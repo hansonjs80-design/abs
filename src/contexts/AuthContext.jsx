@@ -8,16 +8,30 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    let isMounted = true;
+
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (!isMounted) return;
+        setUser(session?.user ?? null);
+      })
+      .catch((error) => {
+        console.error('Failed to restore auth session:', error);
+        if (!isMounted) return;
+        setUser(null);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email, password) => {
@@ -33,7 +47,10 @@ export function AuthProvider({ children }) {
       options: { data: metadata }
     });
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      emailConfirmationRequired: Boolean(data?.user && !data?.session),
+    };
   };
 
   const signOut = async () => {
