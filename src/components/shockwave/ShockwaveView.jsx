@@ -5,6 +5,8 @@ import { supabase } from '../../lib/supabaseClient';
 import { has4060Pattern } from '../../lib/memoParser';
 import { useToast } from '../common/Toast';
 
+const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+
 export default function ShockwaveView({ therapists, settings, memos, onLoadMemos, onSaveMemo, holidays }) {
   const { currentYear, currentMonth } = useSchedule();
   const { addToast } = useToast();
@@ -325,7 +327,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                 <div key={dayIdx} className={`shockwave-day${isToday ? ' is-today' : ''}`}>
                   {/* 날짜 헤더 */}
                   <div className={headerClass}>
-                    {formatDisplayDate(dayInfo.year, dayInfo.month, dayInfo.day)}
+                    {formatDisplayDate(dayInfo.year, dayInfo.month, dayInfo.day)} ({DAY_NAMES[dayInfo.dow]})
                   </div>
 
                   {/* 치료사 이름 헤더 */}
