@@ -341,6 +341,18 @@
   border-color: var(--brand-primary);
 }
 
+.shockwave-context-menu {
+  position: fixed;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 6px 12px;
+  cursor: pointer;
+  font-weight: 600;
+  z-index: 500;
+}
+
 .patient-search-results {
   max-height: 300px;
   overflow-y: auto;
