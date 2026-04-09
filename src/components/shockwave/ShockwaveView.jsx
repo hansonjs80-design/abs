@@ -446,7 +446,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                   </div>
 
                   {/* 스케줄 바디 */}
-                  <div className="sw-schedule-body" style={{ display: 'grid', gridTemplateColumns: gridCols, gridAutoRows: 'minmax(24px, auto)', borderBottom: '1px solid var(--border-color-light)' }}>
+                  <div className="sw-schedule-body" style={{ display: 'grid', gridTemplateColumns: gridCols, gridAutoRows: 'minmax(22px, auto)', borderBottom: '1px solid var(--border-color-light)' }}>
                     {getTimeSlotsForDay(dayInfo.dow).flatMap((slotInfo, slotRenderIndex) => {
                       const rowIdx = slotInfo.idx;
                       const gridRowStart = slotRenderIndex + 1;

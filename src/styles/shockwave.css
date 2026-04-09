@@ -112,7 +112,7 @@
 .sw-schedule-row {
   display: grid;
   border-bottom: 1px solid var(--border-color-light);
-  min-height: 24px;
+  min-height: 22px;
 }
 
 .sw-schedule-row.cols-2 { grid-template-columns: 1fr 1fr; }
@@ -131,7 +131,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 24px;
+  min-height: 22px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
