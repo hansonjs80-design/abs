@@ -127,7 +127,7 @@
   text-align: center;
   border-right: 1px solid var(--border-color-light);
   cursor: pointer;
-  transition: filter var(--transition-fast);
+  transition: background var(--transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -140,7 +140,7 @@
 .sw-cell:last-child { border-right: none; }
 
 .sw-cell:hover {
-  filter: brightness(0.92);
+  background: var(--bg-hover);
 }
 
 /* 셀 선택 상태 (구글 시트 방식) */
