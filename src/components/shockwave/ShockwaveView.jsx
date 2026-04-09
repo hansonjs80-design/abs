@@ -6,6 +6,7 @@ import { has4060Pattern } from '../../lib/memoParser';
 import { useToast } from '../common/Toast';
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+const HORIZONTAL_BORDER_COLOR = '#b7b7b7';
 
 export default function ShockwaveView({ therapists, settings, memos, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
   const { currentYear, currentMonth } = useSchedule();
@@ -504,7 +505,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                   </div>
 
                   {/* 스케줄 바디 */}
-                  <div className="sw-schedule-body" style={{ display: 'grid', gridTemplateColumns: gridCols, gridAutoRows: 'minmax(22px, auto)', borderBottom: '1px solid var(--border-color-light)' }}>
+                  <div className="sw-schedule-body" style={{ display: 'grid', gridTemplateColumns: gridCols, gridAutoRows: 'minmax(22px, auto)', borderBottom: `1px solid ${HORIZONTAL_BORDER_COLOR}` }}>
                     {getTimeSlotsForDay(dayInfo.dow).flatMap((slotInfo, slotRenderIndex) => {
                       const rowIdx = slotInfo.idx;
                       const gridRowStart = slotRenderIndex + 1;
@@ -519,7 +520,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                             style={{
                               gridColumn: '1',
                               gridRow: `${gridRowStart}`,
-                              borderBottom: '1px solid var(--border-color-light)',
+                              borderBottom: `1px solid ${HORIZONTAL_BORDER_COLOR}`,
                             }}
                           >
                             {slotInfo.label}
@@ -539,7 +540,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                               style={{
                                 gridColumn: `${gridColumnStart}`,
                                 gridRow: `${gridRowStart}`,
-                                borderBottom: '1px solid var(--border-color-light)',
+                                borderBottom: `1px solid ${HORIZONTAL_BORDER_COLOR}`,
                               }}
                             >
                               {isLunchCell && showTimeCol && colIdx === 0 ? '' : ''}
@@ -584,7 +585,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                           let inlineStyle = {
                             gridColumn: `${gridColumnStart}${mergeSpan.colSpan > 1 ? ` / span ${mergeSpan.colSpan}` : ''}`,
                             gridRow: `${gridRowStart}${visualRowSpan > 1 ? ` / span ${visualRowSpan}` : ''}`,
-                            borderBottom: '1px solid var(--border-color-light)',
+                            borderBottom: `1px solid ${HORIZONTAL_BORDER_COLOR}`,
                           };
                           
                           // 마스터 셀 중앙 효과
