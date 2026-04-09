@@ -59,10 +59,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
       const isLunch = lunchStart && lunchEnd && t >= lunchStart && t < lunchEnd;
 
       if (isLunch) {
-        if (!lunchAdded) {
-          result.push({ ...slot, idx, disabled: true, isLunch: true, label: `점심 (${lunchStart}~${lunchEnd})`, isMergedLunch: true });
-          lunchAdded = true;
-        }
+        result.push({ ...slot, idx, disabled: true, isLunch: true });
       } else {
         result.push({ ...slot, idx, disabled: isBeforeStart || isAfterEnd, isLunch: false });
       }
@@ -412,22 +409,21 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                       // 1. Time Label
                       if (showTimeCol) {
                         elements.push(
-                          <div key={`time-${rowIdx}`} className={`sw-time-label${slotInfo.isLunch ? ' lunch' : ''}${slotInfo.disabled ? ' disabled' : ''}`} style={{ borderBottom: '1px solid var(--border-color-light)', ...(slotInfo.isMergedLunch ? { fontSize: '9px', whiteSpace: 'nowrap' } : {}) }}>
+                          <div key={`time-${rowIdx}`} className={`sw-time-label${slotInfo.isLunch ? ' lunch' : ''}${slotInfo.disabled ? ' disabled' : ''}`} style={{ borderBottom: '1px solid var(--border-color-light)' }}>
                             {slotInfo.label}
                           </div>
                         );
                       }
 
                       // 2. Cells
-                      if (slotInfo.isMergedLunch) {
-                        elements.push(
-                          <div key={`lunch-${rowIdx}`} className="sw-cell disabled" style={{ gridColumn: `span ${colCount}`, justifyContent: 'center', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-tertiary)', opacity: 0.6, fontSize: '10px', borderBottom: '1px solid var(--border-color-light)' }}>
-                            점심시간
-                          </div>
-                        );
-                      } else if (slotInfo.disabled) {
+                      if (slotInfo.disabled) {
                         for (let colIdx = 0; colIdx < colCount; colIdx++) {
-                          elements.push(<div key={`dis-${rowIdx}-${colIdx}`} className="sw-cell disabled" style={{ borderBottom: '1px solid var(--border-color-light)' }} />);
+                          const isLunchCell = slotInfo.isLunch;
+                          elements.push(
+                            <div key={`dis-${rowIdx}-${colIdx}`} className={`sw-cell disabled${isLunchCell ? ' lunch-cell' : ''}`} style={{ borderBottom: '1px solid var(--border-color-light)' }}>
+                              {isLunchCell && showTimeCol && colIdx === 0 ? '' : ''}
+                            </div>
+                          );
                         }
                       } else {
                         for (let colIdx = 0; colIdx < colCount; colIdx++) {
