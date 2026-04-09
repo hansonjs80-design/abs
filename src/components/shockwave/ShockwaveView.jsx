@@ -126,6 +126,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
     const isMeta = e?.metaKey || e?.ctrlKey;
 
     if (e?.button !== 0) return;
+    viewRef.current?.focus();
 
     if (isMeta) {
       setSelectedCell(cell);
@@ -159,6 +160,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
   // ── 더블 클릭 = 편집 모드 진입 ──
   const handleCellDoubleClick = useCallback((w, d, r, c, content) => {
     const key = cellKey(w, d, r, c);
+    viewRef.current?.focus();
     setEditingCell(key);
     setEditValue(content || '');
     selectSingleCell({ w, d, r, c });
@@ -166,11 +168,11 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
   }, [selectSingleCell]);
 
   // ── 편집 저장 ──
-  const handleCellSave = useCallback(async (w, d, r, c) => {
+  const handleCellSave = useCallback(async (w, d, r, c, nextValue = editValue) => {
     setEditingCell(null);
     const key = cellKey(w, d, r, c);
     const oldContent = memos[key]?.content || '';
-    const newContent = editValue.trim();
+    const newContent = nextValue.trim();
     if (newContent === oldContent) return;
     const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, newContent);
     if (!success) addToast('저장 실패', 'error');
@@ -534,12 +536,12 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
 
                           if (isEditing) {
                             elements.push(
-                              <div key={colIdx} className="sw-cell editing" style={inlineStyle}>
+                              <div key={key} className="sw-cell editing" style={inlineStyle}>
                                 <input
                                   className="sw-cell-input"
                                   value={editValue}
                                   onChange={e => setEditValue(e.target.value)}
-                                  onBlur={() => handleCellSave(weekIdx, dayIdx, rowIdx, colIdx)}
+                                  onBlur={(e) => handleCellSave(weekIdx, dayIdx, rowIdx, colIdx, e.target.value)}
                                   onKeyDown={e => handleEditKeyDown(e, weekIdx, dayIdx, rowIdx, colIdx)}
                                   autoFocus
                                 />
@@ -548,7 +550,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                           } else {
                             elements.push(
                               <div
-                                key={colIdx}
+                                key={key}
                                 className={cls}
                                 style={inlineStyle}
                                 onMouseDown={(e) => handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e)}
