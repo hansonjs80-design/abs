@@ -47,7 +47,7 @@
 
 /* 날짜 헤더 */
 .sw-day-header {
-  padding: 8px 4px;
+  padding: 7px 3px;
   text-align: center;
   font-size: 13px;
   font-weight: 700;
@@ -84,7 +84,7 @@
 .sw-therapist-header.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
 
 .sw-therapist-name {
-  padding: 6px 4px;
+  padding: 5px 3px;
   text-align: center;
   font-size: 12px;
   font-weight: 600;
