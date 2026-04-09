@@ -189,7 +189,7 @@ export function ScheduleProvider({ children }) {
 
       const memoMap = {};
       (data || []).forEach(item => {
-        const key = `${item.year}-${item.month}-${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+        const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
         memoMap[key] = item;
       });
       setShockwaveMemos(memoMap);
@@ -216,7 +216,7 @@ export function ScheduleProvider({ children }) {
 
       if (error) throw error;
 
-      const key = `${year}-${month}-${weekIndex}-${dayIndex}-${rowIndex}-${colIndex}`;
+      const key = `${weekIndex}-${dayIndex}-${rowIndex}-${colIndex}`;
       setShockwaveMemos(prev => ({
         ...prev,
         [key]: data?.[0] || { year, month, week_index: weekIndex, day_index: dayIndex, row_index: rowIndex, col_index: colIndex, content }
