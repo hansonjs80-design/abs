@@ -1,8 +1,13 @@
+import { useEffect } from 'react';
 import { useSchedule } from '../contexts/ScheduleContext';
 import ShockwaveView from '../components/shockwave/ShockwaveView';
 
 export default function ShockwavePage() {
-  const { therapists, shockwaveMemos, loadShockwaveMemos, saveShockwaveMemo, holidays } = useSchedule();
+  const { therapists, loadTherapists, shockwaveMemos, loadShockwaveMemos, saveShockwaveMemo, holidays } = useSchedule();
+
+  useEffect(() => {
+    loadTherapists();
+  }, [loadTherapists]);
 
   return (
     <div className="animate-fade-in">
