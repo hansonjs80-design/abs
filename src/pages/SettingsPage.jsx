@@ -18,6 +18,8 @@ export default function SettingsPage() {
   const [newHoliday, setNewHoliday] = useState({ date: '', name: '' });
   
   const [swSettings, setSwSettings] = useState({ start_time: '09:00', end_time: '18:00', interval_minutes: 10 });
+  const [dayOverrides, setDayOverrides] = useState({});
+  const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
   useEffect(() => {
     loadTherapists();
@@ -30,10 +32,11 @@ export default function SettingsPage() {
       const { data, error } = await supabase.from('shockwave_settings').select('*').limit(1).single();
       if (!error && data) {
         setSwSettings({
-          start_time: data.start_time.substring(0, 5), // '09:00:00' -> '09:00'
+          start_time: data.start_time.substring(0, 5),
           end_time: data.end_time.substring(0, 5),
           interval_minutes: data.interval_minutes
         });
+        setDayOverrides(data.day_overrides || {});
       }
     } catch(e) {}
   };
@@ -42,9 +45,24 @@ export default function SettingsPage() {
     const success = await saveShockwaveSettings({
       start_time: swSettings.start_time + ':00',
       end_time: swSettings.end_time + ':00',
-      interval_minutes: Number(swSettings.interval_minutes)
+      interval_minutes: Number(swSettings.interval_minutes),
+      day_overrides: dayOverrides
     });
     if (success) addToast('시간표 설정이 저장되었습니다.', 'success');
+  };
+
+  const updateDayOverride = (dow, field, value) => {
+    setDayOverrides(prev => {
+      const updated = { ...prev };
+      if (!updated[dow]) updated[dow] = {};
+      if (value === '' || value === undefined) {
+        delete updated[dow][field];
+        if (Object.keys(updated[dow]).length === 0) delete updated[dow];
+      } else {
+        updated[dow][field] = value;
+      }
+      return updated;
+    });
   };
 
   const loadTherapists = async () => {
@@ -143,9 +161,53 @@ export default function SettingsPage() {
             </div>
             <button className="btn btn-primary" onClick={handleSaveSettings}>적용 및 저장</button>
           </div>
-          <p style={{ color: 'var(--text-tertiary)', fontSize: '0.8rem', marginTop: 10 }}>
-            * 주의: 시간표 구성을 변경하면 기존에 기록되어 있던 메모들의 위치 기준(줄 번호)이 틀어질 수 있습니다. (초기 세팅용으로 사용 권장)
+          <p style={{ color: 'var(--text-tertiary)', fontSize: '0.8rem', marginTop: 10, marginBottom: 20 }}>
+            * 위의 기본 시간이 전체 범위(격자)를 결정합니다.
           </p>
+
+          {/* 요일별 오버라이드 테이블 */}
+          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 16 }}>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 10, color: 'var(--text-primary)' }}>📅 요일별 운영 시간 설정</div>
+            <p style={{ color: 'var(--text-tertiary)', fontSize: '0.78rem', marginBottom: 12 }}>
+              비워두면 위의 기본 시간이 적용됩니다. 요일별로 시작/종료 시간과 점심 시간을 다르게 설정할 수 있습니다.
+            </p>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <thead>
+                  <tr style={{ background: 'var(--bg-tertiary)' }}>
+                    <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 700, minWidth: 40 }}>요일</th>
+                    <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 90 }}>시작 시간</th>
+                    <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 90 }}>종료 시간</th>
+                    <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 90 }}>점심 시작</th>
+                    <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 90 }}>점심 종료</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[1, 2, 3, 4, 5, 6].map(dow => {
+                    const ov = dayOverrides[dow] || {};
+                    return (
+                      <tr key={dow} style={{ borderBottom: '1px solid var(--border-color-light)' }}>
+                        <td style={{ padding: '6px', textAlign: 'center', fontWeight: 700, color: dow === 6 ? 'var(--cal-saturday-text, #3b82f6)' : 'var(--text-primary)' }}>{DAY_NAMES[dow]}</td>
+                        <td style={{ padding: '4px 3px' }}>
+                          <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem' }} value={ov.start_time || ''} placeholder={swSettings.start_time} onChange={e => updateDayOverride(dow, 'start_time', e.target.value)} />
+                        </td>
+                        <td style={{ padding: '4px 3px' }}>
+                          <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem' }} value={ov.end_time || ''} placeholder={swSettings.end_time} onChange={e => updateDayOverride(dow, 'end_time', e.target.value)} />
+                        </td>
+                        <td style={{ padding: '4px 3px' }}>
+                          <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem' }} value={ov.lunch_start || ''} placeholder="12:00" onChange={e => updateDayOverride(dow, 'lunch_start', e.target.value)} />
+                        </td>
+                        <td style={{ padding: '4px 3px' }}>
+                          <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem' }} value={ov.lunch_end || ''} placeholder="13:00" onChange={e => updateDayOverride(dow, 'lunch_end', e.target.value)} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={handleSaveSettings}>전체 설정 저장</button>
+          </div>
         </div>
       </div>
 

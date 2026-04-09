@@ -12,7 +12,8 @@ export function ScheduleProvider({ children }) {
   const [shockwaveSettings, setShockwaveSettings] = useState({
     start_time: '09:00:00',
     end_time: '18:00:00',
-    interval_minutes: 10
+    interval_minutes: 10,
+    day_overrides: {}
   });
   const [shockwaveMemos, setShockwaveMemos] = useState({});
   const [notices, setNotices] = useState([]);
@@ -146,7 +147,8 @@ export function ScheduleProvider({ children }) {
         setShockwaveSettings({
           start_time: data.start_time,
           end_time: data.end_time,
-          interval_minutes: data.interval_minutes
+          interval_minutes: data.interval_minutes,
+          day_overrides: data.day_overrides || {}
         });
       }
     } catch (err) {
@@ -163,7 +165,8 @@ export function ScheduleProvider({ children }) {
       const { error } = await supabase.from('shockwave_settings').insert({
         start_time: newSettings.start_time,
         end_time: newSettings.end_time,
-        interval_minutes: newSettings.interval_minutes
+        interval_minutes: newSettings.interval_minutes,
+        day_overrides: newSettings.day_overrides || {}
       });
 
       if (error) throw error;

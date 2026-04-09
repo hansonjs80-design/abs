@@ -13,26 +13,44 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
 
   const colCount = Math.max(1, therapists.length); // 치료사가 0명이어도 최소 1열 유지
 
-  const timeSlots = useMemo(() => {
+  // 기본 시간표 (전체 범위) - 격자 기준으로 사용
+  const baseTimeSlots = useMemo(() => {
     if (!settings || !settings.start_time || !settings.end_time || !settings.interval_minutes) {
-      return Array.from({ length: 31 }, (_, i) => `Row ${i}`);
+      return Array.from({ length: 31 }, (_, i) => ({ label: `Row ${i}`, time: '' }));
     }
     const start = new Date(`2000-01-01T${settings.start_time}`);
     const end = new Date(`2000-01-01T${settings.end_time}`);
     const interval = settings.interval_minutes;
 
     const slots = [];
-    let current = start;
+    let current = new Date(start);
     while (current < end) {
       const hh = String(current.getHours()).padStart(2, '0');
       const mm = String(current.getMinutes()).padStart(2, '0');
-      slots.push(`${hh}:${mm}`);
+      slots.push({ label: `${hh}:${mm}`, time: `${hh}:${mm}` });
       current = new Date(current.getTime() + interval * 60000);
     }
     return slots;
   }, [settings]);
 
-  const ROWS_PER_DAY = timeSlots.length;
+  // 요일별 시간 슬롯 생성 (오버라이드 + 점심시간 반영)
+  const getTimeSlotsForDay = useCallback((dow) => {
+    const dayOv = settings?.day_overrides?.[dow] || {};
+    const dayStart = dayOv.start_time || (settings?.start_time?.substring(0, 5)) || '09:00';
+    const dayEnd = dayOv.end_time || (settings?.end_time?.substring(0, 5)) || '18:00';
+    const lunchStart = dayOv.lunch_start || null;
+    const lunchEnd = dayOv.lunch_end || null;
+
+    return baseTimeSlots.map((slot, idx) => {
+      const t = slot.time;
+      const isBeforeStart = t < dayStart;
+      const isAfterEnd = t >= dayEnd;
+      const isLunch = lunchStart && lunchEnd && t >= lunchStart && t < lunchEnd;
+      return { ...slot, idx, disabled: isBeforeStart || isAfterEnd, isLunch };
+    });
+  }, [baseTimeSlots, settings]);
+
+  const ROWS_PER_DAY = baseTimeSlots.length;
   
   const today = getTodayKST();
 
@@ -107,13 +125,21 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
 
                   {/* 스케줄 바디 */}
                   <div className="sw-schedule-body">
-                    {timeSlots.map((timeText, rowIdx) => (
-                      <div key={rowIdx} className="sw-schedule-row" style={{ gridTemplateColumns: `46px repeat(${colCount}, 1fr)` }}>
+                    {getTimeSlotsForDay(dayInfo.dow).map((slotInfo) => {
+                      const rowIdx = slotInfo.idx;
+                      return (
+                      <div key={rowIdx} className={`sw-schedule-row${slotInfo.isLunch ? ' sw-lunch-row' : ''}${slotInfo.disabled ? ' sw-disabled-row' : ''}`} style={{ gridTemplateColumns: `46px repeat(${colCount}, 1fr)` }}>
                         {/* 시간 라벨 */}
-                        <div className="sw-time-label">
-                          {timeText}
+                        <div className={`sw-time-label${slotInfo.isLunch ? ' lunch' : ''}${slotInfo.disabled ? ' disabled' : ''}`}>
+                          {slotInfo.label}
                         </div>
-                        {Array.from({ length: colCount }, (_, colIdx) => {
+                        {slotInfo.disabled ? (
+                          /* 운영 시간 외 - 빈 칸으로 차단 */
+                          Array.from({ length: colCount }, (_, colIdx) => (
+                            <div key={colIdx} className="sw-cell disabled" />
+                          ))
+                        ) : (
+                        Array.from({ length: colCount }, (_, colIdx) => {
                           const cellKey = `${weekIdx}-${dayIdx}-${rowIdx}-${colIdx}`;
                           const cellData = memos[cellKey];
                           const content = cellData?.content || '';
@@ -155,8 +181,10 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                             </div>
                           );
                         })}
+                        )}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );

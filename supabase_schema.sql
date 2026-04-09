@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS public.shockwave_settings (
   start_time time NOT NULL DEFAULT '09:00:00',
   end_time time NOT NULL DEFAULT '18:00:00',
   interval_minutes integer NOT NULL DEFAULT 10,
+  day_overrides jsonb DEFAULT '{}'::jsonb,
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

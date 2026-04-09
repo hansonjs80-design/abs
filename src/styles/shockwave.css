@@ -192,6 +192,37 @@
   user-select: none;
 }
 
+.sw-time-label.disabled {
+  color: var(--text-tertiary);
+  opacity: 0.35;
+}
+
+.sw-time-label.lunch {
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+  opacity: 0.6;
+}
+
+/* 비활성(disabled) 셀 - 운영 시간 외 */
+.sw-cell.disabled {
+  background: var(--bg-tertiary);
+  cursor: default;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* 점심시간 행 */
+.sw-lunch-row .sw-cell {
+  background: color-mix(in srgb, var(--bg-tertiary) 70%, transparent);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* 비활성 행 */
+.sw-disabled-row {
+  min-height: 16px !important;
+}
+
 /* 토글 today 보더 */
 .shockwave-day.is-today {
   box-shadow: inset 0 0 0 2px var(--sw-today-border);
