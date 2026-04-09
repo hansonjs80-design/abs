@@ -402,14 +402,23 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
 
                   {/* 스케줄 바디 */}
                   <div className="sw-schedule-body" style={{ display: 'grid', gridTemplateColumns: gridCols, gridAutoRows: 'minmax(24px, auto)', borderBottom: '1px solid var(--border-color-light)' }}>
-                    {getTimeSlotsForDay(dayInfo.dow).flatMap((slotInfo) => {
+                    {getTimeSlotsForDay(dayInfo.dow).flatMap((slotInfo, slotRenderIndex) => {
                       const rowIdx = slotInfo.idx;
+                      const gridRowStart = slotRenderIndex + 1;
                       const elements = [];
                       
                       // 1. Time Label
                       if (showTimeCol) {
                         elements.push(
-                          <div key={`time-${rowIdx}`} className={`sw-time-label${slotInfo.isLunch ? ' lunch' : ''}${slotInfo.disabled ? ' disabled' : ''}`} style={{ borderBottom: '1px solid var(--border-color-light)' }}>
+                          <div
+                            key={`time-${rowIdx}`}
+                            className={`sw-time-label${slotInfo.isLunch ? ' lunch' : ''}${slotInfo.disabled ? ' disabled' : ''}`}
+                            style={{
+                              gridColumn: '1',
+                              gridRow: `${gridRowStart}`,
+                              borderBottom: '1px solid var(--border-color-light)',
+                            }}
+                          >
                             {slotInfo.label}
                           </div>
                         );
@@ -439,6 +448,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                           const isEditing = editingCell === key;
                           const isSelected = selectedKeys.has(key);
                           const isPrimary = selectedCell && selectedCell.w === weekIdx && selectedCell.d === dayIdx && selectedCell.r === rowIdx && selectedCell.c === colIdx;
+                          const gridColumnStart = showTimeCol ? colIdx + 2 : colIdx + 1;
 
                           // View Span Calculation (in case it spans across omitted rows like lunch)
                           let visualRowSpan = 1;
@@ -456,9 +466,11 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                           if (isPrimary) cls += ' primary-selected';
                           if (slotInfo.isLunch) cls += ' lunch-cell';
 
-                          let inlineStyle = { borderBottom: '1px solid var(--border-color-light)' };
-                          if (mergeSpan.colSpan > 1) inlineStyle.gridColumn = `span ${mergeSpan.colSpan}`;
-                          if (visualRowSpan > 1) inlineStyle.gridRow = `span ${visualRowSpan}`;
+                          let inlineStyle = {
+                            gridColumn: `${gridColumnStart}${mergeSpan.colSpan > 1 ? ` / span ${mergeSpan.colSpan}` : ''}`,
+                            gridRow: `${gridRowStart}${visualRowSpan > 1 ? ` / span ${visualRowSpan}` : ''}`,
+                            borderBottom: '1px solid var(--border-color-light)',
+                          };
                           
                           // 마스터 셀 중앙 효과
                           if (visualRowSpan > 1 || mergeSpan.colSpan > 1) {
