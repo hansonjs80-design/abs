@@ -412,9 +412,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
               // 첫 번째 요일 또는 활성화된 요일에만 시간 열 표시
               const showTimeCol = dayIdx === 0 || activeDayKey === thisDayKey;
               const therapistCols = `repeat(${colCount}, 1.56fr)`;
-              const gridCols = showTimeCol
-                ? `46px ${therapistCols}`
-                : therapistCols;
+              const gridCols = `46px ${therapistCols}`;
 
               let headerClass = 'sw-day-header';
               if (dayInfo.isHoliday) headerClass += ' holiday';
@@ -431,9 +429,9 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
 
                   {/* 치료사 이름 헤더 */}
                   <div className="sw-therapist-header" style={{ gridTemplateColumns: gridCols }}>
-                    {showTimeCol && (
-                      <div className="sw-time-label" style={{ borderBottom: 'none' }}>시간</div>
-                    )}
+                    <div className={`sw-time-label${showTimeCol ? '' : ' hidden'}`} style={{ borderBottom: 'none' }}>
+                      {showTimeCol ? '시간' : '\u00A0'}
+                    </div>
                     {Array.from({ length: colCount }, (_, ci) => {
                       let nameClass = 'sw-therapist-name';
                       if (dayInfo.isHoliday) nameClass += ' holiday';
