@@ -493,7 +493,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                       if (slotInfo.disabled) {
                         for (let colIdx = 0; colIdx < colCount; colIdx++) {
                           const isLunchCell = slotInfo.isLunch;
-                          const gridColumnStart = showTimeCol ? colIdx + 2 : colIdx + 1;
+                          const gridColumnStart = colIdx + 2;
                           elements.push(
                             <div
                               key={`dis-${rowIdx}-${colIdx}`}
