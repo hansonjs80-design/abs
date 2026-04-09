@@ -38,6 +38,7 @@
 
 .shockwave-day {
   border-right: 1px solid #000;
+  border-bottom: 2px solid #b7b7b7;
   min-width: 0;
 }
 
@@ -277,7 +278,7 @@
     grid-template-columns: repeat(3, 1fr);
   }
   .shockwave-day:nth-child(3) { border-right: none; }
-  .shockwave-day:nth-child(n+4) { border-top: 2px solid var(--border-color); }
+  .shockwave-day:nth-child(n+4) { border-top: 2px solid #b7b7b7; }
 }
 
 @media (max-width: 768px) {
@@ -285,7 +286,7 @@
     grid-template-columns: repeat(2, 1fr);
   }
   .shockwave-day:nth-child(2n) { border-right: none; }
-  .shockwave-day:nth-child(n+3) { border-top: 2px solid var(--border-color); }
+  .shockwave-day:nth-child(n+3) { border-top: 2px solid #b7b7b7; }
   .sw-cell { font-size: 0.62rem; min-height: 20px; }
   .sw-day-header { font-size: 0.68rem; padding: 6px 2px; }
   .sw-therapist-name { font-size: 0.62rem; padding: 4px 2px; }
@@ -295,7 +296,7 @@
   .shockwave-days {
     grid-template-columns: 1fr;
   }
-  .shockwave-day { border-right: none; border-bottom: 2px solid var(--border-color); }
+  .shockwave-day { border-right: none; border-bottom: 2px solid #b7b7b7; }
   .shockwave-day:last-child { border-bottom: none; }
 }
 
