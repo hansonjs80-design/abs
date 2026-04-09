@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../components/common/Toast';
 import { supabase } from '../lib/supabaseClient';
+import { useSchedule } from '../contexts/ScheduleContext';
 import { Sun, Moon, Database, Users, Shield, RefreshCw } from 'lucide-react';
 
 export default function SettingsPage() {
