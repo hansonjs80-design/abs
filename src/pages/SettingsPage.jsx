@@ -55,12 +55,29 @@ export default function SettingsPage() {
     setDayOverrides(prev => {
       const updated = { ...prev };
       if (!updated[dow]) updated[dow] = {};
-      if (value === '' || value === undefined) {
-        delete updated[dow][field];
-        if (Object.keys(updated[dow]).length === 0) delete updated[dow];
+      
+      // no_lunch 체크 전환 시
+      if (field === 'no_lunch') {
+        if (value) {
+          updated[dow].no_lunch = true;
+          // 점심 시간 삭제
+          delete updated[dow].lunch_start;
+          delete updated[dow].lunch_end;
+        } else {
+          delete updated[dow].no_lunch;
+        }
       } else {
-        updated[dow][field] = value;
+        if (value === '' || value === undefined) {
+          delete updated[dow][field];
+        } else {
+          updated[dow][field] = value;
+        }
       }
+      
+      if (Object.keys(updated[dow]).length === 0) {
+        delete updated[dow];
+      }
+      
       return updated;
     });
   };
@@ -180,11 +197,13 @@ export default function SettingsPage() {
                     <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 90 }}>종료 시간</th>
                     <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 90 }}>점심 시작</th>
                     <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 90 }}>점심 종료</th>
+                    <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 60 }}>점심 없음</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[1, 2, 3, 4, 5, 6].map(dow => {
                     const ov = dayOverrides[dow] || {};
+                    const isNoLunch = ov.no_lunch === true;
                     return (
                       <tr key={dow} style={{ borderBottom: '1px solid var(--border-color-light)' }}>
                         <td style={{ padding: '6px', textAlign: 'center', fontWeight: 700, color: dow === 6 ? 'var(--cal-saturday-text, #3b82f6)' : 'var(--text-primary)' }}>{DAY_NAMES[dow]}</td>
@@ -195,10 +214,13 @@ export default function SettingsPage() {
                           <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem' }} value={ov.end_time || ''} placeholder={swSettings.end_time} onChange={e => updateDayOverride(dow, 'end_time', e.target.value)} />
                         </td>
                         <td style={{ padding: '4px 3px' }}>
-                          <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem' }} value={ov.lunch_start || ''} placeholder="12:00" onChange={e => updateDayOverride(dow, 'lunch_start', e.target.value)} />
+                          <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem', opacity: isNoLunch ? 0.3 : 1 }} value={isNoLunch ? '' : (ov.lunch_start || '')} placeholder="12:00" disabled={isNoLunch} onChange={e => updateDayOverride(dow, 'lunch_start', e.target.value)} />
                         </td>
                         <td style={{ padding: '4px 3px' }}>
-                          <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem' }} value={ov.lunch_end || ''} placeholder="13:00" onChange={e => updateDayOverride(dow, 'lunch_end', e.target.value)} />
+                          <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem', opacity: isNoLunch ? 0.3 : 1 }} value={isNoLunch ? '' : (ov.lunch_end || '')} placeholder="13:00" disabled={isNoLunch} onChange={e => updateDayOverride(dow, 'lunch_end', e.target.value)} />
+                        </td>
+                        <td style={{ padding: '4px 3px', textAlign: 'center' }}>
+                          <input type="checkbox" checked={isNoLunch} onChange={e => updateDayOverride(dow, 'no_lunch', e.target.checked)} style={{ cursor: 'pointer' }} />
                         </td>
                       </tr>
                     );

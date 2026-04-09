@@ -43,15 +43,29 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
     const dayOv = settings?.day_overrides?.[dow] || {};
     const dayStart = dayOv.start_time || (settings?.start_time?.substring(0, 5)) || '09:00';
     const dayEnd = dayOv.end_time || (settings?.end_time?.substring(0, 5)) || '18:00';
-    const lunchStart = dayOv.lunch_start || null;
-    const lunchEnd = dayOv.lunch_end || null;
-    return baseTimeSlots.map((slot, idx) => {
+    const noLunch = dayOv.no_lunch === true;
+    const lunchStart = noLunch ? null : (dayOv.lunch_start || null);
+    const lunchEnd = noLunch ? null : (dayOv.lunch_end || null);
+
+    const result = [];
+    let lunchAdded = false;
+
+    baseTimeSlots.forEach((slot, idx) => {
       const t = slot.time;
       const isBeforeStart = t < dayStart;
       const isAfterEnd = t >= dayEnd;
       const isLunch = lunchStart && lunchEnd && t >= lunchStart && t < lunchEnd;
-      return { ...slot, idx, disabled: isBeforeStart || isAfterEnd, isLunch };
+
+      if (isLunch) {
+        if (!lunchAdded) {
+          result.push({ ...slot, idx, disabled: true, isLunch: true, label: `점심 (${lunchStart}~${lunchEnd})`, isMergedLunch: true });
+          lunchAdded = true;
+        }
+      } else {
+        result.push({ ...slot, idx, disabled: isBeforeStart || isAfterEnd, isLunch: false });
+      }
     });
+    return result;
   }, [baseTimeSlots, settings]);
 
   const today = getTodayKST();
@@ -343,12 +357,18 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                         >
                           {/* 시간 라벨 (조건부) */}
                           {showTimeCol && (
-                            <div className={`sw-time-label${slotInfo.isLunch ? ' lunch' : ''}${slotInfo.disabled ? ' disabled' : ''}`}>
+                            <div className={`sw-time-label${slotInfo.isLunch ? ' lunch' : ''}${slotInfo.disabled ? ' disabled' : ''}`} style={slotInfo.isMergedLunch ? { fontSize: '9px', whiteSpace: 'nowrap' } : undefined}>
                               {slotInfo.label}
                             </div>
                           )}
 
-                          {slotInfo.disabled ? (
+                          {slotInfo.isMergedLunch ? (
+                            /* 점심시간 압축 행 - 1개의 셀로 병합 */
+                            <div className="sw-cell disabled" style={{ gridColumn: `span ${colCount}`, justifyContent: 'center', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-tertiary)', opacity: 0.6, fontSize: '10px' }}>
+                              점심시간
+                            </div>
+                          ) : slotInfo.disabled ? (
+                            /* 운영 시간 외 - 빈 칸으로 차단 */
                             Array.from({ length: colCount }, (_, colIdx) => (
                               <div key={colIdx} className="sw-cell disabled" />
                             ))
