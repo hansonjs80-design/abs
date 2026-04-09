@@ -143,6 +143,22 @@
   filter: brightness(0.92);
 }
 
+/* 셀 선택 상태 (구글 시트 방식) */
+.sw-cell.selected {
+  background: rgba(66, 133, 244, 0.08);
+}
+
+.sw-cell.primary-selected {
+  outline: 2px solid #4285f4;
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+.sw-cell.lunch-cell {
+  background: color-mix(in srgb, var(--bg-tertiary) 60%, transparent);
+  opacity: 0.6;
+}
+
 .sw-cell.green {
   background: var(--sw-green);
 }
