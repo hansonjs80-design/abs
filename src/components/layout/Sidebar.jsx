@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { Calendar, Zap, ZapOff, Settings, LogOut, ClipboardList } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
-export default function Sidebar({ isOpen, onClose }) {
+export default function Sidebar({ isOpen, isCollapsed, onClose }) {
   const { user, signOut } = useAuth();
   const location = useLocation();
 
@@ -13,8 +13,7 @@ export default function Sidebar({ isOpen, onClose }) {
   const navItems = [
     { section: '스케줄 관리' },
     { path: '/', icon: Calendar, label: '직원 근무표' },
-    { path: '/shockwave-2', icon: Zap, label: '충격파 (2인)' },
-    { path: '/shockwave-3', icon: ZapOff, label: '충격파 (3인)' },
+    { path: '/shockwave', icon: Zap, label: '충격파 스케줄러' },
     { section: '시스템' },
     { path: '/settings', icon: Settings, label: '설정' },
   ];
@@ -27,7 +26,7 @@ export default function Sidebar({ isOpen, onClose }) {
         className={`sidebar-overlay${isOpen ? ' visible' : ''}`}
         onClick={onClose}
       />
-      <aside className={`sidebar${isOpen ? ' open' : ''}`}>
+      <aside className={`sidebar${isOpen ? ' open' : ''}${isCollapsed ? ' collapsed' : ''}`}>
         <div className="sidebar-header">
           <div className="sidebar-logo">📅</div>
           <div className="sidebar-brand">
@@ -49,9 +48,10 @@ export default function Sidebar({ isOpen, onClose }) {
                 className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
                 onClick={onClose}
                 end={item.path === '/'}
+                title={isCollapsed ? item.label : undefined}
               >
                 <Icon size={20} />
-                {item.label}
+                <span>{item.label}</span>
               </NavLink>
             );
           })}

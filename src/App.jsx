@@ -6,8 +6,7 @@ import { ToastProvider } from './components/common/Toast';
 import Layout from './components/layout/Layout';
 import LoginPage from './pages/LoginPage';
 import StaffSchedulePage from './pages/StaffSchedulePage';
-import Shockwave2Page from './pages/Shockwave2Page';
-import Shockwave3Page from './pages/Shockwave3Page';
+import ShockwavePage from './pages/ShockwavePage';
 import SettingsPage from './pages/SettingsPage';
 
 function ProtectedRoute({ children }) {
@@ -49,8 +48,7 @@ function AppRoutes() {
         }
       >
         <Route path="/" element={<StaffSchedulePage />} />
-        <Route path="/shockwave-2" element={<Shockwave2Page />} />
-        <Route path="/shockwave-3" element={<Shockwave3Page />} />
+        <Route path="/shockwave" element={<ShockwavePage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

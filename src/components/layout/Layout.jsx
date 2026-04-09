@@ -5,13 +5,26 @@ import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
 
 export default function Layout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [desktopCollapsed, setDesktopCollapsed] = useState(false);
+
+  const toggleSidebar = () => {
+    if (window.innerWidth <= 768) {
+      setMobileOpen(!mobileOpen);
+    } else {
+      setDesktopCollapsed(!desktopCollapsed);
+    }
+  };
 
   return (
-    <div className="app-layout">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <div className={`app-layout ${desktopCollapsed ? 'desktop-collapsed' : ''}`}>
+      <Sidebar 
+        isOpen={mobileOpen} 
+        isCollapsed={desktopCollapsed}
+        onClose={() => setMobileOpen(false)} 
+      />
       <div className="app-main">
-        <Header onMenuToggle={() => setSidebarOpen(o => !o)} />
+        <Header onMenuToggle={toggleSidebar} />
         <main className="app-content">
           <Outlet />
         </main>

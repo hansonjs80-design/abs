@@ -8,53 +8,82 @@
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  border: 2px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
+  border: 2px solid var(--text-secondary); /* 전체 달력 외곽선: 2px 두께의 진한 색(slate-600) */
+  border-radius: 4px; /* 사각에 가까운 테두리 */
   background: var(--bg-card);
   box-shadow: var(--shadow-md);
+  overflow-x: auto;
 }
 
 /* 요일 헤더 */
 .calendar-weekday-header {
-  padding: 10px 4px;
+  padding: 5.3px 4px; /* 폰트가 커진 만큼 위아래 여백을 줄여 전체 셀 높이 보존 */
   text-align: center;
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 14.3px; /* 13px에서 10% 증가 */
+  font-weight: 800; /* 기존 700(Bold)에서 800(Extra Bold)으로 더 두껍게 */
   background: var(--bg-tertiary);
-  border-bottom: 2px solid var(--border-color);
+  border-bottom: 1px solid var(--text-primary);
+  border-right: 0.5px solid var(--text-primary); /* 세로선을 0.5px 두께로 얇고 샤프하게 설정 */
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
+.calendar-weekday-header:nth-child(7n) {
+  border-right: none;
+}
+
 .calendar-weekday-header.sunday {
   color: var(--cal-sunday-text);
-  background: var(--cal-sunday-bg);
+  background: var(--cal-header-sunday-bg);
 }
 
 .calendar-weekday-header.saturday {
   color: var(--cal-saturday-text);
-  background: var(--cal-saturday-bg);
+  background: var(--cal-header-saturday-bg);
 }
 
 /* 날짜 셀 */
 .calendar-cell {
-  border-right: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
-  min-height: 120px;
+  position: relative;
+  border-right: 0.5px solid var(--text-primary); /* 세로선을 0.5px 두께로 얇게 */
+  border-bottom: 1px solid var(--text-primary); /* 셀 가로선 단일 1px */
   display: flex;
   flex-direction: column;
   transition: background var(--transition-fast);
 }
 
-.calendar-cell:nth-child(7n) {
-  border-right: none;
+/* 리사이즈 핸들 */
+.col-resizer {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+}
+.col-resizer:hover, .col-resizer:active {
+  background: var(--brand-primary);
+  opacity: 0.5;
 }
 
-.calendar-cell.other-month {
-  background: var(--cal-other-month-bg);
+.row-resizer {
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  cursor: row-resize;
+  z-index: 10;
+}
+.row-resizer:hover, .row-resizer:active {
+  background: var(--brand-primary);
+  opacity: 0.5;
+}
+
+.calendar-cell:nth-child(7n) {
+  border-right: none;
 }
 
 .calendar-cell.sunday,
@@ -66,26 +95,33 @@
   background: var(--cal-saturday-bg);
 }
 
+.calendar-cell.other-month {
+  background: var(--cal-other-month-bg) !important;
+}
+
 .calendar-cell.today {
   box-shadow: inset 0 0 0 2px var(--brand-primary);
 }
 
 /* 날짜 번호 */
 .calendar-date {
-  padding: 6px 8px 2px;
-  font-size: 0.85rem;
+  padding: 0px 3px 0px 8px; /* 우측 여백을 8px에서 3px로 줄여 날짜를 5px 우측으로 더 붙임 */
+  font-size: 1.08rem; /* 0.98rem 에서 10% 추가 증가 */
   font-weight: 700;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
+  gap: 6px;
+  border-bottom: 1px solid var(--border-color); /* 날짜 바로 아래에 실선 적용 (더 진하게) */
+  margin-bottom: 0px; /* 불필요한 하단 마진 제거하여 더 붙임 */
 }
 
 .calendar-date-number {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 24px; /* 글자가 10% 커진 만큼 원형 크기도 22px에서 24px로 미세 조정 */
+  height: 24px;
   border-radius: var(--radius-full);
 }
 
@@ -95,10 +131,6 @@
   font-weight: 800;
 }
 
-.other-month .calendar-date-number {
-  color: var(--cal-other-month-text);
-}
-
 .sunday .calendar-date-number,
 .holiday .calendar-date-number {
   color: var(--cal-sunday-text);
@@ -106,6 +138,11 @@
 
 .saturday .calendar-date-number {
   color: var(--cal-saturday-text);
+}
+
+/* 이전/다음 달 스타일 덮어쓰기 (가장 마지막에 선언하여 우선권 확보) */
+.other-month .calendar-date-number {
+  color: var(--cal-other-month-text) !important;
 }
 
 .calendar-date-badge {
@@ -122,32 +159,48 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 2px 4px 4px;
-  gap: 1px;
+  padding: 0px 4px 0px; /* 하단 패딩 제거하여 마지막 메모 슬롯이 바닥 테두리에 딱 붙게 함 */
 }
 
 .memo-slot {
-  padding: 2px 6px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  border-radius: 3px;
+  padding: 4px 3px 4px 6px; /* 우측 여백을 6px에서 3px로 줄여 텍스트를 3픽셀 우측으로 이동 (날짜 숫자와 라인 일치) */
+  font-size: 0.88rem; /* 기존 0.8rem보다 약 10% 증가 */
+  font-weight: 700;
+  border-radius: 2px;
   cursor: pointer;
-  transition: background var(--transition-fast);
-  min-height: 18px;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+  min-height: 22px;
   display: flex;
   align-items: center;
+  justify-content: flex-end; /* 텍스트 우측 정렬 */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.3;
+  outline: none;
+  border: 1px solid transparent;
+  border-bottom: 1px solid var(--border-color); /* 가로선을 더 명확하게 */
+  margin-bottom: 0px; /* 마진을 없애서 테두리끼리 일치시킴 */
+}
+
+/* 마지막 슬롯은 하단 셀 테두리와 이중선이 생기지 않도록 보더 제거 */
+.memo-slot:last-child {
+  border-bottom: none;
 }
 
 .memo-slot:hover {
   filter: brightness(0.95);
 }
 
+.memo-slot:focus {
+  border-color: var(--brand-primary);
+  background: var(--bg-hover);
+  box-shadow: inset 0 0 0 1px var(--bg-card);
+}
+
 .memo-slot.editing {
   padding: 0;
+  border: none;
 }
 
 .memo-slot-input {
@@ -155,12 +208,13 @@
   padding: 2px 6px;
   border: 2px solid var(--brand-primary);
   border-radius: 3px;
-  font-size: 0.72rem;
+  font-size: 0.88rem; /* 일반 메모 슬롯과 동일한 크기 */
   font-weight: 600;
   background: var(--bg-input);
   color: var(--text-primary);
   outline: none;
   min-height: 18px;
+  text-align: right; /* 입력창 내부 텍스트도 우측 정렬 */
 }
 
 /* 메모 색상 */

@@ -8,8 +8,8 @@ export function ScheduleProvider({ children }) {
   const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth() + 1);
   const [staffMemos, setStaffMemos] = useState({});
   const [holidays, setHolidays] = useState(new Set());
-  const [therapists2, setTherapists2] = useState([]);
-  const [therapists3, setTherapists3] = useState([]);
+  const [therapists, setTherapists] = useState([]);
+  const [shockwaveMemos, setShockwaveMemos] = useState({});
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -120,10 +120,62 @@ export function ScheduleProvider({ children }) {
 
       if (error) throw error;
 
-      setTherapists2((data || []).filter(t => t.type === '2인'));
-      setTherapists3((data || []).filter(t => t.type === '3인'));
+      setTherapists(data || []);
     } catch (err) {
       console.error('Failed to load therapists:', err);
+    }
+  }, []);
+
+  // 충격파 스케줄 로드
+  const loadShockwaveMemos = useCallback(async (year, month) => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('shockwave_schedules')
+        .select('*')
+        .eq('year', year)
+        .eq('month', month);
+
+      if (error) throw error;
+
+      const memoMap = {};
+      (data || []).forEach(item => {
+        const key = `${item.year}-${item.month}-${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+        memoMap[key] = item;
+      });
+      setShockwaveMemos(memoMap);
+    } catch (err) {
+      console.error('Failed to load shockwave memos:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // 충격파 스케줄 저장
+  const saveShockwaveMemo = useCallback(async (year, month, weekIndex, dayIndex, rowIndex, colIndex, content) => {
+    try {
+      const { data, error } = await supabase
+        .from('shockwave_schedules')
+        .upsert({
+          year, month, week_index: weekIndex, day_index: dayIndex, row_index: rowIndex, col_index: colIndex,
+          content: content || '',
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'year,month,week_index,day_index,row_index,col_index'
+        })
+        .select();
+
+      if (error) throw error;
+
+      const key = `${year}-${month}-${weekIndex}-${dayIndex}-${rowIndex}-${colIndex}`;
+      setShockwaveMemos(prev => ({
+        ...prev,
+        [key]: data?.[0] || { year, month, week_index: weekIndex, day_index: dayIndex, row_index: rowIndex, col_index: colIndex, content }
+      }));
+      return true;
+    } catch (err) {
+      console.error('Failed to save shockwave memo:', err);
+      return false;
     }
   }, []);
 
@@ -168,7 +220,8 @@ export function ScheduleProvider({ children }) {
       navigateMonth, goToMonth,
       staffMemos, loadStaffMemos, saveStaffMemo,
       holidays, loadHolidays,
-      therapists2, therapists3, loadTherapists,
+      therapists, loadTherapists,
+      shockwaveMemos, loadShockwaveMemos, saveShockwaveMemo,
       notices, loadNotices, saveNotice,
       loading
     }}>

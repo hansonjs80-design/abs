@@ -4,8 +4,7 @@ import { Calendar, Zap, ZapOff, Settings } from 'lucide-react';
 export default function BottomNav() {
   const items = [
     { path: '/', icon: Calendar, label: '근무표' },
-    { path: '/shockwave-2', icon: Zap, label: '충격파2인' },
-    { path: '/shockwave-3', icon: ZapOff, label: '충격파3인' },
+    { path: '/shockwave', icon: Zap, label: '충격파 스케줄' },
     { path: '/settings', icon: Settings, label: '설정' },
   ];
 

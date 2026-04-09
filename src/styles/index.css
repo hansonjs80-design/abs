@@ -6,7 +6,7 @@
 
 /* ── Light Theme (기본) ── */
 :root {
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family: Arial, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
   /* 기본 색상 */
   --bg-primary: #f8fafc;
@@ -31,9 +31,9 @@
   --brand-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
 
   /* 보더 */
-  --border-color: #e2e8f0;
-  --border-color-light: #f1f5f9;
-  --border-color-focus: #6366f1;
+  --border-color: #cbd5e1; /* 명확한 선 (slate-300) */
+  --border-color-light: #e2e8f0; /* 내부 얇은 선 (slate-200) */
+  --border-color-focus: #4f46e5;
 
   /* 그림자 */
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
@@ -42,24 +42,26 @@
   --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.05);
 
   /* 달력 색상 */
-  --cal-sunday-bg: #fef2f2;
-  --cal-sunday-text: #ef4444;
-  --cal-saturday-bg: #eff6ff;
-  --cal-saturday-text: #3b82f6;
+  --cal-sunday-bg: #fee2e2;
+  --cal-sunday-text: #dc2626; /* 쨍한 빨강 */
+  --cal-saturday-bg: #dbeafe;
+  --cal-saturday-text: #2563eb; /* 쨍한 파랑 */
+  --cal-header-sunday-bg: #fca5a5; /* 상단 요일 셀은 20% 더 진하게 (red-300) */
+  --cal-header-saturday-bg: #93c5fd; /* 상단 요일 셀은 20% 더 진하게 (blue-300) */
   --cal-other-month-bg: #f8fafc;
-  --cal-other-month-text: #cbd5e1;
-  --cal-today-date-bg: #c4b5fd;
-  --cal-today-memo-bg: #fef9c3;
+  --cal-other-month-text: #94a3b8;
+  --cal-today-date-bg: #7c3aed;
+  --cal-today-memo-bg: #fef08a;
   --cal-holiday-bg: #fecaca;
-  --cal-holiday-text: #dc2626;
+  --cal-holiday-text: #b91c1c;
   --cal-weekday-bg: #ffffff;
 
-  /* 메모 글자색 */
-  --memo-night: #3b82f6;
-  --memo-off: #8b5cf6;
-  --memo-leave: #22c55e;
-  --memo-attend: #f97316;
-  --memo-special: #ef4444;
+  /* 메모 글자색 (더 강렬하게) */
+  --memo-night: #1d4ed8; /* 파랑 */
+  --memo-off: #6d28d9; /* 보라 */
+  --memo-leave: #15803d; /* 초록 */
+  --memo-attend: #c2410c; /* 주황 */
+  --memo-special: #b91c1c; /* 빨강 */
 
   /* 충격파 색상 */
   --sw-green: #86efac;

@@ -10,7 +10,7 @@ export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const { addToast } = useToast();
   const [therapists, setTherapists] = useState([]);
-  const [newTherapist, setNewTherapist] = useState({ name: '', type: '2인', slot_index: 0 });
+  const [newTherapist, setNewTherapist] = useState({ name: '', slot_index: 0 });
   const [holidays, setHolidays] = useState([]);
   const [newHoliday, setNewHoliday] = useState({ date: '', name: '' });
 
@@ -20,7 +20,7 @@ export default function SettingsPage() {
   }, []);
 
   const loadTherapists = async () => {
-    const { data } = await supabase.from('shockwave_therapists').select('*').order('type,slot_index');
+    const { data } = await supabase.from('shockwave_therapists').select('*').order('slot_index');
     setTherapists(data || []);
   };
 
@@ -33,13 +33,12 @@ export default function SettingsPage() {
     if (!newTherapist.name.trim()) return;
     const { error } = await supabase.from('shockwave_therapists').insert({
       name: newTherapist.name.trim(),
-      type: newTherapist.type,
       slot_index: newTherapist.slot_index,
       is_active: true
     });
     if (error) { addToast('추가 실패: ' + error.message, 'error'); return; }
     addToast('치료사가 추가되었습니다', 'success');
-    setNewTherapist({ name: '', type: '2인', slot_index: 0 });
+    setNewTherapist({ name: '', slot_index: 0 });
     loadTherapists();
   };
 
@@ -103,21 +102,12 @@ export default function SettingsPage() {
               value={newTherapist.name}
               onChange={e => setNewTherapist(p => ({ ...p, name: e.target.value }))}
             />
-            <select
-              className="form-input"
-              style={{ width: 100 }}
-              value={newTherapist.type}
-              onChange={e => setNewTherapist(p => ({ ...p, type: e.target.value }))}
-            >
-              <option value="2인">2인</option>
-              <option value="3인">3인</option>
-            </select>
             <input
               className="form-input"
               style={{ width: 80 }}
               type="number"
               min={0}
-              max={2}
+              max={10}
               placeholder="순서"
               value={newTherapist.slot_index}
               onChange={e => setNewTherapist(p => ({ ...p, slot_index: parseInt(e.target.value) || 0 }))}
@@ -129,7 +119,7 @@ export default function SettingsPage() {
             <div key={t.id} className="settings-row">
               <div>
                 <div className="settings-row-label">{t.name}</div>
-                <div className="settings-row-desc">{t.type} — 슬롯 {t.slot_index}</div>
+                <div className="settings-row-desc">슬롯 (표시 순서): {t.slot_index}</div>
               </div>
               <button className="btn btn-danger btn-sm" onClick={() => removeTherapist(t.id)}>삭제</button>
             </div>

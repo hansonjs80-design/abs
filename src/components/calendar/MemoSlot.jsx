@@ -1,11 +1,19 @@
-import { useState, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { computeMemoFontColor } from '../../lib/memoParser';
 
-export default function MemoSlot({ memo, dayInfo, slotIndex, onSave }) {
+export default function MemoSlot({ memo, dayInfo, slotIndex, onSave, coord, maxWeeks }) {
   const [editing, setEditing] = useState(false);
+  const [flash, setFlash] = useState(false);
   const [value, setValue] = useState(memo?.content || '');
+  const wrapperRef = useRef(null);
 
-  const handleClick = () => {
+  useEffect(() => {
+    if (!editing && wrapperRef.current && document.activeElement !== wrapperRef.current) {
+      // Focus restoration tracking handled by React
+    }
+  }, [editing]);
+
+  const handleDoubleClick = () => {
     if (dayInfo.isOtherMonth) return;
     setValue(memo?.content || '');
     setEditing(true);
@@ -21,9 +29,82 @@ export default function MemoSlot({ memo, dayInfo, slotIndex, onSave }) {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') e.target.blur();
-    if (e.key === 'Escape') { setValue(memo?.content || ''); setEditing(false); }
+    if (editing) {
+      if (e.key === 'Enter') {
+        // 한글 조합 중(isComposing)일 때 Enter 키를 누르면 조합만 완료하고 셀 저장은 하지 않음
+        if (e.nativeEvent.isComposing) return;
+        e.target.blur();
+      }
+      if (e.key === 'Escape') { setValue(memo?.content || ''); setEditing(false); }
+      return;
+    }
+
+    // Selected state (Not editing)
+    if (dayInfo.isOtherMonth) return;
+
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      e.preventDefault();
+      const [wi, di, slot] = coord.split('-').map(Number);
+      let nextWi = wi, nextDi = di, nextSlot = slot;
+
+      if (e.key === 'ArrowUp') {
+        if (slot > 0) nextSlot = slot - 1;
+        else if (wi > 0) { nextWi = wi - 1; nextSlot = 5; }
+      } else if (e.key === 'ArrowDown') {
+        if (slot < 5) nextSlot = slot + 1;
+        else if (wi < maxWeeks - 1) { nextWi = wi + 1; nextSlot = 0; }
+      } else if (e.key === 'ArrowLeft') {
+        if (di > 0) nextDi = di - 1;
+        else if (wi > 0) { nextWi = wi - 1; nextDi = 6; }
+      } else if (e.key === 'ArrowRight') {
+        if (di < 6) nextDi = di + 1;
+        else if (wi < maxWeeks - 1) { nextWi = wi + 1; nextDi = 0; }
+      }
+
+      const target = document.querySelector(`[data-coord="${nextWi}-${nextDi}-${nextSlot}"]`);
+      if (target) target.focus();
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      setValue(memo?.content || '');
+      setEditing(true);
+    } else if (e.key === 'Backspace' || e.key === 'Delete') {
+      e.preventDefault();
+      if (memo?.content) {
+        onSave(dayInfo.year, dayInfo.month, dayInfo.day, slotIndex, '');
+      }
+    } else if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1) {
+      // 한글 자모음(단일키 조합중)일 경우 key 값이 들어가는것을 방지 (ㅈ주한솔 방지)
+      const isKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(e.key) || e.keyCode === 229 || e.nativeEvent.isComposing;
+      setValue(isKorean ? '' : e.key);
+      setEditing(true);
+    } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'c' || e.code === 'KeyC')) {
+      e.preventDefault();
+      navigator.clipboard.writeText(memo?.content || '');
+      setFlash(true);
+      setTimeout(() => setFlash(false), 150);
+    } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'x' || e.code === 'KeyX')) {
+      e.preventDefault();
+      navigator.clipboard.writeText(memo?.content || '');
+      setFlash(true);
+      setTimeout(() => setFlash(false), 150);
+      onSave(dayInfo.year, dayInfo.month, dayInfo.day, slotIndex, '');
+    } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'v' || e.code === 'KeyV')) {
+      e.preventDefault();
+      navigator.clipboard.readText().then((text) => {
+        if (text !== undefined && text !== null) {
+          onSave(dayInfo.year, dayInfo.month, dayInfo.day, slotIndex, text);
+          setFlash(true);
+          setTimeout(() => setFlash(false), 150);
+        }
+      }).catch(err => {
+        console.error('Clipboard read failed:', err);
+      });
+    }
   };
+
 
   const content = memo?.content || '';
   const fontColor = computeMemoFontColor(content);
@@ -56,8 +137,13 @@ export default function MemoSlot({ memo, dayInfo, slotIndex, onSave }) {
 
   return (
     <div
+      ref={wrapperRef}
       className={`memo-slot ${colorClass}`}
-      onClick={handleClick}
+      style={flash ? { backgroundColor: 'var(--brand-primary-light)', opacity: 0.8 } : undefined}
+      data-coord={coord}
+      onDoubleClick={handleDoubleClick}
+      onKeyDown={handleKeyDown}
+      tabIndex={dayInfo.isOtherMonth ? -1 : 0}
       title={content}
     >
       {content}

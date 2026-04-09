@@ -39,7 +39,7 @@
 }
 
 .menu-btn {
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: center;
   width: 40px;
@@ -55,7 +55,6 @@
 
 @media (max-width: 768px) {
   .header { padding: 0 16px; }
-  .menu-btn { display: flex; }
   .header-title { font-size: 1.1rem; }
 }
 
@@ -72,8 +71,35 @@
   left: 0;
   top: 0;
   z-index: 200;
-  transition: transform var(--transition-normal), background var(--transition-normal);
+  transition: width var(--transition-normal), transform var(--transition-normal), background var(--transition-normal);
   overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* 데스크탑 접힘 상태 (collapsed) */
+.sidebar.collapsed {
+  width: var(--sidebar-collapsed-width);
+}
+.sidebar.collapsed .sidebar-brand,
+.sidebar.collapsed .sidebar-section-title,
+.sidebar.collapsed .sidebar-link span,
+.sidebar.collapsed .sidebar-user-info,
+.sidebar.collapsed .sidebar-footer .btn-icon {
+  display: none;
+}
+.sidebar.collapsed .sidebar-header {
+  justify-content: center;
+  padding: 20px 0;
+}
+.sidebar.collapsed .sidebar-link {
+  justify-content: center;
+  padding: 10px 0;
+}
+.sidebar.collapsed .sidebar-footer {
+  padding: 16px 0;
+}
+.sidebar.collapsed .sidebar-user {
+  justify-content: center;
 }
 
 .sidebar-header {
@@ -239,6 +265,9 @@
 @media (min-width: 769px) {
   .app-main {
     margin-left: var(--sidebar-width);
+  }
+  .app-layout.desktop-collapsed .app-main {
+    margin-left: var(--sidebar-collapsed-width);
   }
 }
 

@@ -7,52 +7,20 @@ import { useToast } from '../common/Toast';
 
 const ROWS_PER_DAY = 31;
 
-export default function ShockwaveView({ type = '2인' }) {
-  const { currentYear, currentMonth, holidays, loadHolidays, therapists2, therapists3, loadTherapists } = useSchedule();
+export default function ShockwaveView({ therapists, memos, onLoadMemos, onSaveMemo, holidays }) {
+  const { currentYear, currentMonth } = useSchedule();
   const { addToast } = useToast();
-  const [scheduleData, setScheduleData] = useState({});
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const therapists = type === '2인' ? therapists2 : therapists3;
-  const colCount = type === '2인' ? 2 : 3;
-  const tableName = type === '2인' ? 'shockwave_2_schedules' : 'shockwave_3_schedules';
+  const colCount = Math.max(1, therapists.length); // 치료사가 0명이어도 최소 1열 유지
 
   const today = getTodayKST();
 
+  // 스케줄 데이터 초기 로드 (년월 바뀔때)
   useEffect(() => {
-    loadHolidays(currentYear, currentMonth);
-    loadTherapists();
-  }, [currentYear, currentMonth, loadHolidays, loadTherapists]);
-
-  // 스케줄 데이터 로드
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from(tableName)
-          .select('*')
-          .eq('year', currentYear)
-          .eq('month', currentMonth);
-
-        if (error) throw error;
-
-        const map = {};
-        (data || []).forEach(item => {
-          const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-          map[key] = item;
-        });
-        setScheduleData(map);
-      } catch (err) {
-        console.error('Failed to load shockwave data:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [currentYear, currentMonth, tableName]);
+    onLoadMemos(currentYear, currentMonth);
+  }, [currentYear, currentMonth, onLoadMemos]);
 
   const weeks = useMemo(() => {
     return generateShockwaveCalendar(currentYear, currentMonth, holidays);
@@ -66,46 +34,14 @@ export default function ShockwaveView({ type = '2인' }) {
   const handleCellSave = useCallback(async (weekIdx, dayIdx, rowIdx, colIdx) => {
     setEditingCell(null);
     const key = `${weekIdx}-${dayIdx}-${rowIdx}-${colIdx}`;
-    const oldContent = scheduleData[key]?.content || '';
+    const oldContent = memos[key]?.content || '';
     const newContent = editValue.trim();
 
     if (newContent === oldContent) return;
 
-    try {
-      const { error } = await supabase
-        .from(tableName)
-        .upsert({
-          year: currentYear,
-          month: currentMonth,
-          week_index: weekIdx,
-          day_index: dayIdx,
-          row_index: rowIdx,
-          col_index: colIdx,
-          content: newContent,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'year,month,week_index,day_index,row_index,col_index'
-        });
-
-      if (error) throw error;
-
-      setScheduleData(prev => ({
-        ...prev,
-        [key]: { ...prev[key], content: newContent }
-      }));
-    } catch (err) {
-      console.error('Save error:', err);
-      addToast('저장 실패', 'error');
-    }
-  }, [editValue, currentYear, currentMonth, tableName, scheduleData, addToast]);
-
-  if (loading) {
-    return (
-      <div className="loading-spinner">
-        <div className="spinner" />
-      </div>
-    );
-  }
+    const success = await onSaveMemo(currentYear, currentMonth, weekIdx, dayIdx, rowIdx, colIdx, newContent);
+    if (!success) addToast('저장 실패', 'error');
+  }, [editValue, currentYear, currentMonth, memos, onSaveMemo, addToast]);
 
   return (
     <div className="shockwave-view animate-fade-in">
@@ -132,7 +68,7 @@ export default function ShockwaveView({ type = '2인' }) {
                   </div>
 
                   {/* 치료사 이름 헤더 */}
-                  <div className={`sw-therapist-header cols-${colCount}`}>
+                  <div className="sw-therapist-header" style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)` }}>
                     {Array.from({ length: colCount }, (_, ci) => {
                       let nameClass = 'sw-therapist-name';
                       if (dayInfo.isHoliday) nameClass += ' holiday';
@@ -149,10 +85,10 @@ export default function ShockwaveView({ type = '2인' }) {
                   {/* 스케줄 바디 */}
                   <div className="sw-schedule-body">
                     {Array.from({ length: ROWS_PER_DAY }, (_, rowIdx) => (
-                      <div key={rowIdx} className={`sw-schedule-row cols-${colCount}`}>
+                      <div key={rowIdx} className="sw-schedule-row" style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)` }}>
                         {Array.from({ length: colCount }, (_, colIdx) => {
                           const cellKey = `${weekIdx}-${dayIdx}-${rowIdx}-${colIdx}`;
-                          const cellData = scheduleData[cellKey];
+                          const cellData = memos[cellKey];
                           const content = cellData?.content || '';
                           const isEditing = editingCell === cellKey;
 
@@ -161,7 +97,7 @@ export default function ShockwaveView({ type = '2인' }) {
                           else if (dayInfo.isHoliday) cellClass += ' holiday-bg';
 
                           if (cellData?.bg_color === '#ffe599') cellClass += ' preserve';
-                          if (type === '3인' && has4060Pattern(content)) cellClass += ' color-4060';
+                          if (colCount >= 3 && has4060Pattern(content)) cellClass += ' color-4060';
 
                           if (isEditing) {
                             return (
