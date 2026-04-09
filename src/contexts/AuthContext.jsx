@@ -6,6 +6,27 @@ const DEV_LOGIN_STORAGE_KEY = 'dev-auth-user';
 const DEV_LOGIN_ID = 'admin';
 const DEV_LOGIN_PASSWORD = '1';
 
+const readStoredDevUser = () => {
+  try {
+    const savedUser = localStorage.getItem(DEV_LOGIN_STORAGE_KEY);
+    return savedUser ? JSON.parse(savedUser) : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeStoredDevUser = (user) => {
+  try {
+    localStorage.setItem(DEV_LOGIN_STORAGE_KEY, JSON.stringify(user));
+  } catch {}
+};
+
+const clearStoredDevUser = () => {
+  try {
+    localStorage.removeItem(DEV_LOGIN_STORAGE_KEY);
+  } catch {}
+};
+
 const createDevUser = () => ({
   id: 'local-admin',
   email: DEV_LOGIN_ID,
@@ -29,9 +50,9 @@ export function AuthProvider({ children }) {
           return;
         }
 
-        const savedDevUser = localStorage.getItem(DEV_LOGIN_STORAGE_KEY);
+        const savedDevUser = readStoredDevUser();
         if (savedDevUser) {
-          setUser(JSON.parse(savedDevUser));
+          setUser(savedDevUser);
           return;
         }
 
@@ -40,8 +61,7 @@ export function AuthProvider({ children }) {
       .catch((error) => {
         console.error('Failed to restore auth session:', error);
         if (!isMounted) return;
-        const savedDevUser = localStorage.getItem(DEV_LOGIN_STORAGE_KEY);
-        setUser(savedDevUser ? JSON.parse(savedDevUser) : null);
+        setUser(readStoredDevUser());
       })
       .finally(() => {
         if (isMounted) setLoading(false);
@@ -60,7 +80,7 @@ export function AuthProvider({ children }) {
   const signIn = async (email, password) => {
     if (email === DEV_LOGIN_ID && password === DEV_LOGIN_PASSWORD) {
       const devUser = createDevUser();
-      localStorage.setItem(DEV_LOGIN_STORAGE_KEY, JSON.stringify(devUser));
+      writeStoredDevUser(devUser);
       setUser(devUser);
       return { user: devUser, session: null };
     }
@@ -84,7 +104,7 @@ export function AuthProvider({ children }) {
   };
 
   const signOut = async () => {
-    localStorage.removeItem(DEV_LOGIN_STORAGE_KEY);
+    clearStoredDevUser();
     if (user?.isLocalDevUser) {
       setUser(null);
       return;

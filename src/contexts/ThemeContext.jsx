@@ -1,16 +1,28 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 
 const ThemeContext = createContext();
+const THEME_STORAGE_KEY = 'clinic-theme';
+
+const readStoredTheme = () => {
+  try {
+    return localStorage.getItem(THEME_STORAGE_KEY) || 'light';
+  } catch {
+    return 'light';
+  }
+};
+
+const persistTheme = (theme) => {
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  } catch {}
+};
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(() => {
-    const saved = localStorage.getItem('clinic-theme');
-    return saved || 'light';
-  });
+  const [theme, setTheme] = useState(readStoredTheme);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('clinic-theme', theme);
+    persistTheme(theme);
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.content = theme === 'dark' ? '#0f172a' : '#6366f1';
   }, [theme]);
