@@ -65,3 +65,14 @@ ALTER TABLE public.shockwave_therapists DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shockwave_schedules DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.holidays DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notices DISABLE ROW LEVEL SECURITY;
+
+-- 6. 충격파 스케줄러 환경설정 (단일 Row 강제)
+CREATE TABLE IF NOT EXISTS public.shockwave_settings (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  start_time time NOT NULL DEFAULT '09:00:00',
+  end_time time NOT NULL DEFAULT '18:00:00',
+  interval_minutes integer NOT NULL DEFAULT 10,
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.shockwave_settings DISABLE ROW LEVEL SECURITY;

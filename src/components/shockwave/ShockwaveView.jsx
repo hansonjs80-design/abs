@@ -5,9 +5,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { has4060Pattern } from '../../lib/memoParser';
 import { useToast } from '../common/Toast';
 
-const ROWS_PER_DAY = 31;
-
-export default function ShockwaveView({ therapists, memos, onLoadMemos, onSaveMemo, holidays }) {
+export default function ShockwaveView({ therapists, settings, memos, onLoadMemos, onSaveMemo, holidays }) {
   const { currentYear, currentMonth } = useSchedule();
   const { addToast } = useToast();
   const [editingCell, setEditingCell] = useState(null);
@@ -15,6 +13,27 @@ export default function ShockwaveView({ therapists, memos, onLoadMemos, onSaveMe
 
   const colCount = Math.max(1, therapists.length); // 치료사가 0명이어도 최소 1열 유지
 
+  const timeSlots = useMemo(() => {
+    if (!settings || !settings.start_time || !settings.end_time || !settings.interval_minutes) {
+      return Array.from({ length: 31 }, (_, i) => `Row ${i}`);
+    }
+    const start = new Date(`2000-01-01T${settings.start_time}`);
+    const end = new Date(`2000-01-01T${settings.end_time}`);
+    const interval = settings.interval_minutes;
+
+    const slots = [];
+    let current = start;
+    while (current < end) {
+      const hh = String(current.getHours()).padStart(2, '0');
+      const mm = String(current.getMinutes()).padStart(2, '0');
+      slots.push(`${hh}:${mm}`);
+      current = new Date(current.getTime() + interval * 60000);
+    }
+    return slots;
+  }, [settings]);
+
+  const ROWS_PER_DAY = timeSlots.length;
+  
   const today = getTodayKST();
 
   // 스케줄 데이터 초기 로드 (년월 바뀔때)
@@ -68,7 +87,11 @@ export default function ShockwaveView({ therapists, memos, onLoadMemos, onSaveMe
                   </div>
 
                   {/* 치료사 이름 헤더 */}
-                  <div className="sw-therapist-header" style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)` }}>
+                  <div className="sw-therapist-header" style={{ gridTemplateColumns: `46px repeat(${colCount}, 1fr)` }}>
+                    {/* 시간 표시 빈 칸 */}
+                    <div className="sw-time-label" style={{ borderBottom: 'none' }}>
+                      시간
+                    </div>
                     {Array.from({ length: colCount }, (_, ci) => {
                       let nameClass = 'sw-therapist-name';
                       if (dayInfo.isHoliday) nameClass += ' holiday';
@@ -84,8 +107,12 @@ export default function ShockwaveView({ therapists, memos, onLoadMemos, onSaveMe
 
                   {/* 스케줄 바디 */}
                   <div className="sw-schedule-body">
-                    {Array.from({ length: ROWS_PER_DAY }, (_, rowIdx) => (
-                      <div key={rowIdx} className="sw-schedule-row" style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)` }}>
+                    {timeSlots.map((timeText, rowIdx) => (
+                      <div key={rowIdx} className="sw-schedule-row" style={{ gridTemplateColumns: `46px repeat(${colCount}, 1fr)` }}>
+                        {/* 시간 라벨 */}
+                        <div className="sw-time-label">
+                          {timeText}
+                        </div>
                         {Array.from({ length: colCount }, (_, colIdx) => {
                           const cellKey = `${weekIdx}-${dayIdx}-${rowIdx}-${colIdx}`;
                           const cellData = memos[cellKey];

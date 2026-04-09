@@ -9,6 +9,11 @@ export function ScheduleProvider({ children }) {
   const [staffMemos, setStaffMemos] = useState({});
   const [holidays, setHolidays] = useState(new Set());
   const [therapists, setTherapists] = useState([]);
+  const [shockwaveSettings, setShockwaveSettings] = useState({
+    start_time: '09:00:00',
+    end_time: '18:00:00',
+    interval_minutes: 10
+  });
   const [shockwaveMemos, setShockwaveMemos] = useState({});
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -126,6 +131,50 @@ export function ScheduleProvider({ children }) {
     }
   }, []);
 
+  // 충격파 스케줄러 환경설정 로드
+  const loadShockwaveSettings = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('shockwave_settings')
+        .select('*')
+        .limit(1)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error; // PGRST116 is empty row
+
+      if (data) {
+        setShockwaveSettings({
+          start_time: data.start_time,
+          end_time: data.end_time,
+          interval_minutes: data.interval_minutes
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load shockwave settings:', err);
+    }
+  }, []);
+
+  // 충격파 스케줄러 환경설정 저장
+  const saveShockwaveSettings = useCallback(async (newSettings) => {
+    try {
+      // 첫번째 행을 모두 비우고 덮어쓰거나, 단일 행 업데이트 (단순화를 위해 삭제 후 삽입)
+      await supabase.from('shockwave_settings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      
+      const { error } = await supabase.from('shockwave_settings').insert({
+        start_time: newSettings.start_time,
+        end_time: newSettings.end_time,
+        interval_minutes: newSettings.interval_minutes
+      });
+
+      if (error) throw error;
+      setShockwaveSettings(newSettings);
+      return true;
+    } catch (err) {
+      console.error('Failed to save shockwave settings:', err);
+      return false;
+    }
+  }, []);
+
   // 충격파 스케줄 로드
   const loadShockwaveMemos = useCallback(async (year, month) => {
     setLoading(true);
@@ -221,6 +270,7 @@ export function ScheduleProvider({ children }) {
       staffMemos, loadStaffMemos, saveStaffMemo,
       holidays, loadHolidays,
       therapists, loadTherapists,
+      shockwaveSettings, loadShockwaveSettings, saveShockwaveSettings,
       shockwaveMemos, loadShockwaveMemos, saveShockwaveMemo,
       notices, loadNotices, saveNotice,
       loading

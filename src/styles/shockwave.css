@@ -104,8 +104,7 @@
 
 /* 스케줄 행 */
 .sw-schedule-body {
-  max-height: 500px;
-  overflow-y: auto;
+  /* 스크롤바가 발생하여 헤더와 행렬 폭이 틀어지는 것을 방지하기 위해 강제 스크롤 및 높이 제한 해제 */
 }
 
 .sw-schedule-row {
@@ -178,6 +177,19 @@
   background: var(--bg-input);
   color: var(--text-primary);
   outline: none;
+}
+
+/* 시간 레이블 (좌측 첫 번째 열) */
+.sw-time-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  user-select: none;
 }
 
 /* 토글 today 보더 */

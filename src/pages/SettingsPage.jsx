@@ -9,15 +9,42 @@ export default function SettingsPage() {
   const { user, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { addToast } = useToast();
+  const { loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
+  
   const [therapists, setTherapists] = useState([]);
   const [newTherapist, setNewTherapist] = useState({ name: '', slot_index: 0 });
   const [holidays, setHolidays] = useState([]);
   const [newHoliday, setNewHoliday] = useState({ date: '', name: '' });
+  
+  const [swSettings, setSwSettings] = useState({ start_time: '09:00', end_time: '18:00', interval_minutes: 10 });
 
   useEffect(() => {
     loadTherapists();
     loadHolidays();
+    loadSettings();
   }, []);
+
+  const loadSettings = async () => {
+    try {
+      const { data, error } = await supabase.from('shockwave_settings').select('*').limit(1).single();
+      if (!error && data) {
+        setSwSettings({
+          start_time: data.start_time.substring(0, 5), // '09:00:00' -> '09:00'
+          end_time: data.end_time.substring(0, 5),
+          interval_minutes: data.interval_minutes
+        });
+      }
+    } catch(e) {}
+  };
+
+  const handleSaveSettings = async () => {
+    const success = await saveShockwaveSettings({
+      start_time: swSettings.start_time + ':00',
+      end_time: swSettings.end_time + ':00',
+      interval_minutes: Number(swSettings.interval_minutes)
+    });
+    if (success) addToast('시간표 설정이 저장되었습니다.', 'success');
+  };
 
   const loadTherapists = async () => {
     const { data } = await supabase.from('shockwave_therapists').select('*').order('slot_index');
@@ -85,6 +112,39 @@ export default function SettingsPage() {
               {theme === 'light' ? '다크 모드로' : '라이트 모드로'}
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* 충격파 시간표 관리 */}
+      <div className="card" style={{ marginBottom: 24 }}>
+        <div className="card-header">
+          <span className="card-title">⏰ 충격파 스케줄 시간표 설정</span>
+        </div>
+        <div className="card-body">
+          <div className="settings-row" style={{ flexWrap: 'wrap', gap: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="settings-row-label">시작 시간</span>
+              <input type="time" className="form-input" style={{ width: 120 }} value={swSettings.start_time} onChange={e => setSwSettings(p => ({ ...p, start_time: e.target.value }))} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="settings-row-label">종료 시간</span>
+              <input type="time" className="form-input" style={{ width: 120 }} value={swSettings.end_time} onChange={e => setSwSettings(p => ({ ...p, end_time: e.target.value }))} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="settings-row-label">시간 단위</span>
+              <select className="form-input" style={{ width: 100 }} value={swSettings.interval_minutes} onChange={e => setSwSettings(p => ({ ...p, interval_minutes: Number(e.target.value) }))}>
+                <option value={10}>10분</option>
+                <option value={15}>15분</option>
+                <option value={20}>20분</option>
+                <option value={30}>30분</option>
+                <option value={60}>60분(1시간)</option>
+              </select>
+            </div>
+            <button className="btn btn-primary" onClick={handleSaveSettings}>적용 및 저장</button>
+          </div>
+          <p style={{ color: 'var(--text-tertiary)', fontSize: '0.8rem', marginTop: 10 }}>
+            * 주의: 시간표 구성을 변경하면 기존에 기록되어 있던 메모들의 위치 기준(줄 번호)이 틀어질 수 있습니다. (초기 세팅용으로 사용 권장)
+          </p>
         </div>
       </div>
 
