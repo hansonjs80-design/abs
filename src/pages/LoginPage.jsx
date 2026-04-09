@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
+const DEV_LOGIN_ID = 'admin';
+const DEV_LOGIN_PASSWORD = '1';
+
 const getAuthMessage = (error, isSignUp) => {
   const message = error?.message || '';
 
@@ -26,8 +29,8 @@ const getAuthMessage = (error, isSignUp) => {
 export default function LoginPage() {
   const { signIn, signUp } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(DEV_LOGIN_ID);
+  const [password, setPassword] = useState(DEV_LOGIN_PASSWORD);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
@@ -88,16 +91,16 @@ export default function LoginPage() {
           )}
 
           <div className="form-group">
-            <label className="form-label" htmlFor="email">이메일</label>
+            <label className="form-label" htmlFor="email">{isSignUp ? '이메일' : '아이디'}</label>
             <input
               id="email"
               className="form-input"
-              type="email"
+              type={isSignUp ? 'email' : 'text'}
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="your@email.com"
+              placeholder={isSignUp ? 'your@email.com' : DEV_LOGIN_ID}
               required
-              autoComplete="email"
+              autoComplete={isSignUp ? 'email' : 'username'}
             />
           </div>
 
@@ -109,9 +112,9 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder="6자 이상"
+              placeholder={isSignUp ? '6자 이상' : DEV_LOGIN_PASSWORD}
               required
-              minLength={6}
+              minLength={isSignUp ? 6 : 1}
               autoComplete={isSignUp ? 'new-password' : 'current-password'}
             />
           </div>
@@ -130,7 +133,18 @@ export default function LoginPage() {
 
         <div className="login-switch">
           {isSignUp ? '이미 계정이 있으신가요?' : '계정이 없으신가요?'}{' '}
-          <button type="button" onClick={() => { setIsSignUp(!isSignUp); setError(''); setInfo(''); }}>
+          <button
+            type="button"
+            onClick={() => {
+              const nextIsSignUp = !isSignUp;
+              setIsSignUp(nextIsSignUp);
+              setError('');
+              setInfo('');
+              setEmail(nextIsSignUp ? '' : DEV_LOGIN_ID);
+              setPassword(nextIsSignUp ? '' : DEV_LOGIN_PASSWORD);
+              setName('');
+            }}
+          >
             {isSignUp ? '로그인' : '회원가입'}
           </button>
         </div>

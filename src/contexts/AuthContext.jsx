@@ -2,6 +2,17 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
 const AuthContext = createContext();
+const DEV_LOGIN_STORAGE_KEY = 'dev-auth-user';
+const DEV_LOGIN_ID = 'admin';
+const DEV_LOGIN_PASSWORD = '1';
+
+const createDevUser = () => ({
+  id: 'local-admin',
+  email: DEV_LOGIN_ID,
+  user_metadata: { name: '관리자' },
+  app_metadata: { provider: 'local-dev' },
+  isLocalDevUser: true,
+});
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -13,12 +24,24 @@ export function AuthProvider({ children }) {
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
         if (!isMounted) return;
-        setUser(session?.user ?? null);
+        if (session?.user) {
+          setUser(session.user);
+          return;
+        }
+
+        const savedDevUser = localStorage.getItem(DEV_LOGIN_STORAGE_KEY);
+        if (savedDevUser) {
+          setUser(JSON.parse(savedDevUser));
+          return;
+        }
+
+        setUser(null);
       })
       .catch((error) => {
         console.error('Failed to restore auth session:', error);
         if (!isMounted) return;
-        setUser(null);
+        const savedDevUser = localStorage.getItem(DEV_LOGIN_STORAGE_KEY);
+        setUser(savedDevUser ? JSON.parse(savedDevUser) : null);
       })
       .finally(() => {
         if (isMounted) setLoading(false);
@@ -35,6 +58,13 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signIn = async (email, password) => {
+    if (email === DEV_LOGIN_ID && password === DEV_LOGIN_PASSWORD) {
+      const devUser = createDevUser();
+      localStorage.setItem(DEV_LOGIN_STORAGE_KEY, JSON.stringify(devUser));
+      setUser(devUser);
+      return { user: devUser, session: null };
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
     return data;
@@ -54,6 +84,12 @@ export function AuthProvider({ children }) {
   };
 
   const signOut = async () => {
+    localStorage.removeItem(DEV_LOGIN_STORAGE_KEY);
+    if (user?.isLocalDevUser) {
+      setUser(null);
+      return;
+    }
+
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   };
