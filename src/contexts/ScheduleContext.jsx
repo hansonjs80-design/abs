@@ -159,15 +159,13 @@ export function ScheduleProvider({ children }) {
   // 충격파 스케줄러 환경설정 저장
   const saveShockwaveSettings = useCallback(async (newSettings) => {
     try {
-      // 첫번째 행을 모두 비우고 덮어쓰거나, 단일 행 업데이트 (단순화를 위해 삭제 후 삽입)
-      await supabase.from('shockwave_settings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      
-      const { error } = await supabase.from('shockwave_settings').insert({
+      const { error } = await supabase.from('shockwave_settings').upsert({
+        id: '00000000-0000-0000-0000-000000000000',
         start_time: newSettings.start_time,
         end_time: newSettings.end_time,
         interval_minutes: newSettings.interval_minutes,
         day_overrides: newSettings.day_overrides || {}
-      });
+      }, { onConflict: 'id' });
 
       if (error) throw error;
       setShockwaveSettings(newSettings);

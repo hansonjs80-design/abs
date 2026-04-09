@@ -77,3 +77,13 @@ CREATE TABLE IF NOT EXISTS public.shockwave_settings (
 );
 
 ALTER TABLE public.shockwave_settings DISABLE ROW LEVEL SECURITY;
+
+-- =============================================
+-- [긴급 패치] 기존 설정 테이블에 요일별 설정 및 병합 데이터 컬럼 추가
+-- (이미 테이블이 생성된 경우를 대비한 ALTER 명령)
+-- =============================================
+ALTER TABLE public.shockwave_settings 
+ADD COLUMN IF NOT EXISTS day_overrides jsonb DEFAULT '{}'::jsonb;
+
+ALTER TABLE public.shockwave_schedules 
+ADD COLUMN IF NOT EXISTS merge_span jsonb DEFAULT '{"rowSpan": 1, "colSpan": 1, "mergedInto": null}'::jsonb;
