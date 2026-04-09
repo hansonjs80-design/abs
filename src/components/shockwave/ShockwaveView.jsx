@@ -212,6 +212,62 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
       return;
     }
 
+    // Cmd+E → 병합 / 병합 해제
+    if (isMeta && e.key.toLowerCase() === 'e') {
+      e.preventDefault();
+      const keysArray = Array.from(selectedKeys);
+      if (keysArray.length <= 1) return; // 하나만 선택시 무시
+
+      // 마스터 셀 찾기 (가장 왼쪽 위)
+      let minRow = 9999, minCol = 9999, maxRow = -1, maxCol = -1;
+      keysArray.forEach(k => {
+        const [,, r, c] = k.split('-').map(Number);
+        if (r < minRow) minRow = r;
+        if (c < minCol) minCol = c;
+        if (r > maxRow) maxRow = r;
+        if (c > maxCol) maxCol = c;
+      });
+
+      const masterKey = cellKey(w, d, minRow, minCol);
+      const isAlreadyMerged = memos[masterKey]?.merge_span?.mergedInto === null && (memos[masterKey]?.merge_span?.colSpan > 1 || memos[masterKey]?.merge_span?.rowSpan > 1);
+
+      const payload = [];
+      if (isAlreadyMerged) {
+        // 언머지
+        for (let row = minRow; row <= maxRow; row++) {
+          for (let col = minCol; col <= maxCol; col++) {
+            const k = cellKey(w, d, row, col);
+            payload.push({
+              year: currentYear, month: currentMonth, week_index: w, day_index: d, row_index: row, col_index: col,
+              merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+              content: memos[k]?.content || ''
+            });
+          }
+        }
+      } else {
+        // 머지
+        for (let row = minRow; row <= maxRow; row++) {
+          for (let col = minCol; col <= maxCol; col++) {
+            const k = cellKey(w, d, row, col);
+            const isMaster = (k === masterKey);
+            payload.push({
+              year: currentYear, month: currentMonth, week_index: w, day_index: d, row_index: row, col_index: col,
+              merge_span: isMaster 
+                ? { rowSpan: maxRow - minRow + 1, colSpan: maxCol - minCol + 1, mergedInto: null }
+                : { rowSpan: 1, colSpan: 1, mergedInto: masterKey },
+              content: isMaster ? (memos[k]?.content || '') : ''
+            });
+          }
+        }
+      }
+      
+      if (payload.length > 0) {
+        saveShockwaveMemosBulk(payload);
+        addToast(isAlreadyMerged ? '병합이 해제되었습니다' : '셀이 병합되었습니다', 'info');
+      }
+      return;
+    }
+
     // Tab → 우측 이동
     if (e.key === 'Tab') {
       e.preventDefault();
@@ -348,80 +404,104 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                   </div>
 
                   {/* 스케줄 바디 */}
-                  <div className="sw-schedule-body">
-                    {getTimeSlotsForDay(dayInfo.dow).map((slotInfo) => {
+                  <div className="sw-schedule-body" style={{ display: 'grid', gridTemplateColumns: gridCols, gridAutoRows: 'minmax(24px, auto)', borderBottom: '1px solid var(--border-color-light)' }}>
+                    {getTimeSlotsForDay(dayInfo.dow).flatMap((slotInfo) => {
                       const rowIdx = slotInfo.idx;
-                      return (
-                        <div
-                          key={rowIdx}
-                          className={`sw-schedule-row${slotInfo.isLunch ? ' sw-lunch-row' : ''}${slotInfo.disabled ? ' sw-disabled-row' : ''}`}
-                          style={{ gridTemplateColumns: gridCols }}
-                        >
-                          {/* 시간 라벨 (조건부) */}
-                          {showTimeCol && (
-                            <div className={`sw-time-label${slotInfo.isLunch ? ' lunch' : ''}${slotInfo.disabled ? ' disabled' : ''}`} style={slotInfo.isMergedLunch ? { fontSize: '9px', whiteSpace: 'nowrap' } : undefined}>
-                              {slotInfo.label}
-                            </div>
-                          )}
+                      const elements = [];
+                      
+                      // 1. Time Label
+                      if (showTimeCol) {
+                        elements.push(
+                          <div key={`time-${rowIdx}`} className={`sw-time-label${slotInfo.isLunch ? ' lunch' : ''}${slotInfo.disabled ? ' disabled' : ''}`} style={{ borderBottom: '1px solid var(--border-color-light)', ...(slotInfo.isMergedLunch ? { fontSize: '9px', whiteSpace: 'nowrap' } : {}) }}>
+                            {slotInfo.label}
+                          </div>
+                        );
+                      }
 
-                          {slotInfo.isMergedLunch ? (
-                            /* 점심시간 압축 행 - 1개의 셀로 병합 */
-                            <div className="sw-cell disabled" style={{ gridColumn: `span ${colCount}`, justifyContent: 'center', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-tertiary)', opacity: 0.6, fontSize: '10px' }}>
-                              점심시간
-                            </div>
-                          ) : slotInfo.disabled ? (
-                            /* 운영 시간 외 - 빈 칸으로 차단 */
-                            Array.from({ length: colCount }, (_, colIdx) => (
-                              <div key={colIdx} className="sw-cell disabled" />
-                            ))
-                          ) : (
-                            Array.from({ length: colCount }, (_, colIdx) => {
-                              const key = cellKey(weekIdx, dayIdx, rowIdx, colIdx);
-                              const cellData = memos[key];
-                              const content = cellData?.content || '';
-                              const isEditing = editingCell === key;
-                              const isSelected = selectedKeys.has(key);
-                              const isPrimary = selectedCell && selectedCell.w === weekIdx && selectedCell.d === dayIdx && selectedCell.r === rowIdx && selectedCell.c === colIdx;
+                      // 2. Cells
+                      if (slotInfo.isMergedLunch) {
+                        elements.push(
+                          <div key={`lunch-${rowIdx}`} className="sw-cell disabled" style={{ gridColumn: `span ${colCount}`, justifyContent: 'center', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-tertiary)', opacity: 0.6, fontSize: '10px', borderBottom: '1px solid var(--border-color-light)' }}>
+                            점심시간
+                          </div>
+                        );
+                      } else if (slotInfo.disabled) {
+                        for (let colIdx = 0; colIdx < colCount; colIdx++) {
+                          elements.push(<div key={`dis-${rowIdx}-${colIdx}`} className="sw-cell disabled" style={{ borderBottom: '1px solid var(--border-color-light)' }} />);
+                        }
+                      } else {
+                        for (let colIdx = 0; colIdx < colCount; colIdx++) {
+                          const key = cellKey(weekIdx, dayIdx, rowIdx, colIdx);
+                          const cellData = memos[key];
+                          const content = cellData?.content || '';
+                          const mergeSpan = cellData?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+                          
+                          if (mergeSpan.mergedInto) {
+                            continue; // 병합된 하위 셀은 묶어서 렌더링 생략
+                          }
 
-                              let cls = 'sw-cell';
-                              if (!dayInfo.isCurrentMonth) cls += ' other-month-bg';
-                              else if (dayInfo.isHoliday) cls += ' holiday-bg';
-                              if (cellData?.bg_color === '#ffe599') cls += ' preserve';
-                              if (colCount >= 3 && has4060Pattern(content)) cls += ' color-4060';
-                              if (isSelected) cls += ' selected';
-                              if (isPrimary) cls += ' primary-selected';
-                              if (slotInfo.isLunch) cls += ' lunch-cell';
+                          const isEditing = editingCell === key;
+                          const isSelected = selectedKeys.has(key);
+                          const isPrimary = selectedCell && selectedCell.w === weekIdx && selectedCell.d === dayIdx && selectedCell.r === rowIdx && selectedCell.c === colIdx;
 
-                              if (isEditing) {
-                                return (
-                                  <div key={colIdx} className="sw-cell editing">
-                                    <input
-                                      className="sw-cell-input"
-                                      value={editValue}
-                                      onChange={e => setEditValue(e.target.value)}
-                                      onBlur={() => handleCellSave(weekIdx, dayIdx, rowIdx, colIdx)}
-                                      onKeyDown={e => handleEditKeyDown(e, weekIdx, dayIdx, rowIdx, colIdx)}
-                                      autoFocus
-                                    />
-                                  </div>
-                                );
-                              }
+                          // View Span Calculation (in case it spans across omitted rows like lunch)
+                          let visualRowSpan = 1;
+                          if (mergeSpan.rowSpan > 1) {
+                            const endRowIdx = rowIdx + mergeSpan.rowSpan - 1;
+                            visualRowSpan = getTimeSlotsForDay(dayInfo.dow).filter(s => s.idx >= rowIdx && s.idx <= endRowIdx).length;
+                          }
 
-                              return (
-                                <div
-                                  key={colIdx}
-                                  className={cls}
-                                  onClick={(e) => handleCellClick(weekIdx, dayIdx, rowIdx, colIdx, e)}
-                                  onDoubleClick={() => handleCellDoubleClick(weekIdx, dayIdx, rowIdx, colIdx, content)}
-                                  title={content}
-                                >
-                                  {content}
-                                </div>
-                              );
-                            })
-                          )}
-                        </div>
-                      );
+                          let cls = 'sw-cell';
+                          if (!dayInfo.isCurrentMonth) cls += ' other-month-bg';
+                          else if (dayInfo.isHoliday) cls += ' holiday-bg';
+                          if (cellData?.bg_color === '#ffe599') cls += ' preserve';
+                          if (colCount >= 3 && has4060Pattern(content)) cls += ' color-4060';
+                          if (isSelected) cls += ' selected';
+                          if (isPrimary) cls += ' primary-selected';
+                          if (slotInfo.isLunch) cls += ' lunch-cell';
+
+                          let inlineStyle = { borderBottom: '1px solid var(--border-color-light)' };
+                          if (mergeSpan.colSpan > 1) inlineStyle.gridColumn = `span ${mergeSpan.colSpan}`;
+                          if (visualRowSpan > 1) inlineStyle.gridRow = `span ${visualRowSpan}`;
+                          
+                          // 마스터 셀 중앙 효과
+                          if (visualRowSpan > 1 || mergeSpan.colSpan > 1) {
+                            inlineStyle.display = 'flex';
+                            inlineStyle.alignItems = 'center';
+                            inlineStyle.justifyContent = 'center';
+                            cls += ' merged-master';
+                          }
+
+                          if (isEditing) {
+                            elements.push(
+                              <div key={colIdx} className="sw-cell editing" style={inlineStyle}>
+                                <input
+                                  className="sw-cell-input"
+                                  value={editValue}
+                                  onChange={e => setEditValue(e.target.value)}
+                                  onBlur={() => handleCellSave(weekIdx, dayIdx, rowIdx, colIdx)}
+                                  onKeyDown={e => handleEditKeyDown(e, weekIdx, dayIdx, rowIdx, colIdx)}
+                                  autoFocus
+                                />
+                              </div>
+                            );
+                          } else {
+                            elements.push(
+                              <div
+                                key={colIdx}
+                                className={cls}
+                                style={inlineStyle}
+                                onClick={(e) => handleCellClick(weekIdx, dayIdx, rowIdx, colIdx, e)}
+                                onDoubleClick={() => handleCellDoubleClick(weekIdx, dayIdx, rowIdx, colIdx, content)}
+                                title={content}
+                              >
+                                {content}
+                              </div>
+                            );
+                          }
+                        }
+                      }
+                      return elements;
                     })}
                   </div>
                 </div>

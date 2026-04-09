@@ -49,7 +49,7 @@
 .sw-day-header {
   padding: 8px 4px;
   text-align: center;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-tertiary);
@@ -222,19 +222,32 @@
   opacity: 0.6;
 }
 
-/* 비활성(disabled) 셀 - 운영 시간 외 */
-.sw-cell.disabled {
-  background: var(--bg-tertiary);
-  cursor: default;
-  opacity: 0.3;
+/* 비활성(disabled) 시간대 및 점심시간 셀 */
+.sw-disabled-row .sw-cell, .sw-cell.disabled {
+  background: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--bg-tertiary) 60%, transparent),
+    color-mix(in srgb, var(--bg-tertiary) 60%, transparent) 10px,
+    color-mix(in srgb, var(--bg-tertiary) 40%, transparent) 10px,
+    color-mix(in srgb, var(--bg-tertiary) 40%, transparent) 20px
+  );
+  cursor: not-allowed;
+  opacity: 0.6;
   pointer-events: none;
 }
 
-/* 점심시간 행 */
-.sw-lunch-row .sw-cell {
-  background: color-mix(in srgb, var(--bg-tertiary) 70%, transparent);
-  opacity: 0.5;
-  pointer-events: none;
+/* 점심시간 셀 추가 효과 */
+.sw-cell.lunch-cell {
+  background: color-mix(in srgb, var(--bg-tertiary) 40%, transparent);
+}
+
+/* 병합된 셀(마스터) 스타일 */
+.sw-cell.merged-master {
+  z-index: 5;
+  white-space: pre-wrap; /* 병합 시 길어지는 텍스트 줄바꿈 허용 */
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 /* 비활성 행 */

@@ -229,6 +229,39 @@ export function ScheduleProvider({ children }) {
     }
   }, []);
 
+  // 다중 셀 동시 업데이트 (병합/병합해제 등)
+  const saveShockwaveMemosBulk = useCallback(async (memosArray) => {
+    try {
+      if (!memosArray || memosArray.length === 0) return true;
+      
+      const { data, error } = await supabase
+        .from('shockwave_schedules')
+        .upsert(
+          memosArray.map(m => ({
+            ...m,
+            updated_at: new Date().toISOString()
+          })), 
+          { onConflict: 'year,month,week_index,day_index,row_index,col_index' }
+        )
+        .select();
+
+      if (error) throw error;
+
+      setShockwaveMemos(prev => {
+        const next = { ...prev };
+        (data || memosArray).forEach(item => {
+          const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+          next[key] = { ...next[key], ...item };
+        });
+        return next;
+      });
+      return true;
+    } catch (err) {
+      console.error('Failed to save bulk shockwave memos:', err);
+      return false;
+    }
+  }, []);
+
   // 공지사항 로드/저장
   const loadNotices = useCallback(async () => {
     try {
@@ -272,7 +305,7 @@ export function ScheduleProvider({ children }) {
       holidays, loadHolidays,
       therapists, loadTherapists,
       shockwaveSettings, loadShockwaveSettings, saveShockwaveSettings,
-      shockwaveMemos, loadShockwaveMemos, saveShockwaveMemo,
+      shockwaveMemos, loadShockwaveMemos, saveShockwaveMemo, saveShockwaveMemosBulk,
       notices, loadNotices, saveNotice,
       loading
     }}>
