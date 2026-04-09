@@ -11,10 +11,12 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
   const { currentYear, currentMonth } = useSchedule();
   const { addToast } = useToast();
   const viewRef = useRef(null);
+  const dragSelectionRef = useRef(null);
 
   // ── 셀 조작 상태 (구글 시트 방식) ──
   const [selectedCell, setSelectedCell] = useState(null);     // { w, d, r, c }
   const [rangeEnd, setRangeEnd] = useState(null);             // { w, d, r, c } (Shift 선택 끝점)
+  const [selectedKeys, setSelectedKeys] = useState(() => new Set());
   const [editingCell, setEditingCell] = useState(null);       // "w-d-r-c" 키 문자열
   const [editValue, setEditValue] = useState('');
   const [activeDayKey, setActiveDayKey] = useState(null);     // "w-d" (시간열 표시 대상)
@@ -81,53 +83,87 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
   const cellKey = (w, d, r, c) => `${w}-${d}-${r}-${c}`;
   const dayKey = (w, d) => `${w}-${d}`;
 
-  // ── 선택 범위 계산 ──
-  const getSelectedRange = useCallback(() => {
-    if (!selectedCell) return new Set();
-    if (!rangeEnd || (rangeEnd.w === selectedCell.w && rangeEnd.d === selectedCell.d && rangeEnd.r === selectedCell.r && rangeEnd.c === selectedCell.c)) {
-      return new Set([cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c)]);
+  const buildRangeKeys = useCallback((anchor, target) => {
+    if (!anchor || !target) return new Set();
+    if (anchor.w !== target.w || anchor.d !== target.d) {
+      return new Set([cellKey(target.w, target.d, target.r, target.c)]);
     }
-    // 같은 요일 안에서만 범위 선택 가능
-    if (selectedCell.w !== rangeEnd.w || selectedCell.d !== rangeEnd.d) {
-      return new Set([cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c)]);
-    }
-    const rMin = Math.min(selectedCell.r, rangeEnd.r);
-    const rMax = Math.max(selectedCell.r, rangeEnd.r);
-    const cMin = Math.min(selectedCell.c, rangeEnd.c);
-    const cMax = Math.max(selectedCell.c, rangeEnd.c);
+
+    const rMin = Math.min(anchor.r, target.r);
+    const rMax = Math.max(anchor.r, target.r);
+    const cMin = Math.min(anchor.c, target.c);
+    const cMax = Math.max(anchor.c, target.c);
     const keys = new Set();
     for (let r = rMin; r <= rMax; r++) {
       for (let c = cMin; c <= cMax; c++) {
-        keys.add(cellKey(selectedCell.w, selectedCell.d, r, c));
+        keys.add(cellKey(anchor.w, anchor.d, r, c));
       }
     }
     return keys;
-  }, [selectedCell, rangeEnd]);
+  }, []);
 
-  const selectedKeys = getSelectedRange();
+  const selectSingleCell = useCallback((cell) => {
+    const key = cellKey(cell.w, cell.d, cell.r, cell.c);
+    setSelectedCell(cell);
+    setRangeEnd(null);
+    setSelectedKeys(new Set([key]));
+  }, []);
+
+  const updateDraggedSelection = useCallback((targetCell) => {
+    const dragState = dragSelectionRef.current;
+    if (!dragState) return;
+
+    const nextKeys = buildRangeKeys(dragState.anchor, targetCell);
+    setSelectedCell(dragState.anchor);
+    setRangeEnd(targetCell);
+    setSelectedKeys(nextKeys);
+  }, [buildRangeKeys]);
 
   // ── 셀 클릭 = 선택 (편집 아님) ──
-  const handleCellClick = useCallback((w, d, r, c, e) => {
-    if (e?.shiftKey && selectedCell) {
-      // Shift 클릭 → 범위 선택
-      setRangeEnd({ w, d, r, c });
-    } else {
-      setSelectedCell({ w, d, r, c });
+  const handleCellMouseDown = useCallback((w, d, r, c, e) => {
+    const cell = { w, d, r, c };
+    const key = cellKey(w, d, r, c);
+    const isMeta = e?.metaKey || e?.ctrlKey;
+
+    if (e?.button !== 0) return;
+
+    if (isMeta) {
+      setSelectedCell(cell);
       setRangeEnd(null);
+      setSelectedKeys((prev) => {
+        const next = new Set(prev);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next.size ? next : new Set([key]);
+      });
+      dragSelectionRef.current = null;
+    } else if (e?.shiftKey && selectedCell) {
+      setSelectedCell(selectedCell);
+      setRangeEnd(cell);
+      setSelectedKeys(buildRangeKeys(selectedCell, cell));
+      dragSelectionRef.current = { anchor: selectedCell };
+    } else {
+      selectSingleCell(cell);
+      dragSelectionRef.current = { anchor: cell };
     }
+
     setEditingCell(null);
     setActiveDayKey(dayKey(w, d));
-  }, [selectedCell]);
+  }, [selectedCell, buildRangeKeys, selectSingleCell]);
+
+  const handleCellMouseEnter = useCallback((w, d, r, c) => {
+    if (!dragSelectionRef.current) return;
+    updateDraggedSelection({ w, d, r, c });
+  }, [updateDraggedSelection]);
 
   // ── 더블 클릭 = 편집 모드 진입 ──
   const handleCellDoubleClick = useCallback((w, d, r, c, content) => {
     const key = cellKey(w, d, r, c);
     setEditingCell(key);
     setEditValue(content || '');
-    setSelectedCell({ w, d, r, c });
-    setRangeEnd(null);
+    selectSingleCell({ w, d, r, c });
     setActiveDayKey(dayKey(w, d));
-  }, []);
+  }, [selectSingleCell]);
 
   // ── 편집 저장 ──
   const handleCellSave = useCallback(async (w, d, r, c) => {
@@ -201,10 +237,11 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
       if (e.key === 'ArrowRight') nc = Math.min(colCount - 1, c + 1);
 
       if (e.shiftKey) {
-        setRangeEnd({ w, d, r: nr, c: nc });
+        const nextCell = { w, d, r: nr, c: nc };
+        setRangeEnd(nextCell);
+        setSelectedKeys(buildRangeKeys(selectedCell, nextCell));
       } else {
-        setSelectedCell({ w, d, r: nr, c: nc });
-        setRangeEnd(null);
+        selectSingleCell({ w, d, r: nr, c: nc });
       }
       return;
     }
@@ -269,8 +306,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
     if (e.key === 'Tab') {
       e.preventDefault();
       const nc = e.shiftKey ? Math.max(0, c - 1) : Math.min(colCount - 1, c + 1);
-      setSelectedCell({ w, d, r, c: nc });
-      setRangeEnd(null);
+      selectSingleCell({ w, d, r, c: nc });
       return;
     }
 
@@ -321,7 +357,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
       setEditValue(e.key);
       return;
     }
-  }, [selectedCell, editingCell, memos, selectedKeys, colCount, baseTimeSlots.length, currentYear, currentMonth, onSaveMemo, deleteCells, addToast]);
+  }, [selectedCell, editingCell, memos, selectedKeys, colCount, baseTimeSlots.length, currentYear, currentMonth, onSaveMemo, deleteCells, addToast, buildRangeKeys, selectSingleCell]);
 
   // 키보드 이벤트 등록
   useEffect(() => {
@@ -332,14 +368,22 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
     }
   }, [handleKeyDown]);
 
+  useEffect(() => {
+    const handleMouseUp = () => {
+      dragSelectionRef.current = null;
+    };
+
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => window.removeEventListener('mouseup', handleMouseUp);
+  }, []);
+
   // 편집 완료 후 아래로 이동
   const handleEditKeyDown = useCallback((e, w, d, r, c) => {
     if (e.key === 'Enter') {
       e.target.blur();
       // Enter 후 아래 셀로 이동
       const nr = Math.min(baseTimeSlots.length - 1, r + 1);
-      setSelectedCell({ w, d, r: nr, c });
-      setRangeEnd(null);
+      selectSingleCell({ w, d, r: nr, c });
     }
     if (e.key === 'Escape') {
       setEditingCell(null);
@@ -348,10 +392,9 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
       e.preventDefault();
       e.target.blur();
       const nc = e.shiftKey ? Math.max(0, c - 1) : Math.min(colCount - 1, c + 1);
-      setSelectedCell({ w, d, r, c: nc });
-      setRangeEnd(null);
+      selectSingleCell({ w, d, r, c: nc });
     }
-  }, [baseTimeSlots.length, colCount]);
+  }, [baseTimeSlots.length, colCount, selectSingleCell]);
 
   return (
     <div className="shockwave-view animate-fade-in" ref={viewRef} tabIndex={0} style={{ outline: 'none' }}>
@@ -428,8 +471,17 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                       if (slotInfo.disabled) {
                         for (let colIdx = 0; colIdx < colCount; colIdx++) {
                           const isLunchCell = slotInfo.isLunch;
+                          const gridColumnStart = showTimeCol ? colIdx + 2 : colIdx + 1;
                           elements.push(
-                            <div key={`dis-${rowIdx}-${colIdx}`} className={`sw-cell disabled${isLunchCell ? ' lunch-cell' : ''}`} style={{ borderBottom: '1px solid var(--border-color-light)' }}>
+                            <div
+                              key={`dis-${rowIdx}-${colIdx}`}
+                              className={`sw-cell disabled${isLunchCell ? ' lunch-cell' : ''}`}
+                              style={{
+                                gridColumn: `${gridColumnStart}`,
+                                gridRow: `${gridRowStart}`,
+                                borderBottom: '1px solid var(--border-color-light)',
+                              }}
+                            >
                               {isLunchCell && showTimeCol && colIdx === 0 ? '' : ''}
                             </div>
                           );
@@ -499,7 +551,8 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                                 key={colIdx}
                                 className={cls}
                                 style={inlineStyle}
-                                onClick={(e) => handleCellClick(weekIdx, dayIdx, rowIdx, colIdx, e)}
+                                onMouseDown={(e) => handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e)}
+                                onMouseEnter={() => handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx)}
                                 onDoubleClick={() => handleCellDoubleClick(weekIdx, dayIdx, rowIdx, colIdx, content)}
                                 title={content}
                               >
