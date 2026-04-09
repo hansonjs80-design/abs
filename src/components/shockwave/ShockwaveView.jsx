@@ -7,7 +7,7 @@ import { useToast } from '../common/Toast';
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
-export default function ShockwaveView({ therapists, settings, memos, onLoadMemos, onSaveMemo, holidays }) {
+export default function ShockwaveView({ therapists, settings, memos, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
   const { currentYear, currentMonth } = useSchedule();
   const { addToast } = useToast();
   const viewRef = useRef(null);
@@ -23,6 +23,27 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
   const clipboardRef = useRef({ content: '', mode: null });   // mode: 'copy' | 'cut', cutKey
 
   const colCount = Math.max(1, therapists.length);
+  const staffMemoByDate = useMemo(() => {
+    const map = {};
+    Object.values(staffMemos || {}).forEach(item => {
+      if (!item) return;
+      const key = `${item.year}-${item.month}-${item.day}`;
+      if (!map[key]) map[key] = [];
+      map[key].push(item.content || '');
+    });
+    return map;
+  }, [staffMemos]);
+
+  const isTherapistOff = useCallback((dateKey, name) => {
+    if (!name) return false;
+    const entries = staffMemoByDate[dateKey];
+    if (!entries || entries.length === 0) return false;
+    const normalizedName = name.toLowerCase();
+    return entries.some(content => {
+      const normalized = (content || '').toLowerCase();
+      return normalized.includes(normalizedName) && normalized.includes('pt');
+    });
+  }, [staffMemoByDate]);
 
   // ── 시간 슬롯 생성 ──
   const baseTimeSlots = useMemo(() => {
@@ -518,6 +539,9 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                           if (isSelected) cls += ' selected';
                           if (isPrimary) cls += ' primary-selected';
                           if (slotInfo.isLunch) cls += ' lunch-cell';
+                          const dateKey = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}`;
+                          const therapistName = therapists[colIdx]?.name || '';
+                          if (!isSelected && isTherapistOff(dateKey, therapistName)) cls += ' staff-off';
 
                           let inlineStyle = {
                             gridColumn: `${gridColumnStart}${mergeSpan.colSpan > 1 ? ` / span ${mergeSpan.colSpan}` : ''}`,
