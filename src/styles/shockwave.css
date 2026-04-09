@@ -149,7 +149,8 @@
 }
 
 .sw-cell.staff-off {
-  background: color-mix(in srgb, var(--sw-4060-color) 30%, var(--bg-secondary) 70%);
+  background: #93c47e;
+  color: var(--text-primary);
 }
 
 .sw-cell.primary-selected {
@@ -172,11 +173,11 @@
 }
 
 .sw-cell.holiday-bg {
-  background: var(--sw-holiday-bg);
+  background: #f8c2c2;
 }
 
 .sw-cell.other-month-bg {
-  background: var(--sw-green-other);
+  background: #93c47e;
 }
 
 .sw-cell.color-4060 {
