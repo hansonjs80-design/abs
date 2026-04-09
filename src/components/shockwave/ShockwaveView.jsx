@@ -411,7 +411,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
               const thisDayKey = dayKey(weekIdx, dayIdx);
               // 첫 번째 요일 또는 활성화된 요일에만 시간 열 표시
               const showTimeCol = dayIdx === 0 || activeDayKey === thisDayKey;
-              const therapistCols = `repeat(${colCount}, 1.3fr)`;
+              const therapistCols = `repeat(${colCount}, 1.5fr)`;
               const gridCols = showTimeCol
                 ? `46px ${therapistCols}`
                 : therapistCols;
