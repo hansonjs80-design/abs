@@ -106,6 +106,67 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
   const cellKey = (w, d, r, c) => `${w}-${d}-${r}-${c}`;
   const dayKey = (w, d) => `${w}-${d}`;
 
+  const computeSelectionInfo = useCallback(() => {
+    if (!selectedCell || !selectedKeys || selectedKeys.size === 0) return null;
+    const { w, d } = selectedCell;
+    let minRow = Infinity;
+    let maxRow = -Infinity;
+    let minCol = Infinity;
+    let maxCol = -Infinity;
+    let hasValid = false;
+
+    Array.from(selectedKeys).forEach((key) => {
+      const [kw, kd, r, c] = key.split('-').map(Number);
+      if (kw !== w || kd !== d) return;
+      hasValid = true;
+      minRow = Math.min(minRow, r);
+      maxRow = Math.max(maxRow, r);
+      minCol = Math.min(minCol, c);
+      maxCol = Math.max(maxCol, c);
+
+      const mergeSpan = memos[key]?.merge_span;
+      if (mergeSpan?.mergedInto) {
+        const masterKey = mergeSpan.mergedInto;
+        const [mw, md, mr, mc] = masterKey.split('-').map(Number);
+        if (mw !== w || md !== d) return;
+        const masterSpan = memos[masterKey]?.merge_span || { rowSpan: 1, colSpan: 1 };
+        minRow = Math.min(minRow, mr);
+        minCol = Math.min(minCol, mc);
+        maxRow = Math.max(maxRow, mr + masterSpan.rowSpan - 1);
+        maxCol = Math.max(maxCol, mc + masterSpan.colSpan - 1);
+      } else if (mergeSpan?.rowSpan > 1 || mergeSpan?.colSpan > 1) {
+        maxRow = Math.max(maxRow, r + mergeSpan.rowSpan - 1);
+        maxCol = Math.max(maxCol, c + mergeSpan.colSpan - 1);
+      }
+    });
+
+    if (!hasValid || minRow === Infinity) return null;
+    const boundedMinRow = minRow === Infinity ? selectedCell.r : minRow;
+    const boundedMaxRow = maxRow === -Infinity ? selectedCell.r : maxRow;
+    const boundedMinCol = minCol === Infinity ? selectedCell.c : minCol;
+    const boundedMaxCol = maxCol === -Infinity ? selectedCell.c : maxCol;
+    const masterKey = cellKey(w, d, boundedMinRow, boundedMinCol);
+    const masterSpan = memos[masterKey]?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+    const selectionRowSpan = boundedMaxRow - boundedMinRow + 1;
+    const selectionColSpan = boundedMaxCol - boundedMinCol + 1;
+    const isMergedMaster = masterSpan.mergedInto === null && (masterSpan.rowSpan > 1 || masterSpan.colSpan > 1);
+
+    return {
+      w,
+      d,
+      minRow: boundedMinRow,
+      maxRow: boundedMaxRow,
+      minCol: boundedMinCol,
+      maxCol: boundedMaxCol,
+      masterKey,
+      masterSpan,
+      selectionRowSpan,
+      selectionColSpan,
+      isMergedMaster,
+      selectionMultiple: selectionRowSpan > 1 || selectionColSpan > 1,
+    };
+  }, [selectedCell, selectedKeys, memos, cellKey]);
+
   const buildRangeKeys = useCallback((anchor, target) => {
     if (!anchor || !target) return new Set();
     if (anchor.w !== target.w || anchor.d !== target.d) {
@@ -212,25 +273,11 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
   }, [currentYear, currentMonth, memos, onSaveMemo]);
 
   const tryMergeSelection = useCallback(() => {
-    if (!selectedCell) return;
-    const keysArray = Array.from(selectedKeys);
-    if (keysArray.length <= 1) return;
-    const { w, d } = selectedCell;
-
-    let minRow = 9999, minCol = 9999, maxRow = -1, maxCol = -1;
-    keysArray.forEach(k => {
-      const [kw, kd, r, c] = k.split('-').map(Number);
-      if (kw !== w || kd !== d) return;
-      if (r < minRow) minRow = r;
-      if (c < minCol) minCol = c;
-      if (r > maxRow) maxRow = r;
-      if (c > maxCol) maxCol = c;
-    });
-
-    if (minRow === 9999) return;
-    const masterKey = cellKey(w, d, minRow, minCol);
-    const isAlreadyMerged = memos[masterKey]?.merge_span?.mergedInto === null
-      && (memos[masterKey]?.merge_span?.colSpan > 1 || memos[masterKey]?.merge_span?.rowSpan > 1);
+    const selection = computeSelectionInfo();
+    if (!selection) return;
+    const { w, d, minRow, minCol, maxRow, maxCol, masterKey } = selection;
+    const isAlreadyMerged = selection.isMergedMaster;
+    if (!isAlreadyMerged && !selection.selectionMultiple) return;
 
     const payload = [];
     if (isAlreadyMerged) {
@@ -265,7 +312,57 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
       addToast(isAlreadyMerged ? '병합이 해제되었습니다' : '셀이 병합되었습니다', 'info');
     }
     setContextMenu(null);
-  }, [selectedCell, selectedKeys, currentYear, currentMonth, memos, saveShockwaveMemosBulk, addToast]);
+  }, [computeSelectionInfo, currentYear, currentMonth, memos, saveShockwaveMemosBulk, addToast, cellKey]);
+
+  const selectionInfo = computeSelectionInfo();
+
+  const handleCopySelection = useCallback(() => {
+    if (!selectedCell) return;
+    const { w, d, r, c } = selectedCell;
+    const key = cellKey(w, d, r, c);
+    const content = memos[key]?.content || '';
+    clipboardRef.current = { content, mode: 'copy', key: null };
+    try { navigator.clipboard.writeText(content); } catch (_) {}
+    addToast('복사됨', 'info');
+    setContextMenu(null);
+  }, [selectedCell, memos, addToast, cellKey]);
+
+  const handleCutSelection = useCallback(() => {
+    if (!selectedCell) return;
+    const { w, d, r, c } = selectedCell;
+    const key = cellKey(w, d, r, c);
+    const content = memos[key]?.content || '';
+    clipboardRef.current = { content, mode: 'cut', key };
+    try { navigator.clipboard.writeText(content); } catch (_) {}
+    onSaveMemo(currentYear, currentMonth, w, d, r, c, '');
+    addToast('잘라내기됨', 'info');
+    setContextMenu(null);
+  }, [selectedCell, memos, onSaveMemo, addToast, currentYear, currentMonth, cellKey]);
+
+  const handlePasteSelection = useCallback(() => {
+    if (!selectedCell) return;
+    const pasteContent = clipboardRef.current?.content;
+    if (pasteContent === undefined || pasteContent === null) {
+      setContextMenu(null);
+      return;
+    }
+    const { w, d, r, c } = selectedCell;
+    onSaveMemo(currentYear, currentMonth, w, d, r, c, pasteContent);
+    if (clipboardRef.current.mode === 'cut' && clipboardRef.current.key) {
+      const [ow, od, or2, oc] = clipboardRef.current.key.split('-').map(Number);
+      onSaveMemo(currentYear, currentMonth, ow, od, or2, oc, '');
+      clipboardRef.current = { content: pasteContent, mode: 'copy', key: null };
+    }
+    addToast('붙여넣기 완료', 'success');
+    setContextMenu(null);
+  }, [selectedCell, onSaveMemo, currentYear, currentMonth, addToast]);
+
+  const handleContextAction = useCallback((action) => {
+    if (action === 'copy') handleCopySelection();
+    if (action === 'cut') handleCutSelection();
+    if (action === 'paste') handlePasteSelection();
+    if (action === 'merge' || action === 'unmerge') tryMergeSelection();
+  }, [handleCopySelection, handleCutSelection, handlePasteSelection, tryMergeSelection]);
 
   // ── 키보드 이벤트 핸들러 (구글 시트 방식) ──
   const handleKeyDown = useCallback((e) => {
@@ -415,7 +512,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
     const el = viewRef.current;
     if (!el) return;
     const handleContext = (event) => {
-      if (!selectedKeys || selectedKeys.size <= 1) {
+      if (!selectedKeys || selectedKeys.size === 0 || editingCell) {
         setContextMenu(null);
         return;
       }
@@ -424,13 +521,19 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
     };
     el.addEventListener('contextmenu', handleContext);
     return () => el.removeEventListener('contextmenu', handleContext);
-  }, [selectedKeys]);
+  }, [selectedKeys, editingCell]);
 
   useEffect(() => {
-    if (contextMenu && selectedKeys.size <= 1) {
+    if (contextMenu && (!selectedKeys || selectedKeys.size === 0)) {
       setContextMenu(null);
     }
-  }, [contextMenu, selectedKeys.size]);
+  }, [contextMenu, selectedKeys]);
+
+  useEffect(() => {
+    const handleWindowClick = () => setContextMenu(null);
+    window.addEventListener('click', handleWindowClick);
+    return () => window.removeEventListener('click', handleWindowClick);
+  }, []);
 
   // 편집 완료 후 아래로 이동
   const handleEditKeyDown = useCallback((e, w, d, r, c) => {
@@ -640,9 +743,37 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
         <div
           className="shockwave-context-menu"
           style={{ top: contextMenu.y, left: contextMenu.x }}
-          onClick={handleContextMerge}
+          onMouseDown={(e) => e.stopPropagation()}
         >
-          병합(Cmd+E)
+          <button type="button" className="context-menu-item" onClick={() => handleContextAction('copy')}>
+            복사 (Cmd+C)
+          </button>
+          <button type="button" className="context-menu-item" onClick={() => handleContextAction('cut')}>
+            잘라내기 (Cmd+X)
+          </button>
+          <button type="button" className="context-menu-item" onClick={() => handleContextAction('paste')}>
+            붙여넣기 (Cmd+V)
+          </button>
+          <div className="context-menu-divider" />
+          {!selectionInfo?.isMergedMaster && (
+            <button
+              type="button"
+              className="context-menu-item"
+              onClick={() => handleContextAction('merge')}
+              disabled={!selectionInfo?.selectionMultiple}
+            >
+              셀 병합 (Cmd+E)
+            </button>
+          )}
+          {selectionInfo?.isMergedMaster && (
+            <button
+              type="button"
+              className="context-menu-item"
+              onClick={() => handleContextAction('unmerge')}
+            >
+              병합 해제 (Cmd+E)
+            </button>
+          )}
         </div>
       )}
     </>
