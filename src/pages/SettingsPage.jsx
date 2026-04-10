@@ -4,7 +4,60 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../components/common/Toast';
 import { supabase } from '../lib/supabaseClient';
 import { useSchedule } from '../contexts/ScheduleContext';
-import { Sun, Moon, Database, Users, Shield, RefreshCw } from 'lucide-react';
+import { Sun, Moon, Database, Users, Shield, RefreshCw, Copy } from 'lucide-react';
+
+const SQL_SNIPPETS = [
+  {
+    title: '충격파 설정 테이블',
+    description: '기본 시간, 간격 그리고 요일별 오버라이드 정보 저장.',
+    sql: `CREATE TABLE IF NOT EXISTS shockwave_settings (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  start_time time NOT NULL DEFAULT '09:00:00',
+  end_time time NOT NULL DEFAULT '18:00:00',
+  interval_minutes int NOT NULL DEFAULT 10,
+  day_overrides jsonb NOT NULL DEFAULT '{}',
+  updated_at timestamptz NOT NULL DEFAULT now()
+);`
+  },
+  {
+    title: '치료사 목록 테이블',
+    description: '스케줄러에 나열할 치료사 이름과 순서를 관리.',
+    sql: `CREATE TABLE IF NOT EXISTS shockwave_therapists (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  slot_index int NOT NULL DEFAULT 0,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);`
+  },
+  {
+    title: '공휴일 테이블',
+    description: '슈퍼바이스의 공휴일을 추가하여 자동 색칠 처리.',
+    sql: `CREATE TABLE IF NOT EXISTS holidays (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  date date NOT NULL,
+  name text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);`
+  },
+  {
+    title: '충격파 스케줄 테이블',
+    description: '셀 내용, 병합 정보를 매달 저장.',
+    sql: `CREATE TABLE IF NOT EXISTS shockwave_schedules (
+  year int NOT NULL,
+  month int NOT NULL,
+  week_index int NOT NULL,
+  day_index int NOT NULL,
+  row_index int NOT NULL,
+  col_index int NOT NULL,
+  content text,
+  merge_span jsonb DEFAULT '{"rowSpan":1,"colSpan":1}',
+  bg_color text,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (year, month, week_index, day_index, row_index, col_index)
+);`
+  }
+];
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
@@ -20,6 +73,19 @@ export default function SettingsPage() {
   const [swSettings, setSwSettings] = useState({ start_time: '09:00', end_time: '18:00', interval_minutes: 10 });
   const [dayOverrides, setDayOverrides] = useState({});
   const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+
+  const handleCopySQL = async (sql) => {
+    if (!navigator?.clipboard) {
+      addToast('복사 실패: 브라우저가 클립보드를 지원하지 않습니다.', 'error');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(sql);
+      addToast('SQL 코드가 클립보드에 복사되었습니다.', 'success');
+    } catch (err) {
+      addToast('복사 실패: 클립보드 접근 권한이 필요합니다.', 'error');
+    }
+  };
 
   useEffect(() => {
     loadTherapists();
@@ -332,6 +398,60 @@ export default function SettingsPage() {
               <div className="settings-row-desc">현재 로그인된 계정</div>
             </div>
             <button className="btn btn-danger btn-sm" onClick={signOut}>로그아웃</button>
+          </div>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 24 }}>
+        <div className="card-header">
+          <span className="card-title"><Copy size={18} /> Supabase SQL 코드</span>
+        </div>
+        <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>
+            아래 SQL 스니펫을 복사해서 Supabase SQL 편집기 또는 psql에 붙여넣으면 현재 프로그램이 사용하는 테이블을 준비할 수 있습니다.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {SQL_SNIPPETS.map(snippet => (
+              <div
+                key={snippet.title}
+                style={{
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 10,
+                  padding: 12,
+                  background: 'var(--bg-card)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 700 }}>{snippet.title}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>{snippet.description}</div>
+                  </div>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+                    onClick={() => handleCopySQL(snippet.sql)}
+                  >
+                    <Copy size={14} />
+                    복사
+                  </button>
+                </div>
+                <pre style={{
+                  margin: 0,
+                  fontSize: '0.75rem',
+                  lineHeight: '1.35rem',
+                  background: 'var(--bg-tertiary)',
+                  borderRadius: 8,
+                  padding: 10,
+                  overflowX: 'auto',
+                  fontFamily: 'Consolas, menlo, monospace'
+                }}>
+                  {snippet.sql}
+                </pre>
+              </div>
+            ))}
           </div>
         </div>
       </div>
