@@ -97,7 +97,7 @@ export default function SettingsPage() {
 
   const loadSettings = async () => {
     try {
-      const { data, error } = await supabase.from('shockwave_settings').select('*').limit(1).single();
+      const { data, error } = await supabase.from('shockwave_settings').select('*').order('updated_at', { ascending: false }).limit(1).single();
       if (!error && data) {
         setSwSettings({
           start_time: data.start_time.substring(0, 5),
@@ -122,7 +122,7 @@ export default function SettingsPage() {
   const updateDayOverride = (dow, field, value) => {
     setDayOverrides(prev => {
       const updated = { ...prev };
-      if (!updated[dow]) updated[dow] = {};
+      updated[dow] = { ...(prev[dow] || {}) };
       
       // no_lunch 체크 전환 시
       if (field === 'no_lunch') {

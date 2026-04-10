@@ -232,14 +232,14 @@
 .today-panel {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  border-radius: 4px;
   overflow: hidden;
   box-shadow: var(--shadow-md);
 }
 
 .today-panel-header {
   padding: 14px 16px;
-  background: var(--brand-gradient);
+  background: var(--brand-primary);
   color: white;
   font-weight: 700;
   font-size: 0.95rem;

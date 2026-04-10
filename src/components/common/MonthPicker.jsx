@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSchedule } from '../../contexts/ScheduleContext';
 
-export default function MonthPicker() {
+export default function MonthPicker({ suffix = '' }) {
   const { currentYear, currentMonth, navigateMonth, goToMonth } = useSchedule();
   const [showDropdown, setShowDropdown] = useState(false);
   const [dropdownYear, setDropdownYear] = useState(currentYear);
@@ -37,7 +37,7 @@ export default function MonthPicker() {
         role="button"
         tabIndex={0}
       >
-        {currentYear}년 {currentMonth}월
+        {currentYear}년 {currentMonth}월 {suffix}
       </span>
 
       <button className="month-nav-btn" onClick={() => navigateMonth(1)} aria-label="다음 달">

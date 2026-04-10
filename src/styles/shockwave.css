@@ -31,16 +31,17 @@
 
 /* 하루 블록 그리드 */
 .shockwave-days {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   border-bottom: 1px solid #000;
 }
 
 .shockwave-day {
+  flex: 1 1 auto;
+  min-width: 12%;
   border-right: 1px solid #000;
   border-bottom: 2px solid #000;
   border-top: 2px solid #000;
-  min-width: 0;
 }
 
 .shockwave-day:last-child {
@@ -142,12 +143,12 @@
 .sw-cell:last-child { border-right: none; }
 
 .sw-cell:hover {
-  background: var(--bg-hover);
+  filter: brightness(var(--hover-brightness));
 }
 
 /* 셀 선택 상태 (구글 시트 방식) */
 .sw-cell.selected {
-  background: rgba(66, 133, 244, 0.08);
+  filter: brightness(var(--hover-brightness));
 }
 
 .sw-cell.staff-off {
@@ -237,21 +238,15 @@
 
 /* 비활성(disabled) 시간대 및 점심시간 셀 */
 .sw-disabled-row .sw-cell, .sw-cell.disabled {
-  background: repeating-linear-gradient(
-    45deg,
-    color-mix(in srgb, var(--bg-tertiary) 60%, transparent),
-    color-mix(in srgb, var(--bg-tertiary) 60%, transparent) 10px,
-    color-mix(in srgb, var(--bg-tertiary) 40%, transparent) 10px,
-    color-mix(in srgb, var(--bg-tertiary) 40%, transparent) 20px
-  );
+  background: #93c37d;
   cursor: not-allowed;
-  opacity: 0.6;
   pointer-events: none;
 }
 
 /* 점심시간 셀 추가 효과 */
 .sw-cell.lunch-cell {
   background: color-mix(in srgb, var(--bg-tertiary) 40%, transparent);
+  opacity: 0.6;
 }
 
 /* 병합된 셀(마스터) 스타일 */
@@ -273,31 +268,34 @@
   box-shadow: inset 0 0 0 2px var(--sw-today-border);
 }
 
-/* ── 반응형 ── */
 @media (max-width: 1200px) {
-  .shockwave-days {
-    grid-template-columns: repeat(3, 1fr);
+  .shockwave-day { 
+    min-width: 30%; 
+    border-right: 1px solid #000; 
   }
-  .shockwave-day:nth-child(3) { border-right: none; }
+  .shockwave-day:nth-child(3n) { border-right: none; }
   .shockwave-day:nth-child(n+4) { border-top: 2px solid #b7b7b7; }
 }
 
 @media (max-width: 768px) {
-  .shockwave-days {
-    grid-template-columns: repeat(2, 1fr);
+  .shockwave-day { 
+    min-width: 45%; 
+    border-right: 1px solid #000; 
   }
   .shockwave-day:nth-child(2n) { border-right: none; }
   .shockwave-day:nth-child(n+3) { border-top: 2px solid #b7b7b7; }
+  
   .sw-cell { font-size: 0.62rem; min-height: 20px; }
   .sw-day-header { font-size: 0.68rem; padding: 6px 2px; }
   .sw-therapist-name { font-size: 0.62rem; padding: 4px 2px; }
 }
 
 @media (max-width: 480px) {
-  .shockwave-days {
-    grid-template-columns: 1fr;
+  .shockwave-day { 
+    min-width: 100%; 
+    border-right: none; 
+    border-bottom: 2px solid #b7b7b7; 
   }
-  .shockwave-day { border-right: none; border-bottom: 2px solid #b7b7b7; }
   .shockwave-day:last-child { border-bottom: none; }
 }
 

@@ -4,6 +4,8 @@ import ShockwaveView from '../components/shockwave/ShockwaveView';
 
 export default function ShockwavePage() {
   const {
+    currentYear,
+    currentMonth,
     therapists,
     loadTherapists,
     shockwaveSettings,
@@ -12,6 +14,7 @@ export default function ShockwavePage() {
     loadShockwaveMemos,
     saveShockwaveMemo,
     holidays,
+    loadHolidays,
     staffMemos,
     loadStaffMemos
   } = useSchedule();
@@ -19,8 +22,12 @@ export default function ShockwavePage() {
   useEffect(() => {
     loadTherapists();
     loadShockwaveSettings();
-    loadStaffMemos();
-  }, [loadTherapists, loadShockwaveSettings, loadStaffMemos]);
+  }, [loadTherapists, loadShockwaveSettings]);
+
+  useEffect(() => {
+    loadStaffMemos(currentYear, currentMonth);
+    loadHolidays(currentYear, currentMonth);
+  }, [currentYear, currentMonth, loadStaffMemos, loadHolidays]);
 
   return (
     <div className="animate-fade-in">

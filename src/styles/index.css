@@ -16,6 +16,8 @@
   --bg-hover: #f1f5f9;
   --bg-input: #ffffff;
   --bg-modal-overlay: rgba(15, 23, 42, 0.5);
+  
+  --hover-brightness: 0.80; /* 호버 시 20% 더 진하게 */
 
   /* 텍스트 */
   --text-primary: #0f172a;
@@ -107,6 +109,8 @@
   --bg-hover: #334155;
   --bg-input: #1e293b;
   --bg-modal-overlay: rgba(0, 0, 0, 0.7);
+  
+  --hover-brightness: 1.20; /* 다크모드에서는 호버 시 더 밝게 */
 
   --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;

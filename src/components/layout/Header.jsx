@@ -21,10 +21,7 @@ export default function Header({ onMenuToggle }) {
           <Menu size={22} />
         </button>
         {(location.pathname === '/' || location.pathname.includes('shockwave')) && (
-          <>
-            <MonthPicker />
-            <span className="header-title" style={{ fontSize: '1.1rem', marginLeft: '8px' }}>{pageLabel}</span>
-          </>
+          <MonthPicker suffix={pageLabel} />
         )}
         {location.pathname === '/settings' && <div className="header-title" style={{ fontSize: '1.2rem' }}>{pageLabel}</div>}
       </div>

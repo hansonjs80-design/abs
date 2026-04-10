@@ -138,6 +138,7 @@ export function ScheduleProvider({ children }) {
       const { data, error } = await supabase
         .from('shockwave_settings')
         .select('*')
+        .order('updated_at', { ascending: false })
         .limit(1)
         .single();
 
