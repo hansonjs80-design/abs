@@ -135,6 +135,7 @@
   align-items: center;
   justify-content: center;
   min-height: 22px;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -162,10 +163,7 @@
   z-index: 1;
 }
 
-.sw-cell.lunch-cell {
-  background: color-mix(in srgb, var(--bg-tertiary) 60%, transparent);
-  opacity: 0.6;
-}
+/* 점심시간 셀에 설정된 투명도 제거하여 온전한 #93c37d 표시 */
 
 .sw-cell.green {
   background: var(--sw-green);
@@ -184,16 +182,21 @@
 }
 
 .sw-cell.color-4060 {
-  color: var(--sw-4060-color);
+  color: #980000;
 }
 
 .sw-cell.editing {
   padding: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .sw-cell-input {
   width: 100%;
   height: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 2px 4px;
   border: 2px solid var(--brand-primary);
   border-radius: 0;
@@ -225,28 +228,13 @@
   visibility: hidden;
 }
 
-.sw-time-label.disabled {
-  color: var(--text-tertiary);
-  opacity: 0.35;
-}
-
-.sw-time-label.lunch {
-  background: var(--bg-tertiary);
-  color: var(--text-tertiary);
-  opacity: 0.6;
-}
+/* Removed .sw-time-label.disabled to keep text black and fully opaque */
 
 /* 비활성(disabled) 시간대 및 점심시간 셀 */
 .sw-disabled-row .sw-cell, .sw-cell.disabled {
   background: #93c37d;
   cursor: not-allowed;
   pointer-events: none;
-}
-
-/* 점심시간 셀 추가 효과 */
-.sw-cell.lunch-cell {
-  background: color-mix(in srgb, var(--bg-tertiary) 40%, transparent);
-  opacity: 0.6;
 }
 
 /* 병합된 셀(마스터) 스타일 */

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { generateShockwaveCalendar, getTodayKST, isSameDate, formatDisplayDate } from '../../lib/calendarUtils';
 import { supabase } from '../../lib/supabaseClient';
-import { has4060Pattern } from '../../lib/memoParser';
+import { has4060Pattern, incrementSessionCount } from '../../lib/memoParser';
 import { useToast } from '../common/Toast';
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
@@ -66,11 +66,15 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
     return slots;
   }, [settings]);
 
-  const getTimeSlotsForDay = useCallback((dow) => {
+  const getTimeSlotsForDay = useCallback((dayInfo) => {
+    const dow = dayInfo.dow;
     const dayOv = settings?.day_overrides?.[dow] || {};
     const dayStart = dayOv.start_time || (settings?.start_time?.substring(0, 5)) || '09:00';
     const dayEnd = dayOv.end_time || (settings?.end_time?.substring(0, 5)) || '18:00';
-    const noLunch = dayOv.no_lunch === true;
+    
+    const skipLunch = !dayInfo.isCurrentMonth || dayInfo.isHoliday;
+    const noLunch = dayOv.no_lunch === true || skipLunch;
+    
     const lunchStart = noLunch ? null : (dayOv.lunch_start || null);
     const lunchEnd = noLunch ? null : (dayOv.lunch_end || null);
 
@@ -79,8 +83,14 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
 
     baseTimeSlots.forEach((slot, idx) => {
       const t = slot.time;
-      const isBeforeStart = t < dayStart;
-      const isAfterEnd = t >= dayEnd;
+      let isBeforeStart = t < dayStart;
+      let isAfterEnd = t >= dayEnd;
+      
+      if (skipLunch) { // 공휴일이거나 다른 달 날짜인 경우 요일별 운영 시간 제약을 무시
+        isBeforeStart = false;
+        isAfterEnd = false;
+      }
+
       const isLunch = lunchStart && lunchEnd && t >= lunchStart && t < lunchEnd;
 
       if (isLunch) {
@@ -316,12 +326,22 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
 
   const selectionInfo = computeSelectionInfo();
 
+  // 날짜 비교 헬퍼: 원본(w,d)와 대상(w,d)의 실제 날짜를 비교
+  const isLaterDate = useCallback((srcW, srcD, dstW, dstD) => {
+    const srcDay = weeks[srcW]?.[srcD];
+    const dstDay = weeks[dstW]?.[dstD];
+    if (!srcDay || !dstDay) return false;
+    const srcDate = new Date(srcDay.year, srcDay.month - 1, srcDay.day);
+    const dstDate = new Date(dstDay.year, dstDay.month - 1, dstDay.day);
+    return dstDate > srcDate;
+  }, [weeks]);
+
   const handleCopySelection = useCallback(() => {
     if (!selectedCell) return;
     const { w, d, r, c } = selectedCell;
     const key = cellKey(w, d, r, c);
     const content = memos[key]?.content || '';
-    clipboardRef.current = { content, mode: 'copy', key: null };
+    clipboardRef.current = { content, mode: 'copy', key: null, srcW: w, srcD: d };
     try { navigator.clipboard.writeText(content); } catch (_) {}
     addToast('복사됨', 'info');
     setContextMenu(null);
@@ -332,7 +352,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
     const { w, d, r, c } = selectedCell;
     const key = cellKey(w, d, r, c);
     const content = memos[key]?.content || '';
-    clipboardRef.current = { content, mode: 'cut', key };
+    clipboardRef.current = { content, mode: 'cut', key, srcW: w, srcD: d };
     try { navigator.clipboard.writeText(content); } catch (_) {}
     onSaveMemo(currentYear, currentMonth, w, d, r, c, '');
     addToast('잘라내기됨', 'info');
@@ -341,21 +361,29 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
 
   const handlePasteSelection = useCallback(() => {
     if (!selectedCell) return;
-    const pasteContent = clipboardRef.current?.content;
+    let pasteContent = clipboardRef.current?.content;
     if (pasteContent === undefined || pasteContent === null) {
       setContextMenu(null);
       return;
     }
     const { w, d, r, c } = selectedCell;
+    const clip = clipboardRef.current;
+    // 복사 모드이고 이후 날짜이면 회수 +1
+    if (clip.mode === 'copy' && clip.srcW !== undefined && isLaterDate(clip.srcW, clip.srcD, w, d)) {
+      pasteContent = incrementSessionCount(pasteContent);
+    }
     onSaveMemo(currentYear, currentMonth, w, d, r, c, pasteContent);
-    if (clipboardRef.current.mode === 'cut' && clipboardRef.current.key) {
-      const [ow, od, or2, oc] = clipboardRef.current.key.split('-').map(Number);
+    if (clip.mode === 'cut' && clip.key) {
+      const [ow, od, or2, oc] = clip.key.split('-').map(Number);
       onSaveMemo(currentYear, currentMonth, ow, od, or2, oc, '');
-      clipboardRef.current = { content: pasteContent, mode: 'copy', key: null };
+      clipboardRef.current = { content: pasteContent, mode: 'copy', key: null, srcW: w, srcD: d };
+    } else {
+      // 복사 모드에서 붙여넣기한 후에는 증가된 내용을 새 원본으로 갱신
+      clipboardRef.current = { ...clip, content: pasteContent, srcW: w, srcD: d };
     }
     addToast('붙여넣기 완료', 'success');
     setContextMenu(null);
-  }, [selectedCell, onSaveMemo, currentYear, currentMonth, addToast]);
+  }, [selectedCell, onSaveMemo, currentYear, currentMonth, addToast, isLaterDate]);
 
   const handleContextAction = useCallback((action) => {
     if (action === 'copy') handleCopySelection();
@@ -444,7 +472,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
       e.preventDefault();
       const key = cellKey(w, d, r, c);
       const content = memos[key]?.content || '';
-      clipboardRef.current = { content, mode: 'copy', key };
+      clipboardRef.current = { content, mode: 'copy', key, srcW: w, srcD: d };
       try { navigator.clipboard.writeText(content); } catch(_) {}
       addToast('복사됨', 'info');
       return;
@@ -455,7 +483,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
       e.preventDefault();
       const key = cellKey(w, d, r, c);
       const content = memos[key]?.content || '';
-      clipboardRef.current = { content, mode: 'cut', key };
+      clipboardRef.current = { content, mode: 'cut', key, srcW: w, srcD: d };
       try { navigator.clipboard.writeText(content); } catch(_) {}
       addToast('잘라내기됨', 'info');
       return;
@@ -464,14 +492,21 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
     // Cmd+V → 붙여넣기
     if (isMeta && e.key === 'v') {
       e.preventDefault();
-      const pasteContent = clipboardRef.current.content;
+      let pasteContent = clipboardRef.current.content;
       if (pasteContent !== undefined && pasteContent !== null) {
+        const clip = clipboardRef.current;
+        // 복사 모드이고 이후 날짜이면 회수 +1
+        if (clip.mode === 'copy' && clip.srcW !== undefined && isLaterDate(clip.srcW, clip.srcD, w, d)) {
+          pasteContent = incrementSessionCount(pasteContent);
+        }
         onSaveMemo(currentYear, currentMonth, w, d, r, c, pasteContent);
         // 잘라내기 모드면 원본 삭제
-        if (clipboardRef.current.mode === 'cut' && clipboardRef.current.key) {
-          const [ow, od, or2, oc] = clipboardRef.current.key.split('-').map(Number);
+        if (clip.mode === 'cut' && clip.key) {
+          const [ow, od, or2, oc] = clip.key.split('-').map(Number);
           onSaveMemo(currentYear, currentMonth, ow, od, or2, oc, '');
-          clipboardRef.current = { content: pasteContent, mode: 'copy', key: null };
+          clipboardRef.current = { content: pasteContent, mode: 'copy', key: null, srcW: w, srcD: d };
+        } else {
+          clipboardRef.current = { ...clip, content: pasteContent, srcW: w, srcD: d };
         }
         addToast('붙여넣기 완료', 'success');
       }
@@ -609,7 +644,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
 
                   {/* 스케줄 바디 */}
                   <div className="sw-schedule-body" style={{ display: 'grid', gridTemplateColumns: gridCols, gridAutoRows: 'minmax(22px, auto)', borderBottom: `1px solid ${HORIZONTAL_BORDER_COLOR}` }}>
-                    {getTimeSlotsForDay(dayInfo.dow).flatMap((slotInfo, slotRenderIndex) => {
+                    {getTimeSlotsForDay(dayInfo).flatMap((slotInfo, slotRenderIndex) => {
                       const rowIdx = slotInfo.idx;
                       const gridRowStart = slotRenderIndex + 1;
                       const elements = [];
@@ -632,30 +667,11 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                       }
 
                       // 2. Cells
-                      if (slotInfo.disabled) {
-                        for (let colIdx = 0; colIdx < colCount; colIdx++) {
-                          const isLunchCell = slotInfo.isLunch;
-                          const gridColumnStart = colIdx + 2;
-                          elements.push(
-                            <div
-                              key={`dis-${rowIdx}-${colIdx}`}
-                              className={`sw-cell disabled${isLunchCell ? ' lunch-cell' : ''}`}
-                              style={{
-                                gridColumn: `${gridColumnStart}`,
-                                gridRow: `${gridRowStart}`,
-                                borderBottom: `1px solid ${HORIZONTAL_BORDER_COLOR}`,
-                              }}
-                            >
-                              {isLunchCell && showTimeCol && colIdx === 0 ? '' : ''}
-                            </div>
-                          );
-                        }
-                      } else {
-                        for (let colIdx = 0; colIdx < colCount; colIdx++) {
-                          const key = cellKey(weekIdx, dayIdx, rowIdx, colIdx);
-                          const cellData = memos[key];
-                          const content = cellData?.content || '';
-                          const mergeSpan = cellData?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+                      for (let colIdx = 0; colIdx < colCount; colIdx++) {
+                        const key = cellKey(weekIdx, dayIdx, rowIdx, colIdx);
+                        const cellData = memos[key];
+                        const content = cellData?.content || '';
+                        const mergeSpan = cellData?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
                           
                           if (mergeSpan.mergedInto) {
                             continue; // 병합된 하위 셀은 묶어서 렌더링 생략
@@ -670,17 +686,19 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                           let visualRowSpan = 1;
                           if (mergeSpan.rowSpan > 1) {
                             const endRowIdx = rowIdx + mergeSpan.rowSpan - 1;
-                            visualRowSpan = getTimeSlotsForDay(dayInfo.dow).filter(s => s.idx >= rowIdx && s.idx <= endRowIdx).length;
+                            visualRowSpan = getTimeSlotsForDay(dayInfo).filter(s => s.idx >= rowIdx && s.idx <= endRowIdx).length;
                           }
 
                           let cls = 'sw-cell';
                           if (!dayInfo.isCurrentMonth) cls += ' other-month-bg';
                           else if (dayInfo.isHoliday) cls += ' holiday-bg';
+                          
+                          if (slotInfo.disabled && !content) cls += ' disabled';
+                          
                           if (cellData?.bg_color === '#ffe599') cls += ' preserve';
-                          if (colCount >= 3 && has4060Pattern(content)) cls += ' color-4060';
+                          if (has4060Pattern(content)) cls += ' color-4060';
                           if (isSelected) cls += ' selected';
                           if (isPrimary) cls += ' primary-selected';
-                          if (slotInfo.isLunch) cls += ' lunch-cell';
                           const dateKey = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}`;
                           const therapistName = therapists[colIdx]?.name || '';
                           if (!isSelected && isTherapistOff(dateKey, therapistName)) cls += ' staff-off';
@@ -728,7 +746,6 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                             );
                           }
                         }
-                      }
                       return elements;
                     })}
                   </div>

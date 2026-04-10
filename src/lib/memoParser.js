@@ -183,3 +183,42 @@ export function getMemoShockwaveType(parsed) {
 export function has4060Pattern(text) {
   return /[가-힣a-zA-Z]\s*(40|60)\**($|[(\s])/.test(String(text || ''));
 }
+
+/**
+ * 충격파 셀 내용의 회수(세션 횟수) 증가
+ * 
+ * 지원 패턴:
+ *   - 1234/이름(3)       → 1234/이름(4)
+ *   - 1234/이름*         → 1234/이름(2)   (* = 1회)
+ *   - 1234/이름40(3)     → 1234/이름40(4)
+ *   - 1234/이름60*       → 1234/이름60(2) (* = 1회)
+ *   - 1234/이름(회수없음) → 그대로 반환
+ * 
+ * @param {string} text - 셀 내용
+ * @returns {string} 회수가 1 증가된 셀 내용
+ */
+export function incrementSessionCount(text) {
+  const s = String(text || '').trim();
+  if (!s) return s;
+
+  // 패턴: chartNo/name[40|60]*(count) 또는 chartNo/name[40|60]*
+  // 1) 괄호 안에 숫자가 있는 경우: 1234/이름(3) 또는 1234/이름40(3)
+  const parenMatch = s.match(/^(.+?\/[^(]+?)(40|60)?(\((\d+)\))$/);
+  if (parenMatch) {
+    const prefix = parenMatch[1];
+    const suffix4060 = parenMatch[2] || '';
+    const count = parseInt(parenMatch[4], 10);
+    return `${prefix}${suffix4060}(${count + 1})`;
+  }
+
+  // 2) *로 끝나는 경우: 1234/이름* 또는 1234/이름40*  → 1회로 간주 → (2)
+  const starMatch = s.match(/^(.+?\/[^*]+?)(40|60)?(\*+)$/);
+  if (starMatch) {
+    const prefix = starMatch[1];
+    const suffix4060 = starMatch[2] || '';
+    return `${prefix}${suffix4060}(2)`;
+  }
+
+  // 매칭 안 되면 그대로 반환
+  return s;
+}
