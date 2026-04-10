@@ -1,0 +1,325 @@
+/* src/styles/shockwave_stats.css */
+
+.sw-stats-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.sw-stats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background-color: var(--bg-secondary);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border: 1px solid var(--border-color);
+}
+
+.sw-stats-summary h2 {
+  margin: 0 0 15px 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.sw-stats-cards {
+  display: flex;
+  gap: 15px;
+}
+
+.sw-stats-card {
+  background-color: var(--bg-primary);
+  padding: 12px 20px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 140px;
+}
+
+.sw-stats-card .card-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.sw-stats-card .card-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.sw-stats-card .card-value.sum-value {
+  color: #4285f4;
+}
+
+.sw-sync-btn {
+  background-color: #34a853;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s;
+}
+
+.sw-sync-btn:hover {
+  background-color: #2b8b45;
+}
+
+.sw-sync-btn:disabled {
+  background-color: #a0cda8;
+  cursor: not-allowed;
+}
+
+.sw-stats-body {
+  background-color: var(--bg-primary);
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  overflow: hidden;
+  border: 1px solid #c0c0c0;
+}
+
+.sw-stats-empty {
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.sw-stats-empty .empty-subtext {
+  font-size: 0.9rem;
+  margin-top: 8px;
+  opacity: 0.8;
+}
+
+.sw-stats-list-wrapper {
+  overflow-x: auto;
+  max-height: 70vh; /* Make the inner table scrollable */
+}
+
+/* Excel-like Table Styling */
+.sw-stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background-color: #fff;
+  font-family: Arial, sans-serif;
+}
+
+.sw-stats-table th,
+.sw-stats-table td {
+  border: 1px solid #e2e2e2;
+  padding: 0;
+  vertical-align: middle;
+  height: 25px;
+  position: relative;
+}
+
+.sw-stats-table th {
+  background-color: #f8f9fa;
+  color: #5f6368;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: inset 0 -1px 0 #c0c0c0, inset 0 1px 0 #c0c0c0;
+  padding: 6px;
+}
+
+.sw-row-header {
+  background-color: #f8f9fa;
+  color: #5f6368;
+  text-align: center;
+  font-weight: 500;
+  font-size: 0.8rem;
+  width: 40px !important;
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  box-shadow: inset -1px 0 0 #c0c0c0;
+}
+
+/* Group Headers */
+.sw-stats-group-header td {
+  background-color: #f1f3f4;
+  border-top: 2px solid #dadce0;
+  border-bottom: 1px solid #dadce0;
+  padding: 4px 10px;
+}
+
+.group-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.group-date {
+  color: #202124;
+}
+
+.group-sum {
+  color: #1a73e8;
+  font-weight: 700;
+}
+
+/* Cell Inputs */
+.sw-stats-input {
+  width: 100%;
+  height: 100%;
+  border: 2px solid transparent;
+  background: transparent;
+  color: #202124;
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  padding: 0 6px;
+  border-radius: 0;
+  transition: none;
+  display: block;
+}
+
+.sw-stats-input:focus {
+  background-color: #fff;
+  border: 2px solid #1a73e8;
+  box-shadow: none;
+  z-index: 20;
+  position: relative;
+}
+
+.btn-secondary {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.center-text { text-align: center; }
+.text-gray { color: #5f6368; }
+.bold-text { font-weight: 600; }
+
+.is-first-visit input {
+  background-color: rgba(24bbc1, 0.06);
+}
+
+/* 다크모드 대응 */
+[data-theme='dark'] .sw-stats-table {
+  background-color: var(--bg-primary);
+}
+[data-theme='dark'] .sw-stats-table th,
+[data-theme='dark'] .sw-row-header {
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+  box-shadow: inset 0 -1px 0 var(--border-color), inset 0 1px 0 var(--border-color);
+}
+[data-theme='dark'] .sw-stats-table td {
+  border-color: var(--border-color);
+}
+[data-theme='dark'] .sw-stats-input {
+  color: var(--text-primary);
+}
+[data-theme='dark'] .sw-stats-input:focus {
+  background-color: var(--bg-secondary);
+}
+[data-theme='dark'] .sw-stats-group-header td {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+[data-theme='dark'] .group-date {
+  color: var(--text-primary);
+}
+[data-theme='dark'] .btn-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* 엑셀(스프레드시트) 스타일 표 (UI 개편본) */
+.sw-stats-table.spreadsheet-theme {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.85rem;
+  table-layout: auto;
+  border: 1px solid #000;
+}
+
+.sw-stats-table.spreadsheet-theme th,
+.sw-stats-table.spreadsheet-theme td {
+  border: 1px solid #000;
+  padding: 4px;
+  vertical-align: middle;
+}
+
+.sw-stats-table.spreadsheet-theme thead th {
+  text-align: center;
+  font-weight: 700;
+  vertical-align: middle;
+  border: 1px solid #000;
+  color: #000;
+  padding: 8px 4px;
+}
+
+/* 제목 행 */
+.sw-stats-table.spreadsheet-theme .spreadsheet-title {
+  background-color: #c3b4f3 !important; /* 보라색 */
+  padding: 8px !important;
+  font-size: 1.2rem !important;
+  border: 1px solid #000 !important;
+}
+
+/* 헤더 보더라인 처리 */
+.sw-stats-table.spreadsheet-theme .spreadsheet-header-row2 th,
+.sw-stats-table.spreadsheet-theme .spreadsheet-header-row3 th, 
+.sw-stats-table.spreadsheet-theme .spreadsheet-header-row4 th {
+  border: 1px solid #000;
+}
+
+/* 인풋 덮어쓰기 */
+.sw-stats-table.spreadsheet-theme input.sw-stats-input {
+  width: 100%;
+  border: 1px solid transparent; /* 기본은 투명하게 */
+  background-color: transparent;
+  font-size: 0.85rem;
+  padding: 4px;
+  outline: none;
+  min-height: 24px;
+  border-radius: 0;
+}
+
+.sw-stats-table.spreadsheet-theme input.sw-stats-input:focus {
+  border: 2px solid #1a73e8;
+  background-color: #fff;
+  z-index: 10;
+}
+
+[data-theme='dark'] .sw-stats-table.spreadsheet-theme input.sw-stats-input {
+  color: #000; /* 다크모드여도 시트 내부는 밝게 하거나 커스텀 */
+}
+[data-theme='dark'] .sw-stats-table.spreadsheet-theme td {
+  background-color: #fff; /* 엑셀은 다크모드에서도 흰배경 강제이거나, 어둡게 하거나 선택 가능. 본 스크립트에서는 구글시트처럼 흰색 유지 */
+  color: #000;
+}
+[data-theme='dark'] .sw-stats-table.spreadsheet-theme input.sw-stats-input {
+  color: #000;
+}

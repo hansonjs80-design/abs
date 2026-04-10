@@ -8,7 +8,7 @@ import { useToast } from '../common/Toast';
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 const HORIZONTAL_BORDER_COLOR = '#b7b7b7';
 
-export default function ShockwaveView({ therapists, settings, memos, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
+export default function ShockwaveView({ therapists, settings, memos = {}, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
   const { currentYear, currentMonth, saveShockwaveMemosBulk } = useSchedule();
   const { addToast } = useToast();
   const viewRef = useRef(null);
@@ -20,9 +20,17 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
   const [selectedKeys, setSelectedKeys] = useState(() => new Set());
   const [editingCell, setEditingCell] = useState(null);       // "w-d-r-c" 키 문자열
   const [editValue, setEditValue] = useState('');
-  const [activeDayKey, setActiveDayKey] = useState(null);     // "w-d" (시간열 표시 대상)
   const clipboardRef = useRef({ content: '', mode: null });   // mode: 'copy' | 'cut', cutKey
   const [contextMenu, setContextMenu] = useState(null);
+
+  // 열 너비 조정 (fr 비율 기반)
+  const [colRatios, setColRatios] = useState(null);
+  const colResizeRef = useRef({ active: false, colIdx: -1, startX: 0, startRatios: [], containerWidth: 0 });
+  const [dayColWidth, setDayColWidth] = useState(null); // null = flex, number = px
+  const dayResizeRef = useRef({ active: false, startX: 0, startWidth: 0, factor: 1 });
+
+  const tooltipRef = useRef(null);
+  const [hoverData, setHoverData] = useState(null);
 
   const colCount = Math.max(1, therapists.length);
   const staffMemoByDate = useMemo(() => {
@@ -241,9 +249,7 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
       selectSingleCell(cell);
       dragSelectionRef.current = { anchor: cell };
     }
-
     setEditingCell(null);
-    setActiveDayKey(dayKey(w, d));
   }, [selectedCell, buildRangeKeys, selectSingleCell]);
 
   const handleCellMouseEnter = useCallback((w, d, r, c) => {
@@ -258,7 +264,6 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
     setEditingCell(key);
     setEditValue(content || '');
     selectSingleCell({ w, d, r, c });
-    setActiveDayKey(dayKey(w, d));
   }, [selectSingleCell]);
 
   // ── 편집 저장 ──
@@ -595,19 +600,34 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
 
   return (
     <>
-      <div className="shockwave-view animate-fade-in" ref={viewRef} tabIndex={0} style={{ outline: 'none' }}>
+      <div 
+        className="shockwave-view animate-fade-in" 
+        ref={viewRef} 
+        tabIndex={0} 
+        style={{ outline: 'none' }}
+        onMouseLeave={() => setHoverData(null)}
+        onMouseMove={(e) => {
+          if (tooltipRef.current) {
+            tooltipRef.current.style.left = `${e.clientX + 14}px`;
+            tooltipRef.current.style.top = `${e.clientY + 14}px`;
+            tooltipRef.current.style.opacity = hoverData ? '1' : '0';
+          }
+        }}
+      >
       {weeks.map((weekDays, weekIdx) => (
         <div key={weekIdx} className="shockwave-week">
           <div className="shockwave-week-label">
             📅 {weekIdx + 1}주차
           </div>
-          <div className="shockwave-days">
+          <div className="shockwave-days" style={{ position: 'relative' }}>
             {weekDays.map((dayInfo, dayIdx) => {
               const isToday = isSameDate(dayInfo.date, today);
               const thisDayKey = dayKey(weekIdx, dayIdx);
-              // 첫 번째 요일 또는 활성화된 요일에만 시간 열 표시
-              const showTimeCol = dayIdx === 0 || activeDayKey === thisDayKey;
-              const therapistCols = `repeat(${colCount}, minmax(0, 1fr))`;
+              // 첫 번째 요일에만 시간 열 표사
+              const showTimeCol = dayIdx === 0;
+              const therapistCols = colRatios
+                ? colRatios.map(r => `minmax(0, ${r}fr)`).join(' ')
+                : `repeat(${colCount}, minmax(0, 1fr))`;
               const gridCols = showTimeCol
                 ? `46px ${therapistCols}`
                 : therapistCols;
@@ -618,26 +638,69 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
               else if (isToday) headerClass += ' today';
               else if (dayInfo.dow === 6) headerClass += ' saturday';
 
+              const targetColWidth = showTimeCol && dayColWidth ? dayColWidth + 46 : dayColWidth;
+              const flexBasis = showTimeCol ? 46 : 0;
+              const dayFlexStyle = targetColWidth
+                ? { flex: `0 0 ${targetColWidth}px`, width: `${targetColWidth}px` }
+                : { flex: `1 1 ${flexBasis}px`, minWidth: 0 };
+
               return (
-                <div key={dayIdx} className={`shockwave-day${isToday ? ' is-today' : ''}`}>
+                <div key={dayIdx} className={`shockwave-day${isToday ? ' is-today' : ''}`} style={dayFlexStyle}>
                   {/* 날짜 헤더 */}
                   <div className={headerClass}>
                     {formatDisplayDate(dayInfo.year, dayInfo.month, dayInfo.day)} ({DAY_NAMES[dayInfo.dow]})
                   </div>
 
-                  {/* 치료사 이름 헤더 */}
-                  <div className="sw-therapist-header" style={{ gridTemplateColumns: gridCols }}>
-                    {showTimeCol && (
-                      <div className="sw-time-label" style={{ borderBottom: 'none' }}>시간</div>
-                    )}
-                    {Array.from({ length: colCount }, (_, ci) => {
-                      let nameClass = 'sw-therapist-name';
-                      if (dayInfo.isHoliday) nameClass += ' holiday';
-                      else if (!dayInfo.isCurrentMonth) nameClass += ' other-month';
+                  {/* 치료사 이름 헤더 + 열 리사이즈 */}
+                  <div className="sw-therapist-header-wrapper" style={{ position: 'relative' }}>
+                    <div className="sw-therapist-header" style={{ gridTemplateColumns: gridCols }}>
+                      {showTimeCol && (
+                        <div className="sw-time-label" style={{ borderBottom: 'none' }}>시간</div>
+                      )}
+                      {Array.from({ length: colCount }, (_, ci) => {
+                        let nameClass = 'sw-therapist-name';
+                        if (dayInfo.isHoliday) nameClass += ' holiday';
+                        else if (!dayInfo.isCurrentMonth) nameClass += ' other-month';
+                        return (
+                          <div key={ci} className={nameClass}>
+                            {therapists[ci]?.name || `치료사${ci + 1}`}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* 열 리사이즈 핸들 오버레이 */}
+                    {colCount > 1 && Array.from({ length: colCount - 1 }, (_, ci) => {
+                      const ratios = colRatios || Array(colCount).fill(1);
+                      const totalR = ratios.reduce((a, b) => a + b, 0);
+                      const leftPct = ratios.slice(0, ci + 1).reduce((a, b) => a + b, 0) / totalR * 100;
+                      const timeColPx = showTimeCol ? 46 : 0;
                       return (
-                        <div key={ci} className={nameClass}>
-                          {therapists[ci]?.name || `치료사${ci + 1}`}
-                        </div>
+                        <div
+                          key={`col-resize-${ci}`}
+                          className="sw-col-resize-handle"
+                          style={{
+                            position: 'absolute', top: 0, height: '100%',
+                            left: `calc(${timeColPx}px + (100% - ${timeColPx}px) * ${leftPct / 100})`,
+                            transform: 'translateX(-4px)',
+                          }}
+                          onMouseDown={(e) => {
+                            e.preventDefault(); e.stopPropagation();
+                            const cur = colRatios ? [...colRatios] : Array(colCount).fill(1);
+                            const cw = e.target.closest('.sw-therapist-header-wrapper').getBoundingClientRect().width - timeColPx;
+                            colResizeRef.current = { active: true, colIdx: ci, startX: e.clientX, startRatios: [...cur], containerWidth: cw };
+                            const onMove = (ev) => {
+                              if (!colResizeRef.current.active) return;
+                              const { startRatios: sr, containerWidth: w, colIdx: c, startX } = colResizeRef.current;
+                              const d = ev.clientX - startX;
+                              const tR = sr.reduce((a, b) => a + b, 0);
+                              const dR = (d / w) * tR;
+                              const nr = [...sr]; nr[c] = Math.max(0.2, sr[c] + dR); nr[c+1] = Math.max(0.2, sr[c+1] - dR);
+                              setColRatios(nr);
+                            };
+                            const onUp = () => { colResizeRef.current.active = false; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+                            window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
+                          }}
+                        />
                       );
                     })}
                   </div>
@@ -737,9 +800,39 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                                 className={cls}
                                 style={inlineStyle}
                                 onMouseDown={(e) => handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e)}
-                                onMouseEnter={() => handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx)}
+                                onMouseEnter={() => {
+                                  handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
+                                  let text = `⏱ [${slotInfo.label}]`;
+                                  if (content && content !== '\u200B') text += `\n📝 ${content}`;
+
+                                  if (isSelected && selectedKeys.size > 1 && selectionInfo && selectionInfo.w === weekIdx && selectionInfo.d === dayIdx && selectionInfo.minRow !== selectionInfo.maxRow) {
+                                    const slots = getTimeSlotsForDay(dayInfo);
+                                    const sStart = slots.find(s => s.idx === selectionInfo.minRow);
+                                    const sEnd = slots.find(s => s.idx === selectionInfo.maxRow);
+                                    if (sStart && sEnd) {
+                                      const t1 = sStart.time || sStart.label;
+                                      
+                                      const t2_time = new Date(`2000-01-01T${sEnd.time || sEnd.label}:00`);
+                                      t2_time.setMinutes(t2_time.getMinutes() + (settings?.interval_minutes || 30));
+                                      const t2_hh = String(t2_time.getHours()).padStart(2, '0');
+                                      const t2_mm = String(t2_time.getMinutes()).padStart(2, '0');
+                                      const t2 = `${t2_hh}:${t2_mm}`;
+                                      
+                                      const diffMin = (selectionInfo.maxRow - selectionInfo.minRow + 1) * (settings?.interval_minutes || 30);
+                                      const hrs = Math.floor(diffMin / 60);
+                                      const mns = diffMin % 60;
+                                      let dStr = '';
+                                      if (hrs > 0) dStr += `${hrs}시간`;
+                                      if (mns > 0) dStr += (hrs > 0 ? ' ' : '') + `${mns}분`;
+                                      
+                                      text = `⏱ [${t1} ~ ${t2}] (총 ${dStr})`;
+                                      if (content && content !== '\u200B') text += `\n📝 ${content}`;
+                                    }
+                                  }
+                                  setHoverData({ text });
+                                }}
+                                onMouseLeave={() => setHoverData(null)}
                                 onDoubleClick={() => handleCellDoubleClick(weekIdx, dayIdx, rowIdx, colIdx, content)}
-                                title={content}
                               >
                                 {content}
                               </div>
@@ -750,6 +843,37 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
                     })}
                   </div>
                 </div>
+              );
+            })}
+            {/* 날짜 열 리사이즈 핸들 (모든 날짜 열 동일 너비) */}
+            {weekDays.length > 1 && Array.from({ length: weekDays.length - 1 }, (_, di) => {
+              const numDays = weekDays.length;
+              const leftPct = ((di + 1) / numDays) * 100;
+              return (
+                <div
+                  key={`day-resize-${di}`}
+                  className="sw-day-resize-handle"
+                  style={{
+                    position: 'absolute', top: 0, height: '100%',
+                    left: `${leftPct}%`,
+                    transform: 'translateX(-4px)',
+                  }}
+                  onMouseDown={(e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    const cw = e.target.closest('.shockwave-days').getBoundingClientRect().width;
+                    const currentDayWidth = cw / numDays;
+                    dayResizeRef.current = { active: true, startX: e.clientX, startWidth: currentDayWidth, factor: di + 1 };
+                    const onMove = (ev) => {
+                      if (!dayResizeRef.current.active) return;
+                      const { startWidth, factor, startX } = dayResizeRef.current;
+                      const delta = ev.clientX - startX;
+                      const newWidth = Math.max(100, Math.min(600, startWidth + delta / factor));
+                      setDayColWidth(newWidth);
+                    };
+                    const onUp = () => { dayResizeRef.current.active = false; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+                    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
+                  }}
+                />
               );
             })}
           </div>
@@ -791,6 +915,21 @@ export default function ShockwaveView({ therapists, settings, memos, onLoadMemos
               병합 해제 (Cmd+E)
             </button>
           )}
+        </div>
+      )}
+
+      {hoverData && (
+        <div
+          ref={tooltipRef}
+          className="sw-custom-tooltip"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            opacity: 0,
+          }}
+        >
+          {hoverData.text.split('\n').map((line, i) => <div key={i}>{line}</div>)}
         </div>
       )}
     </>

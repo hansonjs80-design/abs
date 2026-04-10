@@ -28,7 +28,7 @@ const SQL_SNIPPETS = [
   slot_index int NOT NULL DEFAULT 0,
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now()
-);`
+);\nALTER TABLE shockwave_therapists DISABLE ROW LEVEL SECURITY;`
   },
   {
     title: '공휴일 테이블',

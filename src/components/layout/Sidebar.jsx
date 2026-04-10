@@ -14,6 +14,7 @@ export default function Sidebar({ isOpen, isCollapsed, onClose }) {
     { section: '스케줄 관리' },
     { path: '/', icon: Calendar, label: '직원 근무표' },
     { path: '/shockwave', icon: Zap, label: '충격파 스케줄러' },
+    { path: '/shockwave-stats', icon: ClipboardList, label: '치료 내역 통계' },
     { section: '시스템' },
     { path: '/settings', icon: Settings, label: '설정' },
   ];

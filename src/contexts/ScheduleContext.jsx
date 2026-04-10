@@ -203,15 +203,18 @@ export function ScheduleProvider({ children }) {
   }, []);
 
   // 충격파 스케줄 저장
-  const saveShockwaveMemo = useCallback(async (year, month, weekIndex, dayIndex, rowIndex, colIndex, content) => {
+  const saveShockwaveMemo = useCallback(async (year, month, weekIndex, dayIndex, rowIndex, colIndex, content, bg_color) => {
     try {
+      const upsertData = {
+        year, month, week_index: weekIndex, day_index: dayIndex, row_index: rowIndex, col_index: colIndex,
+        content: content || '',
+        updated_at: new Date().toISOString()
+      };
+      if (bg_color !== undefined) upsertData.bg_color = bg_color;
+
       const { data, error } = await supabase
         .from('shockwave_schedules')
-        .upsert({
-          year, month, week_index: weekIndex, day_index: dayIndex, row_index: rowIndex, col_index: colIndex,
-          content: content || '',
-          updated_at: new Date().toISOString()
-        }, {
+        .upsert(upsertData, {
           onConflict: 'year,month,week_index,day_index,row_index,col_index'
         })
         .select();
@@ -221,7 +224,7 @@ export function ScheduleProvider({ children }) {
       const key = `${weekIndex}-${dayIndex}-${rowIndex}-${colIndex}`;
       setShockwaveMemos(prev => ({
         ...prev,
-        [key]: data?.[0] || { year, month, week_index: weekIndex, day_index: dayIndex, row_index: rowIndex, col_index: colIndex, content }
+        [key]: data?.[0] || { ...upsertData }
       }));
       return true;
     } catch (err) {
