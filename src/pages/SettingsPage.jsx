@@ -59,6 +59,8 @@ const SQL_SNIPPETS = [
   }
 ];
 
+const SQL_SETUP_SCRIPT = SQL_SNIPPETS.map(snippet => `-- ${snippet.title}\n${snippet.sql}`).join('\n\n');
+
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -453,6 +455,38 @@ export default function SettingsPage() {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 24 }}>
+        <div className="card-header">
+          <span className="card-title"><Copy size={18} /> 전체 SQL 스크립트</span>
+          <button
+            className="btn btn-secondary btn-sm"
+            style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}
+            onClick={() => handleCopySQL(SQL_SETUP_SCRIPT)}
+          >
+            <Copy size={14} />
+            전체 복사
+          </button>
+        </div>
+        <div className="card-body">
+          <textarea
+            readOnly
+            value={SQL_SETUP_SCRIPT}
+            style={{
+              width: '100%',
+              minHeight: 220,
+              borderRadius: 10,
+              padding: 12,
+              fontFamily: 'Consolas, Menlo, monospace',
+              fontSize: '0.78rem',
+              border: '1px solid var(--border-color)'
+            }}
+          />
+          <p style={{ marginTop: 10, fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+            위 전체 SQL을 복사하면 필요한 테이블과 기본 데이터를 한 번에 생성할 수 있습니다.
+          </p>
         </div>
       </div>
     </div>
