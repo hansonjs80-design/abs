@@ -375,7 +375,28 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
           <button 
             className="btn btn-secondary"
             onClick={async () => {
-              const dateStr = `${current          <table className="sw-stats-table spreadsheet-theme">
+              const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
+              const { error } = await supabase.from('shockwave_patient_logs').insert([{
+                date: dateStr, patient_name: '', chart_number: '', visit_count: '', body_part: '', therapist_name: '', prescription: ''
+              }]);
+              if (!error) fetchLogs();
+            }}
+          >
+            + 수동 추가
+          </button>
+          <button 
+            className="sw-sync-btn"
+            onClick={handleSyncFromScheduler}
+            disabled={isLoading}
+          >
+            {isLoading ? '동기화 중...' : '⬇ 현재 스케줄러 데이터 가져오기'}
+          </button>
+        </div>
+      </div>
+
+      <div className="sw-stats-body">
+        <div className="sw-stats-list-wrapper">
+          <table className="sw-stats-table spreadsheet-theme">
             <thead>
               {/* === ROW 1: TITLE === */}
               <tr>
