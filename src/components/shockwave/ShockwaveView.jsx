@@ -9,7 +9,7 @@ const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 const HORIZONTAL_BORDER_COLOR = '#b7b7b7';
 
 export default function ShockwaveView({ therapists, settings, memos, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
-  const { currentYear, currentMonth } = useSchedule();
+  const { currentYear, currentMonth, saveShockwaveMemosBulk } = useSchedule();
   const { addToast } = useToast();
   const viewRef = useRef(null);
   const dragSelectionRef = useRef(null);
