@@ -180,8 +180,12 @@
 .hdr-total { background-color: #c1a8c8 !important; font-weight: 700; color: #000; }
 .hdr-grand-total { font-size: 1.1rem; font-weight: 700; color: #cc0000; background-color: #f4cccc !important; }
 
-/* Sticky header */
-.sw-grid-table thead th { position: sticky; top: 0; z-index: 10; }
+/* Sticky header — each row stacks below the previous */
+.sw-grid-table thead th { position: sticky; z-index: 10; }
+.sw-grid-table thead tr:nth-child(1) th { top: 0; }           /* 제목 행 */
+.sw-grid-table thead tr:nth-child(2) th { top: 34px; }        /* 치료사 이름 행 */
+.sw-grid-table thead tr:nth-child(3) th { top: 62px; }        /* F1.5/F/Rdc/F/R 행 */
+.sw-grid-table thead tr:nth-child(4) th { top: 88px; }        /* 합계 숫자 행 */
 
 /* ── Body cells ── */
 .gc { background: #fff; color: #202124; height: 26px; cursor: cell; }
