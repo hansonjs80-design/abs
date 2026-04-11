@@ -1,621 +1,590 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import '../../styles/shockwave_stats.css';
 
-export default function ShockwaveDataGrid({ logs, therapists, currentYear, currentMonth, fetchLogs }) {
-  // === Data and Layout Preparation ===
-  const generateDraftRows = (count, startIndex) => {
-    return Array.from({ length: count }).map((_, i) => ({
-      id: `draft-${startIndex + i}`, date: '', patient_name: '', chart_number: '', visit_count: '', body_part: '', therapist_name: '', prescription: '', prescription_count: '', isDraft: true
-    }));
-  };
+const PRESCRIPTIONS = ['F1.5', 'F/Rdc', 'F/R'];
+const PRES_DB_MAP = { 'F1.5': 'F1.5', 'F/Rdc': 'F/R DC', 'F/R': 'F/R' };
+const PRES_DISPLAY_MAP = { 'F1.5': 'F1.5', 'F/R DC': 'F/Rdc', 'F/R': 'F/R' };
+const THERAPIST_COLORS = ['#cde4f9', '#ffebb4', '#d9ead3', '#fce5cd', '#ead1dc'];
 
+export default function ShockwaveDataGrid({ logs, therapists, currentYear, currentMonth, fetchLogs }) {
+
+  // ─── 1. DATA PREPARATION ─────────────────────────────────
   const gridData = useMemo(() => {
-    const sortedLogs = [...logs].sort((a, b) => a.date.localeCompare(b.date));
+    const sorted = [...logs].sort((a, b) => a.date.localeCompare(b.date));
     const groups = {};
-    sortedLogs.forEach(log => {
-      if (!groups[log.date]) groups[log.date] = { items: [], total: 0 };
-      groups[log.date].items.push(log);
-      if (log.prescription) groups[log.date].total += parseInt(log.prescription_count || '1', 10) || 1;
+    sorted.forEach(log => {
+      const d = log.date || '';
+      if (!groups[d]) groups[d] = [];
+      groups[d].push(log);
     });
 
-    const flattened = [];
+    const flat = [];
     Object.keys(groups).sort().forEach(date => {
-      const g = groups[date];
-      g.items.forEach((log, idx) => {
-        flattened.push({
+      const items = groups[date];
+      items.forEach((log, idx) => {
+        flat.push({
           ...log,
-          isFirstOfDate: idx === 0,
-          isLastOfDate: idx === g.items.length - 1,
-          dailyTotal: idx === 0 ? g.total : null,
-          groupSize: g.items.length
+          _isFirst: idx === 0,
+          _isLast: idx === items.length - 1,
+          _groupSize: items.length,
         });
       });
     });
 
-    const minRows = 80; // Keep plenty of drafting space
-    const draftsNeeded = Math.max(minRows - flattened.length, 30);
-    generateDraftRows(draftsNeeded, flattened.length).forEach(d => {
-      flattened.push({ ...d, isFirstOfDate: true, isLastOfDate: true, dailyTotal: null, groupSize: 1 });
-    });
-
-    return flattened;
+    // Add 40+ empty draft rows
+    const draftsNeeded = Math.max(60 - flat.length, 30);
+    for (let i = 0; i < draftsNeeded; i++) {
+      flat.push({
+        id: `draft-${i}`,
+        date: '', patient_name: '', chart_number: '', visit_count: '',
+        body_part: '', therapist_name: '', prescription: '', prescription_count: '',
+        isDraft: true, _isFirst: true, _isLast: true, _groupSize: 1,
+      });
+    }
+    return flat;
   }, [logs]);
 
-  const columns = useMemo(() => {
-    const cols = [
-      { id: 'date', label: '날짜', width: 80, isFixed: true, align: 'center', field: 'date' },
-      { id: 'patient_name', label: '이름', width: 90, isFixed: true, align: 'center', field: 'patient_name', bold: true },
-      { id: 'chart_number', label: '차트번호', width: 90, isFixed: true, align: 'center', field: 'chart_number', color: '#5f6368' },
-      { id: 'visit_count', label: '회차', width: 60, isFixed: true, align: 'center', field: 'visit_count' },
-      { id: 'body_part', label: '부위', width: 140, isFixed: true, align: 'left', field: 'body_part' },
-    ];
-    
-    therapists.forEach(t => {
-      cols.push({ id: `T_${t.id}_F1.5`, label: 'F1.5', therapist: t.name, pres: 'F1.5', width: 45, align: 'center' });
-      cols.push({ id: `T_${t.id}_F/Rdc`, label: 'F/Rdc', therapist: t.name, pres: 'F/R DC', width: 45, align: 'center' });
-      cols.push({ id: `T_${t.id}_F/R`, label: 'F/R', therapist: t.name, pres: 'F/R', width: 45, align: 'center' });
-    });
-    
-    cols.push({ id: 'totalCount', label: '총건수', width: 60, isReadOnly: true, align: 'center', color: '#cc0000', bold: true });
-    return cols;
-  }, [therapists]);
+  // Column definitions (flat array matching <colgroup>)
+  // Fixed: 날짜, 이름, 차트번호, 회차, 부위
+  // Dynamic: per therapist × 3 prescriptions
+  // Final: 총건수
+  const FIXED_FIELDS = [
+    { id: 'date', label: '날짜', field: 'date', w: 70 },
+    { id: 'name', label: '이름', field: 'patient_name', w: 85, bold: true },
+    { id: 'chart', label: '차트번호', field: 'chart_number', w: 75 },
+    { id: 'visit', label: '회차', field: 'visit_count', w: 45 },
+    { id: 'body', label: '부위', field: 'body_part', w: 120 },
+  ];
 
-  // Utility to read cell value from log depending on column definition
-  const getCellValue = (row, col) => {
-    if (col.id === 'totalCount') return row.dailyTotal > 0 ? row.dailyTotal : '';
-    // Format date specifically for display if it's the date column
-    if (col.id === 'date') {
+  const totalColCount = FIXED_FIELDS.length + therapists.length * 3 + 1;
+
+  // Helper: get therapist column index offset
+  const tColStart = (tIdx) => FIXED_FIELDS.length + tIdx * 3;
+
+  // ─── 2. CELL VALUE HELPERS ────────────────────────────────
+  const getVal = (row, colIdx) => {
+    if (colIdx < FIXED_FIELDS.length) {
+      const f = FIXED_FIELDS[colIdx];
+      if (f.id === 'date') {
         if (!row.date) return '';
-        const parts = row.date.split('-');
-        return parts.length === 3 ? `${parts[1]}/${parts[2]}` : row.date;
-    }
-    if (col.therapist) {
-      if (row.therapist_name === col.therapist && row.prescription === col.pres) {
-        return row.prescription_count || '1';
+        const p = row.date.split('-');
+        return p.length === 3 ? `${p[1]}/${p[2]}` : row.date;
       }
-      return '';
+      return row[f.field] || '';
     }
-    return row[col.field] || '';
+    if (colIdx === totalColCount - 1) {
+      // 총건수 — only show on first row of date group
+      if (!row._isFirst) return '';
+      const sameDate = gridData.filter(r => r.date === row.date && r.date);
+      return sameDate.reduce((s, r) => s + (r.prescription ? (parseInt(r.prescription_count || '1') || 1) : 0), 0) || '';
+    }
+    // Therapist prescription cell
+    const tIdx = Math.floor((colIdx - FIXED_FIELDS.length) / 3);
+    const pIdx = (colIdx - FIXED_FIELDS.length) % 3;
+    const t = therapists[tIdx];
+    if (!t) return '';
+    const pres = PRESCRIPTIONS[pIdx];
+    const dbPres = PRES_DB_MAP[pres];
+    if (row.therapist_name === t.name && row.prescription === dbPres) {
+      return row.prescription_count || '1';
+    }
+    return '';
   };
 
-  // State
-  const [selectedRange, setSelectedRange] = useState(null);
-  const [focusedCell, setFocusedCell] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [editingCell, setEditingCell] = useState(null); // { r, c, value }
-  const [contextMenu, setContextMenu] = useState(null); // { x, y, row, col }
+  // ─── 3. SELECTION, FOCUS, EDIT STATE ──────────────────────
+  const [focus, setFocus] = useState(null); // {r, c}
+  const [sel, setSel] = useState(null); // {r1,c1,r2,c2}
+  const [dragging, setDragging] = useState(false);
+  const [editing, setEditing] = useState(null); // {r,c,val}
+  const [ctxMenu, setCtxMenu] = useState(null);
+  const [mergedCells, setMergedCells] = useState({}); // key "r-c" -> {rs, cs}
 
-  const gridRef = useRef(null);
-  const editInputRef = useRef(null);
+  const wrapRef = useRef(null);
+  const inputRef = useRef(null);
 
-  // === Handlers ===
-  const handleMouseDown = (e, r, c) => {
-    if (e.button === 2) return; // Right click handled separately
-    if (editingCell) finishEditing();
-    
-    setFocusedCell({ r, c });
-    setSelectedRange({ startRow: r, startCol: c, endRow: r, endCol: c });
-    setIsDragging(true);
-    setContextMenu(null);
+  const selNorm = sel ? {
+    r1: Math.min(sel.r1, sel.r2), c1: Math.min(sel.c1, sel.c2),
+    r2: Math.max(sel.r1, sel.r2), c2: Math.max(sel.c1, sel.c2),
+  } : null;
+
+  const inSel = (r, c) => selNorm && r >= selNorm.r1 && r <= selNorm.r2 && c >= selNorm.c1 && c <= selNorm.c2;
+
+  // ─── 4. MERGE / UNMERGE ───────────────────────────────────
+  const getMergeKey = (r, c) => `${r}-${c}`;
+
+  // Check if cell (r,c) is hidden by a merge
+  const getMergedInto = (r, c) => {
+    for (const [key, { rs, cs }] of Object.entries(mergedCells)) {
+      const [mr, mc] = key.split('-').map(Number);
+      if (r >= mr && r < mr + rs && c >= mc && c < mc + cs && !(r === mr && c === mc)) {
+        return key;
+      }
+    }
+    return null;
   };
 
-  const handleMouseEnter = (r, c) => {
-    if (isDragging && selectedRange) {
-      setSelectedRange(prev => ({ ...prev, endRow: r, endCol: c }));
+  const handleMerge = () => {
+    if (!selNorm) return;
+    const { r1, c1, r2, c2 } = selNorm;
+    if (r1 === r2 && c1 === c2) return; // single cell
+    const key = getMergeKey(r1, c1);
+    setMergedCells(prev => ({
+      ...prev,
+      [key]: { rs: r2 - r1 + 1, cs: c2 - c1 + 1 }
+    }));
+  };
+
+  const handleUnmerge = () => {
+    if (!focus) return;
+    // Find merge that contains focus
+    const key = getMergeKey(focus.r, focus.c);
+    if (mergedCells[key]) {
+      setMergedCells(prev => { const n = { ...prev }; delete n[key]; return n; });
+      return;
+    }
+    const into = getMergedInto(focus.r, focus.c);
+    if (into) {
+      setMergedCells(prev => { const n = { ...prev }; delete n[into]; return n; });
     }
   };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
+  // ─── 5. EDITING ───────────────────────────────────────────
+  const startEdit = (r, c) => {
+    if (c === totalColCount - 1) return; // 총건수 read-only
+    setEditing({ r, c, val: getVal(gridData[r], c) });
   };
 
-  const handleDoubleClick = (r, c) => {
-    if (columns[c].isReadOnly) return;
-    setEditingCell({ r, c, value: gridData[r][columns[c].field] || getCellValue(gridData[r], columns[c]) });
-  };
-
-  const handleContextMenu = (e, r, c) => {
-    e.preventDefault();
-    if (editingCell) finishEditing();
-    // If clicked outside selection, select exactly this cell
-    if (!isInSelection(r, c)) {
-        setFocusedCell({ r, c });
-        setSelectedRange({ startRow: r, startCol: c, endRow: r, endCol: c });
-    }
-    setContextMenu({ x: e.clientX, y: e.clientY, row: r, col: c });
-  };
-
-  const isInSelection = (r, c) => {
-    if (!selectedRange) return false;
-    const minR = Math.min(selectedRange.startRow, selectedRange.endRow);
-    const maxR = Math.max(selectedRange.startRow, selectedRange.endRow);
-    const minC = Math.min(selectedRange.startCol, selectedRange.endCol);
-    const maxC = Math.max(selectedRange.startCol, selectedRange.endCol);
-    return r >= minR && r <= maxR && c >= minC && c <= maxC;
-  };
-
-  // Edit completion triggers UPSERT logic
-  const finishEditing = async () => {
-    if (!editingCell) return;
-    const { r, c, value } = editingCell;
-    setEditingCell(null);
-    gridRef.current?.focus(); // Return focus to grid for keyboard navigation
+  const finishEdit = async () => {
+    if (!editing) return;
+    const { r, c, val } = editing;
+    setEditing(null);
+    wrapRef.current?.focus();
 
     const row = gridData[r];
-    const colName = columns[c];
-    const oldValue = getCellValue(row, colName);
+    const oldVal = getVal(row, c);
+    if (val === oldVal) return;
 
-    if (value === oldValue) return; // No change
+    if (c < FIXED_FIELDS.length) {
+      // Normal field
+      const field = FIXED_FIELDS[c].field;
+      let v = val;
+      if (field === 'date') {
+        if (v.length === 5 && v.includes('/')) v = `${currentYear}-${v.replace('/', '-')}`;
+        else if (v.length === 4 && !v.includes('-')) v = `${currentYear}-${v.substring(0,2)}-${v.substring(2,4)}`;
+      }
 
-    // Construct upsert object
-    let updates = { id: row.id };
-    if (row.isDraft) {
-      delete updates.id; // Let Supabase gen UUID
-      // Fill draft required fields or defaults
-      updates.date = row.date || `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
-      updates.patient_name = row.patient_name || '';
-    }
-
-    if (colName.therapist) {
-      // It's a prescription cell
-      if (value.trim() === '') {
-         // Erase if this was the active prescription
-         if (row.therapist_name === colName.therapist && row.prescription === colName.pres) {
-            updates.therapist_name = '';
-            updates.prescription = '';
-            updates.prescription_count = '';
-         }
+      if (row.isDraft) {
+        const ins = {
+          date: row.date || `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`,
+          patient_name: row.patient_name || '',
+          chart_number: row.chart_number || '',
+          visit_count: row.visit_count || '',
+          body_part: row.body_part || '',
+          therapist_name: '', prescription: '', prescription_count: '',
+        };
+        ins[field] = v;
+        if (!ins.date) ins.date = `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`;
+        await supabase.from('shockwave_patient_logs').insert([ins]);
       } else {
-         updates.therapist_name = colName.therapist;
-         updates.prescription = colName.pres;
-         updates.prescription_count = value.trim();
+        await supabase.from('shockwave_patient_logs').update({ [field]: v }).eq('id', row.id);
       }
     } else {
-      // Normal field
-      if (colName.field === 'date') {
-         // Auto prefix year if user just types MM-DD
-         let formattedVal = value;
-         if (value.length === 5 && value.includes('/')) formattedVal = `${currentYear}-${value.replace('/', '-')}`;
-         else if (value.length === 5 && value.includes('-')) formattedVal = `${currentYear}-${value}`;
-         else if (value.length === 4 && !value.includes('-')) formattedVal = `${currentYear}-${value.substring(0,2)}-${value.substring(2,4)}`;
-         updates[colName.field] = formattedVal;
+      // Therapist cell
+      const tIdx = Math.floor((c - FIXED_FIELDS.length) / 3);
+      const pIdx = (c - FIXED_FIELDS.length) % 3;
+      const t = therapists[tIdx];
+      if (!t) return;
+      const pres = PRESCRIPTIONS[pIdx];
+      const dbPres = PRES_DB_MAP[pres];
+
+      if (row.isDraft) {
+        if (!val.trim()) return;
+        const ins = {
+          date: `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`,
+          patient_name: '(이름없음)', chart_number: '', visit_count: '', body_part: '',
+          therapist_name: t.name, prescription: dbPres, prescription_count: val.trim(),
+        };
+        await supabase.from('shockwave_patient_logs').insert([ins]);
       } else {
-         updates[colName.field] = value;
+        if (val.trim() === '') {
+          if (row.therapist_name === t.name && row.prescription === dbPres) {
+            await supabase.from('shockwave_patient_logs').update({
+              therapist_name: '', prescription: '', prescription_count: ''
+            }).eq('id', row.id);
+          }
+        } else {
+          await supabase.from('shockwave_patient_logs').update({
+            therapist_name: t.name, prescription: dbPres, prescription_count: val.trim()
+          }).eq('id', row.id);
+        }
       }
     }
+    fetchLogs();
+  };
 
-    // Merge existing fields to satisfy NOT NULL constraints if it's a draft
-    if (row.isDraft) {
-        updates = {
-            date: row.date,
-            patient_name: row.patient_name,
-            chart_number: row.chart_number || '',
-            visit_count: row.visit_count || '',
-            body_part: row.body_part || '',
-            therapist_name: row.therapist_name || '',
-            prescription: row.prescription || '',
-            prescription_count: row.prescription_count || '',
-            ...updates
-        };
-        // Auto default date if missing
-        if (!updates.date) {
-            const yesterdayOrLastLog = r > 0 ? gridData[r-1].date : `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
-            updates.date = yesterdayOrLastLog;
-        }
-        if (!updates.patient_name) updates.patient_name = '(이름 모름)';
+  // ─── 6. MOUSE HANDLERS ───────────────────────────────────
+  const onMouseDown = (e, r, c) => {
+    if (e.button === 2) return;
+    if (editing) finishEdit();
+    setFocus({ r, c });
+    setSel({ r1: r, c1: c, r2: r, c2: c });
+    setDragging(true);
+    setCtxMenu(null);
+  };
+  const onMouseEnter = (r, c) => { if (dragging) setSel(prev => prev ? { ...prev, r2: r, c2: c } : prev); };
+  const onMouseUp = () => setDragging(false);
+  const onDblClick = (r, c) => startEdit(r, c);
+  const onCtxMenu = (e, r, c) => {
+    e.preventDefault();
+    if (editing) finishEdit();
+    if (!inSel(r, c)) {
+      setFocus({ r, c });
+      setSel({ r1: r, c1: c, r2: r, c2: c });
     }
+    setCtxMenu({ x: e.clientX, y: e.clientY, r, c });
+  };
 
-    try {
-        await supabase.from('shockwave_patient_logs').upsert([updates]);
-        fetchLogs();
-    } catch (err) {
-        console.error("Upsert failed", err);
+  // ─── 7. CLIPBOARD ────────────────────────────────────────
+  const doCopy = () => {
+    if (!selNorm) return;
+    let tsv = '';
+    for (let r = selNorm.r1; r <= selNorm.r2; r++) {
+      const row = [];
+      for (let c = selNorm.c1; c <= selNorm.c2; c++) row.push(getVal(gridData[r], c));
+      tsv += row.join('\t') + '\n';
+    }
+    navigator.clipboard.writeText(tsv);
+  };
+
+  const doPaste = async (text, startR, startC) => {
+    const rows = text.split('\n').map(l => l.split('\t'));
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i].length === 1 && rows[i][0] === '') continue;
+      const r = startR + i;
+      if (r >= gridData.length) break;
+      const row = gridData[r];
+
+      for (let j = 0; j < rows[i].length; j++) {
+        const c = startC + j;
+        if (c >= totalColCount - 1) break; // skip 총건수
+        const v = rows[i][j].trim();
+
+        if (c < FIXED_FIELDS.length) {
+          const field = FIXED_FIELDS[c].field;
+          if (row.isDraft) {
+            if (v) {
+              const ins = {
+                date: `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`,
+                patient_name: '', chart_number: '', visit_count: '', body_part: '',
+                therapist_name: '', prescription: '', prescription_count: '',
+              };
+              ins[field] = v;
+              await supabase.from('shockwave_patient_logs').insert([ins]);
+            }
+          } else {
+            await supabase.from('shockwave_patient_logs').update({ [field]: v }).eq('id', row.id);
+          }
+        } else {
+          const tIdx = Math.floor((c - FIXED_FIELDS.length) / 3);
+          const pIdx = (c - FIXED_FIELDS.length) % 3;
+          const t = therapists[tIdx];
+          if (!t || !v) continue;
+          const dbPres = PRES_DB_MAP[PRESCRIPTIONS[pIdx]];
+          if (!row.isDraft) {
+            await supabase.from('shockwave_patient_logs').update({
+              therapist_name: t.name, prescription: dbPres, prescription_count: v
+            }).eq('id', row.id);
+          }
+        }
+      }
+    }
+    fetchLogs();
+  };
+
+  const doDelete = async () => {
+    if (!selNorm) return;
+    for (let r = selNorm.r1; r <= selNorm.r2; r++) {
+      const row = gridData[r];
+      if (row.isDraft) continue;
+      for (let c = selNorm.c1; c <= selNorm.c2; c++) {
+        if (c >= totalColCount - 1) continue;
+        if (c < FIXED_FIELDS.length) {
+          await supabase.from('shockwave_patient_logs').update({ [FIXED_FIELDS[c].field]: '' }).eq('id', row.id);
+        } else {
+          const tIdx = Math.floor((c - FIXED_FIELDS.length) / 3);
+          const pIdx = (c - FIXED_FIELDS.length) % 3;
+          const t = therapists[tIdx];
+          if (t && row.therapist_name === t.name && row.prescription === PRES_DB_MAP[PRESCRIPTIONS[pIdx]]) {
+            await supabase.from('shockwave_patient_logs').update({ therapist_name: '', prescription: '', prescription_count: '' }).eq('id', row.id);
+          }
+        }
+      }
+    }
+    fetchLogs();
+  };
+
+  const doDeleteRow = async (r) => {
+    const row = gridData[r];
+    if (row && !row.isDraft && window.confirm(`${row.patient_name} 행을 삭제하시겠습니까?`)) {
+      await supabase.from('shockwave_patient_logs').delete().eq('id', row.id);
+      setCtxMenu(null);
+      fetchLogs();
     }
   };
 
-  // Keyboard navigation & copying
+  // ─── 8. KEYBOARD ─────────────────────────────────────────
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      // If Context Menu open
-      if (contextMenu) {
-         if (e.key === 'Escape') setContextMenu(null);
-         return;
-      }
+    const kd = (e) => {
+      if (ctxMenu && e.key === 'Escape') { setCtxMenu(null); return; }
 
-      // If editing, only handle Escape and Enter
-      if (editingCell) {
-        if (e.key === 'Escape') setEditingCell(null);
+      if (editing) {
+        if (e.key === 'Escape') { setEditing(null); return; }
         if (e.key === 'Enter') {
           e.preventDefault();
-          finishEditing().then(() => {
-             // Move focus down
-             const nextRow = Math.min(editingCell.r + 1, gridData.length - 1);
-             setFocusedCell({ r: nextRow, c: editingCell.c });
-             setSelectedRange({ startRow: nextRow, startCol: editingCell.c, endRow: nextRow, endCol: editingCell.c });
+          finishEdit().then(() => {
+            const nr = Math.min(editing.r + 1, gridData.length - 1);
+            setFocus({ r: nr, c: editing.c });
+            setSel({ r1: nr, c1: editing.c, r2: nr, c2: editing.c });
           });
+          return;
+        }
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          finishEdit().then(() => {
+            const nc = Math.min(editing.c + 1, totalColCount - 1);
+            setFocus({ r: editing.r, c: nc });
+            setSel({ r1: editing.r, c1: nc, r2: editing.r, c2: nc });
+          });
+          return;
         }
         return;
       }
 
-      // We need focused cell
-      if (!focusedCell) return;
-      let { r, c } = focusedCell;
+      if (!focus) return;
+      let { r, c } = focus;
 
+      // Arrows
       if (e.key === 'ArrowUp') r = Math.max(0, r - 1);
       if (e.key === 'ArrowDown') r = Math.min(gridData.length - 1, r + 1);
       if (e.key === 'ArrowLeft') c = Math.max(0, c - 1);
-      if (e.key === 'ArrowRight') c = Math.min(columns.length - 1, c + 1);
-
+      if (e.key === 'ArrowRight') c = Math.min(totalColCount - 1, c + 1);
       if (e.key.startsWith('Arrow')) {
         e.preventDefault();
-        setFocusedCell({ r, c });
-        if (e.shiftKey && selectedRange) {
-           setSelectedRange(prev => ({ ...prev, endRow: r, endCol: c }));
-        } else {
-           setSelectedRange({ startRow: r, startCol: c, endRow: r, endCol: c });
-        }
+        setFocus({ r, c });
+        setSel(e.shiftKey && sel ? { ...sel, r2: r, c2: c } : { r1: r, c1: c, r2: r, c2: c });
         return;
       }
 
-      if (e.key === 'Enter') {
-         e.preventDefault();
-         handleDoubleClick(r, c);
-         return;
+      if (e.key === 'Enter') { e.preventDefault(); startEdit(r, c); return; }
+      if (e.key === 'Tab') { e.preventDefault(); const nc = Math.min(c+1, totalColCount-1); setFocus({r, c:nc}); setSel({r1:r,c1:nc,r2:r,c2:nc}); return; }
+      if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); doDelete(); return; }
+
+      // Merge/Unmerge: Ctrl+E / Ctrl+Shift+E
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'e') {
+        e.preventDefault();
+        e.shiftKey ? handleUnmerge() : handleMerge();
+        return;
       }
 
-      // Delete contents
-      if (e.key === 'Backspace' || e.key === 'Delete') {
-          e.preventDefault();
-          handleDeleteSelection();
-          return;
-      }
+      // Copy/Cut
+      if ((e.metaKey || e.ctrlKey) && e.key === 'c') { e.preventDefault(); doCopy(); return; }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'x') { e.preventDefault(); doCopy(); doDelete(); return; }
 
-      // Any printable character starts editing
-      if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) {
-          if (!columns[c].isReadOnly) {
-             setEditingCell({ r, c, value: '' }); 
-             // value is empty so the new char replaces it immediately. The input field will capture the char if autoFocus is fast enough, but to be safe we can prefill:
-             setTimeout(() => { if (editInputRef.current) editInputRef.current.value = e.key; }, 0);
-          }
+      // Printable char starts edit
+      if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey && c < totalColCount - 1) {
+        setEditing({ r, c, val: '' });
+        setTimeout(() => { if (inputRef.current) inputRef.current.value = e.key; }, 0);
       }
-
-      // Copy / Paste / Cut
-      if ((e.metaKey || e.ctrlKey) && e.key === 'c') { e.preventDefault(); handleCopy(); }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'x') { e.preventDefault(); handleCut(); }
-      // Pasta happens natively in browser via 'paste' event.
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [focusedCell, selectedRange, editingCell, gridData, columns, currentYear, currentMonth]);
+    window.addEventListener('keydown', kd);
+    return () => window.removeEventListener('keydown', kd);
+  }, [focus, sel, editing, gridData, totalColCount, ctxMenu]);
 
-  // Paste Event Listener
+  // Paste listener
   useEffect(() => {
-      const handlePaste = (e) => {
-          if (editingCell) return;
-          if (!focusedCell) return;
-          const text = (e.clipboardData || window.clipboardData).getData('text');
-          if (text) {
-              e.preventDefault();
-              processPaste(text, focusedCell.r, focusedCell.c);
-          }
-      };
-      window.addEventListener('paste', handlePaste);
-      return () => window.removeEventListener('paste', handlePaste);
-  }, [focusedCell, editingCell, gridData, columns]);
+    const handler = (e) => {
+      if (editing) return;
+      if (!focus) return;
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      if (text) { e.preventDefault(); doPaste(text, focus.r, focus.c); }
+    };
+    window.addEventListener('paste', handler);
+    return () => window.removeEventListener('paste', handler);
+  }, [focus, editing, gridData]);
 
-  const handleCopy = () => {
-      if (!selectedRange) return;
-      const minR = Math.min(selectedRange.startRow, selectedRange.endRow);
-      const maxR = Math.max(selectedRange.startRow, selectedRange.endRow);
-      const minC = Math.min(selectedRange.startCol, selectedRange.endCol);
-      const maxC = Math.max(selectedRange.startCol, selectedRange.endCol);
-      
-      let tsv = '';
-      for (let r = minR; r <= maxR; r++) {
-          let rowStr = [];
-          for (let c = minC; c <= maxC; c++) {
-              rowStr.push(getCellValue(gridData[r], columns[c]));
-          }
-          tsv += rowStr.join('\t') + '\n';
-      }
-      navigator.clipboard.writeText(tsv);
-      // Optional: show toast
-  };
-
-  const handleCut = () => {
-      handleCopy();
-      handleDeleteSelection();
-  };
-
-  const processPaste = async (text, startR, startC) => {
-      const rows = text.split('\n').map(line => line.split('\t'));
-      let toUpsert = [];
-
-      for (let i = 0; i < rows.length; i++) {
-          if (rows[i].length === 1 && rows[i][0] === '') continue; // skip last empty newline
-          const r = startR + i;
-          if (r >= gridData.length) break;
-          
-          let row = gridData[r];
-          let updates = { id: row.id };
-          if (row.isDraft) {
-              delete updates.id;
-              updates.date = row.date || `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
-              updates.patient_name = row.patient_name || '(이름모름)';
-          } else {
-              updates.date = row.date;
-              updates.patient_name = row.patient_name;
-          }
-
-          for (let j = 0; j < rows[i].length; j++) {
-              const c = startC + j;
-              if (c >= columns.length) break;
-              const colName = columns[c];
-              if (colName.isReadOnly) continue;
-
-              const val = rows[i][j].trim();
-              if (colName.therapist) {
-                  if (val !== '') {
-                      updates.therapist_name = colName.therapist;
-                      updates.prescription = colName.pres;
-                      updates.prescription_count = val;
-                  }
-              } else {
-                  if (colName.field === 'date') {
-                      let formattedVal = val;
-                      if (val.length === 5 && val.includes('/')) formattedVal = `${currentYear}-${val.replace('/', '-')}`;
-                      updates[colName.field] = formattedVal;
-                  } else {
-                      updates[colName.field] = val;
-                  }
-              }
-          }
-          toUpsert.push(updates);
-      }
-
-      if (toUpsert.length > 0) {
-          await supabase.from('shockwave_patient_logs').upsert(toUpsert);
-          fetchLogs();
-      }
-  };
-
-  const handleDeleteSelection = async () => {
-      if (!selectedRange) return;
-      const minR = Math.min(selectedRange.startRow, selectedRange.endRow);
-      const maxR = Math.max(selectedRange.startRow, selectedRange.endRow);
-      const minC = Math.min(selectedRange.startCol, selectedRange.endCol);
-      const maxC = Math.max(selectedRange.startCol, selectedRange.endCol);
-      
-      let toUpsert = [];
-      for (let r = minR; r <= maxR; r++) {
-         let row = gridData[r];
-         if (row.isDraft) continue; // Can't delete what hasn't been saved
-
-         // If ALL columns selected for a row, we could theoretically delete the whole record.
-         // Let's just clear the fields. Actual deletion via context menu.
-         let updates = { id: row.id };
-         let modified = false;
-
-         for (let c = minC; c <= maxC; c++) {
-             const colName = columns[c];
-             if (colName.isReadOnly) continue;
-             if (colName.therapist) {
-                 if (row.therapist_name === colName.therapist && row.prescription === colName.pres) {
-                     updates.therapist_name = '';
-                     updates.prescription = '';
-                     updates.prescription_count = '';
-                     modified = true;
-                 }
-             } else {
-                 updates[colName.field] = '';
-                 modified = true;
-             }
-         }
-         if (modified) toUpsert.push(updates);
-      }
-
-      if (toUpsert.length > 0) {
-          await supabase.from('shockwave_patient_logs').upsert(toUpsert);
-          fetchLogs();
-      }
-  };
-
-  const deleteRowCompletely = async (rowIndex) => {
-      const row = gridData[rowIndex];
-      if (row && !row.isDraft) {
-          if (window.confirm(`${row.patient_name} 데이터를 삭제하시겠습니까?`)) {
-              await supabase.from('shockwave_patient_logs').delete().eq('id', row.id);
-              setContextMenu(null);
-              fetchLogs();
-          }
-      }
-  };
-
-  // Effect to focus input
+  // Focus input on edit
   useEffect(() => {
-    if (editingCell && editInputRef.current) {
-      editInputRef.current.focus();
-      editInputRef.current.select();
-    }
-  }, [editingCell]);
+    if (editing && inputRef.current) { inputRef.current.focus(); inputRef.current.select(); }
+  }, [editing]);
 
-  // Click outside to cancel context menu
+  // Close context menu
   useEffect(() => {
-      const closeMenu = (e) => {
-          if (contextMenu) setContextMenu(null);
-      };
-      window.addEventListener('mousedown', closeMenu);
-      return () => window.removeEventListener('mousedown', closeMenu);
-  }, [contextMenu]);
+    if (!ctxMenu) return;
+    const close = () => setCtxMenu(null);
+    window.addEventListener('mousedown', close);
+    return () => window.removeEventListener('mousedown', close);
+  }, [ctxMenu]);
 
-  // View Calculation
-  // Total sum of everything
-  const grandTotal = logs.reduce((s, l) => s + (l.prescription ? (parseInt(l.prescription_count || '1', 10) || 1) : 0), 0);
+  // ─── 9. COMPUTED TOTALS ───────────────────────────────────
+  const grandTotal = logs.reduce((s, l) => s + (l.prescription ? (parseInt(l.prescription_count || '1') || 1) : 0), 0);
 
+  const therapistTotals = useMemo(() => {
+    return therapists.map(t => {
+      const all = logs.filter(l => l.therapist_name === t.name && l.prescription);
+      const total = all.reduce((s, l) => s + (parseInt(l.prescription_count || '1') || 1), 0);
+      const byPres = {};
+      PRESCRIPTIONS.forEach(p => {
+        const dbP = PRES_DB_MAP[p];
+        byPres[p] = all.filter(l => l.prescription === dbP).reduce((s, l) => s + (parseInt(l.prescription_count || '1') || 1), 0);
+      });
+      return { total, byPres };
+    });
+  }, [logs, therapists]);
+
+  // ─── 10. RENDER ───────────────────────────────────────────
   return (
-    <div className="sw-grid-wrapper" tabIndex={0} onMouseUp={handleMouseUp} outline="none">
-      <table className="sw-stats-table custom-grid">
+    <div className="sw-grid-wrapper" ref={wrapRef} tabIndex={0} onMouseUp={onMouseUp}>
+
+      <table className="sw-grid-table">
+        {/* ── COLGROUP: controls widths without conflicting with colspan ── */}
+        <colgroup>
+          {FIXED_FIELDS.map(f => <col key={f.id} style={{ width: f.w }} />)}
+          {therapists.map(t => PRESCRIPTIONS.map(p => <col key={`${t.id}-${p}`} style={{ width: 48 }} />))}
+          <col style={{ width: 60 }} />
+        </colgroup>
+
         <thead>
-          {/* R1: Title */}
+          {/* Row 1: Title */}
           <tr>
-            <th colSpan={columns.length} className="spreadsheet-title" style={{ backgroundColor: '#c3b4f3', fontSize: '1.2rem', padding: '10px' }}>
+            <th colSpan={totalColCount} className="grid-title">
               {currentMonth}월 충격파 현황
             </th>
           </tr>
-          
-          {/* R2: Header & Therapists */}
-          <tr className="spreadsheet-header-row2">
-            <th rowSpan={3} className="sticky-col" style={{ left: 0, width: 80, backgroundColor: '#e2f0d9' }}>날짜</th>
-            <th rowSpan={3} className="sticky-col" style={{ left: 80, width: 90, backgroundColor: '#e2f0d9' }}>이름</th>
-            <th rowSpan={3} className="sticky-col" style={{ left: 170, width: 90, backgroundColor: '#e2f0d9' }}>차트번호</th>
-            <th rowSpan={3} className="sticky-col" style={{ left: 260, width: 60, backgroundColor: '#e2f0d9' }}>회차</th>
-            <th rowSpan={3} className="sticky-col border-right-heavy" style={{ left: 320, width: 140, backgroundColor: '#e2f0d9' }}>부위</th>
-            
-            {therapists.map((t, idx) => {
-              const colors = ['#cde4f9', '#ffebb4', '#d9ead3', '#fce5cd', '#ead1dc'];
-              const bgColor = colors[idx % colors.length];
-              const total = logs.reduce((sum, log) => {
-                if (log.therapist_name === t.name && log.prescription) return sum + (parseInt(log.prescription_count || '1', 10) || 1);
-                return sum;
-              }, 0);
 
-              return (
-                <th key={'th1_'+t.id} colSpan={3} style={{ backgroundColor: bgColor }}>
-                  {t.name} ( {total}건 )
-                </th>
-              );
-            })}
-            <th rowSpan={2} style={{ width: '60px', backgroundColor: '#c1a8c8' }}>총건수</th>
+          {/* Row 2: Fixed headers (rowSpan=3) + Therapist names (colSpan=3) + 총건수 (rowSpan=2) */}
+          <tr>
+            {FIXED_FIELDS.map((f, i) => (
+              <th key={f.id} rowSpan={3} className={`hdr-fixed ${i === FIXED_FIELDS.length - 1 ? 'hdr-fixed-last' : ''}`}>
+                {f.label}
+              </th>
+            ))}
+            {therapists.map((t, idx) => (
+              <th key={`tn-${t.id}`} colSpan={3} className="hdr-therapist" style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}>
+                {t.name} ( {therapistTotals[idx]?.total || 0}건 )
+              </th>
+            ))}
+            <th rowSpan={2} className="hdr-total">총건수</th>
           </tr>
 
-          {/* R3: Prescription Types */}
-          <tr className="spreadsheet-header-row3">
-            {therapists.map((t, idx) => {
-              const colors = ['#cde4f9', '#ffebb4', '#d9ead3', '#fce5cd', '#ead1dc'];
-              const bgColor = colors[idx % colors.length];
-              return (
-                <React.Fragment key={'th2_'+t.id}>
-                  <th style={{ backgroundColor: bgColor }}>F1.5</th>
-                  <th style={{ backgroundColor: bgColor }}>F/Rdc</th>
-                  <th style={{ backgroundColor: bgColor }}>F/R</th>
-                </React.Fragment>
-              );
-            })}
+          {/* Row 3: Prescription names */}
+          <tr>
+            {therapists.map((t, idx) => PRESCRIPTIONS.map(p => (
+              <th key={`pn-${t.id}-${p}`} className="hdr-pres" style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}>
+                {p}
+              </th>
+            )))}
           </tr>
 
-          {/* R4: Prescription Totals */}
-          <tr className="spreadsheet-header-row4">
-            {therapists.map((t, idx) => {
-              let f15 = 0, frdc = 0, fr = 0;
-              logs.forEach(log => {
-                if (log.therapist_name === t.name && log.prescription) {
-                  const cnt = parseInt(log.prescription_count || '1', 10) || 1;
-                  const p = log.prescription === 'F/R DC' ? 'F/Rdc' : log.prescription;
-                  if (p === 'F1.5') f15 += cnt; else if (p === 'F/Rdc') frdc += cnt; else if (p === 'F/R') fr += cnt;
-                }
-              });
-              return (
-                <React.Fragment key={'th3_'+t.id}>
-                  <th style={{ color: 'blue' }}>{f15}</th>
-                  <th style={{ color: 'blue' }}>{frdc}</th>
-                  <th style={{ color: 'blue' }}>{fr}</th>
-                </React.Fragment>
-              );
-            })}
-            <th style={{ fontSize: '1.2rem', color: '#cc0000', backgroundColor: '#f4cccc' }}>
-              {grandTotal}건
-            </th>
+          {/* Row 4: Prescription totals */}
+          <tr>
+            {therapists.map((t, idx) => PRESCRIPTIONS.map(p => (
+              <th key={`pt-${t.id}-${p}`} className="hdr-pres-total">
+                {therapistTotals[idx]?.byPres[p] || 0}
+              </th>
+            )))}
+            <th className="hdr-grand-total">{grandTotal}건</th>
           </tr>
         </thead>
 
         <tbody>
-          {gridData.map((row, rIndex) => {
-            // Determine vertical visuals for date and total
-            // To simulate rowspan, we hide the top border of the cell and make text transparent unless it's the first
-            const isFirst = row.isFirstOfDate;
-            const isLast = row.isLastOfDate;
-            const groupClasses = `group-cell ${isFirst ? 'group-first' : ''} ${isLast ? 'group-last' : ''} ${!isFirst && !isLast ? 'group-middle' : ''}`;
+          {gridData.map((row, ri) => (
+            <tr key={row.id}>
+              {Array.from({ length: totalColCount }, (_, ci) => {
+                // Skip if merged into another cell
+                if (getMergedInto(ri, ci)) return null;
 
-            return (
-              <tr key={row.id}>
-                {columns.map((col, cIndex) => {
-                  const isSelected = isInSelection(rIndex, cIndex);
-                  const isFocused = focusedCell?.r === rIndex && focusedCell?.c === cIndex;
-                  const isEditing = editingCell?.r === rIndex && editingCell?.c === cIndex;
-                  
-                  // Sticky left offsets calculation
-                  const stickyStyle = col.isFixed ? { position: 'sticky', left: col.id === 'date' ? 0 : col.id === 'patient_name' ? 80 : col.id === 'chart_number' ? 170 : col.id === 'visit_count' ? 260 : 320, zIndex: 5, backgroundColor: isSelected ? '#e8f0fe' : '#fff' } : {};
-                  if (col.id === 'body_part') stickyStyle.borderRight = '2px solid #000'; // freeze border
+                const mergeInfo = mergedCells[getMergeKey(ri, ci)];
+                const rs = mergeInfo?.rs || 1;
+                const cs = mergeInfo?.cs || 1;
 
-                  let cellValue = getCellValue(row, col);
+                const isSel = inSel(ri, ci);
+                const isFoc = focus?.r === ri && focus?.c === ci;
+                const isEdit = editing?.r === ri && editing?.c === ci;
 
-                  // Apply transparent text if it is grouped and NOT first
-                  let cellStyle = { ...stickyStyle, width: col.width, minWidth: col.width, maxWidth: col.width };
-                  let cls = `grid-cell align-${col.align} ${isSelected ? 'selected' : ''} ${isFocused ? 'focused' : ''}`;
-                  
-                  if (col.id === 'date' || col.id === 'totalCount') {
-                      cls += ' ' + groupClasses;
-                      if (!isFirst) {
-                          cellValue = ''; // Visually empty
-                      }
+                let val = getVal(row, ci);
+
+                // Date & total: hide text for non-first rows of same date group
+                const isDateCol = ci === 0;
+                const isTotalCol = ci === totalColCount - 1;
+                let groupCls = '';
+                if ((isDateCol || isTotalCol) && row.date) {
+                  if (!row._isFirst) {
+                    val = '';
+                    groupCls = row._isLast ? 'grp-last' : 'grp-mid';
+                  } else if (!row._isLast) {
+                    groupCls = 'grp-first';
                   }
+                }
 
-                  if (col.color) cellStyle.color = col.color;
-                  if (col.bold) cellStyle.fontWeight = 'bold';
-                  if (col.therapist) cls += ' therapist-cell';
+                let cls = 'gc';
+                if (isSel) cls += ' gc-sel';
+                if (isFoc) cls += ' gc-foc';
+                if (groupCls) cls += ' ' + groupCls;
+                if (ci < FIXED_FIELDS.length && FIXED_FIELDS[ci]?.bold) cls += ' gc-bold';
+                if (isTotalCol) cls += ' gc-total';
 
-                  if (isEditing) {
-                     return (
-                         <td key={cIndex} className={cls} style={{...cellStyle, padding: 0}}>
-                            <input
-                              ref={editInputRef}
-                              className="inline-editor"
-                              value={editingCell.value}
-                              onChange={e => setEditingCell({...editingCell, value: e.target.value})}
-                              onBlur={finishEditing}
-                            />
-                         </td>
-                     );
-                  }
-
+                if (isEdit) {
                   return (
-                    <td 
-                      key={cIndex}
-                      className={cls}
-                      style={cellStyle}
-                      onMouseDown={(e) => handleMouseDown(e, rIndex, cIndex)}
-                      onMouseEnter={() => handleMouseEnter(rIndex, cIndex)}
-                      onDoubleClick={() => handleDoubleClick(rIndex, cIndex)}
-                      onContextMenu={(e) => handleContextMenu(e, rIndex, cIndex)}
-                    >
-                      {cellValue}
-                      {isFocused && <div className="focus-ring"></div>}
+                    <td key={ci} className={cls} rowSpan={rs > 1 ? rs : undefined} colSpan={cs > 1 ? cs : undefined} style={{ padding: 0 }}>
+                      <input
+                        ref={inputRef}
+                        className="gc-input"
+                        value={editing.val}
+                        onChange={e => setEditing({ ...editing, val: e.target.value })}
+                        onBlur={finishEdit}
+                      />
                     </td>
                   );
-                })}
-              </tr>
-            );
-          })}
+                }
+
+                return (
+                  <td
+                    key={ci}
+                    className={cls}
+                    rowSpan={rs > 1 ? rs : undefined}
+                    colSpan={cs > 1 ? cs : undefined}
+                    onMouseDown={e => onMouseDown(e, ri, ci)}
+                    onMouseEnter={() => onMouseEnter(ri, ci)}
+                    onDoubleClick={() => onDblClick(ri, ci)}
+                    onContextMenu={e => onCtxMenu(e, ri, ci)}
+                  >
+                    {val}
+                    {isFoc && <div className="gc-dot" />}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
         </tbody>
       </table>
 
       {/* Context Menu */}
-      {contextMenu && (
-        <div className="context-menu" style={{ top: contextMenu.y, left: contextMenu.x }} onMouseDown={e => e.stopPropagation()}>
-          <div className="context-menu-item" onClick={() => { handleCopy(); setContextMenu(null); }}>복사 (Ctrl+C)</div>
-          <div className="context-menu-item" onClick={() => { handleCut(); setContextMenu(null); }}>잘라내기 (Ctrl+X)</div>
-          <div className="context-menu-item" onClick={async () => {
-              try {
-                 const text = await navigator.clipboard.readText();
-                 processPaste(text, contextMenu.row, contextMenu.col);
-              } catch (e) { alert("붙여넣기 권한이 필요합니다. Ctrl+V를 사용해주세요."); }
-              setContextMenu(null);
-          }}>붙여넣기 (Ctrl+V)</div>
-          <div className="context-menu-divider"></div>
-          <div className="context-menu-item" onClick={() => { handleDeleteSelection(); setContextMenu(null); }}>선택 셀 내용 지우기 (Del)</div>
-          <div className="context-menu-item delete-row" onClick={() => { deleteRowCompletely(contextMenu.row); }}>이 행(데이터) 영구 삭제</div>
+      {ctxMenu && (
+        <div className="ctx-menu" style={{ top: ctxMenu.y, left: ctxMenu.x }} onMouseDown={e => e.stopPropagation()}>
+          <div className="ctx-item" onClick={() => { doCopy(); setCtxMenu(null); }}>📋 복사 <span className="ctx-shortcut">⌘C</span></div>
+          <div className="ctx-item" onClick={() => { doCopy(); doDelete(); setCtxMenu(null); }}>✂️ 잘라내기 <span className="ctx-shortcut">⌘X</span></div>
+          <div className="ctx-item" onClick={async () => {
+            try { const t = await navigator.clipboard.readText(); doPaste(t, ctxMenu.r, ctxMenu.c); } catch { alert('Ctrl+V를 사용하세요.'); }
+            setCtxMenu(null);
+          }}>📥 붙여넣기 <span className="ctx-shortcut">⌘V</span></div>
+          <div className="ctx-sep" />
+          <div className="ctx-item" onClick={() => { handleMerge(); setCtxMenu(null); }}>⬛ 셀 병합 <span className="ctx-shortcut">⌘E</span></div>
+          <div className="ctx-item" onClick={() => { handleUnmerge(); setCtxMenu(null); }}>⬜ 셀 병합 해제 <span className="ctx-shortcut">⌘⇧E</span></div>
+          <div className="ctx-sep" />
+          <div className="ctx-item" onClick={() => { doDelete(); setCtxMenu(null); }}>🗑️ 선택 내용 지우기 <span className="ctx-shortcut">Del</span></div>
+          <div className="ctx-item ctx-danger" onClick={() => { doDeleteRow(ctxMenu.r); }}>❌ 이 행 영구 삭제</div>
         </div>
       )}
     </div>

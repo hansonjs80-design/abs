@@ -103,104 +103,6 @@
   opacity: 0.8;
 }
 
-.sw-stats-list-wrapper {
-  overflow-x: auto;
-  max-height: 70vh; /* Make the inner table scrollable */
-}
-
-/* Excel-like Table Styling */
-.sw-stats-table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-  background-color: #fff;
-  font-family: Arial, sans-serif;
-}
-
-.sw-stats-table th,
-.sw-stats-table td {
-  border: 1px solid #e2e2e2;
-  padding: 0;
-  vertical-align: middle;
-  height: 25px;
-  position: relative;
-}
-
-.sw-stats-table th {
-  background-color: #f8f9fa;
-  color: #5f6368;
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-align: center;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  box-shadow: inset 0 -1px 0 #c0c0c0, inset 0 1px 0 #c0c0c0;
-  padding: 6px;
-}
-
-.sw-row-header {
-  background-color: #f8f9fa;
-  color: #5f6368;
-  text-align: center;
-  font-weight: 500;
-  font-size: 0.8rem;
-  width: 40px !important;
-  position: sticky;
-  left: 0;
-  z-index: 5;
-  box-shadow: inset -1px 0 0 #c0c0c0;
-}
-
-/* Group Headers */
-.sw-stats-group-header td {
-  background-color: #f1f3f4;
-  border-top: 2px solid #dadce0;
-  border-bottom: 1px solid #dadce0;
-  padding: 4px 10px;
-}
-
-.group-header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 600;
-  font-size: 0.85rem;
-}
-
-.group-date {
-  color: #202124;
-}
-
-.group-sum {
-  color: #1a73e8;
-  font-weight: 700;
-}
-
-/* Cell Inputs */
-.sw-stats-input {
-  width: 100%;
-  height: 100%;
-  border: 2px solid transparent;
-  background: transparent;
-  color: #202124;
-  font-family: inherit;
-  font-size: 0.9rem;
-  outline: none;
-  padding: 0 6px;
-  border-radius: 0;
-  transition: none;
-  display: block;
-}
-
-.sw-stats-input:focus {
-  background-color: #fff;
-  border: 2px solid #1a73e8;
-  box-shadow: none;
-  z-index: 20;
-  position: relative;
-}
-
 .btn-secondary {
   background-color: transparent;
   border: 1px solid var(--border-color);
@@ -210,248 +112,163 @@
   font-size: 0.95rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s;
 }
+.btn-secondary:hover { background-color: rgba(0,0,0,0.05); }
 
-.btn-secondary:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-}
+/* ════════════════════════════════════════════════════════════
+   DATA GRID — Google Sheets pixel-perfect layout
+   ════════════════════════════════════════════════════════════ */
 
-.center-text { text-align: center; }
-.text-gray { color: #5f6368; }
-.bold-text { font-weight: 600; }
-
-.is-first-visit input {
-  background-color: rgba(24bbc1, 0.06);
-}
-
-/* 다크모드 대응 */
-[data-theme='dark'] .sw-stats-table {
-  background-color: var(--bg-primary);
-}
-[data-theme='dark'] .sw-stats-table th,
-[data-theme='dark'] .sw-row-header {
-  background-color: var(--bg-tertiary);
-  color: var(--text-secondary);
-  box-shadow: inset 0 -1px 0 var(--border-color), inset 0 1px 0 var(--border-color);
-}
-[data-theme='dark'] .sw-stats-table td {
-  border-color: var(--border-color);
-}
-[data-theme='dark'] .sw-stats-input {
-  color: var(--text-primary);
-}
-[data-theme='dark'] .sw-stats-input:focus {
-  background-color: var(--bg-secondary);
-}
-[data-theme='dark'] .sw-stats-group-header td {
-  background-color: var(--bg-secondary);
-  border-color: var(--border-color);
-}
-[data-theme='dark'] .group-date {
-  color: var(--text-primary);
-}
-[data-theme='dark'] .btn-secondary:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-/* 엑셀(스프레드시트) 스타일 표 (UI 개편본) */
-.sw-stats-table.spreadsheet-theme {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 0.85rem;
-  table-layout: auto;
-  border: 1px solid #000;
-}
-
-.sw-stats-table.spreadsheet-theme th,
-.sw-stats-table.spreadsheet-theme td {
-  border: 1px solid #000;
-  padding: 4px;
-  vertical-align: middle;
-}
-
-.sw-stats-table.spreadsheet-theme thead th {
-  text-align: center;
-  font-weight: 700;
-  vertical-align: middle;
-  border: 1px solid #000;
-  color: #000;
-  padding: 8px 4px;
-}
-
-/* 제목 행 */
-.sw-stats-table.spreadsheet-theme .spreadsheet-title {
-  background-color: #c3b4f3 !important; /* 보라색 */
-  padding: 8px !important;
-  font-size: 1.2rem !important;
-  border: 1px solid #000 !important;
-}
-
-/* 헤더 보더라인 처리 */
-.sw-stats-table.spreadsheet-theme .spreadsheet-header-row2 th,
-.sw-stats-table.spreadsheet-theme .spreadsheet-header-row3 th, 
-.sw-stats-table.spreadsheet-theme .spreadsheet-header-row4 th {
-  border: 1px solid #000;
-}
-
-/* 인풋 덮어쓰기 */
-.sw-stats-table.spreadsheet-theme input.sw-stats-input {
-  width: 100%;
-  border: 1px solid transparent; /* 기본은 투명하게 */
-  background-color: transparent;
-  font-size: 0.85rem;
-  padding: 4px;
-  outline: none;
-  min-height: 24px;
-  border-radius: 0;
-}
-
-.sw-stats-table.spreadsheet-theme input.sw-stats-input:focus {
-  border: 2px solid #1a73e8;
-  background-color: #fff;
-  z-index: 10;
-}
-
-[data-theme='dark'] .sw-stats-table.spreadsheet-theme input.sw-stats-input {
-  color: #000; /* 다크모드여도 시트 내부는 밝게 하거나 커스텀 */
-}
-[data-theme='dark'] .sw-stats-table.spreadsheet-theme td {
-  background-color: #fff; /* 엑셀은 다크모드에서도 흰배경 강제이거나, 어둡게 하거나 선택 가능. 본 스크립트에서는 구글시트처럼 흰색 유지 */
-  color: #000;
-}
-[data-theme='dark'] .sw-stats-table.spreadsheet-theme input.sw-stats-input {
-  color: #000;
-}
-
-/* === Custom Spreadsheet Grid Additions === */
-
-/* Wrapper handles scroll clipping so sticky columns work */
 .sw-grid-wrapper {
-  max-width: 100%;
+  width: 100%;
   overflow-x: auto;
-  overflow-y: visible;
+  overflow-y: auto;
+  max-height: 80vh;
   position: relative;
-  outline: none; /* remove focus outline */
-  user-select: none; /* prevent native text selection when dragging */
+  outline: none;
+  user-select: none;
 }
 
-/* Base custom grid adjustments */
-.custom-grid {
-  table-layout: fixed;
+.sw-grid-table {
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
+  font-family: 'Inter', Arial, sans-serif;
+  font-size: 13px;
+  background: #fff;
 }
 
-.custom-grid th, .custom-grid td {
-  padding: 4px;
-  border: 1px solid #000;
+.sw-grid-table th,
+.sw-grid-table td {
+  border: 1px solid #9e9e9e;
+  text-align: center;
+  vertical-align: middle;
+  padding: 4px 6px;
   white-space: nowrap;
   position: relative;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-/* Simulated RowSpan effects for visual purity */
-.group-first {
-  border-bottom-color: transparent !important;
+/* Title bar */
+.grid-title {
+  background-color: #c3b4f3 !important;
+  font-size: 1.15rem;
+  font-weight: 700;
+  padding: 8px !important;
+  color: #000;
 }
 
-.group-middle {
-  border-top-color: transparent !important;
-  border-bottom-color: transparent !important;
-  color: transparent !important; /* hide text visually */
+/* Fixed col headers (날짜 ~ 부위) */
+.hdr-fixed {
+  background-color: #e2f0d9 !important;
+  font-weight: 700;
+  color: #000;
 }
-
-.group-last {
-  border-top-color: transparent !important;
-}
-
-/* Alignment utilities */
-.align-center { text-align: center; }
-.align-left { text-align: left; padding-left: 8px; }
-
-/* Sticky columns z-index layers */
-.sticky-col {
-  position: sticky;
-  z-index: 5;
-  background-color: #fff;
-}
-.custom-grid thead .sticky-col {
-  z-index: 15; /* MUST be higher so it floats above normal body sticky */
-}
-.border-right-heavy {
+.hdr-fixed-last {
   border-right: 2px solid #000 !important;
 }
 
-/* Selection and UI States */
-.grid-cell.selected {
-  background-color: rgba(26, 115, 232, 0.1) !important;
-}
+/* Therapist name header */
+.hdr-therapist { font-weight: 700; color: #000; }
 
-.grid-cell.focused {
-  border: 2px solid #1a73e8 !important;
-}
+/* Prescription type sub-header */
+.hdr-pres { font-weight: 600; font-size: 12px; color: #333; }
 
-.focus-ring {
+/* Prescription totals */
+.hdr-pres-total { font-weight: 700; color: blue; background-color: #fff; }
+
+/* 총건수 header */
+.hdr-total { background-color: #c1a8c8 !important; font-weight: 700; color: #000; }
+.hdr-grand-total { font-size: 1.1rem; font-weight: 700; color: #cc0000; background-color: #f4cccc !important; }
+
+/* Sticky header */
+.sw-grid-table thead th { position: sticky; top: 0; z-index: 10; }
+
+/* ── Body cells ── */
+.gc { background: #fff; color: #202124; height: 26px; cursor: cell; }
+.gc-bold { font-weight: 700; }
+.gc-total { font-weight: 700; color: #cc0000; }
+
+/* Date group visual merge */
+.grp-first { border-bottom-color: transparent !important; }
+.grp-mid { border-top-color: transparent !important; border-bottom-color: transparent !important; }
+.grp-last { border-top-color: transparent !important; }
+
+/* Selection & focus */
+.gc-sel { background-color: rgba(26, 115, 232, 0.08) !important; }
+.gc-foc { outline: 2px solid #1a73e8; outline-offset: -1px; z-index: 2; }
+
+.gc-dot {
   position: absolute;
-  bottom: -2px;
-  right: -2px;
-  width: 6px;
-  height: 6px;
+  bottom: -3px; right: -3px;
+  width: 7px; height: 7px;
   background: #1a73e8;
-  border: 1px solid #fff;
+  border: 1.5px solid #fff;
   border-radius: 50%;
   z-index: 3;
 }
 
-/* Inline typing box */
-.inline-editor {
+/* Inline editor */
+.gc-input {
   position: absolute;
-  top: -1px; left: -1px; right: -1px; bottom: -1px;
+  top: 0; left: 0; right: 0; bottom: 0;
+  width: 100%; height: 100%;
   border: 2px solid #1a73e8;
-  background-color: #fff;
+  background: #fff;
   z-index: 20;
-  width: calc(100% + 2px);
-  height: calc(100% + 2px);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  padding: 4px;
+  padding: 2px 6px;
   font-family: inherit;
-  font-size: 0.85rem;
+  font-size: 13px;
   outline: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
-/* Context Menu */
-.context-menu {
-  position: fixed; /* so it breaks out of overflow containers */
-  background-color: #fff;
-  border: 1px solid #ccc;
-  box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
-  min-width: 150px;
+/* Frozen left columns (body) */
+.gc:nth-child(1), .gc:nth-child(2), .gc:nth-child(3),
+.gc:nth-child(4), .gc:nth-child(5) {
+  position: sticky; z-index: 3; background: #fff;
+}
+.gc:nth-child(1) { left: 0; }
+.gc:nth-child(2) { left: 70px; }
+.gc:nth-child(3) { left: 155px; }
+.gc:nth-child(4) { left: 230px; }
+.gc:nth-child(5) { left: 275px; border-right: 2px solid #000; }
+
+.gc-sel:nth-child(1), .gc-sel:nth-child(2), .gc-sel:nth-child(3),
+.gc-sel:nth-child(4), .gc-sel:nth-child(5) {
+  background-color: rgba(26, 115, 232, 0.08) !important;
+}
+
+/* Frozen left columns (header) */
+.sw-grid-table thead th:nth-child(1),
+.sw-grid-table thead th:nth-child(2),
+.sw-grid-table thead th:nth-child(3),
+.sw-grid-table thead th:nth-child(4),
+.sw-grid-table thead th:nth-child(5) {
+  z-index: 15;
+}
+
+/* ── Context Menu ── */
+.ctx-menu {
+  position: fixed;
+  background: #fff;
+  border: 1px solid #ddd;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  min-width: 200px;
   z-index: 10000;
-  padding: 4px 0;
-  border-radius: 4px;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.9rem;
+  padding: 6px 0;
+  border-radius: 8px;
+  font-size: 13px;
 }
-
-.context-menu-item {
+.ctx-item {
   padding: 8px 16px;
   cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   color: #333;
 }
-
-.context-menu-item:hover {
-  background-color: #f1f3f4;
-}
-
-.context-menu-divider {
-  border-top: 1px solid #ddd;
-  margin: 4px 0;
-}
-
-.context-menu-item.delete-row {
-  color: #d93025;
-}
-.context-menu-item.delete-row:hover {
-  background-color: #fce8e6;
-}
+.ctx-item:hover { background: #f1f3f4; }
+.ctx-shortcut { color: #999; font-size: 11px; margin-left: 16px; }
+.ctx-sep { border-top: 1px solid #eee; margin: 4px 0; }
+.ctx-danger { color: #d93025; }
+.ctx-danger:hover { background: #fce8e6; }
