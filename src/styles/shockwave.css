@@ -38,6 +38,7 @@
   border-bottom: 1px solid #000;
   width: max-content;
   min-width: 100%;
+  position: relative;
 }
 
 .shockwave-day {
