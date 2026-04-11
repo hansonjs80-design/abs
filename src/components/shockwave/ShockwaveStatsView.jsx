@@ -218,11 +218,23 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
               
               if (colB) {
                 const strB = String(colB).trim();
-                const dm = strB.match(/(\d{1,2})[\/\.\-](\d{1,2})/);
-                if (dm) {
-                  currentDate = `20${y}-${String(dm[1]).padStart(2, '0')}-${String(dm[2]).padStart(2, '0')}`;
-                } else if (/^\d{1,2}$/.test(strB)) {
-                  currentDate = `20${y}-${String(m).padStart(2, '0')}-${strB.padStart(2, '0')}`;
+                
+                // 구글 시트 네이티브 Date 포맷: "Date(2024,0,1)" (월은 0부터 시작)
+                const dateMatch = strB.match(/Date\((\d+),\s*(\d+),\s*(\d+)\)/);
+                if (dateMatch) {
+                  const py = parseInt(dateMatch[1], 10);
+                  const pm = parseInt(dateMatch[2], 10) + 1; // 0-indexed month
+                  const pd = parseInt(dateMatch[3], 10);
+                  currentDate = `${py}-${String(pm).padStart(2, '0')}-${String(pd).padStart(2, '0')}`;
+                } else {
+                  // 일반 텍스트 mm/dd, mm.dd 포맷
+                  const dm = strB.match(/(\d{1,2})[\/\.\-](\d{1,2})/);
+                  if (dm) {
+                    currentDate = `20${y}-${String(dm[1]).padStart(2, '0')}-${String(dm[2]).padStart(2, '0')}`;
+                  } else if (/^\d{1,2}$/.test(strB)) {
+                    // 일(dd)만 적혀있는 경우
+                    currentDate = `20${y}-${String(m).padStart(2, '0')}-${strB.padStart(2, '0')}`;
+                  }
                 }
               }
 
