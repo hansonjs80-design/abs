@@ -151,10 +151,23 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   };
 
   const handleFullGoogleSheetImport = async () => {
-    if (!window.confirm('구글 시트에서 과거 전체 기록을 가져오시겠습니까? 시간이 소요될 수 있습니다.')) return;
+    if (!window.confirm('⚠️ 기존 치료 내역을 모두 삭제하고 구글 시트에서 새로 가져옵니다.\n정말 진행하시겠습니까?')) return;
     setIsLoading(true);
     
     try {
+      // 1단계: 기존 DB 데이터 정리
+      addToast('기존 데이터 정리 중...', 'info');
+      const { error: delError } = await supabase
+        .from('shockwave_patient_logs')
+        .delete()
+        .gte('id', '00000000-0000-0000-0000-000000000000'); // 전체 삭제
+      
+      if (delError) {
+        console.error('DB 정리 실패:', delError);
+        addToast('DB 정리 실패: ' + delError.message, 'error');
+        return;
+      }
+      addToast('기존 데이터 정리 완료. 구글 시트에서 가져오기 시작...', 'info');
       const fetchGoogleSheetJSONP = (sheetName) => {
         return new Promise((resolve) => {
           const callbackName = `gvizCallback_${sheetName.replace(/\./g, '_')}`;
@@ -278,68 +291,22 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
       addToast(`총 ${allNewLogs.length}건 중 중복 제외 ${dedupedLogs.length}건 저장 시작...`, 'info');
       allNewLogs = dedupedLogs;
 
+      // DB를 비웠으므로 단순 insert만 수행
       const chunkSize = 500;
       let totalInserted = 0;
-      let totalUpserted = 0;
 
       for (let i = 0; i < allNewLogs.length; i += chunkSize) {
         const chunk = allNewLogs.slice(i, i + chunkSize);
-        
-        const dates = chunk.map(l => l.date);
-        const minDate = dates.reduce((a, b) => a < b ? a : b);
-        const maxDate = dates.reduce((a, b) => a > b ? a : b);
-
-        const { data: existing } = await supabase
-          .from('shockwave_patient_logs')
-          .select('*')
-          .gte('date', minDate)
-          .lte('date', maxDate);
-          
-        // 강화된 중복 키: date + name + chart_number + body_part
-        const existingSet = new Set((existing || []).map(l => `${l.date}_${l.patient_name}_${l.chart_number}_${l.body_part}`));
-        const existingMap = new Map((existing || []).map(l => [`${l.date}_${l.patient_name}_${l.chart_number}_${l.body_part}`, l]));
-        
-        const toUpsert = [];
-        const toInsert = [];
-
-        chunk.forEach(n => {
-          const key = `${n.date}_${n.patient_name}_${n.chart_number}_${n.body_part}`;
-          if (existingMap.has(key)) {
-            const old = existingMap.get(key);
-            // 만약 구글시트에 기록된 담당치료사/처방 값이 새로 생겼는데 DB가 비어있거나 '구글 시트 연동' 상태면 업데이트
-            const shouldUpdateTherapist = n.therapist_name !== '구글 시트 연동' && 
-                (old.therapist_name === '구글 시트 연동' || !old.therapist_name);
-            const shouldUpdatePres = n.prescription && !old.prescription;
-            
-            if (shouldUpdateTherapist || shouldUpdatePres) {
-              toUpsert.push({
-                id: old.id,
-                date: n.date,
-                patient_name: n.patient_name,
-                chart_number: old.chart_number || n.chart_number,
-                visit_count: old.visit_count || n.visit_count,
-                body_part: old.body_part || n.body_part,
-                therapist_name: shouldUpdateTherapist ? n.therapist_name : old.therapist_name,
-                prescription: shouldUpdatePres ? n.prescription : (old.prescription || ''),
-              });
-            }
-          } else {
-            toInsert.push(n);
-          }
-        });
-
-        if (toUpsert.length > 0) {
-          await supabase.from('shockwave_patient_logs').upsert(toUpsert);
-          totalUpserted += toUpsert.length;
+        const { error } = await supabase.from('shockwave_patient_logs').insert(chunk);
+        if (error) {
+          console.error('Insert 오류:', error);
+        } else {
+          totalInserted += chunk.length;
         }
-
-        if (toInsert.length > 0) {
-          await supabase.from('shockwave_patient_logs').insert(toInsert);
-          totalInserted += toInsert.length;
-        }
+        addToast(`저장 중... ${totalInserted} / ${allNewLogs.length}`, 'info');
       }
 
-      addToast(`과거 기록 연동 완료! (${totalInserted}건 추가, ${totalUpserted}건 정보 갱신)`, 'success');
+      addToast(`가져오기 완료! 총 ${totalInserted}건 저장됨`, 'success');
       await fetchLogs();
 
     } catch (err) {
