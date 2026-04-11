@@ -165,7 +165,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
           };
           
           const script = document.createElement('script');
-          script.src = `https://docs.google.com/spreadsheets/d/1ieBva8HCugMM3j2PlV6HamMgCOmfxxS5MIdqeBid1Cw/gviz/tq?tq=select%20*&tqx=responseHandler:${callbackName}&sheet=${sheetName}`;
+          script.src = `https://docs.google.com/spreadsheets/d/1ieBva8HCugMM3j2PlV6HamMgCOmfxxS5MIdqeBid1Cw/gviz/tq?tq=${encodeURIComponent('select B,C,D,E,F,G,H,I,J,K,L,M,N,O,P')}&tqx=responseHandler:${callbackName}&sheet=${sheetName}`;
           script.onerror = () => {
             delete window[callbackName];
             document.body.removeChild(script);
@@ -187,19 +187,21 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
             let currentDate = null;
             const sheetLogs = [];
             
+            // B:P 범위로 가져왔으므로 인덱스가 0부터 시작 (0=B, 1=C, ... 14=P)
             const headerCells = data.table.rows[0]?.c || [];
-            const t1 = headerCells[6]?.v ? String(headerCells[6].v).split('(')[0].trim() : "치료사 1";
-            const t2 = headerCells[9]?.v ? String(headerCells[9].v).split('(')[0].trim() : "치료사 2";
-            const t3 = headerCells[12]?.v ? String(headerCells[12].v).split('(')[0].trim() : "치료사 3";
+            const t1 = headerCells[5]?.v ? String(headerCells[5].v).split('(')[0].trim() : "치료사 1";
+            const t2 = headerCells[8]?.v ? String(headerCells[8].v).split('(')[0].trim() : "치료사 2";
+            const t3 = headerCells[11]?.v ? String(headerCells[11].v).split('(')[0].trim() : "치료사 3";
             
             data.table.rows.forEach((row, rowIndex) => {
               if (rowIndex < 5) return;
               const cells = row.c || [];
-              const colB = cells[1]?.f || cells[1]?.v;
-              const colC = cells[2]?.f || cells[2]?.v;
-              const colD = cells[3]?.f || cells[3]?.v;
-              const colE = cells[4]?.f || cells[4]?.v;
-              const colF = cells[5]?.f || cells[5]?.v;
+              // B=0, C=1, D=2, E=3, F=4
+              const colB = cells[0]?.f || cells[0]?.v;
+              const colC = cells[1]?.f || cells[1]?.v;
+              const colD = cells[2]?.f || cells[2]?.v;
+              const colE = cells[3]?.f || cells[3]?.v;
+              const colF = cells[4]?.f || cells[4]?.v;
               
               if (colB) {
                 const strB = String(colB).trim();
@@ -220,22 +222,26 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                 let presType = '';
                 
                 // 각 치료사 별 처방 컬럼 확인: 첫번째(F1.5), 두번째(F/R DC), 세번째(F/R)
+                // B:P 범위이므로 G=5, H=6, I=7, J=8, K=9, L=10, M=11, N=12, O=13
                 const checkPrescription = (colStart, tName) => {
-                  if (cells[colStart]?.f || cells[colStart]?.v) {
+                  const v1 = cells[colStart]?.v;
+                  const v2 = cells[colStart + 1]?.v;
+                  const v3 = cells[colStart + 2]?.v;
+                  if (v1 && String(v1).trim() !== '0' && String(v1).trim() !== '') {
                     therapist = tName;
                     presType = 'F1.5';
-                  } else if (cells[colStart + 1]?.f || cells[colStart + 1]?.v) {
+                  } else if (v2 && String(v2).trim() !== '0' && String(v2).trim() !== '') {
                     therapist = tName;
                     presType = 'F/R DC';
-                  } else if (cells[colStart + 2]?.f || cells[colStart + 2]?.v) {
+                  } else if (v3 && String(v3).trim() !== '0' && String(v3).trim() !== '') {
                     therapist = tName;
                     presType = 'F/R';
                   }
                 };
 
-                checkPrescription(6, t1);
-                if (!presType) checkPrescription(9, t2);
-                if (!presType) checkPrescription(12, t3);
+                checkPrescription(5, t1);  // G=5, H=6, I=7
+                if (!presType) checkPrescription(8, t2);  // J=8, K=9, L=10
+                if (!presType) checkPrescription(11, t3); // M=11, N=12, O=13
 
                 sheetLogs.push({
                   date: currentDate,
@@ -258,9 +264,21 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
         return;
       }
 
-      addToast(`총 ${allNewLogs.length}건을 읽었습니다. 중복 제외 저장 시작...`, 'info');
+      // 1차: 가져온 데이터 자체에서 중복 제거 (같은 date+name+chart+body_part 조합)
+      const seenKeys = new Set();
+      const dedupedLogs = [];
+      allNewLogs.forEach(l => {
+        const key = `${l.date}_${l.patient_name}_${l.chart_number}_${l.body_part}`;
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          dedupedLogs.push(l);
+        }
+      });
 
-      const chunkSize = 1000;
+      addToast(`총 ${allNewLogs.length}건 중 중복 제외 ${dedupedLogs.length}건 저장 시작...`, 'info');
+      allNewLogs = dedupedLogs;
+
+      const chunkSize = 500;
       let totalInserted = 0;
       let totalUpserted = 0;
 
@@ -277,13 +295,15 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
           .gte('date', minDate)
           .lte('date', maxDate);
           
-        const existingMap = new Map((existing || []).map(l => [`${l.date}_${l.patient_name}`, l]));
+        // 강화된 중복 키: date + name + chart_number + body_part
+        const existingSet = new Set((existing || []).map(l => `${l.date}_${l.patient_name}_${l.chart_number}_${l.body_part}`));
+        const existingMap = new Map((existing || []).map(l => [`${l.date}_${l.patient_name}_${l.chart_number}_${l.body_part}`, l]));
         
         const toUpsert = [];
         const toInsert = [];
 
         chunk.forEach(n => {
-          const key = `${n.date}_${n.patient_name}`;
+          const key = `${n.date}_${n.patient_name}_${n.chart_number}_${n.body_part}`;
           if (existingMap.has(key)) {
             const old = existingMap.get(key);
             // 만약 구글시트에 기록된 담당치료사/처방 값이 새로 생겼는데 DB가 비어있거나 '구글 시트 연동' 상태면 업데이트
