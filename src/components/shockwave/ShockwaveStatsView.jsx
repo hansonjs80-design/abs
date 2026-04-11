@@ -240,7 +240,8 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
 
               if (!currentDate || !colC) return;
               
-              const name = String(colC).trim();
+              // '*' 기호는 1회차라는 의미이므로 이름에서 원천 제거하여 동일인으로 취급
+              const name = String(colC).trim().replace(/\*/g, '');
               if (name && !/^\d+$/.test(name) && !/^(이름|성함|차트|합계|건수)/.test(name)) {
                 
                 let therapist = '구글 시트 연동';

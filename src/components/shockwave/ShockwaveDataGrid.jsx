@@ -181,7 +181,8 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
 
       // 이름 입력 시 과거 기록 바탕으로 차트번호, 부위, 회차(+1) 자동 완성
       if (field === 'patient_name' && v.trim()) {
-        const pastLogs = logs.filter(l => l.patient_name === v.trim() && l.id !== row.id);
+        const queryName = v.trim().replace(/\*/g, '');
+        const pastLogs = logs.filter(l => l.patient_name.replace(/\*/g, '') === queryName && l.id !== row.id);
         if (pastLogs.length > 0) {
           pastLogs.sort((a, b) => {
              if (a.date !== b.date) return b.date.localeCompare(a.date);
