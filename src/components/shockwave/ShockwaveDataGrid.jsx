@@ -414,10 +414,20 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
     return () => window.removeEventListener('paste', handler);
   }, [focus, editing, gridData]);
 
-  // Focus input on edit
+  // Focus input on edit start
   useEffect(() => {
-    if (editing && inputRef.current) { inputRef.current.focus(); inputRef.current.select(); }
-  }, [editing]);
+    if (editing && inputRef.current) { 
+      inputRef.current.focus(); 
+      // Do not re-select on every keystroke, only when first entering edit mode for a cell
+    }
+  }, [editing?.r, editing?.c]);
+
+  // Initial select when first double-clicked / enter pressed
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.select();
+    }
+  }, [editing?.r, editing?.c]);
 
   // Close context menu
   useEffect(() => {
