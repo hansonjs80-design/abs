@@ -102,6 +102,7 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
 
   const wrapRef = useRef(null);
   const inputRef = useRef(null);
+  const datePickerRef = useRef(null);
 
   const selNorm = sel ? {
     r1: Math.min(sel.r1, sel.r2), c1: Math.min(sel.c1, sel.c2),
@@ -150,9 +151,9 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
   };
 
   // ─── 5. EDITING ───────────────────────────────────────────
-  const startEdit = (r, c) => {
+  const startEdit = (r, c, isDblClick = false) => {
     if (c === totalColCount - 1) return; // 총건수 read-only
-    setEditing({ r, c, val: getVal(gridData[r], c) });
+    setEditing({ r, c, val: getVal(gridData[r], c), isDblClick });
   };
 
   const finishEdit = async () => {
@@ -269,7 +270,9 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
   };
   const onMouseEnter = (r, c) => { if (dragging) setSel(prev => prev ? { ...prev, r2: r, c2: c } : prev); };
   const onMouseUp = () => setDragging(false);
-  const onDblClick = (r, c) => startEdit(r, c);
+  const onDblClick = (r, c) => {
+    startEdit(r, c, true);
+  };
   const onCtxMenu = (e, r, c) => {
     e.preventDefault();
     if (editing) finishEdit();
@@ -411,7 +414,7 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
         return;
       }
 
-      if (e.key === 'Enter') { e.preventDefault(); startEdit(r, c); return; }
+      if (e.key === 'Enter') { e.preventDefault(); startEdit(r, c, true); return; }
       if (e.key === 'Tab') { e.preventDefault(); const nc = Math.min(c+1, totalColCount-1); setFocus({r, c:nc}); setSel({r1:r,c1:nc,r2:r,c2:nc}); return; }
       if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); doDelete(); return; }
 
@@ -453,7 +456,10 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
   useEffect(() => {
     if (editing && inputRef.current) { 
       inputRef.current.focus(); 
-      // Do not re-select on every keystroke, only when first entering edit mode for a cell
+      // 달력 피커 자동 팝업 (날짜 셀 더블클릭 시)
+      if (editing.isDblClick && editing.c === FIXED_FIELDS.findIndex(f => f.field === 'date') && datePickerRef.current) {
+        try { datePickerRef.current.showPicker(); } catch (e) {}
+      }
     }
   }, [editing?.r, editing?.c]);
 
@@ -583,13 +589,31 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
                 if (isEdit) {
                   return (
                     <td key={ci} className={cls} rowSpan={rs > 1 ? rs : undefined} colSpan={cs > 1 ? cs : undefined} style={{ padding: 0 }}>
-                      <input
-                        ref={inputRef}
-                        className="gc-input"
-                        value={editing.val}
-                        onChange={e => setEditing({ ...editing, val: e.target.value })}
-                        onBlur={finishEdit}
-                      />
+                      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                        <input
+                          ref={inputRef}
+                          className="gc-input"
+                          style={{ width: '100%', height: '100%', boxSizing: 'border-box' }}
+                          value={editing.val}
+                          onChange={e => setEditing({ ...editing, val: e.target.value })}
+                          onBlur={finishEdit}
+                        />
+                        {isDateCol && (
+                          <input 
+                            type="date"
+                            ref={datePickerRef}
+                            style={{ position: 'absolute', opacity: 0, right: 0, top: 0, width: 0, height: 0, pointerEvents: 'none' }}
+                            onChange={e => {
+                              if (e.target.value) {
+                                // e.target.value is "YYYY-MM-DD"
+                                setEditing({ ...editing, val: e.target.value });
+                                setTimeout(finishEdit, 50);
+                              }
+                            }}
+                            onBlur={() => {}} // focus out doesn't trigger anything special here
+                          />
+                        )}
+                      </div>
                     </td>
                   );
                 }
