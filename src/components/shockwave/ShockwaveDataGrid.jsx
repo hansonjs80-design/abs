@@ -174,6 +174,26 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
         else if (v.length === 4 && !v.includes('-')) v = `${currentYear}-${v.substring(0,2)}-${v.substring(2,4)}`;
       }
 
+      let updatePayload = { [field]: v };
+
+      // 이름 입력 시 과거 기록 바탕으로 차트번호, 부위, 회차(+1) 자동 완성
+      if (field === 'patient_name' && v.trim()) {
+        const pastLogs = logs.filter(l => l.patient_name === v.trim() && l.id !== row.id);
+        if (pastLogs.length > 0) {
+          pastLogs.sort((a, b) => {
+             if (a.date !== b.date) return b.date.localeCompare(a.date);
+             return (parseInt(b.visit_count || '0') || 0) - (parseInt(a.visit_count || '0') || 0);
+          });
+          const lastLog = pastLogs[0];
+          
+          updatePayload.chart_number = lastLog.chart_number || '';
+          updatePayload.body_part = lastLog.body_part || '';
+          
+          const lastVisit = parseInt(lastLog.visit_count || '0', 10);
+          updatePayload.visit_count = lastVisit > 0 ? String(lastVisit + 1) : '2';
+        }
+      }
+
       if (row.isDraft) {
         const ins = {
           date: row.date || `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`,
@@ -182,12 +202,12 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
           visit_count: row.visit_count || '',
           body_part: row.body_part || '',
           therapist_name: '', prescription: '', prescription_count: '',
+          ...updatePayload
         };
-        ins[field] = v;
         if (!ins.date) ins.date = `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`;
         await supabase.from('shockwave_patient_logs').insert([ins]);
       } else {
-        await supabase.from('shockwave_patient_logs').update({ [field]: v }).eq('id', row.id);
+        await supabase.from('shockwave_patient_logs').update(updatePayload).eq('id', row.id);
       }
     } else {
       // Therapist cell
