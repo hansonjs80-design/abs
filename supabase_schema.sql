@@ -107,3 +107,7 @@ ADD COLUMN IF NOT EXISTS prescription text;
 
 ALTER TABLE public.shockwave_patient_logs 
 ADD COLUMN IF NOT EXISTS prescription_count text;
+
+-- source 컬럼: 'scheduler' (스케줄러 자동 동기화) 또는 'manual' (수동 입력)
+ALTER TABLE public.shockwave_patient_logs 
+ADD COLUMN IF NOT EXISTS source text DEFAULT 'manual';

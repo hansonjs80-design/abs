@@ -148,14 +148,17 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
          }
       });
 
-      // 3. 통계 DB의 오늘 데이터와 완전 순서 일치 동기화
+      // 3. 통계 DB의 오늘 데이터 중 자동(scheduler) 항목만 동기화 대상
       const { data: todayStats } = await supabase
         .from('shockwave_patient_logs')
         .select('*')
         .eq('date', todayDateStr);
         
+      // scheduler 소스만 동기화 대상, manual은 절대 건드리지 않음
+      const schedulerEntries = (todayStats || []).filter(l => l.source === 'scheduler');
+      
       const existingGroups = {};
-      (todayStats || []).forEach(l => {
+      schedulerEntries.forEach(l => {
          const key = l.patient_name.replace(/\*/g, '');
          if (!existingGroups[key]) existingGroups[key] = [];
          existingGroups[key].push(l);
@@ -181,6 +184,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
             visit_count: n.visit_count,
             body_part: n.body_part,
             therapist_name: n.therapist_name,
+            source: 'scheduler',
         };
 
         if (old) {
@@ -194,7 +198,8 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
         }
       });
       
-      const toDeleteIds = (todayStats || []).filter(l => !usedIds.has(l.id)).map(l => l.id);
+      // scheduler 소스 중 스케줄러에서 삭제된 것만 제거 (manual은 유지)
+      const toDeleteIds = schedulerEntries.filter(l => !usedIds.has(l.id)).map(l => l.id);
 
       if (toDeleteIds.length > 0) {
         await supabase.from('shockwave_patient_logs').delete().in('id', toDeleteIds);
@@ -454,7 +459,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                  if (dates.length > 0) fallbackDate = dates[dates.length - 1];
               }
               const { error } = await supabase.from('shockwave_patient_logs').insert([{
-                date: fallbackDate, patient_name: '', chart_number: '', visit_count: '', body_part: '', therapist_name: '', prescription: ''
+                date: fallbackDate, patient_name: '', chart_number: '', visit_count: '', body_part: '', therapist_name: '', prescription: '', source: 'manual'
               }]);
               if (!error) fetchLogs();
             }}

@@ -212,6 +212,7 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
           visit_count: row.visit_count || '',
           body_part: row.body_part || '',
           therapist_name: '', prescription: '', prescription_count: '',
+          source: 'manual',
           ...updatePayload
         };
         if (!ins.date) ins.date = fallbackDate;
@@ -241,6 +242,7 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
           date: fallbackDate,
           patient_name: '(이름없음)', chart_number: '', visit_count: '', body_part: '',
           therapist_name: t.name, prescription: dbPres, prescription_count: val.trim(),
+          source: 'manual',
         };
         await supabase.from('shockwave_patient_logs').insert([ins]);
       } else {
