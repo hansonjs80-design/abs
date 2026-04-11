@@ -404,7 +404,6 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
           fetchLogs={fetchLogs} 
         />
       </div>
-      </div>
     </div>
   );
 }
