@@ -169,9 +169,11 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
       // Normal field
       const field = FIXED_FIELDS[c].field;
       let v = val;
-      if (field === 'date') {
-        if (v.length === 5 && v.includes('/')) v = `${currentYear}-${v.replace('/', '-')}`;
-        else if (v.length === 4 && !v.includes('-')) v = `${currentYear}-${v.substring(0,2)}-${v.substring(2,4)}`;
+      if (field === 'date' && v.trim()) {
+        const tv = v.trim();
+        if (tv.length === 5 && tv.includes('/')) v = `${currentYear}-${tv.replace('/', '-')}`;
+        else if (tv.length === 4 && !tv.includes('-')) v = `${currentYear}-${tv.substring(0,2)}-${tv.substring(2,4)}`;
+        else if (/^\d{1,2}$/.test(tv)) v = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${tv.padStart(2,'0')}`;
       }
 
       let updatePayload = { [field]: v };
@@ -195,8 +197,14 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
       }
 
       if (row.isDraft) {
+        let fallbackDate = `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`;
+        if (logs.length > 0) {
+            const validDates = logs.map(l => l.date).filter(Boolean).sort();
+            if (validDates.length > 0) fallbackDate = validDates[validDates.length - 1]; // 가장 마지막 작성된 날짜를 기본값으로
+        }
+
         const ins = {
-          date: row.date || `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`,
+          date: row.date || fallbackDate,
           patient_name: row.patient_name || '',
           chart_number: row.chart_number || '',
           visit_count: row.visit_count || '',
@@ -204,7 +212,7 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
           therapist_name: '', prescription: '', prescription_count: '',
           ...updatePayload
         };
-        if (!ins.date) ins.date = `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`;
+        if (!ins.date) ins.date = fallbackDate;
         await supabase.from('shockwave_patient_logs').insert([ins]);
       } else {
         await supabase.from('shockwave_patient_logs').update(updatePayload).eq('id', row.id);
@@ -220,8 +228,15 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
 
       if (row.isDraft) {
         if (!val.trim()) return;
+        
+        let fallbackDate = `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`;
+        if (logs.length > 0) {
+            const validDates = logs.map(l => l.date).filter(Boolean).sort();
+            if (validDates.length > 0) fallbackDate = validDates[validDates.length - 1];
+        }
+
         const ins = {
-          date: `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`,
+          date: fallbackDate,
           patient_name: '(이름없음)', chart_number: '', visit_count: '', body_part: '',
           therapist_name: t.name, prescription: dbPres, prescription_count: val.trim(),
         };

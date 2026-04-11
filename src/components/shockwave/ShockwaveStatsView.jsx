@@ -375,9 +375,13 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
           <button 
             className="btn btn-secondary"
             onClick={async () => {
-              const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
+              let fallbackDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
+              if (logs && logs.length > 0) {
+                 const dates = logs.map(l => l.date).filter(Boolean).sort();
+                 if (dates.length > 0) fallbackDate = dates[dates.length - 1];
+              }
               const { error } = await supabase.from('shockwave_patient_logs').insert([{
-                date: dateStr, patient_name: '', chart_number: '', visit_count: '', body_part: '', therapist_name: '', prescription: ''
+                date: fallbackDate, patient_name: '', chart_number: '', visit_count: '', body_part: '', therapist_name: '', prescription: ''
               }]);
               if (!error) fetchLogs();
             }}
