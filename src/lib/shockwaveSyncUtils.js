@@ -90,42 +90,51 @@ export function parseTherapyInfo(rawContent) {
   // 시간포맷 필터 (예: 12:30)
   if (/^\d{1,2}:\d{2}$/.test(s)) return null;
 
-  let name = "";
   let chart = "";
+  let name = s;
   let visit = "";
-  let memo = "";
-  
-  // Format 1: 이름/차트번호/회차/메모
+
   if (s.includes('/')) {
     const parts = s.split('/');
-    name = parts[0].trim();
-    if (parts.length > 1) chart = parts[1].trim();
-    if (parts.length > 2) visit = parts[2].trim();
-    if (parts.length > 3) memo = parts.slice(3).join('/').trim();
-  } else {
-    // Format 2: 그냥 텍스트
-    name = s;
+    const p0 = parts[0].trim();
+    const p1 = parts[1]?.trim() || '';
+
+    // If p0 has numbers and p1 has letters, it's Chart/Name (User described: 챠트번호/이름)
+    if (/\d/.test(p0) && /[^\d*()]/.test(p1)) {
+       chart = p0;
+       name = p1;
+    } 
+    // If p0 has letters and p1 has numbers, it's Name/Chart
+    else if (/[^\d*()]/.test(p0) && /\d/.test(p1)) {
+       name = p0;
+       chart = p1;
+    } else {
+       chart = p0;
+       name = p1;
+    }
   }
 
-  // 꼬리 패턴 (e.g. 이름(40), (60)) 필터. 이거는 Shockwave Scheduler 자체 메모 파서(has4060Pattern)와 겹침
-  name = name.replace(/\(\d+\)\s*$/, "").trim();
-  name = name.replace(/\*+$/, "").trim(); // 별표 사전 제거
+  // 도수치료 (40, 60) 필터 (이름에 포함된 경우)
+  if (/40|60/.test(name)) return null;
 
-  if (!name || /^\d+$/.test(name)) return null; // 이름이 없거나 숫자뿐이면 스킵
+  // Extract visit count: name(visit) or name*
+  const visitMatch = name.match(/\((\d+)\)$/);
+  if (visitMatch) {
+    visit = visitMatch[1];
+    name = name.replace(/\(\d+\)$/, '').trim();
+  } else if (name.endsWith('*')) {
+    visit = "1";
+    // 별표는 1회차 시각적 표시이므로 이름에 남겨둠
+  }
 
-  // 회차가 1이거나 빈칸일때 기본 1로 설정? (PWA 앱스 환경상 사용자가 방문횟수를 입력 안할수도 있음)
-  const numericVisit = visit && !isNaN(Number(visit)) ? Number(visit) : 1;
-  const isFirstVisit = numericVisit === 1;
-
-  // 메모부위 영문 대문자/약어 보정 (ex: rt.sh -> Rt. Shoulder)
-  const convertedMemo = memo ? toProperCase(memo) : "";
+  name = name.trim();
+  if (!name || /^\d+$/.test(name.replace(/\*/g, ''))) return null;
 
   return {
-    patient_name: isFirstVisit ? `${name}*` : name,
+    patient_name: name,
     chart_number: chart,
-    visit_count: visit || "-",
-    body_part: convertedMemo,
-    is_first_visit: isFirstVisit,
+    visit_count: visit, 
+    body_part: "", // To be auto-filled by sync logic
     original: s
   };
 }
