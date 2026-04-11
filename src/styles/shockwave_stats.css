@@ -162,10 +162,14 @@
   background-color: #e2f0d9 !important;
   font-weight: 700;
   color: #000;
+  position: sticky !important;
+  z-index: 15 !important;
 }
-.hdr-fixed-last {
-  border-right: 2px solid #000 !important;
-}
+.sw-grid-table thead .hdr-fixed:nth-child(1) { left: 0; }
+.sw-grid-table thead .hdr-fixed:nth-child(2) { left: 70px; }
+.sw-grid-table thead .hdr-fixed:nth-child(3) { left: 155px; }
+.sw-grid-table thead .hdr-fixed:nth-child(4) { left: 230px; }
+.sw-grid-table thead .hdr-fixed:nth-child(5) { left: 275px; border-right: 2px solid #000 !important; }
 
 /* Therapist name header */
 .hdr-therapist { font-weight: 700; color: #000; }
@@ -180,12 +184,25 @@
 .hdr-total { background-color: #c1a8c8 !important; font-weight: 700; color: #000; }
 .hdr-grand-total { font-size: 1.1rem; font-weight: 700; color: #cc0000; background-color: #f4cccc !important; }
 
-/* Sticky header — each row stacks below the previous */
+/* Sticky header — each row stacks below the previous exactly by their height */
 .sw-grid-table thead th { position: sticky; z-index: 10; }
-.sw-grid-table thead tr:nth-child(1) th { top: 0; }           /* 제목 행 */
-.sw-grid-table thead tr:nth-child(2) th { top: 34px; }        /* 치료사 이름 행 */
-.sw-grid-table thead tr:nth-child(3) th { top: 62px; }        /* F1.5/F/Rdc/F/R 행 */
-.sw-grid-table thead tr:nth-child(4) th { top: 88px; }        /* 합계 숫자 행 */
+
+.sw-grid-table thead tr:nth-child(1) th {
+  top: 0;
+  height: 40px; 
+}
+.sw-grid-table thead tr:nth-child(2) th {
+  top: 40px; 
+  height: 36px;
+}
+.sw-grid-table thead tr:nth-child(3) th {
+  top: 76px; 
+  height: 28px;
+}
+.sw-grid-table thead tr:nth-child(4) th {
+  top: 104px; 
+  height: 28px;
+}
 
 /* ── Body cells ── */
 .gc { background: #fff; color: #202124; height: 26px; cursor: cell; }
