@@ -11,10 +11,11 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
 
   // ─── 1. DATA PREPARATION ─────────────────────────────────
   const gridData = useMemo(() => {
-    const sorted = [...logs].sort((a, b) => a.date.localeCompare(b.date));
+    const safeLogs = Array.isArray(logs) ? logs.filter(Boolean) : [];
+    const sorted = [...safeLogs].sort((a, b) => String(a?.date || '').localeCompare(String(b?.date || '')));
     const groups = {};
     sorted.forEach(log => {
-      const d = log.date || '';
+      const d = String(log?.date || '');
       if (!groups[d]) groups[d] = [];
       groups[d].push(log);
     });
@@ -58,9 +59,23 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
   ];
 
   const totalColCount = FIXED_FIELDS.length + therapists.length * 3 + 1;
+  const ROW_DATA_FIELDS = [
+    ...FIXED_FIELDS.map((field) => field.field),
+    'therapist_name',
+    'prescription',
+    'prescription_count',
+  ];
 
   // Helper: get therapist column index offset
   const tColStart = (tIdx) => FIXED_FIELDS.length + tIdx * 3;
+  const isTherapistGroupStartCol = (colIdx) => (
+    colIdx >= FIXED_FIELDS.length &&
+    colIdx < totalColCount - 1 &&
+    (colIdx - FIXED_FIELDS.length) % 3 === 0 &&
+    colIdx !== tColStart(0)
+  );
+  const isBlankValue = (value) => value == null || String(value).trim() === '';
+  const isRowEmpty = (row) => ROW_DATA_FIELDS.every((field) => isBlankValue(row?.[field]));
 
   // ─── 2. CELL VALUE HELPERS ────────────────────────────────
   const getVal = (row, colIdx) => {
@@ -218,7 +233,9 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
         if (!ins.date) ins.date = fallbackDate;
         await supabase.from('shockwave_patient_logs').insert([ins]);
       } else {
-        await supabase.from('shockwave_patient_logs').update(updatePayload).eq('id', row.id);
+        const nextRow = { ...row, ...updatePayload };
+        if (isRowEmpty(nextRow)) await supabase.from('shockwave_patient_logs').delete().eq('id', row.id);
+        else await supabase.from('shockwave_patient_logs').update(updatePayload).eq('id', row.id);
       }
     } else {
       // Therapist cell
@@ -248,9 +265,10 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
       } else {
         if (val.trim() === '') {
           if (row.therapist_name === t.name && row.prescription === dbPres) {
-            await supabase.from('shockwave_patient_logs').update({
-              therapist_name: '', prescription: '', prescription_count: ''
-            }).eq('id', row.id);
+            const clearedFields = { therapist_name: '', prescription: '', prescription_count: '' };
+            const nextRow = { ...row, ...clearedFields };
+            if (isRowEmpty(nextRow)) await supabase.from('shockwave_patient_logs').delete().eq('id', row.id);
+            else await supabase.from('shockwave_patient_logs').update(clearedFields).eq('id', row.id);
           }
         } else {
           await supabase.from('shockwave_patient_logs').update({
@@ -348,19 +366,26 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
     for (let r = selNorm.r1; r <= selNorm.r2; r++) {
       const row = gridData[r];
       if (row.isDraft) continue;
+      const updatePayload = {};
       for (let c = selNorm.c1; c <= selNorm.c2; c++) {
         if (c >= totalColCount - 1) continue;
         if (c < FIXED_FIELDS.length) {
-          await supabase.from('shockwave_patient_logs').update({ [FIXED_FIELDS[c].field]: '' }).eq('id', row.id);
+          updatePayload[FIXED_FIELDS[c].field] = '';
         } else {
           const tIdx = Math.floor((c - FIXED_FIELDS.length) / 3);
           const pIdx = (c - FIXED_FIELDS.length) % 3;
           const t = therapists[tIdx];
           if (t && row.therapist_name === t.name && row.prescription === PRES_DB_MAP[PRESCRIPTIONS[pIdx]]) {
-            await supabase.from('shockwave_patient_logs').update({ therapist_name: '', prescription: '', prescription_count: '' }).eq('id', row.id);
+            updatePayload.therapist_name = '';
+            updatePayload.prescription = '';
+            updatePayload.prescription_count = '';
           }
         }
       }
+      if (Object.keys(updatePayload).length === 0) continue;
+      const nextRow = { ...row, ...updatePayload };
+      if (isRowEmpty(nextRow)) await supabase.from('shockwave_patient_logs').delete().eq('id', row.id);
+      else await supabase.from('shockwave_patient_logs').update(updatePayload).eq('id', row.id);
     }
     fetchLogs();
   };
@@ -525,17 +550,26 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
               </th>
             ))}
             {therapists.map((t, idx) => (
-              <th key={`tn-${t.id}`} colSpan={3} className="hdr-therapist" style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}>
+              <th
+                key={`tn-${t.id}`}
+                colSpan={3}
+                className={`hdr-therapist ${idx > 0 ? 'therapist-group-start' : ''}`}
+                style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}
+              >
                 {t.name} ( {therapistTotals[idx]?.total || 0}건 )
               </th>
             ))}
-            <th rowSpan={2} className="hdr-total">총건수</th>
+            <th rowSpan={2} className="hdr-total total-group-start">총건수</th>
           </tr>
 
           {/* Row 3: Prescription names */}
           <tr>
             {therapists.map((t, idx) => PRESCRIPTIONS.map(p => (
-              <th key={`pn-${t.id}-${p}`} className="hdr-pres" style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}>
+              <th
+                key={`pn-${t.id}-${p}`}
+                className={`hdr-pres ${PRESCRIPTIONS.indexOf(p) === 0 && idx > 0 ? 'therapist-group-start' : ''}`}
+                style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}
+              >
                 {p}
               </th>
             )))}
@@ -544,17 +578,20 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
           {/* Row 4: Prescription totals */}
           <tr>
             {therapists.map((t, idx) => PRESCRIPTIONS.map(p => (
-              <th key={`pt-${t.id}-${p}`} className="hdr-pres-total">
+              <th
+                key={`pt-${t.id}-${p}`}
+                className={`hdr-pres-total ${PRESCRIPTIONS.indexOf(p) === 0 && idx > 0 ? 'therapist-group-start' : ''}`}
+              >
                 {therapistTotals[idx]?.byPres[p] || 0}
               </th>
             )))}
-            <th className="hdr-grand-total">{grandTotal}건</th>
+            <th className="hdr-grand-total total-group-start">{grandTotal}건</th>
           </tr>
         </thead>
 
         <tbody>
           {gridData.map((row, ri) => (
-            <tr key={row.id} className={row._isFirst ? 'tr-date-start' : ''}>
+            <tr key={row.id} className={row._isFirst && row.date ? 'tr-date-start' : ''}>
               {Array.from({ length: totalColCount }, (_, ci) => {
                 // Skip if merged into another cell
                 if (getMergedInto(ri, ci)) return null;
@@ -587,7 +624,9 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
                 if (isFoc) cls += ' gc-foc';
                 if (groupCls) cls += ' ' + groupCls;
                 if (ci < FIXED_FIELDS.length && FIXED_FIELDS[ci]?.bold) cls += ' gc-bold';
-                if (isTotalCol) cls += ' gc-total';
+                if (isDateCol) cls += ' gc-date';
+                if (isTotalCol) cls += ' gc-total total-group-start';
+                if (isTherapistGroupStartCol(ci)) cls += ' therapist-group-start';
 
                 if (isEdit) {
                   return (

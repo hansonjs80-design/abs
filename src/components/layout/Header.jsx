@@ -9,6 +9,7 @@ export default function Header({ onMenuToggle }) {
   const pageLabels = {
     '/': '직원 근무표',
     '/shockwave': '충격파/도수 스케줄',
+    '/shockwave-stats': '치료 내역 통계',
     '/settings': '설정 / 관리',
   };
 
@@ -17,13 +18,15 @@ export default function Header({ onMenuToggle }) {
   return (
     <header className="header glass">
       <div className="header-left">
-        <button className="menu-btn" onClick={onMenuToggle} aria-label="메뉴">
+        <button className="menu-btn mobile-only" onClick={onMenuToggle} aria-label="메뉴">
           <Menu size={22} />
         </button>
-        {(location.pathname === '/' || location.pathname.includes('shockwave')) && (
+        {(location.pathname === '/' || location.pathname === '/shockwave') && (
           <MonthPicker suffix={pageLabel} />
         )}
-        {location.pathname === '/settings' && <div className="header-title" style={{ fontSize: '1.2rem' }}>{pageLabel}</div>}
+        {(location.pathname === '/shockwave-stats' || location.pathname === '/settings') && (
+          <div className="header-title" style={{ fontSize: '1.2rem' }}>{pageLabel}</div>
+        )}
       </div>
       <div className="header-right">
         <ThemeToggle />

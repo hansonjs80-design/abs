@@ -4,6 +4,7 @@
 
 .staff-calendar {
   animation: fadeIn var(--transition-normal) ease-out;
+  --calendar-weekday-row-height: 32px;
 }
 
 .calendar-grid {
@@ -17,7 +18,12 @@
 
 /* 요일 헤더 */
 .calendar-weekday-header {
-  padding: 5.3px 4px; /* 폰트가 커진 만큼 위아래 여백을 줄여 전체 셀 높이 보존 */
+  min-height: var(--calendar-weekday-row-height);
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   text-align: center;
   font-size: 14.3px; /* 13px에서 10% 증가 */
   font-weight: 800; /* 기존 700(Bold)에서 800(Extra Bold)으로 더 두껍게 */
@@ -294,6 +300,7 @@
   gap: 20px;
   position: sticky;
   top: calc(var(--header-height) + 24px);
+  margin-top: var(--calendar-weekday-row-height);
 }
 
 @media (max-width: 1200px) {
@@ -305,6 +312,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px;
+    margin-top: 0;
   }
 }
 
@@ -331,7 +339,7 @@
   }
   .calendar-weekday-header {
     font-size: 0.7rem;
-    padding: 6px 2px;
+    padding: 0 2px;
   }
 }
 

@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSchedule } from '../../contexts/ScheduleContext';
 
-export default function MonthPicker({ suffix = '' }) {
+export default function MonthPicker({ suffix = '', variant = 'default' }) {
   const { currentYear, currentMonth, navigateMonth, goToMonth } = useSchedule();
   const [showDropdown, setShowDropdown] = useState(false);
   const [dropdownYear, setDropdownYear] = useState(currentYear);
@@ -24,9 +24,13 @@ export default function MonthPicker({ suffix = '' }) {
   const now = new Date();
   const todayYear = now.getFullYear();
   const todayMonth = now.getMonth() + 1;
+  const labelText = useMemo(() => {
+    const title = suffix ? ` ${suffix}` : '';
+    return `${currentYear}년 ${currentMonth}월${title}`;
+  }, [currentYear, currentMonth, suffix]);
 
   return (
-    <div className="month-picker" ref={ref} style={{ position: 'relative' }}>
+    <div className={`month-picker${variant === 'tab' ? ' tab-variant' : ''}`} ref={ref} style={{ position: 'relative' }}>
       <button className="month-nav-btn" onClick={() => navigateMonth(-1)} aria-label="이전 달">
         <ChevronLeft size={18} />
       </button>
@@ -37,7 +41,7 @@ export default function MonthPicker({ suffix = '' }) {
         role="button"
         tabIndex={0}
       >
-        {currentYear}년 {currentMonth}월 {suffix}
+        {labelText}
       </span>
 
       <button className="month-nav-btn" onClick={() => navigateMonth(1)} aria-label="다음 달">

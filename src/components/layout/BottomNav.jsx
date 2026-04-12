@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { Calendar, Zap, ZapOff, Settings } from 'lucide-react';
+import { Calendar, ClipboardList, Settings, Zap } from 'lucide-react';
 
 export default function BottomNav() {
   const items = [
     { path: '/', icon: Calendar, label: '근무표' },
     { path: '/shockwave', icon: Zap, label: '충격파 스케줄' },
+    { path: '/shockwave-stats', icon: ClipboardList, label: '치료통계' },
     { path: '/settings', icon: Settings, label: '설정' },
   ];
 

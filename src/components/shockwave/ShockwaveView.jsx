@@ -31,6 +31,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   const tooltipRef = useRef(null);
   const [hoverData, setHoverData] = useState(null);
+  const [chartSelector, setChartSelector] = useState(null);
+  const contextMenuRef = useRef(null);
 
   const colCount = Math.max(1, therapists.length);
   const staffMemoByDate = useMemo(() => {
@@ -111,14 +113,100 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, [baseTimeSlots, settings]);
 
   const today = getTodayKST();
+  const weeks = useMemo(() => {
+    return generateShockwaveCalendar(currentYear, currentMonth, holidays);
+  }, [currentYear, currentMonth, holidays]);
+
+  const shouldAutoFormatSchedulerName = useCallback((value) => {
+    const text = String(value || '').trim();
+    if (!text) return false;
+    if (text.includes('/')) return false;
+    if (/[()*]/.test(text)) return false;
+    if (has4060Pattern(text)) return false;
+    if (/^\d+$/.test(text)) return false;
+    if (/^(휴무|연차|반차|출근|퇴근|근무|야간|오전|오후)$/u.test(text)) return false;
+    return true;
+  }, []);
+
+  const pickChartOption = useCallback((options, rawName) => {
+    return new Promise((resolve) => {
+      setChartSelector({ options, rawName, resolve });
+    });
+  }, []);
+
+  const buildSchedulerAutoText = useCallback(async (w, d, nextValue) => {
+    const rawName = String(nextValue || '').trim();
+    if (!shouldAutoFormatSchedulerName(rawName)) return rawName;
+
+    const dayInfo = weeks[w]?.[d];
+    if (!dayInfo) return rawName;
+    const targetDate = `${dayInfo.year}-${String(dayInfo.month).padStart(2, '0')}-${String(dayInfo.day).padStart(2, '0')}`;
+
+    const { data, error } = await supabase
+      .from('shockwave_patient_logs')
+      .select('patient_name, chart_number, visit_count, date')
+      .lt('date', targetDate)
+      .in('patient_name', [rawName, `${rawName}*`])
+      .order('date', { ascending: false });
+
+    if (error) {
+      console.error('Failed to lookup patient chart history:', error);
+      return rawName;
+    }
+
+    const matches = (data || []).filter((item) => String(item.patient_name || '').replace(/\*/g, '') === rawName);
+    if (matches.length === 0) return rawName;
+
+    const chartMap = new Map();
+    matches.forEach((item) => {
+      const chartNumber = String(item.chart_number || '').trim();
+      if (!chartNumber) return;
+      const current = chartMap.get(chartNumber);
+      if (!current) {
+        chartMap.set(chartNumber, item);
+        return;
+      }
+
+      if ((item.date || '') > (current.date || '')) {
+        chartMap.set(chartNumber, item);
+        return;
+      }
+
+      if ((item.date || '') === (current.date || '')) {
+        const currentVisit = parseInt(current.visit_count || '0', 10) || 0;
+        const nextVisit = parseInt(item.visit_count || '0', 10) || 0;
+        if (nextVisit > currentVisit) chartMap.set(chartNumber, item);
+      }
+    });
+
+    const options = Array.from(chartMap.entries())
+      .map(([chartNumber, item]) => {
+        const lastVisit = parseInt(item.visit_count || '0', 10) || 0;
+        return {
+          chartNumber,
+          nextVisit: lastVisit > 0 ? lastVisit + 1 : 1,
+          lastDate: item.date || '',
+        };
+      })
+      .sort((a, b) => {
+        if (a.lastDate !== b.lastDate) return b.lastDate.localeCompare(a.lastDate);
+        return a.chartNumber.localeCompare(b.chartNumber);
+      });
+
+    if (options.length === 0) return rawName;
+
+    let selected = options[0];
+    if (options.length > 1) {
+      selected = await pickChartOption(options, rawName);
+      if (!selected) return rawName;
+    }
+
+    return `${selected.chartNumber}/${rawName}(${selected.nextVisit})`;
+  }, [pickChartOption, shouldAutoFormatSchedulerName, weeks]);
 
   useEffect(() => {
     onLoadMemos(currentYear, currentMonth);
   }, [currentYear, currentMonth, onLoadMemos]);
-
-  const weeks = useMemo(() => {
-    return generateShockwaveCalendar(currentYear, currentMonth, holidays);
-  }, [currentYear, currentMonth, holidays]);
 
   // ── 셀 키 헬퍼 ──
   const cellKey = (w, d, r, c) => `${w}-${d}-${r}-${c}`;
@@ -271,11 +359,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setEditingCell(null);
     const key = cellKey(w, d, r, c);
     const oldContent = memos[key]?.content || '';
-    const newContent = nextValue.trim();
+    const newContent = (await buildSchedulerAutoText(w, d, nextValue)).trim();
     if (newContent === oldContent) return;
     const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, newContent);
     if (!success) addToast('저장 실패', 'error');
-  }, [editValue, currentYear, currentMonth, memos, onSaveMemo, addToast]);
+  }, [editValue, currentYear, currentMonth, memos, onSaveMemo, addToast, buildSchedulerAutoText]);
 
   // ── 셀 삭제 ──
   const deleteCells = useCallback(async (keys) => {
@@ -557,11 +645,38 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         return;
       }
       event.preventDefault();
-      setContextMenu({ x: event.clientX, y: event.clientY });
+      const MENU_WIDTH = 180;
+      const MENU_HEIGHT = 140;
+      const VIEWPORT_GAP = 12;
+      const maxX = Math.max(VIEWPORT_GAP, window.innerWidth - MENU_WIDTH - VIEWPORT_GAP);
+      const maxY = Math.max(VIEWPORT_GAP, window.innerHeight - MENU_HEIGHT - VIEWPORT_GAP);
+      setContextMenu({
+        x: Math.min(event.clientX, maxX),
+        y: Math.min(event.clientY, maxY),
+      });
     };
     el.addEventListener('contextmenu', handleContext);
     return () => el.removeEventListener('contextmenu', handleContext);
   }, [selectedKeys, editingCell]);
+
+  useEffect(() => {
+    if (!contextMenu || !contextMenuRef.current) return;
+    const rect = contextMenuRef.current.getBoundingClientRect();
+    const VIEWPORT_GAP = 12;
+    let nextX = contextMenu.x;
+    let nextY = contextMenu.y;
+
+    if (rect.right > window.innerWidth - VIEWPORT_GAP) {
+      nextX = Math.max(VIEWPORT_GAP, window.innerWidth - rect.width - VIEWPORT_GAP);
+    }
+    if (rect.bottom > window.innerHeight - VIEWPORT_GAP) {
+      nextY = Math.max(VIEWPORT_GAP, window.innerHeight - rect.height - VIEWPORT_GAP);
+    }
+
+    if (nextX !== contextMenu.x || nextY !== contextMenu.y) {
+      setContextMenu((prev) => prev ? { ...prev, x: nextX, y: nextY } : prev);
+    }
+  }, [contextMenu]);
 
   useEffect(() => {
     if (contextMenu && (!selectedKeys || selectedKeys.size === 0)) {
@@ -597,6 +712,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const handleContextMerge = useCallback(() => {
     tryMergeSelection();
   }, [tryMergeSelection]);
+
+  const handleChartSelectorClose = useCallback((selected) => {
+    if (!chartSelector) return;
+    chartSelector.resolve(selected || null);
+    setChartSelector(null);
+  }, [chartSelector]);
 
   return (
     <>
@@ -882,6 +1003,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       </div>
       {contextMenu && (
         <div
+          ref={contextMenuRef}
           className="shockwave-context-menu"
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onMouseDown={(e) => e.stopPropagation()}
@@ -915,6 +1037,40 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               병합 해제 (Cmd+E)
             </button>
           )}
+        </div>
+      )}
+
+      {chartSelector && (
+        <div className="shockwave-chart-selector-backdrop" onMouseDown={() => handleChartSelectorClose(null)}>
+          <div className="shockwave-chart-selector" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="shockwave-chart-selector-title">차트번호 선택</div>
+            <div className="shockwave-chart-selector-subtitle">
+              {chartSelector.rawName} 환자의 차트번호를 선택하세요.
+            </div>
+            <div className="shockwave-chart-selector-options">
+              {chartSelector.options.map((option) => (
+                <button
+                  key={`${option.chartNumber}-${option.lastDate}`}
+                  type="button"
+                  className="shockwave-chart-selector-option"
+                  onClick={() => handleChartSelectorClose(option)}
+                >
+                  <span>{option.chartNumber}</span>
+                  <span>{option.nextVisit}회차</span>
+                  <span>{option.lastDate}</span>
+                </button>
+              ))}
+            </div>
+            <div className="shockwave-chart-selector-actions">
+              <button
+                type="button"
+                className="shockwave-chart-selector-cancel"
+                onClick={() => handleChartSelectorClose(null)}
+              >
+                취소
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

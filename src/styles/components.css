@@ -53,9 +53,20 @@
 
 .menu-btn:hover { background: var(--bg-hover); }
 
+.mobile-only {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .header { padding: 0 16px; }
   .header-title { font-size: 1.1rem; }
+  .mobile-only { display: flex; }
+}
+
+@media (min-width: 769px) {
+  .header {
+    display: none;
+  }
 }
 
 /* ── 사이드바 ── */
@@ -74,6 +85,13 @@
   transition: width var(--transition-normal), transform var(--transition-normal), background var(--transition-normal);
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+@media (min-width: 769px) {
+  .sidebar,
+  .sidebar-overlay {
+    display: none;
+  }
 }
 
 /* 데스크탑 접힘 상태 (collapsed) */
@@ -262,15 +280,6 @@
   }
 }
 
-@media (min-width: 769px) {
-  .app-main {
-    margin-left: var(--sidebar-width);
-  }
-  .app-layout.desktop-collapsed .app-main {
-    margin-left: var(--sidebar-collapsed-width);
-  }
-}
-
 /* ── 하단 네비게이션 (모바일) ── */
 .bottom-nav {
   display: none;
@@ -318,6 +327,120 @@
 
 @media (max-width: 768px) {
   .bottom-nav { display: flex; }
+}
+
+/* ── 상단 탭 네비게이션 ── */
+.top-tabs-shell {
+  position: sticky;
+  top: 0;
+  z-index: 95;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  background: linear-gradient(180deg, var(--bg-secondary) 0%, rgba(255,255,255,0.88) 100%);
+  border-bottom: 1px solid var(--border-color);
+  gap: 16px;
+  padding: 10px 24px 0;
+}
+
+[data-theme="dark"] .top-tabs-shell {
+  background: linear-gradient(180deg, var(--bg-secondary) 0%, rgba(30,41,59,0.9) 100%);
+}
+
+.top-tabs {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.top-tabs-track {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: max-content;
+}
+
+.top-tabs-actions {
+  display: flex;
+  align-items: center;
+  padding-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.top-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 16px 9px;
+  border: 1px solid var(--border-color);
+  border-bottom: none;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  background: linear-gradient(180deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+  transform: translateY(1px);
+  transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.top-tab:hover {
+  color: var(--text-primary);
+  background: linear-gradient(180deg, var(--bg-hover) 0%, var(--bg-secondary) 100%);
+}
+
+.top-tab.active {
+  color: var(--brand-primary);
+  background: var(--bg-secondary);
+  box-shadow: 0 -1px 0 var(--border-color), var(--shadow-md);
+  transform: translateY(0);
+  position: relative;
+}
+
+.top-tab.active::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -1px;
+  height: 2px;
+  background: var(--bg-secondary);
+}
+
+.top-tab.month-tab {
+  gap: 10px;
+  padding-right: 12px;
+}
+
+.top-tab.month-tab .month-picker {
+  gap: 6px;
+}
+
+.top-tab.month-tab .month-picker-label {
+  min-width: auto;
+  padding: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  background: transparent;
+}
+
+.top-tab.month-tab .month-picker-label:hover {
+  background: transparent;
+}
+
+.top-tab.month-tab .month-nav-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+  .top-tabs-shell {
+    display: none;
+  }
 }
 
 /* ── 버튼 ── */

@@ -1,15 +1,43 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { generateShockwaveCalendar, isSameDate } from '../../lib/calendarUtils';
-import { parseTherapyInfo } from '../../lib/shockwaveSyncUtils';
+import { syncTodayShockwaveScheduleToStats } from '../../lib/shockwaveSyncUtils';
 import { useToast } from '../common/Toast';
 import '../../styles/shockwave_stats.css';
 import ShockwaveDataGrid from './ShockwaveDataGrid';
+
+class ShockwaveStatsErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error) {
+    console.error('Shockwave stats render failed:', error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="sw-stats-empty">
+          치료 내역 통계를 표시하는 중 오류가 발생했습니다.
+          <div className="empty-subtext">페이지를 새로고침한 뒤 다시 확인해 주세요.</div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function ShockwaveStatsView({ currentYear, currentMonth, memos, therapists }) {
   const { addToast } = useToast();
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
+  const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
 
   const fetchLogs = useCallback(async () => {
     setIsLoading(true);
@@ -56,169 +84,28 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   const handleSyncFromScheduler = async () => {
     setIsLoading(true);
     try {
-      if (!memos) return;
-      
-      const today = new Date();
-      const todayY = today.getFullYear();
-      const todayM = today.getMonth() + 1;
-      const todayD = today.getDate();
-      const todayDateStr = `${todayY}-${String(todayM).padStart(2, '0')}-${String(todayD).padStart(2, '0')}`;
-      
-      if (todayY !== currentYear || todayM !== currentMonth) {
-         addToast('오늘 날짜가 포함된 이번 달 스케줄러에서만 동기화할 수 있습니다.', 'info');
-         setIsLoading(false);
-         return;
-      }
-      
-      const weeks = generateShockwaveCalendar(currentYear, currentMonth);
-      const newLogs = [];
-
-      // 1. 오늘 날짜 스케줄러 내용 추출
-      Object.entries(memos).forEach(([key, cell]) => {
-        const [w, d, r, c] = key.split('-').map(Number);
-        const dayInfo = weeks[w]?.[d];
-        if (!dayInfo || !dayInfo.isCurrentMonth) return;
-        
-        if (dayInfo.year === todayY && dayInfo.month === todayM && dayInfo.day === todayD) {
-          const content = cell.content;
-          const parsed = parseTherapyInfo(content);
-          if (parsed) {
-            const therapistName = therapists[c] ? therapists[c].name : `치료사 ${c + 1}`;
-            newLogs.push({
-              r,
-              c,
-              date: todayDateStr,
-              patient_name: parsed.patient_name,
-              chart_number: parsed.chart_number || '',
-              visit_count: parsed.visit_count || '',
-              body_part: parsed.body_part || '',
-              therapist_name: therapistName,
-              prescription: '',
-            });
-          }
-        }
+      const result = await syncTodayShockwaveScheduleToStats({
+        year: currentYear,
+        month: currentMonth,
+        memos,
+        therapists: safeTherapists,
       });
 
-      if (newLogs.length === 0) {
+      if (result.skipped && result.reason === 'today_outside_current_month') {
+        addToast('오늘 날짜가 포함된 이번 달 스케줄러에서만 동기화할 수 있습니다.', 'info');
+        return;
+      }
+
+      if (result.extractedCount === 0) {
         addToast('오늘 스케줄러에 해당하는 예약 내역이 없습니다.', 'info');
       }
 
-      // 예약 시간순(r) 정렬
-      newLogs.sort((a, b) => {
-        if (a.r !== b.r) return a.r - b.r;
-        return a.c - b.c;
-      });
-
-      // 2. 과거 데이터 조회 (차트번호, 회차, 부위 계산용)
-      const cleanNamesSet = new Set(newLogs.map(l => l.patient_name.replace(/\*/g, '')));
-      const queryNames = [];
-      cleanNamesSet.forEach(n => {
-         queryNames.push(n);
-         queryNames.push(`${n}*`);
-      });
-      
-      const { data: pastData } = await supabase
-        .from('shockwave_patient_logs')
-        .select('patient_name, chart_number, visit_count, body_part, date')
-        .in('patient_name', queryNames)
-        .order('date', { ascending: false });
-
-      // 빈 값 자동 계산
-      newLogs.forEach(n => {
-         const cleanName = n.patient_name.replace(/\*/g, '');
-         // 과거 기록 중 오늘이 아닌 가장 최신 기록 탐색
-         const pLogs = (pastData || []).filter(p => p.patient_name.replace(/\*/g, '') === cleanName && p.date !== todayDateStr);
-         
-         if (pLogs.length > 0) {
-            pLogs.sort((a, b) => {
-               if (a.date !== b.date) return b.date.localeCompare(a.date);
-               return (parseInt(b.visit_count || '0') || 0) - (parseInt(a.visit_count || '0') || 0);
-            });
-            const lastLog = pLogs[0];
-            
-            if (!n.chart_number) n.chart_number = lastLog.chart_number || '';
-            if (!n.body_part) n.body_part = lastLog.body_part || '';
-            
-            if (!n.visit_count) {
-                const lastVisit = parseInt(lastLog.visit_count || '0', 10);
-                n.visit_count = lastVisit > 0 ? String(lastVisit + 1) : '1';
-            }
-         } else {
-            if (!n.visit_count) n.visit_count = '1';
-         }
-      });
-
-      // 3. 통계 DB의 오늘 데이터 중 자동(scheduler) 항목만 동기화 대상
-      const { data: todayStats } = await supabase
-        .from('shockwave_patient_logs')
-        .select('*')
-        .eq('date', todayDateStr);
-        
-      // scheduler 소스만 동기화 대상, manual은 절대 건드리지 않음
-      const schedulerEntries = (todayStats || []).filter(l => l.source === 'scheduler');
-      
-      const existingGroups = {};
-      schedulerEntries.forEach(l => {
-         const key = l.patient_name.replace(/\*/g, '');
-         if (!existingGroups[key]) existingGroups[key] = [];
-         existingGroups[key].push(l);
-      });
-
-      const toUpsert = [];
-      const toInsert = [];
-      const usedIds = new Set();
-
-      newLogs.forEach(n => {
-        const key = n.patient_name.replace(/\*/g, '');
-        const group = existingGroups[key];
-        
-        let old = null;
-        if (group && group.length > 0) {
-            old = group.find(g => !usedIds.has(g.id));
-        }
-
-        const out = {
-            date: n.date,
-            patient_name: n.patient_name,
-            chart_number: n.chart_number,
-            visit_count: n.visit_count,
-            body_part: n.body_part,
-            therapist_name: n.therapist_name,
-            source: 'scheduler',
-        };
-
-        if (old) {
-          out.id = old.id;
-          out.prescription = old.prescription || '';
-          out.prescription_count = old.prescription_count || '';
-          toUpsert.push(out);
-          usedIds.add(old.id);
-        } else {
-          toInsert.push(out);
-        }
-      });
-      
-      // scheduler 소스 중 스케줄러에서 삭제된 것만 제거 (manual은 유지)
-      const toDeleteIds = schedulerEntries.filter(l => !usedIds.has(l.id)).map(l => l.id);
-
-      if (toDeleteIds.length > 0) {
-        await supabase.from('shockwave_patient_logs').delete().in('id', toDeleteIds);
-      }
-      if (toUpsert.length > 0) {
-        await supabase.from('shockwave_patient_logs').upsert(toUpsert);
-      }
-      if (toInsert.length > 0) {
-        await supabase.from('shockwave_patient_logs').insert(toInsert);
-      }
-
-      const totalUpdates = toInsert.length + toUpsert.length + toDeleteIds.length;
-      if (totalUpdates > 0) {
-        addToast(`오늘 스케줄과 동기화 성공! (추가:${toInsert.length}, 갱신:${toUpsert.length}, 제거:${toDeleteIds.length})`, 'success');
+      if (result.totalUpdates > 0) {
+        addToast(`오늘 스케줄과 동기화 성공! (추가:${result.insertedCount}, 갱신:${result.updatedCount}, 제거:${result.deletedCount})`, 'success');
         await fetchLogs();
       } else {
         addToast('오늘 스케줄과 치료 내역 통계가 이미 일치합니다.', 'info');
       }
-
     } catch (err) {
       console.error(err);
       addToast('데이터 동기화 중 오류가 발생했습니다.', 'error');
@@ -407,20 +294,6 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     }
   };
 
-  const groupedLogs = useMemo(() => {
-    const groups = {};
-    logs.forEach(log => {
-      if (!groups[log.date]) groups[log.date] = [];
-      groups[log.date].push(log);
-    });
-    return Object.keys(groups).sort().map(date => ({
-      date,
-      items: groups[date]
-    }));
-  }, [logs]);
-
-  const totalCount = logs.length;
-
   return (
     <div className="sw-stats-container animate-fade-in">
       <div className="sw-stats-header">
@@ -430,13 +303,13 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
             <div className="sw-stats-card">
               <span className="card-label">해당 월 총 처방수</span>
               <span className="card-value sum-value">
-                {logs.reduce((s, l) => s + (l.prescription ? (parseInt(l.prescription_count || '1') || 1) : 0), 0)}건
+                {safeLogs.reduce((s, l) => s + (l?.prescription ? (parseInt(l.prescription_count || '1') || 1) : 0), 0)}건
               </span>
             </div>
             <div className="sw-stats-card">
               <span className="card-label">초진 포함 전체 목록</span>
               <span className="card-value">
-                {logs.filter(l => l.patient_name?.includes('*')).length}명 (*)
+                {safeLogs.filter(l => l?.patient_name?.includes('*')).length}명 (*)
               </span>
             </div>
           </div>
@@ -456,8 +329,8 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
             className="btn btn-secondary"
             onClick={async () => {
               let fallbackDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
-              if (logs && logs.length > 0) {
-                 const dates = logs.map(l => l.date).filter(Boolean).sort();
+              if (safeLogs.length > 0) {
+                 const dates = safeLogs.map(l => l?.date).filter(Boolean).sort();
                  if (dates.length > 0) fallbackDate = dates[dates.length - 1];
               }
               const { error } = await supabase.from('shockwave_patient_logs').insert([{
@@ -479,13 +352,15 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
       </div>
 
       <div className="sw-stats-body">
-        <ShockwaveDataGrid 
-          logs={logs} 
-          therapists={therapists} 
-          currentYear={currentYear} 
-          currentMonth={currentMonth} 
-          fetchLogs={fetchLogs} 
-        />
+        <ShockwaveStatsErrorBoundary>
+          <ShockwaveDataGrid 
+            logs={safeLogs} 
+            therapists={safeTherapists} 
+            currentYear={currentYear} 
+            currentMonth={currentMonth} 
+            fetchLogs={fetchLogs} 
+          />
+        </ShockwaveStatsErrorBoundary>
       </div>
     </div>
   );

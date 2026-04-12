@@ -138,9 +138,13 @@
   background: #fff;
 }
 
+.sw-grid-table {
+  --grid-line-color: #bcbcbc;
+}
+
 .sw-grid-table th,
 .sw-grid-table td {
-  border: 1px solid #9e9e9e;
+  border: 1px solid var(--grid-line-color);
   text-align: center;
   vertical-align: middle;
   padding: 4px 6px;
@@ -164,15 +168,20 @@
   color: #000;
   position: sticky !important;
   z-index: 15 !important;
+  background-clip: padding-box;
+  border-top: 2px solid #000 !important;
 }
 .sw-grid-table thead .hdr-fixed:nth-child(1) { left: 0; }
 .sw-grid-table thead .hdr-fixed:nth-child(2) { left: 70px; }
 .sw-grid-table thead .hdr-fixed:nth-child(3) { left: 155px; }
 .sw-grid-table thead .hdr-fixed:nth-child(4) { left: 230px; }
-.sw-grid-table thead .hdr-fixed:nth-child(5) { left: 275px; border-right: 2px solid #000 !important; }
+.sw-grid-table thead .hdr-fixed:nth-child(5) { left: 275px; border-right: 2px solid #000 !important; background-clip: padding-box; }
+.sw-grid-table thead .hdr-fixed:nth-child(1) { border-left: 2px solid #000 !important; }
 
 /* Therapist name header */
 .hdr-therapist { font-weight: 700; color: #000; }
+.therapist-group-start { border-left: 3px solid #000 !important; }
+.total-group-start { border-left: 3px solid #000 !important; }
 
 /* Prescription type sub-header */
 .hdr-pres { font-weight: 600; font-size: 12px; color: #333; }
@@ -183,6 +192,12 @@
 /* 총건수 header */
 .hdr-total { background-color: #c1a8c8 !important; font-weight: 700; color: #000; }
 .hdr-grand-total { font-size: 1.1rem; font-weight: 700; color: #cc0000; background-color: #f4cccc !important; }
+.hdr-fixed,
+.hdr-total,
+.hdr-pres-total,
+.hdr-grand-total {
+  box-shadow: inset 0 -1px 0 #000;
+}
 
 /* Sticky header — each row stacks below the previous exactly by their height */
 .sw-grid-table thead th { position: sticky; z-index: 10; }
@@ -202,19 +217,20 @@
 .sw-grid-table thead tr:nth-child(4) th {
   top: 104px; 
   height: 28px;
-  border-bottom: 1.5px solid #000 !important;
+  box-shadow: inset 0 -1px 0 #000;
 }
 
 /* ── Body cells ── */
 .gc { background: #fff; color: #202124; height: 26px; cursor: cell; }
 .gc-bold { font-weight: 700; }
+.gc-date { font-weight: 700; }
 .gc-total { font-weight: 700; color: #cc0000; }
 
 /* Date group visual merge */
 .tr-date-start td { border-top: 2px solid #000 !important; }
-.grp-first { border-bottom-color: transparent !important; }
-.grp-mid { border-top-color: transparent !important; border-bottom-color: transparent !important; }
-.grp-last { border-top-color: transparent !important; }
+.grp-first { border-bottom-color: var(--grid-line-color) !important; }
+.grp-mid { border-top-color: var(--grid-line-color) !important; border-bottom-color: var(--grid-line-color) !important; }
+.grp-last { border-top-color: var(--grid-line-color) !important; }
 
 /* Selection & focus */
 .gc-sel { background-color: rgba(26, 115, 232, 0.08) !important; }
@@ -249,12 +265,69 @@
 .gc:nth-child(1), .gc:nth-child(2), .gc:nth-child(3),
 .gc:nth-child(4), .gc:nth-child(5) {
   position: sticky; z-index: 3; background: #fff;
+  background-clip: padding-box;
 }
 .gc:nth-child(1) { left: 0; }
 .gc:nth-child(2) { left: 70px; }
 .gc:nth-child(3) { left: 155px; }
 .gc:nth-child(4) { left: 230px; }
-.gc:nth-child(5) { left: 275px; border-right: 2px solid #000; }
+.gc:nth-child(5) { left: 275px; border-right: 2px solid #000; background-clip: padding-box; }
+.gc:nth-child(1) { border-left: 2px solid #000; }
+
+.hdr-fixed::after,
+.gc:nth-child(1)::after,
+.gc:nth-child(2)::after,
+.gc:nth-child(3)::after,
+.gc:nth-child(4)::after,
+.gc:nth-child(5)::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: var(--grid-line-color);
+  pointer-events: none;
+}
+
+.hdr-fixed:not(:nth-child(5))::before,
+.gc:nth-child(1)::before,
+.gc:nth-child(2)::before,
+.gc:nth-child(3)::before,
+.gc:nth-child(4)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -1px;
+  width: 1px;
+  background: var(--grid-line-color);
+  pointer-events: none;
+}
+
+.hdr-fixed:nth-child(5)::after {
+  background: #000;
+}
+
+.hdr-fixed:nth-child(1)::before,
+.gc:nth-child(1)::before {
+  right: auto;
+  left: -1px;
+  width: 2px;
+  background: #000;
+}
+
+.hdr-fixed:nth-child(5)::before,
+.gc:nth-child(5)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -1px;
+  width: 2px;
+  background: #000;
+  pointer-events: none;
+}
 
 .gc-sel:nth-child(1), .gc-sel:nth-child(2), .gc-sel:nth-child(3),
 .gc-sel:nth-child(4), .gc-sel:nth-child(5) {

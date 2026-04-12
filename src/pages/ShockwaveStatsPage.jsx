@@ -1,6 +1,33 @@
-import { useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { useSchedule } from '../contexts/ScheduleContext';
-import ShockwaveStatsView from '../components/shockwave/ShockwaveStatsView';
+
+const ShockwaveStatsView = React.lazy(() => import('../components/shockwave/ShockwaveStatsView'));
+
+class ShockwaveStatsPageErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error) {
+    console.error('ShockwaveStatsPage failed:', error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 24 }}>
+          치료 내역 통계 화면을 여는 중 오류가 발생했습니다.
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function ShockwaveStatsPage() {
   const {
@@ -23,12 +50,16 @@ export default function ShockwaveStatsPage() {
 
   return (
     <div className="animate-fade-in" style={{ height: '100%', overflow: 'auto' }}>
-      <ShockwaveStatsView 
-        currentYear={currentYear}
-        currentMonth={currentMonth}
-        memos={shockwaveMemos}
-        therapists={therapists}
-      />
+      <ShockwaveStatsPageErrorBoundary>
+        <Suspense fallback={<div style={{ padding: 24 }}>치료 내역 통계를 불러오는 중...</div>}>
+          <ShockwaveStatsView 
+            currentYear={currentYear}
+            currentMonth={currentMonth}
+            memos={shockwaveMemos}
+            therapists={therapists}
+          />
+        </Suspense>
+      </ShockwaveStatsPageErrorBoundary>
     </div>
   );
 }

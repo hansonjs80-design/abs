@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { generateShockwaveCalendar, getTodayKST } from '../lib/calendarUtils';
+import { syncTodayShockwaveScheduleToStats } from '../lib/shockwaveSyncUtils';
 
 const ScheduleContext = createContext();
 
@@ -222,16 +224,42 @@ export function ScheduleProvider({ children }) {
       if (error) throw error;
 
       const key = `${weekIndex}-${dayIndex}-${rowIndex}-${colIndex}`;
+      const nextShockwaveMemos = {
+        ...shockwaveMemos,
+        [key]: data?.[0] || { ...upsertData }
+      };
       setShockwaveMemos(prev => ({
         ...prev,
         [key]: data?.[0] || { ...upsertData }
       }));
+
+      const today = getTodayKST();
+      const weeks = generateShockwaveCalendar(year, month);
+      const dayInfo = weeks[weekIndex]?.[dayIndex];
+      const isTodayCell = dayInfo &&
+        dayInfo.isCurrentMonth &&
+        dayInfo.year === today.getFullYear() &&
+        dayInfo.month === today.getMonth() + 1 &&
+        dayInfo.day === today.getDate();
+
+      if (isTodayCell && therapists.length > 0) {
+        try {
+          await syncTodayShockwaveScheduleToStats({
+            year,
+            month,
+            memos: nextShockwaveMemos,
+            therapists,
+          });
+        } catch (syncErr) {
+          console.error('Failed to sync today shockwave memo to stats:', syncErr);
+        }
+      }
       return true;
     } catch (err) {
       console.error('Failed to save shockwave memo:', err);
       return false;
     }
-  }, []);
+  }, [shockwaveMemos, therapists]);
 
   // 다중 셀 동시 업데이트 (병합/병합해제 등)
   const saveShockwaveMemosBulk = useCallback(async (memosArray) => {
@@ -251,6 +279,12 @@ export function ScheduleProvider({ children }) {
 
       if (error) throw error;
 
+      const nextShockwaveMemos = { ...shockwaveMemos };
+      (data || memosArray).forEach(item => {
+        const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+        nextShockwaveMemos[key] = { ...nextShockwaveMemos[key], ...item };
+      });
+
       setShockwaveMemos(prev => {
         const next = { ...prev };
         (data || memosArray).forEach(item => {
@@ -259,12 +293,36 @@ export function ScheduleProvider({ children }) {
         });
         return next;
       });
+
+      const today = getTodayKST();
+      const weeks = generateShockwaveCalendar(currentYear, currentMonth);
+      const touchesToday = memosArray.some((item) => {
+        const dayInfo = weeks[item.week_index]?.[item.day_index];
+        return dayInfo &&
+          dayInfo.isCurrentMonth &&
+          dayInfo.year === today.getFullYear() &&
+          dayInfo.month === today.getMonth() + 1 &&
+          dayInfo.day === today.getDate();
+      });
+
+      if (touchesToday && therapists.length > 0) {
+        try {
+          await syncTodayShockwaveScheduleToStats({
+            year: currentYear,
+            month: currentMonth,
+            memos: nextShockwaveMemos,
+            therapists,
+          });
+        } catch (syncErr) {
+          console.error('Failed to sync today bulk shockwave memos to stats:', syncErr);
+        }
+      }
       return true;
     } catch (err) {
       console.error('Failed to save bulk shockwave memos:', err);
       return false;
     }
-  }, []);
+  }, [currentYear, currentMonth, shockwaveMemos, therapists]);
 
   // 공지사항 로드/저장
   const loadNotices = useCallback(async () => {
