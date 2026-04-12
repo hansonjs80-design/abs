@@ -429,7 +429,9 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
           <div className="sw-stats-cards">
             <div className="sw-stats-card">
               <span className="card-label">해당 월 총 처방수</span>
-              <span className="card-value sum-value">{totalCount}건</span>
+              <span className="card-value sum-value">
+                {logs.reduce((s, l) => s + (l.prescription ? (parseInt(l.prescription_count || '1') || 1) : 0), 0)}건
+              </span>
             </div>
             <div className="sw-stats-card">
               <span className="card-label">초진 포함 전체 목록</span>

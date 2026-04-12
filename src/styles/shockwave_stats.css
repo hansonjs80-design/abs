@@ -211,6 +211,7 @@
 .gc-total { font-weight: 700; color: #cc0000; }
 
 /* Date group visual merge */
+.tr-date-start td { border-top: 2px solid #000 !important; }
 .grp-first { border-bottom-color: transparent !important; }
 .grp-mid { border-top-color: transparent !important; border-bottom-color: transparent !important; }
 .grp-last { border-top-color: transparent !important; }

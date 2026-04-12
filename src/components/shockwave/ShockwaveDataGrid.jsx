@@ -554,7 +554,7 @@ export default function ShockwaveDataGrid({ logs, therapists, currentYear, curre
 
         <tbody>
           {gridData.map((row, ri) => (
-            <tr key={row.id}>
+            <tr key={row.id} className={row._isFirst ? 'tr-date-start' : ''}>
               {Array.from({ length: totalColCount }, (_, ci) => {
                 // Skip if merged into another cell
                 if (getMergedInto(ri, ci)) return null;
