@@ -189,6 +189,7 @@
 
 /* 셀 선택 상태 (모든 선택 셀 테두리 및 진한 배경) */
 .sw-cell.selected {
+  background-color: rgba(66, 133, 244, 0.12);
   filter: brightness(0.82); /* 선택 시 진하게 */
   outline: 2px solid #4285f4;
   outline-offset: -2px;
@@ -201,7 +202,7 @@
 }
 
 .sw-cell.primary-selected {
-  background-color: rgba(66, 133, 244, 0.2);
+  background-color: rgba(66, 133, 244, 0.22);
 }
 
 /* 점심시간 셀에 설정된 투명도 제거하여 온전한 #93c37d 표시 */

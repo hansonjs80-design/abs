@@ -20,6 +20,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [selectedKeys, setSelectedKeys] = useState(() => new Set());
   const [editingCell, setEditingCell] = useState(null);       // "w-d-r-c" 키 문자열
   const [editValue, setEditValue] = useState('');
+  const [pendingDisplayValues, setPendingDisplayValues] = useState({});
   const clipboardRef = useRef({ content: '', mode: null });   // mode: 'copy' | 'cut'
   const [contextMenu, setContextMenu] = useState(null);
 
@@ -399,12 +400,26 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   // ── 편집 저장 ──
   const handleCellSave = useCallback(async (w, d, r, c, nextValue = editValue) => {
-    setEditingCell(null);
     const key = cellKey(w, d, r, c);
     const oldContent = memos[key]?.content || '';
     const newContent = (await buildSchedulerAutoText(w, d, nextValue)).trim();
-    if (newContent === oldContent) return;
+    setEditingCell(null);
+    if (newContent === oldContent) {
+      setPendingDisplayValues((prev) => {
+        if (!(key in prev)) return prev;
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      return;
+    }
+    setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
     const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, newContent);
+    setPendingDisplayValues((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
     if (!success) addToast('저장 실패', 'error');
   }, [editValue, currentYear, currentMonth, memos, onSaveMemo, addToast, buildSchedulerAutoText]);
 
@@ -482,6 +497,38 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const dstDate = new Date(dstDay.year, dstDay.month - 1, dstDay.day);
     return dstDate > srcDate;
   }, [weeks]);
+
+  const getAdjacentCell = useCallback((cell, direction) => {
+    let { w, d, r, c } = cell;
+
+    if (direction === 'ArrowLeft') {
+      if (c > 0) return { w, d, r, c: c - 1 };
+      if (d > 0) return { w, d: d - 1, r, c: colCount - 1 };
+      if (w > 0) return { w: w - 1, d: weeks[w - 1].length - 1, r, c: colCount - 1 };
+      return cell;
+    }
+
+    if (direction === 'ArrowRight') {
+      if (c < colCount - 1) return { w, d, r, c: c + 1 };
+      if (d < weeks[w].length - 1) return { w, d: d + 1, r, c: 0 };
+      if (w < weeks.length - 1) return { w: w + 1, d: 0, r, c: 0 };
+      return cell;
+    }
+
+    if (direction === 'ArrowUp') {
+      if (r > 0) return { w, d, r: r - 1, c };
+      if (w > 0) return { w: w - 1, d, r: baseTimeSlots.length - 1, c };
+      return cell;
+    }
+
+    if (direction === 'ArrowDown') {
+      if (r < baseTimeSlots.length - 1) return { w, d, r: r + 1, c };
+      if (w < weeks.length - 1) return { w: w + 1, d, r: 0, c };
+      return cell;
+    }
+
+    return cell;
+  }, [baseTimeSlots.length, colCount, weeks]);
 
   const buildClipboardSelection = useCallback(() => {
     if (!selectedCell) return null;
@@ -707,18 +754,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     // 화살표 키 → 셀 이동
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
       e.preventDefault();
-      let nr = r, nc = c;
-      if (e.key === 'ArrowUp') nr = Math.max(0, r - 1);
-      if (e.key === 'ArrowDown') nr = Math.min(baseTimeSlots.length - 1, r + 1);
-      if (e.key === 'ArrowLeft') nc = Math.max(0, c - 1);
-      if (e.key === 'ArrowRight') nc = Math.min(colCount - 1, c + 1);
+      const nextCell = getAdjacentCell({ w, d, r, c }, e.key);
 
       if (e.shiftKey) {
-        const nextCell = { w, d, r: nr, c: nc };
         setRangeEnd(nextCell);
         setSelectedKeys(buildRangeKeys(selectedCell, nextCell));
       } else {
-        selectSingleCell({ w, d, r: nr, c: nc });
+        selectSingleCell(nextCell);
       }
       return;
     }
@@ -780,16 +822,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
     // 일반 문자 입력 → 편집 모드 진입 (기존 내용 대체)
     if (e.key.length === 1 && !isMeta && !e.altKey) {
+      e.preventDefault();
       const key = cellKey(w, d, r, c);
       const isKorean = /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(e.key) || e.keyCode === 229 || e.nativeEvent?.isComposing;
-      if (!isKorean) {
-        e.preventDefault();
-      }
       setEditingCell(key);
-      setEditValue(isKorean ? '' : e.key);
+      setEditValue(isKorean || /^[a-zA-Z]$/.test(e.key) ? '' : e.key);
       return;
     }
-  }, [selectedCell, editingCell, selectedKeys, colCount, baseTimeSlots.length, deleteCells, addToast, buildRangeKeys, selectSingleCell, buildClipboardSelection, clearClipboardSource, pasteClipboardSelection]);
+  }, [selectedCell, editingCell, selectedKeys, deleteCells, addToast, buildRangeKeys, selectSingleCell, buildClipboardSelection, clearClipboardSource, pasteClipboardSelection, getAdjacentCell]);
 
   // 키보드 이벤트 등록
   const dismissContextMenu = useCallback(() => setContextMenu(null), []);
@@ -801,6 +841,21 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return () => el.removeEventListener('keydown', handleKeyDown);
     }
   }, [handleKeyDown]);
+
+  useEffect(() => {
+    const el = viewRef.current;
+    if (!el) return;
+
+    const handleCompositionStart = () => {
+      if (!selectedCell || editingCell) return;
+      const { w, d, r, c } = selectedCell;
+      setEditingCell(cellKey(w, d, r, c));
+      setEditValue('');
+    };
+
+    el.addEventListener('compositionstart', handleCompositionStart);
+    return () => el.removeEventListener('compositionstart', handleCompositionStart);
+  }, [selectedCell, editingCell]);
 
   useEffect(() => {
     const handleMouseUp = () => {
@@ -1043,7 +1098,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       for (let colIdx = 0; colIdx < colCount; colIdx++) {
                         const key = cellKey(weekIdx, dayIdx, rowIdx, colIdx);
                         const cellData = memos[key];
-                        const content = cellData?.content || '';
+                        const content = pendingDisplayValues[key] ?? cellData?.content ?? '';
                         const mergeSpan = cellData?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
                           
                           if (mergeSpan.mergedInto) {
