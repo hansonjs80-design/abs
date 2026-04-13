@@ -136,10 +136,17 @@ export function generateShockwaveCalendar(year, month, holidays = new Set()) {
  * 오늘 날짜 (KST)
  */
 export function getTodayKST() {
-  const now = new Date();
-  // KST is UTC+9
-  const kst = new Date(now.getTime() + (9 * 60 * 60 * 1000) - (now.getTimezoneOffset() * 60 * 1000));
-  return new Date(kst.getFullYear(), kst.getMonth(), kst.getDate());
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = formatter.formatToParts(new Date());
+  const year = Number(parts.find((part) => part.type === 'year')?.value);
+  const month = Number(parts.find((part) => part.type === 'month')?.value);
+  const day = Number(parts.find((part) => part.type === 'day')?.value);
+  return new Date(year, month - 1, day);
 }
 
 /**
