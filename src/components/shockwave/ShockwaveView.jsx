@@ -370,7 +370,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     for (const key of keys) {
       const [w, d, r, c] = key.split('-').map(Number);
       if (memos[key]?.content) {
-        await onSaveMemo(currentYear, currentMonth, w, d, r, c, '');
+        await onSaveMemo(currentYear, currentMonth, w, d, r, c, '', null);
       }
     }
   }, [currentYear, currentMonth, memos, onSaveMemo]);
@@ -447,7 +447,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const content = memos[key]?.content || '';
     clipboardRef.current = { content, mode: 'cut', key, srcW: w, srcD: d };
     try { navigator.clipboard.writeText(content); } catch (_) {}
-    onSaveMemo(currentYear, currentMonth, w, d, r, c, '');
+    onSaveMemo(currentYear, currentMonth, w, d, r, c, '', null);
     addToast('잘라내기됨', 'info');
     setContextMenu(null);
   }, [selectedCell, memos, onSaveMemo, addToast, currentYear, currentMonth, cellKey]);
@@ -465,10 +465,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (clip.mode === 'copy' && clip.srcW !== undefined && isLaterDate(clip.srcW, clip.srcD, w, d)) {
       pasteContent = incrementSessionCount(pasteContent);
     }
-    onSaveMemo(currentYear, currentMonth, w, d, r, c, pasteContent);
+    const shouldClearBg = clip.srcW !== undefined && (clip.srcW !== w || clip.srcD !== d);
+    onSaveMemo(currentYear, currentMonth, w, d, r, c, pasteContent, shouldClearBg ? null : undefined);
     if (clip.mode === 'cut' && clip.key) {
       const [ow, od, or2, oc] = clip.key.split('-').map(Number);
-      onSaveMemo(currentYear, currentMonth, ow, od, or2, oc, '');
+      onSaveMemo(currentYear, currentMonth, ow, od, or2, oc, '', null);
       clipboardRef.current = { content: pasteContent, mode: 'copy', key: null, srcW: w, srcD: d };
     } else {
       // 복사 모드에서 붙여넣기한 후에는 증가된 내용을 새 원본으로 갱신
@@ -478,12 +479,38 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setContextMenu(null);
   }, [selectedCell, onSaveMemo, currentYear, currentMonth, addToast, isLaterDate]);
 
+  const handleMarkTreatmentComplete = useCallback(async () => {
+    if (!selectedCell) return;
+    const { w, d, r, c } = selectedCell;
+    const key = cellKey(w, d, r, c);
+    const content = memos[key]?.content || '';
+    if (!String(content).trim()) {
+      setContextMenu(null);
+      return;
+    }
+    const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, content, '#ffe599');
+    if (!success) addToast('치료 완료 표시 실패', 'error');
+    setContextMenu(null);
+  }, [selectedCell, cellKey, memos, onSaveMemo, currentYear, currentMonth, addToast]);
+
+  const handleClearTreatmentComplete = useCallback(async () => {
+    if (!selectedCell) return;
+    const { w, d, r, c } = selectedCell;
+    const key = cellKey(w, d, r, c);
+    const content = memos[key]?.content || '';
+    const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, content, null);
+    if (!success) addToast('치료 완료 해제 실패', 'error');
+    setContextMenu(null);
+  }, [selectedCell, cellKey, memos, onSaveMemo, currentYear, currentMonth, addToast]);
+
   const handleContextAction = useCallback((action) => {
     if (action === 'copy') handleCopySelection();
     if (action === 'cut') handleCutSelection();
     if (action === 'paste') handlePasteSelection();
+    if (action === 'complete') handleMarkTreatmentComplete();
+    if (action === 'clear-complete') handleClearTreatmentComplete();
     if (action === 'merge' || action === 'unmerge') tryMergeSelection();
-  }, [handleCopySelection, handleCutSelection, handlePasteSelection, tryMergeSelection]);
+  }, [handleCopySelection, handleCutSelection, handlePasteSelection, handleMarkTreatmentComplete, handleClearTreatmentComplete, tryMergeSelection]);
 
   // ── 키보드 이벤트 핸들러 (구글 시트 방식) ──
   const handleKeyDown = useCallback((e) => {
@@ -592,11 +619,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         if (clip.mode === 'copy' && clip.srcW !== undefined && isLaterDate(clip.srcW, clip.srcD, w, d)) {
           pasteContent = incrementSessionCount(pasteContent);
         }
-        onSaveMemo(currentYear, currentMonth, w, d, r, c, pasteContent);
+        const shouldClearBg = clip.srcW !== undefined && (clip.srcW !== w || clip.srcD !== d);
+        onSaveMemo(currentYear, currentMonth, w, d, r, c, pasteContent, shouldClearBg ? null : undefined);
         // 잘라내기 모드면 원본 삭제
         if (clip.mode === 'cut' && clip.key) {
           const [ow, od, or2, oc] = clip.key.split('-').map(Number);
-          onSaveMemo(currentYear, currentMonth, ow, od, or2, oc, '');
+          onSaveMemo(currentYear, currentMonth, ow, od, or2, oc, '', null);
           clipboardRef.current = { content: pasteContent, mode: 'copy', key: null, srcW: w, srcD: d };
         } else {
           clipboardRef.current = { ...clip, content: pasteContent, srcW: w, srcD: d };
@@ -646,7 +674,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       }
       event.preventDefault();
       const MENU_WIDTH = 180;
-      const MENU_HEIGHT = 140;
+      const MENU_HEIGHT = 180;
       const VIEWPORT_GAP = 12;
       const maxX = Math.max(VIEWPORT_GAP, window.innerWidth - MENU_WIDTH - VIEWPORT_GAP);
       const maxY = Math.max(VIEWPORT_GAP, window.innerHeight - MENU_HEIGHT - VIEWPORT_GAP);
@@ -1011,6 +1039,22 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           </button>
           <button type="button" className="context-menu-item" onClick={() => handleContextAction('paste')}>
             붙여넣기 (Cmd+V)
+          </button>
+          <button
+            type="button"
+            className="context-menu-item"
+            onClick={() => handleContextAction('complete')}
+            disabled={!selectedCell || !String(memos[cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c)]?.content || '').trim()}
+          >
+            치료 완료
+          </button>
+          <button
+            type="button"
+            className="context-menu-item"
+            onClick={() => handleContextAction('clear-complete')}
+            disabled={!selectedCell || memos[cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c)]?.bg_color !== '#ffe599'}
+          >
+            치료 완료 해제
           </button>
           <div className="context-menu-divider" />
           {!selectionInfo?.isMergedMaster && (

@@ -30,7 +30,7 @@ export default function ShockwavePage() {
   }, [currentYear, currentMonth, loadStaffMemos, loadHolidays]);
 
   return (
-    <div className="animate-fade-in" style={{ height: '100%', overflow: 'auto' }}>
+    <div className="animate-fade-in">
       <ShockwaveView
         therapists={therapists}
         settings={shockwaveSettings}

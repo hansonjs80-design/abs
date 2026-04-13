@@ -205,11 +205,12 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
 .app-content {
   flex: 1;
-  padding: 24px;
+  padding: 24px 8px 24px 40px;
   overflow-y: auto;
-  max-width: 1600px;
+  overflow-x: hidden;
+  max-width: none;
   width: 100%;
-  margin: 0 auto;
+  margin: 0;
 }
 
 /* ── 유틸리티 ── */
