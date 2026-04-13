@@ -33,6 +33,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [hoverData, setHoverData] = useState(null);
   const [chartSelector, setChartSelector] = useState(null);
   const contextMenuRef = useRef(null);
+  const editInputRef = useRef(null);
 
   const colCount = Math.max(1, therapists.length);
   const therapistShiftByDate = useMemo(() => {
@@ -409,13 +410,24 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   // ── 셀 삭제 ──
   const deleteCells = useCallback(async (keys) => {
+    const payload = [];
     for (const key of keys) {
       const [w, d, r, c] = key.split('-').map(Number);
-      if (memos[key]?.content) {
-        await onSaveMemo(currentYear, currentMonth, w, d, r, c, '', null);
-      }
+      payload.push({
+        year: currentYear,
+        month: currentMonth,
+        week_index: w,
+        day_index: d,
+        row_index: r,
+        col_index: c,
+        content: '',
+        bg_color: null,
+      });
     }
-  }, [currentYear, currentMonth, memos, onSaveMemo]);
+    if (payload.length > 0) {
+      await saveShockwaveMemosBulk(payload);
+    }
+  }, [currentYear, currentMonth, saveShockwaveMemosBulk]);
 
   const tryMergeSelection = useCallback(() => {
     const selection = computeSelectionInfo();
@@ -768,10 +780,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
     // 일반 문자 입력 → 편집 모드 진입 (기존 내용 대체)
     if (e.key.length === 1 && !isMeta && !e.altKey) {
-      e.preventDefault();
       const key = cellKey(w, d, r, c);
+      const isKorean = /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(e.key) || e.keyCode === 229 || e.nativeEvent?.isComposing;
+      if (!isKorean) {
+        e.preventDefault();
+      }
       setEditingCell(key);
-      setEditValue(e.key);
+      setEditValue(isKorean ? '' : e.key);
       return;
     }
   }, [selectedCell, editingCell, selectedKeys, colCount, baseTimeSlots.length, deleteCells, addToast, buildRangeKeys, selectSingleCell, buildClipboardSelection, clearClipboardSource, pasteClipboardSelection]);
@@ -850,9 +865,21 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     return () => window.removeEventListener('click', handleWindowClick);
   }, []);
 
+  useEffect(() => {
+    if (!editingCell || !editInputRef.current) return;
+    requestAnimationFrame(() => {
+      editInputRef.current?.focus();
+      if (document.activeElement === editInputRef.current) {
+        const len = editInputRef.current.value?.length || 0;
+        editInputRef.current.setSelectionRange(len, len);
+      }
+    });
+  }, [editingCell]);
+
   // 편집 완료 후 아래로 이동
   const handleEditKeyDown = useCallback((e, w, d, r, c) => {
     if (e.key === 'Enter') {
+      if (e.nativeEvent?.isComposing) return;
       e.target.blur();
       // Enter 후 아래 셀로 이동
       const nr = Math.min(baseTimeSlots.length - 1, r + 1);
@@ -1072,6 +1099,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             elements.push(
                               <div key={key} className="sw-cell editing" style={inlineStyle}>
                                 <input
+                                  ref={editInputRef}
                                   className="sw-cell-input"
                                   value={editValue}
                                   onChange={e => setEditValue(e.target.value)}
