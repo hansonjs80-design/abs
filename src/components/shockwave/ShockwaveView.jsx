@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { generateShockwaveCalendar, getTodayKST, isSameDate, formatDisplayDate } from '../../lib/calendarUtils';
 import { supabase } from '../../lib/supabaseClient';
-import { has4060Pattern, incrementSessionCount } from '../../lib/memoParser';
+import { has4060Pattern, incrementSessionCount, normalizeNameForMatch } from '../../lib/memoParser';
 import { useToast } from '../common/Toast';
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
@@ -20,7 +20,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [selectedKeys, setSelectedKeys] = useState(() => new Set());
   const [editingCell, setEditingCell] = useState(null);       // "w-d-r-c" 키 문자열
   const [editValue, setEditValue] = useState('');
-  const clipboardRef = useRef({ content: '', mode: null });   // mode: 'copy' | 'cut', cutKey
+  const clipboardRef = useRef({ content: '', mode: null });   // mode: 'copy' | 'cut'
   const [contextMenu, setContextMenu] = useState(null);
 
   // 열 너비 조정 (fr 비율 기반)
@@ -35,27 +35,69 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const contextMenuRef = useRef(null);
 
   const colCount = Math.max(1, therapists.length);
-  const staffMemoByDate = useMemo(() => {
+  const therapistShiftByDate = useMemo(() => {
     const map = {};
-    Object.values(staffMemos || {}).forEach(item => {
-      if (!item) return;
-      const key = `${item.year}-${item.month}-${item.day}`;
-      if (!map[key]) map[key] = [];
-      map[key].push(item.content || '');
+
+    Object.values(staffMemos || {}).forEach((item) => {
+      if (!item?.content) return;
+
+      const dateKey = `${item.year}-${item.month}-${item.day}`;
+      const text = String(item.content).trim();
+      if (!/pt\s*\//i.test(text)) return;
+
+      const isNightShift = /야간\s*pt\s*\//i.test(text) || /^야\s*pt\s*\//i.test(text);
+      const slashIndex = text.indexOf('/');
+      if (slashIndex < 0) return;
+
+      const names = text
+        .slice(slashIndex + 1)
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .map((part) => part.split(/\s+/)[0])
+        .map((part) => normalizeNameForMatch(part))
+        .filter(Boolean);
+
+      if (names.length === 0) return;
+      if (!map[dateKey]) map[dateKey] = {};
+
+      names.forEach((normalizedName) => {
+        if (!map[dateKey][normalizedName]) {
+          map[dateKey][normalizedName] = { hasPtShift: false, hasNightShift: false };
+        }
+        map[dateKey][normalizedName].hasPtShift = true;
+        if (isNightShift) map[dateKey][normalizedName].hasNightShift = true;
+      });
     });
+
     return map;
   }, [staffMemos]);
 
-  const isTherapistOff = useCallback((dateKey, name) => {
+  const isLastHourSlot = useCallback((dayInfo, slotTime) => {
+    if (!slotTime || !settings?.end_time) return false;
+
+    const dayOverride = settings.day_overrides?.[dayInfo.dow] || {};
+    const effectiveEnd = (dayOverride.end_time || settings.end_time || '18:00:00').slice(0, 5);
+    const [endHour, endMinute] = effectiveEnd.split(':').map(Number);
+    const endTotal = endHour * 60 + endMinute;
+    const [slotHour, slotMinute] = String(slotTime).split(':').map(Number);
+    const slotTotal = slotHour * 60 + slotMinute;
+
+    return slotTotal >= (endTotal - 60) && slotTotal < endTotal;
+  }, [settings]);
+
+  const getTherapistWorkState = useCallback((dateKey, name) => {
     if (!name) return false;
-    const entries = staffMemoByDate[dateKey];
-    if (!entries || entries.length === 0) return false;
-    const normalizedName = name.toLowerCase();
-    return entries.some(content => {
-      const normalized = (content || '').toLowerCase();
-      return normalized.includes(normalizedName) && normalized.includes('pt');
-    });
-  }, [staffMemoByDate]);
+    const normalizedName = normalizeNameForMatch(name);
+    const dayMap = therapistShiftByDate[dateKey] || {};
+    const shiftInfo = dayMap[normalizedName];
+    const hasAnyNightShift = Object.values(dayMap).some((item) => item?.hasNightShift);
+
+    if (shiftInfo?.hasNightShift) return 'night';
+    if (shiftInfo?.hasPtShift) return 'off';
+    if (hasAnyNightShift) return 'early-leave';
+    return 'normal';
+  }, [therapistShiftByDate]);
 
   // ── 시간 슬롯 생성 ──
   const baseTimeSlots = useMemo(() => {
@@ -429,55 +471,152 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     return dstDate > srcDate;
   }, [weeks]);
 
+  const buildClipboardSelection = useCallback(() => {
+    if (!selectedCell) return null;
+
+    const range = selectionInfo || {
+      w: selectedCell.w,
+      d: selectedCell.d,
+      minRow: selectedCell.r,
+      maxRow: selectedCell.r,
+      minCol: selectedCell.c,
+      maxCol: selectedCell.c,
+    };
+
+    const rowCount = range.maxRow - range.minRow + 1;
+    const colCountInRange = range.maxCol - range.minCol + 1;
+    const cells = [];
+    const plainRows = [];
+    const sourceKeys = [];
+
+    for (let rowOffset = 0; rowOffset < rowCount; rowOffset++) {
+      const cellRow = [];
+      const plainRow = [];
+      for (let colOffset = 0; colOffset < colCountInRange; colOffset++) {
+        const rowIndex = range.minRow + rowOffset;
+        const colIndex = range.minCol + colOffset;
+        const key = cellKey(range.w, range.d, rowIndex, colIndex);
+        const memo = memos[key];
+        cellRow.push({
+          rowOffset,
+          colOffset,
+          content: memo?.content || '',
+          bg_color: memo?.bg_color || null,
+        });
+        plainRow.push(memo?.content || '');
+        sourceKeys.push(key);
+      }
+      cells.push(cellRow);
+      plainRows.push(plainRow.join('\t'));
+    }
+
+    return {
+      mode: 'copy',
+      srcW: range.w,
+      srcD: range.d,
+      srcMinRow: range.minRow,
+      srcMinCol: range.minCol,
+      rowCount,
+      colCount: colCountInRange,
+      cells,
+      sourceKeys,
+      plainText: plainRows.join('\n'),
+    };
+  }, [selectedCell, selectionInfo, memos, cellKey]);
+
+  const clearClipboardSource = useCallback(async (clip) => {
+    if (!clip?.sourceKeys?.length) return;
+    const payload = clip.sourceKeys.map((key) => {
+      const [w, d, r, c] = key.split('-').map(Number);
+      return {
+        year: currentYear,
+        month: currentMonth,
+        week_index: w,
+        day_index: d,
+        row_index: r,
+        col_index: c,
+        content: '',
+        bg_color: null,
+      };
+    });
+    await saveShockwaveMemosBulk(payload);
+  }, [currentYear, currentMonth, saveShockwaveMemosBulk]);
+
+  const pasteClipboardSelection = useCallback(async (clip, target) => {
+    if (!clip?.cells?.length) return false;
+
+    const payload = [];
+    const isCrossDate = clip.srcW !== target.w || clip.srcD !== target.d;
+
+    for (const row of clip.cells) {
+      for (const cell of row) {
+        const targetRow = target.r + cell.rowOffset;
+        const targetCol = target.c + cell.colOffset;
+        if (targetRow >= baseTimeSlots.length || targetCol >= colCount) continue;
+
+        let nextContent = cell.content || '';
+        if (clip.mode === 'copy' && isCrossDate && nextContent) {
+          nextContent = incrementSessionCount(nextContent);
+        }
+
+        payload.push({
+          year: currentYear,
+          month: currentMonth,
+          week_index: target.w,
+          day_index: target.d,
+          row_index: targetRow,
+          col_index: targetCol,
+          content: nextContent,
+          bg_color: isCrossDate ? null : (cell.bg_color || null),
+        });
+      }
+    }
+
+    if (payload.length === 0) return false;
+    await saveShockwaveMemosBulk(payload);
+    return true;
+  }, [baseTimeSlots.length, colCount, currentYear, currentMonth, saveShockwaveMemosBulk]);
+
   const handleCopySelection = useCallback(() => {
-    if (!selectedCell) return;
-    const { w, d, r, c } = selectedCell;
-    const key = cellKey(w, d, r, c);
-    const content = memos[key]?.content || '';
-    clipboardRef.current = { content, mode: 'copy', key: null, srcW: w, srcD: d };
-    try { navigator.clipboard.writeText(content); } catch (_) {}
+    const clip = buildClipboardSelection();
+    if (!clip) return;
+    clipboardRef.current = { ...clip, mode: 'copy' };
+    try { navigator.clipboard.writeText(clip.plainText); } catch (_) {}
     addToast('복사됨', 'info');
     setContextMenu(null);
-  }, [selectedCell, memos, addToast, cellKey]);
+  }, [buildClipboardSelection, addToast]);
 
-  const handleCutSelection = useCallback(() => {
-    if (!selectedCell) return;
-    const { w, d, r, c } = selectedCell;
-    const key = cellKey(w, d, r, c);
-    const content = memos[key]?.content || '';
-    clipboardRef.current = { content, mode: 'cut', key, srcW: w, srcD: d };
-    try { navigator.clipboard.writeText(content); } catch (_) {}
-    onSaveMemo(currentYear, currentMonth, w, d, r, c, '', null);
+  const handleCutSelection = useCallback(async () => {
+    const clip = buildClipboardSelection();
+    if (!clip) return;
+    clipboardRef.current = { ...clip, mode: 'cut' };
+    try { navigator.clipboard.writeText(clip.plainText); } catch (_) {}
+    await clearClipboardSource(clip);
     addToast('잘라내기됨', 'info');
     setContextMenu(null);
-  }, [selectedCell, memos, onSaveMemo, addToast, currentYear, currentMonth, cellKey]);
+  }, [buildClipboardSelection, clearClipboardSource, addToast]);
 
-  const handlePasteSelection = useCallback(() => {
+  const handlePasteSelection = useCallback(async () => {
     if (!selectedCell) return;
-    let pasteContent = clipboardRef.current?.content;
-    if (pasteContent === undefined || pasteContent === null) {
+    const clip = clipboardRef.current;
+    if (!clip?.cells?.length) {
       setContextMenu(null);
       return;
     }
-    const { w, d, r, c } = selectedCell;
-    const clip = clipboardRef.current;
-    // 복사 모드이고 이후 날짜이면 회수 +1
-    if (clip.mode === 'copy' && clip.srcW !== undefined && isLaterDate(clip.srcW, clip.srcD, w, d)) {
-      pasteContent = incrementSessionCount(pasteContent);
+    const success = await pasteClipboardSelection(clip, selectedCell);
+    if (!success) {
+      setContextMenu(null);
+      return;
     }
-    const shouldClearBg = clip.srcW !== undefined && (clip.srcW !== w || clip.srcD !== d);
-    onSaveMemo(currentYear, currentMonth, w, d, r, c, pasteContent, shouldClearBg ? null : undefined);
-    if (clip.mode === 'cut' && clip.key) {
-      const [ow, od, or2, oc] = clip.key.split('-').map(Number);
-      onSaveMemo(currentYear, currentMonth, ow, od, or2, oc, '', null);
-      clipboardRef.current = { content: pasteContent, mode: 'copy', key: null, srcW: w, srcD: d };
+
+    if (clip.mode === 'cut') {
+      clipboardRef.current = { ...clip, mode: 'copy', srcW: selectedCell.w, srcD: selectedCell.d };
     } else {
-      // 복사 모드에서 붙여넣기한 후에는 증가된 내용을 새 원본으로 갱신
-      clipboardRef.current = { ...clip, content: pasteContent, srcW: w, srcD: d };
+      clipboardRef.current = { ...clip, srcW: selectedCell.w, srcD: selectedCell.d };
     }
     addToast('붙여넣기 완료', 'success');
     setContextMenu(null);
-  }, [selectedCell, onSaveMemo, currentYear, currentMonth, addToast, isLaterDate]);
+  }, [selectedCell, pasteClipboardSelection, addToast]);
 
   const handleMarkTreatmentComplete = useCallback(async () => {
     if (!selectedCell) return;
@@ -590,10 +729,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     // Cmd+C → 복사
     if (isMeta && e.key === 'c') {
       e.preventDefault();
-      const key = cellKey(w, d, r, c);
-      const content = memos[key]?.content || '';
-      clipboardRef.current = { content, mode: 'copy', key, srcW: w, srcD: d };
-      try { navigator.clipboard.writeText(content); } catch(_) {}
+      const clip = buildClipboardSelection();
+      if (!clip) return;
+      clipboardRef.current = { ...clip, mode: 'copy' };
+      try { navigator.clipboard.writeText(clip.plainText); } catch(_) {}
       addToast('복사됨', 'info');
       return;
     }
@@ -601,10 +740,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     // Cmd+X → 잘라내기
     if (isMeta && e.key === 'x') {
       e.preventDefault();
-      const key = cellKey(w, d, r, c);
-      const content = memos[key]?.content || '';
-      clipboardRef.current = { content, mode: 'cut', key, srcW: w, srcD: d };
-      try { navigator.clipboard.writeText(content); } catch(_) {}
+      const clip = buildClipboardSelection();
+      if (!clip) return;
+      clipboardRef.current = { ...clip, mode: 'cut' };
+      try { navigator.clipboard.writeText(clip.plainText); } catch(_) {}
+      clearClipboardSource(clip);
       addToast('잘라내기됨', 'info');
       return;
     }
@@ -612,25 +752,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     // Cmd+V → 붙여넣기
     if (isMeta && e.key === 'v') {
       e.preventDefault();
-      let pasteContent = clipboardRef.current.content;
-      if (pasteContent !== undefined && pasteContent !== null) {
-        const clip = clipboardRef.current;
-        // 복사 모드이고 이후 날짜이면 회수 +1
-        if (clip.mode === 'copy' && clip.srcW !== undefined && isLaterDate(clip.srcW, clip.srcD, w, d)) {
-          pasteContent = incrementSessionCount(pasteContent);
-        }
-        const shouldClearBg = clip.srcW !== undefined && (clip.srcW !== w || clip.srcD !== d);
-        onSaveMemo(currentYear, currentMonth, w, d, r, c, pasteContent, shouldClearBg ? null : undefined);
-        // 잘라내기 모드면 원본 삭제
-        if (clip.mode === 'cut' && clip.key) {
-          const [ow, od, or2, oc] = clip.key.split('-').map(Number);
-          onSaveMemo(currentYear, currentMonth, ow, od, or2, oc, '', null);
-          clipboardRef.current = { content: pasteContent, mode: 'copy', key: null, srcW: w, srcD: d };
+      const clip = clipboardRef.current;
+      if (!clip?.cells?.length) return;
+      pasteClipboardSelection(clip, selectedCell).then((success) => {
+        if (!success) return;
+        if (clip.mode === 'cut') {
+          clipboardRef.current = { ...clip, mode: 'copy', srcW: w, srcD: d };
         } else {
-          clipboardRef.current = { ...clip, content: pasteContent, srcW: w, srcD: d };
+          clipboardRef.current = { ...clip, srcW: w, srcD: d };
         }
         addToast('붙여넣기 완료', 'success');
-      }
+      });
       return;
     }
 
@@ -642,7 +774,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       setEditValue(e.key);
       return;
     }
-  }, [selectedCell, editingCell, memos, selectedKeys, colCount, baseTimeSlots.length, currentYear, currentMonth, onSaveMemo, deleteCells, addToast, buildRangeKeys, selectSingleCell]);
+  }, [selectedCell, editingCell, selectedKeys, colCount, baseTimeSlots.length, deleteCells, addToast, buildRangeKeys, selectSingleCell, buildClipboardSelection, clearClipboardSource, pasteClipboardSelection]);
 
   // 키보드 이벤트 등록
   const dismissContextMenu = useCallback(() => setContextMenu(null), []);
@@ -772,6 +904,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
             {weekDays.map((dayInfo, dayIdx) => {
               const isToday = isSameDate(dayInfo.date, today);
               const thisDayKey = dayKey(weekIdx, dayIdx);
+              const daySlots = getTimeSlotsForDay(dayInfo);
               // 첫 번째 요일에만 시간 열 표사
               const showTimeCol = dayIdx === 0;
               const therapistCols = colRatios
@@ -855,10 +988,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   </div>
 
                   {/* 스케줄 바디 */}
-                  <div className="sw-schedule-body" style={{ display: 'grid', gridTemplateColumns: gridCols, gridAutoRows: 'minmax(22px, auto)', borderBottom: `1px solid ${HORIZONTAL_BORDER_COLOR}` }}>
-                    {getTimeSlotsForDay(dayInfo).flatMap((slotInfo, slotRenderIndex) => {
+                  <div className="sw-schedule-body" style={{ display: 'grid', gridTemplateColumns: gridCols, gridAutoRows: 'var(--sw-row-height)' }}>
+                    {daySlots.flatMap((slotInfo, slotRenderIndex) => {
                       const rowIdx = slotInfo.idx;
                       const gridRowStart = slotRenderIndex + 1;
+                      const isLastRenderedRow = slotRenderIndex === daySlots.length - 1;
                       const elements = [];
                       
                       // 1. Time Label
@@ -870,7 +1004,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             style={{
                               gridColumn: '1',
                               gridRow: `${gridRowStart}`,
-                              borderBottom: `1px solid ${HORIZONTAL_BORDER_COLOR}`,
+                              borderBottom: isLastRenderedRow ? 'none' : `1px solid ${HORIZONTAL_BORDER_COLOR}`,
                             }}
                           >
                             {slotInfo.label}
@@ -898,7 +1032,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                           let visualRowSpan = 1;
                           if (mergeSpan.rowSpan > 1) {
                             const endRowIdx = rowIdx + mergeSpan.rowSpan - 1;
-                            visualRowSpan = getTimeSlotsForDay(dayInfo).filter(s => s.idx >= rowIdx && s.idx <= endRowIdx).length;
+                            visualRowSpan = daySlots.filter(s => s.idx >= rowIdx && s.idx <= endRowIdx).length;
                           }
 
                           let cls = 'sw-cell';
@@ -913,12 +1047,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                           if (isPrimary) cls += ' primary-selected';
                           const dateKey = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}`;
                           const therapistName = therapists[colIdx]?.name || '';
-                          if (!isSelected && isTherapistOff(dateKey, therapistName)) cls += ' staff-off';
+                          const workState = getTherapistWorkState(dateKey, therapistName);
+                          if (!isSelected && workState === 'off') {
+                            cls += ' staff-off';
+                          } else if (!isSelected && workState === 'early-leave' && isLastHourSlot(dayInfo, slotInfo.time)) {
+                            cls += ' staff-off';
+                          }
 
                           let inlineStyle = {
                             gridColumn: `${gridColumnStart}${mergeSpan.colSpan > 1 ? ` / span ${mergeSpan.colSpan}` : ''}`,
                             gridRow: `${gridRowStart}${visualRowSpan > 1 ? ` / span ${visualRowSpan}` : ''}`,
-                            borderBottom: `1px solid ${HORIZONTAL_BORDER_COLOR}`,
+                            borderBottom: isLastRenderedRow ? 'none' : `1px solid ${HORIZONTAL_BORDER_COLOR}`,
                           };
                           
                           // 마스터 셀 중앙 효과

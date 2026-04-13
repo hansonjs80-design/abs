@@ -7,6 +7,7 @@
   font-family: Arial, Helvetica, sans-serif;
   font-size: 11px;
   overflow-x: auto;
+  --sw-row-height: 24px;
 }
 
 .shockwave-week {
@@ -16,7 +17,7 @@
   border-radius: 4px;
   box-shadow: var(--shadow-sm);
   width: fit-content;
-  min-width: 100%;
+  min-width: 0;
 }
 
 .shockwave-week-label {
@@ -36,7 +37,6 @@
   display: flex;
   flex-wrap: nowrap;
   width: max-content;
-  min-width: 100%;
   position: relative;
 }
 
@@ -161,6 +161,7 @@
 .sw-schedule-row:last-child { border-bottom: none; }
 
 .sw-cell {
+  box-sizing: border-box;
   padding: 2px 4px;
   font-size: 11px;
   font-weight: 600;
@@ -171,11 +172,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 22px;
+  min-height: 0;
+  height: 100%;
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1;
 }
 
 .sw-cell:last-child { border-right: none; }
@@ -249,6 +252,7 @@
 
 /* 시간 레이블 (좌측 첫 번째 열) */
 .sw-time-label {
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -259,6 +263,9 @@
   border-right: 1px solid var(--border-color);
   user-select: none;
   transition: opacity var(--transition-fast), visibility var(--transition-fast);
+  min-height: 0;
+  height: 100%;
+  line-height: 1;
 }
 
 .sw-time-label.hidden {
