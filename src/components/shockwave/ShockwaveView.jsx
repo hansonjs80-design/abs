@@ -963,38 +963,33 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       return elements;
                     })}
                   </div>
+
+                  {dayIdx < weekDays.length - 1 && (
+                    <div
+                      className="sw-day-resize-handle"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const currentDayWidth = e.currentTarget.closest('.shockwave-day').getBoundingClientRect().width;
+                        dayResizeRef.current = { active: true, startX: e.clientX, startWidth: currentDayWidth, factor: 1 };
+                        const onMove = (ev) => {
+                          if (!dayResizeRef.current.active) return;
+                          const { startWidth, startX } = dayResizeRef.current;
+                          const delta = ev.clientX - startX;
+                          const newWidth = Math.max(100, Math.min(600, startWidth + delta));
+                          setDayColWidth(newWidth);
+                        };
+                        const onUp = () => {
+                          dayResizeRef.current.active = false;
+                          window.removeEventListener('mousemove', onMove);
+                          window.removeEventListener('mouseup', onUp);
+                        };
+                        window.addEventListener('mousemove', onMove);
+                        window.addEventListener('mouseup', onUp);
+                      }}
+                    />
+                  )}
                 </div>
-              );
-            })}
-            {/* 날짜 열 리사이즈 핸들 (모든 날짜 열 동일 너비) */}
-            {weekDays.length > 1 && Array.from({ length: weekDays.length - 1 }, (_, di) => {
-              const numDays = weekDays.length;
-              const leftPct = ((di + 1) / numDays) * 100;
-              return (
-                <div
-                  key={`day-resize-${di}`}
-                  className="sw-day-resize-handle"
-                  style={{
-                    position: 'absolute', top: 0, height: '100%',
-                    left: `${leftPct}%`,
-                    transform: 'translateX(-4px)',
-                  }}
-                  onMouseDown={(e) => {
-                    e.preventDefault(); e.stopPropagation();
-                    const cw = e.target.closest('.shockwave-days').getBoundingClientRect().width;
-                    const currentDayWidth = cw / numDays;
-                    dayResizeRef.current = { active: true, startX: e.clientX, startWidth: currentDayWidth, factor: di + 1 };
-                    const onMove = (ev) => {
-                      if (!dayResizeRef.current.active) return;
-                      const { startWidth, factor, startX } = dayResizeRef.current;
-                      const delta = ev.clientX - startX;
-                      const newWidth = Math.max(100, Math.min(600, startWidth + delta / factor));
-                      setDayColWidth(newWidth);
-                    };
-                    const onUp = () => { dayResizeRef.current.active = false; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-                    window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
-                  }}
-                />
               );
             })}
           </div>

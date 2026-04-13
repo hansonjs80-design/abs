@@ -12,7 +12,7 @@
 .shockwave-week {
   margin-bottom: 24px;
   background: var(--bg-card);
-  border: 1px solid #000;
+  border: 1.5px solid #000;
   border-radius: 4px;
   box-shadow: var(--shadow-sm);
   width: fit-content;
@@ -35,18 +35,17 @@
 .shockwave-days {
   display: flex;
   flex-wrap: nowrap;
-  border-bottom: 1px solid #000;
   width: max-content;
   min-width: 100%;
   position: relative;
 }
 
 .shockwave-day {
+  position: relative;
   flex: 1 1 auto;
   min-width: 12%;
-  border-right: 1px solid #000;
-  border-bottom: 2px solid #000;
-  border-top: 2px solid #000;
+  border-right: 1.5px solid #000;
+  border-top: 1.5px solid #000;
 }
 
 .shockwave-day:last-child {
@@ -130,9 +129,13 @@
 
 /* 날짜 열 너비 조정 핸들 */
 .sw-day-resize-handle {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  height: calc(100% + 4px);
   width: 8px;
   cursor: col-resize;
-  z-index: 30;
+  z-index: 40;
   background: transparent;
 }
 
@@ -288,7 +291,17 @@
 
 /* 토글 today 보더 */
 .shockwave-day.is-today {
-  box-shadow: inset 0 0 0 2px var(--sw-today-border);
+  z-index: 6;
+}
+
+.shockwave-day.is-today::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border: 3px solid var(--sw-today-border);
+  border-radius: 3px;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45);
 }
 
 @media (max-width: 1200px) {

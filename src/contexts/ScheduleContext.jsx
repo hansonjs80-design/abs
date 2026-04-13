@@ -206,6 +206,26 @@ export function ScheduleProvider({ children }) {
 
   // 충격파 스케줄 저장
   const saveShockwaveMemo = useCallback(async (year, month, weekIndex, dayIndex, rowIndex, colIndex, content, bg_color) => {
+    const key = `${weekIndex}-${dayIndex}-${rowIndex}-${colIndex}`;
+    const previousMemo = shockwaveMemos[key];
+    const optimisticMemo = {
+      ...(previousMemo || {}),
+      year,
+      month,
+      week_index: weekIndex,
+      day_index: dayIndex,
+      row_index: rowIndex,
+      col_index: colIndex,
+      content: content || '',
+      updated_at: new Date().toISOString(),
+      ...(bg_color !== undefined ? { bg_color } : {}),
+    };
+
+    setShockwaveMemos(prev => ({
+      ...prev,
+      [key]: optimisticMemo
+    }));
+
     try {
       const upsertData = {
         year, month, week_index: weekIndex, day_index: dayIndex, row_index: rowIndex, col_index: colIndex,
@@ -223,14 +243,13 @@ export function ScheduleProvider({ children }) {
 
       if (error) throw error;
 
-      const key = `${weekIndex}-${dayIndex}-${rowIndex}-${colIndex}`;
       const nextShockwaveMemos = {
         ...shockwaveMemos,
-        [key]: data?.[0] || { ...upsertData }
+        [key]: data?.[0] || { ...optimisticMemo, ...upsertData }
       };
       setShockwaveMemos(prev => ({
         ...prev,
-        [key]: data?.[0] || { ...upsertData }
+        [key]: data?.[0] || { ...optimisticMemo, ...upsertData }
       }));
 
       const today = getTodayKST();
@@ -256,6 +275,12 @@ export function ScheduleProvider({ children }) {
       }
       return true;
     } catch (err) {
+      setShockwaveMemos(prev => {
+        const next = { ...prev };
+        if (previousMemo === undefined) delete next[key];
+        else next[key] = previousMemo;
+        return next;
+      });
       console.error('Failed to save shockwave memo:', err);
       return false;
     }
@@ -263,8 +288,28 @@ export function ScheduleProvider({ children }) {
 
   // 다중 셀 동시 업데이트 (병합/병합해제 등)
   const saveShockwaveMemosBulk = useCallback(async (memosArray) => {
+    const previousMemos = {};
+    const optimisticMemos = {};
+
     try {
       if (!memosArray || memosArray.length === 0) return true;
+      memosArray.forEach((item) => {
+        const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+        previousMemos[key] = shockwaveMemos[key];
+        optimisticMemos[key] = {
+          ...(shockwaveMemos[key] || {}),
+          ...item,
+          updated_at: new Date().toISOString()
+        };
+      });
+
+      setShockwaveMemos(prev => {
+        const next = { ...prev };
+        Object.entries(optimisticMemos).forEach(([key, value]) => {
+          next[key] = value;
+        });
+        return next;
+      });
       
       const { data, error } = await supabase
         .from('shockwave_schedules')
@@ -319,6 +364,15 @@ export function ScheduleProvider({ children }) {
       }
       return true;
     } catch (err) {
+      setShockwaveMemos(prev => {
+        const next = { ...prev };
+        memosArray.forEach((item) => {
+          const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+          if (previousMemos[key] === undefined) delete next[key];
+          else next[key] = previousMemos[key];
+        });
+        return next;
+      });
       console.error('Failed to save bulk shockwave memos:', err);
       return false;
     }
