@@ -1042,7 +1042,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           </button>
           <button
             type="button"
-            className="context-menu-item"
+            className="context-menu-item context-menu-item-complete"
             onClick={() => handleContextAction('complete')}
             disabled={!selectedCell || !String(memos[cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c)]?.content || '').trim()}
           >
@@ -1050,7 +1050,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           </button>
           <button
             type="button"
-            className="context-menu-item"
+            className="context-menu-item context-menu-item-clear-complete"
             onClick={() => handleContextAction('clear-complete')}
             disabled={!selectedCell || memos[cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c)]?.bg_color !== '#ffe599'}
           >

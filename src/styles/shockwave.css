@@ -407,6 +407,24 @@
   background: var(--bg-hover);
 }
 
+.shockwave-context-menu .context-menu-item-complete {
+  color: #8a5a00;
+  background: rgba(255, 229, 153, 0.35);
+}
+
+.shockwave-context-menu .context-menu-item-complete:hover:not(:disabled) {
+  background: rgba(255, 229, 153, 0.6);
+}
+
+.shockwave-context-menu .context-menu-item-clear-complete {
+  color: var(--text-secondary);
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.shockwave-context-menu .context-menu-item-clear-complete:hover:not(:disabled) {
+  background: rgba(148, 163, 184, 0.22);
+}
+
 .shockwave-context-menu button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
