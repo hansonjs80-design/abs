@@ -5,7 +5,8 @@
 .staff-calendar {
   animation: fadeIn var(--transition-normal) ease-out;
   --calendar-weekday-row-height: 32px;
-  overflow-x: auto;
+  min-width: max-content;
+  overflow: visible;
 }
 
 .calendar-grid {
@@ -59,6 +60,9 @@
   border-bottom: 1px solid var(--text-primary); /* 셀 가로선 단일 1px */
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  min-width: 0;
+  overflow: hidden;
   transition: background var(--transition-fast);
 }
 
@@ -108,10 +112,6 @@
   background: var(--cal-other-month-bg) !important;
 }
 
-.calendar-cell.today {
-  background: var(--cal-today-date-bg) !important;
-}
-
 /* 날짜 번호 */
 .calendar-date {
   padding: 0px 3px 0px 8px; /* 우측 여백을 8px에서 3px로 줄여 날짜를 5px 우측으로 더 붙임 */
@@ -121,8 +121,14 @@
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
+  flex: 0 0 28px;
   border-bottom: 1px solid var(--border-color); /* 날짜 바로 아래에 실선 적용 (더 진하게) */
   margin-bottom: 0px; /* 불필요한 하단 마진 제거하여 더 붙임 */
+  box-sizing: border-box;
+}
+
+.today .calendar-date {
+  background: #9d72f2;
 }
 
 .calendar-date-number {
@@ -144,7 +150,7 @@
 }
 
 .saturday .calendar-date-number {
-  color: #7ec8ff;
+  color: #3b82f6;
 }
 
 .today .calendar-date-badge {
@@ -169,30 +175,36 @@
 /* 메모 슬롯 */
 .calendar-memos {
   flex: 1;
-  display: flex;
-  flex-direction: column;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: repeat(6, minmax(0, 1fr));
   padding: 0px 4px 0px; /* 하단 패딩 제거하여 마지막 메모 슬롯이 바닥 테두리에 딱 붙게 함 */
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .memo-slot {
   padding: 4px 3px 4px 6px; /* 우측 여백을 6px에서 3px로 줄여 텍스트를 3픽셀 우측으로 이동 (날짜 숫자와 라인 일치) */
-  font-size: 0.88rem; /* 기존 0.8rem보다 약 10% 증가 */
+  font-size: 0.97rem; /* 기존 대비 약 10% 확대 */
   font-weight: 700;
   border-radius: 2px;
   cursor: pointer;
   transition: background var(--transition-fast), border-color var(--transition-fast);
-  min-height: 22px;
+  min-height: 0;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: flex-end; /* 텍스트 우측 정렬 */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.3;
+  line-height: 1.15;
   outline: none;
   border: 1px solid transparent;
   border-bottom: 1px solid var(--border-color); /* 가로선을 더 명확하게 */
   margin-bottom: 0px; /* 마진을 없애서 테두리끼리 일치시킴 */
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 /* 마지막 슬롯은 하단 셀 테두리와 이중선이 생기지 않도록 보더 제거 */
@@ -215,19 +227,25 @@
 .memo-slot.editing {
   padding: 0;
   border: none;
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
 }
 
 .memo-slot-input {
+  display: block;
   width: 100%;
   padding: 2px 6px;
   border: 2px solid var(--brand-primary);
   border-radius: 3px;
-  font-size: 0.88rem; /* 일반 메모 슬롯과 동일한 크기 */
+  font-size: 0.97rem; /* 일반 메모 슬롯과 동일한 크기 */
   font-weight: 600;
   background: var(--bg-input);
   color: var(--text-primary);
   outline: none;
   min-height: 18px;
+  min-width: 0;
+  box-sizing: border-box;
   text-align: right; /* 입력창 내부 텍스트도 우측 정렬 */
 }
 
@@ -295,9 +313,12 @@
 /* 레이아웃: 달력 + 사이드 */
 .staff-layout {
   display: grid;
-  grid-template-columns: 1fr 300px;
+  grid-template-columns: max-content minmax(260px, 300px);
   gap: 24px;
   align-items: start;
+  width: max-content;
+  min-width: 100%;
+  overflow-x: auto;
 }
 
 .staff-side {
@@ -307,6 +328,8 @@
   position: sticky;
   top: calc(var(--header-height) + 24px);
   margin-top: var(--calendar-weekday-row-height);
+  width: 300px;
+  min-width: 260px;
 }
 
 @media (max-width: 1200px) {

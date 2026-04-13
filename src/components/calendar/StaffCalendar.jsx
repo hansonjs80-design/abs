@@ -100,7 +100,7 @@ export default function StaffCalendar() {
               <div 
                 key={`${wi}-${di}`} 
                 className={cellClass}
-                style={{ minHeight: `${rowHeight}px` }}
+                style={{ height: `${rowHeight}px` }}
               >
                 <div className="calendar-date">
                   {dayInfo.isHoliday && <span className="calendar-date-badge">휴일</span>}

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { computeMemoFontColor } from '../../lib/memoParser';
 
 export default function MemoSlot({ memo, dayInfo, slotIndex, onSave, coord, maxWeeks }) {
@@ -6,6 +7,7 @@ export default function MemoSlot({ memo, dayInfo, slotIndex, onSave, coord, maxW
   const [flash, setFlash] = useState(false);
   const [value, setValue] = useState(memo?.content || '');
   const wrapperRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     if (!editing && wrapperRef.current && document.activeElement !== wrapperRef.current) {
@@ -13,10 +15,36 @@ export default function MemoSlot({ memo, dayInfo, slotIndex, onSave, coord, maxW
     }
   }, [editing]);
 
+  useEffect(() => {
+    if (!editing || !inputRef.current) return;
+    inputRef.current.focus();
+  }, [editing]);
+
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el || editing || dayInfo.isOtherMonth) return;
+
+    const handleCompositionStart = () => {
+      setValue(memo?.content || '');
+      setEditing(true);
+    };
+
+    el.addEventListener('compositionstart', handleCompositionStart);
+    return () => el.removeEventListener('compositionstart', handleCompositionStart);
+  }, [editing, dayInfo.isOtherMonth, memo?.content]);
+
   const handleDoubleClick = () => {
     if (dayInfo.isOtherMonth) return;
     setValue(memo?.content || '');
     setEditing(true);
+  };
+
+  const beginEditing = (nextValue) => {
+    flushSync(() => {
+      setValue(nextValue);
+      setEditing(true);
+    });
+    inputRef.current?.focus();
   };
 
   const handleBlur = () => {
@@ -28,8 +56,45 @@ export default function MemoSlot({ memo, dayInfo, slotIndex, onSave, coord, maxW
     }
   };
 
+  const moveFocusByArrow = (key) => {
+    const [wi, di, slot] = coord.split('-').map(Number);
+    let nextWi = wi;
+    let nextDi = di;
+    let nextSlot = slot;
+
+    if (key === 'ArrowUp') {
+      if (slot > 0) nextSlot = slot - 1;
+      else if (wi > 0) { nextWi = wi - 1; nextSlot = 5; }
+    } else if (key === 'ArrowDown') {
+      if (slot < 5) nextSlot = slot + 1;
+      else if (wi < maxWeeks - 1) { nextWi = wi + 1; nextSlot = 0; }
+    } else if (key === 'ArrowLeft') {
+      if (di > 0) nextDi = di - 1;
+      else if (wi > 0) { nextWi = wi - 1; nextDi = 6; }
+    } else if (key === 'ArrowRight') {
+      if (di < 6) nextDi = di + 1;
+      else if (wi < maxWeeks - 1) { nextWi = wi + 1; nextDi = 0; }
+    }
+
+    const target = document.querySelector(`[data-coord="${nextWi}-${nextDi}-${nextSlot}"]`);
+    if (target) target.focus();
+  };
+
   const handleKeyDown = (e) => {
     if (editing) {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        if (e.nativeEvent?.isComposing) return;
+        e.preventDefault();
+        const newVal = value.trim();
+        const oldVal = (memo?.content || '').trim();
+        setEditing(false);
+        if (newVal !== oldVal) {
+          onSave(dayInfo.year, dayInfo.month, dayInfo.day, slotIndex, newVal);
+        }
+        requestAnimationFrame(() => moveFocusByArrow(e.key));
+        return;
+      }
+
       if (e.key === 'Enter') {
         // 한글 조합 중(isComposing)일 때 Enter 키를 누르면 조합만 완료하고 셀 저장은 하지 않음
         if (e.nativeEvent.isComposing) return;
@@ -44,25 +109,7 @@ export default function MemoSlot({ memo, dayInfo, slotIndex, onSave, coord, maxW
 
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
       e.preventDefault();
-      const [wi, di, slot] = coord.split('-').map(Number);
-      let nextWi = wi, nextDi = di, nextSlot = slot;
-
-      if (e.key === 'ArrowUp') {
-        if (slot > 0) nextSlot = slot - 1;
-        else if (wi > 0) { nextWi = wi - 1; nextSlot = 5; }
-      } else if (e.key === 'ArrowDown') {
-        if (slot < 5) nextSlot = slot + 1;
-        else if (wi < maxWeeks - 1) { nextWi = wi + 1; nextSlot = 0; }
-      } else if (e.key === 'ArrowLeft') {
-        if (di > 0) nextDi = di - 1;
-        else if (wi > 0) { nextWi = wi - 1; nextDi = 6; }
-      } else if (e.key === 'ArrowRight') {
-        if (di < 6) nextDi = di + 1;
-        else if (wi < maxWeeks - 1) { nextWi = wi + 1; nextDi = 0; }
-      }
-
-      const target = document.querySelector(`[data-coord="${nextWi}-${nextDi}-${nextSlot}"]`);
-      if (target) target.focus();
+      moveFocusByArrow(e.key);
       return;
     }
 
@@ -75,11 +122,23 @@ export default function MemoSlot({ memo, dayInfo, slotIndex, onSave, coord, maxW
       if (memo?.content) {
         onSave(dayInfo.year, dayInfo.month, dayInfo.day, slotIndex, '');
       }
-    } else if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1) {
-      // 한글 자모음(단일키 조합중)일 경우 key 값이 들어가는것을 방지 (ㅈ주한솔 방지)
-      const isKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(e.key) || e.keyCode === 229 || e.nativeEvent.isComposing;
-      setValue(isKorean ? '' : e.key);
-      setEditing(true);
+    } else if (
+      (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1) ||
+      e.key === 'Process' ||
+      e.keyCode === 229
+    ) {
+      const isImeTrigger =
+        /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(e.key) ||
+        e.key === 'Process' ||
+        e.keyCode === 229 ||
+        e.nativeEvent.isComposing;
+
+      if (isImeTrigger) {
+        beginEditing(memo?.content || '');
+      } else {
+        e.preventDefault();
+        beginEditing(e.key);
+      }
     } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'c' || e.code === 'KeyC')) {
       e.preventDefault();
       navigator.clipboard.writeText(memo?.content || '');
@@ -124,6 +183,7 @@ export default function MemoSlot({ memo, dayInfo, slotIndex, onSave, coord, maxW
     return (
       <div className="memo-slot editing">
         <input
+          ref={inputRef}
           className="memo-slot-input"
           value={value}
           onChange={e => setValue(e.target.value)}

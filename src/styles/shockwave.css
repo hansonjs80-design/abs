@@ -54,9 +54,9 @@
 
 /* 날짜 헤더 */
 .sw-day-header {
-  padding: 7px 3px;
+  padding: 5px 3px;
   text-align: center;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-tertiary);

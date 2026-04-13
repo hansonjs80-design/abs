@@ -21,6 +21,21 @@ export function ScheduleProvider({ children }) {
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const shouldKeepShockwaveMemo = useCallback((memo) => {
+    if (!memo) return false;
+    const hasContent = Boolean((memo.content || '').trim());
+    const hasBgColor = memo.bg_color !== undefined && memo.bg_color !== null && memo.bg_color !== '';
+    const merge = memo.merge_span;
+    const hasMerge =
+      Boolean(merge) &&
+      (
+        (merge.rowSpan && merge.rowSpan !== 1) ||
+        (merge.colSpan && merge.colSpan !== 1) ||
+        merge.mergedInto
+      );
+    return hasContent || hasBgColor || hasMerge;
+  }, []);
+
   const navigateMonth = useCallback((delta) => {
     setCurrentMonth(prev => {
       let newMonth = prev + delta;
@@ -221,10 +236,12 @@ export function ScheduleProvider({ children }) {
       ...(bg_color !== undefined ? { bg_color } : {}),
     };
 
-    setShockwaveMemos(prev => ({
-      ...prev,
-      [key]: optimisticMemo
-    }));
+    setShockwaveMemos(prev => {
+      const next = { ...prev };
+      if (shouldKeepShockwaveMemo(optimisticMemo)) next[key] = optimisticMemo;
+      else delete next[key];
+      return next;
+    });
 
     try {
       const upsertData = {
@@ -243,14 +260,17 @@ export function ScheduleProvider({ children }) {
 
       if (error) throw error;
 
-      const nextShockwaveMemos = {
-        ...shockwaveMemos,
-        [key]: data?.[0] || { ...optimisticMemo, ...upsertData }
-      };
-      setShockwaveMemos(prev => ({
-        ...prev,
-        [key]: data?.[0] || { ...optimisticMemo, ...upsertData }
-      }));
+      const savedMemo = data?.[0] || { ...optimisticMemo, ...upsertData };
+      const nextShockwaveMemos = { ...shockwaveMemos };
+      if (shouldKeepShockwaveMemo(savedMemo)) nextShockwaveMemos[key] = savedMemo;
+      else delete nextShockwaveMemos[key];
+
+      setShockwaveMemos(prev => {
+        const next = { ...prev };
+        if (shouldKeepShockwaveMemo(savedMemo)) next[key] = savedMemo;
+        else delete next[key];
+        return next;
+      });
 
       const today = getTodayKST();
       const weeks = generateShockwaveCalendar(year, month);
@@ -284,7 +304,7 @@ export function ScheduleProvider({ children }) {
       console.error('Failed to save shockwave memo:', err);
       return false;
     }
-  }, [shockwaveMemos, therapists]);
+  }, [shockwaveMemos, therapists, shouldKeepShockwaveMemo]);
 
   // 다중 셀 동시 업데이트 (병합/병합해제 등)
   const saveShockwaveMemosBulk = useCallback(async (memosArray) => {
@@ -306,7 +326,8 @@ export function ScheduleProvider({ children }) {
       setShockwaveMemos(prev => {
         const next = { ...prev };
         Object.entries(optimisticMemos).forEach(([key, value]) => {
-          next[key] = value;
+          if (shouldKeepShockwaveMemo(value)) next[key] = value;
+          else delete next[key];
         });
         return next;
       });
@@ -327,14 +348,18 @@ export function ScheduleProvider({ children }) {
       const nextShockwaveMemos = { ...shockwaveMemos };
       (data || memosArray).forEach(item => {
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-        nextShockwaveMemos[key] = { ...nextShockwaveMemos[key], ...item };
+        const merged = { ...nextShockwaveMemos[key], ...item };
+        if (shouldKeepShockwaveMemo(merged)) nextShockwaveMemos[key] = merged;
+        else delete nextShockwaveMemos[key];
       });
 
       setShockwaveMemos(prev => {
         const next = { ...prev };
         (data || memosArray).forEach(item => {
           const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-          next[key] = { ...next[key], ...item };
+          const merged = { ...next[key], ...item };
+          if (shouldKeepShockwaveMemo(merged)) next[key] = merged;
+          else delete next[key];
         });
         return next;
       });
@@ -376,7 +401,7 @@ export function ScheduleProvider({ children }) {
       console.error('Failed to save bulk shockwave memos:', err);
       return false;
     }
-  }, [currentYear, currentMonth, shockwaveMemos, therapists]);
+  }, [currentYear, currentMonth, shockwaveMemos, therapists, shouldKeepShockwaveMemo]);
 
   // 공지사항 로드/저장
   const loadNotices = useCallback(async () => {
