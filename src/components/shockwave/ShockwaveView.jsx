@@ -843,6 +843,22 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, [handleKeyDown]);
 
   useEffect(() => {
+    const handleWindowKeyDown = (event) => {
+      const target = event.target;
+      const isEditableTarget =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target?.isContentEditable;
+
+      if (isEditableTarget) return;
+      handleKeyDown(event);
+    };
+
+    window.addEventListener('keydown', handleWindowKeyDown);
+    return () => window.removeEventListener('keydown', handleWindowKeyDown);
+  }, [handleKeyDown]);
+
+  useEffect(() => {
     const el = viewRef.current;
     if (!el) return;
 

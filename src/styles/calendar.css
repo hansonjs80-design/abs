@@ -109,7 +109,7 @@
 }
 
 .calendar-cell.today {
-  box-shadow: inset 0 0 0 2px var(--brand-primary);
+  background: var(--cal-today-date-bg) !important;
 }
 
 /* 날짜 번호 */
@@ -131,22 +131,25 @@
   justify-content: center;
   width: 24px; /* 글자가 10% 커진 만큼 원형 크기도 22px에서 24px로 미세 조정 */
   height: 24px;
-  border-radius: var(--radius-full);
 }
 
 .today .calendar-date-number {
-  background: var(--cal-today-date-bg);
   color: white;
   font-weight: 800;
 }
 
 .sunday .calendar-date-number,
 .holiday .calendar-date-number {
-  color: var(--cal-sunday-text);
+  color: #f4a3a3;
 }
 
 .saturday .calendar-date-number {
-  color: var(--cal-saturday-text);
+  color: #7ec8ff;
+}
+
+.today .calendar-date-badge {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
 }
 
 /* 이전/다음 달 스타일 덮어쓰기 (가장 마지막에 선언하여 우선권 확보) */
