@@ -4,6 +4,9 @@ import { generateCalendarGrid, getTodayKST, isSameDate } from '../../lib/calenda
 import { WEEKDAYS } from '../../lib/constants';
 import MemoSlot from './MemoSlot';
 
+const STAFF_CALENDAR_COL_WIDTH_KEY = 'staff-calendar-col-width';
+const STAFF_CALENDAR_ROW_HEIGHT_KEY = 'staff-calendar-row-height';
+
 export default function StaffCalendar() {
   const {
     currentYear, currentMonth,
@@ -11,8 +14,16 @@ export default function StaffCalendar() {
     holidays, loadHolidays
   } = useSchedule();
 
-  const [colWidth, setColWidth] = useState(0); // 0 = 1fr
-  const [rowHeight, setRowHeight] = useState(120);
+  const [colWidth, setColWidth] = useState(() => {
+    if (typeof window === 'undefined') return 0;
+    const saved = Number(window.localStorage.getItem(STAFF_CALENDAR_COL_WIDTH_KEY));
+    return Number.isFinite(saved) && saved > 0 ? saved : 0;
+  }); // 0 = 1fr
+  const [rowHeight, setRowHeight] = useState(() => {
+    if (typeof window === 'undefined') return 120;
+    const saved = Number(window.localStorage.getItem(STAFF_CALENDAR_ROW_HEIGHT_KEY));
+    return Number.isFinite(saved) && saved >= 60 ? saved : 120;
+  });
 
   const startColResize = (e) => {
     e.preventDefault();
@@ -58,6 +69,17 @@ export default function StaffCalendar() {
     loadStaffMemos(currentYear, currentMonth);
     loadHolidays(currentYear, currentMonth);
   }, [currentYear, currentMonth, loadStaffMemos, loadHolidays]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (colWidth > 0) window.localStorage.setItem(STAFF_CALENDAR_COL_WIDTH_KEY, String(colWidth));
+    else window.localStorage.removeItem(STAFF_CALENDAR_COL_WIDTH_KEY);
+  }, [colWidth]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(STAFF_CALENDAR_ROW_HEIGHT_KEY, String(rowHeight));
+  }, [rowHeight]);
 
   const today = getTodayKST();
 

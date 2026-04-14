@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { generateShockwaveCalendar, getTodayKST, isSameDate, formatDisplayDate } from '../../lib/calendarUtils';
 import { supabase } from '../../lib/supabaseClient';
@@ -7,6 +8,8 @@ import { useToast } from '../common/Toast';
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 const HORIZONTAL_BORDER_COLOR = '#b7b7b7';
+const SHOCKWAVE_DAY_COL_WIDTH_KEY = 'shockwave-day-col-width';
+const SHOCKWAVE_COL_RATIOS_KEY = 'shockwave-col-ratios';
 
 export default function ShockwaveView({ therapists, settings, memos = {}, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
   const { currentYear, currentMonth, saveShockwaveMemosBulk } = useSchedule();
@@ -25,9 +28,21 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [contextMenu, setContextMenu] = useState(null);
 
   // 열 너비 조정 (fr 비율 기반)
-  const [colRatios, setColRatios] = useState(null);
+  const [colRatios, setColRatios] = useState(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(SHOCKWAVE_COL_RATIOS_KEY) || 'null');
+      return Array.isArray(parsed) && parsed.every((v) => Number.isFinite(v) && v > 0) ? parsed : null;
+    } catch {
+      return null;
+    }
+  });
   const colResizeRef = useRef({ active: false, colIdx: -1, startX: 0, startRatios: [], containerWidth: 0 });
-  const [dayColWidth, setDayColWidth] = useState(null); // null = flex, number = px
+  const [dayColWidth, setDayColWidth] = useState(() => {
+    if (typeof window === 'undefined') return null;
+    const saved = Number(window.localStorage.getItem(SHOCKWAVE_DAY_COL_WIDTH_KEY));
+    return Number.isFinite(saved) && saved > 0 ? saved : null;
+  }); // null = flex, number = px
   const dayResizeRef = useRef({ active: false, startX: 0, startWidth: 0, factor: 1 });
 
   const tooltipRef = useRef(null);
@@ -252,6 +267,26 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     onLoadMemos(currentYear, currentMonth);
   }, [currentYear, currentMonth, onLoadMemos]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (dayColWidth && dayColWidth > 0) window.localStorage.setItem(SHOCKWAVE_DAY_COL_WIDTH_KEY, String(dayColWidth));
+    else window.localStorage.removeItem(SHOCKWAVE_DAY_COL_WIDTH_KEY);
+  }, [dayColWidth]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (Array.isArray(colRatios) && colRatios.length > 0) {
+      window.localStorage.setItem(SHOCKWAVE_COL_RATIOS_KEY, JSON.stringify(colRatios));
+    } else {
+      window.localStorage.removeItem(SHOCKWAVE_COL_RATIOS_KEY);
+    }
+  }, [colRatios]);
+
+  useEffect(() => {
+    if (!Array.isArray(colRatios) || colRatios.length === colCount) return;
+    setColRatios(Array(colCount).fill(1));
+  }, [colRatios, colCount]);
+
   // ── 셀 키 헬퍼 ──
   const cellKey = (w, d, r, c) => `${w}-${d}-${r}-${c}`;
   const dayKey = (w, d) => `${w}-${d}`;
@@ -402,8 +437,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const handleCellSave = useCallback(async (w, d, r, c, nextValue = editValue) => {
     const key = cellKey(w, d, r, c);
     const oldContent = memos[key]?.content || '';
-    const newContent = (await buildSchedulerAutoText(w, d, nextValue)).trim();
+    const immediateContent = String(nextValue ?? '').trim();
+    setPendingDisplayValues((prev) => ({ ...prev, [key]: immediateContent }));
     setEditingCell(null);
+    const newContent = (await buildSchedulerAutoText(w, d, nextValue)).trim();
+
+    if (newContent !== immediateContent) {
+      setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
+    }
+
     if (newContent === oldContent) {
       setPendingDisplayValues((prev) => {
         if (!(key in prev)) return prev;
@@ -710,6 +752,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (action === 'merge' || action === 'unmerge') tryMergeSelection();
   }, [handleCopySelection, handleCutSelection, handlePasteSelection, handleMarkTreatmentComplete, handleClearTreatmentComplete, tryMergeSelection]);
 
+  const beginEditingCell = useCallback((key, nextValue) => {
+    flushSync(() => {
+      setEditingCell(key);
+      setEditValue(nextValue);
+    });
+    editInputRef.current?.focus();
+  }, []);
+
   // ── 키보드 이벤트 핸들러 (구글 시트 방식) ──
   const handleKeyDown = useCallback((e) => {
     if (!selectedCell) return;
@@ -821,18 +871,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     }
 
     // 일반 문자 입력 → 편집 모드 진입 (기존 내용 대체)
-    if (e.key.length === 1 && !isMeta && !e.altKey) {
-      e.preventDefault();
+    if ((e.key.length === 1 || e.key === 'Process' || e.keyCode === 229) && !isMeta && !e.altKey) {
       const key = cellKey(w, d, r, c);
-      const isKorean = /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(e.key) || e.keyCode === 229 || e.nativeEvent?.isComposing;
-      setEditingCell(key);
-      setEditValue(isKorean || /^[a-zA-Z]$/.test(e.key) ? '' : e.key);
+      beginEditingCell(key, '');
       return;
     }
-  }, [selectedCell, editingCell, selectedKeys, deleteCells, addToast, buildRangeKeys, selectSingleCell, buildClipboardSelection, clearClipboardSource, pasteClipboardSelection, getAdjacentCell]);
+  }, [selectedCell, editingCell, selectedKeys, deleteCells, addToast, buildRangeKeys, selectSingleCell, buildClipboardSelection, clearClipboardSource, pasteClipboardSelection, getAdjacentCell, beginEditingCell]);
+
+  const dismissContextMenu = useCallback(() => setContextMenu(null), []);
 
   // 키보드 이벤트 등록
-  const dismissContextMenu = useCallback(() => setContextMenu(null), []);
 
   useEffect(() => {
     const el = viewRef.current;
@@ -865,13 +913,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const handleCompositionStart = () => {
       if (!selectedCell || editingCell) return;
       const { w, d, r, c } = selectedCell;
-      setEditingCell(cellKey(w, d, r, c));
-      setEditValue('');
+      beginEditingCell(cellKey(w, d, r, c), '');
     };
 
     el.addEventListener('compositionstart', handleCompositionStart);
     return () => el.removeEventListener('compositionstart', handleCompositionStart);
-  }, [selectedCell, editingCell]);
+  }, [selectedCell, editingCell, beginEditingCell]);
 
   useEffect(() => {
     const handleMouseUp = () => {

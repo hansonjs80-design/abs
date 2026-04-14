@@ -127,18 +127,7 @@ export default function MemoSlot({ memo, dayInfo, slotIndex, onSave, coord, maxW
       e.key === 'Process' ||
       e.keyCode === 229
     ) {
-      const isImeTrigger =
-        /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(e.key) ||
-        e.key === 'Process' ||
-        e.keyCode === 229 ||
-        e.nativeEvent.isComposing;
-
-      if (isImeTrigger) {
-        beginEditing(memo?.content || '');
-      } else {
-        e.preventDefault();
-        beginEditing(e.key);
-      }
+      beginEditing('');
     } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'c' || e.code === 'KeyC')) {
       e.preventDefault();
       navigator.clipboard.writeText(memo?.content || '');
