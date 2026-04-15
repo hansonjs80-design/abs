@@ -2,6 +2,8 @@ import { supabase } from './supabaseClient';
 import { generateShockwaveCalendar, getTodayKST } from './calendarUtils';
 import { has4060Pattern } from './memoParser';
 
+let todaySchedulerSyncQueue = Promise.resolve();
+
 // --- Google Sheets _ABBREV_MAP ---
 export const ABBREV_MAP = {
   'b.': 'Both',
@@ -146,7 +148,7 @@ export function parseTherapyInfo(rawContent) {
   };
 }
 
-export async function syncTodayShockwaveScheduleToStats({ year, month, memos, therapists }) {
+async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therapists }) {
   if (!memos) {
     return { skipped: true, reason: 'missing_memos' };
   }
@@ -286,6 +288,12 @@ export async function syncTodayShockwaveScheduleToStats({ year, month, memos, th
     deletedCount: toDeleteIds.length,
     totalUpdates: rebuiltSchedulerRows.length + toDeleteIds.length,
   };
+}
+
+export async function syncTodayShockwaveScheduleToStats(params) {
+  const run = todaySchedulerSyncQueue.then(() => runTodayShockwaveScheduleToStatsSync(params));
+  todaySchedulerSyncQueue = run.catch(() => {});
+  return run;
 }
 
 function formatStatsRowForScheduler(row) {

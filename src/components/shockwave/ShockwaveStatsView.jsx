@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { syncTodayShockwaveScheduleToStats } from '../../lib/shockwaveSyncUtils';
 import { getTodayKST } from '../../lib/calendarUtils';
@@ -40,6 +40,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   const [extraDraftRows, setExtraDraftRows] = useState(0);
   const [activeSection, setActiveSection] = useState('overview');
   const [isAutoSyncingToday, setIsAutoSyncingToday] = useState(false);
+  const lastAutoSyncKeyRef = useRef(null);
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
 
@@ -86,8 +87,15 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     const isTodayMonth =
       currentYear === today.getFullYear() &&
       currentMonth === today.getMonth() + 1;
+    const autoSyncKey = `${currentYear}-${currentMonth}`;
 
-    if (!schedulerMemosReady || !isTodayMonth || safeTherapists.length === 0 || isAutoSyncingToday) {
+    if (
+      !schedulerMemosReady ||
+      !isTodayMonth ||
+      safeTherapists.length === 0 ||
+      isAutoSyncingToday ||
+      lastAutoSyncKeyRef.current === autoSyncKey
+    ) {
       return;
     }
 
@@ -95,6 +103,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
 
     (async () => {
       setIsAutoSyncingToday(true);
+      lastAutoSyncKeyRef.current = autoSyncKey;
       try {
         const result = await syncTodayShockwaveScheduleToStats({
           year: currentYear,
@@ -119,7 +128,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     return () => {
       cancelled = true;
     };
-  }, [schedulerMemosReady, currentYear, currentMonth, memos, safeTherapists, fetchLogs, addToast, isAutoSyncingToday]);
+  }, [schedulerMemosReady, currentYear, currentMonth, safeTherapists, fetchLogs, addToast, isAutoSyncingToday]);
 
   const handleCellEdit = async (id, field, value) => {
     try {
