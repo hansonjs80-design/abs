@@ -872,9 +872,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const handlePasteSelection = useCallback(async () => {
     if (!selectedCell) return;
     const clip = clipboardRef.current;
+    const currentClipboardSource = clipboardSource;
     if (!clip?.cells?.length) {
       setContextMenu(null);
       return;
+    }
+
+    if (currentClipboardSource) {
+      setClipboardSource(null);
     }
 
     // Record undo status for target area before paste
@@ -906,8 +911,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
     const combinedPayload = new Map();
 
-    if (clip.mode === 'cut' && clipboardSource?.keys) {
-      Array.from(clipboardSource.keys).forEach((k) => {
+    if (clip.mode === 'cut' && currentClipboardSource?.keys) {
+      Array.from(currentClipboardSource.keys).forEach((k) => {
         const [w, d, r, c] = k.split('-').map(Number);
         const m = memos[k];
         oldMemos.push({
@@ -936,12 +941,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
     await saveShockwaveMemosBulk(Array.from(combinedPayload.values()));
 
-    if (clip.mode === 'cut' && clipboardSource?.keys) {
+    if (clip.mode === 'cut' && currentClipboardSource?.keys) {
       clipboardRef.current = { ...clip, mode: 'copy' };
-    }
-
-    if (clipboardSource) {
-      setClipboardSource(null);
     }
     
     recordUndo({ type: 'bulk-edit', oldMemos });
