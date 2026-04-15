@@ -781,9 +781,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     };
   }, [selectedCell, selectionInfo, memos, cellKey]);
 
-  const pasteClipboardSelection = useCallback(async (clip, target) => {
-    if (!clip?.cells?.length) return false;
-
+  const buildPastePayload = useCallback((clip, target) => {
+    if (!clip?.cells?.length) return [];
     const payload = [];
     const isCrossDate = clip.srcW !== target.w || clip.srcD !== target.d;
     const sourceMasterToTargetMaster = new Map();
@@ -847,10 +846,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       }
     }
 
-    if (payload.length === 0) return false;
-    await saveShockwaveMemosBulk(payload);
-    return true;
-  }, [baseTimeSlots.length, colCount, currentYear, currentMonth, saveShockwaveMemosBulk]);
+    return payload;
+  }, [baseTimeSlots.length, colCount, currentYear, currentMonth]);
 
   const handleCopySelection = useCallback(() => {
     const clip = buildClipboardSelection();
@@ -901,18 +898,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       }
     }
 
-    const success = await pasteClipboardSelection(clip, selectedCell);
-    if (!success) {
+    const targetPayload = buildPastePayload(clip, selectedCell);
+    if (targetPayload.length === 0) {
       setContextMenu(null);
       return;
     }
 
-    // Delayed cut execution
+    const combinedPayload = new Map();
+
     if (clip.mode === 'cut' && clipboardSource?.keys) {
-      const sourcePayload = Array.from(clipboardSource.keys).map(k => {
+      Array.from(clipboardSource.keys).forEach((k) => {
         const [w, d, r, c] = k.split('-').map(Number);
         const m = memos[k];
-        // Also record source old state for undo
         oldMemos.push({
           year: currentYear, month: currentMonth,
           week_index: w, day_index: d,
@@ -920,16 +917,27 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           content: m?.content || '', bg_color: m?.bg_color || null,
           merge_span: m?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null }
         });
-        return {
+        combinedPayload.set(`${w}-${d}-${r}-${c}`, {
           year: currentYear, month: currentMonth,
           week_index: w, day_index: d,
           row_index: r, col_index: c,
           content: '', bg_color: null,
           merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null }
-        };
+        });
       });
-      await saveShockwaveMemosBulk(sourcePayload);
-      clipboardRef.current = { ...clip, mode: 'copy' }; // Change mode to copy after cut-paste
+    }
+
+    targetPayload.forEach((item) => {
+      combinedPayload.set(
+        `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`,
+        item
+      );
+    });
+
+    await saveShockwaveMemosBulk(Array.from(combinedPayload.values()));
+
+    if (clip.mode === 'cut' && clipboardSource?.keys) {
+      clipboardRef.current = { ...clip, mode: 'copy' };
     }
 
     if (clipboardSource) {
@@ -939,7 +947,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     recordUndo({ type: 'bulk-edit', oldMemos });
     addToast('붙여넣기 완료', 'success');
     setContextMenu(null);
-  }, [selectedCell, pasteClipboardSelection, addToast, clipboardSource, memos, cellKey, currentYear, currentMonth, baseTimeSlots.length, colCount, saveShockwaveMemosBulk]);
+  }, [selectedCell, buildPastePayload, addToast, clipboardSource, memos, cellKey, currentYear, currentMonth, baseTimeSlots.length, colCount, saveShockwaveMemosBulk]);
 
   const buildTreatmentCompletePayload = useCallback((mode) => {
     if (!selectedKeys || selectedKeys.size === 0) return null;
