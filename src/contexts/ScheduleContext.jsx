@@ -15,7 +15,9 @@ export function ScheduleProvider({ children }) {
     start_time: '09:00:00',
     end_time: '18:00:00',
     interval_minutes: 10,
-    day_overrides: {}
+    day_overrides: {},
+    prescriptions: ['F1.5', 'F/Rdc', 'F/R'],
+    frozen_columns: 6
   });
   const [shockwaveMemos, setShockwaveMemos] = useState({});
   const [notices, setNotices] = useState([]);
@@ -111,13 +113,15 @@ export function ScheduleProvider({ children }) {
   const loadHolidays = useCallback(async (year, month) => {
     try {
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-      const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
+      const nextYear = month === 12 ? year + 1 : year;
+      const nextMonth = month === 12 ? 1 : month + 1;
+      const endStr = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
 
       const { data, error } = await supabase
         .from('holidays')
         .select('*')
         .gte('date', startDate)
-        .lte('date', endDate);
+        .lt('date', endStr);
 
       if (error) throw error;
 
@@ -166,7 +170,9 @@ export function ScheduleProvider({ children }) {
           start_time: data.start_time,
           end_time: data.end_time,
           interval_minutes: data.interval_minutes,
-          day_overrides: data.day_overrides || {}
+          day_overrides: data.day_overrides || {},
+          prescriptions: data.prescriptions || ['F1.5', 'F/Rdc', 'F/R'],
+          frozen_columns: data.frozen_columns || 6
         });
       }
     } catch (err) {
@@ -182,7 +188,9 @@ export function ScheduleProvider({ children }) {
         start_time: newSettings.start_time,
         end_time: newSettings.end_time,
         interval_minutes: newSettings.interval_minutes,
-        day_overrides: newSettings.day_overrides || {}
+        day_overrides: newSettings.day_overrides || {},
+        prescriptions: newSettings.prescriptions || ['F1.5', 'F/Rdc', 'F/R'],
+        frozen_columns: newSettings.frozen_columns || 6
       }, { onConflict: 'id' });
 
       if (error) throw error;

@@ -2,12 +2,17 @@ import React, { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffe
 import { supabase } from '../../lib/supabaseClient';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import { syncStatsDateToScheduler } from '../../lib/shockwaveSyncUtils';
+import { useSchedule } from '../../contexts/ScheduleContext';
 import '../../styles/shockwave_stats.css';
 
-const PRESCRIPTIONS = ['F1.5', 'F/Rdc', 'F/R'];
-const PRES_DB_MAP = { 'F1.5': 'F1.5', 'F/Rdc': 'F/R DC', 'F/R': 'F/R' };
-const PRES_DISPLAY_MAP = { 'F1.5': 'F1.5', 'F/R DC': 'F/Rdc', 'F/R': 'F/R' };
-const THERAPIST_COLORS = ['#cde4f9', '#ffebb4', '#d9ead3', '#fce5cd', '#ead1dc'];
+// Dynamic labels from settings will be used instead
+const THERAPIST_COLORS = [
+  'hsla(215, 20%, 96%, 0.6)', // Very subtle blue-gray
+  'hsla(240, 10%, 97%, 0.6)',  // Very subtle neutral gray
+  'hsla(215, 10%, 95%, 0.6)',  // Slightly deeper gray-blue
+  'hsla(240, 5%, 98%, 0.6)',   // Almost white-gray
+  'hsla(215, 15%, 97%, 0.6)'   // Subtle slate tint
+];
 function toTitleCaseBodyPart(value) {
   return String(value || '')
     .trim()
@@ -27,13 +32,20 @@ export default function ShockwaveDataGrid({
   onApplyTodaySchedule,
   isApplyingTodaySchedule = false,
 }) {
+  const { shockwaveSettings: settings } = useSchedule();
+  const prescriptions = useMemo(() => settings?.prescriptions || ['F1.5', 'F/Rdc', 'F/R'], [settings?.prescriptions]);
+  const frozenColumnCount = settings?.frozen_columns ?? 6;
+
   const [insertedDraftRows, setInsertedDraftRows] = useState([]);
+  const [clipboardSource, setClipboardSource] = useState(null); // { r1, c1, r2, c2, mode: 'copy'|'cut' }
+  const [undoStack, setUndoStack] = useState([]);
   const rowClipboardRef = useRef({ row: null, mode: null });
   const rowOrderRef = useRef(new Map());
 
   // ─── 1. DATA PREPARATION ─────────────────────────────────
   const gridData = useMemo(() => {
-    const safeLogs = Array.isArray(logs) ? logs.filter(Boolean) : [];
+    // Filter out saved logs that have no patient name (Row Compaction)
+    const safeLogs = Array.isArray(logs) ? logs.filter(log => log && log.patient_name?.trim()) : [];
     const sorted = [...safeLogs]
       .sort((a, b) => {
         const dateCompare = String(a?.date || '').localeCompare(String(b?.date || ''));
@@ -125,10 +137,8 @@ export default function ShockwaveDataGrid({
   }, [gridData]);
 
   // Column definitions (flat array matching <colgroup>)
-  // Fixed: 날짜, 이름, 차트번호, 회차, 부위
-  // Dynamic: per therapist × 3 prescriptions
-  // Final: 총건수, 신환
   const FIXED_FIELDS = [
+    { id: 'idx', label: '#', field: 'idx', w: 48 },
     { id: 'date', label: '날짜', field: 'date', w: 70 },
     { id: 'name', label: '이름', field: 'patient_name', w: 85, bold: true },
     { id: 'chart', label: '차트번호', field: 'chart_number', w: 75 },
@@ -136,29 +146,34 @@ export default function ShockwaveDataGrid({
     { id: 'body', label: '부위', field: 'body_part', w: 120 },
   ];
 
-  const totalCountColIndex = FIXED_FIELDS.length + therapists.length * 3;
+  const totalCountColIndex = FIXED_FIELDS.length + therapists.length * prescriptions.length;
   const newPatientColIndex = totalCountColIndex + 1;
   const totalColCount = newPatientColIndex + 1;
   const ROW_DATA_FIELDS = [
-    ...FIXED_FIELDS.map((field) => field.field),
+    ...FIXED_FIELDS.filter(f => f.id !== 'idx').map((field) => field.field),
     'therapist_name',
     'prescription',
     'prescription_count',
   ];
 
-  // Helper: get therapist column index offset
-  const tColStart = (tIdx) => FIXED_FIELDS.length + tIdx * 3;
   const isTherapistGroupStartCol = (colIdx) => (
     colIdx >= FIXED_FIELDS.length &&
-    colIdx < totalColCount - 1 &&
-    (colIdx - FIXED_FIELDS.length) % 3 === 0 &&
-    colIdx !== tColStart(0)
+    colIdx < totalCountColIndex &&
+    (colIdx - FIXED_FIELDS.length) % prescriptions.length === 0
   );
   const isBlankValue = (value) => value == null || String(value).trim() === '';
+  const toPrescriptionCount = (value) => {
+    const parsed = parseInt(String(value ?? '').trim(), 10);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
   const isRowEmpty = (row) => ROW_DATA_FIELDS.every((field) => isBlankValue(row?.[field]));
 
   // ─── 2. CELL VALUE HELPERS ────────────────────────────────
   const getVal = (row, colIdx) => {
+    if (colIdx === 0) {
+      const idx = gridData.indexOf(row);
+      return idx >= 0 ? idx + 1 : '';
+    }
     if (colIdx < FIXED_FIELDS.length) {
       const f = FIXED_FIELDS[colIdx];
       if (f.id === 'date') {
@@ -169,24 +184,21 @@ export default function ShockwaveDataGrid({
       return row[f.field] || '';
     }
     if (colIdx === totalCountColIndex) {
-      // 총건수 — only show on first row of date group
       if (!row._isFirst) return '';
       const sameDate = gridData.filter(r => r.date === row.date && r.date);
-      return sameDate.reduce((s, r) => s + (r.prescription ? (parseInt(r.prescription_count || '1') || 1) : 0), 0) || '';
+      return sameDate.reduce((s, r) => s + (r.prescription ? toPrescriptionCount(r.prescription_count) : 0), 0) || '';
     }
     if (colIdx === newPatientColIndex) {
       if (!row._isFirst) return '';
       const sameDate = gridData.filter(r => r.date === row.date && r.date);
       return sameDate.filter((r) => String(r.patient_name || '').includes('*')).length || '';
     }
-    // Therapist prescription cell
-    const tIdx = Math.floor((colIdx - FIXED_FIELDS.length) / 3);
-    const pIdx = (colIdx - FIXED_FIELDS.length) % 3;
+    const tIdx = Math.floor((colIdx - FIXED_FIELDS.length) / prescriptions.length);
+    const pIdx = (colIdx - FIXED_FIELDS.length) % prescriptions.length;
     const t = therapists[tIdx];
     if (!t) return '';
-    const pres = PRESCRIPTIONS[pIdx];
-    const dbPres = PRES_DB_MAP[pres];
-    if (row.therapist_name === t.name && row.prescription === dbPres) {
+    const pres = prescriptions[pIdx];
+    if (row.therapist_name === t.name && row.prescription === pres) {
       return row.prescription_count || '1';
     }
     return '';
@@ -288,7 +300,6 @@ export default function ShockwaveDataGrid({
     ]));
   }, []);
 
-  // Check if cell (r,c) is hidden by a merge
   const getMergedInto = (r, c) => {
     for (const [key, { rs, cs }] of Object.entries(mergedCells)) {
       const [mr, mc] = key.split('-').map(Number);
@@ -302,7 +313,7 @@ export default function ShockwaveDataGrid({
   const handleMerge = () => {
     if (!selNorm) return;
     const { r1, c1, r2, c2 } = selNorm;
-    if (r1 === r2 && c1 === c2) return; // single cell
+    if (r1 === r2 && c1 === c2) return;
     const key = getMergeKey(r1, c1);
     setMergedCells(prev => ({
       ...prev,
@@ -312,7 +323,6 @@ export default function ShockwaveDataGrid({
 
   const handleUnmerge = () => {
     if (!focus) return;
-    // Find merge that contains focus
     const key = getMergeKey(focus.r, focus.c);
     if (mergedCells[key]) {
       setMergedCells(prev => { const n = { ...prev }; delete n[key]; return n; });
@@ -326,7 +336,7 @@ export default function ShockwaveDataGrid({
 
   // ─── 5. EDITING ───────────────────────────────────────────
   const startEdit = (r, c, isDblClick = false) => {
-    if (c === totalCountColIndex || c === newPatientColIndex) return; // summary columns read-only
+    if (c === totalCountColIndex || c === newPatientColIndex) return;
     imeOpenRef.current = false;
     setEditing({ r, c, val: getVal(gridData[r], c), isDblClick });
   };
@@ -344,7 +354,6 @@ export default function ShockwaveDataGrid({
     if (row?.date) affectedDates.add(row.date);
 
     if (c < FIXED_FIELDS.length) {
-      // Normal field
       const field = FIXED_FIELDS[c].field;
       let v = val;
       if (field === 'date' && v.trim()) {
@@ -355,30 +364,18 @@ export default function ShockwaveDataGrid({
       }
 
       let updatePayload = { [field]: v };
+      if (field === 'body_part' && v.trim()) updatePayload.body_part = toTitleCaseBodyPart(v);
 
-      if (field === 'body_part' && v.trim()) {
-        updatePayload.body_part = toTitleCaseBodyPart(v);
-      }
-
-      // 이름 입력 시 과거 기록 바탕으로 차트번호, 부위, 회차(+1) 자동 완성
       if (field === 'patient_name' && v.trim()) {
         const queryName = v.trim().replace(/\*/g, '').replace(/\(-\)/g, '').trim();
         const normalizedQueryName = normalizeNameForMatch(queryName);
-        const pastLogs = logs.filter((l) => {
-          if (l.id === row.id) return false;
-          return normalizeNameForMatch(l.patient_name) === normalizedQueryName;
-        });
+        const pastLogs = logs.filter((l) => l.id !== row.id && normalizeNameForMatch(l.patient_name) === normalizedQueryName);
         if (pastLogs.length > 0) {
-          pastLogs.sort((a, b) => {
-             if (a.date !== b.date) return b.date.localeCompare(a.date);
-             return (parseInt(b.visit_count || '0') || 0) - (parseInt(a.visit_count || '0') || 0);
-          });
+          pastLogs.sort((a, b) => (a.date !== b.date ? b.date.localeCompare(a.date) : (parseInt(b.visit_count || '0') || 0) - (parseInt(a.visit_count || '0') || 0)));
           const lastLog = pastLogs[0];
-          
           updatePayload.patient_name = queryName;
           updatePayload.chart_number = lastLog.chart_number || '';
           updatePayload.body_part = lastLog.body_part || '';
-          
           const lastVisit = parseInt(lastLog.visit_count || '0', 10);
           updatePayload.visit_count = lastVisit > 0 ? String(lastVisit + 1) : '2';
         }
@@ -388,25 +385,13 @@ export default function ShockwaveDataGrid({
         let fallbackDate = `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`;
         if (logs.length > 0) {
             const validDates = logs.map(l => l.date).filter(Boolean).sort();
-            if (validDates.length > 0) fallbackDate = validDates[validDates.length - 1]; // 가장 마지막 작성된 날짜를 기본값으로
+            if (validDates.length > 0) fallbackDate = validDates[validDates.length - 1];
         }
-
-        const ins = {
-          date: row.date || fallbackDate,
-          patient_name: row.patient_name || '',
-          chart_number: row.chart_number || '',
-          visit_count: row.visit_count || '',
-          body_part: row.body_part || '',
-          therapist_name: '', prescription: '', prescription_count: '',
-          source: 'manual',
-          ...updatePayload
-        };
+        const ins = { date: row.date || fallbackDate, patient_name: row.patient_name || '', chart_number: row.chart_number || '', visit_count: row.visit_count || '', body_part: row.body_part || '', therapist_name: '', prescription: '', prescription_count: '', source: 'manual', ...updatePayload };
         if (!ins.date) ins.date = fallbackDate;
         if (ins.date) affectedDates.add(ins.date);
         await supabase.from('shockwave_patient_logs').insert([ins]);
-        if (row.isInsertedDraft) {
-          setInsertedDraftRows((prev) => prev.filter((item) => item.id !== row.id));
-        }
+        if (row.isInsertedDraft) setInsertedDraftRows((prev) => prev.filter((item) => item.id !== row.id));
       } else {
         const nextRow = { ...row, ...updatePayload };
         if (nextRow?.date) affectedDates.add(nextRow.date);
@@ -414,46 +399,33 @@ export default function ShockwaveDataGrid({
         else await supabase.from('shockwave_patient_logs').update(updatePayload).eq('id', row.id);
       }
     } else {
-      // Therapist cell
-      const tIdx = Math.floor((c - FIXED_FIELDS.length) / 3);
-      const pIdx = (c - FIXED_FIELDS.length) % 3;
+      const tIdx = Math.floor((c - FIXED_FIELDS.length) / prescriptions.length);
+      const pIdx = (c - FIXED_FIELDS.length) % prescriptions.length;
       const t = therapists[tIdx];
       if (!t) return;
-      const pres = PRESCRIPTIONS[pIdx];
-      const dbPres = PRES_DB_MAP[pres];
+      const pres = prescriptions[pIdx];
 
       if (row.isDraft) {
         if (!val.trim()) return;
-        
         let fallbackDate = `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`;
         if (logs.length > 0) {
             const validDates = logs.map(l => l.date).filter(Boolean).sort();
             if (validDates.length > 0) fallbackDate = validDates[validDates.length - 1];
         }
-
-        const ins = {
-          date: fallbackDate,
-          patient_name: '(이름없음)', chart_number: '', visit_count: '', body_part: '',
-          therapist_name: t.name, prescription: dbPres, prescription_count: val.trim(),
-          source: 'manual',
-        };
+        const ins = { date: fallbackDate, patient_name: '(이름없음)', chart_number: '', visit_count: '', body_part: '', therapist_name: t.name, prescription: pres, prescription_count: val.trim(), source: 'manual' };
         if (ins.date) affectedDates.add(ins.date);
         await supabase.from('shockwave_patient_logs').insert([ins]);
-        if (row.isInsertedDraft) {
-          setInsertedDraftRows((prev) => prev.filter((item) => item.id !== row.id));
-        }
+        if (row.isInsertedDraft) setInsertedDraftRows((prev) => prev.filter((item) => item.id !== row.id));
       } else {
         if (val.trim() === '') {
-          if (row.therapist_name === t.name && row.prescription === dbPres) {
+          if (row.therapist_name === t.name && row.prescription === pres) {
             const clearedFields = { therapist_name: '', prescription: '', prescription_count: '' };
             const nextRow = { ...row, ...clearedFields };
             if (isRowEmpty(nextRow)) await supabase.from('shockwave_patient_logs').delete().eq('id', row.id);
             else await supabase.from('shockwave_patient_logs').update(clearedFields).eq('id', row.id);
           }
         } else {
-          await supabase.from('shockwave_patient_logs').update({
-            therapist_name: t.name, prescription: dbPres, prescription_count: val.trim()
-          }).eq('id', row.id);
+          await supabase.from('shockwave_patient_logs').update({ therapist_name: t.name, prescription: pres, prescription_count: val.trim() }).eq('id', row.id);
         }
       }
     }
@@ -480,16 +452,11 @@ export default function ShockwaveDataGrid({
   };
   const onMouseEnter = (r, c) => { if (dragging) setSel(prev => prev ? { ...prev, r2: r, c2: c } : prev); };
   const onMouseUp = () => setDragging(false);
-  const onDblClick = (r, c) => {
-    startEdit(r, c, true);
-  };
+  const onDblClick = (r, c) => { startEdit(r, c, true); };
   const onCtxMenu = (e, r, c) => {
     e.preventDefault();
     if (editing) finishEdit();
-    if (!inSel(r, c)) {
-      setFocus({ r, c });
-      setSel({ r1: r, c1: c, r2: r, c2: c });
-    }
+    if (!inSel(r, c)) { setFocus({ r, c }); setSel({ r1: r, c1: c, r2: r, c2: c }); }
     setCtxMenu({ x: e.clientX, y: e.clientY, r, c });
   };
 
@@ -510,6 +477,7 @@ export default function ShockwaveDataGrid({
   // ─── 7. CLIPBOARD ────────────────────────────────────────
   const doCopy = () => {
     if (!selNorm) return;
+    setClipboardSource({ ...selNorm, mode: 'copy' });
     let tsv = '';
     for (let r = selNorm.r1; r <= selNorm.r2; r++) {
       const row = [];
@@ -519,9 +487,55 @@ export default function ShockwaveDataGrid({
     navigator.clipboard.writeText(tsv);
   };
 
+  const doCut = () => {
+    if (!selNorm) return;
+    setClipboardSource({ ...selNorm, mode: 'cut' });
+    doCopy();
+    // No immediate delete - will be deleted on paste
+  };
+
+  const recordUndo = (action) => {
+    setUndoStack(prev => [action, ...prev].slice(0, 50));
+  };
+
+  const doUndo = async () => {
+    const action = undoStack[0];
+    if (!action) return;
+    setUndoStack(prev => prev.slice(1));
+
+    if (action.type === 'edit') {
+      const { id, field, oldVal, date } = action;
+      await supabase.from('shockwave_patient_logs').update({ [field]: oldVal }).eq('id', id);
+      if (date) await syncStatsDateToScheduler({ year: currentYear, month: currentMonth, date, therapists });
+    } else if (action.type === 'bulk') {
+      const chunkSize = 50;
+      for (let i = 0; i < action.changes.length; i += chunkSize) {
+        const chunk = action.changes.slice(i, i + chunkSize);
+        await Promise.all(chunk.map(c => {
+          if (c.field === 'prescription_stats') {
+             return supabase.from('shockwave_patient_logs').update({ 
+               therapist_name: c.oldVal.t, 
+               prescription: c.oldVal.p, 
+               prescription_count: c.oldVal.c 
+             }).eq('id', c.id);
+          } else {
+             return supabase.from('shockwave_patient_logs').update({ [c.field]: c.oldVal }).eq('id', c.id);
+          }
+        }));
+      }
+      for (const d of action.affectedDates) {
+        if (d) await syncStatsDateToScheduler({ year: currentYear, month: currentMonth, date: d, therapists });
+      }
+    }
+    await fetchLogs();
+  };
   const doPaste = async (text, startR, startC) => {
     const affectedDates = new Set();
     const rows = text.split('\n').map(l => l.split('\t'));
+    const undoChanges = [];
+    const bulkUpdates = [];
+    const bulkInserts = [];
+
     for (let i = 0; i < rows.length; i++) {
       if (rows[i].length === 1 && rows[i][0] === '') continue;
       const r = startR + i;
@@ -531,96 +545,112 @@ export default function ShockwaveDataGrid({
 
       for (let j = 0; j < rows[i].length; j++) {
         const c = startC + j;
-        if (c >= totalCountColIndex) break; // skip summary columns
+        if (c >= totalCountColIndex) break;
         const v = rows[i][j].trim();
+        const oldVal = getVal(row, c);
+        if (oldVal === v) continue;
 
         if (c < FIXED_FIELDS.length) {
           const field = FIXED_FIELDS[c].field;
+          undoChanges.push({ id: row.id, field, oldVal, newVal: v });
           if (row.isDraft) {
             if (v) {
-              const ins = {
-                date: `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`,
-                patient_name: '', chart_number: '', visit_count: '', body_part: '',
-                therapist_name: '', prescription: '', prescription_count: '',
-              };
+              const ins = { date: `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`, patient_name: '', chart_number: '', visit_count: '', body_part: '', therapist_name: '', prescription: '', prescription_count: '' };
               ins[field] = v;
+              bulkInserts.push(ins);
               if (ins.date) affectedDates.add(ins.date);
-              await supabase.from('shockwave_patient_logs').insert([ins]);
             }
           } else {
-            if (field === 'date' && v) {
-              let nextDate = v;
-              const tv = v.trim();
-              if (tv.length === 5 && tv.includes('/')) nextDate = `${currentYear}-${tv.replace('/', '-')}`;
-              else if (tv.length === 4 && !tv.includes('-')) nextDate = `${currentYear}-${tv.substring(0,2)}-${tv.substring(2,4)}`;
-              else if (/^\d{1,2}$/.test(tv)) nextDate = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${tv.padStart(2,'0')}`;
-              affectedDates.add(nextDate);
+            bulkUpdates.push({ id: row.id, data: { [field]: v } });
+            if (field === 'date') {
+               let nextDate = v;
+               const tv = v.trim();
+               if (tv.length === 5 && tv.includes('/')) nextDate = `${currentYear}-${tv.replace('/', '-')}`;
+               else if (tv.length === 4 && !tv.includes('-')) nextDate = `${currentYear}-${tv.substring(0,2)}-${tv.substring(2,4)}`;
+               else if (/^\d{1,2}$/.test(tv)) nextDate = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${tv.padStart(2,'0')}`;
+               affectedDates.add(nextDate);
+               bulkUpdates[bulkUpdates.length-1].data.date = nextDate;
             }
-            await supabase.from('shockwave_patient_logs').update({ [field]: v }).eq('id', row.id);
           }
         } else {
-          const tIdx = Math.floor((c - FIXED_FIELDS.length) / 3);
-          const pIdx = (c - FIXED_FIELDS.length) % 3;
+          const tIdx = Math.floor((c - FIXED_FIELDS.length) / prescriptions.length);
+          const pIdx = (c - FIXED_FIELDS.length) % prescriptions.length;
           const t = therapists[tIdx];
-          if (!t || !v) continue;
-          const dbPres = PRES_DB_MAP[PRESCRIPTIONS[pIdx]];
+          if (!t) continue;
+          const pres = prescriptions[pIdx];
+          undoChanges.push({ id: row.id, field: 'prescription_stats', oldVal: { t: row.therapist_name, p: row.prescription, c: row.prescription_count }, newVal: { t: t.name, p: pres, c: v } });
           if (!row.isDraft) {
-            await supabase.from('shockwave_patient_logs').update({
-              therapist_name: t.name, prescription: dbPres, prescription_count: v
-            }).eq('id', row.id);
+            bulkUpdates.push({ id: row.id, data: { therapist_name: t.name, prescription: pres, prescription_count: v } });
           }
         }
       }
     }
+
+    if (bulkInserts.length > 0) await supabase.from('shockwave_patient_logs').insert(bulkInserts);
+    for (const update of bulkUpdates) {
+      await supabase.from('shockwave_patient_logs').update(update.data).eq('id', update.id);
+    }
+
+    // Clear visual source highlight after a successful paste.
+    if (clipboardSource?.mode === 'cut') {
+      await clearRange(clipboardSource);
+    }
+    if (clipboardSource) {
+      setClipboardSource(null);
+    }
+
+    recordUndo({ type: 'bulk', changes: undoChanges, affectedDates: Array.from(affectedDates) });
     rememberCurrentRowOrder();
     await fetchLogs();
-    for (const date of affectedDates) {
-      if (!date) continue;
-      try {
-        await syncStatsDateToScheduler({ year: currentYear, month: currentMonth, date, therapists });
-      } catch (error) {
-        console.error('Failed to sync pasted stats to scheduler:', error);
-      }
+    for (const d of affectedDates) {
+      if (d) await syncStatsDateToScheduler({ year: currentYear, month: currentMonth, date: d, therapists });
     }
   };
 
-  const doDelete = async () => {
-    if (!selNorm) return;
+  const clearRange = async (range) => {
     const affectedDates = new Set();
-    for (let r = selNorm.r1; r <= selNorm.r2; r++) {
+    const undoChanges = [];
+    for (let r = range.r1; r <= range.r2; r++) {
       const row = gridData[r];
       if (row.isDraft) continue;
       if (row?.date) affectedDates.add(row.date);
       const updatePayload = {};
-      for (let c = selNorm.c1; c <= selNorm.c2; c++) {
+      for (let c = range.c1; c <= range.c2; c++) {
         if (c >= totalCountColIndex) continue;
+        const oldVal = getVal(row, c);
         if (c < FIXED_FIELDS.length) {
-          updatePayload[FIXED_FIELDS[c].field] = '';
+          const field = FIXED_FIELDS[c].field;
+          updatePayload[field] = '';
+          undoChanges.push({ id: row.id, field, oldVal, newVal: '' });
         } else {
-          const tIdx = Math.floor((c - FIXED_FIELDS.length) / 3);
-          const pIdx = (c - FIXED_FIELDS.length) % 3;
+          const tIdx = Math.floor((c - FIXED_FIELDS.length) / prescriptions.length);
+          const pIdx = (c - FIXED_FIELDS.length) % prescriptions.length;
           const t = therapists[tIdx];
-          if (t && row.therapist_name === t.name && row.prescription === PRES_DB_MAP[PRESCRIPTIONS[pIdx]]) {
+          if (t && row.therapist_name === t.name && row.prescription === prescriptions[pIdx]) {
             updatePayload.therapist_name = '';
             updatePayload.prescription = '';
             updatePayload.prescription_count = '';
+            undoChanges.push({ id: row.id, field: 'prescription_stats', oldVal: { t: row.therapist_name, p: row.prescription, c: row.prescription_count }, newVal: { t: '', p: '', c: '' } });
           }
         }
       }
-      if (Object.keys(updatePayload).length === 0) continue;
-      const nextRow = { ...row, ...updatePayload };
-      if (isRowEmpty(nextRow)) await supabase.from('shockwave_patient_logs').delete().eq('id', row.id);
-      else await supabase.from('shockwave_patient_logs').update(updatePayload).eq('id', row.id);
+      if (Object.keys(updatePayload).length > 0) {
+        const nextRow = { ...row, ...updatePayload };
+        if (isRowEmpty(nextRow)) await supabase.from('shockwave_patient_logs').delete().eq('id', row.id);
+        else await supabase.from('shockwave_patient_logs').update(updatePayload).eq('id', row.id);
+      }
     }
+    return { undoChanges, affectedDates: Array.from(affectedDates) };
+  };
+
+  const doDelete = async () => {
+    if (!selNorm) return;
+    const { undoChanges, affectedDates } = await clearRange(selNorm);
+    recordUndo({ type: 'bulk', changes: undoChanges, affectedDates });
     rememberCurrentRowOrder();
     await fetchLogs();
     for (const date of affectedDates) {
-      if (!date) continue;
-      try {
-        await syncStatsDateToScheduler({ year: currentYear, month: currentMonth, date, therapists });
-      } catch (error) {
-        console.error('Failed to sync deleted stats to scheduler:', error);
-      }
+      if (date) await syncStatsDateToScheduler({ year: currentYear, month: currentMonth, date, therapists });
     }
   };
 
@@ -658,16 +688,7 @@ export default function ShockwaveDataGrid({
     if (!row) return;
     const snapshot = makeRowSnapshot(row);
     rowClipboardRef.current = { row: snapshot, mode: 'copy' };
-    const values = [
-      snapshot.date,
-      snapshot.patient_name,
-      snapshot.chart_number,
-      snapshot.visit_count,
-      snapshot.body_part,
-      snapshot.therapist_name,
-      snapshot.prescription,
-      snapshot.prescription_count,
-    ];
+    const values = [snapshot.date, snapshot.patient_name, snapshot.chart_number, snapshot.visit_count, snapshot.body_part, snapshot.therapist_name, snapshot.prescription, snapshot.prescription_count];
     navigator.clipboard?.writeText(values.join('\t')).catch(() => {});
   }, [gridData, makeRowSnapshot]);
 
@@ -682,16 +703,15 @@ export default function ShockwaveDataGrid({
     const row = gridData[r];
     if (!clipboard?.row || !row) return;
     await applyRowSnapshot(row, clipboard.row);
-    if (clipboard.mode === 'cut') {
-      rowClipboardRef.current = { row: null, mode: null };
-    }
+    if (clipboard.mode === 'cut') rowClipboardRef.current = { row: null, mode: null };
   }, [applyRowSnapshot, gridData]);
 
   // ─── 8. KEYBOARD ─────────────────────────────────────────
   useEffect(() => {
     const kd = (e) => {
       if (ctxMenu && e.key === 'Escape') { setCtxMenu(null); return; }
-
+      if (clipboardSource && e.key === 'Escape') { setClipboardSource(null); return; }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); doUndo(); return; }
       if (editing) {
         if (e.key === 'Escape') { setEditing(null); return; }
         if (e.key === 'Enter') {
@@ -714,11 +734,8 @@ export default function ShockwaveDataGrid({
         }
         return;
       }
-
       if (!focus) return;
       let { r, c } = focus;
-
-      // Arrows
       if (e.key === 'ArrowUp') r = Math.max(0, r - 1);
       if (e.key === 'ArrowDown') r = Math.min(gridData.length - 1, r + 1);
       if (e.key === 'ArrowLeft') c = Math.max(0, c - 1);
@@ -729,34 +746,21 @@ export default function ShockwaveDataGrid({
         setSel(e.shiftKey && sel ? { ...sel, r2: r, c2: c } : { r1: r, c1: c, r2: r, c2: c });
         return;
       }
-
       if (e.key === 'Enter') { e.preventDefault(); startEdit(r, c, true); return; }
       if (e.key === 'Tab') { e.preventDefault(); const nc = Math.min(c+1, totalColCount-1); setFocus({r, c:nc}); setSel({r1:r,c1:nc,r2:r,c2:nc}); return; }
       if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); doDelete(); return; }
-
-      // Merge/Unmerge: Ctrl+E / Ctrl+Shift+E
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'e') {
-        e.preventDefault();
-        e.shiftKey ? handleUnmerge() : handleMerge();
-        return;
-      }
-
-      // Copy/Cut
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'e') { e.preventDefault(); e.shiftKey ? handleUnmerge() : handleMerge(); return; }
       if ((e.metaKey || e.ctrlKey) && e.key === 'c') { e.preventDefault(); doCopy(); return; }
       if ((e.metaKey || e.ctrlKey) && e.key === 'x') { e.preventDefault(); doCopy(); doDelete(); return; }
-
-      // Printable char starts edit
       if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey && c < totalCountColIndex) {
         imeOpenRef.current = true;
         setEditing({ r, c, val: '' });
       }
     };
-
     window.addEventListener('keydown', kd);
     return () => window.removeEventListener('keydown', kd);
   }, [focus, sel, editing, gridData, totalColCount, totalCountColIndex, ctxMenu]);
 
-  // Paste listener
   useEffect(() => {
     const handler = (e) => {
       if (editing) return;
@@ -768,25 +772,19 @@ export default function ShockwaveDataGrid({
     return () => window.removeEventListener('paste', handler);
   }, [focus, editing, gridData]);
 
-  // Focus input on edit start
   useEffect(() => {
     if (editing && inputRef.current) { 
       inputRef.current.focus(); 
-      // 달력 피커 자동 팝업 (날짜 셀 더블클릭 시)
       if (editing.isDblClick && editing.c === FIXED_FIELDS.findIndex(f => f.field === 'date') && datePickerRef.current) {
         try { datePickerRef.current.showPicker(); } catch (e) {}
       }
     }
   }, [editing?.r, editing?.c]);
 
-  // Initial select when first double-clicked / enter pressed
   useEffect(() => {
-    if (editing && inputRef.current && !imeOpenRef.current) {
-      inputRef.current.select();
-    }
+    if (editing && inputRef.current && !imeOpenRef.current) inputRef.current.select();
   }, [editing?.r, editing?.c]);
 
-  // Close context menu
   useEffect(() => {
     if (!ctxMenu) return;
     const close = () => setCtxMenu(null);
@@ -796,206 +794,139 @@ export default function ShockwaveDataGrid({
 
   useLayoutEffect(() => {
     const measure = () => {
-      if (theadRef.current) {
-        setHeaderHeight(Math.round(theadRef.current.getBoundingClientRect().height));
-      }
-      setRowHeights(
-        rowRefs.current.map((rowEl) => (
-          rowEl ? Math.round(rowEl.getBoundingClientRect().height) : 25
-        ))
-      );
+      if (theadRef.current) setHeaderHeight(Math.round(theadRef.current.getBoundingClientRect().height));
+      setRowHeights(rowRefs.current.map((rowEl) => (rowEl ? Math.round(rowEl.getBoundingClientRect().height) : 25)));
     };
-
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
   }, [gridData, therapists.length, currentMonth]);
 
   // ─── 9. COMPUTED TOTALS ───────────────────────────────────
-  const grandTotal = logs.reduce((s, l) => s + (l.prescription ? (parseInt(l.prescription_count || '1') || 1) : 0), 0);
+  const grandTotal = logs.reduce((s, l) => s + (l.prescription ? toPrescriptionCount(l.prescription_count) : 0), 0);
   const newPatientTotal = logs.filter((l) => String(l?.patient_name || '').includes('*')).length;
 
   const therapistTotals = useMemo(() => {
     return therapists.map(t => {
       const all = logs.filter(l => l.therapist_name === t.name && l.prescription);
-      const total = all.reduce((s, l) => s + (parseInt(l.prescription_count || '1') || 1), 0);
+      const total = all.reduce((s, l) => s + toPrescriptionCount(l.prescription_count), 0);
       const byPres = {};
-      PRESCRIPTIONS.forEach(p => {
-        const dbP = PRES_DB_MAP[p];
-        byPres[p] = all.filter(l => l.prescription === dbP).reduce((s, l) => s + (parseInt(l.prescription_count || '1') || 1), 0);
+      prescriptions.forEach(p => {
+        byPres[p] = all.filter(l => l.prescription === p).reduce((s, l) => s + toPrescriptionCount(l.prescription_count), 0);
       });
       return { total, byPres };
     });
-  }, [logs, therapists]);
+  }, [logs, therapists, prescriptions]);
 
   // ─── 10. RENDER ───────────────────────────────────────────
   return (
     <div className="sw-grid-wrapper" ref={wrapRef} tabIndex={0} onMouseUp={onMouseUp}>
-      <div className="sw-grid-inner">
-        <div className="sw-row-headers">
-          <div className="sw-row-headers-spacer" style={{ height: `${headerHeight}px` }} />
-          {gridData.map((row, ri) => {
-            const rowHeaderCls = [
-              'sw-row-header',
-              row._isFirst && row.date ? 'sw-row-header-date-start' : '',
-              focus?.r === ri ? 'active' : '',
-            ].filter(Boolean).join(' ');
-
-            return (
-              <button
-                key={`row-hdr-${row.id}`}
-                type="button"
-                className={rowHeaderCls}
-                style={{ height: `${rowHeights[ri] || 25}px` }}
-                onMouseDown={(e) => onRowHeaderMouseDown(e, ri)}
-                onContextMenu={(e) => onRowHeaderContextMenu(e, ri)}
-              >
-                {ri + 1}
-              </button>
-            );
-          })}
-        </div>
-
       <table className="sw-grid-table">
-        {/* ── COLGROUP: controls widths without conflicting with colspan ── */}
         <colgroup>
-          {FIXED_FIELDS.map(f => <col key={f.id} style={{ width: f.w }} />)}
-          {therapists.map(t => PRESCRIPTIONS.map(p => <col key={`${t.id}-${p}`} style={{ width: 48 }} />))}
+          {FIXED_FIELDS.map((f, i) => <col key={f.id} style={{ width: f.w, minWidth: f.w }} />)}
+          {therapists.map(t => prescriptions.map(p => <col key={`${t.id}-${p}`} style={{ width: 48 }} />))}
           <col style={{ width: 60 }} />
           <col style={{ width: 60 }} />
         </colgroup>
 
         <thead ref={theadRef}>
           {/* Row 1: Title */}
-          <tr>
+          <tr className="sw-header-row sw-header-row-title">
             <th colSpan={totalColCount} className="grid-title">
               <div className="grid-title-inner">
                 <span>{currentMonth}월 충격파 현황</span>
-                <button
-                  type="button"
-                  className="grid-title-action"
-                  onClick={onApplyTodaySchedule}
-                  disabled={!onApplyTodaySchedule || isApplyingTodaySchedule}
-                >
+                <button type="button" className="grid-title-action" onClick={onApplyTodaySchedule} disabled={!onApplyTodaySchedule || isApplyingTodaySchedule}>
                   {isApplyingTodaySchedule ? '적용 중...' : '오늘 스케줄 적용'}
                 </button>
               </div>
             </th>
           </tr>
 
-          {/* Row 2: Fixed headers (rowSpan=3) + Therapist names (colSpan=3) + 총건수/신환 (rowSpan=2) */}
-          <tr>
+          {/* Row 2: Fixed Fields + Therapist Names + Summary Labels */}
+          <tr className="sw-header-row sw-header-row-therapists">
             {FIXED_FIELDS.map((f, i) => (
               <th key={f.id} rowSpan={3} className={`hdr-fixed hdr-fixed-${i + 1} ${i === FIXED_FIELDS.length - 1 ? 'hdr-fixed-last' : ''}`}>
                 {f.label}
               </th>
             ))}
             {therapists.map((t, idx) => (
-              <th
-                key={`tn-${t.id}`}
-                colSpan={3}
-                className={`hdr-therapist ${idx > 0 ? 'therapist-group-start' : ''}`}
-                style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}
-              >
+              <th key={`tn-${t.id}`} colSpan={prescriptions.length} className={`hdr-therapist ${idx > 0 ? 'therapist-group-start' : ''}`} style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}>
                 {t.name} ( {therapistTotals[idx]?.total || 0}건 )
               </th>
             ))}
-            <th rowSpan={2} className="hdr-total total-group-start">총건수</th>
-            <th rowSpan={2} className="hdr-total hdr-new-patient">신환</th>
+            <th className="hdr-total sticky-right-last-2 total-group-start">총건수</th>
+            <th className="hdr-total hdr-new-patient sticky-right-last-1">신환</th>
           </tr>
 
-          {/* Row 3: Prescription names */}
-          <tr>
-            {therapists.map((t, idx) => PRESCRIPTIONS.map(p => (
-              <th
-                key={`pn-${t.id}-${p}`}
-                className={`hdr-pres ${PRESCRIPTIONS.indexOf(p) === 0 && idx > 0 ? 'therapist-group-start' : ''}`}
-                style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}
-              >
+          {/* Row 3: Prescription Names + Summary Values */}
+          <tr className="sw-header-row sw-header-row-prescriptions">
+            {therapists.map((t, idx) => prescriptions.map((p, pIdx) => (
+              <th key={`${t.name}-${pIdx}`} className={`hdr-pres ${pIdx === 0 && idx > 0 ? 'therapist-group-start' : ''}`} style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}>
                 {p}
               </th>
             )))}
+            <th rowSpan={2} className="hdr-grand-total sticky-right-last-2 total-group-start">{grandTotal}건</th>
+            <th rowSpan={2} className="hdr-grand-total hdr-new-patient-total sticky-right-last-1">{newPatientTotal}명</th>
           </tr>
 
-          {/* Row 4: Prescription totals */}
-          <tr>
-            {therapists.map((t, idx) => PRESCRIPTIONS.map(p => (
-              <th
-                key={`pt-${t.id}-${p}`}
-                className={`hdr-pres-total ${PRESCRIPTIONS.indexOf(p) === 0 && idx > 0 ? 'therapist-group-start' : ''}`}
-              >
+          {/* Row 4: Prescription Totals */}
+          <tr className="sw-header-row sw-header-row-prescription-totals">
+            {therapists.map((t, idx) => prescriptions.map((p, pIdx) => (
+              <th key={`${t.name}-${pIdx}-inner`} className={`hdr-pres-total ${pIdx === 0 && idx > 0 ? 'therapist-group-start' : ''}`}>
                 {therapistTotals[idx]?.byPres[p] || 0}
               </th>
             )))}
-            <th className="hdr-grand-total total-group-start">{grandTotal}건</th>
-            <th className="hdr-grand-total hdr-new-patient-total">{newPatientTotal}명</th>
           </tr>
         </thead>
 
         <tbody>
           {gridData.map((row, ri) => {
-            const rowClasses = [
-              row._isFirst && row.date ? 'tr-date-start' : '',
-            ].filter(Boolean).join(' ');
-
+            const rowClasses = [row._isFirst && row.date ? 'tr-date-start' : ''].filter(Boolean).join(' ');
             return (
-            <tr
-              key={row.id}
-              className={rowClasses}
-              ref={(el) => { rowRefs.current[ri] = el; }}
-            >
+            <tr key={row.id} className={rowClasses} ref={(el) => { rowRefs.current[ri] = el; }}>
               {Array.from({ length: totalColCount }, (_, ci) => {
-                // Skip if merged into another cell
                 if (getMergedInto(ri, ci)) return null;
-
                 const mergeInfo = mergedCells[getMergeKey(ri, ci)];
                 const rs = mergeInfo?.rs || 1;
                 const cs = mergeInfo?.cs || 1;
-
                 const isSel = inSel(ri, ci);
                 const isFoc = focus?.r === ri && focus?.c === ci;
                 const isEdit = editing?.r === ri && editing?.c === ci;
-
                 let val = getVal(row, ci);
-
-                // Date & total: hide text for non-first rows of same date group
-                const isDateCol = ci === 0;
+                const isDateCol = ci === 1;
                 const isTotalCol = ci === totalCountColIndex;
                 const isNewPatientCol = ci === newPatientColIndex;
                 let groupCls = '';
                 if ((isDateCol || isTotalCol || isNewPatientCol) && row.date) {
-                  if (!row._isFirst) {
-                    val = '';
-                    groupCls = row._isLast ? 'grp-last' : 'grp-mid';
-                  } else if (!row._isLast) {
-                    groupCls = 'grp-first';
-                  }
+                  if (!row._isFirst) { val = ''; groupCls = row._isLast ? 'grp-last' : 'grp-mid'; }
+                  else if (!row._isLast) groupCls = 'grp-first';
                 }
-
                 let cls = 'gc';
                 if (isSel) cls += ' gc-sel';
                 if (isFoc) cls += ' gc-foc';
                 if (groupCls) cls += ' ' + groupCls;
-                if (ci < FIXED_FIELDS.length) cls += ` gc-fixed gc-fixed-${ci + 1}`;
+                if (ci < frozenColumnCount) {
+                    cls += ` gc-fixed gc-fixed-${ci + 1}`;
+                }
+                if (clipboardSource && ri >= clipboardSource.r1 && ri <= clipboardSource.r2 && ci >= clipboardSource.c1 && ci <= clipboardSource.c2) {
+                    cls += clipboardSource.mode === 'cut' ? ' gc-cut-source' : ' gc-copy-source';
+                }
                 if (ci < FIXED_FIELDS.length && FIXED_FIELDS[ci]?.bold) cls += ' gc-bold';
                 if (ci >= FIXED_FIELDS.length && ci < totalCountColIndex) cls += ' gc-therapist-value';
-                if (isDateCol) cls += ' gc-date';
                 if (isTotalCol) cls += ' gc-total total-group-start';
                 if (isNewPatientCol) cls += ' gc-total gc-new-patient';
                 if (isTherapistGroupStartCol(ci)) cls += ' therapist-group-start';
 
+                let fixedLeft = 0;
+                if (ci < frozenColumnCount) {
+                    for (let i = 0; i < ci; i++) fixedLeft += (FIXED_FIELDS[i]?.w || 48);
+                }
+
                 if (isEdit) {
                   return (
-                    <td key={ci} className={cls} rowSpan={rs > 1 ? rs : undefined} colSpan={cs > 1 ? cs : undefined} style={{ padding: 0 }}>
+                    <td key={ci} className={cls} rowSpan={rs > 1 ? rs : undefined} colSpan={cs > 1 ? cs : undefined} style={{ padding: 0, position: ci < frozenColumnCount ? 'sticky' : undefined, left: ci < frozenColumnCount ? fixedLeft : undefined, zIndex: 10 }}>
                       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                        <input
-                          ref={inputRef}
-                          className="gc-input"
-                          style={{ width: '100%', height: '100%', boxSizing: 'border-box' }}
-                          value={editing.val}
-                          onChange={e => setEditing({ ...editing, val: e.target.value })}
-                          onBlur={finishEdit}
-                        />
+                        <input ref={inputRef} className="gc-input" style={{ width: '100%', height: '100%', boxSizing: 'border-box' }} value={editing.val} onChange={e => setEditing({ ...editing, val: e.target.value })} onBlur={finishEdit} />
                         {isDateCol && (
                           <input 
                             type="date"
@@ -1003,12 +934,10 @@ export default function ShockwaveDataGrid({
                             style={{ position: 'absolute', opacity: 0, right: 0, top: 0, width: 0, height: 0, pointerEvents: 'none' }}
                             onChange={e => {
                               if (e.target.value) {
-                                // e.target.value is "YYYY-MM-DD"
                                 setEditing({ ...editing, val: e.target.value });
                                 setTimeout(finishEdit, 50);
                               }
                             }}
-                            onBlur={() => {}} // focus out doesn't trigger anything special here
                           />
                         )}
                       </div>
@@ -1033,10 +962,10 @@ export default function ShockwaveDataGrid({
                 );
               })}
             </tr>
-          )})}
+          );
+        })}
         </tbody>
       </table>
-      </div>
 
       {/* Context Menu */}
       {ctxMenu && (

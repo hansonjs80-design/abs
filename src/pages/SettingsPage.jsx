@@ -10,40 +10,35 @@ const SQL_SNIPPETS = [
   {
     title: '충격파 설정 테이블',
     description: '기본 시간, 간격 그리고 요일별 오버라이드 정보 저장.',
-    sql: `CREATE TABLE IF NOT EXISTS shockwave_settings (
+    sql: `CREATE TABLE IF NOT EXISTS public.shockwave_settings (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   start_time time NOT NULL DEFAULT '09:00:00',
   end_time time NOT NULL DEFAULT '18:00:00',
   interval_minutes int NOT NULL DEFAULT 10,
   day_overrides jsonb NOT NULL DEFAULT '{}',
+  prescriptions text[] DEFAULT ARRAY['F1.5', 'F/Rdc', 'F/R'],
+  frozen_columns int DEFAULT 6,
   updated_at timestamptz NOT NULL DEFAULT now()
-);`
+);
+ALTER TABLE public.shockwave_settings DISABLE ROW LEVEL SECURITY;`
   },
   {
     title: '치료사 목록 테이블',
     description: '스케줄러에 나열할 치료사 이름과 순서를 관리.',
-    sql: `CREATE TABLE IF NOT EXISTS shockwave_therapists (
+    sql: `CREATE TABLE IF NOT EXISTS public.shockwave_therapists (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
   slot_index int NOT NULL DEFAULT 0,
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now()
-);\nALTER TABLE shockwave_therapists DISABLE ROW LEVEL SECURITY;`
+);
+ALTER TABLE public.shockwave_therapists DISABLE ROW LEVEL SECURITY;`
   },
   {
-    title: '공휴일 테이블',
-    description: '슈퍼바이스의 공휴일을 추가하여 자동 색칠 처리.',
-    sql: `CREATE TABLE IF NOT EXISTS holidays (
+    title: '통합 충격파 스케줄 테이블',
+    description: '스케줄러의 셀 내용, 배경색, 병합(JSON) 정보를 저장합니다.',
+    sql: `CREATE TABLE IF NOT EXISTS public.shockwave_schedules (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  date date NOT NULL,
-  name text,
-  created_at timestamptz NOT NULL DEFAULT now()
-);`
-  },
-  {
-    title: '충격파 스케줄 테이블',
-    description: '셀 내용, 병합 정보를 매달 저장.',
-    sql: `CREATE TABLE IF NOT EXISTS shockwave_schedules (
   year int NOT NULL,
   month int NOT NULL,
   week_index int NOT NULL,
@@ -51,11 +46,71 @@ const SQL_SNIPPETS = [
   row_index int NOT NULL,
   col_index int NOT NULL,
   content text,
-  merge_span jsonb DEFAULT '{"rowSpan":1,"colSpan":1}',
   bg_color text,
+  merge_span jsonb DEFAULT '{"rowSpan": 1, "colSpan": 1, "mergedInto": null}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (year, month, week_index, day_index, row_index, col_index)
-);`
+  UNIQUE(year, month, week_index, day_index, row_index, col_index)
+);
+ALTER TABLE public.shockwave_schedules DISABLE ROW LEVEL SECURITY;`
+  },
+  {
+    title: '환자 치료 로그 (통계/현황)',
+    description: '충격파 통계 탭에서 관리하는 환자 일일 기록 테이블입니다.',
+    sql: `CREATE TABLE IF NOT EXISTS public.shockwave_patient_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  date date NOT NULL,
+  patient_name text NOT NULL,
+  chart_number text,
+  visit_count text,
+  body_part text,
+  therapist_name text,
+  prescription text,
+  prescription_count text,
+  source text DEFAULT 'manual',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.shockwave_patient_logs DISABLE ROW LEVEL SECURITY;`
+  },
+  {
+    title: '직원 근무표용 스케줄 테이블',
+    description: '직원 근무표 탭에서 사용하는 메모 저장소입니다.',
+    sql: `CREATE TABLE IF NOT EXISTS public.staff_schedules (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  year int NOT NULL,
+  month int NOT NULL,
+  day int NOT NULL,
+  slot_index int NOT NULL,
+  content text,
+  font_color text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(year, month, day, slot_index)
+);
+ALTER TABLE public.staff_schedules DISABLE ROW LEVEL SECURITY;`
+  },
+  {
+    title: '공지사항 및 공휴일',
+    description: '공지사항 보드 및 달력 공휴일 관리용.',
+    sql: `-- 공지사항
+CREATE TABLE IF NOT EXISTS public.notices (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  slot_index int NOT NULL UNIQUE,
+  content text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.notices DISABLE ROW LEVEL SECURITY;
+
+-- 공휴일
+CREATE TABLE IF NOT EXISTS public.holidays (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  date date NOT NULL UNIQUE,
+  name text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.holidays DISABLE ROW LEVEL SECURITY;`
   }
 ];
 
@@ -72,7 +127,13 @@ export default function SettingsPage() {
   const [holidays, setHolidays] = useState([]);
   const [newHoliday, setNewHoliday] = useState({ date: '', name: '' });
   
-  const [swSettings, setSwSettings] = useState({ start_time: '09:00', end_time: '18:00', interval_minutes: 10 });
+  const [swSettings, setSwSettings] = useState({ 
+    start_time: '09:00', 
+    end_time: '18:00', 
+    interval_minutes: 10,
+    prescriptions: ['F1.5', 'F/Rdc', 'F/R'],
+    frozen_columns: 6
+  });
   const [dayOverrides, setDayOverrides] = useState({});
   const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -102,7 +163,9 @@ export default function SettingsPage() {
         setSwSettings({
           start_time: data.start_time.substring(0, 5),
           end_time: data.end_time.substring(0, 5),
-          interval_minutes: data.interval_minutes
+          interval_minutes: data.interval_minutes,
+          prescriptions: data.prescriptions || ['F1.5', 'F/Rdc', 'F/R'],
+          frozen_columns: data.frozen_columns || 6
         });
         setDayOverrides(data.day_overrides || {});
       }
@@ -114,7 +177,9 @@ export default function SettingsPage() {
       start_time: swSettings.start_time + ':00',
       end_time: swSettings.end_time + ':00',
       interval_minutes: Number(swSettings.interval_minutes),
-      day_overrides: dayOverrides
+      day_overrides: dayOverrides,
+      prescriptions: swSettings.prescriptions,
+      frozen_columns: Number(swSettings.frozen_columns)
     });
     if (success) addToast('시간표 설정이 저장되었습니다.', 'success');
   };
@@ -246,9 +311,69 @@ export default function SettingsPage() {
             </div>
             <button className="btn btn-primary" onClick={handleSaveSettings}>적용 및 저장</button>
           </div>
-          <p style={{ color: 'var(--text-tertiary)', fontSize: '0.8rem', marginTop: 10, marginBottom: 20 }}>
-            * 위의 기본 시간이 전체 범위(격자)를 결정합니다.
-          </p>
+          <div className="settings-row" style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--border-color-light)' }}>
+            <div>
+              <div className="settings-row-label">🧊 고정 컬럼 개수</div>
+              <div className="settings-row-desc">가로 스크롤 시 왼쪽에 고정할 열의 개수를 지정합니다. (기본 6: #, 날짜, 이름, 차트번호, 회차, 부위)</div>
+            </div>
+            <input 
+              type="number" 
+              className="form-input" 
+              style={{ width: 80 }} 
+              min={0} max={10} 
+              value={swSettings.frozen_columns} 
+              onChange={e => setSwSettings(p => ({ ...p, frozen_columns: parseInt(e.target.value) || 0 }))} 
+            />
+          </div>
+
+          <div className="settings-row" style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--border-color-light)' }}>
+            <div style={{ flex: 1 }}>
+              <div className="settings-row-label">📝 처방 목록 (현황 탭)</div>
+              <div className="settings-row-desc">치료사별로 표시할 처방 종류를 입력하세요. 삭제하려면 클릭하세요.</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+                {swSettings.prescriptions.map((pres, idx) => (
+                  <span 
+                    key={idx} 
+                    style={{ 
+                      background: 'var(--accent-color, #6366f1)', 
+                      color: 'white', 
+                      padding: '4px 10px', 
+                      borderRadius: 16, 
+                      fontSize: '0.8rem', 
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}
+                    onClick={() => {
+                      const next = swSettings.prescriptions.filter((_, i) => i !== idx);
+                      setSwSettings(p => ({ ...p, prescriptions: next }));
+                    }}
+                  >
+                    {pres} ✕
+                  </span>
+                ))}
+                <input 
+                  className="form-input" 
+                  placeholder="+ 추가" 
+                  style={{ width: 100, height: 28, fontSize: '0.8rem', padding: '0 8px' }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && e.target.value.trim()) {
+                      const val = e.target.value.trim();
+                      if (!swSettings.prescriptions.includes(val)) {
+                        setSwSettings(p => ({ ...p, prescriptions: [...p.prescriptions, val] }));
+                      }
+                      e.target.value = '';
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div style={{ textAlign: 'right', marginTop: 24 }}>
+            <button className="btn btn-primary" onClick={handleSaveSettings}>환경설정 저장</button>
+          </div>
 
           {/* 요일별 오버라이드 테이블 */}
           <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 16 }}>

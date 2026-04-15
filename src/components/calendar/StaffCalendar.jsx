@@ -25,6 +25,9 @@ export default function StaffCalendar() {
     return Number.isFinite(saved) && saved >= 60 ? saved : 120;
   });
 
+  const [undoStack, setUndoStack] = useState([]);
+  const [clipboardSource, setClipboardSource] = useState(null); // { key, mode: 'copy'|'cut' }
+
   const startColResize = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -80,6 +83,60 @@ export default function StaffCalendar() {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(STAFF_CALENDAR_ROW_HEIGHT_KEY, String(rowHeight));
   }, [rowHeight]);
+
+  const recordUndo = (action) => {
+    setUndoStack(prev => [action, ...prev].slice(0, 50));
+  };
+
+  const doUndo = async () => {
+    const action = undoStack[0];
+    if (!action) return;
+    setUndoStack(prev => prev.slice(1));
+
+    if (action.type === 'edit') {
+      const { year, month, day, slotIndex, oldVal } = action;
+      await saveStaffMemo(year, month, day, slotIndex, oldVal);
+    }
+  };
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        doUndo();
+      } else if (e.key === 'Escape') {
+        setClipboardSource(null);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [undoStack, doUndo]);
+
+  const performPaste = async (targetCoord, text) => {
+    const [wi, di, slot] = targetCoord.split('-').map(Number);
+    const dayInfo = grid[wi][di];
+    const oldVal = staffMemos[targetCoord]?.content || '';
+    
+    if (oldVal !== text) {
+      recordUndo({ type: 'edit', year: dayInfo.year, month: dayInfo.month, day: dayInfo.day, slotIndex: slot, oldVal });
+      await saveStaffMemo(dayInfo.year, dayInfo.month, dayInfo.day, slot, text);
+    }
+
+    if (clipboardSource && clipboardSource.mode === 'cut') {
+      const srcCoord = clipboardSource.coord;
+      if (srcCoord !== targetCoord) {
+        const [swi, sdi, sslot] = srcCoord.split('-').map(Number);
+        const sDay = grid[swi][sdi];
+        // Record undo for the source clear too? Yes, but maybe as a batch? 
+        // For now, simple record.
+        await saveStaffMemo(sDay.year, sDay.month, sDay.day, sslot, '');
+      }
+    }
+
+    if (clipboardSource) {
+      setClipboardSource(null);
+    }
+  };
 
   const today = getTodayKST();
 
@@ -138,6 +195,10 @@ export default function StaffCalendar() {
                         dayInfo={dayInfo}
                         slotIndex={slot}
                         onSave={saveStaffMemo}
+                        recordUndo={recordUndo}
+                        performPaste={performPaste}
+                        clipboardSource={clipboardSource}
+                        setClipboardSource={setClipboardSource}
                         coord={`${wi}-${di}-${slot}`}
                         maxWeeks={grid.length}
                       />

@@ -9,74 +9,75 @@
   --font-family: Arial, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
   /* 기본 색상 */
-  --bg-primary: #f8fafc;
+  --bg-primary: #f4f7fa;
   --bg-secondary: #ffffff;
-  --bg-tertiary: #f1f5f9;
+  --bg-tertiary: #e9eff6;
   --bg-card: #ffffff;
   --bg-hover: #f1f5f9;
   --bg-input: #ffffff;
-  --bg-modal-overlay: rgba(15, 23, 42, 0.5);
+  --bg-modal-overlay: rgba(15, 23, 42, 0.4);
   
-  --hover-brightness: 0.80; /* 호버 시 20% 더 진하게 */
+  --hover-brightness: 0.96;
 
   /* 텍스트 */
-  --text-primary: #0f172a;
+  --text-primary: #1e293b;
   --text-secondary: #475569;
   --text-tertiary: #94a3b8;
   --text-inverse: #ffffff;
 
   /* 브랜드 */
-  --brand-primary: #6366f1;
-  --brand-primary-hover: #4f46e5;
-  --brand-primary-light: #e0e7ff;
-  --brand-secondary: #8b5cf6;
-  --brand-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+  --brand-primary: #5850ec;
+  --brand-primary-hover: #4338ca;
+  --brand-primary-light: #eef2ff;
+  --brand-secondary: #7c3aed;
+  --brand-gradient: linear-gradient(135deg, #5850ec 0%, #7c3aed 100%);
 
   /* 보더 */
-  --border-color: #cbd5e1; /* 명확한 선 (slate-300) */
-  --border-color-light: #e2e8f0; /* 내부 얇은 선 (slate-200) */
-  --border-color-focus: #4f46e5;
+  --border-color: #d1d5db; /* slate-300 느낌 */
+  --border-color-light: #e5e7eb; /* slate-200 느낌 */
+  --border-color-focus: #5850ec;
 
-  /* 그림자 */
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.05);
+  /* 그림자 (Soft Layered Shadows) */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
 
-  /* 달력 색상 */
-  --cal-sunday-bg: #fee2e2;
-  --cal-sunday-text: #dc2626; /* 쨍한 빨강 */
-  --cal-saturday-bg: #dbeafe;
-  --cal-saturday-text: #2563eb; /* 쨍한 파랑 */
-  --cal-header-sunday-bg: #fca5a5; /* 상단 요일 셀은 20% 더 진하게 (red-300) */
-  --cal-header-saturday-bg: #93c5fd; /* 상단 요일 셀은 20% 더 진하게 (blue-300) */
+  /* 달력 색상 (Refined) */
+  --cal-sunday-bg: #fff1f2;
+  --cal-sunday-text: #e11d48;
+  --cal-saturday-bg: #eff6ff;
+  --cal-saturday-text: #2563eb;
+  --cal-header-sunday-bg: #fda4af;
+  --cal-header-saturday-bg: #93c5fd;
   --cal-other-month-bg: #f8fafc;
-  --cal-other-month-text: #94a3b8;
-  --cal-today-date-bg: #7c3aed;
-  --cal-today-memo-bg: #fef08a;
-  --cal-holiday-bg: #fecaca;
-  --cal-holiday-text: #b91c1c;
+  --cal-other-month-text: #cbd5e1;
+  --cal-today-date-bg: #6366f1;
+  --cal-today-memo-bg: #fef9c3;
+  --cal-holiday-bg: #fee2e2;
+  --cal-holiday-text: #991b1b;
   --cal-weekday-bg: #ffffff;
 
-  /* 메모 글자색 (더 강렬하게) */
-  --memo-night: #1d4ed8; /* 파랑 */
-  --memo-off: #6d28d9; /* 보라 */
-  --memo-leave: #15803d; /* 초록 */
-  --memo-attend: #c2410c; /* 주황 */
-  --memo-special: #b91c1c; /* 빨강 */
+  /* 메모 글자색 (Sophisticated) */
+  --memo-night: #2563eb;
+  --memo-off: #7c3aed;
+  --memo-leave: #059669;
+  --memo-attend: #ea580c;
+  --memo-special: #dc2626;
 
-  /* 충격파 색상 */
-  --sw-green: #86efac;
-  --sw-green-other: #bbf7d0;
-  --sw-preserve: #fde68a;
-  --sw-holiday-header: #fca5a5;
-  --sw-holiday-name: #fecaca;
-  --sw-holiday-bg: #86efac;
-  --sw-today-border: #c026d3;
+  /* 충격파 색상 (Refined & Semi-transparent) */
+  --sw-green: #dcfce7;
+  --sw-green-text: #166534;
+  --sw-green-other: #f0fdf4;
+  --sw-preserve: #fef9c3;
+  --sw-holiday-header: #fecaca;
+  --sw-holiday-name: #fee2e2;
+  --sw-holiday-bg: #f0fdf4;
+  --sw-today-border: #d946ef;
   --sw-4060-color: #dc2626;
 
   /* 상태 */
-  --success: #22c55e;
+  --success: #10b981;
   --warning: #f59e0b;
   --error: #ef4444;
   --info: #3b82f6;
@@ -84,19 +85,24 @@
   /* 반경/간격 */
   --radius-sm: 6px;
   --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
   --radius-full: 9999px;
 
+  /* 글래스모피즘 */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-blur: blur(12px);
+
   /* 트랜지션 */
-  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
 
   /* 사이드바 */
-  --sidebar-width: 260px;
-  --sidebar-collapsed-width: 72px;
-  --header-height: 51px;
+  --sidebar-width: 280px;
+  --sidebar-collapsed-width: 80px;
+  --header-height: 60px;
   --bottom-nav-height: 64px;
 }
 
@@ -108,11 +114,11 @@
   --bg-card: #1e293b;
   --bg-hover: #334155;
   --bg-input: #1e293b;
-  --bg-modal-overlay: rgba(0, 0, 0, 0.7);
+  --bg-modal-overlay: rgba(0, 0, 0, 0.6);
   
-  --hover-brightness: 1.20; /* 다크모드에서는 호버 시 더 밝게 */
+  --hover-brightness: 1.1;
 
-  --text-primary: #f1f5f9;
+  --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
   --text-tertiary: #64748b;
   --text-inverse: #0f172a;
@@ -125,6 +131,10 @@
   --border-color-light: #1e293b;
   --border-color-focus: #818cf8;
 
+  /* 글래스모피즘 (Dark) */
+  --glass-bg: rgba(30, 41, 59, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.05);
+
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
   --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.4);
   --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.5);
@@ -136,18 +146,19 @@
   --cal-saturday-text: #60a5fa;
   --cal-other-month-bg: #1a2332;
   --cal-other-month-text: #475569;
-  --cal-today-date-bg: #5b21b6;
+  --cal-today-date-bg: #6366f1;
   --cal-today-memo-bg: #422006;
   --cal-holiday-bg: #450a0a;
   --cal-holiday-text: #f87171;
   --cal-weekday-bg: #1e293b;
 
-  --sw-green: #166534;
-  --sw-green-other: #14532d;
-  --sw-preserve: #854d0e;
+  --sw-green: #064e3b;
+  --sw-green-text: #6ee7b7;
+  --sw-green-other: #064e3b;
+  --sw-preserve: #78350f;
   --sw-holiday-header: #7f1d1d;
   --sw-holiday-name: #991b1b;
-  --sw-holiday-bg: #166534;
+  --sw-holiday-bg: #064e3b;
   --sw-4060-color: #f87171;
 }
 
@@ -272,4 +283,111 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: var(--radius-sm);
+}
+
+/* ── 클립보드 시각적 피드백 (Marching Ants) ── */
+@keyframes marching-ants {
+  to { border-image-outset: 0; outline-offset: -2px; outline-style: dashed; outline-width: 2px; }
+  from { outline-offset: -2px; outline-style: dashed; outline-width: 2px; outline-color: transparent; }
+}
+
+/* 더 직관적이고 부드러운 애니메이션을 위한 새로운 방식 */
+@keyframes ants {
+  0% { border-dash-offset: 0; }
+  100% { border-dash-offset: 8; }
+}
+
+.marching-ants-blue {
+  outline: 2px dashed #3b82f6 !important;
+  outline-offset: -2px !important;
+  animation: ants-animation 0.5s infinite linear !important;
+}
+
+.marching-ants-red {
+  outline: 2px dashed #ef4444 !important;
+  outline-offset: -2px !important;
+  animation: ants-animation 0.5s infinite linear !important;
+}
+
+@keyframes ants-animation {
+  from { outline-offset: -2px; }
+  to { outline-offset: -4px; }
+}
+
+/* 실제 실선/점선 흐르는 효과를 위한 더 정교한 구현 */
+.gc-copy-source {
+  position: relative;
+  z-index: 10;
+}
+.gc-copy-source::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border: 2px dashed #3b82f6;
+  pointer-events: none;
+  animation: ants-flow 0.6s infinite linear;
+  z-index: 11;
+}
+
+.gc-cut-source {
+  position: relative;
+  z-index: 10;
+}
+.gc-cut-source::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border: 2px dashed #ef4444;
+  pointer-events: none;
+  animation: ants-flow 0.6s infinite linear;
+  z-index: 11;
+}
+
+@keyframes ants-flow {
+  from { outline: 2px dashed transparent; }
+  to { outline: 2px dashed currentColor; }
+}
+
+/* 가상 요소를 이용한 실제 점선 흐름 효과 */
+.marching-ants {
+  position: relative;
+}
+.marching-ants::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border: 2px dashed var(--ants-color, #3b82f6);
+  animation: marching-ants-animation 1s infinite linear;
+  pointer-events: none;
+  z-index: 100;
+}
+
+@keyframes marching-ants-animation {
+  0% { outline: 2px dashed var(--ants-color); outline-offset: -2px; }
+  50% { outline: 2px dashed transparent; outline-offset: -2px; }
+  100% { outline: 2px dashed var(--ants-color); outline-offset: -2px; }
+}
+
+/* 최종 선정한 부드러운 점선 애니메이션 */
+.ants-blue { --ants-color: #3b82f6; }
+.ants-red { --ants-color: #ef4444; }
+
+.ants-active {
+  position: relative;
+  overflow: visible !important;
+}
+.ants-active::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border: 2px dashed var(--ants-color, #3b82f6);
+  pointer-events: none;
+  z-index: 10;
+  animation: ants-pulse 1s tablet infinite;
+}
+
+@keyframes ants-pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
+  100% { opacity: 1; }
 }

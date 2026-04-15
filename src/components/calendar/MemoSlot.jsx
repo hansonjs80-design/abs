@@ -2,7 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import { flushSync } from 'react-dom';
 import { computeMemoFontColor } from '../../lib/memoParser';
 
-export default function MemoSlot({ memo, dayInfo, slotIndex, onSave, coord, maxWeeks }) {
+export default function MemoSlot({ 
+  memo, dayInfo, slotIndex, onSave, coord, maxWeeks,
+  recordUndo, performPaste, clipboardSource, setClipboardSource 
+}) {
   const [editing, setEditing] = useState(false);
   const [flash, setFlash] = useState(false);
   const [value, setValue] = useState(memo?.content || '');
@@ -41,6 +44,7 @@ export default function MemoSlot({ memo, dayInfo, slotIndex, onSave, coord, maxW
     const newVal = value.trim();
     const oldVal = (memo?.content || '').trim();
     if (newVal !== oldVal) {
+      recordUndo({ type: 'edit', year: dayInfo.year, month: dayInfo.month, day: dayInfo.day, slotIndex: slotIndex, oldVal });
       onSave(dayInfo.year, dayInfo.month, dayInfo.day, slotIndex, newVal);
     }
   };
@@ -78,6 +82,7 @@ export default function MemoSlot({ memo, dayInfo, slotIndex, onSave, coord, maxW
         const oldVal = (memo?.content || '').trim();
         setEditing(false);
         if (newVal !== oldVal) {
+          recordUndo({ type: 'edit', year: dayInfo.year, month: dayInfo.month, day: dayInfo.day, slotIndex: slotIndex, oldVal });
           onSave(dayInfo.year, dayInfo.month, dayInfo.day, slotIndex, newVal);
         }
         requestAnimationFrame(() => moveFocusByArrow(e.key));
@@ -109,6 +114,7 @@ export default function MemoSlot({ memo, dayInfo, slotIndex, onSave, coord, maxW
     } else if (e.key === 'Backspace' || e.key === 'Delete') {
       e.preventDefault();
       if (memo?.content) {
+        recordUndo({ type: 'edit', year: dayInfo.year, month: dayInfo.month, day: dayInfo.day, slotIndex: slotIndex, oldVal: memo.content });
         onSave(dayInfo.year, dayInfo.month, dayInfo.day, slotIndex, '');
       }
     } else if (
@@ -120,19 +126,20 @@ export default function MemoSlot({ memo, dayInfo, slotIndex, onSave, coord, maxW
     } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'c' || e.code === 'KeyC')) {
       e.preventDefault();
       navigator.clipboard.writeText(memo?.content || '');
+      setClipboardSource({ coord, mode: 'copy' });
       setFlash(true);
       setTimeout(() => setFlash(false), 150);
     } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'x' || e.code === 'KeyX')) {
       e.preventDefault();
       navigator.clipboard.writeText(memo?.content || '');
+      setClipboardSource({ coord, mode: 'cut' });
       setFlash(true);
       setTimeout(() => setFlash(false), 150);
-      onSave(dayInfo.year, dayInfo.month, dayInfo.day, slotIndex, '');
     } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'v' || e.code === 'KeyV')) {
       e.preventDefault();
       navigator.clipboard.readText().then((text) => {
         if (text !== undefined && text !== null) {
-          onSave(dayInfo.year, dayInfo.month, dayInfo.day, slotIndex, text);
+          performPaste(coord, text);
           setFlash(true);
           setTimeout(() => setFlash(false), 150);
         }
@@ -156,6 +163,9 @@ export default function MemoSlot({ memo, dayInfo, slotIndex, onSave, coord, maxW
   else if (fontColor === '#ff0000') colorClass = 'memo-special';
 
   if (memo?.is_strikethrough) colorClass += ' memo-strikethrough';
+
+  const isAntsActive = clipboardSource?.coord === coord;
+  const antsClass = isAntsActive ? `ants-active ${clipboardSource.mode === 'cut' ? 'ants-red' : 'ants-blue'}` : '';
 
   if (editing) {
     return (
@@ -181,7 +191,7 @@ export default function MemoSlot({ memo, dayInfo, slotIndex, onSave, coord, maxW
   return (
     <div
       ref={wrapperRef}
-      className={`memo-slot ${colorClass}`}
+      className={`memo-slot ${colorClass} ${antsClass}`}
       style={flash ? { backgroundColor: 'var(--brand-primary-light)', opacity: 0.8 } : undefined}
       data-coord={coord}
       onDoubleClick={handleDoubleClick}
