@@ -30,7 +30,7 @@ export default function NoticeBoard() {
   return (
     <div className="notice-board">
       <div className="notice-board-header">
-        <MessageSquare size={16} />
+        <MessageSquare size={21} strokeWidth={2.4} />
         전달 사항
       </div>
       {Array.from({ length: SLOT_COUNT }, (_, i) => {
@@ -50,8 +50,8 @@ export default function NoticeBoard() {
                 placeholder="메모를 입력하세요..."
               />
             ) : (
-              <span style={{ width: '100%', textAlign: 'center', color: notice?.content ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
-                {notice?.content || '—'}
+              <span className="notice-text" style={{ color: notice?.content ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
+                {notice?.content || ''}
               </span>
             )}
           </div>

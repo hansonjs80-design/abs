@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { syncTodayShockwaveScheduleToStats } from '../../lib/shockwaveSyncUtils';
+import { getTodayKST } from '../../lib/calendarUtils';
 import { useToast } from '../common/Toast';
 import '../../styles/shockwave_stats.css';
 import ShockwaveDataGrid from './ShockwaveDataGrid';
@@ -32,10 +33,13 @@ class ShockwaveStatsErrorBoundary extends React.Component {
   }
 }
 
-export default function ShockwaveStatsView({ currentYear, currentMonth, memos, therapists }) {
+export default function ShockwaveStatsView({ currentYear, currentMonth, memos, therapists, schedulerMemosReady = false }) {
   const { addToast } = useToast();
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [extraDraftRows, setExtraDraftRows] = useState(0);
+  const [activeSection, setActiveSection] = useState('overview');
+  const [isAutoSyncingToday, setIsAutoSyncingToday] = useState(false);
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
 
@@ -43,16 +47,15 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     setIsLoading(true);
     try {
       const startStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
-      const endStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`; // This naturally rolls over months due to postgres date handling or via proper end date.
-      
-      const lastDay = new Date(currentYear, currentMonth, 0).getDate();
-      const properEndStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+      const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+      const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+      const endStr = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
 
       const { data, error } = await supabase
         .from('shockwave_patient_logs')
         .select('*')
         .gte('date', startStr)
-        .lte('date', properEndStr)
+        .lt('date', endStr)
         .order('date', { ascending: true })
         .order('created_at', { ascending: true });
 
@@ -69,6 +72,54 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
+
+  useEffect(() => {
+    setExtraDraftRows(0);
+  }, [currentYear, currentMonth]);
+
+  useEffect(() => {
+    setActiveSection('overview');
+  }, [currentYear, currentMonth]);
+
+  useEffect(() => {
+    const today = getTodayKST();
+    const isTodayMonth =
+      currentYear === today.getFullYear() &&
+      currentMonth === today.getMonth() + 1;
+
+    if (!schedulerMemosReady || !isTodayMonth || safeTherapists.length === 0 || isAutoSyncingToday) {
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      setIsAutoSyncingToday(true);
+      try {
+        const result = await syncTodayShockwaveScheduleToStats({
+          year: currentYear,
+          month: currentMonth,
+          memos,
+          therapists: safeTherapists,
+        });
+
+        if (!cancelled && !result?.skipped && result?.totalUpdates > 0) {
+          await fetchLogs();
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error(error);
+          addToast('오늘 충격파 스케줄 동기화 중 오류가 발생했습니다.', 'error');
+        }
+      } finally {
+        if (!cancelled) setIsAutoSyncingToday(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [schedulerMemosReady, currentYear, currentMonth, memos, safeTherapists, fetchLogs, addToast, isAutoSyncingToday]);
 
   const handleCellEdit = async (id, field, value) => {
     try {
@@ -296,71 +347,107 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
 
   return (
     <div className="sw-stats-container animate-fade-in">
-      <div className="sw-stats-header">
-        <div className="sw-stats-summary">
-          <h2>📊 {currentMonth}월 치료 내역 통계</h2>
-          <div className="sw-stats-cards">
-            <div className="sw-stats-card">
-              <span className="card-label">해당 월 총 처방수</span>
-              <span className="card-value sum-value">
-                {safeLogs.reduce((s, l) => s + (l?.prescription ? (parseInt(l.prescription_count || '1') || 1) : 0), 0)}건
-              </span>
-            </div>
-            <div className="sw-stats-card">
-              <span className="card-label">초진 포함 전체 목록</span>
-              <span className="card-value">
-                {safeLogs.filter(l => l?.patient_name?.includes('*')).length}명 (*)
-              </span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="sw-stats-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <button 
-            className="btn btn-secondary"
-            onClick={handleFullGoogleSheetImport}
-            disabled={isLoading}
-            style={{ borderColor: '#ea4335', color: '#ea4335' }}
-            title="기존 스프레드시트의 24년~26년 모든 시트 데이터를 읽어와 누적합니다."
+      <div className="sw-stats-layout">
+        <aside className="sw-stats-sidebar">
+          <button
+            className={`sw-stats-side-tab${activeSection === 'overview' ? ' active' : ''}`}
+            onClick={() => setActiveSection('overview')}
           >
-            🔥 과거 기록 전체 연동 (Google Sheets)
+            치료 내역 통계
           </button>
-          <button 
-            className="btn btn-secondary"
-            onClick={async () => {
-              let fallbackDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
-              if (safeLogs.length > 0) {
-                 const dates = safeLogs.map(l => l?.date).filter(Boolean).sort();
-                 if (dates.length > 0) fallbackDate = dates[dates.length - 1];
-              }
-              const { error } = await supabase.from('shockwave_patient_logs').insert([{
-                date: fallbackDate, patient_name: '', chart_number: '', visit_count: '', body_part: '', therapist_name: '', prescription: '', source: 'manual'
-              }]);
-              if (!error) fetchLogs();
-            }}
+          <button
+            className={`sw-stats-side-tab${activeSection === 'grid' ? ' active' : ''}`}
+            onClick={() => setActiveSection('grid')}
           >
-            + 수동 추가
+            충격파 현황
           </button>
-          <button 
-            className="sw-sync-btn"
-            onClick={handleSyncFromScheduler}
-            disabled={isLoading}
-          >
-            {isLoading ? '동기화 중...' : '⬇ 현재 스케줄러 데이터 가져오기'}
-          </button>
-        </div>
-      </div>
+        </aside>
 
-      <div className="sw-stats-body">
-        <ShockwaveStatsErrorBoundary>
-          <ShockwaveDataGrid 
-            logs={safeLogs} 
-            therapists={safeTherapists} 
-            currentYear={currentYear} 
-            currentMonth={currentMonth} 
-            fetchLogs={fetchLogs} 
-          />
-        </ShockwaveStatsErrorBoundary>
+        <div className="sw-stats-panel">
+          {activeSection === 'overview' && (
+            <div className="sw-stats-header">
+              <div className="sw-stats-summary">
+                <h2>📊 {currentMonth}월 치료 내역 통계</h2>
+                <div className="sw-stats-cards">
+                  <div className="sw-stats-card">
+                    <span className="card-label">해당 월 총 처방수</span>
+                    <span className="card-value sum-value">
+                      {safeLogs.reduce((s, l) => s + (l?.prescription ? (parseInt(l.prescription_count || '1') || 1) : 0), 0)}건
+                    </span>
+                  </div>
+                  <div className="sw-stats-card">
+                    <span className="card-label">초진 포함 전체 목록</span>
+                    <span className="card-value">
+                      {safeLogs.filter(l => l?.patient_name?.includes('*')).length}명 (*)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="sw-stats-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleFullGoogleSheetImport}
+                  disabled={isLoading}
+                  style={{ borderColor: '#ea4335', color: '#ea4335' }}
+                  title="기존 스프레드시트의 24년~26년 모든 시트 데이터를 읽어와 누적합니다."
+                >
+                  🔥 과거 기록 전체 연동 (Google Sheets)
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={async () => {
+                    let fallbackDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
+                    if (safeLogs.length > 0) {
+                      const dates = safeLogs.map(l => l?.date).filter(Boolean).sort();
+                      if (dates.length > 0) fallbackDate = dates[dates.length - 1];
+                    }
+                    const { error } = await supabase.from('shockwave_patient_logs').insert([{
+                      date: fallbackDate, patient_name: '', chart_number: '', visit_count: '', body_part: '', therapist_name: '', prescription: '', source: 'manual'
+                    }]);
+                    if (!error) fetchLogs();
+                  }}
+                >
+                  + 수동 추가
+                </button>
+                <button
+                  className="sw-sync-btn"
+                  onClick={handleSyncFromScheduler}
+                  disabled={isLoading}
+                >
+                  {isLoading ? '동기화 중...' : '⬇ 현재 스케줄러 데이터 가져오기'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'grid' && (
+            <>
+              <div className="sw-stats-body">
+                <ShockwaveStatsErrorBoundary>
+                  <ShockwaveDataGrid
+                    logs={safeLogs}
+                    therapists={safeTherapists}
+                    currentYear={currentYear}
+                    currentMonth={currentMonth}
+                    fetchLogs={fetchLogs}
+                    extraDraftRows={extraDraftRows}
+                    onApplyTodaySchedule={handleSyncFromScheduler}
+                    isApplyingTodaySchedule={isLoading}
+                  />
+                </ShockwaveStatsErrorBoundary>
+              </div>
+              <div className="sw-stats-footer">
+                <button
+                  className="btn btn-secondary sw-add-rows-btn"
+                  onClick={() => setExtraDraftRows((prev) => prev + 10)}
+                >
+                  + 10행 추가
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

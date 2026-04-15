@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useSchedule } from '../contexts/ScheduleContext';
 
 const ShockwaveStatsView = React.lazy(() => import('../components/shockwave/ShockwaveStatsView'));
@@ -30,6 +30,7 @@ class ShockwaveStatsPageErrorBoundary extends React.Component {
 }
 
 export default function ShockwaveStatsPage() {
+  const [schedulerMemosReady, setSchedulerMemosReady] = useState(false);
   const {
     currentYear,
     currentMonth,
@@ -45,7 +46,17 @@ export default function ShockwaveStatsPage() {
 
   // Use useEffect to ensure memos are loaded if navigating here directly
   useEffect(() => {
-    loadShockwaveMemos(currentYear, currentMonth);
+    let active = true;
+    setSchedulerMemosReady(false);
+
+    (async () => {
+      await loadShockwaveMemos(currentYear, currentMonth);
+      if (active) setSchedulerMemosReady(true);
+    })();
+
+    return () => {
+      active = false;
+    };
   }, [currentYear, currentMonth, loadShockwaveMemos]);
 
   return (
@@ -57,6 +68,7 @@ export default function ShockwaveStatsPage() {
             currentMonth={currentMonth}
             memos={shockwaveMemos}
             therapists={therapists}
+            schedulerMemosReady={schedulerMemosReady}
           />
         </Suspense>
       </ShockwaveStatsPageErrorBoundary>

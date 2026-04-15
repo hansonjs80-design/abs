@@ -4,10 +4,10 @@ import MonthPicker from '../common/MonthPicker';
 import ThemeToggle from '../common/ThemeToggle';
 
 const items = [
-  { path: '/', icon: Calendar, label: '직원 근무표', monthLabel: '직원 근무표' },
-  { path: '/shockwave', icon: Zap, label: '충격파 스케줄러', monthLabel: '충격파 스케줄러' },
-  { path: '/shockwave-stats', icon: ClipboardList, label: '치료 내역 통계' },
-  { path: '/settings', icon: Settings, label: '설정' },
+  { path: '/', icon: Calendar, label: '직원 근무표', monthLabel: '직원 근무표', tabClass: 'top-tab--calendar' },
+  { path: '/shockwave', icon: Zap, label: '충격파 스케줄러', monthLabel: '충격파 스케줄러', tabClass: 'top-tab--shockwave' },
+  { path: '/shockwave-stats', icon: ClipboardList, label: '충격파 통계', monthLabel: '충격파 통계', tabClass: 'top-tab--stats' },
+  { path: '/settings', icon: Settings, label: '설정', tabClass: 'top-tab--settings' },
 ];
 
 export default function TopTabs() {
@@ -25,7 +25,7 @@ export default function TopTabs() {
 
             if (isActive && item.monthLabel) {
               return (
-                <div key={item.path} className="top-tab active month-tab">
+                <div key={item.path} className={`top-tab active month-tab ${item.tabClass}`}>
                   <Icon size={16} />
                   <MonthPicker suffix={item.monthLabel} variant="tab" />
                 </div>
@@ -37,7 +37,7 @@ export default function TopTabs() {
                 key={item.path}
                 to={item.path}
                 end={item.path === '/'}
-                className={({ isActive: linkActive }) => `top-tab${linkActive ? ' active' : ''}`}
+                className={({ isActive: linkActive }) => `top-tab ${item.tabClass}${linkActive ? ' active' : ''}`}
               >
                 <Icon size={16} />
                 <span>{item.label}</span>

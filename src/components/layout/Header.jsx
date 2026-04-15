@@ -9,7 +9,7 @@ export default function Header({ onMenuToggle }) {
   const pageLabels = {
     '/': '직원 근무표',
     '/shockwave': '충격파/도수 스케줄',
-    '/shockwave-stats': '치료 내역 통계',
+    '/shockwave-stats': '충격파 통계',
     '/settings': '설정 / 관리',
   };
 

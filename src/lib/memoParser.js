@@ -11,7 +11,7 @@ import { FONT_COLORS, CLINIC_DEPT_MAP } from './constants';
 export function normalizeNameForMatch(s) {
   return String(s || '')
     .trim()
-    .replace(/[*\d\s().]/g, '')
+    .replace(/[*\d\s().-]/g, '')
     .toLowerCase();
 }
 

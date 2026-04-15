@@ -5,7 +5,7 @@ export default function BottomNav() {
   const items = [
     { path: '/', icon: Calendar, label: '근무표' },
     { path: '/shockwave', icon: Zap, label: '충격파 스케줄' },
-    { path: '/shockwave-stats', icon: ClipboardList, label: '치료통계' },
+    { path: '/shockwave-stats', icon: ClipboardList, label: '충격파 통계' },
     { path: '/settings', icon: Settings, label: '설정' },
   ];
 

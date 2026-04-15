@@ -35,7 +35,7 @@ export default function TodayPanel() {
   return (
     <div className="today-panel">
       <div className="today-panel-header">
-        <CalIcon size={18} />
+        <CalIcon size={24} strokeWidth={2.4} />
         {dateLabel}
       </div>
       <div className="today-panel-body">

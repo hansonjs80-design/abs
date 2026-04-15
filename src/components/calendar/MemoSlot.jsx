@@ -8,6 +8,7 @@ export default function MemoSlot({ memo, dayInfo, slotIndex, onSave, coord, maxW
   const [value, setValue] = useState(memo?.content || '');
   const wrapperRef = useRef(null);
   const inputRef = useRef(null);
+  const imeOpenRef = useRef(false);
 
   useEffect(() => {
     if (!editing && wrapperRef.current && document.activeElement !== wrapperRef.current) {
@@ -20,26 +21,14 @@ export default function MemoSlot({ memo, dayInfo, slotIndex, onSave, coord, maxW
     inputRef.current.focus();
   }, [editing]);
 
-  useEffect(() => {
-    const el = wrapperRef.current;
-    if (!el || editing || dayInfo.isOtherMonth) return;
-
-    const handleCompositionStart = () => {
-      setValue(memo?.content || '');
-      setEditing(true);
-    };
-
-    el.addEventListener('compositionstart', handleCompositionStart);
-    return () => el.removeEventListener('compositionstart', handleCompositionStart);
-  }, [editing, dayInfo.isOtherMonth, memo?.content]);
-
   const handleDoubleClick = () => {
     if (dayInfo.isOtherMonth) return;
     setValue(memo?.content || '');
     setEditing(true);
   };
 
-  const beginEditing = (nextValue) => {
+  const beginEditing = (nextValue, imeStart = false) => {
+    imeOpenRef.current = imeStart;
     flushSync(() => {
       setValue(nextValue);
       setEditing(true);
@@ -127,7 +116,7 @@ export default function MemoSlot({ memo, dayInfo, slotIndex, onSave, coord, maxW
       e.key === 'Process' ||
       e.keyCode === 229
     ) {
-      beginEditing('');
+      beginEditing('', true);
     } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'c' || e.code === 'KeyC')) {
       e.preventDefault();
       navigator.clipboard.writeText(memo?.content || '');
@@ -176,6 +165,11 @@ export default function MemoSlot({ memo, dayInfo, slotIndex, onSave, coord, maxW
           className="memo-slot-input"
           value={value}
           onChange={e => setValue(e.target.value)}
+          onCompositionStart={() => {
+            if (!imeOpenRef.current) return;
+            imeOpenRef.current = false;
+            setValue('');
+          }}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           autoFocus

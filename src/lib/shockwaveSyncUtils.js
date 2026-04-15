@@ -126,6 +126,9 @@ export function parseTherapyInfo(rawContent) {
   if (visitMatch) {
     visit = visitMatch[1];
     name = name.replace(/\(\d+\)$/, '').trim();
+  } else if (/\(-\)$/.test(name)) {
+    visit = "-";
+    name = name.replace(/\(-\)$/, '').trim();
   } else if (name.endsWith('*')) {
     visit = "1";
     // 별표는 1회차 시각적 표시이므로 이름에 남겨둠
@@ -236,7 +239,7 @@ export async function syncTodayShockwaveScheduleToStats({ year, month, memos, th
     .select('*')
     .eq('date', todayDateStr);
 
-  const schedulerEntries = (todayStats || []).filter((row) => row.source === 'scheduler');
+  const schedulerEntries = (todayStats || []).filter((row) => row.source !== 'manual');
   const existingGroups = {};
   schedulerEntries.forEach((row) => {
     const key = row.patient_name.replace(/\*/g, '');
@@ -244,14 +247,11 @@ export async function syncTodayShockwaveScheduleToStats({ year, month, memos, th
     existingGroups[key].push(row);
   });
 
-  const toUpsert = [];
-  const toInsert = [];
-  const usedIds = new Set();
+  const rebuiltSchedulerRows = [];
 
   newLogs.forEach((item) => {
     const key = item.patient_name.replace(/\*/g, '');
-    const group = existingGroups[key];
-    const old = group?.find((entry) => !usedIds.has(entry.id)) || null;
+    const old = existingGroups[key]?.shift() || null;
 
     const out = {
       date: item.date,
@@ -260,39 +260,138 @@ export async function syncTodayShockwaveScheduleToStats({ year, month, memos, th
       visit_count: item.visit_count,
       body_part: item.body_part,
       therapist_name: item.therapist_name,
+      prescription: old?.prescription || '',
+      prescription_count: old?.prescription_count || '',
       source: 'scheduler',
     };
 
-    if (old) {
-      out.id = old.id;
-      out.prescription = old.prescription || '';
-      out.prescription_count = old.prescription_count || '';
-      toUpsert.push(out);
-      usedIds.add(old.id);
-    } else {
-      toInsert.push(out);
-    }
+    rebuiltSchedulerRows.push(out);
   });
 
-  const toDeleteIds = schedulerEntries.filter((row) => !usedIds.has(row.id)).map((row) => row.id);
+  const toDeleteIds = schedulerEntries.map((row) => row.id).filter(Boolean);
 
   if (toDeleteIds.length > 0) {
     await supabase.from('shockwave_patient_logs').delete().in('id', toDeleteIds);
   }
-  if (toUpsert.length > 0) {
-    await supabase.from('shockwave_patient_logs').upsert(toUpsert);
-  }
-  if (toInsert.length > 0) {
-    await supabase.from('shockwave_patient_logs').insert(toInsert);
+  if (rebuiltSchedulerRows.length > 0) {
+    await supabase.from('shockwave_patient_logs').insert(rebuiltSchedulerRows);
   }
 
   return {
     skipped: false,
     todayDateStr,
     extractedCount: newLogs.length,
-    insertedCount: toInsert.length,
-    updatedCount: toUpsert.length,
+    insertedCount: rebuiltSchedulerRows.length,
+    updatedCount: 0,
     deletedCount: toDeleteIds.length,
-    totalUpdates: toInsert.length + toUpsert.length + toDeleteIds.length,
+    totalUpdates: rebuiltSchedulerRows.length + toDeleteIds.length,
+  };
+}
+
+function formatStatsRowForScheduler(row) {
+  const patientName = String(row?.patient_name || '').trim();
+  if (!patientName) return '';
+
+  const cleanName = patientName.replace(/\*/g, '').trim();
+  const chartNumber = String(row?.chart_number || '').trim();
+  const visitCount = String(row?.visit_count || '').trim();
+  const hasStar = patientName.includes('*');
+
+  let suffix = '';
+  if (visitCount === '-') suffix = '(-)';
+  else if (visitCount) suffix = `(${visitCount})`;
+  else if (hasStar) suffix = '*';
+
+  const nameText = `${cleanName}${suffix}`;
+  return chartNumber ? `${chartNumber}/${nameText}` : nameText;
+}
+
+export async function syncStatsDateToScheduler({ year, month, date, therapists }) {
+  if (!date || !Array.isArray(therapists) || therapists.length === 0) {
+    return { skipped: true, reason: 'missing_input' };
+  }
+
+  const weeks = generateShockwaveCalendar(year, month);
+  let targetWeekIndex = -1;
+  let targetDayIndex = -1;
+
+  weeks.forEach((week, wIdx) => {
+    week.forEach((dayInfo, dIdx) => {
+      const key = `${dayInfo.year}-${String(dayInfo.month).padStart(2, '0')}-${String(dayInfo.day).padStart(2, '0')}`;
+      if (key === date) {
+        targetWeekIndex = wIdx;
+        targetDayIndex = dIdx;
+      }
+    });
+  });
+
+  if (targetWeekIndex < 0 || targetDayIndex < 0) {
+    return { skipped: true, reason: 'date_outside_visible_calendar' };
+  }
+
+  const therapistIndexMap = new Map();
+  therapists.forEach((therapist, index) => {
+    if (!therapist?.name) return;
+    therapistIndexMap.set(therapist.name, index);
+  });
+
+  const { data: dayLogs, error: logsError } = await supabase
+    .from('shockwave_patient_logs')
+    .select('*')
+    .eq('date', date)
+    .order('created_at', { ascending: true });
+
+  if (logsError) throw logsError;
+
+  const groupedByTherapist = Array.from({ length: therapists.length }, () => []);
+  (dayLogs || []).forEach((row) => {
+    const therapistIndex = therapistIndexMap.get(row?.therapist_name);
+    if (typeof therapistIndex !== 'number') return;
+    const content = formatStatsRowForScheduler(row);
+    if (!content) return;
+    groupedByTherapist[therapistIndex].push(content);
+  });
+
+  const therapistCols = therapists.map((_, index) => index);
+  const { error: deleteError } = await supabase
+    .from('shockwave_schedules')
+    .delete()
+    .eq('year', year)
+    .eq('month', month)
+    .eq('week_index', targetWeekIndex)
+    .eq('day_index', targetDayIndex)
+    .in('col_index', therapistCols);
+
+  if (deleteError) throw deleteError;
+
+  const rowsToInsert = [];
+  groupedByTherapist.forEach((items, therapistIndex) => {
+    items.forEach((content, rowIndex) => {
+      rowsToInsert.push({
+        year,
+        month,
+        week_index: targetWeekIndex,
+        day_index: targetDayIndex,
+        row_index: rowIndex,
+        col_index: therapistIndex,
+        content,
+        bg_color: null,
+        merge_span: { rowSpan: 1, colSpan: 1 },
+      });
+    });
+  });
+
+  if (rowsToInsert.length > 0) {
+    const { error: insertError } = await supabase
+      .from('shockwave_schedules')
+      .insert(rowsToInsert);
+    if (insertError) throw insertError;
+  }
+
+  return {
+    synced: true,
+    date,
+    insertedCount: rowsToInsert.length,
+    therapistCount: therapists.length,
   };
 }
