@@ -576,9 +576,26 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   // ── 셀 삭제 ──
   const deleteCells = useCallback(async (keys) => {
+    const affectedKeys = new Set();
+
+    for (const key of keys || []) {
+      const mergeSpan = memos[key]?.merge_span;
+      const masterKey = mergeSpan?.mergedInto || key;
+      const [w, d, r, c] = masterKey.split('-').map(Number);
+      const masterSpan = memos[masterKey]?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+      const rowSpan = Math.max(1, masterSpan.rowSpan || 1);
+      const colSpan = Math.max(1, masterSpan.colSpan || 1);
+
+      for (let row = r; row < r + rowSpan; row++) {
+        for (let col = c; col < c + colSpan; col++) {
+          affectedKeys.add(cellKey(w, d, row, col));
+        }
+      }
+    }
+
     const oldMemos = [];
     const payload = [];
-    for (const key of keys) {
+    for (const key of affectedKeys) {
       const [w, d, r, c] = key.split('-').map(Number);
       const memo = memos[key];
       oldMemos.push({
@@ -590,6 +607,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         col_index: c,
         content: memo?.content || '',
         bg_color: memo?.bg_color || null,
+        merge_span: memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
       });
       payload.push({
         year: currentYear,
@@ -600,6 +618,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         col_index: c,
         content: '',
         bg_color: null,
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
       });
     }
     if (payload.length > 0) {
