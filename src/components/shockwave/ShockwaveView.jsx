@@ -460,6 +460,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     return normalized;
   }, [memos]);
 
+  const normalizeCellToMergeMaster = useCallback((cell) => {
+    if (!cell) return cell;
+    const key = cellKey(cell.w, cell.d, cell.r, cell.c);
+    const mergeSpan = memos[key]?.merge_span;
+    if (!mergeSpan?.mergedInto) return cell;
+    const [w, d, r, c] = mergeSpan.mergedInto.split('-').map(Number);
+    return { w, d, r, c };
+  }, [cellKey, memos]);
+
   const buildRangeKeys = useCallback((anchor, target) => {
     if (!anchor || !target) return new Set();
     if (anchor.w !== target.w || anchor.d !== target.d) {
@@ -480,11 +489,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, []);
 
   const selectSingleCell = useCallback((cell) => {
-    const key = cellKey(cell.w, cell.d, cell.r, cell.c);
-    setSelectedCell(cell);
+    const normalizedCell = normalizeCellToMergeMaster(cell);
+    const key = cellKey(normalizedCell.w, normalizedCell.d, normalizedCell.r, normalizedCell.c);
+    setSelectedCell(normalizedCell);
     setRangeEnd(null);
     setSelectedKeys(new Set([key]));
-  }, []);
+  }, [cellKey, normalizeCellToMergeMaster]);
 
   const updateDraggedSelection = useCallback((targetCell) => {
     const dragState = dragSelectionRef.current;
@@ -498,8 +508,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   // ── 셀 클릭 = 선택 (편집 아님) ──
   const handleCellMouseDown = useCallback((w, d, r, c, e) => {
-    const cell = { w, d, r, c };
-    const key = cellKey(w, d, r, c);
+    const cell = normalizeCellToMergeMaster({ w, d, r, c });
+    const key = cellKey(cell.w, cell.d, cell.r, cell.c);
     const isMeta = e?.metaKey || e?.ctrlKey;
 
     if (e?.button !== 0) return;
@@ -525,7 +535,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       dragSelectionRef.current = { anchor: cell };
     }
     setEditingCell(null);
-  }, [selectedCell, buildRangeKeys, selectSingleCell]);
+  }, [selectedCell, buildRangeKeys, selectSingleCell, normalizeCellToMergeMaster, cellKey]);
 
   const handleCellMouseEnter = useCallback((w, d, r, c) => {
     if (!dragSelectionRef.current) return;
@@ -627,22 +637,31 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     }
   }, [currentYear, currentMonth, memos, saveShockwaveMemosBulk]);
 
-  const tryMergeSelection = useCallback(() => {
+  const tryMergeSelection = useCallback(async () => {
     const selection = computeSelectionInfo();
     if (!selection) return;
     const { w, d, minRow, minCol, maxRow, maxCol, masterKey } = selection;
     const isAlreadyMerged = selection.isMergedMaster;
-    if (!isAlreadyMerged && !selection.selectionMultiple) return;
+    const hasMultipleSelectedCells = (selectedKeys?.size || 0) > 1;
+    if (!isAlreadyMerged && !selection.selectionMultiple && !hasMultipleSelectedCells) return;
 
+    const oldMemos = [];
     const payload = [];
     if (isAlreadyMerged) {
       for (let row = minRow; row <= maxRow; row++) {
         for (let col = minCol; col <= maxCol; col++) {
           const k = cellKey(w, d, row, col);
+          const memo = memos[k];
+          oldMemos.push({
+            year: currentYear, month: currentMonth, week_index: w, day_index: d, row_index: row, col_index: col,
+            content: memo?.content || '',
+            bg_color: memo?.bg_color || null,
+            merge_span: memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+          });
           payload.push({
             year: currentYear, month: currentMonth, week_index: w, day_index: d, row_index: row, col_index: col,
             merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
-            content: memos[k]?.content || ''
+            content: memo?.content || ''
           });
         }
       }
@@ -651,23 +670,31 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         for (let col = minCol; col <= maxCol; col++) {
           const k = cellKey(w, d, row, col);
           const isMaster = (k === masterKey);
+          const memo = memos[k];
+          oldMemos.push({
+            year: currentYear, month: currentMonth, week_index: w, day_index: d, row_index: row, col_index: col,
+            content: memo?.content || '',
+            bg_color: memo?.bg_color || null,
+            merge_span: memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+          });
           payload.push({
             year: currentYear, month: currentMonth, week_index: w, day_index: d, row_index: row, col_index: col,
             merge_span: isMaster
               ? { rowSpan: maxRow - minRow + 1, colSpan: maxCol - minCol + 1, mergedInto: null }
               : { rowSpan: 1, colSpan: 1, mergedInto: masterKey },
-            content: isMaster ? (memos[k]?.content || '') : ''
+            content: isMaster ? (memo?.content || '') : ''
           });
         }
       }
     }
 
     if (payload.length > 0) {
-      saveShockwaveMemosBulk(payload);
+      recordUndo({ type: 'bulk-edit', oldMemos });
+      await saveShockwaveMemosBulk(payload);
       addToast(isAlreadyMerged ? '병합이 해제되었습니다' : '셀이 병합되었습니다', 'info');
     }
     setContextMenu(null);
-  }, [computeSelectionInfo, currentYear, currentMonth, memos, saveShockwaveMemosBulk, addToast, cellKey]);
+  }, [computeSelectionInfo, currentYear, currentMonth, memos, saveShockwaveMemosBulk, addToast, cellKey, recordUndo, selectedKeys]);
 
   const selectionInfo = computeSelectionInfo();
   const hasCompletableSelection = useMemo(() => {
@@ -956,6 +983,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const effectiveKeys = normalizeKeysToMergeMasters(selectedKeys);
     const oldMemos = [];
     const payload = [];
+    const touchedKeys = new Set();
     const shouldClearSelection =
       mode === 'toggle'
         ? Array.from(effectiveKeys).some((key) => memos[key]?.bg_color === '#ffe599')
@@ -968,32 +996,46 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
       if (!String(content).trim()) return;
 
+      const masterSpan = memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+      const rowSpan = Math.max(1, masterSpan.rowSpan || 1);
+      const colSpan = Math.max(1, masterSpan.colSpan || 1);
       const isCompleted = memo?.bg_color === '#ffe599';
       const nextBgColor = shouldClearSelection ? null : '#ffe599';
 
       if (isCompleted === (nextBgColor === '#ffe599')) return;
 
-      oldMemos.push({
-        year: currentYear,
-        month: currentMonth,
-        week_index: w,
-        day_index: d,
-        row_index: r,
-        col_index: c,
-        content,
-        bg_color: memo?.bg_color || null,
-      });
+      for (let row = r; row < r + rowSpan; row += 1) {
+        for (let col = c; col < c + colSpan; col += 1) {
+          const rangeKey = cellKey(w, d, row, col);
+          if (touchedKeys.has(rangeKey)) continue;
+          touchedKeys.add(rangeKey);
 
-      payload.push({
-        year: currentYear,
-        month: currentMonth,
-        week_index: w,
-        day_index: d,
-        row_index: r,
-        col_index: c,
-        content,
-        bg_color: nextBgColor,
-      });
+          const rangeMemo = memos[rangeKey];
+          oldMemos.push({
+            year: currentYear,
+            month: currentMonth,
+            week_index: w,
+            day_index: d,
+            row_index: row,
+            col_index: col,
+            content: rangeMemo?.content || '',
+            bg_color: rangeMemo?.bg_color || null,
+            merge_span: rangeMemo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+          });
+
+          payload.push({
+            year: currentYear,
+            month: currentMonth,
+            week_index: w,
+            day_index: d,
+            row_index: row,
+            col_index: col,
+            content: rangeMemo?.content || '',
+            bg_color: nextBgColor,
+            merge_span: rangeMemo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+          });
+        }
+      }
     });
 
     if (payload.length === 0) return null;

@@ -61,6 +61,7 @@ export default function ShockwaveDataGrid({
   }, [currentMonth, currentYear, onSyncDateToScheduler, therapists]);
 
   const [insertedDraftRows, setInsertedDraftRows] = useState([]);
+  const [draftCellValues, setDraftCellValues] = useState({});
   const [clipboardSource, setClipboardSource] = useState(null); // { r1, c1, r2, c2, mode: 'copy'|'cut' }
   const [undoStack, setUndoStack] = useState([]);
   const rowClipboardRef = useRef({ row: null, mode: null });
@@ -141,15 +142,17 @@ export default function ShockwaveDataGrid({
     // Add 40+ empty draft rows
     const draftsNeeded = Math.max(60 - flat.length, 30) + extraDraftRows;
     for (let i = 0; i < draftsNeeded; i++) {
+      const draftId = `draft-${i}`;
       flat.push({
-        id: `draft-${i}`,
+        id: draftId,
         date: '', patient_name: '', chart_number: '', visit_count: '',
         body_part: '', therapist_name: '', prescription: '', prescription_count: '',
+        ...(draftCellValues[draftId] || {}),
         isDraft: true, _isFirst: true, _isLast: true, _groupSize: 1,
       });
     }
     return flat;
-  }, [logs, extraDraftRows, insertedDraftRows]);
+  }, [logs, extraDraftRows, insertedDraftRows, draftCellValues]);
 
   const rememberCurrentRowOrder = useCallback(() => {
     const nextOrder = new Map();
@@ -159,6 +162,11 @@ export default function ShockwaveDataGrid({
     });
     rowOrderRef.current = nextOrder;
   }, [gridData]);
+
+  useEffect(() => {
+    setInsertedDraftRows([]);
+    setDraftCellValues({});
+  }, [currentYear, currentMonth]);
 
   // Column definitions (flat array matching <colgroup>)
   const FIXED_FIELDS = [
@@ -266,6 +274,43 @@ export default function ShockwaveDataGrid({
     prescription_count: row?.prescription_count || '',
   }), []);
 
+  const setLocalDraftRow = useCallback((rowId, nextValues, isInsertedDraft) => {
+    const normalized = {
+      date: nextValues?.date || '',
+      patient_name: nextValues?.patient_name || '',
+      chart_number: nextValues?.chart_number || '',
+      visit_count: nextValues?.visit_count || '',
+      body_part: nextValues?.body_part || '',
+      therapist_name: nextValues?.therapist_name || '',
+      prescription: nextValues?.prescription || '',
+      prescription_count: nextValues?.prescription_count || '',
+    };
+
+    if (isInsertedDraft) {
+      setInsertedDraftRows((prev) => prev.map((item) => (
+        item.id === rowId ? { ...item, ...normalized } : item
+      )));
+      return;
+    }
+
+    setDraftCellValues((prev) => ({
+      ...prev,
+      [rowId]: normalized,
+    }));
+  }, []);
+
+  const clearLocalDraftRow = useCallback((rowId, isInsertedDraft) => {
+    if (isInsertedDraft) {
+      setInsertedDraftRows((prev) => prev.filter((item) => item.id !== rowId));
+      return;
+    }
+    setDraftCellValues((prev) => {
+      const next = { ...prev };
+      delete next[rowId];
+      return next;
+    });
+  }, []);
+
   const applyRowSnapshot = useCallback(async (targetRow, snapshot) => {
     if (!targetRow || !snapshot) return;
     const affectedDates = new Set();
@@ -286,9 +331,7 @@ export default function ShockwaveDataGrid({
 
     if (targetRow.isDraft) {
       await supabase.from(tableName).insert([payload]);
-      if (targetRow.isInsertedDraft) {
-        setInsertedDraftRows((prev) => prev.filter((item) => item.id !== targetRow.id));
-      }
+      clearLocalDraftRow(targetRow.id, targetRow.isInsertedDraft);
     } else {
       await supabase.from(tableName).update(payload).eq('id', targetRow.id);
     }
@@ -303,7 +346,7 @@ export default function ShockwaveDataGrid({
         console.error('Failed to sync stats row snapshot to scheduler:', error);
       }
     }
-  }, [currentMonth, currentYear, fetchLogs, rememberCurrentRowOrder, runSyncForDate, tableName]);
+  }, [clearLocalDraftRow, currentMonth, currentYear, fetchLogs, rememberCurrentRowOrder, runSyncForDate, tableName]);
 
   const insertDraftRow = useCallback((anchorRow, placement) => {
     if (!anchorRow) return;
@@ -412,11 +455,28 @@ export default function ShockwaveDataGrid({
             const validDates = logs.map(l => l.date).filter(Boolean).sort();
             if (validDates.length > 0) fallbackDate = validDates[validDates.length - 1];
         }
-        const ins = { date: row.date || fallbackDate, patient_name: row.patient_name || '', chart_number: row.chart_number || '', visit_count: row.visit_count || '', body_part: row.body_part || '', therapist_name: '', prescription: '', prescription_count: 0, source: 'manual', ...updatePayload };
-        if (!ins.date) ins.date = fallbackDate;
-        if (ins.date) affectedDates.add(ins.date);
-      await supabase.from(tableName).insert([ins]);
-        if (row.isInsertedDraft) setInsertedDraftRows((prev) => prev.filter((item) => item.id !== row.id));
+        const nextDraft = {
+          date: row.date || fallbackDate,
+          patient_name: row.patient_name || '',
+          chart_number: row.chart_number || '',
+          visit_count: row.visit_count || '',
+          body_part: row.body_part || '',
+          therapist_name: row.therapist_name || '',
+          prescription: row.prescription || '',
+          prescription_count: row.prescription_count || 0,
+          ...updatePayload,
+        };
+        if (!nextDraft.date) nextDraft.date = fallbackDate;
+
+        if (!String(nextDraft.patient_name || '').trim()) {
+          setLocalDraftRow(row.id, nextDraft, row.isInsertedDraft);
+          return;
+        }
+
+        if (nextDraft.date) affectedDates.add(nextDraft.date);
+        const ins = { ...nextDraft, source: 'manual' };
+        await supabase.from(tableName).insert([ins]);
+        clearLocalDraftRow(row.id, row.isInsertedDraft);
       } else {
         const nextRow = { ...row, ...updatePayload };
         if (nextRow?.date) affectedDates.add(nextRow.date);
@@ -438,10 +498,25 @@ export default function ShockwaveDataGrid({
             const validDates = logs.map(l => l.date).filter(Boolean).sort();
             if (validDates.length > 0) fallbackDate = validDates[validDates.length - 1];
         }
-        const ins = { date: fallbackDate, patient_name: '(이름없음)', chart_number: '', visit_count: '', body_part: '', therapist_name: t.name, prescription: pres, prescription_count: intVal, source: 'manual' };
-        if (ins.date) affectedDates.add(ins.date);
-        await supabase.from(tableName).insert([ins]);
-        if (row.isInsertedDraft) setInsertedDraftRows((prev) => prev.filter((item) => item.id !== row.id));
+        const nextDraft = {
+          date: row.date || fallbackDate,
+          patient_name: row.patient_name || '',
+          chart_number: row.chart_number || '',
+          visit_count: row.visit_count || '',
+          body_part: row.body_part || '',
+          therapist_name: t.name,
+          prescription: pres,
+          prescription_count: intVal,
+        };
+
+        if (!String(nextDraft.patient_name || '').trim()) {
+          setLocalDraftRow(row.id, nextDraft, row.isInsertedDraft);
+          return;
+        }
+
+        if (nextDraft.date) affectedDates.add(nextDraft.date);
+        await supabase.from(tableName).insert([{ ...nextDraft, source: 'manual' }]);
+        clearLocalDraftRow(row.id, row.isInsertedDraft);
       } else {
         if (val.trim() === '') {
           if (row.therapist_name === t.name && row.prescription === pres) {
@@ -683,8 +758,8 @@ export default function ShockwaveDataGrid({
   const doDeleteRow = async (r, options = {}) => {
     const { skipConfirm = false } = options;
     const row = gridData[r];
-    if (row?.isInsertedDraft) {
-      setInsertedDraftRows((prev) => prev.filter((item) => item.id !== row.id));
+    if (row?.isDraft) {
+      clearLocalDraftRow(row.id, row.isInsertedDraft);
       setCtxMenu(null);
       return;
     }
