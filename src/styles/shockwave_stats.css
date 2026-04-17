@@ -167,6 +167,71 @@
   overflow: hidden;
 }
 
+.sw-stats-body--grid {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.sw-grid-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sw-grid-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sw-grid-card-title h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.sw-grid-card-title p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.sw-grid-card-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sw-grid-card-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.sw-grid-card-table {
+  overflow: hidden;
+  border: 1px solid var(--border-color-light);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
 /* ════════════════════════════════════════════════════════════
    DATA GRID — Refined Dashboard Table
    ════════════════════════════════════════════════════════════ */
@@ -204,7 +269,8 @@
   max-height: 85vh;
   position: relative;
   outline: none;
-  background: var(--bg-secondary);
+  background: #ffffff;
+  border-radius: 16px;
 }
 
 .sw-grid-table {
@@ -951,5 +1017,63 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 .sw-summary-table tr th:last-child,
 .sw-summary-table tr td:last-child {
+  border-right: none;
+}
+
+.sw-new-patient-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.sw-new-patient-table th,
+.sw-new-patient-table td {
+  padding: 12px 10px;
+  text-align: center;
+  border-right: 1px solid #dbe3ee;
+  border-bottom: 1px solid #dbe3ee;
+  white-space: nowrap;
+}
+
+.sw-new-patient-table thead th {
+  background: #eef4fb;
+  color: #334155;
+  font-weight: 800;
+}
+
+.sw-new-patient-table thead .therapist-col {
+  background: #dce9f9;
+  font-size: 0.98rem;
+}
+
+.sw-new-patient-table thead .sub-col {
+  background: #f5f8fc;
+  color: #475569;
+  font-size: 0.84rem;
+}
+
+.sw-new-patient-table tbody td {
+  background: #ffffff;
+  color: #334155;
+  font-weight: 700;
+}
+
+.sw-new-patient-table tbody td.patient-name {
+  text-align: left;
+  padding-left: 14px;
+}
+
+.sw-new-patient-table tbody td.visit-count {
+  color: #7c3aed;
+}
+
+.sw-new-patient-table tr:last-child td,
+.sw-new-patient-table tr:last-child th {
+  border-bottom: none;
+}
+
+.sw-new-patient-table tr th:last-child,
+.sw-new-patient-table tr td:last-child {
   border-right: none;
 }

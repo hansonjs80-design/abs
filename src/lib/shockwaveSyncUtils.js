@@ -148,6 +148,86 @@ export function parseTherapyInfo(rawContent) {
   };
 }
 
+function buildSchedulerRowPlacement(items, existingRows) {
+  const parsedExistingRows = (existingRows || [])
+    .map((row) => {
+      const parsed = parseTherapyInfo(row?.content);
+      return {
+        rowIndex: Number(row?.row_index),
+        content: String(row?.content || '').trim(),
+        cleanName: parsed?.patient_name?.replace(/\*/g, '').trim() || '',
+      };
+    })
+    .filter((row) => Number.isInteger(row.rowIndex))
+    .sort((a, b) => a.rowIndex - b.rowIndex);
+
+  const usedRowIndexes = new Set();
+  const lastAssignedRowByName = new Map();
+  const existingRowsByContent = new Map();
+  const existingRowsByName = new Map();
+
+  parsedExistingRows.forEach((row) => {
+    if (row.content) {
+      const contentRows = existingRowsByContent.get(row.content) || [];
+      contentRows.push(row.rowIndex);
+      existingRowsByContent.set(row.content, contentRows);
+    }
+    if (row.cleanName) {
+      const nameRows = existingRowsByName.get(row.cleanName) || [];
+      nameRows.push(row.rowIndex);
+      existingRowsByName.set(row.cleanName, nameRows);
+    }
+  });
+
+  const takeMatchingExistingRow = (matcher) => {
+    const matchedRow = parsedExistingRows.find(
+      (row) => !usedRowIndexes.has(row.rowIndex) && matcher(row)
+    );
+    if (!matchedRow) return null;
+    usedRowIndexes.add(matchedRow.rowIndex);
+    return matchedRow.rowIndex;
+  };
+
+  const findNextAvailableRow = (startRow) => {
+    let candidate = Math.max(0, Number.isInteger(startRow) ? startRow : 0);
+    while (usedRowIndexes.has(candidate)) candidate += 1;
+    usedRowIndexes.add(candidate);
+    return candidate;
+  };
+
+  return items.map((item, itemIndex) => {
+    const content = String(item?.content || '').trim();
+    const cleanName = String(item?.cleanName || '').trim();
+
+    let rowIndex =
+      takeMatchingExistingRow((row) => content && row.content === content) ??
+      takeMatchingExistingRow((row) => cleanName && row.cleanName === cleanName);
+
+    if (!Number.isInteger(rowIndex) && cleanName && lastAssignedRowByName.has(cleanName)) {
+      rowIndex = findNextAvailableRow(lastAssignedRowByName.get(cleanName) + 1);
+    }
+
+    if (!Number.isInteger(rowIndex) && cleanName) {
+      const existingNameRows = existingRowsByName.get(cleanName) || [];
+      const anchorRow = existingNameRows.length > 0
+        ? Math.max(...existingNameRows)
+        : itemIndex;
+      rowIndex = findNextAvailableRow(anchorRow);
+    }
+
+    if (!Number.isInteger(rowIndex)) {
+      rowIndex = findNextAvailableRow(itemIndex);
+    }
+
+    if (cleanName) lastAssignedRowByName.set(cleanName, rowIndex);
+
+    return {
+      ...item,
+      rowIndex,
+    };
+  });
+}
+
 async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therapists }) {
   if (!memos) {
     return { skipped: true, reason: 'missing_memos' };
@@ -342,6 +422,7 @@ export async function syncStatsDateToScheduler({ year, month, date, therapists }
     if (!therapist?.name) return;
     therapistIndexMap.set(therapist.name, index);
   });
+  const therapistCols = therapists.map((_, index) => index);
 
   const { data: dayLogs, error: logsError } = await supabase
     .from('shockwave_patient_logs')
@@ -351,16 +432,29 @@ export async function syncStatsDateToScheduler({ year, month, date, therapists }
 
   if (logsError) throw logsError;
 
+  const { data: existingScheduleRows, error: existingScheduleError } = await supabase
+    .from('shockwave_schedules')
+    .select('row_index, col_index, content')
+    .eq('year', year)
+    .eq('month', month)
+    .eq('week_index', targetWeekIndex)
+    .eq('day_index', targetDayIndex)
+    .in('col_index', therapistCols)
+    .order('row_index', { ascending: true });
+
+  if (existingScheduleError) throw existingScheduleError;
+
   const groupedByTherapist = Array.from({ length: therapists.length }, () => []);
   (dayLogs || []).forEach((row) => {
     const therapistIndex = therapistIndexMap.get(row?.therapist_name);
     if (typeof therapistIndex !== 'number') return;
     const content = formatStatsRowForScheduler(row);
     if (!content) return;
-    groupedByTherapist[therapistIndex].push(content);
+    groupedByTherapist[therapistIndex].push({
+      content,
+      cleanName: String(row?.patient_name || '').replace(/\*/g, '').trim(),
+    });
   });
-
-  const therapistCols = therapists.map((_, index) => index);
   const { error: deleteError } = await supabase
     .from('shockwave_schedules')
     .delete()
@@ -374,7 +468,12 @@ export async function syncStatsDateToScheduler({ year, month, date, therapists }
 
   const rowsToInsert = [];
   groupedByTherapist.forEach((items, therapistIndex) => {
-    items.forEach((content, rowIndex) => {
+    const existingRowsForTherapist = (existingScheduleRows || []).filter(
+      (row) => row?.col_index === therapistIndex
+    );
+    const placedRows = buildSchedulerRowPlacement(items, existingRowsForTherapist);
+
+    placedRows.forEach(({ content, rowIndex }) => {
       rowsToInsert.push({
         year,
         month,

@@ -7,6 +7,7 @@ import { useSchedule } from '../../contexts/ScheduleContext';
 import '../../styles/shockwave_stats.css';
 import ShockwaveDataGrid from './ShockwaveDataGrid';
 import ShockwaveSettlementView from './ShockwaveSettlementView';
+import ShockwaveNewPatientsView from './ShockwaveNewPatientsView';
 
 class ShockwaveStatsErrorBoundary extends React.Component {
   constructor(props) {
@@ -42,7 +43,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   const [recentLogs, setRecentLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [extraDraftRows, setExtraDraftRows] = useState(0);
-  const [activeSection, setActiveSection] = useState('overview');
+  const [activeSection, setActiveSection] = useState('grid');
   const [isAutoSyncingToday, setIsAutoSyncingToday] = useState(false);
   const lastAutoSyncKeyRef = useRef(null);
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
@@ -168,7 +169,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   }, [currentYear, currentMonth]);
 
   useEffect(() => {
-    setActiveSection('overview');
+    setActiveSection('grid');
   }, [currentYear, currentMonth]);
 
   useEffect(() => {
@@ -453,22 +454,28 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
       <div className="sw-stats-layout">
         <aside className="sw-stats-sidebar">
           <button
-            className={`sw-stats-side-tab${activeSection === 'overview' ? ' active' : ''}`}
-            onClick={() => setActiveSection('overview')}
-          >
-            치료 내역 통계
-          </button>
-          <button
             className={`sw-stats-side-tab${activeSection === 'grid' ? ' active' : ''}`}
             onClick={() => setActiveSection('grid')}
           >
             충격파 현황
           </button>
           <button
+            className={`sw-stats-side-tab${activeSection === 'overview' ? ' active' : ''}`}
+            onClick={() => setActiveSection('overview')}
+          >
+            치료 내역 통계
+          </button>
+          <button
             className={`sw-stats-side-tab${activeSection === 'settlement' ? ' active' : ''}`}
             onClick={() => setActiveSection('settlement')}
           >
             충격파 결산
+          </button>
+          <button
+            className={`sw-stats-side-tab${activeSection === 'new-patients' ? ' active' : ''}`}
+            onClick={() => setActiveSection('new-patients')}
+          >
+            신규환자
           </button>
         </aside>
 
@@ -531,21 +538,35 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
           )}
 
           {activeSection === 'grid' && (
-            <>
-              <div className="sw-stats-body">
-                <ShockwaveStatsErrorBoundary>
-                  <ShockwaveDataGrid
-                    logs={safeLogs}
-                    therapists={safeTherapists}
-                    currentYear={currentYear}
-                    currentMonth={currentMonth}
-                    fetchLogs={fetchLogs}
-                    extraDraftRows={extraDraftRows}
-                    onApplyTodaySchedule={handleSyncFromScheduler}
-                    isApplyingTodaySchedule={isLoading}
-                  />
-                </ShockwaveStatsErrorBoundary>
+            <div className="sw-stats-body sw-stats-body--grid">
+              <div className="sw-grid-card">
+                <div className="sw-grid-card-header">
+                  <div className="sw-grid-card-title">
+                    <h2>{currentMonth}월 충격파 현황</h2>
+                    <p>날짜별 치료 내역과 치료사별 처방 분포를 한 화면에서 확인하고 수정합니다.</p>
+                  </div>
+                  <div className="sw-grid-card-meta">
+                    <span>총 기록 {safeLogs.length}건</span>
+                    <span>치료사 {safeTherapists.length}명</span>
+                  </div>
+                </div>
+
+                <div className="sw-grid-card-table">
+                  <ShockwaveStatsErrorBoundary>
+                    <ShockwaveDataGrid
+                      logs={safeLogs}
+                      therapists={safeTherapists}
+                      currentYear={currentYear}
+                      currentMonth={currentMonth}
+                      fetchLogs={fetchLogs}
+                      extraDraftRows={extraDraftRows}
+                      onApplyTodaySchedule={handleSyncFromScheduler}
+                      isApplyingTodaySchedule={isLoading}
+                    />
+                  </ShockwaveStatsErrorBoundary>
+                </div>
               </div>
+
               <div className="sw-stats-footer">
                 <button
                   className="btn btn-secondary sw-add-rows-btn"
@@ -554,7 +575,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                   + 10행 추가
                 </button>
               </div>
-            </>
+            </div>
           )}
 
           {activeSection === 'settlement' && (
@@ -567,6 +588,16 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                 prescriptionPrices={settlementPrices}
                 incentivePercentage={incentivePercentage}
                 recentMonthlySummaries={recentMonthlySummaries}
+              />
+            </div>
+          )}
+
+          {activeSection === 'new-patients' && (
+            <div className="sw-stats-body sw-stats-body--settlement">
+              <ShockwaveNewPatientsView
+                logs={safeLogs}
+                therapists={safeTherapists}
+                currentMonth={currentMonth}
               />
             </div>
           )}
