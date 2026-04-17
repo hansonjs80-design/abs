@@ -8,6 +8,7 @@ import { useToast } from '../common/Toast';
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 const HORIZONTAL_BORDER_COLOR = '#b7b7b7';
+const TIME_COL_WIDTH = 46;
 const SHOCKWAVE_DAY_COL_WIDTH_KEY = 'shockwave-day-col-width';
 const SHOCKWAVE_COL_RATIOS_KEY = 'shockwave-col-ratios';
 
@@ -808,6 +809,44 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     };
   }, [selectedCell, selectionInfo, memos, cellKey]);
 
+  const parsePlainTextClipboard = useCallback((plainText) => {
+    if (typeof plainText !== 'string') return null;
+    const normalized = plainText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    if (!normalized.length) return null;
+
+    const rawRows = normalized.split('\n');
+    while (rawRows.length > 1 && rawRows[rawRows.length - 1] === '') {
+      rawRows.pop();
+    }
+
+    const cells = rawRows.map((rowText, rowOffset) =>
+      rowText.split('\t').map((content, colOffset) => ({
+        rowOffset,
+        colOffset,
+        content,
+        bg_color: null,
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+      }))
+    );
+
+    const rowCount = cells.length;
+    const pastedColCount = cells.reduce((max, row) => Math.max(max, row.length), 0);
+    if (!rowCount || !pastedColCount) return null;
+
+    return {
+      mode: 'copy',
+      srcW: selectedCell?.w ?? 0,
+      srcD: selectedCell?.d ?? 0,
+      srcMinRow: 0,
+      srcMinCol: 0,
+      rowCount,
+      colCount: pastedColCount,
+      cells,
+      sourceKeys: [],
+      plainText: normalized,
+    };
+  }, [selectedCell]);
+
   const buildPastePayload = useCallback((clip, target) => {
     if (!clip?.cells?.length) return [];
     const payload = [];
@@ -896,10 +935,27 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setContextMenu(null);
   }, [buildClipboardSelection, addToast]);
 
-  const handlePasteSelection = useCallback(async () => {
+  const handlePasteSelection = useCallback(async (forcedPlainText = null) => {
     if (!selectedCell) return;
-    const clip = clipboardRef.current;
+    let clip = clipboardRef.current;
     const currentClipboardSource = clipboardSource;
+
+    if (typeof forcedPlainText === 'string') {
+      const externalClip = parsePlainTextClipboard(forcedPlainText);
+      if (externalClip?.cells?.length) clip = externalClip;
+    } else if (typeof navigator !== 'undefined' && navigator.clipboard?.readText) {
+      try {
+        const clipboardText = await navigator.clipboard.readText();
+        if (clipboardText) {
+          const externalClip = parsePlainTextClipboard(clipboardText);
+          const internalPlainText = clipboardRef.current?.plainText || '';
+          if (externalClip?.cells?.length && clipboardText !== internalPlainText) {
+            clip = externalClip;
+          }
+        }
+      } catch (_) {}
+    }
+
     if (!clip?.cells?.length) {
       setContextMenu(null);
       return;
@@ -975,7 +1031,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     recordUndo({ type: 'bulk-edit', oldMemos });
     addToast('붙여넣기 완료', 'success');
     setContextMenu(null);
-  }, [selectedCell, buildPastePayload, addToast, clipboardSource, memos, cellKey, currentYear, currentMonth, baseTimeSlots.length, colCount, saveShockwaveMemosBulk]);
+  }, [selectedCell, clipboardSource, parsePlainTextClipboard, buildPastePayload, addToast, memos, cellKey, currentYear, currentMonth, baseTimeSlots.length, colCount, saveShockwaveMemosBulk]);
 
   const buildTreatmentCompletePayload = useCallback((mode) => {
     if (!selectedKeys || selectedKeys.size === 0) return null;
@@ -1218,6 +1274,27 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, [handleKeyDown]);
 
   useEffect(() => {
+    const el = viewRef.current;
+    if (!el) return undefined;
+
+    const handlePasteEvent = (event) => {
+      if (!selectedCell) return;
+      const target = event.target;
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target?.isContentEditable) {
+        return;
+      }
+
+      const pastedText = event.clipboardData?.getData('text/plain');
+      if (!pastedText) return;
+      event.preventDefault();
+      handlePasteSelection(pastedText);
+    };
+
+    el.addEventListener('paste', handlePasteEvent);
+    return () => el.removeEventListener('paste', handlePasteEvent);
+  }, [selectedCell, handlePasteSelection]);
+
+  useEffect(() => {
     const handleWindowKeyDown = (event) => {
       const target = event.target;
       const isEditableTarget =
@@ -1369,7 +1446,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                 ? colRatios.map(r => `minmax(0, ${r}fr)`).join(' ')
                 : `repeat(${colCount}, minmax(0, 1fr))`;
               const gridCols = showTimeCol
-                ? `46px ${therapistCols}`
+                ? `${TIME_COL_WIDTH}px ${therapistCols}`
                 : therapistCols;
 
               let headerClass = 'sw-day-header';
@@ -1378,8 +1455,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               else if (isToday) headerClass += ' today';
               else if (dayInfo.dow === 6) headerClass += ' saturday';
 
-              const targetColWidth = showTimeCol && dayColWidth ? dayColWidth + 46 : dayColWidth;
-              const flexBasis = showTimeCol ? 46 : 0;
+              const targetColWidth = showTimeCol && dayColWidth ? dayColWidth + TIME_COL_WIDTH : dayColWidth;
+              const flexBasis = showTimeCol ? TIME_COL_WIDTH : 0;
               const dayFlexStyle = targetColWidth
                 ? { flex: `0 0 ${targetColWidth}px`, width: `${targetColWidth}px` }
                 : { flex: `1 1 ${flexBasis}px`, minWidth: 0 };
@@ -1413,7 +1490,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       const ratios = colRatios || Array(colCount).fill(1);
                       const totalR = ratios.reduce((a, b) => a + b, 0);
                       const leftPct = ratios.slice(0, ci + 1).reduce((a, b) => a + b, 0) / totalR * 100;
-                      const timeColPx = showTimeCol ? 46 : 0;
+                      const timeColPx = showTimeCol ? TIME_COL_WIDTH : 0;
                       return (
                         <div
                           key={`col-resize-${ci}`}
@@ -1608,12 +1685,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                         e.preventDefault();
                         e.stopPropagation();
                         const currentDayWidth = e.currentTarget.closest('.shockwave-day').getBoundingClientRect().width;
+                        const normalizedDayWidth = showTimeCol
+                          ? Math.max(100, currentDayWidth - TIME_COL_WIDTH)
+                          : currentDayWidth;
                         dayResizeRef.current = { active: true, startX: e.clientX, startWidth: currentDayWidth, factor: 1 };
                         const onMove = (ev) => {
                           if (!dayResizeRef.current.active) return;
-                          const { startWidth, startX } = dayResizeRef.current;
+                          const { startX } = dayResizeRef.current;
                           const delta = ev.clientX - startX;
-                          const newWidth = Math.max(100, Math.min(600, startWidth + delta));
+                          const newWidth = Math.max(100, Math.min(600, normalizedDayWidth + delta));
                           setDayColWidth(newWidth);
                         };
                         const onUp = () => {
