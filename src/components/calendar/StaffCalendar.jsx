@@ -189,6 +189,7 @@ export default function StaffCalendar() {
       }
     }
     if (proms.length) { recordUndo({ type: 'bulk', items }); await Promise.all(proms); addToast('붙여넣기 완료', 'success'); }
+    setClipboardSource(null);
   }, [selectedCell, clipboardSource, cellFromXY, grid, staffMemos, saveStaffMemo, dayFromKey, recordUndo, addToast]);
 
   // ── Edit key handler ──
