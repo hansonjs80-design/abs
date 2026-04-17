@@ -1758,8 +1758,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             borderBottom: isLastRenderedRow ? 'none' : `1px solid ${HORIZONTAL_BORDER_COLOR}`,
                           };
                           
-                          if (memo?.prescription && settings?.prescription_colors?.[memo.prescription]) {
-                            inlineStyle.color = settings.prescription_colors[memo.prescription];
+                          if (cellData?.prescription && settings?.prescription_colors?.[cellData.prescription]) {
+                            inlineStyle.color = settings.prescription_colors[cellData.prescription];
                             inlineStyle.fontWeight = '700';
                           }
 
@@ -1828,7 +1828,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 onContextMenu={(e) => {
                                   // 내용이 있을 때만 처방을 설정할 수 있도록 함
                                   if (content && content.trim() !== '' && content.trim() !== '\u200B') {
-                                    handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, memo?.prescription);
+                                    handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellData?.prescription);
                                   }
                                 }}
                               >
