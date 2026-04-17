@@ -39,10 +39,26 @@ export default function ShockwaveDataGrid({
   extraDraftRows = 0,
   onApplyTodaySchedule,
   isApplyingTodaySchedule = false,
+  tableName = 'shockwave_patient_logs',
+  prescriptions: prescriptionsProp,
+  frozenColumnCount: frozenColumnCountProp,
+  title,
+  applyTodayLabel = '오늘 스케줄 적용',
+  secondarySummaryLabel = '신환',
+  onSyncDateToScheduler = syncStatsDateToScheduler,
 }) {
   const { shockwaveSettings: settings } = useSchedule();
-  const prescriptions = useMemo(() => settings?.prescriptions || ['F1.5', 'F/Rdc', 'F/R'], [settings?.prescriptions]);
-  const frozenColumnCount = settings?.frozen_columns ?? 6;
+  const prescriptions = useMemo(
+    () => prescriptionsProp || settings?.prescriptions || ['F1.5', 'F/Rdc', 'F/R'],
+    [prescriptionsProp, settings?.prescriptions]
+  );
+  const frozenColumnCount = frozenColumnCountProp ?? settings?.frozen_columns ?? 6;
+  const gridTitle = title || `${currentMonth}월 충격파 현황`;
+
+  const runSyncForDate = useCallback(async (date) => {
+    if (!date || !onSyncDateToScheduler) return;
+    await onSyncDateToScheduler({ year: currentYear, month: currentMonth, date, therapists });
+  }, [currentMonth, currentYear, onSyncDateToScheduler, therapists]);
 
   const [insertedDraftRows, setInsertedDraftRows] = useState([]);
   const [clipboardSource, setClipboardSource] = useState(null); // { r1, c1, r2, c2, mode: 'copy'|'cut' }
@@ -269,12 +285,12 @@ export default function ShockwaveDataGrid({
     };
 
     if (targetRow.isDraft) {
-      await supabase.from('shockwave_patient_logs').insert([payload]);
+      await supabase.from(tableName).insert([payload]);
       if (targetRow.isInsertedDraft) {
         setInsertedDraftRows((prev) => prev.filter((item) => item.id !== targetRow.id));
       }
     } else {
-      await supabase.from('shockwave_patient_logs').update(payload).eq('id', targetRow.id);
+      await supabase.from(tableName).update(payload).eq('id', targetRow.id);
     }
 
     rememberCurrentRowOrder();
@@ -282,12 +298,12 @@ export default function ShockwaveDataGrid({
     for (const date of affectedDates) {
       if (!date) continue;
       try {
-        await syncStatsDateToScheduler({ year: currentYear, month: currentMonth, date, therapists });
+        await runSyncForDate(date);
       } catch (error) {
         console.error('Failed to sync stats row snapshot to scheduler:', error);
       }
     }
-  }, [currentMonth, currentYear, fetchLogs, rememberCurrentRowOrder]);
+  }, [currentMonth, currentYear, fetchLogs, rememberCurrentRowOrder, runSyncForDate, tableName]);
 
   const insertDraftRow = useCallback((anchorRow, placement) => {
     if (!anchorRow) return;
@@ -399,13 +415,13 @@ export default function ShockwaveDataGrid({
         const ins = { date: row.date || fallbackDate, patient_name: row.patient_name || '', chart_number: row.chart_number || '', visit_count: row.visit_count || '', body_part: row.body_part || '', therapist_name: '', prescription: '', prescription_count: 0, source: 'manual', ...updatePayload };
         if (!ins.date) ins.date = fallbackDate;
         if (ins.date) affectedDates.add(ins.date);
-        await supabase.from('shockwave_patient_logs').insert([ins]);
+      await supabase.from(tableName).insert([ins]);
         if (row.isInsertedDraft) setInsertedDraftRows((prev) => prev.filter((item) => item.id !== row.id));
       } else {
         const nextRow = { ...row, ...updatePayload };
         if (nextRow?.date) affectedDates.add(nextRow.date);
-        if (isRowEmpty(nextRow)) await supabase.from('shockwave_patient_logs').delete().eq('id', row.id);
-        else await supabase.from('shockwave_patient_logs').update(updatePayload).eq('id', row.id);
+        if (isRowEmpty(nextRow)) await supabase.from(tableName).delete().eq('id', row.id);
+        else await supabase.from(tableName).update(updatePayload).eq('id', row.id);
       }
     } else {
       const tIdx = Math.floor((c - FIXED_FIELDS.length) / prescriptions.length);
@@ -424,18 +440,18 @@ export default function ShockwaveDataGrid({
         }
         const ins = { date: fallbackDate, patient_name: '(이름없음)', chart_number: '', visit_count: '', body_part: '', therapist_name: t.name, prescription: pres, prescription_count: intVal, source: 'manual' };
         if (ins.date) affectedDates.add(ins.date);
-        await supabase.from('shockwave_patient_logs').insert([ins]);
+        await supabase.from(tableName).insert([ins]);
         if (row.isInsertedDraft) setInsertedDraftRows((prev) => prev.filter((item) => item.id !== row.id));
       } else {
         if (val.trim() === '') {
           if (row.therapist_name === t.name && row.prescription === pres) {
             const clearedFields = { therapist_name: '', prescription: '', prescription_count: 0 };
             const nextRow = { ...row, ...clearedFields };
-            if (isRowEmpty(nextRow)) await supabase.from('shockwave_patient_logs').delete().eq('id', row.id);
-            else await supabase.from('shockwave_patient_logs').update(clearedFields).eq('id', row.id);
+            if (isRowEmpty(nextRow)) await supabase.from(tableName).delete().eq('id', row.id);
+            else await supabase.from(tableName).update(clearedFields).eq('id', row.id);
           }
         } else {
-          await supabase.from('shockwave_patient_logs').update({ therapist_name: t.name, prescription: pres, prescription_count: intVal }).eq('id', row.id);
+          await supabase.from(tableName).update({ therapist_name: t.name, prescription: pres, prescription_count: intVal }).eq('id', row.id);
         }
       }
     }
@@ -444,7 +460,7 @@ export default function ShockwaveDataGrid({
     for (const date of affectedDates) {
       if (!date) continue;
       try {
-        await syncStatsDateToScheduler({ year: currentYear, month: currentMonth, date, therapists });
+        await runSyncForDate(date);
       } catch (error) {
         console.error('Failed to sync stats edit to scheduler:', error);
       }
@@ -515,26 +531,26 @@ export default function ShockwaveDataGrid({
 
     if (action.type === 'edit') {
       const { id, field, oldVal, date } = action;
-      await supabase.from('shockwave_patient_logs').update({ [field]: oldVal }).eq('id', id);
-      if (date) await syncStatsDateToScheduler({ year: currentYear, month: currentMonth, date, therapists });
+      await supabase.from(tableName).update({ [field]: oldVal }).eq('id', id);
+      if (date) await runSyncForDate(date);
     } else if (action.type === 'bulk') {
       const chunkSize = 50;
       for (let i = 0; i < action.changes.length; i += chunkSize) {
         const chunk = action.changes.slice(i, i + chunkSize);
         await Promise.all(chunk.map(c => {
           if (c.field === 'prescription_stats') {
-             return supabase.from('shockwave_patient_logs').update({ 
+             return supabase.from(tableName).update({ 
                therapist_name: c.oldVal.t, 
                prescription: c.oldVal.p, 
                prescription_count: c.oldVal.c 
              }).eq('id', c.id);
           } else {
-             return supabase.from('shockwave_patient_logs').update({ [c.field]: c.oldVal }).eq('id', c.id);
+             return supabase.from(tableName).update({ [c.field]: c.oldVal }).eq('id', c.id);
           }
         }));
       }
       for (const d of action.affectedDates) {
-        if (d) await syncStatsDateToScheduler({ year: currentYear, month: currentMonth, date: d, therapists });
+        if (d) await runSyncForDate(d);
       }
     }
     await fetchLogs();
@@ -596,9 +612,9 @@ export default function ShockwaveDataGrid({
       }
     }
 
-    if (bulkInserts.length > 0) await supabase.from('shockwave_patient_logs').insert(bulkInserts);
+    if (bulkInserts.length > 0) await supabase.from(tableName).insert(bulkInserts);
     for (const update of bulkUpdates) {
-      await supabase.from('shockwave_patient_logs').update(update.data).eq('id', update.id);
+      await supabase.from(tableName).update(update.data).eq('id', update.id);
     }
 
     // Clear visual source highlight after a successful paste.
@@ -613,7 +629,7 @@ export default function ShockwaveDataGrid({
     rememberCurrentRowOrder();
     await fetchLogs();
     for (const d of affectedDates) {
-      if (d) await syncStatsDateToScheduler({ year: currentYear, month: currentMonth, date: d, therapists });
+      if (d) await runSyncForDate(d);
     }
   };
 
@@ -646,8 +662,8 @@ export default function ShockwaveDataGrid({
       }
       if (Object.keys(updatePayload).length > 0) {
         const nextRow = { ...row, ...updatePayload };
-        if (isRowEmpty(nextRow)) await supabase.from('shockwave_patient_logs').delete().eq('id', row.id);
-        else await supabase.from('shockwave_patient_logs').update(updatePayload).eq('id', row.id);
+        if (isRowEmpty(nextRow)) await supabase.from(tableName).delete().eq('id', row.id);
+        else await supabase.from(tableName).update(updatePayload).eq('id', row.id);
       }
     }
     return { undoChanges, affectedDates: Array.from(affectedDates) };
@@ -660,7 +676,7 @@ export default function ShockwaveDataGrid({
     rememberCurrentRowOrder();
     await fetchLogs();
     for (const date of affectedDates) {
-      if (date) await syncStatsDateToScheduler({ year: currentYear, month: currentMonth, date, therapists });
+      if (date) await runSyncForDate(date);
     }
   };
 
@@ -674,13 +690,13 @@ export default function ShockwaveDataGrid({
     }
     if (row && !row.isDraft && (skipConfirm || window.confirm(`${row.patient_name} 행을 삭제하시겠습니까?`))) {
       const affectedDate = row.date || '';
-      await supabase.from('shockwave_patient_logs').delete().eq('id', row.id);
+      await supabase.from(tableName).delete().eq('id', row.id);
       setCtxMenu(null);
       rememberCurrentRowOrder();
       await fetchLogs();
       if (affectedDate) {
         try {
-          await syncStatsDateToScheduler({ year: currentYear, month: currentMonth, date: affectedDate, therapists });
+          await runSyncForDate(affectedDate);
         } catch (error) {
           console.error('Failed to sync deleted stats row to scheduler:', error);
         }
@@ -884,9 +900,9 @@ export default function ShockwaveDataGrid({
           <tr className="sw-header-row sw-header-row-title">
             <th colSpan={totalColCount} className="grid-title">
               <div className="grid-title-inner">
-                <span>{currentMonth}월 충격파 현황</span>
+                <span>{gridTitle}</span>
                 <button type="button" className="grid-title-action" onClick={onApplyTodaySchedule} disabled={!onApplyTodaySchedule || isApplyingTodaySchedule}>
-                  {isApplyingTodaySchedule ? '적용 중...' : '오늘 스케줄 적용'}
+                  {isApplyingTodaySchedule ? '적용 중...' : applyTodayLabel}
                 </button>
               </div>
             </th>
@@ -905,7 +921,7 @@ export default function ShockwaveDataGrid({
               </th>
             ))}
             <th rowSpan={2} className="hdr-total sticky-right-last-2 total-group-start">총건수</th>
-            <th rowSpan={2} className="hdr-total hdr-new-patient sticky-right-last-1">신환</th>
+            <th rowSpan={2} className="hdr-total hdr-new-patient sticky-right-last-1">{secondarySummaryLabel}</th>
           </tr>
 
           {/* Row 3: Prescription Names */}

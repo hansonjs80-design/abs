@@ -1,171 +1,39 @@
 import React, { useMemo } from 'react';
-import { generateShockwaveCalendar } from '../../lib/calendarUtils';
-import { normalizeNameForMatch } from '../../lib/memoParser';
-
-function escapeRegExp(value) {
-  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function toVisitNumber(value) {
-  if (value === '-') return '-';
-  const parsed = parseInt(String(value ?? '').trim(), 10);
-  return Number.isFinite(parsed) ? parsed : '';
-}
-
-function formatMonthDay(dateText) {
-  const parts = String(dateText || '').split('-');
-  if (parts.length !== 3) return '';
-  return `${parts[1]}/${parts[2]}`;
-}
-
-function parseManualTherapyEntry(rawContent, therapists) {
-  const source = String(rawContent || '').trim();
-  if (!source || !/(40|60)/.test(source)) return null;
-
-  let chartNumber = '';
-  let rest = source;
-
-  if (source.includes('/')) {
-    const [left, ...right] = source.split('/');
-    if (/\d/.test(left)) {
-      chartNumber = left.trim();
-      rest = right.join('/').trim();
-    }
-  }
-
-  let suffixToken = '';
-  let visitCount = '';
-  const suffixMatch = rest.match(/(\((-|\d+)\)|\*)\s*$/);
-  if (suffixMatch) {
-    suffixToken = suffixMatch[1];
-    visitCount = suffixToken === '*'
-      ? '1'
-      : suffixMatch[2] === '-'
-        ? '-'
-        : suffixMatch[2];
-    rest = rest.slice(0, rest.length - suffixToken.length).trim();
-  }
-
-  const sortedTherapists = [...(therapists || [])]
-    .filter((item) => item?.name)
-    .sort((a, b) => String(b.name).length - String(a.name).length);
-
-  for (const therapist of sortedTherapists) {
-    const match = rest.match(
-      new RegExp(`^(.*?)(?:\\s+)?(${escapeRegExp(therapist.name)})\\s*(40|60)$`)
-    );
-    if (!match) continue;
-
-    const patientName = String(match[1] || '').trim();
-    if (!patientName) continue;
-
-    return {
-      patientName,
-      therapistName: therapist.name,
-      duration: match[3],
-      chartNumber,
-      visitCount,
-    };
-  }
-
-  const fallback = rest.match(/^(.*?)(40|60)$/);
-  if (!fallback) return null;
-
-  const patientName = String(fallback[1] || '').trim();
-  if (!patientName) return null;
-
-  return {
-    patientName,
-    therapistName: '',
-    duration: fallback[2],
-    chartNumber,
-    visitCount,
-  };
-}
-
-function pickEnrichedHistory(entry, logs) {
-  const normalizedName = normalizeNameForMatch(entry.patientName);
-  const matched = (logs || [])
-    .filter((log) => {
-      const sameChart = entry.chartNumber && String(log?.chart_number || '').trim() === entry.chartNumber;
-      const sameName = normalizedName && normalizeNameForMatch(log?.patient_name) === normalizedName;
-      return sameChart || sameName;
-    })
-    .sort((a, b) => {
-      const dateCompare = String(b?.date || '').localeCompare(String(a?.date || ''));
-      if (dateCompare !== 0) return dateCompare;
-      return (parseInt(String(b?.visit_count || '0'), 10) || 0) - (parseInt(String(a?.visit_count || '0'), 10) || 0);
-    });
-
-  return matched[0] || null;
-}
+import { formatMonthDay, formatVisitLabel } from '../../lib/manualTherapyUtils';
 
 export default function ManualTherapyStatsView({
-  currentYear,
   currentMonth,
-  memos,
-  therapists,
   logs = [],
+  therapists,
   prescriptions = ['40분', '60분'],
   incentivePercentage = 0,
 }) {
   const entries = useMemo(() => {
-    const weeks = generateShockwaveCalendar(currentYear, currentMonth);
-
-    return Object.entries(memos || {})
-      .map(([key, memo]) => {
-        const [w, d, r, c] = key.split('-').map(Number);
-        const dayInfo = weeks[w]?.[d];
-        if (!dayInfo?.isCurrentMonth) return null;
-
-        const parsed = parseManualTherapyEntry(memo?.content, therapists);
-        if (!parsed) return null;
-
-        const date = `${dayInfo.year}-${String(dayInfo.month).padStart(2, '0')}-${String(dayInfo.day).padStart(2, '0')}`;
-        const enriched = pickEnrichedHistory(parsed, logs);
-        const latestVisit = toVisitNumber(parsed.visitCount);
-        const fallbackVisit = toVisitNumber(enriched?.visit_count);
-        const visitLabel = latestVisit !== ''
-          ? `${latestVisit}회`
-          : fallbackVisit !== '' && fallbackVisit !== '-'
-            ? `${fallbackVisit}회`
-            : fallbackVisit === '-'
-              ? '(-)'
-              : '';
-
-        return {
-          key,
-          weekIndex: w,
-          dayIndex: d,
-          rowIndex: r,
-          colIndex: c,
-          date,
-          dateLabel: formatMonthDay(date),
-          patientName: parsed.patientName,
-          therapistName: parsed.therapistName || therapists?.[c]?.name || '',
-          duration: parsed.duration,
-          durationLabel: `${parsed.duration}분`,
-          chartNumber: parsed.chartNumber || String(enriched?.chart_number || '').trim(),
-          visitLabel,
-          bodyPart: String(enriched?.body_part || '').trim() || '-',
-        };
-      })
+    return [...(Array.isArray(logs) ? logs : [])]
       .filter(Boolean)
+      .map((row) => ({
+        ...row,
+        dateLabel: formatMonthDay(row?.date),
+        visitLabel: formatVisitLabel(row?.visit_count),
+      }))
       .sort((a, b) => {
-        if (a.date !== b.date) return a.date.localeCompare(b.date);
-        if (a.therapistName !== b.therapistName) return a.therapistName.localeCompare(b.therapistName, 'ko');
-        if (a.rowIndex !== b.rowIndex) return a.rowIndex - b.rowIndex;
-        return a.colIndex - b.colIndex;
+        if (String(a?.date || '') !== String(b?.date || '')) {
+          return String(a?.date || '').localeCompare(String(b?.date || ''));
+        }
+        if (String(a?.therapist_name || '') !== String(b?.therapist_name || '')) {
+          return String(a?.therapist_name || '').localeCompare(String(b?.therapist_name || ''), 'ko');
+        }
+        return String(a?.created_at || '').localeCompare(String(b?.created_at || ''));
       });
-  }, [currentYear, currentMonth, memos, therapists, logs]);
+  }, [logs]);
 
   const summaryByTherapist = useMemo(() => {
-    return therapists
+    return (Array.isArray(therapists) ? therapists : [])
       .filter((therapist) => therapist?.name)
       .map((therapist) => {
-        const therapistEntries = entries.filter((entry) => entry.therapistName === therapist.name);
-        const count40 = therapistEntries.filter((entry) => entry.duration === '40').length;
-        const count60 = therapistEntries.filter((entry) => entry.duration === '60').length;
+        const therapistEntries = entries.filter((entry) => entry.therapist_name === therapist.name);
+        const count40 = therapistEntries.filter((entry) => String(entry.prescription || '').includes('40')).length;
+        const count60 = therapistEntries.filter((entry) => String(entry.prescription || '').includes('60')).length;
 
         return {
           therapist,
@@ -231,7 +99,7 @@ export default function ManualTherapyStatsView({
 
       <div className="sw-settlement-card">
         <div className="sw-settlement-header">
-          <h2>{currentMonth}월 도수치료 현황</h2>
+          <h2>{currentMonth}월 도수치료 상세 내역</h2>
         </div>
 
         <div className="sw-settlement-table-wrap">
@@ -249,18 +117,20 @@ export default function ManualTherapyStatsView({
             </thead>
             <tbody>
               {entries.length > 0 ? entries.map((entry) => (
-                <tr key={entry.key}>
+                <tr key={entry.id || `${entry.date}-${entry.patient_name}-${entry.therapist_name}`}>
                   <td>{entry.dateLabel}</td>
-                  <td className="patient-name">{entry.patientName}</td>
-                  <td>{entry.chartNumber || ''}</td>
+                  <td className="patient-name">{entry.patient_name}</td>
+                  <td>{entry.chart_number || ''}</td>
                   <td>{entry.visitLabel}</td>
-                  <td>{entry.bodyPart}</td>
-                  <td>{entry.therapistName}</td>
-                  <td className={entry.duration === '40' ? 'duration-40' : 'duration-60'}>{entry.durationLabel}</td>
+                  <td>{entry.body_part || '-'}</td>
+                  <td>{entry.therapist_name || ''}</td>
+                  <td className={String(entry.prescription || '').includes('40') ? 'duration-40' : 'duration-60'}>
+                    {entry.prescription || ''}
+                  </td>
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={7} className="manual-empty">이번 달 스케줄러에 도수치료(40/60) 표기가 없습니다.</td>
+                  <td colSpan={7} className="manual-empty">이번 달 도수치료 기록이 없습니다.</td>
                 </tr>
               )}
             </tbody>

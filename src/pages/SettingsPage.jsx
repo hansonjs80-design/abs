@@ -46,6 +46,18 @@ ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS frozen_columns in
 ALTER TABLE public.shockwave_therapists DISABLE ROW LEVEL SECURITY;`
   },
   {
+    title: '도수치료 치료사 목록 테이블',
+    description: '도수치료 현황 탭에 나열할 치료사 이름과 순서를 관리.',
+    sql: `CREATE TABLE IF NOT EXISTS public.manual_therapy_therapists (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  slot_index int NOT NULL DEFAULT 0,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.manual_therapy_therapists DISABLE ROW LEVEL SECURITY;`
+  },
+  {
     title: '통합 충격파 스케줄 테이블',
     description: '스케줄러의 셀 내용, 배경색, 병합(JSON) 정보를 저장합니다.',
     sql: `CREATE TABLE IF NOT EXISTS public.shockwave_schedules (
@@ -67,7 +79,7 @@ ALTER TABLE public.shockwave_schedules DISABLE ROW LEVEL SECURITY;`
   },
   {
     title: '환자 치료 로그 (통계/현황)',
-    description: '충격파 통계 탭에서 관리하는 환자 일일 기록 테이블입니다.',
+    description: '충격파/도수치료 통계 탭에서 관리하는 환자 일일 기록 테이블입니다.',
     sql: `CREATE TABLE IF NOT EXISTS public.shockwave_patient_logs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   date date NOT NULL,
@@ -85,7 +97,26 @@ ALTER TABLE public.shockwave_schedules DISABLE ROW LEVEL SECURITY;`
 ALTER TABLE public.shockwave_patient_logs DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shockwave_patient_logs ADD COLUMN IF NOT EXISTS prescription text;
 ALTER TABLE public.shockwave_patient_logs ADD COLUMN IF NOT EXISTS prescription_count integer;
-ALTER TABLE public.shockwave_patient_logs ADD COLUMN IF NOT EXISTS source text DEFAULT 'manual';`
+ALTER TABLE public.shockwave_patient_logs ADD COLUMN IF NOT EXISTS source text DEFAULT 'manual';
+
+CREATE TABLE IF NOT EXISTS public.manual_therapy_patient_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  date date NOT NULL,
+  patient_name text NOT NULL,
+  chart_number text,
+  visit_count text,
+  body_part text,
+  therapist_name text,
+  prescription text,
+  prescription_count integer,
+  source text DEFAULT 'manual',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.manual_therapy_patient_logs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.manual_therapy_patient_logs ADD COLUMN IF NOT EXISTS prescription text;
+ALTER TABLE public.manual_therapy_patient_logs ADD COLUMN IF NOT EXISTS prescription_count integer;
+ALTER TABLE public.manual_therapy_patient_logs ADD COLUMN IF NOT EXISTS source text DEFAULT 'manual';`
   },
   {
     title: '직원 근무표용 스케줄 테이블',
@@ -138,6 +169,8 @@ export default function SettingsPage() {
   
   const [therapists, setTherapists] = useState([]);
   const [newTherapist, setNewTherapist] = useState({ name: '', slot_index: 0 });
+  const [manualTherapists, setManualTherapists] = useState([]);
+  const [newManualTherapist, setNewManualTherapist] = useState({ name: '', slot_index: 0 });
   const [holidays, setHolidays] = useState([]);
   const [newHoliday, setNewHoliday] = useState({ date: '', name: '' });
   
@@ -174,6 +207,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadTherapists();
+    loadManualTherapists();
     loadHolidays();
     loadSettings();
   }, []);
@@ -254,6 +288,11 @@ export default function SettingsPage() {
     setTherapists(data || []);
   };
 
+  const loadManualTherapists = async () => {
+    const { data } = await supabase.from('manual_therapy_therapists').select('*').order('slot_index');
+    setManualTherapists(data || []);
+  };
+
   const loadHolidays = async () => {
     const { data } = await supabase.from('holidays').select('*').order('date');
     setHolidays(data || []);
@@ -275,6 +314,24 @@ export default function SettingsPage() {
   const removeTherapist = async (id) => {
     const { error } = await supabase.from('shockwave_therapists').delete().eq('id', id);
     if (!error) { addToast('삭제되었습니다', 'success'); loadTherapists(); }
+  };
+
+  const addManualTherapist = async () => {
+    if (!newManualTherapist.name.trim()) return;
+    const { error } = await supabase.from('manual_therapy_therapists').insert({
+      name: newManualTherapist.name.trim(),
+      slot_index: newManualTherapist.slot_index,
+      is_active: true
+    });
+    if (error) { addToast('추가 실패: ' + error.message, 'error'); return; }
+    addToast('도수치료 치료사가 추가되었습니다', 'success');
+    setNewManualTherapist({ name: '', slot_index: 0 });
+    loadManualTherapists();
+  };
+
+  const removeManualTherapist = async (id) => {
+    const { error } = await supabase.from('manual_therapy_therapists').delete().eq('id', id);
+    if (!error) { addToast('삭제되었습니다', 'success'); loadManualTherapists(); }
   };
 
   const addHoliday = async () => {
@@ -615,6 +672,50 @@ export default function SettingsPage() {
           {therapists.length === 0 && (
             <p style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: 16 }}>
               등록된 치료사가 없습니다
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 24 }}>
+        <div className="card-header">
+          <span className="card-title"><Users size={18} /> 도수치료 치료사 관리</span>
+        </div>
+        <div className="card-body">
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+            <input
+              className="form-input"
+              style={{ flex: 1, minWidth: 120 }}
+              placeholder="이름"
+              value={newManualTherapist.name}
+              onChange={e => setNewManualTherapist(p => ({ ...p, name: e.target.value }))}
+            />
+            <input
+              className="form-input"
+              style={{ width: 80 }}
+              type="number"
+              min={0}
+              max={10}
+              placeholder="순서"
+              value={newManualTherapist.slot_index}
+              onChange={e => setNewManualTherapist(p => ({ ...p, slot_index: parseInt(e.target.value) || 0 }))}
+            />
+            <button className="btn btn-primary btn-sm" onClick={addManualTherapist}>추가</button>
+          </div>
+
+          {manualTherapists.map(t => (
+            <div key={t.id} className="settings-row">
+              <div>
+                <div className="settings-row-label">{t.name}</div>
+                <div className="settings-row-desc">슬롯 (표시 순서): {t.slot_index}</div>
+              </div>
+              <button className="btn btn-danger btn-sm" onClick={() => removeManualTherapist(t.id)}>삭제</button>
+            </div>
+          ))}
+
+          {manualTherapists.length === 0 && (
+            <p style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: 16 }}>
+              등록된 도수치료 치료사가 없습니다
             </p>
           )}
         </div>

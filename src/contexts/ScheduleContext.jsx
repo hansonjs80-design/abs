@@ -11,6 +11,7 @@ export function ScheduleProvider({ children }) {
   const [staffMemos, setStaffMemos] = useState({});
   const [holidays, setHolidays] = useState(new Set());
   const [therapists, setTherapists] = useState([]);
+  const [manualTherapists, setManualTherapists] = useState([]);
   const [shockwaveSettings, setShockwaveSettings] = useState({
     start_time: '09:00:00',
     end_time: '18:00:00',
@@ -158,6 +159,21 @@ export function ScheduleProvider({ children }) {
       setTherapists(data || []);
     } catch (err) {
       console.error('Failed to load therapists:', err);
+    }
+  }, []);
+
+  const loadManualTherapists = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('manual_therapy_therapists')
+        .select('*')
+        .eq('is_active', true)
+        .order('slot_index');
+
+      if (error) throw error;
+      setManualTherapists(data || []);
+    } catch (err) {
+      console.error('Failed to load manual therapy therapists:', err);
     }
   }, []);
 
@@ -477,6 +493,7 @@ export function ScheduleProvider({ children }) {
       staffMemos, loadStaffMemos, saveStaffMemo,
       holidays, loadHolidays,
       therapists, loadTherapists,
+      manualTherapists, loadManualTherapists,
       shockwaveSettings, loadShockwaveSettings, saveShockwaveSettings,
       shockwaveMemos, loadShockwaveMemos, saveShockwaveMemo, saveShockwaveMemosBulk,
       notices, loadNotices, saveNotice,

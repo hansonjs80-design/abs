@@ -21,6 +21,14 @@ CREATE TABLE IF NOT EXISTS public.shockwave_therapists (
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS public.manual_therapy_therapists (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  name text NOT NULL,
+  slot_index integer NOT NULL,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- 3. 통합 충격파 스케줄 테이블 (N열 호환)
 CREATE TABLE IF NOT EXISTS public.shockwave_schedules (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -57,6 +65,7 @@ CREATE TABLE IF NOT EXISTS public.notices (
 -- RLS (보안 정책) 비활성화 (개발 편의를 위해 임시)
 ALTER TABLE public.staff_schedules DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shockwave_therapists DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.manual_therapy_therapists DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shockwave_schedules DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.holidays DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notices DISABLE ROW LEVEL SECURITY;
@@ -124,7 +133,22 @@ CREATE TABLE IF NOT EXISTS public.shockwave_patient_logs (
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS public.manual_therapy_patient_logs (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  date date NOT NULL,
+  patient_name text NOT NULL,
+  chart_number text,
+  visit_count text,
+  body_part text,
+  therapist_name text,
+  prescription text,
+  prescription_count integer,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 ALTER TABLE public.shockwave_patient_logs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.manual_therapy_patient_logs DISABLE ROW LEVEL SECURITY;
 
 ALTER TABLE public.shockwave_patient_logs 
 ADD COLUMN IF NOT EXISTS prescription text;
@@ -134,4 +158,13 @@ ADD COLUMN IF NOT EXISTS prescription_count integer;
 
 -- source 컬럼: 'scheduler' (스케줄러 자동 동기화) 또는 'manual' (수동 입력)
 ALTER TABLE public.shockwave_patient_logs 
+ADD COLUMN IF NOT EXISTS source text DEFAULT 'manual';
+
+ALTER TABLE public.manual_therapy_patient_logs 
+ADD COLUMN IF NOT EXISTS prescription text;
+
+ALTER TABLE public.manual_therapy_patient_logs 
+ADD COLUMN IF NOT EXISTS prescription_count integer;
+
+ALTER TABLE public.manual_therapy_patient_logs 
 ADD COLUMN IF NOT EXISTS source text DEFAULT 'manual';
