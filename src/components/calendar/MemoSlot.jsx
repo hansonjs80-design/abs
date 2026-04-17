@@ -6,10 +6,8 @@ export default function MemoSlot({
   isSelected, isPrimary, isEditing, editValue, editSessionId,
   clipboardMode,
   onMouseDown, onMouseEnter, onDoubleClick, onContextMenu,
-  onInput, onBlur, onKeyDown
+  editInputRef, onEditBlur, onEditKeyDown
 }) {
-  const editInputRef = useRef(null);
-
   const content = memo?.content || '';
   const fontColor = computeMemoFontColor(content);
 
@@ -32,8 +30,6 @@ export default function MemoSlot({
   if (isPrimary) stateClass += ' primary-selected';
   if (isEditing) stateClass += ' editing';
 
-  const showInput = isPrimary || isEditing;
-
   return (
     <div
       className={`memo-slot ${colorClass} ${antsClass} ${stateClass}`}
@@ -44,46 +40,29 @@ export default function MemoSlot({
       title={content}
       style={{ position: 'relative', overflow: 'hidden' }}
     >
-      {/* Content - hidden when editing */}
-      <span style={{
-        visibility: isEditing ? 'hidden' : 'visible',
-        pointerEvents: 'none',
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        width: '100%',
-        textAlign: 'right',
-      }}>
-        {content}
-      </span>
-
-      {/* Input - same pattern as ShockwaveView: ref callback for immediate focus */}
-      {showInput && (
+      {isEditing ? (
         <input
-          key={isEditing && editSessionId ? editSessionId : 'hidden'}
-          ref={isEditing ? editInputRef : (el) => { if (el && !isEditing) el.focus(); }}
+          key={editSessionId || 'edit'}
+          ref={editInputRef}
           className="memo-slot-input"
-          data-hidden-input={!isEditing ? 'true' : undefined}
-          defaultValue={isEditing ? editValue : ''}
-          style={isEditing ? {
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            zIndex: 2,
-            boxSizing: 'border-box',
-          } : {
-            position: 'absolute',
-            top: 0, left: 0,
-            width: '1px', height: '1px',
-            opacity: 0,
-            padding: 0, border: 'none', outline: 'none',
-            pointerEvents: 'none',
+          defaultValue={editValue}
+          style={{
+            position: 'absolute', inset: 0,
+            width: '100%', height: '100%',
+            zIndex: 2, boxSizing: 'border-box',
           }}
-          onInput={onInput}
-          onBlur={onBlur}
-          onKeyDown={onKeyDown}
+          onBlur={onEditBlur}
+          onKeyDown={onEditKeyDown}
+          autoFocus
         />
+      ) : (
+        <span style={{
+          pointerEvents: 'none',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          width: '100%', textAlign: 'right',
+        }}>
+          {content}
+        </span>
       )}
     </div>
   );

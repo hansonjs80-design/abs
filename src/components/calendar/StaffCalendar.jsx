@@ -27,6 +27,8 @@ export default function StaffCalendar() {
   const viewRef = useRef(null);
   const contextMenuRef = useRef(null);
   const dragRef = useRef(null);
+  const hiddenInputRef = useRef(null);
+  const editInputRef = useRef(null);
 
   const today = getTodayKST();
   const { grid } = useMemo(() => generateCalendarGrid(currentYear, currentMonth, holidays), [currentYear, currentMonth, holidays]);
@@ -96,13 +98,18 @@ export default function StaffCalendar() {
   useEffect(() => { if (colWidth > 0) localStorage.setItem(COL_W_KEY, colWidth); else localStorage.removeItem(COL_W_KEY); localStorage.setItem(ROW_H_KEY, rowHeight); }, [colWidth, rowHeight]);
 
   // ── Actions ──
+  const focusHiddenInput = useCallback(() => {
+    setTimeout(() => { hiddenInputRef.current?.focus(); }, 0);
+  }, []);
+
   const selectSingle = useCallback((cell) => {
     if (!cell) return;
     const d = grid[cell.wi]?.[cell.di];
     if (d?.isOtherMonth) return;
     setSelectedCell(cell); setRangeEnd(cell); setSelectedKeys(new Set([cell.key]));
     if (editingCell && editingCell !== cell.key) setEditingCell(null);
-  }, [editingCell, grid]);
+    focusHiddenInput();
+  }, [editingCell, grid, focusHiddenInput]);
 
   const beginEdit = useCallback((key, val, preserve) => {
     flushSync(() => { setEditingCell(key); setEditValue(val); if (preserve) setEditSessionId(Date.now()); });
@@ -228,12 +235,27 @@ export default function StaffCalendar() {
     if (meta && e.code === 'KeyC') { e.preventDefault(); handleCopy(); return; }
     if (meta && e.code === 'KeyX') { e.preventDefault(); handleCut(); return; }
     if (meta && e.code === 'KeyV') return; // native paste
-    if ((e.key.length === 1 || e.key === 'Process' || e.keyCode === 229) && !meta && !e.altKey) { beginEdit(selectedCell.key, '', false); return; }
+    if ((e.key.length === 1 || e.key === 'Process' || e.keyCode === 229) && !meta && !e.altKey) {
+      // Don't preventDefault - let the character go to the hidden input
+      // The hidden input's onInput will trigger beginEdit with the typed value
+      return;
+    }
   }, [selectedCell, editingCell, selectedKeys, cellFromXY, selectSingle, buildRange, beginEdit, staffMemos, doUndo, clipboardSource, deleteCells, handleCopy, handleCut]);
 
-  useEffect(() => { const el = viewRef.current; if (el) { el.addEventListener('keydown', handleKeyDown); return () => el.removeEventListener('keydown', handleKeyDown); } }, [handleKeyDown]);
   useEffect(() => {
-    const h = (ev) => { if (!selectedCell) return; const t = ev.target; if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement) return; const txt = ev.clipboardData?.getData('text/plain'); if (!txt) return; ev.preventDefault(); handlePaste(txt); };
+    const el = hiddenInputRef.current;
+    if (el) { el.addEventListener('keydown', handleKeyDown); return () => el.removeEventListener('keydown', handleKeyDown); }
+  }, [handleKeyDown]);
+  useEffect(() => {
+    const h = (ev) => {
+      if (!selectedCell) return;
+      const t = ev.target;
+      // Allow paste from hidden input and viewRef, block from real editing inputs
+      if (t instanceof HTMLInputElement && !t.dataset.hiddenInput) return;
+      if (t instanceof HTMLTextAreaElement) return;
+      const txt = ev.clipboardData?.getData('text/plain'); if (!txt) return;
+      ev.preventDefault(); handlePaste(txt);
+    };
     window.addEventListener('paste', h, true); return () => window.removeEventListener('paste', h, true);
   }, [selectedCell, handlePaste]);
 
@@ -243,6 +265,7 @@ export default function StaffCalendar() {
     const cell = makeCell(wi, di, slot); if (!cell) return;
     if (grid[wi]?.[di]?.isOtherMonth) return;
     if (editingCell) setEditingCell(null); setContextMenu(null);
+    focusHiddenInput();
     if (e.shiftKey && selectedCell) { setRangeEnd(cell); setSelectedKeys(buildRange(selectedCell, cell)); }
     else { selectSingle(cell); dragRef.current = cell; }
   }, [makeCell, grid, editingCell, selectedCell, buildRange, selectSingle]);
@@ -271,7 +294,20 @@ export default function StaffCalendar() {
   }, [handleCopy, handleCut, handlePaste, deleteCells, selectedKeys]);
 
   return (
-    <div className="staff-calendar animate-fade-in" ref={viewRef} tabIndex={0} style={{ outline: 'none' }}>
+    <div className="staff-calendar animate-fade-in" ref={viewRef} style={{ outline: 'none', position: 'relative' }}>
+      {/* Global hidden input for IME capture */}
+      <input
+        ref={hiddenInputRef}
+        data-hidden-input="true"
+        style={{ position: 'absolute', top: 0, left: 0, width: '1px', height: '1px', opacity: 0, padding: 0, border: 'none', outline: 'none', pointerEvents: 'none', zIndex: -1 }}
+        onInput={(e) => {
+          if (selectedCell && !editingCell) {
+            const val = e.target.value;
+            e.target.value = '';
+            beginEdit(selectedCell.key, val, false);
+          }
+        }}
+      />
       <div className="calendar-grid" style={{ gridTemplateColumns: colWidth ? `repeat(7, ${colWidth}px)` : 'repeat(7, minmax(0, 1fr))' }}>
         {WEEKDAYS.map((day, i) => (
           <div key={`h-${i}`} className={`calendar-weekday-header${i === 0 ? ' sunday' : ''}${i === 6 ? ' saturday' : ''}`} style={{ position: 'relative' }}>
@@ -310,9 +346,9 @@ export default function StaffCalendar() {
                       onMouseEnter={() => onCellMouseEnter(wi, di, slot)}
                       onDoubleClick={() => onCellDblClick(wi, di, slot)}
                       onContextMenu={(e) => onCellCtxMenu(wi, di, slot, e)}
-                      onInput={(e) => { if (!isEd) beginEdit(key, e.target.value, false); }}
-                      onBlur={(e) => { if (isEd) saveCell(wi, di, slot, e.target.value); }}
-                      onKeyDown={(e) => { if (isEd) handleEditKey(e, wi, di, slot); }}
+                      editInputRef={editInputRef}
+                      onEditBlur={(e) => saveCell(wi, di, slot, e.target.value)}
+                      onEditKeyDown={(e) => handleEditKey(e, wi, di, slot)}
                     />
                   );
                 })}
