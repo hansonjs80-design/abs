@@ -17,16 +17,20 @@ const SQL_SNIPPETS = [
   interval_minutes int NOT NULL DEFAULT 10,
   day_overrides jsonb NOT NULL DEFAULT '{}',
   prescriptions text[] DEFAULT ARRAY['F1.5', 'F/Rdc', 'F/R'],
+  manual_therapy_prescriptions text[] DEFAULT ARRAY['40분', '60분'],
   prescription_prices jsonb NOT NULL DEFAULT '{"F1.5":50000,"F/Rdc":70000,"F/R":80000}'::jsonb,
   incentive_percentage numeric(5,2) NOT NULL DEFAULT 7,
+  manual_therapy_incentive_percentage numeric(5,2) NOT NULL DEFAULT 0,
   frozen_columns int DEFAULT 6,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE public.shockwave_settings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS day_overrides jsonb NOT NULL DEFAULT '{}';
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS prescriptions text[] DEFAULT ARRAY['F1.5', 'F/Rdc', 'F/R'];
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS manual_therapy_prescriptions text[] DEFAULT ARRAY['40분', '60분'];
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS prescription_prices jsonb NOT NULL DEFAULT '{"F1.5":50000,"F/Rdc":70000,"F/R":80000}'::jsonb;
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS incentive_percentage numeric(5,2) NOT NULL DEFAULT 7;
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS manual_therapy_incentive_percentage numeric(5,2) NOT NULL DEFAULT 0;
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS frozen_columns int DEFAULT 6;`
   },
   {
@@ -142,12 +146,14 @@ export default function SettingsPage() {
     end_time: '18:00', 
     interval_minutes: 10,
     prescriptions: ['F1.5', 'F/Rdc', 'F/R'],
+    manual_therapy_prescriptions: ['40분', '60분'],
     prescription_prices: {
       'F1.5': 50000,
       'F/Rdc': 70000,
       'F/R': 80000,
     },
     incentive_percentage: 7,
+    manual_therapy_incentive_percentage: 0,
     frozen_columns: 6
   });
   const [dayOverrides, setDayOverrides] = useState({});
@@ -181,12 +187,14 @@ export default function SettingsPage() {
           end_time: data.end_time.substring(0, 5),
           interval_minutes: data.interval_minutes,
           prescriptions: data.prescriptions || ['F1.5', 'F/Rdc', 'F/R'],
+          manual_therapy_prescriptions: data.manual_therapy_prescriptions || ['40분', '60분'],
           prescription_prices: data.prescription_prices || {
             'F1.5': 50000,
             'F/Rdc': 70000,
             'F/R': 80000,
           },
           incentive_percentage: data.incentive_percentage ?? 7,
+          manual_therapy_incentive_percentage: data.manual_therapy_incentive_percentage ?? 0,
           frozen_columns: data.frozen_columns || 6
         });
         setDayOverrides(data.day_overrides || {});
@@ -201,8 +209,10 @@ export default function SettingsPage() {
       interval_minutes: Number(swSettings.interval_minutes),
       day_overrides: dayOverrides,
       prescriptions: swSettings.prescriptions,
+      manual_therapy_prescriptions: swSettings.manual_therapy_prescriptions,
       prescription_prices: swSettings.prescription_prices,
       incentive_percentage: Number(swSettings.incentive_percentage) || 0,
+      manual_therapy_incentive_percentage: Number(swSettings.manual_therapy_incentive_percentage) || 0,
       frozen_columns: Number(swSettings.frozen_columns)
     });
     if (success) addToast('시간표 설정이 저장되었습니다.', 'success');
@@ -435,6 +445,73 @@ export default function SettingsPage() {
                       setSwSettings((p) => ({
                         ...p,
                         incentive_percentage: Number.isFinite(value) ? value : 0,
+                      }));
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="settings-row" style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--border-color-light)' }}>
+            <div style={{ flex: 1 }}>
+              <div className="settings-row-label">💆 도수 처방목록 / 인센</div>
+              <div className="settings-row-desc">도수치료 통계 탭에서 사용할 시간 라벨과 인센티브 퍼센트를 별도로 관리합니다.</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+                {swSettings.manual_therapy_prescriptions.map((pres, idx) => (
+                  <span
+                    key={`manual-${idx}`}
+                    style={{
+                      background: '#0f766e',
+                      color: 'white',
+                      padding: '4px 10px',
+                      borderRadius: 16,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}
+                    onClick={() => {
+                      const next = swSettings.manual_therapy_prescriptions.filter((_, i) => i !== idx);
+                      setSwSettings(p => ({ ...p, manual_therapy_prescriptions: next }));
+                    }}
+                  >
+                    {pres} ✕
+                  </span>
+                ))}
+                <input
+                  className="form-input"
+                  placeholder="+ 도수 라벨 추가"
+                  style={{ width: 140, height: 28, fontSize: '0.8rem', padding: '0 8px' }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && e.target.value.trim()) {
+                      const val = e.target.value.trim();
+                      if (!swSettings.manual_therapy_prescriptions.includes(val)) {
+                        setSwSettings(p => ({
+                          ...p,
+                          manual_therapy_prescriptions: [...p.manual_therapy_prescriptions, val],
+                        }));
+                      }
+                      e.target.value = '';
+                    }
+                  }}
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginTop: 16 }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span className="settings-row-label" style={{ fontSize: '0.82rem' }}>도수 인센티브 퍼센트</span>
+                  <input
+                    type="number"
+                    className="form-input"
+                    min={0}
+                    step={0.1}
+                    value={swSettings.manual_therapy_incentive_percentage}
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      setSwSettings((p) => ({
+                        ...p,
+                        manual_therapy_incentive_percentage: Number.isFinite(value) ? value : 0,
                       }));
                     }}
                   />

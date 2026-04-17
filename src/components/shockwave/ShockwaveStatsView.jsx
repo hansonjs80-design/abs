@@ -60,7 +60,6 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     () => shockwaveSettings?.incentive_percentage ?? 7,
     [shockwaveSettings?.incentive_percentage]
   );
-
   const normalizedPriceMap = useMemo(() => {
     return Object.fromEntries(
       Object.entries(settlementPrices || {}).map(([key, value]) => [

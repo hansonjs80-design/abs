@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Calendar, Zap, ZapOff, Settings, LogOut, ClipboardList } from 'lucide-react';
+import { Calendar, Zap, ZapOff, Settings, LogOut, ClipboardList, Hand } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function Sidebar({ isOpen, isCollapsed, onClose }) {
@@ -15,6 +15,7 @@ export default function Sidebar({ isOpen, isCollapsed, onClose }) {
     { path: '/', icon: Calendar, label: '직원 근무표' },
     { path: '/shockwave', icon: Zap, label: '충격파 스케줄러' },
     { path: '/shockwave-stats', icon: ClipboardList, label: '충격파 통계' },
+    { path: '/manual-therapy-stats', icon: Hand, label: '도수치료 통계' },
     { section: '시스템' },
     { path: '/settings', icon: Settings, label: '설정' },
   ];

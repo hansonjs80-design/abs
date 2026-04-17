@@ -8,6 +8,7 @@ import LoginPage from './pages/LoginPage';
 import StaffSchedulePage from './pages/StaffSchedulePage';
 import ShockwavePage from './pages/ShockwavePage';
 import ShockwaveStatsPage from './pages/ShockwaveStatsPage';
+import ManualTherapyStatsPage from './pages/ManualTherapyStatsPage';
 import SettingsPage from './pages/SettingsPage';
 
 function ProtectedRoute({ children }) {
@@ -51,6 +52,7 @@ function AppRoutes() {
         <Route path="/" element={<StaffSchedulePage />} />
         <Route path="/shockwave" element={<ShockwavePage />} />
         <Route path="/shockwave-stats" element={<ShockwaveStatsPage />} />
+        <Route path="/manual-therapy-stats" element={<ManualTherapyStatsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

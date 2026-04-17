@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Calendar, ClipboardList, Settings, Zap } from 'lucide-react';
+import { Calendar, ClipboardList, Hand, Settings, Zap } from 'lucide-react';
 import MonthPicker from '../common/MonthPicker';
 import ThemeToggle from '../common/ThemeToggle';
 
@@ -7,6 +7,7 @@ const items = [
   { path: '/', icon: Calendar, label: '직원 근무표', monthLabel: '직원 근무표', tabClass: 'top-tab--calendar' },
   { path: '/shockwave', icon: Zap, label: '충격파 스케줄러', monthLabel: '충격파 스케줄러', tabClass: 'top-tab--shockwave' },
   { path: '/shockwave-stats', icon: ClipboardList, label: '충격파 통계', monthLabel: '충격파 통계', tabClass: 'top-tab--stats' },
+  { path: '/manual-therapy-stats', icon: Hand, label: '도수치료 통계', monthLabel: '도수치료 통계', tabClass: 'top-tab--stats' },
   { path: '/settings', icon: Settings, label: '설정', tabClass: 'top-tab--settings' },
 ];
 

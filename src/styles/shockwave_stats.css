@@ -1077,3 +1077,87 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-new-patient-table tr td:last-child {
   border-right: none;
 }
+
+.sw-manual-summary-table,
+.sw-manual-detail-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.sw-manual-summary-table {
+  min-width: 420px;
+}
+
+.sw-manual-detail-table {
+  min-width: 920px;
+}
+
+.sw-manual-summary-table th,
+.sw-manual-summary-table td,
+.sw-manual-detail-table th,
+.sw-manual-detail-table td {
+  padding: 12px 10px;
+  text-align: center;
+  border-right: 1px solid #dbe3ee;
+  border-bottom: 1px solid #dbe3ee;
+  white-space: nowrap;
+}
+
+.sw-manual-summary-table thead th,
+.sw-manual-detail-table thead th {
+  background: #eef4fb;
+  color: #334155;
+  font-weight: 800;
+}
+
+.sw-manual-summary-table thead .therapist-col {
+  background: #dce9f9;
+  font-size: 0.98rem;
+}
+
+.sw-manual-summary-table tbody td,
+.sw-manual-detail-table tbody td {
+  background: #ffffff;
+  color: #334155;
+  font-weight: 700;
+}
+
+.sw-manual-detail-table tbody td.patient-name {
+  text-align: left;
+  padding-left: 14px;
+}
+
+.sw-manual-summary-table .duration-40,
+.sw-manual-detail-table .duration-40 {
+  color: #2563eb;
+}
+
+.sw-manual-summary-table .duration-60,
+.sw-manual-detail-table .duration-60 {
+  color: #7c3aed;
+}
+
+.sw-manual-summary-table .total-count {
+  color: #0f766e;
+}
+
+.sw-manual-detail-table .manual-empty {
+  color: #64748b;
+  font-weight: 700;
+  background: #f8fafc;
+}
+
+.sw-manual-summary-table tr:last-child td,
+.sw-manual-summary-table tr:last-child th,
+.sw-manual-detail-table tr:last-child td,
+.sw-manual-detail-table tr:last-child th {
+  border-bottom: none;
+}
+
+.sw-manual-summary-table tr th:last-child,
+.sw-manual-summary-table tr td:last-child,
+.sw-manual-detail-table tr th:last-child,
+.sw-manual-detail-table tr td:last-child {
+  border-right: none;
+}

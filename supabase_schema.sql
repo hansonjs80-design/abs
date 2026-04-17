@@ -69,8 +69,10 @@ CREATE TABLE IF NOT EXISTS public.shockwave_settings (
   interval_minutes integer NOT NULL DEFAULT 10,
   day_overrides jsonb DEFAULT '{}'::jsonb,
   prescriptions text[] DEFAULT ARRAY['F1.5', 'F/Rdc', 'F/R'],
+  manual_therapy_prescriptions text[] DEFAULT ARRAY['40분', '60분'],
   prescription_prices jsonb DEFAULT '{"F1.5":50000,"F/Rdc":70000,"F/R":80000}'::jsonb,
   incentive_percentage numeric(5,2) DEFAULT 7,
+  manual_therapy_incentive_percentage numeric(5,2) DEFAULT 0,
   frozen_columns integer DEFAULT 6,
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -88,10 +90,16 @@ ALTER TABLE public.shockwave_settings
 ADD COLUMN IF NOT EXISTS prescriptions text[] DEFAULT ARRAY['F1.5', 'F/Rdc', 'F/R'];
 
 ALTER TABLE public.shockwave_settings
+ADD COLUMN IF NOT EXISTS manual_therapy_prescriptions text[] DEFAULT ARRAY['40분', '60분'];
+
+ALTER TABLE public.shockwave_settings
 ADD COLUMN IF NOT EXISTS prescription_prices jsonb DEFAULT '{"F1.5":50000,"F/Rdc":70000,"F/R":80000}'::jsonb;
 
 ALTER TABLE public.shockwave_settings
 ADD COLUMN IF NOT EXISTS incentive_percentage numeric(5,2) DEFAULT 7;
+
+ALTER TABLE public.shockwave_settings
+ADD COLUMN IF NOT EXISTS manual_therapy_incentive_percentage numeric(5,2) DEFAULT 0;
 
 ALTER TABLE public.shockwave_settings
 ADD COLUMN IF NOT EXISTS frozen_columns integer DEFAULT 6;
