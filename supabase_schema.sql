@@ -175,3 +175,6 @@ ADD COLUMN IF NOT EXISTS prescription_count integer;
 
 ALTER TABLE public.manual_therapy_patient_logs 
 ADD COLUMN IF NOT EXISTS source text DEFAULT 'manual';
+
+ALTER TABLE public.staff_schedules
+ADD COLUMN IF NOT EXISTS bg_color text;

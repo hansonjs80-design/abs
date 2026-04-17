@@ -10,6 +10,7 @@ export function ScheduleProvider({ children }) {
   const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth() + 1);
   const [staffMemos, setStaffMemos] = useState({});
   const [holidays, setHolidays] = useState(new Set());
+  const [holidayNames, setHolidayNames] = useState(new Map());
   const [therapists, setTherapists] = useState([]);
   const [manualTherapists, setManualTherapists] = useState([]);
   const [shockwaveSettings, setShockwaveSettings] = useState({
@@ -90,27 +91,41 @@ export function ScheduleProvider({ children }) {
   }, []);
 
   // 직원 메모 저장/업데이트
-  const saveStaffMemo = useCallback(async (year, month, day, slotIndex, content, fontColor = null) => {
+  const saveStaffMemo = useCallback(async (year, month, day, slotIndex, content, fontColor = null, bgColor = null) => {
     try {
+      const upsertData = {
+        year, month, day,
+        slot_index: slotIndex,
+        content: content || '',
+        updated_at: new Date().toISOString()
+      };
+      if (fontColor !== undefined) upsertData.font_color = fontColor;
+      if (bgColor !== undefined) upsertData.bg_color = bgColor;
+
+      const key = `${year}-${month}-${day}-${slotIndex}`;
+      
+      // 낙관적 업데이트 (네트워크 응답 대기 중 화면 깜빡임 방지)
+      setStaffMemos(prev => ({
+        ...prev,
+        [key]: { ...prev[key], ...upsertData, slot_index: slotIndex }
+      }));
+
       const { data, error } = await supabase
         .from('staff_schedules')
-        .upsert({
-          year, month, day,
-          slot_index: slotIndex,
-          content: content || '',
-          font_color: fontColor,
-          updated_at: new Date().toISOString()
-        }, {
+        .upsert(upsertData, {
           onConflict: 'year,month,day,slot_index'
         })
         .select();
 
-      if (error) throw error;
+      if (error) {
+        // 실패 시 원래 상태로 롤백 로직이 필요할 수 있으나, 현재는 에러만 던짐
+        throw error;
+      }
 
-      const key = `${year}-${month}-${day}-${slotIndex}`;
+      // 서버 데이터로 최종 업데이트
       setStaffMemos(prev => ({
         ...prev,
-        [key]: data?.[0] || { year, month, day, slot_index: slotIndex, content, font_color: fontColor }
+        [key]: data?.[0] || { ...prev[key], ...upsertData, slot_index: slotIndex }
       }));
       return true;
     } catch (err) {
@@ -136,11 +151,15 @@ export function ScheduleProvider({ children }) {
       if (error) throw error;
 
       const holSet = new Set();
+      const holNames = new Map();
       (data || []).forEach(h => {
         const d = new Date(h.date);
-        holSet.add(`${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`);
+        const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+        holSet.add(key);
+        if (h.name) holNames.set(key, h.name);
       });
       setHolidays(holSet);
+      setHolidayNames(holNames);
     } catch (err) {
       console.error('Failed to load holidays:', err);
     }
@@ -514,7 +533,7 @@ export function ScheduleProvider({ children }) {
       setCurrentYear, setCurrentMonth,
       navigateMonth, goToMonth,
       staffMemos, loadStaffMemos, saveStaffMemo,
-      holidays, loadHolidays,
+      holidays, holidayNames, loadHolidays,
       therapists, loadTherapists,
       manualTherapists, loadManualTherapists,
       shockwaveSettings, loadShockwaveSettings, saveShockwaveSettings,

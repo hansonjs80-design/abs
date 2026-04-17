@@ -10,7 +10,7 @@ const COL_W_KEY = 'staff-calendar-col-width';
 const ROW_H_KEY = 'staff-calendar-row-height';
 
 export default function StaffCalendar() {
-  const { currentYear, currentMonth, staffMemos, loadStaffMemos, saveStaffMemo, holidays, loadHolidays } = useSchedule();
+  const { currentYear, currentMonth, staffMemos, loadStaffMemos, saveStaffMemo, holidays, holidayNames, loadHolidays } = useSchedule();
   const { addToast } = useToast();
 
   const [colWidth, setColWidth] = useState(() => { const v = Number(localStorage.getItem(COL_W_KEY)); return v > 0 ? v : 0; });
@@ -24,6 +24,7 @@ export default function StaffCalendar() {
   const [editValue, setEditValue] = useState('');
   const [clipboardSource, setClipboardSource] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
+  const [colorMenu, setColorMenu] = useState(null); // { type: 'font' | 'bg' }
   const viewRef = useRef(null);
   const contextMenuRef = useRef(null);
   const dragRef = useRef(null);
@@ -112,11 +113,71 @@ export default function StaffCalendar() {
   }, [editingCell, grid, focusHiddenInput]);
 
   const beginEdit = useCallback((key, val, preserve) => {
-    flushSync(() => { setEditingCell(key); setEditValue(val); if (preserve) setEditSessionId(Date.now()); });
+    flushSync(() => {
+      setEditingCell(key);
+      setEditValue(val);
+      if (preserve) setEditSessionId(Date.now());
+    });
+    // Position the input over the target cell
+    requestAnimationFrame(() => {
+      const el = hiddenInputRef.current;
+      const cellEl = viewRef.current?.querySelector(`[data-cell-id="${key}"]`);
+      if (el && cellEl) {
+        const rect = cellEl.getBoundingClientRect();
+        const parentRect = viewRef.current.getBoundingClientRect();
+        el.style.position = 'absolute';
+        el.style.top = `${rect.top - parentRect.top}px`;
+        el.style.left = `${rect.left - parentRect.left}px`;
+        el.style.width = `${rect.width}px`;
+        el.style.height = `${rect.height}px`;
+        el.style.opacity = '1';
+        el.style.pointerEvents = 'auto';
+        el.style.zIndex = '20';
+        el.style.padding = '2px 6px';
+        el.style.border = '2px solid var(--brand-primary)';
+        el.style.borderRadius = '3px';
+        el.style.fontSize = '0.97rem';
+        el.style.fontWeight = '600';
+        el.style.textAlign = 'right';
+        el.style.boxSizing = 'border-box';
+        el.style.background = 'var(--bg-input, #fff)';
+        el.style.color = 'var(--text-primary, #000)';
+        el.style.outline = 'none';
+        if (preserve) {
+          el.value = val;
+          el.select();
+        }
+        el.focus();
+      }
+    });
+  }, []);
+
+  const resetInputToHidden = useCallback(() => {
+    const el = hiddenInputRef.current;
+    if (el) {
+      el.value = '';
+      el.style.position = 'absolute';
+      el.style.top = '0';
+      el.style.left = '0';
+      el.style.width = '1px';
+      el.style.height = '1px';
+      el.style.opacity = '0';
+      el.style.pointerEvents = 'none';
+      el.style.zIndex = '-1';
+      el.style.padding = '0';
+      el.style.border = 'none';
+      el.style.borderRadius = '0';
+      el.style.fontSize = 'inherit';
+      el.style.fontWeight = 'inherit';
+      el.style.textAlign = 'left';
+      el.style.background = 'transparent';
+      el.style.color = 'inherit';
+    }
   }, []);
 
   const saveCell = useCallback(async (wi, di, slot, val) => {
     setEditingCell(null);
+    resetInputToHidden();
     const key = memoKey(wi, di, slot);
     const old = (staffMemos[key]?.content || '').trim();
     const nv = (val || '').trim();
@@ -125,8 +186,8 @@ export default function StaffCalendar() {
       recordUndo({ type: 'edit', year: d.year, month: d.month, day: d.day, slot, oldVal: old });
       if (!await saveStaffMemo(d.year, d.month, d.day, slot, nv)) addToast('저장 실패', 'error');
     }
-    viewRef.current?.focus();
-  }, [staffMemos, memoKey, grid, saveStaffMemo, addToast, recordUndo]);
+    focusHiddenInput();
+  }, [staffMemos, memoKey, grid, saveStaffMemo, addToast, recordUndo, resetInputToHidden, focusHiddenInput]);
 
   const deleteCells = useCallback(async (keys) => {
     const items = [], proms = [];
@@ -218,7 +279,7 @@ export default function StaffCalendar() {
     if (e.key === 'Escape' && clipboardSource) { setClipboardSource(null); return; }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); doUndo(); return; }
     if (!selectedCell) return;
-    if (editingCell) { if (e.key === 'Escape') { e.preventDefault(); setEditingCell(null); viewRef.current?.focus(); } return; }
+    if (editingCell) { if (e.key === 'Escape') { e.preventDefault(); setEditingCell(null); resetInputToHidden(); focusHiddenInput(); } return; }
 
     const meta = e.metaKey || e.ctrlKey;
     if (e.key === 'Enter' || e.key === 'F2') { e.preventDefault(); beginEdit(selectedCell.key, staffMemos[selectedCell.key]?.content || '', true); return; }
@@ -236,8 +297,8 @@ export default function StaffCalendar() {
     if (meta && e.code === 'KeyX') { e.preventDefault(); handleCut(); return; }
     if (meta && e.code === 'KeyV') return; // native paste
     if ((e.key.length === 1 || e.key === 'Process' || e.keyCode === 229) && !meta && !e.altKey) {
-      // Don't preventDefault - let the character go to the hidden input
-      // The hidden input's onInput will trigger beginEdit with the typed value
+      // Same DOM element transitions from hidden to visible - IME composition preserved
+      beginEdit(selectedCell.key, '', false);
       return;
     }
   }, [selectedCell, editingCell, selectedKeys, cellFromXY, selectSingle, buildRange, beginEdit, staffMemos, doUndo, clipboardSource, deleteCells, handleCopy, handleCut]);
@@ -290,21 +351,55 @@ export default function StaffCalendar() {
 
   const ctxAction = useCallback((a) => {
     if (a === 'copy') handleCopy(); else if (a === 'cut') handleCut(); else if (a === 'paste') handlePaste(); else if (a === 'delete') deleteCells(selectedKeys);
-    setContextMenu(null);
+    setContextMenu(null); setColorMenu(null);
   }, [handleCopy, handleCut, handlePaste, deleteCells, selectedKeys]);
+
+  const PRESET_COLORS = [
+    '#000000','#e53e3e','#dd6b20','#d69e2e','#38a169','#3182ce','#805ad5','#d53f8c',
+    '#ffffff','#feb2b2','#fbd38d','#fefcbf','#c6f6d5','#bee3f8','#d6bcfa','#fed7e2',
+  ];
+
+  const applyColor = useCallback(async (type, color) => {
+    const promises = [];
+    for (const k of selectedKeys) {
+      const { year, month, day, slot } = dayFromKey(k);
+      const memo = staffMemos[k];
+      if (type === 'font') {
+        promises.push(saveStaffMemo(year, month, day, slot, memo?.content || '', color, undefined));
+      } else {
+        promises.push(saveStaffMemo(year, month, day, slot, memo?.content || '', undefined, color));
+      }
+    }
+    await Promise.all(promises);
+    setContextMenu(null); setColorMenu(null);
+    addToast(type === 'font' ? '글자색 적용' : '배경색 적용', 'success');
+  }, [selectedKeys, staffMemos, dayFromKey, saveStaffMemo, addToast]);
+
+  const handleEyedropper = useCallback(async (type) => {
+    if (!window.EyeDropper) { addToast('이 브라우저는 스포이드를 지원하지 않습니다.', 'info'); return; }
+    try {
+      const dropper = new window.EyeDropper();
+      const result = await dropper.open();
+      if (result?.sRGBHex) applyColor(type, result.sRGBHex);
+    } catch (e) { /* cancelled */ }
+  }, [applyColor, addToast]);
 
   return (
     <div className="staff-calendar animate-fade-in" ref={viewRef} style={{ outline: 'none', position: 'relative' }}>
-      {/* Global hidden input for IME capture */}
+      {/* Unified input: hidden when not editing, positioned over cell when editing */}
       <input
         ref={hiddenInputRef}
         data-hidden-input="true"
-        style={{ position: 'absolute', top: 0, left: 0, width: '1px', height: '1px', opacity: 0, padding: 0, border: 'none', outline: 'none', pointerEvents: 'none', zIndex: -1 }}
-        onInput={(e) => {
-          if (selectedCell && !editingCell) {
-            const val = e.target.value;
-            e.target.value = '';
-            beginEdit(selectedCell.key, val, false);
+        className="memo-slot-input"
+        style={{ position: 'absolute', top: 0, left: 0, width: '1px', height: '1px', opacity: 0, padding: 0, border: 'none', outline: 'none', pointerEvents: 'none', zIndex: -1, boxSizing: 'border-box' }}
+        onBlur={(e) => {
+          if (editingCell && selectedCell) {
+            saveCell(selectedCell.wi, selectedCell.di, selectedCell.slot, e.target.value);
+          }
+        }}
+        onKeyDown={(e) => {
+          if (editingCell) {
+            handleEditKey(e, selectedCell.wi, selectedCell.di, selectedCell.slot);
           }
         }}
       />
@@ -327,7 +422,6 @@ export default function StaffCalendar() {
           return (
             <div key={`${wi}-${di}`} className={cc} style={{ height: `${rowHeight}px` }}>
               <div className="calendar-date">
-                {dayInfo.isHoliday && <span className="calendar-date-badge">휴일</span>}
                 <span className="calendar-date-number">{dayInfo.day}</span>
               </div>
               <div className="calendar-memos">
@@ -339,16 +433,18 @@ export default function StaffCalendar() {
                   let clipMode = null;
                   if (clipboardSource?.keys?.has(key)) clipMode = clipboardSource.mode;
 
+                  // 공휴일 이름: 첫 번째 슬롯에 표시
+                  const holidayName = (slot === 0 && dayInfo.isHoliday) ? holidayNames.get(dayInfo.key) : null;
+
                   return (
                     <MemoSlot key={slot} memo={staffMemos[key]} dayInfo={dayInfo} slotIndex={slot}
-                      isSelected={isSel} isPrimary={isPri} isEditing={isEd} editValue={editValue} editSessionId={editSessionId} clipboardMode={clipMode}
+                      isSelected={isSel} isPrimary={isPri} isEditing={isEd} clipboardMode={clipMode}
+                      cellId={key}
+                      holidayName={holidayName}
                       onMouseDown={(e) => onCellMouseDown(wi, di, slot, e)}
                       onMouseEnter={() => onCellMouseEnter(wi, di, slot)}
                       onDoubleClick={() => onCellDblClick(wi, di, slot)}
                       onContextMenu={(e) => onCellCtxMenu(wi, di, slot, e)}
-                      editInputRef={editInputRef}
-                      onEditBlur={(e) => saveCell(wi, di, slot, e.target.value)}
-                      onEditKeyDown={(e) => handleEditKey(e, wi, di, slot)}
                     />
                   );
                 })}
@@ -367,6 +463,59 @@ export default function StaffCalendar() {
           <button type="button" className="context-menu-item" onClick={() => ctxAction('paste')}>붙여넣기 (Cmd+V)</button>
           <div className="context-menu-divider" />
           <button type="button" className="context-menu-item" onClick={() => ctxAction('delete')}>삭제 (Delete)</button>
+          <div className="context-menu-divider" />
+          <button type="button" className="context-menu-item" onClick={() => setColorMenu(colorMenu?.type === 'font' ? null : { type: 'font' })} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 14, height: 14, borderRadius: 2, background: 'linear-gradient(135deg, #e53e3e, #3182ce)', border: '1px solid #ccc', flexShrink: 0 }} />
+            글자색
+          </button>
+          <button type="button" className="context-menu-item" onClick={() => setColorMenu(colorMenu?.type === 'bg' ? null : { type: 'bg' })} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 14, height: 14, borderRadius: 2, background: 'linear-gradient(135deg, #fefcbf, #c6f6d5)', border: '1px solid #ccc', flexShrink: 0 }} />
+            배경색
+          </button>
+
+          {colorMenu && (
+            <div style={{ borderTop: '1px solid var(--border-color)', padding: '8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 2 }}>
+                {colorMenu.type === 'font' ? '글자색 선택' : '배경색 선택'}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 3 }}>
+                {PRESET_COLORS.map(c => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => applyColor(colorMenu.type, c)}
+                    style={{ width: 22, height: 22, borderRadius: 3, background: c, border: '1px solid #999', cursor: 'pointer', padding: 0 }}
+                    title={c}
+                  />
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <input
+                  type="color"
+                  style={{ width: 28, height: 28, padding: 0, border: '1px solid #ccc', borderRadius: 3, cursor: 'pointer' }}
+                  onChange={(e) => applyColor(colorMenu.type, e.target.value)}
+                  title="사용자 지정 색상"
+                />
+                <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>사용자 지정</span>
+                <button
+                  type="button"
+                  onClick={() => handleEyedropper(colorMenu.type)}
+                  style={{ marginLeft: 'auto', padding: '2px 6px', fontSize: 12, borderRadius: 3, border: '1px solid #ccc', background: 'var(--bg-secondary)', cursor: 'pointer' }}
+                  title="스포이드"
+                >
+                  💧
+                </button>
+              </div>
+              <button
+                type="button"
+                className="context-menu-item"
+                onClick={() => applyColor(colorMenu.type, null)}
+                style={{ fontSize: 12, padding: '3px 6px' }}
+              >
+                색상 초기화
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
