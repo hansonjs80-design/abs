@@ -928,7 +928,11 @@ export default function ShockwaveDataGrid({
 
         <tbody>
           {gridData.map((row, ri) => {
-            const rowClasses = [row._isFirst && row.date ? 'tr-date-start' : ''].filter(Boolean).join(' ');
+            const isWholeRowSelected = !!selNorm && selNorm.r1 === ri && selNorm.r2 === ri && selNorm.c1 === 0 && selNorm.c2 === totalColCount - 1;
+            const rowClasses = [
+              row._isFirst && row.date ? 'tr-date-start' : '',
+              isWholeRowSelected ? 'tr-row-selected' : '',
+            ].filter(Boolean).join(' ');
             return (
             <tr key={row.id} className={rowClasses} ref={(el) => { rowRefs.current[ri] = el; }}>
               {Array.from({ length: totalColCount }, (_, ci) => {
@@ -950,11 +954,13 @@ export default function ShockwaveDataGrid({
                 }
                 let cls = 'gc';
                 if (isSel) cls += ' gc-sel';
+                if (isWholeRowSelected) cls += ' gc-row-selected';
                 if (isFoc) cls += ' gc-foc';
                 if (groupCls) cls += ' ' + groupCls;
                 if (ci < frozenColumnCount) {
                     cls += ` gc-fixed gc-fixed-${ci + 1}`;
                 }
+                if (ci === 0) cls += ' gc-row-index';
                 if (clipboardSource && ri >= clipboardSource.r1 && ri <= clipboardSource.r2 && ci >= clipboardSource.c1 && ci <= clipboardSource.c2) {
                     cls += clipboardSource.mode === 'cut' ? ' gc-cut-source' : ' gc-copy-source';
                 }

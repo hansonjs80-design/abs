@@ -195,6 +195,9 @@
   --grid-new-strong-bg: #e2e8f0;
   --grid-total-cell-bg: #f1f5f9;
   --grid-new-cell-bg: #f1f5f9;
+  --grid-row-selected-bg: #dde7f6;
+  --grid-row-selected-fixed-bg: #d6e3f5;
+  --grid-row-selected-summary-bg: #dce6f3;
   width: 100%;
   overflow: auto;
   max-height: 85vh;
@@ -422,6 +425,15 @@
   background-color: var(--brand-primary-light) !important;
 }
 
+.gc-row-selected {
+  background-color: var(--grid-row-selected-bg) !important;
+}
+
+.gc-row-index.gc-row-selected {
+  background-color: #cddcf1 !important;
+  color: #334155;
+}
+
 .gc-foc {
   outline: 2px solid var(--brand-primary);
   outline-offset: -2px;
@@ -518,8 +530,21 @@ td.gc-bold > .gc-input {
   background: var(--grid-fixed-bg) !important;
 }
 
+.gc-fixed.gc-row-selected {
+  background: var(--grid-row-selected-fixed-bg) !important;
+}
+
 tbody tr:hover .gc-fixed {
   background: #eef3f8 !important;
+}
+
+tbody tr.tr-row-selected:hover .gc,
+tbody tr.tr-row-selected:hover .gc-fixed {
+  background-color: var(--grid-row-selected-bg) !important;
+}
+
+tbody tr.tr-row-selected:hover .gc-fixed {
+  background-color: var(--grid-row-selected-fixed-bg) !important;
 }
 
 /* Context Menu (Modern) */
@@ -613,6 +638,13 @@ tbody .gc-new-patient.sticky-right-last-2 {
   isolation: isolate;
 }
 
+tbody .gc-total.gc-row-selected.sticky-right-last-1,
+tbody .gc-total.gc-row-selected.sticky-right-last-2,
+tbody .gc-new-patient.gc-row-selected.sticky-right-last-1,
+tbody .gc-new-patient.gc-row-selected.sticky-right-last-2 {
+  background-color: var(--grid-row-selected-summary-bg) !important;
+}
+
 tbody tr:hover .sticky-right-last-1,
 tbody tr:hover .sticky-right-last-2 {
   background-color: inherit !important;
@@ -647,6 +679,13 @@ tbody td.gc-total.sticky-right-last-2::before {
 tbody td.gc-new-patient.sticky-right-last-1::before,
 tbody td.gc-new-patient.sticky-right-last-2::before {
   background: var(--grid-new-cell-bg);
+}
+
+tbody td.gc-total.gc-row-selected.sticky-right-last-1::before,
+tbody td.gc-total.gc-row-selected.sticky-right-last-2::before,
+tbody td.gc-new-patient.gc-row-selected.sticky-right-last-1::before,
+tbody td.gc-new-patient.gc-row-selected.sticky-right-last-2::before {
+  background: var(--grid-row-selected-summary-bg);
 }
 
 /* Summary Grid Totals specific styles */
