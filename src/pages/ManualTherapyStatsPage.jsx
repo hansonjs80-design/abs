@@ -2,9 +2,10 @@ import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } fr
 import { useSchedule } from '../contexts/ScheduleContext';
 import { supabase } from '../lib/supabaseClient';
 import { useToast } from '../components/common/Toast';
-import { syncTodayManualTherapyScheduleToStats } from '../lib/manualTherapyUtils';
+import { syncTodayManualTherapyScheduleToStats, syncMonthManualTherapyScheduleToStats } from '../lib/manualTherapyUtils';
 import { getTodayKST } from '../lib/calendarUtils';
 import ShockwaveDataGrid from '../components/shockwave/ShockwaveDataGrid';
+import ShockwaveNewPatientsView from '../components/shockwave/ShockwaveNewPatientsView';
 
 const ManualTherapyStatsView = React.lazy(() => import('../components/shockwave/ManualTherapyStatsView'));
 const MANUAL_THERAPY_SHEET_ID = '1-R_p3eyxwXISFTYX5G7_ec5L0kgUIhNbIwA9AdEj-9U';
@@ -135,14 +136,15 @@ export default function ManualTherapyStatsPage() {
       setIsAutoSyncingToday(true);
       lastAutoSyncKeyRef.current = autoSyncKey;
       try {
-        const result = await syncTodayManualTherapyScheduleToStats({
+        const result = await syncMonthManualTherapyScheduleToStats({
           year: currentYear,
           month: currentMonth,
           memos: shockwaveMemos,
           therapists: safeTherapists,
+          upToToday: true,
         });
 
-        if (!cancelled && !result?.skipped && result?.totalUpdates > 0) {
+        if (!cancelled && result?.totalUpdates > 0) {
           await fetchLogs();
         }
       } catch (error) {
@@ -188,6 +190,33 @@ export default function ManualTherapyStatsPage() {
     } catch (error) {
       console.error(error);
       addToast('도수치료 데이터 동기화 중 오류가 발생했습니다.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [addToast, currentMonth, currentYear, fetchLogs, safeTherapists, shockwaveMemos]);
+
+  const handleSyncMonthFromScheduler = useCallback(async () => {
+    if (!window.confirm(`${currentMonth}월 전체 도수치료 스케줄을 스케줄러 기준으로 덮어씁니다.\n(수동으로 추가한 내역은 모두 삭제됩니다.) 진행하시겠습니까?`)) return;
+    setIsLoading(true);
+    try {
+      const result = await syncMonthManualTherapyScheduleToStats({
+        year: currentYear,
+        month: currentMonth,
+        memos: shockwaveMemos,
+        therapists: safeTherapists,
+        upToToday: false,
+        overwriteManual: true,
+      });
+
+      if (result.totalUpdates > 0) {
+        addToast(`전체 월 스케줄 동기화 성공! (추가:${result.totalInserted}, 삭제:${result.totalDeleted})`, 'success');
+        await fetchLogs();
+      } else {
+        addToast('전체 스케줄과 도수치료 현황이 이미 일치합니다.', 'info');
+      }
+    } catch (error) {
+      console.error(error);
+      addToast('전체 월 데이터 동기화 중 오류가 발생했습니다.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -333,11 +362,79 @@ export default function ManualTherapyStatsPage() {
                 className={`sw-stats-side-tab${activeSection === 'overview' ? ' active' : ''}`}
                 onClick={() => setActiveSection('overview')}
               >
-                도수치료 통계
+                치료 내역 통계
+              </button>
+              <button
+                className={`sw-stats-side-tab${activeSection === 'settlement' ? ' active' : ''}`}
+                onClick={() => setActiveSection('settlement')}
+              >
+                도수치료 결산
+              </button>
+              <button
+                className={`sw-stats-side-tab${activeSection === 'new-patients' ? ' active' : ''}`}
+                onClick={() => setActiveSection('new-patients')}
+              >
+                신규환자
               </button>
             </aside>
 
             <div className="sw-stats-panel">
+              {activeSection === 'overview' && (
+                <div className="sw-stats-header">
+                  <div className="sw-stats-summary">
+                    <h2>📊 {currentMonth}월 치료 내역 통계</h2>
+                    <div className="sw-stats-cards">
+                      <div className="sw-stats-card">
+                        <span className="card-label">해당 월 총 처방수</span>
+                        <span className="card-value sum-value">
+                          {logs.reduce((s, l) => s + (l?.prescription ? (parseInt(l.prescription_count || '1') || 1) : 0), 0)}건
+                        </span>
+                      </div>
+                      <div className="sw-stats-card">
+                        <span className="card-label">초진 포함 전체 목록</span>
+                        <span className="card-value">
+                          {logs.filter(l => l?.patient_name?.includes('*')).length}명 (*)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="sw-stats-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={handleImportFromGoogleSheet}
+                      disabled={isLoading}
+                      style={{ borderColor: '#2563eb', color: '#2563eb' }}
+                    >
+                      📥 구글시트 B:I 가져오기
+                    </button>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={async () => {
+                        let fallbackDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
+                        if (logs.length > 0) {
+                          const dates = logs.map(l => l?.date).filter(Boolean).sort();
+                          if (dates.length > 0) fallbackDate = dates[dates.length - 1];
+                        }
+                        const { error } = await supabase.from('manual_therapy_patient_logs').insert([{
+                          date: fallbackDate, patient_name: '', chart_number: '', visit_count: '', body_part: '', therapist_name: '', prescription: '', prescription_count: 0, source: 'manual'
+                        }]);
+                        if (!error) fetchLogs();
+                      }}
+                    >
+                      + 수동 추가
+                    </button>
+                    <button
+                      className="sw-sync-btn"
+                      onClick={handleSyncFromScheduler}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? '동기화 중...' : '⬇ 현재 스케줄러 데이터 가져오기'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {activeSection === 'grid' && (
                 <div className="sw-stats-body sw-stats-body--grid">
                   <div className="sw-grid-card">
@@ -353,16 +450,6 @@ export default function ManualTherapyStatsPage() {
                     </div>
 
                     <div className="sw-grid-card-table">
-                      <div className="sw-stats-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end', padding: '0 20px 16px' }}>
-                        <button
-                          className="btn btn-secondary"
-                          onClick={handleImportFromGoogleSheet}
-                          disabled={isLoading}
-                          style={{ borderColor: '#2563eb', color: '#2563eb' }}
-                        >
-                          📥 구글시트 B:I 가져오기
-                        </button>
-                      </div>
                       <ShockwaveDataGrid
                         logs={logs}
                         therapists={safeTherapists}
@@ -372,6 +459,8 @@ export default function ManualTherapyStatsPage() {
                         extraDraftRows={extraDraftRows}
                         onApplyTodaySchedule={handleSyncFromScheduler}
                         isApplyingTodaySchedule={isLoading}
+                        onApplyMonthSchedule={handleSyncMonthFromScheduler}
+                        isApplyingMonthSchedule={isLoading}
                         tableName="manual_therapy_patient_logs"
                         prescriptions={prescriptions}
                         frozenColumnCount={shockwaveSettings?.frozen_columns ?? 6}
@@ -394,8 +483,8 @@ export default function ManualTherapyStatsPage() {
                 </div>
               )}
 
-              {activeSection === 'overview' && (
-                <Suspense fallback={<div style={{ padding: 24 }}>도수치료 통계를 불러오는 중...</div>}>
+              {activeSection === 'settlement' && (
+                <Suspense fallback={<div style={{ padding: 24 }}>도수치료 결산을 불러오는 중...</div>}>
                   <div className="sw-stats-body sw-stats-body--settlement">
                     <ManualTherapyStatsView
                       currentMonth={currentMonth}
@@ -403,9 +492,21 @@ export default function ManualTherapyStatsPage() {
                       therapists={safeTherapists}
                       prescriptions={prescriptions}
                       incentivePercentage={shockwaveSettings?.manual_therapy_incentive_percentage ?? 0}
+                      prescriptionPrices={shockwaveSettings?.prescription_prices || {}}
                     />
                   </div>
                 </Suspense>
+              )}
+
+              {activeSection === 'new-patients' && (
+                <div className="sw-stats-body sw-stats-body--settlement">
+                  <ShockwaveNewPatientsView
+                    logs={logs}
+                    therapists={safeTherapists}
+                    currentMonth={currentMonth}
+                    title={`${currentMonth}월 도수치료 신규환자`}
+                  />
+                </div>
               )}
             </div>
           </div>

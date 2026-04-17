@@ -228,19 +228,19 @@ function buildSchedulerRowPlacement(items, existingRows) {
   });
 }
 
-async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therapists }) {
+async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therapists, targetDateStr, overwriteManual = false }) {
   if (!memos) {
     return { skipped: true, reason: 'missing_memos' };
   }
 
   const today = getTodayKST();
-  const todayY = today.getFullYear();
-  const todayM = today.getMonth() + 1;
-  const todayD = today.getDate();
-  const todayDateStr = `${todayY}-${String(todayM).padStart(2, '0')}-${String(todayD).padStart(2, '0')}`;
+  const todayY = targetDateStr ? parseInt(targetDateStr.split('-')[0], 10) : today.getFullYear();
+  const todayM = targetDateStr ? parseInt(targetDateStr.split('-')[1], 10) : today.getMonth() + 1;
+  const todayD = targetDateStr ? parseInt(targetDateStr.split('-')[2], 10) : today.getDate();
+  const todayDateStrFinal = targetDateStr || `${todayY}-${String(todayM).padStart(2, '0')}-${String(todayD).padStart(2, '0')}`;
 
-  if (todayY !== year || todayM !== month) {
-    return { skipped: true, reason: 'today_outside_current_month', todayDateStr };
+  if (!targetDateStr && (todayY !== year || todayM !== month)) {
+    return { skipped: true, reason: 'today_outside_current_month', todayDateStr: todayDateStrFinal };
   }
 
   const weeks = generateShockwaveCalendar(year, month);
@@ -259,13 +259,14 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
     newLogs.push({
       r,
       c,
-      date: todayDateStr,
+      date: todayDateStrFinal,
       patient_name: parsed.patient_name,
       chart_number: parsed.chart_number || '',
       visit_count: parsed.visit_count || '',
       body_part: parsed.body_part || '',
       therapist_name: therapistName,
-      prescription: '',
+      prescription: cell?.prescription || '',
+      prescription_count: cell?.prescription ? 1 : null,
     });
   });
 
@@ -295,7 +296,7 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
   newLogs.forEach((item) => {
     const cleanName = item.patient_name.replace(/\*/g, '');
     const patientLogs = pastData.filter(
-      (past) => past.patient_name.replace(/\*/g, '') === cleanName && past.date !== todayDateStr
+      (past) => past.patient_name.replace(/\*/g, '') === cleanName && past.date !== todayDateStrFinal
     );
 
     if (patientLogs.length > 0) {
@@ -319,11 +320,11 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
   const { data: todayStats } = await supabase
     .from('shockwave_patient_logs')
     .select('*')
-    .eq('date', todayDateStr);
+    .eq('date', todayDateStrFinal);
 
-  const schedulerEntries = (todayStats || []).filter((row) => row.source !== 'manual');
+  const schedulerEntriesForCopying = (todayStats || []).filter((row) => row.source !== 'manual');
   const existingGroups = {};
-  schedulerEntries.forEach((row) => {
+  schedulerEntriesForCopying.forEach((row) => {
     const key = row.patient_name.replace(/\*/g, '');
     if (!existingGroups[key]) existingGroups[key] = [];
     existingGroups[key].push(row);
@@ -342,15 +343,18 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
       visit_count: item.visit_count,
       body_part: item.body_part,
       therapist_name: item.therapist_name,
-      prescription: old?.prescription || '',
-      prescription_count: old?.prescription_count || '',
+      prescription: item.prescription || old?.prescription || '',
+      prescription_count: item.prescription_count !== null ? item.prescription_count : old?.prescription_count || '',
       source: 'scheduler',
     };
 
     rebuiltSchedulerRows.push(out);
   });
 
-  const toDeleteIds = schedulerEntries.map((row) => row.id).filter(Boolean);
+  const toDeleteIds = (todayStats || [])
+    .filter((row) => overwriteManual || row.source !== 'manual')
+    .map((row) => row.id)
+    .filter(Boolean);
 
   if (toDeleteIds.length > 0) {
     await supabase.from('shockwave_patient_logs').delete().in('id', toDeleteIds);
@@ -361,7 +365,7 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
 
   return {
     skipped: false,
-    todayDateStr,
+    todayDateStr: todayDateStrFinal,
     extractedCount: newLogs.length,
     insertedCount: rebuiltSchedulerRows.length,
     updatedCount: 0,
@@ -374,6 +378,62 @@ export async function syncTodayShockwaveScheduleToStats(params) {
   const run = todaySchedulerSyncQueue.then(() => runTodayShockwaveScheduleToStatsSync(params));
   todaySchedulerSyncQueue = run.catch(() => {});
   return run;
+}
+
+export async function syncMonthShockwaveScheduleToStats({ year, month, memos, therapists, upToToday = false, overwriteManual = false }) {
+  const today = getTodayKST();
+  const daysInMonth = new Date(year, month, 0).getDate();
+  let endDay = daysInMonth;
+  
+  if (upToToday && year === today.getFullYear() && month === today.getMonth() + 1) {
+    endDay = today.getDate();
+  }
+
+  let totalInserted = 0;
+  let totalDeleted = 0;
+  let totalUpdated = 0;
+
+  for (let d = 1; d <= endDay; d++) {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    try {
+      const result = await syncTodayShockwaveScheduleToStats({
+        year,
+        month,
+        memos,
+        therapists,
+        targetDateStr: dateStr,
+        overwriteManual
+      });
+      if (!result.skipped) {
+        totalInserted += result.insertedCount || 0;
+        totalDeleted += result.deletedCount || 0;
+        totalUpdated += result.updatedCount || 0;
+      }
+    } catch (e) {
+      console.error(`Failed to sync shockwave schedule for ${dateStr}:`, e);
+    }
+  }
+
+  // If we only synced up to today, delete any future scheduler records for this month
+  if (upToToday && year === today.getFullYear() && month === today.getMonth() + 1) {
+    const todayDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const nextMonthDate = new Date(year, month, 1);
+    const endOfMonthStr = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
+    
+    try {
+      const { error } = await supabase
+        .from('shockwave_patient_logs')
+        .delete()
+        .gt('date', todayDateStr)
+        .lte('date', endOfMonthStr);
+        
+      if (error) console.error('Failed to cleanup future dates:', error);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  return { totalInserted, totalDeleted, totalUpdated, totalUpdates: totalInserted + totalDeleted + totalUpdated };
 }
 
 function formatStatsRowForScheduler(row) {

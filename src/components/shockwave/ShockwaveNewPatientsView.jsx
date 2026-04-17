@@ -19,6 +19,7 @@ export default function ShockwaveNewPatientsView({
   logs,
   therapists,
   currentMonth,
+  title,
 }) {
   const summary = useMemo(() => {
     const byTherapist = therapists.map((therapist) => {
@@ -104,7 +105,7 @@ export default function ShockwaveNewPatientsView({
     <div className="sw-settlement-stack">
       <div className="sw-settlement-card">
         <div className="sw-settlement-header">
-          <h2>{currentMonth}월 충격파 신규환자</h2>
+          <h2>{title || `${currentMonth}월 충격파 신규환자`}</h2>
           <div className="sw-settlement-meta">
             <span>총 {summary.totalCount}명</span>
           </div>

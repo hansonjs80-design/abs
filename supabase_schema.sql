@@ -40,10 +40,14 @@ CREATE TABLE IF NOT EXISTS public.shockwave_schedules (
   col_index integer NOT NULL,  /* 몇 번째 치료사 칸인지 (0~N) */
   content text,
   bg_color text,
+  prescription text,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
   UNIQUE(year, month, week_index, day_index, row_index, col_index)
 );
+
+ALTER TABLE public.shockwave_schedules 
+ADD COLUMN IF NOT EXISTS prescription text;
 
 -- 4. 휴일 관리 테이블
 CREATE TABLE IF NOT EXISTS public.holidays (
@@ -112,6 +116,9 @@ ADD COLUMN IF NOT EXISTS manual_therapy_incentive_percentage numeric(5,2) DEFAUL
 
 ALTER TABLE public.shockwave_settings
 ADD COLUMN IF NOT EXISTS frozen_columns integer DEFAULT 6;
+
+ALTER TABLE public.shockwave_settings
+ADD COLUMN IF NOT EXISTS prescription_colors jsonb DEFAULT '{}'::jsonb;
 
 ALTER TABLE public.shockwave_schedules 
 ADD COLUMN IF NOT EXISTS merge_span jsonb DEFAULT '{"rowSpan": 1, "colSpan": 1, "mergedInto": null}'::jsonb;

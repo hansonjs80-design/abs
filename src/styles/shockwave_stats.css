@@ -273,6 +273,33 @@
   border-radius: 16px;
 }
 
+/* Custom Scrollbar for Grid Wrapper to avoid obscuring corners */
+.sw-grid-wrapper::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+.sw-grid-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+  margin-top: 16px;
+  margin-bottom: 16px;
+  margin-left: 16px;
+  margin-right: 16px;
+}
+.sw-grid-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 10px;
+  border: 4px solid #ffffff;
+  background-clip: padding-box;
+}
+.sw-grid-wrapper::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+  border: 4px solid #ffffff;
+  background-clip: padding-box;
+}
+.sw-grid-wrapper::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 .sw-grid-table {
   width: max-content;
   border-collapse: separate;
@@ -282,6 +309,7 @@
   color: var(--text-primary);
   border-left: 1px solid var(--grid-strong);
   border-top: 1px solid var(--grid-strong);
+  border-radius: 16px;
 }
 
 .sw-grid-table thead {
@@ -332,6 +360,8 @@
   border-bottom: 1px solid var(--grid-strong) !important;
   padding: 12px !important;
   box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.16);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
 }
 
 .grid-title-inner {

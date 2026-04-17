@@ -8,6 +8,7 @@ export default function ShockwavePage() {
     currentMonth,
     therapists,
     loadTherapists,
+    loadManualTherapists,
     shockwaveSettings,
     loadShockwaveSettings,
     shockwaveMemos,
@@ -21,8 +22,9 @@ export default function ShockwavePage() {
 
   useEffect(() => {
     loadTherapists();
+    loadManualTherapists();
     loadShockwaveSettings();
-  }, [loadTherapists, loadShockwaveSettings]);
+  }, [loadTherapists, loadManualTherapists, loadShockwaveSettings]);
 
   useEffect(() => {
     loadStaffMemos(currentYear, currentMonth);

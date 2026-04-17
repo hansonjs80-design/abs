@@ -43,8 +43,11 @@ export default function ShockwaveDataGrid({
   prescriptions: prescriptionsProp,
   frozenColumnCount: frozenColumnCountProp,
   title,
-  applyTodayLabel = '오늘 스케줄 적용',
-  secondarySummaryLabel = '신환',
+  applyTodayLabel = '오늘 충격파 스케줄 적용',
+  onApplyMonthSchedule,
+  isApplyingMonthSchedule = false,
+  applyMonthLabel = '전체 날짜 스케줄 적용',
+  secondarySummaryLabel = '신규',
   onSyncDateToScheduler = syncStatsDateToScheduler,
 }) {
   const { shockwaveSettings: settings } = useSchedule();
@@ -976,9 +979,26 @@ export default function ShockwaveDataGrid({
             <th colSpan={totalColCount} className="grid-title">
               <div className="grid-title-inner">
                 <span>{gridTitle}</span>
-                <button type="button" className="grid-title-action" onClick={onApplyTodaySchedule} disabled={!onApplyTodaySchedule || isApplyingTodaySchedule}>
-                  {isApplyingTodaySchedule ? '적용 중...' : applyTodayLabel}
-                </button>
+                {onApplyTodaySchedule && (
+                  <button
+                    type="button"
+                    className="grid-title-action"
+                    onClick={onApplyTodaySchedule}
+                    disabled={isApplyingTodaySchedule || isApplyingMonthSchedule}
+                  >
+                    {isApplyingTodaySchedule ? '적용 중...' : applyTodayLabel}
+                  </button>
+                )}
+                {onApplyMonthSchedule && (
+                  <button
+                    type="button"
+                    className="grid-title-action"
+                    onClick={onApplyMonthSchedule}
+                    disabled={isApplyingTodaySchedule || isApplyingMonthSchedule}
+                  >
+                    {isApplyingMonthSchedule ? '전체 동기화 중...' : applyMonthLabel}
+                  </button>
+                )}
               </div>
             </th>
           </tr>

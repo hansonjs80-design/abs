@@ -24,6 +24,7 @@ export function ScheduleProvider({ children }) {
       'F/Rdc': 70000,
       'F/R': 80000,
     },
+    prescription_colors: {},
     incentive_percentage: 7,
     manual_therapy_incentive_percentage: 0,
     frozen_columns: 6
@@ -202,6 +203,7 @@ export function ScheduleProvider({ children }) {
             'F/Rdc': 70000,
             'F/R': 80000,
           },
+          prescription_colors: data.prescription_colors || {},
           incentive_percentage: data.incentive_percentage ?? 7,
           manual_therapy_incentive_percentage: data.manual_therapy_incentive_percentage ?? 0,
           frozen_columns: data.frozen_columns || 6
@@ -230,7 +232,8 @@ export function ScheduleProvider({ children }) {
         },
         incentive_percentage: newSettings.incentive_percentage ?? 7,
         manual_therapy_incentive_percentage: newSettings.manual_therapy_incentive_percentage ?? 0,
-        frozen_columns: newSettings.frozen_columns || 6
+        frozen_columns: newSettings.frozen_columns || 6,
+        prescription_colors: newSettings.prescription_colors || {}
       }, { onConflict: 'id' });
 
       if (error) throw error;
@@ -268,36 +271,26 @@ export function ScheduleProvider({ children }) {
   }, []);
 
   // 충격파 스케줄 저장
-  const saveShockwaveMemo = useCallback(async (year, month, weekIndex, dayIndex, rowIndex, colIndex, content, bg_color) => {
-    const key = `${weekIndex}-${dayIndex}-${rowIndex}-${colIndex}`;
-    const previousMemo = shockwaveMemos[key];
-    const optimisticMemo = {
-      ...(previousMemo || {}),
-      year,
-      month,
-      week_index: weekIndex,
-      day_index: dayIndex,
-      row_index: rowIndex,
-      col_index: colIndex,
-      content: content || '',
-      updated_at: new Date().toISOString(),
-      ...(bg_color !== undefined ? { bg_color } : {}),
-    };
-
-    setShockwaveMemos(prev => {
-      const next = { ...prev };
-      if (shouldKeepShockwaveMemo(optimisticMemo)) next[key] = optimisticMemo;
-      else delete next[key];
-      return next;
-    });
-
+  const saveShockwaveMemo = useCallback(async (year, month, weekIndex, dayIndex, rowIndex, colIndex, content, bg_color, merge_span, prescription) => {
     try {
+      const key = `${weekIndex}-${dayIndex}-${rowIndex}-${colIndex}`;
+      const optimisticMemo = shockwaveMemos[key] || {};
       const upsertData = {
         year, month, week_index: weekIndex, day_index: dayIndex, row_index: rowIndex, col_index: colIndex,
-        content: content || '',
+        content: content !== undefined ? content : optimisticMemo.content,
         updated_at: new Date().toISOString()
       };
       if (bg_color !== undefined) upsertData.bg_color = bg_color;
+      if (merge_span !== undefined) upsertData.merge_span = merge_span;
+      if (prescription !== undefined) upsertData.prescription = prescription;
+
+      setShockwaveMemos(prev => {
+        const next = { ...prev };
+        const updated = { ...optimisticMemo, ...upsertData };
+        if (shouldKeepShockwaveMemo(updated)) next[key] = updated;
+        else delete next[key];
+        return next;
+      });
 
       const { data, error } = await supabase
         .from('shockwave_schedules')
@@ -309,10 +302,8 @@ export function ScheduleProvider({ children }) {
       if (error) throw error;
 
       const savedMemo = data?.[0] || { ...optimisticMemo, ...upsertData };
-      const nextShockwaveMemos = { ...shockwaveMemos };
-      if (shouldKeepShockwaveMemo(savedMemo)) nextShockwaveMemos[key] = savedMemo;
-      else delete nextShockwaveMemos[key];
-
+      const nextShockwaveMemos = { ...shockwaveMemos, [key]: savedMemo };
+      
       setShockwaveMemos(prev => {
         const next = { ...prev };
         if (shouldKeepShockwaveMemo(savedMemo)) next[key] = savedMemo;
@@ -321,34 +312,44 @@ export function ScheduleProvider({ children }) {
       });
 
       const today = getTodayKST();
+      const todayDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const weeks = generateShockwaveCalendar(year, month);
       const dayInfo = weeks[weekIndex]?.[dayIndex];
-      const isTodayCell = dayInfo &&
-        dayInfo.isCurrentMonth &&
-        dayInfo.year === today.getFullYear() &&
-        dayInfo.month === today.getMonth() + 1 &&
-        dayInfo.day === today.getDate();
+      const targetDateStr = dayInfo && dayInfo.isCurrentMonth
+        ? `${dayInfo.year}-${String(dayInfo.month).padStart(2, '0')}-${String(dayInfo.day).padStart(2, '0')}`
+        : null;
 
-      if (isTodayCell && therapists.length > 0) {
-        try {
-          await syncTodayShockwaveScheduleToStats({
-            year,
-            month,
-            memos: nextShockwaveMemos,
-            therapists,
-          });
-        } catch (syncErr) {
-          console.error('Failed to sync today shockwave memo to stats:', syncErr);
+      if (targetDateStr && targetDateStr <= todayDateStr) {
+        if (therapists.length > 0) {
+          try {
+            await syncTodayShockwaveScheduleToStats({
+              year,
+              month,
+              memos: nextShockwaveMemos,
+              therapists,
+              targetDateStr,
+            });
+          } catch (syncErr) {
+            console.error('Failed to sync shockwave memo to stats:', syncErr);
+          }
+        }
+        if (manualTherapists.length > 0) {
+          try {
+            await syncTodayManualTherapyScheduleToStats({
+              year,
+              month,
+              memos: nextShockwaveMemos,
+              therapists: manualTherapists,
+              targetDateStr,
+            });
+          } catch (syncErr) {
+            console.error('Failed to sync manual therapy memo to stats:', syncErr);
+          }
         }
       }
       return true;
     } catch (err) {
-      setShockwaveMemos(prev => {
-        const next = { ...prev };
-        if (previousMemo === undefined) delete next[key];
-        else next[key] = previousMemo;
-        return next;
-      });
+      setShockwaveMemos(prev => ({ ...prev }));
       console.error('Failed to save shockwave memo:', err);
       return false;
     }
@@ -413,26 +414,48 @@ export function ScheduleProvider({ children }) {
       });
 
       const today = getTodayKST();
+      const todayDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const weeks = generateShockwaveCalendar(currentYear, currentMonth);
-      const touchesToday = memosArray.some((item) => {
+      const touchedDates = new Set();
+      
+      memosArray.forEach((item) => {
         const dayInfo = weeks[item.week_index]?.[item.day_index];
-        return dayInfo &&
-          dayInfo.isCurrentMonth &&
-          dayInfo.year === today.getFullYear() &&
-          dayInfo.month === today.getMonth() + 1 &&
-          dayInfo.day === today.getDate();
+        if (dayInfo && dayInfo.isCurrentMonth) {
+          const dateStr = `${dayInfo.year}-${String(dayInfo.month).padStart(2, '0')}-${String(dayInfo.day).padStart(2, '0')}`;
+          if (dateStr <= todayDateStr) {
+            touchedDates.add(dateStr);
+          }
+        }
       });
 
-      if (touchesToday && therapists.length > 0) {
-        try {
-          await syncTodayShockwaveScheduleToStats({
-            year: currentYear,
-            month: currentMonth,
-            memos: nextShockwaveMemos,
-            therapists,
-          });
-        } catch (syncErr) {
-          console.error('Failed to sync today bulk shockwave memos to stats:', syncErr);
+      if (touchedDates.size > 0) {
+        for (const dateStr of touchedDates) {
+          if (therapists.length > 0) {
+            try {
+              await syncTodayShockwaveScheduleToStats({
+                year: currentYear,
+                month: currentMonth,
+                memos: nextShockwaveMemos,
+                therapists,
+                targetDateStr: dateStr,
+              });
+            } catch (syncErr) {
+              console.error('Failed to sync bulk shockwave memos to stats:', syncErr);
+            }
+          }
+          if (manualTherapists.length > 0) {
+            try {
+              await syncTodayManualTherapyScheduleToStats({
+                year: currentYear,
+                month: currentMonth,
+                memos: nextShockwaveMemos,
+                therapists: manualTherapists,
+                targetDateStr: dateStr,
+              });
+            } catch (syncErr) {
+              console.error('Failed to sync bulk manual therapy memos to stats:', syncErr);
+            }
+          }
         }
       }
       return true;

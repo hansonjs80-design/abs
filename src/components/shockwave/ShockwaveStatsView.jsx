@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { syncTodayShockwaveScheduleToStats } from '../../lib/shockwaveSyncUtils';
+import { syncTodayShockwaveScheduleToStats, syncMonthShockwaveScheduleToStats } from '../../lib/shockwaveSyncUtils';
 import { getTodayKST } from '../../lib/calendarUtils';
 import { useToast } from '../common/Toast';
 import { useSchedule } from '../../contexts/ScheduleContext';
@@ -194,14 +194,15 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
       setIsAutoSyncingToday(true);
       lastAutoSyncKeyRef.current = autoSyncKey;
       try {
-        const result = await syncTodayShockwaveScheduleToStats({
+        const result = await syncMonthShockwaveScheduleToStats({
           year: currentYear,
           month: currentMonth,
           memos,
           therapists: safeTherapists,
+          upToToday: true,
         });
 
-        if (!cancelled && !result?.skipped && result?.totalUpdates > 0) {
+        if (!cancelled && result?.totalUpdates > 0) {
           await fetchLogs();
         }
       } catch (error) {
@@ -258,6 +259,33 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     } catch (err) {
       console.error(err);
       addToast('데이터 동기화 중 오류가 발생했습니다.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSyncMonthFromScheduler = async () => {
+    if (!window.confirm(`${currentMonth}월 전체 스케줄을 스케줄러 기준으로 덮어씁니다.\n(수동으로 추가한 내역은 모두 삭제됩니다.) 진행하시겠습니까?`)) return;
+    setIsLoading(true);
+    try {
+      const result = await syncMonthShockwaveScheduleToStats({
+        year: currentYear,
+        month: currentMonth,
+        memos,
+        therapists: safeTherapists,
+        upToToday: false,
+        overwriteManual: true,
+      });
+
+      if (result.totalUpdates > 0) {
+        addToast(`전체 월 스케줄 동기화 성공! (추가:${result.totalInserted}, 삭제:${result.totalDeleted})`, 'success');
+        await fetchLogs();
+      } else {
+        addToast('전체 스케줄과 치료 내역 통계가 이미 일치합니다.', 'info');
+      }
+    } catch (err) {
+      console.error(err);
+      addToast('전체 월 데이터 동기화 중 오류가 발생했습니다.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -561,6 +589,8 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                       extraDraftRows={extraDraftRows}
                       onApplyTodaySchedule={handleSyncFromScheduler}
                       isApplyingTodaySchedule={isLoading}
+                      onApplyMonthSchedule={handleSyncMonthFromScheduler}
+                      isApplyingMonthSchedule={isLoading}
                     />
                   </ShockwaveStatsErrorBoundary>
                 </div>

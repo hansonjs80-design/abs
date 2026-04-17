@@ -22,6 +22,7 @@ const SQL_SNIPPETS = [
   incentive_percentage numeric(5,2) NOT NULL DEFAULT 7,
   manual_therapy_incentive_percentage numeric(5,2) NOT NULL DEFAULT 0,
   frozen_columns int DEFAULT 6,
+  prescription_colors jsonb NOT NULL DEFAULT '{}'::jsonb,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE public.shockwave_settings DISABLE ROW LEVEL SECURITY;
@@ -31,7 +32,8 @@ ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS manual_therapy_pr
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS prescription_prices jsonb NOT NULL DEFAULT '{"F1.5":50000,"F/Rdc":70000,"F/R":80000}'::jsonb;
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS incentive_percentage numeric(5,2) NOT NULL DEFAULT 7;
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS manual_therapy_incentive_percentage numeric(5,2) NOT NULL DEFAULT 0;
-ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS frozen_columns int DEFAULT 6;`
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS frozen_columns int DEFAULT 6;
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS prescription_colors jsonb NOT NULL DEFAULT '{}'::jsonb;`
   },
   {
     title: '치료사 목록 테이블',
@@ -70,6 +72,7 @@ ALTER TABLE public.manual_therapy_therapists DISABLE ROW LEVEL SECURITY;`
   col_index int NOT NULL,
   content text,
   bg_color text,
+  prescription text,
   merge_span jsonb DEFAULT '{"rowSpan": 1, "colSpan": 1, "mergedInto": null}'::jsonb,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
@@ -185,6 +188,7 @@ export default function SettingsPage() {
       'F/Rdc': 70000,
       'F/R': 80000,
     },
+    prescription_colors: {},
     incentive_percentage: 7,
     manual_therapy_incentive_percentage: 0,
     frozen_columns: 6
@@ -227,6 +231,7 @@ export default function SettingsPage() {
             'F/Rdc': 70000,
             'F/R': 80000,
           },
+          prescription_colors: data.prescription_colors || {},
           incentive_percentage: data.incentive_percentage ?? 7,
           manual_therapy_incentive_percentage: data.manual_therapy_incentive_percentage ?? 0,
           frozen_columns: data.frozen_columns || 6
@@ -245,6 +250,7 @@ export default function SettingsPage() {
       prescriptions: swSettings.prescriptions,
       manual_therapy_prescriptions: swSettings.manual_therapy_prescriptions,
       prescription_prices: swSettings.prescription_prices,
+      prescription_colors: swSettings.prescription_colors,
       incentive_percentage: Number(swSettings.incentive_percentage) || 0,
       manual_therapy_incentive_percentage: Number(swSettings.manual_therapy_incentive_percentage) || 0,
       frozen_columns: Number(swSettings.frozen_columns)
@@ -428,20 +434,46 @@ export default function SettingsPage() {
                     style={{ 
                       background: 'var(--accent-color, #6366f1)', 
                       color: 'white', 
-                      padding: '4px 10px', 
+                      padding: '4px 4px 4px 10px', 
                       borderRadius: 16, 
                       fontSize: '0.8rem', 
-                      cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 4
-                    }}
-                    onClick={() => {
-                      const next = swSettings.prescriptions.filter((_, i) => i !== idx);
-                      setSwSettings(p => ({ ...p, prescriptions: next }));
+                      gap: 6
                     }}
                   >
-                    {pres} ✕
+                    {pres}
+                    <input
+                      type="color"
+                      value={swSettings.prescription_colors[pres] || '#000000'}
+                      onChange={(e) => {
+                        const newColor = e.target.value;
+                        setSwSettings(p => ({
+                          ...p,
+                          prescription_colors: {
+                            ...p.prescription_colors,
+                            [pres]: newColor
+                          }
+                        }));
+                      }}
+                      style={{
+                        width: 20,
+                        height: 20,
+                        padding: 0,
+                        border: 'none',
+                        borderRadius: '50%',
+                        cursor: 'pointer',
+                        overflow: 'hidden'
+                      }}
+                      title="스케줄러 글자색 선택"
+                    />
+                    <span
+                      style={{ cursor: 'pointer', paddingRight: 6 }}
+                      onClick={() => {
+                        const next = swSettings.prescriptions.filter((_, i) => i !== idx);
+                        setSwSettings(p => ({ ...p, prescriptions: next }));
+                      }}
+                    >✕</span>
                   </span>
                 ))}
                 <input 
@@ -548,6 +580,10 @@ export default function SettingsPage() {
                         setSwSettings(p => ({
                           ...p,
                           manual_therapy_prescriptions: [...p.manual_therapy_prescriptions, val],
+                          prescription_prices: {
+                            ...p.prescription_prices,
+                            [val]: p.prescription_prices?.[val] ?? 0,
+                          },
                         }));
                       }
                       e.target.value = '';
@@ -556,6 +592,28 @@ export default function SettingsPage() {
                 />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginTop: 16 }}>
+                {swSettings.manual_therapy_prescriptions.map((pres) => (
+                  <label key={`manual-${pres}-price`} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <span className="settings-row-label" style={{ fontSize: '0.82rem' }}>{pres} 가격</span>
+                    <input
+                      type="number"
+                      className="form-input"
+                      min={0}
+                      step={1000}
+                      value={swSettings.prescription_prices?.[pres] ?? 0}
+                      onChange={(e) => {
+                        const value = Number(e.target.value) || 0;
+                        setSwSettings((p) => ({
+                          ...p,
+                          prescription_prices: {
+                            ...p.prescription_prices,
+                            [pres]: value,
+                          },
+                        }));
+                      }}
+                    />
+                  </label>
+                ))}
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <span className="settings-row-label" style={{ fontSize: '0.82rem' }}>도수 인센티브 퍼센트</span>
                   <input

@@ -94,19 +94,19 @@ export function parseManualTherapyEntry(rawContent, therapists, fallbackTherapis
   };
 }
 
-async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, therapists }) {
+async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, therapists, targetDateStr, overwriteManual = false }) {
   if (!memos) {
     return { skipped: true, reason: 'missing_memos' };
   }
 
   const today = getTodayKST();
-  const todayY = today.getFullYear();
-  const todayM = today.getMonth() + 1;
-  const todayD = today.getDate();
-  const todayDateStr = `${todayY}-${String(todayM).padStart(2, '0')}-${String(todayD).padStart(2, '0')}`;
+  const todayY = targetDateStr ? parseInt(targetDateStr.split('-')[0], 10) : today.getFullYear();
+  const todayM = targetDateStr ? parseInt(targetDateStr.split('-')[1], 10) : today.getMonth() + 1;
+  const todayD = targetDateStr ? parseInt(targetDateStr.split('-')[2], 10) : today.getDate();
+  const todayDateStrFinal = targetDateStr || `${todayY}-${String(todayM).padStart(2, '0')}-${String(todayD).padStart(2, '0')}`;
 
-  if (todayY !== year || todayM !== month) {
-    return { skipped: true, reason: 'today_outside_current_month', todayDateStr };
+  if (!targetDateStr && (todayY !== year || todayM !== month)) {
+    return { skipped: true, reason: 'today_outside_current_month', todayDateStr: todayDateStrFinal };
   }
 
   const weeks = generateShockwaveCalendar(year, month);
@@ -125,7 +125,7 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
     newLogs.push({
       r,
       c,
-      date: todayDateStr,
+      date: todayDateStrFinal,
       patient_name: parsed.patientName,
       chart_number: parsed.chartNumber || '',
       visit_count: parsed.visitCount || '',
@@ -186,7 +186,7 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
       (past) => {
         const sameChart = item.chart_number && String(past?.chart_number || '').trim() === String(item.chart_number).trim();
         const sameName = normalizedName && normalizeNameForMatch(past?.patient_name) === normalizedName;
-        return (sameChart || sameName) && past.date !== todayDateStr;
+        return (sameChart || sameName) && past.date !== todayDateStrFinal;
       }
     );
 
@@ -211,10 +211,12 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
   const { data: todayStats } = await supabase
     .from('manual_therapy_patient_logs')
     .select('*')
-    .eq('date', todayDateStr);
+    .eq('date', todayDateStrFinal);
 
-  const schedulerEntries = (todayStats || []).filter((row) => row.source !== 'manual');
-  const toDeleteIds = schedulerEntries.map((row) => row.id).filter(Boolean);
+  const toDeleteIds = (todayStats || [])
+    .filter((row) => overwriteManual || row.source !== 'manual')
+    .map((row) => row.id)
+    .filter(Boolean);
 
   const rebuiltRows = newLogs.map((item) => ({
     date: item.date,
@@ -237,7 +239,7 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
 
   return {
     skipped: false,
-    todayDateStr,
+    todayDateStr: todayDateStrFinal,
     extractedCount: newLogs.length,
     insertedCount: rebuiltRows.length,
     updatedCount: 0,
@@ -250,4 +252,60 @@ export async function syncTodayManualTherapyScheduleToStats(params) {
   const run = todayManualTherapySyncQueue.then(() => runTodayManualTherapyScheduleToStatsSync(params));
   todayManualTherapySyncQueue = run.catch(() => {});
   return run;
+}
+
+export async function syncMonthManualTherapyScheduleToStats({ year, month, memos, therapists, upToToday = false, overwriteManual = false }) {
+  const today = getTodayKST();
+  const daysInMonth = new Date(year, month, 0).getDate();
+  let endDay = daysInMonth;
+  
+  if (upToToday && year === today.getFullYear() && month === today.getMonth() + 1) {
+    endDay = today.getDate();
+  }
+
+  let totalInserted = 0;
+  let totalDeleted = 0;
+  let totalUpdated = 0;
+
+  for (let d = 1; d <= endDay; d++) {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    try {
+      const result = await syncTodayManualTherapyScheduleToStats({
+        year,
+        month,
+        memos,
+        therapists,
+        targetDateStr: dateStr,
+        overwriteManual
+      });
+      if (!result.skipped) {
+        totalInserted += result.insertedCount || 0;
+        totalDeleted += result.deletedCount || 0;
+        totalUpdated += result.updatedCount || 0;
+      }
+    } catch (e) {
+      console.error(`Failed to sync manual therapy schedule for ${dateStr}:`, e);
+    }
+  }
+
+  // If we only synced up to today, delete any future scheduler records for this month
+  if (upToToday && year === today.getFullYear() && month === today.getMonth() + 1) {
+    const todayDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const nextMonthDate = new Date(year, month, 1);
+    const endOfMonthStr = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
+    
+    try {
+      const { error } = await supabase
+        .from('manual_therapy_patient_logs')
+        .delete()
+        .gt('date', todayDateStr)
+        .lte('date', endOfMonthStr);
+        
+      if (error) console.error('Failed to cleanup future dates:', error);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  return { totalInserted, totalDeleted, totalUpdated, totalUpdates: totalInserted + totalDeleted + totalUpdated };
 }

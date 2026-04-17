@@ -17,6 +17,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const { addToast } = useToast();
   const viewRef = useRef(null);
   const dragSelectionRef = useRef(null);
+  const selectedCellRef = useRef(null);
 
   // ── 셀 조작 상태 (구글 시트 방식) ──
   const [selectedCell, setSelectedCell] = useState(null);     // { w, d, r, c }
@@ -28,7 +29,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const clipboardRef = useRef({ content: '', mode: null });   // mode: 'copy' | 'cut'
   const [clipboardSource, setClipboardSource] = useState(null); // { keys: Set, mode: 'copy'|'cut' }
   const [undoStack, setUndoStack] = useState([]);
-  const [contextMenu, setContextMenu] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, weekIdx, dayIdx, rowIdx, colIdx, currentPrescription }
+
+  useEffect(() => {
+    selectedCellRef.current = selectedCell;
+  }, [selectedCell]);
 
   // 열 너비 조정 (fr 비율 기반)
   const [colRatios, setColRatios] = useState(() => {
@@ -587,6 +592,40 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (!success) addToast('저장 실패', 'error');
   }, [editValue, currentYear, currentMonth, memos, onSaveMemo, addToast, buildSchedulerAutoText]);
 
+  // ── 셀 우클릭 = 처방 선택 ──
+  const handleCellContextMenu = useCallback((e, w, d, r, c, currentPrescription) => {
+    e.preventDefault();
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      weekIdx: w,
+      dayIdx: d,
+      rowIdx: r,
+      colIdx: c,
+      currentPrescription
+    });
+  }, []);
+
+  const handlePrescriptionSelect = useCallback(async (prescription) => {
+    if (!contextMenu) return;
+    const { weekIdx: w, dayIdx: d, rowIdx: r, colIdx: c } = contextMenu;
+    const key = cellKey(w, d, r, c);
+    const memo = memos[key] || {};
+    
+    setContextMenu(null);
+    const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, memo.merge_span, prescription);
+    if (!success) addToast('처방 지정 실패', 'error');
+  }, [contextMenu, currentYear, currentMonth, memos, onSaveMemo, addToast]);
+
+  // ── 뷰어 바깥 클릭 시 컨텍스트 메뉴 닫기 ──
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (contextMenu) setContextMenu(null);
+    };
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, [contextMenu]);
+
   // ── 셀 삭제 ──
   const deleteCells = useCallback(async (keys) => {
     const affectedKeys = new Set();
@@ -789,6 +828,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           content: memo?.content || '',
           bg_color: memo?.bg_color || null,
           merge_span: memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+          prescription: memo?.prescription || '',
         });
         plainRow.push(memo?.content || '');
         sourceKeys.push(key);
@@ -811,7 +851,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     };
   }, [selectedCell, selectionInfo, memos, cellKey]);
 
-  const parsePlainTextClipboard = useCallback((plainText) => {
+  const parsePlainTextClipboard = useCallback((plainText, htmlText = null) => {
     if (typeof plainText !== 'string') return null;
     const normalized = plainText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     if (!normalized.length) return null;
@@ -828,8 +868,88 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         content,
         bg_color: null,
         merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+        prescription: '',
       }))
     );
+
+    if (htmlText) {
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlText, 'text/html');
+        // Parse <style> blocks for class-based backgrounds (common in Google Sheets)
+        const styleText = Array.from(doc.querySelectorAll('style')).map(s => s.textContent).join('\n');
+        const classColors = {};
+        if (styleText) {
+          const styleRegex = /\.([\w-]+)[^{]*\{([^}]+)\}/g;
+          let match;
+          while ((match = styleRegex.exec(styleText)) !== null) {
+            const className = match[1];
+            const rules = match[2].toLowerCase();
+            const bgMatch = rules.match(/background(?:-color)?\s*:\s*([^;!}]+)/);
+            if (bgMatch) {
+              let parsedColor = bgMatch[1].trim().split(' ')[0];
+              if (parsedColor && parsedColor !== 'none' && parsedColor !== 'transparent' && parsedColor !== 'windowtext') {
+                classColors[className] = parsedColor;
+              }
+            }
+          }
+        }
+
+        // Find the most likely data table (usually the one with the most rows or just the first)
+        const tables = Array.from(doc.querySelectorAll('table'));
+        let targetTable = tables.length > 0 ? tables[0] : null;
+        
+        // If no table found, fallback to body
+        const root = targetTable || doc.body;
+        const rows = Array.from(root.querySelectorAll('tr'));
+        
+        // We need to map the parsed rows to our `cells` array. 
+        // We'll skip empty rows at the beginning if there's a mismatch.
+        let cellRowIdx = 0;
+        
+        for (let i = 0; i < rows.length; i++) {
+          if (cellRowIdx >= cells.length) break;
+          const tr = rows[i];
+          const tds = Array.from(tr.querySelectorAll('td, th'));
+          
+          // Only process rows that have actual cells
+          if (tds.length === 0) continue;
+          
+          for (let j = 0; j < tds.length; j++) {
+            if (j >= cells[cellRowIdx].length) break;
+            const td = tds[j];
+            
+            let bgColor = td.style.backgroundColor || td.getAttribute('bgcolor');
+            
+            // Check for background shorthand in inline style
+            if (!bgColor && td.hasAttribute('style')) {
+              const styleStr = td.getAttribute('style').toLowerCase();
+              const bgMatch = styleStr.match(/background(?:-color)?\s*:\s*([^;]+)/);
+              if (bgMatch) {
+                bgColor = bgMatch[1].trim().split(' ')[0];
+              }
+            }
+
+            // Check class-based styling
+            if (!bgColor && td.classList.length > 0) {
+              for (const cls of Array.from(td.classList)) {
+                if (classColors[cls]) {
+                  bgColor = classColors[cls];
+                  break;
+                }
+              }
+            }
+            
+            if (bgColor && bgColor !== 'transparent' && bgColor !== 'none' && bgColor !== 'windowtext') {
+              cells[cellRowIdx][j].bg_color = bgColor;
+            }
+          }
+          cellRowIdx++;
+        }
+      } catch (e) {
+        console.error("Failed to parse HTML from clipboard", e);
+      }
+    }
 
     const rowCount = cells.length;
     const pastedColCount = cells.reduce((max, row) => Math.max(max, row.length), 0);
@@ -910,6 +1030,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           content: nextContent,
           bg_color: isCrossDate ? null : (cell.bg_color || null),
           merge_span: nextMergeSpan,
+          prescription: cell.prescription || '',
         });
       }
     }
@@ -937,21 +1058,29 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setContextMenu(null);
   }, [buildClipboardSelection, addToast]);
 
-  const handlePasteSelection = useCallback(async (forcedPlainText = null) => {
-    if (!selectedCell) return;
+  const handlePasteSelection = useCallback(async (forcedPlainText = null, forcedHtmlText = null, explicitTargetCell = null) => {
+    const targetCell = explicitTargetCell || selectedCellRef.current || selectedCell;
+    if (!targetCell) return;
     let clip = clipboardRef.current;
     const currentClipboardSource = clipboardSource;
 
     if (typeof forcedPlainText === 'string') {
-      const externalClip = parsePlainTextClipboard(forcedPlainText);
-      if (externalClip?.cells?.length) clip = externalClip;
+      const externalClip = parsePlainTextClipboard(forcedPlainText, forcedHtmlText);
+      const internalPlainText = clipboardRef.current?.plainText || '';
+      const normalizedForced = forcedPlainText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      const normalizedInternal = internalPlainText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      if (externalClip?.cells?.length && normalizedForced !== normalizedInternal) {
+        clip = externalClip;
+      }
     } else if (typeof navigator !== 'undefined' && navigator.clipboard?.readText) {
       try {
         const clipboardText = await navigator.clipboard.readText();
         if (clipboardText) {
           const externalClip = parsePlainTextClipboard(clipboardText);
           const internalPlainText = clipboardRef.current?.plainText || '';
-          if (externalClip?.cells?.length && clipboardText !== internalPlainText) {
+          const normalizedForced = clipboardText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+          const normalizedInternal = internalPlainText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+          if (externalClip?.cells?.length && normalizedForced !== normalizedInternal) {
             clip = externalClip;
           }
         }
@@ -973,22 +1102,23 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const targetColCountInRange = clip.colCount;
     for (let ro = 0; ro < targetRowCount; ro++) {
       for (let co = 0; co < targetColCountInRange; co++) {
-        const tr = selectedCell.r + ro;
-        const tc = selectedCell.c + co;
+        const tr = targetCell.r + ro;
+        const tc = targetCell.c + co;
         if (tr >= baseTimeSlots.length || tc >= colCount) continue;
-        const k = cellKey(selectedCell.w, selectedCell.d, tr, tc);
+        const k = cellKey(targetCell.w, targetCell.d, tr, tc);
         const m = memos[k];
         oldMemos.push({
           year: currentYear, month: currentMonth,
-          week_index: selectedCell.w, day_index: selectedCell.d,
+          week_index: targetCell.w, day_index: targetCell.d,
           row_index: tr, col_index: tc,
           content: m?.content || '', bg_color: m?.bg_color || null,
-          merge_span: m?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null }
+          merge_span: m?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+          prescription: m?.prescription || ''
         });
       }
     }
 
-    const targetPayload = buildPastePayload(clip, selectedCell);
+    const targetPayload = buildPastePayload(clip, targetCell);
     if (targetPayload.length === 0) {
       setContextMenu(null);
       return;
@@ -1005,14 +1135,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           week_index: w, day_index: d,
           row_index: r, col_index: c,
           content: m?.content || '', bg_color: m?.bg_color || null,
-          merge_span: m?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null }
+          merge_span: m?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+          prescription: m?.prescription || ''
         });
         combinedPayload.set(`${w}-${d}-${r}-${c}`, {
           year: currentYear, month: currentMonth,
           week_index: w, day_index: d,
           row_index: r, col_index: c,
           content: '', bg_color: null,
-          merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null }
+          merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+          prescription: ''
         });
       });
     }
@@ -1138,17 +1270,32 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     await applyTreatmentCompleteToSelection('toggle');
   }, [applyTreatmentCompleteToSelection]);
 
-  const handleContextAction = useCallback((action) => {
+  const handleContextAction = useCallback(async (action) => {
     if (action === 'copy') handleCopySelection();
-    if (action === 'cut') handleCutSelection();
-    if (action === 'paste') handlePasteSelection();
-    if (action === 'complete') handleMarkTreatmentComplete();
-    if (action === 'clear-complete') handleClearTreatmentComplete();
-    if (action === 'merge' || action === 'unmerge') tryMergeSelection();
-  }, [handleCopySelection, handleCutSelection, handlePasteSelection, handleMarkTreatmentComplete, handleClearTreatmentComplete, tryMergeSelection]);
+    else if (action === 'cut') handleCutSelection();
+    else if (action === 'paste') handlePasteSelection();
+    else if (action === 'complete') handleMarkTreatmentComplete();
+    else if (action === 'clear-complete') handleClearTreatmentComplete();
+    else if (action === 'merge' || action === 'unmerge') tryMergeSelection();
+    else if (action?.type === 'prescription') {
+      const keys = Array.from(selectedKeys || []);
+      const newMemos = { ...memos };
+      let anyChanged = false;
+      
+      for (const key of keys) {
+        const [w, d, r, c] = key.split('-').map(Number);
+        const memo = memos[key] || {};
+        if (memo.prescription !== action.value) {
+          const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, memo.merge_span, action.value);
+          if (success) anyChanged = true;
+        }
+      }
+      if (anyChanged) addToast('처방이 적용되었습니다.', 'success');
+    }
+    setContextMenu(null);
+  }, [selectedKeys, memos, currentYear, currentMonth, onSaveMemo, addToast, handleCopySelection, handleCutSelection, handlePasteSelection, handleMarkTreatmentComplete, handleClearTreatmentComplete, tryMergeSelection]);
 
-  const beginEditingCell = useCallback((key, nextValue, imeStart = false) => {
-    imeOpenRef.current = imeStart;
+  const beginEditingCell = useCallback((key, nextValue) => {
     flushSync(() => {
       setEditingCell(key);
       setEditValue(nextValue);
@@ -1248,15 +1395,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return;
     }
 
-    // Cmd+V → 브라우저 paste 이벤트 경유
-    if (isMeta && e.code === 'KeyV') {
-      return;
-    }
 
     // 일반 문자 입력 → 편집 모드 진입 (기존 내용 대체)
     if ((e.key.length === 1 || e.key === 'Process' || e.keyCode === 229) && !isMeta && !e.altKey) {
       const key = cellKey(w, d, r, c);
-      beginEditingCell(key, '', true);
+      // For IME (229 or Process), we shouldn't pass e.key as it's just 'Process'.
+      // The browser will dispatch the composition events to the focused input automatically.
+      // For English (length === 1), we can pass e.key, but if we don't preventDefault, 
+      // the browser will insert it into the focused input anyway!
+      // Actually, passing '' and NOT calling preventDefault is the safest way to let the browser handle it natively.
+      beginEditingCell(key, '');
       return;
     }
   }, [selectedCell, editingCell, selectedKeys, deleteCells, buildRangeKeys, selectSingleCell, getAdjacentCell, beginEditingCell, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, tryMergeSelection]);
@@ -1284,18 +1432,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         target?.isContentEditable;
       if (isEditableTarget) return;
 
-      const activeElement = document.activeElement;
-      const isSchedulerFocused =
-        activeElement === viewRef.current ||
-        viewRef.current?.contains(activeElement) ||
-        viewRef.current?.contains(target) ||
-        target === document.body;
-      if (!isSchedulerFocused) return;
-
       const pastedText = event.clipboardData?.getData('text/plain');
+      const pastedHtml = event.clipboardData?.getData('text/html');
       if (!pastedText) return;
       event.preventDefault();
-      handlePasteSelection(pastedText);
+      handlePasteSelection(pastedText, pastedHtml);
     };
 
     window.addEventListener('paste', handlePasteEvent, true);
@@ -1617,6 +1758,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             borderBottom: isLastRenderedRow ? 'none' : `1px solid ${HORIZONTAL_BORDER_COLOR}`,
                           };
                           
+                          if (memo?.prescription && settings?.prescription_colors?.[memo.prescription]) {
+                            inlineStyle.color = settings.prescription_colors[memo.prescription];
+                            inlineStyle.fontWeight = '700';
+                          }
+
                           // 마스터 셀 중앙 효과
                           if (visualRowSpan > 1 || mergeSpan.colSpan > 1) {
                             inlineStyle.display = 'flex';
@@ -1633,11 +1779,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                   className="sw-cell-input"
                                   value={editValue}
                                   onChange={e => setEditValue(e.target.value)}
-                                  onCompositionStart={() => {
-                                    if (!imeOpenRef.current) return;
-                                    imeOpenRef.current = false;
-                                    setEditValue('');
-                                  }}
                                   onBlur={(e) => handleCellSave(weekIdx, dayIdx, rowIdx, colIdx, e.target.value)}
                                   onKeyDown={e => handleEditKeyDown(e, weekIdx, dayIdx, rowIdx, colIdx)}
                                   autoFocus
@@ -1684,6 +1825,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 }}
                                 onMouseLeave={() => setHoverData(null)}
                                 onDoubleClick={() => handleCellDoubleClick(weekIdx, dayIdx, rowIdx, colIdx, content)}
+                                onContextMenu={(e) => {
+                                  // 내용이 있을 때만 처방을 설정할 수 있도록 함
+                                  if (content && content.trim() !== '' && content.trim() !== '\u200B') {
+                                    handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, memo?.prescription);
+                                  }
+                                }}
                               >
                                 {content}
                               </div>
@@ -1781,6 +1928,42 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               병합 해제 (Cmd+E)
             </button>
           )}
+
+          {/* 처방 목록 */}
+          <div className="context-menu-divider" style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '4px 0' }} />
+          <div style={{ padding: '4px 12px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 'bold' }}>
+            처방 지정
+          </div>
+          {settings?.prescriptions?.map(pres => {
+            // 선택된 셀들의 첫번째 셀 처방을 확인
+            const firstKey = selectedKeys ? Array.from(selectedKeys)[0] : null;
+            const currentPres = firstKey ? memos[firstKey]?.prescription : null;
+            return (
+              <button
+                key={pres}
+                type="button"
+                className="context-menu-item"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  backgroundColor: currentPres === pres ? 'var(--bg-tertiary)' : 'transparent',
+                }}
+                onClick={() => handleContextAction({ type: 'prescription', value: pres })}
+              >
+                <span>{pres}</span>
+                {currentPres === pres && <span style={{ color: 'var(--accent-color, #6366f1)' }}>✓</span>}
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            className="context-menu-item"
+            style={{ color: '#ef4444' }}
+            onClick={() => handleContextAction({ type: 'prescription', value: null })}
+          >
+            처방 지우기
+          </button>
         </div>
       )}
 
