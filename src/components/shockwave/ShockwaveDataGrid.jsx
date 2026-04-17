@@ -7,11 +7,19 @@ import '../../styles/shockwave_stats.css';
 
 // Dynamic labels from settings will be used instead
 const THERAPIST_COLORS = [
-  'hsla(215, 20%, 96%, 0.6)', // Very subtle blue-gray
-  'hsla(240, 10%, 97%, 0.6)',  // Very subtle neutral gray
-  'hsla(215, 10%, 95%, 0.6)',  // Slightly deeper gray-blue
-  'hsla(240, 5%, 98%, 0.6)',   // Almost white-gray
-  'hsla(215, 15%, 97%, 0.6)'   // Subtle slate tint
+  '#dbeafe',
+  '#e9ddff',
+  '#d8f3ea',
+  '#ffe7c7',
+  '#ffdced',
+];
+
+const THERAPIST_TOTAL_COLORS = [
+  '#bfdbfe',
+  '#d8b4fe',
+  '#b7ead8',
+  '#ffd39a',
+  '#ffb9d8',
 ];
 function toTitleCaseBodyPart(value) {
   return String(value || '')
@@ -199,7 +207,7 @@ export default function ShockwaveDataGrid({
     if (!t) return '';
     const pres = prescriptions[pIdx];
     if (row.therapist_name === t.name && row.prescription === pres) {
-      return row.prescription_count || '1';
+      return (row.prescription_count !== null && row.prescription_count !== undefined) ? row.prescription_count : '1';
     }
     return '';
   };
@@ -217,6 +225,7 @@ export default function ShockwaveDataGrid({
   const imeOpenRef = useRef(false);
   const datePickerRef = useRef(null);
   const theadRef = useRef(null);
+  const ctxMenuRef = useRef(null);
   const rowRefs = useRef([]);
   const [headerHeight, setHeaderHeight] = useState(132);
   const [rowHeights, setRowHeights] = useState([]);
@@ -387,7 +396,7 @@ export default function ShockwaveDataGrid({
             const validDates = logs.map(l => l.date).filter(Boolean).sort();
             if (validDates.length > 0) fallbackDate = validDates[validDates.length - 1];
         }
-        const ins = { date: row.date || fallbackDate, patient_name: row.patient_name || '', chart_number: row.chart_number || '', visit_count: row.visit_count || '', body_part: row.body_part || '', therapist_name: '', prescription: '', prescription_count: '', source: 'manual', ...updatePayload };
+        const ins = { date: row.date || fallbackDate, patient_name: row.patient_name || '', chart_number: row.chart_number || '', visit_count: row.visit_count || '', body_part: row.body_part || '', therapist_name: '', prescription: '', prescription_count: 0, source: 'manual', ...updatePayload };
         if (!ins.date) ins.date = fallbackDate;
         if (ins.date) affectedDates.add(ins.date);
         await supabase.from('shockwave_patient_logs').insert([ins]);
@@ -404,6 +413,7 @@ export default function ShockwaveDataGrid({
       const t = therapists[tIdx];
       if (!t) return;
       const pres = prescriptions[pIdx];
+      const intVal = parseInt(val.trim(), 10) || 0;
 
       if (row.isDraft) {
         if (!val.trim()) return;
@@ -412,20 +422,20 @@ export default function ShockwaveDataGrid({
             const validDates = logs.map(l => l.date).filter(Boolean).sort();
             if (validDates.length > 0) fallbackDate = validDates[validDates.length - 1];
         }
-        const ins = { date: fallbackDate, patient_name: '(이름없음)', chart_number: '', visit_count: '', body_part: '', therapist_name: t.name, prescription: pres, prescription_count: val.trim(), source: 'manual' };
+        const ins = { date: fallbackDate, patient_name: '(이름없음)', chart_number: '', visit_count: '', body_part: '', therapist_name: t.name, prescription: pres, prescription_count: intVal, source: 'manual' };
         if (ins.date) affectedDates.add(ins.date);
         await supabase.from('shockwave_patient_logs').insert([ins]);
         if (row.isInsertedDraft) setInsertedDraftRows((prev) => prev.filter((item) => item.id !== row.id));
       } else {
         if (val.trim() === '') {
           if (row.therapist_name === t.name && row.prescription === pres) {
-            const clearedFields = { therapist_name: '', prescription: '', prescription_count: '' };
+            const clearedFields = { therapist_name: '', prescription: '', prescription_count: 0 };
             const nextRow = { ...row, ...clearedFields };
             if (isRowEmpty(nextRow)) await supabase.from('shockwave_patient_logs').delete().eq('id', row.id);
             else await supabase.from('shockwave_patient_logs').update(clearedFields).eq('id', row.id);
           }
         } else {
-          await supabase.from('shockwave_patient_logs').update({ therapist_name: t.name, prescription: pres, prescription_count: val.trim() }).eq('id', row.id);
+          await supabase.from('shockwave_patient_logs').update({ therapist_name: t.name, prescription: pres, prescription_count: intVal }).eq('id', row.id);
         }
       }
     }
@@ -736,6 +746,7 @@ export default function ShockwaveDataGrid({
       }
       if (!focus) return;
       let { r, c } = focus;
+      const isWholeRowSelected = !!selNorm && selNorm.r1 === selNorm.r2 && selNorm.r1 === r && selNorm.c1 === 0 && selNorm.c2 === totalColCount - 1;
       if (e.key === 'ArrowUp') r = Math.max(0, r - 1);
       if (e.key === 'ArrowDown') r = Math.min(gridData.length - 1, r + 1);
       if (e.key === 'ArrowLeft') c = Math.max(0, c - 1);
@@ -748,6 +759,11 @@ export default function ShockwaveDataGrid({
       }
       if (e.key === 'Enter') { e.preventDefault(); startEdit(r, c, true); return; }
       if (e.key === 'Tab') { e.preventDefault(); const nc = Math.min(c+1, totalColCount-1); setFocus({r, c:nc}); setSel({r1:r,c1:nc,r2:r,c2:nc}); return; }
+      if ((e.metaKey || e.ctrlKey) && (e.key === '-' || e.key === '_' || e.code === 'Minus') && isWholeRowSelected) {
+        e.preventDefault();
+        doDeleteRow(r);
+        return;
+      }
       if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); doDelete(); return; }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'e') { e.preventDefault(); e.shiftKey ? handleUnmerge() : handleMerge(); return; }
       if ((e.metaKey || e.ctrlKey) && e.key === 'c') { e.preventDefault(); doCopy(); return; }
@@ -790,6 +806,33 @@ export default function ShockwaveDataGrid({
     const close = () => setCtxMenu(null);
     window.addEventListener('mousedown', close);
     return () => window.removeEventListener('mousedown', close);
+  }, [ctxMenu]);
+
+  useLayoutEffect(() => {
+    if (!ctxMenu || !ctxMenuRef.current) return;
+
+    const menuRect = ctxMenuRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const margin = 12;
+
+    let nextX = ctxMenu.x;
+    let nextY = ctxMenu.y;
+
+    if (nextX + menuRect.width + margin > viewportWidth) {
+      nextX = Math.max(margin, viewportWidth - menuRect.width - margin);
+    }
+
+    if (nextY + menuRect.height + margin > viewportHeight) {
+      nextY = Math.max(margin, viewportHeight - menuRect.height - margin);
+    }
+
+    if (nextX < margin) nextX = margin;
+    if (nextY < margin) nextY = margin;
+
+    if (nextX !== ctxMenu.x || nextY !== ctxMenu.y) {
+      setCtxMenu((prev) => (prev ? { ...prev, x: nextX, y: nextY } : prev));
+    }
   }, [ctxMenu]);
 
   useLayoutEffect(() => {
@@ -854,28 +897,32 @@ export default function ShockwaveDataGrid({
                 {t.name} ( {therapistTotals[idx]?.total || 0}건 )
               </th>
             ))}
-            <th className="hdr-total sticky-right-last-2 total-group-start">총건수</th>
-            <th className="hdr-total hdr-new-patient sticky-right-last-1">신환</th>
+            <th rowSpan={2} className="hdr-total sticky-right-last-2 total-group-start">총건수</th>
+            <th rowSpan={2} className="hdr-total hdr-new-patient sticky-right-last-1">신환</th>
           </tr>
 
-          {/* Row 3: Prescription Names + Summary Values */}
+          {/* Row 3: Prescription Names */}
           <tr className="sw-header-row sw-header-row-prescriptions">
             {therapists.map((t, idx) => prescriptions.map((p, pIdx) => (
               <th key={`${t.name}-${pIdx}`} className={`hdr-pres ${pIdx === 0 && idx > 0 ? 'therapist-group-start' : ''}`} style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}>
                 {p}
               </th>
             )))}
-            <th rowSpan={2} className="hdr-grand-total sticky-right-last-2 total-group-start">{grandTotal}건</th>
-            <th rowSpan={2} className="hdr-grand-total hdr-new-patient-total sticky-right-last-1">{newPatientTotal}명</th>
           </tr>
 
-          {/* Row 4: Prescription Totals */}
+          {/* Row 4: Column-wise totals (Prescription Totals + Grand Totals) */}
           <tr className="sw-header-row sw-header-row-prescription-totals">
             {therapists.map((t, idx) => prescriptions.map((p, pIdx) => (
-              <th key={`${t.name}-${pIdx}-inner`} className={`hdr-pres-total ${pIdx === 0 && idx > 0 ? 'therapist-group-start' : ''}`}>
+              <th
+                key={`${t.name}-${pIdx}-inner`}
+                className={`hdr-pres-total ${pIdx === 0 && idx > 0 ? 'therapist-group-start' : ''}`}
+                style={{ backgroundColor: THERAPIST_TOTAL_COLORS[idx % THERAPIST_TOTAL_COLORS.length] }}
+              >
                 {therapistTotals[idx]?.byPres[p] || 0}
               </th>
             )))}
+            <th className="hdr-grand-total sticky-right-last-2 total-group-start">{grandTotal}건</th>
+            <th className="hdr-grand-total hdr-new-patient-total sticky-right-last-1">{newPatientTotal}명</th>
           </tr>
         </thead>
 
@@ -969,7 +1016,7 @@ export default function ShockwaveDataGrid({
 
       {/* Context Menu */}
       {ctxMenu && (
-        <div className="ctx-menu" style={{ top: ctxMenu.y, left: ctxMenu.x }} onMouseDown={e => e.stopPropagation()}>
+        <div ref={ctxMenuRef} className="ctx-menu" style={{ top: ctxMenu.y, left: ctxMenu.x }} onMouseDown={e => e.stopPropagation()}>
           {ctxMenu.type === 'row' ? (
             <>
               <div className="ctx-item" onClick={() => { selectRow(ctxMenu.r); setCtxMenu(null); }}>☰ 행 선택</div>
