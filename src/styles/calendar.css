@@ -105,7 +105,7 @@
 }
 
 .calendar-cell.saturday {
-  background: #3b82f6;
+  background: var(--cal-saturday-bg);
 }
 
 .calendar-cell.other-month {
@@ -128,7 +128,7 @@
 }
 
 .today .calendar-date {
-  background: #9d72f2;
+  background: #3b82f6;
 }
 
 .calendar-date-number {
@@ -150,7 +150,7 @@
 }
 
 .saturday .calendar-date-number {
-  color: #ffffff;
+  color: #3b82f6;
 }
 
 .today .calendar-date-badge {
