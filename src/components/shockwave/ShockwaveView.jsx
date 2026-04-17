@@ -24,6 +24,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [rangeEnd, setRangeEnd] = useState(null);             // { w, d, r, c } (Shift 선택 끝점)
   const [selectedKeys, setSelectedKeys] = useState(() => new Set());
   const [editingCell, setEditingCell] = useState(null);       // "w-d-r-c" 키 문자열
+  const [editSessionId, setEditSessionId] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [pendingDisplayValues, setPendingDisplayValues] = useState({});
   const clipboardRef = useRef({ content: '', mode: null });   // mode: 'copy' | 'cut'
@@ -689,6 +690,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
     const oldMemos = [];
     const payload = [];
+    const combinedContent = [];
     if (isAlreadyMerged) {
       for (let row = minRow; row <= maxRow; row++) {
         for (let col = minCol; col <= maxCol; col++) {
@@ -713,6 +715,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           const k = cellKey(w, d, row, col);
           const isMaster = (k === masterKey);
           const memo = memos[k];
+          if (memo?.content) {
+            combinedContent.push(memo.content);
+          }
           oldMemos.push({
             year: currentYear, month: currentMonth, week_index: w, day_index: d, row_index: row, col_index: col,
             content: memo?.content || '',
@@ -724,10 +729,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
             merge_span: isMaster
               ? { rowSpan: maxRow - minRow + 1, colSpan: maxCol - minCol + 1, mergedInto: null }
               : { rowSpan: 1, colSpan: 1, mergedInto: masterKey },
-            content: isMaster ? (memo?.content || '') : ''
+            content: '' // will update master later
           });
         }
       }
+      
+      const mergedText = combinedContent.filter(Boolean).join('\n');
+      payload.forEach(p => {
+        if (!p.merge_span.mergedInto) {
+          p.content = mergedText;
+        }
+      });
     }
 
     if (payload.length > 0) {
@@ -1295,12 +1307,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setContextMenu(null);
   }, [selectedKeys, memos, currentYear, currentMonth, onSaveMemo, addToast, handleCopySelection, handleCutSelection, handlePasteSelection, handleMarkTreatmentComplete, handleClearTreatmentComplete, tryMergeSelection]);
 
-  const beginEditingCell = useCallback((key, nextValue) => {
+  const beginEditingCell = useCallback((key, nextValue, preserveValue = false) => {
     flushSync(() => {
       setEditingCell(key);
       setEditValue(nextValue);
+      if (preserveValue) setEditSessionId(Date.now());
     });
-    editInputRef.current?.focus();
+    // The input will be focused automatically by its ref callback, or it's already focused.
   }, []);
 
   // ── 키보드 이벤트 핸들러 (구글 시트 방식) ──
@@ -1323,8 +1336,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (e.key === 'Enter') {
       e.preventDefault();
       const key = cellKey(w, d, r, c);
-      setEditingCell(key);
-      setEditValue(memos[key]?.content || '');
+      beginEditingCell(key, memos[key]?.content || '', true);
       return;
     }
 
@@ -1332,8 +1344,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (e.key === 'F2') {
       e.preventDefault();
       const key = cellKey(w, d, r, c);
-      setEditingCell(key);
-      setEditValue(memos[key]?.content || '');
+      beginEditingCell(key, memos[key]?.content || '', true);
       return;
     }
 
@@ -1399,12 +1410,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     // 일반 문자 입력 → 편집 모드 진입 (기존 내용 대체)
     if ((e.key.length === 1 || e.key === 'Process' || e.keyCode === 229) && !isMeta && !e.altKey) {
       const key = cellKey(w, d, r, c);
-      // For IME (229 or Process), we shouldn't pass e.key as it's just 'Process'.
-      // The browser will dispatch the composition events to the focused input automatically.
-      // For English (length === 1), we can pass e.key, but if we don't preventDefault, 
-      // the browser will insert it into the focused input anyway!
-      // Actually, passing '' and NOT calling preventDefault is the safest way to let the browser handle it natively.
-      beginEditingCell(key, '');
+      beginEditingCell(key, '', false);
       return;
     }
   }, [selectedCell, editingCell, selectedKeys, deleteCells, buildRangeKeys, selectSingleCell, getAdjacentCell, beginEditingCell, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, tryMergeSelection]);
@@ -1771,17 +1777,42 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             cls += ' merged-master';
                           }
 
-                          if (isEditing) {
+                          const showInput = isPrimary || isEditing;
+
+                          if (showInput) {
                             elements.push(
-                              <div key={key} className="sw-cell editing" style={inlineStyle}>
+                              <div key={key} className={`sw-cell ${isEditing ? 'editing' : ''} ${cls}`} style={inlineStyle}
+                                onMouseDown={(e) => handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e)}
+                                onMouseEnter={() => {
+                                  handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
+                                  let text = `⏱ [${slotInfo.label}]`;
+                                  if (content && content !== '\u200B') text += `\n📝 ${content}`;
+                                  // Tooltip logic can be preserved via title or CSS, here simplified.
+                                }}
+                              >
+                                {!isEditing && (
+                                  <div style={{ pointerEvents: 'none', position: 'absolute', inset: 0, padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    {content}
+                                  </div>
+                                )}
                                 <input
-                                  ref={editInputRef}
+                                  key={isEditing && editSessionId ? editSessionId : 'hidden'}
+                                  ref={isEditing ? editInputRef : (el) => { if (el && !isEditing) el.focus(); }}
                                   className="sw-cell-input"
-                                  value={editValue}
-                                  onChange={e => setEditValue(e.target.value)}
-                                  onBlur={(e) => handleCellSave(weekIdx, dayIdx, rowIdx, colIdx, e.target.value)}
-                                  onKeyDown={e => handleEditKeyDown(e, weekIdx, dayIdx, rowIdx, colIdx)}
-                                  autoFocus
+                                  defaultValue={isEditing ? editValue : ''}
+                                  style={{
+                                    opacity: isEditing ? 1 : 0,
+                                    position: isEditing ? 'relative' : 'absolute',
+                                    top: 0, left: 0, width: '100%', height: '100%',
+                                    zIndex: isEditing ? 2 : -1,
+                                    boxSizing: 'border-box'
+                                  }}
+                                  onBlur={(e) => {
+                                    if (isEditing) handleCellSave(weekIdx, dayIdx, rowIdx, colIdx, e.target.value);
+                                  }}
+                                  onKeyDown={e => {
+                                    if (isEditing) handleEditKeyDown(e, weekIdx, dayIdx, rowIdx, colIdx);
+                                  }}
                                 />
                               </div>
                             );
@@ -1898,7 +1929,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
             onClick={() => handleContextAction('complete')}
             disabled={!hasCompletableSelection}
           >
-            치료 완료 (Ctrl/Cmd+G)
+            치료 완료 (Cmd+G)
           </button>
           <button
             type="button"

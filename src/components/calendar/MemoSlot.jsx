@@ -1,154 +1,20 @@
-import { useState, useRef, useEffect } from 'react';
-import { flushSync } from 'react-dom';
+import { useRef, useEffect } from 'react';
 import { computeMemoFontColor } from '../../lib/memoParser';
 
 export default function MemoSlot({ 
-  memo, dayInfo, slotIndex, onSave, coord, maxWeeks,
-  recordUndo, performPaste, clipboardSource, setClipboardSource 
+  memo, dayInfo, slotIndex, 
+  isSelected, isPrimary, isEditing, editValue, editSessionId,
+  clipboardMode,
+  onMouseDown, onMouseEnter, onDoubleClick, onContextMenu,
+  onInput, onBlur, onKeyDown
 }) {
-  const [editing, setEditing] = useState(false);
-  const [flash, setFlash] = useState(false);
-  const [value, setValue] = useState(memo?.content || '');
-  const wrapperRef = useRef(null);
   const inputRef = useRef(null);
-  const imeOpenRef = useRef(false);
 
   useEffect(() => {
-    if (!editing && wrapperRef.current && document.activeElement !== wrapperRef.current) {
-      // Focus restoration tracking handled by React
+    if (isPrimary && !isEditing && inputRef.current) {
+      inputRef.current.focus();
     }
-  }, [editing]);
-
-  useEffect(() => {
-    if (!editing || !inputRef.current) return;
-    inputRef.current.focus();
-  }, [editing]);
-
-  const handleDoubleClick = () => {
-    if (dayInfo.isOtherMonth) return;
-    setValue(memo?.content || '');
-    setEditing(true);
-  };
-
-  const beginEditing = (nextValue, imeStart = false) => {
-    imeOpenRef.current = imeStart;
-    flushSync(() => {
-      setValue(nextValue);
-      setEditing(true);
-    });
-    inputRef.current?.focus();
-  };
-
-  const handleBlur = () => {
-    setEditing(false);
-    const newVal = value.trim();
-    const oldVal = (memo?.content || '').trim();
-    if (newVal !== oldVal) {
-      recordUndo({ type: 'edit', year: dayInfo.year, month: dayInfo.month, day: dayInfo.day, slotIndex: slotIndex, oldVal });
-      onSave(dayInfo.year, dayInfo.month, dayInfo.day, slotIndex, newVal);
-    }
-  };
-
-  const moveFocusByArrow = (key) => {
-    const [wi, di, slot] = coord.split('-').map(Number);
-    let nextWi = wi;
-    let nextDi = di;
-    let nextSlot = slot;
-
-    if (key === 'ArrowUp') {
-      if (slot > 0) nextSlot = slot - 1;
-      else if (wi > 0) { nextWi = wi - 1; nextSlot = 5; }
-    } else if (key === 'ArrowDown') {
-      if (slot < 5) nextSlot = slot + 1;
-      else if (wi < maxWeeks - 1) { nextWi = wi + 1; nextSlot = 0; }
-    } else if (key === 'ArrowLeft') {
-      if (di > 0) nextDi = di - 1;
-      else if (wi > 0) { nextWi = wi - 1; nextDi = 6; }
-    } else if (key === 'ArrowRight') {
-      if (di < 6) nextDi = di + 1;
-      else if (wi < maxWeeks - 1) { nextWi = wi + 1; nextDi = 0; }
-    }
-
-    const target = document.querySelector(`[data-coord="${nextWi}-${nextDi}-${nextSlot}"]`);
-    if (target) target.focus();
-  };
-
-  const handleKeyDown = (e) => {
-    if (editing) {
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-        if (e.nativeEvent?.isComposing) return;
-        e.preventDefault();
-        const newVal = value.trim();
-        const oldVal = (memo?.content || '').trim();
-        setEditing(false);
-        if (newVal !== oldVal) {
-          recordUndo({ type: 'edit', year: dayInfo.year, month: dayInfo.month, day: dayInfo.day, slotIndex: slotIndex, oldVal });
-          onSave(dayInfo.year, dayInfo.month, dayInfo.day, slotIndex, newVal);
-        }
-        requestAnimationFrame(() => moveFocusByArrow(e.key));
-        return;
-      }
-
-      if (e.key === 'Enter') {
-        // 한글 조합 중(isComposing)일 때 Enter 키를 누르면 조합만 완료하고 셀 저장은 하지 않음
-        if (e.nativeEvent.isComposing) return;
-        e.target.blur();
-      }
-      if (e.key === 'Escape') { setValue(memo?.content || ''); setEditing(false); }
-      return;
-    }
-
-    // Selected state (Not editing)
-    if (dayInfo.isOtherMonth) return;
-
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-      e.preventDefault();
-      moveFocusByArrow(e.key);
-      return;
-    }
-
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      setValue(memo?.content || '');
-      setEditing(true);
-    } else if (e.key === 'Backspace' || e.key === 'Delete') {
-      e.preventDefault();
-      if (memo?.content) {
-        recordUndo({ type: 'edit', year: dayInfo.year, month: dayInfo.month, day: dayInfo.day, slotIndex: slotIndex, oldVal: memo.content });
-        onSave(dayInfo.year, dayInfo.month, dayInfo.day, slotIndex, '');
-      }
-    } else if (
-      (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1) ||
-      e.key === 'Process' ||
-      e.keyCode === 229
-    ) {
-      beginEditing('', true);
-    } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'c' || e.code === 'KeyC')) {
-      e.preventDefault();
-      navigator.clipboard.writeText(memo?.content || '');
-      setClipboardSource({ coord, mode: 'copy' });
-      setFlash(true);
-      setTimeout(() => setFlash(false), 150);
-    } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'x' || e.code === 'KeyX')) {
-      e.preventDefault();
-      navigator.clipboard.writeText(memo?.content || '');
-      setClipboardSource({ coord, mode: 'cut' });
-      setFlash(true);
-      setTimeout(() => setFlash(false), 150);
-    } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'v' || e.code === 'KeyV')) {
-      e.preventDefault();
-      navigator.clipboard.readText().then((text) => {
-        if (text !== undefined && text !== null) {
-          performPaste(coord, text);
-          setFlash(true);
-          setTimeout(() => setFlash(false), 150);
-        }
-      }).catch(err => {
-        console.error('Clipboard read failed:', err);
-      });
-    }
-  };
-
+  }, [isPrimary, isEditing]);
 
   const content = memo?.content || '';
   const fontColor = computeMemoFontColor(content);
@@ -164,42 +30,52 @@ export default function MemoSlot({
 
   if (memo?.is_strikethrough) colorClass += ' memo-strikethrough';
 
-  const isAntsActive = clipboardSource?.coord === coord;
-  const antsClass = isAntsActive ? `ants-active ${clipboardSource.mode === 'cut' ? 'ants-red' : 'ants-blue'}` : '';
-
-  if (editing) {
-    return (
-      <div className="memo-slot editing">
-        <input
-          ref={inputRef}
-          className="memo-slot-input"
-          value={value}
-          onChange={e => setValue(e.target.value)}
-          onCompositionStart={() => {
-            if (!imeOpenRef.current) return;
-            imeOpenRef.current = false;
-            setValue('');
-          }}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          autoFocus
-        />
-      </div>
-    );
+  let antsClass = '';
+  if (clipboardMode) {
+    antsClass = `ants-active ${clipboardMode === 'cut' ? 'ants-red' : 'ants-blue'}`;
   }
+
+  let stateClass = '';
+  if (isSelected) stateClass += ' selected';
+  if (isPrimary) stateClass += ' primary-selected';
+  if (isEditing) stateClass += ' editing';
+
+  const showInput = isPrimary || isEditing;
 
   return (
     <div
-      ref={wrapperRef}
-      className={`memo-slot ${colorClass} ${antsClass}`}
-      style={flash ? { backgroundColor: 'var(--brand-primary-light)', opacity: 0.8 } : undefined}
-      data-coord={coord}
-      onDoubleClick={handleDoubleClick}
-      onKeyDown={handleKeyDown}
-      tabIndex={dayInfo.isOtherMonth ? -1 : 0}
+      className={`memo-slot ${colorClass} ${antsClass} ${stateClass}`}
+      onMouseDown={onMouseDown}
+      onMouseEnter={onMouseEnter}
+      onDoubleClick={onDoubleClick}
+      onContextMenu={onContextMenu}
       title={content}
+      style={{ position: 'relative' }}
     >
-      {content}
+      {!isEditing && (
+        <div style={{ pointerEvents: 'none', position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 3px 0 6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {content}
+        </div>
+      )}
+      
+      {showInput && (
+        <input
+          key={isEditing && editSessionId ? editSessionId : 'hidden'}
+          ref={inputRef}
+          className="memo-slot-input"
+          defaultValue={isEditing ? editValue : ''}
+          style={{
+            opacity: isEditing ? 1 : 0,
+            position: isEditing ? 'relative' : 'absolute',
+            top: 0, left: 0, width: '100%', height: '100%',
+            zIndex: isEditing ? 2 : -1,
+            boxSizing: 'border-box'
+          }}
+          onInput={onInput}
+          onBlur={onBlur}
+          onKeyDown={onKeyDown}
+        />
+      )}
     </div>
   );
 }

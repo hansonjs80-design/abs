@@ -1093,19 +1093,54 @@ export default function ShockwaveDataGrid({
                     for (let i = 0; i < ci; i++) fixedLeft += (FIXED_FIELDS[i]?.w || 48);
                 }
 
-                if (isEdit) {
+                const showInput = isFoc || isEdit;
+
+                if (showInput) {
                   return (
-                    <td key={ci} className={cls} rowSpan={rs > 1 ? rs : undefined} colSpan={cs > 1 ? cs : undefined} style={{ padding: 0, position: ci < frozenColumnCount ? 'sticky' : undefined, left: ci < frozenColumnCount ? fixedLeft : undefined, zIndex: 10 }}>
-                      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                        <input ref={inputRef} className="gc-input" style={{ width: '100%', height: '100%', boxSizing: 'border-box' }} value={editing.val} onChange={e => setEditing({ ...editing, val: e.target.value })} onBlur={finishEdit} />
-                        {isDateCol && (
+                    <td
+                      key={ci}
+                      className={cls}
+                      rowSpan={rs > 1 ? rs : undefined}
+                      colSpan={cs > 1 ? cs : undefined}
+                      style={{ padding: 0, position: ci < frozenColumnCount ? 'sticky' : undefined, left: ci < frozenColumnCount ? fixedLeft : undefined, zIndex: 10 }}
+                      onMouseDown={e => (ci === 0 ? onRowHeaderMouseDown(e, ri) : onMouseDown(e, ri, ci))}
+                      onMouseEnter={() => onMouseEnter(ri, ci)}
+                      onContextMenu={e => (ci === 0 ? onRowHeaderContextMenu(e, ri) : onCtxMenu(e, ri, ci))}
+                    >
+                      <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: '30px' }}>
+                        {!isEdit && (
+                          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
+                            <div style={{ padding: '0 8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{val}</div>
+                            <div className="gc-dot" />
+                          </div>
+                        )}
+                        <input 
+                          key={isEdit && editing.isDblClick ? 'edit' : 'hidden'}
+                          ref={isEdit ? inputRef : (el) => { if (el && !isEdit) { el.focus(); } }} 
+                          className="gc-input" 
+                          style={{ 
+                            width: '100%', height: '100%', boxSizing: 'border-box',
+                            opacity: isEdit ? 1 : 0,
+                            position: isEdit ? 'relative' : 'absolute',
+                            top: 0, left: 0,
+                            zIndex: isEdit ? 2 : -1,
+                          }} 
+                          defaultValue={isEdit ? editing.val : ''} 
+                          onInput={(e) => {
+                            if (!isEdit) {
+                               setEditing({ r: ri, c: ci, val: e.target.value, isDblClick: false });
+                            }
+                          }}
+                          onBlur={isEdit ? finishEdit : undefined} 
+                        />
+                        {isDateCol && isEdit && (
                           <input 
                             type="date"
                             ref={datePickerRef}
                             style={{ position: 'absolute', opacity: 0, right: 0, top: 0, width: 0, height: 0, pointerEvents: 'none' }}
                             onChange={e => {
                               if (e.target.value) {
-                                setEditing({ ...editing, val: e.target.value });
+                                setEditing({ r: ri, c: ci, val: e.target.value, isDblClick: true });
                                 setTimeout(finishEdit, 50);
                               }
                             }}
@@ -1128,7 +1163,6 @@ export default function ShockwaveDataGrid({
                     onContextMenu={e => (ci === 0 ? onRowHeaderContextMenu(e, ri) : onCtxMenu(e, ri, ci))}
                   >
                     {val}
-                    {isFoc && <div className="gc-dot" />}
                   </td>
                 );
               })}

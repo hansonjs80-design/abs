@@ -8,6 +8,7 @@ import ShockwaveDataGrid from '../components/shockwave/ShockwaveDataGrid';
 import ShockwaveNewPatientsView from '../components/shockwave/ShockwaveNewPatientsView';
 
 const ManualTherapyStatsView = React.lazy(() => import('../components/shockwave/ManualTherapyStatsView'));
+const ManualTherapySixMonthStats = React.lazy(() => import('../components/shockwave/ManualTherapySixMonthStats'));
 const MANUAL_THERAPY_SHEET_ID = '1-R_p3eyxwXISFTYX5G7_ec5L0kgUIhNbIwA9AdEj-9U';
 
 class ManualTherapyStatsPageErrorBoundary extends React.Component {
@@ -493,6 +494,13 @@ export default function ManualTherapyStatsPage() {
                       prescriptions={prescriptions}
                       incentivePercentage={shockwaveSettings?.manual_therapy_incentive_percentage ?? 0}
                       prescriptionPrices={shockwaveSettings?.prescription_prices || {}}
+                    />
+                    <ManualTherapySixMonthStats
+                      currentYear={currentYear}
+                      currentMonth={currentMonth}
+                      therapists={safeTherapists}
+                      prescriptionPrices={shockwaveSettings?.prescription_prices || {}}
+                      incentivePercentage={shockwaveSettings?.manual_therapy_incentive_percentage ?? 0}
                     />
                   </div>
                 </Suspense>
