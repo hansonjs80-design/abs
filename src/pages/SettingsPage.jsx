@@ -17,6 +17,8 @@ const SQL_SNIPPETS = [
   interval_minutes int NOT NULL DEFAULT 10,
   day_overrides jsonb NOT NULL DEFAULT '{}',
   prescriptions text[] DEFAULT ARRAY['F1.5', 'F/Rdc', 'F/R'],
+  prescription_prices jsonb NOT NULL DEFAULT '{"F1.5":50000,"F/Rdc":70000,"F/R":80000}'::jsonb,
+  incentive_percentage numeric(5,2) NOT NULL DEFAULT 7,
   frozen_columns int DEFAULT 6,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -132,6 +134,12 @@ export default function SettingsPage() {
     end_time: '18:00', 
     interval_minutes: 10,
     prescriptions: ['F1.5', 'F/Rdc', 'F/R'],
+    prescription_prices: {
+      'F1.5': 50000,
+      'F/Rdc': 70000,
+      'F/R': 80000,
+    },
+    incentive_percentage: 7,
     frozen_columns: 6
   });
   const [dayOverrides, setDayOverrides] = useState({});
@@ -165,6 +173,12 @@ export default function SettingsPage() {
           end_time: data.end_time.substring(0, 5),
           interval_minutes: data.interval_minutes,
           prescriptions: data.prescriptions || ['F1.5', 'F/Rdc', 'F/R'],
+          prescription_prices: data.prescription_prices || {
+            'F1.5': 50000,
+            'F/Rdc': 70000,
+            'F/R': 80000,
+          },
+          incentive_percentage: data.incentive_percentage ?? 7,
           frozen_columns: data.frozen_columns || 6
         });
         setDayOverrides(data.day_overrides || {});
@@ -179,6 +193,8 @@ export default function SettingsPage() {
       interval_minutes: Number(swSettings.interval_minutes),
       day_overrides: dayOverrides,
       prescriptions: swSettings.prescriptions,
+      prescription_prices: swSettings.prescription_prices,
+      incentive_percentage: Number(swSettings.incentive_percentage) || 0,
       frozen_columns: Number(swSettings.frozen_columns)
     });
     if (success) addToast('시간표 설정이 저장되었습니다.', 'success');
@@ -329,7 +345,7 @@ export default function SettingsPage() {
           <div className="settings-row" style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--border-color-light)' }}>
             <div style={{ flex: 1 }}>
               <div className="settings-row-label">📝 처방 목록 (현황 탭)</div>
-              <div className="settings-row-desc">치료사별로 표시할 처방 종류를 입력하세요. 삭제하려면 클릭하세요.</div>
+              <div className="settings-row-desc">치료사별로 표시할 처방 종류와 결산에 사용할 가격을 관리합니다.</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
                 {swSettings.prescriptions.map((pres, idx) => (
                   <span 
@@ -361,12 +377,60 @@ export default function SettingsPage() {
                     if (e.key === 'Enter' && e.target.value.trim()) {
                       const val = e.target.value.trim();
                       if (!swSettings.prescriptions.includes(val)) {
-                        setSwSettings(p => ({ ...p, prescriptions: [...p.prescriptions, val] }));
+                        setSwSettings(p => ({
+                          ...p,
+                          prescriptions: [...p.prescriptions, val],
+                          prescription_prices: {
+                            ...p.prescription_prices,
+                            [val]: p.prescription_prices?.[val] ?? 0,
+                          },
+                        }));
                       }
                       e.target.value = '';
                     }
                   }}
                 />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginTop: 16 }}>
+                {swSettings.prescriptions.map((pres) => (
+                  <label key={`${pres}-price`} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <span className="settings-row-label" style={{ fontSize: '0.82rem' }}>{pres} 가격</span>
+                    <input
+                      type="number"
+                      className="form-input"
+                      min={0}
+                      step={1000}
+                      value={swSettings.prescription_prices?.[pres] ?? 0}
+                      onChange={(e) => {
+                        const value = Number(e.target.value) || 0;
+                        setSwSettings((p) => ({
+                          ...p,
+                          prescription_prices: {
+                            ...p.prescription_prices,
+                            [pres]: value,
+                          },
+                        }));
+                      }}
+                    />
+                  </label>
+                ))}
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span className="settings-row-label" style={{ fontSize: '0.82rem' }}>인센티브 퍼센트</span>
+                  <input
+                    type="number"
+                    className="form-input"
+                    min={0}
+                    step={0.1}
+                    value={swSettings.incentive_percentage}
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      setSwSettings((p) => ({
+                        ...p,
+                        incentive_percentage: Number.isFinite(value) ? value : 0,
+                      }));
+                    }}
+                  />
+                </label>
               </div>
             </div>
           </div>

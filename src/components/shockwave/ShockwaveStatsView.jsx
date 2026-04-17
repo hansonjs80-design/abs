@@ -3,8 +3,10 @@ import { supabase } from '../../lib/supabaseClient';
 import { syncTodayShockwaveScheduleToStats } from '../../lib/shockwaveSyncUtils';
 import { getTodayKST } from '../../lib/calendarUtils';
 import { useToast } from '../common/Toast';
+import { useSchedule } from '../../contexts/ScheduleContext';
 import '../../styles/shockwave_stats.css';
 import ShockwaveDataGrid from './ShockwaveDataGrid';
+import ShockwaveSettlementView from './ShockwaveSettlementView';
 
 class ShockwaveStatsErrorBoundary extends React.Component {
   constructor(props) {
@@ -35,6 +37,7 @@ class ShockwaveStatsErrorBoundary extends React.Component {
 
 export default function ShockwaveStatsView({ currentYear, currentMonth, memos, therapists, schedulerMemosReady = false }) {
   const { addToast } = useToast();
+  const { shockwaveSettings } = useSchedule();
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [extraDraftRows, setExtraDraftRows] = useState(0);
@@ -43,6 +46,18 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   const lastAutoSyncKeyRef = useRef(null);
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
+  const settlementPrescriptions = useMemo(
+    () => shockwaveSettings?.prescriptions || ['F1.5', 'F/Rdc', 'F/R'],
+    [shockwaveSettings?.prescriptions]
+  );
+  const settlementPrices = useMemo(
+    () => shockwaveSettings?.prescription_prices || { 'F1.5': 50000, 'F/Rdc': 70000, 'F/R': 80000 },
+    [shockwaveSettings?.prescription_prices]
+  );
+  const incentivePercentage = useMemo(
+    () => shockwaveSettings?.incentive_percentage ?? 7,
+    [shockwaveSettings?.incentive_percentage]
+  );
 
   const fetchLogs = useCallback(async () => {
     setIsLoading(true);
@@ -270,6 +285,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                 
                 let therapist = '구글 시트 연동';
                 let presType = '';
+                let presCount = 0;
                 
                 // 각 치료사 별 처방 컬럼 확인: 첫번째(F1.5), 두번째(F/R DC), 세번째(F/R)
                 // B:P 범위이므로 G=5, H=6, I=7, J=8, K=9, L=10, M=11, N=12, O=13
@@ -280,12 +296,15 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                   if (v1 && String(v1).trim() !== '0' && String(v1).trim() !== '') {
                     therapist = tName;
                     presType = 'F1.5';
+                    presCount = parseInt(v1, 10) || 1;
                   } else if (v2 && String(v2).trim() !== '0' && String(v2).trim() !== '') {
                     therapist = tName;
                     presType = 'F/R DC';
+                    presCount = parseInt(v2, 10) || 1;
                   } else if (v3 && String(v3).trim() !== '0' && String(v3).trim() !== '') {
                     therapist = tName;
                     presType = 'F/R';
+                    presCount = parseInt(v3, 10) || 1;
                   }
                 };
 
@@ -301,6 +320,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                   body_part: colF ? String(colF) : '',
                   therapist_name: therapist,
                   prescription: presType,
+                  prescription_count: presCount || null,
                 });
               }
             });
@@ -370,6 +390,12 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
           >
             충격파 현황
           </button>
+          <button
+            className={`sw-stats-side-tab${activeSection === 'settlement' ? ' active' : ''}`}
+            onClick={() => setActiveSection('settlement')}
+          >
+            충격파 결산
+          </button>
         </aside>
 
         <div className="sw-stats-panel">
@@ -412,7 +438,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                       if (dates.length > 0) fallbackDate = dates[dates.length - 1];
                     }
                     const { error } = await supabase.from('shockwave_patient_logs').insert([{
-                      date: fallbackDate, patient_name: '', chart_number: '', visit_count: '', body_part: '', therapist_name: '', prescription: '', source: 'manual'
+                      date: fallbackDate, patient_name: '', chart_number: '', visit_count: '', body_part: '', therapist_name: '', prescription: '', prescription_count: 0, source: 'manual'
                     }]);
                     if (!error) fetchLogs();
                   }}
@@ -455,6 +481,19 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                 </button>
               </div>
             </>
+          )}
+
+          {activeSection === 'settlement' && (
+            <div className="sw-stats-body sw-stats-body--settlement">
+              <ShockwaveSettlementView
+                logs={safeLogs}
+                therapists={safeTherapists}
+                currentMonth={currentMonth}
+                prescriptions={settlementPrescriptions}
+                prescriptionPrices={settlementPrices}
+                incentivePercentage={incentivePercentage}
+              />
+            </div>
           )}
         </div>
       </div>

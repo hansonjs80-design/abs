@@ -68,6 +68,9 @@ CREATE TABLE IF NOT EXISTS public.shockwave_settings (
   end_time time NOT NULL DEFAULT '18:00:00',
   interval_minutes integer NOT NULL DEFAULT 10,
   day_overrides jsonb DEFAULT '{}'::jsonb,
+  prescriptions text[] DEFAULT ARRAY['F1.5', 'F/Rdc', 'F/R'],
+  prescription_prices jsonb DEFAULT '{"F1.5":50000,"F/Rdc":70000,"F/R":80000}'::jsonb,
+  incentive_percentage numeric(5,2) DEFAULT 7,
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -79,6 +82,15 @@ ALTER TABLE public.shockwave_settings DISABLE ROW LEVEL SECURITY;
 -- =============================================
 ALTER TABLE public.shockwave_settings 
 ADD COLUMN IF NOT EXISTS day_overrides jsonb DEFAULT '{}'::jsonb;
+
+ALTER TABLE public.shockwave_settings
+ADD COLUMN IF NOT EXISTS prescriptions text[] DEFAULT ARRAY['F1.5', 'F/Rdc', 'F/R'];
+
+ALTER TABLE public.shockwave_settings
+ADD COLUMN IF NOT EXISTS prescription_prices jsonb DEFAULT '{"F1.5":50000,"F/Rdc":70000,"F/R":80000}'::jsonb;
+
+ALTER TABLE public.shockwave_settings
+ADD COLUMN IF NOT EXISTS incentive_percentage numeric(5,2) DEFAULT 7;
 
 ALTER TABLE public.shockwave_schedules 
 ADD COLUMN IF NOT EXISTS merge_span jsonb DEFAULT '{"rowSpan": 1, "colSpan": 1, "mergedInto": null}'::jsonb;
@@ -95,7 +107,7 @@ CREATE TABLE IF NOT EXISTS public.shockwave_patient_logs (
   body_part text,              -- 변환된 치료 부위/메모 (예: Rt. Shoulder)
   therapist_name text,         -- 담당 치료사 이름 또는 인덱스
   prescription text,           -- 처방 종류 (예: F1.5, F/R DC, F/R 등)
-  prescription_count text,     -- 처방 횟수/숫자 기입 (예: 1, 2)
+  prescription_count integer,     -- 처방 횟수/숫자 기입 (예: 1, 2)
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -106,7 +118,7 @@ ALTER TABLE public.shockwave_patient_logs
 ADD COLUMN IF NOT EXISTS prescription text;
 
 ALTER TABLE public.shockwave_patient_logs 
-ADD COLUMN IF NOT EXISTS prescription_count text;
+ADD COLUMN IF NOT EXISTS prescription_count integer;
 
 -- source 컬럼: 'scheduler' (스케줄러 자동 동기화) 또는 'manual' (수동 입력)
 ALTER TABLE public.shockwave_patient_logs 

@@ -664,14 +664,15 @@ export default function ShockwaveDataGrid({
     }
   };
 
-  const doDeleteRow = async (r) => {
+  const doDeleteRow = async (r, options = {}) => {
+    const { skipConfirm = false } = options;
     const row = gridData[r];
     if (row?.isInsertedDraft) {
       setInsertedDraftRows((prev) => prev.filter((item) => item.id !== row.id));
       setCtxMenu(null);
       return;
     }
-    if (row && !row.isDraft && window.confirm(`${row.patient_name} 행을 삭제하시겠습니까?`)) {
+    if (row && !row.isDraft && (skipConfirm || window.confirm(`${row.patient_name} 행을 삭제하시겠습니까?`))) {
       const affectedDate = row.date || '';
       await supabase.from('shockwave_patient_logs').delete().eq('id', row.id);
       setCtxMenu(null);
@@ -691,6 +692,7 @@ export default function ShockwaveDataGrid({
     setFocus({ r, c: 0 });
     setSel({ r1: r, c1: 0, r2: r, c2: totalColCount - 1 });
     setCtxMenu(null);
+    wrapRef.current?.focus();
   }, [totalColCount]);
 
   const copyRow = useCallback((r) => {
@@ -759,9 +761,14 @@ export default function ShockwaveDataGrid({
       }
       if (e.key === 'Enter') { e.preventDefault(); startEdit(r, c, true); return; }
       if (e.key === 'Tab') { e.preventDefault(); const nc = Math.min(c+1, totalColCount-1); setFocus({r, c:nc}); setSel({r1:r,c1:nc,r2:r,c2:nc}); return; }
-      if ((e.metaKey || e.ctrlKey) && (e.key === '-' || e.key === '_' || e.code === 'Minus') && isWholeRowSelected) {
+      if ((e.metaKey || e.ctrlKey) && (e.key === '+' || e.key === '=' || e.code === 'Equal' || e.code === 'NumpadAdd')) {
         e.preventDefault();
-        doDeleteRow(r);
+        insertDraftRow(gridData[r], 'after');
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && (e.key === '-' || e.key === '_' || e.code === 'Minus' || e.code === 'NumpadSubtract') && isWholeRowSelected) {
+        e.preventDefault();
+        doDeleteRow(r, { skipConfirm: true });
         return;
       }
       if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); doDelete(); return; }
@@ -1004,10 +1011,10 @@ export default function ShockwaveDataGrid({
                     className={cls}
                     rowSpan={rs > 1 ? rs : undefined}
                     colSpan={cs > 1 ? cs : undefined}
-                    onMouseDown={e => onMouseDown(e, ri, ci)}
+                    onMouseDown={e => (ci === 0 ? onRowHeaderMouseDown(e, ri) : onMouseDown(e, ri, ci))}
                     onMouseEnter={() => onMouseEnter(ri, ci)}
                     onDoubleClick={() => onDblClick(ri, ci)}
-                    onContextMenu={e => onCtxMenu(e, ri, ci)}
+                    onContextMenu={e => (ci === 0 ? onRowHeaderContextMenu(e, ri) : onCtxMenu(e, ri, ci))}
                   >
                     {val}
                     {isFoc && <div className="gc-dot" />}

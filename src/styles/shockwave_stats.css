@@ -195,9 +195,10 @@
   --grid-new-strong-bg: #e2e8f0;
   --grid-total-cell-bg: #f1f5f9;
   --grid-new-cell-bg: #f1f5f9;
-  --grid-row-selected-bg: #dde7f6;
-  --grid-row-selected-fixed-bg: #d6e3f5;
-  --grid-row-selected-summary-bg: #dce6f3;
+  --grid-row-selected-bg: #d5e2f5;
+  --grid-row-selected-fixed-bg: #c9daF2;
+  --grid-row-selected-summary-bg: #d0deef;
+  --grid-row-selected-line: #8aa4cf;
   width: 100%;
   overflow: auto;
   max-height: 85vh;
@@ -427,10 +428,11 @@
 
 .gc-row-selected {
   background-color: var(--grid-row-selected-bg) !important;
+  box-shadow: inset 0 1px 0 var(--grid-row-selected-line), inset 0 -1px 0 var(--grid-row-selected-line);
 }
 
 .gc-row-index.gc-row-selected {
-  background-color: #cddcf1 !important;
+  background-color: #bfd2ec !important;
   color: #334155;
 }
 
@@ -532,6 +534,7 @@ td.gc-bold > .gc-input {
 
 .gc-fixed.gc-row-selected {
   background: var(--grid-row-selected-fixed-bg) !important;
+  box-shadow: inset 0 1px 0 var(--grid-row-selected-line), inset 0 -1px 0 var(--grid-row-selected-line);
 }
 
 tbody tr:hover .gc-fixed {
@@ -621,7 +624,24 @@ tbody tr.tr-row-selected:hover .gc-fixed {
 
 /* Ensure background of sticky right cells stays opaque */
 thead .sticky-right-last-1, thead .sticky-right-last-2 {
-  background-color: inherit !important;
+  isolation: isolate;
+  background-image: none !important;
+}
+
+thead .hdr-total.sticky-right-last-2 {
+  background-color: var(--grid-summary-bg) !important;
+}
+
+thead .hdr-total.hdr-new-patient.sticky-right-last-1 {
+  background-color: var(--grid-new-bg) !important;
+}
+
+thead .hdr-grand-total.sticky-right-last-2 {
+  background-color: var(--grid-summary-strong-bg) !important;
+}
+
+thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1 {
+  background-color: var(--grid-new-strong-bg) !important;
 }
 
 tbody .gc-total.sticky-right-last-1, 
@@ -643,6 +663,7 @@ tbody .gc-total.gc-row-selected.sticky-right-last-2,
 tbody .gc-new-patient.gc-row-selected.sticky-right-last-1,
 tbody .gc-new-patient.gc-row-selected.sticky-right-last-2 {
   background-color: var(--grid-row-selected-summary-bg) !important;
+  box-shadow: inset 0 1px 0 var(--grid-row-selected-line), inset 0 -1px 0 var(--grid-row-selected-line);
 }
 
 tbody tr:hover .sticky-right-last-1,
@@ -688,6 +709,31 @@ tbody td.gc-new-patient.gc-row-selected.sticky-right-last-2::before {
   background: var(--grid-row-selected-summary-bg);
 }
 
+thead th.sticky-right-last-1::before,
+thead th.sticky-right-last-2::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+thead .hdr-total.sticky-right-last-2::before {
+  background: var(--grid-summary-bg);
+}
+
+thead .hdr-total.hdr-new-patient.sticky-right-last-1::before {
+  background: var(--grid-new-bg);
+}
+
+thead .hdr-grand-total.sticky-right-last-2::before {
+  background: var(--grid-summary-strong-bg);
+}
+
+thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
+  background: var(--grid-new-strong-bg);
+}
+
 /* Summary Grid Totals specific styles */
 .hdr-grand-total {
   font-weight: 800;
@@ -704,4 +750,148 @@ tbody td.gc-new-patient.gc-row-selected.sticky-right-last-2::before {
 /* Specific Z-Index for intersection of Frozen Left and Sticky Right (though they don't overlap) */
 .hdr-fixed.sticky-right-last-1, .hdr-fixed.sticky-right-last-2 {
   z-index: 70 !important;
+}
+
+.sw-stats-body--settlement {
+  overflow: auto;
+  padding: 20px;
+}
+
+.sw-stats-empty {
+  display: flex;
+  min-height: 220px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.empty-subtext {
+  color: var(--text-tertiary);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.sw-settlement-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sw-settlement-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sw-settlement-header h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.sw-settlement-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.sw-settlement-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--border-color-light);
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.sw-settlement-table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.sw-settlement-table th,
+.sw-settlement-table td {
+  padding: 12px 10px;
+  text-align: center;
+  border-right: 1px solid #dbe3ee;
+  border-bottom: 1px solid #dbe3ee;
+  white-space: nowrap;
+}
+
+.sw-settlement-table thead th {
+  background: #eef4fb;
+  color: #334155;
+  font-weight: 800;
+}
+
+.sw-settlement-table thead .label-col {
+  background: #e2e8f0;
+  min-width: 140px;
+}
+
+.sw-settlement-table thead .therapist-col {
+  background: #dce9f9;
+}
+
+.sw-settlement-table thead .prescription-col {
+  background: #f5f8fc;
+  font-size: 0.84rem;
+}
+
+.sw-settlement-table thead .grand-col {
+  background: #d9e1ec;
+  min-width: 128px;
+}
+
+.sw-settlement-table .row-label {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 800;
+  text-align: left;
+  padding-left: 16px;
+}
+
+.sw-settlement-table tbody td {
+  background: #ffffff;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.sw-settlement-table .merged-value {
+  background: #f8fbff;
+}
+
+.sw-settlement-table .grand-value {
+  background: #edf2f7;
+  color: #334155;
+  font-weight: 800;
+}
+
+.sw-settlement-table .amount {
+  color: #1d4ed8;
+}
+
+.sw-settlement-table .incentive {
+  color: #7c3aed;
+}
+
+.sw-settlement-table tr:last-child td,
+.sw-settlement-table tr:last-child th {
+  border-bottom: none;
+}
+
+.sw-settlement-table tr th:last-child,
+.sw-settlement-table tr td:last-child {
+  border-right: none;
 }

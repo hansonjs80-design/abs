@@ -17,6 +17,12 @@ export function ScheduleProvider({ children }) {
     interval_minutes: 10,
     day_overrides: {},
     prescriptions: ['F1.5', 'F/Rdc', 'F/R'],
+    prescription_prices: {
+      'F1.5': 50000,
+      'F/Rdc': 70000,
+      'F/R': 80000,
+    },
+    incentive_percentage: 7,
     frozen_columns: 6
   });
   const [shockwaveMemos, setShockwaveMemos] = useState({});
@@ -172,6 +178,12 @@ export function ScheduleProvider({ children }) {
           interval_minutes: data.interval_minutes,
           day_overrides: data.day_overrides || {},
           prescriptions: data.prescriptions || ['F1.5', 'F/Rdc', 'F/R'],
+          prescription_prices: data.prescription_prices || {
+            'F1.5': 50000,
+            'F/Rdc': 70000,
+            'F/R': 80000,
+          },
+          incentive_percentage: data.incentive_percentage ?? 7,
           frozen_columns: data.frozen_columns || 6
         });
       }
@@ -190,6 +202,12 @@ export function ScheduleProvider({ children }) {
         interval_minutes: newSettings.interval_minutes,
         day_overrides: newSettings.day_overrides || {},
         prescriptions: newSettings.prescriptions || ['F1.5', 'F/Rdc', 'F/R'],
+        prescription_prices: newSettings.prescription_prices || {
+          'F1.5': 50000,
+          'F/Rdc': 70000,
+          'F/R': 80000,
+        },
+        incentive_percentage: newSettings.incentive_percentage ?? 7,
         frozen_columns: newSettings.frozen_columns || 6
       }, { onConflict: 'id' });
 
