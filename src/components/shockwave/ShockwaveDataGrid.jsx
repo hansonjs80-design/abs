@@ -1118,13 +1118,19 @@ export default function ShockwaveDataGrid({
                           key={isEdit && editing.isDblClick ? 'edit' : 'hidden'}
                           ref={isEdit ? inputRef : (el) => { if (el && !isEdit) { el.focus(); } }} 
                           className="gc-input" 
-                          style={{ 
+                          data-hidden-input={!isEdit ? 'true' : undefined}
+                          style={isEdit ? {
                             width: '100%', height: '100%', boxSizing: 'border-box',
-                            opacity: isEdit ? 1 : 0,
-                            position: isEdit ? 'relative' : 'absolute',
+                            position: 'relative',
+                            zIndex: 2,
+                          } : {
+                            position: 'absolute',
                             top: 0, left: 0,
-                            zIndex: isEdit ? 2 : -1,
-                          }} 
+                            width: '1px', height: '1px',
+                            opacity: 0,
+                            padding: 0, border: 'none', outline: 'none',
+                            pointerEvents: 'none',
+                          }}
                           defaultValue={isEdit ? editing.val : ''} 
                           onInput={(e) => {
                             if (!isEdit) {

@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef } from 'react';
 import { computeMemoFontColor } from '../../lib/memoParser';
 
 export default function MemoSlot({ 
@@ -8,13 +8,7 @@ export default function MemoSlot({
   onMouseDown, onMouseEnter, onDoubleClick, onContextMenu,
   onInput, onBlur, onKeyDown
 }) {
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    if (isPrimary && !isEditing && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isPrimary, isEditing]);
+  const editInputRef = useRef(null);
 
   const content = memo?.content || '';
   const fontColor = computeMemoFontColor(content);
@@ -31,9 +25,7 @@ export default function MemoSlot({
   if (memo?.is_strikethrough) colorClass += ' memo-strikethrough';
 
   let antsClass = '';
-  if (clipboardMode) {
-    antsClass = `ants-active ${clipboardMode === 'cut' ? 'ants-red' : 'ants-blue'}`;
-  }
+  if (clipboardMode) antsClass = `ants-active ${clipboardMode === 'cut' ? 'ants-red' : 'ants-blue'}`;
 
   let stateClass = '';
   if (isSelected) stateClass += ' selected';
@@ -50,26 +42,43 @@ export default function MemoSlot({
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
       title={content}
-      style={{ position: 'relative' }}
+      style={{ position: 'relative', overflow: 'hidden' }}
     >
-      {!isEditing && (
-        <div style={{ pointerEvents: 'none', position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 3px 0 6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {content}
-        </div>
-      )}
-      
+      {/* Content - hidden when editing */}
+      <span style={{
+        visibility: isEditing ? 'hidden' : 'visible',
+        pointerEvents: 'none',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        width: '100%',
+        textAlign: 'right',
+      }}>
+        {content}
+      </span>
+
+      {/* Input - same pattern as ShockwaveView: ref callback for immediate focus */}
       {showInput && (
         <input
           key={isEditing && editSessionId ? editSessionId : 'hidden'}
-          ref={inputRef}
+          ref={isEditing ? editInputRef : (el) => { if (el && !isEditing) el.focus(); }}
           className="memo-slot-input"
+          data-hidden-input={!isEditing ? 'true' : undefined}
           defaultValue={isEditing ? editValue : ''}
-          style={{
-            opacity: isEditing ? 1 : 0,
-            position: isEditing ? 'relative' : 'absolute',
-            top: 0, left: 0, width: '100%', height: '100%',
-            zIndex: isEditing ? 2 : -1,
-            boxSizing: 'border-box'
+          style={isEditing ? {
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            zIndex: 2,
+            boxSizing: 'border-box',
+          } : {
+            position: 'absolute',
+            top: 0, left: 0,
+            width: '1px', height: '1px',
+            opacity: 0,
+            padding: 0, border: 'none', outline: 'none',
+            pointerEvents: 'none',
           }}
           onInput={onInput}
           onBlur={onBlur}

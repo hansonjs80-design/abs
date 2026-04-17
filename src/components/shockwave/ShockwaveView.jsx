@@ -1433,7 +1433,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
       const target = event.target;
       const isEditableTarget =
-        target instanceof HTMLInputElement ||
+        (target instanceof HTMLInputElement && !target.dataset.hiddenInput) ||
         target instanceof HTMLTextAreaElement ||
         target?.isContentEditable;
       if (isEditableTarget) return;
@@ -1799,13 +1799,21 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                   key={isEditing && editSessionId ? editSessionId : 'hidden'}
                                   ref={isEditing ? editInputRef : (el) => { if (el && !isEditing) el.focus(); }}
                                   className="sw-cell-input"
+                                  data-hidden-input={!isEditing ? 'true' : undefined}
                                   defaultValue={isEditing ? editValue : ''}
-                                  style={{
-                                    opacity: isEditing ? 1 : 0,
-                                    position: isEditing ? 'relative' : 'absolute',
-                                    top: 0, left: 0, width: '100%', height: '100%',
-                                    zIndex: isEditing ? 2 : -1,
+                                  style={isEditing ? {
+                                    position: 'relative',
+                                    width: '100%', height: '100%',
+                                    zIndex: 2,
                                     boxSizing: 'border-box'
+                                  } : {
+                                    position: 'absolute',
+                                    top: 0, left: 0,
+                                    width: '1px', height: '1px',
+                                    opacity: 0,
+                                    padding: 0, border: 'none', outline: 'none',
+                                    pointerEvents: 'none',
+                                    zIndex: 1,
                                   }}
                                   onBlur={(e) => {
                                     if (isEditing) handleCellSave(weekIdx, dayIdx, rowIdx, colIdx, e.target.value);

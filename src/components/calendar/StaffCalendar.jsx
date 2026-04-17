@@ -241,7 +241,7 @@ export default function StaffCalendar() {
     if (e.button === 2) return;
     const cell = makeCell(wi, di, slot); if (!cell) return;
     if (grid[wi]?.[di]?.isOtherMonth) return;
-    viewRef.current?.focus(); if (editingCell) setEditingCell(null); setContextMenu(null);
+    if (editingCell) setEditingCell(null); setContextMenu(null);
     if (e.shiftKey && selectedCell) { setRangeEnd(cell); setSelectedKeys(buildRange(selectedCell, cell)); }
     else { selectSingle(cell); dragRef.current = cell; }
   }, [makeCell, grid, editingCell, selectedCell, buildRange, selectSingle]);

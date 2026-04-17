@@ -153,6 +153,10 @@
   color: #3b82f6;
 }
 
+.today.saturday .calendar-date-number {
+  color: #ffffff;
+}
+
 .today .calendar-date-badge {
   background: rgba(255, 255, 255, 0.22);
   color: #fff;
