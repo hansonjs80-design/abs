@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS public.shockwave_settings (
   prescriptions text[] DEFAULT ARRAY['F1.5', 'F/Rdc', 'F/R'],
   prescription_prices jsonb DEFAULT '{"F1.5":50000,"F/Rdc":70000,"F/R":80000}'::jsonb,
   incentive_percentage numeric(5,2) DEFAULT 7,
+  frozen_columns integer DEFAULT 6,
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -91,6 +92,9 @@ ADD COLUMN IF NOT EXISTS prescription_prices jsonb DEFAULT '{"F1.5":50000,"F/Rdc
 
 ALTER TABLE public.shockwave_settings
 ADD COLUMN IF NOT EXISTS incentive_percentage numeric(5,2) DEFAULT 7;
+
+ALTER TABLE public.shockwave_settings
+ADD COLUMN IF NOT EXISTS frozen_columns integer DEFAULT 6;
 
 ALTER TABLE public.shockwave_schedules 
 ADD COLUMN IF NOT EXISTS merge_span jsonb DEFAULT '{"rowSpan": 1, "colSpan": 1, "mergedInto": null}'::jsonb;

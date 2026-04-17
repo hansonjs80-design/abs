@@ -22,7 +22,12 @@ const SQL_SNIPPETS = [
   frozen_columns int DEFAULT 6,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-ALTER TABLE public.shockwave_settings DISABLE ROW LEVEL SECURITY;`
+ALTER TABLE public.shockwave_settings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS day_overrides jsonb NOT NULL DEFAULT '{}';
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS prescriptions text[] DEFAULT ARRAY['F1.5', 'F/Rdc', 'F/R'];
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS prescription_prices jsonb NOT NULL DEFAULT '{"F1.5":50000,"F/Rdc":70000,"F/R":80000}'::jsonb;
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS incentive_percentage numeric(5,2) NOT NULL DEFAULT 7;
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS frozen_columns int DEFAULT 6;`
   },
   {
     title: '치료사 목록 테이블',
@@ -68,12 +73,15 @@ ALTER TABLE public.shockwave_schedules DISABLE ROW LEVEL SECURITY;`
   body_part text,
   therapist_name text,
   prescription text,
-  prescription_count text,
+  prescription_count integer,
   source text DEFAULT 'manual',
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-ALTER TABLE public.shockwave_patient_logs DISABLE ROW LEVEL SECURITY;`
+ALTER TABLE public.shockwave_patient_logs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.shockwave_patient_logs ADD COLUMN IF NOT EXISTS prescription text;
+ALTER TABLE public.shockwave_patient_logs ADD COLUMN IF NOT EXISTS prescription_count integer;
+ALTER TABLE public.shockwave_patient_logs ADD COLUMN IF NOT EXISTS source text DEFAULT 'manual';`
   },
   {
     title: '직원 근무표용 스케줄 테이블',

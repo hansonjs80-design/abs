@@ -39,6 +39,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   const { addToast } = useToast();
   const { shockwaveSettings } = useSchedule();
   const [logs, setLogs] = useState([]);
+  const [recentLogs, setRecentLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [extraDraftRows, setExtraDraftRows] = useState(0);
   const [activeSection, setActiveSection] = useState('overview');
@@ -58,6 +59,15 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     () => shockwaveSettings?.incentive_percentage ?? 7,
     [shockwaveSettings?.incentive_percentage]
   );
+
+  const normalizedPriceMap = useMemo(() => {
+    return Object.fromEntries(
+      Object.entries(settlementPrices || {}).map(([key, value]) => [
+        String(key || '').toLowerCase().replace(/[^a-z0-9]/g, ''),
+        Number(value) || 0,
+      ])
+    );
+  }, [settlementPrices]);
 
   const fetchLogs = useCallback(async () => {
     setIsLoading(true);
@@ -88,6 +98,70 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchRecentLogs = async () => {
+      try {
+        const currentDate = new Date(currentYear, currentMonth - 1, 1);
+        const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 5, 1);
+        const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+
+        const startStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-01`;
+        const endStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-01`;
+
+        const { data, error } = await supabase
+          .from('shockwave_patient_logs')
+          .select('*')
+          .gte('date', startStr)
+          .lt('date', endStr);
+
+        if (error) throw error;
+        if (!cancelled) setRecentLogs(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error(error);
+        if (!cancelled) setRecentLogs([]);
+      }
+    };
+
+    fetchRecentLogs();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentYear, currentMonth]);
+
+  const recentMonthlySummaries = useMemo(() => {
+    const normalizePrescriptionKey = (value) =>
+      String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const toCount = (value) => {
+      const parsed = parseInt(String(value ?? '').trim(), 10);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    return Array.from({ length: 6 }, (_, index) => {
+      const targetDate = new Date(currentYear, currentMonth - 1 - index, 1);
+      const year = targetDate.getFullYear();
+      const month = targetDate.getMonth() + 1;
+      const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+
+      const monthlyLogs = recentLogs.filter((log) => String(log?.date || '').startsWith(monthKey));
+      const totalCount = monthlyLogs.reduce((sum, log) => sum + toCount(log?.prescription_count || 1), 0);
+      const amount = monthlyLogs.reduce((sum, log) => {
+        const price = normalizedPriceMap[normalizePrescriptionKey(log?.prescription)] || 0;
+        return sum + toCount(log?.prescription_count || 1) * price;
+      }, 0);
+      const newPatientCount = monthlyLogs.filter((log) => String(log?.patient_name || '').includes('*')).length;
+
+      return {
+        monthKey,
+        label: `${year}년 ${String(month).padStart(2, '0')}월`,
+        totalCount,
+        amount,
+        newPatientCount,
+      };
+    });
+  }, [currentYear, currentMonth, recentLogs, normalizedPriceMap]);
 
   useEffect(() => {
     setExtraDraftRows(0);
@@ -492,6 +566,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                 prescriptions={settlementPrescriptions}
                 prescriptionPrices={settlementPrices}
                 incentivePercentage={incentivePercentage}
+                recentMonthlySummaries={recentMonthlySummaries}
               />
             </div>
           )}

@@ -26,6 +26,7 @@ export default function ShockwaveSettlementView({
   prescriptions,
   prescriptionPrices,
   incentivePercentage,
+  recentMonthlySummaries = [],
 }) {
   const normalizedPriceMap = useMemo(() => {
     const entries = Object.entries(prescriptionPrices || {}).map(([key, amount]) => [
@@ -106,79 +107,110 @@ export default function ShockwaveSettlementView({
   }
 
   return (
-    <div className="sw-settlement-card">
-      <div className="sw-settlement-header">
-        <h2>{currentMonth}월 충격파 결산</h2>
-        <div className="sw-settlement-meta">
-          <span>인센티브 {Number(incentivePercentage) || 0}%</span>
+    <div className="sw-settlement-stack">
+      <div className="sw-settlement-card">
+        <div className="sw-settlement-header">
+          <h2>{currentMonth}월 충격파 결산</h2>
+          <div className="sw-settlement-meta">
+            <span>인센티브 {Number(incentivePercentage) || 0}%</span>
+          </div>
+        </div>
+
+        <div className="sw-settlement-table-wrap">
+          <table className="sw-settlement-table">
+            <thead>
+              <tr>
+                <th className="label-col" rowSpan={2}>구분</th>
+                {settlement.summaryByTherapist.map((item) => (
+                  <th key={item.therapist.id} colSpan={prescriptions.length} className="therapist-col">
+                    {item.therapist.name}
+                  </th>
+                ))}
+                <th className="grand-col" rowSpan={2}>총 합계</th>
+              </tr>
+              <tr>
+                {settlement.summaryByTherapist.flatMap((item) =>
+                  prescriptions.map((prescription) => (
+                    <th key={`${item.therapist.id}-${prescription}`} className="prescription-col">
+                      {prescription}
+                    </th>
+                  ))
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th className="row-label">처방 건수</th>
+                {settlement.summaryByTherapist.flatMap((item) =>
+                  prescriptions.map((prescription) => (
+                    <td key={`count-${item.therapist.id}-${prescription}`}>
+                      {settlement.grandPrescriptionCounts[prescription] >= 0
+                        ? item.countsByPrescription[prescription] || 0
+                        : 0}
+                    </td>
+                  ))
+                )}
+                <td className="grand-value">{formatCount(settlement.grandTotalCount)}</td>
+              </tr>
+              <tr>
+                <th className="row-label">충격파 합계(건)</th>
+                {settlement.summaryByTherapist.map((item) => (
+                  <td key={`total-count-${item.therapist.id}`} colSpan={prescriptions.length} className="merged-value">
+                    {formatCount(item.totalCount)}
+                  </td>
+                ))}
+                <td className="grand-value">{formatCount(settlement.grandTotalCount)}</td>
+              </tr>
+              <tr>
+                <th className="row-label">결산 금액(원)</th>
+                {settlement.summaryByTherapist.map((item) => (
+                  <td key={`amount-${item.therapist.id}`} colSpan={prescriptions.length} className="merged-value amount">
+                    {formatCurrency(item.amount)}
+                  </td>
+                ))}
+                <td className="grand-value amount">{formatCurrency(settlement.grandAmount)}</td>
+              </tr>
+              <tr>
+                <th className="row-label">인센티브 ({Number(incentivePercentage) || 0}%)</th>
+                {settlement.summaryByTherapist.map((item) => (
+                  <td key={`incentive-${item.therapist.id}`} colSpan={prescriptions.length} className="merged-value incentive">
+                    {formatCurrency(item.incentive)}
+                  </td>
+                ))}
+                <td className="grand-value incentive">{formatCurrency(settlement.grandIncentive)}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <div className="sw-settlement-table-wrap">
-        <table className="sw-settlement-table">
-          <thead>
-            <tr>
-              <th className="label-col" rowSpan={2}>구분</th>
-              {settlement.summaryByTherapist.map((item) => (
-                <th key={item.therapist.id} colSpan={prescriptions.length} className="therapist-col">
-                  {item.therapist.name}
-                </th>
+      <div className="sw-settlement-card">
+        <div className="sw-settlement-header">
+          <h2>최근 6개월 충격파 결산/신환 현황</h2>
+        </div>
+
+        <div className="sw-settlement-table-wrap">
+          <table className="sw-summary-table">
+            <thead>
+              <tr>
+                <th>월</th>
+                <th>건수(건)</th>
+                <th>결산 금액(원)</th>
+                <th>신환(명)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentMonthlySummaries.map((item) => (
+                <tr key={item.monthKey}>
+                  <th className="month-label">{item.label}</th>
+                  <td>{formatCount(item.totalCount)}</td>
+                  <td className="amount">{formatCurrency(item.amount)}</td>
+                  <td className="new-patient">{item.newPatientCount}명</td>
+                </tr>
               ))}
-              <th className="grand-col" rowSpan={2}>총 합계</th>
-            </tr>
-            <tr>
-              {settlement.summaryByTherapist.flatMap((item) =>
-                prescriptions.map((prescription) => (
-                  <th key={`${item.therapist.id}-${prescription}`} className="prescription-col">
-                    {prescription}
-                  </th>
-                ))
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <th className="row-label">처방 건수</th>
-              {settlement.summaryByTherapist.flatMap((item) =>
-                prescriptions.map((prescription) => (
-                  <td key={`count-${item.therapist.id}-${prescription}`}>
-                    {settlement.grandPrescriptionCounts[prescription] >= 0
-                      ? item.countsByPrescription[prescription] || 0
-                      : 0}
-                  </td>
-                ))
-              )}
-              <td className="grand-value">{formatCount(settlement.grandTotalCount)}</td>
-            </tr>
-            <tr>
-              <th className="row-label">충격파 합계(건)</th>
-              {settlement.summaryByTherapist.map((item) => (
-                <td key={`total-count-${item.therapist.id}`} colSpan={prescriptions.length} className="merged-value">
-                  {formatCount(item.totalCount)}
-                </td>
-              ))}
-              <td className="grand-value">{formatCount(settlement.grandTotalCount)}</td>
-            </tr>
-            <tr>
-              <th className="row-label">결산 금액(원)</th>
-              {settlement.summaryByTherapist.map((item) => (
-                <td key={`amount-${item.therapist.id}`} colSpan={prescriptions.length} className="merged-value amount">
-                  {formatCurrency(item.amount)}
-                </td>
-              ))}
-              <td className="grand-value amount">{formatCurrency(settlement.grandAmount)}</td>
-            </tr>
-            <tr>
-              <th className="row-label">인센티브 ({Number(incentivePercentage) || 0}%)</th>
-              {settlement.summaryByTherapist.map((item) => (
-                <td key={`incentive-${item.therapist.id}`} colSpan={prescriptions.length} className="merged-value incentive">
-                  {formatCurrency(item.incentive)}
-                </td>
-              ))}
-              <td className="grand-value incentive">{formatCurrency(settlement.grandIncentive)}</td>
-            </tr>
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

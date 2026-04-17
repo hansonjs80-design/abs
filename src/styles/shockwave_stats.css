@@ -780,6 +780,12 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   gap: 16px;
 }
 
+.sw-settlement-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .sw-settlement-header {
   display: flex;
   align-items: center;
@@ -893,5 +899,57 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 .sw-settlement-table tr th:last-child,
 .sw-settlement-table tr td:last-child {
+  border-right: none;
+}
+
+.sw-summary-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.sw-summary-table th,
+.sw-summary-table td {
+  padding: 12px 14px;
+  text-align: center;
+  border-right: 1px solid #dbe3ee;
+  border-bottom: 1px solid #dbe3ee;
+  white-space: nowrap;
+}
+
+.sw-summary-table thead th {
+  background: #eef4fb;
+  color: #334155;
+  font-weight: 800;
+}
+
+.sw-summary-table tbody th.month-label {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 800;
+}
+
+.sw-summary-table tbody td {
+  background: #ffffff;
+  color: #334155;
+  font-weight: 700;
+}
+
+.sw-summary-table tbody td.amount {
+  color: #1d4ed8;
+}
+
+.sw-summary-table tbody td.new-patient {
+  color: #7c3aed;
+}
+
+.sw-summary-table tr:last-child td,
+.sw-summary-table tr:last-child th {
+  border-bottom: none;
+}
+
+.sw-summary-table tr th:last-child,
+.sw-summary-table tr td:last-child {
   border-right: none;
 }
