@@ -87,7 +87,7 @@ export default function ShockwaveDataGrid({
         if (typeof aOrder !== 'number' && typeof bOrder === 'number') return 1;
         return String(a?.created_at || '').localeCompare(String(b?.created_at || ''));
       })
-      .map((log) => ({ ...log }));
+      .map((log) => ({ ...log, ...(draftCellValues[log.id] || {}) }));
 
     const rows = [...sorted];
 
@@ -482,7 +482,9 @@ export default function ShockwaveDataGrid({
         clearLocalDraftRow(row.id, row.isInsertedDraft);
       } else {
         const nextRow = { ...row, ...updatePayload };
+        setLocalDraftRow(row.id, nextRow, false); // 낙관적 업데이트
         if (nextRow?.date) affectedDates.add(nextRow.date);
+        
         if (isRowEmpty(nextRow)) await supabase.from(tableName).delete().eq('id', row.id);
         else await supabase.from(tableName).update(updatePayload).eq('id', row.id);
       }
@@ -525,11 +527,15 @@ export default function ShockwaveDataGrid({
           if (row.therapist_name === t.name && row.prescription === pres) {
             const clearedFields = { therapist_name: '', prescription: '', prescription_count: 0 };
             const nextRow = { ...row, ...clearedFields };
+            setLocalDraftRow(row.id, nextRow, false); // 낙관적 업데이트
             if (isRowEmpty(nextRow)) await supabase.from(tableName).delete().eq('id', row.id);
             else await supabase.from(tableName).update(clearedFields).eq('id', row.id);
           }
         } else {
-          await supabase.from(tableName).update({ therapist_name: t.name, prescription: pres, prescription_count: intVal }).eq('id', row.id);
+          const updateFields = { therapist_name: t.name, prescription: pres, prescription_count: intVal };
+          const nextRow = { ...row, ...updateFields };
+          setLocalDraftRow(row.id, nextRow, false); // 낙관적 업데이트
+          await supabase.from(tableName).update(updateFields).eq('id', row.id);
         }
       }
     }
