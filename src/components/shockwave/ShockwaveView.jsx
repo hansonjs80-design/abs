@@ -495,6 +495,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setSelectedCell(normalizedCell);
     setRangeEnd(null);
     setSelectedKeys(new Set([key]));
+    viewRef.current?.focus({ preventScroll: true });
   }, [cellKey, normalizeCellToMergeMaster]);
 
   const updateDraggedSelection = useCallback((targetCell) => {
@@ -514,7 +515,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const isMeta = e?.metaKey || e?.ctrlKey;
 
     if (e?.button !== 0) return;
-    viewRef.current?.focus();
+    e.preventDefault();
+    viewRef.current?.focus({ preventScroll: true });
 
     if (isMeta) {
       setSelectedCell(cell);
@@ -1246,10 +1248,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return;
     }
 
-    // Cmd+V → 붙여넣기
+    // Cmd+V → 브라우저 paste 이벤트 경유
     if (isMeta && e.code === 'KeyV') {
-      e.preventDefault();
-      handlePasteSelection();
       return;
     }
 
@@ -1274,15 +1274,23 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, [handleKeyDown]);
 
   useEffect(() => {
-    const el = viewRef.current;
-    if (!el) return undefined;
-
     const handlePasteEvent = (event) => {
       if (!selectedCell) return;
+
       const target = event.target;
-      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target?.isContentEditable) {
-        return;
-      }
+      const isEditableTarget =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target?.isContentEditable;
+      if (isEditableTarget) return;
+
+      const activeElement = document.activeElement;
+      const isSchedulerFocused =
+        activeElement === viewRef.current ||
+        viewRef.current?.contains(activeElement) ||
+        viewRef.current?.contains(target) ||
+        target === document.body;
+      if (!isSchedulerFocused) return;
 
       const pastedText = event.clipboardData?.getData('text/plain');
       if (!pastedText) return;
@@ -1290,8 +1298,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       handlePasteSelection(pastedText);
     };
 
-    el.addEventListener('paste', handlePasteEvent);
-    return () => el.removeEventListener('paste', handlePasteEvent);
+    window.addEventListener('paste', handlePasteEvent, true);
+    return () => window.removeEventListener('paste', handlePasteEvent, true);
   }, [selectedCell, handlePasteSelection]);
 
   useEffect(() => {
@@ -1386,6 +1394,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   // 편집 완료 후 아래로 이동
   const handleEditKeyDown = useCallback((e, w, d, r, c) => {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      e.preventDefault();
+      e.target.blur();
+      const nextCell = getAdjacentCell({ w, d, r, c }, e.key);
+      selectSingleCell(nextCell);
+      return;
+    }
+
     if (e.key === 'Enter') {
       if (e.nativeEvent?.isComposing) return;
       e.target.blur();
@@ -1402,7 +1418,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const nc = e.shiftKey ? Math.max(0, c - 1) : Math.min(colCount - 1, c + 1);
       selectSingleCell({ w, d, r, c: nc });
     }
-  }, [baseTimeSlots.length, colCount, selectSingleCell]);
+  }, [baseTimeSlots.length, colCount, selectSingleCell, getAdjacentCell]);
 
   const handleContextMerge = useCallback(() => {
     tryMergeSelection();
