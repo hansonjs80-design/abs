@@ -12,6 +12,159 @@ const TIME_COL_WIDTH = 46;
 const SHOCKWAVE_DAY_COL_WIDTH_KEY = 'shockwave-day-col-width';
 const SHOCKWAVE_COL_RATIOS_KEY = 'shockwave-col-ratios';
 
+function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
+  const [localVisit, setLocalVisit] = useState(dlg.visitCount);
+  const [localPres, setLocalPres] = useState(dlg.prescription || '');
+  const [localBodyChecked, setLocalBodyChecked] = useState(() => {
+    const latestParts = (dlg.latestBodyPart || '').split(',').map(p => p.trim()).filter(Boolean);
+    return dlg.bodyParts.map(bp => ({
+      name: bp,
+      checked: latestParts.includes(bp),
+    }));
+  });
+  const [newBodyPart, setNewBodyPart] = useState('');
+
+  const handleConfirm = useCallback(() => {
+    const selectedParts = localBodyChecked.filter(bp => bp.checked).map(bp => bp.name);
+    onConfirm({
+      chartNumber: dlg.chartNumber,
+      namePart: dlg.namePart,
+      visitCount: localVisit,
+      prescription: localPres || undefined,
+      bodyPart: selectedParts.join(', ') || undefined,
+    });
+  }, [localBodyChecked, onConfirm, dlg, localVisit, localPres]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Enter') {
+        // Ignore if typing a new body part
+        if (document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'text' && document.activeElement.value.trim() !== '') {
+          return;
+        }
+        e.preventDefault();
+        handleConfirm();
+      } else if (e.key === 'Escape') {
+        onCancel();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleConfirm, onCancel]);
+
+  return (
+    <div className="shockwave-chart-selector-backdrop" onMouseDown={() => onCancel()}>
+      <div className="shockwave-chart-selector" style={{ minWidth: '340px' }} onMouseDown={(e) => e.stopPropagation()}>
+        <div className="shockwave-chart-selector-title">환자 정보 확인</div>
+        <div className="shockwave-chart-selector-subtitle" style={{ marginBottom: '12px' }}>
+          <strong>{dlg.chartNumber}</strong> / {dlg.cleanName}
+        </div>
+
+        <div style={{ marginBottom: '10px' }}>
+          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '4px' }}>회차</label>
+          <input
+            type="number"
+            value={localVisit}
+            onChange={(e) => setLocalVisit(parseInt(e.target.value, 10) || 1)}
+            min={1}
+            style={{ width: '80px', padding: '5px 8px', fontSize: '0.9rem', fontWeight: 700, border: '1px solid var(--border-color)', borderRadius: '4px', textAlign: 'center' }}
+          />
+        </div>
+
+        <div style={{ marginBottom: '10px' }}>
+          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '4px' }}>처방</label>
+          <select
+            value={localPres}
+            onChange={(e) => setLocalPres(e.target.value)}
+            style={{ width: '100%', padding: '5px 8px', fontSize: '0.85rem', fontWeight: 600, border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--bg-input, #fff)', cursor: 'pointer' }}
+          >
+            <option value="">처방 없음</option>
+            {dlg.settings?.prescriptions?.map(pres => (
+              <option key={pres} value={pres}>{pres}</option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ marginBottom: '10px' }}>
+          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '4px' }}>부위</label>
+          {localBodyChecked.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {localBodyChecked.map((bp, idx) => (
+                <label key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={bp.checked}
+                    onChange={() => setLocalBodyChecked(prev => prev.map((item, i) => i === idx ? { ...item, checked: !item.checked } : item))}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                  />
+                  {bp.name}
+                  <button
+                    type="button"
+                    style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.9rem', padding: '0 4px' }}
+                    onClick={() => setLocalBodyChecked(prev => prev.filter((_, i) => i !== idx))}
+                  >×</button>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>기록된 부위가 없습니다</div>
+          )}
+          <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
+            <input
+              type="text"
+              placeholder="새 부위 추가..."
+              value={newBodyPart}
+              onChange={(e) => setNewBodyPart(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newBodyPart.trim()) {
+                  e.preventDefault();
+                  setLocalBodyChecked(prev => [...prev, { name: newBodyPart.trim(), checked: true }]);
+                  setNewBodyPart('');
+                }
+              }}
+              style={{ flex: 1, padding: '4px 8px', fontSize: '0.8rem', border: '1px solid var(--border-color)', borderRadius: '4px' }}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                if (newBodyPart.trim()) {
+                  setLocalBodyChecked(prev => [...prev, { name: newBodyPart.trim(), checked: true }]);
+                  setNewBodyPart('');
+                }
+              }}
+              style={{ padding: '4px 10px', fontSize: '0.8rem', fontWeight: 700, border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--bg-tertiary)', cursor: 'pointer' }}
+            >+</button>
+          </div>
+        </div>
+
+        <div className="shockwave-chart-selector-actions" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+          <button type="button" className="shockwave-chart-selector-cancel" onClick={() => onCancel()}>취소</button>
+          <button
+            type="button"
+            style={{ padding: '8px 16px', fontSize: '0.85rem', fontWeight: 700, border: 'none', borderRadius: '8px', background: 'var(--brand-primary, #4285f4)', color: '#fff', cursor: 'pointer' }}
+            onClick={handleConfirm}
+          >확인</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function addBodyPartToMap(map, part) {
+  if (!part) return;
+  const lower = part.toLowerCase();
+  const existing = map.get(lower);
+  if (!existing) {
+    map.set(lower, part);
+  } else {
+    const existingUpperCount = existing.length - existing.replace(/[A-Z]/g, '').length;
+    const newUpperCount = part.length - part.replace(/[A-Z]/g, '').length;
+    if (newUpperCount > existingUpperCount) {
+      map.set(lower, part);
+    }
+  }
+}
+
 export default function ShockwaveView({ therapists, settings, memos = {}, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
   const { currentYear, currentMonth, saveShockwaveMemosBulk } = useSchedule();
   const { addToast } = useToast();
@@ -31,6 +184,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [clipboardSource, setClipboardSource] = useState(null); // { keys: Set, mode: 'copy'|'cut' }
   const [undoStack, setUndoStack] = useState([]);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, weekIdx, dayIdx, rowIdx, colIdx, currentPrescription }
+  const [contextMenuBodyInput, setContextMenuBodyInput] = useState('');
 
   useEffect(() => {
     selectedCellRef.current = selectedCell;
@@ -57,9 +211,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const tooltipRef = useRef(null);
   const [hoverData, setHoverData] = useState(null);
   const [chartSelector, setChartSelector] = useState(null);
+  const [autoFillDialog, setAutoFillDialog] = useState(null);
   const contextMenuRef = useRef(null);
   const editInputRef = useRef(null);
   const imeOpenRef = useRef(false);
+  const undoStackRef = useRef([]);
+  const undoQueueRef = useRef(Promise.resolve());
 
   const colCount = Math.max(1, therapists.length);
   const therapistShiftByDate = useMemo(() => {
@@ -192,7 +349,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (text.includes('/')) return false;
     if (/[()*]/.test(text)) return false;
     if (has4060Pattern(text)) return false;
-    if (/^\d+$/.test(text)) return false;
     if (/^(휴무|연차|반차|출근|퇴근|근무|야간|오전|오후)$/u.test(text)) return false;
     return true;
   }, []);
@@ -202,6 +358,24 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       setChartSelector({ options, rawName, resolve });
     });
   }, []);
+
+  const showAutoFillDialog = useCallback((dialogData) => {
+    return new Promise((resolve) => {
+      setAutoFillDialog({ ...dialogData, resolve });
+    });
+  }, []);
+
+  const handleAutoFillConfirm = useCallback((result) => {
+    if (!autoFillDialog) return;
+    autoFillDialog.resolve(result);
+    setAutoFillDialog(null);
+  }, [autoFillDialog]);
+
+  const handleAutoFillCancel = useCallback(() => {
+    if (!autoFillDialog) return;
+    autoFillDialog.resolve(null);
+    setAutoFillDialog(null);
+  }, [autoFillDialog]);
 
   const parseSchedulerPatientText = useCallback((text) => {
     const raw = String(text || '').trim();
@@ -229,109 +403,163 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     };
   }, []);
 
-  const buildSchedulerAutoText = useCallback(async (w, d, nextValue) => {
+  const buildSchedulerAutoText = useCallback(async (w, d, c, nextValue) => {
     const rawName = String(nextValue || '').trim();
-    if (!shouldAutoFormatSchedulerName(rawName)) return rawName;
-    const normalizedName = normalizeNameForMatch(rawName);
-    const cleanDisplayName = String(rawName).replace(/\(-\)/g, '').trim();
-    if (!normalizedName) return rawName;
+    if (!shouldAutoFormatSchedulerName(rawName)) return { text: rawName };
 
     const dayInfo = weeks[w]?.[d];
-    if (!dayInfo) return rawName;
+    if (!dayInfo) return { text: rawName };
     const targetDate = `${dayInfo.year}-${String(dayInfo.month).padStart(2, '0')}-${String(dayInfo.day).padStart(2, '0')}`;
 
-    const schedulerCandidates = Object.entries(memos || [])
-      .map(([key, memo]) => {
-        const [mw, md] = key.split('-').map(Number);
-        const memoDay = weeks[mw]?.[md];
-        if (!memoDay) return null;
-        const memoDate = `${memoDay.year}-${String(memoDay.month).padStart(2, '0')}-${String(memoDay.day).padStart(2, '0')}`;
-        if (memoDate >= targetDate) return null;
+    // Supabase에서 shockwave와 manual_therapy 모두 조회
+    const normalizedName = normalizeNameForMatch(rawName);
+    const cleanDisplayName = String(rawName).replace(/\(-\)/g, '').trim();
 
-        const parsed = parseSchedulerPatientText(memo?.content);
-        if (!parsed || parsed.normalizedName !== normalizedName) return null;
+    const [shockwaveRes, manualRes, shockwaveBpRes, manualBpRes] = await Promise.all([
+      supabase.from('shockwave_patient_logs')
+        .select('patient_name, chart_number, visit_count, date, prescription, body_part')
+        .lte('date', targetDate)
+        .order('date', { ascending: false })
+        .limit(200),
+      supabase.from('manual_therapy_patient_logs')
+        .select('patient_name, chart_number, visit_count, date, prescription, body_part')
+        .lte('date', targetDate)
+        .order('date', { ascending: false })
+        .limit(200),
+      supabase.from('shockwave_patient_logs')
+        .select('body_part')
+        .not('body_part', 'is', null)
+        .limit(500),
+      supabase.from('manual_therapy_patient_logs')
+        .select('body_part')
+        .not('body_part', 'is', null)
+        .limit(500),
+    ]);
 
-        return { ...parsed, memoDate };
-      })
-      .filter(Boolean)
-      .sort((a, b) => b.memoDate.localeCompare(a.memoDate));
+    const allData = [
+      ...(shockwaveRes.data || []).map(d => ({ ...d, type: 'shockwave' })),
+      ...(manualRes.data || []).map(d => ({ ...d, type: 'manual' })),
+    ];
 
-    if (schedulerCandidates.length > 0) {
-      const latest = schedulerCandidates[0];
-      if (latest.suffixToken === '(-)') {
-        return `${latest.chartNumber}/${cleanDisplayName}(-)`;
-      }
-      if (latest.suffixToken === '*') {
-        return `${latest.chartNumber}/${cleanDisplayName}(2)`;
-      }
-      if (/^\(\d+\)$/.test(latest.suffixToken)) {
-        const nextVisit = (parseInt(latest.suffixValue || '0', 10) || 0) + 1;
-        return `${latest.chartNumber}/${cleanDisplayName}(${nextVisit})`;
-      }
-      return `${latest.chartNumber}/${cleanDisplayName}`;
-    }
+    const matches = allData.filter((item) => {
+      const matchName = normalizeNameForMatch(item.patient_name) === normalizedName;
+      const matchChart = String(item.chart_number || '').trim() === rawName;
+      return matchName || matchChart;
+    });
 
-    const { data, error } = await supabase
-      .from('shockwave_patient_logs')
-      .select('patient_name, chart_number, visit_count, date')
-      .lt('date', targetDate)
-      .in('patient_name', [cleanDisplayName, `${cleanDisplayName}*`, rawName, `${rawName}*`])
-      .order('date', { ascending: false });
+    if (matches.length === 0) return { text: rawName };
 
-    if (error) {
-      console.error('Failed to lookup patient chart history:', error);
-      return rawName;
-    }
+    matches.sort((a, b) => {
+      if (a.date !== b.date) return b.date.localeCompare(a.date);
+      return (parseInt(b.visit_count || '0', 10) || 0) - (parseInt(a.visit_count || '0', 10) || 0);
+    });
 
-    const matches = (data || []).filter((item) => normalizeNameForMatch(item.patient_name) === normalizedName);
-    if (matches.length === 0) return rawName;
-
+    // 차트번호별 그룹핑 + 해당 환자의 모든 부위/처방 수집
     const chartMap = new Map();
+    const chartBodyParts = new Map(); // chartNumber -> Set of body parts
+    const chartPrescriptions = new Map(); // chartNumber -> Set of prescriptions
     matches.forEach((item) => {
       const chartNumber = String(item.chart_number || '').trim();
       if (!chartNumber) return;
-      const current = chartMap.get(chartNumber);
-      if (!current) {
+      if (!chartMap.has(chartNumber)) {
         chartMap.set(chartNumber, item);
-        return;
       }
-
-      if ((item.date || '') > (current.date || '')) {
-        chartMap.set(chartNumber, item);
-        return;
+      if (!chartBodyParts.has(chartNumber)) {
+        chartBodyParts.set(chartNumber, new Map());
       }
-
-      if ((item.date || '') === (current.date || '')) {
-        const currentVisit = parseInt(current.visit_count || '0', 10) || 0;
-        const nextVisit = parseInt(item.visit_count || '0', 10) || 0;
-        if (nextVisit > currentVisit) chartMap.set(chartNumber, item);
+      if (!chartPrescriptions.has(chartNumber)) {
+        chartPrescriptions.set(chartNumber, new Set());
+      }
+      if (item.body_part) {
+        item.body_part.split(',').map(p => p.trim()).filter(Boolean).forEach(p => {
+          addBodyPartToMap(chartBodyParts.get(chartNumber), p);
+        });
+      }
+      if (item.prescription) {
+        chartPrescriptions.get(chartNumber).add(item.prescription);
       }
     });
 
-    const options = Array.from(chartMap.entries())
-      .map(([chartNumber, item]) => {
-        const lastVisit = parseInt(item.visit_count || '0', 10) || 0;
-        return {
-          chartNumber,
-          nextVisit: lastVisit > 0 ? lastVisit + 1 : 1,
-          lastDate: item.date || '',
-        };
-      })
-      .sort((a, b) => {
-        if (a.lastDate !== b.lastDate) return b.lastDate.localeCompare(a.lastDate);
-        return a.chartNumber.localeCompare(b.chartNumber);
-      });
+    const options = Array.from(chartMap.entries()).map(([chartNumber, item]) => {
+      const lastVisit = parseInt(item.visit_count || '0', 10) || 0;
+      const nextVisit = (item.date === targetDate) ? (lastVisit || 1) : (lastVisit > 0 ? lastVisit + 1 : 1);
+      
+      const cleanPatientName = String(item.patient_name).replace(/\*/g, '').trim();
+      let namePart = cleanPatientName;
+      let prescription = item.prescription || '';
 
-    if (options.length === 0) return rawName;
+      if (item.type === 'manual') {
+        const pres = String(item.prescription || '');
+        if (pres.includes('40')) namePart += '40';
+        else if (pres.includes('60')) namePart += '60';
+        else namePart += '40';
+      }
 
-    let selected = options[0];
-    if (options.length > 1) {
+      const bodyPartsSet = new Set(chartBodyParts.get(chartNumber)?.values() || []);
+      const prescriptionsSet = chartPrescriptions.get(chartNumber) || new Set();
+      const latestBodyPart = item.body_part || '';
+
+      return {
+        chartNumber,
+        namePart,
+        cleanName: cleanPatientName,
+        nextVisit,
+        lastDate: item.date || '',
+        prescription,
+        prescriptions: Array.from(prescriptionsSet),
+        bodyParts: Array.from(bodyPartsSet),
+        latestBodyPart,
+        type: item.type,
+      };
+    });
+
+    if (options.length === 0) return { text: rawName };
+
+    let selected;
+    if (options.length === 1) {
+      selected = options[0];
+    } else {
+      // 동명이인 - 먼저 선택
       selected = await pickChartOption(options, rawName);
-      if (!selected) return rawName;
+      if (!selected) return { text: rawName };
     }
 
-    return `${selected.chartNumber}/${cleanDisplayName}(${selected.nextVisit})`;
-  }, [memos, parseSchedulerPatientText, pickChartOption, shouldAutoFormatSchedulerName, weeks]);
+    // 부위가 2개 이상이거나 처방이 변경된 이력이 있으면 다이얼로그로 선택
+    const needsDialog = selected.bodyParts.length >= 2 || selected.prescriptions.length >= 2;
+    if (needsDialog) {
+      try {
+        const dialogResult = await showAutoFillDialog({
+          chartNumber: selected.chartNumber,
+          namePart: selected.namePart,
+          cleanName: selected.cleanName,
+          visitCount: selected.nextVisit,
+          prescription: selected.prescription,
+          bodyParts: selected.bodyParts,
+          latestBodyPart: selected.latestBodyPart,
+          type: selected.type,
+          settings,
+        });
+
+        if (!dialogResult) return { text: rawName };
+
+        return {
+          text: `${dialogResult.chartNumber}/${dialogResult.namePart}(${dialogResult.visitCount})`,
+          prescription: dialogResult.prescription,
+          bodyPart: dialogResult.bodyPart,
+        };
+      } catch (err) {
+        console.error('autoFillDialog error:', err);
+        // 에러 발생 시 기본 자동완성
+      }
+    }
+
+    // 부위가 0~1개: 다이얼로그 없이 바로 자동완성
+    return {
+      text: `${selected.chartNumber}/${selected.namePart}(${selected.nextVisit})`,
+      prescription: selected.prescription || undefined,
+      bodyPart: selected.latestBodyPart || undefined,
+    };
+  }, [pickChartOption, showAutoFillDialog, shouldAutoFormatSchedulerName, weeks, settings]);
 
   useEffect(() => {
     onLoadMemos(currentYear, currentMonth);
@@ -352,28 +580,46 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     }
   }, [colRatios]);
 
-  const recordUndo = (action) => {
-    setUndoStack(prev => [action, ...prev].slice(0, 50));
-  };
+  const isEditableTarget = useCallback((target) => {
+    return (
+      (target instanceof HTMLInputElement && !target.dataset.hiddenInput) ||
+      target instanceof HTMLTextAreaElement ||
+      target?.isContentEditable
+    );
+  }, []);
 
-  const doUndo = async () => {
-    const action = undoStack[0];
+  useEffect(() => {
+    undoStackRef.current = undoStack;
+  }, [undoStack]);
+
+  const recordUndo = useCallback((action) => {
+    undoStackRef.current = [action, ...undoStackRef.current].slice(0, 50);
+    setUndoStack(undoStackRef.current);
+  }, []);
+
+  const doUndo = useCallback(() => {
+    const [action, ...rest] = undoStackRef.current;
     if (!action) return;
-    setUndoStack(prev => prev.slice(1));
+    undoStackRef.current = rest;
+    setUndoStack(rest);
 
-    if (action.type === 'bulk-edit') {
-      await saveShockwaveMemosBulk(action.oldMemos);
-    } else if (action.type === 'edit') {
-      const { w, d, r, c, oldContent, oldBg } = action;
-      await onSaveMemo(currentYear, currentMonth, w, d, r, c, oldContent, oldBg);
-    }
-  };
+    undoQueueRef.current = undoQueueRef.current.then(async () => {
+      if (action.type === 'bulk-edit') {
+        await saveShockwaveMemosBulk(action.oldMemos);
+      } else if (action.type === 'edit') {
+        const { w, d, r, c, oldContent, oldBg } = action;
+        await onSaveMemo(currentYear, currentMonth, w, d, r, c, oldContent, oldBg);
+      }
+    }).catch((error) => {
+      console.error('Undo failed:', error);
+    });
+  }, [saveShockwaveMemosBulk, onSaveMemo, currentYear, currentMonth]);
 
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') {
         const activeItem = document.activeElement;
-        if (activeItem?.tagName === 'INPUT' || activeItem?.tagName === 'TEXTAREA') return;
+        if (isEditableTarget(activeItem)) return;
         e.preventDefault();
         doUndo();
       } else if (e.key === 'Escape') {
@@ -382,7 +628,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     };
     window.addEventListener('keydown', handleGlobalKeyDown, true);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown, true);
-  }, [undoStack, doUndo]);
+  }, [doUndo, isEditableTarget]);
 
   useEffect(() => {
     if (!Array.isArray(colRatios) || colRatios.length === colCount) return;
@@ -553,11 +799,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   // ── 더블 클릭 = 편집 모드 진입 ──
   const handleCellDoubleClick = useCallback((w, d, r, c, content) => {
-    const key = cellKey(w, d, r, c);
-    viewRef.current?.focus();
-    setEditingCell(key);
-    setEditValue(content || '');
     selectSingleCell({ w, d, r, c });
+    const key = cellKey(w, d, r, c);
+    flushSync(() => {
+      setEditingCell(key);
+      setEditValue(content || '');
+      setEditSessionId(Date.now());
+    });
   }, [selectSingleCell]);
 
   // ── 편집 저장 ──
@@ -567,13 +815,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const immediateContent = String(nextValue ?? '').trim();
     setPendingDisplayValues((prev) => ({ ...prev, [key]: immediateContent }));
     setEditingCell(null);
-    const newContent = (await buildSchedulerAutoText(w, d, nextValue)).trim();
+    const result = await buildSchedulerAutoText(w, d, c, nextValue);
+    const newContent = (typeof result === 'string' ? result : (result?.text || '')).trim();
+    const newPrescription = result?.prescription;
+    const newBodyPart = result?.bodyPart;
 
     if (newContent !== immediateContent) {
       setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
     }
 
-    if (newContent === oldContent) {
+    if (newContent === oldContent && !newPrescription && !newBodyPart) {
       setPendingDisplayValues((prev) => {
         if (!(key in prev)) return prev;
         const next = { ...prev };
@@ -584,7 +835,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     }
     setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
     recordUndo({ type: 'edit', w, d, r, c, oldContent, oldBg: memos[key]?.bg_color });
-    const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, newContent);
+    const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, newContent, undefined, undefined, newPrescription, newBodyPart);
     setPendingDisplayValues((prev) => {
       const next = { ...prev };
       delete next[key];
@@ -596,6 +847,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   // ── 셀 우클릭 = 처방 선택 ──
   const handleCellContextMenu = useCallback((e, w, d, r, c, currentPrescription) => {
     e.preventDefault();
+    selectSingleCell({ w, d, r, c });
+    const key = cellKey(w, d, r, c);
+    setContextMenuBodyInput(memos[key]?.body_part || '');
     setContextMenu({
       x: e.clientX,
       y: e.clientY,
@@ -605,7 +859,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       colIdx: c,
       currentPrescription
     });
-  }, []);
+  }, [cellKey, memos, selectSingleCell]);
 
   const handlePrescriptionSelect = useCallback(async (prescription) => {
     if (!contextMenu) return;
@@ -625,6 +879,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     };
     window.addEventListener('click', handleClickOutside);
     return () => window.removeEventListener('click', handleClickOutside);
+  }, [contextMenu]);
+
+  useEffect(() => {
+    if (!contextMenu) {
+      setContextMenuBodyInput('');
+    }
   }, [contextMenu]);
 
   // ── 셀 삭제 ──
@@ -841,6 +1101,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           bg_color: memo?.bg_color || null,
           merge_span: memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
           prescription: memo?.prescription || '',
+          body_part: memo?.body_part || '',
         });
         plainRow.push(memo?.content || '');
         sourceKeys.push(key);
@@ -1043,6 +1304,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           bg_color: isCrossDate ? null : (cell.bg_color || null),
           merge_span: nextMergeSpan,
           prescription: cell.prescription || '',
+          body_part: cell.body_part || '',
         });
       }
     }
@@ -1304,6 +1566,101 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       }
       if (anyChanged) addToast('처방이 적용되었습니다.', 'success');
     }
+    else if (action?.type === 'bodyPart') {
+      const keys = Array.from(selectedKeys || []);
+      let anyChanged = false;
+      
+      for (const key of keys) {
+        const [w, d, r, c] = key.split('-').map(Number);
+        const memo = memos[key] || {};
+        if (memo.body_part !== action.value) {
+          const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, memo.merge_span, memo.prescription, action.value);
+          if (success) anyChanged = true;
+        }
+      }
+      if (anyChanged) addToast('부위가 적용되었습니다.', 'success');
+      return; // don't close menu
+    }
+    else if (action?.type === 'bodyPartAdd') {
+      // 기존 부위에 추가
+      const keys = Array.from(selectedKeys || []);
+      let anyChanged = false;
+      for (const key of keys) {
+        const [w, d, r, c] = key.split('-').map(Number);
+        const memo = memos[key] || {};
+        const existing = (memo.body_part || '').trim();
+        const newPart = action.value.trim();
+        if (!newPart) continue;
+        const combined = existing ? `${existing}, ${newPart}` : newPart;
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, memo.merge_span, memo.prescription, combined);
+        if (success) anyChanged = true;
+      }
+      if (anyChanged) addToast('부위가 추가되었습니다.', 'success');
+      return;
+    }
+    else if (action?.type === 'bodyPartRemove') {
+      // 특정 부위 삭제
+      const keys = Array.from(selectedKeys || []);
+      let anyChanged = false;
+      for (const key of keys) {
+        const [w, d, r, c] = key.split('-').map(Number);
+        const memo = memos[key] || {};
+        const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
+        const updated = parts.filter((_, i) => i !== action.index).join(', ');
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, memo.merge_span, memo.prescription, updated);
+        if (success) anyChanged = true;
+      }
+      if (anyChanged) addToast('부위가 삭제되었습니다.', 'success');
+      return;
+    }
+    else if (action?.type === 'bodyPartEdit') {
+      // 특정 부위 수정
+      const keys = Array.from(selectedKeys || []);
+      let anyChanged = false;
+      for (const key of keys) {
+        const [w, d, r, c] = key.split('-').map(Number);
+        const memo = memos[key] || {};
+        const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
+        parts[action.index] = action.value.trim();
+        const updated = parts.filter(Boolean).join(', ');
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, memo.merge_span, memo.prescription, updated);
+        if (success) anyChanged = true;
+      }
+      if (anyChanged) addToast('부위가 수정되었습니다.', 'success');
+      return;
+    }
+    else if (action?.type === 'bodyPartClear') {
+      const keys = Array.from(selectedKeys || []);
+      let anyChanged = false;
+      for (const key of keys) {
+        const [w, d, r, c] = key.split('-').map(Number);
+        const memo = memos[key] || {};
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, memo.merge_span, memo.prescription, '');
+        if (success) anyChanged = true;
+      }
+      if (anyChanged) addToast('부위가 삭제되었습니다.', 'success');
+      return;
+    }
+    else if (action?.type === 'bodyPartToggle') {
+      const keys = Array.from(selectedKeys || []);
+      let anyChanged = false;
+      const targetPart = action.value.trim();
+      for (const key of keys) {
+        const [w, d, r, c] = key.split('-').map(Number);
+        const memo = memos[key] || {};
+        const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
+        const idx = parts.findIndex(p => p.toLowerCase() === targetPart.toLowerCase());
+        if (idx >= 0) {
+          parts.splice(idx, 1);
+        } else {
+          parts.push(targetPart);
+        }
+        const updated = parts.join(', ');
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, memo.merge_span, memo.prescription, updated);
+        if (success) anyChanged = true;
+      }
+      return;
+    }
     setContextMenu(null);
   }, [selectedKeys, memos, currentYear, currentMonth, onSaveMemo, addToast, handleCopySelection, handleCutSelection, handlePasteSelection, handleMarkTreatmentComplete, handleClearTreatmentComplete, tryMergeSelection]);
 
@@ -1318,6 +1675,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   // ── 키보드 이벤트 핸들러 (구글 시트 방식) ──
   const handleKeyDown = useCallback((e) => {
+    if (e.defaultPrevented) return;
+    if (isEditableTarget(e.target)) return;
     if (!selectedCell) return;
     const { w, d, r, c } = selectedCell;
 
@@ -1413,7 +1772,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       beginEditingCell(key, '', false);
       return;
     }
-  }, [selectedCell, editingCell, selectedKeys, deleteCells, buildRangeKeys, selectSingleCell, getAdjacentCell, beginEditingCell, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, tryMergeSelection]);
+  }, [selectedCell, editingCell, selectedKeys, deleteCells, buildRangeKeys, selectSingleCell, getAdjacentCell, beginEditingCell, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, tryMergeSelection, isEditableTarget]);
 
   const dismissContextMenu = useCallback(() => setContextMenu(null), []);
 
@@ -1452,18 +1811,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   useEffect(() => {
     const handleWindowKeyDown = (event) => {
       const target = event.target;
-      const isEditableTarget =
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target?.isContentEditable;
-
-      if (isEditableTarget) return;
+      if (isEditableTarget(target)) return;
       handleKeyDown(event);
     };
 
     window.addEventListener('keydown', handleWindowKeyDown, true);
     return () => window.removeEventListener('keydown', handleWindowKeyDown, true);
-  }, [handleKeyDown]);
+  }, [handleKeyDown, isEditableTarget]);
 
   useEffect(() => {
     const handleMouseUp = () => {
@@ -1529,20 +1883,37 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, []);
 
   useEffect(() => {
-    if (!editingCell || !editInputRef.current) return;
+    if (!editingCell) return;
+    // Double rAF ensures the input DOM node exists after React re-renders the cell
     requestAnimationFrame(() => {
-      editInputRef.current?.focus();
-      if (!imeOpenRef.current && document.activeElement === editInputRef.current) {
-        const len = editInputRef.current.value?.length || 0;
-        editInputRef.current.setSelectionRange(len, len);
-      }
+      requestAnimationFrame(() => {
+        if (editInputRef.current) {
+          editInputRef.current.focus();
+          if (!imeOpenRef.current && document.activeElement === editInputRef.current) {
+            const len = editInputRef.current.value?.length || 0;
+            editInputRef.current.setSelectionRange(len, len);
+          }
+        }
+      });
     });
-  }, [editingCell]);
+  }, [editingCell, editSessionId]);
 
   // 편집 완료 후 아래로 이동
   const handleEditKeyDown = useCallback((e, w, d, r, c) => {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      const { selectionStart, selectionEnd, value } = e.target;
+      
+      // If Left arrow, let it move cursor if not at the beginning
+      if (e.key === 'ArrowLeft' && (selectionStart > 0 || selectionEnd > 0)) {
+        return; // default behavior moves cursor left
+      }
+      // If Right arrow, let it move cursor if not at the end
+      if (e.key === 'ArrowRight' && (selectionStart < value.length || selectionEnd < value.length)) {
+        return; // default behavior moves cursor right
+      }
+
       e.preventDefault();
+      e.stopPropagation();
       e.target.blur();
       const nextCell = getAdjacentCell({ w, d, r, c }, e.key);
       selectSingleCell(nextCell);
@@ -1787,7 +2158,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                   handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
                                   let text = `⏱ [${slotInfo.label}]`;
                                   if (content && content !== '\u200B') text += `\n📝 ${content}`;
-                                  // Tooltip logic can be preserved via title or CSS, here simplified.
+                                  if (cellData?.prescription) text += `\n💊 처방: ${cellData.prescription}`;
+                                  if (cellData?.body_part) text += `\n🦴 부위: ${cellData.body_part}`;
+                                  setHoverData({ text });
+                                }}
+                                onMouseLeave={() => setHoverData(null)}
+                                onDoubleClick={() => handleCellDoubleClick(weekIdx, dayIdx, rowIdx, colIdx, content)}
+                                onContextMenu={(e) => {
+                                  // 내용이 있을 때만 처방을 설정할 수 있도록 함
+                                  if (content && content.trim() !== '' && content.trim() !== '\u200B') {
+                                    handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellData?.prescription);
+                                  }
                                 }}
                               >
                                 {!isEditing && (
@@ -1797,10 +2178,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 )}
                                 <input
                                   key={isEditing && editSessionId ? editSessionId : 'hidden'}
-                                  ref={isEditing ? editInputRef : (el) => { if (el && !isEditing) el.focus(); }}
+                                  ref={isEditing ? editInputRef : null}
                                   className="sw-cell-input"
                                   data-hidden-input={!isEditing ? 'true' : undefined}
                                   defaultValue={isEditing ? editValue : ''}
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onClick={(e) => e.stopPropagation()}
                                   style={isEditing ? {
                                     position: 'relative',
                                     width: '100%', height: '100%',
@@ -1860,6 +2243,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                       if (content && content !== '\u200B') text += `\n📝 ${content}`;
                                     }
                                   }
+                                  if (cellData?.prescription) text += `\n💊 처방: ${cellData.prescription}`;
+                                  if (cellData?.body_part) text += `\n🦴 부위: ${cellData.body_part}`;
                                   setHoverData({ text });
                                 }}
                                 onMouseLeave={() => setHoverData(null)}
@@ -1921,6 +2306,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           className="shockwave-context-menu"
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
           <button type="button" className="context-menu-item" onClick={() => handleContextAction('copy')}>
             복사 (Cmd+C)
@@ -1973,36 +2359,131 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           <div style={{ padding: '4px 12px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 'bold' }}>
             처방 지정
           </div>
-          {settings?.prescriptions?.map(pres => {
-            // 선택된 셀들의 첫번째 셀 처방을 확인
+          <div style={{ padding: '4px 8px' }}>
+            <select
+              style={{ width: '100%', padding: '5px 8px', fontSize: '0.85rem', fontWeight: 600, border: '1px solid var(--border-color)', borderRadius: '4px', outline: 'none', background: 'var(--bg-input, #fff)', color: 'var(--text-primary)', cursor: 'pointer' }}
+              value={(() => {
+                const firstKey = selectedKeys ? Array.from(selectedKeys)[0] : null;
+                return firstKey ? (memos[firstKey]?.prescription || '') : '';
+              })()}
+              onChange={(e) => {
+                e.stopPropagation();
+                const val = e.target.value;
+                handleContextAction({ type: 'prescription', value: val || null });
+              }}
+              onMouseDown={e => e.stopPropagation()}
+              onClick={e => e.stopPropagation()}
+            >
+              <option value="">처방 없음</option>
+              {settings?.prescriptions?.map(pres => (
+                <option key={pres} value={pres}>{pres}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* 부위 지정 */}
+          <div className="context-menu-divider" style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '4px 0' }} />
+          <div style={{ padding: '4px 12px', fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 'bold' }}>
+            부위 입력
+          </div>
+          {(() => {
             const firstKey = selectedKeys ? Array.from(selectedKeys)[0] : null;
-            const currentPres = firstKey ? memos[firstKey]?.prescription : null;
+            const currentBodyPart = firstKey ? (memos[firstKey]?.body_part || '') : '';
+            const currentParts = currentBodyPart.split(',').map(p => p.trim()).filter(Boolean);
+            
+            // 해당 환자의 부위만 수집 (이름/차트번호로 매칭)
+            const cellContent = firstKey ? (memos[firstKey]?.content || '') : '';
+            let patientChart = '';
+            let patientName = '';
+            if (cellContent.includes('/')) {
+              const parts = cellContent.split('/');
+              const p0 = parts[0].trim();
+              const p1 = (parts[1] || '').trim().replace(/\(\d+₩?\)$/, '').replace(/\*$/, '').trim();
+              if (/\d/.test(p0)) { patientChart = p0; patientName = p1; }
+              else { patientName = p0; patientChart = p1; }
+            } else {
+              patientName = cellContent.replace(/\(\d+₩?\)$/, '').replace(/\*$/, '').trim();
+            }
+            
+            const patientBodyPartsMap = new Map();
+            // 같은 환자(차트번호 or 이름)의 과거 부위를 모든 memo에서 수집
+            Object.values(memos || {}).forEach(m => {
+              if (!m?.body_part || !m?.content) return;
+              const mc = m.content;
+              let mChart = '', mName = '';
+              if (mc.includes('/')) {
+                const mp = mc.split('/');
+                const mp0 = mp[0].trim();
+                const mp1 = (mp[1] || '').trim().replace(/\(\d+₩?\)$/, '').replace(/\*$/, '').trim();
+                if (/\d/.test(mp0)) { mChart = mp0; mName = mp1; }
+                else { mName = mp0; mChart = mp1; }
+              } else {
+                mName = mc.replace(/\(\d+₩?\)$/, '').replace(/\*$/, '').trim();
+              }
+              const isMatch = (patientChart && mChart && patientChart === mChart) || 
+                              (patientName && mName && patientName === mName);
+              if (isMatch) {
+                m.body_part.split(',').map(p => p.trim()).filter(Boolean).forEach(p => addBodyPartToMap(patientBodyPartsMap, p));
+              }
+            });
+            // 현재 선택된 부위도 항상 목록에 추가
+            currentParts.forEach(p => addBodyPartToMap(patientBodyPartsMap, p));
+            
+            const availableParts = Array.from(patientBodyPartsMap.values()).sort();
+            
             return (
-              <button
-                key={pres}
-                type="button"
-                className="context-menu-item"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  backgroundColor: currentPres === pres ? 'var(--bg-tertiary)' : 'transparent',
-                }}
-                onClick={() => handleContextAction({ type: 'prescription', value: pres })}
-              >
-                <span>{pres}</span>
-                {currentPres === pres && <span style={{ color: 'var(--accent-color, #6366f1)' }}>✓</span>}
-              </button>
+              <div style={{ padding: '0 8px' }}>
+                {availableParts.length > 0 && (
+                  <div style={{ marginBottom: '6px', maxHeight: '120px', overflowY: 'auto' }}>
+                    {availableParts.map((part, idx) => {
+                      const isChecked = currentParts.some(p => p.toLowerCase() === part.toLowerCase());
+                      return (
+                        <label key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', fontSize: '0.8rem', cursor: 'pointer', color: 'var(--text-primary)' }}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              handleContextAction({ type: 'bodyPartToggle', value: part });
+                            }}
+                            onMouseDown={e => e.stopPropagation()}
+                            onClick={e => e.stopPropagation()}
+                          />
+                          {part}
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+                
+                {/* 새 부위 입력 */}
+                <input 
+                  type="text" 
+                  placeholder="부위 입력 후 Enter..." 
+                  className="context-menu-input"
+                  value={contextMenuBodyInput}
+                  style={{ width: '100%', padding: '4px 8px', fontSize: '0.8rem', border: '1px solid var(--border-color)', borderRadius: '4px', outline: 'none', marginBottom: '4px' }}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setContextMenuBodyInput(e.target.value);
+                  }}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const val = contextMenuBodyInput.trim();
+                      if (!val) return;
+                      handleContextAction({ type: 'bodyPartAdd', value: val });
+                      setContextMenuBodyInput('');
+                    }
+                  }}
+                  onMouseDown={e => e.stopPropagation()}
+                  onClick={e => e.stopPropagation()}
+                />
+
+              </div>
             );
-          })}
-          <button
-            type="button"
-            className="context-menu-item"
-            style={{ color: '#ef4444' }}
-            onClick={() => handleContextAction({ type: 'prescription', value: null })}
-          >
-            처방 지우기
-          </button>
+          })()}
         </div>
       )}
 
@@ -2038,6 +2519,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
             </div>
           </div>
         </div>
+      )}
+
+      {autoFillDialog && (
+        <AutoFillDialogInner
+          dlg={autoFillDialog}
+          onConfirm={handleAutoFillConfirm}
+          onCancel={handleAutoFillCancel}
+        />
       )}
 
       {hoverData && (

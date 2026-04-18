@@ -468,7 +468,6 @@ export default function ManualTherapyStatsPage() {
                         title={`${currentMonth}월 도수치료 현황`}
                         applyTodayLabel="오늘 도수 스케줄 적용"
                         secondarySummaryLabel="신규"
-                        onSyncDateToScheduler={null}
                       />
                     </div>
                   </div>

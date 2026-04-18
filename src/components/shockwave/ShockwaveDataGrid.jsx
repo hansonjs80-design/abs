@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { normalizeNameForMatch } from '../../lib/memoParser';
-import { syncStatsDateToScheduler } from '../../lib/shockwaveSyncUtils';
+import { syncUnifiedStatsDateToScheduler } from '../../lib/unifiedSyncUtils';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import '../../styles/shockwave_stats.css';
 
@@ -48,7 +48,7 @@ export default function ShockwaveDataGrid({
   isApplyingMonthSchedule = false,
   applyMonthLabel = '전체 날짜 스케줄 적용',
   secondarySummaryLabel = '신규',
-  onSyncDateToScheduler = syncStatsDateToScheduler,
+  onSyncDateToScheduler = syncUnifiedStatsDateToScheduler,
 }) {
   const { shockwaveSettings: settings } = useSchedule();
   const prescriptions = useMemo(
@@ -60,7 +60,7 @@ export default function ShockwaveDataGrid({
 
   const runSyncForDate = useCallback(async (date) => {
     if (!date || !onSyncDateToScheduler) return;
-    await onSyncDateToScheduler({ year: currentYear, month: currentMonth, date, therapists });
+    await onSyncDateToScheduler({ year: currentYear, month: currentMonth, date });
   }, [currentMonth, currentYear, onSyncDateToScheduler, therapists]);
 
   const [insertedDraftRows, setInsertedDraftRows] = useState([]);
@@ -250,6 +250,7 @@ export default function ShockwaveDataGrid({
   const wrapRef = useRef(null);
   const inputRef = useRef(null);
   const imeOpenRef = useRef(false);
+  const editingValueRef = useRef('');
   const datePickerRef = useRef(null);
   const theadRef = useRef(null);
   const ctxMenuRef = useRef(null);
@@ -409,12 +410,15 @@ export default function ShockwaveDataGrid({
   const startEdit = (r, c, isDblClick = false) => {
     if (c === totalCountColIndex || c === newPatientColIndex) return;
     imeOpenRef.current = false;
-    setEditing({ r, c, val: getVal(gridData[r], c), isDblClick });
+    const nextValue = getVal(gridData[r], c);
+    editingValueRef.current = nextValue;
+    setEditing({ r, c, val: nextValue, isDblClick });
   };
 
   const finishEdit = async () => {
     if (!editing) return;
-    const { r, c, val } = editing;
+    const { r, c } = editing;
+    const val = editingValueRef.current ?? editing.val ?? '';
     setEditing(null);
     wrapRef.current?.focus();
 
@@ -550,6 +554,16 @@ export default function ShockwaveDataGrid({
       }
     }
   };
+
+  const updateEditingValue = useCallback((r, c, value, isDblClick = false) => {
+    editingValueRef.current = value;
+    setEditing((prev) => {
+      if (prev && prev.r === r && prev.c === c) {
+        return { ...prev, val: value, isDblClick };
+      }
+      return { r, c, val: value, isDblClick };
+    });
+  }, []);
 
   // ─── 6. MOUSE HANDLERS ───────────────────────────────────
   const onMouseDown = (e, r, c) => {
@@ -877,7 +891,7 @@ export default function ShockwaveDataGrid({
       if ((e.metaKey || e.ctrlKey) && e.key === 'x') { e.preventDefault(); doCopy(); doDelete(); return; }
       if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey && c < totalCountColIndex) {
         imeOpenRef.current = true;
-        setEditing({ r, c, val: '' });
+        updateEditingValue(r, c, '', false);
       }
     };
     window.addEventListener('keydown', kd);
@@ -1137,10 +1151,15 @@ export default function ShockwaveDataGrid({
                             padding: 0, border: 'none', outline: 'none',
                             pointerEvents: 'none',
                           }}
-                          defaultValue={isEdit ? editing.val : ''} 
+                          value={isEdit ? editing.val : ''} 
                           onInput={(e) => {
                             if (!isEdit) {
-                               setEditing({ r: ri, c: ci, val: e.target.value, isDblClick: false });
+                              updateEditingValue(ri, ci, e.target.value, false);
+                            }
+                          }}
+                          onChange={(e) => {
+                            if (isEdit) {
+                              updateEditingValue(ri, ci, e.target.value, editing.isDblClick);
                             }
                           }}
                           onBlur={isEdit ? finishEdit : undefined} 
@@ -1152,7 +1171,7 @@ export default function ShockwaveDataGrid({
                             style={{ position: 'absolute', opacity: 0, right: 0, top: 0, width: 0, height: 0, pointerEvents: 'none' }}
                             onChange={e => {
                               if (e.target.value) {
-                                setEditing({ r: ri, c: ci, val: e.target.value, isDblClick: true });
+                                updateEditingValue(ri, ci, e.target.value, true);
                                 setTimeout(finishEdit, 50);
                               }
                             }}
