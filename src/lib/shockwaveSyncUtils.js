@@ -124,10 +124,10 @@ export function parseTherapyInfo(rawContent) {
   if (has4060Pattern(s) || has4060Pattern(name)) return null;
 
   // Extract visit count: name(visit) or name*
-  const visitMatch = name.match(/\((\d+)\)$/);
+  const visitMatch = name.match(/\((\d+)₩?\)$/);
   if (visitMatch) {
     visit = visitMatch[1];
-    name = name.replace(/\(\d+\)$/, '').trim();
+    name = name.replace(/\(\d+₩?\)$/, '').trim();
   } else if (/\(-\)$/.test(name)) {
     visit = "-";
     name = name.replace(/\(-\)$/, '').trim();
@@ -263,7 +263,7 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
       patient_name: parsed.patient_name,
       chart_number: parsed.chart_number || '',
       visit_count: parsed.visit_count || '',
-      body_part: parsed.body_part || '',
+      body_part: cell?.body_part || parsed.body_part || '',
       therapist_name: therapistName,
       prescription: cell?.prescription || '',
       prescription_count: cell?.prescription ? 1 : null,
@@ -436,7 +436,7 @@ export async function syncMonthShockwaveScheduleToStats({ year, month, memos, th
   return { totalInserted, totalDeleted, totalUpdated, totalUpdates: totalInserted + totalDeleted + totalUpdated };
 }
 
-function formatStatsRowForScheduler(row) {
+export function formatStatsRowForScheduler(row) {
   const patientName = String(row?.patient_name || '').trim();
   if (!patientName) return '';
 
@@ -513,6 +513,8 @@ export async function syncStatsDateToScheduler({ year, month, date, therapists }
     groupedByTherapist[therapistIndex].push({
       content,
       cleanName: String(row?.patient_name || '').replace(/\*/g, '').trim(),
+      body_part: row?.body_part || '',
+      prescription: row?.prescription || '',
     });
   });
   const { error: deleteError } = await supabase
@@ -533,7 +535,7 @@ export async function syncStatsDateToScheduler({ year, month, date, therapists }
     );
     const placedRows = buildSchedulerRowPlacement(items, existingRowsForTherapist);
 
-    placedRows.forEach(({ content, rowIndex }) => {
+    placedRows.forEach(({ content, rowIndex, body_part, prescription }) => {
       rowsToInsert.push({
         year,
         month,
@@ -542,6 +544,8 @@ export async function syncStatsDateToScheduler({ year, month, date, therapists }
         row_index: rowIndex,
         col_index: therapistIndex,
         content,
+        body_part,
+        prescription,
         bg_color: null,
         merge_span: { rowSpan: 1, colSpan: 1 },
       });
