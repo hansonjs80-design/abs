@@ -12,6 +12,30 @@ const TIME_COL_WIDTH = 46;
 const SHOCKWAVE_DAY_COL_WIDTH_KEY = 'shockwave-day-col-width';
 const SHOCKWAVE_COL_RATIOS_KEY = 'shockwave-col-ratios';
 
+function getManualDoseTag(prescription) {
+  const pres = String(prescription || '');
+  if (pres.includes('60')) return '60';
+  if (pres.includes('40')) return '40';
+  return '';
+}
+
+function buildManualNamePart(patientName, prescription) {
+  const cleanName = String(patientName || '').replace(/\*/g, '').trim();
+  const doseTag = getManualDoseTag(prescription);
+  if (!cleanName) return doseTag || '';
+  if (!doseTag || has4060Pattern(cleanName)) return cleanName;
+  return `${cleanName}${doseTag}`;
+}
+
+function getSchedulerHistoryTypeLabel(option) {
+  if (!option) return '';
+  if (option.type === 'manual') {
+    const doseTag = option.doseTag || getManualDoseTag(option.prescription);
+    return doseTag ? `도수치료 ${doseTag}` : '도수치료';
+  }
+  return '충격파';
+}
+
 function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
   const [localVisit, setLocalVisit] = useState(dlg.visitCount);
   const [localPres, setLocalPres] = useState(dlg.prescription || '');
@@ -58,6 +82,9 @@ function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
         <div className="shockwave-chart-selector-title">환자 정보 확인</div>
         <div className="shockwave-chart-selector-subtitle" style={{ marginBottom: '12px' }}>
           <strong>{dlg.chartNumber}</strong> / {dlg.cleanName}
+        </div>
+        <div style={{ marginBottom: '10px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+          {getSchedulerHistoryTypeLabel(dlg)}
         </div>
 
         <div style={{ marginBottom: '10px' }}>
@@ -454,50 +481,53 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return (parseInt(b.visit_count || '0', 10) || 0) - (parseInt(a.visit_count || '0', 10) || 0);
     });
 
-    // 차트번호별 그룹핑 + 해당 환자의 모든 부위/처방 수집
-    const chartMap = new Map();
-    const chartBodyParts = new Map(); // chartNumber -> Set of body parts
-    const chartPrescriptions = new Map(); // chartNumber -> Set of prescriptions
+    // 같은 환자여도 충격파/도수40/도수60 이력이 함께 있을 수 있으므로
+    // 자동완성 후보를 차트번호 + 이력유형 단위로 분리한다.
+    const candidateMap = new Map();
     matches.forEach((item) => {
       const chartNumber = String(item.chart_number || '').trim();
       if (!chartNumber) return;
-      if (!chartMap.has(chartNumber)) {
-        chartMap.set(chartNumber, item);
-      }
-      if (!chartBodyParts.has(chartNumber)) {
-        chartBodyParts.set(chartNumber, new Map());
-      }
-      if (!chartPrescriptions.has(chartNumber)) {
-        chartPrescriptions.set(chartNumber, new Set());
-      }
-      if (item.body_part) {
-        item.body_part.split(',').map(p => p.trim()).filter(Boolean).forEach(p => {
-          addBodyPartToMap(chartBodyParts.get(chartNumber), p);
+      const doseTag = item.type === 'manual' ? getManualDoseTag(item.prescription) : '';
+      const candidateKey = `${chartNumber}__${item.type}__${doseTag || 'default'}`;
+      if (!candidateMap.has(candidateKey)) {
+        candidateMap.set(candidateKey, {
+          chartNumber,
+          type: item.type,
+          doseTag,
+          latestItem: item,
+          bodyPartsMap: new Map(),
+          prescriptions: new Set(),
         });
       }
+      const candidate = candidateMap.get(candidateKey);
+      const itemVisit = parseInt(item.visit_count || '0', 10) || 0;
+      const latestVisit = parseInt(candidate.latestItem?.visit_count || '0', 10) || 0;
+      if (
+        !candidate.latestItem ||
+        item.date > candidate.latestItem.date ||
+        (item.date === candidate.latestItem.date && itemVisit > latestVisit)
+      ) {
+        candidate.latestItem = item;
+      }
+      if (item.body_part) {
+        item.body_part.split(',').map(p => p.trim()).filter(Boolean).forEach(p => addBodyPartToMap(candidate.bodyPartsMap, p));
+      }
       if (item.prescription) {
-        chartPrescriptions.get(chartNumber).add(item.prescription);
+        candidate.prescriptions.add(item.prescription);
       }
     });
 
-    const options = Array.from(chartMap.entries()).map(([chartNumber, item]) => {
+    const options = Array.from(candidateMap.values()).map((candidate) => {
+      const item = candidate.latestItem;
+      const chartNumber = candidate.chartNumber;
       const lastVisit = parseInt(item.visit_count || '0', 10) || 0;
       const nextVisit = (item.date === targetDate) ? (lastVisit || 1) : (lastVisit > 0 ? lastVisit + 1 : 1);
-      
       const cleanPatientName = String(item.patient_name).replace(/\*/g, '').trim();
-      let namePart = cleanPatientName;
-      let prescription = item.prescription || '';
-
-      if (item.type === 'manual') {
-        const pres = String(item.prescription || '');
-        if (pres.includes('40')) namePart += '40';
-        else if (pres.includes('60')) namePart += '60';
-        else namePart += '40';
-      }
-
-      const bodyPartsSet = new Set(chartBodyParts.get(chartNumber)?.values() || []);
-      const prescriptionsSet = chartPrescriptions.get(chartNumber) || new Set();
+      const namePart = item.type === 'manual'
+        ? buildManualNamePart(cleanPatientName, item.prescription)
+        : cleanPatientName;
       const latestBodyPart = item.body_part || '';
+      const prescriptions = Array.from(candidate.prescriptions);
 
       return {
         chartNumber,
@@ -505,11 +535,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         cleanName: cleanPatientName,
         nextVisit,
         lastDate: item.date || '',
-        prescription,
-        prescriptions: Array.from(prescriptionsSet),
-        bodyParts: Array.from(bodyPartsSet),
+        prescription: item.prescription || '',
+        prescriptions,
+        bodyParts: Array.from(candidate.bodyPartsMap.values()),
         latestBodyPart,
         type: item.type,
+        doseTag: candidate.doseTag,
+        optionLabel: getSchedulerHistoryTypeLabel({ type: item.type, doseTag: candidate.doseTag, prescription: item.prescription }),
       };
     });
 
@@ -537,6 +569,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           bodyParts: selected.bodyParts,
           latestBodyPart: selected.latestBodyPart,
           type: selected.type,
+          doseTag: selected.doseTag,
           settings,
         });
 
@@ -2490,19 +2523,21 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       {chartSelector && (
         <div className="shockwave-chart-selector-backdrop" onMouseDown={() => handleChartSelectorClose(null)}>
           <div className="shockwave-chart-selector" onMouseDown={(e) => e.stopPropagation()}>
-            <div className="shockwave-chart-selector-title">차트번호 선택</div>
+            <div className="shockwave-chart-selector-title">이력 선택</div>
             <div className="shockwave-chart-selector-subtitle">
-              {chartSelector.rawName} 환자의 차트번호를 선택하세요.
+              {chartSelector.rawName} 환자의 자동완성 이력을 선택하세요.
             </div>
             <div className="shockwave-chart-selector-options">
               {chartSelector.options.map((option) => (
                 <button
-                  key={`${option.chartNumber}-${option.lastDate}`}
+                  key={`${option.chartNumber}-${option.type}-${option.doseTag || 'default'}-${option.lastDate}`}
                   type="button"
                   className="shockwave-chart-selector-option"
                   onClick={() => handleChartSelectorClose(option)}
                 >
                   <span>{option.chartNumber}</span>
+                  <span>{option.namePart}</span>
+                  <span>{option.optionLabel}</span>
                   <span>{option.nextVisit}회차</span>
                   <span>{option.lastDate}</span>
                 </button>
