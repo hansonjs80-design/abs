@@ -149,16 +149,6 @@ function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
   const [newMemo, setNewMemo] = useState('');
   const [newBodyPart, setNewBodyPart] = useState('');
 
-  const getVisitFromSelectedParts = useCallback((selectedParts) => {
-    if (!Array.isArray(selectedParts) || selectedParts.length !== 1) return null;
-    const key = normalizeBodyPartKey(selectedParts[0]);
-    const bodyPartVisit = dlg.bodyPartVisitMap?.[key];
-    if (Number.isInteger(bodyPartVisit?.nextVisit) && bodyPartVisit.nextVisit > 0) {
-      return bodyPartVisit.nextVisit;
-    }
-    return null;
-  }, [dlg.bodyPartVisitMap]);
-
   const handleConfirm = useCallback(() => {
     const selectedParts = dedupeList(
       localBodyChecked.filter(bp => bp.checked).map(bp => bp.name),
@@ -251,13 +241,7 @@ function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
                             type="checkbox"
                             checked={bp.checked}
                             onChange={() => {
-                              setLocalBodyChecked((prev) => {
-                                const next = prev.map((item, i) => i === idx ? { ...item, checked: !item.checked } : item);
-                                const selectedParts = next.filter((item) => item.checked).map((item) => item.name);
-                                const nextVisit = getVisitFromSelectedParts(selectedParts);
-                                if (nextVisit) setLocalVisit(nextVisit);
-                                return next;
-                              });
+                              setLocalBodyChecked((prev) => prev.map((item, i) => i === idx ? { ...item, checked: !item.checked } : item));
                             }}
                           />
                           <span>{bp.name}</span>
@@ -284,18 +268,15 @@ function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
                         e.preventDefault();
                         const nextPart = formatBodyPartInput(newBodyPart);
                         if (!nextPart) return;
-                          setLocalBodyChecked(prev => {
-                            const next = dedupeList(
-                              [...prev.map((item) => item.name), nextPart],
-                              normalizeBodyPartKey
-                            ).map((name) => ({
-                              name,
-                              checked: normalizeBodyPartKey(name) === normalizeBodyPartKey(nextPart) || prev.some((item) => normalizeBodyPartKey(item.name) === normalizeBodyPartKey(name) && item.checked),
-                            }));
-                            const nextVisit = getVisitFromSelectedParts([nextPart]);
-                            if (nextVisit) setLocalVisit(nextVisit);
-                            return next;
-                          });
+                        setLocalBodyChecked(prev => (
+                          dedupeList(
+                            [...prev.map((item) => item.name), nextPart],
+                            normalizeBodyPartKey
+                          ).map((name) => ({
+                            name,
+                            checked: normalizeBodyPartKey(name) === normalizeBodyPartKey(nextPart) || prev.some((item) => normalizeBodyPartKey(item.name) === normalizeBodyPartKey(name) && item.checked),
+                          }))
+                        ));
                         setNewBodyPart('');
                       }
                     }}
@@ -308,12 +289,7 @@ function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
                       if (!newBodyPart.trim()) return;
                       const nextPart = formatBodyPartInput(newBodyPart);
                       if (!nextPart) return;
-                      setLocalBodyChecked(prev => {
-                        const next = [...prev, { name: nextPart, checked: true }];
-                        const nextVisit = getVisitFromSelectedParts([nextPart]);
-                        if (nextVisit) setLocalVisit(nextVisit);
-                        return next;
-                      });
+                      setLocalBodyChecked(prev => [...prev, { name: nextPart, checked: true }]);
                       setNewBodyPart('');
                     }}
                   >추가</button>
@@ -846,9 +822,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     }
 
     // 부위가 2개 이상이거나 처방이 변경된 이력이 있으면 다이얼로그로 선택
-    const effectiveVisitCount = Number.isInteger(selected.preferredNextVisit) && selected.preferredNextVisit > 0
-      ? selected.preferredNextVisit
-      : selected.nextVisit;
+    const effectiveVisitCount = selected.nextVisit;
     const effectiveBodyPart = selected.preferredBodyPart || selected.latestBodyPart || undefined;
     const inheritedMergeSpan = findLatestSchedulerMemoMeta(
       { w, d, r, c },
