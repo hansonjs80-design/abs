@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { generateShockwaveCalendar, getTodayKST } from '../lib/calendarUtils';
 import { syncTodayShockwaveScheduleToStats } from '../lib/shockwaveSyncUtils';
+import { syncTodayManualTherapyScheduleToStats } from '../lib/manualTherapyUtils';
 
 const ScheduleContext = createContext();
 
@@ -39,6 +40,7 @@ export function ScheduleProvider({ children }) {
     const hasContent = Boolean((memo.content || '').trim());
     const hasBgColor = memo.bg_color !== undefined && memo.bg_color !== null && memo.bg_color !== '';
     const merge = memo.merge_span;
+    const hasMetaMemoList = Array.isArray(merge?.meta?.memo_list) && merge.meta.memo_list.some((item) => String(item || '').trim());
     const hasMerge =
       Boolean(merge) &&
       (
@@ -46,7 +48,7 @@ export function ScheduleProvider({ children }) {
         (merge.colSpan && merge.colSpan !== 1) ||
         merge.mergedInto
       );
-    return hasContent || hasBgColor || hasMerge;
+    return hasContent || hasBgColor || hasMerge || hasMetaMemoList;
   }, []);
 
   const navigateMonth = useCallback((delta) => {
@@ -290,7 +292,7 @@ export function ScheduleProvider({ children }) {
   }, []);
 
   // 충격파 스케줄 저장
-  const saveShockwaveMemo = useCallback(async (year, month, weekIndex, dayIndex, rowIndex, colIndex, content, bg_color, merge_span, prescription) => {
+  const saveShockwaveMemo = useCallback(async (year, month, weekIndex, dayIndex, rowIndex, colIndex, content, bg_color, merge_span, prescription, body_part) => {
     try {
       const key = `${weekIndex}-${dayIndex}-${rowIndex}-${colIndex}`;
       const optimisticMemo = shockwaveMemos[key] || {};
@@ -302,6 +304,7 @@ export function ScheduleProvider({ children }) {
       if (bg_color !== undefined) upsertData.bg_color = bg_color;
       if (merge_span !== undefined) upsertData.merge_span = merge_span;
       if (prescription !== undefined) upsertData.prescription = prescription;
+      if (body_part !== undefined) upsertData.body_part = body_part;
 
       setShockwaveMemos(prev => {
         const next = { ...prev };

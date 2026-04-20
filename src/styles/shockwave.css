@@ -403,14 +403,16 @@
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border-color-light);
-  border-radius: var(--radius-md);
+  border-radius: 14px;
   box-shadow: var(--shadow-xl);
-  padding: 8px 0;
+  padding: 10px;
   cursor: default;
   z-index: 500;
   display: flex;
   flex-direction: column;
-  min-width: 180px;
+  gap: 10px;
+  min-width: 280px;
+  width: min(320px, calc(100vw - 24px));
   animation: fadeIn var(--transition-fast);
 }
 
@@ -424,6 +426,21 @@
   color: var(--text-primary);
   cursor: pointer;
   transition: background var(--transition-fast);
+}
+
+.context-menu-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.context-menu-item {
+  border: 1px solid var(--border-color-light) !important;
+  background: rgba(255, 255, 255, 0.45) !important;
+  border-radius: 10px;
+  text-align: center !important;
+  padding: 8px 10px !important;
+  font-size: 0.8rem !important;
 }
 
 .shockwave-context-menu button:hover:not(:disabled) {
@@ -534,8 +551,130 @@
 .context-menu-divider {
   height: 1px;
   background: var(--border-color-light);
-  margin: 4px 0;
+  margin: 0;
   opacity: 0.6;
+}
+
+.context-menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.context-menu-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.context-menu-section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
+}
+
+.context-menu-select {
+  min-width: 120px;
+  max-width: 170px;
+  padding: 6px 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid var(--border-color-light);
+  border-radius: 9px;
+  background: var(--bg-input, #fff);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.context-menu-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 118px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.context-menu-check-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.34);
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.context-menu-input-row {
+  display: flex;
+  gap: 6px;
+}
+
+.context-menu-input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 9px;
+  font-size: 0.8rem;
+  border: 1px solid var(--border-color-light);
+  border-radius: 9px;
+  outline: none;
+  background: var(--bg-input, #fff);
+}
+
+.context-menu-inline-button {
+  flex: 0 0 auto;
+  border: 1px solid var(--border-color-light) !important;
+  border-radius: 9px;
+  background: var(--bg-tertiary) !important;
+  padding: 7px 10px !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+}
+
+.context-menu-note-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.context-menu-note-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.34);
+  font-size: 0.8rem;
+  color: var(--text-primary);
+}
+
+.context-menu-note-item span {
+  min-width: 0;
+  word-break: break-word;
+}
+
+.context-menu-note-remove {
+  border: 1px solid rgba(239, 68, 68, 0.22) !important;
+  background: rgba(239, 68, 68, 0.08) !important;
+  color: #c2410c !important;
+  border-radius: 8px;
+  padding: 4px 7px !important;
+  font-size: 0.74rem !important;
+  font-weight: 700 !important;
+}
+
+.context-menu-empty {
+  padding: 6px 2px;
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  line-height: 1.45;
 }
 
 .patient-search-results {
@@ -569,17 +708,16 @@
 
 /* 커스텀 툴팁 (시간/범위 표시) */
 .sw-custom-tooltip {
-  background: rgba(32, 33, 36, 0.95);
-  color: #fff;
-  padding: 6px 12px;
-  border-radius: 6px;
+  background: #ffffff;
+  color: #333333;
+  padding: 8px 14px;
+  border-radius: 8px;
   font-size: 13px;
-  font-weight: 500;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-weight: 600;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
   white-space: pre-wrap;
-  line-height: 1.4;
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  line-height: 1.5;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   transition: opacity 0.1s ease-out;
   pointer-events: none;
   z-index: 9999;
