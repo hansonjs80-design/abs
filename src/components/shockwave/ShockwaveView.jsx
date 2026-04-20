@@ -56,6 +56,20 @@ function formatBodyPartInput(part) {
   return toProperCase(String(part || '').trim()).replace(/\s+/g, ' ').trim();
 }
 
+function dedupeList(values, normalizer = (value) => String(value || '').trim()) {
+  const next = [];
+  const seen = new Set();
+  (Array.isArray(values) ? values : []).forEach((value) => {
+    const text = String(value || '').trim();
+    if (!text) return;
+    const key = normalizer(text);
+    if (seen.has(key)) return;
+    seen.add(key);
+    next.push(text);
+  });
+  return next;
+}
+
 function parseSchedulerPatientIdentity(content) {
   const cellContent = String(content || '');
   let patientChart = '';
@@ -126,12 +140,12 @@ function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
     const latestParts = Array.isArray(dlg.initialBodyParts)
       ? dlg.initialBodyParts
       : splitBodyParts(dlg.initialBodyPart || dlg.latestBodyPart);
-    return dlg.bodyParts.map(bp => ({
+    return dedupeList(dlg.bodyParts, normalizeBodyPartKey).map(bp => ({
       name: bp,
       checked: latestParts.includes(bp),
     }));
   });
-  const [localMemoList, setLocalMemoList] = useState(() => Array.isArray(dlg.initialMemoList) ? dlg.initialMemoList : []);
+  const [localMemoList, setLocalMemoList] = useState(() => dedupeList(dlg.initialMemoList));
   const [newMemo, setNewMemo] = useState('');
   const [newBodyPart, setNewBodyPart] = useState('');
 
@@ -146,14 +160,17 @@ function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
   }, [dlg.bodyPartVisitMap]);
 
   const handleConfirm = useCallback(() => {
-    const selectedParts = localBodyChecked.filter(bp => bp.checked).map(bp => bp.name);
+    const selectedParts = dedupeList(
+      localBodyChecked.filter(bp => bp.checked).map(bp => bp.name),
+      normalizeBodyPartKey
+    );
     onConfirm({
       chartNumber: dlg.chartNumber,
       namePart: dlg.namePart,
       visitCount: localVisit,
       prescription: localPres || undefined,
       bodyPart: selectedParts.join(', ') || undefined,
-      memoList: localMemoList,
+      memoList: dedupeList(localMemoList),
     });
   }, [localBodyChecked, onConfirm, dlg, localVisit, localMemoList, localPres]);
 
@@ -197,19 +214,9 @@ function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
               className="shockwave-chart-selector-input shockwave-chart-selector-input--visit"
             />
           </div>
-
-          <div className="shockwave-chart-selector-field">
-            <label className="shockwave-chart-selector-label">처방</label>
-            <select
-              value={localPres}
-              onChange={(e) => setLocalPres(e.target.value)}
-              className="shockwave-chart-selector-select"
-            >
-              <option value="">처방 없음</option>
-              {dlg.settings?.prescriptions?.map(pres => (
-                <option key={pres} value={pres}>{pres}</option>
-              ))}
-            </select>
+          <div className="shockwave-chart-selector-meta-strip">
+            <span>부위 {localBodyChecked.filter((item) => item.checked).length}개</span>
+            <span>메모 {localMemoList.length}개</span>
           </div>
         </div>
 
@@ -277,12 +284,18 @@ function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
                         e.preventDefault();
                         const nextPart = formatBodyPartInput(newBodyPart);
                         if (!nextPart) return;
-                        setLocalBodyChecked(prev => {
-                          const next = [...prev, { name: nextPart, checked: true }];
-                          const nextVisit = getVisitFromSelectedParts([nextPart]);
-                          if (nextVisit) setLocalVisit(nextVisit);
-                          return next;
-                        });
+                          setLocalBodyChecked(prev => {
+                            const next = dedupeList(
+                              [...prev.map((item) => item.name), nextPart],
+                              normalizeBodyPartKey
+                            ).map((name) => ({
+                              name,
+                              checked: normalizeBodyPartKey(name) === normalizeBodyPartKey(nextPart) || prev.some((item) => normalizeBodyPartKey(item.name) === normalizeBodyPartKey(name) && item.checked),
+                            }));
+                            const nextVisit = getVisitFromSelectedParts([nextPart]);
+                            if (nextVisit) setLocalVisit(nextVisit);
+                            return next;
+                          });
                         setNewBodyPart('');
                       }
                     }}
@@ -345,7 +358,7 @@ function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && newMemo.trim()) {
                       e.preventDefault();
-                      setLocalMemoList((prev) => [...prev, newMemo.trim()]);
+                      setLocalMemoList((prev) => dedupeList([...prev, newMemo.trim()]));
                       setNewMemo('');
                     }
                   }}
@@ -356,7 +369,7 @@ function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
                   className="shockwave-chart-selector-add"
                   onClick={() => {
                     if (!newMemo.trim()) return;
-                    setLocalMemoList((prev) => [...prev, newMemo.trim()]);
+                    setLocalMemoList((prev) => dedupeList([...prev, newMemo.trim()]));
                     setNewMemo('');
                   }}
                 >추가</button>
