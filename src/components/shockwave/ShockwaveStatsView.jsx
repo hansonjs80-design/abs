@@ -38,7 +38,7 @@ class ShockwaveStatsErrorBoundary extends React.Component {
 
 export default function ShockwaveStatsView({ currentYear, currentMonth, memos, therapists, schedulerMemosReady = false }) {
   const { addToast } = useToast();
-  const { shockwaveSettings } = useSchedule();
+  const { shockwaveSettings, monthlyTherapists } = useSchedule();
   const [logs, setLogs] = useState([]);
   const [recentLogs, setRecentLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -199,6 +199,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
           month: currentMonth,
           memos,
           therapists: safeTherapists,
+          monthlyTherapists,
           upToToday: true,
         });
 
@@ -239,6 +240,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
         month: currentMonth,
         memos,
         therapists: safeTherapists,
+        monthlyTherapists,
       });
 
       if (result.skipped && result.reason === 'today_outside_current_month') {
@@ -273,6 +275,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
         month: currentMonth,
         memos,
         therapists: safeTherapists,
+        monthlyTherapists,
         upToToday: false,
         overwriteManual: true,
       });

@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { has4060Pattern, strip4060FromContent, incrementSessionCount, normalizeNameForMatch } from '../../lib/memoParser';
 import { toProperCase } from '../../lib/shockwaveSyncUtils';
 import { useToast } from '../common/Toast';
+import MonthlyTherapistConfig from './MonthlyTherapistConfig';
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 const HORIZONTAL_BORDER_COLOR = '#b7b7b7';
@@ -401,11 +402,12 @@ function addBodyPartToMap(map, part) {
 }
 
 export default function ShockwaveView({ therapists, settings, memos = {}, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
-  const { currentYear, currentMonth, saveShockwaveMemosBulk } = useSchedule();
+  const { currentYear, currentMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists } = useSchedule();
   const { addToast } = useToast();
   const viewRef = useRef(null);
   const dragSelectionRef = useRef(null);
   const selectedCellRef = useRef(null);
+  const [showTherapistConfig, setShowTherapistConfig] = useState(false);
 
   // ── 셀 조작 상태 (구글 시트 방식) ──
   const [selectedCell, setSelectedCell] = useState(null);     // { w, d, r, c }
@@ -458,6 +460,24 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const undoQueueRef = useRef(Promise.resolve());
 
   const colCount = Math.max(1, therapists.length);
+
+  // 월별 치료사 설정 로드 (충격파 + 도수치료)
+  useEffect(() => {
+    loadMonthlyTherapists(currentYear, currentMonth, 'shockwave');
+    loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy');
+  }, [currentYear, currentMonth, loadMonthlyTherapists]);
+
+  // 날짜(day)별 치료사 이름 조회
+  const getTherapistNameForDate = useCallback((slotIndex, day) => {
+    if (!monthlyTherapists || monthlyTherapists.length === 0) {
+      return therapists[slotIndex]?.name || '';
+    }
+    const match = monthlyTherapists.find(
+      (t) => t.slot_index === slotIndex && day >= t.start_day && day <= t.end_day
+    );
+    if (match !== undefined) return match.therapist_name || '';
+    return therapists[slotIndex]?.name || '';
+  }, [monthlyTherapists, therapists]);
   const therapistShiftByDate = useMemo(() => {
     const map = {};
 
@@ -2554,6 +2574,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         >
           <div className="shockwave-week-label">
             <span className="shockwave-week-label-text">📅 {weekIdx + 1}주차</span>
+            {weekIdx === 0 && (
+              <button
+                type="button"
+                className="shockwave-week-today-btn"
+                onClick={() => setShowTherapistConfig(true)}
+                style={{ marginRight: 4 }}
+              >
+                🩺 치료사 설정
+              </button>
+            )}
             <button
               type="button"
               className="shockwave-week-today-btn"
@@ -2608,7 +2638,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                         else if (!dayInfo.isCurrentMonth) nameClass += ' other-month';
                         return (
                           <div key={ci} className={nameClass}>
-                            {therapists[ci]?.name || `치료사${ci + 1}`}
+                            {getTherapistNameForDate(ci, dayInfo.day) || `치료사${ci + 1}`}
                           </div>
                         );
                       })}
@@ -2717,7 +2747,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                           }
 
                           const dateKey = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}`;
-                          const therapistName = therapists[colIdx]?.name || '';
+                          const therapistName = getTherapistNameForDate(colIdx, dayInfo.day) || '';
                           const workState = getTherapistWorkState(dateKey, therapistName);
                           if (!isSelected && workState === 'off') {
                             cls += ' staff-off';
@@ -3235,6 +3265,19 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         >
           {hoverData.text.split('\n').map((line, i) => <div key={i}>{line}</div>)}
         </div>
+      )}
+
+      {showTherapistConfig && (
+        <MonthlyTherapistConfig
+          year={currentYear}
+          month={currentMonth}
+          therapists={therapists}
+          manualTherapists={manualTherapists}
+          monthlyTherapists={monthlyTherapists}
+          monthlyManualTherapists={monthlyManualTherapists}
+          onSave={saveMonthlyTherapists}
+          onClose={() => setShowTherapistConfig(false)}
+        />
       )}
     </>
   );

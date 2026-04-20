@@ -228,7 +228,18 @@ function buildSchedulerRowPlacement(items, existingRows) {
   });
 }
 
-async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therapists, targetDateStr, overwriteManual = false }) {
+// 월별 치료사 설정에서 날짜별 치료사 이름 조회
+function resolveTherapistName(slotIndex, day, therapists, monthlyTherapists) {
+  if (monthlyTherapists && monthlyTherapists.length > 0) {
+    const match = monthlyTherapists.find(
+      (t) => t.slot_index === slotIndex && day >= t.start_day && day <= t.end_day
+    );
+    if (match !== undefined) return match.therapist_name || '';
+  }
+  return therapists?.[slotIndex]?.name || `치료사 ${slotIndex + 1}`;
+}
+
+async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therapists, monthlyTherapists, targetDateStr, overwriteManual = false }) {
   if (!memos) {
     return { skipped: true, reason: 'missing_memos' };
   }
@@ -255,7 +266,7 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
     const parsed = parseTherapyInfo(cell?.content);
     if (!parsed) return;
 
-    const therapistName = therapists?.[c]?.name || `치료사 ${c + 1}`;
+    const therapistName = resolveTherapistName(c, dayInfo.day, therapists, monthlyTherapists);
     newLogs.push({
       r,
       c,
@@ -380,7 +391,7 @@ export async function syncTodayShockwaveScheduleToStats(params) {
   return run;
 }
 
-export async function syncMonthShockwaveScheduleToStats({ year, month, memos, therapists, upToToday = false, overwriteManual = false }) {
+export async function syncMonthShockwaveScheduleToStats({ year, month, memos, therapists, monthlyTherapists, upToToday = false, overwriteManual = false }) {
   const today = getTodayKST();
   const daysInMonth = new Date(year, month, 0).getDate();
   let endDay = daysInMonth;
@@ -401,6 +412,7 @@ export async function syncMonthShockwaveScheduleToStats({ year, month, memos, th
         month,
         memos,
         therapists,
+        monthlyTherapists,
         targetDateStr: dateStr,
         overwriteManual
       });

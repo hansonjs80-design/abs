@@ -63,6 +63,7 @@ export default function ManualTherapyStatsPage() {
     shockwaveMemos,
     loadShockwaveMemos,
     shockwaveSettings,
+    monthlyManualTherapists,
   } = useSchedule();
   const { addToast } = useToast();
   const [logs, setLogs] = useState([]);
@@ -163,6 +164,7 @@ export default function ManualTherapyStatsPage() {
           month: currentMonth,
           memos: shockwaveMemos,
           therapists: safeTherapists,
+          monthlyTherapists: monthlyManualTherapists,
           upToToday: true,
         });
 
@@ -192,6 +194,7 @@ export default function ManualTherapyStatsPage() {
         month: currentMonth,
         memos: shockwaveMemos,
         therapists: safeTherapists,
+        monthlyTherapists: monthlyManualTherapists,
       });
 
       if (result.skipped && result.reason === 'today_outside_current_month') {
@@ -226,6 +229,7 @@ export default function ManualTherapyStatsPage() {
         month: currentMonth,
         memos: shockwaveMemos,
         therapists: safeTherapists,
+        monthlyTherapists: monthlyManualTherapists,
         upToToday: false,
         overwriteManual: true,
       });

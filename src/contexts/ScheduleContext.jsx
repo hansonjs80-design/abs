@@ -32,6 +32,8 @@ export function ScheduleProvider({ children }) {
     frozen_columns: 6
   });
   const [shockwaveMemos, setShockwaveMemos] = useState({});
+  const [monthlyTherapists, setMonthlyTherapists] = useState([]);
+  const [monthlyManualTherapists, setMonthlyManualTherapists] = useState([]);
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -349,6 +351,7 @@ export function ScheduleProvider({ children }) {
               month,
               memos: nextShockwaveMemos,
               therapists,
+              monthlyTherapists,
               targetDateStr,
             });
           } catch (syncErr) {
@@ -362,6 +365,7 @@ export function ScheduleProvider({ children }) {
               month,
               memos: nextShockwaveMemos,
               therapists: manualTherapists,
+              monthlyTherapists: monthlyManualTherapists,
               targetDateStr,
             });
           } catch (syncErr) {
@@ -459,6 +463,7 @@ export function ScheduleProvider({ children }) {
                 month: currentMonth,
                 memos: nextShockwaveMemos,
                 therapists,
+                monthlyTherapists,
                 targetDateStr: dateStr,
               });
             } catch (syncErr) {
@@ -472,6 +477,7 @@ export function ScheduleProvider({ children }) {
                 month: currentMonth,
                 memos: nextShockwaveMemos,
                 therapists: manualTherapists,
+                monthlyTherapists: monthlyManualTherapists,
                 targetDateStr: dateStr,
               });
             } catch (syncErr) {
@@ -495,6 +501,120 @@ export function ScheduleProvider({ children }) {
       return false;
     }
   }, [currentYear, currentMonth, shockwaveMemos, therapists, shouldKeepShockwaveMemo]);
+
+  // 월별 치료사 설정 로드 (type: 'shockwave' | 'manual_therapy')
+  const loadMonthlyTherapists = useCallback(async (year, month, type = 'shockwave') => {
+    const fallbackList = type === 'manual_therapy' ? manualTherapists : therapists;
+    const setter = type === 'manual_therapy' ? setMonthlyManualTherapists : setMonthlyTherapists;
+    try {
+      const { data, error } = await supabase
+        .from('shockwave_monthly_therapists')
+        .select('*')
+        .eq('year', year)
+        .eq('month', month)
+        .eq('type', type)
+        .order('slot_index')
+        .order('start_day');
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setter(data);
+        return data;
+      }
+
+      // 해당 월 데이터 없음 → 이전 달에서 복사 시도
+      const prevMonth = month === 1 ? 12 : month - 1;
+      const prevYear = month === 1 ? year - 1 : year;
+      const { data: prevData, error: prevError } = await supabase
+        .from('shockwave_monthly_therapists')
+        .select('*')
+        .eq('year', prevYear)
+        .eq('month', prevMonth)
+        .eq('type', type)
+        .order('slot_index')
+        .order('start_day');
+
+      if (!prevError && prevData && prevData.length > 0) {
+        const slotMap = new Map();
+        prevData.forEach((item) => {
+          const existing = slotMap.get(item.slot_index);
+          if (!existing || item.start_day > existing.start_day) {
+            slotMap.set(item.slot_index, item);
+          }
+        });
+        const lastDay = new Date(year, month, 0).getDate();
+        const inherited = Array.from(slotMap.values()).map((item) => ({
+          slot_index: item.slot_index,
+          therapist_name: item.therapist_name,
+          start_day: 1,
+          end_day: lastDay,
+          year,
+          month,
+          type,
+        }));
+        setter(inherited);
+        return inherited;
+      }
+
+      // 이전 달도 없음 → 기본 therapists 테이블에서 생성
+      const lastDay = new Date(year, month, 0).getDate();
+      const defaults = fallbackList.map((t) => ({
+        slot_index: t.slot_index,
+        therapist_name: t.name || '',
+        start_day: 1,
+        end_day: lastDay,
+        year,
+        month,
+        type,
+      }));
+      setter(defaults);
+      return defaults;
+    } catch (err) {
+      console.error(`Failed to load monthly therapists (${type}):`, err);
+      return [];
+    }
+  }, [therapists, manualTherapists]);
+
+  // 월별 치료사 설정 저장 (type: 'shockwave' | 'manual_therapy')
+  const saveMonthlyTherapists = useCallback(async (year, month, configs, type = 'shockwave') => {
+    const setter = type === 'manual_therapy' ? setMonthlyManualTherapists : setMonthlyTherapists;
+    try {
+      const { error: deleteError } = await supabase
+        .from('shockwave_monthly_therapists')
+        .delete()
+        .eq('year', year)
+        .eq('month', month)
+        .eq('type', type);
+
+      if (deleteError) throw deleteError;
+
+      if (configs.length > 0) {
+        const rows = configs.map((c) => ({
+          year,
+          month,
+          slot_index: c.slot_index,
+          therapist_name: c.therapist_name ?? '',
+          start_day: c.start_day,
+          end_day: c.end_day,
+          type,
+          created_at: new Date().toISOString(),
+        }));
+
+        const { error: insertError } = await supabase
+          .from('shockwave_monthly_therapists')
+          .insert(rows);
+
+        if (insertError) throw insertError;
+      }
+
+      setter(configs.map((c) => ({ ...c, year, month, type })));
+      return true;
+    } catch (err) {
+      console.error(`Failed to save monthly therapists (${type}):`, err);
+      return false;
+    }
+  }, []);
 
   // 공지사항 로드/저장
   const loadNotices = useCallback(async () => {
@@ -541,6 +661,7 @@ export function ScheduleProvider({ children }) {
       manualTherapists, loadManualTherapists,
       shockwaveSettings, loadShockwaveSettings, saveShockwaveSettings,
       shockwaveMemos, loadShockwaveMemos, saveShockwaveMemo, saveShockwaveMemosBulk,
+      monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists,
       notices, loadNotices, saveNotice,
       loading
     }}>

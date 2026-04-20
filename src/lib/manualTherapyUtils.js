@@ -96,7 +96,18 @@ export function parseManualTherapyEntry(rawContent, therapists, fallbackTherapis
   };
 }
 
-async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, therapists, targetDateStr, overwriteManual = false }) {
+// 월별 치료사 설정에서 날짜별 치료사 이름 조회
+function resolveManualTherapistName(slotIndex, day, therapists, monthlyTherapists) {
+  if (monthlyTherapists && monthlyTherapists.length > 0) {
+    const match = monthlyTherapists.find(
+      (t) => t.slot_index === slotIndex && day >= t.start_day && day <= t.end_day
+    );
+    if (match !== undefined) return match.therapist_name || '';
+  }
+  return therapists?.[slotIndex]?.name || '';
+}
+
+async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, therapists, monthlyTherapists, targetDateStr, overwriteManual = false }) {
   if (!memos) {
     return { skipped: true, reason: 'missing_memos' };
   }
@@ -120,7 +131,7 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
     if (!dayInfo || !dayInfo.isCurrentMonth) return;
     if (dayInfo.year !== todayY || dayInfo.month !== todayM || dayInfo.day !== todayD) return;
 
-    const therapistName = therapists?.[c]?.name || '';
+    const therapistName = resolveManualTherapistName(c, dayInfo.day, therapists, monthlyTherapists);
     const parsed = parseManualTherapyEntry(cell?.content, therapists, therapistName);
     if (!parsed) return;
 
@@ -256,7 +267,7 @@ export async function syncTodayManualTherapyScheduleToStats(params) {
   return run;
 }
 
-export async function syncMonthManualTherapyScheduleToStats({ year, month, memos, therapists, upToToday = false, overwriteManual = false }) {
+export async function syncMonthManualTherapyScheduleToStats({ year, month, memos, therapists, monthlyTherapists, upToToday = false, overwriteManual = false }) {
   const today = getTodayKST();
   const daysInMonth = new Date(year, month, 0).getDate();
   let endDay = daysInMonth;
@@ -277,6 +288,7 @@ export async function syncMonthManualTherapyScheduleToStats({ year, month, memos
         month,
         memos,
         therapists,
+        monthlyTherapists,
         targetDateStr: dateStr,
         overwriteManual
       });

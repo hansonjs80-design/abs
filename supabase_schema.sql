@@ -184,3 +184,26 @@ ADD COLUMN IF NOT EXISTS source text DEFAULT 'manual';
 
 ALTER TABLE public.staff_schedules
 ADD COLUMN IF NOT EXISTS bg_color text;
+
+-- =============================================
+-- [월별 치료사 설정] 스케줄러 슬롯별 날짜 범위 기반 치료사 배정
+-- =============================================
+CREATE TABLE IF NOT EXISTS public.shockwave_monthly_therapists (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  year integer NOT NULL,
+  month integer NOT NULL,
+  slot_index integer NOT NULL,          -- 열 번호 (0, 1, 2 ...)
+  therapist_name text NOT NULL DEFAULT '',  -- 치료사 이름 (빈 문자열 = 해당 기간 비활성)
+  start_day integer NOT NULL DEFAULT 1, -- 시작일 (1~31)
+  end_day integer NOT NULL DEFAULT 31,  -- 종료일 (1~31, 해당 월의 마지막 날까지)
+  type text NOT NULL DEFAULT 'shockwave', -- 'shockwave' 또는 'manual_therapy'
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  UNIQUE(year, month, slot_index, start_day, type)
+);
+
+ALTER TABLE public.shockwave_monthly_therapists DISABLE ROW LEVEL SECURITY;
+
+-- type 컬럼 추가 (기존 테이블이 있는 경우)
+ALTER TABLE public.shockwave_monthly_therapists
+ADD COLUMN IF NOT EXISTS type text NOT NULL DEFAULT 'shockwave';
+
