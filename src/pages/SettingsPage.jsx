@@ -16,6 +16,7 @@ const SQL_SNIPPETS = [
   end_time time NOT NULL DEFAULT '18:00:00',
   interval_minutes int NOT NULL DEFAULT 10,
   day_overrides jsonb NOT NULL DEFAULT '{}',
+  date_overrides jsonb NOT NULL DEFAULT '{}',
   prescriptions text[] DEFAULT ARRAY['F1.5', 'F/Rdc', 'F/R'],
   manual_therapy_prescriptions text[] DEFAULT ARRAY['40분', '60분'],
   prescription_prices jsonb NOT NULL DEFAULT '{"F1.5":50000,"F/Rdc":70000,"F/R":80000}'::jsonb,
@@ -27,6 +28,7 @@ const SQL_SNIPPETS = [
 );
 ALTER TABLE public.shockwave_settings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS day_overrides jsonb NOT NULL DEFAULT '{}';
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS date_overrides jsonb NOT NULL DEFAULT '{}';
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS prescriptions text[] DEFAULT ARRAY['F1.5', 'F/Rdc', 'F/R'];
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS manual_therapy_prescriptions text[] DEFAULT ARRAY['40분', '60분'];
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS prescription_prices jsonb NOT NULL DEFAULT '{"F1.5":50000,"F/Rdc":70000,"F/R":80000}'::jsonb;
@@ -200,6 +202,8 @@ export default function SettingsPage() {
     frozen_columns: 6
   });
   const [dayOverrides, setDayOverrides] = useState({});
+  const [dateOverrides, setDateOverrides] = useState({});
+  const [newDateOverride, setNewDateOverride] = useState({ date: '' });
   const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
   const handleCopySQL = async (sql) => {
@@ -243,6 +247,7 @@ export default function SettingsPage() {
           frozen_columns: data.frozen_columns || 6
         });
         setDayOverrides(data.day_overrides || {});
+        setDateOverrides(data.date_overrides || {});
       }
     } catch(e) {}
   };
@@ -253,6 +258,7 @@ export default function SettingsPage() {
       end_time: swSettings.end_time + ':00',
       interval_minutes: Number(swSettings.interval_minutes),
       day_overrides: dayOverrides,
+      date_overrides: dateOverrides,
       prescriptions: swSettings.prescriptions,
       manual_therapy_prescriptions: swSettings.manual_therapy_prescriptions,
       prescription_prices: swSettings.prescription_prices,
@@ -291,6 +297,63 @@ export default function SettingsPage() {
         delete updated[dow];
       }
       
+      return updated;
+    });
+  };
+
+  const updateDateOverride = (dateKey, field, value) => {
+    setDateOverrides(prev => {
+      const updated = { ...prev };
+      updated[dateKey] = { ...(prev[dateKey] || {}) };
+      
+      if (field === 'no_lunch') {
+        if (value) {
+          updated[dateKey].no_lunch = true;
+          delete updated[dateKey].lunch_start;
+          delete updated[dateKey].lunch_end;
+        } else {
+          delete updated[dateKey].no_lunch;
+        }
+      } else {
+        if (value === '' || value === undefined) {
+          delete updated[dateKey][field];
+        } else {
+          updated[dateKey][field] = value;
+        }
+      }
+      
+      // If we only have the 'date' or nothing else, delete the entry if we want to remove it
+      if (Object.keys(updated[dateKey]).length === 0) {
+        delete updated[dateKey];
+      }
+      
+      return updated;
+    });
+  };
+
+  const addDateOverride = () => {
+    if (!newDateOverride.date) {
+      addToast('날짜를 선택해주세요.', 'error');
+      return;
+    }
+    setDateOverrides(prev => ({
+      ...prev,
+      [newDateOverride.date]: {
+        start_time: swSettings.start_time,
+        end_time: swSettings.end_time,
+        ...(newDateOverride.no_lunch ? { no_lunch: true } : {
+          lunch_start: newDateOverride.lunch_start || '',
+          lunch_end: newDateOverride.lunch_end || ''
+        })
+      }
+    }));
+    setNewDateOverride({ date: '' });
+  };
+
+  const removeDateOverride = (dateKey) => {
+    setDateOverrides(prev => {
+      const updated = { ...prev };
+      delete updated[dateKey];
       return updated;
     });
   };
@@ -691,7 +754,73 @@ export default function SettingsPage() {
                 </tbody>
               </table>
             </div>
-            <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={handleSaveSettings}>전체 설정 저장</button>
+
+            {/* 날짜별 오버라이드 테이블 */}
+            <div style={{ marginTop: 24, borderTop: '1px solid var(--border-color)', paddingTop: 16 }}>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 10, color: 'var(--text-primary)' }}>🎯 특정 날짜별 운영 시간 설정</div>
+              <p style={{ color: 'var(--text-tertiary)', fontSize: '0.78rem', marginBottom: 12 }}>
+                공휴일, 명절 등 특정 날짜에만 예외적으로 다른 운영 시간을 적용하고 싶을 때 추가하세요. 요일별 설정보다 우선 적용됩니다.
+              </p>
+              
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+                <input
+                  className="form-input"
+                  style={{ width: 140, fontSize: '0.8rem' }}
+                  type="date"
+                  value={newDateOverride.date}
+                  onChange={e => setNewDateOverride(p => ({ ...p, date: e.target.value }))}
+                />
+                <button className="btn btn-secondary btn-sm" onClick={addDateOverride}>+ 날짜 추가</button>
+              </div>
+
+              {Object.keys(dateOverrides).length > 0 && (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--bg-tertiary)' }}>
+                        <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 700, minWidth: 90 }}>날짜</th>
+                        <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 90 }}>시작 시간</th>
+                        <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 90 }}>종료 시간</th>
+                        <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 90 }}>점심 시작</th>
+                        <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 90 }}>점심 종료</th>
+                        <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 60 }}>점심 없음</th>
+                        <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 50 }}>삭제</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(dateOverrides).sort((a, b) => a[0].localeCompare(b[0])).map(([dateKey, ov]) => {
+                        const isNoLunch = ov.no_lunch === true;
+                        return (
+                          <tr key={dateKey} style={{ borderBottom: '1px solid var(--border-color-light)' }}>
+                            <td style={{ padding: '6px', textAlign: 'center', fontWeight: 700, color: 'var(--accent-color)' }}>{dateKey}</td>
+                            <td style={{ padding: '4px 3px' }}>
+                              <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem' }} value={ov.start_time || ''} placeholder={swSettings.start_time} onChange={e => updateDateOverride(dateKey, 'start_time', e.target.value)} />
+                            </td>
+                            <td style={{ padding: '4px 3px' }}>
+                              <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem' }} value={ov.end_time || ''} placeholder={swSettings.end_time} onChange={e => updateDateOverride(dateKey, 'end_time', e.target.value)} />
+                            </td>
+                            <td style={{ padding: '4px 3px' }}>
+                              <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem', opacity: isNoLunch ? 0.3 : 1 }} value={isNoLunch ? '' : (ov.lunch_start || '')} placeholder="12:00" disabled={isNoLunch} onChange={e => updateDateOverride(dateKey, 'lunch_start', e.target.value)} />
+                            </td>
+                            <td style={{ padding: '4px 3px' }}>
+                              <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem', opacity: isNoLunch ? 0.3 : 1 }} value={isNoLunch ? '' : (ov.lunch_end || '')} placeholder="13:00" disabled={isNoLunch} onChange={e => updateDateOverride(dateKey, 'lunch_end', e.target.value)} />
+                            </td>
+                            <td style={{ padding: '4px 3px', textAlign: 'center' }}>
+                              <input type="checkbox" checked={isNoLunch} onChange={e => updateDateOverride(dateKey, 'no_lunch', e.target.checked)} style={{ cursor: 'pointer' }} />
+                            </td>
+                            <td style={{ padding: '4px 3px', textAlign: 'center' }}>
+                              <button className="btn btn-danger btn-sm" style={{ padding: '2px 6px', fontSize: '0.7rem' }} onClick={() => removeDateOverride(dateKey)}>삭제</button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={handleSaveSettings}>전체 설정 저장</button>
           </div>
         </div>
       </div>

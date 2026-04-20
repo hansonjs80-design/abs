@@ -519,8 +519,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const isLastHourSlot = useCallback((dayInfo, slotTime) => {
     if (!slotTime || !settings?.end_time) return false;
 
+    const dateOverride = settings.date_overrides?.[dayInfo.dateStr] || null;
     const dayOverride = settings.day_overrides?.[dayInfo.dow] || {};
-    const effectiveEnd = (dayOverride.end_time || settings.end_time || '18:00:00').slice(0, 5);
+    const effectiveEnd = (dateOverride?.end_time || dayOverride.end_time || settings.end_time || '18:00:00').slice(0, 5);
     const [endHour, endMinute] = effectiveEnd.split(':').map(Number);
     const endTotal = endHour * 60 + endMinute;
     const [slotHour, slotMinute] = String(slotTime).split(':').map(Number);
@@ -563,15 +564,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   const getTimeSlotsForDay = useCallback((dayInfo) => {
     const dow = dayInfo.dow;
+    const dateStr = dayInfo.dateStr;
+    const dateOv = settings?.date_overrides?.[dateStr] || null;
     const dayOv = settings?.day_overrides?.[dow] || {};
-    const dayStart = dayOv.start_time || (settings?.start_time?.substring(0, 5)) || '09:00';
-    const dayEnd = dayOv.end_time || (settings?.end_time?.substring(0, 5)) || '18:00';
+    
+    const dayStart = dateOv?.start_time || dayOv.start_time || (settings?.start_time?.substring(0, 5)) || '09:00';
+    const dayEnd = dateOv?.end_time || dayOv.end_time || (settings?.end_time?.substring(0, 5)) || '18:00';
     
     const skipLunch = !dayInfo.isCurrentMonth || dayInfo.isHoliday;
-    const noLunch = dayOv.no_lunch === true || skipLunch;
+    const noLunch = dateOv?.no_lunch === true || dayOv.no_lunch === true || skipLunch;
     
-    const lunchStart = noLunch ? null : (dayOv.lunch_start || null);
-    const lunchEnd = noLunch ? null : (dayOv.lunch_end || null);
+    const lunchStart = noLunch ? null : (dateOv?.lunch_start || dayOv.lunch_start || null);
+    const lunchEnd = noLunch ? null : (dateOv?.lunch_end || dayOv.lunch_end || null);
 
     const result = [];
     let lunchAdded = false;

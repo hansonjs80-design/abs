@@ -19,6 +19,7 @@ export function ScheduleProvider({ children }) {
     end_time: '18:00:00',
     interval_minutes: 10,
     day_overrides: {},
+    date_overrides: {},
     prescriptions: ['F1.5', 'F/Rdc', 'F/R'],
     manual_therapy_prescriptions: ['40분', '60분'],
     prescription_prices: {
@@ -216,9 +217,10 @@ export function ScheduleProvider({ children }) {
       if (data) {
         setShockwaveSettings({
           start_time: data.start_time,
-          end_time: data.end_time,
+          end_time: data.end_time.substring(0, 5),
           interval_minutes: data.interval_minutes,
           day_overrides: data.day_overrides || {},
+          date_overrides: data.date_overrides || {},
           prescriptions: data.prescriptions || ['F1.5', 'F/Rdc', 'F/R'],
           manual_therapy_prescriptions: data.manual_therapy_prescriptions || ['40분', '60분'],
           prescription_prices: data.prescription_prices || {
@@ -246,6 +248,7 @@ export function ScheduleProvider({ children }) {
         end_time: newSettings.end_time,
         interval_minutes: newSettings.interval_minutes,
         day_overrides: newSettings.day_overrides || {},
+        date_overrides: newSettings.date_overrides || {},
         prescriptions: newSettings.prescriptions || ['F1.5', 'F/Rdc', 'F/R'],
         manual_therapy_prescriptions: newSettings.manual_therapy_prescriptions || ['40분', '60분'],
         prescription_prices: newSettings.prescription_prices || {
