@@ -316,6 +316,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const dayResizeRef = useRef({ active: false, startX: 0, startWidth: 0, factor: 1 });
 
   const tooltipRef = useRef(null);
+  const tooltipMousePosRef = useRef({ x: 0, y: 0 });
   const [hoverData, setHoverData] = useState(null);
   const [chartSelector, setChartSelector] = useState(null);
   const [autoFillDialog, setAutoFillDialog] = useState(null);
@@ -2148,6 +2149,43 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setChartSelector(null);
   }, [chartSelector]);
 
+  const positionTooltip = useCallback((clientX, clientY) => {
+    const tooltipEl = tooltipRef.current;
+    if (!tooltipEl) return;
+
+    const offset = 14;
+    const edgePadding = 8;
+    const { width, height } = tooltipEl.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let left = clientX + offset;
+    let top = clientY + offset;
+
+    if (left + width + edgePadding > viewportWidth) {
+      left = clientX - width - offset;
+    }
+    if (top + height + edgePadding > viewportHeight) {
+      top = clientY - height - offset;
+    }
+
+    left = Math.min(Math.max(edgePadding, left), Math.max(edgePadding, viewportWidth - width - edgePadding));
+    top = Math.min(Math.max(edgePadding, top), Math.max(edgePadding, viewportHeight - height - edgePadding));
+
+    tooltipEl.style.left = `${left}px`;
+    tooltipEl.style.top = `${top}px`;
+    tooltipEl.style.opacity = hoverData ? '1' : '0';
+  }, [hoverData]);
+
+  useEffect(() => {
+    if (!hoverData || !tooltipRef.current) return;
+    const { x, y } = tooltipMousePosRef.current;
+    const rafId = window.requestAnimationFrame(() => {
+      positionTooltip(x, y);
+    });
+    return () => window.cancelAnimationFrame(rafId);
+  }, [hoverData, positionTooltip]);
+
   return (
     <>
       <div 
@@ -2157,11 +2195,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         style={{ outline: 'none' }}
         onMouseLeave={() => setHoverData(null)}
         onMouseMove={(e) => {
-          if (tooltipRef.current) {
-            tooltipRef.current.style.left = `${e.clientX + 14}px`;
-            tooltipRef.current.style.top = `${e.clientY + 14}px`;
-            tooltipRef.current.style.opacity = hoverData ? '1' : '0';
-          }
+          tooltipMousePosRef.current = { x: e.clientX, y: e.clientY };
+          if (tooltipRef.current) positionTooltip(e.clientX, e.clientY);
         }}
       >
       {weeks.map((weekDays, weekIdx) => (
