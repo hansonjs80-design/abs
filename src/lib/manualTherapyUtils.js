@@ -44,6 +44,7 @@ export function parseManualTherapyEntry(rawContent, therapists, fallbackTherapis
 
   let suffixToken = '';
   let visitCount = '';
+  let isNewMarked = false;
   const suffixMatch = rest.match(/(\((-|\d+)\)|\*)\s*$/);
   if (suffixMatch) {
     suffixToken = suffixMatch[1];
@@ -52,6 +53,7 @@ export function parseManualTherapyEntry(rawContent, therapists, fallbackTherapis
       : suffixMatch[2] === '-'
         ? '-'
         : suffixMatch[2];
+    isNewMarked = suffixToken === '*';
     rest = rest.slice(0, rest.length - suffixToken.length).trim();
   }
 
@@ -69,7 +71,7 @@ export function parseManualTherapyEntry(rawContent, therapists, fallbackTherapis
     if (!patientName) continue;
 
     return {
-      patientName,
+      patientName: isNewMarked ? `${patientName}*` : patientName,
       therapistName: therapist.name,
       durationMinutes: match[3],
       durationLabel: `${match[3]}분`,
@@ -85,7 +87,7 @@ export function parseManualTherapyEntry(rawContent, therapists, fallbackTherapis
   if (!patientName) return null;
 
   return {
-    patientName,
+    patientName: isNewMarked ? `${patientName}*` : patientName,
     therapistName: fallbackTherapistName,
     durationMinutes: fallback[2],
     durationLabel: `${fallback[2]}분`,
@@ -129,7 +131,7 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
       patient_name: parsed.patientName,
       chart_number: parsed.chartNumber || '',
       visit_count: parsed.visitCount || '',
-      body_part: '',
+      body_part: cell?.body_part || '',
       therapist_name: parsed.therapistName || therapistName,
       prescription: parsed.durationLabel,
       prescription_count: 1,
