@@ -100,6 +100,18 @@ function buildMergeSpanWithMemoList(mergeSpan, memoList) {
   return nextMergeSpan;
 }
 
+function buildSchedulerCellDisplay(content, mergeSpan) {
+  const mainText = String(content || '').trim();
+  const memoList = getMemoListFromMergeSpan(mergeSpan);
+  const noteText = memoList.join(' / ');
+  const hasDisplayText = Boolean(mainText || noteText);
+  return {
+    mainText,
+    noteText,
+    hasDisplayText,
+  };
+}
+
 function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
   const [localVisit, setLocalVisit] = useState(dlg.visitCount);
   const [localPres, setLocalPres] = useState(dlg.prescription || '');
@@ -2371,6 +2383,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                         const cellData = memos[key];
                         const content = pendingDisplayValues[key] ?? cellData?.content ?? '';
                         const mergeSpan = cellData?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+                        const displayData = buildSchedulerCellDisplay(content, mergeSpan);
                           
                           if (mergeSpan.mergedInto) {
                             continue; // 병합된 하위 셀은 묶어서 렌더링 생략
@@ -2392,7 +2405,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                           if (!dayInfo.isCurrentMonth) cls += ' other-month-bg';
                           else if (dayInfo.isHoliday) cls += ' holiday-bg';
                           
-                          if (slotInfo.disabled && !content) cls += ' disabled';
+                          if (slotInfo.disabled && !displayData.hasDisplayText) cls += ' disabled';
                           
                           if (cellData?.bg_color === '#ffe599') cls += ' preserve';
                           if (has4060Pattern(content)) cls += ' color-4060';
@@ -2452,14 +2465,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 onDoubleClick={() => handleCellDoubleClick(weekIdx, dayIdx, rowIdx, colIdx, content)}
                                 onContextMenu={(e) => {
                                   // 내용이 있을 때만 처방을 설정할 수 있도록 함
-                                  if (content && content.trim() !== '' && content.trim() !== '\u200B') {
+                                  if (displayData.hasDisplayText && content.trim() !== '\u200B') {
                                     handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellData?.prescription);
                                   }
                                 }}
                               >
                                 {!isEditing && (
-                                  <div style={{ pointerEvents: 'none', position: 'absolute', inset: 0, padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    {content}
+                                  <div className="sw-cell-display" style={{ pointerEvents: 'none', position: 'absolute', inset: 0, padding: 4 }}>
+                                    {displayData.mainText ? <span className="sw-cell-main">{displayData.mainText}</span> : null}
+                                    {displayData.noteText ? <span className="sw-cell-note">{displayData.noteText}</span> : null}
                                   </div>
                                 )}
                                 <input
@@ -2539,12 +2553,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 onDoubleClick={() => handleCellDoubleClick(weekIdx, dayIdx, rowIdx, colIdx, content)}
                                 onContextMenu={(e) => {
                                   // 내용이 있을 때만 처방을 설정할 수 있도록 함
-                                  if (content && content.trim() !== '' && content.trim() !== '\u200B') {
+                                  if (displayData.hasDisplayText && content.trim() !== '\u200B') {
                                     handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellData?.prescription);
                                   }
                                 }}
                               >
-                                {content}
+                                <div className="sw-cell-display">
+                                  {displayData.mainText ? <span className="sw-cell-main">{displayData.mainText}</span> : null}
+                                  {displayData.noteText ? <span className="sw-cell-note">{displayData.noteText}</span> : null}
+                                </div>
                               </div>
                             );
                           }
