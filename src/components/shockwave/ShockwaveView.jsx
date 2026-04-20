@@ -122,13 +122,23 @@ function buildSchedulerCellDisplay(content, mergeSpan) {
 function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
   const [localVisit, setLocalVisit] = useState(dlg.visitCount);
   const [localPres, setLocalPres] = useState(dlg.prescription || '');
+  const [localBodySelect, setLocalBodySelect] = useState(() => {
+    const latestParts = Array.isArray(dlg.initialBodyParts)
+      ? dlg.initialBodyParts
+      : splitBodyParts(dlg.initialBodyPart || dlg.latestBodyPart);
+    return latestParts[0] || '';
+  });
   const [localBodyChecked, setLocalBodyChecked] = useState(() => {
-    const latestParts = splitBodyParts(dlg.initialBodyPart || dlg.latestBodyPart);
+    const latestParts = Array.isArray(dlg.initialBodyParts)
+      ? dlg.initialBodyParts
+      : splitBodyParts(dlg.initialBodyPart || dlg.latestBodyPart);
     return dlg.bodyParts.map(bp => ({
       name: bp,
       checked: latestParts.includes(bp),
     }));
   });
+  const [localMemoList, setLocalMemoList] = useState(() => Array.isArray(dlg.initialMemoList) ? dlg.initialMemoList : []);
+  const [newMemo, setNewMemo] = useState('');
   const [newBodyPart, setNewBodyPart] = useState('');
 
   const getVisitFromSelectedParts = useCallback((selectedParts) => {
@@ -149,8 +159,9 @@ function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
       visitCount: localVisit,
       prescription: localPres || undefined,
       bodyPart: selectedParts.join(', ') || undefined,
+      memoList: localMemoList,
     });
-  }, [localBodyChecked, onConfirm, dlg, localVisit, localPres]);
+  }, [localBodyChecked, onConfirm, dlg, localVisit, localMemoList, localPres]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -171,76 +182,111 @@ function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
 
   return (
     <div className="shockwave-chart-selector-backdrop" onMouseDown={() => onCancel()}>
-      <div className="shockwave-chart-selector" style={{ minWidth: '340px' }} onMouseDown={(e) => e.stopPropagation()}>
-        <div className="shockwave-chart-selector-title">환자 정보 확인</div>
-        <div className="shockwave-chart-selector-subtitle" style={{ marginBottom: '12px' }}>
-          <strong>{dlg.chartNumber}</strong> / {dlg.cleanName}
+      <div className="shockwave-chart-selector shockwave-chart-selector--compact" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="shockwave-chart-selector-head">
+          <div className="shockwave-chart-selector-title">환자 정보 확인</div>
+          <div className="shockwave-chart-selector-badge">{getSchedulerHistoryTypeLabel(dlg)}</div>
         </div>
-        <div style={{ marginBottom: '10px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          {getSchedulerHistoryTypeLabel(dlg)}
-        </div>
-
-        <div style={{ marginBottom: '10px' }}>
-          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '4px' }}>회차</label>
-          <input
-            type="number"
-            value={localVisit}
-            onChange={(e) => setLocalVisit(parseInt(e.target.value, 10) || 1)}
-            min={1}
-            style={{ width: '80px', padding: '5px 8px', fontSize: '0.9rem', fontWeight: 700, border: '1px solid var(--border-color)', borderRadius: '4px', textAlign: 'center' }}
-          />
+        <div className="shockwave-chart-selector-subtitle shockwave-chart-selector-subtitle--compact">
+          <strong>{dlg.chartNumber}</strong>
+          <span>{dlg.cleanName}</span>
         </div>
 
-        <div style={{ marginBottom: '10px' }}>
-          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '4px' }}>처방</label>
-          <select
-            value={localPres}
-            onChange={(e) => setLocalPres(e.target.value)}
-            style={{ width: '100%', padding: '5px 8px', fontSize: '0.85rem', fontWeight: 600, border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--bg-input, #fff)', cursor: 'pointer' }}
-          >
-            <option value="">처방 없음</option>
-            {dlg.settings?.prescriptions?.map(pres => (
-              <option key={pres} value={pres}>{pres}</option>
-            ))}
-          </select>
+        <div className="shockwave-chart-selector-grid">
+          <div className="shockwave-chart-selector-field">
+            <label className="shockwave-chart-selector-label">회차</label>
+            <input
+              type="number"
+              value={localVisit}
+              onChange={(e) => setLocalVisit(parseInt(e.target.value, 10) || 1)}
+              min={1}
+              className="shockwave-chart-selector-input shockwave-chart-selector-input--visit"
+            />
+          </div>
+
+          <div className="shockwave-chart-selector-field">
+            <label className="shockwave-chart-selector-label">처방</label>
+            <select
+              value={localPres}
+              onChange={(e) => setLocalPres(e.target.value)}
+              className="shockwave-chart-selector-select"
+            >
+              <option value="">처방 없음</option>
+              {dlg.settings?.prescriptions?.map(pres => (
+                <option key={pres} value={pres}>{pres}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <div style={{ marginBottom: '10px' }}>
-          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '4px' }}>부위</label>
+        <div className="shockwave-chart-selector-field shockwave-chart-selector-field--body">
+          <label className="shockwave-chart-selector-label">부위</label>
+          {dlg.bodyParts.length > 0 ? (
+            <div className="shockwave-chart-selector-dropdown-row">
+              <select
+                value={localBodySelect}
+                onChange={(e) => setLocalBodySelect(e.target.value)}
+                className="shockwave-chart-selector-select"
+              >
+                <option value="">이전 부위 선택</option>
+                {dlg.bodyParts.map((part) => (
+                  <option key={part} value={part}>{part}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="shockwave-chart-selector-add"
+                onClick={() => {
+                  if (!localBodySelect) return;
+                  setLocalBodyChecked((prev) => {
+                    const existingIndex = prev.findIndex((item) => normalizeBodyPartKey(item.name) === normalizeBodyPartKey(localBodySelect));
+                    const next = existingIndex >= 0
+                      ? prev.map((item, index) => index === existingIndex ? { ...item, checked: true } : item)
+                      : [...prev, { name: localBodySelect, checked: true }];
+                    const nextVisit = getVisitFromSelectedParts([localBodySelect]);
+                    if (nextVisit) setLocalVisit(nextVisit);
+                    return next;
+                  });
+                }}
+              >적용</button>
+            </div>
+          ) : null}
           {localBodyChecked.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div className="shockwave-chart-selector-body-list">
               {localBodyChecked.map((bp, idx) => (
-                <label key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={bp.checked}
-                    onChange={() => {
-                      setLocalBodyChecked((prev) => {
-                        const next = prev.map((item, i) => i === idx ? { ...item, checked: !item.checked } : item);
-                        const selectedParts = next.filter((item) => item.checked).map((item) => item.name);
-                        const nextVisit = getVisitFromSelectedParts(selectedParts);
-                        if (nextVisit) setLocalVisit(nextVisit);
-                        return next;
-                      });
-                    }}
-                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                  />
-                  {bp.name}
+                <label key={idx} className={`shockwave-chart-selector-body-item${bp.checked ? ' is-checked' : ''}`}>
+                  <span className="shockwave-chart-selector-body-toggle">
+                    <input
+                      type="checkbox"
+                      checked={bp.checked}
+                      onChange={() => {
+                        setLocalBodyChecked((prev) => {
+                          const next = prev.map((item, i) => i === idx ? { ...item, checked: !item.checked } : item);
+                          const selectedParts = next.filter((item) => item.checked).map((item) => item.name);
+                          const nextVisit = getVisitFromSelectedParts(selectedParts);
+                          if (nextVisit) setLocalVisit(nextVisit);
+                          return next;
+                        });
+                      }}
+                    />
+                    <span>{bp.name}</span>
+                  </span>
                   <button
                     type="button"
-                    style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.9rem', padding: '0 4px' }}
+                    className="shockwave-chart-selector-remove"
                     onClick={() => setLocalBodyChecked(prev => prev.filter((_, i) => i !== idx))}
-                  >×</button>
+                  >삭제</button>
                 </label>
               ))}
             </div>
           ) : (
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>기록된 부위가 없습니다</div>
+            <div className="shockwave-chart-selector-empty">기록된 부위가 없습니다</div>
           )}
-          <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
+
+          <div className="shockwave-chart-selector-add-row">
             <input
               type="text"
-              placeholder="새 부위 추가..."
+              placeholder="새 부위 추가"
               value={newBodyPart}
               onChange={(e) => setNewBodyPart(e.target.value)}
               onKeyDown={(e) => {
@@ -257,10 +303,11 @@ function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
                   setNewBodyPart('');
                 }
               }}
-              style={{ flex: 1, padding: '4px 8px', fontSize: '0.8rem', border: '1px solid var(--border-color)', borderRadius: '4px' }}
+              className="shockwave-chart-selector-input"
             />
             <button
               type="button"
+              className="shockwave-chart-selector-add"
               onClick={() => {
                 if (newBodyPart.trim()) {
                   const nextPart = formatBodyPartInput(newBodyPart);
@@ -274,16 +321,68 @@ function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
                   setNewBodyPart('');
                 }
               }}
-              style={{ padding: '4px 10px', fontSize: '0.8rem', fontWeight: 700, border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--bg-tertiary)', cursor: 'pointer' }}
-            >+</button>
+            >추가</button>
           </div>
         </div>
 
-        <div className="shockwave-chart-selector-actions" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+        <div className="shockwave-chart-selector-field shockwave-chart-selector-field--body">
+          <label className="shockwave-chart-selector-label">메모</label>
+          {localMemoList.length > 0 ? (
+            <div className="shockwave-chart-selector-note-list">
+              {localMemoList.map((item, index) => (
+                <div key={`${index}-${item}`} className="shockwave-chart-selector-note-row">
+                  <input
+                    type="text"
+                    value={item}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setLocalMemoList((prev) => prev.map((memo, memoIndex) => memoIndex === index ? value : memo));
+                    }}
+                    className="shockwave-chart-selector-input"
+                  />
+                  <button
+                    type="button"
+                    className="shockwave-chart-selector-remove"
+                    onClick={() => setLocalMemoList((prev) => prev.filter((_, memoIndex) => memoIndex !== index))}
+                  >삭제</button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="shockwave-chart-selector-empty">전화번호, 주의사항 등을 메모로 남길 수 있습니다</div>
+          )}
+          <div className="shockwave-chart-selector-add-row">
+            <input
+              type="text"
+              placeholder="메모 추가"
+              value={newMemo}
+              onChange={(e) => setNewMemo(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newMemo.trim()) {
+                  e.preventDefault();
+                  setLocalMemoList((prev) => [...prev, newMemo.trim()]);
+                  setNewMemo('');
+                }
+              }}
+              className="shockwave-chart-selector-input"
+            />
+            <button
+              type="button"
+              className="shockwave-chart-selector-add"
+              onClick={() => {
+                if (!newMemo.trim()) return;
+                setLocalMemoList((prev) => [...prev, newMemo.trim()]);
+                setNewMemo('');
+              }}
+            >추가</button>
+          </div>
+        </div>
+
+        <div className="shockwave-chart-selector-actions shockwave-chart-selector-actions--compact">
           <button type="button" className="shockwave-chart-selector-cancel" onClick={() => onCancel()}>취소</button>
           <button
             type="button"
-            style={{ padding: '8px 16px', fontSize: '0.85rem', fontWeight: 700, border: 'none', borderRadius: '8px', background: 'var(--brand-primary, #4285f4)', color: '#fff', cursor: 'pointer' }}
+            className="shockwave-chart-selector-confirm"
             onClick={handleConfirm}
           >확인</button>
         </div>
@@ -334,6 +433,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [contextMenu, setContextMenu] = useState(null); // { x, y, weekIdx, dayIdx, rowIdx, colIdx, currentPrescription }
   const [contextMenuBodyInput, setContextMenuBodyInput] = useState('');
   const [contextMenuNoteInput, setContextMenuNoteInput] = useState('');
+  const [contextMenuBodySelect, setContextMenuBodySelect] = useState('');
+  const [contextMenuMemoDrafts, setContextMenuMemoDrafts] = useState([]);
 
   useEffect(() => {
     selectedCellRef.current = selectedCell;
@@ -676,9 +777,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           addBodyPartToMap(candidate.bodyPartsMap, part);
           const normalizedPartKey = normalizeBodyPartKey(part);
           const itemVisit = parseInt(item.visit_count || '0', 10) || 0;
-          const nextVisit = item.date === targetDate
-            ? (itemVisit || 1)
-            : (itemVisit > 0 ? itemVisit + 1 : 1);
+          const nextVisit = itemVisit > 0 ? itemVisit + 1 : 1;
           const existingVisitInfo = candidate.bodyPartVisitMap.get(normalizedPartKey);
           if (
             !existingVisitInfo ||
@@ -703,7 +802,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const item = candidate.latestItem;
       const chartNumber = candidate.chartNumber;
       const lastVisit = parseInt(item.visit_count || '0', 10) || 0;
-      const nextVisit = (item.date === targetDate) ? (lastVisit || 1) : (lastVisit > 0 ? lastVisit + 1 : 1);
+      const nextVisit = lastVisit > 0 ? lastVisit + 1 : 1;
       const cleanPatientName = String(item.patient_name).replace(/\*/g, '').trim();
       const namePart = item.type === 'manual'
         ? buildManualNamePart(cleanPatientName, item.prescription)
@@ -726,6 +825,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         prescriptions,
         bodyParts: Array.from(candidate.bodyPartsMap.values()),
         latestBodyPart,
+        initialBodyParts: splitBodyParts(latestBodyPart),
         type: item.type,
         doseTag: candidate.doseTag,
         bodyPartVisitMap,
@@ -751,6 +851,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       ? selected.preferredNextVisit
       : selected.nextVisit;
     const effectiveBodyPart = selected.preferredBodyPart || selected.latestBodyPart || undefined;
+    const inheritedMergeSpan = findLatestSchedulerMemoMeta(
+      { w, d, r, c },
+      selected.chartNumber,
+      selected.cleanName
+    );
     const needsDialog = (selected.bodyParts.length >= 2 && !selected.preferredBodyPart) || selected.prescriptions.length >= 2;
     if (needsDialog) {
       try {
@@ -764,6 +869,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           latestBodyPart: selected.latestBodyPart,
           initialBodyPart: selected.preferredBodyPart,
           bodyPartVisitMap: selected.bodyPartVisitMap,
+          initialMemoList: getMemoListFromMergeSpan(inheritedMergeSpan),
           type: selected.type,
           doseTag: selected.doseTag,
           settings,
@@ -771,17 +877,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
         if (!dialogResult) return { text: rawName };
 
-        const inheritedMergeSpan = findLatestSchedulerMemoMeta(
-          { w, d, r, c },
-          dialogResult.chartNumber,
-          selected.cleanName
-        );
-
         return {
           text: `${dialogResult.chartNumber}/${dialogResult.namePart}(${dialogResult.visitCount})`,
           prescription: dialogResult.prescription,
           bodyPart: dialogResult.bodyPart,
-          mergeSpan: inheritedMergeSpan,
+          mergeSpan: buildMergeSpanWithMemoList(inheritedMergeSpan, dialogResult.memoList),
         };
       } catch (err) {
         console.error('autoFillDialog error:', err);
@@ -790,11 +890,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     }
 
     // 부위가 0~1개: 다이얼로그 없이 바로 자동완성
-    const inheritedMergeSpan = findLatestSchedulerMemoMeta(
-      { w, d, r, c },
-      selected.chartNumber,
-      selected.cleanName
-    );
     return {
       text: `${selected.chartNumber}/${selected.namePart}(${effectiveVisitCount})`,
       prescription: selected.prescription || undefined,
@@ -1094,6 +1189,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const key = cellKey(w, d, r, c);
     setContextMenuBodyInput(memos[key]?.body_part || '');
     setContextMenuNoteInput('');
+    setContextMenuBodySelect('');
+    setContextMenuMemoDrafts(getMemoListFromMergeSpan(memos[key]?.merge_span));
     setContextMenu({
       x: e.clientX,
       y: e.clientY,
@@ -1129,6 +1226,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (!contextMenu) {
       setContextMenuBodyInput('');
       setContextMenuNoteInput('');
+      setContextMenuBodySelect('');
+      setContextMenuMemoDrafts([]);
     }
   }, [contextMenu]);
 
@@ -1940,6 +2039,22 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       if (anyChanged) addToast('메모가 삭제되었습니다.', 'success');
       return;
     }
+    else if (action?.type === 'memoUpdate') {
+      const keys = Array.from(selectedKeys || []);
+      let anyChanged = false;
+      const nextValue = String(action.value || '').trim();
+      for (const key of keys) {
+        const [w, d, r, c] = key.split('-').map(Number);
+        const memo = memos[key] || {};
+        const memoList = getMemoListFromMergeSpan(memo.merge_span);
+        const nextMemoList = memoList.map((item, index) => index === action.index ? nextValue : item).filter(Boolean);
+        const nextMergeSpan = buildMergeSpanWithMemoList(memo.merge_span, nextMemoList);
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part);
+        if (success) anyChanged = true;
+      }
+      if (anyChanged) addToast('메모가 수정되었습니다.', 'success');
+      return;
+    }
     setContextMenu(null);
   }, [selectedKeys, memos, currentYear, currentMonth, onSaveMemo, addToast, handleCopySelection, handleCutSelection, handlePasteSelection, handleMarkTreatmentComplete, handleClearTreatmentComplete, tryMergeSelection]);
 
@@ -1950,6 +2065,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setContextMenuBodyInput('');
     return true;
   }, [contextMenuBodyInput, handleContextAction]);
+
+  const submitContextMenuBodySelect = useCallback(() => {
+    const val = contextMenuBodySelect.trim();
+    if (!val) return false;
+    handleContextAction({ type: 'bodyPartAdd', value: val });
+    setContextMenuBodySelect('');
+    return true;
+  }, [contextMenuBodySelect, handleContextAction]);
 
   const submitContextMenuNoteInput = useCallback(() => {
     const val = contextMenuNoteInput.trim();
@@ -2753,7 +2876,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                 <div className="context-menu-editor-panel">
                   <div className="context-menu-sheet">
                     <div className="context-menu-sheet-row">
-                      <div className="context-menu-sheet-label">처방 지정</div>
+                      <div className="context-menu-sheet-label">처방</div>
                       <div className="context-menu-sheet-cell">
                         <div className="context-menu-prescription-row">
                           {previousPrescriptionValue ? (
@@ -2781,6 +2904,36 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                     <div className="context-menu-sheet-row context-menu-sheet-row-body">
                       <div className="context-menu-sheet-label">부위</div>
                       <div className="context-menu-sheet-cell">
+                        {availableParts.length > 0 ? (
+                          <div className="context-menu-dropdown-row">
+                            <select
+                              className="context-menu-select"
+                              value={contextMenuBodySelect}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                setContextMenuBodySelect(e.target.value);
+                              }}
+                              onMouseDown={e => e.stopPropagation()}
+                              onClick={e => e.stopPropagation()}
+                            >
+                              <option value="">이전 부위 선택</option>
+                              {availableParts.map((part) => (
+                                <option key={part} value={part}>{part}</option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              className="context-menu-inline-button"
+                              onMouseDown={e => e.stopPropagation()}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                submitContextMenuBodySelect();
+                              }}
+                            >
+                              적용
+                            </button>
+                          </div>
+                        ) : null}
                         {currentParts.length > 0 ? (
                           <div className="context-menu-body-tags">
                             {currentParts.map((part, index) => (
@@ -2801,30 +2954,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             ))}
                           </div>
                         ) : null}
-                        {availableParts.length > 0 ? (
-                          <div className="context-menu-checklist">
-                            {availableParts.map((part, idx) => {
-                              const isChecked = currentParts.some((p) => normalizeBodyPartKey(p) === normalizeBodyPartKey(part));
-                              return (
-                                <label key={idx} className="context-menu-check-item">
-                                  <input
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    onChange={(e) => {
-                                      e.stopPropagation();
-                                      handleContextAction({ type: 'bodyPartToggle', value: part });
-                                    }}
-                                    onMouseDown={e => e.stopPropagation()}
-                                    onClick={e => e.stopPropagation()}
-                                  />
-                                  <span>{part}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        ) : (
+                        {availableParts.length === 0 && currentParts.length === 0 ? (
                           <div className="context-menu-empty">등록된 부위가 없습니다.</div>
-                        )}
+                        ) : null}
                         <div className="context-menu-input-row">
                           <input
                             type="text"
@@ -2868,13 +3000,28 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                     </div>
 
                     <div className="context-menu-sheet-row context-menu-sheet-row-note">
-                      <div className="context-menu-sheet-label">메모 목록</div>
+                      <div className="context-menu-sheet-label">메모</div>
                       <div className="context-menu-sheet-cell">
-                        {currentMemoList.length > 0 ? (
+                        {contextMenuMemoDrafts.length > 0 ? (
                           <div className="context-menu-note-list">
-                            {currentMemoList.map((item, index) => (
-                              <div key={`${item}-${index}`} className="context-menu-note-item">
-                                <span>{item}</span>
+                            {contextMenuMemoDrafts.map((item, index) => (
+                              <div key={`${index}-${item}`} className="context-menu-note-item">
+                                <input
+                                  type="text"
+                                  className="context-menu-input context-menu-input--memo"
+                                  value={item}
+                                  onChange={(e) => {
+                                    e.stopPropagation();
+                                    const value = e.target.value;
+                                    setContextMenuMemoDrafts((prev) => prev.map((memo, memoIndex) => memoIndex === index ? value : memo));
+                                  }}
+                                  onBlur={(e) => {
+                                    e.stopPropagation();
+                                    handleContextAction({ type: 'memoUpdate', index, value: e.target.value });
+                                  }}
+                                  onMouseDown={e => e.stopPropagation()}
+                                  onClick={e => e.stopPropagation()}
+                                />
                                 <button
                                   type="button"
                                   className="context-menu-note-remove"
@@ -2889,9 +3036,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               </div>
                             ))}
                           </div>
-                        ) : (
+                        ) : currentMemoList.length === 0 ? (
                           <div className="context-menu-empty">전화번호, 주의사항 등을 메모로 남길 수 있습니다.</div>
-                        )}
+                        ) : null}
                         <div className="context-menu-input-row">
                           <input
                             type="text"
