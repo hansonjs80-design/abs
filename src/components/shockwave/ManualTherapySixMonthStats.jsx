@@ -1,14 +1,23 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
-export default function ManualTherapySixMonthStats({ 
-  currentYear, currentMonth, 
+export default function ManualTherapySixMonthStats({
+  currentYear,
+  currentMonth,
   therapists,
   prescriptionPrices,
-  incentivePercentage
+  incentivePercentage,
 }) {
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const safeTherapists = useMemo(
+    () => (Array.isArray(therapists) ? therapists.filter((item) => item?.name) : []),
+    [therapists]
+  );
+  const safePriceEntries = useMemo(
+    () => (prescriptionPrices && typeof prescriptionPrices === 'object' && !Array.isArray(prescriptionPrices) ? prescriptionPrices : {}),
+    [prescriptionPrices]
+  );
 
   useEffect(() => {
     async function fetchSixMonths() {
@@ -28,9 +37,10 @@ export default function ManualTherapySixMonthStats({
           .order('date', { ascending: true });
 
         if (error) throw error;
-        setLogs(data || []);
+        setLogs(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error(err);
+        setLogs([]);
       } finally {
         setIsLoading(false);
       }
@@ -40,110 +50,104 @@ export default function ManualTherapySixMonthStats({
 
   const monthKeys = useMemo(() => {
     const keys = [];
-    for (let i = 5; i >= 0; i--) {
+    for (let i = 5; i >= 0; i -= 1) {
       const d = new Date(currentYear, currentMonth - 1 - i, 1);
       keys.push({
         key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-        label: `${d.getMonth() + 1}월`
+        label: `${d.getMonth() + 1}월`,
       });
     }
     return keys;
   }, [currentYear, currentMonth]);
 
   const stats = useMemo(() => {
-    const safeTherapists = Array.isArray(therapists) ? therapists.filter(t => t?.name) : [];
+    const price40 = Number(safePriceEntries['40분']) || 0;
+    const price60 = Number(safePriceEntries['60분']) || 0;
     const map = {};
     const totals = {};
 
-    monthKeys.forEach(m => {
-      totals[m.key] = { count: 0, newPatient: 0, amount: 0, count40: 0, count60: 0 };
+    monthKeys.forEach((month) => {
+      totals[month.key] = { count: 0, newPatient: 0, amount: 0 };
     });
 
-    safeTherapists.forEach(t => {
-      map[t.name] = { totalCount: 0, totalNew: 0, totalAmount: 0 };
-      monthKeys.forEach(m => {
-        map[t.name][m.key] = { count: 0, newPatient: 0, amount: 0, count40: 0, count60: 0 };
+    safeTherapists.forEach((therapist) => {
+      map[therapist.name] = { totalCount: 0, totalNew: 0, totalAmount: 0 };
+      monthKeys.forEach((month) => {
+        map[therapist.name][month.key] = { count: 0, newPatient: 0, amount: 0 };
       });
     });
 
-    logs.forEach(log => {
-      const d = new Date(log.date);
-      const mKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const tName = log.therapist_name;
-      
-      const is40 = String(log.prescription || '').includes('40');
-      const is60 = String(log.prescription || '').includes('60');
-      const isNew = log.patient_name?.includes('*');
-      
-      const p40 = prescriptionPrices?.['40분'] || 0;
-      const p60 = prescriptionPrices?.['60분'] || 0;
-      let amt = 0;
-      if (is40) amt += p40;
-      if (is60) amt += p60;
+    logs.forEach((log) => {
+      const date = new Date(log.date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const therapistName = log.therapist_name;
+      const isNew = String(log.patient_name || '').includes('*');
+      const count = Number.parseInt(String(log.prescription_count ?? '1'), 10) || 1;
+      let amount = 0;
+      if (String(log.prescription || '').includes('40')) amount += price40 * count;
+      if (String(log.prescription || '').includes('60')) amount += price60 * count;
 
-      if (map[tName] && map[tName][mKey]) {
-        map[tName][mKey].count += 1;
-        if (isNew) map[tName][mKey].newPatient += 1;
-        if (is40) map[tName][mKey].count40 += 1;
-        if (is60) map[tName][mKey].count60 += 1;
-        map[tName][mKey].amount += amt;
-
-        map[tName].totalCount += 1;
-        if (isNew) map[tName].totalNew += 1;
-        map[tName].totalAmount += amt;
+      if (map[therapistName]?.[monthKey]) {
+        map[therapistName][monthKey].count += count;
+        if (isNew) map[therapistName][monthKey].newPatient += 1;
+        map[therapistName][monthKey].amount += amount;
+        map[therapistName].totalCount += count;
+        if (isNew) map[therapistName].totalNew += 1;
+        map[therapistName].totalAmount += amount;
       }
 
-      if (totals[mKey]) {
-        totals[mKey].count += 1;
-        if (isNew) totals[mKey].newPatient += 1;
-        if (is40) totals[mKey].count40 += 1;
-        if (is60) totals[mKey].count60 += 1;
-        totals[mKey].amount += amt;
+      if (totals[monthKey]) {
+        totals[monthKey].count += count;
+        if (isNew) totals[monthKey].newPatient += 1;
+        totals[monthKey].amount += amount;
       }
     });
-    return { map, totals };
-  }, [logs, monthKeys, therapists, prescriptionPrices]);
 
-  const { map, totals } = stats;
+    return { map, totals };
+  }, [logs, monthKeys, safeTherapists, safePriceEntries]);
+
+  const safeTherapistNames = useMemo(() => Object.keys(stats.map), [stats.map]);
 
   return (
-    <div className="section-container" style={{ marginTop: '24px' }}>
-      <h3 className="section-title">
-        최근 6개월 도수치료 결산 / 신환 현황
-        {isLoading && <span style={{ fontSize: '14px', color: '#666', marginLeft: '12px' }}>(불러오는 중...)</span>}
-      </h3>
-      
-      <div className="table-responsive">
-        <table className="stats-table">
+    <div className="sw-settlement-card">
+      <div className="sw-settlement-header">
+        <h2>최근 6개월 도수치료 결산 / 신환 현황</h2>
+        <div className="sw-settlement-meta">
+          {isLoading ? <span>불러오는 중...</span> : <span>치료사 {safeTherapistNames.length}명</span>}
+        </div>
+      </div>
+
+      <div className="sw-settlement-table-wrap">
+        <table className="sw-summary-table">
           <thead>
             <tr>
-              <th rowSpan={2} style={{ width: '120px' }}>치료사</th>
-              {monthKeys.map(m => (
-                <th key={m.key} colSpan={2}>{m.label}</th>
+              <th rowSpan={2}>치료사</th>
+              {monthKeys.map((month) => (
+                <th key={month.key} colSpan={2}>{month.label}</th>
               ))}
-              <th colSpan={2} style={{ backgroundColor: 'var(--bg-highlight)' }}>총계 (6개월)</th>
+              <th colSpan={2}>총계 (6개월)</th>
             </tr>
             <tr>
-              {monthKeys.map(m => (
-                <React.Fragment key={m.key + '-sub'}>
-                  <th style={{ fontSize: '13px', fontWeight: 'normal' }}>건수 (신환)</th>
-                  <th style={{ fontSize: '13px', fontWeight: 'normal' }}>인센티브</th>
+              {monthKeys.map((month) => (
+                <React.Fragment key={`${month.key}-sub`}>
+                  <th>건수 (신환)</th>
+                  <th>인센티브</th>
                 </React.Fragment>
               ))}
-              <th style={{ fontSize: '13px', fontWeight: 'normal', backgroundColor: 'var(--bg-highlight)' }}>건수 (신환)</th>
-              <th style={{ fontSize: '13px', fontWeight: 'normal', backgroundColor: 'var(--bg-highlight)' }}>인센티브</th>
+              <th>건수 (신환)</th>
+              <th>인센티브</th>
             </tr>
           </thead>
           <tbody>
-            {Object.keys(map).map(tName => (
-              <tr key={tName}>
-                <td style={{ fontWeight: '600' }}>{tName}</td>
-                {monthKeys.map(m => {
-                  const data = map[tName][m.key];
-                  const inc = Math.floor(data.amount * (incentivePercentage / 100));
+            {safeTherapistNames.map((therapistName) => (
+              <tr key={therapistName}>
+                <th className="month-label">{therapistName}</th>
+                {monthKeys.map((month) => {
+                  const data = stats.map[therapistName][month.key];
+                  const incentive = Math.floor(data.amount * ((Number(incentivePercentage) || 0) / 100));
                   return (
-                    <React.Fragment key={m.key}>
-                      <td style={{ textAlign: 'center' }}>
+                    <React.Fragment key={`${therapistName}-${month.key}`}>
+                      <td>
                         {data.count > 0 ? (
                           <>
                             {data.count}
@@ -151,33 +155,33 @@ export default function ManualTherapySixMonthStats({
                           </>
                         ) : '-'}
                       </td>
-                      <td style={{ textAlign: 'right', color: 'var(--status-blue)' }}>
-                        {inc > 0 ? inc.toLocaleString() : '-'}
-                      </td>
+                      <td className="amount">{incentive > 0 ? incentive.toLocaleString() : '-'}</td>
                     </React.Fragment>
                   );
                 })}
-                <td style={{ textAlign: 'center', backgroundColor: 'var(--bg-highlight)', fontWeight: 'bold' }}>
-                  {map[tName].totalCount > 0 ? (
+                <td>
+                  {stats.map[therapistName].totalCount > 0 ? (
                     <>
-                      {map[tName].totalCount}
-                      {map[tName].totalNew > 0 && <span style={{ color: 'var(--status-red)', marginLeft: '4px', fontSize: '12px' }}>({map[tName].totalNew})</span>}
+                      {stats.map[therapistName].totalCount}
+                      {stats.map[therapistName].totalNew > 0 && <span style={{ color: 'var(--status-red)', marginLeft: '4px', fontSize: '12px' }}>({stats.map[therapistName].totalNew})</span>}
                     </>
                   ) : '-'}
                 </td>
-                <td style={{ textAlign: 'right', backgroundColor: 'var(--bg-highlight)', fontWeight: 'bold', color: 'var(--status-blue)' }}>
-                  {map[tName].totalAmount > 0 ? Math.floor(map[tName].totalAmount * (incentivePercentage / 100)).toLocaleString() : '-'}
+                <td className="amount">
+                  {stats.map[therapistName].totalAmount > 0
+                    ? Math.floor(stats.map[therapistName].totalAmount * ((Number(incentivePercentage) || 0) / 100)).toLocaleString()
+                    : '-'}
                 </td>
               </tr>
             ))}
-            <tr style={{ backgroundColor: 'var(--bg-secondary)', fontWeight: 'bold' }}>
-              <td>전체 합계</td>
-              {monthKeys.map(m => {
-                const data = totals[m.key];
-                const inc = Math.floor(data.amount * (incentivePercentage / 100));
+            <tr>
+              <th className="month-label">전체 합계</th>
+              {monthKeys.map((month) => {
+                const data = stats.totals[month.key];
+                const incentive = Math.floor(data.amount * ((Number(incentivePercentage) || 0) / 100));
                 return (
-                  <React.Fragment key={m.key}>
-                    <td style={{ textAlign: 'center' }}>
+                  <React.Fragment key={`total-${month.key}`}>
+                    <td>
                       {data.count > 0 ? (
                         <>
                           {data.count}
@@ -185,24 +189,25 @@ export default function ManualTherapySixMonthStats({
                         </>
                       ) : '-'}
                     </td>
-                    <td style={{ textAlign: 'right', color: 'var(--status-blue)' }}>
-                      {inc > 0 ? inc.toLocaleString() : '-'}
-                    </td>
+                    <td className="amount">{incentive > 0 ? incentive.toLocaleString() : '-'}</td>
                   </React.Fragment>
                 );
               })}
-              <td style={{ textAlign: 'center', backgroundColor: 'var(--bg-highlight)' }}>
-                {Object.values(map).reduce((sum, t) => sum + t.totalCount, 0) > 0 ? (
+              <td>
+                {safeTherapistNames.reduce((sum, name) => sum + stats.map[name].totalCount, 0) > 0 ? (
                   <>
-                    {Object.values(map).reduce((sum, t) => sum + t.totalCount, 0)}
+                    {safeTherapistNames.reduce((sum, name) => sum + stats.map[name].totalCount, 0)}
                     <span style={{ color: 'var(--status-red)', marginLeft: '4px', fontSize: '12px' }}>
-                      ({Object.values(map).reduce((sum, t) => sum + t.totalNew, 0)})
+                      ({safeTherapistNames.reduce((sum, name) => sum + stats.map[name].totalNew, 0)})
                     </span>
                   </>
                 ) : '-'}
               </td>
-              <td style={{ textAlign: 'right', backgroundColor: 'var(--bg-highlight)', color: 'var(--status-blue)' }}>
-                {Math.floor(Object.values(map).reduce((sum, t) => sum + t.totalAmount, 0) * (incentivePercentage / 100)).toLocaleString()}
+              <td className="amount">
+                {Math.floor(
+                  safeTherapistNames.reduce((sum, name) => sum + stats.map[name].totalAmount, 0) *
+                    ((Number(incentivePercentage) || 0) / 100)
+                ).toLocaleString()}
               </td>
             </tr>
           </tbody>

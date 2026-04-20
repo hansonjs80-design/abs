@@ -115,37 +115,42 @@ export default function ShockwaveNewPatientsView({
           <table className="sw-new-patient-table">
             <thead>
               <tr>
-                {summary.byTherapist.map((item) => (
-                  <th key={item.therapist.id || item.therapist.name} colSpan={4} className="therapist-col">
+                {summary.byTherapist.map((item, therapistIndex) => (
+                  <th
+                    key={item.therapist.id || item.therapist.name}
+                    colSpan={4}
+                    className={`therapist-col ${therapistIndex % 2 === 0 ? 'therapist-tone-a' : 'therapist-tone-b'} ${therapistIndex > 0 ? 'therapist-group-start' : ''}`}
+                  >
                     {item.therapist.name} ({item.totalCount}명)
                   </th>
                 ))}
               </tr>
               <tr>
-                {summary.byTherapist.flatMap((item) => ([
-                  <th key={`${item.therapist.id || item.therapist.name}-date`} className="sub-col">날짜</th>,
-                  <th key={`${item.therapist.id || item.therapist.name}-name`} className="sub-col">이름</th>,
-                  <th key={`${item.therapist.id || item.therapist.name}-body`} className="sub-col">부위</th>,
-                  <th key={`${item.therapist.id || item.therapist.name}-visit`} className="sub-col">회차</th>,
+                {summary.byTherapist.flatMap((item, therapistIndex) => ([
+                  <th key={`${item.therapist.id || item.therapist.name}-date`} className={`sub-col ${therapistIndex % 2 === 0 ? 'therapist-tone-a-sub' : 'therapist-tone-b-sub'} ${therapistIndex > 0 ? 'therapist-group-start' : ''}`}>날짜</th>,
+                  <th key={`${item.therapist.id || item.therapist.name}-name`} className={`sub-col ${therapistIndex % 2 === 0 ? 'therapist-tone-a-sub' : 'therapist-tone-b-sub'}`}>이름</th>,
+                  <th key={`${item.therapist.id || item.therapist.name}-body`} className={`sub-col ${therapistIndex % 2 === 0 ? 'therapist-tone-a-sub' : 'therapist-tone-b-sub'}`}>부위</th>,
+                  <th key={`${item.therapist.id || item.therapist.name}-visit`} className={`sub-col ${therapistIndex % 2 === 0 ? 'therapist-tone-a-sub' : 'therapist-tone-b-sub therapist-group-end'}`}>회차</th>,
                 ]))}
               </tr>
             </thead>
             <tbody>
               {Array.from({ length: summary.maxRows || 1 }, (_, rowIndex) => (
                 <tr key={`new-patient-row-${rowIndex}`}>
-                  {summary.byTherapist.flatMap((item) => {
+                  {summary.byTherapist.flatMap((item, therapistIndex) => {
                     const patient = item.patients[rowIndex];
+                    const toneClass = therapistIndex % 2 === 0 ? 'therapist-tone-a-cell' : 'therapist-tone-b-cell';
                     return [
-                      <td key={`${item.therapist.id || item.therapist.name}-${rowIndex}-date`}>
+                      <td key={`${item.therapist.id || item.therapist.name}-${rowIndex}-date`} className={`${toneClass} ${therapistIndex > 0 ? 'therapist-group-start' : ''}`}>
                         {patient?.date || ''}
                       </td>,
-                      <td key={`${item.therapist.id || item.therapist.name}-${rowIndex}-name`} className="patient-name">
+                      <td key={`${item.therapist.id || item.therapist.name}-${rowIndex}-name`} className={`patient-name ${toneClass}`}>
                         {patient?.patientName || ''}
                       </td>,
-                      <td key={`${item.therapist.id || item.therapist.name}-${rowIndex}-body`}>
+                      <td key={`${item.therapist.id || item.therapist.name}-${rowIndex}-body`} className={toneClass}>
                         {patient?.bodyPart || ''}
                       </td>,
-                      <td key={`${item.therapist.id || item.therapist.name}-${rowIndex}-visit`} className="visit-count">
+                      <td key={`${item.therapist.id || item.therapist.name}-${rowIndex}-visit`} className={`visit-count ${toneClass} therapist-group-end`}>
                         {patient?.visitLabel || ''}
                       </td>,
                     ];

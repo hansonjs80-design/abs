@@ -2643,21 +2643,26 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                 <div className="context-menu-section">
                   <div className="context-menu-section-header">
                     <span className="context-menu-section-title">처방 지정</span>
-                    <select
-                      className="context-menu-select"
-                      value={currentPrescription}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        handleContextAction({ type: 'prescription', value: e.target.value || null });
-                      }}
-                      onMouseDown={e => e.stopPropagation()}
-                      onClick={e => e.stopPropagation()}
-                    >
-                      <option value="">처방 없음</option>
-                      {settings?.prescriptions?.map((pres) => (
-                        <option key={pres} value={pres}>{pres}</option>
-                      ))}
-                    </select>
+                    <div className="context-menu-prescription-row">
+                      {currentPrescription ? (
+                        <span className="context-menu-current-prescription">{currentPrescription}</span>
+                      ) : null}
+                      <select
+                        className="context-menu-select"
+                        value={currentPrescription}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleContextAction({ type: 'prescription', value: e.target.value || null });
+                        }}
+                        onMouseDown={e => e.stopPropagation()}
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <option value="">처방 없음</option>
+                        {settings?.prescriptions?.map((pres) => (
+                          <option key={pres} value={pres}>{pres}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
 

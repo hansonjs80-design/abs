@@ -1,6 +1,25 @@
 import React, { useMemo } from 'react';
 import { formatMonthDay, formatVisitLabel } from '../../lib/manualTherapyUtils';
 
+function normalizePrescriptionKey(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function toCount(value) {
+  const parsed = parseInt(String(value ?? '').trim(), 10);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatCount(value) {
+  return `${value}건`;
+}
+
+function formatCurrency(value) {
+  return `${Number(value || 0).toLocaleString('ko-KR')}원`;
+}
+
 export default function ManualTherapyStatsView({
   currentMonth,
   logs = [],
@@ -9,9 +28,19 @@ export default function ManualTherapyStatsView({
   incentivePercentage = 0,
   prescriptionPrices = {},
 }) {
+  const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
+  const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter((item) => item?.name) : []), [therapists]);
+  const safePrescriptions = useMemo(() => {
+    const next = Array.isArray(prescriptions) ? prescriptions.filter(Boolean) : [];
+    return next.length > 0 ? next : ['40분', '60분'];
+  }, [prescriptions]);
+  const safePriceEntries = useMemo(
+    () => (prescriptionPrices && typeof prescriptionPrices === 'object' && !Array.isArray(prescriptionPrices) ? prescriptionPrices : {}),
+    [prescriptionPrices]
+  );
+
   const entries = useMemo(() => {
-    return [...(Array.isArray(logs) ? logs : [])]
-      .filter(Boolean)
+    return [...safeLogs]
       .map((row) => ({
         ...row,
         dateLabel: formatMonthDay(row?.date),
@@ -26,90 +55,146 @@ export default function ManualTherapyStatsView({
         }
         return String(a?.created_at || '').localeCompare(String(b?.created_at || ''));
       });
-  }, [logs]);
+  }, [safeLogs]);
 
-  const summaryByTherapist = useMemo(() => {
-    return (Array.isArray(therapists) ? therapists : [])
-      .filter((therapist) => therapist?.name)
-      .map((therapist) => {
-        const therapistEntries = entries.filter((entry) => entry.therapist_name === therapist.name);
-        const count40 = therapistEntries.filter((entry) => String(entry.prescription || '').includes('40')).length;
-        const count60 = therapistEntries.filter((entry) => String(entry.prescription || '').includes('60')).length;
+  const normalizedPriceMap = useMemo(() => {
+    return Object.fromEntries(
+      Object.entries(safePriceEntries).map(([key, amount]) => [
+        normalizePrescriptionKey(key),
+        Number(amount) || 0,
+      ])
+    );
+  }, [safePriceEntries]);
 
-        const price40 = prescriptionPrices['40분'] || 0;
-        const price60 = prescriptionPrices['60분'] || 0;
-        const totalAmount = (count40 * price40) + (count60 * price60);
-        const incentive = Math.floor(totalAmount * (incentivePercentage / 100));
+  const settlement = useMemo(() => {
+    const summaryByTherapist = safeTherapists.map((therapist) => {
+      const countsByPrescription = Object.fromEntries(
+        safePrescriptions.map((prescription) => [prescription, 0])
+      );
 
-        return {
-          therapist,
-          count40,
-          count60,
-          totalCount: therapistEntries.length,
-          totalAmount,
-          incentive,
-        };
-      })
-      .filter((item) => item.totalCount > 0);
-  }, [entries, therapists, prescriptionPrices, incentivePercentage]);
+      const therapistLogs = entries.filter((entry) => entry.therapist_name === therapist.name);
+      therapistLogs.forEach((entry) => {
+        const matchedPrescription = safePrescriptions.find(
+          (prescription) => normalizePrescriptionKey(prescription) === normalizePrescriptionKey(entry?.prescription)
+        );
+        if (!matchedPrescription) return;
+        countsByPrescription[matchedPrescription] += toCount(entry?.prescription_count || 1);
+      });
 
-  const totalCount = entries.length;
-  const totalAmount = summaryByTherapist.reduce((sum, item) => sum + item.totalAmount, 0);
-  const totalIncentive = summaryByTherapist.reduce((sum, item) => sum + item.incentive, 0);
+      const totalCount = safePrescriptions.reduce(
+        (sum, prescription) => sum + (countsByPrescription[prescription] || 0),
+        0
+      );
+      const amount = safePrescriptions.reduce((sum, prescription) => {
+        const unitPrice = normalizedPriceMap[normalizePrescriptionKey(prescription)] || 0;
+        return sum + (countsByPrescription[prescription] || 0) * unitPrice;
+      }, 0);
+      const incentive = Math.round(amount * ((Number(incentivePercentage) || 0) / 100));
 
-  const duration40Label = useMemo(
-    () => prescriptions.find((item) => String(item).includes('40')) || '40분',
-    [prescriptions]
-  );
-  const duration60Label = useMemo(
-    () => prescriptions.find((item) => String(item).includes('60')) || '60분',
-    [prescriptions]
-  );
+      return {
+        therapist,
+        countsByPrescription,
+        totalCount,
+        amount,
+        incentive,
+      };
+    });
+
+    const grandPrescriptionCounts = Object.fromEntries(
+      safePrescriptions.map((prescription) => [
+        prescription,
+        summaryByTherapist.reduce(
+          (sum, item) => sum + (item.countsByPrescription[prescription] || 0),
+          0
+        ),
+      ])
+    );
+
+    const grandTotalCount = summaryByTherapist.reduce((sum, item) => sum + item.totalCount, 0);
+    const grandAmount = summaryByTherapist.reduce((sum, item) => sum + item.amount, 0);
+    const grandIncentive = summaryByTherapist.reduce((sum, item) => sum + item.incentive, 0);
+
+    return {
+      summaryByTherapist,
+      grandPrescriptionCounts,
+      grandTotalCount,
+      grandAmount,
+      grandIncentive,
+    };
+  }, [entries, incentivePercentage, normalizedPriceMap, safePrescriptions, safeTherapists]);
 
   return (
     <div className="sw-settlement-stack">
       <div className="sw-settlement-card">
         <div className="sw-settlement-header">
-          <h2>{currentMonth}월 도수치료 통계</h2>
-          <div className="sw-settlement-meta" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-            <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>총 {totalCount}건</span>
-            <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>총 매출 {totalAmount.toLocaleString()}원</span>
-            <div style={{ padding: '4px 12px', backgroundColor: 'var(--accent-color, #6366f1)', color: 'white', borderRadius: '4px', fontWeight: 'bold' }}>
-              인센티브 ({Number(incentivePercentage) || 0}%) : {totalIncentive.toLocaleString()}원
-            </div>
+          <h2>{currentMonth}월 도수치료 결산</h2>
+          <div className="sw-settlement-meta">
+            <span>총 {formatCount(settlement.grandTotalCount)}</span>
+            <span>매출 {formatCurrency(settlement.grandAmount)}</span>
+            <span>인센티브 {Number(incentivePercentage) || 0}%</span>
           </div>
         </div>
 
         <div className="sw-settlement-table-wrap">
-          <table className="sw-manual-summary-table">
+          <table className="sw-settlement-table">
             <thead>
               <tr>
-                {summaryByTherapist.map((item) => (
-                  <th key={item.therapist.id || item.therapist.name} colSpan={3} className="therapist-col">
-                    {item.therapist.name} ( {item.totalCount}건 )
+                <th className="label-col" rowSpan={2}>구분</th>
+                {settlement.summaryByTherapist.map((item) => (
+                  <th key={item.therapist.id || item.therapist.name} colSpan={safePrescriptions.length} className="therapist-col">
+                    {item.therapist.name}
                   </th>
                 ))}
+                <th className="grand-col" rowSpan={2}>총 합계</th>
               </tr>
               <tr>
-                {summaryByTherapist.flatMap((item) => ([
-                  <th key={`${item.therapist.id || item.therapist.name}-40`}>{duration40Label}</th>,
-                  <th key={`${item.therapist.id || item.therapist.name}-60`}>{duration60Label}</th>,
-                  <th key={`${item.therapist.id || item.therapist.name}-total`}>건수/인센</th>,
-                ]))}
+                {settlement.summaryByTherapist.flatMap((item) =>
+                  safePrescriptions.map((prescription) => (
+                    <th key={`${item.therapist.id || item.therapist.name}-${prescription}`} className="prescription-col">
+                      {prescription}
+                    </th>
+                  ))
+                )}
               </tr>
             </thead>
             <tbody>
               <tr>
-                {summaryByTherapist.flatMap((item) => ([
-                  <td key={`${item.therapist.id || item.therapist.name}-40-count`} className="duration-40">{item.count40}</td>,
-                  <td key={`${item.therapist.id || item.therapist.name}-60-count`} className="duration-60">{item.count60}</td>,
-                  <td key={`${item.therapist.id || item.therapist.name}-total-count`} className="total-count">
-                    <div style={{ fontWeight: 'bold' }}>{item.totalCount}건</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--accent-color, #6366f1)', marginTop: '4px' }}>
-                      {item.incentive.toLocaleString()}원
-                    </div>
-                  </td>,
-                ]))}
+                <th className="row-label">처방 건수</th>
+                {settlement.summaryByTherapist.flatMap((item) =>
+                  safePrescriptions.map((prescription) => (
+                    <td key={`count-${item.therapist.id || item.therapist.name}-${prescription}`}>
+                      {item.countsByPrescription[prescription] || 0}
+                    </td>
+                  ))
+                )}
+                <td className="grand-value">{formatCount(settlement.grandTotalCount)}</td>
+              </tr>
+              <tr>
+                <th className="row-label">도수치료 합계(건)</th>
+                {settlement.summaryByTherapist.map((item) => (
+                  <td key={`total-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className="merged-value">
+                    {formatCount(item.totalCount)}
+                  </td>
+                ))}
+                <td className="grand-value">{formatCount(settlement.grandTotalCount)}</td>
+              </tr>
+              <tr>
+                <th className="row-label">결산 금액(원)</th>
+                {settlement.summaryByTherapist.map((item) => (
+                  <td key={`amount-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className="merged-value amount">
+                    {formatCurrency(item.amount)}
+                  </td>
+                ))}
+                <td className="grand-value amount">{formatCurrency(settlement.grandAmount)}</td>
+              </tr>
+              <tr>
+                <th className="row-label">인센티브 ({Number(incentivePercentage) || 0}%)</th>
+                {settlement.summaryByTherapist.map((item) => (
+                  <td key={`incentive-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className="merged-value incentive">
+                    {formatCurrency(item.incentive)}
+                  </td>
+                ))}
+                <td className="grand-value incentive">{formatCurrency(settlement.grandIncentive)}</td>
               </tr>
             </tbody>
           </table>
@@ -119,6 +204,9 @@ export default function ManualTherapyStatsView({
       <div className="sw-settlement-card">
         <div className="sw-settlement-header">
           <h2>{currentMonth}월 도수치료 상세 내역</h2>
+          <div className="sw-settlement-meta">
+            <span>기록 {entries.length}건</span>
+          </div>
         </div>
 
         <div className="sw-settlement-table-wrap">

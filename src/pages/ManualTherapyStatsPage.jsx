@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSchedule } from '../contexts/ScheduleContext';
 import { supabase } from '../lib/supabaseClient';
 import { useToast } from '../components/common/Toast';
@@ -6,9 +6,8 @@ import { syncTodayManualTherapyScheduleToStats, syncMonthManualTherapyScheduleTo
 import { getTodayKST } from '../lib/calendarUtils';
 import ShockwaveDataGrid from '../components/shockwave/ShockwaveDataGrid';
 import ShockwaveNewPatientsView from '../components/shockwave/ShockwaveNewPatientsView';
-
-const ManualTherapyStatsView = React.lazy(() => import('../components/shockwave/ManualTherapyStatsView'));
-const ManualTherapySixMonthStats = React.lazy(() => import('../components/shockwave/ManualTherapySixMonthStats'));
+import ManualTherapyStatsView from '../components/shockwave/ManualTherapyStatsView';
+import ManualTherapySixMonthStats from '../components/shockwave/ManualTherapySixMonthStats';
 const MANUAL_THERAPY_SHEET_ID = '1-R_p3eyxwXISFTYX5G7_ec5L0kgUIhNbIwA9AdEj-9U';
 
 class ManualTherapyStatsPageErrorBoundary extends React.Component {
@@ -28,6 +27,28 @@ class ManualTherapyStatsPageErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return <div style={{ padding: 24 }}>도수치료 통계 화면을 여는 중 오류가 발생했습니다.</div>;
+    }
+    return this.props.children;
+  }
+}
+
+class ManualTherapySettlementErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error) {
+    console.error('ManualTherapy settlement render failed:', error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <div style={{ padding: 24 }}>도수치료 결산을 표시하는 중 오류가 발생했습니다.</div>;
     }
     return this.props.children;
   }
@@ -484,7 +505,7 @@ export default function ManualTherapyStatsPage() {
               )}
 
               {activeSection === 'settlement' && (
-                <Suspense fallback={<div style={{ padding: 24 }}>도수치료 결산을 불러오는 중...</div>}>
+                <ManualTherapySettlementErrorBoundary>
                   <div className="sw-stats-body sw-stats-body--settlement">
                     <ManualTherapyStatsView
                       currentMonth={currentMonth}
@@ -502,7 +523,7 @@ export default function ManualTherapyStatsPage() {
                       incentivePercentage={shockwaveSettings?.manual_therapy_incentive_percentage ?? 0}
                     />
                   </div>
-                </Suspense>
+                </ManualTherapySettlementErrorBoundary>
               )}
 
               {activeSection === 'new-patients' && (
