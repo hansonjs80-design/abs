@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react';
-import { formatMonthDay, formatVisitLabel } from '../../lib/manualTherapyUtils';
 
 function normalizePrescriptionKey(value) {
   return String(value || '')
@@ -39,24 +38,6 @@ export default function ManualTherapyStatsView({
     [prescriptionPrices]
   );
 
-  const entries = useMemo(() => {
-    return [...safeLogs]
-      .map((row) => ({
-        ...row,
-        dateLabel: formatMonthDay(row?.date),
-        visitLabel: formatVisitLabel(row?.visit_count),
-      }))
-      .sort((a, b) => {
-        if (String(a?.date || '') !== String(b?.date || '')) {
-          return String(a?.date || '').localeCompare(String(b?.date || ''));
-        }
-        if (String(a?.therapist_name || '') !== String(b?.therapist_name || '')) {
-          return String(a?.therapist_name || '').localeCompare(String(b?.therapist_name || ''), 'ko');
-        }
-        return String(a?.created_at || '').localeCompare(String(b?.created_at || ''));
-      });
-  }, [safeLogs]);
-
   const normalizedPriceMap = useMemo(() => {
     return Object.fromEntries(
       Object.entries(safePriceEntries).map(([key, amount]) => [
@@ -72,7 +53,7 @@ export default function ManualTherapyStatsView({
         safePrescriptions.map((prescription) => [prescription, 0])
       );
 
-      const therapistLogs = entries.filter((entry) => entry.therapist_name === therapist.name);
+      const therapistLogs = safeLogs.filter((entry) => entry.therapist_name === therapist.name);
       therapistLogs.forEach((entry) => {
         const matchedPrescription = safePrescriptions.find(
           (prescription) => normalizePrescriptionKey(prescription) === normalizePrescriptionKey(entry?.prescription)
@@ -100,28 +81,17 @@ export default function ManualTherapyStatsView({
       };
     });
 
-    const grandPrescriptionCounts = Object.fromEntries(
-      safePrescriptions.map((prescription) => [
-        prescription,
-        summaryByTherapist.reduce(
-          (sum, item) => sum + (item.countsByPrescription[prescription] || 0),
-          0
-        ),
-      ])
-    );
-
     const grandTotalCount = summaryByTherapist.reduce((sum, item) => sum + item.totalCount, 0);
     const grandAmount = summaryByTherapist.reduce((sum, item) => sum + item.amount, 0);
     const grandIncentive = summaryByTherapist.reduce((sum, item) => sum + item.incentive, 0);
 
     return {
       summaryByTherapist,
-      grandPrescriptionCounts,
       grandTotalCount,
       grandAmount,
       grandIncentive,
     };
-  }, [entries, incentivePercentage, normalizedPriceMap, safePrescriptions, safeTherapists]);
+  }, [incentivePercentage, normalizedPriceMap, safeLogs, safePrescriptions, safeTherapists]);
 
   return (
     <div className="sw-settlement-stack">
@@ -201,49 +171,6 @@ export default function ManualTherapyStatsView({
         </div>
       </div>
 
-      <div className="sw-settlement-card">
-        <div className="sw-settlement-header">
-          <h2>{currentMonth}월 도수치료 상세 내역</h2>
-          <div className="sw-settlement-meta">
-            <span>기록 {entries.length}건</span>
-          </div>
-        </div>
-
-        <div className="sw-settlement-table-wrap">
-          <table className="sw-manual-detail-table">
-            <thead>
-              <tr>
-                <th>날짜</th>
-                <th>이름</th>
-                <th>번호</th>
-                <th>회차</th>
-                <th>부위</th>
-                <th>담당</th>
-                <th>시간</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.length > 0 ? entries.map((entry) => (
-                <tr key={entry.id || `${entry.date}-${entry.patient_name}-${entry.therapist_name}`}>
-                  <td>{entry.dateLabel}</td>
-                  <td className="patient-name">{entry.patient_name}</td>
-                  <td>{entry.chart_number || ''}</td>
-                  <td>{entry.visitLabel}</td>
-                  <td>{entry.body_part || '-'}</td>
-                  <td>{entry.therapist_name || ''}</td>
-                  <td className={String(entry.prescription || '').includes('40') ? 'duration-40' : 'duration-60'}>
-                    {entry.prescription || ''}
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={7} className="manual-empty">이번 달 도수치료 기록이 없습니다.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
 }
