@@ -33,7 +33,6 @@
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
 }
 
@@ -41,6 +40,10 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.shockwave-week-today-btn {
+  order: -1;
 }
 
 .shockwave-week-today-btn {
