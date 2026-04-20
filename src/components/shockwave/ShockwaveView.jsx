@@ -2630,6 +2630,26 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   <div className="context-menu-section-header">
                     <span className="context-menu-section-title">부위</span>
                   </div>
+                  {currentParts.length > 0 ? (
+                    <div className="context-menu-body-tags">
+                      {currentParts.map((part, index) => (
+                        <div key={`${part}-${index}`} className="context-menu-body-tag">
+                          <span>{part}</span>
+                          <button
+                            type="button"
+                            className="context-menu-body-tag-remove"
+                            onMouseDown={e => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleContextAction({ type: 'bodyPartRemove', index });
+                            }}
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                   {availableParts.length > 0 ? (
                     <div className="context-menu-checklist">
                       {availableParts.map((part, idx) => {
