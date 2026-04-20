@@ -344,6 +344,7 @@
   gap: 20px;
   position: sticky;
   top: calc(var(--header-height) + 24px);
+  margin-top: calc(var(--calendar-weekday-row-height) * -1);
   width: 300px;
   min-width: 260px;
 }
