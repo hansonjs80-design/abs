@@ -72,13 +72,17 @@ ALTER TABLE public.manual_therapy_therapists DISABLE ROW LEVEL SECURITY;`
   col_index int NOT NULL,
   content text,
   bg_color text,
+  body_part text,
   prescription text,
   merge_span jsonb DEFAULT '{"rowSpan": 1, "colSpan": 1, "mergedInto": null}'::jsonb,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(year, month, week_index, day_index, row_index, col_index)
 );
-ALTER TABLE public.shockwave_schedules DISABLE ROW LEVEL SECURITY;`
+ALTER TABLE public.shockwave_schedules DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.shockwave_schedules ADD COLUMN IF NOT EXISTS prescription text;
+ALTER TABLE public.shockwave_schedules ADD COLUMN IF NOT EXISTS body_part text;
+ALTER TABLE public.shockwave_schedules ADD COLUMN IF NOT EXISTS merge_span jsonb DEFAULT '{"rowSpan": 1, "colSpan": 1, "mergedInto": null}'::jsonb;`
   },
   {
     title: '환자 치료 로그 (통계/현황)',
@@ -132,11 +136,13 @@ ALTER TABLE public.manual_therapy_patient_logs ADD COLUMN IF NOT EXISTS source t
   slot_index int NOT NULL,
   content text,
   font_color text,
+  bg_color text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(year, month, day, slot_index)
 );
-ALTER TABLE public.staff_schedules DISABLE ROW LEVEL SECURITY;`
+ALTER TABLE public.staff_schedules DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.staff_schedules ADD COLUMN IF NOT EXISTS bg_color text;`
   },
   {
     title: '공지사항 및 공휴일',

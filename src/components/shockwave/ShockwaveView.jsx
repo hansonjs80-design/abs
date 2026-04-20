@@ -2702,227 +2702,231 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
             return (
               <>
-                <div className="context-menu-actions-grid">
-                  <button type="button" className="context-menu-item" onClick={() => handleContextAction('copy')}>
-                    복사
-                  </button>
-                  <button type="button" className="context-menu-item" onClick={() => handleContextAction('cut')}>
-                    잘라내기
-                  </button>
-                  <button type="button" className="context-menu-item" onClick={() => handleContextAction('paste')}>
-                    붙여넣기
-                  </button>
-                  {!selectionInfo?.isMergedMaster ? (
-                    <button
-                      type="button"
-                      className="context-menu-item"
-                      onClick={() => handleContextAction('merge')}
-                      disabled={!selectionInfo?.selectionMultiple}
-                    >
-                      셀 병합
+                <div className="context-menu-action-panel">
+                  <div className="context-menu-actions-grid">
+                    <button type="button" className="context-menu-item" onClick={() => handleContextAction('copy')}>
+                      복사
                     </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="context-menu-item"
-                      onClick={() => handleContextAction('unmerge')}
-                    >
-                      병합 해제
+                    <button type="button" className="context-menu-item" onClick={() => handleContextAction('cut')}>
+                      잘라내기
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    className="context-menu-item context-menu-item-complete"
-                    onClick={() => handleContextAction('complete')}
-                    disabled={!hasCompletableSelection}
-                  >
-                    치료 완료
-                  </button>
-                  <button
-                    type="button"
-                    className="context-menu-item context-menu-item-clear-complete"
-                    onClick={() => handleContextAction('clear-complete')}
-                    disabled={!hasCompletedSelection}
-                  >
-                    완료 해제
-                  </button>
-                </div>
-
-                <div className="context-menu-divider" />
-
-                <div className="context-menu-section">
-                  <div className="context-menu-section-header">
-                    <span className="context-menu-section-title">처방 지정</span>
-                    <div className="context-menu-prescription-row">
-                      {previousPrescriptionValue ? (
-                        <span className="context-menu-current-prescription">{previousPrescriptionValue}</span>
-                      ) : null}
-                      <select
-                        className="context-menu-select"
-                        value={currentPrescription}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          handleContextAction({ type: 'prescription', value: e.target.value || null });
-                        }}
-                        onMouseDown={e => e.stopPropagation()}
-                        onClick={e => e.stopPropagation()}
+                    <button type="button" className="context-menu-item" onClick={() => handleContextAction('paste')}>
+                      붙여넣기
+                    </button>
+                    {!selectionInfo?.isMergedMaster ? (
+                      <button
+                        type="button"
+                        className="context-menu-item"
+                        onClick={() => handleContextAction('merge')}
+                        disabled={!selectionInfo?.selectionMultiple}
                       >
-                        <option value="">처방 없음</option>
-                        {settings?.prescriptions?.map((pres) => (
-                          <option key={pres} value={pres}>{pres}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="context-menu-section">
-                  <div className="context-menu-section-header">
-                    <span className="context-menu-section-title">부위</span>
-                  </div>
-                  {currentParts.length > 0 ? (
-                    <div className="context-menu-body-tags">
-                      {currentParts.map((part, index) => (
-                        <div key={`${part}-${index}`} className="context-menu-body-tag">
-                          <span>{part}</span>
-                          <button
-                            type="button"
-                            className="context-menu-body-tag-remove"
-                            onMouseDown={e => e.stopPropagation()}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleContextAction({ type: 'bodyPartRemove', index });
-                            }}
-                          >
-                            삭제
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                  {availableParts.length > 0 ? (
-                    <div className="context-menu-checklist">
-                      {availableParts.map((part, idx) => {
-                        const isChecked = currentParts.some((p) => normalizeBodyPartKey(p) === normalizeBodyPartKey(part));
-                        return (
-                          <label key={idx} className="context-menu-check-item">
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                handleContextAction({ type: 'bodyPartToggle', value: part });
-                              }}
-                              onMouseDown={e => e.stopPropagation()}
-                              onClick={e => e.stopPropagation()}
-                            />
-                            <span>{part}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="context-menu-empty">등록된 부위가 없습니다.</div>
-                  )}
-                  <div className="context-menu-input-row">
-                    <input
-                      type="text"
-                      placeholder="부위 입력 후 Enter"
-                      className="context-menu-input"
-                      value={contextMenuBodyInput}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        setContextMenuBodyInput(e.target.value);
-                      }}
-                      onKeyDown={(e) => {
-                        e.stopPropagation();
-                        if (e.nativeEvent?.isComposing || e.keyCode === 229) return;
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          submitContextMenuBodyInput();
-                        }
-                      }}
-                      onCompositionStart={() => {
-                        imeOpenRef.current = true;
-                      }}
-                      onCompositionEnd={() => {
-                        imeOpenRef.current = false;
-                      }}
-                      onMouseDown={e => e.stopPropagation()}
-                      onClick={e => e.stopPropagation()}
-                    />
+                        셀 병합
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="context-menu-item"
+                        onClick={() => handleContextAction('unmerge')}
+                      >
+                        병합 해제
+                      </button>
+                    )}
                     <button
                       type="button"
-                      className="context-menu-inline-button"
-                      onMouseDown={e => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        submitContextMenuBodyInput();
-                      }}
+                      className="context-menu-item context-menu-item-complete"
+                      onClick={() => handleContextAction('complete')}
+                      disabled={!hasCompletableSelection}
                     >
-                      추가
+                      치료 완료
+                    </button>
+                    <button
+                      type="button"
+                      className="context-menu-item context-menu-item-clear-complete"
+                      onClick={() => handleContextAction('clear-complete')}
+                      disabled={!hasCompletedSelection}
+                    >
+                      완료 해제
                     </button>
                   </div>
                 </div>
 
-                <div className="context-menu-section">
-                  <div className="context-menu-section-header">
-                    <span className="context-menu-section-title">메모 목록</span>
-                  </div>
-                  {currentMemoList.length > 0 ? (
-                    <div className="context-menu-note-list">
-                      {currentMemoList.map((item, index) => (
-                        <div key={`${item}-${index}`} className="context-menu-note-item">
-                          <span>{item}</span>
+                <div className="context-menu-editor-panel">
+                  <div className="context-menu-sheet">
+                    <div className="context-menu-sheet-row">
+                      <div className="context-menu-sheet-label">처방 지정</div>
+                      <div className="context-menu-sheet-cell">
+                        <div className="context-menu-prescription-row">
+                          {previousPrescriptionValue ? (
+                            <span className="context-menu-current-prescription">{previousPrescriptionValue}</span>
+                          ) : null}
+                          <select
+                            className="context-menu-select"
+                            value={currentPrescription}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              handleContextAction({ type: 'prescription', value: e.target.value || null });
+                            }}
+                            onMouseDown={e => e.stopPropagation()}
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <option value="">처방 없음</option>
+                            {settings?.prescriptions?.map((pres) => (
+                              <option key={pres} value={pres}>{pres}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="context-menu-sheet-row context-menu-sheet-row-body">
+                      <div className="context-menu-sheet-label">부위</div>
+                      <div className="context-menu-sheet-cell">
+                        {currentParts.length > 0 ? (
+                          <div className="context-menu-body-tags">
+                            {currentParts.map((part, index) => (
+                              <div key={`${part}-${index}`} className="context-menu-body-tag">
+                                <span>{part}</span>
+                                <button
+                                  type="button"
+                                  className="context-menu-body-tag-remove"
+                                  onMouseDown={e => e.stopPropagation()}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleContextAction({ type: 'bodyPartRemove', index });
+                                  }}
+                                >
+                                  삭제
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                        {availableParts.length > 0 ? (
+                          <div className="context-menu-checklist">
+                            {availableParts.map((part, idx) => {
+                              const isChecked = currentParts.some((p) => normalizeBodyPartKey(p) === normalizeBodyPartKey(part));
+                              return (
+                                <label key={idx} className="context-menu-check-item">
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={(e) => {
+                                      e.stopPropagation();
+                                      handleContextAction({ type: 'bodyPartToggle', value: part });
+                                    }}
+                                    onMouseDown={e => e.stopPropagation()}
+                                    onClick={e => e.stopPropagation()}
+                                  />
+                                  <span>{part}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="context-menu-empty">등록된 부위가 없습니다.</div>
+                        )}
+                        <div className="context-menu-input-row">
+                          <input
+                            type="text"
+                            placeholder="부위 입력 후 Enter"
+                            className="context-menu-input"
+                            value={contextMenuBodyInput}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              setContextMenuBodyInput(e.target.value);
+                            }}
+                            onKeyDown={(e) => {
+                              e.stopPropagation();
+                              if (e.nativeEvent?.isComposing || e.keyCode === 229) return;
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                submitContextMenuBodyInput();
+                              }
+                            }}
+                            onCompositionStart={() => {
+                              imeOpenRef.current = true;
+                            }}
+                            onCompositionEnd={() => {
+                              imeOpenRef.current = false;
+                            }}
+                            onMouseDown={e => e.stopPropagation()}
+                            onClick={e => e.stopPropagation()}
+                          />
                           <button
                             type="button"
-                            className="context-menu-note-remove"
+                            className="context-menu-inline-button"
                             onMouseDown={e => e.stopPropagation()}
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleContextAction({ type: 'memoRemove', index });
+                              submitContextMenuBodyInput();
                             }}
                           >
-                            삭제
+                            추가
                           </button>
                         </div>
-                      ))}
+                      </div>
                     </div>
-                  ) : (
-                    <div className="context-menu-empty">전화번호, 주의사항 등을 메모로 남길 수 있습니다.</div>
-                  )}
-                  <div className="context-menu-input-row">
-                    <input
-                      type="text"
-                      placeholder="전화번호 / 주의사항 입력"
-                      className="context-menu-input"
-                      value={contextMenuNoteInput}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        setContextMenuNoteInput(e.target.value);
-                      }}
-                      onKeyDown={(e) => {
-                        e.stopPropagation();
-                        if (e.nativeEvent?.isComposing || e.keyCode === 229) return;
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          submitContextMenuNoteInput();
-                        }
-                      }}
-                      onMouseDown={e => e.stopPropagation()}
-                      onClick={e => e.stopPropagation()}
-                    />
-                    <button
-                      type="button"
-                      className="context-menu-inline-button"
-                      onMouseDown={e => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        submitContextMenuNoteInput();
-                      }}
-                    >
-                      추가
-                    </button>
+
+                    <div className="context-menu-sheet-row context-menu-sheet-row-note">
+                      <div className="context-menu-sheet-label">메모 목록</div>
+                      <div className="context-menu-sheet-cell">
+                        {currentMemoList.length > 0 ? (
+                          <div className="context-menu-note-list">
+                            {currentMemoList.map((item, index) => (
+                              <div key={`${item}-${index}`} className="context-menu-note-item">
+                                <span>{item}</span>
+                                <button
+                                  type="button"
+                                  className="context-menu-note-remove"
+                                  onMouseDown={e => e.stopPropagation()}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleContextAction({ type: 'memoRemove', index });
+                                  }}
+                                >
+                                  삭제
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="context-menu-empty">전화번호, 주의사항 등을 메모로 남길 수 있습니다.</div>
+                        )}
+                        <div className="context-menu-input-row">
+                          <input
+                            type="text"
+                            placeholder="전화번호 / 주의사항 입력"
+                            className="context-menu-input"
+                            value={contextMenuNoteInput}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              setContextMenuNoteInput(e.target.value);
+                            }}
+                            onKeyDown={(e) => {
+                              e.stopPropagation();
+                              if (e.nativeEvent?.isComposing || e.keyCode === 229) return;
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                submitContextMenuNoteInput();
+                              }
+                            }}
+                            onMouseDown={e => e.stopPropagation()}
+                            onClick={e => e.stopPropagation()}
+                          />
+                          <button
+                            type="button"
+                            className="context-menu-inline-button"
+                            onMouseDown={e => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              submitContextMenuNoteInput();
+                            }}
+                          >
+                            추가
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </>
