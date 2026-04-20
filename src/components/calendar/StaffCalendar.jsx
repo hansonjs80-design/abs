@@ -277,7 +277,7 @@ export default function StaffCalendar() {
   // ── Grid key handler ──
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Escape' && clipboardSource) { setClipboardSource(null); return; }
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); doUndo(); return; }
+    if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'z' || e.code === 'KeyZ')) { e.preventDefault(); doUndo(); return; }
     if (!selectedCell) return;
     if (editingCell) { if (e.key === 'Escape') { e.preventDefault(); setEditingCell(null); resetInputToHidden(); focusHiddenInput(); } return; }
 

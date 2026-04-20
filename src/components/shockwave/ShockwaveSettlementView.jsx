@@ -28,6 +28,14 @@ export default function ShockwaveSettlementView({
   incentivePercentage,
   recentMonthlySummaries = [],
 }) {
+  const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
+  const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
+  const safePrescriptions = useMemo(() => (Array.isArray(prescriptions) ? prescriptions.filter(Boolean) : []), [prescriptions]);
+  const safeRecentMonthlySummaries = useMemo(
+    () => (Array.isArray(recentMonthlySummaries) ? recentMonthlySummaries.filter(Boolean) : []),
+    [recentMonthlySummaries]
+  );
+
   const normalizedPriceMap = useMemo(() => {
     const entries = Object.entries(prescriptionPrices || {}).map(([key, amount]) => [
       normalizePrescriptionKey(key),
@@ -37,28 +45,28 @@ export default function ShockwaveSettlementView({
   }, [prescriptionPrices]);
 
   const settlement = useMemo(() => {
-    const summaryByTherapist = therapists.map((therapist) => {
+    const summaryByTherapist = safeTherapists.map((therapist) => {
       const countsByPrescription = Object.fromEntries(
-        prescriptions.map((prescription) => [prescription, 0])
+        safePrescriptions.map((prescription) => [prescription, 0])
       );
 
-      const therapistLogs = (logs || []).filter((log) => log?.therapist_name === therapist.name);
+      const therapistLogs = safeLogs.filter((log) => log?.therapist_name === therapist.name);
 
       therapistLogs.forEach((log) => {
         const normalizedLogPrescription = normalizePrescriptionKey(log?.prescription);
-        const matchedPrescription = prescriptions.find(
+        const matchedPrescription = safePrescriptions.find(
           (prescription) => normalizePrescriptionKey(prescription) === normalizedLogPrescription
         );
         if (!matchedPrescription) return;
         countsByPrescription[matchedPrescription] += toCount(log?.prescription_count || 1);
       });
 
-      const totalCount = prescriptions.reduce(
+      const totalCount = safePrescriptions.reduce(
         (sum, prescription) => sum + (countsByPrescription[prescription] || 0),
         0
       );
 
-      const amount = prescriptions.reduce((sum, prescription) => {
+      const amount = safePrescriptions.reduce((sum, prescription) => {
         const unitPrice = normalizedPriceMap[normalizePrescriptionKey(prescription)] || 0;
         return sum + (countsByPrescription[prescription] || 0) * unitPrice;
       }, 0);
@@ -75,7 +83,7 @@ export default function ShockwaveSettlementView({
     });
 
     const grandPrescriptionCounts = Object.fromEntries(
-      prescriptions.map((prescription) => [
+      safePrescriptions.map((prescription) => [
         prescription,
         summaryByTherapist.reduce(
           (sum, item) => sum + (item.countsByPrescription[prescription] || 0),
@@ -95,9 +103,9 @@ export default function ShockwaveSettlementView({
       grandAmount,
       grandIncentive,
     };
-  }, [logs, therapists, prescriptions, normalizedPriceMap, incentivePercentage]);
+  }, [safeLogs, safeTherapists, safePrescriptions, normalizedPriceMap, incentivePercentage]);
 
-  if (!therapists.length) {
+  if (!safeTherapists.length) {
     return (
       <div className="sw-stats-empty">
         활성화된 치료사가 없어 결산표를 계산할 수 없습니다.
@@ -122,7 +130,7 @@ export default function ShockwaveSettlementView({
               <tr>
                 <th className="label-col" rowSpan={2}>구분</th>
                 {settlement.summaryByTherapist.map((item) => (
-                  <th key={item.therapist.id} colSpan={prescriptions.length} className="therapist-col">
+                  <th key={item.therapist.id || item.therapist.name} colSpan={safePrescriptions.length} className="therapist-col">
                     {item.therapist.name}
                   </th>
                 ))}
@@ -130,8 +138,8 @@ export default function ShockwaveSettlementView({
               </tr>
               <tr>
                 {settlement.summaryByTherapist.flatMap((item) =>
-                  prescriptions.map((prescription) => (
-                    <th key={`${item.therapist.id}-${prescription}`} className="prescription-col">
+                  safePrescriptions.map((prescription) => (
+                    <th key={`${item.therapist.id || item.therapist.name}-${prescription}`} className="prescription-col">
                       {prescription}
                     </th>
                   ))
@@ -142,8 +150,8 @@ export default function ShockwaveSettlementView({
               <tr>
                 <th className="row-label">처방 건수</th>
                 {settlement.summaryByTherapist.flatMap((item) =>
-                  prescriptions.map((prescription) => (
-                    <td key={`count-${item.therapist.id}-${prescription}`}>
+                  safePrescriptions.map((prescription) => (
+                    <td key={`count-${item.therapist.id || item.therapist.name}-${prescription}`}>
                       {settlement.grandPrescriptionCounts[prescription] >= 0
                         ? item.countsByPrescription[prescription] || 0
                         : 0}
@@ -155,7 +163,7 @@ export default function ShockwaveSettlementView({
               <tr>
                 <th className="row-label">충격파 합계(건)</th>
                 {settlement.summaryByTherapist.map((item) => (
-                  <td key={`total-count-${item.therapist.id}`} colSpan={prescriptions.length} className="merged-value">
+                  <td key={`total-count-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className="merged-value">
                     {formatCount(item.totalCount)}
                   </td>
                 ))}
@@ -164,7 +172,7 @@ export default function ShockwaveSettlementView({
               <tr>
                 <th className="row-label">결산 금액(원)</th>
                 {settlement.summaryByTherapist.map((item) => (
-                  <td key={`amount-${item.therapist.id}`} colSpan={prescriptions.length} className="merged-value amount">
+                  <td key={`amount-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className="merged-value amount">
                     {formatCurrency(item.amount)}
                   </td>
                 ))}
@@ -173,7 +181,7 @@ export default function ShockwaveSettlementView({
               <tr>
                 <th className="row-label">인센티브 ({Number(incentivePercentage) || 0}%)</th>
                 {settlement.summaryByTherapist.map((item) => (
-                  <td key={`incentive-${item.therapist.id}`} colSpan={prescriptions.length} className="merged-value incentive">
+                  <td key={`incentive-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className="merged-value incentive">
                     {formatCurrency(item.incentive)}
                   </td>
                 ))}
@@ -200,7 +208,7 @@ export default function ShockwaveSettlementView({
               </tr>
             </thead>
             <tbody>
-              {recentMonthlySummaries.map((item) => (
+              {safeRecentMonthlySummaries.map((item) => (
                 <tr key={item.monthKey}>
                   <th className="month-label">{item.label}</th>
                   <td>{formatCount(item.totalCount)}</td>

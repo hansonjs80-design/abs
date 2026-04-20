@@ -1087,20 +1087,44 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   font-size: 0.84rem;
 }
 
-.sw-new-patient-table .therapist-tone-a {
+.sw-new-patient-table .therapist-tone-0 {
   background: linear-gradient(180deg, #d9eafe 0%, #ebf4ff 100%);
 }
 
-.sw-new-patient-table .therapist-tone-b {
-  background: linear-gradient(180deg, #eef4fb 0%, #f8fbff 100%);
+.sw-new-patient-table .therapist-tone-1 {
+  background: linear-gradient(180deg, #ece3ff 0%, #f5efff 100%);
 }
 
-.sw-new-patient-table .therapist-tone-a-sub {
+.sw-new-patient-table .therapist-tone-2 {
+  background: linear-gradient(180deg, #dcf5e7 0%, #eefbf4 100%);
+}
+
+.sw-new-patient-table .therapist-tone-3 {
+  background: linear-gradient(180deg, #ffe9d2 0%, #fff4ea 100%);
+}
+
+.sw-new-patient-table .therapist-tone-4 {
+  background: linear-gradient(180deg, #ffe0ec 0%, #fff1f7 100%);
+}
+
+.sw-new-patient-table .therapist-tone-0-sub {
   background: #eef6ff;
 }
 
-.sw-new-patient-table .therapist-tone-b-sub {
-  background: #f6f9fd;
+.sw-new-patient-table .therapist-tone-1-sub {
+  background: #f4efff;
+}
+
+.sw-new-patient-table .therapist-tone-2-sub {
+  background: #edf9f2;
+}
+
+.sw-new-patient-table .therapist-tone-3-sub {
+  background: #fff6ee;
+}
+
+.sw-new-patient-table .therapist-tone-4-sub {
+  background: #fff2f8;
 }
 
 .sw-new-patient-table tbody td {
@@ -1109,12 +1133,24 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   font-weight: 700;
 }
 
-.sw-new-patient-table tbody td.therapist-tone-a-cell {
+.sw-new-patient-table tbody td.therapist-tone-0-cell {
   background: #fcfeff;
 }
 
-.sw-new-patient-table tbody td.therapist-tone-b-cell {
-  background: #f9fbfd;
+.sw-new-patient-table tbody td.therapist-tone-1-cell {
+  background: #fcfbff;
+}
+
+.sw-new-patient-table tbody td.therapist-tone-2-cell {
+  background: #fbfffd;
+}
+
+.sw-new-patient-table tbody td.therapist-tone-3-cell {
+  background: #fffdf9;
+}
+
+.sw-new-patient-table tbody td.therapist-tone-4-cell {
+  background: #fffafd;
 }
 
 .sw-new-patient-table tbody td.patient-name {
@@ -1134,12 +1170,24 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   border-right: 2px solid #c2d5ea;
 }
 
-.sw-new-patient-table tbody tr:hover td.therapist-tone-a-cell {
+.sw-new-patient-table tbody tr:hover td.therapist-tone-0-cell {
   background: #eef6ff;
 }
 
-.sw-new-patient-table tbody tr:hover td.therapist-tone-b-cell {
-  background: #f1f6fb;
+.sw-new-patient-table tbody tr:hover td.therapist-tone-1-cell {
+  background: #f3efff;
+}
+
+.sw-new-patient-table tbody tr:hover td.therapist-tone-2-cell {
+  background: #edf8f2;
+}
+
+.sw-new-patient-table tbody tr:hover td.therapist-tone-3-cell {
+  background: #fff3e7;
+}
+
+.sw-new-patient-table tbody tr:hover td.therapist-tone-4-cell {
+  background: #fff0f7;
 }
 
 .sw-new-patient-table tr:last-child td,

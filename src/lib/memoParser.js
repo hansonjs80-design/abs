@@ -185,6 +185,20 @@ export function has4060Pattern(text) {
 }
 
 /**
+ * 셀 내용에서 이름 뒤의 40/60 숫자를 제거
+ * 예: "1234/주한솔40(3)" → "1234/주한솔(3)"
+ *     "김지선60" → "김지선"
+ *     "1234/김지선60*(2)" → "1234/김지선(2)"
+ */
+export function strip4060FromContent(text) {
+  const s = String(text || '').trim();
+  if (!s) return s;
+  if (!has4060Pattern(s)) return s;
+  // 이름 뒤 40 또는 60 (그 뒤에 *가 올 수도 있음) 제거
+  return s.replace(/([가-힣a-zA-Z])\s*(40|60)(\**)/, '$1$3');
+}
+
+/**
  * 충격파 셀 내용의 회수(세션 횟수) 증가
  * 
  * 지원 패턴:

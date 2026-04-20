@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { generateShockwaveCalendar, getTodayKST, isSameDate, formatDisplayDate } from '../../lib/calendarUtils';
 import { supabase } from '../../lib/supabaseClient';
-import { has4060Pattern, incrementSessionCount, normalizeNameForMatch } from '../../lib/memoParser';
+import { has4060Pattern, strip4060FromContent, incrementSessionCount, normalizeNameForMatch } from '../../lib/memoParser';
 import { toProperCase } from '../../lib/shockwaveSyncUtils';
 import { useToast } from '../common/Toast';
 
@@ -1235,15 +1235,21 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setEditingCell(null);
     const result = await buildSchedulerAutoText(w, d, r, c, nextValue);
     const newContent = (typeof result === 'string' ? result : (result?.text || '')).trim();
-    const newPrescription = result?.prescription;
+    let newPrescription = result?.prescription;
     const newBodyPart = result?.bodyPart;
     const newMergeSpan = result?.mergeSpan;
+
+    // 이름에 40/60 패턴이 있으면 기존 처방을 명시적으로 취소
+    if (has4060Pattern(newContent) && memos[key]?.prescription) {
+      newPrescription = '';
+    }
 
     if (newContent !== immediateContent) {
       setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
     }
 
-    if (newContent === oldContent && !newPrescription && !newBodyPart) {
+    const prescriptionCleared = has4060Pattern(newContent) && memos[key]?.prescription && newPrescription === '';
+    if (newContent === oldContent && !newPrescription && !newBodyPart && !prescriptionCleared) {
       setPendingDisplayValues((prev) => {
         if (!(key in prev)) return prev;
         const next = { ...prev };
@@ -1288,8 +1294,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const key = cellKey(w, d, r, c);
     const memo = memos[key] || {};
     
+    // 처방이 설정될 때 이름에 40/60이 있으면 숫자 자동 제거
+    let updatedContent = memo.content;
+    if (prescription && has4060Pattern(memo.content)) {
+      updatedContent = strip4060FromContent(memo.content);
+    }
+    
     setContextMenu(null);
-    const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, memo.merge_span, prescription);
+    const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, updatedContent, memo.bg_color, memo.merge_span, prescription);
     if (!success) addToast('처방 지정 실패', 'error');
   }, [contextMenu, currentYear, currentMonth, memos, onSaveMemo, addToast]);
 
@@ -1457,6 +1469,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return String(memo?.content || '').trim() && memo?.bg_color === TREATMENT_CANCEL_BG;
     });
   }, [selectedKeys, memos, normalizeKeysToMergeMasters]);
+  const treatmentCompleteButtonLabel = hasCompletedSelection ? '방문취소' : '방문완료';
 
   // 날짜 비교 헬퍼: 원본(w,d)와 대상(w,d)의 실제 날짜를 비교
   const isLaterDate = useCallback((srcW, srcD, dstW, dstD) => {
@@ -1993,8 +2006,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       for (const key of keys) {
         const [w, d, r, c] = key.split('-').map(Number);
         const memo = memos[key] || {};
-        if (memo.prescription !== action.value) {
-          const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, memo.merge_span, action.value);
+        let updatedContent = memo.content;
+        // 처방이 설정될 때 이름에 40/60이 있으면 숫자 자동 제거
+        if (action.value && has4060Pattern(memo.content)) {
+          updatedContent = strip4060FromContent(memo.content);
+        }
+        if (memo.prescription !== action.value || updatedContent !== memo.content) {
+          const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, updatedContent, memo.bg_color, memo.merge_span, action.value);
           if (success) anyChanged = true;
         }
       }
@@ -2964,7 +2982,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       onClick={() => handleContextAction('complete-toggle')}
                       disabled={!hasCompletableSelection}
                     >
-                      완료/해제
+                      {treatmentCompleteButtonLabel}
                     </button>
                     <button
                       type="button"
@@ -2972,7 +2990,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       onClick={() => handleContextAction('cancel-toggle')}
                       disabled={!hasCompletableSelection}
                     >
-                      취소
+                      예약 취소
                     </button>
                   </div>
                 </div>

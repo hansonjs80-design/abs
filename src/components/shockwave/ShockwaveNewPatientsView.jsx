@@ -119,7 +119,7 @@ export default function ShockwaveNewPatientsView({
                   <th
                     key={item.therapist.id || item.therapist.name}
                     colSpan={4}
-                    className={`therapist-col ${therapistIndex % 2 === 0 ? 'therapist-tone-a' : 'therapist-tone-b'} ${therapistIndex > 0 ? 'therapist-group-start' : ''}`}
+                    className={`therapist-col therapist-tone-${therapistIndex % 5} ${therapistIndex > 0 ? 'therapist-group-start' : ''}`}
                   >
                     {item.therapist.name} ({item.totalCount}명)
                   </th>
@@ -127,10 +127,10 @@ export default function ShockwaveNewPatientsView({
               </tr>
               <tr>
                 {summary.byTherapist.flatMap((item, therapistIndex) => ([
-                  <th key={`${item.therapist.id || item.therapist.name}-date`} className={`sub-col ${therapistIndex % 2 === 0 ? 'therapist-tone-a-sub' : 'therapist-tone-b-sub'} ${therapistIndex > 0 ? 'therapist-group-start' : ''}`}>날짜</th>,
-                  <th key={`${item.therapist.id || item.therapist.name}-name`} className={`sub-col ${therapistIndex % 2 === 0 ? 'therapist-tone-a-sub' : 'therapist-tone-b-sub'}`}>이름</th>,
-                  <th key={`${item.therapist.id || item.therapist.name}-body`} className={`sub-col ${therapistIndex % 2 === 0 ? 'therapist-tone-a-sub' : 'therapist-tone-b-sub'}`}>부위</th>,
-                  <th key={`${item.therapist.id || item.therapist.name}-visit`} className={`sub-col ${therapistIndex % 2 === 0 ? 'therapist-tone-a-sub' : 'therapist-tone-b-sub therapist-group-end'}`}>회차</th>,
+                  <th key={`${item.therapist.id || item.therapist.name}-date`} className={`sub-col therapist-tone-${therapistIndex % 5}-sub ${therapistIndex > 0 ? 'therapist-group-start' : ''}`}>날짜</th>,
+                  <th key={`${item.therapist.id || item.therapist.name}-name`} className={`sub-col therapist-tone-${therapistIndex % 5}-sub`}>이름</th>,
+                  <th key={`${item.therapist.id || item.therapist.name}-body`} className={`sub-col therapist-tone-${therapistIndex % 5}-sub`}>부위</th>,
+                  <th key={`${item.therapist.id || item.therapist.name}-visit`} className={`sub-col therapist-tone-${therapistIndex % 5}-sub therapist-group-end`}>회차</th>,
                 ]))}
               </tr>
             </thead>
@@ -139,7 +139,7 @@ export default function ShockwaveNewPatientsView({
                 <tr key={`new-patient-row-${rowIndex}`}>
                   {summary.byTherapist.flatMap((item, therapistIndex) => {
                     const patient = item.patients[rowIndex];
-                    const toneClass = therapistIndex % 2 === 0 ? 'therapist-tone-a-cell' : 'therapist-tone-b-cell';
+                    const toneClass = `therapist-tone-${therapistIndex % 5}-cell`;
                     return [
                       <td key={`${item.therapist.id || item.therapist.name}-${rowIndex}-date`} className={`${toneClass} ${therapistIndex > 0 ? 'therapist-group-start' : ''}`}>
                         {patient?.date || ''}
