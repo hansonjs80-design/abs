@@ -36,17 +36,42 @@ function getSchedulerHistoryTypeLabel(option) {
   return '충격파';
 }
 
+function splitBodyParts(value) {
+  return String(value || '')
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function normalizeBodyPartKey(part) {
+  return String(part || '')
+    .toLowerCase()
+    .replace(/\./g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
   const [localVisit, setLocalVisit] = useState(dlg.visitCount);
   const [localPres, setLocalPres] = useState(dlg.prescription || '');
   const [localBodyChecked, setLocalBodyChecked] = useState(() => {
-    const latestParts = (dlg.latestBodyPart || '').split(',').map(p => p.trim()).filter(Boolean);
+    const latestParts = splitBodyParts(dlg.initialBodyPart || dlg.latestBodyPart);
     return dlg.bodyParts.map(bp => ({
       name: bp,
       checked: latestParts.includes(bp),
     }));
   });
   const [newBodyPart, setNewBodyPart] = useState('');
+
+  const getVisitFromSelectedParts = useCallback((selectedParts) => {
+    if (!Array.isArray(selectedParts) || selectedParts.length !== 1) return null;
+    const key = normalizeBodyPartKey(selectedParts[0]);
+    const bodyPartVisit = dlg.bodyPartVisitMap?.[key];
+    if (Number.isInteger(bodyPartVisit?.nextVisit) && bodyPartVisit.nextVisit > 0) {
+      return bodyPartVisit.nextVisit;
+    }
+    return null;
+  }, [dlg.bodyPartVisitMap]);
 
   const handleConfirm = useCallback(() => {
     const selectedParts = localBodyChecked.filter(bp => bp.checked).map(bp => bp.name);
@@ -121,7 +146,15 @@ function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
                   <input
                     type="checkbox"
                     checked={bp.checked}
-                    onChange={() => setLocalBodyChecked(prev => prev.map((item, i) => i === idx ? { ...item, checked: !item.checked } : item))}
+                    onChange={() => {
+                      setLocalBodyChecked((prev) => {
+                        const next = prev.map((item, i) => i === idx ? { ...item, checked: !item.checked } : item);
+                        const selectedParts = next.filter((item) => item.checked).map((item) => item.name);
+                        const nextVisit = getVisitFromSelectedParts(selectedParts);
+                        if (nextVisit) setLocalVisit(nextVisit);
+                        return next;
+                      });
+                    }}
                     style={{ width: '16px', height: '16px', cursor: 'pointer' }}
                   />
                   {bp.name}
@@ -145,7 +178,13 @@ function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && newBodyPart.trim()) {
                   e.preventDefault();
-                  setLocalBodyChecked(prev => [...prev, { name: newBodyPart.trim(), checked: true }]);
+                  const nextPart = newBodyPart.trim();
+                  setLocalBodyChecked(prev => {
+                    const next = [...prev, { name: nextPart, checked: true }];
+                    const nextVisit = getVisitFromSelectedParts([nextPart]);
+                    if (nextVisit) setLocalVisit(nextVisit);
+                    return next;
+                  });
                   setNewBodyPart('');
                 }
               }}
@@ -155,7 +194,13 @@ function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
               type="button"
               onClick={() => {
                 if (newBodyPart.trim()) {
-                  setLocalBodyChecked(prev => [...prev, { name: newBodyPart.trim(), checked: true }]);
+                  const nextPart = newBodyPart.trim();
+                  setLocalBodyChecked(prev => {
+                    const next = [...prev, { name: nextPart, checked: true }];
+                    const nextVisit = getVisitFromSelectedParts([nextPart]);
+                    if (nextVisit) setLocalVisit(nextVisit);
+                    return next;
+                  });
                   setNewBodyPart('');
                 }
               }}
@@ -179,15 +224,21 @@ function AutoFillDialogInner({ dlg, onConfirm, onCancel }) {
 
 function addBodyPartToMap(map, part) {
   if (!part) return;
-  const lower = part.toLowerCase();
-  const existing = map.get(lower);
+  const normalizedKey = normalizeBodyPartKey(part);
+  if (!normalizedKey) return;
+  const existing = map.get(normalizedKey);
   if (!existing) {
-    map.set(lower, part);
+    map.set(normalizedKey, part);
   } else {
+    const existingDotCount = (existing.match(/\./g) || []).length;
+    const newDotCount = (part.match(/\./g) || []).length;
     const existingUpperCount = existing.length - existing.replace(/[A-Z]/g, '').length;
     const newUpperCount = part.length - part.replace(/[A-Z]/g, '').length;
-    if (newUpperCount > existingUpperCount) {
-      map.set(lower, part);
+    if (
+      newDotCount > existingDotCount ||
+      (newDotCount === existingDotCount && newUpperCount > existingUpperCount)
+    ) {
+      map.set(normalizedKey, part);
     }
   }
 }
@@ -430,13 +481,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     };
   }, []);
 
-  const buildSchedulerAutoText = useCallback(async (w, d, c, nextValue) => {
+  const buildSchedulerAutoText = useCallback(async (w, d, r, c, nextValue) => {
     const rawName = String(nextValue || '').trim();
     if (!shouldAutoFormatSchedulerName(rawName)) return { text: rawName };
 
     const dayInfo = weeks[w]?.[d];
     if (!dayInfo) return { text: rawName };
     const targetDate = `${dayInfo.year}-${String(dayInfo.month).padStart(2, '0')}-${String(dayInfo.day).padStart(2, '0')}`;
+    const memoKey = `${w}-${d}-${r}-${c}`;
+    const currentBodyParts = splitBodyParts(memos[memoKey]?.body_part || '');
 
     // Supabase에서 shockwave와 manual_therapy 모두 조회
     const normalizedName = normalizeNameForMatch(rawName);
@@ -496,6 +549,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           doseTag,
           latestItem: item,
           bodyPartsMap: new Map(),
+          bodyPartVisitMap: new Map(),
           prescriptions: new Set(),
         });
       }
@@ -510,7 +564,27 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         candidate.latestItem = item;
       }
       if (item.body_part) {
-        item.body_part.split(',').map(p => p.trim()).filter(Boolean).forEach(p => addBodyPartToMap(candidate.bodyPartsMap, p));
+        splitBodyParts(item.body_part).forEach((part) => {
+          addBodyPartToMap(candidate.bodyPartsMap, part);
+          const normalizedPartKey = normalizeBodyPartKey(part);
+          const itemVisit = parseInt(item.visit_count || '0', 10) || 0;
+          const nextVisit = item.date === targetDate
+            ? (itemVisit || 1)
+            : (itemVisit > 0 ? itemVisit + 1 : 1);
+          const existingVisitInfo = candidate.bodyPartVisitMap.get(normalizedPartKey);
+          if (
+            !existingVisitInfo ||
+            item.date > existingVisitInfo.lastDate ||
+            (item.date === existingVisitInfo.lastDate && itemVisit > existingVisitInfo.lastVisit)
+          ) {
+            candidate.bodyPartVisitMap.set(normalizedPartKey, {
+              name: part,
+              lastDate: item.date || '',
+              lastVisit: itemVisit,
+              nextVisit,
+            });
+          }
+        });
       }
       if (item.prescription) {
         candidate.prescriptions.add(item.prescription);
@@ -528,6 +602,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         : cleanPatientName;
       const latestBodyPart = item.body_part || '';
       const prescriptions = Array.from(candidate.prescriptions);
+      const bodyPartVisitMap = Object.fromEntries(candidate.bodyPartVisitMap.entries());
+      const preferredBodyPart = currentBodyParts.find((part) => bodyPartVisitMap[normalizeBodyPartKey(part)]) || '';
+      const preferredNextVisit = preferredBodyPart
+        ? bodyPartVisitMap[normalizeBodyPartKey(preferredBodyPart)]?.nextVisit
+        : null;
 
       return {
         chartNumber,
@@ -541,6 +620,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         latestBodyPart,
         type: item.type,
         doseTag: candidate.doseTag,
+        bodyPartVisitMap,
+        preferredBodyPart,
+        preferredNextVisit,
         optionLabel: getSchedulerHistoryTypeLabel({ type: item.type, doseTag: candidate.doseTag, prescription: item.prescription }),
       };
     });
@@ -557,17 +639,23 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     }
 
     // 부위가 2개 이상이거나 처방이 변경된 이력이 있으면 다이얼로그로 선택
-    const needsDialog = selected.bodyParts.length >= 2 || selected.prescriptions.length >= 2;
+    const effectiveVisitCount = Number.isInteger(selected.preferredNextVisit) && selected.preferredNextVisit > 0
+      ? selected.preferredNextVisit
+      : selected.nextVisit;
+    const effectiveBodyPart = selected.preferredBodyPart || selected.latestBodyPart || undefined;
+    const needsDialog = (selected.bodyParts.length >= 2 && !selected.preferredBodyPart) || selected.prescriptions.length >= 2;
     if (needsDialog) {
       try {
         const dialogResult = await showAutoFillDialog({
           chartNumber: selected.chartNumber,
           namePart: selected.namePart,
           cleanName: selected.cleanName,
-          visitCount: selected.nextVisit,
+          visitCount: effectiveVisitCount,
           prescription: selected.prescription,
           bodyParts: selected.bodyParts,
           latestBodyPart: selected.latestBodyPart,
+          initialBodyPart: selected.preferredBodyPart,
+          bodyPartVisitMap: selected.bodyPartVisitMap,
           type: selected.type,
           doseTag: selected.doseTag,
           settings,
@@ -588,11 +676,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
     // 부위가 0~1개: 다이얼로그 없이 바로 자동완성
     return {
-      text: `${selected.chartNumber}/${selected.namePart}(${selected.nextVisit})`,
+      text: `${selected.chartNumber}/${selected.namePart}(${effectiveVisitCount})`,
       prescription: selected.prescription || undefined,
-      bodyPart: selected.latestBodyPart || undefined,
+      bodyPart: effectiveBodyPart,
     };
-  }, [pickChartOption, showAutoFillDialog, shouldAutoFormatSchedulerName, weeks, settings]);
+  }, [memos, pickChartOption, showAutoFillDialog, shouldAutoFormatSchedulerName, weeks, settings]);
 
   useEffect(() => {
     onLoadMemos(currentYear, currentMonth);
@@ -848,7 +936,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const immediateContent = String(nextValue ?? '').trim();
     setPendingDisplayValues((prev) => ({ ...prev, [key]: immediateContent }));
     setEditingCell(null);
-    const result = await buildSchedulerAutoText(w, d, c, nextValue);
+    const result = await buildSchedulerAutoText(w, d, r, c, nextValue);
     const newContent = (typeof result === 'string' ? result : (result?.text || '')).trim();
     const newPrescription = result?.prescription;
     const newBodyPart = result?.bodyPart;
@@ -1697,6 +1785,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setContextMenu(null);
   }, [selectedKeys, memos, currentYear, currentMonth, onSaveMemo, addToast, handleCopySelection, handleCutSelection, handlePasteSelection, handleMarkTreatmentComplete, handleClearTreatmentComplete, tryMergeSelection]);
 
+  const submitContextMenuBodyInput = useCallback(() => {
+    const val = contextMenuBodyInput.trim();
+    if (!val) return false;
+    handleContextAction({ type: 'bodyPartAdd', value: val });
+    setContextMenuBodyInput('');
+    return true;
+  }, [contextMenuBodyInput, handleContextAction]);
+
   const beginEditingCell = useCallback((key, nextValue, preserveValue = false) => {
     flushSync(() => {
       setEditingCell(key);
@@ -2502,17 +2598,33 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   }}
                   onKeyDown={(e) => {
                     e.stopPropagation();
+                    if (e.nativeEvent?.isComposing || e.keyCode === 229) return;
                     if (e.key === 'Enter') {
                       e.preventDefault();
-                      const val = contextMenuBodyInput.trim();
-                      if (!val) return;
-                      handleContextAction({ type: 'bodyPartAdd', value: val });
-                      setContextMenuBodyInput('');
+                      submitContextMenuBodyInput();
                     }
+                  }}
+                  onCompositionStart={() => {
+                    imeOpenRef.current = true;
+                  }}
+                  onCompositionEnd={() => {
+                    imeOpenRef.current = false;
                   }}
                   onMouseDown={e => e.stopPropagation()}
                   onClick={e => e.stopPropagation()}
                 />
+
+                <button
+                  type="button"
+                  style={{ width: '100%', padding: '4px 8px', fontSize: '0.8rem', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--bg-tertiary)', cursor: 'pointer' }}
+                  onMouseDown={e => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    submitContextMenuBodyInput();
+                  }}
+                >
+                  부위 추가
+                </button>
 
               </div>
             );
