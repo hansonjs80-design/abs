@@ -479,6 +479,7 @@ export default function ManualTherapyStatsPage() {
                       <ShockwaveDataGrid
                         logs={logs}
                         therapists={safeTherapists}
+                        monthlyTherapists={monthlyManualTherapists}
                         currentYear={currentYear}
                         currentMonth={currentMonth}
                         fetchLogs={fetchLogs}
@@ -515,6 +516,7 @@ export default function ManualTherapyStatsPage() {
                       currentMonth={currentMonth}
                       logs={logs}
                       therapists={safeTherapists}
+                      monthlyTherapists={monthlyManualTherapists}
                       prescriptions={prescriptions}
                       incentivePercentage={shockwaveSettings?.manual_therapy_incentive_percentage ?? 0}
                       prescriptionPrices={shockwaveSettings?.prescription_prices || {}}

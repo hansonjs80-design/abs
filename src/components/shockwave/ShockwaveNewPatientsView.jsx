@@ -20,11 +20,30 @@ export default function ShockwaveNewPatientsView({
   therapists,
   currentMonth,
   title,
+  monthlyTherapists,
 }) {
+  const getSlotNames = React.useCallback((slotIdx) => {
+    if (!monthlyTherapists || monthlyTherapists.length === 0) {
+      return [therapists[slotIdx]?.name || ''];
+    }
+    const configs = monthlyTherapists.filter(t => t.slot_index === slotIdx && t.therapist_name);
+    if (configs.length === 0) return [therapists[slotIdx]?.name || ''];
+    const names = [...new Set(configs.map(t => t.therapist_name))];
+    if (names.length === 0) return [therapists[slotIdx]?.name || ''];
+    return names;
+  }, [monthlyTherapists, therapists]);
+
+  const getSlotDisplayName = React.useCallback((slotIdx) => {
+    const names = getSlotNames(slotIdx);
+    if (names.length === 0 || (names.length === 1 && !names[0])) return therapists[slotIdx]?.name || `치료사 ${slotIdx + 1}`;
+    return names.join(' / ');
+  }, [getSlotNames, therapists]);
+
   const summary = useMemo(() => {
-    const byTherapist = therapists.map((therapist) => {
+    const byTherapist = therapists.map((therapist, idx) => {
+      const validNames = getSlotNames(idx);
       const therapistLogs = (logs || []).filter(
-        (log) => log?.therapist_name === therapist.name && normalizePatientName(log?.patient_name)
+        (log) => validNames.includes(log?.therapist_name) && normalizePatientName(log?.patient_name)
       );
 
       const grouped = new Map();
@@ -76,7 +95,7 @@ export default function ShockwaveNewPatientsView({
         }));
 
       return {
-        therapist,
+        therapist: { ...therapist, name: getSlotDisplayName(idx) },
         patients,
         totalCount: patients.length,
       };
@@ -90,7 +109,7 @@ export default function ShockwaveNewPatientsView({
       maxRows,
       totalCount,
     };
-  }, [logs, therapists]);
+  }, [logs, therapists, getSlotNames, getSlotDisplayName]);
 
   if (!therapists.length) {
     return (

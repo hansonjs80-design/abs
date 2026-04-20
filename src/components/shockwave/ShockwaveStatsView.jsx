@@ -586,6 +586,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                     <ShockwaveDataGrid
                       logs={safeLogs}
                       therapists={safeTherapists}
+                      monthlyTherapists={monthlyTherapists}
                       currentYear={currentYear}
                       currentMonth={currentMonth}
                       fetchLogs={fetchLogs}
@@ -615,6 +616,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
               <ShockwaveSettlementView
                 logs={safeLogs}
                 therapists={safeTherapists}
+                monthlyTherapists={monthlyTherapists}
                 currentMonth={currentMonth}
                 prescriptions={settlementPrescriptions}
                 prescriptionPrices={settlementPrices}
@@ -629,6 +631,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
               <ShockwaveNewPatientsView
                 logs={safeLogs}
                 therapists={safeTherapists}
+                monthlyTherapists={monthlyTherapists}
                 currentMonth={currentMonth}
               />
             </div>
