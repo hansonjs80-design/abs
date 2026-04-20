@@ -56,6 +56,29 @@ function formatBodyPartInput(part) {
   return toProperCase(String(part || '').trim()).replace(/\s+/g, ' ').trim();
 }
 
+function parseSchedulerPatientIdentity(content) {
+  const cellContent = String(content || '');
+  let patientChart = '';
+  let patientName = '';
+
+  if (cellContent.includes('/')) {
+    const parts = cellContent.split('/');
+    const p0 = parts[0].trim();
+    const p1 = (parts[1] || '').trim().replace(/\(\d+₩?\)$/, '').replace(/\*$/, '').trim();
+    if (/\d/.test(p0)) {
+      patientChart = p0;
+      patientName = p1;
+    } else {
+      patientName = p0;
+      patientChart = p1;
+    }
+  } else {
+    patientName = cellContent.replace(/\(\d+₩?\)$/, '').replace(/\*$/, '').trim();
+  }
+
+  return { patientChart, patientName };
+}
+
 function getMemoListFromMergeSpan(mergeSpan) {
   const list = mergeSpan?.meta?.memo_list;
   if (!Array.isArray(list)) return [];
@@ -317,6 +340,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   const tooltipRef = useRef(null);
   const tooltipMousePosRef = useRef({ x: 0, y: 0 });
+  const weekRefs = useRef([]);
   const [hoverData, setHoverData] = useState(null);
   const [chartSelector, setChartSelector] = useState(null);
   const [autoFillDialog, setAutoFillDialog] = useState(null);
@@ -450,6 +474,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const weeks = useMemo(() => {
     return generateShockwaveCalendar(currentYear, currentMonth, holidays);
   }, [currentYear, currentMonth, holidays]);
+  const todayWeekIdx = useMemo(
+    () => weeks.findIndex((weekDays) => weekDays.some((dayInfo) => isSameDate(dayInfo.date, today))),
+    [weeks, today]
+  );
 
   const shouldAutoFormatSchedulerName = useCallback((value) => {
     const text = String(value || '').trim();
@@ -2186,6 +2214,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     return () => window.cancelAnimationFrame(rafId);
   }, [hoverData, positionTooltip]);
 
+  const scrollToTodayWeek = useCallback(() => {
+    if (todayWeekIdx < 0) return;
+    const weekEl = weekRefs.current[todayWeekIdx];
+    if (!weekEl) return;
+    weekEl.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+  }, [todayWeekIdx]);
+
   return (
     <>
       <div 
@@ -2200,9 +2235,23 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         }}
       >
       {weeks.map((weekDays, weekIdx) => (
-        <div key={weekIdx} className="shockwave-week">
+        <div
+          key={weekIdx}
+          className={`shockwave-week${weekIdx === todayWeekIdx ? ' is-today-week' : ''}`}
+          ref={(el) => {
+            weekRefs.current[weekIdx] = el;
+          }}
+        >
           <div className="shockwave-week-label">
-            📅 {weekIdx + 1}주차
+            <span className="shockwave-week-label-text">📅 {weekIdx + 1}주차</span>
+            <button
+              type="button"
+              className="shockwave-week-today-btn"
+              onClick={scrollToTodayWeek}
+              disabled={todayWeekIdx < 0}
+            >
+              오늘
+            </button>
           </div>
           <div className="shockwave-days" style={{ position: 'relative' }}>
             {weekDays.map((dayInfo, dayIdx) => {
@@ -2554,41 +2603,33 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
             const currentBodyPart = currentMemo?.body_part || '';
             const currentParts = splitBodyParts(currentBodyPart);
             const currentMemoList = getMemoListFromMergeSpan(currentMemo?.merge_span);
-
-            const cellContent = currentMemo?.content || '';
-            let patientChart = '';
-            let patientName = '';
-            if (cellContent.includes('/')) {
-              const parts = cellContent.split('/');
-              const p0 = parts[0].trim();
-              const p1 = (parts[1] || '').trim().replace(/\(\d+₩?\)$/, '').replace(/\*$/, '').trim();
-              if (/\d/.test(p0)) { patientChart = p0; patientName = p1; }
-              else { patientName = p0; patientChart = p1; }
-            } else {
-              patientName = cellContent.replace(/\(\d+₩?\)$/, '').replace(/\*$/, '').trim();
-            }
+            const { patientChart, patientName } = parseSchedulerPatientIdentity(currentMemo?.content || '');
+            const currentKeyParts = firstKey ? firstKey.split('-').map(Number) : null;
+            const currentSortKey = currentKeyParts
+              ? `${weeks[currentKeyParts[0]]?.[currentKeyParts[1]]?.date?.toISOString?.().slice(0, 10) || ''}-${String(currentKeyParts[2]).padStart(3, '0')}-${String(currentKeyParts[3]).padStart(3, '0')}`
+              : '';
+            let previousPrescription = null;
 
             const patientBodyPartsMap = new Map();
-            Object.values(memos || {}).forEach((m) => {
-              if (!m?.body_part || !m?.content) return;
-              const mc = m.content;
-              let mChart = '', mName = '';
-              if (mc.includes('/')) {
-                const mp = mc.split('/');
-                const mp0 = mp[0].trim();
-                const mp1 = (mp[1] || '').trim().replace(/\(\d+₩?\)$/, '').replace(/\*$/, '').trim();
-                if (/\d/.test(mp0)) { mChart = mp0; mName = mp1; }
-                else { mName = mp0; mChart = mp1; }
-              } else {
-                mName = mc.replace(/\(\d+₩?\)$/, '').replace(/\*$/, '').trim();
-              }
+            Object.entries(memos || {}).forEach(([memoKey, m]) => {
+              if (!m?.content) return;
+              const { patientChart: mChart, patientName: mName } = parseSchedulerPatientIdentity(m.content);
               const isMatch = (patientChart && mChart && patientChart === mChart) || (patientName && mName && patientName === mName);
               if (isMatch) {
-                splitBodyParts(m.body_part).forEach((part) => addBodyPartToMap(patientBodyPartsMap, part));
+                if (m.body_part) {
+                  splitBodyParts(m.body_part).forEach((part) => addBodyPartToMap(patientBodyPartsMap, part));
+                }
+                if (!m.prescription || memoKey === firstKey) return;
+                const memoKeyParts = memoKey.split('-').map(Number);
+                const memoSortKey = `${weeks[memoKeyParts[0]]?.[memoKeyParts[1]]?.date?.toISOString?.().slice(0, 10) || ''}-${String(memoKeyParts[2]).padStart(3, '0')}-${String(memoKeyParts[3]).padStart(3, '0')}`;
+                if (memoSortKey < currentSortKey && (!previousPrescription || memoSortKey > previousPrescription.sortKey)) {
+                  previousPrescription = { value: m.prescription, sortKey: memoSortKey };
+                }
               }
             });
             currentParts.forEach((part) => addBodyPartToMap(patientBodyPartsMap, part));
             const availableParts = Array.from(patientBodyPartsMap.values()).sort();
+            const previousPrescriptionValue = previousPrescription?.value || '';
 
             return (
               <>
@@ -2644,8 +2685,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   <div className="context-menu-section-header">
                     <span className="context-menu-section-title">처방 지정</span>
                     <div className="context-menu-prescription-row">
-                      {currentPrescription ? (
-                        <span className="context-menu-current-prescription">{currentPrescription}</span>
+                      {previousPrescriptionValue ? (
+                        <span className="context-menu-current-prescription">{previousPrescriptionValue}</span>
                       ) : null}
                       <select
                         className="context-menu-select"

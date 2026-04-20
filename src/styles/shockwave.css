@@ -33,7 +33,42 @@
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.shockwave-week-label-text {
+  display: inline-flex;
+  align-items: center;
   gap: 8px;
+}
+
+.shockwave-week-today-btn {
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border-radius: 9999px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.shockwave-week-today-btn:hover:not(:disabled) {
+  background: var(--brand-primary-light);
+  color: var(--brand-primary);
+  border-color: var(--brand-primary);
+}
+
+.shockwave-week-today-btn:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.shockwave-week.is-today-week {
+  box-shadow: 0 0 0 2px rgba(88, 80, 236, 0.12), var(--shadow-sm);
 }
 
 /* 하루 블록 그리드 */
