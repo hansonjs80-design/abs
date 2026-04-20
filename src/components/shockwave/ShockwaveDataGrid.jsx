@@ -33,6 +33,7 @@ function toTitleCaseBodyPart(value) {
 export default function ShockwaveDataGrid({
   logs,
   therapists,
+  monthlyTherapists,
   currentYear,
   currentMonth,
   fetchLogs,
@@ -211,6 +212,35 @@ export default function ShockwaveDataGrid({
   };
   const isRowEmpty = (row) => ROW_DATA_FIELDS.every((field) => isBlankValue(row?.[field]));
 
+  // 월별 치료사 매핑 헬퍼
+  const resolveTherapistName = useCallback((slotIdx, dateStr) => {
+    const day = dateStr ? parseInt(dateStr.split('-')[2], 10) : 1;
+    if (monthlyTherapists && monthlyTherapists.length > 0) {
+      const match = monthlyTherapists.find(
+        (t) => t.slot_index === slotIdx && day >= t.start_day && day <= t.end_day
+      );
+      if (match !== undefined) return match.therapist_name || '';
+    }
+    return safeTherapists[slotIdx]?.name || '';
+  }, [monthlyTherapists, safeTherapists]);
+
+  const getSlotNames = useCallback((slotIdx) => {
+    if (!monthlyTherapists || monthlyTherapists.length === 0) {
+      return [safeTherapists[slotIdx]?.name || ''];
+    }
+    const configs = monthlyTherapists.filter(t => t.slot_index === slotIdx && t.therapist_name);
+    if (configs.length === 0) return [safeTherapists[slotIdx]?.name || ''];
+    const names = [...new Set(configs.map(t => t.therapist_name))];
+    if (names.length === 0) return [safeTherapists[slotIdx]?.name || ''];
+    return names;
+  }, [monthlyTherapists, safeTherapists]);
+
+  const getSlotDisplayName = useCallback((slotIdx) => {
+    const names = getSlotNames(slotIdx);
+    if (names.length === 0 || (names.length === 1 && !names[0])) return safeTherapists[slotIdx]?.name || `치료사 ${slotIdx + 1}`;
+    return names.join(' / ');
+  }, [getSlotNames, safeTherapists]);
+
   // ─── 2. CELL VALUE HELPERS ────────────────────────────────
   const getVal = (row, colIdx) => {
     if (colIdx === 0) {
@@ -241,7 +271,8 @@ export default function ShockwaveDataGrid({
     const t = safeTherapists[tIdx];
     if (!t) return '';
     const pres = prescriptions[pIdx];
-    if (row.therapist_name === t.name && row.prescription === pres) {
+    const validNames = getSlotNames(tIdx);
+    if (validNames.includes(row.therapist_name) && row.prescription === pres) {
       return (row.prescription_count !== null && row.prescription_count !== undefined) ? row.prescription_count : '1';
     }
     return '';
@@ -521,7 +552,7 @@ export default function ShockwaveDataGrid({
           chart_number: row.chart_number || '',
           visit_count: row.visit_count || '',
           body_part: row.body_part || '',
-          therapist_name: t.name,
+          therapist_name: resolveTherapistName(tIdx, row.date || fallbackDate),
           prescription: pres,
           prescription_count: intVal,
         };
@@ -535,8 +566,10 @@ export default function ShockwaveDataGrid({
         await supabase.from(tableName).insert([{ ...nextDraft, source: 'manual' }]);
         clearLocalDraftRow(row.id, row.isInsertedDraft);
       } else {
+        const expectedName = resolveTherapistName(tIdx, row.date);
+        const validNames = getSlotNames(tIdx);
         if (val.trim() === '') {
-          if (row.therapist_name === t.name && row.prescription === pres) {
+          if (validNames.includes(row.therapist_name) && row.prescription === pres) {
             const clearedFields = { therapist_name: '', prescription: '', prescription_count: 0 };
             const nextRow = { ...row, ...clearedFields };
             setLocalDraftRow(row.id, nextRow, false); // 낙관적 업데이트
@@ -544,7 +577,7 @@ export default function ShockwaveDataGrid({
             else await supabase.from(tableName).update(clearedFields).eq('id', row.id);
           }
         } else {
-          const updateFields = { therapist_name: t.name, prescription: pres, prescription_count: intVal };
+          const updateFields = { therapist_name: expectedName, prescription: pres, prescription_count: intVal };
           const nextRow = { ...row, ...updateFields };
           setLocalDraftRow(row.id, nextRow, false); // 낙관적 업데이트
           await supabase.from(tableName).update(updateFields).eq('id', row.id);
@@ -710,9 +743,10 @@ export default function ShockwaveDataGrid({
           const t = safeTherapists[tIdx];
           if (!t) continue;
           const pres = prescriptions[pIdx];
-          undoChanges.push({ id: row.id, field: 'prescription_stats', oldVal: { t: row.therapist_name, p: row.prescription, c: row.prescription_count }, newVal: { t: t.name, p: pres, c: v } });
+          const expectedName = resolveTherapistName(tIdx, row.date);
+          undoChanges.push({ id: row.id, field: 'prescription_stats', oldVal: { t: row.therapist_name, p: row.prescription, c: row.prescription_count }, newVal: { t: expectedName, p: pres, c: v } });
           if (!row.isDraft) {
-            bulkUpdates.push({ id: row.id, data: { therapist_name: t.name, prescription: pres, prescription_count: v } });
+            bulkUpdates.push({ id: row.id, data: { therapist_name: expectedName, prescription: pres, prescription_count: v } });
           }
         }
       }
@@ -758,7 +792,8 @@ export default function ShockwaveDataGrid({
           const tIdx = Math.floor((c - FIXED_FIELDS.length) / prescriptions.length);
           const pIdx = (c - FIXED_FIELDS.length) % prescriptions.length;
           const t = safeTherapists[tIdx];
-          if (t && row.therapist_name === t.name && row.prescription === prescriptions[pIdx]) {
+          const validNames = getSlotNames(tIdx);
+          if (t && validNames.includes(row.therapist_name) && row.prescription === prescriptions[pIdx]) {
             updatePayload.therapist_name = '';
             updatePayload.prescription = '';
             updatePayload.prescription_count = '';
@@ -979,8 +1014,9 @@ export default function ShockwaveDataGrid({
   const newPatientTotal = safeInputLogs.filter((l) => String(l?.patient_name || '').includes('*')).length;
 
   const therapistTotals = useMemo(() => {
-    return safeTherapists.map(t => {
-      const all = safeInputLogs.filter(l => l.therapist_name === t.name && l.prescription);
+    return safeTherapists.map((t, idx) => {
+      const validNames = getSlotNames(idx);
+      const all = safeInputLogs.filter(l => validNames.includes(l.therapist_name) && l.prescription);
       const total = all.reduce((s, l) => s + toPrescriptionCount(l.prescription_count), 0);
       const byPres = {};
       prescriptions.forEach(p => {
@@ -988,7 +1024,7 @@ export default function ShockwaveDataGrid({
       });
       return { total, byPres };
     });
-  }, [safeInputLogs, safeTherapists, prescriptions]);
+  }, [safeInputLogs, safeTherapists, getSlotNames, prescriptions]);
 
   // ─── 10. RENDER ───────────────────────────────────────────
   return (
@@ -1040,7 +1076,7 @@ export default function ShockwaveDataGrid({
             ))}
             {safeTherapists.map((t, idx) => (
               <th key={`tn-${t.id || t.name}`} colSpan={prescriptions.length} className={`hdr-therapist ${idx > 0 ? 'therapist-group-start' : ''}`} style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}>
-                {t.name} ( {therapistTotals[idx]?.total || 0}건 )
+                {getSlotDisplayName(idx)} ( {therapistTotals[idx]?.total || 0}건 )
               </th>
             ))}
             <th rowSpan={2} className="hdr-total sticky-right-last-2 total-group-start">총건수</th>

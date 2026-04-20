@@ -27,6 +27,7 @@ export default function ShockwaveSettlementView({
   prescriptionPrices,
   incentivePercentage,
   recentMonthlySummaries = [],
+  monthlyTherapists,
 }) {
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
@@ -44,13 +45,31 @@ export default function ShockwaveSettlementView({
     return Object.fromEntries(entries);
   }, [prescriptionPrices]);
 
+  const getSlotNames = React.useCallback((slotIdx) => {
+    if (!monthlyTherapists || monthlyTherapists.length === 0) {
+      return [safeTherapists[slotIdx]?.name || ''];
+    }
+    const configs = monthlyTherapists.filter(t => t.slot_index === slotIdx && t.therapist_name);
+    if (configs.length === 0) return [safeTherapists[slotIdx]?.name || ''];
+    const names = [...new Set(configs.map(t => t.therapist_name))];
+    if (names.length === 0) return [safeTherapists[slotIdx]?.name || ''];
+    return names;
+  }, [monthlyTherapists, safeTherapists]);
+
+  const getSlotDisplayName = React.useCallback((slotIdx) => {
+    const names = getSlotNames(slotIdx);
+    if (names.length === 0 || (names.length === 1 && !names[0])) return safeTherapists[slotIdx]?.name || `치료사 ${slotIdx + 1}`;
+    return names.join(' / ');
+  }, [getSlotNames, safeTherapists]);
+
   const settlement = useMemo(() => {
-    const summaryByTherapist = safeTherapists.map((therapist) => {
+    const summaryByTherapist = safeTherapists.map((therapist, idx) => {
+      const validNames = getSlotNames(idx);
       const countsByPrescription = Object.fromEntries(
         safePrescriptions.map((prescription) => [prescription, 0])
       );
 
-      const therapistLogs = safeLogs.filter((log) => log?.therapist_name === therapist.name);
+      const therapistLogs = safeLogs.filter((log) => validNames.includes(log?.therapist_name));
 
       therapistLogs.forEach((log) => {
         const normalizedLogPrescription = normalizePrescriptionKey(log?.prescription);
@@ -74,7 +93,7 @@ export default function ShockwaveSettlementView({
       const incentive = Math.round(amount * ((Number(incentivePercentage) || 0) / 100));
 
       return {
-        therapist,
+        therapist: { ...therapist, name: getSlotDisplayName(idx) },
         countsByPrescription,
         totalCount,
         amount,
@@ -103,7 +122,7 @@ export default function ShockwaveSettlementView({
       grandAmount,
       grandIncentive,
     };
-  }, [safeLogs, safeTherapists, safePrescriptions, normalizedPriceMap, incentivePercentage]);
+  }, [safeLogs, safeTherapists, safePrescriptions, normalizedPriceMap, incentivePercentage, getSlotNames, getSlotDisplayName]);
 
   if (!safeTherapists.length) {
     return (
