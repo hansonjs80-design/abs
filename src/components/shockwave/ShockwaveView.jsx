@@ -100,14 +100,21 @@ function buildMergeSpanWithMemoList(mergeSpan, memoList) {
   return nextMergeSpan;
 }
 
+function cloneMergeSpanWithMeta(mergeSpan, overrides = {}) {
+  const base = mergeSpan || { rowSpan: 1, colSpan: 1, mergedInto: null };
+  const next = { ...base, ...overrides };
+  if (base.meta && typeof base.meta === 'object') {
+    next.meta = { ...base.meta };
+  }
+  return next;
+}
+
 function buildSchedulerCellDisplay(content, mergeSpan) {
   const mainText = String(content || '').trim();
   const memoList = getMemoListFromMergeSpan(mergeSpan);
-  const noteText = memoList.join(' / ');
-  const hasDisplayText = Boolean(mainText || noteText);
+  const hasDisplayText = Boolean(mainText || memoList.length);
   return {
     mainText,
-    noteText,
     hasDisplayText,
   };
 }
@@ -513,6 +520,37 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     });
   }, []);
 
+  const findLatestSchedulerMemoMeta = useCallback((targetCell, chartNumber, cleanName) => {
+    const normalizedName = normalizeNameForMatch(cleanName);
+    const currentSortKey = `${weeks[targetCell.w]?.[targetCell.d]?.date?.toISOString?.().slice(0, 10) || ''}-${String(targetCell.r).padStart(3, '0')}-${String(targetCell.c).padStart(3, '0')}`;
+    let latestMatch = null;
+
+    Object.entries(memos || {}).forEach(([memoKey, memo]) => {
+      if (!memo?.content) return;
+      const parts = memoKey.split('-').map(Number);
+      if (parts.length !== 4) return;
+      const sortKey = `${weeks[parts[0]]?.[parts[1]]?.date?.toISOString?.().slice(0, 10) || ''}-${String(parts[2]).padStart(3, '0')}-${String(parts[3]).padStart(3, '0')}`;
+      if (!sortKey || sortKey >= currentSortKey) return;
+
+      const parsed = parseSchedulerPatientIdentity(memo.content);
+      const matchesChart = chartNumber && String(parsed.patientChart || '').trim() === String(chartNumber).trim();
+      const matchesName = normalizedName && normalizeNameForMatch(parsed.patientName) === normalizedName;
+      if (!matchesChart && !matchesName) return;
+
+      const memoList = getMemoListFromMergeSpan(memo.merge_span);
+      if (memoList.length === 0) return;
+
+      if (!latestMatch || sortKey > latestMatch.sortKey) {
+        latestMatch = {
+          sortKey,
+          mergeSpan: buildMergeSpanWithMemoList(memo.merge_span, memoList),
+        };
+      }
+    });
+
+    return latestMatch?.mergeSpan;
+  }, [memos, weeks]);
+
   const handleAutoFillConfirm = useCallback((result) => {
     if (!autoFillDialog) return;
     autoFillDialog.resolve(result);
@@ -733,10 +771,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
         if (!dialogResult) return { text: rawName };
 
+        const inheritedMergeSpan = findLatestSchedulerMemoMeta(
+          { w, d, r, c },
+          dialogResult.chartNumber,
+          selected.cleanName
+        );
+
         return {
           text: `${dialogResult.chartNumber}/${dialogResult.namePart}(${dialogResult.visitCount})`,
           prescription: dialogResult.prescription,
           bodyPart: dialogResult.bodyPart,
+          mergeSpan: inheritedMergeSpan,
         };
       } catch (err) {
         console.error('autoFillDialog error:', err);
@@ -745,12 +790,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     }
 
     // 부위가 0~1개: 다이얼로그 없이 바로 자동완성
+    const inheritedMergeSpan = findLatestSchedulerMemoMeta(
+      { w, d, r, c },
+      selected.chartNumber,
+      selected.cleanName
+    );
     return {
       text: `${selected.chartNumber}/${selected.namePart}(${effectiveVisitCount})`,
       prescription: selected.prescription || undefined,
       bodyPart: effectiveBodyPart,
+      mergeSpan: inheritedMergeSpan,
     };
-  }, [memos, pickChartOption, showAutoFillDialog, shouldAutoFormatSchedulerName, weeks, settings]);
+  }, [memos, pickChartOption, showAutoFillDialog, shouldAutoFormatSchedulerName, weeks, settings, findLatestSchedulerMemoMeta]);
 
   useEffect(() => {
     onLoadMemos(currentYear, currentMonth);
@@ -1010,6 +1061,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const newContent = (typeof result === 'string' ? result : (result?.text || '')).trim();
     const newPrescription = result?.prescription;
     const newBodyPart = result?.bodyPart;
+    const newMergeSpan = result?.mergeSpan;
 
     if (newContent !== immediateContent) {
       setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
@@ -1026,7 +1078,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     }
     setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
     recordUndo({ type: 'edit', w, d, r, c, oldContent, oldBg: memos[key]?.bg_color });
-    const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, newContent, undefined, undefined, newPrescription, newBodyPart);
+    const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, newContent, undefined, newMergeSpan, newPrescription, newBodyPart);
     setPendingDisplayValues((prev) => {
       const next = { ...prev };
       delete next[key];
@@ -1475,15 +1527,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
             );
             sourceMasterToTargetMaster.set(mergeSpan.mergedInto, mappedMasterKey);
           }
-          nextMergeSpan = { rowSpan: 1, colSpan: 1, mergedInto: mappedMasterKey };
+          nextMergeSpan = cloneMergeSpanWithMeta(mergeSpan, { rowSpan: 1, colSpan: 1, mergedInto: mappedMasterKey });
         } else if (mergeSpan?.rowSpan > 1 || mergeSpan?.colSpan > 1) {
           const mappedMasterKey = cellKey(target.w, target.d, targetRow, targetCol);
           sourceMasterToTargetMaster.set(sourceCellKey, mappedMasterKey);
-          nextMergeSpan = {
+          nextMergeSpan = cloneMergeSpanWithMeta(mergeSpan, {
             rowSpan: mergeSpan.rowSpan || 1,
             colSpan: mergeSpan.colSpan || 1,
             mergedInto: null,
-          };
+          });
+        } else if (mergeSpan?.meta) {
+          nextMergeSpan = cloneMergeSpanWithMeta(mergeSpan, { rowSpan: 1, colSpan: 1, mergedInto: null });
         }
 
         payload.push({
@@ -2473,7 +2527,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 {!isEditing && (
                                   <div className="sw-cell-display" style={{ pointerEvents: 'none', position: 'absolute', inset: 0, padding: 4 }}>
                                     {displayData.mainText ? <span className="sw-cell-main">{displayData.mainText}</span> : null}
-                                    {displayData.noteText ? <span className="sw-cell-note">{displayData.noteText}</span> : null}
                                   </div>
                                 )}
                                 <input
@@ -2560,7 +2613,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               >
                                 <div className="sw-cell-display">
                                   {displayData.mainText ? <span className="sw-cell-main">{displayData.mainText}</span> : null}
-                                  {displayData.noteText ? <span className="sw-cell-note">{displayData.noteText}</span> : null}
                                 </div>
                               </div>
                             );
