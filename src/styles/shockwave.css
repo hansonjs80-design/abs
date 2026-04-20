@@ -281,6 +281,16 @@
   background: var(--sw-preserve);
 }
 
+.sw-cell.cancelled {
+  background: #f4cccc;
+}
+
+.sw-cell.cancelled .sw-cell-main {
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: currentColor;
+}
+
 .sw-cell.holiday-bg {
   background: #f8c2c2;
 }
@@ -529,12 +539,12 @@
 }
 
 .shockwave-context-menu .context-menu-item-clear-complete {
-  color: var(--text-secondary);
-  background: rgba(148, 163, 184, 0.12);
+  color: #9f1239;
+  background: rgba(244, 204, 204, 0.72);
 }
 
 .shockwave-context-menu .context-menu-item-clear-complete:hover:not(:disabled) {
-  background: rgba(148, 163, 184, 0.22);
+  background: rgba(244, 204, 204, 0.96);
 }
 
 .shockwave-context-menu button:disabled {
