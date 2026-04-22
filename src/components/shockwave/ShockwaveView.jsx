@@ -489,6 +489,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (match !== undefined) return match.therapist_name || '';
     return therapists[slotIndex]?.name || '';
   }, [monthlyTherapists, therapists]);
+  const normalizeStaffBlockKeyword = useCallback((value) => (
+    String(value || '').replace(/\s+/g, '').toLowerCase()
+  ), []);
   const therapistShiftByDate = useMemo(() => {
     const map = {};
 
@@ -497,15 +500,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
       const dateKey = `${item.year}-${item.month}-${item.day}`;
       const text = String(item.content).trim();
-      if (!/pt\s*\//i.test(text)) return;
+      const compactText = normalizeStaffBlockKeyword(text);
+      if (!compactText.includes('pt/')) return;
 
-      const isNightShift = /야간\s*pt\s*\//i.test(text) || /^야\s*pt\s*\//i.test(text);
+      const isNightShift = compactText.includes('야간pt/') || compactText.startsWith('야pt/');
       const slashIndex = text.indexOf('/');
       if (slashIndex < 0) return;
 
       const names = text
         .slice(slashIndex + 1)
-        .split(',')
+        .split(/[,，、\n]/)
         .map((part) => part.trim())
         .filter(Boolean)
         .map((part) => part.split(/\s+/)[0])
@@ -525,7 +529,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     });
 
     return map;
-  }, [staffMemos]);
+  }, [staffMemos, normalizeStaffBlockKeyword]);
 
   const effectiveStaffBlockRules = useMemo(
     () => getEffectiveStaffScheduleBlockRules(settings, currentYear, currentMonth).rules,
@@ -546,6 +550,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       if (slashIndex < 0) return;
 
       const prefix = text.slice(0, slashIndex).trim();
+      const normalizedPrefix = normalizeStaffBlockKeyword(prefix);
+      const normalizedText = normalizeStaffBlockKeyword(text);
       const names = text
         .slice(slashIndex + 1)
         .split(/[,，、\n]/)
@@ -556,21 +562,38 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         .filter(Boolean);
       if (names.length === 0) return;
 
-      const matchedRules = rules.filter((rule) => prefix.includes(rule.keyword) || text.includes(rule.keyword));
+      const matchedRules = rules.filter((rule) => {
+        const normalizedKeyword = normalizeStaffBlockKeyword(rule.keyword);
+        return normalizedKeyword && (normalizedPrefix.includes(normalizedKeyword) || normalizedText.includes(normalizedKeyword));
+      });
       if (matchedRules.length === 0) return;
 
       const dateKey = `${item.year}-${item.month}-${item.day}`;
       if (!map[dateKey]) map[dateKey] = {};
-      names.forEach((normalizedName) => {
-        if (!map[dateKey][normalizedName]) map[dateKey][normalizedName] = [];
-        matchedRules.forEach((rule) => {
+      matchedRules.forEach((rule) => {
+        if (rule.invert_match === true) {
+          const day = Number(item.day);
+          const targetNames = Array.from({ length: colCount }, (_, slotIndex) => (
+            normalizeNameForMatch(getTherapistNameForDate(slotIndex, day))
+          )).filter(Boolean);
+          targetNames
+            .filter((normalizedName) => !names.includes(normalizedName))
+            .forEach((normalizedName) => {
+              if (!map[dateKey][normalizedName]) map[dateKey][normalizedName] = [];
+              map[dateKey][normalizedName].push(rule);
+            });
+          return;
+        }
+
+        names.forEach((normalizedName) => {
+          if (!map[dateKey][normalizedName]) map[dateKey][normalizedName] = [];
           map[dateKey][normalizedName].push(rule);
         });
       });
     });
 
     return map;
-  }, [staffMemos, effectiveStaffBlockRules]);
+  }, [staffMemos, effectiveStaffBlockRules, normalizeStaffBlockKeyword, colCount, getTherapistNameForDate]);
 
   const getStaffScheduleBlockForCell = useCallback((dateKey, therapistName, slotTime) => {
     if (!dateKey || !therapistName || !slotTime) return null;

@@ -355,6 +355,7 @@ export default function MonthlyTherapistConfig({
         end_time: '18:00',
         bg_color: '#d9ead3',
         enabled: true,
+        invert_match: false,
       },
     ]));
   }, []);
@@ -741,7 +742,7 @@ export default function MonthlyTherapistConfig({
     return (
       <>
         <div className="monthly-therapist-desc">
-          근무표 메모가 “문구/치료사명” 형식과 일치하면 해당 날짜의 스케줄러에서 그 치료사 열의 지정 시간대를 색칠합니다. 예: 오후 반차/홍길동
+          근무표 메모가 “문구/치료사명” 형식과 일치하면 해당 날짜의 스케줄러에서 그 치료사 열의 지정 시간대를 색칠합니다. 공백은 완화되어 “야간 PT”와 “야간PT”를 같은 문구로 인식합니다.
           <br />
           {sourceText}
         </div>
@@ -761,13 +762,14 @@ export default function MonthlyTherapistConfig({
                   <th>시작</th>
                   <th>종료</th>
                   <th>색상</th>
+                  <th>미포함</th>
                   <th>삭제</th>
                 </tr>
               </thead>
               <tbody>
                 {staffBlockRules.length === 0 ? (
                   <tr>
-                    <td className="monthly-operating-empty" colSpan={6}>이 달에 설정된 근무표 연동 색칠 규칙이 없습니다.</td>
+                    <td className="monthly-operating-empty" colSpan={7}>이 달에 설정된 근무표 연동 색칠 규칙이 없습니다.</td>
                   </tr>
                 ) : staffBlockRules.map((rule, index) => (
                   <tr key={rule.id || index}>
@@ -810,6 +812,16 @@ export default function MonthlyTherapistConfig({
                         value={rule.bg_color || '#d9ead3'}
                         onChange={(e) => updateStaffBlockRule(index, 'bg_color', e.target.value)}
                       />
+                    </td>
+                    <td>
+                      <label className="monthly-staff-block-invert">
+                        <input
+                          type="checkbox"
+                          checked={rule.invert_match === true}
+                          onChange={(e) => updateStaffBlockRule(index, 'invert_match', e.target.checked)}
+                        />
+                        <span>목록에 없는 치료사</span>
+                      </label>
                     </td>
                     <td>
                       <button

@@ -8,6 +8,7 @@ export const DEFAULT_STAFF_SCHEDULE_BLOCK_RULES = [
     end_time: '18:00',
     bg_color: '#d9ead3',
     enabled: true,
+    invert_match: false,
   },
 ];
 
@@ -23,6 +24,7 @@ function normalizeRule(rule, index = 0) {
     end_time: String(rule?.end_time || '').slice(0, 5),
     bg_color: rule?.bg_color || '#d9ead3',
     enabled: rule?.enabled !== false,
+    invert_match: rule?.invert_match === true,
   };
 }
 
