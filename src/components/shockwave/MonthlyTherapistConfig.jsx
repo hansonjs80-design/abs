@@ -354,6 +354,7 @@ export default function MonthlyTherapistConfig({
         start_time: '13:00',
         end_time: '18:00',
         bg_color: '#d9ead3',
+        font_color: '#0f172a',
         enabled: true,
         invert_match: false,
       },
@@ -761,7 +762,8 @@ export default function MonthlyTherapistConfig({
                   <th>근무표 문구</th>
                   <th>시작</th>
                   <th>종료</th>
-                  <th>색상</th>
+                  <th>배경색</th>
+                  <th>글자색</th>
                   <th>미포함</th>
                   <th>삭제</th>
                 </tr>
@@ -769,7 +771,7 @@ export default function MonthlyTherapistConfig({
               <tbody>
                 {staffBlockRules.length === 0 ? (
                   <tr>
-                    <td className="monthly-operating-empty" colSpan={7}>이 달에 설정된 근무표 연동 색칠 규칙이 없습니다.</td>
+                    <td className="monthly-operating-empty" colSpan={8}>이 달에 설정된 근무표 연동 색칠 규칙이 없습니다.</td>
                   </tr>
                 ) : staffBlockRules.map((rule, index) => (
                   <tr key={rule.id || index}>
@@ -811,6 +813,14 @@ export default function MonthlyTherapistConfig({
                         className="monthly-staff-block-color"
                         value={rule.bg_color || '#d9ead3'}
                         onChange={(e) => updateStaffBlockRule(index, 'bg_color', e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="color"
+                        className="monthly-staff-block-color"
+                        value={rule.font_color || '#0f172a'}
+                        onChange={(e) => updateStaffBlockRule(index, 'font_color', e.target.value)}
                       />
                     </td>
                     <td>

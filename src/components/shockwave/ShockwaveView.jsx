@@ -3042,6 +3042,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             inlineStyle.fontWeight = '700';
                           }
 
+                          if (staffBlockRule?.font_color) {
+                            inlineStyle.color = staffBlockRule.font_color;
+                            inlineStyle.fontWeight = '800';
+                          }
+
                           // 마스터 셀 중앙 효과
                           if (visualRowSpan > 1 || mergeSpan.colSpan > 1) {
                             inlineStyle.display = 'flex';
