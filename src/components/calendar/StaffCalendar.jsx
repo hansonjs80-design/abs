@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { generateCalendarGrid, getTodayKST, isSameDate } from '../../lib/calendarUtils';
 import { WEEKDAYS } from '../../lib/constants';
+import { getEffectiveStaffScheduleBlockRules } from '../../lib/staffScheduleBlockRules';
 import { useToast } from '../common/Toast';
 import MemoSlot from './MemoSlot';
 
@@ -10,7 +11,7 @@ const COL_W_KEY = 'staff-calendar-col-width';
 const ROW_H_KEY = 'staff-calendar-row-height';
 
 export default function StaffCalendar() {
-  const { currentYear, currentMonth, navigateMonth, staffMemos, loadStaffMemos, saveStaffMemo, holidays, holidayNames, loadHolidays } = useSchedule();
+  const { currentYear, currentMonth, navigateMonth, staffMemos, loadStaffMemos, saveStaffMemo, holidays, holidayNames, loadHolidays, shockwaveSettings, loadShockwaveSettings } = useSchedule();
   const { addToast } = useToast();
 
   const [colWidth, setColWidth] = useState(() => { const v = Number(localStorage.getItem(COL_W_KEY)); return v > 0 ? v : 0; });
@@ -33,6 +34,20 @@ export default function StaffCalendar() {
 
   const today = getTodayKST();
   const { grid } = useMemo(() => generateCalendarGrid(currentYear, currentMonth, holidays), [currentYear, currentMonth, holidays]);
+  const staffBlockRules = useMemo(
+    () => getEffectiveStaffScheduleBlockRules(shockwaveSettings, currentYear, currentMonth).rules,
+    [shockwaveSettings, currentYear, currentMonth]
+  );
+  const normalizeRuleText = useCallback((value) => String(value || '').replace(/\s+/g, '').toLowerCase(), []);
+  const getAutoFontColorForStaffMemo = useCallback((content) => {
+    const normalizedContent = normalizeRuleText(content);
+    if (!normalizedContent) return null;
+    const rule = (staffBlockRules || []).find((item) => {
+      if (item?.enabled === false || !item?.keyword || !item?.font_color) return false;
+      return normalizedContent.includes(normalizeRuleText(item.keyword));
+    });
+    return rule?.font_color || null;
+  }, [staffBlockRules, normalizeRuleText]);
 
   // ── Key helpers: memoKey = "year-month-day-slot" matching staffMemos format ──
   const memoKey = useCallback((wi, di, slot) => {
@@ -95,7 +110,7 @@ export default function StaffCalendar() {
     document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
   };
 
-  useEffect(() => { loadStaffMemos(currentYear, currentMonth); loadHolidays(currentYear, currentMonth); }, [currentYear, currentMonth, loadStaffMemos, loadHolidays]);
+  useEffect(() => { loadStaffMemos(currentYear, currentMonth); loadHolidays(currentYear, currentMonth); loadShockwaveSettings(); }, [currentYear, currentMonth, loadStaffMemos, loadHolidays, loadShockwaveSettings]);
   useEffect(() => { if (colWidth > 0) localStorage.setItem(COL_W_KEY, colWidth); else localStorage.removeItem(COL_W_KEY); localStorage.setItem(ROW_H_KEY, rowHeight); }, [colWidth, rowHeight]);
 
   // ── Actions ──
@@ -456,11 +471,14 @@ export default function StaffCalendar() {
 
                   // 공휴일 이름: 첫 번째 슬롯에 표시
                   const holidayName = (slot === 0 && dayInfo.isHoliday) ? holidayNames.get(dayInfo.key) : null;
+                  const memoContent = staffMemos[key]?.content || '';
+                  const autoFontColor = getAutoFontColorForStaffMemo(memoContent);
 
                   return (
                     <MemoSlot key={slot} memo={staffMemos[key]} dayInfo={dayInfo} slotIndex={slot}
                       isSelected={isSel} isPrimary={isPri} isEditing={isEd} clipboardMode={clipMode}
                       cellId={key}
+                      autoFontColor={autoFontColor}
                       holidayName={holidayName}
                       onMouseDown={(e) => onCellMouseDown(wi, di, slot, e)}
                       onMouseEnter={() => onCellMouseEnter(wi, di, slot)}

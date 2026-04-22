@@ -6,12 +6,13 @@ export default function MemoSlot({
   clipboardMode, holidayName,
   onMouseDown, onMouseEnter, onDoubleClick, onContextMenu,
   cellId,
+  autoFontColor,
 }) {
   const content = memo?.content || '';
   const fontColor = computeMemoFontColor(content);
 
   // DB에 저장된 커스텀 색상 우선, 없으면 자동 감지 색상 클래스 사용
-  const customFontColor = memo?.font_color;
+  const customFontColor = memo?.font_color || autoFontColor;
   const customBgColor = memo?.bg_color;
 
   let colorClass = '';

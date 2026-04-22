@@ -328,13 +328,14 @@ export function ScheduleProvider({ children }) {
 
       if (error) {
         const message = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
-        const missingMonthlyColumn = /monthly_settlement_settings|schema cache|column/i.test(message);
-        if (!missingMonthlyColumn) throw error;
+        const missingOptionalColumn = /monthly_settlement_settings|staff_schedule_block_rules|schema cache|column/i.test(message);
+        if (!missingOptionalColumn) throw error;
 
-        console.warn('monthly_settlement_settings column is missing. Saving global settlement settings only.');
+        console.warn('Optional settings column is missing. Saving compatible global settings only.');
+        const { staff_schedule_block_rules, ...compatiblePayload } = basePayload;
         const { error: retryError } = await supabase
           .from('shockwave_settings')
-          .upsert(basePayload, { onConflict: 'id' });
+          .upsert(compatiblePayload, { onConflict: 'id' });
         if (retryError) throw retryError;
       }
       setShockwaveSettings({ ...newSettings, id: targetId, updated_at: nextUpdatedAt });
