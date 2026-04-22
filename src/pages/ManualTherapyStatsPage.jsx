@@ -8,6 +8,8 @@ import ShockwaveDataGrid from '../components/shockwave/ShockwaveDataGrid';
 import ShockwaveNewPatientsView from '../components/shockwave/ShockwaveNewPatientsView';
 import ManualTherapyStatsView from '../components/shockwave/ManualTherapyStatsView';
 import ManualTherapySixMonthStats from '../components/shockwave/ManualTherapySixMonthStats';
+import SettlementSettingsPanel from '../components/shockwave/SettlementSettingsPanel';
+import { getEffectiveSettlementSettings } from '../lib/settlementSettings';
 const MANUAL_THERAPY_SHEET_ID = '1-R_p3eyxwXISFTYX5G7_ec5L0kgUIhNbIwA9AdEj-9U';
 
 class ManualTherapyStatsPageErrorBoundary extends React.Component {
@@ -63,6 +65,7 @@ export default function ManualTherapyStatsPage() {
     shockwaveMemos,
     loadShockwaveMemos,
     shockwaveSettings,
+    saveShockwaveSettings,
     monthlyManualTherapists,
   } = useSchedule();
   const { addToast } = useToast();
@@ -78,9 +81,13 @@ export default function ManualTherapyStatsPage() {
     () => (Array.isArray(manualTherapists) ? manualTherapists.filter(Boolean) : []),
     [manualTherapists]
   );
+  const effectiveSettlementSettings = useMemo(
+    () => getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'manual_therapy'),
+    [shockwaveSettings, currentYear, currentMonth]
+  );
   const prescriptions = useMemo(
-    () => shockwaveSettings?.manual_therapy_prescriptions || ['40분', '60분'],
-    [shockwaveSettings?.manual_therapy_prescriptions]
+    () => effectiveSettlementSettings.prescriptions,
+    [effectiveSettlementSettings]
   );
 
   const fetchLogs = useCallback(async () => {
@@ -372,6 +379,11 @@ export default function ManualTherapyStatsPage() {
     }
   }, [addToast, currentMonth, currentYear, fetchLogs]);
 
+  const handleSaveSettlementSettings = useCallback(async (nextSettings) => {
+    const ok = await saveShockwaveSettings(nextSettings);
+    addToast(ok ? '이번 달 도수치료 결산 설정을 저장했습니다.' : '결산 설정 저장에 실패했습니다.', ok ? 'success' : 'error');
+  }, [addToast, saveShockwaveSettings]);
+
   return (
     <div className="animate-fade-in" style={{ height: '100%', overflow: 'auto' }}>
       <ManualTherapyStatsPageErrorBoundary>
@@ -401,6 +413,12 @@ export default function ManualTherapyStatsPage() {
                 onClick={() => setActiveSection('new-patients')}
               >
                 신규환자
+              </button>
+              <button
+                className={`sw-stats-side-tab${activeSection === 'settings' ? ' active' : ''}`}
+                onClick={() => setActiveSection('settings')}
+              >
+                설정
               </button>
             </aside>
 
@@ -518,15 +536,14 @@ export default function ManualTherapyStatsPage() {
                       therapists={safeTherapists}
                       monthlyTherapists={monthlyManualTherapists}
                       prescriptions={prescriptions}
-                      incentivePercentage={shockwaveSettings?.manual_therapy_incentive_percentage ?? 0}
-                      prescriptionPrices={shockwaveSettings?.prescription_prices || {}}
+                      incentivePercentage={effectiveSettlementSettings.incentive_percentage}
+                      prescriptionPrices={effectiveSettlementSettings.prescription_prices}
                     />
                     <ManualTherapySixMonthStats
                       currentYear={currentYear}
                       currentMonth={currentMonth}
                       therapists={safeTherapists}
-                      prescriptionPrices={shockwaveSettings?.prescription_prices || {}}
-                      incentivePercentage={shockwaveSettings?.manual_therapy_incentive_percentage ?? 0}
+                      settings={shockwaveSettings}
                     />
                   </div>
                 </ManualTherapySettlementErrorBoundary>
@@ -541,6 +558,17 @@ export default function ManualTherapyStatsPage() {
                     title={`${currentMonth}월 도수치료 신규환자`}
                   />
                 </div>
+              )}
+
+              {activeSection === 'settings' && (
+                <SettlementSettingsPanel
+                  type="manual_therapy"
+                  year={currentYear}
+                  month={currentMonth}
+                  settings={shockwaveSettings}
+                  effectiveSettings={effectiveSettlementSettings}
+                  onSave={handleSaveSettlementSettings}
+                />
               )}
             </div>
           </div>

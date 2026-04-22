@@ -32,6 +32,7 @@ const SQL_SNIPPETS = [
   manual_therapy_incentive_percentage numeric(5,2) NOT NULL DEFAULT 0,
   frozen_columns int DEFAULT 6,
   prescription_colors jsonb NOT NULL DEFAULT '{}'::jsonb,
+  monthly_settlement_settings jsonb NOT NULL DEFAULT '{}'::jsonb,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE public.shockwave_settings DISABLE ROW LEVEL SECURITY;
@@ -43,7 +44,8 @@ ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS prescription_pric
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS incentive_percentage numeric(5,2) NOT NULL DEFAULT 7;
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS manual_therapy_incentive_percentage numeric(5,2) NOT NULL DEFAULT 0;
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS frozen_columns int DEFAULT 6;
-ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS prescription_colors jsonb NOT NULL DEFAULT '{}'::jsonb;`
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS prescription_colors jsonb NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS monthly_settlement_settings jsonb NOT NULL DEFAULT '{}'::jsonb;`
   },
   {
     title: '치료사 목록 테이블',
@@ -307,6 +309,7 @@ CREATE TABLE IF NOT EXISTS public.shockwave_settings (
   incentive_percentage numeric(5,2) DEFAULT 7,
   manual_therapy_incentive_percentage numeric(5,2) DEFAULT 0,
   frozen_columns integer DEFAULT 6,
+  monthly_settlement_settings jsonb DEFAULT '{}'::jsonb,
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -342,6 +345,9 @@ ADD COLUMN IF NOT EXISTS date_overrides jsonb NOT NULL DEFAULT '{}';
 
 ALTER TABLE public.shockwave_settings
 ADD COLUMN IF NOT EXISTS prescription_colors jsonb DEFAULT '{}'::jsonb;
+
+ALTER TABLE public.shockwave_settings
+ADD COLUMN IF NOT EXISTS monthly_settlement_settings jsonb DEFAULT '{}'::jsonb;
 
 -- =============================================
 -- [통계/내역 탭 전용] 환자 일일 치료 기록 로그 테이블
@@ -507,6 +513,7 @@ export default function SettingsPage() {
     frozen_columns: 6,
     day_overrides: {},
     date_overrides: {},
+    monthly_settlement_settings: {},
   });
 
   const handleCopySQL = async (sql) => {
@@ -552,6 +559,7 @@ export default function SettingsPage() {
           frozen_columns: data.frozen_columns || 6,
           day_overrides: data.day_overrides || {},
           date_overrides: data.date_overrides || {},
+          monthly_settlement_settings: data.monthly_settlement_settings || {},
         });
       }
     } catch(e) {}
@@ -719,7 +727,8 @@ export default function SettingsPage() {
       prescription_colors: swSettings.prescription_colors,
       incentive_percentage: Number(swSettings.incentive_percentage) || 0,
       manual_therapy_incentive_percentage: Number(swSettings.manual_therapy_incentive_percentage) || 0,
-      frozen_columns: Number(swSettings.frozen_columns)
+      frozen_columns: Number(swSettings.frozen_columns),
+      monthly_settlement_settings: swSettings.monthly_settlement_settings || {},
     });
     if (success) addToast('시간표 설정이 저장되었습니다.', 'success');
   };

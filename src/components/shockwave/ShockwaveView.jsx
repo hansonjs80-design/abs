@@ -1507,6 +1507,22 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     });
   }, [selectedKeys, memos, normalizeKeysToMergeMasters]);
   const treatmentCompleteButtonLabel = hasCompletedSelection ? '방문취소' : '방문완료';
+  const isAppleShortcutPlatform = useMemo(() => {
+    if (typeof navigator === 'undefined') return false;
+    return /Mac|iPhone|iPad|iPod/i.test(`${navigator.platform || ''} ${navigator.userAgent || ''}`);
+  }, []);
+  const shortcutLabels = useMemo(() => {
+    const mod = isAppleShortcutPlatform ? '⌘' : 'Ctrl';
+    const join = (...keys) => isAppleShortcutPlatform ? keys.join('') : keys.join('+');
+    return {
+      copy: join(mod, 'C'),
+      cut: join(mod, 'X'),
+      paste: join(mod, 'V'),
+      merge: join(mod, 'E'),
+      complete: join(mod, 'G'),
+      cancel: join(mod, '-'),
+    };
+  }, [isAppleShortcutPlatform]);
 
   // 날짜 비교 헬퍼: 원본(w,d)와 대상(w,d)의 실제 날짜를 비교
   const isLaterDate = useCallback((srcW, srcD, dstW, dstD) => {
@@ -2386,6 +2402,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return;
     }
 
+    // Ctrl/Cmd+- → 예약 취소 토글
+    if (isMeta && (e.code === 'Minus' || e.key === '-')) {
+      e.preventDefault();
+      e.stopPropagation();
+      handleToggleTreatmentCancel();
+      return;
+    }
+
     // Ctrl/Cmd+G → 치료 완료 토글
     if (isMeta && e.code === 'KeyG') {
       e.preventDefault();
@@ -2450,7 +2474,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       }
       return;
     }
-  }, [selectedCell, editingCell, selectedKeys, deleteCells, buildRangeKeys, selectSingleCell, getAdjacentCell, beginEditingCell, promoteFocusedInputToEditor, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleHolidayBackground, tryMergeSelection, isEditableTarget]);
+  }, [selectedCell, editingCell, selectedKeys, deleteCells, buildRangeKeys, selectSingleCell, getAdjacentCell, beginEditingCell, promoteFocusedInputToEditor, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleTreatmentCancel, handleToggleHolidayBackground, tryMergeSelection, isEditableTarget]);
 
   const dismissContextMenu = useCallback(() => setContextMenu(null), []);
 
@@ -3153,19 +3177,35 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               <>
                 <div className="context-menu-action-panel">
                   <div className="context-menu-actions-grid">
-                    <button type="button" className="context-menu-item" onClick={() => handleContextAction('copy')}>
+                    <button
+                      type="button"
+                      className="context-menu-item"
+                      data-shortcut-tooltip={`복사 ${shortcutLabels.copy}`}
+                      onClick={() => handleContextAction('copy')}
+                    >
                       복사
                     </button>
-                    <button type="button" className="context-menu-item" onClick={() => handleContextAction('cut')}>
+                    <button
+                      type="button"
+                      className="context-menu-item"
+                      data-shortcut-tooltip={`잘라내기 ${shortcutLabels.cut}`}
+                      onClick={() => handleContextAction('cut')}
+                    >
                       잘라내기
                     </button>
-                    <button type="button" className="context-menu-item" onClick={() => handleContextAction('paste')}>
+                    <button
+                      type="button"
+                      className="context-menu-item"
+                      data-shortcut-tooltip={`붙여넣기 ${shortcutLabels.paste}`}
+                      onClick={() => handleContextAction('paste')}
+                    >
                       붙여넣기
                     </button>
                     {!selectionInfo?.isMergedMaster ? (
                       <button
                         type="button"
                         className="context-menu-item"
+                        data-shortcut-tooltip={`셀 병합 ${shortcutLabels.merge}`}
                         onClick={() => handleContextAction('merge')}
                         disabled={!selectionInfo?.selectionMultiple}
                       >
@@ -3175,6 +3215,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       <button
                         type="button"
                         className="context-menu-item"
+                        data-shortcut-tooltip={`병합 해제 ${shortcutLabels.merge}`}
                         onClick={() => handleContextAction('unmerge')}
                       >
                         병합 해제
@@ -3183,6 +3224,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                     <button
                       type="button"
                       className="context-menu-item context-menu-item-complete"
+                      data-shortcut-tooltip={`${treatmentCompleteButtonLabel} ${shortcutLabels.complete}`}
                       onClick={() => handleContextAction('complete-toggle')}
                       disabled={!hasCompletableSelection}
                     >
@@ -3191,6 +3233,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                     <button
                       type="button"
                       className="context-menu-item context-menu-item-clear-complete"
+                      data-shortcut-tooltip={`예약 취소 ${shortcutLabels.cancel}`}
                       onClick={() => handleContextAction('cancel-toggle')}
                       disabled={!hasCompletableSelection}
                     >

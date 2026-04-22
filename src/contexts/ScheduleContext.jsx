@@ -30,7 +30,8 @@ export function ScheduleProvider({ children }) {
     prescription_colors: {},
     incentive_percentage: 7,
     manual_therapy_incentive_percentage: 0,
-    frozen_columns: 6
+    frozen_columns: 6,
+    monthly_settlement_settings: {}
   });
   const [shockwaveMemos, setShockwaveMemos] = useState({});
   const [monthlyTherapists, setMonthlyTherapists] = useState([]);
@@ -270,7 +271,8 @@ export function ScheduleProvider({ children }) {
           prescription_colors: data.prescription_colors || {},
           incentive_percentage: data.incentive_percentage ?? 7,
           manual_therapy_incentive_percentage: data.manual_therapy_incentive_percentage ?? 0,
-          frozen_columns: data.frozen_columns || 6
+          frozen_columns: data.frozen_columns || 6,
+          monthly_settlement_settings: data.monthly_settlement_settings || {}
         });
       }
     } catch (err) {
@@ -298,7 +300,8 @@ export function ScheduleProvider({ children }) {
         incentive_percentage: newSettings.incentive_percentage ?? 7,
         manual_therapy_incentive_percentage: newSettings.manual_therapy_incentive_percentage ?? 0,
         frozen_columns: newSettings.frozen_columns || 6,
-        prescription_colors: newSettings.prescription_colors || {}
+        prescription_colors: newSettings.prescription_colors || {},
+        monthly_settlement_settings: newSettings.monthly_settlement_settings || {}
       }, { onConflict: 'id' });
 
       if (error) throw error;

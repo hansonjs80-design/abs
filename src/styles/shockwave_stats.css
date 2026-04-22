@@ -1064,6 +1064,209 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   border-right: none;
 }
 
+.sw-manual-compact-settlement-table {
+  table-layout: auto;
+  min-width: max-content;
+}
+
+.sw-manual-compact-settlement-table th,
+.sw-manual-compact-settlement-table td {
+  padding: 7px 6px;
+  font-size: 0.9rem;
+  line-height: 1.18;
+}
+
+.sw-manual-compact-settlement-table thead .label-col {
+  width: 92px;
+  min-width: 92px;
+  background: linear-gradient(180deg, #e7edf5 0%, #dce5ef 100%);
+}
+
+.sw-manual-compact-settlement-table thead .therapist-col {
+  min-width: 88px;
+  padding: 8px 8px;
+  font-size: 0.95rem;
+}
+
+.sw-manual-compact-settlement-table thead .prescription-col {
+  width: 44px;
+  min-width: 44px;
+  max-width: 52px;
+  padding: 6px 4px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.sw-manual-compact-settlement-table thead .grand-col {
+  width: 92px;
+  min-width: 92px;
+  background: linear-gradient(180deg, #e4eaf2 0%, #d7e0eb 100%);
+}
+
+.sw-manual-compact-settlement-table .row-label {
+  background: #f8fafc;
+  color: #243047;
+}
+
+.sw-manual-compact-settlement-table tbody td {
+  min-width: 44px;
+  padding-left: 4px;
+  padding-right: 4px;
+  font-weight: 900;
+}
+
+.sw-manual-compact-settlement-table .merged-value {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.sw-manual-compact-settlement-table .grand-value {
+  background: linear-gradient(180deg, #f0f4f8 0%, #e8eef5 100%);
+}
+
+.sw-manual-compact-settlement-table .therapist-tone-0 {
+  background: linear-gradient(180deg, #dbeafe 0%, #edf5ff 100%);
+}
+
+.sw-manual-compact-settlement-table .therapist-tone-1 {
+  background: linear-gradient(180deg, #e9e4ff 0%, #f6f3ff 100%);
+}
+
+.sw-manual-compact-settlement-table .therapist-tone-2 {
+  background: linear-gradient(180deg, #dcf5e7 0%, #f0fbf5 100%);
+}
+
+.sw-manual-compact-settlement-table .therapist-tone-3 {
+  background: linear-gradient(180deg, #ffead2 0%, #fff6ec 100%);
+}
+
+.sw-manual-compact-settlement-table .therapist-tone-4 {
+  background: linear-gradient(180deg, #ffe2ed 0%, #fff3f8 100%);
+}
+
+.sw-manual-compact-settlement-table .therapist-tone-0-sub,
+.sw-manual-compact-settlement-table .therapist-tone-0-cell {
+  background: #f5f9ff;
+}
+
+.sw-manual-compact-settlement-table .therapist-tone-1-sub,
+.sw-manual-compact-settlement-table .therapist-tone-1-cell {
+  background: #faf7ff;
+}
+
+.sw-manual-compact-settlement-table .therapist-tone-2-sub,
+.sw-manual-compact-settlement-table .therapist-tone-2-cell {
+  background: #f5fcf8;
+}
+
+.sw-manual-compact-settlement-table .therapist-tone-3-sub,
+.sw-manual-compact-settlement-table .therapist-tone-3-cell {
+  background: #fff9f2;
+}
+
+.sw-manual-compact-settlement-table .therapist-tone-4-sub,
+.sw-manual-compact-settlement-table .therapist-tone-4-cell {
+  background: #fff6fa;
+}
+
+.sw-settlement-settings-card {
+  max-width: 920px;
+}
+
+.sw-settlement-settings-subtext {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.settlement-settings-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) 180px;
+  gap: 18px;
+  align-items: start;
+}
+
+.settlement-settings-list {
+  display: grid;
+  gap: 8px;
+}
+
+.settlement-settings-row {
+  display: grid;
+  grid-template-columns: minmax(92px, 150px) minmax(110px, 150px) 24px auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid #dbe3ee;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.settlement-prescription-input,
+.settlement-price-input,
+.settlement-add-input {
+  height: 34px;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.settlement-settings-unit {
+  color: #475569;
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.settlement-add-input {
+  max-width: 180px;
+}
+
+.settlement-incentive-box {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef4fb 100%);
+}
+
+.settlement-incentive-box > span {
+  color: #1e293b;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.settlement-incentive-box > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.settlement-incentive-box input {
+  height: 38px;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.settlement-incentive-box em {
+  color: #475569;
+  font-style: normal;
+  font-weight: 900;
+}
+
+@media (max-width: 760px) {
+  .settlement-settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settlement-settings-row {
+    grid-template-columns: 1fr 1fr 22px auto;
+  }
+}
+
 .sw-summary-table {
   width: 100%;
   min-width: 560px;

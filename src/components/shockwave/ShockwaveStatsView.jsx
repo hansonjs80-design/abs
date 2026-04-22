@@ -8,6 +8,8 @@ import '../../styles/shockwave_stats.css';
 import ShockwaveDataGrid from './ShockwaveDataGrid';
 import ShockwaveSettlementView from './ShockwaveSettlementView';
 import ShockwaveNewPatientsView from './ShockwaveNewPatientsView';
+import SettlementSettingsPanel from './SettlementSettingsPanel';
+import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 
 class ShockwaveStatsErrorBoundary extends React.Component {
   constructor(props) {
@@ -38,7 +40,7 @@ class ShockwaveStatsErrorBoundary extends React.Component {
 
 export default function ShockwaveStatsView({ currentYear, currentMonth, memos, therapists, schedulerMemosReady = false }) {
   const { addToast } = useToast();
-  const { shockwaveSettings, monthlyTherapists } = useSchedule();
+  const { shockwaveSettings, monthlyTherapists, saveShockwaveSettings } = useSchedule();
   const [logs, setLogs] = useState([]);
   const [recentLogs, setRecentLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -48,27 +50,22 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   const lastAutoSyncKeyRef = useRef(null);
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
+  const effectiveSettlementSettings = useMemo(
+    () => getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'shockwave'),
+    [shockwaveSettings, currentYear, currentMonth]
+  );
   const settlementPrescriptions = useMemo(
-    () => shockwaveSettings?.prescriptions || ['F1.5', 'F/Rdc', 'F/R'],
-    [shockwaveSettings?.prescriptions]
+    () => effectiveSettlementSettings.prescriptions,
+    [effectiveSettlementSettings]
   );
   const settlementPrices = useMemo(
-    () => shockwaveSettings?.prescription_prices || { 'F1.5': 50000, 'F/Rdc': 70000, 'F/R': 80000 },
-    [shockwaveSettings?.prescription_prices]
+    () => effectiveSettlementSettings.prescription_prices,
+    [effectiveSettlementSettings]
   );
   const incentivePercentage = useMemo(
-    () => shockwaveSettings?.incentive_percentage ?? 7,
-    [shockwaveSettings?.incentive_percentage]
+    () => effectiveSettlementSettings.incentive_percentage,
+    [effectiveSettlementSettings]
   );
-  const normalizedPriceMap = useMemo(() => {
-    return Object.fromEntries(
-      Object.entries(settlementPrices || {}).map(([key, value]) => [
-        String(key || '').toLowerCase().replace(/[^a-z0-9]/g, ''),
-        Number(value) || 0,
-      ])
-    );
-  }, [settlementPrices]);
-
   const fetchLogs = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -147,8 +144,15 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
 
       const monthlyLogs = recentLogs.filter((log) => String(log?.date || '').startsWith(monthKey));
       const totalCount = monthlyLogs.reduce((sum, log) => sum + toCount(log?.prescription_count || 1), 0);
+      const monthSettings = getEffectiveSettlementSettings(shockwaveSettings, year, month, 'shockwave');
+      const monthPriceMap = Object.fromEntries(
+        Object.entries(monthSettings.prescription_prices || {}).map(([key, value]) => [
+          normalizePrescriptionKey(key),
+          Number(value) || 0,
+        ])
+      );
       const amount = monthlyLogs.reduce((sum, log) => {
-        const price = normalizedPriceMap[normalizePrescriptionKey(log?.prescription)] || 0;
+        const price = monthPriceMap[normalizePrescriptionKey(log?.prescription)] || 0;
         return sum + toCount(log?.prescription_count || 1) * price;
       }, 0);
       const newPatientCount = monthlyLogs.filter((log) => String(log?.patient_name || '').includes('*')).length;
@@ -161,7 +165,12 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
         newPatientCount,
       };
     });
-  }, [currentYear, currentMonth, recentLogs, normalizedPriceMap]);
+  }, [currentYear, currentMonth, recentLogs, shockwaveSettings]);
+
+  const handleSaveSettlementSettings = useCallback(async (nextSettings) => {
+    const ok = await saveShockwaveSettings(nextSettings);
+    addToast(ok ? '이번 달 충격파 결산 설정을 저장했습니다.' : '결산 설정 저장에 실패했습니다.', ok ? 'success' : 'error');
+  }, [addToast, saveShockwaveSettings]);
 
   useEffect(() => {
     setExtraDraftRows(0);
@@ -507,6 +516,12 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
           >
             신규환자
           </button>
+          <button
+            className={`sw-stats-side-tab${activeSection === 'settings' ? ' active' : ''}`}
+            onClick={() => setActiveSection('settings')}
+          >
+            설정
+          </button>
         </aside>
 
         <div className="sw-stats-panel">
@@ -635,6 +650,17 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                 currentMonth={currentMonth}
               />
             </div>
+          )}
+
+          {activeSection === 'settings' && (
+            <SettlementSettingsPanel
+              type="shockwave"
+              year={currentYear}
+              month={currentMonth}
+              settings={shockwaveSettings}
+              effectiveSettings={effectiveSettlementSettings}
+              onSave={handleSaveSettlementSettings}
+            />
           )}
         </div>
       </div>

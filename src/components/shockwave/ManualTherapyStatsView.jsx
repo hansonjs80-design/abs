@@ -112,7 +112,7 @@ export default function ManualTherapyStatsView({
         </div>
 
         <div className="sw-settlement-table-wrap">
-          <table className="sw-settlement-table">
+          <table className="sw-settlement-table sw-manual-compact-settlement-table">
             <thead>
               <tr>
                 <th className="label-col" rowSpan={2}>구분</th>

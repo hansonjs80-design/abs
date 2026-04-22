@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 
 function normalizePrescriptionKey(value) {
   return String(value || '')
@@ -10,21 +11,10 @@ function normalizePrescriptionKey(value) {
 export default function ManualTherapySixMonthStats({
   currentYear,
   currentMonth,
-  prescriptionPrices,
+  settings,
 }) {
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-
-  const safePriceEntries = useMemo(
-    () => (
-      prescriptionPrices &&
-      typeof prescriptionPrices === 'object' &&
-      !Array.isArray(prescriptionPrices)
-        ? prescriptionPrices
-        : {}
-    ),
-    [prescriptionPrices]
-  );
 
   useEffect(() => {
     async function fetchSixMonths() {
@@ -68,13 +58,6 @@ export default function ManualTherapySixMonthStats({
   }, [currentMonth, currentYear]);
 
   const monthlySummaries = useMemo(() => {
-    const normalizedPriceMap = Object.fromEntries(
-      Object.entries(safePriceEntries).map(([key, amount]) => [
-        normalizePrescriptionKey(key),
-        Number(amount) || 0,
-      ])
-    );
-
     const base = monthKeys.map((month) => ({
       ...month,
       totalCount: 0,
@@ -91,6 +74,18 @@ export default function ManualTherapySixMonthStats({
       const target = summaryMap[monthKey];
       if (!target) return;
 
+      const monthSettings = getEffectiveSettlementSettings(
+        settings,
+        logDate.getFullYear(),
+        logDate.getMonth() + 1,
+        'manual_therapy'
+      );
+      const normalizedPriceMap = Object.fromEntries(
+        Object.entries(monthSettings.prescription_prices || {}).map(([key, amount]) => [
+          normalizePrescriptionKey(key),
+          Number(amount) || 0,
+        ])
+      );
       const count = Number.parseInt(String(log?.prescription_count ?? '1'), 10) || 1;
       const normalizedPrescription = normalizePrescriptionKey(log?.prescription);
       const unitPrice = normalizedPriceMap[normalizedPrescription] || 0;
@@ -102,7 +97,7 @@ export default function ManualTherapySixMonthStats({
     });
 
     return base;
-  }, [logs, monthKeys, safePriceEntries]);
+  }, [logs, monthKeys, settings]);
 
   return (
     <div className="sw-settlement-card">
