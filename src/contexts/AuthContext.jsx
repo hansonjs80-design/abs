@@ -1,25 +1,15 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import {
+  ADMIN_USERNAME,
+  DEFAULT_ADMIN_PASSWORD,
+  createDefaultPermissions,
+  normalizePermissions,
+  normalizeUsername,
+} from '../lib/authPermissions';
 
 const AuthContext = createContext();
 const DEV_LOGIN_STORAGE_KEY = 'dev-auth-user';
-const DEV_LOGIN_ID = 'admin';
-const DEV_LOGIN_PASSWORD = '1';
-
-const readStoredDevUser = () => {
-  try {
-    const savedUser = localStorage.getItem(DEV_LOGIN_STORAGE_KEY);
-    return savedUser ? JSON.parse(savedUser) : null;
-  } catch {
-    return null;
-  }
-};
-
-const writeStoredDevUser = (user) => {
-  try {
-    localStorage.setItem(DEV_LOGIN_STORAGE_KEY, JSON.stringify(user));
-  } catch {}
-};
 
 const clearStoredDevUser = () => {
   try {
@@ -27,12 +17,24 @@ const clearStoredDevUser = () => {
   } catch {}
 };
 
-const createDevUser = () => ({
-  id: 'local-admin',
-  email: DEV_LOGIN_ID,
-  user_metadata: { name: '관리자' },
-  app_metadata: { provider: 'local-dev' },
+const createAppUser = (row) => ({
+  id: `app-${row.id || row.username}`,
+  username: row.username,
+  email: row.username,
+  user_metadata: { name: row.display_name || row.username },
+  app_metadata: { provider: 'app-users' },
+  app_permissions: normalizePermissions(row.permissions, row),
+  app_role: row.role || 'user',
+  isAdmin: row.role === 'admin' || row.username === ADMIN_USERNAME,
   isLocalDevUser: true,
+});
+
+const createBootstrapAdminUser = () => createAppUser({
+  id: 'local-admin',
+  username: ADMIN_USERNAME,
+  display_name: '관리자',
+  role: 'admin',
+  permissions: createDefaultPermissions(),
 });
 
 export function AuthProvider({ children }) {
@@ -40,53 +42,64 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let isMounted = true;
+    clearStoredDevUser();
+    setUser(null);
+    setLoading(false);
 
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-        if (!isMounted) return;
-        if (session?.user) {
-          setUser(session.user);
-          return;
-        }
-
-        const savedDevUser = readStoredDevUser();
-        if (savedDevUser) {
-          setUser(savedDevUser);
-          return;
-        }
-
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        setUser(session.user);
+        return;
+      }
+      if (event === 'SIGNED_OUT') {
         setUser(null);
-      })
-      .catch((error) => {
-        console.error('Failed to restore auth session:', error);
-        if (!isMounted) return;
-        setUser(readStoredDevUser());
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      }
     });
 
     return () => {
-      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
   const signIn = async (email, password) => {
-    if (email === DEV_LOGIN_ID && password === DEV_LOGIN_PASSWORD) {
-      const devUser = createDevUser();
-      writeStoredDevUser(devUser);
-      setUser(devUser);
-      return { user: devUser, session: null };
+    const username = normalizeUsername(email);
+    const normalizedPassword = String(password || '').trim();
+
+    try {
+      const { data, error } = await supabase
+        .from('app_users')
+        .select('*')
+        .eq('username', username)
+        .eq('is_active', true)
+        .limit(1)
+        .single();
+
+      if (data && !Array.isArray(data)) {
+        if (String(data.password || '') !== normalizedPassword) {
+          throw new Error('Invalid login credentials');
+        }
+        const appUser = createAppUser(data);
+        setUser(appUser);
+        return { user: appUser, session: null };
+      }
+
+      if (error && error.code !== 'PGRST116') {
+        console.warn('App user login lookup failed:', error.message || error);
+      }
+    } catch (err) {
+      if (err?.message === 'Invalid login credentials') throw err;
+      console.warn('App user login failed, falling back to Supabase auth:', err);
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (username === ADMIN_USERNAME && normalizedPassword === DEFAULT_ADMIN_PASSWORD) {
+      const adminUser = createBootstrapAdminUser();
+      setUser(adminUser);
+      return { user: adminUser, session: null };
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email: username, password: normalizedPassword });
     if (error) throw error;
+    if (data?.user) setUser(data.user);
     return data;
   };
 
@@ -114,8 +127,12 @@ export function AuthProvider({ children }) {
     if (error) throw error;
   };
 
+  const refreshStoredUser = (nextUser) => {
+    setUser(nextUser);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, refreshStoredUser }}>
       {children}
     </AuthContext.Provider>
   );

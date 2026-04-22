@@ -10,8 +10,9 @@ import ShockwavePage from './pages/ShockwavePage';
 import ShockwaveStatsPage from './pages/ShockwaveStatsPage';
 import ManualTherapyStatsPage from './pages/ManualTherapyStatsPage';
 import SettingsPage from './pages/SettingsPage';
+import { canAccessPath, getFirstAllowedPath } from './lib/authPermissions';
 
-function ProtectedRoute({ children }) {
+function ProtectedRoute({ children, path }) {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -23,6 +24,9 @@ function ProtectedRoute({ children }) {
   }
 
   if (!user) return <Navigate to="/login" replace />;
+  if (path && !canAccessPath(user, path)) {
+    return <Navigate to={getFirstAllowedPath(user)} replace />;
+  }
   return children;
 }
 
@@ -49,11 +53,11 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<StaffSchedulePage />} />
-        <Route path="/shockwave" element={<ShockwavePage />} />
-        <Route path="/shockwave-stats" element={<ShockwaveStatsPage />} />
-        <Route path="/manual-therapy-stats" element={<ManualTherapyStatsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/" element={<ProtectedRoute path="/"><StaffSchedulePage /></ProtectedRoute>} />
+        <Route path="/shockwave" element={<ProtectedRoute path="/shockwave"><ShockwavePage /></ProtectedRoute>} />
+        <Route path="/shockwave-stats" element={<ProtectedRoute path="/shockwave-stats"><ShockwaveStatsPage /></ProtectedRoute>} />
+        <Route path="/manual-therapy-stats" element={<ProtectedRoute path="/manual-therapy-stats"><ManualTherapyStatsPage /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute path="/settings"><SettingsPage /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

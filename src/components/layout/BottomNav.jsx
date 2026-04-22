@@ -1,14 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { Calendar, ClipboardList, Hand, Settings, Zap } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { getAllowedTabs } from '../../lib/authPermissions';
 
 export default function BottomNav() {
-  const items = [
-    { path: '/', icon: Calendar, label: '근무표' },
-    { path: '/shockwave', icon: Zap, label: '충격파 스케줄' },
-    { path: '/shockwave-stats', icon: ClipboardList, label: '충격파 통계' },
-    { path: '/manual-therapy-stats', icon: Hand, label: '도수통계' },
-    { path: '/settings', icon: Settings, label: '설정' },
-  ];
+  const { user } = useAuth();
+  const items = getAllowedTabs(user);
 
   return (
     <nav className="bottom-nav glass">
@@ -23,7 +19,7 @@ export default function BottomNav() {
               end={item.path === '/'}
             >
               <Icon size={22} />
-              <span>{item.label}</span>
+              <span>{item.shortLabel || item.label}</span>
             </NavLink>
           );
         })}

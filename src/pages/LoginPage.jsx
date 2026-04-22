@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-
-const DEV_LOGIN_ID = 'admin';
-const DEV_LOGIN_PASSWORD = '1';
+import { ADMIN_USERNAME, DEFAULT_ADMIN_PASSWORD } from '../lib/authPermissions';
 
 const getAuthMessage = (error, isSignUp) => {
   const message = error?.message || '';
@@ -29,8 +27,8 @@ const getAuthMessage = (error, isSignUp) => {
 export default function LoginPage() {
   const { signIn, signUp } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState(DEV_LOGIN_ID);
-  const [password, setPassword] = useState(DEV_LOGIN_PASSWORD);
+  const [email, setEmail] = useState(ADMIN_USERNAME);
+  const [password, setPassword] = useState(DEFAULT_ADMIN_PASSWORD);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
@@ -98,7 +96,7 @@ export default function LoginPage() {
               type={isSignUp ? 'email' : 'text'}
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder={isSignUp ? 'your@email.com' : DEV_LOGIN_ID}
+              placeholder={isSignUp ? 'your@email.com' : ADMIN_USERNAME}
               required
               autoComplete={isSignUp ? 'email' : 'username'}
             />
@@ -112,7 +110,7 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder={isSignUp ? '6자 이상' : DEV_LOGIN_PASSWORD}
+              placeholder={isSignUp ? '6자 이상' : DEFAULT_ADMIN_PASSWORD}
               required
               minLength={isSignUp ? 6 : 1}
               autoComplete={isSignUp ? 'new-password' : 'current-password'}
@@ -140,8 +138,8 @@ export default function LoginPage() {
               setIsSignUp(nextIsSignUp);
               setError('');
               setInfo('');
-              setEmail(nextIsSignUp ? '' : DEV_LOGIN_ID);
-              setPassword(nextIsSignUp ? '' : DEV_LOGIN_PASSWORD);
+              setEmail(nextIsSignUp ? '' : ADMIN_USERNAME);
+              setPassword(nextIsSignUp ? '' : DEFAULT_ADMIN_PASSWORD);
               setName('');
             }}
           >

@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Calendar, Zap, ZapOff, Settings, LogOut, ClipboardList, Hand } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { getAllowedTabs } from '../../lib/authPermissions';
 
 export default function Sidebar({ isOpen, isCollapsed, onClose }) {
   const { user, signOut } = useAuth();
@@ -10,14 +11,12 @@ export default function Sidebar({ isOpen, isCollapsed, onClose }) {
     try { await signOut(); } catch (e) { console.error(e); }
   };
 
+  const allowedTabs = getAllowedTabs(user);
   const navItems = [
     { section: '스케줄 관리' },
-    { path: '/', icon: Calendar, label: '직원 근무표' },
-    { path: '/shockwave', icon: Zap, label: '충격파 스케줄러' },
-    { path: '/shockwave-stats', icon: ClipboardList, label: '충격파 통계' },
-    { path: '/manual-therapy-stats', icon: Hand, label: '도수치료 통계' },
+    ...allowedTabs.filter((item) => item.path !== '/settings'),
     { section: '시스템' },
-    { path: '/settings', icon: Settings, label: '설정' },
+    ...allowedTabs.filter((item) => item.path === '/settings'),
   ];
 
   const userInitial = user?.email?.[0]?.toUpperCase() || '?';
