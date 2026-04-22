@@ -15,7 +15,7 @@ const SHOCKWAVE_DAY_COL_WIDTH_KEY = 'shockwave-day-col-width';
 const SHOCKWAVE_COL_RATIOS_KEY = 'shockwave-col-ratios';
 const TREATMENT_COMPLETE_BG = '#ffe599';
 const TREATMENT_CANCEL_BG = '#f4cccc';
-const SCHEDULER_HOLIDAY_BG = '#f8c2c2';
+const SCHEDULER_HOLIDAY_BG = '#93c47d';
 
 function getManualDoseTag(prescription) {
   const pres = String(prescription || '');
@@ -1381,6 +1381,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         content: memo?.content || '',
         bg_color: memo?.bg_color || null,
         merge_span: memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+        prescription: memo?.prescription || null,
+        body_part: memo?.body_part || null,
       });
       payload.push({
         year: currentYear,
@@ -1392,6 +1394,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         content: '',
         bg_color: null,
         merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+        prescription: null,
+        body_part: null,
       });
     }
     if (payload.length > 0) {
@@ -2289,13 +2293,30 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     });
   }, []);
 
+  const focusEditInputImmediately = useCallback(() => {
+    const input = editInputRef.current;
+    if (!input) return;
+    input.focus();
+    if (!imeOpenRef.current && document.activeElement === input) {
+      const len = input.value?.length || 0;
+      input.setSelectionRange(len, len);
+    }
+  }, []);
+
   const beginEditingCell = useCallback((key, nextValue, preserveValue = false) => {
     flushSync(() => {
       setEditingCell(key);
       setEditValue(nextValue);
       if (preserveValue) setEditSessionId(Date.now());
     });
-    // The input will be focused automatically by its ref callback, or it's already focused.
+    focusEditInputImmediately();
+  }, [focusEditInputImmediately]);
+
+  const promoteFocusedInputToEditor = useCallback((key, value) => {
+    flushSync(() => {
+      setEditingCell(key);
+      setEditValue(value);
+    });
   }, []);
 
   // ── 키보드 이벤트 핸들러 (구글 시트 방식) ──
@@ -2315,6 +2336,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     }
 
     const isMeta = e.metaKey || e.ctrlKey;
+
+    if (e.key === 'Hangul' || e.code === 'Lang1' || e.code === 'Lang2') {
+      return;
+    }
 
     // Enter → 편집 모드 진입
     if (e.key === 'Enter') {
@@ -2402,10 +2427,22 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     // 일반 문자 입력 → 편집 모드 진입 (기존 내용 대체)
     if ((e.key.length === 1 || e.key === 'Process' || e.keyCode === 229) && !isMeta && !e.altKey) {
       const key = cellKey(w, d, r, c);
-      beginEditingCell(key, '', false);
+      const isImeCompositionKey =
+        e.key === 'Process' ||
+        e.keyCode === 229 ||
+        e.nativeEvent?.isComposing ||
+        /[^\x00-\x7F]/.test(e.key);
+      if (isImeCompositionKey) {
+        e.stopPropagation();
+        imeOpenRef.current = true;
+        promoteFocusedInputToEditor(key, '');
+      } else {
+        e.preventDefault();
+        beginEditingCell(key, e.key, false);
+      }
       return;
     }
-  }, [selectedCell, editingCell, selectedKeys, deleteCells, buildRangeKeys, selectSingleCell, getAdjacentCell, beginEditingCell, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleHolidayBackground, tryMergeSelection, isEditableTarget]);
+  }, [selectedCell, editingCell, selectedKeys, deleteCells, buildRangeKeys, selectSingleCell, getAdjacentCell, beginEditingCell, promoteFocusedInputToEditor, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleHolidayBackground, tryMergeSelection, isEditableTarget]);
 
   const dismissContextMenu = useCallback(() => setContextMenu(null), []);
 
@@ -2534,6 +2571,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       });
     });
   }, [editingCell, editSessionId]);
+
+  useEffect(() => {
+    if (!selectedCell || editingCell) return;
+    if (isEditableTarget(document.activeElement)) return;
+    requestAnimationFrame(() => {
+      const input = editInputRef.current;
+      if (!input || !input.dataset.hiddenInput) return;
+      input.focus();
+    });
+  }, [selectedCell, editingCell, isEditableTarget]);
 
   // 편집 완료 후 아래로 이동
   const handleEditKeyDown = useCallback((e, w, d, r, c) => {
@@ -2888,7 +2935,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 )}
                                 <input
                                   key={isEditing && editSessionId ? editSessionId : 'hidden'}
-                                  ref={isEditing ? editInputRef : null}
+                                  ref={(isEditing || isPrimary) ? editInputRef : null}
                                   className="sw-cell-input"
                                   data-hidden-input={!isEditing ? 'true' : undefined}
                                   defaultValue={isEditing ? editValue : ''}
@@ -2902,17 +2949,28 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                   } : {
                                     position: 'absolute',
                                     top: 0, left: 0,
-                                    width: '1px', height: '1px',
+                                    width: '100%', height: '100%',
                                     opacity: 0,
                                     padding: 0, border: 'none', outline: 'none',
                                     pointerEvents: 'none',
                                     zIndex: 1,
+                                  }}
+                                  onInput={(e) => {
+                                    if (!isEditing && e.currentTarget.value) {
+                                      promoteFocusedInputToEditor(key, e.currentTarget.value);
+                                    }
                                   }}
                                   onBlur={(e) => {
                                     if (isEditing) handleCellSave(weekIdx, dayIdx, rowIdx, colIdx, e.target.value);
                                   }}
                                   onKeyDown={e => {
                                     if (isEditing) handleEditKeyDown(e, weekIdx, dayIdx, rowIdx, colIdx);
+                                  }}
+                                  onCompositionStart={() => {
+                                    imeOpenRef.current = true;
+                                  }}
+                                  onCompositionEnd={() => {
+                                    imeOpenRef.current = false;
                                   }}
                                 />
                               </div>
