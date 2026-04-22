@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 
 function normalizePrescriptionKey(value) {
   return String(value || '')
@@ -31,6 +32,10 @@ export default function ShockwaveSettlementView({
 }) {
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
+  const displayTherapists = useMemo(
+    () => buildDisplayTherapists(safeTherapists, monthlyTherapists),
+    [safeTherapists, monthlyTherapists]
+  );
   const safePrescriptions = useMemo(() => (Array.isArray(prescriptions) ? prescriptions.filter(Boolean) : []), [prescriptions]);
   const safeRecentMonthlySummaries = useMemo(
     () => (Array.isArray(recentMonthlySummaries) ? recentMonthlySummaries.filter(Boolean) : []),
@@ -45,31 +50,13 @@ export default function ShockwaveSettlementView({
     return Object.fromEntries(entries);
   }, [prescriptionPrices]);
 
-  const getSlotNames = React.useCallback((slotIdx) => {
-    if (!monthlyTherapists || monthlyTherapists.length === 0) {
-      return [safeTherapists[slotIdx]?.name || ''];
-    }
-    const configs = monthlyTherapists.filter(t => t.slot_index === slotIdx && t.therapist_name);
-    if (configs.length === 0) return [safeTherapists[slotIdx]?.name || ''];
-    const names = [...new Set(configs.map(t => t.therapist_name))];
-    if (names.length === 0) return [safeTherapists[slotIdx]?.name || ''];
-    return names;
-  }, [monthlyTherapists, safeTherapists]);
-
-  const getSlotDisplayName = React.useCallback((slotIdx) => {
-    const names = getSlotNames(slotIdx);
-    if (names.length === 0 || (names.length === 1 && !names[0])) return safeTherapists[slotIdx]?.name || `치료사 ${slotIdx + 1}`;
-    return names.join(' / ');
-  }, [getSlotNames, safeTherapists]);
-
   const settlement = useMemo(() => {
-    const summaryByTherapist = safeTherapists.map((therapist, idx) => {
-      const validNames = getSlotNames(idx);
+    const summaryByTherapist = displayTherapists.map((therapist) => {
       const countsByPrescription = Object.fromEntries(
         safePrescriptions.map((prescription) => [prescription, 0])
       );
 
-      const therapistLogs = safeLogs.filter((log) => validNames.includes(log?.therapist_name));
+      const therapistLogs = safeLogs.filter((log) => log?.therapist_name === therapist.name);
 
       therapistLogs.forEach((log) => {
         const normalizedLogPrescription = normalizePrescriptionKey(log?.prescription);
@@ -93,7 +80,7 @@ export default function ShockwaveSettlementView({
       const incentive = Math.round(amount * ((Number(incentivePercentage) || 0) / 100));
 
       return {
-        therapist: { ...therapist, name: getSlotDisplayName(idx) },
+        therapist: { ...therapist, id: therapist.key || therapist.id || therapist.name, name: therapist.displayName || therapist.name },
         countsByPrescription,
         totalCount,
         amount,
@@ -122,9 +109,9 @@ export default function ShockwaveSettlementView({
       grandAmount,
       grandIncentive,
     };
-  }, [safeLogs, safeTherapists, safePrescriptions, normalizedPriceMap, incentivePercentage, getSlotNames, getSlotDisplayName]);
+  }, [safeLogs, displayTherapists, safePrescriptions, normalizedPriceMap, incentivePercentage]);
 
-  if (!safeTherapists.length) {
+  if (!displayTherapists.length) {
     return (
       <div className="sw-stats-empty">
         활성화된 치료사가 없어 결산표를 계산할 수 없습니다.
@@ -148,17 +135,17 @@ export default function ShockwaveSettlementView({
             <thead>
               <tr>
                 <th className="label-col" rowSpan={2}>구분</th>
-                {settlement.summaryByTherapist.map((item) => (
-                  <th key={item.therapist.id || item.therapist.name} colSpan={safePrescriptions.length} className="therapist-col">
+                {settlement.summaryByTherapist.map((item, therapistIndex) => (
+                  <th key={item.therapist.id || item.therapist.name} colSpan={safePrescriptions.length} className={`therapist-col therapist-tone-${therapistIndex % 5}`}>
                     {item.therapist.name}
                   </th>
                 ))}
                 <th className="grand-col" rowSpan={2}>총 합계</th>
               </tr>
               <tr>
-                {settlement.summaryByTherapist.flatMap((item) =>
+                {settlement.summaryByTherapist.flatMap((item, therapistIndex) =>
                   safePrescriptions.map((prescription) => (
-                    <th key={`${item.therapist.id || item.therapist.name}-${prescription}`} className="prescription-col">
+                    <th key={`${item.therapist.id || item.therapist.name}-${prescription}`} className={`prescription-col therapist-tone-${therapistIndex % 5}-sub`}>
                       {prescription}
                     </th>
                   ))
@@ -168,9 +155,9 @@ export default function ShockwaveSettlementView({
             <tbody>
               <tr>
                 <th className="row-label">처방 건수</th>
-                {settlement.summaryByTherapist.flatMap((item) =>
+                {settlement.summaryByTherapist.flatMap((item, therapistIndex) =>
                   safePrescriptions.map((prescription) => (
-                    <td key={`count-${item.therapist.id || item.therapist.name}-${prescription}`}>
+                    <td key={`count-${item.therapist.id || item.therapist.name}-${prescription}`} className={`therapist-tone-${therapistIndex % 5}-cell`}>
                       {settlement.grandPrescriptionCounts[prescription] >= 0
                         ? item.countsByPrescription[prescription] || 0
                         : 0}
@@ -181,8 +168,8 @@ export default function ShockwaveSettlementView({
               </tr>
               <tr>
                 <th className="row-label">충격파 합계(건)</th>
-                {settlement.summaryByTherapist.map((item) => (
-                  <td key={`total-count-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className="merged-value">
+                {settlement.summaryByTherapist.map((item, therapistIndex) => (
+                  <td key={`total-count-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className={`merged-value therapist-tone-${therapistIndex % 5}-cell`}>
                     {formatCount(item.totalCount)}
                   </td>
                 ))}
@@ -190,8 +177,8 @@ export default function ShockwaveSettlementView({
               </tr>
               <tr>
                 <th className="row-label">결산 금액(원)</th>
-                {settlement.summaryByTherapist.map((item) => (
-                  <td key={`amount-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className="merged-value amount">
+                {settlement.summaryByTherapist.map((item, therapistIndex) => (
+                  <td key={`amount-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className={`merged-value amount therapist-tone-${therapistIndex % 5}-cell`}>
                     {formatCurrency(item.amount)}
                   </td>
                 ))}
@@ -199,8 +186,8 @@ export default function ShockwaveSettlementView({
               </tr>
               <tr>
                 <th className="row-label">인센티브 ({Number(incentivePercentage) || 0}%)</th>
-                {settlement.summaryByTherapist.map((item) => (
-                  <td key={`incentive-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className="merged-value incentive">
+                {settlement.summaryByTherapist.map((item, therapistIndex) => (
+                  <td key={`incentive-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className={`merged-value incentive therapist-tone-${therapistIndex % 5}-cell`}>
                     {formatCurrency(item.incentive)}
                   </td>
                 ))}

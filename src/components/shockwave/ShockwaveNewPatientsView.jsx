@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 
 function normalizePatientName(value) {
   return String(value || '').replace(/\*/g, '').trim();
@@ -22,28 +23,16 @@ export default function ShockwaveNewPatientsView({
   title,
   monthlyTherapists,
 }) {
-  const getSlotNames = React.useCallback((slotIdx) => {
-    if (!monthlyTherapists || monthlyTherapists.length === 0) {
-      return [therapists[slotIdx]?.name || ''];
-    }
-    const configs = monthlyTherapists.filter(t => t.slot_index === slotIdx && t.therapist_name);
-    if (configs.length === 0) return [therapists[slotIdx]?.name || ''];
-    const names = [...new Set(configs.map(t => t.therapist_name))];
-    if (names.length === 0) return [therapists[slotIdx]?.name || ''];
-    return names;
-  }, [monthlyTherapists, therapists]);
-
-  const getSlotDisplayName = React.useCallback((slotIdx) => {
-    const names = getSlotNames(slotIdx);
-    if (names.length === 0 || (names.length === 1 && !names[0])) return therapists[slotIdx]?.name || `치료사 ${slotIdx + 1}`;
-    return names.join(' / ');
-  }, [getSlotNames, therapists]);
+  const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
+  const displayTherapists = useMemo(
+    () => buildDisplayTherapists(safeTherapists, monthlyTherapists),
+    [safeTherapists, monthlyTherapists]
+  );
 
   const summary = useMemo(() => {
-    const byTherapist = therapists.map((therapist, idx) => {
-      const validNames = getSlotNames(idx);
+    const byTherapist = displayTherapists.map((therapist) => {
       const therapistLogs = (logs || []).filter(
-        (log) => validNames.includes(log?.therapist_name) && normalizePatientName(log?.patient_name)
+        (log) => log?.therapist_name === therapist.name && normalizePatientName(log?.patient_name)
       );
 
       const grouped = new Map();
@@ -95,7 +84,7 @@ export default function ShockwaveNewPatientsView({
         }));
 
       return {
-        therapist: { ...therapist, name: getSlotDisplayName(idx) },
+        therapist: { ...therapist, id: therapist.key || therapist.id || therapist.name, name: therapist.displayName || therapist.name },
         patients,
         totalCount: patients.length,
       };
@@ -109,9 +98,9 @@ export default function ShockwaveNewPatientsView({
       maxRows,
       totalCount,
     };
-  }, [logs, therapists, getSlotNames, getSlotDisplayName]);
+  }, [logs, displayTherapists]);
 
-  if (!therapists.length) {
+  if (!displayTherapists.length) {
     return (
       <div className="sw-stats-empty">
         활성화된 치료사가 없어 신규환자 목록을 계산할 수 없습니다.

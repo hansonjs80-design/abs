@@ -873,7 +873,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-settlement-card {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .sw-settlement-stack {
@@ -891,21 +891,22 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 .sw-settlement-header h2 {
   margin: 0;
-  font-size: 1.3rem;
+  font-size: 1.18rem;
   font-weight: 800;
   color: var(--text-primary);
+  letter-spacing: -0.03em;
 }
 
 .sw-settlement-meta {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 6px;
+  padding: 6px 10px;
   border-radius: 999px;
   background: var(--bg-tertiary);
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  font-weight: 700;
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 800;
 }
 
 .sw-settlement-table-wrap {
@@ -917,57 +918,69 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 .sw-settlement-table {
   width: 100%;
-  min-width: 820px;
+  min-width: 720px;
   border-collapse: separate;
   border-spacing: 0;
+  table-layout: fixed;
 }
 
 .sw-settlement-table th,
 .sw-settlement-table td {
-  padding: 12px 10px;
+  padding: 8px 7px;
   text-align: center;
   border-right: 1px solid #dbe3ee;
   border-bottom: 1px solid #dbe3ee;
   white-space: nowrap;
+  font-size: 0.86rem;
+  line-height: 1.2;
 }
 
 .sw-settlement-table thead th {
   background: #eef4fb;
-  color: #334155;
-  font-weight: 800;
+  color: #1f2937;
+  font-weight: 900;
+  letter-spacing: -0.02em;
 }
 
 .sw-settlement-table thead .label-col {
   background: #e2e8f0;
-  min-width: 140px;
+  width: 112px;
+  min-width: 112px;
 }
 
 .sw-settlement-table thead .therapist-col {
   background: #dce9f9;
+  color: #0f172a;
+  font-size: 0.96rem;
+  text-align: center;
+  vertical-align: middle;
 }
 
 .sw-settlement-table thead .prescription-col {
   background: #f5f8fc;
-  font-size: 0.84rem;
+  color: #334155;
+  font-size: 0.8rem;
 }
 
 .sw-settlement-table thead .grand-col {
   background: #d9e1ec;
-  min-width: 128px;
+  width: 112px;
+  min-width: 112px;
 }
 
 .sw-settlement-table .row-label {
   background: #f8fafc;
-  color: #475569;
-  font-weight: 800;
-  text-align: left;
-  padding-left: 16px;
+  color: #1f2937;
+  font-weight: 900;
+  text-align: center;
+  padding-left: 7px;
+  padding-right: 7px;
 }
 
 .sw-settlement-table tbody td {
   background: #ffffff;
-  color: var(--text-primary);
-  font-weight: 700;
+  color: #0f172a;
+  font-weight: 800;
 }
 
 .sw-settlement-table .merged-value {
@@ -976,8 +989,8 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 .sw-settlement-table .grand-value {
   background: #edf2f7;
-  color: #334155;
-  font-weight: 800;
+  color: #0f172a;
+  font-weight: 900;
 }
 
 .sw-settlement-table .amount {
@@ -986,6 +999,59 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 .sw-settlement-table .incentive {
   color: #7c3aed;
+}
+
+.sw-settlement-table .therapist-tone-0 {
+  background: linear-gradient(180deg, #d9eafe 0%, #ebf4ff 100%);
+}
+
+.sw-settlement-table .therapist-tone-1 {
+  background: linear-gradient(180deg, #ece3ff 0%, #f5efff 100%);
+}
+
+.sw-settlement-table .therapist-tone-2 {
+  background: linear-gradient(180deg, #dcf5e7 0%, #eefbf4 100%);
+}
+
+.sw-settlement-table .therapist-tone-3 {
+  background: linear-gradient(180deg, #ffe9d2 0%, #fff4ea 100%);
+}
+
+.sw-settlement-table .therapist-tone-4 {
+  background: linear-gradient(180deg, #ffe0ec 0%, #fff1f7 100%);
+}
+
+.sw-settlement-table .therapist-tone-0-sub,
+.sw-settlement-table .therapist-tone-0-cell {
+  background: #f3f8ff;
+}
+
+.sw-settlement-table .therapist-tone-1-sub,
+.sw-settlement-table .therapist-tone-1-cell {
+  background: #f8f4ff;
+}
+
+.sw-settlement-table .therapist-tone-2-sub,
+.sw-settlement-table .therapist-tone-2-cell {
+  background: #f3fbf6;
+}
+
+.sw-settlement-table .therapist-tone-3-sub,
+.sw-settlement-table .therapist-tone-3-cell {
+  background: #fff8f0;
+}
+
+.sw-settlement-table .therapist-tone-4-sub,
+.sw-settlement-table .therapist-tone-4-cell {
+  background: #fff5fa;
+}
+
+.sw-settlement-table .therapist-tone-0-cell,
+.sw-settlement-table .therapist-tone-1-cell,
+.sw-settlement-table .therapist-tone-2-cell,
+.sw-settlement-table .therapist-tone-3-cell,
+.sw-settlement-table .therapist-tone-4-cell {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
 .sw-settlement-table tr:last-child td,

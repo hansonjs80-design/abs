@@ -49,13 +49,13 @@ CREATE TABLE IF NOT EXISTS public.shockwave_schedules (
   UNIQUE(year, month, week_index, day_index, row_index, col_index)
 );
 
-ALTER TABLE public.shockwave_schedules 
+ALTER TABLE public.shockwave_schedules
 ADD COLUMN IF NOT EXISTS prescription text;
 
-ALTER TABLE public.shockwave_schedules 
+ALTER TABLE public.shockwave_schedules
 ADD COLUMN IF NOT EXISTS body_part text;
 
-ALTER TABLE public.shockwave_schedules 
+ALTER TABLE public.shockwave_schedules
 ADD COLUMN IF NOT EXISTS merge_span jsonb DEFAULT '{"rowSpan": 1, "colSpan": 1, "mergedInto": null}'::jsonb;
 
 -- 4. 휴일 관리 테이블
@@ -106,7 +106,7 @@ ALTER TABLE public.shockwave_settings DISABLE ROW LEVEL SECURITY;
 -- [긴급 패치] 기존 설정 테이블에 요일별 설정 및 병합 데이터 컬럼 추가
 -- (이미 테이블이 생성된 경우를 대비한 ALTER 명령)
 -- =============================================
-ALTER TABLE public.shockwave_settings 
+ALTER TABLE public.shockwave_settings
 ADD COLUMN IF NOT EXISTS day_overrides jsonb DEFAULT '{}'::jsonb;
 
 ALTER TABLE public.shockwave_settings
@@ -127,10 +127,10 @@ ADD COLUMN IF NOT EXISTS manual_therapy_incentive_percentage numeric(5,2) DEFAUL
 ALTER TABLE public.shockwave_settings
 ADD COLUMN IF NOT EXISTS frozen_columns integer DEFAULT 6;
 
-ALTER TABLE public.shockwave_settings 
+ALTER TABLE public.shockwave_settings
 ADD COLUMN IF NOT EXISTS date_overrides jsonb NOT NULL DEFAULT '{}';
 
-ALTER TABLE public.shockwave_settings 
+ALTER TABLE public.shockwave_settings
 ADD COLUMN IF NOT EXISTS prescription_colors jsonb DEFAULT '{}'::jsonb;
 
 -- =============================================
@@ -145,7 +145,7 @@ CREATE TABLE IF NOT EXISTS public.shockwave_patient_logs (
   body_part text,              -- 변환된 치료 부위/메모 (예: Rt. Shoulder)
   therapist_name text,         -- 담당 치료사 이름 또는 인덱스
   prescription text,           -- 처방 종류 (예: F1.5, F/R DC, F/R 등)
-  prescription_count integer,     -- 처방 횟수/숫자 기입 (예: 1, 2)
+  prescription_count integer,  -- 처방 횟수/숫자 기입 (예: 1, 2)
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -167,23 +167,23 @@ CREATE TABLE IF NOT EXISTS public.manual_therapy_patient_logs (
 ALTER TABLE public.shockwave_patient_logs DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.manual_therapy_patient_logs DISABLE ROW LEVEL SECURITY;
 
-ALTER TABLE public.shockwave_patient_logs 
+ALTER TABLE public.shockwave_patient_logs
 ADD COLUMN IF NOT EXISTS prescription text;
 
-ALTER TABLE public.shockwave_patient_logs 
+ALTER TABLE public.shockwave_patient_logs
 ADD COLUMN IF NOT EXISTS prescription_count integer;
 
 -- source 컬럼: 'scheduler' (스케줄러 자동 동기화) 또는 'manual' (수동 입력)
-ALTER TABLE public.shockwave_patient_logs 
+ALTER TABLE public.shockwave_patient_logs
 ADD COLUMN IF NOT EXISTS source text DEFAULT 'manual';
 
-ALTER TABLE public.manual_therapy_patient_logs 
+ALTER TABLE public.manual_therapy_patient_logs
 ADD COLUMN IF NOT EXISTS prescription text;
 
-ALTER TABLE public.manual_therapy_patient_logs 
+ALTER TABLE public.manual_therapy_patient_logs
 ADD COLUMN IF NOT EXISTS prescription_count integer;
 
-ALTER TABLE public.manual_therapy_patient_logs 
+ALTER TABLE public.manual_therapy_patient_logs
 ADD COLUMN IF NOT EXISTS source text DEFAULT 'manual';
 
 ALTER TABLE public.staff_schedules
@@ -196,11 +196,11 @@ CREATE TABLE IF NOT EXISTS public.shockwave_monthly_therapists (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   year integer NOT NULL,
   month integer NOT NULL,
-  slot_index integer NOT NULL,          -- 열 번호 (0, 1, 2 ...)
-  therapist_name text NOT NULL DEFAULT '',  -- 치료사 이름 (빈 문자열 = 해당 기간 비활성)
-  start_day integer NOT NULL DEFAULT 1, -- 시작일 (1~31)
-  end_day integer NOT NULL DEFAULT 31,  -- 종료일 (1~31, 해당 월의 마지막 날까지)
-  type text NOT NULL DEFAULT 'shockwave', -- 'shockwave' 또는 'manual_therapy'
+  slot_index integer NOT NULL,             -- 열 번호 (0, 1, 2 ...)
+  therapist_name text NOT NULL DEFAULT '', -- 치료사 이름 (빈 문자열 = 해당 기간 비활성)
+  start_day integer NOT NULL DEFAULT 1,    -- 시작일 (1~31)
+  end_day integer NOT NULL DEFAULT 31,     -- 종료일 (1~31, 해당 월의 마지막 날까지)
+  type text NOT NULL DEFAULT 'shockwave',  -- 'shockwave' 또는 'manual_therapy'
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
   UNIQUE(year, month, slot_index, start_day, type)
 );
@@ -210,4 +210,3 @@ ALTER TABLE public.shockwave_monthly_therapists DISABLE ROW LEVEL SECURITY;
 -- type 컬럼 추가 (기존 테이블이 있는 경우)
 ALTER TABLE public.shockwave_monthly_therapists
 ADD COLUMN IF NOT EXISTS type text NOT NULL DEFAULT 'shockwave';
-

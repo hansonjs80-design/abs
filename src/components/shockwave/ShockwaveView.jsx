@@ -15,6 +15,7 @@ const SHOCKWAVE_DAY_COL_WIDTH_KEY = 'shockwave-day-col-width';
 const SHOCKWAVE_COL_RATIOS_KEY = 'shockwave-col-ratios';
 const TREATMENT_COMPLETE_BG = '#ffe599';
 const TREATMENT_CANCEL_BG = '#f4cccc';
+const SCHEDULER_HOLIDAY_BG = '#f8c2c2';
 
 function getManualDoseTag(prescription) {
   const pres = String(prescription || '');
@@ -2015,6 +2016,71 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     await applyTreatmentCompleteToSelection('cancel-toggle');
   }, [applyTreatmentCompleteToSelection]);
 
+  const handleToggleHolidayBackground = useCallback(async () => {
+    if (!selectedKeys || selectedKeys.size === 0) return;
+
+    const effectiveKeys = normalizeKeysToMergeMasters(selectedKeys);
+    const shouldClearSelection = Array.from(effectiveKeys).some(
+      (key) => memos[key]?.bg_color === SCHEDULER_HOLIDAY_BG
+    );
+    const nextBgColor = shouldClearSelection ? null : SCHEDULER_HOLIDAY_BG;
+    const touchedKeys = new Set();
+    const oldMemos = [];
+    const payload = [];
+
+    Array.from(effectiveKeys).forEach((key) => {
+      const [w, d, r, c] = key.split('-').map(Number);
+      const memo = memos[key];
+      const masterSpan = memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+      const rowSpan = Math.max(1, masterSpan.rowSpan || 1);
+      const colSpan = Math.max(1, masterSpan.colSpan || 1);
+
+      for (let row = r; row < r + rowSpan; row += 1) {
+        for (let col = c; col < c + colSpan; col += 1) {
+          const rangeKey = cellKey(w, d, row, col);
+          if (touchedKeys.has(rangeKey)) continue;
+          touchedKeys.add(rangeKey);
+
+          const rangeMemo = memos[rangeKey];
+          if ((rangeMemo?.bg_color || null) === nextBgColor) continue;
+
+          oldMemos.push({
+            year: currentYear,
+            month: currentMonth,
+            week_index: w,
+            day_index: d,
+            row_index: row,
+            col_index: col,
+            content: rangeMemo?.content || '',
+            bg_color: rangeMemo?.bg_color || null,
+            merge_span: rangeMemo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+            prescription: rangeMemo?.prescription || null,
+            body_part: rangeMemo?.body_part || null,
+          });
+
+          payload.push({
+            year: currentYear,
+            month: currentMonth,
+            week_index: w,
+            day_index: d,
+            row_index: row,
+            col_index: col,
+            content: rangeMemo?.content || '',
+            bg_color: nextBgColor,
+            merge_span: rangeMemo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+            prescription: rangeMemo?.prescription || null,
+            body_part: rangeMemo?.body_part || null,
+          });
+        }
+      }
+    });
+
+    if (payload.length === 0) return;
+    recordUndo({ type: 'bulk-edit', oldMemos });
+    const success = await saveShockwaveMemosBulk(payload);
+    if (!success) addToast('배경색 변경 실패', 'error');
+  }, [selectedKeys, memos, currentYear, currentMonth, normalizeKeysToMergeMasters, cellKey, saveShockwaveMemosBulk, addToast]);
+
   const handleContextAction = useCallback(async (action) => {
     if (action === 'copy') handleCopySelection();
     else if (action === 'cut') handleCutSelection();
@@ -2295,6 +2361,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return;
     }
 
+    // Ctrl/Cmd+B -> 휴일 배경색 토글
+    if (isMeta && e.code === 'KeyB') {
+      e.preventDefault();
+      e.stopPropagation();
+      handleToggleHolidayBackground();
+      return;
+    }
+
     // Cmd+E → 병합 / 병합 해제
     if (isMeta && e.code === 'KeyE') {
       e.preventDefault();
@@ -2331,7 +2405,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       beginEditingCell(key, '', false);
       return;
     }
-  }, [selectedCell, editingCell, selectedKeys, deleteCells, buildRangeKeys, selectSingleCell, getAdjacentCell, beginEditingCell, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, tryMergeSelection, isEditableTarget]);
+  }, [selectedCell, editingCell, selectedKeys, deleteCells, buildRangeKeys, selectSingleCell, getAdjacentCell, beginEditingCell, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleHolidayBackground, tryMergeSelection, isEditableTarget]);
 
   const dismissContextMenu = useCallback(() => setContextMenu(null), []);
 
@@ -2764,6 +2838,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             gridRow: `${gridRowStart}${visualRowSpan > 1 ? ` / span ${visualRowSpan}` : ''}`,
                             borderBottom: isLastRenderedRow ? 'none' : `1px solid ${HORIZONTAL_BORDER_COLOR}`,
                           };
+
+                          if (cellData?.bg_color) {
+                            inlineStyle.backgroundColor = cellData.bg_color;
+                          }
                           
                           if (cellData?.prescription && settings?.prescription_colors?.[cellData.prescription]) {
                             inlineStyle.color = settings.prescription_colors[cellData.prescription];

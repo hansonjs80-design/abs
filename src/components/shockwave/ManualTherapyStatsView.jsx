@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 
 function normalizePrescriptionKey(value) {
   return String(value || '')
@@ -30,6 +31,10 @@ export default function ManualTherapyStatsView({
 }) {
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter((item) => item?.name) : []), [therapists]);
+  const displayTherapists = useMemo(
+    () => buildDisplayTherapists(safeTherapists, monthlyTherapists),
+    [safeTherapists, monthlyTherapists]
+  );
   const safePrescriptions = useMemo(() => {
     const next = Array.isArray(prescriptions) ? prescriptions.filter(Boolean) : [];
     return next.length > 0 ? next : ['40분', '60분'];
@@ -48,31 +53,13 @@ export default function ManualTherapyStatsView({
     );
   }, [safePriceEntries]);
 
-  const getSlotNames = React.useCallback((slotIdx) => {
-    if (!monthlyTherapists || monthlyTherapists.length === 0) {
-      return [safeTherapists[slotIdx]?.name || ''];
-    }
-    const configs = monthlyTherapists.filter(t => t.slot_index === slotIdx && t.therapist_name);
-    if (configs.length === 0) return [safeTherapists[slotIdx]?.name || ''];
-    const names = [...new Set(configs.map(t => t.therapist_name))];
-    if (names.length === 0) return [safeTherapists[slotIdx]?.name || ''];
-    return names;
-  }, [monthlyTherapists, safeTherapists]);
-
-  const getSlotDisplayName = React.useCallback((slotIdx) => {
-    const names = getSlotNames(slotIdx);
-    if (names.length === 0 || (names.length === 1 && !names[0])) return safeTherapists[slotIdx]?.name || `치료사 ${slotIdx + 1}`;
-    return names.join(' / ');
-  }, [getSlotNames, safeTherapists]);
-
   const settlement = useMemo(() => {
-    const summaryByTherapist = safeTherapists.map((therapist, idx) => {
-      const validNames = getSlotNames(idx);
+    const summaryByTherapist = displayTherapists.map((therapist) => {
       const countsByPrescription = Object.fromEntries(
         safePrescriptions.map((prescription) => [prescription, 0])
       );
 
-      const therapistLogs = safeLogs.filter((entry) => validNames.includes(entry.therapist_name));
+      const therapistLogs = safeLogs.filter((entry) => entry.therapist_name === therapist.name);
       therapistLogs.forEach((entry) => {
         const matchedPrescription = safePrescriptions.find(
           (prescription) => normalizePrescriptionKey(prescription) === normalizePrescriptionKey(entry?.prescription)
@@ -92,7 +79,7 @@ export default function ManualTherapyStatsView({
       const incentive = Math.round(amount * ((Number(incentivePercentage) || 0) / 100));
 
       return {
-        therapist: { ...therapist, name: getSlotDisplayName(idx) },
+        therapist: { ...therapist, id: therapist.key || therapist.id || therapist.name, name: therapist.displayName || therapist.name },
         countsByPrescription,
         totalCount,
         amount,
@@ -110,7 +97,7 @@ export default function ManualTherapyStatsView({
       grandAmount,
       grandIncentive,
     };
-  }, [incentivePercentage, normalizedPriceMap, safeLogs, safePrescriptions, safeTherapists, getSlotNames, getSlotDisplayName]);
+  }, [incentivePercentage, normalizedPriceMap, safeLogs, safePrescriptions, displayTherapists]);
 
   return (
     <div className="sw-settlement-stack">
@@ -129,17 +116,17 @@ export default function ManualTherapyStatsView({
             <thead>
               <tr>
                 <th className="label-col" rowSpan={2}>구분</th>
-                {settlement.summaryByTherapist.map((item) => (
-                  <th key={item.therapist.id || item.therapist.name} colSpan={safePrescriptions.length} className="therapist-col">
+                {settlement.summaryByTherapist.map((item, therapistIndex) => (
+                  <th key={item.therapist.id || item.therapist.name} colSpan={safePrescriptions.length} className={`therapist-col therapist-tone-${therapistIndex % 5}`}>
                     {item.therapist.name}
                   </th>
                 ))}
                 <th className="grand-col" rowSpan={2}>총 합계</th>
               </tr>
               <tr>
-                {settlement.summaryByTherapist.flatMap((item) =>
+                {settlement.summaryByTherapist.flatMap((item, therapistIndex) =>
                   safePrescriptions.map((prescription) => (
-                    <th key={`${item.therapist.id || item.therapist.name}-${prescription}`} className="prescription-col">
+                    <th key={`${item.therapist.id || item.therapist.name}-${prescription}`} className={`prescription-col therapist-tone-${therapistIndex % 5}-sub`}>
                       {prescription}
                     </th>
                   ))
@@ -149,9 +136,9 @@ export default function ManualTherapyStatsView({
             <tbody>
               <tr>
                 <th className="row-label">처방 건수</th>
-                {settlement.summaryByTherapist.flatMap((item) =>
+                {settlement.summaryByTherapist.flatMap((item, therapistIndex) =>
                   safePrescriptions.map((prescription) => (
-                    <td key={`count-${item.therapist.id || item.therapist.name}-${prescription}`}>
+                    <td key={`count-${item.therapist.id || item.therapist.name}-${prescription}`} className={`therapist-tone-${therapistIndex % 5}-cell`}>
                       {item.countsByPrescription[prescription] || 0}
                     </td>
                   ))
@@ -160,8 +147,8 @@ export default function ManualTherapyStatsView({
               </tr>
               <tr>
                 <th className="row-label">도수치료 합계(건)</th>
-                {settlement.summaryByTherapist.map((item) => (
-                  <td key={`total-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className="merged-value">
+                {settlement.summaryByTherapist.map((item, therapistIndex) => (
+                  <td key={`total-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className={`merged-value therapist-tone-${therapistIndex % 5}-cell`}>
                     {formatCount(item.totalCount)}
                   </td>
                 ))}
@@ -169,8 +156,8 @@ export default function ManualTherapyStatsView({
               </tr>
               <tr>
                 <th className="row-label">결산 금액(원)</th>
-                {settlement.summaryByTherapist.map((item) => (
-                  <td key={`amount-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className="merged-value amount">
+                {settlement.summaryByTherapist.map((item, therapistIndex) => (
+                  <td key={`amount-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className={`merged-value amount therapist-tone-${therapistIndex % 5}-cell`}>
                     {formatCurrency(item.amount)}
                   </td>
                 ))}
@@ -178,8 +165,8 @@ export default function ManualTherapyStatsView({
               </tr>
               <tr>
                 <th className="row-label">인센티브 ({Number(incentivePercentage) || 0}%)</th>
-                {settlement.summaryByTherapist.map((item) => (
-                  <td key={`incentive-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className="merged-value incentive">
+                {settlement.summaryByTherapist.map((item, therapistIndex) => (
+                  <td key={`incentive-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className={`merged-value incentive therapist-tone-${therapistIndex % 5}-cell`}>
                     {formatCurrency(item.incentive)}
                   </td>
                 ))}
