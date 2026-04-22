@@ -40,6 +40,7 @@ export function buildBaseSettlementSettings(settings, type = 'shockwave') {
       ...fallback.prescription_prices,
       ...(settings?.prescription_prices || {}),
     },
+    prescription_colors: settings?.prescription_colors || {},
     incentive_percentage: isManual
       ? settings?.manual_therapy_incentive_percentage ?? fallback.incentive_percentage
       : settings?.incentive_percentage ?? fallback.incentive_percentage,
@@ -70,6 +71,10 @@ export function getEffectiveSettlementSettings(settings, year, month, type = 'sh
       ...base.prescription_prices,
       ...(override?.prescription_prices || {}),
     },
+    prescription_colors: {
+      ...base.prescription_colors,
+      ...(override?.prescription_colors || {}),
+    },
     incentive_percentage: override?.incentive_overridden === true || Number(override?.incentive_percentage) > 0
       ? Number(override?.incentive_percentage) || 0
       : base.incentive_percentage,
@@ -91,6 +96,7 @@ export function setMonthlySettlementSettings(settings, year, month, type, nextCo
       [type]: {
         prescriptions: Array.isArray(nextConfig?.prescriptions) ? nextConfig.prescriptions.filter(Boolean) : [],
         prescription_prices: nextConfig?.prescription_prices || {},
+        prescription_colors: nextConfig?.prescription_colors || {},
         incentive_percentage: Number(nextConfig?.incentive_percentage) || 0,
         incentive_overridden: true,
       },

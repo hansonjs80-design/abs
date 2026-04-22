@@ -111,7 +111,7 @@ export default function ManualTherapyStatsView({
           </div>
         </div>
 
-        <div className="sw-settlement-table-wrap">
+        <div className="sw-settlement-table-wrap sw-manual-settlement-table-wrap">
           <table className="sw-settlement-table sw-manual-compact-settlement-table">
             <thead>
               <tr>

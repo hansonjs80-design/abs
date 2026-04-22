@@ -15,6 +15,7 @@ export function ScheduleProvider({ children }) {
   const [therapists, setTherapists] = useState([]);
   const [manualTherapists, setManualTherapists] = useState([]);
   const [shockwaveSettings, setShockwaveSettings] = useState({
+    id: '00000000-0000-0000-0000-000000000000',
     start_time: '09:00:00',
     end_time: '18:00:00',
     interval_minutes: 10,
@@ -31,6 +32,7 @@ export function ScheduleProvider({ children }) {
     incentive_percentage: 7,
     manual_therapy_incentive_percentage: 0,
     frozen_columns: 6,
+    staff_schedule_block_rules: {},
     monthly_settlement_settings: {}
   });
   const [shockwaveMemos, setShockwaveMemos] = useState({});
@@ -256,6 +258,7 @@ export function ScheduleProvider({ children }) {
 
       if (data) {
         setShockwaveSettings({
+          id: data.id || '00000000-0000-0000-0000-000000000000',
           start_time: data.start_time,
           end_time: data.end_time.substring(0, 5),
           interval_minutes: data.interval_minutes,
@@ -272,6 +275,7 @@ export function ScheduleProvider({ children }) {
           incentive_percentage: data.incentive_percentage ?? 7,
           manual_therapy_incentive_percentage: data.manual_therapy_incentive_percentage ?? 0,
           frozen_columns: data.frozen_columns || 6,
+          staff_schedule_block_rules: data.staff_schedule_block_rules || {},
           monthly_settlement_settings: data.monthly_settlement_settings || {}
         });
       }
@@ -283,8 +287,17 @@ export function ScheduleProvider({ children }) {
   // 충격파 스케줄러 환경설정 저장
   const saveShockwaveSettings = useCallback(async (newSettings) => {
     try {
-      const { error } = await supabase.from('shockwave_settings').upsert({
-        id: '00000000-0000-0000-0000-000000000000',
+      const nextUpdatedAt = new Date().toISOString();
+      const { data: latestRow } = await supabase
+        .from('shockwave_settings')
+        .select('id')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const targetId = latestRow?.id || newSettings.id || shockwaveSettings?.id || '00000000-0000-0000-0000-000000000000';
+      const basePayload = {
+        id: targetId,
         start_time: newSettings.start_time,
         end_time: newSettings.end_time,
         interval_minutes: newSettings.interval_minutes,
@@ -301,17 +314,36 @@ export function ScheduleProvider({ children }) {
         manual_therapy_incentive_percentage: newSettings.manual_therapy_incentive_percentage ?? 0,
         frozen_columns: newSettings.frozen_columns || 6,
         prescription_colors: newSettings.prescription_colors || {},
+        staff_schedule_block_rules: newSettings.staff_schedule_block_rules || {},
+        updated_at: nextUpdatedAt
+      };
+      const payload = {
+        ...basePayload,
         monthly_settlement_settings: newSettings.monthly_settlement_settings || {}
-      }, { onConflict: 'id' });
+      };
 
-      if (error) throw error;
-      setShockwaveSettings(newSettings);
+      const { error } = await supabase
+        .from('shockwave_settings')
+        .upsert(payload, { onConflict: 'id' });
+
+      if (error) {
+        const message = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
+        const missingMonthlyColumn = /monthly_settlement_settings|schema cache|column/i.test(message);
+        if (!missingMonthlyColumn) throw error;
+
+        console.warn('monthly_settlement_settings column is missing. Saving global settlement settings only.');
+        const { error: retryError } = await supabase
+          .from('shockwave_settings')
+          .upsert(basePayload, { onConflict: 'id' });
+        if (retryError) throw retryError;
+      }
+      setShockwaveSettings({ ...newSettings, id: targetId, updated_at: nextUpdatedAt });
       return true;
     } catch (err) {
       console.error('Failed to save shockwave settings:', err);
       return false;
     }
-  }, []);
+  }, [shockwaveSettings?.id]);
 
   // 충격파 스케줄 로드
   const loadShockwaveMemos = useCallback(async (year, month) => {

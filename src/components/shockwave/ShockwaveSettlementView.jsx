@@ -130,8 +130,8 @@ export default function ShockwaveSettlementView({
           </div>
         </div>
 
-        <div className="sw-settlement-table-wrap">
-          <table className="sw-settlement-table">
+        <div className="sw-settlement-table-wrap sw-compact-table-wrap">
+          <table className="sw-settlement-table sw-compact-settlement-table">
             <thead>
               <tr>
                 <th className="label-col" rowSpan={2}>구분</th>
@@ -203,8 +203,8 @@ export default function ShockwaveSettlementView({
           <h2>최근 6개월 충격파 결산/신환 현황</h2>
         </div>
 
-        <div className="sw-settlement-table-wrap">
-          <table className="sw-summary-table">
+        <div className="sw-settlement-table-wrap sw-compact-table-wrap">
+          <table className="sw-summary-table sw-compact-summary-table">
             <thead>
               <tr>
                 <th>월</th>

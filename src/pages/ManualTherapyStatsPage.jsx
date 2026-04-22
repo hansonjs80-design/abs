@@ -65,6 +65,7 @@ export default function ManualTherapyStatsPage() {
     shockwaveMemos,
     loadShockwaveMemos,
     shockwaveSettings,
+    loadShockwaveSettings,
     saveShockwaveSettings,
     monthlyManualTherapists,
   } = useSchedule();
@@ -118,7 +119,8 @@ export default function ManualTherapyStatsPage() {
 
   useEffect(() => {
     loadManualTherapists();
-  }, [loadManualTherapists]);
+    loadShockwaveSettings();
+  }, [loadManualTherapists, loadShockwaveSettings]);
 
   useEffect(() => {
     let active = true;
@@ -381,8 +383,9 @@ export default function ManualTherapyStatsPage() {
 
   const handleSaveSettlementSettings = useCallback(async (nextSettings) => {
     const ok = await saveShockwaveSettings(nextSettings);
+    if (ok) await loadShockwaveSettings();
     addToast(ok ? '이번 달 도수치료 결산 설정을 저장했습니다.' : '결산 설정 저장에 실패했습니다.', ok ? 'success' : 'error');
-  }, [addToast, saveShockwaveSettings]);
+  }, [addToast, loadShockwaveSettings, saveShockwaveSettings]);
 
   return (
     <div className="animate-fade-in" style={{ height: '100%', overflow: 'auto' }}>

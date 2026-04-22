@@ -6,6 +6,8 @@ import { supabase } from '../../lib/supabaseClient';
 import { has4060Pattern, strip4060FromContent, incrementSessionCount, normalizeNameForMatch } from '../../lib/memoParser';
 import { toProperCase } from '../../lib/shockwaveSyncUtils';
 import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
+import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
+import { getEffectiveStaffScheduleBlockRules } from '../../lib/staffScheduleBlockRules';
 import { useToast } from '../common/Toast';
 import MonthlyTherapistConfig from './MonthlyTherapistConfig';
 
@@ -524,6 +526,58 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
     return map;
   }, [staffMemos]);
+
+  const effectiveStaffBlockRules = useMemo(
+    () => getEffectiveStaffScheduleBlockRules(settings, currentYear, currentMonth).rules,
+    [settings, currentYear, currentMonth]
+  );
+
+  const staffScheduleBlocksByDate = useMemo(() => {
+    const map = {};
+    const rules = (effectiveStaffBlockRules || []).filter((rule) => (
+      rule?.enabled !== false && rule?.keyword && rule?.start_time && rule?.end_time
+    ));
+    if (rules.length === 0) return map;
+
+    Object.values(staffMemos || {}).forEach((item) => {
+      const text = String(item?.content || '').trim();
+      if (!text) return;
+      const slashIndex = text.indexOf('/');
+      if (slashIndex < 0) return;
+
+      const prefix = text.slice(0, slashIndex).trim();
+      const names = text
+        .slice(slashIndex + 1)
+        .split(/[,，、\n]/)
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .map((part) => part.split(/\s+/)[0])
+        .map((part) => normalizeNameForMatch(part))
+        .filter(Boolean);
+      if (names.length === 0) return;
+
+      const matchedRules = rules.filter((rule) => prefix.includes(rule.keyword) || text.includes(rule.keyword));
+      if (matchedRules.length === 0) return;
+
+      const dateKey = `${item.year}-${item.month}-${item.day}`;
+      if (!map[dateKey]) map[dateKey] = {};
+      names.forEach((normalizedName) => {
+        if (!map[dateKey][normalizedName]) map[dateKey][normalizedName] = [];
+        matchedRules.forEach((rule) => {
+          map[dateKey][normalizedName].push(rule);
+        });
+      });
+    });
+
+    return map;
+  }, [staffMemos, effectiveStaffBlockRules]);
+
+  const getStaffScheduleBlockForCell = useCallback((dateKey, therapistName, slotTime) => {
+    if (!dateKey || !therapistName || !slotTime) return null;
+    const normalizedName = normalizeNameForMatch(therapistName);
+    const rules = staffScheduleBlocksByDate?.[dateKey]?.[normalizedName] || [];
+    return rules.find((rule) => slotTime >= rule.start_time && slotTime < rule.end_time) || null;
+  }, [staffScheduleBlocksByDate]);
 
   const isLastHourSlot = useCallback((dayInfo, slotTime) => {
     if (!slotTime || !settings?.end_time) return false;
@@ -1523,6 +1577,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       cancel: join(mod, '-'),
     };
   }, [isAppleShortcutPlatform]);
+  const effectivePrescriptionColors = useMemo(() => {
+    const shockwaveSettlement = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'shockwave');
+    const manualSettlement = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'manual_therapy');
+    return {
+      ...(settings?.prescription_colors || {}),
+      ...(shockwaveSettlement.prescription_colors || {}),
+      ...(manualSettlement.prescription_colors || {}),
+    };
+  }, [settings, currentYear, currentMonth]);
 
   // 날짜 비교 헬퍼: 원본(w,d)와 대상(w,d)의 실제 날짜를 비교
   const isLaterDate = useCallback((srcW, srcD, dstW, dstD) => {
@@ -2932,6 +2995,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                           const dateKey = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}`;
                           const therapistName = getTherapistNameForDate(colIdx, dayInfo.day) || '';
                           const workState = getTherapistWorkState(dateKey, therapistName);
+                          const staffBlockRule = getStaffScheduleBlockForCell(dateKey, therapistName, slotInfo.time);
                           if (!isSelected && workState === 'off') {
                             cls += ' staff-off';
                           } else if (!isSelected && workState === 'early-leave' && isLastHourSlot(dayInfo, slotInfo.time)) {
@@ -2946,10 +3010,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
                           if (cellData?.bg_color) {
                             inlineStyle.backgroundColor = cellData.bg_color;
+                          } else if (staffBlockRule?.bg_color) {
+                            inlineStyle.backgroundColor = staffBlockRule.bg_color;
                           }
                           
-                          if (cellData?.prescription && settings?.prescription_colors?.[cellData.prescription]) {
-                            inlineStyle.color = settings.prescription_colors[cellData.prescription];
+                          if (cellData?.prescription && effectivePrescriptionColors?.[cellData.prescription]) {
+                            inlineStyle.color = effectivePrescriptionColors[cellData.prescription];
                             inlineStyle.fontWeight = '700';
                           }
 
@@ -2971,6 +3037,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                   handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
                                   let text = `⏱ [${slotInfo.label}]`;
                                   if (content && content !== '\u200B') text += `\n📝 ${content}`;
+                                  if (staffBlockRule) text += `\n근무표: ${staffBlockRule.keyword}`;
                                   if (cellData?.prescription) text += `\n💊 처방: ${cellData.prescription}`;
                                   if (cellData?.body_part) text += `\n🦴 부위: ${cellData.body_part}`;
                                   const memoList = getMemoListFromMergeSpan(cellData?.merge_span);
@@ -3071,6 +3138,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                   }
                                   if (cellData?.prescription) text += `\n💊 처방: ${cellData.prescription}`;
                                   if (cellData?.body_part) text += `\n🦴 부위: ${cellData.body_part}`;
+                                  if (staffBlockRule) text += `\n근무표: ${staffBlockRule.keyword}`;
                                   const memoList = getMemoListFromMergeSpan(cellData?.merge_span);
                                   if (memoList.length > 0) text += `\n📌 메모: ${memoList.join(' / ')}`;
                                   setHoverData({ text });

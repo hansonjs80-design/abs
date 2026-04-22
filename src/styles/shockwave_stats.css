@@ -1065,8 +1065,61 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 }
 
 .sw-manual-compact-settlement-table {
+  width: max-content;
+  max-width: none;
+  min-width: 0;
   table-layout: auto;
-  min-width: max-content;
+}
+
+.sw-manual-settlement-table-wrap {
+  width: auto;
+  max-width: 100%;
+  align-self: flex-start;
+  display: inline-block;
+}
+
+.sw-compact-table-wrap {
+  width: auto;
+  max-width: 100%;
+  align-self: flex-start;
+  display: inline-block;
+}
+
+.sw-compact-settlement-table,
+.sw-compact-summary-table,
+.sw-compact-new-patient-table {
+  width: max-content;
+  max-width: none;
+  min-width: 0;
+  table-layout: auto;
+}
+
+.sw-compact-settlement-table thead .label-col {
+  width: 102px;
+  min-width: 102px;
+}
+
+.sw-compact-settlement-table thead .therapist-col {
+  min-width: 96px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.sw-compact-settlement-table thead .prescription-col {
+  width: 58px;
+  min-width: 58px;
+  max-width: 72px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.sw-compact-settlement-table thead .grand-col {
+  width: 104px;
+  min-width: 104px;
+}
+
+.sw-compact-settlement-table tbody td {
+  min-width: 58px;
 }
 
 .sw-manual-compact-settlement-table th,
@@ -1196,7 +1249,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 .settlement-settings-row {
   display: grid;
-  grid-template-columns: minmax(92px, 150px) minmax(110px, 150px) 24px auto;
+  grid-template-columns: minmax(92px, 150px) minmax(100px, 140px) 36px 24px auto;
   gap: 8px;
   align-items: center;
   padding: 8px;
@@ -1217,6 +1270,16 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   color: #475569;
   font-size: 0.84rem;
   font-weight: 900;
+}
+
+.settlement-color-input {
+  width: 34px;
+  height: 34px;
+  padding: 2px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  cursor: pointer;
 }
 
 .settlement-add-input {
@@ -1263,7 +1326,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   }
 
   .settlement-settings-row {
-    grid-template-columns: 1fr 1fr 22px auto;
+    grid-template-columns: 1fr 1fr 34px 22px auto;
   }
 }
 
@@ -1317,6 +1380,25 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-summary-table tr th:last-child,
 .sw-summary-table tr td:last-child {
   border-right: none;
+}
+
+.sw-compact-summary-table th,
+.sw-compact-summary-table td {
+  padding: 9px 14px;
+  font-size: 0.88rem;
+}
+
+.sw-compact-summary-table th:nth-child(1) {
+  width: 82px;
+}
+
+.sw-compact-summary-table th:nth-child(2),
+.sw-compact-summary-table th:nth-child(4) {
+  width: 92px;
+}
+
+.sw-compact-summary-table th:nth-child(3) {
+  width: 140px;
 }
 
 .sw-new-patient-table {
@@ -1467,6 +1549,40 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-new-patient-table tr th:last-child,
 .sw-new-patient-table tr td:last-child {
   border-right: none;
+}
+
+.sw-compact-new-patient-table th,
+.sw-compact-new-patient-table td {
+  padding: 9px 8px;
+  font-size: 0.84rem;
+}
+
+.sw-compact-new-patient-table thead .therapist-col {
+  min-width: 250px;
+}
+
+.sw-compact-new-patient-table thead .sub-col:nth-child(4n + 1),
+.sw-compact-new-patient-table tbody td:nth-child(4n + 1) {
+  width: 58px;
+  min-width: 58px;
+}
+
+.sw-compact-new-patient-table thead .sub-col:nth-child(4n + 2),
+.sw-compact-new-patient-table tbody td:nth-child(4n + 2) {
+  width: 78px;
+  min-width: 78px;
+}
+
+.sw-compact-new-patient-table thead .sub-col:nth-child(4n + 3),
+.sw-compact-new-patient-table tbody td:nth-child(4n + 3) {
+  width: 88px;
+  min-width: 88px;
+}
+
+.sw-compact-new-patient-table thead .sub-col:nth-child(4n),
+.sw-compact-new-patient-table tbody td:nth-child(4n) {
+  width: 52px;
+  min-width: 52px;
 }
 
 .sw-manual-summary-table,

@@ -1452,7 +1452,7 @@
 
 .monthly-therapist-section-tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   padding: 12px 18px 6px;
 }
@@ -1620,6 +1620,30 @@
 .monthly-operating-input:disabled {
   opacity: 0.42;
   background: #f8fafc;
+}
+
+.monthly-staff-block-toolbar {
+  background: rgba(236, 253, 245, 0.72);
+  border-color: rgba(16, 185, 129, 0.18);
+  color: #065f46;
+}
+
+.monthly-staff-block-table {
+  min-width: 660px;
+}
+
+.monthly-staff-block-keyword {
+  min-width: 150px;
+}
+
+.monthly-staff-block-color {
+  width: 36px;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  border-radius: 9px;
+  background: #ffffff;
+  cursor: pointer;
 }
 
 .monthly-date-override-form {

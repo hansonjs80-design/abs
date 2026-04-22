@@ -6,6 +6,10 @@ import {
   getMonthKey,
   setMonthlyDayOverrides,
 } from '../../lib/schedulerOperatingHours';
+import {
+  getEffectiveStaffScheduleBlockRules,
+  setMonthlyStaffScheduleBlockRules,
+} from '../../lib/staffScheduleBlockRules';
 
 /**
  * 월별 치료사 설정 모달
@@ -27,7 +31,7 @@ export default function MonthlyTherapistConfig({
   onSaveSettings,
   onClose,
 }) {
-  const [configSection, setConfigSection] = useState('therapists'); // therapists | weekly | dates
+  const [configSection, setConfigSection] = useState('therapists'); // therapists | weekly | dates | staffBlocks
   const [activeTab, setActiveTab] = useState('shockwave'); // 'shockwave' | 'manual_therapy'
 
   const currentTherapists = activeTab === 'manual_therapy' ? manualTherapists : therapists;
@@ -38,6 +42,7 @@ export default function MonthlyTherapistConfig({
   const [manualSlots, setManualSlots] = useState(null);
   const [dayOverrides, setDayOverrides] = useState({});
   const [dateOverrides, setDateOverrides] = useState({});
+  const [staffBlockRules, setStaffBlockRules] = useState([]);
   const [newDateOverride, setNewDateOverride] = useState({
     date: '',
     start_time: '',
@@ -108,7 +113,8 @@ export default function MonthlyTherapistConfig({
   useEffect(() => {
     setDayOverrides(getMonthlyDayOverrides(settings?.day_overrides, year, month));
     setDateOverrides(getDateOverridesForMonth(settings?.date_overrides, year, month));
-  }, [settings?.day_overrides, settings?.date_overrides, year, month]);
+    setStaffBlockRules(getEffectiveStaffScheduleBlockRules(settings, year, month).rules);
+  }, [settings, settings?.day_overrides, settings?.date_overrides, settings?.staff_schedule_block_rules, year, month]);
 
   const addSlot = useCallback(() => {
     setSlots((prev) => {
@@ -338,6 +344,41 @@ export default function MonthlyTherapistConfig({
     setSaving(false);
     if (success) onClose();
   }, [onSaveSettings, settings, year, month, dayOverrides, dateOverrides, onClose]);
+
+  const addStaffBlockRule = useCallback(() => {
+    setStaffBlockRules((prev) => ([
+      ...(prev || []),
+      {
+        id: `staff-block-${Date.now()}`,
+        keyword: '',
+        start_time: '13:00',
+        end_time: '18:00',
+        bg_color: '#d9ead3',
+        enabled: true,
+      },
+    ]));
+  }, []);
+
+  const updateStaffBlockRule = useCallback((index, field, value) => {
+    setStaffBlockRules((prev) => (prev || []).map((rule, ruleIndex) => (
+      ruleIndex === index ? { ...rule, [field]: value } : rule
+    )));
+  }, []);
+
+  const removeStaffBlockRule = useCallback((index) => {
+    setStaffBlockRules((prev) => (prev || []).filter((_, ruleIndex) => ruleIndex !== index));
+  }, []);
+
+  const handleSaveStaffBlockRules = useCallback(async () => {
+    if (!onSaveSettings || !settings) return;
+    setSaving(true);
+    const success = await onSaveSettings({
+      ...settings,
+      staff_schedule_block_rules: setMonthlyStaffScheduleBlockRules(settings, year, month, staffBlockRules),
+    });
+    setSaving(false);
+    if (success) onClose();
+  }, [onSaveSettings, settings, year, month, staffBlockRules, onClose]);
 
   // ESC 닫기
   useEffect(() => {
@@ -689,6 +730,106 @@ export default function MonthlyTherapistConfig({
     );
   };
 
+  const renderStaffBlockSettings = () => {
+    const effective = getEffectiveStaffScheduleBlockRules(settings, year, month);
+    const sourceText = !effective.source_month_key
+      ? '기본 근무표 연동 규칙 사용 중'
+      : effective.source_month_key === effective.target_month_key
+        ? '이번 달 직접 설정 사용 중'
+        : `${effective.source_month_key} 설정을 이어받아 적용 중`;
+
+    return (
+      <>
+        <div className="monthly-therapist-desc">
+          근무표 메모가 “문구/치료사명” 형식과 일치하면 해당 날짜의 스케줄러에서 그 치료사 열의 지정 시간대를 색칠합니다. 예: 오후 반차/홍길동
+          <br />
+          {sourceText}
+        </div>
+        <div className="monthly-therapist-toolbar monthly-staff-block-toolbar">
+          <span>현재 {staffBlockRules.length}개 규칙</span>
+          <button type="button" className="monthly-therapist-add-slot" onClick={addStaffBlockRule}>
+            + 색칠 규칙 추가
+          </button>
+        </div>
+        <div className="monthly-therapist-body monthly-therapist-body--settings">
+          <div className="monthly-operating-table-wrap">
+            <table className="monthly-operating-table monthly-staff-block-table">
+              <thead>
+                <tr>
+                  <th>사용</th>
+                  <th>근무표 문구</th>
+                  <th>시작</th>
+                  <th>종료</th>
+                  <th>색상</th>
+                  <th>삭제</th>
+                </tr>
+              </thead>
+              <tbody>
+                {staffBlockRules.length === 0 ? (
+                  <tr>
+                    <td className="monthly-operating-empty" colSpan={6}>이 달에 설정된 근무표 연동 색칠 규칙이 없습니다.</td>
+                  </tr>
+                ) : staffBlockRules.map((rule, index) => (
+                  <tr key={rule.id || index}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={rule.enabled !== false}
+                        onChange={(e) => updateStaffBlockRule(index, 'enabled', e.target.checked)}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        className="monthly-operating-input monthly-staff-block-keyword"
+                        value={rule.keyword || ''}
+                        placeholder="오후 반차"
+                        onChange={(e) => updateStaffBlockRule(index, 'keyword', e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="time"
+                        className="monthly-operating-input"
+                        value={rule.start_time || ''}
+                        onChange={(e) => updateStaffBlockRule(index, 'start_time', e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="time"
+                        className="monthly-operating-input"
+                        value={rule.end_time || ''}
+                        onChange={(e) => updateStaffBlockRule(index, 'end_time', e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="color"
+                        className="monthly-staff-block-color"
+                        value={rule.bg_color || '#d9ead3'}
+                        onChange={(e) => updateStaffBlockRule(index, 'bg_color', e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="monthly-therapist-remove-btn"
+                        onClick={() => removeStaffBlockRule(index)}
+                      >
+                        삭제
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </>
+    );
+  };
+
   return (
     <div className="monthly-therapist-backdrop" onMouseDown={onClose}>
       <div
@@ -724,11 +865,19 @@ export default function MonthlyTherapistConfig({
           >
             날짜별 운영
           </button>
+          <button
+            type="button"
+            className={`monthly-therapist-section-tab${configSection === 'staffBlocks' ? ' active' : ''}`}
+            onClick={() => setConfigSection('staffBlocks')}
+          >
+            근무표 연동
+          </button>
         </div>
 
         {configSection === 'therapists' && renderTherapistSettings()}
         {configSection === 'weekly' && renderWeeklySettings()}
         {configSection === 'dates' && renderDateSettings()}
+        {configSection === 'staffBlocks' && renderStaffBlockSettings()}
 
         <div className="monthly-therapist-footer">
           <button type="button" className="monthly-therapist-cancel" onClick={onClose}>
@@ -737,14 +886,22 @@ export default function MonthlyTherapistConfig({
           <button
             type="button"
             className="monthly-therapist-save"
-            onClick={configSection === 'therapists' ? handleSave : handleSaveOperatingSettings}
+            onClick={
+              configSection === 'therapists'
+                ? handleSave
+                : configSection === 'staffBlocks'
+                  ? handleSaveStaffBlockRules
+                  : handleSaveOperatingSettings
+            }
             disabled={saving}
           >
             {saving
               ? '저장 중...'
               : configSection === 'therapists'
                 ? `${activeTab === 'manual_therapy' ? '도수치료' : '충격파'} 저장`
-                : '운영시간 저장'}
+                : configSection === 'staffBlocks'
+                  ? '근무표 연동 저장'
+                  : '운영시간 저장'}
           </button>
         </div>
       </div>

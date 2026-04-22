@@ -108,8 +108,8 @@ export default function ManualTherapySixMonthStats({
         </div>
       </div>
 
-      <div className="sw-settlement-table-wrap">
-        <table className="sw-summary-table">
+      <div className="sw-settlement-table-wrap sw-compact-table-wrap sw-six-month-summary-wrap">
+        <table className="sw-summary-table sw-compact-summary-table">
           <thead>
             <tr>
               <th>월</th>

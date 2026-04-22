@@ -40,7 +40,7 @@ class ShockwaveStatsErrorBoundary extends React.Component {
 
 export default function ShockwaveStatsView({ currentYear, currentMonth, memos, therapists, schedulerMemosReady = false }) {
   const { addToast } = useToast();
-  const { shockwaveSettings, monthlyTherapists, saveShockwaveSettings } = useSchedule();
+  const { shockwaveSettings, monthlyTherapists, loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
   const [logs, setLogs] = useState([]);
   const [recentLogs, setRecentLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -95,6 +95,10 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
+
+  useEffect(() => {
+    loadShockwaveSettings();
+  }, [loadShockwaveSettings]);
 
   useEffect(() => {
     let cancelled = false;
@@ -169,8 +173,9 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
 
   const handleSaveSettlementSettings = useCallback(async (nextSettings) => {
     const ok = await saveShockwaveSettings(nextSettings);
+    if (ok) await loadShockwaveSettings();
     addToast(ok ? '이번 달 충격파 결산 설정을 저장했습니다.' : '결산 설정 저장에 실패했습니다.', ok ? 'success' : 'error');
-  }, [addToast, saveShockwaveSettings]);
+  }, [addToast, loadShockwaveSettings, saveShockwaveSettings]);
 
   useEffect(() => {
     setExtraDraftRows(0);

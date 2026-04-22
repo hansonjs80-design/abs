@@ -32,6 +32,7 @@ const SQL_SNIPPETS = [
   manual_therapy_incentive_percentage numeric(5,2) NOT NULL DEFAULT 0,
   frozen_columns int DEFAULT 6,
   prescription_colors jsonb NOT NULL DEFAULT '{}'::jsonb,
+  staff_schedule_block_rules jsonb NOT NULL DEFAULT '{}'::jsonb,
   monthly_settlement_settings jsonb NOT NULL DEFAULT '{}'::jsonb,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -45,7 +46,24 @@ ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS incentive_percent
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS manual_therapy_incentive_percentage numeric(5,2) NOT NULL DEFAULT 0;
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS frozen_columns int DEFAULT 6;
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS prescription_colors jsonb NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS monthly_settlement_settings jsonb NOT NULL DEFAULT '{}'::jsonb;`
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS staff_schedule_block_rules jsonb NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS monthly_settlement_settings jsonb NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+UPDATE public.shockwave_settings
+SET prescription_colors = '{}'::jsonb
+WHERE prescription_colors IS NULL;
+UPDATE public.shockwave_settings
+SET monthly_settlement_settings = '{}'::jsonb
+WHERE monthly_settlement_settings IS NULL;
+UPDATE public.shockwave_settings
+SET staff_schedule_block_rules = '{}'::jsonb
+WHERE staff_schedule_block_rules IS NULL;
+ALTER TABLE public.shockwave_settings ALTER COLUMN prescription_colors SET DEFAULT '{}'::jsonb;
+ALTER TABLE public.shockwave_settings ALTER COLUMN prescription_colors SET NOT NULL;
+ALTER TABLE public.shockwave_settings ALTER COLUMN staff_schedule_block_rules SET DEFAULT '{}'::jsonb;
+ALTER TABLE public.shockwave_settings ALTER COLUMN staff_schedule_block_rules SET NOT NULL;
+ALTER TABLE public.shockwave_settings ALTER COLUMN monthly_settlement_settings SET DEFAULT '{}'::jsonb;
+ALTER TABLE public.shockwave_settings ALTER COLUMN monthly_settlement_settings SET NOT NULL;`
   },
   {
     title: '치료사 목록 테이블',
@@ -309,6 +327,8 @@ CREATE TABLE IF NOT EXISTS public.shockwave_settings (
   incentive_percentage numeric(5,2) DEFAULT 7,
   manual_therapy_incentive_percentage numeric(5,2) DEFAULT 0,
   frozen_columns integer DEFAULT 6,
+  prescription_colors jsonb DEFAULT '{}'::jsonb,
+  staff_schedule_block_rules jsonb DEFAULT '{}'::jsonb,
   monthly_settlement_settings jsonb DEFAULT '{}'::jsonb,
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -347,7 +367,44 @@ ALTER TABLE public.shockwave_settings
 ADD COLUMN IF NOT EXISTS prescription_colors jsonb DEFAULT '{}'::jsonb;
 
 ALTER TABLE public.shockwave_settings
+ADD COLUMN IF NOT EXISTS staff_schedule_block_rules jsonb DEFAULT '{}'::jsonb;
+
+ALTER TABLE public.shockwave_settings
 ADD COLUMN IF NOT EXISTS monthly_settlement_settings jsonb DEFAULT '{}'::jsonb;
+
+ALTER TABLE public.shockwave_settings
+ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL;
+
+-- 월별 결산 설정/처방 색상 컬럼 보정
+UPDATE public.shockwave_settings
+SET prescription_colors = '{}'::jsonb
+WHERE prescription_colors IS NULL;
+
+UPDATE public.shockwave_settings
+SET monthly_settlement_settings = '{}'::jsonb
+WHERE monthly_settlement_settings IS NULL;
+
+UPDATE public.shockwave_settings
+SET staff_schedule_block_rules = '{}'::jsonb
+WHERE staff_schedule_block_rules IS NULL;
+
+ALTER TABLE public.shockwave_settings
+ALTER COLUMN prescription_colors SET DEFAULT '{}'::jsonb;
+
+ALTER TABLE public.shockwave_settings
+ALTER COLUMN prescription_colors SET NOT NULL;
+
+ALTER TABLE public.shockwave_settings
+ALTER COLUMN staff_schedule_block_rules SET DEFAULT '{}'::jsonb;
+
+ALTER TABLE public.shockwave_settings
+ALTER COLUMN staff_schedule_block_rules SET NOT NULL;
+
+ALTER TABLE public.shockwave_settings
+ALTER COLUMN monthly_settlement_settings SET DEFAULT '{}'::jsonb;
+
+ALTER TABLE public.shockwave_settings
+ALTER COLUMN monthly_settlement_settings SET NOT NULL;
 
 -- =============================================
 -- [통계/내역 탭 전용] 환자 일일 치료 기록 로그 테이블
@@ -497,6 +554,7 @@ export default function SettingsPage() {
   });
   
   const [swSettings, setSwSettings] = useState({ 
+    id: '00000000-0000-0000-0000-000000000000',
     start_time: '09:00', 
     end_time: '18:00', 
     interval_minutes: 10,
@@ -513,6 +571,7 @@ export default function SettingsPage() {
     frozen_columns: 6,
     day_overrides: {},
     date_overrides: {},
+    staff_schedule_block_rules: {},
     monthly_settlement_settings: {},
   });
 
@@ -543,6 +602,7 @@ export default function SettingsPage() {
       const { data, error } = await supabase.from('shockwave_settings').select('*').order('updated_at', { ascending: false }).limit(1).single();
       if (!error && data) {
         setSwSettings({
+          id: data.id || '00000000-0000-0000-0000-000000000000',
           start_time: data.start_time.substring(0, 5),
           end_time: data.end_time.substring(0, 5),
           interval_minutes: data.interval_minutes,
@@ -559,6 +619,7 @@ export default function SettingsPage() {
           frozen_columns: data.frozen_columns || 6,
           day_overrides: data.day_overrides || {},
           date_overrides: data.date_overrides || {},
+          staff_schedule_block_rules: data.staff_schedule_block_rules || {},
           monthly_settlement_settings: data.monthly_settlement_settings || {},
         });
       }
@@ -716,6 +777,7 @@ export default function SettingsPage() {
 
   const handleSaveSettings = async () => {
     const success = await saveShockwaveSettings({
+      id: swSettings.id,
       start_time: swSettings.start_time + ':00',
       end_time: swSettings.end_time + ':00',
       interval_minutes: Number(swSettings.interval_minutes),
@@ -728,6 +790,7 @@ export default function SettingsPage() {
       incentive_percentage: Number(swSettings.incentive_percentage) || 0,
       manual_therapy_incentive_percentage: Number(swSettings.manual_therapy_incentive_percentage) || 0,
       frozen_columns: Number(swSettings.frozen_columns),
+      staff_schedule_block_rules: swSettings.staff_schedule_block_rules || {},
       monthly_settlement_settings: swSettings.monthly_settlement_settings || {},
     });
     if (success) addToast('시간표 설정이 저장되었습니다.', 'success');
@@ -840,218 +903,6 @@ export default function SettingsPage() {
               value={swSettings.frozen_columns} 
               onChange={e => setSwSettings(p => ({ ...p, frozen_columns: parseInt(e.target.value) || 0 }))} 
             />
-          </div>
-
-          <div className="settings-row" style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--border-color-light)' }}>
-            <div style={{ flex: 1 }}>
-              <div className="settings-row-label">📝 처방 목록 (현황 탭)</div>
-              <div className="settings-row-desc">치료사별로 표시할 처방 종류와 결산에 사용할 가격을 관리합니다.</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-                {swSettings.prescriptions.map((pres, idx) => (
-                  <span 
-                    key={idx} 
-                    style={{ 
-                      background: 'var(--accent-color, #6366f1)', 
-                      color: 'white', 
-                      padding: '4px 4px 4px 10px', 
-                      borderRadius: 16, 
-                      fontSize: '0.8rem', 
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6
-                    }}
-                  >
-                    {pres}
-                    <input
-                      type="color"
-                      value={swSettings.prescription_colors[pres] || '#000000'}
-                      onChange={(e) => {
-                        const newColor = e.target.value;
-                        setSwSettings(p => ({
-                          ...p,
-                          prescription_colors: {
-                            ...p.prescription_colors,
-                            [pres]: newColor
-                          }
-                        }));
-                      }}
-                      style={{
-                        width: 20,
-                        height: 20,
-                        padding: 0,
-                        border: 'none',
-                        borderRadius: '50%',
-                        cursor: 'pointer',
-                        overflow: 'hidden'
-                      }}
-                      title="스케줄러 글자색 선택"
-                    />
-                    <span
-                      style={{ cursor: 'pointer', paddingRight: 6 }}
-                      onClick={() => {
-                        const next = swSettings.prescriptions.filter((_, i) => i !== idx);
-                        setSwSettings(p => ({ ...p, prescriptions: next }));
-                      }}
-                    >✕</span>
-                  </span>
-                ))}
-                <input 
-                  className="form-input" 
-                  placeholder="+ 추가" 
-                  style={{ width: 100, height: 28, fontSize: '0.8rem', padding: '0 8px' }}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && e.target.value.trim()) {
-                      const val = e.target.value.trim();
-                      if (!swSettings.prescriptions.includes(val)) {
-                        setSwSettings(p => ({
-                          ...p,
-                          prescriptions: [...p.prescriptions, val],
-                          prescription_prices: {
-                            ...p.prescription_prices,
-                            [val]: p.prescription_prices?.[val] ?? 0,
-                          },
-                        }));
-                      }
-                      e.target.value = '';
-                    }
-                  }}
-                />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginTop: 16 }}>
-                {swSettings.prescriptions.map((pres) => (
-                  <label key={`${pres}-price`} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <span className="settings-row-label" style={{ fontSize: '0.82rem' }}>{pres} 가격</span>
-                    <input
-                      type="number"
-                      className="form-input"
-                      min={0}
-                      step={1000}
-                      value={swSettings.prescription_prices?.[pres] ?? 0}
-                      onChange={(e) => {
-                        const value = Number(e.target.value) || 0;
-                        setSwSettings((p) => ({
-                          ...p,
-                          prescription_prices: {
-                            ...p.prescription_prices,
-                            [pres]: value,
-                          },
-                        }));
-                      }}
-                    />
-                  </label>
-                ))}
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <span className="settings-row-label" style={{ fontSize: '0.82rem' }}>인센티브 퍼센트</span>
-                  <input
-                    type="number"
-                    className="form-input"
-                    min={0}
-                    step={0.1}
-                    value={swSettings.incentive_percentage}
-                    onChange={(e) => {
-                      const value = Number(e.target.value);
-                      setSwSettings((p) => ({
-                        ...p,
-                        incentive_percentage: Number.isFinite(value) ? value : 0,
-                      }));
-                    }}
-                  />
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <div className="settings-row" style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--border-color-light)' }}>
-            <div style={{ flex: 1 }}>
-              <div className="settings-row-label">💆 도수 처방목록 / 인센</div>
-              <div className="settings-row-desc">도수치료 통계 탭에서 사용할 시간 라벨과 인센티브 퍼센트를 별도로 관리합니다.</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-                {swSettings.manual_therapy_prescriptions.map((pres, idx) => (
-                  <span
-                    key={`manual-${idx}`}
-                    style={{
-                      background: '#0f766e',
-                      color: 'white',
-                      padding: '4px 10px',
-                      borderRadius: 16,
-                      fontSize: '0.8rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4
-                    }}
-                    onClick={() => {
-                      const next = swSettings.manual_therapy_prescriptions.filter((_, i) => i !== idx);
-                      setSwSettings(p => ({ ...p, manual_therapy_prescriptions: next }));
-                    }}
-                  >
-                    {pres} ✕
-                  </span>
-                ))}
-                <input
-                  className="form-input"
-                  placeholder="+ 도수 라벨 추가"
-                  style={{ width: 140, height: 28, fontSize: '0.8rem', padding: '0 8px' }}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && e.target.value.trim()) {
-                      const val = e.target.value.trim();
-                      if (!swSettings.manual_therapy_prescriptions.includes(val)) {
-                        setSwSettings(p => ({
-                          ...p,
-                          manual_therapy_prescriptions: [...p.manual_therapy_prescriptions, val],
-                          prescription_prices: {
-                            ...p.prescription_prices,
-                            [val]: p.prescription_prices?.[val] ?? 0,
-                          },
-                        }));
-                      }
-                      e.target.value = '';
-                    }
-                  }}
-                />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginTop: 16 }}>
-                {swSettings.manual_therapy_prescriptions.map((pres) => (
-                  <label key={`manual-${pres}-price`} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <span className="settings-row-label" style={{ fontSize: '0.82rem' }}>{pres} 가격</span>
-                    <input
-                      type="number"
-                      className="form-input"
-                      min={0}
-                      step={1000}
-                      value={swSettings.prescription_prices?.[pres] ?? 0}
-                      onChange={(e) => {
-                        const value = Number(e.target.value) || 0;
-                        setSwSettings((p) => ({
-                          ...p,
-                          prescription_prices: {
-                            ...p.prescription_prices,
-                            [pres]: value,
-                          },
-                        }));
-                      }}
-                    />
-                  </label>
-                ))}
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <span className="settings-row-label" style={{ fontSize: '0.82rem' }}>도수 인센티브 퍼센트</span>
-                  <input
-                    type="number"
-                    className="form-input"
-                    min={0}
-                    step={0.1}
-                    value={swSettings.manual_therapy_incentive_percentage}
-                    onChange={(e) => {
-                      const value = Number(e.target.value);
-                      setSwSettings((p) => ({
-                        ...p,
-                        manual_therapy_incentive_percentage: Number.isFinite(value) ? value : 0,
-                      }));
-                    }}
-                  />
-                </label>
-              </div>
-            </div>
           </div>
 
           <div style={{ textAlign: 'right', marginTop: 24 }}>

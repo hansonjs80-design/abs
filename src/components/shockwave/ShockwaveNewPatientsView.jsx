@@ -119,8 +119,8 @@ export default function ShockwaveNewPatientsView({
           </div>
         </div>
 
-        <div className="sw-settlement-table-wrap">
-          <table className="sw-new-patient-table">
+        <div className="sw-settlement-table-wrap sw-compact-table-wrap">
+          <table className="sw-new-patient-table sw-compact-new-patient-table">
             <thead>
               <tr>
                 {summary.byTherapist.map((item, therapistIndex) => (
