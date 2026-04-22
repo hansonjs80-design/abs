@@ -4,7 +4,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../components/common/Toast';
 import { supabase } from '../lib/supabaseClient';
 import { useSchedule } from '../contexts/ScheduleContext';
-import { Sun, Moon, Database, Users, Shield, RefreshCw, Copy } from 'lucide-react';
+import { Sun, Moon, Database, Shield, Copy } from 'lucide-react';
 
 const SQL_SNIPPETS = [
   {
@@ -387,12 +387,8 @@ export default function SettingsPage() {
   const { user, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { addToast } = useToast();
-  const { loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
+  const { saveShockwaveSettings } = useSchedule();
   
-  const [therapists, setTherapists] = useState([]);
-  const [newTherapist, setNewTherapist] = useState({ name: '', slot_index: 0 });
-  const [manualTherapists, setManualTherapists] = useState([]);
-  const [newManualTherapist, setNewManualTherapist] = useState({ name: '', slot_index: 0 });
   const [holidays, setHolidays] = useState([]);
   const [newHoliday, setNewHoliday] = useState({ date: '', name: '' });
   
@@ -410,19 +406,10 @@ export default function SettingsPage() {
     prescription_colors: {},
     incentive_percentage: 7,
     manual_therapy_incentive_percentage: 0,
-    frozen_columns: 6
+    frozen_columns: 6,
+    day_overrides: {},
+    date_overrides: {},
   });
-  const [dayOverrides, setDayOverrides] = useState({});
-  const [dateOverrides, setDateOverrides] = useState({});
-  const [newDateOverride, setNewDateOverride] = useState({
-    date: '',
-    start_time: '',
-    end_time: '',
-    lunch_start: '',
-    lunch_end: '',
-    no_lunch: false,
-  });
-  const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
   const handleCopySQL = async (sql) => {
     if (!navigator?.clipboard) {
@@ -438,8 +425,6 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
-    loadTherapists();
-    loadManualTherapists();
     loadHolidays();
     loadSettings();
   }, []);
@@ -462,10 +447,10 @@ export default function SettingsPage() {
           prescription_colors: data.prescription_colors || {},
           incentive_percentage: data.incentive_percentage ?? 7,
           manual_therapy_incentive_percentage: data.manual_therapy_incentive_percentage ?? 0,
-          frozen_columns: data.frozen_columns || 6
+          frozen_columns: data.frozen_columns || 6,
+          day_overrides: data.day_overrides || {},
+          date_overrides: data.date_overrides || {},
         });
-        setDayOverrides(data.day_overrides || {});
-        setDateOverrides(data.date_overrides || {});
       }
     } catch(e) {}
   };
@@ -475,8 +460,8 @@ export default function SettingsPage() {
       start_time: swSettings.start_time + ':00',
       end_time: swSettings.end_time + ':00',
       interval_minutes: Number(swSettings.interval_minutes),
-      day_overrides: dayOverrides,
-      date_overrides: dateOverrides,
+      day_overrides: swSettings.day_overrides || {},
+      date_overrides: swSettings.date_overrides || {},
       prescriptions: swSettings.prescriptions,
       manual_therapy_prescriptions: swSettings.manual_therapy_prescriptions,
       prescription_prices: swSettings.prescription_prices,
@@ -488,153 +473,9 @@ export default function SettingsPage() {
     if (success) addToast('시간표 설정이 저장되었습니다.', 'success');
   };
 
-  const updateDayOverride = (dow, field, value) => {
-    setDayOverrides(prev => {
-      const updated = { ...prev };
-      updated[dow] = { ...(prev[dow] || {}) };
-      
-      // no_lunch 체크 전환 시
-      if (field === 'no_lunch') {
-        if (value) {
-          updated[dow].no_lunch = true;
-          // 점심 시간 삭제
-          delete updated[dow].lunch_start;
-          delete updated[dow].lunch_end;
-        } else {
-          delete updated[dow].no_lunch;
-        }
-      } else {
-        if (value === '' || value === undefined) {
-          delete updated[dow][field];
-        } else {
-          updated[dow][field] = value;
-        }
-      }
-      
-      if (Object.keys(updated[dow]).length === 0) {
-        delete updated[dow];
-      }
-      
-      return updated;
-    });
-  };
-
-  const updateDateOverride = (dateKey, field, value) => {
-    setDateOverrides(prev => {
-      const updated = { ...prev };
-      updated[dateKey] = { ...(prev[dateKey] || {}) };
-      
-      if (field === 'no_lunch') {
-        if (value) {
-          updated[dateKey].no_lunch = true;
-          delete updated[dateKey].lunch_start;
-          delete updated[dateKey].lunch_end;
-        } else {
-          delete updated[dateKey].no_lunch;
-        }
-      } else {
-        if (value === '' || value === undefined) {
-          delete updated[dateKey][field];
-        } else {
-          updated[dateKey][field] = value;
-        }
-      }
-      
-      // If we only have the 'date' or nothing else, delete the entry if we want to remove it
-      if (Object.keys(updated[dateKey]).length === 0) {
-        delete updated[dateKey];
-      }
-      
-      return updated;
-    });
-  };
-
-  const addDateOverride = () => {
-    if (!newDateOverride.date) {
-      addToast('날짜를 선택해주세요.', 'error');
-      return;
-    }
-    const nextOverride = {
-      start_time: newDateOverride.start_time || swSettings.start_time,
-      end_time: newDateOverride.end_time || swSettings.end_time,
-    };
-    if (newDateOverride.no_lunch) {
-      nextOverride.no_lunch = true;
-    } else {
-      nextOverride.lunch_start = newDateOverride.lunch_start || '';
-      nextOverride.lunch_end = newDateOverride.lunch_end || '';
-    }
-    setDateOverrides(prev => ({
-      ...prev,
-      [newDateOverride.date]: nextOverride
-    }));
-    setNewDateOverride({
-      date: '',
-      start_time: '',
-      end_time: '',
-      lunch_start: '',
-      lunch_end: '',
-      no_lunch: false,
-    });
-  };
-
-  const removeDateOverride = (dateKey) => {
-    setDateOverrides(prev => {
-      const updated = { ...prev };
-      delete updated[dateKey];
-      return updated;
-    });
-  };
-
-  const loadTherapists = async () => {
-    const { data } = await supabase.from('shockwave_therapists').select('*').order('slot_index');
-    setTherapists(data || []);
-  };
-
-  const loadManualTherapists = async () => {
-    const { data } = await supabase.from('manual_therapy_therapists').select('*').order('slot_index');
-    setManualTherapists(data || []);
-  };
-
   const loadHolidays = async () => {
     const { data } = await supabase.from('holidays').select('*').order('date');
     setHolidays(data || []);
-  };
-
-  const addTherapist = async () => {
-    if (!newTherapist.name.trim()) return;
-    const { error } = await supabase.from('shockwave_therapists').insert({
-      name: newTherapist.name.trim(),
-      slot_index: newTherapist.slot_index,
-      is_active: true
-    });
-    if (error) { addToast('추가 실패: ' + error.message, 'error'); return; }
-    addToast('치료사가 추가되었습니다', 'success');
-    setNewTherapist({ name: '', slot_index: 0 });
-    loadTherapists();
-  };
-
-  const removeTherapist = async (id) => {
-    const { error } = await supabase.from('shockwave_therapists').delete().eq('id', id);
-    if (!error) { addToast('삭제되었습니다', 'success'); loadTherapists(); }
-  };
-
-  const addManualTherapist = async () => {
-    if (!newManualTherapist.name.trim()) return;
-    const { error } = await supabase.from('manual_therapy_therapists').insert({
-      name: newManualTherapist.name.trim(),
-      slot_index: newManualTherapist.slot_index,
-      is_active: true
-    });
-    if (error) { addToast('추가 실패: ' + error.message, 'error'); return; }
-    addToast('도수치료 치료사가 추가되었습니다', 'success');
-    setNewManualTherapist({ name: '', slot_index: 0 });
-    loadManualTherapists();
-  };
-
-  const removeManualTherapist = async (id) => {
-    const { error } = await supabase.from('manual_therapy_therapists').delete().eq('id', id);
-    if (!error) { addToast('삭제되었습니다', 'success'); loadManualTherapists(); }
   };
 
   const addHoliday = async () => {
@@ -935,282 +776,6 @@ export default function SettingsPage() {
           <div style={{ textAlign: 'right', marginTop: 24 }}>
             <button className="btn btn-primary" onClick={handleSaveSettings}>환경설정 저장</button>
           </div>
-
-          {/* 요일별 오버라이드 테이블 */}
-          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 16 }}>
-            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 10, color: 'var(--text-primary)' }}>📅 요일별 운영 시간 설정</div>
-            <p style={{ color: 'var(--text-tertiary)', fontSize: '0.78rem', marginBottom: 12 }}>
-              비워두면 위의 기본 시간이 적용됩니다. 요일별로 시작/종료 시간과 점심 시간을 다르게 설정할 수 있습니다.
-            </p>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                <thead>
-                  <tr style={{ background: 'var(--bg-tertiary)' }}>
-                    <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 700, minWidth: 40 }}>요일</th>
-                    <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 90 }}>시작 시간</th>
-                    <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 90 }}>종료 시간</th>
-                    <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 90 }}>점심 시작</th>
-                    <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 90 }}>점심 종료</th>
-                    <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 60 }}>점심 없음</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[1, 2, 3, 4, 5, 6].map(dow => {
-                    const ov = dayOverrides[dow] || {};
-                    const isNoLunch = ov.no_lunch === true;
-                    return (
-                      <tr key={dow} style={{ borderBottom: '1px solid var(--border-color-light)' }}>
-                        <td style={{ padding: '6px', textAlign: 'center', fontWeight: 700, color: dow === 6 ? 'var(--cal-saturday-text, #3b82f6)' : 'var(--text-primary)' }}>{DAY_NAMES[dow]}</td>
-                        <td style={{ padding: '4px 3px' }}>
-                          <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem' }} value={ov.start_time || ''} placeholder={swSettings.start_time} onChange={e => updateDayOverride(dow, 'start_time', e.target.value)} />
-                        </td>
-                        <td style={{ padding: '4px 3px' }}>
-                          <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem' }} value={ov.end_time || ''} placeholder={swSettings.end_time} onChange={e => updateDayOverride(dow, 'end_time', e.target.value)} />
-                        </td>
-                        <td style={{ padding: '4px 3px' }}>
-                          <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem', opacity: isNoLunch ? 0.3 : 1 }} value={isNoLunch ? '' : (ov.lunch_start || '')} placeholder="12:00" disabled={isNoLunch} onChange={e => updateDayOverride(dow, 'lunch_start', e.target.value)} />
-                        </td>
-                        <td style={{ padding: '4px 3px' }}>
-                          <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem', opacity: isNoLunch ? 0.3 : 1 }} value={isNoLunch ? '' : (ov.lunch_end || '')} placeholder="13:00" disabled={isNoLunch} onChange={e => updateDayOverride(dow, 'lunch_end', e.target.value)} />
-                        </td>
-                        <td style={{ padding: '4px 3px', textAlign: 'center' }}>
-                          <input type="checkbox" checked={isNoLunch} onChange={e => updateDayOverride(dow, 'no_lunch', e.target.checked)} style={{ cursor: 'pointer' }} />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* 날짜별 오버라이드 테이블 */}
-            <div style={{ marginTop: 24, borderTop: '1px solid var(--border-color)', paddingTop: 16 }}>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 10, color: 'var(--text-primary)' }}>🎯 날짜별 운영 시간 설정</div>
-              <p style={{ color: 'var(--text-tertiary)', fontSize: '0.78rem', marginBottom: 12 }}>
-                특정 날짜만 운영 시간이 다를 때 날짜를 선택해 추가하세요. 날짜별 설정은 요일별 설정보다 우선 적용됩니다.
-              </p>
-              
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'minmax(130px, 1fr) repeat(4, minmax(95px, 1fr)) auto auto',
-                gap: 8,
-                marginBottom: 16,
-                alignItems: 'end',
-                padding: 12,
-                border: '1px solid var(--border-color-light)',
-                borderRadius: 10,
-                background: 'var(--bg-secondary)'
-              }}>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.72rem', fontWeight: 700 }}>
-                  날짜
-                  <input
-                    className="form-input"
-                    style={{ width: '100%', fontSize: '0.8rem' }}
-                    type="date"
-                    value={newDateOverride.date}
-                    onChange={e => setNewDateOverride(p => ({ ...p, date: e.target.value }))}
-                  />
-                </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.72rem', fontWeight: 700 }}>
-                  시작
-                  <input
-                    className="form-input"
-                    style={{ width: '100%', fontSize: '0.8rem' }}
-                    type="time"
-                    value={newDateOverride.start_time}
-                    placeholder={swSettings.start_time}
-                    onChange={e => setNewDateOverride(p => ({ ...p, start_time: e.target.value }))}
-                  />
-                </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.72rem', fontWeight: 700 }}>
-                  종료
-                  <input
-                    className="form-input"
-                    style={{ width: '100%', fontSize: '0.8rem' }}
-                    type="time"
-                    value={newDateOverride.end_time}
-                    placeholder={swSettings.end_time}
-                    onChange={e => setNewDateOverride(p => ({ ...p, end_time: e.target.value }))}
-                  />
-                </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.72rem', fontWeight: 700 }}>
-                  점심 시작
-                  <input
-                    className="form-input"
-                    style={{ width: '100%', fontSize: '0.8rem', opacity: newDateOverride.no_lunch ? 0.35 : 1 }}
-                    type="time"
-                    value={newDateOverride.no_lunch ? '' : newDateOverride.lunch_start}
-                    placeholder="12:00"
-                    disabled={newDateOverride.no_lunch}
-                    onChange={e => setNewDateOverride(p => ({ ...p, lunch_start: e.target.value }))}
-                  />
-                </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.72rem', fontWeight: 700 }}>
-                  점심 종료
-                  <input
-                    className="form-input"
-                    style={{ width: '100%', fontSize: '0.8rem', opacity: newDateOverride.no_lunch ? 0.35 : 1 }}
-                    type="time"
-                    value={newDateOverride.no_lunch ? '' : newDateOverride.lunch_end}
-                    placeholder="13:00"
-                    disabled={newDateOverride.no_lunch}
-                    onChange={e => setNewDateOverride(p => ({ ...p, lunch_end: e.target.value }))}
-                  />
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.76rem', fontWeight: 700, whiteSpace: 'nowrap', paddingBottom: 9 }}>
-                  <input
-                    type="checkbox"
-                    checked={newDateOverride.no_lunch}
-                    onChange={e => setNewDateOverride(p => ({
-                      ...p,
-                      no_lunch: e.target.checked,
-                      lunch_start: e.target.checked ? '' : p.lunch_start,
-                      lunch_end: e.target.checked ? '' : p.lunch_end,
-                    }))}
-                  />
-                  점심 없음
-                </label>
-                <button className="btn btn-secondary btn-sm" style={{ whiteSpace: 'nowrap' }} onClick={addDateOverride}>날짜 적용</button>
-              </div>
-
-              {Object.keys(dateOverrides).length > 0 && (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                    <thead>
-                      <tr style={{ background: 'var(--bg-tertiary)' }}>
-                        <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 700, minWidth: 90 }}>날짜</th>
-                        <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 90 }}>시작 시간</th>
-                        <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 90 }}>종료 시간</th>
-                        <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 90 }}>점심 시작</th>
-                        <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 90 }}>점심 종료</th>
-                        <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 60 }}>점심 없음</th>
-                        <th style={{ padding: '8px 6px', borderBottom: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 600, minWidth: 50 }}>삭제</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Object.entries(dateOverrides).sort((a, b) => a[0].localeCompare(b[0])).map(([dateKey, ov]) => {
-                        const isNoLunch = ov.no_lunch === true;
-                        return (
-                          <tr key={dateKey} style={{ borderBottom: '1px solid var(--border-color-light)' }}>
-                            <td style={{ padding: '6px', textAlign: 'center', fontWeight: 700, color: 'var(--accent-color)' }}>{dateKey}</td>
-                            <td style={{ padding: '4px 3px' }}>
-                              <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem' }} value={ov.start_time || ''} placeholder={swSettings.start_time} onChange={e => updateDateOverride(dateKey, 'start_time', e.target.value)} />
-                            </td>
-                            <td style={{ padding: '4px 3px' }}>
-                              <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem' }} value={ov.end_time || ''} placeholder={swSettings.end_time} onChange={e => updateDateOverride(dateKey, 'end_time', e.target.value)} />
-                            </td>
-                            <td style={{ padding: '4px 3px' }}>
-                              <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem', opacity: isNoLunch ? 0.3 : 1 }} value={isNoLunch ? '' : (ov.lunch_start || '')} placeholder="12:00" disabled={isNoLunch} onChange={e => updateDateOverride(dateKey, 'lunch_start', e.target.value)} />
-                            </td>
-                            <td style={{ padding: '4px 3px' }}>
-                              <input type="time" className="form-input" style={{ width: '100%', padding: '4px 6px', fontSize: '0.78rem', opacity: isNoLunch ? 0.3 : 1 }} value={isNoLunch ? '' : (ov.lunch_end || '')} placeholder="13:00" disabled={isNoLunch} onChange={e => updateDateOverride(dateKey, 'lunch_end', e.target.value)} />
-                            </td>
-                            <td style={{ padding: '4px 3px', textAlign: 'center' }}>
-                              <input type="checkbox" checked={isNoLunch} onChange={e => updateDateOverride(dateKey, 'no_lunch', e.target.checked)} style={{ cursor: 'pointer' }} />
-                            </td>
-                            <td style={{ padding: '4px 3px', textAlign: 'center' }}>
-                              <button className="btn btn-danger btn-sm" style={{ padding: '2px 6px', fontSize: '0.7rem' }} onClick={() => removeDateOverride(dateKey)}>삭제</button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={handleSaveSettings}>전체 설정 저장</button>
-          </div>
-        </div>
-      </div>
-
-      {/* 치료사 관리 */}
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div className="card-header">
-          <span className="card-title"><Users size={18} /> 치료사 관리</span>
-        </div>
-        <div className="card-body">
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-            <input
-              className="form-input"
-              style={{ flex: 1, minWidth: 120 }}
-              placeholder="이름"
-              value={newTherapist.name}
-              onChange={e => setNewTherapist(p => ({ ...p, name: e.target.value }))}
-            />
-            <input
-              className="form-input"
-              style={{ width: 80 }}
-              type="number"
-              min={0}
-              max={10}
-              placeholder="순서"
-              value={newTherapist.slot_index}
-              onChange={e => setNewTherapist(p => ({ ...p, slot_index: parseInt(e.target.value) || 0 }))}
-            />
-            <button className="btn btn-primary btn-sm" onClick={addTherapist}>추가</button>
-          </div>
-
-          {therapists.map(t => (
-            <div key={t.id} className="settings-row">
-              <div>
-                <div className="settings-row-label">{t.name}</div>
-                <div className="settings-row-desc">슬롯 (표시 순서): {t.slot_index}</div>
-              </div>
-              <button className="btn btn-danger btn-sm" onClick={() => removeTherapist(t.id)}>삭제</button>
-            </div>
-          ))}
-
-          {therapists.length === 0 && (
-            <p style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: 16 }}>
-              등록된 치료사가 없습니다
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div className="card-header">
-          <span className="card-title"><Users size={18} /> 도수치료 치료사 관리</span>
-        </div>
-        <div className="card-body">
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-            <input
-              className="form-input"
-              style={{ flex: 1, minWidth: 120 }}
-              placeholder="이름"
-              value={newManualTherapist.name}
-              onChange={e => setNewManualTherapist(p => ({ ...p, name: e.target.value }))}
-            />
-            <input
-              className="form-input"
-              style={{ width: 80 }}
-              type="number"
-              min={0}
-              max={10}
-              placeholder="순서"
-              value={newManualTherapist.slot_index}
-              onChange={e => setNewManualTherapist(p => ({ ...p, slot_index: parseInt(e.target.value) || 0 }))}
-            />
-            <button className="btn btn-primary btn-sm" onClick={addManualTherapist}>추가</button>
-          </div>
-
-          {manualTherapists.map(t => (
-            <div key={t.id} className="settings-row">
-              <div>
-                <div className="settings-row-label">{t.name}</div>
-                <div className="settings-row-desc">슬롯 (표시 순서): {t.slot_index}</div>
-              </div>
-              <button className="btn btn-danger btn-sm" onClick={() => removeManualTherapist(t.id)}>삭제</button>
-            </div>
-          ))}
-
-          {manualTherapists.length === 0 && (
-            <p style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: 16 }}>
-              등록된 도수치료 치료사가 없습니다
-            </p>
-          )}
         </div>
       </div>
 

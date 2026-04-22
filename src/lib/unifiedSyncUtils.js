@@ -71,19 +71,48 @@ export async function syncUnifiedStatsDateToScheduler({ year, month, date }) {
   if (targetWeekIndex < 0 || targetDayIndex < 0) {
     return { skipped: true, reason: 'date_outside_visible_calendar' };
   }
+  const targetDay = Number(String(date).slice(-2));
 
   // 1. Fetch shockwave therapists to map col_index
-  const { data: shockwaveTherapists, error: tError } = await supabase
-    .from('shockwave_therapists')
-    .select('*')
-    .eq('is_active', true)
-    .order('slot_index');
+  const [
+    { data: shockwaveTherapists, error: tError },
+    { data: monthlyTherapists, error: mtError },
+  ] = await Promise.all([
+    supabase
+      .from('shockwave_therapists')
+      .select('*')
+      .eq('is_active', true)
+      .order('slot_index'),
+    supabase
+      .from('shockwave_monthly_therapists')
+      .select('*')
+      .eq('year', year)
+      .eq('month', month)
+      .eq('type', 'shockwave')
+      .order('slot_index')
+      .order('start_day'),
+  ]);
 
   if (tError) throw tError;
+  if (mtError) throw mtError;
 
+  const monthlyMaxSlot = (monthlyTherapists || []).reduce(
+    (max, item) => Math.max(max, Number(item?.slot_index) || 0),
+    -1
+  );
+  const slotCount = Math.max(1, shockwaveTherapists.length, monthlyMaxSlot + 1);
   const therapistIndexMap = new Map();
-  shockwaveTherapists.forEach((t, index) => therapistIndexMap.set(t.name, index));
-  const therapistCols = shockwaveTherapists.map((_, index) => index);
+  Array.from({ length: slotCount }, (_, index) => {
+    const baseName = shockwaveTherapists[index]?.name;
+    if (baseName) therapistIndexMap.set(baseName, index);
+    const monthlyMatch = (monthlyTherapists || []).find(
+      (item) => item.slot_index === index && targetDay >= item.start_day && targetDay <= item.end_day
+    );
+    if (monthlyMatch?.therapist_name) {
+      therapistIndexMap.set(monthlyMatch.therapist_name, index);
+    }
+  });
+  const therapistCols = Array.from({ length: slotCount }, (_, index) => index);
 
   // 2. Fetch all logs for the date
   const [
@@ -98,7 +127,7 @@ export async function syncUnifiedStatsDateToScheduler({ year, month, date }) {
   if (mError) throw mError;
 
   // 3. Format into common structure
-  const groupedByTherapist = Array.from({ length: shockwaveTherapists.length }, () => []);
+  const groupedByTherapist = Array.from({ length: slotCount }, () => []);
 
   (shockwaveLogs || []).forEach((row) => {
     const therapistIndex = therapistIndexMap.get(row?.therapist_name);
@@ -194,6 +223,6 @@ export async function syncUnifiedStatsDateToScheduler({ year, month, date }) {
     synced: true,
     date,
     insertedCount: rowsToInsert.length,
-    therapistCount: shockwaveTherapists.length,
+    therapistCount: slotCount,
   };
 }

@@ -5,10 +5,10 @@ import { generateShockwaveCalendar, getTodayKST, isSameDate, formatDisplayDate }
 import { supabase } from '../../lib/supabaseClient';
 import { has4060Pattern, strip4060FromContent, incrementSessionCount, normalizeNameForMatch } from '../../lib/memoParser';
 import { toProperCase } from '../../lib/shockwaveSyncUtils';
+import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
 import { useToast } from '../common/Toast';
 import MonthlyTherapistConfig from './MonthlyTherapistConfig';
 
-const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 const HORIZONTAL_BORDER_COLOR = '#b7b7b7';
 const TIME_COL_WIDTH = 46;
 const SHOCKWAVE_DAY_COL_WIDTH_KEY = 'shockwave-day-col-width';
@@ -403,7 +403,7 @@ function addBodyPartToMap(map, part) {
 }
 
 export default function ShockwaveView({ therapists, settings, memos = {}, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
-  const { currentYear, currentMonth, navigateMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists } = useSchedule();
+  const { currentYear, currentMonth, navigateMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists, saveTherapistRoster, saveShockwaveSettings } = useSchedule();
   const { addToast } = useToast();
   const viewRef = useRef(null);
   const dragSelectionRef = useRef(null);
@@ -460,7 +460,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const undoStackRef = useRef([]);
   const undoQueueRef = useRef(Promise.resolve());
 
-  const colCount = Math.max(1, therapists.length);
+  const monthlyTherapistSlotCount = useMemo(
+    () => (monthlyTherapists || []).reduce((max, item) => Math.max(max, (Number(item?.slot_index) || 0) + 1), 0),
+    [monthlyTherapists]
+  );
+  const colCount = Math.max(1, therapists.length, monthlyTherapistSlotCount);
+  const effectiveDayOverrides = useMemo(
+    () => getMonthlyDayOverrides(settings?.day_overrides, currentYear, currentMonth),
+    [settings?.day_overrides, currentYear, currentMonth]
+  );
 
   // 월별 치료사 설정 로드 (충격파 + 도수치료)
   useEffect(() => {
@@ -521,7 +529,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (!slotTime || !settings?.end_time) return false;
 
     const dateOverride = settings.date_overrides?.[dayInfo.dateStr] || null;
-    const dayOverride = settings.day_overrides?.[dayInfo.dow] || {};
+    const dayOverride = effectiveDayOverrides?.[dayInfo.dow] || {};
     const effectiveEnd = (dateOverride?.end_time || dayOverride.end_time || settings.end_time || '18:00:00').slice(0, 5);
     const [endHour, endMinute] = effectiveEnd.split(':').map(Number);
     const endTotal = endHour * 60 + endMinute;
@@ -529,7 +537,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const slotTotal = slotHour * 60 + slotMinute;
 
     return slotTotal >= (endTotal - 60) && slotTotal < endTotal;
-  }, [settings]);
+  }, [settings, effectiveDayOverrides]);
 
   const getTherapistWorkState = useCallback((dateKey, name) => {
     if (!name) return false;
@@ -567,7 +575,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const dow = dayInfo.dow;
     const dateStr = dayInfo.dateStr;
     const dateOv = settings?.date_overrides?.[dateStr] || null;
-    const dayOv = settings?.day_overrides?.[dow] || {};
+    const dayOv = effectiveDayOverrides?.[dow] || {};
     
     const dayStart = dateOv?.start_time || dayOv.start_time || (settings?.start_time?.substring(0, 5)) || '09:00';
     const dayEnd = dateOv?.end_time || dayOv.end_time || (settings?.end_time?.substring(0, 5)) || '18:00';
@@ -600,7 +608,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       }
     });
     return result;
-  }, [baseTimeSlots, settings]);
+  }, [baseTimeSlots, settings, effectiveDayOverrides]);
 
   const today = getTodayKST();
   const weeks = useMemo(() => {
@@ -2739,7 +2747,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   className="shockwave-week-today-btn"
                   onClick={() => setShowTherapistConfig(true)}
                 >
-                  🩺 치료사 설정
+                  설정
                 </button>
               )}
             </div>
@@ -3442,6 +3450,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           monthlyTherapists={monthlyTherapists}
           monthlyManualTherapists={monthlyManualTherapists}
           onSave={saveMonthlyTherapists}
+          onSaveRoster={saveTherapistRoster}
+          settings={settings}
+          onSaveSettings={saveShockwaveSettings}
           onClose={() => setShowTherapistConfig(false)}
         />
       )}

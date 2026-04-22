@@ -1,8 +1,18 @@
 export function buildDisplayTherapists(therapists, monthlyTherapists) {
   const safeTherapists = Array.isArray(therapists) ? therapists.filter(Boolean) : [];
   const monthlyConfigs = Array.isArray(monthlyTherapists) ? monthlyTherapists.filter(Boolean) : [];
+  const monthlyMaxSlot = monthlyConfigs.reduce(
+    (max, item) => Math.max(max, Number(item?.slot_index) || 0),
+    -1
+  );
+  const slotCount = Math.max(safeTherapists.length, monthlyMaxSlot + 1);
 
-  return safeTherapists.flatMap((therapist, slotIdx) => {
+  return Array.from({ length: slotCount }, (_, slotIdx) => {
+    const therapist = safeTherapists[slotIdx] || {
+      id: `monthly-slot-${slotIdx}`,
+      name: `치료사 ${slotIdx + 1}`,
+      slot_index: slotIdx,
+    };
     const slotConfigs = monthlyConfigs
       .filter((item) => item.slot_index === slotIdx && String(item.therapist_name || '').trim())
       .sort((a, b) => (Number(a.start_day) || 1) - (Number(b.start_day) || 1));
@@ -61,5 +71,5 @@ export function buildDisplayTherapists(therapists, monthlyTherapists) {
       key: `slot-${item.slotIdx}-${item.name}-${item.startDay}-${item.endDay}`,
       rangeLabel: `${item.startDay}~${item.endDay}일`,
     }));
-  });
+  }).flat();
 }

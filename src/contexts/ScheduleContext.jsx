@@ -202,6 +202,45 @@ export function ScheduleProvider({ children }) {
     }
   }, []);
 
+  const saveTherapistRoster = useCallback(async (type = 'shockwave', roster = []) => {
+    const tableName = type === 'manual_therapy' ? 'manual_therapy_therapists' : 'shockwave_therapists';
+    const setter = type === 'manual_therapy' ? setManualTherapists : setTherapists;
+    try {
+      const { error: deactivateError } = await supabase
+        .from(tableName)
+        .update({ is_active: false })
+        .eq('is_active', true);
+
+      if (deactivateError) throw deactivateError;
+
+      const rows = (Array.isArray(roster) ? roster : [])
+        .map((item, index) => ({
+          name: String(item?.name ?? item ?? '').trim(),
+          slot_index: index,
+          is_active: true,
+        }))
+        .filter((item) => item.name);
+
+      if (rows.length === 0) {
+        setter([]);
+        return true;
+      }
+
+      const { data, error: insertError } = await supabase
+        .from(tableName)
+        .insert(rows)
+        .select('*')
+        .order('slot_index');
+
+      if (insertError) throw insertError;
+      setter(data || rows);
+      return true;
+    } catch (err) {
+      console.error(`Failed to save therapist roster (${type}):`, err);
+      return false;
+    }
+  }, []);
+
   // 충격파 스케줄러 환경설정 로드
   const loadShockwaveSettings = useCallback(async () => {
     try {
@@ -526,19 +565,32 @@ export function ScheduleProvider({ children }) {
         return data;
       }
 
-      // 해당 월 데이터 없음 → 이전 달에서 복사 시도
-      const prevMonth = month === 1 ? 12 : month - 1;
-      const prevYear = month === 1 ? year - 1 : year;
-      const { data: prevData, error: prevError } = await supabase
+      // 해당 월 데이터 없음 → 가장 최근 이전 월 설정을 상속
+      const currentValue = year * 12 + month;
+      const { data: previousRows, error: prevError } = await supabase
         .from('shockwave_monthly_therapists')
         .select('*')
-        .eq('year', prevYear)
-        .eq('month', prevMonth)
         .eq('type', type)
+        .order('year', { ascending: false })
+        .order('month', { ascending: false })
         .order('slot_index')
         .order('start_day');
 
-      if (!prevError && prevData && prevData.length > 0) {
+      const previousMonths = (previousRows || []).filter((item) => {
+        const itemYear = Number(item.year);
+        const itemMonth = Number(item.month);
+        return itemYear * 12 + itemMonth < currentValue;
+      });
+      const inheritedValue = previousMonths.reduce((max, item) => {
+        const value = Number(item.year) * 12 + Number(item.month);
+        return Math.max(max, value);
+      }, -Infinity);
+      const prevData = previousMonths.filter((item) => {
+        const value = Number(item.year) * 12 + Number(item.month);
+        return value === inheritedValue;
+      });
+
+      if (!prevError && prevData.length > 0) {
         const slotMap = new Map();
         prevData.forEach((item) => {
           const existing = slotMap.get(item.slot_index);
@@ -662,6 +714,7 @@ export function ScheduleProvider({ children }) {
       holidays, holidayNames, loadHolidays,
       therapists, loadTherapists,
       manualTherapists, loadManualTherapists,
+      saveTherapistRoster,
       shockwaveSettings, loadShockwaveSettings, saveShockwaveSettings,
       shockwaveMemos, loadShockwaveMemos, saveShockwaveMemo, saveShockwaveMemosBulk,
       monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists,
