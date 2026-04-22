@@ -42,10 +42,13 @@ export default function StaffCalendar() {
   const getAutoFontColorForStaffMemo = useCallback((content) => {
     const normalizedContent = normalizeRuleText(content);
     if (!normalizedContent) return null;
-    const rule = (staffBlockRules || []).find((item) => {
-      if (item?.enabled === false || !item?.keyword || !item?.font_color) return false;
-      return normalizedContent.includes(normalizeRuleText(item.keyword));
-    });
+    const matchedRules = (staffBlockRules || [])
+      .filter((item) => {
+        if (item?.enabled === false || !item?.keyword || !item?.font_color) return false;
+        return normalizedContent.includes(normalizeRuleText(item.keyword));
+      })
+      .sort((a, b) => normalizeRuleText(b.keyword).length - normalizeRuleText(a.keyword).length);
+    const rule = matchedRules[0];
     return rule?.font_color || null;
   }, [staffBlockRules, normalizeRuleText]);
 

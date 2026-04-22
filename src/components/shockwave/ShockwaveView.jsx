@@ -543,40 +543,51 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     ));
     if (rules.length === 0) return map;
 
+    const getCurrentTherapistNames = (day) => (
+      Array.from({ length: colCount }, (_, slotIndex) => (
+        normalizeNameForMatch(getTherapistNameForDate(slotIndex, day))
+      )).filter(Boolean)
+    );
+
     Object.values(staffMemos || {}).forEach((item) => {
       const text = String(item?.content || '').trim();
       if (!text) return;
       const slashIndex = text.indexOf('/');
-      if (slashIndex < 0) return;
 
-      const prefix = text.slice(0, slashIndex).trim();
+      const day = Number(item.day);
+      const currentTherapistNames = getCurrentTherapistNames(day);
+      const prefix = slashIndex >= 0 ? text.slice(0, slashIndex).trim() : text;
       const normalizedPrefix = normalizeStaffBlockKeyword(prefix);
       const normalizedText = normalizeStaffBlockKeyword(text);
-      const names = text
-        .slice(slashIndex + 1)
-        .split(/[,，、\n]/)
-        .map((part) => part.trim())
-        .filter(Boolean)
-        .map((part) => part.split(/\s+/)[0])
-        .map((part) => normalizeNameForMatch(part))
-        .filter(Boolean);
+      const names = slashIndex >= 0
+        ? text
+          .slice(slashIndex + 1)
+          .split(/[,，、\n]/)
+          .map((part) => part.trim())
+          .filter(Boolean)
+          .map((part) => part.split(/\s+/)[0])
+          .map((part) => normalizeNameForMatch(part))
+          .filter(Boolean)
+        : currentTherapistNames.filter((normalizedName) => normalizedText.includes(normalizedName));
       if (names.length === 0) return;
 
-      const matchedRules = rules.filter((rule) => {
+      const allMatchedRules = rules.filter((rule) => {
         const normalizedKeyword = normalizeStaffBlockKeyword(rule.keyword);
         return normalizedKeyword && (normalizedPrefix.includes(normalizedKeyword) || normalizedText.includes(normalizedKeyword));
       });
+      const maxKeywordLength = allMatchedRules.reduce((max, rule) => (
+        Math.max(max, normalizeStaffBlockKeyword(rule.keyword).length)
+      ), 0);
+      const matchedRules = allMatchedRules.filter((rule) => (
+        normalizeStaffBlockKeyword(rule.keyword).length === maxKeywordLength
+      ));
       if (matchedRules.length === 0) return;
 
       const dateKey = `${item.year}-${item.month}-${item.day}`;
       if (!map[dateKey]) map[dateKey] = {};
       matchedRules.forEach((rule) => {
         if (rule.invert_match === true) {
-          const day = Number(item.day);
-          const targetNames = Array.from({ length: colCount }, (_, slotIndex) => (
-            normalizeNameForMatch(getTherapistNameForDate(slotIndex, day))
-          )).filter(Boolean);
-          targetNames
+          currentTherapistNames
             .filter((normalizedName) => !names.includes(normalizedName))
             .forEach((normalizedName) => {
               if (!map[dateKey][normalizedName]) map[dateKey][normalizedName] = [];
