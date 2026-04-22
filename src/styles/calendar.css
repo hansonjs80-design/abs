@@ -5,8 +5,59 @@
 .staff-calendar {
   animation: fadeIn var(--transition-normal) ease-out;
   --calendar-weekday-row-height: 32px;
-  min-width: max-content;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: max-content;
+  min-width: 0;
   overflow: visible;
+}
+
+.staff-calendar-toolbar {
+  width: 100%;
+  min-width: 0;
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  display: inline-grid;
+  grid-template-columns: 36px auto 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--border-color-light);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  box-sizing: border-box;
+}
+
+.staff-calendar-title {
+  margin: 0;
+  text-align: center;
+  color: #0f172a;
+  font-size: 1.18rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.staff-month-nav-btn {
+  width: 36px;
+  height: 32px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 1.45rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.staff-month-nav-btn:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  transform: translateY(-1px);
 }
 
 .calendar-grid {
@@ -331,7 +382,7 @@
 .staff-layout {
   display: grid;
   grid-template-columns: max-content minmax(260px, 300px);
-  gap: 24px;
+  gap: 14px;
   align-items: start;
   width: max-content;
   min-width: 100%;

@@ -22,6 +22,9 @@ const THERAPIST_TOTAL_COLORS = [
   '#ffd39a',
   '#ffb9d8',
 ];
+
+const SUMMARY_COL_WIDTH = 68;
+
 function toTitleCaseBodyPart(value) {
   return String(value || '')
     .trim()
@@ -198,6 +201,18 @@ export default function ShockwaveDataGrid({
   const totalCountColIndex = FIXED_FIELDS.length + displayTherapists.length * prescriptions.length;
   const newPatientColIndex = totalCountColIndex + 1;
   const totalColCount = newPatientColIndex + 1;
+  const therapistColumnWidth = useMemo(() => {
+    const count = Math.max(1, displayTherapists.length);
+    if (count <= 2) return 74;
+    if (count <= 4) return 64;
+    if (count <= 6) return 58;
+    return 54;
+  }, [displayTherapists.length]);
+  const gridMinWidth = useMemo(() => {
+    const fixedWidth = FIXED_FIELDS.reduce((sum, field) => sum + field.w, 0);
+    const therapistWidth = displayTherapists.length * prescriptions.length * therapistColumnWidth;
+    return fixedWidth + therapistWidth + SUMMARY_COL_WIDTH * 2;
+  }, [FIXED_FIELDS, displayTherapists.length, prescriptions.length, therapistColumnWidth]);
   const ROW_DATA_FIELDS = [
     ...FIXED_FIELDS.filter(f => f.id !== 'idx').map((field) => field.field),
     'therapist_name',
@@ -1001,12 +1016,14 @@ export default function ShockwaveDataGrid({
   // ─── 10. RENDER ───────────────────────────────────────────
   return (
     <div className="sw-grid-wrapper" ref={wrapRef} tabIndex={0} onMouseUp={onMouseUp}>
-      <table className="sw-grid-table">
+      <table className="sw-grid-table" style={{ minWidth: `${gridMinWidth}px` }}>
         <colgroup>
           {FIXED_FIELDS.map((f, i) => <col key={f.id} style={{ width: f.w, minWidth: f.w }} />)}
-          {displayTherapists.map(t => prescriptions.map(p => <col key={`${t.key}-${p}`} style={{ width: 48 }} />))}
-          <col style={{ width: 60 }} />
-          <col style={{ width: 60 }} />
+          {displayTherapists.map(t => prescriptions.map(p => (
+            <col key={`${t.key}-${p}`} style={{ width: therapistColumnWidth, minWidth: therapistColumnWidth }} />
+          )))}
+          <col style={{ width: SUMMARY_COL_WIDTH, minWidth: SUMMARY_COL_WIDTH }} />
+          <col style={{ width: SUMMARY_COL_WIDTH, minWidth: SUMMARY_COL_WIDTH }} />
         </colgroup>
 
         <thead ref={theadRef}>
@@ -1051,8 +1068,8 @@ export default function ShockwaveDataGrid({
                 {t.displayName} ( {therapistTotals[idx]?.total || 0}건 )
               </th>
             ))}
-            <th rowSpan={2} className="hdr-total sticky-right-last-2 total-group-start">총건수</th>
-            <th rowSpan={2} className="hdr-total hdr-new-patient sticky-right-last-1">{secondarySummaryLabel}</th>
+            <th rowSpan={2} className="hdr-total total-group-start">총건수</th>
+            <th rowSpan={2} className="hdr-total hdr-new-patient">{secondarySummaryLabel}</th>
           </tr>
 
           {/* Row 3: Prescription Names */}
@@ -1075,8 +1092,8 @@ export default function ShockwaveDataGrid({
                 {therapistTotals[idx]?.byPres[p] || 0}
               </th>
             )))}
-            <th className="hdr-grand-total sticky-right-last-2 total-group-start">{grandTotal}건</th>
-            <th className="hdr-grand-total hdr-new-patient-total sticky-right-last-1">{newPatientTotal}명</th>
+            <th className="hdr-grand-total total-group-start">{grandTotal}건</th>
+            <th className="hdr-grand-total hdr-new-patient-total">{newPatientTotal}명</th>
           </tr>
         </thead>
 

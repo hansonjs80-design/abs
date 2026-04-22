@@ -403,7 +403,7 @@ function addBodyPartToMap(map, part) {
 }
 
 export default function ShockwaveView({ therapists, settings, memos = {}, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
-  const { currentYear, currentMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists } = useSchedule();
+  const { currentYear, currentMonth, navigateMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists } = useSchedule();
   const { addToast } = useToast();
   const viewRef = useRef(null);
   const dragSelectionRef = useRef(null);
@@ -2698,25 +2698,51 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           }}
         >
           <div className="shockwave-week-label">
-            <span className="shockwave-week-label-text">📅 {weekIdx + 1}주차</span>
-            {weekIdx === 0 && (
+            <div className="shockwave-week-label-main">
+              {weekIdx === 0 && (
+                <div className="shockwave-month-title-group">
+                  <button
+                    type="button"
+                    className="shockwave-month-nav-btn"
+                    onClick={() => navigateMonth(-1)}
+                    aria-label="이전 달"
+                  >
+                    ‹
+                  </button>
+                  <span className="shockwave-month-title">
+                    {currentYear}년 {String(currentMonth).padStart(2, '0')}월 충격파/도수 스케줄
+                  </span>
+                  <button
+                    type="button"
+                    className="shockwave-month-nav-btn"
+                    onClick={() => navigateMonth(1)}
+                    aria-label="다음 달"
+                  >
+                    ›
+                  </button>
+                </div>
+              )}
+              <span className="shockwave-week-label-text">{weekIdx + 1}주차</span>
               <button
                 type="button"
                 className="shockwave-week-today-btn"
-                onClick={() => setShowTherapistConfig(true)}
-                style={{ marginRight: 4 }}
+                onClick={scrollToTodayWeek}
+                disabled={todayWeekIdx < 0}
               >
-                🩺 치료사 설정
+                오늘
               </button>
-            )}
-            <button
-              type="button"
-              className="shockwave-week-today-btn"
-              onClick={scrollToTodayWeek}
-              disabled={todayWeekIdx < 0}
-            >
-              오늘
-            </button>
+            </div>
+            <div className="shockwave-week-label-actions">
+              {weekIdx === 0 && (
+                <button
+                  type="button"
+                  className="shockwave-week-today-btn"
+                  onClick={() => setShowTherapistConfig(true)}
+                >
+                  🩺 치료사 설정
+                </button>
+              )}
+            </div>
           </div>
           <div className="shockwave-days" style={{ position: 'relative' }}>
             {weekDays.map((dayInfo, dayIdx) => {

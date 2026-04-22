@@ -10,7 +10,7 @@ const COL_W_KEY = 'staff-calendar-col-width';
 const ROW_H_KEY = 'staff-calendar-row-height';
 
 export default function StaffCalendar() {
-  const { currentYear, currentMonth, staffMemos, loadStaffMemos, saveStaffMemo, holidays, holidayNames, loadHolidays } = useSchedule();
+  const { currentYear, currentMonth, navigateMonth, staffMemos, loadStaffMemos, saveStaffMemo, holidays, holidayNames, loadHolidays } = useSchedule();
   const { addToast } = useToast();
 
   const [colWidth, setColWidth] = useState(() => { const v = Number(localStorage.getItem(COL_W_KEY)); return v > 0 ? v : 0; });
@@ -386,6 +386,27 @@ export default function StaffCalendar() {
 
   return (
     <div className="staff-calendar animate-fade-in" ref={viewRef} style={{ outline: 'none', position: 'relative' }}>
+      <div className="staff-calendar-toolbar">
+        <button
+          type="button"
+          className="staff-month-nav-btn"
+          onClick={() => navigateMonth(-1)}
+          aria-label="이전 달"
+        >
+          ‹
+        </button>
+        <h2 className="staff-calendar-title">
+          {currentYear}년 {String(currentMonth).padStart(2, '0')}월 직원 근무표
+        </h2>
+        <button
+          type="button"
+          className="staff-month-nav-btn"
+          onClick={() => navigateMonth(1)}
+          aria-label="다음 달"
+        >
+          ›
+        </button>
+      </div>
       {/* Unified input: hidden when not editing, positioned over cell when editing */}
       <input
         ref={hiddenInputRef}
