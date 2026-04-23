@@ -74,21 +74,32 @@ export function ScheduleProvider({ children }) {
   }, []);
 
   // 직원 메모 로드
-  const loadStaffMemos = useCallback(async (year, month) => {
+  const loadStaffMemos = useCallback(async (year, month, options = {}) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('staff_schedules')
-        .select('*')
-        .eq('year', year)
-        .eq('month', month);
+      const targetMonths = [{ year, month }];
+      if (options.includeAdjacentMonths) {
+        const prev = month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
+        const next = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
+        targetMonths.unshift(prev);
+        targetMonths.push(next);
+      }
 
-      if (error) throw error;
+      const results = await Promise.all(targetMonths.map((target) => (
+        supabase
+          .from('staff_schedules')
+          .select('*')
+          .eq('year', target.year)
+          .eq('month', target.month)
+      )));
 
       const memoMap = {};
-      (data || []).forEach(item => {
-        const key = `${item.year}-${item.month}-${item.day}-${item.slot_index}`;
-        memoMap[key] = item;
+      results.forEach(({ data, error }) => {
+        if (error) throw error;
+        (data || []).forEach(item => {
+          const key = `${item.year}-${item.month}-${item.day}-${item.slot_index}`;
+          memoMap[key] = item;
+        });
       });
       setStaffMemos(memoMap);
     } catch (err) {

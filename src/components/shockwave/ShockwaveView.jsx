@@ -7,7 +7,10 @@ import { has4060Pattern, strip4060FromContent, incrementSessionCount, normalizeN
 import { toProperCase } from '../../lib/shockwaveSyncUtils';
 import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
-import { getEffectiveStaffScheduleBlockRules } from '../../lib/staffScheduleBlockRules';
+import {
+  getEffectiveStaffScheduleBlockRules,
+  normalizeStaffScheduleRuleText,
+} from '../../lib/staffScheduleBlockRules';
 import { useToast } from '../common/Toast';
 import MonthlyTherapistConfig from './MonthlyTherapistConfig';
 
@@ -489,11 +492,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (match !== undefined) return match.therapist_name || '';
     return therapists[slotIndex]?.name || '';
   }, [monthlyTherapists, therapists]);
-  const normalizeStaffBlockKeyword = useCallback((value) => (
-    String(value || '').replace(/\s+/g, '').toLowerCase()
-  ), []);
+  const normalizeStaffBlockKeyword = useCallback((value) => normalizeStaffScheduleRuleText(value), []);
+  const effectiveStaffBlockRules = useMemo(
+    () => getEffectiveStaffScheduleBlockRules(settings, currentYear, currentMonth).rules,
+    [settings, currentYear, currentMonth]
+  );
+
   const therapistShiftByDate = useMemo(() => {
     const map = {};
+    const blockRuleKeywords = (effectiveStaffBlockRules || [])
+      .filter((rule) => rule?.enabled !== false && rule?.keyword)
+      .map((rule) => normalizeStaffBlockKeyword(rule.keyword))
+      .filter(Boolean);
 
     Object.values(staffMemos || {}).forEach((item) => {
       if (!item?.content) return;
@@ -502,6 +512,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const text = String(item.content).trim();
       const compactText = normalizeStaffBlockKeyword(text);
       if (!compactText.includes('pt/')) return;
+      if (blockRuleKeywords.some((keyword) => compactText.includes(keyword))) return;
 
       const isNightShift = compactText.includes('야간pt/') || compactText.startsWith('야pt/');
       const slashIndex = text.indexOf('/');
@@ -529,12 +540,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     });
 
     return map;
-  }, [staffMemos, normalizeStaffBlockKeyword]);
-
-  const effectiveStaffBlockRules = useMemo(
-    () => getEffectiveStaffScheduleBlockRules(settings, currentYear, currentMonth).rules,
-    [settings, currentYear, currentMonth]
-  );
+  }, [staffMemos, normalizeStaffBlockKeyword, effectiveStaffBlockRules]);
 
   const staffScheduleBlocksByDate = useMemo(() => {
     const map = {};
@@ -549,6 +555,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       )).filter(Boolean)
     );
 
+    const extractMentionedTherapistNames = (rawText, day) => {
+      const normalizedText = normalizeNameForMatch(rawText);
+      const currentNames = getCurrentTherapistNames(day);
+      return currentNames.filter((normalizedName) => normalizedText.includes(normalizedName));
+    };
+
     Object.values(staffMemos || {}).forEach((item) => {
       const text = String(item?.content || '').trim();
       if (!text) return;
@@ -559,16 +571,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const prefix = slashIndex >= 0 ? text.slice(0, slashIndex).trim() : text;
       const normalizedPrefix = normalizeStaffBlockKeyword(prefix);
       const normalizedText = normalizeStaffBlockKeyword(text);
-      const names = slashIndex >= 0
-        ? text
-          .slice(slashIndex + 1)
-          .split(/[,，、\n]/)
-          .map((part) => part.trim())
-          .filter(Boolean)
-          .map((part) => part.split(/\s+/)[0])
-          .map((part) => normalizeNameForMatch(part))
-          .filter(Boolean)
-        : currentTherapistNames.filter((normalizedName) => normalizedText.includes(normalizedName));
+      const names = extractMentionedTherapistNames(
+        slashIndex >= 0 ? text.slice(slashIndex + 1) : text,
+        day
+      );
       if (names.length === 0) return;
 
       const allMatchedRules = rules.filter((rule) => {

@@ -1,5 +1,12 @@
 import { getMonthKey } from './schedulerOperatingHours';
 
+export function normalizeStaffScheduleRuleText(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .replace(/[\s\u00a0\u200b\u200c\u200d\ufeff]+/g, '')
+    .toLowerCase();
+}
+
 export const DEFAULT_STAFF_SCHEDULE_BLOCK_RULES = [
   {
     id: 'afternoon-half-day',

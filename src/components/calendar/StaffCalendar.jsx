@@ -3,7 +3,10 @@ import { flushSync } from 'react-dom';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { generateCalendarGrid, getTodayKST, isSameDate } from '../../lib/calendarUtils';
 import { WEEKDAYS } from '../../lib/constants';
-import { getEffectiveStaffScheduleBlockRules } from '../../lib/staffScheduleBlockRules';
+import {
+  getEffectiveStaffScheduleBlockRules,
+  normalizeStaffScheduleRuleText,
+} from '../../lib/staffScheduleBlockRules';
 import { useToast } from '../common/Toast';
 import MemoSlot from './MemoSlot';
 
@@ -38,7 +41,7 @@ export default function StaffCalendar() {
     () => getEffectiveStaffScheduleBlockRules(shockwaveSettings, currentYear, currentMonth).rules,
     [shockwaveSettings, currentYear, currentMonth]
   );
-  const normalizeRuleText = useCallback((value) => String(value || '').replace(/\s+/g, '').toLowerCase(), []);
+  const normalizeRuleText = useCallback((value) => normalizeStaffScheduleRuleText(value), []);
   const getAutoFontColorForStaffMemo = useCallback((content) => {
     const normalizedContent = normalizeRuleText(content);
     if (!normalizedContent) return null;
@@ -113,7 +116,11 @@ export default function StaffCalendar() {
     document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
   };
 
-  useEffect(() => { loadStaffMemos(currentYear, currentMonth); loadHolidays(currentYear, currentMonth); loadShockwaveSettings(); }, [currentYear, currentMonth, loadStaffMemos, loadHolidays, loadShockwaveSettings]);
+  useEffect(() => {
+    loadStaffMemos(currentYear, currentMonth, { includeAdjacentMonths: true });
+    loadHolidays(currentYear, currentMonth);
+    loadShockwaveSettings();
+  }, [currentYear, currentMonth, loadStaffMemos, loadHolidays, loadShockwaveSettings]);
   useEffect(() => { if (colWidth > 0) localStorage.setItem(COL_W_KEY, colWidth); else localStorage.removeItem(COL_W_KEY); localStorage.setItem(ROW_H_KEY, rowHeight); }, [colWidth, rowHeight]);
 
   // ── Actions ──
@@ -123,12 +130,10 @@ export default function StaffCalendar() {
 
   const selectSingle = useCallback((cell) => {
     if (!cell) return;
-    const d = grid[cell.wi]?.[cell.di];
-    if (d?.isOtherMonth) return;
     setSelectedCell(cell); setRangeEnd(cell); setSelectedKeys(new Set([cell.key]));
     if (editingCell && editingCell !== cell.key) setEditingCell(null);
     focusHiddenInput();
-  }, [editingCell, grid, focusHiddenInput]);
+  }, [editingCell, focusHiddenInput]);
 
   const beginEdit = useCallback((key, val, preserve) => {
     flushSync(() => {
@@ -256,7 +261,7 @@ export default function StaffCalendar() {
         for (let dy = 0; dy <= clipboardSource.maxY - clipboardSource.minY; dy++) {
           const v = clipboardSource.data.get(`${dx}-${dy}`); if (v === undefined) continue;
           const tc = cellFromXY(sx + dx, sy + dy); if (!tc) continue;
-          const d = grid[tc.wi]?.[tc.di]; if (!d || d.isOtherMonth) continue;
+          const d = grid[tc.wi]?.[tc.di]; if (!d) continue;
           const old = staffMemos[tc.key]?.content || '';
           if (old !== v) { items.push({ year: d.year, month: d.month, day: d.day, slot: tc.slot, content: old }); proms.push(saveStaffMemo(d.year, d.month, d.day, tc.slot, v)); }
         }
@@ -269,7 +274,7 @@ export default function StaffCalendar() {
       const rows = text.split(/\r?\n/).map(r => r.split('\t'));
       for (let dy = 0; dy < rows.length; dy++) for (let dx = 0; dx < rows[dy].length; dx++) {
         const v = rows[dy][dx].trim(); const tc = cellFromXY(sx + dx, sy + dy); if (!tc) continue;
-        const d = grid[tc.wi]?.[tc.di]; if (!d || d.isOtherMonth) continue;
+        const d = grid[tc.wi]?.[tc.di]; if (!d) continue;
         const old = staffMemos[tc.key]?.content || '';
         if (old !== v) { items.push({ year: d.year, month: d.month, day: d.day, slot: tc.slot, content: old }); proms.push(saveStaffMemo(d.year, d.month, d.day, tc.slot, v)); }
       }
@@ -342,12 +347,11 @@ export default function StaffCalendar() {
   const onCellMouseDown = useCallback((wi, di, slot, e) => {
     if (e.button === 2) return;
     const cell = makeCell(wi, di, slot); if (!cell) return;
-    if (grid[wi]?.[di]?.isOtherMonth) return;
     if (editingCell) setEditingCell(null); setContextMenu(null);
     focusHiddenInput();
     if (e.shiftKey && selectedCell) { setRangeEnd(cell); setSelectedKeys(buildRange(selectedCell, cell)); }
     else { selectSingle(cell); dragRef.current = cell; }
-  }, [makeCell, grid, editingCell, selectedCell, buildRange, selectSingle]);
+  }, [makeCell, editingCell, selectedCell, buildRange, selectSingle, focusHiddenInput]);
 
   const onCellMouseEnter = useCallback((wi, di, slot) => {
     if (dragRef.current) { const c = makeCell(wi, di, slot); if (c) { setRangeEnd(c); setSelectedKeys(buildRange(dragRef.current, c)); } }
