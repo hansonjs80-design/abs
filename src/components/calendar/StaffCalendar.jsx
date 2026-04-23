@@ -34,6 +34,7 @@ export default function StaffCalendar() {
   const dragRef = useRef(null);
   const hiddenInputRef = useRef(null);
   const editInputRef = useRef(null);
+  const skipNextBlurSaveRef = useRef(false);
 
   const today = getTodayKST();
   const { grid } = useMemo(() => generateCalendarGrid(currentYear, currentMonth, holidays), [currentYear, currentMonth, holidays]);
@@ -212,6 +213,26 @@ export default function StaffCalendar() {
     focusHiddenInput();
   }, [staffMemos, memoKey, grid, saveStaffMemo, addToast, recordUndo, resetInputToHidden, focusHiddenInput]);
 
+  const commitActiveEdit = useCallback(() => {
+    if (!editingCell) return;
+    const currentKey = editingCell;
+    const { year, month, day, slot } = dayFromKey(currentKey);
+    const old = (staffMemos[currentKey]?.content || '').trim();
+    const nv = (hiddenInputRef.current?.value || '').trim();
+    skipNextBlurSaveRef.current = true;
+    setTimeout(() => {
+      skipNextBlurSaveRef.current = false;
+    }, 0);
+    setEditingCell(null);
+    resetInputToHidden();
+    if (old !== nv) {
+      recordUndo({ type: 'edit', year, month, day, slot, oldVal: old });
+      saveStaffMemo(year, month, day, slot, nv).then((success) => {
+        if (!success) addToast('저장 실패', 'error');
+      });
+    }
+  }, [editingCell, dayFromKey, staffMemos, resetInputToHidden, recordUndo, saveStaffMemo, addToast]);
+
   const deleteCells = useCallback(async (keys) => {
     const items = [], proms = [];
     for (const k of keys || []) {
@@ -347,11 +368,13 @@ export default function StaffCalendar() {
   const onCellMouseDown = useCallback((wi, di, slot, e) => {
     if (e.button === 2) return;
     const cell = makeCell(wi, di, slot); if (!cell) return;
-    if (editingCell) setEditingCell(null); setContextMenu(null);
+    if (editingCell && editingCell !== cell.key) commitActiveEdit();
+    else if (editingCell) setEditingCell(null);
+    setContextMenu(null);
     focusHiddenInput();
     if (e.shiftKey && selectedCell) { setRangeEnd(cell); setSelectedKeys(buildRange(selectedCell, cell)); }
     else { selectSingle(cell); dragRef.current = cell; }
-  }, [makeCell, editingCell, selectedCell, buildRange, selectSingle, focusHiddenInput]);
+  }, [makeCell, editingCell, commitActiveEdit, selectedCell, buildRange, selectSingle, focusHiddenInput]);
 
   const onCellMouseEnter = useCallback((wi, di, slot) => {
     if (dragRef.current) { const c = makeCell(wi, di, slot); if (c) { setRangeEnd(c); setSelectedKeys(buildRange(dragRef.current, c)); } }
@@ -436,6 +459,10 @@ export default function StaffCalendar() {
         className="memo-slot-input"
         style={{ position: 'absolute', top: 0, left: 0, width: '1px', height: '1px', opacity: 0, padding: 0, border: 'none', outline: 'none', pointerEvents: 'none', zIndex: -1, boxSizing: 'border-box' }}
         onBlur={(e) => {
+          if (skipNextBlurSaveRef.current) {
+            skipNextBlurSaveRef.current = false;
+            return;
+          }
           if (editingCell && selectedCell) {
             saveCell(selectedCell.wi, selectedCell.di, selectedCell.slot, e.target.value);
           }
