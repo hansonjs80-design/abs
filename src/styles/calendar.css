@@ -292,6 +292,17 @@
   border-color: transparent;
 }
 
+.other-month .memo-slot.selected {
+  background: rgba(66, 133, 244, 0.16);
+  border-color: rgba(66, 133, 244, 0.5);
+  color: var(--text-primary);
+}
+
+.other-month .memo-slot.primary-selected {
+  background: rgba(66, 133, 244, 0.2);
+  color: var(--text-primary);
+}
+
 .memo-slot.editing {
   padding: 0;
   border: none;
