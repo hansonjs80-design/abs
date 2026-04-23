@@ -79,6 +79,19 @@ function dedupeList(values, normalizer = (value) => String(value || '').trim()) 
   return next;
 }
 
+function normalizePrescriptionColorKey(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .replace(/\s+/g, '')
+    .replace(/분$/u, '')
+    .toLowerCase();
+}
+
+function getPrescriptionColor(prescription, colorMap) {
+  if (!prescription || !colorMap) return null;
+  return colorMap[prescription] || colorMap[normalizePrescriptionColorKey(prescription)] || null;
+}
+
 function parseSchedulerPatientIdentity(content) {
   const cellContent = String(content || '');
   let patientChart = '';
@@ -408,7 +421,7 @@ function addBodyPartToMap(map, part) {
 }
 
 export default function ShockwaveView({ therapists, settings, memos = {}, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
-  const { currentYear, currentMonth, navigateMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists, saveTherapistRoster, saveShockwaveSettings } = useSchedule();
+  const { currentYear, currentMonth, navigateMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
   const { addToast } = useToast();
   const viewRef = useRef(null);
   const dragSelectionRef = useRef(null);
@@ -434,6 +447,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   useEffect(() => {
     selectedCellRef.current = selectedCell;
   }, [selectedCell]);
+
+  useEffect(() => {
+    loadShockwaveSettings?.();
+  }, [loadShockwaveSettings, currentYear, currentMonth]);
 
   // 열 너비 조정 (fr 비율 기반)
   const [colRatios, setColRatios] = useState(() => {
@@ -1620,11 +1637,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const effectivePrescriptionColors = useMemo(() => {
     const shockwaveSettlement = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'shockwave');
     const manualSettlement = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'manual_therapy');
-    return {
+    const colors = {
       ...(settings?.prescription_colors || {}),
       ...(shockwaveSettlement.prescription_colors || {}),
       ...(manualSettlement.prescription_colors || {}),
     };
+    return Object.entries(colors).reduce((acc, [key, value]) => {
+      if (!key || !value) return acc;
+      acc[key] = value;
+      acc[normalizePrescriptionColorKey(key)] = value;
+      return acc;
+    }, {});
   }, [settings, currentYear, currentMonth]);
 
   // 날짜 비교 헬퍼: 원본(w,d)와 대상(w,d)의 실제 날짜를 비교
@@ -2997,6 +3020,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                         const cellData = memos[key];
                         const content = pendingDisplayValues[key] ?? cellData?.content ?? '';
                         const mergeSpan = cellData?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+                        const cellPrescription = cellData?.prescription || mergeSpan?.meta?.prescription || '';
                         const displayData = buildSchedulerCellDisplay(content, mergeSpan);
                           
                           if (mergeSpan.mergedInto) {
@@ -3054,14 +3078,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             inlineStyle.backgroundColor = staffBlockRule.bg_color;
                           }
                           
-                          if (cellData?.prescription && effectivePrescriptionColors?.[cellData.prescription]) {
-                            inlineStyle.color = effectivePrescriptionColors[cellData.prescription];
-                            inlineStyle.fontWeight = '700';
-                          }
-
                           if (staffBlockRule?.font_color) {
                             inlineStyle.color = staffBlockRule.font_color;
                             inlineStyle.fontWeight = '800';
+                          }
+
+                          const prescriptionColor = getPrescriptionColor(cellPrescription, effectivePrescriptionColors);
+                          const prescriptionTextStyle = prescriptionColor ? { color: prescriptionColor, fontWeight: 800 } : undefined;
+                          if (prescriptionColor) {
+                            inlineStyle.color = prescriptionColor;
+                            inlineStyle.fontWeight = '700';
                           }
 
                           // 마스터 셀 중앙 효과
@@ -3083,7 +3109,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                   let text = `⏱ [${slotInfo.label}]`;
                                   if (content && content !== '\u200B') text += `\n📝 ${content}`;
                                   if (staffBlockRule) text += `\n근무표: ${staffBlockRule.keyword}`;
-                                  if (cellData?.prescription) text += `\n💊 처방: ${cellData.prescription}`;
+                                  if (cellPrescription) text += `\n💊 처방: ${cellPrescription}`;
                                   if (cellData?.body_part) text += `\n🦴 부위: ${cellData.body_part}`;
                                   const memoList = getMemoListFromMergeSpan(cellData?.merge_span);
                                   if (memoList.length > 0) text += `\n📌 메모: ${memoList.join(' / ')}`;
@@ -3094,13 +3120,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 onContextMenu={(e) => {
                                   // 내용이 있을 때만 처방을 설정할 수 있도록 함
                                   if (displayData.hasDisplayText && content.trim() !== '\u200B') {
-                                    handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellData?.prescription);
+                                    handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription);
                                   }
                                 }}
                               >
                                 {!isEditing && (
                                   <div className="sw-cell-display" style={{ pointerEvents: 'none', position: 'absolute', inset: 0, padding: 4 }}>
-                                    {displayData.mainText ? <span className="sw-cell-main">{displayData.mainText}</span> : null}
+                                    {displayData.mainText ? <span className="sw-cell-main" style={prescriptionTextStyle}>{displayData.mainText}</span> : null}
                                   </div>
                                 )}
                                 <input
@@ -3181,7 +3207,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                       if (content && content !== '\u200B') text += `\n📝 ${content}`;
                                     }
                                   }
-                                  if (cellData?.prescription) text += `\n💊 처방: ${cellData.prescription}`;
+                                  if (cellPrescription) text += `\n💊 처방: ${cellPrescription}`;
                                   if (cellData?.body_part) text += `\n🦴 부위: ${cellData.body_part}`;
                                   if (staffBlockRule) text += `\n근무표: ${staffBlockRule.keyword}`;
                                   const memoList = getMemoListFromMergeSpan(cellData?.merge_span);
@@ -3193,12 +3219,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 onContextMenu={(e) => {
                                   // 내용이 있을 때만 처방을 설정할 수 있도록 함
                                   if (displayData.hasDisplayText && content.trim() !== '\u200B') {
-                                    handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellData?.prescription);
+                                    handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription);
                                   }
                                 }}
                               >
                                 <div className="sw-cell-display">
-                                  {displayData.mainText ? <span className="sw-cell-main">{displayData.mainText}</span> : null}
+                                  {displayData.mainText ? <span className="sw-cell-main" style={prescriptionTextStyle}>{displayData.mainText}</span> : null}
                                 </div>
                               </div>
                             );

@@ -213,6 +213,18 @@ export default function ShockwaveDataGrid({
     const therapistWidth = displayTherapists.length * prescriptions.length * therapistColumnWidth;
     return fixedWidth + therapistWidth + SUMMARY_COL_WIDTH * 2;
   }, [FIXED_FIELDS, displayTherapists.length, prescriptions.length, therapistColumnWidth]);
+  const getColumnWidth = useCallback((colIndex) => {
+    if (colIndex < FIXED_FIELDS.length) return FIXED_FIELDS[colIndex]?.w || 48;
+    if (colIndex >= FIXED_FIELDS.length && colIndex < totalCountColIndex) return therapistColumnWidth;
+    return SUMMARY_COL_WIDTH;
+  }, [FIXED_FIELDS, totalCountColIndex, therapistColumnWidth]);
+  const getFrozenLeft = useCallback((colIndex) => {
+    let left = 0;
+    for (let i = 0; i < colIndex; i += 1) {
+      left += getColumnWidth(i);
+    }
+    return left;
+  }, [getColumnWidth]);
   const ROW_DATA_FIELDS = [
     ...FIXED_FIELDS.filter(f => f.id !== 'idx').map((field) => field.field),
     'therapist_name',
@@ -1141,10 +1153,14 @@ export default function ShockwaveDataGrid({
                 if (isNewPatientCol) cls += ' gc-total gc-new-patient';
                 if (isTherapistGroupStartCol(ci)) cls += ' therapist-group-start';
 
-                let fixedLeft = 0;
-                if (ci < frozenColumnCount) {
-                    for (let i = 0; i < ci; i++) fixedLeft += (FIXED_FIELDS[i]?.w || 48);
-                }
+                const isFrozenCol = ci < frozenColumnCount;
+                const fixedLeft = isFrozenCol ? getFrozenLeft(ci) : undefined;
+                const frozenStyle = isFrozenCol ? {
+                  position: 'sticky',
+                  left: fixedLeft,
+                  zIndex: isFoc || isEdit ? 35 : 28,
+                  borderRight: ci === frozenColumnCount - 1 ? '1px solid var(--grid-strong)' : undefined,
+                } : undefined;
 
                 const showInput = isFoc || isEdit;
 
@@ -1155,7 +1171,7 @@ export default function ShockwaveDataGrid({
                       className={cls}
                       rowSpan={rs > 1 ? rs : undefined}
                       colSpan={cs > 1 ? cs : undefined}
-                      style={{ padding: 0, position: ci < frozenColumnCount ? 'sticky' : undefined, left: ci < frozenColumnCount ? fixedLeft : undefined, zIndex: 10 }}
+                      style={{ padding: 0, ...frozenStyle }}
                       onMouseDown={e => (ci === 0 ? onRowHeaderMouseDown(e, ri) : onMouseDown(e, ri, ci))}
                       onMouseEnter={() => onMouseEnter(ri, ci)}
                       onContextMenu={e => (ci === 0 ? onRowHeaderContextMenu(e, ri) : onCtxMenu(e, ri, ci))}
@@ -1221,6 +1237,7 @@ export default function ShockwaveDataGrid({
                     className={cls}
                     rowSpan={rs > 1 ? rs : undefined}
                     colSpan={cs > 1 ? cs : undefined}
+                    style={frozenStyle}
                     onMouseDown={e => (ci === 0 ? onRowHeaderMouseDown(e, ri) : onMouseDown(e, ri, ci))}
                     onMouseEnter={() => onMouseEnter(ri, ci)}
                     onDoubleClick={() => onDblClick(ri, ci)}

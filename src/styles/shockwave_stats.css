@@ -624,7 +624,7 @@ td.gc-bold > .gc-input {
 }
 
 .gc-fixed {
-  z-index: 12 !important;
+  z-index: 28 !important;
   background: var(--grid-fixed-bg) !important;
 }
 

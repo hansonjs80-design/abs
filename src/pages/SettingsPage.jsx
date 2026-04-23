@@ -797,7 +797,10 @@ export default function SettingsPage() {
   };
 
   const loadHolidays = async () => {
-    const { data } = await supabase.from('holidays').select('*').order('date');
+    const { data } = await supabase
+      .from('holidays')
+      .select('*')
+      .order('date', { ascending: false });
     setHolidays(data || []);
   };
 
@@ -935,15 +938,26 @@ export default function SettingsPage() {
             <button className="btn btn-primary btn-sm" onClick={addHoliday}>추가</button>
           </div>
 
-          {holidays.slice(0, 20).map(h => (
-            <div key={h.id} className="settings-row">
-              <div>
-                <div className="settings-row-label">{h.date}</div>
-                <div className="settings-row-desc">{h.name || '(이름 없음)'}</div>
+          <div
+            style={{
+              maxHeight: 320,
+              overflowY: holidays.length > 5 ? 'auto' : 'visible',
+              paddingRight: holidays.length > 5 ? 6 : 0,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+            }}
+          >
+            {holidays.map(h => (
+              <div key={h.id} className="settings-row" style={{ margin: 0 }}>
+                <div>
+                  <div className="settings-row-label">{h.date}</div>
+                  <div className="settings-row-desc">{h.name || '(이름 없음)'}</div>
+                </div>
+                <button className="btn btn-danger btn-sm" onClick={() => removeHoliday(h.id)}>삭제</button>
               </div>
-              <button className="btn btn-danger btn-sm" onClick={() => removeHoliday(h.id)}>삭제</button>
-            </div>
-          ))}
+            ))}
+          </div>
 
           {holidays.length === 0 && (
             <p style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: 16 }}>
@@ -965,60 +979,6 @@ export default function SettingsPage() {
               <div className="settings-row-desc">현재 로그인된 계정</div>
             </div>
             <button className="btn btn-danger btn-sm" onClick={signOut}>로그아웃</button>
-          </div>
-        </div>
-      </div>
-
-      <div className="card" style={{ marginTop: 24 }}>
-        <div className="card-header">
-          <span className="card-title"><Copy size={18} /> Supabase SQL 코드</span>
-        </div>
-        <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>
-            아래 SQL 스니펫을 복사해서 Supabase SQL 편집기 또는 psql에 붙여넣으면 현재 프로그램이 사용하는 테이블을 준비할 수 있습니다.
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {SQL_SNIPPETS.map(snippet => (
-              <div
-                key={snippet.title}
-                style={{
-                  border: '1px solid var(--border-color)',
-                  borderRadius: 10,
-                  padding: 12,
-                  background: 'var(--bg-card)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 8
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: 700 }}>{snippet.title}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>{snippet.description}</div>
-                  </div>
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    style={{ display: 'flex', alignItems: 'center', gap: 4 }}
-                    onClick={() => handleCopySQL(snippet.sql)}
-                  >
-                    <Copy size={14} />
-                    복사
-                  </button>
-                </div>
-                <pre style={{
-                  margin: 0,
-                  fontSize: '0.75rem',
-                  lineHeight: '1.35rem',
-                  background: 'var(--bg-tertiary)',
-                  borderRadius: 8,
-                  padding: 10,
-                  overflowX: 'auto',
-                  fontFamily: 'Consolas, menlo, monospace'
-                }}>
-                  {snippet.sql}
-                </pre>
-              </div>
-            ))}
           </div>
         </div>
       </div>
