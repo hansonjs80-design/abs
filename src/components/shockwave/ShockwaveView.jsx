@@ -1665,6 +1665,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       merge: join(mod, 'E'),
       complete: join(mod, 'G'),
       cancel: join(mod, '-'),
+      today: join(mod, 'O'),
     };
   }, [isAppleShortcutPlatform]);
   const effectivePrescriptionColors = useMemo(() => {
@@ -2971,15 +2972,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   </button>
                 </div>
               )}
-              <span className="shockwave-week-label-text">{weekIdx + 1}주차</span>
-              <button
-                type="button"
-                className="shockwave-week-today-btn"
-                onClick={scrollToTodayWeek}
-                disabled={todayWeekIdx < 0}
-              >
-                오늘
-              </button>
+              <span className="shockwave-week-jump-group">
+                <span className="shockwave-week-label-text">{weekIdx + 1}주차</span>
+                <button
+                  type="button"
+                  className="shockwave-week-today-btn"
+                  data-shortcut-tooltip={`오늘 ${shortcutLabels.today}`}
+                  onClick={scrollToTodayWeek}
+                  disabled={todayWeekIdx < 0}
+                >
+                  오늘
+                </button>
+              </span>
             </div>
             <div className="shockwave-week-label-actions">
               {weekIdx === 0 && (
@@ -3200,12 +3204,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 onMouseEnter={() => {
                                   handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
                                   let text = `⏱ [${slotInfo.label}]`;
-                                  if (content && content !== '\u200B') text += `\n📝 ${content}`;
+                                  if (content && content !== '\u200B') text += `\n👤 ${content}`;
                                   if (staffBlockRule) text += `\n근무표: ${staffBlockRule.keyword}`;
                                   if (cellPrescription) text += `\n💊 처방: ${cellPrescription}`;
                                   if (cellData?.body_part) text += `\n🦴 부위: ${cellData.body_part}`;
                                   const memoList = getMemoListFromMergeSpan(cellData?.merge_span);
-                                  if (memoList.length > 0) text += `\n📌 메모: ${memoList.join(' / ')}`;
+                                  if (memoList.length > 0) text += `\n📝 메모: ${memoList.join(' / ')}`;
                                   setHoverData({ text });
                                 }}
                                 onMouseLeave={() => setHoverData(null)}
@@ -3274,7 +3278,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 onMouseEnter={() => {
                                   handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
                                   let text = `⏱ [${slotInfo.label}]`;
-                                  if (content && content !== '\u200B') text += `\n📝 ${content}`;
+                                  if (content && content !== '\u200B') text += `\n👤 ${content}`;
 
                                   if (isSelected && selectedKeys.size > 1 && selectionInfo && selectionInfo.w === weekIdx && selectionInfo.d === dayIdx && selectionInfo.minRow !== selectionInfo.maxRow) {
                                     const slots = getTimeSlotsForDay(dayInfo);
@@ -3297,14 +3301,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                       if (mns > 0) dStr += (hrs > 0 ? ' ' : '') + `${mns}분`;
                                       
                                       text = `⏱ [${t1} ~ ${t2}] (총 ${dStr})`;
-                                      if (content && content !== '\u200B') text += `\n📝 ${content}`;
+                                      if (content && content !== '\u200B') text += `\n👤 ${content}`;
                                     }
                                   }
                                   if (cellPrescription) text += `\n💊 처방: ${cellPrescription}`;
                                   if (cellData?.body_part) text += `\n🦴 부위: ${cellData.body_part}`;
                                   if (staffBlockRule) text += `\n근무표: ${staffBlockRule.keyword}`;
                                   const memoList = getMemoListFromMergeSpan(cellData?.merge_span);
-                                  if (memoList.length > 0) text += `\n📌 메모: ${memoList.join(' / ')}`;
+                                  if (memoList.length > 0) text += `\n📝 메모: ${memoList.join(' / ')}`;
                                   setHoverData({ text });
                                 }}
                                 onMouseLeave={() => setHoverData(null)}
