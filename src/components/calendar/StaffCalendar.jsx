@@ -530,7 +530,7 @@ export default function StaffCalendar() {
       </div>
 
       {contextMenu && (
-        <div ref={contextMenuRef} className="shockwave-context-menu" style={{ top: contextMenu.y, left: contextMenu.x, zIndex: 1000, position: 'fixed' }} onMouseDown={e => e.stopPropagation()}>
+        <div ref={contextMenuRef} className="shockwave-context-menu staff-calendar-context-menu" style={{ top: contextMenu.y, left: contextMenu.x, zIndex: 1000, position: 'fixed' }} onMouseDown={e => e.stopPropagation()}>
           <button type="button" className="context-menu-item" onClick={() => ctxAction('copy')}>복사 (Cmd+C)</button>
           <button type="button" className="context-menu-item" onClick={() => ctxAction('cut')}>잘라내기 (Cmd+X)</button>
           <button type="button" className="context-menu-item" onClick={() => ctxAction('paste')}>붙여넣기 (Cmd+V)</button>

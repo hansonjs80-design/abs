@@ -337,6 +337,19 @@
 .memo-dim { color: var(--cal-other-month-text); }
 .memo-strikethrough { text-decoration: line-through; opacity: 0.6; }
 
+.staff-calendar-context-menu {
+  min-width: 188px;
+  width: min(228px, calc(100vw - 24px));
+}
+
+.staff-calendar-context-menu .context-menu-item {
+  font-size: 0.805rem !important;
+}
+
+.staff-calendar-context-menu > button {
+  font-size: 1.035rem;
+}
+
 /* 오늘 일정 패널 */
 .today-panel {
   background: var(--bg-card);
