@@ -189,8 +189,10 @@ function buildSchedulerMemoSortKey(memoKey, weeks) {
   const parts = String(memoKey || '').split('-').map(Number);
   if (parts.length !== 4 || parts.some((value) => Number.isNaN(value))) return '';
   const [w, d, r, c] = parts;
-  const date = weeks?.[w]?.[d]?.date;
-  const dateKey = date?.toISOString?.().slice(0, 10);
+  const dayInfo = weeks?.[w]?.[d];
+  const dateKey = dayInfo
+    ? `${dayInfo.year}-${String(dayInfo.month).padStart(2, '0')}-${String(dayInfo.day).padStart(2, '0')}`
+    : '';
   if (!dateKey) return '';
   return `${dateKey}-${String(r).padStart(3, '0')}-${String(c).padStart(3, '0')}`;
 }
@@ -522,6 +524,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const contextMenuRef = useRef(null);
   const editInputRef = useRef(null);
   const imeOpenRef = useRef(false);
+  const skipNextEditBlurSaveRef = useRef(false);
   const undoStackRef = useRef([]);
   const undoQueueRef = useRef(Promise.resolve());
 
@@ -797,14 +800,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   const findLatestSchedulerMemoMeta = useCallback((targetCell, chartNumber, cleanName) => {
     const normalizedName = normalizeNameForMatch(cleanName);
-    const currentSortKey = `${weeks[targetCell.w]?.[targetCell.d]?.date?.toISOString?.().slice(0, 10) || ''}-${String(targetCell.r).padStart(3, '0')}-${String(targetCell.c).padStart(3, '0')}`;
+    const currentSortKey = buildSchedulerMemoSortKey(`${targetCell.w}-${targetCell.d}-${targetCell.r}-${targetCell.c}`, weeks);
     let latestMatch = null;
 
     Object.entries(memos || {}).forEach(([memoKey, memo]) => {
       if (!memo?.content) return;
       const parts = memoKey.split('-').map(Number);
       if (parts.length !== 4) return;
-      const sortKey = `${weeks[parts[0]]?.[parts[1]]?.date?.toISOString?.().slice(0, 10) || ''}-${String(parts[2]).padStart(3, '0')}-${String(parts[3]).padStart(3, '0')}`;
+      const sortKey = buildSchedulerMemoSortKey(memoKey, weeks);
       if (!sortKey || sortKey >= currentSortKey) return;
 
       const parsed = parseSchedulerPatientIdentity(memo.content);
@@ -864,16 +867,24 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     };
   }, []);
 
-  const findSchedulerHistoryCandidates = useCallback((targetCell, rawInput) => {
+  const findSchedulerHistoryCandidates = useCallback((targetCell, rawInput, targetDate = '') => {
     const normalizedInput = normalizeNameForMatch(rawInput);
     const exactInput = String(rawInput || '').trim();
-    const currentSortKey = buildSchedulerMemoSortKey(`${targetCell.w}-${targetCell.d}-${targetCell.r}-${targetCell.c}`, weeks);
+    const targetMemoKey = `${targetCell.w}-${targetCell.d}-${targetCell.r}-${targetCell.c}`;
+    const currentSortKey = buildSchedulerMemoSortKey(targetMemoKey, weeks);
     const candidateMap = new Map();
 
     Object.entries(memos || {}).forEach(([memoKey, memo]) => {
       if (!memo?.content) return;
+      if (memoKey === targetMemoKey) return;
       const sortKey = buildSchedulerMemoSortKey(memoKey, weeks);
-      if (!sortKey || (currentSortKey && sortKey >= currentSortKey)) return;
+      const sortDate = sortKey?.slice(0, 10) || '';
+      if (!sortKey) return;
+      if (targetDate) {
+        if (sortDate > targetDate) return;
+      } else if (currentSortKey && sortKey >= currentSortKey) {
+        return;
+      }
 
       const parsed = parseSchedulerPatientText(memo.content);
       if (!parsed?.chartNumber) return;
@@ -908,7 +919,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     return Array.from(candidateMap.values())
       .map((candidate) => {
         const latestContent = String(candidate.latestMemo?.content || '').trim();
-        const nextText = incrementSessionCount(latestContent) || latestContent;
+        const latestDate = candidate.latestSortKey.slice(0, 10);
+        const shouldKeepVisitForSameDate = targetDate && latestDate === targetDate;
+        const nextText = shouldKeepVisitForSameDate ? latestContent : (incrementSessionCount(latestContent) || latestContent);
         const incrementedParsed = parseSchedulerPatientText(nextText);
         const latestParsed = candidate.latestParsed;
         const latestMergeSpan = buildMergeSpanWithMemoList(
@@ -916,7 +929,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           getMemoListFromMergeSpan(candidate.latestMemo?.merge_span)
         );
         const lastVisit = parseInt(latestParsed?.suffixValue || '0', 10) || (latestParsed?.suffixToken === '*' ? 1 : 0);
-        const nextVisit = parseInt(incrementedParsed?.suffixValue || '0', 10) || (lastVisit > 0 ? lastVisit + 1 : 1);
+        const nextVisit = shouldKeepVisitForSameDate
+          ? (lastVisit > 0 ? lastVisit : 1)
+          : (parseInt(incrementedParsed?.suffixValue || '0', 10) || (lastVisit > 0 ? lastVisit + 1 : 1));
 
         return {
           chartNumber: candidate.chartNumber,
@@ -924,7 +939,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           cleanName: latestParsed?.cleanName || '',
           nextText,
           nextVisit,
-          lastDate: candidate.latestSortKey.slice(0, 10),
+          lastDate: latestDate,
           prescription: candidate.latestMemo?.prescription || '',
           prescriptions: Array.from(candidate.prescriptions),
           bodyParts: Array.from(candidate.bodyPartsMap.values()),
@@ -952,7 +967,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const memoKey = `${w}-${d}-${r}-${c}`;
     const currentBodyParts = splitBodyParts(memos[memoKey]?.body_part || '');
 
-    const schedulerOptions = findSchedulerHistoryCandidates({ w, d, r, c }, rawName);
+    const schedulerOptions = findSchedulerHistoryCandidates({ w, d, r, c }, rawName, targetDate);
     if (schedulerOptions.length > 0) {
       const selected = schedulerOptions.length === 1
         ? schedulerOptions[0]
@@ -1045,7 +1060,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           addBodyPartToMap(candidate.bodyPartsMap, part);
           const normalizedPartKey = normalizeBodyPartKey(part);
           const itemVisit = parseInt(item.visit_count || '0', 10) || 0;
-          const nextVisit = itemVisit > 0 ? itemVisit + 1 : 1;
+          const nextVisit = item.date === targetDate
+            ? (itemVisit > 0 ? itemVisit : 1)
+            : (itemVisit > 0 ? itemVisit + 1 : 1);
           const existingVisitInfo = candidate.bodyPartVisitMap.get(normalizedPartKey);
           if (
             !existingVisitInfo ||
@@ -1070,7 +1087,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const item = candidate.latestItem;
       const chartNumber = candidate.chartNumber;
       const lastVisit = parseInt(item.visit_count || '0', 10) || 0;
-      const nextVisit = lastVisit > 0 ? lastVisit + 1 : 1;
+      const nextVisit = item.date === targetDate
+        ? (lastVisit > 0 ? lastVisit : 1)
+        : (lastVisit > 0 ? lastVisit + 1 : 1);
       const cleanPatientName = String(item.patient_name).replace(/\*/g, '').trim();
       const namePart = item.type === 'manual'
         ? buildManualNamePart(cleanPatientName, item.prescription)
@@ -1115,7 +1134,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     }
 
     // 부위가 2개 이상이거나 처방이 변경된 이력이 있으면 다이얼로그로 선택
-    const effectiveVisitCount = selected.nextVisit;
+    const effectiveVisitCount = selected.preferredNextVisit || selected.nextVisit;
     const effectiveBodyPart = selected.preferredBodyPart || selected.latestBodyPart || undefined;
     const autoText = `${selected.chartNumber}/${selected.namePart}(${effectiveVisitCount})`;
     const autoPrescription = has4060Pattern(autoText) ? undefined : (selected.prescription || undefined);
@@ -1459,6 +1478,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   // ── 셀 우클릭 = 처방 선택 ──
   const handleCellContextMenu = useCallback((e, w, d, r, c, currentPrescription) => {
     e.preventDefault();
+    skipNextEditBlurSaveRef.current = true;
+    setEditingCell(null);
     selectSingleCell({ w, d, r, c });
     const key = cellKey(w, d, r, c);
     setContextMenuBodyInput(memos[key]?.body_part || '');
@@ -1473,6 +1494,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       colIdx: c,
       currentPrescription
     });
+    window.setTimeout(() => {
+      skipNextEditBlurSaveRef.current = false;
+    }, 0);
   }, [cellKey, memos, selectSingleCell]);
 
   const handlePrescriptionSelect = useCallback(async (prescription) => {
@@ -2286,6 +2310,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, [selectedKeys, memos, currentYear, currentMonth, normalizeKeysToMergeMasters, cellKey, saveShockwaveMemosBulk, addToast]);
 
   const handleContextAction = useCallback(async (action) => {
+    const getStableMemoContent = (key, memo = {}) => {
+      if (typeof memo.content === 'string') return memo.content;
+      if (typeof pendingDisplayValues[key] === 'string') return pendingDisplayValues[key];
+      return '';
+    };
+
     if (action === 'copy') handleCopySelection();
     else if (action === 'cut') handleCutSelection();
     else if (action === 'paste') handlePasteSelection();
@@ -2300,12 +2330,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       for (const key of keys) {
         const [w, d, r, c] = key.split('-').map(Number);
         const memo = memos[key] || {};
-        let updatedContent = memo.content;
+        let updatedContent = getStableMemoContent(key, memo);
         // 처방이 설정될 때 이름에 40/60이 있으면 숫자 자동 제거
-        if (action.value && has4060Pattern(memo.content)) {
-          updatedContent = strip4060FromContent(memo.content);
+        if (action.value && has4060Pattern(updatedContent)) {
+          updatedContent = strip4060FromContent(updatedContent);
         }
-        if (memo.prescription !== action.value || updatedContent !== memo.content) {
+        if (memo.prescription !== action.value || updatedContent !== getStableMemoContent(key, memo)) {
           const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, updatedContent, memo.bg_color, memo.merge_span, action.value);
           if (success) anyChanged = true;
         }
@@ -2320,7 +2350,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         const [w, d, r, c] = key.split('-').map(Number);
         const memo = memos[key] || {};
         if (memo.body_part !== action.value) {
-          const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, memo.merge_span, memo.prescription, action.value);
+          const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, action.value);
           if (success) anyChanged = true;
         }
       }
@@ -2338,7 +2368,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         const newPart = formatBodyPartInput(action.value);
         if (!newPart) continue;
         const combined = existing ? `${existing}, ${newPart}` : newPart;
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, memo.merge_span, memo.prescription, combined);
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, combined);
         if (success) anyChanged = true;
       }
       if (anyChanged) addToast('부위가 추가되었습니다.', 'success');
@@ -2353,7 +2383,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         const memo = memos[key] || {};
         const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
         const updated = parts.filter((_, i) => i !== action.index).join(', ');
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, memo.merge_span, memo.prescription, updated);
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, updated);
         if (success) anyChanged = true;
       }
       if (anyChanged) addToast('부위가 삭제되었습니다.', 'success');
@@ -2370,7 +2400,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         const parts = splitBodyParts(memo.body_part || '');
         const updated = parts.filter((part) => normalizeBodyPartKey(part) !== targetKey).join(', ');
         if (updated === (memo.body_part || '').trim()) continue;
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, memo.merge_span, memo.prescription, updated);
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, updated);
         if (success) anyChanged = true;
       }
       if (anyChanged) addToast('부위가 삭제되었습니다.', 'success');
@@ -2386,7 +2416,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
         parts[action.index] = formatBodyPartInput(action.value);
         const updated = parts.filter(Boolean).join(', ');
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, memo.merge_span, memo.prescription, updated);
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, updated);
         if (success) anyChanged = true;
       }
       if (anyChanged) addToast('부위가 수정되었습니다.', 'success');
@@ -2398,7 +2428,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       for (const key of keys) {
         const [w, d, r, c] = key.split('-').map(Number);
         const memo = memos[key] || {};
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, memo.merge_span, memo.prescription, '');
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, '');
         if (success) anyChanged = true;
       }
       if (anyChanged) addToast('부위가 삭제되었습니다.', 'success');
@@ -2419,7 +2449,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           parts.push(targetPart);
         }
         const updated = parts.join(', ');
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, memo.merge_span, memo.prescription, updated);
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, updated);
         if (success) anyChanged = true;
       }
       return;
@@ -2436,7 +2466,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         const memoList = getMemoListFromMergeSpan(memo.merge_span);
         const nextMemoList = [...memoList, newMemo];
         const nextMergeSpan = buildMergeSpanWithMemoList(memo.merge_span, nextMemoList);
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part);
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part);
         if (success) anyChanged = true;
       }
       if (anyChanged) addToast('메모가 추가되었습니다.', 'success');
@@ -2452,7 +2482,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         const memoList = getMemoListFromMergeSpan(memo.merge_span);
         const nextMemoList = memoList.filter((_, index) => index !== action.index);
         const nextMergeSpan = buildMergeSpanWithMemoList(memo.merge_span, nextMemoList);
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part);
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part);
         if (success) anyChanged = true;
       }
       if (anyChanged) addToast('메모가 삭제되었습니다.', 'success');
@@ -2469,14 +2499,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         const memoList = getMemoListFromMergeSpan(memo.merge_span);
         const nextMemoList = memoList.map((item, index) => index === action.index ? nextValue : item).filter(Boolean);
         const nextMergeSpan = buildMergeSpanWithMemoList(memo.merge_span, nextMemoList);
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part);
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part);
         if (success) anyChanged = true;
       }
       if (anyChanged) addToast('메모가 수정되었습니다.', 'success');
       return;
     }
     setContextMenu(null);
-  }, [selectedKeys, memos, currentYear, currentMonth, onSaveMemo, addToast, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleTreatmentCancel, tryMergeSelection]);
+  }, [selectedKeys, memos, pendingDisplayValues, currentYear, currentMonth, onSaveMemo, addToast, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleTreatmentCancel, tryMergeSelection]);
 
   const submitContextMenuBodyInput = useCallback(() => {
     const val = contextMenuBodyInput.trim();
@@ -2658,9 +2688,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         e.nativeEvent?.isComposing ||
         /[^\x00-\x7F]/.test(e.key);
       if (isImeCompositionKey) {
-        e.stopPropagation();
         imeOpenRef.current = true;
-        promoteFocusedInputToEditor(key, '');
+        // Let the focused hidden input receive the IME composition intact.
+        // Promoting here splits Korean syllables such as "길" into "ㄱㅣㄹ".
       } else {
         e.preventDefault();
         beginEditingCell(key, e.key, false);
@@ -3271,11 +3301,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                     zIndex: 1,
                                   }}
                                   onInput={(e) => {
+                                    if (imeOpenRef.current || e.nativeEvent?.isComposing) return;
                                     if (!isEditing && e.currentTarget.value) {
                                       promoteFocusedInputToEditor(key, e.currentTarget.value);
                                     }
                                   }}
                                   onBlur={(e) => {
+                                    if (skipNextEditBlurSaveRef.current) {
+                                      skipNextEditBlurSaveRef.current = false;
+                                      return;
+                                    }
+                                    if (contextMenuRef.current?.contains(e.relatedTarget)) return;
                                     if (isEditing) handleCellSave(weekIdx, dayIdx, rowIdx, colIdx, e.target.value);
                                   }}
                                   onKeyDown={e => {
@@ -3284,8 +3320,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                   onCompositionStart={() => {
                                     imeOpenRef.current = true;
                                   }}
-                                  onCompositionEnd={() => {
+                                  onCompositionEnd={(e) => {
                                     imeOpenRef.current = false;
+                                    if (!isEditing && e.currentTarget.value) {
+                                      promoteFocusedInputToEditor(key, e.currentTarget.value);
+                                    }
                                   }}
                                 />
                               </div>
@@ -3406,7 +3445,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
             const { patientChart, patientName } = parseSchedulerPatientIdentity(currentMemo?.content || '');
             const currentKeyParts = firstKey ? firstKey.split('-').map(Number) : null;
             const currentSortKey = currentKeyParts
-              ? `${weeks[currentKeyParts[0]]?.[currentKeyParts[1]]?.date?.toISOString?.().slice(0, 10) || ''}-${String(currentKeyParts[2]).padStart(3, '0')}-${String(currentKeyParts[3]).padStart(3, '0')}`
+              ? buildSchedulerMemoSortKey(firstKey, weeks)
               : '';
             let previousPrescription = null;
 
@@ -3420,8 +3459,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   splitBodyParts(m.body_part).forEach((part) => addBodyPartToMap(patientBodyPartsMap, part));
                 }
                 if (!m.prescription || memoKey === firstKey) return;
-                const memoKeyParts = memoKey.split('-').map(Number);
-                const memoSortKey = `${weeks[memoKeyParts[0]]?.[memoKeyParts[1]]?.date?.toISOString?.().slice(0, 10) || ''}-${String(memoKeyParts[2]).padStart(3, '0')}-${String(memoKeyParts[3]).padStart(3, '0')}`;
+                const memoSortKey = buildSchedulerMemoSortKey(memoKey, weeks);
                 if (memoSortKey < currentSortKey && (!previousPrescription || memoSortKey > previousPrescription.sortKey)) {
                   previousPrescription = { value: m.prescription, sortKey: memoSortKey };
                 }
