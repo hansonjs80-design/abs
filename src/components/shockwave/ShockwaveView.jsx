@@ -3477,11 +3477,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                 <div className="context-menu-editor-panel">
                   <div className="context-menu-inline-grid">
                     <div className="context-menu-inline-column">
-                      <div className="context-menu-inline-label">처방</div>
-                      <div className="context-menu-prescription-row">
+                      <div className="context-menu-inline-label">
+                        <span>처방</span>
                         {previousPrescriptionValue ? (
                           <span className="context-menu-current-prescription">{previousPrescriptionValue}</span>
                         ) : null}
+                      </div>
+                      <div className="context-menu-prescription-row">
                         <select
                           className="context-menu-select"
                           value={currentPrescription}
@@ -3598,7 +3600,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                     </div>
 
                     <div className="context-menu-inline-column context-menu-inline-column--full">
-                      <div className="context-menu-inline-label">메모</div>
+                      <div className="context-menu-inline-label">
+                        <span>
+                          메모
+                          <span className="context-menu-note-status">
+                            ({contextMenuMemoDrafts.length > 0 ? `${contextMenuMemoDrafts.length}개` : '메모 없음'})
+                          </span>
+                        </span>
+                      </div>
                       <div className="context-menu-inline-memo-box">
                         {contextMenuMemoDrafts.length > 0 ? (
                           <div className="context-menu-note-list">
@@ -3634,9 +3643,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               </div>
                             ))}
                           </div>
-                        ) : (
-                          <div className="context-menu-empty">메모 없음</div>
-                        )}
+                        ) : null}
                         <div className="context-menu-input-row">
                           <input
                             type="text"
