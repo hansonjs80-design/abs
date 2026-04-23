@@ -25,7 +25,7 @@
   gap: 8px;
   border: 1px solid var(--border-color-light);
   border-radius: 12px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  background: #ffffff;
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
   box-sizing: border-box;
 }
@@ -336,19 +336,6 @@
 .memo-special { color: var(--memo-special); }
 .memo-dim { color: var(--cal-other-month-text); }
 .memo-strikethrough { text-decoration: line-through; opacity: 0.6; }
-
-.staff-calendar-context-menu {
-  min-width: 188px;
-  width: min(228px, calc(100vw - 24px));
-}
-
-.staff-calendar-context-menu .context-menu-item {
-  font-size: 0.805rem !important;
-}
-
-.staff-calendar-context-menu > button {
-  font-size: 1.035rem;
-}
 
 /* 오늘 일정 패널 */
 .today-panel {

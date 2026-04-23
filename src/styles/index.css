@@ -30,7 +30,7 @@
   --brand-primary-hover: #4338ca;
   --brand-primary-light: #eef2ff;
   --brand-secondary: #7c3aed;
-  --brand-gradient: linear-gradient(135deg, #5850ec 0%, #7c3aed 100%);
+  --brand-gradient: #5850ec;
 
   /* 보더 */
   --border-color: #d1d5db; /* slate-300 느낌 */

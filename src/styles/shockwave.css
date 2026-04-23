@@ -74,7 +74,7 @@
   padding: 4px 8px;
   border: 1px solid #cbd5e1;
   border-radius: 999px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  background: #ffffff;
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
 }
 
@@ -530,7 +530,7 @@
 
 .shockwave-context-menu {
   position: fixed;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 250, 255, 0.96) 100%);
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(148, 163, 184, 0.34);
@@ -563,7 +563,7 @@
   padding: 8px;
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 12px;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(237, 243, 251, 0.95) 100%);
+  background: rgba(248, 250, 252, 0.98);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
@@ -575,7 +575,7 @@
 
 .context-menu-item {
   border: 1px solid rgba(148, 163, 184, 0.24) !important;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(241, 245, 249, 0.94) 100%) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
   border-radius: 10px;
   text-align: center !important;
   padding: 8px 5px !important;
@@ -601,7 +601,7 @@
 }
 
 .shockwave-context-menu button:hover:not(:disabled) {
-  background: linear-gradient(180deg, #f8fbff 0%, #e8f0ff 100%);
+  background: #e8f0ff;
 }
 
 .context-menu-item[data-shortcut-tooltip]::after {
@@ -636,23 +636,23 @@
 .shockwave-context-menu .context-menu-item-complete {
   grid-column: 2;
   color: #8a5a00;
-  background: linear-gradient(180deg, rgba(255, 242, 204, 0.98) 0%, rgba(255, 229, 153, 0.76) 100%) !important;
+  background: rgba(255, 242, 204, 0.98) !important;
   border-color: rgba(217, 119, 6, 0.24) !important;
 }
 
 .shockwave-context-menu .context-menu-item-complete:hover:not(:disabled) {
-  background: linear-gradient(180deg, rgba(255, 247, 222, 0.98) 0%, rgba(255, 229, 153, 0.86) 100%) !important;
+  background: rgba(255, 247, 222, 0.98) !important;
 }
 
 .shockwave-context-menu .context-menu-item-clear-complete {
   grid-column: 3;
   color: #9f1239;
-  background: linear-gradient(180deg, rgba(255, 241, 242, 0.98) 0%, rgba(244, 204, 204, 0.82) 100%) !important;
+  background: rgba(255, 241, 242, 0.98) !important;
   border-color: rgba(190, 18, 60, 0.2) !important;
 }
 
 .shockwave-context-menu .context-menu-item-clear-complete:hover:not(:disabled) {
-  background: linear-gradient(180deg, rgba(255, 247, 247, 0.98) 0%, rgba(244, 204, 204, 0.96) 100%) !important;
+  background: rgba(255, 247, 247, 0.98) !important;
 }
 
 .shockwave-context-menu button:disabled {
@@ -660,11 +660,24 @@
   cursor: not-allowed;
 }
 
+.shockwave-context-menu.staff-calendar-context-menu {
+  min-width: 188px;
+  width: min(228px, calc(100vw - 24px));
+}
+
+.shockwave-context-menu.staff-calendar-context-menu .context-menu-item {
+  font-size: 0.805rem !important;
+}
+
+.shockwave-context-menu.staff-calendar-context-menu > button {
+  font-size: 1.035rem;
+}
+
 .context-menu-editor-panel {
   border: 1px solid rgba(99, 102, 241, 0.16);
   border-radius: 14px;
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(242, 246, 255, 0.98) 0%, rgba(233, 240, 251, 0.98) 100%);
+  background: rgba(242, 246, 255, 0.98);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
@@ -736,7 +749,7 @@
   border: 1px solid rgba(148, 163, 184, 0.34);
   border-radius: 14px;
   padding: 14px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(245, 249, 255, 0.97) 100%);
+  background: rgba(255, 255, 255, 0.99);
   box-shadow: 0 20px 48px rgba(15, 23, 42, 0.18), 0 6px 16px rgba(15, 23, 42, 0.08);
 }
 
@@ -1061,7 +1074,7 @@
 
 .shockwave-chart-selector-confirm {
   border: none;
-  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+  background: #2563eb;
   color: #fff;
   border-radius: 10px;
   padding: 8px 14px;
@@ -1103,12 +1116,12 @@
   color: #0f172a;
   letter-spacing: 0.01em;
   border-right: 1px solid rgba(148, 163, 184, 0.24);
-  background: linear-gradient(180deg, rgba(228, 235, 249, 0.95) 0%, rgba(220, 229, 244, 0.95) 100%);
+  background: rgba(228, 235, 249, 0.95);
 }
 
 .context-menu-sheet-row-body .context-menu-sheet-label,
 .context-menu-sheet-row-note .context-menu-sheet-label {
-  background: linear-gradient(180deg, rgba(223, 236, 252, 0.98) 0%, rgba(213, 228, 248, 0.98) 100%);
+  background: rgba(223, 236, 252, 0.98);
 }
 
 .context-menu-sheet-cell {
@@ -1266,7 +1279,7 @@
   flex: 0 0 auto;
   border: 1px solid rgba(99, 102, 241, 0.18) !important;
   border-radius: 10px;
-  background: linear-gradient(180deg, #f4f7ff 0%, #e8eefc 100%) !important;
+  background: #e8eefc !important;
   padding: 8px 12px !important;
   font-size: 0.78rem !important;
   font-weight: 700 !important;
@@ -1398,7 +1411,7 @@
 .monthly-therapist-modal {
   width: min(760px, calc(100vw - 32px));
   max-height: calc(100vh - 48px);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(245, 249, 255, 0.97) 100%);
+  background: rgba(255, 255, 255, 0.99);
   border: 1px solid rgba(148, 163, 184, 0.34);
   border-radius: 16px;
   box-shadow: 0 24px 56px rgba(15, 23, 42, 0.18), 0 8px 18px rgba(15, 23, 42, 0.1);
@@ -1543,7 +1556,7 @@
 }
 
 .monthly-therapist-tab.active {
-  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+  background: #2563eb;
   color: #fff;
   border-color: transparent;
   box-shadow: 0 4px 10px rgba(37, 99, 235, 0.18);
@@ -1698,7 +1711,7 @@
   gap: 8px;
   padding: 9px 12px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-  background: linear-gradient(180deg, rgba(241, 245, 249, 0.98) 0%, rgba(236, 241, 248, 0.94) 100%);
+  background: rgba(241, 245, 249, 0.98);
 }
 
 .monthly-therapist-slot-badge {
@@ -1854,7 +1867,7 @@
 
 .monthly-therapist-save {
   border: none;
-  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+  background: #2563eb;
   color: #fff;
   border-radius: 10px;
   padding: 8px 20px;

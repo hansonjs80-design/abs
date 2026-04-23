@@ -304,6 +304,65 @@ export default function StaffCalendar() {
     setClipboardSource(null);
   }, [selectedCell, clipboardSource, cellFromXY, grid, staffMemos, saveStaffMemo, dayFromKey, recordUndo, addToast]);
 
+  const replaceEditingSelection = useCallback((insertText) => {
+    const input = hiddenInputRef.current;
+    if (!editingCell || !input) return false;
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? start;
+    const nextValue = `${input.value.slice(0, start)}${insertText}${input.value.slice(end)}`;
+    const nextCursor = start + insertText.length;
+    input.value = nextValue;
+    input.focus();
+    input.setSelectionRange(nextCursor, nextCursor);
+    return true;
+  }, [editingCell]);
+
+  const handleTextContextAction = useCallback(async (action) => {
+    const input = hiddenInputRef.current;
+    if (!editingCell || !input) return false;
+    const start = input.selectionStart ?? 0;
+    const end = input.selectionEnd ?? start;
+    const selectedText = input.value.slice(start, end);
+
+    if (action === 'copy') {
+      if (selectedText) await navigator.clipboard?.writeText(selectedText);
+      setContextMenu(null);
+      setColorMenu(null);
+      input.focus();
+      return true;
+    }
+
+    if (action === 'cut') {
+      if (selectedText) {
+        await navigator.clipboard?.writeText(selectedText);
+        replaceEditingSelection('');
+      }
+      setContextMenu(null);
+      setColorMenu(null);
+      input.focus();
+      return true;
+    }
+
+    if (action === 'paste') {
+      const text = await navigator.clipboard?.readText?.();
+      if (text) replaceEditingSelection(text);
+      setContextMenu(null);
+      setColorMenu(null);
+      input.focus();
+      return true;
+    }
+
+    if (action === 'delete') {
+      if (selectedText) replaceEditingSelection('');
+      setContextMenu(null);
+      setColorMenu(null);
+      input.focus();
+      return true;
+    }
+
+    return false;
+  }, [editingCell, replaceEditingSelection]);
+
   // ── Edit key handler ──
   const handleEditKey = useCallback((e, wi, di, slot) => {
     if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
@@ -355,6 +414,7 @@ export default function StaffCalendar() {
     const h = (ev) => {
       if (!selectedCell) return;
       const t = ev.target;
+      if (editingCell && t === hiddenInputRef.current) return;
       // Allow paste from hidden input and viewRef, block from real editing inputs
       if (t instanceof HTMLInputElement && !t.dataset.hiddenInput) return;
       if (t instanceof HTMLTextAreaElement) return;
@@ -362,7 +422,7 @@ export default function StaffCalendar() {
       ev.preventDefault(); handlePaste(txt);
     };
     window.addEventListener('paste', h, true); return () => window.removeEventListener('paste', h, true);
-  }, [selectedCell, handlePaste]);
+  }, [selectedCell, editingCell, handlePaste]);
 
   // ── Mouse handlers ──
   const onCellMouseDown = useCallback((wi, di, slot, e) => {
@@ -394,10 +454,11 @@ export default function StaffCalendar() {
 
   useEffect(() => { const h = () => { dragRef.current = null; }; window.addEventListener('mouseup', h); return () => window.removeEventListener('mouseup', h); }, []);
 
-  const ctxAction = useCallback((a) => {
+  const ctxAction = useCallback(async (a) => {
+    if (contextMenu?.mode === 'text' && await handleTextContextAction(a)) return;
     if (a === 'copy') handleCopy(); else if (a === 'cut') handleCut(); else if (a === 'paste') handlePaste(); else if (a === 'delete') deleteCells(selectedKeys);
     setContextMenu(null); setColorMenu(null);
-  }, [handleCopy, handleCut, handlePaste, deleteCells, selectedKeys]);
+  }, [contextMenu, handleTextContextAction, handleCopy, handleCut, handlePaste, deleteCells, selectedKeys]);
 
   const PRESET_COLORS = [
     '#000000','#e53e3e','#dd6b20','#d69e2e','#38a169','#3182ce','#805ad5','#d53f8c',
@@ -472,6 +533,17 @@ export default function StaffCalendar() {
             handleEditKey(e, selectedCell.wi, selectedCell.di, selectedCell.slot);
           }
         }}
+        onContextMenu={(e) => {
+          if (!editingCell) return;
+          e.preventDefault();
+          e.stopPropagation();
+          setColorMenu(null);
+          setContextMenu({
+            x: Math.min(e.clientX, window.innerWidth - 170),
+            y: Math.min(e.clientY, window.innerHeight - 180),
+            mode: 'text',
+          });
+        }}
       />
       <div className="calendar-grid" style={{ gridTemplateColumns: colWidth ? `repeat(7, ${colWidth}px)` : 'repeat(7, minmax(0, 1fr))' }}>
         {WEEKDAYS.map((day, i) => (
@@ -530,7 +602,15 @@ export default function StaffCalendar() {
       </div>
 
       {contextMenu && (
-        <div ref={contextMenuRef} className="shockwave-context-menu staff-calendar-context-menu" style={{ top: contextMenu.y, left: contextMenu.x, zIndex: 1000, position: 'fixed' }} onMouseDown={e => e.stopPropagation()}>
+        <div
+          ref={contextMenuRef}
+          className="shockwave-context-menu staff-calendar-context-menu"
+          style={{ top: contextMenu.y, left: contextMenu.x, zIndex: 1000, position: 'fixed' }}
+          onMouseDown={(e) => {
+            if (contextMenu.mode === 'text' && e.target.tagName !== 'INPUT') e.preventDefault();
+            e.stopPropagation();
+          }}
+        >
           <button type="button" className="context-menu-item" onClick={() => ctxAction('copy')}>복사 (Cmd+C)</button>
           <button type="button" className="context-menu-item" onClick={() => ctxAction('cut')}>잘라내기 (Cmd+X)</button>
           <button type="button" className="context-menu-item" onClick={() => ctxAction('paste')}>붙여넣기 (Cmd+V)</button>
@@ -538,11 +618,11 @@ export default function StaffCalendar() {
           <button type="button" className="context-menu-item" onClick={() => ctxAction('delete')}>삭제 (Delete)</button>
           <div className="context-menu-divider" />
           <button type="button" className="context-menu-item" onClick={() => setColorMenu(colorMenu?.type === 'font' ? null : { type: 'font' })} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 14, height: 14, borderRadius: 2, background: 'linear-gradient(135deg, #e53e3e, #3182ce)', border: '1px solid #ccc', flexShrink: 0 }} />
+            <span style={{ width: 14, height: 14, borderRadius: 2, background: '#3182ce', border: '1px solid #ccc', flexShrink: 0 }} />
             글자색
           </button>
           <button type="button" className="context-menu-item" onClick={() => setColorMenu(colorMenu?.type === 'bg' ? null : { type: 'bg' })} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 14, height: 14, borderRadius: 2, background: 'linear-gradient(135deg, #fefcbf, #c6f6d5)', border: '1px solid #ccc', flexShrink: 0 }} />
+            <span style={{ width: 14, height: 14, borderRadius: 2, background: '#c6f6d5', border: '1px solid #ccc', flexShrink: 0 }} />
             배경색
           </button>
 
