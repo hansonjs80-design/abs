@@ -516,6 +516,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const tooltipMousePosRef = useRef({ x: 0, y: 0 });
   const weekRefs = useRef([]);
   const [hoverData, setHoverData] = useState(null);
+  const [todayShortcutTooltip, setTodayShortcutTooltip] = useState(null);
   const [chartSelector, setChartSelector] = useState(null);
   const [autoFillDialog, setAutoFillDialog] = useState(null);
   const contextMenuRef = useRef(null);
@@ -2903,6 +2904,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     weekEl.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
   }, [todayWeekIdx]);
 
+  const updateTodayShortcutTooltip = useCallback((event) => {
+    const tooltipWidth = 96;
+    const edgeGap = 8;
+    const x = Math.min(
+      Math.max(event.clientX, edgeGap + tooltipWidth / 2),
+      window.innerWidth - edgeGap - tooltipWidth / 2
+    );
+    const y = Math.max(edgeGap, event.clientY - 38);
+    setTodayShortcutTooltip({ x, y, text: `오늘 ${shortcutLabels.today}` });
+  }, [shortcutLabels.today]);
+
   useEffect(() => {
     const handleTodayShortcut = (event) => {
       const key = String(event.key || '').toLowerCase();
@@ -2977,8 +2989,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                 <button
                   type="button"
                   className="shockwave-week-today-btn"
-                  data-shortcut-tooltip={`오늘 ${shortcutLabels.today}`}
                   onClick={scrollToTodayWeek}
+                  onMouseEnter={updateTodayShortcutTooltip}
+                  onMouseMove={updateTodayShortcutTooltip}
+                  onMouseLeave={() => setTodayShortcutTooltip(null)}
+                  onFocus={(event) => {
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    updateTodayShortcutTooltip({
+                      clientX: rect.left + rect.width / 2,
+                      clientY: rect.top,
+                    });
+                  }}
+                  onBlur={() => setTodayShortcutTooltip(null)}
                   disabled={todayWeekIdx < 0}
                 >
                   오늘
@@ -3203,7 +3225,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 onMouseDown={(e) => handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e)}
                                 onMouseEnter={() => {
                                   handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
-                                  let text = `⏱ [${slotInfo.label}]`;
+                                  let text = `⏱ ${slotInfo.label}`;
                                   if (content && content !== '\u200B') text += `\n👤 ${content}`;
                                   if (staffBlockRule) text += `\n근무표: ${staffBlockRule.keyword}`;
                                   if (cellPrescription) text += `\n💊 처방: ${cellPrescription}`;
@@ -3277,7 +3299,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 onMouseDown={(e) => handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e)}
                                 onMouseEnter={() => {
                                   handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
-                                  let text = `⏱ [${slotInfo.label}]`;
+                                  let text = `⏱ ${slotInfo.label}`;
                                   if (content && content !== '\u200B') text += `\n👤 ${content}`;
 
                                   if (isSelected && selectedKeys.size > 1 && selectionInfo && selectionInfo.w === weekIdx && selectionInfo.d === dayIdx && selectionInfo.minRow !== selectionInfo.maxRow) {
@@ -3300,7 +3322,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                       if (hrs > 0) dStr += `${hrs}시간`;
                                       if (mns > 0) dStr += (hrs > 0 ? ' ' : '') + `${mns}분`;
                                       
-                                      text = `⏱ [${t1} ~ ${t2}] (총 ${dStr})`;
+                                      text = `⏱ ${t1} ~ ${t2} (총 ${dStr})`;
                                       if (content && content !== '\u200B') text += `\n👤 ${content}`;
                                     }
                                   }
@@ -3746,7 +3768,21 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
             opacity: 0,
           }}
         >
-          {hoverData.text.split('\n').map((line, i) => <div key={i}>{line}</div>)}
+          {hoverData.text.split('\n').map((line, i) => (
+            <div key={i} className={i === 0 ? 'sw-custom-tooltip-time' : undefined}>{line}</div>
+          ))}
+        </div>
+      )}
+
+      {todayShortcutTooltip && (
+        <div
+          className="sw-shortcut-floating-tooltip"
+          style={{
+            left: todayShortcutTooltip.x,
+            top: todayShortcutTooltip.y,
+          }}
+        >
+          {todayShortcutTooltip.text}
         </div>
       )}
 
