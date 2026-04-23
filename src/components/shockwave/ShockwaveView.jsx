@@ -82,6 +82,7 @@ function dedupeList(values, normalizer = (value) => String(value || '').trim()) 
 function normalizePrescriptionColorKey(value) {
   return String(value || '')
     .normalize('NFKC')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
     .replace(/\s+/g, '')
     .replace(/분$/u, '')
     .toLowerCase();
@@ -93,7 +94,15 @@ function getPrescriptionColor(prescription, colorMap) {
   if (direct) return direct;
   const targetKey = normalizePrescriptionColorKey(prescription);
   const match = Object.entries(colorMap).find(([key]) => normalizePrescriptionColorKey(key) === targetKey);
-  return match?.[1] || null;
+  if (match?.[1]) return match[1];
+  if (!targetKey) return null;
+  const containedMatch = Object.entries(colorMap)
+    .sort(([a], [b]) => normalizePrescriptionColorKey(b).length - normalizePrescriptionColorKey(a).length)
+    .find(([key]) => {
+      const normalizedKey = normalizePrescriptionColorKey(key);
+      return normalizedKey && (targetKey.includes(normalizedKey) || normalizedKey.includes(targetKey));
+    });
+  return containedMatch?.[1] || null;
 }
 
 function parseSchedulerPatientIdentity(content) {
@@ -1655,9 +1664,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       ...(monthlyEntries[paddedMonthKey]?.[type]?.prescription_colors || {}),
     }), {});
     const colors = {
-      ...(settings?.prescription_colors || {}),
       ...(shockwaveSettlement.prescription_colors || {}),
       ...(manualSettlement.prescription_colors || {}),
+      ...(settings?.prescription_colors || {}),
       ...directMonthColors,
     };
     return Object.entries(colors).reduce((acc, [key, value]) => {
