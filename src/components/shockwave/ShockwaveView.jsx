@@ -89,7 +89,11 @@ function normalizePrescriptionColorKey(value) {
 
 function getPrescriptionColor(prescription, colorMap) {
   if (!prescription || !colorMap) return null;
-  return colorMap[prescription] || colorMap[normalizePrescriptionColorKey(prescription)] || null;
+  const direct = colorMap[prescription] || colorMap[normalizePrescriptionColorKey(prescription)];
+  if (direct) return direct;
+  const targetKey = normalizePrescriptionColorKey(prescription);
+  const match = Object.entries(colorMap).find(([key]) => normalizePrescriptionColorKey(key) === targetKey);
+  return match?.[1] || null;
 }
 
 function parseSchedulerPatientIdentity(content) {
@@ -451,6 +455,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   useEffect(() => {
     loadShockwaveSettings?.();
   }, [loadShockwaveSettings, currentYear, currentMonth]);
+
+  useEffect(() => {
+    const refreshSettingsOnFocus = () => {
+      loadShockwaveSettings?.();
+    };
+    window.addEventListener('focus', refreshSettingsOnFocus);
+    document.addEventListener('visibilitychange', refreshSettingsOnFocus);
+    return () => {
+      window.removeEventListener('focus', refreshSettingsOnFocus);
+      document.removeEventListener('visibilitychange', refreshSettingsOnFocus);
+    };
+  }, [loadShockwaveSettings]);
 
   // 열 너비 조정 (fr 비율 기반)
   const [colRatios, setColRatios] = useState(() => {
@@ -1449,15 +1465,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (!success) addToast('처방 지정 실패', 'error');
   }, [contextMenu, currentYear, currentMonth, memos, onSaveMemo, addToast]);
 
-  // ── 뷰어 바깥 클릭 시 컨텍스트 메뉴 닫기 ──
-  useEffect(() => {
-    const handleClickOutside = () => {
-      if (contextMenu) setContextMenu(null);
-    };
-    window.addEventListener('click', handleClickOutside);
-    return () => window.removeEventListener('click', handleClickOutside);
-  }, [contextMenu]);
-
   useEffect(() => {
     if (!contextMenu) {
       setContextMenuBodyInput('');
@@ -1637,10 +1644,21 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const effectivePrescriptionColors = useMemo(() => {
     const shockwaveSettlement = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'shockwave');
     const manualSettlement = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'manual_therapy');
+    const monthlyEntries = settings?.monthly_settlement_settings && typeof settings.monthly_settlement_settings === 'object'
+      ? settings.monthly_settlement_settings
+      : {};
+    const paddedMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+    const legacyMonthKey = `${currentYear}-${currentMonth}`;
+    const directMonthColors = ['shockwave', 'manual_therapy'].reduce((acc, type) => ({
+      ...acc,
+      ...(monthlyEntries[legacyMonthKey]?.[type]?.prescription_colors || {}),
+      ...(monthlyEntries[paddedMonthKey]?.[type]?.prescription_colors || {}),
+    }), {});
     const colors = {
       ...(settings?.prescription_colors || {}),
       ...(shockwaveSettlement.prescription_colors || {}),
       ...(manualSettlement.prescription_colors || {}),
+      ...directMonthColors,
     };
     return Object.entries(colors).reduce((acc, [key, value]) => {
       if (!key || !value) return acc;
@@ -2309,6 +2327,23 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       if (anyChanged) addToast('부위가 삭제되었습니다.', 'success');
       return;
     }
+    else if (action?.type === 'bodyPartDeleteValue') {
+      const keys = Array.from(selectedKeys || []);
+      let anyChanged = false;
+      const targetKey = normalizeBodyPartKey(action.value);
+      if (!targetKey) return;
+      for (const key of keys) {
+        const [w, d, r, c] = key.split('-').map(Number);
+        const memo = memos[key] || {};
+        const parts = splitBodyParts(memo.body_part || '');
+        const updated = parts.filter((part) => normalizeBodyPartKey(part) !== targetKey).join(', ');
+        if (updated === (memo.body_part || '').trim()) continue;
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, memo.content, memo.bg_color, memo.merge_span, memo.prescription, updated);
+        if (success) anyChanged = true;
+      }
+      if (anyChanged) addToast('부위가 삭제되었습니다.', 'success');
+      return;
+    }
     else if (action?.type === 'bodyPartEdit') {
       // 특정 부위 수정
       const keys = Array.from(selectedKeys || []);
@@ -2709,7 +2744,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, [contextMenu, selectedKeys]);
 
   useEffect(() => {
-    const handleWindowClick = () => setContextMenu(null);
+    const handleWindowClick = (event) => {
+      if (contextMenuRef.current?.contains(event.target)) return;
+      setContextMenu(null);
+    };
     window.addEventListener('click', handleWindowClick);
     return () => window.removeEventListener('click', handleWindowClick);
   }, []);
@@ -2833,6 +2871,29 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (!weekEl) return;
     weekEl.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
   }, [todayWeekIdx]);
+
+  useEffect(() => {
+    const handleTodayShortcut = (event) => {
+      const key = String(event.key || '').toLowerCase();
+      const isOpenShortcut = (event.metaKey || event.ctrlKey) && (
+        event.code === 'KeyO' ||
+        key === 'o' ||
+        key === 'ㅐ'
+      );
+      if (!isOpenShortcut) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      scrollToTodayWeek();
+    };
+
+    window.addEventListener('keydown', handleTodayShortcut, true);
+    document.addEventListener('keydown', handleTodayShortcut, true);
+    return () => {
+      window.removeEventListener('keydown', handleTodayShortcut, true);
+      document.removeEventListener('keydown', handleTodayShortcut, true);
+    };
+  }, [scrollToTodayWeek]);
 
   return (
     <>
@@ -3086,8 +3147,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                           const prescriptionColor = getPrescriptionColor(cellPrescription, effectivePrescriptionColors);
                           const prescriptionTextStyle = prescriptionColor ? { color: prescriptionColor, fontWeight: 800 } : undefined;
                           if (prescriptionColor) {
+                            cls += ' has-prescription-color';
                             inlineStyle.color = prescriptionColor;
                             inlineStyle.fontWeight = '700';
+                            inlineStyle['--prescription-color'] = prescriptionColor;
                           }
 
                           // 마스터 셀 중앙 효과
@@ -3125,7 +3188,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 }}
                               >
                                 {!isEditing && (
-                                  <div className="sw-cell-display" style={{ pointerEvents: 'none', position: 'absolute', inset: 0, padding: 4 }}>
+                                  <div className="sw-cell-display" style={{ pointerEvents: 'none' }}>
                                     {displayData.mainText ? <span className="sw-cell-main" style={prescriptionTextStyle}>{displayData.mainText}</span> : null}
                                   </div>
                                 )}
@@ -3409,29 +3472,52 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
                     <div className="context-menu-inline-column">
                       <div className="context-menu-inline-label">부위</div>
-                      <details className="context-menu-body-dropdown" onMouseDown={(e) => e.stopPropagation()}>
+                      <details
+                        className="context-menu-body-dropdown"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <summary className="context-menu-body-summary">
                           {currentParts.join(', ') || '부위 선택'}
                         </summary>
-                        <div className="context-menu-body-panel">
+                        <div
+                          className="context-menu-body-panel"
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           {availableParts.length > 0 ? (
                             <div className="context-menu-checklist">
                               {availableParts.map((part, idx) => {
                                 const isChecked = currentParts.some((p) => normalizeBodyPartKey(p) === normalizeBodyPartKey(part));
                                 return (
-                                  <label key={idx} className="context-menu-check-item">
-                                    <input
-                                      type="checkbox"
-                                      checked={isChecked}
-                                      onChange={(e) => {
-                                        e.stopPropagation();
-                                        handleContextAction({ type: 'bodyPartToggle', value: part });
-                                      }}
+                                  <div key={idx} className={`context-menu-check-item${isChecked ? ' is-checked' : ''}`}>
+                                    <label className="context-menu-check-label">
+                                      <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={(e) => {
+                                          e.stopPropagation();
+                                          handleContextAction({ type: 'bodyPartToggle', value: part });
+                                        }}
+                                        onMouseDown={e => e.stopPropagation()}
+                                        onClick={e => e.stopPropagation()}
+                                      />
+                                      <span>{part}</span>
+                                    </label>
+                                    <button
+                                      type="button"
+                                      className="context-menu-body-delete"
+                                      title={`${part} 삭제`}
                                       onMouseDown={e => e.stopPropagation()}
-                                      onClick={e => e.stopPropagation()}
-                                    />
-                                    <span>{part}</span>
-                                  </label>
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleContextAction({ type: 'bodyPartDeleteValue', value: part });
+                                      }}
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
                                 );
                               })}
                             </div>
