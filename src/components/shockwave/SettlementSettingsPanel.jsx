@@ -96,10 +96,17 @@ export default function SettlementSettingsPanel({
   };
 
   const handleSave = async () => {
+    const cleanedPrescriptions = draft.prescriptions.map((item) => String(item || '').trim()).filter(Boolean);
+    const cleanedColors = cleanedPrescriptions.reduce((acc, prescription) => {
+      if (draft.prescription_colors?.[prescription]) {
+        acc[prescription] = draft.prescription_colors[prescription];
+      }
+      return acc;
+    }, {});
     const cleaned = {
-      prescriptions: draft.prescriptions.map((item) => String(item || '').trim()).filter(Boolean),
+      prescriptions: cleanedPrescriptions,
       prescription_prices: draft.prescription_prices,
-      prescription_colors: draft.prescription_colors || {},
+      prescription_colors: cleanedColors,
       incentive_percentage: Number(draft.incentive_percentage) || 0,
     };
     const monthly_settlement_settings = setMonthlySettlementSettings(settings, year, month, type, cleaned);

@@ -105,6 +105,23 @@ function getPrescriptionColor(prescription, colorMap) {
   return containedMatch?.[1] || null;
 }
 
+function filterPrescriptionColorMap(colorMap, prescriptions) {
+  const allowed = new Set(
+    (Array.isArray(prescriptions) ? prescriptions : [])
+      .map((item) => normalizePrescriptionColorKey(item))
+      .filter(Boolean)
+  );
+  if (!colorMap || allowed.size === 0) return {};
+
+  return Object.entries(colorMap).reduce((acc, [key, value]) => {
+    if (!key || !value) return acc;
+    if (allowed.has(normalizePrescriptionColorKey(key))) {
+      acc[key] = value;
+    }
+    return acc;
+  }, {});
+}
+
 function parseSchedulerPatientIdentity(content) {
   const cellContent = String(content || '');
   let patientChart = '';
@@ -1658,16 +1675,20 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       : {};
     const paddedMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
     const legacyMonthKey = `${currentYear}-${currentMonth}`;
-    const directMonthColors = ['shockwave', 'manual_therapy'].reduce((acc, type) => ({
-      ...acc,
-      ...(monthlyEntries[legacyMonthKey]?.[type]?.prescription_colors || {}),
-      ...(monthlyEntries[paddedMonthKey]?.[type]?.prescription_colors || {}),
-    }), {});
+    const buildDirectMonthColors = (type) => {
+      const legacyEntry = monthlyEntries[legacyMonthKey]?.[type] || {};
+      const paddedEntry = monthlyEntries[paddedMonthKey]?.[type] || {};
+      return {
+        ...filterPrescriptionColorMap(legacyEntry.prescription_colors, legacyEntry.prescriptions),
+        ...filterPrescriptionColorMap(paddedEntry.prescription_colors, paddedEntry.prescriptions),
+      };
+    };
     const colors = {
-      ...(shockwaveSettlement.prescription_colors || {}),
-      ...(manualSettlement.prescription_colors || {}),
       ...(settings?.prescription_colors || {}),
-      ...directMonthColors,
+      ...filterPrescriptionColorMap(shockwaveSettlement.prescription_colors, shockwaveSettlement.prescriptions),
+      ...filterPrescriptionColorMap(manualSettlement.prescription_colors, manualSettlement.prescriptions),
+      ...buildDirectMonthColors('shockwave'),
+      ...buildDirectMonthColors('manual_therapy'),
     };
     return Object.entries(colors).reduce((acc, [key, value]) => {
       if (!key || !value) return acc;

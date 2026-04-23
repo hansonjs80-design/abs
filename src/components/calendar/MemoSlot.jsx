@@ -12,7 +12,7 @@ export default function MemoSlot({
   const fontColor = computeMemoFontColor(content);
 
   // DB에 저장된 커스텀 색상 우선, 없으면 자동 감지 색상 클래스 사용
-  const customFontColor = dayInfo.isOtherMonth ? null : (memo?.font_color || autoFontColor);
+  const customFontColor = dayInfo.isOtherMonth ? null : (autoFontColor || memo?.font_color);
   const customBgColor = memo?.bg_color;
 
   let colorClass = '';
