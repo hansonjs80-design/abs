@@ -26,7 +26,7 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
   const todayMonth = now.getMonth() + 1;
   const labelText = useMemo(() => {
     const title = suffix ? ` ${suffix}` : '';
-    return `${currentYear}년 ${currentMonth}월${title}`;
+    return `${currentYear}년 ${String(currentMonth).padStart(2, '0')}월${title}`;
   }, [currentYear, currentMonth, suffix]);
 
   return (
