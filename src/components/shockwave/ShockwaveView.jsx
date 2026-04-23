@@ -3769,7 +3769,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           }}
         >
           {hoverData.text.split('\n').map((line, i) => (
-            <div key={i} className={i === 0 ? 'sw-custom-tooltip-time' : undefined}>{line}</div>
+            <div key={i} className={i === 0 ? 'sw-custom-tooltip-time' : undefined}>
+              {i === 0 && line.startsWith('⏱') ? (
+                <>
+                  <span className="sw-custom-tooltip-clock">⏱</span>
+                  {line.slice(1)}
+                </>
+              ) : line}
+            </div>
           ))}
         </div>
       )}

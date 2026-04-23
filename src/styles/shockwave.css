@@ -1523,6 +1523,14 @@
   margin-bottom: 2px;
 }
 
+.sw-custom-tooltip-clock {
+  display: inline-block;
+  margin-right: 2px;
+  font-size: 1.1em;
+  line-height: 1;
+  vertical-align: -0.04em;
+}
+
 /* ═══════════════════════════════════════════════
    월별 치료사 설정 모달
    ═══════════════════════════════════════════════ */
