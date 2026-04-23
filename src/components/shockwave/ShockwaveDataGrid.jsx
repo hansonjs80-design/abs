@@ -72,7 +72,6 @@ export default function ShockwaveDataGrid({
     const source = prescriptionsProp || settings?.prescriptions || ['F1.5', 'F/Rdc', 'F/R'];
     return Array.isArray(source) ? source.filter(Boolean) : ['F1.5', 'F/Rdc', 'F/R'];
   }, [prescriptionsProp, settings?.prescriptions]);
-  const frozenColumnCount = frozenColumnCountProp ?? settings?.frozen_columns ?? 6;
   const gridTitle = title || `${currentMonth}월 충격파 현황`;
 
   const runSyncForDate = useCallback(async (date) => {
@@ -197,6 +196,7 @@ export default function ShockwaveDataGrid({
     { id: 'visit', label: '회차', field: 'visit_count', w: 45 },
     { id: 'body', label: '부위', field: 'body_part', w: 120 },
   ];
+  const frozenColumnCount = 0;
 
   const totalCountColIndex = FIXED_FIELDS.length + displayTherapists.length * prescriptions.length;
   const newPatientColIndex = totalCountColIndex + 1;
@@ -1071,7 +1071,14 @@ export default function ShockwaveDataGrid({
           {/* Row 2: Fixed Fields + Therapist Names + Summary Labels */}
           <tr className="sw-header-row sw-header-row-therapists">
             {FIXED_FIELDS.map((f, i) => (
-              <th key={f.id} rowSpan={3} className={`hdr-fixed hdr-fixed-${i + 1} ${i === FIXED_FIELDS.length - 1 ? 'hdr-fixed-last' : ''}`}>
+              <th
+                key={f.id}
+                rowSpan={3}
+                className={frozenColumnCount > 0 && i < frozenColumnCount
+                  ? `hdr-fixed hdr-fixed-${i + 1} ${i === frozenColumnCount - 1 ? 'hdr-fixed-last' : ''}`
+                  : ''
+                }
+              >
                 {f.label}
               </th>
             ))}

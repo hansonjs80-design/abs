@@ -32,6 +32,7 @@ export default function StaffCalendar() {
   const viewRef = useRef(null);
   const contextMenuRef = useRef(null);
   const dragRef = useRef(null);
+  const pendingDragRef = useRef(null);
   const hiddenInputRef = useRef(null);
   const editInputRef = useRef(null);
   const skipNextBlurSaveRef = useRef(false);
@@ -126,7 +127,7 @@ export default function StaffCalendar() {
 
   // ── Actions ──
   const focusHiddenInput = useCallback(() => {
-    setTimeout(() => { hiddenInputRef.current?.focus(); }, 0);
+    setTimeout(() => { hiddenInputRef.current?.focus({ preventScroll: true }); }, 0);
   }, []);
 
   const selectSingle = useCallback((cell) => {
@@ -171,7 +172,7 @@ export default function StaffCalendar() {
           el.value = val;
           el.select();
         }
-        el.focus();
+        el.focus({ preventScroll: true });
       }
     });
   }, []);
@@ -312,7 +313,7 @@ export default function StaffCalendar() {
     const nextValue = `${input.value.slice(0, start)}${insertText}${input.value.slice(end)}`;
     const nextCursor = start + insertText.length;
     input.value = nextValue;
-    input.focus();
+    input.focus({ preventScroll: true });
     input.setSelectionRange(nextCursor, nextCursor);
     return true;
   }, [editingCell]);
@@ -328,7 +329,7 @@ export default function StaffCalendar() {
       if (selectedText) await navigator.clipboard?.writeText(selectedText);
       setContextMenu(null);
       setColorMenu(null);
-      input.focus();
+      input.focus({ preventScroll: true });
       return true;
     }
 
@@ -339,7 +340,7 @@ export default function StaffCalendar() {
       }
       setContextMenu(null);
       setColorMenu(null);
-      input.focus();
+      input.focus({ preventScroll: true });
       return true;
     }
 
@@ -348,7 +349,7 @@ export default function StaffCalendar() {
       if (text) replaceEditingSelection(text);
       setContextMenu(null);
       setColorMenu(null);
-      input.focus();
+      input.focus({ preventScroll: true });
       return true;
     }
 
@@ -356,7 +357,7 @@ export default function StaffCalendar() {
       if (selectedText) replaceEditingSelection('');
       setContextMenu(null);
       setColorMenu(null);
-      input.focus();
+      input.focus({ preventScroll: true });
       return true;
     }
 
@@ -373,7 +374,7 @@ export default function StaffCalendar() {
       const nc = cellFromXY(nx, ny); if (nc) selectSingle(nc); return;
     }
     if (e.key === 'Enter') { if (e.nativeEvent?.isComposing) return; e.target.blur(); const c = cellFromXY(di, wi*6+slot); const nc = cellFromXY(c.x, c.y+1); if (nc) selectSingle(nc); }
-    if (e.key === 'Escape') { setEditingCell(null); viewRef.current?.focus(); }
+    if (e.key === 'Escape') { setEditingCell(null); viewRef.current?.focus({ preventScroll: true }); }
     if (e.key === 'Tab') { e.preventDefault(); e.target.blur(); const c = cellFromXY(di, wi*6+slot); const nc = cellFromXY(c.x + (e.shiftKey ? -1 : 1), c.y); if (nc) selectSingle(nc); }
   }, [cellFromXY, selectSingle]);
 
@@ -427,17 +428,29 @@ export default function StaffCalendar() {
   // ── Mouse handlers ──
   const onCellMouseDown = useCallback((wi, di, slot, e) => {
     if (e.button === 2) return;
+    e.preventDefault();
     const cell = makeCell(wi, di, slot); if (!cell) return;
     if (editingCell && editingCell !== cell.key) commitActiveEdit();
     else if (editingCell) setEditingCell(null);
     setContextMenu(null);
-    focusHiddenInput();
-    if (e.shiftKey && selectedCell) { setRangeEnd(cell); setSelectedKeys(buildRange(selectedCell, cell)); }
-    else { selectSingle(cell); dragRef.current = cell; }
-  }, [makeCell, editingCell, commitActiveEdit, selectedCell, buildRange, selectSingle, focusHiddenInput]);
+    if (e.shiftKey && selectedCell) {
+      pendingDragRef.current = null;
+      setRangeEnd(cell);
+      setSelectedKeys(buildRange(selectedCell, cell));
+    } else {
+      selectSingle(cell);
+      pendingDragRef.current = { cell, x: e.clientX, y: e.clientY };
+    }
+  }, [makeCell, editingCell, commitActiveEdit, selectedCell, buildRange, selectSingle]);
 
-  const onCellMouseEnter = useCallback((wi, di, slot) => {
-    if (dragRef.current) { const c = makeCell(wi, di, slot); if (c) { setRangeEnd(c); setSelectedKeys(buildRange(dragRef.current, c)); } }
+  const onCellMouseEnter = useCallback((wi, di, slot, e) => {
+    const c = makeCell(wi, di, slot); if (!c) return;
+    const pending = pendingDragRef.current;
+    if (!dragRef.current && pending && e.buttons === 1) {
+      const distance = Math.hypot(e.clientX - pending.x, e.clientY - pending.y);
+      if (distance >= 6) dragRef.current = pending.cell;
+    }
+    if (dragRef.current) { setRangeEnd(c); setSelectedKeys(buildRange(dragRef.current, c)); }
   }, [makeCell, buildRange]);
 
   const onCellDblClick = useCallback((wi, di, slot) => {
@@ -452,7 +465,14 @@ export default function StaffCalendar() {
     setContextMenu({ x: Math.min(e.clientX, window.innerWidth - 170), y: Math.min(e.clientY, window.innerHeight - 180) });
   }, [makeCell, selectedKeys, selectSingle]);
 
-  useEffect(() => { const h = () => { dragRef.current = null; }; window.addEventListener('mouseup', h); return () => window.removeEventListener('mouseup', h); }, []);
+  useEffect(() => {
+    const h = () => {
+      dragRef.current = null;
+      pendingDragRef.current = null;
+    };
+    window.addEventListener('mouseup', h);
+    return () => window.removeEventListener('mouseup', h);
+  }, []);
 
   const ctxAction = useCallback(async (a) => {
     if (contextMenu?.mode === 'text' && await handleTextContextAction(a)) return;
@@ -587,7 +607,7 @@ export default function StaffCalendar() {
                       autoFontColor={autoFontColor}
                       holidayName={holidayName}
                       onMouseDown={(e) => onCellMouseDown(wi, di, slot, e)}
-                      onMouseEnter={() => onCellMouseEnter(wi, di, slot)}
+                      onMouseEnter={(e) => onCellMouseEnter(wi, di, slot, e)}
                       onDoubleClick={() => onCellDblClick(wi, di, slot)}
                       onContextMenu={(e) => onCellCtxMenu(wi, di, slot, e)}
                     />

@@ -390,12 +390,15 @@
 
 /* Therapist Group Columns */
 .therapist-group-start {
-  border-left: 1px solid var(--grid-strong) !important;
+  border-left: 0 !important;
+  box-shadow: inset 1px 0 0 var(--grid-strong);
 }
 
 .hdr-therapist {
   font-size: 14px;
   color: var(--grid-ink);
+  border-left: 1px solid var(--grid-strong) !important;
+  border-right: 1px solid var(--grid-strong) !important;
   border-bottom: 1px solid var(--grid-strong) !important;
   box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.28);
 }
@@ -417,23 +420,26 @@
   background: var(--grid-summary-bg) !important;
   color: var(--grid-ink) !important;
   border-left: 1px solid var(--grid-strong) !important;
+  border-right: 1px solid var(--grid-strong) !important;
 }
 
 .hdr-grand-total {
   background: var(--grid-summary-strong-bg) !important;
   color: #475569 !important;
+  border: 1px solid var(--grid-strong) !important;
 }
 
 .hdr-new-patient {
   background: var(--grid-new-bg) !important;
   color: #475569 !important;
   border-left: 1px solid var(--grid-strong) !important;
+  border-right: 1px solid var(--grid-strong) !important;
 }
 
 .hdr-new-patient-total {
   background: var(--grid-new-strong-bg) !important;
   color: #334155 !important;
-  border-right: 1px solid var(--grid-strong) !important;
+  border: 1px solid var(--grid-strong) !important;
 }
 
 /* Sticky Rows Alignment */
@@ -498,12 +504,14 @@
   font-weight: 800; 
   color: #475569;
   border-left: 1px solid var(--grid-strong) !important;
+  border-right: 1px solid var(--grid-strong) !important;
   background-color: var(--grid-total-cell-bg) !important; 
 }
 .gc-new-patient { 
   font-weight: 800; 
   color: #475569;
   border-left: 1px solid var(--grid-strong) !important;
+  border-right: 1px solid var(--grid-strong) !important;
   background-color: var(--grid-new-cell-bg) !important;
 }
 
@@ -606,7 +614,14 @@ td.gc-bold > .gc-input {
 
 /* Group Separation */
 .tr-date-start td {
-  border-top: 1px solid var(--grid-strong) !important;
+  border-top: 0 !important;
+  box-shadow: inset 0 1px 0 var(--grid-strong);
+}
+
+.tr-date-start td.therapist-group-start {
+  box-shadow:
+    inset 1px 0 0 var(--grid-strong),
+    inset 0 1px 0 var(--grid-strong);
 }
 
 /* Frozen Columns Persistence */
@@ -835,12 +850,14 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   font-weight: 800;
   color: #475569;
   background: var(--grid-summary-strong-bg) !important;
+  border: 1px solid var(--grid-strong) !important;
 }
 
 .hdr-new-patient-total {
   font-weight: 800;
   color: #334155;
   background: var(--grid-new-strong-bg) !important;
+  border: 1px solid var(--grid-strong) !important;
 }
 
 /* Specific Z-Index for intersection of Frozen Left and Sticky Right (though they don't overlap) */
@@ -1124,59 +1141,68 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 .sw-manual-compact-settlement-table th,
 .sw-manual-compact-settlement-table td {
-  padding: 7px 6px;
-  font-size: 0.9rem;
-  line-height: 1.18;
+  padding: 10px 9px;
+  font-size: 1rem;
+  line-height: 1.28;
+  letter-spacing: -0.01em;
 }
 
 .sw-manual-compact-settlement-table thead .label-col {
   width: 92px;
   min-width: 92px;
-  background: linear-gradient(180deg, #e7edf5 0%, #dce5ef 100%);
+  background: #dbe5f1;
+  color: #1e293b;
 }
 
 .sw-manual-compact-settlement-table thead .therapist-col {
-  min-width: 88px;
-  padding: 8px 8px;
-  font-size: 0.95rem;
+  min-width: 96px;
+  padding: 10px 9px;
+  font-size: 1.05rem;
+  color: #172033;
 }
 
 .sw-manual-compact-settlement-table thead .prescription-col {
-  width: 44px;
-  min-width: 44px;
-  max-width: 52px;
-  padding: 6px 4px;
-  background: #f8fafc;
-  color: #475569;
-  font-size: 0.84rem;
+  width: 52px;
+  min-width: 52px;
+  max-width: 60px;
+  padding: 8px 6px;
+  background: #f3f6fa;
+  color: #334155;
+  font-size: 0.92rem;
   font-weight: 900;
 }
 
 .sw-manual-compact-settlement-table thead .grand-col {
-  width: 92px;
-  min-width: 92px;
-  background: linear-gradient(180deg, #e4eaf2 0%, #d7e0eb 100%);
+  width: 108px;
+  min-width: 108px;
+  background: #dbe5f1;
+  color: #1e293b;
 }
 
 .sw-manual-compact-settlement-table .row-label {
-  background: #f8fafc;
-  color: #243047;
-}
-
-.sw-manual-compact-settlement-table tbody td {
-  min-width: 44px;
-  padding-left: 4px;
-  padding-right: 4px;
+  background: #f6f8fb;
+  color: #1f2a3d;
+  font-size: 1.02rem;
   font-weight: 900;
 }
 
-.sw-manual-compact-settlement-table .merged-value {
+.sw-manual-compact-settlement-table tbody td {
+  min-width: 52px;
   padding-left: 8px;
   padding-right: 8px;
+  font-weight: 900;
+  color: #243247;
+}
+
+.sw-manual-compact-settlement-table .merged-value {
+  padding-left: 12px;
+  padding-right: 12px;
+  font-size: 1.02rem;
 }
 
 .sw-manual-compact-settlement-table .grand-value {
-  background: linear-gradient(180deg, #f0f4f8 0%, #e8eef5 100%);
+  background: #eef3f8;
+  font-size: 1.04rem;
 }
 
 .sw-manual-compact-settlement-table .therapist-tone-0 {
@@ -1201,27 +1227,71 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 .sw-manual-compact-settlement-table .therapist-tone-0-sub,
 .sw-manual-compact-settlement-table .therapist-tone-0-cell {
-  background: #f5f9ff;
+  background: #f4f8ff;
 }
 
 .sw-manual-compact-settlement-table .therapist-tone-1-sub,
 .sw-manual-compact-settlement-table .therapist-tone-1-cell {
-  background: #faf7ff;
+  background: #f8f5ff;
 }
 
 .sw-manual-compact-settlement-table .therapist-tone-2-sub,
 .sw-manual-compact-settlement-table .therapist-tone-2-cell {
-  background: #f5fcf8;
+  background: #f3fbf7;
 }
 
 .sw-manual-compact-settlement-table .therapist-tone-3-sub,
 .sw-manual-compact-settlement-table .therapist-tone-3-cell {
-  background: #fff9f2;
+  background: #fff8f0;
 }
 
 .sw-manual-compact-settlement-table .therapist-tone-4-sub,
 .sw-manual-compact-settlement-table .therapist-tone-4-cell {
-  background: #fff6fa;
+  background: #fff5f9;
+}
+
+.sw-manual-compact-settlement-table .amount {
+  color: #1d4ed8;
+}
+
+.sw-manual-compact-settlement-table .incentive {
+  color: #6d48e5;
+}
+
+.sw-summary-table th,
+.sw-summary-table td {
+  padding: 14px 16px;
+  font-size: 1.02rem;
+  line-height: 1.3;
+}
+
+.sw-summary-table thead th {
+  background: #e8eef6;
+  color: #1f2a3d;
+  font-size: 1.04rem;
+  font-weight: 900;
+}
+
+.sw-summary-table tbody th.month-label {
+  background: #f7f9fc;
+  color: #334155;
+  font-size: 1.02rem;
+  font-weight: 900;
+}
+
+.sw-summary-table tbody td {
+  color: #243247;
+  font-weight: 800;
+}
+
+.sw-summary-table tbody td.amount {
+  color: #1d4ed8;
+  font-size: 1.04rem;
+}
+
+.sw-summary-table tbody td.new-patient {
+  color: #475569;
+  font-size: 1.04rem;
 }
 
 .sw-settlement-settings-card {
