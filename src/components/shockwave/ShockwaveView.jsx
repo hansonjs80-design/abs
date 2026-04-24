@@ -3435,15 +3435,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                           
                           if (staffBlockRule?.font_color) {
                             inlineStyle.color = staffBlockRule.font_color;
-                            inlineStyle.fontWeight = '800';
                           }
 
                           const prescriptionColor = getPrescriptionColor(cellPrescription, effectivePrescriptionColors);
-                          const prescriptionTextStyle = prescriptionColor ? { color: prescriptionColor, fontWeight: 800 } : undefined;
+                          const prescriptionTextStyle = prescriptionColor ? { color: prescriptionColor } : undefined;
                           if (prescriptionColor) {
                             cls += ' has-prescription-color';
                             inlineStyle.color = prescriptionColor;
-                            inlineStyle.fontWeight = '700';
                             inlineStyle['--prescription-color'] = prescriptionColor;
                           }
 
