@@ -402,7 +402,8 @@
   border-color: rgba(255, 255, 255, 0.3);
 }
 
-.top-tab.active .month-nav-btn:hover {
+.top-tab.active .month-nav-btn:hover,
+.top-tab.active .month-picker-label:hover {
   background: rgba(255, 255, 255, 0.3);
 }
 
@@ -412,7 +413,8 @@
   border-color: rgba(0, 0, 0, 0.1);
 }
 
-.top-tab--shockwave.active .month-nav-btn:hover {
+.top-tab--shockwave.active .month-nav-btn:hover,
+.top-tab--shockwave.active .month-picker-label:hover {
   background: rgba(0, 0, 0, 0.08);
 }
 
