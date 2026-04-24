@@ -462,7 +462,10 @@ export default function StaffCalendar() {
     e.preventDefault();
     const cell = makeCell(wi, di, slot); if (!cell) return;
     if (!selectedKeys.has(cell.key)) selectSingle(cell);
-    setContextMenu({ x: Math.min(e.clientX, window.innerWidth - 170), y: Math.min(e.clientY, window.innerHeight - 180) });
+    setContextMenu({ 
+      x: e.clientX + 228 > window.innerWidth ? e.clientX - 228 : e.clientX, 
+      y: e.clientY + 240 > window.innerHeight ? Math.max(10, e.clientY - 240) : e.clientY 
+    });
   }, [makeCell, selectedKeys, selectSingle]);
 
   useEffect(() => {
@@ -559,8 +562,8 @@ export default function StaffCalendar() {
           e.stopPropagation();
           setColorMenu(null);
           setContextMenu({
-            x: Math.min(e.clientX, window.innerWidth - 170),
-            y: Math.min(e.clientY, window.innerHeight - 180),
+            x: e.clientX + 228 > window.innerWidth ? e.clientX - 228 : e.clientX,
+            y: e.clientY + 240 > window.innerHeight ? Math.max(10, e.clientY - 240) : e.clientY,
             mode: 'text',
           });
         }}

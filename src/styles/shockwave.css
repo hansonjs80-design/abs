@@ -723,16 +723,25 @@
 }
 
 .shockwave-context-menu.staff-calendar-context-menu {
-  min-width: 188px;
-  width: min(228px, calc(100vw - 24px));
+  min-width: 172px;
+  width: min(200px, calc(100vw - 24px));
+  padding: 6px;
+  gap: 4px;
 }
 
 .shockwave-context-menu.staff-calendar-context-menu .context-menu-item {
-  font-size: 0.805rem !important;
+  font-size: 0.8rem !important;
+  min-height: 28px;
+  padding: 4px 5px !important;
 }
 
 .shockwave-context-menu.staff-calendar-context-menu > button {
-  font-size: 1.035rem;
+  font-size: 0.85rem;
+  padding: 6px 12px;
+}
+
+.shockwave-context-menu.staff-calendar-context-menu .context-menu-divider {
+  margin: 2px 0;
 }
 
 .context-menu-editor-panel {
