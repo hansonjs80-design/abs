@@ -356,17 +356,17 @@
 /* 2. Shockwave (Green) */
 .top-tab--shockwave { background: #dcfce7; border-color: #bbf7d0; color: #111827; }
 .top-tab--shockwave:hover { background: #f0fdf4; color: #111827; }
-.top-tab--shockwave.active { background: #16a34a; color: #ffffff; border-color: #15803d; box-shadow: none; }
+.top-tab--shockwave.active { background: #93c37d; color: #ffffff; border-color: #7ba866; box-shadow: none; }
 
-/* 3. Stats SW (Yellow/Amber) */
-.top-tab--stats-sw { background: #fef3c7; border-color: #fde68a; color: #111827; }
-.top-tab--stats-sw:hover { background: #fffbeb; color: #111827; }
-.top-tab--stats-sw.active { background: #d97706; color: #ffffff; border-color: #b45309; box-shadow: none; }
+/* 3. Stats SW (Purple) */
+.top-tab--stats-sw { background: #ede9fe; border-color: #ddd6fe; color: #111827; }
+.top-tab--stats-sw:hover { background: #f5f3ff; color: #111827; }
+.top-tab--stats-sw.active { background: #8b5cf6; color: #ffffff; border-color: #7c3aed; box-shadow: none; }
 
-/* 4. Stats MT (Yellow/Amber) */
-.top-tab--stats-mt { background: #fef3c7; border-color: #fde68a; color: #111827; }
-.top-tab--stats-mt:hover { background: #fffbeb; color: #111827; }
-.top-tab--stats-mt.active { background: #d97706; color: #ffffff; border-color: #b45309; box-shadow: none; }
+/* 4. Stats MT (Purple) */
+.top-tab--stats-mt { background: #ede9fe; border-color: #ddd6fe; color: #111827; }
+.top-tab--stats-mt:hover { background: #f5f3ff; color: #111827; }
+.top-tab--stats-mt.active { background: #8b5cf6; color: #ffffff; border-color: #7c3aed; box-shadow: none; }
 
 /* 5. Settings (Gray) */
 .top-tab--settings { background: #f3f4f6; border-color: #e5e7eb; color: #111827; }
