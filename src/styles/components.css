@@ -387,12 +387,23 @@
   padding: 2px 6px;
   font-size: 0.92rem;
   line-height: 1.2;
+  color: inherit;
 }
 
 .month-picker.tab-variant .month-nav-btn {
   width: 24px;
   height: 24px;
   border-radius: 8px;
+}
+
+.top-tab.active .month-nav-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.top-tab.active .month-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* ── 버튼 ── */
