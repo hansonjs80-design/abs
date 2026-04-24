@@ -400,12 +400,6 @@ export default function ManualTherapyStatsPage() {
                 도수치료 현황
               </button>
               <button
-                className={`sw-stats-side-tab${activeSection === 'overview' ? ' active' : ''}`}
-                onClick={() => setActiveSection('overview')}
-              >
-                치료 내역 통계
-              </button>
-              <button
                 className={`sw-stats-side-tab${activeSection === 'settlement' ? ' active' : ''}`}
                 onClick={() => setActiveSection('settlement')}
               >
@@ -426,62 +420,6 @@ export default function ManualTherapyStatsPage() {
             </aside>
 
             <div className="sw-stats-panel">
-              {activeSection === 'overview' && (
-                <div className="sw-stats-header">
-                  <div className="sw-stats-summary">
-                    <h2>📊 {currentMonth}월 치료 내역 통계</h2>
-                    <div className="sw-stats-cards">
-                      <div className="sw-stats-card">
-                        <span className="card-label">해당 월 총 처방수</span>
-                        <span className="card-value sum-value">
-                          {logs.reduce((s, l) => s + (l?.prescription ? (parseInt(l.prescription_count || '1') || 1) : 0), 0)}건
-                        </span>
-                      </div>
-                      <div className="sw-stats-card">
-                        <span className="card-label">초진 포함 전체 목록</span>
-                        <span className="card-value">
-                          {logs.filter(l => l?.patient_name?.includes('*')).length}명 (*)
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="sw-stats-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                    <button
-                      className="btn btn-secondary"
-                      onClick={handleImportFromGoogleSheet}
-                      disabled={isLoading}
-                      style={{ borderColor: '#2563eb', color: '#2563eb' }}
-                    >
-                      📥 구글시트 B:I 가져오기
-                    </button>
-                    <button
-                      className="btn btn-secondary"
-                      onClick={async () => {
-                        let fallbackDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
-                        if (logs.length > 0) {
-                          const dates = logs.map(l => l?.date).filter(Boolean).sort();
-                          if (dates.length > 0) fallbackDate = dates[dates.length - 1];
-                        }
-                        const { error } = await supabase.from('manual_therapy_patient_logs').insert([{
-                          date: fallbackDate, patient_name: '', chart_number: '', visit_count: '', body_part: '', therapist_name: '', prescription: '', prescription_count: 0, source: 'manual'
-                        }]);
-                        if (!error) fetchLogs();
-                      }}
-                    >
-                      + 수동 추가
-                    </button>
-                    <button
-                      className="sw-sync-btn"
-                      onClick={handleSyncFromScheduler}
-                      disabled={isLoading}
-                    >
-                      {isLoading ? '동기화 중...' : '⬇ 현재 스케줄러 데이터 가져오기'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {activeSection === 'grid' && (
                 <div className="sw-stats-body sw-stats-body--grid">
                   <div className="sw-grid-card">

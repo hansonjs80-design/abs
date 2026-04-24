@@ -32,16 +32,25 @@
 
 .staff-calendar-title {
   margin: 0;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   color: #0f172a;
-  font-size: 1.18rem;
+  font-size: 1.3rem;
   font-weight: 900;
+  line-height: 1;
   letter-spacing: -0.03em;
 }
 
 .staff-month-nav-btn {
   width: 36px;
   height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid #cbd5e1;
   border-radius: 10px;
   background: #ffffff;
@@ -49,6 +58,7 @@
   font-size: 1.45rem;
   font-weight: 900;
   line-height: 1;
+  vertical-align: middle;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
   transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
