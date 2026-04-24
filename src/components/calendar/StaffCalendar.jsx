@@ -462,11 +462,33 @@ export default function StaffCalendar() {
     e.preventDefault();
     const cell = makeCell(wi, di, slot); if (!cell) return;
     if (!selectedKeys.has(cell.key)) selectSingle(cell);
+    const MENU_W = 160; const MENU_H = 200;
     setContextMenu({ 
-      x: e.clientX + 160 > window.innerWidth ? e.clientX - 160 : e.clientX, 
-      y: e.clientY + 340 > window.innerHeight ? Math.max(10, e.clientY - 340) : e.clientY 
+      x: e.clientX + MENU_W > window.innerWidth ? e.clientX - MENU_W : e.clientX, 
+      y: e.clientY + MENU_H > window.innerHeight ? Math.max(10, e.clientY - MENU_H) : e.clientY 
     });
+    setColorMenu(null);
   }, [makeCell, selectedKeys, selectSingle]);
+
+  // 색상 팔레트가 열릴 때 메뉴 위치를 동적으로 재조정
+  useEffect(() => {
+    if (!contextMenu || !contextMenuRef.current) return;
+    // requestAnimationFrame으로 렌더링 후 크기 측정
+    requestAnimationFrame(() => {
+      const el = contextMenuRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      let newX = contextMenu.x;
+      let newY = contextMenu.y;
+      if (rect.bottom > vh) newY = Math.max(10, vh - rect.height - 10);
+      if (rect.right > vw) newX = Math.max(10, vw - rect.width - 10);
+      if (newX !== contextMenu.x || newY !== contextMenu.y) {
+        setContextMenu(prev => prev ? { ...prev, x: newX, y: newY } : prev);
+      }
+    });
+  }, [colorMenu]);
 
   useEffect(() => {
     const h = () => {
@@ -561,9 +583,10 @@ export default function StaffCalendar() {
           e.preventDefault();
           e.stopPropagation();
           setColorMenu(null);
+          const MENU_W = 160; const MENU_H = 200;
           setContextMenu({
-            x: e.clientX + 160 > window.innerWidth ? e.clientX - 160 : e.clientX,
-            y: e.clientY + 340 > window.innerHeight ? Math.max(10, e.clientY - 340) : e.clientY,
+            x: e.clientX + MENU_W > window.innerWidth ? e.clientX - MENU_W : e.clientX,
+            y: e.clientY + MENU_H > window.innerHeight ? Math.max(10, e.clientY - MENU_H) : e.clientY,
             mode: 'text',
           });
         }}
