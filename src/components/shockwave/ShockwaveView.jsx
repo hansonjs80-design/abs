@@ -7,6 +7,7 @@ import { has4060Pattern, strip4060FromContent, incrementSessionCount, normalizeN
 import { toProperCase } from '../../lib/shockwaveSyncUtils';
 import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
+import { getEffectiveSchedulerTextSettings } from '../../lib/schedulerTextSettings';
 import {
   getEffectiveStaffScheduleBlockRules,
   normalizeStaffScheduleRuleText,
@@ -18,6 +19,7 @@ const HORIZONTAL_BORDER_COLOR = '#b7b7b7';
 const TIME_COL_WIDTH = 46;
 const SHOCKWAVE_DAY_COL_WIDTH_KEY = 'shockwave-day-col-width';
 const SHOCKWAVE_COL_RATIOS_KEY = 'shockwave-col-ratios';
+const SHOCKWAVE_ROW_HEIGHT_KEY = 'shockwave-row-height';
 const TREATMENT_COMPLETE_BG = '#ffe599';
 const TREATMENT_CANCEL_BG = '#f4cccc';
 const SCHEDULER_HOLIDAY_BG = '#93c47d';
@@ -559,6 +561,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     return Number.isFinite(saved) && saved > 0 ? saved : null;
   }); // null = flex, number = px
   const dayResizeRef = useRef({ active: false, startX: 0, startWidth: 0, factor: 1 });
+  const [rowHeight, setRowHeight] = useState(() => {
+    if (typeof window === 'undefined') return 23;
+    const saved = Number(window.localStorage.getItem(SHOCKWAVE_ROW_HEIGHT_KEY));
+    return Number.isFinite(saved) && saved >= 18 ? saved : 23;
+  });
+  const rowResizeRef = useRef({ active: false, startY: 0, startHeight: 23 });
 
   const tooltipRef = useRef(null);
   const tooltipMousePosRef = useRef({ x: 0, y: 0 });
@@ -1233,6 +1241,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    window.localStorage.setItem(SHOCKWAVE_ROW_HEIGHT_KEY, String(rowHeight));
+  }, [rowHeight]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
     if (Array.isArray(colRatios) && colRatios.length > 0) {
       window.localStorage.setItem(SHOCKWAVE_COL_RATIOS_KEY, JSON.stringify(colRatios));
     } else {
@@ -1793,6 +1806,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return acc;
     }, {});
   }, [settings, currentYear, currentMonth]);
+  const effectiveSchedulerTextSettings = useMemo(
+    () => getEffectiveSchedulerTextSettings(settings, currentYear, currentMonth),
+    [settings, currentYear, currentMonth]
+  );
 
   const getAdjacentCell = useCallback((cell, direction) => {
     let { w, d, r, c } = cell;
@@ -3133,7 +3150,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         className="shockwave-view animate-fade-in" 
         ref={viewRef} 
         tabIndex={0} 
-        style={{ outline: 'none' }}
+        style={{
+          outline: 'none',
+          '--sw-row-height': `${rowHeight}px`,
+          '--sw-cell-font-size': `${effectiveSchedulerTextSettings.font_size}px`,
+          '--sw-cell-font-weight': effectiveSchedulerTextSettings.font_weight,
+        }}
         onMouseLeave={() => setHoverData(null)}
         onMouseMove={(e) => {
           tooltipMousePosRef.current = { x: e.clientX, y: e.clientY };
@@ -3172,6 +3194,33 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                     ›
                   </button>
                 </div>
+              )}
+              {weekIdx === 0 && (
+                <button
+                  type="button"
+                  className="shockwave-row-height-handle"
+                  title={`행 높이 조절 (${rowHeight}px)`}
+                  aria-label="시간 행 높이 조절"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    rowResizeRef.current = { active: true, startY: e.clientY, startHeight: rowHeight };
+                    const onMove = (ev) => {
+                      if (!rowResizeRef.current.active) return;
+                      const delta = ev.clientY - rowResizeRef.current.startY;
+                      setRowHeight(Math.max(18, Math.min(44, rowResizeRef.current.startHeight + delta)));
+                    };
+                    const onUp = () => {
+                      rowResizeRef.current.active = false;
+                      window.removeEventListener('mousemove', onMove);
+                      window.removeEventListener('mouseup', onUp);
+                    };
+                    window.addEventListener('mousemove', onMove);
+                    window.addEventListener('mouseup', onUp);
+                  }}
+                >
+                  ↕
+                </button>
               )}
               <span className="shockwave-week-jump-group">
                 <span className="shockwave-week-label-text">{weekIdx + 1}주차</span>

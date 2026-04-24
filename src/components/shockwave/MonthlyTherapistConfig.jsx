@@ -893,7 +893,7 @@ export default function MonthlyTherapistConfig({
                 <div className="monthly-text-style-size-row">
                   <input
                     type="range"
-                    min={11}
+                    min={9}
                     max={18}
                     step={1}
                     value={schedulerTextSettings.font_size}
@@ -905,7 +905,7 @@ export default function MonthlyTherapistConfig({
                   <input
                     type="number"
                     className="monthly-operating-input monthly-text-style-number"
-                    min={11}
+                    min={9}
                     max={18}
                     step={1}
                     value={schedulerTextSettings.font_size}

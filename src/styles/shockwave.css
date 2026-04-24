@@ -8,6 +8,8 @@
   font-size: 11px;
   overflow-x: auto;
   --sw-row-height: 23px;
+  --sw-cell-font-size: 13px;
+  --sw-cell-font-weight: 700;
 }
 
 .shockwave-view * {
@@ -292,8 +294,8 @@
   position: relative;
   box-sizing: border-box;
   padding: 2px 4px;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--sw-cell-font-size);
+  font-weight: var(--sw-cell-font-weight);
   text-align: center;
   border-right: 1px solid #b7b7b7;
   cursor: pointer;
@@ -417,12 +419,34 @@
   border: 2px solid var(--brand-primary);
   border-radius: 0;
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--sw-cell-font-size);
+  font-weight: var(--sw-cell-font-weight);
   text-align: center;
   background: var(--bg-input);
   color: var(--text-primary);
   outline: none;
+}
+
+.shockwave-row-height-handle {
+  width: 28px;
+  height: 24px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 0.9rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: ns-resize;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.shockwave-row-height-handle:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
 }
 
 /* 시간 레이블 (좌측 첫 번째 열) */
@@ -506,7 +530,7 @@
   .shockwave-day:nth-child(2n) { border-right: none; }
   .shockwave-day:nth-child(n+3) { border-top: 2px solid #b7b7b7; }
   
-  .sw-cell { font-size: 0.62rem; min-height: 20px; }
+  .sw-cell { font-size: var(--sw-cell-font-size); min-height: 20px; }
   .sw-day-header { font-size: 0.68rem; padding: 6px 2px; }
   .sw-therapist-name { font-size: 0.62rem; padding: 4px 2px; }
 }
