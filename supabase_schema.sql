@@ -97,6 +97,9 @@ CREATE TABLE IF NOT EXISTS public.shockwave_settings (
   incentive_percentage numeric(5,2) DEFAULT 7,
   manual_therapy_incentive_percentage numeric(5,2) DEFAULT 0,
   frozen_columns integer DEFAULT 6,
+  prescription_colors jsonb DEFAULT '{}'::jsonb,
+  staff_schedule_block_rules jsonb DEFAULT '{}'::jsonb,
+  monthly_settlement_settings jsonb DEFAULT '{}'::jsonb,
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -132,6 +135,46 @@ ADD COLUMN IF NOT EXISTS date_overrides jsonb NOT NULL DEFAULT '{}';
 
 ALTER TABLE public.shockwave_settings
 ADD COLUMN IF NOT EXISTS prescription_colors jsonb DEFAULT '{}'::jsonb;
+
+ALTER TABLE public.shockwave_settings
+ADD COLUMN IF NOT EXISTS staff_schedule_block_rules jsonb DEFAULT '{}'::jsonb;
+
+ALTER TABLE public.shockwave_settings
+ADD COLUMN IF NOT EXISTS monthly_settlement_settings jsonb DEFAULT '{}'::jsonb;
+
+ALTER TABLE public.shockwave_settings
+ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL;
+
+-- 월별 결산 설정/처방 색상 컬럼 보정
+UPDATE public.shockwave_settings
+SET prescription_colors = '{}'::jsonb
+WHERE prescription_colors IS NULL;
+
+UPDATE public.shockwave_settings
+SET monthly_settlement_settings = '{}'::jsonb
+WHERE monthly_settlement_settings IS NULL;
+
+UPDATE public.shockwave_settings
+SET staff_schedule_block_rules = '{}'::jsonb
+WHERE staff_schedule_block_rules IS NULL;
+
+ALTER TABLE public.shockwave_settings
+ALTER COLUMN prescription_colors SET DEFAULT '{}'::jsonb;
+
+ALTER TABLE public.shockwave_settings
+ALTER COLUMN prescription_colors SET NOT NULL;
+
+ALTER TABLE public.shockwave_settings
+ALTER COLUMN staff_schedule_block_rules SET DEFAULT '{}'::jsonb;
+
+ALTER TABLE public.shockwave_settings
+ALTER COLUMN staff_schedule_block_rules SET NOT NULL;
+
+ALTER TABLE public.shockwave_settings
+ALTER COLUMN monthly_settlement_settings SET DEFAULT '{}'::jsonb;
+
+ALTER TABLE public.shockwave_settings
+ALTER COLUMN monthly_settlement_settings SET NOT NULL;
 
 -- =============================================
 -- [통계/내역 탭 전용] 환자 일일 치료 기록 로그 테이블
@@ -210,3 +253,52 @@ ALTER TABLE public.shockwave_monthly_therapists DISABLE ROW LEVEL SECURITY;
 -- type 컬럼 추가 (기존 테이블이 있는 경우)
 ALTER TABLE public.shockwave_monthly_therapists
 ADD COLUMN IF NOT EXISTS type text NOT NULL DEFAULT 'shockwave';
+
+-- =============================================
+-- [로그인/권한 관리] 앱 내부 사용자 계정 및 탭 권한
+-- =============================================
+CREATE TABLE IF NOT EXISTS public.app_users (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  username text NOT NULL UNIQUE,
+  password text NOT NULL DEFAULT '',
+  display_name text NOT NULL DEFAULT '',
+  role text NOT NULL DEFAULT 'user',
+  permissions jsonb NOT NULL DEFAULT '{}'::jsonb,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.app_users DISABLE ROW LEVEL SECURITY;
+
+ALTER TABLE public.app_users
+ADD COLUMN IF NOT EXISTS password text NOT NULL DEFAULT '';
+
+ALTER TABLE public.app_users
+ADD COLUMN IF NOT EXISTS display_name text NOT NULL DEFAULT '';
+
+ALTER TABLE public.app_users
+ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'user';
+
+ALTER TABLE public.app_users
+ADD COLUMN IF NOT EXISTS permissions jsonb NOT NULL DEFAULT '{}'::jsonb;
+
+ALTER TABLE public.app_users
+ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
+
+INSERT INTO public.app_users (username, password, display_name, role, permissions, is_active)
+VALUES (
+  'admin',
+  '1',
+  '관리자',
+  'admin',
+  '{"staff_schedule":true,"shockwave":true,"shockwave_stats":true,"manual_therapy_stats":true,"settings":true}'::jsonb,
+  true
+)
+ON CONFLICT (username) DO UPDATE SET
+  password = EXCLUDED.password,
+  display_name = EXCLUDED.display_name,
+  role = EXCLUDED.role,
+  permissions = EXCLUDED.permissions,
+  is_active = true,
+  updated_at = timezone('utc'::text, now());

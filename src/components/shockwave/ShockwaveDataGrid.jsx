@@ -235,6 +235,11 @@ export default function ShockwaveDataGrid({
     colIdx < totalCountColIndex &&
     (colIdx - FIXED_FIELDS.length) % prescriptions.length === 0
   );
+  const isTherapistGroupEndCol = (colIdx) => (
+    colIdx >= FIXED_FIELDS.length &&
+    colIdx < totalCountColIndex &&
+    (colIdx - FIXED_FIELDS.length) % prescriptions.length === prescriptions.length - 1
+  );
   const isBlankValue = (value) => value == null || String(value).trim() === '';
   const toPrescriptionCount = (value) => {
     const parsed = parseInt(String(value ?? '').trim(), 10);
@@ -1076,7 +1081,7 @@ export default function ShockwaveDataGrid({
           {/* Row 3: Prescription Names */}
           <tr className="sw-header-row sw-header-row-prescriptions">
             {displayTherapists.map((t, idx) => prescriptions.map((p, pIdx) => (
-              <th key={`${t.key}-${pIdx}`} className={`hdr-pres ${pIdx === 0 && idx > 0 ? 'therapist-group-start' : ''}`} style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}>
+              <th key={`${t.key}-${pIdx}`} className={`hdr-pres ${pIdx === 0 ? 'therapist-group-start' : ''} ${pIdx === prescriptions.length - 1 ? 'therapist-group-end' : ''}`} style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}>
                 {p}
               </th>
             )))}
@@ -1087,7 +1092,7 @@ export default function ShockwaveDataGrid({
             {displayTherapists.map((t, idx) => prescriptions.map((p, pIdx) => (
               <th
                 key={`${t.key}-${pIdx}-inner`}
-                className={`hdr-pres-total ${pIdx === 0 && idx > 0 ? 'therapist-group-start' : ''}`}
+                className={`hdr-pres-total ${pIdx === 0 ? 'therapist-group-start' : ''} ${pIdx === prescriptions.length - 1 ? 'therapist-group-end' : ''}`}
                 style={{ backgroundColor: THERAPIST_TOTAL_COLORS[idx % THERAPIST_TOTAL_COLORS.length] }}
               >
                 {therapistTotals[idx]?.byPres[p] || 0}
@@ -1141,6 +1146,7 @@ export default function ShockwaveDataGrid({
                 if (isTotalCol) cls += ' gc-total total-group-start';
                 if (isNewPatientCol) cls += ' gc-total gc-new-patient';
                 if (isTherapistGroupStartCol(ci)) cls += ' therapist-group-start';
+                if (isTherapistGroupEndCol(ci)) cls += ' therapist-group-end';
 
                 const isFrozenCol = ci < frozenColumnCount;
                 const fixedLeft = isFrozenCol ? getFrozenLeft(ci) : undefined;
