@@ -2427,6 +2427,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         recordUndo({ type: 'bulk-edit', oldMemos });
         addToast('처방이 적용되었습니다.', 'success');
       }
+      return;
     }
     else if (action?.type === 'bodyPart') {
       const keys = Array.from(selectedKeys || []);
