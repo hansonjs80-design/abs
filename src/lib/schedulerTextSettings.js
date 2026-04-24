@@ -12,7 +12,8 @@ function compareMonthKeys(a, b) {
 function normalizeFontSize(value) {
   const nextValue = Number(value);
   if (!Number.isFinite(nextValue)) return DEFAULT_SCHEDULER_TEXT_SETTINGS.font_size;
-  return Math.min(18, Math.max(9, Math.round(nextValue)));
+  const clamped = Math.min(18, Math.max(9, nextValue));
+  return Math.round(clamped * 2) / 2;
 }
 
 function normalizeFontWeight(value) {
