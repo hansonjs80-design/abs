@@ -356,7 +356,7 @@
 /* 2. Shockwave (Green) */
 .top-tab--shockwave { background: #dcfce7; border-color: #bbf7d0; color: #111827; }
 .top-tab--shockwave:hover { background: #f0fdf4; color: #111827; }
-.top-tab--shockwave.active { background: #93c37d; color: #ffffff; border-color: #7ba866; box-shadow: none; }
+.top-tab--shockwave.active { background: #93c37d; color: #111827; border-color: #7ba866; box-shadow: none; }
 
 /* 3. Stats SW (Purple) */
 .top-tab--stats-sw { background: #ede9fe; border-color: #ddd6fe; color: #111827; }
@@ -404,6 +404,16 @@
 
 .top-tab.active .month-nav-btn:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+.top-tab--shockwave.active .month-nav-btn {
+  background: rgba(0, 0, 0, 0.05);
+  color: #111827;
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.top-tab--shockwave.active .month-nav-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
 }
 
 /* ── 버튼 ── */
