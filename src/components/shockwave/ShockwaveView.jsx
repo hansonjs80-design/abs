@@ -3145,6 +3145,21 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     };
   }, [scrollToTodayWeek]);
 
+  // 월이 변경될 때 스크롤 위치 초기화 (오늘이 포함된 달이면 오늘 주차로, 아니면 1주차로)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (todayWeekIdx >= 0) {
+        scrollToTodayWeek();
+      } else {
+        const firstWeekEl = weekRefs.current[0];
+        if (firstWeekEl) {
+          firstWeekEl.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+        }
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [currentYear, currentMonth, todayWeekIdx, scrollToTodayWeek]);
+
   return (
     <>
       <div 
