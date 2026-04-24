@@ -351,27 +351,27 @@
 /* 1. Calendar (Blue) */
 .top-tab--calendar { background: #dbeafe; border-color: #bfdbfe; color: #111827; }
 .top-tab--calendar:hover { background: #eff6ff; color: #111827; }
-.top-tab--calendar.active { background: #eff6ff; color: #111827; box-shadow: 0 -2px 0 #2563eb inset; border-color: #bfdbfe; }
+.top-tab--calendar.active { background: #2563eb; color: #ffffff; border-color: #1d4ed8; box-shadow: none; }
 
 /* 2. Shockwave (Green) */
 .top-tab--shockwave { background: #dcfce7; border-color: #bbf7d0; color: #111827; }
 .top-tab--shockwave:hover { background: #f0fdf4; color: #111827; }
-.top-tab--shockwave.active { background: #f0fdf4; color: #111827; box-shadow: 0 -2px 0 #16a34a inset; border-color: #bbf7d0; }
+.top-tab--shockwave.active { background: #16a34a; color: #ffffff; border-color: #15803d; box-shadow: none; }
 
-/* 3. Stats SW (Yellow) */
+/* 3. Stats SW (Yellow/Amber) */
 .top-tab--stats-sw { background: #fef3c7; border-color: #fde68a; color: #111827; }
 .top-tab--stats-sw:hover { background: #fffbeb; color: #111827; }
-.top-tab--stats-sw.active { background: #fffbeb; color: #111827; box-shadow: 0 -2px 0 #d97706 inset; border-color: #fde68a; }
+.top-tab--stats-sw.active { background: #d97706; color: #ffffff; border-color: #b45309; box-shadow: none; }
 
-/* 4. Stats MT (Yellow) */
+/* 4. Stats MT (Yellow/Amber) */
 .top-tab--stats-mt { background: #fef3c7; border-color: #fde68a; color: #111827; }
 .top-tab--stats-mt:hover { background: #fffbeb; color: #111827; }
-.top-tab--stats-mt.active { background: #fffbeb; color: #111827; box-shadow: 0 -2px 0 #d97706 inset; border-color: #fde68a; }
+.top-tab--stats-mt.active { background: #d97706; color: #ffffff; border-color: #b45309; box-shadow: none; }
 
 /* 5. Settings (Gray) */
 .top-tab--settings { background: #f3f4f6; border-color: #e5e7eb; color: #111827; }
 .top-tab--settings:hover { background: #f9fafb; color: #111827; }
-.top-tab--settings.active { background: #f9fafb; color: #111827; box-shadow: 0 -2px 0 #4b5563 inset; border-color: #e5e7eb; }
+.top-tab--settings.active { background: #4b5563; color: #ffffff; border-color: #374151; box-shadow: none; }
 
 .top-tab.month-tab {
   gap: 8px;
