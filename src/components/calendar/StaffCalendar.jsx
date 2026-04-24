@@ -464,7 +464,7 @@ export default function StaffCalendar() {
     if (!selectedKeys.has(cell.key)) selectSingle(cell);
     setContextMenu({ 
       x: e.clientX + 160 > window.innerWidth ? e.clientX - 160 : e.clientX, 
-      y: e.clientY + 240 > window.innerHeight ? Math.max(10, e.clientY - 240) : e.clientY 
+      y: e.clientY + 340 > window.innerHeight ? Math.max(10, e.clientY - 340) : e.clientY 
     });
   }, [makeCell, selectedKeys, selectSingle]);
 
@@ -563,7 +563,7 @@ export default function StaffCalendar() {
           setColorMenu(null);
           setContextMenu({
             x: e.clientX + 160 > window.innerWidth ? e.clientX - 160 : e.clientX,
-            y: e.clientY + 240 > window.innerHeight ? Math.max(10, e.clientY - 240) : e.clientY,
+            y: e.clientY + 340 > window.innerHeight ? Math.max(10, e.clientY - 340) : e.clientY,
             mode: 'text',
           });
         }}
