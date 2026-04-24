@@ -3104,11 +3104,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     return () => window.cancelAnimationFrame(rafId);
   }, [hoverData, positionTooltip]);
 
-  const scrollToTodayWeek = useCallback(() => {
+  const scrollToTodayWeek = useCallback((instant = false) => {
     if (todayWeekIdx < 0) return;
     const weekEl = weekRefs.current[todayWeekIdx];
     if (!weekEl) return;
-    weekEl.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+    weekEl.scrollIntoView({ behavior: instant ? 'instant' : 'smooth', block: 'start', inline: 'nearest' });
   }, [todayWeekIdx]);
 
   const updateTodayShortcutTooltip = useCallback((event) => {
@@ -3145,8 +3145,27 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     };
   }, [scrollToTodayWeek]);
 
-  // 월이 변경될 때 스크롤 위치 초기화 (오늘이 포함된 달이면 오늘 주차로, 아니면 1주차로)
+  // 최초 마운트 시 오늘 주차로 즉시 이동 (모션 없이)
+  const initialScrollDoneRef = useRef(false);
   useEffect(() => {
+    if (initialScrollDoneRef.current) return;
+    const timer = setTimeout(() => {
+      if (todayWeekIdx >= 0) {
+        scrollToTodayWeek(true); // instant
+      } else {
+        const firstWeekEl = weekRefs.current[0];
+        if (firstWeekEl) {
+          firstWeekEl.scrollIntoView({ behavior: 'instant', block: 'start', inline: 'nearest' });
+        }
+      }
+      initialScrollDoneRef.current = true;
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [todayWeekIdx, scrollToTodayWeek]);
+
+  // 월이 변경될 때 스크롤 위치 초기화 (최초 마운트 이후에만 smooth로)
+  useEffect(() => {
+    if (!initialScrollDoneRef.current) return;
     const timer = setTimeout(() => {
       if (todayWeekIdx >= 0) {
         scrollToTodayWeek();
