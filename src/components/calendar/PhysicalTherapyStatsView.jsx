@@ -142,12 +142,23 @@ export default function PhysicalTherapyStatsView() {
     let yearTotal = 0; let yearDays = 0;
     let yearWdTotal = 0; let yearWdDays = 0;
     let yearWeTotal = 0; let yearWeDays = 0;
+    
+    // 개별 요일 누적
+    const yearDowTotals = [0, 0, 0, 0, 0, 0, 0];
+    const yearDowDays = [0, 0, 0, 0, 0, 0, 0];
+
+    // 특정 그룹 누적
+    let yearMtthfTotal = 0; let yearMtthfDays = 0;
 
     for (let m = 1; m <= 12; m++) {
       const monthDays = yearlyData[m] || [];
       let mTotal = 0; let mDays = 0;
       let mWdTotal = 0; let mWdDays = 0;
       let mWeTotal = 0; let mWeDays = 0;
+      
+      const mDowTotals = [0, 0, 0, 0, 0, 0, 0];
+      const mDowDays = [0, 0, 0, 0, 0, 0, 0];
+      let mMtthfTotal = 0; let mMtthfDays = 0;
 
       monthDays.forEach(d => {
         mTotal += d.value; mDays++;
@@ -155,6 +166,14 @@ export default function PhysicalTherapyStatsView() {
           mWdTotal += d.value; mWdDays++;
         } else {
           mWeTotal += d.value; mWeDays++;
+        }
+        
+        mDowTotals[d.dow] += d.value;
+        mDowDays[d.dow]++;
+        
+        if ([1, 2, 4, 5].includes(d.dow)) { // 월, 화, 목, 금
+          mMtthfTotal += d.value;
+          mMtthfDays++;
         }
       });
 
@@ -165,11 +184,17 @@ export default function PhysicalTherapyStatsView() {
         avg: mDays > 0 ? Math.round(mTotal / mDays) : 0,
         wdAvg: mWdDays > 0 ? Math.round(mWdTotal / mWdDays) : 0,
         weAvg: mWeDays > 0 ? Math.round(mWeTotal / mWeDays) : 0,
+        dows: mDowTotals.map((tot, i) => mDowDays[i] > 0 ? Math.round(tot / mDowDays[i]) : 0),
+        mtthfAvg: mMtthfDays > 0 ? Math.round(mMtthfTotal / mMtthfDays) : 0,
+        wedAvg: mDowDays[3] > 0 ? Math.round(mDowTotals[3] / mDowDays[3]) : 0,
       });
 
       yearTotal += mTotal; yearDays += mDays;
       yearWdTotal += mWdTotal; yearWdDays += mWdDays;
       yearWeTotal += mWeTotal; yearWeDays += mWeDays;
+      
+      mDowTotals.forEach((tot, i) => { yearDowTotals[i] += tot; yearDowDays[i] += mDowDays[i]; });
+      yearMtthfTotal += mMtthfTotal; yearMtthfDays += mMtthfDays;
     }
 
     return {
@@ -180,6 +205,9 @@ export default function PhysicalTherapyStatsView() {
         avg: yearDays > 0 ? Math.round(yearTotal / yearDays) : 0,
         wdAvg: yearWdDays > 0 ? Math.round(yearWdTotal / yearWdDays) : 0,
         weAvg: yearWeDays > 0 ? Math.round(yearWeTotal / yearWeDays) : 0,
+        dows: yearDowTotals.map((tot, i) => yearDowDays[i] > 0 ? Math.round(tot / yearDowDays[i]) : 0),
+        mtthfAvg: yearMtthfDays > 0 ? Math.round(yearMtthfTotal / yearMtthfDays) : 0,
+        wedAvg: yearDowDays[3] > 0 ? Math.round(yearDowTotals[3] / yearDowDays[3]) : 0,
       }
     };
   }, [yearlyData]);
@@ -350,11 +378,59 @@ export default function PhysicalTherapyStatsView() {
                     <td style={{ fontWeight: 800, background: 'var(--bg-tertiary)' }}>{yearlyStatsAgg.year.wdAvg || '-'}</td>
                   </tr>
                   <tr>
+                    <td>월/화/목/금 평균</td>
+                    {yearlyStatsAgg.months.map(m => (
+                      <td key={`td-mtthf-${m.month}`}>{m.mtthfAvg || '-'}</td>
+                    ))}
+                    <td style={{ fontWeight: 800, background: 'var(--bg-tertiary)' }}>{yearlyStatsAgg.year.mtthfAvg || '-'}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ color: 'var(--text-secondary)' }}>수요일 평균</td>
+                    {yearlyStatsAgg.months.map(m => (
+                      <td key={`td-wed-${m.month}`} style={{ color: 'var(--text-secondary)' }}>{m.wedAvg || '-'}</td>
+                    ))}
+                    <td style={{ fontWeight: 800, color: 'var(--text-secondary)', background: 'var(--bg-tertiary)' }}>{yearlyStatsAgg.year.wedAvg || '-'}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ color: 'var(--text-secondary)' }}>토요일 평균</td>
+                    {yearlyStatsAgg.months.map(m => (
+                      <td key={`td-sat-${m.month}`} style={{ color: 'var(--text-secondary)' }}>{m.dows[6] || '-'}</td>
+                    ))}
+                    <td style={{ fontWeight: 800, color: 'var(--text-secondary)', background: 'var(--bg-tertiary)' }}>{yearlyStatsAgg.year.dows[6] || '-'}</td>
+                  </tr>
+                  <tr>
                     <td>주말(토,일) 평균</td>
                     {yearlyStatsAgg.months.map(m => (
                       <td key={`td-we-${m.month}`}>{m.weAvg || '-'}</td>
                     ))}
                     <td style={{ fontWeight: 800, background: 'var(--bg-tertiary)' }}>{yearlyStatsAgg.year.weAvg || '-'}</td>
+                  </tr>
+                  {/* 개별 요일 세부 평균 표기 */}
+                  <tr style={{ height: 4 }}>
+                    <td colSpan={14} style={{ padding: 0, background: 'var(--bg-tertiary)' }} />
+                  </tr>
+                  <tr>
+                    <td style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>월요일 평균</td>
+                    {yearlyStatsAgg.months.map(m => <td key={`td-mon-${m.month}`} style={{ color: 'var(--text-tertiary)' }}>{m.dows[1] || '-'}</td>)}
+                    <td style={{ color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)' }}>{yearlyStatsAgg.year.dows[1] || '-'}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>화요일 평균</td>
+                    {yearlyStatsAgg.months.map(m => <td key={`td-tue-${m.month}`} style={{ color: 'var(--text-tertiary)' }}>{m.dows[2] || '-'}</td>)}
+                    <td style={{ color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)' }}>{yearlyStatsAgg.year.dows[2] || '-'}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>목요일 평균</td>
+                    {yearlyStatsAgg.months.map(m => <td key={`td-thu-${m.month}`} style={{ color: 'var(--text-tertiary)' }}>{m.dows[4] || '-'}</td>)}
+                    <td style={{ color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)' }}>{yearlyStatsAgg.year.dows[4] || '-'}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>금요일 평균</td>
+                    {yearlyStatsAgg.months.map(m => <td key={`td-fri-${m.month}`} style={{ color: 'var(--text-tertiary)' }}>{m.dows[5] || '-'}</td>)}
+                    <td style={{ color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)' }}>{yearlyStatsAgg.year.dows[5] || '-'}</td>
+                  </tr>
+                  <tr style={{ height: 4 }}>
+                    <td colSpan={14} style={{ padding: 0, background: 'var(--bg-tertiary)' }} />
                   </tr>
                   <tr>
                     <td>영업(기록) 일수</td>
