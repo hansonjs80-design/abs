@@ -5,6 +5,7 @@ import './styles/index.css'
 import './styles/components.css'
 import './styles/calendar.css'
 import './styles/shockwave.css'
+import './styles/pt_stats.css'
 
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {

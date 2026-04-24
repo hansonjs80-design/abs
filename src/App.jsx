@@ -9,6 +9,7 @@ import StaffSchedulePage from './pages/StaffSchedulePage';
 import ShockwavePage from './pages/ShockwavePage';
 import ShockwaveStatsPage from './pages/ShockwaveStatsPage';
 import ManualTherapyStatsPage from './pages/ManualTherapyStatsPage';
+import PhysicalTherapyStatsPage from './pages/PhysicalTherapyStatsPage';
 import SettingsPage from './pages/SettingsPage';
 import { canAccessPath, getFirstAllowedPath } from './lib/authPermissions';
 
@@ -57,6 +58,7 @@ function AppRoutes() {
         <Route path="/shockwave" element={<ProtectedRoute path="/shockwave"><ShockwavePage /></ProtectedRoute>} />
         <Route path="/shockwave-stats" element={<ProtectedRoute path="/shockwave-stats"><ShockwaveStatsPage /></ProtectedRoute>} />
         <Route path="/manual-therapy-stats" element={<ProtectedRoute path="/manual-therapy-stats"><ManualTherapyStatsPage /></ProtectedRoute>} />
+        <Route path="/pt-stats" element={<ProtectedRoute path="/pt-stats"><PhysicalTherapyStatsPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute path="/settings"><SettingsPage /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

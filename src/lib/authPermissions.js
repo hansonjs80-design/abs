@@ -1,4 +1,4 @@
-import { Calendar, ClipboardList, Hand, Settings, Zap } from 'lucide-react';
+import { Calendar, ClipboardList, Hand, Settings, Zap, Activity } from 'lucide-react';
 
 export const ADMIN_USERNAME = 'admin';
 export const DEFAULT_ADMIN_PASSWORD = '1';
@@ -8,6 +8,7 @@ export const APP_TABS = [
   { key: 'shockwave', path: '/shockwave', icon: ClipboardList, label: '충격파/도수 스케줄', shortLabel: '충격파/도수 스케줄', monthLabel: '충격파/도수 스케줄', tabClass: 'top-tab--shockwave' },
   { key: 'shockwave_stats', path: '/shockwave-stats', icon: Zap, label: '충격파 통계', shortLabel: '충격파 통계', monthLabel: '충격파 통계', tabClass: 'top-tab--stats-sw' },
   { key: 'manual_therapy_stats', path: '/manual-therapy-stats', icon: Hand, label: '도수치료 통계', shortLabel: '도수통계', monthLabel: '도수치료 통계', tabClass: 'top-tab--stats-mt' },
+  { key: 'pt_stats', path: '/pt-stats', icon: Activity, label: '물리치료 통계', shortLabel: '물리치료 통계', monthLabel: '물리치료 통계', tabClass: 'top-tab--stats-pt' },
   { key: 'settings', path: '/settings', icon: Settings, label: '설정', shortLabel: '설정', tabClass: 'top-tab--settings' },
 ];
 

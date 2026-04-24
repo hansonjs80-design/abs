@@ -368,6 +368,11 @@
 .top-tab--stats-mt:hover { background: #f5f3ff; color: #111827; }
 .top-tab--stats-mt.active { background: #8b5cf6; color: #ffffff; border-color: #7c3aed; box-shadow: none; }
 
+/* 5. Stats PT (Purple) */
+.top-tab--stats-pt { background: #ede9fe; border-color: #ddd6fe; color: #111827; }
+.top-tab--stats-pt:hover { background: #f5f3ff; color: #111827; }
+.top-tab--stats-pt.active { background: #8b5cf6; color: #ffffff; border-color: #7c3aed; box-shadow: none; }
+
 /* 5. Settings (Gray) */
 .top-tab--settings { background: #f3f4f6; border-color: #e5e7eb; color: #111827; }
 .top-tab--settings:hover { background: #f9fafb; color: #111827; }
