@@ -673,17 +673,17 @@ export default function StaffCalendar() {
           </button>
 
           {colorMenu && (
-            <div style={{ borderTop: '1px solid var(--border-color)', padding: '8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 2 }}>
+            <div style={{ borderTop: '1px solid var(--border-color)', padding: '6px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>
                 {colorMenu.type === 'font' ? '글자색 선택' : '배경색 선택'}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 3 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
                 {PRESET_COLORS.map(c => (
                   <button
                     key={c}
                     type="button"
                     onClick={() => applyColor(colorMenu.type, c)}
-                    style={{ width: 22, height: 22, borderRadius: 3, background: c, border: '1px solid #999', cursor: 'pointer', padding: 0 }}
+                    style={{ width: 18, height: 18, borderRadius: 2, background: c, border: '1px solid #999', cursor: 'pointer', padding: 0 }}
                     title={c}
                   />
                 ))}
@@ -691,15 +691,15 @@ export default function StaffCalendar() {
               <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                 <input
                   type="color"
-                  style={{ width: 28, height: 28, padding: 0, border: '1px solid #ccc', borderRadius: 3, cursor: 'pointer' }}
+                  style={{ width: 22, height: 22, padding: 0, border: '1px solid #ccc', borderRadius: 2, cursor: 'pointer' }}
                   onChange={(e) => applyColor(colorMenu.type, e.target.value)}
                   title="사용자 지정 색상"
                 />
-                <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>사용자 지정</span>
+                <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>직접선택</span>
                 <button
                   type="button"
                   onClick={() => handleEyedropper(colorMenu.type)}
-                  style={{ marginLeft: 'auto', padding: '2px 6px', fontSize: 12, borderRadius: 3, border: '1px solid #ccc', background: 'var(--bg-secondary)', cursor: 'pointer' }}
+                  style={{ marginLeft: 'auto', padding: '1px 4px', fontSize: 11, borderRadius: 2, border: '1px solid #ccc', background: 'var(--bg-secondary)', cursor: 'pointer' }}
                   title="스포이드"
                 >
                   💧
@@ -709,7 +709,7 @@ export default function StaffCalendar() {
                 type="button"
                 className="context-menu-item"
                 onClick={() => applyColor(colorMenu.type, null)}
-                style={{ fontSize: 12, padding: '3px 6px' }}
+                style={{ fontSize: 11, padding: '2px 4px' }}
               >
                 색상 초기화
               </button>
