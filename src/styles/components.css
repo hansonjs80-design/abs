@@ -368,10 +368,10 @@
 .top-tab--stats-mt:hover { background: #fffbeb; color: #111827; }
 .top-tab--stats-mt.active { background: #fffbeb; color: #111827; box-shadow: 0 -2px 0 #d97706 inset; border-color: #fde68a; }
 
-/* 5. Settings (Violet) */
-.top-tab--settings { background: #ede9fe; border-color: #ddd6fe; color: #111827; }
-.top-tab--settings:hover { background: #f5f3ff; color: #111827; }
-.top-tab--settings.active { background: #f5f3ff; color: #111827; box-shadow: 0 -2px 0 #7c3aed inset; border-color: #ddd6fe; }
+/* 5. Settings (Gray) */
+.top-tab--settings { background: #f3f4f6; border-color: #e5e7eb; color: #111827; }
+.top-tab--settings:hover { background: #f9fafb; color: #111827; }
+.top-tab--settings.active { background: #f9fafb; color: #111827; box-shadow: 0 -2px 0 #4b5563 inset; border-color: #e5e7eb; }
 
 .top-tab.month-tab {
   gap: 8px;
