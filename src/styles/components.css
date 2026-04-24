@@ -341,7 +341,6 @@
 }
 
 .top-tab.active {
-  color: var(--brand-primary);
   background: var(--bg-secondary);
   box-shadow: 0 -2px 0 var(--brand-primary) inset, var(--shadow-sm);
   transform: translateY(0) scale(1.01);
@@ -349,10 +348,30 @@
   z-index: 2;
 }
 
-.top-tab--calendar.active { background: #eff6ff; color: #2563eb; box-shadow: 0 -2px 0 #2563eb inset; border-color: #bfdbfe; }
-.top-tab--shockwave.active { background: #fff1f2; color: #e11d48; box-shadow: 0 -2px 0 #e11d48 inset; border-color: #fecdd3; }
-.top-tab--stats.active { background: #f0fdf4; color: #059669; box-shadow: 0 -2px 0 #059669 inset; border-color: #bbf7d0; }
-.top-tab--settings.active { background: #f5f3ff; color: #7c3aed; box-shadow: 0 -2px 0 #7c3aed inset; border-color: #ddd6fe; }
+/* 1. Calendar (Blue) */
+.top-tab--calendar { background: #dbeafe; border-color: #bfdbfe; color: #111827; }
+.top-tab--calendar:hover { background: #eff6ff; color: #111827; }
+.top-tab--calendar.active { background: #eff6ff; color: #111827; box-shadow: 0 -2px 0 #2563eb inset; border-color: #bfdbfe; }
+
+/* 2. Shockwave (Rose) */
+.top-tab--shockwave { background: #ffe4e6; border-color: #fecdd3; color: #111827; }
+.top-tab--shockwave:hover { background: #fff1f2; color: #111827; }
+.top-tab--shockwave.active { background: #fff1f2; color: #111827; box-shadow: 0 -2px 0 #e11d48 inset; border-color: #fecdd3; }
+
+/* 3. Stats SW (Emerald) */
+.top-tab--stats-sw { background: #d1fae5; border-color: #a7f3d0; color: #111827; }
+.top-tab--stats-sw:hover { background: #ecfdf5; color: #111827; }
+.top-tab--stats-sw.active { background: #ecfdf5; color: #111827; box-shadow: 0 -2px 0 #059669 inset; border-color: #a7f3d0; }
+
+/* 4. Stats MT (Amber) */
+.top-tab--stats-mt { background: #fef3c7; border-color: #fde68a; color: #111827; }
+.top-tab--stats-mt:hover { background: #fffbeb; color: #111827; }
+.top-tab--stats-mt.active { background: #fffbeb; color: #111827; box-shadow: 0 -2px 0 #d97706 inset; border-color: #fde68a; }
+
+/* 5. Settings (Violet) */
+.top-tab--settings { background: #ede9fe; border-color: #ddd6fe; color: #111827; }
+.top-tab--settings:hover { background: #f5f3ff; color: #111827; }
+.top-tab--settings.active { background: #f5f3ff; color: #111827; box-shadow: 0 -2px 0 #7c3aed inset; border-color: #ddd6fe; }
 
 .top-tab.month-tab {
   gap: 8px;

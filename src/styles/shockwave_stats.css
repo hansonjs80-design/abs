@@ -416,8 +416,8 @@
 
 /* Therapist Group Columns */
 .therapist-group-start {
-  border-left: 1px solid var(--grid-strong) !important;
-  box-shadow: none !important;
+  border-left: 0 !important;
+  box-shadow: inset 1px 0 0 var(--grid-strong);
 }
 
 .therapist-group-end {
