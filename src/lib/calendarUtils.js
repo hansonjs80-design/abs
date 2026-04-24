@@ -129,6 +129,17 @@ export function generateShockwaveCalendar(year, month, holidays = new Set()) {
     weeks.push(weekDays);
   }
 
+  // 필터링: 마지막 주차에 이번 달 날짜가 하나도 없으면 해당 주차 제거
+  while (weeks.length > 0) {
+    const lastWeek = weeks[weeks.length - 1];
+    const hasCurrentMonthDay = lastWeek.some(day => day.isCurrentMonth);
+    if (!hasCurrentMonthDay) {
+      weeks.pop();
+    } else {
+      break;
+    }
+  }
+
   return weeks;
 }
 
