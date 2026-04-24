@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { generateShockwaveCalendar, getTodayKST } from '../lib/calendarUtils';
 import { syncTodayShockwaveScheduleToStats } from '../lib/shockwaveSyncUtils';
@@ -40,6 +40,7 @@ export function ScheduleProvider({ children }) {
   const [monthlyManualTherapists, setMonthlyManualTherapists] = useState([]);
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   const shouldKeepShockwaveMemo = useCallback((memo) => {
     if (!memo) return false;
@@ -294,6 +295,17 @@ export function ScheduleProvider({ children }) {
       console.error('Failed to load shockwave settings:', err);
     }
   }, []);
+
+  // 앱 시작 시 치료사 목록과 설정을 미리 로드 (탭 전환 시 즉시 표시하기 위해)
+  useEffect(() => {
+    if (!initialLoadDone) {
+      Promise.all([
+        loadTherapists(),
+        loadManualTherapists(),
+        loadShockwaveSettings(),
+      ]).then(() => setInitialLoadDone(true));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 충격파 스케줄러 환경설정 저장
   const saveShockwaveSettings = useCallback(async (newSettings) => {
