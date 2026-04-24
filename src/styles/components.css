@@ -552,6 +552,7 @@
   transform: translateX(-50%);
   width: 300px;
   background: var(--bg-card);
+  color: var(--text-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
@@ -565,6 +566,7 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
+  color: var(--text-primary);
 }
 
 .month-dropdown-year span {
