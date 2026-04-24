@@ -485,17 +485,6 @@ export default function ManualTherapyStatsPage() {
               {activeSection === 'grid' && (
                 <div className="sw-stats-body sw-stats-body--grid">
                   <div className="sw-grid-card">
-                    <div className="sw-grid-card-header">
-                      <div className="sw-grid-card-title">
-                        <h2>{currentMonth}월 도수치료 현황</h2>
-                        <p>도수치료 치료사와 처방 목록 기준으로 날짜별 내역을 입력하고 수정합니다.</p>
-                      </div>
-                      <div className="sw-grid-card-meta">
-                        <span>총 기록 {logs.length}건</span>
-                        <span>치료사 {safeTherapists.length}명</span>
-                      </div>
-                    </div>
-
                     <div className="sw-grid-card-table">
                       <ShockwaveDataGrid
                         logs={logs}
