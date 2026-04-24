@@ -353,10 +353,10 @@
 .top-tab--calendar:hover { background: #eff6ff; color: #111827; }
 .top-tab--calendar.active { background: #eff6ff; color: #111827; box-shadow: 0 -2px 0 #2563eb inset; border-color: #bfdbfe; }
 
-/* 2. Shockwave (Rose) */
-.top-tab--shockwave { background: #ffe4e6; border-color: #fecdd3; color: #111827; }
-.top-tab--shockwave:hover { background: #fff1f2; color: #111827; }
-.top-tab--shockwave.active { background: #fff1f2; color: #111827; box-shadow: 0 -2px 0 #e11d48 inset; border-color: #fecdd3; }
+/* 2. Shockwave (Green) */
+.top-tab--shockwave { background: #dcfce7; border-color: #bbf7d0; color: #111827; }
+.top-tab--shockwave:hover { background: #f0fdf4; color: #111827; }
+.top-tab--shockwave.active { background: #f0fdf4; color: #111827; box-shadow: 0 -2px 0 #16a34a inset; border-color: #bbf7d0; }
 
 /* 3. Stats SW (Emerald) */
 .top-tab--stats-sw { background: #d1fae5; border-color: #a7f3d0; color: #111827; }
