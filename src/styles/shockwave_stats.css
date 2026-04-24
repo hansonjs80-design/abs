@@ -367,8 +367,34 @@
 .grid-title-inner {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.grid-title-text {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.grid-title-meta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.grid-title-meta span {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.96);
+  font-size: 0.83rem;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .grid-title-action {

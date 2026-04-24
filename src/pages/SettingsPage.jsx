@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../components/common/Toast';
@@ -533,6 +533,46 @@ ON CONFLICT (username) DO UPDATE SET
   is_active = true,
   updated_at = timezone('utc'::text, now());`;
 
+const DB_USAGE_CHECK_SQL = `-- 1. 현재 DB 전체 크기
+select
+  current_database() as database_name,
+  pg_database_size(current_database()) as current_bytes,
+  pg_size_pretty(pg_database_size(current_database())) as current_size_pretty,
+  500 * 1024 * 1024 as free_limit_bytes,
+  pg_size_pretty(500 * 1024 * 1024) as free_limit_pretty,
+  round(
+    pg_database_size(current_database())::numeric
+    / (500 * 1024 * 1024)::numeric * 100,
+    2
+  ) as percent_of_free_limit;
+
+-- 2. 핵심 테이블별 크기
+select
+  c.relname as table_name,
+  c.reltuples::bigint as estimated_rows,
+  pg_total_relation_size(c.oid) as total_bytes,
+  pg_size_pretty(pg_total_relation_size(c.oid)) as total_size,
+  pg_relation_size(c.oid) as table_bytes,
+  pg_size_pretty(pg_relation_size(c.oid)) as table_size,
+  pg_size_pretty(pg_total_relation_size(c.oid) - pg_relation_size(c.oid)) as index_and_toast_size
+from pg_class c
+join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = 'public'
+  and c.relkind = 'r'
+  and c.relname in (
+    'shockwave_patient_logs',
+    'manual_therapy_patient_logs',
+    'shockwave_schedules',
+    'staff_schedules',
+    'shockwave_settings',
+    'shockwave_monthly_therapists',
+    'holidays',
+    'notices',
+    'shockwave_therapists',
+    'manual_therapy_therapists'
+  )
+order by pg_total_relation_size(c.oid) desc;`;
+
 export default function SettingsPage() {
   const { user, signOut, refreshStoredUser } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -574,6 +614,12 @@ export default function SettingsPage() {
     staff_schedule_block_rules: {},
     monthly_settlement_settings: {},
   });
+  const dbUsageChecklist = [
+    'Supabase 프로젝트 > SQL Editor > New query 에서 실행',
+    '첫 번째 결과의 percent_of_free_limit 확인',
+    '70% 이상이면 정리 계획 시작, 90% 근처면 정리 필요',
+    '핵심 테이블은 shockwave_patient_logs, manual_therapy_patient_logs, shockwave_schedules, staff_schedules',
+  ];
 
   const handleCopySQL = async (sql) => {
     if (!navigator?.clipboard) {
@@ -583,19 +629,19 @@ export default function SettingsPage() {
     try {
       await navigator.clipboard.writeText(sql);
       addToast('SQL 코드가 클립보드에 복사되었습니다.', 'success');
-    } catch (err) {
+    } catch {
       addToast('복사 실패: 클립보드 접근 권한이 필요합니다.', 'error');
     }
+  };
+
+  const openSupabaseDashboard = () => {
+    window.open('https://supabase.com/dashboard', '_blank', 'noopener,noreferrer');
   };
 
   useEffect(() => {
     loadHolidays();
     loadSettings();
   }, []);
-
-  useEffect(() => {
-    if (canManageLogin) loadAppUsers();
-  }, [canManageLogin]);
 
   const loadSettings = async () => {
     try {
@@ -623,10 +669,12 @@ export default function SettingsPage() {
           monthly_settlement_settings: data.monthly_settlement_settings || {},
         });
       }
-    } catch(e) {}
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+    }
   };
 
-  const loadAppUsers = async () => {
+  const loadAppUsers = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('app_users')
@@ -658,7 +706,11 @@ export default function SettingsPage() {
       console.error('Failed to load app users:', err);
       addToast('로그인 사용자 목록을 불러오지 못했습니다. SQL 테이블을 먼저 생성해주세요.', 'error');
     }
-  };
+  }, [addToast]);
+
+  useEffect(() => {
+    if (canManageLogin) loadAppUsers();
+  }, [canManageLogin, loadAppUsers]);
 
   const addAppUser = async () => {
     const username = normalizeUsername(newAppUser.username);
@@ -964,6 +1016,80 @@ export default function SettingsPage() {
               등록된 공휴일이 없습니다
             </p>
           )}
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 24 }}>
+        <div className="card-header" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+          <span className="card-title"><Database size={18} /> DB 용량 확인</span>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={openSupabaseDashboard}
+            >
+              Supabase 열기
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => handleCopySQL(DB_USAGE_CHECK_SQL)}
+            >
+              <Copy size={14} />
+              용량 확인 SQL 복사
+            </button>
+          </div>
+        </div>
+        <div className="card-body">
+          <div
+            style={{
+              display: 'grid',
+              gap: 14,
+              gridTemplateColumns: 'minmax(260px, 360px) minmax(0, 1fr)',
+            }}
+          >
+            <div
+              style={{
+                border: '1px solid var(--border-color-light)',
+                borderRadius: 16,
+                padding: '16px 18px',
+                background: 'var(--bg-tertiary)',
+              }}
+            >
+              <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 10 }}>확인 순서</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {dbUsageChecklist.map((item, index) => (
+                  <div key={item} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', color: 'var(--text-secondary)' }}>
+                    <span style={{ minWidth: 20, fontWeight: 800, color: 'var(--primary)' }}>{index + 1}.</span>
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>SQL Editor에서 실행할 코드</div>
+              <textarea
+                readOnly
+                value={DB_USAGE_CHECK_SQL}
+                style={{
+                  width: '100%',
+                  minHeight: 240,
+                  borderRadius: 16,
+                  border: '1px solid var(--border-color-light)',
+                  background: 'var(--bg-tertiary)',
+                  color: 'var(--text-primary)',
+                  padding: 16,
+                  fontSize: 13,
+                  lineHeight: 1.55,
+                  resize: 'vertical',
+                }}
+              />
+              <div style={{ marginTop: 10, color: 'var(--text-tertiary)', fontSize: 13 }}>
+                앱 안에서 직접 숫자를 표시하려면 Supabase에 조회용 함수 생성이 추가로 필요합니다. 지금은 설정 탭에서 바로 복사하고 실행할 수 있게 구성했습니다.
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

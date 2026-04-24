@@ -42,16 +42,12 @@ export default function ShockwaveDataGrid({
   currentMonth,
   fetchLogs,
   extraDraftRows = 0,
-  onApplyTodaySchedule,
-  isApplyingTodaySchedule = false,
   tableName = 'shockwave_patient_logs',
   prescriptions: prescriptionsProp,
   frozenColumnCount: frozenColumnCountProp,
   title,
-  applyTodayLabel = '오늘 충격파 스케줄 적용',
-  onApplyMonthSchedule,
-  isApplyingMonthSchedule = false,
-  applyMonthLabel = '전체 날짜 스케줄 적용',
+  totalRecordCount,
+  therapistCount,
   secondarySummaryLabel = '신규',
   onSyncDateToScheduler = syncUnifiedStatsDateToScheduler,
 }) {
@@ -73,6 +69,8 @@ export default function ShockwaveDataGrid({
     return Array.isArray(source) ? source.filter(Boolean) : ['F1.5', 'F/Rdc', 'F/R'];
   }, [prescriptionsProp, settings?.prescriptions]);
   const gridTitle = title || `${currentMonth}월 충격파 현황`;
+  const summaryRecordCount = Number.isFinite(totalRecordCount) ? totalRecordCount : safeInputLogs.length;
+  const summaryTherapistCount = Number.isFinite(therapistCount) ? therapistCount : displayTherapists.length;
 
   const runSyncForDate = useCallback(async (date) => {
     if (!date || !onSyncDateToScheduler) return;
@@ -1043,27 +1041,11 @@ export default function ShockwaveDataGrid({
           <tr className="sw-header-row sw-header-row-title">
             <th colSpan={totalColCount} className="grid-title">
               <div className="grid-title-inner">
-                <span>{gridTitle}</span>
-                {onApplyTodaySchedule && (
-                  <button
-                    type="button"
-                    className="grid-title-action"
-                    onClick={onApplyTodaySchedule}
-                    disabled={isApplyingTodaySchedule || isApplyingMonthSchedule}
-                  >
-                    {isApplyingTodaySchedule ? '적용 중...' : applyTodayLabel}
-                  </button>
-                )}
-                {onApplyMonthSchedule && (
-                  <button
-                    type="button"
-                    className="grid-title-action"
-                    onClick={onApplyMonthSchedule}
-                    disabled={isApplyingTodaySchedule || isApplyingMonthSchedule}
-                  >
-                    {isApplyingMonthSchedule ? '전체 동기화 중...' : applyMonthLabel}
-                  </button>
-                )}
+                <span className="grid-title-text">{gridTitle}</span>
+                <div className="grid-title-meta">
+                  <span>총 기록 {summaryRecordCount}건</span>
+                  <span>치료사 {summaryTherapistCount}명</span>
+                </div>
               </div>
             </th>
           </tr>

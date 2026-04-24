@@ -462,7 +462,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   // ── 셀 조작 상태 (구글 시트 방식) ──
   const [selectedCell, setSelectedCell] = useState(null);     // { w, d, r, c }
-  const [rangeEnd, setRangeEnd] = useState(null);             // { w, d, r, c } (Shift 선택 끝점)
+  const [, setRangeEnd] = useState(null);                     // { w, d, r, c } (Shift 선택 끝점)
   const [selectedKeys, setSelectedKeys] = useState(() => new Set());
   const [editingCell, setEditingCell] = useState(null);       // "w-d-r-c" 키 문자열
   const [editSessionId, setEditSessionId] = useState(null);
@@ -744,7 +744,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const lunchEnd = noLunch ? null : (dateOv?.lunch_end || dayOv.lunch_end || null);
 
     const result = [];
-    let lunchAdded = false;
 
     baseTimeSlots.forEach((slot, idx) => {
       const t = slot.time;
@@ -985,9 +984,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
     // Supabase에서 shockwave와 manual_therapy 모두 조회
     const normalizedName = normalizeNameForMatch(rawName);
-    const cleanDisplayName = String(rawName).replace(/\(-\)/g, '').trim();
 
-    const [shockwaveRes, manualRes, shockwaveBpRes, manualBpRes] = await Promise.all([
+    const [shockwaveRes, manualRes] = await Promise.all([
       supabase.from('shockwave_patient_logs')
         .select('patient_name, chart_number, visit_count, date, prescription, body_part')
         .lte('date', targetDate)
@@ -998,14 +996,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         .lte('date', targetDate)
         .order('date', { ascending: false })
         .limit(200),
-      supabase.from('shockwave_patient_logs')
-        .select('body_part')
-        .not('body_part', 'is', null)
-        .limit(500),
-      supabase.from('manual_therapy_patient_logs')
-        .select('body_part')
-        .not('body_part', 'is', null)
-        .limit(500),
     ]);
 
     const allData = [
@@ -1212,6 +1202,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     );
   }, []);
 
+  const isContextMenuTarget = useCallback((target) => {
+    return Boolean(target && contextMenuRef.current?.contains(target));
+  }, []);
+
   useEffect(() => {
     undoStackRef.current = undoStack;
   }, [undoStack]);
@@ -1220,6 +1214,26 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     undoStackRef.current = [action, ...undoStackRef.current].slice(0, 50);
     setUndoStack(undoStackRef.current);
   }, []);
+
+  const buildMemoSnapshotForKeys = useCallback((keys) => {
+    return Array.from(new Set(keys || [])).map((key) => {
+      const [w, d, r, c] = key.split('-').map(Number);
+      const memo = memos[key] || {};
+      return {
+        year: currentYear,
+        month: currentMonth,
+        week_index: w,
+        day_index: d,
+        row_index: r,
+        col_index: c,
+        content: memo.content || '',
+        bg_color: memo.bg_color || null,
+        merge_span: memo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+        prescription: memo.prescription || null,
+        body_part: memo.body_part || null,
+      };
+    });
+  }, [currentYear, currentMonth, memos]);
 
   const doUndo = useCallback(() => {
     const [action, ...rest] = undoStackRef.current;
@@ -1231,8 +1245,30 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       if (action.type === 'bulk-edit') {
         await saveShockwaveMemosBulk(action.oldMemos);
       } else if (action.type === 'edit') {
-        const { w, d, r, c, oldContent, oldBg } = action;
-        await onSaveMemo(currentYear, currentMonth, w, d, r, c, oldContent, oldBg);
+        const {
+          w,
+          d,
+          r,
+          c,
+          oldContent,
+          oldBg,
+          oldMergeSpan,
+          oldPrescription,
+          oldBodyPart,
+        } = action;
+        await onSaveMemo(
+          currentYear,
+          currentMonth,
+          w,
+          d,
+          r,
+          c,
+          oldContent,
+          oldBg,
+          oldMergeSpan,
+          oldPrescription,
+          oldBodyPart
+        );
       }
     }).catch((error) => {
       console.error('Undo failed:', error);
@@ -1243,6 +1279,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const handleGlobalKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') {
         const activeItem = document.activeElement;
+        if (isContextMenuTarget(e.target) || isContextMenuTarget(activeItem)) return;
         if (isEditableTarget(activeItem)) return;
         e.preventDefault();
         doUndo();
@@ -1252,7 +1289,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     };
     window.addEventListener('keydown', handleGlobalKeyDown, true);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown, true);
-  }, [doUndo, isEditableTarget]);
+  }, [doUndo, isEditableTarget, isContextMenuTarget]);
 
   useEffect(() => {
     if (!Array.isArray(colRatios) || colRatios.length === colCount) return;
@@ -1260,8 +1297,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, [colRatios, colCount]);
 
   // ── 셀 키 헬퍼 ──
-  const cellKey = (w, d, r, c) => `${w}-${d}-${r}-${c}`;
-  const dayKey = (w, d) => `${w}-${d}`;
+  const cellKey = useCallback((w, d, r, c) => `${w}-${d}-${r}-${c}`, []);
 
   const computeSelectionInfo = useCallback(() => {
     if (!selectedCell || !selectedKeys || selectedKeys.size === 0) return null;
@@ -1465,7 +1501,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return;
     }
     setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
-    recordUndo({ type: 'edit', w, d, r, c, oldContent, oldBg: memos[key]?.bg_color });
+    recordUndo({
+      type: 'edit',
+      w,
+      d,
+      r,
+      c,
+      oldContent,
+      oldBg: memos[key]?.bg_color,
+      oldMergeSpan: memos[key]?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+      oldPrescription: memos[key]?.prescription || null,
+      oldBodyPart: memos[key]?.body_part || null,
+    });
     const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, newContent, undefined, newMergeSpan, newPrescription, newBodyPart);
     setPendingDisplayValues((prev) => {
       const next = { ...prev };
@@ -1473,7 +1520,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return next;
     });
     if (!success) addToast('저장 실패', 'error');
-  }, [editValue, currentYear, currentMonth, memos, onSaveMemo, addToast, buildSchedulerAutoText]);
+  }, [editValue, currentYear, currentMonth, memos, onSaveMemo, addToast, buildSchedulerAutoText, recordUndo]);
 
   // ── 셀 우클릭 = 처방 선택 ──
   const handleCellContextMenu = useCallback((e, w, d, r, c, currentPrescription) => {
@@ -1482,7 +1529,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setEditingCell(null);
     selectSingleCell({ w, d, r, c });
     const key = cellKey(w, d, r, c);
-    setContextMenuBodyInput(memos[key]?.body_part || '');
+    setContextMenuBodyInput('');
     setContextMenuNoteInput('');
     setContextMenuMemoDrafts(getMemoListFromMergeSpan(memos[key]?.merge_span));
     setContextMenu({
@@ -1498,23 +1545,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       skipNextEditBlurSaveRef.current = false;
     }, 0);
   }, [cellKey, memos, selectSingleCell]);
-
-  const handlePrescriptionSelect = useCallback(async (prescription) => {
-    if (!contextMenu) return;
-    const { weekIdx: w, dayIdx: d, rowIdx: r, colIdx: c } = contextMenu;
-    const key = cellKey(w, d, r, c);
-    const memo = memos[key] || {};
-    
-    // 처방이 설정될 때 이름에 40/60이 있으면 숫자 자동 제거
-    let updatedContent = memo.content;
-    if (prescription && has4060Pattern(memo.content)) {
-      updatedContent = strip4060FromContent(memo.content);
-    }
-    
-    setContextMenu(null);
-    const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, updatedContent, memo.bg_color, memo.merge_span, prescription);
-    if (!success) addToast('처방 지정 실패', 'error');
-  }, [contextMenu, currentYear, currentMonth, memos, onSaveMemo, addToast]);
 
   useEffect(() => {
     if (!contextMenu) {
@@ -1579,7 +1609,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       recordUndo({ type: 'bulk-edit', oldMemos });
       await saveShockwaveMemosBulk(payload);
     }
-  }, [currentYear, currentMonth, memos, saveShockwaveMemosBulk]);
+  }, [currentYear, currentMonth, memos, saveShockwaveMemosBulk, recordUndo]);
 
   const tryMergeSelection = useCallback(async () => {
     const selection = computeSelectionInfo();
@@ -1667,14 +1697,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     });
   }, [selectedKeys, memos, normalizeKeysToMergeMasters]);
 
-  const hasCancelledSelection = useMemo(() => {
-    if (!selectedKeys || selectedKeys.size === 0) return false;
-    const effectiveKeys = normalizeKeysToMergeMasters(selectedKeys);
-    return Array.from(effectiveKeys).some((key) => {
-      const memo = memos[key];
-      return String(memo?.content || '').trim() && memo?.bg_color === TREATMENT_CANCEL_BG;
-    });
-  }, [selectedKeys, memos, normalizeKeysToMergeMasters]);
   const treatmentCompleteButtonLabel = hasCompletedSelection ? '방문취소' : '방문완료';
   const isAppleShortcutPlatform = useMemo(() => {
     if (typeof navigator === 'undefined') return false;
@@ -1723,16 +1745,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return acc;
     }, {});
   }, [settings, currentYear, currentMonth]);
-
-  // 날짜 비교 헬퍼: 원본(w,d)와 대상(w,d)의 실제 날짜를 비교
-  const isLaterDate = useCallback((srcW, srcD, dstW, dstD) => {
-    const srcDay = weeks[srcW]?.[srcD];
-    const dstDay = weeks[dstW]?.[dstD];
-    if (!srcDay || !dstDay) return false;
-    const srcDate = new Date(srcDay.year, srcDay.month - 1, srcDay.day);
-    const dstDate = new Date(dstDay.year, dstDay.month - 1, dstDay.day);
-    return dstDate > srcDate;
-  }, [weeks]);
 
   const getAdjacentCell = useCallback((cell, direction) => {
     let { w, d, r, c } = cell;
@@ -2017,7 +2029,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (!clip) return;
     clipboardRef.current = { ...clip, mode: 'copy' };
     setClipboardSource({ keys: new Set(clip.sourceKeys), mode: 'copy' });
-    try { navigator.clipboard.writeText(clip.plainText); } catch (_) {}
+    navigator.clipboard.writeText(clip.plainText).catch(() => {
+      console.debug('Clipboard sync failed during copy.');
+    });
     addToast('복사됨', 'info');
     setContextMenu(null);
   }, [buildClipboardSelection, addToast]);
@@ -2027,7 +2041,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (!clip) return;
     clipboardRef.current = { ...clip, mode: 'cut' };
     setClipboardSource({ keys: new Set(clip.sourceKeys), mode: 'cut' });
-    try { navigator.clipboard.writeText(clip.plainText); } catch (_) {}
+    navigator.clipboard.writeText(clip.plainText).catch(() => {
+      console.debug('Clipboard sync failed during cut.');
+    });
     addToast('잘라내기됨 (붙여넣기 시 원본 삭제)', 'info');
     setContextMenu(null);
   }, [buildClipboardSelection, addToast]);
@@ -2058,7 +2074,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
             clip = externalClip;
           }
         }
-      } catch (_) {}
+      } catch (error) {
+        console.debug('Clipboard read failed during paste.', error);
+      }
     }
 
     if (!clip?.cells?.length) {
@@ -2139,7 +2157,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     recordUndo({ type: 'bulk-edit', oldMemos });
     addToast('붙여넣기 완료', 'success');
     setContextMenu(null);
-  }, [selectedCell, clipboardSource, parsePlainTextClipboard, buildPastePayload, addToast, memos, cellKey, currentYear, currentMonth, baseTimeSlots.length, colCount, saveShockwaveMemosBulk]);
+  }, [selectedCell, clipboardSource, parsePlainTextClipboard, buildPastePayload, addToast, memos, cellKey, currentYear, currentMonth, baseTimeSlots.length, colCount, saveShockwaveMemosBulk, recordUndo]);
 
   const buildTreatmentStatusPayload = useCallback((mode) => {
     if (!selectedKeys || selectedKeys.size === 0) return null;
@@ -2234,7 +2252,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
     setContextMenu(null);
     return true;
-  }, [buildTreatmentStatusPayload, saveShockwaveMemosBulk, addToast]);
+  }, [buildTreatmentStatusPayload, saveShockwaveMemosBulk, addToast, recordUndo]);
 
   const handleToggleTreatmentComplete = useCallback(async () => {
     await applyTreatmentCompleteToSelection('toggle');
@@ -2324,7 +2342,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     else if (action === 'merge' || action === 'unmerge') tryMergeSelection();
     else if (action?.type === 'prescription') {
       const keys = Array.from(selectedKeys || []);
-      const newMemos = { ...memos };
+      const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       
       for (const key of keys) {
@@ -2340,10 +2358,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           if (success) anyChanged = true;
         }
       }
-      if (anyChanged) addToast('처방이 적용되었습니다.', 'success');
+      if (anyChanged) {
+        recordUndo({ type: 'bulk-edit', oldMemos });
+        addToast('처방이 적용되었습니다.', 'success');
+      }
     }
     else if (action?.type === 'bodyPart') {
       const keys = Array.from(selectedKeys || []);
+      const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       
       for (const key of keys) {
@@ -2354,12 +2376,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           if (success) anyChanged = true;
         }
       }
-      if (anyChanged) addToast('부위가 적용되었습니다.', 'success');
+      if (anyChanged) {
+        recordUndo({ type: 'bulk-edit', oldMemos });
+        addToast('부위가 적용되었습니다.', 'success');
+      }
       return; // don't close menu
     }
     else if (action?.type === 'bodyPartAdd') {
       // 기존 부위에 추가
       const keys = Array.from(selectedKeys || []);
+      const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       for (const key of keys) {
         const [w, d, r, c] = key.split('-').map(Number);
@@ -2371,12 +2397,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, combined);
         if (success) anyChanged = true;
       }
-      if (anyChanged) addToast('부위가 추가되었습니다.', 'success');
+      if (anyChanged) {
+        recordUndo({ type: 'bulk-edit', oldMemos });
+        addToast('부위가 추가되었습니다.', 'success');
+      }
       return;
     }
     else if (action?.type === 'bodyPartRemove') {
       // 특정 부위 삭제
       const keys = Array.from(selectedKeys || []);
+      const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       for (const key of keys) {
         const [w, d, r, c] = key.split('-').map(Number);
@@ -2386,11 +2416,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, updated);
         if (success) anyChanged = true;
       }
-      if (anyChanged) addToast('부위가 삭제되었습니다.', 'success');
+      if (anyChanged) {
+        recordUndo({ type: 'bulk-edit', oldMemos });
+        addToast('부위가 삭제되었습니다.', 'success');
+      }
       return;
     }
     else if (action?.type === 'bodyPartDeleteValue') {
       const keys = Array.from(selectedKeys || []);
+      const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       const targetKey = normalizeBodyPartKey(action.value);
       if (!targetKey) return;
@@ -2403,12 +2437,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, updated);
         if (success) anyChanged = true;
       }
-      if (anyChanged) addToast('부위가 삭제되었습니다.', 'success');
+      if (anyChanged) {
+        recordUndo({ type: 'bulk-edit', oldMemos });
+        addToast('부위가 삭제되었습니다.', 'success');
+      }
       return;
     }
     else if (action?.type === 'bodyPartEdit') {
       // 특정 부위 수정
       const keys = Array.from(selectedKeys || []);
+      const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       for (const key of keys) {
         const [w, d, r, c] = key.split('-').map(Number);
@@ -2419,11 +2457,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, updated);
         if (success) anyChanged = true;
       }
-      if (anyChanged) addToast('부위가 수정되었습니다.', 'success');
+      if (anyChanged) {
+        recordUndo({ type: 'bulk-edit', oldMemos });
+        addToast('부위가 수정되었습니다.', 'success');
+      }
       return;
     }
     else if (action?.type === 'bodyPartClear') {
       const keys = Array.from(selectedKeys || []);
+      const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       for (const key of keys) {
         const [w, d, r, c] = key.split('-').map(Number);
@@ -2431,11 +2473,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, '');
         if (success) anyChanged = true;
       }
-      if (anyChanged) addToast('부위가 삭제되었습니다.', 'success');
+      if (anyChanged) {
+        recordUndo({ type: 'bulk-edit', oldMemos });
+        addToast('부위가 삭제되었습니다.', 'success');
+      }
       return;
     }
     else if (action?.type === 'bodyPartToggle') {
       const keys = Array.from(selectedKeys || []);
+      const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       const targetPart = action.value.trim();
       for (const key of keys) {
@@ -2452,10 +2498,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, updated);
         if (success) anyChanged = true;
       }
+      if (anyChanged) {
+        recordUndo({ type: 'bulk-edit', oldMemos });
+      }
       return;
     }
     else if (action?.type === 'memoAdd') {
       const keys = Array.from(selectedKeys || []);
+      const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       const newMemo = String(action.value || '').trim();
       if (!newMemo) return;
@@ -2469,11 +2519,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part);
         if (success) anyChanged = true;
       }
-      if (anyChanged) addToast('메모가 추가되었습니다.', 'success');
+      if (anyChanged) {
+        recordUndo({ type: 'bulk-edit', oldMemos });
+        addToast('메모가 추가되었습니다.', 'success');
+      }
       return;
     }
     else if (action?.type === 'memoRemove') {
       const keys = Array.from(selectedKeys || []);
+      const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       setContextMenuMemoDrafts((prev) => prev.filter((_, index) => index !== action.index));
       for (const key of keys) {
@@ -2485,11 +2539,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part);
         if (success) anyChanged = true;
       }
-      if (anyChanged) addToast('메모가 삭제되었습니다.', 'success');
+      if (anyChanged) {
+        recordUndo({ type: 'bulk-edit', oldMemos });
+        addToast('메모가 삭제되었습니다.', 'success');
+      }
       return;
     }
     else if (action?.type === 'memoUpdate') {
       const keys = Array.from(selectedKeys || []);
+      const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       const nextValue = String(action.value || '').trim();
       setContextMenuMemoDrafts((prev) => prev.map((item, index) => index === action.index ? nextValue : item).filter(Boolean));
@@ -2502,11 +2560,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part);
         if (success) anyChanged = true;
       }
-      if (anyChanged) addToast('메모가 수정되었습니다.', 'success');
+      if (anyChanged) {
+        recordUndo({ type: 'bulk-edit', oldMemos });
+        addToast('메모가 수정되었습니다.', 'success');
+      }
       return;
     }
     setContextMenu(null);
-  }, [selectedKeys, memos, pendingDisplayValues, currentYear, currentMonth, onSaveMemo, addToast, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleTreatmentCancel, tryMergeSelection]);
+  }, [selectedKeys, memos, pendingDisplayValues, currentYear, currentMonth, onSaveMemo, addToast, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleTreatmentCancel, tryMergeSelection, buildMemoSnapshotForKeys, recordUndo]);
 
   const submitContextMenuBodyInput = useCallback(() => {
     const val = contextMenuBodyInput.trim();
@@ -2566,9 +2627,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     });
   }, []);
 
+  const beginImeEditingCell = useCallback((key, value = '') => {
+    flushSync(() => {
+      setEditingCell(key);
+      setEditValue(value);
+    });
+  }, []);
+
   // ── 키보드 이벤트 핸들러 (구글 시트 방식) ──
   const handleKeyDown = useCallback((e) => {
     if (e.defaultPrevented) return;
+    if (isContextMenuTarget(e.target)) return;
     if (isEditableTarget(e.target)) return;
     if (!selectedCell) return;
     const { w, d, r, c } = selectedCell;
@@ -2686,7 +2755,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         e.key === 'Process' ||
         e.keyCode === 229 ||
         e.nativeEvent?.isComposing ||
-        /[^\x00-\x7F]/.test(e.key);
+        (e.key.length === 1 && e.key.charCodeAt(0) > 127);
       if (isImeCompositionKey) {
         imeOpenRef.current = true;
         // Let the focused hidden input receive the IME composition intact.
@@ -2697,9 +2766,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       }
       return;
     }
-  }, [selectedCell, editingCell, selectedKeys, deleteCells, buildRangeKeys, selectSingleCell, getAdjacentCell, beginEditingCell, promoteFocusedInputToEditor, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleTreatmentCancel, handleToggleHolidayBackground, tryMergeSelection, isEditableTarget]);
-
-  const dismissContextMenu = useCallback(() => setContextMenu(null), []);
+  }, [selectedCell, editingCell, selectedKeys, deleteCells, buildRangeKeys, selectSingleCell, getAdjacentCell, beginEditingCell, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleTreatmentCancel, handleToggleHolidayBackground, tryMergeSelection, isEditableTarget, isContextMenuTarget]);
 
   // 키보드 이벤트 등록
 
@@ -2716,6 +2783,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       if (!selectedCell) return;
 
       const target = event.target;
+      if (isContextMenuTarget(target)) return;
       const isEditableTarget =
         (target instanceof HTMLInputElement && !target.dataset.hiddenInput) ||
         target instanceof HTMLTextAreaElement ||
@@ -2731,18 +2799,19 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
     window.addEventListener('paste', handlePasteEvent, true);
     return () => window.removeEventListener('paste', handlePasteEvent, true);
-  }, [selectedCell, handlePasteSelection]);
+  }, [selectedCell, handlePasteSelection, isContextMenuTarget]);
 
   useEffect(() => {
     const handleWindowKeyDown = (event) => {
       const target = event.target;
+      if (isContextMenuTarget(target)) return;
       if (isEditableTarget(target)) return;
       handleKeyDown(event);
     };
 
     window.addEventListener('keydown', handleWindowKeyDown, true);
     return () => window.removeEventListener('keydown', handleWindowKeyDown, true);
-  }, [handleKeyDown, isEditableTarget]);
+  }, [handleKeyDown, isEditableTarget, isContextMenuTarget]);
 
   useEffect(() => {
     const handleMouseUp = () => {
@@ -2879,10 +2948,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       selectSingleCell({ w, d, r, c: nc });
     }
   }, [baseTimeSlots.length, colCount, selectSingleCell, getAdjacentCell]);
-
-  const handleContextMerge = useCallback(() => {
-    tryMergeSelection();
-  }, [tryMergeSelection]);
 
   const handleChartSelectorClose = useCallback((selected) => {
     if (!chartSelector) return;
@@ -3052,7 +3117,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           <div className="shockwave-days" style={{ position: 'relative' }}>
             {weekDays.map((dayInfo, dayIdx) => {
               const isToday = isSameDate(dayInfo.date, today);
-              const thisDayKey = dayKey(weekIdx, dayIdx);
               const daySlots = getTimeSlotsForDay(dayInfo);
               // 첫 번째 요일에만 시간 열 표사
               const showTimeCol = dayIdx === 0;
@@ -3319,6 +3383,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                   }}
                                   onCompositionStart={() => {
                                     imeOpenRef.current = true;
+                                    if (!isEditing) {
+                                      beginImeEditingCell(key, editInputRef.current?.value || '');
+                                    }
                                   }}
                                   onCompositionEnd={(e) => {
                                     imeOpenRef.current = false;
@@ -3432,6 +3499,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           ref={contextMenuRef}
           className="shockwave-context-menu"
           style={{ top: contextMenu.y, left: contextMenu.x }}
+          onKeyDown={(e) => e.stopPropagation()}
+          onKeyUp={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
@@ -3441,7 +3510,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
             const currentPrescription = currentMemo?.prescription || '';
             const currentBodyPart = currentMemo?.body_part || '';
             const currentParts = splitBodyParts(currentBodyPart);
-            const currentMemoList = getMemoListFromMergeSpan(currentMemo?.merge_span);
             const { patientChart, patientName } = parseSchedulerPatientIdentity(currentMemo?.content || '');
             const currentKeyParts = firstKey ? firstKey.split('-').map(Number) : null;
             const currentSortKey = currentKeyParts

@@ -10,6 +10,11 @@ import {
   getEffectiveStaffScheduleBlockRules,
   setMonthlyStaffScheduleBlockRules,
 } from '../../lib/staffScheduleBlockRules';
+import {
+  DEFAULT_SCHEDULER_TEXT_SETTINGS,
+  getEffectiveSchedulerTextSettings,
+  setMonthlySchedulerTextSettings,
+} from '../../lib/schedulerTextSettings';
 
 /**
  * 월별 치료사 설정 모달
@@ -31,7 +36,7 @@ export default function MonthlyTherapistConfig({
   onSaveSettings,
   onClose,
 }) {
-  const [configSection, setConfigSection] = useState('therapists'); // therapists | weekly | dates | staffBlocks
+  const [configSection, setConfigSection] = useState('therapists'); // therapists | weekly | dates | staffBlocks | textStyle
   const [activeTab, setActiveTab] = useState('shockwave'); // 'shockwave' | 'manual_therapy'
 
   const currentTherapists = activeTab === 'manual_therapy' ? manualTherapists : therapists;
@@ -43,6 +48,7 @@ export default function MonthlyTherapistConfig({
   const [dayOverrides, setDayOverrides] = useState({});
   const [dateOverrides, setDateOverrides] = useState({});
   const [staffBlockRules, setStaffBlockRules] = useState([]);
+  const [schedulerTextSettings, setSchedulerTextSettings] = useState(DEFAULT_SCHEDULER_TEXT_SETTINGS);
   const [newDateOverride, setNewDateOverride] = useState({
     date: '',
     start_time: '',
@@ -114,6 +120,7 @@ export default function MonthlyTherapistConfig({
     setDayOverrides(getMonthlyDayOverrides(settings?.day_overrides, year, month));
     setDateOverrides(getDateOverridesForMonth(settings?.date_overrides, year, month));
     setStaffBlockRules(getEffectiveStaffScheduleBlockRules(settings, year, month).rules);
+    setSchedulerTextSettings(getEffectiveSchedulerTextSettings(settings, year, month));
   }, [settings, settings?.day_overrides, settings?.date_overrides, settings?.staff_schedule_block_rules, year, month]);
 
   const addSlot = useCallback(() => {
@@ -381,6 +388,17 @@ export default function MonthlyTherapistConfig({
     setSaving(false);
     if (success) onClose();
   }, [onSaveSettings, settings, year, month, staffBlockRules, onClose]);
+
+  const handleSaveTextSettings = useCallback(async () => {
+    if (!onSaveSettings || !settings) return;
+    setSaving(true);
+    const success = await onSaveSettings({
+      ...settings,
+      monthly_settlement_settings: setMonthlySchedulerTextSettings(settings, year, month, schedulerTextSettings),
+    });
+    setSaving(false);
+    if (success) onClose();
+  }, [onSaveSettings, settings, year, month, schedulerTextSettings, onClose]);
 
   // ESC 닫기
   useEffect(() => {
@@ -852,6 +870,102 @@ export default function MonthlyTherapistConfig({
     );
   };
 
+  const renderTextStyleSettings = () => {
+    const effective = getEffectiveSchedulerTextSettings(settings, year, month);
+    const sourceText = !effective.source_month_key
+      ? '기본 글자 설정 사용 중'
+      : effective.source_month_key === effective.target_month_key
+        ? '이번 달 직접 설정 사용 중'
+        : `${effective.source_month_key} 설정을 이어받아 적용 중`;
+
+    return (
+      <>
+        <div className="monthly-therapist-desc">
+          스케줄 영역 셀 안의 이름 글자 크기와 두께를 월별로 조정합니다.
+          <br />
+          {sourceText}
+        </div>
+        <div className="monthly-therapist-body monthly-therapist-body--settings">
+          <div className="monthly-text-style-card">
+            <div className="monthly-text-style-grid">
+              <label className="monthly-text-style-field">
+                <span>글자 크기</span>
+                <div className="monthly-text-style-size-row">
+                  <input
+                    type="range"
+                    min={11}
+                    max={18}
+                    step={1}
+                    value={schedulerTextSettings.font_size}
+                    onChange={(e) => setSchedulerTextSettings((prev) => ({
+                      ...prev,
+                      font_size: Number(e.target.value) || DEFAULT_SCHEDULER_TEXT_SETTINGS.font_size,
+                    }))}
+                  />
+                  <input
+                    type="number"
+                    className="monthly-operating-input monthly-text-style-number"
+                    min={11}
+                    max={18}
+                    step={1}
+                    value={schedulerTextSettings.font_size}
+                    onChange={(e) => setSchedulerTextSettings((prev) => ({
+                      ...prev,
+                      font_size: Number(e.target.value) || DEFAULT_SCHEDULER_TEXT_SETTINGS.font_size,
+                    }))}
+                  />
+                  <span className="monthly-text-style-unit">px</span>
+                </div>
+              </label>
+
+              <label className="monthly-text-style-field">
+                <span>글자 두께</span>
+                <select
+                  className="monthly-operating-input monthly-text-style-select"
+                  value={schedulerTextSettings.font_weight}
+                  onChange={(e) => setSchedulerTextSettings((prev) => ({
+                    ...prev,
+                    font_weight: Number(e.target.value) || DEFAULT_SCHEDULER_TEXT_SETTINGS.font_weight,
+                  }))}
+                >
+                  <option value={500}>보통</option>
+                  <option value={600}>조금 굵게</option>
+                  <option value={700}>굵게</option>
+                  <option value={800}>매우 굵게</option>
+                  <option value={900}>최대 굵기</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="monthly-text-style-preview-wrap">
+              <div className="monthly-text-style-preview-label">미리보기</div>
+              <div className="monthly-text-style-preview-board">
+                <div
+                  className="monthly-text-style-preview-cell"
+                  style={{
+                    fontSize: `${schedulerTextSettings.font_size}px`,
+                    fontWeight: schedulerTextSettings.font_weight,
+                  }}
+                >
+                  10887/이선영(3)
+                </div>
+                <div
+                  className="monthly-text-style-preview-cell monthly-text-style-preview-cell--prescription"
+                  style={{
+                    fontSize: `${schedulerTextSettings.font_size}px`,
+                    fontWeight: schedulerTextSettings.font_weight,
+                  }}
+                >
+                  14175/김미정(2)
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  };
+
   return (
     <div className="monthly-therapist-backdrop" onMouseDown={onClose}>
       <div
@@ -894,12 +1008,20 @@ export default function MonthlyTherapistConfig({
           >
             근무표 연동
           </button>
+          <button
+            type="button"
+            className={`monthly-therapist-section-tab${configSection === 'textStyle' ? ' active' : ''}`}
+            onClick={() => setConfigSection('textStyle')}
+          >
+            글자크기 설정
+          </button>
         </div>
 
         {configSection === 'therapists' && renderTherapistSettings()}
         {configSection === 'weekly' && renderWeeklySettings()}
         {configSection === 'dates' && renderDateSettings()}
         {configSection === 'staffBlocks' && renderStaffBlockSettings()}
+        {configSection === 'textStyle' && renderTextStyleSettings()}
 
         <div className="monthly-therapist-footer">
           <button type="button" className="monthly-therapist-cancel" onClick={onClose}>
@@ -913,7 +1035,9 @@ export default function MonthlyTherapistConfig({
                 ? handleSave
                 : configSection === 'staffBlocks'
                   ? handleSaveStaffBlockRules
-                  : handleSaveOperatingSettings
+                  : configSection === 'textStyle'
+                    ? handleSaveTextSettings
+                    : handleSaveOperatingSettings
             }
             disabled={saving}
           >
@@ -923,6 +1047,8 @@ export default function MonthlyTherapistConfig({
                 ? `${activeTab === 'manual_therapy' ? '도수치료' : '충격파'} 저장`
                 : configSection === 'staffBlocks'
                   ? '근무표 연동 저장'
+                  : configSection === 'textStyle'
+                    ? '글자 설정 저장'
                   : '운영시간 저장'}
           </button>
         </div>

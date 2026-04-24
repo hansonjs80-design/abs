@@ -590,17 +590,6 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
           {activeSection === 'grid' && (
             <div className="sw-stats-body sw-stats-body--grid">
               <div className="sw-grid-card">
-                <div className="sw-grid-card-header">
-                  <div className="sw-grid-card-title">
-                    <h2>{currentMonth}월 충격파 현황</h2>
-                    <p>날짜별 치료 내역과 치료사별 처방 분포를 한 화면에서 확인하고 수정합니다.</p>
-                  </div>
-                  <div className="sw-grid-card-meta">
-                    <span>총 기록 {safeLogs.length}건</span>
-                    <span>치료사 {safeTherapists.length}명</span>
-                  </div>
-                </div>
-
                 <div className="sw-grid-card-table">
                   <ShockwaveStatsErrorBoundary>
                     <ShockwaveDataGrid
@@ -611,10 +600,8 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                       currentMonth={currentMonth}
                       fetchLogs={fetchLogs}
                       extraDraftRows={extraDraftRows}
-                      onApplyTodaySchedule={handleSyncFromScheduler}
-                      isApplyingTodaySchedule={isLoading}
-                      onApplyMonthSchedule={handleSyncMonthFromScheduler}
-                      isApplyingMonthSchedule={isLoading}
+                      totalRecordCount={safeLogs.length}
+                      therapistCount={safeTherapists.length}
                     />
                   </ShockwaveStatsErrorBoundary>
                 </div>
