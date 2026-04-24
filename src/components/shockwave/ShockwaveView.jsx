@@ -145,6 +145,51 @@ function parseSchedulerPatientIdentity(content) {
   return { patientChart, patientName };
 }
 
+function getSchedulerVisitInputValue(content) {
+  const raw = String(content || '').trim();
+  if (!raw) return '';
+  if (/\(-\)$/.test(raw)) return '-';
+  if (/\*$/.test(raw)) return '*';
+  const match = raw.match(/\((\d+)\)$/);
+  return match?.[1] || '';
+}
+
+function normalizeVisitInputValue(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  if (raw === '-') return '-';
+  if (raw === '*') return '*';
+  const numeric = raw.replace(/[^\d]/g, '');
+  if (!numeric) return '';
+  const parsed = parseInt(numeric, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? String(parsed) : '';
+}
+
+function applyVisitCountToSchedulerContent(content, visitInput) {
+  const raw = String(content || '').trim();
+  if (!raw) return raw;
+  const base = raw.replace(/(\((-|\d+)\)|\*)$/, '').trim();
+  const normalizedVisit = normalizeVisitInputValue(visitInput);
+  if (!normalizedVisit) return base;
+  if (normalizedVisit === '-') return `${base}(-)`;
+  if (normalizedVisit === '*') return `${base}*`;
+  return `${base}(${normalizedVisit})`;
+}
+
+function stepVisitInputValue(value, delta) {
+  const normalized = normalizeVisitInputValue(value);
+  if (normalized === '-') {
+    return delta > 0 ? '*' : '-';
+  }
+  if (normalized === '*') {
+    return delta > 0 ? '2' : '';
+  }
+  const numeric = parseInt(normalized || '0', 10) || 0;
+  if (delta > 0) return String(Math.max(1, numeric + delta));
+  if (numeric <= 1) return '*';
+  return String(Math.max(1, numeric + delta));
+}
+
 function getMemoListFromMergeSpan(mergeSpan) {
   const list = mergeSpan?.meta?.memo_list;
   if (!Array.isArray(list)) return [];
@@ -475,6 +520,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [contextMenuBodyInput, setContextMenuBodyInput] = useState('');
   const [contextMenuNoteInput, setContextMenuNoteInput] = useState('');
   const [contextMenuMemoDrafts, setContextMenuMemoDrafts] = useState([]);
+  const [contextMenuVisitInput, setContextMenuVisitInput] = useState('');
 
   useEffect(() => {
     selectedCellRef.current = selectedCell;
@@ -1532,6 +1578,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setContextMenuBodyInput('');
     setContextMenuNoteInput('');
     setContextMenuMemoDrafts(getMemoListFromMergeSpan(memos[key]?.merge_span));
+    setContextMenuVisitInput(getSchedulerVisitInputValue(memos[key]?.content || ''));
     setContextMenu({
       x: e.clientX,
       y: e.clientY,
@@ -1551,6 +1598,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       setContextMenuBodyInput('');
       setContextMenuNoteInput('');
       setContextMenuMemoDrafts([]);
+      setContextMenuVisitInput('');
     }
   }, [contextMenu]);
 
@@ -2566,6 +2614,39 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       }
       return;
     }
+    else if (action?.type === 'visitCount') {
+      const keys = Array.from(selectedKeys || []);
+      const oldMemos = buildMemoSnapshotForKeys(keys);
+      let anyChanged = false;
+      const nextVisitInput = normalizeVisitInputValue(action.value);
+      setContextMenuVisitInput(nextVisitInput);
+      for (const key of keys) {
+        const [w, d, r, c] = key.split('-').map(Number);
+        const memo = memos[key] || {};
+        const stableContent = getStableMemoContent(key, memo);
+        const updatedContent = applyVisitCountToSchedulerContent(stableContent, nextVisitInput);
+        if (updatedContent === stableContent) continue;
+        const success = await onSaveMemo(
+          currentYear,
+          currentMonth,
+          w,
+          d,
+          r,
+          c,
+          updatedContent,
+          memo.bg_color,
+          memo.merge_span,
+          memo.prescription,
+          memo.body_part
+        );
+        if (success) anyChanged = true;
+      }
+      if (anyChanged) {
+        recordUndo({ type: 'bulk-edit', oldMemos });
+        addToast('회차가 수정되었습니다.', 'success');
+      }
+      return;
+    }
     setContextMenu(null);
   }, [selectedKeys, memos, pendingDisplayValues, currentYear, currentMonth, onSaveMemo, addToast, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleTreatmentCancel, tryMergeSelection, buildMemoSnapshotForKeys, recordUndo]);
 
@@ -2584,6 +2665,19 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setContextMenuNoteInput('');
     return true;
   }, [contextMenuNoteInput, handleContextAction]);
+
+  const submitContextMenuVisitInput = useCallback(() => {
+    const val = normalizeVisitInputValue(contextMenuVisitInput);
+    setContextMenuVisitInput(val);
+    handleContextAction({ type: 'visitCount', value: val });
+    return true;
+  }, [contextMenuVisitInput, handleContextAction]);
+
+  const stepContextMenuVisitInput = useCallback((delta) => {
+    const nextValue = stepVisitInputValue(contextMenuVisitInput, delta);
+    setContextMenuVisitInput(nextValue);
+    handleContextAction({ type: 'visitCount', value: nextValue });
+  }, [contextMenuVisitInput, handleContextAction]);
 
   const repositionContextMenu = useCallback(() => {
     if (!contextMenuRef.current) return;
@@ -3693,6 +3787,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               type="text"
                               placeholder="새 부위 추가"
                               className="context-menu-input"
+                              autoComplete="off"
                               value={contextMenuBodyInput}
                               onChange={(e) => {
                                 e.stopPropagation();
@@ -3739,6 +3834,71 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             ({contextMenuMemoDrafts.length > 0 ? `${contextMenuMemoDrafts.length}개` : '메모 없음'})
                           </span>
                         </span>
+                        <label className="context-menu-visit-editor">
+                          <span>회차</span>
+                          <span className="context-menu-visit-control">
+                            <input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9*-]*"
+                            autoComplete="off"
+                            className="context-menu-visit-input"
+                            value={contextMenuVisitInput}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              setContextMenuVisitInput(e.target.value.replace(/[^\d*-]/g, ''));
+                            }}
+                              onBlur={(e) => {
+                                e.stopPropagation();
+                                submitContextMenuVisitInput();
+                              }}
+                              onKeyDown={(e) => {
+                                e.stopPropagation();
+                                if (e.nativeEvent?.isComposing || e.keyCode === 229) return;
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  submitContextMenuVisitInput();
+                                }
+                                if (e.key === 'ArrowUp') {
+                                  e.preventDefault();
+                                  stepContextMenuVisitInput(1);
+                                }
+                                if (e.key === 'ArrowDown') {
+                                  e.preventDefault();
+                                  stepContextMenuVisitInput(-1);
+                                }
+                              }}
+                              onMouseDown={e => e.stopPropagation()}
+                              onClick={e => e.stopPropagation()}
+                            />
+                            <span className="context-menu-visit-stepper">
+                              <button
+                                type="button"
+                                className="context-menu-visit-step"
+                                aria-label="회차 증가"
+                                onMouseDown={e => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  stepContextMenuVisitInput(1);
+                                }}
+                              >
+                                ▲
+                              </button>
+                              <button
+                                type="button"
+                                className="context-menu-visit-step"
+                                aria-label="회차 감소"
+                                onMouseDown={e => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  stepContextMenuVisitInput(-1);
+                                }}
+                              >
+                                ▼
+                              </button>
+                            </span>
+                          </span>
+                        </label>
                       </div>
                       <div className="context-menu-inline-memo-box">
                         {contextMenuMemoDrafts.length > 0 ? (
@@ -3781,6 +3941,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             type="text"
                             placeholder="메모 추가"
                             className="context-menu-input"
+                            autoComplete="off"
                             value={contextMenuNoteInput}
                             onChange={(e) => {
                               e.stopPropagation();
