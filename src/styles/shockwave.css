@@ -19,7 +19,10 @@
 .shockwave-week {
   margin-bottom: 24px;
   background: var(--bg-card);
-  border: 1.5px solid #000;
+  border-top: 1.5px solid #000;
+  border-bottom: 1.5px solid #000;
+  border-left: none;
+  border-right: none;
   border-radius: 4px;
   box-shadow: var(--shadow-sm);
   width: fit-content;
