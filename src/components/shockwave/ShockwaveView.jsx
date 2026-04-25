@@ -3179,6 +3179,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     return () => clearTimeout(timer);
   }, [currentYear, currentMonth, todayWeekIdx, scrollToTodayWeek]);
 
+  // 최상위 CSS 변수로 그리드 컬럼 너비를 통일 (모든 주차에 동일하게 적용)
+  const therapistColsCSS = useMemo(() => {
+    return colRatios
+      ? colRatios.map(r => `minmax(0, ${r}fr)`).join(' ')
+      : `repeat(${colCount}, minmax(0, 1fr))`;
+  }, [colRatios, colCount]);
+
   return (
     <>
       <div 
@@ -3190,6 +3197,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           '--sw-row-height': `${rowHeight}px`,
           '--sw-cell-font-size': `${effectiveSchedulerTextSettings.font_size}px`,
           '--sw-cell-font-weight': effectiveSchedulerTextSettings.font_weight,
+          '--sw-therapist-cols': therapistColsCSS,
+          '--sw-day-col-width': dayColWidth ? `${dayColWidth}px` : 'none',
         }}
         onMouseLeave={() => setHoverData(null)}
         onMouseMove={(e) => {
@@ -3298,12 +3307,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               const daySlots = getTimeSlotsForDay(dayInfo);
               // 첫 번째 요일에만 시간 열 표사
               const showTimeCol = dayIdx === 0;
-              const therapistCols = colRatios
-                ? colRatios.map(r => `minmax(0, ${r}fr)`).join(' ')
-                : `repeat(${colCount}, minmax(0, 1fr))`;
               const gridCols = showTimeCol
-                ? `${TIME_COL_WIDTH}px ${therapistCols}`
-                : therapistCols;
+                ? `${TIME_COL_WIDTH}px ${therapistColsCSS}`
+                : therapistColsCSS;
 
               let headerClass = 'sw-day-header';
               if (dayInfo.isHoliday) headerClass += ' holiday';
