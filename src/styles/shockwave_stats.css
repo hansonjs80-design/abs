@@ -629,7 +629,7 @@
   font-weight: 600;
   outline: none;
   box-shadow: var(--shadow-xl);
-  text-align: center;
+  text-align: inherit;
 }
 
 .gc-bold {
