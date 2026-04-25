@@ -125,20 +125,20 @@ export default function ShockwaveNewPatientsView({
               <tr>
                 {summary.byTherapist.map((item, therapistIndex) => (
                   <th
-                    key={item.therapist.id || item.therapist.name}
+                    key={item?.therapist?.id || item?.therapist?.name || therapistIndex}
                     colSpan={4}
                     className={`therapist-col therapist-tone-${therapistIndex % 5} ${therapistIndex > 0 ? 'therapist-group-start' : ''}`}
                   >
-                    {item.therapist.name} ({item.totalCount}명)
+                    {item?.therapist?.name || ''} ({item.totalCount}명)
                   </th>
                 ))}
               </tr>
               <tr>
                 {summary.byTherapist.flatMap((item, therapistIndex) => ([
-                  <th key={`${item.therapist.id || item.therapist.name}-date`} className={`sub-col therapist-tone-${therapistIndex % 5}-sub ${therapistIndex > 0 ? 'therapist-group-start' : ''}`}>날짜</th>,
-                  <th key={`${item.therapist.id || item.therapist.name}-name`} className={`sub-col therapist-tone-${therapistIndex % 5}-sub`}>이름</th>,
-                  <th key={`${item.therapist.id || item.therapist.name}-body`} className={`sub-col therapist-tone-${therapistIndex % 5}-sub`}>부위</th>,
-                  <th key={`${item.therapist.id || item.therapist.name}-visit`} className={`sub-col therapist-tone-${therapistIndex % 5}-sub therapist-group-end`}>회차</th>,
+                  <th key={`${item?.therapist?.id || item?.therapist?.name || therapistIndex}-date`} className={`sub-col therapist-tone-${therapistIndex % 5}-sub ${therapistIndex > 0 ? 'therapist-group-start' : ''}`}>날짜</th>,
+                  <th key={`${item?.therapist?.id || item?.therapist?.name || therapistIndex}-name`} className={`sub-col therapist-tone-${therapistIndex % 5}-sub`}>이름</th>,
+                  <th key={`${item?.therapist?.id || item?.therapist?.name || therapistIndex}-body`} className={`sub-col therapist-tone-${therapistIndex % 5}-sub`}>부위</th>,
+                  <th key={`${item?.therapist?.id || item?.therapist?.name || therapistIndex}-visit`} className={`sub-col therapist-tone-${therapistIndex % 5}-sub therapist-group-end`}>회차</th>,
                 ]))}
               </tr>
             </thead>
@@ -148,17 +148,18 @@ export default function ShockwaveNewPatientsView({
                   {summary.byTherapist.flatMap((item, therapistIndex) => {
                     const patient = item.patients[rowIndex];
                     const toneClass = `therapist-tone-${therapistIndex % 5}-cell`;
+                    const tKey = item?.therapist?.id || item?.therapist?.name || therapistIndex;
                     return [
-                      <td key={`${item.therapist.id || item.therapist.name}-${rowIndex}-date`} className={`${toneClass} ${therapistIndex > 0 ? 'therapist-group-start' : ''}`}>
+                      <td key={`${tKey}-${rowIndex}-date`} className={`${toneClass} ${therapistIndex > 0 ? 'therapist-group-start' : ''}`}>
                         {patient?.date || ''}
                       </td>,
-                      <td key={`${item.therapist.id || item.therapist.name}-${rowIndex}-name`} className={`patient-name ${toneClass}`}>
+                      <td key={`${tKey}-${rowIndex}-name`} className={`patient-name ${toneClass}`}>
                         {patient?.patientName || ''}
                       </td>,
-                      <td key={`${item.therapist.id || item.therapist.name}-${rowIndex}-body`} className={toneClass}>
+                      <td key={`${tKey}-${rowIndex}-body`} className={toneClass}>
                         {patient?.bodyPart || ''}
                       </td>,
-                      <td key={`${item.therapist.id || item.therapist.name}-${rowIndex}-visit`} className={`visit-count ${toneClass} therapist-group-end`}>
+                      <td key={`${tKey}-${rowIndex}-visit`} className={`visit-count ${toneClass} therapist-group-end`}>
                         {patient?.visitLabel || ''}
                       </td>,
                     ];
