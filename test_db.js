@@ -1,18 +1,27 @@
 import { createClient } from '@supabase/supabase-js';
-import fs from 'fs';
+import dotenv from 'dotenv';
+dotenv.config();
 
-const lines = fs.readFileSync('.env', 'utf-8').split('\n');
-let url = '', key = '';
-for (const line of lines) {
-  if (line.startsWith('VITE_SUPABASE_URL=')) url = line.split('=')[1];
-  if (line.startsWith('VITE_SUPABASE_KEY=')) key = line.split('=')[1];
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+if (!supabaseUrl || !supabaseKey) {
+  console.log("Missing Supabase config");
+  process.exit(1);
 }
 
-const supabase = createClient(url, key);
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function test() {
-  const { data, error } = await supabase.from('shockwave_therapists').select('*');
+async function run() {
+  const { data, error } = await supabase
+    .from('shockwave_patient_logs')
+    .select('*')
+    .gte('date', '2025-11-01')
+    .lte('date', '2025-11-30')
+    .order('date');
+
   console.log('Error:', error);
-  console.log('Data:', data);
+  console.log('Count:', data?.length);
+  console.log('Data:', JSON.stringify(data, null, 2));
 }
-test();
+
+run();

@@ -336,7 +336,7 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
   const schedulerEntriesForCopying = (todayStats || []).filter((row) => row.source !== 'manual');
   const existingGroups = {};
   schedulerEntriesForCopying.forEach((row) => {
-    const key = row.patient_name.replace(/\*/g, '');
+    const key = (row.patient_name || '').replace(/\*/g, '');
     if (!existingGroups[key]) existingGroups[key] = [];
     existingGroups[key].push(row);
   });
@@ -363,7 +363,6 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
   });
 
   const toDeleteIds = (todayStats || [])
-    .filter((row) => overwriteManual || row.source !== 'manual')
     .map((row) => row.id)
     .filter(Boolean);
 

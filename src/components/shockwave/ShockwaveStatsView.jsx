@@ -194,7 +194,6 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
 
     if (
       !schedulerMemosReady ||
-      !isTodayMonth ||
       safeTherapists.length === 0 ||
       isAutoSyncingToday ||
       lastAutoSyncKeyRef.current === autoSyncKey
@@ -205,7 +204,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     let cancelled = false;
 
     (async () => {
-      setIsAutoSyncingToday(true);
+        setIsAutoSyncingToday(true);
       lastAutoSyncKeyRef.current = autoSyncKey;
       try {
         const result = await syncMonthShockwaveScheduleToStats({
@@ -218,6 +217,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
         });
 
         if (!cancelled && result?.totalUpdates > 0) {
+          addToast(`${currentMonth}월 스케줄 빈칸 연동이 완료되었습니다.`, 'success');
           await fetchLogs();
         }
       } catch (error) {

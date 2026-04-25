@@ -536,7 +536,7 @@ export function ScheduleProvider({ children }) {
       console.error('Failed to save shockwave memo:', err);
       return false;
     }
-  }, [shockwaveMemos, therapists, shouldKeepShockwaveMemo]);
+  }, [shockwaveMemos, therapists, manualTherapists, monthlyTherapists, monthlyManualTherapists, shouldKeepShockwaveMemo]);
 
   // 다중 셀 동시 업데이트 (병합/병합해제 등)
   const saveShockwaveMemosBulk = useCallback(async (memosArray) => {
@@ -596,23 +596,22 @@ export function ScheduleProvider({ children }) {
         return next;
       });
 
-      const today = getTodayKST();
-      const todayDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const weeks = generateShockwaveCalendar(currentYear, currentMonth);
-      const touchedDates = new Set();
+      const affectedDates = new Set();
       
       memosArray.forEach((item) => {
         const dayInfo = weeks[item.week_index]?.[item.day_index];
         if (dayInfo && dayInfo.isCurrentMonth) {
           const dateStr = `${dayInfo.year}-${String(dayInfo.month).padStart(2, '0')}-${String(dayInfo.day).padStart(2, '0')}`;
-          if (dateStr <= todayDateStr) {
-            touchedDates.add(dateStr);
-          }
+          affectedDates.add(dateStr);
         }
       });
 
-      if (touchedDates.size > 0) {
-        for (const dateStr of touchedDates) {
+      const today = getTodayKST();
+      const todayDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      for (const targetDateStr of affectedDates) {
+        if (targetDateStr && targetDateStr <= todayDateStr) {
           if (therapists.length > 0) {
             try {
               await syncTodayShockwaveScheduleToStats({
@@ -621,7 +620,7 @@ export function ScheduleProvider({ children }) {
                 memos: nextShockwaveMemos,
                 therapists,
                 monthlyTherapists,
-                targetDateStr: dateStr,
+                targetDateStr,
               });
             } catch (syncErr) {
               console.error('Failed to sync bulk shockwave memos to stats:', syncErr);
@@ -635,7 +634,7 @@ export function ScheduleProvider({ children }) {
                 memos: nextShockwaveMemos,
                 therapists: manualTherapists,
                 monthlyTherapists: monthlyManualTherapists,
-                targetDateStr: dateStr,
+                targetDateStr,
               });
             } catch (syncErr) {
               console.error('Failed to sync bulk manual therapy memos to stats:', syncErr);

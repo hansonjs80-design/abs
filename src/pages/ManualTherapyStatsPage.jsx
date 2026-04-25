@@ -154,7 +154,6 @@ export default function ManualTherapyStatsPage() {
 
     if (
       !schedulerMemosReady ||
-      !isTodayMonth ||
       safeTherapists.length === 0 ||
       isAutoSyncingToday ||
       lastAutoSyncKeyRef.current === autoSyncKey

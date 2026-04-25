@@ -227,7 +227,6 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
     .eq('date', todayDateStrFinal);
 
   const toDeleteIds = (todayStats || [])
-    .filter((row) => overwriteManual || row.source !== 'manual')
     .map((row) => row.id)
     .filter(Boolean);
 

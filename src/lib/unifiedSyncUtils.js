@@ -165,10 +165,10 @@ export async function syncUnifiedStatsDateToScheduler({ year, month, date }) {
     });
   });
 
-  // 4. Update scheduler
+  // 4. Fetch existing schedule rows for the day to preserve bg_color and merge_span
   const { data: existingScheduleRows, error: existingScheduleError } = await supabase
     .from('shockwave_schedules')
-    .select('row_index, col_index, content')
+    .select('*')
     .eq('year', year)
     .eq('month', month)
     .eq('week_index', targetWeekIndex)
@@ -177,46 +177,91 @@ export async function syncUnifiedStatsDateToScheduler({ year, month, date }) {
 
   if (existingScheduleError) throw existingScheduleError;
 
-  const { error: deleteError } = await supabase
-    .from('shockwave_schedules')
-    .delete()
-    .eq('year', year)
-    .eq('month', month)
-    .eq('week_index', targetWeekIndex)
-    .eq('day_index', targetDayIndex)
-    .in('col_index', therapistCols);
+  const parsedExistingRows = (existingScheduleRows || []).map(row => {
+    let cleanName = '';
+    if (row.content) {
+      // Very basic extraction of cleanName to match against
+      const match = row.content.match(/^[\d]*\/?([^\s(]+)/);
+      if (match) {
+        cleanName = match[1].replace(/\*/g, '').trim();
+      }
+    }
+    return { ...row, cleanName };
+  });
 
-  if (deleteError) throw deleteError;
+  const upsertPayload = [];
+  const deleteIds = []; // We won't delete rows, we will just clear their content
 
-  const rowsToInsert = [];
   groupedByTherapist.forEach((items, therapistIndex) => {
-    const existingRowsForTherapist = (existingScheduleRows || []).filter(
-      (row) => row?.col_index === therapistIndex
-    );
-    const placedRows = buildSchedulerRowPlacement(items, existingRowsForTherapist);
+    const existingForTherapist = parsedExistingRows.filter(r => r.col_index === therapistIndex);
+    const usedRowIndexes = new Set();
+    const matchedExistingRowIds = new Set();
 
-    placedRows.forEach(({ content, rowIndex, body_part, prescription }) => {
-      rowsToInsert.push({
-        year,
-        month,
-        week_index: targetWeekIndex,
-        day_index: targetDayIndex,
-        row_index: rowIndex,
-        col_index: therapistIndex,
-        content,
-        body_part,
-        prescription,
-        bg_color: null,
-        merge_span: { rowSpan: 1, colSpan: 1 },
+    // Helper to find next available row index
+    const findNextAvailableRow = (start) => {
+      let candidate = start || 0;
+      while (usedRowIndexes.has(candidate) || existingForTherapist.some(r => r.row_index === candidate && !matchedExistingRowIds.has(r.id) && r.content)) {
+        candidate++;
+      }
+      usedRowIndexes.add(candidate);
+      return candidate;
+    };
+
+    items.forEach((item, itemIndex) => {
+      // Find a matching existing row
+      let matchedRow = existingForTherapist.find(r => 
+        !matchedExistingRowIds.has(r.id) && 
+        (r.content === item.content || (r.cleanName && r.cleanName === item.cleanName))
+      );
+
+      let rowIndex;
+      let bg_color = null;
+      let merge_span = { rowSpan: 1, colSpan: 1, mergedInto: null };
+
+      if (matchedRow) {
+        matchedExistingRowIds.add(matchedRow.id);
+        rowIndex = matchedRow.row_index;
+        bg_color = matchedRow.bg_color;
+        merge_span = matchedRow.merge_span;
+        usedRowIndexes.add(rowIndex);
+      } else {
+        rowIndex = findNextAvailableRow(itemIndex);
+      }
+
+      upsertPayload.push({
+        year, month, week_index: targetWeekIndex, day_index: targetDayIndex,
+        row_index: rowIndex, col_index: therapistIndex,
+        content: item.content,
+        body_part: item.body_part,
+        prescription: item.prescription,
+        bg_color,
+        merge_span,
+        updated_at: new Date().toISOString()
       });
+    });
+
+    // For existing rows that had content but were NOT matched, we clear their content
+    existingForTherapist.forEach(r => {
+      if (!matchedExistingRowIds.has(r.id) && r.content) {
+        upsertPayload.push({
+          year, month, week_index: targetWeekIndex, day_index: targetDayIndex,
+          row_index: r.row_index, col_index: r.col_index,
+          content: '',
+          body_part: null,
+          prescription: null,
+          bg_color: r.bg_color,
+          merge_span: r.merge_span,
+          updated_at: new Date().toISOString()
+        });
+      }
     });
   });
 
-  if (rowsToInsert.length > 0) {
-    const { error: insertError } = await supabase
+  if (upsertPayload.length > 0) {
+    const { error: upsertError } = await supabase
       .from('shockwave_schedules')
-      .insert(rowsToInsert);
-    if (insertError) throw insertError;
+      .upsert(upsertPayload, { onConflict: 'year,month,week_index,day_index,row_index,col_index' });
+    if (upsertError) throw upsertError;
   }
 
   return {
