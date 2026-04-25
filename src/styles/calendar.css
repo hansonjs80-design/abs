@@ -19,7 +19,7 @@
   margin: 0 0 10px;
   padding: 8px 10px;
   display: inline-grid;
-  grid-template-columns: 36px auto 36px;
+  grid-template-columns: 36px auto max-content;
   align-items: center;
   justify-content: center;
   gap: 8px;

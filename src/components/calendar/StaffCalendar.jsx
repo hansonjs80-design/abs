@@ -570,34 +570,35 @@ export default function StaffCalendar() {
         <h2 className="staff-calendar-title">
           {currentYear}년 {String(currentMonth).padStart(2, '0')}월 직원 근무표
         </h2>
-        <button
-          type="button"
-          className="staff-month-nav-btn"
-          onClick={() => navigateMonth(1)}
-          aria-label="다음 달"
-        >
-          ›
-        </button>
-        <div style={{ position: 'relative', marginLeft: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <button
             type="button"
-            onClick={() => setShowSlotSettings(!showSlotSettings)}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: 'var(--text-secondary)',
-              padding: 4,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: 4,
-            }}
-            title="주차별 행 수 설정"
+            className="staff-month-nav-btn"
+            onClick={() => navigateMonth(1)}
+            aria-label="다음 달"
           >
-            ⚙️
+            ›
           </button>
-          {showSlotSettings && (
+          <div style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => setShowSlotSettings(!showSlotSettings)}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--text-secondary)',
+                padding: 4,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 4,
+              }}
+              title="주차별 행 수 설정"
+            >
+              ⚙️
+            </button>
+            {showSlotSettings && (
             <div style={{
               position: 'absolute', top: '100%', right: 0, marginTop: 4,
               background: 'var(--bg-primary)', border: '1px solid var(--border-color)',
@@ -606,6 +607,48 @@ export default function StaffCalendar() {
             }}>
               <div style={{ fontWeight: 600, marginBottom: 8, borderBottom: '1px solid var(--border-color)', paddingBottom: 4 }}>
                 주차별 메모 행 수 설정
+              </div>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const newCounts = { ...calendarSlotSettings?.week_slot_counts };
+                    const promises = [];
+                    grid.forEach((daysInWeek, wi) => {
+                      const currentCount = getSlotCount(wi);
+                      const newCount = Math.max(1, currentCount - 1);
+                      if (newCount < currentCount) {
+                        daysInWeek.forEach(dayInfo => {
+                          if (dayInfo) {
+                            for (let s = newCount; s < currentCount; s++) {
+                              promises.push(saveStaffMemo(dayInfo.year, dayInfo.month, dayInfo.day, s, ''));
+                            }
+                          }
+                        });
+                      }
+                      newCounts[String(wi)] = newCount;
+                    });
+                    await Promise.all(promises);
+                    saveCalendarSlotSettings(currentYear, currentMonth, newCounts);
+                  }}
+                  style={{ flex: 1, padding: '4px 0', fontSize: '0.8rem', border: '1px solid #ccc', borderRadius: 4, background: 'var(--bg-secondary)', cursor: 'pointer' }}
+                >
+                  - 일괄 축소
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newCounts = { ...calendarSlotSettings?.week_slot_counts };
+                    grid.forEach((_, wi) => {
+                      const currentCount = getSlotCount(wi);
+                      newCounts[String(wi)] = Math.min(20, currentCount + 1);
+                    });
+                    saveCalendarSlotSettings(currentYear, currentMonth, newCounts);
+                  }}
+                  style={{ flex: 1, padding: '4px 0', fontSize: '0.8rem', border: '1px solid #ccc', borderRadius: 4, background: 'var(--bg-secondary)', cursor: 'pointer' }}
+                >
+                  + 일괄 추가
+                </button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {grid.map((_, wi) => {
@@ -653,6 +696,7 @@ export default function StaffCalendar() {
             </div>
           )}
         </div>
+      </div>
       </div>
       {/* Unified input: hidden when not editing, positioned over cell when editing */}
       <input
