@@ -88,6 +88,22 @@ export default function ShockwaveDataGrid({
       .sort((a, b) => {
         const dateCompare = String(a?.date || '').localeCompare(String(b?.date || ''));
         if (dateCompare !== 0) return dateCompare;
+        // Group same chart_number/patient_name together within the same date
+        const aChart = String(a?.chart_number || '').trim();
+        const bChart = String(b?.chart_number || '').trim();
+        const aName = String(a?.patient_name || '').replace(/\*/g, '').trim();
+        const bName = String(b?.patient_name || '').replace(/\*/g, '').trim();
+        const groupKeyA = aChart || aName;
+        const groupKeyB = bChart || bName;
+        if (groupKeyA && groupKeyB && groupKeyA !== groupKeyB) {
+          // Preserve first-appearance order: use the earliest rowOrder or created_at within each group
+          const aOrder = rowOrderRef.current.get(a?.id);
+          const bOrder = rowOrderRef.current.get(b?.id);
+          const aFirst = typeof aOrder === 'number' ? aOrder : Infinity;
+          const bFirst = typeof bOrder === 'number' ? bOrder : Infinity;
+          return aFirst - bFirst;
+        }
+        // Within same group (same patient), preserve existing order
         const aOrder = rowOrderRef.current.get(a?.id);
         const bOrder = rowOrderRef.current.get(b?.id);
         if (typeof aOrder === 'number' && typeof bOrder === 'number' && aOrder !== bOrder) {
