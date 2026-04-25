@@ -1419,20 +1419,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     };
   }, [selectedCell, selectedKeys, memos, cellKey]);
 
-  const normalizeKeysToMergeMasters = useCallback((keys) => {
-    const normalized = new Set();
-    if (!keys) return normalized;
-
-    Array.from(keys).forEach((key) => {
-      const [w, d, r, c] = key.split('-').map(Number);
-      const masterCell = normalizeCellToMergeMaster({w, d, r, c});
-      normalized.add(cellKey(masterCell.w, masterCell.d, masterCell.r, masterCell.c));
-    });
-
-    return normalized;
-  }, [normalizeCellToMergeMaster, cellKey]);
-
-  
   const getEffectiveMergeSpan = useCallback((key, currentMemos) => {
     const memosData = currentMemos || memos;
     const cellData = memosData[key];
@@ -1468,7 +1454,21 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     return { w, d, r, c };
   }, [cellKey, getEffectiveMergeSpan]);
 
-  const buildRangeKeys = useCallback((anchor, target) => {
+  
+  const normalizeKeysToMergeMasters = useCallback((keys) => {
+    const normalized = new Set();
+    if (!keys) return normalized;
+
+    Array.from(keys).forEach((key) => {
+      const [w, d, r, c] = key.split('-').map(Number);
+      const masterCell = normalizeCellToMergeMaster({w, d, r, c});
+      normalized.add(cellKey(masterCell.w, masterCell.d, masterCell.r, masterCell.c));
+    });
+
+    return normalized;
+  }, [normalizeCellToMergeMaster, cellKey]);
+
+const buildRangeKeys = useCallback((anchor, target) => {
     if (!anchor || !target) return new Set();
     if (anchor.w !== target.w || anchor.d !== target.d) {
       return new Set([cellKey(target.w, target.d, target.r, target.c)]);
@@ -1485,7 +1485,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       }
     }
     return keys;
-  }, []);
+  }, [cellKey]);
 
   const selectSingleCell = useCallback((cell) => {
     const normalizedCell = normalizeCellToMergeMaster(cell);
@@ -1552,7 +1552,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       setEditValue(content || '');
       setEditSessionId(Date.now());
     });
-  }, [selectSingleCell]);
+  }, [selectSingleCell, cellKey]);
 
   // ── 편집 저장 ──
   const handleCellSave = useCallback(async (w, d, r, c, nextValue = editValue) => {
@@ -1606,7 +1606,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       return next;
     });
     if (!success) addToast('저장 실패', 'error');
-  }, [editValue, currentYear, currentMonth, memos, onSaveMemo, addToast, buildSchedulerAutoText, recordUndo]);
+  }, [editValue, currentYear, currentMonth, memos, onSaveMemo, addToast, buildSchedulerAutoText, recordUndo, cellKey]);
 
   // ── 셀 우클릭 = 처방 선택 ──
   const handleCellContextMenu = useCallback((e, w, d, r, c, currentPrescription) => {
@@ -1697,7 +1697,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       recordUndo({ type: 'bulk-edit', oldMemos });
       await saveShockwaveMemosBulk(payload);
     }
-  }, [currentYear, currentMonth, memos, saveShockwaveMemosBulk, recordUndo]);
+  }, [currentYear, currentMonth, memos, saveShockwaveMemosBulk, recordUndo, cellKey]);
 
   const tryMergeSelection = useCallback(async () => {
     const selection = computeSelectionInfo();
@@ -2114,7 +2114,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     }
 
     return payload;
-  }, [baseTimeSlots.length, colCount, currentYear, currentMonth]);
+  }, [baseTimeSlots.length, colCount, currentYear, currentMonth, cellKey]);
 
   const handleCopySelection = useCallback(() => {
     const clip = buildClipboardSelection();
@@ -2316,7 +2316,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
 
     if (payload.length === 0) return null;
     return { oldMemos, payload };
-  }, [selectedKeys, memos, currentYear, currentMonth, normalizeKeysToMergeMasters]);
+  }, [selectedKeys, memos, currentYear, currentMonth, normalizeKeysToMergeMasters, cellKey]);
 
   const applyTreatmentCompleteToSelection = useCallback(async (mode) => {
     const batch = buildTreatmentStatusPayload(mode);
@@ -2417,7 +2417,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     recordUndo({ type: 'bulk-edit', oldMemos });
     const success = await saveShockwaveMemosBulk(payload);
     if (!success) addToast('배경색 변경 실패', 'error');
-  }, [selectedKeys, memos, currentYear, currentMonth, normalizeKeysToMergeMasters, cellKey, saveShockwaveMemosBulk, addToast]);
+  }, [selectedKeys, memos, currentYear, currentMonth, normalizeKeysToMergeMasters, cellKey, saveShockwaveMemosBulk, addToast, recordUndo]);
 
   const handleContextAction = useCallback(async (action) => {
     const getStableMemoContent = (key, memo = {}) => {
@@ -2905,7 +2905,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       }
       return;
     }
-  }, [selectedCell, editingCell, selectedKeys, deleteCells, buildRangeKeys, selectSingleCell, getAdjacentCell, beginEditingCell, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleTreatmentCancel, handleToggleHolidayBackground, tryMergeSelection, isEditableTarget, isContextMenuTarget]);
+  }, [selectedCell, editingCell, selectedKeys, deleteCells, buildRangeKeys, selectSingleCell, getAdjacentCell, beginEditingCell, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleTreatmentCancel, handleToggleHolidayBackground, tryMergeSelection, isEditableTarget, isContextMenuTarget, cellKey, colCount, memos]);
 
   // 키보드 이벤트 등록
 
