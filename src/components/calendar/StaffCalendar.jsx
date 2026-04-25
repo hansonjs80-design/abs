@@ -752,7 +752,7 @@ export default function StaffCalendar() {
               <div className="calendar-date">
                 <span className="calendar-date-number">{dayInfo.day}</span>
               </div>
-              <div className="calendar-memos">
+              <div className="calendar-memos" style={{ gridTemplateRows: `repeat(${getSlotCount(wi)}, minmax(0, 1fr))` }}>
                 {Array.from({ length: getSlotCount(wi) }, (_, slot) => {
                   const key = memoKey(wi, di, slot);
                   const isSel = selectedKeys.has(key);
