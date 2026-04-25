@@ -637,12 +637,29 @@ export default function StaffCalendar() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     const newCounts = { ...calendarSlotSettings?.week_slot_counts };
-                    grid.forEach((_, wi) => {
+                    const promises = [];
+                    grid.forEach((daysInWeek, wi) => {
                       const currentCount = getSlotCount(wi);
-                      newCounts[String(wi)] = Math.min(20, currentCount + 1);
+                      const newCount = Math.min(20, currentCount + 1);
+                      if (newCount > currentCount) {
+                        daysInWeek.forEach(dayInfo => {
+                          if (dayInfo) {
+                            const oldLastSlot = currentCount - 1;
+                            const newLastSlot = newCount - 1;
+                            const key = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}-${oldLastSlot}`;
+                            const content = staffMemos[key]?.content || '';
+                            if (/\d/.test(content)) {
+                              promises.push(saveStaffMemo(dayInfo.year, dayInfo.month, dayInfo.day, newLastSlot, content));
+                              promises.push(saveStaffMemo(dayInfo.year, dayInfo.month, dayInfo.day, oldLastSlot, ''));
+                            }
+                          }
+                        });
+                      }
+                      newCounts[String(wi)] = newCount;
                     });
+                    await Promise.all(promises);
                     saveCalendarSlotSettings(currentYear, currentMonth, newCounts);
                   }}
                   style={{ flex: 1, padding: '4px 0', fontSize: '0.8rem', border: '1px solid #ccc', borderRadius: 4, background: 'var(--bg-secondary)', cursor: 'pointer' }}
@@ -681,8 +698,25 @@ export default function StaffCalendar() {
                         <span style={{ width: 24, textAlign: 'center' }}>{currentCount}</span>
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={async () => {
                             const newCount = Math.min(20, currentCount + 1);
+                            if (newCount > currentCount) {
+                              const daysInWeek = grid[wi] || [];
+                              const promises = [];
+                              for (const dayInfo of daysInWeek) {
+                                if (dayInfo) {
+                                  const oldLastSlot = currentCount - 1;
+                                  const newLastSlot = newCount - 1;
+                                  const key = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}-${oldLastSlot}`;
+                                  const content = staffMemos[key]?.content || '';
+                                  if (/\d/.test(content)) {
+                                    promises.push(saveStaffMemo(dayInfo.year, dayInfo.month, dayInfo.day, newLastSlot, content));
+                                    promises.push(saveStaffMemo(dayInfo.year, dayInfo.month, dayInfo.day, oldLastSlot, ''));
+                                  }
+                                }
+                              }
+                              await Promise.all(promises);
+                            }
                             const newCounts = { ...(calendarSlotSettings?.week_slot_counts || {}), [String(wi)]: newCount };
                             saveCalendarSlotSettings(currentYear, currentMonth, newCounts);
                           }}
