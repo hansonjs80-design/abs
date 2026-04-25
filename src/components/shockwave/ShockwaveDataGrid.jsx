@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { normalizeNameForMatch } from '../../lib/memoParser';
+import { toProperCase } from '../../lib/shockwaveSyncUtils';
 import { syncUnifiedStatsDateToScheduler } from '../../lib/unifiedSyncUtils';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 import { useSchedule } from '../../contexts/ScheduleContext';
@@ -26,12 +27,7 @@ const THERAPIST_TOTAL_COLORS = [
 const SUMMARY_COL_WIDTH = 68;
 
 function toTitleCaseBodyPart(value) {
-  return String(value || '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join(' ');
+  return toProperCase(String(value || '').trim());
 }
 
 export default function ShockwaveDataGrid({
