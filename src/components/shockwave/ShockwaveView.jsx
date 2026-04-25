@@ -3414,7 +3414,31 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                         const key = cellKey(weekIdx, dayIdx, rowIdx, colIdx);
                         const cellData = memos[key];
                         const content = pendingDisplayValues[key] ?? cellData?.content ?? '';
-                        const mergeSpan = cellData?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+                        let mergeSpan = cellData?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+
+                        // Validate mergedInto reference - prevent "dead" cells
+                        if (mergeSpan.mergedInto) {
+                          const masterKey = mergeSpan.mergedInto;
+                          const masterData = memos[masterKey];
+                          const masterSpan = masterData?.merge_span;
+                          if (!masterData || !masterSpan || masterSpan.rowSpan <= 1) {
+                            // Master cell doesn't exist or has no merge span - orphaned reference
+                            mergeSpan = { rowSpan: 1, colSpan: 1, mergedInto: null };
+                          } else {
+                            // Verify master actually covers this cell
+                            const [mw, md, mr, mc] = masterKey.split('-').map(Number);
+                            if (mw === weekIdx && md === dayIdx && mc === colIdx) {
+                              const endRow = mr + (masterSpan.rowSpan || 1) - 1;
+                              if (rowIdx < mr || rowIdx > endRow) {
+                                mergeSpan = { rowSpan: 1, colSpan: 1, mergedInto: null };
+                              }
+                            } else {
+                              // Master is in a different column/day - invalid
+                              mergeSpan = { rowSpan: 1, colSpan: 1, mergedInto: null };
+                            }
+                          }
+                        }
+
                         const cellPrescription = cellData?.prescription || mergeSpan?.meta?.prescription || '';
                         const displayData = buildSchedulerCellDisplay(content, mergeSpan);
                           
