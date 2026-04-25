@@ -3341,7 +3341,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                         if (dayInfo.isHoliday) nameClass += ' holiday';
                         else if (!dayInfo.isCurrentMonth) nameClass += ' other-month';
                         return (
-                          <div key={ci} className={nameClass}>
+                          <div key={ci} className={nameClass} style={ci === colCount - 1 ? { borderRight: 'none' } : undefined}>
                             {getTherapistNameForDate(ci, dayInfo.day) || `치료사${ci + 1}`}
                           </div>
                         );
@@ -3466,6 +3466,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             gridRow: `${gridRowStart}${visualRowSpan > 1 ? ` / span ${visualRowSpan}` : ''}`,
                             borderBottom: isLastRenderedRow ? 'none' : `1px solid ${HORIZONTAL_BORDER_COLOR}`,
                           };
+
+                          // 마지막 열의 셀은 자체 우측 테두리를 없애서 날짜 경계의 두꺼운 선과 중복되지 않게 함
+                          if (colIdx + mergeSpan.colSpan - 1 === colCount - 1) {
+                            inlineStyle.borderRight = 'none';
+                          }
 
                           if (cellData?.bg_color) {
                             inlineStyle.backgroundColor = cellData.bg_color;

@@ -351,7 +351,7 @@
 /* 1. Calendar (Blue) */
 .top-tab--calendar { background: #dbeafe; border-color: #bfdbfe; color: #111827; }
 .top-tab--calendar:hover { background: #eff6ff; color: #111827; }
-.top-tab--calendar.active { background: color-mix(in srgb, #2563eb 90%, white); color: #000000; border-color: #1d4ed8; box-shadow: none; }
+.top-tab--calendar.active { background: color-mix(in srgb, #2563eb 75%, white); color: #000000; border-color: #1d4ed8; box-shadow: none; }
 
 /* 2. Shockwave (Green) */
 .top-tab--shockwave { background: #dcfce7; border-color: #bbf7d0; color: #111827; }
