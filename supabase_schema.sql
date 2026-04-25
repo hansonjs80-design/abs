@@ -302,3 +302,15 @@ ON CONFLICT (username) DO UPDATE SET
   permissions = EXCLUDED.permissions,
   is_active = true,
   updated_at = timezone('utc'::text, now());
+
+-- 근무표 달력 주차별 슬롯 수 설정
+CREATE TABLE IF NOT EXISTS public.staff_calendar_settings (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  year integer NOT NULL,
+  month integer NOT NULL,
+  week_slot_counts jsonb NOT NULL DEFAULT '{"0":6,"1":6,"2":6,"3":6,"4":6}'::jsonb,
+  created_at timestamptz DEFAULT timezone('utc'::text, now()),
+  updated_at timestamptz DEFAULT timezone('utc'::text, now()),
+  UNIQUE (year, month)
+);
+ALTER TABLE public.staff_calendar_settings DISABLE ROW LEVEL SECURITY;

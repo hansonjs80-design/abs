@@ -9,7 +9,7 @@ const WEEKDAYS = [1, 2, 3, 4, 5]; // 월~금
 const WEEKENDS = [6, 0]; // 토, 일
 
 export default function PhysicalTherapyStatsView() {
-  const { currentYear, currentMonth, navigateMonth, staffMemos, loadStaffMemos } = useSchedule();
+  const { currentYear, currentMonth, navigateMonth, staffMemos, loadStaffMemos, calendarSlotSettings } = useSchedule();
   
   const [activeTab, setActiveTab] = useState('monthly'); // 'monthly' | 'yearly'
   
@@ -41,19 +41,28 @@ export default function PhysicalTherapyStatsView() {
     try {
       const { data, error } = await supabase
         .from('staff_schedules')
-        .select('month, day, content')
-        .eq('year', year)
-        .eq('slot_index', 5);
+        .select('month, day, slot_index, content')
+        .eq('year', year);
 
       if (error) throw error;
       
+      // 월,일별로 가장 높은 slot_index (내용이 있는 것) 찾기
+      const dayMaxSlot = {};
+      (data || []).forEach(item => {
+        if (!item.content || !item.content.trim()) return;
+        const k = `${item.month}-${item.day}`;
+        if (!dayMaxSlot[k] || item.slot_index > dayMaxSlot[k].slot_index) {
+          dayMaxSlot[k] = item;
+        }
+      });
+
       // 월별로 매핑
       const mapped = {};
       for (let i = 1; i <= 12; i++) {
         mapped[i] = [];
       }
 
-      (data || []).forEach(item => {
+      Object.values(dayMaxSlot).forEach(item => {
         const match = (item.content || '').match(/\d+/);
         if (match) {
           const val = parseInt(match[0], 10);
@@ -76,11 +85,18 @@ export default function PhysicalTherapyStatsView() {
   // --- 월간 상세 통계 데이터 ---
   const { grid } = useMemo(() => generateCalendarGrid(currentYear, currentMonth, new Set()), [currentYear, currentMonth]);
 
+  const getSlotCount = (wi) => {
+    if (!calendarSlotSettings?.week_slot_counts) return 6;
+    return Number(calendarSlotSettings.week_slot_counts[String(wi)]) || 6;
+  };
+
   const weeksData = useMemo(() => {
-    return grid.map(week => {
+    return grid.map((week, wi) => {
+      const slotCount = getSlotCount(wi);
+      const targetSlot = slotCount - 1; // 해당 주차의 마지막 행
       return week.map(day => {
         if (!day.isCurrentMonth) return null;
-        const key = `${day.year}-${day.month}-${day.day}-5`;
+        const key = `${day.year}-${day.month}-${day.day}-${targetSlot}`;
         const content = staffMemos[key]?.content || '';
         const match = content.match(/\d+/);
         return {
@@ -90,7 +106,7 @@ export default function PhysicalTherapyStatsView() {
         };
       });
     });
-  }, [grid, staffMemos]);
+  }, [grid, staffMemos, calendarSlotSettings]);
 
   const monthlySummary = useMemo(() => {
     let total = 0; let daysWithData = 0;

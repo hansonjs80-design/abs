@@ -41,6 +41,7 @@ export function ScheduleProvider({ children }) {
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const [calendarSlotSettings, setCalendarSlotSettings] = useState(null); // { year, month, week_slot_counts }
 
   const shouldKeepShockwaveMemo = useCallback((memo) => {
     if (!memo) return false;
@@ -306,6 +307,61 @@ export function ScheduleProvider({ children }) {
       ]).then(() => setInitialLoadDone(true));
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 근무표 달력 주차별 슬롯 수 설정 로드
+  const loadCalendarSlotSettings = useCallback(async (year, month) => {
+    try {
+      const { data, error } = await supabase
+        .from('staff_calendar_settings')
+        .select('*')
+        .eq('year', year)
+        .eq('month', month)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setCalendarSlotSettings({ year, month, week_slot_counts: data.week_slot_counts });
+      } else {
+        // 이전 달 설정이 있으면 복사, 없으면 기본값
+        const prevMonth = month === 1 ? 12 : month - 1;
+        const prevYear = month === 1 ? year - 1 : year;
+        const { data: prevData } = await supabase
+          .from('staff_calendar_settings')
+          .select('week_slot_counts')
+          .eq('year', prevYear)
+          .eq('month', prevMonth)
+          .maybeSingle();
+
+        const defaults = prevData?.week_slot_counts || { '0': 6, '1': 6, '2': 6, '3': 6, '4': 6 };
+        setCalendarSlotSettings({ year, month, week_slot_counts: defaults });
+      }
+    } catch (err) {
+      console.error('Failed to load calendar slot settings:', err);
+      setCalendarSlotSettings({ year, month, week_slot_counts: { '0': 6, '1': 6, '2': 6, '3': 6, '4': 6 } });
+    }
+  }, []);
+
+  // 근무표 달력 주차별 슬롯 수 설정 저장
+  const saveCalendarSlotSettings = useCallback(async (year, month, weekSlotCounts) => {
+    try {
+      const { error } = await supabase
+        .from('staff_calendar_settings')
+        .upsert({
+          year,
+          month,
+          week_slot_counts: weekSlotCounts,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'year,month' });
+
+      if (error) throw error;
+      setCalendarSlotSettings({ year, month, week_slot_counts: weekSlotCounts });
+      return true;
+    } catch (err) {
+      console.error('Failed to save calendar slot settings:', err);
+      return false;
+    }
+  }, []);
 
   // 충격파 스케줄러 환경설정 저장
   const saveShockwaveSettings = useCallback(async (newSettings) => {
@@ -778,6 +834,7 @@ export function ScheduleProvider({ children }) {
       shockwaveMemos, loadShockwaveMemos, saveShockwaveMemo, saveShockwaveMemosBulk,
       monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists,
       notices, loadNotices, saveNotice,
+      calendarSlotSettings, loadCalendarSlotSettings, saveCalendarSlotSettings,
       loading
     }}>
       {children}

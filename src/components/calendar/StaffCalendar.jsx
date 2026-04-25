@@ -14,8 +14,9 @@ const COL_W_KEY = 'staff-calendar-col-width';
 const ROW_H_KEY = 'staff-calendar-row-height';
 
 export default function StaffCalendar() {
-  const { currentYear, currentMonth, navigateMonth, staffMemos, loadStaffMemos, saveStaffMemo, holidays, holidayNames, loadHolidays, shockwaveSettings, loadShockwaveSettings } = useSchedule();
+  const { currentYear, currentMonth, navigateMonth, staffMemos, loadStaffMemos, saveStaffMemo, holidays, holidayNames, loadHolidays, shockwaveSettings, loadShockwaveSettings, calendarSlotSettings, loadCalendarSlotSettings, saveCalendarSlotSettings } = useSchedule();
   const { addToast } = useToast();
+  const [showSlotSettings, setShowSlotSettings] = useState(false);
 
   const [colWidth, setColWidth] = useState(() => { const v = Number(localStorage.getItem(COL_W_KEY)); return v > 0 ? v : 0; });
   const [rowHeight, setRowHeight] = useState(() => { const v = Number(localStorage.getItem(ROW_H_KEY)); return v >= 60 ? v : 120; });
@@ -39,6 +40,13 @@ export default function StaffCalendar() {
 
   const today = getTodayKST();
   const { grid } = useMemo(() => generateCalendarGrid(currentYear, currentMonth, holidays), [currentYear, currentMonth, holidays]);
+
+  // 주차별 슬롯 수 헬퍼
+  const getSlotCount = useCallback((wi) => {
+    if (!calendarSlotSettings?.week_slot_counts) return 6;
+    return Number(calendarSlotSettings.week_slot_counts[String(wi)]) || 6;
+  }, [calendarSlotSettings]);
+
   const staffBlockRules = useMemo(
     () => getEffectiveStaffScheduleBlockRules(shockwaveSettings, currentYear, currentMonth).rules,
     [shockwaveSettings, currentYear, currentMonth]
@@ -65,14 +73,26 @@ export default function StaffCalendar() {
 
   const makeCell = useCallback((wi, di, slot) => {
     const key = memoKey(wi, di, slot);
-    return key ? { x: di, y: wi * 6 + slot, wi, di, slot, key } : null;
-  }, [memoKey]);
+    if (!key) return null;
+    // 누적 y 좌표 계산 (가변 슬롯)
+    let y = 0;
+    for (let w = 0; w < wi; w++) y += getSlotCount(w);
+    y += slot;
+    return { x: di, y, wi, di, slot, key };
+  }, [memoKey, getSlotCount]);
 
   const cellFromXY = useCallback((x, y) => {
-    const wi = Math.floor(y / 6), slot = y % 6, di = x;
-    if (di < 0 || di >= 7 || wi < 0 || wi >= grid.length) return null;
-    return makeCell(wi, di, slot);
-  }, [grid, makeCell]);
+    if (x < 0 || x >= 7) return null;
+    let cumY = 0;
+    for (let w = 0; w < grid.length; w++) {
+      const sc = getSlotCount(w);
+      if (y < cumY + sc) {
+        return makeCell(w, x, y - cumY);
+      }
+      cumY += sc;
+    }
+    return null;
+  }, [grid, makeCell, getSlotCount]);
 
   const buildRange = useCallback((a, b) => {
     if (!a || !b) return new Set();
@@ -122,7 +142,8 @@ export default function StaffCalendar() {
     loadStaffMemos(currentYear, currentMonth, { includeAdjacentMonths: true });
     loadHolidays(currentYear, currentMonth);
     loadShockwaveSettings();
-  }, [currentYear, currentMonth, loadStaffMemos, loadHolidays, loadShockwaveSettings]);
+    loadCalendarSlotSettings(currentYear, currentMonth);
+  }, [currentYear, currentMonth, loadStaffMemos, loadHolidays, loadShockwaveSettings, loadCalendarSlotSettings]);
   useEffect(() => { if (colWidth > 0) localStorage.setItem(COL_W_KEY, colWidth); else localStorage.removeItem(COL_W_KEY); localStorage.setItem(ROW_H_KEY, rowHeight); }, [colWidth, rowHeight]);
 
   // ── Actions ──
@@ -557,6 +578,81 @@ export default function StaffCalendar() {
         >
           ›
         </button>
+        <div style={{ position: 'relative', marginLeft: 8 }}>
+          <button
+            type="button"
+            onClick={() => setShowSlotSettings(!showSlotSettings)}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--text-secondary)',
+              padding: 4,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 4,
+            }}
+            title="주차별 행 수 설정"
+          >
+            ⚙️
+          </button>
+          {showSlotSettings && (
+            <div style={{
+              position: 'absolute', top: '100%', right: 0, marginTop: 4,
+              background: 'var(--bg-primary)', border: '1px solid var(--border-color)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)', borderRadius: 6, padding: 12,
+              zIndex: 1000, width: 200, fontSize: '0.85rem', color: 'var(--text-primary)'
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: 8, borderBottom: '1px solid var(--border-color)', paddingBottom: 4 }}>
+                주차별 메모 행 수 설정
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {grid.map((_, wi) => {
+                  const currentCount = getSlotCount(wi);
+                  return (
+                    <div key={wi} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span>{wi + 1}주차</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const newCount = Math.max(1, currentCount - 1);
+                            if (newCount < currentCount) {
+                              const daysInWeek = grid[wi] || [];
+                              const promises = [];
+                              for (const dayInfo of daysInWeek) {
+                                if (dayInfo) {
+                                  for (let s = newCount; s < currentCount; s++) {
+                                    promises.push(saveStaffMemo(dayInfo.year, dayInfo.month, dayInfo.day, s, ''));
+                                  }
+                                }
+                              }
+                              await Promise.all(promises);
+                            }
+                            const newCounts = { ...(calendarSlotSettings?.week_slot_counts || {}), [String(wi)]: newCount };
+                            saveCalendarSlotSettings(currentYear, currentMonth, newCounts);
+                          }}
+                          style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #ccc', borderRadius: 2, background: 'var(--bg-secondary)', cursor: 'pointer' }}
+                        >-</button>
+                        <span style={{ width: 24, textAlign: 'center' }}>{currentCount}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newCount = Math.min(20, currentCount + 1);
+                            const newCounts = { ...(calendarSlotSettings?.week_slot_counts || {}), [String(wi)]: newCount };
+                            saveCalendarSlotSettings(currentYear, currentMonth, newCounts);
+                          }}
+                          style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #ccc', borderRadius: 2, background: 'var(--bg-secondary)', cursor: 'pointer' }}
+                        >+</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
       {/* Unified input: hidden when not editing, positioned over cell when editing */}
       <input
@@ -613,7 +709,7 @@ export default function StaffCalendar() {
                 <span className="calendar-date-number">{dayInfo.day}</span>
               </div>
               <div className="calendar-memos">
-                {[0,1,2,3,4,5].map(slot => {
+                {Array.from({ length: getSlotCount(wi) }, (_, slot) => {
                   const key = memoKey(wi, di, slot);
                   const isSel = selectedKeys.has(key);
                   const isPri = selectedCell?.key === key;

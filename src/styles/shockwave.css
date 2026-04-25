@@ -293,7 +293,7 @@
 .sw-cell {
   position: relative;
   box-sizing: border-box;
-  padding: 0 4px;
+  padding: 0;
   font-size: var(--sw-cell-font-size);
   font-weight: var(--sw-cell-font-weight);
   text-align: center;
