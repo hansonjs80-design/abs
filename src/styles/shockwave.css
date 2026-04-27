@@ -21,8 +21,8 @@
   background: var(--bg-card);
   border-top: 1.5px solid #000;
   border-bottom: 1.5px solid #000;
-  border-left: none;
-  border-right: none;
+  border-left: 1.5px solid #000;
+  border-right: 1.5px solid #000;
   border-radius: 4px;
   box-shadow: var(--shadow-sm);
   width: fit-content;
