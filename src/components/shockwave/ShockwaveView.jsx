@@ -16,7 +16,7 @@ import { useToast } from '../common/Toast';
 import MonthlyTherapistConfig from './MonthlyTherapistConfig';
 
 const HORIZONTAL_BORDER_COLOR = '#b7b7b7';
-const TIME_COL_WIDTH = 46;
+const TIME_COL_WIDTH = 41;
 const SHOCKWAVE_DAY_COL_WIDTH_KEY = 'shockwave-day-col-width';
 const SHOCKWAVE_COL_RATIOS_KEY = 'shockwave-col-ratios';
 const SHOCKWAVE_ROW_HEIGHT_KEY = 'shockwave-row-height';
@@ -832,10 +832,19 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const shouldAutoFormatSchedulerName = useCallback((value) => {
     const text = String(value || '').trim();
     if (!text) return false;
-    if (text.includes('/')) return false;
-    if (/[()*]/.test(text)) return false;
-    if (has4060Pattern(text)) return false;
+    
+    // 허용되는 특수 예약어는 제외
     if (/^(휴무|연차|반차|출근|퇴근|근무|야간|오전|오후)$/u.test(text)) return false;
+    
+    // 차트번호/이름 형식이면 허용
+    const hasPatientPattern = /^\d+\/?.*?/.test(text) || text.includes('/');
+    if (hasPatientPattern) return true;
+    
+    // 단순 이름에 ( ) 가 포함되어 있어도 허용
+    if (/[()*]/.test(text)) return true;
+    
+    if (has4060Pattern(text)) return true;
+    
     return true;
   }, []);
 
@@ -1010,9 +1019,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       });
   }, [memos, parseSchedulerPatientText, weeks]);
 
-  const buildSchedulerAutoText = useCallback(async (w, d, r, c, nextValue) => {
+  const buildSchedulerAutoText = useCallback(async (w, d, r, c, nextValue, forceOverrideSession = false) => {
     const rawName = String(nextValue || '').trim();
     if (!shouldAutoFormatSchedulerName(rawName)) return { text: rawName };
+
+    let manualSession = null;
+    const inputParenMatch = rawName.match(/\((\d+)\)$/);
+    if (inputParenMatch) {
+      manualSession = parseInt(inputParenMatch[1], 10);
+    }
 
     const dayInfo = weeks[w]?.[d];
     if (!dayInfo) return { text: rawName };
@@ -1036,8 +1051,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       };
     }
 
-    // Supabase에서 shockwave와 manual_therapy 모두 조회
-    const normalizedName = normalizeNameForMatch(rawName);
+    const parsedIdentity = parseSchedulerPatientIdentity(rawName);
+    const searchChart = parsedIdentity.patientChart ? String(parsedIdentity.patientChart).trim() : null;
+    const searchName = normalizeNameForMatch(parsedIdentity.patientName) || normalizeNameForMatch(rawName);
 
     const [shockwaveRes, manualRes] = await Promise.all([
       supabase.from('shockwave_patient_logs')
@@ -1058,9 +1074,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     ];
 
     const matches = allData.filter((item) => {
-      const matchName = normalizeNameForMatch(item.patient_name) === normalizedName;
-      const matchChart = String(item.chart_number || '').trim() === rawName;
-      return matchName || matchChart;
+      const matchChart = searchChart && String(item.chart_number || '').trim() === searchChart;
+      const matchName = searchName && normalizeNameForMatch(item.patient_name) === searchName;
+      if (searchChart) return matchChart;
+      return matchName;
     });
 
     if (matches.length === 0) return { text: rawName };
@@ -1070,8 +1087,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return (parseInt(b.visit_count || '0', 10) || 0) - (parseInt(a.visit_count || '0', 10) || 0);
     });
 
-    // 같은 환자여도 충격파/도수40/도수60 이력이 함께 있을 수 있으므로
-    // 자동완성 후보를 차트번호 + 이력유형 단위로 분리한다.
     const candidateMap = new Map();
     matches.forEach((item) => {
       const chartNumber = String(item.chart_number || '').trim();
@@ -1104,9 +1119,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           addBodyPartToMap(candidate.bodyPartsMap, part);
           const normalizedPartKey = normalizeBodyPartKey(part);
           const itemVisit = parseInt(item.visit_count || '0', 10) || 0;
-          const nextVisit = item.date === targetDate
+          let nextVisit = item.date === targetDate
             ? (itemVisit > 0 ? itemVisit : 1)
             : (itemVisit > 0 ? itemVisit + 1 : 1);
+            
+          if (!forceOverrideSession && manualSession !== null) {
+            nextVisit = manualSession;
+          }
+          
           const existingVisitInfo = candidate.bodyPartVisitMap.get(normalizedPartKey);
           if (
             !existingVisitInfo ||
@@ -1131,9 +1151,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const item = candidate.latestItem;
       const chartNumber = candidate.chartNumber;
       const lastVisit = parseInt(item.visit_count || '0', 10) || 0;
-      const nextVisit = item.date === targetDate
+      let nextVisit = item.date === targetDate
         ? (lastVisit > 0 ? lastVisit : 1)
         : (lastVisit > 0 ? lastVisit + 1 : 1);
+        
+      if (!forceOverrideSession && manualSession !== null) {
+        nextVisit = manualSession;
+      }
+      
       const cleanPatientName = String(item.patient_name).replace(/\*/g, '').trim();
       const namePart = item.type === 'manual'
         ? buildManualNamePart(cleanPatientName, item.prescription)
@@ -1180,7 +1205,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     // 부위가 2개 이상이거나 처방이 변경된 이력이 있으면 다이얼로그로 선택
     const effectiveVisitCount = selected.preferredNextVisit || selected.nextVisit;
     const effectiveBodyPart = selected.preferredBodyPart || selected.latestBodyPart || undefined;
-    const autoText = `${selected.chartNumber}/${selected.namePart}(${effectiveVisitCount})`;
+    
+    let autoText = `${selected.chartNumber}/${selected.namePart}`;
+    if (selected.doseTag) {
+      autoText += selected.doseTag;
+    } else {
+      const inputDoseMatch = rawName.match(/(40|60)(?:\(\d+\))?$/);
+      if (inputDoseMatch) {
+        autoText += inputDoseMatch[1];
+      }
+    }
+    autoText += `(${effectiveVisitCount})`;
+    
     const autoPrescription = has4060Pattern(autoText) ? undefined : (selected.prescription || undefined);
     const inheritedMergeSpan = findLatestSchedulerMemoMeta(
       { w, d, r, c },
@@ -2208,6 +2244,21 @@ const buildRangeKeys = useCallback((anchor, target) => {
       return;
     }
 
+    const enhancedPayload = await Promise.all(targetPayload.map(async (item) => {
+      // 외부 붙여넣기 등에서 처방/부위 정보가 없는 텍스트만 들어온 경우 자동 조회
+      if (item.content && !item.prescription && !item.body_part) {
+        const result = await buildSchedulerAutoText(item.week_index, item.day_index, item.row_index, item.col_index, item.content, true);
+        return {
+          ...item,
+          content: result.text || item.content,
+          prescription: result.prescription || item.prescription,
+          body_part: result.bodyPart || item.body_part,
+          merge_span: result.mergeSpan || item.merge_span
+        };
+      }
+      return item;
+    }));
+
     const combinedPayload = new Map();
 
     if (clip.mode === 'cut' && currentClipboardSource?.keys) {
@@ -2233,7 +2284,7 @@ const buildRangeKeys = useCallback((anchor, target) => {
       });
     }
 
-    targetPayload.forEach((item) => {
+    enhancedPayload.forEach((item) => {
       combinedPayload.set(
         `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`,
         item
@@ -2249,7 +2300,7 @@ const buildRangeKeys = useCallback((anchor, target) => {
     recordUndo({ type: 'bulk-edit', oldMemos });
     addToast('붙여넣기 완료', 'success');
     setContextMenu(null);
-  }, [selectedCell, clipboardSource, parsePlainTextClipboard, buildPastePayload, addToast, memos, cellKey, currentYear, currentMonth, baseTimeSlots.length, colCount, saveShockwaveMemosBulk, recordUndo]);
+  }, [selectedCell, clipboardSource, parsePlainTextClipboard, buildPastePayload, buildSchedulerAutoText, addToast, memos, cellKey, currentYear, currentMonth, baseTimeSlots.length, colCount, saveShockwaveMemosBulk, recordUndo]);
 
   const buildTreatmentStatusPayload = useCallback((mode) => {
     if (!selectedKeys || selectedKeys.size === 0) return null;
