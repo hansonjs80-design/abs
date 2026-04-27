@@ -598,16 +598,16 @@
   position: fixed;
   background: #ffffff;
   border: 1px solid rgba(148, 163, 184, 0.34);
-  border-radius: 16px;
-  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.16);
-  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.16), 0 4px 12px rgba(15, 23, 42, 0.08);
+  padding: 6px;
   cursor: default;
   z-index: 500;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  min-width: 252px;
-  width: min(292px, calc(100vw - 24px));
+  gap: 2px;
+  min-width: 180px;
+  width: auto;
   animation: fadeIn var(--transition-fast);
 }
 
@@ -624,48 +624,43 @@
 }
 
 .context-menu-action-panel {
-  padding: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  border-radius: 12px;
-  background: #f8fafc;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+  display: contents; /* Grid box 제거, 리스트 형태로 병합되도록 */
 }
 
 .context-menu-actions-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
+  display: contents;
 }
 
 .context-menu-item {
-  border: 1px solid rgba(148, 163, 184, 0.24) !important;
-  background: #ffffff !important;
-  border-radius: 10px;
-  text-align: center !important;
-  padding: 8px 5px !important;
-  min-height: 38px;
-  font-size: 0.78rem !important;
-  font-weight: 800 !important;
+  border: none !important;
+  background: transparent !important;
+  border-radius: 6px;
+  text-align: left !important;
+  padding: 8px 12px !important;
+  min-height: 32px;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
   box-shadow: none;
   white-space: nowrap;
   display: flex !important;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   position: relative;
   overflow: visible;
   letter-spacing: -0.01em;
-  transition: border-color 0.14s ease, background 0.14s ease;
+  transition: background 0.1s ease;
+  width: 100%;
 }
 
 .context-menu-item:hover:not(:disabled),
 .context-menu-item:focus-visible:not(:disabled) {
-  border-color: rgba(37, 99, 235, 0.28) !important;
-  background: #f8fbff !important;
-  box-shadow: none;
+  background: rgba(37, 99, 235, 0.08) !important;
+  color: #1e3a8a;
+  border-color: transparent !important;
 }
 
 .shockwave-context-menu button:hover:not(:disabled) {
-  background: #e8f0ff;
+  background: rgba(37, 99, 235, 0.08);
 }
 
 .context-menu-item[data-shortcut-tooltip]::after {
@@ -698,25 +693,19 @@
 }
 
 .shockwave-context-menu .context-menu-item-complete {
-  grid-column: 2;
   color: #8a5a00;
-  background: #fff2cc !important;
-  border-color: rgba(217, 119, 6, 0.24) !important;
 }
 
 .shockwave-context-menu .context-menu-item-complete:hover:not(:disabled) {
-  background: #fff7de !important;
+  background: rgba(217, 119, 6, 0.1) !important;
 }
 
 .shockwave-context-menu .context-menu-item-clear-complete {
-  grid-column: 3;
   color: #9f1239;
-  background: #fff1f2 !important;
-  border-color: rgba(190, 18, 60, 0.2) !important;
 }
 
 .shockwave-context-menu .context-menu-item-clear-complete:hover:not(:disabled) {
-  background: #fff7f7 !important;
+  background: rgba(190, 18, 60, 0.1) !important;
 }
 
 .shockwave-context-menu button:disabled {
@@ -746,13 +735,64 @@
   margin: 2px 0;
 }
 
+.context-menu-divider {
+  height: 1px;
+  background: rgba(148, 163, 184, 0.25);
+  margin: 4px 0;
+  display: block;
+}
+
+/* Submenu System */
+.has-submenu {
+  position: relative;
+  justify-content: space-between !important;
+}
+
+.has-submenu::after {
+  content: "▶";
+  font-size: 0.6rem;
+  opacity: 0.5;
+  margin-left: 12px;
+}
+
+.context-menu-submenu {
+  position: absolute;
+  top: -6px; /* align with parent padding */
+  left: calc(100% + 4px); /* pop out to the right */
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.16), 0 4px 12px rgba(15, 23, 42, 0.08);
+  padding: 10px;
+  min-width: 250px;
+  width: max-content;
+  max-width: 300px;
+  display: none;
+  z-index: 510;
+  cursor: default;
+}
+
+.context-menu-submenu::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -10px;
+  width: 10px;
+  height: 100%;
+}
+
+.has-submenu:hover > .context-menu-submenu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .context-menu-editor-panel {
   position: relative;
-  border: 1px solid rgba(99, 102, 241, 0.24);
-  border-radius: 14px;
-  overflow: hidden;
-  background: #f3f6ff;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
 }
 
 .context-menu-editor-panel::before {
