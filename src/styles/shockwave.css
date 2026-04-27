@@ -796,15 +796,14 @@
 }
 
 .context-menu-editor-panel::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 12px;
-  right: 12px;
-  height: 3px;
-  border-radius: 0 0 999px 999px;
-  background: #c7d2fe;
-  pointer-events: none;
+  display: none;
+}
+
+/* Fix submenu overflowing bottom of screen for the last two items */
+.has-submenu:nth-last-child(1) > .context-menu-submenu,
+.has-submenu:nth-last-child(2) > .context-menu-submenu {
+  top: auto;
+  bottom: -6px;
 }
 
 .context-menu-inline-grid {
