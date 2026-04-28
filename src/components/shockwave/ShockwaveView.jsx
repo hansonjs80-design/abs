@@ -4012,81 +4012,72 @@ const buildRangeKeys = useCallback((anchor, target) => {
                   </div>
                 </div>
 
-                <div className="context-menu-item has-submenu">
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    회차 : {contextMenuVisitInput || '1'}
-                  </span>
-                  <div className="context-menu-submenu">
-                    <div className="context-menu-editor-panel">
-                      <div className="context-menu-inline-column">
-                        <label className="context-menu-visit-editor">
-                          <span>회차 설정</span>
-                          <span className="context-menu-visit-control">
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9*-]*"
-                              autoComplete="off"
-                              className="context-menu-visit-input"
-                              value={contextMenuVisitInput}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                setContextMenuVisitInput(e.target.value.replace(/[^\d*-]/g, ''));
-                              }}
-                              onBlur={(e) => {
-                                e.stopPropagation();
-                                submitContextMenuVisitInput();
-                              }}
-                              onKeyDown={(e) => {
-                                e.stopPropagation();
-                                if (e.nativeEvent?.isComposing || e.keyCode === 229) return;
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  submitContextMenuVisitInput();
-                                }
-                                if (e.key === 'ArrowUp') {
-                                  e.preventDefault();
-                                  stepContextMenuVisitInput(1);
-                                }
-                                if (e.key === 'ArrowDown') {
-                                  e.preventDefault();
-                                  stepContextMenuVisitInput(-1);
-                                }
-                              }}
-                              onMouseDown={e => e.stopPropagation()}
-                              onClick={e => e.stopPropagation()}
-                            />
-                            <span className="context-menu-visit-stepper">
-                              <button
-                                type="button"
-                                className="context-menu-visit-step"
-                                aria-label="회차 증가"
-                                onMouseDown={e => e.stopPropagation()}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  stepContextMenuVisitInput(1);
-                                }}
-                              >
-                                ▲
-                              </button>
-                              <button
-                                type="button"
-                                className="context-menu-visit-step"
-                                aria-label="회차 감소"
-                                onMouseDown={e => e.stopPropagation()}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  stepContextMenuVisitInput(-1);
-                                }}
-                              >
-                                ▼
-                              </button>
-                            </span>
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
+                <div className="context-menu-item context-menu-item-inline-edit" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} style={{ cursor: 'default' }}>
+                  <label className="context-menu-visit-editor" style={{ width: '100%', margin: 0, padding: 0 }}>
+                    <span style={{ flexShrink: 0, width: '40px' }}>회차 :</span>
+                    <span className="context-menu-visit-control" style={{ flexGrow: 1 }}>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9*-]*"
+                        autoComplete="off"
+                        className="context-menu-visit-input"
+                        value={contextMenuVisitInput}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          setContextMenuVisitInput(e.target.value.replace(/[^\d*-]/g, ''));
+                        }}
+                        onBlur={(e) => {
+                          e.stopPropagation();
+                          submitContextMenuVisitInput();
+                        }}
+                        onKeyDown={(e) => {
+                          e.stopPropagation();
+                          if (e.nativeEvent?.isComposing || e.keyCode === 229) return;
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            submitContextMenuVisitInput();
+                          }
+                          if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            stepContextMenuVisitInput(1);
+                          }
+                          if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            stepContextMenuVisitInput(-1);
+                          }
+                        }}
+                        onMouseDown={e => e.stopPropagation()}
+                        onClick={e => e.stopPropagation()}
+                      />
+                      <span className="context-menu-visit-stepper">
+                        <button
+                          type="button"
+                          className="context-menu-visit-step"
+                          aria-label="회차 증가"
+                          onMouseDown={e => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            stepContextMenuVisitInput(1);
+                          }}
+                        >
+                          ▲
+                        </button>
+                        <button
+                          type="button"
+                          className="context-menu-visit-step"
+                          aria-label="회차 감소"
+                          onMouseDown={e => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            stepContextMenuVisitInput(-1);
+                          }}
+                        >
+                          ▼
+                        </button>
+                      </span>
+                    </span>
+                  </label>
                 </div>
 
                 <div className="context-menu-item has-submenu">
