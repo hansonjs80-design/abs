@@ -3957,6 +3957,11 @@ const buildRangeKeys = useCallback((anchor, target) => {
                             {settings?.prescriptions?.map((pres) => (
                               <option key={pres} value={pres}>{pres}</option>
                             ))}
+                            {settings?.manual_therapy_prescriptions?.filter(
+                              (mp) => !settings?.prescriptions?.includes(mp)
+                            ).map((pres) => (
+                              <option key={pres} value={pres}>{pres}</option>
+                            ))}
                           </select>
                         </div>
                       </div>
