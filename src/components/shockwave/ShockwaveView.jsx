@@ -1207,9 +1207,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const effectiveBodyPart = selected.preferredBodyPart || selected.latestBodyPart || undefined;
     
     let autoText = `${selected.chartNumber}/${selected.namePart}`;
-    if (selected.doseTag) {
-      autoText += selected.doseTag;
-    } else {
+    if (!selected.doseTag) {
       const inputDoseMatch = rawName.match(/(40|60)(?:\(\d+\))?$/);
       if (inputDoseMatch) {
         autoText += inputDoseMatch[1];

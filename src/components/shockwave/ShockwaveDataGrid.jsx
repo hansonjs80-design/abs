@@ -934,22 +934,27 @@ export default function ShockwaveDataGrid({
       if (e.key === 'Enter') { e.preventDefault(); startEdit(r, c, true); return; }
       if (e.key === 'Tab') { e.preventDefault(); const nc = Math.min(c+1, totalColCount-1); setFocus({r, c:nc}); setSel({r1:r,c1:nc,r2:r,c2:nc}); return; }
       if ((e.metaKey || e.ctrlKey) && (e.key === '+' || e.key === '=' || e.code === 'Equal' || e.code === 'NumpadAdd')) {
-        e.preventDefault();
-        insertDraftRow(gridData[r], 'after');
-        return;
+        if (isWholeRowSelected) {
+          e.preventDefault();
+          insertDraftRow(gridData[r], 'after');
+          return;
+        }
       }
-      if ((e.metaKey || e.ctrlKey) && (e.key === '-' || e.key === '_' || e.code === 'Minus' || e.code === 'NumpadSubtract') && isWholeRowSelected) {
-        e.preventDefault();
-        doDeleteRow(r, { skipConfirm: true });
-        return;
+      if ((e.metaKey || e.ctrlKey) && (e.key === '-' || e.key === '_' || e.code === 'Minus' || e.code === 'NumpadSubtract')) {
+        if (isWholeRowSelected) {
+          e.preventDefault();
+          doDeleteRow(r, { skipConfirm: true });
+          return;
+        }
       }
       if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); doDelete(); return; }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'e') { e.preventDefault(); e.shiftKey ? handleUnmerge() : handleMerge(); return; }
       if ((e.metaKey || e.ctrlKey) && e.key === 'c') { e.preventDefault(); doCopy(); return; }
       if ((e.metaKey || e.ctrlKey) && e.key === 'x') { e.preventDefault(); doCopy(); doDelete(); return; }
+      
+      // Let onInput handle the first keystroke for editing, just track IME state
       if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey && c < totalCountColIndex) {
         imeOpenRef.current = true;
-        updateEditingValue(r, c, '', false);
       }
     };
     window.addEventListener('keydown', kd);
@@ -1262,33 +1267,33 @@ export default function ShockwaveDataGrid({
 
       {/* Context Menu */}
       {ctxMenu && (
-        <div ref={ctxMenuRef} className="ctx-menu" style={{ top: ctxMenu.y, left: ctxMenu.x }} onMouseDown={e => e.stopPropagation()}>
+        <div ref={ctxMenuRef} className="shockwave-context-menu" style={{ top: ctxMenu.y, left: ctxMenu.x }} onMouseDown={e => e.stopPropagation()}>
           {ctxMenu.type === 'row' ? (
             <>
-              <div className="ctx-item" onClick={() => { selectRow(ctxMenu.r); setCtxMenu(null); }}>☰ 행 선택</div>
-              <div className="ctx-item" onClick={() => { copyRow(ctxMenu.r); setCtxMenu(null); }}>📋 행 복사</div>
-              <div className="ctx-item" onClick={() => { cutRow(ctxMenu.r); setCtxMenu(null); }}>✂️ 행 잘라내기</div>
-              <div className="ctx-item" onClick={() => { pasteRow(ctxMenu.r); setCtxMenu(null); }}>📥 행 붙여넣기</div>
-              <div className="ctx-sep" />
-              <div className="ctx-item" onClick={() => { insertDraftRow(gridData[ctxMenu.r], 'before'); setCtxMenu(null); }}>⬆ 위에 행 삽입</div>
-              <div className="ctx-item" onClick={() => { insertDraftRow(gridData[ctxMenu.r], 'after'); setCtxMenu(null); }}>⬇ 아래에 행 삽입</div>
-              <div className="ctx-sep" />
-              <div className="ctx-item ctx-danger" onClick={() => { doDeleteRow(ctxMenu.r); }}>❌ 행 삭제</div>
+              <button type="button" className="context-menu-item" onClick={() => { selectRow(ctxMenu.r); setCtxMenu(null); }}>행 선택</button>
+              <button type="button" className="context-menu-item" onClick={() => { copyRow(ctxMenu.r); setCtxMenu(null); }}>행 복사</button>
+              <button type="button" className="context-menu-item" onClick={() => { cutRow(ctxMenu.r); setCtxMenu(null); }}>행 잘라내기</button>
+              <button type="button" className="context-menu-item" onClick={() => { pasteRow(ctxMenu.r); setCtxMenu(null); }}>행 붙여넣기</button>
+              <div className="context-menu-divider" />
+              <button type="button" className="context-menu-item" onClick={() => { insertDraftRow(gridData[ctxMenu.r], 'before'); setCtxMenu(null); }}>위에 행 삽입</button>
+              <button type="button" className="context-menu-item" onClick={() => { insertDraftRow(gridData[ctxMenu.r], 'after'); setCtxMenu(null); }}>아래에 행 삽입</button>
+              <div className="context-menu-divider" />
+              <button type="button" className="context-menu-item context-menu-danger" onClick={() => { doDeleteRow(ctxMenu.r); setCtxMenu(null); }}>행 삭제</button>
             </>
           ) : (
             <>
-              <div className="ctx-item" onClick={() => { doCopy(); setCtxMenu(null); }}>📋 복사 <span className="ctx-shortcut">⌘C</span></div>
-              <div className="ctx-item" onClick={() => { doCopy(); doDelete(); setCtxMenu(null); }}>✂️ 잘라내기 <span className="ctx-shortcut">⌘X</span></div>
-              <div className="ctx-item" onClick={async () => {
+              <button type="button" className="context-menu-item" onClick={() => { doCopy(); setCtxMenu(null); }}>복사 <span className="ctx-shortcut">⌘C</span></button>
+              <button type="button" className="context-menu-item" onClick={() => { doCopy(); doDelete(); setCtxMenu(null); }}>잘라내기 <span className="ctx-shortcut">⌘X</span></button>
+              <button type="button" className="context-menu-item" onClick={async () => {
                 try { const t = await navigator.clipboard.readText(); doPaste(t, ctxMenu.r, ctxMenu.c); } catch { alert('Ctrl+V를 사용하세요.'); }
                 setCtxMenu(null);
-              }}>📥 붙여넣기 <span className="ctx-shortcut">⌘V</span></div>
-              <div className="ctx-sep" />
-              <div className="ctx-item" onClick={() => { handleMerge(); setCtxMenu(null); }}>⬛ 셀 병합 <span className="ctx-shortcut">⌘E</span></div>
-              <div className="ctx-item" onClick={() => { handleUnmerge(); setCtxMenu(null); }}>⬜ 셀 병합 해제 <span className="ctx-shortcut">⌘⇧E</span></div>
-              <div className="ctx-sep" />
-              <div className="ctx-item" onClick={() => { doDelete(); setCtxMenu(null); }}>🗑️ 선택 내용 지우기 <span className="ctx-shortcut">Del</span></div>
-              <div className="ctx-item ctx-danger" onClick={() => { doDeleteRow(ctxMenu.r); }}>❌ 이 행 영구 삭제</div>
+              }}>붙여넣기 <span className="ctx-shortcut">⌘V</span></button>
+              <div className="context-menu-divider" />
+              <button type="button" className="context-menu-item" onClick={() => { handleMerge(); setCtxMenu(null); }}>셀 병합 <span className="ctx-shortcut">⌘E</span></button>
+              <button type="button" className="context-menu-item" onClick={() => { handleUnmerge(); setCtxMenu(null); }}>셀 병합 해제 <span className="ctx-shortcut">⌘⇧E</span></button>
+              <div className="context-menu-divider" />
+              <button type="button" className="context-menu-item" onClick={() => { doDelete(); setCtxMenu(null); }}>선택 내용 지우기 <span className="ctx-shortcut">Del</span></button>
+              <button type="button" className="context-menu-item context-menu-danger" onClick={() => { doDeleteRow(ctxMenu.r); setCtxMenu(null); }}>이 행 영구 삭제</button>
             </>
           )}
         </div>

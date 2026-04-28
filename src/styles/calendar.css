@@ -16,51 +16,51 @@
 .staff-calendar-toolbar {
   width: 100%;
   min-width: 0;
-  margin: 0 0 10px;
-  padding: 8px 10px;
+  margin: -16px 0 10px; /* pull it up closer to tabs */
+  padding: 4px 10px; /* reduce padding to decrease height */
   display: inline-grid;
-  grid-template-columns: 36px auto max-content;
+  grid-template-columns: 32px auto max-content; /* match smaller nav btn width */
   align-items: center;
   justify-content: center;
   gap: 8px;
   border: 1px solid var(--border-color-light);
-  border-radius: 12px;
+  border-radius: 10px; /* slightly smaller radius */
   background: #ffffff;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
   box-sizing: border-box;
 }
 
 .staff-calendar-title {
   margin: 0;
-  min-height: 36px;
+  min-height: 28px; /* reduced from 36px */
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
   color: #0f172a;
-  font-size: 1.3rem;
+  font-size: 1.25rem; /* reduced from 1.3rem */
   font-weight: 900;
   line-height: 1;
   letter-spacing: -0.03em;
 }
 
 .staff-month-nav-btn {
-  width: 36px;
-  height: 32px;
+  width: 32px; /* reduced from 36px */
+  height: 28px; /* reduced from 32px */
   padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  border-radius: 8px; /* slightly smaller radius */
   background: #ffffff;
   color: #1e293b;
-  font-size: 1.45rem;
+  font-size: 1.35rem; /* reduced from 1.45rem */
   font-weight: 900;
   line-height: 1;
   vertical-align: middle;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
   transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
 }
 

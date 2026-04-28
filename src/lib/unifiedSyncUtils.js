@@ -166,16 +166,29 @@ export async function syncUnifiedStatsDateToScheduler({ year, month, date }) {
   });
 
   // 4. Fetch existing schedule rows for the day to preserve bg_color and merge_span
-  const { data: existingScheduleRows, error: existingScheduleError } = await supabase
-    .from('shockwave_schedules')
-    .select('*')
-    .eq('year', year)
-    .eq('month', month)
-    .eq('week_index', targetWeekIndex)
-    .eq('day_index', targetDayIndex)
-    .in('col_index', therapistCols);
+  const [
+    { data: existingScheduleRows, error: existingScheduleError },
+    { data: existingMemos, error: memosError }
+  ] = await Promise.all([
+    supabase
+      .from('shockwave_schedules')
+      .select('*')
+      .eq('year', year)
+      .eq('month', month)
+      .eq('week_index', targetWeekIndex)
+      .eq('day_index', targetDayIndex)
+      .in('col_index', therapistCols),
+    supabase
+      .from('shockwave_memos')
+      .select('id, year, month, week_index, day_index, row_index, col_index, content, bg_color, merge_span, prescription, body_part')
+      .eq('year', year)
+      .eq('month', month)
+      .eq('week_index', targetWeekIndex)
+      .eq('day_index', targetDayIndex)
+  ]);
 
   if (existingScheduleError) throw existingScheduleError;
+  if (memosError) throw memosError;
 
   const parsedExistingRows = (existingScheduleRows || []).map(row => {
     let cleanName = '';
@@ -190,6 +203,7 @@ export async function syncUnifiedStatsDateToScheduler({ year, month, date }) {
   });
 
   const upsertPayload = [];
+  const memosUpsertPayload = [];
   const deleteIds = []; // We won't delete rows, we will just clear their content
 
   groupedByTherapist.forEach((items, therapistIndex) => {
@@ -238,6 +252,16 @@ export async function syncUnifiedStatsDateToScheduler({ year, month, date }) {
         merge_span,
         updated_at: new Date().toISOString()
       });
+
+      const existingMemo = existingMemos?.find(m => m.row_index === rowIndex && m.col_index === therapistIndex);
+      if (existingMemo && (existingMemo.body_part !== item.body_part || existingMemo.prescription !== item.prescription)) {
+        memosUpsertPayload.push({
+          ...existingMemo,
+          body_part: item.body_part,
+          prescription: item.prescription,
+          updated_at: new Date().toISOString()
+        });
+      }
     });
 
     // For existing rows that had content but were NOT matched, we clear their content
@@ -253,6 +277,16 @@ export async function syncUnifiedStatsDateToScheduler({ year, month, date }) {
           merge_span: r.merge_span,
           updated_at: new Date().toISOString()
         });
+
+        const existingMemo = existingMemos?.find(m => m.row_index === r.row_index && m.col_index === r.col_index);
+        if (existingMemo && (existingMemo.body_part || existingMemo.prescription)) {
+          memosUpsertPayload.push({
+            ...existingMemo,
+            body_part: null,
+            prescription: null,
+            updated_at: new Date().toISOString()
+          });
+        }
       }
     });
   });
@@ -262,6 +296,13 @@ export async function syncUnifiedStatsDateToScheduler({ year, month, date }) {
       .from('shockwave_schedules')
       .upsert(upsertPayload, { onConflict: 'year,month,week_index,day_index,row_index,col_index' });
     if (upsertError) throw upsertError;
+  }
+
+  if (memosUpsertPayload.length > 0) {
+    const { error: memoUpsertError } = await supabase
+      .from('shockwave_memos')
+      .upsert(memosUpsertPayload, { onConflict: 'id' });
+    if (memoUpsertError) throw memoUpsertError;
   }
 
   return {
