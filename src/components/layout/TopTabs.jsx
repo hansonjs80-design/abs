@@ -22,7 +22,7 @@ export default function TopTabs() {
             if (isActive && item.monthLabel) {
               return (
                 <div key={item.path} className={`top-tab active month-tab ${item.tabClass}`}>
-                  <Icon size={16} />
+                  <Icon size={18} />
                   <MonthPicker suffix={item.monthLabel} variant="tab" />
                 </div>
               );
@@ -35,7 +35,7 @@ export default function TopTabs() {
                 end={item.path === '/'}
                 className={({ isActive: linkActive }) => `top-tab ${item.tabClass}${linkActive ? ' active' : ''}`}
               >
-                <Icon size={16} />
+                <Icon size={18} />
                 <span>{item.label}</span>
               </NavLink>
             );

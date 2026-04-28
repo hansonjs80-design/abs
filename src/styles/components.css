@@ -319,15 +319,15 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  min-height: 42px;
-  padding: 10px 20px 11px;
+  min-height: 38px;
+  padding: 8px 20px 9px;
   border: 1px solid var(--border-color-light);
   border-bottom: none;
   border-top-left-radius: var(--radius-md);
   border-top-right-radius: var(--radius-md);
   background: var(--bg-tertiary);
   color: var(--text-secondary);
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   font-weight: 700;
   text-decoration: none;
   transform: translateY(1px);
@@ -380,7 +380,7 @@
 
 .top-tab.month-tab {
   gap: 8px;
-  padding: 8px 14px 9px;
+  padding: 6px 14px 7px;
 }
 
 .month-picker.tab-variant {
@@ -390,7 +390,7 @@
 .month-picker.tab-variant .month-picker-label {
   min-width: 112px;
   padding: 2px 6px;
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   line-height: 1.2;
   color: inherit;
 }
