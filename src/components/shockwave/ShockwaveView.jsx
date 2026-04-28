@@ -1025,8 +1025,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
     // 사용자가 명시적으로 40/60 패턴(도수치료)을 입력한 경우,
     // 자동 포맷팅(충격파 히스토리 기반 덮어쓰기)을 건너뛰고 사용자 입력을 그대로 보존
+    // 동시에 40분/60분 처방을 자동으로 설정
     if (has4060Pattern(rawName)) {
-      return { text: rawName, prescription: undefined };
+      const doseMatch = rawName.match(/[가-힣a-zA-Z]\s*(40|60)/);
+      const autoDosePrescription = doseMatch ? `${doseMatch[1]}분` : undefined;
+      return { text: rawName, prescription: autoDosePrescription };
     }
 
     let manualSession = null;
@@ -1625,17 +1628,20 @@ const buildRangeKeys = useCallback((anchor, target) => {
     const newBodyPart = result?.bodyPart;
     const newMergeSpan = result?.mergeSpan;
 
-    // 이름에 40/60 패턴이 있으면 기존 처방을 명시적으로 취소
-    if (has4060Pattern(newContent) && memos[key]?.prescription) {
-      newPrescription = '';
+    // 이름에 40/60 패턴이 있으면 해당하는 40분/60분 처방을 자동 설정
+    if (has4060Pattern(newContent)) {
+      const doseMatch = newContent.match(/[가-힣a-zA-Z]\s*(40|60)/);
+      if (doseMatch) {
+        newPrescription = `${doseMatch[1]}분`;
+      }
     }
 
     if (newContent !== immediateContent) {
       setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
     }
 
-    const prescriptionCleared = has4060Pattern(newContent) && memos[key]?.prescription && newPrescription === '';
-    if (newContent === oldContent && !newPrescription && !newBodyPart && !prescriptionCleared) {
+    const prescriptionChanged = has4060Pattern(newContent) && newPrescription && memos[key]?.prescription !== newPrescription;
+    if (newContent === oldContent && !newPrescription && !newBodyPart && !prescriptionChanged) {
       setPendingDisplayValues((prev) => {
         if (!(key in prev)) return prev;
         const next = { ...prev };
@@ -2518,8 +2524,25 @@ const buildRangeKeys = useCallback((anchor, target) => {
         const [w, d, r, c] = key.split('-').map(Number);
         const memo = memos[key] || {};
         let updatedContent = getStableMemoContent(key, memo);
-        // 처방이 설정될 때 이름에 40/60이 있으면 숫자 자동 제거
-        if (action.value && has4060Pattern(updatedContent)) {
+        const prescriptionValue = action.value || '';
+        const doseNumber = prescriptionValue.match(/^(40|60)분$/)?.[1];
+
+        if (doseNumber) {
+          // 40분/60분 처방 선택 시: 기존 40/60을 제거 후 이름 뒤에 해당 숫자 추가
+          updatedContent = strip4060FromContent(updatedContent);
+          // 이름(회차) 패턴에서 이름 뒤에 숫자 삽입
+          const parenMatch = updatedContent.match(/^(.+?)(\(\d+\).*)$/);
+          if (parenMatch) {
+            updatedContent = `${parenMatch[1]}${doseNumber}${parenMatch[2]}`;
+          } else if (updatedContent && !/\(\d+\)/.test(updatedContent)) {
+            // 괄호가 없는 경우 끝에 추가
+            updatedContent = `${updatedContent}${doseNumber}`;
+          }
+        } else if (action.value && has4060Pattern(updatedContent)) {
+          // 다른 처방(충격파 등) 설정 시 기존 40/60 제거
+          updatedContent = strip4060FromContent(updatedContent);
+        } else if (!action.value) {
+          // 처방 없음 선택 시 기존 40/60 제거
           updatedContent = strip4060FromContent(updatedContent);
         }
         if (memo.prescription !== action.value || updatedContent !== getStableMemoContent(key, memo)) {
@@ -2593,16 +2616,21 @@ const buildRangeKeys = useCallback((anchor, target) => {
       return;
     }
     else if (action?.type === 'bodyPartDeleteValue') {
+      // x 버튼: 현재 셀의 body_part에서 해당 부위를 토글(제거)
+      // bodyPartToggle과 동일한 동작으로 통합
       const keys = Array.from(selectedKeys || []);
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
-      const targetKey = normalizeBodyPartKey(action.value);
-      if (!targetKey) return;
+      const targetPart = action.value.trim();
       for (const key of keys) {
         const [w, d, r, c] = key.split('-').map(Number);
         const memo = memos[key] || {};
-        const parts = splitBodyParts(memo.body_part || '');
-        const updated = parts.filter((part) => normalizeBodyPartKey(part) !== targetKey).join(', ');
+        const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
+        const idx = parts.findIndex(p => normalizeBodyPartKey(p) === normalizeBodyPartKey(targetPart));
+        if (idx >= 0) {
+          parts.splice(idx, 1);
+        }
+        const updated = parts.join(', ');
         if (updated === (memo.body_part || '').trim()) continue;
         const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, updated);
         if (success) anyChanged = true;
