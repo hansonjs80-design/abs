@@ -217,16 +217,16 @@ export function incrementSessionCount(text) {
 
   // 패턴: chartNo/name[40|60]*(count) 또는 chartNo/name[40|60]*
   // 1) 괄호 안에 숫자가 있는 경우: 1234/이름(3) 또는 1234/이름40(3)
-  const parenMatch = s.match(/^(.+?\/[^(]+?)(40|60)?(\((\d+)\))$/);
+  const parenMatch = s.match(/^(.+?\/.*?[가-힣a-zA-Z])(40|60)?(\(\d+\))$/);
   if (parenMatch) {
     const prefix = parenMatch[1];
     const suffix4060 = parenMatch[2] || '';
-    const count = parseInt(parenMatch[4], 10);
+    const count = parseInt(parenMatch[3].replace(/[()]/g, ''), 10);
     return `${prefix}${suffix4060}(${count + 1})`;
   }
 
   // 2) *로 끝나는 경우: 1234/이름* 또는 1234/이름40*  → 1회로 간주 → (2)
-  const starMatch = s.match(/^(.+?\/[^*]+?)(40|60)?(\*+)$/);
+  const starMatch = s.match(/^(.+?\/.*?[가-힣a-zA-Z])(40|60)?(\*+)$/);
   if (starMatch) {
     const prefix = starMatch[1];
     const suffix4060 = starMatch[2] || '';

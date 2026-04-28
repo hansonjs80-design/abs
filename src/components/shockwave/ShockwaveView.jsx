@@ -907,13 +907,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const raw = String(text || '').trim();
     if (!raw.includes('/')) return null;
 
-    const match = raw.match(/^([^/]+)\/(.+?)(\((-|\d+)\)|\*)?$/);
+    // 차트번호/이름[40|60][(회차)|*] 패턴 매칭
+    // 이름 뒤에 40 또는 60이 올 수 있고, 그 뒤에 (숫자) 또는 *가 올 수 있음
+    const match = raw.match(/^([^/]+)\/(.+?(?:40|60)?)((\(-?\d*\))|\*)?$/);
     if (!match) return null;
 
     const chartNumber = String(match[1] || '').trim();
     const namePart = String(match[2] || '').trim();
     const suffixToken = match[3] || '';
-    const suffixValue = match[4] || '';
+    const suffixValue = suffixToken.replace(/[()]/g, '') || (suffixToken === '*' ? '*' : '');
     const cleanName = namePart.replace(/\(-\)/g, '').trim();
     const normalizedName = normalizeNameForMatch(cleanName);
 
@@ -1634,13 +1636,16 @@ const buildRangeKeys = useCallback((anchor, target) => {
       if (doseMatch) {
         newPrescription = `${doseMatch[1]}분`;
       }
+    } else if (!has4060Pattern(newContent) && /^(40|60)분$/.test(memos[key]?.prescription || '')) {
+      // 이름에서 40/60이 없어졌는데 기존 처방이 40분/60분이면 처방 없음으로 변경
+      newPrescription = '';
     }
 
     if (newContent !== immediateContent) {
       setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
     }
 
-    const prescriptionChanged = has4060Pattern(newContent) && newPrescription && memos[key]?.prescription !== newPrescription;
+    const prescriptionChanged = (newPrescription !== undefined && newPrescription !== null && memos[key]?.prescription !== newPrescription);
     if (newContent === oldContent && !newPrescription && !newBodyPart && !prescriptionChanged) {
       setPendingDisplayValues((prev) => {
         if (!(key in prev)) return prev;
