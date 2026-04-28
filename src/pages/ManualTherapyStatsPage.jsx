@@ -173,7 +173,7 @@ export default function ManualTherapyStatsPage() {
           memos: shockwaveMemos,
           therapists: safeTherapists,
           monthlyTherapists: monthlyManualTherapists,
-          upToToday: true,
+          upToToday: false,
         });
 
         if (!cancelled && result?.totalUpdates > 0) {

@@ -363,6 +363,7 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
   });
 
   const toDeleteIds = (todayStats || [])
+    .filter((row) => overwriteManual ? true : row.source !== 'manual')
     .map((row) => row.id)
     .filter(Boolean);
 
@@ -436,7 +437,8 @@ export async function syncMonthShockwaveScheduleToStats({ year, month, memos, th
         .from('shockwave_patient_logs')
         .delete()
         .gt('date', todayDateStr)
-        .lte('date', endOfMonthStr);
+        .lte('date', endOfMonthStr)
+        .neq('source', 'manual');
         
       if (error) console.error('Failed to cleanup future dates:', error);
     } catch (e) {

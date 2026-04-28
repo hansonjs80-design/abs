@@ -227,6 +227,7 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
     .eq('date', todayDateStrFinal);
 
   const toDeleteIds = (todayStats || [])
+    .filter((row) => overwriteManual ? true : row.source !== 'manual')
     .map((row) => row.id)
     .filter(Boolean);
 
@@ -312,7 +313,8 @@ export async function syncMonthManualTherapyScheduleToStats({ year, month, memos
         .from('manual_therapy_patient_logs')
         .delete()
         .gt('date', todayDateStr)
-        .lte('date', endOfMonthStr);
+        .lte('date', endOfMonthStr)
+        .neq('source', 'manual');
         
       if (error) console.error('Failed to cleanup future dates:', error);
     } catch (e) {
