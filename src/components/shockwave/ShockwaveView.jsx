@@ -1653,6 +1653,9 @@ const buildRangeKeys = useCallback((anchor, target) => {
     setContextMenuNoteInput('');
     setContextMenuMemoDrafts(getMemoListFromMergeSpan(memos[key]?.merge_span));
     setContextMenuVisitInput(getSchedulerVisitInputValue(memos[key]?.content || ''));
+    const viewW = window.innerWidth;
+    const isNearRightEdge = e.clientX + 180 + 300 > viewW;
+
     setContextMenu({
       x: e.clientX,
       y: e.clientY,
@@ -1660,7 +1663,8 @@ const buildRangeKeys = useCallback((anchor, target) => {
       dayIdx: d,
       rowIdx: r,
       colIdx: c,
-      currentPrescription
+      currentPrescription,
+      isNearRightEdge
     });
     window.setTimeout(() => {
       skipNextEditBlurSaveRef.current = false;
@@ -3022,11 +3026,15 @@ const buildRangeKeys = useCallback((anchor, target) => {
       const MENU_WIDTH = 180;
       const MENU_HEIGHT = 180;
       const VIEWPORT_GAP = 12;
+      const SUBMENU_WIDTH = 300;
+      const isNearRightEdge = event.clientX + MENU_WIDTH + SUBMENU_WIDTH > window.innerWidth;
+      
       const maxX = Math.max(VIEWPORT_GAP, window.innerWidth - MENU_WIDTH - VIEWPORT_GAP);
       const maxY = Math.max(VIEWPORT_GAP, window.innerHeight - MENU_HEIGHT - VIEWPORT_GAP);
       setContextMenu({
         x: Math.min(event.clientX, maxX),
         y: Math.min(event.clientY, maxY),
+        isNearRightEdge,
       });
     };
     el.addEventListener('contextmenu', handleContext);
@@ -3761,7 +3769,7 @@ const buildRangeKeys = useCallback((anchor, target) => {
       {contextMenu && (
         <div
           ref={contextMenuRef}
-          className="shockwave-context-menu"
+          className={`shockwave-context-menu ${contextMenu.isNearRightEdge ? 'submenu-pop-left' : ''}`}
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onKeyDown={(e) => e.stopPropagation()}
           onKeyUp={(e) => e.stopPropagation()}

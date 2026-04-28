@@ -781,6 +781,16 @@
   height: 100%;
 }
 
+.submenu-pop-left .context-menu-submenu {
+  left: auto;
+  right: calc(100% + 4px); /* pop out to the left */
+}
+
+.submenu-pop-left .context-menu-submenu::before {
+  left: auto;
+  right: -10px;
+}
+
 .has-submenu:hover > .context-menu-submenu {
   display: flex;
   flex-direction: column;
