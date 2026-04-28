@@ -1041,6 +1041,20 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         ? schedulerOptions[0]
         : await pickChartOption(schedulerOptions, rawName);
       if (!selected) return { text: rawName };
+
+      // 사용자가 명시적으로 40/60 패턴(도수치료)을 입력한 경우,
+      // 스케줄러 히스토리의 충격파 형식을 무시하고 사용자 입력을 존중
+      const inputHas4060 = has4060Pattern(rawName);
+      if (inputHas4060 && !has4060Pattern(selected.nextText)) {
+        // 사용자의 도수치료 형식을 유지하되, 히스토리에서 부위/메모 정보만 상속
+        return {
+          text: rawName,
+          prescription: undefined,
+          bodyPart: selected.latestBodyPart || undefined,
+          mergeSpan: selected.mergeSpan,
+        };
+      }
+
       const autoPrescription = has4060Pattern(selected.nextText) ? undefined : (selected.prescription || undefined);
 
       return {
@@ -1377,7 +1391,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         e.preventDefault();
         doUndo();
       } else if (e.key === 'Escape') {
-        setClipboardSource(null);
+        if (contextMenu) {
+          setContextMenu(null);
+        } else {
+          setClipboardSource(null);
+        }
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown, true);
