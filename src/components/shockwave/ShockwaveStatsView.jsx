@@ -213,7 +213,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
           memos,
           therapists: safeTherapists,
           monthlyTherapists,
-          upToToday: false,
+          upToToday: true,
         });
 
         if (!cancelled && result?.totalUpdates > 0) {

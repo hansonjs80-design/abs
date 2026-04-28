@@ -500,7 +500,7 @@ export function ScheduleProvider({ children }) {
         ? `${dayInfo.year}-${String(dayInfo.month).padStart(2, '0')}-${String(dayInfo.day).padStart(2, '0')}`
         : null;
 
-      if (targetDateStr) {
+      if (targetDateStr && targetDateStr <= todayDateStr) {
         if (therapists.length > 0) {
           try {
             await syncTodayShockwaveScheduleToStats({
@@ -611,7 +611,7 @@ export function ScheduleProvider({ children }) {
       const todayDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
       for (const targetDateStr of affectedDates) {
-        if (targetDateStr) {
+        if (targetDateStr && targetDateStr <= todayDateStr) {
           if (therapists.length > 0) {
             try {
               await syncTodayShockwaveScheduleToStats({
