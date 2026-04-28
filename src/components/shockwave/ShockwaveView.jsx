@@ -1023,6 +1023,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const rawName = String(nextValue || '').trim();
     if (!shouldAutoFormatSchedulerName(rawName)) return { text: rawName };
 
+    // 사용자가 명시적으로 40/60 패턴(도수치료)을 입력한 경우,
+    // 자동 포맷팅(충격파 히스토리 기반 덮어쓰기)을 건너뛰고 사용자 입력을 그대로 보존
+    if (has4060Pattern(rawName)) {
+      return { text: rawName, prescription: undefined };
+    }
+
     let manualSession = null;
     const inputParenMatch = rawName.match(/\((\d+)\)$/);
     if (inputParenMatch) {
