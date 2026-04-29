@@ -695,6 +695,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const imeOpenRef = useRef(false);
   const skipNextEditBlurSaveRef = useRef(false);
   const handleCellSaveRef = useRef(null);
+  const editDraftRef = useRef(null);
+  const editAutosaveTimerRef = useRef(null);
+  const saveMemoRef = useRef(onSaveMemo);
+  const scheduleDateRef = useRef({ year: currentYear, month: currentMonth });
   const undoStackRef = useRef([]);
   const undoQueueRef = useRef(Promise.resolve());
 
@@ -707,6 +711,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     () => getMonthlyDayOverrides(settings?.day_overrides, currentYear, currentMonth),
     [settings?.day_overrides, currentYear, currentMonth]
   );
+
+  useEffect(() => {
+    saveMemoRef.current = onSaveMemo;
+    scheduleDateRef.current = { year: currentYear, month: currentMonth };
+  }, [onSaveMemo, currentYear, currentMonth]);
 
   // 월별 치료사 설정 로드 (충격파 + 도수치료)
   useEffect(() => {
@@ -1673,7 +1682,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     return normalized;
   }, [normalizeCellToMergeMaster, cellKey]);
 
-const buildRangeKeys = useCallback((anchor, target) => {
+  const buildRangeKeys = useCallback((anchor, target) => {
     if (!anchor || !target) return new Set();
     if (anchor.w !== target.w || anchor.d !== target.d) {
       return new Set([cellKey(target.w, target.d, target.r, target.c)]);
@@ -1691,6 +1700,39 @@ const buildRangeKeys = useCallback((anchor, target) => {
     }
     return keys;
   }, [cellKey]);
+
+  const scheduleEditDraftAutosave = useCallback((key, value) => {
+    editDraftRef.current = { key, value: value ?? '', dirty: true };
+    if (editAutosaveTimerRef.current) {
+      clearTimeout(editAutosaveTimerRef.current);
+    }
+    editAutosaveTimerRef.current = window.setTimeout(() => {
+      const draft = editDraftRef.current;
+      if (!draft?.key || !draft.dirty) return;
+      const [w, d, r, c] = draft.key.split('-').map(Number);
+      if (![w, d, r, c].every(Number.isFinite)) return;
+      const { year, month } = scheduleDateRef.current;
+      saveMemoRef.current?.(year, month, w, d, r, c, draft.value ?? '');
+    }, 350);
+  }, []);
+
+  const flushEditDraft = useCallback(() => {
+    if (editAutosaveTimerRef.current) {
+      clearTimeout(editAutosaveTimerRef.current);
+      editAutosaveTimerRef.current = null;
+    }
+    const draft = editDraftRef.current;
+    if (!draft?.key || !draft.dirty) return;
+    const [w, d, r, c] = draft.key.split('-').map(Number);
+    if (![w, d, r, c].every(Number.isFinite)) return;
+    const { year, month } = scheduleDateRef.current;
+    saveMemoRef.current?.(year, month, w, d, r, c, draft.value ?? '');
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('clinic-before-route-change', flushEditDraft);
+    return () => window.removeEventListener('clinic-before-route-change', flushEditDraft);
+  }, [flushEditDraft]);
 
   const selectSingleCell = useCallback((cell) => {
     const normalizedCell = normalizeCellToMergeMaster(cell);
@@ -1783,6 +1825,13 @@ const buildRangeKeys = useCallback((anchor, target) => {
   // ── 편집 저장 ──
   const handleCellSave = useCallback(async (w, d, r, c, nextValue = editValue) => {
     const key = cellKey(w, d, r, c);
+    if (editDraftRef.current?.key === key) {
+      editDraftRef.current = null;
+    }
+    if (editAutosaveTimerRef.current) {
+      clearTimeout(editAutosaveTimerRef.current);
+      editAutosaveTimerRef.current = null;
+    }
     const oldContent = memos[key]?.content || '';
     const immediateContent = String(nextValue ?? '').trim();
     setPendingDisplayValues((prev) => ({ ...prev, [key]: immediateContent }));
@@ -1839,6 +1888,12 @@ const buildRangeKeys = useCallback((anchor, target) => {
   }, [editValue, currentYear, currentMonth, memos, onSaveMemo, addToast, buildSchedulerAutoText, recordUndo, cellKey]);
 
   handleCellSaveRef.current = handleCellSave;
+
+  useEffect(() => {
+    return () => {
+      flushEditDraft();
+    };
+  }, [flushEditDraft]);
 
   // ── 셀 우클릭 = 처방 선택 ──
   const handleCellContextMenu = useCallback((e, w, d, r, c, currentPrescription, slotTime = '') => {
@@ -3152,6 +3207,7 @@ const buildRangeKeys = useCallback((anchor, target) => {
   }, []);
 
   const beginEditingCell = useCallback((key, nextValue, preserveValue = false) => {
+    editDraftRef.current = { key, value: nextValue || '', dirty: false };
     flushSync(() => {
       setEditingCell(key);
       setEditValue(nextValue);
@@ -3161,6 +3217,7 @@ const buildRangeKeys = useCallback((anchor, target) => {
   }, [focusEditInputImmediately]);
 
   const promoteFocusedInputToEditor = useCallback((key, value) => {
+    editDraftRef.current = { key, value: value || '', dirty: true };
     flushSync(() => {
       setEditingCell(key);
       setEditValue(value);
@@ -3168,6 +3225,7 @@ const buildRangeKeys = useCallback((anchor, target) => {
   }, []);
 
   const beginImeEditingCell = useCallback((key, value = '') => {
+    editDraftRef.current = { key, value, dirty: true };
     flushSync(() => {
       setEditingCell(key);
       setEditValue(value);
@@ -4046,7 +4104,13 @@ const buildRangeKeys = useCallback((anchor, target) => {
                                     zIndex: 1,
                                   }}
                                   onInput={(e) => {
+                                    const nextValue = e.currentTarget.value;
+                                    editDraftRef.current = { key, value: nextValue, dirty: true };
+                                    if (isEditing) {
+                                      setEditValue(nextValue);
+                                    }
                                     if (imeOpenRef.current || e.nativeEvent?.isComposing) return;
+                                    scheduleEditDraftAutosave(key, nextValue);
                                     if (!isEditing && e.currentTarget.value) {
                                       promoteFocusedInputToEditor(key, e.currentTarget.value);
                                     }
@@ -4064,14 +4128,18 @@ const buildRangeKeys = useCallback((anchor, target) => {
                                   }}
                                   onCompositionStart={() => {
                                     imeOpenRef.current = true;
+                                    editDraftRef.current = { key, value: editInputRef.current?.value || '', dirty: true };
                                     if (!isEditing) {
                                       beginImeEditingCell(key, editInputRef.current?.value || '');
                                     }
                                   }}
                                   onCompositionEnd={(e) => {
                                     imeOpenRef.current = false;
+                                    scheduleEditDraftAutosave(key, e.currentTarget.value);
                                     if (!isEditing && e.currentTarget.value) {
                                       promoteFocusedInputToEditor(key, e.currentTarget.value);
+                                    } else if (isEditing) {
+                                      setEditValue(e.currentTarget.value);
                                     }
                                   }}
                                 />

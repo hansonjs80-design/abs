@@ -63,6 +63,12 @@ export function ScheduleProvider({ children }) {
     return queuedWrite;
   }, []);
 
+  const waitForShockwaveWrites = useCallback(async () => {
+    const pendingWrites = Array.from(shockwaveWriteQueueRef.current.values());
+    if (pendingWrites.length === 0) return;
+    await Promise.allSettled(pendingWrites);
+  }, []);
+
   const shouldKeepShockwaveMemo = useCallback((memo) => {
     if (!memo) return false;
     const hasContent = Boolean((memo.content || '').trim());
@@ -449,6 +455,7 @@ export function ScheduleProvider({ children }) {
   const loadShockwaveMemos = useCallback(async (year, month) => {
     setLoading(true);
     try {
+      await waitForShockwaveWrites();
       const { data, error } = await supabase
         .from('shockwave_schedules')
         .select('*')
@@ -462,13 +469,21 @@ export function ScheduleProvider({ children }) {
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
         memoMap[key] = item;
       });
-      setShockwaveMemos(memoMap);
+      setShockwaveMemos(prev => {
+        const next = { ...memoMap };
+        Object.entries(prev || {}).forEach(([key, memo]) => {
+          if (memo?.year !== year || memo?.month !== month) return;
+          if (next[key]) return;
+          if (shouldKeepShockwaveMemo(memo)) next[key] = memo;
+        });
+        return next;
+      });
     } catch (err) {
       console.error('Failed to load shockwave memos:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [waitForShockwaveWrites, shouldKeepShockwaveMemo]);
 
   // 충격파 스케줄 저장
   const saveShockwaveMemo = useCallback(async (year, month, weekIndex, dayIndex, rowIndex, colIndex, content, bg_color, merge_span, prescription, body_part) => {

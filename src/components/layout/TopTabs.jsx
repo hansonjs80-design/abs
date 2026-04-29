@@ -9,6 +9,9 @@ export default function TopTabs() {
   const location = useLocation();
   const { user } = useAuth();
   const items = getAllowedTabs(user);
+  const notifyBeforeTabChange = () => {
+    window.dispatchEvent(new CustomEvent('clinic-before-route-change'));
+  };
 
   return (
     <div className="top-tabs-shell">
@@ -35,6 +38,8 @@ export default function TopTabs() {
                 to={item.path}
                 end={item.path === '/'}
                 className={({ isActive: linkActive }) => `top-tab ${item.tabClass}${linkActive ? ' active' : ''}`}
+                onMouseDown={notifyBeforeTabChange}
+                onTouchStart={notifyBeforeTabChange}
               >
                 <Icon size={18} />
                 <span>{item.label}</span>
