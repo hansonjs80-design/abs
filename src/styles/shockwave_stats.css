@@ -899,6 +899,19 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   border: 1px solid var(--grid-strong) !important;
 }
 
+/* Data grid header emphasis: fixed, therapist, prescription, and summary header rows. */
+.sw-grid-table thead .hdr-fixed,
+.sw-grid-table thead .hdr-therapist,
+.sw-grid-table thead .hdr-pres,
+.sw-grid-table thead .hdr-pres-total,
+.sw-grid-table thead .hdr-total,
+.sw-grid-table thead .hdr-grand-total,
+.sw-grid-table thead .hdr-new-patient,
+.sw-grid-table thead .hdr-new-patient-total {
+  font-weight: 950 !important;
+  text-shadow: 0 0 0 currentColor;
+}
+
 /* Specific Z-Index for intersection of Frozen Left and Sticky Right (though they don't overlap) */
 .hdr-fixed.sticky-right-last-1, .hdr-fixed.sticky-right-last-2 {
   z-index: 70 !important;
