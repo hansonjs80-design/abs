@@ -8,6 +8,12 @@ export function has4060Pattern(text) {
   return /[가-힣a-zA-Z]\s*\*?\s*(40|60)\**($|[(\s])/.test(String(text || ''));
 }
 
+export function get4060PrescriptionFromContent(text) {
+  const normalized = normalize4060StarOrder(text);
+  const match = normalized.match(/[가-힣a-zA-Z]\s*(40|60)\**($|[(\s])/);
+  return match ? `${match[1]}분` : '';
+}
+
 export function normalize4060StarOrder(text) {
   return String(text || '').replace(/([가-힣a-zA-Z])\s*\*\s*(40|60)(?=$|[\s(])/g, '$1$2*');
 }

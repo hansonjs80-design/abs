@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 import { generateShockwaveCalendar } from './calendarUtils';
-import { formatStatsRowForScheduler } from './shockwaveSyncUtils';
+import { formatStatsRowForScheduler, parseTherapyInfo } from './shockwaveSyncUtils';
 
 function buildSchedulerRowPlacement(items, existingRows) {
   // Simple placement logic based on existing rows or next available row
@@ -193,11 +193,8 @@ export async function syncUnifiedStatsDateToScheduler({ year, month, date }) {
   const parsedExistingRows = (existingScheduleRows || []).map(row => {
     let cleanName = '';
     if (row.content) {
-      // Very basic extraction of cleanName to match against
-      const match = row.content.match(/^[\d]*\/?([^\s(]+)/);
-      if (match) {
-        cleanName = match[1].replace(/\*/g, '').trim();
-      }
+      const parsed = parseTherapyInfo(row.content);
+      cleanName = String(parsed?.patient_name || '').replace(/\*/g, '').trim();
     }
     return { ...row, cleanName };
   });
@@ -210,6 +207,7 @@ export async function syncUnifiedStatsDateToScheduler({ year, month, date }) {
     const existingForTherapist = parsedExistingRows.filter(r => r.col_index === therapistIndex);
     const usedRowIndexes = new Set();
     const matchedExistingRowIds = new Set();
+    const incomingNames = new Set(items.map((item) => String(item.cleanName || '').trim()).filter(Boolean));
 
     // Helper to find next available row index
     const findNextAvailableRow = (start) => {
@@ -267,6 +265,11 @@ export async function syncUnifiedStatsDateToScheduler({ year, month, date }) {
     // For existing rows that had content but were NOT matched, we clear their content
     existingForTherapist.forEach(r => {
       if (!matchedExistingRowIds.has(r.id) && r.content) {
+        // 같은 날짜/치료사에 동일 환자가 여러 번 있는 경우, 통계 행 하나와 매칭되지 않았다는
+        // 이유만으로 나머지 예약을 지우면 실제 스케줄 중복 예약이 1개로 줄어든다.
+        // 동일 환자명으로 들어온 동기화가 있으면 기존 추가 예약은 유지한다.
+        if (r.cleanName && incomingNames.has(r.cleanName)) return;
+
         upsertPayload.push({
           year, month, week_index: targetWeekIndex, day_index: targetDayIndex,
           row_index: r.row_index, col_index: r.col_index,
@@ -308,7 +311,7 @@ export async function syncUnifiedStatsDateToScheduler({ year, month, date }) {
   return {
     synced: true,
     date,
-    insertedCount: rowsToInsert.length,
+    insertedCount: upsertPayload.length,
     therapistCount: slotCount,
   };
 }

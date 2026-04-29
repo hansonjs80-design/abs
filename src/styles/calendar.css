@@ -338,33 +338,6 @@
   text-align: right;
 }
 
-.staff-input-mode-badge {
-  position: fixed;
-  z-index: 3000;
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  border: 2px solid rgba(15, 23, 42, 0.22);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  color: #000000;
-  font-size: 13px;
-  font-weight: 900;
-  line-height: 1;
-  background: #ffffff;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18);
-}
-
-.staff-input-mode-badge--ko {
-  background: #ffffff;
-}
-
-.staff-input-mode-badge--en {
-  background: #ffffff;
-}
-
 /* 메모 색상 */
 .memo-night { color: var(--memo-night); }
 .memo-off { color: var(--memo-off); }

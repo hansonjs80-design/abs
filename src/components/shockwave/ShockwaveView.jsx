@@ -4,7 +4,7 @@ import { useSchedule } from '../../contexts/ScheduleContext';
 import { generateShockwaveCalendar, getTodayKST, isSameDate } from '../../lib/calendarUtils';
 import { supabase } from '../../lib/supabaseClient';
 import { incrementSessionCount, normalizeNameForMatch } from '../../lib/memoParser';
-import { has4060Pattern, normalize4060StarOrder, strip4060FromContent } from '../../lib/schedulerContentFormat';
+import { get4060PrescriptionFromContent, has4060Pattern, normalize4060StarOrder, strip4060FromContent } from '../../lib/schedulerContentFormat';
 import { toProperCase } from '../../lib/shockwaveSyncUtils';
 import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
@@ -1163,8 +1163,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     // 동시에 40분/60분 처방을 자동으로 설정
     if (has4060Pattern(rawName)) {
       const normalizedManualText = normalize4060StarOrder(rawName);
-      const doseMatch = normalizedManualText.match(/[가-힣a-zA-Z]\s*(40|60)/);
-      const autoDosePrescription = doseMatch ? `${doseMatch[1]}분` : undefined;
+      const autoDosePrescription = get4060PrescriptionFromContent(normalizedManualText) || undefined;
       return { text: normalizedManualText, prescription: autoDosePrescription };
     }
 
@@ -1781,11 +1780,9 @@ const buildRangeKeys = useCallback((anchor, target) => {
     const newMergeSpan = result?.mergeSpan ? stripReservationTimeFromMergeSpan(result.mergeSpan) : undefined;
 
     // 이름에 40/60 패턴이 있으면 해당하는 40분/60분 처방을 자동 설정
-    if (has4060Pattern(newContent)) {
-      const doseMatch = newContent.match(/[가-힣a-zA-Z]\s*(40|60)/);
-      if (doseMatch) {
-        newPrescription = `${doseMatch[1]}분`;
-      }
+    const autoDosePrescription = get4060PrescriptionFromContent(newContent);
+    if (autoDosePrescription) {
+      newPrescription = autoDosePrescription;
     } else if (!has4060Pattern(newContent) && /^(40|60)분$/.test(memos[key]?.prescription || '')) {
       // 이름에서 40/60이 없어졌는데 기존 처방이 40분/60분이면 처방 없음으로 변경
       newPrescription = '';
@@ -3731,7 +3728,8 @@ const buildRangeKeys = useCallback((anchor, target) => {
           )}
           <div className="shockwave-days" style={{ position: 'relative' }}>
             {weekIdx > 0 && (
-              <div className="shockwave-week-floating-actions">
+              <>
+              <div className="shockwave-week-floating-actions shockwave-week-floating-actions--left">
                 <button
                   type="button"
                   className="shockwave-week-today-btn"
@@ -3752,6 +3750,28 @@ const buildRangeKeys = useCallback((anchor, target) => {
                   오늘
                 </button>
               </div>
+              <div className="shockwave-week-floating-actions shockwave-week-floating-actions--right">
+                <button
+                  type="button"
+                  className="shockwave-week-today-btn"
+                  onClick={scrollToTodayWeek}
+                  onMouseEnter={updateTodayShortcutTooltip}
+                  onMouseMove={updateTodayShortcutTooltip}
+                  onMouseLeave={() => setTodayShortcutTooltip(null)}
+                  onFocus={(event) => {
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    updateTodayShortcutTooltip({
+                      clientX: rect.left + rect.width / 2,
+                      clientY: rect.top,
+                    });
+                  }}
+                  onBlur={() => setTodayShortcutTooltip(null)}
+                  disabled={todayWeekIdx < 0}
+                >
+                  오늘
+                </button>
+              </div>
+              </>
             )}
             {weekDays.map((dayInfo, dayIdx) => {
               const isToday = isSameDate(dayInfo.date, today);

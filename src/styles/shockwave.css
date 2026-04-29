@@ -147,12 +147,19 @@
 .shockwave-week-floating-actions {
   position: absolute;
   top: 4px;
-  right: 8px;
   z-index: 35;
   display: flex;
   align-items: center;
   gap: 6px;
   pointer-events: none;
+}
+
+.shockwave-week-floating-actions--left {
+  left: 50px;
+}
+
+.shockwave-week-floating-actions--right {
+  right: 8px;
 }
 
 .shockwave-week-floating-actions .shockwave-week-today-btn {
