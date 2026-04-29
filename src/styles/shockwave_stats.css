@@ -3072,3 +3072,262 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   border-radius: 9px;
   overflow: hidden;
 }
+
+/* Stats visual refresh: brighter therapy groups with slimmer, cleaner rules. */
+.sw-stats-body--settlement {
+  background:
+    linear-gradient(180deg, rgba(248, 251, 255, 0.94) 0%, rgba(242, 247, 255, 0.94) 100%);
+}
+
+.sw-settlement-card {
+  border-color: #d7e3f2;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(38, 76, 128, 0.07);
+}
+
+.sw-settlement-header h2 {
+  color: #111827;
+}
+
+.sw-settlement-meta span,
+.sw-recent-period-control input {
+  border-color: #d7e3f2;
+  background: #fbfdff;
+}
+
+.sw-settlement-table,
+.sw-manual-compact-settlement-table,
+.sw-new-patient-table,
+.sw-compact-new-patient-table,
+.sw-summary-table,
+.sw-compact-summary-table {
+  border: 1.5px solid #aebfd4;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.sw-settlement-table th,
+.sw-settlement-table td,
+.sw-manual-compact-settlement-table th,
+.sw-manual-compact-settlement-table td,
+.sw-new-patient-table th,
+.sw-new-patient-table td,
+.sw-compact-new-patient-table th,
+.sw-compact-new-patient-table td,
+.sw-summary-table th,
+.sw-summary-table td,
+.sw-compact-summary-table th,
+.sw-compact-summary-table td {
+  border-right-color: #d2deeb;
+  border-bottom-color: #d2deeb;
+}
+
+.sw-settlement-table thead th,
+.sw-manual-compact-settlement-table thead th,
+.sw-new-patient-table thead th,
+.sw-compact-new-patient-table thead th,
+.sw-summary-table thead th,
+.sw-compact-summary-table thead th {
+  color: #172033;
+}
+
+.sw-settlement-table thead tr:last-child th,
+.sw-manual-compact-settlement-table thead tr:last-child th,
+.sw-new-patient-table thead tr:last-child th,
+.sw-compact-new-patient-table thead tr:last-child th,
+.sw-summary-table thead th,
+.sw-compact-summary-table thead th {
+  border-bottom: 1.5px solid #aebfd4 !important;
+}
+
+.sw-settlement-table .therapist-group-end,
+.sw-manual-compact-settlement-table .therapist-group-end,
+.sw-new-patient-table .therapist-group-end,
+.sw-compact-new-patient-table .therapist-group-end {
+  border-right: 1.5px solid var(--therapist-line, var(--new-patient-line, #aebfd4)) !important;
+}
+
+.sw-settlement-table thead .label-col,
+.sw-settlement-table .row-label,
+.sw-manual-compact-settlement-table thead .label-col,
+.sw-manual-compact-settlement-table .row-label,
+.sw-summary-table thead th:first-child,
+.sw-compact-summary-table thead th:first-child,
+.sw-summary-table tbody th.month-label,
+.sw-compact-summary-table tbody th.month-label {
+  border-right: 1.5px solid #aebfd4 !important;
+}
+
+.sw-settlement-table thead .label-col,
+.sw-settlement-table thead .grand-col,
+.sw-manual-compact-settlement-table thead .label-col,
+.sw-manual-compact-settlement-table thead .grand-col,
+.sw-summary-table thead th,
+.sw-compact-summary-table thead th {
+  background: #edf4fc;
+}
+
+.sw-settlement-table .row-label,
+.sw-manual-compact-settlement-table .row-label,
+.sw-summary-table tbody th.month-label,
+.sw-compact-summary-table tbody th.month-label {
+  background: #f6faff;
+}
+
+.sw-settlement-table .grand-value,
+.sw-manual-compact-settlement-table .grand-value {
+  background: #eef5ff;
+}
+
+.sw-settlement-table .therapist-tone-0,
+.sw-settlement-table .therapist-tone-0-sub,
+.sw-settlement-table .therapist-tone-0-cell,
+.sw-manual-compact-settlement-table .therapist-tone-0,
+.sw-manual-compact-settlement-table .therapist-tone-0-sub,
+.sw-manual-compact-settlement-table .therapist-tone-0-cell,
+.sw-new-patient-table .therapist-tone-0,
+.sw-new-patient-table .therapist-tone-0-sub,
+.sw-new-patient-table .therapist-tone-0-cell,
+.sw-compact-new-patient-table .therapist-tone-0,
+.sw-compact-new-patient-table .therapist-tone-0-sub,
+.sw-compact-new-patient-table .therapist-tone-0-cell {
+  --therapist-accent: #1e88e5;
+  --therapist-line: #8bc5ff;
+  --therapist-head: #d8ecff;
+  --therapist-subhead: #edf7ff;
+  --therapist-cell: #f7fbff;
+  --new-patient-accent: #1e88e5;
+  --new-patient-line: #8bc5ff;
+  --new-patient-head: #d8ecff;
+  --new-patient-subhead: #edf7ff;
+  --new-patient-cell: #ffffff;
+}
+
+.sw-settlement-table .therapist-tone-1,
+.sw-settlement-table .therapist-tone-1-sub,
+.sw-settlement-table .therapist-tone-1-cell,
+.sw-manual-compact-settlement-table .therapist-tone-1,
+.sw-manual-compact-settlement-table .therapist-tone-1-sub,
+.sw-manual-compact-settlement-table .therapist-tone-1-cell,
+.sw-new-patient-table .therapist-tone-1,
+.sw-new-patient-table .therapist-tone-1-sub,
+.sw-new-patient-table .therapist-tone-1-cell,
+.sw-compact-new-patient-table .therapist-tone-1,
+.sw-compact-new-patient-table .therapist-tone-1-sub,
+.sw-compact-new-patient-table .therapist-tone-1-cell {
+  --therapist-accent: #7c3aed;
+  --therapist-line: #b9a2ff;
+  --therapist-head: #eadfff;
+  --therapist-subhead: #f5efff;
+  --therapist-cell: #fbf8ff;
+  --new-patient-accent: #7c3aed;
+  --new-patient-line: #b9a2ff;
+  --new-patient-head: #eadfff;
+  --new-patient-subhead: #f5efff;
+  --new-patient-cell: #ffffff;
+}
+
+.sw-settlement-table .therapist-tone-2,
+.sw-settlement-table .therapist-tone-2-sub,
+.sw-settlement-table .therapist-tone-2-cell,
+.sw-manual-compact-settlement-table .therapist-tone-2,
+.sw-manual-compact-settlement-table .therapist-tone-2-sub,
+.sw-manual-compact-settlement-table .therapist-tone-2-cell,
+.sw-new-patient-table .therapist-tone-2,
+.sw-new-patient-table .therapist-tone-2-sub,
+.sw-new-patient-table .therapist-tone-2-cell,
+.sw-compact-new-patient-table .therapist-tone-2,
+.sw-compact-new-patient-table .therapist-tone-2-sub,
+.sw-compact-new-patient-table .therapist-tone-2-cell {
+  --therapist-accent: #059669;
+  --therapist-line: #78d7b3;
+  --therapist-head: #dcfce7;
+  --therapist-subhead: #effdf5;
+  --therapist-cell: #f7fefb;
+  --new-patient-accent: #059669;
+  --new-patient-line: #78d7b3;
+  --new-patient-head: #dcfce7;
+  --new-patient-subhead: #effdf5;
+  --new-patient-cell: #ffffff;
+}
+
+.sw-settlement-table .therapist-tone-3,
+.sw-settlement-table .therapist-tone-3-sub,
+.sw-settlement-table .therapist-tone-3-cell,
+.sw-manual-compact-settlement-table .therapist-tone-3,
+.sw-manual-compact-settlement-table .therapist-tone-3-sub,
+.sw-manual-compact-settlement-table .therapist-tone-3-cell,
+.sw-new-patient-table .therapist-tone-3,
+.sw-new-patient-table .therapist-tone-3-sub,
+.sw-new-patient-table .therapist-tone-3-cell,
+.sw-compact-new-patient-table .therapist-tone-3,
+.sw-compact-new-patient-table .therapist-tone-3-sub,
+.sw-compact-new-patient-table .therapist-tone-3-cell {
+  --therapist-accent: #f59e0b;
+  --therapist-line: #f8c46d;
+  --therapist-head: #ffedd5;
+  --therapist-subhead: #fff7ed;
+  --therapist-cell: #fffaf3;
+  --new-patient-accent: #f59e0b;
+  --new-patient-line: #f8c46d;
+  --new-patient-head: #ffedd5;
+  --new-patient-subhead: #fff7ed;
+  --new-patient-cell: #ffffff;
+}
+
+.sw-settlement-table .therapist-tone-4,
+.sw-settlement-table .therapist-tone-4-sub,
+.sw-settlement-table .therapist-tone-4-cell,
+.sw-manual-compact-settlement-table .therapist-tone-4,
+.sw-manual-compact-settlement-table .therapist-tone-4-sub,
+.sw-manual-compact-settlement-table .therapist-tone-4-cell,
+.sw-new-patient-table .therapist-tone-4,
+.sw-new-patient-table .therapist-tone-4-sub,
+.sw-new-patient-table .therapist-tone-4-cell,
+.sw-compact-new-patient-table .therapist-tone-4,
+.sw-compact-new-patient-table .therapist-tone-4-sub,
+.sw-compact-new-patient-table .therapist-tone-4-cell {
+  --therapist-accent: #ec4899;
+  --therapist-line: #f6a6ce;
+  --therapist-head: #fce7f3;
+  --therapist-subhead: #fff1f7;
+  --therapist-cell: #fff8fc;
+  --new-patient-accent: #ec4899;
+  --new-patient-line: #f6a6ce;
+  --new-patient-head: #fce7f3;
+  --new-patient-subhead: #fff1f7;
+  --new-patient-cell: #ffffff;
+}
+
+.sw-settlement-table thead .therapist-col,
+.sw-manual-compact-settlement-table thead .therapist-col,
+.sw-new-patient-table thead .therapist-col,
+.sw-compact-new-patient-table thead .therapist-col {
+  border-top-width: 3px;
+  background: var(--therapist-head, var(--new-patient-head, #edf4fc));
+}
+
+.sw-settlement-table thead .prescription-col,
+.sw-manual-compact-settlement-table thead .prescription-col,
+.sw-new-patient-table thead .sub-col,
+.sw-compact-new-patient-table thead .sub-col {
+  background: var(--therapist-subhead, var(--new-patient-subhead, #f7fbff));
+}
+
+.sw-settlement-table tbody td,
+.sw-manual-compact-settlement-table tbody td {
+  background: var(--therapist-cell, #ffffff);
+}
+
+.sw-settlement-table tbody tr:hover th,
+.sw-settlement-table tbody tr:hover td,
+.sw-manual-compact-settlement-table tbody tr:hover th,
+.sw-manual-compact-settlement-table tbody tr:hover td,
+.sw-new-patient-table tbody tr:hover td,
+.sw-compact-new-patient-table tbody tr:hover td,
+.sw-summary-table tbody tr:hover th,
+.sw-summary-table tbody tr:hover td,
+.sw-compact-summary-table tbody tr:hover th,
+.sw-compact-summary-table tbody tr:hover td {
+  background-color: #f3f8ff !important;
+}
