@@ -694,6 +694,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const editInputRef = useRef(null);
   const imeOpenRef = useRef(false);
   const skipNextEditBlurSaveRef = useRef(false);
+  const handleCellSaveRef = useRef(null);
   const undoStackRef = useRef([]);
   const undoQueueRef = useRef(Promise.resolve());
 
@@ -1726,6 +1727,19 @@ const buildRangeKeys = useCallback((anchor, target) => {
     }
     if (e?.button !== 0) return;
     e.preventDefault();
+
+    if (editingCell) {
+      const [editW, editD, editR, editC] = editingCell.split('-').map(Number);
+      if ([editW, editD, editR, editC].every(Number.isFinite)) {
+        const value = editInputRef.current?.value ?? editValue;
+        skipNextEditBlurSaveRef.current = true;
+        handleCellSaveRef.current?.(editW, editD, editR, editC, value);
+        window.setTimeout(() => {
+          skipNextEditBlurSaveRef.current = false;
+        }, 0);
+      }
+    }
+
     viewRef.current?.focus({ preventScroll: true });
 
     if (isMeta) {
@@ -1747,8 +1761,8 @@ const buildRangeKeys = useCallback((anchor, target) => {
       selectSingleCell(cell);
       dragSelectionRef.current = { anchor: cell };
     }
-    setEditingCell(null);
-  }, [selectedCell, buildRangeKeys, selectSingleCell, normalizeCellToMergeMaster, cellKey]);
+    if (!editingCell) setEditingCell(null);
+  }, [selectedCell, editingCell, editValue, buildRangeKeys, selectSingleCell, normalizeCellToMergeMaster, cellKey]);
 
   const handleCellMouseEnter = useCallback((w, d, r, c) => {
     if (!dragSelectionRef.current) return;
@@ -1823,6 +1837,8 @@ const buildRangeKeys = useCallback((anchor, target) => {
     });
     if (!success) addToast('저장 실패', 'error');
   }, [editValue, currentYear, currentMonth, memos, onSaveMemo, addToast, buildSchedulerAutoText, recordUndo, cellKey]);
+
+  handleCellSaveRef.current = handleCellSave;
 
   // ── 셀 우클릭 = 처방 선택 ──
   const handleCellContextMenu = useCallback((e, w, d, r, c, currentPrescription, slotTime = '') => {

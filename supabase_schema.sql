@@ -336,7 +336,7 @@ VALUES (
   '1',
   '관리자',
   'admin',
-  '{"staff_schedule":true,"shockwave":true,"shockwave_stats":true,"manual_therapy_stats":true,"settings":true}'::jsonb,
+  '{"staff_schedule":true,"shockwave":true,"shockwave_stats":true,"manual_therapy_stats":true,"pt_stats":true,"settings":true}'::jsonb,
   true
 )
 ON CONFLICT (username) DO UPDATE SET

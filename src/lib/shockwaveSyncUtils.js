@@ -190,7 +190,12 @@ function buildSchedulerRowPlacement(items, existingRows) {
 
   const findNextAvailableRow = (startRow) => {
     let candidate = Math.max(0, Number.isInteger(startRow) ? startRow : 0);
-    while (usedRowIndexes.has(candidate)) candidate += 1;
+    while (
+      usedRowIndexes.has(candidate) ||
+      parsedExistingRows.some((row) => row.rowIndex === candidate && row.content)
+    ) {
+      candidate += 1;
+    }
     usedRowIndexes.add(candidate);
     return candidate;
   };
@@ -507,7 +512,7 @@ export async function syncStatsDateToScheduler({ year, month, date, therapists }
 
   const { data: existingScheduleRows, error: existingScheduleError } = await supabase
     .from('shockwave_schedules')
-    .select('row_index, col_index, content')
+    .select('*')
     .eq('year', year)
     .eq('month', month)
     .eq('week_index', targetWeekIndex)
@@ -530,18 +535,7 @@ export async function syncStatsDateToScheduler({ year, month, date, therapists }
       prescription: row?.prescription || '',
     });
   });
-  const { error: deleteError } = await supabase
-    .from('shockwave_schedules')
-    .delete()
-    .eq('year', year)
-    .eq('month', month)
-    .eq('week_index', targetWeekIndex)
-    .eq('day_index', targetDayIndex)
-    .in('col_index', therapistCols);
-
-  if (deleteError) throw deleteError;
-
-  const rowsToInsert = [];
+  const rowsToUpsert = [];
   groupedByTherapist.forEach((items, therapistIndex) => {
     const existingRowsForTherapist = (existingScheduleRows || []).filter(
       (row) => row?.col_index === therapistIndex
@@ -549,7 +543,8 @@ export async function syncStatsDateToScheduler({ year, month, date, therapists }
     const placedRows = buildSchedulerRowPlacement(items, existingRowsForTherapist);
 
     placedRows.forEach(({ content, rowIndex, body_part, prescription }) => {
-      rowsToInsert.push({
+      const existingRow = existingRowsForTherapist.find((row) => row?.row_index === rowIndex);
+      rowsToUpsert.push({
         year,
         month,
         week_index: targetWeekIndex,
@@ -559,23 +554,24 @@ export async function syncStatsDateToScheduler({ year, month, date, therapists }
         content,
         body_part,
         prescription,
-        bg_color: null,
-        merge_span: { rowSpan: 1, colSpan: 1 },
+        bg_color: existingRow?.bg_color || null,
+        merge_span: existingRow?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+        updated_at: new Date().toISOString(),
       });
     });
   });
 
-  if (rowsToInsert.length > 0) {
-    const { error: insertError } = await supabase
+  if (rowsToUpsert.length > 0) {
+    const { error: upsertError } = await supabase
       .from('shockwave_schedules')
-      .insert(rowsToInsert);
-    if (insertError) throw insertError;
+      .upsert(rowsToUpsert, { onConflict: 'year,month,week_index,day_index,row_index,col_index' });
+    if (upsertError) throw upsertError;
   }
 
   return {
     synced: true,
     date,
-    insertedCount: rowsToInsert.length,
+    insertedCount: rowsToUpsert.length,
     therapistCount: therapists.length,
   };
 }
