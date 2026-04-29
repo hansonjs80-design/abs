@@ -1453,6 +1453,31 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   box-shadow: none;
 }
 
+.sw-recent-period-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sw-recent-period-control input {
+  width: 112px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #cbd7e5;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1f2a3d;
+  font-size: 0.98rem;
+  font-weight: 800;
+  text-align: center;
+  outline: none;
+}
+
+.sw-recent-period-control input:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
 .sw-settlement-table-wrap,
 .sw-compact-table-wrap,
 .sw-manual-settlement-table-wrap {
@@ -2430,7 +2455,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   border: 1px solid #d8e1ec;
   border-radius: 10px;
   background: #ffffff;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+  box-shadow: none;
 }
 
 .sw-settlement-header {
@@ -2780,4 +2805,270 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-compact-summary-table th,
 .sw-compact-summary-table td {
   font-size: 1.2rem;
+}
+
+/* Settlement table line/color refinement: single group dividers, clearer grid. */
+.sw-settlement-table th,
+.sw-settlement-table td,
+.sw-manual-compact-settlement-table th,
+.sw-manual-compact-settlement-table td {
+  border-right-color: #c6d2e1;
+  border-bottom-color: #c6d2e1;
+}
+
+.sw-settlement-table thead .therapist-col,
+.sw-manual-compact-settlement-table thead .therapist-col,
+.sw-settlement-table thead .prescription-col,
+.sw-manual-compact-settlement-table thead .prescription-col,
+.sw-settlement-table .therapist-tone-0-cell,
+.sw-settlement-table .therapist-tone-1-cell,
+.sw-settlement-table .therapist-tone-2-cell,
+.sw-settlement-table .therapist-tone-3-cell,
+.sw-settlement-table .therapist-tone-4-cell,
+.sw-manual-compact-settlement-table .therapist-tone-0-cell,
+.sw-manual-compact-settlement-table .therapist-tone-1-cell,
+.sw-manual-compact-settlement-table .therapist-tone-2-cell,
+.sw-manual-compact-settlement-table .therapist-tone-3-cell,
+.sw-manual-compact-settlement-table .therapist-tone-4-cell {
+  border-left: 0;
+}
+
+.sw-settlement-table .therapist-group-end,
+.sw-manual-compact-settlement-table .therapist-group-end {
+  border-right: 2px solid var(--therapist-line, #9aabba) !important;
+}
+
+.sw-settlement-table .therapist-tone-0,
+.sw-settlement-table .therapist-tone-0-sub,
+.sw-settlement-table .therapist-tone-0-cell,
+.sw-manual-compact-settlement-table .therapist-tone-0,
+.sw-manual-compact-settlement-table .therapist-tone-0-sub,
+.sw-manual-compact-settlement-table .therapist-tone-0-cell {
+  --therapist-accent: #2f6db5;
+  --therapist-line: #8eb3df;
+  --therapist-head: #dcebff;
+  --therapist-subhead: #eaf4ff;
+  --therapist-cell: #f1f7ff;
+}
+
+.sw-settlement-table .therapist-tone-1,
+.sw-settlement-table .therapist-tone-1-sub,
+.sw-settlement-table .therapist-tone-1-cell,
+.sw-manual-compact-settlement-table .therapist-tone-1,
+.sw-manual-compact-settlement-table .therapist-tone-1-sub,
+.sw-manual-compact-settlement-table .therapist-tone-1-cell {
+  --therapist-accent: #7657d6;
+  --therapist-line: #b7a6ec;
+  --therapist-head: #e7e0ff;
+  --therapist-subhead: #f0ebff;
+  --therapist-cell: #f7f3ff;
+}
+
+.sw-settlement-table .therapist-tone-2,
+.sw-settlement-table .therapist-tone-2-sub,
+.sw-settlement-table .therapist-tone-2-cell,
+.sw-manual-compact-settlement-table .therapist-tone-2,
+.sw-manual-compact-settlement-table .therapist-tone-2-sub,
+.sw-manual-compact-settlement-table .therapist-tone-2-cell {
+  --therapist-accent: #25815a;
+  --therapist-line: #8cc8aa;
+  --therapist-head: #dff5ea;
+  --therapist-subhead: #ebfbf3;
+  --therapist-cell: #f2fbf6;
+}
+
+.sw-summary-table thead th,
+.sw-compact-summary-table thead th {
+  border-bottom: 2px solid #aebdce !important;
+}
+
+.sw-summary-table thead th:first-child,
+.sw-compact-summary-table thead th:first-child,
+.sw-summary-table tbody th.month-label,
+.sw-compact-summary-table tbody th.month-label {
+  border-right: 2px solid #aebdce !important;
+}
+
+/* New patient table line/color refinement: clean single-sided therapist groups. */
+.sw-new-patient-table th,
+.sw-new-patient-table td,
+.sw-compact-new-patient-table th,
+.sw-compact-new-patient-table td {
+  border-right-color: #c4d0df;
+  border-bottom-color: #c4d0df;
+}
+
+.sw-new-patient-table thead .therapist-col,
+.sw-compact-new-patient-table thead .therapist-col {
+  border-left: 0 !important;
+  border-right: 0;
+  border-top-width: 4px;
+}
+
+.sw-new-patient-table thead .sub-col,
+.sw-compact-new-patient-table thead .sub-col,
+.sw-new-patient-table tbody td.therapist-tone-0-cell,
+.sw-new-patient-table tbody td.therapist-tone-1-cell,
+.sw-new-patient-table tbody td.therapist-tone-2-cell,
+.sw-new-patient-table tbody td.therapist-tone-3-cell,
+.sw-new-patient-table tbody td.therapist-tone-4-cell,
+.sw-compact-new-patient-table tbody td.therapist-tone-0-cell,
+.sw-compact-new-patient-table tbody td.therapist-tone-1-cell,
+.sw-compact-new-patient-table tbody td.therapist-tone-2-cell,
+.sw-compact-new-patient-table tbody td.therapist-tone-3-cell,
+.sw-compact-new-patient-table tbody td.therapist-tone-4-cell {
+  border-left: 0 !important;
+}
+
+.sw-new-patient-table .therapist-group-start,
+.sw-compact-new-patient-table .therapist-group-start {
+  border-left: 0 !important;
+}
+
+.sw-new-patient-table .therapist-group-end,
+.sw-compact-new-patient-table .therapist-group-end {
+  border-right: 2px solid var(--new-patient-line, #9daebe) !important;
+}
+
+.sw-new-patient-table thead tr:last-child th,
+.sw-compact-new-patient-table thead tr:last-child th {
+  border-bottom: 2px solid #aebdce !important;
+}
+
+.sw-new-patient-table .therapist-tone-0,
+.sw-new-patient-table .therapist-tone-0-sub,
+.sw-new-patient-table .therapist-tone-0-cell,
+.sw-compact-new-patient-table .therapist-tone-0,
+.sw-compact-new-patient-table .therapist-tone-0-sub,
+.sw-compact-new-patient-table .therapist-tone-0-cell {
+  --new-patient-accent: #2f6db5;
+  --new-patient-line: #8fb5df;
+  --new-patient-head: #d9eaff;
+  --new-patient-subhead: #eaf4ff;
+  --new-patient-cell: #f1f7ff;
+}
+
+.sw-new-patient-table .therapist-tone-1,
+.sw-new-patient-table .therapist-tone-1-sub,
+.sw-new-patient-table .therapist-tone-1-cell,
+.sw-compact-new-patient-table .therapist-tone-1,
+.sw-compact-new-patient-table .therapist-tone-1-sub,
+.sw-compact-new-patient-table .therapist-tone-1-cell {
+  --new-patient-accent: #7657d6;
+  --new-patient-line: #b8a7ec;
+  --new-patient-head: #e7e0ff;
+  --new-patient-subhead: #f0ebff;
+  --new-patient-cell: #f7f3ff;
+}
+
+.sw-new-patient-table .therapist-tone-2,
+.sw-new-patient-table .therapist-tone-2-sub,
+.sw-new-patient-table .therapist-tone-2-cell,
+.sw-compact-new-patient-table .therapist-tone-2,
+.sw-compact-new-patient-table .therapist-tone-2-sub,
+.sw-compact-new-patient-table .therapist-tone-2-cell {
+  --new-patient-accent: #25815a;
+  --new-patient-line: #8bc7a8;
+  --new-patient-head: #dff5ea;
+  --new-patient-subhead: #ebfbf3;
+  --new-patient-cell: #f2fbf6;
+}
+
+.sw-new-patient-table .therapist-tone-3,
+.sw-new-patient-table .therapist-tone-3-sub,
+.sw-new-patient-table .therapist-tone-3-cell,
+.sw-compact-new-patient-table .therapist-tone-3,
+.sw-compact-new-patient-table .therapist-tone-3-sub,
+.sw-compact-new-patient-table .therapist-tone-3-cell {
+  --new-patient-accent: #bd6b22;
+  --new-patient-line: #e4b87e;
+  --new-patient-head: #ffe6c8;
+  --new-patient-subhead: #fff2e5;
+  --new-patient-cell: #fff8ef;
+}
+
+.sw-new-patient-table .therapist-tone-4,
+.sw-new-patient-table .therapist-tone-4-sub,
+.sw-new-patient-table .therapist-tone-4-cell,
+.sw-compact-new-patient-table .therapist-tone-4,
+.sw-compact-new-patient-table .therapist-tone-4-sub,
+.sw-compact-new-patient-table .therapist-tone-4-cell {
+  --new-patient-accent: #bf567f;
+  --new-patient-line: #e7a9c2;
+  --new-patient-head: #ffddeb;
+  --new-patient-subhead: #fff0f6;
+  --new-patient-cell: #fff6fa;
+}
+
+/* New patient compact polish: even outer stroke, shorter rows, white data cells. */
+.sw-new-patient-table,
+.sw-compact-new-patient-table {
+  border: 2px solid #b8c6d6;
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.sw-new-patient-table th,
+.sw-new-patient-table td,
+.sw-compact-new-patient-table th,
+.sw-compact-new-patient-table td {
+  height: 38px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+
+.sw-new-patient-table tbody td,
+.sw-compact-new-patient-table tbody td,
+.sw-new-patient-table tbody td.therapist-tone-0-cell,
+.sw-new-patient-table tbody td.therapist-tone-1-cell,
+.sw-new-patient-table tbody td.therapist-tone-2-cell,
+.sw-new-patient-table tbody td.therapist-tone-3-cell,
+.sw-new-patient-table tbody td.therapist-tone-4-cell,
+.sw-compact-new-patient-table tbody td.therapist-tone-0-cell,
+.sw-compact-new-patient-table tbody td.therapist-tone-1-cell,
+.sw-compact-new-patient-table tbody td.therapist-tone-2-cell,
+.sw-compact-new-patient-table tbody td.therapist-tone-3-cell,
+.sw-compact-new-patient-table tbody td.therapist-tone-4-cell {
+  background: #ffffff !important;
+}
+
+.sw-new-patient-table tr:last-child td,
+.sw-new-patient-table tr:last-child th,
+.sw-compact-new-patient-table tr:last-child td,
+.sw-compact-new-patient-table tr:last-child th {
+  border-bottom: 0;
+}
+
+.sw-new-patient-table tr th:last-child,
+.sw-new-patient-table tr td:last-child,
+.sw-compact-new-patient-table tr th:last-child,
+.sw-compact-new-patient-table tr td:last-child {
+  border-right: 0;
+}
+
+/* Settlement grand column cleanup: avoid doubled divider next to therapist groups. */
+.sw-settlement-table thead .grand-col,
+.sw-settlement-table .grand-value,
+.sw-manual-compact-settlement-table thead .grand-col,
+.sw-manual-compact-settlement-table .grand-value {
+  border-left: 0 !important;
+}
+
+.sw-settlement-table thead .label-col,
+.sw-settlement-table .row-label,
+.sw-manual-compact-settlement-table thead .label-col,
+.sw-manual-compact-settlement-table .row-label {
+  border-right: 2px solid #9fb0c4 !important;
+}
+
+.sw-settlement-table .row-label,
+.sw-manual-compact-settlement-table .row-label {
+  text-align: right !important;
+}
+
+.sw-settlement-table,
+.sw-manual-compact-settlement-table {
+  border: 2px solid #b8c6d6;
+  border-radius: 9px;
+  overflow: hidden;
 }

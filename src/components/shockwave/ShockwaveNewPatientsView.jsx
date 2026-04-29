@@ -127,7 +127,7 @@ export default function ShockwaveNewPatientsView({
                   <th
                     key={item?.therapist?.id || item?.therapist?.name || therapistIndex}
                     colSpan={4}
-                    className={`therapist-col therapist-tone-${therapistIndex % 5} ${therapistIndex > 0 ? 'therapist-group-start' : ''}`}
+                    className={`therapist-col therapist-tone-${therapistIndex % 5} therapist-group-end`}
                   >
                     {item?.therapist?.name || ''} ({item.totalCount}명)
                   </th>

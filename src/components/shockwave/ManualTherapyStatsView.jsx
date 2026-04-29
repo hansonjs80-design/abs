@@ -117,7 +117,7 @@ export default function ManualTherapyStatsView({
               <tr>
                 <th className="label-col" rowSpan={2}>구분</th>
                 {settlement.summaryByTherapist.map((item, therapistIndex) => (
-                  <th key={item.therapist.id || item.therapist.name} colSpan={safePrescriptions.length} className={`therapist-col therapist-tone-${therapistIndex % 5}`}>
+                  <th key={item.therapist.id || item.therapist.name} colSpan={safePrescriptions.length} className={`therapist-col therapist-group-end therapist-tone-${therapistIndex % 5}`}>
                     {item.therapist.name}
                   </th>
                 ))}
@@ -125,8 +125,8 @@ export default function ManualTherapyStatsView({
               </tr>
               <tr>
                 {settlement.summaryByTherapist.flatMap((item, therapistIndex) =>
-                  safePrescriptions.map((prescription) => (
-                    <th key={`${item.therapist.id || item.therapist.name}-${prescription}`} className={`prescription-col therapist-tone-${therapistIndex % 5}-sub`}>
+                  safePrescriptions.map((prescription, prescriptionIndex) => (
+                    <th key={`${item.therapist.id || item.therapist.name}-${prescription}`} className={`prescription-col therapist-tone-${therapistIndex % 5}-sub${prescriptionIndex === safePrescriptions.length - 1 ? ' therapist-group-end' : ''}`}>
                       {prescription}
                     </th>
                   ))
@@ -137,8 +137,8 @@ export default function ManualTherapyStatsView({
               <tr>
                 <th className="row-label">처방 건수</th>
                 {settlement.summaryByTherapist.flatMap((item, therapistIndex) =>
-                  safePrescriptions.map((prescription) => (
-                    <td key={`count-${item.therapist.id || item.therapist.name}-${prescription}`} className={`therapist-tone-${therapistIndex % 5}-cell`}>
+                  safePrescriptions.map((prescription, prescriptionIndex) => (
+                    <td key={`count-${item.therapist.id || item.therapist.name}-${prescription}`} className={`therapist-tone-${therapistIndex % 5}-cell${prescriptionIndex === safePrescriptions.length - 1 ? ' therapist-group-end' : ''}`}>
                       {item.countsByPrescription[prescription] || 0}
                     </td>
                   ))
@@ -148,7 +148,7 @@ export default function ManualTherapyStatsView({
               <tr>
                 <th className="row-label">도수치료 합계(건)</th>
                 {settlement.summaryByTherapist.map((item, therapistIndex) => (
-                  <td key={`total-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className={`merged-value therapist-tone-${therapistIndex % 5}-cell`}>
+                  <td key={`total-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className={`merged-value therapist-group-end therapist-tone-${therapistIndex % 5}-cell`}>
                     {formatCount(item.totalCount)}
                   </td>
                 ))}
@@ -157,7 +157,7 @@ export default function ManualTherapyStatsView({
               <tr>
                 <th className="row-label">결산 금액(원)</th>
                 {settlement.summaryByTherapist.map((item, therapistIndex) => (
-                  <td key={`amount-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className={`merged-value amount therapist-tone-${therapistIndex % 5}-cell`}>
+                  <td key={`amount-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className={`merged-value amount therapist-group-end therapist-tone-${therapistIndex % 5}-cell`}>
                     {formatCurrency(item.amount)}
                   </td>
                 ))}
@@ -166,7 +166,7 @@ export default function ManualTherapyStatsView({
               <tr>
                 <th className="row-label">인센티브 ({Number(incentivePercentage) || 0}%)</th>
                 {settlement.summaryByTherapist.map((item, therapistIndex) => (
-                  <td key={`incentive-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className={`merged-value incentive therapist-tone-${therapistIndex % 5}-cell`}>
+                  <td key={`incentive-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className={`merged-value incentive therapist-group-end therapist-tone-${therapistIndex % 5}-cell`}>
                     {formatCurrency(item.incentive)}
                   </td>
                 ))}

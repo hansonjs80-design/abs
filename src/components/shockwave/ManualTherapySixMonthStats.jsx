@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
+import { formatRecentPeriodLabel, parseRecentPeriodMonths } from '../../lib/recentPeriodUtils';
 
 function normalizePrescriptionKey(value) {
   return String(value || '')
@@ -15,12 +16,21 @@ export default function ManualTherapySixMonthStats({
 }) {
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
+  const recentPeriodMonths = useMemo(
+    () => parseRecentPeriodMonths(recentPeriodInput, 6),
+    [recentPeriodInput]
+  );
+  const recentPeriodLabel = useMemo(
+    () => formatRecentPeriodLabel(recentPeriodMonths),
+    [recentPeriodMonths]
+  );
 
   useEffect(() => {
     async function fetchSixMonths() {
       setIsLoading(true);
       try {
-        const startDate = new Date(currentYear, currentMonth - 6, 1);
+        const startDate = new Date(currentYear, currentMonth - recentPeriodMonths, 1);
         const endDate = new Date(currentYear, currentMonth, 1);
         const startStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-01`;
         const endStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-01`;
@@ -43,19 +53,19 @@ export default function ManualTherapySixMonthStats({
     }
 
     fetchSixMonths();
-  }, [currentMonth, currentYear]);
+  }, [currentMonth, currentYear, recentPeriodMonths]);
 
   const monthKeys = useMemo(() => {
     const keys = [];
-    for (let index = 5; index >= 0; index -= 1) {
+    for (let index = recentPeriodMonths - 1; index >= 0; index -= 1) {
       const monthDate = new Date(currentYear, currentMonth - 1 - index, 1);
       keys.push({
         key: `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`,
-        label: `${monthDate.getMonth() + 1}월`,
+        label: `${monthDate.getFullYear()}년 ${String(monthDate.getMonth() + 1).padStart(2, '0')}월`,
       });
     }
     return keys;
-  }, [currentMonth, currentYear]);
+  }, [currentMonth, currentYear, recentPeriodMonths]);
 
   const monthlySummaries = useMemo(() => {
     const base = monthKeys.map((month) => ({
@@ -102,8 +112,15 @@ export default function ManualTherapySixMonthStats({
   return (
     <div className="sw-settlement-card">
       <div className="sw-settlement-header">
-        <h2>최근 6개월 도수치료 결산/신환 현황</h2>
-        <div className="sw-settlement-meta">
+        <h2>{recentPeriodLabel} 도수치료 결산/신환 현황</h2>
+        <div className="sw-settlement-meta sw-recent-period-control">
+          <input
+            type="text"
+            value={recentPeriodInput}
+            onChange={(event) => setRecentPeriodInput(event.target.value)}
+            placeholder="최근 6개월"
+            aria-label="도수치료 최근 현황 기간"
+          />
           {isLoading ? <span>불러오는 중...</span> : <span>{monthKeys.length}개월 집계</span>}
         </div>
       </div>

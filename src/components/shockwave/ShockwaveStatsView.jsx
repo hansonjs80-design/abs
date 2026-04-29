@@ -10,6 +10,7 @@ import ShockwaveSettlementView from './ShockwaveSettlementView';
 import ShockwaveNewPatientsView from './ShockwaveNewPatientsView';
 import SettlementSettingsPanel from './SettlementSettingsPanel';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
+import { formatRecentPeriodLabel, parseRecentPeriodMonths } from '../../lib/recentPeriodUtils';
 
 class ShockwaveStatsErrorBoundary extends React.Component {
   constructor(props) {
@@ -47,6 +48,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   const [extraDraftRows, setExtraDraftRows] = useState(0);
   const [activeSection, setActiveSection] = useState('grid');
   const [isAutoSyncingToday, setIsAutoSyncingToday] = useState(false);
+  const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
   const lastAutoSyncKeyRef = useRef(null);
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
@@ -65,6 +67,14 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   const incentivePercentage = useMemo(
     () => effectiveSettlementSettings.incentive_percentage,
     [effectiveSettlementSettings]
+  );
+  const recentPeriodMonths = useMemo(
+    () => parseRecentPeriodMonths(recentPeriodInput, 6),
+    [recentPeriodInput]
+  );
+  const recentPeriodLabel = useMemo(
+    () => formatRecentPeriodLabel(recentPeriodMonths),
+    [recentPeriodMonths]
   );
   const fetchLogs = useCallback(async () => {
     setIsLoading(true);
@@ -106,7 +116,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     const fetchRecentLogs = async () => {
       try {
         const currentDate = new Date(currentYear, currentMonth - 1, 1);
-        const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 5, 1);
+        const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - (recentPeriodMonths - 1), 1);
         const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
 
         const startStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-01`;
@@ -130,7 +140,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     return () => {
       cancelled = true;
     };
-  }, [currentYear, currentMonth]);
+  }, [currentYear, currentMonth, recentPeriodMonths]);
 
   const recentMonthlySummaries = useMemo(() => {
     const normalizePrescriptionKey = (value) =>
@@ -140,7 +150,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
       return Number.isFinite(parsed) ? parsed : 0;
     };
 
-    return Array.from({ length: 6 }, (_, index) => {
+    return Array.from({ length: recentPeriodMonths }, (_, index) => {
       const targetDate = new Date(currentYear, currentMonth - 1 - index, 1);
       const year = targetDate.getFullYear();
       const month = targetDate.getMonth() + 1;
@@ -169,7 +179,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
         newPatientCount,
       };
     });
-  }, [currentYear, currentMonth, recentLogs, shockwaveSettings]);
+  }, [currentYear, currentMonth, recentLogs, shockwaveSettings, recentPeriodMonths]);
 
   const handleSaveSettlementSettings = useCallback(async (nextSettings) => {
     const ok = await saveShockwaveSettings(nextSettings);
@@ -566,6 +576,9 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                 prescriptionPrices={settlementPrices}
                 incentivePercentage={incentivePercentage}
                 recentMonthlySummaries={recentMonthlySummaries}
+                recentPeriodInput={recentPeriodInput}
+                recentPeriodLabel={recentPeriodLabel}
+                onRecentPeriodInputChange={setRecentPeriodInput}
               />
             </div>
           )}
