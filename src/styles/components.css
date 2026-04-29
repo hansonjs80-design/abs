@@ -315,6 +315,14 @@
   transition: all var(--transition-normal);
 }
 
+.top-tabs-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 8px;
+  flex: 0 0 auto;
+}
+
 .top-tab {
   display: inline-flex;
   align-items: center;
@@ -617,8 +625,9 @@
   font-weight: 600;
 }
 
-/* ── 테마 토글 ── */
-.theme-toggle {
+/* ── 상단 액션 버튼 ── */
+.theme-toggle,
+.print-toggle {
   width: 40px;
   height: 40px;
   border: none;
@@ -632,7 +641,8 @@
   cursor: pointer;
 }
 
-.theme-toggle:hover {
+.theme-toggle:hover,
+.print-toggle:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
 }
@@ -879,6 +889,140 @@
   font-weight: 800;
   outline: none;
   text-align: left;
+}
+
+.notice-department-filter {
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--bg-card) 92%, var(--brand-primary-light));
+}
+
+.notice-department-filter-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.notice-department-filter-title {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.notice-department-settings-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color-light);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+.notice-department-settings-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.notice-department-filter-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.notice-department-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid var(--border-color-light);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.86rem;
+  font-weight: 800;
+  cursor: pointer;
+  user-select: none;
+}
+
+.notice-department-check input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--brand-primary);
+}
+
+.notice-department-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color-light);
+}
+
+.notice-department-edit-row,
+.notice-department-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.notice-department-edit-input {
+  min-width: 0;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--border-color-light);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.86rem;
+  font-weight: 800;
+  outline: none;
+}
+
+.notice-department-edit-input:focus {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-primary) 18%, transparent);
+}
+
+.notice-department-delete-btn,
+.notice-department-add-btn {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color-light);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.notice-department-delete-btn {
+  width: 30px;
+}
+
+.notice-department-add-btn {
+  padding: 0 10px;
+}
+
+.notice-department-delete-btn:hover {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.notice-department-add-btn:hover {
+  border-color: color-mix(in srgb, var(--brand-primary) 45%, var(--border-color-light));
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 /* ── 빈 상태 ── */

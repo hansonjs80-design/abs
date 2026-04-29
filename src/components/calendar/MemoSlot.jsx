@@ -7,13 +7,14 @@ export default function MemoSlot({
   onMouseDown, onMouseEnter, onDoubleClick, onContextMenu,
   cellId,
   autoFontColor,
+  isDepartmentHidden = false,
 }) {
   const content = memo?.content || '';
   const fontColor = computeMemoFontColor(content);
 
   // DB에 저장된 커스텀 색상 우선, 없으면 자동 감지 색상 클래스 사용
-  const customFontColor = dayInfo.isOtherMonth ? null : (autoFontColor || memo?.font_color);
-  const customBgColor = memo?.bg_color;
+  const customFontColor = isDepartmentHidden ? null : (dayInfo.isOtherMonth ? null : (autoFontColor || memo?.font_color));
+  const customBgColor = isDepartmentHidden ? null : memo?.bg_color;
 
   let colorClass = '';
   if (!customFontColor) {
@@ -50,7 +51,7 @@ export default function MemoSlot({
       onMouseEnter={onMouseEnter}
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
-      title={content}
+      title={isDepartmentHidden ? '' : content}
       style={inlineStyle}
     >
       <span style={{
@@ -59,7 +60,7 @@ export default function MemoSlot({
         width: '100%', textAlign: 'right',
         ...(holidayName && !content ? { color: '#e53e3e', fontWeight: 600 } : {}),
       }}>
-        {content || holidayName || ''}
+        {isDepartmentHidden ? '' : (content || holidayName || '')}
       </span>
     </div>
   );

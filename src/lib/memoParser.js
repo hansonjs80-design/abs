@@ -3,6 +3,7 @@
  * ============================================*/
 
 import { FONT_COLORS, CLINIC_DEPT_MAP } from './constants';
+export { has4060Pattern, normalize4060StarOrder, strip4060FromContent } from './schedulerContentFormat';
 
 /**
  * 이름 정규화 (매칭용)
@@ -175,27 +176,6 @@ export function getMemoShockwaveType(parsed) {
   if (parsed.isMorning) return 'morning';
   if (parsed.isAfternoon) return 'afternoon';
   return null;
-}
-
-/**
- * 40/60 패턴 체크 (충격파 3인)
- */
-export function has4060Pattern(text) {
-  return /[가-힣a-zA-Z]\s*(40|60)\**($|[(\s])/.test(String(text || ''));
-}
-
-/**
- * 셀 내용에서 이름 뒤의 40/60 숫자를 제거
- * 예: "1234/주한솔40(3)" → "1234/주한솔(3)"
- *     "김지선60" → "김지선"
- *     "1234/김지선60*(2)" → "1234/김지선(2)"
- */
-export function strip4060FromContent(text) {
-  const s = String(text || '').trim();
-  if (!s) return s;
-  if (!has4060Pattern(s)) return s;
-  // 이름 뒤 40 또는 60 (그 뒤에 *가 올 수도 있음) 제거
-  return s.replace(/([가-힣a-zA-Z])\s*(40|60)(\**)/, '$1$3');
 }
 
 /**

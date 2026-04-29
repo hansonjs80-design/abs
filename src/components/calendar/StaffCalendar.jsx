@@ -7,13 +7,14 @@ import {
   getEffectiveStaffScheduleBlockRules,
   normalizeStaffScheduleRuleText,
 } from '../../lib/staffScheduleBlockRules';
+import { shouldHideStaffMemoByDepartment } from '../../lib/staffDepartmentFilters';
 import { useToast } from '../common/Toast';
 import MemoSlot from './MemoSlot';
 
 const COL_W_KEY = 'staff-calendar-col-width';
 const ROW_H_KEY = 'staff-calendar-row-height';
 
-export default function StaffCalendar() {
+export default function StaffCalendar({ hiddenDepartments = [] }) {
   const { currentYear, currentMonth, navigateMonth, staffMemos, loadStaffMemos, saveStaffMemo, holidays, holidayNames, loadHolidays, shockwaveSettings, loadShockwaveSettings, calendarSlotSettings, loadCalendarSlotSettings, saveCalendarSlotSettings } = useSchedule();
   const { addToast } = useToast();
   const [showSlotSettings, setShowSlotSettings] = useState(false);
@@ -798,6 +799,7 @@ export default function StaffCalendar() {
                   // 공휴일 이름: 첫 번째 슬롯에 표시
                   const holidayName = (slot === 0 && dayInfo.isHoliday) ? holidayNames.get(dayInfo.key) : null;
                   const memoContent = staffMemos[key]?.content || '';
+                  const isDepartmentHidden = shouldHideStaffMemoByDepartment(memoContent, hiddenDepartments);
                   const autoFontColor = getAutoFontColorForStaffMemo(memoContent);
 
                   return (
@@ -806,6 +808,7 @@ export default function StaffCalendar() {
                       cellId={key}
                       autoFontColor={autoFontColor}
                       holidayName={holidayName}
+                      isDepartmentHidden={isDepartmentHidden}
                       onMouseDown={(e) => onCellMouseDown(wi, di, slot, e)}
                       onMouseEnter={(e) => onCellMouseEnter(wi, di, slot, e)}
                       onDoubleClick={() => onCellDblClick(wi, di, slot)}

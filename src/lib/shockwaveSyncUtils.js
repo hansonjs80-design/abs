@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 import { generateShockwaveCalendar, getTodayKST } from './calendarUtils';
-import { has4060Pattern } from './memoParser';
+import { has4060Pattern } from './schedulerContentFormat';
 
 let todaySchedulerSyncQueue = Promise.resolve();
 

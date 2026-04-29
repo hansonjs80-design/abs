@@ -24,7 +24,7 @@ const THERAPIST_TOTAL_COLORS = [
   '#ffb9d8',
 ];
 
-const SUMMARY_COL_WIDTH = 68;
+const SUMMARY_COL_WIDTH = 82;
 
 function toTitleCaseBodyPart(value) {
   return toProperCase(String(value || '').trim());
@@ -213,10 +213,10 @@ export default function ShockwaveDataGrid({
   const totalColCount = newPatientColIndex + 1;
   const therapistColumnWidth = useMemo(() => {
     const count = Math.max(1, displayTherapists.length);
-    if (count <= 2) return 74;
-    if (count <= 4) return 64;
-    if (count <= 6) return 58;
-    return 54;
+    if (count <= 2) return 86;
+    if (count <= 4) return 78;
+    if (count <= 6) return 70;
+    return 64;
   }, [displayTherapists.length]);
   const gridMinWidth = useMemo(() => {
     const fixedWidth = FIXED_FIELDS.reduce((sum, field) => sum + field.w, 0);

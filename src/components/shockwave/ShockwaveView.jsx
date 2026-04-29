@@ -3,7 +3,8 @@ import { flushSync } from 'react-dom';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { generateShockwaveCalendar, getTodayKST, isSameDate, formatDisplayDate } from '../../lib/calendarUtils';
 import { supabase } from '../../lib/supabaseClient';
-import { has4060Pattern, strip4060FromContent, incrementSessionCount, normalizeNameForMatch } from '../../lib/memoParser';
+import { incrementSessionCount, normalizeNameForMatch } from '../../lib/memoParser';
+import { has4060Pattern, normalize4060StarOrder, strip4060FromContent } from '../../lib/schedulerContentFormat';
 import { toProperCase } from '../../lib/shockwaveSyncUtils';
 import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
@@ -196,6 +197,86 @@ function getMemoListFromMergeSpan(mergeSpan) {
   const list = mergeSpan?.meta?.memo_list;
   if (!Array.isArray(list)) return [];
   return list.map((item) => String(item || '').trim()).filter(Boolean);
+}
+
+function normalizeReservationTimeValue(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  const colonMatch = raw.match(/^(\d{1,2}):(\d{1,2})$/);
+  if (colonMatch) {
+    const hh = Math.min(23, Math.max(0, parseInt(colonMatch[1], 10) || 0));
+    const mm = Math.min(59, Math.max(0, parseInt(colonMatch[2], 10) || 0));
+    return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+  }
+  const compact = raw.replace(/[^\d]/g, '');
+  if (compact.length === 3) {
+    const hh = Math.min(23, Math.max(0, parseInt(compact.slice(0, 1), 10) || 0));
+    const mm = Math.min(59, Math.max(0, parseInt(compact.slice(1), 10) || 0));
+    return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+  }
+  if (compact.length >= 4) {
+    const hh = Math.min(23, Math.max(0, parseInt(compact.slice(0, 2), 10) || 0));
+    const mm = Math.min(59, Math.max(0, parseInt(compact.slice(2, 4), 10) || 0));
+    return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+  }
+  return '';
+}
+
+function stepReservationTimeValue(value, deltaMinutes) {
+  const normalized = normalizeReservationTimeValue(value);
+  const match = normalized.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return normalized;
+  const total = (parseInt(match[1], 10) * 60) + parseInt(match[2], 10) + deltaMinutes;
+  const wrapped = ((total % 1440) + 1440) % 1440;
+  const hh = String(Math.floor(wrapped / 60)).padStart(2, '0');
+  const mm = String(wrapped % 60).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+function timeValueToMinutes(value) {
+  const normalized = normalizeReservationTimeValue(value);
+  const match = normalized.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  return (parseInt(match[1], 10) * 60) + parseInt(match[2], 10);
+}
+
+function minutesToTimeValue(totalMinutes) {
+  const bounded = Math.min(1439, Math.max(0, totalMinutes));
+  const hh = String(Math.floor(bounded / 60)).padStart(2, '0');
+  const mm = String(bounded % 60).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+function stepReservationTimeWithinCellBase(value, baseValue, deltaMinutes) {
+  const baseMinutes = timeValueToMinutes(baseValue);
+  if (baseMinutes === null) return stepReservationTimeValue(value, deltaMinutes);
+
+  const currentMinutes = timeValueToMinutes(value) ?? baseMinutes;
+  const minMinutes = Math.max(0, baseMinutes - 10);
+  const maxMinutes = Math.min(1439, baseMinutes + 10);
+  const nextMinutes = Math.min(maxMinutes, Math.max(minMinutes, currentMinutes + deltaMinutes));
+  return minutesToTimeValue(nextMinutes);
+}
+
+function getReservationTimeFromMergeSpan(mergeSpan) {
+  return String(mergeSpan?.meta?.reservation_time || '').trim();
+}
+
+function buildMergeSpanWithReservationTime(mergeSpan, reservationTime) {
+  const base = mergeSpan || { rowSpan: 1, colSpan: 1, mergedInto: null };
+  const nextMeta = { ...(base.meta || {}) };
+  const nextTime = normalizeReservationTimeValue(reservationTime);
+  if (nextTime) nextMeta.reservation_time = nextTime;
+  else delete nextMeta.reservation_time;
+
+  const nextMergeSpan = { ...base };
+  if (Object.keys(nextMeta).length > 0) nextMergeSpan.meta = nextMeta;
+  else delete nextMergeSpan.meta;
+  return nextMergeSpan;
+}
+
+function stripReservationTimeFromMergeSpan(mergeSpan) {
+  return buildMergeSpanWithReservationTime(mergeSpan, '');
 }
 
 function buildMergeSpanWithMemoList(mergeSpan, memoList) {
@@ -523,6 +604,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [contextMenuNoteInput, setContextMenuNoteInput] = useState('');
   const [contextMenuMemoDrafts, setContextMenuMemoDrafts] = useState([]);
   const [contextMenuVisitInput, setContextMenuVisitInput] = useState('');
+  const [contextMenuReservationInput, setContextMenuReservationInput] = useState('');
 
   useEffect(() => {
     selectedCellRef.current = selectedCell;
@@ -824,6 +906,24 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const weeks = useMemo(() => {
     return generateShockwaveCalendar(currentYear, currentMonth, holidays);
   }, [currentYear, currentMonth, holidays]);
+
+  const getDefaultReservationTime = useCallback((w, d, r) => {
+    const dayInfo = weeks?.[w]?.days?.[d];
+    const slot = dayInfo ? getTimeSlotsForDay(dayInfo).find((item) => item.idx === r) : null;
+    const slotTime = slot?.time || slot?.label || baseTimeSlots?.[r]?.time || baseTimeSlots?.[r]?.label || '';
+    if (slotTime) return slotTime;
+    if (!settings?.start_time || !settings?.interval_minutes || !Number.isFinite(Number(r))) return '';
+    const start = new Date(`2000-01-01T${settings.start_time}`);
+    if (Number.isNaN(start.getTime())) return '';
+    start.setMinutes(start.getMinutes() + (Number(r) * Number(settings.interval_minutes)));
+    const hh = String(start.getHours()).padStart(2, '0');
+    const mm = String(start.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }, [baseTimeSlots, getTimeSlotsForDay, settings, weeks]);
+
+  const getReservationTimeForMemo = useCallback((memo, w, d, r) => (
+    getReservationTimeFromMergeSpan(memo?.merge_span) || getDefaultReservationTime(w, d, r)
+  ), [getDefaultReservationTime]);
   const todayWeekIdx = useMemo(
     () => weeks.findIndex((weekDays) => weekDays.some((dayInfo) => isSameDate(dayInfo.date, today))),
     [weeks, today]
@@ -883,7 +983,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       if (!latestMatch || sortKey > latestMatch.sortKey) {
         latestMatch = {
           sortKey,
-          mergeSpan: buildMergeSpanWithMemoList(memo.merge_span, memoList),
+          mergeSpan: stripReservationTimeFromMergeSpan(buildMergeSpanWithMemoList(memo.merge_span, memoList)),
         };
       }
     });
@@ -1029,9 +1129,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     // 자동 포맷팅(충격파 히스토리 기반 덮어쓰기)을 건너뛰고 사용자 입력을 그대로 보존
     // 동시에 40분/60분 처방을 자동으로 설정
     if (has4060Pattern(rawName)) {
-      const doseMatch = rawName.match(/[가-힣a-zA-Z]\s*(40|60)/);
+      const normalizedManualText = normalize4060StarOrder(rawName);
+      const doseMatch = normalizedManualText.match(/[가-힣a-zA-Z]\s*(40|60)/);
       const autoDosePrescription = doseMatch ? `${doseMatch[1]}분` : undefined;
-      return { text: rawName, prescription: autoDosePrescription };
+      return { text: normalizedManualText, prescription: autoDosePrescription };
     }
 
     let manualSession = null;
@@ -1239,6 +1340,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       }
     }
     autoText += `(${effectiveVisitCount})`;
+    autoText = normalize4060StarOrder(autoText);
     
     const autoPrescription = has4060Pattern(autoText) ? undefined : (selected.prescription || undefined);
     const inheritedMergeSpan = findLatestSchedulerMemoMeta(
@@ -1625,10 +1727,10 @@ const buildRangeKeys = useCallback((anchor, target) => {
     setPendingDisplayValues((prev) => ({ ...prev, [key]: immediateContent }));
     setEditingCell(null);
     const result = await buildSchedulerAutoText(w, d, r, c, nextValue);
-    const newContent = (typeof result === 'string' ? result : (result?.text || '')).trim();
+    const newContent = normalize4060StarOrder(typeof result === 'string' ? result : (result?.text || '')).trim();
     let newPrescription = result?.prescription;
     const newBodyPart = result?.bodyPart;
-    const newMergeSpan = result?.mergeSpan;
+    const newMergeSpan = result?.mergeSpan ? stripReservationTimeFromMergeSpan(result.mergeSpan) : undefined;
 
     // 이름에 40/60 패턴이 있으면 해당하는 40분/60분 처방을 자동 설정
     if (has4060Pattern(newContent)) {
@@ -1678,7 +1780,7 @@ const buildRangeKeys = useCallback((anchor, target) => {
   }, [editValue, currentYear, currentMonth, memos, onSaveMemo, addToast, buildSchedulerAutoText, recordUndo, cellKey]);
 
   // ── 셀 우클릭 = 처방 선택 ──
-  const handleCellContextMenu = useCallback((e, w, d, r, c, currentPrescription) => {
+  const handleCellContextMenu = useCallback((e, w, d, r, c, currentPrescription, slotTime = '') => {
     e.preventDefault();
     skipNextEditBlurSaveRef.current = true;
     setEditingCell(null);
@@ -1688,6 +1790,9 @@ const buildRangeKeys = useCallback((anchor, target) => {
     setContextMenuNoteInput('');
     setContextMenuMemoDrafts(getMemoListFromMergeSpan(memos[key]?.merge_span));
     setContextMenuVisitInput(getSchedulerVisitInputValue(memos[key]?.content || ''));
+    const defaultReservationTime = slotTime || getDefaultReservationTime(w, d, r);
+    const savedReservationTime = getReservationTimeFromMergeSpan(memos[key]?.merge_span);
+    setContextMenuReservationInput(savedReservationTime || defaultReservationTime);
     const viewW = window.innerWidth;
     const isNearRightEdge = e.clientX + 180 + 300 > viewW;
 
@@ -1699,12 +1804,14 @@ const buildRangeKeys = useCallback((anchor, target) => {
       rowIdx: r,
       colIdx: c,
       currentPrescription,
+      defaultReservationTime,
+      savedReservationTime,
       isNearRightEdge
     });
     window.setTimeout(() => {
       skipNextEditBlurSaveRef.current = false;
     }, 0);
-  }, [cellKey, memos, selectSingleCell]);
+  }, [cellKey, getDefaultReservationTime, memos, selectSingleCell]);
 
   useEffect(() => {
     if (!contextMenu) {
@@ -1712,8 +1819,20 @@ const buildRangeKeys = useCallback((anchor, target) => {
       setContextMenuNoteInput('');
       setContextMenuMemoDrafts([]);
       setContextMenuVisitInput('');
+      setContextMenuReservationInput('');
     }
   }, [contextMenu]);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    setContextMenuReservationInput(
+      contextMenu.savedReservationTime || contextMenu.defaultReservationTime || getDefaultReservationTime(
+        contextMenu.weekIdx,
+        contextMenu.dayIdx,
+        contextMenu.rowIdx
+      )
+    );
+  }, [contextMenu?.weekIdx, contextMenu?.dayIdx, contextMenu?.rowIdx, contextMenu?.defaultReservationTime, contextMenu?.savedReservationTime, getDefaultReservationTime]);
 
   // ── 셀 삭제 ──
   const deleteCells = useCallback(async (keys) => {
@@ -2169,6 +2288,7 @@ const buildRangeKeys = useCallback((anchor, target) => {
         } else if (mergeSpan?.meta) {
           nextMergeSpan = cloneMergeSpanWithMeta(mergeSpan, { rowSpan: 1, colSpan: 1, mergedInto: null });
         }
+        nextMergeSpan = stripReservationTimeFromMergeSpan(nextMergeSpan);
 
         payload.push({
           year: currentYear,
@@ -2290,7 +2410,7 @@ const buildRangeKeys = useCallback((anchor, target) => {
           content: result.text || item.content,
           prescription: result.prescription || item.prescription,
           body_part: result.bodyPart || item.body_part,
-          merge_span: result.mergeSpan || item.merge_span
+          merge_span: stripReservationTimeFromMergeSpan(result.mergeSpan || item.merge_span)
         };
       }
       return item;
@@ -2543,6 +2663,7 @@ const buildRangeKeys = useCallback((anchor, target) => {
             // 괄호가 없는 경우 끝에 추가
             updatedContent = `${updatedContent}${doseNumber}`;
           }
+          updatedContent = normalize4060StarOrder(updatedContent);
         } else if (action.value && has4060Pattern(updatedContent)) {
           // 다른 처방(충격파 등) 설정 시 기존 40/60 제거
           updatedContent = strip4060FromContent(updatedContent);
@@ -2766,6 +2887,58 @@ const buildRangeKeys = useCallback((anchor, target) => {
       if (anyChanged) {
         recordUndo({ type: 'bulk-edit', oldMemos });
         addToast('메모가 수정되었습니다.', 'success');
+      }
+      return;
+    }
+    else if (action?.type === 'reservationTime') {
+      const keys = contextMenu
+        ? [`${contextMenu.weekIdx}-${contextMenu.dayIdx}-${contextMenu.rowIdx}-${contextMenu.colIdx}`]
+        : Array.from(selectedKeys || []);
+      const oldMemos = buildMemoSnapshotForKeys(keys);
+      let anyChanged = false;
+      const nextTime = normalizeReservationTimeValue(action.value);
+      setContextMenuReservationInput(nextTime);
+      if (contextMenu) {
+        setContextMenu((prev) => prev ? { ...prev, savedReservationTime: nextTime } : prev);
+      }
+      for (const key of keys) {
+        const [w, d, r, c] = key.split('-').map(Number);
+        const memo = memos[key] || {};
+        const nextMergeSpan = buildMergeSpanWithReservationTime(memo.merge_span, nextTime);
+        const currentTime = getReservationTimeFromMergeSpan(memo.merge_span);
+        if (currentTime === getReservationTimeFromMergeSpan(nextMergeSpan)) continue;
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part);
+        if (success) anyChanged = true;
+      }
+      if (anyChanged) {
+        recordUndo({ type: 'bulk-edit', oldMemos });
+        addToast('예약 시간이 수정되었습니다.', 'success');
+      }
+      return;
+    }
+    else if (action?.type === 'reservationTimeReset') {
+      const keys = contextMenu
+        ? [`${contextMenu.weekIdx}-${contextMenu.dayIdx}-${contextMenu.rowIdx}-${contextMenu.colIdx}`]
+        : Array.from(selectedKeys || []);
+      const oldMemos = buildMemoSnapshotForKeys(keys);
+      let anyChanged = false;
+      const defaultTime = contextMenu?.defaultReservationTime || (contextMenu ? getDefaultReservationTime(contextMenu.weekIdx, contextMenu.dayIdx, contextMenu.rowIdx) : '');
+      setContextMenuReservationInput(defaultTime);
+      for (const key of keys) {
+        const [w, d, r, c] = key.split('-').map(Number);
+        const memo = memos[key] || {};
+        const currentTime = getReservationTimeFromMergeSpan(memo.merge_span);
+        if (!currentTime) continue;
+        const nextMergeSpan = buildMergeSpanWithReservationTime(memo.merge_span, '');
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part);
+        if (success) anyChanged = true;
+      }
+      if (contextMenu) {
+        setContextMenu((prev) => prev ? { ...prev, savedReservationTime: '' } : prev);
+      }
+      if (anyChanged) {
+        recordUndo({ type: 'bulk-edit', oldMemos });
+        addToast('예약 시간이 기본 시간으로 복구되었습니다.', 'success');
       }
       return;
     }
@@ -3648,7 +3821,8 @@ const buildRangeKeys = useCallback((anchor, target) => {
                                 onMouseDown={(e) => handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e)}
                                 onMouseEnter={() => {
                                   handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
-                                  let text = `⏱ ${slotInfo.label}`;
+                                  const reservationTime = getReservationTimeForMemo(cellData, weekIdx, dayIdx, rowIdx);
+                                  let text = `⏱ ${reservationTime || slotInfo.label}`;
                                   if (content && content !== '\u200B') text += `\n👤 ${content}`;
                                   if (staffBlockRule) text += `\n근무표: ${staffBlockRule.keyword}`;
                                   if (cellPrescription) text += `\n💊 처방: ${cellPrescription}`;
@@ -3662,7 +3836,7 @@ const buildRangeKeys = useCallback((anchor, target) => {
                                 onContextMenu={(e) => {
                                   // 내용이 있을 때만 처방을 설정할 수 있도록 함
                                   if (displayData.hasDisplayText && content.trim() !== '\u200B') {
-                                    handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription);
+                                    handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);
                                   }
                                 }}
                               >
@@ -3734,7 +3908,8 @@ const buildRangeKeys = useCallback((anchor, target) => {
                                 onMouseDown={(e) => handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e)}
                                 onMouseEnter={() => {
                                   handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
-                                  let text = `⏱ ${slotInfo.label}`;
+                                  const reservationTime = getReservationTimeForMemo(cellData, weekIdx, dayIdx, rowIdx);
+                                  let text = `⏱ ${reservationTime || slotInfo.label}`;
                                   if (content && content !== '\u200B') text += `\n👤 ${content}`;
 
                                   if (isSelected && selectedKeys.size > 1 && selectionInfo && selectionInfo.w === weekIdx && selectionInfo.d === dayIdx && selectionInfo.minRow !== selectionInfo.maxRow) {
@@ -3773,7 +3948,7 @@ const buildRangeKeys = useCallback((anchor, target) => {
                                 onContextMenu={(e) => {
                                   // 내용이 있을 때만 처방을 설정할 수 있도록 함
                                   if (displayData.hasDisplayText && content.trim() !== '\u200B') {
-                                    handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription);
+                                    handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);
                                   }
                                 }}
                               >
@@ -3865,6 +4040,12 @@ const buildRangeKeys = useCallback((anchor, target) => {
             currentParts.forEach((part) => addBodyPartToMap(patientBodyPartsMap, part));
             const availableParts = Array.from(patientBodyPartsMap.values()).sort();
             const previousPrescriptionValue = previousPrescription?.value || '';
+            const shockwavePrescriptions = Array.isArray(settings?.prescriptions)
+              ? settings.prescriptions.filter(Boolean)
+              : [];
+            const manualTherapyPrescriptions = Array.isArray(settings?.manual_therapy_prescriptions)
+              ? settings.manual_therapy_prescriptions.filter((pres) => pres && !shockwavePrescriptions.includes(pres))
+              : [];
 
             return (
               <>
@@ -3934,55 +4115,161 @@ const buildRangeKeys = useCallback((anchor, target) => {
                 </button>
                 <div className="context-menu-divider" />
 
-                <div className="context-menu-item has-submenu">
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    처방 : {currentPrescription || '없음'}
-                  </span>
-                  <div className="context-menu-submenu">
-                    <div className="context-menu-editor-panel">
-                      <div className="context-menu-inline-column">
-                        <div className="context-menu-inline-label">
-                          <span>처방</span>
-                          {previousPrescriptionValue ? (
-                            <span className="context-menu-current-prescription">{previousPrescriptionValue}</span>
-                          ) : null}
-                        </div>
-                        <div className="context-menu-prescription-row">
-                          <select
-                            className="context-menu-select"
-                            value={currentPrescription}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              handleContextAction({ type: 'prescription', value: e.target.value || null });
-                            }}
+                <div className="context-menu-meta-section">
+                  <div className="context-menu-item context-menu-item-inline-edit context-menu-meta-item" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} style={{ cursor: 'default' }}>
+                    <label className="context-menu-time-editor" style={{ width: '100%', margin: 0, padding: 0 }}>
+                      <span className="context-menu-time-label">예약시간 :</span>
+                      <span className="context-menu-time-control">
+                        <button
+                          type="button"
+                          className="context-menu-time-reset"
+                          aria-label="예약시간 기본값으로 되돌리기"
+                          title="기본 시간으로"
+                          disabled={!contextMenu?.savedReservationTime}
+                          onMouseDown={e => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleContextAction({ type: 'reservationTimeReset' });
+                          }}
+                        >
+                          ↺
+                        </button>
+                        <input
+                          type="text"
+                          placeholder={contextMenu?.defaultReservationTime || ''}
+                          className="context-menu-time-input"
+                          value={contextMenuReservationInput}
+                          readOnly
+                          onKeyDown={(e) => {
+                            e.stopPropagation();
+                            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                              e.preventDefault();
+                              const baseTime = contextMenu.defaultReservationTime || getDefaultReservationTime(
+                                contextMenu.weekIdx,
+                                contextMenu.dayIdx,
+                                contextMenu.rowIdx
+                              );
+                              const nextTime = stepReservationTimeWithinCellBase(
+                                contextMenuReservationInput,
+                                baseTime,
+                                e.key === 'ArrowUp' ? 10 : -10
+                              );
+                              setContextMenuReservationInput(nextTime);
+                              handleContextAction({ type: 'reservationTime', value: nextTime });
+                            }
+                          }}
+                          onMouseDown={e => e.stopPropagation()}
+                          onClick={e => e.stopPropagation()}
+                        />
+                        <span className="context-menu-time-stepper">
+                          <button
+                            type="button"
+                            className="context-menu-time-step"
+                            aria-label="현재 셀 기준 예약시간 10분 증가"
                             onMouseDown={e => e.stopPropagation()}
-                            onClick={e => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const baseTime = contextMenu.defaultReservationTime || getDefaultReservationTime(
+                                contextMenu.weekIdx,
+                                contextMenu.dayIdx,
+                                contextMenu.rowIdx
+                              );
+                              const nextTime = stepReservationTimeWithinCellBase(contextMenuReservationInput, baseTime, 10);
+                              setContextMenuReservationInput(nextTime);
+                              handleContextAction({ type: 'reservationTime', value: nextTime });
+                            }}
                           >
-                            <option value="">처방 없음</option>
-                            {settings?.prescriptions?.map((pres) => (
-                              <option key={pres} value={pres}>{pres}</option>
-                            ))}
-                            {settings?.manual_therapy_prescriptions?.filter(
-                              (mp) => !settings?.prescriptions?.includes(mp)
-                            ).map((pres) => (
-                              <option key={pres} value={pres}>{pres}</option>
-                            ))}
-                          </select>
+                            ▲
+                          </button>
+                          <button
+                            type="button"
+                            className="context-menu-time-step"
+                            aria-label="현재 셀 기준 예약시간 10분 감소"
+                            onMouseDown={e => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const baseTime = contextMenu.defaultReservationTime || getDefaultReservationTime(
+                                contextMenu.weekIdx,
+                                contextMenu.dayIdx,
+                                contextMenu.rowIdx
+                              );
+                              const nextTime = stepReservationTimeWithinCellBase(contextMenuReservationInput, baseTime, -10);
+                              setContextMenuReservationInput(nextTime);
+                              handleContextAction({ type: 'reservationTime', value: nextTime });
+                            }}
+                          >
+                            ▼
+                          </button>
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="context-menu-item has-submenu context-menu-meta-item">
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      처방 : {currentPrescription || '없음'}
+                    </span>
+                    <div className="context-menu-submenu context-menu-submenu--prescription">
+                      <div className="context-menu-editor-panel">
+                        <div className="context-menu-inline-column">
+                          <div className="context-menu-inline-label">
+                            <span>처방</span>
+                            {previousPrescriptionValue ? (
+                              <span className="context-menu-current-prescription">{previousPrescriptionValue}</span>
+                            ) : null}
+                          </div>
+                          <div className="context-menu-prescription-row context-menu-prescription-row--dual">
+                            <div className="context-menu-prescription-select-group">
+                              <label className="context-menu-prescription-select-label">충격파</label>
+                              <select
+                                className="context-menu-select"
+                                value={shockwavePrescriptions.includes(currentPrescription) ? currentPrescription : ''}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  handleContextAction({ type: 'prescription', value: e.target.value || null });
+                                }}
+                                onMouseDown={e => e.stopPropagation()}
+                                onClick={e => e.stopPropagation()}
+                              >
+                                <option value="">처방 없음</option>
+                                {shockwavePrescriptions.map((pres) => (
+                                  <option key={pres} value={pres}>{pres}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="context-menu-prescription-select-group">
+                              <label className="context-menu-prescription-select-label">도수치료</label>
+                              <select
+                                className="context-menu-select"
+                                value={manualTherapyPrescriptions.includes(currentPrescription) ? currentPrescription : ''}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  handleContextAction({ type: 'prescription', value: e.target.value || null });
+                                }}
+                                onMouseDown={e => e.stopPropagation()}
+                                onClick={e => e.stopPropagation()}
+                              >
+                                <option value="">처방 없음</option>
+                                {manualTherapyPrescriptions.map((pres) => (
+                                  <option key={pres} value={pres}>{pres}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="context-menu-item has-submenu">
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    부위 : {currentParts.join(', ') || '없음'}
-                  </span>
-                  <div className="context-menu-submenu">
-                    <div className="context-menu-editor-panel">
-                      <div className="context-menu-inline-column">
-                        <div className="context-menu-inline-label">부위</div>
-                        <div className="context-menu-body-dropdown">
+                  <div className="context-menu-item has-submenu context-menu-meta-item">
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      부위 : {currentParts.join(', ') || '없음'}
+                    </span>
+                    <div className="context-menu-submenu">
+                      <div className="context-menu-editor-panel">
+                        <div className="context-menu-inline-column">
+                          <div className="context-menu-inline-label">부위</div>
+                          <div className="context-menu-body-dropdown">
                           <div
                             className="context-menu-body-panel"
                             onMouseDown={(e) => e.stopPropagation()}
@@ -4074,7 +4361,7 @@ const buildRangeKeys = useCallback((anchor, target) => {
                   </div>
                 </div>
 
-                <div className="context-menu-item context-menu-item-inline-edit" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} style={{ cursor: 'default' }}>
+                <div className="context-menu-item context-menu-item-inline-edit context-menu-meta-item" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} style={{ cursor: 'default' }}>
                   <label className="context-menu-visit-editor" style={{ width: '100%', margin: 0, padding: 0 }}>
                     <span style={{ flexShrink: 0, width: '40px' }}>회차 :</span>
                     <span className="context-menu-visit-control" style={{ flexGrow: 1 }}>
@@ -4142,7 +4429,7 @@ const buildRangeKeys = useCallback((anchor, target) => {
                   </label>
                 </div>
 
-                <div className="context-menu-item has-submenu">
+                <div className="context-menu-item has-submenu context-menu-meta-item">
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     메모 : {contextMenuMemoDrafts.length > 0 ? contextMenuMemoDrafts.join(', ') : '없음'}
                   </span>
@@ -4231,6 +4518,7 @@ const buildRangeKeys = useCallback((anchor, target) => {
                       </div>
                     </div>
                   </div>
+                </div>
                 </div>
               </>
             );

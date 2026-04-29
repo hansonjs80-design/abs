@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import MonthPicker from '../common/MonthPicker';
+import PrintButton from '../common/PrintButton';
 import ThemeToggle from '../common/ThemeToggle';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAllowedTabs } from '../../lib/authPermissions';
@@ -43,6 +44,7 @@ export default function TopTabs() {
         </div>
       </nav>
       <div className="top-tabs-actions">
+        <PrintButton />
         <ThemeToggle />
       </div>
     </div>
