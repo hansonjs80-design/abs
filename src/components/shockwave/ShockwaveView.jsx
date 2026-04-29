@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { useSchedule } from '../../contexts/ScheduleContext';
-import { generateShockwaveCalendar, getTodayKST, isSameDate, formatDisplayDate } from '../../lib/calendarUtils';
+import { generateShockwaveCalendar, getTodayKST, isSameDate } from '../../lib/calendarUtils';
 import { supabase } from '../../lib/supabaseClient';
 import { incrementSessionCount, normalizeNameForMatch } from '../../lib/memoParser';
 import { has4060Pattern, normalize4060StarOrder, strip4060FromContent } from '../../lib/schedulerContentFormat';
@@ -304,6 +304,12 @@ function buildMergeSpanWithVisitCopyLink(mergeSpan, link) {
 
 function clearVisitCopyLinkFromMergeSpan(mergeSpan) {
   return buildMergeSpanWithVisitCopyLink(mergeSpan, null);
+}
+
+function isUndoShortcutEvent(event) {
+  if (!event || !(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey) return false;
+  const key = String(event.key || '').toLowerCase();
+  return event.code === 'KeyZ' || key === 'z';
 }
 
 function buildMergeSpanWithMemoList(mergeSpan, memoList) {
@@ -1524,11 +1530,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') {
+      if (isUndoShortcutEvent(e)) {
         const activeItem = document.activeElement;
         if (isContextMenuTarget(e.target) || isContextMenuTarget(activeItem)) return;
-        if (isEditableTarget(activeItem)) return;
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation?.();
         doUndo();
       } else if (e.key === 'Escape') {
         if (contextMenu) {
@@ -1704,6 +1711,14 @@ const buildRangeKeys = useCallback((anchor, target) => {
     const key = cellKey(cell.w, cell.d, cell.r, cell.c);
     const isMeta = e?.metaKey || e?.ctrlKey;
 
+    if (e?.button === 2) {
+      dragSelectionRef.current = null;
+      skipNextEditBlurSaveRef.current = true;
+      window.setTimeout(() => {
+        skipNextEditBlurSaveRef.current = false;
+      }, 0);
+      return;
+    }
     if (e?.button !== 0) return;
     e.preventDefault();
     viewRef.current?.focus({ preventScroll: true });
@@ -1809,6 +1824,7 @@ const buildRangeKeys = useCallback((anchor, target) => {
   // ── 셀 우클릭 = 처방 선택 ──
   const handleCellContextMenu = useCallback((e, w, d, r, c, currentPrescription, slotTime = '') => {
     e.preventDefault();
+    e.stopPropagation();
     skipNextEditBlurSaveRef.current = true;
     setEditingCell(null);
     selectSingleCell({ w, d, r, c });
@@ -3143,7 +3159,21 @@ const buildRangeKeys = useCallback((anchor, target) => {
   const handleKeyDown = useCallback((e) => {
     if (e.defaultPrevented) return;
     if (isContextMenuTarget(e.target)) return;
+    if (isUndoShortcutEvent(e)) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation?.();
+      doUndo();
+      return;
+    }
     if (isEditableTarget(e.target)) return;
+    if (contextMenu) {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      return;
+    }
     if (!selectedCell) return;
     const { w, d, r, c } = selectedCell;
 
@@ -3271,7 +3301,7 @@ const buildRangeKeys = useCallback((anchor, target) => {
       }
       return;
     }
-  }, [selectedCell, editingCell, selectedKeys, deleteCells, buildRangeKeys, selectSingleCell, getAdjacentCell, beginEditingCell, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleTreatmentCancel, handleToggleHolidayBackground, tryMergeSelection, isEditableTarget, isContextMenuTarget, cellKey, colCount, memos]);
+  }, [contextMenu, selectedCell, editingCell, selectedKeys, deleteCells, buildRangeKeys, selectSingleCell, getAdjacentCell, beginEditingCell, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleTreatmentCancel, handleToggleHolidayBackground, tryMergeSelection, doUndo, isEditableTarget, isContextMenuTarget, cellKey, colCount, memos]);
 
   // 키보드 이벤트 등록
 
@@ -3724,7 +3754,7 @@ const buildRangeKeys = useCallback((anchor, target) => {
                 <div key={dayIdx} className={`shockwave-day${isToday ? ' is-today' : ''}`} style={dayFlexStyle}>
                   {/* 날짜 헤더 */}
                   <div className={headerClass}>
-                    {formatDisplayDate(dayInfo.year, dayInfo.month, dayInfo.day)} ({DAY_NAMES[dayInfo.dow]})
+                    {dayInfo.month}월 {dayInfo.day}일 {DAY_NAMES[dayInfo.dow]}요일
                   </div>
 
                   {/* 치료사 이름 헤더 + 열 리사이즈 */}

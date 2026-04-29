@@ -19,10 +19,10 @@
 .shockwave-week {
   margin-bottom: 24px;
   background: var(--bg-card);
-  border-top: 1.5px solid #000;
-  border-bottom: 1.5px solid #000;
-  border-left: 1.5px solid #000;
-  border-right: 1.5px solid #000;
+  border-top: 2px solid #000;
+  border-bottom: 2px solid #000;
+  border-left: 2px solid #000;
+  border-right: 2px solid #000;
   border-radius: 4px;
   box-shadow: var(--shadow-sm);
   width: fit-content;
@@ -177,8 +177,8 @@
   position: relative;
   flex: 1 1 auto;
   min-width: 12%;
-  border-right: 1.5px solid #000;
-  border-top: 1.5px solid #000;
+  border-right: 2px solid #000;
+  border-top: 2px solid #000;
 }
 
 .shockwave-day:last-child {
@@ -187,11 +187,12 @@
 
 /* 날짜 헤더 */
 .sw-day-header {
-  padding: 5px 3px;
+  padding: 1px 3px;
   text-align: center;
-  font-size: 15px;
-  font-weight: 700;
-  border-bottom: 1px solid var(--border-color);
+  font-size: 16.28px;
+  font-weight: 770;
+  line-height: 1.43;
+  border-bottom: 2px solid #000;
   background: var(--bg-tertiary);
   transition: background var(--transition-fast);
 }
@@ -225,10 +226,11 @@
 .sw-therapist-header.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
 
 .sw-therapist-name {
-  padding: 5px 3px;
+  padding: 1px 3px;
   text-align: center;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14.12px;
+  font-weight: 660;
+  line-height: 1.43;
   color: #000;
   border-right: 1px solid #b7b7b7;
   background: var(--bg-secondary);
@@ -463,7 +465,7 @@
   font-weight: 700;
   color: #000;
   background: var(--bg-secondary);
-  border-right: 1px solid var(--border-color);
+  border-right: 2px solid #000;
   user-select: none;
   transition: opacity var(--transition-fast), visibility var(--transition-fast);
   min-height: 0;
@@ -520,19 +522,19 @@
 @media (max-width: 1200px) {
   .shockwave-day { 
     min-width: 30%; 
-    border-right: 1px solid #000; 
+    border-right: 2px solid #000; 
   }
   .shockwave-day:nth-child(3n) { border-right: none; }
-  .shockwave-day:nth-child(n+4) { border-top: 2px solid #b7b7b7; }
+  .shockwave-day:nth-child(n+4) { border-top: 2px solid #000; }
 }
 
 @media (max-width: 768px) {
   .shockwave-day { 
     min-width: 45%; 
-    border-right: 1px solid #000; 
+    border-right: 2px solid #000; 
   }
   .shockwave-day:nth-child(2n) { border-right: none; }
-  .shockwave-day:nth-child(n+3) { border-top: 2px solid #b7b7b7; }
+  .shockwave-day:nth-child(n+3) { border-top: 2px solid #000; }
   
   .sw-cell { font-size: var(--sw-cell-font-size); min-height: 20px; }
   .sw-day-header { font-size: 0.68rem; padding: 6px 2px; }
@@ -543,7 +545,7 @@
   .shockwave-day { 
     min-width: 100%; 
     border-right: none; 
-    border-bottom: 2px solid #b7b7b7; 
+    border-bottom: 2px solid #000; 
   }
   .shockwave-day:last-child { border-bottom: none; }
 }
