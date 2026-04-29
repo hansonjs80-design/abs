@@ -279,6 +279,33 @@ function stripReservationTimeFromMergeSpan(mergeSpan) {
   return buildMergeSpanWithReservationTime(mergeSpan, '');
 }
 
+function buildMergeSpanWithVisitCopyLink(mergeSpan, link) {
+  const base = mergeSpan || { rowSpan: 1, colSpan: 1, mergedInto: null };
+  const nextMeta = { ...(base.meta || {}) };
+  const sourceKey = String(link?.sourceKey || '').trim();
+  const originalContent = String(link?.originalContent || '');
+  const incrementedContent = String(link?.incrementedContent || '');
+
+  if (sourceKey && originalContent && incrementedContent) {
+    nextMeta.visit_copy_source_key = sourceKey;
+    nextMeta.visit_copy_original_content = originalContent;
+    nextMeta.visit_copy_incremented_content = incrementedContent;
+  } else {
+    delete nextMeta.visit_copy_source_key;
+    delete nextMeta.visit_copy_original_content;
+    delete nextMeta.visit_copy_incremented_content;
+  }
+
+  const nextMergeSpan = { ...base };
+  if (Object.keys(nextMeta).length > 0) nextMergeSpan.meta = nextMeta;
+  else delete nextMergeSpan.meta;
+  return nextMergeSpan;
+}
+
+function clearVisitCopyLinkFromMergeSpan(mergeSpan) {
+  return buildMergeSpanWithVisitCopyLink(mergeSpan, null);
+}
+
 function buildMergeSpanWithMemoList(mergeSpan, memoList) {
   const base = mergeSpan || { rowSpan: 1, colSpan: 1, mergedInto: null };
   const nextList = Array.isArray(memoList)
@@ -1854,10 +1881,13 @@ const buildRangeKeys = useCallback((anchor, target) => {
     }
 
     const oldMemos = [];
-    const payload = [];
-    for (const key of affectedKeys) {
+    const oldMemoKeys = new Set();
+    const payloadByKey = new Map();
+    const addOldMemo = (key, memoOverride = undefined) => {
+      if (oldMemoKeys.has(key)) return;
       const [w, d, r, c] = key.split('-').map(Number);
-      const memo = memos[key];
+      const memo = memoOverride !== undefined ? memoOverride : memos[key];
+      oldMemoKeys.add(key);
       oldMemos.push({
         year: currentYear,
         month: currentMonth,
@@ -1871,7 +1901,12 @@ const buildRangeKeys = useCallback((anchor, target) => {
         prescription: memo?.prescription || null,
         body_part: memo?.body_part || null,
       });
-      payload.push({
+    };
+
+    for (const key of affectedKeys) {
+      const [w, d, r, c] = key.split('-').map(Number);
+      addOldMemo(key);
+      payloadByKey.set(key, {
         year: currentYear,
         month: currentMonth,
         week_index: w,
@@ -1885,6 +1920,36 @@ const buildRangeKeys = useCallback((anchor, target) => {
         body_part: null,
       });
     }
+
+    Object.entries(memos || {}).forEach(([targetKey, targetMemo]) => {
+      if (affectedKeys.has(targetKey)) return;
+      const meta = targetMemo?.merge_span?.meta;
+      const sourceKey = String(meta?.visit_copy_source_key || '').trim();
+      if (!sourceKey || !affectedKeys.has(sourceKey)) return;
+
+      const originalContent = String(meta?.visit_copy_original_content || '');
+      const incrementedContent = String(meta?.visit_copy_incremented_content || '');
+      const currentContent = String(targetMemo?.content || '');
+      if (!originalContent || currentContent !== incrementedContent) return;
+
+      const [w, d, r, c] = targetKey.split('-').map(Number);
+      addOldMemo(targetKey, targetMemo);
+      payloadByKey.set(targetKey, {
+        year: currentYear,
+        month: currentMonth,
+        week_index: w,
+        day_index: d,
+        row_index: r,
+        col_index: c,
+        content: originalContent,
+        bg_color: targetMemo?.bg_color || null,
+        merge_span: clearVisitCopyLinkFromMergeSpan(targetMemo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null }),
+        prescription: targetMemo?.prescription || null,
+        body_part: targetMemo?.body_part || null,
+      });
+    });
+
+    const payload = Array.from(payloadByKey.values());
     if (payload.length > 0) {
       recordUndo({ type: 'bulk-edit', oldMemos });
       await saveShockwaveMemosBulk(payload);
@@ -2089,6 +2154,7 @@ const buildRangeKeys = useCallback((anchor, target) => {
         const key = cellKey(range.w, range.d, rowIndex, colIndex);
         const memo = memos[key];
         cellRow.push({
+          sourceKey: key,
           rowOffset,
           colOffset,
           content: memo?.content || '',
@@ -2248,9 +2314,23 @@ const buildRangeKeys = useCallback((anchor, target) => {
         const targetCol = target.c + cell.colOffset;
         if (targetRow >= baseTimeSlots.length || targetCol >= colCount) continue;
 
-        let nextContent = cell.content || '';
+        const originalContent = cell.content || '';
+        let nextContent = originalContent;
+        let visitCopyLink = null;
         if (clip.mode === 'copy' && isCrossDate && nextContent) {
           nextContent = incrementSessionCount(nextContent);
+          if (nextContent !== originalContent) {
+            visitCopyLink = {
+              sourceKey: cell.sourceKey || cellKey(
+                clip.srcW,
+                clip.srcD,
+                clip.srcMinRow + cell.rowOffset,
+                clip.srcMinCol + cell.colOffset
+              ),
+              originalContent,
+              incrementedContent: nextContent,
+            };
+          }
         }
 
         let nextMergeSpan = { rowSpan: 1, colSpan: 1, mergedInto: null };
@@ -2289,6 +2369,9 @@ const buildRangeKeys = useCallback((anchor, target) => {
           nextMergeSpan = cloneMergeSpanWithMeta(mergeSpan, { rowSpan: 1, colSpan: 1, mergedInto: null });
         }
         nextMergeSpan = stripReservationTimeFromMergeSpan(nextMergeSpan);
+        nextMergeSpan = visitCopyLink
+          ? buildMergeSpanWithVisitCopyLink(nextMergeSpan, visitCopyLink)
+          : clearVisitCopyLinkFromMergeSpan(nextMergeSpan);
 
         payload.push({
           year: currentYear,
