@@ -24,6 +24,11 @@ const SHOCKWAVE_ROW_HEIGHT_KEY = 'shockwave-row-height';
 const TREATMENT_COMPLETE_BG = '#ffe599';
 const TREATMENT_CANCEL_BG = '#f4cccc';
 const SCHEDULER_HOLIDAY_BG = '#93c47d';
+const shockwaveScheduleScrollMemory = new Map();
+
+function getShockwaveScheduleScrollKey(year, month) {
+  return `${year}-${String(month).padStart(2, '0')}`;
+}
 
 function getManualDoseTag(prescription) {
   const pres = String(prescription || '');
@@ -701,6 +706,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const scheduleDateRef = useRef({ year: currentYear, month: currentMonth });
   const undoStackRef = useRef([]);
   const undoQueueRef = useRef(Promise.resolve());
+  const scheduleScrollKey = useMemo(
+    () => getShockwaveScheduleScrollKey(currentYear, currentMonth),
+    [currentYear, currentMonth]
+  );
 
   const monthlyTherapistSlotCount = useMemo(
     () => (monthlyTherapists || []).reduce((max, item) => Math.max(max, (Number(item?.slot_index) || 0) + 1), 0),
@@ -3617,6 +3626,22 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     weekEl.scrollIntoView({ behavior: instant ? 'instant' : 'smooth', block: 'start', inline: 'nearest' });
   }, [todayWeekIdx]);
 
+  const saveScheduleScrollPosition = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    shockwaveScheduleScrollMemory.set(scheduleScrollKey, {
+      x: window.scrollX || window.pageXOffset || 0,
+      y: window.scrollY || window.pageYOffset || 0,
+    });
+  }, [scheduleScrollKey]);
+
+  useEffect(() => {
+    window.addEventListener('clinic-before-route-change', saveScheduleScrollPosition);
+    return () => {
+      saveScheduleScrollPosition();
+      window.removeEventListener('clinic-before-route-change', saveScheduleScrollPosition);
+    };
+  }, [saveScheduleScrollPosition]);
+
   const updateTodayShortcutTooltip = useCallback((event) => {
     const tooltipWidth = 96;
     const edgeGap = 8;
@@ -3656,6 +3681,13 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
   useEffect(() => {
     if (initialScrollDoneRef.current) return;
     const timer = setTimeout(() => {
+      const savedPosition = shockwaveScheduleScrollMemory.get(scheduleScrollKey);
+      if (savedPosition) {
+        window.scrollTo(savedPosition.x || 0, savedPosition.y || 0);
+        initialScrollDoneRef.current = true;
+        return;
+      }
+
       if (todayWeekIdx >= 0) {
         scrollToTodayWeek(true); // instant
       } else {
@@ -3667,7 +3699,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       initialScrollDoneRef.current = true;
     }, 80);
     return () => clearTimeout(timer);
-  }, [todayWeekIdx, scrollToTodayWeek]);
+  }, [scheduleScrollKey, todayWeekIdx, scrollToTodayWeek]);
 
   // 월이 변경될 때 스크롤 위치 초기화 (최초 마운트 이후에만 smooth로)
   useEffect(() => {

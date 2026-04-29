@@ -4,6 +4,27 @@ import { normalizeNameForMatch } from './memoParser';
 
 let todayManualTherapySyncQueue = Promise.resolve();
 
+function buildSchedulerCellKey(year, month, weekIndex, dayIndex, rowIndex, colIndex) {
+  return [
+    year,
+    String(month).padStart(2, '0'),
+    weekIndex,
+    dayIndex,
+    rowIndex,
+    colIndex,
+  ].join(':');
+}
+
+function isMissingSchedulerCellKeyError(error) {
+  const message = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`;
+  return /scheduler_cell_key/i.test(message) || error?.code === '42703';
+}
+
+function omitSchedulerCellKey(row) {
+  const { scheduler_cell_key, ...rest } = row;
+  return rest;
+}
+
 function escapeRegExp(value) {
   return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -138,6 +159,7 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
     newLogs.push({
       r,
       c,
+      scheduler_cell_key: buildSchedulerCellKey(year, month, w, d, r, c),
       date: todayDateStrFinal,
       patient_name: parsed.patientName,
       chart_number: parsed.chartNumber || '',
@@ -226,12 +248,8 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
     .select('*')
     .eq('date', todayDateStrFinal);
 
-  const toDeleteIds = (todayStats || [])
-    .filter((row) => overwriteManual ? true : row.source !== 'manual')
-    .map((row) => row.id)
-    .filter(Boolean);
-
   const rebuiltRows = newLogs.map((item) => ({
+    scheduler_cell_key: item.scheduler_cell_key,
     date: item.date,
     patient_name: item.patient_name,
     chart_number: item.chart_number,
@@ -243,11 +261,36 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
     source: 'scheduler',
   }));
 
+  const rebuiltCellKeys = new Set(rebuiltRows.map((row) => row.scheduler_cell_key).filter(Boolean));
+  const toDeleteIds = (todayStats || [])
+    .filter((row) => {
+      if (overwriteManual && row.source === 'manual') return true;
+      if (row.source === 'manual') return false;
+      return !row.scheduler_cell_key || !rebuiltCellKeys.has(row.scheduler_cell_key);
+    })
+    .map((row) => row.id)
+    .filter(Boolean);
+
   if (toDeleteIds.length > 0) {
     await supabase.from('manual_therapy_patient_logs').delete().in('id', toDeleteIds);
   }
   if (rebuiltRows.length > 0) {
-    await supabase.from('manual_therapy_patient_logs').insert(rebuiltRows);
+    const { error: upsertError } = await supabase
+      .from('manual_therapy_patient_logs')
+      .upsert(rebuiltRows, { onConflict: 'scheduler_cell_key' });
+
+    if (upsertError) {
+      if (!isMissingSchedulerCellKeyError(upsertError)) throw upsertError;
+      const fallbackRows = rebuiltRows.map(omitSchedulerCellKey);
+      const fallbackDeleteIds = (todayStats || [])
+        .filter((row) => overwriteManual ? true : row.source !== 'manual')
+        .map((row) => row.id)
+        .filter(Boolean);
+      if (fallbackDeleteIds.length > 0) {
+        await supabase.from('manual_therapy_patient_logs').delete().in('id', fallbackDeleteIds);
+      }
+      await supabase.from('manual_therapy_patient_logs').insert(fallbackRows);
+    }
   }
 
   return {

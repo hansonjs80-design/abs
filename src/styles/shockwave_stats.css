@@ -1050,8 +1050,8 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   font-size: 0.96rem;
   text-align: center;
   vertical-align: middle;
-  border-left: 3px solid var(--therapist-accent, #64748b);
-  border-right: 3px solid var(--therapist-accent, #64748b);
+  border-left: 2px solid var(--therapist-accent, #64748b);
+  border-right: 2px solid var(--therapist-accent, #64748b);
   box-shadow: inset 0 -2px 0 var(--therapist-accent, #64748b);
 }
 
@@ -1566,7 +1566,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   padding: 10px 14px;
   border-left: 1px solid var(--therapist-line, #d7e0eb);
   border-right: 1px solid var(--therapist-line, #d7e0eb);
-  border-top: 4px solid var(--therapist-accent, #64748b);
+  border-top: 2px solid var(--therapist-accent, #64748b);
   background: var(--therapist-head, #f3f6fa);
   color: var(--therapist-text, #243247);
   box-shadow: none;
@@ -2092,7 +2092,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 }
 
 .sw-new-patient-table .therapist-group-start {
-  border-left: 3px solid #93b5dd;
+  border-left: 2px solid #93b5dd;
 }
 
 .sw-new-patient-table .therapist-group-end {
@@ -2283,7 +2283,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-new-patient-table thead .therapist-col,
 .sw-compact-new-patient-table thead .therapist-col {
   min-width: 268px;
-  border-top: 4px solid var(--new-patient-accent, #64748b);
+  border-top: 2px solid var(--new-patient-accent, #64748b);
   border-left: 2px solid var(--new-patient-line, #cbd5e1);
   border-right: 2px solid var(--new-patient-line, #cbd5e1);
   background: var(--new-patient-head, #edf2f7);
@@ -2555,7 +2555,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-manual-compact-settlement-table thead .therapist-col {
   min-width: 112px;
   padding: 12px 18px;
-  border-top: 4px solid var(--therapist-accent, #64748b);
+  border-top: 2px solid var(--therapist-accent, #64748b);
   border-left: 2px solid var(--therapist-line, #cbd5e1);
   border-right: 2px solid var(--therapist-line, #cbd5e1);
   background: var(--therapist-head, #edf2f7);
@@ -2902,7 +2902,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-compact-new-patient-table thead .therapist-col {
   border-left: 0 !important;
   border-right: 0;
-  border-top-width: 4px;
+  border-top-width: 2px;
 }
 
 .sw-new-patient-table thead .sub-col,
@@ -3303,7 +3303,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-manual-compact-settlement-table thead .therapist-col,
 .sw-new-patient-table thead .therapist-col,
 .sw-compact-new-patient-table thead .therapist-col {
-  border-top-width: 3px;
+  border-top-width: 2px;
   background: var(--therapist-head, var(--new-patient-head, #edf4fc));
 }
 
@@ -3330,4 +3330,77 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-compact-summary-table tbody tr:hover th,
 .sw-compact-summary-table tbody tr:hover td {
   background-color: #f3f8ff !important;
+}
+
+/* Stats table border cap: keep every table rule at 2px or below. */
+.sw-grid-table th,
+.sw-grid-table td,
+.sw-settlement-table th,
+.sw-settlement-table td,
+.sw-manual-compact-settlement-table th,
+.sw-manual-compact-settlement-table td,
+.sw-new-patient-table th,
+.sw-new-patient-table td,
+.sw-compact-new-patient-table th,
+.sw-compact-new-patient-table td,
+.sw-summary-table th,
+.sw-summary-table td,
+.sw-compact-summary-table th,
+.sw-compact-summary-table td {
+  border-width: 0 1px 1px 0;
+}
+
+.sw-settlement-table,
+.sw-manual-compact-settlement-table,
+.sw-new-patient-table,
+.sw-compact-new-patient-table,
+.sw-summary-table,
+.sw-compact-summary-table {
+  border-width: 1.5px;
+}
+
+.sw-settlement-table-wrap,
+.sw-compact-table-wrap,
+.sw-manual-settlement-table-wrap,
+.sw-six-month-summary-wrap {
+  border: 0 !important;
+  background: transparent;
+}
+
+.sw-settlement-table thead .therapist-col,
+.sw-manual-compact-settlement-table thead .therapist-col,
+.sw-new-patient-table thead .therapist-col,
+.sw-compact-new-patient-table thead .therapist-col {
+  border-top-width: 2px !important;
+}
+
+.sw-settlement-table .therapist-group-end,
+.sw-manual-compact-settlement-table .therapist-group-end,
+.sw-new-patient-table .therapist-group-end,
+.sw-compact-new-patient-table .therapist-group-end,
+.sw-settlement-table thead .label-col,
+.sw-settlement-table .row-label,
+.sw-manual-compact-settlement-table thead .label-col,
+.sw-manual-compact-settlement-table .row-label,
+.sw-summary-table thead th:first-child,
+.sw-compact-summary-table thead th:first-child,
+.sw-summary-table tbody th.month-label,
+.sw-compact-summary-table tbody th.month-label {
+  border-right-width: 1.5px !important;
+}
+
+.sw-settlement-table thead tr:last-child th,
+.sw-manual-compact-settlement-table thead tr:last-child th,
+.sw-new-patient-table thead tr:last-child th,
+.sw-compact-new-patient-table thead tr:last-child th,
+.sw-summary-table thead th,
+.sw-compact-summary-table thead th {
+  border-bottom-width: 1.5px !important;
+}
+
+.sw-new-patient-table thead th:last-child,
+.sw-new-patient-table tbody td:last-child,
+.sw-compact-new-patient-table thead th:last-child,
+.sw-compact-new-patient-table tbody td:last-child {
+  border-right: 0 !important;
 }

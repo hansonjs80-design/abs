@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffe
 import { supabase } from '../../lib/supabaseClient';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import { toProperCase } from '../../lib/shockwaveSyncUtils';
-import { syncUnifiedStatsDateToScheduler } from '../../lib/unifiedSyncUtils';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import '../../styles/shockwave_stats.css';
@@ -45,7 +44,6 @@ export default function ShockwaveDataGrid({
   totalRecordCount,
   therapistCount,
   secondarySummaryLabel = '신규',
-  onSyncDateToScheduler = syncUnifiedStatsDateToScheduler,
 }) {
   const { shockwaveSettings: settings } = useSchedule();
   const safeInputLogs = useMemo(
@@ -68,10 +66,10 @@ export default function ShockwaveDataGrid({
   const summaryRecordCount = Number.isFinite(totalRecordCount) ? totalRecordCount : safeInputLogs.length;
   const summaryTherapistCount = Number.isFinite(therapistCount) ? therapistCount : displayTherapists.length;
 
-  const runSyncForDate = useCallback(async (date) => {
-    if (!date || !onSyncDateToScheduler) return;
-    await onSyncDateToScheduler({ year: currentYear, month: currentMonth, date });
-  }, [currentMonth, currentYear, onSyncDateToScheduler]);
+  const runSyncForDate = useCallback(async () => {
+    // 통계/현황 탭은 스케줄 표를 다시 쓰지 않는다.
+    // 스케줄 표가 원본이고, 현황 로그는 스케줄 저장 시 단방향으로 갱신된다.
+  }, []);
 
   const [insertedDraftRows, setInsertedDraftRows] = useState([]);
   const [draftCellValues, setDraftCellValues] = useState({});

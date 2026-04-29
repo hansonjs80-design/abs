@@ -241,6 +241,7 @@ CREATE TABLE IF NOT EXISTS public.shockwave_patient_logs (
   prescription text,
   prescription_count integer,
   source text NOT NULL DEFAULT 'manual',
+  scheduler_cell_key text,
   created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now())
 );
@@ -256,6 +257,7 @@ CREATE TABLE IF NOT EXISTS public.manual_therapy_patient_logs (
   prescription text,
   prescription_count integer,
   source text NOT NULL DEFAULT 'manual',
+  scheduler_cell_key text,
   created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now())
 );
@@ -263,9 +265,11 @@ CREATE TABLE IF NOT EXISTS public.manual_therapy_patient_logs (
 ALTER TABLE public.shockwave_patient_logs ADD COLUMN IF NOT EXISTS prescription text;
 ALTER TABLE public.shockwave_patient_logs ADD COLUMN IF NOT EXISTS prescription_count integer;
 ALTER TABLE public.shockwave_patient_logs ADD COLUMN IF NOT EXISTS source text DEFAULT 'manual';
+ALTER TABLE public.shockwave_patient_logs ADD COLUMN IF NOT EXISTS scheduler_cell_key text;
 ALTER TABLE public.manual_therapy_patient_logs ADD COLUMN IF NOT EXISTS prescription text;
 ALTER TABLE public.manual_therapy_patient_logs ADD COLUMN IF NOT EXISTS prescription_count integer;
 ALTER TABLE public.manual_therapy_patient_logs ADD COLUMN IF NOT EXISTS source text DEFAULT 'manual';
+ALTER TABLE public.manual_therapy_patient_logs ADD COLUMN IF NOT EXISTS scheduler_cell_key text;
 UPDATE public.shockwave_patient_logs SET source = 'manual' WHERE source IS NULL;
 UPDATE public.manual_therapy_patient_logs SET source = 'manual' WHERE source IS NULL;
 ALTER TABLE public.shockwave_patient_logs ALTER COLUMN source SET DEFAULT 'manual';
@@ -284,6 +288,9 @@ ON public.shockwave_patient_logs (therapist_name, date);
 CREATE INDEX IF NOT EXISTS idx_shockwave_patient_logs_patient_date
 ON public.shockwave_patient_logs (patient_name, chart_number, date DESC);
 
+CREATE UNIQUE INDEX IF NOT EXISTS ux_shockwave_patient_logs_scheduler_cell_key
+ON public.shockwave_patient_logs (scheduler_cell_key);
+
 CREATE INDEX IF NOT EXISTS idx_manual_therapy_patient_logs_date
 ON public.manual_therapy_patient_logs (date);
 
@@ -292,6 +299,9 @@ ON public.manual_therapy_patient_logs (therapist_name, date);
 
 CREATE INDEX IF NOT EXISTS idx_manual_therapy_patient_logs_patient_date
 ON public.manual_therapy_patient_logs (patient_name, chart_number, date DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_manual_therapy_patient_logs_scheduler_cell_key
+ON public.manual_therapy_patient_logs (scheduler_cell_key);
 
 DROP TRIGGER IF EXISTS set_shockwave_patient_logs_updated_at ON public.shockwave_patient_logs;
 CREATE TRIGGER set_shockwave_patient_logs_updated_at

@@ -4,6 +4,27 @@ import { has4060Pattern } from './schedulerContentFormat';
 
 let todaySchedulerSyncQueue = Promise.resolve();
 
+function buildSchedulerCellKey(year, month, weekIndex, dayIndex, rowIndex, colIndex) {
+  return [
+    year,
+    String(month).padStart(2, '0'),
+    weekIndex,
+    dayIndex,
+    rowIndex,
+    colIndex,
+  ].join(':');
+}
+
+function isMissingSchedulerCellKeyError(error) {
+  const message = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`;
+  return /scheduler_cell_key/i.test(message) || error?.code === '42703';
+}
+
+function omitSchedulerCellKey(row) {
+  const { scheduler_cell_key, ...rest } = row;
+  return rest;
+}
+
 // --- Google Sheets _ABBREV_MAP ---
 export const ABBREV_MAP = {
   'b.': 'Both',
@@ -275,6 +296,7 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
     newLogs.push({
       r,
       c,
+      scheduler_cell_key: buildSchedulerCellKey(year, month, w, d, r, c),
       date: todayDateStrFinal,
       patient_name: parsed.patient_name,
       chart_number: parsed.chart_number || '',
@@ -339,8 +361,10 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
     .eq('date', todayDateStrFinal);
 
   const schedulerEntriesForCopying = (todayStats || []).filter((row) => row.source !== 'manual');
+  const existingByCellKey = new Map();
   const existingGroups = {};
   schedulerEntriesForCopying.forEach((row) => {
+    if (row.scheduler_cell_key) existingByCellKey.set(row.scheduler_cell_key, row);
     const key = (row.patient_name || '').replace(/\*/g, '');
     if (!existingGroups[key]) existingGroups[key] = [];
     existingGroups[key].push(row);
@@ -350,9 +374,10 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
 
   newLogs.forEach((item) => {
     const key = item.patient_name.replace(/\*/g, '');
-    const old = existingGroups[key]?.shift() || null;
+    const old = existingByCellKey.get(item.scheduler_cell_key) || existingGroups[key]?.shift() || null;
 
     const out = {
+      scheduler_cell_key: item.scheduler_cell_key,
       date: item.date,
       patient_name: item.patient_name,
       chart_number: item.chart_number,
@@ -367,8 +392,13 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
     rebuiltSchedulerRows.push(out);
   });
 
+  const rebuiltCellKeys = new Set(rebuiltSchedulerRows.map((row) => row.scheduler_cell_key).filter(Boolean));
   const toDeleteIds = (todayStats || [])
-    .filter((row) => overwriteManual ? true : row.source !== 'manual')
+    .filter((row) => {
+      if (overwriteManual && row.source === 'manual') return true;
+      if (row.source === 'manual') return false;
+      return !row.scheduler_cell_key || !rebuiltCellKeys.has(row.scheduler_cell_key);
+    })
     .map((row) => row.id)
     .filter(Boolean);
 
@@ -376,7 +406,22 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
     await supabase.from('shockwave_patient_logs').delete().in('id', toDeleteIds);
   }
   if (rebuiltSchedulerRows.length > 0) {
-    await supabase.from('shockwave_patient_logs').insert(rebuiltSchedulerRows);
+    const { error: upsertError } = await supabase
+      .from('shockwave_patient_logs')
+      .upsert(rebuiltSchedulerRows, { onConflict: 'scheduler_cell_key' });
+
+    if (upsertError) {
+      if (!isMissingSchedulerCellKeyError(upsertError)) throw upsertError;
+      const fallbackRows = rebuiltSchedulerRows.map(omitSchedulerCellKey);
+      const fallbackDeleteIds = (todayStats || [])
+        .filter((row) => overwriteManual ? true : row.source !== 'manual')
+        .map((row) => row.id)
+        .filter(Boolean);
+      if (fallbackDeleteIds.length > 0) {
+        await supabase.from('shockwave_patient_logs').delete().in('id', fallbackDeleteIds);
+      }
+      await supabase.from('shockwave_patient_logs').insert(fallbackRows);
+    }
   }
 
   return {
@@ -473,6 +518,15 @@ export function formatStatsRowForScheduler(row) {
 }
 
 export async function syncStatsDateToScheduler({ year, month, date, therapists }) {
+  return {
+    skipped: true,
+    reason: 'stats_to_scheduler_disabled',
+    year,
+    month,
+    date,
+    therapistCount: Array.isArray(therapists) ? therapists.length : 0,
+  };
+
   if (!date || !Array.isArray(therapists) || therapists.length === 0) {
     return { skipped: true, reason: 'missing_input' };
   }
