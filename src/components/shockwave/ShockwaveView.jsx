@@ -21,6 +21,8 @@ const TIME_COL_WIDTH = 41;
 const SHOCKWAVE_DAY_COL_WIDTH_KEY = 'shockwave-day-col-width';
 const SHOCKWAVE_COL_RATIOS_KEY = 'shockwave-col-ratios';
 const SHOCKWAVE_ROW_HEIGHT_KEY = 'shockwave-row-height';
+const SHOCKWAVE_PENDING_DRAFTS_KEY = 'shockwave-pending-cell-drafts-v1';
+const SHOCKWAVE_PENDING_DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const TREATMENT_COMPLETE_BG = '#ffe599';
 const TREATMENT_CANCEL_BG = '#f4cccc';
 const SCHEDULER_HOLIDAY_BG = '#93c47d';
@@ -28,6 +30,53 @@ const shockwaveScheduleScrollMemory = new Map();
 
 function getShockwaveScheduleScrollKey(year, month) {
   return `${year}-${String(month).padStart(2, '0')}`;
+}
+
+function getPendingDraftId(year, month, key) {
+  return `${year}-${String(month).padStart(2, '0')}:${key}`;
+}
+
+function readPendingScheduleDrafts() {
+  if (typeof window === 'undefined') return {};
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(SHOCKWAVE_PENDING_DRAFTS_KEY) || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writePendingScheduleDrafts(drafts) {
+  if (typeof window === 'undefined') return;
+  const entries = Object.entries(drafts || {}).filter(([, draft]) => {
+    const updatedAt = Number(draft?.updatedAt) || 0;
+    return Date.now() - updatedAt < SHOCKWAVE_PENDING_DRAFT_MAX_AGE_MS;
+  });
+  if (entries.length === 0) {
+    window.localStorage.removeItem(SHOCKWAVE_PENDING_DRAFTS_KEY);
+    return;
+  }
+  window.localStorage.setItem(SHOCKWAVE_PENDING_DRAFTS_KEY, JSON.stringify(Object.fromEntries(entries)));
+}
+
+function rememberPendingScheduleDraft(year, month, key, value) {
+  if (!key) return;
+  const drafts = readPendingScheduleDrafts();
+  drafts[getPendingDraftId(year, month, key)] = {
+    year,
+    month,
+    key,
+    value: value ?? '',
+    updatedAt: Date.now(),
+  };
+  writePendingScheduleDrafts(drafts);
+}
+
+function removePendingScheduleDraft(year, month, key) {
+  if (!key) return;
+  const drafts = readPendingScheduleDrafts();
+  delete drafts[getPendingDraftId(year, month, key)];
+  writePendingScheduleDrafts(drafts);
 }
 
 function getManualDoseTag(prescription) {
@@ -634,6 +683,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [editSessionId, setEditSessionId] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [pendingDisplayValues, setPendingDisplayValues] = useState({});
+  const [loadedMemosKey, setLoadedMemosKey] = useState('');
   const clipboardRef = useRef({ content: '', mode: null });   // mode: 'copy' | 'cut'
   const [clipboardSource, setClipboardSource] = useState(null); // { keys: Set, mode: 'copy'|'cut' }
   const [, setUndoStack] = useState([]);
@@ -1442,8 +1492,81 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, [memos, pickChartOption, showAutoFillDialog, shouldAutoFormatSchedulerName, weeks, settings, findLatestSchedulerMemoMeta, findSchedulerHistoryCandidates]);
 
   useEffect(() => {
-    onLoadMemos(currentYear, currentMonth);
+    let cancelled = false;
+    setLoadedMemosKey('');
+    Promise.resolve(onLoadMemos(currentYear, currentMonth)).finally(() => {
+      if (!cancelled) {
+        setLoadedMemosKey(getShockwaveScheduleScrollKey(currentYear, currentMonth));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [currentYear, currentMonth, onLoadMemos]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (loadedMemosKey !== getShockwaveScheduleScrollKey(currentYear, currentMonth)) return;
+    const drafts = readPendingScheduleDrafts();
+    const currentDrafts = Object.values(drafts).filter((draft) => (
+      Number(draft?.year) === currentYear &&
+      Number(draft?.month) === currentMonth &&
+      draft?.key
+    ));
+    if (currentDrafts.length === 0) return;
+
+    const nextPendingDisplay = {};
+    const draftsToSave = [];
+
+    currentDrafts.forEach((draft) => {
+      const key = String(draft.key);
+      const value = String(draft.value ?? '');
+      const savedMemo = memos[key];
+      const savedUpdatedAt = savedMemo?.updated_at ? Date.parse(savedMemo.updated_at) : 0;
+      const draftUpdatedAt = Number(draft.updatedAt) || 0;
+
+      if (savedMemo && savedUpdatedAt > draftUpdatedAt && String(savedMemo.content || '') !== value) {
+        removePendingScheduleDraft(currentYear, currentMonth, key);
+        return;
+      }
+
+      if (String(savedMemo?.content || '') === value) {
+        removePendingScheduleDraft(currentYear, currentMonth, key);
+        return;
+      }
+
+      nextPendingDisplay[key] = value;
+      draftsToSave.push({ key, value });
+    });
+
+    if (Object.keys(nextPendingDisplay).length > 0) {
+      setPendingDisplayValues((prev) => ({ ...prev, ...nextPendingDisplay }));
+    }
+
+    draftsToSave.forEach(({ key, value }) => {
+      const [w, d, r, c] = key.split('-').map(Number);
+      if (![w, d, r, c].every(Number.isFinite)) {
+        removePendingScheduleDraft(currentYear, currentMonth, key);
+        return;
+      }
+
+      Promise.resolve(onSaveMemo(currentYear, currentMonth, w, d, r, c, value))
+        .then((success) => {
+          if (success) {
+            removePendingScheduleDraft(currentYear, currentMonth, key);
+            setPendingDisplayValues((prev) => {
+              if (!(key in prev)) return prev;
+              const next = { ...prev };
+              delete next[key];
+              return next;
+            });
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to restore pending schedule draft:', error);
+        });
+    });
+  }, [currentYear, currentMonth, loadedMemosKey, memos, onSaveMemo]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1711,6 +1834,8 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
   }, [cellKey]);
 
   const scheduleEditDraftAutosave = useCallback((key, value) => {
+    const { year, month } = scheduleDateRef.current;
+    rememberPendingScheduleDraft(year, month, key, value ?? '');
     editDraftRef.current = { key, value: value ?? '', dirty: true };
     if (editAutosaveTimerRef.current) {
       clearTimeout(editAutosaveTimerRef.current);
@@ -1721,7 +1846,13 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       const [w, d, r, c] = draft.key.split('-').map(Number);
       if (![w, d, r, c].every(Number.isFinite)) return;
       const { year, month } = scheduleDateRef.current;
-      saveMemoRef.current?.(year, month, w, d, r, c, draft.value ?? '');
+      Promise.resolve(saveMemoRef.current?.(year, month, w, d, r, c, draft.value ?? ''))
+        .then((success) => {
+          if (success) removePendingScheduleDraft(year, month, draft.key);
+        })
+        .catch((error) => {
+          console.error('Failed to autosave schedule draft:', error);
+        });
     }, 350);
   }, []);
 
@@ -1735,7 +1866,13 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     const [w, d, r, c] = draft.key.split('-').map(Number);
     if (![w, d, r, c].every(Number.isFinite)) return;
     const { year, month } = scheduleDateRef.current;
-    saveMemoRef.current?.(year, month, w, d, r, c, draft.value ?? '');
+    Promise.resolve(saveMemoRef.current?.(year, month, w, d, r, c, draft.value ?? ''))
+      .then((success) => {
+        if (success) removePendingScheduleDraft(year, month, draft.key);
+      })
+      .catch((error) => {
+        console.error('Failed to flush schedule draft:', error);
+      });
   }, []);
 
   useEffect(() => {
@@ -1875,6 +2012,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       return;
     }
     setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
+    rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
     recordUndo({
       type: 'edit',
       w,
@@ -1888,6 +2026,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       oldBodyPart: memos[key]?.body_part || null,
     });
     const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, newContent, undefined, newMergeSpan, newPrescription, newBodyPart);
+    if (success) removePendingScheduleDraft(currentYear, currentMonth, key);
     setPendingDisplayValues((prev) => {
       const next = { ...prev };
       delete next[key];
