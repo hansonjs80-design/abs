@@ -58,6 +58,50 @@ ADD COLUMN IF NOT EXISTS body_part text;
 ALTER TABLE public.shockwave_schedules
 ADD COLUMN IF NOT EXISTS merge_span jsonb DEFAULT '{"rowSpan": 1, "colSpan": 1, "mergedInto": null}'::jsonb;
 
+ALTER TABLE public.shockwave_schedules
+ALTER COLUMN content SET DEFAULT '';
+
+UPDATE public.shockwave_schedules
+SET content = ''
+WHERE content IS NULL;
+
+UPDATE public.shockwave_schedules
+SET merge_span = '{"rowSpan": 1, "colSpan": 1, "mergedInto": null}'::jsonb
+WHERE merge_span IS NULL;
+
+ALTER TABLE public.shockwave_schedules
+ALTER COLUMN merge_span SET DEFAULT '{"rowSpan": 1, "colSpan": 1, "mergedInto": null}'::jsonb;
+
+CREATE INDEX IF NOT EXISTS idx_shockwave_schedules_month
+ON public.shockwave_schedules (year, month);
+
+CREATE INDEX IF NOT EXISTS idx_shockwave_schedules_day
+ON public.shockwave_schedules (year, month, week_index, day_index);
+
+CREATE INDEX IF NOT EXISTS idx_shockwave_schedules_cell_updated
+ON public.shockwave_schedules (year, month, week_index, day_index, row_index, col_index, updated_at DESC);
+
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+RETURNS trigger AS $$
+BEGIN
+  NEW.updated_at = timezone('utc'::text, now());
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger
+    WHERE tgname = 'set_shockwave_schedules_updated_at'
+  ) THEN
+    CREATE TRIGGER set_shockwave_schedules_updated_at
+    BEFORE UPDATE ON public.shockwave_schedules
+    FOR EACH ROW
+    EXECUTE FUNCTION public.set_updated_at();
+  END IF;
+END $$;
+
 -- 4. 휴일 관리 테이블
 CREATE TABLE IF NOT EXISTS public.holidays (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,

@@ -166,29 +166,16 @@ export async function syncUnifiedStatsDateToScheduler({ year, month, date }) {
   });
 
   // 4. Fetch existing schedule rows for the day to preserve bg_color and merge_span
-  const [
-    { data: existingScheduleRows, error: existingScheduleError },
-    { data: existingMemos, error: memosError }
-  ] = await Promise.all([
-    supabase
-      .from('shockwave_schedules')
-      .select('*')
-      .eq('year', year)
-      .eq('month', month)
-      .eq('week_index', targetWeekIndex)
-      .eq('day_index', targetDayIndex)
-      .in('col_index', therapistCols),
-    supabase
-      .from('shockwave_memos')
-      .select('id, year, month, week_index, day_index, row_index, col_index, content, bg_color, merge_span, prescription, body_part')
-      .eq('year', year)
-      .eq('month', month)
-      .eq('week_index', targetWeekIndex)
-      .eq('day_index', targetDayIndex)
-  ]);
+  const { data: existingScheduleRows, error: existingScheduleError } = await supabase
+    .from('shockwave_schedules')
+    .select('*')
+    .eq('year', year)
+    .eq('month', month)
+    .eq('week_index', targetWeekIndex)
+    .eq('day_index', targetDayIndex)
+    .in('col_index', therapistCols);
 
   if (existingScheduleError) throw existingScheduleError;
-  if (memosError) throw memosError;
 
   const parsedExistingRows = (existingScheduleRows || []).map(row => {
     let cleanName = '';
@@ -200,14 +187,11 @@ export async function syncUnifiedStatsDateToScheduler({ year, month, date }) {
   });
 
   const upsertPayload = [];
-  const memosUpsertPayload = [];
-  const deleteIds = []; // We won't delete rows, we will just clear their content
 
   groupedByTherapist.forEach((items, therapistIndex) => {
     const existingForTherapist = parsedExistingRows.filter(r => r.col_index === therapistIndex);
     const usedRowIndexes = new Set();
     const matchedExistingRowIds = new Set();
-    const incomingNames = new Set(items.map((item) => String(item.cleanName || '').trim()).filter(Boolean));
 
     // Helper to find next available row index
     const findNextAvailableRow = (start) => {
@@ -251,47 +235,10 @@ export async function syncUnifiedStatsDateToScheduler({ year, month, date }) {
         updated_at: new Date().toISOString()
       });
 
-      const existingMemo = existingMemos?.find(m => m.row_index === rowIndex && m.col_index === therapistIndex);
-      if (existingMemo && (existingMemo.body_part !== item.body_part || existingMemo.prescription !== item.prescription)) {
-        memosUpsertPayload.push({
-          ...existingMemo,
-          body_part: item.body_part,
-          prescription: item.prescription,
-          updated_at: new Date().toISOString()
-        });
-      }
     });
 
-    // For existing rows that had content but were NOT matched, we clear their content
-    existingForTherapist.forEach(r => {
-      if (!matchedExistingRowIds.has(r.id) && r.content) {
-        // 같은 날짜/치료사에 동일 환자가 여러 번 있는 경우, 통계 행 하나와 매칭되지 않았다는
-        // 이유만으로 나머지 예약을 지우면 실제 스케줄 중복 예약이 1개로 줄어든다.
-        // 동일 환자명으로 들어온 동기화가 있으면 기존 추가 예약은 유지한다.
-        if (r.cleanName && incomingNames.has(r.cleanName)) return;
-
-        upsertPayload.push({
-          year, month, week_index: targetWeekIndex, day_index: targetDayIndex,
-          row_index: r.row_index, col_index: r.col_index,
-          content: '',
-          body_part: null,
-          prescription: null,
-          bg_color: r.bg_color,
-          merge_span: r.merge_span,
-          updated_at: new Date().toISOString()
-        });
-
-        const existingMemo = existingMemos?.find(m => m.row_index === r.row_index && m.col_index === r.col_index);
-        if (existingMemo && (existingMemo.body_part || existingMemo.prescription)) {
-          memosUpsertPayload.push({
-            ...existingMemo,
-            body_part: null,
-            prescription: null,
-            updated_at: new Date().toISOString()
-          });
-        }
-      }
-    });
+    // 통계 동기화는 스케줄을 채우는 방향으로만 동작한다.
+    // 통계에 없다는 이유로 기존 스케줄 셀을 비우면 사용자가 직접 입력한 예약이 사라질 수 있다.
   });
 
   if (upsertPayload.length > 0) {
@@ -299,13 +246,6 @@ export async function syncUnifiedStatsDateToScheduler({ year, month, date }) {
       .from('shockwave_schedules')
       .upsert(upsertPayload, { onConflict: 'year,month,week_index,day_index,row_index,col_index' });
     if (upsertError) throw upsertError;
-  }
-
-  if (memosUpsertPayload.length > 0) {
-    const { error: memoUpsertError } = await supabase
-      .from('shockwave_memos')
-      .upsert(memosUpsertPayload, { onConflict: 'id' });
-    if (memoUpsertError) throw memoUpsertError;
   }
 
   return {

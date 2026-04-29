@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { generateShockwaveCalendar, getTodayKST } from '../lib/calendarUtils';
 import { syncTodayShockwaveScheduleToStats } from '../lib/shockwaveSyncUtils';
@@ -42,6 +42,26 @@ export function ScheduleProvider({ children }) {
   const [loading, setLoading] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [calendarSlotSettings, setCalendarSlotSettings] = useState(null); // { year, month, week_slot_counts }
+  const shockwaveWriteQueueRef = useRef(new Map());
+
+  const enqueueShockwaveWrite = useCallback((keys, task) => {
+    const targetKeys = Array.from(new Set((keys || []).filter(Boolean)));
+    const previousWrites = targetKeys
+      .map((key) => shockwaveWriteQueueRef.current.get(key))
+      .filter(Boolean);
+    const queuedWrite = Promise
+      .allSettled(previousWrites)
+      .then(task);
+    const trackedWrite = queuedWrite.finally(() => {
+      targetKeys.forEach((key) => {
+        if (shockwaveWriteQueueRef.current.get(key) === trackedWrite) {
+          shockwaveWriteQueueRef.current.delete(key);
+        }
+      });
+    });
+    targetKeys.forEach((key) => shockwaveWriteQueueRef.current.set(key, trackedWrite));
+    return queuedWrite;
+  }, []);
 
   const shouldKeepShockwaveMemo = useCallback((memo) => {
     if (!memo) return false;
@@ -452,8 +472,9 @@ export function ScheduleProvider({ children }) {
 
   // 충격파 스케줄 저장
   const saveShockwaveMemo = useCallback(async (year, month, weekIndex, dayIndex, rowIndex, colIndex, content, bg_color, merge_span, prescription, body_part) => {
-    try {
-      const key = `${weekIndex}-${dayIndex}-${rowIndex}-${colIndex}`;
+    const key = `${weekIndex}-${dayIndex}-${rowIndex}-${colIndex}`;
+    return enqueueShockwaveWrite([key], async () => {
+      try {
       const optimisticMemo = shockwaveMemos[key] || {};
       const upsertData = {
         year, month, week_index: weekIndex, day_index: dayIndex, row_index: rowIndex, col_index: colIndex,
@@ -531,20 +552,24 @@ export function ScheduleProvider({ children }) {
         }
       }
       return true;
-    } catch (err) {
-      setShockwaveMemos(prev => ({ ...prev }));
-      console.error('Failed to save shockwave memo:', err);
-      return false;
-    }
-  }, [shockwaveMemos, therapists, manualTherapists, monthlyTherapists, monthlyManualTherapists, shouldKeepShockwaveMemo]);
+      } catch (err) {
+        setShockwaveMemos(prev => ({ ...prev }));
+        console.error('Failed to save shockwave memo:', err);
+        return false;
+      }
+    });
+  }, [shockwaveMemos, therapists, manualTherapists, monthlyTherapists, monthlyManualTherapists, shouldKeepShockwaveMemo, enqueueShockwaveWrite]);
 
   // 다중 셀 동시 업데이트 (병합/병합해제 등)
   const saveShockwaveMemosBulk = useCallback(async (memosArray) => {
-    const previousMemos = {};
-    const optimisticMemos = {};
+    if (!memosArray || memosArray.length === 0) return true;
+    const targetKeys = memosArray.map((item) => `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`);
 
-    try {
-      if (!memosArray || memosArray.length === 0) return true;
+    return enqueueShockwaveWrite(targetKeys, async () => {
+      const previousMemos = {};
+      const optimisticMemos = {};
+
+      try {
       memosArray.forEach((item) => {
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
         previousMemos[key] = shockwaveMemos[key];
@@ -655,8 +680,9 @@ export function ScheduleProvider({ children }) {
       });
       console.error('Failed to save bulk shockwave memos:', err);
       return false;
-    }
-  }, [currentYear, currentMonth, shockwaveMemos, therapists, shouldKeepShockwaveMemo]);
+      }
+    });
+  }, [currentYear, currentMonth, shockwaveMemos, therapists, manualTherapists, monthlyTherapists, monthlyManualTherapists, shouldKeepShockwaveMemo, enqueueShockwaveWrite]);
 
   // 월별 치료사 설정 로드 (type: 'shockwave' | 'manual_therapy')
   const loadMonthlyTherapists = useCallback(async (year, month, type = 'shockwave') => {
