@@ -14,6 +14,21 @@ import MemoSlot from './MemoSlot';
 const COL_W_KEY = 'staff-calendar-col-width';
 const ROW_H_KEY = 'staff-calendar-row-height';
 
+function inferInputModeFromEvent(event) {
+  const key = String(event?.key || '');
+  const data = String(event?.data || '');
+  if (event?.isComposing || event?.nativeEvent?.isComposing || event?.keyCode === 229 || key === 'Process') return 'ko';
+  if (/[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(key) || /[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(data)) return 'ko';
+  if (/^[a-zA-Z]$/.test(key) || /^[a-zA-Z]$/.test(data)) return 'en';
+  return null;
+}
+
+function isInputModeToggleEvent(event) {
+  const key = String(event?.key || '');
+  const code = String(event?.code || '');
+  return key === 'Hangul' || code === 'Lang1' || event?.keyCode === 21;
+}
+
 export default function StaffCalendar({ hiddenDepartments = [] }) {
   const { currentYear, currentMonth, navigateMonth, staffMemos, loadStaffMemos, saveStaffMemo, holidays, holidayNames, loadHolidays, shockwaveSettings, loadShockwaveSettings, calendarSlotSettings, loadCalendarSlotSettings, saveCalendarSlotSettings } = useSchedule();
   const { addToast } = useToast();
@@ -31,6 +46,8 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
   const [clipboardSource, setClipboardSource] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
   const [colorMenu, setColorMenu] = useState(null); // { type: 'font' | 'bg' }
+  const [inputMode, setInputMode] = useState('en');
+  const [inputModeBadge, setInputModeBadge] = useState({ x: 0, y: 0, visible: false });
   const viewRef = useRef(null);
   const contextMenuRef = useRef(null);
   const dragRef = useRef(null);
@@ -53,6 +70,21 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
     [shockwaveSettings, currentYear, currentMonth]
   );
   const normalizeRuleText = useCallback((value) => normalizeStaffScheduleRuleText(value), []);
+  const updateInputModeFromEvent = useCallback((event, fallbackMode = null) => {
+    const nativeEvent = event?.nativeEvent || event;
+    if (nativeEvent?.__staffInputModeHandled) return;
+    if (nativeEvent) nativeEvent.__staffInputModeHandled = true;
+    if (isInputModeToggleEvent(nativeEvent)) {
+      setInputMode((prev) => (prev === 'ko' ? 'en' : 'ko'));
+      return;
+    }
+    const nextMode = fallbackMode || inferInputModeFromEvent(event);
+    if (nextMode) setInputMode(nextMode);
+  }, []);
+  const updateInputModeBadgePosition = useCallback((event) => {
+    if (!selectedCell) return;
+    setInputModeBadge({ x: event.clientX, y: event.clientY, visible: true });
+  }, [selectedCell]);
   const getAutoFontColorForStaffMemo = useCallback((content) => {
     const normalizedContent = normalizeRuleText(content);
     if (!normalizedContent) return null;
@@ -402,6 +434,7 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
 
   // ── Grid key handler ──
   const handleKeyDown = useCallback((e) => {
+    updateInputModeFromEvent(e);
     if (e.key === 'Escape' && clipboardSource) { setClipboardSource(null); return; }
     if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'z' || e.code === 'KeyZ')) { e.preventDefault(); doUndo(); return; }
     if (!selectedCell) return;
@@ -427,7 +460,7 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
       beginEdit(selectedCell.key, '', false);
       return;
     }
-  }, [selectedCell, editingCell, selectedKeys, cellFromXY, selectSingle, buildRange, beginEdit, staffMemos, doUndo, clipboardSource, deleteCells, handleCopy, handleCut]);
+  }, [selectedCell, editingCell, selectedKeys, cellFromXY, selectSingle, buildRange, beginEdit, staffMemos, doUndo, clipboardSource, deleteCells, handleCopy, handleCut, updateInputModeFromEvent]);
 
   useEffect(() => {
     const el = hiddenInputRef.current;
@@ -451,6 +484,7 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
   const onCellMouseDown = useCallback((wi, di, slot, e) => {
     if (e.button === 2) return;
     e.preventDefault();
+    setInputModeBadge({ x: e.clientX, y: e.clientY, visible: true });
     const cell = makeCell(wi, di, slot); if (!cell) return;
     if (editingCell && editingCell !== cell.key) commitActiveEdit();
     else if (editingCell) setEditingCell(null);
@@ -558,7 +592,13 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
   }, [applyColor, addToast]);
 
   return (
-    <div className="staff-calendar animate-fade-in" ref={viewRef} style={{ outline: 'none', position: 'relative' }}>
+    <div
+      className="staff-calendar animate-fade-in"
+      ref={viewRef}
+      style={{ outline: 'none', position: 'relative' }}
+      onMouseMove={updateInputModeBadgePosition}
+      onMouseLeave={() => setInputModeBadge((prev) => ({ ...prev, visible: false }))}
+    >
       <div className="staff-calendar-toolbar">
         <button
           type="button"
@@ -734,6 +774,15 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
       </div>
       </div>
       {/* Unified input: hidden when not editing, positioned over cell when editing */}
+      {selectedCell && inputModeBadge.visible && (
+        <div
+          className={`staff-input-mode-badge staff-input-mode-badge--${inputMode}`}
+          style={{ left: inputModeBadge.x + 12, top: inputModeBadge.y - 28 }}
+          aria-hidden="true"
+        >
+          {inputMode === 'ko' ? '한' : 'A'}
+        </div>
+      )}
       <input
         ref={hiddenInputRef}
         data-hidden-input="true"
@@ -749,10 +798,15 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
           }
         }}
         onKeyDown={(e) => {
+          updateInputModeFromEvent(e);
           if (editingCell) {
             handleEditKey(e, selectedCell.wi, selectedCell.di, selectedCell.slot);
           }
         }}
+        onCompositionStart={(e) => updateInputModeFromEvent(e, 'ko')}
+        onCompositionUpdate={(e) => updateInputModeFromEvent(e, 'ko')}
+        onCompositionEnd={(e) => updateInputModeFromEvent(e, inferInputModeFromEvent(e) || 'ko')}
+        onInput={(e) => updateInputModeFromEvent(e.nativeEvent)}
         onContextMenu={(e) => {
           if (!editingCell) return;
           e.preventDefault();
