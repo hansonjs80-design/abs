@@ -631,7 +631,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [pendingDisplayValues, setPendingDisplayValues] = useState({});
   const clipboardRef = useRef({ content: '', mode: null });   // mode: 'copy' | 'cut'
   const [clipboardSource, setClipboardSource] = useState(null); // { keys: Set, mode: 'copy'|'cut' }
-  const [undoStack, setUndoStack] = useState([]);
+  const [, setUndoStack] = useState([]);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, weekIdx, dayIdx, rowIdx, colIdx, currentPrescription }
   const [contextMenuBodyInput, setContextMenuBodyInput] = useState('');
   const [contextMenuNoteInput, setContextMenuNoteInput] = useState('');
@@ -1459,10 +1459,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     return Boolean(target && contextMenuRef.current?.contains(target));
   }, []);
 
-  useEffect(() => {
-    undoStackRef.current = undoStack;
-  }, [undoStack]);
-
   const recordUndo = useCallback((action) => {
     undoStackRef.current = [action, ...undoStackRef.current].slice(0, 50);
     setUndoStack(undoStackRef.current);
@@ -1490,9 +1486,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   const doUndo = useCallback(() => {
     const [action, ...rest] = undoStackRef.current;
-    if (!action) return;
+    if (!action) return false;
     undoStackRef.current = rest;
-    setUndoStack(rest);
+    flushSync(() => {
+      setUndoStack(rest);
+      setEditingCell(null);
+      setContextMenu(null);
+    });
 
     undoQueueRef.current = undoQueueRef.current.then(async () => {
       if (action.type === 'bulk-edit') {
@@ -1526,17 +1526,19 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     }).catch((error) => {
       console.error('Undo failed:', error);
     });
+    return true;
   }, [saveShockwaveMemosBulk, onSaveMemo, currentYear, currentMonth]);
 
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
       if (isUndoShortcutEvent(e)) {
-        const activeItem = document.activeElement;
-        if (isContextMenuTarget(e.target) || isContextMenuTarget(activeItem)) return;
+        if (e.__shockwaveUndoHandled) return;
+        e.__shockwaveUndoHandled = true;
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation?.();
         doUndo();
+        return;
       } else if (e.key === 'Escape') {
         if (contextMenu) {
           setContextMenu(null);
@@ -1546,8 +1548,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown, true);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown, true);
-  }, [doUndo, isEditableTarget, isContextMenuTarget]);
+    document.addEventListener('keydown', handleGlobalKeyDown, true);
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeyDown, true);
+      document.removeEventListener('keydown', handleGlobalKeyDown, true);
+    };
+  }, [doUndo, contextMenu]);
 
   useEffect(() => {
     if (!Array.isArray(colRatios) || colRatios.length === colCount) return;
@@ -3160,6 +3166,8 @@ const buildRangeKeys = useCallback((anchor, target) => {
     if (e.defaultPrevented) return;
     if (isContextMenuTarget(e.target)) return;
     if (isUndoShortcutEvent(e)) {
+      if (e.__shockwaveUndoHandled) return;
+      e.__shockwaveUndoHandled = true;
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation?.();
@@ -3641,9 +3649,9 @@ const buildRangeKeys = useCallback((anchor, target) => {
             weekRefs.current[weekIdx] = el;
           }}
         >
-          <div className="shockwave-week-label">
-            <div className="shockwave-week-label-main">
-              {weekIdx === 0 && (
+          {weekIdx === 0 && (
+            <div className="shockwave-week-label">
+              <div className="shockwave-week-label-main">
                 <div className="shockwave-month-title-group">
                   <button
                     type="button"
@@ -3665,8 +3673,6 @@ const buildRangeKeys = useCallback((anchor, target) => {
                     ›
                   </button>
                 </div>
-              )}
-              {weekIdx === 0 && (
                 <button
                   type="button"
                   className="shockwave-row-height-handle"
@@ -3692,9 +3698,8 @@ const buildRangeKeys = useCallback((anchor, target) => {
                 >
                   ↕
                 </button>
-              )}
-              <span className="shockwave-week-jump-group">
-                <span className="shockwave-week-label-text">{weekIdx + 1}주차</span>
+              </div>
+              <div className="shockwave-week-label-actions">
                 <button
                   type="button"
                   className="shockwave-week-today-btn"
@@ -3714,10 +3719,6 @@ const buildRangeKeys = useCallback((anchor, target) => {
                 >
                   오늘
                 </button>
-              </span>
-            </div>
-            <div className="shockwave-week-label-actions">
-              {weekIdx === 0 && (
                 <button
                   type="button"
                   className="shockwave-week-today-btn"
@@ -3725,10 +3726,33 @@ const buildRangeKeys = useCallback((anchor, target) => {
                 >
                   설정
                 </button>
-              )}
+              </div>
             </div>
-          </div>
+          )}
           <div className="shockwave-days" style={{ position: 'relative' }}>
+            {weekIdx > 0 && (
+              <div className="shockwave-week-floating-actions">
+                <button
+                  type="button"
+                  className="shockwave-week-today-btn"
+                  onClick={scrollToTodayWeek}
+                  onMouseEnter={updateTodayShortcutTooltip}
+                  onMouseMove={updateTodayShortcutTooltip}
+                  onMouseLeave={() => setTodayShortcutTooltip(null)}
+                  onFocus={(event) => {
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    updateTodayShortcutTooltip({
+                      clientX: rect.left + rect.width / 2,
+                      clientY: rect.top,
+                    });
+                  }}
+                  onBlur={() => setTodayShortcutTooltip(null)}
+                  disabled={todayWeekIdx < 0}
+                >
+                  오늘
+                </button>
+              </div>
+            )}
             {weekDays.map((dayInfo, dayIdx) => {
               const isToday = isSameDate(dayInfo.date, today);
               const daySlots = getTimeSlotsForDay(dayInfo);
@@ -3738,7 +3762,7 @@ const buildRangeKeys = useCallback((anchor, target) => {
                 ? `${TIME_COL_WIDTH}px ${therapistColsCSS}`
                 : therapistColsCSS;
 
-              let headerClass = 'sw-day-header';
+              let headerClass = 'sw-day-header-cell';
               if (dayInfo.isHoliday) headerClass += ' holiday';
               else if (!dayInfo.isCurrentMonth) headerClass += ' other-month';
               else if (isToday) headerClass += ' today';
@@ -3753,8 +3777,13 @@ const buildRangeKeys = useCallback((anchor, target) => {
               return (
                 <div key={dayIdx} className={`shockwave-day${isToday ? ' is-today' : ''}`} style={dayFlexStyle}>
                   {/* 날짜 헤더 */}
-                  <div className={headerClass}>
-                    {dayInfo.month}월 {dayInfo.day}일 {DAY_NAMES[dayInfo.dow]}요일
+                  <div className="sw-day-header-row" style={{ gridTemplateColumns: gridCols }}>
+                    {showTimeCol && (
+                      <div className="sw-week-header-cell">{weekIdx + 1}주차</div>
+                    )}
+                    <div className={`${headerClass}${showTimeCol ? ' with-week-col' : ''}`}>
+                      {dayInfo.month}월 {dayInfo.day}일 {DAY_NAMES[dayInfo.dow]}요일
+                    </div>
                   </div>
 
                   {/* 치료사 이름 헤더 + 열 리사이즈 */}

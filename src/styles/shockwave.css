@@ -27,6 +27,7 @@
   box-shadow: var(--shadow-sm);
   width: fit-content;
   min-width: 0;
+  position: relative;
 }
 
 .shockwave-week-label {
@@ -143,6 +144,23 @@
   opacity: 0.45;
 }
 
+.shockwave-week-floating-actions {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.shockwave-week-floating-actions .shockwave-week-today-btn {
+  pointer-events: auto;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.16);
+}
+
 .sw-shortcut-floating-tooltip {
   position: fixed;
   z-index: 9999;
@@ -178,7 +196,7 @@
   flex: 1 1 auto;
   min-width: 12%;
   border-right: 2px solid #000;
-  border-top: 2px solid #000;
+  border-top: none;
 }
 
 .shockwave-day:last-child {
@@ -186,32 +204,65 @@
 }
 
 /* 날짜 헤더 */
-.sw-day-header {
-  padding: 1px 3px;
+.sw-day-header-row {
+  display: grid;
+  border-top: 2px solid #000;
+  border-bottom: 2px solid #000;
+}
+
+.shockwave-week:not(:first-child) .sw-day-header-row {
+  border-top: none;
+}
+
+.sw-week-header-cell,
+.sw-day-header-cell {
+  padding: 0;
   text-align: center;
   font-size: 16.28px;
   font-weight: 770;
   line-height: 1.43;
-  border-bottom: 2px solid #000;
   background: var(--bg-tertiary);
   transition: background var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 1px 3px;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 
-.sw-day-header.holiday {
+.sw-week-header-cell {
+  border-right: 2px solid #000;
+  color: #075985;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.sw-day-header-cell {
+  grid-column: 1 / -1;
+}
+
+.sw-day-header-cell.with-week-col {
+  grid-column: 2 / -1;
+}
+
+.sw-day-header-cell.holiday {
   background: var(--sw-holiday-header);
   color: var(--cal-holiday-text);
 }
 
-.sw-day-header.other-month {
+.sw-day-header-cell.other-month {
   color: var(--cal-other-month-text);
 }
 
-.sw-day-header.today {
+.sw-day-header-cell.today {
   background: var(--brand-primary);
   color: white;
 }
 
-.sw-day-header.saturday {
+.sw-day-header-cell.saturday {
   color: var(--cal-saturday-text);
 }
 
@@ -537,7 +588,7 @@
   .shockwave-day:nth-child(n+3) { border-top: 2px solid #000; }
   
   .sw-cell { font-size: var(--sw-cell-font-size); min-height: 20px; }
-  .sw-day-header { font-size: 0.68rem; padding: 6px 2px; }
+  .sw-day-header-cell { font-size: 0.68rem; padding: 6px 2px; }
   .sw-therapist-name { font-size: 0.62rem; padding: 4px 2px; }
 }
 
