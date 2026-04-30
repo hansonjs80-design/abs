@@ -1803,10 +1803,47 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setUndoStack(undoStackRef.current);
   }, []);
 
+  const applyImmediateCellDisplay = useCallback((updates) => {
+    const entries = Array.isArray(updates) ? updates : [updates];
+    const nextValues = {};
+    entries.forEach((item) => {
+      if (!item) return;
+      const key = item.key || `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+      if (!key || key.includes('undefined')) return;
+      nextValues[key] = String(item.content ?? '');
+    });
+    if (Object.keys(nextValues).length === 0) return;
+    flushSync(() => {
+      setPendingDisplayValues((prev) => ({ ...prev, ...nextValues }));
+      setEditingCell(null);
+      setContextMenu(null);
+    });
+  }, []);
+
+  const clearImmediateCellDisplay = useCallback((updates) => {
+    const entries = Array.isArray(updates) ? updates : [updates];
+    const keys = entries
+      .map((item) => item?.key || `${item?.week_index}-${item?.day_index}-${item?.row_index}-${item?.col_index}`)
+      .filter((key) => key && !key.includes('undefined'));
+    if (keys.length === 0) return;
+    setPendingDisplayValues((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      keys.forEach((key) => {
+        if (key in next) {
+          delete next[key];
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, []);
+
   const buildMemoSnapshotForKeys = useCallback((keys) => {
     return Array.from(new Set(keys || [])).map((key) => {
       const [w, d, r, c] = key.split('-').map(Number);
       const memo = memos[key] || {};
+      const stableContent = key in pendingDisplayValues ? pendingDisplayValues[key] : memo.content;
       return {
         year: currentYear,
         month: currentMonth,
@@ -1814,14 +1851,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         day_index: d,
         row_index: r,
         col_index: c,
-        content: memo.content || '',
+        content: stableContent || '',
         bg_color: memo.bg_color || null,
         merge_span: memo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
         prescription: memo.prescription || null,
         body_part: memo.body_part || null,
       };
     });
-  }, [currentYear, currentMonth, memos]);
+  }, [currentYear, currentMonth, memos, pendingDisplayValues]);
 
   const doUndo = useCallback(() => {
     const [action, ...rest] = undoStackRef.current;
@@ -1833,11 +1870,33 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       setContextMenu(null);
     });
 
+    const undoPayload = action.type === 'bulk-edit'
+      ? action.oldMemos
+      : action.type === 'edit'
+        ? [{
+            year: action.year || currentYear,
+            month: action.month || currentMonth,
+            week_index: action.w,
+            day_index: action.d,
+            row_index: action.r,
+            col_index: action.c,
+            content: action.oldContent,
+            bg_color: action.oldBg,
+            merge_span: action.oldMergeSpan,
+            prescription: action.oldPrescription,
+            body_part: action.oldBodyPart,
+          }]
+        : [];
+    applyImmediateCellDisplay(undoPayload);
+
     undoQueueRef.current = undoQueueRef.current.then(async () => {
       if (action.type === 'bulk-edit') {
-        await saveShockwaveMemosBulk(action.oldMemos);
+        const success = await saveShockwaveMemosBulk(action.oldMemos);
+        if (success) clearImmediateCellDisplay(action.oldMemos);
       } else if (action.type === 'edit') {
         const {
+          year,
+          month,
           w,
           d,
           r,
@@ -1848,9 +1907,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           oldPrescription,
           oldBodyPart,
         } = action;
-        await onSaveMemo(
-          currentYear,
-          currentMonth,
+        const undoMemo = {
+          week_index: w,
+          day_index: d,
+          row_index: r,
+          col_index: c,
+        };
+        const success = await onSaveMemo(
+          year || currentYear,
+          month || currentMonth,
           w,
           d,
           r,
@@ -1861,12 +1926,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           oldPrescription,
           oldBodyPart
         );
+        if (success) clearImmediateCellDisplay(undoMemo);
       }
     }).catch((error) => {
       console.error('Undo failed:', error);
     });
     return true;
-  }, [saveShockwaveMemosBulk, onSaveMemo, currentYear, currentMonth]);
+  }, [saveShockwaveMemosBulk, onSaveMemo, currentYear, currentMonth, applyImmediateCellDisplay, clearImmediateCellDisplay]);
 
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
@@ -2212,6 +2278,8 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
     recordUndo({
       type: 'edit',
+      year: currentYear,
+      month: currentMonth,
       w,
       d,
       r,
@@ -2322,6 +2390,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       if (oldMemoKeys.has(key)) return;
       const [w, d, r, c] = key.split('-').map(Number);
       const memo = memoOverride !== undefined ? memoOverride : memos[key];
+      const stableContent = key in pendingDisplayValues ? pendingDisplayValues[key] : memo?.content;
       oldMemoKeys.add(key);
       oldMemos.push({
         year: currentYear,
@@ -2330,7 +2399,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
         day_index: d,
         row_index: r,
         col_index: c,
-        content: memo?.content || '',
+        content: stableContent || '',
         bg_color: memo?.bg_color || null,
         merge_span: memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
         prescription: memo?.prescription || null,
@@ -2387,9 +2456,15 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     const payload = Array.from(payloadByKey.values());
     if (payload.length > 0) {
       recordUndo({ type: 'bulk-edit', oldMemos });
-      await saveShockwaveMemosBulk(payload);
+      applyImmediateCellDisplay(payload);
+      const success = await saveShockwaveMemosBulk(payload);
+      if (success) clearImmediateCellDisplay(payload);
+      else {
+        applyImmediateCellDisplay(oldMemos);
+        addToast('삭제 실패', 'error');
+      }
     }
-  }, [currentYear, currentMonth, memos, saveShockwaveMemosBulk, recordUndo, cellKey]);
+  }, [currentYear, currentMonth, memos, pendingDisplayValues, saveShockwaveMemosBulk, recordUndo, cellKey, applyImmediateCellDisplay, clearImmediateCellDisplay, addToast]);
 
   const tryMergeSelection = useCallback(async () => {
     const selection = computeSelectionInfo();
