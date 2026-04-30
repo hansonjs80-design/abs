@@ -23,7 +23,7 @@ const THERAPIST_TOTAL_COLORS = [
   '#ffb9d8',
 ];
 
-const SUMMARY_COL_WIDTH = 82;
+const SUMMARY_COL_WIDTH = 78;
 
 function toTitleCaseBodyPart(value) {
   return toProperCase(String(value || '').trim());
@@ -197,12 +197,12 @@ export default function ShockwaveDataGrid({
 
   // Column definitions (flat array matching <colgroup>)
   const FIXED_FIELDS = [
-    { id: 'idx', label: '#', field: 'idx', w: 48 },
-    { id: 'date', label: '날짜', field: 'date', w: 70 },
-    { id: 'name', label: '이름', field: 'patient_name', w: 85, bold: true },
-    { id: 'chart', label: '차트번호', field: 'chart_number', w: 75 },
-    { id: 'visit', label: '회차', field: 'visit_count', w: 45 },
-    { id: 'body', label: '부위', field: 'body_part', w: 120 },
+    { id: 'idx', label: '#', field: 'idx', w: 46 },
+    { id: 'date', label: '날짜', field: 'date', w: 67 },
+    { id: 'name', label: '이름', field: 'patient_name', w: 81, bold: true },
+    { id: 'chart', label: '차트번호', field: 'chart_number', w: 71 },
+    { id: 'visit', label: '회차', field: 'visit_count', w: 43 },
+    { id: 'body', label: '부위', field: 'body_part', w: 114 },
   ];
   const frozenColumnCount = 0;
 
@@ -211,10 +211,10 @@ export default function ShockwaveDataGrid({
   const totalColCount = newPatientColIndex + 1;
   const therapistColumnWidth = useMemo(() => {
     const count = Math.max(1, displayTherapists.length);
-    if (count <= 2) return 86;
-    if (count <= 4) return 78;
-    if (count <= 6) return 70;
-    return 64;
+    if (count <= 2) return 73;
+    if (count <= 4) return 67;
+    if (count <= 6) return 60;
+    return 55;
   }, [displayTherapists.length]);
   const gridMinWidth = useMemo(() => {
     const fixedWidth = FIXED_FIELDS.reduce((sum, field) => sum + field.w, 0);
