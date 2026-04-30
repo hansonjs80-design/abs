@@ -197,7 +197,7 @@ export default function ShockwaveDataGrid({
 
   // Column definitions (flat array matching <colgroup>)
   const FIXED_FIELDS = [
-    { id: 'idx', label: '#', field: 'idx', w: 46 },
+    { id: 'idx', label: '#', field: 'idx', w: 37 },
     { id: 'date', label: '날짜', field: 'date', w: 67 },
     { id: 'name', label: '이름', field: 'patient_name', w: 81, bold: true },
     { id: 'chart', label: '차트번호', field: 'chart_number', w: 71 },
@@ -211,10 +211,10 @@ export default function ShockwaveDataGrid({
   const totalColCount = newPatientColIndex + 1;
   const therapistColumnWidth = useMemo(() => {
     const count = Math.max(1, displayTherapists.length);
-    if (count <= 2) return 73;
-    if (count <= 4) return 67;
-    if (count <= 6) return 60;
-    return 55;
+    if (count <= 2) return 69;
+    if (count <= 4) return 64;
+    if (count <= 6) return 57;
+    return 52;
   }, [displayTherapists.length]);
   const gridMinWidth = useMemo(() => {
     const fixedWidth = FIXED_FIELDS.reduce((sum, field) => sum + field.w, 0);
