@@ -85,6 +85,75 @@ export function ScheduleProvider({ children }) {
     return hasContent || hasBgColor || hasMerge || hasMetaMemoList;
   }, []);
 
+  const protectExistingScheduleContent = useCallback(async (items, localSnapshot = {}) => {
+    const list = Array.isArray(items) ? items : [];
+    const blankContentItems = list.filter((item) => (
+      item &&
+      Object.prototype.hasOwnProperty.call(item, 'content') &&
+      !String(item.content || '').trim()
+    ));
+
+    const needsProtection = blankContentItems.filter((item) => {
+      const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+      return !String(localSnapshot[key]?.content || '').trim();
+    });
+
+    if (needsProtection.length === 0) return list;
+
+    const monthKeys = Array.from(new Set(
+      needsProtection.map((item) => `${item.year}-${item.month}`)
+    ));
+    const existingByCell = new Map();
+
+    for (const monthKey of monthKeys) {
+      const [year, month] = monthKey.split('-').map(Number);
+      if (!Number.isFinite(year) || !Number.isFinite(month)) continue;
+
+      const pageSize = 1000;
+      let from = 0;
+
+      while (true) {
+        const { data, error } = await supabase
+          .from('shockwave_schedules')
+          .select('year,month,week_index,day_index,row_index,col_index,content')
+          .eq('year', year)
+          .eq('month', month)
+          .order('week_index', { ascending: true })
+          .order('day_index', { ascending: true })
+          .order('row_index', { ascending: true })
+          .order('col_index', { ascending: true })
+          .range(from, from + pageSize - 1);
+
+        if (error) throw error;
+
+        (data || []).forEach((row) => {
+          const key = `${row.year}-${row.month}-${row.week_index}-${row.day_index}-${row.row_index}-${row.col_index}`;
+          existingByCell.set(key, row);
+        });
+
+        if (!data || data.length < pageSize) break;
+        from += pageSize;
+      }
+    }
+
+    return list.map((item) => {
+      if (!item || !Object.prototype.hasOwnProperty.call(item, 'content')) return item;
+      if (String(item.content || '').trim()) return item;
+
+      const localKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+      if (String(localSnapshot[localKey]?.content || '').trim()) return item;
+
+      const dbKey = `${item.year}-${item.month}-${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+      const existing = existingByCell.get(dbKey);
+      if (!String(existing?.content || '').trim()) return item;
+
+      return {
+        ...item,
+        content: existing.content,
+      };
+    });
+  }, []);
+
   const navigateMonth = useCallback((delta) => {
     setCurrentMonth(prev => {
       let newMonth = prev + delta;
@@ -456,13 +525,28 @@ export function ScheduleProvider({ children }) {
     setLoading(true);
     try {
       await waitForShockwaveWrites();
-      const { data, error } = await supabase
-        .from('shockwave_schedules')
-        .select('*')
-        .eq('year', year)
-        .eq('month', month);
+      const pageSize = 1000;
+      let from = 0;
+      let data = [];
 
-      if (error) throw error;
+      while (true) {
+        const { data: page, error } = await supabase
+          .from('shockwave_schedules')
+          .select('*')
+          .eq('year', year)
+          .eq('month', month)
+          .order('week_index', { ascending: true })
+          .order('day_index', { ascending: true })
+          .order('row_index', { ascending: true })
+          .order('col_index', { ascending: true })
+          .range(from, from + pageSize - 1);
+
+        if (error) throw error;
+
+        data = data.concat(page || []);
+        if (!page || page.length < pageSize) break;
+        from += pageSize;
+      }
 
       const memoMap = {};
       (data || []).forEach(item => {
@@ -491,7 +575,7 @@ export function ScheduleProvider({ children }) {
     return enqueueShockwaveWrite([key], async () => {
       try {
       const optimisticMemo = shockwaveMemos[key] || {};
-      const upsertData = {
+      let upsertData = {
         year, month, week_index: weekIndex, day_index: dayIndex, row_index: rowIndex, col_index: colIndex,
         content: content !== undefined ? content : optimisticMemo.content,
         updated_at: new Date().toISOString()
@@ -500,6 +584,8 @@ export function ScheduleProvider({ children }) {
       if (merge_span !== undefined) upsertData.merge_span = merge_span;
       if (prescription !== undefined) upsertData.prescription = prescription;
       if (body_part !== undefined) upsertData.body_part = body_part;
+
+      [upsertData] = await protectExistingScheduleContent([upsertData], { [key]: optimisticMemo });
 
       setShockwaveMemos(prev => {
         const next = { ...prev };
@@ -573,7 +659,7 @@ export function ScheduleProvider({ children }) {
         return false;
       }
     });
-  }, [shockwaveMemos, therapists, manualTherapists, monthlyTherapists, monthlyManualTherapists, shouldKeepShockwaveMemo, enqueueShockwaveWrite]);
+  }, [shockwaveMemos, therapists, manualTherapists, monthlyTherapists, monthlyManualTherapists, shouldKeepShockwaveMemo, protectExistingScheduleContent, enqueueShockwaveWrite]);
 
   // 다중 셀 동시 업데이트 (병합/병합해제 등)
   const saveShockwaveMemosBulk = useCallback(async (memosArray) => {
@@ -588,6 +674,12 @@ export function ScheduleProvider({ children }) {
       memosArray.forEach((item) => {
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
         previousMemos[key] = shockwaveMemos[key];
+      });
+
+      const guardedMemosArray = await protectExistingScheduleContent(memosArray, previousMemos);
+
+      guardedMemosArray.forEach((item) => {
+        const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
         optimisticMemos[key] = {
           ...(shockwaveMemos[key] || {}),
           ...item,
@@ -607,7 +699,7 @@ export function ScheduleProvider({ children }) {
       const { data, error } = await supabase
         .from('shockwave_schedules')
         .upsert(
-          memosArray.map(m => ({
+          guardedMemosArray.map(m => ({
             ...m,
             updated_at: new Date().toISOString()
           })), 
@@ -618,7 +710,7 @@ export function ScheduleProvider({ children }) {
       if (error) throw error;
 
       const nextShockwaveMemos = { ...shockwaveMemos };
-      (data || memosArray).forEach(item => {
+      (data || guardedMemosArray).forEach(item => {
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
         const merged = { ...nextShockwaveMemos[key], ...item };
         if (shouldKeepShockwaveMemo(merged)) nextShockwaveMemos[key] = merged;
@@ -627,7 +719,7 @@ export function ScheduleProvider({ children }) {
 
       setShockwaveMemos(prev => {
         const next = { ...prev };
-        (data || memosArray).forEach(item => {
+        (data || guardedMemosArray).forEach(item => {
           const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
           const merged = { ...next[key], ...item };
           if (shouldKeepShockwaveMemo(merged)) next[key] = merged;
@@ -639,7 +731,7 @@ export function ScheduleProvider({ children }) {
       const weeks = generateShockwaveCalendar(currentYear, currentMonth);
       const affectedDates = new Set();
       
-      memosArray.forEach((item) => {
+      guardedMemosArray.forEach((item) => {
         const dayInfo = weeks[item.week_index]?.[item.day_index];
         if (dayInfo && dayInfo.isCurrentMonth) {
           const dateStr = `${dayInfo.year}-${String(dayInfo.month).padStart(2, '0')}-${String(dayInfo.day).padStart(2, '0')}`;
@@ -697,7 +789,7 @@ export function ScheduleProvider({ children }) {
       return false;
       }
     });
-  }, [currentYear, currentMonth, shockwaveMemos, therapists, manualTherapists, monthlyTherapists, monthlyManualTherapists, shouldKeepShockwaveMemo, enqueueShockwaveWrite]);
+  }, [currentYear, currentMonth, shockwaveMemos, therapists, manualTherapists, monthlyTherapists, monthlyManualTherapists, shouldKeepShockwaveMemo, protectExistingScheduleContent, enqueueShockwaveWrite]);
 
   // 월별 치료사 설정 로드 (type: 'shockwave' | 'manual_therapy')
   const loadMonthlyTherapists = useCallback(async (year, month, type = 'shockwave') => {

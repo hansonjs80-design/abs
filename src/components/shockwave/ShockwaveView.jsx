@@ -244,7 +244,7 @@ function parseSchedulerPatientIdentity(content) {
   if (cellContent.includes('/')) {
     const parts = cellContent.split('/');
     const p0 = parts[0].trim();
-    const p1 = (parts[1] || '').trim().replace(/\(\d+₩?\)$/, '').replace(/\*$/, '').trim();
+    const p1 = (parts[1] || '').trim().replace(/(\((-|\d+)\)|\*)+$/g, '').trim();
     if (/\d/.test(p0)) {
       patientChart = p0;
       patientName = p1;
@@ -253,7 +253,7 @@ function parseSchedulerPatientIdentity(content) {
       patientChart = p1;
     }
   } else {
-    patientName = cellContent.replace(/\(\d+₩?\)$/, '').replace(/\*$/, '').trim();
+    patientName = cellContent.replace(/(\((-|\d+)\)|\*)+$/g, '').trim();
   }
 
   return { patientChart, patientName };
@@ -268,6 +268,28 @@ function getSchedulerVisitInputValue(content) {
   return match?.[1] || '';
 }
 
+function getExplicitVisitSuffix(content) {
+  const raw = String(content || '').trim();
+  if (!raw) return '';
+  if (/\*$/.test(raw)) return '*';
+  const match = raw.match(/\((-|\d+)\)$/);
+  return match?.[0] || '';
+}
+
+function normalizeSchedulerVisitSuffix(content) {
+  const raw = String(content || '').trim();
+  if (!raw) return raw;
+
+  const suffix = getExplicitVisitSuffix(raw);
+  const base = raw
+    .replace(/(\((-|\d+)\)|\*)+$/g, '')
+    .replace(/\(-?\d*$/g, '')
+    .replace(/[()]+$/g, '')
+    .trim();
+
+  return suffix ? `${base}${suffix}` : base;
+}
+
 function normalizeVisitInputValue(value) {
   const raw = String(value ?? '').trim();
   if (!raw) return '';
@@ -280,9 +302,9 @@ function normalizeVisitInputValue(value) {
 }
 
 function applyVisitCountToSchedulerContent(content, visitInput) {
-  const raw = String(content || '').trim();
+  const raw = normalizeSchedulerVisitSuffix(content);
   if (!raw) return raw;
-  const base = raw.replace(/(\((-|\d+)\)|\*)$/, '').trim();
+  const base = raw.replace(/(\((-|\d+)\)|\*)+$/g, '').trim();
   const normalizedVisit = normalizeVisitInputValue(visitInput);
   if (!normalizedVisit) return base;
   if (normalizedVisit === '-') return `${base}(-)`;
@@ -1132,7 +1154,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     });
   }, []);
 
-  const findLatestSchedulerMemoMeta = useCallback((targetCell, chartNumber, cleanName) => {
+  const findLatestSchedulerMemoMeta = useCallback((targetCell, chartNumber, cleanName, options = {}) => {
     const normalizedName = normalizeNameForMatch(cleanName);
     const currentSortKey = buildSchedulerMemoSortKey(`${targetCell.w}-${targetCell.d}-${targetCell.r}-${targetCell.c}`, weeks);
     let latestMatch = null;
@@ -1148,6 +1170,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const matchesChart = chartNumber && String(parsed.patientChart || '').trim() === String(chartNumber).trim();
       const matchesName = normalizedName && normalizeNameForMatch(parsed.patientName) === normalizedName;
       if (!matchesChart && !matchesName) return;
+      if (options.exclude4060 && has4060Pattern(memo.content)) return;
 
       const memoList = getMemoListFromMergeSpan(memo.merge_span);
       if (memoList.length === 0) return;
@@ -1294,7 +1317,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, [memos, parseSchedulerPatientText, weeks]);
 
   const buildSchedulerAutoText = useCallback(async (w, d, r, c, nextValue, forceOverrideSession = false) => {
-    const rawName = String(nextValue || '').trim();
+    const rawName = normalizeSchedulerVisitSuffix(nextValue);
     if (!shouldAutoFormatSchedulerName(rawName)) return { text: rawName };
 
     // 사용자가 명시적으로 40/60 패턴(도수치료)을 입력한 경우,
@@ -1311,14 +1334,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (inputParenMatch) {
       manualSession = parseInt(inputParenMatch[1], 10);
     }
+    const explicitVisitSuffix = getExplicitVisitSuffix(rawName);
 
     const dayInfo = weeks[w]?.[d];
     if (!dayInfo) return { text: rawName };
     const targetDate = `${dayInfo.year}-${String(dayInfo.month).padStart(2, '0')}-${String(dayInfo.day).padStart(2, '0')}`;
     const memoKey = `${w}-${d}-${r}-${c}`;
     const currentBodyParts = splitBodyParts(memos[memoKey]?.body_part || '');
+    const previousContent = String(memos[memoKey]?.content || '').trim();
+    const userRemovedDoseTag = has4060Pattern(previousContent) && !has4060Pattern(rawName);
 
-    const schedulerOptions = findSchedulerHistoryCandidates({ w, d, r, c }, rawName, targetDate);
+    const schedulerOptions = findSchedulerHistoryCandidates({ w, d, r, c }, rawName, targetDate)
+      .filter((option) => !userRemovedDoseTag || !has4060Pattern(option.nextText));
     if (schedulerOptions.length > 0) {
       const selected = schedulerOptions.length === 1
         ? schedulerOptions[0]
@@ -1341,7 +1368,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const autoPrescription = has4060Pattern(selected.nextText) ? undefined : (selected.prescription || undefined);
 
       return {
-        text: selected.nextText,
+        text: explicitVisitSuffix ? rawName : selected.nextText,
         prescription: autoPrescription,
         bodyPart: selected.latestBodyPart || undefined,
         mergeSpan: selected.mergeSpan,
@@ -1365,10 +1392,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         .limit(200),
     ]);
 
-    const allData = [
-      ...(shockwaveRes.data || []).map(d => ({ ...d, type: 'shockwave' })),
-      ...(manualRes.data || []).map(d => ({ ...d, type: 'manual' })),
-    ];
+    const allData = userRemovedDoseTag
+      ? (shockwaveRes.data || []).map(d => ({ ...d, type: 'shockwave' }))
+      : [
+          ...(shockwaveRes.data || []).map(d => ({ ...d, type: 'shockwave' })),
+          ...(manualRes.data || []).map(d => ({ ...d, type: 'manual' })),
+        ];
 
     const matches = allData.filter((item) => {
       const matchChart = searchChart && String(item.chart_number || '').trim() === searchChart;
@@ -1377,7 +1406,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return matchName;
     });
 
-    if (matches.length === 0) return { text: rawName };
+    if (matches.length === 0) {
+      return userRemovedDoseTag
+        ? {
+            text: rawName,
+            prescription: '',
+            bodyPart: '',
+            mergeSpan: stripReservationTimeFromMergeSpan(buildMergeSpanWithMemoList(memos[memoKey]?.merge_span, [])),
+          }
+        : { text: rawName };
+    }
 
     matches.sort((a, b) => {
       if (a.date !== b.date) return b.date.localeCompare(a.date);
@@ -1510,14 +1548,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         autoText += inputDoseMatch[1];
       }
     }
-    autoText += `(${effectiveVisitCount})`;
+    autoText += explicitVisitSuffix || `(${effectiveVisitCount})`;
     autoText = normalize4060StarOrder(autoText);
     
     const autoPrescription = has4060Pattern(autoText) ? undefined : (selected.prescription || undefined);
     const inheritedMergeSpan = findLatestSchedulerMemoMeta(
       { w, d, r, c },
       selected.chartNumber,
-      selected.cleanName
+      selected.cleanName,
+      { exclude4060: userRemovedDoseTag }
     );
     const needsDialog = (selected.bodyParts.length >= 2 && !selected.preferredBodyPart) || selected.prescriptions.length >= 2;
     if (needsDialog) {
@@ -1541,7 +1580,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         if (!dialogResult) return { text: rawName };
 
         return {
-          text: `${dialogResult.chartNumber}/${dialogResult.namePart}(${dialogResult.visitCount})`,
+          text: normalizeSchedulerVisitSuffix(`${dialogResult.chartNumber}/${dialogResult.namePart}${explicitVisitSuffix || `(${dialogResult.visitCount})`}`),
           prescription: dialogResult.prescription,
           bodyPart: dialogResult.bodyPart,
           mergeSpan: buildMergeSpanWithMemoList(inheritedMergeSpan, dialogResult.memoList),
@@ -1958,6 +1997,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
   const scheduleEditDraftAutosave = useCallback((key, value) => {
     const { year, month } = scheduleDateRef.current;
     rememberPendingScheduleDraft(year, month, key, value ?? '');
+    setPendingDisplayValues((prev) => ({ ...prev, [key]: value ?? '' }));
     editDraftRef.current = { key, value: value ?? '', dirty: true };
     if (editAutosaveTimerRef.current) {
       clearTimeout(editAutosaveTimerRef.current);
@@ -1969,13 +2009,11 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       if (![w, d, r, c].every(Number.isFinite)) return;
       const { year, month } = scheduleDateRef.current;
       Promise.resolve(saveMemoRef.current?.(year, month, w, d, r, c, draft.value ?? ''))
-        .then((success) => {
-          if (success) removePendingScheduleDraft(year, month, draft.key);
-        })
+        .then(() => {})
         .catch((error) => {
           console.error('Failed to autosave schedule draft:', error);
         });
-    }, 350);
+    }, 150);
   }, []);
 
   const flushEditDraft = useCallback(() => {
@@ -1989,9 +2027,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     if (![w, d, r, c].every(Number.isFinite)) return;
     const { year, month } = scheduleDateRef.current;
     Promise.resolve(saveMemoRef.current?.(year, month, w, d, r, c, draft.value ?? ''))
-      .then((success) => {
-        if (success) removePendingScheduleDraft(year, month, draft.key);
-      })
+      .then(() => {})
       .catch((error) => {
         console.error('Failed to flush schedule draft:', error);
       });
@@ -2105,7 +2141,9 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     setPendingDisplayValues((prev) => ({ ...prev, [key]: immediateContent }));
     setEditingCell(null);
     const result = await buildSchedulerAutoText(w, d, r, c, nextValue);
-    const newContent = normalize4060StarOrder(typeof result === 'string' ? result : (result?.text || '')).trim();
+    const newContent = normalizeSchedulerVisitSuffix(
+      normalize4060StarOrder(typeof result === 'string' ? result : (result?.text || ''))
+    );
     let newPrescription = result?.prescription;
     const newBodyPart = result?.bodyPart;
     const newMergeSpan = result?.mergeSpan ? stripReservationTimeFromMergeSpan(result.mergeSpan) : undefined;
@@ -4256,7 +4294,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                       for (let colIdx = 0; colIdx < colCount; colIdx++) {
                         const key = cellKey(weekIdx, dayIdx, rowIdx, colIdx);
                         const cellData = memos[key];
-                        const content = pendingDisplayValues[key] ?? cellData?.content ?? '';
+                        const content = normalizeSchedulerVisitSuffix(pendingDisplayValues[key] ?? cellData?.content ?? '');
                         let mergeSpan = getEffectiveMergeSpan(key);
 
                         const cellPrescription = cellData?.prescription || mergeSpan?.meta?.prescription || '';
