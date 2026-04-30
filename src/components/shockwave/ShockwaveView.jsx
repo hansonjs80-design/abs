@@ -22,6 +22,7 @@ const SHOCKWAVE_DAY_COL_WIDTH_KEY = 'shockwave-day-col-width';
 const SHOCKWAVE_COL_RATIOS_KEY = 'shockwave-col-ratios';
 const SHOCKWAVE_ROW_HEIGHT_KEY = 'shockwave-row-height';
 const SHOCKWAVE_PENDING_DRAFTS_KEY = 'shockwave-pending-cell-drafts-v1';
+const SHOCKWAVE_MONTH_BACKUP_KEY = 'shockwave-month-backup-v1';
 const SHOCKWAVE_PENDING_DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const TREATMENT_COMPLETE_BG = '#ffe599';
 const TREATMENT_CANCEL_BG = '#f4cccc';
@@ -77,6 +78,62 @@ function removePendingScheduleDraft(year, month, key) {
   const drafts = readPendingScheduleDrafts();
   delete drafts[getPendingDraftId(year, month, key)];
   writePendingScheduleDrafts(drafts);
+}
+
+function readScheduleMonthBackups() {
+  if (typeof window === 'undefined') return {};
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(SHOCKWAVE_MONTH_BACKUP_KEY) || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeScheduleMonthBackups(backups) {
+  if (typeof window === 'undefined') return;
+  const entries = Object.entries(backups || {}).filter(([, backup]) => {
+    const updatedAt = Number(backup?.updatedAt) || 0;
+    return Date.now() - updatedAt < SHOCKWAVE_PENDING_DRAFT_MAX_AGE_MS;
+  });
+  if (entries.length === 0) {
+    window.localStorage.removeItem(SHOCKWAVE_MONTH_BACKUP_KEY);
+    return;
+  }
+  window.localStorage.setItem(SHOCKWAVE_MONTH_BACKUP_KEY, JSON.stringify(Object.fromEntries(entries)));
+}
+
+function rememberScheduleMonthBackup(year, month, memos) {
+  if (typeof window === 'undefined') return;
+  const cells = {};
+  Object.entries(memos || {}).forEach(([key, memo]) => {
+    const content = String(memo?.content || '').trim();
+    const hasBgColor = memo?.bg_color !== undefined && memo?.bg_color !== null && memo?.bg_color !== '';
+    const hasPrescription = memo?.prescription !== undefined && memo?.prescription !== null && memo?.prescription !== '';
+    const hasBodyPart = memo?.body_part !== undefined && memo?.body_part !== null && memo?.body_part !== '';
+    const merge = memo?.merge_span;
+    const hasMerge = Boolean(merge) && (
+      (merge.rowSpan && merge.rowSpan !== 1) ||
+      (merge.colSpan && merge.colSpan !== 1) ||
+      merge.mergedInto ||
+      merge.meta
+    );
+    if (!content && !hasBgColor && !hasPrescription && !hasBodyPart && !hasMerge) return;
+    cells[key] = {
+      content: memo.content || '',
+      bg_color: memo.bg_color ?? null,
+      prescription: memo.prescription ?? null,
+      body_part: memo.body_part ?? null,
+      merge_span: memo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+      updated_at: memo.updated_at || new Date().toISOString(),
+    };
+  });
+
+  const backups = readScheduleMonthBackups();
+  const id = getShockwaveScheduleScrollKey(year, month);
+  if (Object.keys(cells).length === 0) delete backups[id];
+  else backups[id] = { year, month, cells, updatedAt: Date.now() };
+  writeScheduleMonthBackups(backups);
 }
 
 function getManualDoseTag(prescription) {
@@ -697,6 +754,19 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   useEffect(() => {
     selectedCellRef.current = selectedCell;
   }, [selectedCell]);
+
+  useEffect(() => {
+    if (loadedMemosKey !== getShockwaveScheduleScrollKey(currentYear, currentMonth)) return;
+    const mergedMemos = { ...(memos || {}) };
+    Object.entries(pendingDisplayValues || {}).forEach(([key, value]) => {
+      mergedMemos[key] = {
+        ...(mergedMemos[key] || {}),
+        content: value,
+        updated_at: new Date().toISOString(),
+      };
+    });
+    rememberScheduleMonthBackup(currentYear, currentMonth, mergedMemos);
+  }, [currentYear, currentMonth, loadedMemosKey, memos, pendingDisplayValues]);
 
   useEffect(() => {
     loadShockwaveSettings?.();
@@ -1565,6 +1635,58 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         .catch((error) => {
           console.error('Failed to restore pending schedule draft:', error);
         });
+    });
+  }, [currentYear, currentMonth, loadedMemosKey, memos, onSaveMemo]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (loadedMemosKey !== getShockwaveScheduleScrollKey(currentYear, currentMonth)) return;
+
+    const backup = readScheduleMonthBackups()[loadedMemosKey];
+    const backupCells = backup?.cells && typeof backup.cells === 'object' ? backup.cells : null;
+    if (!backupCells) return;
+
+    const missingCells = Object.entries(backupCells).filter(([key, backupMemo]) => {
+      const currentMemo = memos[key];
+      const backupContent = String(backupMemo?.content || '').trim();
+      if (!backupContent) return false;
+      return !String(currentMemo?.content || '').trim();
+    });
+
+    if (missingCells.length === 0) return;
+
+    const nextPendingDisplay = {};
+    missingCells.forEach(([key, backupMemo]) => {
+      nextPendingDisplay[key] = backupMemo.content || '';
+    });
+    setPendingDisplayValues((prev) => ({ ...prev, ...nextPendingDisplay }));
+
+    missingCells.forEach(([key, backupMemo]) => {
+      const [w, d, r, c] = key.split('-').map(Number);
+      if (![w, d, r, c].every(Number.isFinite)) return;
+      Promise.resolve(onSaveMemo(
+        currentYear,
+        currentMonth,
+        w,
+        d,
+        r,
+        c,
+        backupMemo.content || '',
+        backupMemo.bg_color,
+        backupMemo.merge_span,
+        backupMemo.prescription,
+        backupMemo.body_part
+      )).then((success) => {
+        if (!success) return;
+        setPendingDisplayValues((prev) => {
+          if (!(key in prev)) return prev;
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+      }).catch((error) => {
+        console.error('Failed to restore schedule month backup:', error);
+      });
     });
   }, [currentYear, currentMonth, loadedMemosKey, memos, onSaveMemo]);
 
