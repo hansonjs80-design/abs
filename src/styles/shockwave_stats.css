@@ -236,6 +236,91 @@
    DATA GRID — Refined Dashboard Table
    ════════════════════════════════════════════════════════════ */
 
+.sw-grid-shell {
+  width: 100%;
+}
+
+.sw-therapist-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border: 1px solid #dbe4f0;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.sw-therapist-filter-title {
+  flex: 0 0 auto;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.sw-therapist-filter-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sw-therapist-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid #d8e1ee;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sw-therapist-filter-chip.is-active {
+  border-color: #8fa3bd;
+  color: #1f2937;
+}
+
+.sw-therapist-filter-chip.tone-0.is-active { background: #dbeafe; }
+.sw-therapist-filter-chip.tone-1.is-active { background: #e9ddff; }
+.sw-therapist-filter-chip.tone-2.is-active { background: #d8f3ea; }
+.sw-therapist-filter-chip.tone-3.is-active { background: #ffe7c7; }
+.sw-therapist-filter-chip.tone-4.is-active { background: #ffdced; }
+
+.sw-therapist-filter-chip input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: #6d5dfc;
+}
+
+.sw-therapist-filter-chip input:disabled {
+  opacity: 0.55;
+}
+
+.sw-therapist-filter-reset {
+  flex: 0 0 auto;
+  margin-left: auto;
+  min-height: 30px;
+  padding: 5px 12px;
+  border: 1px solid #d8e1ee;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sw-therapist-filter-reset:hover {
+  background: #eef4ff;
+}
+
 .sw-grid-wrapper {
   --sw-grid-row-height: 28px;
   --sw-grid-header-title-height: 42px;
@@ -248,9 +333,9 @@
     var(--sw-grid-header-prescription-height) +
     var(--sw-grid-header-total-row-height)
   );
-  --grid-line: #ccd6e3;
+  --grid-line: #d5deea;
   --grid-soft: #e7eef7;
-  --grid-strong: #7f93ad;
+  --grid-strong: #94a3b8;
   --grid-ink: #334155;
   --grid-title-bg: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
   --grid-fixed-bg: #f6f9fc;
@@ -3407,8 +3492,8 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 /* Current-status grid line cleanup: keep the outer frame and semantic dividers visually even. */
 .sw-grid-table {
-  border-left-width: 1.5px;
-  border-top-width: 1.5px;
+  border-left-width: 2px;
+  border-top-width: 2px;
 }
 
 .sw-grid-table thead .hdr-therapist,
@@ -3431,9 +3516,164 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   border-bottom-width: 1.5px !important;
 }
 
-.sw-grid-table .therapist-group-end,
-.sw-grid-table .total-group-start,
-.sw-grid-table .gc-total,
-.sw-grid-table .gc-new-patient {
+.sw-grid-table thead .sw-header-row-prescription-totals th {
+  border-bottom-width: 2px !important;
+}
+
+.sw-grid-table thead .sw-header-row-therapists th[rowspan="3"] {
+  border-bottom: 2px solid var(--grid-strong) !important;
+}
+
+.sw-grid-table thead .therapist-group-end,
+.sw-grid-table thead .total-group-start,
+.sw-grid-table thead .gc-total,
+.sw-grid-table thead .gc-new-patient {
   border-right-width: 1.5px !important;
+}
+
+.sw-grid-table tbody .therapist-group-start {
+  box-shadow: none !important;
+}
+
+.sw-grid-table tbody .therapist-group-end,
+.sw-grid-table tbody .gc-total,
+.sw-grid-table tbody .gc-new-patient {
+  border-color: var(--grid-line) !important;
+  border-right-width: 1px !important;
+  border-bottom-width: 1px !important;
+}
+
+.sw-grid-table tbody .gc-therapist-value.therapist-group-end {
+  border-right-color: #9fb0c4 !important;
+  border-right-width: 1.5px !important;
+}
+
+.sw-grid-table thead .therapist-group-start,
+.sw-grid-table tbody .gc-therapist-value.therapist-group-start {
+  box-shadow: none !important;
+}
+
+.sw-grid-table tbody td:nth-child(7) {
+  box-shadow: inset 1.5px 0 0 #9fb0c4 !important;
+}
+
+.sw-grid-table tbody .gc-total.total-group-start {
+  border-left-color: #b4c0cf !important;
+  border-left-width: 1px !important;
+  border-right-color: #9fb0c4 !important;
+  border-right-width: 1.5px !important;
+}
+
+.sw-grid-table thead .hdr-total,
+.sw-grid-table thead .hdr-grand-total.total-group-start {
+  border-right-color: #9fb0c4 !important;
+  border-right-width: 1.5px !important;
+}
+
+.sw-grid-table tr th:last-child,
+.sw-grid-table tr td:last-child {
+  border-right: 2px solid var(--grid-strong) !important;
+}
+
+.sw-grid-table tbody tr.tr-date-start td,
+.sw-grid-table tbody tr.tr-date-start td.therapist-group-start {
+  box-shadow: inset 0 1px 0 #aeb8c6 !important;
+}
+
+.sw-grid-table tbody tr.tr-date-start td:nth-child(7) {
+  box-shadow:
+    inset 1.5px 0 0 #9fb0c4,
+    inset 0 1px 0 #aeb8c6 !important;
+}
+
+/* Final status-grid border system: one boundary = one rendered line. */
+.sw-grid-table {
+  --grid-frame: #94a3b8;
+  --grid-divider: #9fb0c4;
+  --grid-row-divider: #aeb8c6;
+  --grid-line: #d7e0eb;
+  border-left: 2px solid var(--grid-frame);
+  border-top: 2px solid var(--grid-frame);
+}
+
+.sw-grid-table th,
+.sw-grid-table td {
+  border-color: var(--grid-line);
+  border-width: 0 1px 1px 0;
+  box-shadow: none;
+}
+
+.sw-grid-table .therapist-group-start,
+.sw-grid-table tbody td:nth-child(7),
+.sw-grid-table tbody tr.tr-date-start td:nth-child(7) {
+  box-shadow: none !important;
+}
+
+.sw-grid-table thead .sw-header-row-therapists th:nth-child(6),
+.sw-grid-table tbody td:nth-child(6),
+.sw-grid-table .therapist-group-end {
+  border-right-color: var(--grid-divider) !important;
+  border-right-width: 1.5px !important;
+}
+
+.sw-grid-table thead .sw-header-row-prescription-totals th,
+.sw-grid-table thead .sw-header-row-therapists th[rowspan="3"] {
+  border-bottom: 2px solid var(--grid-frame) !important;
+}
+
+.sw-grid-table thead .hdr-total,
+.sw-grid-table thead .hdr-grand-total.total-group-start,
+.sw-grid-table tbody .gc-total.total-group-start {
+  border-left-width: 0 !important;
+  border-right: 1.5px solid var(--grid-divider) !important;
+}
+
+.sw-grid-table thead .hdr-new-patient,
+.sw-grid-table thead .hdr-new-patient-total,
+.sw-grid-table tbody .gc-new-patient {
+  border-left-width: 0 !important;
+}
+
+.sw-grid-table tr th:last-child,
+.sw-grid-table tr td:last-child {
+  border-right: 2px solid var(--grid-frame) !important;
+}
+
+.sw-grid-table tbody tr.tr-date-start td {
+  border-top: 1.5px solid var(--grid-row-divider) !important;
+  box-shadow: none !important;
+}
+
+/* Status-grid seam alignment: keep therapist dividers on a single side. */
+.sw-grid-table thead .hdr-therapist {
+  border-left: 0 !important;
+  border-right: 1px solid var(--grid-line) !important;
+  box-shadow: none !important;
+}
+
+.sw-grid-table thead .therapist-group-start,
+.sw-grid-table tbody .therapist-group-start {
+  border-left: 0 !important;
+  box-shadow: none !important;
+}
+
+.sw-grid-table thead .sw-header-row-therapists th:nth-child(6),
+.sw-grid-table tbody td:nth-child(6),
+.sw-grid-table thead .hdr-therapist.therapist-group-end,
+.sw-grid-table thead .hdr-pres.therapist-group-end,
+.sw-grid-table thead .hdr-pres-total.therapist-group-end,
+.sw-grid-table tbody .gc-therapist-value.therapist-group-end {
+  border-right: 2px solid var(--grid-divider) !important;
+}
+
+.sw-grid-table tbody tr.tr-date-start td:nth-child(6),
+.sw-grid-table tbody tr.tr-date-start td:nth-child(7),
+.sw-grid-table tbody tr.tr-date-start .gc-therapist-value.therapist-group-start,
+.sw-grid-table tbody tr.tr-date-start .gc-therapist-value.therapist-group-end {
+  border-top: 1.5px solid var(--grid-row-divider) !important;
+  box-shadow: none !important;
+}
+
+.sw-grid-table tbody tr.tr-date-end td {
+  border-bottom: 1.5px solid var(--grid-row-divider) !important;
 }
