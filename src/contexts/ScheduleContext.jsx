@@ -523,6 +523,7 @@ export function ScheduleProvider({ children }) {
   // 충격파 스케줄 로드
   const loadShockwaveMemos = useCallback(async (year, month) => {
     setLoading(true);
+    setShockwaveMemos({});
     try {
       await waitForShockwaveWrites();
       const pageSize = 1000;

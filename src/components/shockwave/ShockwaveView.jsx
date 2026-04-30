@@ -253,7 +253,12 @@ function parseSchedulerPatientIdentity(content) {
       patientChart = p1;
     }
   } else {
-    patientName = cellContent.replace(/(\((-|\d+)\)|\*)+$/g, '').trim();
+    const cleaned = cellContent.replace(/(\((-|\d+)\)|\*)+$/g, '').trim();
+    if (/^\d+$/.test(cleaned)) {
+      patientChart = cleaned;
+    } else {
+      patientName = cleaned;
+    }
   }
 
   return { patientChart, patientName };
@@ -836,7 +841,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [hoverData, setHoverData] = useState(null);
   const [todayShortcutTooltip, setTodayShortcutTooltip] = useState(null);
   const [chartSelector, setChartSelector] = useState(null);
-  const [autoFillDialog, setAutoFillDialog] = useState(null);
   const contextMenuRef = useRef(null);
   const editInputRef = useRef(null);
   const imeOpenRef = useRef(false);
@@ -1143,14 +1147,57 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, []);
 
   const pickChartOption = useCallback((options, rawName) => {
+    if (!Array.isArray(options) || options.length === 0) return Promise.resolve(null);
+    const getOptionSortValue = (option) => {
+      const dateValue = String(option?.lastDate || '');
+      const visitValue = Number.parseInt(option?.nextVisit || '0', 10) || 0;
+      return `${dateValue}-${String(visitValue).padStart(4, '0')}`;
+    };
+    const distinctCharts = new Set(options.map((option) => String(option.chartNumber || '').trim()).filter(Boolean));
+    const distinctTreatmentTypes = new Set(
+      options
+        .map((option) => option.type)
+        .filter((type) => type === 'shockwave' || type === 'manual')
+    );
+    const shouldShowSelector = distinctCharts.size > 1 || distinctTreatmentTypes.size > 1;
+    if (!shouldShowSelector) return Promise.resolve(options[0]);
+
+    const chartOptions = Array.from(
+      options.reduce((map, option) => {
+        const chartNumber = String(option.chartNumber || '').trim();
+        const typeKey = option.type === 'manual' || option.type === 'shockwave' ? option.type : 'default';
+        const optionKey = `${chartNumber}__${typeKey}`;
+        const existing = map.get(optionKey);
+        if (chartNumber && (!existing || getOptionSortValue(option) > getOptionSortValue(existing))) {
+          map.set(optionKey, option);
+        }
+        return map;
+      }, new Map()).values()
+    ).sort((a, b) => getOptionSortValue(b).localeCompare(getOptionSortValue(a)));
+
     return new Promise((resolve) => {
-      setChartSelector({ options, rawName, resolve });
+      setChartSelector({ options: chartOptions, rawName, resolve });
     });
   }, []);
 
   const showAutoFillDialog = useCallback((dialogData) => {
-    return new Promise((resolve) => {
-      setAutoFillDialog({ ...dialogData, resolve });
+    if (!dialogData) return Promise.resolve(null);
+    const bodyPart =
+      dialogData.initialBodyPart ||
+      dialogData.latestBodyPart ||
+      (Array.isArray(dialogData.bodyParts) ? dialogData.bodyParts[0] : '') ||
+      '';
+
+    return Promise.resolve({
+      chartNumber: dialogData.chartNumber,
+      namePart: dialogData.namePart,
+      cleanName: dialogData.cleanName,
+      visitCount: dialogData.visitCount,
+      prescription: dialogData.prescription || '',
+      bodyPart,
+      memoList: Array.isArray(dialogData.initialMemoList) ? dialogData.initialMemoList : [],
+      type: dialogData.type,
+      doseTag: dialogData.doseTag,
     });
   }, []);
 
@@ -1185,18 +1232,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
     return latestMatch?.mergeSpan;
   }, [memos, weeks]);
-
-  const handleAutoFillConfirm = useCallback((result) => {
-    if (!autoFillDialog) return;
-    autoFillDialog.resolve(result);
-    setAutoFillDialog(null);
-  }, [autoFillDialog]);
-
-  const handleAutoFillCancel = useCallback(() => {
-    if (!autoFillDialog) return;
-    autoFillDialog.resolve(null);
-    setAutoFillDialog(null);
-  }, [autoFillDialog]);
 
   const parseSchedulerPatientText = useCallback((text) => {
     const raw = String(text || '').trim();
@@ -1427,7 +1462,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const chartNumber = String(item.chart_number || '').trim();
       if (!chartNumber) return;
       const doseTag = item.type === 'manual' ? getManualDoseTag(item.prescription) : '';
-      const candidateKey = `${chartNumber}__${item.type}__${doseTag || 'default'}`;
+      const candidateKey = `${chartNumber}__${item.type}`;
       if (!candidateMap.has(candidateKey)) {
         candidateMap.set(candidateKey, {
           chartNumber,
@@ -1448,6 +1483,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         (item.date === candidate.latestItem.date && itemVisit > latestVisit)
       ) {
         candidate.latestItem = item;
+        candidate.doseTag = doseTag;
       }
       if (item.body_part) {
         splitBodyParts(item.body_part).forEach((part) => {
@@ -1603,6 +1639,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   useEffect(() => {
     let cancelled = false;
     setLoadedMemosKey('');
+    setPendingDisplayValues({});
     Promise.resolve(onLoadMemos(currentYear, currentMonth)).finally(() => {
       if (!cancelled) {
         setLoadedMemosKey(getShockwaveScheduleScrollKey(currentYear, currentMonth));
@@ -4022,11 +4059,13 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       ? colRatios.map(r => `minmax(0, ${r}fr)`).join(' ')
       : `repeat(${colCount}, minmax(0, 1fr))`;
   }, [colRatios, colCount]);
+  const isScheduleMonthLoading = loadedMemosKey !== scheduleScrollKey;
+  const renderMemos = isScheduleMonthLoading ? {} : memos;
 
   return (
     <>
       <div 
-        className="shockwave-view animate-fade-in" 
+        className={`shockwave-view animate-fade-in${isScheduleMonthLoading ? ' is-month-loading' : ''}`}
         ref={viewRef} 
         tabIndex={0} 
         style={{
@@ -4043,6 +4082,14 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
           if (tooltipRef.current) positionTooltip(e.clientX, e.clientY);
         }}
       >
+      {isScheduleMonthLoading && (
+        <div className="shockwave-month-loading" role="status" aria-live="polite">
+          <div className="shockwave-month-loading-card">
+            <span className="shockwave-month-loading-spinner" />
+            <span>{currentYear}년 {String(currentMonth).padStart(2, '0')}월 스케줄 불러오는 중</span>
+          </div>
+        </div>
+      )}
       {weeks.map((weekDays, weekIdx) => (
         <div
           key={weekIdx}
@@ -4293,9 +4340,9 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                       // 2. Cells
                       for (let colIdx = 0; colIdx < colCount; colIdx++) {
                         const key = cellKey(weekIdx, dayIdx, rowIdx, colIdx);
-                        const cellData = memos[key];
+                        const cellData = renderMemos[key];
                         const content = normalizeSchedulerVisitSuffix(pendingDisplayValues[key] ?? cellData?.content ?? '');
-                        let mergeSpan = getEffectiveMergeSpan(key);
+                        let mergeSpan = getEffectiveMergeSpan(key, renderMemos);
 
                         const cellPrescription = cellData?.prescription || mergeSpan?.meta?.prescription || '';
                         const displayData = buildSchedulerCellDisplay(content, mergeSpan);
@@ -4587,7 +4634,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
         >
           {(() => {
             const firstKey = selectedKeys ? Array.from(selectedKeys)[0] : null;
-            const currentMemo = firstKey ? (memos[firstKey] || {}) : {};
+            const currentMemo = firstKey ? (renderMemos[firstKey] || {}) : {};
             const currentPrescription = currentMemo?.prescription || '';
             const currentBodyPart = currentMemo?.body_part || '';
             const currentParts = splitBodyParts(currentBodyPart);
@@ -4599,7 +4646,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
             let previousPrescription = null;
 
             const patientBodyPartsMap = new Map();
-            Object.entries(memos || {}).forEach(([memoKey, m]) => {
+            Object.entries(renderMemos || {}).forEach(([memoKey, m]) => {
               if (!m?.content) return;
               const { patientChart: mChart, patientName: mName } = parseSchedulerPatientIdentity(m.content);
               const isMatch = (patientChart && mChart && patientChart === mChart) || (patientName && mName && patientName === mName);
@@ -5106,23 +5153,25 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       {chartSelector && (
         <div className="shockwave-chart-selector-backdrop" onMouseDown={() => handleChartSelectorClose(null)}>
           <div className="shockwave-chart-selector" onMouseDown={(e) => e.stopPropagation()}>
-            <div className="shockwave-chart-selector-title">이력 선택</div>
+            <div className="shockwave-chart-selector-title">동명이인 선택</div>
             <div className="shockwave-chart-selector-subtitle">
-              {chartSelector.rawName} 환자의 자동완성 이력을 선택하세요.
+              {chartSelector.rawName} 환자의 차트번호를 선택하세요.
             </div>
             <div className="shockwave-chart-selector-options">
               {chartSelector.options.map((option) => (
                 <button
                   key={`${option.chartNumber}-${option.type}-${option.doseTag || 'default'}-${option.lastDate}`}
                   type="button"
-                  className="shockwave-chart-selector-option"
+                  className={`shockwave-chart-selector-option shockwave-chart-selector-option--${option.type === 'manual' ? 'manual' : 'shockwave'}`}
                   onClick={() => handleChartSelectorClose(option)}
                 >
-                  <span>{option.chartNumber}</span>
-                  <span>{option.namePart}</span>
-                  <span>{option.optionLabel}</span>
-                  <span>{option.nextVisit}회차</span>
-                  <span>{option.lastDate}</span>
+                  <span className="shockwave-chart-selector-type">
+                    {option.type === 'manual' ? '도수치료' : '충격파'}
+                  </span>
+                  <span className="shockwave-chart-selector-chart">{option.chartNumber}</span>
+                  <span className="shockwave-chart-selector-name">{option.namePart}</span>
+                  <span className="shockwave-chart-selector-detail">{option.optionLabel}</span>
+                  <span className="shockwave-chart-selector-meta">{option.nextVisit}회차 · {option.lastDate}</span>
                 </button>
               ))}
             </div>
@@ -5137,14 +5186,6 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
             </div>
           </div>
         </div>
-      )}
-
-      {autoFillDialog && (
-        <AutoFillDialogInner
-          dlg={autoFillDialog}
-          onConfirm={handleAutoFillConfirm}
-          onCancel={handleAutoFillCancel}
-        />
       )}
 
       {hoverData && (
