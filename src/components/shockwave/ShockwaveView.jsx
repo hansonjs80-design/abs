@@ -841,6 +841,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [hoverData, setHoverData] = useState(null);
   const [todayShortcutTooltip, setTodayShortcutTooltip] = useState(null);
   const [chartSelector, setChartSelector] = useState(null);
+  const [imePreviewCell, setImePreviewCell] = useState(null);
   const contextMenuRef = useRef(null);
   const editInputRef = useRef(null);
   const imeOpenRef = useRef(false);
@@ -4427,6 +4428,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                           }
 
                           const isEditing = editingCell === key;
+                          const isImePreview = imePreviewCell === key;
                           const isSelected = selectedKeys.has(key);
                           const isPrimary = selectedCell && selectedCell.w === weekIdx && selectedCell.d === dayIdx && selectedCell.r === rowIdx && selectedCell.c === colIdx;
                           const gridColumnStart = showTimeCol ? colIdx + 2 : colIdx + 1;
@@ -4529,7 +4531,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                                   }
                                 }}
                               >
-                                {!isEditing && (
+                                {!isEditing && !isImePreview && (
                                   <div className="sw-cell-display" style={{ pointerEvents: 'none' }}>
                                     {displayData.mainText ? <span className="sw-cell-main" style={prescriptionTextStyle}>{displayData.mainText}</span> : null}
                                   </div>
@@ -4538,11 +4540,11 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                                   key={isEditing && editSessionId ? editSessionId : 'hidden'}
                                   ref={(isEditing || isPrimary) ? editInputRef : null}
                                   className="sw-cell-input"
-                                  data-hidden-input={!isEditing ? 'true' : undefined}
+                                  data-hidden-input={!isEditing && !isImePreview ? 'true' : undefined}
                                   defaultValue={isEditing ? editValue : ''}
                                   onMouseDown={(e) => e.stopPropagation()}
                                   onClick={(e) => e.stopPropagation()}
-                                  style={isEditing ? {
+                                  style={(isEditing || isImePreview) ? {
                                     position: 'relative',
                                     width: '100%', height: '100%',
                                     zIndex: 2,
@@ -4569,6 +4571,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                                     }
                                   }}
                                   onBlur={(e) => {
+                                    setImePreviewCell((prev) => (prev === key ? null : prev));
                                     if (skipNextEditBlurSaveRef.current) {
                                       skipNextEditBlurSaveRef.current = false;
                                       return;
@@ -4581,13 +4584,12 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                                   }}
                                   onCompositionStart={() => {
                                     imeOpenRef.current = true;
+                                    setImePreviewCell(key);
                                     editDraftRef.current = { key, value: editInputRef.current?.value || '', dirty: true };
-                                    if (!isEditing) {
-                                      beginImeEditingCell(key, editInputRef.current?.value || '');
-                                    }
                                   }}
                                   onCompositionEnd={(e) => {
                                     imeOpenRef.current = false;
+                                    setImePreviewCell((prev) => (prev === key ? null : prev));
                                     scheduleEditDraftAutosave(key, e.currentTarget.value);
                                     if (!isEditing && e.currentTarget.value) {
                                       promoteFocusedInputToEditor(key, e.currentTarget.value);
@@ -5245,7 +5247,9 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                   </span>
                   <span className="shockwave-chart-selector-chart">{option.chartNumber}</span>
                   <span className="shockwave-chart-selector-name">{option.namePart}</span>
-                  <span className="shockwave-chart-selector-detail">{option.optionLabel}</span>
+                  <span className="shockwave-chart-selector-detail">
+                    {[option.prescription, option.latestBodyPart].filter(Boolean).join(' · ') || '최근 기록'}
+                  </span>
                   <span className="shockwave-chart-selector-meta">{option.nextVisit}회차 · {option.lastDate}</span>
                 </button>
               ))}

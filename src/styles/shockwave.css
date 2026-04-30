@@ -1049,7 +1049,7 @@
 }
 
 .shockwave-chart-selector {
-  width: min(420px, calc(100vw - 32px));
+  width: min(520px, calc(100vw - 32px));
   background: var(--bg-card);
   border: 1px solid #000;
   border-radius: 10px;
@@ -1334,28 +1334,33 @@
 }
 
 .shockwave-chart-selector-options {
-  margin-top: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 160px));
+  justify-content: center;
+  gap: 12px;
 }
 
 .shockwave-chart-selector-option {
   width: 100%;
+  min-height: 162px;
   border: 1.5px solid #cbd5e1;
   background: #fff;
-  border-radius: 12px;
-  padding: 12px 14px;
+  border-radius: 14px;
+  padding: 14px;
   display: grid;
-  grid-template-columns: auto minmax(92px, auto) minmax(0, 1fr);
+  grid-template-columns: 1fr;
   grid-template-areas:
-    "type chart name"
-    "type chart detail"
-    "type chart meta";
-  gap: 5px 12px;
-  align-items: center;
+    "type"
+    "chart"
+    "name"
+    "detail"
+    "meta";
+  gap: 9px;
+  align-items: stretch;
+  align-content: start;
   font: inherit;
-  text-align: left;
+  text-align: center;
   font-size: 0.86rem;
   font-weight: 700;
   color: var(--text-primary);
@@ -1364,13 +1369,13 @@
 }
 
 .shockwave-chart-selector-option--shockwave {
-  border-color: #7fb7ff;
-  background: linear-gradient(90deg, #e7f1ff 0%, #f8fbff 100%);
+  border-color: #60a5fa;
+  background: linear-gradient(180deg, #dbeafe 0%, #f8fbff 100%);
 }
 
 .shockwave-chart-selector-option--manual {
-  border-color: #63d59d;
-  background: linear-gradient(90deg, #dcfce7 0%, #f6fff9 100%);
+  border-color: #34d399;
+  background: linear-gradient(180deg, #dcfce7 0%, #f6fff9 100%);
 }
 
 .shockwave-chart-selector-option:hover {
@@ -1381,12 +1386,13 @@
 
 .shockwave-chart-selector-type {
   grid-area: type;
-  justify-self: start;
-  min-width: 74px;
-  padding: 8px 10px;
-  border-radius: 999px;
+  justify-self: center;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 10px;
+  border-radius: 12px;
   color: #fff;
-  font-size: 0.96rem;
+  font-size: 1rem;
   font-weight: 900;
   text-align: center;
   line-height: 1.15;
@@ -1402,13 +1408,14 @@
 
 .shockwave-chart-selector-chart {
   grid-area: chart;
-  min-width: 86px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.86);
-  border: 1px solid rgba(100, 116, 139, 0.25);
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1.5px solid rgba(100, 116, 139, 0.28);
   color: #0f172a;
-  font-size: 1.12rem;
+  font-size: 1.18rem;
   font-weight: 950;
   text-align: center;
   letter-spacing: 0;
@@ -1417,29 +1424,47 @@
 .shockwave-chart-selector-name {
   grid-area: name;
   color: #111827;
-  font-size: 1rem;
+  font-size: 1.02rem;
   font-weight: 900;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .shockwave-chart-selector-detail {
   grid-area: detail;
   color: #334155;
-  font-size: 0.82rem;
+  font-size: 0.92rem;
   font-weight: 800;
+  min-height: 1.2em;
 }
 
 .shockwave-chart-selector-meta {
   grid-area: meta;
   color: #64748b;
-  font-size: 0.76rem;
+  font-size: 0.84rem;
   font-weight: 800;
+  padding-top: 6px;
+  border-top: 1px solid rgba(100, 116, 139, 0.18);
 }
 
 .shockwave-chart-selector-actions {
   margin-top: 14px;
   display: flex;
   justify-content: flex-end;
+}
+
+@media (max-width: 560px) {
+  .shockwave-chart-selector {
+    width: min(420px, calc(100vw - 24px));
+  }
+
+  .shockwave-chart-selector-options {
+    grid-template-columns: 1fr;
+  }
+
+  .shockwave-chart-selector-option {
+    min-height: 0;
+  }
 }
 
 .shockwave-chart-selector-actions--compact {
