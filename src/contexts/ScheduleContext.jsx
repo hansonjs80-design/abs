@@ -585,8 +585,6 @@ export function ScheduleProvider({ children }) {
       if (prescription !== undefined) upsertData.prescription = prescription;
       if (body_part !== undefined) upsertData.body_part = body_part;
 
-      [upsertData] = await protectExistingScheduleContent([upsertData], { [key]: optimisticMemo });
-
       setShockwaveMemos(prev => {
         const next = { ...prev };
         const updated = { ...optimisticMemo, ...upsertData };
@@ -594,6 +592,8 @@ export function ScheduleProvider({ children }) {
         else delete next[key];
         return next;
       });
+
+      [upsertData] = await protectExistingScheduleContent([upsertData], { [key]: optimisticMemo });
 
       const { data, error } = await supabase
         .from('shockwave_schedules')
@@ -674,12 +674,6 @@ export function ScheduleProvider({ children }) {
       memosArray.forEach((item) => {
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
         previousMemos[key] = shockwaveMemos[key];
-      });
-
-      const guardedMemosArray = await protectExistingScheduleContent(memosArray, previousMemos);
-
-      guardedMemosArray.forEach((item) => {
-        const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
         optimisticMemos[key] = {
           ...(shockwaveMemos[key] || {}),
           ...item,
@@ -695,6 +689,8 @@ export function ScheduleProvider({ children }) {
         });
         return next;
       });
+
+      const guardedMemosArray = await protectExistingScheduleContent(memosArray, previousMemos);
       
       const { data, error } = await supabase
         .from('shockwave_schedules')
