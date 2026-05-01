@@ -4,6 +4,8 @@ import { syncTodayShockwaveScheduleToStats, syncMonthShockwaveScheduleToStats } 
 import { getTodayKST } from '../../lib/calendarUtils';
 import { useToast } from '../common/Toast';
 import { useSchedule } from '../../contexts/ScheduleContext';
+import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
+import { GridSkeleton, SettlementSkeleton } from '../common/LoadingSkeleton';
 import '../../styles/shockwave_stats.css';
 import ShockwaveDataGrid from './ShockwaveDataGrid';
 import ShockwaveSettlementView from './ShockwaveSettlementView';
@@ -76,6 +78,37 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     () => formatRecentPeriodLabel(recentPeriodMonths),
     [recentPeriodMonths]
   );
+
+  // Therapist filter state (lifted from ShockwaveDataGrid)
+  const displayTherapists = useMemo(
+    () => buildDisplayTherapists(safeTherapists, monthlyTherapists),
+    [safeTherapists, monthlyTherapists]
+  );
+  const therapistNameList = useMemo(
+    () => displayTherapists.map((t) => t.name).filter(Boolean),
+    [displayTherapists]
+  );
+  const [selectedTherapistNames, setSelectedTherapistNames] = useState([]);
+  useEffect(() => {
+    setSelectedTherapistNames((prev) => {
+      if (therapistNameList.length === 0) return [];
+      const valid = prev.filter((name) => therapistNameList.includes(name));
+      return valid.length > 0 ? valid : therapistNameList;
+    });
+  }, [therapistNameList]);
+  const selectedTherapistSet = useMemo(
+    () => new Set(selectedTherapistNames),
+    [selectedTherapistNames]
+  );
+  const toggleTherapistFilter = useCallback((name) => {
+    setSelectedTherapistNames((prev) => {
+      if (prev.includes(name)) {
+        if (prev.length <= 1) return prev;
+        return prev.filter((item) => item !== name);
+      }
+      return [...prev, name];
+    });
+  }, []);
   const fetchLogs = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -503,8 +536,12 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     }
   };
 
+  const showGridSkeleton = isLoading && safeLogs.length === 0 && activeSection === 'grid';
+  const showSettlementSkeleton = isLoading && safeLogs.length === 0 && activeSection === 'settlement';
+
   return (
     <div className="sw-stats-container animate-fade-in">
+      {isLoading && <div className="top-loading-bar" />}
       <div className="sw-stats-layout">
         <aside className="sw-stats-sidebar">
           <button
@@ -531,60 +568,105 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
           >
             설정
           </button>
+
+          {therapistNameList.length > 1 && (
+            <div className="sw-sidebar-filter" aria-label="치료사 필터">
+              <div className="sw-sidebar-filter-title">치료사 필터</div>
+              <div className="sw-sidebar-filter-list">
+                {displayTherapists.map((therapist, idx) => {
+                  const isSelected = selectedTherapistSet.has(therapist.name);
+                  const isLastSelected = isSelected && selectedTherapistNames.length <= 1;
+                  return (
+                    <label
+                      key={therapist.key || therapist.name}
+                      className={`sw-sidebar-filter-chip tone-${idx % 5} ${isSelected ? 'is-active' : ''}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        disabled={isLastSelected}
+                        onChange={() => toggleTherapistFilter(therapist.name)}
+                      />
+                      <span>{therapist.displayName || therapist.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <button
+                type="button"
+                className="sw-sidebar-filter-reset"
+                onClick={() => setSelectedTherapistNames(therapistNameList)}
+              >
+                전체 선택
+              </button>
+            </div>
+          )}
         </aside>
 
         <div className="sw-stats-panel">
           {activeSection === 'grid' && (
-            <div className="sw-stats-body sw-stats-body--grid">
-              <div className="sw-grid-card">
-                <div className="sw-grid-card-table">
-                  <ShockwaveStatsErrorBoundary>
-                    <ShockwaveDataGrid
-                      logs={safeLogs}
-                      therapists={safeTherapists}
-                      monthlyTherapists={monthlyTherapists}
-                      currentYear={currentYear}
-                      currentMonth={currentMonth}
-                      fetchLogs={fetchLogs}
-                      extraDraftRows={extraDraftRows}
-                      totalRecordCount={safeLogs.length}
-                      therapistCount={safeTherapists.length}
-                    />
-                  </ShockwaveStatsErrorBoundary>
-                </div>
-              </div>
+            <div className="sw-stats-body sw-stats-body--grid fade-transition-wrapper">
+              {showGridSkeleton ? (
+                <GridSkeleton rows={15} cols={8} />
+              ) : (
+                <>
+                  <div className="sw-grid-card">
+                    <div className="sw-grid-card-table">
+                      <ShockwaveStatsErrorBoundary>
+                        <ShockwaveDataGrid
+                          logs={safeLogs}
+                          therapists={safeTherapists}
+                          monthlyTherapists={monthlyTherapists}
+                          currentYear={currentYear}
+                          currentMonth={currentMonth}
+                          fetchLogs={fetchLogs}
+                          extraDraftRows={extraDraftRows}
+                          totalRecordCount={safeLogs.length}
+                          therapistCount={safeTherapists.length}
+                          selectedTherapistNames={selectedTherapistNames}
+                          onSelectedTherapistNamesChange={setSelectedTherapistNames}
+                        />
+                      </ShockwaveStatsErrorBoundary>
+                    </div>
+                  </div>
 
-              <div className="sw-stats-footer">
-                <button
-                  className="btn btn-secondary sw-add-rows-btn"
-                  onClick={() => setExtraDraftRows((prev) => prev + 10)}
-                >
-                  + 10행 추가
-                </button>
-              </div>
+                  <div className="sw-stats-footer">
+                    <button
+                      className="btn btn-secondary sw-add-rows-btn"
+                      onClick={() => setExtraDraftRows((prev) => prev + 10)}
+                    >
+                      + 10행 추가
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
           {activeSection === 'settlement' && (
-            <div className="sw-stats-body sw-stats-body--settlement">
-              <ShockwaveSettlementView
-                logs={safeLogs}
-                therapists={safeTherapists}
-                monthlyTherapists={monthlyTherapists}
-                currentMonth={currentMonth}
-                prescriptions={settlementPrescriptions}
-                prescriptionPrices={settlementPrices}
-                incentivePercentage={incentivePercentage}
-                recentMonthlySummaries={recentMonthlySummaries}
-                recentPeriodInput={recentPeriodInput}
-                recentPeriodLabel={recentPeriodLabel}
-                onRecentPeriodInputChange={setRecentPeriodInput}
-              />
+            <div className="sw-stats-body sw-stats-body--settlement fade-transition-wrapper">
+              {showSettlementSkeleton ? (
+                <SettlementSkeleton />
+              ) : (
+                <ShockwaveSettlementView
+                  logs={safeLogs}
+                  therapists={safeTherapists}
+                  monthlyTherapists={monthlyTherapists}
+                  currentMonth={currentMonth}
+                  prescriptions={settlementPrescriptions}
+                  prescriptionPrices={settlementPrices}
+                  incentivePercentage={incentivePercentage}
+                  recentMonthlySummaries={recentMonthlySummaries}
+                  recentPeriodInput={recentPeriodInput}
+                  recentPeriodLabel={recentPeriodLabel}
+                  onRecentPeriodInputChange={setRecentPeriodInput}
+                />
+              )}
             </div>
           )}
 
           {activeSection === 'new-patients' && (
-            <div className="sw-stats-body sw-stats-body--settlement">
+            <div className="sw-stats-body sw-stats-body--settlement fade-transition-wrapper">
               <ShockwaveNewPatientsView
                 logs={safeLogs}
                 therapists={safeTherapists}

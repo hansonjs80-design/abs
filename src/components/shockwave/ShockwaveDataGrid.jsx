@@ -44,6 +44,8 @@ export default function ShockwaveDataGrid({
   totalRecordCount,
   therapistCount,
   secondarySummaryLabel = '신규',
+  selectedTherapistNames: externalSelectedNames,
+  onSelectedTherapistNamesChange,
 }) {
   const { shockwaveSettings: settings } = useSchedule();
   const safeInputLogs = useMemo(
@@ -58,18 +60,22 @@ export default function ShockwaveDataGrid({
     () => buildDisplayTherapists(safeTherapists, monthlyTherapists),
     [safeTherapists, monthlyTherapists]
   );
-  const [selectedTherapistNames, setSelectedTherapistNames] = useState([]);
+  const [internalSelectedNames, setInternalSelectedNames] = useState([]);
+  const isControlled = externalSelectedNames !== undefined && onSelectedTherapistNamesChange !== undefined;
+  const selectedTherapistNames = isControlled ? externalSelectedNames : internalSelectedNames;
+  const setSelectedTherapistNames = isControlled ? onSelectedTherapistNamesChange : setInternalSelectedNames;
   const therapistNameList = useMemo(
     () => displayTherapists.map((therapist) => therapist.name).filter(Boolean),
     [displayTherapists]
   );
   useEffect(() => {
-    setSelectedTherapistNames((prev) => {
+    if (isControlled) return;
+    setInternalSelectedNames((prev) => {
       if (therapistNameList.length === 0) return [];
       const valid = prev.filter((name) => therapistNameList.includes(name));
       return valid.length > 0 ? valid : therapistNameList;
     });
-  }, [therapistNameList]);
+  }, [therapistNameList, isControlled]);
   const selectedTherapistSet = useMemo(
     () => new Set(selectedTherapistNames),
     [selectedTherapistNames]
@@ -102,7 +108,7 @@ export default function ShockwaveDataGrid({
       }
       return [...prev, name];
     });
-  }, []);
+  }, [setSelectedTherapistNames]);
 
   const runSyncForDate = useCallback(async () => {
     // 통계/현황 탭은 스케줄 표를 다시 쓰지 않는다.
@@ -1084,39 +1090,6 @@ export default function ShockwaveDataGrid({
   // ─── 10. RENDER ───────────────────────────────────────────
   return (
     <div className="sw-grid-shell">
-      {therapistNameList.length > 1 && (
-        <div className="sw-therapist-filter-bar" aria-label="치료사 필터">
-          <div className="sw-therapist-filter-title">치료사 필터</div>
-          <div className="sw-therapist-filter-list">
-            {displayTherapists.map((therapist, idx) => {
-              const isSelected = selectedTherapistSet.has(therapist.name);
-              const isLastSelected = isSelected && selectedTherapistNames.length <= 1;
-              return (
-                <label
-                  key={therapist.key || therapist.name}
-                  className={`sw-therapist-filter-chip tone-${idx % THERAPIST_COLORS.length} ${isSelected ? 'is-active' : ''}`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    disabled={isLastSelected}
-                    onChange={() => toggleTherapistFilter(therapist.name)}
-                  />
-                  <span>{therapist.displayName || therapist.name}</span>
-                </label>
-              );
-            })}
-          </div>
-          <button
-            type="button"
-            className="sw-therapist-filter-reset"
-            onClick={() => setSelectedTherapistNames(therapistNameList)}
-          >
-            전체
-          </button>
-        </div>
-      )}
-
     <div className="sw-grid-wrapper" ref={wrapRef} tabIndex={0} onMouseUp={onMouseUp}>
       <table className="sw-grid-table" style={{ minWidth: `${gridMinWidth}px` }}>
         <colgroup>

@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabaseClient';
 import { useToast } from '../components/common/Toast';
 import { syncTodayManualTherapyScheduleToStats, syncMonthManualTherapyScheduleToStats } from '../lib/manualTherapyUtils';
 import { getTodayKST } from '../lib/calendarUtils';
+import { buildDisplayTherapists } from '../lib/therapistDisplayUtils';
+import { GridSkeleton, SettlementSkeleton } from '../components/common/LoadingSkeleton';
 import ShockwaveDataGrid from '../components/shockwave/ShockwaveDataGrid';
 import ShockwaveNewPatientsView from '../components/shockwave/ShockwaveNewPatientsView';
 import ManualTherapyStatsView from '../components/shockwave/ManualTherapyStatsView';
@@ -90,6 +92,37 @@ export default function ManualTherapyStatsPage() {
     () => effectiveSettlementSettings.prescriptions,
     [effectiveSettlementSettings]
   );
+
+  // Therapist filter state (lifted from ShockwaveDataGrid)
+  const displayTherapists = useMemo(
+    () => buildDisplayTherapists(safeTherapists, monthlyManualTherapists),
+    [safeTherapists, monthlyManualTherapists]
+  );
+  const therapistNameList = useMemo(
+    () => displayTherapists.map((t) => t.name).filter(Boolean),
+    [displayTherapists]
+  );
+  const [selectedTherapistNames, setSelectedTherapistNames] = useState([]);
+  useEffect(() => {
+    setSelectedTherapistNames((prev) => {
+      if (therapistNameList.length === 0) return [];
+      const valid = prev.filter((name) => therapistNameList.includes(name));
+      return valid.length > 0 ? valid : therapistNameList;
+    });
+  }, [therapistNameList]);
+  const selectedTherapistSet = useMemo(
+    () => new Set(selectedTherapistNames),
+    [selectedTherapistNames]
+  );
+  const toggleTherapistFilter = useCallback((name) => {
+    setSelectedTherapistNames((prev) => {
+      if (prev.includes(name)) {
+        if (prev.length <= 1) return prev;
+        return prev.filter((item) => item !== name);
+      }
+      return [...prev, name];
+    });
+  }, []);
 
   const fetchLogs = useCallback(async () => {
     setIsLoading(true);
@@ -390,6 +423,7 @@ export default function ManualTherapyStatsPage() {
     <div className="animate-fade-in" style={{ height: '100%', overflow: 'auto' }}>
       <ManualTherapyStatsPageErrorBoundary>
         <div className="sw-stats-container animate-fade-in">
+          {isLoading && <div className="top-loading-bar" />}
           <div className="sw-stats-layout">
             <aside className="sw-stats-sidebar">
               <button
@@ -416,70 +450,117 @@ export default function ManualTherapyStatsPage() {
               >
                 설정
               </button>
+
+              {therapistNameList.length > 1 && (
+                <div className="sw-sidebar-filter" aria-label="치료사 필터">
+                  <div className="sw-sidebar-filter-title">치료사 필터</div>
+                  <div className="sw-sidebar-filter-list">
+                    {displayTherapists.map((therapist, idx) => {
+                      const isSelected = selectedTherapistSet.has(therapist.name);
+                      const isLastSelected = isSelected && selectedTherapistNames.length <= 1;
+                      return (
+                        <label
+                          key={therapist.key || therapist.name}
+                          className={`sw-sidebar-filter-chip tone-${idx % 5} ${isSelected ? 'is-active' : ''}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            disabled={isLastSelected}
+                            onChange={() => toggleTherapistFilter(therapist.name)}
+                          />
+                          <span>{therapist.displayName || therapist.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <button
+                    type="button"
+                    className="sw-sidebar-filter-reset"
+                    onClick={() => setSelectedTherapistNames(therapistNameList)}
+                  >
+                    전체 선택
+                  </button>
+                </div>
+              )}
             </aside>
 
             <div className="sw-stats-panel">
               {activeSection === 'grid' && (
-                <div className="sw-stats-body sw-stats-body--grid">
-                  <div className="sw-grid-card">
-                    <div className="sw-grid-card-table">
-                      <ShockwaveDataGrid
-                        logs={logs}
-                        therapists={safeTherapists}
-                        monthlyTherapists={monthlyManualTherapists}
-                        currentYear={currentYear}
-                        currentMonth={currentMonth}
-                        fetchLogs={fetchLogs}
-                        extraDraftRows={extraDraftRows}
-                        onApplyTodaySchedule={handleSyncFromScheduler}
-                        isApplyingTodaySchedule={isLoading}
-                        onApplyMonthSchedule={handleSyncMonthFromScheduler}
-                        isApplyingMonthSchedule={isLoading}
-                        tableName="manual_therapy_patient_logs"
-                        prescriptions={prescriptions}
-                        frozenColumnCount={shockwaveSettings?.frozen_columns ?? 6}
-                        title={`${currentMonth}월 도수치료 현황`}
-                        applyTodayLabel="오늘 도수 스케줄 적용"
-                        secondarySummaryLabel="신규"
-                      />
-                    </div>
-                  </div>
+                <div className="sw-stats-body sw-stats-body--grid fade-transition-wrapper">
+                  {isLoading && logs.length === 0 ? (
+                    <GridSkeleton rows={12} cols={8} />
+                  ) : (
+                    <>
+                      <div className="sw-grid-card">
+                        <div className="sw-grid-card-table">
+                          <ShockwaveDataGrid
+                            logs={logs}
+                            therapists={safeTherapists}
+                            monthlyTherapists={monthlyManualTherapists}
+                            currentYear={currentYear}
+                            currentMonth={currentMonth}
+                            fetchLogs={fetchLogs}
+                            extraDraftRows={extraDraftRows}
+                            onApplyTodaySchedule={handleSyncFromScheduler}
+                            isApplyingTodaySchedule={isLoading}
+                            onApplyMonthSchedule={handleSyncMonthFromScheduler}
+                            isApplyingMonthSchedule={isLoading}
+                            tableName="manual_therapy_patient_logs"
+                            prescriptions={prescriptions}
+                            frozenColumnCount={shockwaveSettings?.frozen_columns ?? 6}
+                            title={`${currentMonth}월 도수치료 현황`}
+                            applyTodayLabel="오늘 도수 스케줄 적용"
+                            secondarySummaryLabel="신규"
+                            selectedTherapistNames={selectedTherapistNames}
+                            onSelectedTherapistNamesChange={setSelectedTherapistNames}
+                          />
+                        </div>
+                      </div>
 
-                  <div className="sw-stats-footer">
-                    <button
-                      className="btn btn-secondary sw-add-rows-btn"
-                      onClick={() => setExtraDraftRows((prev) => prev + 10)}
-                    >
-                      + 10행 추가
-                    </button>
-                  </div>
+                      <div className="sw-stats-footer">
+                        <button
+                          className="btn btn-secondary sw-add-rows-btn"
+                          onClick={() => setExtraDraftRows((prev) => prev + 10)}
+                        >
+                          + 10행 추가
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
               {activeSection === 'settlement' && (
                 <ManualTherapySettlementErrorBoundary>
-                  <div className="sw-stats-body sw-stats-body--settlement">
-                    <ManualTherapyStatsView
-                      currentMonth={currentMonth}
-                      logs={logs}
-                      therapists={safeTherapists}
-                      monthlyTherapists={monthlyManualTherapists}
-                      prescriptions={prescriptions}
-                      incentivePercentage={effectiveSettlementSettings.incentive_percentage}
-                      prescriptionPrices={effectiveSettlementSettings.prescription_prices}
-                    />
-                    <ManualTherapySixMonthStats
-                      currentYear={currentYear}
-                      currentMonth={currentMonth}
-                      therapists={safeTherapists}
-                      settings={shockwaveSettings}
-                    />
+                  <div className="sw-stats-body sw-stats-body--settlement fade-transition-wrapper">
+                    {isLoading && logs.length === 0 ? (
+                      <SettlementSkeleton />
+                    ) : (
+                      <>
+                        <ManualTherapyStatsView
+                          currentMonth={currentMonth}
+                          logs={logs}
+                          therapists={safeTherapists}
+                          monthlyTherapists={monthlyManualTherapists}
+                          prescriptions={prescriptions}
+                          incentivePercentage={effectiveSettlementSettings.incentive_percentage}
+                          prescriptionPrices={effectiveSettlementSettings.prescription_prices}
+                        />
+                        <ManualTherapySixMonthStats
+                          currentYear={currentYear}
+                          currentMonth={currentMonth}
+                          therapists={safeTherapists}
+                          settings={shockwaveSettings}
+                        />
+                      </>
+                    )}
                   </div>
                 </ManualTherapySettlementErrorBoundary>
               )}
 
               {activeSection === 'new-patients' && (
-                <div className="sw-stats-body sw-stats-body--settlement">
+                <div className="sw-stats-body sw-stats-body--settlement fade-transition-wrapper">
                   <ShockwaveNewPatientsView
                     logs={logs}
                     therapists={safeTherapists}

@@ -517,7 +517,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [, setRangeEnd] = useState(null);                     // { w, d, r, c } (Shift 선택 끝점)
   const [selectedKeys, setSelectedKeys] = useState(() => new Set());
   const [editingCell, setEditingCell] = useState(null);       // "w-d-r-c" 키 문자열
-  const [editSessionId, setEditSessionId] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [pendingDisplayValues, setPendingDisplayValues] = useState({});
   const [loadedMemosKey, setLoadedMemosKey] = useState('');
@@ -1979,12 +1978,15 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     flushSync(() => {
       setEditingCell(key);
       setEditValue(content || '');
-      setEditSessionId(Date.now());
     });
+    if (editInputRef.current) {
+      editInputRef.current.value = content || '';
+    }
   }, [selectSingleCell, cellKey]);
 
   // ── 편집 저장 ──
-  const handleCellSave = useCallback(async (w, d, r, c, nextValue = editValue) => {
+  const handleCellSave = useCallback(async (w, d, r, c, nextValue) => {
+    const finalValue = nextValue !== undefined ? nextValue : (editInputRef.current?.value ?? editValue);
     const key = cellKey(w, d, r, c);
     if (editDraftRef.current?.key === key) {
       editDraftRef.current = null;
@@ -1994,10 +1996,10 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       editAutosaveTimerRef.current = null;
     }
     const oldContent = memos[key]?.content || '';
-    const immediateContent = String(nextValue ?? '').trim();
+    const immediateContent = String(finalValue ?? '').trim();
     setPendingDisplayValues((prev) => ({ ...prev, [key]: immediateContent }));
     setEditingCell(null);
-    const result = await buildSchedulerAutoText(w, d, r, c, nextValue);
+    const result = await buildSchedulerAutoText(w, d, r, c, finalValue);
     const newContent = normalizeSchedulerVisitSuffix(
       normalize4060StarOrder(typeof result === 'string' ? result : (result?.text || ''))
     );
@@ -3385,8 +3387,10 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     flushSync(() => {
       setEditingCell(key);
       setEditValue(nextValue);
-      if (preserveValue) setEditSessionId(Date.now());
     });
+    if (editInputRef.current) {
+      editInputRef.current.value = nextValue || '';
+    }
     focusEditInputImmediately();
   }, [focusEditInputImmediately]);
 
@@ -3681,7 +3685,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
         }
       });
     });
-  }, [editingCell, editSessionId]);
+  }, [editingCell]);
 
   useEffect(() => {
     if (!selectedCell || editingCell) return;
@@ -4282,7 +4286,6 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                                   </div>
                                 )}
                                 <input
-                                  key={isEditing && editSessionId ? editSessionId : 'hidden'}
                                   ref={(isEditing || isPrimary) ? editInputRef : null}
                                   className="sw-cell-input"
                                   data-hidden-input={!isEditing && !isImePreview ? 'true' : undefined}
@@ -4306,9 +4309,6 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                                   onInput={(e) => {
                                     const nextValue = e.currentTarget.value;
                                     editDraftRef.current = { key, value: nextValue, dirty: true };
-                                    if (isEditing) {
-                                      setEditValue(nextValue);
-                                    }
                                     if (imeOpenRef.current || e.nativeEvent?.isComposing) return;
                                     scheduleEditDraftAutosave(key, nextValue);
                                     if (!isEditing && e.currentTarget.value) {
@@ -4338,8 +4338,6 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                                     scheduleEditDraftAutosave(key, e.currentTarget.value);
                                     if (!isEditing && e.currentTarget.value) {
                                       promoteFocusedInputToEditor(key, e.currentTarget.value);
-                                    } else if (isEditing) {
-                                      setEditValue(e.currentTarget.value);
                                     }
                                   }}
                                 />

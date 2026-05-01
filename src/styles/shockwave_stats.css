@@ -57,6 +57,107 @@
   box-shadow: var(--shadow-md);
 }
 
+/* ── Sidebar Therapist Filter ── */
+.sw-sidebar-filter {
+  margin-top: 8px;
+  padding: 10px 8px;
+  border: 1px solid var(--border-color-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.sw-sidebar-filter-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.sw-sidebar-filter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.sw-sidebar-filter-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 1px solid #d8e1ee;
+  border-radius: var(--radius-sm);
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  transition: all var(--transition-fast);
+}
+
+.sw-sidebar-filter-chip:hover {
+  background: #eef4ff;
+  border-color: #b0c3dc;
+}
+
+.sw-sidebar-filter-chip.is-active {
+  border-color: #8fa3bd;
+  color: #1f2937;
+}
+
+.sw-sidebar-filter-chip.tone-0.is-active { background: #dbeafe; }
+.sw-sidebar-filter-chip.tone-1.is-active { background: #e9ddff; }
+.sw-sidebar-filter-chip.tone-2.is-active { background: #d8f3ea; }
+.sw-sidebar-filter-chip.tone-3.is-active { background: #ffe7c7; }
+.sw-sidebar-filter-chip.tone-4.is-active { background: #ffdced; }
+
+.sw-sidebar-filter-chip input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: #6d5dfc;
+  flex-shrink: 0;
+}
+
+.sw-sidebar-filter-chip input:disabled {
+  opacity: 0.55;
+}
+
+.sw-sidebar-filter-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sw-sidebar-filter-reset {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  min-height: 26px;
+  padding: 4px 8px;
+  border: 1px solid #d8e1ee;
+  border-radius: var(--radius-sm);
+  background: #f8fafc;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: center;
+  transition: all var(--transition-fast);
+}
+
+.sw-sidebar-filter-reset:hover {
+  background: #eef4ff;
+  border-color: #b0c3dc;
+}
+
 .sw-stats-panel {
   flex: 1;
   min-width: 0;

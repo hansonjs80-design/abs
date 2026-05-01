@@ -41,8 +41,9 @@ export function ScheduleProvider({ children }) {
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
-  const [calendarSlotSettings, setCalendarSlotSettings] = useState(null); // { year, month, week_slot_counts }
+  const [calendarSlotSettings, setCalendarSlotSettings] = useState(null);
   const shockwaveWriteQueueRef = useRef(new Map());
+  const loadCacheRef = useRef({ staffMemos: null, shockwaveMemos: null });
 
   const enqueueShockwaveWrite = useCallback((keys, task) => {
     const targetKeys = Array.from(new Set((keys || []).filter(Boolean)));
@@ -155,6 +156,7 @@ export function ScheduleProvider({ children }) {
   }, []);
 
   const navigateMonth = useCallback((delta) => {
+    loadCacheRef.current = { staffMemos: null, shockwaveMemos: null };
     setCurrentMonth(prev => {
       let newMonth = prev + delta;
       let newYear = currentYear;
@@ -166,12 +168,17 @@ export function ScheduleProvider({ children }) {
   }, [currentYear]);
 
   const goToMonth = useCallback((year, month) => {
+    loadCacheRef.current = { staffMemos: null, shockwaveMemos: null };
     setCurrentYear(year);
     setCurrentMonth(month);
   }, []);
 
-  // 직원 메모 로드
+  // 직원 메모 로드 (캐시 키로 중복 방지)
   const loadStaffMemos = useCallback(async (year, month, options = {}) => {
+    const cacheKey = `${year}-${month}-${options.includeAdjacentMonths ? 'adj' : 'single'}`;
+    if (loadCacheRef.current.staffMemos === cacheKey) return;
+    loadCacheRef.current.staffMemos = cacheKey;
+
     setLoading(true);
     try {
       const targetMonths = [{ year, month }];
@@ -201,6 +208,7 @@ export function ScheduleProvider({ children }) {
       setStaffMemos(memoMap);
     } catch (err) {
       console.error('Failed to load staff memos:', err);
+      loadCacheRef.current.staffMemos = null;
     } finally {
       setLoading(false);
     }
@@ -520,34 +528,28 @@ export function ScheduleProvider({ children }) {
     }
   }, [shockwaveSettings?.id]);
 
-  // 충격파 스케줄 로드
+  // 충격파 스케줄 로드 (단일 쿼리 + 캐시 키)
   const loadShockwaveMemos = useCallback(async (year, month) => {
+    const cacheKey = `${year}-${month}`;
+    if (loadCacheRef.current.shockwaveMemos === cacheKey) return;
+    loadCacheRef.current.shockwaveMemos = cacheKey;
+
     setLoading(true);
-    setShockwaveMemos({});
     try {
       await waitForShockwaveWrites();
-      const pageSize = 1000;
-      let from = 0;
-      let data = [];
 
-      while (true) {
-        const { data: page, error } = await supabase
-          .from('shockwave_schedules')
-          .select('*')
-          .eq('year', year)
-          .eq('month', month)
-          .order('week_index', { ascending: true })
-          .order('day_index', { ascending: true })
-          .order('row_index', { ascending: true })
-          .order('col_index', { ascending: true })
-          .range(from, from + pageSize - 1);
+      // 비어있지 않은 셀만 조회 (content가 비어있어도 merge_span이나 body_part 등이 있을 수 있으므로 전체 조회)
+      const { data, error } = await supabase
+        .from('shockwave_schedules')
+        .select('*')
+        .eq('year', year)
+        .eq('month', month)
+        .order('week_index', { ascending: true })
+        .order('day_index', { ascending: true })
+        .order('row_index', { ascending: true })
+        .order('col_index', { ascending: true });
 
-        if (error) throw error;
-
-        data = data.concat(page || []);
-        if (!page || page.length < pageSize) break;
-        from += pageSize;
-      }
+      if (error) throw error;
 
       const memoMap = {};
       (data || []).forEach(item => {
@@ -565,6 +567,7 @@ export function ScheduleProvider({ children }) {
       });
     } catch (err) {
       console.error('Failed to load shockwave memos:', err);
+      loadCacheRef.current.shockwaveMemos = null;
     } finally {
       setLoading(false);
     }
@@ -809,16 +812,19 @@ export function ScheduleProvider({ children }) {
         return data;
       }
 
-      // 해당 월 데이터 없음 → 가장 최근 이전 월 설정을 상속
+      // 해당 월 데이터 없음 → 가장 최근 이전 월 설정을 상속 (최근 12개월만 스캔)
       const currentValue = year * 12 + month;
+      const lookbackYear = month <= 12 ? year - 1 : year;
       const { data: previousRows, error: prevError } = await supabase
         .from('shockwave_monthly_therapists')
         .select('*')
         .eq('type', type)
+        .gte('year', lookbackYear)
         .order('year', { ascending: false })
         .order('month', { ascending: false })
         .order('slot_index')
-        .order('start_day');
+        .order('start_day')
+        .limit(50);
 
       const previousMonths = (previousRows || []).filter((item) => {
         const itemYear = Number(item.year);
