@@ -1592,7 +1592,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 /* Settlement tables: clean operational layout shared by shockwave and manual therapy. */
 .sw-stats-body--settlement {
   padding: 18px;
-  background: #f6f8fb;
+  background: #ffffff;
 }
 
 .sw-settlement-stack {
@@ -1607,7 +1607,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   border: 1px solid #dce3ed;
   border-radius: 10px;
   background: #ffffff;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  box-shadow: none;
 }
 
 .sw-settlement-header {

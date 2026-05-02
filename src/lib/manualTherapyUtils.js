@@ -271,17 +271,34 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
     .map((row) => row.id)
     .filter(Boolean);
 
+  const rowsToUpsert = rebuiltRows.filter((newRow) => {
+    const existing = (todayStats || []).find((oldRow) => oldRow.scheduler_cell_key === newRow.scheduler_cell_key);
+    if (!existing) return true; // Insert needed
+    
+    // Check for changes (Update needed)
+    if (existing.patient_name !== newRow.patient_name) return true;
+    if (String(existing.chart_number || '') !== String(newRow.chart_number || '')) return true;
+    if (String(existing.visit_count || '') !== String(newRow.visit_count || '')) return true;
+    if (String(existing.body_part || '') !== String(newRow.body_part || '')) return true;
+    if (existing.therapist_name !== newRow.therapist_name) return true;
+    if (existing.prescription !== newRow.prescription) return true;
+    if (Number(existing.prescription_count || 1) !== Number(newRow.prescription_count || 1)) return true;
+    
+    return false; // Exact match, skip upsert
+  });
+
   if (toDeleteIds.length > 0) {
     await supabase.from('manual_therapy_patient_logs').delete().in('id', toDeleteIds);
   }
-  if (rebuiltRows.length > 0) {
+  
+  if (rowsToUpsert.length > 0) {
     const { error: upsertError } = await supabase
       .from('manual_therapy_patient_logs')
-      .upsert(rebuiltRows, { onConflict: 'scheduler_cell_key' });
+      .upsert(rowsToUpsert, { onConflict: 'scheduler_cell_key' });
 
     if (upsertError) {
       if (!isMissingSchedulerCellKeyError(upsertError)) throw upsertError;
-      const fallbackRows = rebuiltRows.map(omitSchedulerCellKey);
+      const fallbackRows = rowsToUpsert.map(omitSchedulerCellKey);
       const fallbackDeleteIds = (todayStats || [])
         .filter((row) => overwriteManual ? true : row.source !== 'manual')
         .map((row) => row.id)
@@ -297,10 +314,10 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
     skipped: false,
     todayDateStr: todayDateStrFinal,
     extractedCount: newLogs.length,
-    insertedCount: rebuiltRows.length,
+    insertedCount: rowsToUpsert.length,
     updatedCount: 0,
     deletedCount: toDeleteIds.length,
-    totalUpdates: rebuiltRows.length + toDeleteIds.length,
+    totalUpdates: rowsToUpsert.length + toDeleteIds.length,
   };
 }
 

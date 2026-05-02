@@ -110,6 +110,8 @@ export default function ManualTherapyStatsView({
     };
   }, [incentivePercentage, normalizedPriceMap, safeLogs, safePrescriptions, displayTherapists]);
 
+  const showGrandTotal = settlement.summaryByTherapist.length > 1;
+
   return (
     <div className="sw-settlement-stack">
       <div className="sw-settlement-card">
@@ -123,7 +125,7 @@ export default function ManualTherapyStatsView({
         </div>
 
         <div className="sw-settlement-table-wrap sw-manual-settlement-table-wrap">
-          <table className="sw-settlement-table sw-manual-compact-settlement-table">
+          <table className="sw-settlement-table sw-manual-compact-settlement-table" style={{ tableLayout: 'fixed' }}>
             <thead>
               <tr>
                 <th className="label-col" rowSpan={2}>구분</th>
@@ -132,12 +134,12 @@ export default function ManualTherapyStatsView({
                     {item.therapist.name}
                   </th>
                 ))}
-                <th className="grand-col" rowSpan={2}>총 합계</th>
+                {showGrandTotal && <th className="grand-col" rowSpan={2}>총 합계</th>}
               </tr>
               <tr>
                 {settlement.summaryByTherapist.flatMap((item, therapistIndex) =>
                   safePrescriptions.map((prescription, prescriptionIndex) => (
-                    <th key={`${item.therapist.id || item.therapist.name}-${prescription}`} className={`prescription-col therapist-tone-${therapistIndex % 5}-sub${prescriptionIndex === safePrescriptions.length - 1 ? ' therapist-group-end' : ''}`}>
+                    <th key={`${item.therapist.id || item.therapist.name}-${prescription}`} className={`prescription-col therapist-tone-${therapistIndex % 5}-sub${prescriptionIndex === safePrescriptions.length - 1 ? ' therapist-group-end' : ''}`} style={{ width: '130px' }}>
                       {prescription}
                     </th>
                   ))
@@ -154,7 +156,16 @@ export default function ManualTherapyStatsView({
                     </td>
                   ))
                 )}
-                <td className="grand-value">{formatCount(settlement.grandTotalCount)}</td>
+                {showGrandTotal && <td className="grand-value">{formatCount(settlement.grandTotalCount)}</td>}
+              </tr>
+              <tr>
+                <th className="row-label">총 처방 건수</th>
+                {settlement.summaryByTherapist.map((item, therapistIndex) => (
+                  <td key={`total-count-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className={`merged-value therapist-group-end therapist-tone-${therapistIndex % 5}-cell`}>
+                    {formatCount(item.totalCount)}
+                  </td>
+                ))}
+                {showGrandTotal && <td className="grand-value">{formatCount(settlement.grandTotalCount)}</td>}
               </tr>
               <tr>
                 <th className="row-label">처방별 금액(원)</th>
@@ -165,7 +176,7 @@ export default function ManualTherapyStatsView({
                     </td>
                   ))
                 )}
-                <td className="grand-value amount">-</td>
+                {showGrandTotal && <td className="grand-value amount">-</td>}
               </tr>
               <tr>
                 <th className="row-label">결산 금액(원)</th>
@@ -174,7 +185,7 @@ export default function ManualTherapyStatsView({
                     {formatCurrency(item.amount)}
                   </td>
                 ))}
-                <td className="grand-value amount">{formatCurrency(settlement.grandAmount)}</td>
+                {showGrandTotal && <td className="grand-value amount">{formatCurrency(settlement.grandAmount)}</td>}
               </tr>
               <tr>
                 <th className="row-label">처방별 인센티브(원)</th>
@@ -185,7 +196,7 @@ export default function ManualTherapyStatsView({
                     </td>
                   ))
                 )}
-                <td className="grand-value incentive">-</td>
+                {showGrandTotal && <td className="grand-value incentive">-</td>}
               </tr>
               <tr>
                 <th className="row-label">총 인센티브 ({Number(incentivePercentage) || 0}%)</th>
@@ -194,7 +205,7 @@ export default function ManualTherapyStatsView({
                     {formatCurrency(item.incentive)}
                   </td>
                 ))}
-                <td className="grand-value incentive">{formatCurrency(settlement.grandIncentive)}</td>
+                {showGrandTotal && <td className="grand-value incentive">{formatCurrency(settlement.grandIncentive)}</td>}
               </tr>
             </tbody>
           </table>
