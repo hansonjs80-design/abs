@@ -1579,17 +1579,20 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       .map((item) => item?.key || `${item?.week_index}-${item?.day_index}-${item?.row_index}-${item?.col_index}`)
       .filter((key) => key && !key.includes('undefined'));
     if (keys.length === 0) return;
-    setPendingDisplayValues((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      keys.forEach((key) => {
-        if (key in next) {
-          delete next[key];
-          changed = true;
-        }
+    
+    setTimeout(() => {
+      setPendingDisplayValues((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        keys.forEach((key) => {
+          if (key in next) {
+            delete next[key];
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
       });
-      return changed ? next : prev;
-    });
+    }, 2000);
   }, []);
 
   const buildMemoSnapshotForKeys = useCallback((keys) => {
