@@ -3914,9 +3914,19 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   animation: spin-reload 0.8s linear infinite;
 }
 
-/* Reload button: force single line */
+/* Reload button: force single line + distinct style */
 .sw-stats-sidebar .sw-stats-side-tab[title] {
   white-space: nowrap;
   font-size: 0.78rem;
   padding: 10px 6px;
+  justify-content: center;
+  background: #e0edff;
+  color: #1d4ed8;
+  border-color: #93b4f5;
+}
+
+.sw-stats-sidebar .sw-stats-side-tab[title]:hover {
+  background: #c7dcff;
+  color: #1e3a8a;
+  border-color: #6b9cf0;
 }
