@@ -3784,32 +3784,32 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 /* Force all individual prescription columns to be exactly the same width */
 .sw-settlement-table thead .prescription-col,
 .sw-settlement-table tbody td:not(.label-col):not(.row-label):not([colspan]) {
-  width: 115px !important;
-  min-width: 115px !important;
-  max-width: 115px !important;
+  width: 135px !important;
+  min-width: 135px !important;
+  max-width: 135px !important;
 }
 
 .sw-compact-settlement-table thead .prescription-col,
 .sw-compact-settlement-table tbody td:not(.label-col):not(.row-label):not([colspan]) {
-  width: 115px !important;
-  min-width: 115px !important;
-  max-width: 115px !important;
+  width: 135px !important;
+  min-width: 135px !important;
+  max-width: 135px !important;
 }
 
 .sw-manual-compact-settlement-table thead .prescription-col,
 .sw-manual-compact-settlement-table tbody td:not(.label-col):not(.row-label):not([colspan]) {
-  width: 115px !important;
-  min-width: 115px !important;
-  max-width: 115px !important;
+  width: 135px !important;
+  min-width: 135px !important;
+  max-width: 135px !important;
 }
 
 /* Also apply to the specific grand total single-column cells */
 .sw-settlement-table thead th.grand-col.prescription-col,
 .sw-compact-settlement-table thead th.grand-col.prescription-col,
 .sw-manual-compact-settlement-table thead th.grand-col.prescription-col {
-  width: 115px !important;
-  min-width: 115px !important;
-  max-width: 115px !important;
+  width: 135px !important;
+  min-width: 135px !important;
+  max-width: 135px !important;
 }
 
 .sw-settlement-table thead th.grand-col[colspan="3"],
