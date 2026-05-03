@@ -983,6 +983,63 @@ export function ScheduleProvider({ children }) {
     }
   }, [loadNotices]);
 
+  // Real-time synchronization
+  useEffect(() => {
+    const channel = supabase.channel('schedule-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'shockwave_schedules' },
+        (payload) => {
+          if (payload.new && payload.new.year === currentYear && payload.new.month === currentMonth) {
+            const item = payload.new;
+            const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+            setShockwaveMemos(prev => {
+              const next = { ...prev };
+              if (shouldKeepShockwaveMemo(item)) next[key] = item;
+              else delete next[key];
+              return next;
+            });
+          } else if (payload.old && payload.eventType === 'DELETE') {
+            const item = payload.old;
+            if (item.year === currentYear && item.month === currentMonth) {
+              const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+              setShockwaveMemos(prev => {
+                const next = { ...prev };
+                delete next[key];
+                return next;
+              });
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'staff_schedules' },
+        (payload) => {
+          if (payload.new && payload.new.year === currentYear && payload.new.month === currentMonth) {
+            const item = payload.new;
+            const key = `${item.year}-${item.month}-${item.day}-${item.slot_index}`;
+            setStaffMemos(prev => ({ ...prev, [key]: item }));
+          } else if (payload.old && payload.eventType === 'DELETE') {
+            const item = payload.old;
+            if (item.year === currentYear && item.month === currentMonth) {
+              const key = `${item.year}-${item.month}-${item.day}-${item.slot_index}`;
+              setStaffMemos(prev => {
+                const next = { ...prev };
+                delete next[key];
+                return next;
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentYear, currentMonth, shouldKeepShockwaveMemo]);
+
   return (
     <ScheduleContext.Provider value={{
       currentYear, currentMonth,
