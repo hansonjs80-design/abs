@@ -3782,42 +3782,42 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 /* --- Adjust widths based on user request --- */
 .sw-settlement-table thead .prescription-col {
+  width: 75px !important;
+  min-width: 75px !important;
+}
+.sw-compact-settlement-table thead .prescription-col {
   width: 65px !important;
   min-width: 65px !important;
 }
-.sw-compact-settlement-table thead .prescription-col {
-  width: 52px !important;
-  min-width: 52px !important;
-}
 .sw-manual-compact-settlement-table thead .prescription-col {
-  width: 47px !important;
-  min-width: 47px !important;
+  width: 65px !important;
+  min-width: 65px !important;
 }
 
 .sw-settlement-table thead th.grand-col.prescription-col {
+  width: 75px !important;
+  min-width: 75px !important;
+}
+.sw-compact-settlement-table thead th.grand-col.prescription-col {
   width: 65px !important;
   min-width: 65px !important;
 }
-.sw-compact-settlement-table thead th.grand-col.prescription-col {
-  width: 52px !important;
-  min-width: 52px !important;
-}
 .sw-manual-compact-settlement-table thead th.grand-col.prescription-col {
-  width: 47px !important;
-  min-width: 47px !important;
+  width: 65px !important;
+  min-width: 65px !important;
 }
 
 .sw-settlement-table tbody td.grand-value:not([colspan]) {
+  width: 75px !important;
+  min-width: 75px !important;
+}
+.sw-compact-settlement-table tbody td.grand-value:not([colspan]) {
   width: 65px !important;
   min-width: 65px !important;
 }
-.sw-compact-settlement-table tbody td.grand-value:not([colspan]) {
-  width: 52px !important;
-  min-width: 52px !important;
-}
 .sw-manual-compact-settlement-table tbody td.grand-value:not([colspan]) {
-  width: 47px !important;
-  min-width: 47px !important;
+  width: 65px !important;
+  min-width: 65px !important;
 }
 
 .sw-settlement-table thead th.grand-col[colspan="3"],
@@ -3833,10 +3833,11 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   box-shadow: none !important;
   background: transparent !important;
   border: none !important;
-  padding: 0 !important;
+  margin-bottom: 2rem !important; /* Add gap between top/bottom cards */
 }
 
 /* Apply shadow and background to the table wrapper instead */
+.sw-grid-shell,
 .sw-settlement-table-wrap,
 .sw-compact-table-wrap,
 .sw-new-patient-table-wrap,
@@ -3875,6 +3876,15 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-new-patient-table thead .label-col,
 .sw-compact-new-patient-table thead .label-col {
   background: #ffffff !important;
+}
+
+/* Increase padding for 6-month summary table to increase row height */
+.sw-summary-table td,
+.sw-summary-table th,
+.sw-compact-summary-table td,
+.sw-compact-summary-table th {
+  padding-top: 14px !important;
+  padding-bottom: 14px !important;
 }
 
 /* Increase font size and weight for Settlement Amount and Total Incentive */
