@@ -3895,3 +3895,13 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   font-size: 1.2rem !important;
   font-weight: 800 !important;
 }
+
+/* ── Reload button spin animation ── */
+@keyframes spin-reload {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin-animation {
+  animation: spin-reload 0.8s linear infinite;
+}

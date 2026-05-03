@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { useSchedule } from '../contexts/ScheduleContext';
 import { supabase } from '../lib/supabaseClient';
 import { useToast } from '../components/common/Toast';
@@ -172,6 +173,40 @@ export default function ManualTherapyStatsPage() {
     };
   }, [currentMonth, currentYear, loadShockwaveMemos]);
 
+  // 탭이 다시 보일 때 (visibility change) 자동으로 데이터 갱신
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        setSchedulerMemosReady(false);
+        (async () => {
+          await loadShockwaveMemos(currentYear, currentMonth);
+          setSchedulerMemosReady(true);
+        })();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [currentYear, currentMonth, loadShockwaveMemos]);
+
+  // 수동 새로고침
+  const [isReloading, setIsReloading] = useState(false);
+  const handleReload = useCallback(async () => {
+    setIsReloading(true);
+    try {
+      setSchedulerMemosReady(false);
+      await loadShockwaveMemos(currentYear, currentMonth);
+      setSchedulerMemosReady(true);
+      lastAutoSyncKeyRef.current = null;
+      await fetchLogs();
+      addToast('도수치료 통계 데이터를 새로 불러왔습니다.', 'success');
+    } catch (err) {
+      console.error(err);
+      addToast('데이터 새로고침 중 오류가 발생했습니다.', 'error');
+    } finally {
+      setIsReloading(false);
+    }
+  }, [currentYear, currentMonth, loadShockwaveMemos, fetchLogs, addToast]);
+
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
@@ -191,9 +226,11 @@ export default function ManualTherapyStatsPage() {
     if (
       !schedulerMemosReady ||
       safeTherapists.length === 0 ||
-      isAutoSyncingToday ||
-      lastAutoSyncKeyRef.current === autoSyncKey
+      isAutoSyncingToday
     ) {
+      return;
+    }
+    if (lastAutoSyncKeyRef.current === autoSyncKey) {
       return;
     }
 
@@ -453,6 +490,20 @@ export default function ManualTherapyStatsPage() {
               >
                 설정
               </button>
+
+              <div style={{ marginTop: 'auto', padding: '12px 0' }}>
+                <button
+                  type="button"
+                  className="sw-stats-side-tab"
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, opacity: isReloading ? 0.6 : 1 }}
+                  onClick={handleReload}
+                  disabled={isReloading || isLoading}
+                  title="스케줄 데이터를 다시 불러와 통계에 반영합니다"
+                >
+                  <RefreshCw size={14} className={isReloading ? 'spin-animation' : ''} />
+                  {isReloading ? '새로고침 중...' : '데이터 새로고침'}
+                </button>
+              </div>
 
               {therapistNameList.length > 1 && (
                 <div className="sw-sidebar-filter" aria-label="치료사 필터">

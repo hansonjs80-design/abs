@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { syncTodayShockwaveScheduleToStats, syncMonthShockwaveScheduleToStats } from '../../lib/shockwaveSyncUtils';
 import { getTodayKST } from '../../lib/calendarUtils';
@@ -41,7 +42,7 @@ class ShockwaveStatsErrorBoundary extends React.Component {
   }
 }
 
-export default function ShockwaveStatsView({ currentYear, currentMonth, memos, therapists, schedulerMemosReady = false }) {
+export default function ShockwaveStatsView({ currentYear, currentMonth, memos, therapists, schedulerMemosReady = false, onReloadMemos }) {
   const { addToast } = useToast();
   const { shockwaveSettings, monthlyTherapists, loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
   const [logs, setLogs] = useState([]);
@@ -134,6 +135,26 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
       setIsLoading(false);
     }
   }, [currentYear, currentMonth, addToast]);
+
+  // 수동 새로고침: 스케줄 메모 + 통계 로그 + 자동동기화 재실행
+  const [isReloading, setIsReloading] = useState(false);
+  const handleReload = useCallback(async () => {
+    setIsReloading(true);
+    try {
+      // 1. 스케줄 메모를 다시 가져옴
+      if (onReloadMemos) await onReloadMemos();
+      // 2. 자동동기화 키를 리셋하여 다시 실행되도록
+      lastAutoSyncKeyRef.current = null;
+      // 3. DB에서 통계 로그 다시 가져옴
+      await fetchLogs();
+      addToast('통계 데이터를 새로 불러왔습니다.', 'success');
+    } catch (err) {
+      console.error(err);
+      addToast('데이터 새로고침 중 오류가 발생했습니다.', 'error');
+    } finally {
+      setIsReloading(false);
+    }
+  }, [onReloadMemos, fetchLogs, addToast]);
 
   useEffect(() => {
     fetchLogs();
@@ -238,9 +259,12 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     if (
       !schedulerMemosReady ||
       safeTherapists.length === 0 ||
-      isAutoSyncingToday ||
-      lastAutoSyncKeyRef.current === autoSyncKey
+      isAutoSyncingToday
     ) {
+      return;
+    }
+    // 이미 같은 키로 동기화가 완료되었으면 스킵 (탭 재진입 시 리셋됨)
+    if (lastAutoSyncKeyRef.current === autoSyncKey) {
       return;
     }
 
@@ -568,6 +592,20 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
           >
             설정
           </button>
+
+          <div style={{ marginTop: 'auto', padding: '12px 0' }}>
+            <button
+              type="button"
+              className="sw-stats-side-tab"
+              style={{ display: 'flex', alignItems: 'center', gap: 6, opacity: isReloading ? 0.6 : 1 }}
+              onClick={handleReload}
+              disabled={isReloading || isLoading}
+              title="스케줄 데이터를 다시 불러와 통계에 반영합니다"
+            >
+              <RefreshCw size={14} className={isReloading ? 'spin-animation' : ''} />
+              {isReloading ? '새로고침 중...' : '데이터 새로고침'}
+            </button>
+          </div>
 
           {therapistNameList.length > 1 && (
             <div className="sw-sidebar-filter" aria-label="치료사 필터">

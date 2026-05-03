@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useState } from 'react';
 import { useSchedule } from '../contexts/ScheduleContext';
 
 const ShockwaveStatsView = React.lazy(() => import('../components/shockwave/ShockwaveStatsView'));
@@ -59,6 +59,28 @@ export default function ShockwaveStatsPage() {
     };
   }, [currentYear, currentMonth, loadShockwaveMemos]);
 
+  // 탭이 다시 보일 때 (visibility change) 자동으로 데이터 갱신
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        setSchedulerMemosReady(false);
+        (async () => {
+          await loadShockwaveMemos(currentYear, currentMonth);
+          setSchedulerMemosReady(true);
+        })();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [currentYear, currentMonth, loadShockwaveMemos]);
+
+  // 수동 새로고침 콜백
+  const handleReloadMemos = useCallback(async () => {
+    setSchedulerMemosReady(false);
+    await loadShockwaveMemos(currentYear, currentMonth);
+    setSchedulerMemosReady(true);
+  }, [currentYear, currentMonth, loadShockwaveMemos]);
+
   return (
     <div className="animate-fade-in" style={{ height: '100%', overflow: 'auto' }}>
       <ShockwaveStatsPageErrorBoundary>
@@ -69,6 +91,7 @@ export default function ShockwaveStatsPage() {
             memos={shockwaveMemos}
             therapists={therapists}
             schedulerMemosReady={schedulerMemosReady}
+            onReloadMemos={handleReloadMemos}
           />
         </Suspense>
       </ShockwaveStatsPageErrorBoundary>
