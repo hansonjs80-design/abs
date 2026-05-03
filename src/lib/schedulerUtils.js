@@ -483,8 +483,13 @@ export function buildSchedulerCellDisplay(content, mergeSpan) {
   const mainText = String(content || '').trim();
   const memoList = getMemoListFromMergeSpan(mergeSpan);
   const hasDisplayText = Boolean(mainText || memoList.length);
+  const visitSuffix = getExplicitVisitSuffix(mainText);
+  const baseText = visitSuffix ? mainText.slice(0, -visitSuffix.length) : mainText;
+
   return {
     mainText,
+    baseText,
+    visitSuffix,
     hasDisplayText,
   };
 }

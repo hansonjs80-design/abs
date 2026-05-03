@@ -3869,17 +3869,29 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                           const hasMeaningfulContent = displayData.hasDisplayText && content.trim() && content.trim() !== '\u200B';
                           const noPrescription = hasMeaningfulContent && !cellPrescription;
                           const noBodyPart = hasMeaningfulContent && !String(cellData?.body_part || '').trim();
-                          const missingMeta = noPrescription || noBodyPart;
-                          const prescriptionTextStyle = missingMeta
-                            ? { color: '#b8860b' }
-                            : (prescriptionColor ? { color: prescriptionColor } : undefined);
-                          if (prescriptionColor) {
+                          
+                          let baseTextColor = undefined;
+                          let visitSuffixColor = undefined;
+
+                          if (noPrescription) {
+                            baseTextColor = '#b8860b';
+                            visitSuffixColor = '#b8860b';
+                            cls += ' no-prescription';
+                            inlineStyle.color = '#b8860b';
+                          } else if (noBodyPart) {
+                            baseTextColor = prescriptionColor || undefined;
+                            visitSuffixColor = '#b8860b';
+                            if (prescriptionColor) {
+                              cls += ' has-prescription-color';
+                              inlineStyle.color = prescriptionColor;
+                              inlineStyle['--prescription-color'] = prescriptionColor;
+                            }
+                          } else if (prescriptionColor) {
+                            baseTextColor = prescriptionColor;
+                            visitSuffixColor = prescriptionColor;
                             cls += ' has-prescription-color';
                             inlineStyle.color = prescriptionColor;
                             inlineStyle['--prescription-color'] = prescriptionColor;
-                          } else if (missingMeta) {
-                            cls += ' no-prescription';
-                            inlineStyle.color = '#b8860b';
                           }
 
                           // 마스터 셀 중앙 효과
@@ -3930,7 +3942,12 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                               >
                                 {!isEditing && !isImePreview && (
                                   <div className="sw-cell-display" style={{ pointerEvents: 'none' }}>
-                                    {displayData.mainText ? <span className="sw-cell-main" style={prescriptionTextStyle}>{displayData.mainText}</span> : null}
+                                    {displayData.hasDisplayText ? (
+                                      <span className="sw-cell-main">
+                                        <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
+                                        {displayData.visitSuffix ? <span style={visitSuffixColor ? { color: visitSuffixColor } : undefined}>{displayData.visitSuffix}</span> : null}
+                                      </span>
+                                    ) : null}
                                   </div>
                                 )}
                                 <input
@@ -4045,7 +4062,12 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                                 }}
                               >
                                 <div className="sw-cell-display">
-                                  {displayData.mainText ? <span className="sw-cell-main" style={prescriptionTextStyle}>{displayData.mainText}</span> : null}
+                                  {displayData.hasDisplayText ? (
+                                    <span className="sw-cell-main">
+                                      <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
+                                      {displayData.visitSuffix ? <span style={visitSuffixColor ? { color: visitSuffixColor } : undefined}>{displayData.visitSuffix}</span> : null}
+                                    </span>
+                                  ) : null}
                                 </div>
                               </div>
                             );
