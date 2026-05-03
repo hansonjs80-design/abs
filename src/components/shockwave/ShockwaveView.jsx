@@ -865,9 +865,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       }
       
       const cleanPatientName = String(item.patient_name).replace(/\*/g, '').trim();
-      const namePart = item.type === 'manual'
+      let namePart = item.type === 'manual'
         ? buildManualNamePart(cleanPatientName, item.prescription)
         : cleanPatientName;
+      // 사용자가 명시적으로 40/60을 제거한 경우, namePart에서도 도수 태그를 제거
+      if (userRemovedDoseTag) {
+        namePart = strip4060FromContent(namePart);
+      }
       const latestBodyPart = item.body_part || '';
       const prescriptions = Array.from(candidate.prescriptions);
       const bodyPartVisitMap = Object.fromEntries(candidate.bodyPartVisitMap.entries());
@@ -912,7 +916,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const effectiveBodyPart = selected.preferredBodyPart || selected.latestBodyPart || undefined;
     
     let autoText = `${selected.chartNumber}/${selected.namePart}`;
-    if (!selected.doseTag) {
+    if (!selected.doseTag && !userRemovedDoseTag) {
       const inputDoseMatch = rawName.match(/(40|60)(?:\(\d+\))?$/);
       if (inputDoseMatch) {
         autoText += inputDoseMatch[1];
@@ -921,7 +925,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     autoText += explicitVisitSuffix || `(${effectiveVisitCount})`;
     autoText = normalize4060StarOrder(autoText);
     
-    const autoPrescription = has4060Pattern(autoText) ? undefined : (selected.prescription || undefined);
+    // 사용자가 도수 태그를 제거한 경우, 처방을 명시적으로 비움
+    const autoPrescription = userRemovedDoseTag
+      ? ''
+      : (has4060Pattern(autoText) ? undefined : (selected.prescription || undefined));
     const inheritedMergeSpan = findLatestSchedulerMemoMeta(
       { w, d, r, c },
       selected.chartNumber,
@@ -3799,11 +3806,18 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                           }
 
                           const prescriptionColor = getPrescriptionColor(cellPrescription, effectivePrescriptionColors);
-                          const prescriptionTextStyle = prescriptionColor ? { color: prescriptionColor } : undefined;
+                          const hasMeaningfulContent = displayData.hasDisplayText && content.trim() && content.trim() !== '\u200B';
+                          const noPrescription = hasMeaningfulContent && !cellPrescription;
+                          const prescriptionTextStyle = noPrescription
+                            ? { color: '#b8860b' }
+                            : (prescriptionColor ? { color: prescriptionColor } : undefined);
                           if (prescriptionColor) {
                             cls += ' has-prescription-color';
                             inlineStyle.color = prescriptionColor;
                             inlineStyle['--prescription-color'] = prescriptionColor;
+                          } else if (noPrescription) {
+                            cls += ' no-prescription';
+                            inlineStyle.color = '#b8860b';
                           }
 
                           // 마스터 셀 중앙 효과
