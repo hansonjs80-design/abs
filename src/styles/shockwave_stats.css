@@ -3781,35 +3781,43 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 
 /* --- Adjust widths based on user request --- */
-/* Force all individual prescription columns to be exactly the same width */
-.sw-settlement-table thead .prescription-col,
-.sw-settlement-table tbody td:not(.label-col):not(.row-label):not([colspan]) {
-  width: 135px !important;
-  min-width: 135px !important;
-  max-width: 135px !important;
+.sw-settlement-table thead .prescription-col {
+  width: 75px !important;
+  min-width: 75px !important;
+}
+.sw-compact-settlement-table thead .prescription-col {
+  width: 65px !important;
+  min-width: 65px !important;
+}
+.sw-manual-compact-settlement-table thead .prescription-col {
+  width: 65px !important;
+  min-width: 65px !important;
 }
 
-.sw-compact-settlement-table thead .prescription-col,
-.sw-compact-settlement-table tbody td:not(.label-col):not(.row-label):not([colspan]) {
-  width: 135px !important;
-  min-width: 135px !important;
-  max-width: 135px !important;
+.sw-settlement-table thead th.grand-col.prescription-col {
+  width: 75px !important;
+  min-width: 75px !important;
 }
-
-.sw-manual-compact-settlement-table thead .prescription-col,
-.sw-manual-compact-settlement-table tbody td:not(.label-col):not(.row-label):not([colspan]) {
-  width: 135px !important;
-  min-width: 135px !important;
-  max-width: 135px !important;
+.sw-compact-settlement-table thead th.grand-col.prescription-col {
+  width: 65px !important;
+  min-width: 65px !important;
 }
-
-/* Also apply to the specific grand total single-column cells */
-.sw-settlement-table thead th.grand-col.prescription-col,
-.sw-compact-settlement-table thead th.grand-col.prescription-col,
 .sw-manual-compact-settlement-table thead th.grand-col.prescription-col {
-  width: 135px !important;
-  min-width: 135px !important;
-  max-width: 135px !important;
+  width: 65px !important;
+  min-width: 65px !important;
+}
+
+.sw-settlement-table tbody td.grand-value:not([colspan]) {
+  width: 75px !important;
+  min-width: 75px !important;
+}
+.sw-compact-settlement-table tbody td.grand-value:not([colspan]) {
+  width: 65px !important;
+  min-width: 65px !important;
+}
+.sw-manual-compact-settlement-table tbody td.grand-value:not([colspan]) {
+  width: 65px !important;
+  min-width: 65px !important;
 }
 
 .sw-settlement-table thead th.grand-col[colspan="3"],
@@ -3904,4 +3912,11 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 .spin-animation {
   animation: spin-reload 0.8s linear infinite;
+}
+
+/* Reload button: force single line */
+.sw-stats-sidebar .sw-stats-side-tab[title] {
+  white-space: nowrap;
+  font-size: 0.78rem;
+  padding: 10px 6px;
 }
