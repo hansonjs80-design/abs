@@ -4304,15 +4304,14 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                     <div className="context-menu-submenu context-menu-submenu--prescription">
                       <div className="context-menu-editor-panel">
                         <div className="context-menu-inline-column">
-                          <div className="context-menu-inline-label">
-                            <span>처방</span>
-                            {previousPrescriptionValue ? (
-                              <span className="context-menu-current-prescription">{previousPrescriptionValue}</span>
-                            ) : null}
-                          </div>
                           <div className="context-menu-prescription-row context-menu-prescription-row--dual">
                             <div className="context-menu-prescription-select-group">
-                              <label className="context-menu-prescription-select-label">충격파</label>
+                              <label className="context-menu-prescription-select-label">
+                                충격파
+                                {previousPrescriptionValue && shockwavePrescriptions.includes(previousPrescriptionValue) ? (
+                                  <span className="context-menu-current-prescription" style={{ marginLeft: '6px' }}>{previousPrescriptionValue}</span>
+                                ) : null}
+                              </label>
                               <select
                                 className="context-menu-select"
                                 value={shockwavePrescriptions.includes(currentPrescription) ? currentPrescription : ''}
@@ -4330,7 +4329,12 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                               </select>
                             </div>
                             <div className="context-menu-prescription-select-group">
-                              <label className="context-menu-prescription-select-label">도수치료</label>
+                              <label className="context-menu-prescription-select-label">
+                                도수치료
+                                {previousPrescriptionValue && manualTherapyPrescriptions.includes(previousPrescriptionValue) ? (
+                                  <span className="context-menu-current-prescription" style={{ marginLeft: '6px' }}>{previousPrescriptionValue}</span>
+                                ) : null}
+                              </label>
                               <select
                                 className="context-menu-select"
                                 value={manualTherapyPrescriptions.includes(currentPrescription) ? currentPrescription : ''}
@@ -4360,7 +4364,6 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                     <div className="context-menu-submenu">
                       <div className="context-menu-editor-panel">
                         <div className="context-menu-inline-column">
-                          <div className="context-menu-inline-label">부위</div>
                           <div className="context-menu-body-dropdown">
                           <div
                             className="context-menu-body-panel"
