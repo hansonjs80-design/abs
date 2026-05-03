@@ -16,493 +16,62 @@ import {
 import { useToast } from '../common/Toast';
 import MonthlyTherapistConfig from './MonthlyTherapistConfig';
 import SchedulerPatientSelector from './SchedulerPatientSelector';
-
-const HORIZONTAL_BORDER_COLOR = '#b7b7b7';
-const TIME_COL_WIDTH = 41;
-const SHOCKWAVE_DAY_COL_WIDTH_KEY = 'shockwave-day-col-width';
-const SHOCKWAVE_COL_RATIOS_KEY = 'shockwave-col-ratios';
-const SHOCKWAVE_ROW_HEIGHT_KEY = 'shockwave-row-height';
-const SHOCKWAVE_PENDING_DRAFTS_KEY = 'shockwave-pending-cell-drafts-v1';
-const SHOCKWAVE_MONTH_BACKUP_KEY = 'shockwave-month-backup-v1';
-const SHOCKWAVE_PENDING_DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-const TREATMENT_COMPLETE_BG = '#ffe599';
-const TREATMENT_CANCEL_BG = '#f4cccc';
-const SCHEDULER_HOLIDAY_BG = '#93c47d';
-const shockwaveScheduleScrollMemory = new Map();
-
-function getShockwaveScheduleScrollKey(year, month) {
-  return `${year}-${String(month).padStart(2, '0')}`;
-}
-
-function getPendingDraftId(year, month, key) {
-  return `${year}-${String(month).padStart(2, '0')}:${key}`;
-}
-
-function readPendingScheduleDrafts() {
-  if (typeof window === 'undefined') return {};
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(SHOCKWAVE_PENDING_DRAFTS_KEY) || '{}');
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-function writePendingScheduleDrafts(drafts) {
-  if (typeof window === 'undefined') return;
-  const entries = Object.entries(drafts || {}).filter(([, draft]) => {
-    const updatedAt = Number(draft?.updatedAt) || 0;
-    return Date.now() - updatedAt < SHOCKWAVE_PENDING_DRAFT_MAX_AGE_MS;
-  });
-  if (entries.length === 0) {
-    window.localStorage.removeItem(SHOCKWAVE_PENDING_DRAFTS_KEY);
-    return;
-  }
-  window.localStorage.setItem(SHOCKWAVE_PENDING_DRAFTS_KEY, JSON.stringify(Object.fromEntries(entries)));
-}
-
-function rememberPendingScheduleDraft(year, month, key, value) {
-  if (!key) return;
-  const drafts = readPendingScheduleDrafts();
-  drafts[getPendingDraftId(year, month, key)] = {
-    year,
-    month,
-    key,
-    value: value ?? '',
-    updatedAt: Date.now(),
-  };
-  writePendingScheduleDrafts(drafts);
-}
-
-function removePendingScheduleDraft(year, month, key) {
-  if (!key) return;
-  const drafts = readPendingScheduleDrafts();
-  delete drafts[getPendingDraftId(year, month, key)];
-  writePendingScheduleDrafts(drafts);
-}
-
-function readScheduleMonthBackups() {
-  if (typeof window === 'undefined') return {};
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(SHOCKWAVE_MONTH_BACKUP_KEY) || '{}');
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeScheduleMonthBackups(backups) {
-  if (typeof window === 'undefined') return;
-  const entries = Object.entries(backups || {}).filter(([, backup]) => {
-    const updatedAt = Number(backup?.updatedAt) || 0;
-    return Date.now() - updatedAt < SHOCKWAVE_PENDING_DRAFT_MAX_AGE_MS;
-  });
-  if (entries.length === 0) {
-    window.localStorage.removeItem(SHOCKWAVE_MONTH_BACKUP_KEY);
-    return;
-  }
-  window.localStorage.setItem(SHOCKWAVE_MONTH_BACKUP_KEY, JSON.stringify(Object.fromEntries(entries)));
-}
-
-function rememberScheduleMonthBackup(year, month, memos) {
-  if (typeof window === 'undefined') return;
-  const cells = {};
-  Object.entries(memos || {}).forEach(([key, memo]) => {
-    const content = String(memo?.content || '').trim();
-    const hasBgColor = memo?.bg_color !== undefined && memo?.bg_color !== null && memo?.bg_color !== '';
-    const hasPrescription = memo?.prescription !== undefined && memo?.prescription !== null && memo?.prescription !== '';
-    const hasBodyPart = memo?.body_part !== undefined && memo?.body_part !== null && memo?.body_part !== '';
-    const merge = memo?.merge_span;
-    const hasMerge = Boolean(merge) && (
-      (merge.rowSpan && merge.rowSpan !== 1) ||
-      (merge.colSpan && merge.colSpan !== 1) ||
-      merge.mergedInto ||
-      merge.meta
-    );
-    if (!content && !hasBgColor && !hasPrescription && !hasBodyPart && !hasMerge) return;
-    cells[key] = {
-      content: memo.content || '',
-      bg_color: memo.bg_color ?? null,
-      prescription: memo.prescription ?? null,
-      body_part: memo.body_part ?? null,
-      merge_span: memo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
-      updated_at: memo.updated_at || new Date().toISOString(),
-    };
-  });
-
-  const backups = readScheduleMonthBackups();
-  const id = getShockwaveScheduleScrollKey(year, month);
-  if (Object.keys(cells).length === 0) delete backups[id];
-  else backups[id] = { year, month, cells, updatedAt: Date.now() };
-  writeScheduleMonthBackups(backups);
-}
-
-function getManualDoseTag(prescription) {
-  const pres = String(prescription || '');
-  if (pres.includes('60')) return '60';
-  if (pres.includes('40')) return '40';
-  return '';
-}
-
-function buildManualNamePart(patientName, prescription) {
-  const cleanName = String(patientName || '').replace(/\*/g, '').trim();
-  const doseTag = getManualDoseTag(prescription);
-  if (!cleanName) return doseTag || '';
-  if (!doseTag || has4060Pattern(cleanName)) return cleanName;
-  return `${cleanName}${doseTag}`;
-}
-
-function getSchedulerHistoryTypeLabel(option) {
-  if (!option) return '';
-  if (option.type === 'manual') {
-    const doseTag = option.doseTag || getManualDoseTag(option.prescription);
-    return doseTag ? `도수치료 ${doseTag}` : '도수치료';
-  }
-  return '충격파';
-}
-
-function splitBodyParts(value) {
-  return String(value || '')
-    .split(',')
-    .map((part) => part.trim())
-    .filter(Boolean);
-}
-
-function normalizeBodyPartKey(part) {
-  return String(part || '')
-    .toLowerCase()
-    .replace(/\./g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function formatBodyPartInput(part) {
-  return toProperCase(String(part || '').trim()).replace(/\s+/g, ' ').trim();
-}
-
-function normalizePrescriptionColorKey(value) {
-  return String(value || '')
-    .normalize('NFKC')
-    .replace(/[\u200B-\u200D\uFEFF]/g, '')
-    .replace(/\s+/g, '')
-    .replace(/분$/u, '')
-    .toLowerCase();
-}
-
-function getPrescriptionColor(prescription, colorMap) {
-  if (!prescription || !colorMap) return null;
-  const direct = colorMap[prescription] || colorMap[normalizePrescriptionColorKey(prescription)];
-  if (direct) return direct;
-  const targetKey = normalizePrescriptionColorKey(prescription);
-  const match = Object.entries(colorMap).find(([key]) => normalizePrescriptionColorKey(key) === targetKey);
-  if (match?.[1]) return match[1];
-  if (!targetKey) return null;
-  const containedMatch = Object.entries(colorMap)
-    .sort(([a], [b]) => normalizePrescriptionColorKey(b).length - normalizePrescriptionColorKey(a).length)
-    .find(([key]) => {
-      const normalizedKey = normalizePrescriptionColorKey(key);
-      return normalizedKey && (targetKey.includes(normalizedKey) || normalizedKey.includes(targetKey));
-    });
-  return containedMatch?.[1] || null;
-}
-
-function filterPrescriptionColorMap(colorMap, prescriptions) {
-  const allowed = new Set(
-    (Array.isArray(prescriptions) ? prescriptions : [])
-      .map((item) => normalizePrescriptionColorKey(item))
-      .filter(Boolean)
-  );
-  if (!colorMap || allowed.size === 0) return {};
-
-  return Object.entries(colorMap).reduce((acc, [key, value]) => {
-    if (!key || !value) return acc;
-    if (allowed.has(normalizePrescriptionColorKey(key))) {
-      acc[key] = value;
-    }
-    return acc;
-  }, {});
-}
-
-function parseSchedulerPatientIdentity(content) {
-  const cellContent = String(content || '');
-  let patientChart = '';
-  let patientName = '';
-
-  if (cellContent.includes('/')) {
-    const parts = cellContent.split('/');
-    const p0 = parts[0].trim();
-    const p1 = (parts[1] || '').trim().replace(/(\((-|\d+)\)|\*)+$/g, '').trim();
-    if (/\d/.test(p0)) {
-      patientChart = p0;
-      patientName = p1;
-    } else {
-      patientName = p0;
-      patientChart = p1;
-    }
-  } else {
-    const cleaned = cellContent.replace(/(\((-|\d+)\)|\*)+$/g, '').trim();
-    if (/^\d+$/.test(cleaned)) {
-      patientChart = cleaned;
-    } else {
-      patientName = cleaned;
-    }
-  }
-
-  return { patientChart, patientName };
-}
-
-function getSchedulerVisitInputValue(content) {
-  const raw = String(content || '').trim();
-  if (!raw) return '';
-  if (/\(-\)$/.test(raw)) return '-';
-  if (/\*$/.test(raw)) return '*';
-  const match = raw.match(/\((\d+)\)$/);
-  return match?.[1] || '';
-}
-
-function getExplicitVisitSuffix(content) {
-  const raw = String(content || '').trim();
-  if (!raw) return '';
-  if (/\*$/.test(raw)) return '*';
-  const match = raw.match(/\((-|\d+)\)$/);
-  return match?.[0] || '';
-}
-
-function normalizeSchedulerVisitSuffix(content) {
-  const raw = String(content || '').trim();
-  if (!raw) return raw;
-
-  const suffix = getExplicitVisitSuffix(raw);
-  const base = raw
-    .replace(/(\((-|\d+)\)|\*)+$/g, '')
-    .replace(/\(-?\d*$/g, '')
-    .replace(/[()]+$/g, '')
-    .trim();
-
-  return suffix ? `${base}${suffix}` : base;
-}
-
-function normalizeVisitInputValue(value) {
-  const raw = String(value ?? '').trim();
-  if (!raw) return '';
-  if (raw === '-') return '-';
-  if (raw === '*') return '*';
-  const numeric = raw.replace(/[^\d]/g, '');
-  if (!numeric) return '';
-  const parsed = parseInt(numeric, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? String(parsed) : '';
-}
-
-function applyVisitCountToSchedulerContent(content, visitInput) {
-  const raw = normalizeSchedulerVisitSuffix(content);
-  if (!raw) return raw;
-  const base = raw.replace(/(\((-|\d+)\)|\*)+$/g, '').trim();
-  const normalizedVisit = normalizeVisitInputValue(visitInput);
-  if (!normalizedVisit) return base;
-  if (normalizedVisit === '-') return `${base}(-)`;
-  if (normalizedVisit === '*') return `${base}*`;
-  return `${base}(${normalizedVisit})`;
-}
-
-function stepVisitInputValue(value, delta) {
-  const normalized = normalizeVisitInputValue(value);
-  if (normalized === '-') {
-    return delta > 0 ? '*' : '-';
-  }
-  if (normalized === '*') {
-    return delta > 0 ? '2' : '';
-  }
-  const numeric = parseInt(normalized || '0', 10) || 0;
-  if (delta > 0) return String(Math.max(1, numeric + delta));
-  if (numeric <= 1) return '*';
-  return String(Math.max(1, numeric + delta));
-}
-
-function getMemoListFromMergeSpan(mergeSpan) {
-  const list = mergeSpan?.meta?.memo_list;
-  if (!Array.isArray(list)) return [];
-  return list.map((item) => String(item || '').trim()).filter(Boolean);
-}
-
-function normalizeReservationTimeValue(value) {
-  const raw = String(value ?? '').trim();
-  if (!raw) return '';
-  const colonMatch = raw.match(/^(\d{1,2}):(\d{1,2})$/);
-  if (colonMatch) {
-    const hh = Math.min(23, Math.max(0, parseInt(colonMatch[1], 10) || 0));
-    const mm = Math.min(59, Math.max(0, parseInt(colonMatch[2], 10) || 0));
-    return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-  }
-  const compact = raw.replace(/[^\d]/g, '');
-  if (compact.length === 3) {
-    const hh = Math.min(23, Math.max(0, parseInt(compact.slice(0, 1), 10) || 0));
-    const mm = Math.min(59, Math.max(0, parseInt(compact.slice(1), 10) || 0));
-    return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-  }
-  if (compact.length >= 4) {
-    const hh = Math.min(23, Math.max(0, parseInt(compact.slice(0, 2), 10) || 0));
-    const mm = Math.min(59, Math.max(0, parseInt(compact.slice(2, 4), 10) || 0));
-    return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-  }
-  return '';
-}
-
-function stepReservationTimeValue(value, deltaMinutes) {
-  const normalized = normalizeReservationTimeValue(value);
-  const match = normalized.match(/^(\d{1,2}):(\d{2})$/);
-  if (!match) return normalized;
-  const total = (parseInt(match[1], 10) * 60) + parseInt(match[2], 10) + deltaMinutes;
-  const wrapped = ((total % 1440) + 1440) % 1440;
-  const hh = String(Math.floor(wrapped / 60)).padStart(2, '0');
-  const mm = String(wrapped % 60).padStart(2, '0');
-  return `${hh}:${mm}`;
-}
-
-function timeValueToMinutes(value) {
-  const normalized = normalizeReservationTimeValue(value);
-  const match = normalized.match(/^(\d{1,2}):(\d{2})$/);
-  if (!match) return null;
-  return (parseInt(match[1], 10) * 60) + parseInt(match[2], 10);
-}
-
-function minutesToTimeValue(totalMinutes) {
-  const bounded = Math.min(1439, Math.max(0, totalMinutes));
-  const hh = String(Math.floor(bounded / 60)).padStart(2, '0');
-  const mm = String(bounded % 60).padStart(2, '0');
-  return `${hh}:${mm}`;
-}
-
-function stepReservationTimeWithinCellBase(value, baseValue, deltaMinutes) {
-  const baseMinutes = timeValueToMinutes(baseValue);
-  if (baseMinutes === null) return stepReservationTimeValue(value, deltaMinutes);
-
-  const currentMinutes = timeValueToMinutes(value) ?? baseMinutes;
-  const minMinutes = Math.max(0, baseMinutes - 10);
-  const maxMinutes = Math.min(1439, baseMinutes + 10);
-  const nextMinutes = Math.min(maxMinutes, Math.max(minMinutes, currentMinutes + deltaMinutes));
-  return minutesToTimeValue(nextMinutes);
-}
-
-function getReservationTimeFromMergeSpan(mergeSpan) {
-  return String(mergeSpan?.meta?.reservation_time || '').trim();
-}
-
-function buildMergeSpanWithReservationTime(mergeSpan, reservationTime) {
-  const base = mergeSpan || { rowSpan: 1, colSpan: 1, mergedInto: null };
-  const nextMeta = { ...(base.meta || {}) };
-  const nextTime = normalizeReservationTimeValue(reservationTime);
-  if (nextTime) nextMeta.reservation_time = nextTime;
-  else delete nextMeta.reservation_time;
-
-  const nextMergeSpan = { ...base };
-  if (Object.keys(nextMeta).length > 0) nextMergeSpan.meta = nextMeta;
-  else delete nextMergeSpan.meta;
-  return nextMergeSpan;
-}
-
-function stripReservationTimeFromMergeSpan(mergeSpan) {
-  return buildMergeSpanWithReservationTime(mergeSpan, '');
-}
-
-function buildMergeSpanWithVisitCopyLink(mergeSpan, link) {
-  const base = mergeSpan || { rowSpan: 1, colSpan: 1, mergedInto: null };
-  const nextMeta = { ...(base.meta || {}) };
-  const sourceKey = String(link?.sourceKey || '').trim();
-  const originalContent = String(link?.originalContent || '');
-  const incrementedContent = String(link?.incrementedContent || '');
-
-  if (sourceKey && originalContent && incrementedContent) {
-    nextMeta.visit_copy_source_key = sourceKey;
-    nextMeta.visit_copy_original_content = originalContent;
-    nextMeta.visit_copy_incremented_content = incrementedContent;
-  } else {
-    delete nextMeta.visit_copy_source_key;
-    delete nextMeta.visit_copy_original_content;
-    delete nextMeta.visit_copy_incremented_content;
-  }
-
-  const nextMergeSpan = { ...base };
-  if (Object.keys(nextMeta).length > 0) nextMergeSpan.meta = nextMeta;
-  else delete nextMergeSpan.meta;
-  return nextMergeSpan;
-}
-
-function clearVisitCopyLinkFromMergeSpan(mergeSpan) {
-  return buildMergeSpanWithVisitCopyLink(mergeSpan, null);
-}
-
-function isUndoShortcutEvent(event) {
-  if (!event || !(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey) return false;
-  const key = String(event.key || '').toLowerCase();
-  return event.code === 'KeyZ' || key === 'z';
-}
-
-function buildMergeSpanWithMemoList(mergeSpan, memoList) {
-  const base = mergeSpan || { rowSpan: 1, colSpan: 1, mergedInto: null };
-  const nextList = Array.isArray(memoList)
-    ? memoList.map((item) => String(item || '').trim()).filter(Boolean)
-    : [];
-  const nextMeta = { ...(base.meta || {}) };
-  if (nextList.length > 0) nextMeta.memo_list = nextList;
-  else delete nextMeta.memo_list;
-
-  const nextMergeSpan = { ...base };
-  if (Object.keys(nextMeta).length > 0) nextMergeSpan.meta = nextMeta;
-  else delete nextMergeSpan.meta;
-  return nextMergeSpan;
-}
-
-function cloneMergeSpanWithMeta(mergeSpan, overrides = {}) {
-  const base = mergeSpan || { rowSpan: 1, colSpan: 1, mergedInto: null };
-  const next = { ...base, ...overrides };
-  if (base.meta && typeof base.meta === 'object') {
-    next.meta = { ...base.meta };
-  }
-  return next;
-}
-
-function buildSchedulerCellDisplay(content, mergeSpan) {
-  const mainText = String(content || '').trim();
-  const memoList = getMemoListFromMergeSpan(mergeSpan);
-  const hasDisplayText = Boolean(mainText || memoList.length);
-  return {
-    mainText,
-    hasDisplayText,
-  };
-}
-
-function buildSchedulerMemoSortKey(memoKey, weeks) {
-  const parts = String(memoKey || '').split('-').map(Number);
-  if (parts.length !== 4 || parts.some((value) => Number.isNaN(value))) return '';
-  const [w, d, r, c] = parts;
-  const dayInfo = weeks?.[w]?.[d];
-  const dateKey = dayInfo
-    ? `${dayInfo.year}-${String(dayInfo.month).padStart(2, '0')}-${String(dayInfo.day).padStart(2, '0')}`
-    : '';
-  if (!dateKey) return '';
-  return `${dateKey}-${String(r).padStart(3, '0')}-${String(c).padStart(3, '0')}`;
-}
-
-function addBodyPartToMap(map, part) {
-  if (!part) return;
-  const normalizedKey = normalizeBodyPartKey(part);
-  if (!normalizedKey) return;
-  const existing = map.get(normalizedKey);
-  if (!existing) {
-    map.set(normalizedKey, part);
-  } else {
-    const existingDotCount = (existing.match(/\./g) || []).length;
-    const newDotCount = (part.match(/\./g) || []).length;
-    const existingUpperCount = existing.length - existing.replace(/[A-Z]/g, '').length;
-    const newUpperCount = part.length - part.replace(/[A-Z]/g, '').length;
-    if (
-      newDotCount > existingDotCount ||
-      (newDotCount === existingDotCount && newUpperCount > existingUpperCount)
-    ) {
-      map.set(normalizedKey, part);
-    }
-  }
-}
+import {
+  HORIZONTAL_BORDER_COLOR,
+  TIME_COL_WIDTH,
+  SHOCKWAVE_DAY_COL_WIDTH_KEY,
+  SHOCKWAVE_COL_RATIOS_KEY,
+  SHOCKWAVE_ROW_HEIGHT_KEY,
+  SHOCKWAVE_PENDING_DRAFTS_KEY,
+  SHOCKWAVE_MONTH_BACKUP_KEY,
+  SHOCKWAVE_PENDING_DRAFT_MAX_AGE_MS,
+  TREATMENT_COMPLETE_BG,
+  TREATMENT_CANCEL_BG,
+  SCHEDULER_HOLIDAY_BG,
+  shockwaveScheduleScrollMemory,
+  getShockwaveScheduleScrollKey,
+  getPendingDraftId,
+  readPendingScheduleDrafts,
+  writePendingScheduleDrafts,
+  rememberPendingScheduleDraft,
+  removePendingScheduleDraft,
+  readScheduleMonthBackups,
+  writeScheduleMonthBackups,
+  rememberScheduleMonthBackup,
+  getManualDoseTag,
+  buildManualNamePart,
+  getSchedulerHistoryTypeLabel,
+  splitBodyParts,
+  normalizeBodyPartKey,
+  formatBodyPartInput,
+  normalizePrescriptionColorKey,
+  getPrescriptionColor,
+  filterPrescriptionColorMap,
+  parseSchedulerPatientIdentity,
+  getSchedulerVisitInputValue,
+  getExplicitVisitSuffix,
+  normalizeSchedulerVisitSuffix,
+  normalizeVisitInputValue,
+  applyVisitCountToSchedulerContent,
+  stepVisitInputValue,
+  getMemoListFromMergeSpan,
+  normalizeReservationTimeValue,
+  stepReservationTimeValue,
+  timeValueToMinutes,
+  minutesToTimeValue,
+  stepReservationTimeWithinCellBase,
+  getReservationTimeFromMergeSpan,
+  buildMergeSpanWithReservationTime,
+  stripReservationTimeFromMergeSpan,
+  buildMergeSpanWithVisitCopyLink,
+  clearVisitCopyLinkFromMergeSpan,
+  isUndoShortcutEvent,
+  buildMergeSpanWithMemoList,
+  cloneMergeSpanWithMeta,
+  buildSchedulerCellDisplay,
+  buildSchedulerMemoSortKey,
+  addBodyPartToMap,
+} from '../../lib/schedulerUtils';
 
 export default function ShockwaveView({ therapists, settings, memos = {}, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
   const { currentYear, currentMonth, navigateMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
