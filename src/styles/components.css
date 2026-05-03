@@ -421,14 +421,14 @@
 }
 
 .top-tab--shockwave.active .month-nav-btn {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.5);
   color: #111827;
-  border-color: rgba(0, 0, 0, 0.1);
+  border-color: rgba(255, 255, 255, 0.6);
 }
 
 .top-tab--shockwave.active .month-nav-btn:hover,
 .top-tab--shockwave.active .month-picker-label:hover {
-  background: rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.65);
 }
 
 /* ── 버튼 ── */
