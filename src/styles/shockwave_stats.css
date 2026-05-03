@@ -3826,3 +3826,31 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   width: auto !important;
   min-width: auto !important;
 }
+
+
+/* --- Remove gray backgrounds & shadows for print-friendly look --- */
+.sw-settlement-card {
+  box-shadow: none !important;
+  background: #ffffff !important;
+}
+
+.sw-settlement-table th,
+.sw-settlement-table td,
+.sw-compact-settlement-table th,
+.sw-compact-settlement-table td,
+.sw-manual-compact-settlement-table th,
+.sw-manual-compact-settlement-table td,
+.sw-summary-table th,
+.sw-summary-table td,
+.sw-compact-summary-table th,
+.sw-compact-summary-table td {
+  background: #ffffff !important;
+}
+
+
+.sw-new-patient-table th,
+.sw-new-patient-table td,
+.sw-compact-new-patient-table th,
+.sw-compact-new-patient-table td {
+  background: #ffffff !important;
+}
