@@ -991,6 +991,45 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     };
   }, [currentYear, currentMonth, onLoadMemos]);
 
+  // ── 기존 40/60 셀에 누락된 처방 일괄 패치 ──
+  const prescriptionPatchKeyRef = useRef(null);
+  useEffect(() => {
+    const monthKey = getShockwaveScheduleScrollKey(currentYear, currentMonth);
+    if (loadedMemosKey !== monthKey) return;
+    if (prescriptionPatchKeyRef.current === monthKey) return; // 이미 이번 달 패치 완료
+    if (!memos || Object.keys(memos).length === 0) return;
+
+    const fixEntries = [];
+    Object.entries(memos).forEach(([key, memo]) => {
+      const content = String(memo?.content || '').trim();
+      if (!content) return;
+      const existingPrescription = String(memo?.prescription || '').trim();
+      if (existingPrescription) return;
+      const autoPres = get4060PrescriptionFromContent(content);
+      if (!autoPres) return;
+      fixEntries.push({ key, prescription: autoPres });
+    });
+
+    prescriptionPatchKeyRef.current = monthKey; // 패치 시도 표시 (빈 배열이어도)
+
+    if (fixEntries.length === 0) return;
+
+    (async () => {
+      const bulkUpdates = fixEntries.map(({ key, prescription }) => ({
+        key,
+        content: memos[key]?.content || '',
+        bg_color: memos[key]?.bg_color || null,
+        merge_span: memos[key]?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+        prescription,
+        body_part: memos[key]?.body_part || null,
+      }));
+      const ok = await saveShockwaveMemosBulk(currentYear, currentMonth, bulkUpdates);
+      if (ok) {
+        await onLoadMemos(currentYear, currentMonth);
+      }
+    })();
+  }, [loadedMemosKey, currentYear, currentMonth, memos, saveShockwaveMemosBulk, onLoadMemos]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (loadedMemosKey !== getShockwaveScheduleScrollKey(currentYear, currentMonth)) return;
