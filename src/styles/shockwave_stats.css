@@ -3834,23 +3834,28 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   background: #ffffff !important;
 }
 
-.sw-settlement-table th,
-.sw-settlement-table td,
-.sw-compact-settlement-table th,
-.sw-compact-settlement-table td,
-.sw-manual-compact-settlement-table th,
-.sw-manual-compact-settlement-table td,
-.sw-summary-table th,
-.sw-summary-table td,
-.sw-compact-summary-table th,
-.sw-compact-summary-table td {
+/* Make side labels and grand total cells white instead of gray/blue */
+.sw-settlement-table .label-col,
+.sw-settlement-table .row-label,
+.sw-settlement-table .grand-col,
+.sw-settlement-table .grand-value,
+.sw-compact-settlement-table .label-col,
+.sw-compact-settlement-table .row-label,
+.sw-compact-settlement-table .grand-col,
+.sw-compact-settlement-table .grand-value,
+.sw-manual-compact-settlement-table .label-col,
+.sw-manual-compact-settlement-table .row-label,
+.sw-manual-compact-settlement-table .grand-col,
+.sw-manual-compact-settlement-table .grand-value {
   background: #ffffff !important;
 }
 
-
-.sw-new-patient-table th,
-.sw-new-patient-table td,
-.sw-compact-new-patient-table th,
-.sw-compact-new-patient-table td {
+/* Make summary table and new patient table headers white instead of gray/blue */
+.sw-summary-table thead th,
+.sw-summary-table tbody th.month-label,
+.sw-compact-summary-table thead th,
+.sw-compact-summary-table tbody th.month-label,
+.sw-new-patient-table thead .label-col,
+.sw-compact-new-patient-table thead .label-col {
   background: #ffffff !important;
 }
