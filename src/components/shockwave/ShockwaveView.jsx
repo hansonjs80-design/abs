@@ -640,6 +640,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         candidate.latestSortKey = sortKey;
       }
 
+      // 부위가 비어있지 않은 가장 최근 기록을 추적
+      const memoBodyPart = String(memo.body_part || '').trim();
+      if (memoBodyPart && (!candidate.latestNonEmptyBodyPartSortKey || sortKey > candidate.latestNonEmptyBodyPartSortKey)) {
+        candidate.latestNonEmptyBodyPart = memoBodyPart;
+        candidate.latestNonEmptyBodyPartSortKey = sortKey;
+      }
+
       splitBodyParts(memo.body_part || '').forEach((part) => addBodyPartToMap(candidate.bodyPartsMap, part));
       if (memo.prescription) candidate.prescriptions.add(memo.prescription);
     });
@@ -661,23 +668,28 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           ? (lastVisit > 0 ? lastVisit : 1)
           : (parseInt(incrementedParsed?.suffixValue || '0', 10) || (lastVisit > 0 ? lastVisit + 1 : 1));
 
-        return {
-          chartNumber: candidate.chartNumber,
-          namePart: incrementedParsed?.rawName || latestParsed?.rawName || '',
-          cleanName: latestParsed?.cleanName || '',
-          nextText,
-          nextVisit,
-          lastDate: latestDate,
-          prescription: candidate.latestMemo?.prescription || '',
-          prescriptions: Array.from(candidate.prescriptions),
-          bodyParts: Array.from(candidate.bodyPartsMap.values()),
-          latestBodyPart: candidate.latestMemo?.body_part || '',
-          initialBodyParts: splitBodyParts(candidate.latestMemo?.body_part || ''),
-          type: 'scheduler',
-          doseTag: '',
-          optionLabel: candidate.latestMemo?.prescription || '최근 스케줄',
-          mergeSpan: latestMergeSpan,
-        };
+          // 부위: 최신 메모에 값이 있으면 사용, 없으면 이전 기록에서 가져옴
+          const effectiveLatestBodyPart = String(candidate.latestMemo?.body_part || '').trim()
+            || candidate.latestNonEmptyBodyPart
+            || '';
+
+          return {
+            chartNumber: candidate.chartNumber,
+            namePart: incrementedParsed?.rawName || latestParsed?.rawName || '',
+            cleanName: latestParsed?.cleanName || '',
+            nextText,
+            nextVisit,
+            lastDate: latestDate,
+            prescription: candidate.latestMemo?.prescription || '',
+            prescriptions: Array.from(candidate.prescriptions),
+            bodyParts: Array.from(candidate.bodyPartsMap.values()),
+            latestBodyPart: effectiveLatestBodyPart,
+            initialBodyParts: splitBodyParts(effectiveLatestBodyPart),
+            type: 'scheduler',
+            doseTag: '',
+            optionLabel: candidate.latestMemo?.prescription || '최근 스케줄',
+            mergeSpan: latestMergeSpan,
+          };
       })
       .sort((a, b) => {
         if (a.lastDate !== b.lastDate) return b.lastDate.localeCompare(a.lastDate);
@@ -803,6 +815,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           type: item.type,
           doseTag,
           latestItem: item,
+          latestNonEmptyBodyPart: '',
           bodyPartsMap: new Map(),
           bodyPartVisitMap: new Map(),
           prescriptions: new Set(),
@@ -847,6 +860,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           }
         });
       }
+      // 부위가 비어있지 않은 가장 최근 기록 추적
+      const itemBodyPart = String(item.body_part || '').trim();
+      if (itemBodyPart && !candidate.latestNonEmptyBodyPart) {
+        candidate.latestNonEmptyBodyPart = itemBodyPart;
+      }
       if (item.prescription) {
         candidate.prescriptions.add(item.prescription);
       }
@@ -872,7 +890,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       if (userRemovedDoseTag) {
         namePart = strip4060FromContent(namePart);
       }
-      const latestBodyPart = item.body_part || '';
+      // 부위: 최신 기록에 값이 있으면 사용, 없으면 이전 기록에서 가져옴
+      const latestBodyPart = String(item.body_part || '').trim()
+        || candidate.latestNonEmptyBodyPart
+        || '';
       const prescriptions = Array.from(candidate.prescriptions);
       const bodyPartVisitMap = Object.fromEntries(candidate.bodyPartVisitMap.entries());
       const preferredBodyPart = currentBodyParts.find((part) => bodyPartVisitMap[normalizeBodyPartKey(part)]) || '';
@@ -3847,14 +3868,16 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                           const prescriptionColor = getPrescriptionColor(cellPrescription, effectivePrescriptionColors);
                           const hasMeaningfulContent = displayData.hasDisplayText && content.trim() && content.trim() !== '\u200B';
                           const noPrescription = hasMeaningfulContent && !cellPrescription;
-                          const prescriptionTextStyle = noPrescription
+                          const noBodyPart = hasMeaningfulContent && !String(cellData?.body_part || '').trim();
+                          const missingMeta = noPrescription || noBodyPart;
+                          const prescriptionTextStyle = missingMeta
                             ? { color: '#b8860b' }
                             : (prescriptionColor ? { color: prescriptionColor } : undefined);
                           if (prescriptionColor) {
                             cls += ' has-prescription-color';
                             inlineStyle.color = prescriptionColor;
                             inlineStyle['--prescription-color'] = prescriptionColor;
-                          } else if (noPrescription) {
+                          } else if (missingMeta) {
                             cls += ' no-prescription';
                             inlineStyle.color = '#b8860b';
                           }
