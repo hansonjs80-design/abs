@@ -3900,6 +3900,6 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-manual-compact-settlement-table td.grand-value.amount,
 .sw-manual-compact-settlement-table td.merged-value.incentive,
 .sw-manual-compact-settlement-table td.grand-value.incentive {
-  font-size: 1.05rem !important;
+  font-size: 1.2rem !important;
   font-weight: 800 !important;
 }
