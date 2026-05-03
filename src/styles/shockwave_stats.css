@@ -3845,7 +3845,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08) !important;
-  border: 1px solid #e2e8f0;
+  border: 2px solid #cbd5e1;
   overflow: hidden;
 }
 
