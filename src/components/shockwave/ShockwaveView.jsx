@@ -3992,25 +3992,6 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                 <button
                   type="button"
                   className="shockwave-week-today-btn"
-                  onClick={scrollToTodayWeek}
-                  onMouseEnter={updateTodayShortcutTooltip}
-                  onMouseMove={updateTodayShortcutTooltip}
-                  onMouseLeave={() => setTodayShortcutTooltip(null)}
-                  onFocus={(event) => {
-                    const rect = event.currentTarget.getBoundingClientRect();
-                    updateTodayShortcutTooltip({
-                      clientX: rect.left + rect.width / 2,
-                      clientY: rect.top,
-                    });
-                  }}
-                  onBlur={() => setTodayShortcutTooltip(null)}
-                  disabled={todayWeekIdx < 0}
-                >
-                  오늘
-                </button>
-                <button
-                  type="button"
-                  className="shockwave-week-today-btn"
                   onClick={() => setShowTherapistConfig(true)}
                 >
                   설정
@@ -4019,52 +4000,48 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
             </div>
           )}
           <div className="shockwave-days" style={{ position: 'relative' }}>
-            {weekIdx > 0 && (
-              <>
-              <div className="shockwave-week-floating-actions shockwave-week-floating-actions--left">
-                <button
-                  type="button"
-                  className="shockwave-week-today-btn"
-                  onClick={scrollToTodayWeek}
-                  onMouseEnter={updateTodayShortcutTooltip}
-                  onMouseMove={updateTodayShortcutTooltip}
-                  onMouseLeave={() => setTodayShortcutTooltip(null)}
-                  onFocus={(event) => {
-                    const rect = event.currentTarget.getBoundingClientRect();
-                    updateTodayShortcutTooltip({
-                      clientX: rect.left + rect.width / 2,
-                      clientY: rect.top,
-                    });
-                  }}
-                  onBlur={() => setTodayShortcutTooltip(null)}
-                  disabled={todayWeekIdx < 0}
-                >
-                  오늘
-                </button>
-              </div>
-              <div className="shockwave-week-floating-actions shockwave-week-floating-actions--right">
-                <button
-                  type="button"
-                  className="shockwave-week-today-btn"
-                  onClick={scrollToTodayWeek}
-                  onMouseEnter={updateTodayShortcutTooltip}
-                  onMouseMove={updateTodayShortcutTooltip}
-                  onMouseLeave={() => setTodayShortcutTooltip(null)}
-                  onFocus={(event) => {
-                    const rect = event.currentTarget.getBoundingClientRect();
-                    updateTodayShortcutTooltip({
-                      clientX: rect.left + rect.width / 2,
-                      clientY: rect.top,
-                    });
-                  }}
-                  onBlur={() => setTodayShortcutTooltip(null)}
-                  disabled={todayWeekIdx < 0}
-                >
-                  오늘
-                </button>
-              </div>
-              </>
-            )}
+            <div className="shockwave-week-floating-actions shockwave-week-floating-actions--left">
+              <button
+                type="button"
+                className="shockwave-week-today-btn"
+                onClick={scrollToTodayWeek}
+                onMouseEnter={updateTodayShortcutTooltip}
+                onMouseMove={updateTodayShortcutTooltip}
+                onMouseLeave={() => setTodayShortcutTooltip(null)}
+                onFocus={(event) => {
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  updateTodayShortcutTooltip({
+                    clientX: rect.left + rect.width / 2,
+                    clientY: rect.top,
+                  });
+                }}
+                onBlur={() => setTodayShortcutTooltip(null)}
+                disabled={todayWeekIdx < 0}
+              >
+                오늘
+              </button>
+            </div>
+            <div className="shockwave-week-floating-actions shockwave-week-floating-actions--right">
+              <button
+                type="button"
+                className="shockwave-week-today-btn"
+                onClick={scrollToTodayWeek}
+                onMouseEnter={updateTodayShortcutTooltip}
+                onMouseMove={updateTodayShortcutTooltip}
+                onMouseLeave={() => setTodayShortcutTooltip(null)}
+                onFocus={(event) => {
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  updateTodayShortcutTooltip({
+                    clientX: rect.left + rect.width / 2,
+                    clientY: rect.top,
+                  });
+                }}
+                onBlur={() => setTodayShortcutTooltip(null)}
+                disabled={todayWeekIdx < 0}
+              >
+                오늘
+              </button>
+            </div>
             {weekDays.map((dayInfo, dayIdx) => {
               const isToday = isSameDate(dayInfo.date, today);
               const daySlots = getTimeSlotsForDay(dayInfo);
