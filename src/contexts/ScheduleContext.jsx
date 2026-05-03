@@ -43,7 +43,7 @@ export function ScheduleProvider({ children }) {
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [calendarSlotSettings, setCalendarSlotSettings] = useState(null);
   const shockwaveWriteQueueRef = useRef(new Map());
-  const loadCacheRef = useRef({ staffMemos: null, shockwaveMemos: null });
+  const loadCacheRef = useRef({ staffMemos: null, shockwaveMemos: null, holidays: null });
 
   const enqueueShockwaveWrite = useCallback((keys, task) => {
     const targetKeys = Array.from(new Set((keys || []).filter(Boolean)));
@@ -156,7 +156,7 @@ export function ScheduleProvider({ children }) {
   }, []);
 
   const navigateMonth = useCallback((delta) => {
-    loadCacheRef.current = { staffMemos: null, shockwaveMemos: null };
+    loadCacheRef.current = { staffMemos: null, shockwaveMemos: null, holidays: null };
     setCurrentMonth(prev => {
       let newMonth = prev + delta;
       let newYear = currentYear;
@@ -168,7 +168,7 @@ export function ScheduleProvider({ children }) {
   }, [currentYear]);
 
   const goToMonth = useCallback((year, month) => {
-    loadCacheRef.current = { staffMemos: null, shockwaveMemos: null };
+    loadCacheRef.current = { staffMemos: null, shockwaveMemos: null, holidays: null };
     setCurrentYear(year);
     setCurrentMonth(month);
   }, []);
@@ -214,6 +214,7 @@ export function ScheduleProvider({ children }) {
         }
       }));
 
+      if (loadCacheRef.current.staffMemos !== cacheKey) return;
       setStaffMemos(memoMap);
     } catch (err) {
       console.error('Failed to load staff memos:', err);
@@ -269,6 +270,10 @@ export function ScheduleProvider({ children }) {
 
   // 공휴일 로드
   const loadHolidays = useCallback(async (year, month) => {
+    const cacheKey = `${year}-${month}`;
+    if (loadCacheRef.current.holidays === cacheKey) return;
+    loadCacheRef.current.holidays = cacheKey;
+
     try {
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
       const nextYear = month === 12 ? year + 1 : year;
@@ -291,6 +296,7 @@ export function ScheduleProvider({ children }) {
         holSet.add(key);
         if (h.name) holNames.set(key, h.name);
       });
+      if (loadCacheRef.current.holidays !== cacheKey) return;
       setHolidays(holSet);
       setHolidayNames(holNames);
     } catch (err) {
@@ -573,6 +579,7 @@ export function ScheduleProvider({ children }) {
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
         memoMap[key] = item;
       });
+      if (loadCacheRef.current.shockwaveMemos !== cacheKey) return;
       setShockwaveMemos(prev => {
         const next = { ...memoMap };
         Object.entries(prev || {}).forEach(([key, memo]) => {

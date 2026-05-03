@@ -102,6 +102,7 @@ export default function ManualTherapyStatsPage() {
     () => displayTherapists.map((t) => t.name).filter(Boolean),
     [displayTherapists]
   );
+  const fetchIdRef = useRef(0);
   const [selectedTherapistNames, setSelectedTherapistNames] = useState([]);
   useEffect(() => {
     setSelectedTherapistNames((prev) => {
@@ -132,6 +133,7 @@ export default function ManualTherapyStatsPage() {
       const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
       const endStr = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
 
+      const currentFetchId = ++fetchIdRef.current;
       const { data, error } = await supabase
         .from('manual_therapy_patient_logs')
         .select('*')
@@ -141,6 +143,7 @@ export default function ManualTherapyStatsPage() {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
+      if (currentFetchId !== fetchIdRef.current) return;
       setLogs(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error(error);
