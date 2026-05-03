@@ -3781,43 +3781,35 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 
 /* --- Adjust widths based on user request --- */
-.sw-settlement-table thead .prescription-col {
-  width: 75px !important;
-  min-width: 75px !important;
-}
-.sw-compact-settlement-table thead .prescription-col {
-  width: 65px !important;
-  min-width: 65px !important;
-}
-.sw-manual-compact-settlement-table thead .prescription-col {
-  width: 65px !important;
-  min-width: 65px !important;
+/* Force all individual prescription columns to be exactly the same width */
+.sw-settlement-table thead .prescription-col,
+.sw-settlement-table tbody td:not(.label-col):not(.row-label):not([colspan]) {
+  width: 90px !important;
+  min-width: 90px !important;
+  max-width: 90px !important;
 }
 
-.sw-settlement-table thead th.grand-col.prescription-col {
-  width: 75px !important;
-  min-width: 75px !important;
+.sw-compact-settlement-table thead .prescription-col,
+.sw-compact-settlement-table tbody td:not(.label-col):not(.row-label):not([colspan]) {
+  width: 90px !important;
+  min-width: 90px !important;
+  max-width: 90px !important;
 }
-.sw-compact-settlement-table thead th.grand-col.prescription-col {
-  width: 65px !important;
-  min-width: 65px !important;
+
+.sw-manual-compact-settlement-table thead .prescription-col,
+.sw-manual-compact-settlement-table tbody td:not(.label-col):not(.row-label):not([colspan]) {
+  width: 90px !important;
+  min-width: 90px !important;
+  max-width: 90px !important;
 }
+
+/* Also apply to the specific grand total single-column cells */
+.sw-settlement-table thead th.grand-col.prescription-col,
+.sw-compact-settlement-table thead th.grand-col.prescription-col,
 .sw-manual-compact-settlement-table thead th.grand-col.prescription-col {
-  width: 65px !important;
-  min-width: 65px !important;
-}
-
-.sw-settlement-table tbody td.grand-value:not([colspan]) {
-  width: 75px !important;
-  min-width: 75px !important;
-}
-.sw-compact-settlement-table tbody td.grand-value:not([colspan]) {
-  width: 65px !important;
-  min-width: 65px !important;
-}
-.sw-manual-compact-settlement-table tbody td.grand-value:not([colspan]) {
-  width: 65px !important;
-  min-width: 65px !important;
+  width: 90px !important;
+  min-width: 90px !important;
+  max-width: 90px !important;
 }
 
 .sw-settlement-table thead th.grand-col[colspan="3"],
