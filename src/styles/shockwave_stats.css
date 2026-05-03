@@ -3828,10 +3828,25 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 }
 
 
-/* --- Remove gray backgrounds & shadows for print-friendly look --- */
+/* --- Adjust colors & shadows for UI and print-friendly look --- */
 .sw-settlement-card {
   box-shadow: none !important;
-  background: #ffffff !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+/* Apply shadow and background to the table wrapper instead */
+.sw-settlement-table-wrap,
+.sw-compact-table-wrap,
+.sw-new-patient-table-wrap,
+.sw-summary-table-wrap,
+.sw-six-month-summary-wrap {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08) !important;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
 }
 
 /* Make side labels and grand total cells white instead of gray/blue */
@@ -3850,12 +3865,31 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   background: #ffffff !important;
 }
 
-/* Make summary table and new patient table headers white instead of gray/blue */
+/* Make summary table and new patient table headers and cells white instead of gray/blue */
 .sw-summary-table thead th,
 .sw-summary-table tbody th.month-label,
+.sw-summary-table tbody td,
 .sw-compact-summary-table thead th,
 .sw-compact-summary-table tbody th.month-label,
+.sw-compact-summary-table tbody td,
 .sw-new-patient-table thead .label-col,
 .sw-compact-new-patient-table thead .label-col {
   background: #ffffff !important;
+}
+
+/* Increase font size and weight for Settlement Amount and Total Incentive */
+.sw-settlement-table td.merged-value.amount,
+.sw-settlement-table td.grand-value.amount,
+.sw-settlement-table td.merged-value.incentive,
+.sw-settlement-table td.grand-value.incentive,
+.sw-compact-settlement-table td.merged-value.amount,
+.sw-compact-settlement-table td.grand-value.amount,
+.sw-compact-settlement-table td.merged-value.incentive,
+.sw-compact-settlement-table td.grand-value.incentive,
+.sw-manual-compact-settlement-table td.merged-value.amount,
+.sw-manual-compact-settlement-table td.grand-value.amount,
+.sw-manual-compact-settlement-table td.merged-value.incentive,
+.sw-manual-compact-settlement-table td.grand-value.incentive {
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
 }
