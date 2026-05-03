@@ -3700,7 +3700,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                 : { flex: `1 1 ${flexBasis}px`, minWidth: 0 };
 
               return (
-                <div key={dayIdx} className={`shockwave-day${isToday ? ' is-today' : ''}`} style={dayFlexStyle}>
+                <div key={dayIdx} className={`shockwave-day${isToday ? ' is-today' : ''}${showTimeCol ? ' has-time-col' : ''}`} style={dayFlexStyle}>
                   {/* 날짜 헤더 */}
                   <div className="sw-day-header-row" style={{ gridTemplateColumns: gridCols }}>
                     {showTimeCol && (
