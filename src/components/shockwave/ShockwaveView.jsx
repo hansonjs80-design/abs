@@ -875,10 +875,22 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const getReservationTimeForMemo = useCallback((memo, w, d, r) => (
     getReservationTimeFromMergeSpan(memo?.merge_span) || getDefaultReservationTime(w, d, r)
   ), [getDefaultReservationTime]);
-  const todayWeekIdx = useMemo(
-    () => weeks.findIndex((weekDays) => weekDays.some((dayInfo) => isSameDate(dayInfo.date, today))),
-    [weeks, today]
-  );
+  const todayWeekIdx = useMemo(() => {
+    let idx = weeks.findIndex((weekDays) => weekDays.some((dayInfo) => isSameDate(dayInfo.date, today)));
+    if (idx !== -1) return idx;
+
+    // Fallback: 일요일은 달력에 없으므로, 해당 주차(월~일) 안에 오늘이 포함되는지 확인
+    idx = weeks.findIndex(weekDays => {
+      if (!weekDays || weekDays.length === 0) return false;
+      const mondayDate = new Date(weekDays[0].date);
+      mondayDate.setHours(0, 0, 0, 0);
+      const sundayDate = new Date(mondayDate);
+      sundayDate.setDate(mondayDate.getDate() + 6);
+      sundayDate.setHours(23, 59, 59, 999);
+      return today >= mondayDate && today <= sundayDate;
+    });
+    return idx;
+  }, [weeks, today]);
 
   const shouldAutoFormatSchedulerName = useCallback((value) => {
     const text = String(value || '').trim();
@@ -4168,9 +4180,9 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                       // 2. Cells
                       for (let colIdx = 0; colIdx < colCount; colIdx++) {
                         const key = cellKey(weekIdx, dayIdx, rowIdx, colIdx);
-                        const cellData = renderMemos[key];
-                        const content = normalizeSchedulerVisitSuffix(pendingDisplayValues[key] ?? cellData?.content ?? '');
-                        let mergeSpan = getEffectiveMergeSpan(key, renderMemos);
+                        const cellData = dayInfo.isCurrentMonth ? renderMemos[key] : null;
+                        const content = dayInfo.isCurrentMonth ? normalizeSchedulerVisitSuffix(pendingDisplayValues[key] ?? cellData?.content ?? '') : '';
+                        let mergeSpan = dayInfo.isCurrentMonth ? getEffectiveMergeSpan(key, renderMemos) : { rowSpan: 1, colSpan: 1, mergedInto: null };
 
                         const cellPrescription = cellData?.prescription || mergeSpan?.meta?.prescription || '';
                         const displayData = buildSchedulerCellDisplay(content, mergeSpan);
@@ -4179,10 +4191,10 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                             continue; // 병합된 하위 셀은 묶어서 렌더링 생략
                           }
 
-                          const isEditing = editingCell === key;
-                          const isImePreview = imePreviewCell === key;
-                          const isSelected = selectedKeys.has(key);
-                          const isPrimary = selectedCell && selectedCell.w === weekIdx && selectedCell.d === dayIdx && selectedCell.r === rowIdx && selectedCell.c === colIdx;
+                          const isEditing = dayInfo.isCurrentMonth && editingCell === key;
+                          const isImePreview = dayInfo.isCurrentMonth && imePreviewCell === key;
+                          const isSelected = dayInfo.isCurrentMonth && selectedKeys.has(key);
+                          const isPrimary = dayInfo.isCurrentMonth && selectedCell && selectedCell.w === weekIdx && selectedCell.d === dayIdx && selectedCell.r === rowIdx && selectedCell.c === colIdx;
                           const gridColumnStart = showTimeCol ? colIdx + 2 : colIdx + 1;
 
                           // View Span Calculation (in case it spans across omitted rows like lunch)
@@ -4193,7 +4205,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                           }
 
                           let cls = 'sw-cell';
-                          if (!dayInfo.isCurrentMonth) cls += ' other-month-bg';
+                          if (!dayInfo.isCurrentMonth) cls += ' other-month-bg disabled-cell';
                           else if (dayInfo.isHoliday) cls += ' holiday-bg';
                           
                           if (slotInfo.disabled && !displayData.hasDisplayText) cls += ' disabled';
@@ -4261,8 +4273,12 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                           if (showInput) {
                             elements.push(
                               <div key={key} className={`sw-cell ${isEditing ? 'editing' : ''} ${cls}`} style={inlineStyle}
-                                onMouseDown={(e) => handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e)}
+                                onMouseDown={(e) => {
+                                  if (!dayInfo.isCurrentMonth) return;
+                                  handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e);
+                                }}
                                 onMouseEnter={() => {
+                                  if (!dayInfo.isCurrentMonth) return;
                                   handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
                                   const reservationTime = getReservationTimeForMemo(cellData, weekIdx, dayIdx, rowIdx);
                                   let text = `⏱ ${reservationTime || slotInfo.label}`;
@@ -4275,8 +4291,15 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                                   setHoverData({ text });
                                 }}
                                 onMouseLeave={() => setHoverData(null)}
-                                onDoubleClick={() => handleCellDoubleClick(weekIdx, dayIdx, rowIdx, colIdx, content)}
+                                onDoubleClick={() => {
+                                  if (!dayInfo.isCurrentMonth) return;
+                                  handleCellDoubleClick(weekIdx, dayIdx, rowIdx, colIdx, content);
+                                }}
                                 onContextMenu={(e) => {
+                                  if (!dayInfo.isCurrentMonth) {
+                                    e.preventDefault();
+                                    return;
+                                  }
                                   // 내용이 있을 때만 처방을 설정할 수 있도록 함
                                   if (displayData.hasDisplayText && content.trim() !== '\u200B') {
                                     handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);

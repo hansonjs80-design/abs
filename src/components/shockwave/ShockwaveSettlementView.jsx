@@ -143,7 +143,7 @@ export default function ShockwaveSettlementView({
                     {item?.therapist?.name || ''}
                   </th>
                 ))}
-                <th className="grand-col" rowSpan={2}>총 합계</th>
+                <th className="grand-col" colSpan={safePrescriptions.length}>총 합계</th>
               </tr>
               <tr>
                 {settlement.summaryByTherapist.flatMap((item, therapistIndex) =>
@@ -153,6 +153,11 @@ export default function ShockwaveSettlementView({
                     </th>
                   ))
                 )}
+                {safePrescriptions.map((prescription, prescriptionIndex) => (
+                  <th key={`grand-head-${prescription}`} className={`grand-col prescription-col${prescriptionIndex === safePrescriptions.length - 1 ? ' therapist-group-end' : ''}`}>
+                    {prescription}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -167,7 +172,11 @@ export default function ShockwaveSettlementView({
                     </td>
                   ))
                 )}
-                <td className="grand-value">{formatCount(settlement.grandTotalCount)}</td>
+                {safePrescriptions.map((prescription, prescriptionIndex) => (
+                  <td key={`grand-count-${prescription}`} className={`grand-value${prescriptionIndex === safePrescriptions.length - 1 ? ' therapist-group-end' : ''}`}>
+                    {formatCount(settlement.grandPrescriptionCounts[prescription] || 0)}
+                  </td>
+                ))}
               </tr>
               <tr>
                 <th className="row-label">충격파 합계(건)</th>
@@ -176,7 +185,7 @@ export default function ShockwaveSettlementView({
                     {formatCount(item.totalCount)}
                   </td>
                 ))}
-                <td className="grand-value">{formatCount(settlement.grandTotalCount)}</td>
+                <td className="grand-value" colSpan={safePrescriptions.length}>{formatCount(settlement.grandTotalCount)}</td>
               </tr>
               <tr>
                 <th className="row-label">결산 금액(원)</th>
@@ -185,7 +194,7 @@ export default function ShockwaveSettlementView({
                     {formatCurrency(item.amount)}
                   </td>
                 ))}
-                <td className="grand-value amount">{formatCurrency(settlement.grandAmount)}</td>
+                <td className="grand-value amount" colSpan={safePrescriptions.length}>{formatCurrency(settlement.grandAmount)}</td>
               </tr>
               <tr>
                 <th className="row-label">인센티브 ({Number(incentivePercentage) || 0}%)</th>
@@ -194,7 +203,7 @@ export default function ShockwaveSettlementView({
                     {formatCurrency(item.incentive)}
                   </td>
                 ))}
-                <td className="grand-value incentive">{formatCurrency(settlement.grandIncentive)}</td>
+                <td className="grand-value incentive" colSpan={safePrescriptions.length}>{formatCurrency(settlement.grandIncentive)}</td>
               </tr>
             </tbody>
           </table>

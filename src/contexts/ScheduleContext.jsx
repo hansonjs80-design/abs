@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { generateShockwaveCalendar, getTodayKST } from '../lib/calendarUtils';
+import { generateShockwaveCalendar, getTodayKST, buildCrossMonthMirroredPayloads } from '../lib/calendarUtils';
 import { syncTodayShockwaveScheduleToStats } from '../lib/shockwaveSyncUtils';
 import { syncTodayManualTherapyScheduleToStats } from '../lib/manualTherapyUtils';
 
@@ -189,22 +189,31 @@ export function ScheduleProvider({ children }) {
         targetMonths.push(next);
       }
 
-      const results = await Promise.all(targetMonths.map((target) => (
-        supabase
-          .from('staff_schedules')
-          .select('*')
-          .eq('year', target.year)
-          .eq('month', target.month)
-      )));
-
       const memoMap = {};
-      results.forEach(({ data, error }) => {
-        if (error) throw error;
-        (data || []).forEach(item => {
-          const key = `${item.year}-${item.month}-${item.day}-${item.slot_index}`;
-          memoMap[key] = item;
-        });
-      });
+
+      await Promise.all(targetMonths.map(async (target) => {
+        let page = 0;
+        let hasMore = true;
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from('staff_schedules')
+            .select('*')
+            .eq('year', target.year)
+            .eq('month', target.month)
+            .range(page * 1000, (page + 1) * 1000 - 1);
+            
+          if (error) throw error;
+          
+          (data || []).forEach(item => {
+            const key = `${item.year}-${item.month}-${item.day}-${item.slot_index}`;
+            memoMap[key] = item;
+          });
+          
+          if (!data || data.length < 1000) hasMore = false;
+          page++;
+        }
+      }));
+
       setStaffMemos(memoMap);
     } catch (err) {
       console.error('Failed to load staff memos:', err);
@@ -538,21 +547,29 @@ export function ScheduleProvider({ children }) {
     try {
       await waitForShockwaveWrites();
 
-      // 비어있지 않은 셀만 조회 (content가 비어있어도 merge_span이나 body_part 등이 있을 수 있으므로 전체 조회)
-      const { data, error } = await supabase
-        .from('shockwave_schedules')
-        .select('*')
-        .eq('year', year)
-        .eq('month', month)
-        .order('week_index', { ascending: true })
-        .order('day_index', { ascending: true })
-        .order('row_index', { ascending: true })
-        .order('col_index', { ascending: true });
+      let allData = [];
+      let page = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('shockwave_schedules')
+          .select('*')
+          .eq('year', year)
+          .eq('month', month)
+          .order('week_index', { ascending: true })
+          .order('day_index', { ascending: true })
+          .order('row_index', { ascending: true })
+          .order('col_index', { ascending: true })
+          .range(page * 1000, (page + 1) * 1000 - 1);
 
-      if (error) throw error;
+        if (error) throw error;
+        if (data) allData.push(...data);
+        if (!data || data.length < 1000) hasMore = false;
+        page++;
+      }
 
       const memoMap = {};
-      (data || []).forEach(item => {
+      allData.forEach(item => {
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
         memoMap[key] = item;
       });
@@ -599,16 +616,18 @@ export function ScheduleProvider({ children }) {
 
       [upsertData] = await protectExistingScheduleContent([upsertData], { [key]: optimisticMemo });
 
+      const upsertPayloads = buildCrossMonthMirroredPayloads([upsertData]);
+
       const { data, error } = await supabase
         .from('shockwave_schedules')
-        .upsert(upsertData, {
+        .upsert(upsertPayloads, {
           onConflict: 'year,month,week_index,day_index,row_index,col_index'
         })
         .select();
 
       if (error) throw error;
 
-      const savedMemo = data?.[0] || { ...optimisticMemo, ...upsertData };
+      const savedMemo = data?.find(d => d.year === year && d.month === month) || { ...optimisticMemo, ...upsertData };
       const nextShockwaveMemos = { ...shockwaveMemos, [key]: savedMemo };
       
       setShockwaveMemos(prev => {
@@ -695,22 +714,24 @@ export function ScheduleProvider({ children }) {
       });
 
       const guardedMemosArray = await protectExistingScheduleContent(memosArray, previousMemos);
-      
+      const upsertPayloads = buildCrossMonthMirroredPayloads(guardedMemosArray.map(m => ({
+        ...m,
+        updated_at: new Date().toISOString()
+      })));
+
       const { data, error } = await supabase
         .from('shockwave_schedules')
         .upsert(
-          guardedMemosArray.map(m => ({
-            ...m,
-            updated_at: new Date().toISOString()
-          })), 
+          upsertPayloads, 
           { onConflict: 'year,month,week_index,day_index,row_index,col_index' }
         )
         .select();
 
       if (error) throw error;
 
+      const viewRelevantData = (data || guardedMemosArray).filter(d => d.year === currentYear && d.month === currentMonth);
       const nextShockwaveMemos = { ...shockwaveMemos };
-      (data || guardedMemosArray).forEach(item => {
+      viewRelevantData.forEach(item => {
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
         const merged = { ...nextShockwaveMemos[key], ...item };
         if (shouldKeepShockwaveMemo(merged)) nextShockwaveMemos[key] = merged;
@@ -719,7 +740,7 @@ export function ScheduleProvider({ children }) {
 
       setShockwaveMemos(prev => {
         const next = { ...prev };
-        (data || guardedMemosArray).forEach(item => {
+        viewRelevantData.forEach(item => {
           const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
           const merged = { ...next[key], ...item };
           if (shouldKeepShockwaveMemo(merged)) next[key] = merged;

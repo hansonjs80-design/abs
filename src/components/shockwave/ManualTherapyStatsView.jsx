@@ -98,12 +98,45 @@ export default function ManualTherapyStatsView({
       };
     });
 
+    const grandPrescriptionCounts = Object.fromEntries(
+      safePrescriptions.map((prescription) => [
+        prescription,
+        summaryByTherapist.reduce(
+          (sum, item) => sum + (item.countsByPrescription[prescription] || 0),
+          0
+        ),
+      ])
+    );
+
+    const grandPrescriptionAmounts = Object.fromEntries(
+      safePrescriptions.map((prescription) => [
+        prescription,
+        summaryByTherapist.reduce(
+          (sum, item) => sum + (item.amountsByPrescription[prescription] || 0),
+          0
+        ),
+      ])
+    );
+
+    const grandPrescriptionIncentives = Object.fromEntries(
+      safePrescriptions.map((prescription) => [
+        prescription,
+        summaryByTherapist.reduce(
+          (sum, item) => sum + (item.incentivesByPrescription[prescription] || 0),
+          0
+        ),
+      ])
+    );
+
     const grandTotalCount = summaryByTherapist.reduce((sum, item) => sum + item.totalCount, 0);
     const grandAmount = summaryByTherapist.reduce((sum, item) => sum + item.amount, 0);
     const grandIncentive = summaryByTherapist.reduce((sum, item) => sum + item.incentive, 0);
 
     return {
       summaryByTherapist,
+      grandPrescriptionCounts,
+      grandPrescriptionAmounts,
+      grandPrescriptionIncentives,
       grandTotalCount,
       grandAmount,
       grandIncentive,
@@ -134,7 +167,7 @@ export default function ManualTherapyStatsView({
                     {item.therapist.name}
                   </th>
                 ))}
-                {showGrandTotal && <th className="grand-col" rowSpan={2}>총 합계</th>}
+                {showGrandTotal && <th className="grand-col" colSpan={safePrescriptions.length}>총 합계</th>}
               </tr>
               <tr>
                 {settlement.summaryByTherapist.flatMap((item, therapistIndex) =>
@@ -144,6 +177,11 @@ export default function ManualTherapyStatsView({
                     </th>
                   ))
                 )}
+                {showGrandTotal && safePrescriptions.map((prescription, prescriptionIndex) => (
+                  <th key={`grand-head-${prescription}`} className={`grand-col prescription-col${prescriptionIndex === safePrescriptions.length - 1 ? ' therapist-group-end' : ''}`} style={{ width: '130px' }}>
+                    {prescription}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -156,7 +194,11 @@ export default function ManualTherapyStatsView({
                     </td>
                   ))
                 )}
-                {showGrandTotal && <td className="grand-value">{formatCount(settlement.grandTotalCount)}</td>}
+                {showGrandTotal && safePrescriptions.map((prescription, prescriptionIndex) => (
+                  <td key={`grand-count-${prescription}`} className={`grand-value${prescriptionIndex === safePrescriptions.length - 1 ? ' therapist-group-end' : ''}`}>
+                    {formatCount(settlement.grandPrescriptionCounts[prescription] || 0)}
+                  </td>
+                ))}
               </tr>
               <tr>
                 <th className="row-label">총 처방 건수</th>
@@ -165,7 +207,7 @@ export default function ManualTherapyStatsView({
                     {formatCount(item.totalCount)}
                   </td>
                 ))}
-                {showGrandTotal && <td className="grand-value">{formatCount(settlement.grandTotalCount)}</td>}
+                {showGrandTotal && <td className="grand-value" colSpan={safePrescriptions.length}>{formatCount(settlement.grandTotalCount)}</td>}
               </tr>
               <tr>
                 <th className="row-label">처방별 금액(원)</th>
@@ -176,7 +218,11 @@ export default function ManualTherapyStatsView({
                     </td>
                   ))
                 )}
-                {showGrandTotal && <td className="grand-value amount">-</td>}
+                {showGrandTotal && safePrescriptions.map((prescription, prescriptionIndex) => (
+                  <td key={`grand-amount-presc-${prescription}`} className={`grand-value amount${prescriptionIndex === safePrescriptions.length - 1 ? ' therapist-group-end' : ''}`}>
+                    {formatCurrency(settlement.grandPrescriptionAmounts[prescription] || 0)}
+                  </td>
+                ))}
               </tr>
               <tr>
                 <th className="row-label">결산 금액(원)</th>
@@ -185,7 +231,7 @@ export default function ManualTherapyStatsView({
                     {formatCurrency(item.amount)}
                   </td>
                 ))}
-                {showGrandTotal && <td className="grand-value amount">{formatCurrency(settlement.grandAmount)}</td>}
+                {showGrandTotal && <td className="grand-value amount" colSpan={safePrescriptions.length}>{formatCurrency(settlement.grandAmount)}</td>}
               </tr>
               <tr>
                 <th className="row-label">처방별 인센티브(원)</th>
@@ -196,7 +242,11 @@ export default function ManualTherapyStatsView({
                     </td>
                   ))
                 )}
-                {showGrandTotal && <td className="grand-value incentive">-</td>}
+                {showGrandTotal && safePrescriptions.map((prescription, prescriptionIndex) => (
+                  <td key={`grand-incentive-presc-${prescription}`} className={`grand-value incentive${prescriptionIndex === safePrescriptions.length - 1 ? ' therapist-group-end' : ''}`}>
+                    {formatCurrency(settlement.grandPrescriptionIncentives[prescription] || 0)}
+                  </td>
+                ))}
               </tr>
               <tr>
                 <th className="row-label">총 인센티브 ({Number(incentivePercentage) || 0}%)</th>
@@ -205,7 +255,7 @@ export default function ManualTherapyStatsView({
                     {formatCurrency(item.incentive)}
                   </td>
                 ))}
-                {showGrandTotal && <td className="grand-value incentive">{formatCurrency(settlement.grandIncentive)}</td>}
+                {showGrandTotal && <td className="grand-value incentive" colSpan={safePrescriptions.length}>{formatCurrency(settlement.grandIncentive)}</td>}
               </tr>
             </tbody>
           </table>

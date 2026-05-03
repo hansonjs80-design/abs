@@ -183,3 +183,89 @@ export function formatDateKey(year, month, day) {
 export function formatDisplayDate(year, month, day) {
   return `${String(year).padStart(4, '0')}. ${String(month).padStart(2, '0')}. ${String(day).padStart(2, '0')}`;
 }
+
+/**
+ * 특정 날짜가 인접한 이전 달/다음 달 달력의 어떤 셀(weekIndex, dayIndex)에 위치하는지 반환합니다.
+ */
+export function getOverlappingCalendarCoordinates(year, month, weekIndex, dayIndex) {
+  const weeks = generateShockwaveCalendar(year, month);
+  const dayInfo = weeks[weekIndex]?.[dayIndex];
+  if (!dayInfo) return [];
+
+  const targetDateStr = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}`;
+  const overlappingCoords = [];
+
+  // 이전 달 달력 확인
+  const prevYear = month === 1 ? year - 1 : year;
+  const prevMonth = month === 1 ? 12 : month - 1;
+  const prevWeeks = generateShockwaveCalendar(prevYear, prevMonth);
+  prevWeeks.forEach((week, w) => {
+    week.forEach((day, d) => {
+      if (`${day.year}-${day.month}-${day.day}` === targetDateStr) {
+        overlappingCoords.push({ year: prevYear, month: prevMonth, weekIndex: w, dayIndex: d });
+      }
+    });
+  });
+
+  // 다음 달 달력 확인
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextWeeks = generateShockwaveCalendar(nextYear, nextMonth);
+  nextWeeks.forEach((week, w) => {
+    week.forEach((day, d) => {
+      if (`${day.year}-${day.month}-${day.day}` === targetDateStr) {
+        overlappingCoords.push({ year: nextYear, month: nextMonth, weekIndex: w, dayIndex: d });
+      }
+    });
+  });
+
+  return overlappingCoords;
+}
+
+/**
+ * 저장할 스케줄 데이터를 인접한 달력에도 동일하게 복제하여 반영합니다. (ex: 4/30일 데이터를 5월 달력 화면에도 동일하게 저장)
+ */
+export function buildCrossMonthMirroredPayloads(originalPayloads) {
+  const mirroredPayloads = [];
+  
+  originalPayloads.forEach((payload) => {
+    const { id, year, month, week_index, day_index, row_index, col_index, merge_span, ...rest } = payload;
+    
+    // 원본 데이터 유지 (undefined 속성 제거)
+    const cleanOriginal = {
+      year, month, week_index, day_index, row_index, col_index, ...rest
+    };
+    if (merge_span !== undefined) cleanOriginal.merge_span = merge_span;
+    mirroredPayloads.push(cleanOriginal);
+    
+    // 교차 달력 좌표 찾기
+    const overlaps = getOverlappingCalendarCoordinates(year, month, week_index, day_index);
+    
+    overlaps.forEach((overlap) => {
+      // 병합 데이터(merge_span)가 있다면 새로운 좌표계(week, day)에 맞게 mergedInto 값 수정
+      let newMergeSpan = merge_span;
+      if (merge_span && merge_span.mergedInto) {
+        const [, , mRow, mCol] = merge_span.mergedInto.split('-');
+        newMergeSpan = {
+          ...merge_span,
+          mergedInto: `${overlap.weekIndex}-${overlap.dayIndex}-${mRow}-${mCol}`
+        };
+      }
+      
+      const mirroredPayload = {
+        year: overlap.year,
+        month: overlap.month,
+        week_index: overlap.weekIndex,
+        day_index: overlap.dayIndex,
+        row_index,
+        col_index,
+        ...rest
+      };
+      if (newMergeSpan !== undefined) mirroredPayload.merge_span = newMergeSpan;
+      
+      mirroredPayloads.push(mirroredPayload);
+    });
+  });
+  
+  return mirroredPayloads;
+}

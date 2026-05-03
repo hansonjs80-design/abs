@@ -3778,3 +3778,51 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-grid-table tbody tr.tr-date-end td {
   border-bottom: 1.5px solid var(--grid-row-divider) !important;
 }
+
+
+/* --- Adjust widths based on user request --- */
+.sw-settlement-table thead .prescription-col {
+  width: 65px !important;
+  min-width: 65px !important;
+}
+.sw-compact-settlement-table thead .prescription-col {
+  width: 52px !important;
+  min-width: 52px !important;
+}
+.sw-manual-compact-settlement-table thead .prescription-col {
+  width: 47px !important;
+  min-width: 47px !important;
+}
+
+.sw-settlement-table thead th.grand-col.prescription-col {
+  width: 65px !important;
+  min-width: 65px !important;
+}
+.sw-compact-settlement-table thead th.grand-col.prescription-col {
+  width: 52px !important;
+  min-width: 52px !important;
+}
+.sw-manual-compact-settlement-table thead th.grand-col.prescription-col {
+  width: 47px !important;
+  min-width: 47px !important;
+}
+
+.sw-settlement-table tbody td.grand-value:not([colspan]) {
+  width: 65px !important;
+  min-width: 65px !important;
+}
+.sw-compact-settlement-table tbody td.grand-value:not([colspan]) {
+  width: 52px !important;
+  min-width: 52px !important;
+}
+.sw-manual-compact-settlement-table tbody td.grand-value:not([colspan]) {
+  width: 47px !important;
+  min-width: 47px !important;
+}
+
+.sw-settlement-table thead th.grand-col[colspan="3"],
+.sw-compact-settlement-table thead th.grand-col[colspan="3"],
+.sw-manual-compact-settlement-table thead th.grand-col[colspan="3"] {
+  width: auto !important;
+  min-width: auto !important;
+}
