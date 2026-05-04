@@ -2703,6 +2703,7 @@
 /* Remote Presence */
 .sw-cell.has-remote-presence {
   z-index: 3;
+  overflow: visible;
 }
 
 .sw-remote-badge {

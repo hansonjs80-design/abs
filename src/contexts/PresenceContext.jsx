@@ -90,7 +90,7 @@ export function PresenceProvider({ children }) {
 
   const updatePresence = useCallback((newState) => {
     localStateRef.current = { ...localStateRef.current, ...newState };
-    if (channelRef.current && channelRef.current.state === 'joined') {
+    if (channelRef.current) {
       channelRef.current.track({
         userId: user?.id,
         displayName: user?.user_metadata?.name || user?.display_name || user?.username || '익명',
