@@ -327,8 +327,6 @@
 
 .sw-grid-card-table {
   overflow: hidden;
-  border: 1px solid var(--border-color-light);
-  border-radius: 16px;
   background: #ffffff;
   box-shadow: var(--shadow-sm);
 }
@@ -456,6 +454,7 @@
   position: relative;
   outline: none;
   background: #ffffff;
+  border: 1px solid var(--grid-strong);
   border-radius: 16px;
 }
 
@@ -493,7 +492,6 @@
   font-family: inherit;
   font-size: 13px;
   color: var(--text-primary);
-  border-radius: 16px;
 }
 
 .sw-grid-table thead {
@@ -522,7 +520,6 @@
   color: var(--text-tertiary);
   text-align: center;
   border-right: 1px solid var(--grid-line);
-  border-left: 1px solid var(--grid-strong);
 }
 
 /* Header Cells Styling */
@@ -544,12 +541,8 @@
   letter-spacing: -0.01em;
   border-bottom: 1px solid var(--grid-strong) !important;
   border-right: 1px solid var(--grid-strong) !important;
-  border-left: 1px solid var(--grid-strong) !important;
-  border-top: 1px solid var(--grid-strong) !important;
   padding: 12px !important;
   box-shadow: none;
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
 }
 
 .grid-title-inner {

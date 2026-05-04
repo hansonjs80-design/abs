@@ -18,6 +18,19 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
   const { currentYear, currentMonth, navigateMonth, staffMemos, loadStaffMemos, saveStaffMemo, holidays, holidayNames, loadHolidays, shockwaveSettings, loadShockwaveSettings, calendarSlotSettings, loadCalendarSlotSettings, saveCalendarSlotSettings } = useSchedule();
   const { addToast } = useToast();
   const [showSlotSettings, setShowSlotSettings] = useState(false);
+  const slotSettingsRef = useRef(null);
+
+  // 설정 팝업 외부 클릭 시 닫기
+  useEffect(() => {
+    if (!showSlotSettings) return;
+    const handleClickOutside = (e) => {
+      if (slotSettingsRef.current && !slotSettingsRef.current.contains(e.target)) {
+        setShowSlotSettings(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showSlotSettings]);
 
   const [colWidth, setColWidth] = useState(() => { const v = Number(localStorage.getItem(COL_W_KEY)); return v > 0 ? v : 0; });
   const [rowHeight, setRowHeight] = useState(() => { const v = Number(localStorage.getItem(ROW_H_KEY)); return v >= 60 ? v : 120; });
@@ -600,7 +613,7 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
               ⚙️
             </button>
             {showSlotSettings && (
-            <div style={{
+            <div ref={slotSettingsRef} style={{
               position: 'absolute', top: '100%', right: 0, marginTop: 4,
               background: 'var(--bg-primary)', border: '1px solid var(--border-color)',
               boxShadow: '0 4px 12px rgba(0,0,0,0.15)', borderRadius: 6, padding: 12,
