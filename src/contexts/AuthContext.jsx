@@ -42,8 +42,15 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    clearStoredDevUser();
-    setUser(null);
+    try {
+      const stored = localStorage.getItem(DEV_LOGIN_STORAGE_KEY);
+      if (stored) {
+        setUser(JSON.parse(stored));
+      }
+    } catch (err) {
+      console.warn('Failed to restore dev user session:', err);
+      clearStoredDevUser();
+    }
     setLoading(false);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -52,7 +59,8 @@ export function AuthProvider({ children }) {
         return;
       }
       if (event === 'SIGNED_OUT') {
-        setUser(null);
+        // Only clear user if they are a supabase auth user
+        setUser(prev => prev?.isLocalDevUser ? prev : null);
       }
     });
 
@@ -79,6 +87,7 @@ export function AuthProvider({ children }) {
           throw new Error('Invalid login credentials');
         }
         const appUser = createAppUser(data);
+        localStorage.setItem(DEV_LOGIN_STORAGE_KEY, JSON.stringify(appUser));
         setUser(appUser);
         return { user: appUser, session: null };
       }
@@ -93,6 +102,7 @@ export function AuthProvider({ children }) {
 
     if (username === ADMIN_USERNAME && normalizedPassword === DEFAULT_ADMIN_PASSWORD) {
       const adminUser = createBootstrapAdminUser();
+      localStorage.setItem(DEV_LOGIN_STORAGE_KEY, JSON.stringify(adminUser));
       setUser(adminUser);
       return { user: adminUser, session: null };
     }
