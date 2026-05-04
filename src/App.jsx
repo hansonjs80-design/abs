@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ScheduleProvider } from './contexts/ScheduleContext';
+import { PresenceProvider } from './contexts/PresenceContext';
 import { ToastProvider } from './components/common/Toast';
 import Layout from './components/layout/Layout';
 import LoginPage from './pages/LoginPage';
@@ -49,7 +50,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <ScheduleProvider>
-              <Layout />
+              <PresenceProvider>
+                <Layout />
+              </PresenceProvider>
             </ScheduleProvider>
           </ProtectedRoute>
         }
