@@ -119,6 +119,23 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     rememberScheduleMonthBackup(currentYear, currentMonth, mergedMemos);
   }, [currentYear, currentMonth, loadedMemosKey, memos, pendingDisplayValues]);
 
+  // memos가 새 값을 반영하면 pendingDisplayValues에서 해당 키를 자동 정리
+  useEffect(() => {
+    setPendingDisplayValues((prev) => {
+      const keys = Object.keys(prev);
+      if (keys.length === 0) return prev;
+      const keysToRemove = keys.filter((key) => {
+        const pendingContent = prev[key];
+        const memoContent = memos[key]?.content || '';
+        // memos에 동일한 내용이 반영되었으면 pending 제거
+        return memoContent === pendingContent;
+      });
+      if (keysToRemove.length === 0) return prev;
+      const next = { ...prev };
+      keysToRemove.forEach((key) => delete next[key]);
+      return next;
+    });
+  }, [memos]);
   useEffect(() => {
     loadShockwaveSettings?.();
   }, [loadShockwaveSettings, currentYear, currentMonth]);
@@ -1709,11 +1726,9 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     });
     const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, newContent, undefined, newMergeSpan, newPrescription, newBodyPart);
     if (success) removePendingScheduleDraft(currentYear, currentMonth, key);
-    setPendingDisplayValues((prev) => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
+    // pendingDisplayValues는 즉시 삭제하지 않음.
+    // memos 컨텍스트가 새 값을 반영할 때까지 유지하여 깜빡임 방지.
+    // 아래 useEffect(cleanupStalePendingValues)에서 memos 업데이트 후 자동 정리.
     if (!success) addToast('저장 실패', 'error');
   }, [editValue, currentYear, currentMonth, memos, onSaveMemo, addToast, buildSchedulerAutoText, recordUndo, cellKey]);
 
