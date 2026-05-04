@@ -6,6 +6,14 @@ import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import '../../styles/shockwave_stats.css';
 
+/** 처방명 비교용 정규화 – 띄어쓰기·슬래시·대소문자 무시 */
+function normalizePrescriptionKey(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+function prescriptionsMatch(a, b) {
+  return normalizePrescriptionKey(a) === normalizePrescriptionKey(b);
+}
+
 // Dynamic labels from settings will be used instead
 const THERAPIST_COLORS = [
   '#dbeafe',
@@ -331,7 +339,7 @@ export default function ShockwaveDataGrid({
     const t = visibleTherapists[tIdx];
     if (!t) return '';
     const pres = prescriptions[pIdx];
-    if (row.therapist_name === t.name && row.prescription === pres) {
+    if (row.therapist_name === t.name && prescriptionsMatch(row.prescription, pres)) {
       return (row.prescription_count !== null && row.prescription_count !== undefined) ? row.prescription_count : '1';
     }
     return '';
@@ -627,7 +635,7 @@ export default function ShockwaveDataGrid({
       } else {
         const expectedName = t.name;
         if (val.trim() === '') {
-          if (row.therapist_name === expectedName && row.prescription === pres) {
+          if (row.therapist_name === expectedName && prescriptionsMatch(row.prescription, pres)) {
             const clearedFields = { therapist_name: '', prescription: '', prescription_count: 0 };
             const nextRow = { ...row, ...clearedFields };
             setLocalDraftRow(row.id, nextRow, false); // 낙관적 업데이트
@@ -850,7 +858,7 @@ export default function ShockwaveDataGrid({
           const tIdx = Math.floor((c - FIXED_FIELDS.length) / prescriptions.length);
           const pIdx = (c - FIXED_FIELDS.length) % prescriptions.length;
           const t = visibleTherapists[tIdx];
-          if (t && row.therapist_name === t.name && row.prescription === prescriptions[pIdx]) {
+          if (t && row.therapist_name === t.name && prescriptionsMatch(row.prescription, prescriptions[pIdx])) {
             updatePayload.therapist_name = '';
             updatePayload.prescription = '';
             updatePayload.prescription_count = '';

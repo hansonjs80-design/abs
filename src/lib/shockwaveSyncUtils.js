@@ -2,6 +2,11 @@ import { supabase } from './supabaseClient';
 import { generateShockwaveCalendar, getTodayKST } from './calendarUtils';
 import { has4060Pattern } from './schedulerContentFormat';
 
+/** 처방명 비교용 정규화 – 띄어쓰기·슬래시·대소문자 무시 */
+function normalizePrescriptionKeySync(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
 let todaySchedulerSyncQueue = Promise.resolve();
 
 function buildSchedulerCellKey(year, month, weekIndex, dayIndex, rowIndex, colIndex) {
@@ -412,7 +417,7 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
     if (String(existing.visit_count || '') !== String(newRow.visit_count || '')) return true;
     if (String(existing.body_part || '') !== String(newRow.body_part || '')) return true;
     if (existing.therapist_name !== newRow.therapist_name) return true;
-    if (existing.prescription !== newRow.prescription) return true;
+    if (normalizePrescriptionKeySync(existing.prescription) !== normalizePrescriptionKeySync(newRow.prescription)) return true;
     if (Number(existing.prescription_count || 1) !== Number(newRow.prescription_count || 1)) return true;
     
     return false; // Exact match, skip upsert
