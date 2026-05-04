@@ -159,15 +159,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     };
   }, [loadShockwaveSettings]);
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (contextMenu && !isContextMenuTarget(e.target)) {
-        setContextMenu(null);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [contextMenu, isContextMenuTarget]);
 
   // 열 너비 조정 (fr 비율 기반)
   const [colRatios, setColRatios] = useState(() => {
@@ -1237,6 +1228,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const isContextMenuTarget = useCallback((target) => {
     return Boolean(target && contextMenuRef.current?.contains(target));
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (contextMenu && !isContextMenuTarget(e.target)) {
+        setContextMenu(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [contextMenu, isContextMenuTarget]);
 
   const recordUndo = useCallback((action) => {
     undoStackRef.current = [action, ...undoStackRef.current].slice(0, 50);
