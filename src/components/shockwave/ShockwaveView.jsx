@@ -1522,21 +1522,12 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     rememberPendingScheduleDraft(year, month, key, value ?? '');
     setPendingDisplayValues((prev) => ({ ...prev, [key]: value ?? '' }));
     editDraftRef.current = { key, value: value ?? '', dirty: true };
+    // DB 저장은 handleCellSave(편집 완료 시)에서 처방 정보와 함께 수행.
+    // 여기서 미리 저장하면 처방 없이 저장되어 노란색 '처방 없음'이 잠깐 보이는 문제 발생.
     if (editAutosaveTimerRef.current) {
       clearTimeout(editAutosaveTimerRef.current);
+      editAutosaveTimerRef.current = null;
     }
-    editAutosaveTimerRef.current = window.setTimeout(() => {
-      const draft = editDraftRef.current;
-      if (!draft?.key || !draft.dirty) return;
-      const [w, d, r, c] = draft.key.split('-').map(Number);
-      if (![w, d, r, c].every(Number.isFinite)) return;
-      const { year, month } = scheduleDateRef.current;
-      Promise.resolve(saveMemoRef.current?.(year, month, w, d, r, c, draft.value ?? ''))
-        .then(() => {})
-        .catch((error) => {
-          console.error('Failed to autosave schedule draft:', error);
-        });
-    }, 150);
   }, []);
 
   const flushEditDraft = useCallback(() => {
@@ -1546,10 +1537,11 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     }
     const draft = editDraftRef.current;
     if (!draft?.key || !draft.dirty) return;
+    editDraftRef.current = null;
     const [w, d, r, c] = draft.key.split('-').map(Number);
     if (![w, d, r, c].every(Number.isFinite)) return;
-    const { year, month } = scheduleDateRef.current;
-    Promise.resolve(saveMemoRef.current?.(year, month, w, d, r, c, draft.value ?? ''))
+    // handleCellSave를 통해 처방 조회 포함 저장
+    Promise.resolve(handleCellSaveRef.current?.(w, d, r, c, draft.value ?? ''))
       .then(() => {})
       .catch((error) => {
         console.error('Failed to flush schedule draft:', error);
