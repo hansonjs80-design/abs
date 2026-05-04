@@ -410,3 +410,30 @@ DROP TRIGGER IF EXISTS set_staff_calendar_settings_updated_at ON public.staff_ca
 CREATE TRIGGER set_staff_calendar_settings_updated_at
 BEFORE UPDATE ON public.staff_calendar_settings
 FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- 10. Enable Realtime Replication
+-- Add tables to the 'supabase_realtime' publication to enable real-time sync across multiple clients
+DO $$
+BEGIN
+  -- Enable replica identity for DELETE events to broadcast old row data
+  ALTER TABLE public.shockwave_schedules REPLICA IDENTITY FULL;
+  ALTER TABLE public.staff_schedules REPLICA IDENTITY FULL;
+
+  -- Add tables to realtime publication if not already added
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'shockwave_schedules'
+  ) THEN
+    EXECUTE 'ALTER PUBLICATION supabase_realtime ADD TABLE public.shockwave_schedules';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'staff_schedules'
+  ) THEN
+    EXECUTE 'ALTER PUBLICATION supabase_realtime ADD TABLE public.staff_schedules';
+  END IF;
+EXCEPTION WHEN OTHERS THEN
+  -- Ignore errors (e.g., if supabase_realtime publication does not exist)
+END;
+$$;
