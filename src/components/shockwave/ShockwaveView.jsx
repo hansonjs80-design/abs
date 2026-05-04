@@ -159,6 +159,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     };
   }, [loadShockwaveSettings]);
 
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (contextMenu && !isContextMenuTarget(e.target)) {
+        setContextMenu(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [contextMenu, isContextMenuTarget]);
+
   // 열 너비 조정 (fr 비율 기반)
   const [colRatios, setColRatios] = useState(() => {
     if (typeof window === 'undefined') return null;
@@ -1609,6 +1619,8 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     }
     if (e?.button !== 0) return;
     e.preventDefault();
+
+    setContextMenu(null);
 
     if (editingCell) {
       const [editW, editD, editR, editC] = editingCell.split('-').map(Number);

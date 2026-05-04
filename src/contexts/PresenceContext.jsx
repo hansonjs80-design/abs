@@ -88,16 +88,25 @@ export function PresenceProvider({ children }) {
     };
   }, [user, sessionId]);
 
+  const trackTimeoutRef = useRef(null);
+
   const updatePresence = useCallback((newState) => {
     localStateRef.current = { ...localStateRef.current, ...newState };
-    if (channelRef.current) {
-      channelRef.current.track({
-        userId: user?.id,
-        displayName: user?.user_metadata?.name || user?.display_name || user?.username || '익명',
-        color: getSessionColor(sessionId),
-        ...localStateRef.current,
-      }).catch(err => console.warn('Failed to track presence', err));
+    
+    if (trackTimeoutRef.current) {
+      clearTimeout(trackTimeoutRef.current);
     }
+    
+    trackTimeoutRef.current = setTimeout(() => {
+      if (channelRef.current) {
+        channelRef.current.track({
+          userId: user?.id,
+          displayName: user?.user_metadata?.name || user?.display_name || user?.username || '익명',
+          color: getSessionColor(sessionId),
+          ...localStateRef.current,
+        }).catch(err => console.warn('Failed to track presence', err));
+      }
+    }, 150);
   }, [user, sessionId]);
 
   return (
