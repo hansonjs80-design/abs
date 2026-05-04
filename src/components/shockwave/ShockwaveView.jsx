@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { useSchedule } from '../../contexts/ScheduleContext';
-import { usePresence } from '../../contexts/PresenceContext';
+
 import { generateShockwaveCalendar, getTodayKST, isSameDate } from '../../lib/calendarUtils';
 import { supabase } from '../../lib/supabaseClient';
 import { incrementSessionCount, normalizeNameForMatch } from '../../lib/memoParser';
@@ -100,31 +100,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [contextMenuVisitInput, setContextMenuVisitInput] = useState('');
   const [contextMenuReservationInput, setContextMenuReservationInput] = useState('');
 
-  const { remoteUsers, updatePresence } = usePresence();
-
-  const remotePresenceMaps = useMemo(() => {
-    const selected = new Map();
-    const editing = new Map();
-    Object.values(remoteUsers || {}).forEach(u => {
-      u.selectedKeys?.forEach(k => {
-        if (!selected.has(k)) selected.set(k, []);
-        selected.get(k).push(u);
-      });
-      if (u.editingCell) {
-        if (!editing.has(u.editingCell)) editing.set(u.editingCell, []);
-        editing.get(u.editingCell).push(u);
-      }
-    });
-    return { selected, editing };
-  }, [remoteUsers]);
-
-  useEffect(() => {
-    updatePresence({
-      selectedKeys: Array.from(selectedKeys),
-      editingCell,
-      draftValue: editingCell ? editValue : ''
-    });
-  }, [selectedKeys, editingCell, editValue, updatePresence]);
+  // Presence 기능 비활성화 – 실시간 데이터 동기화만 유지
 
   useEffect(() => {
     selectedCellRef.current = selectedCell;
@@ -3946,17 +3922,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
 
                           const showInput = isPrimary || isEditing;
 
-                          const remoteSelectedUsers = remotePresenceMaps.selected.get(key) || [];
-                          const remoteEditingUsers = remotePresenceMaps.editing.get(key) || [];
-                          const allRemoteUsers = [...remoteSelectedUsers, ...remoteEditingUsers.filter(u => !remoteSelectedUsers.includes(u))];
-                          const remoteColor = allRemoteUsers.length > 0 ? allRemoteUsers[0].color : null;
 
-                          if (remoteColor) {
-                            inlineStyle.outline = `2px solid ${remoteColor}`;
-                            inlineStyle.outlineOffset = '-2px';
-                            inlineStyle.zIndex = 3;
-                            cls += ' has-remote-presence';
-                          }
 
                           if (showInput) {
                             elements.push(
@@ -3994,20 +3960,9 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                                   }
                                 }}
                               >
-                                {allRemoteUsers.length > 0 && !isEditing && (
-                                  <div className="sw-remote-badge" style={{ backgroundColor: remoteColor }}>
-                                    {remoteEditingUsers.length > 0 
-                                      ? `${remoteEditingUsers[0].displayName}님이 수정 중...`
-                                      : remoteSelectedUsers[0].displayName}
-                                  </div>
-                                )}
                                 {!isEditing && !isImePreview && (
                                   <div className="sw-cell-display" style={{ pointerEvents: 'none' }}>
-                                    {remoteEditingUsers.length > 0 && remoteEditingUsers[0].draftValue ? (
-                                      <span className="sw-cell-main" style={{ color: remoteColor, opacity: 0.8, fontStyle: 'italic' }}>
-                                        {remoteEditingUsers[0].draftValue}
-                                      </span>
-                                    ) : displayData.hasDisplayText ? (
+                                    {displayData.hasDisplayText ? (
                                       <span className="sw-cell-main">
                                         <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
                                         {displayData.visitSuffix ? <span style={visitSuffixColor ? { color: visitSuffixColor } : undefined}>{displayData.visitSuffix}</span> : null}
