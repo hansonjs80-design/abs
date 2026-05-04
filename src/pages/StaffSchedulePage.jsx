@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import StaffCalendar from '../components/calendar/StaffCalendar';
 import TodayPanel from '../components/calendar/TodayPanel';
 import NoticeBoard from '../components/notice/NoticeBoard';
+import { useSchedule } from '../contexts/ScheduleContext';
 import {
   readStoredStaffDepartments,
   saveStoredStaffDepartments,
@@ -26,8 +27,25 @@ function saveStoredHiddenDepartments(hidden) {
 }
 
 export default function StaffSchedulePage() {
+  const { shockwaveSettings, saveShockwaveSettings } = useSchedule();
+  
   const [hiddenDepartments, setHiddenDepartments] = useState(readStoredHiddenDepartments);
   const [departments, setDepartments] = useState(readStoredStaffDepartments);
+
+  useEffect(() => {
+    if (shockwaveSettings?.monthly_settlement_settings) {
+      const ms = shockwaveSettings.monthly_settlement_settings;
+      if (ms.global_departments) {
+        const normalized = normalizeStaffDepartmentList(ms.global_departments);
+        setDepartments(normalized);
+        saveStoredStaffDepartments(normalized);
+      }
+      if (ms.global_hidden_departments) {
+        setHiddenDepartments(ms.global_hidden_departments);
+        saveStoredHiddenDepartments(ms.global_hidden_departments);
+      }
+    }
+  }, [shockwaveSettings]);
 
   const updateDepartments = (updater) => {
     setDepartments((prev) => {
@@ -36,6 +54,18 @@ export default function StaffSchedulePage() {
       setHiddenDepartments((hidden) => {
         const nextHidden = hidden.filter((dept) => next.includes(dept));
         saveStoredHiddenDepartments(nextHidden);
+        
+        if (saveShockwaveSettings && shockwaveSettings) {
+          saveShockwaveSettings({
+            ...shockwaveSettings,
+            monthly_settlement_settings: {
+              ...(shockwaveSettings.monthly_settlement_settings || {}),
+              global_departments: next,
+              global_hidden_departments: nextHidden
+            }
+          });
+        }
+        
         return nextHidden;
       });
       return next;
@@ -46,6 +76,18 @@ export default function StaffSchedulePage() {
     setHiddenDepartments((prev) => {
       const nextHidden = typeof updater === 'function' ? updater(prev) : updater;
       saveStoredHiddenDepartments(nextHidden);
+      
+      if (saveShockwaveSettings && shockwaveSettings) {
+        saveShockwaveSettings({
+          ...shockwaveSettings,
+          monthly_settlement_settings: {
+            ...(shockwaveSettings.monthly_settlement_settings || {}),
+            global_departments: departments,
+            global_hidden_departments: nextHidden
+          }
+        });
+      }
+      
       return nextHidden;
     });
   };
