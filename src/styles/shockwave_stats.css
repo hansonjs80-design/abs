@@ -329,6 +329,8 @@
   overflow: hidden;
   background: #ffffff;
   box-shadow: var(--shadow-sm);
+  border: 1px solid var(--grid-strong);
+  border-radius: 16px;
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -454,8 +456,6 @@
   position: relative;
   outline: none;
   background: #ffffff;
-  border: 1px solid var(--grid-strong);
-  border-radius: 16px;
 }
 
 /* Custom Scrollbar for Grid Wrapper to avoid obscuring corners */
