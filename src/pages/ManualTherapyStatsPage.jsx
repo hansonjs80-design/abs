@@ -600,12 +600,14 @@ export default function ManualTherapyStatsPage() {
                           prescriptions={prescriptions}
                           incentivePercentage={effectiveSettlementSettings.incentive_percentage}
                           prescriptionPrices={effectiveSettlementSettings.prescription_prices}
+                          selectedTherapistNames={selectedTherapistNames}
                         />
                         <ManualTherapySixMonthStats
                           currentYear={currentYear}
                           currentMonth={currentMonth}
                           therapists={safeTherapists}
                           settings={shockwaveSettings}
+                          selectedTherapistNames={selectedTherapistNames}
                         />
                       </>
                     )}
@@ -620,6 +622,8 @@ export default function ManualTherapyStatsPage() {
                     therapists={safeTherapists}
                     currentMonth={currentMonth}
                     title={`${currentMonth}월 도수치료 신규환자`}
+                    monthlyTherapists={monthlyManualTherapists}
+                    selectedTherapistNames={selectedTherapistNames}
                   />
                 </div>
               )}

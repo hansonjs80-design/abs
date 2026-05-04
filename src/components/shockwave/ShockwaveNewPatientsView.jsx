@@ -22,12 +22,18 @@ export default function ShockwaveNewPatientsView({
   currentMonth,
   title,
   monthlyTherapists,
+  selectedTherapistNames,
 }) {
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
-  const displayTherapists = useMemo(
+  const allDisplayTherapists = useMemo(
     () => buildDisplayTherapists(safeTherapists, monthlyTherapists),
     [safeTherapists, monthlyTherapists]
   );
+  const displayTherapists = useMemo(() => {
+    if (!selectedTherapistNames || selectedTherapistNames.length === 0) return allDisplayTherapists;
+    const nameSet = new Set(selectedTherapistNames);
+    return allDisplayTherapists.filter((t) => nameSet.has(t.name));
+  }, [allDisplayTherapists, selectedTherapistNames]);
 
   const summary = useMemo(() => {
     const byTherapist = displayTherapists.map((therapist) => {

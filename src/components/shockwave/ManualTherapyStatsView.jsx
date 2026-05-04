@@ -28,13 +28,19 @@ export default function ManualTherapyStatsView({
   incentivePercentage = 0,
   prescriptionPrices = {},
   monthlyTherapists,
+  selectedTherapistNames,
 }) {
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter((item) => item?.name) : []), [therapists]);
-  const displayTherapists = useMemo(
+  const allDisplayTherapists = useMemo(
     () => buildDisplayTherapists(safeTherapists, monthlyTherapists),
     [safeTherapists, monthlyTherapists]
   );
+  const displayTherapists = useMemo(() => {
+    if (!selectedTherapistNames || selectedTherapistNames.length === 0) return allDisplayTherapists;
+    const nameSet = new Set(selectedTherapistNames);
+    return allDisplayTherapists.filter((t) => nameSet.has(t.name));
+  }, [allDisplayTherapists, selectedTherapistNames]);
   const safePrescriptions = useMemo(() => {
     const next = Array.isArray(prescriptions) ? prescriptions.filter(Boolean) : [];
     return next.length > 0 ? next : ['40분', '60분'];

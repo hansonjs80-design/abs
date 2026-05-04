@@ -32,13 +32,19 @@ export default function ShockwaveSettlementView({
   recentPeriodLabel = '최근 6개월',
   onRecentPeriodInputChange,
   monthlyTherapists,
+  selectedTherapistNames,
 }) {
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
-  const displayTherapists = useMemo(
+  const allDisplayTherapists = useMemo(
     () => buildDisplayTherapists(safeTherapists, monthlyTherapists),
     [safeTherapists, monthlyTherapists]
   );
+  const displayTherapists = useMemo(() => {
+    if (!selectedTherapistNames || selectedTherapistNames.length === 0) return allDisplayTherapists;
+    const nameSet = new Set(selectedTherapistNames);
+    return allDisplayTherapists.filter((t) => nameSet.has(t.name));
+  }, [allDisplayTherapists, selectedTherapistNames]);
   const safePrescriptions = useMemo(() => (Array.isArray(prescriptions) ? prescriptions.filter(Boolean) : []), [prescriptions]);
   const safeRecentMonthlySummaries = useMemo(
     () => (Array.isArray(recentMonthlySummaries) ? recentMonthlySummaries.filter(Boolean) : []),

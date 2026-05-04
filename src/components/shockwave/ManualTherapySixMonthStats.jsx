@@ -13,6 +13,7 @@ export default function ManualTherapySixMonthStats({
   currentYear,
   currentMonth,
   settings,
+  selectedTherapistNames,
 }) {
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -75,8 +76,10 @@ export default function ManualTherapySixMonthStats({
       newPatientCount: 0,
     }));
     const summaryMap = Object.fromEntries(base.map((month) => [month.key, month]));
+    const filterSet = selectedTherapistNames && selectedTherapistNames.length > 0 ? new Set(selectedTherapistNames) : null;
 
     logs.forEach((log) => {
+      if (filterSet && !filterSet.has(log?.therapist_name)) return;
       const logDate = new Date(log?.date);
       if (Number.isNaN(logDate.getTime())) return;
 
@@ -107,7 +110,7 @@ export default function ManualTherapySixMonthStats({
     });
 
     return base;
-  }, [logs, monthKeys, settings]);
+  }, [logs, monthKeys, settings, selectedTherapistNames]);
 
   return (
     <div className="sw-settlement-card">

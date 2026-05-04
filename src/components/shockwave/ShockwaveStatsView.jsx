@@ -698,6 +698,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                   recentPeriodInput={recentPeriodInput}
                   recentPeriodLabel={recentPeriodLabel}
                   onRecentPeriodInputChange={setRecentPeriodInput}
+                  selectedTherapistNames={selectedTherapistNames}
                 />
               )}
             </div>
@@ -710,6 +711,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                 therapists={safeTherapists}
                 monthlyTherapists={monthlyTherapists}
                 currentMonth={currentMonth}
+                selectedTherapistNames={selectedTherapistNames}
               />
             </div>
           )}
