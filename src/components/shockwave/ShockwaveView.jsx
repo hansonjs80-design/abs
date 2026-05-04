@@ -697,7 +697,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       });
   }, [memos, parseSchedulerPatientText, weeks]);
 
-  const buildSchedulerAutoText = useCallback(async (w, d, r, c, nextValue, forceOverrideSession = false) => {
+  const buildSchedulerAutoText = useCallback(async (w, d, r, c, nextValue, forceOverrideSession = false, originalContent = undefined) => {
     const rawName = normalizeSchedulerVisitSuffix(nextValue);
     if (!shouldAutoFormatSchedulerName(rawName)) return { text: rawName };
 
@@ -722,7 +722,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const targetDate = `${dayInfo.year}-${String(dayInfo.month).padStart(2, '0')}-${String(dayInfo.day).padStart(2, '0')}`;
     const memoKey = `${w}-${d}-${r}-${c}`;
     const currentBodyParts = splitBodyParts(memos[memoKey]?.body_part || '');
-    const previousContent = String(memos[memoKey]?.content || '').trim();
+    
+    // editing 중인 경우 editValue(originalContent)를 참조하여 원본 텍스트 확인
+    const previousContent = originalContent !== undefined ? String(originalContent).trim() : String(memos[memoKey]?.content || '').trim();
     const userRemovedDoseTag = has4060Pattern(previousContent) && !has4060Pattern(rawName);
 
     const schedulerOptions = findSchedulerHistoryCandidates({ w, d, r, c }, rawName, targetDate)
@@ -946,9 +948,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     autoText += explicitVisitSuffix || `(${effectiveVisitCount})`;
     autoText = normalize4060StarOrder(autoText);
     
-    // 사용자가 도수 태그를 제거한 경우, 처방을 명시적으로 비움
+    // 사용자가 도수 태그를 제거한 경우, 마지막 충격파 처방 내역으로 폴백
     const autoPrescription = userRemovedDoseTag
-      ? ''
+      ? (selected.prescription || '')
       : (has4060Pattern(autoText) ? undefined : (selected.prescription || undefined));
     const inheritedMergeSpan = findLatestSchedulerMemoMeta(
       { w, d, r, c },
@@ -1650,7 +1652,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     const immediateContent = String(finalValue ?? '').trim();
     setPendingDisplayValues((prev) => ({ ...prev, [key]: immediateContent }));
     setEditingCell(null);
-    const result = await buildSchedulerAutoText(w, d, r, c, finalValue);
+    const result = await buildSchedulerAutoText(w, d, r, c, finalValue, false, editValue);
     const newContent = normalizeSchedulerVisitSuffix(
       normalize4060StarOrder(typeof result === 'string' ? result : (result?.text || ''))
     );
