@@ -2637,14 +2637,21 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
         const calDays = generateShockwaveCalendar(currentYear, currentMonth, holidays)[selectedCell.w]?.days;
         const cellDate = calDays ? calDays[selectedCell.d]?.date : '';
         if (cellDate) {
+          const cellKey_ = `${selectedCell.w}-${selectedCell.d}-${selectedCell.r}-${selectedCell.c}`;
+          const cellMemo = memos[cellKey_] || {};
+          const cellContent = cellMemo.content || pendingDisplayValues[cellKey_] || '';
+          // 셀 내용에서 회차 추출
+          const visitSuffix = getExplicitVisitSuffix(cellContent);
+          const cellVisitCount = visitSuffix.replace(/[()]/g, '') || '';
+
           draftLog = {
             id: 'draft',
             date: cellDate,
             patient_name: nameParam || '',
             chart_number: chartParam || '',
-            prescription: '', // 알 수 없음
-            body_part: '', // 알 수 없음
-            visit_count: '',
+            prescription: cellMemo.prescription || '',
+            body_part: cellMemo.body_part || '',
+            visit_count: cellVisitCount,
             type: 'draft'
           };
         }
@@ -2657,7 +2664,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       alert(`디버그 에러 발생: ${e.message}`);
       setPatientHistoryModalData(prev => ({ ...prev, loading: false }));
     }
-  }, [currentYear, currentMonth, holidays, selectedCell]);
+  }, [currentYear, currentMonth, holidays, selectedCell, memos, pendingDisplayValues]);
 
   const handleUpdateLogVisitCount = useCallback(async (logId, logType, newValue) => {
     if (logId === 'draft') return; // 임시 항목은 DB 업데이트 안 함
