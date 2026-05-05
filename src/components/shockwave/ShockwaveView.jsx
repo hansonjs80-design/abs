@@ -2622,25 +2622,39 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       setPatientHistoryModalOpen(true);
       setPatientHistoryModalData({ loading: true, logs: [], searchName, searchChart });
 
-      const [shockwaveRes, manualRes] = await Promise.all([
-        supabase.from('shockwave_patient_logs')
-          .select('patient_name, chart_number, visit_count, date, prescription, body_part')
-          .order('date', { ascending: false })
-          .limit(100),
-        supabase.from('manual_therapy_patient_logs')
-          .select('patient_name, chart_number, visit_count, date, prescription, body_part')
-          .order('date', { ascending: false })
-          .limit(100),
-      ]);
+      // DB에서 해당 환자의 내역만 조회하도록 쿼리 작성
+      const shockwaveQuery = supabase.from('shockwave_patient_logs')
+        .select('patient_name, chart_number, visit_count, date, prescription, body_part')
+        .order('date', { ascending: false })
+        .limit(50);
+        
+      const manualQuery = supabase.from('manual_therapy_patient_logs')
+        .select('patient_name, chart_number, visit_count, date, prescription, body_part')
+        .order('date', { ascending: false })
+        .limit(50);
+
+      // 이름 또는 차트번호로 필터링 (DB 레벨)
+      if (searchChart) {
+        shockwaveQuery.eq('chart_number', searchChart);
+        manualQuery.eq('chart_number', searchChart);
+      } else if (searchName) {
+        // 이름은 띄어쓰기 등 변수가 있으므로 ilike(부분일치) 사용을 권장하나
+        // 여기서는 정확한 이름 검색을 위해 eq 사용 후, 혹시 모를 공백 차이 대비
+        shockwaveQuery.ilike('patient_name', `%${searchName}%`);
+        manualQuery.ilike('patient_name', `%${searchName}%`);
+      }
+
+      const [shockwaveRes, manualRes] = await Promise.all([shockwaveQuery, manualQuery]);
 
       const allData = [
         ...(shockwaveRes.data || []).map(d => ({ ...d, type: 'shockwave' })),
         ...(manualRes.data || []).map(d => ({ ...d, type: 'manual' })),
       ];
 
+      // 가져온 데이터에서 한 번 더 정확하게 필터링
       const matches = allData.filter((item) => {
         const matchChart = searchChart && String(item.chart_number || '').trim() === searchChart;
-        const matchName = searchName && normalizeNameForMatch(item.patient_name) === searchName;
+        const matchName = searchName && normalizeNameForMatch(item.patient_name).includes(searchName);
         if (searchChart) return matchChart;
         return matchName;
       });
@@ -4839,13 +4853,13 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       />
 
       {patientHistoryModalOpen && (
-        <div className="sw-modal-overlay" onClick={() => setPatientHistoryModalOpen(false)}>
-          <div className="sw-modal-content" style={{ maxWidth: 800, width: '90%', padding: 0 }} onClick={e => e.stopPropagation()}>
-            <div className="sw-modal-header" style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-secondary)', borderRadius: '12px 12px 0 0' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999999 }} onClick={() => setPatientHistoryModalOpen(false)}>
+          <div style={{ background: 'var(--bg-primary, #fff)', maxWidth: 800, width: '90%', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border-color, #eee)', background: 'var(--bg-secondary, #f8f9fa)' }}>
               <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>환자 스케줄 내역 검색</h3>
-              <button className="sw-modal-close" onClick={() => setPatientHistoryModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', padding: '0 4px', color: 'var(--text-secondary)' }}>✕</button>
+              <button onClick={() => setPatientHistoryModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', padding: '0 4px', color: 'var(--text-secondary, #666)' }}>✕</button>
             </div>
-            <div className="sw-modal-body" style={{ padding: '16px 20px', maxHeight: '70vh', overflowY: 'auto' }}>
+            <div style={{ padding: '16px 20px', maxHeight: '70vh', overflowY: 'auto' }}>
               <div style={{ marginBottom: 16, fontSize: '1.05rem', fontWeight: 600 }}>
                 검색 대상: <span style={{ color: 'var(--brand-primary)' }}>{patientHistoryModalData.searchName}</span> {patientHistoryModalData.searchChart ? `(${patientHistoryModalData.searchChart})` : ''}
               </div>
