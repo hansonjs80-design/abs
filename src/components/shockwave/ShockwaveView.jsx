@@ -3359,21 +3359,32 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     }
   }, [handleKeyDown]);
 
+  // 최신 모달 호출 함수를 Ref에 저장하여 클로저 문제 해결
+  const openModalRef = useRef(handleOpenPatientHistoryModal);
+  useEffect(() => {
+    openModalRef.current = handleOpenPatientHistoryModal;
+  }, [handleOpenPatientHistoryModal]);
+
   // 전역 Cmd+F 가로채기 (캡처링 단계)
   useEffect(() => {
     const handleGlobalCmdF = (e) => {
-      if (!selectedCellRef.current) return; // 셀이 선택되지 않았으면 무시 (브라우저 기본 검색 허용)
       const isMeta = e.metaKey || e.ctrlKey;
-      if (isMeta && (e.code === 'KeyF' || e.key.toLowerCase() === 'f')) {
-        e.preventDefault();
-        e.stopPropagation();
-        handleOpenPatientHistoryModal();
+      const isKeyF = e.code === 'KeyF' || e.key.toLowerCase() === 'f';
+      
+      if (isMeta && isKeyF) {
+        // 셀이 선택되어 있으면 브라우저 기본 검색을 막고 팝업 호출
+        if (selectedCellRef.current) {
+          e.preventDefault();
+          e.stopPropagation();
+          openModalRef.current();
+        }
       }
     };
     
+    // 캡처링 단계에서 가장 먼저 잡음
     window.addEventListener('keydown', handleGlobalCmdF, { capture: true });
     return () => window.removeEventListener('keydown', handleGlobalCmdF, { capture: true });
-  }, [handleOpenPatientHistoryModal]);
+  }, []); // 의존성 배열을 비워 한 번만 등록
 
   useEffect(() => {
     const handlePasteEvent = (event) => {
@@ -4639,6 +4650,16 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                         </div>
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                <div className="context-menu-item" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => {
+                  e.stopPropagation();
+                  setContextMenu(null);
+                  handleOpenPatientHistoryModal();
+                }}>
+                  <div className="context-menu-label" style={{ fontWeight: 600, color: 'var(--brand-primary)' }}>
+                    🔍 환자 내역 검색 (Cmd+F)
                   </div>
                 </div>
 
