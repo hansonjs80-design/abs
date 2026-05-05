@@ -2681,17 +2681,23 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     const name = String(log.patient_name || '').replace(/\*/g, '').trim();
     const bodyPart = String(log.body_part || '').trim();
     const prescription = String(log.prescription || '').trim();
+    const visitCount = parseInt(log.visit_count || '0', 10) || 0;
     
     let newContent = name;
-    if (chart) {
-      newContent = `${name}/${chart}`;
-    }
 
     if (log.type === 'manual') {
       const doseMatch = String(prescription).match(/(40|60)/);
       if (doseMatch && !has4060Pattern(newContent)) {
         newContent = `${newContent}${doseMatch[0]}`;
       }
+    }
+
+    if (chart) {
+      newContent = `${chart}/${newContent}`;
+    }
+
+    if (visitCount > 0) {
+      newContent = `${newContent}(${visitCount})`;
     }
 
     const currentMemo = memos[key] || {};
