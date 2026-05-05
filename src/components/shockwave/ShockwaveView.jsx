@@ -2594,8 +2594,10 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
   // 환자 스케줄 내역 검색 및 적용 (Cmd+F)
   const handleOpenPatientHistoryModal = useCallback(async () => {
     try {
+      // alert('디버그: 팝업 함수 진입');
+      
       if (!selectedCell) {
-        addToast('디버그: 선택된 셀이 없습니다.', 'error');
+        alert('디버그: 선택된 셀이 없습니다.');
         return;
       }
       const { w, d, r, c } = selectedCell;
@@ -2604,7 +2606,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       const content = editingCell === key ? editValue : (memos[key]?.content || pendingDisplayValues[key] || '');
       
       if (!content.trim()) {
-        addToast('이름이나 차트번호를 먼저 입력해주세요.', 'info');
+        alert('디버그: 이름이나 차트번호가 비어있습니다. (' + content + ')');
         return;
       }
       
@@ -2613,7 +2615,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       const searchChart = parsed.patientChart ? String(parsed.patientChart).trim() : null;
 
       if (!searchName && !searchChart) {
-        addToast(`이름이나 차트번호를 파악할 수 없습니다: ${content}`, 'info');
+        alert(`디버그: 이름/차트번호를 파악할 수 없습니다: ${content}`);
         return;
       }
 
@@ -2651,10 +2653,10 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       setPatientHistoryModalData({ loading: false, logs: matches, searchName, searchChart });
     } catch (e) {
       console.error(e);
-      addToast(`디버그 에러: ${e.message}`, 'error');
+      alert(`디버그 에러 발생: ${e.message}`);
       setPatientHistoryModalData(prev => ({ ...prev, loading: false }));
     }
-  }, [selectedCell, cellKey, editingCell, editValue, memos, pendingDisplayValues, addToast]);
+  }, [selectedCell, cellKey, editingCell, editValue, memos, pendingDisplayValues]);
 
   const handleApplyHistoryToCell = useCallback((log) => {
     if (!selectedCell) return;
