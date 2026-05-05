@@ -2744,7 +2744,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       }
       const { w, d, r, c } = selectedCell;
       const key = cellKey(w, d, r, c);
-      const content = editingCell === key ? editValue : (memos[key]?.content || pendingDisplayValues[key] || '');
+      const content = editingCell === key ? (editInputRef.current?.value ?? editValue) : (memos[key]?.content || pendingDisplayValues[key] || '');
       
       if (!content.trim()) {
         alert('디버그: 이름이나 차트번호가 비어있습니다. (' + content + ')');
