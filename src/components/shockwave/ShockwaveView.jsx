@@ -2634,9 +2634,13 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       // 현재 선택된 셀의 날짜 구하기 (가상 항목 추가용)
       let draftLog = null;
       if (selectedCell) {
-        const calDays = generateShockwaveCalendar(currentYear, currentMonth, holidays)[selectedCell.w]?.days;
-        const cellDate = calDays ? calDays[selectedCell.d]?.date : '';
-        if (cellDate) {
+        const calWeeks = generateShockwaveCalendar(currentYear, currentMonth, holidays);
+        const dayInfo = calWeeks[selectedCell.w]?.[selectedCell.d];
+        if (dayInfo) {
+          // Date 객체를 YYYY-MM-DD 문자열로 변환
+          const dd = dayInfo.date;
+          const cellDate = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`;
+          
           const cellKey_ = `${selectedCell.w}-${selectedCell.d}-${selectedCell.r}-${selectedCell.c}`;
           const cellMemo = memos[cellKey_] || {};
           const cellContent = cellMemo.content || pendingDisplayValues[cellKey_] || '';
