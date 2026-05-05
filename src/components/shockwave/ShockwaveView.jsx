@@ -2596,10 +2596,12 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     if (!selectedCell) return;
     const { w, d, r, c } = selectedCell;
     const key = cellKey(w, d, r, c);
-    const content = memos[key]?.content || pendingDisplayValues[key] || '';
+    
+    // 편집 중이라면 editValue를, 아니면 셀 내용을 사용
+    const content = editingCell === key ? editValue : (memos[key]?.content || pendingDisplayValues[key] || '');
     
     if (!content.trim()) {
-      addToast('선택된 셀이 비어있습니다.', 'info');
+      addToast('이름이나 차트번호를 먼저 입력해주세요.', 'info');
       return;
     }
     
@@ -2608,7 +2610,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     const searchChart = parsed.patientChart ? String(parsed.patientChart).trim() : null;
 
     if (!searchName && !searchChart) {
-      addToast('이름이나 차트번호를 파악할 수 없습니다.', 'info');
+      addToast(`이름이나 차트번호를 파악할 수 없습니다: ${content}`, 'info');
       return;
     }
 
@@ -2650,7 +2652,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       addToast('내역을 불러오는 중 오류가 발생했습니다.', 'error');
       setPatientHistoryModalData(prev => ({ ...prev, loading: false }));
     }
-  }, [selectedCell, cellKey, memos, pendingDisplayValues, addToast]);
+  }, [selectedCell, cellKey, editingCell, editValue, memos, pendingDisplayValues, addToast]);
 
   const handleApplyHistoryToCell = useCallback((log) => {
     if (!selectedCell) return;
@@ -3206,6 +3208,16 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       doUndo();
       return;
     }
+    const isMeta = e.metaKey || e.ctrlKey;
+
+    // Cmd+F → 환자 내역 검색 팝업 (가장 우선 처리)
+    if (isMeta && (e.code === 'KeyF' || e.key.toLowerCase() === 'f')) {
+      e.preventDefault();
+      e.stopPropagation();
+      handleOpenPatientHistoryModal();
+      return;
+    }
+
     if (isEditableTarget(e.target)) return;
     if (contextMenu) {
       if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -3224,19 +3236,6 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
         setEditingCell(null);
       }
       return; // 편집 중에는 input이 키 이벤트를 처리
-    }
-
-    const isMeta = e.metaKey || e.ctrlKey;
-
-    if (e.key === 'Hangul' || e.code === 'Lang1' || e.code === 'Lang2') {
-      return;
-    }
-
-    // Cmd+F → 환자 내역 검색 팝업
-    if (isMeta && e.code === 'KeyF') {
-      e.preventDefault();
-      handleOpenPatientHistoryModal();
-      return;
     }
 
     // Enter → 편집 모드 진입
