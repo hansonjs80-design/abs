@@ -3359,6 +3359,22 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     }
   }, [handleKeyDown]);
 
+  // 전역 Cmd+F 가로채기 (캡처링 단계)
+  useEffect(() => {
+    const handleGlobalCmdF = (e) => {
+      if (!selectedCellRef.current) return; // 셀이 선택되지 않았으면 무시 (브라우저 기본 검색 허용)
+      const isMeta = e.metaKey || e.ctrlKey;
+      if (isMeta && (e.code === 'KeyF' || e.key.toLowerCase() === 'f')) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleOpenPatientHistoryModal();
+      }
+    };
+    
+    window.addEventListener('keydown', handleGlobalCmdF, { capture: true });
+    return () => window.removeEventListener('keydown', handleGlobalCmdF, { capture: true });
+  }, [handleOpenPatientHistoryModal]);
+
   useEffect(() => {
     const handlePasteEvent = (event) => {
       if (!selectedCell) return;
