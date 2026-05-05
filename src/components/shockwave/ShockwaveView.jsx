@@ -2622,11 +2622,11 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
 
       const [shockwaveRes, manualRes] = await Promise.all([
         supabase.from('shockwave_patient_logs')
-          .select('patient_name, chart_number, visit_count, date, prescription, body_part, memo')
+          .select('patient_name, chart_number, visit_count, date, prescription, body_part')
           .order('date', { ascending: false })
           .limit(100),
         supabase.from('manual_therapy_patient_logs')
-          .select('patient_name, chart_number, visit_count, date, prescription, body_part, memo')
+          .select('patient_name, chart_number, visit_count, date, prescription, body_part')
           .order('date', { ascending: false })
           .limit(100),
       ]);
