@@ -2593,31 +2593,33 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
 
   // 환자 스케줄 내역 검색 및 적용 (Cmd+F)
   const handleOpenPatientHistoryModal = useCallback(async () => {
-    if (!selectedCell) return;
-    const { w, d, r, c } = selectedCell;
-    const key = cellKey(w, d, r, c);
-    
-    // 편집 중이라면 editValue를, 아니면 셀 내용을 사용
-    const content = editingCell === key ? editValue : (memos[key]?.content || pendingDisplayValues[key] || '');
-    
-    if (!content.trim()) {
-      addToast('이름이나 차트번호를 먼저 입력해주세요.', 'info');
-      return;
-    }
-    
-    const parsed = parseSchedulerPatientIdentity(content);
-    const searchName = normalizeNameForMatch(parsed.patientName);
-    const searchChart = parsed.patientChart ? String(parsed.patientChart).trim() : null;
-
-    if (!searchName && !searchChart) {
-      addToast(`이름이나 차트번호를 파악할 수 없습니다: ${content}`, 'info');
-      return;
-    }
-
-    setPatientHistoryModalOpen(true);
-    setPatientHistoryModalData({ loading: true, logs: [], searchName, searchChart });
-
     try {
+      if (!selectedCell) {
+        addToast('디버그: 선택된 셀이 없습니다.', 'error');
+        return;
+      }
+      const { w, d, r, c } = selectedCell;
+      const key = cellKey(w, d, r, c);
+      
+      const content = editingCell === key ? editValue : (memos[key]?.content || pendingDisplayValues[key] || '');
+      
+      if (!content.trim()) {
+        addToast('이름이나 차트번호를 먼저 입력해주세요.', 'info');
+        return;
+      }
+      
+      const parsed = parseSchedulerPatientIdentity(content);
+      const searchName = normalizeNameForMatch(parsed.patientName);
+      const searchChart = parsed.patientChart ? String(parsed.patientChart).trim() : null;
+
+      if (!searchName && !searchChart) {
+        addToast(`이름이나 차트번호를 파악할 수 없습니다: ${content}`, 'info');
+        return;
+      }
+
+      setPatientHistoryModalOpen(true);
+      setPatientHistoryModalData({ loading: true, logs: [], searchName, searchChart });
+
       const [shockwaveRes, manualRes] = await Promise.all([
         supabase.from('shockwave_patient_logs')
           .select('patient_name, chart_number, visit_count, date, prescription, body_part, memo')
@@ -2649,7 +2651,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       setPatientHistoryModalData({ loading: false, logs: matches, searchName, searchChart });
     } catch (e) {
       console.error(e);
-      addToast('내역을 불러오는 중 오류가 발생했습니다.', 'error');
+      addToast(`디버그 에러: ${e.message}`, 'error');
       setPatientHistoryModalData(prev => ({ ...prev, loading: false }));
     }
   }, [selectedCell, cellKey, editingCell, editValue, memos, pendingDisplayValues, addToast]);
