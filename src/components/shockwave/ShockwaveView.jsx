@@ -3338,7 +3338,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
         for (const k of keys) {
           const [kw, kd, kr, kc] = k.split('-').map(Number);
           const memo = memos[k] || {};
-          const stableContent = getStableMemoContent(k, memo);
+          const stableContent = (typeof memo.content === 'string' ? memo.content : pendingDisplayValues[k]) || '';
           if (!stableContent) continue;
           
           // 셀 내용에서 현재 회차 추출 (예: "715/이기성(2)" → "(2)" → "2")
