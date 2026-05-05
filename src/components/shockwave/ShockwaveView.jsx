@@ -787,18 +787,36 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const searchChart = parsedIdentity.patientChart ? String(parsedIdentity.patientChart).trim() : null;
     const searchName = normalizeNameForMatch(parsedIdentity.patientName) || normalizeNameForMatch(rawName);
 
-    const [shockwaveRes, manualRes] = await Promise.all([
-      supabase.from('shockwave_patient_logs')
-        .select('patient_name, chart_number, visit_count, date, prescription, body_part')
-        .lte('date', targetDate)
-        .order('date', { ascending: false })
-        .limit(200),
-      supabase.from('manual_therapy_patient_logs')
-        .select('patient_name, chart_number, visit_count, date, prescription, body_part')
-        .lte('date', targetDate)
-        .order('date', { ascending: false })
-        .limit(200),
-    ]);
+    const shockwaveQuery = supabase.from('shockwave_patient_logs')
+      .select('patient_name, chart_number, visit_count, date, prescription, body_part')
+      .lte('date', targetDate)
+      .order('date', { ascending: false })
+      .limit(500);
+
+    const manualQuery = supabase.from('manual_therapy_patient_logs')
+      .select('patient_name, chart_number, visit_count, date, prescription, body_part')
+      .lte('date', targetDate)
+      .order('date', { ascending: false })
+      .limit(500);
+
+    const scheduleQuery = supabase.from('shockwave_schedules')
+      .select('id, year, month, week_index, day_index, content, prescription, body_part')
+      .neq('content', '')
+      .order('year', { ascending: false })
+      .order('month', { ascending: false })
+      .limit(1000);
+
+    if (searchChart) {
+      shockwaveQuery.eq('chart_number', searchChart);
+      manualQuery.eq('chart_number', searchChart);
+      scheduleQuery.ilike('content', `%${searchChart}%`);
+    } else if (searchName) {
+      shockwaveQuery.ilike('patient_name', `%${searchName}%`);
+      manualQuery.ilike('patient_name', `%${searchName}%`);
+      scheduleQuery.ilike('content', `%${searchName}%`);
+    }
+
+    const [shockwaveRes, manualRes, scheduleRes] = await Promise.all([shockwaveQuery, manualQuery, scheduleQuery]);
 
     const allData = userRemovedDoseTag
       ? (shockwaveRes.data || []).map(d => ({ ...d, type: 'shockwave' }))
@@ -806,6 +824,45 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           ...(shockwaveRes.data || []).map(d => ({ ...d, type: 'shockwave' })),
           ...(manualRes.data || []).map(d => ({ ...d, type: 'manual' })),
         ];
+
+    if (!userRemovedDoseTag) {
+      const scheduleData = (scheduleRes.data || []);
+      const seenLogDates = new Set(allData.map(d => d.date));
+      
+      for (const s of scheduleData) {
+        try {
+          const calWeeks = generateShockwaveCalendar(s.year, s.month);
+          const dayInfo = calWeeks[s.week_index]?.[s.day_index];
+          if (!dayInfo) continue;
+          const dd = dayInfo.date;
+          const dateStr = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`;
+          
+          if (dateStr > targetDate) continue;
+          if (seenLogDates.has(dateStr)) continue;
+          
+          const content = s.content || '';
+          const parsed = parseSchedulerPatientIdentity(content);
+          const matchChart = searchChart && String(parsed.patientChart || '').trim() === searchChart;
+          const matchName = searchName && normalizeNameForMatch(parsed.patientName).includes(searchName);
+          if (searchChart && !matchChart) continue;
+          if (!searchChart && !matchName) continue;
+          
+          const visitSuffix = getExplicitVisitSuffix(content);
+          const visitCount = visitSuffix.replace(/[()]/g, '') || '';
+          
+          allData.push({
+            date: dateStr,
+            patient_name: parsed.patientName || '',
+            chart_number: parsed.patientChart || '',
+            visit_count: visitCount,
+            prescription: s.prescription || '',
+            body_part: s.body_part || '',
+            type: 'shockwave' // 스케줄 기록은 기본적으로 충격파 속성으로 취급 (도수치료 태그가 없으면)
+          });
+          seenLogDates.add(dateStr);
+        } catch { /* skip */ }
+      }
+    }
 
     const matches = allData.filter((item) => {
       const matchChart = searchChart && String(item.chart_number || '').trim() === searchChart;
