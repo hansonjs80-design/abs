@@ -100,6 +100,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [contextMenuVisitInput, setContextMenuVisitInput] = useState('');
   const [contextMenuReservationInput, setContextMenuReservationInput] = useState('');
 
+  // 환자 내역 검색 팝업 상태 (Cmd+F)
+  const [patientHistoryModalOpen, setPatientHistoryModalOpen] = useState(false);
+  const [patientHistoryModalData, setPatientHistoryModalData] = useState({ loading: false, logs: [], searchName: '', searchChart: '' });
+
   // Presence 기능 비활성화 – 실시간 데이터 동기화만 유지
 
   useEffect(() => {
@@ -2587,6 +2591,117 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     await applyTreatmentCompleteToSelection('cancel-toggle');
   }, [applyTreatmentCompleteToSelection]);
 
+  // 환자 스케줄 내역 검색 및 적용 (Cmd+F)
+  const handleOpenPatientHistoryModal = useCallback(async () => {
+    if (!selectedCell) return;
+    const { w, d, r, c } = selectedCell;
+    const key = cellKey(w, d, r, c);
+    const content = memos[key]?.content || pendingDisplayValues[key] || '';
+    
+    if (!content.trim()) {
+      addToast('선택된 셀이 비어있습니다.', 'info');
+      return;
+    }
+    
+    const parsed = parseSchedulerPatientIdentity(content);
+    const searchName = normalizeNameForMatch(parsed.patientName);
+    const searchChart = parsed.patientChart ? String(parsed.patientChart).trim() : null;
+
+    if (!searchName && !searchChart) {
+      addToast('이름이나 차트번호를 파악할 수 없습니다.', 'info');
+      return;
+    }
+
+    setPatientHistoryModalOpen(true);
+    setPatientHistoryModalData({ loading: true, logs: [], searchName, searchChart });
+
+    try {
+      const [shockwaveRes, manualRes] = await Promise.all([
+        supabase.from('shockwave_patient_logs')
+          .select('patient_name, chart_number, visit_count, date, prescription, body_part, memo')
+          .order('date', { ascending: false })
+          .limit(100),
+        supabase.from('manual_therapy_patient_logs')
+          .select('patient_name, chart_number, visit_count, date, prescription, body_part, memo')
+          .order('date', { ascending: false })
+          .limit(100),
+      ]);
+
+      const allData = [
+        ...(shockwaveRes.data || []).map(d => ({ ...d, type: 'shockwave' })),
+        ...(manualRes.data || []).map(d => ({ ...d, type: 'manual' })),
+      ];
+
+      const matches = allData.filter((item) => {
+        const matchChart = searchChart && String(item.chart_number || '').trim() === searchChart;
+        const matchName = searchName && normalizeNameForMatch(item.patient_name) === searchName;
+        if (searchChart) return matchChart;
+        return matchName;
+      });
+
+      matches.sort((a, b) => {
+        if (a.date !== b.date) return b.date.localeCompare(a.date);
+        return (parseInt(b.visit_count || '0', 10) || 0) - (parseInt(a.visit_count || '0', 10) || 0);
+      });
+
+      setPatientHistoryModalData({ loading: false, logs: matches, searchName, searchChart });
+    } catch (e) {
+      console.error(e);
+      addToast('내역을 불러오는 중 오류가 발생했습니다.', 'error');
+      setPatientHistoryModalData(prev => ({ ...prev, loading: false }));
+    }
+  }, [selectedCell, cellKey, memos, pendingDisplayValues, addToast]);
+
+  const handleApplyHistoryToCell = useCallback((log) => {
+    if (!selectedCell) return;
+    const { w, d, r, c } = selectedCell;
+    const key = cellKey(w, d, r, c);
+    
+    const chart = String(log.chart_number || '').trim();
+    const name = String(log.patient_name || '').replace(/\*/g, '').trim();
+    const bodyPart = String(log.body_part || '').trim();
+    const prescription = String(log.prescription || '').trim();
+    
+    let newContent = name;
+    if (chart) {
+      newContent = `${name}/${chart}`;
+    }
+
+    if (log.type === 'manual') {
+      const doseMatch = String(prescription).match(/(40|60)/);
+      if (doseMatch && !has4060Pattern(newContent)) {
+        newContent = `${newContent}${doseMatch[0]}`;
+      }
+    }
+
+    const currentMemo = memos[key] || {};
+    
+    const payload = {
+      year: currentYear,
+      month: currentMonth,
+      week_index: w,
+      day_index: d,
+      row_index: r,
+      col_index: c,
+      content: newContent,
+      bg_color: currentMemo.bg_color || null,
+      prescription: prescription || null,
+      body_part: bodyPart || null,
+      merge_span: currentMemo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null }
+    };
+
+    setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
+    
+    saveShockwaveMemosBulk([payload]).then((success) => {
+      if (success) {
+        addToast('선택한 내역이 적용되었습니다.', 'success');
+      } else {
+        addToast('내역 적용에 실패했습니다.', 'error');
+      }
+      setPatientHistoryModalOpen(false);
+    });
+  }, [selectedCell, cellKey, currentYear, currentMonth, memos, saveShockwaveMemosBulk, addToast]);
+
   const handleToggleHolidayBackground = useCallback(async () => {
     if (!selectedKeys || selectedKeys.size === 0) return;
 
@@ -3117,6 +3232,13 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       return;
     }
 
+    // Cmd+F → 환자 내역 검색 팝업
+    if (isMeta && e.code === 'KeyF') {
+      e.preventDefault();
+      handleOpenPatientHistoryModal();
+      return;
+    }
+
     // Enter → 편집 모드 진입
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -3226,7 +3348,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       }
       return;
     }
-  }, [contextMenu, selectedCell, editingCell, selectedKeys, deleteCells, buildRangeKeys, selectSingleCell, getAdjacentCell, beginEditingCell, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleTreatmentCancel, handleToggleHolidayBackground, tryMergeSelection, doUndo, isEditableTarget, isContextMenuTarget, cellKey, colCount, memos]);
+  }, [contextMenu, selectedCell, editingCell, selectedKeys, deleteCells, buildRangeKeys, selectSingleCell, getAdjacentCell, beginEditingCell, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleTreatmentCancel, handleToggleHolidayBackground, tryMergeSelection, doUndo, isEditableTarget, isContextMenuTarget, cellKey, colCount, memos, handleOpenPatientHistoryModal]);
 
   // 키보드 이벤트 등록
 
@@ -4675,6 +4797,76 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
         onSelect={handleChartSelectorClose}
         onCancel={() => handleChartSelectorClose(null)}
       />
+
+      {patientHistoryModalOpen && (
+        <div className="sw-modal-overlay" onClick={() => setPatientHistoryModalOpen(false)}>
+          <div className="sw-modal-content" style={{ maxWidth: 800, width: '90%', padding: 0 }} onClick={e => e.stopPropagation()}>
+            <div className="sw-modal-header" style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-secondary)', borderRadius: '12px 12px 0 0' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>환자 스케줄 내역 검색</h3>
+              <button className="sw-modal-close" onClick={() => setPatientHistoryModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', padding: '0 4px', color: 'var(--text-secondary)' }}>✕</button>
+            </div>
+            <div className="sw-modal-body" style={{ padding: '16px 20px', maxHeight: '70vh', overflowY: 'auto' }}>
+              <div style={{ marginBottom: 16, fontSize: '1.05rem', fontWeight: 600 }}>
+                검색 대상: <span style={{ color: 'var(--brand-primary)' }}>{patientHistoryModalData.searchName}</span> {patientHistoryModalData.searchChart ? `(${patientHistoryModalData.searchChart})` : ''}
+              </div>
+              
+              {patientHistoryModalData.loading ? (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>내역을 불러오는 중...</div>
+              ) : patientHistoryModalData.logs.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>해당하는 내역이 없습니다.</div>
+              ) : (
+                <div className="sw-compact-table-wrap">
+                  <table className="sw-summary-table sw-compact-summary-table" style={{ width: '100%', margin: 0 }}>
+                    <thead>
+                      <tr>
+                        <th style={{ width: '12%', textAlign: 'center' }}>날짜</th>
+                        <th style={{ width: '12%', textAlign: 'center' }}>차트</th>
+                        <th style={{ width: '10%', textAlign: 'center' }}>이름</th>
+                        <th style={{ width: '12%', textAlign: 'center' }}>처방</th>
+                        <th style={{ width: '15%', textAlign: 'center' }}>부위</th>
+                        <th style={{ width: '8%', textAlign: 'center' }}>회차</th>
+                        <th style={{ width: '21%', textAlign: 'left' }}>메모</th>
+                        <th style={{ width: '10%', textAlign: 'center' }}>선택</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {patientHistoryModalData.logs.map((log, idx) => (
+                        <tr 
+                          key={`${log.date}-${idx}`} 
+                          onClick={() => handleApplyHistoryToCell(log)}
+                          style={{ cursor: 'pointer' }}
+                          title="클릭하여 내역을 현재 셀에 적용합니다"
+                        >
+                          <td style={{ textAlign: 'center' }}>{log.date}</td>
+                          <td style={{ textAlign: 'center' }}>{log.chart_number}</td>
+                          <td style={{ textAlign: 'center' }}>{log.patient_name}</td>
+                          <td style={{ textAlign: 'center', color: log.type === 'manual' ? 'var(--brand-primary)' : 'inherit', fontWeight: log.type === 'manual' ? 600 : 400 }}>
+                            {log.prescription}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>{log.body_part}</td>
+                          <td style={{ textAlign: 'center' }}>{log.visit_count ? `${log.visit_count}회` : '-'}</td>
+                          <td style={{ textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.85em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {log.memo}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <button 
+                              className="btn btn-primary" 
+                              style={{ padding: '4px 12px', fontSize: '0.85rem', minHeight: 'unset', height: 'auto', borderRadius: '4px' }} 
+                              onClick={(e) => { e.stopPropagation(); handleApplyHistoryToCell(log); }}
+                            >
+                              적용
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {hoverData && (
         <div
