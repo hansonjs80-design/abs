@@ -2591,18 +2591,96 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     await applyTreatmentCompleteToSelection('cancel-toggle');
   }, [applyTreatmentCompleteToSelection]);
 
+  const fetchPatientHistory = useCallback(async (nameParam, chartParam) => {
+    setPatientHistoryModalData(prev => ({ ...prev, loading: true, searchName: nameParam, searchChart: chartParam }));
+    try {
+      const shockwaveQuery = supabase.from('shockwave_patient_logs')
+        .select('id, patient_name, chart_number, visit_count, date, prescription, body_part')
+        .order('date', { ascending: false })
+        .limit(50);
+        
+      const manualQuery = supabase.from('manual_therapy_patient_logs')
+        .select('id, patient_name, chart_number, visit_count, date, prescription, body_part')
+        .order('date', { ascending: false })
+        .limit(50);
+
+      if (chartParam) {
+        shockwaveQuery.eq('chart_number', chartParam);
+        manualQuery.eq('chart_number', chartParam);
+      } else if (nameParam) {
+        shockwaveQuery.ilike('patient_name', `%${nameParam}%`);
+        manualQuery.ilike('patient_name', `%${nameParam}%`);
+      }
+
+      const [shockwaveRes, manualRes] = await Promise.all([shockwaveQuery, manualQuery]);
+
+      const allData = [
+        ...(shockwaveRes.data || []).map(d => ({ ...d, type: 'shockwave' })),
+        ...(manualRes.data || []).map(d => ({ ...d, type: 'manual' })),
+      ];
+
+      const matches = allData.filter((item) => {
+        const matchChart = chartParam && String(item.chart_number || '').trim() === chartParam;
+        const matchName = nameParam && normalizeNameForMatch(item.patient_name).includes(nameParam);
+        if (chartParam) return matchChart;
+        return matchName;
+      });
+
+      matches.sort((a, b) => {
+        if (a.date !== b.date) return b.date.localeCompare(a.date);
+        return (parseInt(b.visit_count || '0', 10) || 0) - (parseInt(a.visit_count || '0', 10) || 0);
+      });
+
+      // 현재 선택된 셀의 날짜 구하기 (가상 항목 추가용)
+      let draftLog = null;
+      if (selectedCell) {
+        const calDays = generateShockwaveCalendar(currentYear, currentMonth, holidays)[selectedCell.w]?.days;
+        const cellDate = calDays ? calDays[selectedCell.d]?.date : '';
+        if (cellDate) {
+          draftLog = {
+            id: 'draft',
+            date: cellDate,
+            patient_name: nameParam || '',
+            chart_number: chartParam || '',
+            prescription: '', // 알 수 없음
+            body_part: '', // 알 수 없음
+            visit_count: '',
+            type: 'draft'
+          };
+        }
+      }
+
+      const finalLogs = draftLog ? [draftLog, ...matches] : matches;
+      setPatientHistoryModalData({ loading: false, logs: finalLogs, searchName: nameParam, searchChart: chartParam });
+    } catch (e) {
+      console.error(e);
+      alert(`디버그 에러 발생: ${e.message}`);
+      setPatientHistoryModalData(prev => ({ ...prev, loading: false }));
+    }
+  }, [currentYear, currentMonth, holidays, selectedCell]);
+
+  const handleUpdateLogVisitCount = useCallback(async (logId, logType, newValue) => {
+    if (logId === 'draft') return; // 임시 항목은 DB 업데이트 안 함
+    const tableName = logType === 'shockwave' ? 'shockwave_patient_logs' : 'manual_therapy_patient_logs';
+    try {
+      const { error } = await supabase.from(tableName).update({ visit_count: newValue }).eq('id', logId);
+      if (error) throw error;
+      addToast('회차가 수정되었습니다.', 'success');
+    } catch (e) {
+      console.error(e);
+      addToast('회차 수정 실패', 'error');
+    }
+  }, [addToast]);
+
   // 환자 스케줄 내역 검색 및 적용 (Cmd+F)
   const handleOpenPatientHistoryModal = useCallback(async () => {
     try {
-      // alert('디버그: 팝업 함수 진입');
-      
       if (!selectedCell) {
         alert('디버그: 선택된 셀이 없습니다.');
         return;
       }
       const { w, d, r, c } = selectedCell;
       const key = cellKey(w, d, r, c);
-      
       const content = editingCell === key ? editValue : (memos[key]?.content || pendingDisplayValues[key] || '');
       
       if (!content.trim()) {
@@ -2620,57 +2698,12 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       }
 
       setPatientHistoryModalOpen(true);
-      setPatientHistoryModalData({ loading: true, logs: [], searchName, searchChart });
-
-      // DB에서 해당 환자의 내역만 조회하도록 쿼리 작성
-      const shockwaveQuery = supabase.from('shockwave_patient_logs')
-        .select('patient_name, chart_number, visit_count, date, prescription, body_part')
-        .order('date', { ascending: false })
-        .limit(50);
-        
-      const manualQuery = supabase.from('manual_therapy_patient_logs')
-        .select('patient_name, chart_number, visit_count, date, prescription, body_part')
-        .order('date', { ascending: false })
-        .limit(50);
-
-      // 이름 또는 차트번호로 필터링 (DB 레벨)
-      if (searchChart) {
-        shockwaveQuery.eq('chart_number', searchChart);
-        manualQuery.eq('chart_number', searchChart);
-      } else if (searchName) {
-        // 이름은 띄어쓰기 등 변수가 있으므로 ilike(부분일치) 사용을 권장하나
-        // 여기서는 정확한 이름 검색을 위해 eq 사용 후, 혹시 모를 공백 차이 대비
-        shockwaveQuery.ilike('patient_name', `%${searchName}%`);
-        manualQuery.ilike('patient_name', `%${searchName}%`);
-      }
-
-      const [shockwaveRes, manualRes] = await Promise.all([shockwaveQuery, manualQuery]);
-
-      const allData = [
-        ...(shockwaveRes.data || []).map(d => ({ ...d, type: 'shockwave' })),
-        ...(manualRes.data || []).map(d => ({ ...d, type: 'manual' })),
-      ];
-
-      // 가져온 데이터에서 한 번 더 정확하게 필터링
-      const matches = allData.filter((item) => {
-        const matchChart = searchChart && String(item.chart_number || '').trim() === searchChart;
-        const matchName = searchName && normalizeNameForMatch(item.patient_name).includes(searchName);
-        if (searchChart) return matchChart;
-        return matchName;
-      });
-
-      matches.sort((a, b) => {
-        if (a.date !== b.date) return b.date.localeCompare(a.date);
-        return (parseInt(b.visit_count || '0', 10) || 0) - (parseInt(a.visit_count || '0', 10) || 0);
-      });
-
-      setPatientHistoryModalData({ loading: false, logs: matches, searchName, searchChart });
+      await fetchPatientHistory(searchName, searchChart);
     } catch (e) {
       console.error(e);
       alert(`디버그 에러 발생: ${e.message}`);
-      setPatientHistoryModalData(prev => ({ ...prev, loading: false }));
     }
-  }, [selectedCell, cellKey, editingCell, editValue, memos, pendingDisplayValues]);
+  }, [selectedCell, cellKey, editingCell, editValue, memos, pendingDisplayValues, fetchPatientHistory]);
 
   const handleApplyHistoryToCell = useCallback((log) => {
     if (!selectedCell) return;
@@ -4860,9 +4893,33 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
 
       {patientHistoryModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999999 }} onClick={() => setPatientHistoryModalOpen(false)}>
-          <div style={{ background: 'var(--bg-primary, #fff)', maxWidth: 800, width: '90%', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border-color, #eee)', background: 'var(--bg-secondary, #f8f9fa)' }}>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>환자 스케줄 내역 검색</h3>
+          <div style={{ background: 'var(--bg-primary, #fff)', maxWidth: 850, width: '95%', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--border-color, #eee)', background: 'var(--bg-secondary, #f8f9fa)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>환자 스케줄 내역 검색</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-primary, #fff)', border: '1px solid var(--border-color, #ddd)', borderRadius: '6px', padding: '2px 8px' }}>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary, #666)' }}>검색:</span>
+                  <input 
+                    type="text" 
+                    placeholder="이름/차트번호" 
+                    defaultValue={patientHistoryModalData.searchChart || patientHistoryModalData.searchName}
+                    style={{ border: 'none', outline: 'none', background: 'transparent', width: '120px', fontSize: '0.9rem', padding: '4px 0' }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const val = e.target.value.trim();
+                        if (val) {
+                          const parsed = parseSchedulerPatientIdentity(val);
+                          const sName = normalizeNameForMatch(parsed.patientName);
+                          const sChart = parsed.patientChart ? String(parsed.patientChart).trim() : null;
+                          fetchPatientHistory(sName, sChart);
+                        }
+                      }
+                    }}
+                  />
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary, #999)' }}>↵ Enter</span>
+                </div>
+              </div>
               <button onClick={() => setPatientHistoryModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', padding: '0 4px', color: 'var(--text-secondary, #666)' }}>✕</button>
             </div>
             <div style={{ padding: '16px 20px', maxHeight: '70vh', overflowY: 'auto' }}>
@@ -4894,17 +4951,46 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                         <tr 
                           key={`${log.date}-${idx}`} 
                           onClick={() => handleApplyHistoryToCell(log)}
-                          style={{ cursor: 'pointer' }}
-                          title="클릭하여 내역을 현재 셀에 적용합니다"
+                          style={{ cursor: 'pointer', backgroundColor: log.id === 'draft' ? 'var(--bg-tertiary, #f0f7ff)' : undefined }}
+                          title={log.id === 'draft' ? "현재 선택된 셀의 날짜를 기반으로 한 임시 항목입니다" : "클릭하여 내역을 현재 셀에 적용합니다"}
                         >
-                          <td style={{ textAlign: 'center' }}>{log.date}</td>
+                          <td style={{ textAlign: 'center' }}>{log.date}{log.id === 'draft' && <span style={{fontSize: '0.75rem', color: 'var(--brand-primary)', display: 'block', marginTop: '2px'}}>현재 셀</span>}</td>
                           <td style={{ textAlign: 'center' }}>{log.chart_number}</td>
                           <td style={{ textAlign: 'center' }}>{log.patient_name}</td>
                           <td style={{ textAlign: 'center', color: log.type === 'manual' ? 'var(--brand-primary)' : 'inherit', fontWeight: log.type === 'manual' ? 600 : 400 }}>
                             {log.prescription}
                           </td>
                           <td style={{ textAlign: 'center' }}>{log.body_part}</td>
-                          <td style={{ textAlign: 'center' }}>{log.visit_count ? `${log.visit_count}회` : '-'}</td>
+                          <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="text"
+                              value={log.visit_count || ''}
+                              placeholder="-"
+                              style={{ width: '40px', textAlign: 'center', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '2px', outline: 'none' }}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setPatientHistoryModalData(prev => ({
+                                  ...prev,
+                                  logs: prev.logs.map(l => l.id === log.id ? { ...l, visit_count: val } : l)
+                                }));
+                              }}
+                              onBlur={(e) => {
+                                if (log.id !== 'draft' && e.target.value !== log._original_visit_count) {
+                                  handleUpdateLogVisitCount(log.id, log.type, e.target.value);
+                                  // Update original to prevent re-saving
+                                  setPatientHistoryModalData(prev => ({
+                                    ...prev,
+                                    logs: prev.logs.map(l => l.id === log.id ? { ...l, _original_visit_count: e.target.value } : l)
+                                  }));
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.target.blur(); // Trigger onBlur
+                                }
+                              }}
+                            />
+                          </td>
                           <td style={{ textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.85em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {log.memo}
                           </td>
