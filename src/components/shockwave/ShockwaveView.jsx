@@ -2604,20 +2604,72 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
         .order('date', { ascending: false })
         .limit(500);
 
+      // 스케줄러 원본 데이터에서도 검색 (patient_logs에 없는 과거 데이터 보완)
+      const scheduleQuery = supabase.from('shockwave_schedules')
+        .select('id, year, month, week_index, day_index, content, prescription, body_part')
+        .neq('content', '')
+        .order('year', { ascending: false })
+        .order('month', { ascending: false })
+        .limit(1000);
+
       if (chartParam) {
         shockwaveQuery.eq('chart_number', chartParam);
         manualQuery.eq('chart_number', chartParam);
+        scheduleQuery.ilike('content', `%${chartParam}%`);
       } else if (nameParam) {
         shockwaveQuery.ilike('patient_name', `%${nameParam}%`);
         manualQuery.ilike('patient_name', `%${nameParam}%`);
+        scheduleQuery.ilike('content', `%${nameParam}%`);
       }
 
-      const [shockwaveRes, manualRes] = await Promise.all([shockwaveQuery, manualQuery]);
+      const [shockwaveRes, manualRes, scheduleRes] = await Promise.all([shockwaveQuery, manualQuery, scheduleQuery]);
 
       const allData = [
         ...(shockwaveRes.data || []).map(d => ({ ...d, type: 'shockwave' })),
         ...(manualRes.data || []).map(d => ({ ...d, type: 'manual' })),
       ];
+
+      // 스케줄러 원본 데이터에서 날짜를 계산하여 로그 형식으로 변환
+      const scheduleData = (scheduleRes.data || []);
+      const seenLogDates = new Set(allData.map(d => d.date));
+      
+      for (const s of scheduleData) {
+        // 스케줄 좌표에서 실제 날짜 계산
+        try {
+          const calWeeks = generateShockwaveCalendar(s.year, s.month);
+          const dayInfo = calWeeks[s.week_index]?.[s.day_index];
+          if (!dayInfo) continue;
+          const dd = dayInfo.date;
+          const dateStr = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`;
+          
+          // 이미 patient_logs에 같은 날짜 데이터가 있으면 스킵 (중복 방지)
+          if (seenLogDates.has(dateStr)) continue;
+          
+          const content = s.content || '';
+          // 이름/차트번호 필터링
+          const parsed = parseSchedulerPatientIdentity(content);
+          const matchChart = chartParam && String(parsed.patientChart || '').trim() === chartParam;
+          const matchName = nameParam && normalizeNameForMatch(parsed.patientName).includes(nameParam);
+          if (chartParam && !matchChart) continue;
+          if (!chartParam && !matchName) continue;
+          
+          // 회차 추출
+          const visitSuffix = getExplicitVisitSuffix(content);
+          const visitCount = visitSuffix.replace(/[()]/g, '') || '';
+          
+          allData.push({
+            id: s.id,
+            date: dateStr,
+            patient_name: parsed.patientName || '',
+            chart_number: parsed.patientChart || '',
+            visit_count: visitCount,
+            prescription: s.prescription || '',
+            body_part: s.body_part || '',
+            type: 'schedule'
+          });
+          seenLogDates.add(dateStr);
+        } catch { /* skip */ }
+      }
 
       const matches = allData.filter((item) => {
         const matchChart = chartParam && String(item.chart_number || '').trim() === chartParam;
