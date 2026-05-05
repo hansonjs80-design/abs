@@ -3318,6 +3318,45 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       return;
     }
 
+    // Ctrl/Cmd + Up/Down → 선택된 셀 회차 증가/감소
+    if (isMeta && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault();
+      e.stopPropagation();
+      const delta = e.key === 'ArrowUp' ? 1 : -1;
+      const keys = Array.from(selectedKeys || []);
+      const oldMemos = buildMemoSnapshotForKeys(keys);
+      let anyChanged = false;
+
+      (async () => {
+        for (const k of keys) {
+          const [kw, kd, kr, kc] = k.split('-').map(Number);
+          const memo = memos[k] || {};
+          const stableContent = getStableMemoContent(k, memo);
+          if (!stableContent) continue;
+          
+          // 셀 내용에서 현재 회차 추출 (예: "715/이기성(2)" → "(2)" → "2")
+          const visitSuffix = getExplicitVisitSuffix(stableContent);
+          const currentVisit = visitSuffix.replace(/[()]/g, '') || '';
+          // 회차 증감
+          const nextVisit = stepVisitInputValue(currentVisit, delta);
+          // 셀 내용에 다시 적용
+          const updatedContent = applyVisitCountToSchedulerContent(stableContent, nextVisit);
+          if (updatedContent === stableContent) continue;
+          
+          const success = await onSaveMemo(
+            currentYear, currentMonth, kw, kd, kr, kc, 
+            updatedContent, memo.bg_color, memo.merge_span, memo.prescription, memo.body_part
+          );
+          if (success) anyChanged = true;
+        }
+        if (anyChanged) {
+          recordUndo({ type: 'bulk-edit', oldMemos });
+          addToast(`회차가 ${delta > 0 ? '증가' : '감소'}했습니다.`, 'success');
+        }
+      })();
+      return;
+    }
+
     // 화살표 키 → 셀 이동
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
       e.preventDefault();
@@ -4975,13 +5014,19 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                                 }));
                               }}
                               onBlur={(e) => {
-                                if (log.id !== 'draft' && e.target.value !== log._original_visit_count) {
-                                  handleUpdateLogVisitCount(log.id, log.type, e.target.value);
+                                const newVal = e.target.value;
+                                if (newVal !== log._original_visit_count) {
+                                  if (log.id !== 'draft') {
+                                    handleUpdateLogVisitCount(log.id, log.type, newVal);
+                                  }
                                   // Update original to prevent re-saving
                                   setPatientHistoryModalData(prev => ({
                                     ...prev,
-                                    logs: prev.logs.map(l => l.id === log.id ? { ...l, _original_visit_count: e.target.value } : l)
+                                    logs: prev.logs.map(l => l.id === log.id ? { ...l, _original_visit_count: newVal } : l)
                                   }));
+                                  
+                                  // 사용자가 회차 변경 시 셀에 자동 반영되기를 원함
+                                  handleApplyHistoryToCell({ ...log, visit_count: newVal });
                                 }
                               }}
                               onKeyDown={(e) => {
