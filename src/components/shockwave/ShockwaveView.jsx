@@ -2597,12 +2597,12 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       const shockwaveQuery = supabase.from('shockwave_patient_logs')
         .select('id, patient_name, chart_number, visit_count, date, prescription, body_part')
         .order('date', { ascending: false })
-        .limit(50);
+        .limit(500);
         
       const manualQuery = supabase.from('manual_therapy_patient_logs')
         .select('id, patient_name, chart_number, visit_count, date, prescription, body_part')
         .order('date', { ascending: false })
-        .limit(50);
+        .limit(500);
 
       if (chartParam) {
         shockwaveQuery.eq('chart_number', chartParam);
