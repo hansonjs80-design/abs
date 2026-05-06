@@ -4044,7 +4044,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
           key={weekIdx}
           className={`shockwave-week${weekIdx === todayWeekIdx ? ' is-today-week' : ''}`}
           style={daysContainerWidth
-            ? { width: `${daysContainerWidth}px` }
+            ? { width: `${daysContainerWidth}px`, minWidth: 0 }
             : { width: '100%', minWidth: '1000px' }
           }
           ref={(el) => {
@@ -4173,7 +4173,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
               const targetColWidth = showTimeCol && dayColWidth ? dayColWidth + TIME_COL_WIDTH : dayColWidth;
               const flexBasis = showTimeCol ? TIME_COL_WIDTH : 0;
               const dayFlexStyle = targetColWidth
-                ? { flex: `0 0 ${targetColWidth}px`, width: `${targetColWidth}px` }
+                ? { flex: `0 0 ${targetColWidth}px`, width: `${targetColWidth}px`, minWidth: 0 }
                 : { flex: `1 1 ${flexBasis}px`, minWidth: 0 };
 
               return (
@@ -4562,7 +4562,11 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                       onMouseDown={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        const currentDayWidth = e.currentTarget.closest('.shockwave-day').getBoundingClientRect().width;
+                        const dayEl = e.currentTarget.closest('.shockwave-day');
+                        const isLastDay = !dayEl.nextElementSibling || !dayEl.nextElementSibling.classList.contains('shockwave-day');
+                        const rawDayWidth = dayEl.getBoundingClientRect().width;
+                        // getBoundingClientRect includes border; subtract border-right (2px) for non-last days
+                        const currentDayWidth = isLastDay ? rawDayWidth : rawDayWidth - 2;
                         const normalizedDayWidth = showTimeCol
                           ? Math.max(100, currentDayWidth - TIME_COL_WIDTH)
                           : currentDayWidth;
