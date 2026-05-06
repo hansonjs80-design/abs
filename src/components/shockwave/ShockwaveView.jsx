@@ -4037,7 +4037,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       {weeks.map((weekDays, weekIdx) => {
         // dayColWidth 설정 시 컨테이너 너비를 명시적으로 계산하여 우측 보더가 컨텐츠를 정확히 추종하도록 함
         const daysContainerWidth = dayColWidth
-          ? dayColWidth * weekDays.length + TIME_COL_WIDTH
+          ? dayColWidth * weekDays.length + TIME_COL_WIDTH + 4
           : null;
         return (
         <div
