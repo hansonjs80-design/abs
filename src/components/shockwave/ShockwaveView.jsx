@@ -2779,18 +2779,86 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     }
   }, [currentYear, currentMonth, holidays, selectedCell, memos, pendingDisplayValues]);
 
-  const handleUpdateLogVisitCount = useCallback(async (logId, logType, newValue) => {
-    if (logId === 'draft') return; // 임시 항목은 DB 업데이트 안 함
-    const tableName = logType === 'shockwave' ? 'shockwave_patient_logs' : 'manual_therapy_patient_logs';
+  const handleUpdateLogVisitCount = useCallback(async (log, newValue) => {
+    if (log.id === 'draft') return; // 임시 항목은 여기서 DB 업데이트 안 함
+    
     try {
-      const { error } = await supabase.from(tableName).update({ visit_count: newValue }).eq('id', logId);
-      if (error) throw error;
-      addToast('회차가 수정되었습니다.', 'success');
+      if (log.type === 'schedule') {
+        // shockwave_schedules 업데이트
+        const { data } = await supabase.from('shockwave_schedules').select('content').eq('id', log.id).single();
+        if (data) {
+          const updatedContent = applyVisitCountToSchedulerContent(data.content, newValue);
+          const { error } = await supabase.from('shockwave_schedules').update({ content: updatedContent, updated_at: new Date().toISOString() }).eq('id', log.id);
+          if (error) throw error;
+        }
+      } else {
+        const tableName = log.type === 'shockwave' ? 'shockwave_patient_logs' : 'manual_therapy_patient_logs';
+        const { error } = await supabase.from(tableName).update({ visit_count: newValue }).eq('id', log.id);
+        if (error) throw error;
+      }
+
+      addToast('해당 날짜의 회차가 수정되었습니다.', 'success');
+
+      // 현재 화면(UI)에 해당 날짜/환자의 셀이 있다면 업데이트
+      const calWeeks = generateShockwaveCalendar(currentYear, currentMonth, holidays);
+      let targetW = -1;
+      let targetD = -1;
+      
+      // 달력에서 해당 날짜(w, d) 찾기
+      for (let w = 0; w < calWeeks.length; w++) {
+        for (let d = 0; d < calWeeks[w].length; d++) {
+          const dd = calWeeks[w][d].date;
+          const dateStr = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`;
+          if (dateStr === log.date) {
+            targetW = w;
+            targetD = d;
+            break;
+          }
+        }
+        if (targetW !== -1) break;
+      }
+
+      if (targetW !== -1 && targetD !== -1) {
+        // 해당 날짜의 모든 셀을 뒤져서 환자 이름(또는 차트번호)가 일치하는 셀 찾기
+        for (let r = 0; r < baseTimeSlots.length; r++) {
+          for (let c = 0; c < colCount; c++) {
+            const key = cellKey(targetW, targetD, r, c);
+            const memo = memos[key];
+            if (memo && memo.content) {
+              const parsed = parseSchedulerPatientIdentity(memo.content);
+              const matchChart = log.chart_number && parsed.patientChart && String(parsed.patientChart).trim() === String(log.chart_number).trim();
+              const matchName = log.patient_name && normalizeNameForMatch(parsed.patientName) === normalizeNameForMatch(log.patient_name);
+              
+              if (matchChart || matchName) {
+                // 회차 업데이트 후 로컬 상태 저장
+                const updatedContent = applyVisitCountToSchedulerContent(memo.content, newValue);
+                if (updatedContent !== memo.content) {
+                  setPendingDisplayValues(prev => ({ ...prev, [key]: updatedContent }));
+                  await saveShockwaveMemosBulk([{
+                    year: currentYear,
+                    month: currentMonth,
+                    week_index: targetW,
+                    day_index: targetD,
+                    row_index: r,
+                    col_index: c,
+                    content: updatedContent,
+                    bg_color: memo.bg_color || null,
+                    prescription: memo.prescription || null,
+                    body_part: memo.body_part || null,
+                    merge_span: memo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null }
+                  }]);
+                }
+              }
+            }
+          }
+        }
+      }
+
     } catch (e) {
       console.error(e);
       addToast('회차 수정 실패', 'error');
     }
-  }, [addToast]);
+  }, [addToast, currentYear, currentMonth, holidays, memos, baseTimeSlots.length, colCount, saveShockwaveMemosBulk, cellKey]);
 
   // 환자 스케줄 내역 검색 및 적용 (Cmd+F)
   const handleOpenPatientHistoryModal = useCallback(async () => {
@@ -5136,17 +5204,19 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                               onBlur={(e) => {
                                 const newVal = e.target.value;
                                 if (newVal !== log._original_visit_count) {
-                                  if (log.id !== 'draft') {
-                                    handleUpdateLogVisitCount(log.id, log.type, newVal);
-                                  }
                                   // Update original to prevent re-saving
                                   setPatientHistoryModalData(prev => ({
                                     ...prev,
                                     logs: prev.logs.map(l => l.id === log.id ? { ...l, _original_visit_count: newVal } : l)
                                   }));
-                                  
-                                  // 사용자가 회차 변경 시 셀에 자동 반영되기를 원함
-                                  handleApplyHistoryToCell({ ...log, visit_count: newVal });
+
+                                  if (log.id === 'draft') {
+                                    // 현재 선택된 셀을 위한 임시 항목이므로, 선택된 셀 업데이트
+                                    handleApplyHistoryToCell({ ...log, visit_count: newVal });
+                                  } else {
+                                    // 특정 과거 날짜의 로그이므로, 선택된 셀 덮어쓰기를 하지 않고 DB와 해당 날짜의 셀만 업데이트
+                                    handleUpdateLogVisitCount(log, newVal);
+                                  }
                                 }
                               }}
                               onKeyDown={(e) => {
