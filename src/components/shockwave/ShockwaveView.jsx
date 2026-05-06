@@ -5142,7 +5142,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
 
       {patientHistoryModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999999 }} onClick={() => setPatientHistoryModalOpen(false)}>
-          <div style={{ background: 'var(--bg-primary, #fff)', maxWidth: 850, width: '95%', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: 'var(--bg-primary, #fff)', maxWidth: 1000, width: '95%', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--border-color, #eee)', background: 'var(--bg-secondary, #f8f9fa)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>환자 스케줄 내역 검색</h3>
@@ -5177,7 +5177,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
               </div>
               
               <div className="sw-compact-table-wrap">
-                <table className="sw-summary-table sw-compact-summary-table" style={{ width: '100%', margin: 0 }}>
+                <table className="sw-summary-table sw-compact-summary-table" style={{ width: '100%', margin: 0, tableLayout: 'fixed' }}>
                   <thead>
                     <tr>
                       <th style={{ width: '12%', textAlign: 'center' }}>날짜</th>
