@@ -783,7 +783,7 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
         {WEEKDAYS.map((day, i) => (
           <div key={`h-${i}`} className={`calendar-weekday-header${i === 0 ? ' sunday' : ''}${i === 6 ? ' saturday' : ''}`} style={{ position: 'relative' }}>
             {day}
-            {i < 6 && <div className="col-resizer" onMouseDown={startColResize} />}
+            <div className="col-resizer" onMouseDown={startColResize} />
           </div>
         ))}
         {grid.map((week, wi) => week.map((dayInfo, di) => {
