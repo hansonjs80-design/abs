@@ -4034,10 +4034,19 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
           </div>
         </div>
       )}
-      {weeks.map((weekDays, weekIdx) => (
+      {weeks.map((weekDays, weekIdx) => {
+        // dayColWidth 설정 시 컨테이너 너비를 명시적으로 계산하여 우측 보더가 컨텐츠를 정확히 추종하도록 함
+        const daysContainerWidth = dayColWidth
+          ? dayColWidth * weekDays.length + TIME_COL_WIDTH + 2 * (weekDays.length - 1)
+          : null;
+        return (
         <div
           key={weekIdx}
           className={`shockwave-week${weekIdx === todayWeekIdx ? ' is-today-week' : ''}`}
+          style={daysContainerWidth
+            ? { width: `${daysContainerWidth}px` }
+            : { width: '100%', minWidth: '1000px' }
+          }
           ref={(el) => {
             weekRefs.current[weekIdx] = el;
           }}
@@ -4103,7 +4112,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
               </div>
             </div>
           )}
-          <div className="shockwave-days" style={{ position: 'relative' }}>
+          <div className="shockwave-days" style={{ position: 'relative', ...(daysContainerWidth ? { width: `${daysContainerWidth}px` } : {}) }}>
             <div className="shockwave-week-floating-actions shockwave-week-floating-actions--left">
               <button
                 type="button"
@@ -4547,7 +4556,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                     })}
                   </div>
 
-                  {dayIdx < weekDays.length - 1 && (
+                  {(
                     <div
                       className="sw-day-resize-handle"
                       onMouseDown={(e) => {
@@ -4580,7 +4589,8 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
             })}
           </div>
         </div>
-      ))}
+        );
+      })}
       </div>
       {contextMenu && (
         <div
