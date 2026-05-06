@@ -5176,27 +5176,31 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                 검색 대상: <span style={{ color: 'var(--brand-primary)' }}>{patientHistoryModalData.searchName}</span> {patientHistoryModalData.searchChart ? `(${patientHistoryModalData.searchChart})` : ''}
               </div>
               
-              {patientHistoryModalData.loading ? (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>내역을 불러오는 중...</div>
-              ) : patientHistoryModalData.logs.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>해당하는 내역이 없습니다.</div>
-              ) : (
-                <div className="sw-compact-table-wrap">
-                  <table className="sw-summary-table sw-compact-summary-table" style={{ width: '100%', margin: 0 }}>
-                    <thead>
+              <div className="sw-compact-table-wrap">
+                <table className="sw-summary-table sw-compact-summary-table" style={{ width: '100%', margin: 0 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ width: '12%', textAlign: 'center' }}>날짜</th>
+                      <th style={{ width: '12%', textAlign: 'center' }}>차트</th>
+                      <th style={{ width: '10%', textAlign: 'center' }}>이름</th>
+                      <th style={{ width: '12%', textAlign: 'center' }}>처방</th>
+                      <th style={{ width: '15%', textAlign: 'center' }}>부위</th>
+                      <th style={{ width: '8%', textAlign: 'center' }}>회차</th>
+                      <th style={{ width: '21%', textAlign: 'left' }}>메모</th>
+                      <th style={{ width: '10%', textAlign: 'center' }}>선택</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {patientHistoryModalData.loading ? (
                       <tr>
-                        <th style={{ width: '12%', textAlign: 'center' }}>날짜</th>
-                        <th style={{ width: '12%', textAlign: 'center' }}>차트</th>
-                        <th style={{ width: '10%', textAlign: 'center' }}>이름</th>
-                        <th style={{ width: '12%', textAlign: 'center' }}>처방</th>
-                        <th style={{ width: '15%', textAlign: 'center' }}>부위</th>
-                        <th style={{ width: '8%', textAlign: 'center' }}>회차</th>
-                        <th style={{ width: '21%', textAlign: 'left' }}>메모</th>
-                        <th style={{ width: '10%', textAlign: 'center' }}>선택</th>
+                        <td colSpan="8" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>내역을 불러오는 중...</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {patientHistoryModalData.logs.map((log, idx) => (
+                    ) : patientHistoryModalData.logs.length === 0 ? (
+                      <tr>
+                        <td colSpan="8" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>해당하는 내역이 없습니다.</td>
+                      </tr>
+                    ) : (
+                      patientHistoryModalData.logs.map((log, idx) => (
                         <tr 
                           key={`${log.date}-${idx}`} 
                           onClick={() => handleApplyHistoryToCell(log)}
@@ -5261,11 +5265,11 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                             </button>
                           </td>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
