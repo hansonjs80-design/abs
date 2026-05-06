@@ -4037,7 +4037,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       {weeks.map((weekDays, weekIdx) => {
         // dayColWidth 설정 시 컨테이너 너비를 명시적으로 계산하여 우측 보더가 컨텐츠를 정확히 추종하도록 함
         const daysContainerWidth = dayColWidth
-          ? dayColWidth * weekDays.length + TIME_COL_WIDTH + 2 * (weekDays.length - 1)
+          ? dayColWidth * weekDays.length + TIME_COL_WIDTH
           : null;
         return (
         <div
@@ -4563,10 +4563,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                         e.preventDefault();
                         e.stopPropagation();
                         const dayEl = e.currentTarget.closest('.shockwave-day');
-                        const isLastDay = !dayEl.nextElementSibling || !dayEl.nextElementSibling.classList.contains('shockwave-day');
-                        const rawDayWidth = dayEl.getBoundingClientRect().width;
-                        // getBoundingClientRect includes border; subtract border-right (2px) for non-last days
-                        const currentDayWidth = isLastDay ? rawDayWidth : rawDayWidth - 2;
+                        const currentDayWidth = e.currentTarget.closest('.shockwave-day').getBoundingClientRect().width;
                         const normalizedDayWidth = showTimeCol
                           ? Math.max(100, currentDayWidth - TIME_COL_WIDTH)
                           : currentDayWidth;
