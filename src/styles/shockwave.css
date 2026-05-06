@@ -73,8 +73,8 @@
   border-right: 2px solid #000;
   border-radius: 4px;
   box-shadow: var(--shadow-sm);
-  width: fit-content;
-  min-width: 0;
+  width: 100%;
+  min-width: 1000px; /* 너무 좁아지면 스크롤되도록 최소 너비 유지 */
   position: relative;
 }
 

@@ -2770,7 +2770,18 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
         }
       }
 
-      const finalLogs = draftLog ? [draftLog, ...matches] : matches;
+      let finalLogs = matches;
+      if (draftLog) {
+        const existingIdx = matches.findIndex(m => m.date === draftLog.date);
+        if (existingIdx !== -1) {
+          // 이미 DB 내역에 오늘 날짜가 있다면, 중복 생성하지 않고 기존 내역에 '현재 셀' 표시만 추가
+          finalLogs = [...matches];
+          finalLogs[existingIdx] = { ...finalLogs[existingIdx], isCurrentCell: true };
+        } else {
+          draftLog.isCurrentCell = true;
+          finalLogs = [draftLog, ...matches];
+        }
+      }
       setPatientHistoryModalData({ loading: false, logs: finalLogs, searchName: nameParam, searchChart: chartParam });
     } catch (e) {
       console.error(e);
@@ -5181,7 +5192,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                           style={{ cursor: 'pointer', backgroundColor: log.id === 'draft' ? 'var(--bg-tertiary, #f0f7ff)' : undefined }}
                           title={log.id === 'draft' ? "현재 선택된 셀의 날짜를 기반으로 한 임시 항목입니다" : "클릭하여 내역을 현재 셀에 적용합니다"}
                         >
-                          <td style={{ textAlign: 'center' }}>{log.date}{log.id === 'draft' && <span style={{fontSize: '0.75rem', color: 'var(--brand-primary)', display: 'block', marginTop: '2px'}}>현재 셀</span>}</td>
+                          <td style={{ textAlign: 'center' }}>{log.date}{(log.id === 'draft' || log.isCurrentCell) && <span style={{fontSize: '0.75rem', color: 'var(--brand-primary)', display: 'block', marginTop: '2px'}}>현재 셀</span>}</td>
                           <td style={{ textAlign: 'center' }}>{log.chart_number}</td>
                           <td style={{ textAlign: 'center' }}>{log.patient_name}</td>
                           <td style={{ textAlign: 'center', color: log.type === 'manual' ? 'var(--brand-primary)' : 'inherit', fontWeight: log.type === 'manual' ? 600 : 400 }}>
