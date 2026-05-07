@@ -104,6 +104,7 @@ export default function StaffSchedulePage() {
             hiddenDepartments={hiddenDepartments}
             onHiddenDepartmentsChange={updateHiddenDepartments}
           />
+          <div id="staff-settings-portal"></div>
         </div>
       </div>
     </div>

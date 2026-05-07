@@ -1666,8 +1666,8 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   display: block;
   align-self: stretch;
   overflow: auto;
-  border: 1px solid #d7e0eb;
-  border-radius: 9px;
+  border: 1px solid #cfd8e5;
+  border-radius: 7px;
   background: #ffffff;
   box-shadow: none;
 }
@@ -1678,7 +1678,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   width: max-content;
   min-width: 100%;
   max-width: none;
-  border-collapse: separate;
+  border-collapse: collapse;
   border-spacing: 0;
   table-layout: auto;
 }
@@ -1688,11 +1688,11 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-manual-compact-settlement-table th,
 .sw-manual-compact-settlement-table td {
   height: 38px;
-  padding: 9px 12px;
-  border-right: 1px solid #e0e7f0;
-  border-bottom: 1px solid #e0e7f0;
+  padding: 8px 11px;
+  border-right: 1px solid #d8e1ec;
+  border-bottom: 1px solid #d8e1ec;
   color: #1f2a3d;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   line-height: 1.25;
   letter-spacing: 0;
   text-align: center;
@@ -1701,7 +1701,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 .sw-settlement-table thead th,
 .sw-manual-compact-settlement-table thead th {
-  background: #f3f6fa;
+  background: #eef3f8;
   color: #263244;
   font-weight: 900;
 }
@@ -1735,7 +1735,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   min-width: 128px;
   background: #f8fafc;
   color: #243247;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   font-weight: 900;
   text-align: left;
 }
@@ -1743,14 +1743,14 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-settlement-table thead .therapist-col,
 .sw-manual-compact-settlement-table thead .therapist-col {
   min-width: 112px;
-  padding: 10px 14px;
-  border-left: 1px solid var(--therapist-line, #d7e0eb);
-  border-right: 1px solid var(--therapist-line, #d7e0eb);
+  padding: 9px 12px;
+  border-left: 1px solid var(--therapist-line, #cfd8e5);
+  border-right: 1px solid var(--therapist-line, #cfd8e5);
   border-top: 2px solid var(--therapist-accent, #64748b);
   background: var(--therapist-head, #f3f6fa);
   color: var(--therapist-text, #243247);
   box-shadow: none;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .sw-settlement-table thead .prescription-col,
@@ -1758,12 +1758,12 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   width: 72px;
   min-width: 72px;
   max-width: none;
-  padding: 8px 10px;
+  padding: 7px 9px;
   background: var(--therapist-subhead, #f8fafc);
   color: #475569;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 800;
-  border-left: 1px solid var(--therapist-line, #d7e0eb);
+  border-left: 1px solid var(--therapist-line, #cfd8e5);
 }
 
 .sw-settlement-table tbody td,
@@ -1776,10 +1776,10 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 .sw-settlement-table .merged-value,
 .sw-manual-compact-settlement-table .merged-value {
-  padding-left: 14px;
-  padding-right: 14px;
+  padding-left: 12px;
+  padding-right: 12px;
   background: var(--therapist-cell, #ffffff);
-  font-size: 0.92rem;
+  font-size: 0.88rem;
 }
 
 .sw-settlement-table thead .grand-col,
@@ -1796,7 +1796,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   min-width: 126px;
   background: #eef3f8;
   color: #172033;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 900;
   border-left: 1px solid #bcc8d8;
 }
@@ -1948,9 +1948,38 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 .sw-summary-table th,
 .sw-summary-table td {
-  padding: 14px 16px;
-  font-size: 1.02rem;
-  line-height: 1.3;
+  padding: 10px 14px;
+  border-right: 1px solid #d8e1ec;
+  border-bottom: 1px solid #d8e1ec;
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+
+.sw-summary-table {
+  border-collapse: collapse;
+}
+
+.sw-summary-table thead th {
+  background: #eef3f8;
+  color: #263244;
+  font-weight: 900;
+}
+
+.sw-summary-table tbody th {
+  background: #f8fafc;
+  color: #243247;
+  font-weight: 900;
+  text-align: left;
+}
+
+.sw-summary-table tr:last-child td,
+.sw-summary-table tr:last-child th {
+  border-bottom: none;
+}
+
+.sw-summary-table tr th:last-child,
+.sw-summary-table tr td:last-child {
+  border-right: none;
 }
 
 .sw-summary-table thead th {
@@ -2346,7 +2375,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-manual-summary-table,
 .sw-manual-detail-table {
   width: 100%;
-  border-collapse: separate;
+  border-collapse: collapse;
   border-spacing: 0;
 }
 
@@ -2362,23 +2391,26 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-manual-summary-table td,
 .sw-manual-detail-table th,
 .sw-manual-detail-table td {
-  padding: 12px 10px;
+  padding: 9px 10px;
   text-align: center;
-  border-right: 1px solid #dbe3ee;
-  border-bottom: 1px solid #dbe3ee;
+  border-right: 1px solid #d8e1ec;
+  border-bottom: 1px solid #d8e1ec;
+  color: #263244;
+  font-size: 0.86rem;
+  line-height: 1.25;
   white-space: nowrap;
 }
 
 .sw-manual-summary-table thead th,
 .sw-manual-detail-table thead th {
-  background: #eef4fb;
-  color: #334155;
-  font-weight: 800;
+  background: #eef3f8;
+  color: #263244;
+  font-weight: 900;
 }
 
 .sw-manual-summary-table thead .therapist-col {
   background: #dce9f9;
-  font-size: 0.98rem;
+  font-size: 0.9rem;
 }
 
 .sw-manual-summary-table tbody td,
@@ -2390,7 +2422,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 .sw-manual-detail-table tbody td.patient-name {
   text-align: left;
-  padding-left: 14px;
+  padding-left: 12px;
 }
 
 .sw-manual-summary-table .duration-40,

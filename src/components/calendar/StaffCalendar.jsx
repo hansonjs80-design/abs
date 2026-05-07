@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { flushSync } from 'react-dom';
+import { flushSync, createPortal } from 'react-dom';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { generateCalendarGrid, getTodayKST, isSameDate } from '../../lib/calendarUtils';
 import { WEEKDAYS } from '../../lib/constants';
@@ -19,6 +19,11 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
   const { addToast } = useToast();
   const [showSlotSettings, setShowSlotSettings] = useState(false);
   const slotSettingsRef = useRef(null);
+
+  const [portalTarget, setPortalTarget] = useState(null);
+  useEffect(() => {
+    setPortalTarget(document.getElementById('staff-settings-portal'));
+  }, []);
 
   // 설정 팝업 외부 클릭 시 닫기
   useEffect(() => {
@@ -572,50 +577,30 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
 
   return (
     <div className="staff-calendar animate-fade-in" ref={viewRef} style={{ outline: 'none', position: 'relative' }}>
-      <div className="staff-calendar-toolbar">
-        <button
-          type="button"
-          className="staff-month-nav-btn"
-          onClick={() => navigateMonth(-1)}
-          aria-label="이전 달"
-        >
-          ‹
-        </button>
-        <h2 className="staff-calendar-title">
-          {currentYear}년 {String(currentMonth).padStart(2, '0')}월 직원 근무표
-        </h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      {portalTarget && createPortal(
+        <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
           <button
             type="button"
-            className="staff-month-nav-btn"
-            onClick={() => navigateMonth(1)}
-            aria-label="다음 달"
+            onClick={() => setShowSlotSettings(!showSlotSettings)}
+            style={{
+              background: '#475569',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#fff',
+              padding: '4px 12px',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '6px',
+              whiteSpace: 'nowrap',
+            }}
+            title="주차별 행 수 설정"
           >
-            ›
+            설정
           </button>
-          <div style={{ position: 'relative' }}>
-            <button
-              type="button"
-              onClick={() => setShowSlotSettings(!showSlotSettings)}
-              style={{
-                background: '#475569',
-                border: 'none',
-                cursor: 'pointer',
-                color: '#fff',
-                padding: '4px 12px',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '6px',
-                whiteSpace: 'nowrap',
-              }}
-              title="주차별 행 수 설정"
-            >
-              설정
-            </button>
-            {showSlotSettings && (
+          {showSlotSettings && (
             <div ref={slotSettingsRef} style={{
               position: 'absolute', top: '100%', right: 0, marginTop: 4,
               background: 'var(--bg-primary)', border: '1px solid var(--border-color)',
@@ -746,9 +731,9 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
               </div>
             </div>
           )}
-        </div>
-      </div>
-      </div>
+        </div>,
+        portalTarget
+      )}
       {/* Unified input: hidden when not editing, positioned over cell when editing */}
       <input
         ref={hiddenInputRef}
