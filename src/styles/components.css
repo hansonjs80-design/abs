@@ -385,6 +385,13 @@
   transform: none;
   position: relative;
   z-index: 2;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.top-tab.active svg {
+  width: 20px;
+  height: 20px;
 }
 
 /* 1. Calendar (Blue) */
@@ -422,6 +429,11 @@
   padding: 5px 10px;
 }
 
+.top-tab.month-tab.active {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
 .month-picker.tab-variant {
   gap: 4px;
 }
@@ -433,6 +445,11 @@
   line-height: 1.2;
   color: inherit;
   font-weight: 900;
+}
+
+.top-tab.active .month-picker.tab-variant .month-picker-label {
+  font-size: 1.08rem;
+  line-height: 1.1;
 }
 
 .month-picker.tab-variant .month-nav-btn {
