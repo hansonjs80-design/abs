@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import MonthPicker from '../common/MonthPicker';
 import PrintButton from '../common/PrintButton';
@@ -9,6 +10,23 @@ export default function TopTabs() {
   const location = useLocation();
   const { user } = useAuth();
   const items = getAllowedTabs(user);
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const currentDateTimeLabel = new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(now);
+
   const notifyBeforeTabChange = () => {
     window.dispatchEvent(new CustomEvent('clinic-before-route-change'));
   };
@@ -33,17 +51,23 @@ export default function TopTabs() {
             }
 
             return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                end={item.path === '/'}
-                className={({ isActive: linkActive }) => `top-tab ${item.tabClass}${linkActive ? ' active' : ''}`}
-                onMouseDown={notifyBeforeTabChange}
-                onTouchStart={notifyBeforeTabChange}
-              >
-                <Icon size={18} />
-                <span>{item.label}</span>
-              </NavLink>
+              <span key={item.path} className="top-tab-with-date">
+                <NavLink
+                  to={item.path}
+                  end={item.path === '/'}
+                  className={({ isActive: linkActive }) => `top-tab ${item.tabClass}${linkActive ? ' active' : ''}`}
+                  onMouseDown={notifyBeforeTabChange}
+                  onTouchStart={notifyBeforeTabChange}
+                >
+                  <Icon size={18} />
+                  <span>{item.label}</span>
+                </NavLink>
+                {item.key === 'settings' && (
+                  <span className="top-tabs-current-date" aria-label={`현재 날짜와 시간 ${currentDateTimeLabel}`}>
+                    {currentDateTimeLabel}
+                  </span>
+                )}
+              </span>
             );
           })}
         </div>

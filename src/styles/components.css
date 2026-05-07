@@ -323,6 +323,33 @@
   flex: 0 0 auto;
 }
 
+.top-tabs {
+  min-width: 0;
+}
+
+.top-tabs-track {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.top-tab-with-date {
+  display: inline-flex;
+  align-items: flex-end;
+}
+
+.top-tabs-current-date {
+  margin-left: 14px;
+  padding-bottom: 8px;
+  color: var(--text-primary);
+  font-size: clamp(1.35rem, 2.2vw, 2.35rem);
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .top-tab {
   display: inline-flex;
   align-items: center;
@@ -1127,29 +1154,6 @@
 /* ── 설정 ── */
 .settings-section {
   margin-bottom: 32px;
-}
-
-.settings-page .page-header {
-  align-items: flex-start;
-}
-
-.settings-today-date {
-  margin-right: 100px;
-  color: var(--text-primary);
-  font-size: clamp(1.8rem, 3vw, 3rem);
-  font-weight: 900;
-  line-height: 1.15;
-  text-align: right;
-  white-space: nowrap;
-}
-
-@media (max-width: 900px) {
-  .settings-today-date {
-    margin-right: 0;
-    width: 100%;
-    text-align: left;
-    white-space: normal;
-  }
 }
 
 .settings-title {
