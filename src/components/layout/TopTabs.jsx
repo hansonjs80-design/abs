@@ -64,15 +64,17 @@ export default function TopTabs() {
                   <Icon size={18} />
                   <span>{item.label}</span>
                 </NavLink>
+                {item.key === 'settings' && (
+                  <span className="top-tabs-current-date" aria-label={`현재 날짜와 시간 ${currentDateTimeLabel}`}>
+                    {currentDateTimeLabel}
+                  </span>
+                )}
               </span>
             );
           })}
         </div>
       </nav>
       <div className="top-tabs-actions">
-        <span style={{ fontSize: '14.5px', fontWeight: 600, color: 'var(--text-secondary)', marginRight: '10px' }}>
-          {currentDateTimeLabel}
-        </span>
         <PrintButton />
         <ThemeToggle />
       </div>

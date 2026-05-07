@@ -74,6 +74,29 @@ import {
   addBodyPartToMap,
 } from '../../lib/schedulerUtils';
 
+const MIN_SCHEDULE_ROW_HEIGHT = 18;
+const MIN_SCHEDULE_DAY_WIDTH = 100;
+
+function readStoredNumber(key, fallback) {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const value = Number(window.localStorage.getItem(key));
+    return Number.isFinite(value) && value > 0 ? value : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeStoredNumber(key, value) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (Number.isFinite(value) && value > 0) window.localStorage.setItem(key, String(value));
+    else window.localStorage.removeItem(key);
+  } catch {
+    // localStorage may be unavailable in restricted browser contexts.
+  }
+}
+
 export default function ShockwaveView({ therapists, settings, memos = {}, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
   const { currentYear, currentMonth, navigateMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
   const { addToast } = useToast();
@@ -169,15 +192,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   });
   const colResizeRef = useRef({ active: false, colIdx: -1, startX: 0, startRatios: [], containerWidth: 0 });
   const [dayColWidth, setDayColWidth] = useState(() => {
-    if (typeof window === 'undefined') return null;
-    const saved = Number(window.localStorage.getItem(SHOCKWAVE_DAY_COL_WIDTH_KEY));
-    return Number.isFinite(saved) && saved > 0 ? saved : null;
+    const saved = readStoredNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, 0);
+    return saved > 0 ? saved : null;
   }); // null = flex, number = px
   const dayResizeRef = useRef({ active: false, startX: 0, startWidth: 0, factor: 1 });
   const [rowHeight, setRowHeight] = useState(() => {
-    if (typeof window === 'undefined') return 23;
-    const saved = Number(window.localStorage.getItem(SHOCKWAVE_ROW_HEIGHT_KEY));
-    return Number.isFinite(saved) && saved >= 18 ? saved : 23;
+    return Math.max(MIN_SCHEDULE_ROW_HEIGHT, readStoredNumber(SHOCKWAVE_ROW_HEIGHT_KEY, 23));
   });
   const rowResizeRef = useRef({ active: false, startY: 0, startHeight: 23 });
 
@@ -1252,14 +1272,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, [currentYear, currentMonth, loadedMemosKey, memos, onSaveMemo]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (dayColWidth && dayColWidth > 0) window.localStorage.setItem(SHOCKWAVE_DAY_COL_WIDTH_KEY, String(dayColWidth));
-    else window.localStorage.removeItem(SHOCKWAVE_DAY_COL_WIDTH_KEY);
+    writeStoredNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, dayColWidth || 0);
   }, [dayColWidth]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(SHOCKWAVE_ROW_HEIGHT_KEY, String(rowHeight));
+    writeStoredNumber(SHOCKWAVE_ROW_HEIGHT_KEY, rowHeight);
   }, [rowHeight]);
 
   useEffect(() => {
@@ -4094,13 +4111,16 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                     e.preventDefault();
                     e.stopPropagation();
                     rowResizeRef.current = { active: true, startY: e.clientY, startHeight: rowHeight };
+                    let latestHeight = rowHeight;
                     const onMove = (ev) => {
                       if (!rowResizeRef.current.active) return;
                       const delta = ev.clientY - rowResizeRef.current.startY;
-                      setRowHeight(Math.max(18, Math.min(44, rowResizeRef.current.startHeight + delta)));
+                      latestHeight = Math.max(MIN_SCHEDULE_ROW_HEIGHT, rowResizeRef.current.startHeight + delta);
+                      setRowHeight(latestHeight);
                     };
                     const onUp = () => {
                       rowResizeRef.current.active = false;
+                      writeStoredNumber(SHOCKWAVE_ROW_HEIGHT_KEY, latestHeight);
                       window.removeEventListener('mousemove', onMove);
                       window.removeEventListener('mouseup', onUp);
                     };
@@ -4575,18 +4595,20 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                         const dayEl = e.currentTarget.closest('.shockwave-day');
                         const currentDayWidth = e.currentTarget.closest('.shockwave-day').getBoundingClientRect().width;
                         const normalizedDayWidth = showTimeCol
-                          ? Math.max(100, currentDayWidth - TIME_COL_WIDTH)
+                          ? Math.max(MIN_SCHEDULE_DAY_WIDTH, currentDayWidth - TIME_COL_WIDTH)
                           : currentDayWidth;
                         dayResizeRef.current = { active: true, startX: e.clientX, startWidth: currentDayWidth, factor: 1 };
+                        let latestWidth = dayColWidth || normalizedDayWidth;
                         const onMove = (ev) => {
                           if (!dayResizeRef.current.active) return;
                           const { startX } = dayResizeRef.current;
                           const delta = ev.clientX - startX;
-                          const newWidth = Math.max(100, Math.min(600, normalizedDayWidth + delta));
-                          setDayColWidth(newWidth);
+                          latestWidth = Math.max(MIN_SCHEDULE_DAY_WIDTH, normalizedDayWidth + delta);
+                          setDayColWidth(latestWidth);
                         };
                         const onUp = () => {
                           dayResizeRef.current.active = false;
+                          writeStoredNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, latestWidth);
                           window.removeEventListener('mousemove', onMove);
                           window.removeEventListener('mouseup', onUp);
                         };

@@ -13,6 +13,28 @@ import MemoSlot from './MemoSlot';
 
 const COL_W_KEY = 'staff-calendar-col-width';
 const ROW_H_KEY = 'staff-calendar-row-height';
+const MIN_COL_WIDTH = 30;
+const MIN_ROW_HEIGHT = 36;
+
+function readStoredNumber(key, fallback) {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const value = Number(window.localStorage.getItem(key));
+    return Number.isFinite(value) && value > 0 ? value : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeStoredNumber(key, value) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (Number.isFinite(value) && value > 0) window.localStorage.setItem(key, String(value));
+    else window.localStorage.removeItem(key);
+  } catch {
+    // localStorage may be unavailable in restricted browser contexts.
+  }
+}
 
 export default function StaffCalendar({ hiddenDepartments = [] }) {
   const { currentYear, currentMonth, navigateMonth, staffMemos, loadStaffMemos, saveStaffMemo, holidays, holidayNames, loadHolidays, shockwaveSettings, loadShockwaveSettings, calendarSlotSettings, loadCalendarSlotSettings, saveCalendarSlotSettings } = useSchedule();
@@ -37,8 +59,8 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showSlotSettings]);
 
-  const [colWidth, setColWidth] = useState(() => { const v = Number(localStorage.getItem(COL_W_KEY)); return v > 0 ? v : 0; });
-  const [rowHeight, setRowHeight] = useState(() => { const v = Number(localStorage.getItem(ROW_H_KEY)); return v >= 60 ? v : 120; });
+  const [colWidth, setColWidth] = useState(() => readStoredNumber(COL_W_KEY, 0));
+  const [rowHeight, setRowHeight] = useState(() => Math.max(MIN_ROW_HEIGHT, readStoredNumber(ROW_H_KEY, 120)));
   const [undoStack, setUndoStack] = useState([]);
   const [selectedCell, setSelectedCell] = useState(null);
   const [rangeEnd, setRangeEnd] = useState(null);
@@ -145,15 +167,31 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
   const startColResize = (e) => {
     e.preventDefault(); e.stopPropagation();
     const sx = e.clientX, cw = colWidth || e.target.parentElement.offsetWidth;
-    const move = (ev) => setColWidth(Math.max(50, cw + ev.clientX - sx));
-    const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+    let latestWidth = colWidth;
+    const move = (ev) => {
+      latestWidth = Math.max(MIN_COL_WIDTH, cw + ev.clientX - sx);
+      setColWidth(latestWidth);
+    };
+    const up = () => {
+      writeStoredNumber(COL_W_KEY, latestWidth);
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+    };
     document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
   };
   const startRowResize = (e) => {
     e.preventDefault(); e.stopPropagation();
     const sy = e.clientY, ch = rowHeight;
-    const move = (ev) => setRowHeight(Math.max(60, ch + ev.clientY - sy));
-    const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+    let latestHeight = rowHeight;
+    const move = (ev) => {
+      latestHeight = Math.max(MIN_ROW_HEIGHT, ch + ev.clientY - sy);
+      setRowHeight(latestHeight);
+    };
+    const up = () => {
+      writeStoredNumber(ROW_H_KEY, latestHeight);
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+    };
     document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
   };
 
@@ -163,7 +201,10 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
     loadShockwaveSettings();
     loadCalendarSlotSettings(currentYear, currentMonth);
   }, [currentYear, currentMonth, loadStaffMemos, loadHolidays, loadShockwaveSettings, loadCalendarSlotSettings]);
-  useEffect(() => { if (colWidth > 0) localStorage.setItem(COL_W_KEY, colWidth); else localStorage.removeItem(COL_W_KEY); localStorage.setItem(ROW_H_KEY, rowHeight); }, [colWidth, rowHeight]);
+  useEffect(() => {
+    writeStoredNumber(COL_W_KEY, colWidth);
+    writeStoredNumber(ROW_H_KEY, rowHeight);
+  }, [colWidth, rowHeight]);
 
   // ── Actions ──
   const focusHiddenInput = useCallback(() => {
