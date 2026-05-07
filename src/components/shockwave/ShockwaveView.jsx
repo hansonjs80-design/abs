@@ -1480,13 +1480,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       setColRatios(Array(colCount).fill(1));
       return;
     }
-    if (colRatios.length === colCount) return;
+    if (colRatios.length >= colCount) return;
     
     // Preserve existing ratios when colCount changes (e.g. therapists loading)
     setColRatios((prev) => {
       if (!Array.isArray(prev)) return Array(colCount).fill(1);
       if (prev.length < colCount) return [...prev, ...Array(colCount - prev.length).fill(1)];
-      return prev.slice(0, colCount);
+      return prev;
     });
   }, [colRatios, colCount]);
 
@@ -4025,11 +4025,17 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
   }, [currentYear, currentMonth, todayWeekIdx, scrollToTodayWeek]);
 
   // 최상위 CSS 변수로 그리드 컬럼 너비를 통일 (모든 주차에 동일하게 적용)
-  const therapistColsCSS = useMemo(() => {
-    return colRatios
-      ? colRatios.map(r => `minmax(0, ${r}fr)`).join(' ')
-      : `repeat(${colCount}, minmax(0, 1fr))`;
+  const activeColRatios = useMemo(() => {
+    if (!Array.isArray(colRatios)) return null;
+    if (colRatios.length >= colCount) return colRatios.slice(0, colCount);
+    return [...colRatios, ...Array(colCount - colRatios.length).fill(1)];
   }, [colRatios, colCount]);
+
+  const therapistColsCSS = useMemo(() => {
+    return activeColRatios
+      ? activeColRatios.map(r => `minmax(0, ${r}fr)`).join(' ')
+      : `repeat(${colCount}, minmax(0, 1fr))`;
+  }, [activeColRatios, colCount]);
   const isScheduleMonthLoading = loadedMemosKey !== scheduleScrollKey;
   const renderMemos = isScheduleMonthLoading ? {} : memos;
 
@@ -4237,7 +4243,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                     </div>
                     {/* 열 리사이즈 핸들 오버레이 */}
                     {colCount > 1 && Array.from({ length: colCount - 1 }, (_, ci) => {
-                      const ratios = colRatios || Array(colCount).fill(1);
+                      const ratios = activeColRatios || Array(colCount).fill(1);
                       const totalR = ratios.reduce((a, b) => a + b, 0);
                       const leftPct = ratios.slice(0, ci + 1).reduce((a, b) => a + b, 0) / totalR * 100;
                       const timeColPx = showTimeCol ? TIME_COL_WIDTH : 0;
@@ -4252,9 +4258,10 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                           }}
                           onMouseDown={(e) => {
                             e.preventDefault(); e.stopPropagation();
-                            const cur = colRatios ? [...colRatios] : Array(colCount).fill(1);
+                            const cur = activeColRatios ? [...activeColRatios] : Array(colCount).fill(1);
                             const cw = e.target.closest('.sw-therapist-header-wrapper').getBoundingClientRect().width - timeColPx;
                             colResizeRef.current = { active: true, colIdx: ci, startX: e.clientX, startRatios: [...cur], containerWidth: cw };
+                            let latestRatios = cur;
                             const onMove = (ev) => {
                               if (!colResizeRef.current.active) return;
                               const { startRatios: sr, containerWidth: w, colIdx: c, startX } = colResizeRef.current;
@@ -4262,9 +4269,19 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                               const tR = sr.reduce((a, b) => a + b, 0);
                               const dR = (d / w) * tR;
                               const nr = [...sr]; nr[c] = Math.max(0.2, sr[c] + dR); nr[c+1] = Math.max(0.2, sr[c+1] - dR);
+                              latestRatios = nr;
                               setColRatios(nr);
                             };
-                            const onUp = () => { colResizeRef.current.active = false; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+                            const onUp = () => {
+                              colResizeRef.current.active = false;
+                              try {
+                                window.localStorage.setItem(SHOCKWAVE_COL_RATIOS_KEY, JSON.stringify(latestRatios));
+                              } catch {
+                                // localStorage may be unavailable in restricted browser contexts.
+                              }
+                              window.removeEventListener('mousemove', onMove);
+                              window.removeEventListener('mouseup', onUp);
+                            };
                             window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
                           }}
                         />
