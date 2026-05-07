@@ -923,10 +923,10 @@
 .notice-item {
   padding: 6px 16px;
   border-bottom: 1px solid var(--border-color-light);
-  min-height: 34px;
+  min-height: 39px;
   display: flex;
   align-items: center;
-  flex: 0 0 34px;
+  flex: 0 0 39px;
   cursor: pointer;
   transition: background var(--transition-fast);
   font-size: 1.35rem;
