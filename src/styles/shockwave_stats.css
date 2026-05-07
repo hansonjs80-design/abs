@@ -3619,8 +3619,8 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 /* Current-status grid line cleanup: keep the outer frame and semantic dividers visually even. */
 .sw-grid-table {
-  border-left-width: 2px;
-  border-top-width: 2px;
+  border-left-width: 3px;
+  border-top-width: 3px;
 }
 
 .sw-grid-table thead .hdr-therapist,
@@ -3719,8 +3719,8 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   --grid-divider: #9fb0c4;
   --grid-row-divider: #aeb8c6;
   --grid-line: #d7e0eb;
-  border-left: 2px solid var(--grid-frame);
-  border-top: 2px solid var(--grid-frame);
+  border-left: 3px solid var(--grid-frame);
+  border-top: 3px solid var(--grid-frame);
 }
 
 .sw-grid-table th,
@@ -3763,7 +3763,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 .sw-grid-table tr th:last-child,
 .sw-grid-table tr td:last-child {
-  border-right: 2px solid var(--grid-frame) !important;
+  border-right: 3px solid var(--grid-frame) !important;
 }
 
 .sw-grid-table tbody tr.tr-date-start td {
@@ -3873,7 +3873,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08) !important;
-  border: 4px solid #cbd5e1;
+  border: 3px solid #cbd5e1;
   overflow: hidden;
 }
 
