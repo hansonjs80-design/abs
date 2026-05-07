@@ -166,6 +166,10 @@
   background: var(--cal-sunday-bg);
 }
 
+.calendar-cell.sunday {
+  background: var(--cal-sunday-bg);
+}
+
 .calendar-cell.holiday {
   background: var(--cal-holiday-bg);
 }

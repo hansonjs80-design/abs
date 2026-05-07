@@ -44,7 +44,7 @@
   --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
 
   /* 달력 색상 (Refined) */
-  --cal-sunday-bg: #ffe4e6;
+  --cal-sunday-bg: #fecaca;
   --cal-sunday-text: #e11d48;
   --cal-saturday-bg: #eff6ff;
   --cal-saturday-text: #2563eb;
@@ -54,7 +54,7 @@
   --cal-other-month-text: #cbd5e1;
   --cal-today-date-bg: #6366f1;
   --cal-today-memo-bg: #fef9c3;
-  --cal-holiday-bg: #fecaca;
+  --cal-holiday-bg: #fca5a5;
   --cal-holiday-text: #991b1b;
   --cal-weekday-bg: #ffffff;
 
