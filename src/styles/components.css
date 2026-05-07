@@ -504,6 +504,12 @@
 .top-tab.active .month-nav-btn:hover,
 .top-tab.active .month-picker-label:hover {
   background: var(--tab-hover-bg);
+  color: var(--tab-active-border);
+}
+
+.top-tab.active .month-nav-btn:hover svg {
+  color: var(--tab-active-border);
+  stroke: var(--tab-active-border);
 }
 
 /* ── 버튼 ── */
