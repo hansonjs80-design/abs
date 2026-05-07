@@ -3936,8 +3936,6 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-settlement-table thead tr:first-child > *,
 .sw-compact-settlement-table thead tr:first-child > *,
 .sw-manual-compact-settlement-table thead tr:first-child > *,
-.sw-new-patient-table thead tr:first-child > *,
-.sw-compact-new-patient-table thead tr:first-child > *,
 .sw-summary-table thead tr:first-child > *,
 .sw-compact-summary-table thead tr:first-child > * {
   border-top: 3px solid #94a3b8 !important;
@@ -3947,8 +3945,6 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-settlement-table tr > :first-child,
 .sw-compact-settlement-table tr > :first-child,
 .sw-manual-compact-settlement-table tr > :first-child,
-.sw-new-patient-table tr > :first-child,
-.sw-compact-new-patient-table tr > :first-child,
 .sw-summary-table tr > :first-child,
 .sw-compact-summary-table tr > :first-child {
   border-left: 3px solid #94a3b8 !important;
@@ -3958,8 +3954,6 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-settlement-table tr > :last-child,
 .sw-compact-settlement-table tr > :last-child,
 .sw-manual-compact-settlement-table tr > :last-child,
-.sw-new-patient-table tr > :last-child,
-.sw-compact-new-patient-table tr > :last-child,
 .sw-summary-table tr > :last-child,
 .sw-compact-summary-table tr > :last-child {
   border-right: 3px solid #94a3b8 !important;
@@ -3973,10 +3967,6 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-compact-settlement-table tr:last-child > *,
 .sw-manual-compact-settlement-table tbody tr:last-child > *,
 .sw-manual-compact-settlement-table tr:last-child > *,
-.sw-new-patient-table tbody tr:last-child > *,
-.sw-new-patient-table tr:last-child > *,
-.sw-compact-new-patient-table tbody tr:last-child > *,
-.sw-compact-new-patient-table tr:last-child > *,
 .sw-summary-table tbody tr:last-child > *,
 .sw-summary-table tr:last-child > *,
 .sw-compact-summary-table tbody tr:last-child > *,
@@ -3984,40 +3974,30 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   border-bottom: 3px solid #94a3b8 !important;
 }
 
-/* New-patient tables read better with a lighter outer frame. */
-.sw-new-patient-table thead tr:first-child > *,
-.sw-compact-new-patient-table thead tr:first-child > * {
-  border-top-width: 2px !important;
+/* New-patient tables use one wrapper frame so colspan rows stay even. */
+.sw-new-patient-table,
+.sw-compact-new-patient-table {
+  border: 0 !important;
+  border-radius: 0 !important;
 }
 
-.sw-new-patient-table tr > :first-child,
-.sw-compact-new-patient-table tr > :first-child {
-  border-left-width: 2px !important;
-}
-
-.sw-new-patient-table tr > :last-child,
-.sw-compact-new-patient-table tr > :last-child {
-  border-right-width: 2px !important;
-}
-
-.sw-new-patient-table tbody tr:last-child > *,
-.sw-new-patient-table tr:last-child > *,
-.sw-compact-new-patient-table tbody tr:last-child > *,
-.sw-compact-new-patient-table tr:last-child > * {
-  border-bottom-width: 2px !important;
+.sw-new-patient-table-wrap {
+  border: 2px solid #94a3b8 !important;
 }
 
 /* Let the current-status grid use the page scrollbar instead of an inner table box. */
 .sw-stats-body--grid .sw-grid-card-table,
-.sw-stats-body--grid .sw-grid-shell,
-.sw-stats-body--grid .sw-grid-wrapper {
+.sw-stats-body--grid .sw-grid-shell {
   width: max-content;
   min-width: 100%;
   overflow: visible !important;
 }
 
 .sw-stats-body--grid .sw-grid-wrapper {
-  max-height: none;
+  width: max-content;
+  min-width: 100%;
+  max-height: 85vh;
+  overflow: auto !important;
 }
 
 .sw-stats-body--grid .sw-grid-card-table {
