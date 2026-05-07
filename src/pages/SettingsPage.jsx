@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Shield } from 'lucide-react';
 import { isAdminUser } from '../lib/authPermissions';
@@ -9,11 +9,30 @@ export default function SettingsPage() {
   const { user, signOut } = useAuth();
   const canManageLogin = isAdminUser(user);
   const [settingsSection, setSettingsSection] = useState('general');
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const todayLabel = new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(now);
   
   return (
-    <div className="animate-fade-in">
+    <div className="settings-page animate-fade-in">
       <div className="page-header">
         <h1 className="page-title">설정</h1>
+        <div className="settings-today-date" aria-label={`오늘 날짜 ${todayLabel}`}>
+          {todayLabel}
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>

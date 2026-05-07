@@ -1129,6 +1129,29 @@
   margin-bottom: 32px;
 }
 
+.settings-page .page-header {
+  align-items: flex-start;
+}
+
+.settings-today-date {
+  margin-right: 100px;
+  color: var(--text-primary);
+  font-size: clamp(1.8rem, 3vw, 3rem);
+  font-weight: 900;
+  line-height: 1.15;
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .settings-today-date {
+    margin-right: 0;
+    width: 100%;
+    text-align: left;
+    white-space: normal;
+  }
+}
+
 .settings-title {
   font-size: 1.1rem;
   font-weight: 700;
