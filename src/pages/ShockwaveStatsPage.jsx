@@ -38,11 +38,23 @@ export default function ShockwaveStatsPage() {
     loadTherapists,
     shockwaveMemos,
     loadShockwaveMemos,
+    loadMonthlyTherapists,
   } = useSchedule();
 
   useEffect(() => {
     loadTherapists();
   }, [loadTherapists]);
+
+  const reloadScheduleData = useCallback(async ({ force = false } = {}) => {
+    setSchedulerMemosReady(false);
+    const loadedTherapists = await loadTherapists();
+    const [loadedMemos, loadedMonthlyTherapists] = await Promise.all([
+      loadShockwaveMemos(currentYear, currentMonth, { force }),
+      loadMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
+    ]);
+    setSchedulerMemosReady(true);
+    return { memos: loadedMemos, monthlyTherapists: loadedMonthlyTherapists, therapists: loadedTherapists };
+  }, [currentYear, currentMonth, loadShockwaveMemos, loadMonthlyTherapists, loadTherapists]);
 
   // Use useEffect to ensure memos are loaded if navigating here directly
   useEffect(() => {
@@ -50,36 +62,34 @@ export default function ShockwaveStatsPage() {
     setSchedulerMemosReady(false);
 
     (async () => {
-      await loadShockwaveMemos(currentYear, currentMonth);
+      await loadTherapists();
+      await Promise.all([
+        loadShockwaveMemos(currentYear, currentMonth),
+        loadMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
+      ]);
       if (active) setSchedulerMemosReady(true);
     })();
 
     return () => {
       active = false;
     };
-  }, [currentYear, currentMonth, loadShockwaveMemos]);
+  }, [currentYear, currentMonth, loadShockwaveMemos, loadMonthlyTherapists, loadTherapists]);
 
   // 탭이 다시 보일 때 (visibility change) 자동으로 데이터 갱신
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        setSchedulerMemosReady(false);
-        (async () => {
-          await loadShockwaveMemos(currentYear, currentMonth);
-          setSchedulerMemosReady(true);
-        })();
+        reloadScheduleData({ force: true });
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [currentYear, currentMonth, loadShockwaveMemos]);
+  }, [reloadScheduleData]);
 
   // 수동 새로고침 콜백
   const handleReloadMemos = useCallback(async () => {
-    setSchedulerMemosReady(false);
-    await loadShockwaveMemos(currentYear, currentMonth);
-    setSchedulerMemosReady(true);
-  }, [currentYear, currentMonth, loadShockwaveMemos]);
+    await reloadScheduleData({ force: true });
+  }, [reloadScheduleData]);
 
   return (
     <div className="animate-fade-in" style={{ height: '100%', overflow: 'auto' }}>

@@ -71,6 +71,7 @@ export default function ManualTherapyStatsPage() {
     loadShockwaveSettings,
     saveShockwaveSettings,
     monthlyManualTherapists,
+    loadMonthlyTherapists,
   } = useSchedule();
   const { addToast } = useToast();
   const [logs, setLogs] = useState([]);
@@ -159,34 +160,45 @@ export default function ManualTherapyStatsPage() {
     loadShockwaveSettings();
   }, [loadManualTherapists, loadShockwaveSettings]);
 
+  const reloadScheduleData = useCallback(async ({ force = false } = {}) => {
+    setSchedulerMemosReady(false);
+    const loadedTherapists = await loadManualTherapists();
+    const [loadedMemos, loadedMonthlyTherapists] = await Promise.all([
+      loadShockwaveMemos(currentYear, currentMonth, { force }),
+      loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy'),
+    ]);
+    setSchedulerMemosReady(true);
+    return { memos: loadedMemos, monthlyTherapists: loadedMonthlyTherapists, therapists: loadedTherapists };
+  }, [currentYear, currentMonth, loadShockwaveMemos, loadMonthlyTherapists, loadManualTherapists]);
+
   useEffect(() => {
     let active = true;
     setSchedulerMemosReady(false);
 
     (async () => {
-      await loadShockwaveMemos(currentYear, currentMonth);
+      await loadManualTherapists();
+      await Promise.all([
+        loadShockwaveMemos(currentYear, currentMonth),
+        loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy'),
+      ]);
       if (active) setSchedulerMemosReady(true);
     })();
 
     return () => {
       active = false;
     };
-  }, [currentMonth, currentYear, loadShockwaveMemos]);
+  }, [currentMonth, currentYear, loadShockwaveMemos, loadMonthlyTherapists, loadManualTherapists]);
 
   // 탭이 다시 보일 때 (visibility change) 자동으로 데이터 갱신
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        setSchedulerMemosReady(false);
-        (async () => {
-          await loadShockwaveMemos(currentYear, currentMonth);
-          setSchedulerMemosReady(true);
-        })();
+        reloadScheduleData({ force: true });
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [currentYear, currentMonth, loadShockwaveMemos]);
+  }, [reloadScheduleData]);
 
   // 수동 새로고침
   const [isReloading, setIsReloading] = useState(false);
@@ -194,9 +206,19 @@ export default function ManualTherapyStatsPage() {
     setIsReloading(true);
     try {
       setSchedulerMemosReady(false);
-      await loadShockwaveMemos(currentYear, currentMonth);
-      setSchedulerMemosReady(true);
+      const reloaded = await reloadScheduleData({ force: true });
       lastAutoSyncKeyRef.current = null;
+      const latestTherapists = Array.isArray(reloaded?.therapists) && reloaded.therapists.length > 0
+        ? reloaded.therapists
+        : safeTherapists;
+      await syncMonthManualTherapyScheduleToStats({
+        year: currentYear,
+        month: currentMonth,
+        memos: reloaded?.memos || shockwaveMemos,
+        therapists: latestTherapists,
+        monthlyTherapists: reloaded?.monthlyTherapists || monthlyManualTherapists,
+        upToToday: true,
+      });
       await fetchLogs();
       addToast('도수치료 통계 데이터를 새로 불러왔습니다.', 'success');
     } catch (err) {
@@ -205,7 +227,7 @@ export default function ManualTherapyStatsPage() {
     } finally {
       setIsReloading(false);
     }
-  }, [currentYear, currentMonth, loadShockwaveMemos, fetchLogs, addToast]);
+  }, [reloadScheduleData, currentYear, currentMonth, shockwaveMemos, safeTherapists, monthlyManualTherapists, fetchLogs, addToast]);
 
   useEffect(() => {
     fetchLogs();
@@ -265,7 +287,7 @@ export default function ManualTherapyStatsPage() {
     return () => {
       cancelled = true;
     };
-  }, [schedulerMemosReady, currentYear, currentMonth, safeTherapists, isAutoSyncingToday, shockwaveMemos, fetchLogs, addToast]);
+  }, [schedulerMemosReady, currentYear, currentMonth, safeTherapists, isAutoSyncingToday, shockwaveMemos, monthlyManualTherapists, fetchLogs, addToast]);
 
   const handleSyncFromScheduler = useCallback(async () => {
     setIsLoading(true);

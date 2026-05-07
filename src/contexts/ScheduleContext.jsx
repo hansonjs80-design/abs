@@ -316,8 +316,10 @@ export function ScheduleProvider({ children }) {
       if (error) throw error;
 
       setTherapists(data || []);
+      return data || [];
     } catch (err) {
       console.error('Failed to load therapists:', err);
+      return [];
     }
   }, []);
 
@@ -331,8 +333,10 @@ export function ScheduleProvider({ children }) {
 
       if (error) throw error;
       setManualTherapists(data || []);
+      return data || [];
     } catch (err) {
       console.error('Failed to load manual therapy therapists:', err);
+      return [];
     }
   }, []);
 
@@ -544,9 +548,9 @@ export function ScheduleProvider({ children }) {
   }, [shockwaveSettings?.id]);
 
   // 충격파 스케줄 로드 (단일 쿼리 + 캐시 키)
-  const loadShockwaveMemos = useCallback(async (year, month) => {
+  const loadShockwaveMemos = useCallback(async (year, month, options = {}) => {
     const cacheKey = `${year}-${month}`;
-    if (loadCacheRef.current.shockwaveMemos === cacheKey) return;
+    if (!options.force && loadCacheRef.current.shockwaveMemos === cacheKey) return;
     loadCacheRef.current.shockwaveMemos = cacheKey;
 
     setLoading(true);
@@ -589,9 +593,11 @@ export function ScheduleProvider({ children }) {
         });
         return next;
       });
+      return memoMap;
     } catch (err) {
       console.error('Failed to load shockwave memos:', err);
       loadCacheRef.current.shockwaveMemos = null;
+      return null;
     } finally {
       setLoading(false);
     }
@@ -892,7 +898,23 @@ export function ScheduleProvider({ children }) {
 
       // 이전 달도 없음 → 기본 therapists 테이블에서 생성
       const lastDay = new Date(year, month, 0).getDate();
-      const defaults = fallbackList.map((t) => ({
+      let baseTherapists = fallbackList;
+      if (!baseTherapists || baseTherapists.length === 0) {
+        const tableName = type === 'manual_therapy' ? 'manual_therapy_therapists' : 'shockwave_therapists';
+        const { data: defaultRows, error: defaultError } = await supabase
+          .from(tableName)
+          .select('*')
+          .eq('is_active', true)
+          .order('slot_index');
+
+        if (!defaultError && Array.isArray(defaultRows)) {
+          baseTherapists = defaultRows;
+          if (type === 'manual_therapy') setManualTherapists(defaultRows);
+          else setTherapists(defaultRows);
+        }
+      }
+
+      const defaults = (baseTherapists || []).map((t) => ({
         slot_index: t.slot_index,
         therapist_name: t.name || '',
         start_day: 1,

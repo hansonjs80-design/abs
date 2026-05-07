@@ -142,9 +142,22 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     setIsReloading(true);
     try {
       // 1. 스케줄 메모를 다시 가져옴
-      if (onReloadMemos) await onReloadMemos();
+      const reloaded = onReloadMemos ? await onReloadMemos() : null;
+      const latestMemos = reloaded?.memos || memos;
+      const latestMonthlyTherapists = reloaded?.monthlyTherapists || monthlyTherapists;
+      const latestTherapists = Array.isArray(reloaded?.therapists) && reloaded.therapists.length > 0
+        ? reloaded.therapists
+        : safeTherapists;
       // 2. 자동동기화 키를 리셋하여 다시 실행되도록
       lastAutoSyncKeyRef.current = null;
+      await syncMonthShockwaveScheduleToStats({
+        year: currentYear,
+        month: currentMonth,
+        memos: latestMemos,
+        therapists: latestTherapists,
+        monthlyTherapists: latestMonthlyTherapists,
+        upToToday: true,
+      });
       // 3. DB에서 통계 로그 다시 가져옴
       await fetchLogs();
       addToast('통계 데이터를 새로 불러왔습니다.', 'success');
@@ -154,7 +167,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     } finally {
       setIsReloading(false);
     }
-  }, [onReloadMemos, fetchLogs, addToast]);
+  }, [onReloadMemos, memos, monthlyTherapists, currentYear, currentMonth, safeTherapists, fetchLogs, addToast]);
 
   useEffect(() => {
     fetchLogs();
@@ -300,7 +313,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     return () => {
       cancelled = true;
     };
-  }, [schedulerMemosReady, currentYear, currentMonth, safeTherapists, fetchLogs, addToast, isAutoSyncingToday]);
+  }, [schedulerMemosReady, currentYear, currentMonth, safeTherapists, monthlyTherapists, memos, fetchLogs, addToast, isAutoSyncingToday]);
 
   const handleCellEdit = async (id, field, value) => {
     try {
