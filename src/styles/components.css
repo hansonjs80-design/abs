@@ -390,6 +390,11 @@
   box-shadow: 0 7px 16px rgba(15, 23, 42, 0.1);
 }
 
+.top-tab:not(.active) {
+  background: var(--tab-bg);
+  border-color: var(--tab-active-border);
+}
+
 .top-tab.active {
   background: var(--tab-active-bg);
   color: var(--tab-active-text);
