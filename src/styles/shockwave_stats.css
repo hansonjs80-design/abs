@@ -4040,6 +4040,44 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   background: #e8f1ff !important;
 }
 
+.sw-settlement-table thead .grand-col,
+.sw-compact-settlement-table thead .grand-col,
+.sw-manual-compact-settlement-table thead .grand-col {
+  border-bottom: 1px solid #d2deeb !important;
+}
+
+.sw-settlement-table tr > :first-child,
+.sw-compact-settlement-table tr > :first-child,
+.sw-manual-compact-settlement-table tr > :first-child,
+.sw-summary-table tr > :first-child,
+.sw-compact-summary-table tr > :first-child {
+  border-left: 0 !important;
+}
+
+.sw-settlement-table tr > :last-child,
+.sw-compact-settlement-table tr > :last-child,
+.sw-manual-compact-settlement-table tr > :last-child,
+.sw-summary-table tr > :last-child,
+.sw-compact-summary-table tr > :last-child {
+  border-right: 0 !important;
+}
+
+.sw-settlement-table thead tr:first-child > *,
+.sw-compact-settlement-table thead tr:first-child > *,
+.sw-manual-compact-settlement-table thead tr:first-child > *,
+.sw-summary-table thead tr:first-child > *,
+.sw-compact-summary-table thead tr:first-child > * {
+  border-top: 0 !important;
+}
+
+.sw-settlement-table tr:last-child > *,
+.sw-compact-settlement-table tr:last-child > *,
+.sw-manual-compact-settlement-table tr:last-child > *,
+.sw-summary-table tr:last-child > *,
+.sw-compact-summary-table tr:last-child > * {
+  border-bottom: 0 !important;
+}
+
 /* ── Reload button spin animation ── */
 @keyframes spin-reload {
   from { transform: rotate(0deg); }
