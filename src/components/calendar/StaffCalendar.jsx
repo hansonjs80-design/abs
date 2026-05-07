@@ -598,19 +598,22 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
               type="button"
               onClick={() => setShowSlotSettings(!showSlotSettings)}
               style={{
-                background: 'none',
+                background: '#475569',
                 border: 'none',
                 cursor: 'pointer',
-                color: 'var(--text-secondary)',
-                padding: 4,
+                color: '#fff',
+                padding: '4px 12px',
+                fontSize: '0.85rem',
+                fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderRadius: 4,
+                borderRadius: '6px',
+                whiteSpace: 'nowrap',
               }}
               title="주차별 행 수 설정"
             >
-              ⚙️
+              설정
             </button>
             {showSlotSettings && (
             <div ref={slotSettingsRef} style={{

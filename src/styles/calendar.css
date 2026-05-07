@@ -26,7 +26,7 @@
   border: 1px solid var(--border-color-light);
   border-radius: 10px; /* slightly smaller radius */
   background: #ffffff;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  box-shadow: none;
   box-sizing: border-box;
 }
 
