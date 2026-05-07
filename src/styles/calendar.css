@@ -23,7 +23,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1px solid var(--border-color-light);
+  border: none;
   border-radius: 10px; /* slightly smaller radius */
   background: #ffffff;
   box-shadow: none;
