@@ -3941,7 +3941,6 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   border-top: 3px solid #94a3b8 !important;
 }
 
-.sw-grid-table tr > :first-child,
 .sw-settlement-table tr > :first-child,
 .sw-compact-settlement-table tr > :first-child,
 .sw-manual-compact-settlement-table tr > :first-child,
@@ -3977,15 +3976,16 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 /* New-patient tables use one wrapper frame so colspan rows stay even. */
 .sw-new-patient-table,
 .sw-compact-new-patient-table {
-  border: 0 !important;
-  border-radius: 0 !important;
+  border: 2px solid #94a3b8 !important;
+  border-radius: 10px !important;
+  overflow: hidden;
 }
 
 .sw-new-patient-table-wrap {
-  border: 2px solid #94a3b8 !important;
+  border: none !important;
 }
 
-/* Let the current-status grid use the page scrollbar instead of an inner table box. */
+/* Let the current-status grid flow like a sheet while keeping sticky rows active. */
 .sw-stats-body--grid .sw-grid-card-table,
 .sw-stats-body--grid .sw-grid-shell {
   width: max-content;
@@ -3996,8 +3996,8 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-stats-body--grid .sw-grid-wrapper {
   width: max-content;
   min-width: 100%;
-  max-height: 85vh;
-  overflow: auto !important;
+  max-height: none;
+  overflow: visible !important;
 }
 
 .sw-stats-body--grid .sw-grid-card-table {
@@ -4005,6 +4005,51 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
+}
+
+.sw-stats-body--grid .sw-grid-shell {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.sw-stats-body--grid .sw-grid-table {
+  border-left: 3px solid #94a3b8 !important;
+}
+
+.sw-settlement-table-wrap,
+.sw-compact-table-wrap,
+.sw-summary-table-wrap,
+.sw-six-month-summary-wrap {
+  border: none !important;
+}
+
+.sw-settlement-table,
+.sw-compact-settlement-table,
+.sw-manual-compact-settlement-table,
+.sw-summary-table,
+.sw-compact-summary-table {
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+
+.sw-settlement-table thead .therapist-col,
+.sw-compact-settlement-table thead .therapist-col,
+.sw-manual-compact-settlement-table thead .therapist-col,
+.sw-settlement-table thead .prescription-col,
+.sw-compact-settlement-table thead .prescription-col,
+.sw-manual-compact-settlement-table thead .prescription-col {
+  border-left-width: 1px !important;
+}
+
+.sw-settlement-table thead .therapist-col:first-child,
+.sw-compact-settlement-table thead .therapist-col:first-child,
+.sw-manual-compact-settlement-table thead .therapist-col:first-child,
+.sw-settlement-table thead .prescription-col:first-child,
+.sw-compact-settlement-table thead .prescription-col:first-child,
+.sw-manual-compact-settlement-table thead .prescription-col:first-child {
+  border-left-width: 0 !important;
 }
 
 /* ── Reload button spin animation ── */
