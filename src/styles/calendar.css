@@ -25,7 +25,7 @@
   gap: 8px;
   border: none;
   border-radius: 10px; /* slightly smaller radius */
-  background: #ffffff;
+  background: transparent;
   box-shadow: none;
   box-sizing: border-box;
 }
