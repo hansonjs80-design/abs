@@ -602,7 +602,7 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
           </button>
           {showSlotSettings && (
             <div ref={slotSettingsRef} style={{
-              position: 'absolute', top: '100%', right: 0, marginTop: 4,
+              position: 'absolute', bottom: '100%', right: 0, marginBottom: 4,
               background: 'var(--bg-primary)', border: '1px solid var(--border-color)',
               boxShadow: '0 4px 12px rgba(0,0,0,0.15)', borderRadius: 6, padding: 12,
               zIndex: 1000, width: 200, fontSize: '0.85rem', color: 'var(--text-primary)'

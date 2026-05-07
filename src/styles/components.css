@@ -936,8 +936,11 @@
 
 .notice-department-filter-list {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-wrap: nowrap;
+  gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
 }
 
 .notice-department-check {
@@ -954,6 +957,8 @@
   font-weight: 800;
   cursor: pointer;
   user-select: none;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .notice-department-check input {
