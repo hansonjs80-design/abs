@@ -357,7 +357,7 @@
   --tab-hover-bg: #eff6ff;
   --tab-active-bg: #3b82f6;
   --tab-active-border: #2563eb;
-  --tab-active-text: #ffffff;
+  --tab-active-text: #111827;
   --tab-shadow: rgba(37, 99, 235, 0.18);
   position: relative;
   isolation: isolate;
