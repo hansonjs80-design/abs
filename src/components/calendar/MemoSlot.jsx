@@ -56,7 +56,7 @@ export default function MemoSlot({
     >
       <span style={{
         pointerEvents: 'none',
-        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'clip',
         width: '100%', textAlign: 'right',
         ...(holidayName && !content ? { color: '#e53e3e', fontWeight: 600 } : {}),
       }}>
