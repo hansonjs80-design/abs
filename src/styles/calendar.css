@@ -11,6 +11,7 @@
   width: max-content;
   min-width: 0;
   overflow: visible;
+  margin-left: 30px;
 }
 
 .staff-calendar-toolbar {
