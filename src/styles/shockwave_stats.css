@@ -3932,44 +3932,16 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 }
 
 /* Keep the visible table frame at 3px on every shockwave stats table. */
-.sw-grid-table thead tr:first-child > *,
-.sw-settlement-table thead tr:first-child > *,
-.sw-compact-settlement-table thead tr:first-child > *,
-.sw-manual-compact-settlement-table thead tr:first-child > *,
-.sw-summary-table thead tr:first-child > *,
-.sw-compact-summary-table thead tr:first-child > * {
+.sw-grid-table thead tr:first-child > * {
   border-top: 3px solid #94a3b8 !important;
 }
 
-.sw-settlement-table tr > :first-child,
-.sw-compact-settlement-table tr > :first-child,
-.sw-manual-compact-settlement-table tr > :first-child,
-.sw-summary-table tr > :first-child,
-.sw-compact-summary-table tr > :first-child {
-  border-left: 3px solid #94a3b8 !important;
-}
-
-.sw-grid-table tr > :last-child,
-.sw-settlement-table tr > :last-child,
-.sw-compact-settlement-table tr > :last-child,
-.sw-manual-compact-settlement-table tr > :last-child,
-.sw-summary-table tr > :last-child,
-.sw-compact-summary-table tr > :last-child {
+.sw-grid-table tr > :last-child {
   border-right: 3px solid #94a3b8 !important;
 }
 
 .sw-grid-table tbody tr:last-child > *,
-.sw-grid-table tr:last-child > *,
-.sw-settlement-table tbody tr:last-child > *,
-.sw-settlement-table tr:last-child > *,
-.sw-compact-settlement-table tbody tr:last-child > *,
-.sw-compact-settlement-table tr:last-child > *,
-.sw-manual-compact-settlement-table tbody tr:last-child > *,
-.sw-manual-compact-settlement-table tr:last-child > *,
-.sw-summary-table tbody tr:last-child > *,
-.sw-summary-table tr:last-child > *,
-.sw-compact-summary-table tbody tr:last-child > *,
-.sw-compact-summary-table tr:last-child > * {
+.sw-grid-table tr:last-child > * {
   border-bottom: 3px solid #94a3b8 !important;
 }
 
@@ -3985,7 +3957,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   border: none !important;
 }
 
-/* Let the current-status grid flow like a sheet while keeping sticky rows active. */
+/* Keep the current-status grid row freeze behavior tied to its scroll pane. */
 .sw-stats-body--grid .sw-grid-card-table,
 .sw-stats-body--grid .sw-grid-shell {
   width: max-content;
@@ -3996,8 +3968,8 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-stats-body--grid .sw-grid-wrapper {
   width: max-content;
   min-width: 100%;
-  max-height: none;
-  overflow: visible !important;
+  max-height: 85vh;
+  overflow: auto !important;
 }
 
 .sw-stats-body--grid .sw-grid-card-table {
@@ -4034,6 +4006,17 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   border-radius: 0 !important;
 }
 
+.sw-settlement-table-wrap:has(.sw-settlement-table),
+.sw-settlement-table-wrap:has(.sw-compact-settlement-table),
+.sw-settlement-table-wrap:has(.sw-manual-compact-settlement-table),
+.sw-settlement-table-wrap:has(.sw-summary-table),
+.sw-settlement-table-wrap:has(.sw-compact-summary-table),
+.sw-six-month-summary-wrap {
+  border: 3px solid #94a3b8 !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
 .sw-settlement-table thead .therapist-col,
 .sw-compact-settlement-table thead .therapist-col,
 .sw-manual-compact-settlement-table thead .therapist-col,
@@ -4050,6 +4033,11 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-compact-settlement-table thead .prescription-col:first-child,
 .sw-manual-compact-settlement-table thead .prescription-col:first-child {
   border-left-width: 0 !important;
+}
+
+.sw-summary-table thead th,
+.sw-compact-summary-table thead th {
+  background: #e8f1ff !important;
 }
 
 /* ── Reload button spin animation ── */
