@@ -3864,6 +3864,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 /* Apply shadow and background to the table wrapper instead */
 .sw-grid-shell,
+.sw-grid-card-table,
 .sw-settlement-table-wrap,
 .sw-compact-table-wrap,
 .sw-new-patient-table-wrap,
@@ -3872,7 +3873,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08) !important;
-  border: 2px solid #cbd5e1;
+  border: 4px solid #cbd5e1;
   overflow: hidden;
 }
 
