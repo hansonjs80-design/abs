@@ -344,7 +344,7 @@
 .top-tabs-current-date {
   margin-right: 6px;
   color: #111827;
-  font-size: clamp(0.98rem, 1.18vw, 1.32rem);
+  font-size: clamp(1.08rem, 1.3vw, 1.45rem);
   font-weight: 900;
   line-height: 1.05;
   white-space: nowrap;
