@@ -353,9 +353,11 @@
 }
 
 .top-tab {
-  --tab-accent: #2563eb;
-  --tab-accent-soft: #eff6ff;
-  --tab-accent-strong: #1d4ed8;
+  --tab-bg: #ffffff;
+  --tab-hover-bg: #eff6ff;
+  --tab-active-bg: #3b82f6;
+  --tab-active-border: #2563eb;
+  --tab-active-text: #ffffff;
   --tab-shadow: rgba(37, 99, 235, 0.18);
   position: relative;
   isolation: isolate;
@@ -367,7 +369,7 @@
   padding: 6px 13px;
   border: 1px solid #d6dee9;
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--tab-bg);
   color: #263244;
   font-size: 0.92rem;
   font-weight: 800;
@@ -381,18 +383,18 @@
 }
 
 .top-tab:hover {
-  background: var(--tab-accent-soft);
-  color: var(--tab-accent-strong);
-  border-color: color-mix(in srgb, var(--tab-accent) 42%, #cbd5e1);
+  background: var(--tab-hover-bg);
+  color: #111827;
+  border-color: var(--tab-active-border);
   transform: translateY(-1px);
-  box-shadow: 0 7px 16px rgba(15, 23, 42, 0.1), 0 0 0 3px color-mix(in srgb, var(--tab-accent) 10%, transparent);
+  box-shadow: 0 7px 16px rgba(15, 23, 42, 0.1);
 }
 
 .top-tab.active {
-  background: var(--tab-accent-soft);
-  color: var(--tab-accent-strong);
-  border-color: color-mix(in srgb, var(--tab-accent) 58%, #cbd5e1);
-  box-shadow: 0 8px 18px var(--tab-shadow), 0 0 0 3px color-mix(in srgb, var(--tab-accent) 14%, transparent);
+  background: var(--tab-active-bg);
+  color: var(--tab-active-text);
+  border-color: var(--tab-active-border);
+  box-shadow: 0 8px 18px var(--tab-shadow);
   transform: none;
   z-index: 2;
   font-size: 1.08rem;
@@ -402,54 +404,54 @@
 .top-tab.active svg {
   width: 20px;
   height: 20px;
-  color: var(--tab-accent-strong);
+  color: var(--tab-active-text);
 }
 
 /* 1. Calendar (Blue) */
 .top-tab--calendar {
-  --tab-accent: #2563eb;
-  --tab-accent-soft: #dbeafe;
-  --tab-accent-strong: #1d4ed8;
+  --tab-hover-bg: #dbeafe;
+  --tab-active-bg: #3b82f6;
+  --tab-active-border: #2563eb;
   --tab-shadow: rgba(37, 99, 235, 0.18);
 }
 
 /* 2. Shockwave (Green) */
 .top-tab--shockwave {
-  --tab-accent: #16a34a;
-  --tab-accent-soft: #dcfce7;
-  --tab-accent-strong: #15803d;
+  --tab-hover-bg: #dcfce7;
+  --tab-active-bg: #22c55e;
+  --tab-active-border: #16a34a;
   --tab-shadow: rgba(22, 163, 74, 0.18);
 }
 
 /* 3. Stats SW (Purple) */
 .top-tab--stats-sw {
-  --tab-accent: #7c3aed;
-  --tab-accent-soft: #ede9fe;
-  --tab-accent-strong: #6d28d9;
+  --tab-hover-bg: #ede9fe;
+  --tab-active-bg: #8b5cf6;
+  --tab-active-border: #7c3aed;
   --tab-shadow: rgba(124, 58, 237, 0.18);
 }
 
 /* 4. Stats MT (Purple) */
 .top-tab--stats-mt {
-  --tab-accent: #8b5cf6;
-  --tab-accent-soft: #f3e8ff;
-  --tab-accent-strong: #7c3aed;
+  --tab-hover-bg: #f3e8ff;
+  --tab-active-bg: #a855f7;
+  --tab-active-border: #9333ea;
   --tab-shadow: rgba(139, 92, 246, 0.18);
 }
 
 /* 5. Stats PT (Purple) */
 .top-tab--stats-pt {
-  --tab-accent: #0891b2;
-  --tab-accent-soft: #cffafe;
-  --tab-accent-strong: #0e7490;
+  --tab-hover-bg: #cffafe;
+  --tab-active-bg: #06b6d4;
+  --tab-active-border: #0891b2;
   --tab-shadow: rgba(8, 145, 178, 0.18);
 }
 
 /* 5. Settings (Gray) */
 .top-tab--settings {
-  --tab-accent: #475569;
-  --tab-accent-soft: #e2e8f0;
-  --tab-accent-strong: #334155;
+  --tab-hover-bg: #e2e8f0;
+  --tab-active-bg: #475569;
+  --tab-active-border: #334155;
   --tab-shadow: rgba(71, 85, 105, 0.16);
 }
 
@@ -489,14 +491,19 @@
 
 .top-tab.active .month-nav-btn {
   background: #ffffff;
-  color: var(--tab-accent-strong);
-  border-color: color-mix(in srgb, var(--tab-accent) 28%, #dbe3ee);
+  color: var(--tab-active-border);
+  border-color: var(--tab-active-border);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.top-tab.active .month-nav-btn svg {
+  color: var(--tab-active-border);
+  stroke: var(--tab-active-border);
 }
 
 .top-tab.active .month-nav-btn:hover,
 .top-tab.active .month-picker-label:hover {
-  background: var(--tab-accent-soft);
+  background: var(--tab-hover-bg);
 }
 
 /* ── 버튼 ── */
@@ -518,7 +525,7 @@
 }
 
 .btn-primary {
-  background: var(--brand-gradient);
+  background: var(--brand-primary);
   color: white;
 }
 .btn-primary:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
