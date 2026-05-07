@@ -917,7 +917,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  color: var(--brand-primary);
+  color: #000000;
 }
 
 .notice-item {
