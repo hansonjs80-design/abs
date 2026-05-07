@@ -367,7 +367,7 @@
   padding: 6px 13px;
   border: 1px solid #d6dee9;
   border-radius: 8px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  background: #ffffff;
   color: #263244;
   font-size: 0.92rem;
   font-weight: 800;
@@ -380,28 +380,16 @@
   overflow: hidden;
 }
 
-.top-tab::before {
-  content: "";
-  position: absolute;
-  inset: 1px;
-  z-index: -1;
-  border-radius: 7px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--tab-accent-soft) 84%, #ffffff), #ffffff);
-  opacity: 0;
-  transition: opacity 150ms ease;
-}
-
 .top-tab:hover {
+  background: var(--tab-accent-soft);
   color: var(--tab-accent-strong);
   border-color: color-mix(in srgb, var(--tab-accent) 42%, #cbd5e1);
   transform: translateY(-1px);
   box-shadow: 0 7px 16px rgba(15, 23, 42, 0.1), 0 0 0 3px color-mix(in srgb, var(--tab-accent) 10%, transparent);
 }
 
-.top-tab:hover::before { opacity: 0.95; }
-
 .top-tab.active {
-  background: #ffffff;
+  background: var(--tab-accent-soft);
   color: var(--tab-accent-strong);
   border-color: color-mix(in srgb, var(--tab-accent) 58%, #cbd5e1);
   box-shadow: 0 8px 18px var(--tab-shadow), 0 0 0 3px color-mix(in srgb, var(--tab-accent) 14%, transparent);
@@ -410,8 +398,6 @@
   font-size: 1.08rem;
   font-weight: 900;
 }
-
-.top-tab.active::before { opacity: 1; }
 
 .top-tab.active svg {
   width: 20px;
