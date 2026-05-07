@@ -17,15 +17,17 @@ export default function TopTabs() {
     return () => window.clearInterval(timer);
   }, []);
 
-  const currentDateTimeLabel = new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  }).format(now);
+  const formatDateTime = (date) => {
+    const y = date.getFullYear();
+    const m = date.getMonth() + 1;
+    const d = date.getDate();
+    const wd = ['일', '월', '화', '수', '목', '금', '토'][date.getDay()];
+    const hh = date.getHours();
+    const min = String(date.getMinutes()).padStart(2, '0');
+    return `${y}년 ${m}월 ${d}일(${wd}) ${hh}시 ${min}분`;
+  };
+
+  const currentDateTimeLabel = formatDateTime(now);
 
   const notifyBeforeTabChange = () => {
     window.dispatchEvent(new CustomEvent('clinic-before-route-change'));
@@ -62,17 +64,15 @@ export default function TopTabs() {
                   <Icon size={18} />
                   <span>{item.label}</span>
                 </NavLink>
-                {item.key === 'settings' && (
-                  <span className="top-tabs-current-date" aria-label={`현재 날짜와 시간 ${currentDateTimeLabel}`}>
-                    {currentDateTimeLabel}
-                  </span>
-                )}
               </span>
             );
           })}
         </div>
       </nav>
       <div className="top-tabs-actions">
+        <span style={{ fontSize: '14.5px', fontWeight: 600, color: 'var(--text-secondary)', marginRight: '10px' }}>
+          {currentDateTimeLabel}
+        </span>
         <PrintButton />
         <ThemeToggle />
       </div>

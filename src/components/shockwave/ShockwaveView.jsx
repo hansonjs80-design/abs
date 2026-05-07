@@ -1459,8 +1459,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, [doUndo, contextMenu]);
 
   useEffect(() => {
-    if (!Array.isArray(colRatios) || colRatios.length === colCount) return;
-    setColRatios(Array(colCount).fill(1));
+    if (!Array.isArray(colRatios)) {
+      setColRatios(Array(colCount).fill(1));
+      return;
+    }
+    if (colRatios.length === colCount) return;
+    
+    // Preserve existing ratios when colCount changes (e.g. therapists loading)
+    setColRatios((prev) => {
+      if (!Array.isArray(prev)) return Array(colCount).fill(1);
+      if (prev.length < colCount) return [...prev, ...Array(colCount - prev.length).fill(1)];
+      return prev.slice(0, colCount);
+    });
   }, [colRatios, colCount]);
 
   // ── 셀 키 헬퍼 ──
