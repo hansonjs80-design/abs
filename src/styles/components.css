@@ -843,6 +843,9 @@
   border: 1px solid var(--border-color);
   border-radius: 4px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .notice-board-header {
@@ -863,6 +866,7 @@
   min-height: 48px;
   display: flex;
   align-items: center;
+  flex: 1 1 0;
   cursor: pointer;
   transition: background var(--transition-fast);
   font-size: 1.35rem;
