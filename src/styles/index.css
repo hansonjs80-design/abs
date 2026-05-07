@@ -46,7 +46,7 @@
   /* 달력 색상 (Refined) */
   --cal-sunday-bg: #fecaca;
   --cal-sunday-text: #e11d48;
-  --cal-saturday-bg: #eff6ff;
+  --cal-saturday-bg: #dbeafe;
   --cal-saturday-text: #2563eb;
   --cal-header-sunday-bg: #fda4af;
   --cal-header-saturday-bg: #93c5fd;
@@ -142,7 +142,7 @@
 
   --cal-sunday-bg: #3b1a1a;
   --cal-sunday-text: #f87171;
-  --cal-saturday-bg: #1a2744;
+  --cal-saturday-bg: #22345a;
   --cal-saturday-text: #60a5fa;
   --cal-other-month-bg: #1a2332;
   --cal-other-month-text: #475569;
