@@ -300,6 +300,42 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     width: 100% !important;
   }
 
+  .sw-stats-container,
+  .sw-stats-panel,
+  .sw-stats-body,
+  .sw-settlement-stack,
+  .sw-settlement-card,
+  .sw-grid-card {
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .sw-grid-card-header,
+  .sw-settlement-header,
+  .sw-settlement-meta {
+    display: none !important;
+  }
+
+  .sw-grid-shell,
+  .sw-grid-card-table,
+  .sw-settlement-table-wrap,
+  .sw-compact-table-wrap,
+  .sw-new-patient-table-wrap,
+  .sw-summary-table-wrap,
+  .sw-six-month-summary-wrap {
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 0 8mm !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
   * {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
