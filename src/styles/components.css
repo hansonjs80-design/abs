@@ -341,10 +341,9 @@
 }
 
 .top-tabs-current-date {
-  margin-left: 14px;
-  padding-bottom: 8px;
+  margin-right: 10px;
   color: var(--text-primary);
-  font-size: clamp(1.15rem, 1.65vw, 1.8rem);
+  font-size: clamp(1rem, 1.35vw, 1.45rem);
   font-weight: 900;
   line-height: 1;
   white-space: nowrap;
