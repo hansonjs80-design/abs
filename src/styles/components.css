@@ -385,7 +385,7 @@
   transform: none;
   position: relative;
   z-index: 2;
-  font-size: 1rem;
+  font-size: 1.08rem;
   font-weight: 900;
 }
 
@@ -448,7 +448,7 @@
 }
 
 .top-tab.active .month-picker.tab-variant .month-picker-label {
-  font-size: 1.08rem;
+  font-size: 1.16rem;
   line-height: 1.1;
 }
 
