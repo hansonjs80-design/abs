@@ -647,6 +647,40 @@
   color: var(--text-primary);
 }
 
+.print-menu-root {
+  position: relative;
+}
+
+.print-orientation-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 92px;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+}
+
+.print-orientation-menu button {
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.print-orientation-menu button:hover {
+  background: var(--bg-hover);
+}
+
 /* ── 토스트 ── */
 .toast-container {
   position: fixed;
