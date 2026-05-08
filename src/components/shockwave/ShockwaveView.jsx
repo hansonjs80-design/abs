@@ -118,6 +118,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [, setUndoStack] = useState([]);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, weekIdx, dayIdx, rowIdx, colIdx, currentPrescription }
   const [activeContextSubmenu, setActiveContextSubmenu] = useState(null);
+  const [contextMenuBodyPartOptions, setContextMenuBodyPartOptions] = useState([]);
   const [contextMenuBodyInput, setContextMenuBodyInput] = useState('');
   const [contextMenuNoteInput, setContextMenuNoteInput] = useState('');
   const [contextMenuMemoDrafts, setContextMenuMemoDrafts] = useState([]);
@@ -1829,6 +1830,26 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     };
   }, [flushEditDraft]);
 
+  const buildContextMenuBodyPartOptions = useCallback((targetKey) => {
+    const currentMemo = memos[targetKey] || {};
+    const { patientChart, patientName } = parseSchedulerPatientIdentity(currentMemo?.content || '');
+    const normalizedPatientName = normalizeNameForMatch(patientName);
+    const bodyPartsMap = new Map();
+
+    Object.entries(memos || {}).forEach(([, memo]) => {
+      if (!memo?.content) return;
+      const { patientChart: memoChart, patientName: memoName } = parseSchedulerPatientIdentity(memo.content);
+      const matchesChart = patientChart && memoChart && String(patientChart).trim() === String(memoChart).trim();
+      const matchesName = normalizedPatientName && normalizeNameForMatch(memoName) === normalizedPatientName;
+      if (!matchesChart && !matchesName) return;
+      splitBodyParts(memo.body_part || '').forEach((part) => addBodyPartToMap(bodyPartsMap, part));
+    });
+
+    splitBodyParts(currentMemo.body_part || '').forEach((part) => addBodyPartToMap(bodyPartsMap, part));
+
+    return Array.from(bodyPartsMap.values()).sort((a, b) => a.localeCompare(b, 'ko'));
+  }, [memos]);
+
   // ── 셀 우클릭 = 처방 선택 ──
   const handleCellContextMenu = useCallback((e, w, d, r, c, currentPrescription, slotTime = '') => {
     e.preventDefault();
@@ -1838,6 +1859,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     selectSingleCell({ w, d, r, c });
     const key = cellKey(w, d, r, c);
     setActiveContextSubmenu(null);
+    setContextMenuBodyPartOptions(buildContextMenuBodyPartOptions(key));
     setContextMenuBodyInput('');
     setContextMenuNoteInput('');
     setContextMenuMemoDrafts(getMemoListFromMergeSpan(memos[key]?.merge_span));
@@ -1863,11 +1885,12 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     window.setTimeout(() => {
       skipNextEditBlurSaveRef.current = false;
     }, 0);
-  }, [cellKey, getDefaultReservationTime, memos, selectSingleCell]);
+  }, [buildContextMenuBodyPartOptions, cellKey, getDefaultReservationTime, memos, selectSingleCell]);
 
   useEffect(() => {
     if (!contextMenu) {
       setActiveContextSubmenu(null);
+      setContextMenuBodyPartOptions([]);
       setContextMenuBodyInput('');
       setContextMenuNoteInput('');
       setContextMenuMemoDrafts([]);
@@ -4686,7 +4709,10 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
               }
             });
             currentParts.forEach((part) => addBodyPartToMap(patientBodyPartsMap, part));
-            const availableParts = Array.from(patientBodyPartsMap.values()).sort();
+            const availablePartsMap = new Map();
+            contextMenuBodyPartOptions.forEach((part) => addBodyPartToMap(availablePartsMap, part));
+            Array.from(patientBodyPartsMap.values()).forEach((part) => addBodyPartToMap(availablePartsMap, part));
+            const availableParts = Array.from(availablePartsMap.values()).sort((a, b) => a.localeCompare(b, 'ko'));
             const previousPrescriptionValue = previousPrescription?.value || '';
             const shockwavePrescriptions = Array.isArray(settings?.prescriptions)
               ? settings.prescriptions.filter(Boolean)
@@ -4962,6 +4988,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                                           e.preventDefault();
                                           e.stopPropagation();
                                           handleContextAction({ type: 'bodyPartDeleteValue', value: part });
+                                          setContextMenuBodyPartOptions((prev) => prev.filter((item) => normalizeBodyPartKey(item) !== normalizeBodyPartKey(part)));
                                         }}
                                       >
                                         ×
