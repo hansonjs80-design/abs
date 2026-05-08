@@ -51,6 +51,11 @@ export function ScheduleProvider({ children }) {
   const currentDateRef = useRef({ year: currentYear, month: currentMonth });
   const shockwaveMemosLoadRequestRef = useRef(0);
   const monthlyTherapistLoadRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
+  const holidaysLoadRequestRef = useRef(0);
+  const calendarSlotSettingsLoadRequestRef = useRef(0);
+  const calendarSlotSettingsSaveRequestRef = useRef(0);
+  const shockwaveSettingsLoadRequestRef = useRef(0);
+  const shockwaveSettingsSaveRequestRef = useRef(0);
 
   useEffect(() => {
     staffMemosRef.current = staffMemos;
@@ -320,6 +325,7 @@ export function ScheduleProvider({ children }) {
     const cacheKey = `${year}-${month}`;
     if (loadCacheRef.current.holidays === cacheKey) return;
     loadCacheRef.current.holidays = cacheKey;
+    const requestId = ++holidaysLoadRequestRef.current;
 
     try {
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
@@ -343,11 +349,14 @@ export function ScheduleProvider({ children }) {
         holSet.add(key);
         if (h.name) holNames.set(key, h.name);
       });
-      if (loadCacheRef.current.holidays !== cacheKey) return;
+      if (loadCacheRef.current.holidays !== cacheKey || holidaysLoadRequestRef.current !== requestId) return;
       setHolidays(holSet);
       setHolidayNames(holNames);
     } catch (err) {
       console.error('Failed to load holidays:', err);
+      if (holidaysLoadRequestRef.current === requestId) {
+        loadCacheRef.current.holidays = null;
+      }
     }
   }, []);
 
@@ -428,6 +437,7 @@ export function ScheduleProvider({ children }) {
 
   // 충격파 스케줄러 환경설정 로드
   const loadShockwaveSettings = useCallback(async () => {
+    const requestId = ++shockwaveSettingsLoadRequestRef.current;
     try {
       const { data, error } = await supabase
         .from('shockwave_settings')
@@ -439,6 +449,7 @@ export function ScheduleProvider({ children }) {
       if (error && error.code !== 'PGRST116') throw error; // PGRST116 is empty row
 
       if (data) {
+        if (shockwaveSettingsLoadRequestRef.current !== requestId) return null;
         setShockwaveSettings({
           id: data.id || '00000000-0000-0000-0000-000000000000',
           start_time: data.start_time,
@@ -460,9 +471,12 @@ export function ScheduleProvider({ children }) {
           staff_schedule_block_rules: data.staff_schedule_block_rules || {},
           monthly_settlement_settings: data.monthly_settlement_settings || {}
         });
+        return data;
       }
+      return null;
     } catch (err) {
       console.error('Failed to load shockwave settings:', err);
+      return null;
     }
   }, []);
 
@@ -479,6 +493,12 @@ export function ScheduleProvider({ children }) {
 
   // 근무표 달력 주차별 슬롯 수 설정 로드
   const loadCalendarSlotSettings = useCallback(async (year, month) => {
+    const requestId = ++calendarSlotSettingsLoadRequestRef.current;
+    const applyIfLatest = (value) => {
+      if (calendarSlotSettingsLoadRequestRef.current === requestId) {
+        setCalendarSlotSettings(value);
+      }
+    };
     try {
       const { data, error } = await supabase
         .from('staff_calendar_settings')
@@ -490,7 +510,9 @@ export function ScheduleProvider({ children }) {
       if (error) throw error;
 
       if (data) {
-        setCalendarSlotSettings({ year, month, week_slot_counts: data.week_slot_counts });
+        const value = { year, month, week_slot_counts: data.week_slot_counts };
+        applyIfLatest(value);
+        return value;
       } else {
         // 이전 달 설정이 있으면 복사, 없으면 기본값
         const prevMonth = month === 1 ? 12 : month - 1;
@@ -503,16 +525,21 @@ export function ScheduleProvider({ children }) {
           .maybeSingle();
 
         const defaults = prevData?.week_slot_counts || { '0': 6, '1': 6, '2': 6, '3': 6, '4': 6 };
-        setCalendarSlotSettings({ year, month, week_slot_counts: defaults });
+        const value = { year, month, week_slot_counts: defaults };
+        applyIfLatest(value);
+        return value;
       }
     } catch (err) {
       console.error('Failed to load calendar slot settings:', err);
-      setCalendarSlotSettings({ year, month, week_slot_counts: { '0': 6, '1': 6, '2': 6, '3': 6, '4': 6 } });
+      const fallback = { year, month, week_slot_counts: { '0': 6, '1': 6, '2': 6, '3': 6, '4': 6 } };
+      applyIfLatest(fallback);
+      return fallback;
     }
   }, []);
 
   // 근무표 달력 주차별 슬롯 수 설정 저장
   const saveCalendarSlotSettings = useCallback(async (year, month, weekSlotCounts) => {
+    const requestId = ++calendarSlotSettingsSaveRequestRef.current;
     try {
       const { error } = await supabase
         .from('staff_calendar_settings')
@@ -524,7 +551,10 @@ export function ScheduleProvider({ children }) {
         }, { onConflict: 'year,month' });
 
       if (error) throw error;
-      setCalendarSlotSettings({ year, month, week_slot_counts: weekSlotCounts });
+      if (calendarSlotSettingsSaveRequestRef.current === requestId) {
+        calendarSlotSettingsLoadRequestRef.current += 1;
+        setCalendarSlotSettings({ year, month, week_slot_counts: weekSlotCounts });
+      }
       return true;
     } catch (err) {
       console.error('Failed to save calendar slot settings:', err);
@@ -534,6 +564,7 @@ export function ScheduleProvider({ children }) {
 
   // 충격파 스케줄러 환경설정 저장
   const saveShockwaveSettings = useCallback(async (newSettings) => {
+    const requestId = ++shockwaveSettingsSaveRequestRef.current;
     try {
       const nextUpdatedAt = new Date().toISOString();
       const { data: latestRow } = await supabase
@@ -586,7 +617,10 @@ export function ScheduleProvider({ children }) {
           .upsert(compatiblePayload, { onConflict: 'id' });
         if (retryError) throw retryError;
       }
-      setShockwaveSettings({ ...newSettings, id: targetId, updated_at: nextUpdatedAt });
+      if (shockwaveSettingsSaveRequestRef.current === requestId) {
+        shockwaveSettingsLoadRequestRef.current += 1;
+        setShockwaveSettings({ ...newSettings, id: targetId, updated_at: nextUpdatedAt });
+      }
       return true;
     } catch (err) {
       console.error('Failed to save shockwave settings:', err);
