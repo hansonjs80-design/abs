@@ -110,7 +110,8 @@ export default function ManualTherapyStatsPage() {
     setSelectedTherapistNames((prev) => {
       if (therapistNameList.length === 0) return [];
       if (prev.length === 0) return therapistNameList;
-      return prev.filter((name) => therapistNameList.includes(name));
+      const valid = prev.filter((name) => therapistNameList.includes(name));
+      return valid.length > 0 ? valid : therapistNameList;
     });
   }, [therapistNameList]);
   const selectedTherapistSet = useMemo(

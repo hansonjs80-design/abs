@@ -427,7 +427,7 @@
 
 /* 1. Calendar (Blue) */
 .top-tab--calendar {
-  --tab-bg: #fee3c4;
+  --tab-bg: #fee7cd;
   --tab-hover-bg: #ffedd5;
   --tab-active-bg: #fb923c;
   --tab-active-border: #f97316;
@@ -436,7 +436,7 @@
 
 /* 2. Shockwave (Green) */
 .top-tab--shockwave {
-  --tab-bg: #adebbe;
+  --tab-bg: #b9eec8;
   --tab-hover-bg: #dcfce7;
   --tab-active-bg: #22c55e;
   --tab-active-border: #16a34a;
@@ -445,7 +445,7 @@
 
 /* 3. Stats SW (Purple) */
 .top-tab--stats-sw {
-  --tab-bg: #fdecab;
+  --tab-bg: #fdefb8;
   --tab-hover-bg: #fef3c7;
   --tab-active-bg: #facc15;
   --tab-active-border: #eab308;
@@ -454,7 +454,7 @@
 
 /* 4. Stats MT (Purple) */
 .top-tab--stats-mt {
-  --tab-bg: #fef3ab;
+  --tab-bg: #fef5b8;
   --tab-hover-bg: #fef9c3;
   --tab-active-bg: #eab308;
   --tab-active-border: #ca8a04;
@@ -463,7 +463,7 @@
 
 /* 5. Stats PT (Purple) */
 .top-tab--stats-pt {
-  --tab-bg: #9ce4ef;
+  --tab-bg: #abe8f1;
   --tab-hover-bg: #cffafe;
   --tab-active-bg: #06b6d4;
   --tab-active-border: #0891b2;
@@ -472,7 +472,7 @@
 
 /* 5. Settings (Gray) */
 .top-tab--settings {
-  --tab-bg: #b5bbc3;
+  --tab-bg: #c0c6cc;
   --tab-hover-bg: #e2e8f0;
   --tab-active-bg: #475569;
   --tab-active-border: #334155;
