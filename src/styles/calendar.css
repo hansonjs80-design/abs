@@ -170,7 +170,7 @@
 }
 
 .calendar-cell.holiday {
-  background: var(--cal-holiday-bg);
+  background: var(--cal-sunday-bg);
 }
 
 .calendar-cell.other-month {
