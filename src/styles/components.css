@@ -427,7 +427,7 @@
 
 /* 1. Calendar (Blue) */
 .top-tab--calendar {
-  --tab-bg: #fed7aa;
+  --tab-bg: #fee3c4;
   --tab-hover-bg: #ffedd5;
   --tab-active-bg: #fb923c;
   --tab-active-border: #f97316;
@@ -436,7 +436,7 @@
 
 /* 2. Shockwave (Green) */
 .top-tab--shockwave {
-  --tab-bg: #91e2af;
+  --tab-bg: #adebbe;
   --tab-hover-bg: #dcfce7;
   --tab-active-bg: #22c55e;
   --tab-active-border: #16a34a;
@@ -445,25 +445,25 @@
 
 /* 3. Stats SW (Purple) */
 .top-tab--stats-sw {
-  --tab-bg: #c5aefb;
-  --tab-hover-bg: #ede9fe;
-  --tab-active-bg: #8b5cf6;
-  --tab-active-border: #7c3aed;
-  --tab-shadow: rgba(124, 58, 237, 0.18);
+  --tab-bg: #fdecab;
+  --tab-hover-bg: #fef3c7;
+  --tab-active-bg: #facc15;
+  --tab-active-border: #eab308;
+  --tab-shadow: rgba(234, 179, 8, 0.2);
 }
 
 /* 4. Stats MT (Purple) */
 .top-tab--stats-mt {
-  --tab-bg: #d4aafb;
-  --tab-hover-bg: #f3e8ff;
-  --tab-active-bg: #a855f7;
-  --tab-active-border: #9333ea;
-  --tab-shadow: rgba(139, 92, 246, 0.18);
+  --tab-bg: #fef3ab;
+  --tab-hover-bg: #fef9c3;
+  --tab-active-bg: #eab308;
+  --tab-active-border: #ca8a04;
+  --tab-shadow: rgba(202, 138, 4, 0.2);
 }
 
 /* 5. Stats PT (Purple) */
 .top-tab--stats-pt {
-  --tab-bg: #83dbea;
+  --tab-bg: #9ce4ef;
   --tab-hover-bg: #cffafe;
   --tab-active-bg: #06b6d4;
   --tab-active-border: #0891b2;
@@ -472,7 +472,7 @@
 
 /* 5. Settings (Gray) */
 .top-tab--settings {
-  --tab-bg: #a3aab4;
+  --tab-bg: #b5bbc3;
   --tab-hover-bg: #e2e8f0;
   --tab-active-bg: #475569;
   --tab-active-border: #334155;
