@@ -53,6 +53,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   const [isAutoSyncingToday, setIsAutoSyncingToday] = useState(false);
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
   const lastAutoSyncKeyRef = useRef(null);
+  const fetchIdRef = useRef(0);
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
   const effectiveSettlementSettings = useMemo(
@@ -112,6 +113,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     });
   }, []);
   const fetchLogs = useCallback(async () => {
+    const currentFetchId = ++fetchIdRef.current;
     setIsLoading(true);
     try {
       const startStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
@@ -128,12 +130,19 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
         .order('created_at', { ascending: true });
 
       if (error) throw error;
+      if (currentFetchId !== fetchIdRef.current) return [];
       setLogs(data || []);
+      return data || [];
     } catch (err) {
-      console.error(err);
-      addToast('통계 기록을 불러오는데 실패했습니다.', 'error');
+      if (currentFetchId === fetchIdRef.current) {
+        console.error(err);
+        addToast('통계 기록을 불러오는데 실패했습니다.', 'error');
+      }
+      return null;
     } finally {
-      setIsLoading(false);
+      if (currentFetchId === fetchIdRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [currentYear, currentMonth, addToast]);
 

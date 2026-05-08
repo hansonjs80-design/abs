@@ -147,13 +147,19 @@ export default function ManualTherapyStatsPage() {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      if (currentFetchId !== fetchIdRef.current) return;
+      if (currentFetchId !== fetchIdRef.current) return [];
       setLogs(Array.isArray(data) ? data : []);
+      return Array.isArray(data) ? data : [];
     } catch (error) {
-      console.error(error);
-      addToast('도수치료 기록을 불러오는데 실패했습니다.', 'error');
+      if (currentFetchId === fetchIdRef.current) {
+        console.error(error);
+        addToast('도수치료 기록을 불러오는데 실패했습니다.', 'error');
+      }
+      return null;
     } finally {
-      setIsLoading(false);
+      if (currentFetchId === fetchIdRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [addToast, currentMonth, currentYear]);
 
