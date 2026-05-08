@@ -13,6 +13,7 @@ import { getEffectiveSchedulerTextSettings } from '../../lib/schedulerTextSettin
 import { useToast } from '../common/Toast';
 import MonthlyTherapistConfig from './MonthlyTherapistConfig';
 import SchedulerPatientSelector from './SchedulerPatientSelector';
+import useContextMenuPositioning from './useContextMenuPositioning';
 import usePatientHistoryActions from './usePatientHistoryActions';
 import useSchedulerAutoText from './useSchedulerAutoText';
 import useScheduleClipboardActions from './useScheduleClipboardActions';
@@ -90,7 +91,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [contextMenuMemoDrafts, setContextMenuMemoDrafts] = useState([]);
   const [contextMenuVisitInput, setContextMenuVisitInput] = useState('');
   const [contextMenuReservationInput, setContextMenuReservationInput] = useState('');
-  const [contextSubmenuOffsetY, setContextSubmenuOffsetY] = useState(0);
 
   // 환자 내역 검색 팝업 상태 (Cmd+F)
   const [patientHistoryModalOpen, setPatientHistoryModalOpen] = useState(false);
@@ -146,6 +146,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const scheduleDateRef = useRef({ year: currentYear, month: currentMonth });
   const undoStackRef = useRef([]);
   const undoQueueRef = useRef(Promise.resolve());
+  const { contextSubmenuOffsetY } = useContextMenuPositioning({
+    activeContextSubmenu,
+    contextMenu,
+    contextMenuRef,
+    setContextMenu,
+  });
   const scheduleScrollKey = useMemo(
     () => getShockwaveScheduleScrollKey(currentYear, currentMonth),
     [currentYear, currentMonth]
@@ -1074,84 +1080,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setContextMenuVisitInput(nextValue);
     handleContextAction({ type: 'visitCount', value: nextValue });
   }, [contextMenuVisitInput, handleContextAction]);
-
-  const repositionContextMenu = useCallback(() => {
-    if (!contextMenuRef.current) return;
-    const rect = contextMenuRef.current.getBoundingClientRect();
-    const VIEWPORT_GAP = 12;
-    const maxX = Math.max(VIEWPORT_GAP, window.innerWidth - rect.width - VIEWPORT_GAP);
-    const maxY = Math.max(VIEWPORT_GAP, window.innerHeight - rect.height - VIEWPORT_GAP);
-
-    setContextMenu((prev) => {
-      if (!prev) return prev;
-      const nextX = Math.min(Math.max(VIEWPORT_GAP, prev.x), maxX);
-      const nextY = Math.min(Math.max(VIEWPORT_GAP, prev.y), maxY);
-      if (nextX === prev.x && nextY === prev.y) return prev;
-      return { ...prev, x: nextX, y: nextY };
-    });
-  }, []);
-
-  const repositionContextSubmenu = useCallback(() => {
-    const menu = contextMenuRef.current;
-    if (!menu || !activeContextSubmenu) {
-      setContextSubmenuOffsetY(0);
-      return;
-    }
-
-    const submenu = menu.querySelector('.has-submenu.is-submenu-open > .context-menu-submenu');
-    if (!submenu) {
-      setContextSubmenuOffsetY(0);
-      return;
-    }
-
-    const previousTransform = submenu.style.transform;
-    submenu.style.transform = 'translateY(0px)';
-    const rect = submenu.getBoundingClientRect();
-    submenu.style.transform = previousTransform;
-    const VIEWPORT_GAP = 12;
-    let nextOffset = 0;
-    if (rect.bottom > window.innerHeight - VIEWPORT_GAP) {
-      nextOffset = window.innerHeight - VIEWPORT_GAP - rect.bottom;
-    }
-    if (rect.top + nextOffset < VIEWPORT_GAP) {
-      nextOffset += VIEWPORT_GAP - (rect.top + nextOffset);
-    }
-    setContextSubmenuOffsetY(nextOffset);
-  }, [activeContextSubmenu]);
-
-  useEffect(() => {
-    if (!contextMenu) return undefined;
-
-    let frame = window.requestAnimationFrame(() => {
-      repositionContextMenu();
-      repositionContextSubmenu();
-    });
-
-    const handleViewportChange = () => {
-      window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => {
-        repositionContextMenu();
-        repositionContextSubmenu();
-      });
-    };
-
-    window.addEventListener('resize', handleViewportChange);
-    window.addEventListener('scroll', handleViewportChange, true);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener('resize', handleViewportChange);
-      window.removeEventListener('scroll', handleViewportChange, true);
-    };
-  }, [contextMenu, repositionContextMenu, repositionContextSubmenu]);
-
-  useEffect(() => {
-    if (!contextMenu || !activeContextSubmenu) {
-      setContextSubmenuOffsetY(0);
-      return undefined;
-    }
-    const frame = window.requestAnimationFrame(repositionContextSubmenu);
-    return () => window.cancelAnimationFrame(frame);
-  }, [contextMenu, activeContextSubmenu, repositionContextSubmenu]);
 
   const focusEditInputImmediately = useCallback(() => {
     const input = editInputRef.current;
