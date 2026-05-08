@@ -161,21 +161,16 @@
   border-right: none;
 }
 
-.calendar-cell.sunday,
-.calendar-cell.holiday {
-  background: var(--cal-sunday-bg);
-}
-
 .calendar-cell.sunday {
-  background: var(--cal-sunday-bg);
-}
-
-.calendar-cell.holiday {
   background: var(--cal-sunday-bg);
 }
 
 .calendar-cell.saturday {
   background: var(--cal-saturday-bg);
+}
+
+.calendar-cell.holiday {
+  background: var(--cal-holiday-bg);
 }
 
 .calendar-cell.other-month {
@@ -214,13 +209,16 @@
   font-weight: 800;
 }
 
-.sunday .calendar-date-number,
-.holiday .calendar-date-number {
+.sunday .calendar-date-number {
   color: #e53e3e;
 }
 
 .saturday .calendar-date-number {
   color: #3b82f6;
+}
+
+.holiday .calendar-date-number {
+  color: var(--cal-holiday-text);
 }
 
 .today.saturday .calendar-date-number {

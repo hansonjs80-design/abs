@@ -24,15 +24,13 @@ import useScheduleContextMenuActions from './useScheduleContextMenuActions';
 import useScheduleGlobalEvents from './useScheduleGlobalEvents';
 import useScheduleKeyboardActions from './useScheduleKeyboardActions';
 import useScheduleMergeActions from './useScheduleMergeActions';
+import useScheduleResizeState from './useScheduleResizeState';
 import useScheduleSelectionModel from './useScheduleSelectionModel';
 import useScheduleStatusActions from './useScheduleStatusActions';
 import useScheduleTodayNavigation from './useScheduleTodayNavigation';
 import {
   HORIZONTAL_BORDER_COLOR,
   TIME_COL_WIDTH,
-  SHOCKWAVE_DAY_COL_WIDTH_KEY,
-  SHOCKWAVE_COL_RATIOS_KEY,
-  SHOCKWAVE_ROW_HEIGHT_KEY,
   SHOCKWAVE_PENDING_DRAFTS_KEY,
   SHOCKWAVE_MONTH_BACKUP_KEY,
   SHOCKWAVE_PENDING_DRAFT_MAX_AGE_MS,
@@ -75,48 +73,6 @@ import {
   buildSchedulerMemoSortKey,
   addBodyPartToMap,
 } from '../../lib/schedulerUtils';
-
-const MIN_SCHEDULE_ROW_HEIGHT = 18;
-const MIN_SCHEDULE_DAY_WIDTH = 100;
-
-function readStoredNumber(key, fallback) {
-  if (typeof window === 'undefined') return fallback;
-  try {
-    const value = Number(window.localStorage.getItem(key));
-    return Number.isFinite(value) && value > 0 ? value : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function writeStoredNumber(key, value) {
-  if (typeof window === 'undefined') return;
-  try {
-    if (Number.isFinite(value) && value > 0) window.localStorage.setItem(key, String(value));
-  } catch {
-    // localStorage may be unavailable in restricted browser contexts.
-  }
-}
-
-function readStoredColRatios() {
-  if (typeof window === 'undefined') return null;
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(SHOCKWAVE_COL_RATIOS_KEY) || 'null');
-    return Array.isArray(parsed) && parsed.every((v) => Number.isFinite(v) && v > 0) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeStoredColRatios(value) {
-  if (typeof window === 'undefined') return;
-  if (!Array.isArray(value) || value.length === 0) return;
-  try {
-    window.localStorage.setItem(SHOCKWAVE_COL_RATIOS_KEY, JSON.stringify(value));
-  } catch {
-    // localStorage may be unavailable in restricted browser contexts.
-  }
-}
 
 export default function ShockwaveView({ therapists, settings, memos = {}, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
   const { currentYear, currentMonth, navigateMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
@@ -202,23 +158,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     };
   }, [loadShockwaveSettings]);
 
-
-  // 열 너비 조정 (fr 비율 기반)
-  const [colRatios, setColRatios] = useState(() => readStoredColRatios());
-  const colResizeRef = useRef({ active: false, colIdx: -1, startX: 0, startRatios: [], containerWidth: 0 });
-  const [dayColWidth, setDayColWidth] = useState(() => {
-    const saved = readStoredNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, 0);
-    return saved > 0 ? saved : null;
-  }); // null = flex, number = px
-  const dayColWidthRef = useRef(dayColWidth);
-  const dayResizeRef = useRef({ active: false, startX: 0, startWidth: 0, factor: 1 });
-  const [rowHeight, setRowHeight] = useState(() => {
-    return Math.max(MIN_SCHEDULE_ROW_HEIGHT, readStoredNumber(SHOCKWAVE_ROW_HEIGHT_KEY, 23));
-  });
-  const rowHeightRef = useRef(rowHeight);
-  const colRatiosRef = useRef(colRatios);
-  const rowResizeRef = useRef({ active: false, startY: 0, startHeight: 23 });
-
   const tooltipRef = useRef(null);
   const tooltipMousePosRef = useRef({ x: 0, y: 0 });
   const weekRefs = useRef([]);
@@ -247,6 +186,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     [monthlyTherapists]
   );
   const colCount = Math.max(1, therapists.length, monthlyTherapistSlotCount);
+  const {
+    activeColRatios,
+    dayColWidth,
+    rowHeight,
+    startColResize,
+    startDayResize,
+    startRowResize,
+    therapistColsCSS,
+  } = useScheduleResizeState({ colCount });
   const effectiveDayOverrides = useMemo(
     () => getMonthlyDayOverrides(settings?.day_overrides, currentYear, currentMonth),
     [settings?.day_overrides, currentYear, currentMonth]
@@ -693,38 +641,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     });
   }, [currentYear, currentMonth, loadedMemosKey, memos, onSaveMemo]);
 
-  useEffect(() => {
-    dayColWidthRef.current = dayColWidth;
-    writeStoredNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, dayColWidth || 0);
-  }, [dayColWidth]);
-
-  useEffect(() => {
-    rowHeightRef.current = rowHeight;
-    writeStoredNumber(SHOCKWAVE_ROW_HEIGHT_KEY, rowHeight);
-  }, [rowHeight]);
-
-  useEffect(() => {
-    colRatiosRef.current = colRatios;
-    writeStoredColRatios(colRatios);
-  }, [colRatios]);
-
-  useEffect(() => {
-    const flushStoredSizing = () => {
-      writeStoredNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, dayColWidthRef.current || 0);
-      writeStoredNumber(SHOCKWAVE_ROW_HEIGHT_KEY, rowHeightRef.current);
-      writeStoredColRatios(colRatiosRef.current);
-    };
-    window.addEventListener('pagehide', flushStoredSizing);
-    window.addEventListener('beforeunload', flushStoredSizing);
-    document.addEventListener('visibilitychange', flushStoredSizing);
-    return () => {
-      flushStoredSizing();
-      window.removeEventListener('pagehide', flushStoredSizing);
-      window.removeEventListener('beforeunload', flushStoredSizing);
-      document.removeEventListener('visibilitychange', flushStoredSizing);
-    };
-  }, []);
-
   const isEditableTarget = useCallback((target) => {
     return (
       (target instanceof HTMLInputElement && !target.dataset.hiddenInput) ||
@@ -911,18 +827,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       document.removeEventListener('keydown', handleGlobalKeyDown, true);
     };
   }, [doUndo, contextMenu]);
-
-  useEffect(() => {
-    if (!Array.isArray(colRatios)) return;
-    if (colRatios.length >= colCount) return;
-
-    // Preserve existing ratios when colCount changes (e.g. therapists loading)
-    setColRatios((prev) => {
-      if (!Array.isArray(prev)) return Array(colCount).fill(1);
-      if (prev.length < colCount) return [...prev, ...Array(colCount - prev.length).fill(1)];
-      return prev;
-    });
-  }, [colRatios, colCount]);
 
   const {
     cellKey,
@@ -1689,18 +1593,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setTodayShortcutTooltip,
   });
 
-  // 최상위 CSS 변수로 그리드 컬럼 너비를 통일 (모든 주차에 동일하게 적용)
-  const activeColRatios = useMemo(() => {
-    if (!Array.isArray(colRatios)) return null;
-    if (colRatios.length >= colCount) return colRatios.slice(0, colCount);
-    return [...colRatios, ...Array(colCount - colRatios.length).fill(1)];
-  }, [colRatios, colCount]);
-
-  const therapistColsCSS = useMemo(() => {
-    return activeColRatios
-      ? activeColRatios.map(r => `minmax(0, ${r}fr)`).join(' ')
-      : `repeat(${colCount}, minmax(0, 1fr))`;
-  }, [activeColRatios, colCount]);
   const isScheduleMonthLoading = loadedMemosKey !== scheduleScrollKey;
   const renderMemos = isScheduleMonthLoading ? {} : memos;
 
@@ -1778,27 +1670,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   className="shockwave-row-height-handle"
                   title={`행 높이 조절 (${rowHeight}px)`}
                   aria-label="시간 행 높이 조절"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    rowResizeRef.current = { active: true, startY: e.clientY, startHeight: rowHeight };
-                    let latestHeight = rowHeight;
-                    const onMove = (ev) => {
-                      if (!rowResizeRef.current.active) return;
-                      const delta = ev.clientY - rowResizeRef.current.startY;
-                      latestHeight = Math.max(MIN_SCHEDULE_ROW_HEIGHT, rowResizeRef.current.startHeight + delta);
-                      writeStoredNumber(SHOCKWAVE_ROW_HEIGHT_KEY, latestHeight);
-                      setRowHeight(latestHeight);
-                    };
-                    const onUp = () => {
-                      rowResizeRef.current.active = false;
-                      writeStoredNumber(SHOCKWAVE_ROW_HEIGHT_KEY, latestHeight);
-                      window.removeEventListener('mousemove', onMove);
-                      window.removeEventListener('mouseup', onUp);
-                    };
-                    window.addEventListener('mousemove', onMove);
-                    window.addEventListener('mouseup', onUp);
-                  }}
+                  onMouseDown={startRowResize}
                 >
                   ↕
                 </button>
@@ -1923,29 +1795,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             transform: 'translateX(-4px)',
                           }}
                           onMouseDown={(e) => {
-                            e.preventDefault(); e.stopPropagation();
-                            const cur = activeColRatios ? [...activeColRatios] : Array(colCount).fill(1);
-                            const cw = e.target.closest('.sw-therapist-header-wrapper').getBoundingClientRect().width - timeColPx;
-                            colResizeRef.current = { active: true, colIdx: ci, startX: e.clientX, startRatios: [...cur], containerWidth: cw };
-                            let latestRatios = cur;
-                            const onMove = (ev) => {
-                              if (!colResizeRef.current.active) return;
-                              const { startRatios: sr, containerWidth: w, colIdx: c, startX } = colResizeRef.current;
-                              const d = ev.clientX - startX;
-                              const tR = sr.reduce((a, b) => a + b, 0);
-                              const dR = (d / w) * tR;
-                              const nr = [...sr]; nr[c] = Math.max(0.2, sr[c] + dR); nr[c+1] = Math.max(0.2, sr[c+1] - dR);
-                              latestRatios = nr;
-                              writeStoredColRatios(nr);
-                              setColRatios(nr);
-                            };
-                            const onUp = () => {
-                              colResizeRef.current.active = false;
-                              writeStoredColRatios(latestRatios);
-                              window.removeEventListener('mousemove', onMove);
-                              window.removeEventListener('mouseup', onUp);
-                            };
-                            window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
+                            startColResize(e, ci, timeColPx, activeColRatios);
                           }}
                         />
                       );
@@ -2270,31 +2120,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                     <div
                       className="sw-day-resize-handle"
                       onMouseDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const dayEl = e.currentTarget.closest('.shockwave-day');
-                        const currentDayWidth = e.currentTarget.closest('.shockwave-day').getBoundingClientRect().width;
-                        const normalizedDayWidth = showTimeCol
-                          ? Math.max(MIN_SCHEDULE_DAY_WIDTH, currentDayWidth - TIME_COL_WIDTH)
-                          : currentDayWidth;
-                        dayResizeRef.current = { active: true, startX: e.clientX, startWidth: currentDayWidth, factor: 1 };
-                        let latestWidth = dayColWidth || normalizedDayWidth;
-                        const onMove = (ev) => {
-                          if (!dayResizeRef.current.active) return;
-                          const { startX } = dayResizeRef.current;
-                          const delta = ev.clientX - startX;
-                          latestWidth = Math.max(MIN_SCHEDULE_DAY_WIDTH, normalizedDayWidth + delta);
-                          writeStoredNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, latestWidth);
-                          setDayColWidth(latestWidth);
-                        };
-                        const onUp = () => {
-                          dayResizeRef.current.active = false;
-                          writeStoredNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, latestWidth);
-                          window.removeEventListener('mousemove', onMove);
-                          window.removeEventListener('mouseup', onUp);
-                        };
-                        window.addEventListener('mousemove', onMove);
-                        window.addEventListener('mouseup', onUp);
+                        startDayResize(e, showTimeCol);
                       }}
                     />
                   )}
