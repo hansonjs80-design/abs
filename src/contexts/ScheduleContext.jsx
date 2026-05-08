@@ -44,10 +44,17 @@ export function ScheduleProvider({ children }) {
   const [calendarSlotSettings, setCalendarSlotSettings] = useState(null);
   const shockwaveWriteQueueRef = useRef(new Map());
   const loadCacheRef = useRef({ staffMemos: null, shockwaveMemos: null, holidays: null });
+  const staffMemosRef = useRef(staffMemos);
+  const staffMemoSaveRequestRef = useRef(new Map());
+  const staffMemosLoadRequestRef = useRef(0);
   const shockwaveMemosRef = useRef(shockwaveMemos);
   const currentDateRef = useRef({ year: currentYear, month: currentMonth });
   const shockwaveMemosLoadRequestRef = useRef(0);
   const monthlyTherapistLoadRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
+
+  useEffect(() => {
+    staffMemosRef.current = staffMemos;
+  }, [staffMemos]);
 
   useEffect(() => {
     shockwaveMemosRef.current = shockwaveMemos;
@@ -194,8 +201,9 @@ export function ScheduleProvider({ children }) {
   // 직원 메모 로드 (캐시 키로 중복 방지)
   const loadStaffMemos = useCallback(async (year, month, options = {}) => {
     const cacheKey = `${year}-${month}-${options.includeAdjacentMonths ? 'adj' : 'single'}`;
-    if (loadCacheRef.current.staffMemos === cacheKey) return;
+    if (loadCacheRef.current.staffMemos === cacheKey) return staffMemosRef.current;
     loadCacheRef.current.staffMemos = cacheKey;
+    const requestId = ++staffMemosLoadRequestRef.current;
 
     setLoading(true);
     try {
@@ -232,18 +240,28 @@ export function ScheduleProvider({ children }) {
         }
       }));
 
-      if (loadCacheRef.current.staffMemos !== cacheKey) return;
+      if (loadCacheRef.current.staffMemos !== cacheKey || staffMemosLoadRequestRef.current !== requestId) return memoMap;
       setStaffMemos(memoMap);
+      return memoMap;
     } catch (err) {
       console.error('Failed to load staff memos:', err);
-      loadCacheRef.current.staffMemos = null;
+      if (staffMemosLoadRequestRef.current === requestId) {
+        loadCacheRef.current.staffMemos = null;
+      }
+      return null;
     } finally {
-      setLoading(false);
+      if (staffMemosLoadRequestRef.current === requestId) {
+        setLoading(false);
+      }
     }
   }, []);
 
   // 직원 메모 저장/업데이트
   const saveStaffMemo = useCallback(async (year, month, day, slotIndex, content, fontColor = null, bgColor = null) => {
+    const key = `${year}-${month}-${day}-${slotIndex}`;
+    const requestId = (staffMemoSaveRequestRef.current.get(key) || 0) + 1;
+    staffMemoSaveRequestRef.current.set(key, requestId);
+    const previousMemo = staffMemosRef.current[key];
     try {
       const upsertData = {
         year, month, day,
@@ -253,8 +271,6 @@ export function ScheduleProvider({ children }) {
       };
       if (fontColor !== undefined) upsertData.font_color = fontColor;
       if (bgColor !== undefined) upsertData.bg_color = bgColor;
-
-      const key = `${year}-${month}-${day}-${slotIndex}`;
       
       // 낙관적 업데이트 (네트워크 응답 대기 중 화면 깜빡임 방지)
       setStaffMemos(prev => ({
@@ -275,14 +291,27 @@ export function ScheduleProvider({ children }) {
       }
 
       // 서버 데이터로 최종 업데이트
+      if (staffMemoSaveRequestRef.current.get(key) !== requestId) return true;
       setStaffMemos(prev => ({
         ...prev,
         [key]: data?.[0] || { ...prev[key], ...upsertData, slot_index: slotIndex }
       }));
       return true;
     } catch (err) {
+      if (staffMemoSaveRequestRef.current.get(key) === requestId) {
+        setStaffMemos(prev => {
+          const next = { ...prev };
+          if (previousMemo === undefined) delete next[key];
+          else next[key] = previousMemo;
+          return next;
+        });
+      }
       console.error('Failed to save staff memo:', err);
       return false;
+    } finally {
+      if (staffMemoSaveRequestRef.current.get(key) === requestId) {
+        staffMemoSaveRequestRef.current.delete(key);
+      }
     }
   }, []);
 
@@ -1048,6 +1077,7 @@ export function ScheduleProvider({ children }) {
           if (payload.new && payload.new.year === currentYear && payload.new.month === currentMonth) {
             const item = payload.new;
             const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+            if (shockwaveWriteQueueRef.current.has(key)) return;
             setShockwaveMemos(prev => {
               const next = { ...prev };
               if (shouldKeepShockwaveMemo(item)) next[key] = item;
@@ -1058,6 +1088,7 @@ export function ScheduleProvider({ children }) {
             const item = payload.old;
             if (item.year === currentYear && item.month === currentMonth) {
               const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+              if (shockwaveWriteQueueRef.current.has(key)) return;
               setShockwaveMemos(prev => {
                 const next = { ...prev };
                 delete next[key];
@@ -1074,11 +1105,13 @@ export function ScheduleProvider({ children }) {
           if (payload.new && payload.new.year === currentYear && payload.new.month === currentMonth) {
             const item = payload.new;
             const key = `${item.year}-${item.month}-${item.day}-${item.slot_index}`;
+            if (staffMemoSaveRequestRef.current.has(key)) return;
             setStaffMemos(prev => ({ ...prev, [key]: item }));
           } else if (payload.old && payload.eventType === 'DELETE') {
             const item = payload.old;
             if (item.year === currentYear && item.month === currentMonth) {
               const key = `${item.year}-${item.month}-${item.day}-${item.slot_index}`;
+              if (staffMemoSaveRequestRef.current.has(key)) return;
               setStaffMemos(prev => {
                 const next = { ...prev };
                 delete next[key];
