@@ -21,6 +21,7 @@ import usePatientHistoryActions from './usePatientHistoryActions';
 import useSchedulerAutoText from './useSchedulerAutoText';
 import useScheduleClipboardActions from './useScheduleClipboardActions';
 import useScheduleContextMenuActions from './useScheduleContextMenuActions';
+import useScheduleGlobalEvents from './useScheduleGlobalEvents';
 import useScheduleMergeActions from './useScheduleMergeActions';
 import useScheduleSelectionModel from './useScheduleSelectionModel';
 import useScheduleStatusActions from './useScheduleStatusActions';
@@ -1720,152 +1721,22 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     }
   }, [contextMenu, selectedCell, editingCell, selectedKeys, deleteCells, buildRangeKeys, selectSingleCell, getAdjacentCell, beginEditingCell, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleTreatmentCancel, handleToggleHolidayBackground, tryMergeSelection, doUndo, isEditableTarget, isContextMenuTarget, cellKey, colCount, memos, handleOpenPatientHistoryModal]);
 
-  // 키보드 이벤트 등록
-
-  useEffect(() => {
-    const el = viewRef.current;
-    if (el) {
-      el.addEventListener('keydown', handleKeyDown);
-      return () => el.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [handleKeyDown]);
-
-  // 최신 모달 호출 함수를 Ref에 저장하여 클로저 문제 해결
-  const openModalRef = useRef(handleOpenPatientHistoryModal);
-  useEffect(() => {
-    openModalRef.current = handleOpenPatientHistoryModal;
-  }, [handleOpenPatientHistoryModal]);
-
-  // 전역 Cmd+F 가로채기 (캡처링 단계)
-  useEffect(() => {
-    const handleGlobalCmdF = (e) => {
-      const isMeta = e.metaKey || e.ctrlKey;
-      const isKeyF = e.code === 'KeyF' || e.key.toLowerCase() === 'f';
-      
-      if (isMeta && isKeyF) {
-        // 셀이 선택되어 있으면 브라우저 기본 검색을 막고 팝업 호출
-        if (selectedCellRef.current) {
-          e.preventDefault();
-          e.stopPropagation();
-          openModalRef.current();
-        }
-      }
-    };
-    
-    // 캡처링 단계에서 가장 먼저 잡음
-    window.addEventListener('keydown', handleGlobalCmdF, { capture: true });
-    return () => window.removeEventListener('keydown', handleGlobalCmdF, { capture: true });
-  }, []); // 의존성 배열을 비워 한 번만 등록
-
-  useEffect(() => {
-    const handlePasteEvent = (event) => {
-      if (!selectedCell) return;
-
-      const target = event.target;
-      if (isContextMenuTarget(target)) return;
-      const isEditableTarget =
-        (target instanceof HTMLInputElement && !target.dataset.hiddenInput) ||
-        target instanceof HTMLTextAreaElement ||
-        target?.isContentEditable;
-      if (isEditableTarget) return;
-
-      const pastedText = event.clipboardData?.getData('text/plain');
-      const pastedHtml = event.clipboardData?.getData('text/html');
-      if (!pastedText) return;
-      event.preventDefault();
-      handlePasteSelection(pastedText, pastedHtml);
-    };
-
-    window.addEventListener('paste', handlePasteEvent, true);
-    return () => window.removeEventListener('paste', handlePasteEvent, true);
-  }, [selectedCell, handlePasteSelection, isContextMenuTarget]);
-
-  useEffect(() => {
-    const handleWindowKeyDown = (event) => {
-      const target = event.target;
-      if (isContextMenuTarget(target)) return;
-      if (isEditableTarget(target)) return;
-      handleKeyDown(event);
-    };
-
-    window.addEventListener('keydown', handleWindowKeyDown, true);
-    return () => window.removeEventListener('keydown', handleWindowKeyDown, true);
-  }, [handleKeyDown, isEditableTarget, isContextMenuTarget]);
-
-  useEffect(() => {
-    const handleMouseUp = () => {
-      dragSelectionRef.current = null;
-    };
-
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => window.removeEventListener('mouseup', handleMouseUp);
-  }, []);
-
-  useEffect(() => {
-    const el = viewRef.current;
-    if (!el) return;
-    const handleContext = (event) => {
-      if (!selectedKeys || selectedKeys.size === 0 || editingCell) {
-        setContextMenu(null);
-        return;
-      }
-      event.preventDefault();
-      const MENU_WIDTH = 180;
-      const MENU_HEIGHT = 180;
-      const VIEWPORT_GAP = 12;
-      const SUBMENU_WIDTH = 300;
-      const isNearRightEdge = event.clientX + MENU_WIDTH + SUBMENU_WIDTH > window.innerWidth;
-      
-      const maxX = Math.max(VIEWPORT_GAP, window.innerWidth - MENU_WIDTH - VIEWPORT_GAP);
-      const maxY = Math.max(VIEWPORT_GAP, window.innerHeight - MENU_HEIGHT - VIEWPORT_GAP);
-      setActiveContextSubmenu(null);
-      setContextMenu({
-        x: Math.min(event.clientX, maxX),
-        y: Math.min(event.clientY, maxY),
-        isNearRightEdge,
-      });
-    };
-    el.addEventListener('contextmenu', handleContext);
-    return () => el.removeEventListener('contextmenu', handleContext);
-  }, [selectedKeys, editingCell]);
-
-  useEffect(() => {
-    if (!contextMenu || !contextMenuRef.current) return;
-
-    repositionContextMenu();
-
-    const menuEl = contextMenuRef.current;
-    const resizeObserver = typeof ResizeObserver !== 'undefined'
-      ? new ResizeObserver(() => {
-          repositionContextMenu();
-        })
-      : null;
-
-    if (resizeObserver) resizeObserver.observe(menuEl);
-    window.addEventListener('resize', repositionContextMenu);
-    window.addEventListener('scroll', repositionContextMenu, true);
-
-    return () => {
-      if (resizeObserver) resizeObserver.disconnect();
-      window.removeEventListener('resize', repositionContextMenu);
-      window.removeEventListener('scroll', repositionContextMenu, true);
-    };
-  }, [contextMenu, repositionContextMenu]);
-
-  useEffect(() => {
-    if (contextMenu && (!selectedKeys || selectedKeys.size === 0)) {
-      setContextMenu(null);
-    }
-  }, [contextMenu, selectedKeys]);
-
-  useEffect(() => {
-    const handleWindowClick = (event) => {
-      if (contextMenuRef.current?.contains(event.target)) return;
-      setContextMenu(null);
-    };
-    window.addEventListener('click', handleWindowClick);
-    return () => window.removeEventListener('click', handleWindowClick);
-  }, []);
+  useScheduleGlobalEvents({
+    viewRef,
+    contextMenuRef,
+    dragSelectionRef,
+    selectedCell,
+    selectedCellRef,
+    selectedKeys,
+    editingCell,
+    handleKeyDown,
+    handlePasteSelection,
+    handleOpenPatientHistoryModal,
+    isEditableTarget,
+    isContextMenuTarget,
+    setActiveContextSubmenu,
+    setContextMenu,
+  });
 
   useEffect(() => {
     if (!editingCell) return;
