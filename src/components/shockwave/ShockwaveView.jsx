@@ -96,6 +96,26 @@ function writeStoredNumber(key, value) {
   }
 }
 
+function readStoredColRatios() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(SHOCKWAVE_COL_RATIOS_KEY) || 'null');
+    return Array.isArray(parsed) && parsed.every((v) => Number.isFinite(v) && v > 0) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredColRatios(value) {
+  if (typeof window === 'undefined') return;
+  if (!Array.isArray(value) || value.length === 0) return;
+  try {
+    window.localStorage.setItem(SHOCKWAVE_COL_RATIOS_KEY, JSON.stringify(value));
+  } catch {
+    // localStorage may be unavailable in restricted browser contexts.
+  }
+}
+
 export default function ShockwaveView({ therapists, settings, memos = {}, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
   const { currentYear, currentMonth, navigateMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
   const { addToast } = useToast();
@@ -182,15 +202,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
 
   // 열 너비 조정 (fr 비율 기반)
-  const [colRatios, setColRatios] = useState(() => {
-    if (typeof window === 'undefined') return null;
-    try {
-      const parsed = JSON.parse(window.localStorage.getItem(SHOCKWAVE_COL_RATIOS_KEY) || 'null');
-      return Array.isArray(parsed) && parsed.every((v) => Number.isFinite(v) && v > 0) ? parsed : null;
-    } catch {
-      return null;
-    }
-  });
+  const [colRatios, setColRatios] = useState(() => readStoredColRatios());
   const colResizeRef = useRef({ active: false, colIdx: -1, startX: 0, startRatios: [], containerWidth: 0 });
   const [dayColWidth, setDayColWidth] = useState(() => {
     const saved = readStoredNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, 0);
@@ -1281,10 +1293,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, [rowHeight]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (Array.isArray(colRatios) && colRatios.length > 0) {
-      window.localStorage.setItem(SHOCKWAVE_COL_RATIOS_KEY, JSON.stringify(colRatios));
-    }
+    writeStoredColRatios(colRatios);
   }, [colRatios]);
 
   const isEditableTarget = useCallback((target) => {
@@ -1475,12 +1484,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, [doUndo, contextMenu]);
 
   useEffect(() => {
-    if (!Array.isArray(colRatios)) {
-      setColRatios(Array(colCount).fill(1));
-      return;
-    }
+    if (!Array.isArray(colRatios)) return;
     if (colRatios.length >= colCount) return;
-    
+
     // Preserve existing ratios when colCount changes (e.g. therapists loading)
     setColRatios((prev) => {
       if (!Array.isArray(prev)) return Array(colCount).fill(1);
@@ -4298,11 +4304,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                             };
                             const onUp = () => {
                               colResizeRef.current.active = false;
-                              try {
-                                window.localStorage.setItem(SHOCKWAVE_COL_RATIOS_KEY, JSON.stringify(latestRatios));
-                              } catch {
-                                // localStorage may be unavailable in restricted browser contexts.
-                              }
+                              writeStoredColRatios(latestRatios);
                               window.removeEventListener('mousemove', onMove);
                               window.removeEventListener('mouseup', onUp);
                             };
