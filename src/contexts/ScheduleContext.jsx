@@ -54,6 +54,8 @@ export function ScheduleProvider({ children }) {
   const monthlyTherapistSaveRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
   const therapistRosterLoadRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
   const therapistRosterSaveRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
+  const noticesLoadRequestRef = useRef(0);
+  const noticeSaveRequestRef = useRef(new Map());
   const holidaysLoadRequestRef = useRef(0);
   const calendarSlotSettingsLoadRequestRef = useRef(0);
   const calendarSlotSettingsSaveRequestRef = useRef(0);
@@ -1094,6 +1096,7 @@ export function ScheduleProvider({ children }) {
 
   // 공지사항 로드/저장
   const loadNotices = useCallback(async () => {
+    const requestId = ++noticesLoadRequestRef.current;
     try {
       const { data, error } = await supabase
         .from('notices')
@@ -1101,30 +1104,49 @@ export function ScheduleProvider({ children }) {
         .order('slot_index');
 
       if (error) throw error;
-      setNotices(data || []);
+      if (noticesLoadRequestRef.current === requestId) {
+        setNotices(data || []);
+      }
+      return data || [];
     } catch (err) {
       console.error('Failed to load notices:', err);
+      return null;
     }
   }, []);
 
   const saveNotice = useCallback(async (slotIndex, content) => {
+    const requestId = (noticeSaveRequestRef.current.get(slotIndex) || 0) + 1;
+    noticeSaveRequestRef.current.set(slotIndex, requestId);
+    const nextNotice = {
+      slot_index: slotIndex,
+      content,
+      updated_at: new Date().toISOString()
+    };
     try {
+      setNotices((prev) => {
+        const current = Array.isArray(prev) ? prev : [];
+        const withoutSlot = current.filter((item) => item.slot_index !== slotIndex);
+        return [...withoutSlot, nextNotice].sort((a, b) => Number(a.slot_index) - Number(b.slot_index));
+      });
+
       const { error } = await supabase
         .from('notices')
-        .upsert({
-          slot_index: slotIndex,
-          content,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'slot_index' });
+        .upsert(nextNotice, { onConflict: 'slot_index' });
 
       if (error) throw error;
-      await loadNotices();
+      if (noticeSaveRequestRef.current.get(slotIndex) === requestId) {
+        noticesLoadRequestRef.current += 1;
+      }
       return true;
     } catch (err) {
       console.error('Failed to save notice:', err);
       return false;
+    } finally {
+      if (noticeSaveRequestRef.current.get(slotIndex) === requestId) {
+        noticeSaveRequestRef.current.delete(slotIndex);
+      }
     }
-  }, [loadNotices]);
+  }, []);
 
   // Real-time synchronization
   useEffect(() => {
