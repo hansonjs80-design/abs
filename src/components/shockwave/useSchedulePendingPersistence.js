@@ -6,6 +6,7 @@ import {
   readScheduleMonthBackups,
   rememberScheduleMonthBackup,
   removePendingScheduleDraft,
+  removePendingScheduleDraftIfValue,
 } from '../../lib/schedulerUtils';
 
 export default function useSchedulePendingPersistence({
@@ -95,9 +96,10 @@ export default function useSchedulePendingPersistence({
       Promise.resolve(onSaveMemo(currentYear, currentMonth, w, d, r, c, value))
         .then((success) => {
           if (success) {
-            removePendingScheduleDraft(currentYear, currentMonth, key);
+            removePendingScheduleDraftIfValue(currentYear, currentMonth, key, value);
             setPendingDisplayValues((prev) => {
               if (!(key in prev)) return prev;
+              if (String(prev[key] ?? '') !== value) return prev;
               const next = { ...prev };
               delete next[key];
               return next;

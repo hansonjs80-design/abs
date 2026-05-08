@@ -36,7 +36,7 @@ import {
   TREATMENT_CANCEL_BG,
   getShockwaveScheduleScrollKey,
   rememberPendingScheduleDraft,
-  removePendingScheduleDraft,
+  removePendingScheduleDraftIfValue,
   splitBodyParts,
   normalizeBodyPartKey,
   formatBodyPartInput,
@@ -590,7 +590,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       oldBodyPart: memos[key]?.body_part || null,
     });
     const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, newContent, undefined, newMergeSpan, newPrescription, newBodyPart);
-    if (success) removePendingScheduleDraft(currentYear, currentMonth, key);
+    if (success) removePendingScheduleDraftIfValue(currentYear, currentMonth, key, newContent);
     // pendingDisplayValues는 즉시 삭제하지 않음.
     // memos 컨텍스트가 새 값을 반영할 때까지 유지하여 깜빡임 방지.
     // 아래 useEffect(cleanupStalePendingValues)에서 memos 업데이트 후 자동 정리.

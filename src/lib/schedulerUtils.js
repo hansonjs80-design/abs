@@ -75,6 +75,17 @@ export function removePendingScheduleDraft(year, month, key) {
   writePendingScheduleDrafts(drafts);
 }
 
+export function removePendingScheduleDraftIfValue(year, month, key, value) {
+  if (!key) return;
+  const drafts = readPendingScheduleDrafts();
+  const draftId = getPendingDraftId(year, month, key);
+  const draft = drafts[draftId];
+  if (!draft) return;
+  if (String(draft.value ?? '') !== String(value ?? '')) return;
+  delete drafts[draftId];
+  writePendingScheduleDrafts(drafts);
+}
+
 // ── Month Backup Storage ──
 
 export function readScheduleMonthBackups() {

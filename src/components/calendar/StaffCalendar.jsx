@@ -168,34 +168,44 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
   const startColResize = (e) => {
     e.preventDefault(); e.stopPropagation();
     const sx = e.clientX, cw = colWidth || e.target.parentElement.offsetWidth;
-    let latestWidth = colWidth;
+    let latestWidth = colWidth || cw;
     const move = (ev) => {
       latestWidth = Math.max(MIN_COL_WIDTH, cw + ev.clientX - sx);
+      colWidthRef.current = latestWidth;
       writeStoredNumber(COL_W_KEY, latestWidth);
       setColWidth(latestWidth);
     };
     const up = () => {
+      colWidthRef.current = latestWidth;
       writeStoredNumber(COL_W_KEY, latestWidth);
-      document.removeEventListener('mousemove', move);
-      document.removeEventListener('mouseup', up);
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+      window.removeEventListener('blur', up);
     };
-    document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+    window.addEventListener('blur', up);
   };
   const startRowResize = (e) => {
     e.preventDefault(); e.stopPropagation();
     const sy = e.clientY, ch = rowHeight;
-    let latestHeight = rowHeight;
+    let latestHeight = rowHeight || ch;
     const move = (ev) => {
       latestHeight = Math.max(MIN_ROW_HEIGHT, ch + ev.clientY - sy);
+      rowHeightRef.current = latestHeight;
       writeStoredNumber(ROW_H_KEY, latestHeight);
       setRowHeight(latestHeight);
     };
     const up = () => {
+      rowHeightRef.current = latestHeight;
       writeStoredNumber(ROW_H_KEY, latestHeight);
-      document.removeEventListener('mousemove', move);
-      document.removeEventListener('mouseup', up);
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+      window.removeEventListener('blur', up);
     };
-    document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+    window.addEventListener('blur', up);
   };
 
   useEffect(() => {

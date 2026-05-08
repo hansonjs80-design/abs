@@ -133,17 +133,21 @@ export default function useScheduleResizeState({ colCount }) {
       if (!rowResizeRef.current.active) return;
       const delta = moveEvent.clientY - rowResizeRef.current.startY;
       latestHeight = Math.max(MIN_SCHEDULE_ROW_HEIGHT, rowResizeRef.current.startHeight + delta);
+      rowHeightRef.current = latestHeight;
       writeStoredNumber(SHOCKWAVE_ROW_HEIGHT_KEY, latestHeight);
       setRowHeight(latestHeight);
     };
     const onUp = () => {
       rowResizeRef.current.active = false;
+      rowHeightRef.current = latestHeight;
       writeStoredNumber(SHOCKWAVE_ROW_HEIGHT_KEY, latestHeight);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('blur', onUp);
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
+    window.addEventListener('blur', onUp);
   }, [rowHeight]);
 
   const startColResize = useCallback((event, colIdx, timeColPx = 0, currentRatios = null) => {
@@ -170,17 +174,21 @@ export default function useScheduleResizeState({ colCount }) {
       nextRatios[currentColIdx] = Math.max(MIN_COL_RATIO, startRatiosValue[currentColIdx] + deltaRatio);
       nextRatios[currentColIdx + 1] = Math.max(MIN_COL_RATIO, startRatiosValue[currentColIdx + 1] - deltaRatio);
       latestRatios = nextRatios;
+      colRatiosRef.current = nextRatios;
       writeStoredColRatios(nextRatios);
       setColRatios(nextRatios);
     };
     const onUp = () => {
       colResizeRef.current.active = false;
+      colRatiosRef.current = latestRatios;
       writeStoredColRatios(latestRatios);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('blur', onUp);
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
+    window.addEventListener('blur', onUp);
   }, [colCount]);
 
   const startDayResize = useCallback((event, showTimeCol) => {
@@ -197,17 +205,21 @@ export default function useScheduleResizeState({ colCount }) {
       if (!dayResizeRef.current.active) return;
       const delta = moveEvent.clientX - dayResizeRef.current.startX;
       latestWidth = Math.max(MIN_SCHEDULE_DAY_WIDTH, normalizedDayWidth + delta);
+      dayColWidthRef.current = latestWidth;
       writeStoredNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, latestWidth);
       setDayColWidth(latestWidth);
     };
     const onUp = () => {
       dayResizeRef.current.active = false;
+      dayColWidthRef.current = latestWidth;
       writeStoredNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, latestWidth);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('blur', onUp);
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
+    window.addEventListener('blur', onUp);
   }, [dayColWidth]);
 
   return {
