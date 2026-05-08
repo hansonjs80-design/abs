@@ -138,7 +138,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [contextMenu, setContextMenu] = useState(null); // { x, y, weekIdx, dayIdx, rowIdx, colIdx, currentPrescription }
   const [activeContextSubmenu, setActiveContextSubmenu] = useState(null);
   const [contextMenuBodyPartOptions, setContextMenuBodyPartOptions] = useState([]);
-  const [contextMenuUncheckedBodyParts, setContextMenuUncheckedBodyParts] = useState(() => new Set());
   const [contextMenuBodyInput, setContextMenuBodyInput] = useState('');
   const [contextMenuNoteInput, setContextMenuNoteInput] = useState('');
   const [contextMenuMemoDrafts, setContextMenuMemoDrafts] = useState([]);
@@ -209,10 +208,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const saved = readStoredNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, 0);
     return saved > 0 ? saved : null;
   }); // null = flex, number = px
+  const dayColWidthRef = useRef(dayColWidth);
   const dayResizeRef = useRef({ active: false, startX: 0, startWidth: 0, factor: 1 });
   const [rowHeight, setRowHeight] = useState(() => {
     return Math.max(MIN_SCHEDULE_ROW_HEIGHT, readStoredNumber(SHOCKWAVE_ROW_HEIGHT_KEY, 23));
   });
+  const rowHeightRef = useRef(rowHeight);
+  const colRatiosRef = useRef(colRatios);
   const rowResizeRef = useRef({ active: false, startY: 0, startHeight: 23 });
 
   const tooltipRef = useRef(null);
@@ -1286,16 +1288,36 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, [currentYear, currentMonth, loadedMemosKey, memos, onSaveMemo]);
 
   useEffect(() => {
+    dayColWidthRef.current = dayColWidth;
     writeStoredNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, dayColWidth || 0);
   }, [dayColWidth]);
 
   useEffect(() => {
+    rowHeightRef.current = rowHeight;
     writeStoredNumber(SHOCKWAVE_ROW_HEIGHT_KEY, rowHeight);
   }, [rowHeight]);
 
   useEffect(() => {
+    colRatiosRef.current = colRatios;
     writeStoredColRatios(colRatios);
   }, [colRatios]);
+
+  useEffect(() => {
+    const flushStoredSizing = () => {
+      writeStoredNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, dayColWidthRef.current || 0);
+      writeStoredNumber(SHOCKWAVE_ROW_HEIGHT_KEY, rowHeightRef.current);
+      writeStoredColRatios(colRatiosRef.current);
+    };
+    window.addEventListener('pagehide', flushStoredSizing);
+    window.addEventListener('beforeunload', flushStoredSizing);
+    document.addEventListener('visibilitychange', flushStoredSizing);
+    return () => {
+      flushStoredSizing();
+      window.removeEventListener('pagehide', flushStoredSizing);
+      window.removeEventListener('beforeunload', flushStoredSizing);
+      document.removeEventListener('visibilitychange', flushStoredSizing);
+    };
+  }, []);
 
   const isEditableTarget = useCallback((target) => {
     return (
@@ -1864,7 +1886,6 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     const key = cellKey(w, d, r, c);
     setActiveContextSubmenu(null);
     setContextMenuBodyPartOptions(buildContextMenuBodyPartOptions(key));
-    setContextMenuUncheckedBodyParts(new Set());
     setContextMenuBodyInput('');
     setContextMenuNoteInput('');
     setContextMenuMemoDrafts(getMemoListFromMergeSpan(memos[key]?.merge_span));
@@ -1896,7 +1917,6 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     if (!contextMenu) {
       setActiveContextSubmenu(null);
       setContextMenuBodyPartOptions([]);
-      setContextMenuUncheckedBodyParts(new Set());
       setContextMenuBodyInput('');
       setContextMenuNoteInput('');
       setContextMenuMemoDrafts([]);
@@ -3269,7 +3289,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
         const [w, d, r, c] = key.split('-').map(Number);
         const memo = memos[key] || {};
         const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
-        const idx = parts.findIndex(p => p.toLowerCase() === targetPart.toLowerCase());
+        const idx = parts.findIndex(p => normalizeBodyPartKey(p) === normalizeBodyPartKey(targetPart));
         if (idx >= 0) {
           parts.splice(idx, 1);
         } else {
@@ -4155,6 +4175,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                       if (!rowResizeRef.current.active) return;
                       const delta = ev.clientY - rowResizeRef.current.startY;
                       latestHeight = Math.max(MIN_SCHEDULE_ROW_HEIGHT, rowResizeRef.current.startHeight + delta);
+                      writeStoredNumber(SHOCKWAVE_ROW_HEIGHT_KEY, latestHeight);
                       setRowHeight(latestHeight);
                     };
                     const onUp = () => {
@@ -4303,6 +4324,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                               const dR = (d / w) * tR;
                               const nr = [...sr]; nr[c] = Math.max(0.2, sr[c] + dR); nr[c+1] = Math.max(0.2, sr[c+1] - dR);
                               latestRatios = nr;
+                              writeStoredColRatios(nr);
                               setColRatios(nr);
                             };
                             const onUp = () => {
@@ -4650,6 +4672,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                           const { startX } = dayResizeRef.current;
                           const delta = ev.clientX - startX;
                           latestWidth = Math.max(MIN_SCHEDULE_DAY_WIDTH, normalizedDayWidth + delta);
+                          writeStoredNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, latestWidth);
                           setDayColWidth(latestWidth);
                         };
                         const onUp = () => {
@@ -4966,9 +4989,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                               <div className="context-menu-checklist">
                                 {availableParts.map((part, idx) => {
                                   const partKey = normalizeBodyPartKey(part);
-                                  const isSavedPart = currentParts.some((p) => normalizeBodyPartKey(p) === partKey);
-                                  const isUncheckedOnly = contextMenuUncheckedBodyParts.has(partKey);
-                                  const isChecked = isSavedPart && !isUncheckedOnly;
+                                  const isChecked = currentParts.some((p) => normalizeBodyPartKey(p) === partKey);
                                   return (
                                     <div key={idx} className={`context-menu-check-item${isChecked ? ' is-checked' : ''}`}>
                                       <label className="context-menu-check-label">
@@ -4977,24 +4998,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                                           checked={isChecked}
                                           onChange={(e) => {
                                             e.stopPropagation();
-                                            const nextChecked = e.target.checked;
-                                            if (!nextChecked && isSavedPart) {
-                                              setContextMenuUncheckedBodyParts((prev) => {
-                                                const next = new Set(prev);
-                                                next.add(partKey);
-                                                return next;
-                                              });
-                                              return;
-                                            }
-                                            setContextMenuUncheckedBodyParts((prev) => {
-                                              if (!prev.has(partKey)) return prev;
-                                              const next = new Set(prev);
-                                              next.delete(partKey);
-                                              return next;
-                                            });
-                                            if (!isSavedPart) {
-                                              handleContextAction({ type: 'bodyPartToggle', value: part });
-                                            }
+                                            handleContextAction({ type: 'bodyPartToggle', value: part });
                                           }}
                                           onMouseDown={e => e.stopPropagation()}
                                           onClick={e => e.stopPropagation()}

@@ -60,6 +60,8 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
 
   const [colWidth, setColWidth] = useState(() => readStoredNumber(COL_W_KEY, 0));
   const [rowHeight, setRowHeight] = useState(() => Math.max(MIN_ROW_HEIGHT, readStoredNumber(ROW_H_KEY, 120)));
+  const colWidthRef = useRef(colWidth);
+  const rowHeightRef = useRef(rowHeight);
   const [undoStack, setUndoStack] = useState([]);
   const [selectedCell, setSelectedCell] = useState(null);
   const [rangeEnd, setRangeEnd] = useState(null);
@@ -169,6 +171,7 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
     let latestWidth = colWidth;
     const move = (ev) => {
       latestWidth = Math.max(MIN_COL_WIDTH, cw + ev.clientX - sx);
+      writeStoredNumber(COL_W_KEY, latestWidth);
       setColWidth(latestWidth);
     };
     const up = () => {
@@ -184,6 +187,7 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
     let latestHeight = rowHeight;
     const move = (ev) => {
       latestHeight = Math.max(MIN_ROW_HEIGHT, ch + ev.clientY - sy);
+      writeStoredNumber(ROW_H_KEY, latestHeight);
       setRowHeight(latestHeight);
     };
     const up = () => {
@@ -201,9 +205,27 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
     loadCalendarSlotSettings(currentYear, currentMonth);
   }, [currentYear, currentMonth, loadStaffMemos, loadHolidays, loadShockwaveSettings, loadCalendarSlotSettings]);
   useEffect(() => {
+    colWidthRef.current = colWidth;
+    rowHeightRef.current = rowHeight;
     writeStoredNumber(COL_W_KEY, colWidth);
     writeStoredNumber(ROW_H_KEY, rowHeight);
   }, [colWidth, rowHeight]);
+
+  useEffect(() => {
+    const flushStoredSizing = () => {
+      writeStoredNumber(COL_W_KEY, colWidthRef.current);
+      writeStoredNumber(ROW_H_KEY, rowHeightRef.current);
+    };
+    window.addEventListener('pagehide', flushStoredSizing);
+    window.addEventListener('beforeunload', flushStoredSizing);
+    document.addEventListener('visibilitychange', flushStoredSizing);
+    return () => {
+      flushStoredSizing();
+      window.removeEventListener('pagehide', flushStoredSizing);
+      window.removeEventListener('beforeunload', flushStoredSizing);
+      document.removeEventListener('visibilitychange', flushStoredSizing);
+    };
+  }, []);
 
   // ── Actions ──
   const focusHiddenInput = useCallback(() => {
