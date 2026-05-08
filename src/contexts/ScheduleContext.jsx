@@ -51,6 +51,9 @@ export function ScheduleProvider({ children }) {
   const currentDateRef = useRef({ year: currentYear, month: currentMonth });
   const shockwaveMemosLoadRequestRef = useRef(0);
   const monthlyTherapistLoadRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
+  const monthlyTherapistSaveRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
+  const therapistRosterLoadRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
+  const therapistRosterSaveRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
   const holidaysLoadRequestRef = useRef(0);
   const calendarSlotSettingsLoadRequestRef = useRef(0);
   const calendarSlotSettingsSaveRequestRef = useRef(0);
@@ -362,6 +365,8 @@ export function ScheduleProvider({ children }) {
 
   // 치료사 로드
   const loadTherapists = useCallback(async () => {
+    const requestId = (therapistRosterLoadRequestRef.current.shockwave || 0) + 1;
+    therapistRosterLoadRequestRef.current.shockwave = requestId;
     try {
       const { data, error } = await supabase
         .from('shockwave_therapists')
@@ -371,7 +376,9 @@ export function ScheduleProvider({ children }) {
 
       if (error) throw error;
 
-      setTherapists(data || []);
+      if (therapistRosterLoadRequestRef.current.shockwave === requestId) {
+        setTherapists(data || []);
+      }
       return data || [];
     } catch (err) {
       console.error('Failed to load therapists:', err);
@@ -380,6 +387,8 @@ export function ScheduleProvider({ children }) {
   }, []);
 
   const loadManualTherapists = useCallback(async () => {
+    const requestId = (therapistRosterLoadRequestRef.current.manual_therapy || 0) + 1;
+    therapistRosterLoadRequestRef.current.manual_therapy = requestId;
     try {
       const { data, error } = await supabase
         .from('manual_therapy_therapists')
@@ -388,7 +397,9 @@ export function ScheduleProvider({ children }) {
         .order('slot_index');
 
       if (error) throw error;
-      setManualTherapists(data || []);
+      if (therapistRosterLoadRequestRef.current.manual_therapy === requestId) {
+        setManualTherapists(data || []);
+      }
       return data || [];
     } catch (err) {
       console.error('Failed to load manual therapy therapists:', err);
@@ -399,6 +410,9 @@ export function ScheduleProvider({ children }) {
   const saveTherapistRoster = useCallback(async (type = 'shockwave', roster = []) => {
     const tableName = type === 'manual_therapy' ? 'manual_therapy_therapists' : 'shockwave_therapists';
     const setter = type === 'manual_therapy' ? setManualTherapists : setTherapists;
+    const requestKey = type === 'manual_therapy' ? 'manual_therapy' : 'shockwave';
+    const requestId = (therapistRosterSaveRequestRef.current[requestKey] || 0) + 1;
+    therapistRosterSaveRequestRef.current[requestKey] = requestId;
     try {
       const { error: deactivateError } = await supabase
         .from(tableName)
@@ -416,7 +430,10 @@ export function ScheduleProvider({ children }) {
         .filter((item) => item.name);
 
       if (rows.length === 0) {
-        setter([]);
+        if (therapistRosterSaveRequestRef.current[requestKey] === requestId) {
+          therapistRosterLoadRequestRef.current[requestKey] += 1;
+          setter([]);
+        }
         return true;
       }
 
@@ -427,7 +444,10 @@ export function ScheduleProvider({ children }) {
         .order('slot_index');
 
       if (insertError) throw insertError;
-      setter(data || rows);
+      if (therapistRosterSaveRequestRef.current[requestKey] === requestId) {
+        therapistRosterLoadRequestRef.current[requestKey] += 1;
+        setter(data || rows);
+      }
       return true;
     } catch (err) {
       console.error(`Failed to save therapist roster (${type}):`, err);
@@ -1030,6 +1050,8 @@ export function ScheduleProvider({ children }) {
   // 월별 치료사 설정 저장 (type: 'shockwave' | 'manual_therapy')
   const saveMonthlyTherapists = useCallback(async (year, month, configs, type = 'shockwave') => {
     const setter = type === 'manual_therapy' ? setMonthlyManualTherapists : setMonthlyTherapists;
+    const requestId = (monthlyTherapistSaveRequestRef.current[type] || 0) + 1;
+    monthlyTherapistSaveRequestRef.current[type] = requestId;
     try {
       const { error: deleteError } = await supabase
         .from('shockwave_monthly_therapists')
@@ -1059,7 +1081,10 @@ export function ScheduleProvider({ children }) {
         if (insertError) throw insertError;
       }
 
-      setter(configs.map((c) => ({ ...c, year, month, type })));
+      if (monthlyTherapistSaveRequestRef.current[type] === requestId) {
+        monthlyTherapistLoadRequestRef.current[type] += 1;
+        setter(configs.map((c) => ({ ...c, year, month, type })));
+      }
       return true;
     } catch (err) {
       console.error(`Failed to save monthly therapists (${type}):`, err);
