@@ -26,6 +26,7 @@ import useScheduleKeyboardActions from './useScheduleKeyboardActions';
 import useScheduleMergeActions from './useScheduleMergeActions';
 import useScheduleSelectionModel from './useScheduleSelectionModel';
 import useScheduleStatusActions from './useScheduleStatusActions';
+import useScheduleTodayNavigation from './useScheduleTodayNavigation';
 import {
   HORIZONTAL_BORDER_COLOR,
   TIME_COL_WIDTH,
@@ -37,7 +38,6 @@ import {
   SHOCKWAVE_PENDING_DRAFT_MAX_AGE_MS,
   TREATMENT_COMPLETE_BG,
   TREATMENT_CANCEL_BG,
-  shockwaveScheduleScrollMemory,
   getShockwaveScheduleScrollKey,
   getPendingDraftId,
   readPendingScheduleDrafts,
@@ -507,22 +507,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const getReservationTimeForMemo = useCallback((memo, w, d, r) => (
     getReservationTimeFromMergeSpan(memo?.merge_span) || getDefaultReservationTime(w, d, r)
   ), [getDefaultReservationTime]);
-  const todayWeekIdx = useMemo(() => {
-    let idx = weeks.findIndex((weekDays) => weekDays.some((dayInfo) => isSameDate(dayInfo.date, today)));
-    if (idx !== -1) return idx;
 
-    // Fallback: 일요일은 달력에 없으므로, 해당 주차(월~일) 안에 오늘이 포함되는지 확인
-    idx = weeks.findIndex(weekDays => {
-      if (!weekDays || weekDays.length === 0) return false;
-      const mondayDate = new Date(weekDays[0].date);
-      mondayDate.setHours(0, 0, 0, 0);
-      const sundayDate = new Date(mondayDate);
-      sundayDate.setDate(mondayDate.getDate() + 6);
-      sundayDate.setHours(23, 59, 59, 999);
-      return today >= mondayDate && today <= sundayDate;
-    });
-    return idx;
-  }, [weeks, today]);
 
   const { buildSchedulerAutoText } = useSchedulerAutoText({
     memos,
@@ -1689,103 +1674,20 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     return () => window.cancelAnimationFrame(rafId);
   }, [hoverData, positionTooltip]);
 
-  const scrollToTodayWeek = useCallback((instant = false) => {
-    if (todayWeekIdx < 0) return;
-    const weekEl = weekRefs.current[todayWeekIdx];
-    if (!weekEl) return;
-    weekEl.scrollIntoView({ behavior: instant ? 'instant' : 'smooth', block: 'start', inline: 'nearest' });
-  }, [todayWeekIdx]);
-
-  const saveScheduleScrollPosition = useCallback(() => {
-    if (typeof window === 'undefined') return;
-    shockwaveScheduleScrollMemory.set(scheduleScrollKey, {
-      x: window.scrollX || window.pageXOffset || 0,
-      y: window.scrollY || window.pageYOffset || 0,
-    });
-  }, [scheduleScrollKey]);
-
-  useEffect(() => {
-    window.addEventListener('clinic-before-route-change', saveScheduleScrollPosition);
-    return () => {
-      saveScheduleScrollPosition();
-      window.removeEventListener('clinic-before-route-change', saveScheduleScrollPosition);
-    };
-  }, [saveScheduleScrollPosition]);
-
-  const updateTodayShortcutTooltip = useCallback((event) => {
-    const tooltipWidth = 96;
-    const edgeGap = 8;
-    const x = Math.min(
-      Math.max(event.clientX, edgeGap + tooltipWidth / 2),
-      window.innerWidth - edgeGap - tooltipWidth / 2
-    );
-    const y = Math.max(edgeGap, event.clientY - 38);
-    setTodayShortcutTooltip({ x, y, text: `오늘 ${shortcutLabels.today}` });
-  }, [shortcutLabels.today]);
-
-  useEffect(() => {
-    const handleTodayShortcut = (event) => {
-      const key = String(event.key || '').toLowerCase();
-      const isOpenShortcut = (event.metaKey || event.ctrlKey) && (
-        event.code === 'KeyT' ||
-        key === 't' ||
-        key === 'ㅅ'
-      );
-      if (!isOpenShortcut) return;
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation?.();
-      scrollToTodayWeek();
-    };
-
-    window.addEventListener('keydown', handleTodayShortcut, true);
-    document.addEventListener('keydown', handleTodayShortcut, true);
-    return () => {
-      window.removeEventListener('keydown', handleTodayShortcut, true);
-      document.removeEventListener('keydown', handleTodayShortcut, true);
-    };
-  }, [scrollToTodayWeek]);
-
-  // 최초 마운트 시 오늘 주차로 즉시 이동 (모션 없이)
-  const initialScrollDoneRef = useRef(false);
-  useEffect(() => {
-    if (initialScrollDoneRef.current) return;
-    const timer = setTimeout(() => {
-      const savedPosition = shockwaveScheduleScrollMemory.get(scheduleScrollKey);
-      if (savedPosition) {
-        window.scrollTo(savedPosition.x || 0, savedPosition.y || 0);
-        initialScrollDoneRef.current = true;
-        return;
-      }
-
-      if (todayWeekIdx >= 0) {
-        scrollToTodayWeek(true); // instant
-      } else {
-        const firstWeekEl = weekRefs.current[0];
-        if (firstWeekEl) {
-          firstWeekEl.scrollIntoView({ behavior: 'instant', block: 'start', inline: 'nearest' });
-        }
-      }
-      initialScrollDoneRef.current = true;
-    }, 80);
-    return () => clearTimeout(timer);
-  }, [scheduleScrollKey, todayWeekIdx, scrollToTodayWeek]);
-
-  // 월이 변경될 때 스크롤 위치 초기화 (최초 마운트 이후에만 smooth로)
-  useEffect(() => {
-    if (!initialScrollDoneRef.current) return;
-    const timer = setTimeout(() => {
-      if (todayWeekIdx >= 0) {
-        scrollToTodayWeek();
-      } else {
-        const firstWeekEl = weekRefs.current[0];
-        if (firstWeekEl) {
-          firstWeekEl.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
-        }
-      }
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [currentYear, currentMonth, todayWeekIdx, scrollToTodayWeek]);
+  const {
+    todayWeekIdx,
+    scrollToTodayWeek,
+    updateTodayShortcutTooltip,
+  } = useScheduleTodayNavigation({
+    weeks,
+    today,
+    weekRefs,
+    scheduleScrollKey,
+    currentYear,
+    currentMonth,
+    shortcutLabel: shortcutLabels.today,
+    setTodayShortcutTooltip,
+  });
 
   // 최상위 CSS 변수로 그리드 컬럼 너비를 통일 (모든 주차에 동일하게 적용)
   const activeColRatios = useMemo(() => {
