@@ -218,7 +218,7 @@
 }
 
 .holiday .calendar-date-number {
-  color: var(--cal-holiday-text);
+  color: #e53e3e;
 }
 
 .today.saturday .calendar-date-number {
