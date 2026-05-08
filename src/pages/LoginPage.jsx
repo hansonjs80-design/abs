@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { ADMIN_USERNAME, DEFAULT_ADMIN_PASSWORD } from '../lib/authPermissions';
 
 const getAuthMessage = (error, isSignUp) => {
   const message = error?.message || '';
@@ -27,8 +26,8 @@ const getAuthMessage = (error, isSignUp) => {
 export default function LoginPage() {
   const { signIn, signUp } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState(ADMIN_USERNAME);
-  const [password, setPassword] = useState(DEFAULT_ADMIN_PASSWORD);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
@@ -96,7 +95,7 @@ export default function LoginPage() {
               type={isSignUp ? 'email' : 'text'}
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder={isSignUp ? 'your@email.com' : ADMIN_USERNAME}
+              placeholder={isSignUp ? 'your@email.com' : '아이디 입력'}
               required
               autoComplete={isSignUp ? 'email' : 'username'}
             />
@@ -110,7 +109,7 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder={isSignUp ? '6자 이상' : DEFAULT_ADMIN_PASSWORD}
+              placeholder={isSignUp ? '6자 이상' : '비밀번호 입력'}
               required
               minLength={isSignUp ? 6 : 1}
               autoComplete={isSignUp ? 'new-password' : 'current-password'}
@@ -138,8 +137,8 @@ export default function LoginPage() {
               setIsSignUp(nextIsSignUp);
               setError('');
               setInfo('');
-              setEmail(nextIsSignUp ? '' : ADMIN_USERNAME);
-              setPassword(nextIsSignUp ? '' : DEFAULT_ADMIN_PASSWORD);
+              setEmail('');
+              setPassword('');
               setName('');
             }}
           >
