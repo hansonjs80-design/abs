@@ -129,6 +129,7 @@ export default function ShockwaveDataGrid({
   const [undoStack, setUndoStack] = useState([]);
   const rowClipboardRef = useRef({ row: null, mode: null });
   const rowOrderRef = useRef(new Map());
+  const editSaveRequestRef = useRef(0);
 
   // ─── 1. DATA PREPARATION ─────────────────────────────────
   const gridData = useMemo(() => {
@@ -523,6 +524,7 @@ export default function ShockwaveDataGrid({
 
   const finishEdit = async () => {
     if (!editing) return;
+    const saveRequestId = ++editSaveRequestRef.current;
     const { r, c } = editing;
     const val = editingValueRef.current ?? editing.val ?? '';
     setEditing(null);
@@ -534,6 +536,7 @@ export default function ShockwaveDataGrid({
     const affectedDates = new Set();
     if (row?.date) affectedDates.add(row.date);
 
+    try {
     if (c < FIXED_FIELDS.length) {
       const field = FIXED_FIELDS[c].field;
       let v = val;
@@ -588,15 +591,20 @@ export default function ShockwaveDataGrid({
 
         if (nextDraft.date) affectedDates.add(nextDraft.date);
         const ins = { ...nextDraft, source: 'manual' };
-        await supabase.from(tableName).insert([ins]);
-        clearLocalDraftRow(row.id, row.isInsertedDraft);
+        const { error } = await supabase.from(tableName).insert([ins]);
+        if (error) throw error;
+        if (editSaveRequestRef.current === saveRequestId) {
+          clearLocalDraftRow(row.id, row.isInsertedDraft);
+        }
       } else {
         const nextRow = { ...row, ...updatePayload };
         setLocalDraftRow(row.id, nextRow, false); // 낙관적 업데이트
         if (nextRow?.date) affectedDates.add(nextRow.date);
         
-        if (isRowEmpty(nextRow)) await supabase.from(tableName).delete().eq('id', row.id);
-        else await supabase.from(tableName).update(updatePayload).eq('id', row.id);
+        const { error } = isRowEmpty(nextRow)
+          ? await supabase.from(tableName).delete().eq('id', row.id)
+          : await supabase.from(tableName).update(updatePayload).eq('id', row.id);
+        if (error) throw error;
       }
     } else {
       const tIdx = Math.floor((c - FIXED_FIELDS.length) / prescriptions.length);
@@ -630,8 +638,11 @@ export default function ShockwaveDataGrid({
         }
 
         if (nextDraft.date) affectedDates.add(nextDraft.date);
-        await supabase.from(tableName).insert([{ ...nextDraft, source: 'manual' }]);
-        clearLocalDraftRow(row.id, row.isInsertedDraft);
+        const { error } = await supabase.from(tableName).insert([{ ...nextDraft, source: 'manual' }]);
+        if (error) throw error;
+        if (editSaveRequestRef.current === saveRequestId) {
+          clearLocalDraftRow(row.id, row.isInsertedDraft);
+        }
       } else {
         const expectedName = t.name;
         if (val.trim() === '') {
@@ -639,25 +650,36 @@ export default function ShockwaveDataGrid({
             const clearedFields = { therapist_name: '', prescription: '', prescription_count: 0 };
             const nextRow = { ...row, ...clearedFields };
             setLocalDraftRow(row.id, nextRow, false); // 낙관적 업데이트
-            if (isRowEmpty(nextRow)) await supabase.from(tableName).delete().eq('id', row.id);
-            else await supabase.from(tableName).update(clearedFields).eq('id', row.id);
+            const { error } = isRowEmpty(nextRow)
+              ? await supabase.from(tableName).delete().eq('id', row.id)
+              : await supabase.from(tableName).update(clearedFields).eq('id', row.id);
+            if (error) throw error;
           }
         } else {
           const updateFields = { therapist_name: expectedName, prescription: pres, prescription_count: intVal };
           const nextRow = { ...row, ...updateFields };
           setLocalDraftRow(row.id, nextRow, false); // 낙관적 업데이트
-          await supabase.from(tableName).update(updateFields).eq('id', row.id);
+          const { error } = await supabase.from(tableName).update(updateFields).eq('id', row.id);
+          if (error) throw error;
         }
       }
     }
     rememberCurrentRowOrder();
-    await fetchLogs();
-    for (const date of affectedDates) {
-      if (!date) continue;
-      try {
-        await runSyncForDate(date);
-      } catch (error) {
-        console.error('Failed to sync stats edit to scheduler:', error);
+    if (editSaveRequestRef.current === saveRequestId) {
+      await fetchLogs();
+      for (const date of affectedDates) {
+        if (!date) continue;
+        try {
+          await runSyncForDate(date);
+        } catch (error) {
+          console.error('Failed to sync stats edit to scheduler:', error);
+        }
+      }
+    }
+    } catch (error) {
+      console.error('Failed to save stats grid edit:', error);
+      if (editSaveRequestRef.current === saveRequestId) {
+        await fetchLogs();
       }
     }
   };
