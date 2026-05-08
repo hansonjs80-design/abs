@@ -3146,6 +3146,25 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       nextParts.forEach((part) => addBodyPartToMap(optionsMap, part));
       return Array.from(optionsMap.values());
     };
+    const saveMemoMeta = (key, memo = {}, overrides = {}) => {
+      const [w, d, r, c] = key.split('-').map(Number);
+      const pick = (name, fallback) => (
+        Object.prototype.hasOwnProperty.call(overrides, name) ? overrides[name] : fallback
+      );
+      return onSaveMemo(
+        currentYear,
+        currentMonth,
+        w,
+        d,
+        r,
+        c,
+        pick('content', getStableMemoContent(key, memo)),
+        pick('bg_color', memo.bg_color),
+        pick('merge_span', memo.merge_span),
+        pick('prescription', memo.prescription),
+        pick('body_part', memo.body_part)
+      );
+    };
 
     if (action === 'copy') handleCopySelection();
     else if (action === 'cut') handleCutSelection();
@@ -3201,12 +3220,11 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       let anyChanged = false;
       
       for (const key of keys) {
-        const [w, d, r, c] = key.split('-').map(Number);
         const memo = getMemoForAction(key);
         if (memo.body_part !== action.value) {
           const nextParts = splitBodyParts(action.value || '');
           const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, getBodyPartOptionList(memo, nextParts));
-          const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, action.value);
+          const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan, body_part: action.value });
           if (success) anyChanged = true;
         }
       }
@@ -3222,7 +3240,6 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       for (const key of keys) {
-        const [w, d, r, c] = key.split('-').map(Number);
         const memo = getMemoForAction(key);
         const existing = (memo.body_part || '').trim();
         const newPart = formatBodyPartInput(action.value);
@@ -3230,7 +3247,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
         const combined = existing ? `${existing}, ${newPart}` : newPart;
         const nextParts = splitBodyParts(combined);
         const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, getBodyPartOptionList(memo, nextParts));
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, combined);
+        const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan, body_part: combined });
         if (success) anyChanged = true;
       }
       if (anyChanged) {
@@ -3245,12 +3262,11 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       for (const key of keys) {
-        const [w, d, r, c] = key.split('-').map(Number);
         const memo = getMemoForAction(key);
         const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
         const updated = parts.filter((_, i) => i !== action.index).join(', ');
         const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, getBodyPartOptionList(memo, splitBodyParts(updated)));
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, updated);
+        const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan, body_part: updated });
         if (success) anyChanged = true;
       }
       if (anyChanged) {
@@ -3266,7 +3282,6 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       let anyChanged = false;
       const targetPart = action.value.trim();
       for (const key of keys) {
-        const [w, d, r, c] = key.split('-').map(Number);
         const memo = getMemoForAction(key);
         const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
         const idx = parts.findIndex(p => normalizeBodyPartKey(p) === normalizeBodyPartKey(targetPart));
@@ -3278,7 +3293,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
         const nextOptions = getBodyPartOptionList(memo, splitBodyParts(updated))
           .filter((part) => normalizeBodyPartKey(part) !== targetKey);
         const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, nextOptions);
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, updated);
+        const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan, body_part: updated });
         if (success) anyChanged = true;
       }
       if (anyChanged) {
@@ -3293,13 +3308,12 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       for (const key of keys) {
-        const [w, d, r, c] = key.split('-').map(Number);
         const memo = getMemoForAction(key);
         const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
         parts[action.index] = formatBodyPartInput(action.value);
         const updated = parts.filter(Boolean).join(', ');
         const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, getBodyPartOptionList(memo, splitBodyParts(updated)));
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, updated);
+        const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan, body_part: updated });
         if (success) anyChanged = true;
       }
       if (anyChanged) {
@@ -3313,10 +3327,9 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       for (const key of keys) {
-        const [w, d, r, c] = key.split('-').map(Number);
         const memo = getMemoForAction(key);
         const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, getBodyPartOptionList(memo));
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, '');
+        const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan, body_part: '' });
         if (success) anyChanged = true;
       }
       if (anyChanged) {
@@ -3331,7 +3344,6 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       let anyChanged = false;
       const targetPart = action.value.trim();
       for (const key of keys) {
-        const [w, d, r, c] = key.split('-').map(Number);
         const memo = getMemoForAction(key);
         const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
         const idx = parts.findIndex(p => normalizeBodyPartKey(p) === normalizeBodyPartKey(targetPart));
@@ -3342,7 +3354,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
         }
         const updated = parts.join(', ');
         const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, getBodyPartOptionList(memo, [targetPart, ...parts]));
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, updated);
+        const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan, body_part: updated });
         if (success) anyChanged = true;
       }
       if (anyChanged) {
