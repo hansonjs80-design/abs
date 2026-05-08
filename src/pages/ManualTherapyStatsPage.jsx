@@ -107,7 +107,11 @@ export default function ManualTherapyStatsPage() {
   const fetchIdRef = useRef(0);
   const [selectedTherapistNames, setSelectedTherapistNames] = useState([]);
   useEffect(() => {
-    setSelectedTherapistNames(therapistNameList);
+    setSelectedTherapistNames((prev) => {
+      if (therapistNameList.length === 0) return [];
+      if (prev.length === 0) return therapistNameList;
+      return prev.filter((name) => therapistNameList.includes(name));
+    });
   }, [therapistNameList]);
   const selectedTherapistSet = useMemo(
     () => new Set(selectedTherapistNames),

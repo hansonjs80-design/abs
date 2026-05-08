@@ -13,6 +13,23 @@ const DEV_LOGIN_STORAGE_KEY = 'dev-auth-user';
 
 const clearStoredDevUser = () => {
   try {
+    sessionStorage.removeItem(DEV_LOGIN_STORAGE_KEY);
+    localStorage.removeItem(DEV_LOGIN_STORAGE_KEY);
+  } catch {}
+};
+
+const readStoredDevUser = () => {
+  try {
+    localStorage.removeItem(DEV_LOGIN_STORAGE_KEY);
+    return sessionStorage.getItem(DEV_LOGIN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+};
+
+const writeStoredDevUser = (user) => {
+  try {
+    sessionStorage.setItem(DEV_LOGIN_STORAGE_KEY, JSON.stringify(user));
     localStorage.removeItem(DEV_LOGIN_STORAGE_KEY);
   } catch {}
 };
@@ -43,7 +60,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(DEV_LOGIN_STORAGE_KEY);
+      const stored = readStoredDevUser();
       if (stored) {
         setUser(JSON.parse(stored));
       }
@@ -87,7 +104,7 @@ export function AuthProvider({ children }) {
           throw new Error('Invalid login credentials');
         }
         const appUser = createAppUser(data);
-        localStorage.setItem(DEV_LOGIN_STORAGE_KEY, JSON.stringify(appUser));
+        writeStoredDevUser(appUser);
         setUser(appUser);
         return { user: appUser, session: null };
       }
@@ -102,7 +119,7 @@ export function AuthProvider({ children }) {
 
     if (username === ADMIN_USERNAME && normalizedPassword === DEFAULT_ADMIN_PASSWORD) {
       const adminUser = createBootstrapAdminUser();
-      localStorage.setItem(DEV_LOGIN_STORAGE_KEY, JSON.stringify(adminUser));
+      writeStoredDevUser(adminUser);
       setUser(adminUser);
       return { user: adminUser, session: null };
     }

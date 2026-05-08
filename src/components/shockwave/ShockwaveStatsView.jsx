@@ -91,7 +91,11 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   );
   const [selectedTherapistNames, setSelectedTherapistNames] = useState([]);
   useEffect(() => {
-    setSelectedTherapistNames(therapistNameList);
+    setSelectedTherapistNames((prev) => {
+      if (therapistNameList.length === 0) return [];
+      if (prev.length === 0) return therapistNameList;
+      return prev.filter((name) => therapistNameList.includes(name));
+    });
   }, [therapistNameList]);
   const selectedTherapistSet = useMemo(
     () => new Set(selectedTherapistNames),
