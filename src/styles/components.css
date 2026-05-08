@@ -427,11 +427,11 @@
 
 /* 1. Calendar (Blue) */
 .top-tab--calendar {
-  --tab-bg: #9dc1fb;
-  --tab-hover-bg: #dbeafe;
-  --tab-active-bg: #3b82f6;
-  --tab-active-border: #2563eb;
-  --tab-shadow: rgba(37, 99, 235, 0.18);
+  --tab-bg: #fed7aa;
+  --tab-hover-bg: #ffedd5;
+  --tab-active-bg: #fb923c;
+  --tab-active-border: #f97316;
+  --tab-shadow: rgba(249, 115, 22, 0.18);
 }
 
 /* 2. Shockwave (Green) */
