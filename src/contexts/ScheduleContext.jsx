@@ -45,12 +45,21 @@ export function ScheduleProvider({ children }) {
   const shockwaveWriteQueueRef = useRef(new Map());
   const loadCacheRef = useRef({ staffMemos: null, shockwaveMemos: null, holidays: null });
   const shockwaveMemosRef = useRef(shockwaveMemos);
+  const currentDateRef = useRef({ year: currentYear, month: currentMonth });
   const shockwaveMemosLoadRequestRef = useRef(0);
   const monthlyTherapistLoadRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
 
   useEffect(() => {
     shockwaveMemosRef.current = shockwaveMemos;
   }, [shockwaveMemos]);
+
+  useEffect(() => {
+    currentDateRef.current = { year: currentYear, month: currentMonth };
+  }, [currentYear, currentMonth]);
+
+  const isCurrentScheduleMonth = useCallback((year, month) => (
+    currentDateRef.current.year === year && currentDateRef.current.month === month
+  ), []);
 
   const enqueueShockwaveWrite = useCallback((keys, task) => {
     const targetKeys = Array.from(new Set((keys || []).filter(Boolean)));
@@ -622,7 +631,7 @@ export function ScheduleProvider({ children }) {
     const key = `${weekIndex}-${dayIndex}-${rowIndex}-${colIndex}`;
     return enqueueShockwaveWrite([key], async () => {
       try {
-      const optimisticMemo = shockwaveMemos[key] || {};
+      const optimisticMemo = shockwaveMemosRef.current[key] || {};
       let upsertData = {
         year, month, week_index: weekIndex, day_index: dayIndex, row_index: rowIndex, col_index: colIndex,
         content: content !== undefined ? content : optimisticMemo.content,
@@ -655,14 +664,16 @@ export function ScheduleProvider({ children }) {
       if (error) throw error;
 
       const savedMemo = data?.find(d => d.year === year && d.month === month) || { ...optimisticMemo, ...upsertData };
-      const nextShockwaveMemos = { ...shockwaveMemos, [key]: savedMemo };
+      const nextShockwaveMemos = { ...shockwaveMemosRef.current, [key]: savedMemo };
       
-      setShockwaveMemos(prev => {
-        const next = { ...prev };
-        if (shouldKeepShockwaveMemo(savedMemo)) next[key] = savedMemo;
-        else delete next[key];
-        return next;
-      });
+      if (isCurrentScheduleMonth(year, month)) {
+        setShockwaveMemos(prev => {
+          const next = { ...prev };
+          if (shouldKeepShockwaveMemo(savedMemo)) next[key] = savedMemo;
+          else delete next[key];
+          return next;
+        });
+      }
 
       const today = getTodayKST();
       const todayDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -709,7 +720,7 @@ export function ScheduleProvider({ children }) {
         return false;
       }
     });
-  }, [shockwaveMemos, therapists, manualTherapists, monthlyTherapists, monthlyManualTherapists, shouldKeepShockwaveMemo, protectExistingScheduleContent, enqueueShockwaveWrite]);
+  }, [therapists, manualTherapists, monthlyTherapists, monthlyManualTherapists, shouldKeepShockwaveMemo, protectExistingScheduleContent, enqueueShockwaveWrite, isCurrentScheduleMonth]);
 
   // 다중 셀 동시 업데이트 (병합/병합해제 등)
   const saveShockwaveMemosBulk = useCallback(async (memosArray) => {
@@ -721,11 +732,12 @@ export function ScheduleProvider({ children }) {
       const optimisticMemos = {};
 
       try {
+      const currentMemosSnapshot = shockwaveMemosRef.current;
       memosArray.forEach((item) => {
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-        previousMemos[key] = shockwaveMemos[key];
+        previousMemos[key] = currentMemosSnapshot[key];
         optimisticMemos[key] = {
-          ...(shockwaveMemos[key] || {}),
+          ...(currentMemosSnapshot[key] || {}),
           ...item,
           updated_at: new Date().toISOString()
         };
@@ -757,7 +769,7 @@ export function ScheduleProvider({ children }) {
       if (error) throw error;
 
       const viewRelevantData = (data || guardedMemosArray).filter(d => d.year === currentYear && d.month === currentMonth);
-      const nextShockwaveMemos = { ...shockwaveMemos };
+      const nextShockwaveMemos = { ...shockwaveMemosRef.current };
       viewRelevantData.forEach(item => {
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
         const merged = { ...nextShockwaveMemos[key], ...item };
@@ -765,16 +777,18 @@ export function ScheduleProvider({ children }) {
         else delete nextShockwaveMemos[key];
       });
 
-      setShockwaveMemos(prev => {
-        const next = { ...prev };
-        viewRelevantData.forEach(item => {
-          const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-          const merged = { ...next[key], ...item };
-          if (shouldKeepShockwaveMemo(merged)) next[key] = merged;
-          else delete next[key];
+      if (isCurrentScheduleMonth(currentYear, currentMonth)) {
+        setShockwaveMemos(prev => {
+          const next = { ...prev };
+          viewRelevantData.forEach(item => {
+            const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+            const merged = { ...next[key], ...item };
+            if (shouldKeepShockwaveMemo(merged)) next[key] = merged;
+            else delete next[key];
+          });
+          return next;
         });
-        return next;
-      });
+      }
 
       const weeks = generateShockwaveCalendar(currentYear, currentMonth);
       const affectedDates = new Set();
@@ -837,7 +851,7 @@ export function ScheduleProvider({ children }) {
       return false;
       }
     });
-  }, [currentYear, currentMonth, shockwaveMemos, therapists, manualTherapists, monthlyTherapists, monthlyManualTherapists, shouldKeepShockwaveMemo, protectExistingScheduleContent, enqueueShockwaveWrite]);
+  }, [currentYear, currentMonth, therapists, manualTherapists, monthlyTherapists, monthlyManualTherapists, shouldKeepShockwaveMemo, protectExistingScheduleContent, enqueueShockwaveWrite, isCurrentScheduleMonth]);
 
   // 월별 치료사 설정 로드 (type: 'shockwave' | 'manual_therapy')
   const loadMonthlyTherapists = useCallback(async (year, month, type = 'shockwave') => {
