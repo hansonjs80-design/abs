@@ -3363,19 +3363,18 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       return;
     }
     else if (action?.type === 'memoAdd') {
-      const keys = Array.from(selectedKeys || []);
+      const keys = getContextTargetKeys();
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       const newMemo = String(action.value || '').trim();
       if (!newMemo) return;
       setContextMenuMemoDrafts((prev) => [...prev, newMemo]);
       for (const key of keys) {
-        const [w, d, r, c] = key.split('-').map(Number);
-        const memo = memos[key] || {};
+        const memo = getMemoForAction(key);
         const memoList = getMemoListFromMergeSpan(memo.merge_span);
         const nextMemoList = [...memoList, newMemo];
         const nextMergeSpan = buildMergeSpanWithMemoList(memo.merge_span, nextMemoList);
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part);
+        const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan });
         if (success) anyChanged = true;
       }
       if (anyChanged) {
@@ -3385,17 +3384,16 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       return;
     }
     else if (action?.type === 'memoRemove') {
-      const keys = Array.from(selectedKeys || []);
+      const keys = getContextTargetKeys();
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       setContextMenuMemoDrafts((prev) => prev.filter((_, index) => index !== action.index));
       for (const key of keys) {
-        const [w, d, r, c] = key.split('-').map(Number);
-        const memo = memos[key] || {};
+        const memo = getMemoForAction(key);
         const memoList = getMemoListFromMergeSpan(memo.merge_span);
         const nextMemoList = memoList.filter((_, index) => index !== action.index);
         const nextMergeSpan = buildMergeSpanWithMemoList(memo.merge_span, nextMemoList);
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part);
+        const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan });
         if (success) anyChanged = true;
       }
       if (anyChanged) {
@@ -3405,18 +3403,17 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       return;
     }
     else if (action?.type === 'memoUpdate') {
-      const keys = Array.from(selectedKeys || []);
+      const keys = getContextTargetKeys();
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       const nextValue = String(action.value || '').trim();
       setContextMenuMemoDrafts((prev) => prev.map((item, index) => index === action.index ? nextValue : item).filter(Boolean));
       for (const key of keys) {
-        const [w, d, r, c] = key.split('-').map(Number);
-        const memo = memos[key] || {};
+        const memo = getMemoForAction(key);
         const memoList = getMemoListFromMergeSpan(memo.merge_span);
         const nextMemoList = memoList.map((item, index) => index === action.index ? nextValue : item).filter(Boolean);
         const nextMergeSpan = buildMergeSpanWithMemoList(memo.merge_span, nextMemoList);
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part);
+        const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan });
         if (success) anyChanged = true;
       }
       if (anyChanged) {
@@ -3426,9 +3423,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       return;
     }
     else if (action?.type === 'reservationTime') {
-      const keys = contextMenu
-        ? [`${contextMenu.weekIdx}-${contextMenu.dayIdx}-${contextMenu.rowIdx}-${contextMenu.colIdx}`]
-        : Array.from(selectedKeys || []);
+      const keys = getContextTargetKeys();
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       const nextTime = normalizeReservationTimeValue(action.value);
@@ -3437,12 +3432,11 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
         setContextMenu((prev) => prev ? { ...prev, savedReservationTime: nextTime } : prev);
       }
       for (const key of keys) {
-        const [w, d, r, c] = key.split('-').map(Number);
-        const memo = memos[key] || {};
+        const memo = getMemoForAction(key);
         const nextMergeSpan = buildMergeSpanWithReservationTime(memo.merge_span, nextTime);
         const currentTime = getReservationTimeFromMergeSpan(memo.merge_span);
         if (currentTime === getReservationTimeFromMergeSpan(nextMergeSpan)) continue;
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part);
+        const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan });
         if (success) anyChanged = true;
       }
       if (anyChanged) {
@@ -3452,20 +3446,17 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       return;
     }
     else if (action?.type === 'reservationTimeReset') {
-      const keys = contextMenu
-        ? [`${contextMenu.weekIdx}-${contextMenu.dayIdx}-${contextMenu.rowIdx}-${contextMenu.colIdx}`]
-        : Array.from(selectedKeys || []);
+      const keys = getContextTargetKeys();
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       const defaultTime = contextMenu?.defaultReservationTime || (contextMenu ? getDefaultReservationTime(contextMenu.weekIdx, contextMenu.dayIdx, contextMenu.rowIdx) : '');
       setContextMenuReservationInput(defaultTime);
       for (const key of keys) {
-        const [w, d, r, c] = key.split('-').map(Number);
-        const memo = memos[key] || {};
+        const memo = getMemoForAction(key);
         const currentTime = getReservationTimeFromMergeSpan(memo.merge_span);
         if (!currentTime) continue;
         const nextMergeSpan = buildMergeSpanWithReservationTime(memo.merge_span, '');
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part);
+        const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan });
         if (success) anyChanged = true;
       }
       if (contextMenu) {
@@ -3478,30 +3469,17 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       return;
     }
     else if (action?.type === 'visitCount') {
-      const keys = Array.from(selectedKeys || []);
+      const keys = getContextTargetKeys();
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       const nextVisitInput = normalizeVisitInputValue(action.value);
       setContextMenuVisitInput(nextVisitInput);
       for (const key of keys) {
-        const [w, d, r, c] = key.split('-').map(Number);
-        const memo = memos[key] || {};
+        const memo = getMemoForAction(key);
         const stableContent = getStableMemoContent(key, memo);
         const updatedContent = applyVisitCountToSchedulerContent(stableContent, nextVisitInput);
         if (updatedContent === stableContent) continue;
-        const success = await onSaveMemo(
-          currentYear,
-          currentMonth,
-          w,
-          d,
-          r,
-          c,
-          updatedContent,
-          memo.bg_color,
-          memo.merge_span,
-          memo.prescription,
-          memo.body_part
-        );
+        const success = await saveMemoMeta(key, memo, { content: updatedContent });
         if (success) anyChanged = true;
       }
       if (anyChanged) {
