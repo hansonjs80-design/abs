@@ -968,7 +968,9 @@
   right: -10px;
 }
 
-.has-submenu:hover > .context-menu-submenu {
+.has-submenu:hover > .context-menu-submenu,
+.has-submenu:focus-within > .context-menu-submenu,
+.has-submenu.is-submenu-open > .context-menu-submenu {
   display: flex;
   flex-direction: column;
   gap: 8px;

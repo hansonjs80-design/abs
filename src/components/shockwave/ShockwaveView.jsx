@@ -117,6 +117,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [clipboardSource, setClipboardSource] = useState(null); // { keys: Set, mode: 'copy'|'cut' }
   const [, setUndoStack] = useState([]);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, weekIdx, dayIdx, rowIdx, colIdx, currentPrescription }
+  const [activeContextSubmenu, setActiveContextSubmenu] = useState(null);
   const [contextMenuBodyInput, setContextMenuBodyInput] = useState('');
   const [contextMenuNoteInput, setContextMenuNoteInput] = useState('');
   const [contextMenuMemoDrafts, setContextMenuMemoDrafts] = useState([]);
@@ -1836,6 +1837,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     setEditingCell(null);
     selectSingleCell({ w, d, r, c });
     const key = cellKey(w, d, r, c);
+    setActiveContextSubmenu(null);
     setContextMenuBodyInput('');
     setContextMenuNoteInput('');
     setContextMenuMemoDrafts(getMemoListFromMergeSpan(memos[key]?.merge_span));
@@ -1865,6 +1867,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
 
   useEffect(() => {
     if (!contextMenu) {
+      setActiveContextSubmenu(null);
       setContextMenuBodyInput('');
       setContextMenuNoteInput('');
       setContextMenuMemoDrafts([]);
@@ -3769,6 +3772,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       
       const maxX = Math.max(VIEWPORT_GAP, window.innerWidth - MENU_WIDTH - VIEWPORT_GAP);
       const maxY = Math.max(VIEWPORT_GAP, window.innerHeight - MENU_HEIGHT - VIEWPORT_GAP);
+      setActiveContextSubmenu(null);
       setContextMenu({
         x: Math.min(event.clientX, maxX),
         y: Math.min(event.clientY, maxY),
@@ -4849,7 +4853,11 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                     </label>
                   </div>
 
-                  <div className="context-menu-item has-submenu context-menu-meta-item">
+                  <div
+                    className={`context-menu-item has-submenu context-menu-meta-item${activeContextSubmenu === 'prescription' ? ' is-submenu-open' : ''}`}
+                    onMouseEnter={() => setActiveContextSubmenu('prescription')}
+                    onFocusCapture={() => setActiveContextSubmenu('prescription')}
+                  >
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       처방 : {currentPrescription || '없음'}
                     </span>
@@ -4909,7 +4917,11 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                     </div>
                   </div>
 
-                  <div className="context-menu-item has-submenu context-menu-meta-item">
+                  <div
+                    className={`context-menu-item has-submenu context-menu-meta-item${activeContextSubmenu === 'body' ? ' is-submenu-open' : ''}`}
+                    onMouseEnter={() => setActiveContextSubmenu('body')}
+                    onFocusCapture={() => setActiveContextSubmenu('body')}
+                  >
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       부위 : {currentParts.join(', ') || '없음'}
                     </span>
@@ -5086,7 +5098,11 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                   </label>
                 </div>
 
-                <div className="context-menu-item has-submenu context-menu-meta-item">
+                <div
+                  className={`context-menu-item has-submenu context-menu-meta-item${activeContextSubmenu === 'memo' ? ' is-submenu-open' : ''}`}
+                  onMouseEnter={() => setActiveContextSubmenu('memo')}
+                  onFocusCapture={() => setActiveContextSubmenu('memo')}
+                >
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     메모 : {contextMenuMemoDrafts.length > 0 ? contextMenuMemoDrafts.join(', ') : '없음'}
                   </span>
