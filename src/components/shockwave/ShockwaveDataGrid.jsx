@@ -130,6 +130,7 @@ export default function ShockwaveDataGrid({
   const rowClipboardRef = useRef({ row: null, mode: null });
   const rowOrderRef = useRef(new Map());
   const editSaveRequestRef = useRef(0);
+  const bulkMutationRequestRef = useRef(0);
 
   // ─── 1. DATA PREPARATION ─────────────────────────────────
   const gridData = useMemo(() => {
@@ -754,35 +755,49 @@ export default function ShockwaveDataGrid({
   const doUndo = async () => {
     const action = undoStack[0];
     if (!action) return;
+    const mutationRequestId = ++bulkMutationRequestRef.current;
     setUndoStack(prev => prev.slice(1));
 
-    if (action.type === 'edit') {
-      const { id, field, oldVal, date } = action;
-      await supabase.from(tableName).update({ [field]: oldVal }).eq('id', id);
-      if (date) await runSyncForDate(date);
-    } else if (action.type === 'bulk') {
-      const chunkSize = 50;
-      for (let i = 0; i < action.changes.length; i += chunkSize) {
-        const chunk = action.changes.slice(i, i + chunkSize);
-        await Promise.all(chunk.map(c => {
-          if (c.field === 'prescription_stats') {
-             return supabase.from(tableName).update({ 
-               therapist_name: c.oldVal.t, 
-               prescription: c.oldVal.p, 
-               prescription_count: c.oldVal.c 
+    try {
+      if (action.type === 'edit') {
+        const { id, field, oldVal, date } = action;
+        const { error } = await supabase.from(tableName).update({ [field]: oldVal }).eq('id', id);
+        if (error) throw error;
+        if (date) await runSyncForDate(date);
+      } else if (action.type === 'bulk') {
+        const chunkSize = 50;
+        for (let i = 0; i < action.changes.length; i += chunkSize) {
+          const chunk = action.changes.slice(i, i + chunkSize);
+          const results = await Promise.all(chunk.map(c => {
+            if (c.field === 'prescription_stats') {
+               return supabase.from(tableName).update({
+                 therapist_name: c.oldVal.t,
+                 prescription: c.oldVal.p,
+                 prescription_count: c.oldVal.c
              }).eq('id', c.id);
-          } else {
-             return supabase.from(tableName).update({ [c.field]: c.oldVal }).eq('id', c.id);
-          }
-        }));
+            } else {
+               return supabase.from(tableName).update({ [c.field]: c.oldVal }).eq('id', c.id);
+            }
+          }));
+          const failed = results.find((result) => result?.error);
+          if (failed?.error) throw failed.error;
+        }
+        for (const d of action.affectedDates) {
+          if (d) await runSyncForDate(d);
+        }
       }
-      for (const d of action.affectedDates) {
-        if (d) await runSyncForDate(d);
+      if (bulkMutationRequestRef.current === mutationRequestId) {
+        await fetchLogs();
+      }
+    } catch (error) {
+      console.error('Failed to undo stats grid change:', error);
+      if (bulkMutationRequestRef.current === mutationRequestId) {
+        await fetchLogs();
       }
     }
-    await fetchLogs();
   };
   const doPaste = async (text, startR, startC) => {
+    const mutationRequestId = ++bulkMutationRequestRef.current;
     const affectedDates = new Set();
     const rows = text.split('\n').map(l => l.split('\t'));
     const undoChanges = [];
@@ -840,24 +855,37 @@ export default function ShockwaveDataGrid({
       }
     }
 
-    if (bulkInserts.length > 0) await supabase.from(tableName).insert(bulkInserts);
-    for (const update of bulkUpdates) {
-      await supabase.from(tableName).update(update.data).eq('id', update.id);
-    }
+    try {
+      if (bulkInserts.length > 0) {
+        const { error } = await supabase.from(tableName).insert(bulkInserts);
+        if (error) throw error;
+      }
+      for (const update of bulkUpdates) {
+        const { error } = await supabase.from(tableName).update(update.data).eq('id', update.id);
+        if (error) throw error;
+      }
 
-    // Clear visual source highlight after a successful paste.
-    if (clipboardSource?.mode === 'cut') {
-      await clearRange(clipboardSource);
-    }
-    if (clipboardSource) {
-      setClipboardSource(null);
-    }
+      // Clear visual source highlight after a successful paste.
+      if (clipboardSource?.mode === 'cut') {
+        await clearRange(clipboardSource);
+      }
+      if (clipboardSource) {
+        setClipboardSource(null);
+      }
 
-    recordUndo({ type: 'bulk', changes: undoChanges, affectedDates: Array.from(affectedDates) });
-    rememberCurrentRowOrder();
-    await fetchLogs();
-    for (const d of affectedDates) {
-      if (d) await runSyncForDate(d);
+      recordUndo({ type: 'bulk', changes: undoChanges, affectedDates: Array.from(affectedDates) });
+      rememberCurrentRowOrder();
+      if (bulkMutationRequestRef.current === mutationRequestId) {
+        await fetchLogs();
+        for (const d of affectedDates) {
+          if (d) await runSyncForDate(d);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to paste stats grid range:', error);
+      if (bulkMutationRequestRef.current === mutationRequestId) {
+        await fetchLogs();
+      }
     }
   };
 
@@ -890,8 +918,10 @@ export default function ShockwaveDataGrid({
       }
       if (Object.keys(updatePayload).length > 0) {
         const nextRow = { ...row, ...updatePayload };
-        if (isRowEmpty(nextRow)) await supabase.from(tableName).delete().eq('id', row.id);
-        else await supabase.from(tableName).update(updatePayload).eq('id', row.id);
+        const { error } = isRowEmpty(nextRow)
+          ? await supabase.from(tableName).delete().eq('id', row.id)
+          : await supabase.from(tableName).update(updatePayload).eq('id', row.id);
+        if (error) throw error;
       }
     }
     return { undoChanges, affectedDates: Array.from(affectedDates) };
@@ -899,12 +929,15 @@ export default function ShockwaveDataGrid({
 
   const doDelete = async () => {
     if (!selNorm) return;
+    const mutationRequestId = ++bulkMutationRequestRef.current;
     const { undoChanges, affectedDates } = await clearRange(selNorm);
     recordUndo({ type: 'bulk', changes: undoChanges, affectedDates });
     rememberCurrentRowOrder();
-    await fetchLogs();
-    for (const date of affectedDates) {
-      if (date) await runSyncForDate(date);
+    if (bulkMutationRequestRef.current === mutationRequestId) {
+      await fetchLogs();
+      for (const date of affectedDates) {
+        if (date) await runSyncForDate(date);
+      }
     }
   };
 
