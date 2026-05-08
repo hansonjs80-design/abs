@@ -22,6 +22,7 @@ import useSchedulerAutoText from './useSchedulerAutoText';
 import useScheduleClipboardActions from './useScheduleClipboardActions';
 import useScheduleContextMenuActions from './useScheduleContextMenuActions';
 import useScheduleGlobalEvents from './useScheduleGlobalEvents';
+import useScheduleKeyboardActions from './useScheduleKeyboardActions';
 import useScheduleMergeActions from './useScheduleMergeActions';
 import useScheduleSelectionModel from './useScheduleSelectionModel';
 import useScheduleStatusActions from './useScheduleStatusActions';
@@ -54,10 +55,8 @@ import {
   filterPrescriptionColorMap,
   parseSchedulerPatientIdentity,
   getSchedulerVisitInputValue,
-  getExplicitVisitSuffix,
   normalizeSchedulerVisitSuffix,
   normalizeVisitInputValue,
-  applyVisitCountToSchedulerContent,
   stepVisitInputValue,
   getMemoListFromMergeSpan,
   normalizeReservationTimeValue,
@@ -1528,198 +1527,41 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     });
   }, []);
 
-  // ── 키보드 이벤트 핸들러 (구글 시트 방식) ──
-  const handleKeyDown = useCallback((e) => {
-    if (e.defaultPrevented) return;
-    if (isContextMenuTarget(e.target)) return;
-    if (isUndoShortcutEvent(e)) {
-      if (e.__shockwaveUndoHandled) return;
-      e.__shockwaveUndoHandled = true;
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation?.();
-      doUndo();
-      return;
-    }
-    const isMeta = e.metaKey || e.ctrlKey;
-
-    // Cmd+F → 환자 내역 검색 팝업 (가장 우선 처리)
-    if (isMeta && (e.code === 'KeyF' || e.key.toLowerCase() === 'f')) {
-      e.preventDefault();
-      e.stopPropagation();
-      handleOpenPatientHistoryModal();
-      return;
-    }
-
-    if (isEditableTarget(e.target)) return;
-    if (contextMenu) {
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-      return;
-    }
-    if (!selectedCell) return;
-    const { w, d, r, c } = selectedCell;
-
-    // 편집 중이면 대부분의 키를 무시
-    if (editingCell) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        setEditingCell(null);
-      }
-      return; // 편집 중에는 input이 키 이벤트를 처리
-    }
-
-    // Enter → 편집 모드 진입
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const key = cellKey(w, d, r, c);
-      beginEditingCell(key, memos[key]?.content || '', true);
-      return;
-    }
-
-    // F2 → 편집 모드 진입
-    if (e.key === 'F2') {
-      e.preventDefault();
-      const key = cellKey(w, d, r, c);
-      beginEditingCell(key, memos[key]?.content || '', true);
-      return;
-    }
-
-    // Delete / Backspace → 선택된 셀 내용 삭제
-    if (e.key === 'Delete' || e.key === 'Backspace') {
-      e.preventDefault();
-      deleteCells(selectedKeys);
-      return;
-    }
-
-    // Ctrl/Cmd + Up/Down → 선택된 셀 회차 증가/감소
-    if (isMeta && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-      e.preventDefault();
-      e.stopPropagation();
-      const delta = e.key === 'ArrowUp' ? 1 : -1;
-      const keys = Array.from(selectedKeys || []);
-      const oldMemos = buildMemoSnapshotForKeys(keys);
-      let anyChanged = false;
-
-      (async () => {
-        for (const k of keys) {
-          const [kw, kd, kr, kc] = k.split('-').map(Number);
-          const memo = memos[k] || {};
-          const stableContent = (typeof memo.content === 'string' ? memo.content : pendingDisplayValues[k]) || '';
-          if (!stableContent) continue;
-          
-          // 셀 내용에서 현재 회차 추출 (예: "715/이기성(2)" → "(2)" → "2")
-          const visitSuffix = getExplicitVisitSuffix(stableContent);
-          const currentVisit = visitSuffix.replace(/[()]/g, '') || '';
-          // 회차 증감
-          const nextVisit = stepVisitInputValue(currentVisit, delta);
-          // 셀 내용에 다시 적용
-          const updatedContent = applyVisitCountToSchedulerContent(stableContent, nextVisit);
-          if (updatedContent === stableContent) continue;
-          
-          const success = await onSaveMemo(
-            currentYear, currentMonth, kw, kd, kr, kc, 
-            updatedContent, memo.bg_color, memo.merge_span, memo.prescription, memo.body_part
-          );
-          if (success) anyChanged = true;
-        }
-        if (anyChanged) {
-          recordUndo({ type: 'bulk-edit', oldMemos });
-          addToast(`회차가 ${delta > 0 ? '증가' : '감소'}했습니다.`, 'success');
-        }
-      })();
-      return;
-    }
-
-    // 화살표 키 → 셀 이동
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-      e.preventDefault();
-      const nextCell = getAdjacentCell({ w, d, r, c }, e.key);
-
-      if (e.shiftKey) {
-        setRangeEnd(nextCell);
-        setSelectedKeys(buildRangeKeys(selectedCell, nextCell));
-      } else {
-        selectSingleCell(nextCell);
-      }
-      return;
-    }
-
-    // Ctrl/Cmd+- → 예약 취소 토글
-    if (isMeta && (e.code === 'Minus' || e.key === '-')) {
-      e.preventDefault();
-      e.stopPropagation();
-      handleToggleTreatmentCancel();
-      return;
-    }
-
-    // Ctrl/Cmd+G → 치료 완료 토글
-    if (isMeta && e.code === 'KeyG') {
-      e.preventDefault();
-      e.stopPropagation();
-      handleToggleTreatmentComplete();
-      return;
-    }
-
-    // Ctrl/Cmd+B -> 휴일 배경색 토글
-    if (isMeta && e.code === 'KeyB') {
-      e.preventDefault();
-      e.stopPropagation();
-      handleToggleHolidayBackground();
-      return;
-    }
-
-    // Cmd+E → 병합 / 병합 해제
-    if (isMeta && e.code === 'KeyE') {
-      e.preventDefault();
-      tryMergeSelection();
-      return;
-    }
-
-    // Tab → 우측 이동
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const nc = e.shiftKey ? Math.max(0, c - 1) : Math.min(colCount - 1, c + 1);
-      selectSingleCell({ w, d, r, c: nc });
-      return;
-    }
-
-    // Cmd+C → 복사
-    if (isMeta && e.code === 'KeyC') {
-      e.preventDefault();
-      handleCopySelection();
-      return;
-    }
-
-    // Cmd+X → 잘라내기
-    if (isMeta && e.code === 'KeyX') {
-      e.preventDefault();
-      handleCutSelection();
-      return;
-    }
-
-
-    // 일반 문자 입력 → 편집 모드 진입 (기존 내용 대체)
-    if ((e.key.length === 1 || e.key === 'Process' || e.keyCode === 229) && !isMeta && !e.altKey) {
-      const key = cellKey(w, d, r, c);
-      const isImeCompositionKey =
-        e.key === 'Process' ||
-        e.keyCode === 229 ||
-        e.nativeEvent?.isComposing ||
-        (e.key.length === 1 && e.key.charCodeAt(0) > 127);
-      if (isImeCompositionKey) {
-        imeOpenRef.current = true;
-        // Let the focused hidden input receive the IME composition intact.
-        // Promoting here splits Korean syllables such as "길" into "ㄱㅣㄹ".
-      } else {
-        e.preventDefault();
-        beginEditingCell(key, e.key, false);
-      }
-      return;
-    }
-  }, [contextMenu, selectedCell, editingCell, selectedKeys, deleteCells, buildRangeKeys, selectSingleCell, getAdjacentCell, beginEditingCell, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleTreatmentCancel, handleToggleHolidayBackground, tryMergeSelection, doUndo, isEditableTarget, isContextMenuTarget, cellKey, colCount, memos, handleOpenPatientHistoryModal]);
+  const handleKeyDown = useScheduleKeyboardActions({
+    contextMenu,
+    selectedCell,
+    editingCell,
+    selectedKeys,
+    pendingDisplayValues,
+    currentYear,
+    currentMonth,
+    memos,
+    imeOpenRef,
+    cellKey,
+    colCount,
+    deleteCells,
+    buildRangeKeys,
+    selectSingleCell,
+    getAdjacentCell,
+    beginEditingCell,
+    handleCopySelection,
+    handleCutSelection,
+    handleToggleTreatmentComplete,
+    handleToggleTreatmentCancel,
+    handleToggleHolidayBackground,
+    tryMergeSelection,
+    doUndo,
+    isEditableTarget,
+    isContextMenuTarget,
+    handleOpenPatientHistoryModal,
+    buildMemoSnapshotForKeys,
+    onSaveMemo,
+    recordUndo,
+    addToast,
+    setEditingCell,
+    setRangeEnd,
+    setSelectedKeys,
+  });
 
   useScheduleGlobalEvents({
     viewRef,
