@@ -1,6 +1,30 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
+const LAST_LOGIN_CREDENTIALS_KEY = 'clinic-last-login-credentials';
+
+const readLastLoginCredentials = () => {
+  if (typeof window === 'undefined') return { email: '', password: '' };
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(LAST_LOGIN_CREDENTIALS_KEY) || '{}');
+    return {
+      email: typeof parsed.email === 'string' ? parsed.email : '',
+      password: typeof parsed.password === 'string' ? parsed.password : '',
+    };
+  } catch {
+    return { email: '', password: '' };
+  }
+};
+
+const writeLastLoginCredentials = (email, password) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(LAST_LOGIN_CREDENTIALS_KEY, JSON.stringify({ email, password }));
+  } catch {
+    // localStorage may be unavailable in restricted browser contexts.
+  }
+};
+
 const getAuthMessage = (error, isSignUp) => {
   const message = error?.message || '';
 
@@ -26,8 +50,8 @@ const getAuthMessage = (error, isSignUp) => {
 export default function LoginPage() {
   const { signIn, signUp } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(() => readLastLoginCredentials().email);
+  const [password, setPassword] = useState(() => readLastLoginCredentials().password);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
@@ -52,6 +76,7 @@ export default function LoginPage() {
           setPassword('');
         }
       } else {
+        writeLastLoginCredentials(normalizedEmail, normalizedPassword);
         await signIn(normalizedEmail, normalizedPassword);
       }
     } catch (err) {
@@ -137,8 +162,14 @@ export default function LoginPage() {
               setIsSignUp(nextIsSignUp);
               setError('');
               setInfo('');
-              setEmail('');
-              setPassword('');
+              if (nextIsSignUp) {
+                setEmail('');
+                setPassword('');
+              } else {
+                const credentials = readLastLoginCredentials();
+                setEmail(credentials.email);
+                setPassword(credentials.password);
+              }
               setName('');
             }}
           >

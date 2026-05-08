@@ -91,7 +91,6 @@ function writeStoredNumber(key, value) {
   if (typeof window === 'undefined') return;
   try {
     if (Number.isFinite(value) && value > 0) window.localStorage.setItem(key, String(value));
-    else window.localStorage.removeItem(key);
   } catch {
     // localStorage may be unavailable in restricted browser contexts.
   }
@@ -1285,8 +1284,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (typeof window === 'undefined') return;
     if (Array.isArray(colRatios) && colRatios.length > 0) {
       window.localStorage.setItem(SHOCKWAVE_COL_RATIOS_KEY, JSON.stringify(colRatios));
-    } else {
-      window.localStorage.removeItem(SHOCKWAVE_COL_RATIOS_KEY);
     }
   }, [colRatios]);
 

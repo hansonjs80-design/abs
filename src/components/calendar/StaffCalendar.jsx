@@ -30,7 +30,6 @@ function writeStoredNumber(key, value) {
   if (typeof window === 'undefined') return;
   try {
     if (Number.isFinite(value) && value > 0) window.localStorage.setItem(key, String(value));
-    else window.localStorage.removeItem(key);
   } catch {
     // localStorage may be unavailable in restricted browser contexts.
   }
