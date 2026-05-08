@@ -8,8 +8,6 @@ import { normalizeNameForMatch } from '../../lib/memoParser';
 import { get4060PrescriptionFromContent, has4060Pattern, normalize4060StarOrder } from '../../lib/schedulerContentFormat';
 import { toProperCase } from '../../lib/shockwaveSyncUtils';
 import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
-import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
-import { getEffectiveSchedulerTextSettings } from '../../lib/schedulerTextSettings';
 import { useToast } from '../common/Toast';
 import MonthlyTherapistConfig from './MonthlyTherapistConfig';
 import SchedulerPatientSelector from './SchedulerPatientSelector';
@@ -29,6 +27,7 @@ import useScheduleStatusActions from './useScheduleStatusActions';
 import useStaffScheduleState from './useStaffScheduleState';
 import useScheduleTodayNavigation from './useScheduleTodayNavigation';
 import useScheduleUndoActions from './useScheduleUndoActions';
+import useScheduleViewState from './useScheduleViewState';
 import {
   HORIZONTAL_BORDER_COLOR,
   TIME_COL_WIDTH,
@@ -40,9 +39,7 @@ import {
   splitBodyParts,
   normalizeBodyPartKey,
   formatBodyPartInput,
-  normalizePrescriptionColorKey,
   getPrescriptionColor,
-  filterPrescriptionColorMap,
   parseSchedulerPatientIdentity,
   normalizeSchedulerVisitSuffix,
   normalizeVisitInputValue,
@@ -710,73 +707,22 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   });
 
   const selectionInfo = computeSelectionInfo();
-  const hasCompletableSelection = useMemo(() => {
-    if (!selectedKeys || selectedKeys.size === 0) return false;
-    const effectiveKeys = normalizeKeysToMergeMasters(selectedKeys);
-    return Array.from(effectiveKeys).some((key) => String(memos[key]?.content || '').trim());
-  }, [selectedKeys, memos, normalizeKeysToMergeMasters]);
-
-  const hasCompletedSelection = useMemo(() => {
-    if (!selectedKeys || selectedKeys.size === 0) return false;
-    const effectiveKeys = normalizeKeysToMergeMasters(selectedKeys);
-    return Array.from(effectiveKeys).some((key) => {
-      const memo = memos[key];
-      return String(memo?.content || '').trim() && memo?.bg_color === TREATMENT_COMPLETE_BG;
-    });
-  }, [selectedKeys, memos, normalizeKeysToMergeMasters]);
-
-  const treatmentCompleteButtonLabel = hasCompletedSelection ? '방문취소' : '방문완료';
-  const isAppleShortcutPlatform = useMemo(() => {
-    if (typeof navigator === 'undefined') return false;
-    return /Mac|iPhone|iPad|iPod/i.test(`${navigator.platform || ''} ${navigator.userAgent || ''}`);
-  }, []);
-  const shortcutLabels = useMemo(() => {
-    const mod = isAppleShortcutPlatform ? '⌘' : 'Ctrl';
-    const join = (...keys) => isAppleShortcutPlatform ? keys.join('') : keys.join('+');
-    return {
-      copy: join(mod, 'C'),
-      cut: join(mod, 'X'),
-      paste: join(mod, 'V'),
-      merge: join(mod, 'E'),
-      complete: join(mod, 'G'),
-      cancel: join(mod, '-'),
-      today: join(mod, 'T'),
-    };
-  }, [isAppleShortcutPlatform]);
-  const effectivePrescriptionColors = useMemo(() => {
-    const shockwaveSettlement = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'shockwave');
-    const manualSettlement = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'manual_therapy');
-    const monthlyEntries = settings?.monthly_settlement_settings && typeof settings.monthly_settlement_settings === 'object'
-      ? settings.monthly_settlement_settings
-      : {};
-    const paddedMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
-    const legacyMonthKey = `${currentYear}-${currentMonth}`;
-    const buildDirectMonthColors = (type) => {
-      const legacyEntry = monthlyEntries[legacyMonthKey]?.[type] || {};
-      const paddedEntry = monthlyEntries[paddedMonthKey]?.[type] || {};
-      return {
-        ...filterPrescriptionColorMap(legacyEntry.prescription_colors, legacyEntry.prescriptions),
-        ...filterPrescriptionColorMap(paddedEntry.prescription_colors, paddedEntry.prescriptions),
-      };
-    };
-    const colors = {
-      ...(settings?.prescription_colors || {}),
-      ...filterPrescriptionColorMap(shockwaveSettlement.prescription_colors, shockwaveSettlement.prescriptions),
-      ...filterPrescriptionColorMap(manualSettlement.prescription_colors, manualSettlement.prescriptions),
-      ...buildDirectMonthColors('shockwave'),
-      ...buildDirectMonthColors('manual_therapy'),
-    };
-    return Object.entries(colors).reduce((acc, [key, value]) => {
-      if (!key || !value) return acc;
-      acc[key] = value;
-      acc[normalizePrescriptionColorKey(key)] = value;
-      return acc;
-    }, {});
-  }, [settings, currentYear, currentMonth]);
-  const effectiveSchedulerTextSettings = useMemo(
-    () => getEffectiveSchedulerTextSettings(settings, currentYear, currentMonth),
-    [settings, currentYear, currentMonth]
-  );
+  const {
+    effectivePrescriptionColors,
+    effectiveSchedulerTextSettings,
+    hasCompletableSelection,
+    hasCompletedSelection,
+    shortcutLabels,
+    treatmentCompleteButtonLabel,
+  } = useScheduleViewState({
+    currentMonth,
+    currentYear,
+    memos,
+    normalizeKeysToMergeMasters,
+    selectedKeys,
+    settings,
+    treatmentCompleteBg: TREATMENT_COMPLETE_BG,
+  });
 
   const getAdjacentCell = useCallback((cell, direction) => {
     let { w, d, r, c } = cell;
