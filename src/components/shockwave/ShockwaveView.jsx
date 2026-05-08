@@ -90,6 +90,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [contextMenuMemoDrafts, setContextMenuMemoDrafts] = useState([]);
   const [contextMenuVisitInput, setContextMenuVisitInput] = useState('');
   const [contextMenuReservationInput, setContextMenuReservationInput] = useState('');
+  const [contextSubmenuOffsetY, setContextSubmenuOffsetY] = useState(0);
 
   // 환자 내역 검색 팝업 상태 (Cmd+F)
   const [patientHistoryModalOpen, setPatientHistoryModalOpen] = useState(false);
@@ -1090,6 +1091,68 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     });
   }, []);
 
+  const repositionContextSubmenu = useCallback(() => {
+    const menu = contextMenuRef.current;
+    if (!menu || !activeContextSubmenu) {
+      setContextSubmenuOffsetY(0);
+      return;
+    }
+
+    const submenu = menu.querySelector('.has-submenu.is-submenu-open > .context-menu-submenu');
+    if (!submenu) {
+      setContextSubmenuOffsetY(0);
+      return;
+    }
+
+    const previousTransform = submenu.style.transform;
+    submenu.style.transform = 'translateY(0px)';
+    const rect = submenu.getBoundingClientRect();
+    submenu.style.transform = previousTransform;
+    const VIEWPORT_GAP = 12;
+    let nextOffset = 0;
+    if (rect.bottom > window.innerHeight - VIEWPORT_GAP) {
+      nextOffset = window.innerHeight - VIEWPORT_GAP - rect.bottom;
+    }
+    if (rect.top + nextOffset < VIEWPORT_GAP) {
+      nextOffset += VIEWPORT_GAP - (rect.top + nextOffset);
+    }
+    setContextSubmenuOffsetY(nextOffset);
+  }, [activeContextSubmenu]);
+
+  useEffect(() => {
+    if (!contextMenu) return undefined;
+
+    let frame = window.requestAnimationFrame(() => {
+      repositionContextMenu();
+      repositionContextSubmenu();
+    });
+
+    const handleViewportChange = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        repositionContextMenu();
+        repositionContextSubmenu();
+      });
+    };
+
+    window.addEventListener('resize', handleViewportChange);
+    window.addEventListener('scroll', handleViewportChange, true);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('resize', handleViewportChange);
+      window.removeEventListener('scroll', handleViewportChange, true);
+    };
+  }, [contextMenu, repositionContextMenu, repositionContextSubmenu]);
+
+  useEffect(() => {
+    if (!contextMenu || !activeContextSubmenu) {
+      setContextSubmenuOffsetY(0);
+      return undefined;
+    }
+    const frame = window.requestAnimationFrame(repositionContextSubmenu);
+    return () => window.cancelAnimationFrame(frame);
+  }, [contextMenu, activeContextSubmenu, repositionContextSubmenu]);
+
   const focusEditInputImmediately = useCallback(() => {
     const input = editInputRef.current;
     if (!input) return;
@@ -1840,7 +1903,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         <div
           ref={contextMenuRef}
           className={`shockwave-context-menu ${contextMenu.isNearRightEdge ? 'submenu-pop-left' : ''}`}
-          style={{ top: contextMenu.y, left: contextMenu.x }}
+          style={{
+            top: contextMenu.y,
+            left: contextMenu.x,
+            '--context-submenu-offset-y': `${contextSubmenuOffsetY}px`,
+          }}
           onKeyDown={(e) => e.stopPropagation()}
           onKeyUp={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}

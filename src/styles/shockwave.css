@@ -709,6 +709,7 @@
 
 .shockwave-context-menu {
   position: fixed;
+  --context-submenu-offset-y: 0px;
   background: #ffffff;
   border: 1px solid rgba(148, 163, 184, 0.34);
   border-radius: 12px;
@@ -895,6 +896,7 @@
   position: absolute;
   top: -6px; /* align with parent padding */
   left: calc(100% + 4px); /* pop out to the right */
+  transform: translateY(var(--context-submenu-offset-y));
   background: #ffffff;
   border: 1px solid rgba(148, 163, 184, 0.34);
   border-radius: 12px;
@@ -903,6 +905,8 @@
   min-width: 250px;
   width: max-content;
   max-width: 300px;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
   display: none;
   z-index: 510;
   cursor: default;
