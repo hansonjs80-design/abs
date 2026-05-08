@@ -34,6 +34,7 @@ export default function useScheduleContextMenuActions({
   buildMemoSnapshotForKeys,
   recordUndo,
   setContextMenu,
+  setContextMenuBodyPartOptions,
   setContextMenuMemoDrafts,
   setContextMenuReservationInput,
   setContextMenuVisitInput,
@@ -86,6 +87,28 @@ export default function useScheduleContextMenuActions({
         pick('prescription', memo.prescription),
         pick('body_part', memo.body_part)
       );
+    };
+    const rememberBodyPartOptions = (parts = []) => {
+      if (!setContextMenuBodyPartOptions) return;
+      setContextMenuBodyPartOptions((prev) => {
+        const optionsMap = new Map();
+        (prev || []).forEach((part) => addBodyPartToMap(optionsMap, part));
+        parts.forEach((part) => addBodyPartToMap(optionsMap, part));
+        return Array.from(optionsMap.values());
+      });
+    };
+    const updateContextMemoSnapshot = (key, memo = {}, overrides = {}) => {
+      if (key !== getContextKey()) return;
+      setContextMenu((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          memoSnapshot: {
+            ...(prev.memoSnapshot || memo || {}),
+            ...overrides,
+          },
+        };
+      });
     };
 
     if (action === 'copy') handleCopySelection();
@@ -266,7 +289,10 @@ export default function useScheduleContextMenuActions({
           parts.push(targetPart);
         }
         const updated = parts.join(', ');
-        const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, getBodyPartOptionList(memo, [targetPart, ...parts]));
+        const nextOptions = getBodyPartOptionList(memo, [targetPart, ...parts]);
+        const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, nextOptions);
+        rememberBodyPartOptions(nextOptions);
+        updateContextMemoSnapshot(key, memo, { merge_span: nextMergeSpan, body_part: updated });
         const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan, body_part: updated });
         if (success) anyChanged = true;
       }
@@ -420,6 +446,7 @@ export default function useScheduleContextMenuActions({
     buildMemoSnapshotForKeys,
     recordUndo,
     setContextMenu,
+    setContextMenuBodyPartOptions,
     setContextMenuMemoDrafts,
     setContextMenuReservationInput,
     setContextMenuVisitInput,
