@@ -81,6 +81,7 @@ export default function ManualTherapyStatsPage() {
   const [extraDraftRows, setExtraDraftRows] = useState(0);
   const [isAutoSyncingToday, setIsAutoSyncingToday] = useState(false);
   const lastAutoSyncKeyRef = useRef(null);
+  const scheduleReloadRequestRef = useRef(0);
 
   const safeTherapists = useMemo(
     () => (Array.isArray(manualTherapists) ? manualTherapists.filter(Boolean) : []),
@@ -162,18 +163,20 @@ export default function ManualTherapyStatsPage() {
   }, [loadManualTherapists, loadShockwaveSettings]);
 
   const reloadScheduleData = useCallback(async ({ force = false } = {}) => {
+    const requestId = ++scheduleReloadRequestRef.current;
     setSchedulerMemosReady(false);
     const loadedTherapists = await loadManualTherapists();
     const [loadedMemos, loadedMonthlyTherapists] = await Promise.all([
       loadShockwaveMemos(currentYear, currentMonth, { force }),
       loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy'),
     ]);
-    setSchedulerMemosReady(true);
+    if (scheduleReloadRequestRef.current === requestId) setSchedulerMemosReady(true);
     return { memos: loadedMemos, monthlyTherapists: loadedMonthlyTherapists, therapists: loadedTherapists };
   }, [currentYear, currentMonth, loadShockwaveMemos, loadMonthlyTherapists, loadManualTherapists]);
 
   useEffect(() => {
     let active = true;
+    const requestId = ++scheduleReloadRequestRef.current;
     setSchedulerMemosReady(false);
 
     (async () => {
@@ -182,7 +185,7 @@ export default function ManualTherapyStatsPage() {
         loadShockwaveMemos(currentYear, currentMonth),
         loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy'),
       ]);
-      if (active) setSchedulerMemosReady(true);
+      if (active && scheduleReloadRequestRef.current === requestId) setSchedulerMemosReady(true);
     })();
 
     return () => {

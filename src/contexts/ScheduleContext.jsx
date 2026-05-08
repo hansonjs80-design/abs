@@ -44,6 +44,13 @@ export function ScheduleProvider({ children }) {
   const [calendarSlotSettings, setCalendarSlotSettings] = useState(null);
   const shockwaveWriteQueueRef = useRef(new Map());
   const loadCacheRef = useRef({ staffMemos: null, shockwaveMemos: null, holidays: null });
+  const shockwaveMemosRef = useRef(shockwaveMemos);
+  const shockwaveMemosLoadRequestRef = useRef(0);
+  const monthlyTherapistLoadRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
+
+  useEffect(() => {
+    shockwaveMemosRef.current = shockwaveMemos;
+  }, [shockwaveMemos]);
 
   const enqueueShockwaveWrite = useCallback((keys, task) => {
     const targetKeys = Array.from(new Set((keys || []).filter(Boolean)));
@@ -552,8 +559,9 @@ export function ScheduleProvider({ children }) {
   // 충격파 스케줄 로드 (단일 쿼리 + 캐시 키)
   const loadShockwaveMemos = useCallback(async (year, month, options = {}) => {
     const cacheKey = `${year}-${month}`;
-    if (!options.force && loadCacheRef.current.shockwaveMemos === cacheKey) return;
+    if (!options.force && loadCacheRef.current.shockwaveMemos === cacheKey) return shockwaveMemosRef.current;
     loadCacheRef.current.shockwaveMemos = cacheKey;
+    const requestId = ++shockwaveMemosLoadRequestRef.current;
 
     setLoading(true);
     try {
@@ -585,7 +593,7 @@ export function ScheduleProvider({ children }) {
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
         memoMap[key] = item;
       });
-      if (loadCacheRef.current.shockwaveMemos !== cacheKey) return;
+      if (loadCacheRef.current.shockwaveMemos !== cacheKey || shockwaveMemosLoadRequestRef.current !== requestId) return memoMap;
       setShockwaveMemos(prev => {
         const next = { ...memoMap };
         Object.entries(prev || {}).forEach(([key, memo]) => {
@@ -598,10 +606,14 @@ export function ScheduleProvider({ children }) {
       return memoMap;
     } catch (err) {
       console.error('Failed to load shockwave memos:', err);
-      loadCacheRef.current.shockwaveMemos = null;
+      if (shockwaveMemosLoadRequestRef.current === requestId) {
+        loadCacheRef.current.shockwaveMemos = null;
+      }
       return null;
     } finally {
-      setLoading(false);
+      if (shockwaveMemosLoadRequestRef.current === requestId) {
+        setLoading(false);
+      }
     }
   }, [waitForShockwaveWrites, shouldKeepShockwaveMemo]);
 
@@ -831,6 +843,11 @@ export function ScheduleProvider({ children }) {
   const loadMonthlyTherapists = useCallback(async (year, month, type = 'shockwave') => {
     const fallbackList = type === 'manual_therapy' ? manualTherapists : therapists;
     const setter = type === 'manual_therapy' ? setMonthlyManualTherapists : setMonthlyTherapists;
+    const requestId = (monthlyTherapistLoadRequestRef.current[type] || 0) + 1;
+    monthlyTherapistLoadRequestRef.current[type] = requestId;
+    const applyIfLatest = (rows) => {
+      if (monthlyTherapistLoadRequestRef.current[type] === requestId) setter(rows);
+    };
     try {
       const { data, error } = await supabase
         .from('shockwave_monthly_therapists')
@@ -844,7 +861,7 @@ export function ScheduleProvider({ children }) {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        setter(data);
+        applyIfLatest(data);
         return data;
       }
 
@@ -894,7 +911,7 @@ export function ScheduleProvider({ children }) {
           month,
           type,
         }));
-        setter(inherited);
+        applyIfLatest(inherited);
         return inherited;
       }
 
@@ -925,7 +942,7 @@ export function ScheduleProvider({ children }) {
         month,
         type,
       }));
-      setter(defaults);
+      applyIfLatest(defaults);
       return defaults;
     } catch (err) {
       console.error(`Failed to load monthly therapists (${type}):`, err);

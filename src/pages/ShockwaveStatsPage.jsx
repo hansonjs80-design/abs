@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useSchedule } from '../contexts/ScheduleContext';
 
 const ShockwaveStatsView = React.lazy(() => import('../components/shockwave/ShockwaveStatsView'));
@@ -31,6 +31,7 @@ class ShockwaveStatsPageErrorBoundary extends React.Component {
 
 export default function ShockwaveStatsPage() {
   const [schedulerMemosReady, setSchedulerMemosReady] = useState(false);
+  const scheduleReloadRequestRef = useRef(0);
   const {
     currentYear,
     currentMonth,
@@ -46,19 +47,21 @@ export default function ShockwaveStatsPage() {
   }, [loadTherapists]);
 
   const reloadScheduleData = useCallback(async ({ force = false } = {}) => {
+    const requestId = ++scheduleReloadRequestRef.current;
     setSchedulerMemosReady(false);
     const loadedTherapists = await loadTherapists();
     const [loadedMemos, loadedMonthlyTherapists] = await Promise.all([
       loadShockwaveMemos(currentYear, currentMonth, { force }),
       loadMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
     ]);
-    setSchedulerMemosReady(true);
+    if (scheduleReloadRequestRef.current === requestId) setSchedulerMemosReady(true);
     return { memos: loadedMemos, monthlyTherapists: loadedMonthlyTherapists, therapists: loadedTherapists };
   }, [currentYear, currentMonth, loadShockwaveMemos, loadMonthlyTherapists, loadTherapists]);
 
   // Use useEffect to ensure memos are loaded if navigating here directly
   useEffect(() => {
     let active = true;
+    const requestId = ++scheduleReloadRequestRef.current;
     setSchedulerMemosReady(false);
 
     (async () => {
@@ -67,7 +70,7 @@ export default function ShockwaveStatsPage() {
         loadShockwaveMemos(currentYear, currentMonth),
         loadMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
       ]);
-      if (active) setSchedulerMemosReady(true);
+      if (active && scheduleReloadRequestRef.current === requestId) setSchedulerMemosReady(true);
     })();
 
     return () => {
