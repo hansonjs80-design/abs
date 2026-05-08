@@ -64,6 +64,8 @@ import {
   getReservationTimeFromMergeSpan,
   buildMergeSpanWithReservationTime,
   stripReservationTimeFromMergeSpan,
+  getBodyPartOptionsFromMergeSpan,
+  buildMergeSpanWithBodyPartOptions,
   buildMergeSpanWithVisitCopyLink,
   clearVisitCopyLinkFromMergeSpan,
   isUndoShortcutEvent,
@@ -1862,6 +1864,8 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     const normalizedPatientName = normalizeNameForMatch(patientName);
     const bodyPartsMap = new Map();
 
+    getBodyPartOptionsFromMergeSpan(currentMemo.merge_span).forEach((part) => addBodyPartToMap(bodyPartsMap, part));
+
     Object.entries(memos || {}).forEach(([, memo]) => {
       if (!memo?.content) return;
       const { patientChart: memoChart, patientName: memoName } = parseSchedulerPatientIdentity(memo.content);
@@ -1904,6 +1908,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       rowIdx: r,
       colIdx: c,
       currentPrescription,
+      memoSnapshot: memos[key] || {},
       defaultReservationTime,
       savedReservationTime,
       isNearRightEdge
@@ -3105,10 +3110,33 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
   }, [selectedKeys, memos, currentYear, currentMonth, normalizeKeysToMergeMasters, cellKey, saveShockwaveMemosBulk, addToast, recordUndo]);
 
   const handleContextAction = useCallback(async (action) => {
+    const getContextKey = () => (
+      contextMenu
+        ? `${contextMenu.weekIdx}-${contextMenu.dayIdx}-${contextMenu.rowIdx}-${contextMenu.colIdx}`
+        : null
+    );
+    const getMemoForAction = (key) => (
+      memos[key] || (key === getContextKey() ? contextMenu?.memoSnapshot : null) || {}
+    );
     const getStableMemoContent = (key, memo = {}) => {
       if (typeof memo.content === 'string') return memo.content;
       if (typeof pendingDisplayValues[key] === 'string') return pendingDisplayValues[key];
+      if (key === getContextKey() && typeof contextMenu?.memoSnapshot?.content === 'string') {
+        return contextMenu.memoSnapshot.content;
+      }
       return '';
+    };
+    const getContextTargetKeys = () => (
+      contextMenu
+        ? [getContextKey()]
+        : Array.from(selectedKeys || [])
+    );
+    const getBodyPartOptionList = (memo = {}, nextParts = []) => {
+      const optionsMap = new Map();
+      getBodyPartOptionsFromMergeSpan(memo.merge_span).forEach((part) => addBodyPartToMap(optionsMap, part));
+      splitBodyParts(memo.body_part || '').forEach((part) => addBodyPartToMap(optionsMap, part));
+      nextParts.forEach((part) => addBodyPartToMap(optionsMap, part));
+      return Array.from(optionsMap.values());
     };
 
     if (action === 'copy') handleCopySelection();
@@ -3124,7 +3152,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       
       for (const key of keys) {
         const [w, d, r, c] = key.split('-').map(Number);
-        const memo = memos[key] || {};
+        const memo = getMemoForAction(key);
         let updatedContent = getStableMemoContent(key, memo);
         const prescriptionValue = action.value || '';
         const doseNumber = prescriptionValue.match(/^(40|60)분$/)?.[1];
@@ -3160,15 +3188,17 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       return;
     }
     else if (action?.type === 'bodyPart') {
-      const keys = Array.from(selectedKeys || []);
+      const keys = getContextTargetKeys();
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       
       for (const key of keys) {
         const [w, d, r, c] = key.split('-').map(Number);
-        const memo = memos[key] || {};
+        const memo = getMemoForAction(key);
         if (memo.body_part !== action.value) {
-          const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, action.value);
+          const nextParts = splitBodyParts(action.value || '');
+          const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, getBodyPartOptionList(memo, nextParts));
+          const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, action.value);
           if (success) anyChanged = true;
         }
       }
@@ -3180,17 +3210,19 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     }
     else if (action?.type === 'bodyPartAdd') {
       // 기존 부위에 추가
-      const keys = Array.from(selectedKeys || []);
+      const keys = getContextTargetKeys();
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       for (const key of keys) {
         const [w, d, r, c] = key.split('-').map(Number);
-        const memo = memos[key] || {};
+        const memo = getMemoForAction(key);
         const existing = (memo.body_part || '').trim();
         const newPart = formatBodyPartInput(action.value);
         if (!newPart) continue;
         const combined = existing ? `${existing}, ${newPart}` : newPart;
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, combined);
+        const nextParts = splitBodyParts(combined);
+        const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, getBodyPartOptionList(memo, nextParts));
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, combined);
         if (success) anyChanged = true;
       }
       if (anyChanged) {
@@ -3201,15 +3233,16 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     }
     else if (action?.type === 'bodyPartRemove') {
       // 특정 부위 삭제
-      const keys = Array.from(selectedKeys || []);
+      const keys = getContextTargetKeys();
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       for (const key of keys) {
         const [w, d, r, c] = key.split('-').map(Number);
-        const memo = memos[key] || {};
+        const memo = getMemoForAction(key);
         const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
         const updated = parts.filter((_, i) => i !== action.index).join(', ');
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, updated);
+        const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, getBodyPartOptionList(memo, splitBodyParts(updated)));
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, updated);
         if (success) anyChanged = true;
       }
       if (anyChanged) {
@@ -3219,23 +3252,25 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       return;
     }
     else if (action?.type === 'bodyPartDeleteValue') {
-      // x 버튼: 현재 셀의 body_part에서 해당 부위를 토글(제거)
-      // bodyPartToggle과 동일한 동작으로 통합
-      const keys = Array.from(selectedKeys || []);
+      // x 버튼: 현재 셀과 하부목록 후보에서 해당 부위를 삭제
+      const keys = getContextTargetKeys();
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       const targetPart = action.value.trim();
       for (const key of keys) {
         const [w, d, r, c] = key.split('-').map(Number);
-        const memo = memos[key] || {};
+        const memo = getMemoForAction(key);
         const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
         const idx = parts.findIndex(p => normalizeBodyPartKey(p) === normalizeBodyPartKey(targetPart));
         if (idx >= 0) {
           parts.splice(idx, 1);
         }
         const updated = parts.join(', ');
-        if (updated === (memo.body_part || '').trim()) continue;
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, updated);
+        const targetKey = normalizeBodyPartKey(targetPart);
+        const nextOptions = getBodyPartOptionList(memo, splitBodyParts(updated))
+          .filter((part) => normalizeBodyPartKey(part) !== targetKey);
+        const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, nextOptions);
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, updated);
         if (success) anyChanged = true;
       }
       if (anyChanged) {
@@ -3246,16 +3281,17 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     }
     else if (action?.type === 'bodyPartEdit') {
       // 특정 부위 수정
-      const keys = Array.from(selectedKeys || []);
+      const keys = getContextTargetKeys();
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       for (const key of keys) {
         const [w, d, r, c] = key.split('-').map(Number);
-        const memo = memos[key] || {};
+        const memo = getMemoForAction(key);
         const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
         parts[action.index] = formatBodyPartInput(action.value);
         const updated = parts.filter(Boolean).join(', ');
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, updated);
+        const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, getBodyPartOptionList(memo, splitBodyParts(updated)));
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, updated);
         if (success) anyChanged = true;
       }
       if (anyChanged) {
@@ -3265,13 +3301,14 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       return;
     }
     else if (action?.type === 'bodyPartClear') {
-      const keys = Array.from(selectedKeys || []);
+      const keys = getContextTargetKeys();
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       for (const key of keys) {
         const [w, d, r, c] = key.split('-').map(Number);
-        const memo = memos[key] || {};
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, '');
+        const memo = getMemoForAction(key);
+        const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, getBodyPartOptionList(memo));
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, '');
         if (success) anyChanged = true;
       }
       if (anyChanged) {
@@ -3281,13 +3318,13 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       return;
     }
     else if (action?.type === 'bodyPartToggle') {
-      const keys = Array.from(selectedKeys || []);
+      const keys = getContextTargetKeys();
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       const targetPart = action.value.trim();
       for (const key of keys) {
         const [w, d, r, c] = key.split('-').map(Number);
-        const memo = memos[key] || {};
+        const memo = getMemoForAction(key);
         const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
         const idx = parts.findIndex(p => normalizeBodyPartKey(p) === normalizeBodyPartKey(targetPart));
         if (idx >= 0) {
@@ -3296,7 +3333,8 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
           parts.push(targetPart);
         }
         const updated = parts.join(', ');
-        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, memo.merge_span, memo.prescription, updated);
+        const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, getBodyPartOptionList(memo, [targetPart, ...parts]));
+        const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, getStableMemoContent(key, memo), memo.bg_color, nextMergeSpan, memo.prescription, updated);
         if (success) anyChanged = true;
       }
       if (anyChanged) {
@@ -3453,7 +3491,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
       return;
     }
     setContextMenu(null);
-  }, [selectedKeys, memos, pendingDisplayValues, currentYear, currentMonth, onSaveMemo, addToast, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleTreatmentCancel, tryMergeSelection, buildMemoSnapshotForKeys, recordUndo]);
+  }, [selectedKeys, contextMenu, memos, pendingDisplayValues, currentYear, currentMonth, onSaveMemo, addToast, handleCopySelection, handleCutSelection, handlePasteSelection, handleToggleTreatmentComplete, handleToggleTreatmentCancel, tryMergeSelection, buildMemoSnapshotForKeys, recordUndo]);
 
   const submitContextMenuBodyInput = useCallback(() => {
     const val = contextMenuBodyInput.trim();

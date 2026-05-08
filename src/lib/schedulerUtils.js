@@ -332,6 +332,45 @@ export function getMemoListFromMergeSpan(mergeSpan) {
   return list.map((item) => String(item || '').trim()).filter(Boolean);
 }
 
+export function getBodyPartOptionsFromMergeSpan(mergeSpan) {
+  const list = mergeSpan?.meta?.body_part_options;
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  return list
+    .map((item) => formatBodyPartInput(item))
+    .filter((item) => {
+      if (!item) return false;
+      const key = normalizeBodyPartKey(item);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+export function buildMergeSpanWithBodyPartOptions(mergeSpan, bodyPartOptions) {
+  const base = mergeSpan || { rowSpan: 1, colSpan: 1, mergedInto: null };
+  const seen = new Set();
+  const nextList = Array.isArray(bodyPartOptions)
+    ? bodyPartOptions
+        .map((item) => formatBodyPartInput(item))
+        .filter((item) => {
+          if (!item) return false;
+          const key = normalizeBodyPartKey(item);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+    : [];
+  const nextMeta = { ...(base.meta || {}) };
+  if (nextList.length > 0) nextMeta.body_part_options = nextList;
+  else delete nextMeta.body_part_options;
+
+  const nextMergeSpan = { ...base };
+  if (Object.keys(nextMeta).length > 0) nextMergeSpan.meta = nextMeta;
+  else delete nextMergeSpan.meta;
+  return nextMergeSpan;
+}
+
 // ── Reservation Time Helpers ──
 
 export function normalizeReservationTimeValue(value) {

@@ -73,9 +73,11 @@ export function ScheduleProvider({ children }) {
   const shouldKeepShockwaveMemo = useCallback((memo) => {
     if (!memo) return false;
     const hasContent = Boolean((memo.content || '').trim());
+    const hasBodyPart = Boolean((memo.body_part || '').trim());
     const hasBgColor = memo.bg_color !== undefined && memo.bg_color !== null && memo.bg_color !== '';
     const merge = memo.merge_span;
     const hasMetaMemoList = Array.isArray(merge?.meta?.memo_list) && merge.meta.memo_list.some((item) => String(item || '').trim());
+    const hasBodyPartOptions = Array.isArray(merge?.meta?.body_part_options) && merge.meta.body_part_options.some((item) => String(item || '').trim());
     const hasMerge =
       Boolean(merge) &&
       (
@@ -83,7 +85,7 @@ export function ScheduleProvider({ children }) {
         (merge.colSpan && merge.colSpan !== 1) ||
         merge.mergedInto
       );
-    return hasContent || hasBgColor || hasMerge || hasMetaMemoList;
+    return hasContent || hasBodyPart || hasBgColor || hasMerge || hasMetaMemoList || hasBodyPartOptions;
   }, []);
 
   const protectExistingScheduleContent = useCallback(async (items, localSnapshot = {}) => {
