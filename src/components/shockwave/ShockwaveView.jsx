@@ -1158,15 +1158,23 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (fixEntries.length === 0) return;
 
     (async () => {
-      const bulkUpdates = fixEntries.map(({ key, prescription }) => ({
-        key,
-        content: memos[key]?.content || '',
-        bg_color: memos[key]?.bg_color || null,
-        merge_span: memos[key]?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
-        prescription,
-        body_part: memos[key]?.body_part || null,
-      }));
-      const ok = await saveShockwaveMemosBulk(currentYear, currentMonth, bulkUpdates);
+      const bulkUpdates = fixEntries.map(({ key, prescription }) => {
+        const [weekIndex, dayIndex, rowIndex, colIndex] = key.split('-').map(Number);
+        return {
+          year: currentYear,
+          month: currentMonth,
+          week_index: weekIndex,
+          day_index: dayIndex,
+          row_index: rowIndex,
+          col_index: colIndex,
+          content: memos[key]?.content || '',
+          bg_color: memos[key]?.bg_color || null,
+          merge_span: memos[key]?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+          prescription,
+          body_part: memos[key]?.body_part || null,
+        };
+      });
+      const ok = await saveShockwaveMemosBulk(bulkUpdates);
       if (ok) {
         await onLoadMemos(currentYear, currentMonth);
       }
