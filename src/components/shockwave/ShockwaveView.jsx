@@ -138,6 +138,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [contextMenu, setContextMenu] = useState(null); // { x, y, weekIdx, dayIdx, rowIdx, colIdx, currentPrescription }
   const [activeContextSubmenu, setActiveContextSubmenu] = useState(null);
   const [contextMenuBodyPartOptions, setContextMenuBodyPartOptions] = useState([]);
+  const [contextMenuUncheckedBodyParts, setContextMenuUncheckedBodyParts] = useState(() => new Set());
   const [contextMenuBodyInput, setContextMenuBodyInput] = useState('');
   const [contextMenuNoteInput, setContextMenuNoteInput] = useState('');
   const [contextMenuMemoDrafts, setContextMenuMemoDrafts] = useState([]);
@@ -1863,6 +1864,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     const key = cellKey(w, d, r, c);
     setActiveContextSubmenu(null);
     setContextMenuBodyPartOptions(buildContextMenuBodyPartOptions(key));
+    setContextMenuUncheckedBodyParts(new Set());
     setContextMenuBodyInput('');
     setContextMenuNoteInput('');
     setContextMenuMemoDrafts(getMemoListFromMergeSpan(memos[key]?.merge_span));
@@ -1894,6 +1896,7 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
     if (!contextMenu) {
       setActiveContextSubmenu(null);
       setContextMenuBodyPartOptions([]);
+      setContextMenuUncheckedBodyParts(new Set());
       setContextMenuBodyInput('');
       setContextMenuNoteInput('');
       setContextMenuMemoDrafts([]);
@@ -4962,7 +4965,10 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                             {availableParts.length > 0 ? (
                               <div className="context-menu-checklist">
                                 {availableParts.map((part, idx) => {
-                                  const isChecked = currentParts.some((p) => normalizeBodyPartKey(p) === normalizeBodyPartKey(part));
+                                  const partKey = normalizeBodyPartKey(part);
+                                  const isSavedPart = currentParts.some((p) => normalizeBodyPartKey(p) === partKey);
+                                  const isUncheckedOnly = contextMenuUncheckedBodyParts.has(partKey);
+                                  const isChecked = isSavedPart && !isUncheckedOnly;
                                   return (
                                     <div key={idx} className={`context-menu-check-item${isChecked ? ' is-checked' : ''}`}>
                                       <label className="context-menu-check-label">
@@ -4971,7 +4977,24 @@ const normalizeCellToMergeMaster = useCallback((cell) => {
                                           checked={isChecked}
                                           onChange={(e) => {
                                             e.stopPropagation();
-                                            handleContextAction({ type: 'bodyPartToggle', value: part });
+                                            const nextChecked = e.target.checked;
+                                            if (!nextChecked && isSavedPart) {
+                                              setContextMenuUncheckedBodyParts((prev) => {
+                                                const next = new Set(prev);
+                                                next.add(partKey);
+                                                return next;
+                                              });
+                                              return;
+                                            }
+                                            setContextMenuUncheckedBodyParts((prev) => {
+                                              if (!prev.has(partKey)) return prev;
+                                              const next = new Set(prev);
+                                              next.delete(partKey);
+                                              return next;
+                                            });
+                                            if (!isSavedPart) {
+                                              handleContextAction({ type: 'bodyPartToggle', value: part });
+                                            }
                                           }}
                                           onMouseDown={e => e.stopPropagation()}
                                           onClick={e => e.stopPropagation()}
