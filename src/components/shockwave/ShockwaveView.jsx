@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { useSchedule } from '../../contexts/ScheduleContext';
 
-import { generateShockwaveCalendar, getTodayKST, isSameDate } from '../../lib/calendarUtils';
+import { getTodayKST, isSameDate } from '../../lib/calendarUtils';
 import { supabase } from '../../lib/supabaseClient';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import { get4060PrescriptionFromContent, has4060Pattern, normalize4060StarOrder } from '../../lib/schedulerContentFormat';
@@ -26,6 +26,7 @@ import useScheduleSelectionModel from './useScheduleSelectionModel';
 import useScheduleStatusActions from './useScheduleStatusActions';
 import useStaffScheduleState from './useStaffScheduleState';
 import useScheduleTodayNavigation from './useScheduleTodayNavigation';
+import useScheduleTimeSlots from './useScheduleTimeSlots';
 import useScheduleUndoActions from './useScheduleUndoActions';
 import useScheduleViewState from './useScheduleViewState';
 import {
@@ -197,85 +198,20 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     therapists,
   });
 
-  // ── 시간 슬롯 생성 ──
-  const baseTimeSlots = useMemo(() => {
-    if (!settings || !settings.start_time || !settings.end_time || !settings.interval_minutes) {
-      return Array.from({ length: 31 }, (_, i) => ({ label: `Row ${i}`, time: '' }));
-    }
-    const start = new Date(`2000-01-01T${settings.start_time}`);
-    const end = new Date(`2000-01-01T${settings.end_time}`);
-    const interval = settings.interval_minutes;
-    const slots = [];
-    let current = new Date(start);
-    while (current < end) {
-      const hh = String(current.getHours()).padStart(2, '0');
-      const mm = String(current.getMinutes()).padStart(2, '0');
-      slots.push({ label: `${hh}:${mm}`, time: `${hh}:${mm}` });
-      current = new Date(current.getTime() + interval * 60000);
-    }
-    return slots;
-  }, [settings]);
-
-  const getTimeSlotsForDay = useCallback((dayInfo) => {
-    const dow = dayInfo.dow;
-    const dateStr = dayInfo.dateStr;
-    const dateOv = settings?.date_overrides?.[dateStr] || null;
-    const dayOv = effectiveDayOverrides?.[dow] || {};
-    
-    const dayStart = dateOv?.start_time || dayOv.start_time || (settings?.start_time?.substring(0, 5)) || '09:00';
-    const dayEnd = dateOv?.end_time || dayOv.end_time || (settings?.end_time?.substring(0, 5)) || '18:00';
-    
-    const skipLunch = !dayInfo.isCurrentMonth || dayInfo.isHoliday;
-    const noLunch = dateOv?.no_lunch === true || dayOv.no_lunch === true || skipLunch;
-    
-    const lunchStart = noLunch ? null : (dateOv?.lunch_start || dayOv.lunch_start || null);
-    const lunchEnd = noLunch ? null : (dateOv?.lunch_end || dayOv.lunch_end || null);
-
-    const result = [];
-
-    baseTimeSlots.forEach((slot, idx) => {
-      const t = slot.time;
-      let isBeforeStart = t < dayStart;
-      let isAfterEnd = t >= dayEnd;
-      
-      if (skipLunch) { // 공휴일이거나 다른 달 날짜인 경우 요일별 운영 시간 제약을 무시
-        isBeforeStart = false;
-        isAfterEnd = false;
-      }
-
-      const isLunch = lunchStart && lunchEnd && t >= lunchStart && t < lunchEnd;
-
-      if (isLunch) {
-        result.push({ ...slot, idx, disabled: true, isLunch: true });
-      } else {
-        result.push({ ...slot, idx, disabled: isBeforeStart || isAfterEnd, isLunch: false });
-      }
-    });
-    return result;
-  }, [baseTimeSlots, settings, effectiveDayOverrides]);
-
   const today = getTodayKST();
-  const weeks = useMemo(() => {
-    return generateShockwaveCalendar(currentYear, currentMonth, holidays);
-  }, [currentYear, currentMonth, holidays]);
-
-  const getDefaultReservationTime = useCallback((w, d, r) => {
-    const dayInfo = weeks?.[w]?.days?.[d];
-    const slot = dayInfo ? getTimeSlotsForDay(dayInfo).find((item) => item.idx === r) : null;
-    const slotTime = slot?.time || slot?.label || baseTimeSlots?.[r]?.time || baseTimeSlots?.[r]?.label || '';
-    if (slotTime) return slotTime;
-    if (!settings?.start_time || !settings?.interval_minutes || !Number.isFinite(Number(r))) return '';
-    const start = new Date(`2000-01-01T${settings.start_time}`);
-    if (Number.isNaN(start.getTime())) return '';
-    start.setMinutes(start.getMinutes() + (Number(r) * Number(settings.interval_minutes)));
-    const hh = String(start.getHours()).padStart(2, '0');
-    const mm = String(start.getMinutes()).padStart(2, '0');
-    return `${hh}:${mm}`;
-  }, [baseTimeSlots, getTimeSlotsForDay, settings, weeks]);
-
-  const getReservationTimeForMemo = useCallback((memo, w, d, r) => (
-    getReservationTimeFromMergeSpan(memo?.merge_span) || getDefaultReservationTime(w, d, r)
-  ), [getDefaultReservationTime]);
+  const {
+    baseTimeSlots,
+    getDefaultReservationTime,
+    getReservationTimeForMemo,
+    getTimeSlotsForDay,
+    weeks,
+  } = useScheduleTimeSlots({
+    currentMonth,
+    currentYear,
+    effectiveDayOverrides,
+    holidays,
+    settings,
+  });
 
 
   const { buildSchedulerAutoText } = useSchedulerAutoText({
