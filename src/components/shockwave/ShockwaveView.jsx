@@ -851,7 +851,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     let targetX = window.innerWidth / 2;
     let targetY = window.innerHeight / 2;
     
-    const activeCellEl = document.getElementById(`cell-${keyStr}`);
+    let targetKeyStr = keyStr;
+    const mergeSpan = getEffectiveMergeSpan(keyStr, memos);
+    if (mergeSpan && mergeSpan.mergedInto) {
+      targetKeyStr = mergeSpan.mergedInto;
+    }
+    
+    const activeCellEl = document.getElementById(`cell-${targetKeyStr}`);
     if (activeCellEl) {
       const rect = activeCellEl.getBoundingClientRect();
       targetX = rect.right + 8; // 셀 바로 우측
