@@ -2045,11 +2045,11 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 }
 
 .shockwave-row {
-  grid-template-columns: minmax(92px, 150px) minmax(100px, 140px) 36px 24px auto;
+  grid-template-columns: minmax(92px, 150px) minmax(70px, 90px) minmax(90px, 140px) 36px 24px auto;
 }
 
 .manual-therapy-row {
-  grid-template-columns: minmax(92px, 150px) minmax(100px, 150px) minmax(100px, 140px) 36px 24px auto;
+  grid-template-columns: minmax(92px, 150px) minmax(70px, 90px) minmax(70px, 90px) minmax(90px, 140px) 36px 24px auto;
 }
 
 .settlement-settings-header-row {
@@ -2196,11 +2196,11 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   }
 
   .shockwave-row {
-    grid-template-columns: 1fr 1fr 34px 22px auto;
+    grid-template-columns: 1fr 80px 1fr 34px 22px auto;
   }
   
   .manual-therapy-row {
-    grid-template-columns: 1fr 110px 1fr 34px 22px auto;
+    grid-template-columns: 1fr 80px 80px 1fr 34px 22px auto;
   }
 }
 
