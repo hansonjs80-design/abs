@@ -184,7 +184,7 @@ export default function SettlementSettingsPanel({
         <div className="settlement-settings-grid">
           <div className="settlement-settings-list">
             {isManualTherapy && (
-              <div className="settlement-settings-row settlement-settings-header-row">
+              <div className="settlement-settings-row settlement-settings-header-row manual-therapy-row">
                 <span className="settlement-label" style={{ flex: '1 1 100px' }}>처방 이름</span>
                 <span className="settlement-label" style={{ width: 64, textAlign: 'center' }}>셀 태그</span>
                 <span className="settlement-label" style={{ width: 110, textAlign: 'center' }}>단가</span>
@@ -196,7 +196,7 @@ export default function SettlementSettingsPanel({
             {draft.prescriptions.map((prescription, index) => {
               const doseTag = getDoseTag(prescription);
               return (
-                <div key={`${prescription}-${index}`} className="settlement-settings-row">
+                <div key={`${prescription}-${index}`} className={`settlement-settings-row ${isManualTherapy ? 'manual-therapy-row' : 'shockwave-row'}`}>
                   <input
                     className="form-input settlement-prescription-input"
                     value={prescription}

@@ -851,7 +851,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     currentYear,
     currentMonth,
     memos,
-    shockwaveSettings,
+    shockwaveSettings: settings,
     imeOpenRef,
     cellKey,
     colCount,

@@ -159,9 +159,9 @@ export default function useScheduleKeyboardActions({
       let targetPrescription = '';
       let isManualTherapy = false;
 
-      if (keyNum === '1') targetPrescription = shockwaveSettings?.prescriptions?.[0] || '';
+      if (keyNum === '1') targetPrescription = shockwaveSettings?.prescriptions?.[2] || '';
       else if (keyNum === '2') targetPrescription = shockwaveSettings?.prescriptions?.[1] || '';
-      else if (keyNum === '3') targetPrescription = shockwaveSettings?.prescriptions?.[2] || '';
+      else if (keyNum === '3') targetPrescription = shockwaveSettings?.prescriptions?.[0] || '';
       else if (keyNum === '4') {
         targetPrescription = shockwaveSettings?.manual_therapy_prescriptions?.find(p => p.includes('40')) || '';
         isManualTherapy = true;
