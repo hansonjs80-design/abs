@@ -6,6 +6,7 @@ import {
   stepVisitInputValue,
 } from '../../lib/schedulerUtils';
 import { strip4060FromContent } from '../../lib/schedulerContentFormat';
+import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 
 export default function useScheduleKeyboardActions({
   contextMenu,
@@ -164,15 +165,18 @@ export default function useScheduleKeyboardActions({
       let targetPrescription = '';
       let isManualTherapy = false;
 
+      const effectiveManualSettings = getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'manual_therapy');
+      const effectiveShockwaveSettings = getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'shockwave');
+
       // 1. 도수치료 단축키 검색
-      const manualShortcuts = shockwaveSettings?.manual_therapy_shortcuts || {};
+      const manualShortcuts = effectiveManualSettings?.shortcuts || {};
       const manualPrescription = Object.keys(manualShortcuts).find(p => manualShortcuts[p] === keyNum);
       if (manualPrescription) {
         targetPrescription = manualPrescription;
         isManualTherapy = true;
       } else {
         // 2. 충격파 단축키 검색
-        const shockwaveShortcuts = shockwaveSettings?.shortcuts || {};
+        const shockwaveShortcuts = effectiveShockwaveSettings?.shortcuts || {};
         const swPrescription = Object.keys(shockwaveShortcuts).find(p => shockwaveShortcuts[p] === keyNum);
         if (swPrescription) {
           targetPrescription = swPrescription;
@@ -184,7 +188,7 @@ export default function useScheduleKeyboardActions({
       let doseTag = '';
       if (isManualTherapy) {
          const autoTagMatch = targetPrescription.match(/(\d{2,3})/);
-         doseTag = shockwaveSettings?.manual_therapy_dose_tags?.[targetPrescription] || (autoTagMatch ? autoTagMatch[1] : '');
+         doseTag = effectiveManualSettings?.dose_tags?.[targetPrescription] || shockwaveSettings?.manual_therapy_dose_tags?.[targetPrescription] || (autoTagMatch ? autoTagMatch[1] : '');
       }
 
       (async () => {

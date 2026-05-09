@@ -41,6 +41,10 @@ export function buildBaseSettlementSettings(settings, type = 'shockwave') {
     : settings?.prescriptions;
   const fallback = isManual ? DEFAULT_MANUAL_THERAPY_SETTLEMENT : DEFAULT_SHOCKWAVE_SETTLEMENT;
 
+  const rawShortcuts = isManual
+    ? settings?.manual_therapy_shortcuts
+    : settings?.shortcuts;
+
   return {
     prescriptions: Array.isArray(prescriptions) && prescriptions.length > 0
       ? prescriptions.filter(Boolean)
@@ -52,7 +56,7 @@ export function buildBaseSettlementSettings(settings, type = 'shockwave') {
     prescription_colors: settings?.prescription_colors || {},
     shortcuts: {
       ...fallback.shortcuts,
-      ...(settings?.shortcuts || {}),
+      ...(rawShortcuts || {}),
     },
     incentive_percentage: isManual
       ? settings?.manual_therapy_incentive_percentage ?? fallback.incentive_percentage
