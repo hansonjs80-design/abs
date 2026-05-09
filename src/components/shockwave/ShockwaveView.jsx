@@ -848,21 +848,35 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const keyStr = cellKey(w, d, r, c);
     const memo = memos[keyStr] || {};
     
-    const mouseX = tooltipMousePosRef.current?.x || window.innerWidth / 2;
-    const mouseY = tooltipMousePosRef.current?.y || window.innerHeight / 2;
+    let targetX = window.innerWidth / 2;
+    let targetY = window.innerHeight / 2;
     
-    // 호버 툴팁(일반적으로 마우스 우측 하단 위치)과 살짝만 떨어지도록 위치 조정 (160px 우측)
-    // 우측에 여유가 있으면 우측에 배치, 부족하면 좌측에 배치
-    let targetX = mouseX + 160;
-    if (targetX + 280 > window.innerWidth) {
-      targetX = Math.max(10, mouseX - 260);
+    const activeCellEl = document.querySelector('.sw-cell.primary-selected') || document.querySelector('.sw-cell.selected');
+    if (activeCellEl) {
+      const rect = activeCellEl.getBoundingClientRect();
+      targetX = rect.right + 8; // 셀 바로 우측
+      targetY = rect.top;
+      
+      // 우측 공간이 팝업창 너비(약 260px)보다 부족하면 좌측에 배치
+      if (targetX + 260 > window.innerWidth) {
+        targetX = Math.max(10, rect.left - 260);
+      }
+    } else {
+      // DOM을 못 찾을 경우 폴백 (마우스 위치)
+      const mouseX = tooltipMousePosRef.current?.x || targetX;
+      const mouseY = tooltipMousePosRef.current?.y || targetY;
+      targetX = mouseX + 160;
+      targetY = Math.max(10, mouseY + 15);
+      if (targetX + 280 > window.innerWidth) {
+        targetX = Math.max(10, mouseX - 260);
+      }
     }
     
     const mockEvent = {
       preventDefault: () => {},
       stopPropagation: () => {},
       clientX: targetX,
-      clientY: Math.max(10, mouseY + 15),
+      clientY: targetY,
     };
     
     handleCellContextMenu(mockEvent, w, d, r, c, memo.prescription || '', '');
