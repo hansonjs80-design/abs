@@ -75,6 +75,7 @@ export function getEffectiveSettlementSettings(settings, year, month, type = 'sh
       ...base.prescription_colors,
       ...(override?.prescription_colors || {}),
     },
+    dose_tags: override?.dose_tags || {},
     incentive_percentage: override?.incentive_overridden === true || Number(override?.incentive_percentage) > 0
       ? Number(override?.incentive_percentage) || 0
       : base.incentive_percentage,
@@ -97,6 +98,7 @@ export function setMonthlySettlementSettings(settings, year, month, type, nextCo
         prescriptions: Array.isArray(nextConfig?.prescriptions) ? nextConfig.prescriptions.filter(Boolean) : [],
         prescription_prices: nextConfig?.prescription_prices || {},
         prescription_colors: nextConfig?.prescription_colors || {},
+        ...(nextConfig?.dose_tags ? { dose_tags: nextConfig.dose_tags } : {}),
         incentive_percentage: Number(nextConfig?.incentive_percentage) || 0,
         incentive_overridden: true,
       },

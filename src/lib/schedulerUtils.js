@@ -147,10 +147,8 @@ export function rememberScheduleMonthBackup(year, month, memos) {
 // ── Manual Therapy Helpers ──
 
 export function getManualDoseTag(prescription) {
-  const pres = String(prescription || '');
-  if (pres.includes('60')) return '60';
-  if (pres.includes('40')) return '40';
-  return '';
+  const match = String(prescription || '').match(/(\d{2,3})/);
+  return match ? match[1] : '';
 }
 
 export function buildManualNamePart(patientName, prescription) {

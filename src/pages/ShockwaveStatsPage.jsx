@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSchedule } from '../contexts/ScheduleContext';
 
 const ShockwaveStatsView = React.lazy(() => import('../components/shockwave/ShockwaveStatsView'));
@@ -31,6 +31,7 @@ class ShockwaveStatsPageErrorBoundary extends React.Component {
 
 export default function ShockwaveStatsPage() {
   const [schedulerMemosReady, setSchedulerMemosReady] = useState(false);
+  const [localMonthlyTherapists, setLocalMonthlyTherapists] = useState([]);
   const scheduleReloadRequestRef = useRef(0);
   const {
     currentYear,
@@ -41,6 +42,14 @@ export default function ShockwaveStatsPage() {
     loadShockwaveMemos,
     loadMonthlyTherapists,
   } = useSchedule();
+
+  // 연월 변경 시 로컬 치료사 목록을 즉시 초기화하여 이전 달 데이터가 잔류하지 않도록 함
+  const monthKeyRef = useRef(`${currentYear}-${currentMonth}`);
+  const currentMonthKey = useMemo(() => `${currentYear}-${currentMonth}`, [currentYear, currentMonth]);
+  if (monthKeyRef.current !== currentMonthKey) {
+    monthKeyRef.current = currentMonthKey;
+    setLocalMonthlyTherapists([]);
+  }
 
   useEffect(() => {
     loadTherapists();
@@ -54,7 +63,12 @@ export default function ShockwaveStatsPage() {
       loadShockwaveMemos(currentYear, currentMonth, { force }),
       loadMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
     ]);
-    if (scheduleReloadRequestRef.current === requestId) setSchedulerMemosReady(true);
+    if (scheduleReloadRequestRef.current === requestId) {
+      setSchedulerMemosReady(true);
+      if (Array.isArray(loadedMonthlyTherapists)) {
+        setLocalMonthlyTherapists(loadedMonthlyTherapists);
+      }
+    }
     return { memos: loadedMemos, monthlyTherapists: loadedMonthlyTherapists, therapists: loadedTherapists };
   }, [currentYear, currentMonth, loadShockwaveMemos, loadMonthlyTherapists, loadTherapists]);
 
@@ -66,11 +80,16 @@ export default function ShockwaveStatsPage() {
 
     (async () => {
       await loadTherapists();
-      await Promise.all([
+      const [, loadedMonthlyTherapists] = await Promise.all([
         loadShockwaveMemos(currentYear, currentMonth),
         loadMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
       ]);
-      if (active && scheduleReloadRequestRef.current === requestId) setSchedulerMemosReady(true);
+      if (active && scheduleReloadRequestRef.current === requestId) {
+        setSchedulerMemosReady(true);
+        if (Array.isArray(loadedMonthlyTherapists)) {
+          setLocalMonthlyTherapists(loadedMonthlyTherapists);
+        }
+      }
     })();
 
     return () => {
@@ -105,6 +124,7 @@ export default function ShockwaveStatsPage() {
             therapists={therapists}
             schedulerMemosReady={schedulerMemosReady}
             onReloadMemos={handleReloadMemos}
+            monthlyTherapistsProp={localMonthlyTherapists}
           />
         </Suspense>
       </ShockwaveStatsPageErrorBoundary>

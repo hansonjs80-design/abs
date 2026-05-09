@@ -132,7 +132,7 @@ export default function useSchedulerAutoText({
     const raw = String(text || '').trim();
     if (!raw.includes('/')) return null;
 
-    const match = raw.match(/^([^/]+)\/(.+?(?:40|60)?)((\(-?\d*\))|\*)?$/);
+    const match = raw.match(/^([^/]+)\/(.+?(?:\d{2,3})?)((\(-?\d*\))|\*)?$/);
     if (!match) return null;
 
     const chartNumber = String(match[1] || '').trim();
@@ -541,7 +541,7 @@ export default function useSchedulerAutoText({
 
     let autoText = `${selected.chartNumber}/${selected.namePart}`;
     if (!selected.doseTag && !userRemovedDoseTag) {
-      const inputDoseMatch = rawName.match(/(40|60)(?:\(\d+\))?$/);
+      const inputDoseMatch = rawName.match(/(\d{2,3})(?:\(\d+\))?$/);
       if (inputDoseMatch) {
         autoText += inputDoseMatch[1];
       }

@@ -491,6 +491,7 @@ export function ScheduleProvider({ children }) {
           manual_therapy_incentive_percentage: data.manual_therapy_incentive_percentage ?? 0,
           frozen_columns: data.frozen_columns || 6,
           staff_schedule_block_rules: data.staff_schedule_block_rules || {},
+          manual_therapy_dose_tags: data.manual_therapy_dose_tags || {},
           monthly_settlement_settings: data.monthly_settlement_settings || {}
         });
         return data;
@@ -629,7 +630,7 @@ export function ScheduleProvider({ children }) {
 
       if (error) {
         const message = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
-        const missingOptionalColumn = /monthly_settlement_settings|staff_schedule_block_rules|schema cache|column/i.test(message);
+        const missingOptionalColumn = /monthly_settlement_settings|staff_schedule_block_rules|manual_therapy_dose_tags|schema cache|column/i.test(message);
         if (!missingOptionalColumn) throw error;
 
         console.warn('Optional settings column is missing. Saving compatible global settings only.');

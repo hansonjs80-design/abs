@@ -195,22 +195,22 @@ export function incrementSessionCount(text) {
   const s = String(text || '').trim();
   if (!s) return s;
 
-  // 패턴: chartNo/name[40|60]*(count) 또는 chartNo/name[40|60]*
-  // 1) 괄호 안에 숫자가 있는 경우: 1234/이름(3) 또는 1234/이름40(3)
-  const parenMatch = s.match(/^(.+?\/.*?[가-힣a-zA-Z])(40|60)?(\(\d+\))$/);
+  // 패턴: chartNo/name[dose_tag]*(count) 또는 chartNo/name[dose_tag]*
+  // 1) 괄호 안에 숫자가 있는 경우: 1234/이름(3) 또는 1234/이름30(3)
+  const parenMatch = s.match(/^(.+?\/.*?[가-힣a-zA-Z])(\d{2,3})?(\(\d+\))$/);
   if (parenMatch) {
     const prefix = parenMatch[1];
-    const suffix4060 = parenMatch[2] || '';
+    const suffixDose = parenMatch[2] || '';
     const count = parseInt(parenMatch[3].replace(/[()]/g, ''), 10);
-    return `${prefix}${suffix4060}(${count + 1})`;
+    return `${prefix}${suffixDose}(${count + 1})`;
   }
 
-  // 2) *로 끝나는 경우: 1234/이름* 또는 1234/이름40*  → 1회로 간주 → (2)
-  const starMatch = s.match(/^(.+?\/.*?[가-힣a-zA-Z])(40|60)?(\*+)$/);
+  // 2) *로 끝나는 경우: 1234/이름* 또는 1234/이름30*  → 1회로 간주 → (2)
+  const starMatch = s.match(/^(.+?\/.*?[가-힣a-zA-Z])(\d{2,3})?(\*+)$/);
   if (starMatch) {
     const prefix = starMatch[1];
-    const suffix4060 = starMatch[2] || '';
-    return `${prefix}${suffix4060}(2)`;
+    const suffixDose = starMatch[2] || '';
+    return `${prefix}${suffixDose}(2)`;
   }
 
   // 매칭 안 되면 그대로 반환

@@ -42,9 +42,13 @@ class ShockwaveStatsErrorBoundary extends React.Component {
   }
 }
 
-export default function ShockwaveStatsView({ currentYear, currentMonth, memos, therapists, schedulerMemosReady = false, onReloadMemos }) {
+export default function ShockwaveStatsView({ currentYear, currentMonth, memos, therapists, schedulerMemosReady = false, onReloadMemos, monthlyTherapistsProp }) {
   const { addToast } = useToast();
-  const { shockwaveSettings, monthlyTherapists, loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
+  const { shockwaveSettings, monthlyTherapists: contextMonthlyTherapists, loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
+  // prop으로 전달된 로컬 치료사 목록이 있으면 우선 사용 (전역 상태 race condition 방지)
+  const monthlyTherapists = (Array.isArray(monthlyTherapistsProp) && monthlyTherapistsProp.length > 0)
+    ? monthlyTherapistsProp
+    : contextMonthlyTherapists;
   const [logs, setLogs] = useState([]);
   const [recentLogs, setRecentLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);

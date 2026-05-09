@@ -550,12 +550,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const newBodyPart = result?.bodyPart;
     const newMergeSpan = result?.mergeSpan ? stripReservationTimeFromMergeSpan(result.mergeSpan) : undefined;
 
-    // 이름에 40/60 패턴이 있으면 해당하는 40분/60분 처방을 자동 설정
+    // 이름에 도수치료 숫자 패턴이 있으면 해당 처방을 자동 설정
     const autoDosePrescription = get4060PrescriptionFromContent(newContent);
     if (autoDosePrescription) {
       newPrescription = autoDosePrescription;
-    } else if (!has4060Pattern(newContent) && /^(40|60)분$/.test(memos[key]?.prescription || '')) {
-      // 이름에서 40/60이 없어졌는데 기존 처방이 40분/60분이면 처방 없음으로 변경
+    } else if (!has4060Pattern(newContent) && /^\d{2,3}분$/.test(memos[key]?.prescription || '')) {
+      // 이름에서 숫자 태그가 없어졌는데 기존 처방이 도수치료 처방이면 처방 없음으로 변경
       newPrescription = '';
     }
 
@@ -851,6 +851,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     currentYear,
     currentMonth,
     memos,
+    shockwaveSettings,
     imeOpenRef,
     cellKey,
     colCount,

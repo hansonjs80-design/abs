@@ -44,7 +44,16 @@ export default function TopTabs() {
 
             if (isActive && item.monthLabel) {
               return (
-                <div key={item.path} className={`top-tab active month-tab ${item.tabClass}`}>
+                <div 
+                  key={item.path} 
+                  className={`top-tab active month-tab ${item.tabClass}`}
+                  onClick={(e) => {
+                    if (e.target.closest('.month-picker-label') || e.target.closest('.month-nav-btn') || e.target.closest('.month-dropdown')) return;
+                    const label = e.currentTarget.querySelector('.month-picker-label');
+                    if (label) label.click();
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
                   <Icon size={18} />
                   <MonthPicker suffix={item.monthLabel} variant="tab" />
                 </div>
