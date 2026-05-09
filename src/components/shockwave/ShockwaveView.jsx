@@ -851,7 +851,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     let targetX = window.innerWidth / 2;
     let targetY = window.innerHeight / 2;
     
-    const activeCellEl = document.querySelector('.sw-cell.primary-selected') || document.querySelector('.sw-cell.selected');
+    const activeCellEl = document.getElementById(`cell-${keyStr}`);
     if (activeCellEl) {
       const rect = activeCellEl.getBoundingClientRect();
       targetX = rect.right + 8; // 셀 바로 우측
@@ -1418,7 +1418,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
                           if (showInput) {
                             elements.push(
-                              <div key={key} className={`sw-cell ${isEditing ? 'editing' : ''} ${cls}`} style={inlineStyle}
+                              <div key={key} id={`cell-${key}`} className={`sw-cell ${isEditing ? 'editing' : ''} ${cls}`} style={inlineStyle}
                                 onMouseDown={(e) => {
                                   if (!dayInfo.isCurrentMonth) return;
                                   handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e);
@@ -1516,6 +1516,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             elements.push(
                               <div
                                 key={key}
+                                id={`cell-${key}`}
                                 className={cls}
                                 style={inlineStyle}
                                 onMouseDown={(e) => handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e)}
