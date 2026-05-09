@@ -2099,6 +2099,35 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   letter-spacing: -0.02em;
 }
 
+.settlement-shortcut-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.settlement-shortcut-prefix {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.settlement-shortcut-input {
+  width: 24px;
+  height: 30px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-align: center;
+  padding: 0 2px;
+  color: #c2410c;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+
+.settlement-shortcut-input::placeholder {
+  color: #cbd5e1;
+}
+
 .settlement-prescription-input,
 .settlement-price-input,
 .settlement-add-input {

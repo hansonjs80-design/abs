@@ -491,6 +491,8 @@ export function ScheduleProvider({ children }) {
           manual_therapy_incentive_percentage: data.manual_therapy_incentive_percentage ?? 0,
           frozen_columns: data.frozen_columns || 6,
           staff_schedule_block_rules: data.staff_schedule_block_rules || {},
+          shortcuts: data.shortcuts || {},
+          manual_therapy_shortcuts: data.manual_therapy_shortcuts || {},
           manual_therapy_dose_tags: data.manual_therapy_dose_tags || {},
           monthly_settlement_settings: data.monthly_settlement_settings || {}
         });
@@ -616,6 +618,8 @@ export function ScheduleProvider({ children }) {
         manual_therapy_incentive_percentage: newSettings.manual_therapy_incentive_percentage ?? 0,
         frozen_columns: newSettings.frozen_columns || 6,
         prescription_colors: newSettings.prescription_colors || {},
+        shortcuts: newSettings.shortcuts || {},
+        manual_therapy_shortcuts: newSettings.manual_therapy_shortcuts || {},
         staff_schedule_block_rules: newSettings.staff_schedule_block_rules || {},
         updated_at: nextUpdatedAt
       };
@@ -630,11 +634,11 @@ export function ScheduleProvider({ children }) {
 
       if (error) {
         const message = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
-        const missingOptionalColumn = /monthly_settlement_settings|staff_schedule_block_rules|manual_therapy_dose_tags|schema cache|column/i.test(message);
+        const missingOptionalColumn = /monthly_settlement_settings|staff_schedule_block_rules|manual_therapy_dose_tags|shortcuts|manual_therapy_shortcuts|schema cache|column/i.test(message);
         if (!missingOptionalColumn) throw error;
 
         console.warn('Optional settings column is missing. Saving compatible global settings only.');
-        const { staff_schedule_block_rules, ...compatiblePayload } = basePayload;
+        const { staff_schedule_block_rules, shortcuts, manual_therapy_shortcuts, ...compatiblePayload } = basePayload;
         const { error: retryError } = await supabase
           .from('shockwave_settings')
           .upsert(compatiblePayload, { onConflict: 'id' });

@@ -18,6 +18,7 @@ export default function SettlementSettingsPanel({
     prescription_colors: effectiveSettings?.prescription_colors || settings?.prescription_colors || {},
     incentive_percentage: effectiveSettings?.incentive_percentage ?? 0,
     dose_tags: effectiveSettings?.dose_tags || settings?.manual_therapy_dose_tags || {},
+    shortcuts: effectiveSettings?.shortcuts || (isManualTherapy ? settings?.manual_therapy_shortcuts : settings?.shortcuts) || {},
   }));
 
   const title = isManualTherapy ? '도수치료 결산 설정' : '충격파 결산 설정';
@@ -35,8 +36,9 @@ export default function SettlementSettingsPanel({
       prescription_colors: effectiveSettings?.prescription_colors || settings?.prescription_colors || {},
       incentive_percentage: effectiveSettings?.incentive_percentage ?? 0,
       dose_tags: effectiveSettings?.dose_tags || settings?.manual_therapy_dose_tags || {},
+      shortcuts: effectiveSettings?.shortcuts || (isManualTherapy ? settings?.manual_therapy_shortcuts : settings?.shortcuts) || {},
     });
-  }, [effectiveSettings, settings?.prescription_colors, settings?.manual_therapy_dose_tags]);
+  }, [effectiveSettings, settings?.prescription_colors, settings?.manual_therapy_dose_tags, settings?.shortcuts, settings?.manual_therapy_shortcuts]);
 
   /** 처방별 셀 태그 값을 반환 (사용자 지정 → 자동 추출 순) */
   const getDoseTag = (prescription) => {
@@ -59,10 +61,14 @@ export default function SettlementSettingsPanel({
         const nextColors = { ...(prev.prescription_colors || {}) };
         nextColors[nextValue] = nextColors[previousName] || '#000000';
         delete nextColors[previousName];
-        // 도수치료 태그도 이전 값에서 이전
         if (nextDoseTags[previousName] !== undefined) {
           nextDoseTags[nextValue] = nextDoseTags[previousName];
           delete nextDoseTags[previousName];
+        }
+        const nextShortcuts = { ...prev.shortcuts };
+        if (nextShortcuts[previousName] !== undefined) {
+          nextShortcuts[nextValue] = nextShortcuts[previousName];
+          delete nextShortcuts[previousName];
         }
         return {
           ...prev,
@@ -70,6 +76,7 @@ export default function SettlementSettingsPanel({
           prescription_prices: nextPrices,
           prescription_colors: nextColors,
           dose_tags: nextDoseTags,
+          shortcuts: nextShortcuts,
         };
       }
       return { ...prev, prescriptions: nextPrescriptions, prescription_prices: nextPrices };
@@ -82,15 +89,18 @@ export default function SettlementSettingsPanel({
       const nextPrices = { ...prev.prescription_prices };
       const nextColors = { ...(prev.prescription_colors || {}) };
       const nextDoseTags = { ...prev.dose_tags };
+      const nextShortcuts = { ...prev.shortcuts };
       delete nextPrices[target];
       delete nextColors[target];
       delete nextDoseTags[target];
+      delete nextShortcuts[target];
       return {
         ...prev,
         prescriptions: prev.prescriptions.filter((_, itemIndex) => itemIndex !== index),
         prescription_prices: nextPrices,
         prescription_colors: nextColors,
         dose_tags: nextDoseTags,
+        shortcuts: nextShortcuts,
       };
     });
   };
@@ -135,11 +145,20 @@ export default function SettlementSettingsPanel({
         }
       });
     }
+    const cleanedShortcuts = {};
+    cleanedPrescriptions.forEach(prescription => {
+      const customShortcut = String(draft.shortcuts[prescription] || '').trim();
+      if (customShortcut) {
+        cleanedShortcuts[prescription] = customShortcut;
+      }
+    });
+
     const cleaned = {
       prescriptions: cleanedPrescriptions,
       prescription_prices: draft.prescription_prices,
       prescription_colors: cleanedColors,
       incentive_percentage: Number(draft.incentive_percentage) || 0,
+      shortcuts: cleanedShortcuts,
       ...(isManualTherapy ? { dose_tags: cleanedDoseTags } : {}),
     };
     const monthly_settlement_settings = setMonthlySettlementSettings(settings, year, month, type, cleaned);
@@ -160,9 +179,11 @@ export default function SettlementSettingsPanel({
       nextSettings.manual_therapy_prescriptions = cleaned.prescriptions;
       nextSettings.manual_therapy_incentive_percentage = cleaned.incentive_percentage;
       nextSettings.manual_therapy_dose_tags = { ...cleanedDoseTags };
+      nextSettings.manual_therapy_shortcuts = { ...cleanedShortcuts };
     } else {
       nextSettings.prescriptions = cleaned.prescriptions;
       nextSettings.incentive_percentage = cleaned.incentive_percentage;
+      nextSettings.shortcuts = { ...cleanedShortcuts };
     }
 
     await onSave(nextSettings);
@@ -183,10 +204,20 @@ export default function SettlementSettingsPanel({
 
         <div className="settlement-settings-grid">
           <div className="settlement-settings-list">
-            {isManualTherapy && (
+            {isManualTherapy ? (
               <div className="settlement-settings-row settlement-settings-header-row manual-therapy-row">
                 <span className="settlement-label" style={{ flex: '1 1 100px' }}>처방 이름</span>
                 <span className="settlement-label" style={{ width: 64, textAlign: 'center' }}>셀 태그</span>
+                <span className="settlement-label" style={{ width: 64, textAlign: 'center' }}>단축키</span>
+                <span className="settlement-label" style={{ width: 110, textAlign: 'center' }}>단가</span>
+                <span className="settlement-label" style={{ width: 32, textAlign: 'center' }}>색</span>
+                <span style={{ width: 16 }}></span>
+                <span style={{ width: 44 }}></span>
+              </div>
+            ) : (
+              <div className="settlement-settings-row settlement-settings-header-row shockwave-row">
+                <span className="settlement-label" style={{ flex: '1 1 100px' }}>처방 이름</span>
+                <span className="settlement-label" style={{ width: 64, textAlign: 'center' }}>단축키</span>
                 <span className="settlement-label" style={{ width: 110, textAlign: 'center' }}>단가</span>
                 <span className="settlement-label" style={{ width: 32, textAlign: 'center' }}>색</span>
                 <span style={{ width: 16 }}></span>
@@ -224,6 +255,23 @@ export default function SettlementSettingsPanel({
                       )}
                     </div>
                   )}
+                  <div className="settlement-shortcut-group">
+                    <span className="settlement-shortcut-prefix">Cmd+</span>
+                    <input
+                      className="form-input settlement-shortcut-input"
+                      value={draft.shortcuts[prescription] || ''}
+                      placeholder="—"
+                      title="Cmd/Ctrl + 숫자 로 처방 단축키 설정"
+                      maxLength={1}
+                      onChange={(event) => {
+                        const val = event.target.value.replace(/[^1-9]/g, '');
+                        setDraft((prev) => ({
+                          ...prev,
+                          shortcuts: { ...prev.shortcuts, [prescription]: val },
+                        }));
+                      }}
+                    />
+                  </div>
                   <input
                     type="number"
                     className="form-input settlement-price-input"

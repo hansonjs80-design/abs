@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 import { generateShockwaveCalendar, getTodayKST } from './calendarUtils';
-import { has4060Pattern } from './schedulerContentFormat';
+import { has4060Pattern, get4060PrescriptionFromContent } from './schedulerContentFormat';
 
 /** 처방명 비교용 정규화 – 띄어쓰기·슬래시·대소문자 무시 */
 function normalizePrescriptionKeySync(value) {
@@ -308,8 +308,8 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
       visit_count: parsed.visit_count || '',
       body_part: cell?.body_part || parsed.body_part || '',
       therapist_name: therapistName,
-      prescription: cell?.prescription || '',
-      prescription_count: cell?.prescription ? 1 : null,
+      prescription: cell?.prescription || get4060PrescriptionFromContent(cell?.content) || '',
+      prescription_count: (cell?.prescription || get4060PrescriptionFromContent(cell?.content)) ? 1 : null,
     });
   });
 

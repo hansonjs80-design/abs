@@ -147,28 +147,31 @@ export default function useScheduleKeyboardActions({
       return;
     }
 
-    if (isMeta && ['1', '2', '3', '4', '6'].includes(e.key)) {
+    if (isMeta && /^[1-9]$/.test(e.key)) {
       e.preventDefault();
       e.stopPropagation();
 
       const keys = Array.from(selectedKeys || []);
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
-      const keyNum = e.key;
 
+      const keyNum = e.key;
       let targetPrescription = '';
       let isManualTherapy = false;
 
-      if (keyNum === '1') targetPrescription = shockwaveSettings?.prescriptions?.[0] || '';
-      else if (keyNum === '2') targetPrescription = shockwaveSettings?.prescriptions?.[1] || '';
-      else if (keyNum === '3') targetPrescription = shockwaveSettings?.prescriptions?.[2] || '';
-      else if (keyNum === '4') {
-        targetPrescription = shockwaveSettings?.manual_therapy_prescriptions?.find(p => p.includes('40')) || '';
+      // 1. 도수치료 단축키 검색
+      const manualShortcuts = shockwaveSettings?.manual_therapy_shortcuts || {};
+      const manualPrescription = Object.keys(manualShortcuts).find(p => manualShortcuts[p] === keyNum);
+      if (manualPrescription) {
+        targetPrescription = manualPrescription;
         isManualTherapy = true;
-      }
-      else if (keyNum === '6') {
-        targetPrescription = shockwaveSettings?.manual_therapy_prescriptions?.find(p => p.includes('60')) || '';
-        isManualTherapy = true;
+      } else {
+        // 2. 충격파 단축키 검색
+        const shockwaveShortcuts = shockwaveSettings?.shortcuts || {};
+        const swPrescription = Object.keys(shockwaveShortcuts).find(p => shockwaveShortcuts[p] === keyNum);
+        if (swPrescription) {
+          targetPrescription = swPrescription;
+        }
       }
 
       if (!targetPrescription) return;
