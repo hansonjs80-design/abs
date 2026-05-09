@@ -147,7 +147,11 @@ export default function useScheduleKeyboardActions({
       return;
     }
 
-    if (isMeta && /^[1-9]$/.test(e.key)) {
+    // 맥 등에서 한글 입력 상태일 때 e.key가 다를 수 있으므로 e.code(Digit1~Digit9)도 함께 체크
+    const isDigitCode = /^Digit([1-9])$/.test(e.code);
+    const isDigitKey = /^[1-9]$/.test(e.key);
+
+    if (isMeta && (isDigitKey || isDigitCode)) {
       e.preventDefault();
       e.stopPropagation();
 
@@ -155,7 +159,8 @@ export default function useScheduleKeyboardActions({
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
 
-      const keyNum = e.key;
+      const keyMatch = e.code.match(/^Digit([1-9])$/);
+      const keyNum = keyMatch ? keyMatch[1] : e.key;
       let targetPrescription = '';
       let isManualTherapy = false;
 

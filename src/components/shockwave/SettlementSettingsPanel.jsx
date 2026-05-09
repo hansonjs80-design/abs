@@ -259,7 +259,7 @@ export default function SettlementSettingsPanel({
                     <span className="settlement-shortcut-prefix">Cmd+</span>
                     <input
                       className="form-input settlement-shortcut-input"
-                      value={draft.shortcuts[prescription] || ''}
+                      value={draft.shortcuts?.[prescription] || ''}
                       placeholder="—"
                       title="Cmd/Ctrl + 숫자 로 처방 단축키 설정"
                       maxLength={1}
@@ -267,7 +267,7 @@ export default function SettlementSettingsPanel({
                         const val = event.target.value.replace(/[^1-9]/g, '');
                         setDraft((prev) => ({
                           ...prev,
-                          shortcuts: { ...prev.shortcuts, [prescription]: val },
+                          shortcuts: { ...(prev.shortcuts || {}), [prescription]: val },
                         }));
                       }}
                     />
