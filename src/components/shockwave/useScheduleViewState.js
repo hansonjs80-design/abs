@@ -44,7 +44,7 @@ export default function useScheduleViewState({
       paste: join(mod, 'V'),
       merge: join(mod, 'E'),
       complete: join(mod, 'G'),
-      cancel: join(mod, '-'),
+      cancel: join(mod, 'D'),
       today: join(mod, 'T'),
     };
   }, [isAppleShortcutPlatform]);
