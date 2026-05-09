@@ -2222,6 +2222,78 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         </div>
       )}
 
+      {(() => {
+        let hoverTooltipText = '';
+        if (hoverCell) {
+          const { weekIdx, dayIdx, rowIdx, colIdx, staffBlockRule, slotInfo, selectionInfo, isMergedView } = hoverCell;
+          const keyStr = cellKey(weekIdx, dayIdx, rowIdx, colIdx);
+          const cellData = memos[keyStr] || {};
+          const content = typeof pendingDisplayValues[keyStr] === 'string' ? pendingDisplayValues[keyStr] : cellData.content;
+          const cellPrescription = cellData.prescription || '';
+          
+          let text = '';
+          if (isMergedView) {
+            const daySlots = getTimeSlotsForDay(weekIdx, dayIdx);
+            const t1_time = new Date(daySlots[selectionInfo.minRow].date);
+            const t2_time = new Date(daySlots[selectionInfo.maxRow].date);
+            t2_time.setMinutes(t2_time.getMinutes() + (settings?.interval_minutes || 30));
+            
+            const t1_hh = String(t1_time.getHours()).padStart(2, '0');
+            const t1_mm = String(t1_time.getMinutes()).padStart(2, '0');
+            const t1 = `${t1_hh}:${t1_mm}`;
+            
+            const t2_hh = String(t2_time.getHours()).padStart(2, '0');
+            const t2_mm = String(t2_time.getMinutes()).padStart(2, '0');
+            const t2 = `${t2_hh}:${t2_mm}`;
+            
+            const diffMin = (selectionInfo.maxRow - selectionInfo.minRow + 1) * (settings?.interval_minutes || 30);
+            const hrs = Math.floor(diffMin / 60);
+            const mns = diffMin % 60;
+            let dStr = '';
+            if (hrs > 0) dStr += `${hrs}시간`;
+            if (mns > 0) dStr += (hrs > 0 ? ' ' : '') + `${mns}분`;
+            
+            text = `⏱ ${t1} ~ ${t2} (총 ${dStr})`;
+            if (content && content !== '\u200B') text += `\n👤 ${content}`;
+          } else {
+            const reservationTime = getReservationTimeForMemo(cellData, weekIdx, dayIdx, rowIdx);
+            text = `⏱ ${reservationTime || slotInfo.label}`;
+            if (content && content !== '\u200B') text += `\n👤 ${content}`;
+          }
+          
+          if (staffBlockRule) text += `\n근무표: ${staffBlockRule.keyword}`;
+          if (cellPrescription) text += `\n💊 처방: ${cellPrescription}`;
+          if (cellData?.body_part) text += `\n🦴 부위: ${cellData.body_part}`;
+          const memoList = getMemoListFromMergeSpan(cellData?.merge_span);
+          if (memoList.length > 0) text += `\n📝 메모: ${memoList.join(' / ')}`;
+          hoverTooltipText = text;
+        }
+
+        return hoverCell && hoverTooltipText && (
+          <div
+            ref={tooltipRef}
+            className="sw-custom-tooltip"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              opacity: 0,
+            }}
+          >
+            {hoverTooltipText.split('\n').map((line, i) => (
+              <div key={i} className={i === 0 ? 'sw-custom-tooltip-time' : undefined}>
+                {i === 0 && line.startsWith('⏱') ? (
+                  <>
+                    <span className="sw-custom-tooltip-clock">⏱</span>
+                    {line.slice(1)}
+                  </>
+                ) : line}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
       {todayShortcutTooltip && (
         <div
           className="sw-shortcut-floating-tooltip"
