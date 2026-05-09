@@ -848,12 +848,21 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const keyStr = cellKey(w, d, r, c);
     const memo = memos[keyStr] || {};
     
-    // 내용 유무와 관계없이 우클릭 메뉴를 띄우되, 부위 서브메뉴를 바로 열도록
+    const mouseX = tooltipMousePosRef.current?.x || window.innerWidth / 2;
+    const mouseY = tooltipMousePosRef.current?.y || window.innerHeight / 2;
+    
+    // 호버 툴팁(일반적으로 마우스 우측 하단 위치)과 겹치지 않도록 위치 조정
+    // 우측에 여유가 있으면 우측에 배치, 부족하면 좌측에 배치
+    let targetX = mouseX + 260;
+    if (targetX + 250 > window.innerWidth) {
+      targetX = Math.max(10, mouseX - 250);
+    }
+    
     const mockEvent = {
       preventDefault: () => {},
       stopPropagation: () => {},
-      clientX: tooltipMousePosRef.current?.x || window.innerWidth / 2,
-      clientY: tooltipMousePosRef.current?.y || window.innerHeight / 2,
+      clientX: targetX,
+      clientY: Math.max(10, mouseY + 15),
     };
     
     handleCellContextMenu(mockEvent, w, d, r, c, memo.prescription || '', '');
