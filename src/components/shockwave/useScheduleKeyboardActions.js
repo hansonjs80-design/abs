@@ -275,8 +275,7 @@ export default function useScheduleKeyboardActions({
       e.stopPropagation();
       
       const delta = (e.code === 'Minus' || e.key === '-') ? -1 : 1;
-      const interval = shockwaveSettings?.interval_minutes || 30;
-      const deltaMinutes = delta * interval;
+      const deltaMinutes = delta * 10; // 항상 10분 단위로 증감
       
       const keys = Array.from(selectedKeys || []);
       const oldMemos = buildMemoSnapshotForKeys(keys);
