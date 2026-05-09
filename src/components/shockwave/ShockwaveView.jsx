@@ -2231,30 +2231,35 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           const content = typeof pendingDisplayValues[keyStr] === 'string' ? pendingDisplayValues[keyStr] : cellData.content;
           const cellPrescription = cellData.prescription || '';
           
+          const isSelectionHover = selectionInfo && selectionInfo.w === weekIdx && selectionInfo.d === dayIdx && selectionInfo.minRow !== selectionInfo.maxRow && selectedKeys && selectedKeys.has(keyStr);
+          
           let text = '';
-          if (isMergedView) {
+          if (isSelectionHover) {
             const daySlots = getTimeSlotsForDay(weekIdx, dayIdx);
-            const t1_time = new Date(daySlots[selectionInfo.minRow].date);
-            const t2_time = new Date(daySlots[selectionInfo.maxRow].date);
-            t2_time.setMinutes(t2_time.getMinutes() + (settings?.interval_minutes || 30));
-            
-            const t1_hh = String(t1_time.getHours()).padStart(2, '0');
-            const t1_mm = String(t1_time.getMinutes()).padStart(2, '0');
-            const t1 = `${t1_hh}:${t1_mm}`;
-            
-            const t2_hh = String(t2_time.getHours()).padStart(2, '0');
-            const t2_mm = String(t2_time.getMinutes()).padStart(2, '0');
-            const t2 = `${t2_hh}:${t2_mm}`;
-            
-            const diffMin = (selectionInfo.maxRow - selectionInfo.minRow + 1) * (settings?.interval_minutes || 30);
-            const hrs = Math.floor(diffMin / 60);
-            const mns = diffMin % 60;
-            let dStr = '';
-            if (hrs > 0) dStr += `${hrs}시간`;
-            if (mns > 0) dStr += (hrs > 0 ? ' ' : '') + `${mns}분`;
-            
-            text = `⏱ ${t1} ~ ${t2} (총 ${dStr})`;
-            if (content && content !== '\u200B') text += `\n👤 ${content}`;
+            const sStart = daySlots.find(s => s.idx === selectionInfo.minRow);
+            const sEnd = daySlots.find(s => s.idx === selectionInfo.maxRow);
+            if (sStart && sEnd) {
+              const t1 = sStart.time || sStart.label;
+              const t2_time = new Date(`2000-01-01T${sEnd.time || sEnd.label}:00`);
+              t2_time.setMinutes(t2_time.getMinutes() + (settings?.interval_minutes || 30));
+              const t2_hh = String(t2_time.getHours()).padStart(2, '0');
+              const t2_mm = String(t2_time.getMinutes()).padStart(2, '0');
+              const t2 = `${t2_hh}:${t2_mm}`;
+              
+              const diffMin = (selectionInfo.maxRow - selectionInfo.minRow + 1) * (settings?.interval_minutes || 30);
+              const hrs = Math.floor(diffMin / 60);
+              const mns = diffMin % 60;
+              let dStr = '';
+              if (hrs > 0) dStr += `${hrs}시간`;
+              if (mns > 0) dStr += (hrs > 0 ? ' ' : '') + `${mns}분`;
+              
+              text = `⏱ ${t1} ~ ${t2} (총 ${dStr})`;
+              if (content && content !== '\u200B') text += `\n👤 ${content}`;
+            } else {
+              const reservationTime = getReservationTimeForMemo(cellData, weekIdx, dayIdx, rowIdx);
+              text = `⏱ ${reservationTime || slotInfo.label}`;
+              if (content && content !== '\u200B') text += `\n👤 ${content}`;
+            }
           } else {
             const reservationTime = getReservationTimeForMemo(cellData, weekIdx, dayIdx, rowIdx);
             text = `⏱ ${reservationTime || slotInfo.label}`;
