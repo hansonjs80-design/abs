@@ -277,8 +277,9 @@ export default function useScheduleContextMenuActions({
     else if (action?.type === 'bodyPartToggle') {
       const keys = getContextTargetKeys();
       const oldMemos = buildMemoSnapshotForKeys(keys);
-      let anyChanged = false;
       const targetPart = action.value.trim();
+
+      // 즉시 UI 반영을 위해 먼저 로컬 스냅샷 업데이트
       for (const key of keys) {
         const memo = getMemoForAction(key);
         const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
@@ -292,7 +293,24 @@ export default function useScheduleContextMenuActions({
         const nextOptions = getBodyPartOptionList(memo, [targetPart, ...parts]);
         const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, nextOptions);
         rememberBodyPartOptions(nextOptions);
+        // 동기적으로 contextMenu 스냅샷 갱신 → 다음 클릭에서 최신 body_part를 참조
         updateContextMemoSnapshot(key, memo, { merge_span: nextMergeSpan, body_part: updated });
+      }
+
+      // DB 저장은 비동기로 처리 (UI는 이미 갱신됨)
+      let anyChanged = false;
+      for (const key of keys) {
+        const memo = getMemoForAction(key);
+        const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
+        const idx = parts.findIndex(p => normalizeBodyPartKey(p) === normalizeBodyPartKey(targetPart));
+        if (idx >= 0) {
+          parts.splice(idx, 1);
+        } else {
+          parts.push(targetPart);
+        }
+        const updated = parts.join(', ');
+        const nextOptions = getBodyPartOptionList(memo, [targetPart, ...parts]);
+        const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, nextOptions);
         const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan, body_part: updated });
         if (success) anyChanged = true;
       }
