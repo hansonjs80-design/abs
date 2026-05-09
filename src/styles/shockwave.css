@@ -2749,20 +2749,40 @@
   background: transparent !important;
   box-shadow: none !important;
 }
-.shockwave-context-menu.standalone-mode > button,
-.shockwave-context-menu.standalone-mode > .context-menu-item,
-.shockwave-context-menu.standalone-mode > .context-menu-divider {
+
+/* Hide all direct children EXCEPT .context-menu-meta-section */
+.shockwave-context-menu.standalone-mode > *:not(.context-menu-meta-section) {
   display: none !important;
 }
-.shockwave-context-menu.standalone-mode > .context-menu-item.is-submenu-open {
+
+/* For the meta-section, we need it visible but with no styling */
+.shockwave-context-menu.standalone-mode > .context-menu-meta-section {
   display: block !important;
   padding: 0 !important;
-  pointer-events: none;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
-.shockwave-context-menu.standalone-mode > .context-menu-item.is-submenu-open > span {
+
+/* Inside the meta-section, hide all direct children EXCEPT the one that is the open submenu */
+.shockwave-context-menu.standalone-mode > .context-menu-meta-section > *:not(.is-submenu-open) {
   display: none !important;
 }
-.shockwave-context-menu.standalone-mode > .context-menu-item.is-submenu-open > .context-menu-submenu {
+
+/* The open submenu container itself */
+.shockwave-context-menu.standalone-mode > .context-menu-meta-section > .is-submenu-open {
+  display: block !important;
+  padding: 0 !important;
+  pointer-events: none; /* Ignore clicks on the wrapper */
+}
+
+/* Hide the "부위 : Hand" label */
+.shockwave-context-menu.standalone-mode > .context-menu-meta-section > .is-submenu-open > span {
+  display: none !important;
+}
+
+/* Show the actual dropdown panel */
+.shockwave-context-menu.standalone-mode > .context-menu-meta-section > .is-submenu-open > .context-menu-submenu {
   position: static !important;
   display: block !important;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
@@ -2770,6 +2790,6 @@
   border-radius: 8px !important;
   background: var(--bg-primary) !important;
   margin: 0 !important;
-  pointer-events: auto;
+  pointer-events: auto; /* Re-enable clicks */
   min-width: max-content;
 }
