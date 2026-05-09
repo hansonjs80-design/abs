@@ -128,7 +128,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const tooltipRef = useRef(null);
   const tooltipMousePosRef = useRef({ x: 0, y: 0 });
   const weekRefs = useRef([]);
-  const [hoverData, setHoverData] = useState(null);
+  const [hoverCell, setHoverCell] = useState(null);
   const [todayShortcutTooltip, setTodayShortcutTooltip] = useState(null);
   const [chartSelector, setChartSelector] = useState(null);
   const [imePreviewCell, setImePreviewCell] = useState(null);
@@ -877,6 +877,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setEditingCell,
     setRangeEnd,
     setSelectedKeys,
+    getDefaultReservationTime,
   });
 
   useScheduleGlobalEvents({
@@ -993,17 +994,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
     tooltipEl.style.left = `${left}px`;
     tooltipEl.style.top = `${top}px`;
-    tooltipEl.style.opacity = hoverData ? '1' : '0';
-  }, [hoverData]);
+    tooltipEl.style.opacity = hoverCell ? '1' : '0';
+  }, [hoverCell]);
 
   useEffect(() => {
-    if (!hoverData || !tooltipRef.current) return;
+    if (!hoverCell || !tooltipRef.current) return;
     const { x, y } = tooltipMousePosRef.current;
     const rafId = window.requestAnimationFrame(() => {
       positionTooltip(x, y);
     });
     return () => window.cancelAnimationFrame(rafId);
-  }, [hoverData, positionTooltip]);
+  }, [hoverCell, positionTooltip]);
 
   const {
     todayWeekIdx,
@@ -1037,7 +1038,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           '--sw-therapist-cols': therapistColsCSS,
           '--sw-day-col-width': dayColWidth ? `${dayColWidth}px` : 'none',
         }}
-        onMouseLeave={() => setHoverData(null)}
+        onMouseLeave={() => setHoverCell(null)}
         onMouseMove={(e) => {
           tooltipMousePosRef.current = { x: e.clientX, y: e.clientY };
           if (tooltipRef.current) positionTooltip(e.clientX, e.clientY);
@@ -1380,17 +1381,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 onMouseEnter={() => {
                                   if (!dayInfo.isCurrentMonth) return;
                                   handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
-                                  const reservationTime = getReservationTimeForMemo(cellData, weekIdx, dayIdx, rowIdx);
-                                  let text = `⏱ ${reservationTime || slotInfo.label}`;
-                                  if (content && content !== '\u200B') text += `\n👤 ${content}`;
-                                  if (staffBlockRule) text += `\n근무표: ${staffBlockRule.keyword}`;
-                                  if (cellPrescription) text += `\n💊 처방: ${cellPrescription}`;
-                                  if (cellData?.body_part) text += `\n🦴 부위: ${cellData.body_part}`;
-                                  const memoList = getMemoListFromMergeSpan(cellData?.merge_span);
-                                  if (memoList.length > 0) text += `\n📝 메모: ${memoList.join(' / ')}`;
-                                  setHoverData({ text });
+                                  setHoverCell({ weekIdx, dayIdx, rowIdx, colIdx, staffBlockRule, slotInfo, selectionInfo, isMergedView: false });
                                 }}
-                                onMouseLeave={() => setHoverData(null)}
+                                onMouseLeave={() => setHoverCell(null)}
                                 onDoubleClick={() => {
                                   if (!dayInfo.isCurrentMonth) return;
                                   handleCellDoubleClick(weekIdx, dayIdx, rowIdx, colIdx, content);
@@ -1483,42 +1476,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 onMouseDown={(e) => handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e)}
                                 onMouseEnter={() => {
                                   handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
-                                  const reservationTime = getReservationTimeForMemo(cellData, weekIdx, dayIdx, rowIdx);
-                                  let text = `⏱ ${reservationTime || slotInfo.label}`;
-                                  if (content && content !== '\u200B') text += `\n👤 ${content}`;
-
-                                  if (isSelected && selectedKeys.size > 1 && selectionInfo && selectionInfo.w === weekIdx && selectionInfo.d === dayIdx && selectionInfo.minRow !== selectionInfo.maxRow) {
-                                    const slots = getTimeSlotsForDay(dayInfo);
-                                    const sStart = slots.find(s => s.idx === selectionInfo.minRow);
-                                    const sEnd = slots.find(s => s.idx === selectionInfo.maxRow);
-                                    if (sStart && sEnd) {
-                                      const t1 = sStart.time || sStart.label;
-                                      
-                                      const t2_time = new Date(`2000-01-01T${sEnd.time || sEnd.label}:00`);
-                                      t2_time.setMinutes(t2_time.getMinutes() + (settings?.interval_minutes || 30));
-                                      const t2_hh = String(t2_time.getHours()).padStart(2, '0');
-                                      const t2_mm = String(t2_time.getMinutes()).padStart(2, '0');
-                                      const t2 = `${t2_hh}:${t2_mm}`;
-                                      
-                                      const diffMin = (selectionInfo.maxRow - selectionInfo.minRow + 1) * (settings?.interval_minutes || 30);
-                                      const hrs = Math.floor(diffMin / 60);
-                                      const mns = diffMin % 60;
-                                      let dStr = '';
-                                      if (hrs > 0) dStr += `${hrs}시간`;
-                                      if (mns > 0) dStr += (hrs > 0 ? ' ' : '') + `${mns}분`;
-                                      
-                                      text = `⏱ ${t1} ~ ${t2} (총 ${dStr})`;
-                                      if (content && content !== '\u200B') text += `\n👤 ${content}`;
-                                    }
-                                  }
-                                  if (cellPrescription) text += `\n💊 처방: ${cellPrescription}`;
-                                  if (cellData?.body_part) text += `\n🦴 부위: ${cellData.body_part}`;
-                                  if (staffBlockRule) text += `\n근무표: ${staffBlockRule.keyword}`;
-                                  const memoList = getMemoListFromMergeSpan(cellData?.merge_span);
-                                  if (memoList.length > 0) text += `\n📝 메모: ${memoList.join(' / ')}`;
-                                  setHoverData({ text });
+                                  setHoverCell({ weekIdx, dayIdx, rowIdx, colIdx, staffBlockRule, slotInfo, selectionInfo, isMergedView: true });
                                 }}
-                                onMouseLeave={() => setHoverData(null)}
+                                onMouseLeave={() => setHoverCell(null)}
                                 onDoubleClick={() => handleCellDoubleClick(weekIdx, dayIdx, rowIdx, colIdx, content)}
                                 onContextMenu={(e) => {
                                   // 내용이 있을 때만 처방을 설정할 수 있도록 함
@@ -2259,30 +2219,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {hoverData && (
-        <div
-          ref={tooltipRef}
-          className="sw-custom-tooltip"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            opacity: 0,
-          }}
-        >
-          {hoverData.text.split('\n').map((line, i) => (
-            <div key={i} className={i === 0 ? 'sw-custom-tooltip-time' : undefined}>
-              {i === 0 && line.startsWith('⏱') ? (
-                <>
-                  <span className="sw-custom-tooltip-clock">⏱</span>
-                  {line.slice(1)}
-                </>
-              ) : line}
-            </div>
-          ))}
         </div>
       )}
 

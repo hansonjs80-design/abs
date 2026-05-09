@@ -4,6 +4,9 @@ import {
   getExplicitVisitSuffix,
   isUndoShortcutEvent,
   stepVisitInputValue,
+  stepReservationTimeWithinCellBase,
+  getReservationTimeFromMergeSpan,
+  buildMergeSpanWithReservationTime,
 } from '../../lib/schedulerUtils';
 import { strip4060FromContent } from '../../lib/schedulerContentFormat';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
@@ -43,6 +46,7 @@ export default function useScheduleKeyboardActions({
   setRangeEnd,
   setSelectedKeys,
   shockwaveSettings,
+  getDefaultReservationTime,
 }) {
   return useCallback((e) => {
     if (e.defaultPrevented) return;
@@ -259,10 +263,61 @@ export default function useScheduleKeyboardActions({
       return;
     }
 
-    if (isMeta && (e.code === 'Minus' || e.key === '-')) {
+    if (isMeta && (e.code === 'KeyD' || e.key.toLowerCase() === 'd')) {
       e.preventDefault();
       e.stopPropagation();
       handleToggleTreatmentCancel();
+      return;
+    }
+
+    if (isMeta && (e.code === 'Minus' || e.key === '-' || e.code === 'Equal' || e.key === '=' || e.key === '+')) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const delta = (e.code === 'Minus' || e.key === '-') ? -1 : 1;
+      const interval = shockwaveSettings?.interval_minutes || 30;
+      const deltaMinutes = delta * interval;
+      
+      const keys = Array.from(selectedKeys || []);
+      const oldMemos = buildMemoSnapshotForKeys(keys);
+      let anyChanged = false;
+
+      (async () => {
+        for (const key of keys) {
+          const [kw, kd, kr, kc] = key.split('-').map(Number);
+          const memo = memos[key] || {};
+          const stableContent = (typeof memo.content === 'string' ? memo.content : pendingDisplayValues[key]) || '';
+          if (!stableContent || stableContent.trim() === '\u200B') continue;
+
+          const currentMergeSpan = memo.merge_span || '';
+          const currentTime = getReservationTimeFromMergeSpan(currentMergeSpan);
+          const defaultTime = getDefaultReservationTime ? getDefaultReservationTime(kw, kd, kr) : '';
+
+          const nextTime = stepReservationTimeWithinCellBase(currentTime, defaultTime, deltaMinutes);
+          const nextMergeSpan = buildMergeSpanWithReservationTime(currentMergeSpan, nextTime);
+          
+          if (currentMergeSpan === nextMergeSpan) continue;
+
+          const success = await onSaveMemo(
+            currentYear,
+            currentMonth,
+            kw,
+            kd,
+            kr,
+            kc,
+            stableContent,
+            memo.bg_color,
+            nextMergeSpan,
+            memo.prescription,
+            memo.body_part
+          );
+          if (success) anyChanged = true;
+        }
+        if (anyChanged) {
+          recordUndo({ type: 'bulk-edit', oldMemos });
+          addToast('예약 시간이 변경되었습니다.', 'success');
+        }
+      })();
       return;
     }
 
