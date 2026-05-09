@@ -88,6 +88,57 @@ export default function useScheduleKeyboardActions({
       return;
     }
 
+    if (isMeta && e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const keys = Array.from(selectedKeys || []);
+      if (keys.length === 0) return;
+      
+      const firstKey = keys[0];
+      const memo = memos[firstKey] || {};
+      // 내용이 없으면 경고 또는 무시할 수도 있지만, 내용이 없더라도 부위를 추가할 수 있게 할 수 있습니다.
+      // 하지만 보통 내용이 있을 때만 추가하므로 내용 확인
+      const currentBodyPart = memo.body_part || '';
+      
+      const newBodyPart = window.prompt('부위를 입력하세요 (여러 개일 경우 쉼표로 구분):', currentBodyPart);
+      if (newBodyPart === null) return; // 사용자가 취소를 누름
+      
+      const oldMemos = buildMemoSnapshotForKeys(keys);
+      let anyChanged = false;
+
+      (async () => {
+        for (const key of keys) {
+          const [kw, kd, kr, kc] = key.split('-').map(Number);
+          const memo = memos[key] || {};
+          const stableContent = (typeof memo.content === 'string' ? memo.content : pendingDisplayValues[key]) || '';
+          
+          if (!stableContent || stableContent.trim() === '\u200B') continue;
+          if (memo.body_part === newBodyPart.trim()) continue;
+
+          const success = await onSaveMemo(
+            currentYear,
+            currentMonth,
+            kw,
+            kd,
+            kr,
+            kc,
+            stableContent,
+            memo.bg_color,
+            memo.merge_span,
+            memo.prescription,
+            newBodyPart.trim()
+          );
+          if (success) anyChanged = true;
+        }
+        if (anyChanged) {
+          recordUndo({ type: 'bulk-edit', oldMemos });
+          addToast('부위가 변경되었습니다.', 'success');
+        }
+      })();
+      return;
+    }
+
     if (e.key === 'Enter') {
       e.preventDefault();
       const key = cellKey(w, d, r, c);
