@@ -2792,4 +2792,5 @@
   margin: 0 !important;
   pointer-events: auto; /* Re-enable clicks */
   min-width: max-content;
+  overflow-x: hidden !important;
 }

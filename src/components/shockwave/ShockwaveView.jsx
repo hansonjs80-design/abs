@@ -851,11 +851,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const mouseX = tooltipMousePosRef.current?.x || window.innerWidth / 2;
     const mouseY = tooltipMousePosRef.current?.y || window.innerHeight / 2;
     
-    // 호버 툴팁(일반적으로 마우스 우측 하단 위치)과 겹치지 않도록 위치 조정
+    // 호버 툴팁(일반적으로 마우스 우측 하단 위치)과 살짝만 떨어지도록 위치 조정 (160px 우측)
     // 우측에 여유가 있으면 우측에 배치, 부족하면 좌측에 배치
-    let targetX = mouseX + 260;
-    if (targetX + 250 > window.innerWidth) {
-      targetX = Math.max(10, mouseX - 250);
+    let targetX = mouseX + 160;
+    if (targetX + 280 > window.innerWidth) {
+      targetX = Math.max(10, mouseX - 260);
     }
     
     const mockEvent = {
