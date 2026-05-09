@@ -842,6 +842,24 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     });
   }, []);
 
+  const handleOpenBodyPartMenu = useCallback(() => {
+    if (!selectedCell) return;
+    const { w, d, r, c } = selectedCell;
+    const keyStr = cellKey(w, d, r, c);
+    const memo = memos[keyStr] || {};
+    
+    // 내용 유무와 관계없이 우클릭 메뉴를 띄우되, 부위 서브메뉴를 바로 열도록
+    const mockEvent = {
+      preventDefault: () => {},
+      stopPropagation: () => {},
+      clientX: tooltipMousePosRef.current?.x || window.innerWidth / 2,
+      clientY: tooltipMousePosRef.current?.y || window.innerHeight / 2,
+    };
+    
+    handleCellContextMenu(mockEvent, w, d, r, c, memo.prescription || '', '');
+    setTimeout(() => setActiveContextSubmenu('body'), 10);
+  }, [selectedCell, cellKey, memos, handleCellContextMenu, setActiveContextSubmenu]);
+
   const handleKeyDown = useScheduleKeyboardActions({
     contextMenu,
     selectedCell,
@@ -878,6 +896,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setRangeEnd,
     setSelectedKeys,
     getDefaultReservationTime,
+    handleOpenBodyPartMenu,
   });
 
   useScheduleGlobalEvents({
