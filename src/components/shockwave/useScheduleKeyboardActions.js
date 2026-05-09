@@ -166,7 +166,11 @@ export default function useScheduleKeyboardActions({
     const isDigitCode = /^Digit([1-9])$/.test(e.code);
     const isDigitKey = /^[1-9]$/.test(e.key);
 
-    if (isMeta && (isDigitKey || isDigitCode)) {
+    // PWA(설치된 앱) 환경에서는 Cmd/Ctrl + 1~9가 탭/창 전환 단축키로 브라우저 레벨에서 먹히는 경우가 많습니다.
+    // 이를 우회하기 위해 Alt(Option) 키나 Shift 키 조합도 허용합니다.
+    const isMetaOrAltOrShift = isMeta || e.altKey || (e.shiftKey && isMeta);
+
+    if (isMetaOrAltOrShift && (isDigitKey || isDigitCode)) {
       e.preventDefault();
       e.stopPropagation();
 

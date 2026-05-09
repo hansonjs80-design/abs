@@ -857,8 +857,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     };
     
     handleCellContextMenu(mockEvent, w, d, r, c, memo.prescription || '', '');
-    setTimeout(() => setActiveContextSubmenu('body'), 10);
-  }, [selectedCell, cellKey, memos, handleCellContextMenu, setActiveContextSubmenu]);
+    setTimeout(() => {
+      setContextMenu(prev => prev ? { ...prev, isStandaloneBodyPart: true } : null);
+      setActiveContextSubmenu('body');
+    }, 10);
+  }, [selectedCell, cellKey, memos, handleCellContextMenu, setActiveContextSubmenu, setContextMenu]);
 
   const handleKeyDown = useScheduleKeyboardActions({
     contextMenu,
@@ -1541,7 +1544,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       {contextMenu && (
         <div
           ref={contextMenuRef}
-          className={`shockwave-context-menu ${contextMenu.isNearRightEdge ? 'submenu-pop-left' : ''}`}
+          className={`shockwave-context-menu ${contextMenu.isNearRightEdge ? 'submenu-pop-left' : ''} ${contextMenu.isStandaloneBodyPart ? 'standalone-mode' : ''}`}
           style={{
             top: contextMenu.y,
             left: contextMenu.x,
