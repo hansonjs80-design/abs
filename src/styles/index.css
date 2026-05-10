@@ -301,10 +301,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     height: 40px; /* 고정 높이 */
   }
 
-  /* 달력 컨테이너가 1페이지(100vh)를 꽉 채우도록 설정 */
+  /* 달력 컨테이너가 1페이지를 꽉 채우도록 설정 */
   body.calendar-only-print .staff-calendar {
     width: 100% !important;
-    height: calc(100vh - 70px) !important; /* 제목 높이와 여백 제외한 전체 높이 */
+    height: 185mm !important; /* 브라우저 뷰포트(vh) 대신 A4 용지 물리적 크기 기반 */
     display: flex !important;
     flex-direction: column !important;
     margin-left: 0 !important;
@@ -324,6 +324,21 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.calendar-only-print .calendar-cell {
     height: auto !important;
     min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* 6주차 달력일 경우 내용이 넘치지 않도록 미세 축소 */
+  body.calendar-only-print .memo-slot {
+    min-height: 12px !important;
+    padding: 0px 3px !important;
+    font-size: 0.8rem !important;
+    line-height: 1.1 !important;
+  }
+
+  body.calendar-only-print .calendar-date {
+    flex: 0 0 20px !important;
+    font-size: 0.9rem !important;
+    padding: 0 4px !important;
   }
 
   .app-layout,
