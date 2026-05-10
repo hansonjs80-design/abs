@@ -649,6 +649,9 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
 
   return (
     <div className="staff-calendar animate-fade-in" ref={viewRef} style={{ outline: 'none', position: 'relative' }}>
+      <div className="calendar-print-title">
+        {currentYear}년 {currentMonth}월 직원 근무표
+      </div>
       {portalTarget && createPortal(
         <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
           <button

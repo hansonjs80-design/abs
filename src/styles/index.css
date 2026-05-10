@@ -254,6 +254,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   .app-content { padding: 12px; padding-bottom: calc(var(--bottom-nav-height) + 12px); }
 }
 
+.calendar-print-title {
+  display: none;
+}
+
 /* ── 인쇄 전용: 앱 내 탭/네비게이션 제거 후 현재 화면만 출력 ── */
 @media print {
   @page {
@@ -279,6 +283,21 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   .print-toggle,
   .theme-toggle {
     display: none !important;
+  }
+
+  body.calendar-only-print .staff-side {
+    display: none !important;
+  }
+
+
+  body.calendar-only-print .calendar-print-title {
+    display: block !important;
+    text-align: center;
+    font-size: 24pt;
+    font-weight: 700;
+    color: #1e3a8a; /* Tailwind blue-900 */
+    margin-bottom: 20px;
+    letter-spacing: -0.5px;
   }
 
   .app-layout,

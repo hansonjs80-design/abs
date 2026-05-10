@@ -81,7 +81,7 @@ export default function TopTabs() {
         <span className="top-tabs-current-date" aria-label={`현재 날짜와 시간 ${currentDateTimeLabel}`}>
           {currentDateTimeLabel}
         </span>
-        <PrintButton />
+        <PrintButton isStaffSchedule={location.pathname === '/'} />
       </div>
     </div>
   );

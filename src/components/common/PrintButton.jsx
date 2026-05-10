@@ -16,7 +16,7 @@ function setPrintOrientation(orientation) {
   style.textContent = `@media print { @page { size: ${orientation}; margin: 6mm; } }`;
 }
 
-export default function PrintButton() {
+export default function PrintButton({ isStaffSchedule }) {
   const [isOpen, setIsOpen] = useState(false);
   const rootRef = useRef(null);
 
@@ -31,10 +31,24 @@ export default function PrintButton() {
     return () => document.removeEventListener('pointerdown', handlePointerDown);
   }, []);
 
-  const handlePrint = (orientation) => {
+  const handlePrint = (orientation, calendarOnly = false) => {
     setPrintOrientation(orientation);
+    
+    if (calendarOnly) {
+      document.body.classList.add('calendar-only-print');
+    } else {
+      document.body.classList.remove('calendar-only-print');
+    }
+    
     setIsOpen(false);
-    window.setTimeout(() => window.print(), 0);
+    
+    window.setTimeout(() => {
+      window.print();
+      // Remove the class after the print dialog opens
+      window.setTimeout(() => {
+        document.body.classList.remove('calendar-only-print');
+      }, 500);
+    }, 0);
   };
 
   return (
@@ -57,6 +71,11 @@ export default function PrintButton() {
           <button type="button" onClick={() => handlePrint('portrait')} role="menuitem">
             세로
           </button>
+          {isStaffSchedule && (
+            <button type="button" onClick={() => handlePrint('landscape', true)} role="menuitem" style={{ color: 'var(--brand-primary)', fontWeight: 600 }}>
+              달력만 인쇄 (가로)
+            </button>
+          )}
         </div>
       )}
     </div>
