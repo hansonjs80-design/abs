@@ -321,7 +321,6 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   .sw-stats-container,
   .sw-stats-panel,
-  .sw-stats-body,
   .sw-settlement-stack,
   .sw-settlement-card,
   .sw-grid-card {
@@ -331,6 +330,15 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     border-radius: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
+  }
+
+  .sw-stats-body {
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 10mm 15mm !important; /* 넉넉한 여백 추가 */
   }
 
   .sw-grid-card-header,
@@ -350,7 +358,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     border: none !important;
     box-shadow: none !important;
     border-radius: 0 !important;
-    margin: 0 0 8mm !important;
+    margin: 0 auto 12mm !important; /* 가운데 정렬 및 하단 간격 */
     padding: 0 !important;
     overflow: visible !important;
   }
