@@ -303,11 +303,11 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   /* 달력 컨테이너가 가로를 꽉 채우되 원래 화면 비율을 유지하도록 설정 */
   body.calendar-only-print .staff-calendar {
-    width: 100% !important;
+    width: 92% !important; /* 약간의 여백을 두어 세로로 넘쳐서 2장으로 인쇄되는 현상 방지 */
     height: auto !important; /* 강제 높이 해제하여 원래 비율 유지 */
     display: flex !important;
     flex-direction: column !important;
-    margin-left: 0 !important;
+    margin: 3mm auto !important; /* 중앙 정렬 및 여백 확보 */
   }
 
   /* 내부 그리드는 가로폭 100%로 고정하고 세로폭은 셀의 비율에 따라 자연스럽게 늘어남 */
