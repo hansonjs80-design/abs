@@ -126,39 +126,28 @@ export default function useScheduleKeyboardActions({
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
 
-      (async () => {
-        for (const key of keys) {
-          const [kw, kd, kr, kc] = key.split('-').map(Number);
-          const memo = memos[key] || {};
-          const stableContent = (typeof memo.content === 'string' ? memo.content : pendingDisplayValues[key]) || '';
-          if (!stableContent) continue;
+      const savePromises = keys.map(key => {
+        const [kw, kd, kr, kc] = key.split('-').map(Number);
+        const memo = memos[key] || {};
+        const stableContent = (typeof memo.content === 'string' ? memo.content : pendingDisplayValues[key]) || '';
+        if (!stableContent) return null;
 
-          const visitSuffix = getExplicitVisitSuffix(stableContent);
-          const currentVisit = visitSuffix.replace(/[()]/g, '') || '';
-          const nextVisit = stepVisitInputValue(currentVisit, delta);
-          const updatedContent = applyVisitCountToSchedulerContent(stableContent, nextVisit);
-          if (updatedContent === stableContent) continue;
+        const visitSuffix = getExplicitVisitSuffix(stableContent);
+        const currentVisit = visitSuffix.replace(/[()]/g, '') || '';
+        const nextVisit = stepVisitInputValue(currentVisit, delta);
+        const updatedContent = applyVisitCountToSchedulerContent(stableContent, nextVisit);
+        if (updatedContent === stableContent) return null;
 
-          const success = await onSaveMemo(
-            currentYear,
-            currentMonth,
-            kw,
-            kd,
-            kr,
-            kc,
-            updatedContent,
-            memo.bg_color,
-            memo.merge_span,
-            memo.prescription,
-            memo.body_part
-          );
-          if (success) anyChanged = true;
-        }
-        if (anyChanged) {
-          recordUndo({ type: 'bulk-edit', oldMemos });
-          addToast(`회차가 ${delta > 0 ? '증가' : '감소'}했습니다.`, 'success');
-        }
-      })();
+        return onSaveMemo(
+          currentYear, currentMonth, kw, kd, kr, kc,
+          updatedContent, memo.bg_color, memo.merge_span, memo.prescription, memo.body_part
+        );
+      }).filter(Boolean);
+
+      if (savePromises.length > 0) {
+        recordUndo({ type: 'bulk-edit', oldMemos });
+        Promise.all(savePromises);
+      }
       return;
     }
 
@@ -295,42 +284,31 @@ export default function useScheduleKeyboardActions({
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
 
-      (async () => {
-        for (const key of keys) {
-          const [kw, kd, kr, kc] = key.split('-').map(Number);
-          const memo = memos[key] || {};
-          const stableContent = (typeof memo.content === 'string' ? memo.content : pendingDisplayValues[key]) || '';
-          if (!stableContent || stableContent.trim() === '\u200B') continue;
+      const savePromises = keys.map(key => {
+        const [kw, kd, kr, kc] = key.split('-').map(Number);
+        const memo = memos[key] || {};
+        const stableContent = (typeof memo.content === 'string' ? memo.content : pendingDisplayValues[key]) || '';
+        if (!stableContent || stableContent.trim() === '\u200B') return null;
 
-          const currentMergeSpan = memo.merge_span || '';
-          const currentTime = getReservationTimeFromMergeSpan(currentMergeSpan);
-          const defaultTime = getDefaultReservationTime ? getDefaultReservationTime(kw, kd, kr) : '';
+        const currentMergeSpan = memo.merge_span || '';
+        const currentTime = getReservationTimeFromMergeSpan(currentMergeSpan);
+        const defaultTime = getDefaultReservationTime ? getDefaultReservationTime(kw, kd, kr) : '';
 
-          const nextTime = stepReservationTimeWithinCellBase(currentTime, defaultTime, deltaMinutes);
-          const nextMergeSpan = buildMergeSpanWithReservationTime(currentMergeSpan, nextTime);
-          
-          if (currentMergeSpan === nextMergeSpan) continue;
+        const nextTime = stepReservationTimeWithinCellBase(currentTime, defaultTime, deltaMinutes);
+        const nextMergeSpan = buildMergeSpanWithReservationTime(currentMergeSpan, nextTime);
+        
+        if (currentMergeSpan === nextMergeSpan) return null;
 
-          const success = await onSaveMemo(
-            currentYear,
-            currentMonth,
-            kw,
-            kd,
-            kr,
-            kc,
-            stableContent,
-            memo.bg_color,
-            nextMergeSpan,
-            memo.prescription,
-            memo.body_part
-          );
-          if (success) anyChanged = true;
-        }
-        if (anyChanged) {
-          recordUndo({ type: 'bulk-edit', oldMemos });
-          addToast('예약 시간이 변경되었습니다.', 'success');
-        }
-      })();
+        return onSaveMemo(
+          currentYear, currentMonth, kw, kd, kr, kc,
+          stableContent, memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part
+        );
+      }).filter(Boolean);
+
+      if (savePromises.length > 0) {
+        recordUndo({ type: 'bulk-edit', oldMemos });
+        Promise.all(savePromises);
+      }
       return;
     }
 
