@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { generateShockwaveCalendar, getTodayKST } from './calendarUtils';
 import { has4060Pattern, get4060PrescriptionFromContent } from './schedulerContentFormat';
+import { TREATMENT_COMPLETE_BG } from './schedulerUtils';
 
 /** 처방명 비교용 정규화 – 띄어쓰기·슬래시·대소문자 무시 */
 function normalizePrescriptionKeySync(value) {
@@ -288,11 +289,18 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
   const weeks = generateShockwaveCalendar(year, month);
   const newLogs = [];
 
+  // 오늘 날짜 여부 판별 (targetDateStr 유무에 관계없이 처리 대상 날짜가 실제 오늘인지 확인)
+  const realToday = getTodayKST();
+  const isActualToday = todayY === realToday.getFullYear() && todayM === realToday.getMonth() + 1 && todayD === realToday.getDate();
+
   Object.entries(memos).forEach(([key, cell]) => {
     const [w, d, r, c] = key.split('-').map(Number);
     const dayInfo = weeks[w]?.[d];
     if (!dayInfo || !dayInfo.isCurrentMonth) return;
     if (dayInfo.year !== todayY || dayInfo.month !== todayM || dayInfo.day !== todayD) return;
+
+    // 오늘 날짜인 경우: 방문 완료(bg_color === TREATMENT_COMPLETE_BG)된 셀만 통계에 포함
+    if (isActualToday && cell?.bg_color !== TREATMENT_COMPLETE_BG) return;
 
     const parsed = parseTherapyInfo(cell?.content);
     if (!parsed) return;
