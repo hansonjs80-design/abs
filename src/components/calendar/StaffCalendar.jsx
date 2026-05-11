@@ -631,11 +631,8 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
     } catch (e) { /* cancelled */ }
   }, [applyColor, addToast]);
 
-  const computedColWidth = colWidth || (viewRef.current ? viewRef.current.offsetWidth / 7 : 120);
-  const cellRatio = computedColWidth / rowHeight;
-
   return (
-    <div className="staff-calendar animate-fade-in" ref={viewRef} style={{ outline: 'none', position: 'relative', '--cell-ratio': cellRatio }}>
+    <div className="staff-calendar animate-fade-in" ref={viewRef} style={{ outline: 'none', position: 'relative' }}>
       <div className="calendar-print-title">
         {currentYear}년 {currentMonth}월 직원 근무표
       </div>

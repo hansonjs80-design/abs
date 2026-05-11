@@ -450,7 +450,7 @@
 }
 
 .staff-side > .today-panel {
-  flex: 1 1 0;
+  flex: 0 0 auto;
 }
 
 .staff-side > .notice-board {
