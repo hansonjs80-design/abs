@@ -1129,27 +1129,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           {weekIdx === 0 && (
             <div className="shockwave-week-label">
               <div className="shockwave-week-label-main">
-                <div className="shockwave-month-title-group">
-                  <button
-                    type="button"
-                    className="shockwave-month-nav-btn"
-                    onClick={() => navigateMonth(-1)}
-                    aria-label="이전 달"
-                  >
-                    ‹
-                  </button>
-                  <span className="shockwave-month-title">
-                    {currentYear}년 {String(currentMonth).padStart(2, '0')}월 충격파/도수 스케줄
-                  </span>
-                  <button
-                    type="button"
-                    className="shockwave-month-nav-btn"
-                    onClick={() => navigateMonth(1)}
-                    aria-label="다음 달"
-                  >
-                    ›
-                  </button>
-                </div>
                 <button
                   type="button"
                   className="shockwave-row-height-handle"
