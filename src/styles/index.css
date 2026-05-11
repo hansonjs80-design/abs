@@ -335,22 +335,21 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   body.calendar-only-print .memo-slot {
     min-height: 0 !important;
-    padding: 1px 2px !important;
-    font-size: 0.85rem !important;
-    line-height: 1.05 !important;
-    /* 원래 셀 내부 border 디자인 유지 */
+    padding: 0 1px !important;
+    font-size: 0.95rem !important;
+    line-height: 1 !important;
   }
 
   body.calendar-only-print .calendar-date {
-    flex: 0 0 16px !important;
-    font-size: 0.82rem !important;
-    padding: 0 3px !important;
+    flex: 0 0 14px !important;
+    font-size: 0.75rem !important;
+    padding: 0 2px !important;
   }
 
-  /* 메모 컨테이너 내부 gap만 최소화 */
+  /* 메모 컨테이너 여백 완전 제거 */
   body.calendar-only-print .calendar-memos {
     gap: 0 !important;
-    padding: 0 2px !important;
+    padding: 0 !important;
   }
 
   /* ── 6주차 달력: 날짜/메모만 축소하여 한 장에 맞춤 (타이틀은 이미 16pt) ── */
