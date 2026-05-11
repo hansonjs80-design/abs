@@ -1031,11 +1031,19 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     let left = clientX + offset;
     let top = clientY + offset;
 
+    // 부위 팝업(contextMenu)이 열려있으면 툴팁을 커서 위쪽에 배치하여 겹침 방지
+    if (contextMenu) {
+      top = clientY - height - offset;
+    }
+
     if (left + width + edgePadding > viewportWidth) {
       left = clientX - width - offset;
     }
     if (top + height + edgePadding > viewportHeight) {
       top = clientY - height - offset;
+    }
+    if (top < edgePadding) {
+      top = edgePadding;
     }
 
     left = Math.min(Math.max(edgePadding, left), Math.max(edgePadding, viewportWidth - width - edgePadding));
@@ -1044,7 +1052,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     tooltipEl.style.left = `${left}px`;
     tooltipEl.style.top = `${top}px`;
     tooltipEl.style.opacity = hoverCell ? '1' : '0';
-  }, [hoverCell]);
+  }, [hoverCell, contextMenu]);
 
   useEffect(() => {
     if (!hoverCell || !tooltipRef.current) return;
