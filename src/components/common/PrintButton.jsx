@@ -36,8 +36,18 @@ export default function PrintButton({ isStaffSchedule }) {
     
     if (calendarOnly) {
       document.body.classList.add('calendar-only-print');
+      // 달력 그리드의 주차 수를 감지하여 body에 데이터 속성으로 전달
+      const calendarGrid = document.querySelector('.calendar-grid');
+      if (calendarGrid) {
+        const weekdayHeaders = calendarGrid.querySelectorAll('.calendar-weekday-header').length;
+        const totalCells = calendarGrid.children.length;
+        const dataCells = totalCells - weekdayHeaders;
+        const weekCount = Math.round(dataCells / 7);
+        document.body.dataset.calendarWeeks = String(weekCount);
+      }
     } else {
       document.body.classList.remove('calendar-only-print');
+      delete document.body.dataset.calendarWeeks;
     }
     
     setIsOpen(false);
@@ -47,6 +57,7 @@ export default function PrintButton({ isStaffSchedule }) {
       // Remove the class after the print dialog opens
       window.setTimeout(() => {
         document.body.classList.remove('calendar-only-print');
+        delete document.body.dataset.calendarWeeks;
       }, 500);
     }, 0);
   };
