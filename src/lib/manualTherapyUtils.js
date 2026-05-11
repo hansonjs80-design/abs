@@ -150,6 +150,8 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
   // 오늘 날짜 여부 판별 (처리 대상 날짜가 실제 오늘인지 확인)
   const realToday = getTodayKST();
   const isActualToday = todayY === realToday.getFullYear() && todayM === realToday.getMonth() + 1 && todayD === realToday.getDate();
+  // 오늘 날짜에서 내용은 있지만 방문완료가 안 된 셀의 키를 추적 (삭제 방지용)
+  const pendingTodayCellKeys = new Set();
 
   Object.entries(memos).forEach(([key, cell]) => {
     const [w, d, r, c] = key.split('-').map(Number);
@@ -157,12 +159,15 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
     if (!dayInfo || !dayInfo.isCurrentMonth) return;
     if (dayInfo.year !== todayY || dayInfo.month !== todayM || dayInfo.day !== todayD) return;
 
-    // 오늘 날짜인 경우: 방문 완료(bg_color === TREATMENT_COMPLETE_BG)된 셀만 통계에 포함
-    if (isActualToday && cell?.bg_color !== TREATMENT_COMPLETE_BG) return;
-
     const therapistName = resolveManualTherapistName(c, dayInfo.day, therapists, monthlyTherapists);
     const parsed = parseManualTherapyEntry(cell?.content, therapists, therapistName);
     if (!parsed) return;
+
+    // 오늘 날짜인 경우: 방문 완료가 아닌 셀은 통계에 추가하지 않되, 기존 기록 삭제도 방지
+    if (isActualToday && cell?.bg_color !== TREATMENT_COMPLETE_BG) {
+      pendingTodayCellKeys.add(buildSchedulerCellKey(year, month, w, d, r, c));
+      return;
+    }
 
     newLogs.push({
       r,
@@ -274,6 +279,8 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
     .filter((row) => {
       if (overwriteManual && row.source === 'manual') return true;
       if (row.source === 'manual') return false;
+      // 오늘 날짜에서 내용이 있지만 방문완료가 안 된 셀은 삭제하지 않음
+      if (row.scheduler_cell_key && pendingTodayCellKeys.has(row.scheduler_cell_key)) return false;
       return !row.scheduler_cell_key || !rebuiltCellKeys.has(row.scheduler_cell_key);
     })
     .map((row) => row.id)
