@@ -335,10 +335,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   body.calendar-only-print .memo-slot {
     min-height: 0 !important;
-    padding: 0px 2px !important;
+    padding: 1px 2px !important;
     font-size: 0.85rem !important;
     line-height: 1.05 !important;
-    border-bottom-width: 0 !important; /* 셀 내부 구분선 제거로 공간 절약 */
+    /* 원래 셀 내부 border 디자인 유지 */
   }
 
   body.calendar-only-print .calendar-date {
@@ -347,10 +347,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     padding: 0 3px !important;
   }
 
-  /* 메모 컨테이너 내부 여백 제거 */
+  /* 메모 컨테이너 내부 gap만 최소화 */
   body.calendar-only-print .calendar-memos {
     gap: 0 !important;
-    padding: 0 !important;
+    padding: 0 2px !important;
   }
 
   /* ── 6주차 달력: 날짜/메모만 축소하여 한 장에 맞춤 (타이틀은 이미 16pt) ── */

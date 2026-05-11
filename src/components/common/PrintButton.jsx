@@ -22,6 +22,7 @@ function setPrintOrientation(orientation) {
  * 각 주에서 최대 1개의 빈 행만 숨깁니다.
  */
 const HIDDEN_MEMO_ATTR = 'data-print-hidden';
+const ORIGINAL_GRID_ROWS_ATTR = 'data-original-grid-rows';
 
 function hideEmptyMemoRows() {
   const calendarGrid = document.querySelector('.calendar-grid');
@@ -46,11 +47,17 @@ function hideEmptyMemoRows() {
       });
 
       if (allEmpty) {
+        const newRowCount = slotCount - 1;
         memoContainers.forEach(container => {
           const slot = container?.children[s];
           if (slot) {
             slot.setAttribute(HIDDEN_MEMO_ATTR, 'true');
             slot.style.display = 'none';
+          }
+          // grid-template-rows 업데이트하여 남은 행이 공간을 꽉 채우도록
+          if (container) {
+            container.setAttribute(ORIGINAL_GRID_ROWS_ATTR, container.style.gridTemplateRows || '');
+            container.style.gridTemplateRows = `repeat(${newRowCount}, minmax(0, 1fr))`;
           }
         });
         break; // 주당 최대 1개만 숨김
@@ -63,6 +70,10 @@ function restoreHiddenMemoRows() {
   document.querySelectorAll(`[${HIDDEN_MEMO_ATTR}]`).forEach(el => {
     el.removeAttribute(HIDDEN_MEMO_ATTR);
     el.style.display = '';
+  });
+  document.querySelectorAll(`[${ORIGINAL_GRID_ROWS_ATTR}]`).forEach(el => {
+    el.style.gridTemplateRows = el.getAttribute(ORIGINAL_GRID_ROWS_ATTR) || '';
+    el.removeAttribute(ORIGINAL_GRID_ROWS_ATTR);
   });
 }
 
