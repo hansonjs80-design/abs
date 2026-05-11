@@ -301,18 +301,18 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.calendar-only-print .calendar-print-title {
     display: block !important;
     text-align: center;
-    font-size: 24pt;
+    font-size: 16pt;
     font-weight: 700;
-    color: #1e3a8a; /* Tailwind blue-900 */
-    margin-bottom: 20px;
+    color: #1e3a8a;
+    margin-bottom: 6px;
     letter-spacing: -0.5px;
-    height: 40px; /* 고정 높이 */
+    height: 28px;
   }
 
-  /* ── 5주차 달력: 기존 설정 유지 (185mm) ── */
+  /* ── 5주차 달력: A4 가로 꽉 채움 ── */
   body.calendar-only-print .staff-calendar {
     width: 100% !important;
-    height: 185mm !important;
+    height: 192mm !important; /* 타이틀이 작아진 만큼 달력 영역 확대 */
     display: flex !important;
     flex-direction: column !important;
     margin-left: 0 !important;
@@ -346,15 +346,9 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     padding: 0 4px !important;
   }
 
-  /* ── 6주차 달력: 타이틀/날짜/메모 축소하여 한 장에 맞춤 ── */
-  body.calendar-only-print[data-calendar-weeks="6"] .calendar-print-title {
-    font-size: 20pt;
-    margin-bottom: 10px;
-    height: 32px;
-  }
-
+  /* ── 6주차 달력: 날짜/메모만 축소하여 한 장에 맞춤 (타이틀은 이미 16pt) ── */
   body.calendar-only-print[data-calendar-weeks="6"] .staff-calendar {
-    height: 190mm !important; /* 타이틀이 작아진 만큼 달력에 더 많은 공간 할당 */
+    height: 194mm !important; /* 6주차에 최대한 공간 확보 */
   }
 
   body.calendar-only-print[data-calendar-weeks="6"] .calendar-date {
@@ -374,14 +368,9 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.hide-last-week .calendar-cell:nth-last-child(-n+7) {
     display: none !important;
   }
-  /* 5주로 강제하므로 5주차 레이아웃(185mm, 큰 글씨) 적용 */
+  /* 5주로 강제하므로 5주차 레이아웃(192mm, 큰 글씨) 적용 */
   body.hide-last-week .staff-calendar {
-    height: 185mm !important;
-  }
-  body.hide-last-week .calendar-print-title {
-    font-size: 24pt;
-    margin-bottom: 20px;
-    height: 40px;
+    height: 192mm !important;
   }
   body.hide-last-week .memo-slot {
     min-height: 12px !important;
