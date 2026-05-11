@@ -370,6 +370,30 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     line-height: 1.05 !important;
   }
 
+  /* ── 6주차 달이지만 5주만 인쇄하기로 선택한 경우: 마지막 주 숨김 ── */
+  body.hide-last-week .calendar-cell:nth-last-child(-n+7) {
+    display: none !important;
+  }
+  /* 5주로 강제하므로 5주차 레이아웃(185mm, 큰 글씨) 적용 */
+  body.hide-last-week .staff-calendar {
+    height: 185mm !important;
+  }
+  body.hide-last-week .calendar-print-title {
+    font-size: 24pt;
+    margin-bottom: 20px;
+    height: 40px;
+  }
+  body.hide-last-week .memo-slot {
+    min-height: 12px !important;
+    padding: 0px 3px !important;
+    font-size: 0.8rem !important;
+    line-height: 1.1 !important;
+  }
+  body.hide-last-week .calendar-date {
+    flex: 0 0 20px !important;
+    font-size: 0.9rem !important;
+    padding: 0 4px !important;
+  }
   .app-layout,
   .app-main,
   .app-content {
