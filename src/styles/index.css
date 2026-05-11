@@ -289,7 +289,15 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     display: none !important;
   }
 
-
+  /* 스크롤바 인쇄 방지 */
+  body.calendar-only-print,
+  body.calendar-only-print html,
+  body.calendar-only-print .app-layout,
+  body.calendar-only-print .app-main,
+  body.calendar-only-print .app-content,
+  body.calendar-only-print .staff-layout {
+    overflow: hidden !important;
+  }
   body.calendar-only-print .calendar-print-title {
     display: block !important;
     text-align: center;
