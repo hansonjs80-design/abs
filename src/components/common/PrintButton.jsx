@@ -17,6 +17,56 @@ function setPrintOrientation(orientation) {
 }
 
 /**
+ * 각 주(calendar-cell 7개 묶음)에서 특정 슬롯 인덱스의 모든 7개 셀이 비어있으면
+ * 해당 슬롯을 숨겨 인쇄 공간을 확보합니다.
+ * 각 주에서 최대 1개의 빈 행만 숨깁니다.
+ */
+const HIDDEN_MEMO_ATTR = 'data-print-hidden';
+
+function hideEmptyMemoRows() {
+  const calendarGrid = document.querySelector('.calendar-grid');
+  if (!calendarGrid) return;
+
+  const weekdayHeaders = calendarGrid.querySelectorAll('.calendar-weekday-header').length;
+  const allCells = Array.from(calendarGrid.children).slice(weekdayHeaders);
+  const totalWeeks = Math.round(allCells.length / 7);
+
+  for (let w = 0; w < totalWeeks; w++) {
+    const weekCells = allCells.slice(w * 7, (w + 1) * 7);
+    const memoContainers = weekCells.map(cell => cell.querySelector('.calendar-memos'));
+    const slotCount = memoContainers[0]?.children.length || 0;
+    if (slotCount <= 1) continue;
+
+    // 마지막 슬롯부터 역순으로 확인하여 첫 번째로 모든 7개가 비어있는 행 숨기기
+    for (let s = slotCount - 1; s >= 0; s--) {
+      const allEmpty = memoContainers.every(container => {
+        const slot = container?.children[s];
+        if (!slot) return true;
+        return (slot.textContent?.trim() || '') === '';
+      });
+
+      if (allEmpty) {
+        memoContainers.forEach(container => {
+          const slot = container?.children[s];
+          if (slot) {
+            slot.setAttribute(HIDDEN_MEMO_ATTR, 'true');
+            slot.style.display = 'none';
+          }
+        });
+        break; // 주당 최대 1개만 숨김
+      }
+    }
+  }
+}
+
+function restoreHiddenMemoRows() {
+  document.querySelectorAll(`[${HIDDEN_MEMO_ATTR}]`).forEach(el => {
+    el.removeAttribute(HIDDEN_MEMO_ATTR);
+    el.style.display = '';
+  });
+}
+
+/**
  * 달력 그리드에서 실제 주차 수와 마지막 주차에 이번 달 평일이 있는지 감지
  */
 function detectCalendarWeekInfo() {
@@ -82,6 +132,9 @@ export default function PrintButton({ isStaffSchedule }) {
       if (forceWeeks === 5 && weekInfo?.totalWeeks === 6) {
         document.body.classList.add('hide-last-week');
       }
+
+      // 각 주차마다 비어있는 메모 슬롯 행 1개 숨기기 (공간 절약)
+      hideEmptyMemoRows();
     } else {
       document.body.classList.remove('calendar-only-print');
       document.body.classList.remove('hide-last-week');
@@ -96,6 +149,7 @@ export default function PrintButton({ isStaffSchedule }) {
         document.body.classList.remove('calendar-only-print');
         document.body.classList.remove('hide-last-week');
         delete document.body.dataset.calendarWeeks;
+        restoreHiddenMemoRows();
       }, 500);
     }, 0);
   };
