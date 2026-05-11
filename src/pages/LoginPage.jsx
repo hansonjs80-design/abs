@@ -1,27 +1,24 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-const LAST_LOGIN_CREDENTIALS_KEY = 'clinic-last-login-credentials';
+const LAST_LOGIN_ID_KEY = 'clinic-last-login-id';
 
-const readLastLoginCredentials = () => {
-  if (typeof window === 'undefined') return { email: '', password: '' };
+const readLastLoginId = () => {
+  if (typeof window === 'undefined') return '';
   try {
-    const parsed = JSON.parse(window.localStorage.getItem(LAST_LOGIN_CREDENTIALS_KEY) || '{}');
-    return {
-      email: typeof parsed.email === 'string' ? parsed.email : '',
-      password: typeof parsed.password === 'string' ? parsed.password : '',
-    };
+    const saved = window.localStorage.getItem(LAST_LOGIN_ID_KEY);
+    return saved ? saved : '';
   } catch {
-    return { email: '', password: '' };
+    return '';
   }
 };
 
-const writeLastLoginCredentials = (email, password) => {
+const writeLastLoginId = (email) => {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(LAST_LOGIN_CREDENTIALS_KEY, JSON.stringify({ email, password }));
+    window.localStorage.setItem(LAST_LOGIN_ID_KEY, email);
   } catch {
-    // localStorage may be unavailable in restricted browser contexts.
+    // localStorage may be unavailable
   }
 };
 
@@ -50,8 +47,8 @@ const getAuthMessage = (error, isSignUp) => {
 export default function LoginPage() {
   const { signIn, signUp } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState(() => readLastLoginCredentials().email);
-  const [password, setPassword] = useState(() => readLastLoginCredentials().password);
+  const [email, setEmail] = useState(() => readLastLoginId());
+  const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
@@ -76,7 +73,7 @@ export default function LoginPage() {
           setPassword('');
         }
       } else {
-        writeLastLoginCredentials(normalizedEmail, normalizedPassword);
+        writeLastLoginId(normalizedEmail);
         await signIn(normalizedEmail, normalizedPassword);
       }
     } catch (err) {
@@ -166,9 +163,8 @@ export default function LoginPage() {
                 setEmail('');
                 setPassword('');
               } else {
-                const credentials = readLastLoginCredentials();
-                setEmail(credentials.email);
-                setPassword(credentials.password);
+                setEmail(readLastLoginId());
+                setPassword('');
               }
               setName('');
             }}

@@ -221,22 +221,6 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
     writeStoredNumber(ROW_H_KEY, rowHeight);
   }, [colWidth, rowHeight]);
 
-  useEffect(() => {
-    const flushStoredSizing = () => {
-      writeStoredNumber(COL_W_KEY, colWidthRef.current);
-      writeStoredNumber(ROW_H_KEY, rowHeightRef.current);
-    };
-    window.addEventListener('pagehide', flushStoredSizing);
-    window.addEventListener('beforeunload', flushStoredSizing);
-    document.addEventListener('visibilitychange', flushStoredSizing);
-    return () => {
-      flushStoredSizing();
-      window.removeEventListener('pagehide', flushStoredSizing);
-      window.removeEventListener('beforeunload', flushStoredSizing);
-      document.removeEventListener('visibilitychange', flushStoredSizing);
-    };
-  }, []);
-
   // ── Actions ──
   const focusHiddenInput = useCallback(() => {
     setTimeout(() => { hiddenInputRef.current?.focus({ preventScroll: true }); }, 0);

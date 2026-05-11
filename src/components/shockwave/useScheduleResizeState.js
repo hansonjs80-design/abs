@@ -85,23 +85,6 @@ export default function useScheduleResizeState({ colCount }) {
   }, [colRatios]);
 
   useEffect(() => {
-    const flushStoredSizing = () => {
-      writeStoredNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, dayColWidthRef.current || 0);
-      writeStoredNumber(SHOCKWAVE_ROW_HEIGHT_KEY, rowHeightRef.current);
-      writeStoredColRatios(colRatiosRef.current);
-    };
-    window.addEventListener('pagehide', flushStoredSizing);
-    window.addEventListener('beforeunload', flushStoredSizing);
-    document.addEventListener('visibilitychange', flushStoredSizing);
-    return () => {
-      flushStoredSizing();
-      window.removeEventListener('pagehide', flushStoredSizing);
-      window.removeEventListener('beforeunload', flushStoredSizing);
-      document.removeEventListener('visibilitychange', flushStoredSizing);
-    };
-  }, []);
-
-  useEffect(() => {
     if (!Array.isArray(colRatios)) return;
     if (colRatios.length >= colCount) return;
 
