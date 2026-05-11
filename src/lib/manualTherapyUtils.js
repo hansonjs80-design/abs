@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { generateShockwaveCalendar, getTodayKST } from './calendarUtils';
 import { normalizeNameForMatch } from './memoParser';
+import { TREATMENT_COMPLETE_BG } from './schedulerUtils';
 
 let todayManualTherapySyncQueue = Promise.resolve();
 
@@ -146,11 +147,18 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
   const weeks = generateShockwaveCalendar(year, month);
   const newLogs = [];
 
+  // 오늘 날짜 여부 판별 (처리 대상 날짜가 실제 오늘인지 확인)
+  const realToday = getTodayKST();
+  const isActualToday = todayY === realToday.getFullYear() && todayM === realToday.getMonth() + 1 && todayD === realToday.getDate();
+
   Object.entries(memos).forEach(([key, cell]) => {
     const [w, d, r, c] = key.split('-').map(Number);
     const dayInfo = weeks[w]?.[d];
     if (!dayInfo || !dayInfo.isCurrentMonth) return;
     if (dayInfo.year !== todayY || dayInfo.month !== todayM || dayInfo.day !== todayD) return;
+
+    // 오늘 날짜인 경우: 방문 완료(bg_color === TREATMENT_COMPLETE_BG)된 셀만 통계에 포함
+    if (isActualToday && cell?.bg_color !== TREATMENT_COMPLETE_BG) return;
 
     const therapistName = resolveManualTherapistName(c, dayInfo.day, therapists, monthlyTherapists);
     const parsed = parseManualTherapyEntry(cell?.content, therapists, therapistName);
