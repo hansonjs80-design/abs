@@ -1004,15 +1004,15 @@
 }
 
 .notice-item {
-  padding: 5px 14px;
+  padding: 4px 12px;
   border-bottom: 1px solid #e2e8f0;
-  min-height: 41px;
+  min-height: 32px;
   display: flex;
   align-items: center;
-  flex: 0 0 41px;
+  flex: 0 0 32px;
   cursor: pointer;
   transition: background var(--transition-fast);
-  font-size: 1.24rem;
+  font-size: 1.1rem;
   font-weight: 800;
   line-height: 1.16;
 }
@@ -1023,18 +1023,18 @@
 .notice-text {
   width: 100%;
   text-align: left;
-  font-size: 1.24rem;
+  font-size: 1.1rem;
   font-weight: 800;
   line-height: 1.16;
 }
 
 .notice-input {
   width: 100%;
-  padding: 3px 0;
+  padding: 2px 0;
   border: none;
   background: transparent;
   color: var(--text-primary);
-  font-size: 1.24rem;
+  font-size: 1.1rem;
   font-weight: 800;
   outline: none;
   text-align: left;
