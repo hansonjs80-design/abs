@@ -1150,6 +1150,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               </div>
             </>
           )}
+          <div className="shockwave-days" style={{ position: 'relative', ...(daysContainerWidth ? { width: `${daysContainerWidth}px` } : {}) }}>
             {weekDays.map((dayInfo, dayIdx) => {
               const isToday = isSameDate(dayInfo.date, today);
               const daySlots = getTimeSlotsForDay(dayInfo);
@@ -1508,6 +1509,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                 </div>
               );
             })}
+          </div>
         </div>
         );
       })}
