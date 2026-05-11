@@ -312,7 +312,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   /* ── 5주차 달력: A4 가로 꽉 채움 ── */
   body.calendar-only-print .staff-calendar {
     width: 100% !important;
-    height: 192mm !important; /* 타이틀이 작아진 만큼 달력 영역 확대 */
+    height: 188mm !important;
     display: flex !important;
     flex-direction: column !important;
     margin-left: 0 !important;
@@ -376,7 +376,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   }
   /* 5주로 강제하므로 5주차 레이아웃(192mm, 큰 글씨) 적용 */
   body.hide-last-week .staff-calendar {
-    height: 192mm !important;
+    height: 188mm !important;
   }
   body.hide-last-week .memo-slot {
     min-height: 12px !important;
