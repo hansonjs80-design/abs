@@ -1911,6 +1911,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 placeholder="새 부위 추가"
                                 className="context-menu-input"
                                 autoComplete="off"
+                                autoFocus
                                 value={contextMenuBodyInput}
                                 onChange={(e) => {
                                   e.stopPropagation();
