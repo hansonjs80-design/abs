@@ -23,42 +23,33 @@ function normalizeFontWeight(value) {
   return allowed.includes(nextValue) ? nextValue : DEFAULT_SCHEDULER_TEXT_SETTINGS.font_weight;
 }
 
+export const SCHEDULER_TEXT_SETTINGS_KEY = 'shockwave-scheduler-text-settings';
+
 export function getEffectiveSchedulerTextSettings(settings, year, month) {
-  const monthKey = getMonthKey(year, month);
-  const monthlySettings = settings?.monthly_settlement_settings;
-  const monthlyEntries = monthlySettings && typeof monthlySettings === 'object' && !Array.isArray(monthlySettings)
-    ? monthlySettings
-    : {};
-
-  const inheritedMonthKey = Object.keys(monthlyEntries)
-    .filter((key) => compareMonthKeys(key, monthKey) <= 0 && monthlyEntries[key]?.scheduler_ui)
-    .sort(compareMonthKeys)
-    .pop();
-
-  const override = inheritedMonthKey ? monthlyEntries[inheritedMonthKey]?.scheduler_ui : null;
-
-  return {
-    font_size: normalizeFontSize(override?.font_size),
-    font_weight: normalizeFontWeight(override?.font_weight),
-    source_month_key: inheritedMonthKey || null,
-    target_month_key: monthKey,
-  };
+  if (typeof window === 'undefined') return DEFAULT_SCHEDULER_TEXT_SETTINGS;
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(SCHEDULER_TEXT_SETTINGS_KEY) || 'null');
+    if (parsed) {
+      return {
+        font_size: normalizeFontSize(parsed.font_size),
+        font_weight: normalizeFontWeight(parsed.font_weight),
+      };
+    }
+  } catch {}
+  return DEFAULT_SCHEDULER_TEXT_SETTINGS;
 }
 
 export function setMonthlySchedulerTextSettings(settings, year, month, nextConfig) {
-  const monthKey = getMonthKey(year, month);
-  const existing = settings?.monthly_settlement_settings && typeof settings.monthly_settlement_settings === 'object'
-    ? settings.monthly_settlement_settings
-    : {};
-
-  return {
-    ...existing,
-    [monthKey]: {
-      ...(existing[monthKey] || {}),
-      scheduler_ui: {
-        font_size: normalizeFontSize(nextConfig?.font_size),
-        font_weight: normalizeFontWeight(nextConfig?.font_weight),
-      },
-    },
-  };
+  if (typeof window === 'undefined') return settings?.monthly_settlement_settings || {};
+  try {
+    const current = getEffectiveSchedulerTextSettings();
+    const updated = {
+      font_size: normalizeFontSize(nextConfig?.font_size ?? current.font_size),
+      font_weight: normalizeFontWeight(nextConfig?.font_weight ?? current.font_weight),
+    };
+    window.localStorage.setItem(SCHEDULER_TEXT_SETTINGS_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new Event('scheduler-text-settings-changed'));
+  } catch {}
+  
+  return settings?.monthly_settlement_settings || {};
 }

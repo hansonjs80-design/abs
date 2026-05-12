@@ -268,6 +268,16 @@ export default function ManualTherapyStatsPage() {
   }, [fetchLogs]);
 
   useEffect(() => {
+    const handleStatsUpdated = () => {
+      fetchLogs();
+    };
+    window.addEventListener('clinic-stats-updated', handleStatsUpdated);
+    return () => {
+      window.removeEventListener('clinic-stats-updated', handleStatsUpdated);
+    };
+  }, [fetchLogs]);
+
+  useEffect(() => {
     setExtraDraftRows(0);
     setActiveSection('grid');
   }, [currentMonth, currentYear]);

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 import { getEffectiveSchedulerTextSettings } from '../../lib/schedulerTextSettings';
 import { filterPrescriptionColorMap, normalizePrescriptionColorKey } from '../../lib/schedulerUtils';
@@ -80,10 +80,22 @@ export default function useScheduleViewState({
     }, {});
   }, [settings, currentYear, currentMonth]);
 
-  const effectiveSchedulerTextSettings = useMemo(
-    () => getEffectiveSchedulerTextSettings(settings, currentYear, currentMonth),
-    [settings, currentYear, currentMonth]
+  const [effectiveSchedulerTextSettings, setEffectiveSchedulerTextSettings] = useState(() => 
+    getEffectiveSchedulerTextSettings(settings, currentYear, currentMonth)
   );
+
+  useEffect(() => {
+    setEffectiveSchedulerTextSettings(getEffectiveSchedulerTextSettings(settings, currentYear, currentMonth));
+    
+    const handleTextSettingsChanged = () => {
+      setEffectiveSchedulerTextSettings(getEffectiveSchedulerTextSettings(settings, currentYear, currentMonth));
+    };
+    
+    window.addEventListener('scheduler-text-settings-changed', handleTextSettingsChanged);
+    return () => {
+      window.removeEventListener('scheduler-text-settings-changed', handleTextSettingsChanged);
+    };
+  }, [settings, currentYear, currentMonth]);
 
   return {
     effectivePrescriptionColors,

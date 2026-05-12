@@ -188,6 +188,16 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   }, [fetchLogs]);
 
   useEffect(() => {
+    const handleStatsUpdated = () => {
+      fetchLogs();
+    };
+    window.addEventListener('clinic-stats-updated', handleStatsUpdated);
+    return () => {
+      window.removeEventListener('clinic-stats-updated', handleStatsUpdated);
+    };
+  }, [fetchLogs]);
+
+  useEffect(() => {
     loadShockwaveSettings();
   }, [loadShockwaveSettings]);
 

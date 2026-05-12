@@ -327,7 +327,13 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
 }
 
 export async function syncTodayManualTherapyScheduleToStats(params) {
-  const run = todayManualTherapySyncQueue.then(() => runTodayManualTherapyScheduleToStatsSync(params));
+  const run = todayManualTherapySyncQueue.then(async () => {
+    const res = await runTodayManualTherapyScheduleToStatsSync(params);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('clinic-stats-updated'));
+    }
+    return res;
+  });
   todayManualTherapySyncQueue = run.catch(() => {});
   return run;
 }

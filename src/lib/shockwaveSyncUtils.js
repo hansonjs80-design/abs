@@ -463,7 +463,13 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
 }
 
 export async function syncTodayShockwaveScheduleToStats(params) {
-  const run = todaySchedulerSyncQueue.then(() => runTodayShockwaveScheduleToStatsSync(params));
+  const run = todaySchedulerSyncQueue.then(async () => {
+    const res = await runTodayShockwaveScheduleToStatsSync(params);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('clinic-stats-updated'));
+    }
+    return res;
+  });
   todaySchedulerSyncQueue = run.catch(() => {});
   return run;
 }
