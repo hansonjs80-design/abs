@@ -155,7 +155,7 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
     if (dayInfo.year !== todayY || dayInfo.month !== todayM || dayInfo.day !== todayD) return;
 
     // 방문 완료된 셀만 통계에 포함
-    if (cell?.bg_color !== TREATMENT_COMPLETE_BG) return;
+    if (String(cell?.bg_color || '').toLowerCase() !== TREATMENT_COMPLETE_BG.toLowerCase()) return;
 
     const therapistName = resolveManualTherapistName(c, dayInfo.day, therapists, monthlyTherapists);
     const parsed = parseManualTherapyEntry(cell?.content, therapists, therapistName);
