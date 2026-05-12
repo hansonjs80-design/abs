@@ -69,13 +69,56 @@ function AppRoutes() {
   );
 }
 
+import React from 'react';
+
+class GlobalErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, errorMessage: '' };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, errorMessage: error?.message || '' };
+  }
+
+  componentDidCatch(error) {
+    console.error('App global routing failed:', error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-primary, #fff)', color: 'var(--text-primary, #000)' }}>
+          <div style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 12 }}>화면을 불러오는 중 오류가 발생했습니다.</div>
+          <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary, #666)', marginBottom: 24 }}>일시적인 문제일 수 있습니다. 화면을 새로고침해주세요.</div>
+          {this.state.errorMessage && (
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary, #999)', marginBottom: 24, padding: '0 20px', textAlign: 'center', wordBreak: 'break-all' }}>
+              {this.state.errorMessage}
+            </div>
+          )}
+          <button 
+            type="button" 
+            onClick={() => window.location.reload()}
+            style={{ padding: '8px 16px', background: 'var(--brand-primary, #2563eb)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: '1rem', fontWeight: 600 }}
+          >
+            새로고침
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
           <ToastProvider>
-            <AppRoutes />
+            <GlobalErrorBoundary>
+              <AppRoutes />
+            </GlobalErrorBoundary>
           </ToastProvider>
         </AuthProvider>
       </ThemeProvider>

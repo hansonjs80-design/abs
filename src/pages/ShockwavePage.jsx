@@ -24,6 +24,13 @@ class ShockwavePageErrorBoundary extends React.Component {
           {this.state.errorMessage ? (
             <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary, #666)' }}>{this.state.errorMessage}</div>
           ) : null}
+          <button 
+            type="button" 
+            onClick={() => window.location.reload()}
+            style={{ marginTop: 12, padding: '6px 12px', background: 'var(--brand-primary)', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+          >
+            새로고침
+          </button>
         </div>
       );
     }

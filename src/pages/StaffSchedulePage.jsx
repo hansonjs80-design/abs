@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import StaffCalendar from '../components/calendar/StaffCalendar';
 import TodayPanel from '../components/calendar/TodayPanel';
 import NoticeBoard from '../components/notice/NoticeBoard';
@@ -24,6 +24,42 @@ function readStoredHiddenDepartments() {
 function saveStoredHiddenDepartments(hidden) {
   if (typeof localStorage === 'undefined') return;
   localStorage.setItem(HIDDEN_DEPARTMENTS_STORAGE_KEY, JSON.stringify(hidden));
+}
+
+class StaffSchedulePageErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, errorMessage: '' };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, errorMessage: error?.message || '' };
+  }
+
+  componentDidCatch(error) {
+    console.error('StaffSchedulePage failed:', error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 24 }}>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>직원 근무표 화면을 여는 중 오류가 발생했습니다.</div>
+          {this.state.errorMessage ? (
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary, #666)' }}>{this.state.errorMessage}</div>
+          ) : null}
+          <button 
+            type="button" 
+            onClick={() => window.location.reload()}
+            style={{ marginTop: 12, padding: '6px 12px', background: 'var(--brand-primary)', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+          >
+            새로고침
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 export default function StaffSchedulePage() {
@@ -93,20 +129,22 @@ export default function StaffSchedulePage() {
   };
 
   return (
-    <div className="animate-fade-in">
-      <div className="staff-layout">
-        <StaffCalendar hiddenDepartments={hiddenDepartments} />
-        <div className="staff-side">
-          <TodayPanel />
-          <NoticeBoard
-            departments={departments}
-            onDepartmentsChange={updateDepartments}
-            hiddenDepartments={hiddenDepartments}
-            onHiddenDepartmentsChange={updateHiddenDepartments}
-          />
-          <div id="staff-settings-portal"></div>
+    <StaffSchedulePageErrorBoundary>
+      <div className="animate-fade-in">
+        <div className="staff-layout">
+          <StaffCalendar hiddenDepartments={hiddenDepartments} />
+          <div className="staff-side">
+            <TodayPanel />
+            <NoticeBoard
+              departments={departments}
+              onDepartmentsChange={updateDepartments}
+              hiddenDepartments={hiddenDepartments}
+              onHiddenDepartmentsChange={updateHiddenDepartments}
+            />
+            <div id="staff-settings-portal"></div>
+          </div>
         </div>
       </div>
-    </div>
+    </StaffSchedulePageErrorBoundary>
   );
 }

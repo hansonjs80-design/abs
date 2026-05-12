@@ -147,18 +147,15 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
   const weeks = generateShockwaveCalendar(year, month);
   const newLogs = [];
 
-  // 오늘 날짜 여부 판별 (처리 대상 날짜가 실제 오늘인지 확인)
-  const realToday = getTodayKST();
-  const isActualToday = todayY === realToday.getFullYear() && todayM === realToday.getMonth() + 1 && todayD === realToday.getDate();
-
+  // 방문 완료(bg_color === TREATMENT_COMPLETE_BG)된 셀만 통계에 포함
   Object.entries(memos).forEach(([key, cell]) => {
     const [w, d, r, c] = key.split('-').map(Number);
     const dayInfo = weeks[w]?.[d];
     if (!dayInfo || !dayInfo.isCurrentMonth) return;
     if (dayInfo.year !== todayY || dayInfo.month !== todayM || dayInfo.day !== todayD) return;
 
-    // 오나날짜인 경우: 방문 완료(bg_color === TREATMENT_COMPLETE_BG)된 셀만 통계에 포함
-    if (isActualToday && cell?.bg_color !== TREATMENT_COMPLETE_BG) return;
+    // 방문 완료된 셀만 통계에 포함
+    if (cell?.bg_color !== TREATMENT_COMPLETE_BG) return;
 
     const therapistName = resolveManualTherapistName(c, dayInfo.day, therapists, monthlyTherapists);
     const parsed = parseManualTherapyEntry(cell?.content, therapists, therapistName);
