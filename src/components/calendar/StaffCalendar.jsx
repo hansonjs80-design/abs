@@ -7,6 +7,7 @@ import {
   getEffectiveStaffScheduleBlockRules,
   normalizeStaffScheduleRuleText,
 } from '../../lib/staffScheduleBlockRules';
+import { getEffectiveStaffDisplayRules, getMemoFontColorByRule } from '../../lib/staffDisplayRules';
 import { shouldHideStaffMemoByDepartment } from '../../lib/staffDepartmentFilters';
 import { useToast } from '../common/Toast';
 import MemoSlot from './MemoSlot';
@@ -93,10 +94,15 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
     () => getEffectiveStaffScheduleBlockRules(shockwaveSettings, currentYear, currentMonth).rules,
     [shockwaveSettings, currentYear, currentMonth]
   );
+  const displayRules = useMemo(
+    () => getEffectiveStaffDisplayRules(shockwaveSettings, currentYear, currentMonth).rules,
+    [shockwaveSettings, currentYear, currentMonth]
+  );
   const normalizeRuleText = useCallback((value) => normalizeStaffScheduleRuleText(value), []);
   const getAutoFontColorForStaffMemo = useCallback((content) => {
     const normalizedContent = normalizeRuleText(content);
     if (!normalizedContent) return null;
+    // 1. staffBlockRules (스케줄러 색칠 규칙)에서 먼저 매칭
     const matchedRules = (staffBlockRules || [])
       .filter((item) => {
         if (item?.enabled === false || !item?.keyword || !item?.font_color) return false;
@@ -104,8 +110,12 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
       })
       .sort((a, b) => normalizeRuleText(b.keyword).length - normalizeRuleText(a.keyword).length);
     const rule = matchedRules[0];
-    return rule?.font_color || null;
-  }, [staffBlockRules, normalizeRuleText]);
+    if (rule?.font_color) return rule.font_color;
+    // 2. displayRules (부서/이름 표시 규칙)에서 매칭
+    const displayColor = getMemoFontColorByRule(content, displayRules);
+    if (displayColor) return displayColor;
+    return null;
+  }, [staffBlockRules, normalizeRuleText, displayRules]);
 
   // ── Key helpers: memoKey = "year-month-day-slot" matching staffMemos format ──
   const memoKey = useCallback((wi, di, slot) => {
