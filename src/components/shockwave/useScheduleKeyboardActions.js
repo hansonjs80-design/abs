@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import {
   applyVisitCountToSchedulerContent,
   getExplicitVisitSuffix,
@@ -49,6 +49,31 @@ export default function useScheduleKeyboardActions({
   getDefaultReservationTime,
   handleOpenBodyPartMenu,
 }) {
+  // ── refs로 최신 값 추적 (연속 키 입력 시 stale closure 방지) ──
+  const memosRef = useRef(memos);
+  const pendingRef = useRef(pendingDisplayValues);
+  const onSaveMemoRef = useRef(onSaveMemo);
+  const buildSnapshotRef = useRef(buildMemoSnapshotForKeys);
+  const recordUndoRef = useRef(recordUndo);
+  const getDefaultTimeRef = useRef(getDefaultReservationTime);
+  const visitDebounceRef = useRef(null);   // { timer, undoSnapshot, keys }
+  const timeDebounceRef = useRef(null);    // { timer, undoSnapshot, keys }
+
+  useEffect(() => { memosRef.current = memos; }, [memos]);
+  useEffect(() => { pendingRef.current = pendingDisplayValues; }, [pendingDisplayValues]);
+  useEffect(() => { onSaveMemoRef.current = onSaveMemo; }, [onSaveMemo]);
+  useEffect(() => { buildSnapshotRef.current = buildMemoSnapshotForKeys; }, [buildMemoSnapshotForKeys]);
+  useEffect(() => { recordUndoRef.current = recordUndo; }, [recordUndo]);
+  useEffect(() => { getDefaultTimeRef.current = getDefaultReservationTime; }, [getDefaultReservationTime]);
+
+  // 디바운스 cleanup
+  useEffect(() => {
+    return () => {
+      if (visitDebounceRef.current?.timer) clearTimeout(visitDebounceRef.current.timer);
+      if (timeDebounceRef.current?.timer) clearTimeout(timeDebounceRef.current.timer);
+    };
+  }, []);
+
   return useCallback((e) => {
     if (e.defaultPrevented) return;
     if (isContextMenuTarget(e.target)) return;
@@ -123,13 +148,26 @@ export default function useScheduleKeyboardActions({
       e.stopPropagation();
       const delta = e.key === 'ArrowUp' ? 1 : -1;
       const keys = Array.from(selectedKeys || []);
-      const oldMemos = buildMemoSnapshotForKeys(keys);
-      let anyChanged = false;
+
+      // 첫 입력 시에만 undo 스냅샷 저장, 연속 입력 시 재사용
+      const isFirst = !visitDebounceRef.current;
+      if (isFirst) {
+        visitDebounceRef.current = {
+          timer: null,
+          undoSnapshot: buildSnapshotRef.current(keys),
+          keys,
+        };
+      }
+
+      // 최신 refs를 사용하여 즉시 낙관적 저장 시작
+      const latestMemos = memosRef.current;
+      const latestPending = pendingRef.current;
+      const saveMemo = onSaveMemoRef.current;
 
       const savePromises = keys.map(key => {
         const [kw, kd, kr, kc] = key.split('-').map(Number);
-        const memo = memos[key] || {};
-        const stableContent = (typeof memo.content === 'string' ? memo.content : pendingDisplayValues[key]) || '';
+        const memo = latestMemos[key] || {};
+        const stableContent = (typeof memo.content === 'string' ? memo.content : latestPending[key]) || '';
         if (!stableContent) return null;
 
         const visitSuffix = getExplicitVisitSuffix(stableContent);
@@ -138,16 +176,25 @@ export default function useScheduleKeyboardActions({
         const updatedContent = applyVisitCountToSchedulerContent(stableContent, nextVisit);
         if (updatedContent === stableContent) return null;
 
-        return onSaveMemo(
+        return saveMemo(
           currentYear, currentMonth, kw, kd, kr, kc,
           updatedContent, memo.bg_color, memo.merge_span, memo.prescription, memo.body_part
         );
       }).filter(Boolean);
 
       if (savePromises.length > 0) {
-        recordUndo({ type: 'bulk-edit', oldMemos });
         Promise.all(savePromises);
       }
+
+      // 디바운스된 undo 기록 (연속 입력이 멈춘 후 500ms 뒤 기록)
+      if (visitDebounceRef.current?.timer) clearTimeout(visitDebounceRef.current.timer);
+      visitDebounceRef.current.timer = setTimeout(() => {
+        const snapshot = visitDebounceRef.current;
+        if (snapshot?.undoSnapshot) {
+          recordUndoRef.current({ type: 'bulk-edit', oldMemos: snapshot.undoSnapshot });
+        }
+        visitDebounceRef.current = null;
+      }, 500);
       return;
     }
 
@@ -164,8 +211,7 @@ export default function useScheduleKeyboardActions({
       e.stopPropagation();
 
       const keys = Array.from(selectedKeys || []);
-      const oldMemos = buildMemoSnapshotForKeys(keys);
-      let anyChanged = false;
+      const oldMemos = buildSnapshotRef.current(keys);
 
       const keyMatch = e.code.match(/^Digit([1-9])$/);
       const keyNum = keyMatch ? keyMatch[1] : e.key;
@@ -198,11 +244,16 @@ export default function useScheduleKeyboardActions({
          doseTag = effectiveManualSettings?.dose_tags?.[targetPrescription] || shockwaveSettings?.manual_therapy_dose_tags?.[targetPrescription] || (autoTagMatch ? autoTagMatch[1] : '');
       }
 
+      const latestMemos = memosRef.current;
+      const latestPending = pendingRef.current;
+      const saveMemo = onSaveMemoRef.current;
+
       (async () => {
+        let anyChanged = false;
         for (const key of keys) {
           const [kw, kd, kr, kc] = key.split('-').map(Number);
-          const memo = memos[key] || {};
-          const stableContent = (typeof memo.content === 'string' ? memo.content : pendingDisplayValues[key]) || '';
+          const memo = latestMemos[key] || {};
+          const stableContent = (typeof memo.content === 'string' ? memo.content : latestPending[key]) || '';
           if (!stableContent) continue;
           
           let updatedContent = stableContent;
@@ -230,7 +281,7 @@ export default function useScheduleKeyboardActions({
           // 요구사항 원문: "스케줄 셀에 내용이 있는 셀에 단축키를 컨틀롤/커맨드 1,2,3,4,6 을 누르면 자동으로 처방 목록이 입력되게 설정할건데 부위 목록을 자동으로 입력되게 할건데 1번은 충격파 첫번째 목록..." 
           // 말이 조금 꼬인 것 같으나 처방(부위 목록)을 자동으로 지정하라는 의미로 보입니다.
 
-          const success = await onSaveMemo(
+          const success = await saveMemo(
             currentYear,
             currentMonth,
             kw,
@@ -246,7 +297,7 @@ export default function useScheduleKeyboardActions({
           if (success) anyChanged = true;
         }
         if (anyChanged) {
-          recordUndo({ type: 'bulk-edit', oldMemos });
+          recordUndoRef.current({ type: 'bulk-edit', oldMemos });
           addToast(`${targetPrescription} 처방이 적용되었습니다.`, 'success');
         }
       })();
@@ -281,34 +332,57 @@ export default function useScheduleKeyboardActions({
       const deltaMinutes = delta * 10; // 항상 10분 단위로 증감
       
       const keys = Array.from(selectedKeys || []);
-      const oldMemos = buildMemoSnapshotForKeys(keys);
-      let anyChanged = false;
+
+      // 첫 입력 시에만 undo 스냅샷 저장, 연속 입력 시 재사용
+      const isFirst = !timeDebounceRef.current;
+      if (isFirst) {
+        timeDebounceRef.current = {
+          timer: null,
+          undoSnapshot: buildSnapshotRef.current(keys),
+          keys,
+        };
+      }
+
+      // 최신 refs를 사용
+      const latestMemos = memosRef.current;
+      const latestPending = pendingRef.current;
+      const saveMemo = onSaveMemoRef.current;
+      const getDefTime = getDefaultTimeRef.current;
 
       const savePromises = keys.map(key => {
         const [kw, kd, kr, kc] = key.split('-').map(Number);
-        const memo = memos[key] || {};
-        const stableContent = (typeof memo.content === 'string' ? memo.content : pendingDisplayValues[key]) || '';
+        const memo = latestMemos[key] || {};
+        const stableContent = (typeof memo.content === 'string' ? memo.content : latestPending[key]) || '';
         if (!stableContent || stableContent.trim() === '\u200B') return null;
 
         const currentMergeSpan = memo.merge_span || '';
         const currentTime = getReservationTimeFromMergeSpan(currentMergeSpan);
-        const defaultTime = getDefaultReservationTime ? getDefaultReservationTime(kw, kd, kr) : '';
+        const defaultTime = getDefTime ? getDefTime(kw, kd, kr) : '';
 
         const nextTime = stepReservationTimeWithinCellBase(currentTime, defaultTime, deltaMinutes);
         const nextMergeSpan = buildMergeSpanWithReservationTime(currentMergeSpan, nextTime);
         
         if (currentMergeSpan === nextMergeSpan) return null;
 
-        return onSaveMemo(
+        return saveMemo(
           currentYear, currentMonth, kw, kd, kr, kc,
           stableContent, memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part
         );
       }).filter(Boolean);
 
       if (savePromises.length > 0) {
-        recordUndo({ type: 'bulk-edit', oldMemos });
         Promise.all(savePromises);
       }
+
+      // 디바운스된 undo 기록 (연속 입력이 멈춘 후 500ms 뒤 기록)
+      if (timeDebounceRef.current?.timer) clearTimeout(timeDebounceRef.current.timer);
+      timeDebounceRef.current.timer = setTimeout(() => {
+        const snapshot = timeDebounceRef.current;
+        if (snapshot?.undoSnapshot) {
+          recordUndoRef.current({ type: 'bulk-edit', oldMemos: snapshot.undoSnapshot });
+        }
+        timeDebounceRef.current = null;
+      }, 500);
       return;
     }
 
@@ -370,10 +444,8 @@ export default function useScheduleKeyboardActions({
     selectedCell,
     editingCell,
     selectedKeys,
-    pendingDisplayValues,
     currentYear,
     currentMonth,
-    memos,
     imeOpenRef,
     cellKey,
     colCount,
@@ -392,12 +464,11 @@ export default function useScheduleKeyboardActions({
     isEditableTarget,
     isContextMenuTarget,
     handleOpenPatientHistoryModal,
-    buildMemoSnapshotForKeys,
-    onSaveMemo,
-    recordUndo,
+    handleOpenBodyPartMenu,
     addToast,
     setEditingCell,
     setRangeEnd,
     setSelectedKeys,
+    shockwaveSettings,
   ]);
 }

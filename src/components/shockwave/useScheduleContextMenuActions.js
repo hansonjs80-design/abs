@@ -279,7 +279,8 @@ export default function useScheduleContextMenuActions({
       const oldMemos = buildMemoSnapshotForKeys(keys);
       const targetPart = action.value.trim();
 
-      // 즉시 UI 반영을 위해 먼저 로컬 스냅샷 업데이트
+      // 1회만 계산하여 UI + DB 모두에 사용할 결과를 미리 준비
+      const computedResults = [];
       for (const key of keys) {
         const memo = getMemoForAction(key);
         const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
@@ -292,29 +293,22 @@ export default function useScheduleContextMenuActions({
         const updated = parts.join(', ');
         const nextOptions = getBodyPartOptionList(memo, [targetPart, ...parts]);
         const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, nextOptions);
+        computedResults.push({ key, memo, updated, nextOptions, nextMergeSpan });
+      }
+
+      // 즉시 UI 반영 (동기적)
+      for (const { key, memo, updated, nextOptions, nextMergeSpan } of computedResults) {
         rememberBodyPartOptions(nextOptions);
-        // 동기적으로 contextMenu 스냅샷 갱신 → 다음 클릭에서 최신 body_part를 참조
         updateContextMemoSnapshot(key, memo, { merge_span: nextMergeSpan, body_part: updated });
       }
 
-      // DB 저장은 비동기로 처리 (UI는 이미 갱신됨)
-      let anyChanged = false;
-      for (const key of keys) {
-        const memo = getMemoForAction(key);
-        const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
-        const idx = parts.findIndex(p => normalizeBodyPartKey(p) === normalizeBodyPartKey(targetPart));
-        if (idx >= 0) {
-          parts.splice(idx, 1);
-        } else {
-          parts.push(targetPart);
-        }
-        const updated = parts.join(', ');
-        const nextOptions = getBodyPartOptionList(memo, [targetPart, ...parts]);
-        const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, nextOptions);
-        const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan, body_part: updated });
-        if (success) anyChanged = true;
-      }
-      if (anyChanged) {
+      // DB 저장은 병렬로 비동기 처리 (UI는 이미 갱신됨)
+      const saveResults = await Promise.all(
+        computedResults.map(({ key, memo, updated, nextMergeSpan }) =>
+          saveMemoMeta(key, memo, { merge_span: nextMergeSpan, body_part: updated })
+        )
+      );
+      if (saveResults.some(Boolean)) {
         recordUndo({ type: 'bulk-edit', oldMemos });
       }
       return;
