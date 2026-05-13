@@ -2,13 +2,19 @@ import { useMemo } from 'react';
 import { Calendar as CalIcon } from 'lucide-react';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { formatTodayScheduleItem, computeMemoFontColor } from '../../lib/memoParser';
+import { getEffectiveStaffDisplayRules, formatMemoWithRule, getMemoFontColorByRule } from '../../lib/staffDisplayRules';
 import { getTodayKST, isSameDate } from '../../lib/calendarUtils';
 import { WEEKDAYS_FULL } from '../../lib/constants';
 
 export default function TodayPanel() {
-  const { staffMemos, currentYear, currentMonth } = useSchedule();
+  const { staffMemos, currentYear, currentMonth, shockwaveSettings } = useSchedule();
   const today = getTodayKST();
   const dow = today.getDay();
+
+  const displayRules = useMemo(
+    () => getEffectiveStaffDisplayRules(shockwaveSettings, currentYear, currentMonth).rules,
+    [shockwaveSettings, currentYear, currentMonth]
+  );
 
   const todayItems = useMemo(() => {
     const y = today.getFullYear();
@@ -21,14 +27,17 @@ export default function TodayPanel() {
       const memo = staffMemos[key];
       if (!memo?.content) continue;
 
-      const formatted = formatTodayScheduleItem(memo.content, dow);
+      // 표시 규칙 우선 적용, 없으면 기존 memoParser 폴백
+      const ruleFormatted = formatMemoWithRule(memo.content, displayRules);
+      const formatted = ruleFormatted || formatTodayScheduleItem(memo.content, dow);
       if (formatted) {
-        const color = computeMemoFontColor(memo.content);
+        const ruleColor = getMemoFontColorByRule(memo.content, displayRules);
+        const color = ruleColor || computeMemoFontColor(memo.content);
         items.push({ text: formatted, color });
       }
     }
     return items;
-  }, [staffMemos, today, dow]);
+  }, [staffMemos, today, dow, displayRules]);
 
   const dateLabel = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 ${WEEKDAYS_FULL[dow]}`;
 
@@ -47,6 +56,7 @@ export default function TodayPanel() {
             else if (item.color === '#40a417') dotColor = 'var(--memo-leave)';
             else if (item.color === '#ff6d01') dotColor = 'var(--memo-attend)';
             else if (item.color === '#ff0000') dotColor = 'var(--memo-special)';
+            else if (item.color) dotColor = item.color;
 
             return (
               <div key={i} className="today-panel-item" style={{ color: item.color || 'inherit' }}>
