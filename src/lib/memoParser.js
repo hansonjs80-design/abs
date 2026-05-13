@@ -3,7 +3,6 @@
  * ============================================*/
 
 import { FONT_COLORS, CLINIC_DEPT_MAP } from './constants';
-import { matchDisplayRule, formatMemoWithRule, parseDeptNameMemo } from './staffDisplayRules';
 export { has4060Pattern, normalize4060StarOrder, strip4060FromContent } from './schedulerContentFormat';
 
 /**
@@ -44,27 +43,14 @@ export function isSpecialWorkTimeMemo(text) {
 /**
  * 메모별 글자색 결정
  * 원본: computeStaffMemoFontColor_
- * @param {string} txt - 메모 텍스트
- * @param {Array} [displayRules] - 표시 규칙 배열 (없으면 기본 규칙 사용)
  */
-export function computeMemoFontColor(txt, displayRules) {
+export function computeMemoFontColor(txt) {
   const t = String(txt || '').trim();
   if (!t) return null;
 
   if (/^(?:\d+\s*)?명$/.test(t)) return FONT_COLORS.normal;
   if (/^간호\s*(?:오전|오후)\s*\/\s*\S+/.test(t)) return FONT_COLORS.normal;
   if (isSpecialWorkTimeMemo(t)) return FONT_COLORS.red;
-
-  // 부서/이름 패턴이면 규칙 기반 색상 결정
-  const parsed = parseDeptNameMemo(t);
-  if (parsed) {
-    const match = matchDisplayRule(t, displayRules);
-    if (match && match.rule.calendar_font_color) {
-      return match.rule.calendar_font_color;
-    }
-    // 규칙에 매칭 안 되면 기존 키워드 기반 폴백
-  }
-
   if (t.indexOf('야') !== -1) return FONT_COLORS.nightBlue;
   if (t.indexOf('휴무') !== -1) return FONT_COLORS.purple;
   if (t.indexOf('연차') !== -1 || t.indexOf('반차') !== -1) return FONT_COLORS.green;
@@ -132,11 +118,8 @@ export function parseMemoLine(raw, nameList = []) {
 /**
  * 오늘 일정 포맷팅
  * 원본: fillTodayScheduleToJ
- * @param {string} txt - 메모 텍스트
- * @param {number} dow - 요일 (0=일, 6=토)
- * @param {Array} [displayRules] - 표시 규칙 배열 (없으면 기본 규칙 사용)
  */
-export function formatTodayScheduleItem(txt, dow, displayRules) {
+export function formatTodayScheduleItem(txt, dow) {
   let text = String(txt || '').trim();
   if (!text) return null;
 
@@ -144,20 +127,38 @@ export function formatTodayScheduleItem(txt, dow, displayRules) {
   if (/^\d*명$/.test(text)) return null;
   if (!isNaN(Number(text))) return null;
 
-  // 부서/이름 패턴이면 규칙 기반 포맷팅 시도
-  const ruleFormatted = formatMemoWithRule(text, displayRules);
-  if (ruleFormatted) return ruleFormatted;
+  // 연차 패턴
+  if (/^(PT|간호)\/.+\s*연차$/.test(text)) return text;
 
-  // "간호 오전/이름" 같은 특수 간호 패턴 (규칙에 매칭 안 됨)
+  // 간호 패턴
   const mNurse = text.match(/^간호\s+([^\s/]+)\/([^\s/]+)$/);
   if (mNurse) {
     return `간호/${mNurse[2]} ${mNurse[1]}휴무`;
   }
 
-  // 규칙에도 매칭 안 되고, 부서/이름 형태도 아닌 경우 기존 폴백
-  if (!text.includes('휴무') && !text.includes('휴가') && !/반차|연차/.test(text)) {
+  // 반차 패턴
+  const mHalf = text.match(/^(PT|간호)\/(.+?)\s*(오전반차|오후반차)$/);
+  if (mHalf) return text;
+
+  // 일반 패턴
+  const mSimple = text.match(/^(PT|간호)\/(.+)$/);
+  if (mSimple) text = `${mSimple[1]}/${mSimple[2].trim()} 휴무`;
+
+  if (text.startsWith('야 ') && text.includes('간호/')) {
+    text = text.replace(/^야\s*/, '') + ' 야간 근무';
+  } else if (text.startsWith('간호/') && !/(야간 근무|휴무|퇴근|반차|연차|출근)/.test(text)) {
+    text += ' 휴무';
+  } else if (!text.includes('휴무') && !text.includes('휴가') && !/반차|연차/.test(text)) {
     if (text.startsWith('야') && !text.includes('야간 근무')) {
       text = text.replace(/^야(간)?\s*/, '').trim() + ' 야간 근무';
+    } else {
+      const parts = text.split('/');
+      const dept = parts[0]?.trim();
+      const hasTime = /\d|퇴근|출근|근무/.test(text);
+
+      if (parts.length === 2 && !hasTime && dept === '간호') text += ' 휴무';
+      else if (parts.length === 2 && !hasTime && dept === 'PT') text += ' 휴무';
+      else if (!hasTime) text += ' 휴무';
     }
   }
 

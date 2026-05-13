@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Calendar as CalIcon } from 'lucide-react';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { formatTodayScheduleItem, computeMemoFontColor } from '../../lib/memoParser';
-import { getEffectiveStaffDisplayRules } from '../../lib/staffDisplayRules';
+import { getEffectiveStaffDisplayRules, formatMemoWithRule, getMemoFontColorByRule } from '../../lib/staffDisplayRules';
 import { getTodayKST, isSameDate } from '../../lib/calendarUtils';
 import { WEEKDAYS_FULL } from '../../lib/constants';
 
@@ -27,9 +27,12 @@ export default function TodayPanel() {
       const memo = staffMemos[key];
       if (!memo?.content) continue;
 
-      const formatted = formatTodayScheduleItem(memo.content, dow, displayRules);
+      // 표시 규칙 우선 적용, 없으면 기존 memoParser 폴백
+      const ruleFormatted = formatMemoWithRule(memo.content, displayRules);
+      const formatted = ruleFormatted || formatTodayScheduleItem(memo.content, dow);
       if (formatted) {
-        const color = computeMemoFontColor(memo.content, displayRules);
+        const ruleColor = getMemoFontColorByRule(memo.content, displayRules);
+        const color = ruleColor || computeMemoFontColor(memo.content);
         items.push({ text: formatted, color });
       }
     }

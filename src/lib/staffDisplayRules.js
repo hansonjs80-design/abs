@@ -7,7 +7,9 @@
  * - 월별 상속 로직
  */
 
-import { getMonthKey } from './schedulerOperatingHours';
+function getMonthKey(year, month) {
+  return `${year}-${String(month).padStart(2, '0')}`;
+}
 
 /* ── 기본 규칙 ── */
 export const DEFAULT_STAFF_DISPLAY_RULES = [
