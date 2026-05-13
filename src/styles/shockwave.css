@@ -2476,6 +2476,87 @@
   white-space: nowrap;
 }
 
+/* 근무표 연동 서브탭 */
+.monthly-staff-block-sub-tabs {
+  display: flex;
+  gap: 0;
+  margin: 12px 0 0;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.monthly-staff-block-sub-tab {
+  padding: 8px 18px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.15s ease;
+}
+
+.monthly-staff-block-sub-tab:hover {
+  color: #334155;
+  background: rgba(241, 245, 249, 0.7);
+}
+
+.monthly-staff-block-sub-tab.active {
+  color: #1e40af;
+  border-bottom-color: #3b82f6;
+  background: rgba(239, 246, 255, 0.5);
+}
+
+/* 미리보기 패널 */
+.monthly-staff-display-preview {
+  margin: 12px 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  border-radius: 10px;
+  background: rgba(248, 250, 252, 0.96);
+}
+
+.monthly-staff-display-preview-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #1e40af;
+  margin-bottom: 10px;
+}
+
+.monthly-staff-display-preview-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.monthly-staff-display-preview-input-row label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.monthly-staff-display-preview-results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.monthly-staff-display-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.monthly-staff-display-preview-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  min-width: 80px;
+}
+
 .monthly-date-override-form {
   display: grid;
   grid-template-columns: minmax(130px, 1.4fr) repeat(4, minmax(82px, 1fr)) auto auto;
