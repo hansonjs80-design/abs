@@ -147,7 +147,7 @@ export function formatTodayScheduleItem(txt, dow) {
   if (text.startsWith('야 ') && text.includes('간호/')) {
     text = text.replace(/^야\s*/, '') + ' 야간 근무';
   } else if (text.startsWith('간호/') && !/(야간 근무|휴무|퇴근|반차|연차|출근)/.test(text)) {
-    text += dow === 6 ? ' 휴무' : ' 5시 퇴근';
+    text += ' 휴무';
   } else if (!text.includes('휴무') && !text.includes('휴가') && !/반차|연차/.test(text)) {
     if (text.startsWith('야') && !text.includes('야간 근무')) {
       text = text.replace(/^야(간)?\s*/, '').trim() + ' 야간 근무';
@@ -156,7 +156,7 @@ export function formatTodayScheduleItem(txt, dow) {
       const dept = parts[0]?.trim();
       const hasTime = /\d|퇴근|출근|근무/.test(text);
 
-      if (parts.length === 2 && !hasTime && dept === '간호') text += ' 5시 퇴근';
+      if (parts.length === 2 && !hasTime && dept === '간호') text += ' 휴무';
       else if (parts.length === 2 && !hasTime && dept === 'PT') text += ' 휴무';
       else if (!hasTime) text += ' 휴무';
     }
