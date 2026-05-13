@@ -15,6 +15,13 @@ import {
   getEffectiveSchedulerTextSettings,
   setMonthlySchedulerTextSettings,
 } from '../../lib/schedulerTextSettings';
+import {
+  DEFAULT_STAFF_DISPLAY_RULES,
+  getEffectiveStaffDisplayRules,
+  setMonthlyStaffDisplayRules,
+  matchDisplayRule,
+  parseDeptNameMemo,
+} from '../../lib/staffDisplayRules';
 
 /**
  * 월별 치료사 설정 모달
@@ -48,6 +55,9 @@ export default function MonthlyTherapistConfig({
   const [dayOverrides, setDayOverrides] = useState({});
   const [dateOverrides, setDateOverrides] = useState({});
   const [staffBlockRules, setStaffBlockRules] = useState([]);
+  const [staffDisplayRules, setStaffDisplayRules] = useState([]);
+  const [displayPreviewText, setDisplayPreviewText] = useState('간호/강수아');
+  const [staffBlockSubTab, setStaffBlockSubTab] = useState('blocks');
   const [schedulerTextSettings, setSchedulerTextSettings] = useState(DEFAULT_SCHEDULER_TEXT_SETTINGS);
   const [newDateOverride, setNewDateOverride] = useState({
     date: '',
@@ -120,6 +130,7 @@ export default function MonthlyTherapistConfig({
     setDayOverrides(getMonthlyDayOverrides(settings?.day_overrides, year, month));
     setDateOverrides(getDateOverridesForMonth(settings?.date_overrides, year, month));
     setStaffBlockRules(getEffectiveStaffScheduleBlockRules(settings, year, month).rules);
+    setStaffDisplayRules(getEffectiveStaffDisplayRules(settings, year, month).rules);
     setSchedulerTextSettings(getEffectiveSchedulerTextSettings(settings, year, month));
   }, [settings, settings?.day_overrides, settings?.date_overrides, settings?.staff_schedule_block_rules, year, month]);
 
@@ -378,12 +389,39 @@ export default function MonthlyTherapistConfig({
     setStaffBlockRules((prev) => (prev || []).filter((_, ruleIndex) => ruleIndex !== index));
   }, []);
 
+  const addStaffDisplayRule = useCallback(() => {
+    setStaffDisplayRules((prev) => ([
+      ...(prev || []),
+      {
+        id: `display-rule-${Date.now()}`,
+        keyword: '',
+        position: 'suffix',
+        today_suffix: '',
+        calendar_font_color: '',
+        calendar_bg_color: '',
+        enabled: true,
+        priority: 50,
+      },
+    ]));
+  }, []);
+
+  const updateStaffDisplayRule = useCallback((index, field, value) => {
+    setStaffDisplayRules((prev) => (prev || []).map((rule, ruleIndex) => (
+      ruleIndex === index ? { ...rule, [field]: value } : rule
+    )));
+  }, []);
+
+  const removeStaffDisplayRule = useCallback((index) => {
+    setStaffDisplayRules((prev) => (prev || []).filter((_, ruleIndex) => ruleIndex !== index));
+  }, []);
+
   const handleSaveStaffBlockRules = useCallback(async () => {
     if (!onSaveSettings || !settings) return;
     setSaving(true);
     const success = await onSaveSettings({
       ...settings,
       staff_schedule_block_rules: setMonthlyStaffScheduleBlockRules(settings, year, month, staffBlockRules),
+      staff_display_rules: setMonthlyStaffDisplayRules(settings, year, month, staffDisplayRules),
     });
     setSaving(false);
     if (success) onClose();
@@ -751,121 +789,371 @@ export default function MonthlyTherapistConfig({
   };
 
   const renderStaffBlockSettings = () => {
-    const effective = getEffectiveStaffScheduleBlockRules(settings, year, month);
-    const sourceText = !effective.source_month_key
-      ? '기본 근무표 연동 규칙 사용 중'
-      : effective.source_month_key === effective.target_month_key
-        ? '이번 달 직접 설정 사용 중'
-        : `${effective.source_month_key} 설정을 이어받아 적용 중`;
+    const effectiveBlocks = getEffectiveStaffScheduleBlockRules(settings, year, month);
+    const effectiveDisplay = getEffectiveStaffDisplayRules(settings, year, month);
+
+    let matchResult = null;
+    let previewFormatted = displayPreviewText;
+    let previewStyle = {};
+
+    if (staffBlockSubTab === 'display') {
+      const p = parseDeptNameMemo(displayPreviewText);
+      if (p) {
+        matchResult = matchDisplayRule(displayPreviewText, staffDisplayRules);
+        const suffix = matchResult?.rule?.today_suffix || '';
+        previewFormatted = suffix ? `${p.dept}/${p.name} ${suffix}` : `${p.dept}/${p.name}`;
+        if (matchResult?.rule?.calendar_font_color) previewStyle.color = matchResult.rule.calendar_font_color;
+        if (matchResult?.rule?.calendar_bg_color) previewStyle.backgroundColor = matchResult.rule.calendar_bg_color;
+      }
+    }
 
     return (
       <>
         <div className="monthly-therapist-desc">
-          근무표 메모가 “문구/치료사명” 형식과 일치하면 해당 날짜의 스케줄러에서 그 치료사 열의 지정 시간대를 색칠합니다. 공백은 완화되어 “야간 PT”와 “야간PT”를 같은 문구로 인식합니다.
-          <br />
-          {sourceText}
+          근무표 메모 연동 기능을 설정합니다. 달력 셀 색칠 규칙과 부서/이름 표시 규칙을 월별로 관리할 수 있습니다.
         </div>
-        <div className="monthly-therapist-toolbar monthly-staff-block-toolbar">
-          <span>현재 {staffBlockRules.length}개 규칙</span>
-          <button type="button" className="monthly-therapist-add-slot" onClick={addStaffBlockRule}>
-            + 색칠 규칙 추가
+
+        <div className="monthly-staff-block-sub-tabs">
+          <button
+            type="button"
+            className={`monthly-staff-block-sub-tab${staffBlockSubTab === 'blocks' ? ' active' : ''}`}
+            onClick={() => setStaffBlockSubTab('blocks')}
+          >
+            스케줄러 색칠 규칙
+          </button>
+          <button
+            type="button"
+            className={`monthly-staff-block-sub-tab${staffBlockSubTab === 'display' ? ' active' : ''}`}
+            onClick={() => setStaffBlockSubTab('display')}
+          >
+            부서/이름 표시 규칙
           </button>
         </div>
-        <div className="monthly-therapist-body monthly-therapist-body--settings">
-          <div className="monthly-operating-table-wrap">
-            <table className="monthly-operating-table monthly-staff-block-table">
-              <thead>
-                <tr>
-                  <th>사용</th>
-                  <th>근무표 문구</th>
-                  <th>시작</th>
-                  <th>종료</th>
-                  <th>배경색</th>
-                  <th>글자색</th>
-                  <th>미포함</th>
-                  <th>삭제</th>
-                </tr>
-              </thead>
-              <tbody>
-                {staffBlockRules.length === 0 ? (
+
+        {staffBlockSubTab === 'blocks' ? (
+          <div className="monthly-therapist-body monthly-therapist-body--settings">
+            <div className="monthly-staff-block-source">
+              {!effectiveBlocks.source_month_key
+                ? '기본 근무표 연동 색칠 규칙 사용 중'
+                : effectiveBlocks.source_month_key === effectiveBlocks.target_month_key
+                  ? '이번 달 직접 설정 사용 중'
+                  : `${effectiveBlocks.source_month_key} 색칠 설정을 이어받아 적용 중`}
+            </div>
+            <div className="monthly-therapist-toolbar monthly-staff-block-toolbar">
+              <span>현재 {staffBlockRules.length}개 규칙</span>
+              <button type="button" className="monthly-therapist-add-slot" onClick={addStaffBlockRule}>
+                + 색칠 규칙 추가
+              </button>
+            </div>
+            <div className="monthly-operating-table-wrap">
+              <table className="monthly-operating-table monthly-staff-block-table">
+                <thead>
                   <tr>
-                    <td className="monthly-operating-empty" colSpan={8}>이 달에 설정된 근무표 연동 색칠 규칙이 없습니다.</td>
+                    <th>사용</th>
+                    <th>근무표 문구</th>
+                    <th>시작</th>
+                    <th>종료</th>
+                    <th>배경색</th>
+                    <th>글자색</th>
+                    <th>미포함</th>
+                    <th>삭제</th>
                   </tr>
-                ) : staffBlockRules.map((rule, index) => (
-                  <tr key={rule.id || index}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={rule.enabled !== false}
-                        onChange={(e) => updateStaffBlockRule(index, 'enabled', e.target.checked)}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="text"
-                        className="monthly-operating-input monthly-staff-block-keyword"
-                        value={rule.keyword || ''}
-                        placeholder="오후 반차"
-                        onChange={(e) => updateStaffBlockRule(index, 'keyword', e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="time"
-                        className="monthly-operating-input"
-                        value={rule.start_time || ''}
-                        onChange={(e) => updateStaffBlockRule(index, 'start_time', e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="time"
-                        className="monthly-operating-input"
-                        value={rule.end_time || ''}
-                        onChange={(e) => updateStaffBlockRule(index, 'end_time', e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="color"
-                        className="monthly-staff-block-color"
-                        value={rule.bg_color || '#d9ead3'}
-                        onChange={(e) => updateStaffBlockRule(index, 'bg_color', e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="color"
-                        className="monthly-staff-block-color"
-                        value={rule.font_color || '#0f172a'}
-                        onChange={(e) => updateStaffBlockRule(index, 'font_color', e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <label className="monthly-staff-block-invert">
+                </thead>
+                <tbody>
+                  {staffBlockRules.length === 0 ? (
+                    <tr>
+                      <td className="monthly-operating-empty" colSpan={8}>이 달에 설정된 근무표 연동 색칠 규칙이 없습니다.</td>
+                    </tr>
+                  ) : staffBlockRules.map((rule, index) => (
+                    <tr key={rule.id || index}>
+                      <td>
                         <input
                           type="checkbox"
-                          checked={rule.invert_match === true}
-                          onChange={(e) => updateStaffBlockRule(index, 'invert_match', e.target.checked)}
+                          checked={rule.enabled !== false}
+                          onChange={(e) => updateStaffBlockRule(index, 'enabled', e.target.checked)}
                         />
-                        <span>목록에 없는 치료사</span>
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          className="monthly-operating-input monthly-staff-block-keyword"
+                          value={rule.keyword || ''}
+                          placeholder="오후 반차"
+                          onChange={(e) => updateStaffBlockRule(index, 'keyword', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="time"
+                          className="monthly-operating-input"
+                          value={rule.start_time || ''}
+                          onChange={(e) => updateStaffBlockRule(index, 'start_time', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="time"
+                          className="monthly-operating-input"
+                          value={rule.end_time || ''}
+                          onChange={(e) => updateStaffBlockRule(index, 'end_time', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="color"
+                          className="monthly-staff-block-color"
+                          value={rule.bg_color || '#d9ead3'}
+                          onChange={(e) => updateStaffBlockRule(index, 'bg_color', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="color"
+                          className="monthly-staff-block-color"
+                          value={rule.font_color || '#0f172a'}
+                          onChange={(e) => updateStaffBlockRule(index, 'font_color', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <label className="monthly-staff-block-invert">
+                          <input
+                            type="checkbox"
+                            checked={rule.invert_match === true}
+                            onChange={(e) => updateStaffBlockRule(index, 'invert_match', e.target.checked)}
+                          />
+                          <span>목록에 없는 치료사</span>
+                        </label>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="monthly-therapist-remove-btn"
+                          onClick={() => removeStaffBlockRule(index)}
+                        >
+                          삭제
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="monthly-therapist-body monthly-therapist-body--settings">
+            <div className="monthly-staff-block-source">
+              {!effectiveDisplay.source_month_key
+                ? '기본 표시 규칙 사용 중'
+                : effectiveDisplay.source_month_key === effectiveDisplay.target_month_key
+                  ? '이번 달 직접 설정 사용 중'
+                  : `${effectiveDisplay.source_month_key} 표시 설정을 이어받아 적용 중`}
+            </div>
+
+            <div className="monthly-display-preview-panel">
+              <div className="monthly-display-preview-header">
+                <strong>실시간 미리보기</strong>
+                <span className="monthly-display-preview-desc">메모를 입력하여 규칙이 어떻게 적용되는지 확인하세요.</span>
+              </div>
+              <div className="monthly-display-preview-content">
+                <input
+                  type="text"
+                  className="monthly-operating-input monthly-display-preview-input"
+                  value={displayPreviewText}
+                  onChange={(e) => setDisplayPreviewText(e.target.value)}
+                  placeholder="예: 야간 간호/강수아"
+                />
+                <div className="monthly-display-preview-arrow">➔</div>
+                <div className="monthly-display-preview-result">
+                  <div className="monthly-display-preview-label-row">
+                    <span className="monthly-display-preview-label">📅 달력 셀</span>
+                  </div>
+                  <div className="monthly-display-preview-cell" style={previewStyle}>
+                    {displayPreviewText || '(비어있음)'}
+                  </div>
+                  <div className="monthly-display-preview-label-row" style={{ marginTop: '8px' }}>
+                    <span className="monthly-display-preview-label">📋 오늘 일정 패널</span>
+                  </div>
+                  <div className="monthly-display-preview-today-item" style={{ color: previewStyle.color || 'inherit' }}>
+                    <span
+                      className="monthly-display-preview-today-dot"
+                      style={{
+                        background: previewStyle.color === '#3c78d8' ? 'var(--memo-night, #3c78d8)'
+                          : previewStyle.color === '#9900ff' ? 'var(--memo-off, #9900ff)'
+                          : previewStyle.color === '#40a417' ? 'var(--memo-leave, #40a417)'
+                          : previewStyle.color === '#ff6d01' ? 'var(--memo-attend, #ff6d01)'
+                          : previewStyle.color === '#ff0000' ? 'var(--memo-special, #ff0000)'
+                          : previewStyle.color || 'var(--text-tertiary, #94a3b8)',
+                      }}
+                    />
+                    {previewFormatted || displayPreviewText || '(비어있음)'}
+                  </div>
+                </div>
+              </div>
+              <div className="monthly-display-preview-footer">
+                매칭된 규칙: {matchResult ? <strong>{matchResult.rule.keyword || '(기본값 – 순수 부서/이름)'}</strong> : <span className="no-match">없음 (부서/이름 패턴이 아니거나 매칭 규칙 없음)</span>}
+              </div>
+            </div>
+
+            <div className="monthly-therapist-toolbar monthly-staff-block-toolbar">
+              <span>현재 {staffDisplayRules.length}개 표시 규칙</span>
+              <div>
+                <button
+                  type="button"
+                  className="monthly-therapist-add-slot monthly-therapist-restore-btn"
+                  onClick={() => {
+                    if (confirm('기본 표시 규칙으로 덮어쓰시겠습니까? 기존 설정은 사라집니다.')) {
+                      setStaffDisplayRules(DEFAULT_STAFF_DISPLAY_RULES.map(r => ({ ...r, id: `display-rule-${Date.now()}-${Math.random()}` })));
+                    }
+                  }}
+                  style={{ marginRight: '8px' }}
+                >
+                  기본 규칙 복원
+                </button>
+                <button type="button" className="monthly-therapist-add-slot" onClick={addStaffDisplayRule}>
+                  + 표시 규칙 추가
+                </button>
+              </div>
+            </div>
+            <div className="monthly-display-rules-grid">
+              {staffDisplayRules.length === 0 ? (
+                <div className="monthly-operating-empty" style={{ gridColumn: '1 / -1' }}>이 달에 설정된 표시 규칙이 없습니다.</div>
+              ) : staffDisplayRules.sort((a, b) => b.priority - a.priority).map((rule, index) => {
+                const originalIndex = staffDisplayRules.indexOf(rule);
+                const exText = rule.position === 'prefix' ? `${rule.keyword || '야간'} 간호/홍길동`
+                             : rule.position === 'suffix' ? `간호/홍길동 ${rule.keyword || '연차'}`
+                             : '간호/홍길동';
+
+                return (
+                  <div key={rule.id || originalIndex} className={`display-rule-card ${rule.enabled === false ? 'disabled' : ''}`}>
+                    <div className="display-rule-card-header">
+                      <label className="display-rule-toggle">
+                        <input
+                          type="checkbox"
+                          checked={rule.enabled !== false}
+                          onChange={(e) => updateStaffDisplayRule(originalIndex, 'enabled', e.target.checked)}
+                        />
+                        <span className="display-rule-toggle-text">사용</span>
                       </label>
-                    </td>
-                    <td>
                       <button
                         type="button"
                         className="monthly-therapist-remove-btn"
-                        onClick={() => removeStaffBlockRule(index)}
+                        onClick={() => removeStaffDisplayRule(originalIndex)}
                       >
                         삭제
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+
+                    <div className="display-rule-condition">
+                      <div className="display-rule-label">조건</div>
+                      <div className="display-rule-condition-inputs">
+                        <select
+                          className="monthly-operating-input"
+                          value={rule.position}
+                          onChange={(e) => updateStaffDisplayRule(originalIndex, 'position', e.target.value)}
+                        >
+                          <option value="prefix">키워드가 앞에 올 때</option>
+                          <option value="suffix">키워드가 뒤에 올 때</option>
+                          <option value="standalone">키워드 없이 단독일 때</option>
+                        </select>
+                        {rule.position !== 'standalone' && (
+                          <input
+                            type="text"
+                            className="monthly-operating-input"
+                            value={rule.keyword || ''}
+                            placeholder="키워드 입력"
+                            onChange={(e) => updateStaffDisplayRule(originalIndex, 'keyword', e.target.value)}
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="display-rule-actions">
+                      <div className="display-rule-label">결과 지정</div>
+                      
+                      <div className="display-rule-action-row">
+                        <span className="display-rule-action-title">📅 달력</span>
+                        <div className="display-rule-colors">
+                          <label className="display-rule-color-item" title="글자색">
+                            <span>글자</span>
+                            <input
+                              type="color"
+                              className="monthly-staff-block-color"
+                              value={rule.calendar_font_color || '#000000'}
+                              onChange={(e) => updateStaffDisplayRule(originalIndex, 'calendar_font_color', e.target.value)}
+                            />
+                            <button
+                              type="button"
+                              className="display-rule-color-clear"
+                              onClick={() => updateStaffDisplayRule(originalIndex, 'calendar_font_color', '')}
+                              title="기본값 사용"
+                            >
+                              ↺
+                            </button>
+                          </label>
+                          <label className="display-rule-color-item" title="배경색">
+                            <span>배경</span>
+                            <input
+                              type="color"
+                              className="monthly-staff-block-color"
+                              value={rule.calendar_bg_color || '#ffffff'}
+                              onChange={(e) => updateStaffDisplayRule(originalIndex, 'calendar_bg_color', e.target.value)}
+                            />
+                            <button
+                              type="button"
+                              className="display-rule-color-clear"
+                              onClick={() => updateStaffDisplayRule(originalIndex, 'calendar_bg_color', '')}
+                              title="빈 배경 사용"
+                            >
+                              ↺
+                            </button>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="display-rule-action-row">
+                        <span className="display-rule-action-title">📋 오늘 일정</span>
+                        <div className="display-rule-today-input">
+                          <span className="display-rule-today-prefix">부서/이름 +</span>
+                          <input
+                            type="text"
+                            className="monthly-operating-input"
+                            value={rule.today_suffix || ''}
+                            placeholder="꼬리말 (예: 휴무)"
+                            onChange={(e) => updateStaffDisplayRule(originalIndex, 'today_suffix', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="display-rule-card-preview">
+                      <div className="display-rule-preview-cell" style={{
+                        color: rule.calendar_font_color || 'inherit',
+                        backgroundColor: rule.calendar_bg_color || 'transparent'
+                      }}>
+                        {exText}
+                      </div>
+                      <div className="display-rule-preview-today" style={{ color: rule.calendar_font_color || 'inherit' }}>
+                        <span
+                          className="display-rule-preview-dot"
+                          style={{
+                            background: rule.calendar_font_color === '#3c78d8' ? 'var(--memo-night, #3c78d8)'
+                              : rule.calendar_font_color === '#9900ff' ? 'var(--memo-off, #9900ff)'
+                              : rule.calendar_font_color === '#40a417' ? 'var(--memo-leave, #40a417)'
+                              : rule.calendar_font_color === '#ff6d01' ? 'var(--memo-attend, #ff6d01)'
+                              : rule.calendar_font_color === '#ff0000' ? 'var(--memo-special, #ff0000)'
+                              : rule.calendar_font_color || 'var(--text-tertiary, #94a3b8)'
+                          }}
+                        />
+                        간호/홍길동 {rule.today_suffix || ''}
+                      </div>
+                    </div>
+
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </>
     );
   };

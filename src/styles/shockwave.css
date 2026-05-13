@@ -2508,53 +2508,321 @@
   background: rgba(239, 246, 255, 0.5);
 }
 
-/* 미리보기 패널 */
-.monthly-staff-display-preview {
-  margin: 12px 0;
-  padding: 14px 16px;
-  border: 1px solid rgba(59, 130, 246, 0.18);
-  border-radius: 10px;
-  background: rgba(248, 250, 252, 0.96);
-}
-
-.monthly-staff-display-preview-title {
-  font-size: 0.82rem;
-  font-weight: 800;
-  color: #1e40af;
-  margin-bottom: 10px;
-}
-
-.monthly-staff-display-preview-input-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.monthly-staff-display-preview-input-row label {
-  font-size: 0.78rem;
+.monthly-staff-block-source {
+  padding: 8px 12px;
+  background: rgba(241, 245, 249, 0.8);
+  border-radius: 8px;
+  font-size: 0.76rem;
   font-weight: 700;
   color: #475569;
-  white-space: nowrap;
+  border-left: 4px solid #94a3b8;
 }
 
-.monthly-staff-display-preview-results {
+.monthly-therapist-restore-btn {
+  background: #fff;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.monthly-therapist-restore-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.monthly-display-priority {
+  width: 54px;
+  text-align: center;
+}
+
+/* 부서/이름 표시 규칙 카드형 UI */
+.monthly-display-rules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.display-rule-card {
+  background: #ffffff;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
   display: flex;
   flex-direction: column;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.display-rule-card:hover {
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.08);
+}
+
+.display-rule-card.disabled {
+  opacity: 0.6;
+  filter: grayscale(100%);
+}
+
+.display-rule-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 8px;
+}
+
+.display-rule-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #1e293b;
+  cursor: pointer;
+}
+
+.display-rule-condition {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.display-rule-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.display-rule-condition-inputs {
+  display: flex;
   gap: 8px;
 }
 
-.monthly-staff-display-preview-item {
+.display-rule-condition-inputs select {
+  flex: 1;
+}
+
+.display-rule-condition-inputs input {
+  flex: 1;
+}
+
+.display-rule-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(248, 250, 252, 0.8);
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.display-rule-action-row {
   display: flex;
   align-items: center;
+  gap: 12px;
+}
+
+.display-rule-action-title {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #334155;
+  min-width: 65px;
+}
+
+.display-rule-colors {
+  display: flex;
+  gap: 12px;
+}
+
+.display-rule-color-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.display-rule-color-clear {
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.display-rule-color-clear:hover {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.display-rule-today-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.display-rule-today-prefix {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.display-rule-card-preview {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px dashed #cbd5e1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.display-rule-preview-cell {
+  padding: 6px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.display-rule-preview-today {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.display-rule-preview-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* 미리보기 패널 */
+.monthly-display-preview-panel {
+  margin: 0 0 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.96);
+}
+
+.monthly-display-preview-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.monthly-display-preview-header strong {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #1e40af;
+}
+
+.monthly-display-preview-desc {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.monthly-display-preview-content {
+  display: flex;
+  align-items: flex-start;
   gap: 10px;
 }
 
-.monthly-staff-display-preview-label {
-  font-size: 0.75rem;
+.monthly-display-preview-input {
+  flex: 0 0 200px;
+  min-width: 140px;
+}
+
+.monthly-display-preview-arrow {
+  flex-shrink: 0;
+  padding-top: 6px;
+  font-size: 1.1rem;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.monthly-display-preview-result {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.monthly-display-preview-label-row {
+  display: flex;
+  align-items: center;
+}
+
+.monthly-display-preview-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #64748b;
+}
+
+.monthly-display-preview-cell {
+  padding: 6px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+}
+
+.monthly-display-preview-today-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 0.8rem;
+  font-weight: 700;
+  min-height: 28px;
+}
+
+.monthly-display-preview-today-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.monthly-display-preview-footer {
+  margin-top: 8px;
+  font-size: 0.72rem;
   font-weight: 700;
   color: #64748b;
-  min-width: 80px;
+}
+
+.monthly-display-preview-footer .no-match {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.monthly-display-preview-footer strong {
+  color: #1e40af;
 }
 
 .monthly-date-override-form {

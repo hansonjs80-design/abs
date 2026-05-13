@@ -88,7 +88,7 @@ export const DEFAULT_STAFF_DISPLAY_RULES = [
     keyword: '휴무',
     position: 'suffix',       // "부서/이름 휴무"
     today_suffix: '휴무',
-    calendar_font_color: '#9900ff',
+    calendar_font_color: '#000000',
     calendar_bg_color: '',
     enabled: true,
     priority: 60,
@@ -108,7 +108,7 @@ export const DEFAULT_STAFF_DISPLAY_RULES = [
     keyword: '',
     position: 'standalone',   // 순수 "부서/이름"만
     today_suffix: '휴무',
-    calendar_font_color: '#9900ff',
+    calendar_font_color: '#000000',
     calendar_bg_color: '',
     enabled: true,
     priority: 0,              // 가장 낮은 우선순위 (폴백)
