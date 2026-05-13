@@ -1110,18 +1110,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         </div>
       )}
       {weeks.map((weekDays, weekIdx) => {
-        // dayColWidth 설정 시 컨테이너 너비를 명시적으로 계산하여 우측 보더가 컨텐츠를 정확히 추종하도록 함
-        const daysContainerWidth = dayColWidth
-          ? dayColWidth * weekDays.length + TIME_COL_WIDTH + 4
-          : null;
         return (
         <div
           key={weekIdx}
           className={`shockwave-week${weekIdx === todayWeekIdx ? ' is-today-week' : ''}`}
-          style={daysContainerWidth
-            ? { width: `${daysContainerWidth}px`, minWidth: 0 }
-            : { width: '100%', minWidth: '1000px' }
-          }
+          style={{ width: '100%', minWidth: '1000px' }}
           ref={(el) => {
             weekRefs.current[weekIdx] = el;
           }}

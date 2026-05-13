@@ -187,16 +187,22 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
     window.addEventListener('blur', up);
   };
   const startRowResize = (e) => {
-    e.preventDefault(); e.stopPropagation();
-    const sy = e.clientY, ch = rowHeight;
-    let latestHeight = rowHeight || ch;
-    const move = (ev) => {
-      latestHeight = Math.max(MIN_ROW_HEIGHT, ch + ev.clientY - sy);
-      rowHeightRef.current = latestHeight;
-      writeStoredNumber(ROW_H_KEY, latestHeight);
+    e.preventDefault();
+    e.stopPropagation();
+    rowResizeRef.current = { active: true, startY: e.clientY, startHeight: rowHeight };
+
+    const move = (moveEvent) => {
+      if (!rowResizeRef.current.active) return;
+      const delta = moveEvent.clientY - rowResizeRef.current.startY;
+      const latestHeight = Math.max(MIN_ROW_HEIGHT, rowResizeRef.current.startHeight + delta);
       setRowHeight(latestHeight);
     };
-    const up = () => {
+
+    const up = (upEvent) => {
+      if (!rowResizeRef.current.active) return;
+      rowResizeRef.current.active = false;
+      const delta = upEvent ? upEvent.clientY - rowResizeRef.current.startY : 0;
+      const latestHeight = Math.max(MIN_ROW_HEIGHT, rowResizeRef.current.startHeight + delta);
       rowHeightRef.current = latestHeight;
       writeStoredNumber(ROW_H_KEY, latestHeight);
       window.removeEventListener('mousemove', move);
