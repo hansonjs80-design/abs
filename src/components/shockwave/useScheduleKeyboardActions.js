@@ -166,7 +166,10 @@ export default function useScheduleKeyboardActions({
       keys.forEach(key => {
         const [kw, kd, kr, kc] = key.split('-').map(Number);
         const memo = latestMemos[key] || {};
-        const stableContent = (typeof memo.content === 'string' ? memo.content : latestPending[key]) || '';
+        
+        // 디바운스 대기열에 이미 변경된 내용이 있으면 그것을 우선 기준으로 삼음
+        const pendingState = visitDebounceRef.current.pending.get(key);
+        const stableContent = pendingState ? pendingState.updatedContent : ((typeof memo.content === 'string' ? memo.content : latestPending[key]) || '');
         if (!stableContent) return;
 
         const visitSuffix = getExplicitVisitSuffix(stableContent);
@@ -364,7 +367,9 @@ export default function useScheduleKeyboardActions({
         const stableContent = (typeof memo.content === 'string' ? memo.content : latestPending[key]) || '';
         if (!stableContent || stableContent.trim() === '\u200B') return;
 
-        const currentMergeSpan = memo.merge_span || '';
+        // 예약 시간 증감: 디바운스 대기열에 변경된 merge_span이 있으면 기준값으로 우선 적용
+        const pendingState = timeDebounceRef.current.pending.get(key);
+        const currentMergeSpan = pendingState ? pendingState.nextMergeSpan : (memo.merge_span || '');
         const currentTime = getReservationTimeFromMergeSpan(currentMergeSpan);
         const defaultTime = getDefTime ? getDefTime(kw, kd, kr) : '';
 

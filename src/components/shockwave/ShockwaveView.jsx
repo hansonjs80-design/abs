@@ -314,11 +314,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       nextValues[key] = String(item.content ?? '');
     });
     if (Object.keys(nextValues).length === 0) return;
-    flushSync(() => {
-      setPendingDisplayValues((prev) => ({ ...prev, ...nextValues }));
-      setEditingCell(null);
-      setContextMenu(null);
-    });
+    
+    setPendingDisplayValues((prev) => ({ ...prev, ...nextValues }));
+    setEditingCell(null);
+    setContextMenu(null);
   }, []);
 
   const clearImmediateCellDisplay = useCallback((updates) => {
