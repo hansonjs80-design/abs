@@ -79,6 +79,10 @@
   position: relative;
 }
 
+.shockwave-week:first-of-type {
+  border-top-width: 1px;
+}
+
 .shockwave-week-label {
   padding: 8px 16px;
   background: var(--bg-tertiary);

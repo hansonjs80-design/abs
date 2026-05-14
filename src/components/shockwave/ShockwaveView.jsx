@@ -634,9 +634,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     });
     if (Object.keys(nextValues).length === 0) return;
     
-    setPendingDisplayValues((prev) => ({ ...prev, ...nextValues }));
-    setEditingCell(null);
-    setContextMenu(null);
+    flushSync(() => {
+      setPendingDisplayValues((prev) => ({ ...prev, ...nextValues }));
+      setEditingCell(null);
+      setContextMenu(null);
+    });
   }, []);
 
   const applyImmediateMergeSpan = useCallback((updates) => {

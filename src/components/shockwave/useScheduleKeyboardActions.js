@@ -4,6 +4,9 @@ import {
   stepReservationTimeWithinCellBase,
   getReservationTimeFromMergeSpan,
   buildMergeSpanWithReservationTime,
+  applyVisitCountToSchedulerContent,
+  getSchedulerVisitInputValue,
+  stepVisitInputValue,
 } from '../../lib/schedulerUtils';
 import { strip4060FromContent } from '../../lib/schedulerContentFormat';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
@@ -15,6 +18,7 @@ export default function useScheduleKeyboardActions({
   selectedKeys,
   pendingDisplayValues,
   pendingMergeSpans,
+  applyImmediateCellDisplay,
   applyImmediateMergeSpan,
   currentYear,
   currentMonth,
@@ -56,8 +60,10 @@ export default function useScheduleKeyboardActions({
   const buildSnapshotRef = useRef(buildMemoSnapshotForKeys);
   const recordUndoRef = useRef(recordUndo);
   const getDefaultTimeRef = useRef(getDefaultReservationTime);
+  const applyCellDisplayRef = useRef(applyImmediateCellDisplay);
   const applyMergeSpanRef = useRef(applyImmediateMergeSpan);
   const timeDebounceRef = useRef({ timer: null, pending: new Map() });
+  const visitDebounceRef = useRef({ timer: null, pending: new Map() });
 
   useEffect(() => { memosRef.current = memos; }, [memos]);
   useEffect(() => { pendingRef.current = pendingDisplayValues; }, [pendingDisplayValues]);
@@ -66,12 +72,14 @@ export default function useScheduleKeyboardActions({
   useEffect(() => { buildSnapshotRef.current = buildMemoSnapshotForKeys; }, [buildMemoSnapshotForKeys]);
   useEffect(() => { recordUndoRef.current = recordUndo; }, [recordUndo]);
   useEffect(() => { getDefaultTimeRef.current = getDefaultReservationTime; }, [getDefaultReservationTime]);
+  useEffect(() => { applyCellDisplayRef.current = applyImmediateCellDisplay; }, [applyImmediateCellDisplay]);
   useEffect(() => { applyMergeSpanRef.current = applyImmediateMergeSpan; }, [applyImmediateMergeSpan]);
 
   // 디바운스 cleanup
   useEffect(() => {
     return () => {
       if (timeDebounceRef.current?.timer) clearTimeout(timeDebounceRef.current.timer);
+      if (visitDebounceRef.current?.timer) clearTimeout(visitDebounceRef.current.timer);
     };
   }, []);
 
@@ -150,7 +158,6 @@ export default function useScheduleKeyboardActions({
       // 최신 refs를 사용
       const latestMemos = memosRef.current;
       const latestPending = pendingRef.current;
-      const latestPendingMergeSpans = pendingMergeSpansRef.current;
       const saveMemo = onSaveMemoRef.current;
       const getDefTime = getDefaultTimeRef.current;
 
@@ -196,7 +203,21 @@ export default function useScheduleKeyboardActions({
 
         Promise.all(
           pendingSaves.map(({ kw, kd, kr, kc, memo, stableContent, nextMergeSpan }) =>
-            saveMemo(currentYear, currentMonth, kw, kd, kr, kc, stableContent, memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part)
+            saveMemo(
+              currentYear,
+              currentMonth,
+              kw,
+              kd,
+              kr,
+              kc,
+              pendingRef.current?.[`${kw}-${kd}-${kr}-${kc}`] !== undefined
+                ? String(pendingRef.current[`${kw}-${kd}-${kr}-${kc}`])
+                : stableContent,
+              memo.bg_color,
+              nextMergeSpan,
+              memo.prescription,
+              memo.body_part
+            )
           )
         ).then(saveResults => {
           if (saveResults.some(Boolean) && undoMemos) {
@@ -206,10 +227,81 @@ export default function useScheduleKeyboardActions({
       }, 500);
     };
 
+    const applyVisitCountDelta = (delta) => {
+      const keys = Array.from(selectedKeys || []);
+      const latestMemos = memosRef.current;
+      const latestPending = pendingRef.current;
+      const saveMemo = onSaveMemoRef.current;
+
+      const displayUpdates = keys.map(key => {
+        const [kw, kd, kr, kc] = key.split('-').map(Number);
+        const memo = latestMemos[key] || {};
+        const stableContent = visitDebounceRef.current.pending.get(key)?.nextContent
+          ?? (latestPending[key] !== undefined ? String(latestPending[key]) : (memo.content || ''));
+        if (!stableContent || stableContent.trim() === '\u200B') return null;
+
+        const currentVisit = getSchedulerVisitInputValue(stableContent);
+        const nextVisit = stepVisitInputValue(currentVisit, delta);
+        const nextContent = applyVisitCountToSchedulerContent(stableContent, nextVisit);
+        if (nextContent === stableContent) return null;
+
+        visitDebounceRef.current.pending.set(key, {
+          kw,
+          kd,
+          kr,
+          kc,
+          memo,
+          nextContent,
+        });
+
+        return { key, content: nextContent };
+      }).filter(Boolean);
+
+      if (displayUpdates.length > 0) {
+        applyCellDisplayRef.current?.(displayUpdates);
+      }
+
+      if (visitDebounceRef.current.timer) clearTimeout(visitDebounceRef.current.timer);
+      visitDebounceRef.current.timer = setTimeout(() => {
+        const snapshot = visitDebounceRef.current;
+        const pendingSaves = Array.from(snapshot.pending.values());
+        const undoMemos = pendingSaves.length > 0
+          ? buildSnapshotRef.current(pendingSaves.map(({ kw, kd, kr, kc }) => `${kw}-${kd}-${kr}-${kc}`))
+          : null;
+
+        snapshot.pending.clear();
+        snapshot.timer = null;
+
+        Promise.all(
+          pendingSaves.map(({ kw, kd, kr, kc, memo, nextContent }) => {
+            const key = `${kw}-${kd}-${kr}-${kc}`;
+            const nextMergeSpan = pendingMergeSpansRef.current?.[key] || memo.merge_span;
+            return saveMemo(
+              currentYear,
+              currentMonth,
+              kw,
+              kd,
+              kr,
+              kc,
+              nextContent,
+              memo.bg_color,
+              nextMergeSpan,
+              memo.prescription,
+              memo.body_part
+            );
+          })
+        ).then(saveResults => {
+          if (saveResults.some(Boolean) && undoMemos) {
+            recordUndoRef.current({ type: 'bulk-edit', oldMemos: undoMemos });
+          }
+        });
+      }, 300);
+    };
+
     if (isMeta && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
       e.preventDefault();
       e.stopPropagation();
-      applyReservationTimeDelta(e.key === 'ArrowUp' ? 10 : -10);
+      applyVisitCountDelta(e.key === 'ArrowUp' ? 1 : -1);
       return;
     }
 
