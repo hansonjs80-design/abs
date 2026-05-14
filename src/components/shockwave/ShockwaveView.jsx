@@ -96,7 +96,7 @@ const ContextMenuLocalInput = ({ value, onChange, onKeyDown, onBlur, className, 
   );
 };
 
-const ContextMenuLocalInputGroup = ({ placeholder, buttonLabel, onSubmit, imeOpenRef, className = "context-menu-input" }) => {
+const ContextMenuLocalInputGroup = ({ placeholder, buttonLabel, onSubmit, imeOpenRef, className = "context-menu-input", autoFocus }) => {
   const [localValue, setLocalValue] = useState('');
 
   const handleSubmit = () => {
@@ -114,6 +114,7 @@ const ContextMenuLocalInputGroup = ({ placeholder, buttonLabel, onSubmit, imeOpe
         placeholder={placeholder}
         className={className}
         autoComplete="off"
+        autoFocus={autoFocus}
         value={localValue}
         onChange={(e) => {
           e.stopPropagation();
@@ -1944,6 +1945,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             <ContextMenuLocalInputGroup
                               placeholder="새 부위 추가"
                               buttonLabel="추가"
+                              autoFocus={true}
                               onSubmit={(val) => {
                                 handleContextAction({ type: 'bodyPartAdd', value: val });
                               }}
