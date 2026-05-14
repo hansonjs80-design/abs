@@ -83,6 +83,137 @@ export default function useScheduleKeyboardActions({
     };
   }, []);
 
+  const applyReservationTimeDelta = useCallback((deltaMinutes) => {
+    const keys = Array.from(selectedKeys || []);
+
+    const latestMemos = memosRef.current;
+    const latestPending = pendingRef.current;
+    const latestPendingMergeSpans = pendingMergeSpansRef.current;
+    const saveMemo = onSaveMemoRef.current;
+    const getDefTime = getDefaultTimeRef.current;
+
+    const mergeSpanUpdates = keys.map(key => {
+      const [kw, kd, kr, kc] = key.split('-').map(Number);
+      const memo = latestMemos[key] || {};
+      const stableContent = latestPending[key] !== undefined ? String(latestPending[key]) : (memo.content || '');
+      if (!stableContent || stableContent.trim() === '\u200B') return null;
+
+      const pendingState = timeDebounceRef.current.pending.get(key);
+      const currentMergeSpan = pendingState
+        ? pendingState.nextMergeSpan
+        : (latestPendingMergeSpans?.[key] || memo.merge_span || '');
+      const currentTime = getReservationTimeFromMergeSpan(currentMergeSpan);
+      const defaultTime = getDefTime ? getDefTime(kw, kd, kr) : '';
+
+      const nextTime = stepReservationTimeWithinCellBase(currentTime, defaultTime, deltaMinutes);
+      const nextMergeSpan = buildMergeSpanWithReservationTime(currentMergeSpan, nextTime);
+
+      timeDebounceRef.current.pending.set(key, {
+        kw, kd, kr, kc, memo, nextMergeSpan, stableContent
+      });
+
+      return { key, mergeSpan: nextMergeSpan };
+    }).filter(Boolean);
+
+    if (mergeSpanUpdates.length > 0) {
+      applyMergeSpanRef.current?.(mergeSpanUpdates);
+    }
+
+    if (timeDebounceRef.current.timer) clearTimeout(timeDebounceRef.current.timer);
+    timeDebounceRef.current.timer = setTimeout(() => {
+      const snapshot = timeDebounceRef.current;
+      const pendingSaves = Array.from(snapshot.pending.values());
+      const undoMemos = pendingSaves.length > 0
+        ? buildSnapshotRef.current(pendingSaves.map(({ kw, kd, kr, kc }) => `${kw}-${kd}-${kr}-${kc}`))
+        : null;
+
+      snapshot.pending.clear();
+      snapshot.timer = null;
+
+      Promise.all(
+        pendingSaves.map(({ kw, kd, kr, kc, memo, stableContent, nextMergeSpan }) =>
+          saveMemo(
+            currentYear,
+            currentMonth,
+            kw,
+            kd,
+            kr,
+            kc,
+            pendingRef.current?.[`${kw}-${kd}-${kr}-${kc}`] !== undefined
+              ? String(pendingRef.current[`${kw}-${kd}-${kr}-${kc}`])
+              : stableContent,
+            memo.bg_color,
+            nextMergeSpan,
+            memo.prescription,
+            memo.body_part
+          )
+        )
+      ).then(saveResults => {
+        if (saveResults.some(Boolean) && undoMemos) {
+          recordUndoRef.current({ type: 'bulk-edit', oldMemos: undoMemos });
+        }
+      });
+    }, 500);
+  }, [currentMonth, currentYear, selectedKeys]);
+
+  const isReservationTimeShortcutEvent = useCallback((event) => {
+    if (!event || !(event.metaKey || event.ctrlKey)) return false;
+    return (
+      event.code === 'Minus' ||
+      event.code === 'NumpadSubtract' ||
+      event.key === '-' ||
+      event.key === '_' ||
+      event.code === 'Equal' ||
+      event.code === 'NumpadAdd' ||
+      event.key === '=' ||
+      event.key === '+' ||
+      event.key === 'Add'
+    );
+  }, []);
+
+  const handleReservationTimeShortcut = useCallback((event) => {
+    if (event.__shockwaveReservationTimeHandled) return true;
+    if (!isReservationTimeShortcutEvent(event)) return false;
+    event.__shockwaveReservationTimeHandled = true;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+
+    const isDecrease = (
+      event.code === 'Minus' ||
+      event.code === 'NumpadSubtract' ||
+      event.key === '-' ||
+      event.key === '_'
+    );
+    applyReservationTimeDelta(isDecrease ? -10 : 10);
+    return true;
+  }, [isReservationTimeShortcutEvent, applyReservationTimeDelta]);
+
+  useEffect(() => {
+    const handleEarlyReservationShortcut = (event) => {
+      if (!selectedCell || editingCell || contextMenu) return;
+      if (!isReservationTimeShortcutEvent(event)) return;
+      if (isContextMenuTarget(event.target)) return;
+      if (isEditableTarget(event.target)) return;
+      handleReservationTimeShortcut(event);
+    };
+
+    window.addEventListener('keydown', handleEarlyReservationShortcut, { capture: true, passive: false });
+    document.addEventListener('keydown', handleEarlyReservationShortcut, { capture: true, passive: false });
+    return () => {
+      window.removeEventListener('keydown', handleEarlyReservationShortcut, { capture: true });
+      document.removeEventListener('keydown', handleEarlyReservationShortcut, { capture: true });
+    };
+  }, [
+    contextMenu,
+    editingCell,
+    handleReservationTimeShortcut,
+    isContextMenuTarget,
+    isEditableTarget,
+    isReservationTimeShortcutEvent,
+    selectedCell,
+  ]);
+
   return useCallback((e) => {
     if (e.defaultPrevented) return;
     if (isContextMenuTarget(e.target)) return;
@@ -151,81 +282,6 @@ export default function useScheduleKeyboardActions({
       deleteCells(selectedKeys);
       return;
     }
-
-    const applyReservationTimeDelta = (deltaMinutes) => {
-      const keys = Array.from(selectedKeys || []);
-
-      // 최신 refs를 사용
-      const latestMemos = memosRef.current;
-      const latestPending = pendingRef.current;
-      const saveMemo = onSaveMemoRef.current;
-      const getDefTime = getDefaultTimeRef.current;
-
-      const mergeSpanUpdates = keys.map(key => {
-        const [kw, kd, kr, kc] = key.split('-').map(Number);
-        const memo = latestMemos[key] || {};
-        const stableContent = latestPending[key] !== undefined ? String(latestPending[key]) : (memo.content || '');
-        if (!stableContent || stableContent.trim() === '\u200B') return null;
-
-        // 예약 시간 증감: 디바운스 대기열에 변경된 merge_span이 있으면 기준값으로 우선 적용
-        const pendingState = timeDebounceRef.current.pending.get(key);
-        const currentMergeSpan = pendingState
-          ? pendingState.nextMergeSpan
-          : (latestPendingMergeSpans?.[key] || memo.merge_span || '');
-        const currentTime = getReservationTimeFromMergeSpan(currentMergeSpan);
-        const defaultTime = getDefTime ? getDefTime(kw, kd, kr) : '';
-
-        const nextTime = stepReservationTimeWithinCellBase(currentTime, defaultTime, deltaMinutes);
-        const nextMergeSpan = buildMergeSpanWithReservationTime(currentMergeSpan, nextTime);
-
-        timeDebounceRef.current.pending.set(key, {
-          kw, kd, kr, kc, memo, nextMergeSpan, stableContent
-        });
-
-        return { key, mergeSpan: nextMergeSpan };
-      }).filter(Boolean);
-
-      if (mergeSpanUpdates.length > 0) {
-        applyMergeSpanRef.current?.(mergeSpanUpdates);
-      }
-
-      // 디바운스된 DB 저장 및 undo 기록 (연속 입력이 멈춘 후 500ms 뒤 기록)
-      if (timeDebounceRef.current.timer) clearTimeout(timeDebounceRef.current.timer);
-      timeDebounceRef.current.timer = setTimeout(() => {
-        const snapshot = timeDebounceRef.current;
-        const pendingSaves = Array.from(snapshot.pending.values());
-        const undoMemos = pendingSaves.length > 0
-          ? buildSnapshotRef.current(pendingSaves.map(({ kw, kd, kr, kc }) => `${kw}-${kd}-${kr}-${kc}`))
-          : null;
-
-        snapshot.pending.clear();
-        snapshot.timer = null;
-
-        Promise.all(
-          pendingSaves.map(({ kw, kd, kr, kc, memo, stableContent, nextMergeSpan }) =>
-            saveMemo(
-              currentYear,
-              currentMonth,
-              kw,
-              kd,
-              kr,
-              kc,
-              pendingRef.current?.[`${kw}-${kd}-${kr}-${kc}`] !== undefined
-                ? String(pendingRef.current[`${kw}-${kd}-${kr}-${kc}`])
-                : stableContent,
-              memo.bg_color,
-              nextMergeSpan,
-              memo.prescription,
-              memo.body_part
-            )
-          )
-        ).then(saveResults => {
-          if (saveResults.some(Boolean) && undoMemos) {
-            recordUndoRef.current({ type: 'bulk-edit', oldMemos: undoMemos });
-          }
-        });
-      }, 500);
-    };
 
     const applyVisitCountDelta = (delta) => {
       const keys = Array.from(selectedKeys || []);
@@ -431,27 +487,7 @@ export default function useScheduleKeyboardActions({
       return;
     }
 
-    const isReservationTimeDecreaseKey = (
-      e.code === 'Minus' ||
-      e.code === 'NumpadSubtract' ||
-      e.key === '-' ||
-      e.key === '_'
-    );
-    const isReservationTimeIncreaseKey = (
-      e.code === 'Equal' ||
-      e.code === 'NumpadAdd' ||
-      e.key === '=' ||
-      e.key === '+' ||
-      e.key === 'Add'
-    );
-
-    if (isMeta && (isReservationTimeDecreaseKey || isReservationTimeIncreaseKey)) {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation?.();
-
-      const delta = isReservationTimeDecreaseKey ? -1 : 1;
-      applyReservationTimeDelta(delta * 10);
+    if (handleReservationTimeShortcut(e)) {
       return;
     }
 
