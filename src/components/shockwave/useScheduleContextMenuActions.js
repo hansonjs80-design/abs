@@ -51,8 +51,8 @@ export default function useScheduleContextMenuActions({
       memos[key] || (key === getContextKey() ? contextMenu?.memoSnapshot : null) || {}
     );
     const getStableMemoContent = (key, memo = {}) => {
-      if (typeof memo.content === 'string') return memo.content;
       if (typeof pendingDisplayValues[key] === 'string') return pendingDisplayValues[key];
+      if (typeof memo.content === 'string') return memo.content;
       if (key === getContextKey() && typeof contextMenu?.memoSnapshot?.content === 'string') {
         return contextMenu.memoSnapshot.content;
       }
