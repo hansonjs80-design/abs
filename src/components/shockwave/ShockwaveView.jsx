@@ -203,7 +203,7 @@ const MemoizedCell = memo(({
   let inlineStyle = {
     gridColumn: `${gridColumnStart}${effectiveMergeSpan.colSpan > 1 ? ` / span ${effectiveMergeSpan.colSpan}` : ''}`,
     gridRow: `${gridRowStart}${visualRowSpan > 1 ? ` / span ${visualRowSpan}` : ''}`,
-    borderBottom: isLastRenderedRow ? 'none' : `1px solid #e0e0e0`, // HORIZONTAL_BORDER_COLOR
+    borderBottom: isLastRenderedRow ? 'none' : `1px solid ${HORIZONTAL_BORDER_COLOR}`,
   };
 
   if (colIdx + effectiveMergeSpan.colSpan - 1 === colCount - 1) {
@@ -2362,12 +2362,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               text = `⏱ ${t1} ~ ${t2} (총 ${dStr})`;
               if (content && content !== '\u200B') text += `\n👤 ${content}`;
             } else {
-              const reservationTime = getReservationTimeForMemo(cellData, weekIdx, dayIdx, rowIdx);
+              const mergeSpanForHover = pendingMergeSpans[keyStr] || cellData.merge_span;
+              const optimisticCellData = { ...cellData, merge_span: mergeSpanForHover };
+              const reservationTime = getReservationTimeForMemo(optimisticCellData, weekIdx, dayIdx, rowIdx);
               text = `⏱ ${reservationTime || slotInfo.label}`;
               if (content && content !== '\u200B') text += `\n👤 ${content}`;
             }
           } else {
-            const reservationTime = getReservationTimeForMemo(cellData, weekIdx, dayIdx, rowIdx);
+            const mergeSpanForHover = pendingMergeSpans[keyStr] || cellData.merge_span;
+            const optimisticCellData = { ...cellData, merge_span: mergeSpanForHover };
+            const reservationTime = getReservationTimeForMemo(optimisticCellData, weekIdx, dayIdx, rowIdx);
             text = `⏱ ${reservationTime || slotInfo.label}`;
             if (content && content !== '\u200B') text += `\n👤 ${content}`;
           }
