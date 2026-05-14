@@ -390,6 +390,7 @@ const MemoizedCell = memo(({
   if (prevProps.isLastRenderedRow !== nextProps.isLastRenderedRow) return false;
   if (prevProps.colCount !== nextProps.colCount) return false;
   if (prevProps.showTimeCol !== nextProps.showTimeCol) return false;
+  if (prevProps.gridRowStart !== nextProps.gridRowStart) return false;
 
   // Assume callbacks and colors are relatively stable or handled via refs in parent
   return true;
