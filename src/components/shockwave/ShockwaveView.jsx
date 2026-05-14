@@ -160,6 +160,7 @@ const MemoizedCell = React.memo(({
   handleCellMouseDown, handleCellMouseEnter, setHoverCell, handleCellDoubleClick, handleCellContextMenu,
   editInputRef, handleCellSave, handleEditKeyDown, imeOpenRef, setImePreviewCell, editDraftRef, scheduleEditDraftAutosave, promoteFocusedInputToEditor, skipNextEditBlurSaveRef
 }) => {
+  const content = dayInfo.isCurrentMonth ? pendingContent : '';
   const effectiveMergeSpan = pendingMergeSpan || mergeSpan;
   const cellPrescription = cellData?.prescription || effectiveMergeSpan?.meta?.prescription || '';
   const displayData = buildSchedulerCellDisplay(content, effectiveMergeSpan);
