@@ -392,6 +392,9 @@ const MemoizedCell = memo(({
   if (prevProps.showTimeCol !== nextProps.showTimeCol) return false;
   if (prevProps.gridRowStart !== nextProps.gridRowStart) return false;
 
+  if (prevProps.dayInfo?.isHoliday !== nextProps.dayInfo?.isHoliday) return false;
+  if (prevProps.dayInfo?.isCurrentMonth !== nextProps.dayInfo?.isCurrentMonth) return false;
+
   // Assume callbacks and colors are relatively stable or handled via refs in parent
   return true;
 });
@@ -1637,7 +1640,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             const endRowIdx = rowIdx + mergeSpan.rowSpan - 1;
                             visualRowSpan = daySlots.filter(s => s.idx >= rowIdx && s.idx <= endRowIdx).length;
                           }
-                          mergeSpan.rowSpan = visualRowSpan; // Adjust for the MemoizedCell
+                          const finalMergeSpan = { ...mergeSpan, rowSpan: visualRowSpan };
 
                           const dateKey = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}`;
                           const therapistName = getTherapistNameForDate(colIdx, dayInfo.day) || '';
@@ -1654,7 +1657,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               weekIdx={weekIdx} dayIdx={dayIdx} rowIdx={rowIdx} colIdx={colIdx}
                               dayInfo={dayInfo} slotInfo={slotInfo} showTimeCol={showTimeCol}
                               gridRowStart={gridRowStart} isLastRenderedRow={isLastRenderedRow} colCount={colCount}
-                              cellData={cellData} pendingContent={content} pendingMergeSpan={pendingMergeSpans[key]} mergeSpan={mergeSpan}
+                              cellData={cellData} pendingContent={content} pendingMergeSpan={pendingMergeSpans[key]} mergeSpan={finalMergeSpan}
                               editingCell={editingCell} imePreviewCell={imePreviewCell}
                               selectedKeys={selectedKeys} selectedCell={selectedCell} clipboardSource={clipboardSource}
                               workState={workState} staffBlockRule={staffBlockRule}
