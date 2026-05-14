@@ -18,6 +18,7 @@ export default function useScheduleKeyboardActions({
   selectedKeys,
   pendingDisplayValues,
   applyImmediateCellDisplay,
+  applyImmediateMergeSpan,
   currentYear,
   currentMonth,
   memos,
@@ -58,6 +59,7 @@ export default function useScheduleKeyboardActions({
   const recordUndoRef = useRef(recordUndo);
   const getDefaultTimeRef = useRef(getDefaultReservationTime);
   const applyDisplayRef = useRef(applyImmediateCellDisplay);
+  const applyMergeSpanRef = useRef(applyImmediateMergeSpan);
   const visitDebounceRef = useRef({ timer: null, undoSnapshot: null, pending: new Map() });
   const timeDebounceRef = useRef({ timer: null, undoSnapshot: null, pending: new Map() });
 
@@ -68,6 +70,7 @@ export default function useScheduleKeyboardActions({
   useEffect(() => { recordUndoRef.current = recordUndo; }, [recordUndo]);
   useEffect(() => { getDefaultTimeRef.current = getDefaultReservationTime; }, [getDefaultReservationTime]);
   useEffect(() => { applyDisplayRef.current = applyImmediateCellDisplay; }, [applyImmediateCellDisplay]);
+  useEffect(() => { applyMergeSpanRef.current = applyImmediateMergeSpan; }, [applyImmediateMergeSpan]);
 
   // 디바운스 cleanup
   useEffect(() => {
@@ -381,13 +384,13 @@ export default function useScheduleKeyboardActions({
         timeDebounceRef.current.pending.set(key, {
           kw, kd, kr, kc, memo, nextMergeSpan, stableContent
         });
-      });
 
-      // 예약 시간 변경은 화면상 텍스트(`pendingDisplayValues`)가 아니라 Tooltip/MergeSpan으로 보이므로
-      // pendingDisplayValues를 갱신할 필요는 없지만(content가 안바뀜),
-      // merge_span이 바뀌는 것이므로 즉시 UI를 반영하려면 memos를 로컬에서 즉시 업데이트하거나
-      // DB 저장이 빠른 게 좋으나 debounce를 위해 모아서 처리합니다. 
-      // (기존에도 merge_span은 낙관적 업데이트 대상이 아니었음)
+        return { key, mergeSpan: nextMergeSpan };
+      }).filter(Boolean);
+
+      if (mergeSpanUpdates.length > 0) {
+        applyMergeSpanRef.current?.(mergeSpanUpdates);
+      }
 
       // 디바운스된 DB 저장 및 undo 기록 (연속 입력이 멈춘 후 500ms 뒤 기록)
       if (timeDebounceRef.current.timer) clearTimeout(timeDebounceRef.current.timer);

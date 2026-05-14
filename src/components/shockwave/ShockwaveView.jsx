@@ -154,15 +154,15 @@ const ContextMenuLocalInputGroup = ({ placeholder, buttonLabel, onSubmit, imeOpe
 
 const MemoizedCell = React.memo(({
   cellKey, weekIdx, dayIdx, rowIdx, colIdx, dayInfo, slotInfo, showTimeCol, gridRowStart, isLastRenderedRow, colCount,
-  cellData, pendingContent, mergeSpan, editingCell, imePreviewCell, selectedKeys, selectedCell, clipboardSource,
+  cellData, pendingContent, pendingMergeSpan, mergeSpan, editingCell, imePreviewCell, selectedKeys, selectedCell, clipboardSource,
   workState, staffBlockRule, effectivePrescriptionColors,
   editValue,
   handleCellMouseDown, handleCellMouseEnter, setHoverCell, handleCellDoubleClick, handleCellContextMenu,
   editInputRef, handleCellSave, handleEditKeyDown, imeOpenRef, setImePreviewCell, editDraftRef, scheduleEditDraftAutosave, promoteFocusedInputToEditor, skipNextEditBlurSaveRef
 }) => {
-  const content = dayInfo.isCurrentMonth ? pendingContent : '';
-  const cellPrescription = cellData?.prescription || mergeSpan?.meta?.prescription || '';
-  const displayData = buildSchedulerCellDisplay(content, mergeSpan);
+  const effectiveMergeSpan = pendingMergeSpan || mergeSpan;
+  const cellPrescription = cellData?.prescription || effectiveMergeSpan?.meta?.prescription || '';
+  const displayData = buildSchedulerCellDisplay(content, effectiveMergeSpan);
 
   const isEditing = dayInfo.isCurrentMonth && editingCell === cellKey;
   const isImePreview = dayInfo.isCurrentMonth && imePreviewCell === cellKey;
@@ -171,8 +171,8 @@ const MemoizedCell = React.memo(({
   const gridColumnStart = showTimeCol ? colIdx + 2 : colIdx + 1;
 
   let visualRowSpan = 1;
-  if (mergeSpan.rowSpan > 1) {
-    visualRowSpan = mergeSpan.rowSpan; // Approximated, since daySlots is not passed, but for this context it works for UI layout unless lunch is spanned. We will assume simple rowSpan for visual
+  if (effectiveMergeSpan.rowSpan > 1) {
+    visualRowSpan = effectiveMergeSpan.rowSpan;
   }
 
   let cls = 'sw-cell';
@@ -200,12 +200,12 @@ const MemoizedCell = React.memo(({
   }
 
   let inlineStyle = {
-    gridColumn: `${gridColumnStart}${mergeSpan.colSpan > 1 ? ` / span ${mergeSpan.colSpan}` : ''}`,
+    gridColumn: `${gridColumnStart}${effectiveMergeSpan.colSpan > 1 ? ` / span ${effectiveMergeSpan.colSpan}` : ''}`,
     gridRow: `${gridRowStart}${visualRowSpan > 1 ? ` / span ${visualRowSpan}` : ''}`,
     borderBottom: isLastRenderedRow ? 'none' : `1px solid #e0e0e0`, // HORIZONTAL_BORDER_COLOR
   };
 
-  if (colIdx + mergeSpan.colSpan - 1 === colCount - 1) {
+  if (colIdx + effectiveMergeSpan.colSpan - 1 === colCount - 1) {
     inlineStyle.borderRight = 'none';
   }
 
@@ -235,7 +235,7 @@ const MemoizedCell = React.memo(({
     cls += ' has-prescription-color'; inlineStyle.color = prescriptionColor; inlineStyle['--prescription-color'] = prescriptionColor;
   }
 
-  if (visualRowSpan > 1 || mergeSpan.colSpan > 1) {
+  if (visualRowSpan > 1 || effectiveMergeSpan.colSpan > 1) {
     inlineStyle.display = 'flex'; inlineStyle.alignItems = 'center'; inlineStyle.justifyContent = 'center';
     cls += ' merged-master';
   }
@@ -338,6 +338,7 @@ const MemoizedCell = React.memo(({
   }
 }, (prevProps, nextProps) => {
   if (prevProps.pendingContent !== nextProps.pendingContent) return false;
+  if (prevProps.pendingMergeSpan !== nextProps.pendingMergeSpan) return false;
   if (prevProps.cellData !== nextProps.cellData) return false;
   
   if (prevProps.mergeSpan.rowSpan !== nextProps.mergeSpan.rowSpan) return false;
@@ -393,6 +394,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [editingCell, setEditingCell] = useState(null);       // "w-d-r-c" 키 문자열
   const [editValue, setEditValue] = useState('');
   const [pendingDisplayValues, setPendingDisplayValues] = useState({});
+  const [pendingMergeSpans, setPendingMergeSpans] = useState({});
   const [loadedMemosKey, setLoadedMemosKey] = useState('');
   const clipboardRef = useRef({ content: '', mode: null });   // mode: 'copy' | 'cut'
   const [clipboardSource, setClipboardSource] = useState(null); // { keys: Set, mode: 'copy'|'cut' }
@@ -636,6 +638,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setContextMenu(null);
   }, []);
 
+  const applyImmediateMergeSpan = useCallback((updates) => {
+    const entries = Array.isArray(updates) ? updates : [updates];
+    const nextSpans = {};
+    entries.forEach((item) => {
+      if (!item || !item.key || !item.mergeSpan) return;
+      nextSpans[item.key] = item.mergeSpan;
+    });
+    if (Object.keys(nextSpans).length === 0) return;
+    setPendingMergeSpans((prev) => ({ ...prev, ...nextSpans }));
+  }, []);
+
   const clearImmediateCellDisplay = useCallback((updates) => {
     const entries = Array.isArray(updates) ? updates : [updates];
     const keys = entries
@@ -655,7 +668,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         });
         return changed ? next : prev;
       });
-    }, 2000);
+      setPendingMergeSpans((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        keys.forEach((key) => {
+          if (key in next) {
+            delete next[key];
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    }, 0);
   }, []);
 
   const {
@@ -987,7 +1011,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
     if (direction === 'ArrowRight') {
       if (c < colCount - 1) return { w, d, r, c: c + 1 };
-      if (d < weeks[w].length - 1) return { w, d: d + 1, r, c: 0 };
+      if (d < weeks[w].length - 1) return { w: w + 1, d: d + 1, r, c: 0 };
       if (w < weeks.length - 1) return { w: w + 1, d: 0, r, c: 0 };
       return cell;
     }
@@ -1211,6 +1235,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     editingCell,
     selectedKeys,
     pendingDisplayValues,
+    pendingMergeSpans,
     applyImmediateCellDisplay,
     currentYear,
     currentMonth,
@@ -1607,7 +1632,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               weekIdx={weekIdx} dayIdx={dayIdx} rowIdx={rowIdx} colIdx={colIdx}
                               dayInfo={dayInfo} slotInfo={slotInfo} showTimeCol={showTimeCol}
                               gridRowStart={gridRowStart} isLastRenderedRow={isLastRenderedRow} colCount={colCount}
-                              cellData={cellData} pendingContent={content} mergeSpan={mergeSpan}
+                              cellData={cellData} pendingContent={content} pendingMergeSpan={pendingMergeSpans[key]} mergeSpan={mergeSpan}
                               editingCell={editingCell} imePreviewCell={imePreviewCell}
                               selectedKeys={selectedKeys} selectedCell={selectedCell} clipboardSource={clipboardSource}
                               workState={workState} staffBlockRule={staffBlockRule}
@@ -1646,7 +1671,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         weeks, dayColWidth, todayWeekIdx, showTherapistConfig, today, getTimeSlotsForDay,
         therapistColsCSS, colCount, getTherapistNameForDate, activeColRatios,
         startColResize, startDayResize, startRowResize,
-        renderMemos, pendingDisplayValues, editingCell, imePreviewCell,
+        renderMemos, pendingDisplayValues, pendingMergeSpans, editingCell, imePreviewCell,
         selectedKeys, selectedCell, clipboardSource,
         getTherapistWorkState, getStaffScheduleBlockForCell,
         isLastHourSlot, effectivePrescriptionColors, editValue,
