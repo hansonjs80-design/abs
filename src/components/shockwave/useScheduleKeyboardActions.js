@@ -57,7 +57,7 @@ export default function useScheduleKeyboardActions({
   const recordUndoRef = useRef(recordUndo);
   const getDefaultTimeRef = useRef(getDefaultReservationTime);
   const applyMergeSpanRef = useRef(applyImmediateMergeSpan);
-  const timeDebounceRef = useRef({ timer: null, undoSnapshot: null, pending: new Map() });
+  const timeDebounceRef = useRef({ timer: null, pending: new Map() });
 
   useEffect(() => { memosRef.current = memos; }, [memos]);
   useEffect(() => { pendingRef.current = pendingDisplayValues; }, [pendingDisplayValues]);
@@ -147,11 +147,6 @@ export default function useScheduleKeyboardActions({
     const applyReservationTimeDelta = (deltaMinutes) => {
       const keys = Array.from(selectedKeys || []);
 
-      // 첫 입력 시에만 undo 스냅샷 저장, 연속 입력 시 재사용
-      if (!timeDebounceRef.current.undoSnapshot) {
-        timeDebounceRef.current.undoSnapshot = buildSnapshotRef.current(keys);
-      }
-
       // 최신 refs를 사용
       const latestMemos = memosRef.current;
       const latestPending = pendingRef.current;
@@ -192,10 +187,11 @@ export default function useScheduleKeyboardActions({
       timeDebounceRef.current.timer = setTimeout(() => {
         const snapshot = timeDebounceRef.current;
         const pendingSaves = Array.from(snapshot.pending.values());
-        const undoMemos = snapshot.undoSnapshot;
+        const undoMemos = pendingSaves.length > 0
+          ? buildSnapshotRef.current(pendingSaves.map(({ kw, kd, kr, kc }) => `${kw}-${kd}-${kr}-${kc}`))
+          : null;
 
         snapshot.pending.clear();
-        snapshot.undoSnapshot = null;
         snapshot.timer = null;
 
         Promise.all(

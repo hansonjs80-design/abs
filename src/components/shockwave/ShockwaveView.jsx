@@ -647,7 +647,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       nextSpans[item.key] = item.mergeSpan;
     });
     if (Object.keys(nextSpans).length === 0) return;
-    setPendingMergeSpans((prev) => ({ ...prev, ...nextSpans }));
+    flushSync(() => {
+      setPendingMergeSpans((prev) => ({ ...prev, ...nextSpans }));
+    });
   }, []);
 
   const clearImmediateCellDisplay = useCallback((updates) => {
