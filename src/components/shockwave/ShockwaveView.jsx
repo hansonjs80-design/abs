@@ -152,6 +152,232 @@ const ContextMenuLocalInputGroup = ({ placeholder, buttonLabel, onSubmit, imeOpe
   );
 };
 
+const MemoizedCell = React.memo(({
+  cellKey, weekIdx, dayIdx, rowIdx, colIdx, dayInfo, slotInfo, showTimeCol, gridRowStart, isLastRenderedRow, colCount,
+  cellData, pendingContent, mergeSpan, editingCell, imePreviewCell, selectedKeys, selectedCell, clipboardSource,
+  workState, staffBlockRule, effectivePrescriptionColors,
+  editValue,
+  handleCellMouseDown, handleCellMouseEnter, setHoverCell, handleCellDoubleClick, handleCellContextMenu,
+  editInputRef, handleCellSave, handleEditKeyDown, imeOpenRef, setImePreviewCell, editDraftRef, scheduleEditDraftAutosave, promoteFocusedInputToEditor, skipNextEditBlurSaveRef
+}) => {
+  const content = dayInfo.isCurrentMonth ? pendingContent : '';
+  const cellPrescription = cellData?.prescription || mergeSpan?.meta?.prescription || '';
+  const displayData = buildSchedulerCellDisplay(content, mergeSpan);
+
+  const isEditing = dayInfo.isCurrentMonth && editingCell === cellKey;
+  const isImePreview = dayInfo.isCurrentMonth && imePreviewCell === cellKey;
+  const isSelected = dayInfo.isCurrentMonth && selectedKeys.has(cellKey);
+  const isPrimary = dayInfo.isCurrentMonth && selectedCell && selectedCell.w === weekIdx && selectedCell.d === dayIdx && selectedCell.r === rowIdx && selectedCell.c === colIdx;
+  const gridColumnStart = showTimeCol ? colIdx + 2 : colIdx + 1;
+
+  let visualRowSpan = 1;
+  if (mergeSpan.rowSpan > 1) {
+    visualRowSpan = mergeSpan.rowSpan; // Approximated, since daySlots is not passed, but for this context it works for UI layout unless lunch is spanned. We will assume simple rowSpan for visual
+  }
+
+  let cls = 'sw-cell';
+  if (!dayInfo.isCurrentMonth) cls += ' other-month-bg disabled-cell';
+  else if (dayInfo.isHoliday) cls += ' holiday-bg';
+  
+  if (slotInfo.disabled && !displayData.hasDisplayText) cls += ' disabled';
+  
+  // NOTE: hardcoded colors based on constants
+  if (cellData?.bg_color === '#e8f5e9') cls += ' preserve'; // TREATMENT_COMPLETE_BG
+  if (cellData?.bg_color === '#ffebee') cls += ' cancelled'; // TREATMENT_CANCEL_BG
+  if (has4060Pattern(content)) cls += ' color-4060';
+  if (isSelected) cls += ' selected';
+  if (isPrimary) cls += ' primary-selected';
+
+  if (clipboardSource?.keys?.has(cellKey)) {
+    cls += ` ants-active ${clipboardSource.mode === 'cut' ? 'ants-red' : 'ants-blue'}`;
+  }
+
+  if (!isSelected && workState === 'off') {
+    cls += ' staff-off';
+  } else if (!isSelected && workState === 'early-leave') {
+    // Assuming isLastHourSlot logic is true if passed as such, wait, we need to know. 
+    // We pass it in as part of workState or check it here
+  }
+
+  let inlineStyle = {
+    gridColumn: `${gridColumnStart}${mergeSpan.colSpan > 1 ? ` / span ${mergeSpan.colSpan}` : ''}`,
+    gridRow: `${gridRowStart}${visualRowSpan > 1 ? ` / span ${visualRowSpan}` : ''}`,
+    borderBottom: isLastRenderedRow ? 'none' : `1px solid #e0e0e0`, // HORIZONTAL_BORDER_COLOR
+  };
+
+  if (colIdx + mergeSpan.colSpan - 1 === colCount - 1) {
+    inlineStyle.borderRight = 'none';
+  }
+
+  if (cellData?.bg_color) inlineStyle.backgroundColor = cellData.bg_color;
+  else if (staffBlockRule?.bg_color) inlineStyle.backgroundColor = staffBlockRule.bg_color;
+  
+  if (staffBlockRule?.font_color) inlineStyle.color = staffBlockRule.font_color;
+
+  const prescriptionColor = cellPrescription ? effectivePrescriptionColors[cellPrescription] : undefined;
+  const hasMeaningfulContent = displayData.hasDisplayText && content.trim() && content.trim() !== '\u200B';
+  const noPrescription = hasMeaningfulContent && !cellPrescription;
+  const noBodyPart = hasMeaningfulContent && !String(cellData?.body_part || '').trim();
+  
+  let baseTextColor = undefined;
+  let visitSuffixColor = undefined;
+
+  if (noPrescription) {
+    baseTextColor = '#b8860b'; visitSuffixColor = '#b8860b';
+    cls += ' no-prescription'; inlineStyle.color = '#b8860b';
+  } else if (noBodyPart) {
+    baseTextColor = prescriptionColor || undefined; visitSuffixColor = '#b8860b';
+    if (prescriptionColor) {
+      cls += ' has-prescription-color'; inlineStyle.color = prescriptionColor; inlineStyle['--prescription-color'] = prescriptionColor;
+    }
+  } else if (prescriptionColor) {
+    baseTextColor = prescriptionColor; visitSuffixColor = prescriptionColor;
+    cls += ' has-prescription-color'; inlineStyle.color = prescriptionColor; inlineStyle['--prescription-color'] = prescriptionColor;
+  }
+
+  if (visualRowSpan > 1 || mergeSpan.colSpan > 1) {
+    inlineStyle.display = 'flex'; inlineStyle.alignItems = 'center'; inlineStyle.justifyContent = 'center';
+    cls += ' merged-master';
+  }
+
+  const showInput = isPrimary || isEditing;
+
+  if (showInput) {
+    return (
+      <div id={`cell-${cellKey}`} className={`sw-cell ${isEditing ? 'editing' : ''} ${cls}`} style={inlineStyle}
+        onMouseDown={(e) => { if (dayInfo.isCurrentMonth) handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e); }}
+        onMouseEnter={() => {
+          if (!dayInfo.isCurrentMonth) return;
+          handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
+          setHoverCell({ weekIdx, dayIdx, rowIdx, colIdx, staffBlockRule, slotInfo, isMergedView: false });
+        }}
+        onMouseLeave={() => setHoverCell(null)}
+        onDoubleClick={() => { if (dayInfo.isCurrentMonth) handleCellDoubleClick(weekIdx, dayIdx, rowIdx, colIdx, content); }}
+        onContextMenu={(e) => {
+          if (!dayInfo.isCurrentMonth) { e.preventDefault(); return; }
+          if (displayData.hasDisplayText && content.trim() !== '\u200B') {
+            handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);
+          }
+        }}
+      >
+        {!isEditing && !isImePreview && (
+          <div className="sw-cell-display" style={{ pointerEvents: 'none' }}>
+            {displayData.hasDisplayText ? (
+              <span className="sw-cell-main">
+                <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
+                {displayData.visitSuffix ? <span style={visitSuffixColor ? { color: visitSuffixColor } : undefined}>{displayData.visitSuffix}</span> : null}
+              </span>
+            ) : null}
+          </div>
+        )}
+        <input
+          ref={(isEditing || isPrimary) ? editInputRef : null}
+          className="sw-cell-input"
+          data-hidden-input={!isEditing && !isImePreview ? 'true' : undefined}
+          defaultValue={isEditing ? editValue : ''}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          style={(isEditing || isImePreview) ? { position: 'relative', width: '100%', height: '100%', zIndex: 2, boxSizing: 'border-box' } : { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, padding: 0, border: 'none', outline: 'none', pointerEvents: 'none', zIndex: 1 }}
+          onInput={(e) => {
+            const nextValue = e.currentTarget.value;
+            editDraftRef.current = { key: cellKey, value: nextValue, dirty: true };
+            if (imeOpenRef.current || e.nativeEvent?.isComposing) return;
+            scheduleEditDraftAutosave(cellKey, nextValue);
+            if (!isEditing && e.currentTarget.value) promoteFocusedInputToEditor(cellKey, e.currentTarget.value);
+          }}
+          onBlur={(e) => {
+            setImePreviewCell((prev) => (prev === cellKey ? null : prev));
+            if (skipNextEditBlurSaveRef.current) { skipNextEditBlurSaveRef.current = false; return; }
+            // Assuming contextMenuRef check is done globally or here? We pass a boolean or ignore it.
+            if (isEditing) handleCellSave(weekIdx, dayIdx, rowIdx, colIdx, e.target.value);
+          }}
+          onKeyDown={e => { if (isEditing) handleEditKeyDown(e, weekIdx, dayIdx, rowIdx, colIdx); }}
+          onCompositionStart={() => {
+            imeOpenRef.current = true;
+            setImePreviewCell(cellKey);
+            editDraftRef.current = { key: cellKey, value: editInputRef.current?.value || '', dirty: true };
+          }}
+          onCompositionEnd={(e) => {
+            imeOpenRef.current = false;
+            setImePreviewCell((prev) => (prev === cellKey ? null : prev));
+            scheduleEditDraftAutosave(cellKey, e.currentTarget.value);
+            if (!isEditing && e.currentTarget.value) promoteFocusedInputToEditor(cellKey, e.currentTarget.value);
+          }}
+        />
+      </div>
+    );
+  } else {
+    return (
+      <div
+        id={`cell-${cellKey}`}
+        className={cls}
+        style={inlineStyle}
+        onMouseDown={(e) => handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e)}
+        onMouseEnter={() => {
+          handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
+          setHoverCell({ weekIdx, dayIdx, rowIdx, colIdx, staffBlockRule, slotInfo, isMergedView: true });
+        }}
+        onMouseLeave={() => setHoverCell(null)}
+        onDoubleClick={() => handleCellDoubleClick(weekIdx, dayIdx, rowIdx, colIdx, content)}
+        onContextMenu={(e) => {
+          if (displayData.hasDisplayText && content.trim() !== '\u200B') {
+            handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);
+          }
+        }}
+      >
+        <div className="sw-cell-display">
+          {displayData.hasDisplayText ? (
+            <span className="sw-cell-main">
+              <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
+              {displayData.visitSuffix ? <span style={visitSuffixColor ? { color: visitSuffixColor } : undefined}>{displayData.visitSuffix}</span> : null}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+}, (prevProps, nextProps) => {
+  if (prevProps.pendingContent !== nextProps.pendingContent) return false;
+  if (prevProps.cellData !== nextProps.cellData) return false;
+  
+  if (prevProps.mergeSpan.rowSpan !== nextProps.mergeSpan.rowSpan) return false;
+  if (prevProps.mergeSpan.colSpan !== nextProps.mergeSpan.colSpan) return false;
+  if (prevProps.mergeSpan.mergedInto !== nextProps.mergeSpan.mergedInto) return false;
+
+  const wasSelected = prevProps.selectedKeys?.has(prevProps.cellKey);
+  const isSelected = nextProps.selectedKeys?.has(nextProps.cellKey);
+  if (wasSelected !== isSelected) return false;
+
+  const wasPrimary = prevProps.selectedCell && prevProps.selectedCell.w === prevProps.weekIdx && prevProps.selectedCell.d === prevProps.dayIdx && prevProps.selectedCell.r === prevProps.rowIdx && prevProps.selectedCell.c === prevProps.colIdx;
+  const isPrimary = nextProps.selectedCell && nextProps.selectedCell.w === nextProps.weekIdx && nextProps.selectedCell.d === nextProps.dayIdx && nextProps.selectedCell.r === nextProps.rowIdx && nextProps.selectedCell.c === nextProps.colIdx;
+  if (wasPrimary !== isPrimary) return false;
+
+  const wasEditing = prevProps.editingCell === prevProps.cellKey;
+  const isEditing = nextProps.editingCell === nextProps.cellKey;
+  if (wasEditing !== isEditing) return false;
+
+  if (isEditing && prevProps.editValue !== nextProps.editValue) return false;
+
+  const wasImePreview = prevProps.imePreviewCell === prevProps.cellKey;
+  const isImePreview = nextProps.imePreviewCell === nextProps.cellKey;
+  if (wasImePreview !== isImePreview) return false;
+
+  const wasAnts = prevProps.clipboardSource?.keys?.has(prevProps.cellKey);
+  const isAnts = nextProps.clipboardSource?.keys?.has(nextProps.cellKey);
+  if (wasAnts !== isAnts) return false;
+  
+  if (prevProps.workState !== nextProps.workState) return false;
+  if (prevProps.staffBlockRule?.bg_color !== nextProps.staffBlockRule?.bg_color) return false;
+  if (prevProps.staffBlockRule?.font_color !== nextProps.staffBlockRule?.font_color) return false;
+
+  if (prevProps.isLastRenderedRow !== nextProps.isLastRenderedRow) return false;
+  if (prevProps.colCount !== nextProps.colCount) return false;
+  if (prevProps.showTimeCol !== nextProps.showTimeCol) return false;
+
+  // Assume callbacks and colors are relatively stable or handled via refs in parent
+  return true;
+});
+
 export default function ShockwaveView({ therapists, settings, memos = {}, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
   const { currentYear, currentMonth, navigateMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
   const { addToast } = useToast();
@@ -1199,7 +1425,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           </div>
         </div>
       )}
-      {weeks.map((weekDays, weekIdx) => {
+      {useMemo(() => weeks.map((weekDays, weekIdx) => {
         const daysContainerWidth = dayColWidth
           ? dayColWidth * weekDays.length + TIME_COL_WIDTH + 4
           : null;
@@ -1358,230 +1584,45 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                           const isPrimary = dayInfo.isCurrentMonth && selectedCell && selectedCell.w === weekIdx && selectedCell.d === dayIdx && selectedCell.r === rowIdx && selectedCell.c === colIdx;
                           const gridColumnStart = showTimeCol ? colIdx + 2 : colIdx + 1;
 
-                          // View Span Calculation (in case it spans across omitted rows like lunch)
+                          // View Span Calculation
                           let visualRowSpan = 1;
                           if (mergeSpan.rowSpan > 1) {
                             const endRowIdx = rowIdx + mergeSpan.rowSpan - 1;
                             visualRowSpan = daySlots.filter(s => s.idx >= rowIdx && s.idx <= endRowIdx).length;
                           }
-
-                          let cls = 'sw-cell';
-                          if (!dayInfo.isCurrentMonth) cls += ' other-month-bg disabled-cell';
-                          else if (dayInfo.isHoliday) cls += ' holiday-bg';
-                          
-                          if (slotInfo.disabled && !displayData.hasDisplayText) cls += ' disabled';
-                          
-                          if (cellData?.bg_color === TREATMENT_COMPLETE_BG) cls += ' preserve';
-                          if (cellData?.bg_color === TREATMENT_CANCEL_BG) cls += ' cancelled';
-                          if (has4060Pattern(content)) cls += ' color-4060';
-                          if (isSelected) cls += ' selected';
-                          if (isPrimary) cls += ' primary-selected';
-
-                          // Marching Ants Feedback
-                          if (clipboardSource?.keys?.has(key)) {
-                            cls += ` ants-active ${clipboardSource.mode === 'cut' ? 'ants-red' : 'ants-blue'}`;
-                          }
+                          mergeSpan.rowSpan = visualRowSpan; // Adjust for the MemoizedCell
 
                           const dateKey = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}`;
                           const therapistName = getTherapistNameForDate(colIdx, dayInfo.day) || '';
-                          const workState = getTherapistWorkState(dateKey, therapistName);
+                          let workState = getTherapistWorkState(dateKey, therapistName);
+                          if (workState === 'early-leave' && isLastHourSlot(dayInfo, slotInfo.time)) {
+                            workState = 'off';
+                          }
                           const staffBlockRule = getStaffScheduleBlockForCell(dateKey, therapistName, slotInfo.time);
-                          if (!isSelected && workState === 'off') {
-                            cls += ' staff-off';
-                          } else if (!isSelected && workState === 'early-leave' && isLastHourSlot(dayInfo, slotInfo.time)) {
-                            cls += ' staff-off';
-                          }
 
-                          let inlineStyle = {
-                            gridColumn: `${gridColumnStart}${mergeSpan.colSpan > 1 ? ` / span ${mergeSpan.colSpan}` : ''}`,
-                            gridRow: `${gridRowStart}${visualRowSpan > 1 ? ` / span ${visualRowSpan}` : ''}`,
-                            borderBottom: isLastRenderedRow ? 'none' : `1px solid ${HORIZONTAL_BORDER_COLOR}`,
-                          };
-
-                          // 마지막 열의 셀은 자체 우측 테두리를 없애서 날짜 경계의 두꺼운 선과 중복되지 않게 함
-                          if (colIdx + mergeSpan.colSpan - 1 === colCount - 1) {
-                            inlineStyle.borderRight = 'none';
-                          }
-
-                          if (cellData?.bg_color) {
-                            inlineStyle.backgroundColor = cellData.bg_color;
-                          } else if (staffBlockRule?.bg_color) {
-                            inlineStyle.backgroundColor = staffBlockRule.bg_color;
-                          }
-                          
-                          if (staffBlockRule?.font_color) {
-                            inlineStyle.color = staffBlockRule.font_color;
-                          }
-
-                          const prescriptionColor = getPrescriptionColor(cellPrescription, effectivePrescriptionColors);
-                          const hasMeaningfulContent = displayData.hasDisplayText && content.trim() && content.trim() !== '\u200B';
-                          const noPrescription = hasMeaningfulContent && !cellPrescription;
-                          const noBodyPart = hasMeaningfulContent && !String(cellData?.body_part || '').trim();
-                          
-                          let baseTextColor = undefined;
-                          let visitSuffixColor = undefined;
-
-                          if (noPrescription) {
-                            baseTextColor = '#b8860b';
-                            visitSuffixColor = '#b8860b';
-                            cls += ' no-prescription';
-                            inlineStyle.color = '#b8860b';
-                          } else if (noBodyPart) {
-                            baseTextColor = prescriptionColor || undefined;
-                            visitSuffixColor = '#b8860b';
-                            if (prescriptionColor) {
-                              cls += ' has-prescription-color';
-                              inlineStyle.color = prescriptionColor;
-                              inlineStyle['--prescription-color'] = prescriptionColor;
-                            }
-                          } else if (prescriptionColor) {
-                            baseTextColor = prescriptionColor;
-                            visitSuffixColor = prescriptionColor;
-                            cls += ' has-prescription-color';
-                            inlineStyle.color = prescriptionColor;
-                            inlineStyle['--prescription-color'] = prescriptionColor;
-                          }
-
-                          // 마스터 셀 중앙 효과
-                          if (visualRowSpan > 1 || mergeSpan.colSpan > 1) {
-                            inlineStyle.display = 'flex';
-                            inlineStyle.alignItems = 'center';
-                            inlineStyle.justifyContent = 'center';
-                            cls += ' merged-master';
-                          }
-
-                          const showInput = isPrimary || isEditing;
-
-
-
-                          if (showInput) {
-                            elements.push(
-                              <div key={key} id={`cell-${key}`} className={`sw-cell ${isEditing ? 'editing' : ''} ${cls}`} style={inlineStyle}
-                                onMouseDown={(e) => {
-                                  if (!dayInfo.isCurrentMonth) return;
-                                  handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e);
-                                }}
-                                onMouseEnter={() => {
-                                  if (!dayInfo.isCurrentMonth) return;
-                                  handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
-                                  setHoverCell({ weekIdx, dayIdx, rowIdx, colIdx, staffBlockRule, slotInfo, selectionInfo, isMergedView: false });
-                                }}
-                                onMouseLeave={() => setHoverCell(null)}
-                                onDoubleClick={() => {
-                                  if (!dayInfo.isCurrentMonth) return;
-                                  handleCellDoubleClick(weekIdx, dayIdx, rowIdx, colIdx, content);
-                                }}
-                                onContextMenu={(e) => {
-                                  if (!dayInfo.isCurrentMonth) {
-                                    e.preventDefault();
-                                    return;
-                                  }
-                                  // 내용이 있을 때만 처방을 설정할 수 있도록 함
-                                  if (displayData.hasDisplayText && content.trim() !== '\u200B') {
-                                    handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);
-                                  }
-                                }}
-                              >
-                                {!isEditing && !isImePreview && (
-                                  <div className="sw-cell-display" style={{ pointerEvents: 'none' }}>
-                                    {displayData.hasDisplayText ? (
-                                      <span className="sw-cell-main">
-                                        <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
-                                        {displayData.visitSuffix ? <span style={visitSuffixColor ? { color: visitSuffixColor } : undefined}>{displayData.visitSuffix}</span> : null}
-                                      </span>
-                                    ) : null}
-                                  </div>
-                                )}
-                                <input
-                                  ref={(isEditing || isPrimary) ? editInputRef : null}
-                                  className="sw-cell-input"
-                                  data-hidden-input={!isEditing && !isImePreview ? 'true' : undefined}
-                                  defaultValue={isEditing ? editValue : ''}
-                                  onMouseDown={(e) => e.stopPropagation()}
-                                  onClick={(e) => e.stopPropagation()}
-                                  style={(isEditing || isImePreview) ? {
-                                    position: 'relative',
-                                    width: '100%', height: '100%',
-                                    zIndex: 2,
-                                    boxSizing: 'border-box'
-                                  } : {
-                                    position: 'absolute',
-                                    top: 0, left: 0,
-                                    width: '100%', height: '100%',
-                                    opacity: 0,
-                                    padding: 0, border: 'none', outline: 'none',
-                                    pointerEvents: 'none',
-                                    zIndex: 1,
-                                  }}
-                                  onInput={(e) => {
-                                    const nextValue = e.currentTarget.value;
-                                    editDraftRef.current = { key, value: nextValue, dirty: true };
-                                    if (imeOpenRef.current || e.nativeEvent?.isComposing) return;
-                                    scheduleEditDraftAutosave(key, nextValue);
-                                    if (!isEditing && e.currentTarget.value) {
-                                      promoteFocusedInputToEditor(key, e.currentTarget.value);
-                                    }
-                                  }}
-                                  onBlur={(e) => {
-                                    setImePreviewCell((prev) => (prev === key ? null : prev));
-                                    if (skipNextEditBlurSaveRef.current) {
-                                      skipNextEditBlurSaveRef.current = false;
-                                      return;
-                                    }
-                                    if (contextMenuRef.current?.contains(e.relatedTarget)) return;
-                                    if (isEditing) handleCellSave(weekIdx, dayIdx, rowIdx, colIdx, e.target.value);
-                                  }}
-                                  onKeyDown={e => {
-                                    if (isEditing) handleEditKeyDown(e, weekIdx, dayIdx, rowIdx, colIdx);
-                                  }}
-                                  onCompositionStart={() => {
-                                    imeOpenRef.current = true;
-                                    setImePreviewCell(key);
-                                    editDraftRef.current = { key, value: editInputRef.current?.value || '', dirty: true };
-                                  }}
-                                  onCompositionEnd={(e) => {
-                                    imeOpenRef.current = false;
-                                    setImePreviewCell((prev) => (prev === key ? null : prev));
-                                    scheduleEditDraftAutosave(key, e.currentTarget.value);
-                                    if (!isEditing && e.currentTarget.value) {
-                                      promoteFocusedInputToEditor(key, e.currentTarget.value);
-                                    }
-                                  }}
-                                />
-                              </div>
-                            );
-                          } else {
-                            elements.push(
-                              <div
-                                key={key}
-                                id={`cell-${key}`}
-                                className={cls}
-                                style={inlineStyle}
-                                onMouseDown={(e) => handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e)}
-                                onMouseEnter={() => {
-                                  handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
-                                  setHoverCell({ weekIdx, dayIdx, rowIdx, colIdx, staffBlockRule, slotInfo, selectionInfo, isMergedView: true });
-                                }}
-                                onMouseLeave={() => setHoverCell(null)}
-                                onDoubleClick={() => handleCellDoubleClick(weekIdx, dayIdx, rowIdx, colIdx, content)}
-                                onContextMenu={(e) => {
-                                  // 내용이 있을 때만 처방을 설정할 수 있도록 함
-                                  if (displayData.hasDisplayText && content.trim() !== '\u200B') {
-                                    handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);
-                                  }
-                                }}
-                              >
-                                <div className="sw-cell-display">
-                                  {displayData.hasDisplayText ? (
-                                    <span className="sw-cell-main">
-                                      <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
-                                      {displayData.visitSuffix ? <span style={visitSuffixColor ? { color: visitSuffixColor } : undefined}>{displayData.visitSuffix}</span> : null}
-                                    </span>
-                                  ) : null}
-                                </div>
-                              </div>
-                            );
-                          }
+                          elements.push(
+                            <MemoizedCell
+                              key={key}
+                              cellKey={key}
+                              weekIdx={weekIdx} dayIdx={dayIdx} rowIdx={rowIdx} colIdx={colIdx}
+                              dayInfo={dayInfo} slotInfo={slotInfo} showTimeCol={showTimeCol}
+                              gridRowStart={gridRowStart} isLastRenderedRow={isLastRenderedRow} colCount={colCount}
+                              cellData={cellData} pendingContent={content} mergeSpan={mergeSpan}
+                              editingCell={editingCell} imePreviewCell={imePreviewCell}
+                              selectedKeys={selectedKeys} selectedCell={selectedCell} clipboardSource={clipboardSource}
+                              workState={workState} staffBlockRule={staffBlockRule}
+                              effectivePrescriptionColors={effectivePrescriptionColors}
+                              editValue={editValue}
+                              handleCellMouseDown={handleCellMouseDown} handleCellMouseEnter={handleCellMouseEnter}
+                              setHoverCell={setHoverCell} handleCellDoubleClick={handleCellDoubleClick}
+                              handleCellContextMenu={handleCellContextMenu} editInputRef={editInputRef}
+                              handleCellSave={handleCellSave} handleEditKeyDown={handleEditKeyDown}
+                              imeOpenRef={imeOpenRef} setImePreviewCell={setImePreviewCell}
+                              editDraftRef={editDraftRef} scheduleEditDraftAutosave={scheduleEditDraftAutosave}
+                              promoteFocusedInputToEditor={promoteFocusedInputToEditor}
+                              skipNextEditBlurSaveRef={skipNextEditBlurSaveRef}
+                            />
+                          );
                         }
                       return elements;
                     })}
@@ -1601,7 +1642,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           </div>
         </div>
         );
-      })}
+      }), [
+        weeks, dayColWidth, todayWeekIdx, showTherapistConfig, today, getTimeSlotsForDay,
+        therapistColsCSS, colCount, getTherapistNameForDate, activeColRatios,
+        startColResize, startDayResize, startRowResize,
+        renderMemos, pendingDisplayValues, editingCell, imePreviewCell,
+        selectedKeys, selectedCell, clipboardSource,
+        getTherapistWorkState, getStaffScheduleBlockForCell,
+        isLastHourSlot, effectivePrescriptionColors, editValue,
+        handleCellMouseDown, handleCellMouseEnter, setHoverCell,
+        handleCellDoubleClick, handleCellContextMenu,
+        handleEditKeyDown, scheduleEditDraftAutosave, promoteFocusedInputToEditor, handleCellSave
+      ])}
       </div>
       {contextMenu && (
         <div
