@@ -1238,6 +1238,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     pendingDisplayValues,
     pendingMergeSpans,
     applyImmediateCellDisplay,
+    applyImmediateMergeSpan,
     currentYear,
     currentMonth,
     memos,

@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { has4060Pattern, normalize4060StarOrder, strip4060FromContent } from '../../lib/schedulerContentFormat';
 import {
   addBodyPartToMap,
@@ -41,6 +41,15 @@ export default function useScheduleContextMenuActions({
   getDefaultReservationTime,
 }) {
   const saveDebounceRef = useRef({ timer: null, pending: new Map(), undoMemos: null });
+
+  useEffect(() => {
+    return () => {
+      if (saveDebounceRef.current.timer) {
+        clearTimeout(saveDebounceRef.current.timer);
+      }
+    };
+  }, []);
+
   return useCallback(async (action) => {
     const getContextKey = () => (
       contextMenu
@@ -102,12 +111,19 @@ export default function useScheduleContextMenuActions({
       if (key !== getContextKey()) return;
       setContextMenu((prev) => {
         if (!prev) return prev;
+        const prevSnapshot = prev.memoSnapshot || memo || {};
+        const nextSnapshot = {
+          ...prevSnapshot,
+          ...overrides,
+        };
+        const sameBodyPart = prevSnapshot.body_part === nextSnapshot.body_part;
+        const sameMergeSpan = prevSnapshot.merge_span === nextSnapshot.merge_span;
+        const sameContent = prevSnapshot.content === nextSnapshot.content;
+        const samePrescription = prevSnapshot.prescription === nextSnapshot.prescription;
+        if (sameBodyPart && sameMergeSpan && sameContent && samePrescription) return prev;
         return {
           ...prev,
-          memoSnapshot: {
-            ...(prev.memoSnapshot || memo || {}),
-            ...overrides,
-          },
+          memoSnapshot: nextSnapshot,
         };
       });
     };
@@ -458,23 +474,42 @@ export default function useScheduleContextMenuActions({
     else if (action?.type === 'reservationTime') {
       const keys = getContextTargetKeys();
       const oldMemos = buildMemoSnapshotForKeys(keys);
-      let anyChanged = false;
       const nextTime = normalizeReservationTimeValue(action.value);
       setContextMenuReservationInput(nextTime);
       if (contextMenu) {
         setContextMenu((prev) => prev ? { ...prev, savedReservationTime: nextTime } : prev);
       }
+      let anyChanged = false;
       for (const key of keys) {
         const memo = getMemoForAction(key);
         const nextMergeSpan = buildMergeSpanWithReservationTime(memo.merge_span, nextTime);
         const currentTime = getReservationTimeFromMergeSpan(memo.merge_span);
         if (currentTime === getReservationTimeFromMergeSpan(nextMergeSpan)) continue;
-        const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan });
-        if (success) anyChanged = true;
+        updateContextMemoSnapshot(key, memo, { merge_span: nextMergeSpan });
+        saveDebounceRef.current.pending.set(key, { memo, overrides: { merge_span: nextMergeSpan } });
+        anyChanged = true;
       }
       if (anyChanged) {
-        recordUndo({ type: 'bulk-edit', oldMemos });
-        addToast('예약 시간이 수정되었습니다.', 'success');
+        if (!saveDebounceRef.current.undoMemos) {
+          saveDebounceRef.current.undoMemos = oldMemos;
+        }
+        if (saveDebounceRef.current.timer) clearTimeout(saveDebounceRef.current.timer);
+        saveDebounceRef.current.timer = setTimeout(() => {
+          const snapshot = saveDebounceRef.current;
+          const pendingSaves = Array.from(snapshot.pending.entries());
+          const undoMemos = snapshot.undoMemos;
+          snapshot.pending.clear();
+          snapshot.undoMemos = null;
+          snapshot.timer = null;
+
+          Promise.all(
+            pendingSaves.map(([k, { memo, overrides }]) => saveMemoMeta(k, memo, overrides))
+          ).then((saveResults) => {
+            if (saveResults.some(Boolean) && undoMemos) {
+              recordUndo({ type: 'bulk-edit', oldMemos: undoMemos });
+            }
+          });
+        }, 500);
       }
       return;
     }

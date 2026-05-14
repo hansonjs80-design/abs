@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import {
-  applyVisitCountToSchedulerContent,
-  getExplicitVisitSuffix,
   isUndoShortcutEvent,
-  stepVisitInputValue,
   stepReservationTimeWithinCellBase,
   getReservationTimeFromMergeSpan,
   buildMergeSpanWithReservationTime,
@@ -17,7 +14,6 @@ export default function useScheduleKeyboardActions({
   editingCell,
   selectedKeys,
   pendingDisplayValues,
-  applyImmediateCellDisplay,
   applyImmediateMergeSpan,
   currentYear,
   currentMonth,
@@ -58,9 +54,7 @@ export default function useScheduleKeyboardActions({
   const buildSnapshotRef = useRef(buildMemoSnapshotForKeys);
   const recordUndoRef = useRef(recordUndo);
   const getDefaultTimeRef = useRef(getDefaultReservationTime);
-  const applyDisplayRef = useRef(applyImmediateCellDisplay);
   const applyMergeSpanRef = useRef(applyImmediateMergeSpan);
-  const visitDebounceRef = useRef({ timer: null, undoSnapshot: null, pending: new Map() });
   const timeDebounceRef = useRef({ timer: null, undoSnapshot: null, pending: new Map() });
 
   useEffect(() => { memosRef.current = memos; }, [memos]);
@@ -69,13 +63,11 @@ export default function useScheduleKeyboardActions({
   useEffect(() => { buildSnapshotRef.current = buildMemoSnapshotForKeys; }, [buildMemoSnapshotForKeys]);
   useEffect(() => { recordUndoRef.current = recordUndo; }, [recordUndo]);
   useEffect(() => { getDefaultTimeRef.current = getDefaultReservationTime; }, [getDefaultReservationTime]);
-  useEffect(() => { applyDisplayRef.current = applyImmediateCellDisplay; }, [applyImmediateCellDisplay]);
   useEffect(() => { applyMergeSpanRef.current = applyImmediateMergeSpan; }, [applyImmediateMergeSpan]);
 
   // 디바운스 cleanup
   useEffect(() => {
     return () => {
-      if (visitDebounceRef.current?.timer) clearTimeout(visitDebounceRef.current.timer);
       if (timeDebounceRef.current?.timer) clearTimeout(timeDebounceRef.current.timer);
     };
   }, []);
@@ -149,55 +141,50 @@ export default function useScheduleKeyboardActions({
       return;
     }
 
-    if (isMeta && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-      e.preventDefault();
-      e.stopPropagation();
-      const delta = e.key === 'ArrowUp' ? 1 : -1;
+    const applyReservationTimeDelta = (deltaMinutes) => {
       const keys = Array.from(selectedKeys || []);
 
       // 첫 입력 시에만 undo 스냅샷 저장, 연속 입력 시 재사용
-      if (!visitDebounceRef.current.undoSnapshot) {
-        visitDebounceRef.current.undoSnapshot = buildSnapshotRef.current(keys);
+      if (!timeDebounceRef.current.undoSnapshot) {
+        timeDebounceRef.current.undoSnapshot = buildSnapshotRef.current(keys);
       }
 
-      // 최신 refs를 사용하여 즉시 낙관적 UI 적용
+      // 최신 refs를 사용
       const latestMemos = memosRef.current;
       const latestPending = pendingRef.current;
       const saveMemo = onSaveMemoRef.current;
-      const displayUpdates = [];
+      const getDefTime = getDefaultTimeRef.current;
 
-      keys.forEach(key => {
+      const mergeSpanUpdates = keys.map(key => {
         const [kw, kd, kr, kc] = key.split('-').map(Number);
         const memo = latestMemos[key] || {};
-        
-        // 디바운스 대기열에 이미 변경된 내용이 있으면 그것을 우선 기준으로 삼음
-        const pendingState = visitDebounceRef.current.pending.get(key);
-        const stableContent = pendingState ? pendingState.updatedContent : (latestPending[key] !== undefined ? String(latestPending[key]) : (memo.content || ''));
-        if (!stableContent) return;
+        const stableContent = latestPending[key] !== undefined ? String(latestPending[key]) : (memo.content || '');
+        if (!stableContent || stableContent.trim() === '\u200B') return null;
 
-        const visitSuffix = getExplicitVisitSuffix(stableContent);
-        const currentVisit = visitSuffix.replace(/[()]/g, '') || '';
-        const nextVisit = stepVisitInputValue(currentVisit, delta);
-        const updatedContent = applyVisitCountToSchedulerContent(stableContent, nextVisit);
-        if (updatedContent === stableContent) return;
+        // 예약 시간 증감: 디바운스 대기열에 변경된 merge_span이 있으면 기준값으로 우선 적용
+        const pendingState = timeDebounceRef.current.pending.get(key);
+        const currentMergeSpan = pendingState ? pendingState.nextMergeSpan : (memo.merge_span || '');
+        const currentTime = getReservationTimeFromMergeSpan(currentMergeSpan);
+        const defaultTime = getDefTime ? getDefTime(kw, kd, kr) : '';
 
-        // UI 즉각 반영을 위한 값 수집
-        displayUpdates.push({ key, content: updatedContent });
-        
-        // DB 저장 대기열에 추가
-        visitDebounceRef.current.pending.set(key, {
-          kw, kd, kr, kc, memo, updatedContent
+        const nextTime = stepReservationTimeWithinCellBase(currentTime, defaultTime, deltaMinutes);
+        const nextMergeSpan = buildMergeSpanWithReservationTime(currentMergeSpan, nextTime);
+
+        timeDebounceRef.current.pending.set(key, {
+          kw, kd, kr, kc, memo, nextMergeSpan, stableContent
         });
-      });
 
-      if (displayUpdates.length > 0) {
-        applyDisplayRef.current?.(displayUpdates);
+        return { key, mergeSpan: nextMergeSpan };
+      }).filter(Boolean);
+
+      if (mergeSpanUpdates.length > 0) {
+        applyMergeSpanRef.current?.(mergeSpanUpdates);
       }
 
       // 디바운스된 DB 저장 및 undo 기록 (연속 입력이 멈춘 후 500ms 뒤 기록)
-      if (visitDebounceRef.current.timer) clearTimeout(visitDebounceRef.current.timer);
-      visitDebounceRef.current.timer = setTimeout(() => {
-        const snapshot = visitDebounceRef.current;
+      if (timeDebounceRef.current.timer) clearTimeout(timeDebounceRef.current.timer);
+      timeDebounceRef.current.timer = setTimeout(() => {
+        const snapshot = timeDebounceRef.current;
         const pendingSaves = Array.from(snapshot.pending.values());
         const undoMemos = snapshot.undoSnapshot;
 
@@ -206,8 +193,8 @@ export default function useScheduleKeyboardActions({
         snapshot.timer = null;
 
         Promise.all(
-          pendingSaves.map(({ kw, kd, kr, kc, memo, updatedContent }) =>
-            saveMemo(currentYear, currentMonth, kw, kd, kr, kc, updatedContent, memo.bg_color, memo.merge_span, memo.prescription, memo.body_part)
+          pendingSaves.map(({ kw, kd, kr, kc, memo, stableContent, nextMergeSpan }) =>
+            saveMemo(currentYear, currentMonth, kw, kd, kr, kc, stableContent, memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part)
           )
         ).then(saveResults => {
           if (saveResults.some(Boolean) && undoMemos) {
@@ -215,6 +202,12 @@ export default function useScheduleKeyboardActions({
           }
         });
       }, 500);
+    };
+
+    if (isMeta && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault();
+      e.stopPropagation();
+      applyReservationTimeDelta(e.key === 'ArrowUp' ? 10 : -10);
       return;
     }
 
@@ -347,72 +340,9 @@ export default function useScheduleKeyboardActions({
     if (isMeta && (e.code === 'Minus' || e.key === '-' || e.code === 'Equal' || e.key === '=' || e.key === '+')) {
       e.preventDefault();
       e.stopPropagation();
-      
+
       const delta = (e.code === 'Minus' || e.key === '-') ? -1 : 1;
-      const deltaMinutes = delta * 10; // 항상 10분 단위로 증감
-      
-      const keys = Array.from(selectedKeys || []);
-
-      // 첫 입력 시에만 undo 스냅샷 저장, 연속 입력 시 재사용
-      if (!timeDebounceRef.current.undoSnapshot) {
-        timeDebounceRef.current.undoSnapshot = buildSnapshotRef.current(keys);
-      }
-
-      // 최신 refs를 사용
-      const latestMemos = memosRef.current;
-      const latestPending = pendingRef.current;
-      const saveMemo = onSaveMemoRef.current;
-      const getDefTime = getDefaultTimeRef.current;
-
-      const mergeSpanUpdates = keys.map(key => {
-        const [kw, kd, kr, kc] = key.split('-').map(Number);
-        const memo = latestMemos[key] || {};
-        const stableContent = latestPending[key] !== undefined ? String(latestPending[key]) : (memo.content || '');
-        if (!stableContent || stableContent.trim() === '\u200B') return null;
-
-        // 예약 시간 증감: 디바운스 대기열에 변경된 merge_span이 있으면 기준값으로 우선 적용
-        const pendingState = timeDebounceRef.current.pending.get(key);
-        const currentMergeSpan = pendingState ? pendingState.nextMergeSpan : (memo.merge_span || '');
-        const currentTime = getReservationTimeFromMergeSpan(currentMergeSpan);
-        const defaultTime = getDefTime ? getDefTime(kw, kd, kr) : '';
-
-        const nextTime = stepReservationTimeWithinCellBase(currentTime, defaultTime, deltaMinutes);
-        const nextMergeSpan = buildMergeSpanWithReservationTime(currentMergeSpan, nextTime);
-        
-        if (currentMergeSpan === nextMergeSpan) return null;
-
-        timeDebounceRef.current.pending.set(key, {
-          kw, kd, kr, kc, memo, nextMergeSpan, stableContent
-        });
-
-        return { key, mergeSpan: nextMergeSpan };
-      }).filter(Boolean);
-
-      if (mergeSpanUpdates.length > 0) {
-        applyMergeSpanRef.current?.(mergeSpanUpdates);
-      }
-
-      // 디바운스된 DB 저장 및 undo 기록 (연속 입력이 멈춘 후 500ms 뒤 기록)
-      if (timeDebounceRef.current.timer) clearTimeout(timeDebounceRef.current.timer);
-      timeDebounceRef.current.timer = setTimeout(() => {
-        const snapshot = timeDebounceRef.current;
-        const pendingSaves = Array.from(snapshot.pending.values());
-        const undoMemos = snapshot.undoSnapshot;
-
-        snapshot.pending.clear();
-        snapshot.undoSnapshot = null;
-        snapshot.timer = null;
-
-        Promise.all(
-          pendingSaves.map(({ kw, kd, kr, kc, memo, stableContent, nextMergeSpan }) =>
-            saveMemo(currentYear, currentMonth, kw, kd, kr, kc, stableContent, memo.bg_color, nextMergeSpan, memo.prescription, memo.body_part)
-          )
-        ).then(saveResults => {
-          if (saveResults.some(Boolean) && undoMemos) {
-            recordUndoRef.current({ type: 'bulk-edit', oldMemos: undoMemos });
-          }
-        });
-      }, 500);
+      applyReservationTimeDelta(delta * 10);
       return;
     }
 
