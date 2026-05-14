@@ -2245,18 +2245,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       <th style={{ width: '12%', textAlign: 'center' }}>처방</th>
                       <th style={{ width: '15%', textAlign: 'center' }}>부위</th>
                       <th style={{ width: '8%', textAlign: 'center' }}>회차</th>
-                      <th style={{ width: '21%', textAlign: 'left' }}>메모</th>
-                      <th style={{ width: '10%', textAlign: 'center' }}>선택</th>
+                      <th style={{ width: '31%', textAlign: 'left' }}>메모</th>
                     </tr>
                   </thead>
                   <tbody>
                     {patientHistoryModalData.loading ? (
                       <tr>
-                        <td colSpan="8" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>내역을 불러오는 중...</td>
+                        <td colSpan="7" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>내역을 불러오는 중...</td>
                       </tr>
                     ) : patientHistoryModalData.logs.length === 0 ? (
                       <tr>
-                        <td colSpan="8" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>해당하는 내역이 없습니다.</td>
+                        <td colSpan="7" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>해당하는 내역이 없습니다.</td>
                       </tr>
                     ) : (
                       patientHistoryModalData.logs.map((log, idx) => (
@@ -2313,15 +2312,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                           </td>
                           <td style={{ textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.85em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {log.memo}
-                          </td>
-                          <td style={{ textAlign: 'center' }}>
-                            <button 
-                              className="btn btn-primary" 
-                              style={{ padding: '4px 12px', fontSize: '0.85rem', minHeight: 'unset', height: 'auto', borderRadius: '4px' }} 
-                              onClick={(e) => { e.stopPropagation(); handleApplyHistoryToCell(log); }}
-                            >
-                              적용
-                            </button>
                           </td>
                         </tr>
                       ))
