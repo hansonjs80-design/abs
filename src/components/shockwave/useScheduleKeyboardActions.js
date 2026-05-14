@@ -14,6 +14,7 @@ export default function useScheduleKeyboardActions({
   editingCell,
   selectedKeys,
   pendingDisplayValues,
+  pendingMergeSpans,
   applyImmediateMergeSpan,
   currentYear,
   currentMonth,
@@ -50,6 +51,7 @@ export default function useScheduleKeyboardActions({
   // ── refs로 최신 값 추적 (연속 키 입력 시 stale closure 방지) ──
   const memosRef = useRef(memos);
   const pendingRef = useRef(pendingDisplayValues);
+  const pendingMergeSpansRef = useRef(pendingMergeSpans);
   const onSaveMemoRef = useRef(onSaveMemo);
   const buildSnapshotRef = useRef(buildMemoSnapshotForKeys);
   const recordUndoRef = useRef(recordUndo);
@@ -59,6 +61,7 @@ export default function useScheduleKeyboardActions({
 
   useEffect(() => { memosRef.current = memos; }, [memos]);
   useEffect(() => { pendingRef.current = pendingDisplayValues; }, [pendingDisplayValues]);
+  useEffect(() => { pendingMergeSpansRef.current = pendingMergeSpans; }, [pendingMergeSpans]);
   useEffect(() => { onSaveMemoRef.current = onSaveMemo; }, [onSaveMemo]);
   useEffect(() => { buildSnapshotRef.current = buildMemoSnapshotForKeys; }, [buildMemoSnapshotForKeys]);
   useEffect(() => { recordUndoRef.current = recordUndo; }, [recordUndo]);
@@ -152,6 +155,7 @@ export default function useScheduleKeyboardActions({
       // 최신 refs를 사용
       const latestMemos = memosRef.current;
       const latestPending = pendingRef.current;
+      const latestPendingMergeSpans = pendingMergeSpansRef.current;
       const saveMemo = onSaveMemoRef.current;
       const getDefTime = getDefaultTimeRef.current;
 
@@ -163,7 +167,9 @@ export default function useScheduleKeyboardActions({
 
         // 예약 시간 증감: 디바운스 대기열에 변경된 merge_span이 있으면 기준값으로 우선 적용
         const pendingState = timeDebounceRef.current.pending.get(key);
-        const currentMergeSpan = pendingState ? pendingState.nextMergeSpan : (memo.merge_span || '');
+        const currentMergeSpan = pendingState
+          ? pendingState.nextMergeSpan
+          : (latestPendingMergeSpans?.[key] || memo.merge_span || '');
         const currentTime = getReservationTimeFromMergeSpan(currentMergeSpan);
         const defaultTime = getDefTime ? getDefTime(kw, kd, kr) : '';
 

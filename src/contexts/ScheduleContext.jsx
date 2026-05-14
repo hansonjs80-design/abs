@@ -474,8 +474,8 @@ export function ScheduleProvider({ children }) {
         if (shockwaveSettingsLoadRequestRef.current !== requestId) return null;
         setShockwaveSettings({
           id: data.id || '00000000-0000-0000-0000-000000000000',
-          start_time: data.start_time,
-          end_time: data.end_time.substring(0, 5),
+          start_time: data.start_time?.substring(0, 5) || '09:00',
+          end_time: data.end_time?.substring(0, 5) || '18:00',
           interval_minutes: data.interval_minutes,
           day_overrides: data.day_overrides || {},
           date_overrides: data.date_overrides || {},

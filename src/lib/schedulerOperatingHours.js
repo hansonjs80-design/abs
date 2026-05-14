@@ -10,12 +10,30 @@ function normalizeDayOverrides(dayOverrides) {
   return dayOverrides && typeof dayOverrides === 'object' ? dayOverrides : {};
 }
 
+function getGlobalDayOverrides(source) {
+  return Object.fromEntries(
+    Object.entries(source).filter(([key]) => key !== MONTHLY_DAY_OVERRIDES_KEY)
+  );
+}
+
+function mergeDayOverrides(baseOverrides, monthOverrides) {
+  const merged = { ...(baseOverrides || {}) };
+  Object.entries(monthOverrides || {}).forEach(([key, override]) => {
+    merged[key] = {
+      ...(merged[key] || {}),
+      ...(override || {}),
+    };
+  });
+  return merged;
+}
+
 export function getMonthlyDayOverrides(dayOverrides, year, month) {
   const source = normalizeDayOverrides(dayOverrides);
   const monthly = source[MONTHLY_DAY_OVERRIDES_KEY] || {};
+  const globalOverrides = getGlobalDayOverrides(source);
   const currentKey = getMonthKey(year, month);
 
-  if (monthly[currentKey]) return monthly[currentKey] || {};
+  if (monthly[currentKey]) return mergeDayOverrides(globalOverrides, monthly[currentKey]);
 
   const currentValue = year * 12 + month;
   const inheritedKey = Object.keys(monthly)
@@ -27,11 +45,9 @@ export function getMonthlyDayOverrides(dayOverrides, year, month) {
     .sort()
     .pop();
 
-  if (inheritedKey) return monthly[inheritedKey] || {};
+  if (inheritedKey) return mergeDayOverrides(globalOverrides, monthly[inheritedKey]);
 
-  return Object.fromEntries(
-    Object.entries(source).filter(([key]) => key !== MONTHLY_DAY_OVERRIDES_KEY)
-  );
+  return globalOverrides;
 }
 
 export function setMonthlyDayOverrides(dayOverrides, year, month, overrides) {
