@@ -62,6 +62,95 @@ import {
   addBodyPartToMap,
 } from '../../lib/schedulerUtils';
 
+const ContextMenuLocalInput = ({ value, onChange, onKeyDown, onBlur, className, placeholder, autoFocus, onCompositionStart, onCompositionEnd, inputMode, pattern }) => {
+  const [localValue, setLocalValue] = useState(value || '');
+  
+  useEffect(() => { setLocalValue(value || ''); }, [value]);
+
+  return (
+    <input
+      type="text"
+      className={className}
+      placeholder={placeholder}
+      autoFocus={autoFocus}
+      autoComplete="off"
+      inputMode={inputMode}
+      pattern={pattern}
+      value={localValue}
+      onChange={(e) => {
+        e.stopPropagation();
+        setLocalValue(e.target.value);
+        if (onChange) onChange(e.target.value);
+      }}
+      onKeyDown={(e) => {
+        if (onKeyDown) onKeyDown(e, localValue);
+      }}
+      onBlur={(e) => {
+        if (onBlur) onBlur(e, localValue);
+      }}
+      onCompositionStart={onCompositionStart}
+      onCompositionEnd={onCompositionEnd}
+      onMouseDown={e => e.stopPropagation()}
+      onClick={e => e.stopPropagation()}
+    />
+  );
+};
+
+const ContextMenuLocalInputGroup = ({ placeholder, buttonLabel, onSubmit, imeOpenRef, className = "context-menu-input" }) => {
+  const [localValue, setLocalValue] = useState('');
+
+  const handleSubmit = () => {
+    const trimmed = localValue.trim();
+    if (trimmed) {
+      onSubmit(trimmed);
+      setLocalValue('');
+    }
+  };
+
+  return (
+    <div className="context-menu-input-row" style={{ marginTop: '8px' }}>
+      <input
+        type="text"
+        placeholder={placeholder}
+        className={className}
+        autoComplete="off"
+        value={localValue}
+        onChange={(e) => {
+          e.stopPropagation();
+          setLocalValue(e.target.value);
+        }}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.nativeEvent?.isComposing || e.keyCode === 229) return;
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSubmit();
+          }
+        }}
+        onCompositionStart={() => {
+          if (imeOpenRef) imeOpenRef.current = true;
+        }}
+        onCompositionEnd={() => {
+          if (imeOpenRef) imeOpenRef.current = false;
+        }}
+        onMouseDown={e => e.stopPropagation()}
+        onClick={e => e.stopPropagation()}
+      />
+      <button
+        type="button"
+        className="context-menu-inline-button"
+        onMouseDown={e => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleSubmit();
+        }}
+      >
+        {buttonLabel}
+      </button>
+    </div>
+  );
+};
+
 export default function ShockwaveView({ therapists, settings, memos = {}, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
   const { currentYear, currentMonth, navigateMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
   const { addToast } = useToast();
@@ -1852,47 +1941,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             ) : currentParts.length === 0 ? (
                               <div className="context-menu-empty">등록된 부위가 없습니다.</div>
                             ) : null}
-                            <div className="context-menu-input-row" style={{ marginTop: '8px' }}>
-                              <input
-                                type="text"
-                                placeholder="새 부위 추가"
-                                className="context-menu-input"
-                                autoComplete="off"
-                                autoFocus
-                                value={contextMenuBodyInput}
-                                onChange={(e) => {
-                                  e.stopPropagation();
-                                  setContextMenuBodyInput(e.target.value);
-                                }}
-                                onKeyDown={(e) => {
-                                  e.stopPropagation();
-                                  if (e.nativeEvent?.isComposing || e.keyCode === 229) return;
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    submitContextMenuBodyInput();
-                                  }
-                                }}
-                                onCompositionStart={() => {
-                                  imeOpenRef.current = true;
-                                }}
-                                onCompositionEnd={() => {
-                                  imeOpenRef.current = false;
-                                }}
-                                onMouseDown={e => e.stopPropagation()}
-                                onClick={e => e.stopPropagation()}
-                              />
-                              <button
-                                type="button"
-                                className="context-menu-inline-button"
-                                onMouseDown={e => e.stopPropagation()}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  submitContextMenuBodyInput();
-                                }}
-                              >
-                                추가
-                              </button>
-                            </div>
+                            <ContextMenuLocalInputGroup
+                              placeholder="새 부위 추가"
+                              buttonLabel="추가"
+                              onSubmit={(val) => {
+                                handleContextAction({ type: 'bodyPartAdd', value: val });
+                              }}
+                              imeOpenRef={imeOpenRef}
+                            />
                           </div>
                         </div>
                       </div>
@@ -1914,27 +1970,28 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   <label className="context-menu-visit-editor" style={{ width: '100%', margin: 0, padding: 0 }}>
                     <span style={{ flexShrink: 0, width: '40px' }}>회차 :</span>
                     <span className="context-menu-visit-control" style={{ flexGrow: 1 }}>
-                      <input
-                        type="text"
+                      <ContextMenuLocalInput
                         inputMode="numeric"
                         pattern="[0-9*-]*"
-                        autoComplete="off"
                         className="context-menu-visit-input"
                         value={contextMenuVisitInput}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          setContextMenuVisitInput(e.target.value.replace(/[^\d*-]/g, ''));
+                        onChange={(val) => {
+                          setContextMenuVisitInput(val.replace(/[^\d*-]/g, ''));
                         }}
-                        onBlur={(e) => {
+                        onBlur={(e, val) => {
                           e.stopPropagation();
-                          submitContextMenuVisitInput();
+                          const normalized = normalizeVisitInputValue(val);
+                          setContextMenuVisitInput(normalized);
+                          handleContextAction({ type: 'visitCount', value: normalized });
                         }}
-                        onKeyDown={(e) => {
+                        onKeyDown={(e, val) => {
                           e.stopPropagation();
                           if (e.nativeEvent?.isComposing || e.keyCode === 229) return;
                           if (e.key === 'Enter') {
                             e.preventDefault();
-                            submitContextMenuVisitInput();
+                            const normalized = normalizeVisitInputValue(val);
+                            setContextMenuVisitInput(normalized);
+                            handleContextAction({ type: 'visitCount', value: normalized });
                           }
                           if (e.key === 'ArrowUp') {
                             e.preventDefault();
@@ -1945,8 +2002,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             stepContextMenuVisitInput(-1);
                           }
                         }}
-                        onMouseDown={e => e.stopPropagation()}
-                        onClick={e => e.stopPropagation()}
                       />
                       <span className="context-menu-visit-stepper">
                         <button
@@ -2033,40 +2088,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               ))}
                             </div>
                           ) : null}
-                          <div className="context-menu-input-row">
-                            <input
-                              type="text"
-                              placeholder="새 메모 추가"
-                              className="context-menu-input"
-                              autoComplete="off"
-                              value={contextMenuNoteInput}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                setContextMenuNoteInput(e.target.value);
-                              }}
-                              onKeyDown={(e) => {
-                                e.stopPropagation();
-                                if (e.nativeEvent?.isComposing || e.keyCode === 229) return;
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  submitContextMenuNoteInput();
-                                }
-                              }}
-                              onMouseDown={e => e.stopPropagation()}
-                              onClick={e => e.stopPropagation()}
-                            />
-                            <button
-                              type="button"
-                              className="context-menu-inline-button"
-                              onMouseDown={e => e.stopPropagation()}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                submitContextMenuNoteInput();
-                              }}
-                            >
-                              추가
-                            </button>
-                          </div>
+                          <ContextMenuLocalInputGroup
+                            placeholder="새 메모 추가"
+                            buttonLabel="추가"
+                            onSubmit={(val) => {
+                              handleContextAction({ type: 'memoAdd', value: val });
+                            }}
+                          />
                         </div>
                       </div>
                     </div>

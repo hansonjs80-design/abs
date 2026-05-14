@@ -179,6 +179,8 @@ export default function useScheduleContextMenuActions({
       const keys = getContextTargetKeys();
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
+      const computedResults = [];
+      
       for (const key of keys) {
         const memo = getMemoForAction(key);
         const existing = (memo.body_part || '').trim();
@@ -186,13 +188,31 @@ export default function useScheduleContextMenuActions({
         if (!newPart) continue;
         const combined = existing ? `${existing}, ${newPart}` : newPart;
         const nextParts = splitBodyParts(combined);
-        const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, getBodyPartOptionList(memo, nextParts));
-        const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan, body_part: combined });
-        if (success) anyChanged = true;
+        const nextOptions = getBodyPartOptionList(memo, nextParts);
+        const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, nextOptions);
+        computedResults.push({ key, memo, combined, nextOptions, nextMergeSpan });
+        anyChanged = true;
       }
+
       if (anyChanged) {
+        for (const { key, memo, combined, nextOptions, nextMergeSpan } of computedResults) {
+          rememberBodyPartOptions(nextOptions);
+          updateContextMemoSnapshot(key, memo, { merge_span: nextMergeSpan, body_part: combined });
+          saveDebounceRef.current.pending.set(key, {
+            memo, overrides: { merge_span: nextMergeSpan, body_part: combined }
+          });
+        }
+        
+        if (saveDebounceRef.current.timer) clearTimeout(saveDebounceRef.current.timer);
+        saveDebounceRef.current.timer = setTimeout(() => {
+          const snapshot = saveDebounceRef.current;
+          const pendingSaves = Array.from(snapshot.pending.entries());
+          snapshot.pending.clear();
+          snapshot.timer = null;
+          Promise.all(pendingSaves.map(([k, { memo, overrides }]) => saveMemoMeta(k, memo, overrides)));
+        }, 500);
+
         recordUndo({ type: 'bulk-edit', oldMemos });
-        addToast('부위가 추가되었습니다.', 'success');
       }
       return;
     }
@@ -200,17 +220,37 @@ export default function useScheduleContextMenuActions({
       const keys = getContextTargetKeys();
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
+      const computedResults = [];
+
       for (const key of keys) {
         const memo = getMemoForAction(key);
         const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
         const updated = parts.filter((_, i) => i !== action.index).join(', ');
-        const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, getBodyPartOptionList(memo, splitBodyParts(updated)));
-        const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan, body_part: updated });
-        if (success) anyChanged = true;
+        const nextOptions = getBodyPartOptionList(memo, splitBodyParts(updated));
+        const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, nextOptions);
+        computedResults.push({ key, memo, updated, nextOptions, nextMergeSpan });
+        anyChanged = true;
       }
+
       if (anyChanged) {
+        for (const { key, memo, updated, nextOptions, nextMergeSpan } of computedResults) {
+          rememberBodyPartOptions(nextOptions);
+          updateContextMemoSnapshot(key, memo, { merge_span: nextMergeSpan, body_part: updated });
+          saveDebounceRef.current.pending.set(key, {
+            memo, overrides: { merge_span: nextMergeSpan, body_part: updated }
+          });
+        }
+
+        if (saveDebounceRef.current.timer) clearTimeout(saveDebounceRef.current.timer);
+        saveDebounceRef.current.timer = setTimeout(() => {
+          const snapshot = saveDebounceRef.current;
+          const pendingSaves = Array.from(snapshot.pending.entries());
+          snapshot.pending.clear();
+          snapshot.timer = null;
+          Promise.all(pendingSaves.map(([k, { memo, overrides }]) => saveMemoMeta(k, memo, overrides)));
+        }, 500);
+
         recordUndo({ type: 'bulk-edit', oldMemos });
-        addToast('부위가 삭제되었습니다.', 'success');
       }
       return;
     }
@@ -219,6 +259,8 @@ export default function useScheduleContextMenuActions({
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       const targetPart = action.value.trim();
+      const computedResults = [];
+
       for (const key of keys) {
         const memo = getMemoForAction(key);
         const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
@@ -231,12 +273,30 @@ export default function useScheduleContextMenuActions({
         const nextOptions = getBodyPartOptionList(memo, splitBodyParts(updated))
           .filter((part) => normalizeBodyPartKey(part) !== targetKey);
         const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, nextOptions);
-        const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan, body_part: updated });
-        if (success) anyChanged = true;
+        
+        computedResults.push({ key, memo, updated, nextOptions, nextMergeSpan });
+        anyChanged = true;
       }
+
       if (anyChanged) {
+        for (const { key, memo, updated, nextOptions, nextMergeSpan } of computedResults) {
+          rememberBodyPartOptions(nextOptions);
+          updateContextMemoSnapshot(key, memo, { merge_span: nextMergeSpan, body_part: updated });
+          saveDebounceRef.current.pending.set(key, {
+            memo, overrides: { merge_span: nextMergeSpan, body_part: updated }
+          });
+        }
+
+        if (saveDebounceRef.current.timer) clearTimeout(saveDebounceRef.current.timer);
+        saveDebounceRef.current.timer = setTimeout(() => {
+          const snapshot = saveDebounceRef.current;
+          const pendingSaves = Array.from(snapshot.pending.entries());
+          snapshot.pending.clear();
+          snapshot.timer = null;
+          Promise.all(pendingSaves.map(([k, { memo, overrides }]) => saveMemoMeta(k, memo, overrides)));
+        }, 500);
+
         recordUndo({ type: 'bulk-edit', oldMemos });
-        addToast('부위가 삭제되었습니다.', 'success');
       }
       return;
     }
