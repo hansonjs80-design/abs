@@ -263,12 +263,8 @@
 /* 날짜 헤더 */
 .sw-day-header-row {
   display: grid;
-  border-top: 2px solid #000;
-  border-bottom: 2px solid #000;
-}
-
-.shockwave-week:not(:first-child) .sw-day-header-row {
   border-top: none;
+  border-bottom: 2px solid #000;
 }
 
 .sw-week-header-cell,
