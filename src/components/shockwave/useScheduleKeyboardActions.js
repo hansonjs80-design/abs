@@ -364,11 +364,11 @@ export default function useScheduleKeyboardActions({
       const saveMemo = onSaveMemoRef.current;
       const getDefTime = getDefaultTimeRef.current;
 
-      keys.forEach(key => {
+      const mergeSpanUpdates = keys.map(key => {
         const [kw, kd, kr, kc] = key.split('-').map(Number);
         const memo = latestMemos[key] || {};
         const stableContent = latestPending[key] !== undefined ? String(latestPending[key]) : (memo.content || '');
-        if (!stableContent || stableContent.trim() === '\u200B') return;
+        if (!stableContent || stableContent.trim() === '\u200B') return null;
 
         // 예약 시간 증감: 디바운스 대기열에 변경된 merge_span이 있으면 기준값으로 우선 적용
         const pendingState = timeDebounceRef.current.pending.get(key);
@@ -379,7 +379,7 @@ export default function useScheduleKeyboardActions({
         const nextTime = stepReservationTimeWithinCellBase(currentTime, defaultTime, deltaMinutes);
         const nextMergeSpan = buildMergeSpanWithReservationTime(currentMergeSpan, nextTime);
         
-        if (currentMergeSpan === nextMergeSpan) return;
+        if (currentMergeSpan === nextMergeSpan) return null;
 
         timeDebounceRef.current.pending.set(key, {
           kw, kd, kr, kc, memo, nextMergeSpan, stableContent
