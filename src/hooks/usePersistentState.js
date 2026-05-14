@@ -5,9 +5,9 @@ export function usePersistentNumber(key, initialValue, min = 0) {
     if (typeof window === 'undefined') return initialValue;
     try {
       const stored = window.localStorage.getItem(key);
-      if (stored !== null) {
+      if (stored !== null && stored !== '') {
         const num = Number(stored);
-        if (Number.isFinite(num) && num > 0) {
+        if (Number.isFinite(num)) {
           return Math.max(min, num);
         }
       }
@@ -25,7 +25,7 @@ export function usePersistentNumber(key, initialValue, min = 0) {
       valueRef.current = next;
       if (typeof window !== 'undefined') {
         try {
-          if (Number.isFinite(next) && next > 0) {
+          if (Number.isFinite(next)) {
             window.localStorage.setItem(key, String(next));
           }
         } catch (e) {
@@ -41,7 +41,7 @@ export function usePersistentNumber(key, initialValue, min = 0) {
     valueRef.current = value;
     if (typeof window !== 'undefined') {
       try {
-        if (Number.isFinite(value) && value > 0) {
+        if (Number.isFinite(value)) {
           window.localStorage.setItem(key, String(value));
         }
       } catch (e) {}

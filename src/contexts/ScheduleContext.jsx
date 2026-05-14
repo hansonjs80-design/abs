@@ -349,8 +349,14 @@ export function ScheduleProvider({ children }) {
       const holSet = new Set();
       const holNames = new Map();
       (data || []).forEach(h => {
-        const d = new Date(h.date);
-        const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+        let key;
+        if (h.date && h.date.includes('-')) {
+          const [y, m, d] = h.date.split('-');
+          key = `${Number(y)}-${Number(m)}-${Number(d.substring(0, 2))}`;
+        } else {
+          const d = new Date(h.date);
+          key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+        }
         holSet.add(key);
         if (h.name) holNames.set(key, h.name);
       });

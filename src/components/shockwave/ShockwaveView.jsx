@@ -266,7 +266,12 @@ const MemoizedCell = memo(({
             {displayData.hasDisplayText ? (
               <span className="sw-cell-main">
                 <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
-                {displayData.visitSuffix ? <span style={visitSuffixColor ? { color: visitSuffixColor } : undefined}>{displayData.visitSuffix}</span> : null}
+                {displayData.visitSuffix ? (
+                  <>
+                    {visualRowSpan > 1 && <br />}
+                    <span style={visitSuffixColor ? { color: visitSuffixColor } : undefined}>{displayData.visitSuffix}</span>
+                  </>
+                ) : null}
               </span>
             ) : null}
           </div>
@@ -330,7 +335,12 @@ const MemoizedCell = memo(({
           {displayData.hasDisplayText ? (
             <span className="sw-cell-main">
               <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
-              {displayData.visitSuffix ? <span style={visitSuffixColor ? { color: visitSuffixColor } : undefined}>{displayData.visitSuffix}</span> : null}
+              {displayData.visitSuffix ? (
+                <>
+                  {visualRowSpan > 1 && <br />}
+                  <span style={visitSuffixColor ? { color: visitSuffixColor } : undefined}>{displayData.visitSuffix}</span>
+                </>
+              ) : null}
             </span>
           ) : null}
         </div>
@@ -371,6 +381,11 @@ const MemoizedCell = memo(({
   if (prevProps.workState !== nextProps.workState) return false;
   if (prevProps.staffBlockRule?.bg_color !== nextProps.staffBlockRule?.bg_color) return false;
   if (prevProps.staffBlockRule?.font_color !== nextProps.staffBlockRule?.font_color) return false;
+  if (prevProps.staffBlockRule?.keyword !== nextProps.staffBlockRule?.keyword) return false;
+  
+  if (prevProps.slotInfo?.disabled !== nextProps.slotInfo?.disabled) return false;
+  if (prevProps.slotInfo?.isLunch !== nextProps.slotInfo?.isLunch) return false;
+  if (prevProps.slotInfo?.time !== nextProps.slotInfo?.time) return false;
 
   if (prevProps.isLastRenderedRow !== nextProps.isLastRenderedRow) return false;
   if (prevProps.colCount !== nextProps.colCount) return false;
