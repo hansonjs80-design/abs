@@ -431,11 +431,26 @@ export default function useScheduleKeyboardActions({
       return;
     }
 
-    if (isMeta && (e.code === 'Minus' || e.key === '-' || e.code === 'Equal' || e.key === '=' || e.key === '+')) {
+    const isReservationTimeDecreaseKey = (
+      e.code === 'Minus' ||
+      e.code === 'NumpadSubtract' ||
+      e.key === '-' ||
+      e.key === '_'
+    );
+    const isReservationTimeIncreaseKey = (
+      e.code === 'Equal' ||
+      e.code === 'NumpadAdd' ||
+      e.key === '=' ||
+      e.key === '+' ||
+      e.key === 'Add'
+    );
+
+    if (isMeta && (isReservationTimeDecreaseKey || isReservationTimeIncreaseKey)) {
       e.preventDefault();
       e.stopPropagation();
+      e.stopImmediatePropagation?.();
 
-      const delta = (e.code === 'Minus' || e.key === '-') ? -1 : 1;
+      const delta = isReservationTimeDecreaseKey ? -1 : 1;
       applyReservationTimeDelta(delta * 10);
       return;
     }
