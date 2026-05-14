@@ -1713,17 +1713,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
             const patientBodyPartsMap = new Map();
             Object.entries(renderMemos || {}).forEach(([memoKey, m]) => {
-              if (!m?.content) return;
-              const { patientChart: mChart, patientName: mName } = parseSchedulerPatientIdentity(m.content);
+              const effectiveMemo = (selectedKeys && selectedKeys.has(memoKey)) ? currentMemo : m;
+              if (!effectiveMemo?.content) return;
+              const { patientChart: mChart, patientName: mName } = parseSchedulerPatientIdentity(effectiveMemo.content);
               const isMatch = (patientChart && mChart && patientChart === mChart) || (patientName && mName && patientName === mName);
               if (isMatch) {
-                if (m.body_part) {
-                  splitBodyParts(m.body_part).forEach((part) => addBodyPartToMap(patientBodyPartsMap, part));
+                if (effectiveMemo.body_part) {
+                  splitBodyParts(effectiveMemo.body_part).forEach((part) => addBodyPartToMap(patientBodyPartsMap, part));
                 }
-                if (!m.prescription || memoKey === firstKey) return;
+                if (!effectiveMemo.prescription || memoKey === firstKey) return;
                 const memoSortKey = buildSchedulerMemoSortKey(memoKey, weeks);
                 if (memoSortKey < currentSortKey && (!previousPrescription || memoSortKey > previousPrescription.sortKey)) {
-                  previousPrescription = { value: m.prescription, sortKey: memoSortKey };
+                  previousPrescription = { value: effectiveMemo.prescription, sortKey: memoSortKey };
                 }
               }
             });
