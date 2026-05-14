@@ -1529,7 +1529,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         >
           {(() => {
             const firstKey = selectedKeys ? Array.from(selectedKeys)[0] : null;
-            const currentMemo = firstKey ? (renderMemos[firstKey] || {}) : {};
+            const baseMemo = firstKey ? (renderMemos[firstKey] || {}) : {};
+            const currentMemo = (firstKey && contextMenu?.memoSnapshot) 
+              ? { ...baseMemo, ...contextMenu.memoSnapshot } 
+              : baseMemo;
             const currentPrescription = currentMemo?.prescription || '';
             const currentBodyPart = currentMemo?.body_part || '';
             const currentParts = splitBodyParts(currentBodyPart);

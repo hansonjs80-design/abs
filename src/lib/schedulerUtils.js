@@ -321,16 +321,19 @@ export function applyVisitCountToSchedulerContent(content, visitInput) {
 
 export function stepVisitInputValue(value, delta) {
   const normalized = normalizeVisitInputValue(value);
-  if (normalized === '-') {
-    return delta > 0 ? '*' : '-';
-  }
-  if (normalized === '*') {
-    return delta > 0 ? '2' : '';
-  }
-  const numeric = parseInt(normalized || '0', 10) || 0;
-  if (delta > 0) return String(Math.max(1, numeric + delta));
-  if (numeric <= 1) return '*';
-  return String(Math.max(1, numeric + delta));
+  
+  let currentIndex = 0;
+  if (normalized === '-') currentIndex = -1;
+  else if (normalized === '') currentIndex = 0;
+  else if (normalized === '*') currentIndex = 1;
+  else currentIndex = parseInt(normalized, 10) || 0;
+
+  const nextIndex = currentIndex + delta;
+  
+  if (nextIndex <= -1) return '-';
+  if (nextIndex === 0) return '';
+  if (nextIndex === 1) return '*';
+  return String(nextIndex);
 }
 
 // ── Merge Span & Memo List Helpers ──
