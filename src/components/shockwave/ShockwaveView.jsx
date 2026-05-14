@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
 import { flushSync } from 'react-dom';
 import { useSchedule } from '../../contexts/ScheduleContext';
 
@@ -152,7 +152,7 @@ const ContextMenuLocalInputGroup = ({ placeholder, buttonLabel, onSubmit, imeOpe
   );
 };
 
-const MemoizedCell = React.memo(({
+const MemoizedCell = memo(({
   cellKey, weekIdx, dayIdx, rowIdx, colIdx, dayInfo, slotInfo, showTimeCol, gridRowStart, isLastRenderedRow, colCount,
   cellData, pendingContent, pendingMergeSpan, mergeSpan, editingCell, imePreviewCell, selectedKeys, selectedCell, clipboardSource,
   workState, staffBlockRule, effectivePrescriptionColors,
