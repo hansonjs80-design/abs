@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { has4060Pattern, normalize4060StarOrder, strip4060FromContent } from '../../lib/schedulerContentFormat';
 import {
   addBodyPartToMap,
@@ -40,6 +40,7 @@ export default function useScheduleContextMenuActions({
   setContextMenuVisitInput,
   getDefaultReservationTime,
 }) {
+  const saveDebounceRef = useRef({ timer: null, pending: new Map(), undoMemos: null });
   return useCallback(async (action) => {
     const getContextKey = () => (
       contextMenu
@@ -300,17 +301,38 @@ export default function useScheduleContextMenuActions({
       for (const { key, memo, updated, nextOptions, nextMergeSpan } of computedResults) {
         rememberBodyPartOptions(nextOptions);
         updateContextMemoSnapshot(key, memo, { merge_span: nextMergeSpan, body_part: updated });
+        
+        // 디바운스 대기열에 추가
+        saveDebounceRef.current.pending.set(key, { memo, overrides: { merge_span: nextMergeSpan, body_part: updated } });
       }
 
-      // DB 저장은 병렬로 비동기 처리 (UI는 이미 갱신됨)
-      const saveResults = await Promise.all(
-        computedResults.map(({ key, memo, updated, nextMergeSpan }) =>
-          saveMemoMeta(key, memo, { merge_span: nextMergeSpan, body_part: updated })
-        )
-      );
-      if (saveResults.some(Boolean)) {
-        recordUndo({ type: 'bulk-edit', oldMemos });
+      if (!saveDebounceRef.current.undoMemos) {
+        saveDebounceRef.current.undoMemos = oldMemos;
       }
+
+      if (saveDebounceRef.current.timer) {
+        clearTimeout(saveDebounceRef.current.timer);
+      }
+
+      saveDebounceRef.current.timer = setTimeout(() => {
+        const pendingSaves = Array.from(saveDebounceRef.current.pending.entries());
+        const undoMemos = saveDebounceRef.current.undoMemos;
+        
+        saveDebounceRef.current.pending.clear();
+        saveDebounceRef.current.undoMemos = null;
+        saveDebounceRef.current.timer = null;
+
+        Promise.all(
+          pendingSaves.map(([key, { memo, overrides }]) =>
+            saveMemoMeta(key, memo, overrides)
+          )
+        ).then(saveResults => {
+          if (saveResults.some(Boolean) && undoMemos) {
+            recordUndo({ type: 'bulk-edit', oldMemos: undoMemos });
+          }
+        });
+      }, 500);
+
       return;
     }
     else if (action?.type === 'memoAdd') {

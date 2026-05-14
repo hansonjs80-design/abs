@@ -11,30 +11,12 @@ import { getEffectiveStaffDisplayRules, getMemoFontColorByRule } from '../../lib
 import { shouldHideStaffMemoByDepartment } from '../../lib/staffDepartmentFilters';
 import { useToast } from '../common/Toast';
 import MemoSlot from './MemoSlot';
+import { usePersistentNumber } from '../../hooks/usePersistentState';
 
 const COL_W_KEY = 'staff-calendar-col-width';
 const ROW_H_KEY = 'staff-calendar-row-height';
 const MIN_COL_WIDTH = 30;
 const MIN_ROW_HEIGHT = 36;
-
-function readStoredNumber(key, fallback) {
-  if (typeof window === 'undefined') return fallback;
-  try {
-    const value = Number(window.localStorage.getItem(key));
-    return Number.isFinite(value) && value > 0 ? value : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function writeStoredNumber(key, value) {
-  if (typeof window === 'undefined') return;
-  try {
-    if (Number.isFinite(value) && value > 0) window.localStorage.setItem(key, String(value));
-  } catch {
-    // localStorage may be unavailable in restricted browser contexts.
-  }
-}
 
 export default function StaffCalendar({ hiddenDepartments = [] }) {
   const { currentYear, currentMonth, navigateMonth, staffMemos, loadStaffMemos, saveStaffMemo, holidays, holidayNames, loadHolidays, shockwaveSettings, loadShockwaveSettings, calendarSlotSettings, loadCalendarSlotSettings, saveCalendarSlotSettings } = useSchedule();
@@ -59,10 +41,8 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showSlotSettings]);
 
-  const [colWidth, setColWidth] = useState(() => readStoredNumber(COL_W_KEY, 0));
-  const [rowHeight, setRowHeight] = useState(() => Math.max(MIN_ROW_HEIGHT, readStoredNumber(ROW_H_KEY, 120)));
-  const colWidthRef = useRef(colWidth);
-  const rowHeightRef = useRef(rowHeight);
+  const [colWidth, setColWidth, colWidthRef] = usePersistentNumber(COL_W_KEY, 0);
+  const [rowHeight, setRowHeight, rowHeightRef] = usePersistentNumber(ROW_H_KEY, 120, MIN_ROW_HEIGHT);
   const [undoStack, setUndoStack] = useState([]);
   const [selectedCell, setSelectedCell] = useState(null);
   const [rangeEnd, setRangeEnd] = useState(null);
@@ -181,13 +161,10 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
     let latestWidth = colWidth || cw;
     const move = (ev) => {
       latestWidth = Math.max(MIN_COL_WIDTH, cw + ev.clientX - sx);
-      colWidthRef.current = latestWidth;
-      writeStoredNumber(COL_W_KEY, latestWidth);
       setColWidth(latestWidth);
     };
     const up = () => {
-      colWidthRef.current = latestWidth;
-      writeStoredNumber(COL_W_KEY, latestWidth);
+      setColWidth(latestWidth);
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mouseup', up);
       window.removeEventListener('blur', up);
@@ -202,13 +179,10 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
     let latestHeight = rowHeight || ch;
     const move = (ev) => {
       latestHeight = Math.max(MIN_ROW_HEIGHT, ch + ev.clientY - sy);
-      rowHeightRef.current = latestHeight;
-      writeStoredNumber(ROW_H_KEY, latestHeight);
       setRowHeight(latestHeight);
     };
     const up = () => {
-      rowHeightRef.current = latestHeight;
-      writeStoredNumber(ROW_H_KEY, latestHeight);
+      setRowHeight(latestHeight);
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mouseup', up);
       window.removeEventListener('blur', up);
@@ -224,12 +198,6 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
     loadShockwaveSettings();
     loadCalendarSlotSettings(currentYear, currentMonth);
   }, [currentYear, currentMonth, loadStaffMemos, loadHolidays, loadShockwaveSettings, loadCalendarSlotSettings]);
-  useEffect(() => {
-    colWidthRef.current = colWidth;
-    rowHeightRef.current = rowHeight;
-    writeStoredNumber(COL_W_KEY, colWidth);
-    writeStoredNumber(ROW_H_KEY, rowHeight);
-  }, [colWidth, rowHeight]);
 
   // ── Actions ──
   const focusHiddenInput = useCallback(() => {

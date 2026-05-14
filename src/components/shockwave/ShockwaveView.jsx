@@ -896,6 +896,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     editingCell,
     selectedKeys,
     pendingDisplayValues,
+    applyImmediateCellDisplay,
     currentYear,
     currentMonth,
     memos,
