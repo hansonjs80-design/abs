@@ -254,7 +254,7 @@ const MemoizedCell = memo(({
           setHoverCell({ weekIdx, dayIdx, rowIdx, colIdx, staffBlockRule, slotInfo, isMergedView: false });
         }}
         onMouseLeave={() => setHoverCell(null)}
-        onDoubleClick={() => { if (dayInfo.isCurrentMonth) handleCellDoubleClick(weekIdx, dayIdx, rowIdx, colIdx, content); }}
+        onDoubleClick={(e) => { if (dayInfo.isCurrentMonth) handleCellDoubleClick(e, weekIdx, dayIdx, rowIdx, colIdx, content); }}
         onContextMenu={(e) => {
           if (!dayInfo.isCurrentMonth) { e.preventDefault(); return; }
           if (displayData.hasDisplayText && content.trim() !== '\u200B') {
@@ -890,15 +890,36 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, [updateDraggedSelection]);
 
   // ── 더블 클릭 = 편집 모드 진입 ──
-  const handleCellDoubleClick = useCallback((w, d, r, c, content) => {
+  const handleCellDoubleClick = useCallback((e, w, d, r, c, content) => {
     selectSingleCell({ w, d, r, c });
     const key = cellKey(w, d, r, c);
+    
+    let offset = content?.length || 0;
+    try {
+      if (e && document.caretRangeFromPoint) {
+        const range = document.caretRangeFromPoint(e.clientX, e.clientY);
+        if (range && range.startContainer.nodeType === 3) {
+          offset = range.startOffset;
+        }
+      } else if (e && document.caretPositionFromPoint) {
+        const pos = document.caretPositionFromPoint(e.clientX, e.clientY);
+        if (pos && pos.offsetNode.nodeType === 3) {
+          offset = pos.offset;
+        }
+      }
+    } catch (err) {}
+
     flushSync(() => {
       setEditingCell(key);
       setEditValue(content || '');
     });
+    
     if (editInputRef.current) {
       editInputRef.current.value = content || '';
+      editInputRef.current.focus();
+      try {
+        editInputRef.current.setSelectionRange(offset, offset);
+      } catch (err) {}
     }
   }, [selectSingleCell, cellKey]);
 
@@ -1352,18 +1373,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   // 편집 완료 후 아래로 이동
   const handleEditKeyDown = useCallback((e, w, d, r, c) => {
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-      const { selectionStart, selectionEnd, value } = e.target;
-      
-      // If Left arrow, let it move cursor if not at the beginning
-      if (e.key === 'ArrowLeft' && (selectionStart > 0 || selectionEnd > 0)) {
-        return; // default behavior moves cursor left
-      }
-      // If Right arrow, let it move cursor if not at the end
-      if (e.key === 'ArrowRight' && (selectionStart < value.length || selectionEnd < value.length)) {
-        return; // default behavior moves cursor right
-      }
-
+    if (['ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      return; // 편집 중에는 좌우 방향키로 다른 셀 이동 방지 (텍스트 커서 이동만 허용)
+    }
+    
+    if (['ArrowUp', 'ArrowDown'].includes(e.key)) {
       e.preventDefault();
       e.stopPropagation();
       e.target.blur();
