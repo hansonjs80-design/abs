@@ -111,7 +111,7 @@ export default function useSchedulerAutoText({
       const parsed = parseSchedulerPatientIdentity(memo.content);
       const matchesChart = chartNumber && String(parsed.patientChart || '').trim() === String(chartNumber).trim();
       const matchesName = normalizedName && normalizeNameForMatch(parsed.patientName) === normalizedName;
-      if (!matchesChart && !matchesName) return;
+      if (chartNumber ? !matchesChart : !matchesName) return;
       if (options.exclude4060 && has4060Pattern(memo.content)) return;
 
       const memoList = getMemoListFromMergeSpan(memo.merge_span);
@@ -399,6 +399,15 @@ export default function useSchedulerAutoText({
     });
 
     if (matches.length === 0) {
+      if (searchChart) {
+        return {
+          text: rawName,
+          prescription: '',
+          bodyPart: '',
+          mergeSpan: stripReservationTimeFromMergeSpan(buildMergeSpanWithMemoList(memos[memoKey]?.merge_span, [])),
+        };
+      }
+
       return userRemovedDoseTag
         ? {
             text: rawName,
