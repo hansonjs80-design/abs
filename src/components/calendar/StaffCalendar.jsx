@@ -565,6 +565,32 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
   }, [colorMenu]);
 
   useEffect(() => {
+    if (!contextMenu) return;
+
+    const closeIfOutside = (ev) => {
+      const menu = contextMenuRef.current;
+      if (menu && menu.contains(ev.target)) return;
+      setContextMenu(null);
+      setColorMenu(null);
+    };
+
+    const closeOnEscape = (ev) => {
+      if (ev.key !== 'Escape') return;
+      setContextMenu(null);
+      setColorMenu(null);
+    };
+
+    window.addEventListener('mousedown', closeIfOutside, true);
+    window.addEventListener('touchstart', closeIfOutside, true);
+    window.addEventListener('keydown', closeOnEscape, true);
+    return () => {
+      window.removeEventListener('mousedown', closeIfOutside, true);
+      window.removeEventListener('touchstart', closeIfOutside, true);
+      window.removeEventListener('keydown', closeOnEscape, true);
+    };
+  }, [contextMenu]);
+
+  useEffect(() => {
     const h = () => {
       dragRef.current = null;
       pendingDragRef.current = null;
