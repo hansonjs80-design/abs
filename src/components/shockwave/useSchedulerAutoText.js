@@ -17,6 +17,7 @@ import {
   getExplicitVisitSuffix,
   getManualDoseTag,
   getMemoListFromMergeSpan,
+  getNonVisitParentheticalSuffix,
   getSchedulerHistoryTypeLabel,
   normalizeBodyPartKey,
   normalizeSchedulerVisitSuffix,
@@ -140,7 +141,11 @@ export default function useSchedulerAutoText({
     const namePart = String(match[2] || '').trim();
     const suffixToken = match[3] || '';
     const suffixValue = suffixToken.replace(/[()]/g, '') || (suffixToken === '*' ? '*' : '');
-    const cleanName = namePart.replace(/\(-\)/g, '').trim();
+    const noteSuffix = getNonVisitParentheticalSuffix(namePart);
+    const cleanName = namePart
+      .slice(0, noteSuffix ? -noteSuffix.length : undefined)
+      .replace(/\(-\)/g, '')
+      .trim();
     const normalizedName = normalizeNameForMatch(cleanName);
 
     if (!chartNumber || !normalizedName) return null;
@@ -275,6 +280,7 @@ export default function useSchedulerAutoText({
       manualSession = parseInt(inputParenMatch[1], 10);
     }
     const explicitVisitSuffix = getExplicitVisitSuffix(rawName);
+    const explicitNoteSuffix = getNonVisitParentheticalSuffix(rawName);
 
     const dayInfo = weeks[w]?.[d];
     if (!dayInfo) return { text: rawName };
@@ -293,6 +299,10 @@ export default function useSchedulerAutoText({
     const parsedIdentity = parseSchedulerPatientIdentity(rawName);
     const searchChart = parsedIdentity.patientChart ? String(parsedIdentity.patientChart).trim() : null;
     const searchName = normalizeNameForMatch(parsedIdentity.patientName) || normalizeNameForMatch(rawName);
+
+    if (explicitNoteSuffix) {
+      return { text: rawName };
+    }
 
     const schedulerOptions = findSchedulerHistoryCandidates({ w, d, r, c }, rawName, targetDate)
       .filter((option) => !userRemovedDoseTag || !has4060Pattern(option.nextText));
@@ -317,7 +327,7 @@ export default function useSchedulerAutoText({
         : (searchChart ? (selected.prescription || '') : (selected.prescription || undefined));
 
       return {
-        text: explicitVisitSuffix ? rawName : selected.nextText,
+        text: (explicitVisitSuffix || explicitNoteSuffix) ? rawName : selected.nextText,
         prescription: autoPrescription,
         bodyPart: searchChart ? (selected.latestBodyPart || '') : (selected.latestBodyPart || undefined),
         mergeSpan: searchChart ? (selected.mergeSpan || clearPatientMergeSpan()) : selected.mergeSpan,
@@ -569,7 +579,7 @@ export default function useSchedulerAutoText({
         autoText += inputDoseMatch[1];
       }
     }
-    autoText += explicitVisitSuffix || `(${effectiveVisitCount})`;
+    autoText += explicitVisitSuffix || explicitNoteSuffix || `(${effectiveVisitCount})`;
     autoText = normalize4060StarOrder(autoText);
 
     const autoPrescription = userRemovedDoseTag
@@ -603,7 +613,7 @@ export default function useSchedulerAutoText({
         if (!dialogResult) return { text: rawName };
 
         return {
-          text: normalizeSchedulerVisitSuffix(`${dialogResult.chartNumber}/${dialogResult.namePart}${explicitVisitSuffix || `(${dialogResult.visitCount})`}`),
+          text: normalizeSchedulerVisitSuffix(`${dialogResult.chartNumber}/${dialogResult.namePart}${explicitVisitSuffix || explicitNoteSuffix || `(${dialogResult.visitCount})`}`),
           prescription: dialogResult.prescription,
           bodyPart: searchChart ? (dialogResult.bodyPart || '') : dialogResult.bodyPart,
           mergeSpan: buildMergeSpanWithMemoList(inheritedMergeSpan, dialogResult.memoList),

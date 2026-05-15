@@ -59,6 +59,7 @@ import {
   buildMergeSpanWithMemoList,
   buildSchedulerCellDisplay,
   buildSchedulerMemoSortKey,
+  getNonVisitParentheticalSuffix,
   addBodyPartToMap,
 } from '../../lib/schedulerUtils';
 
@@ -270,9 +271,15 @@ const MemoizedCell = memo(({
             {displayData.hasDisplayText ? (
               <span className="sw-cell-main">
                 <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
+                {displayData.noteSuffix ? (
+                  <>
+                    {visualRowSpan > 1 ? <br /> : null}
+                    <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.noteSuffix}</span>
+                  </>
+                ) : null}
                 {displayData.visitSuffix ? (
                   <>
-                    {visualRowSpan > 1 && <br />}
+                    {visualRowSpan > 1 && !displayData.noteSuffix ? <br /> : null}
                     <span style={visitSuffixColor ? { color: visitSuffixColor } : undefined}>{displayData.visitSuffix}</span>
                   </>
                 ) : null}
@@ -339,7 +346,7 @@ const MemoizedCell = memo(({
           setHoverCell({ weekIdx, dayIdx, rowIdx, colIdx, staffBlockRule, slotInfo, isMergedView: true });
         }}
         onMouseLeave={() => setHoverCell(null)}
-        onDoubleClick={() => handleCellDoubleClick(weekIdx, dayIdx, rowIdx, colIdx, content)}
+        onDoubleClick={(e) => handleCellDoubleClick(e, weekIdx, dayIdx, rowIdx, colIdx, content)}
         onContextMenu={(e) => {
           if (displayData.hasDisplayText && content.trim() !== '\u200B') {
             handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);
@@ -350,9 +357,15 @@ const MemoizedCell = memo(({
           {displayData.hasDisplayText ? (
             <span className="sw-cell-main">
               <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
+              {displayData.noteSuffix ? (
+                <>
+                  {visualRowSpan > 1 ? <br /> : null}
+                  <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.noteSuffix}</span>
+                </>
+              ) : null}
               {displayData.visitSuffix ? (
                 <>
-                  {visualRowSpan > 1 && <br />}
+                  {visualRowSpan > 1 && !displayData.noteSuffix ? <br /> : null}
                   <span style={visitSuffixColor ? { color: visitSuffixColor } : undefined}>{displayData.visitSuffix}</span>
                 </>
               ) : null}
@@ -495,6 +508,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const handleCellSaveRef = useRef(null);
   const editDraftRef = useRef(null);
   const editAutosaveTimerRef = useRef(null);
+  const cellSaveVersionRef = useRef({});
   const saveMemoRef = useRef(onSaveMemo);
   const scheduleDateRef = useRef({ year: currentYear, month: currentMonth });
   const { contextSubmenuOffsetY } = useContextMenuPositioning({
@@ -933,6 +947,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const handleCellSave = useCallback(async (w, d, r, c, nextValue) => {
     const finalValue = nextValue !== undefined ? nextValue : (editInputRef.current?.value ?? editValue);
     const key = cellKey(w, d, r, c);
+    const saveVersion = (cellSaveVersionRef.current[key] || 0) + 1;
+    cellSaveVersionRef.current[key] = saveVersion;
     if (editDraftRef.current?.key === key) {
       editDraftRef.current = null;
     }
@@ -944,7 +960,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const immediateContent = String(finalValue ?? '').trim();
     setPendingDisplayValues((prev) => ({ ...prev, [key]: immediateContent }));
     setEditingCell(null);
-    const result = await buildSchedulerAutoText(w, d, r, c, finalValue, false, editValue);
+    const hasManualParentheticalNote = Boolean(getNonVisitParentheticalSuffix(immediateContent));
+    const result = hasManualParentheticalNote
+      ? { text: immediateContent }
+      : await buildSchedulerAutoText(w, d, r, c, finalValue, false, editValue);
+    if (cellSaveVersionRef.current[key] !== saveVersion) return;
     const newContent = normalizeSchedulerVisitSuffix(
       normalize4060StarOrder(typeof result === 'string' ? result : (result?.text || ''))
     );

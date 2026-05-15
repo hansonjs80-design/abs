@@ -240,11 +240,16 @@ export function parseSchedulerPatientIdentity(content) {
   const cellContent = String(content || '');
   let patientChart = '';
   let patientName = '';
+  const stripPatientSuffix = (value) => {
+    const withoutVisit = String(value || '').trim().replace(/(\((-|\d+)\)|\*)+$/g, '').trim();
+    const noteSuffix = getNonVisitParentheticalSuffix(withoutVisit);
+    return noteSuffix ? withoutVisit.slice(0, -noteSuffix.length).trim() : withoutVisit;
+  };
 
   if (cellContent.includes('/')) {
     const parts = cellContent.split('/');
     const p0 = parts[0].trim();
-    const p1 = (parts[1] || '').trim().replace(/(\((-|\d+)\)|\*)+$/g, '').trim();
+    const p1 = stripPatientSuffix(parts[1] || '');
     if (/\d/.test(p0)) {
       patientChart = p0;
       patientName = p1;
@@ -253,7 +258,7 @@ export function parseSchedulerPatientIdentity(content) {
       patientChart = p1;
     }
   } else {
-    const cleaned = cellContent.replace(/(\((-|\d+)\)|\*)+$/g, '').trim();
+    const cleaned = stripPatientSuffix(cellContent);
     if (/^\d+$/.test(cleaned)) {
       patientChart = cleaned;
     } else {
@@ -288,13 +293,26 @@ export function normalizeSchedulerVisitSuffix(content) {
   if (!raw) return raw;
 
   const suffix = getExplicitVisitSuffix(raw);
+  if (!suffix) return raw;
+
   const base = raw
     .replace(/(\((-|\d+)\)|\*)+$/g, '')
-    .replace(/\(-?\d*$/g, '')
-    .replace(/[()]+$/g, '')
     .trim();
 
   return suffix ? `${base}${suffix}` : base;
+}
+
+export function getNonVisitParentheticalSuffix(content) {
+  const raw = String(content || '').trim();
+  if (!raw) return '';
+  const visitSuffix = getExplicitVisitSuffix(raw);
+  const base = visitSuffix ? raw.slice(0, -visitSuffix.length).trim() : raw;
+  if (!base) return '';
+  const match = base.match(/(\(([^()]*)\))$/);
+  if (!match) return '';
+  const inner = String(match[2] || '').trim();
+  if (!inner || /^-?\d+$/.test(inner)) return '';
+  return match[1];
 }
 
 export function normalizeVisitInputValue(value) {
@@ -535,12 +553,15 @@ export function buildSchedulerCellDisplay(content, mergeSpan) {
   const memoList = getMemoListFromMergeSpan(mergeSpan);
   const hasDisplayText = Boolean(mainText || memoList.length);
   const visitSuffix = getExplicitVisitSuffix(mainText);
-  const baseText = visitSuffix ? mainText.slice(0, -visitSuffix.length) : mainText;
+  const noteSuffix = getNonVisitParentheticalSuffix(mainText);
+  const textWithoutVisitSuffix = visitSuffix ? mainText.slice(0, -visitSuffix.length).trimEnd() : mainText;
+  const baseText = noteSuffix ? textWithoutVisitSuffix.slice(0, -noteSuffix.length) : textWithoutVisitSuffix;
 
   return {
     mainText,
     baseText,
     visitSuffix,
+    noteSuffix,
     hasDisplayText,
   };
 }
