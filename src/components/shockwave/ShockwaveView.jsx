@@ -1370,6 +1370,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   // 편집 완료 후 아래로 이동
   const handleEditKeyDown = useCallback((e, w, d, r, c) => {
     if (['ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      e.stopPropagation();
       return; // 편집 중에는 좌우 방향키로 다른 셀 이동 방지 (텍스트 커서 이동만 허용)
     }
     
