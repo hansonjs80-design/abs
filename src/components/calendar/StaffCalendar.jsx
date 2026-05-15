@@ -580,7 +580,7 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
   }, [contextMenu, handleTextContextAction, handleCopy, handleCut, handlePaste, deleteCells, selectedKeys]);
 
   const PRESET_COLORS = [
-    '#000000','#e53e3e','#dd6b20','#d69e2e','#38a169','#3182ce','#805ad5','#d53f8c',
+    '#000000','#999999','#e53e3e','#dd6b20','#d69e2e','#38a169','#3182ce','#805ad5','#d53f8c',
     '#ffffff','#feb2b2','#fbd38d','#fefcbf','#c6f6d5','#bee3f8','#d6bcfa','#fed7e2',
   ];
 
