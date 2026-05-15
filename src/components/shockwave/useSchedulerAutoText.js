@@ -11,6 +11,7 @@ import {
 import {
   addBodyPartToMap,
   buildManualNamePart,
+  buildMergeSpanWithBodyPartOptions,
   buildMergeSpanWithMemoList,
   buildSchedulerMemoSortKey,
   getExplicitVisitSuffix,
@@ -275,10 +276,19 @@ export default function useSchedulerAutoText({
     if (!dayInfo) return { text: rawName };
     const targetDate = `${dayInfo.year}-${String(dayInfo.month).padStart(2, '0')}-${String(dayInfo.day).padStart(2, '0')}`;
     const memoKey = `${w}-${d}-${r}-${c}`;
+    const clearPatientMergeSpan = () => stripReservationTimeFromMergeSpan(
+      buildMergeSpanWithBodyPartOptions(
+        buildMergeSpanWithMemoList(memos[memoKey]?.merge_span, []),
+        []
+      )
+    );
     const currentBodyParts = splitBodyParts(memos[memoKey]?.body_part || '');
 
     const previousContent = originalContent !== undefined ? String(originalContent).trim() : String(memos[memoKey]?.content || '').trim();
     const userRemovedDoseTag = has4060Pattern(previousContent) && !has4060Pattern(rawName);
+    const parsedIdentity = parseSchedulerPatientIdentity(rawName);
+    const searchChart = parsedIdentity.patientChart ? String(parsedIdentity.patientChart).trim() : null;
+    const searchName = normalizeNameForMatch(parsedIdentity.patientName) || normalizeNameForMatch(rawName);
 
     const schedulerOptions = findSchedulerHistoryCandidates({ w, d, r, c }, rawName, targetDate)
       .filter((option) => !userRemovedDoseTag || !has4060Pattern(option.nextText));
@@ -293,24 +303,22 @@ export default function useSchedulerAutoText({
         return {
           text: rawName,
           prescription: undefined,
-          bodyPart: selected.latestBodyPart || undefined,
-          mergeSpan: selected.mergeSpan,
+          bodyPart: searchChart ? (selected.latestBodyPart || '') : (selected.latestBodyPart || undefined),
+          mergeSpan: searchChart ? (selected.mergeSpan || clearPatientMergeSpan()) : selected.mergeSpan,
         };
       }
 
-      const autoPrescription = has4060Pattern(selected.nextText) ? undefined : (selected.prescription || undefined);
+      const autoPrescription = has4060Pattern(selected.nextText)
+        ? undefined
+        : (searchChart ? (selected.prescription || '') : (selected.prescription || undefined));
 
       return {
         text: explicitVisitSuffix ? rawName : selected.nextText,
         prescription: autoPrescription,
-        bodyPart: selected.latestBodyPart || undefined,
-        mergeSpan: selected.mergeSpan,
+        bodyPart: searchChart ? (selected.latestBodyPart || '') : (selected.latestBodyPart || undefined),
+        mergeSpan: searchChart ? (selected.mergeSpan || clearPatientMergeSpan()) : selected.mergeSpan,
       };
     }
-
-    const parsedIdentity = parseSchedulerPatientIdentity(rawName);
-    const searchChart = parsedIdentity.patientChart ? String(parsedIdentity.patientChart).trim() : null;
-    const searchName = normalizeNameForMatch(parsedIdentity.patientName) || normalizeNameForMatch(rawName);
 
     const shockwaveQuery = supabase.from('shockwave_patient_logs')
       .select('patient_name, chart_number, visit_count, date, prescription, body_part')
@@ -404,7 +412,7 @@ export default function useSchedulerAutoText({
           text: rawName,
           prescription: '',
           bodyPart: '',
-          mergeSpan: stripReservationTimeFromMergeSpan(buildMergeSpanWithMemoList(memos[memoKey]?.merge_span, [])),
+          mergeSpan: clearPatientMergeSpan(),
         };
       }
 
@@ -413,7 +421,7 @@ export default function useSchedulerAutoText({
             text: rawName,
             prescription: '',
             bodyPart: '',
-            mergeSpan: stripReservationTimeFromMergeSpan(buildMergeSpanWithMemoList(memos[memoKey]?.merge_span, [])),
+            mergeSpan: clearPatientMergeSpan(),
           }
         : { text: rawName };
     }
@@ -546,7 +554,9 @@ export default function useSchedulerAutoText({
     if (!selected) return { text: rawName };
 
     const effectiveVisitCount = selected.preferredNextVisit || selected.nextVisit;
-    const effectiveBodyPart = selected.preferredBodyPart || selected.latestBodyPart || undefined;
+    const effectiveBodyPart = searchChart
+      ? (selected.preferredBodyPart || selected.latestBodyPart || '')
+      : (selected.preferredBodyPart || selected.latestBodyPart || undefined);
 
     let autoText = `${selected.chartNumber}/${selected.namePart}`;
     if (!selected.doseTag && !userRemovedDoseTag) {
@@ -560,7 +570,7 @@ export default function useSchedulerAutoText({
 
     const autoPrescription = userRemovedDoseTag
       ? (selected.prescription || '')
-      : (has4060Pattern(autoText) ? undefined : (selected.prescription || undefined));
+      : (has4060Pattern(autoText) ? undefined : (searchChart ? (selected.prescription || '') : (selected.prescription || undefined)));
     const inheritedMergeSpan = findLatestSchedulerMemoMeta(
       { w, d, r, c },
       selected.chartNumber,
@@ -591,7 +601,7 @@ export default function useSchedulerAutoText({
         return {
           text: normalizeSchedulerVisitSuffix(`${dialogResult.chartNumber}/${dialogResult.namePart}${explicitVisitSuffix || `(${dialogResult.visitCount})`}`),
           prescription: dialogResult.prescription,
-          bodyPart: dialogResult.bodyPart,
+          bodyPart: searchChart ? (dialogResult.bodyPart || '') : dialogResult.bodyPart,
           mergeSpan: buildMergeSpanWithMemoList(inheritedMergeSpan, dialogResult.memoList),
         };
       } catch (err) {
@@ -603,7 +613,7 @@ export default function useSchedulerAutoText({
       text: autoText,
       prescription: autoPrescription,
       bodyPart: effectiveBodyPart,
-      mergeSpan: inheritedMergeSpan,
+      mergeSpan: searchChart ? (inheritedMergeSpan || clearPatientMergeSpan()) : inheritedMergeSpan,
     };
   }, [
     memos,
