@@ -951,6 +951,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     let newPrescription = result?.prescription;
     const newBodyPart = result?.bodyPart;
     const newMergeSpan = result?.mergeSpan ? stripReservationTimeFromMergeSpan(result.mergeSpan) : undefined;
+    const hasPrescriptionResult = typeof result === 'object' && result !== null && Object.prototype.hasOwnProperty.call(result, 'prescription');
+    const hasBodyPartResult = typeof result === 'object' && result !== null && Object.prototype.hasOwnProperty.call(result, 'bodyPart');
+    const hasMergeSpanResult = typeof result === 'object' && result !== null && Object.prototype.hasOwnProperty.call(result, 'mergeSpan');
 
     // 이름에 도수치료 숫자 패턴이 있으면 해당 처방을 자동 설정
     const autoDosePrescription = get4060PrescriptionFromContent(newContent);
@@ -965,8 +968,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
     }
 
-    const prescriptionChanged = (newPrescription !== undefined && newPrescription !== null && memos[key]?.prescription !== newPrescription);
-    if (newContent === oldContent && !newPrescription && !newBodyPart && !prescriptionChanged) {
+    const shouldWritePrescription = hasPrescriptionResult || (newPrescription !== undefined && newPrescription !== null);
+    const prescriptionChanged = shouldWritePrescription && (memos[key]?.prescription || '') !== (newPrescription || '');
+    const bodyPartChanged = hasBodyPartResult && (memos[key]?.body_part || '') !== (newBodyPart || '');
+    const mergeSpanChanged = hasMergeSpanResult && JSON.stringify(memos[key]?.merge_span || null) !== JSON.stringify(newMergeSpan || null);
+    if (newContent === oldContent && !prescriptionChanged && !bodyPartChanged && !mergeSpanChanged) {
       setPendingDisplayValues((prev) => {
         if (!(key in prev)) return prev;
         const next = { ...prev };

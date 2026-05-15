@@ -158,6 +158,8 @@ export default function useSchedulerAutoText({
   const findSchedulerHistoryCandidates = useCallback((targetCell, rawInput, targetDate = '') => {
     const normalizedInput = normalizeNameForMatch(rawInput);
     const exactInput = String(rawInput || '').trim();
+    const explicitInputIdentity = parseSchedulerPatientText(exactInput);
+    const explicitChartNumber = String(explicitInputIdentity?.chartNumber || '').trim();
     const targetMemoKey = `${targetCell.w}-${targetCell.d}-${targetCell.r}-${targetCell.c}`;
     const currentSortKey = buildSchedulerMemoSortKey(targetMemoKey, weeks);
     const candidateMap = new Map();
@@ -177,9 +179,11 @@ export default function useSchedulerAutoText({
       const parsed = parseSchedulerPatientText(memo.content);
       if (!parsed?.chartNumber) return;
 
-      const matchesChart = exactInput && parsed.chartNumber === exactInput;
+      const matchesChart = explicitChartNumber
+        ? parsed.chartNumber === explicitChartNumber
+        : exactInput && parsed.chartNumber === exactInput;
       const matchesName = normalizedInput && parsed.normalizedName === normalizedInput;
-      if (!matchesChart && !matchesName) return;
+      if (explicitChartNumber ? !matchesChart : (!matchesChart && !matchesName)) return;
 
       const candidateKey = parsed.chartNumber;
       if (!candidateMap.has(candidateKey)) {
