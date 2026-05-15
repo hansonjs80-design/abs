@@ -91,11 +91,23 @@ export default function useScheduleResizeState({ colCount }) {
       nextRatios[currentColIdx] = Math.max(MIN_COL_RATIO, startRatiosValue[currentColIdx] + deltaRatio);
       nextRatios[currentColIdx + 1] = Math.max(MIN_COL_RATIO, startRatiosValue[currentColIdx + 1] - deltaRatio);
       latestRatios = nextRatios;
-      setColRatios(nextRatios);
+      setColRatios(prev => {
+        const full = Array.isArray(prev) ? [...prev] : [];
+        for (let i = 0; i < nextRatios.length; i++) {
+          full[i] = nextRatios[i];
+        }
+        return full;
+      });
     };
     const onUp = () => {
       colResizeRef.current.active = false;
-      setColRatios(latestRatios); // Final write
+      setColRatios(prev => {
+        const full = Array.isArray(prev) ? [...prev] : [];
+        for (let i = 0; i < latestRatios.length; i++) {
+          full[i] = latestRatios[i];
+        }
+        return full;
+      });
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
       window.removeEventListener('blur', onUp);

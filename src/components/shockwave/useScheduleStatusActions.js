@@ -63,6 +63,8 @@ export default function useScheduleStatusActions({
             content: rangeMemo?.content || '',
             bg_color: rangeMemo?.bg_color || null,
             merge_span: rangeMemo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+            prescription: rangeMemo?.prescription || null,
+            body_part: rangeMemo?.body_part || null,
           });
 
           payload.push({
@@ -75,6 +77,8 @@ export default function useScheduleStatusActions({
             content: rangeMemo?.content || '',
             bg_color: nextBgColor,
             merge_span: rangeMemo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+            prescription: rangeMemo?.prescription || null,
+            body_part: rangeMemo?.body_part || null,
           });
         }
       }
