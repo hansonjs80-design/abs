@@ -323,9 +323,8 @@ export default function usePatientHistoryActions({
       } else {
         addToast('내역 적용에 실패했습니다.', 'error');
       }
-      setPatientHistoryModalOpen(false);
     });
-  }, [selectedCell, cellKey, currentYear, currentMonth, memos, saveShockwaveMemosBulk, addToast, setPendingDisplayValues, setPatientHistoryModalOpen]);
+  }, [selectedCell, cellKey, currentYear, currentMonth, memos, saveShockwaveMemosBulk, addToast, setPendingDisplayValues]);
 
   return {
     fetchPatientHistory,

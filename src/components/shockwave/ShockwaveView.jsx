@@ -163,6 +163,8 @@ const MemoizedCell = memo(({
   const resizerRef = useRef(null);
   const content = dayInfo.isCurrentMonth ? pendingContent : '';
   const effectiveMergeSpan = pendingMergeSpan || mergeSpan;
+  const cellMemoList = getMemoListFromMergeSpan(effectiveMergeSpan);
+  const hasCellMemo = dayInfo.isCurrentMonth && cellMemoList.length > 0;
   const cellPrescription = cellData?.prescription || effectiveMergeSpan?.meta?.prescription || '';
   const displayData = buildSchedulerCellDisplay(content, effectiveMergeSpan);
 
@@ -187,6 +189,7 @@ const MemoizedCell = memo(({
   if (cellData?.bg_color === '#e8f5e9') cls += ' preserve'; // TREATMENT_COMPLETE_BG
   if (cellData?.bg_color === '#ffebee') cls += ' cancelled'; // TREATMENT_CANCEL_BG
   if (has4060Pattern(content)) cls += ' color-4060';
+  if (hasCellMemo) cls += ' has-memo';
   if (isSelected) cls += ' selected';
   if (isPrimary) cls += ' primary-selected';
 
@@ -367,6 +370,9 @@ const MemoizedCell = memo(({
   if (prevProps.mergeSpan.rowSpan !== nextProps.mergeSpan.rowSpan) return false;
   if (prevProps.mergeSpan.colSpan !== nextProps.mergeSpan.colSpan) return false;
   if (prevProps.mergeSpan.mergedInto !== nextProps.mergeSpan.mergedInto) return false;
+  const prevMemoListKey = getMemoListFromMergeSpan(prevProps.pendingMergeSpan || prevProps.mergeSpan).join('\u001f');
+  const nextMemoListKey = getMemoListFromMergeSpan(nextProps.pendingMergeSpan || nextProps.mergeSpan).join('\u001f');
+  if (prevMemoListKey !== nextMemoListKey) return false;
 
   const wasSelected = prevProps.selectedKeys?.has(prevProps.cellKey);
   const isSelected = nextProps.selectedKeys?.has(nextProps.cellKey);
@@ -1153,6 +1159,29 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setPatientHistoryModalOpen,
     setPatientHistoryModalData,
   });
+
+  const closePatientHistoryModal = useCallback(() => {
+    setPatientHistoryModalOpen(false);
+  }, []);
+
+  useEffect(() => {
+    if (!patientHistoryModalOpen) return;
+
+    const handlePatientHistoryEscape = (event) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      closePatientHistoryModal();
+    };
+
+    window.addEventListener('keydown', handlePatientHistoryEscape, true);
+    document.addEventListener('keydown', handlePatientHistoryEscape, true);
+    return () => {
+      window.removeEventListener('keydown', handlePatientHistoryEscape, true);
+      document.removeEventListener('keydown', handlePatientHistoryEscape, true);
+    };
+  }, [patientHistoryModalOpen, closePatientHistoryModal]);
 
   const handleContextAction = useScheduleContextMenuActions({
     selectedKeys,
@@ -2242,7 +2271,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       />
 
       {patientHistoryModalOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999999 }} onClick={() => setPatientHistoryModalOpen(false)}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999999 }}>
           <div style={{ background: 'var(--bg-primary, #fff)', maxWidth: 1000, width: '95%', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--border-color, #eee)', background: 'var(--bg-secondary, #f8f9fa)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -2270,7 +2299,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary, #999)' }}>↵ Enter</span>
                 </div>
               </div>
-              <button onClick={() => setPatientHistoryModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', padding: '0 4px', color: 'var(--text-secondary, #666)' }}>✕</button>
+              <button onClick={closePatientHistoryModal} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', padding: '0 4px', color: 'var(--text-secondary, #666)' }}>✕</button>
             </div>
             <div style={{ padding: '16px 20px', maxHeight: '70vh', overflowY: 'auto' }}>
               <div style={{ marginBottom: 16, fontSize: '1.05rem', fontWeight: 600 }}>
