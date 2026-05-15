@@ -3176,3 +3176,11 @@
   min-width: max-content;
   overflow-x: hidden !important;
 }
+
+.sw-cell-input-wrapper {
+  max-width: none !important;
+  white-space: pre !important;
+}
+.sw-cell-input-wrapper::after {
+  white-space: pre !important;
+}
