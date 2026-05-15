@@ -1,3 +1,4 @@
+import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -5,14 +6,31 @@ import { ScheduleProvider } from './contexts/ScheduleContext';
 import { PresenceProvider } from './contexts/PresenceContext';
 import { ToastProvider } from './components/common/Toast';
 import Layout from './components/layout/Layout';
-import LoginPage from './pages/LoginPage';
-import StaffSchedulePage from './pages/StaffSchedulePage';
-import ShockwavePage from './pages/ShockwavePage';
-import ShockwaveStatsPage from './pages/ShockwaveStatsPage';
-import ManualTherapyStatsPage from './pages/ManualTherapyStatsPage';
-import PhysicalTherapyStatsPage from './pages/PhysicalTherapyStatsPage';
-import SettingsPage from './pages/SettingsPage';
 import { canAccessPath, getFirstAllowedPath } from './lib/authPermissions';
+
+const LoginPage = React.lazy(() => import('./pages/LoginPage'));
+const StaffSchedulePage = React.lazy(() => import('./pages/StaffSchedulePage'));
+const ShockwavePage = React.lazy(() => import('./pages/ShockwavePage'));
+const ShockwaveStatsPage = React.lazy(() => import('./pages/ShockwaveStatsPage'));
+const ManualTherapyStatsPage = React.lazy(() => import('./pages/ManualTherapyStatsPage'));
+const PhysicalTherapyStatsPage = React.lazy(() => import('./pages/PhysicalTherapyStatsPage'));
+const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
+
+function PageFallback() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 240, background: 'var(--bg-primary)' }}>
+      <div className="spinner" />
+    </div>
+  );
+}
+
+function LazyPage({ children }) {
+  return (
+    <Suspense fallback={<PageFallback />}>
+      {children}
+    </Suspense>
+  );
+}
 
 function ProtectedRoute({ children, path }) {
   const { user, loading } = useAuth();
@@ -45,7 +63,7 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
+      <Route path="/login" element={user ? <Navigate to="/" replace /> : <LazyPage><LoginPage /></LazyPage>} />
       <Route
         element={
           <ProtectedRoute>
@@ -57,19 +75,17 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<ProtectedRoute path="/"><StaffSchedulePage /></ProtectedRoute>} />
-        <Route path="/shockwave" element={<ProtectedRoute path="/shockwave"><ShockwavePage /></ProtectedRoute>} />
-        <Route path="/shockwave-stats" element={<ProtectedRoute path="/shockwave-stats"><ShockwaveStatsPage /></ProtectedRoute>} />
-        <Route path="/manual-therapy-stats" element={<ProtectedRoute path="/manual-therapy-stats"><ManualTherapyStatsPage /></ProtectedRoute>} />
-        <Route path="/pt-stats" element={<ProtectedRoute path="/pt-stats"><PhysicalTherapyStatsPage /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute path="/settings"><SettingsPage /></ProtectedRoute>} />
+        <Route path="/" element={<ProtectedRoute path="/"><LazyPage><StaffSchedulePage /></LazyPage></ProtectedRoute>} />
+        <Route path="/shockwave" element={<ProtectedRoute path="/shockwave"><LazyPage><ShockwavePage /></LazyPage></ProtectedRoute>} />
+        <Route path="/shockwave-stats" element={<ProtectedRoute path="/shockwave-stats"><LazyPage><ShockwaveStatsPage /></LazyPage></ProtectedRoute>} />
+        <Route path="/manual-therapy-stats" element={<ProtectedRoute path="/manual-therapy-stats"><LazyPage><ManualTherapyStatsPage /></LazyPage></ProtectedRoute>} />
+        <Route path="/pt-stats" element={<ProtectedRoute path="/pt-stats"><LazyPage><PhysicalTherapyStatsPage /></LazyPage></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute path="/settings"><LazyPage><SettingsPage /></LazyPage></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
-
-import React from 'react';
 
 class GlobalErrorBoundary extends React.Component {
   constructor(props) {
