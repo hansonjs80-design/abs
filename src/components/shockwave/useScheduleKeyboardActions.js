@@ -159,15 +159,8 @@ export default function useScheduleKeyboardActions({
   const isReservationTimeShortcutEvent = useCallback((event) => {
     if (!event || !(event.metaKey || event.ctrlKey)) return false;
     return (
-      event.code === 'Minus' ||
-      event.code === 'NumpadSubtract' ||
-      event.key === '-' ||
-      event.key === '_' ||
-      event.code === 'Equal' ||
-      event.code === 'NumpadAdd' ||
-      event.key === '=' ||
-      event.key === '+' ||
-      event.key === 'Add'
+      event.key === 'ArrowLeft' ||
+      event.key === 'ArrowRight'
     );
   }, []);
 
@@ -179,12 +172,7 @@ export default function useScheduleKeyboardActions({
     event.stopPropagation();
     event.stopImmediatePropagation?.();
 
-    const isDecrease = (
-      event.code === 'Minus' ||
-      event.code === 'NumpadSubtract' ||
-      event.key === '-' ||
-      event.key === '_'
-    );
+    const isDecrease = event.key === 'ArrowLeft';
     applyReservationTimeDelta(isDecrease ? -10 : 10);
     return true;
   }, [isReservationTimeShortcutEvent, applyReservationTimeDelta]);
