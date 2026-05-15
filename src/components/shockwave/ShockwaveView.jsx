@@ -1798,7 +1798,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               const effectiveMemo = (selectedKeys && selectedKeys.has(memoKey)) ? currentMemo : m;
               if (!effectiveMemo?.content) return;
               const { patientChart: mChart, patientName: mName } = parseSchedulerPatientIdentity(effectiveMemo.content);
-              const isMatch = (patientChart && mChart && patientChart === mChart) || (patientName && mName && patientName === mName);
+              const isMatch = patientChart
+                ? Boolean(mChart && String(patientChart).trim() === String(mChart).trim())
+                : Boolean(patientName && mName && patientName === mName);
               if (isMatch) {
                 if (effectiveMemo.body_part) {
                   splitBodyParts(effectiveMemo.body_part).forEach((part) => addBodyPartToMap(patientBodyPartsMap, part));

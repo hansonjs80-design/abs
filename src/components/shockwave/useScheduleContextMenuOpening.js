@@ -41,7 +41,7 @@ export default function useScheduleContextMenuOpening({
       const { patientChart: memoChart, patientName: memoName } = parseSchedulerPatientIdentity(memo.content);
       const matchesChart = patientChart && memoChart && String(patientChart).trim() === String(memoChart).trim();
       const matchesName = normalizedPatientName && normalizeNameForMatch(memoName) === normalizedPatientName;
-      if (!matchesChart && !matchesName) return;
+      if (patientChart ? !matchesChart : !matchesName) return;
       splitBodyParts(memo.body_part || '').forEach((part) => addBodyPartToMap(bodyPartsMap, part));
     });
 
