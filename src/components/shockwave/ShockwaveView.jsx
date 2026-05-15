@@ -160,6 +160,7 @@ const MemoizedCell = memo(({
   handleCellMouseDown, handleCellMouseEnter, setHoverCell, handleCellDoubleClick, handleCellContextMenu,
   editInputRef, handleCellSave, handleEditKeyDown, imeOpenRef, setImePreviewCell, editDraftRef, scheduleEditDraftAutosave, promoteFocusedInputToEditor, skipNextEditBlurSaveRef
 }) => {
+  const resizerRef = React.useRef(null);
   const content = dayInfo.isCurrentMonth ? pendingContent : '';
   const effectiveMergeSpan = pendingMergeSpan || mergeSpan;
   const cellPrescription = cellData?.prescription || effectiveMergeSpan?.meta?.prescription || '';
@@ -276,21 +277,26 @@ const MemoizedCell = memo(({
             ) : null}
           </div>
         )}
-        <input
-          ref={(isEditing || isPrimary) ? editInputRef : null}
-          className="sw-cell-input"
-          data-hidden-input={!isEditing && !isImePreview ? 'true' : undefined}
-          defaultValue={isEditing ? editValue : ''}
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-          style={(isEditing || isImePreview) ? { position: 'relative', width: '100%', height: '100%', zIndex: 2, boxSizing: 'border-box' } : { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, padding: 0, border: 'none', outline: 'none', pointerEvents: 'none', zIndex: 1 }}
-          onInput={(e) => {
-            const nextValue = e.currentTarget.value;
-            editDraftRef.current = { key: cellKey, value: nextValue, dirty: true };
-            if (imeOpenRef.current || e.nativeEvent?.isComposing) return;
-            scheduleEditDraftAutosave(cellKey, nextValue);
-            if (!isEditing && e.currentTarget.value) promoteFocusedInputToEditor(cellKey, e.currentTarget.value);
-          }}
+        <div
+          ref={resizerRef}
+          className={`sw-cell-input-wrapper ${(!isEditing && !isImePreview) ? 'hidden' : ''}`}
+          data-value={isEditing ? editValue : ''}
+        >
+          <input
+            ref={(isEditing || isPrimary) ? editInputRef : null}
+            className="sw-cell-input"
+            data-hidden-input={!isEditing && !isImePreview ? 'true' : undefined}
+            defaultValue={isEditing ? editValue : ''}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            onInput={(e) => {
+              const nextValue = e.currentTarget.value;
+              if (resizerRef.current) resizerRef.current.dataset.value = nextValue;
+              editDraftRef.current = { key: cellKey, value: nextValue, dirty: true };
+              if (imeOpenRef.current || e.nativeEvent?.isComposing) return;
+              scheduleEditDraftAutosave(cellKey, nextValue);
+              if (!isEditing && e.currentTarget.value) promoteFocusedInputToEditor(cellKey, e.currentTarget.value);
+            }}
           onBlur={(e) => {
             setImePreviewCell((prev) => (prev === cellKey ? null : prev));
             if (skipNextEditBlurSaveRef.current) { skipNextEditBlurSaveRef.current = false; return; }
@@ -301,15 +307,21 @@ const MemoizedCell = memo(({
           onCompositionStart={() => {
             imeOpenRef.current = true;
             setImePreviewCell(cellKey);
-            editDraftRef.current = { key: cellKey, value: editInputRef.current?.value || '', dirty: true };
+            const val = editInputRef.current?.value || '';
+            editDraftRef.current = { key: cellKey, value: val, dirty: true };
+            if (resizerRef.current) resizerRef.current.dataset.value = val;
           }}
           onCompositionEnd={(e) => {
             imeOpenRef.current = false;
             setImePreviewCell((prev) => (prev === cellKey ? null : prev));
-            scheduleEditDraftAutosave(cellKey, e.currentTarget.value);
-            if (!isEditing && e.currentTarget.value) promoteFocusedInputToEditor(cellKey, e.currentTarget.value);
+            const finalValue = e.currentTarget.value;
+            editDraftRef.current = { key: cellKey, value: finalValue, dirty: true };
+            if (resizerRef.current) resizerRef.current.dataset.value = finalValue;
+            scheduleEditDraftAutosave(cellKey, finalValue);
+            if (!isEditing && finalValue) promoteFocusedInputToEditor(cellKey, finalValue);
           }}
         />
+        </div>
       </div>
     );
   } else {
