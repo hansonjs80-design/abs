@@ -160,7 +160,7 @@ const MemoizedCell = memo(({
   handleCellMouseDown, handleCellMouseEnter, setHoverCell, handleCellDoubleClick, handleCellContextMenu,
   editInputRef, handleCellSave, handleEditKeyDown, imeOpenRef, setImePreviewCell, editDraftRef, scheduleEditDraftAutosave, promoteFocusedInputToEditor, skipNextEditBlurSaveRef
 }) => {
-  const resizerRef = React.useRef(null);
+  const resizerRef = useRef(null);
   const content = dayInfo.isCurrentMonth ? pendingContent : '';
   const effectiveMergeSpan = pendingMergeSpan || mergeSpan;
   const cellPrescription = cellData?.prescription || effectiveMergeSpan?.meta?.prescription || '';
