@@ -1350,12 +1350,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     // Double rAF ensures the input DOM node exists after React re-renders the cell
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        if (editInputRef.current) {
+        if (editInputRef.current && document.activeElement !== editInputRef.current) {
           editInputRef.current.focus();
-          if (!imeOpenRef.current && document.activeElement === editInputRef.current) {
-            const len = editInputRef.current.value?.length || 0;
-            editInputRef.current.setSelectionRange(len, len);
-          }
         }
       });
     });
