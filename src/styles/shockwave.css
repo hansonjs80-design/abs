@@ -536,7 +536,12 @@
 }
 
 .sw-cell-input-wrapper.hidden {
-  display: none;
+  opacity: 0;
+  pointer-events: none;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  z-index: 1;
 }
 
 .sw-cell-input-wrapper::after {
