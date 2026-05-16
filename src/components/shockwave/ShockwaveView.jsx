@@ -475,7 +475,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const key = `${selectedCell.w}-${selectedCell.d}-${selectedCell.r}-${selectedCell.c}`;
     const selectedMemo = memos[key] || {};
     const selectedContent = editingCell === key
-      ? (editInputRef.current?.value ?? editValue)
+      ? editValue
       : (pendingDisplayValues[key] ?? selectedMemo.content ?? '');
     const selectedPrescription = String(selectedMemo.prescription || '').trim();
     const manualPrescriptions = Array.isArray(settings?.manual_therapy_prescriptions)
