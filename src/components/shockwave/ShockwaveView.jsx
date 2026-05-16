@@ -2438,10 +2438,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                           <thead>
                             <tr>
                               <th style={{ width: '22%', textAlign: 'center' }}>날짜</th>
-                              <th style={{ width: '18%', textAlign: 'center' }}>처방</th>
-                              <th style={{ width: '20%', textAlign: 'center' }}>부위</th>
-                              <th style={{ width: '12%', textAlign: 'center' }}>회차</th>
-                              <th style={{ width: '28%', textAlign: 'center' }}>적용</th>
+                              <th style={{ width: '16%', textAlign: 'center' }}>처방</th>
+                              <th style={{ width: '18%', textAlign: 'center' }}>부위</th>
+                              <th style={{ width: '18%', textAlign: 'left' }}>메모</th>
+                              <th style={{ width: '10%', textAlign: 'center' }}>회차</th>
+                              <th style={{ width: '16%', textAlign: 'center' }}>적용</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -2462,6 +2463,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                   {log.prescription}
                                 </td>
                                 <td style={{ textAlign: 'center' }}>{log.body_part}</td>
+                                <td
+                                  title={log.memo || ''}
+                                  style={{ textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.85em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                                >
+                                  {log.memo}
+                                </td>
                                 <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
                                   <input
                                     type="text"
