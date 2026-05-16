@@ -9,6 +9,14 @@ import {
   parseSchedulerPatientIdentity,
 } from '../../lib/schedulerUtils';
 
+const getPatientHistoryTreatmentGroup = ({ type, prescription, content }) => {
+  if (type === 'manual') return 'manual';
+  if (has4060Pattern(content || '')) return 'manual';
+  const prescriptionText = String(prescription || '').trim();
+  if (/(?:^|\D)(40|60)\s*분?(?:\D|$)/.test(prescriptionText)) return 'manual';
+  return 'shockwave';
+};
+
 export default function usePatientHistoryActions({
   currentYear,
   currentMonth,
@@ -61,12 +69,20 @@ export default function usePatientHistoryActions({
       const [shockwaveRes, manualRes, scheduleRes] = await Promise.all([shockwaveQuery, manualQuery, scheduleQuery]);
 
       const allData = [
-        ...(shockwaveRes.data || []).map((d) => ({ ...d, type: 'shockwave' })),
-        ...(manualRes.data || []).map((d) => ({ ...d, type: 'manual' })),
+        ...(shockwaveRes.data || []).map((d) => ({
+          ...d,
+          type: 'shockwave',
+          history_group: getPatientHistoryTreatmentGroup({ type: 'shockwave', prescription: d.prescription }),
+        })),
+        ...(manualRes.data || []).map((d) => ({
+          ...d,
+          type: 'manual',
+          history_group: 'manual',
+        })),
       ];
 
       const scheduleData = scheduleRes.data || [];
-      const seenLogDates = new Set(allData.map((d) => d.date));
+      const seenLogKeys = new Set(allData.map((d) => `${d.date}__${d.history_group || 'shockwave'}`));
 
       for (const s of scheduleData) {
         try {
@@ -87,6 +103,13 @@ export default function usePatientHistoryActions({
 
           const visitSuffix = getExplicitVisitSuffix(content);
           const visitCount = visitSuffix.replace(/[()]/g, '') || '';
+          const historyGroup = getPatientHistoryTreatmentGroup({
+            type: 'schedule',
+            prescription: s.prescription,
+            content,
+          });
+
+          if (seenLogKeys.has(`${dateStr}__${historyGroup}`)) continue;
 
           allData.push({
             id: s.id,
@@ -97,8 +120,9 @@ export default function usePatientHistoryActions({
             prescription: s.prescription || '',
             body_part: s.body_part || '',
             type: 'schedule',
+            history_group: historyGroup,
           });
-          seenLogDates.add(dateStr);
+          seenLogKeys.add(`${dateStr}__${historyGroup}`);
         } catch {
           // Ignore malformed schedule rows.
         }
@@ -139,13 +163,21 @@ export default function usePatientHistoryActions({
             body_part: cellMemo.body_part || '',
             visit_count: cellVisitCount,
             type: 'draft',
+            history_group: getPatientHistoryTreatmentGroup({
+              type: 'draft',
+              prescription: cellMemo.prescription,
+              content: cellContent,
+            }),
           };
         }
       }
 
       let finalLogs = matches;
       if (draftLog) {
-        const existingIdx = matches.findIndex((m) => m.date === draftLog.date);
+        const existingIdx = matches.findIndex((m) => (
+          m.date === draftLog.date &&
+          (m.history_group || 'shockwave') === (draftLog.history_group || 'shockwave')
+        ));
         if (existingIdx !== -1) {
           finalLogs = [...matches];
           finalLogs[existingIdx] = { ...finalLogs[existingIdx], isCurrentCell: true };
@@ -286,7 +318,7 @@ export default function usePatientHistoryActions({
 
     let newContent = name;
 
-    if (log.type === 'manual') {
+    if ((log.history_group || log.type) === 'manual') {
       const doseMatch = String(prescription).match(/(40|60)/);
       if (doseMatch && !has4060Pattern(newContent)) {
         newContent = `${newContent}${doseMatch[0]}`;

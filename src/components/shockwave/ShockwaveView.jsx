@@ -69,7 +69,7 @@ const PATIENT_HISTORY_GROUPS = [
 ];
 
 const getPatientHistoryGroupKey = (log) => (
-  log?.type === 'manual' ? 'manual' : 'shockwave'
+  log?.history_group || (log?.type === 'manual' ? 'manual' : 'shockwave')
 );
 
 const ContextMenuLocalInput = ({ value, onChange, onKeyDown, onBlur, className, placeholder, autoFocus, onCompositionStart, onCompositionEnd, inputMode, pattern }) => {
@@ -547,6 +547,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [imePreviewCell, setImePreviewCell] = useState(null);
   const contextMenuRef = useRef(null);
   const editInputRef = useRef(null);
+  const patientHistorySearchInputRef = useRef(null);
   const imeOpenRef = useRef(false);
   const skipNextEditBlurSaveRef = useRef(false);
   const handleCellSaveRef = useRef(null);
@@ -1247,6 +1248,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   useEffect(() => {
     if (!patientHistoryModalOpen) return;
+    requestAnimationFrame(() => {
+      patientHistorySearchInputRef.current?.focus({ preventScroll: true });
+      patientHistorySearchInputRef.current?.select?.();
+    });
 
     const handlePatientHistoryEscape = (event) => {
       if (event.key !== 'Escape') return;
@@ -2358,6 +2363,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-primary, #fff)', border: '1px solid var(--border-color, #ddd)', borderRadius: '6px', padding: '2px 8px' }}>
                   <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary, #666)' }}>검색:</span>
                   <input 
+                    ref={patientHistorySearchInputRef}
                     type="text" 
                     placeholder="이름/차트번호" 
                     defaultValue={patientHistoryModalData.searchChart || patientHistoryModalData.searchName}
