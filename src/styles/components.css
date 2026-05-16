@@ -420,7 +420,7 @@
   background: #f8fafc;
   border: 2px solid var(--tab-active-border);
   border-bottom: 2px solid #f8fafc;
-  margin-bottom: -1px;
+  margin-bottom: 0px;
   padding: 9px 19px;
   min-height: 40px;
   transform: none;
