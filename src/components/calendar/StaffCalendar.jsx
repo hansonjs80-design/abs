@@ -211,7 +211,7 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
     focusHiddenInput();
   }, [editingCell, focusHiddenInput]);
 
-  const beginEdit = useCallback((key, val, preserve) => {
+  const beginEdit = useCallback((key, val, preserve, selectAll = preserve) => {
     flushSync(() => {
       setEditingCell(key);
       setEditValue(val);
@@ -244,9 +244,16 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
         el.style.outline = 'none';
         if (preserve) {
           el.value = val;
-          el.select();
         }
         el.focus({ preventScroll: true });
+        if (preserve) {
+          if (selectAll) {
+            el.select();
+          } else {
+            const cursor = el.value.length;
+            el.setSelectionRange(cursor, cursor);
+          }
+        }
       }
     });
   }, []);
@@ -529,7 +536,7 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
 
   const onCellDblClick = useCallback((wi, di, slot) => {
     const key = memoKey(wi, di, slot);
-    beginEdit(key, staffMemos[key]?.content || '', true);
+    beginEdit(key, staffMemos[key]?.content || '', true, false);
   }, [memoKey, staffMemos, beginEdit]);
 
   const onCellCtxMenu = useCallback((wi, di, slot, e) => {

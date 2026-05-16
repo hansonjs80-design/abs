@@ -1493,10 +1493,35 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     focusSelectedCellInput();
   }, [selectedCell, editingCell, isEditableTarget, focusSelectedCellInput]);
 
+  const preserveScheduleScrollPosition = useCallback(() => {
+    const view = viewRef.current;
+    if (!view) return;
+
+    const scrollLeft = view.scrollLeft;
+    const scrollTop = view.scrollTop;
+    const windowX = window.scrollX;
+    const windowY = window.scrollY;
+
+    const restoreScroll = () => {
+      if (view.scrollLeft !== scrollLeft) view.scrollLeft = scrollLeft;
+      if (view.scrollTop !== scrollTop) view.scrollTop = scrollTop;
+      if (window.scrollX !== windowX || window.scrollY !== windowY) {
+        window.scrollTo(windowX, windowY);
+      }
+    };
+
+    requestAnimationFrame(() => {
+      restoreScroll();
+      requestAnimationFrame(restoreScroll);
+    });
+  }, []);
+
   // 편집 완료 후 아래로 이동
   const handleEditKeyDown = useCallback((e, w, d, r, c) => {
     if (['ArrowLeft', 'ArrowRight'].includes(e.key)) {
       e.stopPropagation();
+      e.nativeEvent?.stopImmediatePropagation?.();
+      preserveScheduleScrollPosition();
       return; // 편집 중에는 좌우 방향키로 다른 셀 이동 방지 (텍스트 커서 이동만 허용)
     }
     
@@ -1525,7 +1550,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const nc = e.shiftKey ? Math.max(0, c - 1) : Math.min(colCount - 1, c + 1);
       selectSingleCell({ w, d, r, c: nc });
     }
-  }, [baseTimeSlots.length, colCount, selectSingleCell, getAdjacentCell]);
+  }, [baseTimeSlots.length, colCount, selectSingleCell, getAdjacentCell, preserveScheduleScrollPosition]);
 
   const handleChartSelectorClose = useCallback((selected) => {
     if (!chartSelector) return;
