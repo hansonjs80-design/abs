@@ -479,7 +479,7 @@
   --tab-active-bg: #f97316;
   --tab-active-border: #ea580c;
   --tab-shadow: rgba(249, 115, 22, 0.18);
-  --tab-text-color: #ffffff;
+  --tab-text-color: #111827;
 }
 
 /* 2. Shockwave (Green) */
@@ -489,7 +489,7 @@
   --tab-active-bg: #16a34a;
   --tab-active-border: #15803d;
   --tab-shadow: rgba(22, 163, 74, 0.18);
-  --tab-text-color: #ffffff;
+  --tab-text-color: #111827;
 }
 
 /* 3. Stats SW (Purple) */
