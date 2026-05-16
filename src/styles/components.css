@@ -478,7 +478,6 @@
 }
 
 .top-tab.active {
-  animation: tabActivate 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   color: var(--tab-active-border);
   background: #f8fafc;
   border: 2px solid var(--tab-active-border);
@@ -492,24 +491,6 @@
   font-size: 1.61rem;
   font-weight: 900;
   overflow: visible;
-}
-
-@keyframes tabActivate {
-  0% { 
-    transform: scale(0.97) translateY(2px); 
-    box-shadow: 0 0 0 rgba(0,0,0,0);
-    z-index: 50;
-  }
-  70% { 
-    transform: scale(1.008) translateY(-0.5px); 
-    box-shadow: 8px 10px 18px -2px rgba(15, 23, 42, 0.45); 
-    z-index: 50;
-  }
-  100% { 
-    transform: scale(1) translateY(0); 
-    box-shadow: 8px 0px 16px -2px rgba(15, 23, 42, 0.4), -2px -2px 8px -2px rgba(15, 23, 42, 0.1); 
-    z-index: 3;
-  }
 }
 
 .top-tab--stats-sw.active,
