@@ -448,8 +448,21 @@
 .top-tab--stats-sw.active svg,
 .top-tab--stats-mt.active svg,
 .top-tab--stats-sw.active:hover > span,
-.top-tab--stats-mt.active:hover > span {
+.top-tab--stats-mt.active:hover > span,
+.top-tab--stats-sw.active .month-nav-btn,
+.top-tab--stats-mt.active .month-nav-btn {
   color: #d97706 !important;
+}
+
+.top-tab--stats-sw.active .month-nav-btn,
+.top-tab--stats-mt.active .month-nav-btn {
+  border-color: #d97706 !important;
+}
+
+.top-tab--stats-sw.active .month-nav-btn svg,
+.top-tab--stats-mt.active .month-nav-btn svg {
+  color: #d97706 !important;
+  stroke: #d97706 !important;
 }
 
 .top-tab.active:hover {
