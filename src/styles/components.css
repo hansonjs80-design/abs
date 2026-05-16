@@ -551,9 +551,8 @@
   opacity: 1;
 }
 
-.top-tab.active svg {
-  width: 21px;
-  height: 21px;
+.top-tab.active > .top-tab-inner > svg {
+  transform: scale(1.18);
   color: var(--tab-active-border);
 }
 
