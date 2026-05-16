@@ -92,8 +92,6 @@ export default function usePatientHistoryActions({
           const dd = dayInfo.date;
           const dateStr = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`;
 
-          if (seenLogDates.has(dateStr)) continue;
-
           const content = s.content || '';
           const parsed = parseSchedulerPatientIdentity(content);
           const matchChart = chartParam && String(parsed.patientChart || '').trim() === chartParam;
