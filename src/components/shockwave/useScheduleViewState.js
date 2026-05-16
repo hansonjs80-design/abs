@@ -42,8 +42,8 @@ export default function useScheduleViewState({
       copy: join(mod, 'C'),
       cut: join(mod, 'X'),
       paste: join(mod, 'V'),
-      merge: join(mod, 'E'),
-      complete: join(mod, 'G'),
+      merge: join(mod, 'G'),
+      complete: join(mod, 'S'),
       cancel: join(mod, 'D'),
       today: join(mod, 'T'),
     };

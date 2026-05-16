@@ -1053,7 +1053,7 @@ export default function ShockwaveDataGrid({
         }
       }
       if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); doDelete(); return; }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'e') { e.preventDefault(); e.shiftKey ? handleUnmerge() : handleMerge(); return; }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'g') { e.preventDefault(); e.shiftKey ? handleUnmerge() : handleMerge(); return; }
       if ((e.metaKey || e.ctrlKey) && e.key === 'c') { e.preventDefault(); doCopy(); return; }
       if ((e.metaKey || e.ctrlKey) && e.key === 'x') { e.preventDefault(); doCopy(); doDelete(); return; }
       
@@ -1396,8 +1396,8 @@ export default function ShockwaveDataGrid({
                 setCtxMenu(null);
               }}>붙여넣기 <span className="ctx-shortcut">⌘V</span></button>
               <div className="context-menu-divider" />
-              <button type="button" className="context-menu-item" onClick={() => { handleMerge(); setCtxMenu(null); }}>셀 병합 <span className="ctx-shortcut">⌘E</span></button>
-              <button type="button" className="context-menu-item" onClick={() => { handleUnmerge(); setCtxMenu(null); }}>셀 병합 해제 <span className="ctx-shortcut">⌘⇧E</span></button>
+              <button type="button" className="context-menu-item" onClick={() => { handleMerge(); setCtxMenu(null); }}>셀 병합 <span className="ctx-shortcut">⌘G</span></button>
+              <button type="button" className="context-menu-item" onClick={() => { handleUnmerge(); setCtxMenu(null); }}>셀 병합 해제 <span className="ctx-shortcut">⌘⇧G</span></button>
               <div className="context-menu-divider" />
               <button type="button" className="context-menu-item" onClick={() => { doDelete(); setCtxMenu(null); }}>선택 내용 지우기 <span className="ctx-shortcut">Del</span></button>
               <button type="button" className="context-menu-item context-menu-danger" onClick={() => { doDeleteRow(ctxMenu.r); setCtxMenu(null); }}>이 행 영구 삭제</button>

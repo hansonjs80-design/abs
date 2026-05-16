@@ -479,7 +479,7 @@ export default function useScheduleKeyboardActions({
       return;
     }
 
-    if (isMeta && e.code === 'KeyG') {
+    if (isMeta && e.code === 'KeyS') {
       e.preventDefault();
       e.stopPropagation();
       handleToggleTreatmentComplete();
@@ -493,8 +493,9 @@ export default function useScheduleKeyboardActions({
       return;
     }
 
-    if (isMeta && e.code === 'KeyE') {
+    if (isMeta && e.code === 'KeyG') {
       e.preventDefault();
+      e.stopPropagation();
       tryMergeSelection();
       return;
     }
