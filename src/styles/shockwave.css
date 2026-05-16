@@ -1433,8 +1433,8 @@
 }
 
 .shockwave-chart-selector-option--manual {
-  border-color: #c0843a;
-  background: #fff7ed;
+  border-color: #c46a32;
+  background: #fff3ed;
 }
 
 .shockwave-chart-selector-option:hover {
@@ -1462,7 +1462,7 @@
 }
 
 .shockwave-chart-selector-option--manual .shockwave-chart-selector-type {
-  background: #a16207;
+  background: #ad4e08;
 }
 
 .shockwave-chart-selector-chart {
