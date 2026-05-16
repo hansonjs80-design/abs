@@ -444,8 +444,12 @@
 }
 
 .top-tab--stats-sw.active,
-.top-tab--stats-mt.active {
-  color: #111827;
+.top-tab--stats-mt.active,
+.top-tab--stats-sw.active svg,
+.top-tab--stats-mt.active svg,
+.top-tab--stats-sw.active:hover > span,
+.top-tab--stats-mt.active:hover > span {
+  color: #d97706 !important;
 }
 
 .top-tab.active:hover {
