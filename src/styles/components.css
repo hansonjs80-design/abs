@@ -488,7 +488,7 @@
   transform: none;
   box-shadow: 8px 0px 16px -2px rgba(15, 23, 42, 0.4), -2px -2px 8px -2px rgba(15, 23, 42, 0.1);
   z-index: 3;
-  font-size: 1.61rem;
+  font-size: 1.13rem;
   font-weight: 900;
   overflow: visible;
 }
@@ -553,8 +553,8 @@
 }
 
 .top-tab.active svg {
-  width: 21px;
-  height: 21px;
+  width: 19px;
+  height: 19px;
   color: var(--tab-active-border);
 }
 
@@ -671,7 +671,7 @@
 }
 
 .top-tab.active .month-picker.tab-variant .month-picker-label {
-  font-size: 1.3rem;
+  font-size: 1.13rem;
   line-height: 1.1;
 }
 
