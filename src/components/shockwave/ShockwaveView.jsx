@@ -1493,35 +1493,40 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     focusSelectedCellInput();
   }, [selectedCell, editingCell, isEditableTarget, focusSelectedCellInput]);
 
-  const preserveScheduleScrollPosition = useCallback(() => {
-    const view = viewRef.current;
-    if (!view) return;
+  const moveEditInputCaret = useCallback((input, key, extendSelection = false) => {
+    if (!input || typeof input.selectionStart !== 'number') return;
 
-    const scrollLeft = view.scrollLeft;
-    const scrollTop = view.scrollTop;
-    const windowX = window.scrollX;
-    const windowY = window.scrollY;
+    const length = input.value.length;
+    const start = input.selectionStart ?? 0;
+    const end = input.selectionEnd ?? start;
 
-    const restoreScroll = () => {
-      if (view.scrollLeft !== scrollLeft) view.scrollLeft = scrollLeft;
-      if (view.scrollTop !== scrollTop) view.scrollTop = scrollTop;
-      if (window.scrollX !== windowX || window.scrollY !== windowY) {
-        window.scrollTo(windowX, windowY);
-      }
-    };
+    if (!extendSelection) {
+      const position = start !== end
+        ? (key === 'ArrowLeft' ? Math.min(start, end) : Math.max(start, end))
+        : Math.max(0, Math.min(length, start + (key === 'ArrowLeft' ? -1 : 1)));
+      input.setSelectionRange(position, position);
+      return;
+    }
 
-    requestAnimationFrame(() => {
-      restoreScroll();
-      requestAnimationFrame(restoreScroll);
-    });
+    const direction = input.selectionDirection || 'none';
+    const anchor = direction === 'backward' ? end : start;
+    const focus = direction === 'backward' ? start : end;
+    const nextFocus = Math.max(0, Math.min(length, focus + (key === 'ArrowLeft' ? -1 : 1)));
+
+    if (nextFocus < anchor) {
+      input.setSelectionRange(nextFocus, anchor, 'backward');
+    } else {
+      input.setSelectionRange(anchor, nextFocus, 'forward');
+    }
   }, []);
 
   // 편집 완료 후 아래로 이동
   const handleEditKeyDown = useCallback((e, w, d, r, c) => {
     if (['ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      e.preventDefault();
       e.stopPropagation();
       e.nativeEvent?.stopImmediatePropagation?.();
-      preserveScheduleScrollPosition();
+      moveEditInputCaret(e.currentTarget, e.key, e.shiftKey);
       return; // 편집 중에는 좌우 방향키로 다른 셀 이동 방지 (텍스트 커서 이동만 허용)
     }
     
@@ -1550,7 +1555,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const nc = e.shiftKey ? Math.max(0, c - 1) : Math.min(colCount - 1, c + 1);
       selectSingleCell({ w, d, r, c: nc });
     }
-  }, [baseTimeSlots.length, colCount, selectSingleCell, getAdjacentCell, preserveScheduleScrollPosition]);
+  }, [baseTimeSlots.length, colCount, selectSingleCell, getAdjacentCell, moveEditInputCaret]);
 
   const handleChartSelectorClose = useCallback((selected) => {
     if (!chartSelector) return;
@@ -2426,8 +2431,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               </div>
               <button onClick={closePatientHistoryModal} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', padding: '0 4px', color: 'var(--text-secondary, #666)' }}>✕</button>
             </div>
-            <div style={{ padding: '16px 20px', maxHeight: '70vh', overflowY: 'auto' }}>
-              <div style={{ marginBottom: 16, fontSize: '1.05rem', fontWeight: 600 }}>
+            <div style={{ padding: '14px 18px', maxHeight: '70vh', overflowY: 'auto' }}>
+              <div style={{ marginBottom: 14, fontSize: '1.05rem', fontWeight: 600 }}>
                 검색 대상: <span style={{ color: 'var(--brand-primary)' }}>{patientHistoryModalData.searchName}</span> {patientHistoryModalData.searchChart ? `(${patientHistoryModalData.searchChart})` : ''}
               </div>
               
@@ -2436,7 +2441,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               ) : patientHistoryModalData.logs.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>해당하는 내역이 없습니다.</div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: patientHistoryModalLayout.gridTemplateColumns, gap: '14px', alignItems: 'start' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: patientHistoryModalLayout.gridTemplateColumns, gap: '12px', alignItems: 'start' }}>
                   {patientHistoryLogGroups.map((group) => (
                     <div
                       key={group.key}
@@ -2452,22 +2457,22 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                           background: group.key === 'manual' ? 'rgba(161, 98, 7, 0.11)' : 'rgba(14, 165, 233, 0.1)',
                           color: 'var(--text-primary, #1f2937)',
                           fontWeight: 800,
-                          padding: '9px 12px',
+                          padding: '8px 12px',
                           borderBottom: '1px solid var(--border-color, #d7dde5)',
                         }}
                       >
                         {group.label} <span style={{ color: 'var(--text-secondary, #6b7280)', fontWeight: 600 }}>({group.logs.length})</span>
                       </div>
                       <div className="sw-compact-table-wrap">
-                        <table className="sw-summary-table sw-compact-summary-table" style={{ width: '100%', margin: 0, tableLayout: 'fixed' }}>
+                        <table className="sw-summary-table sw-compact-summary-table patient-history-table" style={{ width: '100%', margin: 0, tableLayout: 'fixed' }}>
                           <thead>
                             <tr>
                               <th style={{ width: '22%', textAlign: 'center' }}>날짜</th>
-                              <th style={{ width: '16%', textAlign: 'center' }}>처방</th>
-                              <th style={{ width: '18%', textAlign: 'center' }}>부위</th>
-                              <th style={{ width: '18%', textAlign: 'left' }}>메모</th>
-                              <th style={{ width: '10%', textAlign: 'center' }}>회차</th>
-                              <th style={{ width: '16%', textAlign: 'center' }}>적용</th>
+                              <th style={{ width: '14%', textAlign: 'center' }}>처방</th>
+                              <th style={{ width: '17%', textAlign: 'center' }}>부위</th>
+                              <th style={{ width: '13%', textAlign: 'center' }}>메모</th>
+                              <th style={{ width: '8%', textAlign: 'center' }}>회차</th>
+                              <th style={{ width: '26%', textAlign: 'center' }}>적용</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -2499,7 +2504,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                     type="text"
                                     value={log.visit_count || ''}
                                     placeholder="-"
-                                    style={{ width: '40px', textAlign: 'center', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '2px', outline: 'none' }}
+                                    style={{ width: '36px', textAlign: 'center', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '1px 2px', outline: 'none' }}
                                     onChange={(e) => {
                                       const val = e.target.value;
                                       setPatientHistoryModalData(prev => ({
@@ -2532,14 +2537,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
                                   <button
                                     type="button"
+                                    className="patient-history-apply-button"
                                     onClick={() => handleApplyHistoryToCell(log)}
                                     style={{
                                       border: '1px solid var(--brand-primary, #4f46e5)',
                                       background: 'var(--brand-primary, #4f46e5)',
                                       color: '#fff',
                                       borderRadius: '6px',
-                                      padding: '5px 9px',
-                                      fontSize: '0.82rem',
+                                      padding: '4px 8px',
+                                      fontSize: '0.78rem',
                                       fontWeight: 600,
                                       lineHeight: 1.2,
                                       cursor: 'pointer',

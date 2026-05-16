@@ -3191,3 +3191,41 @@
   min-width: max-content;
   overflow-x: hidden !important;
 }
+
+.patient-history-table {
+  font-size: 0.84rem;
+}
+
+.patient-history-table th,
+.patient-history-table td {
+  padding: 3px 5px !important;
+  height: 23px;
+  line-height: 1.12;
+  overflow: hidden;
+}
+
+.patient-history-table thead th {
+  padding-top: 5px !important;
+  padding-bottom: 5px !important;
+  white-space: nowrap;
+}
+
+.patient-history-table tbody td {
+  vertical-align: middle;
+}
+
+.patient-history-table .patient-history-apply-button {
+  width: 112px;
+  max-width: 100%;
+  min-height: 22px;
+  padding: 2px 7px !important;
+  font-size: 0.74rem !important;
+  line-height: 1.1 !important;
+  overflow: visible;
+  text-align: center;
+}
+
+.patient-history-table input {
+  height: 22px;
+  font-size: 0.84rem;
+}
