@@ -108,6 +108,28 @@ const ContextMenuLocalInput = ({ value, onChange, onKeyDown, onBlur, className, 
 
 const ContextMenuLocalInputGroup = ({ placeholder, buttonLabel, onSubmit, imeOpenRef, className = "context-menu-input", autoFocus }) => {
   const [localValue, setLocalValue] = useState('');
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (!autoFocus) return undefined;
+    let cancelled = false;
+    const focusInput = () => {
+      if (cancelled || !inputRef.current) return;
+      inputRef.current.focus({ preventScroll: true });
+      inputRef.current.select();
+    };
+
+    focusInput();
+    const frameId = requestAnimationFrame(() => {
+      focusInput();
+      requestAnimationFrame(focusInput);
+    });
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frameId);
+    };
+  }, [autoFocus, placeholder]);
 
   const handleSubmit = () => {
     const trimmed = localValue.trim();
@@ -120,6 +142,7 @@ const ContextMenuLocalInputGroup = ({ placeholder, buttonLabel, onSubmit, imeOpe
   return (
     <div className="context-menu-input-row" style={{ marginTop: '8px' }}>
       <input
+        ref={inputRef}
         type="text"
         placeholder={placeholder}
         className={className}
