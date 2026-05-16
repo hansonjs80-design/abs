@@ -396,7 +396,7 @@
   transform: none;
   transform-origin: bottom center;
   filter: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
   overflow: hidden;
 }
@@ -410,8 +410,9 @@
 
 .top-tab > span,
 .top-tab > svg,
-.top-tab .month-picker {
-  transition: transform 0.25s ease, filter 0.25s ease;
+.top-tab .month-picker,
+.top-tab .month-picker-label {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .top-tab > span,
