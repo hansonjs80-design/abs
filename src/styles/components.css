@@ -502,8 +502,8 @@
 
 /* 1. Calendar (Blue) */
 .top-tab--calendar {
-  --tab-bg: #fb923c;
-  --tab-hover-bg: #f97316;
+  --tab-bg: #f97316;
+  --tab-hover-bg: #ea580c;
   --tab-active-bg: #ea580c;
   --tab-active-border: #ea580c;
   --tab-shadow: rgba(234, 88, 12, 0.18);
