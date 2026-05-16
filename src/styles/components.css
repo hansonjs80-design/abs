@@ -396,7 +396,7 @@
   transform: none;
   transform-origin: bottom center;
   filter: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: color 0.25s ease, background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
   white-space: nowrap;
   overflow: hidden;
 }
@@ -407,6 +407,19 @@
   padding-top: 14px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 -4px 16px -4px rgba(15, 23, 42, 0.3);
   z-index: 2;
+}
+
+.top-tab > span,
+.top-tab > svg,
+.top-tab .month-picker-label {
+  transition: transform 0.25s ease;
+  display: inline-block;
+}
+
+.top-tab:hover > span,
+.top-tab:hover > svg,
+.top-tab:hover .month-picker-label {
+  transform: translateY(-2px);
 }
 
 .top-tab:not(.active) {
@@ -480,18 +493,18 @@
 
 /* 1. Calendar (Blue) */
 .top-tab--calendar {
-  --tab-bg: #ea580c;
-  --tab-hover-bg: #ea580c;
-  --tab-active-bg: #f97316;
+  --tab-bg: #fdba74;
+  --tab-hover-bg: #fb923c;
+  --tab-active-bg: #ea580c;
   --tab-active-border: #ea580c;
-  --tab-shadow: rgba(249, 115, 22, 0.18);
+  --tab-shadow: rgba(234, 88, 12, 0.18);
   --tab-text-color: #111827;
 }
 
 /* 2. Shockwave (Green) */
 .top-tab--shockwave {
-  --tab-bg: #15803d;
-  --tab-hover-bg: #15803d;
+  --tab-bg: #86efac;
+  --tab-hover-bg: #4ade80;
   --tab-active-bg: #16a34a;
   --tab-active-border: #15803d;
   --tab-shadow: rgba(22, 163, 74, 0.18);
