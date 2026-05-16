@@ -3193,18 +3193,23 @@
 }
 
 .patient-history-table {
-  font-size: 0.84rem;
+  font-size: 0.9rem;
 }
 
-.patient-history-table th,
-.patient-history-table td {
+.patient-history-table.sw-summary-table th,
+.patient-history-table.sw-summary-table td,
+.patient-history-table.sw-compact-summary-table th,
+.patient-history-table.sw-compact-summary-table td {
   padding: 3px 5px !important;
+  padding-top: 3px !important;
+  padding-bottom: 3px !important;
   height: 23px;
   line-height: 1.12;
   overflow: hidden;
 }
 
-.patient-history-table thead th {
+.patient-history-table.sw-summary-table thead th,
+.patient-history-table.sw-compact-summary-table thead th {
   padding-top: 5px !important;
   padding-bottom: 5px !important;
   white-space: nowrap;
@@ -3219,7 +3224,7 @@
   max-width: 100%;
   min-height: 22px;
   padding: 2px 7px !important;
-  font-size: 0.74rem !important;
+  font-size: 0.8rem !important;
   line-height: 1.1 !important;
   overflow: visible;
   text-align: center;
@@ -3227,5 +3232,5 @@
 
 .patient-history-table input {
   height: 22px;
-  font-size: 0.84rem;
+  font-size: 0.9rem;
 }
