@@ -396,7 +396,7 @@
   transform: none;
   transform-origin: bottom center;
   filter: none;
-  transition: padding 0.2s ease, min-height 0.2s ease, transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease, color 180ms ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
   overflow: hidden;
 }
@@ -439,8 +439,8 @@
   box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.92), -7px -7px 15px rgba(15, 23, 42, 0.12);
 }
 
-.top-tab.active::before,
-.top-tab.active::after {
+.top-tab::before,
+.top-tab::after {
   content: "";
   position: absolute;
   bottom: -2px;
@@ -450,14 +450,21 @@
   z-index: -1;
   box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.25);
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.top-tab.active::before {
+.top-tab::before {
   right: 100%;
 }
 
-.top-tab.active::after {
+.top-tab::after {
   left: 100%;
+}
+
+.top-tab.active::before,
+.top-tab.active::after {
+  opacity: 1;
 }
 
 .top-tab.active svg {
