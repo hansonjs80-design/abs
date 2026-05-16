@@ -512,8 +512,8 @@
 
 /* 2. Shockwave (Green) */
 .top-tab--shockwave {
-  --tab-bg: #4ade80;
-  --tab-hover-bg: #22c55e;
+  --tab-bg: #22c55e;
+  --tab-hover-bg: #16a34a;
   --tab-active-bg: #16a34a;
   --tab-active-border: #15803d;
   --tab-shadow: rgba(22, 163, 74, 0.18);
