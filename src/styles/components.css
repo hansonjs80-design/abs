@@ -410,14 +410,18 @@
 
 .top-tab > span,
 .top-tab > svg,
-.top-tab .month-picker-label {
+.top-tab .month-picker {
   transition: transform 0.25s ease, filter 0.25s ease;
+}
+
+.top-tab > span,
+.top-tab > svg {
   display: inline-block;
 }
 
 .top-tab:hover > span,
 .top-tab:hover > svg,
-.top-tab:hover .month-picker-label {
+.top-tab:hover .month-picker {
   transform: translateY(-2px);
   filter: brightness(1.2);
 }
