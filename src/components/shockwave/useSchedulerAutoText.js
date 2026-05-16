@@ -365,11 +365,27 @@ export default function useSchedulerAutoText({
     }
 
     const [shockwaveRes, manualRes, scheduleRes] = await Promise.all([shockwaveQuery, manualQuery, scheduleQuery]);
+    const manualPrescriptionSet = new Set(
+      (Array.isArray(settings?.manual_therapy_prescriptions) ? settings.manual_therapy_prescriptions : [])
+        .map((prescription) => String(prescription || '').trim())
+        .filter(Boolean)
+    );
+    const isManualTherapyRecord = (record, content = '') => {
+      const prescription = String(record?.prescription || '').trim();
+      const patientName = String(record?.patient_name || '').trim();
+      if (manualPrescriptionSet.has(prescription)) return true;
+      if (/^(40|60)분$/u.test(prescription)) return true;
+      return has4060Pattern(content) || has4060Pattern(patientName);
+    };
 
+    const normalizedShockwaveData = (shockwaveRes.data || []).map((item) => ({
+      ...item,
+      type: isManualTherapyRecord(item) ? 'manual' : 'shockwave',
+    }));
     const allData = userRemovedDoseTag
-      ? (shockwaveRes.data || []).map((item) => ({ ...item, type: 'shockwave' }))
+      ? normalizedShockwaveData.filter((item) => item.type === 'shockwave')
       : [
-          ...(shockwaveRes.data || []).map((item) => ({ ...item, type: 'shockwave' })),
+          ...normalizedShockwaveData,
           ...(manualRes.data || []).map((item) => ({ ...item, type: 'manual' })),
         ];
 
@@ -405,7 +421,7 @@ export default function useSchedulerAutoText({
             visit_count: visitCount,
             prescription: s.prescription || '',
             body_part: s.body_part || '',
-            type: 'shockwave',
+            type: isManualTherapyRecord({ prescription: s.prescription, patient_name: parsed.patientName }, content) ? 'manual' : 'shockwave',
           });
           seenLogDates.add(dateStr);
         } catch {
