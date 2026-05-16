@@ -421,7 +421,7 @@
   padding: 10px 20px;
   min-height: 40px;
   transform: none;
-  box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.92), -6px -6px 13px rgba(15, 23, 42, 0.1);
+  box-shadow: none;
   z-index: 3;
   font-size: 1.04rem;
   font-weight: 900;
