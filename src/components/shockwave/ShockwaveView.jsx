@@ -470,6 +470,25 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   // 환자 내역 검색 팝업 상태 (Cmd+F)
   const [patientHistoryModalOpen, setPatientHistoryModalOpen] = useState(false);
   const [patientHistoryModalData, setPatientHistoryModalData] = useState({ loading: false, logs: [], searchName: '', searchChart: '' });
+  const selectedPatientHistoryGroupKey = useMemo(() => {
+    if (!selectedCell) return 'shockwave';
+    const key = `${selectedCell.w}-${selectedCell.d}-${selectedCell.r}-${selectedCell.c}`;
+    const selectedMemo = memos[key] || {};
+    const selectedContent = editingCell === key
+      ? (editInputRef.current?.value ?? editValue)
+      : (pendingDisplayValues[key] ?? selectedMemo.content ?? '');
+    const selectedPrescription = String(selectedMemo.prescription || '').trim();
+    const manualPrescriptions = Array.isArray(settings?.manual_therapy_prescriptions)
+      ? settings.manual_therapy_prescriptions
+      : [];
+    if (
+      has4060Pattern(selectedContent) ||
+      (selectedPrescription && manualPrescriptions.includes(selectedPrescription))
+    ) {
+      return 'manual';
+    }
+    return 'shockwave';
+  }, [editValue, editingCell, memos, pendingDisplayValues, selectedCell, settings?.manual_therapy_prescriptions]);
   const patientHistoryLogGroups = useMemo(() => {
     const groupMap = new Map(PATIENT_HISTORY_GROUPS.map((group) => [group.key, { ...group, logs: [] }]));
     (patientHistoryModalData.logs || []).forEach((log) => {
@@ -477,10 +496,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const group = groupMap.get(groupKey) || groupMap.get('shockwave');
       group.logs.push(log);
     });
-    return PATIENT_HISTORY_GROUPS
+    const orderedGroups = [...PATIENT_HISTORY_GROUPS].sort((a, b) => {
+      if (a.key === selectedPatientHistoryGroupKey) return -1;
+      if (b.key === selectedPatientHistoryGroupKey) return 1;
+      return 0;
+    });
+    return orderedGroups
       .map((group) => groupMap.get(group.key))
       .filter((group) => group.logs.length > 0);
-  }, [patientHistoryModalData.logs]);
+  }, [patientHistoryModalData.logs, selectedPatientHistoryGroupKey]);
 
   // Presence 기능 비활성화 – 실시간 데이터 동기화만 유지
 
@@ -2327,7 +2351,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
       {patientHistoryModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999999 }}>
-          <div style={{ background: 'var(--bg-primary, #fff)', maxWidth: 1120, width: '95%', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: 'var(--bg-primary, #fff)', maxWidth: 1320, width: '96%', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--border-color, #eee)', background: 'var(--bg-secondary, #f8f9fa)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>환자 스케줄 내역 검색</h3>
@@ -2361,127 +2385,126 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                 검색 대상: <span style={{ color: 'var(--brand-primary)' }}>{patientHistoryModalData.searchName}</span> {patientHistoryModalData.searchChart ? `(${patientHistoryModalData.searchChart})` : ''}
               </div>
               
-              <div className="sw-compact-table-wrap">
-                <table className="sw-summary-table sw-compact-summary-table" style={{ width: '100%', margin: 0, tableLayout: 'fixed' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ width: '12%', textAlign: 'center' }}>날짜</th>
-                      <th style={{ width: '12%', textAlign: 'center' }}>차트</th>
-                      <th style={{ width: '10%', textAlign: 'center' }}>이름</th>
-                      <th style={{ width: '12%', textAlign: 'center' }}>처방</th>
-                      <th style={{ width: '15%', textAlign: 'center' }}>부위</th>
-                      <th style={{ width: '8%', textAlign: 'center' }}>회차</th>
-                      <th style={{ width: '18%', textAlign: 'left' }}>메모</th>
-                      <th style={{ width: '13%', textAlign: 'center' }}>적용</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {patientHistoryModalData.loading ? (
-                      <tr>
-                        <td colSpan="8" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>내역을 불러오는 중...</td>
-                      </tr>
-                    ) : patientHistoryModalData.logs.length === 0 ? (
-                      <tr>
-                        <td colSpan="8" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>해당하는 내역이 없습니다.</td>
-                      </tr>
-                    ) : (
-                      patientHistoryLogGroups.flatMap((group) => [
-                        <tr key={`history-group-${group.key}`}>
-                          <td
-                            colSpan="8"
-                            style={{
-                              background: group.key === 'manual' ? 'rgba(79, 70, 229, 0.08)' : 'rgba(14, 165, 233, 0.08)',
-                              color: 'var(--text-primary, #1f2937)',
-                              fontWeight: 700,
-                              padding: '8px 12px',
-                              textAlign: 'left',
-                            }}
-                          >
-                            {group.label} <span style={{ color: 'var(--text-secondary, #6b7280)', fontWeight: 500 }}>({group.logs.length})</span>
-                          </td>
-                        </tr>,
-                        ...group.logs.map((log, idx) => (
-                        <tr 
-                          key={`${group.key}-${log.id || log.date}-${idx}`} 
-                          onClick={() => handleApplyHistoryToCell(log)}
-                          style={{ cursor: 'pointer', backgroundColor: log.id === 'draft' ? 'var(--bg-tertiary, #f0f7ff)' : undefined }}
-                          title={log.id === 'draft' ? "현재 선택된 셀의 날짜를 기반으로 한 임시 항목입니다" : "클릭하여 내역을 현재 셀에 적용합니다"}
-                        >
-                          <td style={{ textAlign: 'center' }}>{log.date}{(log.id === 'draft' || log.isCurrentCell) && <span style={{fontSize: '0.75rem', color: 'var(--brand-primary)', display: 'block', marginTop: '2px'}}>현재 셀</span>}</td>
-                          <td style={{ textAlign: 'center' }}>{log.chart_number}</td>
-                          <td style={{ textAlign: 'center' }}>{log.patient_name}</td>
-                          <td style={{ textAlign: 'center', color: log.type === 'manual' ? 'var(--brand-primary)' : 'inherit', fontWeight: log.type === 'manual' ? 600 : 400 }}>
-                            {log.prescription}
-                          </td>
-                          <td style={{ textAlign: 'center' }}>{log.body_part}</td>
-                          <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                            <input
-                              type="text"
-                              value={log.visit_count || ''}
-                              placeholder="-"
-                              style={{ width: '40px', textAlign: 'center', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '2px', outline: 'none' }}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setPatientHistoryModalData(prev => ({
-                                  ...prev,
-                                  logs: prev.logs.map(l => l.id === log.id ? { ...l, visit_count: val } : l)
-                                }));
-                              }}
-                              onBlur={(e) => {
-                                const newVal = e.target.value;
-                                if (newVal !== log._original_visit_count) {
-                                  // Update original to prevent re-saving
-                                  setPatientHistoryModalData(prev => ({
-                                    ...prev,
-                                    logs: prev.logs.map(l => l.id === log.id ? { ...l, _original_visit_count: newVal } : l)
-                                  }));
+              {patientHistoryModalData.loading ? (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>내역을 불러오는 중...</div>
+              ) : patientHistoryModalData.logs.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>해당하는 내역이 없습니다.</div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '14px', alignItems: 'start' }}>
+                  {patientHistoryLogGroups.map((group) => (
+                    <div
+                      key={group.key}
+                      style={{
+                        border: '1px solid var(--border-color, #d7dde5)',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        background: 'var(--bg-primary, #fff)',
+                      }}
+                    >
+                      <div
+                        style={{
+                          background: group.key === 'manual' ? 'rgba(161, 98, 7, 0.11)' : 'rgba(14, 165, 233, 0.1)',
+                          color: 'var(--text-primary, #1f2937)',
+                          fontWeight: 800,
+                          padding: '9px 12px',
+                          borderBottom: '1px solid var(--border-color, #d7dde5)',
+                        }}
+                      >
+                        {group.label} <span style={{ color: 'var(--text-secondary, #6b7280)', fontWeight: 600 }}>({group.logs.length})</span>
+                      </div>
+                      <div className="sw-compact-table-wrap">
+                        <table className="sw-summary-table sw-compact-summary-table" style={{ width: '100%', margin: 0, tableLayout: 'fixed' }}>
+                          <thead>
+                            <tr>
+                              <th style={{ width: '22%', textAlign: 'center' }}>날짜</th>
+                              <th style={{ width: '18%', textAlign: 'center' }}>처방</th>
+                              <th style={{ width: '20%', textAlign: 'center' }}>부위</th>
+                              <th style={{ width: '12%', textAlign: 'center' }}>회차</th>
+                              <th style={{ width: '28%', textAlign: 'center' }}>적용</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {group.logs.map((log, idx) => (
+                              <tr
+                                key={`${group.key}-${log.id || log.date}-${idx}`}
+                                onClick={() => handleApplyHistoryToCell(log)}
+                                style={{ cursor: 'pointer', backgroundColor: log.id === 'draft' ? 'var(--bg-tertiary, #f0f7ff)' : undefined }}
+                                title={log.id === 'draft' ? "현재 선택된 셀의 날짜를 기반으로 한 임시 항목입니다" : "클릭하여 내역을 현재 셀에 적용합니다"}
+                              >
+                                <td style={{ textAlign: 'center' }}>
+                                  {log.date}
+                                  {(log.id === 'draft' || log.isCurrentCell) && (
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--brand-primary)', display: 'block', marginTop: '2px' }}>현재 셀</span>
+                                  )}
+                                </td>
+                                <td style={{ textAlign: 'center', color: log.type === 'manual' ? 'var(--brand-primary)' : 'inherit', fontWeight: log.type === 'manual' ? 600 : 400 }}>
+                                  {log.prescription}
+                                </td>
+                                <td style={{ textAlign: 'center' }}>{log.body_part}</td>
+                                <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="text"
+                                    value={log.visit_count || ''}
+                                    placeholder="-"
+                                    style={{ width: '40px', textAlign: 'center', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '2px', outline: 'none' }}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setPatientHistoryModalData(prev => ({
+                                        ...prev,
+                                        logs: prev.logs.map(l => l.id === log.id ? { ...l, visit_count: val } : l)
+                                      }));
+                                    }}
+                                    onBlur={(e) => {
+                                      const newVal = e.target.value;
+                                      if (newVal !== log._original_visit_count) {
+                                        setPatientHistoryModalData(prev => ({
+                                          ...prev,
+                                          logs: prev.logs.map(l => l.id === log.id ? { ...l, _original_visit_count: newVal } : l)
+                                        }));
 
-                                  if (log.id === 'draft') {
-                                    // 현재 선택된 셀을 위한 임시 항목이므로, 선택된 셀 업데이트
-                                    handleApplyHistoryToCell({ ...log, visit_count: newVal });
-                                  } else {
-                                    // 특정 과거 날짜의 로그이므로, 선택된 셀 덮어쓰기를 하지 않고 DB와 해당 날짜의 셀만 업데이트
-                                    handleUpdateLogVisitCount(log, newVal);
-                                  }
-                                }
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.target.blur(); // Trigger onBlur
-                                }
-                              }}
-                            />
-                          </td>
-                          <td style={{ textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.85em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {log.memo}
-                          </td>
-                          <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                            <button
-                              type="button"
-                              onClick={() => handleApplyHistoryToCell(log)}
-                              style={{
-                                border: '1px solid var(--brand-primary, #4f46e5)',
-                                background: 'var(--brand-primary, #4f46e5)',
-                                color: '#fff',
-                                borderRadius: '6px',
-                                padding: '5px 9px',
-                                fontSize: '0.82rem',
-                                fontWeight: 600,
-                                lineHeight: 1.2,
-                                cursor: 'pointer',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              선택한 셀에 적용
-                            </button>
-                          </td>
-                        </tr>
-                        ))
-                      ])
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                                        if (log.id === 'draft') {
+                                          handleApplyHistoryToCell({ ...log, visit_count: newVal });
+                                        } else {
+                                          handleUpdateLogVisitCount(log, newVal);
+                                        }
+                                      }
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.target.blur();
+                                      }
+                                    }}
+                                  />
+                                </td>
+                                <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleApplyHistoryToCell(log)}
+                                    style={{
+                                      border: '1px solid var(--brand-primary, #4f46e5)',
+                                      background: 'var(--brand-primary, #4f46e5)',
+                                      color: '#fff',
+                                      borderRadius: '6px',
+                                      padding: '5px 9px',
+                                      fontSize: '0.82rem',
+                                      fontWeight: 600,
+                                      lineHeight: 1.2,
+                                      cursor: 'pointer',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    선택한 셀에 적용
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
