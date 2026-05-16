@@ -473,11 +473,12 @@
 
 /* 5. Settings (Gray) */
 .top-tab--settings {
-  --tab-bg: #c0c6cc;
-  --tab-hover-bg: #e2e8f0;
-  --tab-active-bg: #475569;
-  --tab-active-border: #334155;
-  --tab-shadow: rgba(71, 85, 105, 0.16);
+  --tab-bg: #ffffff;
+  --tab-hover-bg: #f8fafc;
+  --tab-active-bg: #d1d5db;
+  --tab-active-border: #6b7280;
+  --tab-active-text: #111827;
+  --tab-shadow: rgba(107, 114, 128, 0.16);
 }
 
 .top-tab.month-tab {
