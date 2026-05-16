@@ -73,7 +73,11 @@ export default function useSchedulerAutoText({
     ).sort((a, b) => getOptionSortValue(b).localeCompare(getOptionSortValue(a)));
 
     return new Promise((resolve) => {
-      setChartSelector({ options: chartOptions, rawName, resolve });
+      setChartSelector({
+        options: chartOptions,
+        rawName,
+        resolve: (selected) => resolve(selected ? { ...selected, advanceVisitOnApply: true } : selected),
+      });
     });
   }, [setChartSelector]);
 
@@ -587,7 +591,15 @@ export default function useSchedulerAutoText({
       : await pickChartOption(options, rawName);
     if (!selected) return { text: rawName };
 
-    const effectiveVisitCount = selected.preferredNextVisit || selected.nextVisit;
+    const baseVisitCount = selected.preferredNextVisit || selected.nextVisit;
+    const numericVisitCount = Number.parseInt(baseVisitCount || '0', 10) || 0;
+    const shouldAdvanceSelectorVisit =
+      selected.advanceVisitOnApply &&
+      numericVisitCount > 0 &&
+      !explicitVisitSuffix &&
+      !explicitNoteSuffix &&
+      manualSession === null;
+    const effectiveVisitCount = shouldAdvanceSelectorVisit ? numericVisitCount + 1 : baseVisitCount;
     const effectiveBodyPart = searchChart
       ? (selected.preferredBodyPart || selected.latestBodyPart || '')
       : (selected.preferredBodyPart || selected.latestBodyPart || undefined);
