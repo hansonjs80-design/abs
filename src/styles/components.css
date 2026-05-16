@@ -388,7 +388,7 @@
   border-radius: 11px 11px 0 0;
   background: var(--tab-bg);
   color: var(--tab-text-color);
-  font-size: 1.08rem;
+  font-size: 1.19rem;
   font-weight: 800;
   line-height: 1;
   text-decoration: none;
@@ -403,7 +403,7 @@
 
 .top-tab:hover {
   background: var(--tab-hover-bg);
-  padding-top: 10px;
+  padding-bottom: 10px;
   box-shadow: 8px 0px 16px -2px rgba(15, 23, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   z-index: 2;
 }
@@ -411,7 +411,8 @@
 .top-tab > span,
 .top-tab > svg,
 .top-tab .month-picker,
-.top-tab .month-picker-label {
+.top-tab .month-picker-label,
+.top-tab .tab-content-switcher * {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -420,10 +421,15 @@
   display: inline-block;
 }
 
+.top-tab svg {
+  width: 19px;
+  height: 19px;
+}
+
 .top-tab:hover > span,
 .top-tab:hover > svg,
-.top-tab:hover .month-picker {
-  transform: translateY(-2px);
+.top-tab:hover .month-picker,
+.top-tab:hover .tab-content-switcher * {
   filter: brightness(1.2);
 }
 
@@ -553,7 +559,8 @@
 
 .top-tab.active:hover > span,
 .top-tab.active:hover .month-picker-label,
-.top-tab.active:hover svg {
+.top-tab.active:hover svg,
+.top-tab.active:hover .tab-content-switcher * {
   filter: brightness(1.2);
 }
 
