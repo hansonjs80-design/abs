@@ -379,10 +379,10 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 35px;
+  min-height: 32px;
   margin-left: 0;
   margin-bottom: 0px;
-  padding: 8px 16px;
+  padding: 4px 16px;
   border: 2px solid rgba(0, 0, 0, 0.08);
   border-bottom: 2px solid transparent;
   border-radius: 11px 11px 0 0;
