@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import MonthPicker from '../common/MonthPicker';
 import PrintButton from '../common/PrintButton';
 import { useAuth } from '../../contexts/AuthContext';
@@ -7,6 +7,7 @@ import { getAllowedTabs } from '../../lib/authPermissions';
 
 export default function TopTabs() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const items = getAllowedTabs(user);
   const [now, setNow] = useState(() => new Date());
@@ -42,37 +43,35 @@ export default function TopTabs() {
               ? location.pathname === '/'
               : location.pathname === item.path;
 
-            if (isActive && item.monthLabel) {
-              return (
-                <span key={item.path} className="top-tab-with-date">
-                  <div 
-                    className={`top-tab active month-tab ${item.tabClass}`}
-                    onClick={(e) => {
+            return (
+              <span key={item.path} className="top-tab-with-date">
+                <div
+                  className={`top-tab ${item.tabClass}${isActive ? ' active' : ''}${isActive && item.monthLabel ? ' month-tab' : ''}`}
+                  onClick={(e) => {
+                    if (isActive && item.monthLabel) {
                       if (e.target.closest('.month-picker-label') || e.target.closest('.month-nav-btn') || e.target.closest('.month-dropdown')) return;
                       const label = e.currentTarget.querySelector('.month-picker-label');
                       if (label) label.click();
-                    }}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <Icon size={18} />
-                    <MonthPicker suffix={item.monthLabel} variant="tab" />
-                  </div>
-                </span>
-              );
-            }
-
-            return (
-              <span key={item.path} className="top-tab-with-date">
-                <NavLink
-                  to={item.path}
-                  end={item.path === '/'}
-                  className={({ isActive: linkActive }) => `top-tab ${item.tabClass}${linkActive ? ' active' : ''}`}
-                  onMouseDown={notifyBeforeTabChange}
-                  onTouchStart={notifyBeforeTabChange}
+                      return;
+                    }
+                    if (!isActive) {
+                      notifyBeforeTabChange();
+                      navigate(item.path);
+                    }
+                  }}
+                  onMouseDown={!isActive ? notifyBeforeTabChange : undefined}
+                  onTouchStart={!isActive ? notifyBeforeTabChange : undefined}
+                  style={{ cursor: 'pointer' }}
+                  role="tab"
+                  aria-selected={isActive}
                 >
                   <Icon size={18} />
-                  <span>{item.label}</span>
-                </NavLink>
+                  {isActive && item.monthLabel ? (
+                    <MonthPicker suffix={item.monthLabel} variant="tab" />
+                  ) : (
+                    <span>{item.label}</span>
+                  )}
+                </div>
               </span>
             );
           })}

@@ -592,6 +592,15 @@
   --tab-shadow: rgba(107, 114, 128, 0.16);
 }
 
+.top-tab--settings.active {
+  font-size: 1.45rem;
+}
+
+.top-tab--settings.active svg {
+  width: 19px;
+  height: 19px;
+}
+
 .top-tab.month-tab {
   gap: 7px;
   padding: 6px 16px 6px 12px;
