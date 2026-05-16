@@ -556,10 +556,7 @@
   color: var(--tab-active-border);
 }
 
-.top-tab.active:hover > span,
-.top-tab.active:hover .month-picker-label,
-.top-tab.active:hover svg,
-.top-tab.active:hover .tab-content-switcher * {
+.top-tab.active:hover .top-tab-inner {
   filter: brightness(1.2);
 }
 
