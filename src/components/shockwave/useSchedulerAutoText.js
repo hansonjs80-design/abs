@@ -76,7 +76,7 @@ export default function useSchedulerAutoText({
       setChartSelector({
         options: chartOptions,
         rawName,
-        resolve: (selected) => resolve(selected ? { ...selected, advanceVisitOnApply: true } : selected),
+        resolve,
       });
     });
   }, [setChartSelector]);
@@ -563,12 +563,16 @@ export default function useSchedulerAutoText({
       const preferredNextVisit = preferredBodyPart
         ? bodyPartVisitMap[normalizeBodyPartKey(preferredBodyPart)]?.nextVisit
         : null;
+      const preferredLastVisit = preferredBodyPart
+        ? bodyPartVisitMap[normalizeBodyPartKey(preferredBodyPart)]?.lastVisit
+        : null;
 
       return {
         chartNumber,
         namePart,
         cleanName: cleanPatientName,
         nextVisit,
+        displayVisit: preferredLastVisit || lastVisit || nextVisit,
         lastDate: item.date || '',
         prescription: item.prescription || '',
         prescriptions,
@@ -580,6 +584,7 @@ export default function useSchedulerAutoText({
         bodyPartVisitMap,
         preferredBodyPart,
         preferredNextVisit,
+        preferredLastVisit,
         optionLabel: getSchedulerHistoryTypeLabel({ type: item.type, doseTag: candidate.doseTag, prescription: item.prescription }),
       };
     });
@@ -591,15 +596,7 @@ export default function useSchedulerAutoText({
       : await pickChartOption(options, rawName);
     if (!selected) return { text: rawName };
 
-    const baseVisitCount = selected.preferredNextVisit || selected.nextVisit;
-    const numericVisitCount = Number.parseInt(baseVisitCount || '0', 10) || 0;
-    const shouldAdvanceSelectorVisit =
-      selected.advanceVisitOnApply &&
-      numericVisitCount > 0 &&
-      !explicitVisitSuffix &&
-      !explicitNoteSuffix &&
-      manualSession === null;
-    const effectiveVisitCount = shouldAdvanceSelectorVisit ? numericVisitCount + 1 : baseVisitCount;
+    const effectiveVisitCount = selected.preferredNextVisit || selected.nextVisit;
     const effectiveBodyPart = searchChart
       ? (selected.preferredBodyPart || selected.latestBodyPart || '')
       : (selected.preferredBodyPart || selected.latestBodyPart || undefined);

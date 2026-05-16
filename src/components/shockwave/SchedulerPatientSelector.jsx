@@ -30,7 +30,7 @@ export default function SchedulerPatientSelector({ selector, onSelect, onCancel 
               <span className="shockwave-chart-selector-chart">{option.chartNumber}</span>
               <span className="shockwave-chart-selector-name">{option.namePart}</span>
               <span className="shockwave-chart-selector-detail">{getOptionDetail(option)}</span>
-              <span className="shockwave-chart-selector-meta">{option.nextVisit}회차 · {option.lastDate}</span>
+              <span className="shockwave-chart-selector-meta">{option.displayVisit || option.nextVisit}회차 · {option.lastDate}</span>
             </button>
           ))}
         </div>
