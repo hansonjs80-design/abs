@@ -63,6 +63,15 @@ import {
   addBodyPartToMap,
 } from '../../lib/schedulerUtils';
 
+const PATIENT_HISTORY_GROUPS = [
+  { key: 'shockwave', label: '충격파 내역' },
+  { key: 'manual', label: '도수치료 내역' },
+];
+
+const getPatientHistoryGroupKey = (log) => (
+  log?.type === 'manual' ? 'manual' : 'shockwave'
+);
+
 const ContextMenuLocalInput = ({ value, onChange, onKeyDown, onBlur, className, placeholder, autoFocus, onCompositionStart, onCompositionEnd, inputMode, pattern }) => {
   const [localValue, setLocalValue] = useState(value || '');
   
@@ -461,6 +470,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   // 환자 내역 검색 팝업 상태 (Cmd+F)
   const [patientHistoryModalOpen, setPatientHistoryModalOpen] = useState(false);
   const [patientHistoryModalData, setPatientHistoryModalData] = useState({ loading: false, logs: [], searchName: '', searchChart: '' });
+  const patientHistoryLogGroups = useMemo(() => {
+    const groupMap = new Map(PATIENT_HISTORY_GROUPS.map((group) => [group.key, { ...group, logs: [] }]));
+    (patientHistoryModalData.logs || []).forEach((log) => {
+      const groupKey = getPatientHistoryGroupKey(log);
+      const group = groupMap.get(groupKey) || groupMap.get('shockwave');
+      group.logs.push(log);
+    });
+    return PATIENT_HISTORY_GROUPS
+      .map((group) => groupMap.get(group.key))
+      .filter((group) => group.logs.length > 0);
+  }, [patientHistoryModalData.logs]);
 
   // Presence 기능 비활성화 – 실시간 데이터 동기화만 유지
 
@@ -2365,9 +2385,24 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                         <td colSpan="8" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>해당하는 내역이 없습니다.</td>
                       </tr>
                     ) : (
-                      patientHistoryModalData.logs.map((log, idx) => (
+                      patientHistoryLogGroups.flatMap((group) => [
+                        <tr key={`history-group-${group.key}`}>
+                          <td
+                            colSpan="8"
+                            style={{
+                              background: group.key === 'manual' ? 'rgba(79, 70, 229, 0.08)' : 'rgba(14, 165, 233, 0.08)',
+                              color: 'var(--text-primary, #1f2937)',
+                              fontWeight: 700,
+                              padding: '8px 12px',
+                              textAlign: 'left',
+                            }}
+                          >
+                            {group.label} <span style={{ color: 'var(--text-secondary, #6b7280)', fontWeight: 500 }}>({group.logs.length})</span>
+                          </td>
+                        </tr>,
+                        ...group.logs.map((log, idx) => (
                         <tr 
-                          key={`${log.date}-${idx}`} 
+                          key={`${group.key}-${log.id || log.date}-${idx}`} 
                           onClick={() => handleApplyHistoryToCell(log)}
                           style={{ cursor: 'pointer', backgroundColor: log.id === 'draft' ? 'var(--bg-tertiary, #f0f7ff)' : undefined }}
                           title={log.id === 'draft' ? "현재 선택된 셀의 날짜를 기반으로 한 임시 항목입니다" : "클릭하여 내역을 현재 셀에 적용합니다"}
@@ -2441,7 +2476,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             </button>
                           </td>
                         </tr>
-                      ))
+                        ))
+                      ])
                     )}
                   </tbody>
                 </table>
