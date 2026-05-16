@@ -65,19 +65,21 @@ export default function TopTabs() {
                   role="tab"
                   aria-selected={isActive}
                 >
-                  <Icon size={18} />
-                  {item.monthLabel ? (
-                    <div className="tab-content-switcher">
-                      <span className="tab-content-inactive">
-                        <span>{item.label}</span>
-                      </span>
-                      <span className="tab-content-active">
-                        <MonthPicker suffix={item.monthLabel} variant="tab" />
-                      </span>
-                    </div>
-                  ) : (
-                    <span>{item.label}</span>
-                  )}
+                  <div className="top-tab-inner">
+                    <Icon size={18} />
+                    {item.monthLabel ? (
+                      <div className="tab-content-switcher">
+                        <span className="tab-content-inactive">
+                          <span>{item.label}</span>
+                        </span>
+                        <span className="tab-content-active">
+                          <MonthPicker suffix={item.monthLabel} variant="tab" />
+                        </span>
+                      </div>
+                    ) : (
+                      <span>{item.label}</span>
+                    )}
+                  </div>
                 </div>
               </span>
             );

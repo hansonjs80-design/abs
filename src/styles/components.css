@@ -378,7 +378,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
   min-height: 32px;
   margin-left: 0;
   margin-bottom: 0px;
@@ -408,16 +407,16 @@
   z-index: 2;
 }
 
-.top-tab > span,
-.top-tab > svg,
-.top-tab .month-picker,
-.top-tab .month-picker-label,
-.top-tab .tab-content-switcher * {
+.top-tab-inner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   transition: all 0.6s ease-in-out;
 }
 
-.top-tab > span,
-.top-tab > svg {
+.top-tab > .top-tab-inner > span,
+.top-tab > .top-tab-inner > svg {
   display: inline-block;
 }
 
@@ -426,10 +425,7 @@
   height: 18px;
 }
 
-.top-tab:hover > span,
-.top-tab:hover svg,
-.top-tab:hover .month-picker,
-.top-tab:hover .tab-content-switcher {
+.top-tab:hover .top-tab-inner {
   transform: translateY(-3px);
   filter: brightness(1.2);
 }
