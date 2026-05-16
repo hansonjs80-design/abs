@@ -427,10 +427,10 @@
 }
 
 .top-tab:hover > span,
-.top-tab:hover > svg,
+.top-tab:hover svg,
 .top-tab:hover .month-picker,
 .top-tab:hover .tab-content-switcher {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   filter: brightness(1.2);
 }
 
