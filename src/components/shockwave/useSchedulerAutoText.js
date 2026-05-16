@@ -306,7 +306,8 @@ export default function useSchedulerAutoText({
 
     const schedulerOptions = findSchedulerHistoryCandidates({ w, d, r, c }, rawName, targetDate)
       .filter((option) => !userRemovedDoseTag || !has4060Pattern(option.nextText));
-    if (schedulerOptions.length > 0) {
+    const applySchedulerOption = async () => {
+      if (schedulerOptions.length === 0) return null;
       const selected = schedulerOptions.length === 1
         ? schedulerOptions[0]
         : await pickChartOption(schedulerOptions, rawName);
@@ -332,7 +333,7 @@ export default function useSchedulerAutoText({
         bodyPart: searchChart ? (selected.latestBodyPart || '') : (selected.latestBodyPart || undefined),
         mergeSpan: searchChart ? (selected.mergeSpan || clearPatientMergeSpan()) : selected.mergeSpan,
       };
-    }
+    };
 
     const shockwaveQuery = supabase.from('shockwave_patient_logs')
       .select('patient_name, chart_number, visit_count, date, prescription, body_part')
@@ -421,6 +422,9 @@ export default function useSchedulerAutoText({
     });
 
     if (matches.length === 0) {
+      const schedulerResult = await applySchedulerOption();
+      if (schedulerResult) return schedulerResult;
+
       if (searchChart) {
         return {
           text: rawName,

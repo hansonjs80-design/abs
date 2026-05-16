@@ -2300,7 +2300,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
       {patientHistoryModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999999 }}>
-          <div style={{ background: 'var(--bg-primary, #fff)', maxWidth: 1000, width: '95%', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: 'var(--bg-primary, #fff)', maxWidth: 1120, width: '95%', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--border-color, #eee)', background: 'var(--bg-secondary, #f8f9fa)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>환자 스케줄 내역 검색</h3>
@@ -2344,17 +2344,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       <th style={{ width: '12%', textAlign: 'center' }}>처방</th>
                       <th style={{ width: '15%', textAlign: 'center' }}>부위</th>
                       <th style={{ width: '8%', textAlign: 'center' }}>회차</th>
-                      <th style={{ width: '31%', textAlign: 'left' }}>메모</th>
+                      <th style={{ width: '18%', textAlign: 'left' }}>메모</th>
+                      <th style={{ width: '13%', textAlign: 'center' }}>적용</th>
                     </tr>
                   </thead>
                   <tbody>
                     {patientHistoryModalData.loading ? (
                       <tr>
-                        <td colSpan="7" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>내역을 불러오는 중...</td>
+                        <td colSpan="8" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>내역을 불러오는 중...</td>
                       </tr>
                     ) : patientHistoryModalData.logs.length === 0 ? (
                       <tr>
-                        <td colSpan="7" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>해당하는 내역이 없습니다.</td>
+                        <td colSpan="8" style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>해당하는 내역이 없습니다.</td>
                       </tr>
                     ) : (
                       patientHistoryModalData.logs.map((log, idx) => (
@@ -2411,6 +2412,26 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                           </td>
                           <td style={{ textAlign: 'left', color: 'var(--text-secondary)', fontSize: '0.85em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {log.memo}
+                          </td>
+                          <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => handleApplyHistoryToCell(log)}
+                              style={{
+                                border: '1px solid var(--brand-primary, #4f46e5)',
+                                background: 'var(--brand-primary, #4f46e5)',
+                                color: '#fff',
+                                borderRadius: '6px',
+                                padding: '5px 9px',
+                                fontSize: '0.82rem',
+                                fontWeight: 600,
+                                lineHeight: 1.2,
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              선택한 셀에 적용
+                            </button>
                           </td>
                         </tr>
                       ))

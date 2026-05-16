@@ -250,7 +250,8 @@ export default function usePatientHistoryActions({
         : (memos[key]?.content || pendingDisplayValues[key] || '');
 
       if (!content.trim()) {
-        alert(`디버그: 이름이나 차트번호가 비어있습니다. (${content})`);
+        setPatientHistoryModalData({ loading: false, logs: [], searchName: '', searchChart: '' });
+        setPatientHistoryModalOpen(true);
         return;
       }
 
@@ -259,7 +260,8 @@ export default function usePatientHistoryActions({
       const searchChart = parsed.patientChart ? String(parsed.patientChart).trim() : null;
 
       if (!searchName && !searchChart) {
-        alert(`디버그: 이름/차트번호를 파악할 수 없습니다: ${content}`);
+        setPatientHistoryModalData({ loading: false, logs: [], searchName: '', searchChart: '' });
+        setPatientHistoryModalOpen(true);
         return;
       }
 
