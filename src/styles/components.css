@@ -443,6 +443,11 @@
   overflow: visible;
 }
 
+.top-tab--stats-sw.active,
+.top-tab--stats-mt.active {
+  color: #111827;
+}
+
 .top-tab.active:hover {
   color: var(--tab-active-border);
   background: #f8fafc;
