@@ -830,6 +830,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     return () => window.removeEventListener('clinic-before-route-change', flushEditDraft);
   }, [flushEditDraft]);
 
+  const focusSelectedCellInput = useCallback(() => {
+    requestAnimationFrame(() => {
+      const input = editInputRef.current;
+      if (!input || !input.dataset.hiddenInput) return;
+      if (document.activeElement !== input) {
+        input.focus({ preventScroll: true });
+      }
+    });
+  }, []);
+
   const selectSingleCell = useCallback((cell) => {
     const normalizedCell = normalizeCellToMergeMaster(cell);
     const key = cellKey(normalizedCell.w, normalizedCell.d, normalizedCell.r, normalizedCell.c);
@@ -837,7 +847,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setRangeEnd(null);
     setSelectedKeys(new Set([key]));
     viewRef.current?.focus({ preventScroll: true });
-  }, [cellKey, normalizeCellToMergeMaster]);
+    focusSelectedCellInput();
+  }, [cellKey, focusSelectedCellInput, normalizeCellToMergeMaster]);
 
   const updateDraggedSelection = useCallback((targetCell) => {
     const dragState = dragSelectionRef.current;
@@ -1415,12 +1426,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   useEffect(() => {
     if (!selectedCell || editingCell) return;
     if (isEditableTarget(document.activeElement)) return;
-    requestAnimationFrame(() => {
-      const input = editInputRef.current;
-      if (!input || !input.dataset.hiddenInput) return;
-      input.focus();
-    });
-  }, [selectedCell, editingCell, isEditableTarget]);
+    focusSelectedCellInput();
+  }, [selectedCell, editingCell, isEditableTarget, focusSelectedCellInput]);
 
   // 편집 완료 후 아래로 이동
   const handleEditKeyDown = useCallback((e, w, d, r, c) => {
