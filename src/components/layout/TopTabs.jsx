@@ -11,6 +11,11 @@ export default function TopTabs() {
   const { user } = useAuth();
   const items = getAllowedTabs(user);
   const [now, setNow] = useState(() => new Date());
+  const [optimisticPath, setOptimisticPath] = useState(null);
+
+  useEffect(() => {
+    setOptimisticPath(null);
+  }, [location.pathname]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 1000);
@@ -39,9 +44,10 @@ export default function TopTabs() {
         <div className="top-tabs-track">
           {items.map((item) => {
             const Icon = item.icon;
+            const currentPath = optimisticPath || location.pathname;
             const isActive = item.path === '/'
-              ? location.pathname === '/'
-              : location.pathname === item.path;
+              ? currentPath === '/'
+              : currentPath === item.path;
 
             return (
               <span key={item.path} className="top-tab-with-date">
@@ -56,7 +62,12 @@ export default function TopTabs() {
                     }
                     if (!isActive) {
                       notifyBeforeTabChange();
-                      navigate(item.path);
+                      // Optimistically update UI immediately to unblock CSS animations
+                      setOptimisticPath(item.path);
+                      // Defer heavy route change to allow browser to composite the animation
+                      setTimeout(() => {
+                        navigate(item.path);
+                      }, 50);
                     }
                   }}
                   onMouseDown={!isActive ? notifyBeforeTabChange : undefined}
