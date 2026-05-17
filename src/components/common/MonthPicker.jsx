@@ -10,7 +10,10 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setShowDropdown(false);
+      if (ref.current && !ref.current.contains(e.target)) {
+        if (variant === 'tab' && e.target.closest('.top-tab.active')) return;
+        setShowDropdown(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
