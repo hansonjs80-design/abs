@@ -458,14 +458,14 @@
 }
 
 .top-tab.active .tab-content-active {
-  max-width: 160px;
+  max-width: 400px;
   opacity: 1;
   pointer-events: auto;
   transition: max-width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease-in 0.15s;
 }
 
 .top-tab:not(.active) .tab-content-inactive {
-  max-width: 80px;
+  max-width: 250px;
   opacity: 1;
   pointer-events: auto;
   transition: max-width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease-in 0.15s;
