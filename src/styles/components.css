@@ -391,7 +391,7 @@
   font-weight: 800;
   line-height: 1;
   text-decoration: none;
-  box-shadow: 6px 0px 12px -2px rgba(15, 23, 42, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: 6px -4px 12px -2px rgba(15, 23, 42, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   transform: none;
   transform-origin: bottom center;
   filter: none;
@@ -403,7 +403,7 @@
 .top-tab:not(.active):hover {
   background: var(--tab-hover-bg);
   padding: 4px 16px 10px 16px;
-  box-shadow: 8px 0px 16px -2px rgba(15, 23, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow: 8px -6px 16px -2px rgba(15, 23, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   z-index: 2;
 }
 
@@ -485,7 +485,7 @@
   padding: 8px 19px 4px;
   min-height: 44px;
   transform: none;
-  box-shadow: 8px 0px 16px -2px rgba(15, 23, 42, 0.4), -2px -2px 8px -2px rgba(15, 23, 42, 0.1);
+  box-shadow: 8px -6px 16px -2px rgba(15, 23, 42, 0.4), -2px -4px 8px -2px rgba(15, 23, 42, 0.1);
   z-index: 3;
   font-size: 1.31rem;
   font-weight: 900;
@@ -520,7 +520,7 @@
   border-color: var(--tab-active-border);
   border-bottom-color: #f8fafc;
   transform: none;
-  box-shadow: 8px 0px 16px -2px rgba(15, 23, 42, 0.4), -2px -2px 8px -2px rgba(15, 23, 42, 0.1);
+  box-shadow: 8px -6px 16px -2px rgba(15, 23, 42, 0.4), -2px -4px 8px -2px rgba(15, 23, 42, 0.1);
 }
 
 .top-tab::before,
