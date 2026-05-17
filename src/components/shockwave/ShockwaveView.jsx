@@ -220,7 +220,7 @@ const MemoizedCell = memo(({
   
   // NOTE: hardcoded colors based on constants
   if (cellData?.bg_color === '#e8f5e9') cls += ' preserve'; // TREATMENT_COMPLETE_BG
-  if (cellData?.bg_color === '#ffebee') cls += ' cancelled'; // TREATMENT_CANCEL_BG
+  if (cellData?.bg_color === '#f4cccc') cls += ' cancelled'; // TREATMENT_CANCEL_BG
   if (has4060Pattern(content)) cls += ' color-4060';
   if (hasCellMemo) cls += ' has-memo';
   if (isSelected) cls += ' selected';
