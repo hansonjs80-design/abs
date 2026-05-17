@@ -463,6 +463,7 @@
   max-width: 400px;
   opacity: 1;
   pointer-events: auto;
+  overflow: visible;
   transition: max-width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease-in 0.15s;
 }
 

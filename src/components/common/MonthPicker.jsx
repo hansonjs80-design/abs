@@ -35,14 +35,14 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
         <ChevronLeft size={18} />
       </button>
 
-      <span
+      <button
+        type="button"
         className="month-picker-label"
         onClick={() => setShowDropdown(!showDropdown)}
-        role="button"
-        tabIndex={0}
+        style={{ background: 'none', border: 'none', font: 'inherit', color: 'inherit', padding: 0, margin: 0, cursor: 'pointer' }}
       >
         {labelText}
-      </span>
+      </button>
 
       <button className="month-nav-btn" onClick={() => navigateMonth(1)} aria-label="다음 달">
         <ChevronRight size={18} />
