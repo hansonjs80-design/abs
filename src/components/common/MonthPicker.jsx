@@ -52,8 +52,6 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
       className={`month-picker${variant === 'tab' ? ' tab-variant' : ''}`} 
       ref={containerRef} 
       style={{ position: 'relative' }}
-      onMouseEnter={variant === 'tab' ? () => setShowDropdown(true) : undefined}
-      onMouseLeave={variant === 'tab' ? () => setShowDropdown(false) : undefined}
     >
       <button className="month-nav-btn" onClick={() => navigateMonth(-1)} aria-label="이전 달">
         <ChevronLeft size={18} />
@@ -62,7 +60,7 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
       <button
         type="button"
         className="month-picker-label"
-        onClick={handleToggle}
+        onClick={variant === 'tab' ? undefined : handleToggle}
         style={{ background: 'none', border: 'none', font: 'inherit', color: 'inherit', padding: 0, margin: 0, cursor: 'pointer' }}
       >
         {labelText}
@@ -72,8 +70,8 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
         <ChevronRight size={18} />
       </button>
 
-      {showDropdown && (
-        <div className="month-dropdown">
+      {(showDropdown || variant === 'tab') && (
+        <div className={`month-dropdown ${variant === 'tab' ? 'css-hover-dropdown' : ''}`}>
           <div className="month-dropdown-year">
             <button className="btn-icon" onClick={() => setDropdownYear(y => y - 1)}>
               <ChevronLeft size={16} />

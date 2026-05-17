@@ -848,6 +848,21 @@
   animation: fadeIn var(--transition-fast) ease-out;
 }
 
+/* 탭의 달력(variant='tab')은 오직 CSS Hover로만 완벽하게 동작하도록 설정 */
+.month-dropdown.css-hover-dropdown {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.month-picker.tab-variant:hover .month-dropdown.css-hover-dropdown,
+.month-picker.tab-variant:focus-within .month-dropdown.css-hover-dropdown {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
 /* hover 시 드롭다운과 버튼 사이의 빈 공간(gap)에서 onMouseLeave가 발생하는 것을 방지하는 투명 다리 */
 .month-dropdown::before {
   content: '';
