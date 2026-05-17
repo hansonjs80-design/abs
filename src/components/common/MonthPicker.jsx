@@ -8,29 +8,6 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
   const [dropdownYear, setDropdownYear] = useState(currentYear);
   const containerRef = useRef(null);
   const isToggling = useRef(false);
-  const tabCloseTimerRef = useRef(null);
-
-  const clearTabCloseTimer = () => {
-    if (tabCloseTimerRef.current) {
-      window.clearTimeout(tabCloseTimerRef.current);
-      tabCloseTimerRef.current = null;
-    }
-  };
-
-  const handleTabMouseEnter = () => {
-    if (variant !== 'tab') return;
-    clearTabCloseTimer();
-    setShowDropdown(true);
-  };
-
-  const handleTabMouseLeave = () => {
-    if (variant !== 'tab') return;
-    clearTabCloseTimer();
-    tabCloseTimerRef.current = window.setTimeout(() => {
-      setShowDropdown(false);
-      tabCloseTimerRef.current = null;
-    }, 180);
-  };
 
   const handleToggle = (e) => {
     e.stopPropagation();
@@ -38,7 +15,7 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
     if (isToggling.current) return;
     
     isToggling.current = true;
-    setShowDropdown(variant === 'tab' ? true : prev => !prev);
+    setShowDropdown(prev => !prev);
     
     setTimeout(() => {
       isToggling.current = false;
@@ -54,10 +31,7 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      clearTabCloseTimer();
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -77,8 +51,6 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
     <div 
       className={`month-picker${variant === 'tab' ? ' tab-variant' : ''}${variant === 'tab' && showDropdown ? ' dropdown-open' : ''}`} 
       ref={containerRef} 
-      onMouseEnter={handleTabMouseEnter}
-      onMouseLeave={handleTabMouseLeave}
       style={{ position: 'relative' }}
     >
       <button className="month-nav-btn" onClick={() => navigateMonth(-1)} aria-label="이전 달">
@@ -88,7 +60,7 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
       <button
         type="button"
         className="month-picker-label"
-        onClick={variant === 'tab' ? undefined : handleToggle}
+        onClick={handleToggle}
         style={{ background: 'none', border: 'none', font: 'inherit', color: 'inherit', padding: 0, margin: 0, cursor: 'pointer' }}
       >
         {labelText}
@@ -98,7 +70,7 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
         <ChevronRight size={18} />
       </button>
 
-      {(showDropdown || variant === 'tab') && (
+      {showDropdown && (
         <div className={`month-dropdown-wrapper ${variant === 'tab' ? 'css-hover-dropdown' : ''}`}>
           <div className="month-dropdown">
             <div className="month-dropdown-year">

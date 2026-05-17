@@ -863,13 +863,13 @@
   animation: fadeIn var(--transition-fast) ease-out;
 }
 
-/* 탭의 달력(variant='tab')은 오직 CSS Hover로만 완벽하게 동작하도록 설정 */
+/* 탭의 달력(variant='tab')은 월 글자 클릭 상태로 표시 */
 .month-dropdown-wrapper.css-hover-dropdown {
   position: absolute;
-  top: calc(100% - 2px);
+  top: calc(100% - 1px);
   left: 50%;
   transform: translateX(-50%);
-  padding-top: 14px; /* 탭에서 드롭다운으로 이동하는 hover 영역을 안정적으로 연결 */
+  padding-top: 7px;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -886,12 +886,71 @@
   z-index: auto;
 }
 
-.month-picker.tab-variant:hover .month-dropdown-wrapper.css-hover-dropdown,
 .month-picker.tab-variant.dropdown-open .month-dropdown-wrapper.css-hover-dropdown,
 .month-picker.tab-variant:focus-within .month-dropdown-wrapper.css-hover-dropdown {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+}
+
+.month-picker.tab-variant .month-dropdown {
+  width: 282px;
+  padding: 12px;
+  border: 2px solid var(--tab-active-border);
+  border-top-width: 3px;
+  border-radius: 0 0 12px 12px;
+  background: #f8fafc;
+  box-shadow: 6px 8px 18px rgba(15, 23, 42, 0.14);
+}
+
+.month-picker.tab-variant .month-dropdown::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -9px;
+  width: 38px;
+  height: 9px;
+  transform: translateX(-50%);
+  background: #f8fafc;
+  border-left: 2px solid var(--tab-active-border);
+  border-right: 2px solid var(--tab-active-border);
+}
+
+.month-picker.tab-variant .month-dropdown-year {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #d7dde7;
+}
+
+.month-picker.tab-variant .month-dropdown-year span {
+  color: var(--tab-active-border);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.month-picker.tab-variant .month-grid {
+  gap: 5px;
+}
+
+.month-picker.tab-variant .month-grid-item {
+  border-radius: 7px;
+  color: #334155;
+  font-weight: 700;
+}
+
+.month-picker.tab-variant .month-grid-item:hover {
+  background: color-mix(in srgb, var(--tab-active-border) 12%, #ffffff);
+  color: var(--tab-active-border);
+}
+
+.month-picker.tab-variant .month-grid-item.active {
+  background: var(--tab-active-border);
+  color: #ffffff;
+}
+
+.month-picker.tab-variant .month-grid-item.current:not(.active) {
+  border-color: var(--tab-active-border);
+  color: var(--tab-active-border);
 }
 
 .month-dropdown-year {
