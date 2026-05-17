@@ -448,7 +448,7 @@
   align-items: center;
   white-space: nowrap;
   overflow: hidden;
-  transition: max-width 0.6s ease-in-out, opacity 0.6s ease-in-out;
+  transition: max-width 0.6s ease-in-out, opacity 0.15s ease-out;
 }
 
 .top-tab:not(.active) .tab-content-active {
@@ -461,13 +461,14 @@
   max-width: 350px;
   opacity: 1;
   pointer-events: auto;
-  transition: max-width 0.6s ease-in-out, opacity 0.6s ease-in-out;
+  transition: max-width 0.6s ease-in-out, opacity 0.3s ease-in 0.15s;
 }
 
 .top-tab:not(.active) .tab-content-inactive {
   max-width: 200px;
   opacity: 1;
   pointer-events: auto;
+  transition: max-width 0.6s ease-in-out, opacity 0.3s ease-in 0.15s;
 }
 
 .top-tab.active .tab-content-inactive {
