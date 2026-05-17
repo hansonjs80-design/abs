@@ -54,13 +54,6 @@ export default function TopTabs() {
                 <div
                   className={`top-tab ${item.tabClass}${isActive ? ' active' : ''}${isActive && item.monthLabel ? ' month-tab' : ''}`}
                   onClick={(e) => {
-                    const target = e.target.nodeType === 3 ? e.target.parentNode : e.target;
-                    if (isActive && item.monthLabel) {
-                      if (target.closest('.month-picker-label') || target.closest('.month-nav-btn') || target.closest('.month-dropdown')) return;
-                      const label = e.currentTarget.querySelector('.month-picker-label');
-                      if (label) label.click();
-                      return;
-                    }
                     if (!isActive) {
                       notifyBeforeTabChange();
                       // Optimistically update UI immediately to unblock CSS animations
