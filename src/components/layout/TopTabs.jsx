@@ -64,8 +64,20 @@ export default function TopTabs() {
                       }, 50);
                     }
                   }}
-                  onMouseDown={!isActive ? notifyBeforeTabChange : undefined}
-                  onTouchStart={!isActive ? notifyBeforeTabChange : undefined}
+                  onMouseDown={(e) => {
+                    if (isActive) {
+                      e.stopPropagation();
+                    } else {
+                      notifyBeforeTabChange();
+                    }
+                  }}
+                  onTouchStart={(e) => {
+                    if (isActive) {
+                      e.stopPropagation();
+                    } else {
+                      notifyBeforeTabChange();
+                    }
+                  }}
                   style={{ cursor: 'pointer' }}
                   role="tab"
                   aria-selected={isActive}
