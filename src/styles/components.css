@@ -849,29 +849,33 @@
 }
 
 /* 탭의 달력(variant='tab')은 오직 CSS Hover로만 완벽하게 동작하도록 설정 */
-.month-dropdown.css-hover-dropdown {
+.month-dropdown-wrapper.css-hover-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding-top: 8px; /* 빈 공간(gap)을 채워 마우스 이동 시 onMouseLeave 방지 */
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
   transition: opacity 0.2s ease, visibility 0.2s ease;
+  z-index: 300;
 }
 
-.month-picker.tab-variant:hover .month-dropdown.css-hover-dropdown,
-.month-picker.tab-variant:focus-within .month-dropdown.css-hover-dropdown {
+/* 드롭다운 위치 재조정 (wrapper 내부) */
+.month-dropdown-wrapper .month-dropdown {
+  position: relative;
+  top: 0;
+  left: 0;
+  transform: none;
+  z-index: auto;
+}
+
+.month-picker.tab-variant:hover .month-dropdown-wrapper.css-hover-dropdown,
+.month-picker.tab-variant:focus-within .month-dropdown-wrapper.css-hover-dropdown {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-}
-
-/* hover 시 드롭다운과 버튼 사이의 빈 공간(gap)에서 onMouseLeave가 발생하는 것을 방지하는 투명 다리 */
-.month-dropdown::before {
-  content: '';
-  position: absolute;
-  top: -12px;
-  left: 0;
-  right: 0;
-  height: 12px;
-  background: transparent;
 }
 
 .month-dropdown-year {

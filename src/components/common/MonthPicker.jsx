@@ -71,30 +71,32 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
       </button>
 
       {(showDropdown || variant === 'tab') && (
-        <div className={`month-dropdown ${variant === 'tab' ? 'css-hover-dropdown' : ''}`}>
-          <div className="month-dropdown-year">
-            <button className="btn-icon" onClick={() => setDropdownYear(y => y - 1)}>
-              <ChevronLeft size={16} />
-            </button>
-            <span>{dropdownYear}년</span>
-            <button className="btn-icon" onClick={() => setDropdownYear(y => y + 1)}>
-              <ChevronRight size={16} />
-            </button>
-          </div>
-          <div className="month-grid">
-            {months.map((m, i) => {
-              const isActive = dropdownYear === currentYear && i + 1 === currentMonth;
-              const isCurrent = dropdownYear === todayYear && i + 1 === todayMonth;
-              return (
-                <button
-                  key={i}
-                  className={`month-grid-item${isActive ? ' active' : ''}${isCurrent && !isActive ? ' current' : ''}`}
-                  onClick={() => { goToMonth(dropdownYear, i + 1); setShowDropdown(false); }}
-                >
-                  {m}
-                </button>
-              );
-            })}
+        <div className={`month-dropdown-wrapper ${variant === 'tab' ? 'css-hover-dropdown' : ''}`}>
+          <div className="month-dropdown">
+            <div className="month-dropdown-year">
+              <button className="btn-icon" onClick={() => setDropdownYear(y => y - 1)}>
+                <ChevronLeft size={16} />
+              </button>
+              <span>{dropdownYear}년</span>
+              <button className="btn-icon" onClick={() => setDropdownYear(y => y + 1)}>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+            <div className="month-grid">
+              {months.map((m, i) => {
+                const isActive = dropdownYear === currentYear && i + 1 === currentMonth;
+                const isCurrent = dropdownYear === todayYear && i + 1 === todayMonth;
+                return (
+                  <button
+                    key={i}
+                    className={`month-grid-item${isActive ? ' active' : ''}${isCurrent && !isActive ? ' current' : ''}`}
+                    onClick={() => { goToMonth(dropdownYear, i + 1); setShowDropdown(false); }}
+                  >
+                    {m}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
