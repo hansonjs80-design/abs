@@ -58,6 +58,8 @@ export default function TopTabs() {
                     const target = e.target.nodeType === 3 ? e.target.parentNode : e.target;
                     if (isActive && item.monthLabel) {
                       if (target.closest('.month-picker-label') || target.closest('.month-nav-btn') || target.closest('.month-dropdown')) return;
+                      e.stopPropagation();
+                      e.preventDefault();
                       activeMonthPickerRef.current?.toggleDropdown();
                       return;
                     }

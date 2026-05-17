@@ -48,7 +48,11 @@ const MonthPicker = forwardRef(({ suffix = '', variant = 'default' }, ref) => {
       <button
         type="button"
         className="month-picker-label"
-        onClick={() => setShowDropdown(!showDropdown)}
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          setShowDropdown(prev => !prev);
+        }}
         style={{ background: 'none', border: 'none', font: 'inherit', color: 'inherit', padding: 0, margin: 0, cursor: 'pointer' }}
       >
         {labelText}
