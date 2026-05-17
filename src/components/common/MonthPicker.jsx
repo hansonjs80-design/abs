@@ -1,17 +1,24 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSchedule } from '../../contexts/ScheduleContext';
 
-export default function MonthPicker({ suffix = '', variant = 'default' }) {
+const MonthPicker = forwardRef(({ suffix = '', variant = 'default' }, ref) => {
   const { currentYear, currentMonth, navigateMonth, goToMonth } = useSchedule();
   const [showDropdown, setShowDropdown] = useState(false);
   const [dropdownYear, setDropdownYear] = useState(currentYear);
-  const ref = useRef(null);
+  const containerRef = useRef(null);
+
+  useImperativeHandle(ref, () => ({
+    toggleDropdown: () => setShowDropdown(prev => !prev),
+    openDropdown: () => setShowDropdown(true),
+    closeDropdown: () => setShowDropdown(false)
+  }));
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) {
-        if (variant === 'tab' && e.target.closest('.top-tab.active')) return;
+      const target = e.target.nodeType === 3 ? e.target.parentNode : e.target;
+      if (containerRef.current && !containerRef.current.contains(target)) {
+        if (variant === 'tab' && target.closest && target.closest('.top-tab.active')) return;
         setShowDropdown(false);
       }
     };
@@ -33,7 +40,7 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
   }, [currentYear, currentMonth, suffix]);
 
   return (
-    <div className={`month-picker${variant === 'tab' ? ' tab-variant' : ''}`} ref={ref} style={{ position: 'relative' }}>
+    <div className={`month-picker${variant === 'tab' ? ' tab-variant' : ''}`} ref={containerRef} style={{ position: 'relative' }}>
       <button className="month-nav-btn" onClick={() => navigateMonth(-1)} aria-label="이전 달">
         <ChevronLeft size={18} />
       </button>
@@ -81,4 +88,6 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
       )}
     </div>
   );
-}
+});
+
+export default MonthPicker;

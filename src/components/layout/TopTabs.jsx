@@ -12,6 +12,7 @@ export default function TopTabs() {
   const items = getAllowedTabs(user);
   const [now, setNow] = useState(() => new Date());
   const [optimisticPath, setOptimisticPath] = useState(null);
+  const activeMonthPickerRef = useRef(null);
 
   useEffect(() => {
     setOptimisticPath(null);
@@ -54,10 +55,10 @@ export default function TopTabs() {
                 <div
                   className={`top-tab ${item.tabClass}${isActive ? ' active' : ''}${isActive && item.monthLabel ? ' month-tab' : ''}`}
                   onClick={(e) => {
+                    const target = e.target.nodeType === 3 ? e.target.parentNode : e.target;
                     if (isActive && item.monthLabel) {
-                      if (e.target.closest('.month-picker-label') || e.target.closest('.month-nav-btn') || e.target.closest('.month-dropdown')) return;
-                      const label = e.currentTarget.querySelector('.month-picker-label');
-                      if (label) label.click();
+                      if (target.closest('.month-picker-label') || target.closest('.month-nav-btn') || target.closest('.month-dropdown')) return;
+                      activeMonthPickerRef.current?.toggleDropdown();
                       return;
                     }
                     if (!isActive) {
@@ -84,7 +85,7 @@ export default function TopTabs() {
                           <span>{item.label}</span>
                         </span>
                         <span className="tab-content-active">
-                          <MonthPicker suffix={item.monthLabel} variant="tab" />
+                          <MonthPicker ref={isActive ? activeMonthPickerRef : null} suffix={item.monthLabel} variant="tab" />
                         </span>
                       </div>
                     ) : (
