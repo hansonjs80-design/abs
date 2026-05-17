@@ -43,9 +43,10 @@ export default function useScheduleContextMenuActions({
   const saveDebounceRef = useRef({ timer: null, pending: new Map(), undoMemos: null });
 
   useEffect(() => {
+    const saveDebounce = saveDebounceRef.current;
     return () => {
-      if (saveDebounceRef.current.timer) {
-        clearTimeout(saveDebounceRef.current.timer);
+      if (saveDebounce.timer) {
+        clearTimeout(saveDebounce.timer);
       }
     };
   }, []);

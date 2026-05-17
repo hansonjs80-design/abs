@@ -484,9 +484,9 @@
 
 .top-tab.active {
   color: var(--tab-active-border);
-  background: #f8fafc;
+  background: var(--tab-active-surface, #f8fafc);
   border: 2px solid var(--tab-active-border);
-  border-bottom: 2px solid #f8fafc;
+  border-bottom: 2px solid var(--tab-active-surface, #f8fafc);
   margin-bottom: 0px;
   padding: 8px 19px 4px;
   min-height: 44px;
@@ -513,8 +513,8 @@
 .top-tab--stats-sw.active:hover,
 .top-tab--stats-mt.active,
 .top-tab--stats-mt.active:hover {
-  background: #fbbc04;
-  border-bottom-color: #fbbc04;
+  background: var(--tab-active-surface);
+  border-bottom-color: var(--tab-active-surface);
 }
 
 .top-tab--stats-sw.active::after,
@@ -535,9 +535,9 @@
 
 .top-tab.active:hover {
   color: var(--tab-active-border);
-  background: #f8fafc;
+  background: var(--tab-active-surface, #f8fafc);
   border-color: var(--tab-active-border);
-  border-bottom-color: #f8fafc;
+  border-bottom-color: var(--tab-active-surface, #f8fafc);
   transform: none;
   box-shadow: 5px -5px 10px -2px rgba(15, 23, 42, 0.2), -1px -3px 5px -1px rgba(15, 23, 42, 0.08);
 }
@@ -615,9 +615,10 @@
 
 /* 3. Stats SW (Purple) */
 .top-tab--stats-sw {
-  --tab-bg: #fdf2c6;
-  --tab-hover-bg: #fef3c7;
-  --tab-active-bg: #fbbc04;
+  --tab-bg: #fbbc04;
+  --tab-hover-bg: #fff8df;
+  --tab-active-surface: #f8fafc;
+  --tab-active-bg: #f8fafc;
   --tab-active-border: #fbbc04;
   --tab-shadow: rgba(234, 179, 8, 0.2);
   --tab-text-color: #263244;
@@ -625,9 +626,10 @@
 
 /* 4. Stats MT (Purple) */
 .top-tab--stats-mt {
-  --tab-bg: #fef7c6;
-  --tab-hover-bg: #fef9c3;
-  --tab-active-bg: #fbbc04;
+  --tab-bg: #fbbc04;
+  --tab-hover-bg: #fff8df;
+  --tab-active-surface: #f8fafc;
+  --tab-active-bg: #f8fafc;
   --tab-active-border: #fbbc04;
   --tab-shadow: rgba(202, 138, 4, 0.2);
   --tab-text-color: #263244;

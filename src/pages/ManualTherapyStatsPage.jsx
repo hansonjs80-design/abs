@@ -145,13 +145,13 @@ export default function ManualTherapyStatsPage() {
 
   const fetchLogs = useCallback(async () => {
     setIsLoading(true);
+    const currentFetchId = ++fetchIdRef.current;
     try {
       const startStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
       const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
       const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
       const endStr = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
 
-      const currentFetchId = ++fetchIdRef.current;
       const { data, error } = await supabase
         .from('manual_therapy_patient_logs')
         .select('*')

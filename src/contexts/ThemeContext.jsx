@@ -14,7 +14,9 @@ const readStoredTheme = () => {
 const persistTheme = (theme) => {
   try {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
-  } catch {}
+  } catch {
+    // Theme persistence is optional when storage is unavailable.
+  }
 };
 
 export function ThemeProvider({ children }) {

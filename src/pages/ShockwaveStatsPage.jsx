@@ -44,12 +44,11 @@ export default function ShockwaveStatsPage() {
   } = useSchedule();
 
   // 연월 변경 시 로컬 치료사 목록을 즉시 초기화하여 이전 달 데이터가 잔류하지 않도록 함
-  const monthKeyRef = useRef(`${currentYear}-${currentMonth}`);
   const currentMonthKey = useMemo(() => `${currentYear}-${currentMonth}`, [currentYear, currentMonth]);
-  if (monthKeyRef.current !== currentMonthKey) {
-    monthKeyRef.current = currentMonthKey;
+
+  useEffect(() => {
     setLocalMonthlyTherapists([]);
-  }
+  }, [currentMonthKey]);
 
   useEffect(() => {
     loadTherapists();

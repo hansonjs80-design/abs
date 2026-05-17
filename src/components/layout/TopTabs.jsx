@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MonthPicker from '../common/MonthPicker';
 import PrintButton from '../common/PrintButton';
@@ -53,7 +53,7 @@ export default function TopTabs() {
               <span key={item.path} className="top-tab-with-date">
                 <div
                   className={`top-tab ${item.tabClass}${isActive ? ' active' : ''}${isActive && item.monthLabel ? ' month-tab' : ''}`}
-                  onClick={(e) => {
+                  onClick={() => {
                     if (!isActive) {
                       notifyBeforeTabChange();
                       // Optimistically update UI immediately to unblock CSS animations

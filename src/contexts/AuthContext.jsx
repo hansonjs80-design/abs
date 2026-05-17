@@ -15,7 +15,9 @@ const clearStoredDevUser = () => {
   try {
     sessionStorage.removeItem(DEV_LOGIN_STORAGE_KEY);
     localStorage.removeItem(DEV_LOGIN_STORAGE_KEY);
-  } catch {}
+  } catch {
+    // Storage can be unavailable in private browsing or restricted contexts.
+  }
 };
 
 const readStoredDevUser = () => {
@@ -31,7 +33,9 @@ const writeStoredDevUser = (user) => {
   try {
     sessionStorage.setItem(DEV_LOGIN_STORAGE_KEY, JSON.stringify(user));
     localStorage.removeItem(DEV_LOGIN_STORAGE_KEY);
-  } catch {}
+  } catch {
+    // Keep login usable even when storage persistence is blocked.
+  }
 };
 
 const createAppUser = (row) => ({

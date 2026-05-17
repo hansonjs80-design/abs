@@ -566,6 +566,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   useEffect(() => {
     const refreshSettingsOnFocus = () => {
+      if (document.visibilityState && document.visibilityState !== 'visible') return;
       loadShockwaveSettings?.();
     };
     window.addEventListener('focus', refreshSettingsOnFocus);

@@ -8,6 +8,7 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
   const [dropdownYear, setDropdownYear] = useState(currentYear);
   const containerRef = useRef(null);
   const isToggling = useRef(false);
+  const toggleTimerRef = useRef(null);
 
   const handleToggle = (e) => {
     e.stopPropagation();
@@ -17,12 +18,18 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
     isToggling.current = true;
     setShowDropdown(prev => !prev);
     
-    setTimeout(() => {
+    if (toggleTimerRef.current) {
+      clearTimeout(toggleTimerRef.current);
+    }
+    toggleTimerRef.current = setTimeout(() => {
       isToggling.current = false;
+      toggleTimerRef.current = null;
     }, 300); // Prevent double-toggling within 300ms
   };
 
   useEffect(() => {
+    if (!showDropdown) return undefined;
+
     const handleClickOutside = (e) => {
       const target = e.target.nodeType === 3 ? e.target.parentNode : e.target;
       if (containerRef.current && !containerRef.current.contains(target)) {
@@ -32,6 +39,14 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDropdown, variant]);
+
+  useEffect(() => {
+    return () => {
+      if (toggleTimerRef.current) {
+        clearTimeout(toggleTimerRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {

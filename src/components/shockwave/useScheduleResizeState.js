@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePersistentNumber, usePersistentJson } from '../../hooks/usePersistentState';
 
 import {
@@ -13,9 +13,9 @@ const MIN_SCHEDULE_DAY_WIDTH = 100;
 const MIN_COL_RATIO = 0.2;
 
 export default function useScheduleResizeState({ colCount }) {
-  const [colRatios, setColRatios, colRatiosRef] = usePersistentJson(SHOCKWAVE_COL_RATIOS_KEY, null);
-  const [dayColWidth, setDayColWidth, dayColWidthRef] = usePersistentNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, 0);
-  const [rowHeight, setRowHeight, rowHeightRef] = usePersistentNumber(SHOCKWAVE_ROW_HEIGHT_KEY, 23, MIN_SCHEDULE_ROW_HEIGHT);
+  const [colRatios, setColRatios] = usePersistentJson(SHOCKWAVE_COL_RATIOS_KEY, null);
+  const [dayColWidth, setDayColWidth] = usePersistentNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, 0);
+  const [rowHeight, setRowHeight] = usePersistentNumber(SHOCKWAVE_ROW_HEIGHT_KEY, 23, MIN_SCHEDULE_ROW_HEIGHT);
 
   const colResizeRef = useRef({ active: false, colIdx: -1, startX: 0, startRatios: [], containerWidth: 0 });
   const dayResizeRef = useRef({ active: false, startX: 0 });

@@ -77,9 +77,11 @@ export default function useScheduleKeyboardActions({
 
   // 디바운스 cleanup
   useEffect(() => {
+    const timeDebounce = timeDebounceRef.current;
+    const visitDebounce = visitDebounceRef.current;
     return () => {
-      if (timeDebounceRef.current?.timer) clearTimeout(timeDebounceRef.current.timer);
-      if (visitDebounceRef.current?.timer) clearTimeout(visitDebounceRef.current.timer);
+      if (timeDebounce?.timer) clearTimeout(timeDebounce.timer);
+      if (visitDebounce?.timer) clearTimeout(visitDebounce.timer);
     };
   }, []);
 
@@ -564,5 +566,7 @@ export default function useScheduleKeyboardActions({
     setRangeEnd,
     setSelectedKeys,
     shockwaveSettings,
+    handleReservationTimeShortcut,
+    memos,
   ]);
 }

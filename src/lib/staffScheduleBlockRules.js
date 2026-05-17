@@ -3,7 +3,7 @@ import { getMonthKey } from './schedulerOperatingHours';
 export function normalizeStaffScheduleRuleText(value) {
   return String(value || '')
     .normalize('NFKC')
-    .replace(/[\s\u00a0\u200b\u200c\u200d\ufeff]+/g, '')
+    .replace(/(?:\s|\u00a0|\u200b|\u200c|\u200d|\ufeff)+/g, '')
     .toLowerCase();
 }
 

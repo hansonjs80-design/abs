@@ -60,11 +60,6 @@ export default function GeneralSettings() {
     window.open('https://supabase.com/dashboard', '_blank', 'noopener,noreferrer');
   };
 
-  useEffect(() => {
-    loadHolidays();
-    loadSettings();
-  }, []);
-
   const loadSettings = async () => {
     try {
       const { data, error } = await supabase.from('shockwave_settings').select('*').order('updated_at', { ascending: false }).limit(1).single();
@@ -124,6 +119,11 @@ export default function GeneralSettings() {
       .order('date', { ascending: false });
     setHolidays(data || []);
   };
+
+  useEffect(() => {
+    loadHolidays();
+    loadSettings();
+  }, []);
 
   const addHoliday = async () => {
     if (!newHoliday.date) return;

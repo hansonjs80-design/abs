@@ -102,10 +102,10 @@ export const ALWAYS_UPPER = [
 
 export function toProperCase(str) {
   if (!str) return str;
-  return str.split(/([,\/\- ]+)/).map(tok => {
-    if (/^[,\/\- ]+$/.test(tok)) return tok;
+  return str.split(/([,/\- ]+)/).map(tok => {
+    if (/^[,/\- ]+$/.test(tok)) return tok;
     const lower = tok.toLowerCase();
-    if (ABBREV_MAP.hasOwnProperty(lower)) return ABBREV_MAP[lower];
+    if (Object.prototype.hasOwnProperty.call(ABBREV_MAP, lower)) return ABBREV_MAP[lower];
     const upper = tok.toUpperCase();
     if (ALWAYS_UPPER.includes(upper)) return upper;
     return tok.charAt(0).toUpperCase() + tok.slice(1).toLowerCase();

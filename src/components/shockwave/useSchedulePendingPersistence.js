@@ -50,6 +50,7 @@ export default function useSchedulePendingPersistence({
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (loadedMemosKey !== getShockwaveScheduleScrollKey(currentYear, currentMonth)) return;
+    let cancelled = false;
     const drafts = readPendingScheduleDrafts();
     const currentDrafts = Object.values(drafts).filter((draft) => (
       Number(draft?.year) === currentYear &&
@@ -83,7 +84,7 @@ export default function useSchedulePendingPersistence({
     });
 
     if (Object.keys(nextPendingDisplay).length > 0) {
-      setPendingDisplayValues((prev) => ({ ...prev, ...nextPendingDisplay }));
+      setPendingDisplayValues((prev) => (cancelled ? prev : { ...prev, ...nextPendingDisplay }));
     }
 
     draftsToSave.forEach(({ key, value }) => {
@@ -95,6 +96,7 @@ export default function useSchedulePendingPersistence({
 
       Promise.resolve(onSaveMemo(currentYear, currentMonth, w, d, r, c, value))
         .then((success) => {
+          if (cancelled) return;
           if (success) {
             removePendingScheduleDraftIfValue(currentYear, currentMonth, key, value);
             setPendingDisplayValues((prev) => {
@@ -110,11 +112,16 @@ export default function useSchedulePendingPersistence({
           console.error('Failed to restore pending schedule draft:', error);
         });
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [currentYear, currentMonth, loadedMemosKey, memos, onSaveMemo, setPendingDisplayValues]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (loadedMemosKey !== getShockwaveScheduleScrollKey(currentYear, currentMonth)) return;
+    let cancelled = false;
 
     const backup = readScheduleMonthBackups()[loadedMemosKey];
     const backupCells = backup?.cells && typeof backup.cells === 'object' ? backup.cells : null;
@@ -133,7 +140,7 @@ export default function useSchedulePendingPersistence({
     missingCells.forEach(([key, backupMemo]) => {
       nextPendingDisplay[key] = backupMemo.content || '';
     });
-    setPendingDisplayValues((prev) => ({ ...prev, ...nextPendingDisplay }));
+    setPendingDisplayValues((prev) => (cancelled ? prev : { ...prev, ...nextPendingDisplay }));
 
     missingCells.forEach(([key, backupMemo]) => {
       const [w, d, r, c] = key.split('-').map(Number);
@@ -151,6 +158,7 @@ export default function useSchedulePendingPersistence({
         backupMemo.prescription,
         backupMemo.body_part
       )).then((success) => {
+        if (cancelled) return;
         if (!success) return;
         setPendingDisplayValues((prev) => {
           if (!(key in prev)) return prev;
@@ -162,5 +170,9 @@ export default function useSchedulePendingPersistence({
         console.error('Failed to restore schedule month backup:', error);
       });
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [currentYear, currentMonth, loadedMemosKey, memos, onSaveMemo, setPendingDisplayValues]);
 }

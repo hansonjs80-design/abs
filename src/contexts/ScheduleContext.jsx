@@ -42,6 +42,7 @@ export function ScheduleProvider({ children }) {
   const [loading, setLoading] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [calendarSlotSettings, setCalendarSlotSettings] = useState(null);
+  const loadingCountRef = useRef(0);
   const shockwaveWriteQueueRef = useRef(new Map());
   const loadCacheRef = useRef({ staffMemos: null, shockwaveMemos: null, holidays: null });
   const staffMemosRef = useRef(staffMemos);
@@ -77,6 +78,18 @@ export function ScheduleProvider({ children }) {
   const isCurrentScheduleMonth = useCallback((year, month) => (
     currentDateRef.current.year === year && currentDateRef.current.month === month
   ), []);
+
+  const beginLoading = useCallback(() => {
+    loadingCountRef.current += 1;
+    setLoading(true);
+  }, []);
+
+  const endLoading = useCallback(() => {
+    loadingCountRef.current = Math.max(0, loadingCountRef.current - 1);
+    if (loadingCountRef.current === 0) {
+      setLoading(false);
+    }
+  }, []);
 
   const enqueueShockwaveWrite = useCallback((keys, task) => {
     const targetKeys = Array.from(new Set((keys || []).filter(Boolean)));
@@ -215,7 +228,7 @@ export function ScheduleProvider({ children }) {
     loadCacheRef.current.staffMemos = cacheKey;
     const requestId = ++staffMemosLoadRequestRef.current;
 
-    setLoading(true);
+    beginLoading();
     try {
       const targetMonths = [{ year, month }];
       if (options.includeAdjacentMonths) {
@@ -260,11 +273,9 @@ export function ScheduleProvider({ children }) {
       }
       return null;
     } finally {
-      if (staffMemosLoadRequestRef.current === requestId) {
-        setLoading(false);
-      }
+      endLoading();
     }
-  }, []);
+  }, [beginLoading, endLoading]);
 
   // 직원 메모 저장/업데이트
   const saveStaffMemo = useCallback(async (year, month, day, slotIndex, content, fontColor = null, bgColor = null) => {
@@ -514,7 +525,7 @@ export function ScheduleProvider({ children }) {
   // 앱 시작 시 치료사 목록과 설정을 미리 로드 (탭 전환 시 즉시 표시하기 위해)
   useEffect(() => {
     if (!initialLoadDone) {
-      Promise.all([
+      Promise.allSettled([
         loadTherapists(),
         loadManualTherapists(),
         loadShockwaveSettings(),
@@ -668,7 +679,7 @@ export function ScheduleProvider({ children }) {
     loadCacheRef.current.shockwaveMemos = cacheKey;
     const requestId = ++shockwaveMemosLoadRequestRef.current;
 
-    setLoading(true);
+    beginLoading();
     try {
       await waitForShockwaveWrites();
 
@@ -716,11 +727,9 @@ export function ScheduleProvider({ children }) {
       }
       return null;
     } finally {
-      if (shockwaveMemosLoadRequestRef.current === requestId) {
-        setLoading(false);
-      }
+      endLoading();
     }
-  }, [waitForShockwaveWrites, shouldKeepShockwaveMemo]);
+  }, [waitForShockwaveWrites, shouldKeepShockwaveMemo, beginLoading, endLoading]);
 
   // 충격파 스케줄 저장
   const saveShockwaveMemo = useCallback(async (year, month, weekIndex, dayIndex, rowIndex, colIndex, content, bg_color, merge_span, prescription, body_part) => {
