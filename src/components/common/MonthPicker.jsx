@@ -15,7 +15,7 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
     if (isToggling.current) return;
     
     isToggling.current = true;
-    setShowDropdown(prev => !prev);
+    setShowDropdown(variant === 'tab' ? true : prev => !prev);
     
     setTimeout(() => {
       isToggling.current = false;
@@ -48,7 +48,13 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
   }, [currentYear, currentMonth, suffix]);
 
   return (
-    <div className={`month-picker${variant === 'tab' ? ' tab-variant' : ''}`} ref={containerRef} style={{ position: 'relative' }}>
+    <div 
+      className={`month-picker${variant === 'tab' ? ' tab-variant' : ''}`} 
+      ref={containerRef} 
+      style={{ position: 'relative' }}
+      onMouseEnter={variant === 'tab' ? () => setShowDropdown(true) : undefined}
+      onMouseLeave={variant === 'tab' ? () => setShowDropdown(false) : undefined}
+    >
       <button className="month-nav-btn" onClick={() => navigateMonth(-1)} aria-label="이전 달">
         <ChevronLeft size={18} />
       </button>
