@@ -1,13 +1,7 @@
-import { getMonthKey } from './settlementSettings';
-
 export const DEFAULT_SCHEDULER_TEXT_SETTINGS = {
   font_size: 13,
   font_weight: 700,
 };
-
-function compareMonthKeys(a, b) {
-  return String(a || '').localeCompare(String(b || ''));
-}
 
 function normalizeFontSize(value) {
   const nextValue = Number(value);
@@ -25,7 +19,7 @@ function normalizeFontWeight(value) {
 
 export const SCHEDULER_TEXT_SETTINGS_KEY = 'shockwave-scheduler-text-settings';
 
-export function getEffectiveSchedulerTextSettings(settings, year, month) {
+export function getEffectiveSchedulerTextSettings() {
   if (typeof window === 'undefined') return DEFAULT_SCHEDULER_TEXT_SETTINGS;
   try {
     const parsed = JSON.parse(window.localStorage.getItem(SCHEDULER_TEXT_SETTINGS_KEY) || 'null');
@@ -35,11 +29,13 @@ export function getEffectiveSchedulerTextSettings(settings, year, month) {
         font_weight: normalizeFontWeight(parsed.font_weight),
       };
     }
-  } catch {}
+  } catch {
+    // Ignored
+  }
   return DEFAULT_SCHEDULER_TEXT_SETTINGS;
 }
 
-export function setMonthlySchedulerTextSettings(settings, year, month, nextConfig) {
+export function setMonthlySchedulerTextSettings(settings, _year, _month, nextConfig) {
   if (typeof window === 'undefined') return settings?.monthly_settlement_settings || {};
   try {
     const current = getEffectiveSchedulerTextSettings();
@@ -49,7 +45,9 @@ export function setMonthlySchedulerTextSettings(settings, year, month, nextConfi
     };
     window.localStorage.setItem(SCHEDULER_TEXT_SETTINGS_KEY, JSON.stringify(updated));
     window.dispatchEvent(new Event('scheduler-text-settings-changed'));
-  } catch {}
+  } catch {
+    // Ignored
+  }
   
   return settings?.monthly_settlement_settings || {};
 }

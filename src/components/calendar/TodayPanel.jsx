@@ -3,7 +3,7 @@ import { Calendar as CalIcon } from 'lucide-react';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { formatTodayScheduleItem, computeMemoFontColor } from '../../lib/memoParser';
 import { getEffectiveStaffDisplayRules, formatMemoWithRule, getMemoFontColorByRule } from '../../lib/staffDisplayRules';
-import { getTodayKST, isSameDate } from '../../lib/calendarUtils';
+import { getTodayKST } from '../../lib/calendarUtils';
 import { WEEKDAYS_FULL } from '../../lib/constants';
 
 export default function TodayPanel() {

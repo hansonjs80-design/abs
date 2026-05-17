@@ -3,10 +3,8 @@ import { flushSync } from 'react-dom';
 import { useSchedule } from '../../contexts/ScheduleContext';
 
 import { getTodayKST, isSameDate } from '../../lib/calendarUtils';
-import { supabase } from '../../lib/supabaseClient';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import { get4060PrescriptionFromContent, has4060Pattern, normalize4060StarOrder } from '../../lib/schedulerContentFormat';
-import { toProperCase } from '../../lib/shockwaveSyncUtils';
 import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
 import { useToast } from '../common/Toast';
 import MonthlyTherapistConfig from './MonthlyTherapistConfig';
@@ -39,24 +37,14 @@ import {
   removePendingScheduleDraftIfValue,
   splitBodyParts,
   normalizeBodyPartKey,
-  formatBodyPartInput,
-  getPrescriptionColor,
   parseSchedulerPatientIdentity,
   normalizeSchedulerVisitSuffix,
   normalizeVisitInputValue,
   stepVisitInputValue,
   getMemoListFromMergeSpan,
-  normalizeReservationTimeValue,
-  stepReservationTimeValue,
-  timeValueToMinutes,
-  minutesToTimeValue,
   stepReservationTimeWithinCellBase,
-  getReservationTimeFromMergeSpan,
-  buildMergeSpanWithReservationTime,
   stripReservationTimeFromMergeSpan,
-  buildMergeSpanWithBodyPartOptions,
   isUndoShortcutEvent,
-  buildMergeSpanWithMemoList,
   buildSchedulerCellDisplay,
   buildSchedulerMemoSortKey,
   getNonVisitParentheticalSuffix,
@@ -463,7 +451,7 @@ const MemoizedCell = memo(({
 });
 
 export default function ShockwaveView({ therapists, settings, memos = {}, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
-  const { currentYear, currentMonth, navigateMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
+  const { currentYear, currentMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
   const { addToast } = useToast();
   const viewRef = useRef(null);
   const dragSelectionRef = useRef(null);
@@ -484,8 +472,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [contextMenu, setContextMenu] = useState(null); // { x, y, weekIdx, dayIdx, rowIdx, colIdx, currentPrescription }
   const [activeContextSubmenu, setActiveContextSubmenu] = useState(null);
   const [contextMenuBodyPartOptions, setContextMenuBodyPartOptions] = useState([]);
-  const [contextMenuBodyInput, setContextMenuBodyInput] = useState('');
-  const [contextMenuNoteInput, setContextMenuNoteInput] = useState('');
+  const [, setContextMenuBodyInput] = useState('');
+  const [, setContextMenuNoteInput] = useState('');
   const [contextMenuMemoDrafts, setContextMenuMemoDrafts] = useState([]);
   const [contextMenuVisitInput, setContextMenuVisitInput] = useState('');
   const [contextMenuReservationInput, setContextMenuReservationInput] = useState('');
@@ -1022,7 +1010,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           offset = pos.offset;
         }
       }
-    } catch (err) {}
+    } catch {
+      // Browser caret APIs can fail on non-text nodes.
+    }
 
     flushSync(() => {
       setEditingCell(key);
@@ -1034,7 +1024,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       editInputRef.current.focus();
       try {
         editInputRef.current.setSelectionRange(offset, offset);
-      } catch (err) {}
+      } catch {
+        // Selection range is best effort.
+      }
     }
   }, [selectSingleCell, cellKey]);
 
@@ -1170,7 +1162,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     effectivePrescriptionColors,
     effectiveSchedulerTextSettings,
     hasCompletableSelection,
-    hasCompletedSelection,
     shortcutLabels,
     treatmentCompleteButtonLabel,
   } = useScheduleViewState({
@@ -1333,29 +1324,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     getDefaultReservationTime,
   });
 
-  const submitContextMenuBodyInput = useCallback(() => {
-    const val = contextMenuBodyInput.trim();
-    if (!val) return false;
-    handleContextAction({ type: 'bodyPartAdd', value: val });
-    setContextMenuBodyInput('');
-    return true;
-  }, [contextMenuBodyInput, handleContextAction]);
-
-  const submitContextMenuNoteInput = useCallback(() => {
-    const val = contextMenuNoteInput.trim();
-    if (!val) return false;
-    handleContextAction({ type: 'memoAdd', value: val });
-    setContextMenuNoteInput('');
-    return true;
-  }, [contextMenuNoteInput, handleContextAction]);
-
-  const submitContextMenuVisitInput = useCallback(() => {
-    const val = normalizeVisitInputValue(contextMenuVisitInput);
-    setContextMenuVisitInput(val);
-    handleContextAction({ type: 'visitCount', value: val });
-    return true;
-  }, [contextMenuVisitInput, handleContextAction]);
-
   const stepContextMenuVisitInput = useCallback((delta) => {
     const nextValue = stepVisitInputValue(contextMenuVisitInput, delta);
     setContextMenuVisitInput(nextValue);
@@ -1372,7 +1340,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     }
   }, []);
 
-  const beginEditingCell = useCallback((key, nextValue, preserveValue = false) => {
+  const beginEditingCell = useCallback((key, nextValue, _preserveValue = false) => {
     editDraftRef.current = { key, value: nextValue || '', dirty: false };
     flushSync(() => {
       setEditingCell(key);
@@ -1438,7 +1406,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     handleCellContextMenu(mockEvent, w, d, r, c, memo.prescription || '', '');
     setContextMenu(prev => prev ? { ...prev, isStandaloneBodyPart: true } : null);
     setActiveContextSubmenu('body');
-  }, [selectedCell, cellKey, memos, handleCellContextMenu, setActiveContextSubmenu, setContextMenu]);
+  }, [selectedCell, cellKey, memos, handleCellContextMenu, setActiveContextSubmenu, setContextMenu, getEffectiveMergeSpan]);
 
   const handleKeyDown = useScheduleKeyboardActions({
     contextMenu,
@@ -1632,11 +1600,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     return () => window.cancelAnimationFrame(rafId);
   }, [hoverCell, positionTooltip]);
 
-  const {
-    todayWeekIdx,
-    scrollToTodayWeek,
-    updateTodayShortcutTooltip,
-  } = useScheduleTodayNavigation({
+  const { todayWeekIdx } = useScheduleTodayNavigation({
     weeks,
     today,
     weekRefs,
@@ -1648,7 +1612,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   });
 
   const isScheduleMonthLoading = loadedMemosKey !== scheduleScrollKey;
-  const renderMemos = isScheduleMonthLoading ? {} : memos;
+  const renderMemos = useMemo(
+    () => (isScheduleMonthLoading ? {} : memos),
+    [isScheduleMonthLoading, memos]
+  );
 
   return (
     <>
@@ -1824,18 +1791,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                         const content = dayInfo.isCurrentMonth ? normalizeSchedulerVisitSuffix(pendingDisplayValues[key] ?? cellData?.content ?? '') : '';
                         let mergeSpan = dayInfo.isCurrentMonth ? getEffectiveMergeSpan(key, renderMemos) : { rowSpan: 1, colSpan: 1, mergedInto: null };
 
-                        const cellPrescription = cellData?.prescription || mergeSpan?.meta?.prescription || '';
-                        const displayData = buildSchedulerCellDisplay(content, mergeSpan);
-                          
                           if (mergeSpan.mergedInto) {
                             continue; // 병합된 하위 셀은 묶어서 렌더링 생략
                           }
-
-                          const isEditing = dayInfo.isCurrentMonth && editingCell === key;
-                          const isImePreview = dayInfo.isCurrentMonth && imePreviewCell === key;
-                          const isSelected = dayInfo.isCurrentMonth && selectedKeys.has(key);
-                          const isPrimary = dayInfo.isCurrentMonth && selectedCell && selectedCell.w === weekIdx && selectedCell.d === dayIdx && selectedCell.r === rowIdx && selectedCell.c === colIdx;
-                          const gridColumnStart = showTimeCol ? colIdx + 2 : colIdx + 1;
 
                           // View Span Calculation
                           let visualRowSpan = 1;
@@ -1896,7 +1854,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         </div>
         );
       }), [
-        weeks, dayColWidth, todayWeekIdx, showTherapistConfig, today, getTimeSlotsForDay,
+        weeks, dayColWidth, todayWeekIdx, today, getTimeSlotsForDay,
         therapistColsCSS, colCount, getTherapistNameForDate, activeColRatios,
         startColResize, startDayResize, startRowResize,
         renderMemos, pendingDisplayValues, pendingMergeSpans, editingCell, imePreviewCell,
@@ -1905,7 +1863,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         isLastHourSlot, effectivePrescriptionColors, editValue,
         handleCellMouseDown, handleCellMouseEnter, setHoverCell,
         handleCellDoubleClick, handleCellContextMenu,
-        handleEditKeyDown, scheduleEditDraftAutosave, promoteFocusedInputToEditor, handleCellSave
+        handleEditKeyDown, scheduleEditDraftAutosave, promoteFocusedInputToEditor, handleCellSave,
+        cellKey, getEffectiveMergeSpan, rowHeight
       ])}
       </div>
       {contextMenu && (
@@ -2596,7 +2555,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       {(() => {
         let hoverTooltipText = '';
         if (hoverCell) {
-          const { weekIdx, dayIdx, rowIdx, colIdx, staffBlockRule, slotInfo, selectionInfo, isMergedView } = hoverCell;
+          const { weekIdx, dayIdx, rowIdx, colIdx, staffBlockRule, slotInfo, selectionInfo } = hoverCell;
           const keyStr = cellKey(weekIdx, dayIdx, rowIdx, colIdx);
           const cellData = memos[keyStr] || {};
           const content = typeof pendingDisplayValues[keyStr] === 'string' ? pendingDisplayValues[keyStr] : cellData.content;

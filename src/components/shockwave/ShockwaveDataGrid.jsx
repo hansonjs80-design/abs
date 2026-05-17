@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect } from 'react';
+/* eslint-disable react-hooks/exhaustive-deps */
 import { supabase } from '../../lib/supabaseClient';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import { toProperCase } from '../../lib/shockwaveSyncUtils';
@@ -32,6 +33,14 @@ const THERAPIST_TOTAL_COLORS = [
 ];
 
 const SUMMARY_COL_WIDTH = 78;
+const FIXED_FIELDS = [
+  { id: 'idx', label: '#', field: 'idx', w: 37 },
+  { id: 'date', label: '날짜', field: 'date', w: 67 },
+  { id: 'name', label: '이름', field: 'patient_name', w: 81, bold: true },
+  { id: 'chart', label: '차트번호', field: 'chart_number', w: 71 },
+  { id: 'visit', label: '회차', field: 'visit_count', w: 43 },
+  { id: 'body', label: '부위', field: 'body_part', w: 114 },
+];
 
 function toTitleCaseBodyPart(value) {
   return toProperCase(String(value || '').trim());
@@ -47,7 +56,7 @@ export default function ShockwaveDataGrid({
   extraDraftRows = 0,
   tableName = 'shockwave_patient_logs',
   prescriptions: prescriptionsProp,
-  frozenColumnCount: frozenColumnCountProp,
+  frozenColumnCount: _frozenColumnCountProp,
   title,
   totalRecordCount,
   therapistCount,
@@ -71,7 +80,6 @@ export default function ShockwaveDataGrid({
   const [internalSelectedNames, setInternalSelectedNames] = useState([]);
   const isControlled = externalSelectedNames !== undefined && onSelectedTherapistNamesChange !== undefined;
   const selectedTherapistNames = isControlled ? externalSelectedNames : internalSelectedNames;
-  const setSelectedTherapistNames = isControlled ? onSelectedTherapistNamesChange : setInternalSelectedNames;
   const therapistNameList = useMemo(
     () => displayTherapists.map((therapist) => therapist.name).filter(Boolean),
     [displayTherapists]
@@ -108,16 +116,6 @@ export default function ShockwaveDataGrid({
   const summaryTherapistCount = isAllTherapistsSelected && Number.isFinite(therapistCount)
     ? therapistCount
     : visibleTherapists.length;
-  const toggleTherapistFilter = useCallback((name) => {
-    setSelectedTherapistNames((prev) => {
-      if (prev.includes(name)) {
-        if (prev.length <= 1) return prev;
-        return prev.filter((item) => item !== name);
-      }
-      return [...prev, name];
-    });
-  }, [setSelectedTherapistNames]);
-
   const runSyncForDate = useCallback(async () => {
     // 통계/현황 탭은 스케줄 표를 다시 쓰지 않는다.
     // 스케줄 표가 원본이고, 현황 로그는 스케줄 저장 시 단방향으로 갱신된다.
@@ -249,15 +247,6 @@ export default function ShockwaveDataGrid({
     setDraftCellValues({});
   }, [currentYear, currentMonth]);
 
-  // Column definitions (flat array matching <colgroup>)
-  const FIXED_FIELDS = [
-    { id: 'idx', label: '#', field: 'idx', w: 37 },
-    { id: 'date', label: '날짜', field: 'date', w: 67 },
-    { id: 'name', label: '이름', field: 'patient_name', w: 81, bold: true },
-    { id: 'chart', label: '차트번호', field: 'chart_number', w: 71 },
-    { id: 'visit', label: '회차', field: 'visit_count', w: 43 },
-    { id: 'body', label: '부위', field: 'body_part', w: 114 },
-  ];
   const frozenColumnCount = 0;
 
   const totalCountColIndex = FIXED_FIELDS.length + visibleTherapists.length * prescriptions.length;
@@ -274,12 +263,12 @@ export default function ShockwaveDataGrid({
     const fixedWidth = FIXED_FIELDS.reduce((sum, field) => sum + field.w, 0);
     const therapistWidth = visibleTherapists.length * prescriptions.length * therapistColumnWidth;
     return fixedWidth + therapistWidth + SUMMARY_COL_WIDTH * 2;
-  }, [FIXED_FIELDS, visibleTherapists.length, prescriptions.length, therapistColumnWidth]);
+  }, [visibleTherapists.length, prescriptions.length, therapistColumnWidth]);
   const getColumnWidth = useCallback((colIndex) => {
     if (colIndex < FIXED_FIELDS.length) return FIXED_FIELDS[colIndex]?.w || 48;
     if (colIndex >= FIXED_FIELDS.length && colIndex < totalCountColIndex) return therapistColumnWidth;
     return SUMMARY_COL_WIDTH;
-  }, [FIXED_FIELDS, totalCountColIndex, therapistColumnWidth]);
+  }, [totalCountColIndex, therapistColumnWidth]);
   const getFrozenLeft = useCallback((colIndex) => {
     let left = 0;
     for (let i = 0; i < colIndex; i += 1) {
@@ -360,11 +349,7 @@ export default function ShockwaveDataGrid({
   const imeOpenRef = useRef(false);
   const editingValueRef = useRef('');
   const datePickerRef = useRef(null);
-  const theadRef = useRef(null);
   const ctxMenuRef = useRef(null);
-  const rowRefs = useRef([]);
-  const [headerHeight, setHeaderHeight] = useState(132);
-  const [rowHeights, setRowHeights] = useState([]);
 
   const selNorm = sel ? {
     r1: Math.min(sel.r1, sel.r2), c1: Math.min(sel.c1, sel.c2),
@@ -741,13 +726,6 @@ export default function ShockwaveDataGrid({
     navigator.clipboard.writeText(tsv);
   };
 
-  const doCut = () => {
-    if (!selNorm) return;
-    setClipboardSource({ ...selNorm, mode: 'cut' });
-    doCopy();
-    // No immediate delete - will be deleted on paste
-  };
-
   const recordUndo = (action) => {
     setUndoStack(prev => [action, ...prev].slice(0, 50));
   };
@@ -985,7 +963,7 @@ export default function ShockwaveDataGrid({
     copyRow(r);
     rowClipboardRef.current.mode = 'cut';
     await doDeleteRow(r);
-  }, [copyRow]);
+  }, [copyRow, doDeleteRow]);
 
   const pasteRow = useCallback(async (r) => {
     const clipboard = rowClipboardRef.current;
@@ -1064,7 +1042,7 @@ export default function ShockwaveDataGrid({
     };
     window.addEventListener('keydown', kd);
     return () => window.removeEventListener('keydown', kd);
-  }, [focus, sel, editing, gridData, totalColCount, totalCountColIndex, ctxMenu, visibleTherapists, prescriptions, undoStack]);
+  }, [clipboardSource, doCopy, doDelete, doDeleteRow, doUndo, editing, finishEdit, focus, gridData, handleMerge, handleUnmerge, insertDraftRow, sel, selNorm, startEdit, totalColCount, totalCountColIndex, ctxMenu]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -1075,20 +1053,24 @@ export default function ShockwaveDataGrid({
     };
     window.addEventListener('paste', handler);
     return () => window.removeEventListener('paste', handler);
-  }, [focus, editing, gridData]);
+  }, [focus, editing, doPaste]);
 
   useEffect(() => {
     if (editing && inputRef.current) { 
       inputRef.current.focus(); 
       if (editing.isDblClick && editing.c === FIXED_FIELDS.findIndex(f => f.field === 'date') && datePickerRef.current) {
-        try { datePickerRef.current.showPicker(); } catch (e) {}
+        try {
+          datePickerRef.current.showPicker();
+        } catch {
+          // showPicker is best effort.
+        }
       }
     }
-  }, [editing?.r, editing?.c]);
+  }, [editing]);
 
   useEffect(() => {
     if (editing && inputRef.current && !imeOpenRef.current) inputRef.current.select();
-  }, [editing?.r, editing?.c]);
+  }, [editing]);
 
   useEffect(() => {
     if (!ctxMenu) return;
@@ -1124,16 +1106,6 @@ export default function ShockwaveDataGrid({
     }
   }, [ctxMenu]);
 
-  useLayoutEffect(() => {
-    const measure = () => {
-      if (theadRef.current) setHeaderHeight(Math.round(theadRef.current.getBoundingClientRect().height));
-      setRowHeights(rowRefs.current.map((rowEl) => (rowEl ? Math.round(rowEl.getBoundingClientRect().height) : 25)));
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, [gridData, visibleTherapists.length, currentMonth]);
-
   // ─── 9. COMPUTED TOTALS ───────────────────────────────────
   const grandTotal = filteredInputLogs.reduce((s, l) => s + (l.prescription ? toPrescriptionCount(l.prescription_count) : 0), 0);
   const newPatientTotal = filteredInputLogs.filter((l) => String(l?.patient_name || '').includes('*')).length;
@@ -1156,7 +1128,7 @@ export default function ShockwaveDataGrid({
     <div className="sw-grid-wrapper" ref={wrapRef} tabIndex={0} onMouseUp={onMouseUp}>
       <table className="sw-grid-table" style={{ minWidth: `${gridMinWidth}px` }}>
         <colgroup>
-          {FIXED_FIELDS.map((f, i) => <col key={f.id} style={{ width: f.w, minWidth: f.w }} />)}
+          {FIXED_FIELDS.map((f) => <col key={f.id} style={{ width: f.w, minWidth: f.w }} />)}
           {visibleTherapists.map(t => prescriptions.map(p => (
             <col key={`${t.key}-${p}`} style={{ width: therapistColumnWidth, minWidth: therapistColumnWidth }} />
           )))}
@@ -1164,7 +1136,7 @@ export default function ShockwaveDataGrid({
           <col style={{ width: SUMMARY_COL_WIDTH, minWidth: SUMMARY_COL_WIDTH }} />
         </colgroup>
 
-        <thead ref={theadRef}>
+        <thead>
           {/* Row 1: Title */}
           <tr className="sw-header-row sw-header-row-title">
             <th colSpan={totalColCount} className="grid-title">
@@ -1235,7 +1207,7 @@ export default function ShockwaveDataGrid({
               isWholeRowSelected ? 'tr-row-selected' : '',
             ].filter(Boolean).join(' ');
             return (
-            <tr key={row.id} className={rowClasses} ref={(el) => { rowRefs.current[ri] = el; }}>
+            <tr key={row.id} className={rowClasses}>
               {Array.from({ length: totalColCount }, (_, ci) => {
                 if (getMergedInto(ri, ci)) return null;
                 const mergeInfo = mergedCells[getMergeKey(ri, ci)];

@@ -1,11 +1,10 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAllowedTabs } from '../../lib/authPermissions';
 
 export default function Sidebar({ isOpen, isCollapsed, onClose }) {
   const { user, signOut } = useAuth();
-  const location = useLocation();
 
   const handleSignOut = async () => {
     try { await signOut(); } catch (e) { console.error(e); }

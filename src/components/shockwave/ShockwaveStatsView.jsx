@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { syncTodayShockwaveScheduleToStats, syncMonthShockwaveScheduleToStats } from '../../lib/shockwaveSyncUtils';
-import { getTodayKST } from '../../lib/calendarUtils';
 import { useToast } from '../common/Toast';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
@@ -287,10 +286,6 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   }, [currentYear, currentMonth]);
 
   useEffect(() => {
-    const today = getTodayKST();
-    const isTodayMonth =
-      currentYear === today.getFullYear() &&
-      currentMonth === today.getMonth() + 1;
     const autoSyncKey = `${currentYear}-${currentMonth}`;
 
     if (
@@ -339,17 +334,19 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     };
   }, [schedulerMemosReady, currentYear, currentMonth, safeTherapists, monthlyTherapists, memos, fetchLogs, addToast, isAutoSyncingToday]);
 
+  // eslint-disable-next-line no-unused-vars
   const handleCellEdit = async (id, field, value) => {
     try {
       const { error } = await supabase.from('shockwave_patient_logs').update({ [field]: value }).eq('id', id);
       if (error) throw error;
       setLogs(prev => prev.map(log => log.id === id ? { ...log, [field]: value } : log));
-    } catch (err) {
+    } catch {
       addToast('저장 실패', 'error');
     }
   };
 
   // 스케줄러 데이터 파싱 및 동기화 (One-way Sync)
+  // eslint-disable-next-line no-unused-vars
   const handleSyncFromScheduler = async () => {
     setIsLoading(true);
     try {
@@ -384,6 +381,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const handleSyncMonthFromScheduler = async () => {
     if (!window.confirm(`${currentMonth}월 전체 스케줄을 스케줄러 기준으로 덮어씁니다.\n(수동으로 추가한 내역은 모두 삭제됩니다.) 진행하시겠습니까?`)) return;
     setIsLoading(true);
@@ -412,6 +410,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const handleFullGoogleSheetImport = async () => {
     if (!window.confirm('⚠️ 기존 치료 내역을 모두 삭제하고 구글 시트에서 새로 가져옵니다.\n정말 진행하시겠습니까?')) return;
     setIsLoading(true);
@@ -490,7 +489,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                   currentDate = `${py}-${String(pm).padStart(2, '0')}-${String(pd).padStart(2, '0')}`;
                 } else {
                   // 일반 텍스트 mm/dd, mm.dd 포맷
-                  const dm = strB.match(/(\d{1,2})[\/\.\-](\d{1,2})/);
+                  const dm = strB.match(/(\d{1,2})[./-](\d{1,2})/);
                   if (dm) {
                     currentDate = `20${y}-${String(dm[1]).padStart(2, '0')}-${String(dm[2]).padStart(2, '0')}`;
                   } else if (/^\d{1,2}$/.test(strB)) {

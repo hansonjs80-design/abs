@@ -38,7 +38,7 @@ export default function SettlementSettingsPanel({
       dose_tags: effectiveSettings?.dose_tags || settings?.manual_therapy_dose_tags || {},
       shortcuts: effectiveSettings?.shortcuts || (isManualTherapy ? settings?.manual_therapy_shortcuts : settings?.shortcuts) || {},
     });
-  }, [effectiveSettings, settings?.prescription_colors, settings?.manual_therapy_dose_tags, settings?.shortcuts, settings?.manual_therapy_shortcuts]);
+  }, [effectiveSettings, settings?.prescription_colors, settings?.manual_therapy_dose_tags, settings?.shortcuts, settings?.manual_therapy_shortcuts, isManualTherapy]);
 
   /** 처방별 셀 태그 값을 반환 (사용자 지정 → 자동 추출 순) */
   const getDoseTag = (prescription) => {

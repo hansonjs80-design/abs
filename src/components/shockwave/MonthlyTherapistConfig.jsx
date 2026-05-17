@@ -425,7 +425,7 @@ export default function MonthlyTherapistConfig({
     });
     setSaving(false);
     if (success) onClose();
-  }, [onSaveSettings, settings, year, month, staffBlockRules, onClose]);
+  }, [onSaveSettings, settings, year, month, staffBlockRules, staffDisplayRules, onClose]);
 
   const handleSaveTextSettings = useCallback(async () => {
     if (!onSaveSettings || !settings) return;
@@ -1017,7 +1017,7 @@ export default function MonthlyTherapistConfig({
             <div className="monthly-display-rules-grid">
               {staffDisplayRules.length === 0 ? (
                 <div className="monthly-operating-empty" style={{ gridColumn: '1 / -1' }}>이 달에 설정된 표시 규칙이 없습니다.</div>
-              ) : staffDisplayRules.sort((a, b) => b.priority - a.priority).map((rule, index) => {
+              ) : staffDisplayRules.sort((a, b) => b.priority - a.priority).map((rule) => {
                 const originalIndex = staffDisplayRules.indexOf(rule);
                 const exText = rule.position === 'prefix' ? `${rule.keyword || '야간'} 간호/홍길동`
                              : rule.position === 'suffix' ? `간호/홍길동 ${rule.keyword || '연차'}`

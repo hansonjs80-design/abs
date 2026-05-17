@@ -19,7 +19,7 @@ const MIN_COL_WIDTH = 30;
 const MIN_ROW_HEIGHT = 36;
 
 export default function StaffCalendar({ hiddenDepartments = [] }) {
-  const { currentYear, currentMonth, navigateMonth, staffMemos, loadStaffMemos, saveStaffMemo, holidays, holidayNames, loadHolidays, shockwaveSettings, loadShockwaveSettings, calendarSlotSettings, loadCalendarSlotSettings, saveCalendarSlotSettings } = useSchedule();
+  const { currentYear, currentMonth, staffMemos, loadStaffMemos, saveStaffMemo, holidays, holidayNames, loadHolidays, shockwaveSettings, loadShockwaveSettings, calendarSlotSettings, loadCalendarSlotSettings, saveCalendarSlotSettings } = useSchedule();
   const { addToast } = useToast();
   const [showSlotSettings, setShowSlotSettings] = useState(false);
   const slotSettingsRef = useRef(null);
@@ -41,15 +41,13 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showSlotSettings]);
 
-  const [colWidth, setColWidth, colWidthRef] = usePersistentNumber(COL_W_KEY, 0);
-  const [rowHeight, setRowHeight, rowHeightRef] = usePersistentNumber(ROW_H_KEY, 120, MIN_ROW_HEIGHT);
+  const [colWidth, setColWidth] = usePersistentNumber(COL_W_KEY, 0);
+  const [rowHeight, setRowHeight] = usePersistentNumber(ROW_H_KEY, 120, MIN_ROW_HEIGHT);
   const [undoStack, setUndoStack] = useState([]);
   const [selectedCell, setSelectedCell] = useState(null);
-  const [rangeEnd, setRangeEnd] = useState(null);
+  const [, setRangeEnd] = useState(null);
   const [selectedKeys, setSelectedKeys] = useState(() => new Set());
   const [editingCell, setEditingCell] = useState(null);
-  const [editSessionId, setEditSessionId] = useState(null);
-  const [editValue, setEditValue] = useState('');
   const [clipboardSource, setClipboardSource] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
   const [colorMenu, setColorMenu] = useState(null); // { type: 'font' | 'bg' }
@@ -58,7 +56,6 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
   const dragRef = useRef(null);
   const pendingDragRef = useRef(null);
   const hiddenInputRef = useRef(null);
-  const editInputRef = useRef(null);
   const skipNextBlurSaveRef = useRef(false);
 
   const today = getTodayKST();
@@ -214,8 +211,6 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
   const beginEdit = useCallback((key, val, preserve, selectAll = preserve) => {
     flushSync(() => {
       setEditingCell(key);
-      setEditValue(val);
-      if (preserve) setEditSessionId(Date.now());
     });
     // Position the input over the target cell
     requestAnimationFrame(() => {
@@ -486,7 +481,7 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
       beginEdit(selectedCell.key, '', false);
       return;
     }
-  }, [selectedCell, editingCell, selectedKeys, cellFromXY, selectSingle, buildRange, beginEdit, staffMemos, doUndo, clipboardSource, deleteCells, handleCopy, handleCut]);
+  }, [selectedCell, editingCell, selectedKeys, cellFromXY, selectSingle, buildRange, beginEdit, staffMemos, doUndo, clipboardSource, deleteCells, handleCopy, handleCut, resetInputToHidden, focusHiddenInput]);
 
   useEffect(() => {
     const el = hiddenInputRef.current;
@@ -569,7 +564,7 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
         setContextMenu(prev => prev ? { ...prev, x: newX, y: newY } : prev);
       }
     });
-  }, [colorMenu]);
+  }, [colorMenu, contextMenu]);
 
   useEffect(() => {
     if (!contextMenu) return;
@@ -639,7 +634,9 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
       const dropper = new window.EyeDropper();
       const result = await dropper.open();
       if (result?.sRGBHex) applyColor(type, result.sRGBHex);
-    } catch (e) { /* cancelled */ }
+    } catch {
+      // cancelled
+    }
   }, [applyColor, addToast]);
 
   return (

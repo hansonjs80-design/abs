@@ -229,7 +229,7 @@ export function buildCrossMonthMirroredPayloads(originalPayloads) {
   const mirroredPayloads = [];
   
   originalPayloads.forEach((payload) => {
-    const { id, year, month, week_index, day_index, row_index, col_index, merge_span, ...rest } = payload;
+    const { id: _id, year, month, week_index, day_index, row_index, col_index, merge_span, ...rest } = payload;
     
     // 원본 데이터 유지 (undefined 속성 제거)
     const cleanOriginal = {

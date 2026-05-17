@@ -27,7 +27,7 @@ function isMissingSchedulerCellKeyError(error) {
 }
 
 function omitSchedulerCellKey(row) {
-  const { scheduler_cell_key, ...rest } = row;
+  const { scheduler_cell_key: _scheduler_cell_key, ...rest } = row;
   return rest;
 }
 
@@ -512,7 +512,6 @@ export async function syncMonthShockwaveScheduleToStats({ year, month, memos, th
   // If we only synced up to today, delete any future scheduler records for this month
   if (upToToday && year === today.getFullYear() && month === today.getMonth() + 1) {
     const todayDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    const nextMonthDate = new Date(year, month, 1);
     const endOfMonthStr = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
     
     try {
@@ -550,6 +549,7 @@ export function formatStatsRowForScheduler(row) {
   return chartNumber ? `${chartNumber}/${nameText}` : nameText;
 }
 
+/* eslint-disable no-unreachable */
 export async function syncStatsDateToScheduler({ year, month, date, therapists }) {
   return {
     skipped: true,
@@ -662,3 +662,4 @@ export async function syncStatsDateToScheduler({ year, month, date, therapists }
     therapistCount: therapists.length,
   };
 }
+/* eslint-enable no-unreachable */

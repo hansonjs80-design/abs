@@ -4,7 +4,6 @@ import { useSchedule } from '../contexts/ScheduleContext';
 import { supabase } from '../lib/supabaseClient';
 import { useToast } from '../components/common/Toast';
 import { syncTodayManualTherapyScheduleToStats, syncMonthManualTherapyScheduleToStats } from '../lib/manualTherapyUtils';
-import { getTodayKST } from '../lib/calendarUtils';
 import { buildDisplayTherapists } from '../lib/therapistDisplayUtils';
 import { GridSkeleton, SettlementSkeleton } from '../components/common/LoadingSkeleton';
 import ShockwaveDataGrid from '../components/shockwave/ShockwaveDataGrid';
@@ -283,10 +282,6 @@ export default function ManualTherapyStatsPage() {
   }, [currentMonth, currentYear]);
 
   useEffect(() => {
-    const today = getTodayKST();
-    const isTodayMonth =
-      currentYear === today.getFullYear() &&
-      currentMonth === today.getMonth() + 1;
     const autoSyncKey = `${currentYear}-${currentMonth}`;
 
     if (
@@ -365,7 +360,7 @@ export default function ManualTherapyStatsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [addToast, currentMonth, currentYear, fetchLogs, safeTherapists, shockwaveMemos]);
+  }, [addToast, currentMonth, currentYear, fetchLogs, safeTherapists, shockwaveMemos, monthlyManualTherapists]);
 
   const handleSyncMonthFromScheduler = useCallback(async () => {
     if (!window.confirm(`${currentMonth}월 전체 도수치료 스케줄을 스케줄러 기준으로 덮어씁니다.\n(수동으로 추가한 내역은 모두 삭제됩니다.) 진행하시겠습니까?`)) return;
@@ -393,8 +388,9 @@ export default function ManualTherapyStatsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [addToast, currentMonth, currentYear, fetchLogs, safeTherapists, shockwaveMemos]);
+  }, [addToast, currentMonth, currentYear, fetchLogs, safeTherapists, shockwaveMemos, monthlyManualTherapists]);
 
+  // eslint-disable-next-line no-unused-vars
   const handleImportFromGoogleSheet = useCallback(async () => {
     if (!window.confirm('현재 월의 도수치료 현황 데이터를 구글 시트 B:I 기준으로 다시 불러옵니다.\n기존 이번 달 도수치료 현황 데이터는 교체됩니다. 진행할까요?')) {
       return;

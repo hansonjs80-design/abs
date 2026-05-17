@@ -119,7 +119,7 @@ export function parseMemoLine(raw, nameList = []) {
  * 오늘 일정 포맷팅
  * 원본: fillTodayScheduleToJ
  */
-export function formatTodayScheduleItem(txt, dow) {
+export function formatTodayScheduleItem(txt) {
   let text = String(txt || '').trim();
   if (!text) return null;
 

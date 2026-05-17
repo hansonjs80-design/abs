@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { generateCalendarGrid } from '../../lib/calendarUtils';
 import { supabase } from '../../lib/supabaseClient';
@@ -85,10 +85,10 @@ export default function PhysicalTherapyStatsView() {
   // --- 월간 상세 통계 데이터 ---
   const { grid } = useMemo(() => generateCalendarGrid(currentYear, currentMonth, new Set()), [currentYear, currentMonth]);
 
-  const getSlotCount = (wi) => {
+  const getSlotCount = useCallback((wi) => {
     if (!calendarSlotSettings?.week_slot_counts) return 6;
     return Number(calendarSlotSettings.week_slot_counts[String(wi)]) || 6;
-  };
+  }, [calendarSlotSettings]);
 
   const weeksData = useMemo(() => {
     return grid.map((week, wi) => {
@@ -106,7 +106,7 @@ export default function PhysicalTherapyStatsView() {
         };
       });
     });
-  }, [grid, staffMemos, calendarSlotSettings]);
+  }, [grid, staffMemos, getSlotCount]);
 
   const monthlySummary = useMemo(() => {
     let total = 0; let daysWithData = 0;

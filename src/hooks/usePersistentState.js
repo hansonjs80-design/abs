@@ -11,7 +11,7 @@ export function usePersistentNumber(key, initialValue, min = 0) {
           return Math.max(min, num);
         }
       }
-    } catch (e) {
+    } catch {
       // Ignored
     }
     return initialValue;
@@ -28,7 +28,7 @@ export function usePersistentNumber(key, initialValue, min = 0) {
           if (Number.isFinite(next)) {
             window.localStorage.setItem(key, String(next));
           }
-        } catch (e) {
+        } catch {
           // Ignored
         }
       }
@@ -44,7 +44,9 @@ export function usePersistentNumber(key, initialValue, min = 0) {
         if (Number.isFinite(value)) {
           window.localStorage.setItem(key, String(value));
         }
-      } catch (e) {}
+      } catch {
+        // Ignored
+      }
     }
   }, [key, value]);
 
@@ -60,7 +62,7 @@ export function usePersistentJson(key, initialValue) {
         const parsed = JSON.parse(stored);
         if (parsed) return parsed;
       }
-    } catch (e) {
+    } catch {
       // Ignored
     }
     return initialValue;
@@ -75,7 +77,7 @@ export function usePersistentJson(key, initialValue) {
       if (typeof window !== 'undefined') {
         try {
           window.localStorage.setItem(key, JSON.stringify(next));
-        } catch (e) {
+        } catch {
           // Ignored
         }
       }
@@ -88,7 +90,9 @@ export function usePersistentJson(key, initialValue) {
     if (typeof window !== 'undefined') {
       try {
         window.localStorage.setItem(key, JSON.stringify(value));
-      } catch (e) {}
+      } catch {
+        // Ignored
+      }
     }
   }, [key, value]);
 

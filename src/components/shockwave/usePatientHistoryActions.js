@@ -301,7 +301,7 @@ export default function usePatientHistoryActions({
       console.error(e);
       alert(`디버그 에러 발생: ${e.message}`);
     }
-  }, [selectedCell, cellKey, editingCell, editInputRef, editValue, memos, pendingDisplayValues, fetchPatientHistory, setPatientHistoryModalOpen]);
+  }, [selectedCell, cellKey, editingCell, editInputRef, editValue, memos, pendingDisplayValues, fetchPatientHistory, setPatientHistoryModalOpen, setPatientHistoryModalData]);
 
   const handleApplyHistoryToCell = useCallback((log) => {
     if (!selectedCell) return;

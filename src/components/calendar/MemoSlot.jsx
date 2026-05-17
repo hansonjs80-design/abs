@@ -1,7 +1,7 @@
 import { computeMemoFontColor } from '../../lib/memoParser';
 
 export default function MemoSlot({ 
-  memo, dayInfo, slotIndex, 
+  memo, dayInfo,
   isSelected, isPrimary, isEditing,
   clipboardMode, holidayName,
   onMouseDown, onMouseEnter, onDoubleClick, onContextMenu,

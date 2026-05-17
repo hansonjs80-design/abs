@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { generateShockwaveCalendar, getTodayKST, buildCrossMonthMirroredPayloads } from '../lib/calendarUtils';
+import { generateShockwaveCalendar, buildCrossMonthMirroredPayloads } from '../lib/calendarUtils';
 import { syncTodayShockwaveScheduleToStats } from '../lib/shockwaveSyncUtils';
 import { syncTodayManualTherapyScheduleToStats } from '../lib/manualTherapyUtils';
 
@@ -655,7 +655,12 @@ export function ScheduleProvider({ children }) {
         if (!missingOptionalColumn) throw error;
 
         console.warn('Optional settings column is missing. Saving compatible global settings only.');
-        const { staff_schedule_block_rules, shortcuts, manual_therapy_shortcuts, ...compatiblePayload } = basePayload;
+        const {
+          staff_schedule_block_rules: _staff_schedule_block_rules,
+          shortcuts: _shortcuts,
+          manual_therapy_shortcuts: _manual_therapy_shortcuts,
+          ...compatiblePayload
+        } = basePayload;
         const { error: retryError } = await supabase
           .from('shockwave_settings')
           .upsert(compatiblePayload, { onConflict: 'id' });
@@ -780,8 +785,6 @@ export function ScheduleProvider({ children }) {
         });
       }
 
-      const today = getTodayKST();
-      const todayDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const weeks = generateShockwaveCalendar(year, month);
       const dayInfo = weeks[weekIndex]?.[dayIndex];
       const targetDateStr = dayInfo && dayInfo.isCurrentMonth
@@ -905,9 +908,6 @@ export function ScheduleProvider({ children }) {
           affectedDates.add(dateStr);
         }
       });
-
-      const today = getTodayKST();
-      const todayDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
       for (const targetDateStr of affectedDates) {
         if (targetDateStr) {
