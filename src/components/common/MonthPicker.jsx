@@ -42,10 +42,15 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
       <button
         type="button"
         className="month-picker-label"
-        onClick={(e) => {
+        onPointerDown={(e) => {
           e.stopPropagation();
           e.preventDefault();
           setShowDropdown(prev => !prev);
+        }}
+        onClick={(e) => {
+          // Prevent any default click behaviors that might bubble or cause double-toggles
+          e.stopPropagation();
+          e.preventDefault();
         }}
         style={{ background: 'none', border: 'none', font: 'inherit', color: 'inherit', padding: 0, margin: 0, cursor: 'pointer' }}
       >
