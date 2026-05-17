@@ -848,6 +848,17 @@
   animation: fadeIn var(--transition-fast) ease-out;
 }
 
+/* hover 시 드롭다운과 버튼 사이의 빈 공간(gap)에서 onMouseLeave가 발생하는 것을 방지하는 투명 다리 */
+.month-dropdown::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background: transparent;
+}
+
 .month-dropdown-year {
   display: flex;
   align-items: center;
