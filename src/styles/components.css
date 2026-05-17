@@ -897,23 +897,14 @@
   width: 282px;
   padding: 12px;
   border: 2px solid var(--tab-active-border);
-  border-top-width: 3px;
+  border-top: 0;
   border-radius: 0 0 12px 12px;
   background: #f8fafc;
   box-shadow: 6px 8px 18px rgba(15, 23, 42, 0.14);
 }
 
 .month-picker.tab-variant .month-dropdown::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: -9px;
-  width: 38px;
-  height: 9px;
-  transform: translateX(-50%);
-  background: #f8fafc;
-  border-left: 2px solid var(--tab-active-border);
-  border-right: 2px solid var(--tab-active-border);
+  content: none;
 }
 
 .month-picker.tab-variant .month-dropdown-year {
@@ -926,6 +917,33 @@
   color: var(--tab-active-border);
   font-size: 1rem;
   font-weight: 900;
+}
+
+.month-picker.tab-variant .month-dropdown-year .btn-icon {
+  width: 25px;
+  height: 25px;
+  border: 1px solid var(--tab-active-border);
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--tab-active-border);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.month-picker.tab-variant .month-dropdown-year .btn-icon svg {
+  color: var(--tab-active-border);
+  stroke: var(--tab-active-border);
+}
+
+.month-picker.tab-variant .month-dropdown-year .btn-icon:hover {
+  background: rgba(255, 255, 255, 0.22);
+  color: var(--tab-active-border);
+  border-color: var(--tab-active-border);
+  transform: none;
+}
+
+.month-picker.tab-variant .month-dropdown-year .btn-icon:hover svg {
+  color: var(--tab-active-border);
+  stroke: var(--tab-active-border);
 }
 
 .month-picker.tab-variant .month-grid {
