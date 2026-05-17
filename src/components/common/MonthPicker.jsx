@@ -8,6 +8,29 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
   const [dropdownYear, setDropdownYear] = useState(currentYear);
   const containerRef = useRef(null);
   const isToggling = useRef(false);
+  const tabCloseTimerRef = useRef(null);
+
+  const clearTabCloseTimer = () => {
+    if (tabCloseTimerRef.current) {
+      window.clearTimeout(tabCloseTimerRef.current);
+      tabCloseTimerRef.current = null;
+    }
+  };
+
+  const handleTabMouseEnter = () => {
+    if (variant !== 'tab') return;
+    clearTabCloseTimer();
+    setShowDropdown(true);
+  };
+
+  const handleTabMouseLeave = () => {
+    if (variant !== 'tab') return;
+    clearTabCloseTimer();
+    tabCloseTimerRef.current = window.setTimeout(() => {
+      setShowDropdown(false);
+      tabCloseTimerRef.current = null;
+    }, 180);
+  };
 
   const handleToggle = (e) => {
     e.stopPropagation();
@@ -31,7 +54,10 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      clearTabCloseTimer();
+    };
   }, []);
 
   useEffect(() => {
@@ -49,8 +75,10 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
 
   return (
     <div 
-      className={`month-picker${variant === 'tab' ? ' tab-variant' : ''}`} 
+      className={`month-picker${variant === 'tab' ? ' tab-variant' : ''}${variant === 'tab' && showDropdown ? ' dropdown-open' : ''}`} 
       ref={containerRef} 
+      onMouseEnter={handleTabMouseEnter}
+      onMouseLeave={handleTabMouseLeave}
       style={{ position: 'relative' }}
     >
       <button className="month-nav-btn" onClick={() => navigateMonth(-1)} aria-label="이전 달">

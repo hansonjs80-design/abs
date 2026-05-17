@@ -310,7 +310,7 @@
   justify-content: space-between;
   background: rgba(248, 250, 252, 0.96);
   border-bottom: none;
-  overflow-x: clip;
+  overflow: visible;
   backdrop-filter: blur(10px);
   gap: 14px;
   padding: 7px 18px 0px;
@@ -326,6 +326,8 @@
 }
 
 .top-tabs {
+  position: relative;
+  z-index: 20;
   min-width: 0;
   padding: 8px 0 0;
   border: 0;
@@ -490,7 +492,7 @@
   min-height: 44px;
   transform: none;
   box-shadow: 5px -5px 10px -2px rgba(15, 23, 42, 0.2), -1px -3px 5px -1px rgba(15, 23, 42, 0.08);
-  z-index: 3;
+  z-index: 40;
   font-size: 1.31rem;
   font-weight: 900;
   overflow: visible;
@@ -505,6 +507,19 @@
 .top-tab--stats-sw.active .month-nav-btn,
 .top-tab--stats-mt.active .month-nav-btn {
   color: #d97706 !important;
+}
+
+.top-tab--stats-sw.active,
+.top-tab--stats-sw.active:hover,
+.top-tab--stats-mt.active,
+.top-tab--stats-mt.active:hover {
+  background: #fbbc04;
+  border-bottom-color: #fbbc04;
+}
+
+.top-tab--stats-sw.active::after,
+.top-tab--stats-mt.active::after {
+  background: #fbbc04;
 }
 
 .top-tab--stats-sw.active .month-nav-btn,
@@ -561,7 +576,7 @@
 }
 
 .top-tab.active:hover .top-tab-inner {
-  filter: brightness(1.2);
+  filter: none;
 }
 
 .top-tab-with-date {
@@ -600,8 +615,8 @@
 
 /* 3. Stats SW (Purple) */
 .top-tab--stats-sw {
-  --tab-bg: #fbbc04;
-  --tab-hover-bg: #fbbc04;
+  --tab-bg: #fdf2c6;
+  --tab-hover-bg: #fef3c7;
   --tab-active-bg: #fbbc04;
   --tab-active-border: #fbbc04;
   --tab-shadow: rgba(234, 179, 8, 0.2);
@@ -610,8 +625,8 @@
 
 /* 4. Stats MT (Purple) */
 .top-tab--stats-mt {
-  --tab-bg: #fbbc04;
-  --tab-hover-bg: #fbbc04;
+  --tab-bg: #fef7c6;
+  --tab-hover-bg: #fef9c3;
   --tab-active-bg: #fbbc04;
   --tab-active-border: #fbbc04;
   --tab-shadow: rgba(202, 138, 4, 0.2);
@@ -851,15 +866,15 @@
 /* 탭의 달력(variant='tab')은 오직 CSS Hover로만 완벽하게 동작하도록 설정 */
 .month-dropdown-wrapper.css-hover-dropdown {
   position: absolute;
-  top: 100%;
+  top: calc(100% - 2px);
   left: 50%;
   transform: translateX(-50%);
-  padding-top: 8px; /* 빈 공간(gap)을 채워 마우스 이동 시 onMouseLeave 방지 */
+  padding-top: 14px; /* 탭에서 드롭다운으로 이동하는 hover 영역을 안정적으로 연결 */
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
-  z-index: 300;
+  transition: opacity 0.12s ease, visibility 0.12s ease;
+  z-index: 1000;
 }
 
 /* 드롭다운 위치 재조정 (wrapper 내부) */
@@ -872,6 +887,7 @@
 }
 
 .month-picker.tab-variant:hover .month-dropdown-wrapper.css-hover-dropdown,
+.month-picker.tab-variant.dropdown-open .month-dropdown-wrapper.css-hover-dropdown,
 .month-picker.tab-variant:focus-within .month-dropdown-wrapper.css-hover-dropdown {
   opacity: 1;
   visibility: visible;
