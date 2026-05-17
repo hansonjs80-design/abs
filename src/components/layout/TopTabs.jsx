@@ -12,7 +12,6 @@ export default function TopTabs() {
   const items = getAllowedTabs(user);
   const [now, setNow] = useState(() => new Date());
   const [optimisticPath, setOptimisticPath] = useState(null);
-  const activeMonthPickerRef = useRef(null);
 
   useEffect(() => {
     setOptimisticPath(null);
@@ -58,9 +57,8 @@ export default function TopTabs() {
                     const target = e.target.nodeType === 3 ? e.target.parentNode : e.target;
                     if (isActive && item.monthLabel) {
                       if (target.closest('.month-picker-label') || target.closest('.month-nav-btn') || target.closest('.month-dropdown')) return;
-                      e.stopPropagation();
-                      e.preventDefault();
-                      activeMonthPickerRef.current?.toggleDropdown();
+                      const label = e.currentTarget.querySelector('.month-picker-label');
+                      if (label) label.click();
                       return;
                     }
                     if (!isActive) {
@@ -87,7 +85,7 @@ export default function TopTabs() {
                           <span>{item.label}</span>
                         </span>
                         <span className="tab-content-active">
-                          <MonthPicker ref={isActive ? activeMonthPickerRef : null} suffix={item.monthLabel} variant="tab" />
+                          <MonthPicker suffix={item.monthLabel} variant="tab" />
                         </span>
                       </div>
                     ) : (

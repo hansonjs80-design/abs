@@ -1,18 +1,12 @@
-import { useState, useRef, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSchedule } from '../../contexts/ScheduleContext';
 
-const MonthPicker = forwardRef(({ suffix = '', variant = 'default' }, ref) => {
+export default function MonthPicker({ suffix = '', variant = 'default' }) {
   const { currentYear, currentMonth, navigateMonth, goToMonth } = useSchedule();
   const [showDropdown, setShowDropdown] = useState(false);
   const [dropdownYear, setDropdownYear] = useState(currentYear);
   const containerRef = useRef(null);
-
-  useImperativeHandle(ref, () => ({
-    toggleDropdown: () => setShowDropdown(prev => !prev),
-    openDropdown: () => setShowDropdown(true),
-    closeDropdown: () => setShowDropdown(false)
-  }));
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -92,6 +86,4 @@ const MonthPicker = forwardRef(({ suffix = '', variant = 'default' }, ref) => {
       )}
     </div>
   );
-});
-
-export default MonthPicker;
+}
