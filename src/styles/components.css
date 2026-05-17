@@ -380,10 +380,11 @@
   justify-content: flex-start;
   min-height: 32px;
   margin-left: 0;
-  margin-bottom: 2px;
+  margin-bottom: 0px;
   padding: 4px 16px;
   border: 2px solid rgba(0, 0, 0, 0.08);
   border-bottom: 2px solid transparent;
+  background-clip: padding-box;
   border-radius: 11px 11px 0 0;
   background: var(--tab-bg);
   color: var(--tab-text-color);
