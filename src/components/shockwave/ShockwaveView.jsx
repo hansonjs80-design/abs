@@ -9,6 +9,7 @@ import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingH
 import { useToast } from '../common/Toast';
 import MonthlyTherapistConfig from './MonthlyTherapistConfig';
 import SchedulerPatientSelector from './SchedulerPatientSelector';
+import BodyPartKeyboardPanel from './BodyPartKeyboardPanel';
 import useContextMenuPositioning from './useContextMenuPositioning';
 import usePatientHistoryActions from './usePatientHistoryActions';
 import useSchedulerAutoText from './useSchedulerAutoText';
@@ -94,7 +95,7 @@ const ContextMenuLocalInput = ({ value, onChange, onKeyDown, onBlur, className, 
   );
 };
 
-const ContextMenuLocalInputGroup = ({ placeholder, buttonLabel, onSubmit, imeOpenRef, className = "context-menu-input", autoFocus }) => {
+const ContextMenuLocalInputGroup = ({ placeholder, buttonLabel, onSubmit, imeOpenRef, className = "context-menu-input", autoFocus, onInputKeyDown }) => {
   const [localValue, setLocalValue] = useState('');
   const inputRef = useRef(null);
 
@@ -147,7 +148,9 @@ const ContextMenuLocalInputGroup = ({ placeholder, buttonLabel, onSubmit, imeOpe
           if (e.key === 'Enter') {
             e.preventDefault();
             handleSubmit();
+            return;
           }
+          if (onInputKeyDown) onInputKeyDown(e);
         }}
         onCompositionStart={() => {
           if (imeOpenRef) imeOpenRef.current = true;
@@ -466,6 +469,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [editValue, setEditValue] = useState('');
   const [pendingDisplayValues, setPendingDisplayValues] = useState({});
   const [pendingMergeSpans, setPendingMergeSpans] = useState({});
+  const [pendingMemoOverrides, setPendingMemoOverrides] = useState({});
   const [pendingCellBgColors, setPendingCellBgColors] = useState({});
   const [loadedMemosKey, setLoadedMemosKey] = useState('');
   const clipboardRef = useRef({ content: '', mode: null });   // mode: 'copy' | 'cut'
@@ -774,6 +778,26 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     
     flushSync(() => {
       setPendingDisplayValues((prev) => ({ ...prev, ...nextValues }));
+      setPendingMemoOverrides((prev) => {
+        const next = { ...prev };
+        entries.forEach((item) => {
+          if (!item) return;
+          const key = item.key || `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+          if (!key || key.includes('undefined')) return;
+          const override = {
+            ...next[key],
+            content: String(item.content ?? ''),
+          };
+          if (Object.prototype.hasOwnProperty.call(item, 'bg_color')) override.bg_color = item.bg_color ?? null;
+          if (item.merge_span || item.mergeSpan) override.merge_span = item.merge_span || item.mergeSpan;
+          if (Object.prototype.hasOwnProperty.call(item, 'prescription')) override.prescription = item.prescription ?? null;
+          if (Object.prototype.hasOwnProperty.call(item, 'body_part')) override.body_part = item.body_part ?? null;
+          next[key] = {
+            ...override,
+          };
+        });
+        return next;
+      });
       setEditingCell(null);
       setContextMenu(null);
     });
@@ -783,8 +807,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const entries = Array.isArray(updates) ? updates : [updates];
     const nextSpans = {};
     entries.forEach((item) => {
-      if (!item || !item.key || !item.mergeSpan) return;
-      nextSpans[item.key] = item.mergeSpan;
+      if (!item) return;
+      const key = item.key || `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+      const mergeSpan = item.mergeSpan || item.merge_span;
+      if (!key || key.includes('undefined') || !mergeSpan) return;
+      nextSpans[key] = mergeSpan;
     });
     if (Object.keys(nextSpans).length === 0) return;
     flushSync(() => {
@@ -862,6 +889,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         });
         return changed ? next : prev;
       });
+      setPendingMemoOverrides((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        keys.forEach((key) => {
+          if (key in next) {
+            delete next[key];
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
     }, 0);
   }, []);
 
@@ -871,6 +909,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     recordUndo,
   } = useScheduleUndoActions({
     applyImmediateCellDisplay,
+    applyImmediateMergeSpan,
     clearImmediateCellDisplay,
     currentMonth,
     currentYear,
@@ -919,6 +958,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     selectedCell,
     selectedKeys,
     memos,
+    pendingMergeSpans,
   });
 
   const scheduleEditDraftAutosave = useCallback((key, value) => {
@@ -1207,6 +1247,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     saveShockwaveMemosBulk,
     recordUndo,
     applyImmediateCellDisplay,
+    applyImmediateMergeSpan,
     clearImmediateCellDisplay,
     addToast,
     setContextMenu,
@@ -1281,6 +1322,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     buildSchedulerAutoText,
     saveShockwaveMemosBulk,
     recordUndo,
+    applyImmediateCellDisplay,
+    applyImmediateMergeSpan,
+    clearImmediateCellDisplay,
     addToast,
     setContextMenu,
   });
@@ -1671,8 +1715,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   const isScheduleMonthLoading = loadedMemosKey !== scheduleScrollKey;
   const renderMemos = useMemo(
-    () => (isScheduleMonthLoading ? {} : memos),
-    [isScheduleMonthLoading, memos]
+    () => {
+      if (isScheduleMonthLoading) return {};
+      if (!pendingMemoOverrides || Object.keys(pendingMemoOverrides).length === 0) return memos;
+      const next = { ...(memos || {}) };
+      Object.entries(pendingMemoOverrides).forEach(([key, override]) => {
+        next[key] = { ...(next[key] || {}), ...override };
+      });
+      return next;
+    },
+    [isScheduleMonthLoading, memos, pendingMemoOverrides]
   );
 
   return (
@@ -2228,66 +2280,24 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       <div className="context-menu-editor-panel">
                         <div className="context-menu-inline-column">
                           <div className="context-menu-body-dropdown">
-                          <div
-                            className="context-menu-body-panel"
-                            onMouseDown={(e) => e.stopPropagation()}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {availableParts.length > 0 ? (
-                              <div className="context-menu-checklist">
-                                {availableParts.map((part, idx) => {
-                                  const partKey = normalizeBodyPartKey(part);
-                                  const isChecked = currentParts.some((p) => normalizeBodyPartKey(p) === partKey);
-                                  return (
-                                    <div key={idx} className={`context-menu-check-item${isChecked ? ' is-checked' : ''}`}>
-                                      <label className="context-menu-check-label">
-                                        <input
-                                          type="checkbox"
-                                          checked={isChecked}
-                                          onChange={(e) => {
-                                            e.stopPropagation();
-                                            handleContextAction({ type: 'bodyPartToggle', value: part });
-                                          }}
-                                          onMouseDown={e => e.stopPropagation()}
-                                          onClick={e => e.stopPropagation()}
-                                        />
-                                        <span>{part}</span>
-                                      </label>
-                                      <button
-                                        type="button"
-                                        className="context-menu-body-delete"
-                                        title={`${part} 삭제`}
-                                        onMouseDown={e => e.stopPropagation()}
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          handleContextAction({ type: 'bodyPartDeleteValue', value: part });
-                                          setContextMenuBodyPartOptions((prev) => prev.filter((item) => normalizeBodyPartKey(item) !== normalizeBodyPartKey(part)));
-                                        }}
-                                      >
-                                        ×
-                                      </button>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            ) : currentParts.length === 0 ? (
-                              <div className="context-menu-empty">등록된 부위가 없습니다.</div>
-                            ) : null}
-                            <ContextMenuLocalInputGroup
-                              placeholder="새 부위 추가"
-                              buttonLabel="추가"
+                            <BodyPartKeyboardPanel
+                              availableParts={availableParts}
+                              currentParts={currentParts}
                               autoFocus={true}
-                              onSubmit={(val) => {
-                                handleContextAction({ type: 'bodyPartAdd', value: val });
-                              }}
                               imeOpenRef={imeOpenRef}
+                              onAdd={(value) => handleContextAction({ type: 'bodyPartAdd', value })}
+                              onToggle={(value) => handleContextAction({ type: 'bodyPartToggle', value })}
+                              onDelete={(value) => {
+                                handleContextAction({ type: 'bodyPartDeleteValue', value });
+                                setContextMenuBodyPartOptions((prev) => (
+                                  prev.filter((item) => normalizeBodyPartKey(item) !== normalizeBodyPartKey(value))
+                                ));
+                              }}
                             />
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
                 </div>
 
                 <div className="context-menu-item" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => {

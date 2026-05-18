@@ -4,8 +4,14 @@ export default function useScheduleSelectionModel({
   selectedCell,
   selectedKeys,
   memos,
+  pendingMergeSpans = {},
 }) {
   const cellKey = useCallback((w, d, r, c) => `${w}-${d}-${r}-${c}`, []);
+
+  const getMergeSpanForKey = useCallback((key, currentMemos) => {
+    if (!currentMemos && pendingMergeSpans[key]) return pendingMergeSpans[key];
+    return currentMemos?.[key]?.merge_span || memos[key]?.merge_span;
+  }, [memos, pendingMergeSpans]);
 
   const computeSelectionInfo = useCallback(() => {
     if (!selectedCell || !selectedKeys || selectedKeys.size === 0) return null;
@@ -25,12 +31,12 @@ export default function useScheduleSelectionModel({
       minCol = Math.min(minCol, c);
       maxCol = Math.max(maxCol, c);
 
-      const mergeSpan = memos[key]?.merge_span;
+      const mergeSpan = getMergeSpanForKey(key);
       if (mergeSpan?.mergedInto) {
         const masterKey = mergeSpan.mergedInto;
         const [mw, md, mr, mc] = masterKey.split('-').map(Number);
         if (mw !== w || md !== d) return;
-        const masterSpan = memos[masterKey]?.merge_span || { rowSpan: 1, colSpan: 1 };
+        const masterSpan = getMergeSpanForKey(masterKey) || { rowSpan: 1, colSpan: 1 };
         minRow = Math.min(minRow, mr);
         minCol = Math.min(minCol, mc);
         maxRow = Math.max(maxRow, mr + masterSpan.rowSpan - 1);
@@ -47,10 +53,10 @@ export default function useScheduleSelectionModel({
     const boundedMinCol = minCol === Infinity ? selectedCell.c : minCol;
     const boundedMaxCol = maxCol === -Infinity ? selectedCell.c : maxCol;
     const masterKey = cellKey(w, d, boundedMinRow, boundedMinCol);
-    const masterSpan = memos[masterKey]?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+    const masterSpan = getMergeSpanForKey(masterKey) || { rowSpan: 1, colSpan: 1, mergedInto: null };
     const selectionRowSpan = boundedMaxRow - boundedMinRow + 1;
     const selectionColSpan = boundedMaxCol - boundedMinCol + 1;
-    const isMergedMaster = masterSpan.mergedInto === null && (masterSpan.rowSpan > 1 || masterSpan.colSpan > 1);
+    const isMergedMaster = !masterSpan.mergedInto && (masterSpan.rowSpan > 1 || masterSpan.colSpan > 1);
 
     return {
       w,
@@ -66,21 +72,22 @@ export default function useScheduleSelectionModel({
       isMergedMaster,
       selectionMultiple: selectionRowSpan > 1 || selectionColSpan > 1,
     };
-  }, [selectedCell, selectedKeys, memos, cellKey]);
+  }, [selectedCell, selectedKeys, cellKey, getMergeSpanForKey]);
 
   const getEffectiveMergeSpan = useCallback((key, currentMemos) => {
     const memosData = currentMemos || memos;
     const cellData = memosData[key];
-    if (!cellData || !cellData.merge_span) return { rowSpan: 1, colSpan: 1, mergedInto: null };
+    const pendingSpan = currentMemos ? null : pendingMergeSpans[key];
+    if (!cellData && !pendingSpan) return { rowSpan: 1, colSpan: 1, mergedInto: null };
 
-    const mergeSpan = cellData.merge_span;
+    const mergeSpan = pendingSpan || cellData.merge_span;
     if (!mergeSpan.mergedInto) return mergeSpan;
 
     const masterKey = mergeSpan.mergedInto;
     const masterData = memosData[masterKey];
-    const masterSpan = masterData?.merge_span;
+    const masterSpan = (currentMemos ? null : pendingMergeSpans[masterKey]) || masterData?.merge_span;
 
-    if (!masterData || !masterSpan || masterSpan.rowSpan <= 1) {
+    if ((!masterData && !pendingMergeSpans[masterKey]) || !masterSpan || masterSpan.rowSpan <= 1) {
       return { ...mergeSpan, mergedInto: null };
     }
     const [w, d, r, c] = key.split('-').map(Number);
@@ -92,7 +99,7 @@ export default function useScheduleSelectionModel({
       }
     }
     return { ...mergeSpan, mergedInto: null };
-  }, [memos]);
+  }, [memos, pendingMergeSpans]);
 
   const normalizeCellToMergeMaster = useCallback((cell) => {
     if (!cell) return cell;

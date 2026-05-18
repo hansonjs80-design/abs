@@ -12,6 +12,7 @@ export default function useScheduleMergeActions({
   saveShockwaveMemosBulk,
   recordUndo,
   applyImmediateCellDisplay,
+  applyImmediateMergeSpan,
   clearImmediateCellDisplay,
   addToast,
   setContextMenu,
@@ -154,6 +155,8 @@ export default function useScheduleMergeActions({
             content: memo?.content || '',
             bg_color: memo?.bg_color || null,
             merge_span: memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+            prescription: memo?.prescription || null,
+            body_part: memo?.body_part || null,
           });
           payload.push({
             year: currentYear,
@@ -164,6 +167,9 @@ export default function useScheduleMergeActions({
             col_index: col,
             merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
             content: memo?.content || '',
+            bg_color: memo?.bg_color || null,
+            prescription: memo?.prescription || null,
+            body_part: memo?.body_part || null,
           });
         }
       }
@@ -186,6 +192,8 @@ export default function useScheduleMergeActions({
             content: memo?.content || '',
             bg_color: memo?.bg_color || null,
             merge_span: memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+            prescription: memo?.prescription || null,
+            body_part: memo?.body_part || null,
           });
           payload.push({
             year: currentYear,
@@ -198,6 +206,9 @@ export default function useScheduleMergeActions({
               ? { rowSpan: maxRow - minRow + 1, colSpan: maxCol - minCol + 1, mergedInto: null }
               : { rowSpan: 1, colSpan: 1, mergedInto: masterKey },
             content: '',
+            bg_color: memo?.bg_color || null,
+            prescription: memo?.prescription || null,
+            body_part: memo?.body_part || null,
           });
         }
       }
@@ -212,11 +223,35 @@ export default function useScheduleMergeActions({
 
     if (payload.length > 0) {
       recordUndo({ type: 'bulk-edit', oldMemos });
-      await saveShockwaveMemosBulk(payload);
-      addToast(isAlreadyMerged ? '병합이 해제되었습니다' : '셀이 병합되었습니다', 'info');
+      applyImmediateCellDisplay(payload);
+      applyImmediateMergeSpan(payload);
+      setContextMenu(null);
+
+      const success = await saveShockwaveMemosBulk(payload);
+      if (success) {
+        clearImmediateCellDisplay(payload);
+        addToast(isAlreadyMerged ? '병합이 해제되었습니다' : '셀이 병합되었습니다', 'info');
+      } else {
+        applyImmediateCellDisplay(oldMemos);
+        applyImmediateMergeSpan(oldMemos);
+        addToast(isAlreadyMerged ? '병합 해제 실패' : '병합 실패', 'error');
+      }
     }
-    setContextMenu(null);
-  }, [computeSelectionInfo, currentYear, currentMonth, memos, saveShockwaveMemosBulk, addToast, cellKey, recordUndo, selectedKeys, setContextMenu]);
+  }, [
+    computeSelectionInfo,
+    currentYear,
+    currentMonth,
+    memos,
+    saveShockwaveMemosBulk,
+    addToast,
+    cellKey,
+    recordUndo,
+    selectedKeys,
+    setContextMenu,
+    applyImmediateCellDisplay,
+    applyImmediateMergeSpan,
+    clearImmediateCellDisplay,
+  ]);
 
   return {
     deleteCells,

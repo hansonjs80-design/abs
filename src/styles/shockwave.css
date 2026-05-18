@@ -1900,6 +1900,13 @@
   background: #eff6ff;
 }
 
+.context-menu-check-item:focus,
+.context-menu-check-item.is-keyboard-focused {
+  outline: 2px solid rgba(37, 99, 235, 0.48);
+  outline-offset: -2px;
+  border-color: rgba(37, 99, 235, 0.38);
+}
+
 .context-menu-check-label {
   display: flex;
   align-items: center;

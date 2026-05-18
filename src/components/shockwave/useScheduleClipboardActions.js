@@ -23,6 +23,9 @@ export default function useScheduleClipboardActions({
   buildSchedulerAutoText,
   saveShockwaveMemosBulk,
   recordUndo,
+  applyImmediateCellDisplay,
+  applyImmediateMergeSpan,
+  clearImmediateCellDisplay,
   addToast,
   setContextMenu,
 }) {
@@ -364,6 +367,7 @@ export default function useScheduleClipboardActions({
           bg_color: m?.bg_color || null,
           merge_span: m?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
           prescription: m?.prescription || '',
+          body_part: m?.body_part || '',
         });
       }
     }
@@ -412,6 +416,7 @@ export default function useScheduleClipboardActions({
           bg_color: m?.bg_color || null,
           merge_span: m?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
           prescription: m?.prescription || '',
+          body_part: m?.body_part || '',
         });
         combinedPayload.set(`${w}-${d}-${r}-${c}`, {
           year: currentYear,
@@ -424,6 +429,7 @@ export default function useScheduleClipboardActions({
           bg_color: null,
           merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
           prescription: '',
+          body_part: '',
         });
       });
     }
@@ -435,13 +441,26 @@ export default function useScheduleClipboardActions({
       );
     });
 
-    await saveShockwaveMemosBulk(Array.from(combinedPayload.values()));
+    const payload = Array.from(combinedPayload.values());
+    recordUndo({ type: 'bulk-edit', oldMemos });
+    applyImmediateCellDisplay(payload);
+    applyImmediateMergeSpan(payload);
+    const success = await saveShockwaveMemosBulk(payload);
+
+    if (success) {
+      clearImmediateCellDisplay(payload);
+    } else {
+      applyImmediateCellDisplay(oldMemos);
+      applyImmediateMergeSpan(oldMemos);
+      addToast('붙여넣기 실패', 'error');
+      setContextMenu(null);
+      return;
+    }
 
     if (clip.mode === 'cut' && currentClipboardSource?.keys) {
       clipboardRef.current = { ...clip, mode: 'copy' };
     }
 
-    recordUndo({ type: 'bulk-edit', oldMemos });
     addToast('붙여넣기 완료', 'success');
     setContextMenu(null);
   }, [
@@ -461,6 +480,9 @@ export default function useScheduleClipboardActions({
     colCount,
     saveShockwaveMemosBulk,
     recordUndo,
+    applyImmediateCellDisplay,
+    applyImmediateMergeSpan,
+    clearImmediateCellDisplay,
     setClipboardSource,
     setContextMenu,
   ]);

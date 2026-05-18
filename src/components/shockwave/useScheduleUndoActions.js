@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 
 export default function useScheduleUndoActions({
   applyImmediateCellDisplay,
+  applyImmediateMergeSpan,
   clearImmediateCellDisplay,
   currentMonth,
   currentYear,
@@ -71,6 +72,7 @@ export default function useScheduleUndoActions({
           }]
         : [];
     applyImmediateCellDisplay(undoPayload);
+    applyImmediateMergeSpan(undoPayload);
 
     undoQueueRef.current = undoQueueRef.current.then(async () => {
       if (action.type === 'bulk-edit') {
@@ -117,6 +119,7 @@ export default function useScheduleUndoActions({
     return true;
   }, [
     applyImmediateCellDisplay,
+    applyImmediateMergeSpan,
     clearImmediateCellDisplay,
     currentMonth,
     currentYear,
