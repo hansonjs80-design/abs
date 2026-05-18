@@ -89,3 +89,74 @@ export function buildTreatmentStatusPayload({
   if (payload.length === 0) return null;
   return { oldMemos, payload };
 }
+
+export function buildHolidayBackgroundPayload({
+  selectedKeys,
+  memos,
+  currentYear,
+  currentMonth,
+  normalizeKeysToMergeMasters,
+  cellKey,
+  holidayBgColor,
+}) {
+  if (!selectedKeys || selectedKeys.size === 0) return null;
+
+  const effectiveKeys = normalizeKeysToMergeMasters(selectedKeys);
+  const shouldClearSelection = Array.from(effectiveKeys).some(
+    (key) => memos?.[key]?.bg_color === holidayBgColor
+  );
+  const nextBgColor = shouldClearSelection ? null : holidayBgColor;
+  const touchedKeys = new Set();
+  const oldMemos = [];
+  const payload = [];
+
+  Array.from(effectiveKeys).forEach((key) => {
+    const [w, d, r, c] = key.split('-').map(Number);
+    const memo = memos?.[key];
+    const masterSpan = memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+    const rowSpan = Math.max(1, masterSpan.rowSpan || 1);
+    const colSpan = Math.max(1, masterSpan.colSpan || 1);
+
+    for (let row = r; row < r + rowSpan; row += 1) {
+      for (let col = c; col < c + colSpan; col += 1) {
+        const rangeKey = cellKey(w, d, row, col);
+        if (touchedKeys.has(rangeKey)) continue;
+        touchedKeys.add(rangeKey);
+
+        const rangeMemo = memos?.[rangeKey];
+        if ((rangeMemo?.bg_color || null) === nextBgColor) continue;
+
+        oldMemos.push({
+          year: currentYear,
+          month: currentMonth,
+          week_index: w,
+          day_index: d,
+          row_index: row,
+          col_index: col,
+          content: rangeMemo?.content || '',
+          bg_color: rangeMemo?.bg_color || null,
+          merge_span: rangeMemo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+          prescription: rangeMemo?.prescription || null,
+          body_part: rangeMemo?.body_part || null,
+        });
+
+        payload.push({
+          year: currentYear,
+          month: currentMonth,
+          week_index: w,
+          day_index: d,
+          row_index: row,
+          col_index: col,
+          content: rangeMemo?.content || '',
+          bg_color: nextBgColor,
+          merge_span: rangeMemo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+          prescription: rangeMemo?.prescription || null,
+          body_part: rangeMemo?.body_part || null,
+        });
+      }
+    }
+  });
+
+  if (payload.length === 0) return null;
+  return { oldMemos, payload };
+}

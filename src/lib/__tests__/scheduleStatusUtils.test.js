@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  buildHolidayBackgroundPayload,
   buildTreatmentStatusPayload,
   getEffectiveCellBgColor,
   TREATMENT_COMPLETE_BG,
@@ -56,5 +57,58 @@ describe('schedule treatment status payloads', () => {
       ),
       null
     );
+  });
+
+  it('builds holiday background payload across a merged selection', () => {
+    const memos = {
+      '0-0-1-1': {
+        content: '1234/홍길동',
+        bg_color: null,
+        merge_span: { rowSpan: 1, colSpan: 2, mergedInto: null },
+      },
+      '0-0-1-2': {
+        content: '',
+        bg_color: null,
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-0-1-1' },
+      },
+    };
+
+    const batch = buildHolidayBackgroundPayload({
+      selectedKeys: new Set(['0-0-1-1']),
+      memos,
+      currentYear: 2026,
+      currentMonth: 5,
+      normalizeKeysToMergeMasters,
+      cellKey,
+      holidayBgColor: '#d9ead3',
+    });
+
+    assert.equal(batch.payload.length, 2);
+    assert.deepEqual(batch.payload.map((item) => item.bg_color), ['#d9ead3', '#d9ead3']);
+    assert.deepEqual(batch.oldMemos.map((item) => item.bg_color), [null, null]);
+  });
+
+  it('clears holiday background when any selected master already has it', () => {
+    const memos = {
+      '0-0-0-0': {
+        content: '1234/홍길동',
+        bg_color: '#d9ead3',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+      },
+    };
+
+    const batch = buildHolidayBackgroundPayload({
+      selectedKeys: new Set(['0-0-0-0']),
+      memos,
+      currentYear: 2026,
+      currentMonth: 5,
+      normalizeKeysToMergeMasters,
+      cellKey,
+      holidayBgColor: '#d9ead3',
+    });
+
+    assert.equal(batch.payload.length, 1);
+    assert.equal(batch.payload[0].bg_color, null);
+    assert.equal(batch.oldMemos[0].bg_color, '#d9ead3');
   });
 });

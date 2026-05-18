@@ -384,8 +384,8 @@
   margin-left: 0;
   margin-bottom: 0px;
   padding: 4px 16px;
-  border: 2px solid rgba(0, 0, 0, 0.08);
-  border-bottom: 2px solid transparent;
+  border: 0;
+  border-bottom: 0;
   background-clip: padding-box;
   border-radius: 11px 11px 0 0;
   background: var(--tab-bg);
@@ -394,11 +394,20 @@
   font-weight: 800;
   line-height: 1;
   text-decoration: none;
-  box-shadow: 4px -2px 6px -1px rgba(15, 23, 42, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow:
+    -4px -4px 9px -5px rgba(15, 23, 42, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
   transform: none;
   transform-origin: bottom center;
   filter: none;
-  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition:
+    background-color 420ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 420ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 460ms cubic-bezier(0.16, 1, 0.3, 1),
+    padding 500ms cubic-bezier(0.16, 1, 0.3, 1),
+    min-height 500ms cubic-bezier(0.16, 1, 0.3, 1),
+    font-size 500ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 240ms ease;
   white-space: nowrap;
   overflow: hidden;
 }
@@ -406,7 +415,9 @@
 .top-tab:not(.active):hover {
   background: var(--tab-hover-bg);
   padding: 4px 16px 10px 16px;
-  box-shadow: 5px -5px 10px -2px rgba(15, 23, 42, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow:
+    -5px -5px 11px -5px rgba(15, 23, 42, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   z-index: 2;
 }
 
@@ -417,8 +428,69 @@
   gap: 7px;
 }
 
+.tab-month-prefix {
+  display: inline-block;
+  max-width: 0;
+  margin-right: 0;
+  overflow: hidden;
+  opacity: 0;
+  white-space: nowrap;
+  vertical-align: bottom;
+  transition:
+    max-width 760ms cubic-bezier(0.16, 1, 0.3, 1),
+    margin-right 760ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 260ms ease;
+}
+
+.top-tab.active .tab-month-prefix {
+  max-width: 9.8em;
+  margin-right: 0.35em;
+  opacity: 1;
+}
+
+.measuring-tab-width .tab-content-active {
+  max-width: none !important;
+  opacity: 1 !important;
+}
+
+.measuring-tab-width .tab-month-prefix {
+  max-width: 9.8em !important;
+  margin-right: 0.35em !important;
+  opacity: 1 !important;
+}
+
+.measuring-tab-width .month-picker.tab-variant .month-nav-btn {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.tab-month-title {
+  display: inline-block;
+  white-space: nowrap;
+  transform: translateX(0);
+  transition: transform 760ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.month-picker.tab-variant .month-nav-btn {
+  opacity: 0;
+  transform: translateY(1px) scale(0.92);
+  transition:
+    opacity 360ms ease,
+    transform 520ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 320ms ease,
+    border-color 320ms ease;
+}
+
+.top-tab.active .month-picker.tab-variant .month-nav-btn {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
 .top-tab * {
-  transition: color 0.4s ease, background-color 0.4s ease, border-color 0.4s ease, transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.4s ease;
+  transition:
+    background-color 320ms ease,
+    border-color 320ms ease,
+    transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .top-tab > .top-tab-inner > span,
@@ -432,7 +504,7 @@
 }
 
 .top-tab:not(.active):hover .top-tab-inner {
-  filter: brightness(1.2);
+  transform: translateY(-1px);
 }
 
 .top-tab:not(.active) {
@@ -452,7 +524,8 @@
   align-items: center;
   white-space: nowrap;
   overflow: hidden;
-  transition: max-width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.15s ease-out;
+  transition:
+    max-width 640ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .top-tab:not(.active) .tab-content-active {
@@ -462,18 +535,24 @@
 }
 
 .top-tab.active .tab-content-active {
-  max-width: 400px;
+  max-width: var(--tab-active-content-width, 320px);
   opacity: 1;
   pointer-events: auto;
+  overflow: hidden;
+  transition:
+    max-width 760ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.top-tab.active .tab-content-active:has(.month-picker.dropdown-open) {
   overflow: visible;
-  transition: max-width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease-in 0.15s;
 }
 
 .top-tab:not(.active) .tab-content-inactive {
-  max-width: 250px;
+  max-width: var(--tab-inactive-content-width, 220px);
   opacity: 1;
   pointer-events: auto;
-  transition: max-width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease-in 0.15s;
+  transition:
+    max-width 520ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .top-tab.active .tab-content-inactive {
@@ -491,7 +570,9 @@
   padding: 8px 19px 4px;
   min-height: 44px;
   transform: none;
-  box-shadow: 5px -5px 10px -2px rgba(15, 23, 42, 0.2), -1px -3px 5px -1px rgba(15, 23, 42, 0.08);
+  box-shadow:
+    -5px -5px 12px -5px rgba(15, 23, 42, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
   z-index: 40;
   font-size: 1.31rem;
   font-weight: 900;
@@ -517,11 +598,6 @@
   border-bottom-color: var(--tab-active-surface);
 }
 
-.top-tab--stats-sw.active::after,
-.top-tab--stats-mt.active::after {
-  background: #fbbc04;
-}
-
 .top-tab--stats-sw.active .month-nav-btn,
 .top-tab--stats-mt.active .month-nav-btn {
   border-color: #d97706 !important;
@@ -539,29 +615,38 @@
   border-color: var(--tab-active-border);
   border-bottom-color: var(--tab-active-surface, #f8fafc);
   transform: none;
-  box-shadow: 5px -5px 10px -2px rgba(15, 23, 42, 0.2), -1px -3px 5px -1px rgba(15, 23, 42, 0.08);
+  box-shadow:
+    -5px -5px 12px -5px rgba(15, 23, 42, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .top-tab::before,
 .top-tab::after {
   content: "";
   position: absolute;
+  pointer-events: none;
+}
+
+.top-tab::before {
   bottom: -2px;
+  right: 100%;
   width: 200vw;
   height: 2px;
   background: var(--tab-active-border);
   z-index: -1;
-  pointer-events: none;
   opacity: 0;
   transition: opacity 0.6s ease-in-out;
 }
 
-.top-tab::before {
-  right: 100%;
-}
-
 .top-tab::after {
+  bottom: -2px;
   left: 100%;
+  width: 200vw;
+  height: 2px;
+  background: var(--tab-active-border);
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.6s ease-in-out;
 }
 
 .top-tab.active::before,
@@ -582,6 +667,7 @@
 .top-tab-with-date {
   position: relative;
 }
+
 .top-tab-with-date:nth-child(1) { z-index: 10; }
 .top-tab-with-date:nth-child(2) { z-index: 9; }
 .top-tab-with-date:nth-child(3) { z-index: 8; }

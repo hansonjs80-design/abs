@@ -61,6 +61,10 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
     const title = suffix ? ` ${suffix}` : '';
     return `${currentYear}년 ${String(currentMonth).padStart(2, '0')}월${title}`;
   }, [currentYear, currentMonth, suffix]);
+  const tabMonthPrefix = useMemo(
+    () => `${currentYear}년 ${String(currentMonth).padStart(2, '0')}월`,
+    [currentYear, currentMonth]
+  );
 
   return (
     <div 
@@ -78,7 +82,12 @@ export default function MonthPicker({ suffix = '', variant = 'default' }) {
         onClick={handleToggle}
         style={{ background: 'none', border: 'none', font: 'inherit', color: 'inherit', padding: 0, margin: 0, cursor: 'pointer' }}
       >
-        {labelText}
+        {variant === 'tab' ? (
+          <>
+            <span className="tab-month-prefix">{tabMonthPrefix}</span>
+            {suffix && <span className="tab-month-title">{suffix}</span>}
+          </>
+        ) : labelText}
       </button>
 
       <button className="month-nav-btn" onClick={() => navigateMonth(1)} aria-label="다음 달">

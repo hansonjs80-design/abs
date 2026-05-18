@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MonthPicker from '../common/MonthPicker';
 import PrintButton from '../common/PrintButton';
@@ -12,15 +12,59 @@ export default function TopTabs() {
   const items = getAllowedTabs(user);
   const [now, setNow] = useState(() => new Date());
   const [optimisticPath, setOptimisticPath] = useState(null);
+  const routeTimerRef = useRef(null);
+  const tabWrapRefs = useRef(new Map());
+  const activeContentRefs = useRef(new Map());
+  const inactiveContentRefs = useRef(new Map());
 
   useEffect(() => {
     setOptimisticPath(null);
   }, [location.pathname]);
 
   useEffect(() => {
+    return () => {
+      if (routeTimerRef.current) {
+        window.clearTimeout(routeTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(timer);
   }, []);
+
+  const measureTabContentWidths = useCallback(() => {
+    items.forEach((item) => {
+      const wrap = tabWrapRefs.current.get(item.path);
+      if (!wrap) return;
+
+      const activeEl = activeContentRefs.current.get(item.path);
+      const inactiveEl = inactiveContentRefs.current.get(item.path);
+      if (activeEl) {
+        wrap.classList.add('measuring-tab-width');
+        wrap.style.setProperty('--tab-active-content-width', `${activeEl.scrollWidth}px`);
+        wrap.classList.remove('measuring-tab-width');
+      }
+      if (inactiveEl) {
+        wrap.style.setProperty('--tab-inactive-content-width', `${inactiveEl.scrollWidth}px`);
+      }
+    });
+  }, [items]);
+
+  useLayoutEffect(() => {
+    measureTabContentWidths();
+  }, [measureTabContentWidths]);
+
+  useEffect(() => {
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(() => {
+      window.requestAnimationFrame(measureTabContentWidths);
+    });
+    activeContentRefs.current.forEach((el) => observer.observe(el));
+    inactiveContentRefs.current.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [measureTabContentWidths]);
 
   const formatDateTime = (date) => {
     const y = date.getFullYear();
@@ -38,6 +82,20 @@ export default function TopTabs() {
     window.dispatchEvent(new CustomEvent('clinic-before-route-change'));
   };
 
+  const handleTabChange = (path, isActive) => {
+    if (isActive) return;
+    notifyBeforeTabChange();
+    if (routeTimerRef.current) {
+      window.clearTimeout(routeTimerRef.current);
+    }
+    measureTabContentWidths();
+    setOptimisticPath(path);
+    routeTimerRef.current = window.setTimeout(() => {
+      routeTimerRef.current = null;
+      navigate(path);
+    }, 140);
+  };
+
   return (
     <div className="top-tabs-shell">
       <nav className="top-tabs" aria-label="주요 화면 이동">
@@ -50,32 +108,25 @@ export default function TopTabs() {
               : currentPath === item.path;
 
             return (
-              <span key={item.path} className="top-tab-with-date">
+              <span
+                key={item.path}
+                className="top-tab-with-date"
+                ref={(node) => {
+                  if (node) tabWrapRefs.current.set(item.path, node);
+                  else tabWrapRefs.current.delete(item.path);
+                }}
+              >
                 <div
                   className={`top-tab ${item.tabClass}${isActive ? ' active' : ''}${isActive && item.monthLabel ? ' month-tab' : ''}`}
-                  onClick={() => {
-                    if (!isActive) {
-                      notifyBeforeTabChange();
-                      // Optimistically update UI immediately to unblock CSS animations
-                      setOptimisticPath(item.path);
-                      // Defer heavy route change to allow browser to composite the animation
-                      setTimeout(() => {
-                        navigate(item.path);
-                      }, 50);
-                    }
-                  }}
+                  onClick={() => handleTabChange(item.path, isActive)}
                   onMouseDown={(e) => {
                     if (isActive) {
                       e.stopPropagation();
-                    } else {
-                      notifyBeforeTabChange();
                     }
                   }}
                   onTouchStart={(e) => {
                     if (isActive) {
                       e.stopPropagation();
-                    } else {
-                      notifyBeforeTabChange();
                     }
                   }}
                   style={{ cursor: 'pointer' }}
@@ -86,10 +137,22 @@ export default function TopTabs() {
                     <Icon size={18} />
                     {item.monthLabel ? (
                       <div className="tab-content-switcher">
-                        <span className="tab-content-inactive">
+                        <span
+                          className="tab-content-inactive"
+                          ref={(node) => {
+                            if (node) inactiveContentRefs.current.set(item.path, node);
+                            else inactiveContentRefs.current.delete(item.path);
+                          }}
+                        >
                           <span>{item.label}</span>
                         </span>
-                        <span className="tab-content-active">
+                        <span
+                          className="tab-content-active"
+                          ref={(node) => {
+                            if (node) activeContentRefs.current.set(item.path, node);
+                            else activeContentRefs.current.delete(item.path);
+                          }}
+                        >
                           <MonthPicker suffix={item.monthLabel} variant="tab" />
                         </span>
                       </div>
