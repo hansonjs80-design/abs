@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MonthPicker from '../common/MonthPicker';
 import PrintButton from '../common/PrintButton';
@@ -9,7 +9,7 @@ export default function TopTabs() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const items = getAllowedTabs(user);
+  const items = useMemo(() => getAllowedTabs(user), [user]);
   const [now, setNow] = useState(() => new Date());
   const [optimisticPath, setOptimisticPath] = useState(null);
   const routeTimerRef = useRef(null);
