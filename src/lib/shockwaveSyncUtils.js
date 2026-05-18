@@ -2,6 +2,11 @@ import { supabase } from './supabaseClient';
 import { generateShockwaveCalendar, getTodayKST } from './calendarUtils';
 import { has4060Pattern, get4060PrescriptionFromContent } from './schedulerContentFormat';
 import { TREATMENT_COMPLETE_BG } from './schedulerUtils';
+import {
+  getPastLogsForPatient,
+  normalizeHistoryPatientName,
+  sortPastLogsLatestFirst,
+} from './patientHistoryMatchUtils';
 
 /** 처방명 비교용 정규화 – 띄어쓰기·슬래시·대소문자 무시 */
 function normalizePrescriptionKeySync(value) {
@@ -323,37 +328,54 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
     return a.c - b.c;
   });
 
-  const cleanNamesSet = new Set(newLogs.map((l) => l.patient_name.replace(/\*/g, '')));
+  const cleanNamesSet = new Set(newLogs.map((l) => normalizeHistoryPatientName(l.patient_name)));
   const queryNames = [];
+  const chartNumbers = [];
   cleanNamesSet.forEach((name) => {
     queryNames.push(name);
     queryNames.push(`${name}*`);
   });
+  newLogs.forEach((item) => {
+    if (item.chart_number) chartNumbers.push(String(item.chart_number).trim());
+  });
 
   let pastData = [];
-  if (queryNames.length > 0) {
-    const { data } = await supabase
-      .from('shockwave_patient_logs')
-      .select('patient_name, chart_number, visit_count, body_part, date')
-      .in('patient_name', queryNames)
-      .order('date', { ascending: false });
+  if (queryNames.length > 0 || chartNumbers.length > 0) {
+    const queries = [];
+    if (queryNames.length > 0) {
+      queries.push(
+        supabase
+          .from('shockwave_patient_logs')
+          .select('patient_name, chart_number, visit_count, body_part, date')
+          .in('patient_name', queryNames)
+          .order('date', { ascending: false })
+      );
+    }
+    if (chartNumbers.length > 0) {
+      queries.push(
+        supabase
+          .from('shockwave_patient_logs')
+          .select('patient_name, chart_number, visit_count, body_part, date')
+          .in('chart_number', Array.from(new Set(chartNumbers)))
+          .order('date', { ascending: false })
+      );
+    }
 
-    pastData = data || [];
+    const results = await Promise.all(queries);
+    const seen = new Set();
+    pastData = results.flatMap((result) => result.data || []).filter((row) => {
+      const key = `${row.date}|${row.chart_number}|${row.patient_name}|${row.visit_count}|${row.body_part}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }
 
   newLogs.forEach((item) => {
-    const cleanName = item.patient_name.replace(/\*/g, '');
-    const patientLogs = pastData.filter(
-      (past) => past.patient_name.replace(/\*/g, '') === cleanName && past.date !== todayDateStrFinal
-    );
+    const patientLogs = getPastLogsForPatient(item, pastData, todayDateStrFinal);
 
     if (patientLogs.length > 0) {
-      patientLogs.sort((a, b) => {
-        if (a.date !== b.date) return b.date.localeCompare(a.date);
-        return (parseInt(b.visit_count || '0', 10) || 0) - (parseInt(a.visit_count || '0', 10) || 0);
-      });
-
-      const lastLog = patientLogs[0];
+      const lastLog = sortPastLogsLatestFirst(patientLogs)[0];
       if (!item.chart_number) item.chart_number = lastLog.chart_number || '';
       if (!item.body_part) item.body_part = lastLog.body_part || '';
       if (!item.visit_count) {
@@ -383,7 +405,7 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
   const rebuiltSchedulerRows = [];
 
   newLogs.forEach((item) => {
-    const key = item.patient_name.replace(/\*/g, '');
+    const key = normalizeHistoryPatientName(item.patient_name);
     const old = existingByCellKey.get(item.scheduler_cell_key) || existingGroups[key]?.shift() || null;
 
     const out = {

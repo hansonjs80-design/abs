@@ -6,7 +6,7 @@ import {
   buildMergeSpanWithReservationTime,
   applyVisitCountToSchedulerContent,
   getSchedulerVisitInputValue,
-  stepVisitInputValue,
+  stepVisitShortcutInputValue,
 } from '../../lib/schedulerUtils';
 import { strip4060FromContent } from '../../lib/schedulerContentFormat';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
@@ -297,7 +297,7 @@ export default function useScheduleKeyboardActions({
         if (!stableContent || stableContent.trim() === '\u200B') return null;
 
         const currentVisit = getSchedulerVisitInputValue(stableContent);
-        const nextVisit = stepVisitInputValue(currentVisit, delta);
+        const nextVisit = stepVisitShortcutInputValue(currentVisit, delta);
         const nextContent = applyVisitCountToSchedulerContent(stableContent, nextVisit);
         if (nextContent === stableContent) return null;
 

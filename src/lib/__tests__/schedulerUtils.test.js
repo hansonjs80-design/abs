@@ -6,6 +6,8 @@ import {
   buildSchedulerCellDisplay,
   getNonVisitParentheticalSuffix,
   normalizeSchedulerVisitSuffix,
+  stepVisitShortcutInputValue,
+  stepVisitInputValue,
   parseSchedulerPatientIdentity,
 } from '../schedulerCellTextUtils.js';
 
@@ -46,6 +48,19 @@ describe('scheduler visit suffix normalization', () => {
   it('applies visit counts without removing non-visit parenthetical notes', () => {
     assert.equal(applyVisitCountToSchedulerContent('3275/손연희(진료후도수)', '2'), '3275/손연희(진료후도수)(2)');
     assert.equal(applyVisitCountToSchedulerContent('3275/손연희(진료후도수)*', '2'), '3275/손연희(진료후도수)(2)');
+  });
+
+  it('keeps the shared visit stepper behavior used by non-shortcut flows', () => {
+    assert.equal(stepVisitInputValue('*', 1), '2');
+    assert.equal(stepVisitInputValue('2', -1), '*');
+  });
+
+  it('steps shortcut visit counts through new, first visit, and cancellation markers', () => {
+    assert.equal(stepVisitShortcutInputValue('*', 1), '1');
+    assert.equal(stepVisitShortcutInputValue('1', 1), '2');
+    assert.equal(stepVisitShortcutInputValue('2', -1), '1');
+    assert.equal(stepVisitShortcutInputValue('1', -1), '*');
+    assert.equal(stepVisitShortcutInputValue('*', -1), '-');
   });
 });
 

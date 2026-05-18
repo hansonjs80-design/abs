@@ -17,6 +17,7 @@ import {
   normalizeSchedulerVisitSuffix,
   normalizeVisitInputValue,
   parseSchedulerPatientIdentity,
+  stepVisitShortcutInputValue,
   stepVisitInputValue,
 } from './schedulerCellTextUtils';
 
@@ -30,6 +31,7 @@ export {
   normalizeSchedulerVisitSuffix,
   normalizeVisitInputValue,
   parseSchedulerPatientIdentity,
+  stepVisitShortcutInputValue,
   stepVisitInputValue,
 };
 

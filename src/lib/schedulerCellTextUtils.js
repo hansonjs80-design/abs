@@ -114,6 +114,22 @@ export function stepVisitInputValue(value, delta) {
   return String(nextIndex);
 }
 
+export function stepVisitShortcutInputValue(value, delta) {
+  const normalized = normalizeVisitInputValue(value);
+
+  let currentIndex = 0;
+  if (normalized === '-') currentIndex = 0;
+  else if (normalized === '*') currentIndex = 1;
+  else if (normalized === '') currentIndex = 0;
+  else currentIndex = (parseInt(normalized, 10) || 0) + 1;
+
+  const nextIndex = currentIndex + delta;
+
+  if (nextIndex <= 0) return '-';
+  if (nextIndex === 1) return '*';
+  return String(nextIndex - 1);
+}
+
 export function getMemoListFromMergeSpan(mergeSpan) {
   const list = mergeSpan?.meta?.memo_list;
   return Array.isArray(list) ? list.filter((item) => String(item || '').trim()) : [];

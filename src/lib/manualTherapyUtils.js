@@ -2,6 +2,10 @@ import { supabase } from './supabaseClient';
 import { generateShockwaveCalendar, getTodayKST } from './calendarUtils';
 import { normalizeNameForMatch } from './memoParser';
 import { TREATMENT_COMPLETE_BG } from './schedulerUtils';
+import {
+  getPastLogsForPatient,
+  sortPastLogsLatestFirst,
+} from './patientHistoryMatchUtils';
 
 let todayManualTherapySyncQueue = Promise.resolve();
 
@@ -221,22 +225,10 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
   }
 
   newLogs.forEach((item) => {
-    const normalizedName = normalizeNameForMatch(item.patient_name);
-    const patientLogs = pastData.filter(
-      (past) => {
-        const sameChart = item.chart_number && String(past?.chart_number || '').trim() === String(item.chart_number).trim();
-        const sameName = normalizedName && normalizeNameForMatch(past?.patient_name) === normalizedName;
-        return (sameChart || sameName) && past.date !== todayDateStrFinal;
-      }
-    );
+    const patientLogs = getPastLogsForPatient(item, pastData, todayDateStrFinal);
 
     if (patientLogs.length > 0) {
-      patientLogs.sort((a, b) => {
-        if (a.date !== b.date) return String(b.date || '').localeCompare(String(a.date || ''));
-        return (parseInt(String(b.visit_count || '0'), 10) || 0) - (parseInt(String(a.visit_count || '0'), 10) || 0);
-      });
-
-      const lastLog = patientLogs[0];
+      const lastLog = sortPastLogsLatestFirst(patientLogs)[0];
       if (!item.chart_number) item.chart_number = lastLog.chart_number || '';
       if (!item.body_part) item.body_part = lastLog.body_part || '';
       if (!item.visit_count) {
