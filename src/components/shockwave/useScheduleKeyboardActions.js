@@ -28,6 +28,7 @@ export default function useScheduleKeyboardActions({
   editingCell,
   selectedKeys,
   pendingDisplayValues,
+  pendingMemoOverrides,
   pendingMergeSpans,
   applyImmediateCellDisplay,
   applyImmediateMergeSpan,
@@ -69,6 +70,7 @@ export default function useScheduleKeyboardActions({
   const memosRef = useRef(memos);
   const selectedKeysRef = useRef(selectedKeys);
   const pendingRef = useRef(pendingDisplayValues);
+  const pendingMemoOverridesRef = useRef(pendingMemoOverrides);
   const pendingMergeSpansRef = useRef(pendingMergeSpans);
   const onSaveMemoRef = useRef(onSaveMemo);
   const saveBulkRef = useRef(saveShockwaveMemosBulk);
@@ -81,16 +83,16 @@ export default function useScheduleKeyboardActions({
   const visitDebounceRef = useRef({ timer: null, pending: new Map() });
   const moveSaveQueueRef = useRef(Promise.resolve());
   const moveRequestIdRef = useRef(0);
-  const moveOptimisticMemosRef = useRef({});
 
   useEffect(() => {
-    memosRef.current = {
-      ...(memos || {}),
-      ...(moveOptimisticMemosRef.current || {}),
-    };
+    memosRef.current = { ...(memos || {}), ...(pendingMemoOverridesRef.current || {}) };
   }, [memos]);
   useEffect(() => { selectedKeysRef.current = selectedKeys; }, [selectedKeys]);
   useEffect(() => { pendingRef.current = pendingDisplayValues; }, [pendingDisplayValues]);
+  useEffect(() => {
+    pendingMemoOverridesRef.current = pendingMemoOverrides;
+    memosRef.current = { ...(memosRef.current || {}), ...(pendingMemoOverrides || {}) };
+  }, [pendingMemoOverrides]);
   useEffect(() => { pendingMergeSpansRef.current = pendingMergeSpans; }, [pendingMergeSpans]);
   useEffect(() => { onSaveMemoRef.current = onSaveMemo; }, [onSaveMemo]);
   useEffect(() => { saveBulkRef.current = saveShockwaveMemosBulk; }, [saveShockwaveMemosBulk]);
@@ -227,23 +229,33 @@ export default function useScheduleKeyboardActions({
     applyMergeSpanRef.current?.(result.payload);
     recordUndoRef.current?.({ type: 'bulk-edit', oldMemos: result.oldMemos });
 
+    const getPayloadKey = (item) => cellKey(
+        item.week_index,
+        item.day_index,
+        item.row_index,
+        item.col_index
+    );
+
+    const buildMemoFromPayloadItem = (item, previousMemo = {}) => {
+      return {
+        ...(previousMemo || {}),
+        content: item.content || '',
+        bg_color: item.bg_color || null,
+        merge_span: item.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+        prescription: item.prescription || null,
+        body_part: item.body_part || null,
+      };
+    };
+
     const applyPayloadToLatestRefs = (payload) => {
       const nextMemos = { ...(memosRef.current || {}) };
       const nextPendingDisplay = { ...(pendingRef.current || {}) };
       const nextPendingMergeSpans = { ...(pendingMergeSpansRef.current || {}) };
 
       payload.forEach((item) => {
-        const key = cellKey(item.week_index, item.day_index, item.row_index, item.col_index);
-        const nextMemo = {
-          ...(nextMemos[key] || {}),
-          content: item.content || '',
-          bg_color: item.bg_color || null,
-          merge_span: item.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
-          prescription: item.prescription || null,
-          body_part: item.body_part || null,
-        };
+        const key = getPayloadKey(item);
+        const nextMemo = buildMemoFromPayloadItem(item, nextMemos[key]);
         nextMemos[key] = nextMemo;
-        moveOptimisticMemosRef.current[key] = nextMemo;
         nextPendingDisplay[key] = item.content || '';
         nextPendingMergeSpans[key] = item.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
       });

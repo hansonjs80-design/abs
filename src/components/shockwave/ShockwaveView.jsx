@@ -1391,6 +1391,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     editingCell,
     selectedKeys,
     pendingDisplayValues,
+    pendingMemoOverrides,
     pendingMergeSpans,
     applyImmediateCellDisplay,
     applyImmediateMergeSpan,
