@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { isPatientHistoryShortcut } from '../../lib/scheduleKeyboardUtils';
 
 export default function useScheduleGlobalEvents({
   viewRef,
@@ -30,10 +31,7 @@ export default function useScheduleGlobalEvents({
 
   useEffect(() => {
     const handleGlobalCmdF = (e) => {
-      const isMeta = e.metaKey || e.ctrlKey;
-      const isKeyF = e.code === 'KeyF' || e.key.toLowerCase() === 'f';
-
-      if (isMeta && isKeyF && selectedCellRef.current) {
+      if (isPatientHistoryShortcut(e) && selectedCellRef.current) {
         e.preventDefault();
         e.stopPropagation();
         openModalRef.current();

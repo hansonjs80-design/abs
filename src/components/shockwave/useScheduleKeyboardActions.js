@@ -10,6 +10,16 @@ import {
 } from '../../lib/schedulerUtils';
 import { strip4060FromContent } from '../../lib/schedulerContentFormat';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
+import {
+  getEditingCellKeyAction,
+  isBodyPartMenuShortcut,
+  isGridNavigationKey,
+  isHolidayBackgroundShortcut,
+  isMergeShortcut,
+  isPatientHistoryShortcut,
+  isTreatmentCancelShortcut,
+  isTreatmentCompleteShortcut,
+} from '../../lib/scheduleKeyboardUtils';
 
 export default function useScheduleKeyboardActions({
   contextMenu,
@@ -218,7 +228,7 @@ export default function useScheduleKeyboardActions({
     }
     const isMeta = e.metaKey || e.ctrlKey;
 
-    if (isMeta && (e.code === 'KeyF' || e.key.toLowerCase() === 'f')) {
+    if (isPatientHistoryShortcut(e)) {
       e.preventDefault();
       e.stopPropagation();
       handleOpenPatientHistoryModal();
@@ -237,14 +247,14 @@ export default function useScheduleKeyboardActions({
     const { w, d, r, c } = selectedCell;
 
     if (editingCell) {
-      if (e.key === 'Escape') {
+      if (getEditingCellKeyAction(e) === 'close-edit') {
         e.preventDefault();
         setEditingCell(null);
       }
       return;
     }
 
-    if (isMeta && e.key === 'Enter') {
+    if (isBodyPartMenuShortcut(e)) {
       e.preventDefault();
       e.stopPropagation();
       if (handleOpenBodyPartMenu) {
@@ -457,7 +467,7 @@ export default function useScheduleKeyboardActions({
       return;
     }
 
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+    if (isGridNavigationKey(e)) {
       e.preventDefault();
       const nextCell = getAdjacentCell({ w, d, r, c }, e.key);
 
@@ -470,7 +480,7 @@ export default function useScheduleKeyboardActions({
       return;
     }
 
-    if (isMeta && (e.code === 'KeyD' || e.key.toLowerCase() === 'd')) {
+    if (isTreatmentCancelShortcut(e)) {
       e.preventDefault();
       e.stopPropagation();
       handleToggleTreatmentCancel();
@@ -481,21 +491,21 @@ export default function useScheduleKeyboardActions({
       return;
     }
 
-    if (isMeta && e.code === 'KeyS') {
+    if (isTreatmentCompleteShortcut(e)) {
       e.preventDefault();
       e.stopPropagation();
       handleToggleTreatmentComplete();
       return;
     }
 
-    if (isMeta && e.code === 'KeyB') {
+    if (isHolidayBackgroundShortcut(e)) {
       e.preventDefault();
       e.stopPropagation();
       handleToggleHolidayBackground();
       return;
     }
 
-    if (isMeta && e.code === 'KeyG') {
+    if (isMergeShortcut(e)) {
       e.preventDefault();
       e.stopPropagation();
       tryMergeSelection();

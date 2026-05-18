@@ -466,6 +466,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [editValue, setEditValue] = useState('');
   const [pendingDisplayValues, setPendingDisplayValues] = useState({});
   const [pendingMergeSpans, setPendingMergeSpans] = useState({});
+  const [pendingCellBgColors, setPendingCellBgColors] = useState({});
   const [loadedMemosKey, setLoadedMemosKey] = useState('');
   const clipboardRef = useRef({ content: '', mode: null });   // mode: 'copy' | 'cut'
   const [clipboardSource, setClipboardSource] = useState(null); // { keys: Set, mode: 'copy'|'cut' }
@@ -537,6 +538,20 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   useEffect(() => {
     selectedCellRef.current = selectedCell;
   }, [selectedCell]);
+
+  useEffect(() => {
+    setPendingCellBgColors((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      Object.entries(prev).forEach(([key, bgColor]) => {
+        if ((memos[key]?.bg_color || null) === (bgColor || null)) {
+          delete next[key];
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [memos]);
 
   useSchedulePendingPersistence({
     currentMonth,
@@ -774,6 +789,46 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (Object.keys(nextSpans).length === 0) return;
     flushSync(() => {
       setPendingMergeSpans((prev) => ({ ...prev, ...nextSpans }));
+    });
+  }, []);
+
+  const applyImmediateCellBg = useCallback((updates) => {
+    const entries = Array.isArray(updates) ? updates : [updates];
+    const nextBgColors = {};
+    entries.forEach((item) => {
+      if (!item) return;
+      const key = item.key || `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+      if (!key || key.includes('undefined')) return;
+      nextBgColors[key] = item.bg_color || null;
+    });
+    if (Object.keys(nextBgColors).length === 0) return;
+
+    flushSync(() => {
+      setPendingCellBgColors((prev) => ({ ...prev, ...nextBgColors }));
+      setContextMenu(null);
+    });
+  }, []);
+
+  const clearImmediateCellBg = useCallback((updates) => {
+    const entries = Array.isArray(updates) ? updates : [updates];
+    const keys = entries
+      .map((item) => item?.key || `${item?.week_index}-${item?.day_index}-${item?.row_index}-${item?.col_index}`)
+      .filter((key) => key && !key.includes('undefined'));
+    if (keys.length === 0) return;
+
+    setPendingCellBgColors((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      entries.forEach((item) => {
+        const key = item?.key || `${item?.week_index}-${item?.day_index}-${item?.row_index}-${item?.col_index}`;
+        if (!key || key.includes('undefined')) return;
+        const expectedBgColor = item?.bg_color || null;
+        if (key in next && (next[key] || null) === expectedBgColor) {
+          delete next[key];
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
     });
   }, []);
 
@@ -1245,6 +1300,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     addToast,
     recordUndo,
     setContextMenu,
+    pendingCellBgColors,
+    applyImmediateCellBg,
+    clearImmediateCellBg,
   });
 
   const {
@@ -1788,6 +1846,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       for (let colIdx = 0; colIdx < colCount; colIdx++) {
                         const key = cellKey(weekIdx, dayIdx, rowIdx, colIdx);
                         const cellData = dayInfo.isCurrentMonth ? renderMemos[key] : null;
+                        const hasPendingBg = Object.prototype.hasOwnProperty.call(pendingCellBgColors, key);
+                        const displayCellData = hasPendingBg
+                          ? {
+                              ...(cellData || {}),
+                              bg_color: pendingCellBgColors[key],
+                            }
+                          : cellData;
                         const content = dayInfo.isCurrentMonth ? normalizeSchedulerVisitSuffix(pendingDisplayValues[key] ?? cellData?.content ?? '') : '';
                         let mergeSpan = dayInfo.isCurrentMonth ? getEffectiveMergeSpan(key, renderMemos) : { rowSpan: 1, colSpan: 1, mergedInto: null };
 
@@ -1818,7 +1883,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               weekIdx={weekIdx} dayIdx={dayIdx} rowIdx={rowIdx} colIdx={colIdx}
                               dayInfo={dayInfo} slotInfo={slotInfo} showTimeCol={showTimeCol}
                               gridRowStart={gridRowStart} isLastRenderedRow={isLastRenderedRow} colCount={colCount}
-                              cellData={cellData} pendingContent={content} pendingMergeSpan={pendingMergeSpans[key]} mergeSpan={finalMergeSpan}
+                              cellData={displayCellData} pendingContent={content} pendingMergeSpan={pendingMergeSpans[key]} mergeSpan={finalMergeSpan}
                               editingCell={editingCell} imePreviewCell={imePreviewCell}
                               selectedKeys={selectedKeys} selectedCell={selectedCell} clipboardSource={clipboardSource}
                               workState={workState} staffBlockRule={staffBlockRule}
@@ -1857,7 +1922,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         weeks, dayColWidth, todayWeekIdx, today, getTimeSlotsForDay,
         therapistColsCSS, colCount, getTherapistNameForDate, activeColRatios,
         startColResize, startDayResize, startRowResize,
-        renderMemos, pendingDisplayValues, pendingMergeSpans, editingCell, imePreviewCell,
+        renderMemos, pendingDisplayValues, pendingMergeSpans, pendingCellBgColors, editingCell, imePreviewCell,
         selectedKeys, selectedCell, clipboardSource,
         getTherapistWorkState, getStaffScheduleBlockForCell,
         isLastHourSlot, effectivePrescriptionColors, editValue,

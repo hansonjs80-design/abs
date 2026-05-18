@@ -3,6 +3,11 @@ import { supabase } from '../lib/supabaseClient';
 import { generateShockwaveCalendar, buildCrossMonthMirroredPayloads } from '../lib/calendarUtils';
 import { syncTodayShockwaveScheduleToStats } from '../lib/shockwaveSyncUtils';
 import { syncTodayManualTherapyScheduleToStats } from '../lib/manualTherapyUtils';
+import {
+  applyShockwaveMemoStateUpdate,
+  buildOptimisticShockwaveMemos,
+  rollbackShockwaveMemoState,
+} from '../lib/scheduleSaveStateUtils';
 
 const ScheduleContext = createContext();
 
@@ -740,6 +745,7 @@ export function ScheduleProvider({ children }) {
   const saveShockwaveMemo = useCallback(async (year, month, weekIndex, dayIndex, rowIndex, colIndex, content, bg_color, merge_span, prescription, body_part) => {
     const key = `${weekIndex}-${dayIndex}-${rowIndex}-${colIndex}`;
     return enqueueShockwaveWrite([key], async () => {
+      const previousMemo = shockwaveMemosRef.current[key];
       try {
       const optimisticMemo = shockwaveMemosRef.current[key] || {};
       let upsertData = {
@@ -753,11 +759,8 @@ export function ScheduleProvider({ children }) {
       if (body_part !== undefined) upsertData.body_part = body_part;
 
       setShockwaveMemos(prev => {
-        const next = { ...prev };
         const updated = { ...optimisticMemo, ...upsertData };
-        if (shouldKeepShockwaveMemo(updated)) next[key] = updated;
-        else delete next[key];
-        return next;
+        return applyShockwaveMemoStateUpdate(prev, key, updated, shouldKeepShockwaveMemo);
       });
 
       [upsertData] = await protectExistingScheduleContent([upsertData], { [key]: optimisticMemo });
@@ -823,7 +826,7 @@ export function ScheduleProvider({ children }) {
       }
       return true;
       } catch (err) {
-        setShockwaveMemos(prev => ({ ...prev }));
+        setShockwaveMemos(prev => rollbackShockwaveMemoState(prev, { [key]: previousMemo }));
         console.error('Failed to save shockwave memo:', err);
         return false;
       }
@@ -836,26 +839,21 @@ export function ScheduleProvider({ children }) {
     const targetKeys = memosArray.map((item) => `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`);
 
     return enqueueShockwaveWrite(targetKeys, async () => {
-      const previousMemos = {};
-      const optimisticMemos = {};
+      let previousMemos = {};
 
       try {
       const currentMemosSnapshot = shockwaveMemosRef.current;
-      memosArray.forEach((item) => {
-        const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-        previousMemos[key] = currentMemosSnapshot[key];
-        optimisticMemos[key] = {
-          ...(currentMemosSnapshot[key] || {}),
-          ...item,
-          updated_at: new Date().toISOString()
-        };
-      });
+      const optimisticSnapshot = buildOptimisticShockwaveMemos(
+        currentMemosSnapshot,
+        memosArray,
+        new Date().toISOString()
+      );
+      previousMemos = optimisticSnapshot.previousMemos;
 
       setShockwaveMemos(prev => {
-        const next = { ...prev };
-        Object.entries(optimisticMemos).forEach(([key, value]) => {
-          if (shouldKeepShockwaveMemo(value)) next[key] = value;
-          else delete next[key];
+        let next = prev;
+        Object.entries(optimisticSnapshot.optimisticMemos).forEach(([key, value]) => {
+          next = applyShockwaveMemoStateUpdate(next, key, value, shouldKeepShockwaveMemo);
         });
         return next;
       });
@@ -943,15 +941,7 @@ export function ScheduleProvider({ children }) {
       }
       return true;
     } catch (err) {
-      setShockwaveMemos(prev => {
-        const next = { ...prev };
-        memosArray.forEach((item) => {
-          const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-          if (previousMemos[key] === undefined) delete next[key];
-          else next[key] = previousMemos[key];
-        });
-        return next;
-      });
+      setShockwaveMemos(prev => rollbackShockwaveMemoState(prev, previousMemos));
       console.error('Failed to save bulk shockwave memos:', err);
       return false;
       }
