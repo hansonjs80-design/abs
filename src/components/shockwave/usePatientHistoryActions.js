@@ -1,6 +1,10 @@
 import { useCallback } from 'react';
 import { generateShockwaveCalendar } from '../../lib/calendarUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
+import {
+  buildPatientHistoryCellUpdate,
+  getPatientHistorySearchTarget,
+} from '../../lib/patientHistoryModalUtils';
 import { supabase } from '../../lib/supabaseClient';
 import { has4060Pattern } from '../../lib/schedulerContentFormat';
 import {
@@ -285,11 +289,9 @@ export default function usePatientHistoryActions({
         return;
       }
 
-      const parsed = parseSchedulerPatientIdentity(content);
-      const searchName = normalizeNameForMatch(parsed.patientName);
-      const searchChart = parsed.patientChart ? String(parsed.patientChart).trim() : null;
+      const { shouldFetch, searchName, searchChart } = getPatientHistorySearchTarget(content);
 
-      if (!searchName && !searchChart) {
+      if (!shouldFetch) {
         setPatientHistoryModalData({ loading: false, logs: [], searchName: '', searchChart: '' });
         setPatientHistoryModalOpen(true);
         return;
@@ -308,30 +310,8 @@ export default function usePatientHistoryActions({
     const { w, d, r, c } = selectedCell;
     const key = cellKey(w, d, r, c);
 
-    const chart = String(log.chart_number || '').trim();
-    const name = String(log.patient_name || '').replace(/\*/g, '').trim();
-    const bodyPart = String(log.body_part || '').trim();
-    const prescription = String(log.prescription || '').trim();
-    const visitCount = parseInt(log.visit_count || '0', 10) || 0;
-
-    let newContent = name;
-
-    if ((log.history_group || log.type) === 'manual') {
-      const doseMatch = String(prescription).match(/(40|60)/);
-      if (doseMatch && !has4060Pattern(newContent)) {
-        newContent = `${newContent}${doseMatch[0]}`;
-      }
-    }
-
-    if (chart) {
-      newContent = `${chart}/${newContent}`;
-    }
-
-    if (visitCount > 0) {
-      newContent = `${newContent}(${visitCount})`;
-    }
-
     const currentMemo = memos[key] || {};
+    const cellUpdate = buildPatientHistoryCellUpdate(log, currentMemo);
 
     const payload = {
       year: currentYear,
@@ -340,14 +320,10 @@ export default function usePatientHistoryActions({
       day_index: d,
       row_index: r,
       col_index: c,
-      content: newContent,
-      bg_color: currentMemo.bg_color || null,
-      prescription: prescription || null,
-      body_part: bodyPart || null,
-      merge_span: currentMemo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+      ...cellUpdate,
     };
 
-    setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
+    setPendingDisplayValues((prev) => ({ ...prev, [key]: cellUpdate.content }));
 
     saveShockwaveMemosBulk([payload]).then((success) => {
       if (success) {
