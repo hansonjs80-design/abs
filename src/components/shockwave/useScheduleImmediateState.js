@@ -1,0 +1,183 @@
+import { useCallback, useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
+
+function getUpdateKey(item) {
+  if (!item) return '';
+  return item.key || `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+}
+
+function normalizeUpdateEntries(updates) {
+  return (Array.isArray(updates) ? updates : [updates]).filter(Boolean);
+}
+
+function isValidKey(key) {
+  return Boolean(key && !key.includes('undefined'));
+}
+
+function getExpectedUpdateMap(updates) {
+  const expectedByKey = new Map();
+  normalizeUpdateEntries(updates).forEach((item) => {
+    const key = getUpdateKey(item);
+    if (isValidKey(key)) expectedByKey.set(key, item);
+  });
+  return expectedByKey;
+}
+
+export default function useScheduleImmediateState({ memos, setContextMenu, setEditingCell }) {
+  const [pendingDisplayValues, setPendingDisplayValues] = useState({});
+  const [pendingMergeSpans, setPendingMergeSpans] = useState({});
+  const [pendingMemoOverrides, setPendingMemoOverrides] = useState({});
+  const [pendingCellBgColors, setPendingCellBgColors] = useState({});
+
+  useEffect(() => {
+    setPendingCellBgColors((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      Object.entries(prev).forEach(([key, bgColor]) => {
+        if ((memos[key]?.bg_color || null) === (bgColor || null)) {
+          delete next[key];
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [memos]);
+
+  const applyImmediateCellDisplay = useCallback((updates) => {
+    const entries = normalizeUpdateEntries(updates);
+    const nextValues = {};
+    entries.forEach((item) => {
+      const key = getUpdateKey(item);
+      if (isValidKey(key)) nextValues[key] = String(item.content ?? '');
+    });
+    if (Object.keys(nextValues).length === 0) return;
+
+    flushSync(() => {
+      setPendingDisplayValues((prev) => ({ ...prev, ...nextValues }));
+      setPendingMemoOverrides((prev) => {
+        const next = { ...prev };
+        entries.forEach((item) => {
+          const key = getUpdateKey(item);
+          if (!isValidKey(key)) return;
+          const override = { ...next[key], content: String(item.content ?? '') };
+          if (Object.prototype.hasOwnProperty.call(item, 'bg_color')) override.bg_color = item.bg_color ?? null;
+          if (item.merge_span || item.mergeSpan) override.merge_span = item.merge_span || item.mergeSpan;
+          if (Object.prototype.hasOwnProperty.call(item, 'prescription')) override.prescription = item.prescription ?? null;
+          if (Object.prototype.hasOwnProperty.call(item, 'body_part')) override.body_part = item.body_part ?? null;
+          next[key] = override;
+        });
+        return next;
+      });
+      setEditingCell(null);
+      setContextMenu(null);
+    });
+  }, [setContextMenu, setEditingCell]);
+
+  const applyImmediateMergeSpan = useCallback((updates) => {
+    const nextSpans = {};
+    normalizeUpdateEntries(updates).forEach((item) => {
+      const key = getUpdateKey(item);
+      const mergeSpan = item.mergeSpan || item.merge_span;
+      if (isValidKey(key) && mergeSpan) nextSpans[key] = mergeSpan;
+    });
+    if (Object.keys(nextSpans).length === 0) return;
+    flushSync(() => {
+      setPendingMergeSpans((prev) => ({ ...prev, ...nextSpans }));
+    });
+  }, []);
+
+  const applyImmediateCellBg = useCallback((updates) => {
+    const nextBgColors = {};
+    normalizeUpdateEntries(updates).forEach((item) => {
+      const key = getUpdateKey(item);
+      if (isValidKey(key)) nextBgColors[key] = item.bg_color || null;
+    });
+    if (Object.keys(nextBgColors).length === 0) return;
+
+    flushSync(() => {
+      setPendingCellBgColors((prev) => ({ ...prev, ...nextBgColors }));
+      setContextMenu(null);
+    });
+  }, [setContextMenu]);
+
+  const clearImmediateCellBg = useCallback((updates) => {
+    const entries = normalizeUpdateEntries(updates);
+    setPendingCellBgColors((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      entries.forEach((item) => {
+        const key = getUpdateKey(item);
+        if (!isValidKey(key)) return;
+        const expectedBgColor = item?.bg_color || null;
+        if (key in next && (next[key] || null) === expectedBgColor) {
+          delete next[key];
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, []);
+
+  const clearImmediateCellDisplay = useCallback((updates) => {
+    const expectedByKey = getExpectedUpdateMap(updates);
+    const keys = Array.from(expectedByKey.keys());
+    if (keys.length === 0) return;
+
+    setTimeout(() => {
+      setPendingDisplayValues((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        keys.forEach((key) => {
+          const expectedItem = expectedByKey.get(key);
+          const expectedContent = String(expectedItem?.content ?? '');
+          if (key in next && String(next[key] ?? '') === expectedContent) {
+            delete next[key];
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+
+      setPendingMergeSpans((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        keys.forEach((key) => {
+          const expectedItem = expectedByKey.get(key);
+          const expectedMergeSpan = expectedItem?.merge_span || expectedItem?.mergeSpan;
+          if (key in next && expectedMergeSpan && JSON.stringify(next[key]) === JSON.stringify(expectedMergeSpan)) {
+            delete next[key];
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+
+      setPendingMemoOverrides((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        keys.forEach((key) => {
+          const expectedItem = expectedByKey.get(key);
+          const expectedContent = String(expectedItem?.content ?? '');
+          if (key in next && String(next[key]?.content ?? '') === expectedContent) {
+            delete next[key];
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    }, 0);
+  }, []);
+
+  return {
+    pendingCellBgColors,
+    pendingDisplayValues,
+    pendingMemoOverrides,
+    pendingMergeSpans,
+    setPendingDisplayValues,
+    applyImmediateCellBg,
+    applyImmediateCellDisplay,
+    applyImmediateMergeSpan,
+    clearImmediateCellBg,
+    clearImmediateCellDisplay,
+  };
+}

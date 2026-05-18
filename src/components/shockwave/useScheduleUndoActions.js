@@ -93,10 +93,17 @@ export default function useScheduleUndoActions({
           oldBodyPart,
         } = action;
         const undoMemo = {
+          year: year || currentYear,
+          month: month || currentMonth,
           week_index: w,
           day_index: d,
           row_index: r,
           col_index: c,
+          content: oldContent,
+          bg_color: oldBg,
+          merge_span: oldMergeSpan,
+          prescription: oldPrescription,
+          body_part: oldBodyPart,
         };
         const success = await onSaveMemo(
           year || currentYear,

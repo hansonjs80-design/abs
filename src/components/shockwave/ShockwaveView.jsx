@@ -20,6 +20,7 @@ import useScheduleGlobalEvents from './useScheduleGlobalEvents';
 import useScheduleKeyboardActions from './useScheduleKeyboardActions';
 import useScheduleMergeActions from './useScheduleMergeActions';
 import useSchedulePendingPersistence from './useSchedulePendingPersistence';
+import useScheduleImmediateState from './useScheduleImmediateState';
 import useScheduleResizeState from './useScheduleResizeState';
 import useScheduleSelectionModel from './useScheduleSelectionModel';
 import useScheduleStatusActions from './useScheduleStatusActions';
@@ -467,10 +468,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [selectedKeys, setSelectedKeys] = useState(() => new Set());
   const [editingCell, setEditingCell] = useState(null);       // "w-d-r-c" 키 문자열
   const [editValue, setEditValue] = useState('');
-  const [pendingDisplayValues, setPendingDisplayValues] = useState({});
-  const [pendingMergeSpans, setPendingMergeSpans] = useState({});
-  const [pendingMemoOverrides, setPendingMemoOverrides] = useState({});
-  const [pendingCellBgColors, setPendingCellBgColors] = useState({});
   const [loadedMemosKey, setLoadedMemosKey] = useState('');
   const clipboardRef = useRef({ content: '', mode: null });   // mode: 'copy' | 'cut'
   const [clipboardSource, setClipboardSource] = useState(null); // { keys: Set, mode: 'copy'|'cut' }
@@ -482,6 +479,23 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [contextMenuMemoDrafts, setContextMenuMemoDrafts] = useState([]);
   const [contextMenuVisitInput, setContextMenuVisitInput] = useState('');
   const [contextMenuReservationInput, setContextMenuReservationInput] = useState('');
+
+  const {
+    pendingCellBgColors,
+    pendingDisplayValues,
+    pendingMemoOverrides,
+    pendingMergeSpans,
+    setPendingDisplayValues,
+    applyImmediateCellBg,
+    applyImmediateCellDisplay,
+    applyImmediateMergeSpan,
+    clearImmediateCellBg,
+    clearImmediateCellDisplay,
+  } = useScheduleImmediateState({
+    memos,
+    setContextMenu,
+    setEditingCell,
+  });
 
   // 환자 내역 검색 팝업 상태 (Cmd+F)
   const [patientHistoryModalOpen, setPatientHistoryModalOpen] = useState(false);
@@ -542,20 +556,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   useEffect(() => {
     selectedCellRef.current = selectedCell;
   }, [selectedCell]);
-
-  useEffect(() => {
-    setPendingCellBgColors((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      Object.entries(prev).forEach(([key, bgColor]) => {
-        if ((memos[key]?.bg_color || null) === (bgColor || null)) {
-          delete next[key];
-          changed = true;
-        }
-      });
-      return changed ? next : prev;
-    });
-  }, [memos]);
 
   useSchedulePendingPersistence({
     currentMonth,
@@ -694,7 +694,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     return () => {
       cancelled = true;
     };
-  }, [currentYear, currentMonth, onLoadMemos]);
+  }, [currentYear, currentMonth, onLoadMemos, setPendingDisplayValues]);
 
   // ── 기존 40/60 셀에 누락된 처방 일괄 패치 ──
   const prescriptionPatchKeyRef = useRef(null);
@@ -765,144 +765,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [contextMenu, isContextMenuTarget]);
 
-  const applyImmediateCellDisplay = useCallback((updates) => {
-    const entries = Array.isArray(updates) ? updates : [updates];
-    const nextValues = {};
-    entries.forEach((item) => {
-      if (!item) return;
-      const key = item.key || `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-      if (!key || key.includes('undefined')) return;
-      nextValues[key] = String(item.content ?? '');
-    });
-    if (Object.keys(nextValues).length === 0) return;
-    
-    flushSync(() => {
-      setPendingDisplayValues((prev) => ({ ...prev, ...nextValues }));
-      setPendingMemoOverrides((prev) => {
-        const next = { ...prev };
-        entries.forEach((item) => {
-          if (!item) return;
-          const key = item.key || `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-          if (!key || key.includes('undefined')) return;
-          const override = {
-            ...next[key],
-            content: String(item.content ?? ''),
-          };
-          if (Object.prototype.hasOwnProperty.call(item, 'bg_color')) override.bg_color = item.bg_color ?? null;
-          if (item.merge_span || item.mergeSpan) override.merge_span = item.merge_span || item.mergeSpan;
-          if (Object.prototype.hasOwnProperty.call(item, 'prescription')) override.prescription = item.prescription ?? null;
-          if (Object.prototype.hasOwnProperty.call(item, 'body_part')) override.body_part = item.body_part ?? null;
-          next[key] = {
-            ...override,
-          };
-        });
-        return next;
-      });
-      setEditingCell(null);
-      setContextMenu(null);
-    });
-  }, []);
-
-  const applyImmediateMergeSpan = useCallback((updates) => {
-    const entries = Array.isArray(updates) ? updates : [updates];
-    const nextSpans = {};
-    entries.forEach((item) => {
-      if (!item) return;
-      const key = item.key || `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-      const mergeSpan = item.mergeSpan || item.merge_span;
-      if (!key || key.includes('undefined') || !mergeSpan) return;
-      nextSpans[key] = mergeSpan;
-    });
-    if (Object.keys(nextSpans).length === 0) return;
-    flushSync(() => {
-      setPendingMergeSpans((prev) => ({ ...prev, ...nextSpans }));
-    });
-  }, []);
-
-  const applyImmediateCellBg = useCallback((updates) => {
-    const entries = Array.isArray(updates) ? updates : [updates];
-    const nextBgColors = {};
-    entries.forEach((item) => {
-      if (!item) return;
-      const key = item.key || `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-      if (!key || key.includes('undefined')) return;
-      nextBgColors[key] = item.bg_color || null;
-    });
-    if (Object.keys(nextBgColors).length === 0) return;
-
-    flushSync(() => {
-      setPendingCellBgColors((prev) => ({ ...prev, ...nextBgColors }));
-      setContextMenu(null);
-    });
-  }, []);
-
-  const clearImmediateCellBg = useCallback((updates) => {
-    const entries = Array.isArray(updates) ? updates : [updates];
-    const keys = entries
-      .map((item) => item?.key || `${item?.week_index}-${item?.day_index}-${item?.row_index}-${item?.col_index}`)
-      .filter((key) => key && !key.includes('undefined'));
-    if (keys.length === 0) return;
-
-    setPendingCellBgColors((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      entries.forEach((item) => {
-        const key = item?.key || `${item?.week_index}-${item?.day_index}-${item?.row_index}-${item?.col_index}`;
-        if (!key || key.includes('undefined')) return;
-        const expectedBgColor = item?.bg_color || null;
-        if (key in next && (next[key] || null) === expectedBgColor) {
-          delete next[key];
-          changed = true;
-        }
-      });
-      return changed ? next : prev;
-    });
-  }, []);
-
-  const clearImmediateCellDisplay = useCallback((updates) => {
-    const entries = Array.isArray(updates) ? updates : [updates];
-    const keys = entries
-      .map((item) => item?.key || `${item?.week_index}-${item?.day_index}-${item?.row_index}-${item?.col_index}`)
-      .filter((key) => key && !key.includes('undefined'));
-    if (keys.length === 0) return;
-    
-    setTimeout(() => {
-      setPendingDisplayValues((prev) => {
-        let changed = false;
-        const next = { ...prev };
-        keys.forEach((key) => {
-          if (key in next) {
-            delete next[key];
-            changed = true;
-          }
-        });
-        return changed ? next : prev;
-      });
-      setPendingMergeSpans((prev) => {
-        let changed = false;
-        const next = { ...prev };
-        keys.forEach((key) => {
-          if (key in next) {
-            delete next[key];
-            changed = true;
-          }
-        });
-        return changed ? next : prev;
-      });
-      setPendingMemoOverrides((prev) => {
-        let changed = false;
-        const next = { ...prev };
-        keys.forEach((key) => {
-          if (key in next) {
-            delete next[key];
-            changed = true;
-          }
-        });
-        return changed ? next : prev;
-      });
-    }, 0);
-  }, []);
-
   const {
     buildMemoSnapshotForKeys,
     doUndo,
@@ -972,7 +834,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       clearTimeout(editAutosaveTimerRef.current);
       editAutosaveTimerRef.current = null;
     }
-  }, []);
+  }, [setPendingDisplayValues]);
 
   const flushEditDraft = useCallback(() => {
     if (editAutosaveTimerRef.current) {
@@ -1205,7 +1067,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     // memos 컨텍스트가 새 값을 반영할 때까지 유지하여 깜빡임 방지.
     // 아래 useEffect(cleanupStalePendingValues)에서 memos 업데이트 후 자동 정리.
     if (!success) addToast('저장 실패', 'error');
-  }, [editValue, currentYear, currentMonth, memos, onSaveMemo, addToast, buildSchedulerAutoText, recordUndo, cellKey]);
+  }, [editValue, currentYear, currentMonth, memos, onSaveMemo, addToast, buildSchedulerAutoText, recordUndo, cellKey, setPendingDisplayValues]);
 
   handleCellSaveRef.current = handleCellSave;
 
