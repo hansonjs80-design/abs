@@ -13,6 +13,7 @@ export default function TopTabs() {
   const [now, setNow] = useState(() => new Date());
   const [optimisticPath, setOptimisticPath] = useState(null);
   const routeTimerRef = useRef(null);
+  const measureFrameRef = useRef(null);
   const tabWrapRefs = useRef(new Map());
   const activeContentRefs = useRef(new Map());
   const inactiveContentRefs = useRef(new Map());
@@ -26,6 +27,9 @@ export default function TopTabs() {
       if (routeTimerRef.current) {
         window.clearTimeout(routeTimerRef.current);
       }
+      if (measureFrameRef.current) {
+        window.cancelAnimationFrame(measureFrameRef.current);
+      }
     };
   }, []);
 
@@ -35,6 +39,7 @@ export default function TopTabs() {
   }, []);
 
   const measureTabContentWidths = useCallback(() => {
+    measureFrameRef.current = null;
     items.forEach((item) => {
       const wrap = tabWrapRefs.current.get(item.path);
       if (!wrap) return;
@@ -52,19 +57,30 @@ export default function TopTabs() {
     });
   }, [items]);
 
+  const scheduleTabContentWidthMeasure = useCallback(() => {
+    if (measureFrameRef.current) {
+      window.cancelAnimationFrame(measureFrameRef.current);
+    }
+    measureFrameRef.current = window.requestAnimationFrame(measureTabContentWidths);
+  }, [measureTabContentWidths]);
+
   useLayoutEffect(() => {
     measureTabContentWidths();
   }, [measureTabContentWidths]);
 
   useEffect(() => {
     if (typeof ResizeObserver === 'undefined') return undefined;
-    const observer = new ResizeObserver(() => {
-      window.requestAnimationFrame(measureTabContentWidths);
-    });
+    const observer = new ResizeObserver(scheduleTabContentWidthMeasure);
     activeContentRefs.current.forEach((el) => observer.observe(el));
     inactiveContentRefs.current.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, [measureTabContentWidths]);
+    return () => {
+      observer.disconnect();
+      if (measureFrameRef.current) {
+        window.cancelAnimationFrame(measureFrameRef.current);
+        measureFrameRef.current = null;
+      }
+    };
+  }, [scheduleTabContentWidthMeasure]);
 
   const formatDateTime = (date) => {
     const y = date.getFullYear();
