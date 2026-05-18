@@ -26,14 +26,18 @@ export default function BodyPartKeyboardPanel({
     };
 
     focusInput();
+    let nestedFrameId = null;
     const frameId = requestAnimationFrame(() => {
       focusInput();
-      requestAnimationFrame(focusInput);
+      nestedFrameId = requestAnimationFrame(focusInput);
     });
 
     return () => {
       cancelled = true;
       cancelAnimationFrame(frameId);
+      if (nestedFrameId !== null) {
+        cancelAnimationFrame(nestedFrameId);
+      }
     };
   }, [autoFocus]);
 

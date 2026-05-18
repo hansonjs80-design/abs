@@ -20,6 +20,7 @@ import {
   isTreatmentCancelShortcut,
   isTreatmentCompleteShortcut,
 } from '../../lib/scheduleKeyboardUtils';
+import { buildMoveScheduleSelectionPayload } from '../../lib/scheduleMoveUtils';
 
 export default function useScheduleKeyboardActions({
   contextMenu,
@@ -36,6 +37,7 @@ export default function useScheduleKeyboardActions({
   imeOpenRef,
   cellKey,
   colCount,
+  rowCount,
   deleteCells,
   buildRangeKeys,
   selectSingleCell,
@@ -53,6 +55,7 @@ export default function useScheduleKeyboardActions({
   handleOpenPatientHistoryModal,
   buildMemoSnapshotForKeys,
   onSaveMemo,
+  saveShockwaveMemosBulk,
   recordUndo,
   addToast,
   setEditingCell,
@@ -64,9 +67,11 @@ export default function useScheduleKeyboardActions({
 }) {
   // ── refs로 최신 값 추적 (연속 키 입력 시 stale closure 방지) ──
   const memosRef = useRef(memos);
+  const selectedKeysRef = useRef(selectedKeys);
   const pendingRef = useRef(pendingDisplayValues);
   const pendingMergeSpansRef = useRef(pendingMergeSpans);
   const onSaveMemoRef = useRef(onSaveMemo);
+  const saveBulkRef = useRef(saveShockwaveMemosBulk);
   const buildSnapshotRef = useRef(buildMemoSnapshotForKeys);
   const recordUndoRef = useRef(recordUndo);
   const getDefaultTimeRef = useRef(getDefaultReservationTime);
@@ -74,11 +79,21 @@ export default function useScheduleKeyboardActions({
   const applyMergeSpanRef = useRef(applyImmediateMergeSpan);
   const timeDebounceRef = useRef({ timer: null, pending: new Map() });
   const visitDebounceRef = useRef({ timer: null, pending: new Map() });
+  const moveSaveQueueRef = useRef(Promise.resolve());
+  const moveRequestIdRef = useRef(0);
+  const moveOptimisticMemosRef = useRef({});
 
-  useEffect(() => { memosRef.current = memos; }, [memos]);
+  useEffect(() => {
+    memosRef.current = {
+      ...(memos || {}),
+      ...(moveOptimisticMemosRef.current || {}),
+    };
+  }, [memos]);
+  useEffect(() => { selectedKeysRef.current = selectedKeys; }, [selectedKeys]);
   useEffect(() => { pendingRef.current = pendingDisplayValues; }, [pendingDisplayValues]);
   useEffect(() => { pendingMergeSpansRef.current = pendingMergeSpans; }, [pendingMergeSpans]);
   useEffect(() => { onSaveMemoRef.current = onSaveMemo; }, [onSaveMemo]);
+  useEffect(() => { saveBulkRef.current = saveShockwaveMemosBulk; }, [saveShockwaveMemosBulk]);
   useEffect(() => { buildSnapshotRef.current = buildMemoSnapshotForKeys; }, [buildMemoSnapshotForKeys]);
   useEffect(() => { recordUndoRef.current = recordUndo; }, [recordUndo]);
   useEffect(() => { getDefaultTimeRef.current = getDefaultReservationTime; }, [getDefaultReservationTime]);
@@ -188,6 +203,95 @@ export default function useScheduleKeyboardActions({
     applyReservationTimeDelta(isDecrease ? -10 : 10);
     return true;
   }, [isReservationTimeShortcutEvent, applyReservationTimeDelta]);
+
+  const moveSelectedCellsByRow = useCallback((rowDelta) => {
+    const result = buildMoveScheduleSelectionPayload({
+      selectedKeys: selectedKeysRef.current,
+      memos: memosRef.current,
+      pendingDisplayValues: pendingRef.current,
+      pendingMergeSpans: pendingMergeSpansRef.current,
+      rowDelta,
+      rowCount,
+      currentYear,
+      currentMonth,
+    });
+
+    if (!result.ok) {
+      if (result.reason === 'occupied') {
+        addToast('이동할 위치에 예약 내용이 있어 이동할 수 없습니다.', 'error');
+      }
+      return;
+    }
+
+    applyCellDisplayRef.current?.(result.payload);
+    applyMergeSpanRef.current?.(result.payload);
+    recordUndoRef.current?.({ type: 'bulk-edit', oldMemos: result.oldMemos });
+
+    const applyPayloadToLatestRefs = (payload) => {
+      const nextMemos = { ...(memosRef.current || {}) };
+      const nextPendingDisplay = { ...(pendingRef.current || {}) };
+      const nextPendingMergeSpans = { ...(pendingMergeSpansRef.current || {}) };
+
+      payload.forEach((item) => {
+        const key = cellKey(item.week_index, item.day_index, item.row_index, item.col_index);
+        const nextMemo = {
+          ...(nextMemos[key] || {}),
+          content: item.content || '',
+          bg_color: item.bg_color || null,
+          merge_span: item.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+          prescription: item.prescription || null,
+          body_part: item.body_part || null,
+        };
+        nextMemos[key] = nextMemo;
+        moveOptimisticMemosRef.current[key] = nextMemo;
+        nextPendingDisplay[key] = item.content || '';
+        nextPendingMergeSpans[key] = item.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+      });
+
+      memosRef.current = nextMemos;
+      pendingRef.current = nextPendingDisplay;
+      pendingMergeSpansRef.current = nextPendingMergeSpans;
+    };
+
+    applyPayloadToLatestRefs(result.payload);
+    const moveRequestId = moveRequestIdRef.current + 1;
+    moveRequestIdRef.current = moveRequestId;
+
+    const firstMovedCell = result.movedKeys[0]
+      ? result.movedKeys[0].split('-').map(Number)
+      : null;
+    if (firstMovedCell) {
+      const [w, d, r, c] = firstMovedCell;
+      selectSingleCell({ w, d, r, c });
+      setRangeEnd(null);
+      const movedKeySet = new Set(result.movedKeys);
+      selectedKeysRef.current = movedKeySet;
+      setSelectedKeys(movedKeySet);
+    }
+
+    moveSaveQueueRef.current = moveSaveQueueRef.current
+      .catch(() => false)
+      .then(() => saveBulkRef.current?.(result.payload));
+
+    moveSaveQueueRef.current.then((success) => {
+      if (!success) {
+        if (moveRequestIdRef.current !== moveRequestId) return;
+        applyCellDisplayRef.current?.(result.oldMemos);
+        applyMergeSpanRef.current?.(result.oldMemos);
+        applyPayloadToLatestRefs(result.oldMemos);
+        addToast('셀 이동 실패', 'error');
+      }
+    });
+  }, [
+    addToast,
+    cellKey,
+    currentMonth,
+    currentYear,
+    rowCount,
+    selectSingleCell,
+    setRangeEnd,
+    setSelectedKeys,
+  ]);
 
   useEffect(() => {
     const handleEarlyReservationShortcut = (event) => {
@@ -469,6 +573,13 @@ export default function useScheduleKeyboardActions({
 
     if (isGridNavigationKey(e)) {
       e.preventDefault();
+
+      if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        e.stopPropagation();
+        moveSelectedCellsByRow(e.key === 'ArrowUp' ? -1 : 1);
+        return;
+      }
+
       const nextCell = getAdjacentCell({ w, d, r, c }, e.key);
 
       if (e.shiftKey) {
@@ -577,6 +688,7 @@ export default function useScheduleKeyboardActions({
     setSelectedKeys,
     shockwaveSettings,
     handleReservationTimeShortcut,
+    moveSelectedCellsByRow,
     memos,
   ]);
 }

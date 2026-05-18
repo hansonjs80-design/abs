@@ -69,14 +69,14 @@ export function buildScheduleCellPayload({
   };
 }
 
-export function getExpandedMergeKeys(keys, memos, cellKey) {
+export function getExpandedMergeKeys(keys, memos, cellKey, pendingMergeSpans = {}) {
   const affectedKeys = new Set();
 
   for (const key of keys || []) {
-    const mergeSpan = memos?.[key]?.merge_span;
+    const mergeSpan = pendingMergeSpans?.[key] || memos?.[key]?.merge_span;
     const masterKey = mergeSpan?.mergedInto || key;
     const { w, d, r, c } = parseKey(masterKey);
-    const masterSpan = memos?.[masterKey]?.merge_span || DEFAULT_MERGE_SPAN;
+    const masterSpan = pendingMergeSpans?.[masterKey] || memos?.[masterKey]?.merge_span || DEFAULT_MERGE_SPAN;
     const rowSpan = Math.max(1, masterSpan.rowSpan || 1);
     const colSpan = Math.max(1, masterSpan.colSpan || 1);
 
@@ -94,11 +94,12 @@ export function buildDeleteCellsPayload({
   keys,
   memos,
   pendingDisplayValues = {},
+  pendingMergeSpans = {},
   currentYear,
   currentMonth,
   cellKey,
 }) {
-  const affectedKeys = getExpandedMergeKeys(keys, memos, cellKey);
+  const affectedKeys = getExpandedMergeKeys(keys, memos, cellKey, pendingMergeSpans);
   const oldMemos = [];
   const oldMemoKeys = new Set();
   const payloadByKey = new Map();

@@ -100,6 +100,29 @@ describe('schedule merge payload helpers', () => {
     assert.equal(payload.every((item) => item.content === '' && item.bg_color === null), true);
   });
 
+  it('deleting a pending moved merged master clears the pending merge rectangle', () => {
+    const { payload } = buildDeleteCellsPayload({
+      keys: new Set(['0-0-5-1']),
+      memos: {},
+      pendingDisplayValues: { '0-0-5-1': '123/홍길동(3)' },
+      pendingMergeSpans: {
+        '0-0-5-1': { rowSpan: 3, colSpan: 1, mergedInto: null },
+        '0-0-6-1': { rowSpan: 1, colSpan: 1, mergedInto: '0-0-5-1' },
+        '0-0-7-1': { rowSpan: 1, colSpan: 1, mergedInto: '0-0-5-1' },
+      },
+      currentYear: 2026,
+      currentMonth: 5,
+      cellKey,
+    });
+
+    assert.deepEqual(
+      payload.map((item) => cellKey(item.week_index, item.day_index, item.row_index, item.col_index)).sort(),
+      ['0-0-5-1', '0-0-6-1', '0-0-7-1']
+    );
+    assert.equal(payload.every((item) => item.content === '' && item.bg_color === null), true);
+    assert.equal(payload.every((item) => item.merge_span.rowSpan === 1 && item.merge_span.mergedInto === null), true);
+  });
+
   it('uses pending display values in delete undo snapshots', () => {
     const memos = {
       '0-0-0-0': { content: '저장전', merge_span: defaultSpan },

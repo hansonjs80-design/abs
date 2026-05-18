@@ -9,6 +9,7 @@ export default function useScheduleMergeActions({
   currentMonth,
   memos,
   pendingDisplayValues,
+  pendingMergeSpans,
   selectedKeys,
   cellKey,
   computeSelectionInfo,
@@ -25,6 +26,7 @@ export default function useScheduleMergeActions({
       keys,
       memos,
       pendingDisplayValues,
+      pendingMergeSpans,
       currentYear,
       currentMonth,
       cellKey,
@@ -32,10 +34,12 @@ export default function useScheduleMergeActions({
     if (payload.length > 0) {
       recordUndo({ type: 'bulk-edit', oldMemos });
       applyImmediateCellDisplay(payload);
+      applyImmediateMergeSpan(payload);
       const success = await saveShockwaveMemosBulk(payload);
       if (success) clearImmediateCellDisplay(payload);
       else {
         applyImmediateCellDisplay(oldMemos);
+        applyImmediateMergeSpan(oldMemos);
         addToast('삭제 실패', 'error');
       }
     }
@@ -44,10 +48,12 @@ export default function useScheduleMergeActions({
     currentMonth,
     memos,
     pendingDisplayValues,
+    pendingMergeSpans,
     saveShockwaveMemosBulk,
     recordUndo,
     cellKey,
     applyImmediateCellDisplay,
+    applyImmediateMergeSpan,
     clearImmediateCellDisplay,
     addToast,
   ]);

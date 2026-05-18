@@ -110,14 +110,18 @@ const ContextMenuLocalInputGroup = ({ placeholder, buttonLabel, onSubmit, imeOpe
     };
 
     focusInput();
+    let nestedFrameId = null;
     const frameId = requestAnimationFrame(() => {
       focusInput();
-      requestAnimationFrame(focusInput);
+      nestedFrameId = requestAnimationFrame(focusInput);
     });
 
     return () => {
       cancelled = true;
       cancelAnimationFrame(frameId);
+      if (nestedFrameId !== null) {
+        cancelAnimationFrame(nestedFrameId);
+      }
     };
   }, [autoFocus, placeholder]);
 
@@ -1103,6 +1107,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     currentMonth,
     memos,
     pendingDisplayValues,
+    pendingMergeSpans,
     selectedKeys,
     cellKey,
     computeSelectionInfo,
@@ -1133,36 +1138,44 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   });
 
   const getAdjacentCell = useCallback((cell, direction) => {
-    let { w, d, r, c } = cell;
+    let { w, d, r, c } = normalizeCellToMergeMaster(cell);
+    const key = cellKey(w, d, r, c);
+    const mergeSpan = getEffectiveMergeSpan(key) || { rowSpan: 1, colSpan: 1, mergedInto: null };
+    const rowSpan = Math.max(1, mergeSpan.rowSpan || 1);
+    const colSpan = Math.max(1, mergeSpan.colSpan || 1);
+
+    const normalizeTarget = (targetCell) => normalizeCellToMergeMaster(targetCell);
 
     if (direction === 'ArrowLeft') {
-      if (c > 0) return { w, d, r, c: c - 1 };
-      if (d > 0) return { w, d: d - 1, r, c: colCount - 1 };
-      if (w > 0) return { w: w - 1, d: weeks[w - 1].length - 1, r, c: colCount - 1 };
-      return cell;
+      if (c > 0) return normalizeTarget({ w, d, r, c: c - 1 });
+      if (d > 0) return normalizeTarget({ w, d: d - 1, r, c: colCount - 1 });
+      if (w > 0) return normalizeTarget({ w: w - 1, d: weeks[w - 1].length - 1, r, c: colCount - 1 });
+      return { w, d, r, c };
     }
 
     if (direction === 'ArrowRight') {
-      if (c < colCount - 1) return { w, d, r, c: c + 1 };
-      if (d < weeks[w].length - 1) return { w: w + 1, d: d + 1, r, c: 0 };
-      if (w < weeks.length - 1) return { w: w + 1, d: 0, r, c: 0 };
-      return cell;
+      const nextCol = c + colSpan;
+      if (nextCol < colCount) return normalizeTarget({ w, d, r, c: nextCol });
+      if (d < weeks[w].length - 1) return normalizeTarget({ w, d: d + 1, r, c: 0 });
+      if (w < weeks.length - 1) return normalizeTarget({ w: w + 1, d: 0, r, c: 0 });
+      return { w, d, r, c };
     }
 
     if (direction === 'ArrowUp') {
-      if (r > 0) return { w, d, r: r - 1, c };
-      if (w > 0) return { w: w - 1, d, r: baseTimeSlots.length - 1, c };
-      return cell;
+      if (r > 0) return normalizeTarget({ w, d, r: r - 1, c });
+      if (w > 0) return normalizeTarget({ w: w - 1, d, r: baseTimeSlots.length - 1, c });
+      return { w, d, r, c };
     }
 
     if (direction === 'ArrowDown') {
-      if (r < baseTimeSlots.length - 1) return { w, d, r: r + 1, c };
-      if (w < weeks.length - 1) return { w: w + 1, d, r: 0, c };
-      return cell;
+      const nextRow = r + rowSpan;
+      if (nextRow < baseTimeSlots.length) return normalizeTarget({ w, d, r: nextRow, c });
+      if (w < weeks.length - 1) return normalizeTarget({ w: w + 1, d, r: 0, c });
+      return { w, d, r, c };
     }
 
-    return cell;
-  }, [baseTimeSlots.length, colCount, weeks]);
+    return { w, d, r, c };
+  }, [baseTimeSlots.length, cellKey, colCount, getEffectiveMergeSpan, normalizeCellToMergeMaster, weeks]);
 
   const {
     handleCopySelection,
@@ -1388,6 +1401,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     imeOpenRef,
     cellKey,
     colCount,
+    rowCount: baseTimeSlots.length,
     deleteCells,
     buildRangeKeys,
     selectSingleCell,
@@ -1405,6 +1419,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     handleOpenPatientHistoryModal,
     buildMemoSnapshotForKeys,
     onSaveMemo,
+    saveShockwaveMemosBulk,
     recordUndo,
     addToast,
     setEditingCell,
