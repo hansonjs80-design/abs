@@ -29,6 +29,24 @@ export default function useScheduleClipboardActions({
   addToast,
   setContextMenu,
 }) {
+  const buildMemoSnapshot = useCallback((w, d, r, c) => {
+    const key = cellKey(w, d, r, c);
+    const memo = memos[key];
+    return {
+      year: currentYear,
+      month: currentMonth,
+      week_index: w,
+      day_index: d,
+      row_index: r,
+      col_index: c,
+      content: memo?.content || '',
+      bg_color: memo?.bg_color || null,
+      merge_span: memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+      prescription: memo?.prescription || '',
+      body_part: memo?.body_part || '',
+    };
+  }, [cellKey, currentMonth, currentYear, memos]);
+
   const buildClipboardSelection = useCallback(() => {
     if (!selectedCell) return null;
 
@@ -346,7 +364,13 @@ export default function useScheduleClipboardActions({
       setClipboardSource(null);
     }
 
-    const oldMemos = [];
+    const oldMemoSnapshots = new Map();
+    const rememberOldMemo = (w, d, r, c) => {
+      const key = cellKey(w, d, r, c);
+      if (!oldMemoSnapshots.has(key)) {
+        oldMemoSnapshots.set(key, buildMemoSnapshot(w, d, r, c));
+      }
+    };
     const targetRowCount = clip.rowCount;
     const targetColCountInRange = clip.colCount;
     for (let ro = 0; ro < targetRowCount; ro++) {
@@ -354,21 +378,7 @@ export default function useScheduleClipboardActions({
         const tr = targetCell.r + ro;
         const tc = targetCell.c + co;
         if (tr >= baseTimeSlotsLength || tc >= colCount) continue;
-        const k = cellKey(targetCell.w, targetCell.d, tr, tc);
-        const m = memos[k];
-        oldMemos.push({
-          year: currentYear,
-          month: currentMonth,
-          week_index: targetCell.w,
-          day_index: targetCell.d,
-          row_index: tr,
-          col_index: tc,
-          content: m?.content || '',
-          bg_color: m?.bg_color || null,
-          merge_span: m?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
-          prescription: m?.prescription || '',
-          body_part: m?.body_part || '',
-        });
+        rememberOldMemo(targetCell.w, targetCell.d, tr, tc);
       }
     }
 
@@ -404,20 +414,7 @@ export default function useScheduleClipboardActions({
     if (clip.mode === 'cut' && currentClipboardSource?.keys) {
       Array.from(currentClipboardSource.keys).forEach((k) => {
         const [w, d, r, c] = k.split('-').map(Number);
-        const m = memos[k];
-        oldMemos.push({
-          year: currentYear,
-          month: currentMonth,
-          week_index: w,
-          day_index: d,
-          row_index: r,
-          col_index: c,
-          content: m?.content || '',
-          bg_color: m?.bg_color || null,
-          merge_span: m?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
-          prescription: m?.prescription || '',
-          body_part: m?.body_part || '',
-        });
+        rememberOldMemo(w, d, r, c);
         combinedPayload.set(`${w}-${d}-${r}-${c}`, {
           year: currentYear,
           month: currentMonth,
@@ -442,6 +439,7 @@ export default function useScheduleClipboardActions({
     });
 
     const payload = Array.from(combinedPayload.values());
+    const oldMemos = Array.from(oldMemoSnapshots.values());
     recordUndo({ type: 'bulk-edit', oldMemos });
     applyImmediateCellDisplay(payload);
     applyImmediateMergeSpan(payload);
@@ -468,11 +466,11 @@ export default function useScheduleClipboardActions({
     selectedCellRef,
     clipboardRef,
     clipboardSource,
+    buildMemoSnapshot,
     parsePlainTextClipboard,
     buildPastePayload,
     buildSchedulerAutoText,
     addToast,
-    memos,
     cellKey,
     currentYear,
     currentMonth,
