@@ -144,7 +144,8 @@ export function ScheduleProvider({ children }) {
     const blankContentItems = list.filter((item) => (
       item &&
       Object.prototype.hasOwnProperty.call(item, 'content') &&
-      !String(item.content || '').trim()
+      !String(item.content || '').trim() &&
+      item.merge_span?.meta?.intentional_clear !== true
     ));
 
     const needsProtection = blankContentItems.filter((item) => {
@@ -859,7 +860,17 @@ export function ScheduleProvider({ children }) {
       });
 
       const guardedMemosArray = await protectExistingScheduleContent(memosArray, previousMemos);
-      const upsertPayloads = buildCrossMonthMirroredPayloads(guardedMemosArray.map(m => ({
+      const sanitizedMemosArray = guardedMemosArray.map(({ merge_span, ...memo }) => {
+        if (!merge_span?.meta?.intentional_clear) {
+          return merge_span === undefined ? memo : { ...memo, merge_span };
+        }
+        const { intentional_clear: _intentionalClear, ...meta } = merge_span.meta;
+        const nextMergeSpan = { ...merge_span };
+        if (Object.keys(meta).length > 0) nextMergeSpan.meta = meta;
+        else delete nextMergeSpan.meta;
+        return { ...memo, merge_span: nextMergeSpan };
+      });
+      const upsertPayloads = buildCrossMonthMirroredPayloads(sanitizedMemosArray.map(m => ({
         ...m,
         updated_at: new Date().toISOString()
       })));
@@ -874,7 +885,7 @@ export function ScheduleProvider({ children }) {
 
       if (error) throw error;
 
-      const viewRelevantData = (data || guardedMemosArray).filter(d => d.year === currentYear && d.month === currentMonth);
+      const viewRelevantData = (data || sanitizedMemosArray).filter(d => d.year === currentYear && d.month === currentMonth);
       const nextShockwaveMemos = { ...shockwaveMemosRef.current };
       viewRelevantData.forEach(item => {
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
@@ -899,7 +910,7 @@ export function ScheduleProvider({ children }) {
       const weeks = generateShockwaveCalendar(currentYear, currentMonth);
       const affectedDates = new Set();
       
-      guardedMemosArray.forEach((item) => {
+      sanitizedMemosArray.forEach((item) => {
         const dayInfo = weeks[item.week_index]?.[item.day_index];
         if (dayInfo && dayInfo.isCurrentMonth) {
           const dateStr = `${dayInfo.year}-${String(dayInfo.month).padStart(2, '0')}-${String(dayInfo.day).padStart(2, '0')}`;

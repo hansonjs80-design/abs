@@ -1,4 +1,7 @@
 import {
+  markIntentionalClearPayload,
+} from './scheduleMergeUtils.js';
+import {
   getEffectiveScheduleMergeSpan,
   getScheduleCellKey,
   normalizeScheduleKeysToMergeMasters,
@@ -196,7 +199,7 @@ export function buildMoveScheduleSelectionPayload({
 
   const payloadByKey = new Map();
   sourceFootprintKeys.forEach((key) => {
-    payloadByKey.set(key, buildPayloadItem({
+    payloadByKey.set(key, markIntentionalClearPayload(buildPayloadItem({
       key,
       currentYear,
       currentMonth,
@@ -208,7 +211,7 @@ export function buildMoveScheduleSelectionPayload({
         prescription: null,
         body_part: null,
       },
-    }));
+    })));
   });
 
   const movedKeys = [];

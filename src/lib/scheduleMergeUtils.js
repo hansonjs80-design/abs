@@ -1,4 +1,5 @@
 const DEFAULT_MERGE_SPAN = { rowSpan: 1, colSpan: 1, mergedInto: null };
+const INTENTIONAL_CLEAR_META_KEY = 'intentional_clear';
 
 function parseKey(key) {
   const [w, d, r, c] = String(key || '').split('-').map(Number);
@@ -69,6 +70,20 @@ export function buildScheduleCellPayload({
   };
 }
 
+export function markIntentionalClearPayload(payload) {
+  const mergeSpan = payload.merge_span || DEFAULT_MERGE_SPAN;
+  return {
+    ...payload,
+    merge_span: {
+      ...mergeSpan,
+      meta: {
+        ...(mergeSpan.meta || {}),
+        [INTENTIONAL_CLEAR_META_KEY]: true,
+      },
+    },
+  };
+}
+
 export function getExpandedMergeKeys(keys, memos, cellKey, pendingMergeSpans = {}) {
   const affectedKeys = new Set();
 
@@ -120,7 +135,7 @@ export function buildDeleteCellsPayload({
 
   for (const key of affectedKeys) {
     addOldMemo(key);
-    payloadByKey.set(key, buildScheduleCellPayload({
+    payloadByKey.set(key, markIntentionalClearPayload(buildScheduleCellPayload({
       key,
       currentYear,
       currentMonth,
@@ -131,7 +146,7 @@ export function buildDeleteCellsPayload({
         prescription: null,
         body_part: null,
       },
-    }));
+    })));
   }
 
   Object.entries(memos || {}).forEach(([targetKey, targetMemo]) => {

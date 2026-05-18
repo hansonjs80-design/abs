@@ -6,6 +6,7 @@ import {
   cloneMergeSpanWithMeta,
   stripReservationTimeFromMergeSpan,
 } from '../../lib/schedulerUtils';
+import { markIntentionalClearPayload } from '../../lib/scheduleMergeUtils';
 
 export default function useScheduleClipboardActions({
   selectedCell,
@@ -415,7 +416,7 @@ export default function useScheduleClipboardActions({
       Array.from(currentClipboardSource.keys).forEach((k) => {
         const [w, d, r, c] = k.split('-').map(Number);
         rememberOldMemo(w, d, r, c);
-        combinedPayload.set(`${w}-${d}-${r}-${c}`, {
+        combinedPayload.set(`${w}-${d}-${r}-${c}`, markIntentionalClearPayload({
           year: currentYear,
           month: currentMonth,
           week_index: w,
@@ -427,7 +428,7 @@ export default function useScheduleClipboardActions({
           merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
           prescription: '',
           body_part: '',
-        });
+        }));
       });
     }
 
