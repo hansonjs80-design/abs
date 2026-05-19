@@ -436,7 +436,7 @@ export default function useScheduleKeyboardActions({
     if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault();
       flushPendingMoveSave();
-      deleteCells(selectedKeys);
+      deleteCells(selectedKeysRef.current);
       return;
     }
 
