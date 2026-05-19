@@ -106,6 +106,86 @@ describe('schedule move payload helpers', () => {
     assert.deepEqual(result.movedKeys, ['0-0-3-1']);
   });
 
+  it('allows moves into a visually empty cell with a stale mergedInto reference', () => {
+    const result = buildMoveScheduleSelectionPayload({
+      ...defaultArgs,
+      selectedKeys: new Set(['0-0-2-1']),
+      memos: {
+        '0-0-2-1': { content: '123/홍길동(2)' },
+        '0-0-3-1': {
+          content: '',
+          merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-0-1-1' },
+        },
+      },
+      rowDelta: 1,
+    });
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.movedKeys, ['0-0-3-1']);
+  });
+
+  it('allows moves into a visually empty cell with stale treatment metadata', () => {
+    const result = buildMoveScheduleSelectionPayload({
+      ...defaultArgs,
+      selectedKeys: new Set(['0-0-2-1']),
+      memos: {
+        '0-0-2-1': { content: '123/홍길동(2)' },
+        '0-0-3-1': {
+          content: '',
+          bg_color: '#ffe9a8',
+          prescription: 'F/R',
+          body_part: 'Lumbar',
+          merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+        },
+      },
+      rowDelta: 1,
+    });
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.movedKeys, ['0-0-3-1']);
+  });
+
+  it('allows moves into a visually empty stale merged master', () => {
+    const result = buildMoveScheduleSelectionPayload({
+      ...defaultArgs,
+      selectedKeys: new Set(['0-0-2-1']),
+      memos: {
+        '0-0-2-1': { content: '123/홍길동(2)' },
+        '0-0-3-1': {
+          content: '',
+          merge_span: { rowSpan: 2, colSpan: 1, mergedInto: null },
+        },
+        '0-0-4-1': {
+          content: '',
+          merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-0-3-1' },
+        },
+      },
+      rowDelta: 1,
+    });
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.movedKeys, ['0-0-3-1']);
+  });
+
+  it('still blocks moves into a valid child cell from another merge', () => {
+    const result = buildMoveScheduleSelectionPayload({
+      ...defaultArgs,
+      selectedKeys: new Set(['0-0-2-1']),
+      memos: {
+        '0-0-1-1': { content: '999/다른예약', merge_span: { rowSpan: 3, colSpan: 1, mergedInto: null } },
+        '0-0-2-1': { content: '123/홍길동(2)' },
+        '0-0-3-1': {
+          content: '',
+          merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-0-1-1' },
+        },
+      },
+      rowDelta: 1,
+    });
+
+    assert.equal(result.ok, false);
+    assert.equal(result.reason, 'occupied');
+  });
+
   it('treats an intentional clear marker as the visible empty state even if stale fields remain', () => {
     const result = buildMoveScheduleSelectionPayload({
       ...defaultArgs,

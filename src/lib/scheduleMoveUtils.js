@@ -53,6 +53,13 @@ function isMeaningfulMergeSpan(mergeSpan) {
   );
 }
 
+function getVisibleContentForKey({ key, memos, pendingDisplayValues }) {
+  const memo = memos?.[key] || {};
+  return Object.prototype.hasOwnProperty.call(pendingDisplayValues || {}, key)
+    ? pendingDisplayValues[key]
+    : memo.content;
+}
+
 function isDestinationOccupied({
   key,
   memos,
@@ -61,23 +68,31 @@ function isDestinationOccupied({
   sourceFootprintKeys,
 }) {
   if (sourceFootprintKeys.has(key)) return false;
-  const memo = memos?.[key] || {};
-  const content = Object.prototype.hasOwnProperty.call(pendingDisplayValues || {}, key)
-    ? pendingDisplayValues[key]
-    : memo.content;
-  const mergeSpan = pendingMergeSpans?.[key] || memo.merge_span;
+  const content = getVisibleContentForKey({ key, memos, pendingDisplayValues });
+  if (hasText(content)) return true;
+
+  const mergeSpan = getEffectiveScheduleMergeSpan({
+    key,
+    memos,
+    pendingMergeSpans,
+  });
   const isIntentionalClear = mergeSpan?.meta?.intentional_clear === true;
   if (isIntentionalClear && !hasText(content)) {
     return false;
   }
 
-  return Boolean(
-    hasText(content) ||
-    memo.bg_color ||
-    memo.prescription ||
-    memo.body_part ||
-    isMeaningfulMergeSpan(mergeSpan)
-  );
+  if (!isMeaningfulMergeSpan(mergeSpan)) return false;
+
+  if (mergeSpan?.mergedInto) {
+    if (sourceFootprintKeys.has(mergeSpan.mergedInto)) return false;
+    return hasText(getVisibleContentForKey({
+      key: mergeSpan.mergedInto,
+      memos,
+      pendingDisplayValues,
+    }));
+  }
+
+  return false;
 }
 
 function buildPayloadItem({ key, currentYear, currentMonth, memo, overrides }) {

@@ -228,8 +228,15 @@ export default function useScheduleKeyboardActions({
   }, [isReservationTimeShortcutEvent, applyReservationTimeDelta]);
 
   const moveSelectedCellsByRow = useCallback((rowDelta) => {
+    const selectedCellKey = selectedCell ? cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c) : null;
+    let moveKeys = selectedKeysRef.current;
+    if (selectedCellKey && (!moveKeys || moveKeys.size === 0)) {
+      moveKeys = new Set([selectedCellKey]);
+      selectedKeysRef.current = moveKeys;
+    }
+
     const result = buildMoveScheduleSelectionPayload({
-      selectedKeys: selectedKeysRef.current,
+      selectedKeys: moveKeys,
       memos: memosRef.current,
       pendingDisplayValues: pendingRef.current,
       pendingMergeSpans: pendingMergeSpansRef.current,
@@ -267,12 +274,14 @@ export default function useScheduleKeyboardActions({
     schedulePendingMoveSave(result.payload, result.oldMemos);
   }, [
     addToast,
+    cellKey,
     currentMonth,
     currentYear,
     applyPayloadToLatestRefs,
     rowCount,
     schedulePendingMoveSave,
     selectSingleCell,
+    selectedCell,
     setRangeEnd,
     setSelectedKeys,
   ]);
@@ -563,7 +572,7 @@ export default function useScheduleKeyboardActions({
       if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         e.stopPropagation();
         e.stopImmediatePropagation?.();
-        if (e.repeat || e.__shockwaveScheduleMoveHandled) {
+        if (e.__shockwaveScheduleMoveHandled) {
           return;
         }
         e.__shockwaveScheduleMoveHandled = true;
