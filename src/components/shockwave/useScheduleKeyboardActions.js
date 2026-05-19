@@ -362,6 +362,7 @@ export default function useScheduleKeyboardActions({
 
     if (e.key === 'Enter') {
       e.preventDefault();
+      flushPendingMoveSave();
       const key = cellKey(w, d, r, c);
       beginEditingCell(key, memos[key]?.content || '', true);
       return;
@@ -369,6 +370,7 @@ export default function useScheduleKeyboardActions({
 
     if (e.key === 'F2') {
       e.preventDefault();
+      flushPendingMoveSave();
       const key = cellKey(w, d, r, c);
       beginEditingCell(key, memos[key]?.content || '', true);
       return;
@@ -643,6 +645,7 @@ export default function useScheduleKeyboardActions({
     }
 
     if ((e.key.length === 1 || e.key === 'Process' || e.keyCode === 229) && !isMeta && !e.altKey) {
+      flushPendingMoveSave();
       const key = cellKey(w, d, r, c);
       const isImeCompositionKey =
         e.key === 'Process' ||
@@ -651,6 +654,9 @@ export default function useScheduleKeyboardActions({
         (e.key.length === 1 && e.key.charCodeAt(0) > 127);
       if (isImeCompositionKey) {
         imeOpenRef.current = true;
+        // Don't prevent default, but do start editing immediately so input is focused before composition really starts.
+        // It might lose the first keystroke due to React asynchronous focus, but it ensures editing mode is active.
+        beginEditingCell(key, '', false);
       } else {
         e.preventDefault();
         beginEditingCell(key, e.key, false);

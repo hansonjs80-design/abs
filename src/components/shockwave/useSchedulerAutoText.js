@@ -598,7 +598,11 @@ export default function useSchedulerAutoText({
     if (!selected) return { text: rawName };
 
     const effectiveVisitCount = selected.preferredNextVisit || selected.nextVisit;
-    const effectiveBodyPart = searchChart
+    const oldParsed = parseSchedulerPatientIdentity(originalContent || '');
+    const isNewPatient = oldParsed.patientName !== selected.cleanName && oldParsed.patientChart !== selected.chartNumber;
+    const shouldOverwriteContent = isNewPatient || Boolean(searchChart);
+
+    const effectiveBodyPart = shouldOverwriteContent
       ? (selected.preferredBodyPart || selected.latestBodyPart || '')
       : (selected.preferredBodyPart || selected.latestBodyPart || undefined);
 
@@ -614,7 +618,7 @@ export default function useSchedulerAutoText({
 
     const autoPrescription = userRemovedDoseTag
       ? (selected.prescription || '')
-      : (has4060Pattern(autoText) ? undefined : (searchChart ? (selected.prescription || '') : (selected.prescription || undefined)));
+      : (has4060Pattern(autoText) ? undefined : (shouldOverwriteContent ? (selected.prescription || '') : (selected.prescription || undefined)));
     const inheritedMergeSpan = findLatestSchedulerMemoMeta(
       { w, d, r, c },
       selected.chartNumber,
