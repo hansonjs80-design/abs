@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { buildManualTherapyMergePayload } from '../../lib/manualTherapyMergeUtils';
 import { has4060Pattern, normalize4060StarOrder, strip4060FromContent } from '../../lib/schedulerContentFormat';
 import {
   addBodyPartToMap,
@@ -24,6 +25,7 @@ export default function useScheduleContextMenuActions({
   currentYear,
   currentMonth,
   onSaveMemo,
+  saveShockwaveMemosBulk,
   addToast,
   handleCopySelection,
   handleCutSelection,
@@ -39,6 +41,11 @@ export default function useScheduleContextMenuActions({
   setContextMenuReservationInput,
   setContextMenuVisitInput,
   getDefaultReservationTime,
+  rowCount,
+  pendingMergeSpans,
+  applyImmediateCellDisplay,
+  applyImmediateMergeSpan,
+  clearImmediateCellDisplay,
 }) {
   const saveDebounceRef = useRef({ timer: null, pending: new Map(), undoMemos: null });
 
@@ -137,8 +144,10 @@ export default function useScheduleContextMenuActions({
     else if (action === 'merge' || action === 'unmerge') tryMergeSelection();
     else if (action?.type === 'prescription') {
       const keys = Array.from(selectedKeys || []);
-      const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
+      const payloadByKey = new Map();
+      const affectedKeys = new Set(keys);
+      const fallbackSaves = [];
 
       for (const key of keys) {
         const [w, d, r, c] = key.split('-').map(Number);
@@ -162,10 +171,58 @@ export default function useScheduleContextMenuActions({
           updatedContent = strip4060FromContent(updatedContent);
         }
         if (memo.prescription !== action.value || updatedContent !== getStableMemoContent(key, memo)) {
-          const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, updatedContent, memo.bg_color, memo.merge_span, action.value);
-          if (success) anyChanged = true;
+          const manualTherapyMerge = buildManualTherapyMergePayload({
+            key,
+            memos,
+            pendingMergeSpans,
+            currentYear,
+            currentMonth,
+            rowCount,
+            content: updatedContent,
+            bgColor: memo.bg_color || null,
+            prescription: action.value,
+            bodyPart: memo.body_part || null,
+            mergeSpan: memo.merge_span,
+          });
+
+          if (manualTherapyMerge.ok) {
+            manualTherapyMerge.payload.forEach((item) => {
+              const itemKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+              payloadByKey.set(itemKey, item);
+            });
+            manualTherapyMerge.affectedKeys.forEach((itemKey) => affectedKeys.add(itemKey));
+            anyChanged = true;
+          } else {
+            if (manualTherapyMerge.reason === 'occupied') {
+              addToast('아래 셀이 비어있지 않아 자동 병합하지 않았습니다.', 'warning');
+            } else if (manualTherapyMerge.reason === 'bounds') {
+              addToast('아래 시간이 부족해 자동 병합하지 않았습니다.', 'warning');
+            }
+            fallbackSaves.push(onSaveMemo(currentYear, currentMonth, w, d, r, c, updatedContent, memo.bg_color, memo.merge_span, action.value));
+          }
         }
       }
+
+      const oldMemos = buildMemoSnapshotForKeys(Array.from(affectedKeys));
+
+      if (payloadByKey.size > 0) {
+        const payload = Array.from(payloadByKey.values());
+        applyImmediateCellDisplay?.(payload);
+        applyImmediateMergeSpan?.(payload);
+        const success = await saveShockwaveMemosBulk(payload);
+        if (success) {
+          clearImmediateCellDisplay?.(payload);
+        } else {
+          addToast('처방 적용에 실패했습니다.', 'error');
+          return;
+        }
+      }
+
+      if (fallbackSaves.length > 0) {
+        const results = await Promise.all(fallbackSaves);
+        if (results.some(Boolean)) anyChanged = true;
+      }
+
       if (anyChanged) {
         recordUndo({ type: 'bulk-edit', oldMemos });
         addToast('처방이 적용되었습니다.', 'success');
@@ -581,5 +638,11 @@ export default function useScheduleContextMenuActions({
     setContextMenuReservationInput,
     setContextMenuVisitInput,
     getDefaultReservationTime,
+    saveShockwaveMemosBulk,
+    rowCount,
+    pendingMergeSpans,
+    applyImmediateCellDisplay,
+    applyImmediateMergeSpan,
+    clearImmediateCellDisplay,
   ]);
 }

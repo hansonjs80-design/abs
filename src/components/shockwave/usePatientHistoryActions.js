@@ -5,6 +5,7 @@ import {
   buildPatientHistoryCellUpdate,
   getPatientHistorySearchTarget,
 } from '../../lib/patientHistoryModalUtils';
+import { buildManualTherapyMergePayload } from '../../lib/manualTherapyMergeUtils';
 import { supabase } from '../../lib/supabaseClient';
 import { has4060Pattern } from '../../lib/schedulerContentFormat';
 import {
@@ -322,17 +323,42 @@ export default function usePatientHistoryActions({
       col_index: c,
       ...cellUpdate,
     };
+    const manualTherapyMerge = buildManualTherapyMergePayload({
+      key,
+      memos,
+      currentYear,
+      currentMonth,
+      rowCount: baseTimeSlotsLength,
+      content: cellUpdate.content,
+      bgColor: cellUpdate.bg_color || null,
+      prescription: cellUpdate.prescription,
+      bodyPart: cellUpdate.body_part || null,
+      mergeSpan: cellUpdate.merge_span,
+    });
+    const savePayload = manualTherapyMerge.ok ? manualTherapyMerge.payload : [payload];
 
-    setPendingDisplayValues((prev) => ({ ...prev, [key]: cellUpdate.content }));
+    if (manualTherapyMerge.reason === 'occupied') {
+      addToast('아래 셀이 비어있지 않아 자동 병합하지 않았습니다.', 'warning');
+    } else if (manualTherapyMerge.reason === 'bounds') {
+      addToast('아래 시간이 부족해 자동 병합하지 않았습니다.', 'warning');
+    }
 
-    saveShockwaveMemosBulk([payload]).then((success) => {
+    setPendingDisplayValues((prev) => {
+      const next = { ...prev };
+      savePayload.forEach((item) => {
+        next[`${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`] = String(item.content ?? '');
+      });
+      return next;
+    });
+
+    saveShockwaveMemosBulk(savePayload).then((success) => {
       if (success) {
         addToast('선택한 내역이 적용되었습니다.', 'success');
       } else {
         addToast('내역 적용에 실패했습니다.', 'error');
       }
     });
-  }, [selectedCell, cellKey, currentYear, currentMonth, memos, saveShockwaveMemosBulk, addToast, setPendingDisplayValues]);
+  }, [selectedCell, cellKey, currentYear, currentMonth, memos, baseTimeSlotsLength, saveShockwaveMemosBulk, addToast, setPendingDisplayValues]);
 
   return {
     fetchPatientHistory,
