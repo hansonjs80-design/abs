@@ -67,41 +67,6 @@ function expectedMemoOverrideMatches(current, expectedItem) {
   return true;
 }
 
-function memoMatchesOverride(memo, override) {
-  if (!memo || !override) return false;
-  if (String(memo.content ?? '') !== String(override.content ?? '')) return false;
-
-  if (
-    Object.prototype.hasOwnProperty.call(override, 'bg_color') &&
-    normalizeNullable(memo.bg_color) !== normalizeNullable(override.bg_color)
-  ) {
-    return false;
-  }
-
-  if (
-    Object.prototype.hasOwnProperty.call(override, 'merge_span') &&
-    !mergeSpanEquals(memo.merge_span, override.merge_span)
-  ) {
-    return false;
-  }
-
-  if (
-    Object.prototype.hasOwnProperty.call(override, 'prescription') &&
-    normalizeNullable(memo.prescription) !== normalizeNullable(override.prescription)
-  ) {
-    return false;
-  }
-
-  if (
-    Object.prototype.hasOwnProperty.call(override, 'body_part') &&
-    normalizeNullable(memo.body_part) !== normalizeNullable(override.body_part)
-  ) {
-    return false;
-  }
-
-  return true;
-}
-
 export default function useScheduleImmediateState({ memos, setContextMenu, setEditingCell }) {
   const [pendingDisplayValues, setPendingDisplayValues] = useState({});
   const [pendingMergeSpans, setPendingMergeSpans] = useState({});
@@ -114,32 +79,6 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
       const next = { ...prev };
       Object.entries(prev).forEach(([key, bgColor]) => {
         if ((memos[key]?.bg_color || null) === (bgColor || null)) {
-          delete next[key];
-          changed = true;
-        }
-      });
-      return changed ? next : prev;
-    });
-  }, [memos]);
-
-  useEffect(() => {
-    setPendingMergeSpans((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      Object.entries(prev).forEach(([key, mergeSpan]) => {
-        if (mergeSpanEquals(memos[key]?.merge_span, mergeSpan)) {
-          delete next[key];
-          changed = true;
-        }
-      });
-      return changed ? next : prev;
-    });
-
-    setPendingMemoOverrides((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      Object.entries(prev).forEach(([key, override]) => {
-        if (memoMatchesOverride(memos[key], override)) {
           delete next[key];
           changed = true;
         }

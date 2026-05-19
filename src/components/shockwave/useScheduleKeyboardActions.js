@@ -22,6 +22,8 @@ import {
 } from '../../lib/scheduleKeyboardUtils';
 import { buildMoveScheduleSelectionPayload } from '../../lib/scheduleMoveUtils';
 
+const MOVE_SAVE_IDLE_MS = 220;
+
 export default function useScheduleKeyboardActions({
   contextMenu,
   selectedCell,
@@ -32,6 +34,7 @@ export default function useScheduleKeyboardActions({
   pendingMergeSpans,
   applyImmediateCellDisplay,
   applyImmediateMergeSpan,
+  clearImmediateCellDisplay,
   currentYear,
   currentMonth,
   memos,
@@ -80,10 +83,15 @@ export default function useScheduleKeyboardActions({
   const getDefaultTimeRef = useRef(getDefaultReservationTime);
   const applyCellDisplayRef = useRef(applyImmediateCellDisplay);
   const applyMergeSpanRef = useRef(applyImmediateMergeSpan);
+  const clearCellDisplayRef = useRef(clearImmediateCellDisplay);
   const timeDebounceRef = useRef({ timer: null, pending: new Map() });
   const visitDebounceRef = useRef({ timer: null, pending: new Map() });
-  const moveSaveQueueRef = useRef(Promise.resolve());
-  const moveRequestIdRef = useRef(0);
+  const moveSaveStateRef = useRef({
+    timer: null,
+    payloadByKey: new Map(),
+    rollbackMemos: [],
+    requestId: 0,
+  });
 
   useEffect(() => {
     baseMemosRef.current = memos;
@@ -103,16 +111,95 @@ export default function useScheduleKeyboardActions({
   useEffect(() => { getDefaultTimeRef.current = getDefaultReservationTime; }, [getDefaultReservationTime]);
   useEffect(() => { applyCellDisplayRef.current = applyImmediateCellDisplay; }, [applyImmediateCellDisplay]);
   useEffect(() => { applyMergeSpanRef.current = applyImmediateMergeSpan; }, [applyImmediateMergeSpan]);
+  useEffect(() => { clearCellDisplayRef.current = clearImmediateCellDisplay; }, [clearImmediateCellDisplay]);
 
   // 디바운스 cleanup
   useEffect(() => {
     const timeDebounce = timeDebounceRef.current;
     const visitDebounce = visitDebounceRef.current;
+    const moveSaveState = moveSaveStateRef.current;
     return () => {
       if (timeDebounce?.timer) clearTimeout(timeDebounce.timer);
       if (visitDebounce?.timer) clearTimeout(visitDebounce.timer);
+      if (moveSaveState?.timer) clearTimeout(moveSaveState.timer);
     };
   }, []);
+
+  const getPayloadKey = useCallback((item) => cellKey(
+    item.week_index,
+    item.day_index,
+    item.row_index,
+    item.col_index
+  ), [cellKey]);
+
+  const applyPayloadToLatestRefs = useCallback((payload) => {
+    const nextMemos = { ...(memosRef.current || {}) };
+    const nextPendingDisplay = { ...(pendingRef.current || {}) };
+    const nextPendingMergeSpans = { ...(pendingMergeSpansRef.current || {}) };
+
+    payload.forEach((item) => {
+      const key = getPayloadKey(item);
+      const previousMemo = nextMemos[key] || {};
+      const nextMemo = {
+        ...previousMemo,
+        content: item.content || '',
+        bg_color: item.bg_color || null,
+        merge_span: item.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+        prescription: item.prescription || null,
+        body_part: item.body_part || null,
+      };
+      nextMemos[key] = nextMemo;
+      nextPendingDisplay[key] = item.content || '';
+      nextPendingMergeSpans[key] = item.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+    });
+
+    memosRef.current = nextMemos;
+    pendingRef.current = nextPendingDisplay;
+    pendingMergeSpansRef.current = nextPendingMergeSpans;
+  }, [getPayloadKey]);
+
+  const flushPendingMoveSave = useCallback(() => {
+    const state = moveSaveStateRef.current;
+    if (state.timer) {
+      clearTimeout(state.timer);
+      state.timer = null;
+    }
+
+    const payload = Array.from(state.payloadByKey.values());
+    if (payload.length === 0) return Promise.resolve(true);
+
+    state.payloadByKey = new Map();
+    const rollbackMemos = state.rollbackMemos || [];
+    const requestId = state.requestId + 1;
+    state.requestId = requestId;
+
+    return Promise.resolve(saveBulkRef.current?.(payload)).then((success) => {
+      if (success) {
+        clearCellDisplayRef.current?.(payload);
+        return true;
+      }
+      if (moveSaveStateRef.current.requestId === requestId) {
+        applyCellDisplayRef.current?.(rollbackMemos);
+        applyMergeSpanRef.current?.(rollbackMemos);
+        applyPayloadToLatestRefs(rollbackMemos);
+        addToast('셀 이동 실패', 'error');
+      }
+      return false;
+    });
+  }, [addToast, applyPayloadToLatestRefs]);
+
+  const schedulePendingMoveSave = useCallback((payload, rollbackMemos) => {
+    const state = moveSaveStateRef.current;
+    if (state.timer) clearTimeout(state.timer);
+
+    payload.forEach((item) => {
+      state.payloadByKey.set(getPayloadKey(item), item);
+    });
+    state.rollbackMemos = rollbackMemos || [];
+    state.timer = setTimeout(() => {
+      flushPendingMoveSave();
+    }, MOVE_SAVE_IDLE_MS);
+  }, [flushPendingMoveSave, getPayloadKey]);
 
   const applyReservationTimeDelta = useCallback((deltaMinutes) => {
     const keys = Array.from(selectedKeys || []);
@@ -231,45 +318,7 @@ export default function useScheduleKeyboardActions({
     applyMergeSpanRef.current?.(result.payload);
     recordUndoRef.current?.({ type: 'bulk-edit', oldMemos: result.oldMemos });
 
-    const getPayloadKey = (item) => cellKey(
-        item.week_index,
-        item.day_index,
-        item.row_index,
-        item.col_index
-    );
-
-    const buildMemoFromPayloadItem = (item, previousMemo = {}) => {
-      return {
-        ...(previousMemo || {}),
-        content: item.content || '',
-        bg_color: item.bg_color || null,
-        merge_span: item.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
-        prescription: item.prescription || null,
-        body_part: item.body_part || null,
-      };
-    };
-
-    const applyPayloadToLatestRefs = (payload) => {
-      const nextMemos = { ...(memosRef.current || {}) };
-      const nextPendingDisplay = { ...(pendingRef.current || {}) };
-      const nextPendingMergeSpans = { ...(pendingMergeSpansRef.current || {}) };
-
-      payload.forEach((item) => {
-        const key = getPayloadKey(item);
-        const nextMemo = buildMemoFromPayloadItem(item, nextMemos[key]);
-        nextMemos[key] = nextMemo;
-        nextPendingDisplay[key] = item.content || '';
-        nextPendingMergeSpans[key] = item.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
-      });
-
-      memosRef.current = nextMemos;
-      pendingRef.current = nextPendingDisplay;
-      pendingMergeSpansRef.current = nextPendingMergeSpans;
-    };
-
     applyPayloadToLatestRefs(result.payload);
-    const moveRequestId = moveRequestIdRef.current + 1;
-    moveRequestIdRef.current = moveRequestId;
 
     const firstMovedCell = result.movedKeys[0]
       ? result.movedKeys[0].split('-').map(Number)
@@ -283,25 +332,14 @@ export default function useScheduleKeyboardActions({
       setSelectedKeys(movedKeySet);
     }
 
-    moveSaveQueueRef.current = moveSaveQueueRef.current
-      .catch(() => false)
-      .then(() => saveBulkRef.current?.(result.payload));
-
-    moveSaveQueueRef.current.then((success) => {
-      if (!success) {
-        if (moveRequestIdRef.current !== moveRequestId) return;
-        applyCellDisplayRef.current?.(result.oldMemos);
-        applyMergeSpanRef.current?.(result.oldMemos);
-        applyPayloadToLatestRefs(result.oldMemos);
-        addToast('셀 이동 실패', 'error');
-      }
-    });
+    schedulePendingMoveSave(result.payload, result.oldMemos);
   }, [
     addToast,
-    cellKey,
     currentMonth,
     currentYear,
+    applyPayloadToLatestRefs,
     rowCount,
+    schedulePendingMoveSave,
     selectSingleCell,
     setRangeEnd,
     setSelectedKeys,
@@ -397,6 +435,7 @@ export default function useScheduleKeyboardActions({
 
     if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault();
+      flushPendingMoveSave();
       deleteCells(selectedKeys);
       return;
     }
@@ -701,6 +740,7 @@ export default function useScheduleKeyboardActions({
     isContextMenuTarget,
     handleOpenPatientHistoryModal,
     handleOpenBodyPartMenu,
+    flushPendingMoveSave,
     addToast,
     setEditingCell,
     setRangeEnd,
