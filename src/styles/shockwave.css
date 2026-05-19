@@ -632,6 +632,12 @@
   visibility: hidden;
 }
 
+/* 셀 호버/선택/편집 시 해당 행의 시간 셀 하이라이트 */
+.sw-time-label.active-row {
+  background-color: #93c47d;
+  transition: background-color 0.15s ease;
+}
+
 /* Removed .sw-time-label.disabled to keep text black and fully opaque */
 
 /* 비활성(disabled) 시간대 및 점심시간 셀 */

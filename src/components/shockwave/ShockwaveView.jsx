@@ -615,6 +615,41 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const tooltipMousePosRef = useRef({ x: 0, y: 0 });
   const weekRefs = useRef([]);
   const [hoverCell, setHoverCell] = useState(null);
+
+  // ── 활성 행의 시간 셀 하이라이트 ──
+  useEffect(() => {
+    // 활성 행 인덱스 결정: hover > editing > selected 우선순위
+    let activeWeek = null;
+    let activeRow = null;
+    if (hoverCell) {
+      activeWeek = hoverCell.weekIdx;
+      activeRow = hoverCell.rowIdx;
+    } else if (editingCell) {
+      const parts = editingCell.split('-').map(Number);
+      if (parts.length >= 3) {
+        activeWeek = parts[0];
+        activeRow = parts[2];
+      }
+    } else if (selectedCell) {
+      activeWeek = selectedCell.w;
+      activeRow = selectedCell.r;
+    }
+
+    const container = viewRef.current;
+    if (!container) return;
+
+    // 이전 하이라이트 제거
+    const prevActive = container.querySelectorAll('.sw-time-label.active-row');
+    prevActive.forEach(el => el.classList.remove('active-row'));
+
+    // 새 하이라이트 적용
+    if (activeWeek !== null && activeRow !== null) {
+      const timeCell = container.querySelector(`[data-time-row="${activeWeek}-${activeRow}"]`);
+      if (timeCell) {
+        timeCell.classList.add('active-row');
+      }
+    }
+  }, [hoverCell, selectedCell, editingCell]);
   const [todayShortcutTooltip, setTodayShortcutTooltip] = useState(null);
   const [chartSelector, setChartSelector] = useState(null);
   const [imePreviewCell, setImePreviewCell] = useState(null);
@@ -1342,6 +1377,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     saveShockwaveMemosBulk,
     addToast,
     setPendingDisplayValues,
+    applyImmediateCellDisplay,
+    applyImmediateMergeSpan,
+    clearImmediateCellDisplay,
     setPatientHistoryModalOpen,
     setPatientHistoryModalData,
   });
@@ -1861,6 +1899,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                           <div
                             key={`time-${rowIdx}`}
                             className={`sw-time-label${slotInfo.isLunch ? ' lunch' : ''}${slotInfo.disabled ? ' disabled' : ''}`}
+                            data-time-row={`${weekIdx}-${rowIdx}`}
                             style={{
                               gridColumn: '1',
                               gridRow: `${gridRowStart}`,
@@ -2624,6 +2663,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           const keyStr = cellKey(weekIdx, dayIdx, rowIdx, colIdx);
           const cellData = renderMemos[keyStr] || {};
           const content = typeof pendingDisplayValues[keyStr] === 'string' ? pendingDisplayValues[keyStr] : cellData.content;
+          const hasHoverContent = Boolean(String(content || '').trim() && content !== '\u200B');
           const cellPrescription = cellData.prescription || '';
           
           const isSelectionHover = selectionInfo && selectionInfo.w === weekIdx && selectionInfo.d === dayIdx && selectionInfo.minRow !== selectionInfo.maxRow && selectedKeys && selectedKeys.has(keyStr);
@@ -2649,25 +2689,25 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               if (mns > 0) dStr += (hrs > 0 ? ' ' : '') + `${mns}분`;
               
               text = `⏱ ${t1} ~ ${t2} (총 ${dStr})`;
-              if (content && content !== '\u200B') text += `\n👤 ${content}`;
+              if (hasHoverContent) text += `\n👤 ${content}`;
             } else {
               const mergeSpanForHover = pendingMergeSpans[keyStr] || cellData.merge_span;
               const optimisticCellData = { ...cellData, merge_span: mergeSpanForHover };
               const reservationTime = getReservationTimeForMemo(optimisticCellData, weekIdx, dayIdx, rowIdx);
               text = `⏱ ${reservationTime || slotInfo.label}`;
-              if (content && content !== '\u200B') text += `\n👤 ${content}`;
+              if (hasHoverContent) text += `\n👤 ${content}`;
             }
           } else {
             const mergeSpanForHover = pendingMergeSpans[keyStr] || cellData.merge_span;
             const optimisticCellData = { ...cellData, merge_span: mergeSpanForHover };
             const reservationTime = getReservationTimeForMemo(optimisticCellData, weekIdx, dayIdx, rowIdx);
             text = `⏱ ${reservationTime || slotInfo.label}`;
-            if (content && content !== '\u200B') text += `\n👤 ${content}`;
+            if (hasHoverContent) text += `\n👤 ${content}`;
           }
           
           if (staffBlockRule) text += `\n근무표: ${staffBlockRule.keyword}`;
-          if (cellPrescription) text += `\n💊 처방: ${cellPrescription}`;
-          if (cellData?.body_part) text += `\n🦴 부위: ${cellData.body_part}`;
+          if (hasHoverContent && cellPrescription) text += `\n💊 처방: ${cellPrescription}`;
+          if (hasHoverContent && cellData?.body_part) text += `\n🦴 부위: ${cellData.body_part}`;
           const memoList = getMemoListFromMergeSpan(cellData?.merge_span);
           if (memoList.length > 0) text += `\n📝 메모: ${memoList.join(' / ')}`;
           hoverTooltipText = text;

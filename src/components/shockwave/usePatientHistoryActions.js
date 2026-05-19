@@ -38,6 +38,9 @@ export default function usePatientHistoryActions({
   saveShockwaveMemosBulk,
   addToast,
   setPendingDisplayValues,
+  applyImmediateCellDisplay,
+  applyImmediateMergeSpan,
+  clearImmediateCellDisplay,
   setPatientHistoryModalOpen,
   setPatientHistoryModalData,
 }) {
@@ -282,7 +285,9 @@ export default function usePatientHistoryActions({
       const key = cellKey(w, d, r, c);
       const content = editingCell === key
         ? (editInputRef.current?.value ?? editValue)
-        : (memos[key]?.content || pendingDisplayValues[key] || '');
+        : (Object.prototype.hasOwnProperty.call(pendingDisplayValues, key)
+            ? pendingDisplayValues[key]
+            : (memos[key]?.content || ''));
 
       if (!content.trim()) {
         setPatientHistoryModalData({ loading: false, logs: [], searchName: '', searchChart: '' });
@@ -350,15 +355,31 @@ export default function usePatientHistoryActions({
       });
       return next;
     });
+    applyImmediateCellDisplay?.(savePayload);
+    applyImmediateMergeSpan?.(savePayload);
 
     saveShockwaveMemosBulk(savePayload).then((success) => {
       if (success) {
+        clearImmediateCellDisplay?.(savePayload);
         addToast('선택한 내역이 적용되었습니다.', 'success');
       } else {
         addToast('내역 적용에 실패했습니다.', 'error');
       }
     });
-  }, [selectedCell, cellKey, currentYear, currentMonth, memos, baseTimeSlotsLength, saveShockwaveMemosBulk, addToast, setPendingDisplayValues]);
+  }, [
+    selectedCell,
+    cellKey,
+    currentYear,
+    currentMonth,
+    memos,
+    baseTimeSlotsLength,
+    saveShockwaveMemosBulk,
+    addToast,
+    setPendingDisplayValues,
+    applyImmediateCellDisplay,
+    applyImmediateMergeSpan,
+    clearImmediateCellDisplay,
+  ]);
 
   return {
     fetchPatientHistory,
