@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { buildManualTherapyMergePayload } from '../../lib/manualTherapyMergeUtils';
+import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import { has4060Pattern, normalize4060StarOrder, strip4060FromContent } from '../../lib/schedulerContentFormat';
 import {
   addBodyPartToMap,
@@ -171,7 +171,7 @@ export default function useScheduleContextMenuActions({
           updatedContent = strip4060FromContent(updatedContent);
         }
         if (memo.prescription !== action.value || updatedContent !== getStableMemoContent(key, memo)) {
-          const manualTherapyMerge = buildManualTherapyMergePayload({
+          const manualTherapyMerge = buildManualTherapyAutoMergePayload({
             key,
             memos,
             pendingMergeSpans,

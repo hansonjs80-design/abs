@@ -39,11 +39,8 @@ function collectCurrentFootprint({ key, memos, pendingMergeSpans }) {
 function isEmptyStructuralCell(memo = {}, mergeSpan = memo?.merge_span) {
   if (mergeSpan?.meta?.intentional_clear === true) return true;
   if (String(memo?.content || '').trim()) return false;
-  if (memo?.bg_color) return false;
-  if (memo?.prescription) return false;
-  if (memo?.body_part) return false;
+  if (Array.isArray(mergeSpan?.meta?.memo_list) && mergeSpan.meta.memo_list.length > 0) return false;
   if (mergeSpan?.mergedInto) return false;
-  if ((mergeSpan?.rowSpan || 1) > 1 || (mergeSpan?.colSpan || 1) > 1) return false;
   return true;
 }
 

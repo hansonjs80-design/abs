@@ -5,7 +5,7 @@ import {
   buildPatientHistoryCellUpdate,
   getPatientHistorySearchTarget,
 } from '../../lib/patientHistoryModalUtils';
-import { buildManualTherapyMergePayload } from '../../lib/manualTherapyMergeUtils';
+import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import { supabase } from '../../lib/supabaseClient';
 import { has4060Pattern } from '../../lib/schedulerContentFormat';
 import {
@@ -323,7 +323,7 @@ export default function usePatientHistoryActions({
       col_index: c,
       ...cellUpdate,
     };
-    const manualTherapyMerge = buildManualTherapyMergePayload({
+    const manualTherapyMerge = buildManualTherapyAutoMergePayload({
       key,
       memos,
       currentYear,

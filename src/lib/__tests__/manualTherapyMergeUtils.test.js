@@ -68,6 +68,33 @@ test('buildManualTherapyMergePayload blocks occupied rows below the target', () 
   assert.deepEqual(result.payload, []);
 });
 
+test('buildManualTherapyMergePayload allows visually empty rows with stale treatment metadata below the target', () => {
+  const result = buildManualTherapyMergePayload({
+    ...baseArgs,
+    key: '0-1-4-2',
+    memos: {
+      '0-1-5-2': {
+        content: '',
+        bg_color: '#ffe9a8',
+        prescription: 'F/R',
+        body_part: 'Lumbar',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+      },
+    },
+    content: '1234/홍길동40(2)',
+    prescription: '40분',
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.payload.length, 2);
+  const child = result.payload.find((item) => item.row_index === 5);
+  assert.equal(child.content, '');
+  assert.equal(child.bg_color, null);
+  assert.equal(child.prescription, null);
+  assert.equal(child.body_part, null);
+  assert.deepEqual(child.merge_span, { rowSpan: 1, colSpan: 1, mergedInto: '0-1-4-2' });
+});
+
 test('buildManualTherapyMergePayload blocks child rows from another merge', () => {
   const result = buildManualTherapyMergePayload({
     ...baseArgs,

@@ -4,7 +4,9 @@ import { useSchedule } from '../../contexts/ScheduleContext';
 
 import { getTodayKST, isSameDate } from '../../lib/calendarUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
-import { buildManualTherapyMergePayload, getManualTherapyRowSpan } from '../../lib/manualTherapyMergeUtils';
+import { buildBlankScheduleCleanupPayload, sanitizeBlankScheduleCellData } from '../../lib/scheduleBlankCellCleanupUtils';
+import { getManualTherapyRowSpan } from '../../lib/manualTherapyMergeUtils';
+import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import { get4060PrescriptionFromContent, has4060Pattern, normalize4060StarOrder } from '../../lib/schedulerContentFormat';
 import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
 import { useToast } from '../common/Toast';
@@ -721,7 +723,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     };
   }, [currentYear, currentMonth, onLoadMemos, setPendingDisplayValues]);
 
-  // ── 기존 40/60 셀에 누락된 처방 일괄 패치 ──
+  // ── 기존 40/60 셀과 빈 셀 잔여 메타데이터 보정 ──
   const prescriptionPatchKeyRef = useRef(null);
   useEffect(() => {
     const monthKey = getShockwaveScheduleScrollKey(currentYear, currentMonth);
@@ -748,15 +750,24 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       fixEntries.push({ key, prescription: autoPres, content });
     });
 
+    const blankCleanupPayload = buildBlankScheduleCleanupPayload({
+      memos,
+      currentYear,
+      currentMonth,
+    });
+
     prescriptionPatchKeyRef.current = monthKey; // 패치 시도 표시 (빈 배열이어도)
 
-    if (fixEntries.length === 0) return;
+    if (fixEntries.length === 0 && blankCleanupPayload.length === 0) return;
 
     (async () => {
       const payloadByKey = new Map();
+      blankCleanupPayload.forEach((item) => {
+        payloadByKey.set(`${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`, item);
+      });
       fixEntries.forEach(({ key, prescription, content }) => {
         const [weekIndex, dayIndex, rowIndex, colIndex] = key.split('-').map(Number);
-        const manualTherapyMerge = buildManualTherapyMergePayload({
+        const manualTherapyMerge = buildManualTherapyAutoMergePayload({
           key,
           memos,
           currentYear,
@@ -1082,7 +1093,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
     }
 
-    const manualTherapyMerge = buildManualTherapyMergePayload({
+    const manualTherapyMerge = buildManualTherapyAutoMergePayload({
       key,
       memos: effectiveMemos,
       pendingMergeSpans,
@@ -1091,7 +1102,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       rowCount: baseTimeSlots.length,
       content: newContent,
       bgColor: memos[key]?.bg_color || null,
-      prescription: newPrescription,
+      prescription: newPrescription ?? (memos[key]?.prescription || ''),
       bodyPart: hasBodyPartResult ? newBodyPart : (memos[key]?.body_part || null),
       mergeSpan: newMergeSpan || memos[key]?.merge_span,
     });
@@ -1864,16 +1875,28 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       // 2. Cells
                       for (let colIdx = 0; colIdx < colCount; colIdx++) {
                         const key = cellKey(weekIdx, dayIdx, rowIdx, colIdx);
-                        const cellData = dayInfo.isCurrentMonth ? renderMemos[key] : null;
+                        const rawCellData = dayInfo.isCurrentMonth ? renderMemos[key] : null;
                         const hasPendingBg = Object.prototype.hasOwnProperty.call(pendingCellBgColors, key);
-                        const displayCellData = hasPendingBg
+                        const pendingAdjustedCellData = hasPendingBg
                           ? {
-                              ...(cellData || {}),
+                              ...(rawCellData || {}),
                               bg_color: pendingCellBgColors[key],
                             }
-                          : cellData;
-                        const content = dayInfo.isCurrentMonth ? normalizeSchedulerVisitSuffix(pendingDisplayValues[key] ?? cellData?.content ?? '') : '';
-                        let mergeSpan = dayInfo.isCurrentMonth ? getEffectiveMergeSpan(key, renderMemos) : { rowSpan: 1, colSpan: 1, mergedInto: null };
+                          : rawCellData;
+                        const rawContent = dayInfo.isCurrentMonth ? normalizeSchedulerVisitSuffix(pendingDisplayValues[key] ?? rawCellData?.content ?? '') : '';
+                        const rawMergeSpan = dayInfo.isCurrentMonth ? getEffectiveMergeSpan(key, renderMemos) : { rowSpan: 1, colSpan: 1, mergedInto: null };
+                        const sanitizedBlankCell = dayInfo.isCurrentMonth
+                          ? sanitizeBlankScheduleCellData({
+                              key,
+                              memos: renderMemos,
+                              cellData: pendingAdjustedCellData,
+                              pendingDisplayValues,
+                              pendingMergeSpans,
+                            })
+                          : { cellData: pendingAdjustedCellData, mergeSpan: null, wasSanitized: false };
+                        const displayCellData = sanitizedBlankCell.cellData;
+                        const content = sanitizedBlankCell.wasSanitized ? '' : rawContent;
+                        let mergeSpan = sanitizedBlankCell.mergeSpan || rawMergeSpan;
 
                           if (mergeSpan.mergedInto) {
                             continue; // 병합된 하위 셀은 묶어서 렌더링 생략
