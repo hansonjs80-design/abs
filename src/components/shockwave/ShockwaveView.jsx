@@ -462,6 +462,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const { currentYear, currentMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
   const { addToast } = useToast();
   const viewRef = useRef(null);
+  const scheduleBulkSaveQueueRef = useRef(Promise.resolve(true));
+  const queuedSaveShockwaveMemosBulk = useCallback((payload) => {
+    const nextSave = scheduleBulkSaveQueueRef.current
+      .catch(() => false)
+      .then(() => saveShockwaveMemosBulk(payload));
+    scheduleBulkSaveQueueRef.current = nextSave.catch(() => false);
+    return nextSave;
+  }, [saveShockwaveMemosBulk]);
   const dragSelectionRef = useRef(null);
   const selectedCellRef = useRef(null);
   const [showTherapistConfig, setShowTherapistConfig] = useState(false);
@@ -501,13 +509,25 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setEditingCell,
   });
 
+  const effectiveMemos = useMemo(
+    () => {
+      if (!pendingMemoOverrides || Object.keys(pendingMemoOverrides).length === 0) return memos;
+      const next = { ...(memos || {}) };
+      Object.entries(pendingMemoOverrides).forEach(([key, override]) => {
+        next[key] = { ...(next[key] || {}), ...override };
+      });
+      return next;
+    },
+    [memos, pendingMemoOverrides]
+  );
+
   // 환자 내역 검색 팝업 상태 (Cmd+F)
   const [patientHistoryModalOpen, setPatientHistoryModalOpen] = useState(false);
   const [patientHistoryModalData, setPatientHistoryModalData] = useState({ loading: false, logs: [], searchName: '', searchChart: '' });
   const selectedPatientHistoryGroupKey = useMemo(() => {
     if (!selectedCell) return 'shockwave';
     const key = `${selectedCell.w}-${selectedCell.d}-${selectedCell.r}-${selectedCell.c}`;
-    const selectedMemo = memos[key] || {};
+    const selectedMemo = effectiveMemos[key] || {};
     const selectedContent = editingCell === key
       ? editValue
       : (pendingDisplayValues[key] ?? selectedMemo.content ?? '');
@@ -522,7 +542,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return 'manual';
     }
     return 'shockwave';
-  }, [editValue, editingCell, memos, pendingDisplayValues, selectedCell, settings?.manual_therapy_prescriptions]);
+  }, [editValue, editingCell, effectiveMemos, pendingDisplayValues, selectedCell, settings?.manual_therapy_prescriptions]);
   const patientHistoryLogGroups = useMemo(() => {
     const groupMap = new Map(PATIENT_HISTORY_GROUPS.map((group) => [group.key, { ...group, logs: [] }]));
     (patientHistoryModalData.logs || []).forEach((log) => {
@@ -782,7 +802,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     memos,
     onSaveMemo,
     pendingDisplayValues,
-    saveShockwaveMemosBulk,
+    saveShockwaveMemosBulk: queuedSaveShockwaveMemosBulk,
     setContextMenu,
     setEditingCell,
   });
@@ -823,7 +843,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   } = useScheduleSelectionModel({
     selectedCell,
     selectedKeys,
-    memos,
+    memos: effectiveMemos,
     pendingMergeSpans,
   });
 
@@ -1085,7 +1105,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     cellKey,
     contextMenu,
     getDefaultReservationTime,
-    memos,
+    memos: effectiveMemos,
     selectSingleCell,
     setActiveContextSubmenu,
     setContextMenu,
@@ -1105,13 +1125,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   } = useScheduleMergeActions({
     currentYear,
     currentMonth,
-    memos,
+    memos: effectiveMemos,
     pendingDisplayValues,
     pendingMergeSpans,
     selectedKeys,
     cellKey,
     computeSelectionInfo,
-    saveShockwaveMemosBulk,
+    saveShockwaveMemosBulk: queuedSaveShockwaveMemosBulk,
     recordUndo,
     applyImmediateCellDisplay,
     applyImmediateMergeSpan,
@@ -1130,7 +1150,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   } = useScheduleViewState({
     currentMonth,
     currentYear,
-    memos,
+    memos: effectiveMemos,
     normalizeKeysToMergeMasters,
     selectedKeys,
     settings,
@@ -1185,7 +1205,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     selectedCell,
     selectedCellRef,
     selectionInfo,
-    memos,
+    memos: effectiveMemos,
     clipboardRef,
     clipboardSource,
     setClipboardSource,
@@ -1195,7 +1215,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     colCount,
     cellKey,
     buildSchedulerAutoText,
-    saveShockwaveMemosBulk,
+    saveShockwaveMemosBulk: queuedSaveShockwaveMemosBulk,
     recordUndo,
     applyImmediateCellDisplay,
     applyImmediateMergeSpan,
@@ -1210,12 +1230,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     handleToggleHolidayBackground,
   } = useScheduleStatusActions({
     selectedKeys,
-    memos,
+    memos: effectiveMemos,
     currentYear,
     currentMonth,
     normalizeKeysToMergeMasters,
     cellKey,
-    saveShockwaveMemosBulk,
+    saveShockwaveMemosBulk: queuedSaveShockwaveMemosBulk,
     addToast,
     recordUndo,
     setContextMenu,
@@ -1237,7 +1257,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     editingCell,
     editValue,
     editInputRef,
-    memos,
+    memos: effectiveMemos,
     pendingDisplayValues,
     baseTimeSlotsLength: baseTimeSlots.length,
     colCount,
@@ -1279,7 +1299,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const handleContextAction = useScheduleContextMenuActions({
     selectedKeys,
     contextMenu,
-    memos,
+    memos: effectiveMemos,
     pendingDisplayValues,
     currentYear,
     currentMonth,
@@ -1341,13 +1361,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (!selectedCell) return;
     const { w, d, r, c } = selectedCell;
     const keyStr = cellKey(w, d, r, c);
-    const memo = memos[keyStr] || {};
+    const memo = effectiveMemos[keyStr] || {};
     
     let targetX = window.innerWidth / 2;
     let targetY = window.innerHeight / 2;
     
     let targetKeyStr = keyStr;
-    const mergeSpan = getEffectiveMergeSpan(keyStr, memos);
+    const mergeSpan = getEffectiveMergeSpan(keyStr, effectiveMemos);
     if (mergeSpan && mergeSpan.mergedInto) {
       targetKeyStr = mergeSpan.mergedInto;
     }
@@ -1383,7 +1403,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     handleCellContextMenu(mockEvent, w, d, r, c, memo.prescription || '', '');
     setContextMenu(prev => prev ? { ...prev, isStandaloneBodyPart: true } : null);
     setActiveContextSubmenu('body');
-  }, [selectedCell, cellKey, memos, handleCellContextMenu, setActiveContextSubmenu, setContextMenu, getEffectiveMergeSpan]);
+  }, [selectedCell, cellKey, effectiveMemos, handleCellContextMenu, setActiveContextSubmenu, setContextMenu, getEffectiveMergeSpan]);
 
   const handleKeyDown = useScheduleKeyboardActions({
     contextMenu,
@@ -1397,7 +1417,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     applyImmediateMergeSpan,
     currentYear,
     currentMonth,
-    memos,
+    memos: effectiveMemos,
     shockwaveSettings: settings,
     imeOpenRef,
     cellKey,
@@ -1420,7 +1440,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     handleOpenPatientHistoryModal,
     buildMemoSnapshotForKeys,
     onSaveMemo,
-    saveShockwaveMemosBulk,
+    saveShockwaveMemosBulk: queuedSaveShockwaveMemosBulk,
     recordUndo,
     addToast,
     setEditingCell,
@@ -1595,14 +1615,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const renderMemos = useMemo(
     () => {
       if (isScheduleMonthLoading) return {};
-      if (!pendingMemoOverrides || Object.keys(pendingMemoOverrides).length === 0) return memos;
-      const next = { ...(memos || {}) };
-      Object.entries(pendingMemoOverrides).forEach(([key, override]) => {
-        next[key] = { ...(next[key] || {}), ...override };
-      });
-      return next;
+      return effectiveMemos;
     },
-    [isScheduleMonthLoading, memos, pendingMemoOverrides]
+    [effectiveMemos, isScheduleMonthLoading]
   );
 
   return (
@@ -2510,7 +2525,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         if (hoverCell) {
           const { weekIdx, dayIdx, rowIdx, colIdx, staffBlockRule, slotInfo, selectionInfo } = hoverCell;
           const keyStr = cellKey(weekIdx, dayIdx, rowIdx, colIdx);
-          const cellData = memos[keyStr] || {};
+          const cellData = renderMemos[keyStr] || {};
           const content = typeof pendingDisplayValues[keyStr] === 'string' ? pendingDisplayValues[keyStr] : cellData.content;
           const cellPrescription = cellData.prescription || '';
           

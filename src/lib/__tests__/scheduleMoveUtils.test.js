@@ -71,6 +71,71 @@ describe('schedule move payload helpers', () => {
     assert.equal(result.payload.length, 0);
   });
 
+  it('allows moves into a cell that was intentionally cleared by a prior operation', () => {
+    const result = buildMoveScheduleSelectionPayload({
+      ...defaultArgs,
+      selectedKeys: new Set(['0-0-2-1']),
+      memos: {
+        '0-0-2-1': { content: 'A' },
+        '0-0-3-1': {
+          content: '',
+          bg_color: null,
+          prescription: null,
+          body_part: null,
+          merge_span: {
+            rowSpan: 1,
+            colSpan: 1,
+            mergedInto: null,
+            meta: { intentional_clear: true },
+          },
+        },
+      },
+      pendingDisplayValues: { '0-0-3-1': '' },
+      pendingMergeSpans: {
+        '0-0-3-1': {
+          rowSpan: 1,
+          colSpan: 1,
+          mergedInto: null,
+          meta: { intentional_clear: true },
+        },
+      },
+      rowDelta: 1,
+    });
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.movedKeys, ['0-0-3-1']);
+  });
+
+  it('treats an intentional clear marker as the visible empty state even if stale fields remain', () => {
+    const result = buildMoveScheduleSelectionPayload({
+      ...defaultArgs,
+      selectedKeys: new Set(['0-0-2-1']),
+      memos: {
+        '0-0-2-1': { content: 'A' },
+        '0-0-3-1': {
+          content: 'stale',
+          bg_color: '#ffe9a8',
+          prescription: 'F/R',
+          body_part: 'Lumbar',
+          merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+        },
+      },
+      pendingDisplayValues: { '0-0-3-1': '' },
+      pendingMergeSpans: {
+        '0-0-3-1': {
+          rowSpan: 1,
+          colSpan: 1,
+          mergedInto: null,
+          meta: { intentional_clear: true },
+        },
+      },
+      rowDelta: 1,
+    });
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.movedKeys, ['0-0-3-1']);
+  });
+
   it('moves a merged cell as one block and preserves its merge footprint', () => {
     const memos = {
       '0-0-2-1': {

@@ -39,6 +39,7 @@ function hasText(value) {
 }
 
 function hasMemoList(mergeSpan) {
+  if (mergeSpan?.meta?.intentional_clear === true) return false;
   return Array.isArray(mergeSpan?.meta?.memo_list) && mergeSpan.meta.memo_list.length > 0;
 }
 
@@ -65,6 +66,10 @@ function isDestinationOccupied({
     ? pendingDisplayValues[key]
     : memo.content;
   const mergeSpan = pendingMergeSpans?.[key] || memo.merge_span;
+  const isIntentionalClear = mergeSpan?.meta?.intentional_clear === true;
+  if (isIntentionalClear && !hasText(content)) {
+    return false;
+  }
 
   return Boolean(
     hasText(content) ||

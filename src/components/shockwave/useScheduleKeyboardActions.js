@@ -67,6 +67,7 @@ export default function useScheduleKeyboardActions({
   handleOpenBodyPartMenu,
 }) {
   // ── refs로 최신 값 추적 (연속 키 입력 시 stale closure 방지) ──
+  const baseMemosRef = useRef(memos);
   const memosRef = useRef(memos);
   const selectedKeysRef = useRef(selectedKeys);
   const pendingRef = useRef(pendingDisplayValues);
@@ -85,13 +86,14 @@ export default function useScheduleKeyboardActions({
   const moveRequestIdRef = useRef(0);
 
   useEffect(() => {
+    baseMemosRef.current = memos;
     memosRef.current = { ...(memos || {}), ...(pendingMemoOverridesRef.current || {}) };
   }, [memos]);
   useEffect(() => { selectedKeysRef.current = selectedKeys; }, [selectedKeys]);
   useEffect(() => { pendingRef.current = pendingDisplayValues; }, [pendingDisplayValues]);
   useEffect(() => {
     pendingMemoOverridesRef.current = pendingMemoOverrides;
-    memosRef.current = { ...(memosRef.current || {}), ...(pendingMemoOverrides || {}) };
+    memosRef.current = { ...(baseMemosRef.current || {}), ...(pendingMemoOverrides || {}) };
   }, [pendingMemoOverrides]);
   useEffect(() => { pendingMergeSpansRef.current = pendingMergeSpans; }, [pendingMergeSpans]);
   useEffect(() => { onSaveMemoRef.current = onSaveMemo; }, [onSaveMemo]);
@@ -588,6 +590,11 @@ export default function useScheduleKeyboardActions({
 
       if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         e.stopPropagation();
+        e.stopImmediatePropagation?.();
+        if (e.repeat || e.__shockwaveScheduleMoveHandled) {
+          return;
+        }
+        e.__shockwaveScheduleMoveHandled = true;
         moveSelectedCellsByRow(e.key === 'ArrowUp' ? -1 : 1);
         return;
       }

@@ -23,6 +23,85 @@ function getExpectedUpdateMap(updates) {
   return expectedByKey;
 }
 
+function normalizeNullable(value) {
+  return value ?? null;
+}
+
+function mergeSpanEquals(left, right) {
+  return JSON.stringify(left || null) === JSON.stringify(right || null);
+}
+
+function expectedMemoOverrideMatches(current, expectedItem) {
+  if (!current || !expectedItem) return false;
+  if (String(current.content ?? '') !== String(expectedItem.content ?? '')) return false;
+
+  if (
+    Object.prototype.hasOwnProperty.call(expectedItem, 'bg_color') &&
+    normalizeNullable(current.bg_color) !== normalizeNullable(expectedItem.bg_color)
+  ) {
+    return false;
+  }
+
+  const expectedMergeSpan = expectedItem.merge_span || expectedItem.mergeSpan;
+  if (
+    expectedMergeSpan &&
+    !mergeSpanEquals(current.merge_span, expectedMergeSpan)
+  ) {
+    return false;
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(expectedItem, 'prescription') &&
+    normalizeNullable(current.prescription) !== normalizeNullable(expectedItem.prescription)
+  ) {
+    return false;
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(expectedItem, 'body_part') &&
+    normalizeNullable(current.body_part) !== normalizeNullable(expectedItem.body_part)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function memoMatchesOverride(memo, override) {
+  if (!memo || !override) return false;
+  if (String(memo.content ?? '') !== String(override.content ?? '')) return false;
+
+  if (
+    Object.prototype.hasOwnProperty.call(override, 'bg_color') &&
+    normalizeNullable(memo.bg_color) !== normalizeNullable(override.bg_color)
+  ) {
+    return false;
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(override, 'merge_span') &&
+    !mergeSpanEquals(memo.merge_span, override.merge_span)
+  ) {
+    return false;
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(override, 'prescription') &&
+    normalizeNullable(memo.prescription) !== normalizeNullable(override.prescription)
+  ) {
+    return false;
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(override, 'body_part') &&
+    normalizeNullable(memo.body_part) !== normalizeNullable(override.body_part)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 export default function useScheduleImmediateState({ memos, setContextMenu, setEditingCell }) {
   const [pendingDisplayValues, setPendingDisplayValues] = useState({});
   const [pendingMergeSpans, setPendingMergeSpans] = useState({});
@@ -35,6 +114,32 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
       const next = { ...prev };
       Object.entries(prev).forEach(([key, bgColor]) => {
         if ((memos[key]?.bg_color || null) === (bgColor || null)) {
+          delete next[key];
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [memos]);
+
+  useEffect(() => {
+    setPendingMergeSpans((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      Object.entries(prev).forEach(([key, mergeSpan]) => {
+        if (mergeSpanEquals(memos[key]?.merge_span, mergeSpan)) {
+          delete next[key];
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+
+    setPendingMemoOverrides((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      Object.entries(prev).forEach(([key, override]) => {
+        if (memoMatchesOverride(memos[key], override)) {
           delete next[key];
           changed = true;
         }
@@ -144,7 +249,7 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
         keys.forEach((key) => {
           const expectedItem = expectedByKey.get(key);
           const expectedMergeSpan = expectedItem?.merge_span || expectedItem?.mergeSpan;
-          if (key in next && expectedMergeSpan && JSON.stringify(next[key]) === JSON.stringify(expectedMergeSpan)) {
+          if (key in next && expectedMergeSpan && mergeSpanEquals(next[key], expectedMergeSpan)) {
             delete next[key];
             changed = true;
           }
@@ -157,8 +262,7 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
         const next = { ...prev };
         keys.forEach((key) => {
           const expectedItem = expectedByKey.get(key);
-          const expectedContent = String(expectedItem?.content ?? '');
-          if (key in next && String(next[key]?.content ?? '') === expectedContent) {
+          if (key in next && expectedMemoOverrideMatches(next[key], expectedItem)) {
             delete next[key];
             changed = true;
           }
