@@ -141,11 +141,20 @@ export function ScheduleProvider({ children }) {
 
   const protectExistingScheduleContent = useCallback(async (items, localSnapshot = {}) => {
     const list = Array.isArray(items) ? items : [];
+    const isStructuralBlankWrite = (item) => {
+      const mergeSpan = item?.merge_span;
+      return Boolean(
+        mergeSpan?.meta?.intentional_clear === true ||
+        mergeSpan?.mergedInto ||
+        (mergeSpan?.rowSpan || 1) > 1 ||
+        (mergeSpan?.colSpan || 1) > 1
+      );
+    };
     const blankContentItems = list.filter((item) => (
       item &&
       Object.prototype.hasOwnProperty.call(item, 'content') &&
       !String(item.content || '').trim() &&
-      item.merge_span?.meta?.intentional_clear !== true
+      !isStructuralBlankWrite(item)
     ));
 
     const needsProtection = blankContentItems.filter((item) => {
@@ -194,6 +203,7 @@ export function ScheduleProvider({ children }) {
     return list.map((item) => {
       if (!item || !Object.prototype.hasOwnProperty.call(item, 'content')) return item;
       if (String(item.content || '').trim()) return item;
+      if (isStructuralBlankWrite(item)) return item;
 
       const localKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
       if (String(localSnapshot[localKey]?.content || '').trim()) return item;
