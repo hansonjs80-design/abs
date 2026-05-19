@@ -186,18 +186,20 @@ export default function useSchedulerAutoText({
       }
 
       const parsed = parseSchedulerPatientText(memo.content);
-      if (!parsed?.chartNumber) return;
+      const memoChart = String(parsed?.chartNumber || '').trim();
+      
+      if (!memoChart && !parsed?.normalizedName) return;
 
       const matchesChart = explicitChartNumber
-        ? parsed.chartNumber === explicitChartNumber
-        : exactInput && parsed.chartNumber === exactInput;
-      const matchesName = normalizedInput && parsed.normalizedName === normalizedInput;
+        ? memoChart === explicitChartNumber
+        : exactInput && memoChart === exactInput;
+      const matchesName = normalizedInput && parsed?.normalizedName === normalizedInput;
       if (explicitChartNumber ? !matchesChart : (!matchesChart && !matchesName)) return;
 
-      const candidateKey = parsed.chartNumber;
+      const candidateKey = memoChart || parsed.normalizedName;
       if (!candidateMap.has(candidateKey)) {
         candidateMap.set(candidateKey, {
-          chartNumber: parsed.chartNumber,
+          chartNumber: memoChart,
           latestMemo: memo,
           latestParsed: parsed,
           latestSortKey: sortKey,
@@ -472,9 +474,8 @@ export default function useSchedulerAutoText({
     const candidateMap = new Map();
     matches.forEach((item) => {
       const chartNumber = String(item.chart_number || '').trim();
-      if (!chartNumber) return;
       const doseTag = item.type === 'manual' ? getManualDoseTag(item.prescription) : '';
-      const candidateKey = `${chartNumber}__${item.type}`;
+      const candidateKey = chartNumber ? `${chartNumber}__${item.type}` : `${normalizeNameForMatch(item.patient_name)}__${item.type}`;
       if (!candidateMap.has(candidateKey)) {
         candidateMap.set(candidateKey, {
           chartNumber,
