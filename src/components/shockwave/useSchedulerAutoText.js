@@ -354,7 +354,7 @@ export default function useSchedulerAutoText({
       .limit(500);
 
     const scheduleQuery = supabase.from('shockwave_schedules')
-      .select('id, year, month, week_index, day_index, content, prescription, body_part')
+      .select('id, year, month, week_index, day_index, content, prescription, body_part, merge_span')
       .neq('content', '')
       .order('year', { ascending: false })
       .order('month', { ascending: false })
@@ -427,6 +427,7 @@ export default function useSchedulerAutoText({
             visit_count: visitCount,
             prescription: s.prescription || '',
             body_part: s.body_part || '',
+            merge_span: s.merge_span || undefined,
             type: isManualTherapyRecord({ prescription: s.prescription, patient_name: parsed.patientName }, content) ? 'manual' : 'shockwave',
           });
           seenLogDates.add(dateStr);
@@ -483,6 +484,7 @@ export default function useSchedulerAutoText({
           doseTag,
           latestItem: item,
           latestNonEmptyBodyPart: '',
+          latestMergeSpanWithMemoList: null,
           bodyPartsMap: new Map(),
           bodyPartVisitMap: new Map(),
           prescriptions: new Set(),
@@ -498,6 +500,12 @@ export default function useSchedulerAutoText({
       ) {
         candidate.latestItem = item;
         candidate.doseTag = doseTag;
+      }
+      if (item.merge_span && getMemoListFromMergeSpan(item.merge_span).length > 0) {
+        if (!candidate.latestMergeSpanWithMemoList || item.date >= (candidate.latestMergeSpanDate || '')) {
+          candidate.latestMergeSpanWithMemoList = item.merge_span;
+          candidate.latestMergeSpanDate = item.date;
+        }
       }
       if (item.body_part) {
         splitBodyParts(item.body_part).forEach((part) => {
@@ -582,6 +590,9 @@ export default function useSchedulerAutoText({
         initialBodyParts: splitBodyParts(latestBodyPart),
         type: item.type,
         doseTag: candidate.doseTag,
+        mergeSpan: candidate.latestMergeSpanWithMemoList 
+          ? buildMergeSpanWithMemoList(candidate.latestMergeSpanWithMemoList, getMemoListFromMergeSpan(candidate.latestMergeSpanWithMemoList)) 
+          : undefined,
         bodyPartVisitMap,
         preferredBodyPart,
         preferredNextVisit,

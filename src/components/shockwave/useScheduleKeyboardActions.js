@@ -117,10 +117,11 @@ export default function useScheduleKeyboardActions({
   }, []);
 
   const {
-    applyPayloadToLatestRefs,
     flushPendingMoveSave,
     invalidatePendingMoveSave,
     schedulePendingMoveSave,
+    getLatestMemosWithPendingMoves,
+    applyPayloadToLatestRefs,
   } = useScheduleMovePersistence({
     addToast,
     applyCellDisplayRef,
@@ -235,9 +236,10 @@ export default function useScheduleKeyboardActions({
       selectedKeysRef.current = moveKeys;
     }
 
+    const currentMemos = getLatestMemosWithPendingMoves();
     const result = buildMoveScheduleSelectionPayload({
       selectedKeys: moveKeys,
-      memos: memosRef.current,
+      memos: currentMemos,
       pendingDisplayValues: pendingRef.current,
       pendingMergeSpans: pendingMergeSpansRef.current,
       rowDelta,

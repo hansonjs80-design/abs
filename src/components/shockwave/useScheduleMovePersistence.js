@@ -63,6 +63,22 @@ export default function useScheduleMovePersistence({
     pendingMergeSpansRef.current = nextPendingMergeSpans;
   }, [getPayloadKey, memosRef, pendingMergeSpansRef, pendingRef]);
 
+  const getLatestMemosWithPendingMoves = useCallback(() => {
+    const memos = { ...(memosRef.current || {}) };
+    moveSaveStateRef.current.payloadByKey.forEach((item, key) => {
+      const previousMemo = memos[key] || {};
+      memos[key] = {
+        ...previousMemo,
+        content: item.content || '',
+        bg_color: item.bg_color || null,
+        merge_span: item.merge_span || DEFAULT_MERGE_SPAN,
+        prescription: item.prescription || null,
+        body_part: item.body_part || null,
+      };
+    });
+    return memos;
+  }, [memosRef]);
+
   const flushPendingMoveSave = useCallback(() => {
     const state = moveSaveStateRef.current;
     if (state.timer) {
@@ -125,5 +141,6 @@ export default function useScheduleMovePersistence({
     flushPendingMoveSave,
     invalidatePendingMoveSave,
     schedulePendingMoveSave,
+    getLatestMemosWithPendingMoves,
   };
 }
