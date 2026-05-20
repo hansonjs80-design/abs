@@ -46,12 +46,12 @@
   /* 달력 색상 (Refined) */
   --cal-sunday-bg: #fecaca;
   --cal-sunday-text: #e11d48;
-  --cal-saturday-bg: rgba(59, 130, 246, 0.15);
+  --cal-saturday-bg: rgba(59, 130, 246, 0.22);
   --cal-saturday-text: #2563eb;
   --cal-header-sunday-bg: #fda4af;
-  --cal-header-saturday-bg: rgba(59, 130, 246, 0.15);
-  --cal-other-month-bg: #eef2f6;
-  --cal-other-month-text: #94a3b8;
+  --cal-header-saturday-bg: rgba(59, 130, 246, 0.22);
+  --cal-other-month-bg: #e2e8f0;
+  --cal-other-month-text: #64748b;
   --cal-today-date-bg: #6366f1;
   --cal-today-memo-bg: #fef9c3;
   --cal-holiday-bg: #fca5a5;
