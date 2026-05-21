@@ -402,7 +402,7 @@
     -2px 0 6px rgba(0, 0, 0, 0.04),
     2px 0 6px rgba(0, 0, 0, 0.04),
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  transform: translateY(1px); /* Sits just above border */
+  transform: translateY(2px); /* 아래 가로선(오렌지색 선)에 밀착되도록 아래로 1px 더 내림 */
   transform-origin: bottom center;
   transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   white-space: nowrap;
@@ -413,7 +413,7 @@
   background: var(--tab-hover-bg);
   opacity: 1;
   padding: 10px 20px 8px;
-  transform: translateY(0px);
+  transform: translateY(1px); /* hover 시에도 아래 선과 틈 없이 닿도록 하향 조정 */
   box-shadow: 
     0 -2px 8px rgba(0, 0, 0, 0.04),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -509,7 +509,7 @@
 .top-tab:not(.active) {
   opacity: 0.9;
   z-index: 1;
-  clip-path: inset(-100vh -100vw 2px -100vw);
+  clip-path: inset(-100vh -100vw 0px -100vw); /* 2px -> 0px로 하단 잘림을 제거하여 가로선과 들뜸 없이 밀착 */
 }
 
 .tab-content-switcher {
