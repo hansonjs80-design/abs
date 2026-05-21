@@ -73,7 +73,7 @@
   border-left: 2px solid #000;
   border-right: 2px solid #000;
   border-radius: 4px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.10), 0 12px 28px rgba(15, 23, 42, 0.08);
   width: 100%;
   min-width: 1000px; /* 너무 좁아지면 스크롤되도록 최소 너비 유지 */
   position: relative;
@@ -237,7 +237,7 @@
 }
 
 .shockwave-week.is-today-week {
-  box-shadow: 0 0 0 2px rgba(88, 80, 236, 0.12), var(--shadow-sm);
+  box-shadow: 0 0 0 2px rgba(88, 80, 236, 0.12), 0 4px 12px rgba(15, 23, 42, 0.10), 0 12px 28px rgba(15, 23, 42, 0.08);
 }
 
 /* 하루 블록 그리드 */
