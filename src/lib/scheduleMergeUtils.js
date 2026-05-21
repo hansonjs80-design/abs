@@ -188,7 +188,10 @@ export function buildMergeSelectionPayload({
 }) {
   if (!selection) return { isAlreadyMerged: false, oldMemos: [], payload: [] };
   const { w, d, minRow, minCol, maxRow, maxCol, masterKey } = selection;
-  const isAlreadyMerged = selection.isMergedMaster;
+  const isAlreadyMerged = selection.isMergedMaster &&
+    (selection.selectionRowSpan === undefined ||
+     (selection.selectionRowSpan === (selection.masterSpan?.rowSpan || 1) &&
+      selection.selectionColSpan === (selection.masterSpan?.colSpan || 1)));
   const oldMemos = [];
   const payload = [];
   const combinedContent = [];

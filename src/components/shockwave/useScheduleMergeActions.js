@@ -61,7 +61,9 @@ export default function useScheduleMergeActions({
   const tryMergeSelection = useCallback(async () => {
     const selection = computeSelectionInfo();
     if (!selection) return;
-    const isAlreadyMerged = selection.isMergedMaster;
+    const isAlreadyMerged = selection.isMergedMaster &&
+                            selection.selectionRowSpan === (selection.masterSpan?.rowSpan || 1) &&
+                            selection.selectionColSpan === (selection.masterSpan?.colSpan || 1);
     const hasMultipleSelectedCells = (selectedKeys?.size || 0) > 1;
     if (!isAlreadyMerged && !selection.selectionMultiple && !hasMultipleSelectedCells) return;
 
