@@ -376,6 +376,21 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     font-weight: 800 !important;
   }
 
+  /* 인쇄 시 오늘 날짜 하이라이트(파란색) 제거 */
+  body.calendar-only-print .today .calendar-date {
+    background: transparent !important;
+  }
+  body.calendar-only-print .today .calendar-date-number {
+    color: var(--text-primary) !important;
+  }
+  body.calendar-only-print .today.sunday .calendar-date-number,
+  body.calendar-only-print .today.holiday .calendar-date-number {
+    color: #e53e3e !important;
+  }
+  body.calendar-only-print .today.saturday .calendar-date-number {
+    color: #3b82f6 !important;
+  }
+
   /* 메모 컨테이너 여백 완전 제거 */
   body.calendar-only-print .calendar-memos {
     gap: 0 !important;
