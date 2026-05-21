@@ -16,7 +16,7 @@ import { usePersistentNumber } from '../../hooks/usePersistentState';
 const COL_W_KEY = 'staff-calendar-col-width';
 const ROW_H_KEY = 'staff-calendar-row-height';
 const MIN_COL_WIDTH = 30;
-const MIN_ROW_HEIGHT = 36;
+const MIN_ROW_HEIGHT = 28;
 
 export default function StaffCalendar({ hiddenDepartments = [] }) {
   const { currentYear, currentMonth, staffMemos, loadStaffMemos, saveStaffMemo, holidays, holidayNames, loadHolidays, shockwaveSettings, loadShockwaveSettings, calendarSlotSettings, loadCalendarSlotSettings, saveCalendarSlotSettings } = useSchedule();

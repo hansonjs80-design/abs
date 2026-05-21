@@ -8,7 +8,7 @@ import {
   TIME_COL_WIDTH,
 } from '../../lib/schedulerUtils';
 
-const MIN_SCHEDULE_ROW_HEIGHT = 18;
+const MIN_SCHEDULE_ROW_HEIGHT = 14;
 const MIN_SCHEDULE_DAY_WIDTH = 100;
 const MIN_COL_RATIO = 0.2;
 
