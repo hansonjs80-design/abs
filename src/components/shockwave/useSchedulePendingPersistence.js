@@ -3,7 +3,6 @@ import { useEffect } from 'react';
 import {
   getShockwaveScheduleScrollKey,
   readPendingScheduleDrafts,
-  readScheduleMonthBackups,
   rememberScheduleMonthBackup,
   removePendingScheduleDraft,
   removePendingScheduleDraftIfValue,

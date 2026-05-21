@@ -118,7 +118,6 @@ export default function useScheduleKeyboardActions({
 
   const {
     flushPendingMoveSave,
-    invalidatePendingMoveSave,
     schedulePendingMoveSave,
     getLatestMemosWithPendingMoves,
     applyPayloadToLatestRefs,
@@ -132,6 +131,7 @@ export default function useScheduleKeyboardActions({
     pendingMergeSpansRef,
     pendingRef,
     saveBulkRef,
+    editingCell,
   });
 
   const applyReservationTimeDelta = useCallback((deltaMinutes) => {
@@ -286,6 +286,7 @@ export default function useScheduleKeyboardActions({
     selectedCell,
     setRangeEnd,
     setSelectedKeys,
+    getLatestMemosWithPendingMoves,
   ]);
 
   useEffect(() => {
@@ -364,16 +365,16 @@ export default function useScheduleKeyboardActions({
 
     if (e.key === 'Enter') {
       e.preventDefault();
-      flushPendingMoveSave();
       const key = cellKey(w, d, r, c);
+      flushPendingMoveSave(key);
       beginEditingCell(key, memos[key]?.content || '', true);
       return;
     }
 
     if (e.key === 'F2') {
       e.preventDefault();
-      flushPendingMoveSave();
       const key = cellKey(w, d, r, c);
+      flushPendingMoveSave(key);
       beginEditingCell(key, memos[key]?.content || '', true);
       return;
     }
@@ -381,7 +382,6 @@ export default function useScheduleKeyboardActions({
     if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault();
       flushPendingMoveSave();
-      invalidatePendingMoveSave();
       deleteCells(selectedKeysRef.current);
       return;
     }
@@ -647,8 +647,8 @@ export default function useScheduleKeyboardActions({
     }
 
     if ((e.key.length === 1 || e.key === 'Process' || e.keyCode === 229) && !isMeta && !e.altKey) {
-      flushPendingMoveSave();
       const key = cellKey(w, d, r, c);
+      flushPendingMoveSave(key);
       const isImeCompositionKey =
         e.key === 'Process' ||
         e.keyCode === 229 ||
@@ -691,7 +691,6 @@ export default function useScheduleKeyboardActions({
     handleOpenPatientHistoryModal,
     handleOpenBodyPartMenu,
     flushPendingMoveSave,
-    invalidatePendingMoveSave,
     addToast,
     setEditingCell,
     setRangeEnd,

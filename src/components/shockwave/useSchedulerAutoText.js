@@ -229,8 +229,9 @@ export default function useSchedulerAutoText({
       .map((candidate) => {
         const latestContent = String(candidate.latestMemo?.content || '').trim();
         const latestDate = candidate.latestSortKey.slice(0, 10);
-        const shouldKeepVisitForSameDate = targetDate && latestDate === targetDate;
-        const nextText = shouldKeepVisitForSameDate ? latestContent : (incrementSessionCount(latestContent) || latestContent);
+        const isSameDay = targetDate && latestDate === targetDate;
+        const isHyphen = candidate.latestParsed?.suffixValue === '-';
+        const nextText = (isHyphen || isSameDay) ? latestContent : (incrementSessionCount(latestContent) || latestContent);
         const incrementedParsed = parseSchedulerPatientText(nextText);
         const latestParsed = candidate.latestParsed;
         const latestMergeSpan = buildMergeSpanWithMemoList(
@@ -238,9 +239,14 @@ export default function useSchedulerAutoText({
           getMemoListFromMergeSpan(candidate.latestMemo?.merge_span)
         );
         const lastVisit = parseInt(latestParsed?.suffixValue || '0', 10) || (latestParsed?.suffixToken === '*' ? 1 : 0);
-        const nextVisit = shouldKeepVisitForSameDate
-          ? (lastVisit > 0 ? lastVisit : 1)
-          : (parseInt(incrementedParsed?.suffixValue || '0', 10) || (lastVisit > 0 ? lastVisit + 1 : 1));
+        let nextVisit;
+        if (isHyphen) {
+          nextVisit = '-';
+        } else if (isSameDay) {
+          nextVisit = latestParsed?.suffixValue || (latestParsed?.suffixToken === '*' ? '*' : (lastVisit > 0 ? lastVisit : 1));
+        } else {
+          nextVisit = parseInt(incrementedParsed?.suffixValue || '0', 10) || (lastVisit > 0 ? lastVisit + 1 : 1);
+        }
 
         const effectiveLatestBodyPart = String(candidate.latestMemo?.body_part || '').trim()
           || candidate.latestNonEmptyBodyPart
@@ -511,10 +517,19 @@ export default function useSchedulerAutoText({
         splitBodyParts(item.body_part).forEach((part) => {
           addBodyPartToMap(candidate.bodyPartsMap, part);
           const normalizedPartKey = normalizeBodyPartKey(part);
-          const itemVisit = parseInt(item.visit_count || '0', 10) || 0;
-          let nextVisit = item.date === targetDate
-            ? (itemVisit > 0 ? itemVisit : 1)
-            : (itemVisit > 0 ? itemVisit + 1 : 1);
+          const rawItemVisit = String(item.visit_count || '').trim();
+          const isHyphen = rawItemVisit === '-';
+          const isSameDay = targetDate && item.date === targetDate;
+          const itemVisit = rawItemVisit === '*' ? 1 : (parseInt(rawItemVisit, 10) || 0);
+          
+          let nextVisit;
+          if (isHyphen) {
+            nextVisit = '-';
+          } else if (isSameDay) {
+            nextVisit = rawItemVisit || 1;
+          } else {
+            nextVisit = itemVisit > 0 ? itemVisit + 1 : 1;
+          }
 
           if (!forceOverrideSession && manualSession !== null) {
             nextVisit = manualSession;
@@ -547,10 +562,19 @@ export default function useSchedulerAutoText({
     const options = Array.from(candidateMap.values()).map((candidate) => {
       const item = candidate.latestItem;
       const chartNumber = candidate.chartNumber;
-      const lastVisit = parseInt(item.visit_count || '0', 10) || 0;
-      let nextVisit = item.date === targetDate
-        ? (lastVisit > 0 ? lastVisit : 1)
-        : (lastVisit > 0 ? lastVisit + 1 : 1);
+      const rawVisit = String(item.visit_count || '').trim();
+      const isHyphen = rawVisit === '-';
+      const isSameDay = targetDate && item.date === targetDate;
+      const lastVisit = rawVisit === '*' ? 1 : (parseInt(rawVisit, 10) || 0);
+      
+      let nextVisit;
+      if (isHyphen) {
+        nextVisit = '-';
+      } else if (isSameDay) {
+        nextVisit = rawVisit || 1;
+      } else {
+        nextVisit = lastVisit > 0 ? lastVisit + 1 : 1;
+      }
 
       if (!forceOverrideSession && manualSession !== null) {
         nextVisit = manualSession;

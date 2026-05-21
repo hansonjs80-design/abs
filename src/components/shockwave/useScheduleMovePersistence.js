@@ -13,6 +13,8 @@ export default function useScheduleMovePersistence({
   pendingMergeSpansRef,
   pendingRef,
   saveBulkRef,
+  editingCell,
+  pendingDisplayValuesRef,
 }) {
   const moveSaveStateRef = useRef({
     timer: null,
@@ -20,6 +22,12 @@ export default function useScheduleMovePersistence({
     rollbackMemos: [],
     requestId: 0,
   });
+
+  // editingCell을 ref로 추적 – setTimeout 콜백에서 항상 최신 값을 읽기 위함
+  const editingCellRef = useRef(editingCell);
+  useEffect(() => {
+    editingCellRef.current = editingCell;
+  }, [editingCell]);
 
   useEffect(() => {
     const moveSaveState = moveSaveStateRef.current;
@@ -79,7 +87,7 @@ export default function useScheduleMovePersistence({
     return memos;
   }, [memosRef]);
 
-  const flushPendingMoveSave = useCallback(() => {
+  const flushPendingMoveSave = useCallback((excludeKey) => {
     const state = moveSaveStateRef.current;
     if (state.timer) {
       clearTimeout(state.timer);
@@ -96,7 +104,29 @@ export default function useScheduleMovePersistence({
     return Promise.resolve(saveBulkRef.current?.(payload)).then((success) => {
       if (success) {
         if (moveSaveStateRef.current.requestId === requestId && moveSaveStateRef.current.payloadByKey.size === 0) {
-          clearCellDisplayRef.current?.(payload);
+          // DB 저장 완료 후 pending display를 정리할 때,
+          // 사용자가 직접 수정한 pending 값이 남아있는 셀은 건드리지 않음
+          const latestPending = pendingDisplayValuesRef?.current || pendingRef.current || {};
+          
+          // 콜백 실행 시점에 최신 editingCell 값을 읽어옴 – 비동기 대기 동안에 사용자가 수정을 시작했을 수 있음
+          const currentEditingCell = editingCellRef.current;
+          const effectiveExcludeKey = excludeKey || currentEditingCell;
+
+          const clearPayload = payload.filter((item) => {
+            const key = getPayloadKey(item);
+            // 1) 현재 편집 중인 셀은 무조건 제외
+            if (key === effectiveExcludeKey) return false;
+            // 2) payload의 content와 현재 pending 값이 다르면 사용자가 수정한 것 → 건드리지 않음
+            if (key in latestPending) {
+              const pendingVal = String(latestPending[key] ?? '');
+              const payloadVal = String(item.content ?? '');
+              if (pendingVal !== payloadVal) return false;
+            }
+            return true;
+          });
+          if (clearPayload.length > 0) {
+            clearCellDisplayRef.current?.(clearPayload);
+          }
         }
         return true;
       }
@@ -116,6 +146,9 @@ export default function useScheduleMovePersistence({
     applyPayloadToLatestRefs,
     clearCellDisplayRef,
     saveBulkRef,
+    getPayloadKey,
+    pendingDisplayValuesRef,
+    pendingRef,
   ]);
 
   const schedulePendingMoveSave = useCallback((payload, rollbackMemos) => {
