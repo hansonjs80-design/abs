@@ -500,13 +500,16 @@ export default function ShockwaveDataGrid({
   };
 
   // ─── 5. EDITING ───────────────────────────────────────────
-  const startEdit = (r, c, isDblClick = false) => {
+  const startEdit = useCallback((r, c, isDblClick = false, initialChar = null) => {
     if (c === totalCountColIndex || c === newPatientColIndex) return;
-    imeOpenRef.current = false;
-    const nextValue = getVal(gridData[r], c);
+    
+    const nextValue = initialChar !== null ? initialChar : getVal(gridData[r], c);
+    const isKorean = initialChar && /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(initialChar);
+    imeOpenRef.current = !!isKorean;
+
     editingValueRef.current = nextValue;
     setEditing({ r, c, val: nextValue, isDblClick });
-  };
+  }, [gridData, totalCountColIndex, newPatientColIndex]);
 
   const finishEdit = async () => {
     if (!editing) return;
@@ -1035,9 +1038,10 @@ export default function ShockwaveDataGrid({
       if ((e.metaKey || e.ctrlKey) && e.key === 'c') { e.preventDefault(); doCopy(); return; }
       if ((e.metaKey || e.ctrlKey) && e.key === 'x') { e.preventDefault(); doCopy(); doDelete(); return; }
       
-      // Let onInput handle the first keystroke for editing, just track IME state
+      // Let keydown handle the first keystroke to prevent focus loss issues
       if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey && c < totalCountColIndex) {
-        imeOpenRef.current = true;
+        e.preventDefault();
+        startEdit(r, c, false, e.key);
       }
     };
     window.addEventListener('keydown', kd);

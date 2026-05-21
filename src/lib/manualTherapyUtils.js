@@ -55,7 +55,7 @@ export function formatVisitLabel(value) {
 
 export function parseManualTherapyEntry(rawContent, therapists, fallbackTherapistName = '') {
   const source = String(rawContent || '').trim();
-  if (!source || !/(40|60)/.test(source)) return null;
+  if (!source || !/\d{2,3}/.test(source)) return null;
 
   let chartNumber = '';
   let rest = source;
@@ -73,14 +73,19 @@ export function parseManualTherapyEntry(rawContent, therapists, fallbackTherapis
   let isNewMarked = false;
   const suffixMatch = rest.match(/(\((-|\d+)\)|\*)\s*$/);
   if (suffixMatch) {
-    suffixToken = suffixMatch[1];
-    visitCount = suffixToken === '*'
-      ? '1'
-      : suffixMatch[2] === '-'
-        ? '-'
-        : suffixMatch[2];
-    isNewMarked = suffixToken === '*';
-    rest = rest.slice(0, rest.length - suffixToken.length).trim();
+    const matchedVal = suffixMatch[2];
+    const isDurationCandidate = matchedVal && /^(30|40|60|90|120|150|180)$/.test(matchedVal);
+
+    if (suffixMatch[1] === '*' || !isDurationCandidate) {
+      suffixToken = suffixMatch[1];
+      visitCount = suffixToken === '*'
+        ? '1'
+        : suffixMatch[2] === '-'
+          ? '-'
+          : suffixMatch[2];
+      isNewMarked = suffixToken === '*';
+      rest = rest.slice(0, rest.length - suffixToken.length).trim();
+    }
   }
 
   const sortedTherapists = [...(therapists || [])]
@@ -88,9 +93,8 @@ export function parseManualTherapyEntry(rawContent, therapists, fallbackTherapis
     .sort((a, b) => String(b.name).length - String(a.name).length);
 
   for (const therapist of sortedTherapists) {
-    const match = rest.match(
-      new RegExp(`^(.*?)(?:\\s+)?(${escapeRegExp(therapist.name)})\\s*(40|60)$`)
-    );
+    const pattern = "^(.*?)(?:\\s+)?(" + escapeRegExp(therapist.name) + ")\\s*\\(?\\s*(\\d{2,3})\\s*(?:분|min|m|Min)?\\s*\\)?\\s*$";
+    const match = rest.match(new RegExp(pattern));
     if (!match) continue;
 
     const patientName = String(match[1] || '').trim();
@@ -106,7 +110,8 @@ export function parseManualTherapyEntry(rawContent, therapists, fallbackTherapis
     };
   }
 
-  const fallback = rest.match(/^(.*?)(40|60)$/);
+  const fallbackRegex = /^(.*?)\s*\(?\s*(\d{2,3})\s*(?:분|min|m|Min)?\s*\)?\s*$/;
+  const fallback = rest.match(fallbackRegex);
   if (!fallback) return null;
 
   const patientName = String(fallback[1] || '').trim();
