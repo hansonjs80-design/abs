@@ -328,23 +328,49 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     flex: 1 !important;
   }
 
+  /* 요일 헤더: 높이 고정 및 여백 제거하여 글자 크기 극대화 */
+  body.calendar-only-print .calendar-weekday-header {
+    height: 28px !important;
+    min-height: 28px !important;
+    line-height: 28px !important;
+    padding: 0 !important;
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+  }
+
   body.calendar-only-print .calendar-cell {
     height: auto !important;
     min-height: 0 !important;
     overflow: hidden !important;
+    box-sizing: border-box !important;
   }
 
   body.calendar-only-print .memo-slot {
     min-height: 0 !important;
-    padding: 0 1px !important;
-    font-size: 0.95rem !important;
+    padding: 0 !important; /* 내부 여백 완전 제거 */
+    font-size: 1.2rem !important; /* 0.95rem -> 1.2rem 극대화 */
     line-height: 1 !important;
+    font-weight: 800 !important;
+    box-sizing: border-box !important;
   }
 
   body.calendar-only-print .calendar-date {
-    flex: 0 0 14px !important;
-    font-size: 0.75rem !important;
+    flex: 0 0 18px !important; /* 글자 크기 확보 위해 소폭 조정 */
+    font-size: 1.05rem !important; /* 0.75rem -> 1.05rem 극대화 */
     padding: 0 2px !important;
+    line-height: 1 !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
+  }
+
+  body.calendar-only-print .calendar-date-number {
+    width: auto !important;
+    height: auto !important;
   }
 
   /* 메모 컨테이너 여백 완전 제거 */
@@ -360,15 +386,24 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   body.calendar-only-print[data-calendar-weeks="6"] .calendar-date {
     flex: 0 0 16px !important;
-    font-size: 0.78rem !important;
-    padding: 0 3px !important;
+    font-size: 0.95rem !important; /* 0.78rem -> 0.95rem 극대화 */
+    padding: 0 2px !important;
+    line-height: 1 !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+  }
+
+  body.calendar-only-print[data-calendar-weeks="6"] .calendar-date-number {
+    width: auto !important;
+    height: auto !important;
   }
 
   body.calendar-only-print[data-calendar-weeks="6"] .memo-slot {
-    min-height: 10px !important;
-    padding: 0px 2px !important;
-    font-size: 0.7rem !important;
-    line-height: 1.05 !important;
+    min-height: 0 !important;
+    padding: 0 !important; /* 내부 여백 완전 제거 */
+    font-size: 0.9rem !important; /* 0.7rem -> 0.9rem 극대화 */
+    line-height: 1 !important;
+    font-weight: 800 !important;
   }
 
   /* ── 6주차 달이지만 5주만 인쇄하기로 선택한 경우: 마지막 주 숨김 ── */
@@ -380,15 +415,23 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     height: 188mm !important;
   }
   body.hide-last-week .memo-slot {
-    min-height: 12px !important;
-    padding: 0px 3px !important;
-    font-size: 0.8rem !important;
-    line-height: 1.1 !important;
+    min-height: 0 !important;
+    padding: 0 !important; /* 내부 여백 완전 제거 */
+    font-size: 1.15rem !important; /* 0.8rem -> 1.15rem 극대화 */
+    line-height: 1 !important;
+    font-weight: 800 !important;
   }
   body.hide-last-week .calendar-date {
     flex: 0 0 20px !important;
-    font-size: 0.9rem !important;
-    padding: 0 4px !important;
+    font-size: 1.15rem !important; /* 0.9rem -> 1.15rem 극대화 */
+    padding: 0 2px !important;
+    line-height: 1 !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+  }
+  body.hide-last-week .calendar-date-number {
+    width: auto !important;
+    height: auto !important;
   }
   .app-layout,
   .app-main,
