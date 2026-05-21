@@ -1762,6 +1762,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           '--sw-row-height': `${rowHeight}px`,
           '--sw-cell-font-size': `${effectiveSchedulerTextSettings.font_size}px`,
           '--sw-cell-font-weight': effectiveSchedulerTextSettings.font_weight,
+          '--sw-header-font-size': `${effectiveSchedulerTextSettings.header_font_size}px`,
+          '--sw-header-font-weight': effectiveSchedulerTextSettings.header_font_weight,
+          '--sw-header-row-height': `${effectiveSchedulerTextSettings.header_height}px`,
+          '--sw-therapist-font-size': `${effectiveSchedulerTextSettings.therapist_font_size}px`,
+          '--sw-therapist-font-weight': effectiveSchedulerTextSettings.therapist_font_weight,
+          '--sw-therapist-row-height': `${effectiveSchedulerTextSettings.therapist_height}px`,
           '--sw-therapist-cols': therapistColsCSS,
           '--sw-day-col-width': dayColWidth ? `${dayColWidth}px` : 'none',
         }}

@@ -1169,15 +1169,16 @@ export default function MonthlyTherapistConfig({
     return (
       <>
         <div className="monthly-therapist-desc">
-          스케줄 영역 셀 안의 이름 글자 크기와 두께를 월별로 조정합니다.
+          스케줄 영역의 각 헤더 및 셀의 글자 크기, 두께, 높이를 자유롭게 설정합니다. 너비는 스케줄 표 화면에서 마우스 드래그로 조정 가능합니다.
           <br />
           {sourceText}
         </div>
         <div className="monthly-therapist-body monthly-therapist-body--settings">
           <div className="monthly-text-style-card">
             <div className="monthly-text-style-grid">
+              {/* 1. 스케줄 셀 설정 */}
               <label className="monthly-text-style-field">
-                <span>글자 크기</span>
+                <span>스케줄 셀 글자 크기</span>
                 <div className="monthly-text-style-size-row">
                   <input
                     type="range"
@@ -1207,7 +1208,7 @@ export default function MonthlyTherapistConfig({
               </label>
 
               <label className="monthly-text-style-field">
-                <span>글자 두께</span>
+                <span>스케줄 셀 글자 두께</span>
                 <select
                   className="monthly-operating-input monthly-text-style-select"
                   value={schedulerTextSettings.font_weight}
@@ -1216,35 +1217,242 @@ export default function MonthlyTherapistConfig({
                     font_weight: Number(e.target.value) || DEFAULT_SCHEDULER_TEXT_SETTINGS.font_weight,
                   }))}
                 >
-                  <option value={500}>보통</option>
-                  <option value={600}>조금 굵게</option>
-                  <option value={700}>굵게</option>
-                  <option value={800}>매우 굵게</option>
-                  <option value={900}>최대 굵기</option>
+                  <option value={500}>보통 (500)</option>
+                  <option value={600}>조금 굵게 (600)</option>
+                  <option value={700}>굵게 (700)</option>
+                  <option value={800}>매우 굵게 (800)</option>
+                  <option value={900}>최대 굵기 (900)</option>
                 </select>
+              </label>
+
+              {/* 2. 날짜 헤더 설정 */}
+              <label className="monthly-text-style-field">
+                <span>날짜 헤더 글자 크기</span>
+                <div className="monthly-text-style-size-row">
+                  <input
+                    type="range"
+                    min={11}
+                    max={24}
+                    step={1}
+                    value={schedulerTextSettings.header_font_size ?? 16}
+                    onChange={(e) => setSchedulerTextSettings((prev) => ({
+                      ...prev,
+                      header_font_size: Number(e.target.value) || DEFAULT_SCHEDULER_TEXT_SETTINGS.header_font_size,
+                    }))}
+                  />
+                  <input
+                    type="number"
+                    className="monthly-operating-input monthly-text-style-number"
+                    min={11}
+                    max={24}
+                    step={1}
+                    value={schedulerTextSettings.header_font_size ?? 16}
+                    onChange={(e) => setSchedulerTextSettings((prev) => ({
+                      ...prev,
+                      header_font_size: Number(e.target.value) || DEFAULT_SCHEDULER_TEXT_SETTINGS.header_font_size,
+                    }))}
+                  />
+                  <span className="monthly-text-style-unit">px</span>
+                </div>
+              </label>
+
+              <label className="monthly-text-style-field">
+                <span>날짜 헤더 글자 두께</span>
+                <select
+                  className="monthly-operating-input monthly-text-style-select"
+                  value={schedulerTextSettings.header_font_weight ?? 700}
+                  onChange={(e) => setSchedulerTextSettings((prev) => ({
+                    ...prev,
+                    header_font_weight: Number(e.target.value) || DEFAULT_SCHEDULER_TEXT_SETTINGS.header_font_weight,
+                  }))}
+                >
+                  <option value={500}>보통 (500)</option>
+                  <option value={600}>조금 굵게 (600)</option>
+                  <option value={700}>굵게 (700)</option>
+                  <option value={800}>매우 굵게 (800)</option>
+                  <option value={900}>최대 굵기 (900)</option>
+                </select>
+              </label>
+
+              <label className="monthly-text-style-field" style={{ gridColumn: '1 / -1' }}>
+                <span>날짜 헤더 셀 높이 (헤더 높이)</span>
+                <div className="monthly-text-style-size-row">
+                  <input
+                    type="range"
+                    min={15}
+                    max={80}
+                    step={1}
+                    value={schedulerTextSettings.header_height ?? 32}
+                    onChange={(e) => setSchedulerTextSettings((prev) => ({
+                      ...prev,
+                      header_height: Number(e.target.value) || DEFAULT_SCHEDULER_TEXT_SETTINGS.header_height,
+                    }))}
+                  />
+                  <input
+                    type="number"
+                    className="monthly-operating-input monthly-text-style-number"
+                    min={15}
+                    max={80}
+                    step={1}
+                    value={schedulerTextSettings.header_height ?? 32}
+                    onChange={(e) => setSchedulerTextSettings((prev) => ({
+                      ...prev,
+                      header_height: Number(e.target.value) || DEFAULT_SCHEDULER_TEXT_SETTINGS.header_height,
+                    }))}
+                  />
+                  <span className="monthly-text-style-unit">px</span>
+                </div>
+              </label>
+
+              {/* 3. 치료사 헤더 설정 */}
+              <label className="monthly-text-style-field">
+                <span>치료사 헤더 글자 크기</span>
+                <div className="monthly-text-style-size-row">
+                  <input
+                    type="range"
+                    min={10}
+                    max={20}
+                    step={1}
+                    value={schedulerTextSettings.therapist_font_size ?? 14}
+                    onChange={(e) => setSchedulerTextSettings((prev) => ({
+                      ...prev,
+                      therapist_font_size: Number(e.target.value) || DEFAULT_SCHEDULER_TEXT_SETTINGS.therapist_font_size,
+                    }))}
+                  />
+                  <input
+                    type="number"
+                    className="monthly-operating-input monthly-text-style-number"
+                    min={10}
+                    max={20}
+                    step={1}
+                    value={schedulerTextSettings.therapist_font_size ?? 14}
+                    onChange={(e) => setSchedulerTextSettings((prev) => ({
+                      ...prev,
+                      therapist_font_size: Number(e.target.value) || DEFAULT_SCHEDULER_TEXT_SETTINGS.therapist_font_size,
+                    }))}
+                  />
+                  <span className="monthly-text-style-unit">px</span>
+                </div>
+              </label>
+
+              <label className="monthly-text-style-field">
+                <span>치료사 헤더 글자 두께</span>
+                <select
+                  className="monthly-operating-input monthly-text-style-select"
+                  value={schedulerTextSettings.therapist_font_weight ?? 700}
+                  onChange={(e) => setSchedulerTextSettings((prev) => ({
+                    ...prev,
+                    therapist_font_weight: Number(e.target.value) || DEFAULT_SCHEDULER_TEXT_SETTINGS.therapist_font_weight,
+                  }))}
+                >
+                  <option value={500}>보통 (500)</option>
+                  <option value={600}>조금 굵게 (600)</option>
+                  <option value={700}>굵게 (700)</option>
+                  <option value={800}>매우 굵게 (800)</option>
+                  <option value={900}>최대 굵기 (900)</option>
+                </select>
+              </label>
+
+              <label className="monthly-text-style-field" style={{ gridColumn: '1 / -1' }}>
+                <span>치료사 헤더 셀 높이 (헤더 높이)</span>
+                <div className="monthly-text-style-size-row">
+                  <input
+                    type="range"
+                    min={15}
+                    max={80}
+                    step={1}
+                    value={schedulerTextSettings.therapist_height ?? 29}
+                    onChange={(e) => setSchedulerTextSettings((prev) => ({
+                      ...prev,
+                      therapist_height: Number(e.target.value) || DEFAULT_SCHEDULER_TEXT_SETTINGS.therapist_height,
+                    }))}
+                  />
+                  <input
+                    type="number"
+                    className="monthly-operating-input monthly-text-style-number"
+                    min={15}
+                    max={80}
+                    step={1}
+                    value={schedulerTextSettings.therapist_height ?? 29}
+                    onChange={(e) => setSchedulerTextSettings((prev) => ({
+                      ...prev,
+                      therapist_height: Number(e.target.value) || DEFAULT_SCHEDULER_TEXT_SETTINGS.therapist_height,
+                    }))}
+                  />
+                  <span className="monthly-text-style-unit">px</span>
+                </div>
               </label>
             </div>
 
             <div className="monthly-text-style-preview-wrap">
               <div className="monthly-text-style-preview-label">미리보기</div>
               <div className="monthly-text-style-preview-board">
-                <div
-                  className="monthly-text-style-preview-cell"
-                  style={{
-                    fontSize: `${schedulerTextSettings.font_size}px`,
-                    fontWeight: schedulerTextSettings.font_weight,
-                  }}
-                >
-                  10887/이선영(3)
+                <div className="monthly-text-style-preview-row">
+                  <div className="monthly-text-style-preview-title">날짜 헤더 미리보기</div>
+                  <div
+                    className="monthly-text-style-preview-cell"
+                    style={{
+                      fontSize: `${schedulerTextSettings.header_font_size ?? 16}px`,
+                      fontWeight: schedulerTextSettings.header_font_weight ?? 700,
+                      height: `${schedulerTextSettings.header_height ?? 32}px`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: '#f8fafc',
+                      border: '1px solid #cbd5e1',
+                      padding: '4px 12px',
+                      color: '#0f172a',
+                    }}
+                  >
+                    {month}월 21일 목요일
+                  </div>
                 </div>
-                <div
-                  className="monthly-text-style-preview-cell monthly-text-style-preview-cell--prescription"
-                  style={{
-                    fontSize: `${schedulerTextSettings.font_size}px`,
-                    fontWeight: schedulerTextSettings.font_weight,
-                  }}
-                >
-                  14175/김미정(2)
+
+                <div className="monthly-text-style-preview-row">
+                  <div className="monthly-text-style-preview-title">치료사 헤더 미리보기</div>
+                  <div
+                    className="monthly-text-style-preview-cell"
+                    style={{
+                      fontSize: `${schedulerTextSettings.therapist_font_size ?? 14}px`,
+                      fontWeight: schedulerTextSettings.therapist_font_weight ?? 700,
+                      height: `${schedulerTextSettings.therapist_height ?? 29}px`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: '#f1f5f9',
+                      border: '1px solid #cbd5e1',
+                      padding: '4px 12px',
+                      color: '#0f172a',
+                    }}
+                  >
+                    치료사1
+                  </div>
+                </div>
+
+                <div className="monthly-text-style-preview-row">
+                  <div className="monthly-text-style-preview-title">스케줄 셀 미리보기</div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <div
+                      className="monthly-text-style-preview-cell"
+                      style={{
+                        fontSize: `${schedulerTextSettings.font_size}px`,
+                        fontWeight: schedulerTextSettings.font_weight,
+                      }}
+                    >
+                      10887/이선영(3)
+                    </div>
+                    <div
+                      className="monthly-text-style-preview-cell monthly-text-style-preview-cell--prescription"
+                      style={{
+                        fontSize: `${schedulerTextSettings.font_size}px`,
+                        fontWeight: schedulerTextSettings.font_weight,
+                        color: '#d97706',
+                        borderColor: '#f59e0b',
+                      }}
+                    >
+                      14175/김미정(2)
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

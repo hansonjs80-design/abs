@@ -11,6 +11,8 @@
   --sw-row-height: 23px;
   --sw-cell-font-size: 13px;
   --sw-cell-font-weight: 700;
+  --sw-header-font-size: 16px;
+  --sw-therapist-font-size: 14px;
 }
 
 .shockwave-view * {
@@ -265,14 +267,15 @@
   display: grid;
   border-top: none;
   border-bottom: 2px solid #000;
+  height: var(--sw-header-row-height, 32px);
 }
 
 .sw-week-header-cell,
 .sw-day-header-cell {
   padding: 0;
   text-align: center;
-  font-size: 16.28px;
-  font-weight: 770;
+  font-size: var(--sw-header-font-size, 16px);
+  font-weight: var(--sw-header-font-weight, 700);
   line-height: 1.43;
   background: var(--bg-tertiary);
   transition: background var(--transition-fast);
@@ -284,6 +287,7 @@
   overflow: hidden;
   text-overflow: clip;
   white-space: nowrap;
+  height: 100%;
 }
 
 .sw-week-header-cell {
@@ -324,6 +328,7 @@
   display: grid;
   border-bottom: 1px solid var(--border-color);
   overflow: visible;
+  height: var(--sw-therapist-row-height, 29px);
 }
 
 .sw-therapist-header.cols-2 { grid-template-columns: 1fr 1fr; }
@@ -332,14 +337,18 @@
 .sw-therapist-name {
   padding: 1px 3px;
   text-align: center;
-  font-size: 14.12px;
-  font-weight: 660;
+  font-size: var(--sw-therapist-font-size, 14px);
+  font-weight: var(--sw-therapist-font-weight, 700);
   line-height: 1.43;
   color: #000;
   border-right: 1px solid #b7b7b7;
   background: var(--bg-secondary);
   position: relative;
   overflow: visible;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
 }
 
 .sw-therapist-name:last-child { border-right: none; }
@@ -3256,4 +3265,143 @@
 .patient-history-table input {
   height: 22px;
   font-size: 0.9rem;
+}
+
+/* =============================================
+ * 글자크기 설정 모달 스타일
+ * ============================================*/
+.monthly-text-style-card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.monthly-text-style-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 600px) {
+  .monthly-text-style-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.monthly-text-style-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.monthly-text-style-size-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.monthly-text-style-size-row input[type="range"] {
+  flex: 1;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  appearance: none;
+  outline: none;
+}
+
+.monthly-text-style-size-row input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #3b82f6;
+  cursor: pointer;
+  transition: transform var(--transition-fast) ease;
+}
+
+.monthly-text-style-size-row input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.monthly-text-style-number {
+  width: 60px !important;
+  text-align: center;
+}
+
+.monthly-text-style-unit {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 800;
+}
+
+.monthly-text-style-select {
+  height: 38px;
+  padding: 6px 12px;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.monthly-text-style-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.22);
+  padding-top: 20px;
+}
+
+.monthly-text-style-preview-label {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #475569;
+}
+
+.monthly-text-style-preview-board {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.monthly-text-style-preview-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.monthly-text-style-preview-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.monthly-text-style-preview-cell {
+  background: #ffffff;
+  border: 1px solid #b7b7b7;
+  color: #000000;
+  text-align: center;
+  padding: 6px 12px;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  font-family: inherit;
+  width: max-content;
+  min-width: 140px;
+}
+
+.monthly-text-style-preview-cell--prescription {
+  /* 임시 처방 컬러나 스타일을 줄 수 있음 */
 }
