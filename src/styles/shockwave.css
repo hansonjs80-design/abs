@@ -171,8 +171,8 @@
 }
 
 .shockwave-week-today-btn {
-  border: 1px solid var(--border-color);
-  background: var(--bg-card);
+  border: none;
+  background: transparent;
   color: var(--text-secondary);
   border-radius: 50%;
   width: 26px;
@@ -183,13 +183,12 @@
   justify-content: center;
   cursor: pointer;
   position: relative;
-  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+  transition: color var(--transition-fast), transform 0.2s ease;
 }
 
 .shockwave-week-today-btn:hover:not(:disabled) {
-  background: var(--brand-primary-light);
+  background: transparent;
   color: var(--brand-primary);
-  border-color: var(--brand-primary);
 }
 
 .shockwave-week-today-btn:hover:not(:disabled) svg {
@@ -197,8 +196,8 @@
 }
 
 .shockwave-week-today-btn svg {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   transition: transform 0.3s ease;
 }
 
@@ -230,8 +229,6 @@
 .shockwave-week-floating-actions .shockwave-week-today-btn,
 .shockwave-week-floating-actions .shockwave-row-height-handle {
   pointer-events: auto;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.16);
 }
 
 .sw-shortcut-floating-tooltip {
@@ -611,13 +608,15 @@
 }
 
 .shockwave-row-height-handle {
-  width: 28px;
-  height: 24px;
+  width: 24px;
+  height: calc(var(--sw-header-row-height, 32px) - 8px);
+  min-height: 18px;
+  max-height: 26px;
   border: 1px solid #cbd5e1;
-  border-radius: 999px;
+  border-radius: 4px;
   background: #ffffff;
   color: #334155;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 900;
   line-height: 1;
   cursor: ns-resize;
@@ -625,6 +624,7 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  transition: background var(--transition-fast), border-color var(--transition-fast), height var(--transition-fast);
 }
 
 .shockwave-row-height-handle:hover {
