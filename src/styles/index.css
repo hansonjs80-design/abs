@@ -352,7 +352,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.calendar-only-print .memo-slot {
     min-height: 0 !important;
     padding: 0 !important; /* 내부 여백 완전 제거 */
-    font-size: 1.2rem !important; /* 0.95rem -> 1.2rem 극대화 */
+    font-size: 1.0rem !important; /* 1.2rem -> 1.0rem으로 잘림 방지 및 극대화 유지 */
     line-height: 1 !important;
     font-weight: 800 !important;
     box-sizing: border-box !important;
@@ -417,7 +417,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.hide-last-week .memo-slot {
     min-height: 0 !important;
     padding: 0 !important; /* 내부 여백 완전 제거 */
-    font-size: 1.15rem !important; /* 0.8rem -> 1.15rem 극대화 */
+    font-size: 1.0rem !important; /* 1.15rem -> 1.0rem으로 동일하게 맞추어 균일한 가독성 제공 */
     line-height: 1 !important;
     font-weight: 800 !important;
   }
