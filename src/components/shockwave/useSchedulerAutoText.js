@@ -672,7 +672,7 @@ export default function useSchedulerAutoText({
       text: autoText,
       prescription: autoPrescription,
       bodyPart: effectiveBodyPart,
-      mergeSpan: searchChart ? (inheritedMergeSpan || clearPatientMergeSpan()) : inheritedMergeSpan,
+      mergeSpan: searchChart ? (selected.mergeSpan || clearPatientMergeSpan()) : selected.mergeSpan,
     };
   }, [
     memos,
