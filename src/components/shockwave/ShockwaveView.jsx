@@ -473,6 +473,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     scheduleBulkSaveQueueRef.current = nextSave.catch(() => false);
     return nextSave;
   }, [saveShockwaveMemosBulk]);
+
+  const queuedOnSaveMemo = useCallback((...args) => {
+    const nextSave = scheduleBulkSaveQueueRef.current
+      .catch(() => false)
+      .then(() => onSaveMemo(...args));
+    scheduleBulkSaveQueueRef.current = nextSave.catch(() => false);
+    return nextSave;
+  }, [onSaveMemo]);
   const dragSelectionRef = useRef(null);
   const selectedCellRef = useRef(null);
   const [showTherapistConfig, setShowTherapistConfig] = useState(false);
@@ -589,7 +597,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     currentYear,
     loadedMemosKey,
     memos,
-    onSaveMemo,
+    onSaveMemo: queuedOnSaveMemo,
     pendingDisplayValues,
     setPendingDisplayValues,
   });
@@ -662,7 +670,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const editDraftRef = useRef(null);
   const editAutosaveTimerRef = useRef(null);
   const cellSaveVersionRef = useRef({});
-  const saveMemoRef = useRef(onSaveMemo);
+  const saveMemoRef = useRef(queuedOnSaveMemo);
   const scheduleDateRef = useRef({ year: currentYear, month: currentMonth });
   const { contextSubmenuOffsetY } = useContextMenuPositioning({
     activeContextSubmenu,
@@ -695,9 +703,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   );
 
   useEffect(() => {
-    saveMemoRef.current = onSaveMemo;
+    saveMemoRef.current = queuedOnSaveMemo;
     scheduleDateRef.current = { year: currentYear, month: currentMonth };
-  }, [onSaveMemo, currentYear, currentMonth]);
+  }, [queuedOnSaveMemo, currentYear, currentMonth]);
 
   // 월별 치료사 설정 로드 (충격파 + 도수치료)
   useEffect(() => {
@@ -872,7 +880,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     currentMonth,
     currentYear,
     memos,
-    onSaveMemo,
+    onSaveMemo: queuedOnSaveMemo,
     pendingDisplayValues,
     saveShockwaveMemosBulk: queuedSaveShockwaveMemosBulk,
     setContextMenu,
@@ -1197,13 +1205,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       oldPrescription: memos[key]?.prescription || null,
       oldBodyPart: memos[key]?.body_part || null,
     });
-    const success = await onSaveMemo(currentYear, currentMonth, w, d, r, c, newContent, undefined, newMergeSpan, newPrescription, newBodyPart);
+    const success = await queuedOnSaveMemo(currentYear, currentMonth, w, d, r, c, newContent, undefined, newMergeSpan, newPrescription, newBodyPart);
     if (success) removePendingScheduleDraftIfValue(currentYear, currentMonth, key, newContent);
     // pendingDisplayValues는 즉시 삭제하지 않음.
     // memos 컨텍스트가 새 값을 반영할 때까지 유지하여 깜빡임 방지.
     // 아래 useEffect(cleanupStalePendingValues)에서 memos 업데이트 후 자동 정리.
     if (!success) addToast('저장 실패', 'error');
-  }, [editValue, currentYear, currentMonth, memos, effectiveMemos, pendingMergeSpans, baseTimeSlots.length, onSaveMemo, addToast, buildSchedulerAutoText, recordUndo, buildMemoSnapshotForKeys, queuedSaveShockwaveMemosBulk, applyImmediateCellDisplay, applyImmediateMergeSpan, clearImmediateCellDisplay, cellKey, setPendingDisplayValues]);
+  }, [editValue, currentYear, currentMonth, memos, effectiveMemos, pendingMergeSpans, baseTimeSlots.length, queuedOnSaveMemo, addToast, buildSchedulerAutoText, recordUndo, buildMemoSnapshotForKeys, queuedSaveShockwaveMemosBulk, applyImmediateCellDisplay, applyImmediateMergeSpan, clearImmediateCellDisplay, cellKey, setPendingDisplayValues]);
 
   handleCellSaveRef.current = handleCellSave;
 
@@ -1418,7 +1426,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     pendingDisplayValues,
     currentYear,
     currentMonth,
-    onSaveMemo,
+    onSaveMemo: queuedOnSaveMemo,
     saveShockwaveMemosBulk: queuedSaveShockwaveMemosBulk,
     addToast,
     handleCopySelection,
@@ -1562,7 +1570,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     isContextMenuTarget,
     handleOpenPatientHistoryModal,
     buildMemoSnapshotForKeys,
-    onSaveMemo,
+    onSaveMemo: queuedOnSaveMemo,
     saveShockwaveMemosBulk: queuedSaveShockwaveMemosBulk,
     recordUndo,
     addToast,
