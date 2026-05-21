@@ -564,9 +564,9 @@
   color: var(--tab-active-border);
   background: var(--tab-active-surface, #ffffff);
   border: 1px solid rgba(0, 0, 0, 0.08);
-  border-bottom: 1px solid var(--tab-active-surface, #ffffff);
+  border-bottom: 2px solid var(--tab-active-surface, #ffffff); /* slightly thicker to fully cover shell border */
   border-top: 3px solid var(--tab-active-border);
-  margin-bottom: -1px; /* perfectly overlap shell border */
+  margin-bottom: -2.5px; /* perfectly overlap and cover shell border */
   padding: 12px 24px 10px;
   min-height: 48px;
   transform: none;
@@ -677,7 +677,10 @@
 .top-tab-with-date:nth-child(7) { z-index: 4; }
 .top-tab-with-date:nth-child(8) { z-index: 3; }
 .top-tab-with-date:nth-child(9) { z-index: 2; }
-.top-tab-with-date:has(.top-tab.active) { z-index: 50 !important; }
+.top-tab-with-date:has(.top-tab.active) {
+  z-index: 50 !important;
+  margin-bottom: -1.5px; /* Ensures the active tab wrapper pulls down to cover the shell border */
+}
 
 /* 1. Calendar (Blue) */
 .top-tab--calendar {
