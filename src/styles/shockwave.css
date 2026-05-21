@@ -174,11 +174,13 @@
   border: 1px solid var(--border-color);
   background: var(--bg-card);
   color: var(--text-secondary);
-  border-radius: 9999px;
-  padding: 3px 10px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  line-height: 1.2;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   position: relative;
   transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
@@ -190,6 +192,17 @@
   border-color: var(--brand-primary);
 }
 
+.shockwave-week-today-btn:hover:not(:disabled) svg {
+  transform: rotate(45deg);
+}
+
+.shockwave-week-today-btn svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.3s ease;
+}
+
+
 .shockwave-week-today-btn:disabled {
   cursor: default;
   opacity: 0.45;
@@ -197,7 +210,8 @@
 
 .shockwave-week-floating-actions {
   position: absolute;
-  top: 4px;
+  top: 0;
+  height: var(--sw-header-row-height, 32px);
   z-index: 35;
   display: flex;
   align-items: center;
