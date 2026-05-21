@@ -359,10 +359,11 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   }
 
   body.calendar-only-print .calendar-date {
-    flex: 0 0 18px !important; /* 글자 크기 확보 위해 소폭 조정 */
-    font-size: 1.05rem !important; /* 0.75rem -> 1.05rem 극대화 */
+    flex: 0 0 24px !important; /* 글자 크기 극대화를 위한 높이 확보 */
+    font-size: 1.4rem !important; /* 1.05rem -> 1.4rem 극대화 */
+    font-weight: 800 !important; /* 굵게 강조 */
     padding: 0 2px !important;
-    line-height: 1 !important;
+    line-height: 24px !important;
     justify-content: flex-end !important;
     align-items: center !important;
     box-sizing: border-box !important;
@@ -371,6 +372,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.calendar-only-print .calendar-date-number {
     width: auto !important;
     height: auto !important;
+    font-size: 1.4rem !important;
+    font-weight: 800 !important;
   }
 
   /* 메모 컨테이너 여백 완전 제거 */
@@ -385,10 +388,11 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   }
 
   body.calendar-only-print[data-calendar-weeks="6"] .calendar-date {
-    flex: 0 0 16px !important;
-    font-size: 0.95rem !important; /* 0.78rem -> 0.95rem 극대화 */
+    flex: 0 0 20px !important; /* 글자 크기 극대화를 위한 높이 확보 */
+    font-size: 1.2rem !important; /* 0.95rem -> 1.2rem 극대화 */
+    font-weight: 800 !important; /* 굵게 강조 */
     padding: 0 2px !important;
-    line-height: 1 !important;
+    line-height: 20px !important;
     justify-content: flex-end !important;
     align-items: center !important;
   }
@@ -396,6 +400,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.calendar-only-print[data-calendar-weeks="6"] .calendar-date-number {
     width: auto !important;
     height: auto !important;
+    font-size: 1.2rem !important;
+    font-weight: 800 !important;
   }
 
   body.calendar-only-print[data-calendar-weeks="6"] .memo-slot {
@@ -422,16 +428,19 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     font-weight: 800 !important;
   }
   body.hide-last-week .calendar-date {
-    flex: 0 0 20px !important;
-    font-size: 1.15rem !important; /* 0.9rem -> 1.15rem 극대화 */
+    flex: 0 0 24px !important; /* 글자 크기 극대화를 위한 높이 확보 */
+    font-size: 1.4rem !important; /* 1.15rem -> 1.4rem 극대화 */
+    font-weight: 800 !important; /* 굵게 강조 */
     padding: 0 2px !important;
-    line-height: 1 !important;
+    line-height: 24px !important;
     justify-content: flex-end !important;
     align-items: center !important;
   }
   body.hide-last-week .calendar-date-number {
     width: auto !important;
     height: auto !important;
+    font-size: 1.4rem !important;
+    font-weight: 800 !important;
   }
   .app-layout,
   .app-main,
