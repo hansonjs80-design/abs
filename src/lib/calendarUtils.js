@@ -119,7 +119,7 @@ export function generateShockwaveCalendar(year, month, holidays = new Set()) {
           day: d,
           dow: tempDate.getDay(),
           isCurrentMonth: m === month,
-          isHoliday: m === month && holidays.has(key),
+          isHoliday: holidays.has(key),
           key,
         });
       }

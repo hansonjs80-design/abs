@@ -63,7 +63,7 @@ export default function ShockwavePage() {
   }, [loadTherapists, loadManualTherapists, loadShockwaveSettings]);
 
   useEffect(() => {
-    loadStaffMemos(currentYear, currentMonth);
+    loadStaffMemos(currentYear, currentMonth, { includeAdjacentMonths: true });
     loadHolidays(currentYear, currentMonth);
   }, [currentYear, currentMonth, loadStaffMemos, loadHolidays]);
 

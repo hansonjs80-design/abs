@@ -83,7 +83,7 @@ export default function useScheduleTimeSlots({
     const dayStart = normalizeTime(dateOverride?.start_time || dayOverride.start_time || settings?.start_time) || DEFAULT_START_TIME;
     const dayEnd = normalizeTime(dateOverride?.end_time || dayOverride.end_time || settings?.end_time) || DEFAULT_END_TIME;
 
-    const skipLunch = !dayInfo.isCurrentMonth || dayInfo.isHoliday;
+    const skipLunch = dayInfo.isHoliday;
     const noLunch = dateOverride?.no_lunch === true || dayOverride.no_lunch === true || skipLunch;
 
     const lunchStart = noLunch ? null : normalizeTime(dateOverride?.lunch_start || dayOverride.lunch_start);
@@ -96,7 +96,7 @@ export default function useScheduleTimeSlots({
       let isBeforeStart = time < dayStart;
       let isAfterEnd = time >= dayEnd;
 
-      if (skipLunch) {
+      if (dayInfo.isHoliday) {
         isBeforeStart = false;
         isAfterEnd = false;
       }

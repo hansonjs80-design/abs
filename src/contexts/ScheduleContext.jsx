@@ -360,10 +360,12 @@ export function ScheduleProvider({ children }) {
     const requestId = ++holidaysLoadRequestRef.current;
 
     try {
-      const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-      const nextYear = month === 12 ? year + 1 : year;
-      const nextMonth = month === 12 ? 1 : month + 1;
-      const endStr = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+      const prevYear = month === 1 ? year - 1 : year;
+      const prevMonth = month === 1 ? 12 : month - 1;
+      const startDate = `${prevYear}-${String(prevMonth).padStart(2, '0')}-01`;
+      const afterNextYear = month >= 11 ? year + 1 : year;
+      const afterNextMonth = month === 11 ? 1 : month === 12 ? 2 : month + 2;
+      const endStr = `${afterNextYear}-${String(afterNextMonth).padStart(2, '0')}-01`;
 
       const { data, error } = await supabase
         .from('holidays')

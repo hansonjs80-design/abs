@@ -198,6 +198,7 @@
 .shockwave-week-today-btn svg {
   width: 16px;
   height: 16px;
+  display: block;
   transition: transform 0.3s ease;
 }
 
@@ -209,8 +210,8 @@
 
 .shockwave-week-floating-actions {
   position: absolute;
-  top: 0;
-  height: var(--sw-header-row-height, 32px);
+  top: calc((var(--sw-header-row-height, 32px) / 2) - 2px);
+  transform: translateY(-50%);
   z-index: 35;
   display: flex;
   align-items: center;
@@ -322,7 +323,9 @@
 }
 
 .sw-day-header-cell.other-month {
-  color: var(--cal-other-month-text);
+  background: #b8b8b8;
+  color: #4b5563;
+  font-weight: 900;
 }
 
 .sw-day-header-cell.today {
@@ -370,6 +373,7 @@
 }
 
 .sw-therapist-name.other-month {
+  background: #f1f5f9;
   color: var(--cal-other-month-text);
 }
 
@@ -528,7 +532,14 @@
 }
 
 .sw-cell.other-month-bg {
-  background: #93c47e;
+  background: #f3f4f6;
+  color: var(--text-primary);
+  cursor: default;
+}
+
+.sw-cell.other-month-muted-block {
+  background: #b8b8b8;
+  color: #111827;
 }
 
 .sw-cell.color-4060 {
@@ -669,6 +680,11 @@
   cursor: cell;
 }
 
+.sw-cell.other-month-bg.disabled {
+  background: #b8b8b8;
+  color: #111827;
+}
+
 /* 병합된 셀(마스터) 스타일 */
 .sw-cell.merged-master {
   z-index: 5;
@@ -678,6 +694,12 @@
 
 .sw-cell.merged-master.preserve {
   background: var(--sw-preserve);
+}
+
+.sw-cell.other-month-bg.preserve,
+.sw-cell.merged-master.other-month-bg.preserve {
+  background: #fefbdb;
+  color: #374151;
 }
 
 /* 비활성 행 */

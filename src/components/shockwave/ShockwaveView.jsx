@@ -193,17 +193,17 @@ const MemoizedCell = memo(({
   editInputRef, handleCellSave, handleEditKeyDown, imeOpenRef, setImePreviewCell, editDraftRef, scheduleEditDraftAutosave, promoteFocusedInputToEditor, skipNextEditBlurSaveRef
 }) => {
   const resizerRef = useRef(null);
-  const content = dayInfo.isCurrentMonth ? pendingContent : '';
+  const content = pendingContent || '';
   const effectiveMergeSpan = pendingMergeSpan || mergeSpan;
   const cellMemoList = getMemoListFromMergeSpan(effectiveMergeSpan);
-  const hasCellMemo = dayInfo.isCurrentMonth && cellMemoList.length > 0;
+  const hasCellMemo = cellMemoList.length > 0;
   const cellPrescription = cellData?.prescription || effectiveMergeSpan?.meta?.prescription || '';
   const displayData = buildSchedulerCellDisplay(content, effectiveMergeSpan);
 
-  const isEditing = dayInfo.isCurrentMonth && editingCell === cellKey;
-  const isImePreview = dayInfo.isCurrentMonth && imePreviewCell === cellKey;
-  const isSelected = dayInfo.isCurrentMonth && selectedKeys.has(cellKey);
-  const isPrimary = dayInfo.isCurrentMonth && selectedCell && selectedCell.w === weekIdx && selectedCell.d === dayIdx && selectedCell.r === rowIdx && selectedCell.c === colIdx;
+  const isEditing = editingCell === cellKey;
+  const isImePreview = imePreviewCell === cellKey;
+  const isSelected = selectedKeys.has(cellKey);
+  const isPrimary = selectedCell && selectedCell.w === weekIdx && selectedCell.d === dayIdx && selectedCell.r === rowIdx && selectedCell.c === colIdx;
   const gridColumnStart = showTimeCol ? colIdx + 2 : colIdx + 1;
 
   let visualRowSpan = 1;
@@ -212,13 +212,13 @@ const MemoizedCell = memo(({
   }
 
   let cls = 'sw-cell';
-  if (!dayInfo.isCurrentMonth) cls += ' other-month-bg disabled-cell';
-  else if (dayInfo.isHoliday) cls += ' holiday-bg';
+  if (dayInfo.isHoliday) cls += ' holiday-bg';
+  else if (!dayInfo.isCurrentMonth) cls += ' other-month-bg disabled-cell';
   
   if (slotInfo.disabled && !displayData.hasDisplayText) cls += ' disabled';
   
   // NOTE: hardcoded colors based on constants
-  if (cellData?.bg_color === '#e8f5e9') cls += ' preserve'; // TREATMENT_COMPLETE_BG
+  if (String(cellData?.bg_color || '').toLowerCase() === TREATMENT_COMPLETE_BG.toLowerCase()) cls += ' preserve';
   if (cellData?.bg_color === '#f4cccc') cls += ' cancelled'; // TREATMENT_CANCEL_BG
   if (has4060Pattern(content)) cls += ' color-4060';
   if (hasCellMemo) cls += ' has-memo';
@@ -229,9 +229,16 @@ const MemoizedCell = memo(({
     cls += ` ants-active ${clipboardSource.mode === 'cut' ? 'ants-red' : 'ants-blue'}`;
   }
 
-  if (!isSelected && workState === 'off') {
+  if (dayInfo.isCurrentMonth && !isSelected && workState === 'off') {
     cls += ' staff-off';
-  } else if (!isSelected && workState === 'early-leave') {
+  } else if (!dayInfo.isCurrentMonth && !dayInfo.isHoliday && (
+    workState === 'off' ||
+    workState === 'night' ||
+    workState === 'early-leave' ||
+    staffBlockRule?.bg_color
+  )) {
+    cls += ' other-month-muted-block';
+  } else if (dayInfo.isCurrentMonth && !isSelected && workState === 'early-leave') {
     // Assuming isLastHourSlot logic is true if passed as such, wait, we need to know. 
     // We pass it in as part of workState or check it here
   }
@@ -246,10 +253,10 @@ const MemoizedCell = memo(({
     inlineStyle.borderRight = 'none';
   }
 
-  if (cellData?.bg_color) inlineStyle.backgroundColor = cellData.bg_color;
-  else if (staffBlockRule?.bg_color) inlineStyle.backgroundColor = staffBlockRule.bg_color;
+  if (dayInfo.isCurrentMonth && cellData?.bg_color) inlineStyle.backgroundColor = cellData.bg_color;
+  else if (dayInfo.isCurrentMonth && staffBlockRule?.bg_color) inlineStyle.backgroundColor = staffBlockRule.bg_color;
   
-  if (staffBlockRule?.font_color) inlineStyle.color = staffBlockRule.font_color;
+  if (dayInfo.isCurrentMonth && staffBlockRule?.font_color) inlineStyle.color = staffBlockRule.font_color;
 
   const prescriptionColor = cellPrescription ? effectivePrescriptionColors[cellPrescription] : undefined;
   const hasMeaningfulContent = displayData.hasDisplayText && content.trim() && content.trim() !== '\u200B';
@@ -282,16 +289,14 @@ const MemoizedCell = memo(({
   if (showInput) {
     return (
       <div id={`cell-${cellKey}`} className={`sw-cell ${isEditing ? 'editing' : ''} ${cls}`} style={inlineStyle}
-        onMouseDown={(e) => { if (dayInfo.isCurrentMonth) handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e); }}
+        onMouseDown={(e) => { handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e); }}
         onMouseEnter={() => {
-          if (!dayInfo.isCurrentMonth) return;
           handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
           setHoverCell({ weekIdx, dayIdx, rowIdx, colIdx, staffBlockRule, slotInfo, isMergedView: false });
         }}
         onMouseLeave={() => setHoverCell(null)}
-        onDoubleClick={(e) => { if (dayInfo.isCurrentMonth) handleCellDoubleClick(e, weekIdx, dayIdx, rowIdx, colIdx, content); }}
+        onDoubleClick={(e) => { handleCellDoubleClick(e, weekIdx, dayIdx, rowIdx, colIdx, content); }}
         onContextMenu={(e) => {
-          if (!dayInfo.isCurrentMonth) { e.preventDefault(); return; }
           if (displayData.hasDisplayText && content.trim() !== '\u200B') {
             handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);
           }
@@ -371,13 +376,13 @@ const MemoizedCell = memo(({
         id={`cell-${cellKey}`}
         className={cls}
         style={inlineStyle}
-        onMouseDown={(e) => handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e)}
+        onMouseDown={(e) => { handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e); }}
         onMouseEnter={() => {
           handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
           setHoverCell({ weekIdx, dayIdx, rowIdx, colIdx, staffBlockRule, slotInfo, isMergedView: true });
         }}
         onMouseLeave={() => setHoverCell(null)}
-        onDoubleClick={(e) => handleCellDoubleClick(e, weekIdx, dayIdx, rowIdx, colIdx, content)}
+        onDoubleClick={(e) => { handleCellDoubleClick(e, weekIdx, dayIdx, rowIdx, colIdx, content); }}
         onContextMenu={(e) => {
           if (displayData.hasDisplayText && content.trim() !== '\u200B') {
             handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);
@@ -1947,7 +1952,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       // 2. Cells
                       for (let colIdx = 0; colIdx < colCount; colIdx++) {
                         const key = cellKey(weekIdx, dayIdx, rowIdx, colIdx);
-                        const rawCellData = dayInfo.isCurrentMonth ? renderMemos[key] : null;
+                        const rawCellData = renderMemos[key] || null;
                         const hasPendingBg = Object.prototype.hasOwnProperty.call(pendingCellBgColors, key);
                         const pendingAdjustedCellData = hasPendingBg
                           ? {
@@ -1955,17 +1960,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               bg_color: pendingCellBgColors[key],
                             }
                           : rawCellData;
-                        const rawContent = dayInfo.isCurrentMonth ? normalizeSchedulerVisitSuffix(pendingDisplayValues[key] ?? rawCellData?.content ?? '') : '';
-                        const rawMergeSpan = dayInfo.isCurrentMonth ? getEffectiveMergeSpan(key, renderMemos) : { rowSpan: 1, colSpan: 1, mergedInto: null };
-                        const sanitizedBlankCell = dayInfo.isCurrentMonth
-                          ? sanitizeBlankScheduleCellData({
-                              key,
-                              memos: renderMemos,
-                              cellData: pendingAdjustedCellData,
-                              pendingDisplayValues,
-                              pendingMergeSpans,
-                            })
-                          : { cellData: pendingAdjustedCellData, mergeSpan: null, wasSanitized: false };
+                        const rawContent = normalizeSchedulerVisitSuffix(pendingDisplayValues[key] ?? rawCellData?.content ?? '');
+                        const rawMergeSpan = getEffectiveMergeSpan(key, renderMemos);
+                        const sanitizedBlankCell = sanitizeBlankScheduleCellData({
+                          key,
+                          memos: renderMemos,
+                          cellData: pendingAdjustedCellData,
+                          pendingDisplayValues,
+                          pendingMergeSpans,
+                        });
                         const displayCellData = sanitizedBlankCell.cellData;
                         const content = sanitizedBlankCell.wasSanitized ? '' : rawContent;
                         let mergeSpan = sanitizedBlankCell.mergeSpan || rawMergeSpan;
