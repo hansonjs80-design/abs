@@ -65,10 +65,10 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
   const [colWidth, setColWidth] = usePersistentNumber(COL_W_KEY, 0);
   const [rowHeight, setRowHeight] = usePersistentNumber(ROW_H_KEY, 120, MIN_ROW_HEIGHT);
   const [dateRowHeight, setDateRowHeight] = usePersistentNumber(DATE_H_KEY, 28, MIN_DATE_ROW_HEIGHT);
-  const [memoFontSize, setMemoFontSize] = usePersistentNumber(MEMO_FONT_SIZE_KEY, 16, 10);
-  const [dateFontSize, setDateFontSize] = usePersistentNumber(DATE_FONT_SIZE_KEY, 17.3, 8);
+  const [memoFontSize, setMemoFontSize] = usePersistentNumber(MEMO_FONT_SIZE_KEY, 13, 10);
+  const [dateFontSize, setDateFontSize] = usePersistentNumber(DATE_FONT_SIZE_KEY, 15, 8);
   const [dateFontWeight, setDateFontWeight] = usePersistentNumber(DATE_FONT_WEIGHT_KEY, 700, 500);
-  const [weekdayFontSize, setWeekdayFontSize] = usePersistentNumber(WEEKDAY_FONT_SIZE_KEY, 14.3, 8);
+  const [weekdayFontSize, setWeekdayFontSize] = usePersistentNumber(WEEKDAY_FONT_SIZE_KEY, 16, 8);
   const [undoStack, setUndoStack] = useState([]);
   const [selectedCell, setSelectedCell] = useState(null);
   const [, setRangeEnd] = useState(null);
@@ -742,7 +742,7 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
                   <select
                     id="staff-date-font-size"
                     value={dateFontSize}
-                    onChange={(e) => setDateFontSize(Number(e.target.value) || 17.3)}
+                    onChange={(e) => setDateFontSize(Number(e.target.value) || 15)}
                     style={{
                       width: 88,
                       padding: '4px 6px',
@@ -766,7 +766,7 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
                   <select
                     id="staff-weekday-font-size"
                     value={weekdayFontSize}
-                    onChange={(e) => setWeekdayFontSize(Number(e.target.value) || 14.3)}
+                    onChange={(e) => setWeekdayFontSize(Number(e.target.value) || 16)}
                     style={{
                       width: 88,
                       padding: '4px 6px',
@@ -815,7 +815,7 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
                 <select
                   id="staff-memo-font-size"
                   value={memoFontSize}
-                  onChange={(e) => setMemoFontSize(Number(e.target.value) || 16)}
+                  onChange={(e) => setMemoFontSize(Number(e.target.value) || 13)}
                   style={{
                     width: 88,
                     padding: '4px 6px',

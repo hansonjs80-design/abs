@@ -5,11 +5,11 @@
 .staff-calendar {
   animation: fadeIn var(--transition-normal) ease-out;
   --calendar-weekday-row-height: 32px;
-  --staff-calendar-memo-font-size: 16px;
+  --staff-calendar-memo-font-size: 13px;
   --staff-calendar-date-row-height: 28px;
-  --staff-calendar-date-font-size: 17.3px;
+  --staff-calendar-date-font-size: 15px;
   --staff-calendar-date-font-weight: 700;
-  --staff-calendar-weekday-font-size: 14.3px;
+  --staff-calendar-weekday-font-size: 16px;
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
