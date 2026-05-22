@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildManualTherapyMergePayload,
+  buildManualTherapyUnmergePayload,
   getManualTherapyRowSpan,
 } from '../manualTherapyMergeUtils.js';
 
@@ -130,4 +131,37 @@ test('buildManualTherapyMergePayload clears rows left from a previous larger mer
   assert.equal(cleared.merge_span.rowSpan, 1);
   assert.equal(cleared.merge_span.mergedInto, null);
   assert.equal(cleared.merge_span.meta.intentional_clear, true);
+});
+
+test('buildManualTherapyUnmergePayload clears a manual therapy merge when changing to shockwave', () => {
+  const result = buildManualTherapyUnmergePayload({
+    ...baseArgs,
+    key: '0-1-4-2',
+    memos: {
+      '0-1-4-2': {
+        content: '1234/홍길동60(2)',
+        bg_color: '#fff1b8',
+        prescription: '60분',
+        body_part: 'Lumbar',
+        merge_span: { rowSpan: 3, colSpan: 1, mergedInto: null },
+      },
+      '0-1-5-2': { merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-1-4-2' } },
+      '0-1-6-2': { merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-1-4-2' } },
+    },
+    content: '1234/홍길동(2)',
+    bgColor: '#fff1b8',
+    prescription: 'F/R',
+    bodyPart: 'Lumbar',
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.payload.length, 3);
+  assert.deepEqual(result.affectedKeys, ['0-1-4-2', '0-1-5-2', '0-1-6-2']);
+  assert.deepEqual(result.payload[0].merge_span, { rowSpan: 1, colSpan: 1, mergedInto: null });
+  assert.equal(result.payload[0].content, '1234/홍길동(2)');
+  assert.equal(result.payload[0].prescription, 'F/R');
+  assert.equal(result.payload[1].content, '');
+  assert.equal(result.payload[1].prescription, null);
+  assert.equal(result.payload[1].merge_span.meta.intentional_clear, true);
+  assert.equal(result.payload[2].merge_span.meta.intentional_clear, true);
 });

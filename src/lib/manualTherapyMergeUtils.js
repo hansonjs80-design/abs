@@ -149,3 +149,71 @@ export function buildManualTherapyMergePayload({
     affectedKeys: Array.from(affectedKeys),
   };
 }
+
+export function buildManualTherapyUnmergePayload({
+  key,
+  memos = {},
+  pendingMergeSpans = {},
+  currentYear,
+  currentMonth,
+  content = '',
+  bgColor = null,
+  prescription = '',
+  bodyPart = null,
+}) {
+  const currentSpan = getCurrentMergeSpan({ key, memos, pendingMergeSpans });
+  const masterKey = currentSpan?.mergedInto || key;
+  const masterSpan = getCurrentMergeSpan({ key: masterKey, memos, pendingMergeSpans });
+  const rowSpan = Math.max(1, masterSpan?.rowSpan || 1);
+  const colSpan = Math.max(1, masterSpan?.colSpan || 1);
+
+  if (!currentSpan?.mergedInto && rowSpan === 1 && colSpan === 1) {
+    return { ok: false, reason: 'not-merged', payload: [], affectedKeys: [] };
+  }
+
+  const { w, d, r, c } = parseScheduleCellKey(masterKey);
+  if (![w, d, r, c].every(Number.isFinite)) {
+    return { ok: false, reason: 'invalid-key', payload: [], affectedKeys: [] };
+  }
+
+  const affectedKeys = [];
+  const payload = [];
+  for (let row = r; row < r + rowSpan; row += 1) {
+    for (let col = c; col < c + colSpan; col += 1) {
+      const targetKey = getScheduleCellKey(w, d, row, col);
+      affectedKeys.push(targetKey);
+
+      if (targetKey === masterKey) {
+        payload.push(buildScheduleCellPayload({
+          key: targetKey,
+          currentYear,
+          currentMonth,
+          memo: memos[targetKey],
+          overrides: {
+            content,
+            bg_color: bgColor,
+            merge_span: DEFAULT_MERGE_SPAN,
+            prescription,
+            body_part: bodyPart,
+          },
+        }));
+      } else {
+        payload.push(markIntentionalClearPayload(buildScheduleCellPayload({
+          key: targetKey,
+          currentYear,
+          currentMonth,
+          memo: memos[targetKey],
+          overrides: {
+            content: '',
+            bg_color: null,
+            merge_span: DEFAULT_MERGE_SPAN,
+            prescription: null,
+            body_part: null,
+          },
+        })));
+      }
+    }
+  }
+
+  return { ok: true, reason: null, payload, affectedKeys, masterKey };
+}
