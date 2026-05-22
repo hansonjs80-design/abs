@@ -5,6 +5,7 @@
 .staff-calendar {
   animation: fadeIn var(--transition-normal) ease-out;
   --calendar-weekday-row-height: 32px;
+  --staff-calendar-memo-font-size: 16px;
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
@@ -257,7 +258,7 @@
 
 .memo-slot {
   padding: 4px 3px 4px 6px; /* 우측 여백을 6px에서 3px로 줄여 텍스트를 3픽셀 우측으로 이동 (날짜 숫자와 라인 일치) */
-  font-size: 0.97rem; /* 기존 대비 약 10% 확대 */
+  font-size: var(--staff-calendar-memo-font-size);
   font-weight: 700;
   border-radius: 2px;
   cursor: pointer;
@@ -334,7 +335,7 @@
   padding: 2px 6px;
   border: 2px solid var(--brand-primary);
   border-radius: 3px;
-  font-size: 0.97rem;
+  font-size: var(--staff-calendar-memo-font-size);
   font-weight: 600;
   background: var(--bg-input);
   color: var(--text-primary);

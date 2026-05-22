@@ -15,8 +15,20 @@ import { usePersistentNumber } from '../../hooks/usePersistentState';
 
 const COL_W_KEY = 'staff-calendar-col-width';
 const ROW_H_KEY = 'staff-calendar-row-height';
+const MEMO_FONT_SIZE_KEY = 'staff-calendar-memo-font-size';
 const MIN_COL_WIDTH = 30;
 const MIN_ROW_HEIGHT = 28;
+const NUMERIC_ONLY_STAFF_COUNT_PATTERN = /^\d+$/;
+const MEMO_FONT_SIZE_OPTIONS = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+
+function getStaffCalendarDisplayMemo(memo, isLastSlot) {
+  const content = memo?.content || '';
+  const trimmedContent = content.trim();
+  if (!isLastSlot || !NUMERIC_ONLY_STAFF_COUNT_PATTERN.test(trimmedContent)) {
+    return memo;
+  }
+  return { ...(memo || {}), content: `${trimmedContent}명` };
+}
 
 export default function StaffCalendar({ hiddenDepartments = [] }) {
   const { currentYear, currentMonth, staffMemos, loadStaffMemos, saveStaffMemo, holidays, holidayNames, loadHolidays, shockwaveSettings, loadShockwaveSettings, calendarSlotSettings, loadCalendarSlotSettings, saveCalendarSlotSettings } = useSchedule();
@@ -43,6 +55,7 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
 
   const [colWidth, setColWidth] = usePersistentNumber(COL_W_KEY, 0);
   const [rowHeight, setRowHeight] = usePersistentNumber(ROW_H_KEY, 120, MIN_ROW_HEIGHT);
+  const [memoFontSize, setMemoFontSize] = usePersistentNumber(MEMO_FONT_SIZE_KEY, 16, 10);
   const [undoStack, setUndoStack] = useState([]);
   const [selectedCell, setSelectedCell] = useState(null);
   const [, setRangeEnd] = useState(null);
@@ -230,7 +243,7 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
         el.style.padding = '2px 6px';
         el.style.border = '2px solid var(--brand-primary)';
         el.style.borderRadius = '3px';
-        el.style.fontSize = '0.97rem';
+        el.style.fontSize = `${memoFontSize}px`;
         el.style.fontWeight = '600';
         el.style.textAlign = 'right';
         el.style.boxSizing = 'border-box';
@@ -251,7 +264,7 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
         }
       }
     });
-  }, []);
+  }, [memoFontSize]);
 
   const resetInputToHidden = useCallback(() => {
     const el = hiddenInputRef.current;
@@ -640,7 +653,11 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
   }, [applyColor, addToast]);
 
   return (
-    <div className="staff-calendar animate-fade-in" ref={viewRef} style={{ outline: 'none', position: 'relative' }}>
+    <div
+      className="staff-calendar animate-fade-in"
+      ref={viewRef}
+      style={{ outline: 'none', position: 'relative', '--staff-calendar-memo-font-size': `${memoFontSize}px` }}
+    >
       <div className="calendar-print-title">
         {currentYear}년 {currentMonth}월 직원 근무표
       </div>
@@ -672,10 +689,34 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
               position: 'absolute', bottom: '100%', right: 0, marginBottom: 4,
               background: 'var(--bg-primary)', border: '1px solid var(--border-color)',
               boxShadow: '0 4px 12px rgba(0,0,0,0.15)', borderRadius: 6, padding: 12,
-              zIndex: 1000, width: 200, fontSize: '0.85rem', color: 'var(--text-primary)'
+              zIndex: 1000, width: 220, fontSize: '0.85rem', color: 'var(--text-primary)'
             }}>
               <div style={{ fontWeight: 600, marginBottom: 8, borderBottom: '1px solid var(--border-color)', paddingBottom: 4 }}>
                 주차별 메모 행 수 설정
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
+                <label htmlFor="staff-memo-font-size" style={{ fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                  입력 글자 크기
+                </label>
+                <select
+                  id="staff-memo-font-size"
+                  value={memoFontSize}
+                  onChange={(e) => setMemoFontSize(Number(e.target.value) || 16)}
+                  style={{
+                    width: 88,
+                    padding: '4px 6px',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 4,
+                    background: 'var(--bg-secondary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  {MEMO_FONT_SIZE_OPTIONS.map((size) => (
+                    <option key={size} value={size}>{size}px</option>
+                  ))}
+                </select>
               </div>
               <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
                 <button
@@ -866,12 +907,14 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
 
                   // 공휴일 이름: 첫 번째 슬롯에 표시
                   const holidayName = (slot === 0 && dayInfo.isHoliday) ? holidayNames.get(dayInfo.key) : null;
-                  const memoContent = staffMemos[key]?.content || '';
+                  const rawMemo = staffMemos[key];
+                  const memoContent = rawMemo?.content || '';
+                  const displayMemo = getStaffCalendarDisplayMemo(rawMemo, slot === getSlotCount(wi) - 1);
                   const isDepartmentHidden = shouldHideStaffMemoByDepartment(memoContent, hiddenDepartments);
                   const autoFontColor = getAutoFontColorForStaffMemo(memoContent);
 
                   return (
-                    <MemoSlot key={slot} memo={staffMemos[key]} dayInfo={dayInfo} slotIndex={slot}
+                    <MemoSlot key={slot} memo={displayMemo} dayInfo={dayInfo} slotIndex={slot}
                       isSelected={isSel} isPrimary={isPri} isEditing={isEd} clipboardMode={clipMode}
                       cellId={key}
                       autoFontColor={autoFontColor}
