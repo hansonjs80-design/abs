@@ -19,7 +19,7 @@ const MEMO_FONT_SIZE_KEY = 'staff-calendar-memo-font-size';
 const MIN_COL_WIDTH = 30;
 const MIN_ROW_HEIGHT = 28;
 const NUMERIC_ONLY_STAFF_COUNT_PATTERN = /^\d+$/;
-const MEMO_FONT_SIZE_OPTIONS = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+const MEMO_FONT_SIZE_OPTIONS = Array.from({ length: 21 }, (_, index) => 10 + index * 0.5);
 
 function getStaffCalendarDisplayMemo(memo, isLastSlot) {
   const content = memo?.content || '';
@@ -714,7 +714,7 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
                   }}
                 >
                   {MEMO_FONT_SIZE_OPTIONS.map((size) => (
-                    <option key={size} value={size}>{size}px</option>
+                    <option key={size} value={size}>{Number.isInteger(size) ? size : size.toFixed(1)}px</option>
                   ))}
                 </select>
               </div>
