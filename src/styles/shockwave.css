@@ -340,7 +340,7 @@
 /* 치료사 이름 헤더 */
 .sw-therapist-header {
   display: grid;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid #000;
   overflow: visible;
   height: var(--sw-therapist-row-height, 29px);
 }
