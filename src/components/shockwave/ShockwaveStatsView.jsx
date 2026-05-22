@@ -699,6 +699,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                           therapistCount={safeTherapists.length}
                           selectedTherapistNames={selectedTherapistNames}
                           onSelectedTherapistNamesChange={setSelectedTherapistNames}
+                          readOnly
                         />
                       </ShockwaveStatsErrorBoundary>
                     </div>

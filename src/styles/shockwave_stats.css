@@ -843,6 +843,15 @@ td.gc-bold > .gc-input {
     inset 0 1px 0 var(--grid-strong);
 }
 
+.sw-grid-table tbody tr.tr-today-row td {
+  background-color: #fff7ed;
+}
+
+.sw-grid-table tbody tr.tr-today-row td.gc-foc,
+.sw-grid-table tbody tr.tr-today-row td.gc-sel {
+  background-color: #fed7aa;
+}
+
 /* Frozen Columns Persistence */
 .hdr-fixed-1, .gc-fixed-1 { left: 0; z-index: 25 !important; }
 .hdr-fixed-2, .gc-fixed-2 { left: 48px; z-index: 25 !important; }

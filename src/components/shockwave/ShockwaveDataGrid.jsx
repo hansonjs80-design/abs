@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import { toProperCase } from '../../lib/shockwaveSyncUtils';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
+import { getTodayKST } from '../../lib/calendarUtils';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import '../../styles/shockwave_stats.css';
 
@@ -13,6 +14,45 @@ function normalizePrescriptionKey(value) {
 }
 function prescriptionsMatch(a, b) {
   return normalizePrescriptionKey(a) === normalizePrescriptionKey(b);
+}
+
+function toDateKey(date) {
+  if (!(date instanceof Date)) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function isEditableShortcutTarget(target) {
+  const tagName = target?.tagName;
+  return (
+    tagName === 'INPUT' ||
+    tagName === 'TEXTAREA' ||
+    tagName === 'SELECT' ||
+    target?.isContentEditable
+  );
+}
+
+function findNearestDateRowIndex(rows, targetDateKey) {
+  const datedRows = rows
+    .map((row, index) => ({ row, index }))
+    .filter(({ row }) => row?._isFirst && row?.date);
+
+  const exactIndex = datedRows.find(({ row }) => row.date === targetDateKey)?.index;
+  if (Number.isInteger(exactIndex)) return exactIndex;
+
+  const pastRows = datedRows.filter(({ row }) => row.date < targetDateKey);
+  if (pastRows.length > 0) {
+    return pastRows.reduce((latest, item) => (
+      item.row.date > latest.row.date ? item : latest
+    )).index;
+  }
+
+  if (datedRows.length === 0) return -1;
+  return datedRows.reduce((earliest, item) => (
+    item.row.date < earliest.row.date ? item : earliest
+  )).index;
 }
 
 // Dynamic labels from settings will be used instead
@@ -63,6 +103,7 @@ export default function ShockwaveDataGrid({
   secondarySummaryLabel = '신규',
   selectedTherapistNames: externalSelectedNames,
   onSelectedTherapistNamesChange,
+  readOnly = false,
 }) {
   const { shockwaveSettings: settings } = useSchedule();
   const safeInputLogs = useMemo(
@@ -350,6 +391,7 @@ export default function ShockwaveDataGrid({
   const editingValueRef = useRef('');
   const datePickerRef = useRef(null);
   const ctxMenuRef = useRef(null);
+  const todayDateKey = useMemo(() => toDateKey(getTodayKST()), []);
 
   const selNorm = sel ? {
     r1: Math.min(sel.r1, sel.r2), c1: Math.min(sel.c1, sel.c2),
@@ -501,6 +543,7 @@ export default function ShockwaveDataGrid({
 
   // ─── 5. EDITING ───────────────────────────────────────────
   const startEdit = useCallback((r, c, isDblClick = false, initialChar = null) => {
+    if (readOnly) return;
     if (c === totalCountColIndex || c === newPatientColIndex) return;
     
     const nextValue = initialChar !== null ? initialChar : getVal(gridData[r], c);
@@ -509,10 +552,15 @@ export default function ShockwaveDataGrid({
 
     editingValueRef.current = nextValue;
     setEditing({ r, c, val: nextValue, isDblClick });
-  }, [gridData, totalCountColIndex, newPatientColIndex]);
+  }, [gridData, newPatientColIndex, readOnly, totalCountColIndex]);
 
   const finishEdit = async () => {
     if (!editing) return;
+    if (readOnly) {
+      setEditing(null);
+      wrapRef.current?.focus();
+      return;
+    }
     const saveRequestId = ++editSaveRequestRef.current;
     const { r, c } = editing;
     const val = editingValueRef.current ?? editing.val ?? '';
@@ -674,6 +722,7 @@ export default function ShockwaveDataGrid({
   };
 
   const updateEditingValue = useCallback((r, c, value, isDblClick = false) => {
+    if (readOnly) return;
     editingValueRef.current = value;
     setEditing((prev) => {
       if (prev && prev.r === r && prev.c === c) {
@@ -681,7 +730,7 @@ export default function ShockwaveDataGrid({
       }
       return { r, c, val: value, isDblClick };
     });
-  }, []);
+  }, [readOnly]);
 
   // ─── 6. MOUSE HANDLERS ───────────────────────────────────
   const onMouseDown = (e, r, c) => {
@@ -734,6 +783,7 @@ export default function ShockwaveDataGrid({
   };
 
   const doUndo = async () => {
+    if (readOnly) return;
     const action = undoStack[0];
     if (!action) return;
     const mutationRequestId = ++bulkMutationRequestRef.current;
@@ -778,6 +828,7 @@ export default function ShockwaveDataGrid({
     }
   };
   const doPaste = async (text, startR, startC) => {
+    if (readOnly) return;
     const mutationRequestId = ++bulkMutationRequestRef.current;
     const affectedDates = new Set();
     const rows = text.split('\n').map(l => l.split('\t'));
@@ -909,6 +960,7 @@ export default function ShockwaveDataGrid({
   };
 
   const doDelete = async () => {
+    if (readOnly) return;
     if (!selNorm) return;
     const mutationRequestId = ++bulkMutationRequestRef.current;
     const { undoChanges, affectedDates } = await clearRange(selNorm);
@@ -923,6 +975,7 @@ export default function ShockwaveDataGrid({
   };
 
   const doDeleteRow = async (r, options = {}) => {
+    if (readOnly) return;
     const { skipConfirm = false } = options;
     const row = gridData[r];
     if (row?.isDraft) {
@@ -1019,45 +1072,78 @@ export default function ShockwaveDataGrid({
       }
       if (e.key === 'Enter') { e.preventDefault(); startEdit(r, c, true); return; }
       if (e.key === 'Tab') { e.preventDefault(); const nc = Math.min(c+1, totalColCount-1); setFocus({r, c:nc}); setSel({r1:r,c1:nc,r2:r,c2:nc}); return; }
-      if ((e.metaKey || e.ctrlKey) && (e.key === '+' || e.key === '=' || e.code === 'Equal' || e.code === 'NumpadAdd')) {
+      if (!readOnly && (e.metaKey || e.ctrlKey) && (e.key === '+' || e.key === '=' || e.code === 'Equal' || e.code === 'NumpadAdd')) {
         if (isWholeRowSelected) {
           e.preventDefault();
           insertDraftRow(gridData[r], 'after');
           return;
         }
       }
-      if ((e.metaKey || e.ctrlKey) && (e.key === '-' || e.key === '_' || e.code === 'Minus' || e.code === 'NumpadSubtract')) {
+      if (!readOnly && (e.metaKey || e.ctrlKey) && (e.key === '-' || e.key === '_' || e.code === 'Minus' || e.code === 'NumpadSubtract')) {
         if (isWholeRowSelected) {
           e.preventDefault();
           doDeleteRow(r, { skipConfirm: true });
           return;
         }
       }
-      if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); doDelete(); return; }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'g') { e.preventDefault(); e.shiftKey ? handleUnmerge() : handleMerge(); return; }
+      if (!readOnly && (e.key === 'Backspace' || e.key === 'Delete')) { e.preventDefault(); doDelete(); return; }
+      if (!readOnly && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'g') { e.preventDefault(); e.shiftKey ? handleUnmerge() : handleMerge(); return; }
       if ((e.metaKey || e.ctrlKey) && e.key === 'c') { e.preventDefault(); doCopy(); return; }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'x') { e.preventDefault(); doCopy(); doDelete(); return; }
+      if (!readOnly && (e.metaKey || e.ctrlKey) && e.key === 'x') { e.preventDefault(); doCopy(); doDelete(); return; }
       
       // Let keydown handle the first keystroke to prevent focus loss issues
-      if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey && c < totalCountColIndex) {
+      if (!readOnly && e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey && c < totalCountColIndex) {
         e.preventDefault();
         startEdit(r, c, false, e.key);
       }
     };
     window.addEventListener('keydown', kd);
     return () => window.removeEventListener('keydown', kd);
-  }, [clipboardSource, doCopy, doDelete, doDeleteRow, doUndo, editing, finishEdit, focus, gridData, handleMerge, handleUnmerge, insertDraftRow, sel, selNorm, startEdit, totalColCount, totalCountColIndex, ctxMenu]);
+  }, [clipboardSource, doCopy, doDelete, doDeleteRow, doUndo, editing, finishEdit, focus, gridData, handleMerge, handleUnmerge, insertDraftRow, readOnly, sel, selNorm, startEdit, totalColCount, totalCountColIndex, ctxMenu]);
+
+  const scrollToTodayRow = useCallback(() => {
+    const todayRowIndex = findNearestDateRowIndex(gridData, todayDateKey);
+    if (todayRowIndex < 0) return false;
+
+    setFocus({ r: todayRowIndex, c: 1 });
+    setSel({ r1: todayRowIndex, c1: 1, r2: todayRowIndex, c2: 1 });
+
+    requestAnimationFrame(() => {
+      const targetRow = wrapRef.current?.querySelector(`[data-grid-row-index="${todayRowIndex}"]`);
+      if (!targetRow) return;
+      targetRow.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    });
+
+    return true;
+  }, [gridData, todayDateKey]);
+
+  useEffect(() => {
+    const handleTodayShortcut = (event) => {
+      if (!(event.metaKey || event.ctrlKey)) return;
+      if (event.altKey || event.shiftKey) return;
+      if (event.key.toLowerCase() !== 't') return;
+      if (editing || isEditableShortcutTarget(event.target)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      scrollToTodayRow();
+    };
+
+    window.addEventListener('keydown', handleTodayShortcut, true);
+    return () => window.removeEventListener('keydown', handleTodayShortcut, true);
+  }, [editing, scrollToTodayRow]);
 
   useEffect(() => {
     const handler = (e) => {
       if (editing) return;
+      if (readOnly) return;
       if (!focus) return;
       const text = (e.clipboardData || window.clipboardData).getData('text');
       if (text) { e.preventDefault(); doPaste(text, focus.r, focus.c); }
     };
     window.addEventListener('paste', handler);
     return () => window.removeEventListener('paste', handler);
-  }, [focus, editing, doPaste]);
+  }, [focus, editing, doPaste, readOnly]);
 
   useEffect(() => {
     if (editing && inputRef.current) { 
@@ -1205,13 +1291,15 @@ export default function ShockwaveDataGrid({
         <tbody>
           {gridData.map((row, ri) => {
             const isWholeRowSelected = !!selNorm && selNorm.r1 === ri && selNorm.r2 === ri && selNorm.c1 === 0 && selNorm.c2 === totalColCount - 1;
+            const isTodayRow = row._isFirst && row.date === todayDateKey;
             const rowClasses = [
               row._isFirst && row.date ? 'tr-date-start' : '',
               row._isLast && row.date ? 'tr-date-end' : '',
+              isTodayRow ? 'tr-today-row' : '',
               isWholeRowSelected ? 'tr-row-selected' : '',
             ].filter(Boolean).join(' ');
             return (
-            <tr key={row.id} className={rowClasses}>
+            <tr key={row.id} data-grid-row-index={ri} className={rowClasses}>
               {Array.from({ length: totalColCount }, (_, ci) => {
                 if (getMergedInto(ri, ci)) return null;
                 const mergeInfo = mergedCells[getMergeKey(ri, ci)];
@@ -1257,7 +1345,7 @@ export default function ShockwaveDataGrid({
                   borderRight: ci === frozenColumnCount - 1 ? '1px solid var(--grid-strong)' : undefined,
                 } : undefined;
 
-                const showInput = isFoc || isEdit;
+                const showInput = isEdit || (!readOnly && isFoc);
 
                 if (showInput) {
                   return (
@@ -1355,28 +1443,36 @@ export default function ShockwaveDataGrid({
             <>
               <button type="button" className="context-menu-item" onClick={() => { selectRow(ctxMenu.r); setCtxMenu(null); }}>행 선택</button>
               <button type="button" className="context-menu-item" onClick={() => { copyRow(ctxMenu.r); setCtxMenu(null); }}>행 복사</button>
-              <button type="button" className="context-menu-item" onClick={() => { cutRow(ctxMenu.r); setCtxMenu(null); }}>행 잘라내기</button>
-              <button type="button" className="context-menu-item" onClick={() => { pasteRow(ctxMenu.r); setCtxMenu(null); }}>행 붙여넣기</button>
-              <div className="context-menu-divider" />
-              <button type="button" className="context-menu-item" onClick={() => { insertDraftRow(gridData[ctxMenu.r], 'before'); setCtxMenu(null); }}>위에 행 삽입</button>
-              <button type="button" className="context-menu-item" onClick={() => { insertDraftRow(gridData[ctxMenu.r], 'after'); setCtxMenu(null); }}>아래에 행 삽입</button>
-              <div className="context-menu-divider" />
-              <button type="button" className="context-menu-item context-menu-danger" onClick={() => { doDeleteRow(ctxMenu.r); setCtxMenu(null); }}>행 삭제</button>
+              {!readOnly && (
+                <>
+                  <button type="button" className="context-menu-item" onClick={() => { cutRow(ctxMenu.r); setCtxMenu(null); }}>행 잘라내기</button>
+                  <button type="button" className="context-menu-item" onClick={() => { pasteRow(ctxMenu.r); setCtxMenu(null); }}>행 붙여넣기</button>
+                  <div className="context-menu-divider" />
+                  <button type="button" className="context-menu-item" onClick={() => { insertDraftRow(gridData[ctxMenu.r], 'before'); setCtxMenu(null); }}>위에 행 삽입</button>
+                  <button type="button" className="context-menu-item" onClick={() => { insertDraftRow(gridData[ctxMenu.r], 'after'); setCtxMenu(null); }}>아래에 행 삽입</button>
+                  <div className="context-menu-divider" />
+                  <button type="button" className="context-menu-item context-menu-danger" onClick={() => { doDeleteRow(ctxMenu.r); setCtxMenu(null); }}>행 삭제</button>
+                </>
+              )}
             </>
           ) : (
             <>
               <button type="button" className="context-menu-item" onClick={() => { doCopy(); setCtxMenu(null); }}>복사 <span className="ctx-shortcut">⌘C</span></button>
-              <button type="button" className="context-menu-item" onClick={() => { doCopy(); doDelete(); setCtxMenu(null); }}>잘라내기 <span className="ctx-shortcut">⌘X</span></button>
-              <button type="button" className="context-menu-item" onClick={async () => {
-                try { const t = await navigator.clipboard.readText(); doPaste(t, ctxMenu.r, ctxMenu.c); } catch { alert('Ctrl+V를 사용하세요.'); }
-                setCtxMenu(null);
-              }}>붙여넣기 <span className="ctx-shortcut">⌘V</span></button>
-              <div className="context-menu-divider" />
-              <button type="button" className="context-menu-item" onClick={() => { handleMerge(); setCtxMenu(null); }}>셀 병합 <span className="ctx-shortcut">⌘G</span></button>
-              <button type="button" className="context-menu-item" onClick={() => { handleUnmerge(); setCtxMenu(null); }}>셀 병합 해제 <span className="ctx-shortcut">⌘⇧G</span></button>
-              <div className="context-menu-divider" />
-              <button type="button" className="context-menu-item" onClick={() => { doDelete(); setCtxMenu(null); }}>선택 내용 지우기 <span className="ctx-shortcut">Del</span></button>
-              <button type="button" className="context-menu-item context-menu-danger" onClick={() => { doDeleteRow(ctxMenu.r); setCtxMenu(null); }}>이 행 영구 삭제</button>
+              {!readOnly && (
+                <>
+                  <button type="button" className="context-menu-item" onClick={() => { doCopy(); doDelete(); setCtxMenu(null); }}>잘라내기 <span className="ctx-shortcut">⌘X</span></button>
+                  <button type="button" className="context-menu-item" onClick={async () => {
+                    try { const t = await navigator.clipboard.readText(); doPaste(t, ctxMenu.r, ctxMenu.c); } catch { alert('Ctrl+V를 사용하세요.'); }
+                    setCtxMenu(null);
+                  }}>붙여넣기 <span className="ctx-shortcut">⌘V</span></button>
+                  <div className="context-menu-divider" />
+                  <button type="button" className="context-menu-item" onClick={() => { handleMerge(); setCtxMenu(null); }}>셀 병합 <span className="ctx-shortcut">⌘G</span></button>
+                  <button type="button" className="context-menu-item" onClick={() => { handleUnmerge(); setCtxMenu(null); }}>셀 병합 해제 <span className="ctx-shortcut">⌘⇧G</span></button>
+                  <div className="context-menu-divider" />
+                  <button type="button" className="context-menu-item" onClick={() => { doDelete(); setCtxMenu(null); }}>선택 내용 지우기 <span className="ctx-shortcut">Del</span></button>
+                  <button type="button" className="context-menu-item context-menu-danger" onClick={() => { doDeleteRow(ctxMenu.r); setCtxMenu(null); }}>이 행 영구 삭제</button>
+                </>
+              )}
             </>
           )}
         </div>

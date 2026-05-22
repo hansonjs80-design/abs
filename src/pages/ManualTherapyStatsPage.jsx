@@ -630,6 +630,7 @@ export default function ManualTherapyStatsPage() {
                             secondarySummaryLabel="신규"
                             selectedTherapistNames={selectedTherapistNames}
                             onSelectedTherapistNamesChange={setSelectedTherapistNames}
+                            readOnly
                           />
                         </div>
                       </div>
