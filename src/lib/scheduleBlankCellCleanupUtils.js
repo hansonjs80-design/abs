@@ -5,6 +5,7 @@ import {
 } from './scheduleSelectionUtils.js';
 
 export const EMPTY_SCHEDULE_MERGE_SPAN = { rowSpan: 1, colSpan: 1, mergedInto: null };
+const INTENTIONAL_GREEN_BG = '#93c47d';
 
 function hasVisibleText(value) {
   return String(value || '').trim().replace(/\u200B/g, '') !== '';
@@ -48,6 +49,9 @@ export function isVisuallyEmptyDirtyScheduleCell({
 
   const mergeSpan = getEffectiveScheduleMergeSpan({ key, memos, pendingMergeSpans });
   if (hasMemoList(memo.merge_span) || hasMemoList(mergeSpan)) return false;
+  if ((memo.bg_color || null) === INTENTIONAL_GREEN_BG && isDefaultMergeSpan(memo.merge_span) && isDefaultMergeSpan(mergeSpan)) {
+    return false;
+  }
 
   if (mergeSpan?.mergedInto) {
     return !masterHasVisibleContent({

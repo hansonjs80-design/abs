@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import {
+  SCHEDULER_HOLIDAY_BG,
   isUndoShortcutEvent,
   stepReservationTimeWithinCellBase,
   getReservationTimeFromMergeSpan,
@@ -31,6 +32,8 @@ export default function useScheduleKeyboardActions({
   pendingDisplayValues,
   pendingMemoOverrides,
   pendingMergeSpans,
+  pendingCellBgColors,
+  applyImmediateCellBg,
   applyImmediateCellDisplay,
   applyImmediateMergeSpan,
   clearImmediateCellDisplay,
@@ -73,6 +76,7 @@ export default function useScheduleKeyboardActions({
   const memosRef = useRef(memos);
   const selectedKeysRef = useRef(selectedKeys);
   const pendingRef = useRef(pendingDisplayValues);
+  const pendingBgRef = useRef(pendingCellBgColors);
   const pendingMemoOverridesRef = useRef(pendingMemoOverrides);
   const pendingMergeSpansRef = useRef(pendingMergeSpans);
   const onSaveMemoRef = useRef(onSaveMemo);
@@ -92,6 +96,7 @@ export default function useScheduleKeyboardActions({
   }, [memos]);
   useEffect(() => { selectedKeysRef.current = selectedKeys; }, [selectedKeys]);
   useEffect(() => { pendingRef.current = pendingDisplayValues; }, [pendingDisplayValues]);
+  useEffect(() => { pendingBgRef.current = pendingCellBgColors; }, [pendingCellBgColors]);
   useEffect(() => {
     pendingMemoOverridesRef.current = pendingMemoOverrides;
     memosRef.current = { ...(baseMemosRef.current || {}), ...(pendingMemoOverrides || {}) };
@@ -228,6 +233,89 @@ export default function useScheduleKeyboardActions({
     return true;
   }, [isReservationTimeShortcutEvent, applyReservationTimeDelta]);
 
+  const toggleSelectedGreenBackground = useCallback(() => {
+    const selected = selectedKeysRef.current && selectedKeysRef.current.size > 0
+      ? selectedKeysRef.current
+      : selectedCell
+        ? new Set([cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c)])
+        : new Set();
+    if (selected.size === 0) return;
+
+    const latestMemos = memosRef.current || {};
+    const latestPendingBg = pendingBgRef.current || {};
+    const touchedKeys = new Set();
+    const targetKeys = [];
+
+    Array.from(selected).forEach((key) => {
+      const [w, d, r, c] = key.split('-').map(Number);
+      if (![w, d, r, c].every(Number.isFinite)) return;
+      const memo = latestMemos[key] || {};
+      const mergeSpan = pendingMergeSpansRef.current?.[key] || memo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+      const rowSpan = Math.max(1, mergeSpan.rowSpan || 1);
+      const colSpan = Math.max(1, mergeSpan.colSpan || 1);
+
+      for (let row = r; row < r + rowSpan; row += 1) {
+        for (let col = c; col < c + colSpan; col += 1) {
+          const rangeKey = cellKey(w, d, row, col);
+          if (touchedKeys.has(rangeKey)) continue;
+          touchedKeys.add(rangeKey);
+          targetKeys.push(rangeKey);
+        }
+      }
+    });
+
+    if (targetKeys.length === 0) return;
+
+    const getVisibleBg = (key) => (
+      Object.prototype.hasOwnProperty.call(latestPendingBg, key)
+        ? latestPendingBg[key]
+        : latestMemos[key]?.bg_color
+    ) || null;
+    const shouldClear = targetKeys.some((key) => getVisibleBg(key) === SCHEDULER_HOLIDAY_BG);
+    const nextBgColor = shouldClear ? null : SCHEDULER_HOLIDAY_BG;
+
+    const payload = targetKeys.map((key) => {
+      const [w, d, r, c] = key.split('-').map(Number);
+      const memo = latestMemos[key] || {};
+      return {
+        year: currentYear,
+        month: currentMonth,
+        week_index: w,
+        day_index: d,
+        row_index: r,
+        col_index: c,
+        content: memo.content || '',
+        bg_color: nextBgColor,
+        merge_span: pendingMergeSpansRef.current?.[key] || memo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+        prescription: memo.prescription || null,
+        body_part: memo.body_part || null,
+      };
+    });
+    const oldMemos = targetKeys.map((key) => {
+      const [w, d, r, c] = key.split('-').map(Number);
+      const memo = latestMemos[key] || {};
+      return {
+        year: currentYear,
+        month: currentMonth,
+        week_index: w,
+        day_index: d,
+        row_index: r,
+        col_index: c,
+        content: memo.content || '',
+        bg_color: getVisibleBg(key),
+        merge_span: pendingMergeSpansRef.current?.[key] || memo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+        prescription: memo.prescription || null,
+        body_part: memo.body_part || null,
+      };
+    });
+
+    recordUndoRef.current?.({ type: 'bulk-edit', oldMemos });
+    applyImmediateCellBg?.(payload);
+    saveBulkRef.current?.(payload).then((success) => {
+      if (!success) addToast?.('배경색 변경 실패', 'error');
+    });
+  }, [addToast, applyImmediateCellBg, cellKey, currentMonth, currentYear, selectedCell]);
+
   const moveSelectedCellsByRow = useCallback((rowDelta) => {
     const selectedCellKey = selectedCell ? cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c) : null;
     let moveKeys = selectedKeysRef.current;
@@ -314,8 +402,38 @@ export default function useScheduleKeyboardActions({
     selectedCell,
   ]);
 
+  useEffect(() => {
+    const handleEarlyBackgroundShortcut = (event) => {
+      if (!selectedCell || editingCell || contextMenu) return;
+      if (!isHolidayBackgroundShortcut(event)) return;
+      if (isContextMenuTarget(event.target)) return;
+      if (isEditableTarget(event.target)) return;
+      if (event.__shockwaveBackgroundHandled) return;
+      event.__shockwaveBackgroundHandled = true;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      toggleSelectedGreenBackground();
+    };
+
+    window.addEventListener('keydown', handleEarlyBackgroundShortcut, { capture: true, passive: false });
+    document.addEventListener('keydown', handleEarlyBackgroundShortcut, { capture: true, passive: false });
+    return () => {
+      window.removeEventListener('keydown', handleEarlyBackgroundShortcut, { capture: true });
+      document.removeEventListener('keydown', handleEarlyBackgroundShortcut, { capture: true });
+    };
+  }, [
+    contextMenu,
+    editingCell,
+    isContextMenuTarget,
+    isEditableTarget,
+    selectedCell,
+    toggleSelectedGreenBackground,
+  ]);
+
   return useCallback((e) => {
     if (e.defaultPrevented) return;
+    if (e.__shockwaveBackgroundHandled) return;
     if (isContextMenuTarget(e.target)) return;
     if (isUndoShortcutEvent(e)) {
       if (e.__shockwaveUndoHandled) return;
@@ -616,7 +734,7 @@ export default function useScheduleKeyboardActions({
     if (isHolidayBackgroundShortcut(e)) {
       e.preventDefault();
       e.stopPropagation();
-      handleToggleHolidayBackground();
+      toggleSelectedGreenBackground();
       return;
     }
 
@@ -683,7 +801,7 @@ export default function useScheduleKeyboardActions({
     handleCutSelection,
     handleToggleTreatmentComplete,
     handleToggleTreatmentCancel,
-    handleToggleHolidayBackground,
+    toggleSelectedGreenBackground,
     tryMergeSelection,
     doUndo,
     isEditableTarget,

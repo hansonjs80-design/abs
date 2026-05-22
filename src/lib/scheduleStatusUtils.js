@@ -98,12 +98,14 @@ export function buildHolidayBackgroundPayload({
   normalizeKeysToMergeMasters,
   cellKey,
   holidayBgColor,
+  pendingCellBgColors = {},
 }) {
   if (!selectedKeys || selectedKeys.size === 0) return null;
 
   const effectiveKeys = normalizeKeysToMergeMasters(selectedKeys);
+  const getBgColor = (key) => getEffectiveCellBgColor(memos, pendingCellBgColors, key);
   const shouldClearSelection = Array.from(effectiveKeys).some(
-    (key) => memos?.[key]?.bg_color === holidayBgColor
+    (key) => getBgColor(key) === holidayBgColor
   );
   const nextBgColor = shouldClearSelection ? null : holidayBgColor;
   const touchedKeys = new Set();
@@ -124,7 +126,8 @@ export function buildHolidayBackgroundPayload({
         touchedKeys.add(rangeKey);
 
         const rangeMemo = memos?.[rangeKey];
-        if ((rangeMemo?.bg_color || null) === nextBgColor) continue;
+        const oldBgColor = getBgColor(rangeKey) || null;
+        if (oldBgColor === nextBgColor) continue;
 
         oldMemos.push({
           year: currentYear,
@@ -134,7 +137,7 @@ export function buildHolidayBackgroundPayload({
           row_index: row,
           col_index: col,
           content: rangeMemo?.content || '',
-          bg_color: rangeMemo?.bg_color || null,
+          bg_color: oldBgColor,
           merge_span: rangeMemo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
           prescription: rangeMemo?.prescription || null,
           body_part: rangeMemo?.body_part || null,

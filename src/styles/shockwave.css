@@ -372,6 +372,11 @@
   color: var(--cal-holiday-text);
 }
 
+.sw-therapist-name.today {
+  background: #c8ddfa;
+  color: #0f172a;
+}
+
 .sw-therapist-name.other-month {
   background: #f1f5f9;
   color: var(--cal-other-month-text);

@@ -6,6 +6,10 @@
   animation: fadeIn var(--transition-normal) ease-out;
   --calendar-weekday-row-height: 32px;
   --staff-calendar-memo-font-size: 16px;
+  --staff-calendar-date-row-height: 28px;
+  --staff-calendar-date-font-size: 17.3px;
+  --staff-calendar-date-font-weight: 700;
+  --staff-calendar-weekday-font-size: 14.3px;
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
@@ -92,7 +96,7 @@
   justify-content: center;
   box-sizing: border-box;
   text-align: center;
-  font-size: 14.3px; /* 13px에서 10% 증가 */
+  font-size: var(--staff-calendar-weekday-font-size);
   font-weight: 800; /* 기존 700(Bold)에서 800(Extra Bold)으로 더 두껍게 */
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--text-primary);
@@ -158,6 +162,22 @@
   opacity: 0.5;
 }
 
+.date-row-resizer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 8px;
+  cursor: row-resize;
+  z-index: 9;
+}
+
+.date-row-resizer:hover,
+.date-row-resizer:active {
+  background: var(--brand-primary);
+  opacity: 0.5;
+}
+
 .calendar-cell:nth-child(7n) {
   border-right: none;
 }
@@ -180,14 +200,16 @@
 
 /* 날짜 번호 */
 .calendar-date {
+  position: relative;
   padding: 0px 3px 0px 8px; /* 우측 여백을 8px에서 3px로 줄여 날짜를 5px 우측으로 더 붙임 */
-  font-size: 1.08rem; /* 0.98rem 에서 10% 추가 증가 */
-  font-weight: 700;
+  font-size: var(--staff-calendar-date-font-size);
+  font-weight: var(--staff-calendar-date-font-weight);
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
-  flex: 0 0 28px;
+  flex: 0 0 var(--staff-calendar-date-row-height);
+  min-height: var(--staff-calendar-date-row-height);
   border-bottom: 1px solid var(--border-color); /* 날짜 바로 아래에 실선 적용 (더 진하게) */
   margin-bottom: 0px; /* 불필요한 하단 마진 제거하여 더 붙임 */
   box-sizing: border-box;
@@ -207,7 +229,7 @@
 
 .today .calendar-date-number {
   color: white;
-  font-weight: 800;
+  font-weight: var(--staff-calendar-date-font-weight);
 }
 
 .sunday .calendar-date-number {
@@ -484,12 +506,12 @@
   }
   .calendar-date {
     padding: 4px 4px 1px;
-    font-size: 0.75rem;
+    font-size: var(--staff-calendar-date-font-size);
   }
   .calendar-date-number {
     width: 22px;
     height: 22px;
-    font-size: 0.72rem;
+    font-size: inherit;
   }
   .memo-slot {
     font-size: 0.6rem;
@@ -497,7 +519,7 @@
     min-height: 14px;
   }
   .calendar-weekday-header {
-    font-size: 0.7rem;
+    font-size: var(--staff-calendar-weekday-font-size);
     padding: 0 2px;
   }
 }

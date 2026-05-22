@@ -92,13 +92,31 @@ export default function useScheduleStatusActions({
       normalizeKeysToMergeMasters,
       cellKey,
       holidayBgColor: SCHEDULER_HOLIDAY_BG,
+      pendingCellBgColors,
     });
     if (!batch) return;
 
     recordUndo({ type: 'bulk-edit', oldMemos: batch.oldMemos });
+    applyImmediateCellBg?.(batch.payload);
     const success = await saveShockwaveMemosBulk(batch.payload);
-    if (!success) addToast('배경색 변경 실패', 'error');
-  }, [selectedKeys, memos, currentYear, currentMonth, normalizeKeysToMergeMasters, cellKey, saveShockwaveMemosBulk, addToast, recordUndo]);
+    if (!success) {
+      clearImmediateCellBg?.(batch.payload);
+      addToast('배경색 변경 실패', 'error');
+    }
+  }, [
+    selectedKeys,
+    memos,
+    currentYear,
+    currentMonth,
+    normalizeKeysToMergeMasters,
+    cellKey,
+    saveShockwaveMemosBulk,
+    addToast,
+    recordUndo,
+    pendingCellBgColors,
+    applyImmediateCellBg,
+    clearImmediateCellBg,
+  ]);
 
   return {
     handleToggleTreatmentComplete,

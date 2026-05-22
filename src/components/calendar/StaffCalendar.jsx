@@ -15,11 +15,20 @@ import { usePersistentNumber } from '../../hooks/usePersistentState';
 
 const COL_W_KEY = 'staff-calendar-col-width';
 const ROW_H_KEY = 'staff-calendar-row-height';
+const DATE_H_KEY = 'staff-calendar-date-row-height';
 const MEMO_FONT_SIZE_KEY = 'staff-calendar-memo-font-size';
+const DATE_FONT_SIZE_KEY = 'staff-calendar-date-font-size';
+const DATE_FONT_WEIGHT_KEY = 'staff-calendar-date-font-weight';
+const WEEKDAY_FONT_SIZE_KEY = 'staff-calendar-weekday-font-size';
 const MIN_COL_WIDTH = 30;
 const MIN_ROW_HEIGHT = 28;
+const MIN_DATE_ROW_HEIGHT = 16;
+const MAX_DATE_ROW_HEIGHT = 64;
 const NUMERIC_ONLY_STAFF_COUNT_PATTERN = /^\d+$/;
 const MEMO_FONT_SIZE_OPTIONS = Array.from({ length: 21 }, (_, index) => 10 + index * 0.5);
+const DATE_FONT_SIZE_OPTIONS = Array.from({ length: 25 }, (_, index) => 8 + index * 0.5);
+const WEEKDAY_FONT_SIZE_OPTIONS = Array.from({ length: 25 }, (_, index) => 8 + index * 0.5);
+const DATE_FONT_WEIGHT_OPTIONS = [500, 600, 700, 800, 900];
 
 function getStaffCalendarDisplayMemo(memo, isLastSlot) {
   const content = memo?.content || '';
@@ -55,7 +64,11 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
 
   const [colWidth, setColWidth] = usePersistentNumber(COL_W_KEY, 0);
   const [rowHeight, setRowHeight] = usePersistentNumber(ROW_H_KEY, 120, MIN_ROW_HEIGHT);
+  const [dateRowHeight, setDateRowHeight] = usePersistentNumber(DATE_H_KEY, 28, MIN_DATE_ROW_HEIGHT);
   const [memoFontSize, setMemoFontSize] = usePersistentNumber(MEMO_FONT_SIZE_KEY, 16, 10);
+  const [dateFontSize, setDateFontSize] = usePersistentNumber(DATE_FONT_SIZE_KEY, 17.3, 8);
+  const [dateFontWeight, setDateFontWeight] = usePersistentNumber(DATE_FONT_WEIGHT_KEY, 700, 500);
+  const [weekdayFontSize, setWeekdayFontSize] = usePersistentNumber(WEEKDAY_FONT_SIZE_KEY, 14.3, 8);
   const [undoStack, setUndoStack] = useState([]);
   const [selectedCell, setSelectedCell] = useState(null);
   const [, setRangeEnd] = useState(null);
@@ -193,6 +206,25 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
     };
     const up = () => {
       setRowHeight(latestHeight);
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+      window.removeEventListener('blur', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+    window.addEventListener('blur', up);
+  };
+  const startDateRowResize = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const sy = e.clientY;
+    const startHeight = dateRowHeight;
+    let latestHeight = dateRowHeight || startHeight;
+    const move = (ev) => {
+      latestHeight = Math.min(MAX_DATE_ROW_HEIGHT, Math.max(MIN_DATE_ROW_HEIGHT, startHeight + ev.clientY - sy));
+      setDateRowHeight(latestHeight);
+    };
+    const up = () => {
+      setDateRowHeight(latestHeight);
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mouseup', up);
       window.removeEventListener('blur', up);
@@ -656,7 +688,15 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
     <div
       className="staff-calendar animate-fade-in"
       ref={viewRef}
-      style={{ outline: 'none', position: 'relative', '--staff-calendar-memo-font-size': `${memoFontSize}px` }}
+      style={{
+        outline: 'none',
+        position: 'relative',
+        '--staff-calendar-memo-font-size': `${memoFontSize}px`,
+        '--staff-calendar-date-row-height': `${dateRowHeight}px`,
+        '--staff-calendar-date-font-size': `${dateFontSize}px`,
+        '--staff-calendar-date-font-weight': dateFontWeight,
+        '--staff-calendar-weekday-font-size': `${weekdayFontSize}px`,
+      }}
     >
       <div className="calendar-print-title">
         {currentYear}년 {currentMonth}월 직원 근무표
@@ -693,6 +733,80 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
             }}>
               <div style={{ fontWeight: 600, marginBottom: 8, borderBottom: '1px solid var(--border-color)', paddingBottom: 4 }}>
                 주차별 메모 행 수 설정
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <label htmlFor="staff-date-font-size" style={{ fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                    날짜 글자 크기
+                  </label>
+                  <select
+                    id="staff-date-font-size"
+                    value={dateFontSize}
+                    onChange={(e) => setDateFontSize(Number(e.target.value) || 17.3)}
+                    style={{
+                      width: 88,
+                      padding: '4px 6px',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: 4,
+                      background: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {DATE_FONT_SIZE_OPTIONS.map((size) => (
+                      <option key={size} value={size}>{Number.isInteger(size) ? size : size.toFixed(1)}px</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <label htmlFor="staff-weekday-font-size" style={{ fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                    요일 글자 크기
+                  </label>
+                  <select
+                    id="staff-weekday-font-size"
+                    value={weekdayFontSize}
+                    onChange={(e) => setWeekdayFontSize(Number(e.target.value) || 14.3)}
+                    style={{
+                      width: 88,
+                      padding: '4px 6px',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: 4,
+                      background: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {WEEKDAY_FONT_SIZE_OPTIONS.map((size) => (
+                      <option key={size} value={size}>{Number.isInteger(size) ? size : size.toFixed(1)}px</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <label htmlFor="staff-date-font-weight" style={{ fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                    날짜 글자 두께
+                  </label>
+                  <select
+                    id="staff-date-font-weight"
+                    value={dateFontWeight}
+                    onChange={(e) => setDateFontWeight(Number(e.target.value) || 700)}
+                    style={{
+                      width: 88,
+                      padding: '4px 6px',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: 4,
+                      background: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {DATE_FONT_WEIGHT_OPTIONS.map((weight) => (
+                      <option key={weight} value={weight}>{weight}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
                 <label htmlFor="staff-memo-font-size" style={{ fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
@@ -895,6 +1009,11 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
             <div key={`${wi}-${di}`} className={cc} style={{ height: `${rowHeight}px` }}>
               <div className="calendar-date">
                 <span className="calendar-date-number">{dayInfo.day}</span>
+                <div
+                  className="date-row-resizer"
+                  title="날짜 셀 높이 조절"
+                  onMouseDown={startDateRowResize}
+                />
               </div>
               <div className="calendar-memos" style={{ gridTemplateRows: `repeat(${getSlotCount(wi)}, minmax(0, 1fr))` }}>
                 {Array.from({ length: getSlotCount(wi) }, (_, slot) => {

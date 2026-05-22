@@ -37,6 +37,7 @@ import {
   TIME_COL_WIDTH,
   TREATMENT_COMPLETE_BG,
   TREATMENT_CANCEL_BG,
+  SCHEDULER_HOLIDAY_BG,
   getShockwaveScheduleScrollKey,
   rememberPendingScheduleDraft,
   removePendingScheduleDraftIfValue,
@@ -235,6 +236,7 @@ const MemoizedCell = memo(({
     workState === 'off' ||
     workState === 'night' ||
     workState === 'early-leave' ||
+    cellData?.bg_color === SCHEDULER_HOLIDAY_BG ||
     staffBlockRule?.bg_color
   )) {
     cls += ' other-month-muted-block';
@@ -1548,6 +1550,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     pendingDisplayValues,
     pendingMemoOverrides,
     pendingMergeSpans,
+    pendingCellBgColors,
+    applyImmediateCellBg,
     applyImmediateCellDisplay,
     applyImmediateMergeSpan,
     clearImmediateCellDisplay,
@@ -1893,6 +1897,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                         let nameClass = 'sw-therapist-name';
                         if (dayInfo.isHoliday) nameClass += ' holiday';
                         else if (!dayInfo.isCurrentMonth) nameClass += ' other-month';
+                        else if (isToday) nameClass += ' today';
                         return (
                           <div key={ci} className={nameClass} style={ci === colCount - 1 ? { borderRight: 'none' } : undefined}>
                             {getTherapistNameForDate(ci, dayInfo.day) || `치료사${ci + 1}`}

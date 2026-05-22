@@ -118,6 +118,31 @@ describe('schedule blank cell cleanup helpers', () => {
     assert.equal(payload.length, 0);
   });
 
+  it('keeps blank cells with intentional green background', () => {
+    const memos = {
+      '0-0-3-1': {
+        content: '',
+        bg_color: '#93c47d',
+        merge_span: defaultSpan,
+      },
+    };
+
+    const payload = buildBlankScheduleCleanupPayload({
+      memos,
+      currentYear: 2026,
+      currentMonth: 5,
+    });
+    const result = sanitizeBlankScheduleCellData({
+      key: '0-0-3-1',
+      memos,
+      cellData: memos['0-0-3-1'],
+    });
+
+    assert.equal(payload.length, 0);
+    assert.equal(result.wasSanitized, false);
+    assert.equal(result.cellData.bg_color, '#93c47d');
+  });
+
   it('sanitizes stale blank cell metadata before render', () => {
     const memos = {
       '0-0-3-1': {

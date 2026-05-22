@@ -111,4 +111,29 @@ describe('schedule treatment status payloads', () => {
     assert.equal(batch.payload[0].bg_color, null);
     assert.equal(batch.oldMemos[0].bg_color, '#d9ead3');
   });
+
+  it('uses pending background colors when toggling holiday background', () => {
+    const memos = {
+      '0-0-0-0': {
+        content: '1234/홍길동',
+        bg_color: null,
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+      },
+    };
+
+    const batch = buildHolidayBackgroundPayload({
+      selectedKeys: new Set(['0-0-0-0']),
+      memos,
+      currentYear: 2026,
+      currentMonth: 5,
+      normalizeKeysToMergeMasters,
+      cellKey,
+      holidayBgColor: '#93c47d',
+      pendingCellBgColors: { '0-0-0-0': '#93c47d' },
+    });
+
+    assert.equal(batch.payload.length, 1);
+    assert.equal(batch.payload[0].bg_color, null);
+    assert.equal(batch.oldMemos[0].bg_color, '#93c47d');
+  });
 });
