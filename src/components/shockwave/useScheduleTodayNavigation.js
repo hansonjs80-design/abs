@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { isSameDate } from '../../lib/calendarUtils';
 import { shockwaveScheduleScrollMemory } from '../../lib/schedulerUtils';
 
+const SCHEDULE_TODAY_SCROLL_TOP_OFFSET = 96;
+
 export default function useScheduleTodayNavigation({
   weeks,
   today,
@@ -32,7 +34,13 @@ export default function useScheduleTodayNavigation({
     if (todayWeekIdx < 0) return;
     const weekEl = weekRefs.current[todayWeekIdx];
     if (!weekEl) return;
-    weekEl.scrollIntoView({ behavior: instant ? 'instant' : 'smooth', block: 'start', inline: 'nearest' });
+    const rect = weekEl.getBoundingClientRect();
+    const targetTop = Math.max(0, rect.top + window.scrollY - SCHEDULE_TODAY_SCROLL_TOP_OFFSET);
+    window.scrollTo({
+      top: targetTop,
+      left: window.scrollX || window.pageXOffset || 0,
+      behavior: instant ? 'instant' : 'smooth',
+    });
   }, [todayWeekIdx, weekRefs]);
 
   const saveScheduleScrollPosition = useCallback(() => {
