@@ -138,7 +138,18 @@ function resolveManualTherapistName(slotIndex, day, therapists, monthlyTherapist
   return therapists?.[slotIndex]?.name || '';
 }
 
-async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, therapists, monthlyTherapists, targetDateStr, overwriteManual = false }) {
+async function runTodayManualTherapyScheduleToStatsSync({
+  year,
+  month,
+  memos,
+  therapists,
+  monthlyTherapists,
+  targetDateStr,
+  overwriteManual = false,
+  pastDataCache = null,
+  existingMonthStats = null,
+  collectOnly = false
+}) {
   if (!memos) {
     return { skipped: true, reason: 'missing_memos' };
   }
@@ -202,31 +213,44 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
   });
 
   let pastData = [];
-  const [manualHistoryResult, shockwaveHistoryResult] = await Promise.all([
-    supabase
-      .from('manual_therapy_patient_logs')
-      .select('patient_name, chart_number, visit_count, body_part, date')
-      .order('date', { ascending: false }),
-    supabase
-      .from('shockwave_patient_logs')
-      .select('patient_name, chart_number, visit_count, body_part, date')
-      .order('date', { ascending: false }),
-  ]);
+  if (pastDataCache) {
+    if (queryNames.length > 0 || chartNumbers.length > 0) {
+      pastData = pastDataCache.filter((row) => {
+        const normalizedName = normalizeNameForMatch(row?.patient_name);
+        const chartNumber = String(row?.chart_number || '').trim();
+        return (
+          (normalizedName && queryNames.includes(normalizedName)) ||
+          (chartNumber && chartNumbers.includes(chartNumber))
+        );
+      });
+    }
+  } else {
+    const [manualHistoryResult, shockwaveHistoryResult] = await Promise.all([
+      supabase
+        .from('manual_therapy_patient_logs')
+        .select('patient_name, chart_number, visit_count, body_part, date')
+        .order('date', { ascending: false }),
+      supabase
+        .from('shockwave_patient_logs')
+        .select('patient_name, chart_number, visit_count, body_part, date')
+        .order('date', { ascending: false }),
+    ]);
 
-  const combinedHistory = [
-    ...(manualHistoryResult.data || []),
-    ...(shockwaveHistoryResult.data || []),
-  ];
+    const combinedHistory = [
+      ...(manualHistoryResult.data || []),
+      ...(shockwaveHistoryResult.data || []),
+    ];
 
-  if (queryNames.length > 0 || chartNumbers.length > 0) {
-    pastData = combinedHistory.filter((row) => {
-      const normalizedName = normalizeNameForMatch(row?.patient_name);
-      const chartNumber = String(row?.chart_number || '').trim();
-      return (
-        (normalizedName && queryNames.includes(normalizedName)) ||
-        (chartNumber && chartNumbers.includes(chartNumber))
-      );
-    });
+    if (queryNames.length > 0 || chartNumbers.length > 0) {
+      pastData = combinedHistory.filter((row) => {
+        const normalizedName = normalizeNameForMatch(row?.patient_name);
+        const chartNumber = String(row?.chart_number || '').trim();
+        return (
+          (normalizedName && queryNames.includes(normalizedName)) ||
+          (chartNumber && chartNumbers.includes(chartNumber))
+        );
+      });
+    }
   }
 
   newLogs.forEach((item) => {
@@ -245,10 +269,16 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
     }
   });
 
-  const { data: todayStats } = await supabase
-    .from('manual_therapy_patient_logs')
-    .select('*')
-    .eq('date', todayDateStrFinal);
+  let todayStats = [];
+  if (existingMonthStats) {
+    todayStats = existingMonthStats.filter((row) => row.date === todayDateStrFinal);
+  } else {
+    const { data } = await supabase
+      .from('manual_therapy_patient_logs')
+      .select('*')
+      .eq('date', todayDateStrFinal);
+    todayStats = data || [];
+  }
 
   const rebuiltRows = newLogs.map((item) => ({
     scheduler_cell_key: item.scheduler_cell_key,
@@ -288,6 +318,20 @@ async function runTodayManualTherapyScheduleToStatsSync({ year, month, memos, th
     
     return false; // Exact match, skip upsert
   });
+
+  if (collectOnly) {
+    return {
+      skipped: false,
+      todayDateStr: todayDateStrFinal,
+      extractedCount: newLogs.length,
+      insertedCount: rowsToUpsert.length,
+      updatedCount: 0,
+      deletedCount: toDeleteIds.length,
+      toDeleteIds,
+      rowsToUpsert,
+      todayStats
+    };
+  }
 
   if (toDeleteIds.length > 0) {
     await supabase.from('manual_therapy_patient_logs').delete().in('id', toDeleteIds);
@@ -348,32 +392,177 @@ export async function syncMonthManualTherapyScheduleToStats({ year, month, memos
   let totalDeleted = 0;
   let totalUpdated = 0;
 
+  // 1단계: 월별 스케줄러 memos 전체를 분석하여, 완료된 도수치료 건의 고유 환자 명단(이름 및 차트 번호)을 수집합니다.
+  const weeks = generateShockwaveCalendar(year, month);
+  const patientNamesSet = new Set();
+  const chartNumbersSet = new Set();
+
+  Object.entries(memos || {}).forEach(([key, cell]) => {
+    const [w, d, r, c] = key.split('-').map(Number);
+    const dayInfo = weeks[w]?.[d];
+    if (!dayInfo || !dayInfo.isCurrentMonth) return;
+    if (upToToday && year === today.getFullYear() && month === today.getMonth() + 1) {
+      if (dayInfo.day > today.getDate()) return;
+    }
+
+    if (String(cell?.bg_color || '').toLowerCase() !== TREATMENT_COMPLETE_BG.toLowerCase()) return;
+
+    const therapistName = resolveManualTherapistName(c, dayInfo.day, therapists, monthlyTherapists);
+    const parsed = parseManualTherapyEntry(cell?.content, therapists, therapistName);
+    if (!parsed) return;
+
+    const norm = normalizeNameForMatch(parsed.patientName);
+    if (norm) patientNamesSet.add(norm);
+    if (parsed.chartNumber) chartNumbersSet.add(String(parsed.chartNumber).trim());
+  });
+
+  // 2단계: 수집된 환자들만을 대상으로 과거 히스토리 로그(manual + shockwave)를 단 1회 일괄 조회합니다.
+  const namesArr = Array.from(patientNamesSet);
+  const chartsArr = Array.from(chartNumbersSet);
+  
+  let manualHistory = [];
+  let shockwaveHistory = [];
+
+  if (namesArr.length > 0 || chartsArr.length > 0) {
+    const orParts = [];
+    if (namesArr.length > 0) {
+      const safeNames = namesArr.map(n => n.replace(/,/g, '')).filter(Boolean);
+      if (safeNames.length > 0) {
+        orParts.push(`patient_name.in.(${safeNames.join(',')})`);
+      }
+    }
+    if (chartsArr.length > 0) {
+      const safeCharts = chartsArr.map(c => c.replace(/,/g, '')).filter(Boolean);
+      if (safeCharts.length > 0) {
+        orParts.push(`chart_number.in.(${safeCharts.join(',')})`);
+      }
+    }
+
+    if (orParts.length > 0) {
+      const orQuery = orParts.join(',');
+      const [mHist, sHist] = await Promise.all([
+        supabase
+          .from('manual_therapy_patient_logs')
+          .select('patient_name, chart_number, visit_count, body_part, date')
+          .or(orQuery)
+          .order('date', { ascending: false }),
+        supabase
+          .from('shockwave_patient_logs')
+          .select('patient_name, chart_number, visit_count, body_part, date')
+          .or(orQuery)
+          .order('date', { ascending: false })
+      ]);
+      
+      manualHistory = mHist.data || [];
+      shockwaveHistory = sHist.data || [];
+    }
+  }
+
+  const pastDataCache = [...manualHistory, ...shockwaveHistory];
+
+  // 3단계: 해당 월 전체의 기존 통계 데이터를 단 1회 일괄 조회합니다.
+  const startOfMonthStr = `${year}-${String(month).padStart(2, '0')}-01`;
+  const endOfMonthStr = `${year}-${String(month).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+  
+  const { data: existingMonthStats, error: statsError } = await supabase
+    .from('manual_therapy_patient_logs')
+    .select('*')
+    .gte('date', startOfMonthStr)
+    .lte('date', endOfMonthStr);
+
+  if (statsError) {
+    console.error('Failed to fetch existing month stats:', statsError);
+  }
+  const statsCache = existingMonthStats || [];
+
+  // 4단계: 일별 루프를 돌며 위에서 구성한 로컬 캐시를 사용해 변경 필요 데이터를 수집합니다. (DB 호출 없음)
+  const allToDeleteIds = [];
+  const allRowsToUpsert = [];
+
   for (let d = 1; d <= endDay; d++) {
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     try {
-      const result = await syncTodayManualTherapyScheduleToStats({
+      const result = await runTodayManualTherapyScheduleToStatsSync({
         year,
         month,
         memos,
         therapists,
         monthlyTherapists,
         targetDateStr: dateStr,
-        overwriteManual
+        overwriteManual,
+        pastDataCache,
+        existingMonthStats: statsCache,
+        collectOnly: true
       });
+
       if (!result.skipped) {
+        if (result.toDeleteIds && result.toDeleteIds.length > 0) {
+          allToDeleteIds.push(...result.toDeleteIds);
+        }
+        if (result.rowsToUpsert && result.rowsToUpsert.length > 0) {
+          allRowsToUpsert.push(...result.rowsToUpsert);
+        }
         totalInserted += result.insertedCount || 0;
         totalDeleted += result.deletedCount || 0;
         totalUpdated += result.updatedCount || 0;
       }
     } catch (e) {
-      console.error(`Failed to sync manual therapy schedule for ${dateStr}:`, e);
+      console.error(`Failed to gather sync data for ${dateStr}:`, e);
     }
   }
 
-  // If we only synced up to today, delete any future scheduler records for this month
+  // 5단계: 수집된 삭제 대상 ID들과 업서트 대상 행들을 일괄(Bulk) 쿼리로 처리합니다.
+  if (allToDeleteIds.length > 0) {
+    const chunkSize = 100;
+    for (let i = 0; i < allToDeleteIds.length; i += chunkSize) {
+      const chunk = allToDeleteIds.slice(i, i + chunkSize);
+      const { error: delErr } = await supabase
+        .from('manual_therapy_patient_logs')
+        .delete()
+        .in('id', chunk);
+      if (delErr) {
+        console.error('Failed to bulk delete chunk:', delErr);
+      }
+    }
+  }
+
+  if (allRowsToUpsert.length > 0) {
+    const chunkSize = 100;
+    for (let i = 0; i < allRowsToUpsert.length; i += chunkSize) {
+      const chunk = allRowsToUpsert.slice(i, i + chunkSize);
+      const { error: upsertError } = await supabase
+        .from('manual_therapy_patient_logs')
+        .upsert(chunk, { onConflict: 'scheduler_cell_key' });
+
+      if (upsertError) {
+        console.warn('Bulk upsert failed, retrying with fallback...', upsertError);
+        if (!isMissingSchedulerCellKeyError(upsertError)) throw upsertError;
+
+        // Fallback: scheduler_cell_key 컬럼이 유실되었거나 없는 구버전 스키마 대응
+        const fallbackRows = chunk.map(omitSchedulerCellKey);
+        const uniqueDates = Array.from(new Set(chunk.map(r => r.date)));
+        
+        for (const uDate of uniqueDates) {
+          await supabase
+            .from('manual_therapy_patient_logs')
+            .delete()
+            .eq('date', uDate)
+            .neq('source', 'manual');
+        }
+
+        const { error: insErr } = await supabase
+          .from('manual_therapy_patient_logs')
+          .insert(fallbackRows);
+        if (insErr) {
+          console.error('Fallback insert failed:', insErr);
+        }
+      }
+    }
+  }
+
+  // 6단계: 동기화를 오늘까지만 진행한 경우, 월말까지의 잔여 미래 데이터를 청소합니다.
   if (upToToday && year === today.getFullYear() && month === today.getMonth() + 1) {
     const todayDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    const endOfMonthStr = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
     
     try {
       const { error } = await supabase
@@ -387,6 +576,11 @@ export async function syncMonthManualTherapyScheduleToStats({ year, month, memos
     } catch (e) {
       console.error(e);
     }
+  }
+
+  // 7단계: 모든 벌크 연산 완료 후 이벤트를 단 1회 발생시켜 전역 상태를 업데이트합니다.
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('clinic-stats-updated'));
   }
 
   return { totalInserted, totalDeleted, totalUpdated, totalUpdates: totalInserted + totalDeleted + totalUpdated };

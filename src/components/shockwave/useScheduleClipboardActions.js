@@ -8,7 +8,7 @@ import {
   stripReservationTimeFromMergeSpan,
   parseSchedulerPatientIdentity,
 } from '../../lib/schedulerUtils';
-import { markIntentionalClearPayload } from '../../lib/scheduleMergeUtils';
+import { markIntentionalClearPayload, getExpandedMergeKeys, buildScheduleCellPayload } from '../../lib/scheduleMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 
 export default function useScheduleClipboardActions({
@@ -369,21 +369,15 @@ export default function useScheduleClipboardActions({
       setClipboardSource(null);
     }
 
-    const oldMemoSnapshots = new Map();
-    const rememberOldMemo = (w, d, r, c) => {
-      const key = cellKey(w, d, r, c);
-      if (!oldMemoSnapshots.has(key)) {
-        oldMemoSnapshots.set(key, buildMemoSnapshot(w, d, r, c));
-      }
-    };
     const targetRowCount = clip.rowCount;
     const targetColCountInRange = clip.colCount;
+    const targetKeys = [];
     for (let ro = 0; ro < targetRowCount; ro++) {
       for (let co = 0; co < targetColCountInRange; co++) {
         const tr = targetCell.r + ro;
         const tc = targetCell.c + co;
         if (tr >= baseTimeSlotsLength || tc >= colCount) continue;
-        rememberOldMemo(targetCell.w, targetCell.d, tr, tc);
+        targetKeys.push(cellKey(targetCell.w, targetCell.d, tr, tc));
       }
     }
 
@@ -392,6 +386,23 @@ export default function useScheduleClipboardActions({
       setContextMenu(null);
       return;
     }
+
+    // 붙여넣기 영역이 침범하거나 관계가 깨지는 모든 병합 관련 셀 키 목록 수집
+    const affectedKeys = Array.from(getExpandedMergeKeys(targetKeys, memos, cellKey));
+
+    const oldMemoSnapshots = new Map();
+    const rememberOldMemo = (w, d, r, c) => {
+      const key = cellKey(w, d, r, c);
+      if (!oldMemoSnapshots.has(key)) {
+        oldMemoSnapshots.set(key, buildMemoSnapshot(w, d, r, c));
+      }
+    };
+
+    // 침범당하는 병합 셀 전체에 대해 Undo용 스냅샷 확보
+    affectedKeys.forEach((key) => {
+      const [w, d, r, c] = key.split('-').map(Number);
+      rememberOldMemo(w, d, r, c);
+    });
 
     // 붙여넣을 타겟들의 고유 환자 수집 및 히스토리 일괄 프리로드
     const charts = [];
@@ -416,10 +427,10 @@ export default function useScheduleClipboardActions({
       try {
         const orConditions = [];
         if (uniqueCharts.length > 0) {
-          orConditions.push(`chart_number.in.(${uniqueCharts.map((c) => `"${c}"`).join(',')})`);
+          orConditions.push(`chart_number.in.(${uniqueCharts.map((c) => c.trim()).join(',')})`);
         }
         if (uniqueNames.length > 0) {
-          orConditions.push(`patient_name.in.(${uniqueNames.map((n) => `"${n}"`).join(',')})`);
+          orConditions.push(`patient_name.in.(${uniqueNames.map((n) => n.trim()).join(',')})`);
         }
         const orFilter = orConditions.join(',');
 
@@ -439,8 +450,8 @@ export default function useScheduleClipboardActions({
           .select('id, year, month, week_index, day_index, content, prescription, body_part, merge_span')
           .neq('content', '');
         const scheduleOrConditions = [];
-        uniqueCharts.forEach((c) => scheduleOrConditions.push(`content.ilike.%${c}%`));
-        uniqueNames.forEach((n) => scheduleOrConditions.push(`content.ilike.%${n}%`));
+        uniqueCharts.forEach((c) => scheduleOrConditions.push(`content.ilike.*${c}*`));
+        uniqueNames.forEach((n) => scheduleOrConditions.push(`content.ilike.*${n}*`));
         if (scheduleOrConditions.length > 0) {
           scheduleQuery = scheduleQuery.or(scheduleOrConditions.join(','));
         }
@@ -525,6 +536,25 @@ export default function useScheduleClipboardActions({
 
     const combinedPayload = new Map();
 
+    // 1. 기존 병합을 안전하게 unmerge 해제하는 초기 페이로드를 기본값으로 구성
+    affectedKeys.forEach((k) => {
+      const memo = memos[k];
+      combinedPayload.set(k, markIntentionalClearPayload(buildScheduleCellPayload({
+        key: k,
+        currentYear,
+        currentMonth,
+        memo,
+        overrides: {
+          content: '',
+          bg_color: null,
+          merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+          prescription: '',
+          body_part: '',
+        },
+      })));
+    });
+
+    // 2. 잘라내기(cut) 처리 반영
     if (clip.mode === 'cut' && currentClipboardSource?.keys) {
       Array.from(currentClipboardSource.keys).forEach((k) => {
         const [w, d, r, c] = k.split('-').map(Number);
@@ -545,6 +575,7 @@ export default function useScheduleClipboardActions({
       });
     }
 
+    // 3. 붙여넣기 데이터 덮어쓰기
     enhancedPayload.forEach((item) => {
       combinedPayload.set(
         `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`,
@@ -552,7 +583,7 @@ export default function useScheduleClipboardActions({
       );
     });
 
-    // 도수치료 자동 병합 페이로드를 최종 업서트 맵에 반영
+    // 4. 도수치료 자동 병합 페이로드를 최종 업서트 맵에 반영
     autoMergedPayloads.forEach((p, key) => {
       combinedPayload.set(key, {
         ...(combinedPayload.get(key) || {}),
