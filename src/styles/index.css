@@ -606,8 +606,6 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     border-spacing: 0 !important;
     border: 1.2px solid #475569 !important;
     border-radius: 0 !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
   }
 
   body.new-patient-print .sw-new-patient-table th,
