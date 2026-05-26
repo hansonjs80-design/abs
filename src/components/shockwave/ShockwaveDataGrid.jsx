@@ -19,6 +19,42 @@ import {
 } from './shockwaveDataGridUtils';
 import '../../styles/shockwave_stats.css';
 
+function parseFlexibleDate(val, currentYear, currentMonth) {
+  const clean = String(val || '').trim();
+  if (!clean) return '';
+
+  // 1. 이미 YYYY-MM-DD 형식인 경우 그대로 리턴
+  if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
+
+  // 2. YYYY.MM.DD 또는 YYYY/MM/DD 또는 YYYY-MM-DD 대응
+  const fullDateMatch = clean.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})$/);
+  if (fullDateMatch) {
+    return `${fullDateMatch[1]}-${fullDateMatch[2].padStart(2, '0')}-${fullDateMatch[3].padStart(2, '0')}`;
+  }
+
+  // 3. MM.DD 또는 MM/DD 또는 MM-DD 대응
+  const partialDateMatch = clean.match(/^(\d{1,2})[-./](\d{1,2})$/);
+  if (partialDateMatch) {
+    return `${currentYear}-${partialDateMatch[1].padStart(2, '0')}-${partialDateMatch[2].padStart(2, '0')}`;
+  }
+
+  // 4. MMDD 또는 YYYYMMDD 대응 (구분자 없는 경우)
+  if (/^\d{8}$/.test(clean)) {
+    return `${clean.substring(0, 4)}-${clean.substring(4, 6)}-${clean.substring(6, 8)}`;
+  }
+  if (/^\d{4}$/.test(clean)) {
+    return `${currentYear}-${clean.substring(0, 2)}-${clean.substring(2, 4)}`;
+  }
+
+  // 5. 1~2자리 숫자만 있는 경우 (일(Day) 정보로 간주)
+  if (/^\d{1,2}$/.test(clean)) {
+    return `${currentYear}-${String(currentMonth).padStart(2, '0')}-${clean.padStart(2, '0')}`;
+  }
+
+  // 기본값으로 원본 반환
+  return clean;
+}
+
 export default function ShockwaveDataGrid({
   logs,
   therapists,
@@ -96,6 +132,7 @@ export default function ShockwaveDataGrid({
   const rowOrderRef = useRef(new Map());
   const editSaveRequestRef = useRef(0);
   const bulkMutationRequestRef = useRef(0);
+  const isComposingRef = useRef(false);
 
   // ─── 1. DATA PREPARATION ─────────────────────────────────
   const gridData = useMemo(() => {
@@ -519,10 +556,7 @@ export default function ShockwaveDataGrid({
       const field = FIXED_FIELDS[c].field;
       let v = val;
       if (field === 'date' && v.trim()) {
-        const tv = v.trim();
-        if (tv.length === 5 && tv.includes('/')) v = `${currentYear}-${tv.replace('/', '-')}`;
-        else if (tv.length === 4 && !tv.includes('-')) v = `${currentYear}-${tv.substring(0,2)}-${tv.substring(2,4)}`;
-        else if (/^\d{1,2}$/.test(tv)) v = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${tv.padStart(2,'0')}`;
+        v = parseFlexibleDate(v, currentYear, currentMonth);
       }
 
       let updatePayload = { [field]: v };
@@ -800,21 +834,17 @@ export default function ShockwaveDataGrid({
           undoChanges.push({ id: row.id, field, oldVal, newVal: v });
           if (row.isDraft) {
             if (v) {
-              const ins = { date: `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`, patient_name: '', chart_number: '', visit_count: '', body_part: '', therapist_name: '', prescription: '', prescription_count: '' };
+              const parsedDate = field === 'date' ? parseFlexibleDate(v, currentYear, currentMonth) : `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`;
+              const ins = { date: parsedDate, patient_name: '', chart_number: '', visit_count: '', body_part: '', therapist_name: '', prescription: '', prescription_count: '' };
               ins[field] = v;
               bulkInserts.push(ins);
               if (ins.date) affectedDates.add(ins.date);
             }
           } else {
-            bulkUpdates.push({ id: row.id, data: { [field]: v } });
+            const nextVal = field === 'date' ? parseFlexibleDate(v, currentYear, currentMonth) : v;
+            bulkUpdates.push({ id: row.id, data: { [field]: nextVal } });
             if (field === 'date') {
-               let nextDate = v;
-               const tv = v.trim();
-               if (tv.length === 5 && tv.includes('/')) nextDate = `${currentYear}-${tv.replace('/', '-')}`;
-               else if (tv.length === 4 && !tv.includes('-')) nextDate = `${currentYear}-${tv.substring(0,2)}-${tv.substring(2,4)}`;
-               else if (/^\d{1,2}$/.test(tv)) nextDate = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${tv.padStart(2,'0')}`;
-               affectedDates.add(nextDate);
-               bulkUpdates[bulkUpdates.length-1].data.date = nextDate;
+               affectedDates.add(nextVal);
             }
           }
         } else {
@@ -1011,6 +1041,9 @@ export default function ShockwaveDataGrid({
       if (editing) {
         if (e.key === 'Escape') { setEditing(null); return; }
         if (e.key === 'Enter') {
+          if (e.isComposing || isComposingRef.current) {
+            return;
+          }
           e.preventDefault();
           finishEdit().then(() => {
             const nr = Math.min(editing.r + 1, gridData.length - 1);
@@ -1376,6 +1409,12 @@ export default function ShockwaveDataGrid({
                             pointerEvents: 'none',
                           }}
                           value={isEdit ? editing.val : ''} 
+                          onCompositionStart={() => {
+                            isComposingRef.current = true;
+                          }}
+                          onCompositionEnd={() => {
+                            isComposingRef.current = false;
+                          }}
                           onInput={(e) => {
                             if (!isEdit) {
                               updateEditingValue(ri, ci, e.target.value, false);
