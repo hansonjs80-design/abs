@@ -1,12 +1,15 @@
 import { useCallback } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 import { incrementSessionCount } from '../../lib/memoParser';
 import {
   buildMergeSpanWithVisitCopyLink,
   clearVisitCopyLinkFromMergeSpan,
   cloneMergeSpanWithMeta,
   stripReservationTimeFromMergeSpan,
+  parseSchedulerPatientIdentity,
 } from '../../lib/schedulerUtils';
 import { markIntentionalClearPayload } from '../../lib/scheduleMergeUtils';
+import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 
 export default function useScheduleClipboardActions({
   selectedCell,
@@ -123,6 +126,7 @@ export default function useScheduleClipboardActions({
         bg_color: null,
         merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
         prescription: '',
+        body_part: '',
       }))
     );
 
@@ -389,15 +393,87 @@ export default function useScheduleClipboardActions({
       return;
     }
 
+    // 붙여넣을 타겟들의 고유 환자 수집 및 히스토리 일괄 프리로드
+    const charts = [];
+    const names = [];
+    targetPayload.forEach((item) => {
+      if (!item.content) return;
+      const parsed = parseSchedulerPatientIdentity(item.content);
+      if (parsed?.patientChart) {
+        charts.push(parsed.patientChart);
+      } else if (parsed?.patientName) {
+        names.push(parsed.patientName);
+      } else {
+        names.push(item.content);
+      }
+    });
+
+    const uniqueCharts = Array.from(new Set(charts)).filter(Boolean);
+    const uniqueNames = Array.from(new Set(names)).filter(Boolean);
+
+    let preloadedData = null;
+    if (uniqueCharts.length > 0 || uniqueNames.length > 0) {
+      try {
+        const orConditions = [];
+        if (uniqueCharts.length > 0) {
+          orConditions.push(`chart_number.in.(${uniqueCharts.map((c) => `"${c}"`).join(',')})`);
+        }
+        if (uniqueNames.length > 0) {
+          orConditions.push(`patient_name.in.(${uniqueNames.map((n) => `"${n}"`).join(',')})`);
+        }
+        const orFilter = orConditions.join(',');
+
+        let shockwaveQuery = supabase.from('shockwave_patient_logs')
+          .select('patient_name, chart_number, visit_count, date, prescription, body_part');
+        let manualQuery = supabase.from('manual_therapy_patient_logs')
+          .select('patient_name, chart_number, visit_count, date, prescription, body_part');
+
+        if (orFilter) {
+          shockwaveQuery = shockwaveQuery.or(orFilter);
+          manualQuery = manualQuery.or(orFilter);
+        }
+        shockwaveQuery = shockwaveQuery.order('date', { ascending: false }).limit(500);
+        manualQuery = manualQuery.order('date', { ascending: false }).limit(500);
+
+        let scheduleQuery = supabase.from('shockwave_schedules')
+          .select('id, year, month, week_index, day_index, content, prescription, body_part, merge_span')
+          .neq('content', '');
+        const scheduleOrConditions = [];
+        uniqueCharts.forEach((c) => scheduleOrConditions.push(`content.ilike.%${c}%`));
+        uniqueNames.forEach((n) => scheduleOrConditions.push(`content.ilike.%${n}%`));
+        if (scheduleOrConditions.length > 0) {
+          scheduleQuery = scheduleQuery.or(scheduleOrConditions.join(','));
+        }
+        scheduleQuery = scheduleQuery.order('year', { ascending: false }).order('month', { ascending: false }).limit(1000);
+
+        const [shockwaveRes, manualRes, scheduleRes] = await Promise.all([
+          shockwaveQuery,
+          manualQuery,
+          scheduleQuery,
+        ]);
+
+        preloadedData = {
+          shockwaveLogs: shockwaveRes.data || [],
+          manualLogs: manualRes.data || [],
+          scheduleSchedules: scheduleRes.data || [],
+        };
+      } catch (err) {
+        console.error('Failed to prefetch patient history for paste:', err);
+      }
+    }
+
     const enhancedPayload = await Promise.all(targetPayload.map(async (item) => {
-      if (item.content && !item.prescription && !item.body_part) {
+      if (item.content && (!item.prescription || !item.body_part)) {
         const result = await buildSchedulerAutoText(
           item.week_index,
           item.day_index,
           item.row_index,
           item.col_index,
           item.content,
-          true
+          true,
+          undefined,
+          true,
+          preloadedData
         );
         return {
           ...item,
@@ -409,6 +485,43 @@ export default function useScheduleClipboardActions({
       }
       return item;
     }));
+
+    // 붙여넣기 결과를 가상 맵에 빌드하여 도수치료 연쇄 자동 병합의 입력 소스로 사용
+    const activeMemos = { ...memos };
+    enhancedPayload.forEach((item) => {
+      const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+      activeMemos[key] = item;
+    });
+
+    const autoMergedPayloads = new Map();
+    for (const item of enhancedPayload) {
+      const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+
+      const manualTherapyMerge = buildManualTherapyAutoMergePayload({
+        key,
+        memos: activeMemos,
+        pendingMergeSpans: {},
+        currentYear,
+        currentMonth,
+        rowCount: baseTimeSlotsLength,
+        content: item.content || '',
+        bgColor: item.bg_color || null,
+        prescription: item.prescription || '',
+        bodyPart: item.body_part || null,
+        mergeSpan: item.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+      });
+
+      if (manualTherapyMerge.ok && manualTherapyMerge.payload?.length > 0) {
+        manualTherapyMerge.payload.forEach((p) => {
+          const pKey = `${p.week_index}-${p.day_index}-${p.row_index}-${p.col_index}`;
+          activeMemos[pKey] = {
+            ...activeMemos[pKey],
+            ...p,
+          };
+          autoMergedPayloads.set(pKey, p);
+        });
+      }
+    }
 
     const combinedPayload = new Map();
 
@@ -439,8 +552,30 @@ export default function useScheduleClipboardActions({
       );
     });
 
+    // 도수치료 자동 병합 페이로드를 최종 업서트 맵에 반영
+    autoMergedPayloads.forEach((p, key) => {
+      combinedPayload.set(key, {
+        ...(combinedPayload.get(key) || {}),
+        ...p,
+      });
+    });
+
     const payload = Array.from(combinedPayload.values());
-    const oldMemos = Array.from(oldMemoSnapshots.values());
+
+    // 자동 병합으로 인해 변경될 하위 셀들도 recordUndo 스냅샷에 포함시켜 롤백 가능하게 보호
+    const oldMemos = [];
+    const addedUndoKeys = new Set();
+    const addOldMemo = (w, d, r, c) => {
+      const key = cellKey(w, d, r, c);
+      if (addedUndoKeys.has(key)) return;
+      addedUndoKeys.add(key);
+      oldMemos.push(buildMemoSnapshot(w, d, r, c));
+    };
+
+    payload.forEach((p) => {
+      addOldMemo(p.week_index, p.day_index, p.row_index, p.col_index);
+    });
+
     recordUndo({ type: 'bulk-edit', oldMemos });
     applyImmediateCellDisplay(payload);
     applyImmediateMergeSpan(payload);

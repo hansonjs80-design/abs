@@ -276,14 +276,20 @@ export default function useSchedulerAutoText({
       });
   }, [memos, parseSchedulerPatientText, weeks]);
 
-  const buildSchedulerAutoText = useCallback(async (w, d, r, c, nextValue, forceOverrideSession = false, originalContent = undefined) => {
-    const rawName = normalizeSchedulerVisitSuffix(nextValue);
+  const buildSchedulerAutoText = useCallback(async (
+    w, d, r, c, nextValue,
+    forceOverrideSession = false,
+    originalContent = undefined,
+    skipDialog = false,
+    preloadedData = null
+  ) => {
+    let rawName = normalizeSchedulerVisitSuffix(nextValue);
     if (!shouldAutoFormatSchedulerName(rawName)) return { text: rawName };
 
+    let initialPrescription = undefined;
     if (has4060Pattern(rawName)) {
-      const normalizedManualText = normalize4060StarOrder(rawName);
-      const autoDosePrescription = get4060PrescriptionFromContent(normalizedManualText) || undefined;
-      return { text: normalizedManualText, prescription: autoDosePrescription };
+      rawName = normalize4060StarOrder(rawName);
+      initialPrescription = get4060PrescriptionFromContent(rawName) || undefined;
     }
 
     let manualSession = null;
@@ -320,63 +326,38 @@ export default function useSchedulerAutoText({
       .filter((option) => !userRemovedDoseTag || !has4060Pattern(option.nextText));
     const applySchedulerOption = async () => {
       if (schedulerOptions.length === 0) return null;
-      const selected = schedulerOptions.length === 1
+      const selected = (schedulerOptions.length === 1 || skipDialog)
         ? schedulerOptions[0]
         : await pickChartOption(schedulerOptions, rawName);
       if (!selected) return { text: rawName };
 
       const inputHas4060 = has4060Pattern(rawName);
+      const baseMerge = searchChart ? (selected.mergeSpan || clearPatientMergeSpan()) : selected.mergeSpan;
+      const finalMergeSpan = buildMergeSpanWithBodyPartOptions(baseMerge, selected.bodyParts);
+
       if (inputHas4060 && !has4060Pattern(selected.nextText)) {
         return {
           text: rawName,
-          prescription: undefined,
+          prescription: initialPrescription || undefined,
           bodyPart: searchChart ? (selected.latestBodyPart || '') : (selected.latestBodyPart || undefined),
-          mergeSpan: searchChart ? (selected.mergeSpan || clearPatientMergeSpan()) : selected.mergeSpan,
+          mergeSpan: finalMergeSpan,
         };
       }
 
-      const autoPrescription = has4060Pattern(selected.nextText)
-        ? undefined
-        : (searchChart ? (selected.prescription || '') : (selected.prescription || undefined));
+      const autoPrescription = initialPrescription !== undefined
+        ? initialPrescription
+        : (has4060Pattern(selected.nextText)
+          ? undefined
+          : (searchChart ? (selected.prescription || '') : (selected.prescription || undefined)));
 
       return {
         text: (explicitVisitSuffix || explicitNoteSuffix) ? rawName : selected.nextText,
         prescription: autoPrescription,
         bodyPart: searchChart ? (selected.latestBodyPart || '') : (selected.latestBodyPart || undefined),
-        mergeSpan: searchChart ? (selected.mergeSpan || clearPatientMergeSpan()) : selected.mergeSpan,
+        mergeSpan: finalMergeSpan,
       };
     };
 
-    const shockwaveQuery = supabase.from('shockwave_patient_logs')
-      .select('patient_name, chart_number, visit_count, date, prescription, body_part')
-      .lte('date', targetDate)
-      .order('date', { ascending: false })
-      .limit(500);
-
-    const manualQuery = supabase.from('manual_therapy_patient_logs')
-      .select('patient_name, chart_number, visit_count, date, prescription, body_part')
-      .lte('date', targetDate)
-      .order('date', { ascending: false })
-      .limit(500);
-
-    const scheduleQuery = supabase.from('shockwave_schedules')
-      .select('id, year, month, week_index, day_index, content, prescription, body_part, merge_span')
-      .neq('content', '')
-      .order('year', { ascending: false })
-      .order('month', { ascending: false })
-      .limit(1000);
-
-    if (searchChart) {
-      shockwaveQuery.eq('chart_number', searchChart);
-      manualQuery.eq('chart_number', searchChart);
-      scheduleQuery.ilike('content', `%${searchChart}%`);
-    } else if (searchName) {
-      shockwaveQuery.ilike('patient_name', `%${searchName}%`);
-      manualQuery.ilike('patient_name', `%${searchName}%`);
-      scheduleQuery.ilike('content', `%${searchName}%`);
-    }
-
-    const [shockwaveRes, manualRes, scheduleRes] = await Promise.all([shockwaveQuery, manualQuery, scheduleQuery]);
     const manualPrescriptionSet = new Set(
       (Array.isArray(settings?.manual_therapy_prescriptions) ? settings.manual_therapy_prescriptions : [])
         .map((prescription) => String(prescription || '').trim())
@@ -390,55 +371,151 @@ export default function useSchedulerAutoText({
       return has4060Pattern(content) || has4060Pattern(patientName);
     };
 
-    const normalizedShockwaveData = (shockwaveRes.data || []).map((item) => ({
-      ...item,
-      type: isManualTherapyRecord(item) ? 'manual' : 'shockwave',
-    }));
-    const allData = userRemovedDoseTag
-      ? normalizedShockwaveData.filter((item) => item.type === 'shockwave')
-      : [
-          ...normalizedShockwaveData,
-          ...(manualRes.data || []).map((item) => ({ ...item, type: 'manual' })),
-        ];
+    let allData = [];
+    if (preloadedData) {
+      const filteredShockwave = (preloadedData.shockwaveLogs || []).filter((item) => {
+        const matchesChart = searchChart && String(item.chart_number || '').trim() === searchChart;
+        const matchesName = searchName && normalizeNameForMatch(item.patient_name) === searchName;
+        return searchChart ? matchesChart : matchesName;
+      }).map((item) => ({
+        ...item,
+        type: isManualTherapyRecord(item) ? 'manual' : 'shockwave',
+      }));
 
-    if (!userRemovedDoseTag) {
-      const scheduleData = scheduleRes.data || [];
-      const seenLogDates = new Set(allData.map((item) => item.date));
+      const filteredManual = (preloadedData.manualLogs || []).filter((item) => {
+        const matchesChart = searchChart && String(item.chart_number || '').trim() === searchChart;
+        const matchesName = searchName && normalizeNameForMatch(item.patient_name) === searchName;
+        return searchChart ? matchesChart : matchesName;
+      }).map((item) => ({ ...item, type: 'manual' }));
 
-      for (const s of scheduleData) {
-        try {
-          const calWeeks = generateShockwaveCalendar(s.year, s.month);
-          const dayInfo = calWeeks[s.week_index]?.[s.day_index];
-          if (!dayInfo) continue;
-          const dd = dayInfo.date;
-          const dateStr = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`;
+      allData = userRemovedDoseTag
+        ? filteredShockwave.filter((item) => item.type === 'shockwave')
+        : [...filteredShockwave, ...filteredManual];
 
-          if (dateStr > targetDate) continue;
-          if (seenLogDates.has(dateStr)) continue;
-
+      if (!userRemovedDoseTag) {
+        const filteredSchedules = (preloadedData.scheduleSchedules || []).filter((s) => {
           const content = s.content || '';
           const parsed = parseSchedulerPatientIdentity(content);
           const matchChart = searchChart && String(parsed.patientChart || '').trim() === searchChart;
           const matchName = searchName && normalizeNameForMatch(parsed.patientName).includes(searchName);
-          if (searchChart && !matchChart) continue;
-          if (!searchChart && !matchName) continue;
+          return searchChart ? matchChart : matchName;
+        });
 
-          const visitSuffix = getExplicitVisitSuffix(content);
-          const visitCount = visitSuffix.replace(/[()]/g, '') || '';
+        const seenLogDates = new Set(allData.map((item) => item.date));
+        for (const s of filteredSchedules) {
+          try {
+            const calWeeks = generateShockwaveCalendar(s.year, s.month);
+            const dayInfo = calWeeks[s.week_index]?.[s.day_index];
+            if (!dayInfo) continue;
+            const dd = dayInfo.date;
+            const dateStr = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`;
 
-          allData.push({
-            date: dateStr,
-            patient_name: parsed.patientName || '',
-            chart_number: parsed.patientChart || '',
-            visit_count: visitCount,
-            prescription: s.prescription || '',
-            body_part: s.body_part || '',
-            merge_span: s.merge_span || undefined,
-            type: isManualTherapyRecord({ prescription: s.prescription, patient_name: parsed.patientName }, content) ? 'manual' : 'shockwave',
-          });
-          seenLogDates.add(dateStr);
-        } catch {
-          // Ignore malformed schedule rows.
+            if (dateStr > targetDate) continue;
+            if (seenLogDates.has(dateStr)) continue;
+
+            const content = s.content || '';
+            const parsed = parseSchedulerPatientIdentity(content);
+            const visitSuffix = getExplicitVisitSuffix(content);
+            const visitCount = visitSuffix.replace(/[()]/g, '') || '';
+
+            allData.push({
+              date: dateStr,
+              patient_name: parsed.patientName || '',
+              chart_number: parsed.patientChart || '',
+              visit_count: visitCount,
+              prescription: s.prescription || '',
+              body_part: s.body_part || '',
+              merge_span: s.merge_span || undefined,
+              type: isManualTherapyRecord({ prescription: s.prescription, patient_name: parsed.patientName }, content) ? 'manual' : 'shockwave',
+            });
+            seenLogDates.add(dateStr);
+          } catch {
+            // Ignore malformed schedule rows.
+          }
+        }
+      }
+    } else {
+      const shockwaveQuery = supabase.from('shockwave_patient_logs')
+        .select('patient_name, chart_number, visit_count, date, prescription, body_part')
+        .lte('date', targetDate)
+        .order('date', { ascending: false })
+        .limit(500);
+
+      const manualQuery = supabase.from('manual_therapy_patient_logs')
+        .select('patient_name, chart_number, visit_count, date, prescription, body_part')
+        .lte('date', targetDate)
+        .order('date', { ascending: false })
+        .limit(500);
+
+      const scheduleQuery = supabase.from('shockwave_schedules')
+        .select('id, year, month, week_index, day_index, content, prescription, body_part, merge_span')
+        .neq('content', '')
+        .order('year', { ascending: false })
+        .order('month', { ascending: false })
+        .limit(1000);
+
+      if (searchChart) {
+        shockwaveQuery.eq('chart_number', searchChart);
+        manualQuery.eq('chart_number', searchChart);
+        scheduleQuery.ilike('content', `%${searchChart}%`);
+      } else if (searchName) {
+        shockwaveQuery.ilike('patient_name', `%${searchName}%`);
+        manualQuery.ilike('patient_name', `%${searchName}%`);
+        scheduleQuery.ilike('content', `%${searchName}%`);
+      }
+
+      const [shockwaveRes, manualRes, scheduleRes] = await Promise.all([shockwaveQuery, manualQuery, scheduleQuery]);
+
+      const normalizedShockwaveData = (shockwaveRes.data || []).map((item) => ({
+        ...item,
+        type: isManualTherapyRecord(item) ? 'manual' : 'shockwave',
+      }));
+      allData = userRemovedDoseTag
+        ? normalizedShockwaveData.filter((item) => item.type === 'shockwave')
+        : [
+            ...normalizedShockwaveData,
+            ...(manualRes.data || []).map((item) => ({ ...item, type: 'manual' })),
+          ];
+
+      if (!userRemovedDoseTag) {
+        const scheduleData = scheduleRes.data || [];
+        const seenLogDates = new Set(allData.map((item) => item.date));
+
+        for (const s of scheduleData) {
+          try {
+            const calWeeks = generateShockwaveCalendar(s.year, s.month);
+            const dayInfo = calWeeks[s.week_index]?.[s.day_index];
+            if (!dayInfo) continue;
+            const dd = dayInfo.date;
+            const dateStr = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`;
+
+            if (dateStr > targetDate) continue;
+            if (seenLogDates.has(dateStr)) continue;
+
+            const content = s.content || '';
+            const parsed = parseSchedulerPatientIdentity(content);
+            const matchChart = searchChart && String(parsed.patientChart || '').trim() === searchChart;
+            const matchName = searchName && normalizeNameForMatch(parsed.patientName).includes(searchName);
+            if (searchChart && !matchChart) continue;
+            if (!searchChart && !matchName) continue;
+
+            const visitSuffix = getExplicitVisitSuffix(content);
+            const visitCount = visitSuffix.replace(/[()]/g, '') || '';
+
+            allData.push({
+              date: dateStr,
+              patient_name: parsed.patientName || '',
+              chart_number: parsed.patientChart || '',
+              visit_count: visitCount,
+              prescription: s.prescription || '',
+              body_part: s.body_part || '',
+              merge_span: s.merge_span || undefined,
+              type: isManualTherapyRecord({ prescription: s.prescription, patient_name: parsed.patientName }, content) ? 'manual' : 'shockwave',
+            });
+            seenLogDates.add(dateStr);
+          } catch {
+            // Ignore malformed schedule rows.
+          }
         }
       }
     }
@@ -457,7 +534,7 @@ export default function useSchedulerAutoText({
       if (searchChart) {
         return {
           text: rawName,
-          prescription: '',
+          prescription: initialPrescription || '',
           bodyPart: '',
           mergeSpan: clearPatientMergeSpan(),
         };
@@ -466,11 +543,11 @@ export default function useSchedulerAutoText({
       return userRemovedDoseTag
         ? {
             text: rawName,
-            prescription: '',
+            prescription: initialPrescription || '',
             bodyPart: '',
             mergeSpan: clearPatientMergeSpan(),
           }
-        : { text: rawName };
+        : { text: rawName, prescription: initialPrescription };
     }
 
     matches.sort((a, b) => {
@@ -627,7 +704,7 @@ export default function useSchedulerAutoText({
 
     if (options.length === 0) return { text: rawName };
 
-    const selected = options.length === 1
+    const selected = (options.length === 1 || skipDialog)
       ? options[0]
       : await pickChartOption(options, rawName);
     if (!selected) return { text: rawName };
@@ -654,9 +731,11 @@ export default function useSchedulerAutoText({
     autoText += explicitVisitSuffix || explicitNoteSuffix || `(${effectiveVisitCount})`;
     autoText = normalize4060StarOrder(autoText);
 
-    const autoPrescription = userRemovedDoseTag
-      ? (selected.prescription || '')
-      : (has4060Pattern(autoText) ? undefined : (shouldOverwriteContent ? (selected.prescription || '') : (selected.prescription || undefined)));
+    const autoPrescription = initialPrescription !== undefined
+      ? initialPrescription
+      : (userRemovedDoseTag
+        ? (selected.prescription || '')
+        : (has4060Pattern(autoText) ? undefined : (shouldOverwriteContent ? (selected.prescription || '') : (selected.prescription || undefined))));
     const inheritedMergeSpan = findLatestSchedulerMemoMeta(
       { w, d, r, c },
       selected.chartNumber,
@@ -665,6 +744,17 @@ export default function useSchedulerAutoText({
     );
     const needsDialog = (selected.bodyParts.length >= 2 && !selected.preferredBodyPart) || selected.prescriptions.length >= 2;
     if (needsDialog) {
+      if (skipDialog) {
+        const defaultBodyPart = selected.preferredBodyPart || selected.bodyParts[0] || selected.latestBodyPart || '';
+        const defaultPrescription = autoPrescription || selected.prescription || selected.prescriptions[0] || '';
+        const baseMerge = buildMergeSpanWithMemoList(inheritedMergeSpan, getMemoListFromMergeSpan(inheritedMergeSpan));
+        return {
+          text: normalizeSchedulerVisitSuffix(`${selected.chartNumber}/${selected.namePart}${explicitVisitSuffix || explicitNoteSuffix || `(${effectiveVisitCount})`}`),
+          prescription: defaultPrescription,
+          bodyPart: searchChart ? (defaultBodyPart || '') : defaultBodyPart,
+          mergeSpan: buildMergeSpanWithBodyPartOptions(baseMerge, selected.bodyParts),
+        };
+      }
       try {
         const dialogResult = await showAutoFillDialog({
           chartNumber: selected.chartNumber,
@@ -695,11 +785,14 @@ export default function useSchedulerAutoText({
       }
     }
 
+    const baseMerge = searchChart ? (selected.mergeSpan || clearPatientMergeSpan()) : selected.mergeSpan;
+    const finalMergeSpan = buildMergeSpanWithBodyPartOptions(baseMerge, selected.bodyParts);
+
     return {
       text: autoText,
       prescription: autoPrescription,
       bodyPart: effectiveBodyPart,
-      mergeSpan: searchChart ? (selected.mergeSpan || clearPatientMergeSpan()) : selected.mergeSpan,
+      mergeSpan: finalMergeSpan,
     };
   }, [
     memos,

@@ -5,6 +5,7 @@ import { normalizeNameForMatch } from '../../lib/memoParser';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 import { getTodayKST } from '../../lib/calendarUtils';
 import { useSchedule } from '../../contexts/ScheduleContext';
+import { useToast } from '../common/Toast';
 import {
   FIXED_FIELDS,
   SUMMARY_COL_WIDTH,
@@ -35,6 +36,7 @@ export default function ShockwaveDataGrid({
   onSelectedTherapistNamesChange,
   readOnly = false,
 }) {
+  const { addToast } = useToast();
   const { shockwaveSettings: settings } = useSchedule();
   const safeInputLogs = useMemo(
     () => (Array.isArray(logs) ? logs.filter(Boolean) : []),
@@ -735,23 +737,26 @@ export default function ShockwaveDataGrid({
         if (error) throw error;
         if (date) await runSyncForDate(date);
       } else if (action.type === 'bulk') {
-        const chunkSize = 50;
-        for (let i = 0; i < action.changes.length; i += chunkSize) {
-          const chunk = action.changes.slice(i, i + chunkSize);
-          const results = await Promise.all(chunk.map(c => {
-            if (c.field === 'prescription_stats') {
-               return supabase.from(tableName).update({
-                 therapist_name: c.oldVal.t,
-                 prescription: c.oldVal.p,
-                 prescription_count: c.oldVal.c
-             }).eq('id', c.id);
-            } else {
-               return supabase.from(tableName).update({ [c.field]: c.oldVal }).eq('id', c.id);
-            }
-          }));
-          const failed = results.find((result) => result?.error);
-          if (failed?.error) throw failed.error;
+        const upsertPayloadMap = new Map();
+
+        action.changes.forEach(c => {
+          const existing = upsertPayloadMap.get(c.id) || { id: c.id };
+          if (c.field === 'prescription_stats') {
+            existing.therapist_name = c.oldVal.t;
+            existing.prescription = c.oldVal.p;
+            existing.prescription_count = c.oldVal.c;
+          } else {
+            existing[c.field] = c.oldVal;
+          }
+          upsertPayloadMap.set(c.id, existing);
+        });
+
+        const upsertPayloads = Array.from(upsertPayloadMap.values());
+        if (upsertPayloads.length > 0) {
+          const { error } = await supabase.from(tableName).upsert(upsertPayloads);
+          if (error) throw error;
         }
+
         for (const d of action.affectedDates) {
           if (d) await runSyncForDate(d);
         }
@@ -761,6 +766,7 @@ export default function ShockwaveDataGrid({
       }
     } catch (error) {
       console.error('Failed to undo stats grid change:', error);
+      addToast('실행 취소(Undo) 작업을 적용하지 못했습니다.', 'error');
       if (bulkMutationRequestRef.current === mutationRequestId) {
         await fetchLogs();
       }
@@ -831,8 +837,9 @@ export default function ShockwaveDataGrid({
         const { error } = await supabase.from(tableName).insert(bulkInserts);
         if (error) throw error;
       }
-      for (const update of bulkUpdates) {
-        const { error } = await supabase.from(tableName).update(update.data).eq('id', update.id);
+      if (bulkUpdates.length > 0) {
+        const upsertPayload = bulkUpdates.map(u => ({ id: u.id, ...u.data }));
+        const { error } = await supabase.from(tableName).upsert(upsertPayload);
         if (error) throw error;
       }
 
@@ -854,6 +861,7 @@ export default function ShockwaveDataGrid({
       }
     } catch (error) {
       console.error('Failed to paste stats grid range:', error);
+      addToast('붙여넣기한 데이터를 저장하는 중 일부 혹은 전체가 실패했습니다.', 'error');
       if (bulkMutationRequestRef.current === mutationRequestId) {
         await fetchLogs();
       }
@@ -863,6 +871,9 @@ export default function ShockwaveDataGrid({
   const clearRange = async (range) => {
     const affectedDates = new Set();
     const undoChanges = [];
+    const deleteIds = [];
+    const upsertPayloads = [];
+
     for (let r = range.r1; r <= range.r2; r++) {
       const row = gridData[r];
       if (row.isDraft) continue;
@@ -889,12 +900,29 @@ export default function ShockwaveDataGrid({
       }
       if (Object.keys(updatePayload).length > 0) {
         const nextRow = { ...row, ...updatePayload };
-        const { error } = isRowEmpty(nextRow)
-          ? await supabase.from(tableName).delete().eq('id', row.id)
-          : await supabase.from(tableName).update(updatePayload).eq('id', row.id);
-        if (error) throw error;
+        if (isRowEmpty(nextRow)) {
+          deleteIds.push(row.id);
+        } else {
+          upsertPayloads.push({ id: row.id, ...updatePayload });
+        }
       }
     }
+
+    try {
+      if (deleteIds.length > 0) {
+        const { error } = await supabase.from(tableName).delete().in('id', deleteIds);
+        if (error) throw error;
+      }
+      if (upsertPayloads.length > 0) {
+        const { error } = await supabase.from(tableName).upsert(upsertPayloads);
+        if (error) throw error;
+      }
+    } catch (error) {
+      console.error('Failed to clear stats grid range:', error);
+      addToast('선택한 범위의 데이터를 비우는 중 오류가 발생했습니다.', 'error');
+      throw error;
+    }
+
     return { undoChanges, affectedDates: Array.from(affectedDates) };
   };
 
@@ -924,16 +952,22 @@ export default function ShockwaveDataGrid({
     }
     if (row && !row.isDraft && (skipConfirm || window.confirm(`${row.patient_name} 행을 삭제하시겠습니까?`))) {
       const affectedDate = row.date || '';
-      await supabase.from(tableName).delete().eq('id', row.id);
-      setCtxMenu(null);
-      rememberCurrentRowOrder();
-      await fetchLogs();
-      if (affectedDate) {
-        try {
-          await runSyncForDate(affectedDate);
-        } catch (error) {
-          console.error('Failed to sync deleted stats row to scheduler:', error);
+      try {
+        const { error } = await supabase.from(tableName).delete().eq('id', row.id);
+        if (error) throw error;
+        setCtxMenu(null);
+        rememberCurrentRowOrder();
+        await fetchLogs();
+        if (affectedDate) {
+          try {
+            await runSyncForDate(affectedDate);
+          } catch (error) {
+            console.error('Failed to sync deleted stats row to scheduler:', error);
+          }
         }
+      } catch (error) {
+        console.error('Failed to delete stats row:', error);
+        addToast('행 삭제에 실패했습니다. 다시 시도해 주세요.', 'error');
       }
     }
   };
