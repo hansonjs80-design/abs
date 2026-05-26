@@ -623,10 +623,31 @@ export default function useScheduleKeyboardActions({
     };
   }, [applyPrescriptionShortcut]);
 
+  useEffect(() => {
+    const handleContextMenuTreatmentCompleteShortcut = (event) => {
+      if (!contextMenu || !selectedCell || editingCell) return;
+      if (!isTreatmentCompleteShortcut(event)) return;
+      if (event.__shockwaveTreatmentCompleteHandled) return;
+      event.__shockwaveTreatmentCompleteHandled = true;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      handleToggleTreatmentComplete({ keepContextMenuOpen: true });
+    };
+
+    window.addEventListener('keydown', handleContextMenuTreatmentCompleteShortcut, { capture: true, passive: false });
+    document.addEventListener('keydown', handleContextMenuTreatmentCompleteShortcut, { capture: true, passive: false });
+    return () => {
+      window.removeEventListener('keydown', handleContextMenuTreatmentCompleteShortcut, { capture: true });
+      document.removeEventListener('keydown', handleContextMenuTreatmentCompleteShortcut, { capture: true });
+    };
+  }, [contextMenu, editingCell, handleToggleTreatmentComplete, selectedCell]);
+
   return useCallback((e) => {
     if (e.defaultPrevented) return;
     if (e.__shockwaveBackgroundHandled) return;
     if (e.__shockwavePrescriptionHandled) return;
+    if (e.__shockwaveTreatmentCompleteHandled) return;
     if (isUndoShortcutEvent(e)) {
       if (e.__shockwaveUndoHandled) return;
       e.__shockwaveUndoHandled = true;

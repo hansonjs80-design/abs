@@ -22,7 +22,8 @@ export default function useScheduleStatusActions({
   applyImmediateCellBg,
   clearImmediateCellBg,
 }) {
-  const applyTreatmentCompleteToSelection = useCallback(async (mode) => {
+  const applyTreatmentCompleteToSelection = useCallback(async (mode, options = {}) => {
+    const { keepContextMenuOpen = false } = options;
     const batch = buildTreatmentStatusPayload({
       mode,
       selectedKeys,
@@ -34,12 +35,12 @@ export default function useScheduleStatusActions({
       pendingCellBgColors,
     });
     if (!batch) {
-      setContextMenu(null);
+      if (!keepContextMenuOpen) setContextMenu(null);
       return false;
     }
 
     recordUndo({ type: 'bulk-edit', oldMemos: batch.oldMemos });
-    applyImmediateCellBg?.(batch.payload);
+    applyImmediateCellBg?.(batch.payload, { keepContextMenuOpen });
     const success = await saveShockwaveMemosBulk(batch.payload);
     if (!success) {
       clearImmediateCellBg?.(batch.payload);
@@ -53,11 +54,11 @@ export default function useScheduleStatusActions({
               : '치료 완료/해제 실패',
         'error'
       );
-      setContextMenu(null);
+      if (!keepContextMenuOpen) setContextMenu(null);
       return false;
     }
 
-    setContextMenu(null);
+    if (!keepContextMenuOpen) setContextMenu(null);
     return true;
   }, [
     selectedKeys,
@@ -75,12 +76,12 @@ export default function useScheduleStatusActions({
     clearImmediateCellBg,
   ]);
 
-  const handleToggleTreatmentComplete = useCallback(async () => {
-    await applyTreatmentCompleteToSelection('toggle');
+  const handleToggleTreatmentComplete = useCallback(async (options) => {
+    await applyTreatmentCompleteToSelection('toggle', options);
   }, [applyTreatmentCompleteToSelection]);
 
-  const handleToggleTreatmentCancel = useCallback(async () => {
-    await applyTreatmentCompleteToSelection('cancel-toggle');
+  const handleToggleTreatmentCancel = useCallback(async (options) => {
+    await applyTreatmentCompleteToSelection('cancel-toggle', options);
   }, [applyTreatmentCompleteToSelection]);
 
   const handleToggleHolidayBackground = useCallback(async () => {

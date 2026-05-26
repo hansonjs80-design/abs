@@ -106,6 +106,13 @@ export default function ShockwaveNewPatientsView({
     };
   }, [logs, displayTherapists]);
 
+  const printColumnWidths = useMemo(() => {
+    const therapistCount = Math.max(1, summary.byTherapist.length);
+    const groupWidth = 100 / therapistCount;
+    const ratios = [0.15, 0.38, 0.32, 0.15];
+    return summary.byTherapist.flatMap(() => ratios.map((ratio) => `${groupWidth * ratio}%`));
+  }, [summary.byTherapist]);
+
   if (!displayTherapists.length) {
     return (
       <div className="sw-stats-empty">
@@ -127,6 +134,11 @@ export default function ShockwaveNewPatientsView({
 
         <div className="sw-settlement-table-wrap sw-compact-table-wrap">
           <table className="sw-new-patient-table sw-compact-new-patient-table">
+            <colgroup>
+              {printColumnWidths.map((width, index) => (
+                <col key={`new-patient-print-col-${index}`} style={{ width }} />
+              ))}
+            </colgroup>
             <thead>
               <tr>
                 {summary.byTherapist.map((item, therapistIndex) => (

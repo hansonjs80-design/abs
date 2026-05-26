@@ -30,8 +30,6 @@ export default function ShockwaveDataGrid({
   prescriptions: prescriptionsProp,
   frozenColumnCount: _frozenColumnCountProp,
   title,
-  totalRecordCount,
-  therapistCount,
   secondarySummaryLabel = '신규',
   selectedTherapistNames: externalSelectedNames,
   onSelectedTherapistNamesChange,
@@ -82,13 +80,7 @@ export default function ShockwaveDataGrid({
     const source = prescriptionsProp || settings?.prescriptions || ['F1.5', 'F/Rdc', 'F/R'];
     return Array.isArray(source) ? source.filter(Boolean) : ['F1.5', 'F/Rdc', 'F/R'];
   }, [prescriptionsProp, settings?.prescriptions]);
-  const gridTitle = title || `${currentMonth}월 충격파 현황`;
-  const summaryRecordCount = isAllTherapistsSelected && Number.isFinite(totalRecordCount)
-    ? totalRecordCount
-    : filteredInputLogs.length;
-  const summaryTherapistCount = isAllTherapistsSelected && Number.isFinite(therapistCount)
-    ? therapistCount
-    : visibleTherapists.length;
+  const gridTitle = title || `${currentYear}년 ${String(currentMonth).padStart(2, '0')}월 충격파 현황`;
   const runSyncForDate = useCallback(async () => {
     // 통계/현황 탭은 스케줄 표를 다시 쓰지 않는다.
     // 스케줄 표가 원본이고, 현황 로그는 스케줄 저장 시 단방향으로 갱신된다.
@@ -1164,10 +1156,6 @@ export default function ShockwaveDataGrid({
             <th colSpan={totalColCount} className="grid-title">
               <div className="grid-title-inner">
                 <span className="grid-title-text">{gridTitle}</span>
-                <div className="grid-title-meta">
-                  <span>총 기록 {summaryRecordCount}건</span>
-                  <span>치료사 {summaryTherapistCount}명</span>
-                </div>
               </div>
             </th>
           </tr>

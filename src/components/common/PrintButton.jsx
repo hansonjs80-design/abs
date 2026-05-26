@@ -3,7 +3,7 @@ import { Printer } from 'lucide-react';
 
 const PRINT_STYLE_ID = 'clinic-print-orientation-style';
 
-function setPrintOrientation(orientation) {
+function setPrintOrientation(orientation, margin = '6mm') {
   document.documentElement.dataset.printOrientation = orientation;
 
   let style = document.getElementById(PRINT_STYLE_ID);
@@ -13,7 +13,7 @@ function setPrintOrientation(orientation) {
     document.head.appendChild(style);
   }
 
-  style.textContent = `@media print { @page { size: ${orientation}; margin: 6mm; } }`;
+  style.textContent = `@media print { @page { size: ${orientation}; margin: ${margin}; } }`;
 }
 
 /**
@@ -77,6 +77,14 @@ function restoreHiddenMemoRows() {
   });
 }
 
+function cleanupPrintState() {
+  document.body.classList.remove('calendar-only-print');
+  document.body.classList.remove('hide-last-week');
+  document.body.classList.remove('new-patient-print');
+  delete document.body.dataset.calendarWeeks;
+  restoreHiddenMemoRows();
+}
+
 /**
  * 달력 그리드에서 실제 주차 수와 마지막 주차에 이번 달 평일이 있는지 감지
  */
@@ -124,9 +132,11 @@ export default function PrintButton({ isStaffSchedule }) {
   }, []);
 
   const handlePrint = (orientation, calendarOnly = false, forceWeeks = null) => {
-    setPrintOrientation(orientation);
+    const isNewPatientPortraitPrint = !calendarOnly && orientation === 'portrait' && Boolean(document.querySelector('.sw-new-patient-table'));
+    setPrintOrientation(isNewPatientPortraitPrint ? 'A4 portrait' : orientation, isNewPatientPortraitPrint ? '8mm 5mm 6mm' : '6mm');
     
     if (calendarOnly) {
+      document.body.classList.remove('new-patient-print');
       document.body.classList.add('calendar-only-print');
 
       // 주차 수 결정
@@ -150,19 +160,16 @@ export default function PrintButton({ isStaffSchedule }) {
       document.body.classList.remove('calendar-only-print');
       document.body.classList.remove('hide-last-week');
       delete document.body.dataset.calendarWeeks;
+      if (isNewPatientPortraitPrint) {
+        document.body.classList.add('new-patient-print');
+      } else {
+        document.body.classList.remove('new-patient-print');
+      }
     }
     
     setIsOpen(false);
-    
-    window.setTimeout(() => {
-      window.print();
-      window.setTimeout(() => {
-        document.body.classList.remove('calendar-only-print');
-        document.body.classList.remove('hide-last-week');
-        delete document.body.dataset.calendarWeeks;
-        restoreHiddenMemoRows();
-      }, 500);
-    }, 0);
+    window.addEventListener('afterprint', cleanupPrintState, { once: true });
+    window.print();
   };
 
   // 6주차 달인데 마지막 주에 평일이 없는 경우 → 5주/6주 선택 옵션 제공

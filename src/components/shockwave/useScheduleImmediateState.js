@@ -130,7 +130,8 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
     });
   }, []);
 
-  const applyImmediateCellBg = useCallback((updates) => {
+  const applyImmediateCellBg = useCallback((updates, options = {}) => {
+    const { keepContextMenuOpen = false } = options;
     const nextBgColors = {};
     normalizeUpdateEntries(updates).forEach((item) => {
       const key = getUpdateKey(item);
@@ -140,7 +141,7 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
 
     flushSync(() => {
       setPendingCellBgColors((prev) => ({ ...prev, ...nextBgColors }));
-      setContextMenu(null);
+      if (!keepContextMenuOpen) setContextMenu(null);
     });
   }, [setContextMenu]);
 

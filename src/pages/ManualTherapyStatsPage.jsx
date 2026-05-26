@@ -625,7 +625,7 @@ export default function ManualTherapyStatsPage() {
                             tableName="manual_therapy_patient_logs"
                             prescriptions={prescriptions}
                             frozenColumnCount={shockwaveSettings?.frozen_columns ?? 6}
-                            title={`${currentMonth}월 도수치료 현황`}
+                            title={`${currentYear}년 ${String(currentMonth).padStart(2, '0')}월 도수치료 현황`}
                             applyTodayLabel="오늘 도수 스케줄 적용"
                             secondarySummaryLabel="신규"
                             selectedTherapistNames={selectedTherapistNames}

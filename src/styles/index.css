@@ -524,6 +524,139 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+
+  body.new-patient-print,
+  body.new-patient-print html,
+  body.new-patient-print .app-layout,
+  body.new-patient-print .app-main,
+  body.new-patient-print .app-content,
+  body.new-patient-print .sw-stats-layout,
+  body.new-patient-print .sw-stats-container,
+  body.new-patient-print .sw-stats-panel,
+  body.new-patient-print .sw-stats-body,
+  body.new-patient-print .sw-settlement-stack,
+  body.new-patient-print .sw-settlement-card {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  body.new-patient-print .sw-settlement-card {
+    display: block !important;
+  }
+
+  body.new-patient-print .sw-settlement-header,
+  body.new-patient-print .sw-settlement-meta {
+    display: flex !important;
+  }
+
+  body.new-patient-print .sw-settlement-header {
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 6mm !important;
+    margin: 5mm 0 4mm !important;
+    padding: 0 !important;
+  }
+
+  body.new-patient-print .sw-settlement-header h2 {
+    display: block !important;
+    margin: 0 !important;
+    font-size: 14pt !important;
+    line-height: 1.1 !important;
+    font-weight: 800 !important;
+    color: #111827 !important;
+  }
+
+  body.new-patient-print .sw-settlement-meta span {
+    display: inline-flex !important;
+    align-items: center !important;
+    min-height: 0 !important;
+    padding: 1mm 2.5mm !important;
+    border: 1px solid #94a3b8 !important;
+    border-radius: 3mm !important;
+    font-size: 11pt !important;
+    line-height: 1.1 !important;
+    font-weight: 800 !important;
+    color: #111827 !important;
+    background: #ffffff !important;
+  }
+
+  body.new-patient-print .sw-settlement-table-wrap,
+  body.new-patient-print .sw-compact-table-wrap {
+    display: block !important;
+    width: 95% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  body.new-patient-print .sw-new-patient-table,
+  body.new-patient-print .sw-compact-new-patient-table {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    border: 1.2px solid #475569 !important;
+    border-radius: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  body.new-patient-print .sw-new-patient-table th,
+  body.new-patient-print .sw-new-patient-table td,
+  body.new-patient-print .sw-compact-new-patient-table th,
+  body.new-patient-print .sw-compact-new-patient-table td {
+    width: auto !important;
+    min-width: 0 !important;
+    height: 6.6mm !important;
+    padding: 0.8mm 0.9mm !important;
+    border-right-width: 0.7px !important;
+    border-bottom-width: 0.7px !important;
+    font-size: 7.4pt !important;
+    line-height: 1.05 !important;
+    white-space: normal !important;
+    word-break: keep-all !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  body.new-patient-print .sw-new-patient-table col,
+  body.new-patient-print .sw-compact-new-patient-table col {
+    min-width: 0 !important;
+  }
+
+  body.new-patient-print .sw-new-patient-table thead .therapist-col,
+  body.new-patient-print .sw-compact-new-patient-table thead .therapist-col {
+    height: 7.2mm !important;
+    padding: 1mm 0.8mm !important;
+    font-size: 8.6pt !important;
+    line-height: 1.05 !important;
+  }
+
+  body.new-patient-print .sw-new-patient-table thead .sub-col,
+  body.new-patient-print .sw-compact-new-patient-table thead .sub-col {
+    height: 5.8mm !important;
+    padding: 0.6mm 0.5mm !important;
+    font-size: 7pt !important;
+  }
+
+  body.new-patient-print .sw-new-patient-table tbody td.patient-name,
+  body.new-patient-print .sw-compact-new-patient-table tbody td.patient-name {
+    padding-left: 1mm !important;
+    text-align: left !important;
+  }
+
+  body.new-patient-print .sw-new-patient-table .therapist-group-end,
+  body.new-patient-print .sw-compact-new-patient-table .therapist-group-end {
+    border-right-width: 1.2px !important;
+  }
 }
 
 /* ── 애니메이션 ── */
