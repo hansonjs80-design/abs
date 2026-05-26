@@ -23,7 +23,11 @@ function readStoredHiddenDepartments() {
 
 function saveStoredHiddenDepartments(hidden) {
   if (typeof localStorage === 'undefined') return;
-  localStorage.setItem(HIDDEN_DEPARTMENTS_STORAGE_KEY, JSON.stringify(hidden));
+  try {
+    localStorage.setItem(HIDDEN_DEPARTMENTS_STORAGE_KEY, JSON.stringify(hidden));
+  } catch {
+    // Keep the page usable when browser storage is blocked or full.
+  }
 }
 
 class StaffSchedulePageErrorBoundary extends React.Component {

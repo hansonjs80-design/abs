@@ -49,6 +49,8 @@ export default function ShockwavePage() {
     loadShockwaveSettings,
     shockwaveMemos,
     loadShockwaveMemos,
+    loadMonthlyTherapists,
+    monthlyTherapistLoadKeys,
     saveShockwaveMemo,
     holidays,
     loadHolidays,
@@ -65,20 +67,29 @@ export default function ShockwavePage() {
   useEffect(() => {
     loadStaffMemos(currentYear, currentMonth, { includeAdjacentMonths: true });
     loadHolidays(currentYear, currentMonth);
-  }, [currentYear, currentMonth, loadStaffMemos, loadHolidays]);
+    loadMonthlyTherapists(currentYear, currentMonth, 'shockwave');
+    loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy');
+  }, [currentYear, currentMonth, loadStaffMemos, loadHolidays, loadMonthlyTherapists]);
+
+  const monthKey = `${currentYear}-${currentMonth}`;
+  const monthlyTherapistsReady = monthlyTherapistLoadKeys?.shockwave === monthKey;
 
   return (
     <ShockwavePageErrorBoundary>
       <div className="animate-fade-in">
-        <ShockwaveView
-          therapists={therapists}
-          settings={shockwaveSettings}
-          memos={shockwaveMemos}
-          onLoadMemos={loadShockwaveMemos}
-          onSaveMemo={saveShockwaveMemo}
-          holidays={holidays}
-          staffMemos={staffMemos}
-        />
+        {monthlyTherapistsReady ? (
+          <ShockwaveView
+            therapists={therapists}
+            settings={shockwaveSettings}
+            memos={shockwaveMemos}
+            onLoadMemos={loadShockwaveMemos}
+            onSaveMemo={saveShockwaveMemo}
+            holidays={holidays}
+            staffMemos={staffMemos}
+          />
+        ) : (
+          <div style={{ padding: 24 }}>치료사 설정을 불러오는 중...</div>
+        )}
       </div>
     </ShockwavePageErrorBoundary>
   );

@@ -85,6 +85,34 @@ function cleanupPrintState() {
   restoreHiddenMemoRows();
 }
 
+function registerPrintCleanup() {
+  let cleaned = false;
+  let printDialogOpened = false;
+
+  const cleanupOnce = () => {
+    if (cleaned) return;
+    cleaned = true;
+    cleanupPrintState();
+    window.removeEventListener('afterprint', cleanupOnce);
+    window.removeEventListener('blur', handlePrintWindowBlur);
+    window.removeEventListener('focus', handlePrintWindowFocus);
+  };
+
+  const handlePrintWindowBlur = () => {
+    printDialogOpened = true;
+  };
+
+  const handlePrintWindowFocus = () => {
+    if (printDialogOpened) cleanupOnce();
+  };
+
+  window.addEventListener('afterprint', cleanupOnce, { once: true });
+  window.addEventListener('blur', handlePrintWindowBlur, { once: true });
+  window.addEventListener('focus', handlePrintWindowFocus);
+
+  return cleanupOnce;
+}
+
 /**
  * 달력 그리드에서 실제 주차 수와 마지막 주차에 이번 달 평일이 있는지 감지
  */
@@ -167,9 +195,9 @@ export default function PrintButton({ isStaffSchedule }) {
       }
     }
     
-    window.addEventListener('afterprint', cleanupPrintState, { once: true });
-    window.print();
     setIsOpen(false);
+    registerPrintCleanup();
+    window.print();
   };
 
   // 6주차 달인데 마지막 주에 평일이 없는 경우 → 5주/6주 선택 옵션 제공

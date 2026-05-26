@@ -41,24 +41,29 @@ class ShockwaveStatsErrorBoundary extends React.Component {
   }
 }
 
-export default function ShockwaveStatsView({ currentYear, currentMonth, memos, therapists, schedulerMemosReady = false, onReloadMemos, monthlyTherapistsProp }) {
+export default function ShockwaveStatsView({ currentYear, currentMonth, memos, therapists, onReloadMemos, monthlyTherapistsProp, monthlyTherapistsReady = false, isScheduleLoading = false }) {
   const { addToast } = useToast();
-  const { shockwaveSettings, monthlyTherapists: contextMonthlyTherapists, loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
-  // prop으로 전달된 로컬 치료사 목록이 있으면 우선 사용 (전역 상태 race condition 방지)
-  const monthlyTherapists = (Array.isArray(monthlyTherapistsProp) && monthlyTherapistsProp.length > 0)
-    ? monthlyTherapistsProp
-    : contextMonthlyTherapists;
+  const { shockwaveSettings, loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
+  const monthlyTherapists = useMemo(
+    () => (monthlyTherapistsReady && Array.isArray(monthlyTherapistsProp) ? monthlyTherapistsProp : []),
+    [monthlyTherapistsReady, monthlyTherapistsProp]
+  );
   const [logs, setLogs] = useState([]);
   const [recentLogs, setRecentLogs] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLogsLoading, setIsLogsLoading] = useState(false);
+  const isLoading = isLogsLoading || isScheduleLoading;
   const [extraDraftRows, setExtraDraftRows] = useState(0);
   const [activeSection, setActiveSection] = useState('grid');
-  const [isAutoSyncingToday, setIsAutoSyncingToday] = useState(false);
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
   const lastAutoSyncKeyRef = useRef(null);
+  const logsLoadedKeyRef = useRef('');
   const fetchIdRef = useRef(0);
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
+  const displayBaseTherapists = useMemo(
+    () => (monthlyTherapistsReady ? safeTherapists : []),
+    [monthlyTherapistsReady, safeTherapists]
+  );
   const effectiveSettlementSettings = useMemo(
     () => getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'shockwave'),
     [shockwaveSettings, currentYear, currentMonth]
@@ -86,22 +91,22 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
 
   // Therapist filter state (lifted from ShockwaveDataGrid)
   const displayTherapists = useMemo(
-    () => buildDisplayTherapists(safeTherapists, monthlyTherapists),
-    [safeTherapists, monthlyTherapists]
+    () => buildDisplayTherapists(displayBaseTherapists, monthlyTherapists),
+    [displayBaseTherapists, monthlyTherapists]
   );
   const therapistNameList = useMemo(
     () => displayTherapists.map((t) => t.name).filter(Boolean),
     [displayTherapists]
   );
+  const therapistNameKey = useMemo(
+    () => therapistNameList.join('\u0001'),
+    [therapistNameList]
+  );
   const [selectedTherapistNames, setSelectedTherapistNames] = useState([]);
   useEffect(() => {
-    setSelectedTherapistNames((prev) => {
-      if (therapistNameList.length === 0) return [];
-      if (prev.length === 0) return therapistNameList;
-      const valid = prev.filter((name) => therapistNameList.includes(name));
-      return valid.length > 0 ? valid : therapistNameList;
-    });
-  }, [therapistNameList]);
+    if (!monthlyTherapistsReady) return;
+    setSelectedTherapistNames(therapistNameList);
+  }, [monthlyTherapistsReady, therapistNameKey, therapistNameList]);
   const selectedTherapistSet = useMemo(
     () => new Set(selectedTherapistNames),
     [selectedTherapistNames]
@@ -117,7 +122,9 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   }, []);
   const fetchLogs = useCallback(async () => {
     const currentFetchId = ++fetchIdRef.current;
-    setIsLoading(true);
+    const monthKey = `${currentYear}-${currentMonth}`;
+    const hasCurrentMonthLogs = logsLoadedKeyRef.current === monthKey;
+    if (!hasCurrentMonthLogs) setIsLogsLoading(true);
     try {
       const startStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
       const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
@@ -126,7 +133,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
 
       const { data, error } = await supabase
         .from('shockwave_patient_logs')
-        .select('*')
+        .select('id,date,patient_name,chart_number,visit_count,body_part,therapist_name,prescription,prescription_count,created_at')
         .gte('date', startStr)
         .lt('date', endStr)
         .order('date', { ascending: true })
@@ -134,6 +141,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
 
       if (error) throw error;
       if (currentFetchId !== fetchIdRef.current) return [];
+      logsLoadedKeyRef.current = monthKey;
       setLogs(data || []);
       return data || [];
     } catch (err) {
@@ -144,7 +152,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
       return null;
     } finally {
       if (currentFetchId === fetchIdRef.current) {
-        setIsLoading(false);
+        setIsLogsLoading(false);
       }
     }
   }, [currentYear, currentMonth, addToast]);
@@ -183,6 +191,11 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   }, [onReloadMemos, memos, monthlyTherapists, currentYear, currentMonth, safeTherapists, fetchLogs, addToast]);
 
   useEffect(() => {
+    logsLoadedKeyRef.current = '';
+    setLogs([]);
+  }, [currentYear, currentMonth]);
+
+  useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
 
@@ -201,6 +214,8 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   }, [loadShockwaveSettings]);
 
   useEffect(() => {
+    if (activeSection !== 'settlement') return undefined;
+
     let cancelled = false;
 
     const fetchRecentLogs = async () => {
@@ -230,7 +245,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     return () => {
       cancelled = true;
     };
-  }, [currentYear, currentMonth, recentPeriodMonths]);
+  }, [activeSection, currentYear, currentMonth, recentPeriodMonths]);
 
   const recentMonthlySummaries = useMemo(() => {
     const normalizePrescriptionKey = (value) =>
@@ -285,55 +300,6 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     setActiveSection('grid');
   }, [currentYear, currentMonth]);
 
-  useEffect(() => {
-    const autoSyncKey = `${currentYear}-${currentMonth}`;
-
-    if (
-      !schedulerMemosReady ||
-      safeTherapists.length === 0 ||
-      isAutoSyncingToday
-    ) {
-      return;
-    }
-    // 이미 같은 키로 동기화가 완료되었으면 스킵 (탭 재진입 시 리셋됨)
-    if (lastAutoSyncKeyRef.current === autoSyncKey) {
-      return;
-    }
-
-    let cancelled = false;
-
-    (async () => {
-        setIsAutoSyncingToday(true);
-      lastAutoSyncKeyRef.current = autoSyncKey;
-      try {
-        const result = await syncMonthShockwaveScheduleToStats({
-          year: currentYear,
-          month: currentMonth,
-          memos,
-          therapists: safeTherapists,
-          monthlyTherapists,
-          upToToday: true,
-        });
-
-        if (!cancelled && result?.totalUpdates > 0) {
-          addToast(`${currentMonth}월 스케줄 빈칸 연동이 완료되었습니다.`, 'success');
-          await fetchLogs();
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.error(error);
-          addToast('오늘 충격파 스케줄 동기화 중 오류가 발생했습니다.', 'error');
-        }
-      } finally {
-        if (!cancelled) setIsAutoSyncingToday(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [schedulerMemosReady, currentYear, currentMonth, safeTherapists, monthlyTherapists, memos, fetchLogs, addToast, isAutoSyncingToday]);
-
   // eslint-disable-next-line no-unused-vars
   const handleCellEdit = async (id, field, value) => {
     try {
@@ -348,7 +314,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   // 스케줄러 데이터 파싱 및 동기화 (One-way Sync)
   // eslint-disable-next-line no-unused-vars
   const handleSyncFromScheduler = async () => {
-    setIsLoading(true);
+    setIsLogsLoading(true);
     try {
       const result = await syncTodayShockwaveScheduleToStats({
         year: currentYear,
@@ -377,14 +343,14 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
       console.error(err);
       addToast('데이터 동기화 중 오류가 발생했습니다.', 'error');
     } finally {
-      setIsLoading(false);
+      setIsLogsLoading(false);
     }
   };
 
   // eslint-disable-next-line no-unused-vars
   const handleSyncMonthFromScheduler = async () => {
     if (!window.confirm(`${currentMonth}월 전체 스케줄을 스케줄러 기준으로 덮어씁니다.\n(수동으로 추가한 내역은 모두 삭제됩니다.) 진행하시겠습니까?`)) return;
-    setIsLoading(true);
+    setIsLogsLoading(true);
     try {
       const result = await syncMonthShockwaveScheduleToStats({
         year: currentYear,
@@ -406,14 +372,14 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
       console.error(err);
       addToast('전체 월 데이터 동기화 중 오류가 발생했습니다.', 'error');
     } finally {
-      setIsLoading(false);
+      setIsLogsLoading(false);
     }
   };
 
   // eslint-disable-next-line no-unused-vars
   const handleFullGoogleSheetImport = async () => {
     if (!window.confirm('⚠️ 기존 치료 내역을 모두 삭제하고 구글 시트에서 새로 가져옵니다.\n정말 진행하시겠습니까?')) return;
-    setIsLoading(true);
+    setIsLogsLoading(true);
     
     try {
       // 1단계: 기존 DB 데이터 정리
@@ -592,7 +558,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
       console.error(err);
       addToast('구글 시트 연동 중 오류 발생', 'error');
     } finally {
-      setIsLoading(false);
+      setIsLogsLoading(false);
     }
   };
 
@@ -689,7 +655,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                       <ShockwaveStatsErrorBoundary>
                         <ShockwaveDataGrid
                           logs={safeLogs}
-                          therapists={safeTherapists}
+                          therapists={displayBaseTherapists}
                           monthlyTherapists={monthlyTherapists}
                           currentYear={currentYear}
                           currentMonth={currentMonth}
@@ -725,7 +691,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
               ) : (
                 <ShockwaveSettlementView
                   logs={safeLogs}
-                  therapists={safeTherapists}
+                  therapists={displayBaseTherapists}
                   monthlyTherapists={monthlyTherapists}
                   currentMonth={currentMonth}
                   prescriptions={settlementPrescriptions}
@@ -745,7 +711,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
             <div className="sw-stats-body sw-stats-body--settlement fade-transition-wrapper">
               <ShockwaveNewPatientsView
                 logs={safeLogs}
-                therapists={safeTherapists}
+                therapists={displayBaseTherapists}
                 monthlyTherapists={monthlyTherapists}
                 currentMonth={currentMonth}
                 selectedTherapistNames={selectedTherapistNames}

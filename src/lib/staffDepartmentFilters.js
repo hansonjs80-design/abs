@@ -70,10 +70,14 @@ export function readStoredStaffDepartments() {
 
 export function saveStoredStaffDepartments(departments) {
   if (typeof localStorage === 'undefined') return;
-  localStorage.setItem(
-    STAFF_DEPARTMENT_STORAGE_KEY,
-    JSON.stringify(normalizeStaffDepartmentList(departments))
-  );
+  try {
+    localStorage.setItem(
+      STAFF_DEPARTMENT_STORAGE_KEY,
+      JSON.stringify(normalizeStaffDepartmentList(departments))
+    );
+  } catch {
+    // Storage can be unavailable in private browsing or restricted contexts.
+  }
 }
 
 export function shouldHideStaffMemoByDepartment(content, hiddenDepartments = []) {

@@ -183,8 +183,10 @@ export default function ShockwaveDataGrid({
       i = j;
     }
 
-    // Add 40+ empty draft rows
-    const draftsNeeded = Math.max(60 - flat.length, 30) + extraDraftRows;
+    // Read-only stats pages should not pay to render unused editable draft rows.
+    const draftsNeeded = readOnly
+      ? Math.max(0, extraDraftRows)
+      : Math.max(60 - flat.length, 30) + extraDraftRows;
     for (let i = 0; i < draftsNeeded; i++) {
       const draftId = `draft-${i}`;
       flat.push({
@@ -196,7 +198,7 @@ export default function ShockwaveDataGrid({
       });
     }
     return flat;
-  }, [filteredInputLogs, extraDraftRows, insertedDraftRows, draftCellValues]);
+  }, [filteredInputLogs, extraDraftRows, insertedDraftRows, draftCellValues, readOnly]);
 
   const rememberCurrentRowOrder = useCallback(() => {
     const nextOrder = new Map();
@@ -264,6 +266,21 @@ export default function ShockwaveDataGrid({
     return Number.isFinite(parsed) ? parsed : 0;
   };
   const isRowEmpty = (row) => ROW_DATA_FIELDS.every((field) => isBlankValue(row?.[field]));
+  const dateSummaries = useMemo(() => {
+    const summaries = new Map();
+    gridData.forEach((row) => {
+      if (!row?.date) return;
+      const current = summaries.get(row.date) || { total: 0, newPatient: 0 };
+      if (row.prescription) {
+        current.total += toPrescriptionCount(row.prescription_count);
+      }
+      if (String(row.patient_name || '').includes('*')) {
+        current.newPatient += 1;
+      }
+      summaries.set(row.date, current);
+    });
+    return summaries;
+  }, [gridData]);
 
   // ─── 2. CELL VALUE HELPERS ────────────────────────────────
   const getVal = (row, colIdx) => {
@@ -282,13 +299,11 @@ export default function ShockwaveDataGrid({
     }
     if (colIdx === totalCountColIndex) {
       if (!row._isFirst) return '';
-      const sameDate = gridData.filter(r => r.date === row.date && r.date);
-      return sameDate.reduce((s, r) => s + (r.prescription ? toPrescriptionCount(r.prescription_count) : 0), 0) || '';
+      return dateSummaries.get(row.date)?.total || '';
     }
     if (colIdx === newPatientColIndex) {
       if (!row._isFirst) return '';
-      const sameDate = gridData.filter(r => r.date === row.date && r.date);
-      return sameDate.filter((r) => String(r.patient_name || '').includes('*')).length || '';
+      return dateSummaries.get(row.date)?.newPatient || '';
     }
     const tIdx = Math.floor((colIdx - FIXED_FIELDS.length) / prescriptions.length);
     const pIdx = (colIdx - FIXED_FIELDS.length) % prescriptions.length;
@@ -1121,19 +1136,42 @@ export default function ShockwaveDataGrid({
   }, [ctxMenu]);
 
   // ─── 9. COMPUTED TOTALS ───────────────────────────────────
-  const grandTotal = filteredInputLogs.reduce((s, l) => s + (l.prescription ? toPrescriptionCount(l.prescription_count) : 0), 0);
-  const newPatientTotal = filteredInputLogs.filter((l) => String(l?.patient_name || '').includes('*')).length;
-
-  const therapistTotals = useMemo(() => {
-    return visibleTherapists.map((t) => {
-      const all = filteredInputLogs.filter(l => l.therapist_name === t.name && l.prescription);
-      const total = all.reduce((s, l) => s + toPrescriptionCount(l.prescription_count), 0);
-      const byPres = {};
-      prescriptions.forEach(p => {
-        byPres[p] = all.filter(l => l.prescription === p).reduce((s, l) => s + toPrescriptionCount(l.prescription_count), 0);
+  const { grandTotal, newPatientTotal, therapistTotals } = useMemo(() => {
+    const totalsByTherapist = new Map();
+    visibleTherapists.forEach((therapist) => {
+      totalsByTherapist.set(therapist.name, {
+        total: 0,
+        byPres: Object.fromEntries(prescriptions.map((prescription) => [prescription, 0])),
       });
-      return { total, byPres };
     });
+
+    let total = 0;
+    let newPatients = 0;
+
+    filteredInputLogs.forEach((log) => {
+      if (String(log?.patient_name || '').includes('*')) {
+        newPatients += 1;
+      }
+      if (!log?.prescription) return;
+
+      const count = toPrescriptionCount(log.prescription_count);
+      total += count;
+
+      const therapistTotal = totalsByTherapist.get(log.therapist_name);
+      if (!therapistTotal) return;
+
+      therapistTotal.total += count;
+      const matchedPrescription = prescriptions.find((prescription) => prescriptionsMatch(log.prescription, prescription));
+      if (matchedPrescription) {
+        therapistTotal.byPres[matchedPrescription] = (therapistTotal.byPres[matchedPrescription] || 0) + count;
+      }
+    });
+
+    return {
+      grandTotal: total,
+      newPatientTotal: newPatients,
+      therapistTotals: visibleTherapists.map((therapist) => totalsByTherapist.get(therapist.name) || { total: 0, byPres: {} }),
+    };
   }, [filteredInputLogs, visibleTherapists, prescriptions]);
 
   // ─── 10. RENDER ───────────────────────────────────────────

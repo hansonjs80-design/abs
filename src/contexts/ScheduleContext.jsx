@@ -43,6 +43,7 @@ export function ScheduleProvider({ children }) {
   const [shockwaveMemos, setShockwaveMemos] = useState({});
   const [monthlyTherapists, setMonthlyTherapists] = useState([]);
   const [monthlyManualTherapists, setMonthlyManualTherapists] = useState([]);
+  const [monthlyTherapistLoadKeys, setMonthlyTherapistLoadKeys] = useState({ shockwave: '', manual_therapy: '' });
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
@@ -67,6 +68,10 @@ export function ScheduleProvider({ children }) {
   const calendarSlotSettingsSaveRequestRef = useRef(0);
   const shockwaveSettingsLoadRequestRef = useRef(0);
   const shockwaveSettingsSaveRequestRef = useRef(0);
+  const therapistsRef = useRef(therapists);
+  const manualTherapistsRef = useRef(manualTherapists);
+  const shockwaveSettingsRefCache = useRef(shockwaveSettings);
+  const monthlyTherapistLoadKeysRef = useRef(monthlyTherapistLoadKeys);
 
   useEffect(() => {
     staffMemosRef.current = staffMemos;
@@ -79,6 +84,41 @@ export function ScheduleProvider({ children }) {
   useEffect(() => {
     currentDateRef.current = { year: currentYear, month: currentMonth };
   }, [currentYear, currentMonth]);
+
+  useEffect(() => {
+    monthlyTherapistLoadKeysRef.current = monthlyTherapistLoadKeys;
+  }, [monthlyTherapistLoadKeys]);
+
+  const monthlyTherapistsRef = useRef(monthlyTherapists);
+  const monthlyManualTherapistsRef = useRef(monthlyManualTherapists);
+
+  useEffect(() => {
+    monthlyTherapistsRef.current = monthlyTherapists;
+  }, [monthlyTherapists]);
+
+  useEffect(() => {
+    monthlyManualTherapistsRef.current = monthlyManualTherapists;
+  }, [monthlyManualTherapists]);
+
+  useEffect(() => {
+    therapistsRef.current = therapists;
+  }, [therapists]);
+
+  useEffect(() => {
+    manualTherapistsRef.current = manualTherapists;
+  }, [manualTherapists]);
+
+  useEffect(() => {
+    shockwaveSettingsRefCache.current = shockwaveSettings;
+  }, [shockwaveSettings]);
+
+  const setMonthlyTherapistLoadedKey = useCallback((type, key) => {
+    monthlyTherapistLoadKeysRef.current = {
+      ...monthlyTherapistLoadKeysRef.current,
+      [type]: key,
+    };
+    setMonthlyTherapistLoadKeys(monthlyTherapistLoadKeysRef.current);
+  }, []);
 
   const isCurrentScheduleMonth = useCallback((year, month) => (
     currentDateRef.current.year === year && currentDateRef.current.month === month
@@ -401,7 +441,11 @@ export function ScheduleProvider({ children }) {
   }, []);
 
   // 치료사 로드
-  const loadTherapists = useCallback(async () => {
+  const loadTherapists = useCallback(async (options = {}) => {
+    // 캐시된 데이터가 있고 강제 갱신이 아니면 DB 쿼리 없이 즉시 반환
+    if (!options.force && therapistsRef.current && therapistsRef.current.length > 0) {
+      return therapistsRef.current;
+    }
     const requestId = (therapistRosterLoadRequestRef.current.shockwave || 0) + 1;
     therapistRosterLoadRequestRef.current.shockwave = requestId;
     try {
@@ -413,17 +457,23 @@ export function ScheduleProvider({ children }) {
 
       if (error) throw error;
 
+      const result = data || [];
       if (therapistRosterLoadRequestRef.current.shockwave === requestId) {
-        setTherapists(data || []);
+        therapistsRef.current = result;
+        setTherapists(result);
       }
-      return data || [];
+      return result;
     } catch (err) {
-      console.error('Failed to load therapists:', err);
-      return [];
+      console.error('[ScheduleContext] loadTherapists 실패:', err);
+      return therapistsRef.current || [];
     }
   }, []);
 
-  const loadManualTherapists = useCallback(async () => {
+  const loadManualTherapists = useCallback(async (options = {}) => {
+    // 캐시된 데이터가 있고 강제 갱신이 아니면 DB 쿼리 없이 즉시 반환
+    if (!options.force && manualTherapistsRef.current && manualTherapistsRef.current.length > 0) {
+      return manualTherapistsRef.current;
+    }
     const requestId = (therapistRosterLoadRequestRef.current.manual_therapy || 0) + 1;
     therapistRosterLoadRequestRef.current.manual_therapy = requestId;
     try {
@@ -434,13 +484,16 @@ export function ScheduleProvider({ children }) {
         .order('slot_index');
 
       if (error) throw error;
+
+      const result = data || [];
       if (therapistRosterLoadRequestRef.current.manual_therapy === requestId) {
-        setManualTherapists(data || []);
+        manualTherapistsRef.current = result;
+        setManualTherapists(result);
       }
-      return data || [];
+      return result;
     } catch (err) {
-      console.error('Failed to load manual therapy therapists:', err);
-      return [];
+      console.error('[ScheduleContext] loadManualTherapists 실패:', err);
+      return manualTherapistsRef.current || [];
     }
   }, []);
 
@@ -469,6 +522,9 @@ export function ScheduleProvider({ children }) {
       if (rows.length === 0) {
         if (therapistRosterSaveRequestRef.current[requestKey] === requestId) {
           therapistRosterLoadRequestRef.current[requestKey] += 1;
+          // Ref 캐시도 즉시 갱신
+          if (type === 'manual_therapy') { manualTherapistsRef.current = []; }
+          else { therapistsRef.current = []; }
           setter([]);
         }
         return true;
@@ -483,17 +539,25 @@ export function ScheduleProvider({ children }) {
       if (insertError) throw insertError;
       if (therapistRosterSaveRequestRef.current[requestKey] === requestId) {
         therapistRosterLoadRequestRef.current[requestKey] += 1;
-        setter(data || rows);
+        const savedData = data || rows;
+        // Ref 캐시도 즉시 갱신
+        if (type === 'manual_therapy') { manualTherapistsRef.current = savedData; }
+        else { therapistsRef.current = savedData; }
+        setter(savedData);
       }
       return true;
     } catch (err) {
-      console.error(`Failed to save therapist roster (${type}):`, err);
+      console.error(`[ScheduleContext] saveTherapistRoster(${type}) 실패:`, err);
       return false;
     }
   }, []);
 
-  // 충격파 스케줄러 환경설정 로드
-  const loadShockwaveSettings = useCallback(async () => {
+  // 충격파 스케줄러 환경설정 로드 (캐시 지원)
+  const loadShockwaveSettings = useCallback(async (options = {}) => {
+    // 캐시된 설정이 있고 강제 갱신이 아니면 DB 쿼리 없이 즉시 반환
+    if (!options.force && shockwaveSettingsRefCache.current && shockwaveSettingsRefCache.current.id && shockwaveSettingsRefCache.current.id !== '00000000-0000-0000-0000-000000000000') {
+      return shockwaveSettingsRefCache.current;
+    }
     const requestId = ++shockwaveSettingsLoadRequestRef.current;
     try {
       const { data, error } = await supabase
@@ -507,7 +571,7 @@ export function ScheduleProvider({ children }) {
 
       if (data) {
         if (shockwaveSettingsLoadRequestRef.current !== requestId) return null;
-        setShockwaveSettings({
+        const parsed = {
           id: data.id || '00000000-0000-0000-0000-000000000000',
           start_time: data.start_time?.substring(0, 5) || '09:00',
           end_time: data.end_time?.substring(0, 5) || '18:00',
@@ -530,12 +594,14 @@ export function ScheduleProvider({ children }) {
           manual_therapy_shortcuts: data.manual_therapy_shortcuts || {},
           manual_therapy_dose_tags: data.manual_therapy_dose_tags || {},
           monthly_settlement_settings: data.monthly_settlement_settings || {}
-        });
+        };
+        shockwaveSettingsRefCache.current = parsed;
+        setShockwaveSettings(parsed);
         return data;
       }
       return null;
     } catch (err) {
-      console.error('Failed to load shockwave settings:', err);
+      console.error('[ScheduleContext] loadShockwaveSettings 실패:', err);
       return null;
     }
   }, []);
@@ -686,7 +752,10 @@ export function ScheduleProvider({ children }) {
       }
       if (shockwaveSettingsSaveRequestRef.current === requestId) {
         shockwaveSettingsLoadRequestRef.current += 1;
-        setShockwaveSettings({ ...newSettings, id: targetId, updated_at: nextUpdatedAt });
+        const updatedSettings = { ...newSettings, id: targetId, updated_at: nextUpdatedAt };
+        // Ref 캐시도 즉시 갱신
+        shockwaveSettingsRefCache.current = updatedSettings;
+        setShockwaveSettings(updatedSettings);
       }
       return true;
     } catch (err) {
@@ -975,10 +1044,24 @@ export function ScheduleProvider({ children }) {
   const loadMonthlyTherapists = useCallback(async (year, month, type = 'shockwave') => {
     const fallbackList = type === 'manual_therapy' ? manualTherapists : therapists;
     const setter = type === 'manual_therapy' ? setMonthlyManualTherapists : setMonthlyTherapists;
+    const loadKey = `${year}-${month}`;
+    if (monthlyTherapistLoadKeysRef.current[type] === loadKey) {
+      const currentList = type === 'manual_therapy' ? monthlyManualTherapistsRef.current : monthlyTherapistsRef.current;
+      if (currentList && currentList.length > 0) {
+        return currentList;
+      }
+    }
+    if (monthlyTherapistLoadKeysRef.current[type] !== loadKey) {
+      setMonthlyTherapistLoadedKey(type, '');
+      setter([]);
+    }
     const requestId = (monthlyTherapistLoadRequestRef.current[type] || 0) + 1;
     monthlyTherapistLoadRequestRef.current[type] = requestId;
     const applyIfLatest = (rows) => {
-      if (monthlyTherapistLoadRequestRef.current[type] === requestId) setter(rows);
+      if (monthlyTherapistLoadRequestRef.current[type] === requestId) {
+        setter(rows);
+        setMonthlyTherapistLoadedKey(type, loadKey);
+      }
     };
     try {
       const { data, error } = await supabase
@@ -1078,9 +1161,10 @@ export function ScheduleProvider({ children }) {
       return defaults;
     } catch (err) {
       console.error(`Failed to load monthly therapists (${type}):`, err);
+      applyIfLatest([]);
       return [];
     }
-  }, [therapists, manualTherapists]);
+  }, [therapists, manualTherapists, setMonthlyTherapistLoadedKey]);
 
   // 월별 치료사 설정 저장 (type: 'shockwave' | 'manual_therapy')
   const saveMonthlyTherapists = useCallback(async (year, month, configs, type = 'shockwave') => {
@@ -1119,13 +1203,14 @@ export function ScheduleProvider({ children }) {
       if (monthlyTherapistSaveRequestRef.current[type] === requestId) {
         monthlyTherapistLoadRequestRef.current[type] += 1;
         setter(configs.map((c) => ({ ...c, year, month, type })));
+        setMonthlyTherapistLoadedKey(type, `${year}-${month}`);
       }
       return true;
     } catch (err) {
       console.error(`Failed to save monthly therapists (${type}):`, err);
       return false;
     }
-  }, []);
+  }, [setMonthlyTherapistLoadedKey]);
 
   // 공지사항 로드/저장
   const loadNotices = useCallback(async () => {
@@ -1254,7 +1339,7 @@ export function ScheduleProvider({ children }) {
       saveTherapistRoster,
       shockwaveSettings, loadShockwaveSettings, saveShockwaveSettings,
       shockwaveMemos, loadShockwaveMemos, saveShockwaveMemo, saveShockwaveMemosBulk,
-      monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists,
+      monthlyTherapists, monthlyManualTherapists, monthlyTherapistLoadKeys, loadMonthlyTherapists, saveMonthlyTherapists,
       notices, loadNotices, saveNotice,
       calendarSlotSettings, loadCalendarSlotSettings, saveCalendarSlotSettings,
       loading

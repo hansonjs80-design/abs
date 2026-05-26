@@ -469,7 +469,7 @@ const MemoizedCell = memo(({
 });
 
 export default function ShockwaveView({ therapists, settings, memos = {}, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
-  const { currentYear, currentMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, loadMonthlyTherapists, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
+  const { currentYear, currentMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
   const { addToast } = useToast();
   const viewRef = useRef(null);
   const scheduleBulkSaveQueueRef = useRef(Promise.resolve(true));
@@ -713,12 +713,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     saveMemoRef.current = queuedOnSaveMemo;
     scheduleDateRef.current = { year: currentYear, month: currentMonth };
   }, [queuedOnSaveMemo, currentYear, currentMonth]);
-
-  // 월별 치료사 설정 로드 (충격파 + 도수치료)
-  useEffect(() => {
-    loadMonthlyTherapists(currentYear, currentMonth, 'shockwave');
-    loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy');
-  }, [currentYear, currentMonth, loadMonthlyTherapists]);
 
   const {
     getStaffScheduleBlockForCell,
