@@ -469,7 +469,7 @@ const MemoizedCell = memo(({
 });
 
 export default function ShockwaveView({ therapists, settings, memos = {}, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
-  const { currentYear, currentMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
+  const { currentYear, currentMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings, clipboardRef, clipboardSource, setClipboardSource } = useSchedule();
   const { addToast } = useToast();
   const viewRef = useRef(null);
   const scheduleBulkSaveQueueRef = useRef(Promise.resolve(true));
@@ -499,8 +499,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [editingCell, setEditingCell] = useState(null);       // "w-d-r-c" 키 문자열
   const [editValue, setEditValue] = useState('');
   const [loadedMemosKey, setLoadedMemosKey] = useState('');
-  const clipboardRef = useRef({ content: '', mode: null });   // mode: 'copy' | 'cut'
-  const [clipboardSource, setClipboardSource] = useState(null); // { keys: Set, mode: 'copy'|'cut' }
   const [contextMenu, setContextMenu] = useState(null); // { x, y, weekIdx, dayIdx, rowIdx, colIdx, currentPrescription }
   const [activeContextSubmenu, setActiveContextSubmenu] = useState(null);
   const [contextMenuBodyPartOptions, setContextMenuBodyPartOptions] = useState([]);
@@ -525,6 +523,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     memos,
     setContextMenu,
     setEditingCell,
+    currentYear,
+    currentMonth,
   });
 
   const effectiveMemos = useMemo(

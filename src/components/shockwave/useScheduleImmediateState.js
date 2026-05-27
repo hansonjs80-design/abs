@@ -67,7 +67,7 @@ function expectedMemoOverrideMatches(current, expectedItem) {
   return true;
 }
 
-export default function useScheduleImmediateState({ memos, setContextMenu, setEditingCell }) {
+export default function useScheduleImmediateState({ memos, setContextMenu, setEditingCell, currentYear, currentMonth }) {
   const [pendingDisplayValues, setPendingDisplayValues] = useState({});
   const [pendingMergeSpans, setPendingMergeSpans] = useState({});
   const [pendingMemoOverrides, setPendingMemoOverrides] = useState({});
@@ -91,6 +91,9 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
     const entries = normalizeUpdateEntries(updates);
     const nextValues = {};
     entries.forEach((item) => {
+      if (item.year && item.month && (item.year !== currentYear || item.month !== currentMonth)) {
+        return;
+      }
       const key = getUpdateKey(item);
       if (isValidKey(key)) nextValues[key] = String(item.content ?? '');
     });
@@ -101,6 +104,9 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
       setPendingMemoOverrides((prev) => {
         const next = { ...prev };
         entries.forEach((item) => {
+          if (item.year && item.month && (item.year !== currentYear || item.month !== currentMonth)) {
+            return;
+          }
           const key = getUpdateKey(item);
           if (!isValidKey(key)) return;
           const override = { ...next[key], content: String(item.content ?? '') };
@@ -115,11 +121,14 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
       setEditingCell(null);
       setContextMenu(null);
     });
-  }, [setContextMenu, setEditingCell]);
+  }, [setContextMenu, setEditingCell, currentYear, currentMonth]);
 
   const applyImmediateMergeSpan = useCallback((updates) => {
     const nextSpans = {};
     normalizeUpdateEntries(updates).forEach((item) => {
+      if (item.year && item.month && (item.year !== currentYear || item.month !== currentMonth)) {
+        return;
+      }
       const key = getUpdateKey(item);
       const mergeSpan = item.mergeSpan || item.merge_span;
       if (isValidKey(key) && mergeSpan) nextSpans[key] = mergeSpan;
@@ -128,12 +137,15 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
     flushSync(() => {
       setPendingMergeSpans((prev) => ({ ...prev, ...nextSpans }));
     });
-  }, []);
+  }, [currentYear, currentMonth]);
 
   const applyImmediateCellBg = useCallback((updates, options = {}) => {
     const { keepContextMenuOpen = false } = options;
     const nextBgColors = {};
     normalizeUpdateEntries(updates).forEach((item) => {
+      if (item.year && item.month && (item.year !== currentYear || item.month !== currentMonth)) {
+        return;
+      }
       const key = getUpdateKey(item);
       if (isValidKey(key)) nextBgColors[key] = item.bg_color || null;
     });
@@ -143,7 +155,7 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
       setPendingCellBgColors((prev) => ({ ...prev, ...nextBgColors }));
       if (!keepContextMenuOpen) setContextMenu(null);
     });
-  }, [setContextMenu]);
+  }, [setContextMenu, currentYear, currentMonth]);
 
   const clearImmediateCellBg = useCallback((updates) => {
     const entries = normalizeUpdateEntries(updates);

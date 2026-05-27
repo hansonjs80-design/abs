@@ -3780,7 +3780,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   box-shadow: none !important;
 }
 
-.sw-grid-table tbody td:nth-child(7) {
+.sw-grid-table tbody td.therapist-group-start {
   box-shadow: inset 1.5px 0 0 #9fb0c4 !important;
 }
 
@@ -3807,7 +3807,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   box-shadow: inset 0 1px 0 #aeb8c6 !important;
 }
 
-.sw-grid-table tbody tr.tr-date-start td:nth-child(7) {
+.sw-grid-table tbody tr.tr-date-start td.therapist-group-start {
   box-shadow:
     inset 1.5px 0 0 #9fb0c4,
     inset 0 1px 0 #aeb8c6 !important;
@@ -3831,13 +3831,13 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 }
 
 .sw-grid-table .therapist-group-start,
-.sw-grid-table tbody td:nth-child(7),
-.sw-grid-table tbody tr.tr-date-start td:nth-child(7) {
+.sw-grid-table tbody td.therapist-group-start,
+.sw-grid-table tbody tr.tr-date-start td.therapist-group-start {
   box-shadow: none !important;
 }
 
 .sw-grid-table thead .sw-header-row-therapists th:nth-child(6),
-.sw-grid-table tbody td:nth-child(6),
+.sw-grid-table tbody td.fixed-field-last,
 .sw-grid-table .therapist-group-end {
   border-right-color: var(--grid-divider) !important;
   border-right-width: 1.5px !important;
@@ -3885,7 +3885,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 }
 
 .sw-grid-table thead .sw-header-row-therapists th:nth-child(6),
-.sw-grid-table tbody td:nth-child(6),
+.sw-grid-table tbody td.fixed-field-last,
 .sw-grid-table thead .hdr-therapist.therapist-group-end,
 .sw-grid-table thead .hdr-pres.therapist-group-end,
 .sw-grid-table thead .hdr-pres-total.therapist-group-end,
@@ -3893,8 +3893,8 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   border-right: 2px solid var(--grid-divider) !important;
 }
 
-.sw-grid-table tbody tr.tr-date-start td:nth-child(6),
-.sw-grid-table tbody tr.tr-date-start td:nth-child(7),
+.sw-grid-table tbody tr.tr-date-start td.fixed-field-last,
+.sw-grid-table tbody tr.tr-date-start td.therapist-group-start,
 .sw-grid-table tbody tr.tr-date-start .gc-therapist-value.therapist-group-start,
 .sw-grid-table tbody tr.tr-date-start .gc-therapist-value.therapist-group-end {
   border-top: 1.5px solid var(--grid-row-divider) !important;

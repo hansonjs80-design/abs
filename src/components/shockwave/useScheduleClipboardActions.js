@@ -606,18 +606,54 @@ export default function useScheduleClipboardActions({
 
     const payload = Array.from(combinedPayload.values());
 
-    // 자동 병합으로 인해 변경될 하위 셀들도 recordUndo 스냅샷에 포함시켜 롤백 가능하게 보호
+    // 잘라내기 소스의 원본 상태 맵 구성
+    const cutSourceOriginals = new Map();
+    if (clip.mode === 'cut' && clip.cells) {
+      const srcYear = clip.srcYear ?? currentYear;
+      const srcMonth = clip.srcMonth ?? currentMonth;
+      for (const row of clip.cells) {
+        for (const cell of row) {
+          if (cell.sourceKey) {
+            const [w, d, r, c] = cell.sourceKey.split('-').map(Number);
+            cutSourceOriginals.set(cell.sourceKey, {
+              year: srcYear,
+              month: srcMonth,
+              week_index: w,
+              day_index: d,
+              row_index: r,
+              col_index: c,
+              content: cell.content || '',
+              bg_color: cell.bg_color || null,
+              merge_span: cell.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+              prescription: cell.prescription || '',
+              body_part: cell.body_part || '',
+            });
+          }
+        }
+      }
+    }
+
     const oldMemos = [];
     const addedUndoKeys = new Set();
-    const addOldMemo = (w, d, r, c) => {
-      const key = cellKey(w, d, r, c);
-      if (addedUndoKeys.has(key)) return;
-      addedUndoKeys.add(key);
-      oldMemos.push(buildMemoSnapshot(w, d, r, c));
-    };
+    const getUndoUniqueKey = (year, month, w, d, r, c) => `${year}-${month}-${w}-${d}-${r}-${c}`;
 
     payload.forEach((p) => {
-      addOldMemo(p.week_index, p.day_index, p.row_index, p.col_index);
+      const itemYear = p.year ?? currentYear;
+      const itemMonth = p.month ?? currentMonth;
+      const uKey = getUndoUniqueKey(itemYear, itemMonth, p.week_index, p.day_index, p.row_index, p.col_index);
+      if (addedUndoKeys.has(uKey)) return;
+      addedUndoKeys.add(uKey);
+
+      const sourceKey = `${p.week_index}-${p.day_index}-${p.row_index}-${p.col_index}`;
+      const isCutSource = clip.mode === 'cut' &&
+                          (itemYear !== currentYear || itemMonth !== currentMonth) &&
+                          cutSourceOriginals.has(sourceKey);
+
+      if (isCutSource) {
+        oldMemos.push(cutSourceOriginals.get(sourceKey));
+      } else {
+        oldMemos.push(buildMemoSnapshot(p.week_index, p.day_index, p.row_index, p.col_index));
+      }
     });
 
     recordUndo({ type: 'bulk-edit', oldMemos });

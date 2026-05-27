@@ -100,6 +100,10 @@ export function ScheduleProvider({ children }) {
     monthlyManualTherapistsRef.current = monthlyManualTherapists;
   }, [monthlyManualTherapists]);
 
+  // ─── CLIPBOARD GLOBAL STATE ────────────────────────────────
+  const clipboardRef = useRef({ content: '', mode: null });
+  const [clipboardSource, setClipboardSource] = useState(null); // { keys: Set, mode: 'copy'|'cut' }
+
   useEffect(() => {
     therapistsRef.current = therapists;
   }, [therapists]);
@@ -1342,7 +1346,8 @@ export function ScheduleProvider({ children }) {
       monthlyTherapists, monthlyManualTherapists, monthlyTherapistLoadKeys, loadMonthlyTherapists, saveMonthlyTherapists,
       notices, loadNotices, saveNotice,
       calendarSlotSettings, loadCalendarSlotSettings, saveCalendarSlotSettings,
-      loading
+      loading,
+      clipboardRef, clipboardSource, setClipboardSource
     }}>
       {children}
     </ScheduleContext.Provider>

@@ -309,9 +309,18 @@ export default function ShockwaveDataGrid({
     const summaries = new Map();
     gridData.forEach((row) => {
       if (!row?.date) return;
-      const current = summaries.get(row.date) || { total: 0, newPatient: 0 };
+      const current = summaries.get(row.date) || { 
+        total: 0, 
+        newPatient: 0, 
+        byPrescription: Object.fromEntries(prescriptions.map(p => [p, 0])) 
+      };
       if (row.prescription) {
-        current.total += toPrescriptionCount(row.prescription_count);
+        const count = toPrescriptionCount(row.prescription_count);
+        current.total += count;
+        const matched = prescriptions.find(p => prescriptionsMatch(row.prescription, p));
+        if (matched) {
+          current.byPrescription[matched] = (current.byPrescription[matched] || 0) + count;
+        }
       }
       if (String(row.patient_name || '').includes('*')) {
         current.newPatient += 1;
@@ -319,7 +328,7 @@ export default function ShockwaveDataGrid({
       summaries.set(row.date, current);
     });
     return summaries;
-  }, [gridData]);
+  }, [gridData, prescriptions]);
 
   // ─── 2. CELL VALUE HELPERS ────────────────────────────────
   const getVal = (row, colIdx) => {
@@ -1326,19 +1335,30 @@ export default function ShockwaveDataGrid({
             return (
             <tr key={row.id} data-grid-row-index={ri} className={rowClasses}>
               {Array.from({ length: totalColCount }, (_, ci) => {
+                const isDateCol = ci === 1;
+                const isTotalCol = ci === totalCountColIndex;
+                const isNewPatientCol = ci === newPatientColIndex;
+
+                const isDateGroupMergedCol = (isDateCol || isTotalCol || isNewPatientCol) && row.date;
+
+                // 날짜별 그룹 병합 셀의 경우 첫 행이 아닐 때는 td를 렌더링하지 않아야 정상 병합됨
+                if (isDateGroupMergedCol && !row._isFirst) {
+                  return null;
+                }
+
                 if (getMergedInto(ri, ci)) return null;
+
                 const mergeInfo = mergedCells[getMergeKey(ri, ci)];
-                const rs = mergeInfo?.rs || 1;
-                const cs = mergeInfo?.cs || 1;
+                const rs = isDateGroupMergedCol ? (row._groupSize || 1) : (mergeInfo?.rs || 1);
+                const cs = isDateGroupMergedCol ? 1 : (mergeInfo?.cs || 1);
+
                 const isSel = inSel(ri, ci);
                 const isFoc = focus?.r === ri && focus?.c === ci;
                 const isEdit = editing?.r === ri && editing?.c === ci;
                 let val = getVal(row, ci);
-                const isDateCol = ci === 1;
-                const isTotalCol = ci === totalCountColIndex;
-                const isNewPatientCol = ci === newPatientColIndex;
+
                 let groupCls = '';
-                if ((isDateCol || isTotalCol || isNewPatientCol) && row.date) {
+                if (isDateGroupMergedCol) {
                   if (!row._isFirst) { val = ''; groupCls = row._isLast ? 'grp-last' : 'grp-mid'; }
                   else if (!row._isLast) groupCls = 'grp-first';
                 }
@@ -1351,6 +1371,7 @@ export default function ShockwaveDataGrid({
                     cls += ` gc-fixed gc-fixed-${ci + 1}`;
                 }
                 if (ci === 0) cls += ' gc-row-index';
+                if (ci === FIXED_FIELDS.length - 1) cls += ' fixed-field-last';
                 if (clipboardSource && ri >= clipboardSource.r1 && ri <= clipboardSource.r2 && ci >= clipboardSource.c1 && ci <= clipboardSource.c2) {
                     cls += clipboardSource.mode === 'cut' ? ' gc-cut-source' : ' gc-copy-source';
                 }
@@ -1445,19 +1466,39 @@ export default function ShockwaveDataGrid({
                   );
                 }
 
+                let displayVal = val;
+                if (isTotalCol && val !== '') {
+                  const summary = dateSummaries.get(row.date);
+                  if (summary?.byPrescription) {
+                    const counts = prescriptions.map(p => summary.byPrescription[p] || 0);
+                    const countsStr = counts.join('/');
+                    displayVal = (
+                      <div className="sw-grid-total-cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', lineHeight: '1.1', paddingTop: '0px' }}>
+                        <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{val}</span>
+                        <span style={{ fontSize: '0.95rem', opacity: 0.55, fontWeight: 'normal', marginTop: '1px' }}>({countsStr})</span>
+                      </div>
+                    );
+                  }
+                }
+
+                const cellStyle = {
+                  ...frozenStyle,
+                  ...(isDateGroupMergedCol ? { verticalAlign: 'top', paddingTop: '4px' } : {})
+                };
+
                 return (
                   <td
                     key={ci}
                     className={cls}
                     rowSpan={rs > 1 ? rs : undefined}
                     colSpan={cs > 1 ? cs : undefined}
-                    style={frozenStyle}
+                    style={cellStyle}
                     onMouseDown={e => (ci === 0 ? onRowHeaderMouseDown(e, ri) : onMouseDown(e, ri, ci))}
                     onMouseEnter={() => onMouseEnter(ri, ci)}
                     onDoubleClick={() => onDblClick(ri, ci)}
                     onContextMenu={e => (ci === 0 ? onRowHeaderContextMenu(e, ri) : onCtxMenu(e, ri, ci))}
                   >
-                    {val}
+                    {displayVal}
                   </td>
                 );
               })}
