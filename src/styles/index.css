@@ -573,7 +573,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     align-items: center !important;
     justify-content: space-between !important;
     gap: 6mm !important;
-    margin: 5mm 0 4mm !important;
+    width: 95% !important;
+    max-width: 95% !important;
+    box-sizing: border-box !important;
+    margin: 5mm auto 4mm !important;
     padding: 0 !important;
   }
 
@@ -675,6 +678,13 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.settlement-print .sw-settlement-table tbody tr:nth-child(4) td {
     font-size: 12pt !important;
     font-weight: 800 !important;
+  }
+
+  body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table .settlement-amount-row td.amount,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table .settlement-incentive-row td.incentive {
+    font-size: 14pt !important;
+    font-weight: 900 !important;
+    line-height: 1.05 !important;
   }
 
   body.settlement-print .sw-settlement-table .label-col,

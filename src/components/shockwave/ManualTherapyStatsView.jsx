@@ -230,7 +230,7 @@ export default function ManualTherapyStatsView({
                   </td>
                 ))}
               </tr>
-              <tr>
+              <tr className="settlement-amount-row">
                 <th className="row-label">결산 금액(원)</th>
                 {settlement.summaryByTherapist.map((item, therapistIndex) => (
                   <td key={`amount-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className={`merged-value amount therapist-group-end therapist-tone-${therapistIndex % 5}-cell`}>
@@ -254,7 +254,7 @@ export default function ManualTherapyStatsView({
                   </td>
                 ))}
               </tr>
-              <tr>
+              <tr className="settlement-incentive-row">
                 <th className="row-label">총 인센티브 ({Number(incentivePercentage) || 0}%)</th>
                 {settlement.summaryByTherapist.map((item, therapistIndex) => (
                   <td key={`incentive-${item.therapist.id || item.therapist.name}`} colSpan={safePrescriptions.length} className={`merged-value incentive therapist-group-end therapist-tone-${therapistIndex % 5}-cell`}>
