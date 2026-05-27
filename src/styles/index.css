@@ -693,6 +693,11 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     line-height: 1.05 !important;
   }
 
+  body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table .settlement-amount-row td.grand-value.amount,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table .settlement-incentive-row td.grand-value.incentive {
+    font-size: 15pt !important;
+  }
+
   body.settlement-print .sw-settlement-table .label-col,
   body.settlement-print .sw-settlement-table .row-label {
     width: 15% !important;
