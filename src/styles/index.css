@@ -666,6 +666,12 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     padding: 2mm 1mm !important;
   }
 
+  body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table thead .therapist-col,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table thead .grand-col {
+    font-size: 13pt !important;
+    font-weight: 900 !important;
+  }
+
   /* 처방건수(1행) 및 충격파 합계/총 처방 건수(2행) 폰트 대폭 강조 */
   body.settlement-print .sw-settlement-table tbody tr:nth-child(1) td,
   body.settlement-print .sw-settlement-table tbody tr:nth-child(2) td {
