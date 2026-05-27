@@ -682,6 +682,7 @@ export default function useScheduleClipboardActions({
     selectedCellRef,
     clipboardRef,
     clipboardSource,
+    memos,
     buildMemoSnapshot,
     parsePlainTextClipboard,
     buildPastePayload,

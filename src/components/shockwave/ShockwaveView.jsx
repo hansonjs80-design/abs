@@ -912,7 +912,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       window.removeEventListener('keydown', handleGlobalKeyDown, true);
       document.removeEventListener('keydown', handleGlobalKeyDown, true);
     };
-  }, [doUndo, contextMenu]);
+  }, [doUndo, contextMenu, setClipboardSource]);
 
   const {
     cellKey,

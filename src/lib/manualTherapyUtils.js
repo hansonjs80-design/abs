@@ -398,7 +398,7 @@ export async function syncMonthManualTherapyScheduleToStats({ year, month, memos
   const chartNumbersSet = new Set();
 
   Object.entries(memos || {}).forEach(([key, cell]) => {
-    const [w, d, r, c] = key.split('-').map(Number);
+    const [w, d, _r, c] = key.split('-').map(Number);
     const dayInfo = weeks[w]?.[d];
     if (!dayInfo || !dayInfo.isCurrentMonth) return;
     if (upToToday && year === today.getFullYear() && month === today.getMonth() + 1) {

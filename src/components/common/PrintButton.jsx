@@ -6,6 +6,9 @@ const PRINT_STYLE_ID = 'clinic-print-orientation-style';
 function setPrintOrientation(orientation, margin = '6mm') {
   document.documentElement.dataset.printOrientation = orientation;
 
+  const pageSize = orientation === 'landscape' ? 'A4 landscape' :
+                   orientation === 'portrait' ? 'A4 portrait' : orientation;
+
   let style = document.getElementById(PRINT_STYLE_ID);
   if (!style) {
     style = document.createElement('style');
@@ -13,7 +16,7 @@ function setPrintOrientation(orientation, margin = '6mm') {
     document.head.appendChild(style);
   }
 
-  style.textContent = `@media print { @page { size: ${orientation}; margin: ${margin}; } }`;
+  style.textContent = `@media print { @page { size: ${pageSize}; margin: ${margin}; } }`;
 }
 
 /**
@@ -81,6 +84,7 @@ function cleanupPrintState() {
   document.body.classList.remove('calendar-only-print');
   document.body.classList.remove('hide-last-week');
   document.body.classList.remove('new-patient-print');
+  document.body.classList.remove('settlement-print');
   delete document.body.dataset.calendarWeeks;
   restoreHiddenMemoRows();
 }
@@ -188,10 +192,17 @@ export default function PrintButton({ isStaffSchedule }) {
       document.body.classList.remove('calendar-only-print');
       document.body.classList.remove('hide-last-week');
       delete document.body.dataset.calendarWeeks;
+      
+      const isSettlementPrint = Boolean(document.querySelector('.sw-settlement-table'));
       if (isNewPatientPortraitPrint) {
         document.body.classList.add('new-patient-print');
+        document.body.classList.remove('settlement-print');
+      } else if (isSettlementPrint) {
+        document.body.classList.remove('new-patient-print');
+        document.body.classList.add('settlement-print');
       } else {
         document.body.classList.remove('new-patient-print');
+        document.body.classList.remove('settlement-print');
       }
     }
     

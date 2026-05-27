@@ -109,7 +109,7 @@ export default function ShockwaveNewPatientsView({
   const printColumnWidths = useMemo(() => {
     const therapistCount = Math.max(1, summary.byTherapist.length);
     const groupWidth = 100 / therapistCount;
-    const ratios = [0.15, 0.38, 0.32, 0.15];
+    const ratios = [0.18, 0.23, 0.41, 0.18];
     return summary.byTherapist.flatMap(() => ratios.map((ratio) => `${groupWidth * ratio}%`));
   }, [summary.byTherapist]);
 

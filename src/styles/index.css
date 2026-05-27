@@ -499,8 +499,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   }
 
   .sw-grid-card-header,
-  .sw-settlement-header,
-  .sw-settlement-meta {
+  body:not(.new-patient-print):not(.settlement-print) .sw-settlement-header,
+  body:not(.new-patient-print):not(.settlement-print) .sw-settlement-meta {
     display: none !important;
   }
 
@@ -535,7 +535,18 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.new-patient-print .sw-stats-panel,
   body.new-patient-print .sw-stats-body,
   body.new-patient-print .sw-settlement-stack,
-  body.new-patient-print .sw-settlement-card {
+  body.new-patient-print .sw-settlement-card,
+  body.settlement-print,
+  body.settlement-print html,
+  body.settlement-print .app-layout,
+  body.settlement-print .app-main,
+  body.settlement-print .app-content,
+  body.settlement-print .sw-stats-layout,
+  body.settlement-print .sw-stats-container,
+  body.settlement-print .sw-stats-panel,
+  body.settlement-print .sw-stats-body,
+  body.settlement-print .sw-settlement-stack,
+  body.settlement-print .sw-settlement-card {
     width: 100% !important;
     max-width: none !important;
     min-width: 0 !important;
@@ -545,16 +556,20 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     background: #ffffff !important;
   }
 
-  body.new-patient-print .sw-settlement-card {
+  body.new-patient-print .sw-settlement-card,
+  body.settlement-print .sw-settlement-card {
     display: block !important;
   }
 
   body.new-patient-print .sw-settlement-header,
-  body.new-patient-print .sw-settlement-meta {
+  body.new-patient-print .sw-settlement-meta,
+  body.settlement-print .sw-settlement-header,
+  body.settlement-print .sw-settlement-meta {
     display: flex !important;
   }
 
-  body.new-patient-print .sw-settlement-header {
+  body.new-patient-print .sw-settlement-header,
+  body.settlement-print .sw-settlement-header {
     align-items: center !important;
     justify-content: space-between !important;
     gap: 6mm !important;
@@ -562,7 +577,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     padding: 0 !important;
   }
 
-  body.new-patient-print .sw-settlement-header h2 {
+  body.new-patient-print .sw-settlement-header h2,
+  body.settlement-print .sw-settlement-header h2 {
     display: block !important;
     margin: 0 !important;
     font-size: 14pt !important;
@@ -571,7 +587,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     color: #111827 !important;
   }
 
-  body.new-patient-print .sw-settlement-meta span {
+  body.new-patient-print .sw-settlement-meta span,
+  body.settlement-print .sw-settlement-meta span {
     display: inline-flex !important;
     align-items: center !important;
     min-height: 0 !important;
@@ -585,8 +602,21 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     background: #ffffff !important;
   }
 
+  body.settlement-print .sw-recent-period-control input {
+    border: none !important;
+    background: transparent !important;
+    color: #111827 !important;
+    font-size: 11pt !important;
+    font-weight: 800 !important;
+    padding: 0 !important;
+    width: auto !important;
+    text-align: right !important;
+  }
+
   body.new-patient-print .sw-settlement-table-wrap,
-  body.new-patient-print .sw-compact-table-wrap {
+  body.new-patient-print .sw-compact-table-wrap,
+  body.settlement-print .sw-settlement-table-wrap,
+  body.settlement-print .sw-compact-table-wrap {
     display: block !important;
     width: 95% !important;
     max-width: none !important;
@@ -594,6 +624,127 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     margin: 0 auto !important;
     padding: 0 !important;
     overflow: visible !important;
+  }
+
+  body.settlement-print .sw-settlement-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+
+  body.settlement-print .sw-settlement-table th,
+  body.settlement-print .sw-settlement-table td {
+    width: auto !important;
+    min-width: 0 !important;
+    padding: 1.5mm 1mm !important;
+    font-size: 10pt !important;
+    line-height: 1.15 !important;
+    border-right: 0.7px solid #94a3b8 !important;
+    border-bottom: 0.7px solid #94a3b8 !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+  }
+
+  /* 결산 테이블 1열(첫 번째 열) 가운데 정렬 */
+  body.settlement-print .sw-settlement-table td:first-child,
+  body.settlement-print .sw-settlement-table th:first-child {
+    text-align: center !important;
+    padding-left: 0 !important;
+  }
+
+  body.settlement-print .sw-settlement-table thead th {
+    font-size: 11pt !important;
+    font-weight: 800 !important;
+    padding: 2mm 1mm !important;
+  }
+
+  /* 처방건수(1행) 및 충격파 합계/총 처방 건수(2행) 폰트 대폭 강조 */
+  body.settlement-print .sw-settlement-table tbody tr:nth-child(1) td,
+  body.settlement-print .sw-settlement-table tbody tr:nth-child(2) td {
+    font-size: 13.5pt !important;
+    font-weight: 800 !important;
+  }
+
+  /* 결산금액(3행) 및 인센티브(4행) 폰트 1단계 강조 */
+  body.settlement-print .sw-settlement-table tbody tr:nth-child(3) td,
+  body.settlement-print .sw-settlement-table tbody tr:nth-child(4) td {
+    font-size: 12pt !important;
+    font-weight: 800 !important;
+  }
+
+  body.settlement-print .sw-settlement-table .label-col,
+  body.settlement-print .sw-settlement-table .row-label {
+    width: 15% !important;
+    font-weight: 800 !important;
+    font-size: 10.5pt !important;
+    text-align: center !important;
+    padding-left: 0 !important;
+    white-space: normal !important;
+  }
+
+  body.settlement-print .sw-settlement-card:last-of-type {
+    width: 55% !important;
+    max-width: 55% !important;
+    min-width: 0 !important;
+    margin: 8mm 0 0 2.5% !important;
+  }
+
+  body.settlement-print .sw-settlement-card:last-of-type .sw-settlement-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-direction: row !important;
+    width: 100% !important;
+    margin-bottom: 3mm !important;
+  }
+
+  body.settlement-print .sw-settlement-card:last-of-type .sw-settlement-header h2 {
+    font-size: 11pt !important;
+    white-space: nowrap !important;
+    display: block !important;
+    margin: 0 !important;
+  }
+
+  body.settlement-print .sw-settlement-card:last-of-type .sw-settlement-meta {
+    display: flex !important;
+    align-items: center !important;
+    white-space: nowrap !important;
+  }
+
+  body.settlement-print .sw-settlement-card:last-of-type .sw-compact-table-wrap,
+  body.settlement-print .sw-settlement-card:last-of-type .sw-six-month-summary-wrap {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  body.settlement-print .sw-summary-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    border: none !important;
+  }
+
+  body.settlement-print .sw-summary-table th,
+  body.settlement-print .sw-summary-table td {
+    padding: 2mm 1.5mm !important;
+    font-size: 11.5pt !important;
+    line-height: 1.15 !important;
+    border-right: 0.7px solid #94a3b8 !important;
+    border-bottom: 0.7px solid #94a3b8 !important;
+    text-align: center !important;
+  }
+
+  body.settlement-print .sw-summary-table thead th {
+    font-weight: 800 !important;
+    font-size: 12.5pt !important;
   }
 
   body.new-patient-print .sw-new-patient-table,
@@ -604,7 +755,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     table-layout: fixed !important;
     border-collapse: collapse !important;
     border-spacing: 0 !important;
-    border: 1.2px solid #475569 !important;
+    border: 1.2px solid #94a3b8 !important;
     border-radius: 0 !important;
   }
 
@@ -614,11 +765,11 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.new-patient-print .sw-compact-new-patient-table td {
     width: auto !important;
     min-width: 0 !important;
-    height: 6.6mm !important;
-    padding: 0.8mm 0.9mm !important;
-    border-right-width: 0.7px !important;
-    border-bottom-width: 0.7px !important;
-    font-size: 7.4pt !important;
+    height: 7.2mm !important;
+    padding: 1.2mm 1mm !important;
+    border-right: 0.8px solid #b6c2d1 !important;
+    border-bottom: 0.8px solid #d4dde8 !important;
+    font-size: 8.8pt !important;
     line-height: 1.05 !important;
     white-space: normal !important;
     word-break: keep-all !important;
@@ -632,28 +783,43 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   body.new-patient-print .sw-new-patient-table thead .therapist-col,
   body.new-patient-print .sw-compact-new-patient-table thead .therapist-col {
-    height: 7.2mm !important;
-    padding: 1mm 0.8mm !important;
-    font-size: 8.6pt !important;
+    height: 7.8mm !important;
+    padding: 1.2mm 1mm !important;
+    font-size: 11.5pt !important;
     line-height: 1.05 !important;
   }
 
   body.new-patient-print .sw-new-patient-table thead .sub-col,
   body.new-patient-print .sw-compact-new-patient-table thead .sub-col {
-    height: 5.8mm !important;
-    padding: 0.6mm 0.5mm !important;
-    font-size: 7pt !important;
+    height: 6.1mm !important;
+    padding: 0.8mm 0.7mm !important;
+    font-size: 9pt !important;
+  }
+
+  body.new-patient-print .sw-new-patient-table tbody td,
+  body.new-patient-print .sw-compact-new-patient-table tbody td {
+    height: 6.6mm !important;
+    padding: 0.9mm 0.8mm !important;
+    font-size: 8.8pt !important;
   }
 
   body.new-patient-print .sw-new-patient-table tbody td.patient-name,
   body.new-patient-print .sw-compact-new-patient-table tbody td.patient-name {
-    padding-left: 1mm !important;
-    text-align: left !important;
+    padding-left: 0.8mm !important;
+    padding-right: 0.8mm !important;
+    text-align: center !important;
   }
 
   body.new-patient-print .sw-new-patient-table .therapist-group-end,
   body.new-patient-print .sw-compact-new-patient-table .therapist-group-end {
-    border-right-width: 1.2px !important;
+    border-right: 1.2px solid #8da0b8 !important;
+  }
+
+  body.new-patient-print .sw-new-patient-table thead th:last-child,
+  body.new-patient-print .sw-new-patient-table tbody td:last-child,
+  body.new-patient-print .sw-compact-new-patient-table thead th:last-child,
+  body.new-patient-print .sw-compact-new-patient-table tbody td:last-child {
+    border-right: 0.8px solid #b6c2d1 !important;
   }
 }
 
