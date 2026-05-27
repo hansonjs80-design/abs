@@ -96,6 +96,8 @@ export default function useScheduleClipboardActions({
 
     return {
       mode: 'copy',
+      srcYear: currentYear,
+      srcMonth: currentMonth,
       srcW: range.w,
       srcD: range.d,
       srcMinRow: range.minRow,
@@ -106,7 +108,7 @@ export default function useScheduleClipboardActions({
       sourceKeys,
       plainText: plainRows.join('\n'),
     };
-  }, [selectedCell, selectionInfo, memos, cellKey]);
+  }, [selectedCell, selectionInfo, memos, cellKey, currentYear, currentMonth]);
 
   const parsePlainTextClipboard = useCallback((plainText, htmlText = null) => {
     if (typeof plainText !== 'string') return null;
@@ -556,12 +558,23 @@ export default function useScheduleClipboardActions({
 
     // 2. 잘라내기(cut) 처리 반영
     if (clip.mode === 'cut' && currentClipboardSource?.keys) {
+      // 원본 달 정보: clipboard에 저장된 srcYear/srcMonth 사용 (달 이동 후에도 원본 위치 정확 참조)
+      const cutSrcYear = clip.srcYear ?? currentYear;
+      const cutSrcMonth = clip.srcMonth ?? currentMonth;
+      const isCrossMonth = (cutSrcYear !== currentYear || cutSrcMonth !== currentMonth);
+
       Array.from(currentClipboardSource.keys).forEach((k) => {
         const [w, d, r, c] = k.split('-').map(Number);
-        rememberOldMemo(w, d, r, c);
-        combinedPayload.set(`${w}-${d}-${r}-${c}`, markIntentionalClearPayload({
-          year: currentYear,
-          month: currentMonth,
+        // 같은 달인 경우에만 undo 스냅샷 수집 (다른 달의 memos는 현재 로드되어 있지 않음)
+        if (!isCrossMonth) {
+          rememberOldMemo(w, d, r, c);
+        }
+        // 같은 달: 기존 키 사용 (step 3에서 paste 데이터가 덮어쓸 수 있도록)
+        // 다른 달: cut-src- 접두어 사용 (현재 달의 paste 좌표와 충돌 방지)
+        const mapKey = isCrossMonth ? `cut-src-${w}-${d}-${r}-${c}` : `${w}-${d}-${r}-${c}`;
+        combinedPayload.set(mapKey, markIntentionalClearPayload({
+          year: cutSrcYear,
+          month: cutSrcMonth,
           week_index: w,
           day_index: d,
           row_index: r,
