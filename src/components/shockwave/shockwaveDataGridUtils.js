@@ -1,7 +1,7 @@
 import { toProperCase } from '../../lib/shockwaveSyncUtils';
 
 export const THERAPIST_COLORS = [
-  '#dbeafe',
+  '#ffedd5',
   '#e9ddff',
   '#d8f3ea',
   '#ffe7c7',
@@ -9,7 +9,7 @@ export const THERAPIST_COLORS = [
 ];
 
 export const THERAPIST_TOTAL_COLORS = [
-  '#bfdbfe',
+  '#fed7aa',
   '#d8b4fe',
   '#b7ead8',
   '#ffd39a',

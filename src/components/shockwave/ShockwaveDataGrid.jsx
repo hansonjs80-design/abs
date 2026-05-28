@@ -57,6 +57,7 @@ function parseFlexibleDate(val, currentYear, currentMonth) {
 
 const TOOLTIP_ACCENT_COLORS = {
   '#dbeafe': '#2563eb',
+  '#ffedd5': '#c2410c',
   '#e9ddff': '#7c3aed',
   '#d8f3ea': '#047857',
   '#ffe7c7': '#b45309',
