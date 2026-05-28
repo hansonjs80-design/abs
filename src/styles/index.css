@@ -674,6 +674,12 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     font-weight: 900 !important;
   }
 
+  html[data-print-orientation="landscape"] body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table thead .prescription-col {
+    font-size: 13pt !important;
+    font-weight: 900 !important;
+    line-height: 1.05 !important;
+  }
+
   /* 처방건수 및 합계 행 폰트 강조 */
   body.settlement-print .sw-settlement-table tbody tr:nth-child(1) td,
   body.settlement-print .sw-settlement-table tbody tr:nth-child(2) td,
@@ -697,6 +703,15 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-amount-row td.amount,
   body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-incentive-row td.incentive {
     font-size: 15pt !important;
+    font-weight: 900 !important;
+    line-height: 1.05 !important;
+  }
+
+  html[data-print-orientation="landscape"] body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-amount-row th,
+  html[data-print-orientation="landscape"] body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-amount-row td,
+  html[data-print-orientation="landscape"] body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-incentive-row th,
+  html[data-print-orientation="landscape"] body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-incentive-row td {
+    font-size: 16pt !important;
     font-weight: 900 !important;
     line-height: 1.05 !important;
   }

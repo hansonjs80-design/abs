@@ -196,7 +196,7 @@ export default function ManualTherapyStatsView({
                 {settlement.summaryByTherapist.flatMap((item, therapistIndex) =>
                   safePrescriptions.map((prescription, prescriptionIndex) => (
                     <td key={`count-${item.therapist.id || item.therapist.name}-${prescription}`} className={`therapist-tone-${therapistIndex % 5}-cell${prescriptionIndex === safePrescriptions.length - 1 ? ' therapist-group-end' : ''}`}>
-                      {item.countsByPrescription[prescription] || 0}
+                      {formatCount(item.countsByPrescription[prescription] || 0)}
                     </td>
                   ))
                 )}
