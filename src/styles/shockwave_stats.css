@@ -450,6 +450,7 @@
   --grid-row-selected-fixed-bg: #c9daF2;
   --grid-row-selected-summary-bg: #d0deef;
   --grid-row-selected-line: #8aa4cf;
+  --sw-grid-row-hover-bg: var(--bg-hover);
   width: 100%;
   overflow: auto;
   max-height: 85vh;
@@ -460,10 +461,12 @@
 
 .sw-grid-wrapper--shockwave {
   --grid-title-bg: #bfdbfe;
+  --sw-grid-row-hover-bg: #dbeafe;
 }
 
 .sw-grid-wrapper--manual {
   --grid-title-bg: #fed7aa;
+  --sw-grid-row-hover-bg: #ffedd5;
 }
 
 /* Custom Scrollbar for Grid Wrapper to avoid obscuring corners */
@@ -744,7 +747,7 @@
 }
 
 .sw-grid-table tbody tr:hover .gc:not(.gc-fixed-1):not(.gc-fixed-2):not(.gc-total):not(.gc-new-patient) {
-  background: var(--bg-hover);
+  background: var(--sw-grid-row-hover-bg);
 }
 
 .gc-fixed-6 { border-right: 1px solid var(--grid-strong) !important; }
@@ -1059,7 +1062,7 @@ tbody tr:hover .gc-fixed-3,
 tbody tr:hover .gc-fixed-4,
 tbody tr:hover .gc-fixed-5,
 tbody tr:hover .gc-fixed-6 {
-  background: #eef3f8 !important;
+  background: var(--sw-grid-row-hover-bg) !important;
 }
 
 .sw-grid-table tbody tr:hover .gc-fixed-1,
