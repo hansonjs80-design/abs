@@ -366,6 +366,7 @@ export default function ShockwaveDataGrid({
     return {
       date: formatFullDateLabel(row.date),
       therapistName: therapist.name,
+      therapistColor: THERAPIST_COLORS[tIdx % THERAPIST_COLORS.length],
       items: prescriptions.map(p => ({ label: p, count: counts[p] || 0 })),
     };
   }, [dateSummaries, formatFullDateLabel, prescriptions, totalCountColIndex, visibleTherapists]);
@@ -410,6 +411,7 @@ export default function ShockwaveDataGrid({
   const [dragging, setDragging] = useState(false);
   const [editing, setEditing] = useState(null); // {r,c,val}
   const [ctxMenu, setCtxMenu] = useState(null);
+  const [countTooltip, setCountTooltip] = useState(null);
   const [mergedCells, setMergedCells] = useState({}); // key "r-c" -> {rs, cs}
 
   const wrapRef = useRef(null);
@@ -419,6 +421,32 @@ export default function ShockwaveDataGrid({
   const datePickerRef = useRef(null);
   const ctxMenuRef = useRef(null);
   const todayDateKey = useMemo(() => toDateKey(getTodayKST()), []);
+
+  const showCountTooltip = useCallback((target, tooltip) => {
+    if (!target || !tooltip) return;
+    const rect = target.getBoundingClientRect();
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 1024;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 768;
+    const tooltipWidth = Math.min(320, Math.max(220, viewportWidth - 24));
+    const halfWidth = tooltipWidth / 2;
+    const minX = 12 + halfWidth;
+    const maxX = viewportWidth - 12 - halfWidth;
+    const rawX = rect.left + rect.width / 2;
+    const x = Math.min(Math.max(rawX, minX), Math.max(minX, maxX));
+    const estimatedHeight = 94;
+    const showAbove = rect.bottom + estimatedHeight + 12 > viewportHeight && rect.top > estimatedHeight + 12;
+    setCountTooltip({
+      ...tooltip,
+      x,
+      y: showAbove ? rect.top - 8 : rect.bottom + 8,
+      width: tooltipWidth,
+      placement: showAbove ? 'above' : 'below',
+    });
+  }, []);
+
+  const hideCountTooltip = useCallback(() => {
+    setCountTooltip(null);
+  }, []);
 
   const selNorm = sel ? {
     r1: Math.min(sel.r1, sel.r2), c1: Math.min(sel.c1, sel.c2),
@@ -1506,6 +1534,9 @@ export default function ShockwaveDataGrid({
                   );
                 }
 
+                const countTooltipData = (!isTotalCol && !isNewPatientCol && ci >= FIXED_FIELDS.length && ci < totalCountColIndex)
+                  ? getTherapistCountTooltip(row, ci)
+                  : null;
                 let displayVal = val;
                 if (isTotalCol && val !== '') {
                   const summary = dateSummaries.get(row.date);
@@ -1530,27 +1561,12 @@ export default function ShockwaveDataGrid({
                     </div>
                   );
                 }
-                if (!isTotalCol && !isNewPatientCol && ci >= FIXED_FIELDS.length && ci < totalCountColIndex) {
-                  const tooltip = getTherapistCountTooltip(row, ci);
-                  if (tooltip) {
-                    displayVal = (
-                      <div className="sw-grid-count-hover">
-                        <span className="sw-grid-count-value">{val}</span>
-                        <div className="sw-grid-count-tooltip" role="tooltip">
-                          <div className="sw-grid-count-tooltip-date">{tooltip.date}</div>
-                          <div className="sw-grid-count-tooltip-name">{tooltip.therapistName}</div>
-                          <div className="sw-grid-count-tooltip-line">
-                            {tooltip.items.map(({ label, count }, idx) => (
-                              <React.Fragment key={label}>
-                                {idx > 0 && <span className="sw-grid-count-tooltip-divider">|</span>}
-                                <span>{label} {count}건</span>
-                              </React.Fragment>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
+                if (countTooltipData) {
+                  displayVal = (
+                    <div className="sw-grid-count-hover">
+                      <span className="sw-grid-count-value">{val}</span>
+                    </div>
+                  );
                 }
 
                 const cellStyle = {
@@ -1566,7 +1582,11 @@ export default function ShockwaveDataGrid({
                     colSpan={cs > 1 ? cs : undefined}
                     style={cellStyle}
                     onMouseDown={e => (ci === 0 ? onRowHeaderMouseDown(e, ri) : onMouseDown(e, ri, ci))}
-                    onMouseEnter={() => onMouseEnter(ri, ci)}
+                    onMouseEnter={(e) => {
+                      onMouseEnter(ri, ci);
+                      if (countTooltipData) showCountTooltip(e.currentTarget, countTooltipData);
+                    }}
+                    onMouseLeave={countTooltipData ? hideCountTooltip : undefined}
                     onDoubleClick={() => onDblClick(ri, ci)}
                     onContextMenu={e => (ci === 0 ? onRowHeaderContextMenu(e, ri) : onCtxMenu(e, ri, ci))}
                   >
@@ -1579,6 +1599,31 @@ export default function ShockwaveDataGrid({
         })}
         </tbody>
       </table>
+
+      {countTooltip && (
+        <div
+          className={`sw-grid-count-tooltip sw-grid-count-tooltip--fixed sw-grid-count-tooltip--${countTooltip.placement}`}
+          role="tooltip"
+          style={{
+            left: `${countTooltip.x}px`,
+            top: `${countTooltip.y}px`,
+            width: `${countTooltip.width}px`,
+          }}
+        >
+          <div className="sw-grid-count-tooltip-date">{countTooltip.date}</div>
+          <div className="sw-grid-count-tooltip-name" style={{ color: countTooltip.therapistColor }}>
+            {countTooltip.therapistName}
+          </div>
+          <div className="sw-grid-count-tooltip-line">
+            {countTooltip.items.map(({ label, count }, idx) => (
+              <React.Fragment key={label}>
+                {idx > 0 && <span className="sw-grid-count-tooltip-divider">|</span>}
+                <span>{label} {count}건</span>
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Context Menu */}
       {ctxMenu && (

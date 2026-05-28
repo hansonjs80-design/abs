@@ -724,6 +724,7 @@
 
 .gc-fixed-6 { border-right: 1px solid var(--grid-strong) !important; }
 .gc-total { 
+  font-family: Arial, sans-serif;
   font-weight: 800; 
   color: #475569;
   border-left: 1px solid var(--grid-strong) !important;
@@ -731,6 +732,7 @@
   background-color: var(--grid-total-cell-bg) !important; 
 }
 .gc-new-patient { 
+  font-family: Arial, sans-serif;
   font-weight: 800; 
   color: #475569;
   border-left: 1px solid var(--grid-strong) !important;
@@ -754,6 +756,7 @@
 
 .sw-grid-new-patient-total {
   color: var(--text-primary);
+  font-family: Arial, sans-serif;
   font-size: 1.25rem;
   font-weight: 800;
 }
@@ -761,6 +764,7 @@
 .sw-grid-new-patient-breakdown {
   margin-top: 1px;
   color: #64748b;
+  font-family: Arial, sans-serif;
   font-size: 0.95rem;
   font-weight: 600;
   opacity: 0.62;
@@ -800,6 +804,22 @@
   white-space: nowrap;
 }
 
+.sw-grid-count-tooltip--fixed {
+  position: fixed;
+  z-index: 10000;
+  opacity: 1;
+  pointer-events: none;
+  text-align: center;
+}
+
+.sw-grid-count-tooltip--below {
+  transform: translateX(-50%);
+}
+
+.sw-grid-count-tooltip--above {
+  transform: translate(-50%, -100%);
+}
+
 .sw-grid-count-hover:hover .sw-grid-count-tooltip,
 .sw-grid-count-hover:focus-within .sw-grid-count-tooltip {
   opacity: 1;
@@ -815,8 +835,7 @@
 
 .sw-grid-count-tooltip-name {
   margin-top: 2px;
-  color: #ffffff;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 800;
   line-height: 1.25;
 }
@@ -825,11 +844,13 @@
   display: flex;
   gap: 6px;
   align-items: center;
+  justify-content: center;
   margin-top: 7px;
   color: #e2e8f0;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1.25;
+  text-align: center;
 }
 
 .sw-grid-count-tooltip-divider {
