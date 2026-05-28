@@ -146,51 +146,60 @@ export default function usePatientHistoryActions({
         return (parseInt(b.visit_count || '0', 10) || 0) - (parseInt(a.visit_count || '0', 10) || 0);
       });
 
-      let draftLog = null;
+      let selectedDate = '';
+      const selectedDateLogs = [];
       if (selectedCell) {
         const calWeeks = generateShockwaveCalendar(currentYear, currentMonth, holidays);
         const dayInfo = calWeeks[selectedCell.w]?.[selectedCell.d];
         if (dayInfo) {
           const dd = dayInfo.date;
-          const cellDate = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`;
+          selectedDate = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`;
+          const selectedKey = cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c);
 
-          const cellKeyValue = `${selectedCell.w}-${selectedCell.d}-${selectedCell.r}-${selectedCell.c}`;
-          const cellMemo = memos[cellKeyValue] || {};
-          const cellContent = cellMemo.content || pendingDisplayValues[cellKeyValue] || '';
-          const visitSuffix = getExplicitVisitSuffix(cellContent);
-          const cellVisitCount = visitSuffix.replace(/[()]/g, '') || '';
+          for (let rowIndex = 0; rowIndex < baseTimeSlotsLength; rowIndex++) {
+            for (let colIndex = 0; colIndex < colCount; colIndex++) {
+              const key = cellKey(selectedCell.w, selectedCell.d, rowIndex, colIndex);
+              const memo = memos[key] || {};
+              const content = Object.prototype.hasOwnProperty.call(pendingDisplayValues, key)
+                ? pendingDisplayValues[key]
+                : (memo.content || '');
+              if (!String(content || '').trim()) continue;
 
-          draftLog = {
-            id: 'draft',
-            date: cellDate,
-            patient_name: nameParam || '',
-            chart_number: chartParam || '',
-            prescription: cellMemo.prescription || '',
-            body_part: cellMemo.body_part || '',
-            visit_count: cellVisitCount,
-            type: 'draft',
-            history_group: getPatientHistoryTreatmentGroup({
-              type: 'draft',
-              prescription: cellMemo.prescription,
-              content: cellContent,
-            }),
-          };
+              const parsed = parseSchedulerPatientIdentity(content);
+              const matchChart = chartParam && String(parsed.patientChart || '').trim() === chartParam;
+              const matchName = nameParam && normalizeNameForMatch(parsed.patientName).includes(nameParam);
+              if (chartParam ? !matchChart : !matchName) continue;
+
+              const visitSuffix = getExplicitVisitSuffix(content);
+              selectedDateLogs.push({
+                id: `draft-${key}`,
+                date: selectedDate,
+                patient_name: parsed.patientName || nameParam || '',
+                chart_number: parsed.patientChart || chartParam || '',
+                prescription: memo.prescription || '',
+                body_part: memo.body_part || '',
+                visit_count: visitSuffix.replace(/[()]/g, '') || '',
+                type: 'draft',
+                history_group: getPatientHistoryTreatmentGroup({
+                  type: 'draft',
+                  prescription: memo.prescription,
+                  content,
+                }),
+                isCurrentCell: key === selectedKey,
+                sort_index: rowIndex * colCount + colIndex,
+              });
+            }
+          }
         }
       }
 
       let finalLogs = matches;
-      if (draftLog) {
-        const existingIdx = matches.findIndex((m) => (
-          m.date === draftLog.date &&
-          (m.history_group || 'shockwave') === (draftLog.history_group || 'shockwave')
-        ));
-        if (existingIdx !== -1) {
-          finalLogs = [...matches];
-          finalLogs[existingIdx] = { ...finalLogs[existingIdx], isCurrentCell: true };
-        } else {
-          draftLog.isCurrentCell = true;
-          finalLogs = [draftLog, ...matches];
-        }
+      if (selectedDate && selectedDateLogs.length > 0) {
+        selectedDateLogs.sort((a, b) => (a.sort_index || 0) - (b.sort_index || 0));
+        finalLogs = [
+          ...selectedDateLogs,
+          ...matches.filter((m) => m.date !== selectedDate),
+        ];
       }
       setPatientHistoryModalData({ loading: false, logs: finalLogs, searchName: nameParam, searchChart: chartParam });
     } catch (e) {
@@ -198,10 +207,21 @@ export default function usePatientHistoryActions({
       alert(`디버그 에러 발생: ${e.message}`);
       setPatientHistoryModalData((prev) => ({ ...prev, loading: false }));
     }
-  }, [currentYear, currentMonth, holidays, selectedCell, memos, pendingDisplayValues, setPatientHistoryModalData]);
+  }, [
+    currentYear,
+    currentMonth,
+    holidays,
+    selectedCell,
+    memos,
+    pendingDisplayValues,
+    baseTimeSlotsLength,
+    colCount,
+    cellKey,
+    setPatientHistoryModalData,
+  ]);
 
   const handleUpdateLogVisitCount = useCallback(async (log, newValue) => {
-    if (log.id === 'draft') return;
+    if (log.id === 'draft' || log.type === 'draft') return;
 
     try {
       if (log.type === 'schedule') {
