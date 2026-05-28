@@ -126,6 +126,9 @@ export function formatTodayScheduleItem(txt) {
   // 숫자만 있거나 "N명" 형태면 스킵
   if (/^\d*명$/.test(text)) return null;
   if (!isNaN(Number(text))) return null;
+  if (!text.includes('/') && !/(휴무|연차|반차|야간|야\b|출근|퇴근|근무|오전|오후|휴가|\d|:)/.test(text)) {
+    return null;
+  }
 
   // 연차 패턴
   if (/^(PT|간호)\/.+\s*연차$/.test(text)) return text;

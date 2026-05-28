@@ -68,6 +68,7 @@ export default function useScheduleKeyboardActions({
   setEditingCell,
   setRangeEnd,
   setSelectedKeys,
+  setContextMenu,
   shockwaveSettings,
   getDefaultReservationTime,
   handleOpenBodyPartMenu,
@@ -676,6 +677,9 @@ export default function useScheduleKeyboardActions({
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         e.stopPropagation();
+        flushPendingMoveSave();
+        deleteCells(selectedKeysRef.current);
+        setContextMenu?.(null);
       }
       return;
     }
@@ -923,6 +927,7 @@ export default function useScheduleKeyboardActions({
     handleOpenBodyPartMenu,
     flushPendingMoveSave,
     setEditingCell,
+    setContextMenu,
     setRangeEnd,
     setSelectedKeys,
     handleReservationTimeShortcut,

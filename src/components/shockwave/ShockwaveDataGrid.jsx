@@ -305,6 +305,13 @@ export default function ShockwaveDataGrid({
     return Number.isFinite(parsed) ? parsed : 0;
   };
   const isRowEmpty = (row) => ROW_DATA_FIELDS.every((field) => isBlankValue(row?.[field]));
+  const createEmptyPrescriptionCounts = () => Object.fromEntries(prescriptions.map(p => [p, 0]));
+  const createEmptyTherapistCounts = () => Object.fromEntries(
+    visibleTherapists.map(t => [t.name, createEmptyPrescriptionCounts()])
+  );
+  const createEmptyNewPatientCounts = () => Object.fromEntries(
+    visibleTherapists.map(t => [t.name, 0])
+  );
   const dateSummaries = useMemo(() => {
     const summaries = new Map();
     gridData.forEach((row) => {
@@ -312,7 +319,9 @@ export default function ShockwaveDataGrid({
       const current = summaries.get(row.date) || { 
         total: 0, 
         newPatient: 0, 
-        byPrescription: Object.fromEntries(prescriptions.map(p => [p, 0])) 
+        byPrescription: createEmptyPrescriptionCounts(),
+        byTherapistPrescription: createEmptyTherapistCounts(),
+        newPatientByTherapist: createEmptyNewPatientCounts(),
       };
       if (row.prescription) {
         const count = toPrescriptionCount(row.prescription_count);
@@ -320,15 +329,46 @@ export default function ShockwaveDataGrid({
         const matched = prescriptions.find(p => prescriptionsMatch(row.prescription, p));
         if (matched) {
           current.byPrescription[matched] = (current.byPrescription[matched] || 0) + count;
+          if (row.therapist_name) {
+            if (!current.byTherapistPrescription[row.therapist_name]) {
+              current.byTherapistPrescription[row.therapist_name] = createEmptyPrescriptionCounts();
+            }
+            current.byTherapistPrescription[row.therapist_name][matched] =
+              (current.byTherapistPrescription[row.therapist_name][matched] || 0) + count;
+          }
         }
       }
       if (String(row.patient_name || '').includes('*')) {
         current.newPatient += 1;
+        if (row.therapist_name) {
+          current.newPatientByTherapist[row.therapist_name] =
+            (current.newPatientByTherapist[row.therapist_name] || 0) + 1;
+        }
       }
       summaries.set(row.date, current);
     });
     return summaries;
-  }, [gridData, prescriptions]);
+  }, [gridData, prescriptions, visibleTherapists]);
+
+  const formatFullDateLabel = useCallback((date) => {
+    const parts = String(date || '').split('-');
+    if (parts.length !== 3) return String(date || '');
+    return `${Number(parts[0])}년 ${Number(parts[1])}월 ${Number(parts[2])}일`;
+  }, []);
+
+  const getTherapistCountTooltip = useCallback((row, colIdx) => {
+    if (!row?.date || colIdx < FIXED_FIELDS.length || colIdx >= totalCountColIndex) return null;
+    const tIdx = Math.floor((colIdx - FIXED_FIELDS.length) / prescriptions.length);
+    const therapist = visibleTherapists[tIdx];
+    if (!therapist) return null;
+    const summary = dateSummaries.get(row.date);
+    const counts = summary?.byTherapistPrescription?.[therapist.name] || {};
+    return {
+      date: formatFullDateLabel(row.date),
+      therapistName: therapist.name,
+      items: prescriptions.map(p => ({ label: p, count: counts[p] || 0 })),
+    };
+  }, [dateSummaries, formatFullDateLabel, prescriptions, totalCountColIndex, visibleTherapists]);
 
   // ─── 2. CELL VALUE HELPERS ────────────────────────────────
   const getVal = (row, colIdx) => {
@@ -1476,6 +1516,38 @@ export default function ShockwaveDataGrid({
                       <div className="sw-grid-total-cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', lineHeight: '1.1', paddingTop: '0px' }}>
                         <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{val}</span>
                         <span style={{ fontSize: '0.95rem', opacity: 0.55, fontWeight: 'normal', marginTop: '1px' }}>({countsStr})</span>
+                      </div>
+                    );
+                  }
+                }
+                if (isNewPatientCol && val !== '') {
+                  const summary = dateSummaries.get(row.date);
+                  const counts = visibleTherapists.map(t => summary?.newPatientByTherapist?.[t.name] || 0);
+                  displayVal = (
+                    <div className="sw-grid-new-patient-cell">
+                      <span className="sw-grid-new-patient-total">{val}</span>
+                      <span className="sw-grid-new-patient-breakdown">({counts.join('/')})</span>
+                    </div>
+                  );
+                }
+                if (!isTotalCol && !isNewPatientCol && ci >= FIXED_FIELDS.length && ci < totalCountColIndex) {
+                  const tooltip = getTherapistCountTooltip(row, ci);
+                  if (tooltip) {
+                    displayVal = (
+                      <div className="sw-grid-count-hover">
+                        <span className="sw-grid-count-value">{val}</span>
+                        <div className="sw-grid-count-tooltip" role="tooltip">
+                          <div className="sw-grid-count-tooltip-date">{tooltip.date}</div>
+                          <div className="sw-grid-count-tooltip-name">{tooltip.therapistName}</div>
+                          <div className="sw-grid-count-tooltip-line">
+                            {tooltip.items.map(({ label, count }, idx) => (
+                              <React.Fragment key={label}>
+                                {idx > 0 && <span className="sw-grid-count-tooltip-divider">|</span>}
+                                <span>{label} {count}건</span>
+                              </React.Fragment>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     );
                   }

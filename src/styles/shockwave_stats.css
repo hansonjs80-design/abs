@@ -738,6 +738,104 @@
   background-color: var(--grid-new-cell-bg) !important;
 }
 
+.sw-grid-new-patient-cell,
+.sw-grid-total-cell {
+  min-height: calc(var(--sw-grid-row-height) - 2px);
+}
+
+.sw-grid-new-patient-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  line-height: 1.1;
+  padding-top: 0;
+}
+
+.sw-grid-new-patient-total {
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.sw-grid-new-patient-breakdown {
+  margin-top: 1px;
+  color: #64748b;
+  font-size: 0.95rem;
+  font-weight: 600;
+  opacity: 0.62;
+}
+
+.sw-grid-count-hover {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: calc(var(--sw-grid-row-height) - 2px);
+}
+
+.sw-grid-count-value {
+  display: inline-block;
+  min-width: 1ch;
+}
+
+.sw-grid-count-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 160;
+  min-width: 210px;
+  max-width: 320px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.96);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.22);
+  color: #ffffff;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -2px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  white-space: nowrap;
+}
+
+.sw-grid-count-hover:hover .sw-grid-count-tooltip,
+.sw-grid-count-hover:focus-within .sw-grid-count-tooltip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.sw-grid-count-tooltip-date {
+  color: #dbeafe;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.sw-grid-count-tooltip-name {
+  margin-top: 2px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.sw-grid-count-tooltip-line {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 7px;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.sw-grid-count-tooltip-divider {
+  color: rgba(226, 232, 240, 0.5);
+}
+
 .gc-total.sticky-right-last-2,
 .gc-total.sticky-right-last-1 {
   background-color: var(--grid-total-cell-bg) !important;

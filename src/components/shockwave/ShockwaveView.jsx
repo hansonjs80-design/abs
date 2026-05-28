@@ -1580,6 +1580,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setEditingCell,
     setRangeEnd,
     setSelectedKeys,
+    setContextMenu,
     getDefaultReservationTime,
     handleOpenBodyPartMenu,
   });

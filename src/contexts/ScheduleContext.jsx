@@ -802,6 +802,7 @@ export function ScheduleProvider({ children }) {
 
       const memoMap = {};
       allData.forEach(item => {
+        if (!shouldKeepShockwaveMemo(item)) return;
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
         memoMap[key] = item;
       });
