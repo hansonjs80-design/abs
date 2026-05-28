@@ -2649,7 +2649,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                           logs: prev.logs.map(l => l.id === log.id ? { ...l, _original_visit_count: newVal } : l)
                                         }));
 
-                                        if (log.id === 'draft') {
+                                        if (log.id === 'draft' || log.isCurrentCell) {
                                           handleApplyHistoryToCell({ ...log, visit_count: newVal });
                                         } else {
                                           handleUpdateLogVisitCount(log, newVal);
