@@ -55,6 +55,18 @@ function parseFlexibleDate(val, currentYear, currentMonth) {
   return clean;
 }
 
+const TOOLTIP_ACCENT_COLORS = {
+  '#dbeafe': '#2563eb',
+  '#e9ddff': '#7c3aed',
+  '#d8f3ea': '#047857',
+  '#ffe7c7': '#b45309',
+  '#ffdced': '#be185d',
+};
+
+function getTooltipAccentColor(backgroundColor) {
+  return TOOLTIP_ACCENT_COLORS[String(backgroundColor || '').toLowerCase()] || '#1e293b';
+}
+
 export default function ShockwaveDataGrid({
   logs,
   therapists,
@@ -363,11 +375,14 @@ export default function ShockwaveDataGrid({
     if (!therapist) return null;
     const summary = dateSummaries.get(row.date);
     const counts = summary?.byTherapistPrescription?.[therapist.name] || {};
+    const items = prescriptions.map(p => ({ label: p, count: counts[p] || 0 }));
     return {
       date: formatFullDateLabel(row.date),
       therapistName: therapist.name,
       therapistColor: THERAPIST_COLORS[tIdx % THERAPIST_COLORS.length],
-      items: prescriptions.map(p => ({ label: p, count: counts[p] || 0 })),
+      tooltipAccentColor: getTooltipAccentColor(THERAPIST_COLORS[tIdx % THERAPIST_COLORS.length]),
+      totalCount: items.reduce((sum, item) => sum + item.count, 0),
+      items,
     };
   }, [dateSummaries, formatFullDateLabel, prescriptions, totalCountColIndex, visibleTherapists]);
 
@@ -1413,6 +1428,7 @@ export default function ShockwaveDataGrid({
                 const isNewPatientCol = ci === newPatientColIndex;
 
                 const isDateGroupMergedCol = (isDateCol || isTotalCol || isNewPatientCol) && row.date;
+                const isSingleDateGroupMergedCol = isDateGroupMergedCol && (row._groupSize || 1) === 1;
 
                 // 날짜별 그룹 병합 셀의 경우 첫 행이 아닐 때는 td를 렌더링하지 않아야 정상 병합됨
                 if (isDateGroupMergedCol && !row._isFirst) {
@@ -1445,6 +1461,7 @@ export default function ShockwaveDataGrid({
                 }
                 if (ci === 0) cls += ' gc-row-index';
                 if (isDateCol) cls += ' gc-date-cell';
+                if (isSingleDateGroupMergedCol) cls += ' gc-single-date-group';
                 if (ci === FIXED_FIELDS.length - 1) cls += ' fixed-field-last';
                 if (clipboardSource && ri >= clipboardSource.r1 && ri <= clipboardSource.r2 && ci >= clipboardSource.c1 && ci <= clipboardSource.c2) {
                     cls += clipboardSource.mode === 'cut' ? ' gc-cut-source' : ' gc-copy-source';
@@ -1577,7 +1594,11 @@ export default function ShockwaveDataGrid({
 
                 const cellStyle = {
                   ...frozenStyle,
-                  ...(isDateGroupMergedCol ? { verticalAlign: 'top', paddingTop: '4px' } : {})
+                  ...(isDateGroupMergedCol
+                    ? isSingleDateGroupMergedCol
+                      ? { verticalAlign: 'middle', paddingTop: 0, paddingBottom: 0 }
+                      : { verticalAlign: 'top', paddingTop: '4px' }
+                    : {})
                 };
 
                 return (
@@ -1614,11 +1635,15 @@ export default function ShockwaveDataGrid({
             left: `${countTooltip.x}px`,
             top: `${countTooltip.y}px`,
             width: `${countTooltip.width}px`,
+            backgroundColor: countTooltip.therapistColor,
+            '--tooltip-accent-color': countTooltip.tooltipAccentColor,
           }}
         >
-          <div className="sw-grid-count-tooltip-date">{countTooltip.date}</div>
-          <div className="sw-grid-count-tooltip-name" style={{ color: countTooltip.therapistColor }}>
-            {countTooltip.therapistName}
+          <div className="sw-grid-count-tooltip-header">
+            <div className="sw-grid-count-tooltip-date">{countTooltip.date}</div>
+            <div className="sw-grid-count-tooltip-name">
+              {countTooltip.therapistName} {countTooltip.totalCount}건
+            </div>
           </div>
           <div className="sw-grid-count-tooltip-line">
             {countTooltip.items.map(({ label, count }, idx) => (

@@ -780,6 +780,15 @@
   padding-top: 0;
 }
 
+.sw-grid-table tbody td.gc-single-date-group {
+  vertical-align: middle !important;
+}
+
+.sw-grid-table tbody td.gc-single-date-group .sw-grid-total-cell,
+.sw-grid-table tbody td.gc-single-date-group .sw-grid-new-patient-cell {
+  justify-content: center;
+}
+
 .sw-grid-summary-main-number,
 .sw-grid-new-patient-total {
   color: var(--text-primary);
@@ -822,11 +831,11 @@
   min-width: 210px;
   max-width: 320px;
   padding: 10px 12px;
-  border: 1px solid rgba(148, 163, 184, 0.34);
+  border: 1px solid rgba(15, 23, 42, 0.16);
   border-radius: 8px;
-  background: rgba(15, 23, 42, 0.96);
-  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.22);
-  color: #ffffff;
+  background: #dbeafe;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18), 0 3px 8px rgba(15, 23, 42, 0.10);
+  color: #0f172a;
   opacity: 0;
   pointer-events: none;
   transform: translate(-50%, -2px);
@@ -856,18 +865,31 @@
   transform: translate(-50%, 0);
 }
 
+.sw-grid-count-tooltip-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
 .sw-grid-count-tooltip-date {
-  color: #dbeafe;
-  font-size: 12px;
+  color: var(--tooltip-accent-color, #1e293b);
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.25;
+  text-align: left;
 }
 
 .sw-grid-count-tooltip-name {
-  margin-top: 2px;
+  color: var(--tooltip-accent-color, #111827);
+  flex: 0 0 auto;
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 900;
   line-height: 1.25;
+  text-align: right;
 }
 
 .sw-grid-count-tooltip-line {
@@ -876,15 +898,15 @@
   align-items: center;
   justify-content: center;
   margin-top: 7px;
-  color: #e2e8f0;
-  font-size: 13px;
+  color: #0f172a;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.25;
   text-align: center;
 }
 
 .sw-grid-count-tooltip-divider {
-  color: rgba(226, 232, 240, 0.5);
+  color: rgba(15, 23, 42, 0.42);
 }
 
 .gc-total.sticky-right-last-2,
