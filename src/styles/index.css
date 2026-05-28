@@ -695,7 +695,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table .settlement-amount-row td.grand-value.amount,
   body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table .settlement-incentive-row td.grand-value.incentive {
-    font-size: 15pt !important;
+    font-size: 16pt !important;
+    background: #fff7cc !important;
   }
 
   body.settlement-print .sw-settlement-table .label-col,
