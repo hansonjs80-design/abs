@@ -737,6 +737,19 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     margin: 0 0 0 2.5% !important;
   }
 
+  body.settlement-print .sw-manual-settlement-stack .sw-settlement-header {
+    width: 81% !important;
+    max-width: 81% !important;
+    margin: 5mm 0 4mm 2.5% !important;
+    gap: 3mm !important;
+  }
+
+  body.settlement-print .sw-manual-settlement-stack .sw-settlement-meta {
+    flex-wrap: nowrap !important;
+    justify-content: flex-end !important;
+    min-width: 0 !important;
+  }
+
   body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table tbody td.amount,
   body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table tbody td.incentive {
     font-size: 14pt !important;
