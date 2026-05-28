@@ -846,6 +846,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.settlement-print .sw-summary-table tbody tr:first-child th,
   body.settlement-print .sw-summary-table tbody tr:first-child td {
     background: #fff7cc !important;
+    font-size: 13.5pt !important;
+    font-weight: 900 !important;
   }
 
   body.new-patient-print .sw-new-patient-table,
