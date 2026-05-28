@@ -113,7 +113,7 @@ export default function ManualTherapySixMonthStats({
   }, [logs, monthKeys, settings, selectedTherapistNames]);
 
   return (
-    <div className="sw-settlement-card">
+    <div className="sw-settlement-card sw-manual-summary-card">
       <div className="sw-settlement-header">
         <h2>{recentPeriodLabel} 도수치료 결산/신환 현황</h2>
         <div className="sw-settlement-meta sw-recent-period-control">

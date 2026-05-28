@@ -152,7 +152,7 @@ export default function ManualTherapyStatsView({
   const showGrandTotal = settlement.summaryByTherapist.length > 1;
 
   return (
-    <div className="sw-settlement-stack">
+    <div className="sw-settlement-stack sw-manual-settlement-stack">
       <div className="sw-settlement-card">
         <div className="sw-settlement-header">
           <h2>{currentMonth}월 도수치료 결산</h2>

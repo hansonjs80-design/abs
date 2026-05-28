@@ -721,14 +721,19 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   body.settlement-print .sw-manual-compact-settlement-table .label-col,
   body.settlement-print .sw-manual-compact-settlement-table .row-label {
-    width: 21% !important;
+    width: 30% !important;
   }
 
   body.settlement-print .sw-manual-compact-settlement-table thead .prescription-col,
   body.settlement-print .sw-manual-compact-settlement-table tbody td {
+    width: 28% !important;
     min-width: 0 !important;
     padding-left: 1.3mm !important;
     padding-right: 1.3mm !important;
+  }
+
+  body.settlement-print .sw-manual-settlement-stack .sw-settlement-table-wrap {
+    width: 81% !important;
   }
 
   body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table tbody td.amount,
@@ -773,6 +778,11 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     margin: 0 !important;
   }
 
+  body.settlement-print .sw-manual-summary-card {
+    width: 47% !important;
+    max-width: 47% !important;
+  }
+
   body.settlement-print .sw-summary-table {
     width: 100% !important;
     max-width: 100% !important;
@@ -800,8 +810,17 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   body.settlement-print .sw-summary-table th:first-child,
   body.settlement-print .sw-summary-table td:first-child {
-    width: 24% !important;
+    width: 34% !important;
     white-space: nowrap !important;
+  }
+
+  body.settlement-print .sw-manual-summary-card .sw-summary-table th:nth-child(2),
+  body.settlement-print .sw-manual-summary-card .sw-summary-table td:nth-child(2),
+  body.settlement-print .sw-manual-summary-card .sw-summary-table th:nth-child(3),
+  body.settlement-print .sw-manual-summary-card .sw-summary-table td:nth-child(3),
+  body.settlement-print .sw-manual-summary-card .sw-summary-table th:nth-child(4),
+  body.settlement-print .sw-manual-summary-card .sw-summary-table td:nth-child(4) {
+    width: 22% !important;
   }
 
   body.settlement-print .sw-summary-table tbody tr:first-child th,
