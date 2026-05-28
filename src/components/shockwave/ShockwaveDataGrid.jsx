@@ -427,7 +427,7 @@ export default function ShockwaveDataGrid({
     const rect = target.getBoundingClientRect();
     const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 1024;
     const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 768;
-    const tooltipWidth = Math.min(320, Math.max(220, viewportWidth - 24));
+    const tooltipWidth = Math.min(224, Math.max(154, viewportWidth - 24));
     const halfWidth = tooltipWidth / 2;
     const minX = 12 + halfWidth;
     const maxX = viewportWidth - 12 - halfWidth;
