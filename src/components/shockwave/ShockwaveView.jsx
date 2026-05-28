@@ -2605,9 +2605,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 onClick={() => handleApplyHistoryToCell(log)}
                                 style={{
                                   cursor: 'pointer',
-                                  backgroundColor: log.isCurrentCell ? 'rgba(37, 99, 235, 0.12)' : undefined,
+                                  backgroundColor: log.isCurrentCell ? '#dbeafe' : undefined,
                                   boxShadow: log.isCurrentCell ? 'inset 4px 0 0 var(--brand-primary, #2563eb)' : undefined,
-                                  outline: log.isCurrentCell ? '1px solid rgba(37, 99, 235, 0.28)' : undefined,
+                                  outline: log.isCurrentCell ? '1px solid rgba(37, 99, 235, 0.38)' : undefined,
                                 }}
                                 title={log.id === 'draft' ? "현재 선택된 셀의 날짜를 기반으로 한 임시 항목입니다" : "클릭하여 내역을 현재 셀에 적용합니다"}
                               >
