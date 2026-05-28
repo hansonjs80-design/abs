@@ -199,7 +199,13 @@ export default function usePatientHistoryActions({
         finalLogs = [
           ...selectedDateLogs,
           ...matches.filter((m) => m.date !== selectedDate),
-        ];
+        ].sort((a, b) => {
+          if (a.date !== b.date) return b.date.localeCompare(a.date);
+          if (a.date === selectedDate && b.date === selectedDate) {
+            return (a.sort_index ?? 0) - (b.sort_index ?? 0);
+          }
+          return (parseInt(b.visit_count || '0', 10) || 0) - (parseInt(a.visit_count || '0', 10) || 0);
+        });
       }
       setPatientHistoryModalData({ loading: false, logs: finalLogs, searchName: nameParam, searchChart: chartParam });
     } catch (e) {

@@ -2603,13 +2603,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               <tr
                                 key={`${group.key}-${log.id || log.date}-${idx}`}
                                 onClick={() => handleApplyHistoryToCell(log)}
-                                style={{ cursor: 'pointer', backgroundColor: log.id === 'draft' ? 'var(--bg-tertiary, #f0f7ff)' : undefined }}
+                                style={{
+                                  cursor: 'pointer',
+                                  backgroundColor: log.isCurrentCell ? 'rgba(37, 99, 235, 0.12)' : undefined,
+                                  boxShadow: log.isCurrentCell ? 'inset 4px 0 0 var(--brand-primary, #2563eb)' : undefined,
+                                  outline: log.isCurrentCell ? '1px solid rgba(37, 99, 235, 0.28)' : undefined,
+                                }}
                                 title={log.id === 'draft' ? "현재 선택된 셀의 날짜를 기반으로 한 임시 항목입니다" : "클릭하여 내역을 현재 셀에 적용합니다"}
                               >
                                 <td style={{ textAlign: 'center' }}>
                                   {log.date}
-                                  {(log.id === 'draft' || log.isCurrentCell) && (
-                                    <span style={{ fontSize: '0.75rem', color: 'var(--brand-primary)', display: 'block', marginTop: '2px' }}>현재 셀</span>
+                                  {log.isCurrentCell && (
+                                    <span style={{ fontSize: '0.76rem', color: 'var(--brand-primary)', display: 'block', marginTop: '2px', fontWeight: 800 }}>현재 셀</span>
                                   )}
                                 </td>
                                 <td style={{ textAlign: 'center', color: log.type === 'manual' ? 'var(--brand-primary)' : 'inherit', fontWeight: log.type === 'manual' ? 600 : 400 }}>
