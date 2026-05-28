@@ -58,7 +58,7 @@ export default function ManualTherapySixMonthStats({
 
   const monthKeys = useMemo(() => {
     const keys = [];
-    for (let index = recentPeriodMonths - 1; index >= 0; index -= 1) {
+    for (let index = 0; index < recentPeriodMonths; index += 1) {
       const monthDate = new Date(currentYear, currentMonth - 1 - index, 1);
       keys.push({
         key: `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`,
