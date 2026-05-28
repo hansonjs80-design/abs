@@ -9,6 +9,8 @@ export default function NoticeBoard({
   onDepartmentsChange,
   hiddenDepartments = [],
   onHiddenDepartmentsChange,
+  showLastRows = true,
+  onShowLastRowsChange,
 }) {
   const { notices, loadNotices, saveNotice } = useSchedule();
   const [editingSlot, setEditingSlot] = useState(null);
@@ -105,6 +107,15 @@ export default function NoticeBoard({
             <Settings size={16} />
           </button>
         </div>
+        <button
+          type="button"
+          className={`notice-last-row-toggle${showLastRows ? ' is-active' : ''}`}
+          onClick={() => onShowLastRowsChange?.(!showLastRows)}
+          aria-pressed={showLastRows}
+          title="각 주 마지막행 내용 표시"
+        >
+          마지막행 {showLastRows ? '표시' : '숨김'}
+        </button>
         <div className="notice-department-filter-list">
           {departments.map((dept) => {
             const checked = !hiddenDepartments.includes(dept);

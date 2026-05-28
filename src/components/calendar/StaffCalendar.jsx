@@ -39,7 +39,7 @@ function getStaffCalendarDisplayMemo(memo, isLastSlot) {
   return { ...(memo || {}), content: `${trimmedContent}명` };
 }
 
-export default function StaffCalendar({ hiddenDepartments = [] }) {
+export default function StaffCalendar({ hiddenDepartments = [], showLastRows = true }) {
   const { currentYear, currentMonth, staffMemos, loadStaffMemos, saveStaffMemo, holidays, holidayNames, loadHolidays, shockwaveSettings, loadShockwaveSettings, calendarSlotSettings, loadCalendarSlotSettings, saveCalendarSlotSettings } = useSchedule();
   const { addToast } = useToast();
   const [showSlotSettings, setShowSlotSettings] = useState(false);
@@ -1021,14 +1021,17 @@ export default function StaffCalendar({ hiddenDepartments = [] }) {
                   const isSel = selectedKeys.has(key);
                   const isPri = selectedCell?.key === key;
                   const isEd = editingCell === key;
+                  const shouldHideLastRowContent = !showLastRows && slot === getSlotCount(wi) - 1;
                   let clipMode = null;
                   if (clipboardSource?.keys?.has(key)) clipMode = clipboardSource.mode;
 
                   // 공휴일 이름: 첫 번째 슬롯에 표시
                   const holidayName = (slot === 0 && dayInfo.isHoliday) ? holidayNames.get(dayInfo.key) : null;
                   const rawMemo = staffMemos[key];
-                  const memoContent = rawMemo?.content || '';
-                  const displayMemo = getStaffCalendarDisplayMemo(rawMemo, slot === getSlotCount(wi) - 1);
+                  const memoContent = shouldHideLastRowContent ? '' : (rawMemo?.content || '');
+                  const displayMemo = shouldHideLastRowContent
+                    ? { ...(rawMemo || {}), content: '' }
+                    : getStaffCalendarDisplayMemo(rawMemo, slot === getSlotCount(wi) - 1);
                   const isDepartmentHidden = shouldHideStaffMemoByDepartment(memoContent, hiddenDepartments);
                   const autoFontColor = getAutoFontColorForStaffMemo(memoContent);
 
