@@ -744,6 +744,20 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     width: 30% !important;
   }
 
+  body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table:not(.sw-manual-compact-settlement-table) .label-col,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table:not(.sw-manual-compact-settlement-table) .row-label {
+    font-size: 12.5pt !important;
+    font-weight: 900 !important;
+    line-height: 1.05 !important;
+  }
+
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .label-col,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .row-label {
+    font-size: 11.5pt !important;
+    font-weight: 900 !important;
+    line-height: 1.05 !important;
+  }
+
   html[data-print-orientation="landscape"] body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-amount-row th.row-label,
   html[data-print-orientation="landscape"] body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-incentive-row th.row-label {
     font-size: 11.5pt !important;
@@ -753,10 +767,16 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   body.settlement-print .sw-manual-compact-settlement-table thead .prescription-col,
   body.settlement-print .sw-manual-compact-settlement-table tbody td {
-    width: 21.42% !important;
+    width: 17.14% !important;
     min-width: 0 !important;
     padding-left: 1.3mm !important;
     padding-right: 1.3mm !important;
+  }
+
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table thead .therapist-col,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table thead .grand-col {
+    width: 34.28% !important;
+    min-width: 0 !important;
   }
 
   body.settlement-print .sw-manual-settlement-stack .sw-settlement-table-wrap {
@@ -855,19 +875,24 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     white-space: nowrap !important;
   }
 
+  body.settlement-print .sw-manual-summary-card .sw-summary-table th:first-child,
+  body.settlement-print .sw-manual-summary-card .sw-summary-table td:first-child {
+    width: 17.28% !important;
+  }
+
   body.settlement-print .sw-manual-summary-card .sw-summary-table th:nth-child(2),
   body.settlement-print .sw-manual-summary-card .sw-summary-table td:nth-child(2) {
-    width: 12.75% !important;
+    width: 10.84% !important;
   }
 
   body.settlement-print .sw-manual-summary-card .sw-summary-table th:nth-child(3),
   body.settlement-print .sw-manual-summary-card .sw-summary-table td:nth-child(3) {
-    width: 24% !important;
+    width: 19.2% !important;
   }
 
   body.settlement-print .sw-manual-summary-card .sw-summary-table th:nth-child(4),
   body.settlement-print .sw-manual-summary-card .sw-summary-table td:nth-child(4) {
-    width: 12.75% !important;
+    width: 10.84% !important;
   }
 
   body.settlement-print .sw-summary-table tbody tr:first-child th,
