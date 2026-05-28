@@ -3,6 +3,7 @@
  * ============================================*/
 
 .staff-calendar {
+  font-family: Arial, Helvetica, sans-serif;
   animation: fadeIn var(--transition-normal) ease-out;
   --calendar-weekday-row-height: 32px;
   --staff-calendar-memo-font-size: 13px;
@@ -98,7 +99,7 @@
   text-align: center;
   font-size: var(--staff-calendar-weekday-font-size);
   font-weight: 800; /* 기존 700(Bold)에서 800(Extra Bold)으로 더 두껍게 */
-  background: var(--bg-tertiary);
+  background: #fff;
   border-bottom: 1px solid var(--text-primary);
   border-right: 0.5px solid var(--text-primary); /* 세로선을 0.5px 두께로 얇고 샤프하게 설정 */
   color: var(--text-secondary);
