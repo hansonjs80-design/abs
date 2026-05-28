@@ -3944,7 +3944,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   --grid-row-divider: #aeb8c6;
   --grid-line: #d7e0eb;
   border-left: 3px solid var(--grid-frame);
-  border-top: 3px solid var(--grid-frame);
+  border-top: 0;
 }
 
 .sw-grid-table th,
@@ -3991,7 +3991,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 }
 
 .sw-grid-table tbody tr.tr-date-start td {
-  border-top: 1.5px solid var(--grid-row-divider) !important;
+  border-top: 0 !important;
   box-shadow: none !important;
 }
 
@@ -4021,8 +4021,12 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-grid-table tbody tr.tr-date-start td.therapist-group-start,
 .sw-grid-table tbody tr.tr-date-start .gc-therapist-value.therapist-group-start,
 .sw-grid-table tbody tr.tr-date-start .gc-therapist-value.therapist-group-end {
-  border-top: 1.5px solid var(--grid-row-divider) !important;
+  border-top: 0 !important;
   box-shadow: none !important;
+}
+
+.sw-grid-table tbody td.grp-first {
+  border-bottom: 1.5px solid var(--grid-row-divider) !important;
 }
 
 .sw-grid-table tbody tr.tr-date-end td {
