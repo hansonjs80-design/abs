@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { generateShockwaveCalendar, buildCrossMonthMirroredPayloads } from '../lib/calendarUtils';
 import { syncTodayShockwaveScheduleToStats } from '../lib/shockwaveSyncUtils';
 import { syncTodayManualTherapyScheduleToStats } from '../lib/manualTherapyUtils';
+import { normalizeStaffDeptNameSpacing } from '../lib/staffMemoFormatUtils';
 import {
   applyShockwaveMemoStateUpdate,
   buildOptimisticShockwaveMemos,
@@ -315,7 +316,10 @@ export function ScheduleProvider({ children }) {
           
           (data || []).forEach(item => {
             const key = `${item.year}-${item.month}-${item.day}-${item.slot_index}`;
-            memoMap[key] = item;
+            memoMap[key] = {
+              ...item,
+              content: normalizeStaffDeptNameSpacing(item.content || ''),
+            };
           });
           
           if (!data || data.length < 1000) hasMore = false;
@@ -340,6 +344,7 @@ export function ScheduleProvider({ children }) {
   // 직원 메모 저장/업데이트
   const saveStaffMemo = useCallback(async (year, month, day, slotIndex, content, fontColor = null, bgColor = null) => {
     const key = `${year}-${month}-${day}-${slotIndex}`;
+    const normalizedContent = normalizeStaffDeptNameSpacing(content || '');
     const requestId = (staffMemoSaveRequestRef.current.get(key) || 0) + 1;
     staffMemoSaveRequestRef.current.set(key, requestId);
     const previousMemo = staffMemosRef.current[key];
@@ -347,7 +352,7 @@ export function ScheduleProvider({ children }) {
       const upsertData = {
         year, month, day,
         slot_index: slotIndex,
-        content: content || '',
+        content: normalizedContent,
         updated_at: new Date().toISOString()
       };
       if (fontColor !== undefined) upsertData.font_color = fontColor;

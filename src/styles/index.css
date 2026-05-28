@@ -741,7 +741,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   body.settlement-print .sw-manual-compact-settlement-table .label-col,
   body.settlement-print .sw-manual-compact-settlement-table .row-label {
-    width: 30% !important;
+    width: 25.5% !important;
   }
 
   body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table:not(.sw-manual-compact-settlement-table) .label-col,
@@ -753,14 +753,14 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .label-col,
   body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .row-label {
-    font-size: 11.5pt !important;
+    font-size: 12.65pt !important;
     font-weight: 900 !important;
     line-height: 1.05 !important;
   }
 
   html[data-print-orientation="landscape"] body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-amount-row th.row-label,
   html[data-print-orientation="landscape"] body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-incentive-row th.row-label {
-    font-size: 11.5pt !important;
+    font-size: 12.65pt !important;
     font-weight: 900 !important;
     line-height: 1.05 !important;
   }
@@ -877,7 +877,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   body.settlement-print .sw-manual-summary-card .sw-summary-table th:first-child,
   body.settlement-print .sw-manual-summary-card .sw-summary-table td:first-child {
-    width: 17.28% !important;
+    width: 14.69% !important;
   }
 
   body.settlement-print .sw-manual-summary-card .sw-summary-table th:nth-child(2),
