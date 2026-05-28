@@ -424,7 +424,7 @@
 
 .sw-grid-wrapper {
   --sw-grid-row-height: 28px;
-  --sw-grid-header-title-height: 42px;
+  --sw-grid-header-title-height: 31px;
   --sw-grid-header-therapist-height: 36px;
   --sw-grid-header-prescription-height: 28px;
   --sw-grid-header-total-row-height: 28px;
@@ -456,6 +456,14 @@
   position: relative;
   outline: none;
   background: #ffffff;
+}
+
+.sw-grid-wrapper--shockwave {
+  --grid-title-bg: #bfdbfe;
+}
+
+.sw-grid-wrapper--manual {
+  --grid-title-bg: #fed7aa;
 }
 
 /* Custom Scrollbar for Grid Wrapper to avoid obscuring corners */
@@ -536,7 +544,7 @@
 .grid-title {
   background: var(--grid-title-bg) !important;
   color: #1f2937 !important;
-  font-size: 1.5rem !important;
+  font-size: 1.75rem !important;
   font-weight: 800 !important;
   letter-spacing: -0.01em;
   border-bottom: 1px solid var(--grid-strong) !important;
@@ -589,7 +597,7 @@
 .hdr-fixed {
   background: var(--grid-fixed-bg) !important;
   color: var(--grid-ink) !important;
-  font-size: 0.95rem !important;
+  font-size: 1.08rem !important;
   z-index: 20 !important;
   border-bottom: 1px solid var(--grid-strong) !important;
   border-right: 1px solid var(--grid-line) !important;
@@ -610,7 +618,7 @@
 }
 
 .hdr-therapist {
-  font-size: 14px;
+  font-size: 16px;
   color: var(--grid-ink);
   border-left: 1px solid var(--grid-strong) !important;
   border-right: 1px solid var(--grid-strong) !important;
@@ -634,6 +642,7 @@
 .hdr-total {
   background: var(--grid-summary-bg) !important;
   color: var(--grid-ink) !important;
+  font-size: 16px !important;
   border-left: 1px solid var(--grid-strong) !important;
   border-right: 1px solid var(--grid-strong) !important;
   border-bottom: 1px solid var(--grid-strong) !important;
@@ -683,6 +692,7 @@
 .sw-header-row-prescriptions th {
   top: calc(var(--sw-grid-header-title-height) + var(--sw-grid-header-therapist-height));
   height: var(--sw-grid-header-prescription-height);
+  font-size: 13px !important;
   border-bottom: none;
   z-index: 38 !important;
 }
@@ -694,6 +704,7 @@
     var(--sw-grid-header-prescription-height)
   );
   height: var(--sw-grid-header-total-row-height);
+  font-size: 16px !important;
   border-bottom: 1px solid var(--grid-strong);
   z-index: 37 !important;
 }
@@ -759,7 +770,7 @@
 .sw-grid-new-patient-total {
   color: var(--text-primary);
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 1.28rem;
+  font-size: 1.16rem;
   font-weight: 900;
   letter-spacing: 0;
 }
@@ -1227,6 +1238,10 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-grid-table thead .hdr-new-patient-total {
   font-weight: 950 !important;
   text-shadow: 0 0 0 currentColor;
+}
+
+.sw-grid-table thead .hdr-fixed {
+  font-size: 1.08rem !important;
 }
 
 /* Specific Z-Index for intersection of Frozen Left and Sticky Right (though they don't overlap) */

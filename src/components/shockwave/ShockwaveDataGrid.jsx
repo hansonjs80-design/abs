@@ -1319,9 +1319,14 @@ export default function ShockwaveDataGrid({
   }, [filteredInputLogs, visibleTherapists, prescriptions]);
 
   // ─── 10. RENDER ───────────────────────────────────────────
+  const gridWrapperClassName = [
+    'sw-grid-wrapper',
+    tableName === 'manual_therapy_patient_logs' ? 'sw-grid-wrapper--manual' : 'sw-grid-wrapper--shockwave',
+  ].join(' ');
+
   return (
     <div className="sw-grid-shell">
-    <div className="sw-grid-wrapper" ref={wrapRef} tabIndex={0} onMouseUp={onMouseUp}>
+    <div className={gridWrapperClassName} ref={wrapRef} tabIndex={0} onMouseUp={onMouseUp}>
       <table className="sw-grid-table" style={{ minWidth: `${gridMinWidth}px` }}>
         <colgroup>
           {FIXED_FIELDS.map((f) => <col key={f.id} style={{ width: f.w, minWidth: f.w }} />)}
