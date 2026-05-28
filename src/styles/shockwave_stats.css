@@ -745,6 +745,7 @@
   min-height: calc(var(--sw-grid-row-height) - 2px);
 }
 
+.sw-grid-total-cell,
 .sw-grid-new-patient-cell {
   display: flex;
   flex-direction: column;
@@ -754,19 +755,23 @@
   padding-top: 0;
 }
 
+.sw-grid-summary-main-number,
 .sw-grid-new-patient-total {
   color: var(--text-primary);
-  font-family: Arial, sans-serif;
-  font-size: 1.25rem;
-  font-weight: 800;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 1.28rem;
+  font-weight: 900;
+  letter-spacing: 0;
 }
 
+.sw-grid-summary-breakdown,
 .sw-grid-new-patient-breakdown {
   margin-top: 1px;
   color: #64748b;
-  font-family: Arial, sans-serif;
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: 0;
   opacity: 0.62;
 }
 

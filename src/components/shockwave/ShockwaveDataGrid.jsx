@@ -1544,9 +1544,9 @@ export default function ShockwaveDataGrid({
                     const counts = prescriptions.map(p => summary.byPrescription[p] || 0);
                     const countsStr = counts.join('/');
                     displayVal = (
-                      <div className="sw-grid-total-cell" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', lineHeight: '1.1', paddingTop: '0px' }}>
-                        <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{val}</span>
-                        <span style={{ fontSize: '0.95rem', opacity: 0.55, fontWeight: 'normal', marginTop: '1px' }}>({countsStr})</span>
+                      <div className="sw-grid-total-cell">
+                        <span className="sw-grid-summary-main-number">{val}</span>
+                        <span className="sw-grid-summary-breakdown">({countsStr})</span>
                       </div>
                     );
                   }
