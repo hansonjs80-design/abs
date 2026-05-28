@@ -424,7 +424,7 @@
 
 .sw-grid-wrapper {
   --sw-grid-row-height: 28px;
-  --sw-grid-header-title-height: 31px;
+  --sw-grid-header-title-height: 53px;
   --sw-grid-header-therapist-height: 36px;
   --sw-grid-header-prescription-height: 28px;
   --sw-grid-header-total-row-height: 28px;
@@ -544,12 +544,16 @@
 .grid-title {
   background: var(--grid-title-bg) !important;
   color: #1f2937 !important;
-  font-size: 1.75rem !important;
+  font-size: 1.62rem !important;
   font-weight: 800 !important;
   letter-spacing: -0.01em;
   border-bottom: 1px solid var(--grid-strong) !important;
   border-right: 1px solid var(--grid-strong) !important;
-  padding: 12px !important;
+  height: var(--sw-grid-header-title-height) !important;
+  max-height: var(--sw-grid-header-title-height) !important;
+  padding: 6px 12px !important;
+  line-height: 1 !important;
+  overflow: hidden;
   box-shadow: none;
 }
 
@@ -559,6 +563,8 @@
   justify-content: center;
   gap: 0;
   width: 100%;
+  height: 100%;
+  max-height: 100%;
 }
 
 .grid-title-text {
@@ -567,6 +573,7 @@
   justify-content: center;
   min-width: 0;
   width: 100%;
+  line-height: 1;
   text-align: center;
 }
 
@@ -677,7 +684,10 @@
 /* Sticky Rows Alignment */
 .sw-header-row-title th {
   top: 0;
-  height: var(--sw-grid-header-title-height);
+  height: var(--sw-grid-header-title-height) !important;
+  max-height: var(--sw-grid-header-title-height) !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
   border-bottom: none;
   z-index: 40 !important;
 }
@@ -687,6 +697,10 @@
   height: var(--sw-grid-header-therapist-height);
   border-bottom: none;
   z-index: 39 !important;
+}
+
+.sw-grid-table thead .sw-header-row-therapists th[rowspan="3"] {
+  font-size: 1.12rem !important;
 }
 
 .sw-header-row-prescriptions th {
@@ -729,7 +743,7 @@
   text-align: center;
 }
 
-.sw-grid-table tbody tr:hover .gc {
+.sw-grid-table tbody tr:hover .gc:not(.gc-fixed-1):not(.gc-fixed-2):not(.gc-total):not(.gc-new-patient) {
   background: var(--bg-hover);
 }
 
@@ -982,10 +996,6 @@ td.gc-bold > .gc-input {
     inset 0 1px 0 var(--grid-strong);
 }
 
-.sw-grid-table tbody tr.tr-today-row td {
-  background-color: #fff7ed;
-}
-
 .sw-grid-table tbody tr.tr-today-row td.gc-foc,
 .sw-grid-table tbody tr.tr-today-row td.gc-sel {
   background-color: #fed7aa;
@@ -1010,13 +1020,45 @@ td.gc-bold > .gc-input {
   background: var(--grid-fixed-bg) !important;
 }
 
+.sw-grid-table tbody .gc-date-cell:not(.gc-sel):not(.gc-row-selected),
+.sw-grid-table tbody tr:hover .gc-date-cell:not(.gc-sel):not(.gc-row-selected),
+.sw-grid-table tbody tr:hover .gc-date-cell.grp-first:not(.gc-sel):not(.gc-row-selected),
+.sw-grid-table tbody tr:hover .gc-date-cell.grp-mid:not(.gc-sel):not(.gc-row-selected),
+.sw-grid-table tbody tr:hover .gc-date-cell.grp-last:not(.gc-sel):not(.gc-row-selected) {
+  background: #fff !important;
+}
+
 .gc-fixed.gc-row-selected {
   background: var(--grid-row-selected-fixed-bg) !important;
   box-shadow: inset 0 1px 0 var(--grid-row-selected-line), inset 0 -1px 0 var(--grid-row-selected-line);
 }
 
-tbody tr:hover .gc-fixed {
+tbody tr:hover .gc-fixed-3,
+tbody tr:hover .gc-fixed-4,
+tbody tr:hover .gc-fixed-5,
+tbody tr:hover .gc-fixed-6 {
   background: #eef3f8 !important;
+}
+
+.sw-grid-table tbody tr:hover .gc-fixed-1,
+.sw-grid-table tbody tr:hover .gc-fixed-2 {
+  background: var(--grid-fixed-bg) !important;
+}
+
+.sw-grid-table tbody tr:hover .gc-fixed-1.grp-first,
+.sw-grid-table tbody tr:hover .gc-fixed-2.grp-first,
+.sw-grid-table tbody tr:hover .gc-fixed-1.grp-mid,
+.sw-grid-table tbody tr:hover .gc-fixed-2.grp-mid,
+.sw-grid-table tbody tr:hover .gc-fixed-1.grp-last,
+.sw-grid-table tbody tr:hover .gc-fixed-2.grp-last {
+  background-color: var(--grid-fixed-bg) !important;
+}
+
+.sw-grid-table tbody tr:hover .gc-date-cell:not(.gc-sel):not(.gc-row-selected),
+.sw-grid-table tbody tr:hover .gc-date-cell.grp-first:not(.gc-sel):not(.gc-row-selected),
+.sw-grid-table tbody tr:hover .gc-date-cell.grp-mid:not(.gc-sel):not(.gc-row-selected),
+.sw-grid-table tbody tr:hover .gc-date-cell.grp-last:not(.gc-sel):not(.gc-row-selected) {
+  background-color: #fff !important;
 }
 
 tbody tr.tr-row-selected:hover .gc,
@@ -1241,7 +1283,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 }
 
 .sw-grid-table thead .hdr-fixed {
-  font-size: 1.08rem !important;
+  font-size: 1.12rem !important;
 }
 
 /* Specific Z-Index for intersection of Frozen Left and Sticky Right (though they don't overlap) */

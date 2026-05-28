@@ -1444,6 +1444,7 @@ export default function ShockwaveDataGrid({
                     cls += ` gc-fixed gc-fixed-${ci + 1}`;
                 }
                 if (ci === 0) cls += ' gc-row-index';
+                if (isDateCol) cls += ' gc-date-cell';
                 if (ci === FIXED_FIELDS.length - 1) cls += ' fixed-field-last';
                 if (clipboardSource && ri >= clipboardSource.r1 && ri <= clipboardSource.r2 && ci >= clipboardSource.c1 && ci <= clipboardSource.c2) {
                     cls += clipboardSource.mode === 'cut' ? ' gc-cut-source' : ' gc-copy-source';
