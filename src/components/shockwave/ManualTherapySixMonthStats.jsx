@@ -143,7 +143,7 @@ export default function ManualTherapySixMonthStats({
               <tr key={summary.key}>
                 <th className="month-label">{summary.label}</th>
                 <td>{summary.totalCount > 0 ? summary.totalCount : '-'}</td>
-                <td className="amount">{summary.amount > 0 ? summary.amount.toLocaleString('ko-KR') : '-'}</td>
+                <td className="amount">{summary.amount > 0 ? `${summary.amount.toLocaleString('ko-KR')}원` : '-'}</td>
                 <td>{summary.newPatientCount > 0 ? summary.newPatientCount : '-'}</td>
               </tr>
             ))}
