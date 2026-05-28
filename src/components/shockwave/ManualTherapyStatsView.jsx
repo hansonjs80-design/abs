@@ -239,7 +239,7 @@ export default function ManualTherapyStatsView({
                 ))}
                 {showGrandTotal && <td className="grand-value amount" colSpan={safePrescriptions.length}>{formatCurrency(settlement.grandAmount)}</td>}
               </tr>
-              <tr>
+              <tr className="prescription-incentive-row">
                 <th className="row-label">처방별 인센티브(원)</th>
                 {settlement.summaryByTherapist.flatMap((item, therapistIndex) =>
                   safePrescriptions.map((prescription, prescriptionIndex) => (

@@ -696,9 +696,16 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table .settlement-incentive-row td.incentive,
   body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-amount-row td.amount,
   body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-incentive-row td.incentive {
-    font-size: 14pt !important;
+    font-size: 15pt !important;
     font-weight: 900 !important;
     line-height: 1.05 !important;
+  }
+
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .prescription-incentive-row th,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .prescription-incentive-row td,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-incentive-row th,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-incentive-row td {
+    background: #fff7cc !important;
   }
 
   body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table .settlement-amount-row td.grand-value.amount,
