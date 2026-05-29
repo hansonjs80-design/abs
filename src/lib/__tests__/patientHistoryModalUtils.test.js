@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   buildPatientHistoryCellUpdate,
   getPatientHistorySearchTarget,
+  patientHistoryIdentityMatches,
 } from '../patientHistoryModalUtils.js';
 
 describe('patient history modal search target', () => {
@@ -29,6 +30,31 @@ describe('patient history modal search target', () => {
       searchName: '손연희',
       searchChart: '3275',
     });
+  });
+});
+
+describe('patient history identity matching', () => {
+  it('requires chart and exact normalized name when both are available', () => {
+    assert.equal(patientHistoryIdentityMatches({
+      chartParam: '11081',
+      nameParam: '강민성',
+      chartValue: '11081',
+      nameValue: '강민성',
+    }), true);
+
+    assert.equal(patientHistoryIdentityMatches({
+      chartParam: '11081',
+      nameParam: '강민성',
+      chartValue: '11081',
+      nameValue: '다른환자',
+    }), false);
+  });
+
+  it('does not match partial patient names', () => {
+    assert.equal(patientHistoryIdentityMatches({
+      nameParam: '김민',
+      nameValue: '김민호',
+    }), false);
   });
 });
 

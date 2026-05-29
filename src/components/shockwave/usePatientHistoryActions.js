@@ -4,6 +4,7 @@ import { normalizeNameForMatch } from '../../lib/memoParser';
 import {
   buildPatientHistoryCellUpdate,
   getPatientHistorySearchTarget,
+  patientHistoryIdentityMatches,
 } from '../../lib/patientHistoryModalUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import { supabase } from '../../lib/supabaseClient';
@@ -21,6 +22,21 @@ const getPatientHistoryTreatmentGroup = ({ type, prescription, content }) => {
   if (/(?:^|\D)(40|60)\s*분?(?:\D|$)/.test(prescriptionText)) return 'manual';
   return 'shockwave';
 };
+
+const DEFAULT_MANUAL_THERAPY_PRESCRIPTIONS = ['40분', '60분'];
+
+const normalizePrescriptionForHistory = (value) => String(value || '').trim().toLowerCase();
+
+const buildActiveManualPrescriptionSet = (settings) => {
+  const source = Array.isArray(settings?.manual_therapy_prescriptions)
+    ? settings.manual_therapy_prescriptions
+    : DEFAULT_MANUAL_THERAPY_PRESCRIPTIONS;
+  return new Set(source.map(normalizePrescriptionForHistory).filter(Boolean));
+};
+
+const isActiveManualTherapyPrescription = (prescription, activeSet) => (
+  activeSet.has(normalizePrescriptionForHistory(prescription))
+);
 
 const getPatientHistoryRowKey = (log = {}) => [
   log.type || '',
@@ -63,9 +79,12 @@ const getUniqueMatchingBodyPart = (items, scheduleLog) => {
   items.forEach((item) => {
     if (item.date !== scheduleLog.date) return;
     if ((item.history_group || 'shockwave') !== scheduleLog.history_group) return;
-    const sameChart = scheduleLog.chart_number && item.chart_number && String(item.chart_number).trim() === String(scheduleLog.chart_number).trim();
-    const sameName = scheduleLog.patient_name && normalizeNameForMatch(item.patient_name) === normalizeNameForMatch(scheduleLog.patient_name);
-    if (!sameChart && !sameName) return;
+    if (!patientHistoryIdentityMatches({
+      chartParam: scheduleLog.chart_number,
+      nameParam: scheduleLog.patient_name,
+      chartValue: item.chart_number,
+      nameValue: item.patient_name,
+    })) return;
     const bodyPart = String(item.body_part || '').trim();
     if (bodyPart) bodies.add(bodyPart);
   });
@@ -76,6 +95,7 @@ export default function usePatientHistoryActions({
   currentYear,
   currentMonth,
   holidays,
+  settings,
   selectedCell,
   editingCell,
   editValue,
@@ -101,6 +121,7 @@ export default function usePatientHistoryActions({
       : null;
     setPatientHistoryModalData((prev) => ({ ...prev, loading: true, searchName: nameParam, searchChart: chartParam }));
     try {
+      const activeManualPrescriptionSet = buildActiveManualPrescriptionSet(settings);
       const shockwaveQuery = supabase.from('shockwave_patient_logs')
         .select('id, patient_name, chart_number, visit_count, date, prescription, body_part')
         .order('date', { ascending: false })
@@ -131,12 +152,24 @@ export default function usePatientHistoryActions({
       const [shockwaveRes, manualRes, scheduleRes] = await Promise.all([shockwaveQuery, manualQuery, scheduleQuery]);
 
       const allData = [
-        ...(shockwaveRes.data || []).map((d) => ({
+        ...(shockwaveRes.data || []).filter((d) => patientHistoryIdentityMatches({
+          chartParam,
+          nameParam,
+          chartValue: d.chart_number,
+          nameValue: d.patient_name,
+        })).map((d) => ({
           ...d,
           type: 'shockwave',
           history_group: getPatientHistoryTreatmentGroup({ type: 'shockwave', prescription: d.prescription }),
         })),
-        ...(manualRes.data || []).map((d) => ({
+        ...(manualRes.data || []).filter((d) => (
+          patientHistoryIdentityMatches({
+            chartParam,
+            nameParam,
+            chartValue: d.chart_number,
+            nameValue: d.patient_name,
+          }) && isActiveManualTherapyPrescription(d.prescription, activeManualPrescriptionSet)
+        )).map((d) => ({
           ...d,
           type: 'manual',
           history_group: 'manual',
@@ -156,10 +189,12 @@ export default function usePatientHistoryActions({
 
           const content = s.content || '';
           const parsed = parseSchedulerPatientIdentity(content);
-          const matchChart = chartParam && String(parsed.patientChart || '').trim() === chartParam;
-          const matchName = nameParam && normalizeNameForMatch(parsed.patientName).includes(nameParam);
-          if (chartParam && !matchChart) continue;
-          if (!chartParam && !matchName) continue;
+          if (!patientHistoryIdentityMatches({
+            chartParam,
+            nameParam,
+            chartValue: parsed.patientChart,
+            nameValue: parsed.patientName,
+          })) continue;
 
           const visitSuffix = getExplicitVisitSuffix(content);
           const visitCount = visitSuffix.replace(/[()]/g, '') || '';
@@ -192,9 +227,12 @@ export default function usePatientHistoryActions({
             if (item.date !== scheduleLog.date) return false;
             if ((item.history_group || 'shockwave') !== scheduleLog.history_group) return false;
             if (String(item.body_part || '').trim().toLowerCase() !== String(scheduleLog.body_part || '').trim().toLowerCase()) return false;
-            const sameChart = scheduleLog.chart_number && item.chart_number && String(item.chart_number).trim() === String(scheduleLog.chart_number).trim();
-            const sameName = scheduleLog.patient_name && normalizeNameForMatch(item.patient_name) === normalizeNameForMatch(scheduleLog.patient_name);
-            return Boolean(sameChart || sameName);
+            return patientHistoryIdentityMatches({
+              chartParam: scheduleLog.chart_number,
+              nameParam: scheduleLog.patient_name,
+              chartValue: item.chart_number,
+              nameValue: item.patient_name,
+            });
           });
 
           if (existingIndex >= 0) {
@@ -216,10 +254,12 @@ export default function usePatientHistoryActions({
       }
 
       const matches = allData.filter((item) => {
-        const matchChart = chartParam && String(item.chart_number || '').trim() === chartParam;
-        const matchName = nameParam && normalizeNameForMatch(item.patient_name).includes(nameParam);
-        if (chartParam) return matchChart;
-        return matchName;
+        return patientHistoryIdentityMatches({
+          chartParam,
+          nameParam,
+          chartValue: item.chart_number,
+          nameValue: item.patient_name,
+        });
       }).map((item) => {
         const override = scheduleOverrides.get(getPatientHistoryScheduleOverrideKey(item));
         if (!override) return item;
@@ -268,9 +308,12 @@ export default function usePatientHistoryActions({
               if (!String(content || '').trim()) continue;
 
               const parsed = parseSchedulerPatientIdentity(content);
-              const matchChart = chartParam && String(parsed.patientChart || '').trim() === chartParam;
-              const matchName = nameParam && normalizeNameForMatch(parsed.patientName).includes(nameParam);
-              if (chartParam ? !matchChart : !matchName) continue;
+              if (!patientHistoryIdentityMatches({
+                chartParam,
+                nameParam,
+                chartValue: parsed.patientChart,
+                nameValue: parsed.patientName,
+              })) continue;
 
               const visitSuffix = getExplicitVisitSuffix(content);
               const currentPrescription = memo.prescription || get4060PrescriptionFromContent(content);
@@ -335,6 +378,7 @@ export default function usePatientHistoryActions({
     currentYear,
     currentMonth,
     holidays,
+    settings,
     selectedCell,
     memos,
     pendingDisplayValues,

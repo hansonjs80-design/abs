@@ -28,6 +28,26 @@ export function getPatientHistorySearchTarget(content) {
   };
 }
 
+export function patientHistoryIdentityMatches({
+  chartParam,
+  nameParam,
+  chartValue,
+  nameValue,
+}) {
+  const searchChart = String(chartParam || '').trim();
+  const rowChart = String(chartValue || '').trim();
+  const searchName = normalizeNameForHistorySearch(nameParam);
+  const rowName = normalizeNameForHistorySearch(nameValue);
+
+  const chartMatches = Boolean(searchChart && rowChart && rowChart === searchChart);
+  const nameMatches = Boolean(searchName && rowName && rowName === searchName);
+
+  if (searchChart && searchName) return chartMatches && nameMatches;
+  if (searchChart) return chartMatches;
+  if (searchName) return nameMatches;
+  return false;
+}
+
 export function buildPatientHistoryCellUpdate(log, currentMemo = {}) {
   const chart = String(log?.chart_number || '').trim();
   const name = String(log?.patient_name || '').replace(/\*/g, '').trim();

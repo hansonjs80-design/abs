@@ -1379,6 +1379,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     currentYear,
     currentMonth,
     holidays,
+    settings,
     selectedCell,
     editingCell,
     editValue,
@@ -2632,14 +2633,22 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       </div>
                       <div className="sw-compact-table-wrap">
                         <table className="sw-summary-table sw-compact-summary-table patient-history-table" style={{ width: '100%', margin: 0, tableLayout: 'fixed' }}>
+                          <colgroup>
+                            <col style={{ width: '16.8%' }} />
+                            <col style={{ width: '10.7%' }} />
+                            <col style={{ width: '20%' }} />
+                            <col style={{ width: '21.4%' }} />
+                            <col style={{ width: '9%' }} />
+                            <col style={{ width: '22.1%' }} />
+                          </colgroup>
                           <thead>
                             <tr>
-                              <th style={{ width: '22%', textAlign: 'center' }}>날짜</th>
-                              <th style={{ width: '14%', textAlign: 'center' }}>처방</th>
-                              <th style={{ width: '17%', textAlign: 'center' }}>부위</th>
-                              <th style={{ width: '13%', textAlign: 'center' }}>메모</th>
-                              <th style={{ width: '8%', textAlign: 'center' }}>회차</th>
-                              <th style={{ width: '26%', textAlign: 'center' }}>적용</th>
+                              <th style={{ textAlign: 'center' }}>날짜</th>
+                              <th style={{ textAlign: 'center' }}>처방</th>
+                              <th style={{ textAlign: 'center' }}>부위</th>
+                              <th style={{ textAlign: 'center' }}>메모</th>
+                              <th style={{ textAlign: 'center' }}>회차</th>
+                              <th style={{ textAlign: 'center' }}>적용</th>
                             </tr>
                           </thead>
                           <tbody>
