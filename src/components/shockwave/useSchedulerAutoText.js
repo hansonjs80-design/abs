@@ -102,6 +102,15 @@ export default function useSchedulerAutoText({
     });
   }, []);
 
+  const markUnknownPatient = useCallback((text) => {
+    const value = String(text || '').trim();
+    if (!value || value.includes('*')) return value;
+    const explicitVisitSuffix = getExplicitVisitSuffix(value);
+    if (!explicitVisitSuffix) return normalize4060StarOrder(`${value}*`);
+    const base = value.slice(0, -explicitVisitSuffix.length).trim();
+    return normalize4060StarOrder(`${base}*${explicitVisitSuffix}`);
+  }, []);
+
   const findLatestSchedulerMemoMeta = useCallback((targetCell, chartNumber, cleanName, options = {}) => {
     const normalizedName = normalizeNameForMatch(cleanName);
     const currentSortKey = buildSchedulerMemoSortKey(`${targetCell.w}-${targetCell.d}-${targetCell.r}-${targetCell.c}`, weeks);
@@ -533,7 +542,7 @@ export default function useSchedulerAutoText({
 
       if (searchChart) {
         return {
-          text: rawName,
+          text: markUnknownPatient(rawName),
           prescription: initialPrescription || '',
           bodyPart: '',
           mergeSpan: clearPatientMergeSpan(),
@@ -803,6 +812,7 @@ export default function useSchedulerAutoText({
     settings,
     findLatestSchedulerMemoMeta,
     findSchedulerHistoryCandidates,
+    markUnknownPatient,
   ]);
 
   return { buildSchedulerAutoText };

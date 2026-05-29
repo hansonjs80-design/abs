@@ -87,7 +87,8 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
     });
   }, [memos]);
 
-  const applyImmediateCellDisplay = useCallback((updates) => {
+  const applyImmediateCellDisplay = useCallback((updates, options = {}) => {
+    const { keepContextMenuOpen = false } = options;
     const entries = normalizeUpdateEntries(updates);
     const nextValues = {};
     entries.forEach((item) => {
@@ -119,7 +120,7 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
         return next;
       });
       setEditingCell(null);
-      setContextMenu(null);
+      if (!keepContextMenuOpen) setContextMenu(null);
     });
   }, [setContextMenu, setEditingCell, currentYear, currentMonth]);
 

@@ -2064,7 +2064,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           onClick={(e) => e.stopPropagation()}
         >
           {(() => {
-            const firstKey = selectedKeys ? Array.from(selectedKeys)[0] : null;
+            const contextKey = contextMenu
+              ? `${contextMenu.weekIdx}-${contextMenu.dayIdx}-${contextMenu.rowIdx}-${contextMenu.colIdx}`
+              : null;
+            const firstKey = contextKey || (selectedKeys ? Array.from(selectedKeys)[0] : null);
             const baseMemo = firstKey ? (renderMemos[firstKey] || {}) : {};
             const currentMemo = (firstKey && contextMenu?.memoSnapshot) 
               ? { ...baseMemo, ...contextMenu.memoSnapshot } 

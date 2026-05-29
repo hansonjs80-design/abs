@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { buildManualTherapyUnmergePayload } from '../../lib/manualTherapyMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import { has4060Pattern, normalize4060StarOrder, strip4060FromContent } from '../../lib/schedulerContentFormat';
 import {
@@ -143,7 +144,11 @@ export default function useScheduleContextMenuActions({
     else if (action === 'cancel-toggle') handleToggleTreatmentCancel();
     else if (action === 'merge' || action === 'unmerge') tryMergeSelection();
     else if (action?.type === 'prescription') {
-      const keys = Array.from(selectedKeys || []);
+      const contextKey = getContextKey();
+      const selectedKeyList = Array.from(selectedKeys || []);
+      const keys = contextKey && !selectedKeyList.includes(contextKey)
+        ? [contextKey]
+        : selectedKeyList;
       let anyChanged = false;
       const payloadByKey = new Map();
       const affectedKeys = new Set(keys);
@@ -171,6 +176,11 @@ export default function useScheduleContextMenuActions({
           updatedContent = strip4060FromContent(updatedContent);
         }
         if (memo.prescription !== action.value || updatedContent !== getStableMemoContent(key, memo)) {
+          updateContextMemoSnapshot(key, memo, {
+            content: updatedContent,
+            prescription: prescriptionValue,
+          });
+
           const manualTherapyMerge = buildManualTherapyAutoMergePayload({
             key,
             memos,
@@ -186,6 +196,19 @@ export default function useScheduleContextMenuActions({
           });
 
           if (manualTherapyMerge.ok) {
+            const contextPayload = manualTherapyMerge.payload.find((item) => (
+              `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}` === key
+            ));
+            if (contextPayload) {
+              updateContextMemoSnapshot(key, memo, {
+                content: contextPayload.content,
+                prescription: contextPayload.prescription || null,
+                merge_span: contextPayload.merge_span || memo.merge_span,
+                body_part: Object.prototype.hasOwnProperty.call(contextPayload, 'body_part')
+                  ? contextPayload.body_part
+                  : memo.body_part,
+              });
+            }
             manualTherapyMerge.payload.forEach((item) => {
               const itemKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
               payloadByKey.set(itemKey, item);
@@ -193,6 +216,42 @@ export default function useScheduleContextMenuActions({
             manualTherapyMerge.affectedKeys.forEach((itemKey) => affectedKeys.add(itemKey));
             anyChanged = true;
           } else {
+            if (manualTherapyMerge.reason === 'not-manual-therapy') {
+              const unmergePayload = buildManualTherapyUnmergePayload({
+                key,
+                memos,
+                pendingMergeSpans,
+                currentYear,
+                currentMonth,
+                content: updatedContent,
+                bgColor: memo.bg_color || null,
+                prescription: action.value,
+                bodyPart: memo.body_part || null,
+              });
+
+              if (unmergePayload.ok) {
+                const contextPayload = unmergePayload.payload.find((item) => (
+                  `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}` === key
+                ));
+                if (contextPayload) {
+                  updateContextMemoSnapshot(key, memo, {
+                    content: contextPayload.content,
+                    prescription: contextPayload.prescription || null,
+                    merge_span: contextPayload.merge_span || memo.merge_span,
+                    body_part: Object.prototype.hasOwnProperty.call(contextPayload, 'body_part')
+                      ? contextPayload.body_part
+                      : memo.body_part,
+                  });
+                }
+                unmergePayload.payload.forEach((item) => {
+                  const itemKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+                  payloadByKey.set(itemKey, item);
+                });
+                unmergePayload.affectedKeys.forEach((itemKey) => affectedKeys.add(itemKey));
+                anyChanged = true;
+                continue;
+              }
+            }
             if (manualTherapyMerge.reason === 'occupied') {
               addToast('아래 셀이 비어있지 않아 자동 병합하지 않았습니다.', 'warning');
             } else if (manualTherapyMerge.reason === 'bounds') {
@@ -207,7 +266,7 @@ export default function useScheduleContextMenuActions({
 
       if (payloadByKey.size > 0) {
         const payload = Array.from(payloadByKey.values());
-        applyImmediateCellDisplay?.(payload);
+        applyImmediateCellDisplay?.(payload, { keepContextMenuOpen: Boolean(contextMenu) });
         applyImmediateMergeSpan?.(payload);
         const success = await saveShockwaveMemosBulk(payload);
         if (success) {
