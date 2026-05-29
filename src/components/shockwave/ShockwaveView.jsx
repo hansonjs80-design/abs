@@ -2618,18 +2618,20 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                         borderRadius: '8px',
                         overflow: 'hidden',
                         background: 'var(--bg-primary, #fff)',
+                        '--patient-history-group-header-bg': group.key === 'manual' ? '#fed7aa' : '#bae6fd',
+                        '--patient-history-column-header-bg': group.key === 'manual' ? '#fff3e6' : '#e0f2fe',
                       }}
                     >
                       <div
                         style={{
-                          background: group.key === 'manual' ? 'rgba(161, 98, 7, 0.11)' : 'rgba(14, 165, 233, 0.1)',
+                          background: 'var(--patient-history-group-header-bg)',
                           color: 'var(--text-primary, #1f2937)',
                           fontWeight: 800,
                           padding: '8px 12px',
                           borderBottom: '1px solid var(--border-color, #d7dde5)',
                         }}
                       >
-                        {group.label} <span style={{ color: 'var(--text-secondary, #6b7280)', fontWeight: 600 }}>({group.logs.length})</span>
+                        {group.label} <span style={{ color: 'var(--text-secondary, #6b7280)', fontWeight: 700 }}>{group.logs.length}건</span>
                       </div>
                       <div className="sw-compact-table-wrap">
                         <table className="sw-summary-table sw-compact-summary-table patient-history-table" style={{ width: '100%', margin: 0, tableLayout: 'fixed' }}>
@@ -2658,7 +2660,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 ? `draft-${selectedCell.w}-${selectedCell.d}-${selectedCell.r}-${selectedCell.c}`
                                 : '';
                               const isCurrentHistoryRow = Boolean(log.isCurrentCell || (selectedHistoryCellId && log.id === selectedHistoryCellId));
-                              const currentCellRowBackground = isCurrentHistoryRow ? '#dbeafe' : undefined;
+                              const currentCellRowBackground = isCurrentHistoryRow
+                                ? (group.key === 'manual' ? '#fed7aa' : '#bae6fd')
+                                : undefined;
                               return (
                               <tr
                                 key={historyRowKey}

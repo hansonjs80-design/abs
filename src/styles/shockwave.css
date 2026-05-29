@@ -3283,6 +3283,7 @@
 
 .patient-history-table.sw-summary-table thead th,
 .patient-history-table.sw-compact-summary-table thead th {
+  background: var(--patient-history-column-header-bg, var(--bg-secondary)) !important;
   padding-top: 5px !important;
   padding-bottom: 5px !important;
   white-space: nowrap;
