@@ -1,6 +1,7 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { normalizeNameForMatch } from '../../lib/memoParser';
+import { supabase } from '../../lib/supabaseClient';
 import {
   addBodyPartToMap,
   getBodyPartOptionsFromMergeSpan,
@@ -21,6 +22,7 @@ export default function useScheduleContextMenuOpening({
   setContextMenu,
   setContextMenuBodyInput,
   setContextMenuBodyPartOptions,
+  setContextMenuHiddenBodyPartKeys,
   setContextMenuMemoDrafts,
   setContextMenuNoteInput,
   setContextMenuReservationInput,
@@ -28,6 +30,8 @@ export default function useScheduleContextMenuOpening({
   setEditingCell,
   skipNextEditBlurSaveRef,
 }) {
+  const bodyPartOptionsRequestRef = useRef(0);
+
   const buildContextMenuBodyPartOptions = useCallback((targetKey) => {
     const currentMemo = memos[targetKey] || {};
     const { patientChart, patientName } = parseSchedulerPatientIdentity(currentMemo?.content || '');
@@ -50,6 +54,66 @@ export default function useScheduleContextMenuOpening({
     return Array.from(bodyPartsMap.values()).sort((a, b) => a.localeCompare(b, 'ko'));
   }, [memos]);
 
+  const fetchHistoricalBodyPartOptions = useCallback(async ({ patientChart, patientName }) => {
+    const chart = String(patientChart || '').trim();
+    const name = String(patientName || '').trim();
+    if (!chart && !name) return [];
+
+    const shockwaveQuery = supabase
+      .from('shockwave_patient_logs')
+      .select('patient_name, chart_number, body_part')
+      .not('body_part', 'is', null)
+      .limit(300);
+    const manualQuery = supabase
+      .from('manual_therapy_patient_logs')
+      .select('patient_name, chart_number, body_part')
+      .not('body_part', 'is', null)
+      .limit(300);
+    const scheduleQuery = supabase
+      .from('shockwave_schedules')
+      .select('content, body_part')
+      .not('body_part', 'is', null)
+      .limit(300);
+
+    if (chart) {
+      shockwaveQuery.eq('chart_number', chart);
+      manualQuery.eq('chart_number', chart);
+      scheduleQuery.ilike('content', `%${chart}%`);
+    } else {
+      shockwaveQuery.ilike('patient_name', `%${name}%`);
+      manualQuery.ilike('patient_name', `%${name}%`);
+      scheduleQuery.ilike('content', `%${name}%`);
+    }
+
+    const [shockwaveRes, manualRes, scheduleRes] = await Promise.all([
+      shockwaveQuery,
+      manualQuery,
+      scheduleQuery,
+    ]);
+
+    const optionsMap = new Map();
+    const normalizedName = normalizeNameForMatch(name);
+    const isMatchingLogRow = (row) => {
+      if (chart) return String(row.chart_number || '').trim() === chart;
+      return normalizedName && normalizeNameForMatch(row.patient_name) === normalizedName;
+    };
+    const isMatchingScheduleRow = (row) => {
+      const parsed = parseSchedulerPatientIdentity(row.content || '');
+      if (chart) return String(parsed.patientChart || '').trim() === chart;
+      return normalizedName && normalizeNameForMatch(parsed.patientName) === normalizedName;
+    };
+
+    [
+      ...(shockwaveRes.data || []).filter(isMatchingLogRow),
+      ...(manualRes.data || []).filter(isMatchingLogRow),
+      ...(scheduleRes.data || []).filter(isMatchingScheduleRow),
+    ].forEach((row) => {
+      splitBodyParts(row.body_part || '').forEach((part) => addBodyPartToMap(optionsMap, part));
+    });
+
+    return Array.from(optionsMap.values());
+  }, []);
+
   const handleCellContextMenu = useCallback((event, w, d, r, c, currentPrescription, slotTime = '') => {
     event.preventDefault();
     event.stopPropagation();
@@ -57,14 +121,17 @@ export default function useScheduleContextMenuOpening({
     setEditingCell(null);
     selectSingleCell({ w, d, r, c });
     const key = cellKey(w, d, r, c);
+    const currentMemo = memos[key] || {};
+    const { patientChart, patientName } = parseSchedulerPatientIdentity(currentMemo?.content || '');
     setActiveContextSubmenu(null);
     setContextMenuBodyPartOptions(buildContextMenuBodyPartOptions(key));
+    setContextMenuHiddenBodyPartKeys?.(new Set());
     setContextMenuBodyInput('');
     setContextMenuNoteInput('');
-    setContextMenuMemoDrafts(getMemoListFromMergeSpan(memos[key]?.merge_span));
-    setContextMenuVisitInput(getSchedulerVisitInputValue(memos[key]?.content || ''));
+    setContextMenuMemoDrafts(getMemoListFromMergeSpan(currentMemo?.merge_span));
+    setContextMenuVisitInput(getSchedulerVisitInputValue(currentMemo?.content || ''));
     const defaultReservationTime = slotTime || getDefaultReservationTime(w, d, r);
-    const savedReservationTime = getReservationTimeFromMergeSpan(memos[key]?.merge_span);
+    const savedReservationTime = getReservationTimeFromMergeSpan(currentMemo?.merge_span);
     setContextMenuReservationInput(savedReservationTime || defaultReservationTime);
     const viewW = window.innerWidth;
     const isNearRightEdge = event.clientX + 180 + 300 > viewW;
@@ -77,17 +144,35 @@ export default function useScheduleContextMenuOpening({
       rowIdx: r,
       colIdx: c,
       currentPrescription,
-      memoSnapshot: memos[key] || {},
+      memoSnapshot: currentMemo,
       defaultReservationTime,
       savedReservationTime,
       isNearRightEdge,
     });
+
+    const requestId = bodyPartOptionsRequestRef.current + 1;
+    bodyPartOptionsRequestRef.current = requestId;
+    fetchHistoricalBodyPartOptions({ patientChart, patientName })
+      .then((parts) => {
+        if (bodyPartOptionsRequestRef.current !== requestId || parts.length === 0) return;
+        setContextMenuBodyPartOptions((prev) => {
+          const optionsMap = new Map();
+          (prev || []).forEach((part) => addBodyPartToMap(optionsMap, part));
+          parts.forEach((part) => addBodyPartToMap(optionsMap, part));
+          return Array.from(optionsMap.values()).sort((a, b) => a.localeCompare(b, 'ko'));
+        });
+      })
+      .catch((error) => {
+        console.error('Failed to load historical body part options', error);
+      });
+
     window.setTimeout(() => {
       skipNextEditBlurSaveRef.current = false;
     }, 0);
   }, [
     buildContextMenuBodyPartOptions,
     cellKey,
+    fetchHistoricalBodyPartOptions,
     getDefaultReservationTime,
     memos,
     selectSingleCell,
@@ -95,6 +180,7 @@ export default function useScheduleContextMenuOpening({
     setContextMenu,
     setContextMenuBodyInput,
     setContextMenuBodyPartOptions,
+    setContextMenuHiddenBodyPartKeys,
     setContextMenuMemoDrafts,
     setContextMenuNoteInput,
     setContextMenuReservationInput,
@@ -105,8 +191,10 @@ export default function useScheduleContextMenuOpening({
 
   useEffect(() => {
     if (!contextMenu) {
+      bodyPartOptionsRequestRef.current += 1;
       setActiveContextSubmenu(null);
       setContextMenuBodyPartOptions([]);
+      setContextMenuHiddenBodyPartKeys?.(new Set());
       setContextMenuBodyInput('');
       setContextMenuNoteInput('');
       setContextMenuMemoDrafts([]);
@@ -118,6 +206,7 @@ export default function useScheduleContextMenuOpening({
     setActiveContextSubmenu,
     setContextMenuBodyInput,
     setContextMenuBodyPartOptions,
+    setContextMenuHiddenBodyPartKeys,
     setContextMenuMemoDrafts,
     setContextMenuNoteInput,
     setContextMenuReservationInput,

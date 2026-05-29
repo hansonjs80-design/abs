@@ -50,6 +50,11 @@ describe('scheduler visit suffix normalization', () => {
     assert.equal(applyVisitCountToSchedulerContent('3275/손연희(진료후도수)*', '2'), '3275/손연희(진료후도수)(2)');
   });
 
+  it('replaces special visit markers with explicit numeric visits', () => {
+    assert.equal(applyVisitCountToSchedulerContent('12745/신금란*', '1'), '12745/신금란(1)');
+    assert.equal(applyVisitCountToSchedulerContent('12745/신금란(-)', '1'), '12745/신금란(1)');
+  });
+
   it('keeps the shared visit stepper behavior used by non-shortcut flows', () => {
     assert.equal(stepVisitInputValue('*', 1), '2');
     assert.equal(stepVisitInputValue('2', -1), '*');

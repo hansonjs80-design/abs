@@ -1,5 +1,8 @@
 import { has4060Pattern } from './schedulerContentFormat.js';
-import { parseSchedulerPatientIdentity } from './schedulerCellTextUtils.js';
+import {
+  normalizeVisitInputValue,
+  parseSchedulerPatientIdentity,
+} from './schedulerCellTextUtils.js';
 
 function normalizeNameForHistorySearch(value) {
   return String(value || '')
@@ -28,9 +31,9 @@ export function getPatientHistorySearchTarget(content) {
 export function buildPatientHistoryCellUpdate(log, currentMemo = {}) {
   const chart = String(log?.chart_number || '').trim();
   const name = String(log?.patient_name || '').replace(/\*/g, '').trim();
-  const bodyPart = String(log?.body_part || '').trim();
+  const bodyPart = String(log?.body_part || currentMemo.body_part || '').trim();
   const prescription = String(log?.prescription || '').trim();
-  const visitCount = parseInt(log?.visit_count || '0', 10) || 0;
+  const visitCount = normalizeVisitInputValue(log?.visit_count);
 
   let contentName = name;
 
@@ -42,7 +45,11 @@ export function buildPatientHistoryCellUpdate(log, currentMemo = {}) {
   }
 
   let content = chart ? `${chart}/${contentName}` : contentName;
-  if (visitCount > 0) {
+  if (visitCount === '-') {
+    content = `${content}(-)`;
+  } else if (visitCount === '*') {
+    content = `${content}*`;
+  } else if (visitCount) {
     content = `${content}(${visitCount})`;
   }
 

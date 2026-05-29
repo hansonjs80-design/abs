@@ -413,7 +413,17 @@ export default function useScheduleContextMenuActions({
 
       if (anyChanged) {
         for (const { key, memo, updated, nextOptions, nextMergeSpan } of computedResults) {
-          rememberBodyPartOptions(nextOptions);
+          setContextMenuBodyPartOptions?.((prev) => {
+            const optionsMap = new Map();
+            const targetKey = normalizeBodyPartKey(targetPart);
+            (prev || []).forEach((part) => {
+              if (normalizeBodyPartKey(part) !== targetKey) addBodyPartToMap(optionsMap, part);
+            });
+            nextOptions.forEach((part) => {
+              if (normalizeBodyPartKey(part) !== targetKey) addBodyPartToMap(optionsMap, part);
+            });
+            return Array.from(optionsMap.values());
+          });
           updateContextMemoSnapshot(key, memo, { merge_span: nextMergeSpan, body_part: updated });
           saveDebounceRef.current.pending.set(key, {
             memo, overrides: { merge_span: nextMergeSpan, body_part: updated }

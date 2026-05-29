@@ -48,6 +48,22 @@ describe('patient history apply payload', () => {
     assert.equal(update.body_part, 'Lumbar');
   });
 
+  it('keeps special visit markers when applying a selected history row', () => {
+    assert.equal(buildPatientHistoryCellUpdate({
+      chart_number: '14634',
+      patient_name: '김보람',
+      visit_count: '*',
+      history_group: 'shockwave',
+    }).content, '14634/김보람*');
+
+    assert.equal(buildPatientHistoryCellUpdate({
+      chart_number: '14634',
+      patient_name: '김보람',
+      visit_count: '-',
+      history_group: 'shockwave',
+    }).content, '14634/김보람(-)');
+  });
+
   it('adds manual therapy dose text once when applying a manual history row', () => {
     const update = buildPatientHistoryCellUpdate({
       chart_number: '3275',
@@ -72,5 +88,19 @@ describe('patient history apply payload', () => {
     });
 
     assert.equal(update.content, '13015/한동균40(30)');
+  });
+
+  it('does not clear an existing body part when a history row is missing body metadata', () => {
+    const update = buildPatientHistoryCellUpdate({
+      chart_number: '12089',
+      patient_name: '김정미',
+      prescription: 'F/R',
+      visit_count: '5',
+      history_group: 'shockwave',
+    }, {
+      body_part: 'Lt. Hip',
+    });
+
+    assert.equal(update.body_part, 'Lt. Hip');
   });
 });

@@ -7,7 +7,7 @@ import {
 } from '../../lib/patientHistoryModalUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import { supabase } from '../../lib/supabaseClient';
-import { has4060Pattern } from '../../lib/schedulerContentFormat';
+import { get4060PrescriptionFromContent, has4060Pattern } from '../../lib/schedulerContentFormat';
 import {
   applyVisitCountToSchedulerContent,
   getExplicitVisitSuffix,
@@ -20,6 +20,56 @@ const getPatientHistoryTreatmentGroup = ({ type, prescription, content }) => {
   const prescriptionText = String(prescription || '').trim();
   if (/(?:^|\D)(40|60)\s*분?(?:\D|$)/.test(prescriptionText)) return 'manual';
   return 'shockwave';
+};
+
+const getPatientHistoryRowKey = (log = {}) => [
+  log.type || '',
+  log.id || '',
+  log.history_group || '',
+  log.date || '',
+  log.chart_number || '',
+  log.patient_name || '',
+  log.body_part || '',
+].join('__');
+
+const withPatientHistoryRowMeta = (log) => ({
+  ...log,
+  _history_row_key: getPatientHistoryRowKey(log),
+  _original_visit_count: String(log.visit_count || ''),
+});
+
+const getPatientHistoryScheduleOverrideKey = (log = {}) => {
+  const date = String(log.date || '').trim();
+  const chart = String(log.chart_number || '').trim();
+  const name = normalizeNameForMatch(log.patient_name);
+  const group = String(log.history_group || 'shockwave').trim();
+  const bodyPart = String(log.body_part || '').trim().toLowerCase();
+  if (!date) return '';
+  if (chart) return `${date}__${group}__chart__${chart}__body__${bodyPart}`;
+  if (name) return `${date}__${group}__name__${name}__body__${bodyPart}`;
+  return '';
+};
+
+const getPreservedBodyPart = (...values) => {
+  for (const value of values) {
+    const text = String(value || '').trim();
+    if (text) return text;
+  }
+  return null;
+};
+
+const getUniqueMatchingBodyPart = (items, scheduleLog) => {
+  const bodies = new Set();
+  items.forEach((item) => {
+    if (item.date !== scheduleLog.date) return;
+    if ((item.history_group || 'shockwave') !== scheduleLog.history_group) return;
+    const sameChart = scheduleLog.chart_number && item.chart_number && String(item.chart_number).trim() === String(scheduleLog.chart_number).trim();
+    const sameName = scheduleLog.patient_name && normalizeNameForMatch(item.patient_name) === normalizeNameForMatch(scheduleLog.patient_name);
+    if (!sameChart && !sameName) return;
+    const bodyPart = String(item.body_part || '').trim();
+    if (bodyPart) bodies.add(bodyPart);
+  });
+  return bodies.size === 1 ? [...bodies][0] : '';
 };
 
 export default function usePatientHistoryActions({
@@ -44,7 +94,11 @@ export default function usePatientHistoryActions({
   setPatientHistoryModalOpen,
   setPatientHistoryModalData,
 }) {
-  const fetchPatientHistory = useCallback(async (nameParam, chartParam) => {
+  const fetchPatientHistory = useCallback(async (nameParam, chartParam, options = {}) => {
+    const activeSelectedKey = String(options?.selectedKey || '');
+    const activeSelectedContent = typeof options?.selectedContent === 'string'
+      ? options.selectedContent
+      : null;
     setPatientHistoryModalData((prev) => ({ ...prev, loading: true, searchName: nameParam, searchChart: chartParam }));
     try {
       const shockwaveQuery = supabase.from('shockwave_patient_logs')
@@ -90,7 +144,7 @@ export default function usePatientHistoryActions({
       ];
 
       const scheduleData = scheduleRes.data || [];
-      const seenLogKeys = new Set(allData.map((d) => `${d.date}__${d.history_group || 'shockwave'}`));
+      const scheduleOverrides = new Map();
 
       for (const s of scheduleData) {
         try {
@@ -109,26 +163,53 @@ export default function usePatientHistoryActions({
 
           const visitSuffix = getExplicitVisitSuffix(content);
           const visitCount = visitSuffix.replace(/[()]/g, '') || '';
+          const schedulePrescription = s.prescription || get4060PrescriptionFromContent(content);
           const historyGroup = getPatientHistoryTreatmentGroup({
             type: 'schedule',
-            prescription: s.prescription,
+            prescription: schedulePrescription,
             content,
           });
 
-          if (seenLogKeys.has(`${dateStr}__${historyGroup}`)) continue;
-
-          allData.push({
+          const scheduleLog = {
             id: s.id,
             date: dateStr,
             patient_name: parsed.patientName || '',
             chart_number: parsed.patientChart || '',
             visit_count: visitCount,
-            prescription: s.prescription || '',
+            prescription: schedulePrescription || '',
             body_part: s.body_part || '',
             type: 'schedule',
             history_group: historyGroup,
+          };
+          scheduleLog.body_part = getPreservedBodyPart(
+            scheduleLog.body_part,
+            getUniqueMatchingBodyPart(allData, scheduleLog),
+          ) || '';
+          const scheduleOverrideKey = getPatientHistoryScheduleOverrideKey(scheduleLog);
+          if (scheduleOverrideKey) scheduleOverrides.set(scheduleOverrideKey, scheduleLog);
+
+          const existingIndex = allData.findIndex((item) => {
+            if (item.date !== scheduleLog.date) return false;
+            if ((item.history_group || 'shockwave') !== scheduleLog.history_group) return false;
+            if (String(item.body_part || '').trim().toLowerCase() !== String(scheduleLog.body_part || '').trim().toLowerCase()) return false;
+            const sameChart = scheduleLog.chart_number && item.chart_number && String(item.chart_number).trim() === String(scheduleLog.chart_number).trim();
+            const sameName = scheduleLog.patient_name && normalizeNameForMatch(item.patient_name) === normalizeNameForMatch(scheduleLog.patient_name);
+            return Boolean(sameChart || sameName);
           });
-          seenLogKeys.add(`${dateStr}__${historyGroup}`);
+
+          if (existingIndex >= 0) {
+            allData[existingIndex] = {
+              ...allData[existingIndex],
+              patient_name: scheduleLog.patient_name || allData[existingIndex].patient_name,
+              chart_number: scheduleLog.chart_number || allData[existingIndex].chart_number,
+              visit_count: scheduleLog.visit_count || allData[existingIndex].visit_count,
+              prescription: scheduleLog.prescription || allData[existingIndex].prescription,
+              body_part: scheduleLog.body_part || allData[existingIndex].body_part,
+              schedule_id: scheduleLog.id,
+            };
+          } else {
+            allData.push(scheduleLog);
+          }
         } catch {
           // Ignore malformed schedule rows.
         }
@@ -139,6 +220,25 @@ export default function usePatientHistoryActions({
         const matchName = nameParam && normalizeNameForMatch(item.patient_name).includes(nameParam);
         if (chartParam) return matchChart;
         return matchName;
+      }).map((item) => {
+        const override = scheduleOverrides.get(getPatientHistoryScheduleOverrideKey(item));
+        if (!override) return item;
+        return {
+          ...item,
+          patient_name: override.patient_name || item.patient_name,
+          chart_number: override.chart_number || item.chart_number,
+          visit_count: override.visit_count,
+          prescription: override.prescription || item.prescription,
+          body_part: override.body_part || item.body_part,
+          schedule_id: override.id,
+        };
+      });
+
+      scheduleOverrides.forEach((override) => {
+        const alreadyIncluded = matches.some((item) => (
+          getPatientHistoryScheduleOverrideKey(item) === getPatientHistoryScheduleOverrideKey(override)
+        ));
+        if (!alreadyIncluded) matches.push(override);
       });
 
       matches.sort((a, b) => {
@@ -160,7 +260,9 @@ export default function usePatientHistoryActions({
             for (let colIndex = 0; colIndex < colCount; colIndex++) {
               const key = cellKey(selectedCell.w, selectedCell.d, rowIndex, colIndex);
               const memo = memos[key] || {};
-              const content = Object.prototype.hasOwnProperty.call(pendingDisplayValues, key)
+              const content = activeSelectedKey === key && activeSelectedContent !== null
+                ? activeSelectedContent
+                : Object.prototype.hasOwnProperty.call(pendingDisplayValues, key)
                 ? pendingDisplayValues[key]
                 : (memo.content || '');
               if (!String(content || '').trim()) continue;
@@ -171,20 +273,31 @@ export default function usePatientHistoryActions({
               if (chartParam ? !matchChart : !matchName) continue;
 
               const visitSuffix = getExplicitVisitSuffix(content);
-              selectedDateLogs.push({
-                id: `draft-${key}`,
+              const currentPrescription = memo.prescription || get4060PrescriptionFromContent(content);
+              const draftLog = {
                 date: selectedDate,
                 patient_name: parsed.patientName || nameParam || '',
                 chart_number: parsed.patientChart || chartParam || '',
-                prescription: memo.prescription || '',
-                body_part: memo.body_part || '',
-                visit_count: visitSuffix.replace(/[()]/g, '') || '',
-                type: 'draft',
                 history_group: getPatientHistoryTreatmentGroup({
                   type: 'draft',
-                  prescription: memo.prescription,
+                  prescription: currentPrescription,
                   content,
                 }),
+              };
+              selectedDateLogs.push({
+                id: `draft-${key}`,
+                schedule_cell_key: key,
+                date: selectedDate,
+                patient_name: draftLog.patient_name,
+                chart_number: draftLog.chart_number,
+                prescription: currentPrescription || '',
+                body_part: getPreservedBodyPart(
+                  memo.body_part,
+                  getUniqueMatchingBodyPart(allData, draftLog),
+                ) || '',
+                visit_count: visitSuffix.replace(/[()]/g, '') || '',
+                type: 'draft',
+                history_group: draftLog.history_group,
                 isCurrentCell: key === selectedKey,
                 sort_index: rowIndex * colCount + colIndex,
               });
@@ -207,7 +320,12 @@ export default function usePatientHistoryActions({
           return (parseInt(b.visit_count || '0', 10) || 0) - (parseInt(a.visit_count || '0', 10) || 0);
         });
       }
-      setPatientHistoryModalData({ loading: false, logs: finalLogs, searchName: nameParam, searchChart: chartParam });
+      setPatientHistoryModalData({
+        loading: false,
+        logs: finalLogs.map(withPatientHistoryRowMeta),
+        searchName: nameParam,
+        searchChart: chartParam,
+      });
     } catch (e) {
       console.error(e);
       alert(`디버그 에러 발생: ${e.message}`);
@@ -227,7 +345,7 @@ export default function usePatientHistoryActions({
   ]);
 
   const handleUpdateLogVisitCount = useCallback(async (log, newValue) => {
-    if (log.id === 'draft' || log.type === 'draft') return;
+    if (log.id === 'draft' || log.type === 'draft') return false;
 
     try {
       if (log.type === 'schedule') {
@@ -243,7 +361,22 @@ export default function usePatientHistoryActions({
         if (error) throw error;
       }
 
-      addToast('해당 날짜의 회차가 수정되었습니다.', 'success');
+      if (log.schedule_id && log.type !== 'schedule') {
+        const { data, error: fetchScheduleError } = await supabase
+          .from('shockwave_schedules')
+          .select('content')
+          .eq('id', log.schedule_id)
+          .single();
+        if (fetchScheduleError) throw fetchScheduleError;
+        if (data) {
+          const updatedContent = applyVisitCountToSchedulerContent(data.content, newValue);
+          const { error: updateScheduleError } = await supabase
+            .from('shockwave_schedules')
+            .update({ content: updatedContent, updated_at: new Date().toISOString() })
+            .eq('id', log.schedule_id);
+          if (updateScheduleError) throw updateScheduleError;
+        }
+      }
 
       const calWeeks = generateShockwaveCalendar(currentYear, currentMonth, holidays);
       let targetW = -1;
@@ -262,21 +395,28 @@ export default function usePatientHistoryActions({
         if (targetW !== -1) break;
       }
 
+      let scheduleSyncFailed = false;
       if (targetW !== -1 && targetD !== -1) {
         for (let r = 0; r < baseTimeSlotsLength; r++) {
           for (let c = 0; c < colCount; c++) {
             const key = cellKey(targetW, targetD, r, c);
-            const memo = memos[key];
-            if (memo && memo.content) {
-              const parsed = parseSchedulerPatientIdentity(memo.content);
+            const memo = memos[key] || {};
+            const content = Object.prototype.hasOwnProperty.call(pendingDisplayValues, key)
+              ? pendingDisplayValues[key]
+              : (memo.content || '');
+            if (String(content || '').trim()) {
+              const parsed = parseSchedulerPatientIdentity(content);
               const matchChart = log.chart_number && parsed.patientChart && String(parsed.patientChart).trim() === String(log.chart_number).trim();
               const matchName = log.patient_name && normalizeNameForMatch(parsed.patientName) === normalizeNameForMatch(log.patient_name);
+              const logBodyPart = String(log.body_part || '').trim().toLowerCase();
+              const memoBodyPart = String(memo.body_part || '').trim().toLowerCase();
+              const bodyPartMatches = !logBodyPart || !memoBodyPart || logBodyPart === memoBodyPart;
 
-              if (matchChart || matchName) {
-                const updatedContent = applyVisitCountToSchedulerContent(memo.content, newValue);
-                if (updatedContent !== memo.content) {
+              if ((matchChart || matchName) && bodyPartMatches) {
+                const updatedContent = applyVisitCountToSchedulerContent(content, newValue);
+                if (updatedContent !== content) {
                   setPendingDisplayValues((prev) => ({ ...prev, [key]: updatedContent }));
-                  await saveShockwaveMemosBulk([{
+                  const success = await saveShockwaveMemosBulk([{
                     year: currentYear,
                     month: currentMonth,
                     week_index: targetW,
@@ -286,20 +426,139 @@ export default function usePatientHistoryActions({
                     content: updatedContent,
                     bg_color: memo.bg_color || null,
                     prescription: memo.prescription || null,
-                    body_part: memo.body_part || null,
+                    body_part: getPreservedBodyPart(memo.body_part, log.body_part),
                     merge_span: memo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
                   }]);
+                  if (!success) scheduleSyncFailed = true;
                 }
               }
             }
           }
         }
       }
+      if (scheduleSyncFailed) throw new Error('schedule sync failed');
+      addToast('해당 날짜의 회차가 수정되었습니다.', 'success');
+      return true;
     } catch (e) {
       console.error(e);
       addToast('회차 수정 실패', 'error');
+      return false;
     }
-  }, [addToast, currentYear, currentMonth, holidays, memos, baseTimeSlotsLength, colCount, saveShockwaveMemosBulk, cellKey, setPendingDisplayValues]);
+  }, [addToast, currentYear, currentMonth, holidays, memos, pendingDisplayValues, baseTimeSlotsLength, colCount, saveShockwaveMemosBulk, cellKey, setPendingDisplayValues]);
+
+  const handleUpdateCurrentCellVisitCount = useCallback(async (newValue, log = {}) => {
+    if (!selectedCell) return false;
+    const { w, d, r, c } = selectedCell;
+    const key = cellKey(w, d, r, c);
+    const memo = memos[key] || {};
+    const content = editingCell === key
+      ? (editInputRef.current?.value ?? editValue)
+      : (Object.prototype.hasOwnProperty.call(pendingDisplayValues, key)
+          ? pendingDisplayValues[key]
+          : (memo.content || ''));
+    const updatedContent = applyVisitCountToSchedulerContent(content, newValue);
+    if (!String(content || '').trim() || updatedContent === content) return true;
+
+    const payload = [{
+      year: currentYear,
+      month: currentMonth,
+      week_index: w,
+      day_index: d,
+      row_index: r,
+      col_index: c,
+      content: updatedContent,
+      bg_color: memo.bg_color || null,
+      prescription: memo.prescription || null,
+      body_part: getPreservedBodyPart(memo.body_part, log.body_part),
+      merge_span: memo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+    }];
+
+    setPendingDisplayValues((prev) => ({ ...prev, [key]: updatedContent }));
+    applyImmediateCellDisplay?.(payload, { keepContextMenuOpen: true });
+    applyImmediateMergeSpan?.(payload);
+
+    const success = await saveShockwaveMemosBulk(payload);
+    if (success) {
+      clearImmediateCellDisplay?.(payload);
+      addToast('회차가 수정되었습니다.', 'success');
+      return true;
+    }
+
+    addToast('회차 수정 실패', 'error');
+    return false;
+  }, [
+    selectedCell,
+    cellKey,
+    memos,
+    editingCell,
+    editInputRef,
+    editValue,
+    pendingDisplayValues,
+    currentYear,
+    currentMonth,
+    saveShockwaveMemosBulk,
+    setPendingDisplayValues,
+    applyImmediateCellDisplay,
+    applyImmediateMergeSpan,
+    clearImmediateCellDisplay,
+    addToast,
+  ]);
+
+  const handleUpdateDraftHistoryVisitCount = useCallback(async (log, newValue) => {
+    const draftKey = String(log?.schedule_cell_key || '').trim();
+    if (!draftKey) return handleUpdateCurrentCellVisitCount(newValue, log);
+    const parts = draftKey.split('-').map(Number);
+    if (parts.length !== 4 || parts.some((part) => !Number.isFinite(part))) {
+      return false;
+    }
+    const [w, d, r, c] = parts;
+    const memo = memos[draftKey] || {};
+    const content = Object.prototype.hasOwnProperty.call(pendingDisplayValues, draftKey)
+      ? pendingDisplayValues[draftKey]
+      : (memo.content || '');
+    const updatedContent = applyVisitCountToSchedulerContent(content, newValue);
+    if (!String(content || '').trim() || updatedContent === content) return true;
+
+    const payload = [{
+      year: currentYear,
+      month: currentMonth,
+      week_index: w,
+      day_index: d,
+      row_index: r,
+      col_index: c,
+      content: updatedContent,
+      bg_color: memo.bg_color || null,
+      prescription: memo.prescription || null,
+      body_part: getPreservedBodyPart(memo.body_part, log.body_part),
+      merge_span: memo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+    }];
+
+    setPendingDisplayValues((prev) => ({ ...prev, [draftKey]: updatedContent }));
+    applyImmediateCellDisplay?.(payload, { keepContextMenuOpen: true });
+    applyImmediateMergeSpan?.(payload);
+
+    const success = await saveShockwaveMemosBulk(payload);
+    if (success) {
+      clearImmediateCellDisplay?.(payload);
+      addToast('회차가 수정되었습니다.', 'success');
+      return true;
+    }
+
+    addToast('회차 수정 실패', 'error');
+    return false;
+  }, [
+    handleUpdateCurrentCellVisitCount,
+    memos,
+    pendingDisplayValues,
+    currentYear,
+    currentMonth,
+    saveShockwaveMemosBulk,
+    setPendingDisplayValues,
+    applyImmediateCellDisplay,
+    applyImmediateMergeSpan,
+    clearImmediateCellDisplay,
+    addToast,
+  ]);
 
   const handleOpenPatientHistoryModal = useCallback(async () => {
     try {
@@ -330,7 +589,10 @@ export default function usePatientHistoryActions({
       }
 
       setPatientHistoryModalOpen(true);
-      await fetchPatientHistory(searchName, searchChart);
+      await fetchPatientHistory(searchName, searchChart, {
+        selectedKey: key,
+        selectedContent: content,
+      });
     } catch (e) {
       console.error(e);
       alert(`디버그 에러 발생: ${e.message}`);
@@ -410,6 +672,8 @@ export default function usePatientHistoryActions({
   return {
     fetchPatientHistory,
     handleUpdateLogVisitCount,
+    handleUpdateCurrentCellVisitCount,
+    handleUpdateDraftHistoryVisitCount,
     handleOpenPatientHistoryModal,
     handleApplyHistoryToCell,
   };

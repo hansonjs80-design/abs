@@ -502,6 +502,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [contextMenu, setContextMenu] = useState(null); // { x, y, weekIdx, dayIdx, rowIdx, colIdx, currentPrescription }
   const [activeContextSubmenu, setActiveContextSubmenu] = useState(null);
   const [contextMenuBodyPartOptions, setContextMenuBodyPartOptions] = useState([]);
+  const [contextMenuHiddenBodyPartKeys, setContextMenuHiddenBodyPartKeys] = useState(() => new Set());
+  const [hiddenBodyPartOptionsByPatient, setHiddenBodyPartOptionsByPatient] = useState({});
   const [, setContextMenuBodyInput] = useState('');
   const [, setContextMenuNoteInput] = useState('');
   const [contextMenuMemoDrafts, setContextMenuMemoDrafts] = useState([]);
@@ -1232,6 +1234,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setContextMenu,
     setContextMenuBodyInput,
     setContextMenuBodyPartOptions,
+    setContextMenuHiddenBodyPartKeys,
     setContextMenuMemoDrafts,
     setContextMenuNoteInput,
     setContextMenuReservationInput,
@@ -1368,6 +1371,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const {
     fetchPatientHistory,
     handleUpdateLogVisitCount,
+    handleUpdateCurrentCellVisitCount,
+    handleUpdateDraftHistoryVisitCount,
     handleOpenPatientHistoryModal,
     handleApplyHistoryToCell,
   } = usePatientHistoryActions({
@@ -2076,6 +2081,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
             const currentBodyPart = currentMemo?.body_part || '';
             const currentParts = splitBodyParts(currentBodyPart);
             const { patientChart, patientName } = parseSchedulerPatientIdentity(currentMemo?.content || '');
+            const bodyPartPatientKey = patientChart
+              ? `chart:${String(patientChart).trim()}`
+              : `name:${normalizeNameForMatch(patientName)}`;
+            const hiddenBodyPartKeys = new Set([
+              ...(hiddenBodyPartOptionsByPatient[bodyPartPatientKey] || []),
+              ...contextMenuHiddenBodyPartKeys,
+            ]);
+            const currentBodyPartKeys = new Set(currentParts.map((part) => normalizeBodyPartKey(part)));
             const currentKeyParts = firstKey ? firstKey.split('-').map(Number) : null;
             const currentSortKey = currentKeyParts
               ? buildSchedulerMemoSortKey(firstKey, weeks)
@@ -2105,7 +2118,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
             const availablePartsMap = new Map();
             contextMenuBodyPartOptions.forEach((part) => addBodyPartToMap(availablePartsMap, part));
             Array.from(patientBodyPartsMap.values()).forEach((part) => addBodyPartToMap(availablePartsMap, part));
-            const availableParts = Array.from(availablePartsMap.values()).sort((a, b) => a.localeCompare(b, 'ko'));
+            const availableParts = Array.from(availablePartsMap.values())
+              .filter((part) => {
+                const partKey = normalizeBodyPartKey(part);
+                return currentBodyPartKeys.has(partKey) || !hiddenBodyPartKeys.has(partKey);
+              })
+              .sort((a, b) => a.localeCompare(b, 'ko'));
             const previousPrescriptionValue = previousPrescription?.value || '';
             const shockwavePrescriptions = Array.isArray(settings?.prescriptions)
               ? settings.prescriptions.filter(Boolean)
@@ -2353,12 +2371,35 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               currentParts={currentParts}
                               autoFocus={true}
                               imeOpenRef={imeOpenRef}
-                              onAdd={(value) => handleContextAction({ type: 'bodyPartAdd', value })}
+                              onAdd={(value) => {
+                                const partKey = normalizeBodyPartKey(value);
+                                setContextMenuHiddenBodyPartKeys((prev) => {
+                                  const next = new Set(prev);
+                                  next.delete(partKey);
+                                  return next;
+                                });
+                                setHiddenBodyPartOptionsByPatient((prev) => {
+                                  const nextKeys = (prev[bodyPartPatientKey] || []).filter((key) => key !== partKey);
+                                  if (nextKeys.length === (prev[bodyPartPatientKey] || []).length) return prev;
+                                  return { ...prev, [bodyPartPatientKey]: nextKeys };
+                                });
+                                handleContextAction({ type: 'bodyPartAdd', value });
+                              }}
                               onToggle={(value) => handleContextAction({ type: 'bodyPartToggle', value })}
                               onDelete={(value) => {
-                                handleContextAction({ type: 'bodyPartDeleteValue', value });
+                                const partKey = normalizeBodyPartKey(value);
+                                setContextMenuHiddenBodyPartKeys((prev) => {
+                                  const next = new Set(prev);
+                                  next.add(partKey);
+                                  return next;
+                                });
+                                setHiddenBodyPartOptionsByPatient((prev) => {
+                                  const current = prev[bodyPartPatientKey] || [];
+                                  if (current.includes(partKey)) return prev;
+                                  return { ...prev, [bodyPartPatientKey]: [...current, partKey] };
+                                });
                                 setContextMenuBodyPartOptions((prev) => (
-                                  prev.filter((item) => normalizeBodyPartKey(item) !== normalizeBodyPartKey(value))
+                                  prev.filter((item) => normalizeBodyPartKey(item) !== partKey)
                                 ));
                               }}
                             />
@@ -2603,21 +2644,26 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                           </thead>
                           <tbody>
                             {group.logs.map((log, idx) => {
-                              const currentCellRowBackground = log.isCurrentCell ? '#dbeafe' : undefined;
+                              const historyRowKey = log._history_row_key || `${group.key}-${log.id || log.date}-${idx}`;
+                              const selectedHistoryCellId = selectedCell
+                                ? `draft-${selectedCell.w}-${selectedCell.d}-${selectedCell.r}-${selectedCell.c}`
+                                : '';
+                              const isCurrentHistoryRow = Boolean(log.isCurrentCell || (selectedHistoryCellId && log.id === selectedHistoryCellId));
+                              const currentCellRowBackground = isCurrentHistoryRow ? '#dbeafe' : undefined;
                               return (
                               <tr
-                                key={`${group.key}-${log.id || log.date}-${idx}`}
+                                key={historyRowKey}
                                 onClick={() => handleApplyHistoryToCell(log)}
                                 style={{
                                   cursor: 'pointer',
-                                  boxShadow: log.isCurrentCell ? 'inset 4px 0 0 var(--brand-primary, #2563eb)' : undefined,
-                                  outline: log.isCurrentCell ? '1px solid rgba(37, 99, 235, 0.38)' : undefined,
+                                  boxShadow: isCurrentHistoryRow ? 'inset 4px 0 0 var(--brand-primary, #2563eb)' : undefined,
+                                  outline: isCurrentHistoryRow ? '1px solid rgba(37, 99, 235, 0.38)' : undefined,
                                 }}
                                 title={log.id === 'draft' ? "현재 선택된 셀의 날짜를 기반으로 한 임시 항목입니다" : "클릭하여 내역을 현재 셀에 적용합니다"}
                               >
                                 <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground }}>
                                   {log.date}
-                                  {log.isCurrentCell && (
+                                  {isCurrentHistoryRow && (
                                     <span style={{ fontSize: '0.76rem', color: 'var(--brand-primary)', display: 'block', marginTop: '2px', fontWeight: 800 }}>현재 셀</span>
                                   )}
                                 </td>
@@ -2634,28 +2680,56 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground }} onClick={(e) => e.stopPropagation()}>
                                   <input
                                     type="text"
+                                    inputMode="text"
                                     value={log.visit_count || ''}
                                     placeholder="-"
                                     style={{ width: '36px', textAlign: 'center', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '1px 2px', outline: 'none' }}
                                     onChange={(e) => {
-                                      const val = e.target.value;
+                                      const rawVal = e.target.value.trim();
+                                      const val = rawVal === '*' || rawVal === '-'
+                                        ? rawVal
+                                        : normalizeVisitInputValue(rawVal);
                                       setPatientHistoryModalData(prev => ({
                                         ...prev,
-                                        logs: prev.logs.map(l => l.id === log.id ? { ...l, visit_count: val } : l)
+                                        logs: prev.logs.map(l => (l._history_row_key || l.id) === historyRowKey ? { ...l, visit_count: val } : l)
                                       }));
                                     }}
-                                    onBlur={(e) => {
-                                      const newVal = e.target.value;
-                                      if (newVal !== log._original_visit_count) {
-                                        setPatientHistoryModalData(prev => ({
-                                          ...prev,
-                                          logs: prev.logs.map(l => l.id === log.id ? { ...l, _original_visit_count: newVal } : l)
-                                        }));
-
-                                        if (log.id === 'draft' || log.isCurrentCell) {
-                                          handleApplyHistoryToCell({ ...log, visit_count: newVal });
+                                    onBlur={async (e) => {
+                                      const newVal = normalizeVisitInputValue(e.target.value);
+                                      if (newVal !== e.target.value) e.target.value = newVal;
+                                      const originalVal = log._original_visit_count ?? '';
+                                      if (newVal !== originalVal) {
+                                        if (log.id === 'draft' || isCurrentHistoryRow) {
+                                          const success = await handleUpdateCurrentCellVisitCount(newVal, log);
+                                          setPatientHistoryModalData(prev => ({
+                                            ...prev,
+                                            logs: prev.logs.map(l => (l._history_row_key || l.id) === historyRowKey
+                                              ? (success
+                                                ? { ...l, visit_count: newVal, _original_visit_count: newVal }
+                                                : { ...l, visit_count: originalVal })
+                                              : l)
+                                          }));
+                                        } else if (String(log.id || '').startsWith('draft-')) {
+                                          const success = await handleUpdateDraftHistoryVisitCount(log, newVal);
+                                          setPatientHistoryModalData(prev => ({
+                                            ...prev,
+                                            logs: prev.logs.map(l => (l._history_row_key || l.id) === historyRowKey
+                                              ? (success
+                                                ? { ...l, visit_count: newVal, _original_visit_count: newVal }
+                                                : { ...l, visit_count: originalVal })
+                                              : l)
+                                          }));
                                         } else {
-                                          handleUpdateLogVisitCount(log, newVal);
+                                          const success = await handleUpdateLogVisitCount(log, newVal);
+                                          setPatientHistoryModalData(prev => ({
+                                            ...prev,
+                                            logs: prev.logs.map(l => {
+                                              if ((l._history_row_key || l.id) !== historyRowKey) return l;
+                                              return success
+                                                ? { ...l, visit_count: newVal, _original_visit_count: newVal }
+                                                : { ...l, visit_count: originalVal };
+                                            })
+                                          }));
                                         }
                                       }
                                     }}
