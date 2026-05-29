@@ -2661,13 +2661,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 : '';
                               const isCurrentHistoryRow = Boolean(log.isCurrentCell || (selectedHistoryCellId && log.id === selectedHistoryCellId));
                               const currentCellRowBackground = isCurrentHistoryRow
-                                ? (group.key === 'manual' ? '#fed7aa' : '#bae6fd')
+                                ? (group.key === 'manual' ? '#fedfbb' : '#c8ebfd')
                                 : undefined;
                               return (
                               <tr
                                 key={historyRowKey}
+                                className={isCurrentHistoryRow ? 'patient-history-current-row' : undefined}
                                 onClick={() => handleApplyHistoryToCell(log)}
                                 style={{
+                                  '--patient-history-current-row-bg': currentCellRowBackground,
                                   cursor: 'pointer',
                                   boxShadow: isCurrentHistoryRow ? 'inset 4px 0 0 var(--brand-primary, #2563eb)' : undefined,
                                   outline: isCurrentHistoryRow ? '1px solid rgba(37, 99, 235, 0.38)' : undefined,

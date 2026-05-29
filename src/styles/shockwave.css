@@ -3293,6 +3293,10 @@
   vertical-align: middle;
 }
 
+.patient-history-table tbody tr.patient-history-current-row td {
+  background-color: var(--patient-history-current-row-bg) !important;
+}
+
 .patient-history-table .patient-history-apply-button {
   width: 112px;
   max-width: 100%;
