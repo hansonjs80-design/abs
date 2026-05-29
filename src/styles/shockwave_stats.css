@@ -4359,6 +4359,14 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   background: #ffedd5 !important;
 }
 
+.sw-settlement-table thead .therapist-col.therapist-tone-0,
+.sw-compact-settlement-table thead .therapist-col.therapist-tone-0,
+.sw-manual-compact-settlement-table thead .therapist-col.therapist-tone-0,
+.sw-new-patient-table thead .therapist-col.therapist-tone-0,
+.sw-compact-new-patient-table thead .therapist-col.therapist-tone-0 {
+  color: #9a3412 !important;
+}
+
 .sw-settlement-table .therapist-tone-0-sub,
 .sw-compact-settlement-table .therapist-tone-0-sub,
 .sw-manual-compact-settlement-table .therapist-tone-0-sub,
