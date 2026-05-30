@@ -12,6 +12,7 @@ import ManualTherapyStatsView from '../components/shockwave/ManualTherapyStatsVi
 import ManualTherapySixMonthStats from '../components/shockwave/ManualTherapySixMonthStats';
 import SettlementSettingsPanel from '../components/shockwave/SettlementSettingsPanel';
 import { getEffectiveSettlementSettings } from '../lib/settlementSettings';
+import { normalizeManualTherapyLogRows } from '../lib/manualTherapyLogUtils';
 const MANUAL_THERAPY_SHEET_ID = '1-R_p3eyxwXISFTYX5G7_ec5L0kgUIhNbIwA9AdEj-9U';
 
 class ManualTherapyStatsPageErrorBoundary extends React.Component {
@@ -145,7 +146,7 @@ export default function ManualTherapyStatsPage() {
     });
   }, []);
 
-  const fetchLogs = useCallback(async () => {
+  const fetchLogs = useCallback(async ({ memosOverride = null } = {}) => {
     const currentFetchId = ++fetchIdRef.current;
     const monthKey = `${currentYear}-${currentMonth}`;
     const hasCurrentMonthLogs = logsLoadedKeyRef.current === monthKey;
@@ -158,7 +159,7 @@ export default function ManualTherapyStatsPage() {
 
       const { data, error } = await supabase
         .from('manual_therapy_patient_logs')
-        .select('id,date,patient_name,chart_number,visit_count,body_part,therapist_name,prescription,prescription_count,created_at')
+        .select('id,date,patient_name,chart_number,visit_count,body_part,therapist_name,prescription,prescription_count,scheduler_cell_key,created_at')
         .gte('date', startStr)
         .lt('date', endStr)
         .order('date', { ascending: true })
@@ -167,8 +168,13 @@ export default function ManualTherapyStatsPage() {
       if (error) throw error;
       if (currentFetchId !== fetchIdRef.current) return [];
       logsLoadedKeyRef.current = monthKey;
-      setLogs(Array.isArray(data) ? data : []);
-      return Array.isArray(data) ? data : [];
+      const normalizedLogs = normalizeManualTherapyLogRows(data, prescriptions, {
+        memos: memosOverride || shockwaveMemos,
+        year: currentYear,
+        month: currentMonth,
+      });
+      setLogs(normalizedLogs);
+      return normalizedLogs;
     } catch (error) {
       if (currentFetchId === fetchIdRef.current) {
         console.error(error);
@@ -180,7 +186,7 @@ export default function ManualTherapyStatsPage() {
         setIsLogsLoading(false);
       }
     }
-  }, [addToast, currentMonth, currentYear]);
+  }, [addToast, currentMonth, currentYear, prescriptions, shockwaveMemos]);
 
   useEffect(() => {
     loadManualTherapists();
@@ -241,7 +247,7 @@ export default function ManualTherapyStatsPage() {
 
         // 4. 동기화 완료 후 최신 도수치료 로그 조회
         if (active && scheduleReloadRequestRef.current === requestId) {
-          await fetchLogs();
+          await fetchLogs({ memosOverride: loadedMemos || {} });
         }
       } catch (err) {
         console.error('달 이동 중 도수치료 통계 자동 동기화 실패:', err);
@@ -286,7 +292,7 @@ export default function ManualTherapyStatsPage() {
         monthlyTherapists: reloaded?.monthlyTherapists || monthlyManualTherapists,
         upToToday: true,
       });
-      await fetchLogs();
+      await fetchLogs({ memosOverride: reloaded?.memos || shockwaveMemos });
       addToast('도수치료 통계 데이터를 새로 불러왔습니다.', 'success');
     } catch (err) {
       console.error(err);
