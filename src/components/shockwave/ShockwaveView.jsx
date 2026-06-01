@@ -2402,6 +2402,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 setContextMenuBodyPartOptions((prev) => (
                                   prev.filter((item) => normalizeBodyPartKey(item) !== partKey)
                                 ));
+                                handleContextAction({ type: 'bodyPartDeleteValue', value });
                               }}
                             />
                           </div>

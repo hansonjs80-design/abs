@@ -481,9 +481,9 @@ export default function useScheduleContextMenuActions({
     else if (action?.type === 'bodyPartToggle') {
       const keys = getContextTargetKeys();
       const oldMemos = buildMemoSnapshotForKeys(keys);
-      const targetPart = action.value.trim();
+      const targetPart = formatBodyPartInput(action.value);
+      if (!targetPart) return;
 
-      // 1회만 계산하여 UI + DB 모두에 사용할 결과를 미리 준비
       const computedResults = [];
       for (const key of keys) {
         const memo = getMemoForAction(key);
@@ -499,8 +499,8 @@ export default function useScheduleContextMenuActions({
         const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, nextOptions);
         computedResults.push({ key, memo, updated, nextOptions, nextMergeSpan });
       }
+      if (computedResults.length === 0) return;
 
-      // 즉시 UI 반영 (동기적)
       for (const { key, memo, updated, nextOptions, nextMergeSpan } of computedResults) {
         rememberBodyPartOptions(nextOptions);
         updateContextMemoSnapshot(key, memo, { merge_span: nextMergeSpan, body_part: updated });
