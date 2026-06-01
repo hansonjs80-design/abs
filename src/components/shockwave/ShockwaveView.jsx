@@ -1446,6 +1446,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const targetLog = pendingPatientHistoryApplyLog;
     setPendingPatientHistoryApplyLog(null);
     handleApplyHistoryToCell(targetLog);
+    setPatientHistoryModalOpen(false);
   }, [handleApplyHistoryToCell, pendingPatientHistoryApplyLog]);
 
   useEffect(() => {
@@ -2722,14 +2723,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               <tr
                                 key={historyRowKey}
                                 className={isCurrentHistoryRow ? 'patient-history-current-row' : undefined}
-                                onClick={() => requestApplyPatientHistoryToCell(log)}
                                 style={{
                                   '--patient-history-current-row-bg': currentCellRowBackground,
-                                  cursor: 'pointer',
                                   boxShadow: isCurrentHistoryRow ? 'inset 4px 0 0 var(--brand-primary, #2563eb)' : undefined,
                                   outline: isCurrentHistoryRow ? '1px solid rgba(37, 99, 235, 0.38)' : undefined,
                                 }}
-                                title={log.id === 'draft' ? "현재 선택된 셀의 날짜를 기반으로 한 임시 항목입니다" : "클릭하여 내역을 현재 셀에 적용합니다"}
+                                title={log.id === 'draft' ? "현재 선택된 셀의 날짜를 기반으로 한 임시 항목입니다" : undefined}
                               >
                                 <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground }}>
                                   {log.date}
