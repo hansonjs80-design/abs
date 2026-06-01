@@ -17,6 +17,7 @@ export default function useScheduleContextMenuOpening({
   contextMenu,
   getDefaultReservationTime,
   memos,
+  normalizeCellToMergeMaster,
   selectSingleCell,
   setActiveContextSubmenu,
   setContextMenu,
@@ -117,10 +118,13 @@ export default function useScheduleContextMenuOpening({
   const handleCellContextMenu = useCallback((event, w, d, r, c, currentPrescription, slotTime = '') => {
     event.preventDefault();
     event.stopPropagation();
+    const targetCell = normalizeCellToMergeMaster
+      ? normalizeCellToMergeMaster({ w, d, r, c })
+      : { w, d, r, c };
     skipNextEditBlurSaveRef.current = true;
     setEditingCell(null);
-    selectSingleCell({ w, d, r, c });
-    const key = cellKey(w, d, r, c);
+    selectSingleCell(targetCell);
+    const key = cellKey(targetCell.w, targetCell.d, targetCell.r, targetCell.c);
     const currentMemo = memos[key] || {};
     const { patientChart, patientName } = parseSchedulerPatientIdentity(currentMemo?.content || '');
     setActiveContextSubmenu(null);
@@ -130,7 +134,7 @@ export default function useScheduleContextMenuOpening({
     setContextMenuNoteInput('');
     setContextMenuMemoDrafts(getMemoListFromMergeSpan(currentMemo?.merge_span));
     setContextMenuVisitInput(getSchedulerVisitInputValue(currentMemo?.content || ''));
-    const defaultReservationTime = slotTime || getDefaultReservationTime(w, d, r);
+    const defaultReservationTime = slotTime || getDefaultReservationTime(targetCell.w, targetCell.d, targetCell.r);
     const savedReservationTime = getReservationTimeFromMergeSpan(currentMemo?.merge_span);
     setContextMenuReservationInput(savedReservationTime || defaultReservationTime);
     const viewW = window.innerWidth;
@@ -139,11 +143,11 @@ export default function useScheduleContextMenuOpening({
     setContextMenu({
       x: event.clientX,
       y: event.clientY,
-      weekIdx: w,
-      dayIdx: d,
-      rowIdx: r,
-      colIdx: c,
-      currentPrescription,
+      weekIdx: targetCell.w,
+      dayIdx: targetCell.d,
+      rowIdx: targetCell.r,
+      colIdx: targetCell.c,
+      currentPrescription: currentMemo?.prescription || currentPrescription || '',
       memoSnapshot: currentMemo,
       defaultReservationTime,
       savedReservationTime,
@@ -175,6 +179,7 @@ export default function useScheduleContextMenuOpening({
     fetchHistoricalBodyPartOptions,
     getDefaultReservationTime,
     memos,
+    normalizeCellToMergeMaster,
     selectSingleCell,
     setActiveContextSubmenu,
     setContextMenu,

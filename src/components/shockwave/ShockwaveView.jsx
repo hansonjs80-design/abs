@@ -330,9 +330,7 @@ const MemoizedCell = memo(({
         onMouseLeave={() => setHoverCell(null)}
         onDoubleClick={(e) => { handleCellDoubleClick(e, weekIdx, dayIdx, rowIdx, colIdx, content); }}
         onContextMenu={(e) => {
-          if (displayData.hasDisplayText && content.trim() !== '\u200B') {
-            handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);
-          }
+          handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);
         }}
       >
         {!isEditing && !isImePreview && (
@@ -417,9 +415,7 @@ const MemoizedCell = memo(({
         onMouseLeave={() => setHoverCell(null)}
         onDoubleClick={(e) => { handleCellDoubleClick(e, weekIdx, dayIdx, rowIdx, colIdx, content); }}
         onContextMenu={(e) => {
-          if (displayData.hasDisplayText && content.trim() !== '\u200B') {
-            handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);
-          }
+          handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);
         }}
       >
         <div className="sw-cell-display">
@@ -1035,7 +1031,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const isMeta = e?.metaKey || e?.ctrlKey;
 
     if (e?.button === 2) {
+      e.preventDefault();
       dragSelectionRef.current = null;
+      selectSingleCell(cell);
       skipNextEditBlurSaveRef.current = true;
       window.setTimeout(() => {
         skipNextEditBlurSaveRef.current = false;
@@ -1261,6 +1259,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     contextMenu,
     getDefaultReservationTime,
     memos: effectiveMemos,
+    normalizeCellToMergeMaster,
     selectSingleCell,
     setActiveContextSubmenu,
     setContextMenu,
