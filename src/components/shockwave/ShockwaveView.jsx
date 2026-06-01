@@ -1033,7 +1033,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (e?.button === 2) {
       e.preventDefault();
       dragSelectionRef.current = null;
-      selectSingleCell(cell);
+      if (!selectedKeys || selectedKeys.size <= 1 || !selectedKeys.has(key)) {
+        selectSingleCell(cell);
+      } else {
+        viewRef.current?.focus({ preventScroll: true });
+        focusSelectedCellInput();
+      }
       skipNextEditBlurSaveRef.current = true;
       window.setTimeout(() => {
         skipNextEditBlurSaveRef.current = false;
@@ -1079,7 +1084,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       dragSelectionRef.current = { anchor: cell };
     }
     if (!editingCell) setEditingCell(null);
-  }, [selectedCell, editingCell, editValue, buildRangeKeys, selectSingleCell, normalizeCellToMergeMaster, cellKey]);
+  }, [selectedCell, selectedKeys, editingCell, editValue, buildRangeKeys, selectSingleCell, normalizeCellToMergeMaster, cellKey, focusSelectedCellInput]);
 
   const handleCellMouseEnter = useCallback((w, d, r, c) => {
     if (!dragSelectionRef.current) return;
@@ -1261,6 +1266,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     memos: effectiveMemos,
     normalizeCellToMergeMaster,
     selectSingleCell,
+    selectedKeys,
     setActiveContextSubmenu,
     setContextMenu,
     setContextMenuBodyInput,

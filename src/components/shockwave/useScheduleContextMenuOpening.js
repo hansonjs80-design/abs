@@ -19,6 +19,7 @@ export default function useScheduleContextMenuOpening({
   memos,
   normalizeCellToMergeMaster,
   selectSingleCell,
+  selectedKeys,
   setActiveContextSubmenu,
   setContextMenu,
   setContextMenuBodyInput,
@@ -123,8 +124,11 @@ export default function useScheduleContextMenuOpening({
       : { w, d, r, c };
     skipNextEditBlurSaveRef.current = true;
     setEditingCell(null);
-    selectSingleCell(targetCell);
     const key = cellKey(targetCell.w, targetCell.d, targetCell.r, targetCell.c);
+    const shouldKeepRangeSelection = selectedKeys?.size > 1 && selectedKeys.has(key);
+    if (!shouldKeepRangeSelection) {
+      selectSingleCell(targetCell);
+    }
     const currentMemo = memos[key] || {};
     const { patientChart, patientName } = parseSchedulerPatientIdentity(currentMemo?.content || '');
     setActiveContextSubmenu(null);
@@ -181,6 +185,7 @@ export default function useScheduleContextMenuOpening({
     memos,
     normalizeCellToMergeMaster,
     selectSingleCell,
+    selectedKeys,
     setActiveContextSubmenu,
     setContextMenu,
     setContextMenuBodyInput,
