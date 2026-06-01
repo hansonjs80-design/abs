@@ -473,10 +473,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const { addToast } = useToast();
   const viewRef = useRef(null);
   const scheduleBulkSaveQueueRef = useRef(Promise.resolve(true));
-  const queuedSaveShockwaveMemosBulk = useCallback((payload) => {
+  const queuedSaveShockwaveMemosBulk = useCallback((payload, options) => {
     const nextSave = scheduleBulkSaveQueueRef.current
       .catch(() => false)
-      .then(() => saveShockwaveMemosBulk(payload));
+      .then(() => saveShockwaveMemosBulk(payload, options));
     scheduleBulkSaveQueueRef.current = nextSave.catch(() => false);
     return nextSave;
   }, [saveShockwaveMemosBulk]);

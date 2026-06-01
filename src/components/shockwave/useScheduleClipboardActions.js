@@ -345,7 +345,7 @@ export default function useScheduleClipboardActions({
       if (externalClip?.cells?.length && normalizedForced !== normalizedInternal) {
         clip = externalClip;
       }
-    } else if (typeof navigator !== 'undefined' && navigator.clipboard?.readText) {
+    } else if (!(currentClipboardSource && clip?.cells?.length) && typeof navigator !== 'undefined' && navigator.clipboard?.readText) {
       try {
         const clipboardText = await navigator.clipboard.readText();
         if (clipboardText) {
@@ -659,7 +659,7 @@ export default function useScheduleClipboardActions({
     recordUndo({ type: 'bulk-edit', oldMemos });
     applyImmediateCellDisplay(payload);
     applyImmediateMergeSpan(payload);
-    const success = await saveShockwaveMemosBulk(payload);
+    const success = await saveShockwaveMemosBulk(payload, { deferStatsSync: true });
 
     if (success) {
       clearImmediateCellDisplay(payload);

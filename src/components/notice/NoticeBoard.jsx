@@ -12,15 +12,15 @@ export default function NoticeBoard({
   showLastRows = true,
   onShowLastRowsChange,
 }) {
-  const { notices, loadNotices, saveNotice } = useSchedule();
+  const { currentYear, currentMonth, notices, loadNotices, saveNotice } = useSchedule();
   const [editingSlot, setEditingSlot] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [isDepartmentSettingsOpen, setIsDepartmentSettingsOpen] = useState(false);
   const [newDepartment, setNewDepartment] = useState('');
 
   useEffect(() => {
-    loadNotices();
-  }, [loadNotices]);
+    loadNotices(currentYear, currentMonth);
+  }, [currentMonth, currentYear, loadNotices]);
 
   const handleClick = (index) => {
     const existing = notices.find(n => n.slot_index === index);
@@ -32,7 +32,7 @@ export default function NoticeBoard({
     setEditingSlot(null);
     const existing = notices.find(n => n.slot_index === index);
     if (editValue.trim() !== (existing?.content || '').trim()) {
-      await saveNotice(index, editValue.trim());
+      await saveNotice(index, editValue.trim(), currentYear, currentMonth);
     }
   };
 
@@ -67,7 +67,7 @@ export default function NoticeBoard({
       <div className="notice-board">
         <div className="notice-board-header">
           <MessageSquare size={21} strokeWidth={2.4} />
-          전달 사항
+          {currentMonth}월 전달 사항
         </div>
         {Array.from({ length: SLOT_COUNT }, (_, i) => {
           const notice = notices.find(n => n.slot_index === i);

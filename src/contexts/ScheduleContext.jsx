@@ -105,6 +105,22 @@ export function ScheduleProvider({ children }) {
   const clipboardRef = useRef({ content: '', mode: null });
   const [clipboardSource, setClipboardSource] = useState(null); // { keys: Set, mode: 'copy'|'cut' }
 
+  const getNoticeStorageSlot = useCallback((year, month, slotIndex) => (
+    Number(year) * 10000 + Number(month) * 100 + Number(slotIndex)
+  ), []);
+
+  const normalizeNoticeSlot = useCallback((notice, year, month) => {
+    const storageSlot = Number(notice?.slot_index);
+    const monthPrefix = Number(year) * 10000 + Number(month) * 100;
+    return {
+      ...notice,
+      storage_slot_index: storageSlot,
+      slot_index: storageSlot >= monthPrefix && storageSlot < monthPrefix + 100
+        ? storageSlot - monthPrefix
+        : storageSlot,
+    };
+  }, []);
+
   useEffect(() => {
     therapistsRef.current = therapists;
   }, [therapists]);
@@ -926,8 +942,9 @@ export function ScheduleProvider({ children }) {
   }, [therapists, manualTherapists, monthlyTherapists, monthlyManualTherapists, shouldKeepShockwaveMemo, protectExistingScheduleContent, enqueueShockwaveWrite, isCurrentScheduleMonth]);
 
   // 다중 셀 동시 업데이트 (병합/병합해제 등)
-  const saveShockwaveMemosBulk = useCallback(async (memosArray) => {
+  const saveShockwaveMemosBulk = useCallback(async (memosArray, options = {}) => {
     if (!memosArray || memosArray.length === 0) return true;
+    const { deferStatsSync = false } = options || {};
     const targetKeys = memosArray.map((item) => `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`);
 
     return enqueueShockwaveWrite(targetKeys, async () => {
@@ -1009,7 +1026,8 @@ export function ScheduleProvider({ children }) {
         }
       });
 
-      for (const targetDateStr of affectedDates) {
+      const syncAffectedStats = async () => {
+        for (const targetDateStr of affectedDates) {
         if (targetDateStr) {
           if (therapists.length > 0) {
             try {
@@ -1040,6 +1058,17 @@ export function ScheduleProvider({ children }) {
             }
           }
         }
+        }
+      };
+
+      if (deferStatsSync) {
+        setTimeout(() => {
+          syncAffectedStats().catch((syncErr) => {
+            console.error('Failed to sync deferred bulk schedule stats:', syncErr);
+          });
+        }, 0);
+      } else {
+        await syncAffectedStats();
       }
       return true;
     } catch (err) {
@@ -1223,38 +1252,44 @@ export function ScheduleProvider({ children }) {
   }, [setMonthlyTherapistLoadedKey]);
 
   // 공지사항 로드/저장
-  const loadNotices = useCallback(async () => {
+  const loadNotices = useCallback(async (year = currentYear, month = currentMonth) => {
     const requestId = ++noticesLoadRequestRef.current;
+    const monthPrefix = Number(year) * 10000 + Number(month) * 100;
     try {
       const { data, error } = await supabase
         .from('notices')
         .select('*')
+        .gte('slot_index', monthPrefix)
+        .lt('slot_index', monthPrefix + 100)
         .order('slot_index');
 
       if (error) throw error;
+      const normalized = (data || []).map((notice) => normalizeNoticeSlot(notice, year, month));
       if (noticesLoadRequestRef.current === requestId) {
-        setNotices(data || []);
+        setNotices(normalized);
       }
-      return data || [];
+      return normalized;
     } catch (err) {
       console.error('Failed to load notices:', err);
       return null;
     }
-  }, []);
+  }, [currentMonth, currentYear, normalizeNoticeSlot]);
 
-  const saveNotice = useCallback(async (slotIndex, content) => {
-    const requestId = (noticeSaveRequestRef.current.get(slotIndex) || 0) + 1;
-    noticeSaveRequestRef.current.set(slotIndex, requestId);
+  const saveNotice = useCallback(async (slotIndex, content, year = currentYear, month = currentMonth) => {
+    const storageSlotIndex = getNoticeStorageSlot(year, month, slotIndex);
+    const requestId = (noticeSaveRequestRef.current.get(storageSlotIndex) || 0) + 1;
+    noticeSaveRequestRef.current.set(storageSlotIndex, requestId);
     const nextNotice = {
-      slot_index: slotIndex,
+      slot_index: storageSlotIndex,
       content,
       updated_at: new Date().toISOString()
     };
+    const displayNotice = normalizeNoticeSlot(nextNotice, year, month);
     try {
       setNotices((prev) => {
         const current = Array.isArray(prev) ? prev : [];
         const withoutSlot = current.filter((item) => item.slot_index !== slotIndex);
-        return [...withoutSlot, nextNotice].sort((a, b) => Number(a.slot_index) - Number(b.slot_index));
+        return [...withoutSlot, displayNotice].sort((a, b) => Number(a.slot_index) - Number(b.slot_index));
       });
 
       const { error } = await supabase
@@ -1262,7 +1297,7 @@ export function ScheduleProvider({ children }) {
         .upsert(nextNotice, { onConflict: 'slot_index' });
 
       if (error) throw error;
-      if (noticeSaveRequestRef.current.get(slotIndex) === requestId) {
+      if (noticeSaveRequestRef.current.get(storageSlotIndex) === requestId) {
         noticesLoadRequestRef.current += 1;
       }
       return true;
@@ -1270,11 +1305,11 @@ export function ScheduleProvider({ children }) {
       console.error('Failed to save notice:', err);
       return false;
     } finally {
-      if (noticeSaveRequestRef.current.get(slotIndex) === requestId) {
-        noticeSaveRequestRef.current.delete(slotIndex);
+      if (noticeSaveRequestRef.current.get(storageSlotIndex) === requestId) {
+        noticeSaveRequestRef.current.delete(storageSlotIndex);
       }
     }
-  }, []);
+  }, [currentMonth, currentYear, getNoticeStorageSlot, normalizeNoticeSlot]);
 
   // Real-time synchronization
   useEffect(() => {
