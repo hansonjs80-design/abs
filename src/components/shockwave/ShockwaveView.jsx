@@ -62,6 +62,37 @@ const PATIENT_HISTORY_GROUPS = [
   { key: 'manual', label: '도수치료 내역' },
 ];
 
+const HIDDEN_BODY_PART_OPTIONS_STORAGE_KEY = 'shockwave-hidden-body-part-options-by-patient';
+
+const loadHiddenBodyPartOptionsByPatient = () => {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(HIDDEN_BODY_PART_OPTIONS_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return Object.entries(parsed).reduce((acc, [patientKey, keys]) => {
+      if (!patientKey || !Array.isArray(keys)) return acc;
+      const uniqueKeys = Array.from(new Set(
+        keys.map((key) => String(key || '').trim()).filter(Boolean)
+      ));
+      if (uniqueKeys.length > 0) acc[patientKey] = uniqueKeys;
+      return acc;
+    }, {});
+  } catch {
+    return {};
+  }
+};
+
+const saveHiddenBodyPartOptionsByPatient = (value) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(HIDDEN_BODY_PART_OPTIONS_STORAGE_KEY, JSON.stringify(value || {}));
+  } catch {
+    // localStorage may be unavailable in private browsing or restricted contexts.
+  }
+};
+
 const getPatientHistoryGroupKey = (log) => (
   log?.history_group || (log?.type === 'manual' ? 'manual' : 'shockwave')
 );
@@ -503,7 +534,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [activeContextSubmenu, setActiveContextSubmenu] = useState(null);
   const [contextMenuBodyPartOptions, setContextMenuBodyPartOptions] = useState([]);
   const [contextMenuHiddenBodyPartKeys, setContextMenuHiddenBodyPartKeys] = useState(() => new Set());
-  const [hiddenBodyPartOptionsByPatient, setHiddenBodyPartOptionsByPatient] = useState({});
+  const [hiddenBodyPartOptionsByPatient, setHiddenBodyPartOptionsByPatient] = useState(loadHiddenBodyPartOptionsByPatient);
   const [, setContextMenuBodyInput] = useState('');
   const [, setContextMenuNoteInput] = useState('');
   const [contextMenuMemoDrafts, setContextMenuMemoDrafts] = useState([]);
@@ -2382,7 +2413,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 setHiddenBodyPartOptionsByPatient((prev) => {
                                   const nextKeys = (prev[bodyPartPatientKey] || []).filter((key) => key !== partKey);
                                   if (nextKeys.length === (prev[bodyPartPatientKey] || []).length) return prev;
-                                  return { ...prev, [bodyPartPatientKey]: nextKeys };
+                                  const next = { ...prev };
+                                  if (nextKeys.length > 0) {
+                                    next[bodyPartPatientKey] = nextKeys;
+                                  } else {
+                                    delete next[bodyPartPatientKey];
+                                  }
+                                  saveHiddenBodyPartOptionsByPatient(next);
+                                  return next;
                                 });
                                 handleContextAction({ type: 'bodyPartAdd', value });
                               }}
@@ -2397,7 +2435,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 setHiddenBodyPartOptionsByPatient((prev) => {
                                   const current = prev[bodyPartPatientKey] || [];
                                   if (current.includes(partKey)) return prev;
-                                  return { ...prev, [bodyPartPatientKey]: [...current, partKey] };
+                                  const next = { ...prev, [bodyPartPatientKey]: [...current, partKey] };
+                                  saveHiddenBodyPartOptionsByPatient(next);
+                                  return next;
                                 });
                                 setContextMenuBodyPartOptions((prev) => (
                                   prev.filter((item) => normalizeBodyPartKey(item) !== partKey)
