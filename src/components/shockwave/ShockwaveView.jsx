@@ -44,6 +44,7 @@ import {
   splitBodyParts,
   normalizeBodyPartKey,
   parseSchedulerPatientIdentity,
+  getSchedulerVisitInputValue,
   normalizeSchedulerVisitSuffix,
   normalizeVisitInputValue,
   stepVisitInputValue,
@@ -2207,6 +2208,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
             const currentBodyPart = currentMemo?.body_part || '';
             const currentParts = splitBodyParts(currentBodyPart);
             const { patientChart, patientName } = parseSchedulerPatientIdentity(currentMemo?.content || '');
+            const patientVisit = getSchedulerVisitInputValue(currentMemo?.content || '');
+            const patientHeaderBase = [patientChart, patientName].filter(Boolean).join('/');
+            const patientHeaderLabel = patientHeaderBase
+              ? `${patientHeaderBase}${patientVisit ? `(${patientVisit})` : ''}`
+              : '';
             const bodyPartPatientKey = patientChart
               ? `chart:${String(patientChart).trim()}`
               : `name:${normalizeNameForMatch(patientName)}`;
@@ -2254,6 +2260,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
             return (
               <>
+                {patientHeaderLabel && (
+                  <div
+                    className="context-menu-patient-header"
+                    title={patientHeaderLabel}
+                    style={{ '--context-patient-color': currentPrescriptionColor }}
+                  >
+                    <span className="context-menu-patient-title">{patientHeaderLabel}</span>
+                  </div>
+                )}
                 <button
                   type="button"
                   className="context-menu-item"

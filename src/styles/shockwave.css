@@ -910,6 +910,29 @@
   text-align: right;
 }
 
+.context-menu-patient-header {
+  margin: 1px 1px 5px;
+  padding: 9px 10px 8px;
+  border: 1px solid #d8e2f0;
+  border-radius: 9px;
+  background: linear-gradient(180deg, #ffffff 0%, #f5f8fc 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  text-align: left;
+}
+
+.context-menu-patient-title {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--context-patient-color, #0f172a);
+  font-size: 1.02rem;
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .context-menu-item:hover:not(:disabled),
 .context-menu-item:focus-visible:not(:disabled) {
   background: rgba(37, 99, 235, 0.08) !important;
