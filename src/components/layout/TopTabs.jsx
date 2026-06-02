@@ -89,7 +89,7 @@ export default function TopTabs() {
     const wd = ['일', '월', '화', '수', '목', '금', '토'][date.getDay()];
     const hh = date.getHours();
     const min = String(date.getMinutes()).padStart(2, '0');
-    return `${y}년 ${m}월 ${d}일(${wd}) ${hh}시 ${min}분`;
+    return `${y}년 ${m}월 ${d}일 (${wd}) ${hh}시 ${min}분`;
   };
 
   const currentDateTimeLabel = formatDateTime(now);
