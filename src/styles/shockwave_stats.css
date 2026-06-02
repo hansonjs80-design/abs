@@ -50,11 +50,61 @@
   transform: translateX(4px);
 }
 
+.sw-stats-container--shockwave .sw-stats-side-tab--grid:hover {
+  background: #bfdbfe;
+  border-color: #93c5fd;
+}
+
+.sw-stats-container--manual .sw-stats-side-tab--grid:hover {
+  background: #fed7aa;
+  border-color: #fdba74;
+}
+
+.sw-stats-side-tab--settlement:hover {
+  background: #ffedd5;
+  border-color: #fdba74;
+}
+
+.sw-stats-side-tab--new-patients:hover {
+  background: #e9ddff;
+  border-color: #c4b5fd;
+}
+
+.sw-stats-side-tab--settings:hover {
+  background: #d8f3ea;
+  border-color: #9ddfc9;
+}
+
 .sw-stats-side-tab.active {
   background: #d6cbf6;
   border-color: #9b8ad8;
   color: #1f2937;
   box-shadow: var(--shadow-md);
+}
+
+.sw-stats-container--shockwave .sw-stats-side-tab--grid.active {
+  background: #bfdbfe;
+  border-color: #93c5fd;
+}
+
+.sw-stats-container--manual .sw-stats-side-tab--grid.active {
+  background: #fed7aa;
+  border-color: #fdba74;
+}
+
+.sw-stats-side-tab--settlement.active {
+  background: #ffedd5;
+  border-color: #fdba74;
+}
+
+.sw-stats-side-tab--new-patients.active {
+  background: #e9ddff;
+  border-color: #c4b5fd;
+}
+
+.sw-stats-side-tab--settings.active {
+  background: #d8f3ea;
+  border-color: #9ddfc9;
 }
 
 /* ── Sidebar Therapist Filter ── */
@@ -550,7 +600,7 @@
   font-size: 1.62rem !important;
   font-weight: 800 !important;
   letter-spacing: -0.01em;
-  border-bottom: 1px solid var(--grid-strong) !important;
+  border-bottom: 3px solid var(--grid-strong) !important;
   border-right: 1px solid var(--grid-strong) !important;
   height: var(--sw-grid-header-title-height) !important;
   max-height: var(--sw-grid-header-title-height) !important;
@@ -4252,7 +4302,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 .sw-grid-table tbody tr:last-child > *,
 .sw-grid-table tr:last-child > * {
-  border-bottom: 3px solid #94a3b8 !important;
+  border-bottom: 4px solid #94a3b8 !important;
 }
 
 /* New-patient tables use one wrapper frame so colspan rows stay even. */

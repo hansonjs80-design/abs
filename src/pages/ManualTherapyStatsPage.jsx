@@ -515,30 +515,30 @@ export default function ManualTherapyStatsPage() {
   return (
     <div className="animate-fade-in" style={{ height: '100%', overflow: 'auto' }}>
       <ManualTherapyStatsPageErrorBoundary>
-        <div className="sw-stats-container animate-fade-in">
+        <div className="sw-stats-container sw-stats-container--manual animate-fade-in">
           {isLoading && <div className="top-loading-bar" />}
           <div className="sw-stats-layout">
             <aside className="sw-stats-sidebar">
               <button
-                className={`sw-stats-side-tab${activeSection === 'grid' ? ' active' : ''}`}
+                className={`sw-stats-side-tab sw-stats-side-tab--grid${activeSection === 'grid' ? ' active' : ''}`}
                 onClick={() => setActiveSection('grid')}
               >
                 도수치료 현황
               </button>
               <button
-                className={`sw-stats-side-tab${activeSection === 'settlement' ? ' active' : ''}`}
+                className={`sw-stats-side-tab sw-stats-side-tab--settlement${activeSection === 'settlement' ? ' active' : ''}`}
                 onClick={() => setActiveSection('settlement')}
               >
                 도수치료 결산
               </button>
               <button
-                className={`sw-stats-side-tab${activeSection === 'new-patients' ? ' active' : ''}`}
+                className={`sw-stats-side-tab sw-stats-side-tab--new-patients${activeSection === 'new-patients' ? ' active' : ''}`}
                 onClick={() => setActiveSection('new-patients')}
               >
                 신규환자
               </button>
               <button
-                className={`sw-stats-side-tab${activeSection === 'settings' ? ' active' : ''}`}
+                className={`sw-stats-side-tab sw-stats-side-tab--settings${activeSection === 'settings' ? ' active' : ''}`}
                 onClick={() => setActiveSection('settings')}
               >
                 설정
@@ -618,7 +618,7 @@ export default function ManualTherapyStatsPage() {
                             frozenColumnCount={shockwaveSettings?.frozen_columns ?? 6}
                             title={`${currentYear}년 ${String(currentMonth).padStart(2, '0')}월 도수치료 현황`}
                             applyTodayLabel="오늘 도수 스케줄 적용"
-                            secondarySummaryLabel="신규"
+                            secondarySummaryLabel="신환"
                             selectedTherapistNames={selectedTherapistNames}
                             onSelectedTherapistNamesChange={setSelectedTherapistNames}
                             readOnly

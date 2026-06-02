@@ -566,30 +566,30 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   const showSettlementSkeleton = isLoading && safeLogs.length === 0 && activeSection === 'settlement';
 
   return (
-    <div className="sw-stats-container animate-fade-in">
+    <div className="sw-stats-container sw-stats-container--shockwave animate-fade-in">
       {isLoading && <div className="top-loading-bar" />}
       <div className="sw-stats-layout">
         <aside className="sw-stats-sidebar">
           <button
-            className={`sw-stats-side-tab${activeSection === 'grid' ? ' active' : ''}`}
+            className={`sw-stats-side-tab sw-stats-side-tab--grid${activeSection === 'grid' ? ' active' : ''}`}
             onClick={() => setActiveSection('grid')}
           >
             충격파 현황
           </button>
           <button
-            className={`sw-stats-side-tab${activeSection === 'settlement' ? ' active' : ''}`}
+            className={`sw-stats-side-tab sw-stats-side-tab--settlement${activeSection === 'settlement' ? ' active' : ''}`}
             onClick={() => setActiveSection('settlement')}
           >
             충격파 결산
           </button>
           <button
-            className={`sw-stats-side-tab${activeSection === 'new-patients' ? ' active' : ''}`}
+            className={`sw-stats-side-tab sw-stats-side-tab--new-patients${activeSection === 'new-patients' ? ' active' : ''}`}
             onClick={() => setActiveSection('new-patients')}
           >
             신규환자
           </button>
           <button
-            className={`sw-stats-side-tab${activeSection === 'settings' ? ' active' : ''}`}
+            className={`sw-stats-side-tab sw-stats-side-tab--settings${activeSection === 'settings' ? ' active' : ''}`}
             onClick={() => setActiveSection('settings')}
           >
             설정

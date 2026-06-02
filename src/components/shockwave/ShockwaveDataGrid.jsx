@@ -80,7 +80,7 @@ export default function ShockwaveDataGrid({
   prescriptions: prescriptionsProp,
   frozenColumnCount: _frozenColumnCountProp,
   title,
-  secondarySummaryLabel = '신규',
+  secondarySummaryLabel = '신환',
   selectedTherapistNames: externalSelectedNames,
   onSelectedTherapistNamesChange,
   readOnly = false,
