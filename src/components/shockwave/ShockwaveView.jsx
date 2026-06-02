@@ -62,6 +62,9 @@ const PATIENT_HISTORY_GROUPS = [
   { key: 'manual', label: '도수치료 내역' },
 ];
 
+const PATIENT_HISTORY_ALL_BODY_FILTER = '__all__';
+const PATIENT_HISTORY_EMPTY_BODY_FILTER = '__empty__';
+
 const HIDDEN_BODY_PART_OPTIONS_STORAGE_KEY = 'shockwave-hidden-body-part-options-by-patient';
 
 const loadHiddenBodyPartOptionsByPatient = () => {
@@ -96,6 +99,36 @@ const saveHiddenBodyPartOptionsByPatient = (value) => {
 const getPatientHistoryGroupKey = (log) => (
   log?.history_group || (log?.type === 'manual' ? 'manual' : 'shockwave')
 );
+
+const getPatientHistoryBodyFilterParts = (log = {}) => {
+  const parts = splitBodyParts(log.body_part || '');
+  if (parts.length === 0) {
+    return [{ key: PATIENT_HISTORY_EMPTY_BODY_FILTER, label: '부위 없음' }];
+  }
+  const partMap = new Map();
+  parts.forEach((part) => {
+    const key = normalizeBodyPartKey(part);
+    if (!key || partMap.has(key)) return;
+    partMap.set(key, { key, label: part });
+  });
+  return Array.from(partMap.values());
+};
+
+const buildPatientHistoryBodyFilterOptions = (logs = []) => {
+  const partMap = new Map();
+  logs.forEach((log) => {
+    getPatientHistoryBodyFilterParts(log).forEach((part) => {
+      const current = partMap.get(part.key) || { ...part, count: 0 };
+      current.count += 1;
+      partMap.set(part.key, current);
+    });
+  });
+
+  return [
+    { key: PATIENT_HISTORY_ALL_BODY_FILTER, label: '전체', count: logs.length },
+    ...Array.from(partMap.values()).sort((a, b) => a.label.localeCompare(b.label, 'ko')),
+  ];
+};
 
 const ContextMenuLocalInput = ({ value, onChange, onKeyDown, onBlur, className, placeholder, autoFocus, onCompositionStart, onCompositionEnd, inputMode, pattern }) => {
   const [localValue, setLocalValue] = useState(value || '');
@@ -571,6 +604,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   // 환자 내역 검색 팝업 상태 (Cmd+F)
   const [patientHistoryModalOpen, setPatientHistoryModalOpen] = useState(false);
   const [patientHistoryModalData, setPatientHistoryModalData] = useState({ loading: false, logs: [], searchName: '', searchChart: '' });
+  const [patientHistoryBodyFilters, setPatientHistoryBodyFilters] = useState({});
   const [pendingPatientHistoryApplyLog, setPendingPatientHistoryApplyLog] = useState(null);
   const selectedPatientHistoryGroupKey = useMemo(() => {
     if (!selectedCell) return 'shockwave';
@@ -604,9 +638,27 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return 0;
     });
     return orderedGroups
-      .map((group) => groupMap.get(group.key))
-      .filter((group) => group.logs.length > 0);
-  }, [patientHistoryModalData.logs, selectedPatientHistoryGroupKey]);
+      .map((group) => {
+        const rawGroup = groupMap.get(group.key);
+        if (!rawGroup || rawGroup.logs.length === 0) return null;
+        const bodyFilterOptions = buildPatientHistoryBodyFilterOptions(rawGroup.logs);
+        const requestedFilter = patientHistoryBodyFilters[rawGroup.key] || PATIENT_HISTORY_ALL_BODY_FILTER;
+        const activeBodyFilter = bodyFilterOptions.some((option) => option.key === requestedFilter)
+          ? requestedFilter
+          : PATIENT_HISTORY_ALL_BODY_FILTER;
+        const logs = activeBodyFilter === PATIENT_HISTORY_ALL_BODY_FILTER
+          ? rawGroup.logs
+          : rawGroup.logs.filter((log) => getPatientHistoryBodyFilterParts(log).some((part) => part.key === activeBodyFilter));
+        return {
+          ...rawGroup,
+          logs,
+          totalLogs: rawGroup.logs,
+          bodyFilterOptions,
+          activeBodyFilter,
+        };
+      })
+      .filter(Boolean);
+  }, [patientHistoryBodyFilters, patientHistoryModalData.logs, selectedPatientHistoryGroupKey]);
   const patientHistoryModalLayout = useMemo(() => {
     const groupCount = patientHistoryLogGroups.length;
     if (groupCount >= 2) {
@@ -2109,7 +2161,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       {contextMenu && (
         <div
           ref={contextMenuRef}
-          className={`shockwave-context-menu ${contextMenu.isNearRightEdge ? 'submenu-pop-left' : ''} ${contextMenu.isStandaloneBodyPart ? 'standalone-mode' : ''}`}
+          className={`shockwave-context-menu schedule-context-menu ${contextMenu.isNearRightEdge ? 'submenu-pop-left' : ''} ${contextMenu.isStandaloneBodyPart ? 'standalone-mode' : ''}`}
           style={{
             top: contextMenu.y,
             left: contextMenu.x,
@@ -2192,7 +2244,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   data-shortcut-tooltip={`복사 ${shortcutLabels.copy}`}
                   onClick={() => handleContextAction('copy')}
                 >
-                  복사
+                  <span className="context-menu-label">복사</span>
+                  <span className="context-menu-shortcut">{shortcutLabels.copy}</span>
                 </button>
                 <button
                   type="button"
@@ -2200,7 +2253,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   data-shortcut-tooltip={`잘라내기 ${shortcutLabels.cut}`}
                   onClick={() => handleContextAction('cut')}
                 >
-                  잘라내기
+                  <span className="context-menu-label">잘라내기</span>
+                  <span className="context-menu-shortcut">{shortcutLabels.cut}</span>
                 </button>
                 <button
                   type="button"
@@ -2208,7 +2262,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   data-shortcut-tooltip={`붙여넣기 ${shortcutLabels.paste}`}
                   onClick={() => handleContextAction('paste')}
                 >
-                  붙여넣기
+                  <span className="context-menu-label">붙여넣기</span>
+                  <span className="context-menu-shortcut">{shortcutLabels.paste}</span>
                 </button>
                 <div className="context-menu-divider" />
                 {!selectionInfo?.isMergedMaster ? (
@@ -2219,7 +2274,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                     onClick={() => handleContextAction('merge')}
                     disabled={!selectionInfo?.selectionMultiple}
                   >
-                    셀 병합
+                    <span className="context-menu-label">셀 병합</span>
+                    <span className="context-menu-shortcut">{shortcutLabels.merge}</span>
                   </button>
                 ) : (
                   <button
@@ -2228,7 +2284,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                     data-shortcut-tooltip={`병합 해제 ${shortcutLabels.merge}`}
                     onClick={() => handleContextAction('unmerge')}
                   >
-                    병합 해제
+                    <span className="context-menu-label">병합 해제</span>
+                    <span className="context-menu-shortcut">{shortcutLabels.merge}</span>
                   </button>
                 )}
                 <div className="context-menu-divider" />
@@ -2239,7 +2296,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   onClick={() => handleContextAction('complete-toggle')}
                   disabled={!hasCompletableSelection}
                 >
-                  {treatmentCompleteButtonLabel}
+                  <span className="context-menu-label">{treatmentCompleteButtonLabel}</span>
+                  <span className="context-menu-shortcut">{shortcutLabels.complete}</span>
                 </button>
                 <button
                   type="button"
@@ -2248,8 +2306,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   onClick={() => handleContextAction('cancel-toggle')}
                   disabled={!hasCompletableSelection}
                 >
-                  예약 취소
+                  <span className="context-menu-label">예약 취소</span>
+                  <span className="context-menu-shortcut">{shortcutLabels.cancel}</span>
                 </button>
+                <div className="context-menu-item context-menu-history-search-item" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => {
+                  e.stopPropagation();
+                  setContextMenu(null);
+                  handleOpenPatientHistoryModal();
+                }}>
+                  <div className="context-menu-label" style={{ fontWeight: 600, color: 'var(--brand-primary)' }}>
+                    🔍 환자 내역 검색 (Cmd+F)
+                  </div>
+                </div>
                 <div className="context-menu-divider" />
 
                 <div className="context-menu-meta-section">
@@ -2343,7 +2411,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   </div>
 
                   <div
-                    className={`context-menu-item has-submenu context-menu-meta-item${activeContextSubmenu === 'prescription' ? ' is-submenu-open' : ''}`}
+                    className={`context-menu-item has-submenu context-menu-meta-item context-menu-prescription-item${activeContextSubmenu === 'prescription' ? ' is-submenu-open' : ''}`}
                     onMouseEnter={() => setActiveContextSubmenu('prescription')}
                     onFocusCapture={() => setActiveContextSubmenu('prescription')}
                   >
@@ -2407,14 +2475,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   </div>
 
                   <div
-                    className={`context-menu-item has-submenu context-menu-meta-item${activeContextSubmenu === 'body' ? ' is-submenu-open' : ''}`}
+                    className={`context-menu-item has-submenu context-menu-meta-item context-menu-body-item${activeContextSubmenu === 'body' ? ' is-submenu-open' : ''}`}
                     onMouseEnter={() => setActiveContextSubmenu('body')}
                     onFocusCapture={() => setActiveContextSubmenu('body')}
                   >
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       부위 : {currentParts.join(', ') || '없음'}
                     </span>
-                    <div className="context-menu-submenu">
+                    <div className="context-menu-submenu context-menu-submenu--body">
                       <div className="context-menu-editor-panel">
                         <div className="context-menu-inline-column">
                           <div className="context-menu-body-dropdown">
@@ -2469,16 +2537,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                         </div>
                       </div>
                     </div>
-                </div>
-
-                <div className="context-menu-item" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => {
-                  e.stopPropagation();
-                  setContextMenu(null);
-                  handleOpenPatientHistoryModal();
-                }}>
-                  <div className="context-menu-label" style={{ fontWeight: 600, color: 'var(--brand-primary)' }}>
-                    🔍 환자 내역 검색 (Cmd+F)
-                  </div>
                 </div>
 
                 <div className="context-menu-item context-menu-item-inline-edit context-menu-meta-item" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} style={{ cursor: 'default' }}>
@@ -2556,7 +2614,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     메모 : {contextMenuMemoDrafts.length > 0 ? contextMenuMemoDrafts.join(', ') : '없음'}
                   </span>
-                  <div className="context-menu-submenu">
+                  <div className="context-menu-submenu context-menu-submenu--memo">
                     <div className="context-menu-editor-panel">
                       <div className="context-menu-inline-column">
                         <div className="context-menu-inline-label">
@@ -2690,9 +2748,48 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                           fontWeight: 800,
                           padding: '8px 12px',
                           borderBottom: '1px solid var(--border-color, #d7dde5)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '10px',
                         }}
                       >
-                        {group.label} <span style={{ color: 'var(--text-secondary, #6b7280)', fontWeight: 700 }}>{group.logs.length}건</span>
+                        <span>
+                          {group.label} <span style={{ color: 'var(--text-secondary, #6b7280)', fontWeight: 700 }}>{group.logs.length}건</span>
+                        </span>
+                        {group.bodyFilterOptions.length > 1 && (
+                          <select
+                            aria-label={`${group.label} 부위 필터`}
+                            value={group.activeBodyFilter}
+                            onChange={(event) => {
+                              const value = event.target.value;
+                              setPatientHistoryBodyFilters((prev) => ({
+                                ...prev,
+                                [group.key]: value,
+                              }));
+                            }}
+                            onMouseDown={(event) => event.stopPropagation()}
+                            onClick={(event) => event.stopPropagation()}
+                            style={{
+                              maxWidth: '190px',
+                              minWidth: '118px',
+                              border: '1px solid rgba(148, 163, 184, 0.45)',
+                              borderRadius: '7px',
+                              background: '#fff',
+                              color: 'var(--text-primary, #1f2937)',
+                              fontSize: '0.8rem',
+                              fontWeight: 800,
+                              padding: '3px 7px',
+                              outline: 'none',
+                            }}
+                          >
+                            {group.bodyFilterOptions.map((option) => (
+                              <option key={option.key} value={option.key}>
+                                {option.label} {option.count}회
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </div>
                       <div className="sw-compact-table-wrap">
                         <table className="sw-summary-table sw-compact-summary-table patient-history-table" style={{ width: '100%', margin: 0, tableLayout: 'fixed' }}>

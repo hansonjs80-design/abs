@@ -839,6 +839,19 @@
   transition: background var(--transition-fast);
 }
 
+.shockwave-context-menu.schedule-context-menu {
+  box-sizing: border-box;
+  padding: 5px;
+  gap: 1px;
+  min-width: 185px;
+  width: 185px;
+  overflow: visible;
+}
+
+.shockwave-context-menu.schedule-context-menu:not(.standalone-mode) {
+  max-width: min(185px, calc(100vw - 24px));
+}
+
 .context-menu-action-panel {
   display: contents; /* Grid box 제거, 리스트 형태로 병합되도록 */
 }
@@ -868,6 +881,35 @@
   width: 100%;
 }
 
+.shockwave-context-menu.schedule-context-menu .context-menu-item {
+  box-sizing: border-box;
+  padding: 6px 10px !important;
+  min-height: 27px;
+  width: 100%;
+  min-width: 0;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.shockwave-context-menu.schedule-context-menu .context-menu-label,
+.shockwave-context-menu.schedule-context-menu .context-menu-item > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shockwave-context-menu.schedule-context-menu .context-menu-shortcut {
+  flex: 0 0 auto;
+  min-width: fit-content;
+  margin-left: auto;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-align: right;
+}
+
 .context-menu-item:hover:not(:disabled),
 .context-menu-item:focus-visible:not(:disabled) {
   background: rgba(37, 99, 235, 0.08) !important;
@@ -880,6 +922,17 @@
   padding: 4px;
   border-radius: 9px;
   background: #f2f5fb;
+}
+
+.shockwave-context-menu.schedule-context-menu .context-menu-meta-section {
+  margin-top: 1px;
+  padding: 3px;
+  background: #e7edf6;
+}
+
+.shockwave-context-menu.schedule-context-menu .context-menu-meta-item {
+  padding-left: 4px !important;
+  padding-right: 4px !important;
 }
 
 .context-menu-meta-section .context-menu-meta-item {
@@ -898,12 +951,24 @@
   box-shadow: none;
 }
 
+.shockwave-context-menu.schedule-context-menu .context-menu-prescription-item {
+  color: #111827;
+  font-size: 0.9rem !important;
+  font-weight: 800 !important;
+}
+
+.shockwave-context-menu.schedule-context-menu .context-menu-body-item {
+  color: #111827;
+  font-size: 0.9rem !important;
+  font-weight: 800 !important;
+}
+
 .shockwave-context-menu button:hover:not(:disabled) {
   background: rgba(37, 99, 235, 0.08);
 }
 
 .context-menu-item[data-shortcut-tooltip]::after {
-  content: attr(data-shortcut-tooltip);
+  content: none;
   position: absolute;
   left: 50%;
   top: -35px;
@@ -927,12 +992,16 @@
 
 .context-menu-item[data-shortcut-tooltip]:hover:not(:disabled)::after,
 .context-menu-item[data-shortcut-tooltip]:focus-visible:not(:disabled)::after {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
+  opacity: 0;
+  transform: translateX(-50%) translateY(4px);
 }
 
 .shockwave-context-menu .context-menu-item-complete {
   color: #8a5a00;
+}
+
+.shockwave-context-menu .context-menu-item-complete .context-menu-shortcut {
+  color: #c49a4a;
 }
 
 .shockwave-context-menu .context-menu-item-complete:hover:not(:disabled) {
@@ -941,6 +1010,10 @@
 
 .shockwave-context-menu .context-menu-item-clear-complete {
   color: #9f1239;
+}
+
+.shockwave-context-menu .context-menu-item-clear-complete .context-menu-shortcut {
+  color: #d98aa0;
 }
 
 .shockwave-context-menu .context-menu-item-clear-complete:hover:not(:disabled) {
@@ -981,6 +1054,10 @@
   display: block;
 }
 
+.shockwave-context-menu.schedule-context-menu .context-menu-divider {
+  margin: 3px 0;
+}
+
 /* Submenu System */
 .has-submenu {
   position: relative;
@@ -1012,6 +1089,13 @@
   display: none;
   z-index: 510;
   cursor: default;
+}
+
+.context-menu-submenu--body,
+.context-menu-submenu--memo {
+  min-width: 213px;
+  max-width: 255px;
+  padding: 9px;
 }
 
 .context-menu-submenu--prescription {
@@ -2062,6 +2146,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  justify-content: space-between;
   color: var(--text-primary);
   font-size: 0.85rem;
   font-weight: 600;
@@ -2071,33 +2156,40 @@
 .context-menu-visit-control {
   display: inline-flex;
   align-items: stretch;
+  justify-content: flex-end;
   gap: 4px;
+  margin-left: auto;
 }
 
 .context-menu-time-editor {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 2px;
+  justify-content: space-between;
   color: var(--text-primary);
   font-size: 0.85rem;
   font-weight: 600;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .context-menu-time-label {
   flex: 0 0 auto;
-  width: 72px;
+  width: 54px;
 }
 
 .context-menu-time-control {
   display: inline-flex;
   align-items: stretch;
-  gap: 4px;
+  justify-content: flex-end;
+  gap: 2px;
+  min-width: 0;
+  margin-left: auto;
 }
 
 .context-menu-time-reset {
-  width: 30px;
-  min-width: 30px;
+  width: 22px;
+  min-width: 22px;
   height: 30px;
   padding: 0 !important;
   border: 1px solid rgba(148, 163, 184, 0.28) !important;
@@ -2126,16 +2218,17 @@
 }
 
 .context-menu-time-input {
-  width: 72px;
-  min-width: 72px;
+  width: 52px;
+  min-width: 52px;
   height: 30px;
-  padding: 0 8px;
+  padding: 0 4px;
   border: 1px solid rgba(148, 163, 184, 0.24);
   border-radius: 9px;
   background: #ffffff;
   color: #0f172a;
   font-size: 0.96rem;
   font-weight: 800;
+  text-align: center;
   outline: none;
   cursor: default;
   user-select: none;
@@ -2149,8 +2242,8 @@
 }
 
 .context-menu-time-step {
-  width: 20px;
-  min-width: 20px;
+  width: 16px;
+  min-width: 16px;
   height: 14px;
   padding: 0 !important;
   border: 1px solid rgba(148, 163, 184, 0.22) !important;
