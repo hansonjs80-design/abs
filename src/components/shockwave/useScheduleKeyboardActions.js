@@ -141,6 +141,33 @@ export default function useScheduleKeyboardActions({
     editingCell,
   });
 
+  const updateOpenContextMenuSnapshotFromPayload = useCallback((payload = []) => {
+    if (!contextMenu || !setContextMenu) return;
+    const contextKey = cellKey(contextMenu.weekIdx, contextMenu.dayIdx, contextMenu.rowIdx, contextMenu.colIdx);
+    const rows = Array.isArray(payload) ? payload : [payload];
+    const contextPayload = rows.find((item) => (
+      `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}` === contextKey
+    ));
+    if (!contextPayload) return;
+
+    setContextMenu((prev) => {
+      if (!prev) return prev;
+      const prevKey = cellKey(prev.weekIdx, prev.dayIdx, prev.rowIdx, prev.colIdx);
+      if (prevKey !== contextKey) return prev;
+      return {
+        ...prev,
+        memoSnapshot: {
+          ...(prev.memoSnapshot || {}),
+          content: contextPayload.content || '',
+          bg_color: contextPayload.bg_color ?? null,
+          merge_span: contextPayload.merge_span,
+          prescription: contextPayload.prescription || null,
+          body_part: contextPayload.body_part || null,
+        },
+      };
+    });
+  }, [cellKey, contextMenu, setContextMenu]);
+
   const applyReservationTimeDelta = useCallback((deltaMinutes) => {
     const keys = Array.from(selectedKeys || []);
 
@@ -414,6 +441,7 @@ export default function useScheduleKeyboardActions({
           applyCellDisplayRef.current?.(manualTherapyMerge.payload);
           applyMergeSpanRef.current?.(manualTherapyMerge.payload);
           applyPayloadToLatestRefs(manualTherapyMerge.payload);
+          updateOpenContextMenuSnapshotFromPayload(manualTherapyMerge.payload);
 
           const success = await saveBulkRef.current?.(manualTherapyMerge.payload);
           if (success) {
@@ -446,6 +474,7 @@ export default function useScheduleKeyboardActions({
             applyCellDisplayRef.current?.(unmergePayload.payload);
             applyMergeSpanRef.current?.(unmergePayload.payload);
             applyPayloadToLatestRefs(unmergePayload.payload);
+            updateOpenContextMenuSnapshotFromPayload(unmergePayload.payload);
 
             const success = await saveBulkRef.current?.(unmergePayload.payload);
             if (success) {
@@ -465,6 +494,19 @@ export default function useScheduleKeyboardActions({
         }
 
         addUndoMemos(buildSnapshotRef.current([key]));
+        updateOpenContextMenuSnapshotFromPayload({
+          year: currentYear,
+          month: currentMonth,
+          week_index: kw,
+          day_index: kd,
+          row_index: kr,
+          col_index: kc,
+          content: updatedContent,
+          bg_color: memo.bg_color || null,
+          merge_span: memo.merge_span,
+          prescription: targetPrescription,
+          body_part: memo.body_part || null,
+        });
         const success = await saveMemo(
           currentYear,
           currentMonth,
@@ -490,7 +532,7 @@ export default function useScheduleKeyboardActions({
     })();
 
     return true;
-  }, [addToast, applyPayloadToLatestRefs, cellKey, currentMonth, currentYear, editingCell, rowCount, selectedCell, shockwaveSettings]);
+  }, [addToast, applyPayloadToLatestRefs, cellKey, currentMonth, currentYear, editingCell, rowCount, selectedCell, shockwaveSettings, updateOpenContextMenuSnapshotFromPayload]);
 
   const moveSelectedCellsByRow = useCallback((rowDelta) => {
     const selectedCellKey = selectedCell ? cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c) : null;

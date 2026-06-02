@@ -843,13 +843,13 @@
   box-sizing: border-box;
   padding: 5px;
   gap: 1px;
-  min-width: 185px;
-  width: 185px;
+  min-width: 224px;
+  width: 224px;
   overflow: visible;
 }
 
 .shockwave-context-menu.schedule-context-menu:not(.standalone-mode) {
-  max-width: min(185px, calc(100vw - 24px));
+  max-width: min(224px, calc(100vw - 24px));
 }
 
 .context-menu-action-panel {
@@ -955,6 +955,21 @@
   color: #111827;
   font-size: 0.9rem !important;
   font-weight: 800 !important;
+}
+
+.context-menu-meta-value-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-menu-prescription-value {
+  color: var(--context-prescription-color, #111827);
+  font-weight: 900;
 }
 
 .shockwave-context-menu.schedule-context-menu .context-menu-body-item {
@@ -1093,8 +1108,8 @@
 
 .context-menu-submenu--body,
 .context-menu-submenu--memo {
-  min-width: 213px;
-  max-width: 255px;
+  min-width: 181px;
+  max-width: 217px;
   padding: 9px;
 }
 
@@ -2115,14 +2130,22 @@
 
 .context-menu-inline-button {
   flex: 0 0 auto;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
   border: 1px solid rgba(99, 102, 241, 0.18) !important;
   border-radius: 10px;
   background: #e8eefc !important;
-  padding: 8px 12px !important;
+  padding: 8px 0 !important;
   font-size: 0.78rem !important;
   font-weight: 700 !important;
   color: #334155 !important;
   white-space: nowrap;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  text-align: center !important;
+  line-height: 1;
 }
 
 .context-menu-note-list {
@@ -2259,15 +2282,15 @@
 }
 
 .context-menu-visit-input {
-  width: 54px;
-  min-width: 54px;
+  width: 46px;
+  min-width: 46px;
   height: 30px;
-  padding: 0 8px;
+  padding: 0 4px;
   border: 1px solid rgba(148, 163, 184, 0.24);
   border-radius: 9px;
   background: #fff;
   color: #0f172a;
-  font-size: 0.85rem;
+  font-size: 0.96rem;
   font-weight: 800;
   text-align: center;
   outline: none;

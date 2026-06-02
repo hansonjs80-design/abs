@@ -66,6 +66,14 @@ const PATIENT_HISTORY_ALL_BODY_FILTER = '__all__';
 const PATIENT_HISTORY_EMPTY_BODY_FILTER = '__empty__';
 
 const HIDDEN_BODY_PART_OPTIONS_STORAGE_KEY = 'shockwave-hidden-body-part-options-by-patient';
+const DEFAULT_CONTEXT_PRESCRIPTION_COLORS = {
+  'F/R': '#0f172a',
+  'F/Rdc': '#64748b',
+  'F/RDC': '#64748b',
+  'F1.5': '#7c3aed',
+  '40분': '#9a3412',
+  '60분': '#9a3412',
+};
 
 const loadHiddenBodyPartOptionsByPatient = () => {
   if (typeof window === 'undefined') return {};
@@ -2182,6 +2190,20 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               ? { ...baseMemo, ...contextMenu.memoSnapshot } 
               : baseMemo;
             const currentPrescription = currentMemo?.prescription || '';
+            const shockwavePrescriptions = Array.isArray(settings?.prescriptions)
+              ? settings.prescriptions.filter(Boolean)
+              : [];
+            const manualTherapyPrescriptions = Array.isArray(settings?.manual_therapy_prescriptions)
+              ? settings.manual_therapy_prescriptions.filter((pres) => pres && !shockwavePrescriptions.includes(pres))
+              : [];
+            const currentPrescriptionClass = shockwavePrescriptions.includes(currentPrescription)
+              ? ' is-shockwave'
+              : manualTherapyPrescriptions.includes(currentPrescription)
+                ? ' is-manual'
+                : '';
+            const currentPrescriptionColor = effectivePrescriptionColors?.[currentPrescription]
+              || DEFAULT_CONTEXT_PRESCRIPTION_COLORS[currentPrescription]
+              || '#0f172a';
             const currentBodyPart = currentMemo?.body_part || '';
             const currentParts = splitBodyParts(currentBodyPart);
             const { patientChart, patientName } = parseSchedulerPatientIdentity(currentMemo?.content || '');
@@ -2229,12 +2251,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               })
               .sort((a, b) => a.localeCompare(b, 'ko'));
             const previousPrescriptionValue = previousPrescription?.value || '';
-            const shockwavePrescriptions = Array.isArray(settings?.prescriptions)
-              ? settings.prescriptions.filter(Boolean)
-              : [];
-            const manualTherapyPrescriptions = Array.isArray(settings?.manual_therapy_prescriptions)
-              ? settings.manual_therapy_prescriptions.filter((pres) => pres && !shockwavePrescriptions.includes(pres))
-              : [];
 
             return (
               <>
@@ -2415,8 +2431,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                     onMouseEnter={() => setActiveContextSubmenu('prescription')}
                     onFocusCapture={() => setActiveContextSubmenu('prescription')}
                   >
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      처방 : {currentPrescription || '없음'}
+                    <span className="context-menu-meta-value-row">
+                      <span className="context-menu-meta-label">처방 :</span>
+                      <span
+                        className={`context-menu-prescription-value${currentPrescriptionClass}`}
+                        style={{ '--context-prescription-color': currentPrescriptionColor }}
+                      >
+                        {currentPrescription || '없음'}
+                      </span>
                     </span>
                     <div className="context-menu-submenu context-menu-submenu--prescription">
                       <div className="context-menu-editor-panel">
@@ -2663,7 +2685,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                           ) : null}
                           <ContextMenuLocalInputGroup
                             placeholder="새 메모 추가"
-                            buttonLabel="추가"
+                            buttonLabel="+"
                             onSubmit={(val) => {
                               handleContextAction({ type: 'memoAdd', value: val });
                             }}

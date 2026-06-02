@@ -1,12 +1,18 @@
-import { supabase } from './supabaseClient';
-import { generateShockwaveCalendar, getTodayKST } from './calendarUtils';
-import { has4060Pattern, get4060PrescriptionFromContent } from './schedulerContentFormat';
-import { TREATMENT_COMPLETE_BG } from './schedulerUtils';
+import { supabase } from './supabaseClient.js';
+import { generateShockwaveCalendar, getTodayKST } from './calendarUtils.js';
+import { has4060Pattern, get4060PrescriptionFromContent } from './schedulerContentFormat.js';
+import { TREATMENT_COMPLETE_BG } from './schedulerUtils.js';
 import {
   getPastLogsForPatient,
   normalizeHistoryPatientName,
   sortPastLogsLatestFirst,
-} from './patientHistoryMatchUtils';
+} from './patientHistoryMatchUtils.js';
+export {
+  ABBREV_MAP,
+  ALWAYS_UPPER,
+  normalizeBodyShortcutKey,
+  toProperCase,
+} from './bodyPartFormatUtils.js';
 
 /** 처방명 비교용 정규화 – 띄어쓰기·슬래시·대소문자 무시 */
 function normalizePrescriptionKeySync(value) {
@@ -34,87 +40,6 @@ function isMissingSchedulerCellKeyError(error) {
 function omitSchedulerCellKey(row) {
   const { scheduler_cell_key: _scheduler_cell_key, ...rest } = row;
   return rest;
-}
-
-// --- Google Sheets _ABBREV_MAP ---
-export const ABBREV_MAP = {
-  'b.': 'Both',
-  'lt.hip': 'Lt. Hip',
-  'rt.hip': 'Rt. Hip',
-  'b.sh': 'Both Shoulder',
-  'bsh': 'Both Shoulder',
-  'rtfoot': 'Rt. Foot',
-  'rt.foot': 'Rt. Foot',
-  'ltfoot': 'Lt. Foot',
-  'lt.foot': 'Lt. Foot',
-  'rt.sh': 'Rt. Shoulder',
-  'lt.sh': 'Lt. Shoulder',
-  'lx': 'Lumbar',
-  'b': 'Both',
-  'tx': 'Thoracic',
-  'cx': 'Cervical',
-  'sh': 'Shoulder',
-  'pf': 'Plantar Fasciitis',
-  'pv': 'Pelvis',
-  'deq': 'Deqervain',
-  'quad': 'Quadriceps',
-  'ham': 'Hamstring',
-  'ut': 'Upper Trap',
-  'pt': 'Patellar Tendon',
-  'te': 'Tennis elbow',
-  'ge': 'Golfer Elbow',
-  'ta': 'Tibialis Anterior',
-  'tp': 'Tibialis Posterior',
-  'es': 'Erector Spine',
-  'pl': 'Peroneus Longus',
-  'pb': 'Peroneus Brevis',
-  'rc': 'Rotator Cuff',
-  'rt': 'Rt.',
-  'lt': 'Lt.',
-  'w': 'Wrist',
-  'wx': 'Wrist',
-  'e': 'Elbow',
-  'f': 'Foot',
-  'k': 'Knee',
-  'ak': 'Ankle',
-  'rtak': 'Rt. Ankle',
-  'rt.ak': 'Rt. Ankle',
-  'ltak': 'Lt. Ankle',
-  'lt.ak': 'Lt. Ankle',
-  'rtsh': 'Rt. Shoulder',
-  'ltsh': 'Lt. Shoulder',
-  'rtk': 'Rt. Knee',
-  'ltk': 'Lt. Knee',
-  'rtpv': 'Rt. Pelvis',
-  'ltpv': 'Lt. Pelvis',
-  'rtpf': 'Rt. Plantar Fasciitis',
-  'ltpf': 'Lt. Plantar Fasciitis',
-  'lte': 'Lt. Elbow',
-  'lt.e': 'Lt. Elbow',
-  'rte': 'Rt. Elbow',
-  'rt.e': 'Rt. Elbow',
-  'rtw': 'Rt. Wrist',
-  'rt.w': 'Rt. Wrist',
-  'ltw': 'Lt. Wrist',
-  'lt.w': 'Lt. Wrist'
-};
-
-export const ALWAYS_UPPER = [
-  'TMJ', 'SIJ', 'SI', 'ACL', 'PCL', 'MCL', 'LCL', 'SLAP', 'TOS', 'CTS', 'SCM', 
-  'TFL', 'ITB', 'LBP', 'SC', 'SCJ', 'AC', 'ACJ', 'PFPS', 'GH', 'GHJ', 'MC', 
-  'MCJ', 'MT', 'MTJ', 'MCP', 'ATFL', 'QL', 'MTP', 'FHL', 'TFCC'
-];
-
-export function toProperCase(str) {
-  if (!str) return str;
-  return str.split(/([,/\- ]+)/).map(tok => {
-    if (/^[,/\- ]+$/.test(tok)) return tok;
-    const lower = tok.toLowerCase();
-    if (Object.prototype.hasOwnProperty.call(ABBREV_MAP, lower)) return ABBREV_MAP[lower];
-    const upper = tok.toUpperCase();
-    if (ALWAYS_UPPER.includes(upper)) return upper;
-    return tok.charAt(0).toUpperCase() + tok.slice(1).toLowerCase();
-  }).join('');
 }
 
 // 추출 로직 (기존 앱스스크립트 parseNameChart_ 및 관련 정규표현식 이식)

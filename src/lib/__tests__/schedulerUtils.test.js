@@ -10,6 +10,8 @@ import {
   stepVisitInputValue,
   parseSchedulerPatientIdentity,
 } from '../schedulerCellTextUtils.js';
+import { convertKoreanQwertyMistypeToEnglish } from '../keyboardLayoutUtils.js';
+import { toProperCase } from '../bodyPartFormatUtils.js';
 
 describe('scheduler cell patient parsing', () => {
   it('parses chart number and patient name while ignoring numeric visit suffixes', () => {
@@ -88,5 +90,62 @@ describe('scheduler cell display splitting', () => {
       visitSuffix: '',
       hasDisplayText: true,
     });
+  });
+});
+
+describe('keyboard layout normalization for body part shortcuts', () => {
+  it('converts Korean keyboard mistypes back to the intended English shortcut keys', () => {
+    assert.equal(convertKoreanQwertyMistypeToEnglish('ㅊㅌ'), 'cx');
+    assert.equal(convertKoreanQwertyMistypeToEnglish('ㅣㅌ'), 'lx');
+    assert.equal(convertKoreanQwertyMistypeToEnglish('ㄱㅅ ㅊㅌ'), 'rt cx');
+  });
+});
+
+describe('Korean body part normalization', () => {
+  it('converts Korean body part names to the standard English labels', () => {
+    assert.equal(toProperCase('목'), 'Cervical');
+    assert.equal(toProperCase('허리'), 'Lumbar');
+    assert.equal(toProperCase('등'), 'Thoracic');
+    assert.equal(toProperCase('발목'), 'Ankle');
+    assert.equal(toProperCase('손목'), 'Wrist');
+    assert.equal(toProperCase('무릎'), 'Knee');
+    assert.equal(toProperCase('무'), 'Knee');
+    assert.equal(toProperCase('햄스트링'), 'Hamstring');
+    assert.equal(toProperCase('팔꿈치'), 'Elbow');
+    assert.equal(toProperCase('엘보'), 'Elbow');
+    assert.equal(toProperCase('손가락'), 'Finger');
+    assert.equal(toProperCase('엄지'), 'Thumb');
+    assert.equal(toProperCase('엄지손가락'), 'Thumb');
+    assert.equal(toProperCase('어깨'), 'Shoulder');
+    assert.equal(toProperCase('어'), 'Shoulder');
+    assert.equal(toProperCase('골반'), 'Pelvis');
+    assert.equal(toProperCase('고관절'), 'Hip');
+    assert.equal(toProperCase('엉'), 'Hip');
+    assert.equal(toProperCase('엉덩이'), 'Hip');
+    assert.equal(toProperCase('테니스엘보'), 'Tennis Elbow');
+    assert.equal(toProperCase('테니스 엘보'), 'Tennis Elbow');
+    assert.equal(toProperCase('골퍼엘보'), 'Golfer\'s Elbow');
+    assert.equal(toProperCase('골프 엘보'), 'Golfer\'s Elbow');
+    assert.equal(toProperCase('종아리'), 'Calf');
+    assert.equal(toProperCase('뒤꿈치'), 'Heel');
+  });
+
+  it('converts Korean direction prefixes without mixing Korean and English output', () => {
+    assert.equal(toProperCase('왼 목'), 'Lt. Cervical');
+    assert.equal(toProperCase('왼쪽 목'), 'Lt. Cervical');
+    assert.equal(toProperCase('좌측 목'), 'Lt. Cervical');
+    assert.equal(toProperCase('오른 팔꿈치'), 'Rt. Elbow');
+    assert.equal(toProperCase('오 팔꿈치'), 'Rt. Elbow');
+    assert.equal(toProperCase('오른쪽 팔꿈치'), 'Rt. Elbow');
+    assert.equal(toProperCase('우측 팔꿈치'), 'Rt. Elbow');
+    assert.equal(toProperCase('우 팔꿈치'), 'Rt. Elbow');
+    assert.equal(toProperCase('양 무릎'), 'Both Knee');
+    assert.equal(toProperCase('양쪽 무릎'), 'Both Knee');
+    assert.equal(toProperCase('왼어'), 'Lt. Shoulder');
+    assert.equal(toProperCase('오어'), 'Rt. Shoulder');
+    assert.equal(toProperCase('오른 팔꿈치'), 'Rt. Elbow');
+    assert.equal(toProperCase('왼 테니스 엘보'), 'Lt. Tennis Elbow');
+    assert.equal(toProperCase('양쪽 골반'), 'Both Pelvis');
+    assert.equal(toProperCase('우측 엉덩이'), 'Rt. Hip');
   });
 });

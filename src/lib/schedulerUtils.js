@@ -5,8 +5,8 @@
  * These functions handle: pending drafts, month backups, patient identity parsing,
  * visit counts, reservation times, merge span metadata, body parts, and prescriptions.
  */
-import { has4060Pattern } from './schedulerContentFormat';
-import { toProperCase } from './shockwaveSyncUtils';
+import { has4060Pattern } from './schedulerContentFormat.js';
+import { toProperCase } from './bodyPartFormatUtils.js';
 import {
   applyVisitCountToSchedulerContent,
   buildSchedulerCellDisplay,
@@ -19,7 +19,7 @@ import {
   parseSchedulerPatientIdentity,
   stepVisitShortcutInputValue,
   stepVisitInputValue,
-} from './schedulerCellTextUtils';
+} from './schedulerCellTextUtils.js';
 
 export {
   applyVisitCountToSchedulerContent,
