@@ -1084,10 +1084,16 @@
 }
 
 .has-submenu::after {
-  content: "▶";
-  font-size: 0.6rem;
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-top: 4.5px solid transparent;
+  border-bottom: 4.5px solid transparent;
+  border-left: 7.8px solid currentColor;
   opacity: 0.5;
   margin-left: 12px;
+  vertical-align: middle;
 }
 
 .context-menu-submenu {
@@ -2122,8 +2128,9 @@
 .context-menu-input {
   width: 100%;
   min-width: 0;
+  height: 26px;
   box-sizing: border-box;
-  padding: 8px 10px;
+  padding: 2px 10px;
   font-size: 0.8rem;
   border: 1px solid rgba(148, 163, 184, 0.24);
   border-radius: 10px;
@@ -2134,13 +2141,13 @@
 
 .context-menu-inline-button {
   flex: 0 0 auto;
-  width: 36px;
-  min-width: 36px;
-  height: 36px;
+  min-width: 44px;
+  width: auto;
+  height: 26px;
   border: 1px solid rgba(99, 102, 241, 0.18) !important;
   border-radius: 10px;
   background: #e8eefc !important;
-  padding: 8px 0 !important;
+  padding: 0 10px !important;
   font-size: 0.78rem !important;
   font-weight: 700 !important;
   color: #334155 !important;
@@ -2285,6 +2292,24 @@
   justify-content: center;
 }
 
+.context-menu-triangle-up {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 3.5px solid transparent;
+  border-right: 3.5px solid transparent;
+  border-bottom: 6px solid currentColor;
+}
+
+.context-menu-triangle-down {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 3.5px solid transparent;
+  border-right: 3.5px solid transparent;
+  border-top: 6px solid currentColor;
+}
+
 .context-menu-visit-input {
   width: 46px;
   min-width: 46px;
@@ -2344,7 +2369,7 @@
 }
 
 .context-menu-input--memo {
-  padding: 6px 8px;
+  padding: 3px 8px;
   min-width: 0;
 }
 

@@ -2400,7 +2400,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               handleContextAction({ type: 'reservationTime', value: nextTime });
                             }}
                           >
-                            ▲
+                            <span className="context-menu-triangle-up" />
                           </button>
                           <button
                             type="button"
@@ -2419,7 +2419,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               handleContextAction({ type: 'reservationTime', value: nextTime });
                             }}
                           >
-                            ▼
+                            <span className="context-menu-triangle-down" />
                           </button>
                         </span>
                       </span>
@@ -2609,7 +2609,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             stepContextMenuVisitInput(1);
                           }}
                         >
-                          ▲
+                          <span className="context-menu-triangle-up" />
                         </button>
                         <button
                           type="button"
@@ -2621,7 +2621,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             stepContextMenuVisitInput(-1);
                           }}
                         >
-                          ▼
+                          <span className="context-menu-triangle-down" />
                         </button>
                       </span>
                     </span>
@@ -2685,7 +2685,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                           ) : null}
                           <ContextMenuLocalInputGroup
                             placeholder="새 메모 추가"
-                            buttonLabel="+"
+                            buttonLabel="추가"
                             onSubmit={(val) => {
                               handleContextAction({ type: 'memoAdd', value: val });
                             }}

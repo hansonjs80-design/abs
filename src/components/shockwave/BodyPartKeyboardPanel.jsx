@@ -196,7 +196,7 @@ export default function BodyPartKeyboardPanel({
             submitInput();
           }}
         >
-          +
+          추가
         </button>
       </div>
     </div>
