@@ -934,14 +934,6 @@
   border-radius: 0 0 12px 12px;
 }
 
-.context-menu-history-search-item {
-  justify-content: center !important;
-}
-
-.context-menu-history-search-item .context-menu-label {
-  text-align: center;
-}
-
 .shockwave-context-menu.schedule-context-menu .context-menu-meta-item {
   padding-left: 4px !important;
   padding-right: 4px !important;
