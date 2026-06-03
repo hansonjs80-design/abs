@@ -2337,7 +2337,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                 <div className="context-menu-divider" />
 
                 <div className="context-menu-meta-section">
-                  <div className="context-menu-item context-menu-item-inline-edit context-menu-meta-item" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} style={{ cursor: 'default' }}>
+                  <div className="context-menu-item context-menu-item-inline-edit context-menu-meta-item context-menu-time-item" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} style={{ cursor: 'default' }}>
                     <label className="context-menu-time-editor" style={{ width: '100%', margin: 0, padding: 0 }}>
                       <span className="context-menu-time-label">예약시간 :</span>
                       <span className="context-menu-time-control">
@@ -2561,7 +2561,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                     </div>
                 </div>
 
-                <div className="context-menu-item context-menu-item-inline-edit context-menu-meta-item" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} style={{ cursor: 'default' }}>
+                <div className="context-menu-item context-menu-item-inline-edit context-menu-meta-item context-menu-visit-item" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} style={{ cursor: 'default' }}>
                   <label className="context-menu-visit-editor" style={{ width: '100%', margin: 0, padding: 0 }}>
                     <span style={{ flexShrink: 0, width: '40px' }}>회차 :</span>
                     <span className="context-menu-visit-control" style={{ flexGrow: 1 }}>
@@ -2629,7 +2629,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                 </div>
 
                 <div
-                  className={`context-menu-item has-submenu context-menu-meta-item${activeContextSubmenu === 'memo' ? ' is-submenu-open' : ''}`}
+                  className={`context-menu-item has-submenu context-menu-meta-item context-menu-memo-item${activeContextSubmenu === 'memo' ? ' is-submenu-open' : ''}`}
                   onMouseEnter={() => setActiveContextSubmenu('memo')}
                   onFocusCapture={() => setActiveContextSubmenu('memo')}
                 >

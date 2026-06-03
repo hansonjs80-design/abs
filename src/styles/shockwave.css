@@ -918,6 +918,8 @@
 }
 
 .context-menu-meta-section {
+  display: flex;
+  flex-direction: column;
   margin-top: 2px;
   padding: 4px;
   border-radius: 9px;
@@ -956,6 +958,7 @@
 }
 
 .shockwave-context-menu.schedule-context-menu .context-menu-prescription-item {
+  order: 1;
   color: #111827;
   font-size: 0.9rem !important;
   font-weight: 800 !important;
@@ -977,9 +980,22 @@
 }
 
 .shockwave-context-menu.schedule-context-menu .context-menu-body-item {
+  order: 2;
   color: #111827;
   font-size: 0.9rem !important;
   font-weight: 800 !important;
+}
+
+.shockwave-context-menu.schedule-context-menu .context-menu-visit-item {
+  order: 3;
+}
+
+.shockwave-context-menu.schedule-context-menu .context-menu-time-item {
+  order: 4;
+}
+
+.shockwave-context-menu.schedule-context-menu .context-menu-memo-item {
+  order: 5;
 }
 
 .shockwave-context-menu button:hover:not(:disabled) {

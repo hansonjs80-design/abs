@@ -493,8 +493,8 @@ export default function useScheduleKeyboardActions({
           mergeBlocked = true;
         }
 
-        addUndoMemos(buildSnapshotRef.current([key]));
-        updateOpenContextMenuSnapshotFromPayload({
+        const undoSnapshot = buildSnapshotRef.current([key]);
+        const fallbackPayload = {
           year: currentYear,
           month: currentMonth,
           week_index: kw,
@@ -503,10 +503,14 @@ export default function useScheduleKeyboardActions({
           col_index: kc,
           content: updatedContent,
           bg_color: memo.bg_color || null,
-          merge_span: memo.merge_span,
+          merge_span: pendingMergeSpansRef.current?.[key] || memo.merge_span,
           prescription: targetPrescription,
           body_part: memo.body_part || null,
-        });
+        };
+        addUndoMemos(undoSnapshot);
+        applyCellDisplayRef.current?.(fallbackPayload, { keepContextMenuOpen: Boolean(contextMenu) });
+        applyPayloadToLatestRefs([fallbackPayload]);
+        updateOpenContextMenuSnapshotFromPayload(fallbackPayload);
         const success = await saveMemo(
           currentYear,
           currentMonth,
@@ -516,11 +520,18 @@ export default function useScheduleKeyboardActions({
           kc,
           updatedContent,
           memo.bg_color,
-          memo.merge_span,
+          fallbackPayload.merge_span,
           targetPrescription,
           memo.body_part
         );
-        if (success) anyChanged = true;
+        if (success) {
+          anyChanged = true;
+        } else {
+          applyCellDisplayRef.current?.(undoSnapshot, { keepContextMenuOpen: Boolean(contextMenu) });
+          applyPayloadToLatestRefs(undoSnapshot);
+          updateOpenContextMenuSnapshotFromPayload(undoSnapshot);
+          addToast?.('처방 저장에 실패했습니다.', 'error');
+        }
       }
       if (anyChanged) {
         recordUndoRef.current({ type: 'bulk-edit', oldMemos: Array.from(undoMemosByKey.values()) });
@@ -532,7 +543,7 @@ export default function useScheduleKeyboardActions({
     })();
 
     return true;
-  }, [addToast, applyPayloadToLatestRefs, cellKey, currentMonth, currentYear, editingCell, rowCount, selectedCell, shockwaveSettings, updateOpenContextMenuSnapshotFromPayload]);
+  }, [addToast, applyPayloadToLatestRefs, cellKey, contextMenu, currentMonth, currentYear, editingCell, rowCount, selectedCell, shockwaveSettings, updateOpenContextMenuSnapshotFromPayload]);
 
   const moveSelectedCellsByRow = useCallback((rowDelta) => {
     const selectedCellKey = selectedCell ? cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c) : null;

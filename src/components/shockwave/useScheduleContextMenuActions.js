@@ -65,9 +65,13 @@ export default function useScheduleContextMenuActions({
         ? `${contextMenu.weekIdx}-${contextMenu.dayIdx}-${contextMenu.rowIdx}-${contextMenu.colIdx}`
         : null
     );
-    const getMemoForAction = (key) => (
-      memos[key] || (key === getContextKey() ? contextMenu?.memoSnapshot : null) || {}
-    );
+    const getMemoForAction = (key) => {
+      const memo = memos[key] || {};
+      if (key === getContextKey() && contextMenu?.memoSnapshot) {
+        return { ...memo, ...contextMenu.memoSnapshot };
+      }
+      return memo;
+    };
     const getStableMemoContent = (key, memo = {}) => {
       if (typeof pendingDisplayValues[key] === 'string') return pendingDisplayValues[key];
       if (typeof memo.content === 'string') return memo.content;
@@ -257,7 +261,27 @@ export default function useScheduleContextMenuActions({
             } else if (manualTherapyMerge.reason === 'bounds') {
               addToast('아래 시간이 부족해 자동 병합하지 않았습니다.', 'warning');
             }
-            fallbackSaves.push(onSaveMemo(currentYear, currentMonth, w, d, r, c, updatedContent, memo.bg_color, memo.merge_span, action.value));
+            const fallbackPayload = {
+              year: currentYear,
+              month: currentMonth,
+              week_index: w,
+              day_index: d,
+              row_index: r,
+              col_index: c,
+              content: updatedContent,
+              bg_color: memo.bg_color || null,
+              merge_span: pendingMergeSpans?.[key] || memo.merge_span,
+              prescription: action.value || null,
+              body_part: memo.body_part || null,
+            };
+            applyImmediateCellDisplay?.(fallbackPayload, { keepContextMenuOpen: Boolean(contextMenu) });
+            updateContextMemoSnapshot(key, memo, {
+              content: updatedContent,
+              merge_span: fallbackPayload.merge_span,
+              prescription: action.value || null,
+              body_part: memo.body_part || null,
+            });
+            fallbackSaves.push(onSaveMemo(currentYear, currentMonth, w, d, r, c, updatedContent, memo.bg_color, fallbackPayload.merge_span, action.value, memo.body_part));
           }
         }
       }
