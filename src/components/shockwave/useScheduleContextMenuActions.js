@@ -140,6 +140,23 @@ export default function useScheduleContextMenuActions({
         };
       });
     };
+    const applyImmediateMeta = (key, memo = {}, overrides = {}) => {
+      const [w, d, r, c] = key.split('-').map(Number);
+      if (![w, d, r, c].every(Number.isFinite)) return;
+      applyImmediateCellDisplay?.({
+        year: currentYear,
+        month: currentMonth,
+        week_index: w,
+        day_index: d,
+        row_index: r,
+        col_index: c,
+        content: getStableMemoContent(key, memo),
+        bg_color: Object.prototype.hasOwnProperty.call(overrides, 'bg_color') ? overrides.bg_color : (memo.bg_color ?? null),
+        merge_span: Object.prototype.hasOwnProperty.call(overrides, 'merge_span') ? overrides.merge_span : memo.merge_span,
+        prescription: Object.prototype.hasOwnProperty.call(overrides, 'prescription') ? overrides.prescription : (memo.prescription ?? null),
+        body_part: Object.prototype.hasOwnProperty.call(overrides, 'body_part') ? overrides.body_part : (memo.body_part ?? null),
+      }, { keepContextMenuOpen: Boolean(contextMenu) });
+    };
 
     if (action === 'copy') handleCopySelection();
     else if (action === 'cut') handleCutSelection();
@@ -354,6 +371,7 @@ export default function useScheduleContextMenuActions({
       if (anyChanged) {
         for (const { key, memo, combined, nextOptions, nextMergeSpan } of computedResults) {
           rememberBodyPartOptions(nextOptions);
+          applyImmediateMeta(key, memo, { merge_span: nextMergeSpan, body_part: combined });
           updateContextMemoSnapshot(key, memo, { merge_span: nextMergeSpan, body_part: combined });
           saveDebounceRef.current.pending.set(key, {
             memo, overrides: { merge_span: nextMergeSpan, body_part: combined }
@@ -392,6 +410,7 @@ export default function useScheduleContextMenuActions({
       if (anyChanged) {
         for (const { key, memo, updated, nextOptions, nextMergeSpan } of computedResults) {
           rememberBodyPartOptions(nextOptions);
+          applyImmediateMeta(key, memo, { merge_span: nextMergeSpan, body_part: updated });
           updateContextMemoSnapshot(key, memo, { merge_span: nextMergeSpan, body_part: updated });
           saveDebounceRef.current.pending.set(key, {
             memo, overrides: { merge_span: nextMergeSpan, body_part: updated }
@@ -448,6 +467,7 @@ export default function useScheduleContextMenuActions({
             });
             return Array.from(optionsMap.values());
           });
+          applyImmediateMeta(key, memo, { merge_span: nextMergeSpan, body_part: updated });
           updateContextMemoSnapshot(key, memo, { merge_span: nextMergeSpan, body_part: updated });
           saveDebounceRef.current.pending.set(key, {
             memo, overrides: { merge_span: nextMergeSpan, body_part: updated }
@@ -527,6 +547,7 @@ export default function useScheduleContextMenuActions({
 
       for (const { key, memo, updated, nextOptions, nextMergeSpan } of computedResults) {
         rememberBodyPartOptions(nextOptions);
+        applyImmediateMeta(key, memo, { merge_span: nextMergeSpan, body_part: updated });
         updateContextMemoSnapshot(key, memo, { merge_span: nextMergeSpan, body_part: updated });
         
         // 디바운스 대기열에 추가

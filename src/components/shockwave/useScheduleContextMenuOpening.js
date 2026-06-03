@@ -18,6 +18,7 @@ export default function useScheduleContextMenuOpening({
   getDefaultReservationTime,
   memos,
   normalizeCellToMergeMaster,
+  pendingDisplayValues,
   selectSingleCell,
   selectedKeys,
   setActiveContextSubmenu,
@@ -129,7 +130,12 @@ export default function useScheduleContextMenuOpening({
     if (!shouldKeepRangeSelection) {
       selectSingleCell(targetCell);
     }
-    const currentMemo = memos[key] || {};
+    const currentMemo = {
+      ...(memos[key] || {}),
+      ...(Object.prototype.hasOwnProperty.call(pendingDisplayValues || {}, key)
+        ? { content: String(pendingDisplayValues[key] ?? '') }
+        : {}),
+    };
     const { patientChart, patientName } = parseSchedulerPatientIdentity(currentMemo?.content || '');
     setActiveContextSubmenu(null);
     setContextMenuBodyPartOptions(buildContextMenuBodyPartOptions(key));
@@ -184,6 +190,7 @@ export default function useScheduleContextMenuOpening({
     getDefaultReservationTime,
     memos,
     normalizeCellToMergeMaster,
+    pendingDisplayValues,
     selectSingleCell,
     selectedKeys,
     setActiveContextSubmenu,

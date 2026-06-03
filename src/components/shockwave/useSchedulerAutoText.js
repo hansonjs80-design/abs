@@ -326,6 +326,14 @@ export default function useSchedulerAutoText({
     const parsedIdentity = parseSchedulerPatientIdentity(rawName);
     const searchChart = parsedIdentity.patientChart ? String(parsedIdentity.patientChart).trim() : null;
     const searchName = normalizeNameForMatch(parsedIdentity.patientName) || normalizeNameForMatch(rawName);
+    const hasExplicitSearchName = Boolean(searchChart && normalizeNameForMatch(parsedIdentity.patientName));
+    const matchesSearchIdentity = (chartNumber, patientName) => {
+      const matchesChart = searchChart && String(chartNumber || '').trim() === searchChart;
+      const normalizedPatientName = normalizeNameForMatch(patientName);
+      const matchesName = searchName && normalizedPatientName === searchName;
+      if (searchChart) return hasExplicitSearchName ? Boolean(matchesChart && matchesName) : Boolean(matchesChart);
+      return Boolean(matchesName);
+    };
 
     if (explicitNoteSuffix) {
       return { text: rawName };
@@ -383,18 +391,14 @@ export default function useSchedulerAutoText({
     let allData = [];
     if (preloadedData) {
       const filteredShockwave = (preloadedData.shockwaveLogs || []).filter((item) => {
-        const matchesChart = searchChart && String(item.chart_number || '').trim() === searchChart;
-        const matchesName = searchName && normalizeNameForMatch(item.patient_name) === searchName;
-        return searchChart ? matchesChart : matchesName;
+        return matchesSearchIdentity(item.chart_number, item.patient_name);
       }).map((item) => ({
         ...item,
         type: isManualTherapyRecord(item) ? 'manual' : 'shockwave',
       }));
 
       const filteredManual = (preloadedData.manualLogs || []).filter((item) => {
-        const matchesChart = searchChart && String(item.chart_number || '').trim() === searchChart;
-        const matchesName = searchName && normalizeNameForMatch(item.patient_name) === searchName;
-        return searchChart ? matchesChart : matchesName;
+        return matchesSearchIdentity(item.chart_number, item.patient_name);
       }).map((item) => ({ ...item, type: 'manual' }));
 
       allData = userRemovedDoseTag
@@ -405,9 +409,7 @@ export default function useSchedulerAutoText({
         const filteredSchedules = (preloadedData.scheduleSchedules || []).filter((s) => {
           const content = s.content || '';
           const parsed = parseSchedulerPatientIdentity(content);
-          const matchChart = searchChart && String(parsed.patientChart || '').trim() === searchChart;
-          const matchName = searchName && normalizeNameForMatch(parsed.patientName).includes(searchName);
-          return searchChart ? matchChart : matchName;
+          return matchesSearchIdentity(parsed.patientChart, parsed.patientName);
         });
 
         const seenLogDates = new Set(allData.map((item) => item.date));
@@ -503,10 +505,7 @@ export default function useSchedulerAutoText({
 
             const content = s.content || '';
             const parsed = parseSchedulerPatientIdentity(content);
-            const matchChart = searchChart && String(parsed.patientChart || '').trim() === searchChart;
-            const matchName = searchName && normalizeNameForMatch(parsed.patientName).includes(searchName);
-            if (searchChart && !matchChart) continue;
-            if (!searchChart && !matchName) continue;
+            if (!matchesSearchIdentity(parsed.patientChart, parsed.patientName)) continue;
 
             const visitSuffix = getExplicitVisitSuffix(content);
             const visitCount = visitSuffix.replace(/[()]/g, '') || '';
@@ -530,10 +529,7 @@ export default function useSchedulerAutoText({
     }
 
     const matches = allData.filter((item) => {
-      const matchChart = searchChart && String(item.chart_number || '').trim() === searchChart;
-      const matchName = searchName && normalizeNameForMatch(item.patient_name) === searchName;
-      if (searchChart) return matchChart;
-      return matchName;
+      return matchesSearchIdentity(item.chart_number, item.patient_name);
     });
 
     if (matches.length === 0) {
@@ -717,6 +713,14 @@ export default function useSchedulerAutoText({
       ? options[0]
       : await pickChartOption(options, rawName);
     if (!selected) return { text: rawName };
+    if (hasExplicitSearchName && normalizeNameForMatch(selected.cleanName) !== searchName) {
+      return {
+        text: markUnknownPatient(rawName),
+        prescription: initialPrescription || '',
+        bodyPart: '',
+        mergeSpan: clearPatientMergeSpan(),
+      };
+    }
 
     const effectiveVisitCount = selected.preferredNextVisit || selected.nextVisit;
     const oldParsed = parseSchedulerPatientIdentity(originalContent || '');

@@ -1325,6 +1325,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     getDefaultReservationTime,
     memos: effectiveMemos,
     normalizeCellToMergeMaster,
+    pendingDisplayValues,
     selectSingleCell,
     selectedKeys,
     setActiveContextSubmenu,
