@@ -537,9 +537,6 @@ export default function useSchedulerAutoText({
     });
 
     if (matches.length === 0) {
-      const schedulerResult = await applySchedulerOption();
-      if (schedulerResult) return schedulerResult;
-
       if (searchChart) {
         return {
           text: markUnknownPatient(rawName),
@@ -548,6 +545,9 @@ export default function useSchedulerAutoText({
           mergeSpan: clearPatientMergeSpan(),
         };
       }
+
+      const schedulerResult = await applySchedulerOption();
+      if (schedulerResult) return schedulerResult;
 
       return userRemovedDoseTag
         ? {
