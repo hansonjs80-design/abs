@@ -42,6 +42,7 @@ export const SHOCKWAVE_DAY_COL_WIDTH_KEY = 'shockwave-day-col-width';
 export const SHOCKWAVE_COL_RATIOS_KEY = 'shockwave-col-ratios';
 export const SHOCKWAVE_ROW_HEIGHT_KEY = 'shockwave-row-height';
 export const SHOCKWAVE_PENDING_DRAFTS_KEY = 'shockwave-pending-cell-drafts-v1';
+export const SHOCKWAVE_DELETED_DRAFTS_KEY = 'shockwave-deleted-cell-drafts-v1';
 export const SHOCKWAVE_MONTH_BACKUP_KEY = 'shockwave-month-backup-v1';
 export const SHOCKWAVE_PENDING_DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 export const TREATMENT_COMPLETE_BG = '#ffe599';
@@ -57,6 +58,41 @@ export function getShockwaveScheduleScrollKey(year, month) {
 
 export function getPendingDraftId(year, month, key) {
   return `${year}-${String(month).padStart(2, '0')}:${key}`;
+}
+
+export function readDeletedScheduleDrafts() {
+  if (typeof window === 'undefined') return {};
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(SHOCKWAVE_DELETED_DRAFTS_KEY) || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+export function writeDeletedScheduleDrafts(deletedDrafts) {
+  if (typeof window === 'undefined') return;
+  const entries = Object.entries(deletedDrafts || {}).filter(([, deleted]) => {
+    const updatedAt = Number(deleted?.updatedAt) || 0;
+    return Date.now() - updatedAt < SHOCKWAVE_PENDING_DRAFT_MAX_AGE_MS;
+  });
+  if (entries.length === 0) {
+    window.localStorage.removeItem(SHOCKWAVE_DELETED_DRAFTS_KEY);
+    return;
+  }
+  window.localStorage.setItem(SHOCKWAVE_DELETED_DRAFTS_KEY, JSON.stringify(Object.fromEntries(entries)));
+}
+
+export function rememberDeletedScheduleDraft(year, month, key) {
+  if (!key) return;
+  const deletedDrafts = readDeletedScheduleDrafts();
+  deletedDrafts[getPendingDraftId(year, month, key)] = {
+    year,
+    month,
+    key,
+    updatedAt: Date.now(),
+  };
+  writeDeletedScheduleDrafts(deletedDrafts);
 }
 
 export function readPendingScheduleDrafts() {
@@ -82,17 +118,22 @@ export function writePendingScheduleDrafts(drafts) {
   window.localStorage.setItem(SHOCKWAVE_PENDING_DRAFTS_KEY, JSON.stringify(Object.fromEntries(entries)));
 }
 
-export function rememberPendingScheduleDraft(year, month, key, value) {
+export function rememberPendingScheduleDraft(year, month, key, value, options = {}) {
   if (!key) return;
+  const { source = 'failed-save' } = options || {};
   const drafts = readPendingScheduleDrafts();
   drafts[getPendingDraftId(year, month, key)] = {
     year,
     month,
     key,
     value: value ?? '',
+    source,
     updatedAt: Date.now(),
   };
   writePendingScheduleDrafts(drafts);
+  const deletedDrafts = readDeletedScheduleDrafts();
+  delete deletedDrafts[getPendingDraftId(year, month, key)];
+  writeDeletedScheduleDrafts(deletedDrafts);
 }
 
 export function removePendingScheduleDraft(year, month, key) {

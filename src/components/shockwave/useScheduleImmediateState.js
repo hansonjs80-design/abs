@@ -27,8 +27,20 @@ function normalizeNullable(value) {
   return value ?? null;
 }
 
+function normalizeMergeSpanForCompare(mergeSpan) {
+  if (!mergeSpan) return null;
+  const next = { ...mergeSpan };
+  if (next.meta) {
+    const meta = { ...next.meta };
+    delete meta.intentional_clear;
+    if (Object.keys(meta).length > 0) next.meta = meta;
+    else delete next.meta;
+  }
+  return next;
+}
+
 function mergeSpanEquals(left, right) {
-  return JSON.stringify(left || null) === JSON.stringify(right || null);
+  return JSON.stringify(normalizeMergeSpanForCompare(left)) === JSON.stringify(normalizeMergeSpanForCompare(right));
 }
 
 function expectedMemoOverrideMatches(current, expectedItem) {
@@ -67,6 +79,56 @@ function expectedMemoOverrideMatches(current, expectedItem) {
   return true;
 }
 
+function isDefaultMergeSpan(mergeSpan) {
+  const span = normalizeMergeSpanForCompare(mergeSpan);
+  if (!span) return true;
+  return (span.rowSpan || 1) === 1 && (span.colSpan || 1) === 1 && !span.mergedInto && !span.meta;
+}
+
+function isBlankExpectedItem(item) {
+  if (!item) return false;
+  const mergeSpan = item.merge_span || item.mergeSpan;
+  return String(item.content ?? '') === '' &&
+    (!Object.prototype.hasOwnProperty.call(item, 'bg_color') || item.bg_color == null) &&
+    (!Object.prototype.hasOwnProperty.call(item, 'prescription') || item.prescription == null) &&
+    (!Object.prototype.hasOwnProperty.call(item, 'body_part') || item.body_part == null) &&
+    isDefaultMergeSpan(mergeSpan);
+}
+
+function memoMatchesExpectedItem(memo, expectedItem, hasMemo = true) {
+  if (!expectedItem) return false;
+  if (!hasMemo) return isBlankExpectedItem(expectedItem);
+  if (String(memo?.content ?? '') !== String(expectedItem.content ?? '')) return false;
+
+  if (
+    Object.prototype.hasOwnProperty.call(expectedItem, 'bg_color') &&
+    normalizeNullable(memo?.bg_color) !== normalizeNullable(expectedItem.bg_color)
+  ) {
+    return false;
+  }
+
+  const expectedMergeSpan = expectedItem.merge_span || expectedItem.mergeSpan;
+  if (expectedMergeSpan && !mergeSpanEquals(memo?.merge_span, expectedMergeSpan)) {
+    return false;
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(expectedItem, 'prescription') &&
+    normalizeNullable(memo?.prescription) !== normalizeNullable(expectedItem.prescription)
+  ) {
+    return false;
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(expectedItem, 'body_part') &&
+    normalizeNullable(memo?.body_part) !== normalizeNullable(expectedItem.body_part)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 export default function useScheduleImmediateState({ memos, setContextMenu, setEditingCell, currentYear, currentMonth }) {
   const [pendingDisplayValues, setPendingDisplayValues] = useState({});
   const [pendingMergeSpans, setPendingMergeSpans] = useState({});
@@ -82,6 +144,45 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
           delete next[key];
           changed = true;
         }
+      });
+      return changed ? next : prev;
+    });
+  }, [memos]);
+
+  useEffect(() => {
+    setPendingDisplayValues((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      Object.entries(prev).forEach(([key, value]) => {
+        const hasMemo = Object.prototype.hasOwnProperty.call(memos || {}, key);
+        const memoContent = String(memos?.[key]?.content ?? '');
+        const pendingContent = String(value ?? '');
+        if (hasMemo ? memoContent !== pendingContent : pendingContent !== '') return;
+        delete next[key];
+        changed = true;
+      });
+      return changed ? next : prev;
+    });
+
+    setPendingMergeSpans((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      Object.entries(prev).forEach(([key, mergeSpan]) => {
+        if (!mergeSpanEquals(memos?.[key]?.merge_span, mergeSpan)) return;
+        delete next[key];
+        changed = true;
+      });
+      return changed ? next : prev;
+    });
+
+    setPendingMemoOverrides((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      Object.entries(prev).forEach(([key, override]) => {
+        const hasMemo = Object.prototype.hasOwnProperty.call(memos || {}, key);
+        if (!memoMatchesExpectedItem(memos?.[key], override, hasMemo)) return;
+        delete next[key];
+        changed = true;
       });
       return changed ? next : prev;
     });
@@ -187,6 +288,8 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
         const next = { ...prev };
         keys.forEach((key) => {
           const expectedItem = expectedByKey.get(key);
+          const hasMemo = Object.prototype.hasOwnProperty.call(memos || {}, key);
+          if (!memoMatchesExpectedItem(memos?.[key], expectedItem, hasMemo)) return;
           const expectedContent = String(expectedItem?.content ?? '');
           if (key in next && String(next[key] ?? '') === expectedContent) {
             delete next[key];
@@ -201,6 +304,8 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
         const next = { ...prev };
         keys.forEach((key) => {
           const expectedItem = expectedByKey.get(key);
+          const hasMemo = Object.prototype.hasOwnProperty.call(memos || {}, key);
+          if (!memoMatchesExpectedItem(memos?.[key], expectedItem, hasMemo)) return;
           const expectedMergeSpan = expectedItem?.merge_span || expectedItem?.mergeSpan;
           if (key in next && expectedMergeSpan && mergeSpanEquals(next[key], expectedMergeSpan)) {
             delete next[key];
@@ -215,6 +320,8 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
         const next = { ...prev };
         keys.forEach((key) => {
           const expectedItem = expectedByKey.get(key);
+          const hasMemo = Object.prototype.hasOwnProperty.call(memos || {}, key);
+          if (!memoMatchesExpectedItem(memos?.[key], expectedItem, hasMemo)) return;
           if (key in next && expectedMemoOverrideMatches(next[key], expectedItem)) {
             delete next[key];
             changed = true;
@@ -223,7 +330,7 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
         return changed ? next : prev;
       });
     }, 0);
-  }, []);
+  }, [memos]);
 
   return {
     pendingCellBgColors,

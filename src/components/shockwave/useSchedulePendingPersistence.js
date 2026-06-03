@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
 
 import {
+  getPendingDraftId,
   getShockwaveScheduleScrollKey,
+  readDeletedScheduleDrafts,
   readPendingScheduleDrafts,
   rememberScheduleMonthBackup,
   removePendingScheduleDraft,
@@ -51,6 +53,7 @@ export default function useSchedulePendingPersistence({
     if (loadedMemosKey !== getShockwaveScheduleScrollKey(currentYear, currentMonth)) return;
     let cancelled = false;
     const drafts = readPendingScheduleDrafts();
+    const deletedDrafts = readDeletedScheduleDrafts();
     const currentDrafts = Object.values(drafts).filter((draft) => (
       Number(draft?.year) === currentYear &&
       Number(draft?.month) === currentMonth &&
@@ -67,6 +70,18 @@ export default function useSchedulePendingPersistence({
       const savedMemo = memos[key];
       const savedUpdatedAt = savedMemo?.updated_at ? Date.parse(savedMemo.updated_at) : 0;
       const draftUpdatedAt = Number(draft.updatedAt) || 0;
+      const deletedDraft = deletedDrafts[getPendingDraftId(currentYear, currentMonth, key)];
+      const deletedUpdatedAt = Number(deletedDraft?.updatedAt) || 0;
+
+      if (draft.source !== 'failed-save') {
+        removePendingScheduleDraft(currentYear, currentMonth, key);
+        return;
+      }
+
+      if (deletedUpdatedAt >= draftUpdatedAt) {
+        removePendingScheduleDraft(currentYear, currentMonth, key);
+        return;
+      }
 
       if (savedMemo && savedUpdatedAt > draftUpdatedAt && String(savedMemo.content || '') !== value) {
         removePendingScheduleDraft(currentYear, currentMonth, key);

@@ -205,7 +205,6 @@ export function ScheduleProvider({ children }) {
     const isStructuralBlankWrite = (item) => {
       const mergeSpan = item?.merge_span;
       return Boolean(
-        mergeSpan?.meta?.intentional_clear === true ||
         mergeSpan?.mergedInto ||
         (mergeSpan?.rowSpan || 1) > 1 ||
         (mergeSpan?.colSpan || 1) > 1
@@ -828,15 +827,7 @@ export function ScheduleProvider({ children }) {
         memoMap[key] = item;
       });
       if (loadCacheRef.current.shockwaveMemos !== cacheKey || shockwaveMemosLoadRequestRef.current !== requestId) return memoMap;
-      setShockwaveMemos(prev => {
-        const next = { ...memoMap };
-        Object.entries(prev || {}).forEach(([key, memo]) => {
-          if (memo?.year !== year || memo?.month !== month) return;
-          if (next[key]) return;
-          if (shouldKeepShockwaveMemo(memo)) next[key] = memo;
-        });
-        return next;
-      });
+      setShockwaveMemos(memoMap);
       return memoMap;
     } catch (err) {
       console.error('Failed to load shockwave memos:', err);
@@ -884,6 +875,7 @@ export function ScheduleProvider({ children }) {
 
       if (error) throw error;
 
+      loadCacheRef.current.shockwaveMemos = null;
       const savedMemo = data?.find(d => d.year === year && d.month === month) || { ...optimisticMemo, ...upsertData };
       const nextShockwaveMemos = { ...shockwaveMemosRef.current, [key]: savedMemo };
       
@@ -967,6 +959,9 @@ export function ScheduleProvider({ children }) {
         return next;
       });
 
+      const intentionalClearKeys = new Set(memosArray
+        .filter((item) => item?.merge_span?.meta?.intentional_clear === true)
+        .map((item) => `${item.year}-${item.month}-${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`));
       const guardedMemosArray = await protectExistingScheduleContent(memosArray, previousMemos);
       const sanitizedMemosArray = guardedMemosArray.map(({ merge_span, ...memo }) => {
         if (!merge_span?.meta?.intentional_clear) {
@@ -978,26 +973,58 @@ export function ScheduleProvider({ children }) {
         else delete nextMergeSpan.meta;
         return { ...memo, merge_span: nextMergeSpan };
       });
-      const upsertPayloads = buildCrossMonthMirroredPayloads(sanitizedMemosArray.map(m => ({
+      const clearPayloads = sanitizedMemosArray.filter((item) => {
+        const key = `${item.year}-${item.month}-${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+        return intentionalClearKeys.has(key);
+      });
+      const upsertSourcePayloads = sanitizedMemosArray.filter((item) => {
+        const key = `${item.year}-${item.month}-${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+        return !intentionalClearKeys.has(key);
+      });
+      const upsertPayloads = buildCrossMonthMirroredPayloads(upsertSourcePayloads.map(m => ({
         ...m,
         updated_at: new Date().toISOString()
       })));
+      const deletePayloads = buildCrossMonthMirroredPayloads(clearPayloads);
 
-      const { data, error } = await supabase
-        .from('shockwave_schedules')
-        .upsert(
-          upsertPayloads, 
-          { onConflict: 'year,month,week_index,day_index,row_index,col_index' }
-        )
-        .select();
+      for (const item of deletePayloads) {
+        const { error: deleteError } = await supabase
+          .from('shockwave_schedules')
+          .delete()
+          .eq('year', item.year)
+          .eq('month', item.month)
+          .eq('week_index', item.week_index)
+          .eq('day_index', item.day_index)
+          .eq('row_index', item.row_index)
+          .eq('col_index', item.col_index);
 
-      if (error) throw error;
+        if (deleteError) throw deleteError;
+      }
 
-      const viewRelevantData = (data || sanitizedMemosArray).filter(d => d.year === currentYear && d.month === currentMonth);
+      let data = [];
+      if (upsertPayloads.length > 0) {
+        const { data: upsertData, error } = await supabase
+          .from('shockwave_schedules')
+          .upsert(
+            upsertPayloads,
+            { onConflict: 'year,month,week_index,day_index,row_index,col_index' }
+          )
+          .select();
+
+        if (error) throw error;
+        data = upsertData || [];
+      }
+
+      const viewRelevantData = [
+        ...data,
+        ...clearPayloads,
+      ].filter(d => d.year === currentYear && d.month === currentMonth);
+      loadCacheRef.current.shockwaveMemos = null;
       const nextShockwaveMemos = { ...shockwaveMemosRef.current };
       viewRelevantData.forEach(item => {
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-        const merged = { ...nextShockwaveMemos[key], ...item };
+        const fullKey = `${item.year}-${item.month}-${key}`;
+        const merged = intentionalClearKeys.has(fullKey) ? item : { ...nextShockwaveMemos[key], ...item };
         if (shouldKeepShockwaveMemo(merged)) nextShockwaveMemos[key] = merged;
         else delete nextShockwaveMemos[key];
       });
@@ -1007,7 +1034,8 @@ export function ScheduleProvider({ children }) {
           const next = { ...prev };
           viewRelevantData.forEach(item => {
             const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-            const merged = { ...next[key], ...item };
+            const fullKey = `${item.year}-${item.month}-${key}`;
+            const merged = intentionalClearKeys.has(fullKey) ? item : { ...next[key], ...item };
             if (shouldKeepShockwaveMemo(merged)) next[key] = merged;
             else delete next[key];
           });
