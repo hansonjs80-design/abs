@@ -150,7 +150,7 @@ describe('schedule blank cell cleanup helpers', () => {
         bg_color: '#ffe9a8',
         prescription: 'F/R',
         body_part: 'Lumbar',
-        merge_span: { rowSpan: 2, colSpan: 1, mergedInto: null },
+        merge_span: defaultSpan,
       },
     };
 
@@ -164,5 +164,22 @@ describe('schedule blank cell cleanup helpers', () => {
     assert.equal(result.cellData.bg_color, null);
     assert.equal(result.cellData.prescription, null);
     assert.deepEqual(result.mergeSpan, defaultSpan);
+  });
+
+  it('keeps blank cells with active merge spans', () => {
+    const memos = {
+      '0-0-3-1': {
+        content: '',
+        merge_span: { rowSpan: 2, colSpan: 1, mergedInto: null },
+      },
+    };
+
+    const result = sanitizeBlankScheduleCellData({
+      key: '0-0-3-1',
+      memos,
+      cellData: memos['0-0-3-1'],
+    });
+
+    assert.equal(result.wasSanitized, false);
   });
 });

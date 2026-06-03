@@ -49,6 +49,21 @@ export function isVisuallyEmptyDirtyScheduleCell({
 
   const mergeSpan = getEffectiveScheduleMergeSpan({ key, memos, pendingMergeSpans });
   if (hasMemoList(memo.merge_span) || hasMemoList(mergeSpan)) return false;
+
+  // Active merged cells (whether master or child) should not be treated as visually empty dirty cells to be cleaned up.
+  if (!isDefaultMergeSpan(memo.merge_span) || !isDefaultMergeSpan(mergeSpan)) {
+    // Exception: If it is a child cell but its master does not exist in the memos, it is an orphaned stale child and should be cleaned up.
+    const originalMergedInto = memo?.merge_span?.mergedInto || mergeSpan?.mergedInto;
+    if (originalMergedInto) {
+      const masterKey = originalMergedInto;
+      const masterMemo = memos?.[masterKey];
+      if (!masterMemo) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   if ((memo.bg_color || null) === INTENTIONAL_GREEN_BG && isDefaultMergeSpan(memo.merge_span) && isDefaultMergeSpan(mergeSpan)) {
     return false;
   }
