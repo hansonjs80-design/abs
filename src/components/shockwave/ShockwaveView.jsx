@@ -2342,7 +2342,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   handleOpenPatientHistoryModal();
                 }}>
                   <div className="context-menu-label" style={{ fontWeight: 600, color: 'var(--brand-primary)' }}>
-                    🔍 환자 내역 검색 (Cmd+F)
+                    🔍 환자 내역 검색 ({shortcutLabels.patientHistory})
                   </div>
                 </div>
                 <div className="context-menu-divider" />

@@ -46,6 +46,7 @@ export default function useScheduleViewState({
       complete: join(mod, 'S'),
       cancel: join(mod, 'D'),
       today: join(mod, 'T'),
+      patientHistory: isAppleShortcutPlatform ? 'Cmd+F' : 'Ctrl+F',
     };
   }, [isAppleShortcutPlatform]);
 
