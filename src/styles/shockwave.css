@@ -3427,14 +3427,14 @@
 }
 
 .patient-history-table {
-  font-size: 0.9rem;
+  font-size: 0.86rem;
 }
 
 .patient-history-table.sw-summary-table th,
 .patient-history-table.sw-summary-table td,
 .patient-history-table.sw-compact-summary-table th,
 .patient-history-table.sw-compact-summary-table td {
-  padding: 3px 5px !important;
+  padding: 3px 4px !important;
   padding-top: 3px !important;
   padding-bottom: 3px !important;
   height: 23px;
@@ -3459,11 +3459,11 @@
 }
 
 .patient-history-table .patient-history-apply-button {
-  width: 112px;
+  width: 42px;
   max-width: 100%;
   min-height: 22px;
-  padding: 2px 7px !important;
-  font-size: 0.8rem !important;
+  padding: 2px 6px !important;
+  font-size: 0.78rem !important;
   line-height: 1.1 !important;
   overflow: visible;
   text-align: center;

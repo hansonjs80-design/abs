@@ -672,14 +672,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const groupCount = patientHistoryLogGroups.length;
     if (groupCount >= 2) {
       return {
-        maxWidth: 1320,
-        width: '96%',
+        maxWidth: 1130,
+        width: '88%',
         gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
       };
     }
     return {
-      maxWidth: groupCount === 1 ? 760 : 680,
-      width: '88%',
+      maxWidth: groupCount === 1 ? 655 : 580,
+      width: '80%',
       gridTemplateColumns: 'minmax(0, 1fr)',
     };
   }, [patientHistoryLogGroups.length]);
@@ -1479,6 +1479,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     currentMonth,
     holidays,
     settings,
+    therapists,
+    manualTherapists,
+    monthlyTherapists,
+    monthlyManualTherapists,
     selectedCell,
     editingCell,
     editValue,
@@ -2818,12 +2822,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       <div className="sw-compact-table-wrap">
                         <table className="sw-summary-table sw-compact-summary-table patient-history-table" style={{ width: '100%', margin: 0, tableLayout: 'fixed' }}>
                           <colgroup>
-                            <col style={{ width: '16.8%' }} />
-                            <col style={{ width: '10.7%' }} />
-                            <col style={{ width: '20%' }} />
-                            <col style={{ width: '21.4%' }} />
-                            <col style={{ width: '9%' }} />
-                            <col style={{ width: '22.1%' }} />
+                            <col style={{ width: '16%' }} />
+                            <col style={{ width: '10%' }} />
+                            <col style={{ width: '23%' }} />
+                            <col style={{ width: '24%' }} />
+                            <col style={{ width: '8%' }} />
+                            <col style={{ width: '10.5%' }} />
+                            <col style={{ width: '8.5%' }} />
                           </colgroup>
                           <thead>
                             <tr>
@@ -2832,6 +2837,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               <th style={{ textAlign: 'center' }}>부위</th>
                               <th style={{ textAlign: 'center' }}>메모</th>
                               <th style={{ textAlign: 'center' }}>회차</th>
+                              <th style={{ textAlign: 'center' }}>담당</th>
                               <th style={{ textAlign: 'center' }}>적용</th>
                             </tr>
                           </thead>
@@ -2935,10 +2941,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                     }}
                                   />
                                 </td>
+                                <td
+                                  title={log.therapist_name || ''}
+                                  style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                                >
+                                  {log.therapist_name || '-'}
+                                </td>
                                 <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground }} onClick={(e) => e.stopPropagation()}>
                                   <button
                                     type="button"
                                     className="patient-history-apply-button"
+                                    title="선택한 셀에 적용"
                                     onClick={() => requestApplyPatientHistoryToCell(log)}
                                     style={{
                                       border: '1px solid var(--brand-primary, #4f46e5)',
@@ -2953,7 +2966,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                       whiteSpace: 'nowrap',
                                     }}
                                   >
-                                    선택한 셀에 적용
+                                    적용
                                   </button>
                                 </td>
                               </tr>

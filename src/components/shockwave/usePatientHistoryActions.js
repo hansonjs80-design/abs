@@ -74,6 +74,112 @@ const getPreservedBodyPart = (...values) => {
   return null;
 };
 
+const resolveTherapistNameForHistory = ({
+  slotIndex,
+  day,
+  group,
+  therapists,
+  manualTherapists,
+  monthlyRows,
+}) => {
+  const index = Number(slotIndex);
+  if (!Number.isInteger(index) || index < 0 || !day) return '';
+
+  const isManual = group === 'manual';
+  const baseTherapists = isManual ? manualTherapists : therapists;
+  const monthlyList = Array.isArray(monthlyRows) ? monthlyRows : [];
+
+  if (monthlyList.length > 0) {
+    const match = monthlyList.find((therapist) => (
+      therapist.slot_index === index &&
+      day >= therapist.start_day &&
+      day <= therapist.end_day
+    ));
+    if (match !== undefined) return match.therapist_name || '';
+  }
+
+  return baseTherapists?.[index]?.name || '';
+};
+
+const getHistoryMonthKey = (year, month, type) => `${year}-${month}-${type}`;
+
+const getHistoryMonthValue = (year, month) => (Number(year) * 12) + Number(month);
+
+const loadMonthlyTherapistRowsForHistory = async ({
+  year,
+  month,
+  type,
+  therapists,
+  manualTherapists,
+}) => {
+  const { data, error } = await supabase
+    .from('shockwave_monthly_therapists')
+    .select('*')
+    .eq('year', year)
+    .eq('month', month)
+    .eq('type', type)
+    .order('slot_index')
+    .order('start_day');
+
+  if (!error && Array.isArray(data) && data.length > 0) return data;
+
+  const currentValue = getHistoryMonthValue(year, month);
+  const lookbackYear = month <= 12 ? year - 1 : year;
+  const { data: previousRows, error: prevError } = await supabase
+    .from('shockwave_monthly_therapists')
+    .select('*')
+    .eq('type', type)
+    .gte('year', lookbackYear)
+    .order('year', { ascending: false })
+    .order('month', { ascending: false })
+    .order('slot_index')
+    .order('start_day')
+    .limit(80);
+
+  const previousMonths = (previousRows || []).filter((item) => {
+    const value = getHistoryMonthValue(item.year, item.month);
+    return value < currentValue;
+  });
+  const inheritedValue = previousMonths.reduce((max, item) => (
+    Math.max(max, getHistoryMonthValue(item.year, item.month))
+  ), -Infinity);
+  const prevData = previousMonths.filter((item) => (
+    getHistoryMonthValue(item.year, item.month) === inheritedValue
+  ));
+
+  if (!prevError && prevData.length > 0) {
+    const slotMap = new Map();
+    prevData.forEach((item) => {
+      const existing = slotMap.get(item.slot_index);
+      if (!existing || item.start_day > existing.start_day) {
+        slotMap.set(item.slot_index, item);
+      }
+    });
+    const lastDay = new Date(year, month, 0).getDate();
+    return Array.from(slotMap.values()).map((item) => ({
+      slot_index: item.slot_index,
+      therapist_name: item.therapist_name,
+      start_day: 1,
+      end_day: lastDay,
+      year,
+      month,
+      type,
+    }));
+  }
+
+  const baseTherapists = type === 'manual_therapy' ? manualTherapists : therapists;
+  const lastDay = new Date(year, month, 0).getDate();
+  return (baseTherapists || []).map((therapist, index) => ({
+    slot_index: Number.isInteger(Number(therapist?.slot_index)) ? Number(therapist.slot_index) : index,
+    therapist_name: therapist?.name || '',
+    start_day: 1,
+    end_day: lastDay,
+    year,
+    month,
+    type,
+  }));
+};
+
 const getUniqueMatchingBodyPart = (items, scheduleLog) => {
   const bodies = new Set();
   items.forEach((item) => {
@@ -96,6 +202,10 @@ export default function usePatientHistoryActions({
   currentMonth,
   holidays,
   settings,
+  therapists,
+  manualTherapists,
+  monthlyTherapists,
+  monthlyManualTherapists,
   selectedCell,
   editingCell,
   editValue,
@@ -123,17 +233,17 @@ export default function usePatientHistoryActions({
     try {
       const activeManualPrescriptionSet = buildActiveManualPrescriptionSet(settings);
       const shockwaveQuery = supabase.from('shockwave_patient_logs')
-        .select('id, patient_name, chart_number, visit_count, date, prescription, body_part')
+        .select('id, patient_name, chart_number, visit_count, date, prescription, body_part, therapist_name')
         .order('date', { ascending: false })
         .limit(500);
 
       const manualQuery = supabase.from('manual_therapy_patient_logs')
-        .select('id, patient_name, chart_number, visit_count, date, prescription, body_part')
+        .select('id, patient_name, chart_number, visit_count, date, prescription, body_part, therapist_name')
         .order('date', { ascending: false })
         .limit(500);
 
       const scheduleQuery = supabase.from('shockwave_schedules')
-        .select('id, year, month, week_index, day_index, content, prescription, body_part')
+        .select('id, year, month, week_index, day_index, row_index, col_index, content, prescription, body_part')
         .neq('content', '')
         .order('year', { ascending: false })
         .order('month', { ascending: false })
@@ -178,6 +288,21 @@ export default function usePatientHistoryActions({
 
       const scheduleData = scheduleRes.data || [];
       const scheduleOverrides = new Map();
+      const monthlyTherapistRowsCache = new Map();
+      const getMonthlyTherapistRows = async (year, month, historyGroup) => {
+        const type = historyGroup === 'manual' ? 'manual_therapy' : 'shockwave';
+        const key = getHistoryMonthKey(year, month, type);
+        if (!monthlyTherapistRowsCache.has(key)) {
+          monthlyTherapistRowsCache.set(key, loadMonthlyTherapistRowsForHistory({
+            year,
+            month,
+            type,
+            therapists,
+            manualTherapists,
+          }));
+        }
+        return monthlyTherapistRowsCache.get(key);
+      };
 
       for (const s of scheduleData) {
         try {
@@ -204,6 +329,14 @@ export default function usePatientHistoryActions({
             prescription: schedulePrescription,
             content,
           });
+          const therapistName = resolveTherapistNameForHistory({
+            slotIndex: s.col_index,
+            day: dayInfo.day,
+            group: historyGroup,
+            therapists,
+            manualTherapists,
+            monthlyRows: await getMonthlyTherapistRows(s.year, s.month, historyGroup),
+          });
 
           const scheduleLog = {
             id: s.id,
@@ -213,6 +346,7 @@ export default function usePatientHistoryActions({
             visit_count: visitCount,
             prescription: schedulePrescription || '',
             body_part: s.body_part || '',
+            therapist_name: therapistName,
             type: 'schedule',
             history_group: historyGroup,
           };
@@ -243,6 +377,7 @@ export default function usePatientHistoryActions({
               visit_count: scheduleLog.visit_count || allData[existingIndex].visit_count,
               prescription: scheduleLog.prescription || allData[existingIndex].prescription,
               body_part: scheduleLog.body_part || allData[existingIndex].body_part,
+              therapist_name: scheduleLog.therapist_name,
               schedule_id: scheduleLog.id,
             };
           } else {
@@ -270,6 +405,7 @@ export default function usePatientHistoryActions({
           visit_count: override.visit_count,
           prescription: override.prescription || item.prescription,
           body_part: override.body_part || item.body_part,
+          therapist_name: override.therapist_name,
           schedule_id: override.id,
         };
       });
@@ -317,15 +453,16 @@ export default function usePatientHistoryActions({
 
               const visitSuffix = getExplicitVisitSuffix(content);
               const currentPrescription = memo.prescription || get4060PrescriptionFromContent(content);
+              const historyGroup = getPatientHistoryTreatmentGroup({
+                type: 'draft',
+                prescription: currentPrescription,
+                content,
+              });
               const draftLog = {
                 date: selectedDate,
                 patient_name: parsed.patientName || nameParam || '',
                 chart_number: parsed.patientChart || chartParam || '',
-                history_group: getPatientHistoryTreatmentGroup({
-                  type: 'draft',
-                  prescription: currentPrescription,
-                  content,
-                }),
+                history_group: historyGroup,
               };
               selectedDateLogs.push({
                 id: `draft-${key}`,
@@ -338,6 +475,14 @@ export default function usePatientHistoryActions({
                   memo.body_part,
                   getUniqueMatchingBodyPart(allData, draftLog),
                 ) || '',
+                therapist_name: resolveTherapistNameForHistory({
+                  slotIndex: colIndex,
+                  day: dayInfo.day,
+                  group: historyGroup,
+                  therapists,
+                  manualTherapists,
+                  monthlyRows: historyGroup === 'manual' ? monthlyManualTherapists : monthlyTherapists,
+                }),
                 visit_count: visitSuffix.replace(/[()]/g, '') || '',
                 type: 'draft',
                 history_group: draftLog.history_group,
@@ -379,6 +524,10 @@ export default function usePatientHistoryActions({
     currentMonth,
     holidays,
     settings,
+    therapists,
+    manualTherapists,
+    monthlyTherapists,
+    monthlyManualTherapists,
     selectedCell,
     memos,
     pendingDisplayValues,
