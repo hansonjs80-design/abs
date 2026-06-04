@@ -9,9 +9,16 @@ function getOptionDetail(option) {
 export default function SchedulerPatientSelector({ selector, onSelect, onCancel }) {
   if (!selector) return null;
 
+  const optionCount = selector.options?.length || 0;
+  const columnCount = Math.min(Math.max(optionCount, 1), 6);
+
   return (
     <div className="shockwave-chart-selector-backdrop" onMouseDown={onCancel}>
-      <div className="shockwave-chart-selector" onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        className="shockwave-chart-selector"
+        style={{ '--shockwave-chart-selector-columns': columnCount }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className="shockwave-chart-selector-title">동명이인 선택</div>
         <div className="shockwave-chart-selector-subtitle">
           {selector.rawName} 환자의 차트번호를 선택하세요.

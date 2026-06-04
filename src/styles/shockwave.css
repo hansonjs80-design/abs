@@ -1287,12 +1287,14 @@
 }
 
 .shockwave-chart-selector {
-  width: min(520px, calc(100vw - 32px));
+  width: fit-content;
+  min-width: min(320px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
   background: var(--bg-card);
   border: 1px solid #000;
   border-radius: 10px;
   box-shadow: var(--shadow-lg);
-  padding: 18px;
+  padding: 14px;
 }
 
 .shockwave-chart-selector--compact {
@@ -1572,20 +1574,20 @@
 }
 
 .shockwave-chart-selector-options {
-  margin-top: 16px;
+  margin-top: 12px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(145px, 160px));
+  grid-template-columns: repeat(var(--shockwave-chart-selector-columns, 1), minmax(145px, 160px));
   justify-content: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .shockwave-chart-selector-option {
   width: 100%;
-  min-height: 162px;
+  min-height: 142px;
   border: 1.5px solid #cbd5e1;
   background: #fff;
-  border-radius: 14px;
-  padding: 14px;
+  border-radius: 10px;
+  padding: 9px;
   display: grid;
   grid-template-columns: 1fr;
   grid-template-areas:
@@ -1594,7 +1596,7 @@
     "name"
     "detail"
     "meta";
-  gap: 9px;
+  gap: 6px;
   align-items: stretch;
   align-content: start;
   font: inherit;
@@ -1603,7 +1605,7 @@
   font-weight: 700;
   color: var(--text-primary);
   cursor: pointer;
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.06);
 }
 
 .shockwave-chart-selector-option--shockwave {
@@ -1618,7 +1620,7 @@
 
 .shockwave-chart-selector-option:hover {
   border-color: #334155;
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.13);
+  box-shadow: 0 7px 16px rgba(15, 23, 42, 0.13);
   transform: translateY(-1px);
 }
 
@@ -1627,8 +1629,8 @@
   justify-self: center;
   width: 100%;
   box-sizing: border-box;
-  padding: 9px 10px;
-  border-radius: 12px;
+  padding: 6px 8px;
+  border-radius: 8px;
   color: #fff;
   font-size: 1rem;
   font-weight: 900;
@@ -1648,8 +1650,8 @@
   grid-area: chart;
   width: 100%;
   box-sizing: border-box;
-  padding: 12px 8px;
-  border-radius: 12px;
+  padding: 8px 6px;
+  border-radius: 8px;
   background: #f8fafc;
   border: 1.5px solid rgba(100, 116, 139, 0.32);
   color: #0f172a;
@@ -1691,9 +1693,9 @@
 .shockwave-chart-selector-meta {
   grid-area: meta;
   color: #64748b;
-  font-size: 0.84rem;
-  font-weight: 800;
-  padding-top: 6px;
+  font-size: 0.9rem;
+  font-weight: 900;
+  padding-top: 4px;
   border-top: 1px solid rgba(100, 116, 139, 0.18);
 }
 
@@ -1701,6 +1703,18 @@
   margin-top: 14px;
   display: flex;
   justify-content: flex-end;
+}
+
+@media (max-width: 900px) {
+  .shockwave-chart-selector-options {
+    grid-template-columns: repeat(auto-fit, minmax(145px, 160px));
+  }
+}
+
+@media (max-width: 700px) {
+  .shockwave-chart-selector-options {
+    grid-template-columns: repeat(auto-fit, minmax(145px, 160px));
+  }
 }
 
 @media (max-width: 560px) {
