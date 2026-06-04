@@ -2,6 +2,9 @@ import {
   markIntentionalClearPayload,
 } from './scheduleMergeUtils.js';
 import {
+  stripReservationTimeFromMergeSpan,
+} from './schedulerUtils.js';
+import {
   getEffectiveScheduleMergeSpan,
   getScheduleCellKey,
   normalizeScheduleKeysToMergeMasters,
@@ -25,7 +28,7 @@ function cleanMergeSpan(mergeSpan) {
 }
 
 function normalizeMasterSpan(mergeSpan) {
-  const span = cleanMergeSpan(mergeSpan);
+  const span = cleanMergeSpan(stripReservationTimeFromMergeSpan(mergeSpan));
   return {
     ...span,
     rowSpan: Math.max(1, span.rowSpan || 1),

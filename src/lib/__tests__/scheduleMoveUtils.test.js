@@ -357,4 +357,41 @@ describe('schedule move payload helpers', () => {
     assert.deepEqual(memos['0-0-4-1'].merge_span, { rowSpan: 1, colSpan: 1, mergedInto: '0-0-3-1' });
     assert.deepEqual(memos['0-0-5-1'].merge_span, { rowSpan: 1, colSpan: 1, mergedInto: '0-0-3-1' });
   });
+
+  it('drops custom reservation time when moving so the destination row time is used', () => {
+    const memos = {
+      '0-0-2-1': {
+        content: '123/홍길동',
+        merge_span: {
+          rowSpan: 2,
+          colSpan: 1,
+          mergedInto: null,
+          meta: {
+            reservation_time: '09:10',
+            memo_list: ['주의'],
+          },
+        },
+      },
+      '0-0-3-1': {
+        content: '',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-0-2-1' },
+      },
+    };
+
+    const result = buildMoveScheduleSelectionPayload({
+      ...defaultArgs,
+      selectedKeys: new Set(['0-0-2-1']),
+      memos,
+      rowDelta: 1,
+    });
+
+    assert.equal(result.ok, true);
+    const moved = result.payload.find((item) => keyOf(item) === '0-0-3-1');
+    assert.deepEqual(moved.merge_span, {
+      rowSpan: 2,
+      colSpan: 1,
+      mergedInto: null,
+      meta: { memo_list: ['주의'] },
+    });
+  });
 });

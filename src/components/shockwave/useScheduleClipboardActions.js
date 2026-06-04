@@ -530,8 +530,12 @@ export default function useScheduleClipboardActions({
           activeMemos[pKey] = {
             ...activeMemos[pKey],
             ...p,
+            merge_span: stripReservationTimeFromMergeSpan(p.merge_span),
           };
-          autoMergedPayloads.set(pKey, p);
+          autoMergedPayloads.set(pKey, {
+            ...p,
+            merge_span: stripReservationTimeFromMergeSpan(p.merge_span),
+          });
         });
       }
     }
@@ -592,7 +596,10 @@ export default function useScheduleClipboardActions({
     enhancedPayload.forEach((item) => {
       combinedPayload.set(
         `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`,
-        item
+        {
+          ...item,
+          merge_span: stripReservationTimeFromMergeSpan(item.merge_span),
+        }
       );
     });
 
