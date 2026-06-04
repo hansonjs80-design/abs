@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { generateShockwaveCalendar } from '../../lib/calendarUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import {
@@ -224,11 +224,39 @@ export default function usePatientHistoryActions({
   setPatientHistoryModalOpen,
   setPatientHistoryModalData,
 }) {
+  const patientHistoryResultCacheRef = useRef(new Map());
+  const monthlyTherapistRowsCacheRef = useRef(new Map());
+  const calendarCacheRef = useRef(new Map());
+
   const fetchPatientHistory = useCallback(async (nameParam, chartParam, options = {}) => {
     const activeSelectedKey = String(options?.selectedKey || '');
     const activeSelectedContent = typeof options?.selectedContent === 'string'
       ? options.selectedContent
       : null;
+    const manualPrescriptionSignature = Array.isArray(settings?.manual_therapy_prescriptions)
+      ? settings.manual_therapy_prescriptions.join('|')
+      : '';
+    const cacheKey = [
+      normalizeNameForMatch(nameParam),
+      String(chartParam || '').trim(),
+      activeSelectedKey,
+      activeSelectedContent ?? '',
+      currentYear,
+      currentMonth,
+      baseTimeSlotsLength,
+      colCount,
+      manualPrescriptionSignature,
+    ].join('__');
+    const cached = patientHistoryResultCacheRef.current.get(cacheKey);
+    if (cached && Date.now() - cached.time < 15000) {
+      setPatientHistoryModalData({
+        loading: false,
+        logs: cached.logs,
+        searchName: nameParam,
+        searchChart: chartParam,
+      });
+      return;
+    }
     setPatientHistoryModalData((prev) => ({ ...prev, loading: true, searchName: nameParam, searchChart: chartParam }));
     try {
       const activeManualPrescriptionSet = buildActiveManualPrescriptionSet(settings);
@@ -288,12 +316,14 @@ export default function usePatientHistoryActions({
 
       const scheduleData = scheduleRes.data || [];
       const scheduleOverrides = new Map();
-      const monthlyTherapistRowsCache = new Map();
+      const therapistSignature = (therapists || []).map((item) => item?.name || '').join('|');
+      const manualTherapistSignature = (manualTherapists || []).map((item) => item?.name || '').join('|');
       const getMonthlyTherapistRows = async (year, month, historyGroup) => {
         const type = historyGroup === 'manual' ? 'manual_therapy' : 'shockwave';
-        const key = getHistoryMonthKey(year, month, type);
-        if (!monthlyTherapistRowsCache.has(key)) {
-          monthlyTherapistRowsCache.set(key, loadMonthlyTherapistRowsForHistory({
+        const baseSignature = type === 'manual_therapy' ? manualTherapistSignature : therapistSignature;
+        const key = `${getHistoryMonthKey(year, month, type)}__${baseSignature}`;
+        if (!monthlyTherapistRowsCacheRef.current.has(key)) {
+          monthlyTherapistRowsCacheRef.current.set(key, loadMonthlyTherapistRowsForHistory({
             year,
             month,
             type,
@@ -301,12 +331,21 @@ export default function usePatientHistoryActions({
             manualTherapists,
           }));
         }
-        return monthlyTherapistRowsCache.get(key);
+        return monthlyTherapistRowsCacheRef.current.get(key);
+      };
+      const getCachedCalendar = (year, month) => {
+        const key = `${year}-${month}`;
+        if (!calendarCacheRef.current.has(key)) {
+          calendarCacheRef.current.set(key, generateShockwaveCalendar(year, month));
+        }
+        return calendarCacheRef.current.get(key);
       };
 
+      const scheduleRowsWithMeta = [];
+      const monthlyPreloadTargets = new Map();
       for (const s of scheduleData) {
         try {
-          const calWeeks = generateShockwaveCalendar(s.year, s.month);
+          const calWeeks = getCachedCalendar(s.year, s.month);
           const dayInfo = calWeeks[s.week_index]?.[s.day_index];
           if (!dayInfo) continue;
           const dd = dayInfo.date;
@@ -329,6 +368,40 @@ export default function usePatientHistoryActions({
             prescription: schedulePrescription,
             content,
           });
+          scheduleRowsWithMeta.push({
+            row: s,
+            dayInfo,
+            dateStr,
+            parsed,
+            visitCount,
+            schedulePrescription,
+            historyGroup,
+          });
+          monthlyPreloadTargets.set(`${s.year}-${s.month}-${historyGroup}`, {
+            year: s.year,
+            month: s.month,
+            historyGroup,
+          });
+        } catch {
+          // Ignore malformed schedule rows.
+        }
+      }
+
+      await Promise.all([...monthlyPreloadTargets.values()].map((target) => (
+        getMonthlyTherapistRows(target.year, target.month, target.historyGroup)
+      )));
+
+      for (const item of scheduleRowsWithMeta) {
+        try {
+          const {
+            row: s,
+            dayInfo,
+            dateStr,
+            parsed,
+            visitCount,
+            schedulePrescription,
+            historyGroup,
+          } = item;
           const therapistName = resolveTherapistNameForHistory({
             slotIndex: s.col_index,
             day: dayInfo.day,
@@ -508,9 +581,18 @@ export default function usePatientHistoryActions({
           return (parseInt(b.visit_count || '0', 10) || 0) - (parseInt(a.visit_count || '0', 10) || 0);
         });
       }
+      const logsWithMeta = finalLogs.map(withPatientHistoryRowMeta);
+      patientHistoryResultCacheRef.current.set(cacheKey, {
+        time: Date.now(),
+        logs: logsWithMeta,
+      });
+      if (patientHistoryResultCacheRef.current.size > 30) {
+        const oldestKey = patientHistoryResultCacheRef.current.keys().next().value;
+        patientHistoryResultCacheRef.current.delete(oldestKey);
+      }
       setPatientHistoryModalData({
         loading: false,
-        logs: finalLogs.map(withPatientHistoryRowMeta),
+        logs: logsWithMeta,
         searchName: nameParam,
         searchChart: chartParam,
       });
