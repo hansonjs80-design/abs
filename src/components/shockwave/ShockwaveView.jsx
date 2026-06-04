@@ -47,7 +47,6 @@ import {
   parseSchedulerPatientIdentity,
   normalizeSchedulerVisitSuffix,
   normalizeVisitInputValue,
-  stepVisitInputValue,
   getMemoListFromMergeSpan,
   stepReservationTimeWithinCellBase,
   stripReservationTimeFromMergeSpan,
@@ -62,6 +61,27 @@ const PATIENT_HISTORY_GROUPS = [
   { key: 'shockwave', label: '충격파 내역' },
   { key: 'manual', label: '도수치료 내역' },
 ];
+
+const stepContextMenuVisitValue = (value, delta) => {
+  const normalized = normalizeVisitInputValue(value);
+
+  if (!normalized) {
+    if (delta > 0) return '*';
+    if (delta < 0) return '-';
+    return '';
+  }
+
+  let currentIndex = 0;
+  if (normalized === '-') currentIndex = 0;
+  else if (normalized === '*') currentIndex = 1;
+  else currentIndex = (parseInt(normalized, 10) || 1) + 1;
+
+  const nextIndex = currentIndex + delta;
+
+  if (nextIndex <= 0) return '-';
+  if (nextIndex === 1) return '*';
+  return String(nextIndex - 1);
+};
 
 const PATIENT_HISTORY_ALL_BODY_FILTER = '__all__';
 const PATIENT_HISTORY_EMPTY_BODY_FILTER = '__empty__';
@@ -1581,10 +1601,22 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   });
 
   const stepContextMenuVisitInput = useCallback((delta) => {
-    const nextValue = stepVisitInputValue(contextMenuVisitInput, delta);
-    setContextMenuVisitInput(nextValue);
+    const nextValue = stepContextMenuVisitValue(contextMenuVisitInput, delta);
+    flushSync(() => setContextMenuVisitInput(nextValue));
     handleContextAction({ type: 'visitCount', value: nextValue });
   }, [contextMenuVisitInput, handleContextAction]);
+
+  const stepContextMenuReservationInput = useCallback((delta) => {
+    if (!contextMenu) return;
+    const baseTime = contextMenu.defaultReservationTime || getDefaultReservationTime(
+      contextMenu.weekIdx,
+      contextMenu.dayIdx,
+      contextMenu.rowIdx
+    );
+    const nextTime = stepReservationTimeWithinCellBase(contextMenuReservationInput, baseTime, delta);
+    flushSync(() => setContextMenuReservationInput(nextTime));
+    handleContextAction({ type: 'reservationTime', value: nextTime });
+  }, [contextMenu, contextMenuReservationInput, getDefaultReservationTime, handleContextAction]);
 
   const focusEditInputImmediately = useCallback(() => {
     const input = editInputRef.current;
@@ -2376,18 +2408,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             e.stopPropagation();
                             if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                               e.preventDefault();
-                              const baseTime = contextMenu.defaultReservationTime || getDefaultReservationTime(
-                                contextMenu.weekIdx,
-                                contextMenu.dayIdx,
-                                contextMenu.rowIdx
-                              );
-                              const nextTime = stepReservationTimeWithinCellBase(
-                                contextMenuReservationInput,
-                                baseTime,
-                                e.key === 'ArrowUp' ? 10 : -10
-                              );
-                              setContextMenuReservationInput(nextTime);
-                              handleContextAction({ type: 'reservationTime', value: nextTime });
+                              stepContextMenuReservationInput(e.key === 'ArrowUp' ? 10 : -10);
                             }
                           }}
                           onMouseDown={e => e.stopPropagation()}
@@ -2396,41 +2417,38 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                         <span className="context-menu-time-stepper">
                           <button
                             type="button"
-                            className="context-menu-time-step"
-                            aria-label="현재 셀 기준 예약시간 10분 증가"
-                            onMouseDown={e => e.stopPropagation()}
-                            onClick={(e) => {
+                            className="context-menu-time-step context-menu-step-left"
+                            aria-label="현재 셀 기준 예약시간 10분 감소"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
                               e.stopPropagation();
-                              const baseTime = contextMenu.defaultReservationTime || getDefaultReservationTime(
-                                contextMenu.weekIdx,
-                                contextMenu.dayIdx,
-                                contextMenu.rowIdx
-                              );
-                              const nextTime = stepReservationTimeWithinCellBase(contextMenuReservationInput, baseTime, 10);
-                              setContextMenuReservationInput(nextTime);
-                              handleContextAction({ type: 'reservationTime', value: nextTime });
+                              stepContextMenuReservationInput(-10);
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
                             }}
                           >
-                            <span className="context-menu-triangle-up" />
+                            <span className="context-menu-step-symbol context-menu-step-symbol--minus" />
                           </button>
+                          <span className="context-menu-display-value context-menu-time-display">
+                            {contextMenuReservationInput || contextMenu?.defaultReservationTime || ''}
+                          </span>
                           <button
                             type="button"
-                            className="context-menu-time-step"
-                            aria-label="현재 셀 기준 예약시간 10분 감소"
-                            onMouseDown={e => e.stopPropagation()}
-                            onClick={(e) => {
+                            className="context-menu-time-step context-menu-step-right"
+                            aria-label="현재 셀 기준 예약시간 10분 증가"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
                               e.stopPropagation();
-                              const baseTime = contextMenu.defaultReservationTime || getDefaultReservationTime(
-                                contextMenu.weekIdx,
-                                contextMenu.dayIdx,
-                                contextMenu.rowIdx
-                              );
-                              const nextTime = stepReservationTimeWithinCellBase(contextMenuReservationInput, baseTime, -10);
-                              setContextMenuReservationInput(nextTime);
-                              handleContextAction({ type: 'reservationTime', value: nextTime });
+                              stepContextMenuReservationInput(10);
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
                             }}
                           >
-                            <span className="context-menu-triangle-down" />
+                            <span className="context-menu-step-symbol context-menu-step-symbol--plus" />
                           </button>
                         </span>
                       </span>
@@ -2576,63 +2594,72 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   <label className="context-menu-visit-editor" style={{ width: '100%', margin: 0, padding: 0 }}>
                     <span style={{ flexShrink: 0, width: '40px' }}>회차 :</span>
                     <span className="context-menu-visit-control" style={{ flexGrow: 1 }}>
-                      <ContextMenuLocalInput
-                        inputMode="numeric"
-                        pattern="[0-9*-]*"
-                        className="context-menu-visit-input"
-                        value={contextMenuVisitInput}
-                        onChange={(val) => {
-                          setContextMenuVisitInput(val.replace(/[^\d*-]/g, ''));
-                        }}
-                        onBlur={(e, val) => {
-                          e.stopPropagation();
-                          const normalized = normalizeVisitInputValue(val);
-                          setContextMenuVisitInput(normalized);
-                          handleContextAction({ type: 'visitCount', value: normalized });
-                        }}
-                        onKeyDown={(e, val) => {
-                          e.stopPropagation();
-                          if (e.nativeEvent?.isComposing || e.keyCode === 229) return;
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            const normalized = normalizeVisitInputValue(val);
-                            setContextMenuVisitInput(normalized);
-                            handleContextAction({ type: 'visitCount', value: normalized });
-                          }
-                          if (e.key === 'ArrowUp') {
-                            e.preventDefault();
-                            stepContextMenuVisitInput(1);
-                          }
-                          if (e.key === 'ArrowDown') {
-                            e.preventDefault();
-                            stepContextMenuVisitInput(-1);
-                          }
-                        }}
-                      />
                       <span className="context-menu-visit-stepper">
                         <button
                           type="button"
-                          className="context-menu-visit-step"
-                          aria-label="회차 증가"
-                          onMouseDown={e => e.stopPropagation()}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            stepContextMenuVisitInput(1);
-                          }}
-                        >
-                          <span className="context-menu-triangle-up" />
-                        </button>
-                        <button
-                          type="button"
-                          className="context-menu-visit-step"
+                          className="context-menu-visit-step context-menu-step-left"
                           aria-label="회차 감소"
-                          onMouseDown={e => e.stopPropagation()}
-                          onClick={(e) => {
+                          onMouseDown={(e) => {
+                            e.preventDefault();
                             e.stopPropagation();
                             stepContextMenuVisitInput(-1);
                           }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
                         >
-                          <span className="context-menu-triangle-down" />
+                          <span className="context-menu-step-symbol context-menu-step-symbol--minus" />
+                        </button>
+                        <ContextMenuLocalInput
+                          inputMode="numeric"
+                          pattern="[0-9*-]*"
+                          className={`context-menu-visit-input context-menu-display-value context-menu-visit-display context-menu-visit-display--len-${Math.min(String(contextMenuVisitInput || '').length || 1, 3)}`}
+                          value={contextMenuVisitInput}
+                          onChange={(val) => {
+                            const nextValue = val.replace(/[^\d*-]/g, '');
+                            setContextMenuVisitInput(nextValue);
+                          }}
+                          onBlur={(e, val) => {
+                            e.stopPropagation();
+                            const normalized = normalizeVisitInputValue(val);
+                            setContextMenuVisitInput(normalized);
+                            handleContextAction({ type: 'visitCount', value: normalized });
+                          }}
+                          onKeyDown={(e, val) => {
+                            e.stopPropagation();
+                            if (e.nativeEvent?.isComposing || e.keyCode === 229) return;
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const normalized = normalizeVisitInputValue(val);
+                              setContextMenuVisitInput(normalized);
+                              handleContextAction({ type: 'visitCount', value: normalized });
+                            }
+                            if (e.key === 'ArrowUp') {
+                              e.preventDefault();
+                              stepContextMenuVisitInput(1);
+                            }
+                            if (e.key === 'ArrowDown') {
+                              e.preventDefault();
+                              stepContextMenuVisitInput(-1);
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="context-menu-visit-step context-menu-step-right"
+                          aria-label="회차 증가"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            stepContextMenuVisitInput(1);
+                          }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
+                        >
+                          <span className="context-menu-step-symbol context-menu-step-symbol--plus" />
                         </button>
                       </span>
                     </span>

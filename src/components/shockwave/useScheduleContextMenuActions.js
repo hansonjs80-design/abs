@@ -150,7 +150,7 @@ export default function useScheduleContextMenuActions({
         day_index: d,
         row_index: r,
         col_index: c,
-        content: getStableMemoContent(key, memo),
+        content: Object.prototype.hasOwnProperty.call(overrides, 'content') ? overrides.content : getStableMemoContent(key, memo),
         bg_color: Object.prototype.hasOwnProperty.call(overrides, 'bg_color') ? overrides.bg_color : (memo.bg_color ?? null),
         merge_span: Object.prototype.hasOwnProperty.call(overrides, 'merge_span') ? overrides.merge_span : memo.merge_span,
         prescription: Object.prototype.hasOwnProperty.call(overrides, 'prescription') ? overrides.prescription : (memo.prescription ?? null),
@@ -719,12 +719,33 @@ export default function useScheduleContextMenuActions({
         const stableContent = getStableMemoContent(key, memo);
         const updatedContent = applyVisitCountToSchedulerContent(stableContent, nextVisitInput);
         if (updatedContent === stableContent) continue;
-        const success = await saveMemoMeta(key, memo, { content: updatedContent });
-        if (success) anyChanged = true;
+        const overrides = { content: updatedContent };
+        applyImmediateMeta(key, memo, overrides);
+        updateContextMemoSnapshot(key, memo, overrides);
+        saveDebounceRef.current.pending.set(key, { memo, overrides });
+        anyChanged = true;
       }
       if (anyChanged) {
-        recordUndo({ type: 'bulk-edit', oldMemos });
-        addToast('회차가 수정되었습니다.', 'success');
+        if (!saveDebounceRef.current.undoMemos) {
+          saveDebounceRef.current.undoMemos = oldMemos;
+        }
+        if (saveDebounceRef.current.timer) clearTimeout(saveDebounceRef.current.timer);
+        saveDebounceRef.current.timer = setTimeout(() => {
+          const snapshot = saveDebounceRef.current;
+          const pendingSaves = Array.from(snapshot.pending.entries());
+          const undoMemos = snapshot.undoMemos;
+          snapshot.pending.clear();
+          snapshot.undoMemos = null;
+          snapshot.timer = null;
+
+          Promise.all(
+            pendingSaves.map(([k, { memo, overrides }]) => saveMemoMeta(k, memo, overrides))
+          ).then((saveResults) => {
+            if (saveResults.some(Boolean) && undoMemos) {
+              recordUndo({ type: 'bulk-edit', oldMemos: undoMemos });
+            }
+          });
+        }, 350);
       }
       return;
     }
