@@ -683,6 +683,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       gridTemplateColumns: 'minmax(0, 1fr)',
     };
   }, [patientHistoryLogGroups.length]);
+  const patientHistoryColumnWidths = useMemo(() => (
+    patientHistoryLogGroups.length >= 2
+      ? ['20%', '9%', '21%', '20%', '8%', '10.5%', '11.5%']
+      : ['16%', '10%', '23%', '24%', '8%', '10.5%', '8.5%']
+  ), [patientHistoryLogGroups.length]);
 
   // Presence 기능 비활성화 – 실시간 데이터 동기화만 유지
 
@@ -2822,13 +2827,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       <div className="sw-compact-table-wrap">
                         <table className="sw-summary-table sw-compact-summary-table patient-history-table" style={{ width: '100%', margin: 0, tableLayout: 'fixed' }}>
                           <colgroup>
-                            <col style={{ width: '16%' }} />
-                            <col style={{ width: '10%' }} />
-                            <col style={{ width: '23%' }} />
-                            <col style={{ width: '24%' }} />
-                            <col style={{ width: '8%' }} />
-                            <col style={{ width: '10.5%' }} />
-                            <col style={{ width: '8.5%' }} />
+                            {patientHistoryColumnWidths.map((width, columnIndex) => (
+                              <col key={`patient-history-col-${columnIndex}`} style={{ width }} />
+                            ))}
                           </colgroup>
                           <thead>
                             <tr>
@@ -2851,6 +2852,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               const currentCellRowBackground = isCurrentHistoryRow
                                 ? (group.key === 'manual' ? '#fedfbb' : '#c8ebfd')
                                 : undefined;
+                              const historyRowFontWeight = isCurrentHistoryRow ? 800 : 400;
                               return (
                               <tr
                                 key={historyRowKey}
@@ -2859,26 +2861,27 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                   '--patient-history-current-row-bg': currentCellRowBackground,
                                   boxShadow: isCurrentHistoryRow ? 'inset 4px 0 0 var(--brand-primary, #2563eb)' : undefined,
                                   outline: isCurrentHistoryRow ? '1px solid rgba(37, 99, 235, 0.38)' : undefined,
+                                  fontWeight: historyRowFontWeight,
                                 }}
                                 title={log.id === 'draft' ? "현재 선택된 셀의 날짜를 기반으로 한 임시 항목입니다" : undefined}
                               >
-                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground }}>
+                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, whiteSpace: 'nowrap', fontWeight: historyRowFontWeight }}>
                                   {log.date}
                                   {isCurrentHistoryRow && (
                                     <span style={{ fontSize: '0.76rem', color: 'var(--brand-primary)', display: 'block', marginTop: '2px', fontWeight: 800 }}>현재 셀</span>
                                   )}
                                 </td>
-                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, color: log.type === 'manual' ? 'var(--brand-primary)' : 'inherit', fontWeight: log.type === 'manual' ? 600 : 400 }}>
+                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, color: log.type === 'manual' ? 'var(--brand-primary)' : 'inherit', fontWeight: historyRowFontWeight }}>
                                   {log.prescription}
                                 </td>
-                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground }}>{log.body_part}</td>
+                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }}>{log.body_part}</td>
                                 <td
                                   title={log.memo || ''}
-                                  style={{ textAlign: 'left', backgroundColor: currentCellRowBackground, color: 'var(--text-secondary)', fontSize: '0.85em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                                  style={{ textAlign: 'left', backgroundColor: currentCellRowBackground, color: 'var(--text-secondary)', fontSize: '0.85em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: historyRowFontWeight }}
                                 >
                                   {log.memo}
                                 </td>
-                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground }} onClick={(e) => e.stopPropagation()}>
+                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
                                   <input
                                     type="text"
                                     inputMode="text"
@@ -2943,11 +2946,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 </td>
                                 <td
                                   title={log.therapist_name || ''}
-                                  style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                                  style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: historyRowFontWeight }}
                                 >
                                   {log.therapist_name || '-'}
                                 </td>
-                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground }} onClick={(e) => e.stopPropagation()}>
+                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
                                   <button
                                     type="button"
                                     className="patient-history-apply-button"
