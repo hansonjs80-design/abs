@@ -357,7 +357,7 @@ export function ScheduleProvider({ children }) {
   }, [beginLoading, endLoading]);
 
   // 직원 메모 저장/업데이트
-  const saveStaffMemo = useCallback(async (year, month, day, slotIndex, content, fontColor = null, bgColor = null) => {
+  const saveStaffMemo = useCallback(async (year, month, day, slotIndex, content, fontColor = undefined, bgColor = undefined) => {
     const key = `${year}-${month}-${day}-${slotIndex}`;
     const normalizedContent = normalizeStaffDeptNameSpacing(content || '');
     const requestId = (staffMemoSaveRequestRef.current.get(key) || 0) + 1;
