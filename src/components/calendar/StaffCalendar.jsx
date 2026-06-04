@@ -1249,11 +1249,11 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
             e.stopPropagation();
           }}
         >
-          <button type="button" className="context-menu-item" onClick={() => ctxAction('copy')}>복사 (Cmd+C)</button>
-          <button type="button" className="context-menu-item" onClick={() => ctxAction('cut')}>잘라내기 (Cmd+X)</button>
-          <button type="button" className="context-menu-item" onClick={() => ctxAction('paste')}>붙여넣기 (Cmd+V)</button>
+          <button type="button" className="context-menu-item staff-context-command" onClick={() => ctxAction('copy')}><span>복사</span><span className="staff-context-shortcut">Cmd+C</span></button>
+          <button type="button" className="context-menu-item staff-context-command" onClick={() => ctxAction('cut')}><span>잘라내기</span><span className="staff-context-shortcut">Cmd+X</span></button>
+          <button type="button" className="context-menu-item staff-context-command" onClick={() => ctxAction('paste')}><span>붙여넣기</span><span className="staff-context-shortcut">Cmd+V</span></button>
           <div className="context-menu-divider" />
-          <button type="button" className="context-menu-item" onClick={() => ctxAction('delete')}>삭제 (Delete)</button>
+          <button type="button" className="context-menu-item staff-context-command" onClick={() => ctxAction('delete')}><span>삭제</span><span className="staff-context-shortcut">Delete</span></button>
           <div className="context-menu-divider" />
           <button type="button" className="context-menu-item staff-color-menu-trigger" onClick={(e) => openColorMenu('font', e)}>
             <span className="staff-color-menu-icon staff-color-menu-icon--font" aria-hidden="true">A</span>
