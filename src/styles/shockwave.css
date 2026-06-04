@@ -1061,8 +1061,8 @@
 }
 
 .shockwave-context-menu.staff-calendar-context-menu {
-  min-width: 138px;
-  width: min(160px, calc(100vw - 24px));
+  min-width: 128px;
+  width: min(136px, calc(100vw - 24px));
   padding: 6px;
   gap: 4px;
 }
