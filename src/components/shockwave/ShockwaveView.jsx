@@ -280,6 +280,24 @@ const ContextMenuLocalInputGroup = ({ placeholder, buttonLabel, onSubmit, imeOpe
   );
 };
 
+const renderSchedulerVisitSuffix = (suffix, className, style) => {
+  const text = String(suffix || '');
+  const match = text.match(/^(\()(-|\d+)(\))$/);
+  if (!match) {
+    return <span className={className} style={style}>{text}</span>;
+  }
+  const isEmptyVisit = match[2] === '-';
+  return (
+    <span className={`${className}${isEmptyVisit ? ' sw-cell-visit-suffix--empty' : ''}`} style={style}>
+      <span className="sw-cell-visit-paren">(</span>
+      <span className={isEmptyVisit ? 'sw-cell-visit-empty-marker' : 'sw-cell-visit-number'}>
+        {isEmptyVisit ? null : match[2]}
+      </span>
+      <span className="sw-cell-visit-paren">)</span>
+    </span>
+  );
+};
+
 const MemoizedCell = memo(({
   cellKey, weekIdx, dayIdx, rowIdx, colIdx, dayInfo, slotInfo, showTimeCol, gridRowStart, isLastRenderedRow, colCount,
   cellData, pendingContent, pendingMergeSpan, mergeSpan, editingCell, imePreviewCell, selectedKeys, selectedCell, clipboardSource,
@@ -359,6 +377,10 @@ const MemoizedCell = memo(({
   const hasMeaningfulContent = displayData.hasDisplayText && content.trim() && content.trim() !== '\u200B';
   const noPrescription = hasMeaningfulContent && !cellPrescription;
   const noBodyPart = hasMeaningfulContent && !String(cellData?.body_part || '').trim();
+  const visitSuffixClassName = [
+    'sw-cell-visit-suffix',
+    displayData.visitSuffix === '*' ? 'sw-cell-new-patient-marker' : '',
+  ].filter(Boolean).join(' ');
   
   let baseTextColor = undefined;
   let visitSuffixColor = undefined;
@@ -411,7 +433,7 @@ const MemoizedCell = memo(({
                 {displayData.visitSuffix ? (
                   <>
                     {visualRowSpan > 1 && !displayData.noteSuffix ? <br /> : null}
-                    <span style={visitSuffixColor ? { color: visitSuffixColor } : undefined}>{displayData.visitSuffix}</span>
+                    {renderSchedulerVisitSuffix(displayData.visitSuffix, visitSuffixClassName, visitSuffixColor ? { color: visitSuffixColor } : undefined)}
                   </>
                 ) : null}
               </span>
@@ -495,7 +517,7 @@ const MemoizedCell = memo(({
               {displayData.visitSuffix ? (
                 <>
                   {visualRowSpan > 1 && !displayData.noteSuffix ? <br /> : null}
-                  <span style={visitSuffixColor ? { color: visitSuffixColor } : undefined}>{displayData.visitSuffix}</span>
+                  {renderSchedulerVisitSuffix(displayData.visitSuffix, visitSuffixClassName, visitSuffixColor ? { color: visitSuffixColor } : undefined)}
                 </>
               ) : null}
             </span>
