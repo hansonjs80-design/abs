@@ -12,6 +12,8 @@ import { shouldHideStaffMemoByDepartment } from '../../lib/staffDepartmentFilter
 import { useToast } from '../common/Toast';
 import MemoSlot from './MemoSlot';
 import { usePersistentNumber } from '../../hooks/usePersistentState';
+import { useAuth } from '../../contexts/AuthContext';
+import { isAdminUser } from '../../lib/authPermissions';
 
 const COL_W_KEY = 'staff-calendar-col-width';
 const ROW_H_KEY = 'staff-calendar-row-height';
@@ -101,6 +103,8 @@ function FillColorIcon() {
 export default function StaffCalendar({ hiddenDepartments = [], showLastRows = true }) {
   const { currentYear, currentMonth, staffMemos, loadStaffMemos, saveStaffMemo, holidays, holidayNames, loadHolidays, shockwaveSettings, loadShockwaveSettings, calendarSlotSettings, loadCalendarSlotSettings, saveCalendarSlotSettings } = useSchedule();
   const { addToast } = useToast();
+  const { user } = useAuth();
+  const canManageCalendarSettings = isAdminUser(user);
   const [showSlotSettings, setShowSlotSettings] = useState(false);
   const slotSettingsRef = useRef(null);
 
@@ -108,6 +112,12 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   useEffect(() => {
     setPortalTarget(document.getElementById('staff-settings-portal'));
   }, []);
+
+  useEffect(() => {
+    if (!canManageCalendarSettings && showSlotSettings) {
+      setShowSlotSettings(false);
+    }
+  }, [canManageCalendarSettings, showSlotSettings]);
 
   // 설정 팝업 외부 클릭 시 닫기
   useEffect(() => {
@@ -883,7 +893,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
       <div className="calendar-print-title">
         {currentYear}년 {currentMonth}월 직원 근무표
       </div>
-      {portalTarget && createPortal(
+      {canManageCalendarSettings && portalTarget && createPortal(
         <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
           <button
             type="button"

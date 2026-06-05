@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Settings, Trash2 } from 'lucide-react';
 import { useSchedule } from '../../contexts/ScheduleContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { isAdminUser } from '../../lib/authPermissions';
 
 const SLOT_COUNT = 6;
 
@@ -13,6 +15,8 @@ export default function NoticeBoard({
   onShowLastRowsChange,
 }) {
   const { currentYear, currentMonth, notices, loadNotices, saveNotice } = useSchedule();
+  const { user } = useAuth();
+  const canManageDepartments = isAdminUser(user);
   const [editingSlot, setEditingSlot] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [isDepartmentSettingsOpen, setIsDepartmentSettingsOpen] = useState(false);
@@ -22,6 +26,12 @@ export default function NoticeBoard({
   useEffect(() => {
     loadNotices(currentYear, currentMonth);
   }, [currentMonth, currentYear, loadNotices]);
+
+  useEffect(() => {
+    if (!canManageDepartments && isDepartmentSettingsOpen) {
+      setIsDepartmentSettingsOpen(false);
+    }
+  }, [canManageDepartments, isDepartmentSettingsOpen]);
 
   useEffect(() => {
     if (!isDepartmentSettingsOpen) return undefined;
@@ -116,15 +126,17 @@ export default function NoticeBoard({
       <div ref={departmentFilterRef} className="notice-department-filter" aria-label="근무표 부서 표시 설정">
         <div className="notice-department-filter-head">
           <div className="notice-department-filter-title">부서 표시</div>
-          <button
-            type="button"
-            className="notice-department-settings-btn"
-            onClick={() => setIsDepartmentSettingsOpen((open) => !open)}
-            aria-label="부서 표시 설정"
-            title="부서 표시 설정"
-          >
-            <Settings size={16} />
-          </button>
+          {canManageDepartments && (
+            <button
+              type="button"
+              className="notice-department-settings-btn"
+              onClick={() => setIsDepartmentSettingsOpen((open) => !open)}
+              aria-label="부서 표시 설정"
+              title="부서 표시 설정"
+            >
+              <Settings size={16} />
+            </button>
+          )}
         </div>
         <button
           type="button"
@@ -150,7 +162,7 @@ export default function NoticeBoard({
             );
           })}
         </div>
-        {isDepartmentSettingsOpen && (
+        {canManageDepartments && isDepartmentSettingsOpen && (
           <div className="notice-department-settings">
             {departments.map((dept, index) => (
               <div key={`${dept}-${index}`} className="notice-department-edit-row">

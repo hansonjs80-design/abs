@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { syncTodayShockwaveScheduleToStats, syncMonthShockwaveScheduleToStats } from '../../lib/shockwaveSyncUtils';
 import { useToast } from '../common/Toast';
 import { useSchedule } from '../../contexts/ScheduleContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 import { GridSkeleton, SettlementSkeleton } from '../common/LoadingSkeleton';
 import '../../styles/shockwave_stats.css';
@@ -13,6 +14,7 @@ import ShockwaveNewPatientsView from './ShockwaveNewPatientsView';
 import SettlementSettingsPanel from './SettlementSettingsPanel';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 import { formatRecentPeriodLabel, parseRecentPeriodMonths } from '../../lib/recentPeriodUtils';
+import { isAdminUser } from '../../lib/authPermissions';
 
 class ShockwaveStatsErrorBoundary extends React.Component {
   constructor(props) {
@@ -43,6 +45,8 @@ class ShockwaveStatsErrorBoundary extends React.Component {
 
 export default function ShockwaveStatsView({ currentYear, currentMonth, memos, therapists, onReloadMemos, monthlyTherapistsProp, monthlyTherapistsReady = false, isScheduleLoading = false }) {
   const { addToast } = useToast();
+  const { user } = useAuth();
+  const canManageStatsSettings = isAdminUser(user);
   const { shockwaveSettings, loadShockwaveSettings, saveShockwaveSettings } = useSchedule();
   const monthlyTherapists = useMemo(
     () => (monthlyTherapistsReady && Array.isArray(monthlyTherapistsProp) ? monthlyTherapistsProp : []),
@@ -59,6 +63,12 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   const logsLoadedKeyRef = useRef('');
   const fetchIdRef = useRef(0);
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
+
+  useEffect(() => {
+    if (!canManageStatsSettings && activeSection === 'settings') {
+      setActiveSection('grid');
+    }
+  }, [activeSection, canManageStatsSettings]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
   const displayBaseTherapists = useMemo(
     () => (monthlyTherapistsReady ? safeTherapists : []),
@@ -588,12 +598,14 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
           >
             신규환자
           </button>
-          <button
-            className={`sw-stats-side-tab sw-stats-side-tab--settings${activeSection === 'settings' ? ' active' : ''}`}
-            onClick={() => setActiveSection('settings')}
-          >
-            설정
-          </button>
+          {canManageStatsSettings && (
+            <button
+              className={`sw-stats-side-tab sw-stats-side-tab--settings${activeSection === 'settings' ? ' active' : ''}`}
+              onClick={() => setActiveSection('settings')}
+            >
+              설정
+            </button>
+          )}
 
           <div style={{ marginTop: 'auto', padding: '12px 0' }}>
             <button
@@ -719,7 +731,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
             </div>
           )}
 
-          {activeSection === 'settings' && (
+          {canManageStatsSettings && activeSection === 'settings' && (
             <SettlementSettingsPanel
               type="shockwave"
               year={currentYear}

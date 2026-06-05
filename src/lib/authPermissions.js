@@ -37,11 +37,16 @@ export function normalizePermissions(permissions, user) {
 
 export function getAllowedTabs(user) {
   const permissions = normalizePermissions(user?.app_permissions, user);
-  return APP_TABS.filter((tab) => permissions[tab.key]);
+  const isAdmin = isAdminUser(user);
+  return APP_TABS.filter((tab) => {
+    if (tab.key === 'settings') return isAdmin;
+    return permissions[tab.key];
+  });
 }
 
 export function canAccessTab(user, tabKey) {
   if (isAdminUser(user)) return true;
+  if (tabKey === 'settings') return false;
   const permissions = normalizePermissions(user?.app_permissions, user);
   return permissions[tabKey] !== false;
 }
@@ -53,7 +58,7 @@ export function canAccessPath(user, path) {
 }
 
 export function getFirstAllowedPath(user) {
-  return getAllowedTabs(user)[0]?.path || '/settings';
+  return getAllowedTabs(user)[0]?.path || '/';
 }
 
 export function createDefaultPermissions() {

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useSchedule } from '../contexts/ScheduleContext';
+import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { useToast } from '../components/common/Toast';
 import { syncTodayManualTherapyScheduleToStats, syncMonthManualTherapyScheduleToStats } from '../lib/manualTherapyUtils';
@@ -13,6 +14,7 @@ import ManualTherapySixMonthStats from '../components/shockwave/ManualTherapySix
 import SettlementSettingsPanel from '../components/shockwave/SettlementSettingsPanel';
 import { getEffectiveSettlementSettings } from '../lib/settlementSettings';
 import { normalizeManualTherapyLogRows } from '../lib/manualTherapyLogUtils';
+import { isAdminUser } from '../lib/authPermissions';
 const MANUAL_THERAPY_SHEET_ID = '1-R_p3eyxwXISFTYX5G7_ec5L0kgUIhNbIwA9AdEj-9U';
 
 class ManualTherapyStatsPageErrorBoundary extends React.Component {
@@ -72,6 +74,8 @@ export default function ManualTherapyStatsPage() {
     saveShockwaveSettings,
     loadMonthlyTherapists,
   } = useSchedule();
+  const { user } = useAuth();
+  const canManageStatsSettings = isAdminUser(user);
   const { addToast } = useToast();
   const [logs, setLogs] = useState([]);
   const [activeSection, setActiveSection] = useState('grid');
@@ -83,6 +87,12 @@ export default function ManualTherapyStatsPage() {
   const lastAutoSyncKeyRef = useRef(null);
   const scheduleReloadRequestRef = useRef(0);
   const logsLoadedKeyRef = useRef('');
+
+  useEffect(() => {
+    if (!canManageStatsSettings && activeSection === 'settings') {
+      setActiveSection('grid');
+    }
+  }, [activeSection, canManageStatsSettings]);
 
   // 연월 변경 시 로컬 치료사 목록을 즉시 초기화
   const currentMonthKey = useMemo(() => `${currentYear}-${currentMonth}`, [currentYear, currentMonth]);
@@ -537,12 +547,14 @@ export default function ManualTherapyStatsPage() {
               >
                 신규환자
               </button>
-              <button
-                className={`sw-stats-side-tab sw-stats-side-tab--settings${activeSection === 'settings' ? ' active' : ''}`}
-                onClick={() => setActiveSection('settings')}
-              >
-                설정
-              </button>
+              {canManageStatsSettings && (
+                <button
+                  className={`sw-stats-side-tab sw-stats-side-tab--settings${activeSection === 'settings' ? ' active' : ''}`}
+                  onClick={() => setActiveSection('settings')}
+                >
+                  설정
+                </button>
+              )}
 
               <div style={{ marginTop: 'auto', padding: '12px 0' }}>
                 <button
@@ -682,7 +694,7 @@ export default function ManualTherapyStatsPage() {
             </div>
           )}
 
-              {activeSection === 'settings' && (
+              {canManageStatsSettings && activeSection === 'settings' && (
                 <SettlementSettingsPanel
                   type="manual_therapy"
                   year={currentYear}
