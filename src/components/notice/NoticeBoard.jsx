@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Settings, Trash2 } from 'lucide-react';
 import { useSchedule } from '../../contexts/ScheduleContext';
 
@@ -17,10 +17,29 @@ export default function NoticeBoard({
   const [editValue, setEditValue] = useState('');
   const [isDepartmentSettingsOpen, setIsDepartmentSettingsOpen] = useState(false);
   const [newDepartment, setNewDepartment] = useState('');
+  const departmentFilterRef = useRef(null);
 
   useEffect(() => {
     loadNotices(currentYear, currentMonth);
   }, [currentMonth, currentYear, loadNotices]);
+
+  useEffect(() => {
+    if (!isDepartmentSettingsOpen) return undefined;
+
+    const handleOutsideClick = (event) => {
+      const target = event.target;
+      if (departmentFilterRef.current?.contains(target)) return;
+      setIsDepartmentSettingsOpen(false);
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+    };
+  }, [isDepartmentSettingsOpen]);
 
   const handleClick = (index) => {
     const existing = notices.find(n => n.slot_index === index);
@@ -94,7 +113,7 @@ export default function NoticeBoard({
           );
         })}
       </div>
-      <div className="notice-department-filter" aria-label="근무표 부서 표시 설정">
+      <div ref={departmentFilterRef} className="notice-department-filter" aria-label="근무표 부서 표시 설정">
         <div className="notice-department-filter-head">
           <div className="notice-department-filter-title">부서 표시</div>
           <button
