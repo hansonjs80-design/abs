@@ -28,6 +28,8 @@ import useScheduleMovePersistence from './useScheduleMovePersistence';
 
 export default function useScheduleKeyboardActions({
   contextMenu,
+  clipboardSource,
+  setClipboardSource,
   selectedCell,
   editingCell,
   selectedKeys,
@@ -701,6 +703,14 @@ export default function useScheduleKeyboardActions({
     if (e.__shockwaveBackgroundHandled) return;
     if (e.__shockwavePrescriptionHandled) return;
     if (e.__shockwaveTreatmentCompleteHandled) return;
+    if (clipboardSource && (e.key === 'Escape' || e.key === 'Backspace' || isUndoShortcutEvent(e))) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation?.();
+      if (isUndoShortcutEvent(e)) e.__shockwaveUndoHandled = true;
+      setClipboardSource?.(null);
+      return;
+    }
     if (isUndoShortcutEvent(e)) {
       if (e.__shockwaveUndoHandled) return;
       e.__shockwaveUndoHandled = true;
@@ -953,6 +963,7 @@ export default function useScheduleKeyboardActions({
     }
   }, [
     contextMenu,
+    clipboardSource,
     selectedCell,
     editingCell,
     selectedKeys,
@@ -980,6 +991,7 @@ export default function useScheduleKeyboardActions({
     handleOpenBodyPartMenu,
     flushPendingMoveSave,
     setEditingCell,
+    setClipboardSource,
     setContextMenu,
     setRangeEnd,
     setSelectedKeys,

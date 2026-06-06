@@ -574,10 +574,20 @@
   content: "";
   position: absolute;
   inset: -1px;
-  border: 1.7px solid #4285f4;
+  border: 1.5px solid #4285f4;
   box-sizing: border-box;
   pointer-events: none;
   z-index: 30;
+}
+
+.sw-cell.selected.editing::before {
+  border-width: 1.7px;
+}
+
+.sw-cell.selected.ants-active::before {
+  border: 2px dashed var(--ants-color, #3b82f6);
+  animation: ants-pulse 1s linear infinite;
+  z-index: 40;
 }
 
 .sw-cell.staff-off {

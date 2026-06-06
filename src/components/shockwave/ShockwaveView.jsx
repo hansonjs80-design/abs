@@ -559,6 +559,7 @@ const MemoizedCell = memo(({
   const wasAnts = prevProps.clipboardSource?.keys?.has(prevProps.cellKey);
   const isAnts = nextProps.clipboardSource?.keys?.has(nextProps.cellKey);
   if (wasAnts !== isAnts) return false;
+  if (isAnts && prevProps.clipboardSource?.mode !== nextProps.clipboardSource?.mode) return false;
   
   if (prevProps.workState !== nextProps.workState) return false;
   if (prevProps.staffBlockRule?.bg_color !== nextProps.staffBlockRule?.bg_color) return false;
@@ -1038,6 +1039,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
+      if (clipboardSource && (e.key === 'Escape' || e.key === 'Backspace' || isUndoShortcutEvent(e))) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation?.();
+        if (isUndoShortcutEvent(e)) e.__shockwaveUndoHandled = true;
+        setClipboardSource(null);
+        return;
+      }
       if (isUndoShortcutEvent(e)) {
         if (e.__shockwaveUndoHandled) return;
         e.__shockwaveUndoHandled = true;
@@ -1060,7 +1069,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       window.removeEventListener('keydown', handleGlobalKeyDown, true);
       document.removeEventListener('keydown', handleGlobalKeyDown, true);
     };
-  }, [doUndo, contextMenu, setClipboardSource]);
+  }, [doUndo, contextMenu, clipboardSource, setClipboardSource]);
 
   const {
     cellKey,
@@ -1730,6 +1739,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   const handleKeyDown = useScheduleKeyboardActions({
     contextMenu,
+    clipboardSource,
+    setClipboardSource,
     selectedCell,
     editingCell,
     selectedKeys,

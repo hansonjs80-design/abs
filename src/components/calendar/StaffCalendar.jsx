@@ -88,6 +88,13 @@ function saveStaffCustomColors(colors) {
   window.localStorage.setItem(STAFF_CUSTOM_COLORS_KEY, JSON.stringify(colors));
 }
 
+function getShortcutModifierLabel() {
+  if (typeof navigator === 'undefined') return 'Ctrl';
+  return /Mac|iPhone|iPad|iPod/i.test(`${navigator.platform || ''} ${navigator.userAgent || ''}`)
+    ? 'Cmd'
+    : 'Ctrl';
+}
+
 function FillColorIcon() {
   return (
     <svg viewBox="0 0 28 28" aria-hidden="true" focusable="false">
@@ -149,6 +156,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   const [customColors, setCustomColors] = useState(loadStaffCustomColors);
   const [customColorDraft, setCustomColorDraft] = useState('#000000');
   const [pendingCustomColorType, setPendingCustomColorType] = useState(null);
+  const shortcutModifier = useMemo(() => getShortcutModifierLabel(), []);
   const viewRef = useRef(null);
   const contextMenuRef = useRef(null);
   const colorMenuRef = useRef(null);
@@ -645,7 +653,13 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
 
   // ── Grid key handler ──
   const handleKeyDown = useCallback((e) => {
-    if (e.key === 'Escape' && clipboardSource) { setClipboardSource(null); return; }
+    const isUndoKey = (e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'z' || e.code === 'KeyZ');
+    if (clipboardSource && (e.key === 'Escape' || e.key === 'Backspace' || isUndoKey)) {
+      e.preventDefault();
+      e.stopPropagation();
+      setClipboardSource(null);
+      return;
+    }
     if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'z' || e.code === 'KeyZ')) { e.preventDefault(); doUndo(); return; }
     if (!selectedCell) return;
     if (editingCell) { if (e.key === 'Escape') { e.preventDefault(); setEditingCell(null); resetInputToHidden(); focusHiddenInput(); } return; }
@@ -1259,9 +1273,9 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
             e.stopPropagation();
           }}
         >
-          <button type="button" className="context-menu-item staff-context-command" onClick={() => ctxAction('copy')}><span>복사</span><span className="staff-context-shortcut">Cmd+C</span></button>
-          <button type="button" className="context-menu-item staff-context-command" onClick={() => ctxAction('cut')}><span>잘라내기</span><span className="staff-context-shortcut">Cmd+X</span></button>
-          <button type="button" className="context-menu-item staff-context-command" onClick={() => ctxAction('paste')}><span>붙여넣기</span><span className="staff-context-shortcut">Cmd+V</span></button>
+          <button type="button" className="context-menu-item staff-context-command" onClick={() => ctxAction('copy')}><span>복사</span><span className="staff-context-shortcut">{shortcutModifier}+C</span></button>
+          <button type="button" className="context-menu-item staff-context-command" onClick={() => ctxAction('cut')}><span>잘라내기</span><span className="staff-context-shortcut">{shortcutModifier}+X</span></button>
+          <button type="button" className="context-menu-item staff-context-command" onClick={() => ctxAction('paste')}><span>붙여넣기</span><span className="staff-context-shortcut">{shortcutModifier}+V</span></button>
           <div className="context-menu-divider" />
           <button type="button" className="context-menu-item staff-context-command" onClick={() => ctxAction('delete')}><span>삭제</span><span className="staff-context-shortcut">Delete</span></button>
           <div className="context-menu-divider" />
