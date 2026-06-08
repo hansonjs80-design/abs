@@ -449,6 +449,8 @@
 }
 
 .sw-cell-display {
+  position: relative;
+  z-index: 2;
   height: 100%;
   width: 100%;
   max-width: 100%;
@@ -574,10 +576,11 @@
   content: "";
   position: absolute;
   inset: -1px;
+  background: rgba(66, 133, 244, 0.132);
   border: 1.725px solid #4285f4;
   box-sizing: border-box;
   pointer-events: none;
-  z-index: 30;
+  z-index: 1;
 }
 
 .sw-cell.selected.editing::before {
@@ -587,7 +590,7 @@
 .sw-cell.selected.ants-active::before {
   border: 2px dashed var(--ants-color, #3b82f6);
   animation: ants-pulse 1s linear infinite;
-  z-index: 40;
+  z-index: 4;
 }
 
 .sw-cell.staff-off {
