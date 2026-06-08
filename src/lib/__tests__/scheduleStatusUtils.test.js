@@ -5,7 +5,9 @@ import {
   buildHolidayBackgroundPayload,
   buildTreatmentStatusPayload,
   getEffectiveCellBgColor,
+  isTreatmentCancelBg,
   TREATMENT_COMPLETE_BG,
+  TREATMENT_CANCEL_BG,
 } from '../scheduleStatusUtils.js';
 
 const cellKey = (w, d, r, c) => `${w}-${d}-${r}-${c}`;
@@ -57,6 +59,36 @@ describe('schedule treatment status payloads', () => {
       ),
       null
     );
+  });
+
+  it('recognizes saved cancellation background regardless of casing or whitespace', () => {
+    assert.equal(isTreatmentCancelBg(' #F4CCCC '), true);
+    assert.equal(isTreatmentCancelBg(TREATMENT_CANCEL_BG), true);
+    assert.equal(isTreatmentCancelBg(TREATMENT_COMPLETE_BG), false);
+  });
+
+  it('clears cancellation when the visible background is already cancelled', () => {
+    const memos = {
+      '0-0-0-0': {
+        content: '1234/홍길동',
+        bg_color: ' #F4CCCC ',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+      },
+    };
+
+    const batch = buildTreatmentStatusPayload({
+      mode: 'cancel-toggle',
+      selectedKeys: new Set(['0-0-0-0']),
+      memos,
+      currentYear: 2026,
+      currentMonth: 5,
+      normalizeKeysToMergeMasters,
+      cellKey,
+      pendingCellBgColors: {},
+    });
+
+    assert.equal(batch.payload[0].bg_color, null);
+    assert.equal(batch.oldMemos[0].bg_color, ' #F4CCCC ');
   });
 
   it('builds holiday background payload across a merged selection', () => {

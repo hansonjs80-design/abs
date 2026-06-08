@@ -1,6 +1,18 @@
 export const TREATMENT_COMPLETE_BG = '#ffe599';
 export const TREATMENT_CANCEL_BG = '#f4cccc';
 
+function normalizeStatusBgColor(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+export function isTreatmentCompleteBg(value) {
+  return normalizeStatusBgColor(value) === TREATMENT_COMPLETE_BG;
+}
+
+export function isTreatmentCancelBg(value) {
+  return normalizeStatusBgColor(value) === TREATMENT_CANCEL_BG;
+}
+
 export function getEffectiveCellBgColor(memos, pendingCellBgColors, key) {
   if (Object.prototype.hasOwnProperty.call(pendingCellBgColors || {}, key)) {
     return pendingCellBgColors[key];
@@ -28,9 +40,9 @@ export function buildTreatmentStatusPayload({
   const getBgColor = (key) => getEffectiveCellBgColor(memos, pendingCellBgColors, key);
   const shouldClearSelection =
     mode === 'toggle'
-      ? Array.from(effectiveKeys).some((key) => getBgColor(key) === TREATMENT_COMPLETE_BG)
+      ? Array.from(effectiveKeys).some((key) => isTreatmentCompleteBg(getBgColor(key)))
       : mode === 'cancel-toggle'
-        ? Array.from(effectiveKeys).some((key) => getBgColor(key) === TREATMENT_CANCEL_BG)
+        ? Array.from(effectiveKeys).some((key) => isTreatmentCancelBg(getBgColor(key)))
         : mode === 'clear';
 
   Array.from(effectiveKeys).forEach((key) => {

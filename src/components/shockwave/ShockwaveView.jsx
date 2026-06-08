@@ -5,6 +5,7 @@ import { useSchedule } from '../../contexts/ScheduleContext';
 import { getTodayKST, isSameDate } from '../../lib/calendarUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import { buildBlankScheduleCleanupPayload, sanitizeBlankScheduleCellData } from '../../lib/scheduleBlankCellCleanupUtils';
+import { isTreatmentCancelBg, isTreatmentCompleteBg } from '../../lib/scheduleStatusUtils';
 import { getManualTherapyRowSpan } from '../../lib/manualTherapyMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import { get4060PrescriptionFromContent, has4060Pattern, normalize4060StarOrder } from '../../lib/schedulerContentFormat';
@@ -331,9 +332,8 @@ const MemoizedCell = memo(({
   
   if (slotInfo.disabled && !displayData.hasDisplayText) cls += ' disabled';
   
-  // NOTE: hardcoded colors based on constants
-  if (String(cellData?.bg_color || '').toLowerCase() === TREATMENT_COMPLETE_BG.toLowerCase()) cls += ' preserve';
-  if (cellData?.bg_color === '#f4cccc') cls += ' cancelled'; // TREATMENT_CANCEL_BG
+  if (isTreatmentCompleteBg(cellData?.bg_color)) cls += ' preserve';
+  if (isTreatmentCancelBg(cellData?.bg_color)) cls += ' cancelled';
   if (has4060Pattern(content)) cls += ' color-4060';
   if (hasCellMemo) cls += ' has-memo';
   if (isSelected) cls += ' selected';
