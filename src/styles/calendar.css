@@ -321,8 +321,11 @@
 }
 
 .memo-slot.selected {
-  background: rgba(66, 133, 244, 0.08);
-  border-color: rgba(66, 133, 244, 0.35);
+  outline: 1.7px solid #4285f4;
+  outline-offset: -1.7px;
+  background: rgba(66, 133, 244, 0.06);
+  z-index: 1;
+  border-color: transparent;
 }
 
 .memo-slot.primary-selected {
@@ -334,8 +337,8 @@
 }
 
 .other-month .memo-slot.selected {
-  background: rgba(66, 133, 244, 0.16);
-  border-color: rgba(66, 133, 244, 0.5);
+  background: rgba(66, 133, 244, 0.2);
+  border-color: transparent;
   color: var(--text-primary);
 }
 
