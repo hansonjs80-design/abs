@@ -563,7 +563,7 @@
 
 /* 셀 선택 상태 (모든 선택 셀 테두리 및 진한 배경) */
 .sw-cell.selected {
-  background-color: rgba(66, 133, 244, 0.12);
+  background-color: rgba(66, 133, 244, 0.132);
   filter: brightness(0.82); /* 선택 시 진하게 */
   outline: none;
   overflow: visible;
@@ -574,14 +574,14 @@
   content: "";
   position: absolute;
   inset: -1px;
-  border: 1.5px solid #4285f4;
+  border: 1.725px solid #4285f4;
   box-sizing: border-box;
   pointer-events: none;
   z-index: 30;
 }
 
 .sw-cell.selected.editing::before {
-  border-width: 1.7px;
+  border-width: 1.725px;
 }
 
 .sw-cell.selected.ants-active::before {
