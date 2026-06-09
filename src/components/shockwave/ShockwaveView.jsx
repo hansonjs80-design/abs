@@ -8,7 +8,8 @@ import { buildBlankScheduleCleanupPayload, sanitizeBlankScheduleCellData } from 
 import { isTreatmentCancelBg, isTreatmentCompleteBg } from '../../lib/scheduleStatusUtils';
 import { getManualTherapyRowSpan } from '../../lib/manualTherapyMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
-import { get4060PrescriptionFromContent, has4060Pattern, normalize4060StarOrder } from '../../lib/schedulerContentFormat';
+import { get4060PrescriptionFromContent, has4060Pattern, normalize4060StarOrder, strip4060FromContent } from '../../lib/schedulerContentFormat';
+import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
 import { useToast } from '../common/Toast';
 import { useAuth } from '../../contexts/AuthContext';
@@ -1255,7 +1256,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, [selectSingleCell, cellKey]);
 
   // ── 편집 저장 ──
-  const handleCellSave = useCallback(async (w, d, r, c, nextValue) => {
+  const handleCellSave = useCallback(async (w, d, r, c, nextValue, forcedPrescription, forcedBgColor, forcedBodyPart) => {
     const finalValue = nextValue !== undefined ? nextValue : (editInputRef.current?.value ?? editValue);
     const key = cellKey(w, d, r, c);
     const saveVersion = (cellSaveVersionRef.current[key] || 0) + 1;
@@ -1279,20 +1280,24 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const newContent = normalizeSchedulerVisitSuffix(
       normalize4060StarOrder(typeof result === 'string' ? result : (result?.text || ''))
     );
-    let newPrescription = result?.prescription;
-    const newBodyPart = result?.bodyPart;
+    let newPrescription = forcedPrescription !== undefined ? forcedPrescription : result?.prescription;
+    const newBodyPart = forcedBodyPart !== undefined ? forcedBodyPart : (result?.bodyPart !== undefined ? result.bodyPart : (memos[key]?.body_part || null));
     const newMergeSpan = result?.mergeSpan ? stripReservationTimeFromMergeSpan(result.mergeSpan) : undefined;
-    const hasPrescriptionResult = typeof result === 'object' && result !== null && Object.prototype.hasOwnProperty.call(result, 'prescription');
-    const hasBodyPartResult = typeof result === 'object' && result !== null && Object.prototype.hasOwnProperty.call(result, 'bodyPart');
+    const hasPrescriptionResult = forcedPrescription !== undefined || (typeof result === 'object' && result !== null && Object.prototype.hasOwnProperty.call(result, 'prescription'));
+    const hasBodyPartResult = forcedBodyPart !== undefined || (typeof result === 'object' && result !== null && Object.prototype.hasOwnProperty.call(result, 'bodyPart'));
     const hasMergeSpanResult = typeof result === 'object' && result !== null && Object.prototype.hasOwnProperty.call(result, 'mergeSpan');
 
-    // 이름에 도수치료 숫자 패턴이 있으면 해당 처방을 자동 설정
-    const autoDosePrescription = get4060PrescriptionFromContent(newContent);
-    if (autoDosePrescription) {
-      newPrescription = autoDosePrescription;
-    } else if (!has4060Pattern(newContent) && /^\d{2,3}분$/.test(memos[key]?.prescription || '')) {
-      // 이름에서 숫자 태그가 없어졌는데 기존 처방이 도수치료 처방이면 처방 없음으로 변경
-      newPrescription = '';
+    const targetBgColor = forcedBgColor !== undefined ? forcedBgColor : (memos[key]?.bg_color || null);
+
+    // 이름에 도수치료 숫자 패턴이 있으면 해당 처방을 자동 설정 (처방 강제지정이 없을 때만)
+    if (forcedPrescription === undefined) {
+      const autoDosePrescription = get4060PrescriptionFromContent(newContent);
+      if (autoDosePrescription) {
+        newPrescription = autoDosePrescription;
+      } else if (!has4060Pattern(newContent) && /^\d{2,3}분$/.test(memos[key]?.prescription || '')) {
+        // 이름에서 숫자 태그가 없어졌는데 기존 처방이 도수치료 처방이면 처방 없음으로 변경
+        newPrescription = '';
+      }
     }
 
     if (newContent !== immediateContent) {
@@ -1307,9 +1312,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       currentMonth,
       rowCount: baseTimeSlots.length,
       content: newContent,
-      bgColor: memos[key]?.bg_color || null,
+      bgColor: targetBgColor,
       prescription: newPrescription ?? (memos[key]?.prescription || ''),
-      bodyPart: hasBodyPartResult ? newBodyPart : (memos[key]?.body_part || null),
+      bodyPart: newBodyPart,
       mergeSpan: newMergeSpan || memos[key]?.merge_span,
     });
 
@@ -1317,7 +1322,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const prescriptionChanged = shouldWritePrescription && (memos[key]?.prescription || '') !== (newPrescription || '');
     const bodyPartChanged = hasBodyPartResult && (memos[key]?.body_part || '') !== (newBodyPart || '');
     const mergeSpanChanged = hasMergeSpanResult && JSON.stringify(memos[key]?.merge_span || null) !== JSON.stringify(newMergeSpan || null);
-    if (newContent === oldContent && !prescriptionChanged && !bodyPartChanged && !mergeSpanChanged && !manualTherapyMerge.ok) {
+    const bgChanged = forcedBgColor !== undefined && memos[key]?.bg_color !== targetBgColor;
+    if (newContent === oldContent && !prescriptionChanged && !bodyPartChanged && !mergeSpanChanged && !bgChanged && !manualTherapyMerge.ok) {
       setPendingDisplayValues((prev) => {
         if (!(key in prev)) return prev;
         const next = { ...prev };
@@ -1369,7 +1375,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       oldPrescription: memos[key]?.prescription || null,
       oldBodyPart: memos[key]?.body_part || null,
     });
-    const success = await queuedOnSaveMemo(currentYear, currentMonth, w, d, r, c, newContent, undefined, newMergeSpan, newPrescription, newBodyPart);
+    const success = await queuedOnSaveMemo(currentYear, currentMonth, w, d, r, c, newContent, forcedBgColor !== undefined ? forcedBgColor : undefined, newMergeSpan, newPrescription, newBodyPart);
     if (success) removePendingScheduleDraftIfValue(currentYear, currentMonth, key, newContent);
     else rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
     // pendingDisplayValues는 즉시 삭제하지 않음.
@@ -1852,6 +1858,105 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   // 편집 완료 후 아래로 이동
   const handleEditKeyDown = useCallback((e, w, d, r, c) => {
+    const isMeta = e.metaKey || e.ctrlKey;
+    const hasValue = Boolean(e.target.value?.trim());
+
+    // 1. Ctrl/Cmd + [1-9] (처방 단축키)
+    const isDigitCode = /^Digit([1-9])$/.test(e.code);
+    const isDigitKey = /^[1-9]$/.test(e.key);
+    const isMetaOrAltOrShift = isMeta || e.altKey || (e.shiftKey && isMeta);
+    if (isMetaOrAltOrShift && (isDigitKey || isDigitCode)) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (hasValue) {
+        const keyNum = e.code.match(/^Digit([1-9])$/)?.[1] || e.key;
+        const effectiveManualSettings = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'manual_therapy');
+        const effectiveShockwaveSettings = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'shockwave');
+
+        const manualShortcuts = effectiveManualSettings?.shortcuts || {};
+        const manualPrescription = Object.keys(manualShortcuts).find((prescription) => manualShortcuts[prescription] === keyNum);
+        const shockwaveShortcuts = effectiveShockwaveSettings?.shortcuts || {};
+        const shockwavePrescription = Object.keys(shockwaveShortcuts).find((prescription) => shockwaveShortcuts[prescription] === keyNum);
+        const targetPrescription = manualPrescription || shockwavePrescription || '';
+
+        if (targetPrescription) {
+          const currentVal = e.target.value;
+          let updatedContent = strip4060FromContent(currentVal);
+          const isManualTherapy = Boolean(manualPrescription);
+          if (isManualTherapy) {
+            const autoTagMatch = targetPrescription.match(/(\d{2,3})/);
+            const doseTag = effectiveManualSettings?.dose_tags?.[targetPrescription] || settings?.manual_therapy_dose_tags?.[targetPrescription] || (autoTagMatch ? autoTagMatch[1] : '');
+            if (doseTag) {
+              const match = updatedContent.match(/^([^/]+)\/(.+?)((\(-?\d*\))|\*+)?$/);
+              if (match) {
+                const chartNumber = match[1];
+                const namePart = match[2].trim();
+                const suffixToken = match[3] || '';
+                updatedContent = `${chartNumber}/${namePart}${doseTag}${suffixToken}`;
+              }
+            }
+          }
+          handleCellSave(w, d, r, c, updatedContent, targetPrescription);
+        }
+      }
+      return;
+    }
+
+    // 2. Ctrl/Cmd + Enter (부위 입력 메뉴 열기)
+    if (e.key === 'Enter' && isMeta) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (hasValue) {
+        const currentVal = e.target.value;
+        handleCellSave(w, d, r, c, currentVal).then(() => {
+          handleOpenBodyPartMenu();
+        });
+      }
+      return;
+    }
+
+    // 3. Ctrl/Cmd + S (치료 완료 토글)
+    if ((e.key === 's' || e.key === 'S') && isMeta) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (hasValue) {
+        const currentVal = e.target.value;
+        const key = cellKey(w, d, r, c);
+        const currentBg = memos[key]?.bg_color;
+        const nextBgColor = currentBg === TREATMENT_COMPLETE_BG ? null : TREATMENT_COMPLETE_BG;
+        handleCellSave(w, d, r, c, currentVal, undefined, nextBgColor);
+      }
+      return;
+    }
+
+    // 4. Ctrl/Cmd + D (예약 취소 토글)
+    if ((e.key === 'd' || e.key === 'D') && isMeta) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (hasValue) {
+        const currentVal = e.target.value;
+        const key = cellKey(w, d, r, c);
+        const currentBg = memos[key]?.bg_color;
+        const nextBgColor = currentBg === TREATMENT_CANCEL_BG ? null : TREATMENT_CANCEL_BG;
+        handleCellSave(w, d, r, c, currentVal, undefined, nextBgColor);
+      }
+      return;
+    }
+
+    // 5. Ctrl/Cmd + B (공휴일/녹색 배경 토글)
+    if ((e.key === 'b' || e.key === 'B') && isMeta) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (hasValue) {
+        const currentVal = e.target.value;
+        const key = cellKey(w, d, r, c);
+        const currentBg = memos[key]?.bg_color;
+        const nextBgColor = currentBg === SCHEDULER_HOLIDAY_BG ? null : SCHEDULER_HOLIDAY_BG;
+        handleCellSave(w, d, r, c, currentVal, undefined, nextBgColor);
+      }
+      return;
+    }
+
     if (['ArrowLeft', 'ArrowRight'].includes(e.key)) {
       e.preventDefault();
       e.stopPropagation();
@@ -1885,7 +1990,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const nc = e.shiftKey ? Math.max(0, c - 1) : Math.min(colCount - 1, c + 1);
       selectSingleCell({ w, d, r, c: nc });
     }
-  }, [baseTimeSlots.length, colCount, selectSingleCell, getAdjacentCell, moveEditInputCaret]);
+  }, [baseTimeSlots.length, colCount, selectSingleCell, getAdjacentCell, moveEditInputCaret, settings, currentYear, currentMonth, handleCellSave, memos, cellKey, handleOpenBodyPartMenu, setEditingCell]);
 
   const handleChartSelectorClose = useCallback((selected) => {
     if (!chartSelector) return;
