@@ -65,7 +65,7 @@ import puppeteer from 'puppeteer';
     const currentUrl = page.url();
     console.log('Current URL is:', currentUrl);
     
-    const screenshotPath = '/Users/joohansol/.gemini/antigravity-ide/brain/e9853654-f148-44ec-af82-8a2ac335334d/actual_ui_screenshot.png';
+    const screenshotPath = '/Users/joohansol/.gemini/antigravity-ide/brain/bdd80cff-b0f2-40c1-a715-8105452dea27/actual_ui_screenshot.png';
     await page.screenshot({ path: screenshotPath, fullPage: false }); // viewport only since menu is local
     
     console.log('Screenshot saved to:', screenshotPath);

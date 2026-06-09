@@ -617,6 +617,8 @@ export function ScheduleProvider({ children }) {
           shortcuts: data.shortcuts || {},
           manual_therapy_shortcuts: data.manual_therapy_shortcuts || {},
           manual_therapy_dose_tags: data.manual_therapy_dose_tags || {},
+          duration_minutes: data.duration_minutes || {},
+          manual_therapy_duration_minutes: data.manual_therapy_duration_minutes || {},
           monthly_settlement_settings: data.monthly_settlement_settings || {}
         };
         shockwaveSettingsRefCache.current = parsed;
@@ -745,6 +747,9 @@ export function ScheduleProvider({ children }) {
         prescription_colors: newSettings.prescription_colors || {},
         shortcuts: newSettings.shortcuts || {},
         manual_therapy_shortcuts: newSettings.manual_therapy_shortcuts || {},
+        manual_therapy_dose_tags: newSettings.manual_therapy_dose_tags || {},
+        duration_minutes: newSettings.duration_minutes || {},
+        manual_therapy_duration_minutes: newSettings.manual_therapy_duration_minutes || {},
         staff_schedule_block_rules: newSettings.staff_schedule_block_rules || {},
         updated_at: nextUpdatedAt
       };
@@ -759,7 +764,7 @@ export function ScheduleProvider({ children }) {
 
       if (error) {
         const message = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
-        const missingOptionalColumn = /monthly_settlement_settings|staff_schedule_block_rules|manual_therapy_dose_tags|shortcuts|manual_therapy_shortcuts|schema cache|column/i.test(message);
+        const missingOptionalColumn = /monthly_settlement_settings|staff_schedule_block_rules|manual_therapy_dose_tags|shortcuts|manual_therapy_shortcuts|duration_minutes|manual_therapy_duration_minutes|schema cache|column/i.test(message);
         if (!missingOptionalColumn) throw error;
 
         console.warn('Optional settings column is missing. Saving compatible global settings only.');
@@ -767,6 +772,9 @@ export function ScheduleProvider({ children }) {
           staff_schedule_block_rules: _staff_schedule_block_rules,
           shortcuts: _shortcuts,
           manual_therapy_shortcuts: _manual_therapy_shortcuts,
+          manual_therapy_dose_tags: _manual_therapy_dose_tags,
+          duration_minutes: _duration_minutes,
+          manual_therapy_duration_minutes: _manual_therapy_duration_minutes,
           ...compatiblePayload
         } = basePayload;
         const { error: retryError } = await supabase

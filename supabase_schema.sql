@@ -167,6 +167,11 @@ CREATE TABLE IF NOT EXISTS public.shockwave_settings (
   manual_therapy_incentive_percentage numeric(5,2) NOT NULL DEFAULT 0,
   frozen_columns integer NOT NULL DEFAULT 6,
   prescription_colors jsonb NOT NULL DEFAULT '{}'::jsonb,
+  shortcuts jsonb NOT NULL DEFAULT '{}'::jsonb,
+  manual_therapy_shortcuts jsonb NOT NULL DEFAULT '{}'::jsonb,
+  manual_therapy_dose_tags jsonb NOT NULL DEFAULT '{}'::jsonb,
+  duration_minutes jsonb NOT NULL DEFAULT '{}'::jsonb,
+  manual_therapy_duration_minutes jsonb NOT NULL DEFAULT '{}'::jsonb,
   staff_schedule_block_rules jsonb NOT NULL DEFAULT '{}'::jsonb,
   monthly_settlement_settings jsonb NOT NULL DEFAULT '{}'::jsonb,
   updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now())
@@ -181,6 +186,11 @@ ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS incentive_percent
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS manual_therapy_incentive_percentage numeric(5,2) DEFAULT 0;
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS frozen_columns integer DEFAULT 6;
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS prescription_colors jsonb DEFAULT '{}'::jsonb;
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS shortcuts jsonb DEFAULT '{}'::jsonb;
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS manual_therapy_shortcuts jsonb DEFAULT '{}'::jsonb;
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS manual_therapy_dose_tags jsonb DEFAULT '{}'::jsonb;
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS duration_minutes jsonb DEFAULT '{}'::jsonb;
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS manual_therapy_duration_minutes jsonb DEFAULT '{}'::jsonb;
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS staff_schedule_block_rules jsonb DEFAULT '{}'::jsonb;
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS monthly_settlement_settings jsonb DEFAULT '{}'::jsonb;
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT timezone('utc'::text, now());
@@ -194,6 +204,11 @@ UPDATE public.shockwave_settings SET incentive_percentage = 7 WHERE incentive_pe
 UPDATE public.shockwave_settings SET manual_therapy_incentive_percentage = 0 WHERE manual_therapy_incentive_percentage IS NULL;
 UPDATE public.shockwave_settings SET frozen_columns = 6 WHERE frozen_columns IS NULL;
 UPDATE public.shockwave_settings SET prescription_colors = '{}'::jsonb WHERE prescription_colors IS NULL;
+UPDATE public.shockwave_settings SET shortcuts = '{}'::jsonb WHERE shortcuts IS NULL;
+UPDATE public.shockwave_settings SET manual_therapy_shortcuts = '{}'::jsonb WHERE manual_therapy_shortcuts IS NULL;
+UPDATE public.shockwave_settings SET manual_therapy_dose_tags = '{}'::jsonb WHERE manual_therapy_dose_tags IS NULL;
+UPDATE public.shockwave_settings SET duration_minutes = '{}'::jsonb WHERE duration_minutes IS NULL;
+UPDATE public.shockwave_settings SET manual_therapy_duration_minutes = '{}'::jsonb WHERE manual_therapy_duration_minutes IS NULL;
 UPDATE public.shockwave_settings SET staff_schedule_block_rules = '{}'::jsonb WHERE staff_schedule_block_rules IS NULL;
 UPDATE public.shockwave_settings SET monthly_settlement_settings = '{}'::jsonb WHERE monthly_settlement_settings IS NULL;
 UPDATE public.shockwave_settings SET updated_at = timezone('utc'::text, now()) WHERE updated_at IS NULL;
@@ -207,6 +222,11 @@ ALTER TABLE public.shockwave_settings ALTER COLUMN incentive_percentage SET DEFA
 ALTER TABLE public.shockwave_settings ALTER COLUMN manual_therapy_incentive_percentage SET DEFAULT 0;
 ALTER TABLE public.shockwave_settings ALTER COLUMN frozen_columns SET DEFAULT 6;
 ALTER TABLE public.shockwave_settings ALTER COLUMN prescription_colors SET DEFAULT '{}'::jsonb;
+ALTER TABLE public.shockwave_settings ALTER COLUMN shortcuts SET DEFAULT '{}'::jsonb;
+ALTER TABLE public.shockwave_settings ALTER COLUMN manual_therapy_shortcuts SET DEFAULT '{}'::jsonb;
+ALTER TABLE public.shockwave_settings ALTER COLUMN manual_therapy_dose_tags SET DEFAULT '{}'::jsonb;
+ALTER TABLE public.shockwave_settings ALTER COLUMN duration_minutes SET DEFAULT '{}'::jsonb;
+ALTER TABLE public.shockwave_settings ALTER COLUMN manual_therapy_duration_minutes SET DEFAULT '{}'::jsonb;
 ALTER TABLE public.shockwave_settings ALTER COLUMN staff_schedule_block_rules SET DEFAULT '{}'::jsonb;
 ALTER TABLE public.shockwave_settings ALTER COLUMN monthly_settlement_settings SET DEFAULT '{}'::jsonb;
 ALTER TABLE public.shockwave_settings ALTER COLUMN updated_at SET DEFAULT timezone('utc'::text, now());
@@ -219,6 +239,11 @@ ALTER TABLE public.shockwave_settings ALTER COLUMN incentive_percentage SET NOT 
 ALTER TABLE public.shockwave_settings ALTER COLUMN manual_therapy_incentive_percentage SET NOT NULL;
 ALTER TABLE public.shockwave_settings ALTER COLUMN frozen_columns SET NOT NULL;
 ALTER TABLE public.shockwave_settings ALTER COLUMN prescription_colors SET NOT NULL;
+ALTER TABLE public.shockwave_settings ALTER COLUMN shortcuts SET NOT NULL;
+ALTER TABLE public.shockwave_settings ALTER COLUMN manual_therapy_shortcuts SET NOT NULL;
+ALTER TABLE public.shockwave_settings ALTER COLUMN manual_therapy_dose_tags SET NOT NULL;
+ALTER TABLE public.shockwave_settings ALTER COLUMN duration_minutes SET NOT NULL;
+ALTER TABLE public.shockwave_settings ALTER COLUMN manual_therapy_duration_minutes SET NOT NULL;
 ALTER TABLE public.shockwave_settings ALTER COLUMN staff_schedule_block_rules SET NOT NULL;
 ALTER TABLE public.shockwave_settings ALTER COLUMN monthly_settlement_settings SET NOT NULL;
 ALTER TABLE public.shockwave_settings ALTER COLUMN updated_at SET NOT NULL;
