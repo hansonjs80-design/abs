@@ -210,7 +210,7 @@
 
 .shockwave-week-floating-actions {
   position: absolute;
-  top: calc((var(--sw-header-row-height, 32px) / 2) - 2px);
+  top: calc(var(--sw-header-row-height, 32px) / 2);
   transform: translateY(-50%);
   z-index: 35;
   display: flex;
@@ -220,7 +220,7 @@
 }
 
 .shockwave-week-floating-actions--right {
-  right: 8px;
+  right: -30px;
 }
 
 .shockwave-week-floating-actions .shockwave-week-today-btn {
