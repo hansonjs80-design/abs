@@ -319,6 +319,14 @@ export default function useSchedulerAutoText({
         []
       )
     );
+    const buildUnknownPatientResult = () => {
+      const result = {
+        text: markUnknownPatient(rawName),
+        mergeSpan: clearPatientMergeSpan(),
+      };
+      if (initialPrescription) result.prescription = initialPrescription;
+      return result;
+    };
     const currentBodyParts = splitBodyParts(memos[memoKey]?.body_part || '');
 
     const previousContent = originalContent !== undefined ? String(originalContent).trim() : String(memos[memoKey]?.content || '').trim();
@@ -534,12 +542,7 @@ export default function useSchedulerAutoText({
 
     if (matches.length === 0) {
       if (searchChart) {
-        return {
-          text: markUnknownPatient(rawName),
-          prescription: initialPrescription || '',
-          bodyPart: '',
-          mergeSpan: clearPatientMergeSpan(),
-        };
+        return buildUnknownPatientResult();
       }
 
       const schedulerResult = await applySchedulerOption();
@@ -548,11 +551,10 @@ export default function useSchedulerAutoText({
       return userRemovedDoseTag
         ? {
             text: rawName,
-            prescription: initialPrescription || '',
             bodyPart: '',
             mergeSpan: clearPatientMergeSpan(),
           }
-        : { text: rawName, prescription: initialPrescription };
+        : buildUnknownPatientResult();
     }
 
     matches.sort((a, b) => {
@@ -714,12 +716,7 @@ export default function useSchedulerAutoText({
       : await pickChartOption(options, rawName);
     if (!selected) return { text: rawName };
     if (hasExplicitSearchName && normalizeNameForMatch(selected.cleanName) !== searchName) {
-      return {
-        text: markUnknownPatient(rawName),
-        prescription: initialPrescription || '',
-        bodyPart: '',
-        mergeSpan: clearPatientMergeSpan(),
-      };
+      return buildUnknownPatientResult();
     }
 
     const effectiveVisitCount = selected.preferredNextVisit || selected.nextVisit;
