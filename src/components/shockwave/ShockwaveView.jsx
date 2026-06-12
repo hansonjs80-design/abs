@@ -2144,17 +2144,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         >
           {weekIdx === 0 && (
             <>
-              <div className="shockwave-week-floating-actions shockwave-week-floating-actions--left">
-                <button
-                  type="button"
-                  className="shockwave-row-height-handle"
-                  title={`행 높이 조절 (${rowHeight}px)`}
-                  aria-label="시간 행 높이 조절"
-                  onMouseDown={startRowResize}
-                >
-                  ↕
-                </button>
-              </div>
               {canManageSchedulerSettings && (
                 <div className="shockwave-week-floating-actions shockwave-week-floating-actions--right">
                   <button
@@ -2372,6 +2361,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               );
             })}
           </div>
+          <div
+            className="shockwave-week-row-resize-handle"
+            title={`행 높이 조절 (${rowHeight}px)`}
+            aria-label={`${weekIdx + 1}주차 시간 행 높이 조절`}
+            onMouseDown={startRowResize}
+            onTouchStart={startRowResize}
+          />
         </div>
         );
       }), [

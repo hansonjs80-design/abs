@@ -1279,7 +1279,7 @@ export default function MonthlyTherapistConfig({
                 <div className="monthly-text-style-size-row">
                   <input
                     type="range"
-                    min={15}
+                    min={10}
                     max={80}
                     step={1}
                     value={schedulerTextSettings.header_height ?? 32}
@@ -1291,7 +1291,7 @@ export default function MonthlyTherapistConfig({
                   <input
                     type="number"
                     className="monthly-operating-input monthly-text-style-number"
-                    min={15}
+                    min={10}
                     max={80}
                     step={1}
                     value={schedulerTextSettings.header_height ?? 32}
@@ -1358,7 +1358,7 @@ export default function MonthlyTherapistConfig({
                 <div className="monthly-text-style-size-row">
                   <input
                     type="range"
-                    min={15}
+                    min={10}
                     max={80}
                     step={1}
                     value={schedulerTextSettings.therapist_height ?? 29}
@@ -1370,7 +1370,7 @@ export default function MonthlyTherapistConfig({
                   <input
                     type="number"
                     className="monthly-operating-input monthly-text-style-number"
-                    min={15}
+                    min={10}
                     max={80}
                     step={1}
                     value={schedulerTextSettings.therapist_height ?? 29}

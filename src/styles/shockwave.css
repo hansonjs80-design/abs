@@ -219,16 +219,11 @@
   pointer-events: none;
 }
 
-.shockwave-week-floating-actions--left {
-  left: 50px;
-}
-
 .shockwave-week-floating-actions--right {
   right: 8px;
 }
 
-.shockwave-week-floating-actions .shockwave-week-today-btn,
-.shockwave-week-floating-actions .shockwave-row-height-handle {
+.shockwave-week-floating-actions .shockwave-week-today-btn {
   pointer-events: auto;
 }
 
@@ -284,18 +279,17 @@
 
 .sw-week-header-cell,
 .sw-day-header-cell {
-  padding: 0;
   text-align: center;
   font-size: var(--sw-header-font-size, 16px);
   font-weight: var(--sw-header-font-weight, 700);
-  line-height: 1.43;
+  line-height: 1;
   background: var(--bg-tertiary);
   transition: background var(--transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
   min-width: 0;
-  padding: 1px 3px;
+  padding: 0 2px;
   overflow: hidden;
   text-overflow: clip;
   white-space: nowrap;
@@ -349,11 +343,11 @@
 .sw-therapist-header.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
 
 .sw-therapist-name {
-  padding: 1px 3px;
+  padding: 0 2px;
   text-align: center;
   font-size: var(--sw-therapist-font-size, 14px);
   font-weight: var(--sw-therapist-font-weight, 700);
-  line-height: 1.43;
+  line-height: 1;
   color: #000;
   border-right: 1px solid #b7b7b7;
   background: var(--bg-secondary);
@@ -399,9 +393,9 @@
 .sw-day-resize-handle {
   position: absolute;
   top: -2px;
-  right: -4px;
+  right: -2.5px;
   height: calc(100% + 4px);
-  width: 8px;
+  width: 5px;
   cursor: col-resize;
   z-index: 40;
   background: transparent;
@@ -409,7 +403,38 @@
 
 .sw-day-resize-handle:hover,
 .sw-day-resize-handle:active {
-  background: rgba(234, 67, 53, 0.5);
+  background: rgba(234, 67, 53, 0.45);
+  box-shadow: 0 0 0 1px rgba(234, 67, 53, 0.12);
+}
+
+.shockwave-week-row-resize-handle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -8px;
+  height: 16px;
+  cursor: row-resize;
+  z-index: 45;
+  background: transparent;
+  touch-action: none;
+}
+
+.shockwave-week-row-resize-handle::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 7px;
+  height: 2px;
+  border-radius: 999px;
+  background: transparent;
+  transition: background-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.shockwave-week-row-resize-handle:hover::before,
+.shockwave-week-row-resize-handle:active::before {
+  background: rgba(37, 99, 235, 0.55);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 /* 스케줄 행 */
@@ -753,31 +778,6 @@
   background: transparent !important;
   color: #000;
   white-space: pre !important;
-}
-
-.shockwave-row-height-handle {
-  width: 24px;
-  height: calc(var(--sw-header-row-height, 32px) - 8px);
-  min-height: 18px;
-  max-height: 26px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  background: #ffffff;
-  color: #334155;
-  font-size: 0.8rem;
-  font-weight: 900;
-  line-height: 1;
-  cursor: ns-resize;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
-  transition: background var(--transition-fast), border-color var(--transition-fast), height var(--transition-fast);
-}
-
-.shockwave-row-height-handle:hover {
-  background: #eff6ff;
-  border-color: #93c5fd;
 }
 
 /* 시간 레이블 (좌측 첫 번째 열) */

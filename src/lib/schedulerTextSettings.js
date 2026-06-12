@@ -33,7 +33,7 @@ function normalizeFontWeight(value, defaultVal = 700) {
 function normalizeHeaderHeight(value, defaultVal) {
   const nextValue = Number(value);
   if (!Number.isFinite(nextValue)) return defaultVal;
-  return Math.min(80, Math.max(15, Math.round(nextValue)));
+  return Math.min(80, Math.max(10, Math.round(nextValue)));
 }
 
 export const SCHEDULER_TEXT_SETTINGS_KEY = 'shockwave-scheduler-text-settings';

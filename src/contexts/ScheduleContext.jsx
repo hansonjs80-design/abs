@@ -52,6 +52,7 @@ export function ScheduleProvider({ children }) {
   const loadingCountRef = useRef(0);
   const shockwaveWriteQueueRef = useRef(new Map());
   const loadCacheRef = useRef({ staffMemos: null, shockwaveMemos: null, holidays: null });
+  const realtimeRefreshTimerRef = useRef(null);
   const staffMemosRef = useRef(staffMemos);
   const staffMemoSaveRequestRef = useRef(new Map());
   const staffMemosLoadRequestRef = useRef(0);
@@ -300,7 +301,7 @@ export function ScheduleProvider({ children }) {
   // 직원 메모 로드 (캐시 키로 중복 방지)
   const loadStaffMemos = useCallback(async (year, month, options = {}) => {
     const cacheKey = `${year}-${month}-${options.includeAdjacentMonths ? 'adj' : 'single'}`;
-    if (loadCacheRef.current.staffMemos === cacheKey) return staffMemosRef.current;
+    if (!options.force && loadCacheRef.current.staffMemos === cacheKey) return staffMemosRef.current;
     loadCacheRef.current.staffMemos = cacheKey;
     const requestId = ++staffMemosLoadRequestRef.current;
 
@@ -848,6 +849,64 @@ export function ScheduleProvider({ children }) {
     }
   }, [waitForShockwaveWrites, shouldKeepShockwaveMemo, beginLoading, endLoading]);
 
+  const refreshCurrentScheduleFromServer = useCallback((reason = 'manual') => {
+    if (realtimeRefreshTimerRef.current) {
+      clearTimeout(realtimeRefreshTimerRef.current);
+    }
+
+    realtimeRefreshTimerRef.current = setTimeout(() => {
+      realtimeRefreshTimerRef.current = null;
+      const { year, month } = currentDateRef.current;
+      loadCacheRef.current.staffMemos = null;
+      loadCacheRef.current.shockwaveMemos = null;
+
+      Promise.allSettled([
+        loadShockwaveMemos(year, month, { force: true }),
+        loadStaffMemos(year, month, { force: true, includeAdjacentMonths: true }),
+      ]).then((results) => {
+        results.forEach((result, index) => {
+          if (result.status === 'rejected') {
+            const target = index === 0 ? 'shockwave_schedules' : 'staff_schedules';
+            console.error(`Failed to refresh ${target} after realtime ${reason}:`, result.reason);
+          }
+        });
+      });
+    }, 250);
+  }, [loadShockwaveMemos, loadStaffMemos]);
+
+  useEffect(() => () => {
+    if (realtimeRefreshTimerRef.current) {
+      clearTimeout(realtimeRefreshTimerRef.current);
+      realtimeRefreshTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') {
+        refreshCurrentScheduleFromServer('visibility');
+      }
+    };
+    const refreshWhenOnline = () => {
+      refreshCurrentScheduleFromServer('online');
+    };
+    const refreshWhenFocused = () => {
+      refreshCurrentScheduleFromServer('focus');
+    };
+
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    window.addEventListener('online', refreshWhenOnline);
+    window.addEventListener('focus', refreshWhenFocused);
+
+    return () => {
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+      window.removeEventListener('online', refreshWhenOnline);
+      window.removeEventListener('focus', refreshWhenFocused);
+    };
+  }, [refreshCurrentScheduleFromServer]);
+
   // 충격파 스케줄 저장
   const saveShockwaveMemo = useCallback(async (year, month, weekIndex, dayIndex, rowIndex, colIndex, content, bg_color, merge_span, prescription, body_part) => {
     const key = `${weekIndex}-${dayIndex}-${rowIndex}-${colIndex}`;
@@ -1349,7 +1408,7 @@ export function ScheduleProvider({ children }) {
 
   // Real-time synchronization
   useEffect(() => {
-    const channel = supabase.channel('schedule-realtime')
+    const channel = supabase.channel(`schedule-realtime-${currentYear}-${currentMonth}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'shockwave_schedules' },
@@ -1401,12 +1460,19 @@ export function ScheduleProvider({ children }) {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          refreshCurrentScheduleFromServer('subscribed');
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn(`Schedule realtime ${status}; refreshing current month from database.`);
+          refreshCurrentScheduleFromServer(status.toLowerCase());
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentYear, currentMonth, shouldKeepShockwaveMemo]);
+  }, [currentYear, currentMonth, shouldKeepShockwaveMemo, refreshCurrentScheduleFromServer]);
 
   return (
     <ScheduleContext.Provider value={{
