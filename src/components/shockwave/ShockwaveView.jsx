@@ -8,7 +8,13 @@ import { buildBlankScheduleCleanupPayload, sanitizeBlankScheduleCellData } from 
 import { isTreatmentCancelBg, isTreatmentCompleteBg } from '../../lib/scheduleStatusUtils';
 import { getManualTherapyRowSpan } from '../../lib/manualTherapyMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
-import { get4060PrescriptionFromContent, has4060Pattern, normalize4060StarOrder, strip4060FromContent } from '../../lib/schedulerContentFormat';
+import {
+  applyDoseTagToContent,
+  get4060PrescriptionFromContent,
+  has4060Pattern,
+  normalize4060StarOrder,
+  strip4060FromContent,
+} from '../../lib/schedulerContentFormat';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
 import { useToast } from '../common/Toast';
@@ -1916,13 +1922,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
             const autoTagMatch = targetPrescription.match(/(\d{2,3})/);
             const doseTag = effectiveManualSettings?.dose_tags?.[targetPrescription] || settings?.manual_therapy_dose_tags?.[targetPrescription] || (autoTagMatch ? autoTagMatch[1] : '');
             if (doseTag) {
-              const match = updatedContent.match(/^([^/]+)\/(.+?)((\(-?\d*\))|\*+)?$/);
-              if (match) {
-                const chartNumber = match[1];
-                const namePart = match[2].trim();
-                const suffixToken = match[3] || '';
-                updatedContent = `${chartNumber}/${namePart}${doseTag}${suffixToken}`;
-              }
+              updatedContent = applyDoseTagToContent(currentVal, doseTag);
             }
           }
           handleCellSave(w, d, r, c, updatedContent, targetPrescription);
@@ -2418,6 +2418,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
             const manualTherapyPrescriptions = Array.isArray(settings?.manual_therapy_prescriptions)
               ? settings.manual_therapy_prescriptions.filter((pres) => pres && !shockwavePrescriptions.includes(pres))
               : [];
+            const effectiveManualSettings = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'manual_therapy');
+            const manualDoseTags = {
+              ...(settings?.manual_therapy_dose_tags || {}),
+              ...(effectiveManualSettings?.dose_tags || {}),
+            };
             const currentPrescriptionClass = shockwavePrescriptions.includes(currentPrescription)
               ? ' is-shockwave'
               : manualTherapyPrescriptions.includes(currentPrescription)
@@ -2687,7 +2692,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 value={manualTherapyPrescriptions.includes(currentPrescription) ? currentPrescription : ''}
                                 onChange={(e) => {
                                   e.stopPropagation();
-                                  handleContextAction({ type: 'prescription', value: e.target.value || null });
+                                  const prescription = e.target.value || null;
+                                  const hasDoseTag = prescription && Object.prototype.hasOwnProperty.call(manualDoseTags, prescription);
+                                  const autoDoseTag = prescription?.match(/(\d{2,3})/)?.[1] || '';
+                                  handleContextAction({
+                                    type: 'prescription',
+                                    value: prescription,
+                                    doseTag: hasDoseTag ? manualDoseTags[prescription] : autoDoseTag,
+                                  });
                                 }}
                                 onMouseDown={e => e.stopPropagation()}
                                 onClick={e => e.stopPropagation()}

@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { buildManualTherapyUnmergePayload } from '../../lib/manualTherapyMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
-import { has4060Pattern, normalize4060StarOrder, strip4060FromContent } from '../../lib/schedulerContentFormat';
+import {
+  applyDoseTagToContent,
+  extractDoseTagFromPrescription,
+  has4060Pattern,
+  strip4060FromContent,
+} from '../../lib/schedulerContentFormat';
 import {
   addBodyPartToMap,
   applyVisitCountToSchedulerContent,
@@ -180,17 +185,11 @@ export default function useScheduleContextMenuActions({
         const memo = getMemoForAction(key);
         let updatedContent = getStableMemoContent(key, memo);
         const prescriptionValue = action.value || '';
-        const doseNumber = prescriptionValue.match(/^(40|60)분$/)?.[1];
+        const hasActionDoseTag = Object.prototype.hasOwnProperty.call(action, 'doseTag');
+        const doseNumber = hasActionDoseTag ? action.doseTag : extractDoseTagFromPrescription(prescriptionValue);
 
         if (doseNumber) {
-          updatedContent = strip4060FromContent(updatedContent);
-          const parenMatch = updatedContent.match(/^(.+?)(\(\d+\).*)$/);
-          if (parenMatch) {
-            updatedContent = `${parenMatch[1]}${doseNumber}${parenMatch[2]}`;
-          } else if (updatedContent && !/\(\d+\)/.test(updatedContent)) {
-            updatedContent = `${updatedContent}${doseNumber}`;
-          }
-          updatedContent = normalize4060StarOrder(updatedContent);
+          updatedContent = applyDoseTagToContent(updatedContent, doseNumber);
         } else if (action.value && has4060Pattern(updatedContent)) {
           updatedContent = strip4060FromContent(updatedContent);
         } else if (!action.value) {

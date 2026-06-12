@@ -12,6 +12,7 @@ import {
 } from '../schedulerCellTextUtils.js';
 import { convertKoreanQwertyMistypeToEnglish } from '../keyboardLayoutUtils.js';
 import { toProperCase } from '../bodyPartFormatUtils.js';
+import { applyDoseTagToContent } from '../schedulerContentFormat.js';
 
 describe('scheduler cell patient parsing', () => {
   it('parses chart number and patient name while ignoring numeric visit suffixes', () => {
@@ -68,6 +69,19 @@ describe('scheduler visit suffix normalization', () => {
     assert.equal(stepVisitShortcutInputValue('2', -1), '1');
     assert.equal(stepVisitShortcutInputValue('1', -1), '*');
     assert.equal(stepVisitShortcutInputValue('*', -1), '-');
+  });
+});
+
+describe('manual therapy dose tag formatting', () => {
+  it('adds a dose tag before new-patient and visit suffixes', () => {
+    assert.equal(applyDoseTagToContent('/김지인*', '40'), '/김지인40*');
+    assert.equal(applyDoseTagToContent('234/김지인(2)', '40'), '234/김지인40(2)');
+    assert.equal(applyDoseTagToContent('김지인', '40'), '김지인40');
+  });
+
+  it('replaces an existing dose tag without removing the visit marker', () => {
+    assert.equal(applyDoseTagToContent('/김지인60*', '40'), '/김지인40*');
+    assert.equal(applyDoseTagToContent('234/김지인60(2)', '40'), '234/김지인40(2)');
   });
 });
 

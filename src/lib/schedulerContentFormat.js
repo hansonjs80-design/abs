@@ -29,6 +29,21 @@ export function strip4060FromContent(text) {
   return normalize4060StarOrder(s).replace(/([가-힣a-zA-Z])\s*(\d{2,3})(\**)/, '$1$3');
 }
 
+export function applyDoseTagToContent(text, doseTag) {
+  const tag = String(doseTag || '').trim();
+  const stripped = strip4060FromContent(text);
+  if (!tag || !stripped) return stripped;
+
+  const suffixMatch = String(stripped).trim().match(/(\((-|\d+)\)|\*)$/);
+  const suffix = suffixMatch ? suffixMatch[0] : '';
+  const base = suffix
+    ? String(stripped).trim().slice(0, -suffix.length).trim()
+    : String(stripped).trim();
+
+  if (!base) return normalize4060StarOrder(`${stripped}${tag}`);
+  return normalize4060StarOrder(`${base}${tag}${suffix}`);
+}
+
 /**
  * Extract the numeric dose tag from a prescription name.
  * e.g. "30분" → "30", "40분" → "40", "프리미엄" → ""
