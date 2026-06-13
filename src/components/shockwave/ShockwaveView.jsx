@@ -1778,6 +1778,97 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setActiveContextSubmenu('body');
   }, [selectedCell, cellKey, effectiveMemos, handleCellContextMenu, setActiveContextSubmenu, setContextMenu, getEffectiveMergeSpan]);
 
+  const positionTooltip = useCallback((clientX, clientY) => {
+    const tooltipEl = tooltipRef.current;
+    if (!tooltipEl) return;
+
+    const offset = 14;
+    const edgePadding = 8;
+    const { width, height } = tooltipEl.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let left = clientX + offset;
+    let top = clientY + offset;
+
+    // 부위 팝업(contextMenu)이 열려있으면 툴팁을 커서 위쪽에 배치하여 겹침 방지
+    if (contextMenu) {
+      top = clientY - height - offset;
+    }
+
+    if (left + width + edgePadding > viewportWidth) {
+      left = clientX - width - offset;
+    }
+    if (top + height + edgePadding > viewportHeight) {
+      top = clientY - height - offset;
+    }
+    if (top < edgePadding) {
+      top = edgePadding;
+    }
+
+    left = Math.min(Math.max(edgePadding, left), Math.max(edgePadding, viewportWidth - width - edgePadding));
+    top = Math.min(Math.max(edgePadding, top), Math.max(edgePadding, viewportHeight - height - edgePadding));
+
+    tooltipEl.style.left = `${left}px`;
+    tooltipEl.style.top = `${top}px`;
+    tooltipEl.style.opacity = hoverCell ? '1' : '0';
+  }, [hoverCell, contextMenu]);
+
+  const handleKeyboardSelectionMoved = useCallback((cell, movedKeys = []) => {
+    if (!cell) return;
+    const dayInfo = weeks?.[cell.w]?.[cell.d];
+    if (!dayInfo) return;
+
+    const daySlots = getTimeSlotsForDay(dayInfo);
+    const slotInfo = daySlots.find((slot) => slot.idx === cell.r);
+    if (!slotInfo) return;
+
+    const dateKey = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}`;
+    const therapistName = getTherapistNameForDate(cell.c, dayInfo.day) || '';
+    const staffBlockRule = getStaffScheduleBlockForCell(dateKey, therapistName, slotInfo.time);
+
+    const movedCells = movedKeys
+      .map((key) => key.split('-').map(Number))
+      .filter((parts) => parts.length === 4 && parts.every(Number.isFinite))
+      .map(([w, d, r, c]) => ({ w, d, r, c }))
+      .filter((item) => item.w === cell.w && item.d === cell.d);
+    const selectionHoverInfo = movedCells.length > 1
+      ? {
+          w: cell.w,
+          d: cell.d,
+          minRow: Math.min(...movedCells.map((item) => item.r)),
+          maxRow: Math.max(...movedCells.map((item) => item.r)),
+          minCol: Math.min(...movedCells.map((item) => item.c)),
+          maxCol: Math.max(...movedCells.map((item) => item.c)),
+        }
+      : null;
+
+    const nextHoverCell = {
+      weekIdx: cell.w,
+      dayIdx: cell.d,
+      rowIdx: cell.r,
+      colIdx: cell.c,
+      staffBlockRule,
+      slotInfo,
+      selectionInfo: selectionHoverInfo,
+      isKeyboardMove: true,
+    };
+    setHoverCell(nextHoverCell);
+
+    window.requestAnimationFrame(() => {
+      const targetEl = document.getElementById(`cell-${cellKey(cell.w, cell.d, cell.r, cell.c)}`);
+      if (!targetEl) {
+        positionTooltip(tooltipMousePosRef.current.x, tooltipMousePosRef.current.y);
+        return;
+      }
+      const rect = targetEl.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+      tooltipMousePosRef.current = { x, y };
+      positionTooltip(x, y);
+    });
+  }, [cellKey, getStaffScheduleBlockForCell, getTherapistNameForDate, getTimeSlotsForDay, positionTooltip, weeks]);
+
   const handleKeyDown = useScheduleKeyboardActions({
     contextMenu,
     clipboardSource,
@@ -1827,6 +1918,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setContextMenu,
     getDefaultReservationTime,
     handleOpenBodyPartMenu,
+    onSelectionMoved: handleKeyboardSelectionMoved,
   });
 
   useScheduleGlobalEvents({
@@ -2026,42 +2118,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     chartSelector.resolve(selected || null);
     setChartSelector(null);
   }, [chartSelector]);
-
-  const positionTooltip = useCallback((clientX, clientY) => {
-    const tooltipEl = tooltipRef.current;
-    if (!tooltipEl) return;
-
-    const offset = 14;
-    const edgePadding = 8;
-    const { width, height } = tooltipEl.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    let left = clientX + offset;
-    let top = clientY + offset;
-
-    // 부위 팝업(contextMenu)이 열려있으면 툴팁을 커서 위쪽에 배치하여 겹침 방지
-    if (contextMenu) {
-      top = clientY - height - offset;
-    }
-
-    if (left + width + edgePadding > viewportWidth) {
-      left = clientX - width - offset;
-    }
-    if (top + height + edgePadding > viewportHeight) {
-      top = clientY - height - offset;
-    }
-    if (top < edgePadding) {
-      top = edgePadding;
-    }
-
-    left = Math.min(Math.max(edgePadding, left), Math.max(edgePadding, viewportWidth - width - edgePadding));
-    top = Math.min(Math.max(edgePadding, top), Math.max(edgePadding, viewportHeight - height - edgePadding));
-
-    tooltipEl.style.left = `${left}px`;
-    tooltipEl.style.top = `${top}px`;
-    tooltipEl.style.opacity = hoverCell ? '1' : '0';
-  }, [hoverCell, contextMenu]);
 
   useEffect(() => {
     if (!hoverCell || !tooltipRef.current) return;

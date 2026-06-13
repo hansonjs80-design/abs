@@ -74,6 +74,7 @@ export default function useScheduleKeyboardActions({
   shockwaveSettings,
   getDefaultReservationTime,
   handleOpenBodyPartMenu,
+  onSelectionMoved,
 }) {
   // ── refs로 최신 값 추적 (연속 키 입력 시 stale closure 방지) ──
   const baseMemosRef = useRef(memos);
@@ -584,6 +585,7 @@ export default function useScheduleKeyboardActions({
       const movedKeySet = new Set(result.movedKeys);
       selectedKeysRef.current = movedKeySet;
       setSelectedKeys(movedKeySet);
+      onSelectionMoved?.({ w, d, r, c }, result.movedKeys);
     }
 
     schedulePendingMoveSave(result.payload, result.oldMemos);
@@ -599,6 +601,7 @@ export default function useScheduleKeyboardActions({
     selectedCell,
     setRangeEnd,
     setSelectedKeys,
+    onSelectionMoved,
     getLatestMemosWithPendingMoves,
   ]);
 
