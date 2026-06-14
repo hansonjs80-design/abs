@@ -144,56 +144,126 @@ export function buildMoveScheduleSelectionPayload({
     return { ok: false, reason: 'empty', oldMemos: [], payload: [], movedKeys: [] };
   }
 
-  const moveItems = [];
-  const sourceFootprintKeys = new Set();
+  let currentDelta = rowDelta;
+  let moveItems = [];
+  let sourceFootprintKeys = new Set();
+  const maxAttempts = rowCount + 2;
+  let attempt = 0;
+  let success = false;
 
-  for (const key of masterKeys) {
-    const memo = memos?.[key] || {};
-    const content = Object.prototype.hasOwnProperty.call(pendingDisplayValues, key)
-      ? String(pendingDisplayValues[key] || '')
-      : (memo.content || '');
-    const span = normalizeMasterSpan(getEffectiveScheduleMergeSpan({
-      key,
-      memos,
-      pendingMergeSpans,
-    }));
-    const { w, d, r, c } = parseScheduleCellKey(key);
-    const targetRow = r + rowDelta;
+  while (attempt < maxAttempts) {
+    attempt += 1;
+    moveItems = [];
+    sourceFootprintKeys = new Set();
+    let boundsError = false;
 
-    if (targetRow < 0 || targetRow + span.rowSpan > rowCount) {
+    for (const key of masterKeys) {
+      const memo = memos?.[key] || {};
+      const content = Object.prototype.hasOwnProperty.call(pendingDisplayValues, key)
+        ? String(pendingDisplayValues[key] || '')
+        : (memo.content || '');
+      const span = normalizeMasterSpan(getEffectiveScheduleMergeSpan({
+        key,
+        memos,
+        pendingMergeSpans,
+      }));
+      const { w, d, r, c } = parseScheduleCellKey(key);
+      const targetRow = r + currentDelta;
+
+      if (targetRow < 0 || targetRow + span.rowSpan > rowCount) {
+        boundsError = true;
+        break;
+      }
+
+      addFootprintKeys({ key, rowSpan: span.rowSpan, colSpan: span.colSpan, targetSet: sourceFootprintKeys });
+      moveItems.push({
+        key,
+        targetKey: getScheduleCellKey(w, d, targetRow, c),
+        memo,
+        content,
+        span,
+        r,
+      });
+    }
+
+    if (boundsError) {
       return { ok: false, reason: 'bounds', oldMemos: [], payload: [], movedKeys: [] };
     }
 
-    addFootprintKeys({ key, rowSpan: span.rowSpan, colSpan: span.colSpan, targetSet: sourceFootprintKeys });
-    moveItems.push({
-      key,
-      targetKey: getScheduleCellKey(w, d, targetRow, c),
-      memo,
-      content,
-      span,
-    });
-  }
+    const occupiedConflictKeys = [];
+    for (const item of moveItems) {
+      const destinationKeys = new Set();
+      addFootprintKeys({
+        key: item.targetKey,
+        rowSpan: item.span.rowSpan,
+        colSpan: item.span.colSpan,
+        targetSet: destinationKeys,
+      });
 
-  for (const item of moveItems) {
-    const destinationKeys = new Set();
-    addFootprintKeys({
-      key: item.targetKey,
-      rowSpan: item.span.rowSpan,
-      colSpan: item.span.colSpan,
-      targetSet: destinationKeys,
-    });
-
-    for (const key of destinationKeys) {
-      if (isDestinationOccupied({
-        key,
-        memos,
-        pendingDisplayValues,
-        pendingMergeSpans,
-        sourceFootprintKeys,
-      })) {
-        return { ok: false, reason: 'occupied', oldMemos: [], payload: [], movedKeys: [] };
+      for (const key of destinationKeys) {
+        if (isDestinationOccupied({
+          key,
+          memos,
+          pendingDisplayValues,
+          pendingMergeSpans,
+          sourceFootprintKeys,
+        })) {
+          occupiedConflictKeys.push({ item, conflictKey: key });
+        }
       }
     }
+
+    if (occupiedConflictKeys.length === 0) {
+      success = true;
+      break;
+    }
+
+    const nextDeltas = occupiedConflictKeys.map(({ item, conflictKey }) => {
+      const occMergeSpan = getEffectiveScheduleMergeSpan({
+        key: conflictKey,
+        memos,
+        pendingMergeSpans,
+      });
+      let masterKey = conflictKey;
+      if (occMergeSpan?.mergedInto) {
+        masterKey = occMergeSpan.mergedInto;
+      }
+      const occMasterMergeSpan = getEffectiveScheduleMergeSpan({
+        key: masterKey,
+        memos,
+        pendingMergeSpans,
+      }) || DEFAULT_MERGE_SPAN;
+      const { r: r_master } = parseScheduleCellKey(masterKey);
+      const occRowSpan = Math.max(1, occMasterMergeSpan.rowSpan || 1);
+
+      const r_source = item.r;
+      const sourceRowSpan = item.span.rowSpan;
+
+      if (rowDelta > 0) {
+        return (r_master + occRowSpan) - r_source;
+      } else {
+        return r_master - sourceRowSpan - r_source;
+      }
+    });
+
+    let nextDelta;
+    if (rowDelta > 0) {
+      nextDelta = Math.max(...nextDeltas);
+      if (nextDelta <= currentDelta) {
+        nextDelta = currentDelta + 1;
+      }
+    } else {
+      nextDelta = Math.min(...nextDeltas);
+      if (nextDelta >= currentDelta) {
+        nextDelta = currentDelta - 1;
+      }
+    }
+
+    currentDelta = nextDelta;
+  }
+
+  if (!success) {
+    return { ok: false, reason: 'occupied', oldMemos: [], payload: [], movedKeys: [] };
   }
 
   const oldMemoKeys = new Set(sourceFootprintKeys);

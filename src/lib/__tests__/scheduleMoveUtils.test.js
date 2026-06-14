@@ -55,7 +55,7 @@ describe('schedule move payload helpers', () => {
     assert.equal(moved.body_part, 'Lumbar');
   });
 
-  it('blocks moves when the destination contains another reservation', () => {
+  it('skips moves when the destination contains another reservation', () => {
     const result = buildMoveScheduleSelectionPayload({
       ...defaultArgs,
       selectedKeys: new Set(['0-0-2-1']),
@@ -66,10 +66,51 @@ describe('schedule move payload helpers', () => {
       rowDelta: 1,
     });
 
-    assert.equal(result.ok, false);
-    assert.equal(result.reason, 'occupied');
-    assert.equal(result.payload.length, 0);
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.movedKeys, ['0-0-4-1']);
   });
+
+  it('blocks moves due to bounds when skipped destination exceeds rowCount', () => {
+    const result = buildMoveScheduleSelectionPayload({
+      currentYear: 2026,
+      currentMonth: 5,
+      rowCount: 4, // 0, 1, 2, 3 까지만 존재
+      selectedKeys: new Set(['0-0-2-1']),
+      memos: {
+        '0-0-2-1': { content: 'A' },
+        '0-0-3-1': { content: 'B' },
+      },
+      rowDelta: 1,
+    });
+
+    assert.equal(result.ok, false);
+    assert.equal(result.reason, 'bounds');
+  });
+
+  it('skips over a merged cell by its rowSpan size', () => {
+    const result = buildMoveScheduleSelectionPayload({
+      ...defaultArgs,
+      selectedKeys: new Set(['0-0-2-1']),
+      memos: {
+        '0-0-2-1': { content: 'A' },
+        // row 3, 4가 병합된 마스터 셀 B
+        '0-0-3-1': {
+          content: 'B',
+          merge_span: { rowSpan: 2, colSpan: 1, mergedInto: null }
+        },
+        '0-0-4-1': {
+          content: '',
+          merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-0-3-1' }
+        }
+      },
+      rowDelta: 1,
+    });
+
+    // B의 병합 범위(row 3, 4)를 모두 건너뛰고 row 5로 가야 함
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.movedKeys, ['0-0-5-1']);
+  });
+
 
   it('allows moves into a cell that was intentionally cleared by a prior operation', () => {
     const result = buildMoveScheduleSelectionPayload({
@@ -167,7 +208,7 @@ describe('schedule move payload helpers', () => {
     assert.deepEqual(result.movedKeys, ['0-0-3-1']);
   });
 
-  it('still blocks moves into a valid child cell from another merge', () => {
+  it('skips over a merged child cell from another merge', () => {
     const result = buildMoveScheduleSelectionPayload({
       ...defaultArgs,
       selectedKeys: new Set(['0-0-2-1']),
@@ -182,9 +223,10 @@ describe('schedule move payload helpers', () => {
       rowDelta: 1,
     });
 
-    assert.equal(result.ok, false);
-    assert.equal(result.reason, 'occupied');
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.movedKeys, ['0-0-4-1']);
   });
+
 
   it('treats an intentional clear marker as the visible empty state even if stale fields remain', () => {
     const result = buildMoveScheduleSelectionPayload({

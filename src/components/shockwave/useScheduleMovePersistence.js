@@ -21,6 +21,7 @@ export default function useScheduleMovePersistence({
     payloadByKey: new Map(),
     rollbackMemos: [],
     requestId: 0,
+    activePromise: Promise.resolve(),
   });
 
   // editingCell을 ref로 추적 – setTimeout 콜백에서 항상 최신 값을 읽기 위함
@@ -97,58 +98,39 @@ export default function useScheduleMovePersistence({
     const payload = Array.from(state.payloadByKey.values());
     if (payload.length === 0) return Promise.resolve(true);
 
-    state.payloadByKey = new Map();
+    const currentPayload = payload;
     const rollbackMemos = state.rollbackMemos || [];
     const requestId = state.requestId;
 
-    return Promise.resolve(saveBulkRef.current?.(payload)).then((success) => {
-      if (success) {
-        if (moveSaveStateRef.current.requestId === requestId && moveSaveStateRef.current.payloadByKey.size === 0) {
-          // DB 저장 완료 후 pending display를 정리할 때,
-          // 사용자가 직접 수정한 pending 값이 남아있는 셀은 건드리지 않음
-          const latestPending = pendingDisplayValuesRef?.current || pendingRef.current || {};
-          
-          // 콜백 실행 시점에 최신 editingCell 값을 읽어옴 – 비동기 대기 동안에 사용자가 수정을 시작했을 수 있음
-          const currentEditingCell = editingCellRef.current;
-          const effectiveExcludeKey = excludeKey || currentEditingCell;
+    state.payloadByKey = new Map();
+    state.rollbackMemos = [];
 
-          const clearPayload = payload.filter((item) => {
-            const key = getPayloadKey(item);
-            // 1) 현재 편집 중인 셀은 무조건 제외
-            if (key === effectiveExcludeKey) return false;
-            // 2) payload의 content와 현재 pending 값이 다르면 사용자가 수정한 것 → 건드리지 않음
-            if (key in latestPending) {
-              const pendingVal = String(latestPending[key] ?? '');
-              const payloadVal = String(item.content ?? '');
-              if (pendingVal !== payloadVal) return false;
-            }
-            return true;
-          });
-          if (clearPayload.length > 0) {
-            clearCellDisplayRef.current?.(clearPayload);
-          }
+    state.activePromise = state.activePromise.then(() => {
+      return Promise.resolve(saveBulkRef.current?.(currentPayload)).then((success) => {
+        if (success) {
+          // DB 저장 완료 후 즉각적인 clearCellDisplay 호출을 생략하여,
+          // memos state가 DB 상태를 반영할 때까지 pendingDisplayValues가 유지되도록 함
+          // (useScheduleImmediateState.js의 memos 감시 useEffect에서 최종 정리됨)
+          return true;
         }
-        return true;
-      }
 
-      if (moveSaveStateRef.current.requestId === requestId) {
-        applyCellDisplayRef.current?.(rollbackMemos);
-        applyMergeSpanRef.current?.(rollbackMemos);
-        applyPayloadToLatestRefs(rollbackMemos);
-        addToast('셀 이동 실패', 'error');
-      }
-      return false;
+        if (moveSaveStateRef.current.requestId === requestId) {
+          applyCellDisplayRef.current?.(rollbackMemos);
+          applyMergeSpanRef.current?.(rollbackMemos);
+          applyPayloadToLatestRefs(rollbackMemos);
+          addToast('셀 이동 실패', 'error');
+        }
+        return false;
+      });
     });
+
+    return state.activePromise;
   }, [
     addToast,
     applyCellDisplayRef,
     applyMergeSpanRef,
     applyPayloadToLatestRefs,
-    clearCellDisplayRef,
     saveBulkRef,
-    getPayloadKey,
-    pendingDisplayValuesRef,
-    pendingRef,
   ]);
 
   const schedulePendingMoveSave = useCallback((payload, rollbackMemos) => {
