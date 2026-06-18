@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 
 function getUpdateKey(item) {
@@ -24,7 +24,17 @@ function getExpectedUpdateMap(updates) {
 }
 
 function normalizeNullable(value) {
-  return value ?? null;
+  if (value === undefined || value === null || String(value).replace(/\u200B/g, '').trim() === '') {
+    return null;
+  }
+  if (typeof value === 'string') {
+    const s = String(value).replace(/\u200B/g, '').trim();
+    if (s.startsWith('#')) {
+      return s.toLowerCase();
+    }
+    return s;
+  }
+  return value;
 }
 
 function normalizeMergeSpanForCompare(mergeSpan) {
@@ -33,6 +43,16 @@ function normalizeMergeSpanForCompare(mergeSpan) {
   if (next.meta) {
     const meta = { ...next.meta };
     delete meta.intentional_clear;
+
+    Object.keys(meta).forEach(key => {
+      const val = meta[key];
+      const isEmptyArray = Array.isArray(val) && val.length === 0;
+      const isEmptyValue = val === undefined || val === null || val === '';
+      if (isEmptyArray || isEmptyValue) {
+        delete meta[key];
+      }
+    });
+
     if (Object.keys(meta).length > 0) next.meta = meta;
     else delete next.meta;
   }
@@ -40,12 +60,19 @@ function normalizeMergeSpanForCompare(mergeSpan) {
 }
 
 function mergeSpanEquals(left, right) {
+  if (isDefaultMergeSpan(left) && isDefaultMergeSpan(right)) {
+    return true;
+  }
   return JSON.stringify(normalizeMergeSpanForCompare(left)) === JSON.stringify(normalizeMergeSpanForCompare(right));
+}
+
+function normalizeContentForCompare(val) {
+  return String(val ?? '').trim().replace(/\u200B/g, '');
 }
 
 function expectedMemoOverrideMatches(current, expectedItem) {
   if (!current || !expectedItem) return false;
-  if (String(current.content ?? '') !== String(expectedItem.content ?? '')) return false;
+  if (normalizeContentForCompare(current.content) !== normalizeContentForCompare(expectedItem.content)) return false;
 
   if (
     Object.prototype.hasOwnProperty.call(expectedItem, 'bg_color') &&
@@ -89,16 +116,16 @@ function isBlankExpectedItem(item) {
   if (!item) return false;
   const mergeSpan = item.merge_span || item.mergeSpan;
   return String(item.content ?? '') === '' &&
-    (!Object.prototype.hasOwnProperty.call(item, 'bg_color') || item.bg_color == null) &&
-    (!Object.prototype.hasOwnProperty.call(item, 'prescription') || item.prescription == null) &&
-    (!Object.prototype.hasOwnProperty.call(item, 'body_part') || item.body_part == null) &&
+    (!Object.prototype.hasOwnProperty.call(item, 'bg_color') || normalizeNullable(item.bg_color) == null) &&
+    (!Object.prototype.hasOwnProperty.call(item, 'prescription') || normalizeNullable(item.prescription) == null) &&
+    (!Object.prototype.hasOwnProperty.call(item, 'body_part') || normalizeNullable(item.body_part) == null) &&
     isDefaultMergeSpan(mergeSpan);
 }
 
 function memoMatchesExpectedItem(memo, expectedItem, hasMemo = true) {
   if (!expectedItem) return false;
   if (!hasMemo) return isBlankExpectedItem(expectedItem);
-  if (String(memo?.content ?? '') !== String(expectedItem.content ?? '')) return false;
+  if (normalizeContentForCompare(memo?.content) !== normalizeContentForCompare(expectedItem.content)) return false;
 
   if (
     Object.prototype.hasOwnProperty.call(expectedItem, 'bg_color') &&
@@ -135,56 +162,80 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
   const [pendingMemoOverrides, setPendingMemoOverrides] = useState({});
   const [pendingCellBgColors, setPendingCellBgColors] = useState({});
 
+  const pendingDisplayValuesRef = useRef({});
+  const pendingMergeSpansRef = useRef({});
+  const pendingMemoOverridesRef = useRef({});
+  const pendingCellBgColorsRef = useRef({});
+
   useEffect(() => {
-    setPendingCellBgColors((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      Object.entries(prev).forEach(([key, bgColor]) => {
-        if ((memos[key]?.bg_color || null) === (bgColor || null)) {
+    flushSync(() => {
+      setPendingCellBgColors((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        Object.entries(prev).forEach(([key, bgColor]) => {
+          if (normalizeNullable(memos[key]?.bg_color) === normalizeNullable(bgColor)) {
+            delete next[key];
+            changed = true;
+          }
+        });
+        if (changed) {
+          pendingCellBgColorsRef.current = next;
+          return next;
+        }
+        return prev;
+      });
+
+      setPendingDisplayValues((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        Object.entries(prev).forEach(([key, value]) => {
+          const hasMemo = Object.prototype.hasOwnProperty.call(memos || {}, key);
+          const memoContent = normalizeContentForCompare(memos?.[key]?.content);
+          const pendingContent = normalizeContentForCompare(value);
+          if (hasMemo ? memoContent !== pendingContent : pendingContent !== '') return;
           delete next[key];
           changed = true;
+        });
+        if (changed) {
+          pendingDisplayValuesRef.current = next;
+          return next;
         }
+        return prev;
       });
-      return changed ? next : prev;
-    });
-  }, [memos]);
 
-  useEffect(() => {
-    setPendingDisplayValues((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      Object.entries(prev).forEach(([key, value]) => {
-        const hasMemo = Object.prototype.hasOwnProperty.call(memos || {}, key);
-        const memoContent = String(memos?.[key]?.content ?? '');
-        const pendingContent = String(value ?? '');
-        if (hasMemo ? memoContent !== pendingContent : pendingContent !== '') return;
-        delete next[key];
-        changed = true;
+      setPendingMergeSpans((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        Object.entries(prev).forEach(([key, mergeSpan]) => {
+          const memoMergeSpan = memos?.[key]?.merge_span;
+          const isMatch = mergeSpanEquals(memoMergeSpan, mergeSpan) ||
+            (isDefaultMergeSpan(memoMergeSpan) && isDefaultMergeSpan(mergeSpan));
+          if (!isMatch) return;
+          delete next[key];
+          changed = true;
+        });
+        if (changed) {
+          pendingMergeSpansRef.current = next;
+          return next;
+        }
+        return prev;
       });
-      return changed ? next : prev;
-    });
 
-    setPendingMergeSpans((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      Object.entries(prev).forEach(([key, mergeSpan]) => {
-        if (!mergeSpanEquals(memos?.[key]?.merge_span, mergeSpan)) return;
-        delete next[key];
-        changed = true;
+      setPendingMemoOverrides((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        Object.entries(prev).forEach(([key, override]) => {
+          const hasMemo = Object.prototype.hasOwnProperty.call(memos || {}, key);
+          if (!memoMatchesExpectedItem(memos?.[key], override, hasMemo)) return;
+          delete next[key];
+          changed = true;
+        });
+        if (changed) {
+          pendingMemoOverridesRef.current = next;
+          return next;
+        }
+        return prev;
       });
-      return changed ? next : prev;
-    });
-
-    setPendingMemoOverrides((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      Object.entries(prev).forEach(([key, override]) => {
-        const hasMemo = Object.prototype.hasOwnProperty.call(memos || {}, key);
-        if (!memoMatchesExpectedItem(memos?.[key], override, hasMemo)) return;
-        delete next[key];
-        changed = true;
-      });
-      return changed ? next : prev;
     });
   }, [memos]);
 
@@ -200,6 +251,24 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
       if (isValidKey(key)) nextValues[key] = String(item.content ?? '');
     });
     if (Object.keys(nextValues).length === 0) return;
+
+    pendingDisplayValuesRef.current = { ...pendingDisplayValuesRef.current, ...nextValues };
+    
+    const nextOverrides = { ...pendingMemoOverridesRef.current };
+    entries.forEach((item) => {
+      if (item.year && item.month && (item.year !== currentYear || item.month !== currentMonth)) {
+        return;
+      }
+      const key = getUpdateKey(item);
+      if (!isValidKey(key)) return;
+      const override = { ...nextOverrides[key], content: String(item.content ?? '') };
+      if (Object.prototype.hasOwnProperty.call(item, 'bg_color')) override.bg_color = item.bg_color ?? null;
+      if (item.merge_span || item.mergeSpan) override.merge_span = item.merge_span || item.mergeSpan;
+      if (Object.prototype.hasOwnProperty.call(item, 'prescription')) override.prescription = item.prescription ?? null;
+      if (Object.prototype.hasOwnProperty.call(item, 'body_part')) override.body_part = item.body_part ?? null;
+      nextOverrides[key] = override;
+    });
+    pendingMemoOverridesRef.current = nextOverrides;
 
     flushSync(() => {
       setPendingDisplayValues((prev) => ({ ...prev, ...nextValues }));
@@ -236,6 +305,9 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
       if (isValidKey(key) && mergeSpan) nextSpans[key] = mergeSpan;
     });
     if (Object.keys(nextSpans).length === 0) return;
+
+    pendingMergeSpansRef.current = { ...pendingMergeSpansRef.current, ...nextSpans };
+
     flushSync(() => {
       setPendingMergeSpans((prev) => ({ ...prev, ...nextSpans }));
     });
@@ -253,6 +325,8 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
     });
     if (Object.keys(nextBgColors).length === 0) return;
 
+    pendingCellBgColorsRef.current = { ...pendingCellBgColorsRef.current, ...nextBgColors };
+
     flushSync(() => {
       setPendingCellBgColors((prev) => ({ ...prev, ...nextBgColors }));
       if (!keepContextMenuOpen) setContextMenu(null);
@@ -261,6 +335,22 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
 
   const clearImmediateCellBg = useCallback((updates) => {
     const entries = normalizeUpdateEntries(updates);
+    
+    const nextBg = { ...pendingCellBgColorsRef.current };
+    let changed = false;
+    entries.forEach((item) => {
+      const key = getUpdateKey(item);
+      if (!isValidKey(key)) return;
+      const expectedBgColor = item?.bg_color || null;
+      if (key in nextBg && normalizeNullable(nextBg[key]) === normalizeNullable(expectedBgColor)) {
+        delete nextBg[key];
+        changed = true;
+      }
+    });
+    if (changed) {
+      pendingCellBgColorsRef.current = nextBg;
+    }
+
     setPendingCellBgColors((prev) => {
       let changed = false;
       const next = { ...prev };
@@ -268,7 +358,7 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
         const key = getUpdateKey(item);
         if (!isValidKey(key)) return;
         const expectedBgColor = item?.bg_color || null;
-        if (key in next && (next[key] || null) === expectedBgColor) {
+        if (key in next && normalizeNullable(next[key]) === normalizeNullable(expectedBgColor)) {
           delete next[key];
           changed = true;
         }
@@ -277,21 +367,54 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
     });
   }, []);
 
-  const clearImmediateCellDisplay = useCallback((updates) => {
+  const clearImmediateCellDisplay = useCallback((updates, options = {}) => {
+    const { force = false } = options;
     const expectedByKey = getExpectedUpdateMap(updates);
     const keys = Array.from(expectedByKey.keys());
     if (keys.length === 0) return;
 
-    setTimeout(() => {
+    const nextDisplay = { ...pendingDisplayValuesRef.current };
+    const nextMerge = { ...pendingMergeSpansRef.current };
+    const nextOverrides = { ...pendingMemoOverridesRef.current };
+
+    keys.forEach((key) => {
+      const expectedItem = expectedByKey.get(key);
+      const hasMemo = Object.prototype.hasOwnProperty.call(memos || {}, key);
+      if (!force && !memoMatchesExpectedItem(memos?.[key], expectedItem, hasMemo)) return;
+
+      const expectedContent = normalizeContentForCompare(expectedItem?.content);
+      if (key in nextDisplay && normalizeContentForCompare(nextDisplay[key]) === expectedContent) {
+        delete nextDisplay[key];
+      }
+
+      const expectedMergeSpan = expectedItem?.merge_span || expectedItem?.mergeSpan;
+      if (key in nextMerge && expectedMergeSpan) {
+        const isMatch = mergeSpanEquals(nextMerge[key], expectedMergeSpan) ||
+          (isDefaultMergeSpan(nextMerge[key]) && isDefaultMergeSpan(expectedMergeSpan));
+        if (isMatch) {
+          delete nextMerge[key];
+        }
+      }
+
+      if (key in nextOverrides && (force || expectedMemoOverrideMatches(nextOverrides[key], expectedItem))) {
+        delete nextOverrides[key];
+      }
+    });
+
+    pendingDisplayValuesRef.current = nextDisplay;
+    pendingMergeSpansRef.current = nextMerge;
+    pendingMemoOverridesRef.current = nextOverrides;
+
+    flushSync(() => {
       setPendingDisplayValues((prev) => {
         let changed = false;
         const next = { ...prev };
         keys.forEach((key) => {
           const expectedItem = expectedByKey.get(key);
           const hasMemo = Object.prototype.hasOwnProperty.call(memos || {}, key);
-          if (!memoMatchesExpectedItem(memos?.[key], expectedItem, hasMemo)) return;
-          const expectedContent = String(expectedItem?.content ?? '');
-          if (key in next && String(next[key] ?? '') === expectedContent) {
+          if (!force && !memoMatchesExpectedItem(memos?.[key], expectedItem, hasMemo)) return;
+          const expectedContent = normalizeContentForCompare(expectedItem?.content);
+          if (key in next && normalizeContentForCompare(next[key]) === expectedContent) {
             delete next[key];
             changed = true;
           }
@@ -305,11 +428,15 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
         keys.forEach((key) => {
           const expectedItem = expectedByKey.get(key);
           const hasMemo = Object.prototype.hasOwnProperty.call(memos || {}, key);
-          if (!memoMatchesExpectedItem(memos?.[key], expectedItem, hasMemo)) return;
+          if (!force && !memoMatchesExpectedItem(memos?.[key], expectedItem, hasMemo)) return;
           const expectedMergeSpan = expectedItem?.merge_span || expectedItem?.mergeSpan;
-          if (key in next && expectedMergeSpan && mergeSpanEquals(next[key], expectedMergeSpan)) {
-            delete next[key];
-            changed = true;
+          if (key in next && expectedMergeSpan) {
+            const isMatch = mergeSpanEquals(next[key], expectedMergeSpan) ||
+              (isDefaultMergeSpan(next[key]) && isDefaultMergeSpan(expectedMergeSpan));
+            if (isMatch) {
+              delete next[key];
+              changed = true;
+            }
           }
         });
         return changed ? next : prev;
@@ -321,15 +448,15 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
         keys.forEach((key) => {
           const expectedItem = expectedByKey.get(key);
           const hasMemo = Object.prototype.hasOwnProperty.call(memos || {}, key);
-          if (!memoMatchesExpectedItem(memos?.[key], expectedItem, hasMemo)) return;
-          if (key in next && expectedMemoOverrideMatches(next[key], expectedItem)) {
+          if (!force && !memoMatchesExpectedItem(memos?.[key], expectedItem, hasMemo)) return;
+          if (key in next && (force || expectedMemoOverrideMatches(next[key], expectedItem))) {
             delete next[key];
             changed = true;
           }
         });
         return changed ? next : prev;
       });
-    }, 0);
+    });
   }, [memos]);
 
   return {
@@ -337,6 +464,10 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
     pendingDisplayValues,
     pendingMemoOverrides,
     pendingMergeSpans,
+    pendingDisplayValuesRef,
+    pendingMergeSpansRef,
+    pendingMemoOverridesRef,
+    pendingCellBgColorsRef,
     setPendingDisplayValues,
     applyImmediateCellBg,
     applyImmediateCellDisplay,

@@ -644,6 +644,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     pendingDisplayValues,
     pendingMemoOverrides,
     pendingMergeSpans,
+    pendingDisplayValuesRef,
+    pendingMemoOverridesRef,
     setPendingDisplayValues,
     applyImmediateCellBg,
     applyImmediateCellDisplay,
@@ -1874,11 +1876,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     clipboardSource,
     setClipboardSource,
     selectedCell,
+    selectedCellRef,
     editingCell,
     selectedKeys,
     pendingDisplayValues,
     pendingMemoOverrides,
     pendingMergeSpans,
+    pendingDisplayValuesRef,
+    pendingMemoOverridesRef,
     pendingCellBgColors,
     applyImmediateCellBg,
     applyImmediateCellDisplay,
@@ -2147,6 +2152,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     },
     [effectiveMemos, isScheduleMonthLoading]
   );
+  const renderPendingDisplayValues = useMemo(
+    () => (isScheduleMonthLoading ? {} : pendingDisplayValues),
+    [isScheduleMonthLoading, pendingDisplayValues]
+  );
+  const renderPendingMergeSpans = useMemo(
+    () => (isScheduleMonthLoading ? {} : pendingMergeSpans),
+    [isScheduleMonthLoading, pendingMergeSpans]
+  );
+  const renderPendingCellBgColors = useMemo(
+    () => (isScheduleMonthLoading ? {} : pendingCellBgColors),
+    [isScheduleMonthLoading, pendingCellBgColors]
+  );
 
   return (
     <>
@@ -2337,25 +2354,28 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       for (let colIdx = 0; colIdx < colCount; colIdx++) {
                         const key = cellKey(weekIdx, dayIdx, rowIdx, colIdx);
                         const rawCellData = renderMemos[key] || null;
-                        const hasPendingBg = Object.prototype.hasOwnProperty.call(pendingCellBgColors, key);
+                        const hasPendingBg = Object.prototype.hasOwnProperty.call(renderPendingCellBgColors, key);
                         const pendingAdjustedCellData = hasPendingBg
                           ? {
                               ...(rawCellData || {}),
-                              bg_color: pendingCellBgColors[key],
+                              bg_color: renderPendingCellBgColors[key],
                             }
                           : rawCellData;
-                        const rawContent = normalizeSchedulerVisitSuffix(pendingDisplayValues[key] ?? rawCellData?.content ?? '');
+                        const rawContent = normalizeSchedulerVisitSuffix(renderPendingDisplayValues[key] ?? rawCellData?.content ?? '');
                         const rawMergeSpan = getEffectiveMergeSpan(key, renderMemos);
                         const sanitizedBlankCell = sanitizeBlankScheduleCellData({
                           key,
                           memos: renderMemos,
                           cellData: pendingAdjustedCellData,
-                          pendingDisplayValues,
-                          pendingMergeSpans,
+                          pendingDisplayValues: renderPendingDisplayValues,
+                          pendingMergeSpans: renderPendingMergeSpans,
                         });
                         const displayCellData = sanitizedBlankCell.cellData;
                         const content = sanitizedBlankCell.wasSanitized ? '' : rawContent;
-                        let mergeSpan = sanitizedBlankCell.mergeSpan || rawMergeSpan;
+                        let mergeSpan = rawMergeSpan;
+                        if (sanitizedBlankCell.mergeSpan && !rawMergeSpan.mergedInto) {
+                          mergeSpan = sanitizedBlankCell.mergeSpan;
+                        }
 
                           if (mergeSpan.mergedInto) {
                             continue; // 병합된 하위 셀은 묶어서 렌더링 생략
@@ -2384,7 +2404,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               weekIdx={weekIdx} dayIdx={dayIdx} rowIdx={rowIdx} colIdx={colIdx}
                               dayInfo={dayInfo} slotInfo={slotInfo} showTimeCol={showTimeCol}
                               gridRowStart={gridRowStart} isLastRenderedRow={isLastRenderedRow} colCount={colCount}
-                              cellData={displayCellData} pendingContent={content} pendingMergeSpan={pendingMergeSpans[key]} mergeSpan={finalMergeSpan}
+                              cellData={displayCellData} pendingContent={content} pendingMergeSpan={renderPendingMergeSpans[key]} mergeSpan={finalMergeSpan}
                               editingCell={editingCell} imePreviewCell={imePreviewCell}
                               selectedKeys={selectedKeys} selectedCell={selectedCell} clipboardSource={clipboardSource}
                               workState={workState} staffBlockRule={staffBlockRule}
@@ -2430,7 +2450,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         weeks, dayColWidth, todayWeekIdx, today, getTimeSlotsForDay,
         therapistColsCSS, colCount, getTherapistNameForDate, activeColRatios,
         startColResize, startDayResize, startRowResize,
-        renderMemos, pendingDisplayValues, pendingMergeSpans, pendingCellBgColors, editingCell, imePreviewCell,
+        renderMemos, renderPendingDisplayValues, renderPendingMergeSpans, renderPendingCellBgColors, editingCell, imePreviewCell,
         selectedKeys, selectedCell, clipboardSource,
         getTherapistWorkState, getStaffScheduleBlockForCell,
         isLastHourSlot, effectivePrescriptionColors, editValue,

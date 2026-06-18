@@ -31,11 +31,13 @@ export default function useScheduleKeyboardActions({
   clipboardSource,
   setClipboardSource,
   selectedCell,
+  selectedCellRef,
   editingCell,
   selectedKeys,
-  pendingDisplayValues,
   pendingMemoOverrides,
   pendingMergeSpans,
+  pendingDisplayValuesRef,
+  pendingMemoOverridesRef,
   pendingCellBgColors,
   applyImmediateCellBg,
   applyImmediateCellDisplay,
@@ -77,12 +79,12 @@ export default function useScheduleKeyboardActions({
   onSelectionMoved,
 }) {
   // ── refs로 최신 값 추적 (연속 키 입력 시 stale closure 방지) ──
+  const getLatestSelectedCell = useCallback(() => selectedCellRef?.current || selectedCell, [selectedCellRef, selectedCell]);
   const baseMemosRef = useRef(memos);
   const memosRef = useRef(memos);
   const selectedKeysRef = useRef(selectedKeys);
-  const pendingRef = useRef(pendingDisplayValues);
+  const pendingRef = pendingDisplayValuesRef; // 외부 동기 ref 사용
   const pendingBgRef = useRef(pendingCellBgColors);
-  const pendingMemoOverridesRef = useRef(pendingMemoOverrides);
   const pendingMergeSpansRef = useRef(pendingMergeSpans);
   const onSaveMemoRef = useRef(onSaveMemo);
   const saveBulkRef = useRef(saveShockwaveMemosBulk);
@@ -98,14 +100,12 @@ export default function useScheduleKeyboardActions({
   useEffect(() => {
     baseMemosRef.current = memos;
     memosRef.current = { ...(memos || {}), ...(pendingMemoOverridesRef.current || {}) };
-  }, [memos]);
+  }, [memos, pendingMemoOverridesRef]);
   useEffect(() => { selectedKeysRef.current = selectedKeys; }, [selectedKeys]);
-  useEffect(() => { pendingRef.current = pendingDisplayValues; }, [pendingDisplayValues]);
   useEffect(() => { pendingBgRef.current = pendingCellBgColors; }, [pendingCellBgColors]);
   useEffect(() => {
-    pendingMemoOverridesRef.current = pendingMemoOverrides;
-    memosRef.current = { ...(baseMemosRef.current || {}), ...(pendingMemoOverrides || {}) };
-  }, [pendingMemoOverrides]);
+    memosRef.current = { ...(baseMemosRef.current || {}), ...(pendingMemoOverridesRef.current || {}) };
+  }, [pendingMemoOverrides, pendingMemoOverridesRef]);
   useEffect(() => { pendingMergeSpansRef.current = pendingMergeSpans; }, [pendingMergeSpans]);
   useEffect(() => { onSaveMemoRef.current = onSaveMemo; }, [onSaveMemo]);
   useEffect(() => { saveBulkRef.current = saveShockwaveMemosBulk; }, [saveShockwaveMemosBulk]);
@@ -142,6 +142,7 @@ export default function useScheduleKeyboardActions({
     pendingRef,
     saveBulkRef,
     editingCell,
+    pendingMemoOverridesRef,
   });
 
   const updateOpenContextMenuSnapshotFromPayload = useCallback((payload = []) => {
@@ -242,7 +243,7 @@ export default function useScheduleKeyboardActions({
         }
       });
     }, 500);
-  }, [currentMonth, currentYear, selectedKeys]);
+  }, [currentMonth, currentYear, pendingRef, selectedKeys]);
 
   const isReservationTimeShortcutEvent = useCallback((event) => {
     if (!event || !(event.metaKey || event.ctrlKey)) return false;
@@ -266,10 +267,11 @@ export default function useScheduleKeyboardActions({
   }, [isReservationTimeShortcutEvent, applyReservationTimeDelta]);
 
   const toggleSelectedGreenBackground = useCallback(() => {
+    const activeCell = getLatestSelectedCell();
     const selected = selectedKeysRef.current && selectedKeysRef.current.size > 0
       ? selectedKeysRef.current
-      : selectedCell
-        ? new Set([cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c)])
+      : activeCell
+        ? new Set([cellKey(activeCell.w, activeCell.d, activeCell.r, activeCell.c)])
         : new Set();
     if (selected.size === 0) return;
 
@@ -346,10 +348,11 @@ export default function useScheduleKeyboardActions({
     saveBulkRef.current?.(payload).then((success) => {
       if (!success) addToast?.('배경색 변경 실패', 'error');
     });
-  }, [addToast, applyImmediateCellBg, cellKey, currentMonth, currentYear, selectedCell]);
+  }, [addToast, applyImmediateCellBg, cellKey, currentMonth, currentYear, getLatestSelectedCell]);
 
   const applyPrescriptionShortcut = useCallback((event) => {
-    if (!selectedCell || editingCell) return false;
+    const activeCell = getLatestSelectedCell();
+    if (!activeCell || editingCell) return false;
 
     const isDigitCode = /^Digit([1-9])$/.test(event.code);
     const isDigitKey = /^[1-9]$/.test(event.key);
@@ -380,7 +383,7 @@ export default function useScheduleKeyboardActions({
       : '';
     const rawSelected = selectedKeysRef.current && selectedKeysRef.current.size > 0
       ? selectedKeysRef.current
-      : new Set([cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c)]);
+      : new Set([cellKey(activeCell.w, activeCell.d, activeCell.r, activeCell.c)]);
     const selectionMemos = memosRef.current || {};
     const selectionMergeSpans = pendingMergeSpansRef.current || {};
     const keys = Array.from(new Set(Array.from(rawSelected).map((key) => {
@@ -540,10 +543,11 @@ export default function useScheduleKeyboardActions({
     })();
 
     return true;
-  }, [addToast, applyPayloadToLatestRefs, cellKey, contextMenu, currentMonth, currentYear, editingCell, rowCount, selectedCell, shockwaveSettings, updateOpenContextMenuSnapshotFromPayload]);
+  }, [addToast, applyPayloadToLatestRefs, cellKey, contextMenu, currentMonth, currentYear, editingCell, getLatestSelectedCell, pendingRef, rowCount, shockwaveSettings, updateOpenContextMenuSnapshotFromPayload]);
 
   const moveSelectedCellsByRow = useCallback((rowDelta) => {
-    const selectedCellKey = selectedCell ? cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c) : null;
+    const activeCell = getLatestSelectedCell();
+    const selectedCellKey = activeCell ? cellKey(activeCell.w, activeCell.d, activeCell.r, activeCell.c) : null;
     let moveKeys = selectedKeysRef.current;
     if (selectedCellKey && (!moveKeys || moveKeys.size === 0)) {
       moveKeys = new Set([selectedCellKey]);
@@ -580,12 +584,16 @@ export default function useScheduleKeyboardActions({
       : null;
     if (firstMovedCell) {
       const [w, d, r, c] = firstMovedCell;
-      selectSingleCell({ w, d, r, c });
+      const nextCell = { w, d, r, c };
+      if (selectedCellRef) {
+        selectedCellRef.current = nextCell;
+      }
+      selectSingleCell(nextCell);
       setRangeEnd(null);
       const movedKeySet = new Set(result.movedKeys);
       selectedKeysRef.current = movedKeySet;
       setSelectedKeys(movedKeySet);
-      onSelectionMoved?.({ w, d, r, c }, result.movedKeys);
+      onSelectionMoved?.(nextCell, result.movedKeys);
     }
 
     schedulePendingMoveSave(result.payload, result.oldMemos);
@@ -598,16 +606,19 @@ export default function useScheduleKeyboardActions({
     rowCount,
     schedulePendingMoveSave,
     selectSingleCell,
-    selectedCell,
     setRangeEnd,
     setSelectedKeys,
     onSelectionMoved,
     getLatestMemosWithPendingMoves,
+    getLatestSelectedCell,
+    pendingRef,
+    selectedCellRef,
   ]);
 
   useEffect(() => {
     const handleEarlyReservationShortcut = (event) => {
-      if (!selectedCell || editingCell || contextMenu) return;
+      const activeCell = getLatestSelectedCell();
+      if (!activeCell || editingCell || contextMenu) return;
       if (!isReservationTimeShortcutEvent(event)) return;
       if (isContextMenuTarget(event.target)) return;
       if (isEditableTarget(event.target)) return;
@@ -623,16 +634,17 @@ export default function useScheduleKeyboardActions({
   }, [
     contextMenu,
     editingCell,
+    getLatestSelectedCell,
     handleReservationTimeShortcut,
     isContextMenuTarget,
     isEditableTarget,
     isReservationTimeShortcutEvent,
-    selectedCell,
   ]);
 
   useEffect(() => {
     const handleEarlyBackgroundShortcut = (event) => {
-      if (!selectedCell || editingCell || contextMenu) return;
+      const activeCell = getLatestSelectedCell();
+      if (!activeCell || editingCell || contextMenu) return;
       if (!isHolidayBackgroundShortcut(event)) return;
       if (isContextMenuTarget(event.target)) return;
       if (isEditableTarget(event.target)) return;
@@ -653,9 +665,9 @@ export default function useScheduleKeyboardActions({
   }, [
     contextMenu,
     editingCell,
+    getLatestSelectedCell,
     isContextMenuTarget,
     isEditableTarget,
-    selectedCell,
     toggleSelectedGreenBackground,
   ]);
 
@@ -677,7 +689,8 @@ export default function useScheduleKeyboardActions({
 
   useEffect(() => {
     const handleContextMenuTreatmentCompleteShortcut = (event) => {
-      if (!contextMenu || !selectedCell || editingCell) return;
+      const activeCell = getLatestSelectedCell();
+      if (!contextMenu || !activeCell || editingCell) return;
       if (!isTreatmentCompleteShortcut(event)) return;
       if (event.__shockwaveTreatmentCompleteHandled) return;
       event.__shockwaveTreatmentCompleteHandled = true;
@@ -693,7 +706,7 @@ export default function useScheduleKeyboardActions({
       window.removeEventListener('keydown', handleContextMenuTreatmentCompleteShortcut, { capture: true });
       document.removeEventListener('keydown', handleContextMenuTreatmentCompleteShortcut, { capture: true });
     };
-  }, [contextMenu, editingCell, handleToggleTreatmentComplete, selectedCell]);
+  }, [contextMenu, editingCell, getLatestSelectedCell, handleToggleTreatmentComplete]);
 
   return useCallback((e) => {
     if (e.defaultPrevented) return;
@@ -743,8 +756,9 @@ export default function useScheduleKeyboardActions({
       }
       return;
     }
-    if (!selectedCell) return;
-    const { w, d, r, c } = selectedCell;
+    const activeCell = getLatestSelectedCell();
+    if (!activeCell) return;
+    const { w, d, r, c } = activeCell;
 
     if (editingCell) {
       if (getEditingCellKeyAction(e) === 'close-edit') {
@@ -882,8 +896,15 @@ export default function useScheduleKeyboardActions({
 
       if (e.shiftKey) {
         setRangeEnd(nextCell);
-        setSelectedKeys(buildRangeKeys(selectedCell, nextCell));
+        const nextRangeKeys = buildRangeKeys(activeCell, nextCell);
+        selectedKeysRef.current = nextRangeKeys;
+        setSelectedKeys(nextRangeKeys);
       } else {
+        const nextCellKey = cellKey(nextCell.w, nextCell.d, nextCell.r, nextCell.c);
+        if (selectedCellRef) {
+          selectedCellRef.current = nextCell;
+        }
+        selectedKeysRef.current = new Set([nextCellKey]);
         selectSingleCell(nextCell);
       }
       return;
@@ -961,7 +982,6 @@ export default function useScheduleKeyboardActions({
   }, [
     contextMenu,
     clipboardSource,
-    selectedCell,
     editingCell,
     selectedKeys,
     currentYear,
@@ -995,5 +1015,8 @@ export default function useScheduleKeyboardActions({
     handleReservationTimeShortcut,
     moveSelectedCellsByRow,
     memos,
+    getLatestSelectedCell,
+    pendingRef,
+    selectedCellRef,
   ]);
 }

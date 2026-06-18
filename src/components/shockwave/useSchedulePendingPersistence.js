@@ -32,6 +32,10 @@ export default function useSchedulePendingPersistence({
     rememberScheduleMonthBackup(currentYear, currentMonth, mergedMemos);
   }, [currentYear, currentMonth, loadedMemosKey, memos, pendingDisplayValues]);
 
+  // 중복 정리 방지: memos 변경에 따른 pendingDisplayValues 정리는 
+  // 이미 useScheduleImmediateState.js의 flushSync 단일 훅에서 함께 동기적으로 처리되므로
+  // 이곳의 중복 useEffect 호출은 불필요한 추가 비동기 리렌더링을 유발하여 깜빡임을 발생시킬 수 있으므로 비활성화합니다.
+  /*
   useEffect(() => {
     setPendingDisplayValues((prev) => {
       const keys = Object.keys(prev);
@@ -47,6 +51,7 @@ export default function useSchedulePendingPersistence({
       return next;
     });
   }, [memos, setPendingDisplayValues]);
+  */
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

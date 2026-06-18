@@ -63,6 +63,30 @@ function getVisibleContentForKey({ key, memos, pendingDisplayValues }) {
     : memo.content;
 }
 
+function hasMeaningfulData({
+  key,
+  memos,
+  pendingDisplayValues,
+  pendingMergeSpans,
+}) {
+  const content = getVisibleContentForKey({ key, memos, pendingDisplayValues });
+  if (hasText(content)) return true;
+
+  const memo = memos?.[key] || {};
+  if (memo.prescription && String(memo.prescription).trim() !== '') return true;
+  if (memo.body_part && String(memo.body_part).trim() !== '') return true;
+  if (memo.bg_color && String(memo.bg_color).trim() !== '') return true;
+
+  const mergeSpan = getEffectiveScheduleMergeSpan({
+    key,
+    memos,
+    pendingMergeSpans,
+  });
+  if (hasMemoList(mergeSpan)) return true;
+
+  return false;
+}
+
 function isDestinationOccupied({
   key,
   memos,
@@ -88,14 +112,20 @@ function isDestinationOccupied({
 
   if (mergeSpan?.mergedInto) {
     if (sourceFootprintKeys.has(mergeSpan.mergedInto)) return false;
-    return hasText(getVisibleContentForKey({
+    return hasMeaningfulData({
       key: mergeSpan.mergedInto,
       memos,
       pendingDisplayValues,
-    }));
+      pendingMergeSpans,
+    });
   }
 
-  return false;
+  return hasMeaningfulData({
+    key,
+    memos,
+    pendingDisplayValues,
+    pendingMergeSpans,
+  });
 }
 
 function buildPayloadItem({ key, currentYear, currentMonth, memo, overrides }) {

@@ -11,6 +11,7 @@ import {
 } from '../lib/scheduleSaveStateUtils';
 
 const ScheduleContext = createContext();
+const LOCAL_WRITE_STALE_GUARD_MS = 15000;
 
 export function ScheduleProvider({ children }) {
   const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
@@ -51,6 +52,8 @@ export function ScheduleProvider({ children }) {
   const [calendarSlotSettings, setCalendarSlotSettings] = useState(null);
   const loadingCountRef = useRef(0);
   const shockwaveWriteQueueRef = useRef(new Map());
+  const lastWriteTimeRef = useRef(new Map());
+  const localShockwaveWriteTimeRef = useRef(new Map());
   const loadCacheRef = useRef({ staffMemos: null, shockwaveMemos: null, holidays: null });
   const realtimeRefreshTimerRef = useRef(null);
   const staffMemosRef = useRef(staffMemos);
@@ -166,13 +169,20 @@ export function ScheduleProvider({ children }) {
     const queuedWrite = Promise
       .allSettled(previousWrites)
       .then(task);
-    const trackedWrite = queuedWrite.finally(() => {
+
+    // API 호출이 끝난 후 1.2초간 실시간 이벤트를 무시하도록 락을 유지하는 쿨다운 체인 생성
+    const cooldownDelayPromise = queuedWrite.then(() => {
+      return new Promise((resolve) => setTimeout(resolve, 1200));
+    });
+
+    const trackedWrite = cooldownDelayPromise.finally(() => {
       targetKeys.forEach((key) => {
         if (shockwaveWriteQueueRef.current.get(key) === trackedWrite) {
           shockwaveWriteQueueRef.current.delete(key);
         }
       });
     });
+
     targetKeys.forEach((key) => shockwaveWriteQueueRef.current.set(key, trackedWrite));
     return queuedWrite;
   }, []);
@@ -200,6 +210,55 @@ export function ScheduleProvider({ children }) {
       );
     return hasContent || hasBodyPart || hasBgColor || hasMerge || hasMetaMemoList || hasBodyPartOptions;
   }, []);
+
+  const getShockwaveMemoTime = useCallback((memo) => {
+    const time = memo?.updated_at ? new Date(memo.updated_at).getTime() : 0;
+    return Number.isFinite(time) ? time : 0;
+  }, []);
+
+  const shouldIgnoreStaleShockwaveServerItem = useCallback((key, serverItem) => {
+    const localLastWrite = localShockwaveWriteTimeRef.current.get(key);
+    if (!localLastWrite) return false;
+
+    const localTime = new Date(localLastWrite).getTime();
+    if (!Number.isFinite(localTime)) return false;
+
+    const serverTime = getShockwaveMemoTime(serverItem);
+    if (serverTime > 0) return serverTime <= localTime;
+
+    return Date.now() - localTime < LOCAL_WRITE_STALE_GUARD_MS;
+  }, [getShockwaveMemoTime]);
+
+  const reconcileLoadedShockwaveMemosWithLocalWrites = useCallback((memoMap) => {
+    const next = { ...(memoMap || {}) };
+    const localMemos = shockwaveMemosRef.current || {};
+
+    localShockwaveWriteTimeRef.current.forEach((localLastWrite, key) => {
+      if (!localLastWrite) return;
+
+      const localTime = new Date(localLastWrite).getTime();
+      if (!Number.isFinite(localTime)) return;
+
+      const serverMemo = next[key];
+      const serverTime = getShockwaveMemoTime(serverMemo);
+      const localMemo = localMemos[key];
+      const localMemoTime = getShockwaveMemoTime(localMemo);
+      const isRecentUntimestampedConflict = serverMemo && serverTime === 0 && Date.now() - localTime < LOCAL_WRITE_STALE_GUARD_MS;
+      const serverIsOlderThanLocalWrite = serverMemo && serverTime > 0 && serverTime <= localTime;
+
+      if (serverIsOlderThanLocalWrite || isRecentUntimestampedConflict) {
+        if (shouldKeepShockwaveMemo(localMemo)) next[key] = localMemo;
+        else delete next[key];
+        return;
+      }
+
+      if (!serverMemo && localMemo && localMemoTime >= localTime && shouldKeepShockwaveMemo(localMemo)) {
+        next[key] = localMemo;
+      }
+    });
+
+    return next;
+  }, [getShockwaveMemoTime, shouldKeepShockwaveMemo]);
 
   const protectExistingScheduleContent = useCallback(async (items, localSnapshot = {}) => {
     const list = Array.isArray(items) ? items : [];
@@ -835,9 +894,10 @@ export function ScheduleProvider({ children }) {
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
         memoMap[key] = item;
       });
-      if (loadCacheRef.current.shockwaveMemos !== cacheKey || shockwaveMemosLoadRequestRef.current !== requestId) return memoMap;
-      setShockwaveMemos(memoMap);
-      return memoMap;
+      const reconciledMemoMap = reconcileLoadedShockwaveMemosWithLocalWrites(memoMap);
+      if (loadCacheRef.current.shockwaveMemos !== cacheKey || shockwaveMemosLoadRequestRef.current !== requestId) return reconciledMemoMap;
+      setShockwaveMemos(reconciledMemoMap);
+      return reconciledMemoMap;
     } catch (err) {
       console.error('Failed to load shockwave memos:', err);
       if (shockwaveMemosLoadRequestRef.current === requestId) {
@@ -847,7 +907,7 @@ export function ScheduleProvider({ children }) {
     } finally {
       endLoading();
     }
-  }, [waitForShockwaveWrites, shouldKeepShockwaveMemo, beginLoading, endLoading]);
+  }, [waitForShockwaveWrites, shouldKeepShockwaveMemo, beginLoading, endLoading, reconcileLoadedShockwaveMemosWithLocalWrites]);
 
   const refreshCurrentScheduleFromServer = useCallback((reason = 'manual') => {
     if (realtimeRefreshTimerRef.current) {
@@ -912,13 +972,24 @@ export function ScheduleProvider({ children }) {
     const key = `${weekIndex}-${dayIndex}-${rowIndex}-${colIndex}`;
     return enqueueShockwaveWrite([key], async () => {
       const previousMemo = shockwaveMemosRef.current[key];
+      let writeStartedAtMs = 0;
+      const isWriteStillCurrent = () => {
+        const currentLocalWrite = localShockwaveWriteTimeRef.current.get(key);
+        if (!currentLocalWrite || !writeStartedAtMs) return true;
+        const currentLocalWriteMs = new Date(currentLocalWrite).getTime();
+        return !Number.isFinite(currentLocalWriteMs) || currentLocalWriteMs <= writeStartedAtMs;
+      };
       try {
       const optimisticMemo = shockwaveMemosRef.current[key] || {};
+      const nowStr = new Date().toISOString();
+      writeStartedAtMs = new Date(nowStr).getTime();
       let upsertData = {
         year, month, week_index: weekIndex, day_index: dayIndex, row_index: rowIndex, col_index: colIndex,
         content: content !== undefined ? content : optimisticMemo.content,
-        updated_at: new Date().toISOString()
+        updated_at: nowStr
       };
+      lastWriteTimeRef.current.set(key, nowStr);
+      localShockwaveWriteTimeRef.current.set(key, nowStr);
       if (bg_color !== undefined) upsertData.bg_color = bg_color;
       if (merge_span !== undefined) upsertData.merge_span = merge_span;
       if (prescription !== undefined) upsertData.prescription = prescription;
@@ -944,9 +1015,13 @@ export function ScheduleProvider({ children }) {
 
       loadCacheRef.current.shockwaveMemos = null;
       const savedMemo = data?.find(d => d.year === year && d.month === month) || { ...optimisticMemo, ...upsertData };
+      if (isWriteStillCurrent() && savedMemo?.updated_at) {
+        lastWriteTimeRef.current.set(key, savedMemo.updated_at);
+        localShockwaveWriteTimeRef.current.set(key, savedMemo.updated_at);
+      }
       const nextShockwaveMemos = { ...shockwaveMemosRef.current, [key]: savedMemo };
       
-      if (isCurrentScheduleMonth(year, month)) {
+      if (isWriteStillCurrent() && isCurrentScheduleMonth(year, month)) {
         setShockwaveMemos(prev => {
           const next = { ...prev };
           if (shouldKeepShockwaveMemo(savedMemo)) next[key] = savedMemo;
@@ -993,7 +1068,9 @@ export function ScheduleProvider({ children }) {
       }
       return true;
       } catch (err) {
-        setShockwaveMemos(prev => rollbackShockwaveMemoState(prev, { [key]: previousMemo }));
+        if (isWriteStillCurrent()) {
+          setShockwaveMemos(prev => rollbackShockwaveMemoState(prev, { [key]: previousMemo }));
+        }
         console.error('Failed to save shockwave memo:', err);
         return false;
       }
@@ -1003,28 +1080,49 @@ export function ScheduleProvider({ children }) {
   // 다중 셀 동시 업데이트 (병합/병합해제 등)
   const saveShockwaveMemosBulk = useCallback(async (memosArray, options = {}) => {
     if (!memosArray || memosArray.length === 0) return true;
-    const { deferStatsSync = false } = options || {};
+    const { deferStatsSync = false, shouldApplyClientState } = options || {};
     const targetKeys = memosArray.map((item) => `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`);
 
     return enqueueShockwaveWrite(targetKeys, async () => {
       let previousMemos = {};
+      let writeStartedAtMs = 0;
+      const canApplyClientState = () => (
+        typeof shouldApplyClientState === 'function'
+          ? shouldApplyClientState() !== false
+          : true
+      );
+      const isKeyWriteStillCurrent = (key) => {
+        if (!canApplyClientState()) return false;
+        const currentLocalWrite = localShockwaveWriteTimeRef.current.get(key);
+        if (!currentLocalWrite || !writeStartedAtMs) return true;
+        const currentLocalWriteMs = new Date(currentLocalWrite).getTime();
+        return !Number.isFinite(currentLocalWriteMs) || currentLocalWriteMs <= writeStartedAtMs;
+      };
 
       try {
       const currentMemosSnapshot = shockwaveMemosRef.current;
+      const nowStr = new Date().toISOString();
+      writeStartedAtMs = new Date(nowStr).getTime();
       const optimisticSnapshot = buildOptimisticShockwaveMemos(
         currentMemosSnapshot,
         memosArray,
-        new Date().toISOString()
+        nowStr
       );
       previousMemos = optimisticSnapshot.previousMemos;
+      if (canApplyClientState()) {
+        targetKeys.forEach((key) => lastWriteTimeRef.current.set(key, nowStr));
+        targetKeys.forEach((key) => localShockwaveWriteTimeRef.current.set(key, nowStr));
+      }
 
-      setShockwaveMemos(prev => {
-        let next = prev;
-        Object.entries(optimisticSnapshot.optimisticMemos).forEach(([key, value]) => {
-          next = applyShockwaveMemoStateUpdate(next, key, value, shouldKeepShockwaveMemo);
+      if (canApplyClientState()) {
+        setShockwaveMemos(prev => {
+          let next = prev;
+          Object.entries(optimisticSnapshot.optimisticMemos).forEach(([key, value]) => {
+            next = applyShockwaveMemoStateUpdate(next, key, value, shouldKeepShockwaveMemo);
+          });
+          return next;
         });
-        return next;
-      });
+      }
 
       const intentionalClearKeys = new Set(memosArray
         .filter((item) => item?.merge_span?.meta?.intentional_clear === true)
@@ -1086,10 +1184,20 @@ export function ScheduleProvider({ children }) {
         ...data,
         ...clearPayloads,
       ].filter(d => d.year === currentYear && d.month === currentMonth);
+      const currentViewRelevantData = canApplyClientState()
+        ? viewRelevantData.filter((item) => {
+            const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+            return isKeyWriteStillCurrent(key);
+          })
+        : [];
       loadCacheRef.current.shockwaveMemos = null;
       const nextShockwaveMemos = { ...shockwaveMemosRef.current };
-      viewRelevantData.forEach(item => {
+      currentViewRelevantData.forEach(item => {
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+        if (item.updated_at) {
+          lastWriteTimeRef.current.set(key, item.updated_at);
+          localShockwaveWriteTimeRef.current.set(key, item.updated_at);
+        }
         const fullKey = `${item.year}-${item.month}-${key}`;
         const merged = intentionalClearKeys.has(fullKey) ? item : { ...nextShockwaveMemos[key], ...item };
         if (shouldKeepShockwaveMemo(merged)) nextShockwaveMemos[key] = merged;
@@ -1099,7 +1207,7 @@ export function ScheduleProvider({ children }) {
       if (isCurrentScheduleMonth(currentYear, currentMonth)) {
         setShockwaveMemos(prev => {
           const next = { ...prev };
-          viewRelevantData.forEach(item => {
+          currentViewRelevantData.forEach(item => {
             const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
             const fullKey = `${item.year}-${item.month}-${key}`;
             const merged = intentionalClearKeys.has(fullKey) ? item : { ...next[key], ...item };
@@ -1156,6 +1264,10 @@ export function ScheduleProvider({ children }) {
         }
       };
 
+      if (!canApplyClientState()) {
+        return true;
+      }
+
       if (deferStatsSync) {
         setTimeout(() => {
           syncAffectedStats().catch((syncErr) => {
@@ -1167,7 +1279,12 @@ export function ScheduleProvider({ children }) {
       }
       return true;
     } catch (err) {
-      setShockwaveMemos(prev => rollbackShockwaveMemoState(prev, previousMemos));
+      const currentRollbackMemos = Object.fromEntries(
+        Object.entries(previousMemos).filter(([key]) => isKeyWriteStillCurrent(key))
+      );
+      if (Object.keys(currentRollbackMemos).length > 0) {
+        setShockwaveMemos(prev => rollbackShockwaveMemoState(prev, currentRollbackMemos));
+      }
       console.error('Failed to save bulk shockwave memos:', err);
       return false;
       }
@@ -1417,6 +1534,22 @@ export function ScheduleProvider({ children }) {
             const item = payload.new;
             const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
             if (shockwaveWriteQueueRef.current.has(key)) return;
+            if (shouldIgnoreStaleShockwaveServerItem(key, item)) return;
+
+            const localMemo = shockwaveMemosRef.current?.[key];
+            const localLastWrite = lastWriteTimeRef.current.get(key);
+            const localTime = localLastWrite
+              ? new Date(localLastWrite).getTime()
+              : (localMemo?.updated_at ? new Date(localMemo.updated_at).getTime() : 0);
+
+            if (item.updated_at && new Date(item.updated_at).getTime() <= localTime) {
+              return;
+            }
+
+            if (item.updated_at) {
+              lastWriteTimeRef.current.set(key, item.updated_at);
+            }
+
             setShockwaveMemos(prev => {
               const next = { ...prev };
               if (shouldKeepShockwaveMemo(item)) next[key] = item;
@@ -1428,6 +1561,8 @@ export function ScheduleProvider({ children }) {
             if (item.year === currentYear && item.month === currentMonth) {
               const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
               if (shockwaveWriteQueueRef.current.has(key)) return;
+              if (shouldIgnoreStaleShockwaveServerItem(key, item)) return;
+
               setShockwaveMemos(prev => {
                 const next = { ...prev };
                 delete next[key];
@@ -1472,7 +1607,7 @@ export function ScheduleProvider({ children }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentYear, currentMonth, shouldKeepShockwaveMemo, refreshCurrentScheduleFromServer]);
+  }, [currentYear, currentMonth, shouldKeepShockwaveMemo, shouldIgnoreStaleShockwaveServerItem, refreshCurrentScheduleFromServer]);
 
   return (
     <ScheduleContext.Provider value={{

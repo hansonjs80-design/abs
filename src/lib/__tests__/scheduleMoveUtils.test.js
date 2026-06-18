@@ -208,6 +208,30 @@ describe('schedule move payload helpers', () => {
     assert.deepEqual(result.movedKeys, ['0-0-3-1']);
   });
 
+  it('skips over a visually empty merged master if it has meaningful metadata (prescription/body part/bg_color)', () => {
+    const result = buildMoveScheduleSelectionPayload({
+      ...defaultArgs,
+      selectedKeys: new Set(['0-0-2-1']),
+      memos: {
+        '0-0-2-1': { content: '123/홍길동(2)' },
+        '0-0-3-1': {
+          content: '',
+          prescription: 'F/R',
+          body_part: 'Lumbar',
+          merge_span: { rowSpan: 2, colSpan: 1, mergedInto: null },
+        },
+        '0-0-4-1': {
+          content: '',
+          merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-0-3-1' },
+        },
+      },
+      rowDelta: 1,
+    });
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.movedKeys, ['0-0-5-1']);
+  });
+
   it('skips over a merged child cell from another merge', () => {
     const result = buildMoveScheduleSelectionPayload({
       ...defaultArgs,
