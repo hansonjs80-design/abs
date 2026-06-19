@@ -10,6 +10,9 @@ export const DEFAULT_SHOCKWAVE_SETTLEMENT = {
     'F/Rdc': '2',
     'F1.5': '3',
   },
+  dose_tags: {},
+  duration_minutes: {},
+  visit_line_break_prescriptions: [],
   incentive_percentage: 7,
 };
 
@@ -23,6 +26,15 @@ export const DEFAULT_MANUAL_THERAPY_SETTLEMENT = {
     '40분': '4',
     '60분': '6',
   },
+  dose_tags: {
+    '40분': '40',
+    '60분': '60',
+  },
+  duration_minutes: {
+    '40분': 40,
+    '60분': 60,
+  },
+  visit_line_break_prescriptions: ['40분', '60분'],
   incentive_percentage: 0,
 };
 
@@ -44,6 +56,15 @@ export function buildBaseSettlementSettings(settings, type = 'shockwave') {
   const rawShortcuts = isManual
     ? settings?.manual_therapy_shortcuts
     : settings?.shortcuts;
+  const rawDoseTags = isManual
+    ? settings?.manual_therapy_dose_tags
+    : settings?.dose_tags;
+  const rawDurationMinutes = isManual
+    ? settings?.manual_therapy_duration_minutes
+    : settings?.duration_minutes;
+  const rawVisitLineBreakPrescriptions = isManual
+    ? settings?.manual_therapy_visit_line_break_prescriptions
+    : settings?.visit_line_break_prescriptions;
 
   return {
     prescriptions: Array.isArray(prescriptions) && prescriptions.length > 0
@@ -58,6 +79,17 @@ export function buildBaseSettlementSettings(settings, type = 'shockwave') {
       ...fallback.shortcuts,
       ...(rawShortcuts || {}),
     },
+    dose_tags: {
+      ...fallback.dose_tags,
+      ...(rawDoseTags || {}),
+    },
+    duration_minutes: {
+      ...fallback.duration_minutes,
+      ...(rawDurationMinutes || {}),
+    },
+    visit_line_break_prescriptions: Array.isArray(rawVisitLineBreakPrescriptions)
+      ? rawVisitLineBreakPrescriptions.filter(Boolean)
+      : fallback.visit_line_break_prescriptions,
     incentive_percentage: isManual
       ? settings?.manual_therapy_incentive_percentage ?? fallback.incentive_percentage
       : settings?.incentive_percentage ?? fallback.incentive_percentage,
@@ -96,7 +128,17 @@ export function getEffectiveSettlementSettings(settings, year, month, type = 'sh
       ...base.shortcuts,
       ...(override?.shortcuts || {}),
     },
-    dose_tags: override?.dose_tags || {},
+    dose_tags: {
+      ...base.dose_tags,
+      ...(override?.dose_tags || {}),
+    },
+    duration_minutes: {
+      ...base.duration_minutes,
+      ...(override?.duration_minutes || {}),
+    },
+    visit_line_break_prescriptions: Array.isArray(override?.visit_line_break_prescriptions)
+      ? override.visit_line_break_prescriptions.filter(Boolean)
+      : base.visit_line_break_prescriptions,
     incentive_percentage: override?.incentive_overridden === true || Number(override?.incentive_percentage) > 0
       ? Number(override?.incentive_percentage) || 0
       : base.incentive_percentage,
@@ -121,6 +163,10 @@ export function setMonthlySettlementSettings(settings, year, month, type, nextCo
         prescription_colors: nextConfig?.prescription_colors || {},
         shortcuts: nextConfig?.shortcuts || {},
         ...(nextConfig?.dose_tags ? { dose_tags: nextConfig.dose_tags } : {}),
+        ...(nextConfig?.duration_minutes ? { duration_minutes: nextConfig.duration_minutes } : {}),
+        visit_line_break_prescriptions: Array.isArray(nextConfig?.visit_line_break_prescriptions)
+          ? nextConfig.visit_line_break_prescriptions.filter(Boolean)
+          : [],
         incentive_percentage: Number(nextConfig?.incentive_percentage) || 0,
         incentive_overridden: true,
       },

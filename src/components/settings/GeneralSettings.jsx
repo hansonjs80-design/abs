@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Sun, Moon, Database, Copy } from 'lucide-react';
+import { Database, Copy } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { useToast } from '../common/Toast';
-import { useTheme } from '../../contexts/ThemeContext';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { SQL_SETUP_SCRIPT, DB_USAGE_CHECK_SQL } from '../../lib/sqlSnippets';
 
 export default function GeneralSettings() {
-  const { theme, toggleTheme } = useTheme();
   const { addToast } = useToast();
   const { saveShockwaveSettings } = useSchedule();
   
@@ -19,6 +17,7 @@ export default function GeneralSettings() {
     start_time: '09:00', 
     end_time: '18:00', 
     interval_minutes: 10,
+    time_label_interval_minutes: 20,
     prescriptions: ['F1.5', 'F/Rdc', 'F/R'],
     manual_therapy_prescriptions: ['40분', '60분'],
     prescription_prices: {
@@ -69,6 +68,10 @@ export default function GeneralSettings() {
           start_time: data.start_time.substring(0, 5),
           end_time: data.end_time.substring(0, 5),
           interval_minutes: data.interval_minutes,
+          time_label_interval_minutes: data.time_label_interval_minutes
+            || data.monthly_settlement_settings?.__schedule_display?.time_label_interval_minutes
+            || data.interval_minutes
+            || 20,
           prescriptions: data.prescriptions || ['F1.5', 'F/Rdc', 'F/R'],
           manual_therapy_prescriptions: data.manual_therapy_prescriptions || ['40분', '60분'],
           prescription_prices: data.prescription_prices || {
@@ -97,6 +100,7 @@ export default function GeneralSettings() {
       start_time: swSettings.start_time + ':00',
       end_time: swSettings.end_time + ':00',
       interval_minutes: Number(swSettings.interval_minutes),
+      time_label_interval_minutes: Number(swSettings.time_label_interval_minutes) || Number(swSettings.interval_minutes) || 20,
       day_overrides: swSettings.day_overrides || {},
       date_overrides: swSettings.date_overrides || {},
       prescriptions: swSettings.prescriptions,
@@ -144,24 +148,6 @@ export default function GeneralSettings() {
 
   return (
     <>
-      {/* 테마 */}
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div className="card-header">
-          <span className="card-title">{theme === 'light' ? <Sun size={18} /> : <Moon size={18} />} 테마 설정</span>
-        </div>
-        <div className="card-body">
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-label">다크 모드</div>
-              <div className="settings-row-desc">어두운 테마로 전환합니다</div>
-            </div>
-            <button className="btn btn-secondary btn-sm" onClick={toggleTheme}>
-              {theme === 'light' ? '다크 모드로' : '라이트 모드로'}
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* 충격파 시간표 관리 */}
       <div className="card" style={{ marginBottom: 24 }}>
         <div className="card-header">
@@ -178,8 +164,18 @@ export default function GeneralSettings() {
               <input type="time" className="form-input" style={{ width: 120 }} value={swSettings.end_time} onChange={e => setSwSettings(p => ({ ...p, end_time: e.target.value }))} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="settings-row-label">시간 단위</span>
+              <span className="settings-row-label">기본 병합</span>
               <select className="form-input" style={{ width: 100 }} value={swSettings.interval_minutes} onChange={e => setSwSettings(p => ({ ...p, interval_minutes: Number(e.target.value) }))}>
+                <option value={10}>10분</option>
+                <option value={15}>15분</option>
+                <option value={20}>20분</option>
+                <option value={30}>30분</option>
+                <option value={60}>60분(1시간)</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="settings-row-label">시간열 표시</span>
+              <select className="form-input" style={{ width: 100 }} value={swSettings.time_label_interval_minutes} onChange={e => setSwSettings(p => ({ ...p, time_label_interval_minutes: Number(e.target.value) }))}>
                 <option value={10}>10분</option>
                 <option value={15}>15분</option>
                 <option value={20}>20분</option>

@@ -11,6 +11,7 @@ import {
 } from '../../lib/schedulerUtils';
 import { applyDoseTagToContent, strip4060FromContent } from '../../lib/schedulerContentFormat';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
+import { getPrescriptionScheduleSettings } from '../../lib/prescriptionScheduleSettings';
 import { buildManualTherapyUnmergePayload } from '../../lib/manualTherapyMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import {
@@ -364,6 +365,7 @@ export default function useScheduleKeyboardActions({
     const keyNum = keyMatch ? keyMatch[1] : event.key;
     const effectiveManualSettings = getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'manual_therapy');
     const effectiveShockwaveSettings = getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'shockwave');
+    const prescriptionScheduleSettings = getPrescriptionScheduleSettings(shockwaveSettings, currentYear, currentMonth);
 
     const manualShortcuts = effectiveManualSettings?.shortcuts || {};
     const manualPrescription = Object.keys(manualShortcuts).find((prescription) => manualShortcuts[prescription] === keyNum);
@@ -376,11 +378,8 @@ export default function useScheduleKeyboardActions({
     event.stopPropagation();
     event.stopImmediatePropagation?.();
 
-    const isManualTherapy = Boolean(manualPrescription);
-    const autoTagMatch = isManualTherapy ? targetPrescription.match(/(\d{2,3})/) : null;
-    const doseTag = isManualTherapy
-      ? effectiveManualSettings?.dose_tags?.[targetPrescription] || shockwaveSettings?.manual_therapy_dose_tags?.[targetPrescription] || (autoTagMatch ? autoTagMatch[1] : '')
-      : '';
+    const autoTagMatch = targetPrescription.match(/(\d{2,3})/);
+    const doseTag = prescriptionScheduleSettings.doseTags?.[targetPrescription] || (autoTagMatch ? autoTagMatch[1] : '');
     const rawSelected = selectedKeysRef.current && selectedKeysRef.current.size > 0
       ? selectedKeysRef.current
       : new Set([cellKey(activeCell.w, activeCell.d, activeCell.r, activeCell.c)]);
@@ -413,14 +412,13 @@ export default function useScheduleKeyboardActions({
         if (!stableContent) continue;
 
         let updatedContent = strip4060FromContent(stableContent);
-        if (isManualTherapy && doseTag) {
+        if (doseTag) {
           updatedContent = applyDoseTagToContent(stableContent, doseTag);
         }
 
         if (memo.prescription === targetPrescription && stableContent === updatedContent) continue;
 
-        const manualTherapyMerge = isManualTherapy
-          ? buildManualTherapyAutoMergePayload({
+        const manualTherapyMerge = buildManualTherapyAutoMergePayload({
             key,
             memos: latestMemos,
             pendingMergeSpans: pendingMergeSpansRef.current,
@@ -432,8 +430,10 @@ export default function useScheduleKeyboardActions({
             prescription: targetPrescription,
             bodyPart: memo.body_part || null,
             mergeSpan: pendingMergeSpansRef.current?.[key] || memo.merge_span,
-          })
-          : { ok: false, reason: 'not-manual-therapy' };
+            durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,
+            doseTags: prescriptionScheduleSettings.doseTags,
+            slotMinutes: shockwaveSettings?.interval_minutes || 10,
+          });
 
         if (manualTherapyMerge.ok) {
           const undoSnapshot = buildSnapshotRef.current(manualTherapyMerge.affectedKeys);
@@ -455,7 +455,7 @@ export default function useScheduleKeyboardActions({
           continue;
         }
 
-        if (!isManualTherapy) {
+        if (!manualPrescription) {
           const unmergePayload = buildManualTherapyUnmergePayload({
             key,
             memos: latestMemos,

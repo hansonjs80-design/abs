@@ -1,12 +1,35 @@
 import { buildManualTherapyMergePayload, getManualTherapyRowSpan } from './manualTherapyMergeUtils.js';
 import { get4060PrescriptionFromContent } from './schedulerContentFormat.js';
 
-export function resolveManualTherapyAutoPrescription({ content = '', prescription = '' } = {}) {
+function getDoseTagFromContent(content = '') {
+  const detectedPrescription = get4060PrescriptionFromContent(content);
+  return String(detectedPrescription || '').replace(/[^\d]/g, '');
+}
+
+function findPrescriptionByDoseTag(content, doseTags = {}, durationMinutesMap = {}, slotMinutes) {
+  const contentDoseTag = getDoseTagFromContent(content);
+  if (!contentDoseTag || !doseTags || typeof doseTags !== 'object') return '';
+  return Object.entries(doseTags).find(([candidate, tag]) => (
+    String(tag || '').trim() === contentDoseTag &&
+    getManualTherapyRowSpan(candidate, { durationMinutesMap, slotMinutes }) > 1
+  ))?.[0] || '';
+}
+
+export function resolveManualTherapyAutoPrescription({
+  content = '',
+  prescription = '',
+  durationMinutesMap = {},
+  doseTags = {},
+  slotMinutes,
+} = {}) {
   const explicitPrescription = String(prescription || '').trim();
-  if (getManualTherapyRowSpan(explicitPrescription) > 1) return explicitPrescription;
+  if (getManualTherapyRowSpan(explicitPrescription, { durationMinutesMap, slotMinutes }) > 1) return explicitPrescription;
+
+  const doseTagPrescription = findPrescriptionByDoseTag(content, doseTags, durationMinutesMap, slotMinutes);
+  if (doseTagPrescription) return doseTagPrescription;
 
   const contentPrescription = get4060PrescriptionFromContent(content);
-  if (getManualTherapyRowSpan(contentPrescription) > 1) return contentPrescription;
+  if (getManualTherapyRowSpan(contentPrescription, { durationMinutesMap, slotMinutes }) > 1) return contentPrescription;
 
   return '';
 }
@@ -14,9 +37,18 @@ export function resolveManualTherapyAutoPrescription({ content = '', prescriptio
 export function buildManualTherapyAutoMergePayload({
   content = '',
   prescription = '',
+  durationMinutesMap = {},
+  doseTags = {},
+  slotMinutes,
   ...rest
 }) {
-  const resolvedPrescription = resolveManualTherapyAutoPrescription({ content, prescription });
+  const resolvedPrescription = resolveManualTherapyAutoPrescription({
+    content,
+    prescription,
+    durationMinutesMap,
+    doseTags,
+    slotMinutes,
+  });
   if (!resolvedPrescription) {
     return {
       ok: false,
@@ -31,6 +63,8 @@ export function buildManualTherapyAutoMergePayload({
     ...rest,
     content,
     prescription: resolvedPrescription,
+    durationMinutesMap,
+    slotMinutes,
   });
 
   return {

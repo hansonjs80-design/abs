@@ -7,6 +7,10 @@ import {
   patientHistoryIdentityMatches,
 } from '../../lib/patientHistoryModalUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
+import {
+  getPrescriptionFromConfiguredDoseTag,
+  getPrescriptionScheduleSettings,
+} from '../../lib/prescriptionScheduleSettings';
 import { supabase } from '../../lib/supabaseClient';
 import { get4060PrescriptionFromContent, has4060Pattern } from '../../lib/schedulerContentFormat';
 import {
@@ -362,7 +366,9 @@ export default function usePatientHistoryActions({
 
           const visitSuffix = getExplicitVisitSuffix(content);
           const visitCount = visitSuffix.replace(/[()]/g, '') || '';
-          const schedulePrescription = s.prescription || get4060PrescriptionFromContent(content);
+          const schedulePrescription = s.prescription
+            || getPrescriptionFromConfiguredDoseTag(settings, currentYear, currentMonth, content)
+            || get4060PrescriptionFromContent(content);
           const historyGroup = getPatientHistoryTreatmentGroup({
             type: 'schedule',
             prescription: schedulePrescription,
@@ -525,7 +531,9 @@ export default function usePatientHistoryActions({
               })) continue;
 
               const visitSuffix = getExplicitVisitSuffix(content);
-              const currentPrescription = memo.prescription || get4060PrescriptionFromContent(content);
+              const currentPrescription = memo.prescription
+                || getPrescriptionFromConfiguredDoseTag(settings, currentYear, currentMonth, content)
+                || get4060PrescriptionFromContent(content);
               const historyGroup = getPatientHistoryTreatmentGroup({
                 type: 'draft',
                 prescription: currentPrescription,
@@ -881,6 +889,7 @@ export default function usePatientHistoryActions({
 
     const currentMemo = memos[key] || {};
     const cellUpdate = buildPatientHistoryCellUpdate(log, currentMemo);
+    const prescriptionScheduleSettings = getPrescriptionScheduleSettings(settings, currentYear, currentMonth);
 
     const payload = {
       year: currentYear,
@@ -902,6 +911,9 @@ export default function usePatientHistoryActions({
       prescription: cellUpdate.prescription,
       bodyPart: cellUpdate.body_part || null,
       mergeSpan: cellUpdate.merge_span,
+      durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,
+      doseTags: prescriptionScheduleSettings.doseTags,
+      slotMinutes: settings?.interval_minutes || 10,
     });
     const savePayload = manualTherapyMerge.ok ? manualTherapyMerge.payload : [payload];
 
@@ -934,6 +946,7 @@ export default function usePatientHistoryActions({
     cellKey,
     currentYear,
     currentMonth,
+    settings,
     memos,
     baseTimeSlotsLength,
     saveShockwaveMemosBulk,

@@ -9,8 +9,22 @@ import puppeteer from 'puppeteer';
     });
     const page = await browser.newPage();
     
-    console.log('Navigating to http://localhost:5173/shockwave-stats...');
-    await page.goto('http://localhost:5173/shockwave-stats', { waitUntil: 'networkidle2' });
+    // Try ports in order: 5174 (config default), 5175 (fallback), 5173 (old fallback)
+    const ports = [5174, 5175, 5173];
+    let connected = false;
+    for (const port of ports) {
+      try {
+        console.log(`Navigating to http://localhost:${port}/shockwave-stats...`);
+        await page.goto(`http://localhost:${port}/shockwave-stats`, { waitUntil: 'networkidle2', timeout: 5000 });
+        connected = true;
+        break;
+      } catch (e) {
+        console.log(`Failed to connect to port ${port}, trying next...`);
+      }
+    }
+    if (!connected) {
+      throw new Error('Could not connect to any local port (5174, 5175, 5173)');
+    }
     
     // Check if we are on the login page by looking for the #email input
     const emailInput = await page.$('#email');
@@ -66,7 +80,7 @@ import puppeteer from 'puppeteer';
     const currentUrl = page.url();
     console.log('Current URL is:', currentUrl);
     
-    const screenshotPath = '/Users/joohansol/.gemini/antigravity-ide/brain/b090a929-cbfe-452a-af4e-5684b2d8f045/actual_ui_screenshot.png';
+    const screenshotPath = '/Users/joohansol/.gemini/antigravity-ide/brain/79031304-6253-4829-8bfd-7a6dd8086b3b/actual_ui_screenshot.png';
     await page.screenshot({ path: screenshotPath, fullPage: false }); // viewport only since menu is local
     
     console.log('Screenshot saved to:', screenshotPath);

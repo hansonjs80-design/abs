@@ -2,12 +2,31 @@ import { getScheduleCellKey, parseScheduleCellKey } from './scheduleSelectionUti
 import { buildScheduleCellPayload, markIntentionalClearPayload } from './scheduleMergeUtils.js';
 
 const DEFAULT_MERGE_SPAN = { rowSpan: 1, colSpan: 1, mergedInto: null };
+const DEFAULT_SLOT_MINUTES = 20;
 
-export function getManualTherapyRowSpan(prescription) {
+function normalizeDurationMinutes(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : 0;
+}
+
+function getConfiguredDurationMinutes(prescription, durationMinutesMap = {}) {
   const text = String(prescription || '').trim();
-  if (text === '40분') return 2;
-  if (text === '60분') return 3;
-  return 1;
+  if (!text || !durationMinutesMap || typeof durationMinutesMap !== 'object') return 0;
+  return normalizeDurationMinutes(durationMinutesMap[text]);
+}
+
+function getDurationMinutesFromPrescriptionName(prescription) {
+  const text = String(prescription || '').trim();
+  const match = text.match(/(\d{2,3})\s*분?/);
+  return match ? normalizeDurationMinutes(match[1]) : 0;
+}
+
+export function getManualTherapyRowSpan(prescription, options = {}) {
+  const durationMinutes = getConfiguredDurationMinutes(prescription, options.durationMinutesMap)
+    || getDurationMinutesFromPrescriptionName(prescription);
+  const slotMinutes = normalizeDurationMinutes(options.slotMinutes) || DEFAULT_SLOT_MINUTES;
+  if (durationMinutes <= slotMinutes) return 1;
+  return Math.max(1, Math.ceil(durationMinutes / slotMinutes));
 }
 
 function normalizeMergeSpan(mergeSpan) {
@@ -56,8 +75,10 @@ export function buildManualTherapyMergePayload({
   prescription = '',
   bodyPart = null,
   mergeSpan,
+  durationMinutesMap = {},
+  slotMinutes = DEFAULT_SLOT_MINUTES,
 }) {
-  const targetRowSpan = getManualTherapyRowSpan(prescription);
+  const targetRowSpan = getManualTherapyRowSpan(prescription, { durationMinutesMap, slotMinutes });
   if (targetRowSpan <= 1) {
     return { ok: false, reason: 'not-manual-therapy', payload: [], affectedKeys: [] };
   }

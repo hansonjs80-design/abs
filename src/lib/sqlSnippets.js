@@ -7,6 +7,7 @@ export const SQL_SNIPPETS = [
   start_time time NOT NULL DEFAULT '09:00:00',
   end_time time NOT NULL DEFAULT '18:00:00',
   interval_minutes int NOT NULL DEFAULT 10,
+  time_label_interval_minutes int NOT NULL DEFAULT 20,
   day_overrides jsonb NOT NULL DEFAULT '{}',
   date_overrides jsonb NOT NULL DEFAULT '{}',
   prescriptions text[] DEFAULT ARRAY['F1.5', 'F/Rdc', 'F/R'],
@@ -23,6 +24,7 @@ export const SQL_SNIPPETS = [
 ALTER TABLE public.shockwave_settings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS day_overrides jsonb NOT NULL DEFAULT '{}';
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS date_overrides jsonb NOT NULL DEFAULT '{}';
+ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS time_label_interval_minutes int DEFAULT 20;
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS prescriptions text[] DEFAULT ARRAY['F1.5', 'F/Rdc', 'F/R'];
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS manual_therapy_prescriptions text[] DEFAULT ARRAY['40분', '60분'];
 ALTER TABLE public.shockwave_settings ADD COLUMN IF NOT EXISTS prescription_prices jsonb NOT NULL DEFAULT '{"F1.5":50000,"F/Rdc":70000,"F/R":80000}'::jsonb;
@@ -42,6 +44,11 @@ WHERE monthly_settlement_settings IS NULL;
 UPDATE public.shockwave_settings
 SET staff_schedule_block_rules = '{}'::jsonb
 WHERE staff_schedule_block_rules IS NULL;
+UPDATE public.shockwave_settings
+SET time_label_interval_minutes = COALESCE(time_label_interval_minutes, interval_minutes, 20)
+WHERE time_label_interval_minutes IS NULL;
+ALTER TABLE public.shockwave_settings ALTER COLUMN time_label_interval_minutes SET DEFAULT 20;
+ALTER TABLE public.shockwave_settings ALTER COLUMN time_label_interval_minutes SET NOT NULL;
 ALTER TABLE public.shockwave_settings ALTER COLUMN prescription_colors SET DEFAULT '{}'::jsonb;
 ALTER TABLE public.shockwave_settings ALTER COLUMN prescription_colors SET NOT NULL;
 ALTER TABLE public.shockwave_settings ALTER COLUMN staff_schedule_block_rules SET DEFAULT '{}'::jsonb;
@@ -303,6 +310,7 @@ CREATE TABLE IF NOT EXISTS public.shockwave_settings (
   start_time time NOT NULL DEFAULT '09:00:00',
   end_time time NOT NULL DEFAULT '18:00:00',
   interval_minutes integer NOT NULL DEFAULT 10,
+  time_label_interval_minutes integer NOT NULL DEFAULT 20,
   day_overrides jsonb DEFAULT '{}'::jsonb,
   date_overrides jsonb NOT NULL DEFAULT '{}'::jsonb,
   prescriptions text[] DEFAULT ARRAY['F1.5', 'F/Rdc', 'F/R'],
@@ -328,6 +336,9 @@ ADD COLUMN IF NOT EXISTS day_overrides jsonb DEFAULT '{}'::jsonb;
 
 ALTER TABLE public.shockwave_settings
 ADD COLUMN IF NOT EXISTS prescriptions text[] DEFAULT ARRAY['F1.5', 'F/Rdc', 'F/R'];
+
+ALTER TABLE public.shockwave_settings
+ADD COLUMN IF NOT EXISTS time_label_interval_minutes integer DEFAULT 20;
 
 ALTER TABLE public.shockwave_settings
 ADD COLUMN IF NOT EXISTS manual_therapy_prescriptions text[] DEFAULT ARRAY['40분', '60분'];
@@ -371,6 +382,16 @@ WHERE monthly_settlement_settings IS NULL;
 UPDATE public.shockwave_settings
 SET staff_schedule_block_rules = '{}'::jsonb
 WHERE staff_schedule_block_rules IS NULL;
+
+UPDATE public.shockwave_settings
+SET time_label_interval_minutes = COALESCE(time_label_interval_minutes, interval_minutes, 20)
+WHERE time_label_interval_minutes IS NULL;
+
+ALTER TABLE public.shockwave_settings
+ALTER COLUMN time_label_interval_minutes SET DEFAULT 20;
+
+ALTER TABLE public.shockwave_settings
+ALTER COLUMN time_label_interval_minutes SET NOT NULL;
 
 ALTER TABLE public.shockwave_settings
 ALTER COLUMN prescription_colors SET DEFAULT '{}'::jsonb;
@@ -556,4 +577,3 @@ where n.nspname = 'public'
     'manual_therapy_therapists'
   )
 order by pg_total_relation_size(c.oid) desc;`;
-

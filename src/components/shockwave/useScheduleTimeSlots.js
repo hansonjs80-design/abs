@@ -31,6 +31,11 @@ function minutesToTime(totalMinutes) {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
+function normalizePositiveMinutes(value, fallback) {
+  const minutes = Number(value);
+  return Number.isFinite(minutes) && minutes > 0 ? minutes : fallback;
+}
+
 export default function useScheduleTimeSlots({
   currentMonth,
   currentYear,
@@ -39,7 +44,7 @@ export default function useScheduleTimeSlots({
   settings,
 }) {
   const baseTimeSlots = useMemo(() => {
-    if (!settings || !settings.start_time || !settings.end_time || !settings.interval_minutes) {
+    if (!settings || !settings.start_time || !settings.end_time || (!settings.interval_minutes && !settings.time_label_interval_minutes)) {
       return Array.from({ length: 31 }, (_, index) => ({ label: `Row ${index}`, time: '' }));
     }
 
@@ -59,7 +64,8 @@ export default function useScheduleTimeSlots({
 
     const startMinutes = startCandidates.length ? Math.min(...startCandidates) : timeToMinutes(DEFAULT_START_TIME);
     const endMinutes = endCandidates.length ? Math.max(...endCandidates) : timeToMinutes(DEFAULT_END_TIME);
-    const interval = Number(settings.interval_minutes) || 30;
+    const interval = normalizePositiveMinutes(settings.interval_minutes, 10);
+    const labelInterval = normalizePositiveMinutes(settings.time_label_interval_minutes, interval);
     if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes) || startMinutes >= endMinutes || interval <= 0) {
       return Array.from({ length: 31 }, (_, index) => ({ label: `Row ${index}`, time: '' }));
     }
@@ -68,7 +74,9 @@ export default function useScheduleTimeSlots({
     let current = startMinutes;
     while (current < endMinutes) {
       const time = minutesToTime(current);
-      slots.push({ label: time, time });
+      const showLabel = (current - startMinutes) % labelInterval === 0;
+      const label = showLabel ? time : '';
+      slots.push({ label, time, fullLabel: time, showLabel });
       current += interval;
     }
     return slots;
@@ -121,10 +129,11 @@ export default function useScheduleTimeSlots({
     const slot = dayInfo ? getTimeSlotsForDay(dayInfo).find((item) => item.idx === r) : null;
     const slotTime = slot?.time || slot?.label || baseTimeSlots?.[r]?.time || baseTimeSlots?.[r]?.label || '';
     if (slotTime) return slotTime;
-    if (!settings?.start_time || !settings?.interval_minutes || !Number.isFinite(Number(r))) return '';
+    const interval = normalizePositiveMinutes(settings?.interval_minutes, 10);
+    if (!settings?.start_time || !interval || !Number.isFinite(Number(r))) return '';
     const start = new Date(`2000-01-01T${settings.start_time}`);
     if (Number.isNaN(start.getTime())) return '';
-    start.setMinutes(start.getMinutes() + (Number(r) * Number(settings.interval_minutes)));
+    start.setMinutes(start.getMinutes() + (Number(r) * interval));
     const hh = String(start.getHours()).padStart(2, '0');
     const mm = String(start.getMinutes()).padStart(2, '0');
     return `${hh}:${mm}`;

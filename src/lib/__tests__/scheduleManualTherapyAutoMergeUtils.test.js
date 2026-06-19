@@ -63,3 +63,32 @@ test('buildManualTherapyAutoMergePayload creates a merge from a prescription eve
   assert.deepEqual(result.payload[0].merge_span, { rowSpan: 3, colSpan: 1, mergedInto: null });
   assert.equal(result.payload[0].prescription, '60분');
 });
+
+test('buildManualTherapyAutoMergePayload creates a merge for a configured prescription duration', () => {
+  const result = buildManualTherapyAutoMergePayload({
+    ...baseArgs,
+    content: '1234/홍길동30',
+    prescription: '충격파30',
+    durationMinutesMap: { '충격파30': 60 },
+    doseTags: { '충격파30': '30' },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.resolvedPrescription, '충격파30');
+  assert.equal(result.payload.length, 3);
+  assert.deepEqual(result.payload[0].merge_span, { rowSpan: 3, colSpan: 1, mergedInto: null });
+});
+
+test('buildManualTherapyAutoMergePayload resolves a configured prescription from its cell tag', () => {
+  const result = buildManualTherapyAutoMergePayload({
+    ...baseArgs,
+    content: '1234/홍길동75',
+    prescription: '',
+    durationMinutesMap: { '커스텀75': 40 },
+    doseTags: { '커스텀75': '75' },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.resolvedPrescription, '커스텀75');
+  assert.equal(result.payload.length, 2);
+});

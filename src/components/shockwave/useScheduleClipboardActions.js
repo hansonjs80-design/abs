@@ -10,6 +10,7 @@ import {
 } from '../../lib/schedulerUtils';
 import { markIntentionalClearPayload, getExpandedMergeKeys, buildScheduleCellPayload } from '../../lib/scheduleMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
+import { getPrescriptionScheduleSettings } from '../../lib/prescriptionScheduleSettings';
 
 export default function useScheduleClipboardActions({
   selectedCell,
@@ -21,6 +22,7 @@ export default function useScheduleClipboardActions({
   setClipboardSource,
   currentYear,
   currentMonth,
+  settings,
   baseTimeSlotsLength,
   colCount,
   cellKey,
@@ -507,6 +509,7 @@ export default function useScheduleClipboardActions({
     });
 
     const autoMergedPayloads = new Map();
+    const prescriptionScheduleSettings = getPrescriptionScheduleSettings(settings, currentYear, currentMonth);
     for (const item of enhancedPayload) {
       const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
 
@@ -522,6 +525,9 @@ export default function useScheduleClipboardActions({
         prescription: item.prescription || '',
         bodyPart: item.body_part || null,
         mergeSpan: item.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+        durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,
+        doseTags: prescriptionScheduleSettings.doseTags,
+        slotMinutes: settings?.interval_minutes || 10,
       });
 
       if (manualTherapyMerge.ok && manualTherapyMerge.payload?.length > 0) {
@@ -698,6 +704,7 @@ export default function useScheduleClipboardActions({
     cellKey,
     currentYear,
     currentMonth,
+    settings,
     baseTimeSlotsLength,
     colCount,
     saveShockwaveMemosBulk,

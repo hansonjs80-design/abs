@@ -61,7 +61,7 @@
 }
 
 @media (max-width: 768px) {
-  .header { padding: 0 16px; }
+  .header { display: none; }
   .header-title { font-size: 1.15rem; }
   .mobile-only { display: flex; }
 }
@@ -817,6 +817,61 @@
 .top-tab.active .month-nav-btn:hover svg {
   color: var(--tab-active-border);
   stroke: var(--tab-active-border);
+}
+
+@media (max-width: 768px), ((hover: none) and (pointer: coarse) and (orientation: landscape)) {
+  .top-tabs-shell {
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 10px 10px 0;
+  }
+
+  .top-tabs {
+    flex: 0 1 auto;
+  }
+
+  .top-tabs-actions {
+    gap: 0;
+    padding-bottom: 6px;
+    flex: 0 0 auto;
+  }
+
+  .top-tabs-current-date {
+    display: none;
+  }
+
+  .top-tabs-actions .print-toggle {
+    width: 38px;
+    height: 38px;
+  }
+
+  .top-tabs-track {
+    gap: 2px;
+  }
+
+  .top-tab:not(.active) {
+    justify-content: center;
+    min-width: 42px;
+    padding: 8px 10px 6px;
+  }
+
+  .top-tab:not(.active):hover {
+    padding: 8px 10px 6px;
+    transform: translateY(2px);
+  }
+
+  .top-tab:not(.active) .top-tab-inner {
+    gap: 0;
+  }
+
+  .top-tab:not(.active) .tab-content-switcher,
+  .top-tab:not(.active) .top-tab-inner > span {
+    width: 0;
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
 }
 
 /* ── 버튼 ── */

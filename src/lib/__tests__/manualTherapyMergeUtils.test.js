@@ -18,6 +18,15 @@ test('getManualTherapyRowSpan maps manual prescriptions to total row span', () =
   assert.equal(getManualTherapyRowSpan('F/R'), 1);
 });
 
+test('getManualTherapyRowSpan uses configured treatment duration before prescription name', () => {
+  assert.equal(getManualTherapyRowSpan('새처방', {
+    durationMinutesMap: { '새처방': 80 },
+  }), 4);
+  assert.equal(getManualTherapyRowSpan('40분', {
+    durationMinutesMap: { '40분': 20 },
+  }), 1);
+});
+
 test('buildManualTherapyMergePayload creates a 2-row merge for 40 minutes', () => {
   const result = buildManualTherapyMergePayload({
     ...baseArgs,

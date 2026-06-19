@@ -8,6 +8,7 @@ import {
   normalize4060StarOrder,
   strip4060FromContent,
 } from '../../lib/schedulerContentFormat';
+import { getPrescriptionFromConfiguredDoseTag } from '../../lib/prescriptionScheduleSettings';
 import {
   addBodyPartToMap,
   buildManualNamePart,
@@ -295,10 +296,15 @@ export default function useSchedulerAutoText({
     let rawName = normalizeSchedulerVisitSuffix(nextValue);
     if (!shouldAutoFormatSchedulerName(rawName)) return { text: rawName };
 
+    const dayInfo = weeks[w]?.[d];
+    if (!dayInfo) return { text: rawName };
+
     let initialPrescription = undefined;
     if (has4060Pattern(rawName)) {
       rawName = normalize4060StarOrder(rawName);
-      initialPrescription = get4060PrescriptionFromContent(rawName) || undefined;
+      initialPrescription = getPrescriptionFromConfiguredDoseTag(settings, dayInfo.year, dayInfo.month, rawName)
+        || get4060PrescriptionFromContent(rawName)
+        || undefined;
     }
 
     let manualSession = null;
@@ -309,8 +315,6 @@ export default function useSchedulerAutoText({
     const explicitVisitSuffix = getExplicitVisitSuffix(rawName);
     const explicitNoteSuffix = getNonVisitParentheticalSuffix(rawName);
 
-    const dayInfo = weeks[w]?.[d];
-    if (!dayInfo) return { text: rawName };
     const targetDate = `${dayInfo.year}-${String(dayInfo.month).padStart(2, '0')}-${String(dayInfo.day).padStart(2, '0')}`;
     const memoKey = `${w}-${d}-${r}-${c}`;
     const clearPatientMergeSpan = () => stripReservationTimeFromMergeSpan(

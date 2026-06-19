@@ -16,6 +16,7 @@ import {
   strip4060FromContent,
 } from '../../lib/schedulerContentFormat';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
+import { getPrescriptionFromConfiguredDoseTag, getPrescriptionScheduleSettings } from '../../lib/prescriptionScheduleSettings';
 import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
 import { useToast } from '../common/Toast';
 import { useAuth } from '../../contexts/AuthContext';
@@ -310,6 +311,7 @@ const MemoizedCell = memo(({
   cellKey, weekIdx, dayIdx, rowIdx, colIdx, dayInfo, slotInfo, showTimeCol, gridRowStart, isLastRenderedRow, colCount,
   cellData, pendingContent, pendingMergeSpan, mergeSpan, editingCell, imePreviewCell, selectedKeys, selectedCell, clipboardSource,
   workState, staffBlockRule, effectivePrescriptionColors,
+  visitLineBreakPrescriptions,
   editValue,
   handleCellMouseDown, handleCellMouseEnter, setHoverCell, handleCellDoubleClick, handleCellContextMenu,
   editInputRef, handleCellSave, handleEditKeyDown, imeOpenRef, setImePreviewCell, editDraftRef, scheduleEditDraftAutosave, promoteFocusedInputToEditor, skipNextEditBlurSaveRef
@@ -321,6 +323,7 @@ const MemoizedCell = memo(({
   const hasCellMemo = cellMemoList.length > 0;
   const cellPrescription = cellData?.prescription || effectiveMergeSpan?.meta?.prescription || '';
   const displayData = buildSchedulerCellDisplay(content, effectiveMergeSpan);
+  const hasDisplayText = displayData.hasDisplayText && content.trim() && content.trim() !== '\u200B';
 
   const isEditing = editingCell === cellKey;
   const isImePreview = imePreviewCell === cellKey;
@@ -334,6 +337,7 @@ const MemoizedCell = memo(({
   }
 
   let cls = 'sw-cell';
+  if (colIdx + effectiveMergeSpan.colSpan - 1 === colCount - 1) cls += ' last-col';
   if (dayInfo.isHoliday) cls += ' holiday-bg';
   else if (!dayInfo.isCurrentMonth) cls += ' other-month-bg disabled-cell';
   
@@ -350,8 +354,10 @@ const MemoizedCell = memo(({
     cls += ` ants-active ${clipboardSource.mode === 'cut' ? 'ants-red' : 'ants-blue'}`;
   }
 
-  if (dayInfo.isCurrentMonth && !isSelected && workState === 'off') {
+  if (dayInfo.isCurrentMonth && !isSelected && !hasDisplayText && !cellData?.bg_color && workState === 'off') {
     cls += ' staff-off';
+  } else if (dayInfo.isCurrentMonth && !hasDisplayText && staffBlockRule?.bg_color) {
+    cls += ' staff-blocked';
   } else if (!dayInfo.isCurrentMonth && !dayInfo.isHoliday && (
     workState === 'off' ||
     workState === 'night' ||
@@ -376,12 +382,13 @@ const MemoizedCell = memo(({
   }
 
   if (dayInfo.isCurrentMonth && cellData?.bg_color) inlineStyle.backgroundColor = cellData.bg_color;
-  else if (dayInfo.isCurrentMonth && staffBlockRule?.bg_color) inlineStyle.backgroundColor = staffBlockRule.bg_color;
+  else if (dayInfo.isCurrentMonth && !hasDisplayText && staffBlockRule?.bg_color) inlineStyle.backgroundColor = staffBlockRule.bg_color;
   
   if (dayInfo.isCurrentMonth && staffBlockRule?.font_color) inlineStyle.color = staffBlockRule.font_color;
 
   const prescriptionColor = cellPrescription ? effectivePrescriptionColors[cellPrescription] : undefined;
-  const hasMeaningfulContent = displayData.hasDisplayText && content.trim() && content.trim() !== '\u200B';
+  const shouldBreakVisitLine = Boolean(cellPrescription && visitLineBreakPrescriptions?.includes(cellPrescription));
+  const hasMeaningfulContent = hasDisplayText;
   const noPrescription = hasMeaningfulContent && !cellPrescription;
   const noBodyPart = hasMeaningfulContent && !String(cellData?.body_part || '').trim();
   const visitSuffixClassName = [
@@ -439,7 +446,7 @@ const MemoizedCell = memo(({
                 ) : null}
                 {displayData.visitSuffix ? (
                   <>
-                    {visualRowSpan > 1 && !displayData.noteSuffix ? <br /> : null}
+                    {shouldBreakVisitLine && !displayData.noteSuffix ? <br /> : null}
                     {renderSchedulerVisitSuffix(displayData.visitSuffix, visitSuffixClassName, visitSuffixColor ? { color: visitSuffixColor } : undefined)}
                   </>
                 ) : null}
@@ -523,7 +530,7 @@ const MemoizedCell = memo(({
               ) : null}
               {displayData.visitSuffix ? (
                 <>
-                  {visualRowSpan > 1 && !displayData.noteSuffix ? <br /> : null}
+                  {shouldBreakVisitLine && !displayData.noteSuffix ? <br /> : null}
                   {renderSchedulerVisitSuffix(displayData.visitSuffix, visitSuffixClassName, visitSuffixColor ? { color: visitSuffixColor } : undefined)}
                 </>
               ) : null}
@@ -572,6 +579,7 @@ const MemoizedCell = memo(({
   if (prevProps.staffBlockRule?.bg_color !== nextProps.staffBlockRule?.bg_color) return false;
   if (prevProps.staffBlockRule?.font_color !== nextProps.staffBlockRule?.font_color) return false;
   if (prevProps.staffBlockRule?.keyword !== nextProps.staffBlockRule?.keyword) return false;
+  if (prevProps.visitLineBreakPrescriptions !== nextProps.visitLineBreakPrescriptions) return false;
   
   if (prevProps.slotInfo?.disabled !== nextProps.slotInfo?.disabled) return false;
   if (prevProps.slotInfo?.isLunch !== nextProps.slotInfo?.isLunch) return false;
@@ -670,6 +678,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return next;
     },
     [memos, pendingMemoOverrides]
+  );
+  const prescriptionScheduleSettings = useMemo(
+    () => getPrescriptionScheduleSettings(settings, currentYear, currentMonth),
+    [settings, currentYear, currentMonth]
   );
 
   // 환자 내역 검색 팝업 상태 (Cmd+F)
@@ -834,6 +846,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const handleCellSaveRef = useRef(null);
   const editDraftRef = useRef(null);
   const editAutosaveTimerRef = useRef(null);
+  const defaultEditMergeSpanRef = useRef({});
   const cellSaveVersionRef = useRef({});
   const saveMemoRef = useRef(queuedOnSaveMemo);
   const scheduleDateRef = useRef({ year: currentYear, month: currentMonth });
@@ -929,27 +942,35 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const prescriptionPatchKeyRef = useRef(null);
   useEffect(() => {
     const monthKey = getShockwaveScheduleScrollKey(currentYear, currentMonth);
+    const patchKey = `${monthKey}-${settings?.interval_minutes || 10}`;
     if (loadedMemosKey !== monthKey) return;
-    if (prescriptionPatchKeyRef.current === monthKey) return; // 이미 이번 달 패치 완료
+    if (prescriptionPatchKeyRef.current === patchKey) return; // 이미 이번 설정으로 패치 완료
     if (!memos || Object.keys(memos).length === 0) return;
 
     const fixEntries = [];
     Object.entries(memos).forEach(([key, memo]) => {
       const content = String(memo?.content || '').trim();
       if (!content) return;
-      const autoPres = get4060PrescriptionFromContent(content);
-      if (!autoPres) return;
-      const existingPrescription = String(memo?.prescription || '').trim();
+      const autoPres = getPrescriptionFromConfiguredDoseTag(settings, currentYear, currentMonth, content)
+        || get4060PrescriptionFromContent(content);
+      const targetPres = autoPres || String(memo?.prescription || '').trim();
+      if (!targetPres) return;
+
+      const expectedRowSpan = getManualTherapyRowSpan(targetPres, {
+        durationMinutesMap: prescriptionScheduleSettings?.durationMinutesMap,
+        slotMinutes: settings?.interval_minutes || 10,
+      });
+      if (expectedRowSpan <= 1) return;
+
       const mergeSpan = memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
-      const expectedRowSpan = getManualTherapyRowSpan(autoPres);
       const hasExpectedMerge = (
         expectedRowSpan > 1 &&
         !mergeSpan.mergedInto &&
         (mergeSpan.rowSpan || 1) === expectedRowSpan &&
         (mergeSpan.colSpan || 1) === 1
       );
-      if (existingPrescription === autoPres && hasExpectedMerge) return;
-      fixEntries.push({ key, prescription: autoPres, content });
+      if (memo?.prescription === targetPres && hasExpectedMerge) return;
+      fixEntries.push({ key, prescription: targetPres, content });
     });
 
     const blankCleanupPayload = buildBlankScheduleCleanupPayload({
@@ -958,7 +979,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       currentMonth,
     });
 
-    prescriptionPatchKeyRef.current = monthKey; // 패치 시도 표시 (빈 배열이어도)
+    prescriptionPatchKeyRef.current = patchKey; // 패치 시도 표시 (빈 배열이어도)
 
     if (fixEntries.length === 0 && blankCleanupPayload.length === 0) return;
 
@@ -980,6 +1001,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           prescription,
           bodyPart: memos[key]?.body_part || null,
           mergeSpan: memos[key]?.merge_span,
+          durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,
+          doseTags: prescriptionScheduleSettings.doseTags,
         });
         const updates = manualTherapyMerge.ok ? manualTherapyMerge.payload : [{
           year: currentYear,
@@ -1004,7 +1027,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         await onLoadMemos(currentYear, currentMonth);
       }
     })();
-  }, [loadedMemosKey, currentYear, currentMonth, memos, baseTimeSlots.length, saveShockwaveMemosBulk, onLoadMemos]);
+  }, [loadedMemosKey, currentYear, currentMonth, settings, memos, baseTimeSlots.length, saveShockwaveMemosBulk, onLoadMemos, prescriptionScheduleSettings.durationMinutesMap, prescriptionScheduleSettings.doseTags]);
 
   const isEditableTarget = useCallback((target) => {
     return (
@@ -1229,6 +1252,65 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const handleCellDoubleClick = useCallback((e, w, d, r, c, content) => {
     selectSingleCell({ w, d, r, c });
     const key = cellKey(w, d, r, c);
+    const gridInterval = Math.max(1, Number(settings?.interval_minutes) || Number(settings?.time_label_interval_minutes) || 10);
+    const defaultReservationMinutes = Math.max(gridInterval, Number(settings?.interval_minutes) || gridInterval);
+    const defaultRowSpan = Math.max(1, Math.ceil(defaultReservationMinutes / gridInterval));
+    const currentMergeSpan = pendingMergeSpans[key] || effectiveMemos[key]?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+    const canUseDefaultMerge = (
+      !String(content || '').trim() &&
+      defaultRowSpan > 1 &&
+      !currentMergeSpan.mergedInto &&
+      (currentMergeSpan.rowSpan || 1) === 1 &&
+      r + defaultRowSpan <= baseTimeSlots.length
+    );
+
+    if (canUseDefaultMerge) {
+      const updates = [];
+      const revertUpdates = [];
+      let canMerge = true;
+      for (let rowOffset = 0; rowOffset < defaultRowSpan; rowOffset += 1) {
+        const targetRow = r + rowOffset;
+        const targetKey = cellKey(w, d, targetRow, c);
+        const memo = effectiveMemos[targetKey] || {};
+        const mergeSpan = pendingMergeSpans[targetKey] || memo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+        const hasContent = String(memo.content || '').trim();
+        if (
+          hasContent ||
+          mergeSpan.mergedInto ||
+          (targetKey !== key && ((mergeSpan.rowSpan || 1) > 1 || (mergeSpan.colSpan || 1) > 1))
+        ) {
+          canMerge = false;
+          break;
+        }
+        revertUpdates.push({
+          year: currentYear,
+          month: currentMonth,
+          week_index: w,
+          day_index: d,
+          row_index: targetRow,
+          col_index: c,
+          merge_span: mergeSpan,
+        });
+        updates.push({
+          year: currentYear,
+          month: currentMonth,
+          week_index: w,
+          day_index: d,
+          row_index: targetRow,
+          col_index: c,
+          merge_span: rowOffset === 0
+            ? { rowSpan: defaultRowSpan, colSpan: 1, mergedInto: null }
+            : { rowSpan: 1, colSpan: 1, mergedInto: key },
+        });
+      }
+      if (canMerge) {
+        defaultEditMergeSpanRef.current[key] = {
+          mergeSpan: { rowSpan: defaultRowSpan, colSpan: 1, mergedInto: null },
+          revertUpdates,
+        };
+        applyImmediateMergeSpan(updates);
+      }
+    }
     
     let offset = content?.length || 0;
     try {
@@ -1261,7 +1343,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         // Selection range is best effort.
       }
     }
-  }, [selectSingleCell, cellKey]);
+  }, [
+    applyImmediateMergeSpan,
+    baseTimeSlots.length,
+    cellKey,
+    currentMonth,
+    currentYear,
+    effectiveMemos,
+    pendingMergeSpans,
+    selectSingleCell,
+    settings?.interval_minutes,
+    settings?.time_label_interval_minutes,
+  ]);
 
   // ── 편집 저장 ──
   const handleCellSave = useCallback(async (w, d, r, c, nextValue, forcedPrescription, forcedBgColor, forcedBodyPart) => {
@@ -1280,7 +1373,24 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const oldPrescription = memos[key]?.prescription || '';
     const oldBodyPart = memos[key]?.body_part || null;
     const oldMergeSpan = memos[key]?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+    const defaultEditMerge = defaultEditMergeSpanRef.current[key];
+    delete defaultEditMergeSpanRef.current[key];
+    const defaultEditMergeSpan = defaultEditMerge?.mergeSpan;
     const immediateContent = String(finalValue ?? '').trim();
+    const hasForcedCellUpdate = forcedPrescription !== undefined || forcedBgColor !== undefined || forcedBodyPart !== undefined;
+    if (!hasForcedCellUpdate && immediateContent === String(oldContent || '').trim()) {
+      if (defaultEditMerge?.revertUpdates?.length) {
+        applyImmediateMergeSpan(defaultEditMerge.revertUpdates);
+      }
+      setEditingCell(null);
+      setPendingDisplayValues((prev) => {
+        if (prev[key] === undefined) return prev;
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      return;
+    }
     setPendingDisplayValues((prev) => ({ ...prev, [key]: immediateContent }));
     setEditingCell(null);
     const hasManualParentheticalNote = Boolean(getNonVisitParentheticalSuffix(immediateContent));
@@ -1293,16 +1403,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     );
     let newPrescription = forcedPrescription !== undefined ? forcedPrescription : result?.prescription;
     const newBodyPart = forcedBodyPart !== undefined ? forcedBodyPart : (result?.bodyPart !== undefined ? result.bodyPart : oldBodyPart);
-    const newMergeSpan = result?.mergeSpan ? stripReservationTimeFromMergeSpan(result.mergeSpan) : undefined;
+    const newMergeSpan = result?.mergeSpan ? stripReservationTimeFromMergeSpan(result.mergeSpan) : defaultEditMergeSpan;
     const hasPrescriptionResult = forcedPrescription !== undefined || (typeof result === 'object' && result !== null && Object.prototype.hasOwnProperty.call(result, 'prescription'));
     const hasBodyPartResult = forcedBodyPart !== undefined || (typeof result === 'object' && result !== null && Object.prototype.hasOwnProperty.call(result, 'bodyPart'));
-    const hasMergeSpanResult = typeof result === 'object' && result !== null && Object.prototype.hasOwnProperty.call(result, 'mergeSpan');
+    const hasMergeSpanResult = Boolean(defaultEditMergeSpan) || (typeof result === 'object' && result !== null && Object.prototype.hasOwnProperty.call(result, 'mergeSpan'));
 
     const targetBgColor = forcedBgColor !== undefined ? forcedBgColor : (memos[key]?.bg_color || null);
 
     // 이름에 도수치료 숫자 패턴이 있으면 해당 처방을 자동 설정 (처방 강제지정이 없을 때만)
     if (forcedPrescription === undefined) {
-      const autoDosePrescription = get4060PrescriptionFromContent(newContent);
+      const autoDosePrescription = getPrescriptionFromConfiguredDoseTag(settings, currentYear, currentMonth, newContent)
+        || get4060PrescriptionFromContent(newContent);
       if (autoDosePrescription) {
         newPrescription = autoDosePrescription;
       } else if (
@@ -1332,6 +1443,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       prescription: newPrescription ?? oldPrescription,
       bodyPart: newBodyPart,
       mergeSpan: newMergeSpan || oldMergeSpan,
+      durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,
+      doseTags: prescriptionScheduleSettings.doseTags,
+      slotMinutes: settings?.interval_minutes || 10,
     });
 
     const shouldWritePrescription = hasPrescriptionResult || (newPrescription !== undefined && newPrescription !== null);
@@ -1378,10 +1492,101 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return;
     }
 
+    if (!newContent.trim()) {
+      const maxSpan = Math.max(oldMergeSpan?.rowSpan || 1, defaultEditMergeSpan?.rowSpan || 1);
+      if (maxSpan > 1) {
+        const payload = [];
+        const affectedKeys = [];
+        for (let rowOffset = 0; rowOffset < maxSpan; rowOffset += 1) {
+          const targetRow = r + rowOffset;
+          const targetKey = cellKey(w, d, targetRow, c);
+          affectedKeys.push(targetKey);
+          payload.push({
+            year: currentYear,
+            month: currentMonth,
+            week_index: w,
+            day_index: d,
+            row_index: targetRow,
+            col_index: c,
+            content: '',
+            bg_color: null,
+            merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+            prescription: null,
+            body_part: null,
+          });
+        }
+
+        setPendingDisplayValues((prev) => {
+          const next = { ...prev };
+          affectedKeys.forEach((k) => delete next[k]);
+          return next;
+        });
+        removePendingScheduleDraft(currentYear, currentMonth, key);
+        applyImmediateCellDisplay(payload);
+        applyImmediateMergeSpan(payload);
+        recordUndo({
+          type: 'bulk-edit',
+          oldMemos: buildMemoSnapshotForKeys(affectedKeys),
+        });
+        const success = await queuedSaveShockwaveMemosBulk(payload);
+        if (success) {
+          removePendingScheduleDraftIfValue(currentYear, currentMonth, key, '');
+          clearImmediateCellDisplay(payload);
+        } else {
+          rememberPendingScheduleDraft(currentYear, currentMonth, key, '');
+          addToast('저장 실패', 'error');
+        }
+        return;
+      }
+    }
+
     if (manualTherapyMerge.reason === 'occupied') {
       addToast('아래 셀이 비어있지 않아 자동 병합하지 않았습니다.', 'warning');
     } else if (manualTherapyMerge.reason === 'bounds') {
       addToast('아래 시간이 부족해 자동 병합하지 않았습니다.', 'warning');
+    }
+
+    if (newContent.trim() && defaultEditMergeSpan?.rowSpan > 1 && (finalMergeSpan.rowSpan || 1) > 1) {
+      const payload = [];
+      const affectedKeys = [];
+      for (let rowOffset = 0; rowOffset < finalMergeSpan.rowSpan; rowOffset += 1) {
+        const targetRow = r + rowOffset;
+        const targetKey = cellKey(w, d, targetRow, c);
+        affectedKeys.push(targetKey);
+        payload.push({
+          year: currentYear,
+          month: currentMonth,
+          week_index: w,
+          day_index: d,
+          row_index: targetRow,
+          col_index: c,
+          content: rowOffset === 0 ? newContent : '',
+          bg_color: rowOffset === 0 ? targetBgColor : null,
+          merge_span: rowOffset === 0
+            ? finalMergeSpan
+            : { rowSpan: 1, colSpan: 1, mergedInto: key },
+          prescription: rowOffset === 0 ? finalPrescription : null,
+          body_part: rowOffset === 0 ? finalBodyPart : null,
+        });
+      }
+
+      setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
+      removePendingScheduleDraft(currentYear, currentMonth, key);
+      applyImmediateCellDisplay(payload);
+      applyImmediateMergeSpan(payload);
+      recordUndo({
+        type: 'bulk-edit',
+        oldMemos: buildMemoSnapshotForKeys(affectedKeys),
+      });
+      const success = await queuedSaveShockwaveMemosBulk(payload);
+      if (success) {
+        removePendingScheduleDraftIfValue(currentYear, currentMonth, key, newContent);
+        clearImmediateCellDisplay(payload);
+      } else {
+        rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
+        addToast('저장 실패', 'error');
+      }
+      return;
     }
 
     setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
@@ -1419,7 +1624,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     // memos 컨텍스트가 새 값을 반영할 때까지 유지하여 깜빡임 방지.
     // 아래 useEffect(cleanupStalePendingValues)에서 memos 업데이트 후 자동 정리.
     if (!success) addToast('저장 실패', 'error');
-  }, [editValue, currentYear, currentMonth, memos, effectiveMemos, pendingMergeSpans, baseTimeSlots.length, queuedOnSaveMemo, addToast, buildSchedulerAutoText, recordUndo, buildMemoSnapshotForKeys, queuedSaveShockwaveMemosBulk, applyImmediateCellDisplay, applyImmediateMergeSpan, clearImmediateCellDisplay, cellKey, setPendingDisplayValues]);
+  }, [editValue, currentYear, currentMonth, settings, memos, effectiveMemos, pendingMergeSpans, baseTimeSlots.length, queuedOnSaveMemo, addToast, buildSchedulerAutoText, recordUndo, buildMemoSnapshotForKeys, queuedSaveShockwaveMemosBulk, applyImmediateCellDisplay, applyImmediateMergeSpan, clearImmediateCellDisplay, cellKey, setPendingDisplayValues, prescriptionScheduleSettings.doseTags, prescriptionScheduleSettings.durationMinutesMap]);
 
   handleCellSaveRef.current = handleCellSave;
 
@@ -1543,6 +1748,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setClipboardSource,
     currentYear,
     currentMonth,
+    settings,
     baseTimeSlotsLength: baseTimeSlots.length,
     colCount,
     cellKey,
@@ -1659,6 +1865,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     pendingDisplayValues,
     currentYear,
     currentMonth,
+    settings,
     onSaveMemo: queuedOnSaveMemo,
     saveShockwaveMemosBulk: queuedSaveShockwaveMemosBulk,
     addToast,
@@ -1679,6 +1886,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     cellKey,
     rowCount: baseTimeSlots.length,
     pendingMergeSpans,
+    prescriptionScheduleSettings,
     applyImmediateCellDisplay,
     applyImmediateMergeSpan,
     clearImmediateCellDisplay,
@@ -1815,6 +2023,32 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     tooltipEl.style.top = `${top}px`;
     tooltipEl.style.opacity = hoverCell ? '1' : '0';
   }, [hoverCell, contextMenu]);
+
+  const handleTimeLabelMouseMove = useCallback((e, weekIdx, dayIdx, startSlotRenderIndex, labelSpan, daySlots) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const relativeY = e.clientY - rect.top;
+    const slotHeight = rect.height / labelSpan;
+    const offset = Math.floor(relativeY / slotHeight);
+    const targetSlotRenderIndex = Math.min(startSlotRenderIndex + offset, startSlotRenderIndex + labelSpan - 1);
+    const slotInfo = daySlots[targetSlotRenderIndex];
+    if (slotInfo) {
+      setHoverCell({
+        weekIdx,
+        dayIdx,
+        rowIdx: slotInfo.idx,
+        colIdx: -1,
+        staffBlockRule: null,
+        slotInfo,
+        selectionInfo: null,
+      });
+      tooltipMousePosRef.current = { x: e.clientX, y: e.clientY };
+      if (tooltipRef.current) positionTooltip(e.clientX, e.clientY);
+    }
+  }, [positionTooltip]);
+
+  const handleTimeLabelMouseLeave = useCallback(() => {
+    setHoverCell(null);
+  }, []);
 
   const handleKeyboardSelectionMoved = useCallback((cell, movedKeys = []) => {
     if (!cell) return;
@@ -2014,13 +2248,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         if (targetPrescription) {
           const currentVal = e.target.value;
           let updatedContent = strip4060FromContent(currentVal);
-          const isManualTherapy = Boolean(manualPrescription);
-          if (isManualTherapy) {
-            const autoTagMatch = targetPrescription.match(/(\d{2,3})/);
-            const doseTag = effectiveManualSettings?.dose_tags?.[targetPrescription] || settings?.manual_therapy_dose_tags?.[targetPrescription] || (autoTagMatch ? autoTagMatch[1] : '');
-            if (doseTag) {
-              updatedContent = applyDoseTagToContent(currentVal, doseTag);
-            }
+          const autoTagMatch = targetPrescription.match(/(\d{2,3})/);
+          const doseTag = prescriptionScheduleSettings.doseTags?.[targetPrescription] || (autoTagMatch ? autoTagMatch[1] : '');
+          if (doseTag) {
+            updatedContent = applyDoseTagToContent(currentVal, doseTag);
           }
           handleCellSave(w, d, r, c, updatedContent, targetPrescription);
         }
@@ -2116,7 +2347,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const nc = e.shiftKey ? Math.max(0, c - 1) : Math.min(colCount - 1, c + 1);
       selectSingleCell({ w, d, r, c: nc });
     }
-  }, [baseTimeSlots.length, colCount, selectSingleCell, getAdjacentCell, moveEditInputCaret, settings, currentYear, currentMonth, handleCellSave, memos, cellKey, handleOpenBodyPartMenu, setEditingCell]);
+  }, [baseTimeSlots.length, colCount, selectSingleCell, getAdjacentCell, moveEditInputCaret, settings, currentYear, currentMonth, handleCellSave, memos, cellKey, handleOpenBodyPartMenu, setEditingCell, prescriptionScheduleSettings.doseTags]);
 
   const handleChartSelectorClose = useCallback((selected) => {
     if (!chartSelector) return;
@@ -2334,20 +2565,29 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       
                       // 1. Time Label
                       if (showTimeCol) {
-                        elements.push(
-                          <div
-                            key={`time-${rowIdx}`}
-                            className={`sw-time-label${slotInfo.isLunch ? ' lunch' : ''}${slotInfo.disabled ? ' disabled' : ''}`}
-                            data-time-row={`${weekIdx}-${rowIdx}`}
-                            style={{
-                              gridColumn: '1',
-                              gridRow: `${gridRowStart}`,
-                              borderBottom: isLastRenderedRow ? 'none' : `1px solid ${HORIZONTAL_BORDER_COLOR}`,
-                            }}
-                          >
-                            {slotInfo.label}
-                          </div>
-                        );
+                        const interval = Math.max(1, Number(settings?.interval_minutes) || 10);
+                        const labelInterval = Math.max(interval, Number(settings?.time_label_interval_minutes) || interval);
+                        const labelSpan = Math.round(labelInterval / interval);
+
+                        if (slotInfo.showLabel) {
+                          elements.push(
+                            <div
+                              key={`time-${rowIdx}`}
+                              className={`sw-time-label${slotInfo.isLunch ? ' lunch' : ''}${slotInfo.disabled ? ' disabled' : ''}`}
+                              data-time-row={`${weekIdx}-${rowIdx}`}
+                              style={{
+                                gridColumn: '1',
+                                gridRow: `${gridRowStart} / span ${labelSpan}`,
+                                borderBottom: (isLastRenderedRow || (slotRenderIndex + labelSpan >= daySlots.length)) ? 'none' : `1px solid ${HORIZONTAL_BORDER_COLOR}`,
+                              }}
+                              onMouseEnter={(e) => handleTimeLabelMouseMove(e, weekIdx, dayIdx, slotRenderIndex, labelSpan, daySlots)}
+                              onMouseMove={(e) => handleTimeLabelMouseMove(e, weekIdx, dayIdx, slotRenderIndex, labelSpan, daySlots)}
+                              onMouseLeave={handleTimeLabelMouseLeave}
+                            >
+                              {slotInfo.label}
+                            </div>
+                          );
+                        }
                       }
 
                       // 2. Cells
@@ -2409,6 +2649,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               selectedKeys={selectedKeys} selectedCell={selectedCell} clipboardSource={clipboardSource}
                               workState={workState} staffBlockRule={staffBlockRule}
                               effectivePrescriptionColors={effectivePrescriptionColors}
+                              visitLineBreakPrescriptions={prescriptionScheduleSettings.visitLineBreakPrescriptions}
                               editValue={editValue}
                               handleCellMouseDown={handleCellMouseDown} handleCellMouseEnter={handleCellMouseEnter}
                               setHoverCell={setHoverCell} handleCellDoubleClick={handleCellDoubleClick}
@@ -2457,7 +2698,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         handleCellMouseDown, handleCellMouseEnter, setHoverCell,
         handleCellDoubleClick, handleCellContextMenu,
         handleEditKeyDown, scheduleEditDraftAutosave, promoteFocusedInputToEditor, handleCellSave,
-        cellKey, getEffectiveMergeSpan, rowHeight, canManageSchedulerSettings
+        cellKey, getEffectiveMergeSpan, rowHeight, canManageSchedulerSettings,
+        prescriptionScheduleSettings.visitLineBreakPrescriptions
       ])}
       </div>
       {contextMenu && (
@@ -2491,6 +2733,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               ? settings.manual_therapy_prescriptions.filter((pres) => pres && !shockwavePrescriptions.includes(pres))
               : [];
             const effectiveManualSettings = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'manual_therapy');
+            const effectiveShockwaveSettings = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'shockwave');
+            const allDoseTags = {
+              ...(effectiveShockwaveSettings?.dose_tags || {}),
+              ...(effectiveManualSettings?.dose_tags || {}),
+            };
             const manualDoseTags = {
               ...(settings?.manual_therapy_dose_tags || {}),
               ...(effectiveManualSettings?.dose_tags || {}),
@@ -2741,7 +2988,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 value={shockwavePrescriptions.includes(currentPrescription) ? currentPrescription : ''}
                                 onChange={(e) => {
                                   e.stopPropagation();
-                                  handleContextAction({ type: 'prescription', value: e.target.value || null });
+                                  const prescription = e.target.value || null;
+                                  const hasDoseTag = prescription && Object.prototype.hasOwnProperty.call(allDoseTags, prescription);
+                                  const autoDoseTag = prescription?.match(/(\d{2,3})/)?.[1] || '';
+                                  handleContextAction({
+                                    type: 'prescription',
+                                    value: prescription,
+                                    doseTag: hasDoseTag ? allDoseTags[prescription] : autoDoseTag,
+                                  });
                                 }}
                                 onMouseDown={e => e.stopPropagation()}
                                 onClick={e => e.stopPropagation()}

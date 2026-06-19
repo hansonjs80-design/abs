@@ -49,9 +49,11 @@ export default function useScheduleContextMenuActions({
   getDefaultReservationTime,
   rowCount,
   pendingMergeSpans,
+  prescriptionScheduleSettings,
   applyImmediateCellDisplay,
   applyImmediateMergeSpan,
   clearImmediateCellDisplay,
+  settings,
 }) {
   const saveDebounceRef = useRef({ timer: null, pending: new Map(), undoMemos: null });
 
@@ -213,6 +215,9 @@ export default function useScheduleContextMenuActions({
             prescription: action.value,
             bodyPart: memo.body_part || null,
             mergeSpan: memo.merge_span,
+            durationMinutesMap: prescriptionScheduleSettings?.durationMinutesMap || {},
+            doseTags: prescriptionScheduleSettings?.doseTags || {},
+            slotMinutes: settings?.interval_minutes || 10,
           });
 
           if (manualTherapyMerge.ok) {
@@ -775,8 +780,11 @@ export default function useScheduleContextMenuActions({
     saveShockwaveMemosBulk,
     rowCount,
     pendingMergeSpans,
+    prescriptionScheduleSettings?.durationMinutesMap,
+    prescriptionScheduleSettings?.doseTags,
     applyImmediateCellDisplay,
     applyImmediateMergeSpan,
     clearImmediateCellDisplay,
+    settings,
   ]);
 }

@@ -166,7 +166,7 @@ describe('schedule blank cell cleanup helpers', () => {
     assert.deepEqual(result.mergeSpan, defaultSpan);
   });
 
-  it('keeps blank cells with active merge spans', () => {
+  it('cleans blank cells with active merge spans if they have no other metadata', () => {
     const memos = {
       '0-0-3-1': {
         content: '',
@@ -180,6 +180,6 @@ describe('schedule blank cell cleanup helpers', () => {
       cellData: memos['0-0-3-1'],
     });
 
-    assert.equal(result.wasSanitized, false);
+    assert.equal(result.wasSanitized, true);
   });
 });

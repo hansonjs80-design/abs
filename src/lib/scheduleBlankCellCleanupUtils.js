@@ -52,14 +52,18 @@ export function isVisuallyEmptyDirtyScheduleCell({
 
   // Active merged cells (whether master or child) should not be treated as visually empty dirty cells to be cleaned up.
   if (!isDefaultMergeSpan(memo.merge_span) || !isDefaultMergeSpan(mergeSpan)) {
-    // Exception: If it is a child cell but its master does not exist in the memos, it is an orphaned stale child and should be cleaned up.
+    // If the master cell is completely empty (no content, no prescription, no body part), treat it as a stale merge and allow cleanup.
+    const isMasterEmpty = !hasVisibleText(content) && !memo.prescription && !memo.body_part;
     const originalMergedInto = memo?.merge_span?.mergedInto || mergeSpan?.mergedInto;
     if (originalMergedInto) {
       const masterKey = originalMergedInto;
       const masterMemo = memos?.[masterKey];
-      if (!masterMemo) {
+      const masterContent = getContentForKey({ key: masterKey, memos, pendingDisplayValues });
+      if (!masterMemo || (!hasVisibleText(masterContent) && !masterMemo.prescription && !masterMemo.body_part)) {
         return true;
       }
+    } else if (isMasterEmpty) {
+      return true;
     }
     return false;
   }

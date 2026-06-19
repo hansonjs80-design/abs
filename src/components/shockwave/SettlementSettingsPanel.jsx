@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { setMonthlySettlementSettings } from '../../lib/settlementSettings';
 import { extractDoseTagFromPrescription } from '../../lib/schedulerContentFormat';
 
@@ -12,14 +12,34 @@ export default function SettlementSettingsPanel({
 }) {
   const isManualTherapy = type === 'manual_therapy';
 
-  const [draft, setDraft] = useState(() => ({
+  const buildInitialDraft = useCallback(() => ({
     prescriptions: effectiveSettings?.prescriptions || [],
     prescription_prices: effectiveSettings?.prescription_prices || {},
     prescription_colors: effectiveSettings?.prescription_colors || settings?.prescription_colors || {},
     incentive_percentage: effectiveSettings?.incentive_percentage ?? 0,
-    dose_tags: effectiveSettings?.dose_tags || settings?.manual_therapy_dose_tags || {},
+    dose_tags: effectiveSettings?.dose_tags || (isManualTherapy ? settings?.manual_therapy_dose_tags : settings?.dose_tags) || {},
+    duration_minutes: effectiveSettings?.duration_minutes || (isManualTherapy ? settings?.manual_therapy_duration_minutes : settings?.duration_minutes) || {},
+    visit_line_break_prescriptions: effectiveSettings?.visit_line_break_prescriptions || (
+      isManualTherapy ? settings?.manual_therapy_visit_line_break_prescriptions : settings?.visit_line_break_prescriptions
+    ) || [],
     shortcuts: effectiveSettings?.shortcuts || (isManualTherapy ? settings?.manual_therapy_shortcuts : settings?.shortcuts) || {},
-  }));
+  }), [
+    effectiveSettings,
+    isManualTherapy,
+    settings?.dose_tags,
+    settings?.duration_minutes,
+    settings?.manual_therapy_dose_tags,
+    settings?.manual_therapy_duration_minutes,
+    settings?.manual_therapy_shortcuts,
+    settings?.manual_therapy_visit_line_break_prescriptions,
+    settings?.prescription_colors,
+    settings?.shortcuts,
+    settings?.visit_line_break_prescriptions,
+  ]);
+
+  const [draft, setDraft] = useState(buildInitialDraft);
+  const [newPrescriptionName, setNewPrescriptionName] = useState('');
+  const [prescriptionRenameKeys, setPrescriptionRenameKeys] = useState({});
 
   const title = isManualTherapy ? '도수치료 결산 설정' : '충격파 결산 설정';
   const addPlaceholder = isManualTherapy ? '+ 도수 처방' : '+ 처방';
@@ -30,15 +50,8 @@ export default function SettlementSettingsPanel({
   }, [effectiveSettings?.source_month_key, effectiveSettings?.target_month_key]);
 
   useEffect(() => {
-    setDraft({
-      prescriptions: effectiveSettings?.prescriptions || [],
-      prescription_prices: effectiveSettings?.prescription_prices || {},
-      prescription_colors: effectiveSettings?.prescription_colors || settings?.prescription_colors || {},
-      incentive_percentage: effectiveSettings?.incentive_percentage ?? 0,
-      dose_tags: effectiveSettings?.dose_tags || settings?.manual_therapy_dose_tags || {},
-      shortcuts: effectiveSettings?.shortcuts || (isManualTherapy ? settings?.manual_therapy_shortcuts : settings?.shortcuts) || {},
-    });
-  }, [effectiveSettings, settings?.prescription_colors, settings?.manual_therapy_dose_tags, settings?.shortcuts, settings?.manual_therapy_shortcuts, isManualTherapy]);
+    setDraft(buildInitialDraft());
+  }, [buildInitialDraft]);
 
   /** 처방별 셀 태그 값을 반환 (사용자 지정 → 자동 추출 순) */
   const getDoseTag = (prescription) => {
@@ -46,16 +59,35 @@ export default function SettlementSettingsPanel({
     return extractDoseTagFromPrescription(prescription);
   };
 
-  const updatePrescription = (index, value) => {
-    const nextValue = value.trim();
+  const renamePrescription = (index, rawValue) => {
+    const nextValue = String(rawValue || '').trim();
     setDraft((prev) => {
-      const previousName = prev.prescriptions[index];
+      const previousName = prescriptionRenameKeys[index] || prev.prescriptions[index];
+      if (!previousName) return prev;
+      if (!nextValue) {
+        return {
+          ...prev,
+          prescriptions: prev.prescriptions.map((item, itemIndex) => (
+            itemIndex === index ? previousName : item
+          )),
+        };
+      }
+      if (nextValue !== previousName && prev.prescriptions.some((item, itemIndex) => itemIndex !== index && item === nextValue)) {
+        return {
+          ...prev,
+          prescriptions: prev.prescriptions.map((item, itemIndex) => (
+            itemIndex === index ? previousName : item
+          )),
+        };
+      }
       const nextPrescriptions = prev.prescriptions.map((item, itemIndex) => (
-        itemIndex === index ? value : item
+        itemIndex === index ? nextValue : item
       ));
       const nextPrices = { ...prev.prescription_prices };
       const nextDoseTags = { ...prev.dose_tags };
-      if (nextValue && previousName && previousName !== nextValue) {
+      const nextDurations = { ...(prev.duration_minutes || {}) };
+      const nextLineBreaks = new Set(prev.visit_line_break_prescriptions || []);
+      if (previousName !== nextValue) {
         nextPrices[nextValue] = nextPrices[previousName] ?? 0;
         delete nextPrices[previousName];
         const nextColors = { ...(prev.prescription_colors || {}) };
@@ -64,6 +96,14 @@ export default function SettlementSettingsPanel({
         if (nextDoseTags[previousName] !== undefined) {
           nextDoseTags[nextValue] = nextDoseTags[previousName];
           delete nextDoseTags[previousName];
+        }
+        if (nextDurations[previousName] !== undefined) {
+          nextDurations[nextValue] = nextDurations[previousName];
+          delete nextDurations[previousName];
+        }
+        if (nextLineBreaks.has(previousName)) {
+          nextLineBreaks.delete(previousName);
+          nextLineBreaks.add(nextValue);
         }
         const nextShortcuts = { ...prev.shortcuts };
         if (nextShortcuts[previousName] !== undefined) {
@@ -76,11 +116,27 @@ export default function SettlementSettingsPanel({
           prescription_prices: nextPrices,
           prescription_colors: nextColors,
           dose_tags: nextDoseTags,
+          duration_minutes: nextDurations,
+          visit_line_break_prescriptions: Array.from(nextLineBreaks),
           shortcuts: nextShortcuts,
         };
       }
       return { ...prev, prescriptions: nextPrescriptions, prescription_prices: nextPrices };
     });
+    setPrescriptionRenameKeys((prev) => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+  };
+
+  const updatePrescriptionDraftName = (index, value) => {
+    setDraft((prev) => ({
+      ...prev,
+      prescriptions: prev.prescriptions.map((item, itemIndex) => (
+        itemIndex === index ? value : item
+      )),
+    }));
   };
 
   const removePrescription = (index) => {
@@ -89,10 +145,12 @@ export default function SettlementSettingsPanel({
       const nextPrices = { ...prev.prescription_prices };
       const nextColors = { ...(prev.prescription_colors || {}) };
       const nextDoseTags = { ...prev.dose_tags };
+      const nextDurations = { ...(prev.duration_minutes || {}) };
       const nextShortcuts = { ...prev.shortcuts };
       delete nextPrices[target];
       delete nextColors[target];
       delete nextDoseTags[target];
+      delete nextDurations[target];
       delete nextShortcuts[target];
       return {
         ...prev,
@@ -100,6 +158,8 @@ export default function SettlementSettingsPanel({
         prescription_prices: nextPrices,
         prescription_colors: nextColors,
         dose_tags: nextDoseTags,
+        duration_minutes: nextDurations,
+        visit_line_break_prescriptions: (prev.visit_line_break_prescriptions || []).filter((item) => item !== target),
         shortcuts: nextShortcuts,
       };
     });
@@ -121,6 +181,14 @@ export default function SettlementSettingsPanel({
           ...(prev.prescription_colors || {}),
           [nextValue]: prev.prescription_colors?.[nextValue] || '#000000',
         },
+        dose_tags: {
+          ...(prev.dose_tags || {}),
+          [nextValue]: prev.dose_tags?.[nextValue] ?? extractDoseTagFromPrescription(nextValue),
+        },
+        duration_minutes: {
+          ...(prev.duration_minutes || {}),
+          [nextValue]: prev.duration_minutes?.[nextValue] ?? 0,
+        },
       };
     });
     return true;
@@ -134,17 +202,18 @@ export default function SettlementSettingsPanel({
       }
       return acc;
     }, {});
-    // 도수치료 태그: 자동 추출값과 같으면 저장하지 않음 (기본값 사용)
     const cleanedDoseTags = {};
-    if (isManualTherapy) {
-      cleanedPrescriptions.forEach((prescription) => {
-        const customTag = draft.dose_tags[prescription];
-        const autoTag = extractDoseTagFromPrescription(prescription);
-        if (customTag !== undefined && customTag !== autoTag) {
-          cleanedDoseTags[prescription] = customTag;
-        }
-      });
-    }
+    cleanedPrescriptions.forEach((prescription) => {
+      const customTag = String(draft.dose_tags[prescription] ?? '').replace(/[^\d]/g, '').slice(0, 3);
+      if (customTag) cleanedDoseTags[prescription] = customTag;
+    });
+    const cleanedDurations = {};
+    cleanedPrescriptions.forEach((prescription) => {
+      const duration = Number(draft.duration_minutes?.[prescription]) || 0;
+      if (duration > 0) cleanedDurations[prescription] = duration;
+    });
+    const cleanedLineBreaks = (draft.visit_line_break_prescriptions || [])
+      .filter((prescription) => cleanedPrescriptions.includes(prescription));
     const cleanedShortcuts = {};
     cleanedPrescriptions.forEach(prescription => {
       const customShortcut = String(draft.shortcuts[prescription] || '').trim();
@@ -159,7 +228,9 @@ export default function SettlementSettingsPanel({
       prescription_colors: cleanedColors,
       incentive_percentage: Number(draft.incentive_percentage) || 0,
       shortcuts: cleanedShortcuts,
-      ...(isManualTherapy ? { dose_tags: cleanedDoseTags } : {}),
+      dose_tags: cleanedDoseTags,
+      duration_minutes: cleanedDurations,
+      visit_line_break_prescriptions: cleanedLineBreaks,
     };
     const monthly_settlement_settings = setMonthlySettlementSettings(settings, year, month, type, cleaned);
     const nextSettings = {
@@ -179,10 +250,15 @@ export default function SettlementSettingsPanel({
       nextSettings.manual_therapy_prescriptions = cleaned.prescriptions;
       nextSettings.manual_therapy_incentive_percentage = cleaned.incentive_percentage;
       nextSettings.manual_therapy_dose_tags = { ...cleanedDoseTags };
+      nextSettings.manual_therapy_duration_minutes = { ...cleanedDurations };
+      nextSettings.manual_therapy_visit_line_break_prescriptions = [...cleanedLineBreaks];
       nextSettings.manual_therapy_shortcuts = { ...cleanedShortcuts };
     } else {
       nextSettings.prescriptions = cleaned.prescriptions;
       nextSettings.incentive_percentage = cleaned.incentive_percentage;
+      nextSettings.dose_tags = { ...cleanedDoseTags };
+      nextSettings.duration_minutes = { ...cleanedDurations };
+      nextSettings.visit_line_break_prescriptions = [...cleanedLineBreaks];
       nextSettings.shortcuts = { ...cleanedShortcuts };
     }
 
@@ -204,26 +280,17 @@ export default function SettlementSettingsPanel({
 
         <div className="settlement-settings-grid">
           <div className="settlement-settings-list">
-            {isManualTherapy ? (
-              <div className="settlement-settings-row settlement-settings-header-row manual-therapy-row">
-                <span className="settlement-label" style={{ flex: '1 1 100px' }}>처방 이름</span>
-                <span className="settlement-label" style={{ width: 64, textAlign: 'center' }}>셀 태그</span>
-                <span className="settlement-label" style={{ width: 64, textAlign: 'center' }}>단축키</span>
-                <span className="settlement-label" style={{ width: 110, textAlign: 'center' }}>단가</span>
-                <span className="settlement-label" style={{ width: 32, textAlign: 'center' }}>색</span>
-                <span style={{ width: 16 }}></span>
-                <span style={{ width: 44 }}></span>
-              </div>
-            ) : (
-              <div className="settlement-settings-row settlement-settings-header-row shockwave-row">
-                <span className="settlement-label" style={{ flex: '1 1 100px' }}>처방 이름</span>
-                <span className="settlement-label" style={{ width: 64, textAlign: 'center' }}>단축키</span>
-                <span className="settlement-label" style={{ width: 110, textAlign: 'center' }}>단가</span>
-                <span className="settlement-label" style={{ width: 32, textAlign: 'center' }}>색</span>
-                <span style={{ width: 16 }}></span>
-                <span style={{ width: 44 }}></span>
-              </div>
-            )}
+            <div className={`settlement-settings-row settlement-settings-header-row ${isManualTherapy ? 'manual-therapy-row' : 'shockwave-row'}`}>
+              <span className="settlement-label">처방 이름</span>
+              <span className="settlement-label">셀 태그</span>
+              <span className="settlement-label">단축키</span>
+              <span className="settlement-label">치료시간</span>
+              <span className="settlement-label">회차 줄바꿈</span>
+              <span className="settlement-label">단가</span>
+              <span className="settlement-label">색</span>
+              <span></span>
+              <span></span>
+            </div>
             {draft.prescriptions.map((prescription, index) => {
               const doseTag = getDoseTag(prescription);
               return (
@@ -231,30 +298,42 @@ export default function SettlementSettingsPanel({
                   <input
                     className="form-input settlement-prescription-input"
                     value={prescription}
-                    onChange={(event) => updatePrescription(index, event.target.value)}
+                    onFocus={() => {
+                      setPrescriptionRenameKeys((prev) => ({
+                        ...prev,
+                        [index]: prev[index] || prescription,
+                      }));
+                    }}
+                    onChange={(event) => updatePrescriptionDraftName(index, event.target.value)}
+                    onBlur={(event) => renamePrescription(index, event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        renamePrescription(index, event.currentTarget.value);
+                        event.currentTarget.blur();
+                      }
+                    }}
                   />
-                  {isManualTherapy && (
-                    <div className="settlement-dose-tag-group">
-                      <input
-                        className="form-input settlement-dose-tag-input"
-                        value={doseTag}
-                        placeholder="—"
-                        title={doseTag ? `스케줄 셀에 "주한솔${doseTag}" 형태로 표시` : '셀 태그 없음 (이름만 표시)'}
-                        onChange={(event) => {
-                          const val = event.target.value.replace(/[^\d]/g, '').slice(0, 3);
-                          setDraft((prev) => ({
-                            ...prev,
-                            dose_tags: { ...prev.dose_tags, [prescription]: val },
-                          }));
-                        }}
-                      />
-                      {doseTag && (
-                        <span className="settlement-dose-tag-preview" title="셀 미리보기">
-                          홍길동{doseTag}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  <div className="settlement-dose-tag-group">
+                    <input
+                      className="form-input settlement-dose-tag-input"
+                      value={doseTag}
+                      placeholder="—"
+                      title={doseTag ? `스케줄 셀에 "주한솔${doseTag}" 형태로 표시` : '셀 태그 없음 (이름만 표시)'}
+                      onChange={(event) => {
+                        const val = event.target.value.replace(/[^\d]/g, '').slice(0, 3);
+                        setDraft((prev) => ({
+                          ...prev,
+                          dose_tags: { ...prev.dose_tags, [prescription]: val },
+                        }));
+                      }}
+                    />
+                    {doseTag && (
+                      <span className="settlement-dose-tag-preview" title="셀 미리보기">
+                        홍길동{doseTag}
+                      </span>
+                    )}
+                  </div>
                   <div className="settlement-shortcut-group">
                     <span className="settlement-shortcut-prefix">Cmd+</span>
                     <input
@@ -272,6 +351,45 @@ export default function SettlementSettingsPanel({
                       }}
                     />
                   </div>
+                  <div className="settlement-duration-group">
+                    <input
+                      type="number"
+                      className="form-input settlement-duration-input"
+                      min={0}
+                      step={10}
+                      value={draft.duration_minutes?.[prescription] ?? ''}
+                      placeholder="0"
+                      title="스케줄 셀 자동 병합 시간"
+                      onChange={(event) => {
+                        const value = Math.max(0, Number(event.target.value) || 0);
+                        setDraft((prev) => ({
+                          ...prev,
+                          duration_minutes: {
+                            ...(prev.duration_minutes || {}),
+                            [prescription]: value,
+                          },
+                        }));
+                      }}
+                    />
+                    <span className="settlement-duration-unit">분</span>
+                  </div>
+                  <label className="settlement-linebreak-toggle" title="회차 표시를 다음 줄로 내림">
+                    <input
+                      type="checkbox"
+                      checked={(draft.visit_line_break_prescriptions || []).includes(prescription)}
+                      onChange={(event) => {
+                        setDraft((prev) => {
+                          const next = new Set(prev.visit_line_break_prescriptions || []);
+                          if (event.target.checked) next.add(prescription);
+                          else next.delete(prescription);
+                          return {
+                            ...prev,
+                            visit_line_break_prescriptions: Array.from(next),
+                          };
+                        });
+                      }}
+                    />
+                  </label>
                   <input
                     type="number"
                     className="form-input settlement-price-input"
@@ -312,14 +430,29 @@ export default function SettlementSettingsPanel({
                 </div>
               );
             })}
-            <input
-              className="form-input settlement-add-input"
-              placeholder={addPlaceholder}
-              onKeyDown={(event) => {
-                if (event.key !== 'Enter') return;
-                if (addPrescription(event.currentTarget.value)) event.currentTarget.value = '';
-              }}
-            />
+            <div className="settlement-add-row">
+              <input
+                className="form-input settlement-add-input"
+                placeholder={addPlaceholder}
+                value={newPrescriptionName}
+                onChange={(event) => setNewPrescriptionName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter') return;
+                  event.preventDefault();
+                  if (addPrescription(newPrescriptionName)) setNewPrescriptionName('');
+                }}
+              />
+              <button
+                type="button"
+                className="settlement-add-button"
+                aria-label="처방 추가"
+                onClick={() => {
+                  if (addPrescription(newPrescriptionName)) setNewPrescriptionName('');
+                }}
+              >
+                +
+              </button>
+            </div>
           </div>
 
           <label className="settlement-incentive-box">

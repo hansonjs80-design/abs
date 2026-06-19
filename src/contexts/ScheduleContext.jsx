@@ -26,6 +26,7 @@ export function ScheduleProvider({ children }) {
     start_time: '09:00:00',
     end_time: '18:00:00',
     interval_minutes: 10,
+    time_label_interval_minutes: 20,
     day_overrides: {},
     date_overrides: {},
     prescriptions: ['F1.5', 'F/Rdc', 'F/R'],
@@ -660,6 +661,10 @@ export function ScheduleProvider({ children }) {
           start_time: data.start_time?.substring(0, 5) || '09:00',
           end_time: data.end_time?.substring(0, 5) || '18:00',
           interval_minutes: data.interval_minutes,
+          time_label_interval_minutes: data.time_label_interval_minutes
+            || data.monthly_settlement_settings?.__schedule_display?.time_label_interval_minutes
+            || data.interval_minutes
+            || 20,
           day_overrides: data.day_overrides || {},
           date_overrides: data.date_overrides || {},
           prescriptions: data.prescriptions || ['F1.5', 'F/Rdc', 'F/R'],
@@ -676,9 +681,12 @@ export function ScheduleProvider({ children }) {
           staff_schedule_block_rules: data.staff_schedule_block_rules || {},
           shortcuts: data.shortcuts || {},
           manual_therapy_shortcuts: data.manual_therapy_shortcuts || {},
+          dose_tags: data.dose_tags || {},
           manual_therapy_dose_tags: data.manual_therapy_dose_tags || {},
           duration_minutes: data.duration_minutes || {},
           manual_therapy_duration_minutes: data.manual_therapy_duration_minutes || {},
+          visit_line_break_prescriptions: data.visit_line_break_prescriptions || [],
+          manual_therapy_visit_line_break_prescriptions: data.manual_therapy_visit_line_break_prescriptions || [],
           monthly_settlement_settings: data.monthly_settlement_settings || {}
         };
         shockwaveSettingsRefCache.current = parsed;
@@ -787,11 +795,90 @@ export function ScheduleProvider({ children }) {
         .maybeSingle();
 
       const targetId = latestRow?.id || newSettings.id || shockwaveSettings?.id || '00000000-0000-0000-0000-000000000000';
+
+      const oldInterval = shockwaveSettingsRefCache.current?.interval_minutes || shockwaveSettings?.interval_minutes || 20;
+      const newInterval = newSettings.interval_minutes;
+
+      if (oldInterval !== newInterval && Number.isFinite(oldInterval) && Number.isFinite(newInterval)) {
+        const scale = oldInterval / newInterval;
+        
+        let allSchedules = [];
+        let page = 0;
+        let hasMore = true;
+        while (hasMore) {
+          const { data, error: fetchErr } = await supabase
+            .from('shockwave_schedules')
+            .select('*')
+            .range(page * 1000, (page + 1) * 1000 - 1);
+          if (fetchErr) throw fetchErr;
+          if (data) allSchedules.push(...data);
+          if (!data || data.length < 1000) hasMore = false;
+          page++;
+        }
+
+        if (allSchedules.length > 0) {
+          const idsToDelete = allSchedules.map(item => item.id).filter(Boolean);
+          const migratedSchedules = allSchedules.map(item => {
+            const newItem = { ...item };
+            newItem.row_index = Math.round(item.row_index * scale);
+            
+            if (item.merge_span) {
+              const newMergeSpan = { ...item.merge_span };
+              if (typeof newMergeSpan.rowSpan === 'number') {
+                if (item.merge_span.rowSpan === 1) {
+                  newMergeSpan.rowSpan = 1;
+                } else {
+                  newMergeSpan.rowSpan = Math.max(1, Math.round(newMergeSpan.rowSpan * scale));
+                }
+              }
+              if (newMergeSpan.mergedInto) {
+                const parts = newMergeSpan.mergedInto.split('-');
+                if (parts.length === 4) {
+                  const r = Number(parts[2]);
+                  if (Number.isFinite(r)) {
+                    parts[2] = String(Math.round(r * scale));
+                  }
+                }
+                newMergeSpan.mergedInto = parts.join('-');
+              }
+              newItem.merge_span = newMergeSpan;
+            }
+            
+            delete newItem.id;
+            delete newItem.created_at;
+            delete newItem.updated_at;
+            return newItem;
+          });
+
+          if (idsToDelete.length > 0) {
+            const deleteChunkSize = 200;
+            for (let i = 0; i < idsToDelete.length; i += deleteChunkSize) {
+              const chunk = idsToDelete.slice(i, i + deleteChunkSize);
+              const { error: deleteErr } = await supabase
+                .from('shockwave_schedules')
+                .delete()
+                .in('id', chunk);
+              if (deleteErr) throw deleteErr;
+            }
+          }
+
+          const insertChunkSize = 200;
+          for (let i = 0; i < migratedSchedules.length; i += insertChunkSize) {
+            const chunk = migratedSchedules.slice(i, i + insertChunkSize);
+            const { error: insertErr } = await supabase
+              .from('shockwave_schedules')
+              .insert(chunk);
+            if (insertErr) throw insertErr;
+          }
+        }
+      }
+
       const basePayload = {
         id: targetId,
         start_time: newSettings.start_time,
         end_time: newSettings.end_time,
         interval_minutes: newSettings.interval_minutes,
+        time_label_interval_minutes: newSettings.time_label_interval_minutes || newSettings.interval_minutes || 20,
         day_overrides: newSettings.day_overrides || {},
         date_overrides: newSettings.date_overrides || {},
         prescriptions: newSettings.prescriptions || ['F1.5', 'F/Rdc', 'F/R'],
@@ -807,15 +894,24 @@ export function ScheduleProvider({ children }) {
         prescription_colors: newSettings.prescription_colors || {},
         shortcuts: newSettings.shortcuts || {},
         manual_therapy_shortcuts: newSettings.manual_therapy_shortcuts || {},
+        dose_tags: newSettings.dose_tags || {},
         manual_therapy_dose_tags: newSettings.manual_therapy_dose_tags || {},
         duration_minutes: newSettings.duration_minutes || {},
         manual_therapy_duration_minutes: newSettings.manual_therapy_duration_minutes || {},
+        visit_line_break_prescriptions: newSettings.visit_line_break_prescriptions || [],
+        manual_therapy_visit_line_break_prescriptions: newSettings.manual_therapy_visit_line_break_prescriptions || [],
         staff_schedule_block_rules: newSettings.staff_schedule_block_rules || {},
         updated_at: nextUpdatedAt
       };
       const payload = {
         ...basePayload,
-        monthly_settlement_settings: newSettings.monthly_settlement_settings || {}
+        monthly_settlement_settings: {
+          ...(newSettings.monthly_settlement_settings || {}),
+          __schedule_display: {
+            ...((newSettings.monthly_settlement_settings || {}).__schedule_display || {}),
+            time_label_interval_minutes: newSettings.time_label_interval_minutes || newSettings.interval_minutes || 20,
+          },
+        }
       };
 
       const { error } = await supabase
@@ -824,19 +920,23 @@ export function ScheduleProvider({ children }) {
 
       if (error) {
         const message = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
-        const missingOptionalColumn = /monthly_settlement_settings|staff_schedule_block_rules|manual_therapy_dose_tags|shortcuts|manual_therapy_shortcuts|duration_minutes|manual_therapy_duration_minutes|schema cache|column/i.test(message);
+        const missingOptionalColumn = /monthly_settlement_settings|staff_schedule_block_rules|dose_tags|manual_therapy_dose_tags|shortcuts|manual_therapy_shortcuts|duration_minutes|manual_therapy_duration_minutes|visit_line_break_prescriptions|manual_therapy_visit_line_break_prescriptions|time_label_interval_minutes|schema cache|column/i.test(message);
         if (!missingOptionalColumn) throw error;
 
         console.warn('Optional settings column is missing. Saving compatible global settings only.');
         const {
           staff_schedule_block_rules: _staff_schedule_block_rules,
+          time_label_interval_minutes: _time_label_interval_minutes,
           shortcuts: _shortcuts,
           manual_therapy_shortcuts: _manual_therapy_shortcuts,
+          dose_tags: _dose_tags,
           manual_therapy_dose_tags: _manual_therapy_dose_tags,
           duration_minutes: _duration_minutes,
           manual_therapy_duration_minutes: _manual_therapy_duration_minutes,
+          visit_line_break_prescriptions: _visit_line_break_prescriptions,
+          manual_therapy_visit_line_break_prescriptions: _manual_therapy_visit_line_break_prescriptions,
           ...compatiblePayload
-        } = basePayload;
+        } = payload;
         const { error: retryError } = await supabase
           .from('shockwave_settings')
           .upsert(compatiblePayload, { onConflict: 'id' });
@@ -849,6 +949,11 @@ export function ScheduleProvider({ children }) {
         shockwaveSettingsRefCache.current = updatedSettings;
         setShockwaveSettings(updatedSettings);
       }
+      
+      // 설정 저장 완료 후 즉시 서버에서 메모를 강제 리로드하여 로컬 캐시를 동기화
+      loadCacheRef.current.shockwaveMemos = null;
+      loadShockwaveMemos(currentYear, currentMonth, { force: true });
+
       return true;
     } catch (err) {
       console.error('Failed to save shockwave settings:', err);

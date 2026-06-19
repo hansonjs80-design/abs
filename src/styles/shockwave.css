@@ -13,6 +13,9 @@
   --sw-cell-font-weight: 700;
   --sw-header-font-size: 16px;
   --sw-therapist-font-size: 14px;
+  --sw-grid-line: #b7b7b7;
+  --sw-mobile-grid-line: rgba(82, 82, 82, 0.56);
+  --sw-mobile-strong-line: #000000;
 }
 
 .shockwave-view * {
@@ -440,6 +443,8 @@
 /* 스케줄 행 */
 .sw-schedule-body {
   /* 스크롤바가 발생하여 헤더와 행렬 폭이 틀어지는 것을 방지하기 위해 강제 스크롤 및 높이 제한 해제 */
+  position: relative;
+  isolation: isolate;
 }
 
 .sw-schedule-row {
@@ -873,25 +878,152 @@
   .shockwave-day:nth-child(n+4) { border-top: 2px solid #000; }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 768px), ((hover: none) and (pointer: coarse) and (orientation: landscape)) {
+  .shockwave-view {
+    --sw-mobile-grid-line: #b7b7b7;
+  }
+
+  .shockwave-week {
+    border-color: var(--sw-mobile-strong-line);
+    border-radius: 2px;
+  }
+
+  .shockwave-days {
+    align-items: stretch;
+  }
+
   .shockwave-day { 
     min-width: 45%; 
-    border-right: 2px solid #000; 
+    border-right: 2px solid var(--sw-mobile-strong-line); 
+    border-top: none;
+    box-sizing: border-box;
+    overflow: hidden;
   }
-  .shockwave-day:nth-child(2n) { border-right: none; }
-  .shockwave-day:nth-child(n+3) { border-top: 2px solid #000; }
-  
-  .sw-cell { font-size: var(--sw-cell-font-size); min-height: 20px; }
-  .sw-day-header-cell { font-size: 0.68rem; padding: 6px 2px; }
-  .sw-therapist-name { font-size: 0.62rem; padding: 4px 2px; }
+
+  .shockwave-day:nth-child(n) {
+    border-right: 2px solid var(--sw-mobile-strong-line);
+    border-top: none;
+  }
+
+  .shockwave-day:last-child { border-right: none; }
+
+  .sw-day-header-row,
+  .sw-therapist-header,
+  .sw-schedule-body {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .sw-day-header-row {
+    border-bottom-color: var(--sw-mobile-strong-line);
+  }
+
+  .sw-week-header-cell,
+  .sw-time-label {
+    border-right-color: var(--sw-mobile-strong-line);
+  }
+
+  .sw-time-label {
+    border-bottom-color: transparent !important;
+    box-sizing: border-box;
+    min-height: 0;
+    height: 100%;
+    box-shadow: none;
+  }
+
+  .sw-therapist-header {
+    border-bottom-color: var(--sw-mobile-strong-line);
+  }
+
+  .sw-therapist-name,
+  .sw-cell {
+    border-right-color: var(--sw-mobile-grid-line);
+    box-shadow: none;
+  }
+
+  .sw-cell {
+    border-bottom-color: transparent !important;
+    box-sizing: border-box;
+    background-clip: padding-box;
+    contain: paint;
+    overflow: hidden;
+  }
+
+  .sw-cell.selected {
+    overflow: hidden;
+  }
+
+  .sw-cell.selected::before {
+    inset: 0;
+  }
+
+  .sw-cell.staff-off,
+  .sw-cell.staff-blocked,
+  .sw-cell.disabled {
+    border-bottom-color: transparent !important;
+    background-image: none;
+    box-shadow: none;
+  }
+
+  .sw-schedule-body::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--sw-row-height) - 1px),
+      var(--sw-mobile-grid-line) calc(var(--sw-row-height) - 1px),
+      var(--sw-mobile-grid-line) var(--sw-row-height)
+    );
+    background-position: 0 0;
+    background-size: 100% var(--sw-row-height);
+  }
+
+  .sw-time-label,
+  .sw-cell {
+    z-index: 1;
+  }
+
+  .sw-cell {
+    font-size: min(11px, var(--sw-cell-font-size));
+    min-height: 20px;
+    letter-spacing: 0;
+  }
+
+  .sw-cell-note {
+    font-size: 9px;
+  }
+
+  .sw-week-header-cell {
+    font-size: 12px;
+  }
+
+  .sw-day-header-cell {
+    font-size: 12px;
+    font-weight: 900;
+    padding: 6px 2px;
+  }
+
+  .sw-therapist-name {
+    font-size: 11px;
+    font-weight: 900;
+    padding: 4px 2px;
+  }
 }
 
 @media (max-width: 480px) {
-  .shockwave-day { 
+  .shockwave-day,
+  .shockwave-day:nth-child(n) { 
     min-width: 100%; 
-    border-right: none; 
+    border-right: 2px solid var(--sw-mobile-strong-line, #000); 
+    border-top: none;
     border-bottom: 2px solid #000; 
   }
+  .shockwave-day:last-child { border-right: none; }
   .shockwave-day:last-child { border-bottom: none; }
 }
 
