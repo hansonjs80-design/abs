@@ -27,6 +27,31 @@ function applyPayload(memos, payload) {
   return next;
 }
 
+function mergePayloadMapIntoMemos(memos, payloadByKey) {
+  const next = { ...memos };
+  payloadByKey.forEach((item, key) => {
+    next[key] = {
+      ...(next[key] || {}),
+      content: item.content,
+      bg_color: item.bg_color,
+      merge_span: item.merge_span,
+      prescription: item.prescription,
+      body_part: item.body_part,
+    };
+  });
+  return next;
+}
+
+function buildPendingFromPayloadMap(payloadByKey) {
+  const pendingDisplayValues = {};
+  const pendingMergeSpans = {};
+  payloadByKey.forEach((item, key) => {
+    pendingDisplayValues[key] = item.content;
+    pendingMergeSpans[key] = item.merge_span;
+  });
+  return { pendingDisplayValues, pendingMergeSpans };
+}
+
 describe('schedule move payload helpers', () => {
   it('moves a single selected cell down one row', () => {
     const memos = {
@@ -422,6 +447,50 @@ describe('schedule move payload helpers', () => {
     });
     assert.deepEqual(memos['0-0-4-1'].merge_span, { rowSpan: 1, colSpan: 1, mergedInto: '0-0-3-1' });
     assert.deepEqual(memos['0-0-5-1'].merge_span, { rowSpan: 1, colSpan: 1, mergedInto: '0-0-3-1' });
+  });
+
+  it('does not leave an intermediate ghost master during repeated pending moves before save settles', () => {
+    const memos = {
+      '0-0-2-1': {
+        content: '123/홍길동(7)',
+        bg_color: '#fff1a8',
+        merge_span: { rowSpan: 2, colSpan: 1, mergedInto: null },
+        prescription: 'F/R',
+        body_part: 'Lumbar',
+      },
+      '0-0-3-1': {
+        content: '',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-0-2-1' },
+      },
+    };
+
+    const payloadByKey = new Map();
+    let selectedKeys = new Set(['0-0-2-1']);
+
+    [1, 1].forEach((rowDelta) => {
+      const currentMemos = mergePayloadMapIntoMemos(memos, payloadByKey);
+      const { pendingDisplayValues, pendingMergeSpans } = buildPendingFromPayloadMap(payloadByKey);
+      const result = buildMoveScheduleSelectionPayload({
+        ...defaultArgs,
+        selectedKeys,
+        memos: currentMemos,
+        pendingDisplayValues,
+        pendingMergeSpans,
+        rowDelta,
+      });
+
+      assert.equal(result.ok, true);
+      result.payload.forEach((item) => {
+        payloadByKey.set(keyOf(item), item);
+      });
+      selectedKeys = new Set(result.movedKeys);
+    });
+
+    assert.equal(payloadByKey.get('0-0-2-1').content, '');
+    assert.equal(payloadByKey.get('0-0-3-1').content, '');
+    assert.equal(payloadByKey.get('0-0-4-1').content, '123/홍길동(7)');
+    assert.deepEqual(payloadByKey.get('0-0-4-1').merge_span, { rowSpan: 2, colSpan: 1, mergedInto: null });
+    assert.deepEqual(payloadByKey.get('0-0-5-1').merge_span, { rowSpan: 1, colSpan: 1, mergedInto: '0-0-4-1' });
   });
 
   it('drops custom reservation time when moving so the destination row time is used', () => {

@@ -1161,8 +1161,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     });
   }, []);
 
-  const selectSingleCell = useCallback((cell) => {
-    const normalizedCell = normalizeCellToMergeMaster(cell);
+  const selectSingleCell = useCallback((cell, options = {}) => {
+    const normalizedCell = options.normalize === false ? cell : normalizeCellToMergeMaster(cell);
     const key = cellKey(normalizedCell.w, normalizedCell.d, normalizedCell.r, normalizedCell.c);
     setSelectedCell(normalizedCell);
     setRangeEnd(null);

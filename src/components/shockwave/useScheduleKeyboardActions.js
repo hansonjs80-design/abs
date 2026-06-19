@@ -588,7 +588,7 @@ export default function useScheduleKeyboardActions({
       if (selectedCellRef) {
         selectedCellRef.current = nextCell;
       }
-      selectSingleCell(nextCell);
+      selectSingleCell(nextCell, { normalize: false });
       setRangeEnd(null);
       const movedKeySet = new Set(result.movedKeys);
       selectedKeysRef.current = movedKeySet;
