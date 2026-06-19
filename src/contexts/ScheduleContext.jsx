@@ -25,7 +25,7 @@ export function ScheduleProvider({ children }) {
     id: '00000000-0000-0000-0000-000000000000',
     start_time: '09:00:00',
     end_time: '18:00:00',
-    interval_minutes: 10,
+    interval_minutes: 20,
     time_label_interval_minutes: 20,
     day_overrides: {},
     date_overrides: {},

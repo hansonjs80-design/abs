@@ -16,7 +16,7 @@ export default function GeneralSettings() {
     id: '00000000-0000-0000-0000-000000000000',
     start_time: '09:00', 
     end_time: '18:00', 
-    interval_minutes: 10,
+    interval_minutes: 20,
     time_label_interval_minutes: 20,
     prescriptions: ['F1.5', 'F/Rdc', 'F/R'],
     manual_therapy_prescriptions: ['40분', '60분'],
