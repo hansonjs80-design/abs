@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 
-const MOVE_SAVE_IDLE_MS = 1000;
+const MOVE_SAVE_IDLE_MS = 250;
 const DEFAULT_MERGE_SPAN = { rowSpan: 1, colSpan: 1, mergedInto: null };
 
 export default function useScheduleMovePersistence({

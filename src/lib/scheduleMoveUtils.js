@@ -271,9 +271,8 @@ export function buildMoveScheduleSelectionPayload({
 
       if (rowDelta > 0) {
         return (r_master + occRowSpan) - r_source;
-      } else {
-        return r_master - sourceRowSpan - r_source;
       }
+      return r_master - sourceRowSpan - r_source;
     });
 
     let nextDelta;

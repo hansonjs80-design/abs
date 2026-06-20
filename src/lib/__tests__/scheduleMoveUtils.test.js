@@ -131,7 +131,6 @@ describe('schedule move payload helpers', () => {
       rowDelta: 1,
     });
 
-    // B의 병합 범위(row 3, 4)를 모두 건너뛰고 row 5로 가야 함
     assert.equal(result.ok, true);
     assert.deepEqual(result.movedKeys, ['0-0-5-1']);
   });
