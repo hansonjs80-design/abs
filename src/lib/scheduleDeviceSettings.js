@@ -11,14 +11,12 @@ function normalizeInterval(value, fallback = 20) {
 }
 
 export function normalizeScheduleDeviceSettings(settings = {}, fallback = {}) {
-  const interval = normalizeInterval(settings.interval_minutes, fallback.interval_minutes);
   const timeLabelInterval = normalizeInterval(
     settings.time_label_interval_minutes,
-    fallback.time_label_interval_minutes || interval
+    fallback.time_label_interval_minutes || fallback.interval_minutes
   );
 
   return {
-    interval_minutes: interval,
     time_label_interval_minutes: timeLabelInterval,
   };
 }
@@ -50,6 +48,6 @@ export function applyScheduleDeviceSettings(settings = {}) {
   const deviceSettings = loadScheduleDeviceSettings(settings);
   return {
     ...settings,
-    ...deviceSettings,
+    time_label_interval_minutes: deviceSettings.time_label_interval_minutes,
   };
 }

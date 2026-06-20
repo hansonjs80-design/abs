@@ -815,7 +815,10 @@ export function ScheduleProvider({ children }) {
   const saveShockwaveDeviceScheduleSettings = useCallback((settings) => {
     const nextDeviceSettings = saveScheduleDeviceSettings(settings, shockwaveSettingsRefCache.current);
     setShockwaveSettings((prev) => {
-      const next = { ...prev, ...nextDeviceSettings };
+      const next = {
+        ...prev,
+        time_label_interval_minutes: nextDeviceSettings.time_label_interval_minutes,
+      };
       shockwaveSettingsRefCache.current = next;
       return next;
     });

@@ -81,7 +81,7 @@ export default function GeneralSettings() {
           id: data.id || '00000000-0000-0000-0000-000000000000',
           start_time: data.start_time.substring(0, 5),
           end_time: data.end_time.substring(0, 5),
-          interval_minutes: deviceIntervals.interval_minutes,
+          interval_minutes: globalIntervals.interval_minutes,
           time_label_interval_minutes: deviceIntervals.time_label_interval_minutes,
           prescriptions: data.prescriptions || ['F1.5', 'F/Rdc', 'F/R'],
           manual_therapy_prescriptions: data.manual_therapy_prescriptions || ['40분', '60분'],
@@ -107,17 +107,21 @@ export default function GeneralSettings() {
 
   const handleSaveSettings = async () => {
     const globalIntervals = globalScheduleIntervalRef.current || {};
+    const nextSharedInterval = Number(swSettings.interval_minutes) || Number(globalIntervals.interval_minutes) || 20;
+    const nextDeviceTimeLabelInterval = Number(swSettings.time_label_interval_minutes) || nextSharedInterval;
+    const persistedGlobalTimeLabelInterval = Number(globalIntervals.time_label_interval_minutes)
+      || Number(globalIntervals.interval_minutes)
+      || nextSharedInterval;
+
     saveShockwaveDeviceScheduleSettings?.({
-      interval_minutes: Number(swSettings.interval_minutes),
-      time_label_interval_minutes: Number(swSettings.time_label_interval_minutes) || Number(swSettings.interval_minutes) || 20,
+      time_label_interval_minutes: nextDeviceTimeLabelInterval,
     });
     const success = await saveShockwaveSettings({
       id: swSettings.id,
-      __skipIntervalMigration: true,
       start_time: swSettings.start_time + ':00',
       end_time: swSettings.end_time + ':00',
-      interval_minutes: Number(globalIntervals.interval_minutes) || 20,
-      time_label_interval_minutes: Number(globalIntervals.time_label_interval_minutes) || Number(globalIntervals.interval_minutes) || 20,
+      interval_minutes: nextSharedInterval,
+      time_label_interval_minutes: persistedGlobalTimeLabelInterval,
       day_overrides: swSettings.day_overrides || {},
       date_overrides: swSettings.date_overrides || {},
       prescriptions: swSettings.prescriptions,
@@ -130,7 +134,13 @@ export default function GeneralSettings() {
       staff_schedule_block_rules: swSettings.staff_schedule_block_rules || {},
       monthly_settlement_settings: swSettings.monthly_settlement_settings || {},
     });
-    if (success) addToast('시간표 설정이 저장되었습니다. 기본 병합/시간열 표시는 이 기기에만 적용됩니다.', 'success');
+    if (success) {
+      globalScheduleIntervalRef.current = {
+        interval_minutes: nextSharedInterval,
+        time_label_interval_minutes: persistedGlobalTimeLabelInterval,
+      };
+      addToast('시간표 설정이 저장되었습니다. 기본 병합은 전체 기기에 공통 적용되고, 시간열 표시는 이 기기에만 적용됩니다.', 'success');
+    }
   };
 
   const loadHolidays = async () => {
@@ -199,6 +209,9 @@ export default function GeneralSettings() {
                 <option value={30}>30분</option>
                 <option value={60}>60분(1시간)</option>
               </select>
+            </div>
+            <div className="settings-row-desc" style={{ flexBasis: '100%', marginTop: -8 }}>
+              기본 병합은 모든 기기에 공통 적용됩니다. 시간열 표시는 이 기기에서만 다르게 사용할 수 있습니다.
             </div>
             <button className="btn btn-primary" onClick={handleSaveSettings}>적용 및 저장</button>
           </div>
