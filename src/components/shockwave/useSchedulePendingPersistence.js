@@ -64,7 +64,7 @@ export default function useSchedulePendingPersistence({
       const deletedDraft = deletedDrafts[getPendingDraftId(currentYear, currentMonth, key)];
       const deletedUpdatedAt = Number(deletedDraft?.updatedAt) || 0;
 
-      if (draft.source !== 'failed-save') {
+      if (draft.source !== 'failed-save' || draft.failedSave !== true) {
         removePendingScheduleDraft(currentYear, currentMonth, key);
         return;
       }

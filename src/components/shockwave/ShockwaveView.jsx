@@ -1121,7 +1121,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const nextValue = value ?? '';
     setPendingDisplayValues((prev) => ({ ...prev, [key]: nextValue }));
     editDraftRef.current = { key, value: nextValue, dirty: true };
-    rememberPendingScheduleDraft(currentYear, currentMonth, key, nextValue);
+    rememberPendingScheduleDraft(currentYear, currentMonth, key, nextValue, { source: 'editing-draft' });
     // DB 저장은 handleCellSave(편집 완료 시)에서 처방 정보와 함께 수행.
     // 여기서 미리 저장하면 처방 없이 저장되어 노란색 '처방 없음'이 잠깐 보이는 문제 발생.
     if (editAutosaveTimerRef.current) {

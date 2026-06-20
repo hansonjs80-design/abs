@@ -2,7 +2,7 @@
  * Shockwave Scheduler Utility Functions
  * 
  * Pure utility functions extracted from ShockwaveView.jsx for maintainability.
- * These functions handle: pending drafts, month backups, patient identity parsing,
+ * These functions handle: pending drafts, patient identity parsing,
  * visit counts, reservation times, merge span metadata, body parts, and prescriptions.
  */
 import { has4060Pattern } from './schedulerContentFormat.js';
@@ -43,7 +43,6 @@ export const SHOCKWAVE_COL_RATIOS_KEY = 'shockwave-col-ratios';
 export const SHOCKWAVE_ROW_HEIGHT_KEY = 'shockwave-row-height';
 export const SHOCKWAVE_PENDING_DRAFTS_KEY = 'shockwave-pending-cell-drafts-v1';
 export const SHOCKWAVE_DELETED_DRAFTS_KEY = 'shockwave-deleted-cell-drafts-v1';
-export const SHOCKWAVE_MONTH_BACKUP_KEY = 'shockwave-month-backup-v1';
 export const SHOCKWAVE_PENDING_DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 export const TREATMENT_COMPLETE_BG = '#ffe599';
 export const TREATMENT_CANCEL_BG = '#f4cccc';
@@ -128,6 +127,7 @@ export function rememberPendingScheduleDraft(year, month, key, value, options = 
     key,
     value: value ?? '',
     source,
+    failedSave: source === 'failed-save',
     updatedAt: Date.now(),
   };
   writePendingScheduleDrafts(drafts);
@@ -152,64 +152,6 @@ export function removePendingScheduleDraftIfValue(year, month, key, value) {
   if (String(draft.value ?? '') !== String(value ?? '')) return;
   delete drafts[draftId];
   writePendingScheduleDrafts(drafts);
-}
-
-// ── Month Backup Storage ──
-
-export function readScheduleMonthBackups() {
-  if (typeof window === 'undefined') return {};
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(SHOCKWAVE_MONTH_BACKUP_KEY) || '{}');
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-export function writeScheduleMonthBackups(backups) {
-  if (typeof window === 'undefined') return;
-  const entries = Object.entries(backups || {}).filter(([, backup]) => {
-    const updatedAt = Number(backup?.updatedAt) || 0;
-    return Date.now() - updatedAt < SHOCKWAVE_PENDING_DRAFT_MAX_AGE_MS;
-  });
-  if (entries.length === 0) {
-    window.localStorage.removeItem(SHOCKWAVE_MONTH_BACKUP_KEY);
-    return;
-  }
-  window.localStorage.setItem(SHOCKWAVE_MONTH_BACKUP_KEY, JSON.stringify(Object.fromEntries(entries)));
-}
-
-export function rememberScheduleMonthBackup(year, month, memos) {
-  if (typeof window === 'undefined') return;
-  const cells = {};
-  Object.entries(memos || {}).forEach(([key, memo]) => {
-    const content = String(memo?.content || '').trim();
-    const hasBgColor = memo?.bg_color !== undefined && memo?.bg_color !== null && memo?.bg_color !== '';
-    const hasPrescription = memo?.prescription !== undefined && memo?.prescription !== null && memo?.prescription !== '';
-    const hasBodyPart = memo?.body_part !== undefined && memo?.body_part !== null && memo?.body_part !== '';
-    const merge = memo?.merge_span;
-    const hasMerge = Boolean(merge) && (
-      (merge.rowSpan && merge.rowSpan !== 1) ||
-      (merge.colSpan && merge.colSpan !== 1) ||
-      merge.mergedInto ||
-      merge.meta
-    );
-    if (!content && !hasBgColor && !hasPrescription && !hasBodyPart && !hasMerge) return;
-    cells[key] = {
-      content: memo.content || '',
-      bg_color: memo.bg_color ?? null,
-      prescription: memo.prescription ?? null,
-      body_part: memo.body_part ?? null,
-      merge_span: memo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
-      updated_at: memo.updated_at || new Date().toISOString(),
-    };
-  });
-
-  const backups = readScheduleMonthBackups();
-  const id = getShockwaveScheduleScrollKey(year, month);
-  if (Object.keys(cells).length === 0) delete backups[id];
-  else backups[id] = { year, month, cells, updatedAt: Date.now() };
-  writeScheduleMonthBackups(backups);
 }
 
 // ── Manual Therapy Helpers ──

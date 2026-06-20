@@ -13,6 +13,11 @@ import {
 import { convertKoreanQwertyMistypeToEnglish } from '../keyboardLayoutUtils.js';
 import { toProperCase } from '../bodyPartFormatUtils.js';
 import { applyDoseTagToContent } from '../schedulerContentFormat.js';
+import {
+  readPendingScheduleDrafts,
+  rememberPendingScheduleDraft,
+  SHOCKWAVE_PENDING_DRAFTS_KEY,
+} from '../schedulerUtils.js';
 
 describe('scheduler cell patient parsing', () => {
   it('parses chart number and patient name while ignoring numeric visit suffixes', () => {
@@ -197,5 +202,36 @@ describe('Korean body part normalization', () => {
     assert.equal(toProperCase('왼 테니스 엘보'), 'Lt. Tennis Elbow');
     assert.equal(toProperCase('양쪽 골반'), 'Both Pelvis');
     assert.equal(toProperCase('우측 엉덩이'), 'Rt. Hip');
+  });
+});
+
+describe('scheduler pending draft persistence', () => {
+  it('marks only failed-save drafts as recoverable', () => {
+    const originalWindow = global.window;
+    const storage = new Map();
+    try {
+      global.window = {
+        localStorage: {
+          getItem: (key) => storage.get(key) ?? null,
+          setItem: (key, value) => storage.set(key, value),
+          removeItem: (key) => storage.delete(key),
+        },
+      };
+
+      rememberPendingScheduleDraft(2026, 6, '2-5-10-0', '14314/정경훈40(6)', { source: 'editing-draft' });
+      rememberPendingScheduleDraft(2026, 6, '2-5-11-0', '14314/정경훈40(6)');
+
+      const raw = JSON.parse(storage.get(SHOCKWAVE_PENDING_DRAFTS_KEY));
+      assert.equal(raw['2026-06:2-5-10-0'].source, 'editing-draft');
+      assert.equal(raw['2026-06:2-5-10-0'].failedSave, false);
+      assert.equal(raw['2026-06:2-5-11-0'].source, 'failed-save');
+      assert.equal(raw['2026-06:2-5-11-0'].failedSave, true);
+      assert.deepEqual(Object.keys(readPendingScheduleDrafts()).sort(), [
+        '2026-06:2-5-10-0',
+        '2026-06:2-5-11-0',
+      ]);
+    } finally {
+      global.window = originalWindow;
+    }
   });
 });
