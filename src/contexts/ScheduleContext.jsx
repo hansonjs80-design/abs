@@ -1134,11 +1134,13 @@ export function ScheduleProvider({ children }) {
         const nextTime = visibleItem?.updated_at ? Date.parse(visibleItem.updated_at) : 0;
         if (!existing || nextTime >= existingTime) memoMap[key] = visibleItem;
       });
-      const reconciledMemoMap = mergeLoadedShockwaveMemosWithLocalRecovery(
-        year,
-        month,
-        reconcileLoadedShockwaveMemosWithLocalWrites(memoMap)
-      );
+      const reconciledMemoMap = options.skipLocalRecovery === true
+        ? reconcileLoadedShockwaveMemosWithLocalWrites(memoMap)
+        : mergeLoadedShockwaveMemosWithLocalRecovery(
+            year,
+            month,
+            reconcileLoadedShockwaveMemosWithLocalWrites(memoMap)
+          );
       if (loadCacheRef.current.shockwaveMemos !== cacheKey || shockwaveMemosLoadRequestRef.current !== requestId) return reconciledMemoMap;
       setShockwaveMemosLoadedKey(cacheKey);
       setShockwaveMemos(reconciledMemoMap);
@@ -1154,7 +1156,7 @@ export function ScheduleProvider({ children }) {
     }
   }, [waitForShockwaveWrites, shouldKeepShockwaveMemo, beginLoading, endLoading, reconcileLoadedShockwaveMemosWithLocalWrites, mergeLoadedShockwaveMemosWithLocalRecovery]);
 
-  const refreshCurrentScheduleFromServer = useCallback((reason = 'manual') => {
+  const refreshCurrentScheduleFromServer = useCallback((reason = 'manual', options = {}) => {
     if (realtimeRefreshTimerRef.current) {
       clearTimeout(realtimeRefreshTimerRef.current);
     }
@@ -1166,7 +1168,7 @@ export function ScheduleProvider({ children }) {
       loadCacheRef.current.shockwaveMemos = null;
 
       Promise.allSettled([
-        loadShockwaveMemos(year, month, { force: true }),
+        loadShockwaveMemos(year, month, { force: true, skipLocalRecovery: options.skipLocalRecovery === true }),
         loadStaffMemos(year, month, { force: true, includeAdjacentMonths: true }),
       ]).then((results) => {
         results.forEach((result, index) => {
@@ -1843,6 +1845,7 @@ export function ScheduleProvider({ children }) {
               else delete next[key];
               return next;
             });
+            refreshCurrentScheduleFromServer('shockwave-event', { skipLocalRecovery: true });
           } else if (payload.old && payload.eventType === 'DELETE') {
             const item = mapShockwaveScheduleItemToVisibleMonth(payload.old, currentYear, currentMonth);
             if (!item) return;
@@ -1855,6 +1858,7 @@ export function ScheduleProvider({ children }) {
               delete next[key];
               return next;
             });
+            refreshCurrentScheduleFromServer('shockwave-delete', { skipLocalRecovery: true });
           }
         }
       )
@@ -1867,6 +1871,7 @@ export function ScheduleProvider({ children }) {
             const key = `${item.year}-${item.month}-${item.day}-${item.slot_index}`;
             if (staffMemoSaveRequestRef.current.has(key)) return;
             setStaffMemos(prev => ({ ...prev, [key]: item }));
+            refreshCurrentScheduleFromServer('staff-event', { skipLocalRecovery: true });
           } else if (payload.old && payload.eventType === 'DELETE') {
             const item = payload.old;
             if (item.year === currentYear && item.month === currentMonth) {
@@ -1877,6 +1882,7 @@ export function ScheduleProvider({ children }) {
                 delete next[key];
                 return next;
               });
+              refreshCurrentScheduleFromServer('staff-delete', { skipLocalRecovery: true });
             }
           }
         }
