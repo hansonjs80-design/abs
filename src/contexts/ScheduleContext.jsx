@@ -1848,8 +1848,8 @@ export function ScheduleProvider({ children }) {
             refreshCurrentScheduleFromServer('shockwave-event', { skipLocalRecovery: true });
           } else if (payload.old && payload.eventType === 'DELETE') {
             const deleteId = payload.old?.id;
+            let targetKey = null;
             if (deleteId) {
-              let targetKey = null;
               const currentMemos = shockwaveMemosRef.current || {};
               for (const [k, memo] of Object.entries(currentMemos)) {
                 if (memo && memo.id === deleteId) {
@@ -1857,19 +1857,27 @@ export function ScheduleProvider({ children }) {
                   break;
                 }
               }
+            }
 
-              if (targetKey) {
-                if (shockwaveWriteQueueRef.current.has(targetKey)) return;
-                
-                setShockwaveMemos(prev => {
-                  const next = { ...prev };
-                  delete next[targetKey];
-                  return next;
-                });
-                refreshCurrentScheduleFromServer('shockwave-delete', { skipLocalRecovery: true });
-              } else {
-                refreshCurrentScheduleFromServer('shockwave-delete-unmapped', { skipLocalRecovery: true });
+            if (!targetKey) {
+              const item = mapShockwaveScheduleItemToVisibleMonth(payload.old, currentYear, currentMonth);
+              if (item) {
+                targetKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
               }
+            }
+
+            if (targetKey) {
+              if (shockwaveWriteQueueRef.current.has(targetKey)) return;
+              rememberDeletedScheduleDraft(currentYear, currentMonth, targetKey);
+
+              setShockwaveMemos(prev => {
+                const next = { ...prev };
+                delete next[targetKey];
+                return next;
+              });
+              refreshCurrentScheduleFromServer('shockwave-delete', { skipLocalRecovery: true });
+            } else {
+              refreshCurrentScheduleFromServer('shockwave-delete-unmapped', { skipLocalRecovery: true });
             }
           }
         }
