@@ -1,0 +1,98 @@
+import { generateShockwaveCalendar } from './calendarUtils.js';
+
+export function findShockwaveCalendarCoordinateByDate(year, month, targetYear, targetMonth, targetDay) {
+  const weeks = generateShockwaveCalendar(year, month);
+  for (let weekIndex = 0; weekIndex < weeks.length; weekIndex += 1) {
+    const week = weeks[weekIndex];
+    for (let dayIndex = 0; dayIndex < week.length; dayIndex += 1) {
+      const dayInfo = week[dayIndex];
+      if (
+        dayInfo?.year === targetYear &&
+        dayInfo?.month === targetMonth &&
+        dayInfo?.day === targetDay
+      ) {
+        return { weekIndex, dayIndex, dayInfo };
+      }
+    }
+  }
+  return null;
+}
+
+export function getShockwaveScheduleItemDate(item) {
+  if (!item) return null;
+  const weeks = generateShockwaveCalendar(Number(item.year), Number(item.month));
+  const dayInfo = weeks[Number(item.week_index)]?.[Number(item.day_index)];
+  if (!dayInfo?.isCurrentMonth) return null;
+  return dayInfo;
+}
+
+function remapMergeSpanToDay(mergeSpan, weekIndex, dayIndex) {
+  if (!mergeSpan?.mergedInto) return mergeSpan;
+  const [, , rowIndex, colIndex] = String(mergeSpan.mergedInto).split('-');
+  return {
+    ...mergeSpan,
+    mergedInto: `${weekIndex}-${dayIndex}-${rowIndex}-${colIndex}`,
+  };
+}
+
+export function canonicalizeShockwaveScheduleItemDate(item) {
+  if (!item) return item;
+  const sourceWeeks = generateShockwaveCalendar(Number(item.year), Number(item.month));
+  const sourceDay = sourceWeeks[Number(item.week_index)]?.[Number(item.day_index)];
+  if (!sourceDay || sourceDay.isCurrentMonth) return item;
+
+  const targetCoord = findShockwaveCalendarCoordinateByDate(
+    sourceDay.year,
+    sourceDay.month,
+    sourceDay.year,
+    sourceDay.month,
+    sourceDay.day
+  );
+  if (!targetCoord) return item;
+
+  return {
+    ...item,
+    year: sourceDay.year,
+    month: sourceDay.month,
+    week_index: targetCoord.weekIndex,
+    day_index: targetCoord.dayIndex,
+    merge_span: remapMergeSpanToDay(item.merge_span, targetCoord.weekIndex, targetCoord.dayIndex),
+  };
+}
+
+export function mapShockwaveScheduleItemToVisibleMonth(item, viewYear, viewMonth) {
+  const itemDate = getShockwaveScheduleItemDate(item);
+  if (!itemDate) return null;
+
+  const visibleCoord = findShockwaveCalendarCoordinateByDate(
+    viewYear,
+    viewMonth,
+    itemDate.year,
+    itemDate.month,
+    itemDate.day
+  );
+  if (!visibleCoord) return null;
+
+  return {
+    ...item,
+    year: viewYear,
+    month: viewMonth,
+    week_index: visibleCoord.weekIndex,
+    day_index: visibleCoord.dayIndex,
+    merge_span: remapMergeSpanToDay(item.merge_span, visibleCoord.weekIndex, visibleCoord.dayIndex),
+  };
+}
+
+export function getVisibleShockwaveScheduleMonths(year, month) {
+  const seen = new Set();
+  const months = [];
+  generateShockwaveCalendar(year, month).forEach((week) => {
+    week.forEach((dayInfo) => {
+      const key = `${dayInfo.year}-${dayInfo.month}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      months.push({ year: dayInfo.year, month: dayInfo.month });
+    });
+  });
+  return months;
+}
