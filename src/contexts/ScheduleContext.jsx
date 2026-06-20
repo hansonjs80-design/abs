@@ -1847,18 +1847,30 @@ export function ScheduleProvider({ children }) {
             });
             refreshCurrentScheduleFromServer('shockwave-event', { skipLocalRecovery: true });
           } else if (payload.old && payload.eventType === 'DELETE') {
-            const item = mapShockwaveScheduleItemToVisibleMonth(payload.old, currentYear, currentMonth);
-            if (!item) return;
-            const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-            if (shockwaveWriteQueueRef.current.has(key)) return;
-            if (shouldIgnoreStaleShockwaveServerItem(key, item)) return;
+            const deleteId = payload.old?.id;
+            if (deleteId) {
+              let targetKey = null;
+              const currentMemos = shockwaveMemosRef.current || {};
+              for (const [k, memo] of Object.entries(currentMemos)) {
+                if (memo && memo.id === deleteId) {
+                  targetKey = k;
+                  break;
+                }
+              }
 
-            setShockwaveMemos(prev => {
-              const next = { ...prev };
-              delete next[key];
-              return next;
-            });
-            refreshCurrentScheduleFromServer('shockwave-delete', { skipLocalRecovery: true });
+              if (targetKey) {
+                if (shockwaveWriteQueueRef.current.has(targetKey)) return;
+                
+                setShockwaveMemos(prev => {
+                  const next = { ...prev };
+                  delete next[targetKey];
+                  return next;
+                });
+                refreshCurrentScheduleFromServer('shockwave-delete', { skipLocalRecovery: true });
+              } else {
+                refreshCurrentScheduleFromServer('shockwave-delete-unmapped', { skipLocalRecovery: true });
+              }
+            }
           }
         }
       )
