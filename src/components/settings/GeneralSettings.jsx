@@ -1,13 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Database, Copy } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { useToast } from '../common/Toast';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { SQL_SETUP_SCRIPT, DB_USAGE_CHECK_SQL } from '../../lib/sqlSnippets';
+import { loadScheduleDeviceSettings } from '../../lib/scheduleDeviceSettings';
 
 export default function GeneralSettings() {
   const { addToast } = useToast();
-  const { saveShockwaveSettings } = useSchedule();
+  const { saveShockwaveSettings, saveShockwaveDeviceScheduleSettings } = useSchedule();
+  const globalScheduleIntervalRef = useRef({
+    interval_minutes: 20,
+    time_label_interval_minutes: 20,
+  });
   
   const [holidays, setHolidays] = useState([]);
   const [newHoliday, setNewHoliday] = useState({ date: '', name: '' });
@@ -63,15 +68,21 @@ export default function GeneralSettings() {
     try {
       const { data, error } = await supabase.from('shockwave_settings').select('*').order('updated_at', { ascending: false }).limit(1).single();
       if (!error && data) {
-        setSwSettings({
-          id: data.id || '00000000-0000-0000-0000-000000000000',
-          start_time: data.start_time.substring(0, 5),
-          end_time: data.end_time.substring(0, 5),
-          interval_minutes: data.interval_minutes,
+        const globalIntervals = {
+          interval_minutes: data.interval_minutes || 20,
           time_label_interval_minutes: data.time_label_interval_minutes
             || data.monthly_settlement_settings?.__schedule_display?.time_label_interval_minutes
             || data.interval_minutes
             || 20,
+        };
+        const deviceIntervals = loadScheduleDeviceSettings(globalIntervals);
+        globalScheduleIntervalRef.current = globalIntervals;
+        setSwSettings({
+          id: data.id || '00000000-0000-0000-0000-000000000000',
+          start_time: data.start_time.substring(0, 5),
+          end_time: data.end_time.substring(0, 5),
+          interval_minutes: deviceIntervals.interval_minutes,
+          time_label_interval_minutes: deviceIntervals.time_label_interval_minutes,
           prescriptions: data.prescriptions || ['F1.5', 'F/Rdc', 'F/R'],
           manual_therapy_prescriptions: data.manual_therapy_prescriptions || ['40분', '60분'],
           prescription_prices: data.prescription_prices || {
@@ -95,12 +106,18 @@ export default function GeneralSettings() {
   };
 
   const handleSaveSettings = async () => {
-    const success = await saveShockwaveSettings({
-      id: swSettings.id,
-      start_time: swSettings.start_time + ':00',
-      end_time: swSettings.end_time + ':00',
+    const globalIntervals = globalScheduleIntervalRef.current || {};
+    saveShockwaveDeviceScheduleSettings?.({
       interval_minutes: Number(swSettings.interval_minutes),
       time_label_interval_minutes: Number(swSettings.time_label_interval_minutes) || Number(swSettings.interval_minutes) || 20,
+    });
+    const success = await saveShockwaveSettings({
+      id: swSettings.id,
+      __skipIntervalMigration: true,
+      start_time: swSettings.start_time + ':00',
+      end_time: swSettings.end_time + ':00',
+      interval_minutes: Number(globalIntervals.interval_minutes) || 20,
+      time_label_interval_minutes: Number(globalIntervals.time_label_interval_minutes) || Number(globalIntervals.interval_minutes) || 20,
       day_overrides: swSettings.day_overrides || {},
       date_overrides: swSettings.date_overrides || {},
       prescriptions: swSettings.prescriptions,
@@ -113,7 +130,7 @@ export default function GeneralSettings() {
       staff_schedule_block_rules: swSettings.staff_schedule_block_rules || {},
       monthly_settlement_settings: swSettings.monthly_settlement_settings || {},
     });
-    if (success) addToast('시간표 설정이 저장되었습니다.', 'success');
+    if (success) addToast('시간표 설정이 저장되었습니다. 기본 병합/시간열 표시는 이 기기에만 적용됩니다.', 'success');
   };
 
   const loadHolidays = async () => {

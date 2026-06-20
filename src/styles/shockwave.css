@@ -23,8 +23,7 @@
 }
 
 .shockwave-view.is-month-loading .shockwave-week {
-  opacity: 0.42;
-  transition: opacity 140ms ease;
+  visibility: hidden;
 }
 
 .shockwave-month-loading {

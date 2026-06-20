@@ -50,9 +50,9 @@ import {
   TREATMENT_CANCEL_BG,
   SCHEDULER_HOLIDAY_BG,
   getShockwaveScheduleScrollKey,
+  rememberDeletedScheduleDraft,
   rememberPendingScheduleDraft,
   removePendingScheduleDraft,
-  removePendingScheduleDraftIfValue,
   splitBodyParts,
   normalizeBodyPartKey,
   parseSchedulerPatientIdentity,
@@ -1118,15 +1118,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   });
 
   const scheduleEditDraftAutosave = useCallback((key, value) => {
-    setPendingDisplayValues((prev) => ({ ...prev, [key]: value ?? '' }));
-    editDraftRef.current = { key, value: value ?? '', dirty: true };
+    const nextValue = value ?? '';
+    setPendingDisplayValues((prev) => ({ ...prev, [key]: nextValue }));
+    editDraftRef.current = { key, value: nextValue, dirty: true };
+    rememberPendingScheduleDraft(currentYear, currentMonth, key, nextValue);
     // DB 저장은 handleCellSave(편집 완료 시)에서 처방 정보와 함께 수행.
     // 여기서 미리 저장하면 처방 없이 저장되어 노란색 '처방 없음'이 잠깐 보이는 문제 발생.
     if (editAutosaveTimerRef.current) {
       clearTimeout(editAutosaveTimerRef.current);
       editAutosaveTimerRef.current = null;
     }
-  }, [setPendingDisplayValues]);
+  }, [currentMonth, currentYear, setPendingDisplayValues]);
 
   const flushEditDraft = useCallback(() => {
     if (editAutosaveTimerRef.current) {
@@ -1389,6 +1391,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         delete next[key];
         return next;
       });
+      removePendingScheduleDraft(currentYear, currentMonth, key);
       return;
     }
     setPendingDisplayValues((prev) => ({ ...prev, [key]: immediateContent }));
@@ -1474,7 +1477,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
     if (manualTherapyMerge.ok) {
       setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
-      removePendingScheduleDraft(currentYear, currentMonth, key);
       applyImmediateCellDisplay(manualTherapyMerge.payload);
       applyImmediateMergeSpan(manualTherapyMerge.payload);
       recordUndo({
@@ -1483,7 +1485,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       });
       const success = await queuedSaveShockwaveMemosBulk(manualTherapyMerge.payload);
       if (success) {
-        removePendingScheduleDraftIfValue(currentYear, currentMonth, key, newContent);
+        removePendingScheduleDraft(currentYear, currentMonth, key);
         clearImmediateCellDisplay(manualTherapyMerge.payload);
       } else {
         rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
@@ -1521,7 +1523,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           affectedKeys.forEach((k) => delete next[k]);
           return next;
         });
-        removePendingScheduleDraft(currentYear, currentMonth, key);
         applyImmediateCellDisplay(payload);
         applyImmediateMergeSpan(payload);
         recordUndo({
@@ -1530,7 +1531,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         });
         const success = await queuedSaveShockwaveMemosBulk(payload);
         if (success) {
-          removePendingScheduleDraftIfValue(currentYear, currentMonth, key, '');
+          payload.forEach((item) => {
+            const draftKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+            rememberDeletedScheduleDraft(currentYear, currentMonth, draftKey);
+            removePendingScheduleDraft(currentYear, currentMonth, draftKey);
+          });
           clearImmediateCellDisplay(payload);
         } else {
           rememberPendingScheduleDraft(currentYear, currentMonth, key, '');
@@ -1571,7 +1576,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       }
 
       setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
-      removePendingScheduleDraft(currentYear, currentMonth, key);
       applyImmediateCellDisplay(payload);
       applyImmediateMergeSpan(payload);
       recordUndo({
@@ -1580,7 +1584,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       });
       const success = await queuedSaveShockwaveMemosBulk(payload);
       if (success) {
-        removePendingScheduleDraftIfValue(currentYear, currentMonth, key, newContent);
+        removePendingScheduleDraft(currentYear, currentMonth, key);
         clearImmediateCellDisplay(payload);
       } else {
         rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
@@ -1590,7 +1594,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     }
 
     setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
-    removePendingScheduleDraft(currentYear, currentMonth, key);
     recordUndo({
       type: 'edit',
       year: currentYear,
@@ -1618,8 +1621,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       finalPrescription,
       finalBodyPart
     );
-    if (success) removePendingScheduleDraftIfValue(currentYear, currentMonth, key, newContent);
-    else rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
+    if (success) {
+      if (!newContent.trim()) rememberDeletedScheduleDraft(currentYear, currentMonth, key);
+      removePendingScheduleDraft(currentYear, currentMonth, key);
+    } else {
+      rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
+    }
     // pendingDisplayValues는 즉시 삭제하지 않음.
     // memos 컨텍스트가 새 값을 반영할 때까지 유지하여 깜빡임 방지.
     // 아래 useEffect(cleanupStalePendingValues)에서 memos 업데이트 후 자동 정리.

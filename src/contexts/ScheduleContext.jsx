@@ -1,6 +1,11 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { generateShockwaveCalendar, buildCrossMonthMirroredPayloads } from '../lib/calendarUtils';
+import { generateShockwaveCalendar } from '../lib/calendarUtils';
+import {
+  applyScheduleDeviceSettings,
+  saveScheduleDeviceSettings,
+  SCHEDULE_DEVICE_SETTINGS_EVENT,
+} from '../lib/scheduleDeviceSettings';
 import { syncTodayShockwaveScheduleToStats } from '../lib/shockwaveSyncUtils';
 import { syncTodayManualTherapyScheduleToStats } from '../lib/manualTherapyUtils';
 import { normalizeStaffDeptNameSpacing } from '../lib/staffMemoFormatUtils';
@@ -9,6 +14,13 @@ import {
   buildOptimisticShockwaveMemos,
   rollbackShockwaveMemoState,
 } from '../lib/scheduleSaveStateUtils';
+import {
+  getPendingDraftId,
+  getShockwaveScheduleScrollKey,
+  readDeletedScheduleDrafts,
+  readPendingScheduleDrafts,
+  readScheduleMonthBackups,
+} from '../lib/schedulerUtils';
 
 const ScheduleContext = createContext();
 const LOCAL_WRITE_STALE_GUARD_MS = 15000;
@@ -44,6 +56,7 @@ export function ScheduleProvider({ children }) {
     monthly_settlement_settings: {}
   });
   const [shockwaveMemos, setShockwaveMemos] = useState({});
+  const [shockwaveMemosLoadedKey, setShockwaveMemosLoadedKey] = useState('');
   const [monthlyTherapists, setMonthlyTherapists] = useState([]);
   const [monthlyManualTherapists, setMonthlyManualTherapists] = useState([]);
   const [monthlyTherapistLoadKeys, setMonthlyTherapistLoadKeys] = useState({ shockwave: '', manual_therapy: '' });
@@ -261,6 +274,55 @@ export function ScheduleProvider({ children }) {
     return next;
   }, [getShockwaveMemoTime, shouldKeepShockwaveMemo]);
 
+  const mergeLoadedShockwaveMemosWithLocalRecovery = useCallback((year, month, memoMap) => {
+    if (typeof window === 'undefined') return memoMap || {};
+
+    const next = { ...(memoMap || {}) };
+    const monthKey = getShockwaveScheduleScrollKey(year, month);
+    const deletedDrafts = readDeletedScheduleDrafts();
+    const isDeletedAfter = (key, updatedAt) => {
+      const deleted = deletedDrafts[getPendingDraftId(year, month, key)];
+      return Number(deleted?.updatedAt || 0) >= Number(updatedAt || 0);
+    };
+    const applyRecoveredMemo = (key, memo, recoveredAt) => {
+      if (!key || !memo || isDeletedAfter(key, recoveredAt)) return;
+      if (next[key]) return;
+      const [weekIndex, dayIndex, rowIndex, colIndex] = key.split('-').map(Number);
+      if (![weekIndex, dayIndex, rowIndex, colIndex].every(Number.isFinite)) return;
+      const recoveredMemo = {
+        ...memo,
+        year,
+        month,
+        week_index: weekIndex,
+        day_index: dayIndex,
+        row_index: rowIndex,
+        col_index: colIndex,
+      };
+      if (shouldKeepShockwaveMemo(recoveredMemo)) next[key] = recoveredMemo;
+    };
+
+    const backups = readScheduleMonthBackups();
+    const backup = backups[monthKey];
+    Object.entries(backup?.cells || {}).forEach(([key, cell]) => {
+      applyRecoveredMemo(key, cell, backup?.updatedAt);
+    });
+
+    Object.values(readPendingScheduleDrafts()).forEach((draft) => {
+      if (Number(draft?.year) !== Number(year) || Number(draft?.month) !== Number(month) || !draft?.key) return;
+      const key = String(draft.key);
+      applyRecoveredMemo(
+        key,
+        {
+          content: String(draft.value ?? ''),
+          updated_at: new Date(Number(draft.updatedAt) || Date.now()).toISOString(),
+        },
+        draft.updatedAt
+      );
+    });
+
+    return next;
+  }, [shouldKeepShockwaveMemo]);
+
   const protectExistingScheduleContent = useCallback(async (items, localSnapshot = {}) => {
     const list = Array.isArray(items) ? items : [];
     const isStructuralBlankWrite = (item) => {
@@ -342,6 +404,9 @@ export function ScheduleProvider({ children }) {
 
   const navigateMonth = useCallback((delta) => {
     loadCacheRef.current = { staffMemos: null, shockwaveMemos: null, holidays: null };
+    shockwaveMemosRef.current = {};
+    setShockwaveMemosLoadedKey('');
+    setShockwaveMemos({});
     setCurrentMonth(prev => {
       let newMonth = prev + delta;
       let newYear = currentYear;
@@ -354,6 +419,9 @@ export function ScheduleProvider({ children }) {
 
   const goToMonth = useCallback((year, month) => {
     loadCacheRef.current = { staffMemos: null, shockwaveMemos: null, holidays: null };
+    shockwaveMemosRef.current = {};
+    setShockwaveMemosLoadedKey('');
+    setShockwaveMemos({});
     setCurrentYear(year);
     setCurrentMonth(month);
   }, []);
@@ -656,7 +724,7 @@ export function ScheduleProvider({ children }) {
 
       if (data) {
         if (shockwaveSettingsLoadRequestRef.current !== requestId) return null;
-        const parsed = {
+        const parsed = applyScheduleDeviceSettings({
           id: data.id || '00000000-0000-0000-0000-000000000000',
           start_time: data.start_time?.substring(0, 5) || '09:00',
           end_time: data.end_time?.substring(0, 5) || '18:00',
@@ -688,7 +756,7 @@ export function ScheduleProvider({ children }) {
           visit_line_break_prescriptions: data.visit_line_break_prescriptions || [],
           manual_therapy_visit_line_break_prescriptions: data.manual_therapy_visit_line_break_prescriptions || [],
           monthly_settlement_settings: data.monthly_settlement_settings || {}
-        };
+        });
         shockwaveSettingsRefCache.current = parsed;
         setShockwaveSettings(parsed);
         return data;
@@ -698,6 +766,31 @@ export function ScheduleProvider({ children }) {
       console.error('[ScheduleContext] loadShockwaveSettings 실패:', err);
       return null;
     }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const handleDeviceSettingsChange = () => {
+      setShockwaveSettings((prev) => {
+        const next = applyScheduleDeviceSettings(prev);
+        shockwaveSettingsRefCache.current = next;
+        return next;
+      });
+    };
+
+    window.addEventListener(SCHEDULE_DEVICE_SETTINGS_EVENT, handleDeviceSettingsChange);
+    return () => window.removeEventListener(SCHEDULE_DEVICE_SETTINGS_EVENT, handleDeviceSettingsChange);
+  }, []);
+
+  const saveShockwaveDeviceScheduleSettings = useCallback((settings) => {
+    const nextDeviceSettings = saveScheduleDeviceSettings(settings, shockwaveSettingsRefCache.current);
+    setShockwaveSettings((prev) => {
+      const next = { ...prev, ...nextDeviceSettings };
+      shockwaveSettingsRefCache.current = next;
+      return next;
+    });
+    return nextDeviceSettings;
   }, []);
 
   // 앱 시작 시 치료사 목록과 설정을 미리 로드 (탭 전환 시 즉시 표시하기 위해)
@@ -786,6 +879,7 @@ export function ScheduleProvider({ children }) {
   const saveShockwaveSettings = useCallback(async (newSettings) => {
     const requestId = ++shockwaveSettingsSaveRequestRef.current;
     try {
+      const skipIntervalMigration = newSettings.__skipIntervalMigration === true;
       const nextUpdatedAt = new Date().toISOString();
       const { data: latestRow } = await supabase
         .from('shockwave_settings')
@@ -799,7 +893,7 @@ export function ScheduleProvider({ children }) {
       const oldInterval = shockwaveSettingsRefCache.current?.interval_minutes || shockwaveSettings?.interval_minutes || 20;
       const newInterval = newSettings.interval_minutes;
 
-      if (oldInterval !== newInterval && Number.isFinite(oldInterval) && Number.isFinite(newInterval)) {
+      if (!skipIntervalMigration && oldInterval !== newInterval && Number.isFinite(oldInterval) && Number.isFinite(newInterval)) {
         const scale = oldInterval / newInterval;
         
         let allSchedules = [];
@@ -944,7 +1038,8 @@ export function ScheduleProvider({ children }) {
       }
       if (shockwaveSettingsSaveRequestRef.current === requestId) {
         shockwaveSettingsLoadRequestRef.current += 1;
-        const updatedSettings = { ...newSettings, id: targetId, updated_at: nextUpdatedAt };
+        const { __skipIntervalMigration: _skipIntervalMigration, ...stateSettings } = newSettings;
+        const updatedSettings = applyScheduleDeviceSettings({ ...stateSettings, id: targetId, updated_at: nextUpdatedAt });
         // Ref 캐시도 즉시 갱신
         shockwaveSettingsRefCache.current = updatedSettings;
         setShockwaveSettings(updatedSettings);
@@ -964,7 +1059,10 @@ export function ScheduleProvider({ children }) {
   // 충격파 스케줄 로드 (단일 쿼리 + 캐시 키)
   const loadShockwaveMemos = useCallback(async (year, month, options = {}) => {
     const cacheKey = `${year}-${month}`;
-    if (!options.force && loadCacheRef.current.shockwaveMemos === cacheKey) return shockwaveMemosRef.current;
+    if (!options.force && loadCacheRef.current.shockwaveMemos === cacheKey) {
+      setShockwaveMemosLoadedKey(cacheKey);
+      return shockwaveMemosRef.current;
+    }
     loadCacheRef.current.shockwaveMemos = cacheKey;
     const requestId = ++shockwaveMemosLoadRequestRef.current;
 
@@ -993,14 +1091,22 @@ export function ScheduleProvider({ children }) {
         page++;
       }
 
+      const weeks = generateShockwaveCalendar(year, month);
       const memoMap = {};
       allData.forEach(item => {
         if (!shouldKeepShockwaveMemo(item)) return;
+        const dayInfo = weeks[item.week_index]?.[item.day_index];
+        if (!dayInfo?.isCurrentMonth) return;
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
         memoMap[key] = item;
       });
-      const reconciledMemoMap = reconcileLoadedShockwaveMemosWithLocalWrites(memoMap);
+      const reconciledMemoMap = mergeLoadedShockwaveMemosWithLocalRecovery(
+        year,
+        month,
+        reconcileLoadedShockwaveMemosWithLocalWrites(memoMap)
+      );
       if (loadCacheRef.current.shockwaveMemos !== cacheKey || shockwaveMemosLoadRequestRef.current !== requestId) return reconciledMemoMap;
+      setShockwaveMemosLoadedKey(cacheKey);
       setShockwaveMemos(reconciledMemoMap);
       return reconciledMemoMap;
     } catch (err) {
@@ -1012,7 +1118,7 @@ export function ScheduleProvider({ children }) {
     } finally {
       endLoading();
     }
-  }, [waitForShockwaveWrites, shouldKeepShockwaveMemo, beginLoading, endLoading, reconcileLoadedShockwaveMemosWithLocalWrites]);
+  }, [waitForShockwaveWrites, shouldKeepShockwaveMemo, beginLoading, endLoading, reconcileLoadedShockwaveMemosWithLocalWrites, mergeLoadedShockwaveMemosWithLocalRecovery]);
 
   const refreshCurrentScheduleFromServer = useCallback((reason = 'manual') => {
     if (realtimeRefreshTimerRef.current) {
@@ -1107,11 +1213,9 @@ export function ScheduleProvider({ children }) {
 
       [upsertData] = await protectExistingScheduleContent([upsertData], { [key]: optimisticMemo });
 
-      const upsertPayloads = buildCrossMonthMirroredPayloads([upsertData]);
-
       const { data, error } = await supabase
         .from('shockwave_schedules')
-        .upsert(upsertPayloads, {
+        .upsert([upsertData], {
           onConflict: 'year,month,week_index,day_index,row_index,col_index'
         })
         .select();
@@ -1251,11 +1355,11 @@ export function ScheduleProvider({ children }) {
         const key = `${item.year}-${item.month}-${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
         return !intentionalClearKeys.has(key);
       });
-      const upsertPayloads = buildCrossMonthMirroredPayloads(upsertSourcePayloads.map(m => ({
+      const upsertPayloads = upsertSourcePayloads.map(m => ({
         ...m,
         updated_at: new Date().toISOString()
-      })));
-      const deletePayloads = buildCrossMonthMirroredPayloads(clearPayloads);
+      }));
+      const deletePayloads = clearPayloads;
 
       for (const item of deletePayloads) {
         const { error: deleteError } = await supabase
@@ -1637,6 +1741,8 @@ export function ScheduleProvider({ children }) {
         (payload) => {
           if (payload.new && payload.new.year === currentYear && payload.new.month === currentMonth) {
             const item = payload.new;
+            const dayInfo = generateShockwaveCalendar(currentYear, currentMonth)[item.week_index]?.[item.day_index];
+            if (!dayInfo?.isCurrentMonth) return;
             const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
             if (shockwaveWriteQueueRef.current.has(key)) return;
             if (shouldIgnoreStaleShockwaveServerItem(key, item)) return;
@@ -1664,6 +1770,8 @@ export function ScheduleProvider({ children }) {
           } else if (payload.old && payload.eventType === 'DELETE') {
             const item = payload.old;
             if (item.year === currentYear && item.month === currentMonth) {
+              const dayInfo = generateShockwaveCalendar(currentYear, currentMonth)[item.week_index]?.[item.day_index];
+              if (!dayInfo?.isCurrentMonth) return;
               const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
               if (shockwaveWriteQueueRef.current.has(key)) return;
               if (shouldIgnoreStaleShockwaveServerItem(key, item)) return;
@@ -1724,8 +1832,8 @@ export function ScheduleProvider({ children }) {
       therapists, loadTherapists,
       manualTherapists, loadManualTherapists,
       saveTherapistRoster,
-      shockwaveSettings, loadShockwaveSettings, saveShockwaveSettings,
-      shockwaveMemos, loadShockwaveMemos, saveShockwaveMemo, saveShockwaveMemosBulk,
+      shockwaveSettings, loadShockwaveSettings, saveShockwaveSettings, saveShockwaveDeviceScheduleSettings,
+      shockwaveMemos, shockwaveMemosLoadedKey, loadShockwaveMemos, saveShockwaveMemo, saveShockwaveMemosBulk,
       monthlyTherapists, monthlyManualTherapists, monthlyTherapistLoadKeys, loadMonthlyTherapists, saveMonthlyTherapists,
       notices, loadNotices, saveNotice,
       calendarSlotSettings, loadCalendarSlotSettings, saveCalendarSlotSettings,

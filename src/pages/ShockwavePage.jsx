@@ -50,6 +50,7 @@ export default function ShockwavePage() {
     shockwaveSettings,
     loadShockwaveSettings,
     shockwaveMemos,
+    shockwaveMemosLoadedKey,
     loadShockwaveMemos,
     loadMonthlyTherapists,
     monthlyTherapistLoadKeys,
@@ -85,6 +86,7 @@ export default function ShockwavePage() {
     setLoadError('');
     Promise.allSettled([
       loadStaffMemos(currentYear, currentMonth, { includeAdjacentMonths: true }),
+      loadShockwaveMemos(currentYear, currentMonth),
       loadHolidays(currentYear, currentMonth),
       loadMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
       loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy'),
@@ -99,15 +101,16 @@ export default function ShockwavePage() {
     return () => {
       cancelled = true;
     };
-  }, [currentYear, currentMonth, loadStaffMemos, loadHolidays, loadMonthlyTherapists, loadAttempt]);
+  }, [currentYear, currentMonth, loadStaffMemos, loadShockwaveMemos, loadHolidays, loadMonthlyTherapists, loadAttempt]);
 
   const monthKey = `${currentYear}-${currentMonth}`;
   const monthlyTherapistsReady = monthlyTherapistLoadKeys?.shockwave === monthKey;
+  const shockwaveMemosReady = shockwaveMemosLoadedKey === monthKey;
 
   return (
     <ShockwavePageErrorBoundary>
       <div className="animate-fade-in">
-        {monthlyTherapistsReady ? (
+        {monthlyTherapistsReady && shockwaveMemosReady ? (
           <ShockwaveView
             therapists={therapists}
             settings={shockwaveSettings}
@@ -130,7 +133,7 @@ export default function ShockwavePage() {
             </button>
           </div>
         ) : (
-          <div style={{ padding: 24 }}>치료사 설정을 불러오는 중...</div>
+          <div style={{ padding: 24 }}>스케줄을 불러오는 중...</div>
         )}
       </div>
     </ShockwavePageErrorBoundary>
