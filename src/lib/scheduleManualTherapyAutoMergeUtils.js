@@ -22,14 +22,14 @@ export function resolveManualTherapyAutoPrescription({
   doseTags = {},
   slotMinutes,
 } = {}) {
-  const explicitPrescription = String(prescription || '').trim();
-  if (getManualTherapyRowSpan(explicitPrescription, { durationMinutesMap, slotMinutes }) > 1) return explicitPrescription;
-
   const doseTagPrescription = findPrescriptionByDoseTag(content, doseTags, durationMinutesMap, slotMinutes);
   if (doseTagPrescription) return doseTagPrescription;
 
   const contentPrescription = get4060PrescriptionFromContent(content);
   if (getManualTherapyRowSpan(contentPrescription, { durationMinutesMap, slotMinutes }) > 1) return contentPrescription;
+
+  const explicitPrescription = String(prescription || '').trim();
+  if (getManualTherapyRowSpan(explicitPrescription, { durationMinutesMap, slotMinutes }) > 1) return explicitPrescription;
 
   return '';
 }

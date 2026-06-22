@@ -364,7 +364,7 @@ export default function useSchedulerAutoText({
       const baseMerge = searchChart ? (selected.mergeSpan || clearPatientMergeSpan()) : selected.mergeSpan;
       const finalMergeSpan = buildMergeSpanWithBodyPartOptions(baseMerge, selected.bodyParts);
 
-      if (inputHas4060 && !has4060Pattern(selected.nextText)) {
+      if (inputHas4060) {
         return {
           text: rawName,
           prescription: initialPrescription || undefined,
@@ -731,6 +731,22 @@ export default function useSchedulerAutoText({
     const effectiveBodyPart = shouldOverwriteContent
       ? (selected.preferredBodyPart || selected.latestBodyPart || '')
       : (selected.preferredBodyPart || selected.latestBodyPart || undefined);
+    const inheritedMergeSpan = findLatestSchedulerMemoMeta(
+      { w, d, r, c },
+      selected.chartNumber,
+      selected.cleanName,
+      { exclude4060: userRemovedDoseTag }
+    );
+
+    if (has4060Pattern(rawName) && initialPrescription !== undefined) {
+      const baseMerge = searchChart ? (selected.mergeSpan || clearPatientMergeSpan()) : selected.mergeSpan;
+      return {
+        text: normalizeSchedulerVisitSuffix(rawName),
+        prescription: initialPrescription,
+        bodyPart: effectiveBodyPart,
+        mergeSpan: buildMergeSpanWithBodyPartOptions(baseMerge, selected.bodyParts),
+      };
+    }
 
     let autoText = `${selected.chartNumber}/${selected.namePart}`;
     if (!selected.doseTag && !userRemovedDoseTag) {
@@ -750,12 +766,6 @@ export default function useSchedulerAutoText({
       : (userRemovedDoseTag
         ? (selected.prescription || '')
         : (has4060Pattern(autoText) ? undefined : (shouldOverwriteContent ? (selected.prescription || '') : (selected.prescription || undefined))));
-    const inheritedMergeSpan = findLatestSchedulerMemoMeta(
-      { w, d, r, c },
-      selected.chartNumber,
-      selected.cleanName,
-      { exclude4060: userRemovedDoseTag }
-    );
     const needsDialog = (selected.bodyParts.length >= 2 && !selected.preferredBodyPart) || selected.prescriptions.length >= 2;
     if (needsDialog) {
       if (skipDialog) {

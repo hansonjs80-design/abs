@@ -14,7 +14,7 @@ const baseArgs = {
   memos: {},
 };
 
-test('resolveManualTherapyAutoPrescription uses the explicit 40 or 60 minute prescription first', () => {
+test('resolveManualTherapyAutoPrescription uses the edited name dose tag before the previous prescription', () => {
   assert.equal(resolveManualTherapyAutoPrescription({
     content: '1234/홍길동',
     prescription: '40분',
@@ -22,6 +22,10 @@ test('resolveManualTherapyAutoPrescription uses the explicit 40 or 60 minute pre
   assert.equal(resolveManualTherapyAutoPrescription({
     content: '1234/홍길동40',
     prescription: '60분',
+  }), '40분');
+  assert.equal(resolveManualTherapyAutoPrescription({
+    content: '13/주한솔60',
+    prescription: '40분',
   }), '60분');
 });
 
@@ -62,6 +66,33 @@ test('buildManualTherapyAutoMergePayload creates a merge from a prescription eve
   assert.equal(result.payload.length, 3);
   assert.deepEqual(result.payload[0].merge_span, { rowSpan: 3, colSpan: 1, mergedInto: null });
   assert.equal(result.payload[0].prescription, '60분');
+});
+
+test('buildManualTherapyAutoMergePayload expands a 40 minute cell to 60 minutes when the edited tag changes to 60', () => {
+  const result = buildManualTherapyAutoMergePayload({
+    ...baseArgs,
+    content: '13/주한솔60',
+    prescription: '40분',
+    memos: {
+      '0-1-4-2': {
+        content: '13/주한솔40',
+        prescription: '40분',
+        merge_span: { rowSpan: 2, colSpan: 1, mergedInto: null },
+      },
+      '0-1-5-2': {
+        content: '',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-1-4-2' },
+      },
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.resolvedPrescription, '60분');
+  assert.equal(result.payload.length, 3);
+  assert.deepEqual(result.payload[0].merge_span, { rowSpan: 3, colSpan: 1, mergedInto: null });
+  assert.equal(result.payload[0].content, '13/주한솔60');
+  assert.equal(result.payload[0].prescription, '60분');
+  assert.equal(result.payload[2].merge_span.mergedInto, '0-1-4-2');
 });
 
 test('buildManualTherapyAutoMergePayload creates a merge for a configured prescription duration', () => {
