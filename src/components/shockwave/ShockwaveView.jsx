@@ -1481,7 +1481,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       applyImmediateMergeSpan(manualTherapyMerge.payload);
       recordUndo({
         type: 'bulk-edit',
-        oldMemos: buildMemoSnapshotForKeys(manualTherapyMerge.affectedKeys),
+        oldMemos: buildMemoSnapshotForKeys(manualTherapyMerge.affectedKeys, { includePendingDisplay: false }),
       });
       const success = await queuedSaveShockwaveMemosBulk(manualTherapyMerge.payload);
       if (success) {
@@ -1527,7 +1527,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         applyImmediateMergeSpan(payload);
         recordUndo({
           type: 'bulk-edit',
-          oldMemos: buildMemoSnapshotForKeys(affectedKeys),
+          oldMemos: buildMemoSnapshotForKeys(affectedKeys, { includePendingDisplay: false }),
         });
         const success = await queuedSaveShockwaveMemosBulk(payload);
         if (success) {
@@ -1580,7 +1580,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       applyImmediateMergeSpan(payload);
       recordUndo({
         type: 'bulk-edit',
-        oldMemos: buildMemoSnapshotForKeys(affectedKeys),
+        oldMemos: buildMemoSnapshotForKeys(affectedKeys, { includePendingDisplay: false }),
       });
       const success = await queuedSaveShockwaveMemosBulk(payload);
       if (success) {

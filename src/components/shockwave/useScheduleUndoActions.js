@@ -23,11 +23,14 @@ export default function useScheduleUndoActions({
     setUndoStack(undoStackRef.current);
   }, []);
 
-  const buildMemoSnapshotForKeys = useCallback((keys) => {
+  const buildMemoSnapshotForKeys = useCallback((keys, options = {}) => {
+    const { includePendingDisplay = true } = options;
     return Array.from(new Set(keys || [])).map((key) => {
       const [w, d, r, c] = key.split('-').map(Number);
       const memo = memos[key] || {};
-      const stableContent = key in pendingDisplayValues ? pendingDisplayValues[key] : memo.content;
+      const stableContent = includePendingDisplay && key in pendingDisplayValues
+        ? pendingDisplayValues[key]
+        : memo.content;
       return {
         year: currentYear,
         month: currentMonth,
