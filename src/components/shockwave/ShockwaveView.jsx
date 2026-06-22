@@ -841,6 +841,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const contextMenuRef = useRef(null);
   const editInputRef = useRef(null);
   const patientHistorySearchInputRef = useRef(null);
+  const patientHistoryModalOverlayRef = useRef(null);
+  const patientHistoryModalBodyRef = useRef(null);
   const imeOpenRef = useRef(false);
   const skipNextEditBlurSaveRef = useRef(false);
   const handleCellSaveRef = useRef(null);
@@ -1864,6 +1866,59 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       document.removeEventListener('keydown', handlePatientHistoryEscape, true);
     };
   }, [patientHistoryModalOpen, closePatientHistoryModal]);
+
+  useEffect(() => {
+    if (!patientHistoryModalOpen) return;
+
+    const overlay = patientHistoryModalOverlayRef.current;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    let touchStartY = 0;
+
+    const shouldBlockScroll = (target, deltaY) => {
+      const modalBody = patientHistoryModalBodyRef.current;
+      if (!modalBody || !modalBody.contains(target)) return true;
+
+      const canScroll = modalBody.scrollHeight > modalBody.clientHeight;
+      if (!canScroll) return true;
+
+      const atTop = modalBody.scrollTop <= 0;
+      const atBottom = modalBody.scrollTop + modalBody.clientHeight >= modalBody.scrollHeight - 1;
+      return (deltaY < 0 && atTop) || (deltaY > 0 && atBottom);
+    };
+
+    const handleWheel = (event) => {
+      if (shouldBlockScroll(event.target, event.deltaY)) {
+        event.preventDefault();
+      }
+    };
+
+    const handleTouchStart = (event) => {
+      touchStartY = event.touches?.[0]?.clientY ?? 0;
+    };
+
+    const handleTouchMove = (event) => {
+      const currentY = event.touches?.[0]?.clientY ?? touchStartY;
+      const deltaY = touchStartY - currentY;
+      if (shouldBlockScroll(event.target, deltaY)) {
+        event.preventDefault();
+      }
+    };
+
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    overlay?.addEventListener('wheel', handleWheel, { passive: false });
+    overlay?.addEventListener('touchstart', handleTouchStart, { passive: true });
+    overlay?.addEventListener('touchmove', handleTouchMove, { passive: false });
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      overlay?.removeEventListener('wheel', handleWheel);
+      overlay?.removeEventListener('touchstart', handleTouchStart);
+      overlay?.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, [patientHistoryModalOpen]);
 
   const handleContextAction = useScheduleContextMenuActions({
     selectedKeys,
@@ -3271,7 +3326,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       />
 
       {patientHistoryModalOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999999 }}>
+        <div ref={patientHistoryModalOverlayRef} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999999, overscrollBehavior: 'none' }}>
           <div style={{ background: 'var(--bg-primary, #fff)', maxWidth: patientHistoryModalLayout.maxWidth, width: patientHistoryModalLayout.width, borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--border-color, #eee)', background: 'var(--bg-secondary, #f8f9fa)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -3302,7 +3357,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               </div>
               <button onClick={closePatientHistoryModal} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', padding: '0 4px', color: 'var(--text-secondary, #666)' }}>✕</button>
             </div>
-            <div style={{ padding: '14px 18px', maxHeight: '70vh', overflowY: 'auto' }}>
+            <div ref={patientHistoryModalBodyRef} style={{ padding: '14px 18px', maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain' }}>
               <div style={{ marginBottom: 14, fontSize: '1.05rem', fontWeight: 600 }}>
                 검색 대상: <span style={{ color: 'var(--brand-primary)' }}>{patientHistoryModalData.searchName}</span> {patientHistoryModalData.searchChart ? `(${patientHistoryModalData.searchChart})` : ''}
               </div>
