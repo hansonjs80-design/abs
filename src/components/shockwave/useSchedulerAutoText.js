@@ -82,6 +82,17 @@ export default function useSchedulerAutoText({
     });
   }, [setChartSelector]);
 
+  const pickManualOptionForDosePrescription = useCallback((options, prescription) => {
+    if (!Array.isArray(options) || options.length === 0) return null;
+    const doseTag = getManualDoseTag(prescription);
+    if (!doseTag) return null;
+
+    return options.find((option) => (
+      option?.type === 'manual' &&
+      (String(option.doseTag || '') === doseTag || getManualDoseTag(option.prescription) === doseTag)
+    )) || options.find((option) => option?.type === 'manual') || null;
+  }, []);
+
   const showAutoFillDialog = useCallback((dialogData) => {
     if (!dialogData) return Promise.resolve(null);
     const bodyPart =
@@ -306,6 +317,9 @@ export default function useSchedulerAutoText({
         || get4060PrescriptionFromContent(rawName)
         || undefined;
     }
+    const taggedManualPrescription = initialPrescription && getManualDoseTag(initialPrescription)
+      ? initialPrescription
+      : '';
 
     let manualSession = null;
     const inputParenMatch = rawName.match(/\((\d+)\)$/);
@@ -355,9 +369,10 @@ export default function useSchedulerAutoText({
       .filter((option) => !userRemovedDoseTag || !has4060Pattern(option.nextText));
     const applySchedulerOption = async () => {
       if (schedulerOptions.length === 0) return null;
-      const selected = (schedulerOptions.length === 1 || skipDialog)
+      const selected = pickManualOptionForDosePrescription(schedulerOptions, taggedManualPrescription)
+        || (schedulerOptions.length === 1 || skipDialog
         ? schedulerOptions[0]
-        : await pickChartOption(schedulerOptions, rawName);
+        : await pickChartOption(schedulerOptions, rawName));
       if (!selected) return { text: rawName };
 
       const inputHas4060 = has4060Pattern(rawName);
@@ -367,14 +382,14 @@ export default function useSchedulerAutoText({
       if (inputHas4060) {
         return {
           text: rawName,
-          prescription: initialPrescription || undefined,
+          prescription: taggedManualPrescription || initialPrescription || undefined,
           bodyPart: searchChart ? (selected.latestBodyPart || '') : (selected.latestBodyPart || undefined),
           mergeSpan: finalMergeSpan,
         };
       }
 
-      const autoPrescription = initialPrescription !== undefined
-        ? initialPrescription
+      const autoPrescription = (taggedManualPrescription || initialPrescription !== undefined)
+        ? (taggedManualPrescription || initialPrescription)
         : (has4060Pattern(selected.nextText)
           ? undefined
           : (searchChart ? (selected.prescription || '') : (selected.prescription || undefined)));
@@ -715,9 +730,10 @@ export default function useSchedulerAutoText({
 
     if (options.length === 0) return { text: rawName };
 
-    const selected = (options.length === 1 || skipDialog)
+    const selected = pickManualOptionForDosePrescription(options, taggedManualPrescription)
+      || (options.length === 1 || skipDialog
       ? options[0]
-      : await pickChartOption(options, rawName);
+      : await pickChartOption(options, rawName));
     if (!selected) return { text: rawName };
     if (hasExplicitSearchName && normalizeNameForMatch(selected.cleanName) !== searchName) {
       return buildUnknownPatientResult();
@@ -742,7 +758,7 @@ export default function useSchedulerAutoText({
       const baseMerge = searchChart ? (selected.mergeSpan || clearPatientMergeSpan()) : selected.mergeSpan;
       return {
         text: normalizeSchedulerVisitSuffix(rawName),
-        prescription: initialPrescription,
+        prescription: taggedManualPrescription || initialPrescription,
         bodyPart: effectiveBodyPart,
         mergeSpan: buildMergeSpanWithBodyPartOptions(baseMerge, selected.bodyParts),
       };
@@ -761,8 +777,8 @@ export default function useSchedulerAutoText({
     autoText += explicitVisitSuffix || explicitNoteSuffix || `(${effectiveVisitCount})`;
     autoText = normalize4060StarOrder(autoText);
 
-    const autoPrescription = initialPrescription !== undefined
-      ? initialPrescription
+    const autoPrescription = (taggedManualPrescription || initialPrescription !== undefined)
+      ? (taggedManualPrescription || initialPrescription)
       : (userRemovedDoseTag
         ? (selected.prescription || '')
         : (has4060Pattern(autoText) ? undefined : (shouldOverwriteContent ? (selected.prescription || '') : (selected.prescription || undefined))));
@@ -821,6 +837,7 @@ export default function useSchedulerAutoText({
   }, [
     memos,
     pickChartOption,
+    pickManualOptionForDosePrescription,
     showAutoFillDialog,
     shouldAutoFormatSchedulerName,
     weeks,
