@@ -34,7 +34,7 @@ import {
 } from '../lib/schedulerUtils';
 
 const ScheduleContext = createContext();
-const LOCAL_WRITE_STALE_GUARD_MS = 15000;
+const LOCAL_WRITE_STALE_GUARD_MS = 1200;
 
 export function ScheduleProvider({ children }) {
   const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
@@ -247,11 +247,16 @@ export function ScheduleProvider({ children }) {
 
     const localTime = new Date(localLastWrite).getTime();
     if (!Number.isFinite(localTime)) return false;
+    const isRecentLocalWrite = Date.now() - localTime < LOCAL_WRITE_STALE_GUARD_MS;
+    if (!isRecentLocalWrite) {
+      localShockwaveWriteTimeRef.current.delete(key);
+      return false;
+    }
 
     const serverTime = getShockwaveMemoTime(serverItem);
     if (serverTime > 0) return serverTime <= localTime;
 
-    return Date.now() - localTime < LOCAL_WRITE_STALE_GUARD_MS;
+    return true;
   }, [getShockwaveMemoTime]);
 
   const reconcileLoadedShockwaveMemosWithLocalWrites = useCallback((memoMap) => {
@@ -263,12 +268,17 @@ export function ScheduleProvider({ children }) {
 
       const localTime = new Date(localLastWrite).getTime();
       if (!Number.isFinite(localTime)) return;
+      const isRecentLocalWrite = Date.now() - localTime < LOCAL_WRITE_STALE_GUARD_MS;
+      if (!isRecentLocalWrite) {
+        localShockwaveWriteTimeRef.current.delete(key);
+        return;
+      }
 
       const serverMemo = next[key];
       const serverTime = getShockwaveMemoTime(serverMemo);
       const localMemo = localMemos[key];
       const localMemoTime = getShockwaveMemoTime(localMemo);
-      const isRecentUntimestampedConflict = serverMemo && serverTime === 0 && Date.now() - localTime < LOCAL_WRITE_STALE_GUARD_MS;
+      const isRecentUntimestampedConflict = serverMemo && serverTime === 0;
       const serverIsOlderThanLocalWrite = serverMemo && serverTime > 0 && serverTime <= localTime;
 
       if (serverIsOlderThanLocalWrite || isRecentUntimestampedConflict) {
@@ -1829,16 +1839,12 @@ export function ScheduleProvider({ children }) {
             );
             if (!item) return;
             const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-            if (shockwaveWriteQueueRef.current.has(key)) return;
-            if (shouldIgnoreStaleShockwaveServerItem(key, item)) return;
-
-            const localMemo = shockwaveMemosRef.current?.[key];
-            const localLastWrite = lastWriteTimeRef.current.get(key);
-            const localTime = localLastWrite
-              ? new Date(localLastWrite).getTime()
-              : (localMemo?.updated_at ? new Date(localMemo.updated_at).getTime() : 0);
-
-            if (item.updated_at && new Date(item.updated_at).getTime() <= localTime) {
+            if (shockwaveWriteQueueRef.current.has(key)) {
+              refreshCurrentScheduleFromServer('shockwave-local-write', { skipLocalRecovery: true });
+              return;
+            }
+            if (shouldIgnoreStaleShockwaveServerItem(key, item)) {
+              refreshCurrentScheduleFromServer('shockwave-stale-guard', { skipLocalRecovery: true });
               return;
             }
 
