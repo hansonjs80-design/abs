@@ -18,6 +18,7 @@ import { syncTodayManualTherapyScheduleToStats } from '../lib/manualTherapyUtils
 import { normalizeStaffDeptNameSpacing } from '../lib/staffMemoFormatUtils';
 import {
   applyShockwaveMemoStateUpdate,
+  buildShockwaveScheduleDeleteFilters,
   buildOptimisticShockwaveMemos,
   rollbackShockwaveMemoState,
 } from '../lib/scheduleSaveStateUtils';
@@ -1450,16 +1451,12 @@ export function ScheduleProvider({ children }) {
       }));
       const deletePayloads = clearPayloads;
 
-      for (const item of deletePayloads) {
+      const deleteFilters = buildShockwaveScheduleDeleteFilters(deletePayloads);
+      for (const filter of deleteFilters) {
         const { error: deleteError } = await supabase
           .from('shockwave_schedules')
           .delete()
-          .eq('year', item.year)
-          .eq('month', item.month)
-          .eq('week_index', item.week_index)
-          .eq('day_index', item.day_index)
-          .eq('row_index', item.row_index)
-          .eq('col_index', item.col_index);
+          .or(filter);
 
         if (deleteError) throw deleteError;
       }
