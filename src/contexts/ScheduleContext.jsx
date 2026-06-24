@@ -397,7 +397,7 @@ export function ScheduleProvider({ children }) {
       while (true) {
         const { data, error } = await supabase
           .from('shockwave_schedules')
-          .select('year,month,week_index,day_index,row_index,col_index,content')
+          .select('year,month,week_index,day_index,row_index,col_index,content,bg_color,merge_span,prescription,body_part')
           .eq('year', year)
           .eq('month', month)
           .order('week_index', { ascending: true })
@@ -433,6 +433,10 @@ export function ScheduleProvider({ children }) {
       return {
         ...item,
         content: existing.content,
+        bg_color: existing.bg_color ?? item.bg_color ?? null,
+        merge_span: existing.merge_span ?? item.merge_span,
+        prescription: existing.prescription ?? item.prescription ?? null,
+        body_part: existing.body_part ?? item.body_part ?? null,
       };
     });
   }, []);

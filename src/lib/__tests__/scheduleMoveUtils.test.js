@@ -488,6 +488,8 @@ describe('schedule move payload helpers', () => {
     assert.equal(payloadByKey.get('0-0-2-1').content, '');
     assert.equal(payloadByKey.get('0-0-3-1').content, '');
     assert.equal(payloadByKey.get('0-0-4-1').content, '123/홍길동(7)');
+    assert.equal(payloadByKey.get('0-0-4-1').prescription, 'F/R');
+    assert.equal(payloadByKey.get('0-0-4-1').body_part, 'Lumbar');
     assert.deepEqual(payloadByKey.get('0-0-4-1').merge_span, { rowSpan: 2, colSpan: 1, mergedInto: null });
     assert.deepEqual(payloadByKey.get('0-0-5-1').merge_span, { rowSpan: 1, colSpan: 1, mergedInto: '0-0-4-1' });
   });
