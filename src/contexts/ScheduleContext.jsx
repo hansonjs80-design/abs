@@ -17,6 +17,7 @@ import { syncTodayShockwaveScheduleToStats } from '../lib/shockwaveSyncUtils';
 import { syncTodayManualTherapyScheduleToStats } from '../lib/manualTherapyUtils';
 import { normalizeStaffDeptNameSpacing } from '../lib/staffMemoFormatUtils';
 import {
+  applyRealtimeShockwaveMemoUpdate,
   applyShockwaveMemoStateUpdate,
   buildOptimisticShockwaveMemos,
   rollbackShockwaveMemoState,
@@ -1838,12 +1839,7 @@ export function ScheduleProvider({ children }) {
               lastWriteTimeRef.current.set(key, item.updated_at);
             }
 
-            setShockwaveMemos(prev => {
-              const next = { ...prev };
-              if (shouldKeepShockwaveMemo(item)) next[key] = item;
-              else delete next[key];
-              return next;
-            });
+            setShockwaveMemos(prev => applyRealtimeShockwaveMemoUpdate(prev, key, item, shouldKeepShockwaveMemo));
             refreshCurrentScheduleFromServer('shockwave-event', { skipLocalRecovery: true });
           } else if (payload.old && payload.eventType === 'DELETE') {
             const deleteId = payload.old?.id;

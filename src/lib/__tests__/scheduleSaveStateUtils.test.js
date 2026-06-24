@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  applyRealtimeShockwaveMemoUpdate,
   applyShockwaveMemoStateUpdate,
   buildOptimisticShockwaveMemos,
   rollbackShockwaveMemoState,
@@ -65,4 +66,49 @@ describe('schedule save state helpers', () => {
     assert.equal(optimisticMemos['0-0-0-0'].updated_at, '2026-05-18T00:00:00.000Z');
   });
 
+  it('removes one older duplicate when a realtime move target arrives first', () => {
+    const current = {
+      '0-0-2-1': {
+        content: '123/홍길동(2)',
+        prescription: 'F/R',
+        body_part: 'Lumbar',
+        bg_color: null,
+        updated_at: '2026-06-24T01:00:00.000Z',
+      },
+    };
+
+    const next = applyRealtimeShockwaveMemoUpdate(
+      current,
+      '0-0-3-1',
+      {
+        content: '123/홍길동(2)',
+        prescription: 'F/R',
+        body_part: 'Lumbar',
+        bg_color: null,
+        updated_at: '2026-06-24T01:01:00.000Z',
+      },
+      shouldKeepMemo
+    );
+
+    assert.equal(next['0-0-2-1'], undefined);
+    assert.equal(next['0-0-3-1'].content, '123/홍길동(2)');
+  });
+
+  it('keeps existing duplicates when a realtime update cannot identify one move source', () => {
+    const current = {
+      '0-0-1-1': { content: '123/홍길동(2)', prescription: 'F/R', body_part: 'Lumbar' },
+      '0-0-2-1': { content: '123/홍길동(2)', prescription: 'F/R', body_part: 'Lumbar' },
+    };
+
+    const next = applyRealtimeShockwaveMemoUpdate(
+      current,
+      '0-0-3-1',
+      { content: '123/홍길동(2)', prescription: 'F/R', body_part: 'Lumbar' },
+      shouldKeepMemo
+    );
+
+    assert.equal(next['0-0-1-1'].content, '123/홍길동(2)');
+    assert.equal(next['0-0-2-1'].content, '123/홍길동(2)');
+    assert.equal(next['0-0-3-1'].content, '123/홍길동(2)');
+  });
 });
