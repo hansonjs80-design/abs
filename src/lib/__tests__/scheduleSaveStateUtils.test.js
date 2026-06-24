@@ -4,7 +4,6 @@ import { describe, it } from 'node:test';
 import {
   applyShockwaveMemoStateUpdate,
   buildOptimisticShockwaveMemos,
-  buildShockwaveScheduleDeleteFilters,
   rollbackShockwaveMemoState,
 } from '../scheduleSaveStateUtils.js';
 
@@ -66,17 +65,4 @@ describe('schedule save state helpers', () => {
     assert.equal(optimisticMemos['0-0-0-0'].updated_at, '2026-05-18T00:00:00.000Z');
   });
 
-  it('builds chunked bulk delete filters for schedule cells', () => {
-    const filters = buildShockwaveScheduleDeleteFilters([
-      { year: 2026, month: 6, week_index: 0, day_index: 1, row_index: 2, col_index: 3 },
-      { year: 2026, month: 6, week_index: 0, day_index: 1, row_index: 2, col_index: 3 },
-      { year: 2026, month: 6, week_index: 0, day_index: 1, row_index: 3, col_index: 3 },
-      { year: 2026, month: 6, week_index: 0, day_index: 1, row_index: 'bad', col_index: 3 },
-    ], 1);
-
-    assert.deepEqual(filters, [
-      'and(year.eq.2026,month.eq.6,week_index.eq.0,day_index.eq.1,row_index.eq.2,col_index.eq.3)',
-      'and(year.eq.2026,month.eq.6,week_index.eq.0,day_index.eq.1,row_index.eq.3,col_index.eq.3)',
-    ]);
-  });
 });

@@ -18,7 +18,6 @@ import { syncTodayManualTherapyScheduleToStats } from '../lib/manualTherapyUtils
 import { normalizeStaffDeptNameSpacing } from '../lib/staffMemoFormatUtils';
 import {
   applyShockwaveMemoStateUpdate,
-  buildShockwaveScheduleDeleteFilters,
   buildOptimisticShockwaveMemos,
   rollbackShockwaveMemoState,
 } from '../lib/scheduleSaveStateUtils';
@@ -1441,25 +1440,11 @@ export function ScheduleProvider({ children }) {
         const key = `${item.year}-${item.month}-${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
         return intentionalClearKeys.has(key);
       });
-      const upsertSourcePayloads = sanitizedMemosArray.filter((item) => {
-        const key = `${item.year}-${item.month}-${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-        return !intentionalClearKeys.has(key);
-      });
-      const upsertPayloads = upsertSourcePayloads.map(m => ({
+      const upsertPayloads = sanitizedMemosArray.map(m => ({
         ...m,
         updated_at: new Date().toISOString()
       }));
       const deletePayloads = clearPayloads;
-
-      const deleteFilters = buildShockwaveScheduleDeleteFilters(deletePayloads);
-      for (const filter of deleteFilters) {
-        const { error: deleteError } = await supabase
-          .from('shockwave_schedules')
-          .delete()
-          .or(filter);
-
-        if (deleteError) throw deleteError;
-      }
       deletePayloads.forEach((item) => {
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
         rememberDeletedScheduleDraft(item.year, item.month, key);
@@ -1882,7 +1867,6 @@ export function ScheduleProvider({ children }) {
 
             if (targetKey) {
               if (shockwaveWriteQueueRef.current.has(targetKey)) return;
-              rememberDeletedScheduleDraft(currentYear, currentMonth, targetKey);
 
               setShockwaveMemos(prev => {
                 const next = { ...prev };
