@@ -494,6 +494,68 @@ describe('schedule move payload helpers', () => {
     assert.deepEqual(payloadByKey.get('0-0-5-1').merge_span, { rowSpan: 1, colSpan: 1, mergedInto: '0-0-4-1' });
   });
 
+  it('ignores stale cleared cells from a previous larger merge when moving after prescription shortcut', () => {
+    const memos = {
+      '0-0-2-1': {
+        content: '6281/이지운40',
+        bg_color: '#fff1a8',
+        merge_span: { rowSpan: 2, colSpan: 1, mergedInto: null },
+        prescription: '40분',
+        body_part: 'Shoulder',
+      },
+      '0-0-3-1': {
+        content: '',
+        bg_color: null,
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-0-2-1' },
+        prescription: null,
+        body_part: null,
+      },
+      '0-0-4-1': {
+        content: '',
+        bg_color: null,
+        merge_span: {
+          rowSpan: 1,
+          colSpan: 1,
+          mergedInto: null,
+          meta: { intentional_clear: true },
+        },
+        prescription: null,
+        body_part: null,
+      },
+    };
+
+    const result = buildMoveScheduleSelectionPayload({
+      ...defaultArgs,
+      selectedKeys: new Set(['0-0-2-1', '0-0-3-1', '0-0-4-1']),
+      memos,
+      pendingDisplayValues: {
+        '0-0-2-1': '6281/이지운40',
+        '0-0-3-1': '',
+        '0-0-4-1': '',
+      },
+      pendingMergeSpans: {
+        '0-0-2-1': { rowSpan: 2, colSpan: 1, mergedInto: null },
+        '0-0-3-1': { rowSpan: 1, colSpan: 1, mergedInto: '0-0-2-1' },
+        '0-0-4-1': {
+          rowSpan: 1,
+          colSpan: 1,
+          mergedInto: null,
+          meta: { intentional_clear: true },
+        },
+      },
+      rowDelta: 1,
+    });
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.movedKeys, ['0-0-3-1']);
+    const moved = result.payload.find((item) => keyOf(item) === '0-0-3-1');
+    assert.equal(moved.content, '6281/이지운40');
+    assert.equal(moved.prescription, '40분');
+    assert.equal(moved.body_part, 'Shoulder');
+    assert.deepEqual(moved.merge_span, { rowSpan: 2, colSpan: 1, mergedInto: null });
+    assert.equal(result.payload.some((item) => keyOf(item) === '0-0-5-1' && item.content === '6281/이지운40'), false);
+  });
+
   it('drops custom reservation time when moving so the destination row time is used', () => {
     const memos = {
       '0-0-2-1': {

@@ -165,11 +165,19 @@ export function buildMoveScheduleSelectionPayload({
   currentYear,
   currentMonth,
 }) {
-  const masterKeys = normalizeScheduleKeysToMergeMasters({
+  const normalizedMasterKeys = normalizeScheduleKeysToMergeMasters({
     keys: selectedKeys,
     memos,
     pendingMergeSpans,
   });
+  const masterKeys = new Set(Array.from(normalizedMasterKeys).filter((key) => (
+    hasMeaningfulData({
+      key,
+      memos,
+      pendingDisplayValues,
+      pendingMergeSpans,
+    })
+  )));
   if (!masterKeys.size || !rowDelta || !rowCount) {
     return { ok: false, reason: 'empty', oldMemos: [], payload: [], movedKeys: [] };
   }
