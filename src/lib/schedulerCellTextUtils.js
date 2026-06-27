@@ -62,6 +62,20 @@ export function normalizeSchedulerVisitSuffix(content) {
   return suffix ? `${base}${suffix}` : base;
 }
 
+export function isOnlySchedulerVisitSuffixChange(previousContent, nextContent) {
+  const previousRaw = normalizeSchedulerVisitSuffix(previousContent);
+  const nextRaw = normalizeSchedulerVisitSuffix(nextContent);
+  if (!previousRaw || !nextRaw || previousRaw === nextRaw) return false;
+
+  const previousSuffix = getExplicitVisitSuffix(previousRaw);
+  const nextSuffix = getExplicitVisitSuffix(nextRaw);
+  if (previousSuffix === nextSuffix) return false;
+
+  const previousBase = previousSuffix ? previousRaw.slice(0, -previousSuffix.length).trim() : previousRaw;
+  const nextBase = nextSuffix ? nextRaw.slice(0, -nextSuffix.length).trim() : nextRaw;
+  return previousBase === nextBase;
+}
+
 export function getNonVisitParentheticalSuffix(content) {
   const raw = String(content || '').trim();
   if (!raw) return '';

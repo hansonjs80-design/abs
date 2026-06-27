@@ -58,6 +58,7 @@ import {
   parseSchedulerPatientIdentity,
   normalizeSchedulerVisitSuffix,
   normalizeVisitInputValue,
+  isOnlySchedulerVisitSuffixChange,
   getMemoListFromMergeSpan,
   stepReservationTimeWithinCellBase,
   stripReservationTimeFromMergeSpan,
@@ -1399,7 +1400,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setPendingDisplayValues((prev) => ({ ...prev, [key]: immediateContent }));
     setEditingCell(null);
     const hasManualParentheticalNote = Boolean(getNonVisitParentheticalSuffix(immediateContent));
-    const result = hasManualParentheticalNote
+    const isVisitOnlyEdit = !hasForcedCellUpdate && isOnlySchedulerVisitSuffixChange(oldContent, immediateContent);
+    const result = hasManualParentheticalNote || isVisitOnlyEdit
       ? { text: immediateContent }
       : await buildSchedulerAutoText(w, d, r, c, finalValue, false, editValue);
     if (cellSaveVersionRef.current[key] !== saveVersion) return;

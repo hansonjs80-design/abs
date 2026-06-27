@@ -5,6 +5,7 @@ import {
   applyVisitCountToSchedulerContent,
   buildSchedulerCellDisplay,
   getNonVisitParentheticalSuffix,
+  isOnlySchedulerVisitSuffixChange,
   normalizeSchedulerVisitSuffix,
   stepVisitShortcutInputValue,
   stepVisitInputValue,
@@ -74,6 +75,14 @@ describe('scheduler visit suffix normalization', () => {
     assert.equal(stepVisitShortcutInputValue('2', -1), '1');
     assert.equal(stepVisitShortcutInputValue('1', -1), '*');
     assert.equal(stepVisitShortcutInputValue('*', -1), '-');
+  });
+
+  it('detects direct edits that only change the visit suffix', () => {
+    assert.equal(isOnlySchedulerVisitSuffixChange('6281/이지운60(2)', '6281/이지운60(3)'), true);
+    assert.equal(isOnlySchedulerVisitSuffixChange('6281/이지운60*', '6281/이지운60(1)'), true);
+    assert.equal(isOnlySchedulerVisitSuffixChange('6281/이지운60(-)', '6281/이지운60*'), true);
+    assert.equal(isOnlySchedulerVisitSuffixChange('6281/이지운60(2)', '6281/이지운40(2)'), false);
+    assert.equal(isOnlySchedulerVisitSuffixChange('6281/이지운60(2)', '6281/이지운60(메모)(2)'), false);
   });
 });
 
