@@ -366,11 +366,16 @@ export default function useScheduleKeyboardActions({
     const effectiveManualSettings = getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'manual_therapy');
     const effectiveShockwaveSettings = getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'shockwave');
     const prescriptionScheduleSettings = getPrescriptionScheduleSettings(shockwaveSettings, currentYear, currentMonth);
+    const hiddenPrescriptions = prescriptionScheduleSettings?.hiddenPrescriptions || [];
 
     const manualShortcuts = effectiveManualSettings?.shortcuts || {};
-    const manualPrescription = Object.keys(manualShortcuts).find((prescription) => manualShortcuts[prescription] === keyNum);
+    const manualPrescription = Object.keys(manualShortcuts).find((prescription) => (
+      manualShortcuts[prescription] === keyNum && !hiddenPrescriptions.includes(prescription)
+    ));
     const shockwaveShortcuts = effectiveShockwaveSettings?.shortcuts || {};
-    const shockwavePrescription = Object.keys(shockwaveShortcuts).find((prescription) => shockwaveShortcuts[prescription] === keyNum);
+    const shockwavePrescription = Object.keys(shockwaveShortcuts).find((prescription) => (
+      shockwaveShortcuts[prescription] === keyNum && !hiddenPrescriptions.includes(prescription)
+    ));
     const targetPrescription = manualPrescription || shockwavePrescription || '';
     if (!targetPrescription) return false;
 

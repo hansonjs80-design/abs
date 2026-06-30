@@ -738,6 +738,7 @@
   width: max-content;
   max-width: none !important;
   height: calc(100% + 2px);
+  min-height: 42px;
   box-sizing: border-box;
   z-index: 101;
   border: 2px solid #1a73e8; /* Google blue */

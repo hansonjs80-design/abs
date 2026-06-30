@@ -2809,14 +2809,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               ? { ...baseMemo, ...contextMenu.memoSnapshot } 
               : baseMemo;
             const currentPrescription = currentMemo?.prescription || '';
-            const shockwavePrescriptions = Array.isArray(settings?.prescriptions)
-              ? settings.prescriptions.filter(Boolean)
-              : [];
-            const manualTherapyPrescriptions = Array.isArray(settings?.manual_therapy_prescriptions)
-              ? settings.manual_therapy_prescriptions.filter((pres) => pres && !shockwavePrescriptions.includes(pres))
-              : [];
             const effectiveManualSettings = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'manual_therapy');
             const effectiveShockwaveSettings = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'shockwave');
+            const hiddenPrescriptions = prescriptionScheduleSettings?.hiddenPrescriptions || [];
+            const shockwavePrescriptions = Array.isArray(effectiveShockwaveSettings?.prescriptions)
+              ? effectiveShockwaveSettings.prescriptions.filter((pres) => pres && !hiddenPrescriptions.includes(pres))
+              : [];
+            const manualTherapyPrescriptions = Array.isArray(effectiveManualSettings?.prescriptions)
+              ? effectiveManualSettings.prescriptions.filter((pres) => pres && !shockwavePrescriptions.includes(pres) && !hiddenPrescriptions.includes(pres))
+              : [];
             const allDoseTags = {
               ...(effectiveShockwaveSettings?.dose_tags || {}),
               ...(effectiveManualSettings?.dose_tags || {}),

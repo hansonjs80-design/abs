@@ -327,11 +327,13 @@ export default function SettlementSettingsPanel({
         <div className="settlement-settings-grid">
           <div className="settlement-settings-list">
             <div className={`settlement-settings-row settlement-settings-header-row ${isManualTherapy ? 'manual-therapy-row' : 'shockwave-row'}`}>
+              <span></span>
               <span className="settlement-label">처방 이름</span>
               <span className="settlement-label">셀 태그</span>
               <span className="settlement-label">단축키</span>
               <span className="settlement-label">치료시간</span>
               <span className="settlement-label">회차 줄바꿈</span>
+              <span className="settlement-label">숨김</span>
               <span className="settlement-label">단가</span>
               <span className="settlement-label">색</span>
               <span></span>
@@ -339,8 +341,19 @@ export default function SettlementSettingsPanel({
             </div>
             {draft.prescriptions.map((prescription, index) => {
               const doseTag = getDoseTag(prescription);
+              const isHidden = (draft.hidden_prescriptions || []).includes(prescription);
               return (
-                <div key={`${prescription}-${index}`} className={`settlement-settings-row ${isManualTherapy ? 'manual-therapy-row' : 'shockwave-row'}`}>
+                <div
+                  key={`${prescription}-${index}`}
+                  className={`settlement-settings-row ${isManualTherapy ? 'manual-therapy-row' : 'shockwave-row'} ${draggedIndex === index ? 'dragging' : ''}`}
+                  draggable="true"
+                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragEnd={handleDragEnd}
+                >
+                  <div className="settlement-drag-handle" title="드래그하여 순서 조정">
+                    ⋮⋮
+                  </div>
                   <input
                     className="form-input settlement-prescription-input"
                     value={prescription}
@@ -437,6 +450,23 @@ export default function SettlementSettingsPanel({
                           return {
                             ...prev,
                             visit_line_break_prescriptions: Array.from(next),
+                          };
+                        });
+                      }}
+                    />
+                  </label>
+                  <label className="settlement-hidden-toggle" title="스케줄 화면 처방 선택 목록에서 숨김">
+                    <input
+                      type="checkbox"
+                      checked={isHidden}
+                      onChange={(event) => {
+                        setDraft((prev) => {
+                          const next = new Set(prev.hidden_prescriptions || []);
+                          if (event.target.checked) next.add(prescription);
+                          else next.delete(prescription);
+                          return {
+                            ...prev,
+                            hidden_prescriptions: Array.from(next),
                           };
                         });
                       }}

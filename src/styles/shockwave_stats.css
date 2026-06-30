@@ -2316,11 +2316,46 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 }
 
 .shockwave-row {
-  grid-template-columns: minmax(92px, 150px) minmax(70px, 112px) minmax(70px, 88px) minmax(72px, 92px) minmax(72px, 92px) minmax(90px, 140px) 36px 24px auto;
+  grid-template-columns: 24px minmax(92px, 150px) minmax(70px, 112px) minmax(70px, 88px) minmax(72px, 92px) minmax(72px, 92px) 40px minmax(90px, 140px) 36px 24px auto;
 }
 
 .manual-therapy-row {
-  grid-template-columns: minmax(92px, 150px) minmax(70px, 112px) minmax(70px, 88px) minmax(72px, 92px) minmax(72px, 92px) minmax(90px, 140px) 36px 24px auto;
+  grid-template-columns: 24px minmax(92px, 150px) minmax(70px, 112px) minmax(70px, 88px) minmax(72px, 92px) minmax(72px, 92px) 40px minmax(90px, 140px) 36px 24px auto;
+}
+
+.settlement-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  cursor: grab;
+  user-select: none;
+  height: 34px;
+}
+
+.settlement-drag-handle:active {
+  cursor: grabbing;
+}
+
+.settlement-settings-row.dragging {
+  opacity: 0.4;
+  border: 1px dashed #1a73e8;
+  background: #eff6ff;
+}
+
+.settlement-hidden-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  height: 34px;
+}
+
+.settlement-hidden-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }
 
 .settlement-settings-header-row {
