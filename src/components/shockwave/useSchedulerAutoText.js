@@ -311,7 +311,9 @@ export default function useSchedulerAutoText({
 
     const dayInfo = weeks[w]?.[d];
     if (!dayInfo) return { text: rawName };
-    const config = getPrescriptionScheduleSettings(settings, dayInfo.year, dayInfo.month);
+    const parsedYear = dayInfo.year || (dayInfo.date instanceof Date ? dayInfo.date.getFullYear() : (dayInfo.date ? new Date(dayInfo.date).getFullYear() : undefined));
+    const parsedMonth = dayInfo.month || (dayInfo.date instanceof Date ? dayInfo.date.getMonth() + 1 : (dayInfo.date ? new Date(dayInfo.date).getMonth() + 1 : undefined));
+    const config = getPrescriptionScheduleSettings(settings, parsedYear, parsedMonth);
     const hasDoseTagPattern = (text) => {
       if (!text) return false;
       return has4060Pattern(text) || getConfiguredDoseTagFromContent(text, config.doseTags) !== '';
