@@ -45,7 +45,10 @@ export function getConfiguredDoseTagFromContent(text, doseTags = {}) {
     .sort((a, b) => b.length - a.length);
 
   return tags.find((tag) => {
-    const pattern = new RegExp(`[가-힣a-zA-Z]\\s*${escapeRegExp(tag)}\\**($|[(\\s])`, 'i');
+    const isSingleKoreanChar = /^[가-힣]$/.test(tag);
+    const pattern = isSingleKoreanChar
+      ? new RegExp(`[가-힣a-zA-Z]\\s+${escapeRegExp(tag)}\\**($|[(\\s])`, 'i')
+      : new RegExp(`[가-힣a-zA-Z]\\s*${escapeRegExp(tag)}\\**($|[(\\s])`, 'i');
     return pattern.test(normalized);
   }) || '';
 }

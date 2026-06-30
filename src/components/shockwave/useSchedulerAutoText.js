@@ -378,7 +378,7 @@ export default function useSchedulerAutoText({
       return { text: rawName };
     }
 
-    const schedulerOptions = findSchedulerHistoryCandidates({ w, d, r, c }, rawName, targetDate)
+    const schedulerOptions = findSchedulerHistoryCandidates({ w, d, r, c }, cleanRawNameForIdentity, targetDate)
       .filter((option) => !userRemovedDoseTag || !hasDoseTagPattern(option.nextText));
     const applySchedulerOption = async () => {
       if (schedulerOptions.length === 0) return null;
