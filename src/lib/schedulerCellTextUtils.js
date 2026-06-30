@@ -49,8 +49,11 @@ export function getExplicitVisitSuffix(content) {
 }
 
 export function normalizeSchedulerVisitSuffix(content) {
-  const raw = String(content || '').trim();
+  let raw = String(content || '').trim();
   if (!raw) return raw;
+
+  // x숫자 패턴(예: x2, x3)을 대문자 X숫자(X2, X3)로 강제 정규화
+  raw = raw.replace(/(?:\b|([가-힣a-zA-Z\d()\[\]]))x(\d+)/gi, (match, p1, p2) => (p1 || '') + 'X' + p2);
 
   const suffix = getExplicitVisitSuffix(raw);
   if (!suffix) return raw;

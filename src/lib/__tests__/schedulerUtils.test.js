@@ -59,6 +59,13 @@ describe('scheduler visit suffix normalization', () => {
     assert.equal(normalizeSchedulerVisitSuffix('3275/손연희(진료후도수)'), '3275/손연희(진료후도수)');
   });
 
+  it('normalizes x2, x3 suffix to uppercase X2, X3', () => {
+    assert.equal(normalizeSchedulerVisitSuffix('홍길동x2'), '홍길동X2');
+    assert.equal(normalizeSchedulerVisitSuffix('홍길동 x2'), '홍길동 X2');
+    assert.equal(normalizeSchedulerVisitSuffix('홍길동(x2)'), '홍길동(X2)');
+    assert.equal(normalizeSchedulerVisitSuffix('홍길동 F1.5 x3'), '홍길동 F1.5 X3');
+  });
+
   it('applies visit counts without removing non-visit parenthetical notes', () => {
     assert.equal(applyVisitCountToSchedulerContent('3275/손연희(진료후도수)', '2'), '3275/손연희(진료후도수)(2)');
     assert.equal(applyVisitCountToSchedulerContent('3275/손연희(진료후도수)*', '2'), '3275/손연희(진료후도수)(2)');
