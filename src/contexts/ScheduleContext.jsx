@@ -1102,6 +1102,110 @@ export function ScheduleProvider({ children }) {
       if (shockwaveSettingsSaveRequestRef.current === requestId) {
         shockwaveSettingsLoadRequestRef.current += 1;
         const updatedSettings = applyScheduleDeviceSettings({ ...newSettings, id: targetId, updated_at: nextUpdatedAt });
+        
+        // 태그 명칭 또는 처방별 시간(duration) 변경에 따른 일괄 동기화 마이그레이션 실행
+        try {
+          const oldSettings = shockwaveSettingsRefCache.current || shockwaveSettings;
+          if (oldSettings) {
+            const tagMappings = [];
+
+            // 도수치료 처방 태그 비교
+            const oldMTTags = oldSettings.manual_therapy_dose_tags || {};
+            const newMTTags = newSettings.manual_therapy_dose_tags || {};
+            const mtPrescriptions = newSettings.manual_therapy_prescriptions || [];
+            
+            mtPrescriptions.forEach(p => {
+              const oldT = oldMTTags[p];
+              const newT = newMTTags[p];
+              if (oldT && newT && oldT !== newT) {
+                tagMappings.push({ oldTag: oldT, newTag: newT });
+              }
+            });
+
+            // 충격파 처방 태그 비교
+            const oldSWTags = oldSettings.dose_tags || {};
+            const newSWTags = newSettings.dose_tags || {};
+            const swPrescriptions = newSettings.prescriptions || [];
+
+            swPrescriptions.forEach(p => {
+              const oldT = oldSWTags[p];
+              const newT = newSWTags[p];
+              if (oldT && newT && oldT !== newT) {
+                tagMappings.push({ oldTag: oldT, newTag: newT });
+              }
+            });
+
+            if (tagMappings.length > 0) {
+              const { data: schedules, error: fetchErr } = await supabase
+                .from('shockwave_schedules')
+                .select('*')
+                .eq('year', currentYear)
+                .eq('month', currentMonth);
+
+              if (!fetchErr && schedules && schedules.length > 0) {
+                const updatedSchedules = [];
+
+                for (const s of schedules) {
+                  let contentChanged = false;
+                  let nextContent = s.content || '';
+
+                  for (const mapping of tagMappings) {
+                    const escapedOld = mapping.oldTag.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                    const regex = new RegExp(`([^/\\d\\s]+)${escapedOld}(\\s*\\(-?\\d*\\)|\\s*\\*)?$`, 'u');
+                    if (regex.test(nextContent)) {
+                      nextContent = nextContent.replace(regex, `$1${mapping.newTag}$2`);
+                      contentChanged = true;
+                    }
+                  }
+
+                  if (contentChanged) {
+                    let targetRowSpan = 1;
+                    const slotMinutes = newSettings.interval_minutes || 10;
+                    const isMT = s.prescription && (newSettings.manual_therapy_prescriptions || []).includes(s.prescription);
+                    const duration = isMT 
+                      ? (newSettings.manual_therapy_duration_minutes?.[s.prescription] || 0)
+                      : (newSettings.duration_minutes?.[s.prescription] || 0);
+
+                    if (duration > 0) {
+                      targetRowSpan = Math.ceil(duration / slotMinutes);
+                    }
+                    
+                    if (slotMinutes === 10 && nextContent.trim() && nextContent.trim() !== '\u200B') {
+                      targetRowSpan = Math.max(2, targetRowSpan);
+                    }
+
+                    const nextMergeSpan = {
+                      ...(s.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null }),
+                      rowSpan: targetRowSpan
+                    };
+
+                    updatedSchedules.push({
+                      ...s,
+                      content: nextContent,
+                      merge_span: nextMergeSpan
+                    });
+                  }
+                }
+
+                if (updatedSchedules.length > 0) {
+                  const upsertPayload = updatedSchedules.map(item => {
+                    const copy = { ...item };
+                    delete copy.created_at;
+                    copy.updated_at = new Date().toISOString();
+                    return copy;
+                  });
+
+                  await supabase
+                    .from('shockwave_schedules')
+                    .upsert(upsertPayload, { onConflict: 'year,month,week_index,day_index,row_index,col_index' });
+                }
+              }
+            }
+          }
+        } catch (migrationErr) {
+          console.error('Failed to run scheduler cell tag migration:', migrationErr);
+        }
+
         // Ref 캐시도 즉시 갱신
         shockwaveSettingsRefCache.current = updatedSettings;
         setShockwaveSettings(updatedSettings);

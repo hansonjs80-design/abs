@@ -306,11 +306,13 @@ export default function useSchedulerAutoText({
     skipDialog = false,
     preloadedData = null
   ) => {
-    let rawName = normalizeSchedulerVisitSuffix(nextValue);
-    if (!shouldAutoFormatSchedulerName(rawName)) return { text: rawName };
+    try {
+      let rawName = normalizeSchedulerVisitSuffix(nextValue);
+    console.log('[AutoText] START:', { nextValue, rawName, w, d, r, c });
+    if (!shouldAutoFormatSchedulerName(rawName)) { console.log('[AutoText] SKIP: shouldAutoFormat=false'); return { text: rawName }; }
 
     const dayInfo = weeks[w]?.[d];
-    if (!dayInfo) return { text: rawName };
+    if (!dayInfo) { console.log('[AutoText] SKIP: dayInfo is null', { w, d, weeksLength: weeks?.length }); return { text: rawName }; }
     const parsedYear = dayInfo.year || (dayInfo.date instanceof Date ? dayInfo.date.getFullYear() : (dayInfo.date ? new Date(dayInfo.date).getFullYear() : undefined));
     const parsedMonth = dayInfo.month || (dayInfo.date instanceof Date ? dayInfo.date.getMonth() + 1 : (dayInfo.date ? new Date(dayInfo.date).getMonth() + 1 : undefined));
     const parsedDay = dayInfo.day || (dayInfo.date instanceof Date ? dayInfo.date.getDate() : (dayInfo.date ? new Date(dayInfo.date).getDate() : undefined));
@@ -340,6 +342,7 @@ export default function useSchedulerAutoText({
     const explicitNoteSuffix = getNonVisitParentheticalSuffix(rawName);
 
     const targetDate = `${parsedYear}-${String(parsedMonth).padStart(2, '0')}-${String(parsedDay).padStart(2, '0')}`;
+    console.log('[AutoText] targetDate:', targetDate, '| parsedYear:', parsedYear, '| parsedMonth:', parsedMonth, '| parsedDay:', parsedDay);
     const memoKey = `${w}-${d}-${r}-${c}`;
     const clearPatientMergeSpan = () => stripReservationTimeFromMergeSpan(
       buildMergeSpanWithBodyPartOptions(
@@ -368,6 +371,7 @@ export default function useSchedulerAutoText({
     const parsedIdentity = parseSchedulerPatientIdentity(cleanRawNameForIdentity);
     const searchChart = parsedIdentity.patientChart ? String(parsedIdentity.patientChart).trim() : null;
     const searchName = normalizeNameForMatch(parsedIdentity.patientName) || normalizeNameForMatch(cleanRawNameForIdentity);
+    console.log('[AutoText] search:', { searchChart, searchName, cleanRawNameForIdentity, parsedIdentity, explicitNoteSuffix });
     const hasExplicitSearchName = Boolean(searchChart && normalizeNameForMatch(parsedIdentity.patientName));
     const matchesSearchIdentity = (chartNumber, patientName) => {
       const matchesChart = searchChart && String(chartNumber || '').trim() === searchChart;
@@ -378,6 +382,7 @@ export default function useSchedulerAutoText({
     };
 
     if (explicitNoteSuffix) {
+      console.log('[AutoText] SKIP: explicitNoteSuffix=', explicitNoteSuffix);
       return { text: rawName };
     }
 
@@ -432,6 +437,7 @@ export default function useSchedulerAutoText({
     };
 
     let allData = [];
+    console.log('[AutoText] preloadedData?', Boolean(preloadedData), '| schedulerOptions:', schedulerOptions.length);
     if (preloadedData) {
       const filteredShockwave = (preloadedData.shockwaveLogs || []).filter((item) => {
         return matchesSearchIdentity(item.chart_number, item.patient_name);
@@ -537,6 +543,7 @@ export default function useSchedulerAutoText({
         return [{ data: [] }, { data: [] }, { data: [] }];
       });
 
+      console.log('[AutoText] DB query results:', { sw: shockwaveRes.data?.length, mt: manualRes.data?.length, sch: scheduleRes.data?.length, swErr: shockwaveRes.error, mtErr: manualRes.error, schErr: scheduleRes.error });
       const normalizedShockwaveData = (shockwaveRes.data || []).map((item) => ({
         ...item,
         type: isManualTherapyRecord(item) ? 'manual' : 'shockwave',
@@ -591,6 +598,9 @@ export default function useSchedulerAutoText({
     const matches = allData.filter((item) => {
       return matchesSearchIdentity(item.chart_number, item.patient_name);
     });
+
+    console.log('[AutoText] allData:', allData.length, '| matches:', matches.length);
+    if (matches.length > 0) console.log('[AutoText] first match:', matches[0]);
 
     if (matches.length === 0) {
       if (searchChart) {
@@ -877,6 +887,11 @@ export default function useSchedulerAutoText({
       bodyPart: effectiveBodyPart,
       mergeSpan: finalMergeSpan,
     };
+    } catch (err) {
+      console.error('buildSchedulerAutoText crash:', err);
+      window.lastDbError = err;
+      return { text: normalizeSchedulerVisitSuffix(nextValue) };
+    }
   }, [
     memos,
     pickChartOption,

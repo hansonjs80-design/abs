@@ -1415,6 +1415,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const result = hasManualParentheticalNote || isVisitOnlyEdit
       ? { text: immediateContent }
       : await buildSchedulerAutoText(w, d, r, c, finalValue, false, editValue);
+    if (window.lastAutoTextDebug) {
+      const { allDataCount, matchesCount, searchName, searchChart, cleanName } = window.lastAutoTextDebug;
+      addToast(`[진단] DB조회: ${allDataCount}건, 일치: ${matchesCount}건 / 검색: ${searchName || searchChart || cleanName || '없음'}`, 'info');
+    }
     if (cellSaveVersionRef.current[key] !== saveVersion) return;
     const newContent = normalizeSchedulerVisitSuffix(
       normalize4060StarOrder(typeof result === 'string' ? result : (result?.text || ''))
