@@ -105,6 +105,14 @@ export default function GeneralSettings() {
           date_overrides: data.date_overrides || {},
           staff_schedule_block_rules: data.staff_schedule_block_rules || {},
           monthly_settlement_settings: data.monthly_settlement_settings || {},
+          shortcuts: data.shortcuts || {},
+          manual_therapy_shortcuts: data.manual_therapy_shortcuts || {},
+          dose_tags: data.dose_tags || {},
+          manual_therapy_dose_tags: data.manual_therapy_dose_tags || {},
+          duration_minutes: data.duration_minutes || {},
+          manual_therapy_duration_minutes: data.manual_therapy_duration_minutes || {},
+          visit_line_break_prescriptions: data.visit_line_break_prescriptions || [],
+          manual_therapy_visit_line_break_prescriptions: data.manual_therapy_visit_line_break_prescriptions || [],
         });
       }
     } catch (error) {
@@ -140,6 +148,14 @@ export default function GeneralSettings() {
       frozen_columns: Number(swSettings.frozen_columns),
       staff_schedule_block_rules: swSettings.staff_schedule_block_rules || {},
       monthly_settlement_settings: swSettings.monthly_settlement_settings || {},
+      shortcuts: swSettings.shortcuts || {},
+      manual_therapy_shortcuts: swSettings.manual_therapy_shortcuts || {},
+      dose_tags: swSettings.dose_tags || {},
+      manual_therapy_dose_tags: swSettings.manual_therapy_dose_tags || {},
+      duration_minutes: swSettings.duration_minutes || {},
+      manual_therapy_duration_minutes: swSettings.manual_therapy_duration_minutes || {},
+      visit_line_break_prescriptions: swSettings.visit_line_break_prescriptions || [],
+      manual_therapy_visit_line_break_prescriptions: swSettings.manual_therapy_visit_line_break_prescriptions || [],
     });
     if (success) {
       globalScheduleIntervalRef.current = {
