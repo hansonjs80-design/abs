@@ -29,9 +29,40 @@ export function strip4060FromContent(text) {
   return normalize4060StarOrder(s).replace(/([가-힣a-zA-Z])\s*(\d{2,3})(\**)/, '$1$3');
 }
 
-export function applyDoseTagToContent(text, doseTag) {
-  const tag = String(doseTag || '').trim();
-  const stripped = strip4060FromContent(text);
+export function normalizeDoseTagInput(value) {
+  return String(value || '').trim().replace(/[^0-9A-Za-z가-힣./-]/g, '').slice(0, 12);
+}
+
+function escapeRegExp(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function getConfiguredDoseTagFromContent(text, doseTags = {}) {
+  const normalized = normalize4060StarOrder(text);
+  const tags = Array.from(new Set(Object.values(doseTags || {})
+    .map((tag) => normalizeDoseTagInput(tag))
+    .filter(Boolean)))
+    .sort((a, b) => b.length - a.length);
+
+  return tags.find((tag) => {
+    const pattern = new RegExp(`[가-힣a-zA-Z]\\s*${escapeRegExp(tag)}\\**($|[(\\s])`);
+    return pattern.test(normalized);
+  }) || '';
+}
+
+export function stripDoseTagFromContent(text, doseTag = '') {
+  const normalizedTag = normalizeDoseTagInput(doseTag);
+  if (!normalizedTag) return strip4060FromContent(text);
+
+  const s = String(text || '').trim();
+  if (!s) return s;
+  const pattern = new RegExp(`([가-힣a-zA-Z])\\s*${escapeRegExp(normalizedTag)}(\\**)`);
+  return normalize4060StarOrder(s).replace(pattern, '$1$2');
+}
+
+export function applyDoseTagToContent(text, doseTag, previousDoseTag = '') {
+  const tag = normalizeDoseTagInput(doseTag);
+  const stripped = stripDoseTagFromContent(text, previousDoseTag);
   if (!tag || !stripped) return stripped;
 
   const suffixMatch = String(stripped).trim().match(/(\((-|\d+)\)|\*)$/);

@@ -13,7 +13,7 @@ import {
   get4060PrescriptionFromContent,
   has4060Pattern,
   normalize4060StarOrder,
-  strip4060FromContent,
+  stripDoseTagFromContent,
 } from '../../lib/schedulerContentFormat';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 import { getPrescriptionFromConfiguredDoseTag, getPrescriptionScheduleSettings } from '../../lib/prescriptionScheduleSettings';
@@ -61,7 +61,7 @@ import {
   isOnlySchedulerVisitSuffixChange,
   getMemoListFromMergeSpan,
   stepReservationTimeWithinCellBase,
-  stripReservationTimeFromMergeSpan,
+  buildMergeSpanWithReservationTime,
   isUndoShortcutEvent,
   buildSchedulerCellDisplay,
   buildSchedulerMemoSortKey,
@@ -1270,6 +1270,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     );
 
     if (canUseDefaultMerge) {
+      const defaultReservationTime = getDefaultReservationTime(w, d, r);
+      const masterDefaultMergeSpan = buildMergeSpanWithReservationTime(
+        { rowSpan: defaultRowSpan, colSpan: 1, mergedInto: null },
+        defaultReservationTime
+      );
       const updates = [];
       const revertUpdates = [];
       let canMerge = true;
@@ -1304,13 +1309,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           row_index: targetRow,
           col_index: c,
           merge_span: rowOffset === 0
-            ? { rowSpan: defaultRowSpan, colSpan: 1, mergedInto: null }
+            ? masterDefaultMergeSpan
             : { rowSpan: 1, colSpan: 1, mergedInto: key },
         });
       }
       if (canMerge) {
         defaultEditMergeSpanRef.current[key] = {
-          mergeSpan: { rowSpan: defaultRowSpan, colSpan: 1, mergedInto: null },
+          mergeSpan: masterDefaultMergeSpan,
           revertUpdates,
         };
         applyImmediateMergeSpan(updates);
@@ -1410,7 +1415,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     );
     let newPrescription = forcedPrescription !== undefined ? forcedPrescription : result?.prescription;
     const newBodyPart = forcedBodyPart !== undefined ? forcedBodyPart : (result?.bodyPart !== undefined ? result.bodyPart : oldBodyPart);
-    const newMergeSpan = result?.mergeSpan ? stripReservationTimeFromMergeSpan(result.mergeSpan) : defaultEditMergeSpan;
+    const cellReservationTime = getDefaultReservationTime(w, d, r);
+    const withCellReservationTime = (mergeSpan) => (
+      buildMergeSpanWithReservationTime(
+        mergeSpan || { rowSpan: 1, colSpan: 1, mergedInto: null },
+        cellReservationTime
+      )
+    );
+    const newMergeSpan = result?.mergeSpan
+      ? withCellReservationTime(result.mergeSpan)
+      : (defaultEditMergeSpan ? withCellReservationTime(defaultEditMergeSpan) : undefined);
     const hasPrescriptionResult = forcedPrescription !== undefined || (typeof result === 'object' && result !== null && Object.prototype.hasOwnProperty.call(result, 'prescription'));
     const hasBodyPartResult = forcedBodyPart !== undefined || (typeof result === 'object' && result !== null && Object.prototype.hasOwnProperty.call(result, 'bodyPart'));
     const hasMergeSpanResult = Boolean(defaultEditMergeSpan) || (typeof result === 'object' && result !== null && Object.prototype.hasOwnProperty.call(result, 'mergeSpan'));
@@ -1449,7 +1463,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       bgColor: targetBgColor,
       prescription: newPrescription ?? oldPrescription,
       bodyPart: newBodyPart,
-      mergeSpan: newMergeSpan || oldMergeSpan,
+      mergeSpan: newMergeSpan || withCellReservationTime(oldMergeSpan),
       durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,
       doseTags: prescriptionScheduleSettings.doseTags,
       slotMinutes: settings?.interval_minutes || 10,
@@ -1465,9 +1479,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const finalMergeSpan = newContent.trim()
       ? (hasMergeSpanResult ? newMergeSpan : oldMergeSpan)
       : { rowSpan: 1, colSpan: 1, mergedInto: null };
+    const finalMergeSpanWithTime = newContent.trim() && !finalMergeSpan?.mergedInto
+      ? withCellReservationTime(finalMergeSpan)
+      : finalMergeSpan;
     const prescriptionChanged = oldPrescription !== finalPrescription;
     const bodyPartChanged = (oldBodyPart || '') !== (finalBodyPart || '');
-    const mergeSpanChanged = JSON.stringify(oldMergeSpan || null) !== JSON.stringify(finalMergeSpan || null);
+    const mergeSpanChanged = JSON.stringify(oldMergeSpan || null) !== JSON.stringify(finalMergeSpanWithTime || null);
     const bgChanged = forcedBgColor !== undefined && memos[key]?.bg_color !== targetBgColor;
     if (newContent === oldContent && !prescriptionChanged && !bodyPartChanged && !mergeSpanChanged && !bgChanged && !manualTherapyMerge.ok) {
       setPendingDisplayValues((prev) => {
@@ -1555,10 +1572,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       addToast('아래 시간이 부족해 자동 병합하지 않았습니다.', 'warning');
     }
 
-    if (newContent.trim() && defaultEditMergeSpan?.rowSpan > 1 && (finalMergeSpan.rowSpan || 1) > 1) {
+    if (newContent.trim() && defaultEditMergeSpan?.rowSpan > 1 && (finalMergeSpanWithTime.rowSpan || 1) > 1) {
       const payload = [];
       const affectedKeys = [];
-      for (let rowOffset = 0; rowOffset < finalMergeSpan.rowSpan; rowOffset += 1) {
+      for (let rowOffset = 0; rowOffset < finalMergeSpanWithTime.rowSpan; rowOffset += 1) {
         const targetRow = r + rowOffset;
         const targetKey = cellKey(w, d, targetRow, c);
         affectedKeys.push(targetKey);
@@ -1572,7 +1589,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           content: rowOffset === 0 ? newContent : '',
           bg_color: rowOffset === 0 ? targetBgColor : null,
           merge_span: rowOffset === 0
-            ? finalMergeSpan
+            ? finalMergeSpanWithTime
             : { rowSpan: 1, colSpan: 1, mergedInto: key },
           prescription: rowOffset === 0 ? finalPrescription : null,
           body_part: rowOffset === 0 ? finalBodyPart : null,
@@ -1621,7 +1638,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       c,
       newContent,
       forcedBgColor !== undefined ? forcedBgColor : undefined,
-      finalMergeSpan,
+      finalMergeSpanWithTime,
       finalPrescription,
       finalBodyPart
     );
@@ -2311,11 +2328,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
         if (targetPrescription) {
           const currentVal = e.target.value;
-          let updatedContent = strip4060FromContent(currentVal);
+          const currentPrescription = memos[cellKey(w, d, r, c)]?.prescription || '';
+          const previousDoseTag = prescriptionScheduleSettings.doseTags?.[currentPrescription] || currentPrescription.match(/(\d{2,3})/)?.[1] || '';
+          let updatedContent = stripDoseTagFromContent(currentVal, previousDoseTag);
           const autoTagMatch = targetPrescription.match(/(\d{2,3})/);
           const doseTag = prescriptionScheduleSettings.doseTags?.[targetPrescription] || (autoTagMatch ? autoTagMatch[1] : '');
           if (doseTag) {
-            updatedContent = applyDoseTagToContent(currentVal, doseTag);
+            updatedContent = applyDoseTagToContent(currentVal, doseTag, previousDoseTag);
           }
           handleCellSave(w, d, r, c, updatedContent, targetPrescription);
         }

@@ -8,7 +8,14 @@ import { loadScheduleDeviceSettings } from '../../lib/scheduleDeviceSettings';
 
 export default function GeneralSettings() {
   const { addToast } = useToast();
-  const { saveShockwaveSettings, saveShockwaveDeviceScheduleSettings } = useSchedule();
+  const {
+    currentYear,
+    currentMonth,
+    loadShockwaveMemos,
+    loadShockwaveSettings,
+    saveShockwaveSettings,
+    saveShockwaveDeviceScheduleSettings,
+  } = useSchedule();
   const globalScheduleIntervalRef = useRef({
     interval_minutes: 20,
     time_label_interval_minutes: 20,
@@ -139,6 +146,10 @@ export default function GeneralSettings() {
         interval_minutes: nextSharedInterval,
         time_label_interval_minutes: persistedGlobalTimeLabelInterval,
       };
+      await Promise.allSettled([
+        loadShockwaveSettings?.({ force: true }),
+        loadShockwaveMemos?.(currentYear, currentMonth, { force: true }),
+      ]);
       addToast('시간표 설정이 저장되었습니다. 기본 병합은 전체 기기에 공통 적용되고, 시간열 표시는 이 기기에만 적용됩니다.', 'success');
     }
   };

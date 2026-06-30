@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { setMonthlySettlementSettings } from '../../lib/settlementSettings';
-import { extractDoseTagFromPrescription } from '../../lib/schedulerContentFormat';
+import { extractDoseTagFromPrescription, normalizeDoseTagInput } from '../../lib/schedulerContentFormat';
 
 export default function SettlementSettingsPanel({
   type = 'shockwave',
@@ -204,7 +204,7 @@ export default function SettlementSettingsPanel({
     }, {});
     const cleanedDoseTags = {};
     cleanedPrescriptions.forEach((prescription) => {
-      const customTag = String(draft.dose_tags[prescription] ?? '').replace(/[^\d]/g, '').slice(0, 3);
+      const customTag = normalizeDoseTagInput(draft.dose_tags[prescription]);
       if (customTag) cleanedDoseTags[prescription] = customTag;
     });
     const cleanedDurations = {};
@@ -321,7 +321,13 @@ export default function SettlementSettingsPanel({
                       placeholder="—"
                       title={doseTag ? `스케줄 셀에 "주한솔${doseTag}" 형태로 표시` : '셀 태그 없음 (이름만 표시)'}
                       onChange={(event) => {
-                        const val = event.target.value.replace(/[^\d]/g, '').slice(0, 3);
+                        setDraft((prev) => ({
+                          ...prev,
+                          dose_tags: { ...prev.dose_tags, [prescription]: event.target.value },
+                        }));
+                      }}
+                      onBlur={(event) => {
+                        const val = normalizeDoseTagInput(event.target.value);
                         setDraft((prev) => ({
                           ...prev,
                           dose_tags: { ...prev.dose_tags, [prescription]: val },

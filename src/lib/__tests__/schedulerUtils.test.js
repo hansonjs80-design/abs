@@ -13,7 +13,12 @@ import {
 } from '../schedulerCellTextUtils.js';
 import { convertKoreanQwertyMistypeToEnglish } from '../keyboardLayoutUtils.js';
 import { toProperCase } from '../bodyPartFormatUtils.js';
-import { applyDoseTagToContent } from '../schedulerContentFormat.js';
+import {
+  applyDoseTagToContent,
+  getConfiguredDoseTagFromContent,
+  normalizeDoseTagInput,
+  stripDoseTagFromContent,
+} from '../schedulerContentFormat.js';
 import {
   readPendingScheduleDrafts,
   rememberPendingScheduleDraft,
@@ -96,6 +101,16 @@ describe('manual therapy dose tag formatting', () => {
   it('replaces an existing dose tag without removing the visit marker', () => {
     assert.equal(applyDoseTagToContent('/김지인60*', '40'), '/김지인40*');
     assert.equal(applyDoseTagToContent('234/김지인60(2)', '40'), '234/김지인40(2)');
+  });
+
+  it('supports text and decimal scheduler cell tags', () => {
+    assert.equal(normalizeDoseTagInput(' 1.5 '), '1.5');
+    assert.equal(normalizeDoseTagInput('FR-DC'), 'FR-DC');
+    assert.equal(normalizeDoseTagInput('F/Rdc'), 'F/Rdc');
+    assert.equal(applyDoseTagToContent('234/김지인60(2)', '1.5', '60'), '234/김지인1.5(2)');
+    assert.equal(stripDoseTagFromContent('234/김지인1.5(2)', '1.5'), '234/김지인(2)');
+    assert.equal(getConfiguredDoseTagFromContent('234/김지인F/Rdc(2)', { 'F/Rdc': 'F/Rdc' }), 'F/Rdc');
+    assert.equal(getConfiguredDoseTagFromContent('234/김지인1.5*', { 'F1.5': '1.5' }), '1.5');
   });
 });
 

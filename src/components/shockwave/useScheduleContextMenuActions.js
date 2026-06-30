@@ -5,7 +5,7 @@ import {
   applyDoseTagToContent,
   extractDoseTagFromPrescription,
   has4060Pattern,
-  strip4060FromContent,
+  stripDoseTagFromContent,
 } from '../../lib/schedulerContentFormat';
 import {
   addBodyPartToMap,
@@ -189,13 +189,14 @@ export default function useScheduleContextMenuActions({
         const prescriptionValue = action.value || '';
         const hasActionDoseTag = Object.prototype.hasOwnProperty.call(action, 'doseTag');
         const doseNumber = hasActionDoseTag ? action.doseTag : extractDoseTagFromPrescription(prescriptionValue);
+        const previousDoseTag = prescriptionScheduleSettings?.doseTags?.[memo.prescription] || extractDoseTagFromPrescription(memo.prescription);
 
         if (doseNumber) {
-          updatedContent = applyDoseTagToContent(updatedContent, doseNumber);
-        } else if (action.value && has4060Pattern(updatedContent)) {
-          updatedContent = strip4060FromContent(updatedContent);
+          updatedContent = applyDoseTagToContent(updatedContent, doseNumber, previousDoseTag);
+        } else if (action.value && (previousDoseTag || has4060Pattern(updatedContent))) {
+          updatedContent = stripDoseTagFromContent(updatedContent, previousDoseTag);
         } else if (!action.value) {
-          updatedContent = strip4060FromContent(updatedContent);
+          updatedContent = stripDoseTagFromContent(updatedContent, previousDoseTag);
         }
         if (memo.prescription !== action.value || updatedContent !== getStableMemoContent(key, memo)) {
           updateContextMemoSnapshot(key, memo, {

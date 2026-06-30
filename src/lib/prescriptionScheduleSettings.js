@@ -1,4 +1,5 @@
 import { getEffectiveSettlementSettings } from './settlementSettings.js';
+import { getConfiguredDoseTagFromContent, normalizeDoseTagInput } from './schedulerContentFormat.js';
 
 export function getPrescriptionScheduleSettings(settings, year, month) {
   const shockwave = getEffectiveSettlementSettings(settings, year, month, 'shockwave');
@@ -29,10 +30,10 @@ export function getConfiguredDoseTag(settings, year, month, prescription) {
 
 export function getPrescriptionFromConfiguredDoseTag(settings, year, month, content) {
   const config = getPrescriptionScheduleSettings(settings, year, month);
-  const contentTag = String(content || '').match(/[가-힣a-zA-Z]\s*(\d{2,3})\**($|[(\s])/)?.[1] || '';
+  const contentTag = getConfiguredDoseTagFromContent(content, config.doseTags);
   if (!contentTag) return '';
   return Object.entries(config.doseTags || {}).find(([, tag]) => (
-    String(tag || '').trim() === contentTag
+    normalizeDoseTagInput(tag) === contentTag
   ))?.[0] || '';
 }
 

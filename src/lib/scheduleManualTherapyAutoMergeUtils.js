@@ -1,16 +1,18 @@
 import { buildManualTherapyMergePayload, getManualTherapyRowSpan } from './manualTherapyMergeUtils.js';
-import { get4060PrescriptionFromContent } from './schedulerContentFormat.js';
+import { get4060PrescriptionFromContent, getConfiguredDoseTagFromContent, normalizeDoseTagInput } from './schedulerContentFormat.js';
 
-function getDoseTagFromContent(content = '') {
+function getDoseTagFromContent(content = '', doseTags = {}) {
+  const configuredTag = getConfiguredDoseTagFromContent(content, doseTags);
+  if (configuredTag) return configuredTag;
   const detectedPrescription = get4060PrescriptionFromContent(content);
   return String(detectedPrescription || '').replace(/[^\d]/g, '');
 }
 
 function findPrescriptionByDoseTag(content, doseTags = {}, durationMinutesMap = {}, slotMinutes) {
-  const contentDoseTag = getDoseTagFromContent(content);
+  const contentDoseTag = getDoseTagFromContent(content, doseTags);
   if (!contentDoseTag || !doseTags || typeof doseTags !== 'object') return '';
   return Object.entries(doseTags).find(([candidate, tag]) => (
-    String(tag || '').trim() === contentDoseTag &&
+    normalizeDoseTagInput(tag) === contentDoseTag &&
     getManualTherapyRowSpan(candidate, { durationMinutesMap, slotMinutes }) > 1
   ))?.[0] || '';
 }

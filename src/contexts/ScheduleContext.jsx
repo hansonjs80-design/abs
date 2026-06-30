@@ -922,7 +922,6 @@ export function ScheduleProvider({ children }) {
   const saveShockwaveSettings = useCallback(async (newSettings) => {
     const requestId = ++shockwaveSettingsSaveRequestRef.current;
     try {
-      const skipIntervalMigration = newSettings.__skipIntervalMigration === true;
       const nextUpdatedAt = new Date().toISOString();
       const { data: latestRow } = await supabase
         .from('shockwave_settings')
@@ -932,83 +931,6 @@ export function ScheduleProvider({ children }) {
         .maybeSingle();
 
       const targetId = latestRow?.id || newSettings.id || shockwaveSettings?.id || '00000000-0000-0000-0000-000000000000';
-
-      const oldInterval = shockwaveSettingsRefCache.current?.interval_minutes || shockwaveSettings?.interval_minutes || 20;
-      const newInterval = newSettings.interval_minutes;
-
-      if (!skipIntervalMigration && oldInterval !== newInterval && Number.isFinite(oldInterval) && Number.isFinite(newInterval)) {
-        const scale = oldInterval / newInterval;
-        
-        let allSchedules = [];
-        let page = 0;
-        let hasMore = true;
-        while (hasMore) {
-          const { data, error: fetchErr } = await supabase
-            .from('shockwave_schedules')
-            .select('*')
-            .range(page * 1000, (page + 1) * 1000 - 1);
-          if (fetchErr) throw fetchErr;
-          if (data) allSchedules.push(...data);
-          if (!data || data.length < 1000) hasMore = false;
-          page++;
-        }
-
-        if (allSchedules.length > 0) {
-          const idsToDelete = allSchedules.map(item => item.id).filter(Boolean);
-          const migratedSchedules = allSchedules.map(item => {
-            const newItem = { ...item };
-            newItem.row_index = Math.round(item.row_index * scale);
-            
-            if (item.merge_span) {
-              const newMergeSpan = { ...item.merge_span };
-              if (typeof newMergeSpan.rowSpan === 'number') {
-                if (item.merge_span.rowSpan === 1) {
-                  newMergeSpan.rowSpan = 1;
-                } else {
-                  newMergeSpan.rowSpan = Math.max(1, Math.round(newMergeSpan.rowSpan * scale));
-                }
-              }
-              if (newMergeSpan.mergedInto) {
-                const parts = newMergeSpan.mergedInto.split('-');
-                if (parts.length === 4) {
-                  const r = Number(parts[2]);
-                  if (Number.isFinite(r)) {
-                    parts[2] = String(Math.round(r * scale));
-                  }
-                }
-                newMergeSpan.mergedInto = parts.join('-');
-              }
-              newItem.merge_span = newMergeSpan;
-            }
-            
-            delete newItem.id;
-            delete newItem.created_at;
-            delete newItem.updated_at;
-            return newItem;
-          });
-
-          if (idsToDelete.length > 0) {
-            const deleteChunkSize = 200;
-            for (let i = 0; i < idsToDelete.length; i += deleteChunkSize) {
-              const chunk = idsToDelete.slice(i, i + deleteChunkSize);
-              const { error: deleteErr } = await supabase
-                .from('shockwave_schedules')
-                .delete()
-                .in('id', chunk);
-              if (deleteErr) throw deleteErr;
-            }
-          }
-
-          const insertChunkSize = 200;
-          for (let i = 0; i < migratedSchedules.length; i += insertChunkSize) {
-            const chunk = migratedSchedules.slice(i, i + insertChunkSize);
-            const { error: insertErr } = await supabase
-              .from('shockwave_schedules')
-              .insert(chunk);
-            if (insertErr) throw insertErr;
-          }
-        }
-      }
 
       const basePayload = {
         id: targetId,
@@ -1081,8 +1003,7 @@ export function ScheduleProvider({ children }) {
       }
       if (shockwaveSettingsSaveRequestRef.current === requestId) {
         shockwaveSettingsLoadRequestRef.current += 1;
-        const { __skipIntervalMigration: _skipIntervalMigration, ...stateSettings } = newSettings;
-        const updatedSettings = applyScheduleDeviceSettings({ ...stateSettings, id: targetId, updated_at: nextUpdatedAt });
+        const updatedSettings = applyScheduleDeviceSettings({ ...newSettings, id: targetId, updated_at: nextUpdatedAt });
         // Ref 캐시도 즉시 갱신
         shockwaveSettingsRefCache.current = updatedSettings;
         setShockwaveSettings(updatedSettings);

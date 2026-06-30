@@ -123,3 +123,18 @@ test('buildManualTherapyAutoMergePayload resolves a configured prescription from
   assert.equal(result.resolvedPrescription, '커스텀75');
   assert.equal(result.payload.length, 2);
 });
+
+test('buildManualTherapyAutoMergePayload resolves a decimal configured cell tag', () => {
+  const result = buildManualTherapyAutoMergePayload({
+    ...baseArgs,
+    content: '1234/홍길동1.5',
+    prescription: '',
+    durationMinutesMap: { 'F1.5': 40 },
+    doseTags: { 'F1.5': '1.5' },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.resolvedPrescription, 'F1.5');
+  assert.equal(result.payload.length, 2);
+  assert.equal(result.payload[0].prescription, 'F1.5');
+});

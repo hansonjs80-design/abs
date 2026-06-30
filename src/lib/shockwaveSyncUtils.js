@@ -496,17 +496,7 @@ export function formatStatsRowForScheduler(row) {
   return chartNumber ? `${chartNumber}/${nameText}` : nameText;
 }
 
-/* eslint-disable no-unreachable */
 export async function syncStatsDateToScheduler({ year, month, date, therapists }) {
-  return {
-    skipped: true,
-    reason: 'stats_to_scheduler_disabled',
-    year,
-    month,
-    date,
-    therapistCount: Array.isArray(therapists) ? therapists.length : 0,
-  };
-
   if (!date || !Array.isArray(therapists) || therapists.length === 0) {
     return { skipped: true, reason: 'missing_input' };
   }
@@ -609,4 +599,3 @@ export async function syncStatsDateToScheduler({ year, month, date, therapists }
     therapistCount: therapists.length,
   };
 }
-/* eslint-enable no-unreachable */
