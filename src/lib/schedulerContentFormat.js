@@ -80,6 +80,13 @@ export function applyDoseTagToContent(text, doseTag, previousDoseTag = '') {
  * e.g. "30분" → "30", "40분" → "40", "프리미엄" → ""
  */
 export function extractDoseTagFromPrescription(prescription) {
-  const match = String(prescription || '').match(/(\d{2,3})/);
-  return match ? match[1] : '';
+  const clean = String(prescription || '').trim();
+  if (!clean) return '';
+  
+  // 소수점을 포함한 숫자 패턴 매칭 (예: 1.5, 40, 60 등)
+  const numMatch = clean.match(/(\d+(?:\.\d+)?)/);
+  if (numMatch) return numMatch[1];
+
+  // 숫자가 전혀 없는 경우, 허용된 문자열만 남겨서 태그로 반환
+  return clean.replace(/[^0-9A-Za-z가-힣./-]/g, '').slice(0, 12);
 }

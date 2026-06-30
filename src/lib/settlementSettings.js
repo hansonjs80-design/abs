@@ -13,6 +13,7 @@ export const DEFAULT_SHOCKWAVE_SETTLEMENT = {
   dose_tags: {},
   duration_minutes: {},
   visit_line_break_prescriptions: [],
+  hidden_prescriptions: [],
   incentive_percentage: 7,
 };
 
@@ -35,6 +36,7 @@ export const DEFAULT_MANUAL_THERAPY_SETTLEMENT = {
     '60분': 60,
   },
   visit_line_break_prescriptions: ['40분', '60분'],
+  hidden_prescriptions: [],
   incentive_percentage: 0,
 };
 
@@ -65,6 +67,9 @@ export function buildBaseSettlementSettings(settings, type = 'shockwave') {
   const rawVisitLineBreakPrescriptions = isManual
     ? settings?.manual_therapy_visit_line_break_prescriptions
     : settings?.visit_line_break_prescriptions;
+  const rawHiddenPrescriptions = isManual
+    ? settings?.manual_therapy_hidden_prescriptions
+    : settings?.hidden_prescriptions;
 
   return {
     prescriptions: Array.isArray(prescriptions) && prescriptions.length > 0
@@ -90,6 +95,9 @@ export function buildBaseSettlementSettings(settings, type = 'shockwave') {
     visit_line_break_prescriptions: Array.isArray(rawVisitLineBreakPrescriptions)
       ? rawVisitLineBreakPrescriptions.filter(Boolean)
       : fallback.visit_line_break_prescriptions,
+    hidden_prescriptions: Array.isArray(rawHiddenPrescriptions)
+      ? rawHiddenPrescriptions.filter(Boolean)
+      : fallback.hidden_prescriptions || [],
     incentive_percentage: isManual
       ? settings?.manual_therapy_incentive_percentage ?? fallback.incentive_percentage
       : settings?.incentive_percentage ?? fallback.incentive_percentage,
@@ -139,6 +147,9 @@ export function getEffectiveSettlementSettings(settings, year, month, type = 'sh
     visit_line_break_prescriptions: Array.isArray(override?.visit_line_break_prescriptions)
       ? override.visit_line_break_prescriptions.filter(Boolean)
       : base.visit_line_break_prescriptions,
+    hidden_prescriptions: Array.isArray(override?.hidden_prescriptions)
+      ? override.hidden_prescriptions.filter(Boolean)
+      : base.hidden_prescriptions || [],
     incentive_percentage: override?.incentive_overridden === true || Number(override?.incentive_percentage) > 0
       ? Number(override?.incentive_percentage) || 0
       : base.incentive_percentage,
@@ -166,6 +177,9 @@ export function setMonthlySettlementSettings(settings, year, month, type, nextCo
         ...(nextConfig?.duration_minutes ? { duration_minutes: nextConfig.duration_minutes } : {}),
         visit_line_break_prescriptions: Array.isArray(nextConfig?.visit_line_break_prescriptions)
           ? nextConfig.visit_line_break_prescriptions.filter(Boolean)
+          : [],
+        hidden_prescriptions: Array.isArray(nextConfig?.hidden_prescriptions)
+          ? nextConfig.hidden_prescriptions.filter(Boolean)
           : [],
         incentive_percentage: Number(nextConfig?.incentive_percentage) || 0,
         incentive_overridden: true,

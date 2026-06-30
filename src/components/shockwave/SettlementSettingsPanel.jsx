@@ -22,6 +22,9 @@ export default function SettlementSettingsPanel({
     visit_line_break_prescriptions: effectiveSettings?.visit_line_break_prescriptions || (
       isManualTherapy ? settings?.manual_therapy_visit_line_break_prescriptions : settings?.visit_line_break_prescriptions
     ) || [],
+    hidden_prescriptions: effectiveSettings?.hidden_prescriptions || (
+      isManualTherapy ? settings?.manual_therapy_hidden_prescriptions : settings?.hidden_prescriptions
+    ) || [],
     shortcuts: effectiveSettings?.shortcuts || (isManualTherapy ? settings?.manual_therapy_shortcuts : settings?.shortcuts) || {},
   }), [
     effectiveSettings,
@@ -32,6 +35,8 @@ export default function SettlementSettingsPanel({
     settings?.manual_therapy_duration_minutes,
     settings?.manual_therapy_shortcuts,
     settings?.manual_therapy_visit_line_break_prescriptions,
+    settings?.manual_therapy_hidden_prescriptions,
+    settings?.hidden_prescriptions,
     settings?.prescription_colors,
     settings?.shortcuts,
     settings?.visit_line_break_prescriptions,
@@ -40,6 +45,7 @@ export default function SettlementSettingsPanel({
   const [draft, setDraft] = useState(buildInitialDraft);
   const [newPrescriptionName, setNewPrescriptionName] = useState('');
   const [prescriptionRenameKeys, setPrescriptionRenameKeys] = useState({});
+  const [draggedIndex, setDraggedIndex] = useState(null);
 
   const title = isManualTherapy ? '도수치료 결산 설정' : '충격파 결산 설정';
   const addPlaceholder = isManualTherapy ? '+ 도수 처방' : '+ 처방';
@@ -52,6 +58,34 @@ export default function SettlementSettingsPanel({
   useEffect(() => {
     setDraft(buildInitialDraft());
   }, [buildInitialDraft]);
+
+  // Drag and Drop handlers
+  const handleDragStart = (e, index) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', e.currentTarget);
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    setDraft((prev) => {
+      const nextPrescriptions = [...prev.prescriptions];
+      const draggedItem = nextPrescriptions[draggedIndex];
+      nextPrescriptions.splice(draggedIndex, 1);
+      nextPrescriptions.splice(index, 0, draggedItem);
+      return {
+        ...prev,
+        prescriptions: nextPrescriptions,
+      };
+    });
+    setDraggedIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
 
   /** 처방별 셀 태그 값을 반환 (사용자 지정 → 자동 추출 순) */
   const getDoseTag = (prescription) => {
@@ -87,6 +121,7 @@ export default function SettlementSettingsPanel({
       const nextDoseTags = { ...prev.dose_tags };
       const nextDurations = { ...(prev.duration_minutes || {}) };
       const nextLineBreaks = new Set(prev.visit_line_break_prescriptions || []);
+      const nextHidden = new Set(prev.hidden_prescriptions || []);
       if (previousName !== nextValue) {
         nextPrices[nextValue] = nextPrices[previousName] ?? 0;
         delete nextPrices[previousName];
@@ -105,6 +140,10 @@ export default function SettlementSettingsPanel({
           nextLineBreaks.delete(previousName);
           nextLineBreaks.add(nextValue);
         }
+        if (nextHidden.has(previousName)) {
+          nextHidden.delete(previousName);
+          nextHidden.add(nextValue);
+        }
         const nextShortcuts = { ...prev.shortcuts };
         if (nextShortcuts[previousName] !== undefined) {
           nextShortcuts[nextValue] = nextShortcuts[previousName];
@@ -118,6 +157,7 @@ export default function SettlementSettingsPanel({
           dose_tags: nextDoseTags,
           duration_minutes: nextDurations,
           visit_line_break_prescriptions: Array.from(nextLineBreaks),
+          hidden_prescriptions: Array.from(nextHidden),
           shortcuts: nextShortcuts,
         };
       }
@@ -160,6 +200,7 @@ export default function SettlementSettingsPanel({
         dose_tags: nextDoseTags,
         duration_minutes: nextDurations,
         visit_line_break_prescriptions: (prev.visit_line_break_prescriptions || []).filter((item) => item !== target),
+        hidden_prescriptions: (prev.hidden_prescriptions || []).filter((item) => item !== target),
         shortcuts: nextShortcuts,
       };
     });
@@ -214,6 +255,8 @@ export default function SettlementSettingsPanel({
     });
     const cleanedLineBreaks = (draft.visit_line_break_prescriptions || [])
       .filter((prescription) => cleanedPrescriptions.includes(prescription));
+    const cleanedHiddenPrescriptions = (draft.hidden_prescriptions || [])
+      .filter((prescription) => cleanedPrescriptions.includes(prescription));
     const cleanedShortcuts = {};
     cleanedPrescriptions.forEach(prescription => {
       const customShortcut = String(draft.shortcuts[prescription] || '').trim();
@@ -231,6 +274,7 @@ export default function SettlementSettingsPanel({
       dose_tags: cleanedDoseTags,
       duration_minutes: cleanedDurations,
       visit_line_break_prescriptions: cleanedLineBreaks,
+      hidden_prescriptions: cleanedHiddenPrescriptions,
     };
     const monthly_settlement_settings = setMonthlySettlementSettings(settings, year, month, type, cleaned);
     const nextSettings = {
@@ -252,6 +296,7 @@ export default function SettlementSettingsPanel({
       nextSettings.manual_therapy_dose_tags = { ...cleanedDoseTags };
       nextSettings.manual_therapy_duration_minutes = { ...cleanedDurations };
       nextSettings.manual_therapy_visit_line_break_prescriptions = [...cleanedLineBreaks];
+      nextSettings.manual_therapy_hidden_prescriptions = [...cleanedHiddenPrescriptions];
       nextSettings.manual_therapy_shortcuts = { ...cleanedShortcuts };
     } else {
       nextSettings.prescriptions = cleaned.prescriptions;
@@ -259,6 +304,7 @@ export default function SettlementSettingsPanel({
       nextSettings.dose_tags = { ...cleanedDoseTags };
       nextSettings.duration_minutes = { ...cleanedDurations };
       nextSettings.visit_line_break_prescriptions = [...cleanedLineBreaks];
+      nextSettings.hidden_prescriptions = [...cleanedHiddenPrescriptions];
       nextSettings.shortcuts = { ...cleanedShortcuts };
     }
 

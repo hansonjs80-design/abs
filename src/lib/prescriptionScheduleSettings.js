@@ -20,6 +20,10 @@ export function getPrescriptionScheduleSettings(settings, year, month) {
       ...(shockwave?.visit_line_break_prescriptions || []),
       ...(manualTherapy?.visit_line_break_prescriptions || []),
     ],
+    hiddenPrescriptions: [
+      ...(shockwave?.hidden_prescriptions || []),
+      ...(manualTherapy?.hidden_prescriptions || []),
+    ],
   };
 }
 

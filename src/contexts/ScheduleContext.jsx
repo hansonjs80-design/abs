@@ -32,6 +32,7 @@ import {
   readDeletedScheduleDrafts,
   readPendingScheduleDrafts,
   rememberDeletedScheduleDraft,
+  timeValueToMinutes,
 } from '../lib/schedulerUtils';
 
 const ScheduleContext = createContext();
@@ -931,6 +932,103 @@ export function ScheduleProvider({ children }) {
         .maybeSingle();
 
       const targetId = latestRow?.id || newSettings.id || shockwaveSettings?.id || '00000000-0000-0000-0000-000000000000';
+
+      const oldInterval = shockwaveSettingsRefCache.current?.interval_minutes || shockwaveSettings?.interval_minutes || 20;
+      const newInterval = newSettings.interval_minutes;
+
+      if (oldInterval !== newInterval && Number.isFinite(oldInterval) && Number.isFinite(newInterval)) {
+        const scale = oldInterval / newInterval;
+        
+        let allSchedules = [];
+        let page = 0;
+        let hasMore = true;
+        while (hasMore) {
+          const { data, error: fetchErr } = await supabase
+            .from('shockwave_schedules')
+            .select('*')
+            .range(page * 1000, (page + 1) * 1000 - 1);
+          if (fetchErr) throw fetchErr;
+          if (data) allSchedules.push(...data);
+          if (!data || data.length < 1000) hasMore = false;
+          page++;
+        }
+
+        if (allSchedules.length > 0) {
+          const startTime = newSettings.start_time || '09:00';
+          const startMinutes = timeValueToMinutes(startTime);
+
+          const migratedSchedules = allSchedules.map(item => {
+            const newItem = { ...item };
+            
+            // reservation_time 기반 또는 scale 기반 row_index 계산
+            const resTime = newItem.merge_span?.meta?.reservation_time;
+            const itemMinutes = resTime ? timeValueToMinutes(resTime) : null;
+            
+            if (itemMinutes !== null && startMinutes !== null) {
+              newItem.row_index = Math.round((itemMinutes - startMinutes) / newInterval);
+            } else {
+              newItem.row_index = Math.round(item.row_index * scale);
+            }
+            
+            if (item.merge_span) {
+              const newMergeSpan = { ...item.merge_span };
+              if (typeof newMergeSpan.rowSpan === 'number') {
+                if (item.merge_span.rowSpan === 1) {
+                  newMergeSpan.rowSpan = 1;
+                } else {
+                  newMergeSpan.rowSpan = Math.max(1, Math.round(newMergeSpan.rowSpan * scale));
+                }
+              }
+              if (newMergeSpan.mergedInto) {
+                const parts = newMergeSpan.mergedInto.split('-');
+                if (parts.length === 4) {
+                  const r = Number(parts[2]);
+                  if (Number.isFinite(r)) {
+                    parts[2] = String(Math.round(r * scale));
+                  }
+                }
+                newMergeSpan.mergedInto = parts.join('-');
+              }
+              newItem.merge_span = newMergeSpan;
+            }
+            
+            delete newItem.id;
+            delete newItem.created_at;
+            delete newItem.updated_at;
+            return newItem;
+          });
+
+          // 안전한 마이그레이션을 위해 연도-월 단위로 그룹화하여 순차 처리
+          const groups = {};
+          for (const item of migratedSchedules) {
+            const key = `${item.year}-${item.month}`;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(item);
+          }
+
+          for (const [yearMonth, groupItems] of Object.entries(groups)) {
+            const [y, m] = yearMonth.split('-').map(Number);
+            
+            // 1. 해당 연도/월의 기존 레코드 삭제
+            const { error: deleteErr } = await supabase
+              .from('shockwave_schedules')
+              .delete()
+              .eq('year', y)
+              .eq('month', m);
+            if (deleteErr) throw deleteErr;
+
+            // 2. 변환된 레코드 삽입 (200개씩 청크 단위로 나누어 인서트)
+            const insertChunkSize = 200;
+            for (let i = 0; i < groupItems.length; i += insertChunkSize) {
+              const chunk = groupItems.slice(i, i + insertChunkSize);
+              const { error: insertErr } = await supabase
+                .from('shockwave_schedules')
+                .insert(chunk);
+              if (insertErr) throw insertErr;
+            }
+          }
+        }
+      }
 
       const basePayload = {
         id: targetId,
