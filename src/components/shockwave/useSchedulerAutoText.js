@@ -716,12 +716,15 @@ export default function useSchedulerAutoText({
         ? bodyPartVisitMap[normalizeBodyPartKey(preferredBodyPart)]?.lastVisit
         : null;
 
+      const effectiveVisit = preferredLastVisit || lastVisit || nextVisit;
+      const nextText = `${chartNumber}/${namePart}(${effectiveVisit})`;
+
       return {
         chartNumber,
         namePart,
         cleanName: cleanPatientName,
         nextVisit,
-        displayVisit: preferredLastVisit || lastVisit || nextVisit,
+        displayVisit: effectiveVisit,
         lastDate: item.date || '',
         prescription: item.prescription || '',
         prescriptions,
@@ -738,6 +741,7 @@ export default function useSchedulerAutoText({
         preferredNextVisit,
         preferredLastVisit,
         optionLabel: getSchedulerHistoryTypeLabel({ type: item.type, doseTag: candidate.doseTag, prescription: item.prescription }),
+        nextText,
       };
     });
 
