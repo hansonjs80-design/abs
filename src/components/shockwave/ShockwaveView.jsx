@@ -1514,7 +1514,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         clearImmediateCellDisplay(manualTherapyMerge.payload);
       } else {
         rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
-        addToast('저장 실패', 'error');
+        const errMsg = window.lastDbError?.message || window.lastDbError?.error_description || (typeof window.lastDbError === 'string' ? window.lastDbError : '') || '상세 에러 없음';
+        addToast(`저장 실패 (${errMsg})`, 'error');
       }
       return;
     }
@@ -1564,7 +1565,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           clearImmediateCellDisplay(payload);
         } else {
           rememberPendingScheduleDraft(currentYear, currentMonth, key, '');
-          addToast('저장 실패', 'error');
+          const errMsg = window.lastDbError?.message || window.lastDbError?.error_description || (typeof window.lastDbError === 'string' ? window.lastDbError : '') || '상세 에러 없음';
+          addToast(`저장 실패 (${errMsg})`, 'error');
         }
         return;
       }
@@ -1613,7 +1615,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         clearImmediateCellDisplay(payload);
       } else {
         rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
-        addToast('저장 실패', 'error');
+        const errMsg = window.lastDbError?.message || window.lastDbError?.error_description || (typeof window.lastDbError === 'string' ? window.lastDbError : '') || '상세 에러 없음';
+        addToast(`저장 실패 (${errMsg})`, 'error');
       }
       return;
     }
@@ -1655,7 +1658,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     // pendingDisplayValues는 즉시 삭제하지 않음.
     // memos 컨텍스트가 새 값을 반영할 때까지 유지하여 깜빡임 방지.
     // 아래 useEffect(cleanupStalePendingValues)에서 memos 업데이트 후 자동 정리.
-    if (!success) addToast('저장 실패', 'error');
+    if (!success) {
+      const errMsg = window.lastDbError?.message || window.lastDbError?.error_description || (typeof window.lastDbError === 'string' ? window.lastDbError : '') || '상세 에러 없음';
+      addToast(`저장 실패 (${errMsg})`, 'error');
+    }
   }, [editValue, currentYear, currentMonth, settings, memos, effectiveMemos, pendingMergeSpans, baseTimeSlots.length, queuedOnSaveMemo, addToast, buildSchedulerAutoText, recordUndo, buildMemoSnapshotForKeys, queuedSaveShockwaveMemosBulk, applyImmediateCellDisplay, applyImmediateMergeSpan, clearImmediateCellDisplay, cellKey, setPendingDisplayValues, prescriptionScheduleSettings.doseTags, prescriptionScheduleSettings.durationMinutesMap]);
 
   handleCellSaveRef.current = handleCellSave;

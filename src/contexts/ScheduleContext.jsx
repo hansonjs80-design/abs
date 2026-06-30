@@ -1378,6 +1378,7 @@ export function ScheduleProvider({ children }) {
       }
       return true;
       } catch (err) {
+        window.lastDbError = err;
         if (isWriteStillCurrent()) {
           setShockwaveMemos(prev => rollbackShockwaveMemoState(prev, { [key]: previousMemo }));
         }
@@ -1588,6 +1589,7 @@ export function ScheduleProvider({ children }) {
       }
       return true;
     } catch (err) {
+      window.lastDbError = err;
       const currentRollbackMemos = Object.fromEntries(
         Object.entries(previousMemos).filter(([key]) => isKeyWriteStillCurrent(key))
       );
