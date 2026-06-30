@@ -12,7 +12,7 @@ function findPrescriptionByDoseTag(content, doseTags = {}, durationMinutesMap = 
   const contentDoseTag = getDoseTagFromContent(content, doseTags);
   if (!contentDoseTag || !doseTags || typeof doseTags !== 'object') return '';
   return Object.entries(doseTags).find(([candidate, tag]) => (
-    normalizeDoseTagInput(tag) === contentDoseTag &&
+    normalizeDoseTagInput(tag).toUpperCase() === contentDoseTag.toUpperCase() &&
     getManualTherapyRowSpan(candidate, { durationMinutesMap, slotMinutes }) > 1
   ))?.[0] || '';
 }
