@@ -1468,7 +1468,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       mergeSpan: newMergeSpan || withCellReservationTime(oldMergeSpan),
       durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,
       doseTags: prescriptionScheduleSettings.doseTags,
-      slotMinutes: settings?.interval_minutes || 10,
+      slotMinutes: activeTab === 'manual_therapy' ? 10 : (settings?.interval_minutes || 20),
       oldContent,
       oldPrescription,
     });
