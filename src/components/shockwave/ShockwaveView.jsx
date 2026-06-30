@@ -2536,7 +2536,64 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           {weekIdx === 0 && (
             <>
               {canManageSchedulerSettings && (
-                <div className="shockwave-week-floating-actions shockwave-week-floating-actions--right">
+                <div className="shockwave-week-floating-actions shockwave-week-floating-actions--right" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {/* 행 높이 미세 조절기 */}
+                  <div className="sw-height-controller" style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'white', padding: '2px 8px', borderRadius: '8px', border: '1px solid #dbe3ee', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', fontSize: '0.82rem', fontWeight: 'bold', color: '#475569' }}>
+                    <span style={{ marginRight: '4px', userSelect: 'none' }}>행 높이</span>
+                    <button
+                      type="button"
+                      onClick={() => setRowHeight((prev) => Math.max(5, prev - 1))}
+                      style={{ border: 'none', background: '#f1f5f9', borderRadius: '4px', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 'bold', color: '#475569' }}
+                      title="1px 줄이기"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      value={rowHeight}
+                      min={5}
+                      onChange={(e) => setRowHeight(Math.max(5, Number(e.target.value) || 5))}
+                      style={{ width: '36px', border: 'none', textAlign: 'center', fontWeight: 'bold', outline: 'none', background: 'transparent', fontSize: '0.82rem', color: '#1e293b' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setRowHeight((prev) => prev + 1)}
+                      style={{ border: 'none', background: '#f1f5f9', borderRadius: '4px', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 'bold', color: '#475569' }}
+                      title="1px 늘리기"
+                    >
+                      +
+                    </button>
+                    <span style={{ color: '#94a3b8', marginLeft: '2px', fontWeight: 'normal', userSelect: 'none' }}>px</span>
+                  </div>
+
+                  {/* 열 너비 미세 조절기 */}
+                  <div className="sw-width-controller" style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'white', padding: '2px 8px', borderRadius: '8px', border: '1px solid #dbe3ee', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', fontSize: '0.82rem', fontWeight: 'bold', color: '#475569' }}>
+                    <span style={{ marginRight: '4px', userSelect: 'none' }}>열 너비</span>
+                    <button
+                      type="button"
+                      onClick={() => setDayColWidth((prev) => Math.max(70, (prev || 150) - 2))}
+                      style={{ border: 'none', background: '#f1f5f9', borderRadius: '4px', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 'bold', color: '#475569' }}
+                      title="2px 줄이기"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      value={dayColWidth || 150}
+                      min={70}
+                      onChange={(e) => setDayColWidth(Math.max(70, Number(e.target.value) || 70))}
+                      style={{ width: '36px', border: 'none', textAlign: 'center', fontWeight: 'bold', outline: 'none', background: 'transparent', fontSize: '0.82rem', color: '#1e293b' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setDayColWidth((prev) => (prev || 150) + 2)}
+                      style={{ border: 'none', background: '#f1f5f9', borderRadius: '4px', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 'bold', color: '#475569' }}
+                      title="2px 늘리기"
+                    >
+                      +
+                    </button>
+                    <span style={{ color: '#94a3b8', marginLeft: '2px', fontWeight: 'normal', userSelect: 'none' }}>px</span>
+                  </div>
                   <button
                     type="button"
                     className="shockwave-week-today-btn"

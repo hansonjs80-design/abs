@@ -429,7 +429,7 @@
   top: 7px;
   height: 2px;
   border-radius: 999px;
-  background: transparent;
+  background: #e2e8f0;
   transition: background-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
