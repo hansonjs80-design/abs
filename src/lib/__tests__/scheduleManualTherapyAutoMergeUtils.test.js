@@ -138,3 +138,17 @@ test('buildManualTherapyAutoMergePayload resolves a decimal configured cell tag'
   assert.equal(result.payload.length, 2);
   assert.equal(result.payload[0].prescription, 'F1.5');
 });
+
+test('buildManualTherapyAutoMergePayload creates a 2-slot merge for plain text content when slotMinutes is 10', () => {
+  const result = buildManualTherapyAutoMergePayload({
+    ...baseArgs,
+    content: '홍길동',
+    prescription: '',
+    slotMinutes: 10,
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.resolvedPrescription, '');
+  assert.equal(result.payload.length, 2);
+  assert.deepEqual(result.payload[0].merge_span, { rowSpan: 2, colSpan: 1, mergedInto: null });
+});

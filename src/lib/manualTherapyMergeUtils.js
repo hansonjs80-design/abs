@@ -11,7 +11,11 @@ function normalizeDurationMinutes(value) {
 
 function getConfiguredDurationMinutes(prescription, durationMinutesMap = {}) {
   const text = String(prescription || '').trim();
-  if (!text || !durationMinutesMap || typeof durationMinutesMap !== 'object') return 0;
+  if (!durationMinutesMap || typeof durationMinutesMap !== 'object') return 0;
+  if (Object.prototype.hasOwnProperty.call(durationMinutesMap, text)) {
+    return normalizeDurationMinutes(durationMinutesMap[text]);
+  }
+  if (!text) return 0;
   return normalizeDurationMinutes(durationMinutesMap[text]);
 }
 
