@@ -8,6 +8,7 @@ import {
   normalize4060StarOrder,
   strip4060FromContent,
   getConfiguredDoseTagFromContent,
+  stripDoseTagFromContent,
 } from '../../lib/schedulerContentFormat';
 import { getPrescriptionFromConfiguredDoseTag } from '../../lib/prescriptionScheduleSettings';
 import {
@@ -355,9 +356,15 @@ export default function useSchedulerAutoText({
 
     const previousContent = originalContent !== undefined ? String(originalContent).trim() : String(memos[memoKey]?.content || '').trim();
     const userRemovedDoseTag = hasDoseTagPattern(previousContent) && !hasDoseTagPattern(rawName);
-    const parsedIdentity = parseSchedulerPatientIdentity(rawName);
+
+    const contentTag = getConfiguredDoseTagFromContent(rawName, config.doseTags);
+    const cleanRawNameForIdentity = contentTag
+      ? stripDoseTagFromContent(rawName, contentTag)
+      : strip4060FromContent(rawName);
+
+    const parsedIdentity = parseSchedulerPatientIdentity(cleanRawNameForIdentity);
     const searchChart = parsedIdentity.patientChart ? String(parsedIdentity.patientChart).trim() : null;
-    const searchName = normalizeNameForMatch(parsedIdentity.patientName) || normalizeNameForMatch(rawName);
+    const searchName = normalizeNameForMatch(parsedIdentity.patientName) || normalizeNameForMatch(cleanRawNameForIdentity);
     const hasExplicitSearchName = Boolean(searchChart && normalizeNameForMatch(parsedIdentity.patientName));
     const matchesSearchIdentity = (chartNumber, patientName) => {
       const matchesChart = searchChart && String(chartNumber || '').trim() === searchChart;
