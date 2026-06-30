@@ -1467,6 +1467,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,
       doseTags: prescriptionScheduleSettings.doseTags,
       slotMinutes: settings?.interval_minutes || 10,
+      oldContent,
+      oldPrescription,
     });
 
     const shouldWritePrescription = hasPrescriptionResult || (newPrescription !== undefined && newPrescription !== null);

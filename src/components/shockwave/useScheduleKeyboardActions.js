@@ -439,6 +439,8 @@ export default function useScheduleKeyboardActions({
             durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,
             doseTags: prescriptionScheduleSettings.doseTags,
             slotMinutes: shockwaveSettings?.interval_minutes || 10,
+            oldContent: memo.content || '',
+            oldPrescription: memo.prescription || '',
           });
 
         if (manualTherapyMerge.ok) {

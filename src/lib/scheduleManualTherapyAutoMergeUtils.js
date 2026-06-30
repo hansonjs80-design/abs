@@ -42,35 +42,62 @@ export function buildManualTherapyAutoMergePayload({
   durationMinutesMap = {},
   doseTags = {},
   slotMinutes,
+  oldContent = '',
+  oldPrescription = '',
   ...rest
 }) {
+  const finalSlotMinutes = Number(slotMinutes) || 20;
+
   const resolvedPrescription = resolveManualTherapyAutoPrescription({
     content,
     prescription,
     durationMinutesMap,
     doseTags,
-    slotMinutes,
+    slotMinutes: finalSlotMinutes,
   });
-  if (!resolvedPrescription) {
+
+  const finalPrescription = resolvedPrescription || prescription || '';
+  const rowSpan = getManualTherapyRowSpan(finalPrescription, { durationMinutesMap, slotMinutes: finalSlotMinutes });
+
+  // 10분 단위일 때 내용이 새로 입력된 경우(기존 내용이 없었음) 또는 처방이 변경된 경우 최소 2칸 강제 설정
+  let targetRowSpan = rowSpan;
+  const isNewInput = !String(oldContent || '').trim() && String(content || '').trim() && String(content || '').trim() !== '\u200B';
+  const isPrescriptionChanged = String(oldPrescription || '').trim() !== String(finalPrescription || '').trim();
+
+  if (finalSlotMinutes === 10 && (isNewInput || isPrescriptionChanged)) {
+    targetRowSpan = Math.max(2, rowSpan);
+  }
+
+  if (targetRowSpan <= 1) {
     return {
       ok: false,
-      reason: 'not-manual-therapy',
+      reason: 'not-merged',
       payload: [],
       affectedKeys: [],
       resolvedPrescription: '',
     };
   }
 
+  // targetRowSpan을 buildManualTherapyMergePayload가 정상 파싱하도록 durationMinutesMap에 임시 맵핑
+  const tempDurationMap = {
+    ...durationMinutesMap,
+  };
+  if (finalPrescription) {
+    tempDurationMap[finalPrescription] = targetRowSpan * finalSlotMinutes;
+  } else {
+    tempDurationMap[''] = targetRowSpan * finalSlotMinutes;
+  }
+
   const result = buildManualTherapyMergePayload({
     ...rest,
     content,
-    prescription: resolvedPrescription,
-    durationMinutesMap,
-    slotMinutes,
+    prescription: finalPrescription,
+    durationMinutesMap: tempDurationMap,
+    slotMinutes: finalSlotMinutes,
   });
 
   return {
     ...result,
-    resolvedPrescription,
+    resolvedPrescription: finalPrescription,
   };
 }
