@@ -228,6 +228,8 @@ export default function useScheduleResizeState({ colCount }) {
     activeColRatios,
     dayColWidth,
     rowHeight,
+    setRowHeight,
+    setDayColWidth,
     startColResize,
     startDayResize,
     startRowResize,

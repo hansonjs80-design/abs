@@ -873,6 +873,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     activeColRatios,
     dayColWidth,
     rowHeight,
+    setRowHeight,
+    setDayColWidth,
     startColResize,
     startDayResize,
     startRowResize,
