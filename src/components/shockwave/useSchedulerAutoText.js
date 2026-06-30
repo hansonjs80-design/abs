@@ -45,6 +45,32 @@ const sortAutoFillOptions = (options) => (
   ))
 );
 
+const getHistoryMetadataScore = (item) => {
+  if (!item) return 0;
+  let score = 0;
+  if (String(item.prescription || '').trim()) score += 2;
+  if (String(item.body_part || '').trim()) score += 2;
+  if (getMemoListFromMergeSpan(item.merge_span).length > 0) score += 3;
+  if (item.source === 'schedule') score += 1;
+  return score;
+};
+
+const compareHistoryItemFreshness = (left, right) => {
+  if (!left && !right) return 0;
+  if (left && !right) return 1;
+  if (!left && right) return -1;
+
+  const leftDate = String(left.date || '');
+  const rightDate = String(right.date || '');
+  if (leftDate !== rightDate) return leftDate.localeCompare(rightDate);
+
+  const leftVisit = parseInt(left.visit_count || '0', 10) || 0;
+  const rightVisit = parseInt(right.visit_count || '0', 10) || 0;
+  if (leftVisit !== rightVisit) return leftVisit - rightVisit;
+
+  return getHistoryMetadataScore(left) - getHistoryMetadataScore(right);
+};
+
 export default function useSchedulerAutoText({
   memos,
   weeks,
@@ -446,7 +472,6 @@ export default function useSchedulerAutoText({
           return matchesSearchIdentity(parsed.patientChart, parsed.patientName);
         });
 
-        const seenLogDates = new Set(allData.map((item) => item.date));
         for (const s of filteredSchedules) {
           try {
             const calWeeks = generateShockwaveCalendar(s.year, s.month);
@@ -456,7 +481,6 @@ export default function useSchedulerAutoText({
             const dateStr = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`;
 
             if (dateStr > targetDate) continue;
-            if (seenLogDates.has(dateStr)) continue;
 
             const content = s.content || '';
             const parsed = parseSchedulerPatientIdentity(content);
@@ -471,9 +495,9 @@ export default function useSchedulerAutoText({
               prescription: s.prescription || '',
               body_part: s.body_part || '',
               merge_span: s.merge_span || undefined,
+              source: 'schedule',
               type: isManualTherapyRecord({ prescription: s.prescription, patient_name: parsed.patientName }, content) ? 'manual' : 'shockwave',
             });
-            seenLogDates.add(dateStr);
           } catch {
             // Ignore malformed schedule rows.
           }
@@ -540,8 +564,6 @@ export default function useSchedulerAutoText({
 
       if (!userRemovedDoseTag) {
         const scheduleData = scheduleRes.data || [];
-        const seenLogDates = new Set(allData.map((item) => item.date));
-
         for (const s of scheduleData) {
           try {
             const calWeeks = generateShockwaveCalendar(s.year, s.month);
@@ -551,7 +573,6 @@ export default function useSchedulerAutoText({
             const dateStr = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`;
 
             if (dateStr > targetDate) continue;
-            if (seenLogDates.has(dateStr)) continue;
 
             const content = s.content || '';
             const parsed = parseSchedulerPatientIdentity(content);
@@ -568,9 +589,9 @@ export default function useSchedulerAutoText({
               prescription: s.prescription || '',
               body_part: s.body_part || '',
               merge_span: s.merge_span || undefined,
+              source: 'schedule',
               type: isManualTherapyRecord({ prescription: s.prescription, patient_name: parsed.patientName }, content) ? 'manual' : 'shockwave',
             });
-            seenLogDates.add(dateStr);
           } catch {
             // Ignore malformed schedule rows.
           }
@@ -623,13 +644,8 @@ export default function useSchedulerAutoText({
         });
       }
       const candidate = candidateMap.get(candidateKey);
-      const itemVisit = parseInt(item.visit_count || '0', 10) || 0;
-      const latestVisit = parseInt(candidate.latestItem?.visit_count || '0', 10) || 0;
-      if (
-        !candidate.latestItem ||
-        item.date > candidate.latestItem.date ||
-        (item.date === candidate.latestItem.date && itemVisit > latestVisit)
-      ) {
+      const isFresherOrRicherItem = compareHistoryItemFreshness(item, candidate.latestItem) > 0;
+      if (isFresherOrRicherItem) {
         candidate.latestItem = item;
         candidate.doseTag = doseTag;
       }
@@ -776,9 +792,7 @@ export default function useSchedulerAutoText({
     const isNewPatient = oldParsed.patientName !== selected.cleanName && oldParsed.patientChart !== selected.chartNumber;
     const shouldOverwriteContent = isNewPatient || Boolean(searchChart);
 
-    const effectiveBodyPart = shouldOverwriteContent
-      ? (selected.preferredBodyPart || selected.latestBodyPart || '')
-      : (selected.preferredBodyPart || selected.latestBodyPart || undefined);
+    const effectiveBodyPart = selected.preferredBodyPart || selected.latestBodyPart || '';
     const inheritedMergeSpan = findLatestSchedulerMemoMeta(
       { w, d, r, c },
       selected.chartNumber,

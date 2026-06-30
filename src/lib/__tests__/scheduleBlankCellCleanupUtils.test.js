@@ -54,6 +54,40 @@ describe('schedule blank cell cleanup helpers', () => {
     assert.equal(payload.length, 0);
   });
 
+  it('keeps visible cells even when treatment metadata is missing', () => {
+    const memos = {
+      '0-0-3-1': {
+        content: '123/홍길동(2)',
+        bg_color: null,
+        prescription: null,
+        body_part: null,
+        merge_span: { rowSpan: 2, colSpan: 1, mergedInto: null },
+      },
+      '0-0-4-1': {
+        content: '',
+        bg_color: null,
+        prescription: null,
+        body_part: null,
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-0-3-1' },
+      },
+    };
+
+    const payload = buildBlankScheduleCleanupPayload({
+      memos,
+      currentYear: 2026,
+      currentMonth: 5,
+    });
+    const result = sanitizeBlankScheduleCellData({
+      key: '0-0-3-1',
+      memos,
+      cellData: memos['0-0-3-1'],
+    });
+
+    assert.equal(payload.length, 0);
+    assert.equal(result.wasSanitized, false);
+    assert.equal(result.cellData.content, '123/홍길동(2)');
+  });
+
   it('does not clean a valid merged child when the master has content', () => {
     const payload = buildBlankScheduleCleanupPayload({
       memos: {

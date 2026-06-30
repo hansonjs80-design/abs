@@ -375,7 +375,7 @@ const MemoizedCell = memo(({
   cellData, pendingContent, pendingMergeSpan, mergeSpan, editingCell, imePreviewCell, selectedKeys, selectedCell, clipboardSource,
   workState, staffBlockRule, effectivePrescriptionColors,
   visitLineBreakPrescriptions,
-  editValue,
+  editValue, setEditValue,
   handleCellMouseDown, handleCellMouseEnter, setHoverCell, handleCellDoubleClick, handleCellContextMenu,
   editInputRef, handleCellSave, handleEditKeyDown, imeOpenRef, setImePreviewCell, editDraftRef, scheduleEditDraftAutosave, promoteFocusedInputToEditor, skipNextEditBlurSaveRef
 }) => {
@@ -776,6 +776,24 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     },
     [memos, pendingMemoOverrides]
   );
+  const getDefaultEditingMergeSpanForKey = useCallback((key) => {
+    const directMerge = defaultEditMergeSpanRef.current[key]?.mergeSpan;
+    if (directMerge) return directMerge;
+
+    const [, , rowIndex, colIndex] = String(key || '').split('-').map(Number);
+    if (!Number.isFinite(rowIndex) || !Number.isFinite(colIndex)) return null;
+
+    for (const [masterKey, entry] of Object.entries(defaultEditMergeSpanRef.current || {})) {
+      const [w, d, masterRow, masterCol] = masterKey.split('-').map(Number);
+      const span = entry?.mergeSpan;
+      if (!span || ![w, d, masterRow, masterCol].every(Number.isFinite)) continue;
+      const keyParts = String(key || '').split('-').map(Number);
+      if (keyParts[0] !== w || keyParts[1] !== d || keyParts[3] !== masterCol) continue;
+      if (rowIndex <= masterRow || rowIndex >= masterRow + (span.rowSpan || 1)) continue;
+      return { rowSpan: 1, colSpan: 1, mergedInto: masterKey };
+    }
+    return null;
+  }, []);
   const prescriptionScheduleSettings = useMemo(
     () => getPrescriptionScheduleSettings(settings, currentYear, currentMonth),
     [settings, currentYear, currentMonth]
@@ -1588,7 +1606,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       mergeSpan: newMergeSpan || withCellReservationTime(oldMergeSpan),
       durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,
       doseTags: prescriptionScheduleSettings.doseTags,
-      slotMinutes: activeTab === 'manual_therapy' ? 10 : (settings?.interval_minutes || 20),
+      slotMinutes: settings?.interval_minutes || 20,
       oldContent,
       oldPrescription,
     });
@@ -1670,7 +1688,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const success = await queuedSaveShockwaveMemosBulk(manualTherapyMerge.payload);
       if (success) {
         removePendingScheduleDraft(currentYear, currentMonth, key);
-        clearImmediateCellDisplay(manualTherapyMerge.payload);
+        clearImmediateCellDisplay(manualTherapyMerge.payload, { force: true });
       } else {
         rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
         const errMsg = window.lastDbError?.message || window.lastDbError?.error_description || (typeof window.lastDbError === 'string' ? window.lastDbError : '') || '상세 에러 없음';
@@ -1771,7 +1789,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const success = await queuedSaveShockwaveMemosBulk(payload);
       if (success) {
         removePendingScheduleDraft(currentYear, currentMonth, key);
-        clearImmediateCellDisplay(payload);
+        clearImmediateCellDisplay(payload, { force: true });
       } else {
         rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
         const errMsg = window.lastDbError?.message || window.lastDbError?.error_description || (typeof window.lastDbError === 'string' ? window.lastDbError : '') || '상세 에러 없음';
@@ -1780,7 +1798,21 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return;
     }
 
-    setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
+    const singleCellPayload = [{
+      year: currentYear,
+      month: currentMonth,
+      week_index: w,
+      day_index: d,
+      row_index: r,
+      col_index: c,
+      content: newContent,
+      bg_color: targetBgColor,
+      merge_span: finalMergeSpanWithTime,
+      prescription: finalPrescription,
+      body_part: finalBodyPart,
+    }];
+    applyImmediateCellDisplay(singleCellPayload);
+    applyImmediateMergeSpan(singleCellPayload);
     recordUndo({
       type: 'edit',
       year: currentYear,
@@ -1811,6 +1843,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (success) {
       if (!newContent.trim()) rememberDeletedScheduleDraft(currentYear, currentMonth, key);
       removePendingScheduleDraft(currentYear, currentMonth, key);
+      clearImmediateCellDisplay(singleCellPayload, { force: true });
     } else {
       rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
     }
@@ -2950,7 +2983,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             }
                           : rawCellData;
                         const rawContent = normalizeSchedulerVisitSuffix(renderPendingDisplayValues[key] ?? rawCellData?.content ?? '');
-                        const rawMergeSpan = getEffectiveMergeSpan(key, renderMemos);
+                        const defaultEditingMergeSpan = getDefaultEditingMergeSpanForKey(key);
+                        const rawMergeSpan = defaultEditingMergeSpan || getEffectiveMergeSpan(key, renderMemos);
                         const sanitizedBlankCell = sanitizeBlankScheduleCellData({
                           key,
                           memos: renderMemos,
@@ -2998,7 +3032,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               workState={workState} staffBlockRule={staffBlockRule}
                               effectivePrescriptionColors={effectivePrescriptionColors}
                               visitLineBreakPrescriptions={prescriptionScheduleSettings.visitLineBreakPrescriptions}
-                              editValue={editValue}
+                              editValue={editValue} setEditValue={setEditValue}
                               handleCellMouseDown={handleCellMouseDown} handleCellMouseEnter={handleCellMouseEnter}
                               setHoverCell={setHoverCell} handleCellDoubleClick={handleCellDoubleClick}
                               handleCellContextMenu={handleCellContextMenu} editInputRef={editInputRef}
