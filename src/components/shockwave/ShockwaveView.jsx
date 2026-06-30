@@ -457,7 +457,7 @@ const MemoizedCell = memo(({
         )}
         <div
           ref={resizerRef}
-          className={`sw-cell-input-wrapper ${(!isEditing && !isImePreview) ? 'hidden' : ''}`}
+          className={`sw-cell-input-wrapper ${(!isEditing && !isImePreview) ? 'hidden' : ''} ${visualRowSpan === 1 ? 'is-single-row' : ''}`}
           data-value={isEditing ? editValue : ''}
         >
           <input
