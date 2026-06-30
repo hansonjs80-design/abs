@@ -1381,6 +1381,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       clearTimeout(editAutosaveTimerRef.current);
       editAutosaveTimerRef.current = null;
     }
+    if (window.lastDbError) {
+      const dbErrMsg = window.lastDbError?.message || window.lastDbError?.error_description || String(window.lastDbError);
+      addToast(`DB 오류 감지: ${dbErrMsg}`, 'error');
+    }
     const oldContent = memos[key]?.content || '';
     const oldPrescription = memos[key]?.prescription || '';
     const oldBodyPart = memos[key]?.body_part || null;

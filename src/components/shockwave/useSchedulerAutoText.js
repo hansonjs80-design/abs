@@ -518,7 +518,24 @@ export default function useSchedulerAutoText({
         scheduleQuery.ilike('content', `%${searchName}%`);
       }
 
-      const [shockwaveRes, manualRes, scheduleRes] = await Promise.all([shockwaveQuery, manualQuery, scheduleQuery]);
+      const promiseTimeout = (promise, ms) => {
+        let timeout = new Promise((_, reject) => {
+          let id = setTimeout(() => {
+            clearTimeout(id);
+            reject(new Error('Supabase query timed out'));
+          }, ms);
+        });
+        return Promise.race([promise, timeout]);
+      };
+
+      const [shockwaveRes, manualRes, scheduleRes] = await promiseTimeout(
+        Promise.all([shockwaveQuery, manualQuery, scheduleQuery]),
+        1800
+      ).catch((err) => {
+        window.lastDbError = err;
+        console.warn('Supabase auto-text log query failed or timed out:', err);
+        return [{ data: [] }, { data: [] }, { data: [] }];
+      });
 
       const normalizedShockwaveData = (shockwaveRes.data || []).map((item) => ({
         ...item,
