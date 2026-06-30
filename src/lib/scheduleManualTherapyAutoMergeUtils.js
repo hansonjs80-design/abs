@@ -59,12 +59,11 @@ export function buildManualTherapyAutoMergePayload({
   const finalPrescription = resolvedPrescription || prescription || '';
   const rowSpan = getManualTherapyRowSpan(finalPrescription, { durationMinutesMap, slotMinutes: finalSlotMinutes });
 
-  // 10분 단위일 때 내용이 새로 입력된 경우(기존 내용이 없었음) 또는 처방이 변경된 경우 최소 2칸 강제 설정
+  // 10분 단위일 때 내용이 존재하면 무조건 최소 2칸 강제 병합 보장
   let targetRowSpan = rowSpan;
-  const isNewInput = !String(oldContent || '').trim() && String(content || '').trim() && String(content || '').trim() !== '\u200B';
-  const isPrescriptionChanged = String(oldPrescription || '').trim() !== String(finalPrescription || '').trim();
+  const hasTextContent = String(content || '').trim() && String(content || '').trim() !== '\u200B';
 
-  if (finalSlotMinutes === 10 && (isNewInput || isPrescriptionChanged)) {
+  if (finalSlotMinutes === 10 && hasTextContent) {
     targetRowSpan = Math.max(2, rowSpan);
   }
 

@@ -734,7 +734,13 @@ export default function useSchedulerAutoText({
       };
     });
 
-    if (options.length === 0) return { text: rawName };
+    if (options.length === 0) {
+      const fallbackResult = { text: rawName };
+      if (initialPrescription !== undefined) {
+        fallbackResult.prescription = initialPrescription;
+      }
+      return fallbackResult;
+    }
 
     const selected = pickManualOptionForDosePrescription(options, taggedManualPrescription)
       || (options.length === 1 || skipDialog
