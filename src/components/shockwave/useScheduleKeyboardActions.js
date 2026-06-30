@@ -355,14 +355,24 @@ export default function useScheduleKeyboardActions({
     const activeCell = getLatestSelectedCell();
     if (!activeCell || editingCell) return false;
 
-    const isDigitCode = /^Digit([1-9])$/.test(event.code);
-    const isDigitKey = /^[1-9]$/.test(event.key);
+    const isDigitOrAlphaCode = /^(Digit[1-9]|Key[A-Z])$/.test(event.code);
+    const isDigitOrAlphaKey = /^[1-9a-zA-Z]$/.test(event.key);
     const isMeta = event.metaKey || event.ctrlKey;
     const isMetaOrAltOrShift = isMeta || event.altKey || (event.shiftKey && isMeta);
-    if (!isMetaOrAltOrShift || (!isDigitKey && !isDigitCode)) return false;
+    if (!isMetaOrAltOrShift || (!isDigitOrAlphaKey && !isDigitOrAlphaCode)) return false;
 
-    const keyMatch = event.code.match(/^Digit([1-9])$/);
-    const keyNum = keyMatch ? keyMatch[1] : event.key;
+    let keyNum = '';
+    const digitMatch = event.code.match(/^Digit([1-9])$/);
+    if (digitMatch) {
+      keyNum = digitMatch[1];
+    } else {
+      const alphaMatch = event.code.match(/^Key([A-Z])$/);
+      if (alphaMatch) {
+        keyNum = alphaMatch[1];
+      } else {
+        keyNum = event.key.toUpperCase();
+      }
+    }
     const effectiveManualSettings = getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'manual_therapy');
     const effectiveShockwaveSettings = getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'shockwave');
     const prescriptionScheduleSettings = getPrescriptionScheduleSettings(shockwaveSettings, currentYear, currentMonth);

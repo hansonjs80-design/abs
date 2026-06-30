@@ -2312,15 +2312,32 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const isMeta = e.metaKey || e.ctrlKey;
     const hasValue = Boolean(e.target.value?.trim());
 
-    // 1. Ctrl/Cmd + [1-9] (처방 단축키)
-    const isDigitCode = /^Digit([1-9])$/.test(e.code);
-    const isDigitKey = /^[1-9]$/.test(e.key);
+    // 1. Ctrl/Cmd + [1-9]/[A-Z] (처방 단축키)
+    const isDigitOrAlphaCode = /^(Digit[1-9]|Key[A-Z])$/.test(e.code);
+    const isDigitOrAlphaKey = /^[1-9a-zA-Z]$/.test(e.key);
     const isMetaOrAltOrShift = isMeta || e.altKey || (e.shiftKey && isMeta);
-    if (isMetaOrAltOrShift && (isDigitKey || isDigitCode)) {
+
+    let keyNum = '';
+    if (isDigitOrAlphaCode) {
+      const digitMatch = e.code.match(/^Digit([1-9])$/);
+      if (digitMatch) {
+        keyNum = digitMatch[1];
+      } else {
+        const alphaMatch = e.code.match(/^Key([A-Z])$/);
+        if (alphaMatch) keyNum = alphaMatch[1];
+      }
+    } else if (isDigitOrAlphaKey) {
+      keyNum = e.key.toUpperCase();
+    }
+
+    // 복사(C), 붙여넣기(V), 전체선택(A), 잘라내기(X), 실행취소(Z), 찾기(F) 및 완료(S), 취소(D), 공휴일(B) 등의 주요 편집 조작 단축키 보존
+    const isReservedEditorKey = /^[ACXZFSDB]$/i.test(keyNum);
+    const isValidShortcut = isMetaOrAltOrShift && keyNum && !isReservedEditorKey;
+
+    if (isValidShortcut) {
       e.preventDefault();
       e.stopPropagation();
       if (hasValue) {
-        const keyNum = e.code.match(/^Digit([1-9])$/)?.[1] || e.key;
         const effectiveManualSettings = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'manual_therapy');
         const effectiveShockwaveSettings = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'shockwave');
 

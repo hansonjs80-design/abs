@@ -405,10 +405,10 @@ export default function SettlementSettingsPanel({
                       className="form-input settlement-shortcut-input"
                       value={draft.shortcuts?.[prescription] || ''}
                       placeholder="—"
-                      title="Cmd/Ctrl + 숫자 로 처방 단축키 설정"
+                      title="Cmd/Ctrl + 숫자/영문으로 처방 단축키 설정"
                       maxLength={1}
                       onChange={(event) => {
-                        const val = event.target.value.replace(/[^1-9]/g, '');
+                        const val = event.target.value.replace(/[^1-9a-zA-Z]/g, '').toUpperCase();
                         setDraft((prev) => ({
                           ...prev,
                           shortcuts: { ...(prev.shortcuts || {}), [prescription]: val },
