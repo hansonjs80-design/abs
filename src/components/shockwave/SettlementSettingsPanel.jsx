@@ -245,8 +245,8 @@ export default function SettlementSettingsPanel({
     }, {});
     const cleanedDoseTags = {};
     cleanedPrescriptions.forEach((prescription) => {
-      const customTag = normalizeDoseTagInput(draft.dose_tags[prescription]);
-      if (customTag) cleanedDoseTags[prescription] = customTag;
+      const customTag = normalizeDoseTagInput(draft.dose_tags[prescription] ?? '');
+      cleanedDoseTags[prescription] = customTag;
     });
     const cleanedDurations = {};
     cleanedPrescriptions.forEach((prescription) => {
