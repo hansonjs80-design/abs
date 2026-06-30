@@ -7,6 +7,7 @@ import {
   has4060Pattern,
   normalize4060StarOrder,
   strip4060FromContent,
+  getConfiguredDoseTagFromContent,
 } from '../../lib/schedulerContentFormat';
 import { getPrescriptionFromConfiguredDoseTag } from '../../lib/prescriptionScheduleSettings';
 import {
@@ -309,9 +310,14 @@ export default function useSchedulerAutoText({
 
     const dayInfo = weeks[w]?.[d];
     if (!dayInfo) return { text: rawName };
+    const config = getPrescriptionScheduleSettings(settings, dayInfo.year, dayInfo.month);
+    const hasDoseTagPattern = (text) => {
+      if (!text) return false;
+      return has4060Pattern(text) || getConfiguredDoseTagFromContent(text, config.doseTags) !== '';
+    };
 
     let initialPrescription = undefined;
-    if (has4060Pattern(rawName)) {
+    if (hasDoseTagPattern(rawName)) {
       rawName = normalize4060StarOrder(rawName);
       initialPrescription = getPrescriptionFromConfiguredDoseTag(settings, dayInfo.year, dayInfo.month, rawName)
         || get4060PrescriptionFromContent(rawName)
@@ -348,7 +354,7 @@ export default function useSchedulerAutoText({
     const currentBodyParts = splitBodyParts(memos[memoKey]?.body_part || '');
 
     const previousContent = originalContent !== undefined ? String(originalContent).trim() : String(memos[memoKey]?.content || '').trim();
-    const userRemovedDoseTag = has4060Pattern(previousContent) && !has4060Pattern(rawName);
+    const userRemovedDoseTag = hasDoseTagPattern(previousContent) && !hasDoseTagPattern(rawName);
     const parsedIdentity = parseSchedulerPatientIdentity(rawName);
     const searchChart = parsedIdentity.patientChart ? String(parsedIdentity.patientChart).trim() : null;
     const searchName = normalizeNameForMatch(parsedIdentity.patientName) || normalizeNameForMatch(rawName);
@@ -366,7 +372,7 @@ export default function useSchedulerAutoText({
     }
 
     const schedulerOptions = findSchedulerHistoryCandidates({ w, d, r, c }, rawName, targetDate)
-      .filter((option) => !userRemovedDoseTag || !has4060Pattern(option.nextText));
+      .filter((option) => !userRemovedDoseTag || !hasDoseTagPattern(option.nextText));
     const applySchedulerOption = async () => {
       if (schedulerOptions.length === 0) return null;
       const selected = pickManualOptionForDosePrescription(schedulerOptions, taggedManualPrescription)
@@ -375,11 +381,11 @@ export default function useSchedulerAutoText({
         : await pickChartOption(schedulerOptions, rawName));
       if (!selected) return { text: rawName };
 
-      const inputHas4060 = has4060Pattern(rawName);
+      const inputHasDoseTag = hasDoseTagPattern(rawName);
       const baseMerge = searchChart ? (selected.mergeSpan || clearPatientMergeSpan()) : selected.mergeSpan;
       const finalMergeSpan = buildMergeSpanWithBodyPartOptions(baseMerge, selected.bodyParts);
 
-      if (inputHas4060) {
+      if (inputHasDoseTag) {
         return {
           text: rawName,
           prescription: taggedManualPrescription || initialPrescription || undefined,
@@ -390,7 +396,7 @@ export default function useSchedulerAutoText({
 
       const autoPrescription = (taggedManualPrescription || initialPrescription !== undefined)
         ? (taggedManualPrescription || initialPrescription)
-        : (has4060Pattern(selected.nextText)
+        : (hasDoseTagPattern(selected.nextText)
           ? undefined
           : (searchChart ? (selected.prescription || '') : (selected.prescription || undefined)));
 

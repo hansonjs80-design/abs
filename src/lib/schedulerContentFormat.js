@@ -45,7 +45,7 @@ export function getConfiguredDoseTagFromContent(text, doseTags = {}) {
     .sort((a, b) => b.length - a.length);
 
   return tags.find((tag) => {
-    const pattern = new RegExp(`[가-힣a-zA-Z]\\s*${escapeRegExp(tag)}\\**($|[(\\s])`);
+    const pattern = new RegExp(`[가-힣a-zA-Z]\\s*${escapeRegExp(tag)}\\**($|[(\\s])`, 'i');
     return pattern.test(normalized);
   }) || '';
 }

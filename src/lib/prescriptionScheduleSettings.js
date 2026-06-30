@@ -37,7 +37,7 @@ export function getPrescriptionFromConfiguredDoseTag(settings, year, month, cont
   const contentTag = getConfiguredDoseTagFromContent(content, config.doseTags);
   if (!contentTag) return '';
   return Object.entries(config.doseTags || {}).find(([, tag]) => (
-    normalizeDoseTagInput(tag) === contentTag
+    normalizeDoseTagInput(tag).toUpperCase() === contentTag.toUpperCase()
   ))?.[0] || '';
 }
 
