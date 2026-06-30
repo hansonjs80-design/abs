@@ -313,6 +313,7 @@ export default function useSchedulerAutoText({
     if (!dayInfo) return { text: rawName };
     const parsedYear = dayInfo.year || (dayInfo.date instanceof Date ? dayInfo.date.getFullYear() : (dayInfo.date ? new Date(dayInfo.date).getFullYear() : undefined));
     const parsedMonth = dayInfo.month || (dayInfo.date instanceof Date ? dayInfo.date.getMonth() + 1 : (dayInfo.date ? new Date(dayInfo.date).getMonth() + 1 : undefined));
+    const parsedDay = dayInfo.day || (dayInfo.date instanceof Date ? dayInfo.date.getDate() : (dayInfo.date ? new Date(dayInfo.date).getDate() : undefined));
     const config = getPrescriptionScheduleSettings(settings, parsedYear, parsedMonth);
     const hasDoseTagPattern = (text) => {
       if (!text) return false;
@@ -322,7 +323,7 @@ export default function useSchedulerAutoText({
     let initialPrescription = undefined;
     if (hasDoseTagPattern(rawName)) {
       rawName = normalize4060StarOrder(rawName);
-      initialPrescription = getPrescriptionFromConfiguredDoseTag(settings, dayInfo.year, dayInfo.month, rawName)
+      initialPrescription = getPrescriptionFromConfiguredDoseTag(settings, parsedYear, parsedMonth, rawName)
         || get4060PrescriptionFromContent(rawName)
         || undefined;
     }
@@ -338,7 +339,7 @@ export default function useSchedulerAutoText({
     const explicitVisitSuffix = getExplicitVisitSuffix(rawName);
     const explicitNoteSuffix = getNonVisitParentheticalSuffix(rawName);
 
-    const targetDate = `${dayInfo.year}-${String(dayInfo.month).padStart(2, '0')}-${String(dayInfo.day).padStart(2, '0')}`;
+    const targetDate = `${parsedYear}-${String(parsedMonth).padStart(2, '0')}-${String(parsedDay).padStart(2, '0')}`;
     const memoKey = `${w}-${d}-${r}-${c}`;
     const clearPatientMergeSpan = () => stripReservationTimeFromMergeSpan(
       buildMergeSpanWithBodyPartOptions(
