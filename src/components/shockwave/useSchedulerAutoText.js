@@ -416,7 +416,7 @@ export default function useSchedulerAutoText({
         return {
           text: rawName,
           prescription: firstConfiguredPrescription(taggedManualPrescription, initialPrescription) || undefined,
-          bodyPart: searchChart ? (selected.latestBodyPart || '') : (selected.latestBodyPart || undefined),
+          bodyPart: selected.latestBodyPart || '',
           mergeSpan: finalMergeSpan,
         };
       }
@@ -430,7 +430,7 @@ export default function useSchedulerAutoText({
       return {
         text: (explicitVisitSuffix || explicitNoteSuffix) ? rawName : selected.nextText,
         prescription: autoPrescription,
-        bodyPart: searchChart ? (selected.latestBodyPart || '') : (selected.latestBodyPart || undefined),
+        bodyPart: selected.latestBodyPart || '',
         mergeSpan: finalMergeSpan,
       };
     };
@@ -693,8 +693,15 @@ export default function useSchedulerAutoText({
         });
       }
       const itemBodyPart = String(item.body_part || '').trim();
-      if (itemBodyPart && !candidate.latestNonEmptyBodyPart) {
+      if (
+        itemBodyPart &&
+        (
+          !candidate.latestNonEmptyBodyPart ||
+          compareHistoryItemFreshness(item, candidate.latestNonEmptyBodyPartItem) > 0
+        )
+      ) {
         candidate.latestNonEmptyBodyPart = itemBodyPart;
+        candidate.latestNonEmptyBodyPartItem = item;
       }
       if (item.prescription) {
         candidate.prescriptions.add(item.prescription);

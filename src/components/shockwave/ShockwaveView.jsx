@@ -1688,7 +1688,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const success = await queuedSaveShockwaveMemosBulk(manualTherapyMerge.payload);
       if (success) {
         removePendingScheduleDraft(currentYear, currentMonth, key);
-        clearImmediateCellDisplay(manualTherapyMerge.payload, { force: true });
+        clearImmediateCellDisplay(manualTherapyMerge.payload);
       } else {
         rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
         const errMsg = window.lastDbError?.message || window.lastDbError?.error_description || (typeof window.lastDbError === 'string' ? window.lastDbError : '') || '상세 에러 없음';
@@ -1789,7 +1789,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const success = await queuedSaveShockwaveMemosBulk(payload);
       if (success) {
         removePendingScheduleDraft(currentYear, currentMonth, key);
-        clearImmediateCellDisplay(payload, { force: true });
+        clearImmediateCellDisplay(payload);
       } else {
         rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
         const errMsg = window.lastDbError?.message || window.lastDbError?.error_description || (typeof window.lastDbError === 'string' ? window.lastDbError : '') || '상세 에러 없음';
@@ -1843,7 +1843,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (success) {
       if (!newContent.trim()) rememberDeletedScheduleDraft(currentYear, currentMonth, key);
       removePendingScheduleDraft(currentYear, currentMonth, key);
-      clearImmediateCellDisplay(singleCellPayload, { force: true });
+      clearImmediateCellDisplay(singleCellPayload);
     } else {
       rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
     }
