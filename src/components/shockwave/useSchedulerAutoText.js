@@ -10,7 +10,10 @@ import {
   getConfiguredDoseTagFromContent,
   stripDoseTagFromContent,
 } from '../../lib/schedulerContentFormat';
-import { getPrescriptionFromConfiguredDoseTag } from '../../lib/prescriptionScheduleSettings';
+import {
+  getPrescriptionFromConfiguredDoseTag,
+  getPrescriptionScheduleSettings,
+} from '../../lib/prescriptionScheduleSettings';
 import {
   addBodyPartToMap,
   buildManualNamePart,
@@ -29,11 +32,23 @@ import {
   stripReservationTimeFromMergeSpan,
 } from '../../lib/schedulerUtils';
 
+const getAutoFillOptionSortValue = (option) => {
+  const dateValue = String(option?.lastDate || '');
+  const visitValue = Number.parseInt(option?.displayVisit ?? option?.nextVisit ?? '0', 10) || 0;
+  const chartValue = String(option?.chartNumber || '');
+  return `${dateValue}-${String(visitValue).padStart(4, '0')}-${chartValue}`;
+};
+
+const sortAutoFillOptions = (options) => (
+  [...(Array.isArray(options) ? options : [])].sort((a, b) => (
+    getAutoFillOptionSortValue(b).localeCompare(getAutoFillOptionSortValue(a))
+  ))
+);
+
 export default function useSchedulerAutoText({
   memos,
   weeks,
   settings,
-  setChartSelector,
 }) {
   const shouldAutoFormatSchedulerName = useCallback((value) => {
     const text = String(value || '').trim();
@@ -45,44 +60,6 @@ export default function useSchedulerAutoText({
     if (has4060Pattern(text)) return true;
     return true;
   }, []);
-
-  const pickChartOption = useCallback((options, rawName) => {
-    if (!Array.isArray(options) || options.length === 0) return Promise.resolve(null);
-    const getOptionSortValue = (option) => {
-      const dateValue = String(option?.lastDate || '');
-      const visitValue = Number.parseInt(option?.nextVisit || '0', 10) || 0;
-      return `${dateValue}-${String(visitValue).padStart(4, '0')}`;
-    };
-    const distinctCharts = new Set(options.map((option) => String(option.chartNumber || '').trim()).filter(Boolean));
-    const distinctTreatmentTypes = new Set(
-      options
-        .map((option) => option.type)
-        .filter((type) => type === 'shockwave' || type === 'manual')
-    );
-    const shouldShowSelector = distinctCharts.size > 1 || distinctTreatmentTypes.size > 1;
-    if (!shouldShowSelector) return Promise.resolve(options[0]);
-
-    const chartOptions = Array.from(
-      options.reduce((map, option) => {
-        const chartNumber = String(option.chartNumber || '').trim();
-        const typeKey = option.type === 'manual' || option.type === 'shockwave' ? option.type : 'default';
-        const optionKey = `${chartNumber}__${typeKey}`;
-        const existing = map.get(optionKey);
-        if (chartNumber && (!existing || getOptionSortValue(option) > getOptionSortValue(existing))) {
-          map.set(optionKey, option);
-        }
-        return map;
-      }, new Map()).values()
-    ).sort((a, b) => getOptionSortValue(b).localeCompare(getOptionSortValue(a)));
-
-    return new Promise((resolve) => {
-      setChartSelector({
-        options: chartOptions,
-        rawName,
-        resolve,
-      });
-    });
-  }, [setChartSelector]);
 
   const pickManualOptionForDosePrescription = useCallback((options, prescription) => {
     if (!Array.isArray(options) || options.length === 0) return null;
@@ -308,15 +285,28 @@ export default function useSchedulerAutoText({
   ) => {
     try {
       let rawName = normalizeSchedulerVisitSuffix(nextValue);
-    console.log('[AutoText] START:', { nextValue, rawName, w, d, r, c });
-    if (!shouldAutoFormatSchedulerName(rawName)) { console.log('[AutoText] SKIP: shouldAutoFormat=false'); return { text: rawName }; }
+    if (!shouldAutoFormatSchedulerName(rawName)) return { text: rawName };
 
     const dayInfo = weeks[w]?.[d];
-    if (!dayInfo) { console.log('[AutoText] SKIP: dayInfo is null', { w, d, weeksLength: weeks?.length }); return { text: rawName }; }
+    if (!dayInfo) return { text: rawName };
     const parsedYear = dayInfo.year || (dayInfo.date instanceof Date ? dayInfo.date.getFullYear() : (dayInfo.date ? new Date(dayInfo.date).getFullYear() : undefined));
     const parsedMonth = dayInfo.month || (dayInfo.date instanceof Date ? dayInfo.date.getMonth() + 1 : (dayInfo.date ? new Date(dayInfo.date).getMonth() + 1 : undefined));
     const parsedDay = dayInfo.day || (dayInfo.date instanceof Date ? dayInfo.date.getDate() : (dayInfo.date ? new Date(dayInfo.date).getDate() : undefined));
     const config = getPrescriptionScheduleSettings(settings, parsedYear, parsedMonth);
+    const configuredPrescriptionSet = new Set([
+      ...(Array.isArray(config?.shockwave?.prescriptions) ? config.shockwave.prescriptions : []),
+      ...(Array.isArray(config?.manualTherapy?.prescriptions) ? config.manualTherapy.prescriptions : []),
+      ...(Array.isArray(settings?.prescriptions) ? settings.prescriptions : []),
+      ...(Array.isArray(settings?.manual_therapy_prescriptions) ? settings.manual_therapy_prescriptions : []),
+    ].map((prescription) => String(prescription || '').trim()).filter(Boolean));
+    const normalizeImportedPrescription = (prescription) => {
+      const value = String(prescription || '').trim();
+      if (!value) return '';
+      return configuredPrescriptionSet.size === 0 || configuredPrescriptionSet.has(value) ? value : '';
+    };
+    const firstConfiguredPrescription = (...prescriptions) => (
+      prescriptions.map(normalizeImportedPrescription).find(Boolean) || ''
+    );
     const hasDoseTagPattern = (text) => {
       if (!text) return false;
       return has4060Pattern(text) || getConfiguredDoseTagFromContent(text, config.doseTags) !== '';
@@ -342,7 +332,6 @@ export default function useSchedulerAutoText({
     const explicitNoteSuffix = getNonVisitParentheticalSuffix(rawName);
 
     const targetDate = `${parsedYear}-${String(parsedMonth).padStart(2, '0')}-${String(parsedDay).padStart(2, '0')}`;
-    console.log('[AutoText] targetDate:', targetDate, '| parsedYear:', parsedYear, '| parsedMonth:', parsedMonth, '| parsedDay:', parsedDay);
     const memoKey = `${w}-${d}-${r}-${c}`;
     const clearPatientMergeSpan = () => stripReservationTimeFromMergeSpan(
       buildMergeSpanWithBodyPartOptions(
@@ -371,7 +360,6 @@ export default function useSchedulerAutoText({
     const parsedIdentity = parseSchedulerPatientIdentity(cleanRawNameForIdentity);
     const searchChart = parsedIdentity.patientChart ? String(parsedIdentity.patientChart).trim() : null;
     const searchName = normalizeNameForMatch(parsedIdentity.patientName) || normalizeNameForMatch(cleanRawNameForIdentity);
-    console.log('[AutoText] search:', { searchChart, searchName, cleanRawNameForIdentity, parsedIdentity, explicitNoteSuffix });
     const hasExplicitSearchName = Boolean(searchChart && normalizeNameForMatch(parsedIdentity.patientName));
     const matchesSearchIdentity = (chartNumber, patientName) => {
       const matchesChart = searchChart && String(chartNumber || '').trim() === searchChart;
@@ -382,7 +370,6 @@ export default function useSchedulerAutoText({
     };
 
     if (explicitNoteSuffix) {
-      console.log('[AutoText] SKIP: explicitNoteSuffix=', explicitNoteSuffix);
       return { text: rawName };
     }
 
@@ -390,10 +377,9 @@ export default function useSchedulerAutoText({
       .filter((option) => !userRemovedDoseTag || !hasDoseTagPattern(option.nextText));
     const applySchedulerOption = async () => {
       if (schedulerOptions.length === 0) return null;
-      const selected = pickManualOptionForDosePrescription(schedulerOptions, taggedManualPrescription)
-        || (schedulerOptions.length === 1 || skipDialog
-        ? schedulerOptions[0]
-        : await pickChartOption(schedulerOptions, rawName));
+      const sortedSchedulerOptions = sortAutoFillOptions(schedulerOptions);
+      const selected = pickManualOptionForDosePrescription(sortedSchedulerOptions, taggedManualPrescription)
+        || sortedSchedulerOptions[0];
       if (!selected) return { text: rawName };
 
       const inputHasDoseTag = hasDoseTagPattern(rawName);
@@ -403,17 +389,17 @@ export default function useSchedulerAutoText({
       if (inputHasDoseTag) {
         return {
           text: rawName,
-          prescription: taggedManualPrescription || initialPrescription || undefined,
+          prescription: firstConfiguredPrescription(taggedManualPrescription, initialPrescription) || undefined,
           bodyPart: searchChart ? (selected.latestBodyPart || '') : (selected.latestBodyPart || undefined),
           mergeSpan: finalMergeSpan,
         };
       }
 
       const autoPrescription = (taggedManualPrescription || initialPrescription !== undefined)
-        ? (taggedManualPrescription || initialPrescription)
+        ? firstConfiguredPrescription(taggedManualPrescription, initialPrescription)
         : (hasDoseTagPattern(selected.nextText)
           ? undefined
-          : (searchChart ? (selected.prescription || '') : (selected.prescription || undefined)));
+          : (searchChart ? normalizeImportedPrescription(selected.prescription) : (normalizeImportedPrescription(selected.prescription) || undefined)));
 
       return {
         text: (explicitVisitSuffix || explicitNoteSuffix) ? rawName : selected.nextText,
@@ -437,7 +423,6 @@ export default function useSchedulerAutoText({
     };
 
     let allData = [];
-    console.log('[AutoText] preloadedData?', Boolean(preloadedData), '| schedulerOptions:', schedulerOptions.length);
     if (preloadedData) {
       const filteredShockwave = (preloadedData.shockwaveLogs || []).filter((item) => {
         return matchesSearchIdentity(item.chart_number, item.patient_name);
@@ -536,14 +521,12 @@ export default function useSchedulerAutoText({
 
       const [shockwaveRes, manualRes, scheduleRes] = await promiseTimeout(
         Promise.all([shockwaveQuery, manualQuery, scheduleQuery]),
-        1800
+        8000
       ).catch((err) => {
-        window.lastDbError = err;
         console.warn('Supabase auto-text log query failed or timed out:', err);
         return [{ data: [] }, { data: [] }, { data: [] }];
       });
 
-      console.log('[AutoText] DB query results:', { sw: shockwaveRes.data?.length, mt: manualRes.data?.length, sch: scheduleRes.data?.length, swErr: shockwaveRes.error, mtErr: manualRes.error, schErr: scheduleRes.error });
       const normalizedShockwaveData = (shockwaveRes.data || []).map((item) => ({
         ...item,
         type: isManualTherapyRecord(item) ? 'manual' : 'shockwave',
@@ -598,9 +581,6 @@ export default function useSchedulerAutoText({
     const matches = allData.filter((item) => {
       return matchesSearchIdentity(item.chart_number, item.patient_name);
     });
-
-    console.log('[AutoText] allData:', allData.length, '| matches:', matches.length);
-    if (matches.length > 0) console.log('[AutoText] first match:', matches[0]);
 
     if (matches.length === 0) {
       if (searchChart) {
@@ -746,7 +726,7 @@ export default function useSchedulerAutoText({
         ? bodyPartVisitMap[normalizeBodyPartKey(preferredBodyPart)]?.lastVisit
         : null;
 
-      const effectiveVisit = preferredLastVisit || lastVisit || nextVisit;
+      const effectiveVisit = preferredNextVisit || nextVisit || preferredLastVisit || lastVisit || 1;
       const nextText = `${chartNumber}/${namePart}(${effectiveVisit})`;
 
       return {
@@ -783,10 +763,9 @@ export default function useSchedulerAutoText({
       return fallbackResult;
     }
 
-    const selected = pickManualOptionForDosePrescription(options, taggedManualPrescription)
-      || (options.length === 1 || skipDialog
-      ? options[0]
-      : await pickChartOption(options, rawName));
+    const sortedOptions = sortAutoFillOptions(options);
+    const selected = pickManualOptionForDosePrescription(sortedOptions, taggedManualPrescription)
+      || sortedOptions[0];
     if (!selected) return { text: rawName };
     if (hasExplicitSearchName && normalizeNameForMatch(selected.cleanName) !== searchName) {
       return buildUnknownPatientResult();
@@ -811,7 +790,7 @@ export default function useSchedulerAutoText({
       const baseMerge = searchChart ? (selected.mergeSpan || clearPatientMergeSpan()) : selected.mergeSpan;
       return {
         text: normalizeSchedulerVisitSuffix(rawName),
-        prescription: taggedManualPrescription || initialPrescription,
+        prescription: firstConfiguredPrescription(taggedManualPrescription, initialPrescription),
         bodyPart: effectiveBodyPart,
         mergeSpan: buildMergeSpanWithBodyPartOptions(baseMerge, selected.bodyParts),
       };
@@ -831,15 +810,16 @@ export default function useSchedulerAutoText({
     autoText = normalize4060StarOrder(autoText);
 
     const autoPrescription = (taggedManualPrescription || initialPrescription !== undefined)
-      ? (taggedManualPrescription || initialPrescription)
+      ? firstConfiguredPrescription(taggedManualPrescription, initialPrescription)
       : (userRemovedDoseTag
-        ? (selected.prescription || '')
-        : (has4060Pattern(autoText) ? undefined : (shouldOverwriteContent ? (selected.prescription || '') : (selected.prescription || undefined))));
-    const needsDialog = (selected.bodyParts.length >= 2 && !selected.preferredBodyPart) || selected.prescriptions.length >= 2;
+        ? normalizeImportedPrescription(selected.prescription)
+        : (has4060Pattern(autoText) ? undefined : (shouldOverwriteContent ? normalizeImportedPrescription(selected.prescription) : (normalizeImportedPrescription(selected.prescription) || undefined))));
+    const validSelectedPrescriptions = selected.prescriptions.map(normalizeImportedPrescription).filter(Boolean);
+    const needsDialog = (selected.bodyParts.length >= 2 && !selected.preferredBodyPart) || validSelectedPrescriptions.length >= 2;
     if (needsDialog) {
       if (skipDialog) {
         const defaultBodyPart = selected.preferredBodyPart || selected.bodyParts[0] || selected.latestBodyPart || '';
-        const defaultPrescription = autoPrescription || selected.prescription || selected.prescriptions[0] || '';
+        const defaultPrescription = autoPrescription || normalizeImportedPrescription(selected.prescription) || validSelectedPrescriptions[0] || '';
         const baseMerge = buildMergeSpanWithMemoList(inheritedMergeSpan, getMemoListFromMergeSpan(inheritedMergeSpan));
         return {
           text: normalizeSchedulerVisitSuffix(`${selected.chartNumber}/${selected.namePart}${explicitVisitSuffix || explicitNoteSuffix || `(${effectiveVisitCount})`}`),
@@ -889,12 +869,10 @@ export default function useSchedulerAutoText({
     };
     } catch (err) {
       console.error('buildSchedulerAutoText crash:', err);
-      window.lastDbError = err;
       return { text: normalizeSchedulerVisitSuffix(nextValue) };
     }
   }, [
     memos,
-    pickChartOption,
     pickManualOptionForDosePrescription,
     showAutoFillDialog,
     shouldAutoFormatSchedulerName,

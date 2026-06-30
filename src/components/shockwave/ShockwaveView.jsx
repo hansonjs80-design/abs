@@ -99,6 +99,68 @@ const PATIENT_HISTORY_ALL_BODY_FILTER = '__all__';
 const PATIENT_HISTORY_EMPTY_BODY_FILTER = '__empty__';
 
 const HIDDEN_BODY_PART_OPTIONS_STORAGE_KEY = 'shockwave-hidden-body-part-options-by-patient';
+const isComposingInputEvent = (event) => Boolean(
+  event?.nativeEvent?.isComposing ||
+  event?.isComposing ||
+  event?.keyCode === 229
+);
+
+function saveSchedulerInputValueOnce({
+  event,
+  input,
+  editDraftRef,
+  skipNextEditBlurSaveRef,
+  onSave,
+}) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+
+  const targetInput = input || event?.currentTarget || event?.target;
+  const value = editDraftRef.current?.value ?? targetInput?.value ?? '';
+  skipNextEditBlurSaveRef.current = true;
+  targetInput?.blur?.();
+  editDraftRef.current = null;
+  if (String(value || '').trim()) onSave(value);
+}
+
+function saveSchedulerInputAfterComposition({
+  event,
+  input,
+  editDraftRef,
+  skipNextEditBlurSaveRef,
+  onSave,
+}) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+
+  const targetInput = input || event?.currentTarget || event?.target;
+  let saved = false;
+  let fallbackTimer = null;
+  const save = () => {
+    if (saved) return;
+    saved = true;
+    if (fallbackTimer) window.clearTimeout(fallbackTimer);
+    targetInput?.removeEventListener?.('compositionend', save);
+    window.requestAnimationFrame(() => {
+      const value = targetInput?.value ?? editDraftRef.current?.value ?? '';
+      skipNextEditBlurSaveRef.current = true;
+      targetInput?.blur?.();
+      editDraftRef.current = null;
+      if (String(value || '').trim()) onSave(value);
+    });
+  };
+
+  targetInput?.addEventListener?.('compositionend', save, { once: true });
+  fallbackTimer = window.setTimeout(save, 120);
+}
+
+function getPlainTextDefaultRowSpan({ intervalMinutes, timeLabelIntervalMinutes }) {
+  const gridInterval = Math.max(1, Number(intervalMinutes) || Number(timeLabelIntervalMinutes) || 10);
+  const configuredMinutes = Math.max(gridInterval, Number(intervalMinutes) || gridInterval);
+  const configuredRowSpan = Math.max(1, Math.ceil(configuredMinutes / gridInterval));
+  return Math.max(configuredRowSpan, gridInterval === 10 ? 2 : 1);
+}
+
 const DEFAULT_CONTEXT_PRESCRIPTION_COLORS = {
   'F/R': '#0f172a',
   'F/Rdc': '#64748b',
@@ -471,17 +533,50 @@ const MemoizedCell = memo(({
               const nextValue = e.currentTarget.value;
               if (resizerRef.current) resizerRef.current.dataset.value = nextValue;
               editDraftRef.current = { key: cellKey, value: nextValue, dirty: true };
-              if (imeOpenRef.current || e.nativeEvent?.isComposing) return;
+              if (isEditing) setEditValue(nextValue);
+              // IME 조합 중에도 항상 드래프트를 저장 (macOS 한글 IME 호환)
               scheduleEditDraftAutosave(cellKey, nextValue);
+              if (imeOpenRef.current || e.nativeEvent?.isComposing) return;
               if (!isEditing && e.currentTarget.value) promoteFocusedInputToEditor(cellKey, e.currentTarget.value);
             }}
           onBlur={(e) => {
             setImePreviewCell((prev) => (prev === cellKey ? null : prev));
             if (skipNextEditBlurSaveRef.current) { skipNextEditBlurSaveRef.current = false; return; }
-            // Assuming contextMenuRef check is done globally or here? We pass a boolean or ignore it.
-            if (isEditing) handleCellSave(weekIdx, dayIdx, rowIdx, colIdx, e.target.value);
+            // isEditing이 아니더라도 값이 있으면 handleCellSave 호출
+            const blurValue = e.target.value;
+            if (isEditing || (blurValue && blurValue.trim())) {
+              handleCellSave(weekIdx, dayIdx, rowIdx, colIdx, blurValue);
+            }
           }}
-          onKeyDown={e => { if (isEditing) handleEditKeyDown(e, weekIdx, dayIdx, rowIdx, colIdx); }}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              if (isComposingInputEvent(e)) {
+                saveSchedulerInputAfterComposition({
+                  event: e,
+                  input: e.currentTarget,
+                  editDraftRef,
+                  skipNextEditBlurSaveRef,
+                  onSave: (value) => handleCellSave(weekIdx, dayIdx, rowIdx, colIdx, value),
+                });
+              } else {
+                saveSchedulerInputValueOnce({
+                  event: e,
+                  input: e.currentTarget,
+                  editDraftRef,
+                  skipNextEditBlurSaveRef,
+                  onSave: (value) => handleCellSave(weekIdx, dayIdx, rowIdx, colIdx, value),
+                });
+              }
+              return;
+            }
+            if (e.key === 'Escape') {
+              skipNextEditBlurSaveRef.current = true;
+              e.target.value = '';
+              e.target.blur();
+              return;
+            }
+            if (isEditing) handleEditKeyDown(e, weekIdx, dayIdx, rowIdx, colIdx);
+          }}
           onCompositionStart={() => {
             imeOpenRef.current = true;
             setImePreviewCell(cellKey);
@@ -494,6 +589,7 @@ const MemoizedCell = memo(({
             setImePreviewCell((prev) => (prev === cellKey ? null : prev));
             const finalValue = e.currentTarget.value;
             editDraftRef.current = { key: cellKey, value: finalValue, dirty: true };
+            if (isEditing) setEditValue(finalValue);
             if (resizerRef.current) resizerRef.current.dataset.value = finalValue;
             scheduleEditDraftAutosave(cellKey, finalValue);
             if (!isEditing && finalValue) promoteFocusedInputToEditor(cellKey, finalValue);
@@ -1142,11 +1238,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     }
     const draft = editDraftRef.current;
     if (!draft?.key || !draft.dirty) return;
+    const draftValue = draft.value;
+    const draftKey = draft.key;
     editDraftRef.current = null;
-    const [w, d, r, c] = draft.key.split('-').map(Number);
+    const [w, d, r, c] = draftKey.split('-').map(Number);
     if (![w, d, r, c].every(Number.isFinite)) return;
+    if (!draftValue || !String(draftValue).trim()) return;
     // handleCellSave를 통해 처방 조회 포함 저장
-    Promise.resolve(handleCellSaveRef.current?.(w, d, r, c, draft.value ?? ''))
+    Promise.resolve(handleCellSaveRef.current?.(w, d, r, c, draftValue))
       .then(() => {})
       .catch((error) => {
         console.error('Failed to flush schedule draft:', error);
@@ -1255,13 +1354,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     updateDraggedSelection({ w, d, r, c });
   }, [updateDraggedSelection]);
 
-  // ── 더블 클릭 = 편집 모드 진입 ──
-  const handleCellDoubleClick = useCallback((e, w, d, r, c, content) => {
-    selectSingleCell({ w, d, r, c });
+  const prepareDefaultEditMerge = useCallback((w, d, r, c, content) => {
     const key = cellKey(w, d, r, c);
-    const gridInterval = Math.max(1, Number(settings?.interval_minutes) || Number(settings?.time_label_interval_minutes) || 10);
-    const defaultReservationMinutes = Math.max(gridInterval, Number(settings?.interval_minutes) || gridInterval);
-    const defaultRowSpan = Math.max(1, Math.ceil(defaultReservationMinutes / gridInterval));
+    const defaultRowSpan = getPlainTextDefaultRowSpan({
+      intervalMinutes: settings?.interval_minutes,
+      timeLabelIntervalMinutes: settings?.time_label_interval_minutes,
+    });
     const currentMergeSpan = pendingMergeSpans[key] || effectiveMemos[key]?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
     const canUseDefaultMerge = (
       !String(content || '').trim() &&
@@ -1271,58 +1369,77 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       r + defaultRowSpan <= baseTimeSlots.length
     );
 
-    if (canUseDefaultMerge) {
-      const defaultReservationTime = getDefaultReservationTime(w, d, r);
-      const masterDefaultMergeSpan = buildMergeSpanWithReservationTime(
-        { rowSpan: defaultRowSpan, colSpan: 1, mergedInto: null },
-        defaultReservationTime
-      );
-      const updates = [];
-      const revertUpdates = [];
-      let canMerge = true;
-      for (let rowOffset = 0; rowOffset < defaultRowSpan; rowOffset += 1) {
-        const targetRow = r + rowOffset;
-        const targetKey = cellKey(w, d, targetRow, c);
-        const memo = effectiveMemos[targetKey] || {};
-        const mergeSpan = pendingMergeSpans[targetKey] || memo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
-        const hasContent = String(memo.content || '').trim();
-        if (
-          hasContent ||
-          mergeSpan.mergedInto ||
-          (targetKey !== key && ((mergeSpan.rowSpan || 1) > 1 || (mergeSpan.colSpan || 1) > 1))
-        ) {
-          canMerge = false;
-          break;
-        }
-        revertUpdates.push({
-          year: currentYear,
-          month: currentMonth,
-          week_index: w,
-          day_index: d,
-          row_index: targetRow,
-          col_index: c,
-          merge_span: mergeSpan,
-        });
-        updates.push({
-          year: currentYear,
-          month: currentMonth,
-          week_index: w,
-          day_index: d,
-          row_index: targetRow,
-          col_index: c,
-          merge_span: rowOffset === 0
-            ? masterDefaultMergeSpan
-            : { rowSpan: 1, colSpan: 1, mergedInto: key },
-        });
+    if (!canUseDefaultMerge) return;
+
+    const defaultReservationTime = getDefaultReservationTime(w, d, r);
+    const masterDefaultMergeSpan = buildMergeSpanWithReservationTime(
+      { rowSpan: defaultRowSpan, colSpan: 1, mergedInto: null },
+      defaultReservationTime
+    );
+    const updates = [];
+    const revertUpdates = [];
+    let canMerge = true;
+    for (let rowOffset = 0; rowOffset < defaultRowSpan; rowOffset += 1) {
+      const targetRow = r + rowOffset;
+      const targetKey = cellKey(w, d, targetRow, c);
+      const memo = effectiveMemos[targetKey] || {};
+      const mergeSpan = pendingMergeSpans[targetKey] || memo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+      const hasContent = String(memo.content || '').trim();
+      if (
+        hasContent ||
+        mergeSpan.mergedInto ||
+        (targetKey !== key && ((mergeSpan.rowSpan || 1) > 1 || (mergeSpan.colSpan || 1) > 1))
+      ) {
+        canMerge = false;
+        break;
       }
-      if (canMerge) {
-        defaultEditMergeSpanRef.current[key] = {
-          mergeSpan: masterDefaultMergeSpan,
-          revertUpdates,
-        };
-        applyImmediateMergeSpan(updates);
-      }
+      revertUpdates.push({
+        year: currentYear,
+        month: currentMonth,
+        week_index: w,
+        day_index: d,
+        row_index: targetRow,
+        col_index: c,
+        merge_span: mergeSpan,
+      });
+      updates.push({
+        year: currentYear,
+        month: currentMonth,
+        week_index: w,
+        day_index: d,
+        row_index: targetRow,
+        col_index: c,
+        merge_span: rowOffset === 0
+          ? masterDefaultMergeSpan
+          : { rowSpan: 1, colSpan: 1, mergedInto: key },
+      });
     }
+
+    if (!canMerge) return;
+
+    defaultEditMergeSpanRef.current[key] = {
+      mergeSpan: masterDefaultMergeSpan,
+      revertUpdates,
+    };
+    applyImmediateMergeSpan(updates);
+  }, [
+    applyImmediateMergeSpan,
+    baseTimeSlots.length,
+    cellKey,
+    currentMonth,
+    currentYear,
+    effectiveMemos,
+    getDefaultReservationTime,
+    pendingMergeSpans,
+    settings?.interval_minutes,
+    settings?.time_label_interval_minutes,
+  ]);
+
+  // ── 더블 클릭 = 편집 모드 진입 ──
+  const handleCellDoubleClick = useCallback((e, w, d, r, c, content) => {
+    selectSingleCell({ w, d, r, c });
+    const key = cellKey(w, d, r, c);
+    prepareDefaultEditMerge(w, d, r, c, content);
     
     let offset = content?.length || 0;
     try {
@@ -1356,16 +1473,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       }
     }
   }, [
-    applyImmediateMergeSpan,
-    baseTimeSlots.length,
     cellKey,
-    currentMonth,
-    currentYear,
-    effectiveMemos,
-    pendingMergeSpans,
+    prepareDefaultEditMerge,
     selectSingleCell,
-    settings?.interval_minutes,
-    settings?.time_label_interval_minutes,
   ]);
 
   // ── 편집 저장 ──
@@ -1380,10 +1490,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (editAutosaveTimerRef.current) {
       clearTimeout(editAutosaveTimerRef.current);
       editAutosaveTimerRef.current = null;
-    }
-    if (window.lastDbError) {
-      const dbErrMsg = window.lastDbError?.message || window.lastDbError?.error_description || String(window.lastDbError);
-      addToast(`DB 오류 감지: ${dbErrMsg}`, 'error');
     }
     const oldContent = memos[key]?.content || '';
     const oldPrescription = memos[key]?.prescription || '';
@@ -1412,12 +1518,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setEditingCell(null);
     const hasManualParentheticalNote = Boolean(getNonVisitParentheticalSuffix(immediateContent));
     const isVisitOnlyEdit = !hasForcedCellUpdate && isOnlySchedulerVisitSuffixChange(oldContent, immediateContent);
-    const result = hasManualParentheticalNote || isVisitOnlyEdit
-      ? { text: immediateContent }
-      : await buildSchedulerAutoText(w, d, r, c, finalValue, false, editValue);
-    if (window.lastAutoTextDebug) {
-      const { allDataCount, matchesCount, searchName, searchChart, cleanName } = window.lastAutoTextDebug;
-      addToast(`[진단] DB조회: ${allDataCount}건, 일치: ${matchesCount}건 / 검색: ${searchName || searchChart || cleanName || '없음'}`, 'info');
+    let result;
+    try {
+      result = hasManualParentheticalNote || isVisitOnlyEdit
+        ? { text: immediateContent }
+        : await buildSchedulerAutoText(w, d, r, c, finalValue, false, oldContent);
+    } catch (autoErr) {
+      addToast(`[오류] 자동완성 실패: ${autoErr?.message || autoErr}`, 'error');
+      result = { text: immediateContent };
     }
     if (cellSaveVersionRef.current[key] !== saveVersion) return;
     const newContent = normalizeSchedulerVisitSuffix(
@@ -1432,9 +1540,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         cellReservationTime
       )
     );
-    const newMergeSpan = result?.mergeSpan
+    const resultMergeSpanWithTime = result?.mergeSpan
       ? withCellReservationTime(result.mergeSpan)
-      : (defaultEditMergeSpan ? withCellReservationTime(defaultEditMergeSpan) : undefined);
+      : undefined;
+    const defaultEditMergeSpanWithTime = defaultEditMergeSpan
+      ? withCellReservationTime(defaultEditMergeSpan)
+      : undefined;
+    let newMergeSpan = resultMergeSpanWithTime || defaultEditMergeSpanWithTime;
     const hasPrescriptionResult = forcedPrescription !== undefined || (typeof result === 'object' && result !== null && Object.prototype.hasOwnProperty.call(result, 'prescription'));
     const hasBodyPartResult = forcedBodyPart !== undefined || (typeof result === 'object' && result !== null && Object.prototype.hasOwnProperty.call(result, 'bodyPart'));
     const hasMergeSpanResult = Boolean(defaultEditMergeSpan) || (typeof result === 'object' && result !== null && Object.prototype.hasOwnProperty.call(result, 'mergeSpan'));
@@ -1488,11 +1600,50 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const finalBodyPart = newContent.trim()
       ? (hasBodyPartResult ? newBodyPart : oldBodyPart)
       : null;
+    const plainTextDefaultRowSpan = getPlainTextDefaultRowSpan({
+      intervalMinutes: settings?.interval_minutes,
+      timeLabelIntervalMinutes: settings?.time_label_interval_minutes,
+    });
+    const canApplyPlainTextDefaultMerge = () => {
+      if (plainTextDefaultRowSpan <= 1 || r + plainTextDefaultRowSpan > baseTimeSlots.length) return false;
+      for (let rowOffset = 1; rowOffset < plainTextDefaultRowSpan; rowOffset += 1) {
+        const targetKey = cellKey(w, d, r + rowOffset, c);
+        const targetMemo = effectiveMemos[targetKey] || {};
+        const targetMergeSpan = pendingMergeSpans[targetKey] || targetMemo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+        const isCurrentEditPreviewMerge = targetMergeSpan.mergedInto === key;
+        if (
+          String(targetMemo.content || '').trim() ||
+          (targetMergeSpan.mergedInto && !isCurrentEditPreviewMerge) ||
+          (!isCurrentEditPreviewMerge && (targetMergeSpan.rowSpan || 1) > 1) ||
+          (!isCurrentEditPreviewMerge && (targetMergeSpan.colSpan || 1) > 1)
+        ) {
+          return false;
+        }
+      }
+      return true;
+    };
+    const shouldUsePlainTextDefaultMerge = Boolean(
+      newContent.trim() &&
+      !(newMergeSpan?.mergedInto) &&
+      (!newMergeSpan || (newMergeSpan.rowSpan || 1) <= 1) &&
+      canApplyPlainTextDefaultMerge()
+    );
+    const plainTextDefaultMergeSpan = shouldUsePlainTextDefaultMerge
+      ? { rowSpan: plainTextDefaultRowSpan, colSpan: 1, mergedInto: null }
+      : null;
+    if (
+      shouldUsePlainTextDefaultMerge &&
+      defaultEditMergeSpanWithTime &&
+      (!resultMergeSpanWithTime || (resultMergeSpanWithTime.rowSpan || 1) <= 1)
+    ) {
+      newMergeSpan = defaultEditMergeSpanWithTime;
+    }
     const finalMergeSpan = newContent.trim()
       ? (hasMergeSpanResult ? newMergeSpan : oldMergeSpan)
       : { rowSpan: 1, colSpan: 1, mergedInto: null };
-    const finalMergeSpanWithTime = newContent.trim() && !finalMergeSpan?.mergedInto
-      ? withCellReservationTime(finalMergeSpan)
+    const effectiveFinalMergeSpan = plainTextDefaultMergeSpan || finalMergeSpan;
+    const finalMergeSpanWithTime = newContent.trim() && !effectiveFinalMergeSpan?.mergedInto
+      ? withCellReservationTime(effectiveFinalMergeSpan)
       : finalMergeSpan;
     const prescriptionChanged = oldPrescription !== finalPrescription;
     const bodyPartChanged = (oldBodyPart || '') !== (finalBodyPart || '');
@@ -1586,7 +1737,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       addToast('아래 시간이 부족해 자동 병합하지 않았습니다.', 'warning');
     }
 
-    if (newContent.trim() && defaultEditMergeSpan?.rowSpan > 1 && (finalMergeSpanWithTime.rowSpan || 1) > 1) {
+    if (newContent.trim() && (defaultEditMergeSpan?.rowSpan > 1 || shouldUsePlainTextDefaultMerge) && (finalMergeSpanWithTime.rowSpan || 1) > 1) {
       const payload = [];
       const affectedKeys = [];
       for (let rowOffset = 0; rowOffset < finalMergeSpanWithTime.rowSpan; rowOffset += 1) {
@@ -2032,12 +2183,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, [focusEditInputImmediately]);
 
   const promoteFocusedInputToEditor = useCallback((key, value) => {
+    const [w, d, r, c] = String(key || '').split('-').map(Number);
+    if ([w, d, r, c].every(Number.isFinite)) {
+      prepareDefaultEditMerge(w, d, r, c, effectiveMemos[key]?.content || '');
+    }
     editDraftRef.current = { key, value: value || '', dirty: true };
     flushSync(() => {
       setEditingCell(key);
       setEditValue(value);
     });
-  }, []);
+  }, [effectiveMemos, prepareDefaultEditMerge]);
 
   const handleOpenBodyPartMenu = useCallback(() => {
     if (!selectedCell) return;
@@ -2513,6 +2668,24 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     () => (isScheduleMonthLoading ? {} : pendingCellBgColors),
     [isScheduleMonthLoading, pendingCellBgColors]
   );
+
+  // selectedCell 변경 시 이전 셀 드래프트 자동 flush
+  const prevSelectedRef = useRef(null);
+  useEffect(() => {
+    const prev = prevSelectedRef.current;
+    const curr = selectedCell;
+    if (prev && curr && (prev.w !== curr.w || prev.d !== curr.d || prev.r !== curr.r || prev.c !== curr.c)) {
+      const draft = editDraftRef.current;
+      if (draft?.dirty && draft?.value?.trim()) {
+        const [w, d, r, c] = draft.key.split('-').map(Number);
+        if ([w, d, r, c].every(Number.isFinite)) {
+          editDraftRef.current = null;
+          handleCellSaveRef.current?.(w, d, r, c, draft.value);
+        }
+      }
+    }
+    prevSelectedRef.current = curr ? { ...curr } : null;
+  }, [selectedCell]);
 
   return (
     <>

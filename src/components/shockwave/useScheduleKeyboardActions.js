@@ -819,7 +819,12 @@ export default function useScheduleKeyboardActions({
     }
 
     const applyVisitCountDelta = (delta) => {
-      const keys = Array.from(selectedKeys || []);
+      const activeCell = getLatestSelectedCell();
+      const keys = selectedKeysRef.current && selectedKeysRef.current.size > 0
+        ? Array.from(selectedKeysRef.current)
+        : activeCell
+          ? [cellKey(activeCell.w, activeCell.d, activeCell.r, activeCell.c)]
+          : [];
       const latestMemos = memosRef.current;
       const latestPending = pendingRef.current;
       const saveMemo = onSaveMemoRef.current;
