@@ -5,6 +5,7 @@ import { useSchedule } from '../../contexts/ScheduleContext';
 import { getTodayKST, isSameDate } from '../../lib/calendarUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import { buildBlankScheduleCleanupPayload, sanitizeBlankScheduleCellData } from '../../lib/scheduleBlankCellCleanupUtils';
+import { markIntentionalClearPayload } from '../../lib/scheduleMergeUtils';
 import { isTreatmentCancelBg, isTreatmentCompleteBg } from '../../lib/scheduleStatusUtils';
 import { getManualTherapyRowSpan } from '../../lib/manualTherapyMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
@@ -103,6 +104,7 @@ const PATIENT_HISTORY_ALL_BODY_FILTER = '__all__';
 const PATIENT_HISTORY_EMPTY_BODY_FILTER = '__empty__';
 
 const HIDDEN_BODY_PART_OPTIONS_STORAGE_KEY = 'shockwave-hidden-body-part-options-by-patient';
+const EMPTY_SCHEDULE_MERGE_SPAN = { rowSpan: 1, colSpan: 1, mergedInto: null };
 const isComposingInputEvent = (event) => Boolean(
   event?.nativeEvent?.isComposing ||
   event?.isComposing ||
@@ -358,6 +360,9 @@ const ContextMenuLocalInputGroup = ({ placeholder, buttonLabel, onSubmit, imeOpe
 
 const renderSchedulerVisitSuffix = (suffix, className, style) => {
   const text = String(suffix || '');
+  if (text === '*' || text === '(*)') {
+    return <span className={className} style={style}>*</span>;
+  }
   const match = text.match(/^(\()(-|\d+)(\))$/);
   if (!match) {
     return <span className={className} style={style}>{text}</span>;
@@ -1580,7 +1585,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const oldContent = memos[key]?.content || '';
     const oldPrescription = memos[key]?.prescription || '';
     const oldBodyPart = memos[key]?.body_part || null;
-    const oldMergeSpan = memos[key]?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+    const oldMergeSpan = memos[key]?.merge_span || EMPTY_SCHEDULE_MERGE_SPAN;
     const defaultEditMerge = defaultEditMergeSpanRef.current[key];
     delete defaultEditMergeSpanRef.current[key];
     const defaultEditMergeSpan = defaultEditMerge?.mergeSpan;
@@ -1761,27 +1766,55 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     }
 
     if (!newContent.trim()) {
-      const maxSpan = Math.max(oldMergeSpan?.rowSpan || 1, defaultEditMergeSpan?.rowSpan || 1);
-      if (maxSpan > 1) {
+      const getBlankClearMergeTarget = () => {
+        const previewMergeSpan = pendingMergeSpans[key] || getDefaultEditingMergeSpanForKey(key);
+        const directMergeSpan = previewMergeSpan || effectiveMemos[key]?.merge_span || oldMergeSpan || EMPTY_SCHEDULE_MERGE_SPAN;
+        const masterKey = directMergeSpan?.mergedInto || key;
+        const [masterW, masterD, masterR, masterC] = masterKey.split('-').map(Number);
+        const masterMemo = effectiveMemos[masterKey] || memos[masterKey] || {};
+        const masterPreview = pendingMergeSpans[masterKey] || defaultEditMergeSpanRef.current[masterKey]?.mergeSpan;
+        const masterMergeSpan = masterPreview || masterMemo.merge_span || directMergeSpan || EMPTY_SCHEDULE_MERGE_SPAN;
+        const rowSpan = Math.max(
+          1,
+          masterMergeSpan?.rowSpan || 1,
+          defaultEditMergeSpan?.rowSpan || 1
+        );
+        const colSpan = Math.max(1, masterMergeSpan?.colSpan || 1);
+        return {
+          masterKey,
+          w: Number.isFinite(masterW) ? masterW : w,
+          d: Number.isFinite(masterD) ? masterD : d,
+          r: Number.isFinite(masterR) ? masterR : r,
+          c: Number.isFinite(masterC) ? masterC : c,
+          rowSpan,
+          colSpan,
+        };
+      };
+      const clearTarget = getBlankClearMergeTarget();
+      const shouldBulkClearBlank = clearTarget.rowSpan > 1 || clearTarget.colSpan > 1 || clearTarget.masterKey !== key;
+      if (shouldBulkClearBlank) {
         const payload = [];
         const affectedKeys = [];
-        for (let rowOffset = 0; rowOffset < maxSpan; rowOffset += 1) {
-          const targetRow = r + rowOffset;
-          const targetKey = cellKey(w, d, targetRow, c);
-          affectedKeys.push(targetKey);
-          payload.push({
-            year: currentYear,
-            month: currentMonth,
-            week_index: w,
-            day_index: d,
-            row_index: targetRow,
-            col_index: c,
-            content: '',
-            bg_color: null,
-            merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
-            prescription: null,
-            body_part: null,
-          });
+        for (let rowOffset = 0; rowOffset < clearTarget.rowSpan; rowOffset += 1) {
+          for (let colOffset = 0; colOffset < clearTarget.colSpan; colOffset += 1) {
+            const targetRow = clearTarget.r + rowOffset;
+            const targetCol = clearTarget.c + colOffset;
+            const targetKey = cellKey(clearTarget.w, clearTarget.d, targetRow, targetCol);
+            affectedKeys.push(targetKey);
+            payload.push(markIntentionalClearPayload({
+              year: currentYear,
+              month: currentMonth,
+              week_index: clearTarget.w,
+              day_index: clearTarget.d,
+              row_index: targetRow,
+              col_index: targetCol,
+              content: '',
+              bg_color: null,
+              merge_span: EMPTY_SCHEDULE_MERGE_SPAN,
+              prescription: null,
+              body_part: null,
+            }));
+          }
         }
 
         setPendingDisplayValues((prev) => {
@@ -1878,6 +1911,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       prescription: finalPrescription,
       body_part: finalBodyPart,
     }];
+    if (!newContent.trim()) {
+      singleCellPayload[0] = markIntentionalClearPayload(singleCellPayload[0]);
+    }
     applyImmediateCellDisplay(singleCellPayload);
     applyImmediateMergeSpan(singleCellPayload);
     recordUndo({
@@ -1925,7 +1961,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const errMsg = window.lastDbError?.message || window.lastDbError?.error_description || (typeof window.lastDbError === 'string' ? window.lastDbError : '') || '상세 에러 없음';
       addToast(`저장 실패 (${errMsg})`, 'error');
     }
-  }, [editValue, currentYear, currentMonth, settings, memos, effectiveMemos, pendingMergeSpans, baseTimeSlots.length, queuedOnSaveMemo, addToast, buildSchedulerAutoText, recordUndo, buildMemoSnapshotForKeys, queuedSaveShockwaveMemosBulk, applyImmediateCellDisplay, applyImmediateMergeSpan, clearImmediateCellDisplay, cellKey, setPendingDisplayValues, prescriptionScheduleSettings.doseTags, prescriptionScheduleSettings.durationMinutesMap]);
+  }, [editValue, currentYear, currentMonth, settings, memos, effectiveMemos, pendingMergeSpans, baseTimeSlots.length, queuedOnSaveMemo, addToast, buildSchedulerAutoText, recordUndo, buildMemoSnapshotForKeys, queuedSaveShockwaveMemosBulk, applyImmediateCellDisplay, applyImmediateMergeSpan, clearImmediateCellDisplay, cellKey, setPendingDisplayValues, prescriptionScheduleSettings.doseTags, prescriptionScheduleSettings.durationMinutesMap, getDefaultEditingMergeSpanForKey, getDefaultReservationTime]);
 
   handleCellSaveRef.current = handleCellSave;
 
@@ -2658,8 +2694,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       if (hasValue) {
         const currentVal = e.target.value;
         const key = cellKey(w, d, r, c);
-        const currentBg = memos[key]?.bg_color;
-        const nextBgColor = currentBg === TREATMENT_COMPLETE_BG ? null : TREATMENT_COMPLETE_BG;
+        const currentBg = Object.prototype.hasOwnProperty.call(pendingCellBgColors || {}, key)
+          ? pendingCellBgColors[key]
+          : memos[key]?.bg_color;
+        const nextBgColor = isTreatmentCompleteBg(currentBg) ? null : TREATMENT_COMPLETE_BG;
         handleCellSave(w, d, r, c, currentVal, undefined, nextBgColor);
       }
       return;
@@ -2672,8 +2710,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       if (hasValue) {
         const currentVal = e.target.value;
         const key = cellKey(w, d, r, c);
-        const currentBg = memos[key]?.bg_color;
-        const nextBgColor = currentBg === TREATMENT_CANCEL_BG ? null : TREATMENT_CANCEL_BG;
+        const currentBg = Object.prototype.hasOwnProperty.call(pendingCellBgColors || {}, key)
+          ? pendingCellBgColors[key]
+          : memos[key]?.bg_color;
+        const nextBgColor = isTreatmentCancelBg(currentBg) ? null : TREATMENT_CANCEL_BG;
         handleCellSave(w, d, r, c, currentVal, undefined, nextBgColor);
       }
       return;
@@ -2743,7 +2783,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const nc = e.shiftKey ? Math.max(0, c - 1) : Math.min(colCount - 1, c + 1);
       selectSingleCell({ w, d, r, c: nc });
     }
-  }, [baseTimeSlots.length, colCount, selectSingleCell, getAdjacentCell, moveEditInputCaret, settings, currentYear, currentMonth, handleCellSave, memos, cellKey, handleOpenBodyPartMenu, setEditingCell, prescriptionScheduleSettings.doseTags]);
+  }, [baseTimeSlots.length, colCount, selectSingleCell, getAdjacentCell, moveEditInputCaret, settings, currentYear, currentMonth, handleCellSave, memos, pendingCellBgColors, cellKey, handleOpenBodyPartMenu, setEditingCell, prescriptionScheduleSettings.doseTags]);
 
   const handleChartSelectorClose = useCallback((selected) => {
     if (!chartSelector) return;

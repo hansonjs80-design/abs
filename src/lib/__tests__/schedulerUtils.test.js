@@ -100,6 +100,16 @@ describe('scheduler visit suffix normalization', () => {
     assert.equal(applyVisitCountToSchedulerContent('3275/손연희(진료후도수)*', '2'), '3275/손연희(진료후도수)(2)');
   });
 
+  it('normalizes parenthesized new-patient markers to a bare star', () => {
+    assert.equal(normalizeSchedulerVisitSuffix('12745/신금란(*)'), '12745/신금란*');
+    assert.equal(applyVisitCountToSchedulerContent('12745/신금란(*)', '*'), '12745/신금란*');
+    assert.equal(applyVisitCountToSchedulerContent('12745/신금란(*)', '1'), '12745/신금란(1)');
+    assert.deepEqual(parseSchedulerPatientIdentity('12745/신금란(*)'), {
+      patientChart: '12745',
+      patientName: '신금란',
+    });
+  });
+
   it('replaces special visit markers with explicit numeric visits', () => {
     assert.equal(applyVisitCountToSchedulerContent('12745/신금란*', '1'), '12745/신금란(1)');
     assert.equal(applyVisitCountToSchedulerContent('12745/신금란(-)', '1'), '12745/신금란(1)');

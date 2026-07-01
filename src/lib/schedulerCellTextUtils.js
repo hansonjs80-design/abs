@@ -3,7 +3,7 @@ export function parseSchedulerPatientIdentity(content) {
   let patientChart = '';
   let patientName = '';
   const stripPatientSuffix = (value) => {
-    const withoutVisit = String(value || '').trim().replace(/(\((-|\d+)\)|\*)+$/g, '').trim();
+    const withoutVisit = String(value || '').trim().replace(/(\((-|\d+|\*)\)|\*)+$/g, '').trim();
     const noteSuffix = getNonVisitParentheticalSuffix(withoutVisit);
     return noteSuffix ? withoutVisit.slice(0, -noteSuffix.length).trim() : withoutVisit;
   };
@@ -35,6 +35,7 @@ export function getSchedulerVisitInputValue(content) {
   const raw = String(content || '').trim();
   if (!raw) return '';
   if (/\(-\)$/.test(raw)) return '-';
+  if (/\(\*\)$/.test(raw)) return '*';
   if (/\*$/.test(raw)) return '*';
   const match = raw.match(/\((\d+)\)$/);
   return match?.[1] || '';
@@ -43,6 +44,7 @@ export function getSchedulerVisitInputValue(content) {
 export function getExplicitVisitSuffix(content) {
   const raw = String(content || '').trim();
   if (!raw) return '';
+  if (/\(\*\)$/.test(raw)) return '(*)';
   if (/\*$/.test(raw)) return '*';
   const match = raw.match(/\((-|\d+)\)$/);
   return match?.[0] || '';
@@ -59,10 +61,10 @@ export function normalizeSchedulerVisitSuffix(content) {
   if (!suffix) return raw;
 
   const base = raw
-    .replace(/(\((-|\d+)\)|\*)+$/g, '')
+    .replace(/(\((-|\d+|\*)\)|\*)+$/g, '')
     .trim();
 
-  return suffix ? `${base}${suffix}` : base;
+  return suffix ? `${base}${suffix === '(*)' ? '*' : suffix}` : base;
 }
 
 export function isOnlySchedulerVisitSuffixChange(previousContent, nextContent) {
@@ -106,7 +108,7 @@ export function normalizeVisitInputValue(value) {
 export function applyVisitCountToSchedulerContent(content, visitInput) {
   const raw = normalizeSchedulerVisitSuffix(content);
   if (!raw) return raw;
-  const base = raw.replace(/(\((-|\d+)\)|\*)+$/g, '').trim();
+  const base = raw.replace(/(\((-|\d+|\*)\)|\*)+$/g, '').trim();
   const normalizedVisit = normalizeVisitInputValue(visitInput);
   if (!normalizedVisit) return base;
   if (normalizedVisit === '-') return `${base}(-)`;
