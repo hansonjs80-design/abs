@@ -121,6 +121,13 @@ export function getEffectiveSettlementSettings(settings, year, month, type = 'sh
   const prescriptions = Array.isArray(override?.prescriptions) && override.prescriptions.length > 0
     ? override.prescriptions.filter(Boolean)
     : base.prescriptions;
+  const activePrescriptionSet = new Set(prescriptions);
+  const shortcuts = Object.fromEntries(
+    Object.entries({
+      ...base.shortcuts,
+      ...(override?.shortcuts || {}),
+    }).filter(([prescription]) => activePrescriptionSet.has(prescription))
+  );
 
   return {
     prescriptions,
@@ -132,10 +139,7 @@ export function getEffectiveSettlementSettings(settings, year, month, type = 'sh
       ...base.prescription_colors,
       ...(override?.prescription_colors || {}),
     },
-    shortcuts: {
-      ...base.shortcuts,
-      ...(override?.shortcuts || {}),
-    },
+    shortcuts,
     dose_tags: {
       ...base.dose_tags,
       ...(override?.dose_tags || {}),
