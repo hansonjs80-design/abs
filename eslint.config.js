@@ -36,8 +36,15 @@ export default defineConfig([
       'no-misleading-character-class': 'warn',
       'react-hooks/set-state-in-effect': 'off',
       'react-hooks/preserve-manual-memoization': 'off',
+      'react-hooks/immutability': 'off',
       'react-hooks/refs': 'off',
       'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
+    files: ['*.js', 'scripts/**/*.js', 'src/**/*.test.js', 'src/**/__tests__/**/*.js'],
+    languageOptions: {
+      globals: globals.node,
     },
   },
 ])
