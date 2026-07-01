@@ -15,12 +15,21 @@ import { getPrescriptionScheduleSettings } from '../../lib/prescriptionScheduleS
 import { buildManualTherapyUnmergePayload } from '../../lib/manualTherapyMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import {
+  buildClearReservationGroupPayload,
+  buildMergeSpanWithReservationGroup,
+  buildReservationGroupPayload,
+  getReservationGroupFromMergeSpan,
+  RESERVATION_GROUP_SAME,
+  selectionHasReservationGroup,
+} from '../../lib/scheduleReservationGroupUtils';
+import {
   getEditingCellKeyAction,
   isBodyPartMenuShortcut,
   isGridNavigationKey,
   isHolidayBackgroundShortcut,
   isMergeShortcut,
   isPatientHistoryShortcut,
+  isSameReservationGroupShortcut,
   isTreatmentCancelShortcut,
   isTreatmentCompleteShortcut,
 } from '../../lib/scheduleKeyboardUtils';
@@ -351,6 +360,59 @@ export default function useScheduleKeyboardActions({
     });
   }, [addToast, applyImmediateCellBg, cellKey, currentMonth, currentYear, getLatestSelectedCell]);
 
+  const toggleSameReservationGroup = useCallback(() => {
+    const activeCell = getLatestSelectedCell();
+    const selected = selectedKeysRef.current && selectedKeysRef.current.size > 0
+      ? selectedKeysRef.current
+      : activeCell
+        ? new Set([cellKey(activeCell.w, activeCell.d, activeCell.r, activeCell.c)])
+        : new Set();
+    const latestMemos = memosRef.current || {};
+    const shouldClear = selectionHasReservationGroup({
+      keys: selected,
+      memos: latestMemos,
+      pendingMergeSpans: pendingMergeSpansRef.current,
+    });
+    const batch = shouldClear
+      ? buildClearReservationGroupPayload({
+          keys: selected,
+          memos: latestMemos,
+          pendingDisplayValues: pendingRef.current,
+          pendingMergeSpans: pendingMergeSpansRef.current,
+          currentYear,
+          currentMonth,
+        })
+      : buildReservationGroupPayload({
+          keys: selected,
+          memos: latestMemos,
+          pendingMergeSpans: pendingMergeSpansRef.current,
+          currentYear,
+          currentMonth,
+          getDefaultReservationTime: getDefaultTimeRef.current,
+          mode: RESERVATION_GROUP_SAME,
+        });
+    if (!shouldClear && selected.size < 2) {
+      addToast?.('동시간 예약은 2개 이상 셀을 선택해 주세요.', 'warning');
+      return;
+    }
+    if (!batch?.payload?.length) return;
+
+    recordUndoRef.current?.({ type: 'bulk-edit', oldMemos: batch.oldMemos });
+    applyCellDisplayRef.current?.(batch.payload);
+    applyMergeSpanRef.current?.(batch.payload);
+    applyPayloadToLatestRefs(batch.payload);
+    saveBulkRef.current?.(batch.payload).then((success) => {
+      if (!success) {
+        applyCellDisplayRef.current?.(batch.oldMemos);
+        applyMergeSpanRef.current?.(batch.oldMemos);
+        applyPayloadToLatestRefs(batch.oldMemos);
+        addToast?.(shouldClear ? '동시간 예약 취소 저장 실패' : '동시간 예약 설정 저장 실패', 'error');
+      } else {
+        addToast?.(shouldClear ? '동시간 예약을 취소했습니다.' : '동시간 예약으로 설정했습니다.', 'success');
+      }
+    });
+  }, [addToast, applyPayloadToLatestRefs, cellKey, currentMonth, currentYear, getLatestSelectedCell]);
+
   const applyPrescriptionShortcut = useCallback((event) => {
     const activeCell = getLatestSelectedCell();
     if (!activeCell || editingCell) return false;
@@ -575,6 +637,21 @@ export default function useScheduleKeyboardActions({
     }
 
     const currentMemos = getLatestMemosWithPendingMoves();
+    const activeCellGroup = selectedCellKey
+      ? getReservationGroupFromMergeSpan(pendingMergeSpansRef.current?.[selectedCellKey] || currentMemos[selectedCellKey]?.merge_span)
+      : null;
+    if (selectedCellKey && activeCellGroup?.id) {
+      moveKeys = new Set([selectedCellKey]);
+      selectedKeysRef.current = moveKeys;
+    }
+    const groupClearBatch = buildClearReservationGroupPayload({
+      keys: moveKeys,
+      memos: currentMemos,
+      pendingDisplayValues: pendingRef.current,
+      pendingMergeSpans: pendingMergeSpansRef.current,
+      currentYear,
+      currentMonth,
+    });
     const result = buildMoveScheduleSelectionPayload({
       selectedKeys: moveKeys,
       memos: currentMemos,
@@ -593,11 +670,186 @@ export default function useScheduleKeyboardActions({
       return;
     }
 
-    applyCellDisplayRef.current?.(result.payload);
-    applyMergeSpanRef.current?.(result.payload);
-    recordUndoRef.current?.({ type: 'bulk-edit', oldMemos: result.oldMemos });
+    const movePayload = result.payload.map((item) => ({
+      ...item,
+      merge_span: buildMergeSpanWithReservationGroup(item.merge_span, null),
+    }));
+    const relocationPayload = [];
+    if (selectedCellKey && activeCellGroup?.id && selectedCellKey === activeCellGroup.anchorKey) {
+      const groupItems = (groupClearBatch.payload || [])
+        .map((item) => ({
+          key: `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`,
+          item,
+        }))
+        .filter(({ item }) => {
+          const group = getReservationGroupFromMergeSpan(
+            pendingMergeSpansRef.current?.[`${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`]
+              || currentMemos[`${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`]?.merge_span
+          );
+          return group?.id === activeCellGroup.id;
+        })
+        .sort((a, b) => {
+          const aValue = (((a.item.week_index * 10 + a.item.day_index) * 10 + a.item.col_index) * 1000) + a.item.row_index;
+          const bValue = (((b.item.week_index * 10 + b.item.day_index) * 10 + b.item.col_index) * 1000) + b.item.row_index;
+          return aValue - bValue;
+        });
+      const remainingItems = groupItems
+        .filter(({ key, item }) => key !== selectedCellKey && String(item.content || '').trim())
+        .map(({ key, item }) => ({ key, item }));
+      const firstRemaining = remainingItems[0];
+      if (firstRemaining) {
+        const [w, d, r, c] = selectedCellKey.split('-').map(Number);
+        relocationPayload.push({
+          ...firstRemaining.item,
+          year: currentYear,
+          month: currentMonth,
+          week_index: w,
+          day_index: d,
+          row_index: r,
+          col_index: c,
+          merge_span: buildMergeSpanWithReservationGroup(firstRemaining.item.merge_span, null),
+        });
+        relocationPayload.push({
+          ...firstRemaining.item,
+          content: '',
+          bg_color: null,
+          merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+          prescription: null,
+          body_part: null,
+        });
+      }
+    }
+    const nextPayloadByKey = new Map();
+    (groupClearBatch.payload || []).forEach((item) => {
+      nextPayloadByKey.set(`${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`, item);
+    });
+    movePayload.forEach((item) => {
+      nextPayloadByKey.set(`${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`, item);
+    });
+    relocationPayload.forEach((item) => {
+      nextPayloadByKey.set(`${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`, item);
+    });
+    const oldMemoByKey = new Map();
+    [...(groupClearBatch.oldMemos || []), ...result.oldMemos].forEach((item) => {
+      oldMemoByKey.set(`${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`, item);
+    });
 
-    applyPayloadToLatestRefs(result.payload);
+    if (Number(shockwaveSettings?.interval_minutes || 0) === 10) {
+      const schedulePrescriptionSettings = getPrescriptionScheduleSettings(shockwaveSettings, currentYear, currentMonth);
+      const buildActiveMemos = () => {
+        const active = { ...(currentMemos || {}) };
+        nextPayloadByKey.forEach((item) => {
+          const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+          active[key] = {
+            ...(active[key] || {}),
+            content: item.content || '',
+            bg_color: item.bg_color || null,
+            merge_span: item.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+            prescription: item.prescription || null,
+            body_part: item.body_part || null,
+          };
+        });
+        return active;
+      };
+      const activeMemosForCandidates = buildActiveMemos();
+      const candidateByKey = new Map();
+      const addCandidate = (key) => {
+        const [kw, kd, kr, kc] = key.split('-').map(Number);
+        if (![kw, kd, kr, kc].every(Number.isFinite)) return;
+        const memo = activeMemosForCandidates[key] || {};
+        const mergeSpan = memo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+        if (
+          !String(memo.content || '').trim() ||
+          mergeSpan.mergedInto ||
+          (mergeSpan.rowSpan || 1) > 1 ||
+          (mergeSpan.colSpan || 1) > 1
+        ) {
+          return;
+        }
+        candidateByKey.set(key, {
+          year: currentYear,
+          month: currentMonth,
+          week_index: kw,
+          day_index: kd,
+          row_index: kr,
+          col_index: kc,
+          content: memo.content || '',
+          bg_color: memo.bg_color || null,
+          merge_span: mergeSpan,
+          prescription: memo.prescription || null,
+          body_part: memo.body_part || null,
+        });
+      };
+      nextPayloadByKey.forEach((item) => {
+        const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+        if (String(item.content || '').trim()) {
+          addCandidate(key);
+          return;
+        }
+        const aboveRow = item.row_index - 1;
+        if (aboveRow >= 0) {
+          addCandidate(`${item.week_index}-${item.day_index}-${aboveRow}-${item.col_index}`);
+        }
+      });
+      const candidateItems = Array.from(candidateByKey.values());
+      candidateItems.forEach((item) => {
+        const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+        const activeMemos = buildActiveMemos();
+        const manualTherapyMerge = buildManualTherapyAutoMergePayload({
+          key,
+          memos: activeMemos,
+          pendingMergeSpans: {},
+          currentYear,
+          currentMonth,
+          rowCount,
+          content: item.content || '',
+          bgColor: item.bg_color || null,
+          prescription: item.prescription || '',
+          bodyPart: item.body_part || null,
+          mergeSpan: item.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+          durationMinutesMap: schedulePrescriptionSettings.durationMinutesMap,
+          doseTags: schedulePrescriptionSettings.doseTags,
+          slotMinutes: shockwaveSettings?.interval_minutes || 10,
+        });
+        if (!manualTherapyMerge.ok || !manualTherapyMerge.payload?.length) return;
+        manualTherapyMerge.payload.forEach((payloadItem) => {
+          const payloadKey = `${payloadItem.week_index}-${payloadItem.day_index}-${payloadItem.row_index}-${payloadItem.col_index}`;
+          if (!oldMemoByKey.has(payloadKey)) {
+            const oldMemo = activeMemos[payloadKey] || {};
+            oldMemoByKey.set(payloadKey, {
+              year: currentYear,
+              month: currentMonth,
+              week_index: payloadItem.week_index,
+              day_index: payloadItem.day_index,
+              row_index: payloadItem.row_index,
+              col_index: payloadItem.col_index,
+              content: oldMemo.content || '',
+              bg_color: oldMemo.bg_color || null,
+              merge_span: oldMemo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+              prescription: oldMemo.prescription || null,
+              body_part: oldMemo.body_part || null,
+            });
+          }
+          nextPayloadByKey.set(payloadKey, {
+            ...payloadItem,
+            merge_span: payloadItem.merge_span?.mergedInto
+              ? payloadItem.merge_span
+              : buildMergeSpanWithReservationTime(
+                  payloadItem.merge_span,
+                  getDefaultTimeRef.current?.(payloadItem.week_index, payloadItem.day_index, payloadItem.row_index) || ''
+                ),
+          });
+        });
+      });
+    }
+    const nextPayload = Array.from(nextPayloadByKey.values());
+    const oldMemos = Array.from(oldMemoByKey.values());
+
+    applyCellDisplayRef.current?.(nextPayload);
+    applyMergeSpanRef.current?.(nextPayload);
+    recordUndoRef.current?.({ type: 'bulk-edit', oldMemos });
+
+    applyPayloadToLatestRefs(nextPayload);
 
     const firstMovedCell = result.movedKeys[0]
       ? result.movedKeys[0].split('-').map(Number)
@@ -616,7 +868,7 @@ export default function useScheduleKeyboardActions({
       onSelectionMoved?.(nextCell, result.movedKeys);
     }
 
-    schedulePendingMoveSave(result.payload, result.oldMemos);
+    schedulePendingMoveSave(nextPayload, oldMemos);
   }, [
     addToast,
     cellKey,
@@ -633,6 +885,8 @@ export default function useScheduleKeyboardActions({
     getLatestSelectedCell,
     pendingRef,
     selectedCellRef,
+    shockwaveSettings?.interval_minutes,
+    shockwaveSettings,
   ]);
 
   useEffect(() => {
@@ -924,6 +1178,7 @@ export default function useScheduleKeyboardActions({
         const nextRangeKeys = buildRangeKeys(activeCell, nextCell);
         selectedKeysRef.current = nextRangeKeys;
         setSelectedKeys(nextRangeKeys);
+        onSelectionMoved?.(nextCell, Array.from(nextRangeKeys));
       } else {
         const nextCellKey = cellKey(nextCell.w, nextCell.d, nextCell.r, nextCell.c);
         if (selectedCellRef) {
@@ -931,6 +1186,7 @@ export default function useScheduleKeyboardActions({
         }
         selectedKeysRef.current = new Set([nextCellKey]);
         selectSingleCell(nextCell);
+        onSelectionMoved?.(nextCell, [nextCellKey]);
       }
       return;
     }
@@ -939,6 +1195,13 @@ export default function useScheduleKeyboardActions({
       e.preventDefault();
       e.stopPropagation();
       handleToggleTreatmentCancel();
+      return;
+    }
+
+    if (isSameReservationGroupShortcut(e)) {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleSameReservationGroup();
       return;
     }
 
@@ -970,7 +1233,14 @@ export default function useScheduleKeyboardActions({
     if (e.key === 'Tab') {
       e.preventDefault();
       const nextCol = e.shiftKey ? Math.max(0, c - 1) : Math.min(colCount - 1, c + 1);
-      selectSingleCell({ w, d, r, c: nextCol });
+      const nextCell = { w, d, r, c: nextCol };
+      const nextCellKey = cellKey(w, d, r, nextCol);
+      if (selectedCellRef) {
+        selectedCellRef.current = nextCell;
+      }
+      selectedKeysRef.current = new Set([nextCellKey]);
+      selectSingleCell(nextCell);
+      onSelectionMoved?.(nextCell, [nextCellKey]);
       return;
     }
 
@@ -1023,6 +1293,7 @@ export default function useScheduleKeyboardActions({
     handleCutSelection,
     handleToggleTreatmentComplete,
     handleToggleTreatmentCancel,
+    toggleSameReservationGroup,
     applyPrescriptionShortcut,
     toggleSelectedGreenBackground,
     tryMergeSelection,
@@ -1039,6 +1310,7 @@ export default function useScheduleKeyboardActions({
     setSelectedKeys,
     handleReservationTimeShortcut,
     moveSelectedCellsByRow,
+    onSelectionMoved,
     memos,
     getLatestSelectedCell,
     pendingRef,

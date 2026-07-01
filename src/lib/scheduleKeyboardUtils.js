@@ -31,6 +31,10 @@ export function isHolidayBackgroundShortcut(event) {
   return isMetaEvent(event) && isKey(event, 'KeyB', 'b');
 }
 
+export function isSameReservationGroupShortcut(event) {
+  return isMetaEvent(event) && isKey(event, 'KeyQ', 'q');
+}
+
 export function isGridNavigationKey(event) {
   return ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event?.key);
 }

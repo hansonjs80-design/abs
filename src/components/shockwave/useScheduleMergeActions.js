@@ -3,6 +3,7 @@ import {
   buildDeleteCellsPayload,
   buildMergeSelectionPayload,
 } from '../../lib/scheduleMergeUtils.js';
+import { buildClearReservationGroupPayload } from '../../lib/scheduleReservationGroupUtils.js';
 import { rememberDeletedScheduleDraft, removeDeletedScheduleDraft, removePendingScheduleDraft } from '../../lib/schedulerUtils.js';
 
 export default function useScheduleMergeActions({
@@ -23,7 +24,7 @@ export default function useScheduleMergeActions({
   setContextMenu,
 }) {
   const deleteCells = useCallback(async (keys) => {
-    const { oldMemos, payload } = buildDeleteCellsPayload({
+    const deleteBatch = buildDeleteCellsPayload({
       keys,
       memos,
       pendingDisplayValues,
@@ -32,6 +33,27 @@ export default function useScheduleMergeActions({
       currentMonth,
       cellKey,
     });
+    const clearGroupBatch = buildClearReservationGroupPayload({
+      keys,
+      memos,
+      pendingDisplayValues,
+      pendingMergeSpans,
+      currentYear,
+      currentMonth,
+    });
+    const payloadByKey = new Map();
+    (clearGroupBatch.payload || []).forEach((item) => {
+      payloadByKey.set(`${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`, item);
+    });
+    deleteBatch.payload.forEach((item) => {
+      payloadByKey.set(`${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`, item);
+    });
+    const payload = Array.from(payloadByKey.values());
+    const oldMemoByKey = new Map();
+    [...(clearGroupBatch.oldMemos || []), ...deleteBatch.oldMemos].forEach((item) => {
+      oldMemoByKey.set(`${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`, item);
+    });
+    const oldMemos = Array.from(oldMemoByKey.values());
     if (payload.length > 0) {
       recordUndo({ type: 'bulk-edit', oldMemos });
       payload.forEach((item) => {

@@ -11,12 +11,36 @@ import {
 import { markIntentionalClearPayload, getExpandedMergeKeys, buildScheduleCellPayload } from '../../lib/scheduleMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import { getPrescriptionScheduleSettings } from '../../lib/prescriptionScheduleSettings';
+import {
+  buildClearReservationGroupPayload,
+  buildMergeSpanWithReservationGroup,
+  getReservationGroupFromMergeSpan,
+} from '../../lib/scheduleReservationGroupUtils';
+
+const DEFAULT_MERGE_SPAN = { rowSpan: 1, colSpan: 1, mergedInto: null };
+
+function parseCellKey(key) {
+  const [w, d, r, c] = String(key || '').split('-').map(Number);
+  return { w, d, r, c };
+}
+
+function getPayloadKey(item) {
+  return `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+}
+
+function getKeySortValue(key) {
+  const { w, d, c, r } = parseCellKey(key);
+  if (![w, d, c, r].every(Number.isFinite)) return Number.MAX_SAFE_INTEGER;
+  return (((w * 10 + d) * 10 + c) * 1000) + r;
+}
 
 export default function useScheduleClipboardActions({
   selectedCell,
   selectedCellRef,
   selectionInfo,
   memos,
+  pendingDisplayValues,
+  pendingMergeSpans,
   clipboardRef,
   clipboardSource,
   setClipboardSource,
@@ -285,7 +309,10 @@ export default function useScheduleClipboardActions({
         } else if (mergeSpan?.meta) {
           nextMergeSpan = cloneMergeSpanWithMeta(mergeSpan, { rowSpan: 1, colSpan: 1, mergedInto: null });
         }
-        nextMergeSpan = stripReservationTimeFromMergeSpan(nextMergeSpan);
+        nextMergeSpan = buildMergeSpanWithReservationGroup(
+          stripReservationTimeFromMergeSpan(nextMergeSpan),
+          null
+        );
         nextMergeSpan = visitCopyLink
           ? buildMergeSpanWithVisitCopyLink(nextMergeSpan, visitCopyLink)
           : clearVisitCopyLinkFromMergeSpan(nextMergeSpan);
@@ -495,10 +522,19 @@ export default function useScheduleClipboardActions({
           content: result.text || item.content,
           prescription: result.prescription || item.prescription,
           body_part: result.bodyPart || item.body_part,
-          merge_span: stripReservationTimeFromMergeSpan(result.mergeSpan || item.merge_span),
+          merge_span: buildMergeSpanWithReservationGroup(
+            stripReservationTimeFromMergeSpan(result.mergeSpan || item.merge_span),
+            null
+          ),
         };
       }
-      return item;
+      return {
+        ...item,
+        merge_span: buildMergeSpanWithReservationGroup(
+          stripReservationTimeFromMergeSpan(item.merge_span),
+          null
+        ),
+      };
     }));
 
     // 붙여넣기 결과를 가상 맵에 빌드하여 도수치료 연쇄 자동 병합의 입력 소스로 사용
@@ -536,11 +572,11 @@ export default function useScheduleClipboardActions({
           activeMemos[pKey] = {
             ...activeMemos[pKey],
             ...p,
-            merge_span: stripReservationTimeFromMergeSpan(p.merge_span),
+            merge_span: buildMergeSpanWithReservationGroup(stripReservationTimeFromMergeSpan(p.merge_span), null),
           };
           autoMergedPayloads.set(pKey, {
             ...p,
-            merge_span: stripReservationTimeFromMergeSpan(p.merge_span),
+            merge_span: buildMergeSpanWithReservationGroup(stripReservationTimeFromMergeSpan(p.merge_span), null),
           });
         });
       }
@@ -566,12 +602,33 @@ export default function useScheduleClipboardActions({
       })));
     });
 
+    const cutSourceKeys = clip.mode === 'cut' && currentClipboardSource?.keys
+      ? new Set(Array.from(currentClipboardSource.keys))
+      : null;
+    const cutSrcYear = clip.srcYear ?? currentYear;
+    const cutSrcMonth = clip.srcMonth ?? currentMonth;
+    const isCutCrossMonth = Boolean(cutSourceKeys) && (cutSrcYear !== currentYear || cutSrcMonth !== currentMonth);
+    const clearGroupBatch = cutSourceKeys && !isCutCrossMonth
+      ? buildClearReservationGroupPayload({
+          keys: cutSourceKeys,
+          memos,
+          pendingDisplayValues,
+          pendingMergeSpans,
+          currentYear,
+          currentMonth,
+        })
+      : null;
+    const clearGroupByKey = new Map();
+    (clearGroupBatch?.payload || []).forEach((item) => {
+      const key = getPayloadKey(item);
+      clearGroupByKey.set(key, item);
+      combinedPayload.set(key, item);
+    });
+
     // 2. 잘라내기(cut) 처리 반영
     if (clip.mode === 'cut' && currentClipboardSource?.keys) {
       // 원본 달 정보: clipboard에 저장된 srcYear/srcMonth 사용 (달 이동 후에도 원본 위치 정확 참조)
-      const cutSrcYear = clip.srcYear ?? currentYear;
-      const cutSrcMonth = clip.srcMonth ?? currentMonth;
-      const isCrossMonth = (cutSrcYear !== currentYear || cutSrcMonth !== currentMonth);
+      const isCrossMonth = isCutCrossMonth;
 
       Array.from(currentClipboardSource.keys).forEach((k) => {
         const [w, d, r, c] = k.split('-').map(Number);
@@ -598,13 +655,69 @@ export default function useScheduleClipboardActions({
       });
     }
 
+    if (cutSourceKeys && !isCutCrossMonth && clearGroupByKey.size > 0) {
+      const groups = new Map();
+      clearGroupByKey.forEach((item, key) => {
+        const group = getReservationGroupFromMergeSpan(pendingMergeSpans?.[key] || memos[key]?.merge_span);
+        if (!group?.id) return;
+        if (!groups.has(group.id)) {
+          groups.set(group.id, { group, members: [] });
+        }
+        groups.get(group.id).members.push({ key, item, group });
+      });
+
+      groups.forEach(({ group, members }) => {
+        const selectedMembers = members
+          .filter(({ key }) => cutSourceKeys.has(key))
+          .sort((a, b) => getKeySortValue(a.key) - getKeySortValue(b.key));
+        const remainingMembers = members
+          .filter(({ key, item }) => !cutSourceKeys.has(key) && String(item.content || '').trim())
+          .sort((a, b) => getKeySortValue(a.key) - getKeySortValue(b.key));
+        const anchorWasCut = selectedMembers.some(({ key }) => key === group.anchorKey);
+        if (!anchorWasCut || selectedMembers.length === 0 || remainingMembers.length === 0) return;
+
+        selectedMembers.forEach((destMember, index) => {
+          const sourceMember = remainingMembers[index];
+          if (!sourceMember || sourceMember.key === destMember.key) return;
+
+          const { w, d, r, c } = parseCellKey(destMember.key);
+          const sourceItem = sourceMember.item;
+          combinedPayload.set(destMember.key, {
+            ...sourceItem,
+            year: currentYear,
+            month: currentMonth,
+            week_index: w,
+            day_index: d,
+            row_index: r,
+            col_index: c,
+            merge_span: sourceItem.merge_span || DEFAULT_MERGE_SPAN,
+          });
+
+          const { w: sw, d: sd, r: sr, c: sc } = parseCellKey(sourceMember.key);
+          combinedPayload.set(sourceMember.key, markIntentionalClearPayload({
+            year: currentYear,
+            month: currentMonth,
+            week_index: sw,
+            day_index: sd,
+            row_index: sr,
+            col_index: sc,
+            content: '',
+            bg_color: null,
+            merge_span: { ...DEFAULT_MERGE_SPAN },
+            prescription: '',
+            body_part: '',
+          }));
+        });
+      });
+    }
+
     // 3. 붙여넣기 데이터 덮어쓰기
     enhancedPayload.forEach((item) => {
       combinedPayload.set(
         `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`,
         {
           ...item,
-          merge_span: stripReservationTimeFromMergeSpan(item.merge_span),
+          merge_span: buildMergeSpanWithReservationGroup(stripReservationTimeFromMergeSpan(item.merge_span), null),
         }
       );
     });
@@ -696,6 +809,8 @@ export default function useScheduleClipboardActions({
     clipboardRef,
     clipboardSource,
     memos,
+    pendingDisplayValues,
+    pendingMergeSpans,
     buildMemoSnapshot,
     parsePlainTextClipboard,
     buildPastePayload,

@@ -2,6 +2,12 @@ import { useCallback, useEffect, useRef } from 'react';
 import { buildManualTherapyUnmergePayload } from '../../lib/manualTherapyMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import {
+  buildClearReservationGroupPayload,
+  buildReservationGroupPayload,
+  RESERVATION_GROUP_SAME,
+  selectionHasReservationGroup,
+} from '../../lib/scheduleReservationGroupUtils';
+import {
   extractDoseTagFromPrescription,
   updateDoseTagForPrescriptionContent,
 } from '../../lib/schedulerContentFormat';
@@ -169,6 +175,66 @@ export default function useScheduleContextMenuActions({
     else if (action === 'complete-toggle') handleToggleTreatmentComplete();
     else if (action === 'cancel-toggle') handleToggleTreatmentCancel();
     else if (action === 'merge' || action === 'unmerge') tryMergeSelection();
+    else if (action === 'same-reservation-group-toggle') {
+      const contextKey = getContextKey();
+      const selectedKeyList = Array.from(selectedKeys || []);
+      const keys = contextKey && !selectedKeyList.includes(contextKey)
+        ? [contextKey]
+        : selectedKeyList;
+      const shouldClear = selectionHasReservationGroup({
+        keys,
+        memos,
+        pendingMergeSpans,
+      });
+      if (shouldClear) {
+        const batch = buildClearReservationGroupPayload({
+          keys,
+          memos,
+          pendingDisplayValues,
+          pendingMergeSpans,
+          currentYear,
+          currentMonth,
+        });
+        if (!batch?.payload?.length) return;
+
+        recordUndo({ type: 'bulk-edit', oldMemos: batch.oldMemos });
+        applyImmediateCellDisplay?.(batch.payload, { keepContextMenuOpen: true });
+        applyImmediateMergeSpan?.(batch.payload);
+        const success = await saveShockwaveMemosBulk(batch.payload);
+        if (!success) {
+          clearImmediateCellDisplay?.(batch.payload);
+          addToast?.('동시간 예약 취소 저장 실패', 'error');
+          return;
+        }
+        addToast?.('동시간 예약을 취소했습니다.', 'success');
+        return;
+      }
+      if (keys.length < 2) {
+        addToast?.('동시간 예약은 2개 이상 셀을 선택해 주세요.', 'warning');
+        return;
+      }
+      const batch = buildReservationGroupPayload({
+        keys,
+        memos,
+        pendingMergeSpans,
+        currentYear,
+        currentMonth,
+        getDefaultReservationTime,
+        mode: RESERVATION_GROUP_SAME,
+      });
+      if (!batch?.payload?.length) return;
+
+      recordUndo({ type: 'bulk-edit', oldMemos: batch.oldMemos });
+      applyImmediateCellDisplay?.(batch.payload, { keepContextMenuOpen: true });
+      applyImmediateMergeSpan?.(batch.payload);
+      const success = await saveShockwaveMemosBulk(batch.payload);
+      if (!success) {
+        clearImmediateCellDisplay?.(batch.payload);
+        addToast?.('동시간 예약 설정 저장 실패', 'error');
+        return;
+      }
+      addToast?.('동시간 예약으로 설정했습니다.', 'success');
+    }
     else if (action?.type === 'prescription') {
       const contextKey = getContextKey();
       const selectedKeyList = Array.from(selectedKeys || []);
@@ -647,11 +713,57 @@ export default function useScheduleContextMenuActions({
     }
     else if (action?.type === 'reservationTime') {
       const keys = getContextTargetKeys();
-      const oldMemos = buildMemoSnapshotForKeys(keys);
+      const clearGroupBatch = buildClearReservationGroupPayload({
+        keys,
+        memos,
+        pendingDisplayValues,
+        pendingMergeSpans,
+        currentYear,
+        currentMonth,
+      });
+      const oldMemos = clearGroupBatch?.oldMemos?.length
+        ? clearGroupBatch.oldMemos
+        : buildMemoSnapshotForKeys(keys);
       const nextTime = normalizeReservationTimeValue(action.value);
       setContextMenuReservationInput(nextTime);
       if (contextMenu) {
         setContextMenu((prev) => prev ? { ...prev, savedReservationTime: nextTime } : prev);
+      }
+      if (clearGroupBatch?.payload?.length) {
+        const payloadByKey = new Map();
+        clearGroupBatch.payload.forEach((item) => {
+          payloadByKey.set(`${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`, item);
+        });
+        keys.forEach((key) => {
+          const memo = getMemoForAction(key);
+          const [w, d, r, c] = key.split('-').map(Number);
+          const clearItem = payloadByKey.get(key);
+          const nextMergeSpan = buildMergeSpanWithReservationTime(clearItem?.merge_span || memo.merge_span, nextTime);
+          payloadByKey.set(key, {
+            year: currentYear,
+            month: currentMonth,
+            week_index: w,
+            day_index: d,
+            row_index: r,
+            col_index: c,
+            content: getStableMemoContent(key, memo),
+            bg_color: memo.bg_color || null,
+            merge_span: nextMergeSpan,
+            prescription: memo.prescription || null,
+            body_part: memo.body_part || null,
+          });
+          updateContextMemoSnapshot(key, memo, { merge_span: nextMergeSpan });
+        });
+        const payload = Array.from(payloadByKey.values());
+        applyImmediateCellDisplay?.(payload, { keepContextMenuOpen: true });
+        applyImmediateMergeSpan?.(payload);
+        const success = await saveShockwaveMemosBulk(payload);
+        if (success) recordUndo({ type: 'bulk-edit', oldMemos });
+        else {
+          clearImmediateCellDisplay?.(payload);
+          addToast?.('예약 시간 저장 실패', 'error');
+        }
+        return;
       }
       let anyChanged = false;
       for (const key of keys) {
@@ -689,10 +801,36 @@ export default function useScheduleContextMenuActions({
     }
     else if (action?.type === 'reservationTimeReset') {
       const keys = getContextTargetKeys();
-      const oldMemos = buildMemoSnapshotForKeys(keys);
+      const clearGroupBatch = buildClearReservationGroupPayload({
+        keys,
+        memos,
+        pendingDisplayValues,
+        pendingMergeSpans,
+        currentYear,
+        currentMonth,
+      });
+      const oldMemos = clearGroupBatch?.oldMemos?.length
+        ? clearGroupBatch.oldMemos
+        : buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       const defaultTime = contextMenu?.defaultReservationTime || (contextMenu ? getDefaultReservationTime(contextMenu.weekIdx, contextMenu.dayIdx, contextMenu.rowIdx) : '');
       setContextMenuReservationInput(defaultTime);
+      if (clearGroupBatch?.payload?.length) {
+        applyImmediateCellDisplay?.(clearGroupBatch.payload, { keepContextMenuOpen: true });
+        applyImmediateMergeSpan?.(clearGroupBatch.payload);
+        const success = await saveShockwaveMemosBulk(clearGroupBatch.payload);
+        if (contextMenu) {
+          setContextMenu((prev) => prev ? { ...prev, savedReservationTime: '' } : prev);
+        }
+        if (success) {
+          recordUndo({ type: 'bulk-edit', oldMemos });
+          addToast('예약 시간이 기본 시간으로 복구되었습니다.', 'success');
+        } else {
+          clearImmediateCellDisplay?.(clearGroupBatch.payload);
+          addToast?.('예약 시간 복구 실패', 'error');
+        }
+        return;
+      }
       for (const key of keys) {
         const memo = getMemoForAction(key);
         const currentTime = getReservationTimeFromMergeSpan(memo.merge_span);

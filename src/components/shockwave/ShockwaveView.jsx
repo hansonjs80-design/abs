@@ -6,6 +6,7 @@ import { getTodayKST, isSameDate } from '../../lib/calendarUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import { buildBlankScheduleCleanupPayload, sanitizeBlankScheduleCellData } from '../../lib/scheduleBlankCellCleanupUtils';
 import { markIntentionalClearPayload } from '../../lib/scheduleMergeUtils';
+import { buildClearReservationGroupPayload, getReservationGroupFromMergeSpan, selectionHasReservationGroup } from '../../lib/scheduleReservationGroupUtils';
 import { isTreatmentCancelBg, isTreatmentCompleteBg } from '../../lib/scheduleStatusUtils';
 import { getManualTherapyRowSpan } from '../../lib/manualTherapyMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
@@ -383,6 +384,7 @@ const MemoizedCell = memo(({
   cellKey, weekIdx, dayIdx, rowIdx, colIdx, dayInfo, slotInfo, showTimeCol, gridRowStart, isLastRenderedRow, colCount,
   cellData, pendingContent, pendingMergeSpan, mergeSpan, editingCell, imePreviewCell, selectedKeys, selectedCell, clipboardSource,
   workState, staffBlockRule, effectivePrescriptionColors,
+  reservationGroupEdge,
   visitLineBreakPrescriptions,
   editValue, setEditValue,
   handleCellMouseDown, handleCellMouseEnter, setHoverCell, handleCellDoubleClick, handleCellContextMenu,
@@ -393,6 +395,7 @@ const MemoizedCell = memo(({
   const effectiveMergeSpan = pendingMergeSpan || mergeSpan;
   const cellMemoList = getMemoListFromMergeSpan(effectiveMergeSpan);
   const hasCellMemo = cellMemoList.length > 0;
+  const reservationGroup = getReservationGroupFromMergeSpan(effectiveMergeSpan);
   const cellPrescription = cellData?.prescription || effectiveMergeSpan?.meta?.prescription || '';
   const displayData = buildSchedulerCellDisplay(content, effectiveMergeSpan);
   const hasDisplayText = displayData.hasDisplayText && content.trim() && content.trim() !== '\u200B';
@@ -419,6 +422,7 @@ const MemoizedCell = memo(({
   if (isTreatmentCancelBg(cellData?.bg_color)) cls += ' cancelled';
   if (has4060Pattern(content)) cls += ' color-4060';
   if (hasCellMemo) cls += ' has-memo';
+  if (reservationGroup?.mode === 'same') cls += ' same-reservation-group';
   if (isSelected) cls += ' selected';
   if (isPrimary) cls += ' primary-selected';
 
@@ -457,6 +461,22 @@ const MemoizedCell = memo(({
   else if (dayInfo.isCurrentMonth && !hasDisplayText && staffBlockRule?.bg_color) inlineStyle.backgroundColor = staffBlockRule.bg_color;
   
   if (dayInfo.isCurrentMonth && staffBlockRule?.font_color) inlineStyle.color = staffBlockRule.font_color;
+
+  if (reservationGroup?.mode === 'same') {
+    const groupBorder = '2px solid #2563eb';
+    if (reservationGroupEdge?.top) {
+      inlineStyle.borderTop = groupBorder;
+    }
+    if (reservationGroupEdge?.bottom) {
+      inlineStyle.borderBottom = groupBorder;
+    }
+    if (reservationGroupEdge?.left) {
+      inlineStyle.borderLeft = groupBorder;
+    }
+    if (reservationGroupEdge?.right) {
+      inlineStyle.borderRight = groupBorder;
+    }
+  }
 
   const prescriptionColor = cellPrescription ? effectivePrescriptionColors[cellPrescription] : undefined;
   const shouldBreakVisitLine = Boolean(cellPrescription && visitLineBreakPrescriptions?.includes(cellPrescription));
@@ -657,6 +677,9 @@ const MemoizedCell = memo(({
   const prevMemoListKey = getMemoListFromMergeSpan(prevProps.pendingMergeSpan || prevProps.mergeSpan).join('\u001f');
   const nextMemoListKey = getMemoListFromMergeSpan(nextProps.pendingMergeSpan || nextProps.mergeSpan).join('\u001f');
   if (prevMemoListKey !== nextMemoListKey) return false;
+  const prevReservationGroupKey = JSON.stringify(getReservationGroupFromMergeSpan(prevProps.pendingMergeSpan || prevProps.mergeSpan) || null);
+  const nextReservationGroupKey = JSON.stringify(getReservationGroupFromMergeSpan(nextProps.pendingMergeSpan || nextProps.mergeSpan) || null);
+  if (prevReservationGroupKey !== nextReservationGroupKey) return false;
 
   const wasSelected = prevProps.selectedKeys?.has(prevProps.cellKey);
   const isSelected = nextProps.selectedKeys?.has(nextProps.cellKey);
@@ -686,6 +709,7 @@ const MemoizedCell = memo(({
   if (prevProps.staffBlockRule?.font_color !== nextProps.staffBlockRule?.font_color) return false;
   if (prevProps.staffBlockRule?.keyword !== nextProps.staffBlockRule?.keyword) return false;
   if (prevProps.visitLineBreakPrescriptions !== nextProps.visitLineBreakPrescriptions) return false;
+  if (JSON.stringify(prevProps.reservationGroupEdge || null) !== JSON.stringify(nextProps.reservationGroupEdge || null)) return false;
   
   if (prevProps.slotInfo?.disabled !== nextProps.slotInfo?.disabled) return false;
   if (prevProps.slotInfo?.isLunch !== nextProps.slotInfo?.isLunch) return false;
@@ -1591,6 +1615,21 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const defaultEditMergeSpan = defaultEditMerge?.mergeSpan;
     const immediateContent = String(finalValue ?? '').trim();
     const hasForcedCellUpdate = forcedPrescription !== undefined || forcedBgColor !== undefined || forcedBodyPart !== undefined;
+    const reservationGroup = getReservationGroupFromMergeSpan(pendingMergeSpans[key] || oldMergeSpan);
+    const shouldBreakReservationGroup = Boolean(reservationGroup?.id) && (
+      !immediateContent ||
+      immediateContent !== String(oldContent || '').trim() ||
+      forcedPrescription !== undefined ||
+      forcedBodyPart !== undefined
+    );
+    const buildReservationGroupBreakPayload = () => buildClearReservationGroupPayload({
+      keys: new Set([key]),
+      memos: effectiveMemos,
+      pendingDisplayValues,
+      pendingMergeSpans,
+      currentYear,
+      currentMonth,
+    });
     if (!hasForcedCellUpdate && immediateContent === String(oldContent || '').trim()) {
       if (defaultEditMerge?.revertUpdates?.length) {
         applyImmediateMergeSpan(defaultEditMerge.revertUpdates);
@@ -1744,19 +1783,40 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       });
       return;
     }
+    const reservationGroupBreakBatch = shouldBreakReservationGroup ? buildReservationGroupBreakPayload() : null;
+    const combineWithReservationGroupBreak = (payload) => {
+      if (!reservationGroupBreakBatch?.payload?.length) return payload;
+      const payloadMap = new Map();
+      reservationGroupBreakBatch.payload.forEach((item) => {
+        payloadMap.set(`${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`, item);
+      });
+      (Array.isArray(payload) ? payload : [payload]).forEach((item) => {
+        payloadMap.set(`${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`, item);
+      });
+      return Array.from(payloadMap.values());
+    };
+    const getUndoKeysWithReservationGroupBreak = (keys) => {
+      const next = new Set(keys || []);
+      (reservationGroupBreakBatch?.payload || []).forEach((item) => {
+        next.add(`${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`);
+      });
+      return next;
+    };
 
     if (manualTherapyMerge.ok) {
+      const combinedPayload = combineWithReservationGroupBreak(manualTherapyMerge.payload);
+      const undoKeys = getUndoKeysWithReservationGroupBreak(manualTherapyMerge.affectedKeys);
       setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
-      applyImmediateCellDisplay(manualTherapyMerge.payload);
-      applyImmediateMergeSpan(manualTherapyMerge.payload);
+      applyImmediateCellDisplay(combinedPayload);
+      applyImmediateMergeSpan(combinedPayload);
       recordUndo({
         type: 'bulk-edit',
-        oldMemos: buildMemoSnapshotForKeys(manualTherapyMerge.affectedKeys, { includePendingDisplay: false }),
+        oldMemos: buildMemoSnapshotForKeys(undoKeys, { includePendingDisplay: false }),
       });
-      const success = await queuedSaveShockwaveMemosBulk(manualTherapyMerge.payload);
+      const success = await queuedSaveShockwaveMemosBulk(combinedPayload);
       if (success) {
         removePendingScheduleDraft(currentYear, currentMonth, key);
-        clearImmediateCellDisplay(manualTherapyMerge.payload);
+        clearImmediateCellDisplay(combinedPayload);
       } else {
         rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
         const errMsg = window.lastDbError?.message || window.lastDbError?.error_description || (typeof window.lastDbError === 'string' ? window.lastDbError : '') || '상세 에러 없음';
@@ -1816,26 +1876,28 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
             }));
           }
         }
+        const combinedPayload = combineWithReservationGroupBreak(payload);
+        const undoKeys = getUndoKeysWithReservationGroupBreak(affectedKeys);
 
         setPendingDisplayValues((prev) => {
           const next = { ...prev };
-          affectedKeys.forEach((k) => delete next[k]);
+          undoKeys.forEach((k) => delete next[k]);
           return next;
         });
-        applyImmediateCellDisplay(payload);
-        applyImmediateMergeSpan(payload);
+        applyImmediateCellDisplay(combinedPayload);
+        applyImmediateMergeSpan(combinedPayload);
         recordUndo({
           type: 'bulk-edit',
-          oldMemos: buildMemoSnapshotForKeys(affectedKeys, { includePendingDisplay: false }),
+          oldMemos: buildMemoSnapshotForKeys(undoKeys, { includePendingDisplay: false }),
         });
         payload.forEach((item) => {
           const draftKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
           rememberDeletedScheduleDraft(currentYear, currentMonth, draftKey);
           removePendingScheduleDraft(currentYear, currentMonth, draftKey);
         });
-        const success = await queuedSaveShockwaveMemosBulk(payload);
+        const success = await queuedSaveShockwaveMemosBulk(combinedPayload);
         if (success) {
-          clearImmediateCellDisplay(payload);
+          clearImmediateCellDisplay(combinedPayload);
         } else {
           payload.forEach((item) => {
             const draftKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
@@ -1878,18 +1940,20 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           body_part: rowOffset === 0 ? finalBodyPart : null,
         });
       }
+      const combinedPayload = combineWithReservationGroupBreak(payload);
+      const undoKeys = getUndoKeysWithReservationGroupBreak(affectedKeys);
 
       setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
-      applyImmediateCellDisplay(payload);
-      applyImmediateMergeSpan(payload);
+      applyImmediateCellDisplay(combinedPayload);
+      applyImmediateMergeSpan(combinedPayload);
       recordUndo({
         type: 'bulk-edit',
-        oldMemos: buildMemoSnapshotForKeys(affectedKeys, { includePendingDisplay: false }),
+        oldMemos: buildMemoSnapshotForKeys(undoKeys, { includePendingDisplay: false }),
       });
-      const success = await queuedSaveShockwaveMemosBulk(payload);
+      const success = await queuedSaveShockwaveMemosBulk(combinedPayload);
       if (success) {
         removePendingScheduleDraft(currentYear, currentMonth, key);
-        clearImmediateCellDisplay(payload);
+        clearImmediateCellDisplay(combinedPayload);
       } else {
         rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
         const errMsg = window.lastDbError?.message || window.lastDbError?.error_description || (typeof window.lastDbError === 'string' ? window.lastDbError : '') || '상세 에러 없음';
@@ -1914,42 +1978,53 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (!newContent.trim()) {
       singleCellPayload[0] = markIntentionalClearPayload(singleCellPayload[0]);
     }
-    applyImmediateCellDisplay(singleCellPayload);
-    applyImmediateMergeSpan(singleCellPayload);
-    recordUndo({
-      type: 'edit',
-      year: currentYear,
-      month: currentMonth,
-      w,
-      d,
-      r,
-      c,
-      oldContent,
-      oldBg: memos[key]?.bg_color,
-      oldMergeSpan,
-      oldPrescription: oldPrescription || null,
-      oldBodyPart: oldBodyPart || null,
-    });
+    const finalSinglePayload = combineWithReservationGroupBreak(singleCellPayload);
+    const singleUndoKeys = getUndoKeysWithReservationGroupBreak([key]);
+    applyImmediateCellDisplay(finalSinglePayload);
+    applyImmediateMergeSpan(finalSinglePayload);
+    if (reservationGroupBreakBatch?.payload?.length) {
+      recordUndo({
+        type: 'bulk-edit',
+        oldMemos: buildMemoSnapshotForKeys(singleUndoKeys, { includePendingDisplay: false }),
+      });
+    } else {
+      recordUndo({
+        type: 'edit',
+        year: currentYear,
+        month: currentMonth,
+        w,
+        d,
+        r,
+        c,
+        oldContent,
+        oldBg: memos[key]?.bg_color,
+        oldMergeSpan,
+        oldPrescription: oldPrescription || null,
+        oldBodyPart: oldBodyPart || null,
+      });
+    }
     if (!newContent.trim()) {
       rememberDeletedScheduleDraft(currentYear, currentMonth, key);
       removePendingScheduleDraft(currentYear, currentMonth, key);
     }
-    const success = await queuedOnSaveMemo(
-      currentYear,
-      currentMonth,
-      w,
-      d,
-      r,
-      c,
-      newContent,
-      forcedBgColor !== undefined ? forcedBgColor : undefined,
-      finalMergeSpanWithTime,
-      finalPrescription,
-      finalBodyPart
-    );
+    const success = reservationGroupBreakBatch?.payload?.length
+      ? await queuedSaveShockwaveMemosBulk(finalSinglePayload)
+      : await queuedOnSaveMemo(
+          currentYear,
+          currentMonth,
+          w,
+          d,
+          r,
+          c,
+          newContent,
+          forcedBgColor !== undefined ? forcedBgColor : undefined,
+          finalMergeSpanWithTime,
+          finalPrescription,
+          finalBodyPart
+        );
     if (success) {
       removePendingScheduleDraft(currentYear, currentMonth, key);
-      clearImmediateCellDisplay(singleCellPayload);
+      clearImmediateCellDisplay(finalSinglePayload);
     } else {
       if (!newContent.trim()) removeDeletedScheduleDraft(currentYear, currentMonth, key);
       rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
@@ -2080,6 +2155,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     selectedCellRef,
     selectionInfo,
     memos: effectiveMemos,
+    pendingDisplayValues,
+    pendingMergeSpans,
     clipboardRef,
     clipboardSource,
     setClipboardSource,
@@ -2831,6 +2908,46 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     () => (isScheduleMonthLoading ? {} : pendingCellBgColors),
     [isScheduleMonthLoading, pendingCellBgColors]
   );
+  const reservationGroupEdgeMap = useMemo(() => {
+    if (isScheduleMonthLoading) return {};
+    const groups = new Map();
+    Object.entries(renderMemos || {}).forEach(([key, memo]) => {
+      const mergeSpan = renderPendingMergeSpans[key] || memo?.merge_span;
+      const group = getReservationGroupFromMergeSpan(mergeSpan);
+      if (!group?.id) return;
+      const [w, d, r, c] = key.split('-').map(Number);
+      if (![w, d, r, c].every(Number.isFinite)) return;
+      if (!groups.has(group.id)) groups.set(group.id, []);
+      groups.get(group.id).push({ key, w, d, r, c });
+    });
+    Object.entries(renderPendingMergeSpans || {}).forEach(([key, mergeSpan]) => {
+      if (renderMemos[key]) return;
+      const group = getReservationGroupFromMergeSpan(mergeSpan);
+      if (!group?.id) return;
+      const [w, d, r, c] = key.split('-').map(Number);
+      if (![w, d, r, c].every(Number.isFinite)) return;
+      if (!groups.has(group.id)) groups.set(group.id, []);
+      groups.get(group.id).push({ key, w, d, r, c });
+    });
+
+    const edgeMap = {};
+    groups.forEach((items) => {
+      if (!items.length) return;
+      const minRow = Math.min(...items.map((item) => item.r));
+      const maxRow = Math.max(...items.map((item) => item.r));
+      const minCol = Math.min(...items.map((item) => item.c));
+      const maxCol = Math.max(...items.map((item) => item.c));
+      items.forEach((item) => {
+        edgeMap[item.key] = {
+          top: item.r === minRow,
+          bottom: item.r === maxRow,
+          left: item.c === minCol,
+          right: item.c === maxCol,
+        };
+      });
+    });
+    return edgeMap;
+  }, [isScheduleMonthLoading, renderMemos, renderPendingMergeSpans]);
 
   // selectedCell 변경 시 이전 셀 드래프트 자동 flush
   const prevSelectedRef = useRef(null);
@@ -3116,6 +3233,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               selectedKeys={selectedKeys} selectedCell={selectedCell} clipboardSource={clipboardSource}
                               workState={workState} staffBlockRule={staffBlockRule}
                               effectivePrescriptionColors={effectivePrescriptionColors}
+                              reservationGroupEdge={reservationGroupEdgeMap[key]}
                               visitLineBreakPrescriptions={prescriptionScheduleSettings.visitLineBreakPrescriptions}
                               editValue={editValue} setEditValue={setEditValue}
                               handleCellMouseDown={handleCellMouseDown} handleCellMouseEnter={handleCellMouseEnter}
@@ -3158,7 +3276,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         weeks, dayColWidth, todayWeekIdx, today, getTimeSlotsForDay,
         therapistColsCSS, colCount, getTherapistNameForDate, activeColRatios,
         startColResize, startDayResize, startRowResize,
-        renderMemos, renderPendingDisplayValues, renderPendingMergeSpans, renderPendingCellBgColors, editingCell, imePreviewCell,
+        renderMemos, renderPendingDisplayValues, renderPendingMergeSpans, renderPendingCellBgColors, reservationGroupEdgeMap, editingCell, imePreviewCell,
         selectedKeys, selectedCell, clipboardSource,
         getTherapistWorkState, getStaffScheduleBlockForCell,
         isLastHourSlot, effectivePrescriptionColors, editValue,
@@ -3265,6 +3383,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               })
               .sort((a, b) => a.localeCompare(b, 'ko'));
             const previousPrescriptionValue = previousPrescription?.value || '';
+            const selectedHasSameReservationGroup = selectionHasReservationGroup({
+              keys: selectedKeys,
+              memos: renderMemos,
+              pendingMergeSpans: renderPendingMergeSpans,
+            });
+            const sameReservationLabel = selectedHasSameReservationGroup ? '동시간 예약 취소' : '동시간 예약';
 
             return (
               <>
@@ -3318,6 +3442,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                     <span className="context-menu-shortcut">{shortcutLabels.merge}</span>
                   </button>
                 )}
+                <div className="context-menu-divider" />
+                <button
+                  type="button"
+                  className="context-menu-item"
+                  data-shortcut-tooltip={`${sameReservationLabel} Ctrl+Q`}
+                  onClick={() => handleContextAction('same-reservation-group-toggle')}
+                  disabled={!selectedHasSameReservationGroup && (!selectedKeys || selectedKeys.size < 2)}
+                >
+                  <span className="context-menu-label">{sameReservationLabel}</span>
+                  <span className="context-menu-shortcut">Ctrl+Q</span>
+                </button>
                 <div className="context-menu-divider" />
                 <button
                   type="button"
