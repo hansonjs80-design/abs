@@ -948,7 +948,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
     // 새 하이라이트 적용
     if (activeWeek !== null && activeRow !== null) {
-      const timeCell = container.querySelector(`[data-time-row="${activeWeek}-${activeRow}"]`);
+      const timeCell = container.querySelector(`[data-time-row="${activeWeek}-${activeRow}"]`)
+        || Array.from(container.querySelectorAll(`[data-time-week="${activeWeek}"]`)).find((cell) => {
+          const start = Number(cell.dataset.timeRowStart);
+          const end = Number(cell.dataset.timeRowEnd);
+          return Number.isFinite(start) && Number.isFinite(end) && activeRow >= start && activeRow <= end;
+        });
       if (timeCell) {
         timeCell.classList.add('active-row');
       }
@@ -2990,11 +2995,23 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                         const labelSpan = Math.round(labelInterval / interval);
 
                         if (slotInfo.showLabel) {
+                          const hoverRowIdx = Number(hoverCell?.rowIdx);
+                          const isHoverWithinTimeLabel = hoverCell?.weekIdx === weekIdx
+                            && Number.isFinite(hoverRowIdx)
+                            && hoverRowIdx >= rowIdx
+                            && hoverRowIdx < rowIdx + labelSpan;
+                          const hoveredSlotInfo = isHoverWithinTimeLabel
+                            ? daySlots.find((slot) => slot.idx === hoverRowIdx)
+                            : null;
+                          const displayTimeLabel = hoveredSlotInfo?.time || hoveredSlotInfo?.fullLabel || slotInfo.label;
                           elements.push(
                             <div
                               key={`time-${rowIdx}`}
-                              className={`sw-time-label${slotInfo.isLunch ? ' lunch' : ''}${slotInfo.disabled ? ' disabled' : ''}`}
+                              className={`sw-time-label${slotInfo.isLunch ? ' lunch' : ''}${slotInfo.disabled ? ' disabled' : ''}${isHoverWithinTimeLabel ? ' active-row' : ''}`}
                               data-time-row={`${weekIdx}-${rowIdx}`}
+                              data-time-week={weekIdx}
+                              data-time-row-start={rowIdx}
+                              data-time-row-end={rowIdx + labelSpan - 1}
                               style={{
                                 gridColumn: '1',
                                 gridRow: `${gridRowStart} / span ${labelSpan}`,
@@ -3004,7 +3021,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               onMouseMove={(e) => handleTimeLabelMouseMove(e, weekIdx, dayIdx, slotRenderIndex, labelSpan, daySlots)}
                               onMouseLeave={handleTimeLabelMouseLeave}
                             >
-                              {slotInfo.label}
+                              {displayTimeLabel}
                             </div>
                           );
                         }
