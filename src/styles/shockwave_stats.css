@@ -4532,9 +4532,23 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 .sw-six-month-summary-wrap {
   border: 3px solid #94a3b8 !important;
   border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+.sw-stats-body--settlement {
   overflow-x: auto !important;
-  overflow-y: hidden !important;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.sw-stats-body--settlement .sw-settlement-stack {
+  min-width: 100%;
+  width: max-content;
+}
+
+.sw-stats-body--settlement .sw-settlement-card {
+  min-width: 100%;
+  width: max-content;
 }
 
 .sw-settlement-table thead .therapist-col,
