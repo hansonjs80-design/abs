@@ -19,6 +19,7 @@ import {
   normalizeConfiguredDoseTagInContent,
   normalizeDoseTagInput,
   stripDoseTagFromContent,
+  updateDoseTagForPrescriptionContent,
 } from '../schedulerContentFormat.js';
 import {
   readDeletedScheduleDrafts,
@@ -158,6 +159,27 @@ describe('manual therapy dose tag formatting', () => {
       '14634/김보람F/Rdc*'
     );
     assert.equal(stripDoseTagFromContent('14634/김보람dc(15)', 'DC'), '14634/김보람(15)');
+  });
+
+  it('updates or removes the existing cell tag when the prescription changes', () => {
+    const doseTags = {
+      'F2.5': 'E',
+      'F3.0': 'S',
+      'F2.0': '',
+    };
+
+    assert.equal(
+      updateDoseTagForPrescriptionContent('14634/김보람E(15)', '', '', doseTags),
+      '14634/김보람(15)'
+    );
+    assert.equal(
+      updateDoseTagForPrescriptionContent('14634/김보람E(15)', 'S', '', doseTags),
+      '14634/김보람S(15)'
+    );
+    assert.equal(
+      updateDoseTagForPrescriptionContent('14634/김보람60*', '40', '60', doseTags),
+      '14634/김보람40*'
+    );
   });
 });
 

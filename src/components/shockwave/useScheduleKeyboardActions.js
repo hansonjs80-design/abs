@@ -9,7 +9,7 @@ import {
   getSchedulerVisitInputValue,
   stepVisitShortcutInputValue,
 } from '../../lib/schedulerUtils';
-import { applyDoseTagToContent, stripDoseTagFromContent } from '../../lib/schedulerContentFormat';
+import { updateDoseTagForPrescriptionContent } from '../../lib/schedulerContentFormat';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 import { getPrescriptionScheduleSettings } from '../../lib/prescriptionScheduleSettings';
 import { buildManualTherapyUnmergePayload } from '../../lib/manualTherapyMergeUtils';
@@ -427,10 +427,12 @@ export default function useScheduleKeyboardActions({
         if (!stableContent) continue;
 
         const previousDoseTag = prescriptionScheduleSettings.doseTags?.[memo.prescription] || memo.prescription?.match(/(\d{2,3})/)?.[1] || '';
-        let updatedContent = stripDoseTagFromContent(stableContent, previousDoseTag);
-        if (doseTag) {
-          updatedContent = applyDoseTagToContent(stableContent, doseTag, previousDoseTag);
-        }
+        const updatedContent = updateDoseTagForPrescriptionContent(
+          stableContent,
+          doseTag,
+          previousDoseTag,
+          prescriptionScheduleSettings.doseTags
+        );
 
         if (memo.prescription === targetPrescription && stableContent === updatedContent) continue;
 

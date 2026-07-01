@@ -9,12 +9,11 @@ import { isTreatmentCancelBg, isTreatmentCompleteBg } from '../../lib/scheduleSt
 import { getManualTherapyRowSpan } from '../../lib/manualTherapyMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import {
-  applyDoseTagToContent,
   get4060PrescriptionFromContent,
   has4060Pattern,
   normalizeConfiguredDoseTagInContent,
   normalize4060StarOrder,
-  stripDoseTagFromContent,
+  updateDoseTagForPrescriptionContent,
 } from '../../lib/schedulerContentFormat';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 import { getPrescriptionFromConfiguredDoseTag, getPrescriptionScheduleSettings } from '../../lib/prescriptionScheduleSettings';
@@ -59,7 +58,10 @@ import {
   normalizeBodyPartKey,
   parseSchedulerPatientIdentity,
   normalizeSchedulerVisitSuffix,
+  getSchedulerVisitInputValue,
   normalizeVisitInputValue,
+  applyVisitCountToSchedulerContent,
+  stepVisitShortcutInputValue,
   isOnlySchedulerVisitSuffixChange,
   getMemoListFromMergeSpan,
   stepReservationTimeWithinCellBase,
@@ -2571,12 +2573,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           const currentVal = e.target.value;
           const currentPrescription = memos[cellKey(w, d, r, c)]?.prescription || '';
           const previousDoseTag = prescriptionScheduleSettings.doseTags?.[currentPrescription] || currentPrescription.match(/(\d{2,3})/)?.[1] || '';
-          let updatedContent = stripDoseTagFromContent(currentVal, previousDoseTag);
           const autoTagMatch = targetPrescription.match(/(\d{2,3})/);
           const doseTag = prescriptionScheduleSettings.doseTags?.[targetPrescription] || (autoTagMatch ? autoTagMatch[1] : '');
-          if (doseTag) {
-            updatedContent = applyDoseTagToContent(currentVal, doseTag, previousDoseTag);
-          }
+          const updatedContent = updateDoseTagForPrescriptionContent(
+            currentVal,
+            doseTag,
+            previousDoseTag,
+            prescriptionScheduleSettings.doseTags
+          );
           handleCellSave(w, d, r, c, updatedContent, targetPrescription);
         }
       }
@@ -2634,6 +2638,23 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         const currentBg = memos[key]?.bg_color;
         const nextBgColor = currentBg === SCHEDULER_HOLIDAY_BG ? null : SCHEDULER_HOLIDAY_BG;
         handleCellSave(w, d, r, c, currentVal, undefined, nextBgColor);
+      }
+      return;
+    }
+
+    // 6. Ctrl/Cmd + ↑/↓ (편집 중 회차 증감)
+    if (isMeta && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.nativeEvent?.stopImmediatePropagation?.();
+      if (hasValue) {
+        const currentVal = e.target.value;
+        const currentVisit = getSchedulerVisitInputValue(currentVal);
+        const nextVisit = stepVisitShortcutInputValue(currentVisit, e.key === 'ArrowUp' ? 1 : -1);
+        const nextValue = applyVisitCountToSchedulerContent(currentVal, nextVisit);
+        e.target.value = nextValue;
+        setEditValue(nextValue);
+        handleCellSave(w, d, r, c, nextValue);
       }
       return;
     }

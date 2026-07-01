@@ -100,6 +100,17 @@ export function applyDoseTagToContent(text, doseTag, previousDoseTag = '') {
   return normalize4060StarOrder(`${base}${tag}${suffix}`);
 }
 
+export function updateDoseTagForPrescriptionContent(text, doseTag, previousDoseTag = '', doseTags = {}) {
+  const tag = normalizeDoseTagInput(doseTag);
+  const detectedDoseTag = getConfiguredDoseTagFromContent(text, doseTags);
+  let stripped = stripDoseTagFromContent(text, previousDoseTag || detectedDoseTag);
+  if (detectedDoseTag && detectedDoseTag !== previousDoseTag) {
+    stripped = stripDoseTagFromContent(stripped, detectedDoseTag);
+  }
+  if (!tag) return stripped;
+  return applyDoseTagToContent(stripped, tag);
+}
+
 /**
  * Extract the numeric dose tag from a prescription name.
  * e.g. "30분" → "30", "40분" → "40", "프리미엄" → ""

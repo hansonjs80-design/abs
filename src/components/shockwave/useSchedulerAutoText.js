@@ -842,7 +842,9 @@ export default function useSchedulerAutoText({
     });
 
     if (options.length === 0) {
-      const fallbackResult = { text: rawName };
+      const fallbackResult = {
+        text: userRemovedDoseTag ? rawName : markUnknownPatient(rawName),
+      };
       if (initialPrescription !== undefined) {
         fallbackResult.prescription = initialPrescription;
       }

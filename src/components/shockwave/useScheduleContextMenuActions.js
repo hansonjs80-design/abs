@@ -2,10 +2,8 @@ import { useCallback, useEffect, useRef } from 'react';
 import { buildManualTherapyUnmergePayload } from '../../lib/manualTherapyMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import {
-  applyDoseTagToContent,
   extractDoseTagFromPrescription,
-  has4060Pattern,
-  stripDoseTagFromContent,
+  updateDoseTagForPrescriptionContent,
 } from '../../lib/schedulerContentFormat';
 import {
   addBodyPartToMap,
@@ -191,13 +189,12 @@ export default function useScheduleContextMenuActions({
         const doseNumber = hasActionDoseTag ? action.doseTag : extractDoseTagFromPrescription(prescriptionValue);
         const previousDoseTag = prescriptionScheduleSettings?.doseTags?.[memo.prescription] || extractDoseTagFromPrescription(memo.prescription);
 
-        if (doseNumber) {
-          updatedContent = applyDoseTagToContent(updatedContent, doseNumber, previousDoseTag);
-        } else if (action.value && (previousDoseTag || has4060Pattern(updatedContent))) {
-          updatedContent = stripDoseTagFromContent(updatedContent, previousDoseTag);
-        } else if (!action.value) {
-          updatedContent = stripDoseTagFromContent(updatedContent, previousDoseTag);
-        }
+        updatedContent = updateDoseTagForPrescriptionContent(
+          updatedContent,
+          doseNumber,
+          previousDoseTag,
+          prescriptionScheduleSettings?.doseTags || {}
+        );
         if (memo.prescription !== action.value || updatedContent !== getStableMemoContent(key, memo)) {
           updateContextMemoSnapshot(key, memo, {
             content: updatedContent,
