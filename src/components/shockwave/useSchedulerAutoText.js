@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabaseClient';
 import {
   get4060PrescriptionFromContent,
   has4060Pattern,
+  normalizeConfiguredDoseTagInContent,
   normalize4060StarOrder,
   strip4060FromContent,
   getConfiguredDoseTagFromContent,
@@ -355,6 +356,7 @@ export default function useSchedulerAutoText({
       ...(Array.isArray(config?.shockwave?.prescriptions) ? config.shockwave.prescriptions : []),
       ...(Array.isArray(config?.manualTherapy?.prescriptions) ? config.manualTherapy.prescriptions : []),
     ].map((prescription) => String(prescription || '').trim()).filter(Boolean));
+    rawName = normalizeConfiguredDoseTagInContent(rawName, config.doseTags);
     const normalizeImportedPrescription = (prescription) => {
       const value = String(prescription || '').trim();
       if (!value) return '';

@@ -16,6 +16,7 @@ import { toProperCase } from '../bodyPartFormatUtils.js';
 import {
   applyDoseTagToContent,
   getConfiguredDoseTagFromContent,
+  normalizeConfiguredDoseTagInContent,
   normalizeDoseTagInput,
   stripDoseTagFromContent,
 } from '../schedulerContentFormat.js';
@@ -118,6 +119,18 @@ describe('manual therapy dose tag formatting', () => {
     assert.equal(stripDoseTagFromContent('234/김지인1.5(2)', '1.5'), '234/김지인(2)');
     assert.equal(getConfiguredDoseTagFromContent('234/김지인F/Rdc(2)', { 'F/Rdc': 'F/Rdc' }), 'F/Rdc');
     assert.equal(getConfiguredDoseTagFromContent('234/김지인1.5*', { 'F1.5': '1.5' }), '1.5');
+  });
+
+  it('normalizes typed tag casing to the configured scheduler tag', () => {
+    assert.equal(
+      normalizeConfiguredDoseTagInContent('14634/김보람dc(15)', { 도수DC: 'DC' }),
+      '14634/김보람DC(15)'
+    );
+    assert.equal(
+      normalizeConfiguredDoseTagInContent('14634/김보람f/rdc*', { 'F/Rdc': 'F/Rdc' }),
+      '14634/김보람F/Rdc*'
+    );
+    assert.equal(stripDoseTagFromContent('14634/김보람dc(15)', 'DC'), '14634/김보람(15)');
   });
 });
 

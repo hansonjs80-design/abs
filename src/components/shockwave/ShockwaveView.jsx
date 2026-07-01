@@ -1532,8 +1532,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       removePendingScheduleDraft(currentYear, currentMonth, key);
       return;
     }
-    setPendingDisplayValues((prev) => ({ ...prev, [key]: immediateContent }));
-    setEditingCell(null);
     const hasManualParentheticalNote = Boolean(getNonVisitParentheticalSuffix(immediateContent));
     const isVisitOnlyEdit = !hasForcedCellUpdate && isOnlySchedulerVisitSuffixChange(oldContent, immediateContent);
     let result;
@@ -1586,10 +1584,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         // 이름에서 숫자 태그가 없어졌는데 기존 처방이 도수치료 처방이면 처방 없음으로 변경
         newPrescription = '';
       }
-    }
-
-    if (newContent !== immediateContent) {
-      setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
     }
 
     const manualTherapyMerge = buildManualTherapyAutoMergePayload({
@@ -1668,6 +1662,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const mergeSpanChanged = JSON.stringify(oldMergeSpan || null) !== JSON.stringify(finalMergeSpanWithTime || null);
     const bgChanged = forcedBgColor !== undefined && memos[key]?.bg_color !== targetBgColor;
     if (newContent === oldContent && !prescriptionChanged && !bodyPartChanged && !mergeSpanChanged && !bgChanged && !manualTherapyMerge.ok) {
+      setEditingCell(null);
       setPendingDisplayValues((prev) => {
         if (!(key in prev)) return prev;
         const next = { ...prev };

@@ -53,13 +53,35 @@ export function getConfiguredDoseTagFromContent(text, doseTags = {}) {
   }) || '';
 }
 
+export function normalizeConfiguredDoseTagInContent(text, doseTags = {}) {
+  const s = normalize4060StarOrder(text);
+  if (!s) return s;
+
+  const tags = Array.from(new Set(Object.values(doseTags || {})
+    .map((tag) => normalizeDoseTagInput(tag))
+    .filter(Boolean)))
+    .sort((a, b) => b.length - a.length);
+
+  for (const tag of tags) {
+    const isSingleKoreanChar = /^[가-힣]$/.test(tag);
+    const pattern = isSingleKoreanChar
+      ? new RegExp(`([가-힣a-zA-Z])(\\s+)${escapeRegExp(tag)}(\\**)(?=$|[(\\s])`, 'i')
+      : new RegExp(`([가-힣a-zA-Z])(\\s*)${escapeRegExp(tag)}(\\**)(?=$|[(\\s])`, 'i');
+    if (pattern.test(s)) {
+      return s.replace(pattern, `$1$2${tag}$3`);
+    }
+  }
+
+  return s;
+}
+
 export function stripDoseTagFromContent(text, doseTag = '') {
   const normalizedTag = normalizeDoseTagInput(doseTag);
   if (!normalizedTag) return strip4060FromContent(text);
 
   const s = String(text || '').trim();
   if (!s) return s;
-  const pattern = new RegExp(`([가-힣a-zA-Z])\\s*${escapeRegExp(normalizedTag)}(\\**)`);
+  const pattern = new RegExp(`([가-힣a-zA-Z])\\s*${escapeRegExp(normalizedTag)}(\\**)`, 'i');
   return normalize4060StarOrder(s).replace(pattern, '$1$2');
 }
 
