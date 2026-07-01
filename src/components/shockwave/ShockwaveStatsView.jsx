@@ -79,7 +79,12 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     [shockwaveSettings, currentYear, currentMonth]
   );
   const settlementPrescriptions = useMemo(
-    () => effectiveSettlementSettings.prescriptions,
+    () => {
+      const hiddenSet = new Set(effectiveSettlementSettings.hidden_prescriptions || []);
+      return (effectiveSettlementSettings.prescriptions || []).filter((prescription) => (
+        prescription && !hiddenSet.has(prescription)
+      ));
+    },
     [effectiveSettlementSettings]
   );
   const settlementPrices = useMemo(
@@ -672,6 +677,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                           currentYear={currentYear}
                           currentMonth={currentMonth}
                           fetchLogs={fetchLogs}
+                          prescriptions={settlementPrescriptions}
                           extraDraftRows={extraDraftRows}
                           totalRecordCount={safeLogs.length}
                           therapistCount={safeTherapists.length}
