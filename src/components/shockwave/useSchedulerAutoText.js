@@ -20,6 +20,7 @@ import {
   buildMergeSpanWithBodyPartOptions,
   buildMergeSpanWithMemoList,
   buildSchedulerMemoSortKey,
+  getBodyPartOptionsFromMergeSpan,
   getExplicitVisitSuffix,
   getManualDoseTag,
   getMemoListFromMergeSpan,
@@ -45,11 +46,31 @@ const sortAutoFillOptions = (options) => (
   ))
 );
 
+const getMemoPrescription = (memo) => (
+  String(memo?.prescription || memo?.merge_span?.meta?.prescription || '').trim()
+);
+
+const getMemoBodyPart = (memo) => {
+  const directBodyPart = String(memo?.body_part || '').trim();
+  if (directBodyPart) return directBodyPart;
+  return getBodyPartOptionsFromMergeSpan(memo?.merge_span).join(', ');
+};
+
+const getHistoryPrescription = (item) => (
+  String(item?.prescription || item?.merge_span?.meta?.prescription || '').trim()
+);
+
+const getHistoryBodyPart = (item) => {
+  const directBodyPart = String(item?.body_part || '').trim();
+  if (directBodyPart) return directBodyPart;
+  return getBodyPartOptionsFromMergeSpan(item?.merge_span).join(', ');
+};
+
 const getHistoryMetadataScore = (item) => {
   if (!item) return 0;
   let score = 0;
-  if (String(item.prescription || '').trim()) score += 2;
-  if (String(item.body_part || '').trim()) score += 2;
+  if (getHistoryPrescription(item)) score += 2;
+  if (getHistoryBodyPart(item)) score += 2;
   if (getMemoListFromMergeSpan(item.merge_span).length > 0) score += 3;
   if (item.source === 'schedule') score += 1;
   return score;
@@ -242,20 +263,20 @@ export default function useSchedulerAutoText({
         candidate.latestSortKey = sortKey;
       }
 
-      const memoBodyPart = String(memo.body_part || '').trim();
+      const memoBodyPart = getMemoBodyPart(memo);
       if (memoBodyPart && (!candidate.latestNonEmptyBodyPartSortKey || sortKey > candidate.latestNonEmptyBodyPartSortKey)) {
         candidate.latestNonEmptyBodyPart = memoBodyPart;
         candidate.latestNonEmptyBodyPartSortKey = sortKey;
       }
 
-      const memoPrescription = String(memo.prescription || '').trim();
+      const memoPrescription = getMemoPrescription(memo);
       if (memoPrescription && (!candidate.latestNonEmptyPrescriptionSortKey || sortKey > candidate.latestNonEmptyPrescriptionSortKey)) {
         candidate.latestNonEmptyPrescription = memoPrescription;
         candidate.latestNonEmptyPrescriptionSortKey = sortKey;
       }
 
-      splitBodyParts(memo.body_part || '').forEach((part) => addBodyPartToMap(candidate.bodyPartsMap, part));
-      if (memo.prescription) candidate.prescriptions.add(memo.prescription);
+      splitBodyParts(memoBodyPart).forEach((part) => addBodyPartToMap(candidate.bodyPartsMap, part));
+      if (memoPrescription) candidate.prescriptions.add(memoPrescription);
     });
 
     return Array.from(candidateMap.values())
@@ -281,10 +302,10 @@ export default function useSchedulerAutoText({
           nextVisit = parseInt(incrementedParsed?.suffixValue || '0', 10) || (lastVisit > 0 ? lastVisit + 1 : 1);
         }
 
-        const effectiveLatestBodyPart = String(candidate.latestMemo?.body_part || '').trim()
+        const effectiveLatestBodyPart = getMemoBodyPart(candidate.latestMemo)
           || candidate.latestNonEmptyBodyPart
           || '';
-        const effectiveLatestPrescription = String(candidate.latestMemo?.prescription || '').trim()
+        const effectiveLatestPrescription = getMemoPrescription(candidate.latestMemo)
           || candidate.latestNonEmptyPrescription
           || '';
 
@@ -333,13 +354,15 @@ export default function useSchedulerAutoText({
     const configuredPrescriptionSet = new Set([
       ...(Array.isArray(config?.shockwave?.prescriptions) ? config.shockwave.prescriptions : []),
       ...(Array.isArray(config?.manualTherapy?.prescriptions) ? config.manualTherapy.prescriptions : []),
-      ...(Array.isArray(settings?.prescriptions) ? settings.prescriptions : []),
-      ...(Array.isArray(settings?.manual_therapy_prescriptions) ? settings.manual_therapy_prescriptions : []),
     ].map((prescription) => String(prescription || '').trim()).filter(Boolean));
     const normalizeImportedPrescription = (prescription) => {
       const value = String(prescription || '').trim();
       if (!value) return '';
       return configuredPrescriptionSet.size === 0 || configuredPrescriptionSet.has(value) ? value : '';
+    };
+    const isConfiguredPrescription = (prescription) => {
+      const value = String(prescription || '').trim();
+      return !value || configuredPrescriptionSet.size === 0 || configuredPrescriptionSet.has(value);
     };
     const firstConfiguredPrescription = (...prescriptions) => (
       prescriptions.map(normalizeImportedPrescription).find(Boolean) || ''
@@ -439,10 +462,15 @@ export default function useSchedulerAutoText({
           : (searchChart
             ? normalizeImportedPrescription(selected.latestPrescription || selected.prescription)
             : (normalizeImportedPrescription(selected.latestPrescription || selected.prescription) || undefined)));
+      const selectedPrescription = selected.latestPrescription || selected.prescription || '';
+      const shouldOmitSelectedPrescription = !isConfiguredPrescription(selectedPrescription);
+      const selectedText = shouldOmitSelectedPrescription
+        ? normalizeSchedulerVisitSuffix(`${selected.chartNumber}/${strip4060FromContent(selected.namePart)}(1)`)
+        : selected.nextText;
 
       return {
-        text: (explicitVisitSuffix || explicitNoteSuffix) ? rawName : selected.nextText,
-        prescription: autoPrescription,
+        text: (explicitVisitSuffix || explicitNoteSuffix) ? rawName : selectedText,
+        prescription: shouldOmitSelectedPrescription ? '' : autoPrescription,
         bodyPart: selected.latestBodyPart || '',
         mergeSpan: finalMergeSpan,
       };
@@ -641,7 +669,8 @@ export default function useSchedulerAutoText({
     const candidateMap = new Map();
     matches.forEach((item) => {
       const chartNumber = String(item.chart_number || '').trim();
-      const doseTag = item.type === 'manual' ? getManualDoseTag(item.prescription) : '';
+      const itemPrescriptionForMeta = getHistoryPrescription(item);
+      const doseTag = item.type === 'manual' ? getManualDoseTag(itemPrescriptionForMeta) : '';
       const candidateKey = chartNumber ? `${chartNumber}__${item.type}` : `${normalizeNameForMatch(item.patient_name)}__${item.type}`;
       if (!candidateMap.has(candidateKey)) {
         candidateMap.set(candidateKey, {
@@ -669,8 +698,9 @@ export default function useSchedulerAutoText({
           candidate.latestMergeSpanDate = item.date;
         }
       }
-      if (item.body_part) {
-        splitBodyParts(item.body_part).forEach((part) => {
+      const itemBodyPartForMeta = getHistoryBodyPart(item);
+      if (itemBodyPartForMeta) {
+        splitBodyParts(itemBodyPartForMeta).forEach((part) => {
           addBodyPartToMap(candidate.bodyPartsMap, part);
           const normalizedPartKey = normalizeBodyPartKey(part);
           const rawItemVisit = String(item.visit_count || '').trim();
@@ -706,7 +736,7 @@ export default function useSchedulerAutoText({
           }
         });
       }
-      const itemBodyPart = String(item.body_part || '').trim();
+      const itemBodyPart = itemBodyPartForMeta;
       if (
         itemBodyPart &&
         (
@@ -717,7 +747,7 @@ export default function useSchedulerAutoText({
         candidate.latestNonEmptyBodyPart = itemBodyPart;
         candidate.latestNonEmptyBodyPartItem = item;
       }
-      const itemPrescription = String(item.prescription || '').trim();
+      const itemPrescription = itemPrescriptionForMeta;
       if (itemPrescription) {
         candidate.prescriptions.add(itemPrescription);
         if (
@@ -751,17 +781,19 @@ export default function useSchedulerAutoText({
         nextVisit = manualSession;
       }
 
+      const itemPrescription = getHistoryPrescription(item);
+      const isCurrentPrescription = isConfiguredPrescription(itemPrescription);
       const cleanPatientName = String(item.patient_name).replace(/\*/g, '').trim();
-      let namePart = item.type === 'manual'
-        ? buildManualNamePart(cleanPatientName, item.prescription)
-        : cleanPatientName;
+      let namePart = item.type === 'manual' && isCurrentPrescription
+        ? buildManualNamePart(cleanPatientName, itemPrescription)
+        : strip4060FromContent(cleanPatientName);
       if (userRemovedDoseTag) {
         namePart = strip4060FromContent(namePart);
       }
-      const latestBodyPart = String(item.body_part || '').trim()
+      const latestBodyPart = getHistoryBodyPart(item)
         || candidate.latestNonEmptyBodyPart
         || '';
-      const latestPrescription = String(item.prescription || '').trim()
+      const latestPrescription = getHistoryPrescription(item)
         || candidate.latestNonEmptyPrescription
         || '';
       const prescriptions = Array.from(candidate.prescriptions);
@@ -774,7 +806,9 @@ export default function useSchedulerAutoText({
         ? bodyPartVisitMap[normalizeBodyPartKey(preferredBodyPart)]?.lastVisit
         : null;
 
-      const effectiveVisit = preferredNextVisit || nextVisit || preferredLastVisit || lastVisit || 1;
+      const effectiveVisit = isCurrentPrescription
+        ? (preferredNextVisit || nextVisit || preferredLastVisit || lastVisit || 1)
+        : 1;
       const nextText = `${chartNumber}/${namePart}(${effectiveVisit})`;
 
       return {
@@ -791,7 +825,8 @@ export default function useSchedulerAutoText({
         latestBodyPart,
         initialBodyParts: splitBodyParts(latestBodyPart),
         type: item.type,
-        doseTag: candidate.doseTag,
+        doseTag: isCurrentPrescription ? candidate.doseTag : '',
+        isCurrentPrescription,
         mergeSpan: candidate.latestMergeSpanWithMemoList 
           ? buildMergeSpanWithMemoList(candidate.latestMergeSpanWithMemoList, getMemoListFromMergeSpan(candidate.latestMergeSpanWithMemoList)) 
           : undefined,
@@ -841,13 +876,18 @@ export default function useSchedulerAutoText({
         bodyParts: mergedBodyParts,
         prescriptions: mergedPrescriptions,
         mergeSpan: localSchedulerOption.mergeSpan || selected.mergeSpan,
+        isCurrentPrescription: selected.isCurrentPrescription && isConfiguredPrescription(localPrescription || selected.latestPrescription || selected.prescription),
       };
     }
     if (hasExplicitSearchName && normalizeNameForMatch(selected.cleanName) !== searchName) {
       return buildUnknownPatientResult();
     }
 
-    const effectiveVisitCount = selected.preferredNextVisit || selected.nextVisit;
+    const selectedPrescription = selected.latestPrescription || selected.prescription || '';
+    const shouldOmitSelectedPrescription = !isConfiguredPrescription(selectedPrescription);
+    const effectiveVisitCount = shouldOmitSelectedPrescription
+      ? 1
+      : (selected.preferredNextVisit || selected.nextVisit);
     const oldParsed = parseSchedulerPatientIdentity(originalContent || '');
     const isNewPatient = oldParsed.patientName !== selected.cleanName && oldParsed.patientChart !== selected.chartNumber;
     const shouldOverwriteContent = isNewPatient || Boolean(searchChart);
@@ -873,7 +913,7 @@ export default function useSchedulerAutoText({
     }
 
     let autoText = `${selected.chartNumber}/${selected.namePart}`;
-    if (!selected.doseTag && !userRemovedDoseTag) {
+    if (!selected.doseTag && !userRemovedDoseTag && !shouldOmitSelectedPrescription) {
       const pureChartInput = /^\d+$/.test(rawName.replace(/\(\d+\)$/, '').trim());
       if (!pureChartInput) {
         const inputDoseMatch = rawName.match(/(\d{2,3})(?:\(\d+\))?$/);
@@ -894,12 +934,13 @@ export default function useSchedulerAutoText({
           : (shouldOverwriteContent
             ? normalizeImportedPrescription(selected.latestPrescription || selected.prescription)
             : (normalizeImportedPrescription(selected.latestPrescription || selected.prescription) || undefined))));
+    const finalAutoPrescription = shouldOmitSelectedPrescription ? '' : autoPrescription;
     const validSelectedPrescriptions = selected.prescriptions.map(normalizeImportedPrescription).filter(Boolean);
     const needsDialog = (selected.bodyParts.length >= 2 && !selected.preferredBodyPart) || validSelectedPrescriptions.length >= 2;
     if (needsDialog) {
       if (skipDialog) {
         const defaultBodyPart = selected.preferredBodyPart || selected.bodyParts[0] || selected.latestBodyPart || '';
-        const defaultPrescription = autoPrescription || normalizeImportedPrescription(selected.latestPrescription || selected.prescription) || validSelectedPrescriptions[0] || '';
+        const defaultPrescription = finalAutoPrescription || normalizeImportedPrescription(selected.latestPrescription || selected.prescription) || validSelectedPrescriptions[0] || '';
         const baseMerge = buildMergeSpanWithMemoList(inheritedMergeSpan, getMemoListFromMergeSpan(inheritedMergeSpan));
         return {
           text: normalizeSchedulerVisitSuffix(`${selected.chartNumber}/${selected.namePart}${explicitVisitSuffix || explicitNoteSuffix || `(${effectiveVisitCount})`}`),
@@ -914,7 +955,7 @@ export default function useSchedulerAutoText({
           namePart: selected.namePart,
           cleanName: selected.cleanName,
           visitCount: effectiveVisitCount,
-          prescription: autoPrescription || '',
+          prescription: finalAutoPrescription || '',
           bodyParts: selected.bodyParts,
           latestBodyPart: selected.latestBodyPart,
           initialBodyPart: selected.preferredBodyPart,
@@ -945,7 +986,7 @@ export default function useSchedulerAutoText({
 
     return {
       text: autoText,
-      prescription: autoPrescription,
+      prescription: finalAutoPrescription,
       bodyPart: effectiveBodyPart,
       mergeSpan: finalMergeSpan,
     };

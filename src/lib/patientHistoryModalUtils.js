@@ -48,17 +48,20 @@ export function patientHistoryIdentityMatches({
   return false;
 }
 
-export function buildPatientHistoryCellUpdate(log, currentMemo = {}) {
+export function buildPatientHistoryCellUpdate(log, currentMemo = {}, options = {}) {
   const chart = String(log?.chart_number || '').trim();
   const name = String(log?.patient_name || '').replace(/\*/g, '').trim();
   const bodyPart = String(log?.body_part || currentMemo.body_part || '').trim();
-  const prescription = String(log?.prescription || '').trim();
-  const visitCount = normalizeVisitInputValue(log?.visit_count);
+  const rawPrescription = String(log?.prescription || '').trim();
+  const prescription = options.omitPrescription ? '' : rawPrescription;
+  const visitCount = normalizeVisitInputValue(
+    options.resetVisitCount ? '1' : log?.visit_count
+  );
 
   let contentName = name;
 
-  if ((log?.history_group || log?.type) === 'manual') {
-    const doseMatch = String(prescription).match(/(40|60)/);
+  if ((log?.history_group || log?.type) === 'manual' && !options.omitPrescriptionDoseTag) {
+    const doseMatch = String(rawPrescription).match(/(40|60)/);
     if (doseMatch && !has4060Pattern(contentName)) {
       contentName = `${contentName}${doseMatch[0]}`;
     }

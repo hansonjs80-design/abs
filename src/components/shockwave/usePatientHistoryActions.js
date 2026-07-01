@@ -42,6 +42,19 @@ const isActiveManualTherapyPrescription = (prescription, activeSet) => (
   activeSet.has(normalizePrescriptionForHistory(prescription))
 );
 
+const buildCurrentPrescriptionSet = (settings, year, month) => {
+  const config = getPrescriptionScheduleSettings(settings, year, month);
+  return new Set([
+    ...(Array.isArray(config?.shockwave?.prescriptions) ? config.shockwave.prescriptions : []),
+    ...(Array.isArray(config?.manualTherapy?.prescriptions) ? config.manualTherapy.prescriptions : []),
+  ].map((prescription) => String(prescription || '').trim()).filter(Boolean));
+};
+
+const isCurrentConfiguredPrescription = (prescription, currentPrescriptionSet) => {
+  const value = String(prescription || '').trim();
+  return !value || currentPrescriptionSet.size === 0 || currentPrescriptionSet.has(value);
+};
+
 const getPatientHistoryRowKey = (log = {}) => [
   log.type || '',
   log.id || '',
@@ -888,7 +901,14 @@ export default function usePatientHistoryActions({
     const key = cellKey(w, d, r, c);
 
     const currentMemo = memos[key] || {};
-    const cellUpdate = buildPatientHistoryCellUpdate(log, currentMemo);
+    const currentPrescriptionSet = buildCurrentPrescriptionSet(settings, currentYear, currentMonth);
+    const logPrescription = String(log?.prescription || '').trim();
+    const shouldOmitPrescription = !isCurrentConfiguredPrescription(logPrescription, currentPrescriptionSet);
+    const cellUpdate = buildPatientHistoryCellUpdate(log, currentMemo, {
+      omitPrescription: shouldOmitPrescription,
+      omitPrescriptionDoseTag: shouldOmitPrescription,
+      resetVisitCount: shouldOmitPrescription,
+    });
     const prescriptionScheduleSettings = getPrescriptionScheduleSettings(settings, currentYear, currentMonth);
 
     const payload = {

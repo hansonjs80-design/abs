@@ -129,4 +129,23 @@ describe('patient history apply payload', () => {
 
     assert.equal(update.body_part, 'Lt. Hip');
   });
+
+  it('omits inactive previous prescriptions while keeping patient metadata and resetting visit to first', () => {
+    const update = buildPatientHistoryCellUpdate({
+      chart_number: '13015',
+      patient_name: '한동균',
+      prescription: '40분',
+      body_part: 'Lumbar',
+      visit_count: '7',
+      history_group: 'manual',
+    }, {}, {
+      omitPrescription: true,
+      omitPrescriptionDoseTag: true,
+      resetVisitCount: true,
+    });
+
+    assert.equal(update.content, '13015/한동균(1)');
+    assert.equal(update.prescription, null);
+    assert.equal(update.body_part, 'Lumbar');
+  });
 });
