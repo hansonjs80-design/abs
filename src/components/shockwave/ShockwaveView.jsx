@@ -51,7 +51,9 @@ import {
   TREATMENT_COMPLETE_BG,
   TREATMENT_CANCEL_BG,
   SCHEDULER_HOLIDAY_BG,
+  getPendingDraftId,
   getShockwaveScheduleScrollKey,
+  readDeletedScheduleDrafts,
   rememberDeletedScheduleDraft,
   rememberPendingScheduleDraft,
   removeDeletedScheduleDraft,
@@ -1599,6 +1601,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const key = cellKey(w, d, r, c);
     const saveVersion = (cellSaveVersionRef.current[key] || 0) + 1;
     cellSaveVersionRef.current[key] = saveVersion;
+    const saveStartedAt = Date.now();
+    const wasDeletedAfterSaveStarted = () => {
+      const deletedDraft = readDeletedScheduleDrafts()[getPendingDraftId(currentYear, currentMonth, key)];
+      return Number(deletedDraft?.updatedAt || 0) >= saveStartedAt;
+    };
     if (editDraftRef.current?.key === key) {
       editDraftRef.current = null;
     }
@@ -1655,6 +1662,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       addToast(`[오류] 자동완성 실패: ${autoErr?.message || autoErr}`, 'error');
       result = { text: immediateContent };
     }
+    if (wasDeletedAfterSaveStarted()) return;
     if (cellSaveVersionRef.current[key] !== saveVersion) return;
     const newContent = normalizeSchedulerVisitSuffix(
       normalize4060StarOrder(typeof result === 'string' ? result : (result?.text || ''))
@@ -1897,7 +1905,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         });
         const success = await queuedSaveShockwaveMemosBulk(combinedPayload);
         if (success) {
-          clearImmediateCellDisplay(combinedPayload);
+          clearImmediateCellDisplay(combinedPayload, { force: true });
         } else {
           payload.forEach((item) => {
             const draftKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
@@ -2024,7 +2032,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         );
     if (success) {
       removePendingScheduleDraft(currentYear, currentMonth, key);
-      clearImmediateCellDisplay(finalSinglePayload);
+      clearImmediateCellDisplay(finalSinglePayload, { force: !newContent.trim() });
     } else {
       if (!newContent.trim()) removeDeletedScheduleDraft(currentYear, currentMonth, key);
       rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);

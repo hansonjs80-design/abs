@@ -13,6 +13,15 @@ const MIN_SCHEDULE_DAY_WIDTH = 100;
 const MIN_SCHEDULE_DAY_WIDTH_MOBILE = 70;
 const MIN_COL_RATIO = 0.2;
 const MOBILE_RESIZE_LOCK_KEY = 'clinic-schedule-mobile-resize-locked';
+const ROW_HEIGHT_RESIZE_SENSITIVITY = 0.5;
+const ROW_HEIGHT_PRECISION = 0.5;
+
+const clampRowHeight = (value) => (
+  Math.max(
+    MIN_SCHEDULE_ROW_HEIGHT,
+    Math.round((Number(value) || MIN_SCHEDULE_ROW_HEIGHT) / ROW_HEIGHT_PRECISION) * ROW_HEIGHT_PRECISION
+  )
+);
 
 const getPointerClient = (event) => {
   const touch = event.touches?.[0] || event.changedTouches?.[0];
@@ -101,7 +110,7 @@ export default function useScheduleResizeState({ colCount }) {
       if (!rowResizeRef.current.active) return;
       const point = getPointerClient(moveEvent);
       const delta = point.y - rowResizeRef.current.startY;
-      latestHeight = Math.max(MIN_SCHEDULE_ROW_HEIGHT, rowResizeRef.current.startHeight + delta);
+      latestHeight = clampRowHeight(rowResizeRef.current.startHeight + (delta * ROW_HEIGHT_RESIZE_SENSITIVITY));
       setRowHeight(latestHeight);
     };
     const onUp = (upEvent) => {

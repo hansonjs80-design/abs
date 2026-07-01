@@ -67,7 +67,7 @@ export default function useScheduleMergeActions({
       applyImmediateMergeSpan(payload);
       const success = await saveShockwaveMemosBulk(payload);
       if (success) {
-        clearImmediateCellDisplay(payload);
+        clearImmediateCellDisplay(payload, { force: true });
       } else {
         payload.forEach((item) => {
           const draftYear = item.year ?? currentYear;

@@ -4,6 +4,12 @@ import { shockwaveScheduleScrollMemory } from '../../lib/schedulerUtils';
 
 const SCHEDULE_TODAY_SCROLL_TOP_OFFSET = 96;
 
+const getWeekTop = (weekEl) => {
+  if (!weekEl || typeof window === 'undefined') return 0;
+  const rect = weekEl.getBoundingClientRect();
+  return rect.top + (window.scrollY || window.pageYOffset || 0);
+};
+
 export default function useScheduleTodayNavigation({
   weeks,
   today,
@@ -34,14 +40,35 @@ export default function useScheduleTodayNavigation({
     if (todayWeekIdx < 0) return;
     const weekEl = weekRefs.current[todayWeekIdx];
     if (!weekEl) return;
-    const rect = weekEl.getBoundingClientRect();
-    const targetTop = Math.max(0, rect.top + window.scrollY - SCHEDULE_TODAY_SCROLL_TOP_OFFSET);
+    const targetTop = Math.max(0, getWeekTop(weekEl) - SCHEDULE_TODAY_SCROLL_TOP_OFFSET);
     window.scrollTo({
       top: targetTop,
       left: window.scrollX || window.pageXOffset || 0,
       behavior: instant ? 'instant' : 'smooth',
     });
   }, [todayWeekIdx, weekRefs]);
+
+  const scrollToNextVisibleWeek = useCallback(() => {
+    if (!weeks.length || typeof window === 'undefined') return;
+    const anchorY = (window.scrollY || window.pageYOffset || 0) + SCHEDULE_TODAY_SCROLL_TOP_OFFSET + 1;
+    let currentWeekIdx = 0;
+    weekRefs.current.forEach((weekEl, idx) => {
+      if (!weekEl) return;
+      if (getWeekTop(weekEl) <= anchorY) {
+        currentWeekIdx = idx;
+      }
+    });
+    const nextWeekIdx = currentWeekIdx + 1;
+    if (nextWeekIdx >= weeks.length) return;
+    const nextWeekEl = weekRefs.current[nextWeekIdx];
+    if (!nextWeekEl) return;
+    const targetTop = Math.max(0, getWeekTop(nextWeekEl) - SCHEDULE_TODAY_SCROLL_TOP_OFFSET);
+    window.scrollTo({
+      top: targetTop,
+      left: window.scrollX || window.pageXOffset || 0,
+      behavior: 'smooth',
+    });
+  }, [weekRefs, weeks.length]);
 
   const saveScheduleScrollPosition = useCallback(() => {
     if (typeof window === 'undefined') return;
@@ -92,6 +119,30 @@ export default function useScheduleTodayNavigation({
       document.removeEventListener('keydown', handleTodayShortcut, true);
     };
   }, [scrollToTodayWeek]);
+
+  useEffect(() => {
+    const handleNextWeekShortcut = (event) => {
+      if (event.__shockwaveNextWeekHandled) return;
+      const key = String(event.key || '').toLowerCase();
+      const isNextWeekShortcut = (event.metaKey || event.ctrlKey) &&
+        !event.altKey &&
+        !event.shiftKey &&
+        (event.code === 'KeyN' || key === 'n' || key === 'ㅜ');
+      if (!isNextWeekShortcut) return;
+      event.__shockwaveNextWeekHandled = true;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      scrollToNextVisibleWeek();
+    };
+
+    window.addEventListener('keydown', handleNextWeekShortcut, true);
+    document.addEventListener('keydown', handleNextWeekShortcut, true);
+    return () => {
+      window.removeEventListener('keydown', handleNextWeekShortcut, true);
+      document.removeEventListener('keydown', handleNextWeekShortcut, true);
+    };
+  }, [scrollToNextVisibleWeek]);
 
   const initialScrollDoneRef = useRef(false);
   useEffect(() => {
