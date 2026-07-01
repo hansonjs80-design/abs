@@ -96,6 +96,13 @@ export function rememberDeletedScheduleDraft(year, month, key) {
   writeDeletedScheduleDrafts(deletedDrafts);
 }
 
+export function removeDeletedScheduleDraft(year, month, key) {
+  if (!key) return;
+  const deletedDrafts = readDeletedScheduleDrafts();
+  delete deletedDrafts[getPendingDraftId(year, month, key)];
+  writeDeletedScheduleDrafts(deletedDrafts);
+}
+
 export function readPendingScheduleDrafts() {
   if (typeof window === 'undefined') return {};
   try {

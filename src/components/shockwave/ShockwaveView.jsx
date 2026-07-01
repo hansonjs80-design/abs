@@ -53,6 +53,7 @@ import {
   getShockwaveScheduleScrollKey,
   rememberDeletedScheduleDraft,
   rememberPendingScheduleDraft,
+  removeDeletedScheduleDraft,
   removePendingScheduleDraft,
   splitBodyParts,
   normalizeBodyPartKey,
@@ -1741,15 +1742,19 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           type: 'bulk-edit',
           oldMemos: buildMemoSnapshotForKeys(affectedKeys, { includePendingDisplay: false }),
         });
+        payload.forEach((item) => {
+          const draftKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+          rememberDeletedScheduleDraft(currentYear, currentMonth, draftKey);
+          removePendingScheduleDraft(currentYear, currentMonth, draftKey);
+        });
         const success = await queuedSaveShockwaveMemosBulk(payload);
         if (success) {
-          payload.forEach((item) => {
-            const draftKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-            rememberDeletedScheduleDraft(currentYear, currentMonth, draftKey);
-            removePendingScheduleDraft(currentYear, currentMonth, draftKey);
-          });
           clearImmediateCellDisplay(payload);
         } else {
+          payload.forEach((item) => {
+            const draftKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+            removeDeletedScheduleDraft(currentYear, currentMonth, draftKey);
+          });
           rememberPendingScheduleDraft(currentYear, currentMonth, key, '');
           const errMsg = window.lastDbError?.message || window.lastDbError?.error_description || (typeof window.lastDbError === 'string' ? window.lastDbError : '') || '상세 에러 없음';
           addToast(`저장 실패 (${errMsg})`, 'error');
@@ -1836,6 +1841,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       oldPrescription: oldPrescription || null,
       oldBodyPart: oldBodyPart || null,
     });
+    if (!newContent.trim()) {
+      rememberDeletedScheduleDraft(currentYear, currentMonth, key);
+      removePendingScheduleDraft(currentYear, currentMonth, key);
+    }
     const success = await queuedOnSaveMemo(
       currentYear,
       currentMonth,
@@ -1850,10 +1859,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       finalBodyPart
     );
     if (success) {
-      if (!newContent.trim()) rememberDeletedScheduleDraft(currentYear, currentMonth, key);
       removePendingScheduleDraft(currentYear, currentMonth, key);
       clearImmediateCellDisplay(singleCellPayload);
     } else {
+      if (!newContent.trim()) removeDeletedScheduleDraft(currentYear, currentMonth, key);
       rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
     }
     // pendingDisplayValues는 즉시 삭제하지 않음.

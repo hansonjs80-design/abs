@@ -3,7 +3,7 @@ import {
   buildDeleteCellsPayload,
   buildMergeSelectionPayload,
 } from '../../lib/scheduleMergeUtils.js';
-import { rememberDeletedScheduleDraft, removePendingScheduleDraft } from '../../lib/schedulerUtils.js';
+import { rememberDeletedScheduleDraft, removeDeletedScheduleDraft, removePendingScheduleDraft } from '../../lib/schedulerUtils.js';
 
 export default function useScheduleMergeActions({
   currentYear,
@@ -34,23 +34,25 @@ export default function useScheduleMergeActions({
     });
     if (payload.length > 0) {
       recordUndo({ type: 'bulk-edit', oldMemos });
+      payload.forEach((item) => {
+        const draftYear = item.year ?? currentYear;
+        const draftMonth = item.month ?? currentMonth;
+        const draftKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+        rememberDeletedScheduleDraft(draftYear, draftMonth, draftKey);
+        removePendingScheduleDraft(draftYear, draftMonth, draftKey);
+      });
       applyImmediateCellDisplay(payload);
       applyImmediateMergeSpan(payload);
       const success = await saveShockwaveMemosBulk(payload);
       if (success) {
+        clearImmediateCellDisplay(payload);
+      } else {
         payload.forEach((item) => {
           const draftYear = item.year ?? currentYear;
           const draftMonth = item.month ?? currentMonth;
           const draftKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-          rememberDeletedScheduleDraft(draftYear, draftMonth, draftKey);
-          removePendingScheduleDraft(
-            draftYear,
-            draftMonth,
-            draftKey
-          );
+          removeDeletedScheduleDraft(draftYear, draftMonth, draftKey);
         });
-        clearImmediateCellDisplay(payload);
-      } else {
         applyImmediateCellDisplay(oldMemos);
         applyImmediateMergeSpan(oldMemos);
         addToast('삭제 실패', 'error');

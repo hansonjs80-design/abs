@@ -21,8 +21,12 @@ import {
   stripDoseTagFromContent,
 } from '../schedulerContentFormat.js';
 import {
+  readDeletedScheduleDrafts,
   readPendingScheduleDrafts,
+  rememberDeletedScheduleDraft,
   rememberPendingScheduleDraft,
+  removeDeletedScheduleDraft,
+  SHOCKWAVE_DELETED_DRAFTS_KEY,
   SHOCKWAVE_PENDING_DRAFTS_KEY,
 } from '../schedulerUtils.js';
 
@@ -47,6 +51,29 @@ describe('scheduler cell patient parsing', () => {
       patientName: '손연희',
     });
     assert.equal(getNonVisitParentheticalSuffix('3275/손연희(진료후도수)*'), '(진료후도수)');
+  });
+
+  it('can clear a transient deleted draft marker after a failed delete save', () => {
+    const originalWindow = globalThis.window;
+    const storage = new Map();
+    try {
+      globalThis.window = {
+        localStorage: {
+          getItem: (key) => storage.get(key) ?? null,
+          setItem: (key, value) => storage.set(key, value),
+          removeItem: (key) => storage.delete(key),
+        },
+      };
+
+      rememberDeletedScheduleDraft(2026, 6, '2-5-12-0');
+      assert.equal(Object.keys(readDeletedScheduleDrafts()).length, 1);
+
+      removeDeletedScheduleDraft(2026, 6, '2-5-12-0');
+      assert.equal(storage.has(SHOCKWAVE_DELETED_DRAFTS_KEY), false);
+      assert.deepEqual(readDeletedScheduleDrafts(), {});
+    } finally {
+      globalThis.window = originalWindow;
+    }
   });
 });
 
@@ -251,10 +278,10 @@ describe('Korean body part normalization', () => {
 
 describe('scheduler pending draft persistence', () => {
   it('marks only failed-save drafts as recoverable', () => {
-    const originalWindow = global.window;
+    const originalWindow = globalThis.window;
     const storage = new Map();
     try {
-      global.window = {
+      globalThis.window = {
         localStorage: {
           getItem: (key) => storage.get(key) ?? null,
           setItem: (key, value) => storage.set(key, value),
@@ -275,7 +302,7 @@ describe('scheduler pending draft persistence', () => {
         '2026-06:2-5-11-0',
       ]);
     } finally {
-      global.window = originalWindow;
+      globalThis.window = originalWindow;
     }
   });
 });
