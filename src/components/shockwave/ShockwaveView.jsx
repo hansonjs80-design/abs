@@ -12,6 +12,7 @@ import {
   applyDoseTagToContent,
   get4060PrescriptionFromContent,
   has4060Pattern,
+  normalizeConfiguredDoseTagInContent,
   normalize4060StarOrder,
   stripDoseTagFromContent,
 } from '../../lib/schedulerContentFormat';
@@ -1070,26 +1071,38 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     Object.entries(memos).forEach(([key, memo]) => {
       const content = String(memo?.content || '').trim();
       if (!content) return;
-      const autoPres = getPrescriptionFromConfiguredDoseTag(settings, currentYear, currentMonth, content)
-        || get4060PrescriptionFromContent(content);
-      const targetPres = autoPres || String(memo?.prescription || '').trim();
-      if (!targetPres) return;
+      const mergeSpan = memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+      if (mergeSpan.mergedInto) return;
 
-      const expectedRowSpan = getManualTherapyRowSpan(targetPres, {
-        durationMinutesMap: prescriptionScheduleSettings?.durationMinutesMap,
-        slotMinutes: settings?.interval_minutes || 10,
+      const normalizedContent = normalizeConfiguredDoseTagInContent(content, prescriptionScheduleSettings.doseTags);
+      const autoPres = getPrescriptionFromConfiguredDoseTag(settings, currentYear, currentMonth, normalizedContent)
+        || get4060PrescriptionFromContent(normalizedContent);
+      const targetPres = autoPres || String(memo?.prescription || '').trim();
+
+      const expectedPrescriptionRowSpan = targetPres
+        ? getManualTherapyRowSpan(targetPres, {
+            durationMinutesMap: prescriptionScheduleSettings?.durationMinutesMap,
+            slotMinutes: settings?.interval_minutes || 10,
+          })
+        : 1;
+      const expectedPlainTextRowSpan = getPlainTextDefaultRowSpan({
+        intervalMinutes: settings?.interval_minutes,
+        timeLabelIntervalMinutes: settings?.time_label_interval_minutes,
       });
+      const expectedRowSpan = Math.max(expectedPrescriptionRowSpan, expectedPlainTextRowSpan);
       if (expectedRowSpan <= 1) return;
 
-      const mergeSpan = memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
       const hasExpectedMerge = (
         expectedRowSpan > 1 &&
         !mergeSpan.mergedInto &&
         (mergeSpan.rowSpan || 1) === expectedRowSpan &&
         (mergeSpan.colSpan || 1) === 1
       );
-      if (memo?.prescription === targetPres && hasExpectedMerge) return;
-      fixEntries.push({ key, prescription: targetPres, content });
+      const hasExpectedPrescription = targetPres
+        ? memo?.prescription === targetPres
+        : !String(memo?.prescription || '').trim();
+      if (content === normalizedContent && hasExpectedPrescription && hasExpectedMerge) return;
+      fixEntries.push({ key, prescription: targetPres, content: normalizedContent });
     });
 
     const blankCleanupPayload = buildBlankScheduleCleanupPayload({
@@ -1122,6 +1135,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           mergeSpan: memos[key]?.merge_span,
           durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,
           doseTags: prescriptionScheduleSettings.doseTags,
+          slotMinutes: settings?.interval_minutes || 10,
         });
         const updates = manualTherapyMerge.ok ? manualTherapyMerge.payload : [{
           year: currentYear,
