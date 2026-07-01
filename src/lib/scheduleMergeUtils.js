@@ -195,6 +195,8 @@ export function buildMergeSelectionPayload({
   const oldMemos = [];
   const payload = [];
   const combinedContent = [];
+  let mergedPrescription = '';
+  let mergedBodyPart = '';
 
   for (let row = minRow; row <= maxRow; row += 1) {
     for (let col = minCol; col <= maxCol; col += 1) {
@@ -213,6 +215,8 @@ export function buildMergeSelectionPayload({
         }));
       } else {
         if (memo?.content) combinedContent.push(memo.content);
+        if (!mergedPrescription && memo?.prescription) mergedPrescription = memo.prescription;
+        if (!mergedBodyPart && memo?.body_part) mergedBodyPart = memo.body_part;
         payload.push(buildScheduleCellPayload({
           key,
           currentYear,
@@ -234,6 +238,8 @@ export function buildMergeSelectionPayload({
     payload.forEach((item) => {
       if (!item.merge_span.mergedInto) {
         item.content = mergedText;
+        item.prescription = item.prescription || mergedPrescription || null;
+        item.body_part = item.body_part || mergedBodyPart || null;
       }
     });
   }

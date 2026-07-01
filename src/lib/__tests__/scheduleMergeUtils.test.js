@@ -40,6 +40,35 @@ describe('schedule merge payload helpers', () => {
     assert.deepEqual(payload[1].merge_span, { rowSpan: 1, colSpan: 1, mergedInto: '0-0-1-1' });
   });
 
+  it('keeps prescription and body part metadata from selected cells when merging', () => {
+    const memos = {
+      '0-0-1-1': { content: '123/홍길동', bg_color: '#fff' },
+      '0-0-1-2': { content: '', bg_color: null, prescription: 'F2.0', body_part: 'Lumbar' },
+    };
+
+    const { payload } = buildMergeSelectionPayload({
+      selection: {
+        w: 0,
+        d: 0,
+        minRow: 1,
+        maxRow: 1,
+        minCol: 1,
+        maxCol: 2,
+        masterKey: '0-0-1-1',
+        isMergedMaster: false,
+      },
+      memos,
+      currentYear: 2026,
+      currentMonth: 5,
+      cellKey,
+    });
+
+    assert.equal(payload[0].prescription, 'F2.0');
+    assert.equal(payload[0].body_part, 'Lumbar');
+    assert.equal(payload[1].prescription, 'F2.0');
+    assert.equal(payload[1].body_part, 'Lumbar');
+  });
+
   it('builds an unmerge payload that preserves each cell content and clears merge spans', () => {
     const memos = {
       '0-0-2-1': {

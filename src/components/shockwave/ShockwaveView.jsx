@@ -1110,7 +1110,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         ? memo?.prescription === targetPres
         : !String(memo?.prescription || '').trim();
       if (content === normalizedContent && hasExpectedPrescription && hasExpectedMerge) return;
-      fixEntries.push({ key, prescription: targetPres, content: normalizedContent });
+      fixEntries.push({ key, prescription: targetPres, content: normalizedContent, expectedRowSpan });
     });
 
     const blankCleanupPayload = buildBlankScheduleCleanupPayload({
@@ -1128,7 +1128,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       blankCleanupPayload.forEach((item) => {
         payloadByKey.set(`${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`, item);
       });
-      fixEntries.forEach(({ key, prescription, content }) => {
+      fixEntries.forEach(({ key, prescription, content, expectedRowSpan }) => {
         const [weekIndex, dayIndex, rowIndex, colIndex] = key.split('-').map(Number);
         const manualTherapyMerge = buildManualTherapyAutoMergePayload({
           key,
@@ -1145,19 +1145,65 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           doseTags: prescriptionScheduleSettings.doseTags,
           slotMinutes: settings?.interval_minutes || 10,
         });
-        const updates = manualTherapyMerge.ok ? manualTherapyMerge.payload : [{
-          year: currentYear,
-          month: currentMonth,
-          week_index: weekIndex,
-          day_index: dayIndex,
-          row_index: rowIndex,
-          col_index: colIndex,
-          content: memos[key]?.content || '',
-          bg_color: memos[key]?.bg_color || null,
-          merge_span: memos[key]?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
-          prescription,
-          body_part: memos[key]?.body_part || null,
-        }];
+        let updates = manualTherapyMerge.ok ? manualTherapyMerge.payload : null;
+        if (!updates && expectedRowSpan > 1 && rowIndex + expectedRowSpan <= baseTimeSlots.length) {
+          let canMergePlainText = true;
+          const defaultReservationTime = getDefaultReservationTime(weekIndex, dayIndex, rowIndex);
+          const masterMergeSpan = buildMergeSpanWithReservationTime(
+            { rowSpan: expectedRowSpan, colSpan: 1, mergedInto: null },
+            defaultReservationTime
+          );
+          updates = [];
+          for (let rowOffset = 0; rowOffset < expectedRowSpan; rowOffset += 1) {
+            const targetRow = rowIndex + rowOffset;
+            const targetKey = cellKey(weekIndex, dayIndex, targetRow, colIndex);
+            const targetMemo = memos[targetKey] || {};
+            const targetMergeSpan = targetMemo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+            const isCurrentMergeChild = targetMergeSpan.mergedInto === key;
+            if (
+              rowOffset > 0 &&
+              (
+                String(targetMemo.content || '').trim() ||
+                (targetMergeSpan.mergedInto && !isCurrentMergeChild) ||
+                (!isCurrentMergeChild && ((targetMergeSpan.rowSpan || 1) > 1 || (targetMergeSpan.colSpan || 1) > 1))
+              )
+            ) {
+              canMergePlainText = false;
+              break;
+            }
+            updates.push({
+              year: currentYear,
+              month: currentMonth,
+              week_index: weekIndex,
+              day_index: dayIndex,
+              row_index: targetRow,
+              col_index: colIndex,
+              content: rowOffset === 0 ? content : '',
+              bg_color: rowOffset === 0 ? (memos[key]?.bg_color || null) : null,
+              merge_span: rowOffset === 0
+                ? masterMergeSpan
+                : { rowSpan: 1, colSpan: 1, mergedInto: key },
+              prescription: rowOffset === 0 ? (prescription || null) : null,
+              body_part: rowOffset === 0 ? (memos[key]?.body_part || null) : null,
+            });
+          }
+          if (!canMergePlainText) updates = null;
+        }
+        if (!updates) {
+          updates = [{
+            year: currentYear,
+            month: currentMonth,
+            week_index: weekIndex,
+            day_index: dayIndex,
+            row_index: rowIndex,
+            col_index: colIndex,
+            content: memos[key]?.content || '',
+            bg_color: memos[key]?.bg_color || null,
+            merge_span: memos[key]?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+            prescription,
+            body_part: memos[key]?.body_part || null,
+          }];
+        }
         updates.forEach((item) => {
           payloadByKey.set(`${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`, item);
         });
@@ -2818,63 +2864,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
             <>
               {canManageSchedulerSettings && (
                 <div className="shockwave-week-floating-actions shockwave-week-floating-actions--right" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {/* 행 높이 미세 조절기 */}
-                  <div className="sw-height-controller" style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'white', padding: '2px 8px', borderRadius: '8px', border: '1px solid #dbe3ee', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', fontSize: '0.82rem', fontWeight: 'bold', color: '#475569' }}>
-                    <span style={{ marginRight: '4px', userSelect: 'none' }}>행 높이</span>
-                    <button
-                      type="button"
-                      onClick={() => setRowHeight((prev) => Math.max(5, prev - 1))}
-                      style={{ border: 'none', background: '#f1f5f9', borderRadius: '4px', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 'bold', color: '#475569' }}
-                      title="1px 줄이기"
-                    >
-                      -
-                    </button>
-                    <input
-                      type="number"
-                      value={rowHeight}
-                      min={5}
-                      onChange={(e) => setRowHeight(Math.max(5, Number(e.target.value) || 5))}
-                      style={{ width: '36px', border: 'none', textAlign: 'center', fontWeight: 'bold', outline: 'none', background: 'transparent', fontSize: '0.82rem', color: '#1e293b' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setRowHeight((prev) => prev + 1)}
-                      style={{ border: 'none', background: '#f1f5f9', borderRadius: '4px', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 'bold', color: '#475569' }}
-                      title="1px 늘리기"
-                    >
-                      +
-                    </button>
-                    <span style={{ color: '#94a3b8', marginLeft: '2px', fontWeight: 'normal', userSelect: 'none' }}>px</span>
-                  </div>
-
-                  {/* 열 너비 미세 조절기 */}
-                  <div className="sw-width-controller" style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'white', padding: '2px 8px', borderRadius: '8px', border: '1px solid #dbe3ee', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', fontSize: '0.82rem', fontWeight: 'bold', color: '#475569' }}>
-                    <span style={{ marginRight: '4px', userSelect: 'none' }}>열 너비</span>
-                    <button
-                      type="button"
-                      onClick={() => setDayColWidth((prev) => Math.max(70, (prev || 150) - 2))}
-                      style={{ border: 'none', background: '#f1f5f9', borderRadius: '4px', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 'bold', color: '#475569' }}
-                      title="2px 줄이기"
-                    >
-                      -
-                    </button>
-                    <input
-                      type="number"
-                      value={dayColWidth || 150}
-                      min={70}
-                      onChange={(e) => setDayColWidth(Math.max(70, Number(e.target.value) || 70))}
-                      style={{ width: '36px', border: 'none', textAlign: 'center', fontWeight: 'bold', outline: 'none', background: 'transparent', fontSize: '0.82rem', color: '#1e293b' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setDayColWidth((prev) => (prev || 150) + 2)}
-                      style={{ border: 'none', background: '#f1f5f9', borderRadius: '4px', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontWeight: 'bold', color: '#475569' }}
-                      title="2px 늘리기"
-                    >
-                      +
-                    </button>
-                    <span style={{ color: '#94a3b8', marginLeft: '2px', fontWeight: 'normal', userSelect: 'none' }}>px</span>
-                  </div>
                   <button
                     type="button"
                     className="shockwave-week-today-btn"
