@@ -259,10 +259,7 @@ export default function SettlementSettingsPanel({
       .filter((prescription) => cleanedPrescriptions.includes(prescription));
     const cleanedShortcuts = {};
     cleanedPrescriptions.forEach(prescription => {
-      const customShortcut = String(draft.shortcuts[prescription] || '').trim();
-      if (customShortcut) {
-        cleanedShortcuts[prescription] = customShortcut;
-      }
+      cleanedShortcuts[prescription] = String(draft.shortcuts[prescription] || '').trim();
     });
 
     const cleaned = {
