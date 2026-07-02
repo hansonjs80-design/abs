@@ -875,6 +875,30 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     table-layout: fixed !important;
   }
 
+  body.settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table th:first-child,
+  body.settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table td:first-child {
+    width: 28% !important;
+  }
+
+  body.settlement-print .sw-settlement-stack--shockwave .sw-recent-summary-card .sw-summary-table th:first-child,
+  body.settlement-print .sw-settlement-stack--shockwave .sw-recent-summary-card .sw-summary-table td:first-child {
+    width: 24% !important;
+  }
+
+  body.settlement-print .sw-settlement-stack--shockwave .sw-recent-summary-card .sw-summary-table th:nth-child(2),
+  body.settlement-print .sw-settlement-stack--shockwave .sw-recent-summary-card .sw-summary-table td:nth-child(2),
+  body.settlement-print .sw-settlement-stack--shockwave .sw-recent-summary-card .sw-summary-table th:nth-child(4),
+  body.settlement-print .sw-settlement-stack--shockwave .sw-recent-summary-card .sw-summary-table td:nth-child(4) {
+    width: 17% !important;
+    padding-left: 1mm !important;
+    padding-right: 1mm !important;
+  }
+
+  body.settlement-print .sw-settlement-stack--shockwave .sw-recent-summary-card .sw-summary-table th:nth-child(3),
+  body.settlement-print .sw-settlement-stack--shockwave .sw-recent-summary-card .sw-summary-table td:nth-child(3) {
+    width: 42% !important;
+  }
+
   body.settlement-print .sw-manual-summary-card {
     width: 47% !important;
     max-width: 47% !important;
