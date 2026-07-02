@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
+import { shouldIgnoreContextMenuDismissEvent } from '../../lib/contextMenuDismissUtils';
 import { isPatientHistoryShortcut } from '../../lib/scheduleKeyboardUtils';
 
 export default function useScheduleGlobalEvents({
   viewRef,
   contextMenuRef,
+  contextMenu,
   dragSelectionRef,
   selectedCell,
   selectedCellRef,
@@ -108,6 +110,7 @@ export default function useScheduleGlobalEvents({
         x: Math.min(event.clientX, maxX),
         y: Math.min(event.clientY, maxY),
         isNearRightEdge,
+        openedAt: Date.now(),
       });
     };
     el.addEventListener('contextmenu', handleContext);
@@ -117,9 +120,10 @@ export default function useScheduleGlobalEvents({
   useEffect(() => {
     const handleWindowClick = (event) => {
       if (contextMenuRef.current?.contains(event.target)) return;
+      if (shouldIgnoreContextMenuDismissEvent(contextMenu, event)) return;
       setContextMenu(null);
     };
     window.addEventListener('click', handleWindowClick);
     return () => window.removeEventListener('click', handleWindowClick);
-  }, [contextMenuRef, setContextMenu]);
+  }, [contextMenu, contextMenuRef, setContextMenu]);
 }

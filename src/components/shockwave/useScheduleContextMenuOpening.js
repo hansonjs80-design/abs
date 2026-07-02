@@ -162,6 +162,7 @@ export default function useScheduleContextMenuOpening({
       defaultReservationTime,
       savedReservationTime,
       isNearRightEdge,
+      openedAt: Date.now(),
     });
 
     const requestId = bodyPartOptionsRequestRef.current + 1;

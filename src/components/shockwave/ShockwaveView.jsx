@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { useSchedule } from '../../contexts/ScheduleContext';
 
 import { getTodayKST, isSameDate } from '../../lib/calendarUtils';
+import { shouldIgnoreContextMenuDismissEvent } from '../../lib/contextMenuDismissUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import { buildBlankScheduleCleanupPayload, sanitizeBlankScheduleCellData } from '../../lib/scheduleBlankCellCleanupUtils';
 import { markIntentionalClearPayload } from '../../lib/scheduleMergeUtils';
@@ -1261,6 +1262,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   useEffect(() => {
     const handleClickOutside = (e) => {
+      if (shouldIgnoreContextMenuDismissEvent(contextMenu, e)) return;
       if (contextMenu && !isContextMenuTarget(e.target)) {
         setContextMenu(null);
       }
@@ -2642,6 +2644,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   useScheduleGlobalEvents({
     viewRef,
     contextMenuRef,
+    contextMenu,
     dragSelectionRef,
     selectedCell,
     selectedCellRef,
