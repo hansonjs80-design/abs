@@ -4826,3 +4826,189 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   min-width: auto;
   width: max-content;
 }
+
+/* 충격파 결산 가로/세로 보기 토글 버튼 그룹 */
+.sw-view-mode-selector {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  background: #f1f5f9 !important;
+  padding: 3px !important;
+  border-radius: 20px !important;
+  border: 1px solid #cbd5e1 !important;
+  margin-right: 12px !important;
+}
+
+.sw-view-mode-btn {
+  border: none !important;
+  background: transparent !important;
+  padding: 5px 12px !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  border-radius: 15px !important;
+  cursor: pointer !important;
+  color: #64748b !important;
+  transition: all 0.2s ease !important;
+  outline: none !important;
+  line-height: 1.2 !important;
+}
+
+.sw-view-mode-btn.active {
+  background: #ffffff !important;
+  color: #1e3a8a !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 충격파 세로형 결산 화면 레이아웃 */
+.sw-settlement-vertical-layout {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 20px !important;
+  width: 100% !important;
+}
+
+.sw-settlement-vertical-header-wrap {
+  width: 100% !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.sw-settlement-vertical-body {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 24px !important;
+  align-items: flex-start !important;
+  width: 100% !important;
+}
+
+.sw-settlement-vertical-left {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 24px !important;
+  flex: 1 1 58% !important;
+  min-width: 0 !important;
+}
+
+.sw-settlement-vertical-right {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 24px !important;
+  flex: 0 0 350px !important;
+  width: 350px !important;
+  max-width: 38% !important;
+  min-width: 0 !important;
+}
+
+.sw-vertical-therapist-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  box-shadow: var(--shadow-sm) !important;
+  overflow: hidden !important;
+}
+
+.sw-vertical-therapist-header {
+  padding: 10px 16px !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+}
+
+.sw-vertical-therapist-header h3 {
+  margin: 0 !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  color: #1e3a8a !important;
+}
+
+/* 세로 보기 테이블 기본 포맷 */
+.sw-vertical-therapist-table,
+.sw-vertical-summary-table,
+.sw-vertical-prescription-summary-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  text-align: center !important;
+  font-size: 12px !important;
+}
+
+.sw-vertical-therapist-table th,
+.sw-vertical-therapist-table td,
+.sw-vertical-summary-table th,
+.sw-vertical-summary-table td,
+.sw-vertical-prescription-summary-table th,
+.sw-vertical-prescription-summary-table td {
+  padding: 10px 8px !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+  border-right: 1px solid #cbd5e1 !important;
+}
+
+.sw-vertical-therapist-table th:last-child,
+.sw-vertical-therapist-table td:last-child,
+.sw-vertical-summary-table th:last-child,
+.sw-vertical-summary-table td:last-child,
+.sw-vertical-prescription-summary-table th:last-child,
+.sw-vertical-prescription-summary-table td:last-child {
+  border-right: none !important;
+}
+
+.sw-vertical-therapist-table thead th,
+.sw-vertical-summary-table thead th,
+.sw-vertical-prescription-summary-table thead th {
+  background: #f8fafc !important;
+  font-weight: 800 !important;
+  color: #475569 !important;
+  border-bottom: 2px solid #cbd5e1 !important;
+}
+
+.sw-vertical-therapist-table tbody td.prescription-name,
+.sw-vertical-prescription-summary-table tbody td.prescription-name {
+  font-weight: 700 !important;
+  color: #334155 !important;
+  text-align: left !important;
+  padding-left: 16px !important;
+}
+
+.sw-vertical-therapist-table tbody td.count-val,
+.sw-vertical-prescription-summary-table tbody td.count-val {
+  font-weight: 600 !important;
+  color: #475569 !important;
+}
+
+.sw-vertical-therapist-table tbody td.amount-val,
+.sw-vertical-prescription-summary-table tbody td.amount-val,
+.sw-vertical-summary-table tbody td.amount-val {
+  font-weight: 700 !important;
+  color: #2563eb !important;
+}
+
+.sw-vertical-therapist-table tbody td.incentive-val,
+.sw-vertical-prescription-summary-table tbody td.incentive-val,
+.sw-vertical-summary-table tbody td.incentive-val {
+  font-weight: 700 !important;
+  color: #7c3aed !important;
+}
+
+/* 합계 행 스타일 */
+.sw-vertical-therapist-table tbody tr.vertical-total-row th,
+.sw-vertical-therapist-table tbody tr.vertical-total-row td {
+  background: #f8fafc !important;
+  font-weight: 800 !important;
+  border-top: 1.5px solid #cbd5e1 !important;
+  border-bottom: none !important;
+}
+
+.sw-vertical-summary-table tbody tr.grand-total-row th,
+.sw-vertical-summary-table tbody tr.grand-total-row td {
+  background: #eff6ff !important;
+  font-weight: 900 !important;
+  border-top: 1.5px solid #2563eb !important;
+  border-bottom: none !important;
+}
+
+/* 우측 현황 카드 보정 */
+.sw-vertical-recent-card {
+  margin: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
