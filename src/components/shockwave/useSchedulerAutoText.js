@@ -16,6 +16,10 @@ import {
   getPrescriptionScheduleSettings,
 } from '../../lib/prescriptionScheduleSettings';
 import {
+  isUnmarkedSameDaySchedulerLog,
+  shouldUseScheduleContentForPatientHistory,
+} from '../../lib/schedulerHistoryCandidateUtils';
+import {
   addBodyPartToMap,
   buildManualNamePart,
   buildMergeSpanWithBodyPartOptions,
@@ -222,7 +226,9 @@ export default function useSchedulerAutoText({
     const candidateMap = new Map();
 
     Object.entries(memos || {}).forEach(([memoKey, memo]) => {
-      if (!memo?.content) return;
+      const content = String(memo?.content || '').trim();
+      if (!content) return;
+      if (!shouldUseScheduleContentForPatientHistory(content)) return;
       if (memoKey === targetMemoKey) return;
       const sortKey = buildSchedulerMemoSortKey(memoKey, weeks);
       const sortDate = sortKey?.slice(0, 10) || '';
@@ -233,7 +239,7 @@ export default function useSchedulerAutoText({
         return;
       }
 
-      const parsed = parseSchedulerPatientText(memo.content);
+      const parsed = parseSchedulerPatientText(content);
       const memoChart = String(parsed?.chartNumber || '').trim();
       
       if (!memoChart && !parsed?.normalizedName) return;
@@ -494,6 +500,7 @@ export default function useSchedulerAutoText({
     let allData = [];
     if (preloadedData) {
       const filteredShockwave = (preloadedData.shockwaveLogs || []).filter((item) => {
+        if (isUnmarkedSameDaySchedulerLog(item, targetDate)) return false;
         return matchesSearchIdentity(item.chart_number, item.patient_name);
       }).map((item) => ({
         ...item,
@@ -511,6 +518,7 @@ export default function useSchedulerAutoText({
       if (!userRemovedDoseTag) {
         const filteredSchedules = (preloadedData.scheduleSchedules || []).filter((s) => {
           const content = s.content || '';
+          if (!shouldUseScheduleContentForPatientHistory(content)) return false;
           const parsed = parseSchedulerPatientIdentity(content);
           return matchesSearchIdentity(parsed.patientChart, parsed.patientName);
         });
@@ -548,7 +556,7 @@ export default function useSchedulerAutoText({
       }
     } else {
       const shockwaveQuery = supabase.from('shockwave_patient_logs')
-        .select('patient_name, chart_number, visit_count, date, prescription, body_part')
+        .select('patient_name, chart_number, visit_count, date, prescription, body_part, source, scheduler_cell_key')
         .lte('date', targetDate)
         .order('date', { ascending: false })
         .limit(500);
@@ -594,10 +602,12 @@ export default function useSchedulerAutoText({
         return [{ data: [] }, { data: [] }, { data: [] }];
       });
 
-      const normalizedShockwaveData = (shockwaveRes.data || []).map((item) => ({
-        ...item,
-        type: isManualTherapyRecord(item) ? 'manual' : 'shockwave',
-      }));
+      const normalizedShockwaveData = (shockwaveRes.data || [])
+        .filter((item) => !isUnmarkedSameDaySchedulerLog(item, targetDate))
+        .map((item) => ({
+          ...item,
+          type: isManualTherapyRecord(item) ? 'manual' : 'shockwave',
+        }));
       allData = userRemovedDoseTag
         ? normalizedShockwaveData.filter((item) => item.type === 'shockwave')
         : [
@@ -618,6 +628,7 @@ export default function useSchedulerAutoText({
             if (dateStr > targetDate) continue;
 
             const content = s.content || '';
+            if (!shouldUseScheduleContentForPatientHistory(content)) continue;
             const parsed = parseSchedulerPatientIdentity(content);
             if (!matchesSearchIdentity(parsed.patientChart, parsed.patientName)) continue;
 
