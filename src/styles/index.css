@@ -875,6 +875,20 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     table-layout: fixed !important;
   }
 
+  body.shockwave-settlement-print .sw-settlement-stack--shockwave .sw-grand-total-card .sw-settlement-table-wrap {
+    border: 1.2px solid #94a3b8 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    overflow: hidden !important;
+  }
+
+  body.shockwave-settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table th,
+  body.shockwave-settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table td {
+    border-right: 0.8px solid #94a3b8 !important;
+    border-bottom: 0.8px solid #94a3b8 !important;
+  }
+
   body.settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table th:first-child,
   body.settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table td:first-child {
     width: 28% !important;
@@ -901,7 +915,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   body.manual-settlement-print .sw-stats-body--settlement {
     display: grid !important;
-    grid-template-columns: minmax(0, 70%) minmax(0, 27%) !important;
+    grid-template-columns: minmax(0, 57%) minmax(0, 40%) !important;
     column-gap: 3% !important;
     align-items: start !important;
     width: 100% !important;
@@ -950,7 +964,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   }
 
   body.manual-settlement-print .sw-manual-summary-card .sw-settlement-header h2 {
-    font-size: 9.4pt !important;
+    font-size: 12pt !important;
     line-height: 1.12 !important;
     white-space: normal !important;
   }
@@ -965,31 +979,31 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   body.manual-settlement-print .sw-manual-summary-card .sw-summary-table th,
   body.manual-settlement-print .sw-manual-summary-card .sw-summary-table td {
-    padding: 1.25mm 0.7mm !important;
-    font-size: 8.6pt !important;
-    line-height: 1.08 !important;
+    padding: 1.6mm 1mm !important;
+    font-size: 10.8pt !important;
+    line-height: 1.12 !important;
     white-space: nowrap !important;
   }
 
   body.manual-settlement-print .sw-manual-summary-card .sw-summary-table thead th {
-    font-size: 8.8pt !important;
+    font-size: 11.6pt !important;
   }
 
   body.manual-settlement-print .sw-manual-summary-card .sw-summary-table th:first-child,
   body.manual-settlement-print .sw-manual-summary-card .sw-summary-table td:first-child {
-    width: 25% !important;
+    width: 24% !important;
   }
 
   body.manual-settlement-print .sw-manual-summary-card .sw-summary-table th:nth-child(2),
   body.manual-settlement-print .sw-manual-summary-card .sw-summary-table td:nth-child(2),
   body.manual-settlement-print .sw-manual-summary-card .sw-summary-table th:nth-child(4),
   body.manual-settlement-print .sw-manual-summary-card .sw-summary-table td:nth-child(4) {
-    width: 16% !important;
+    width: 15% !important;
   }
 
   body.manual-settlement-print .sw-manual-summary-card .sw-summary-table th:nth-child(3),
   body.manual-settlement-print .sw-manual-summary-card .sw-summary-table td:nth-child(3) {
-    width: 43% !important;
+    width: 46% !important;
   }
 
   body.settlement-print:not(.manual-settlement-print) .sw-manual-summary-card {

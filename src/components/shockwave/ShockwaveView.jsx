@@ -3,7 +3,10 @@ import { flushSync } from 'react-dom';
 import { useSchedule } from '../../contexts/ScheduleContext';
 
 import { getTodayKST, isSameDate } from '../../lib/calendarUtils';
-import { shouldIgnoreContextMenuDismissEvent } from '../../lib/contextMenuDismissUtils';
+import {
+  CONTEXT_MENU_DISMISS_GRACE_MS,
+  shouldIgnoreContextMenuDismissEvent,
+} from '../../lib/contextMenuDismissUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import { buildBlankScheduleCleanupPayload, sanitizeBlankScheduleCellData } from '../../lib/scheduleBlankCellCleanupUtils';
 import { markIntentionalClearPayload } from '../../lib/scheduleMergeUtils';
@@ -568,7 +571,15 @@ const MemoizedCell = memo(({
             className="sw-cell-input"
             data-hidden-input={!isEditing && !isImePreview ? 'true' : undefined}
             defaultValue={isEditing ? editValue : ''}
-            onMouseDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              if (e.button === 2) {
+                skipNextEditBlurSaveRef.current = true;
+                window.setTimeout(() => {
+                  skipNextEditBlurSaveRef.current = false;
+                }, CONTEXT_MENU_DISMISS_GRACE_MS);
+              }
+            }}
             onClick={(e) => e.stopPropagation()}
             onInput={(e) => {
               const nextValue = e.currentTarget.value;
@@ -1433,7 +1444,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       skipNextEditBlurSaveRef.current = true;
       window.setTimeout(() => {
         skipNextEditBlurSaveRef.current = false;
-      }, 0);
+      }, CONTEXT_MENU_DISMISS_GRACE_MS);
       return;
     }
     if (e?.button !== 0) return;
@@ -2059,6 +2070,29 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   handleCellSaveRef.current = handleCellSave;
 
+  const commitCurrentEditForContextMenu = useCallback(() => {
+    const draft = editDraftRef.current;
+    const activeKey = draft?.key || editingCell;
+    if (!activeKey) return null;
+
+    const nextValue = editInputRef.current?.value ?? draft?.value ?? editValue ?? '';
+    const shouldCommit = Boolean(draft?.dirty) || editingCell === activeKey;
+    if (!shouldCommit && !String(nextValue || '').trim()) return null;
+
+    setPendingDisplayValues((prev) => ({ ...prev, [activeKey]: nextValue }));
+    rememberPendingScheduleDraft(currentYear, currentMonth, activeKey, nextValue, { source: 'context-menu-edit-commit' });
+
+    const [w, d, r, c] = activeKey.split('-').map(Number);
+    if ([w, d, r, c].every(Number.isFinite)) {
+      skipNextEditBlurSaveRef.current = true;
+      Promise.resolve(handleCellSaveRef.current?.(w, d, r, c, nextValue)).catch((error) => {
+        console.error('Failed to save schedule edit before context menu:', error);
+      });
+    }
+
+    return { key: activeKey, value: nextValue };
+  }, [currentMonth, currentYear, editValue, editingCell, setPendingDisplayValues]);
+
   useEffect(() => {
     return () => {
       flushEditDraft();
@@ -2067,6 +2101,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   const { handleCellContextMenu } = useScheduleContextMenuOpening({
     cellKey,
+    commitCurrentEditForContextMenu,
     contextMenu,
     getDefaultReservationTime,
     memos: effectiveMemos,

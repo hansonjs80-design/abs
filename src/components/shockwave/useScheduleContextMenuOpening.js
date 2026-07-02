@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 
+import { CONTEXT_MENU_DISMISS_GRACE_MS } from '../../lib/contextMenuDismissUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import { supabase } from '../../lib/supabaseClient';
 import {
@@ -14,6 +15,7 @@ import {
 
 export default function useScheduleContextMenuOpening({
   cellKey,
+  commitCurrentEditForContextMenu,
   contextMenu,
   getDefaultReservationTime,
   memos,
@@ -125,8 +127,9 @@ export default function useScheduleContextMenuOpening({
       ? normalizeCellToMergeMaster({ w, d, r, c })
       : { w, d, r, c };
     skipNextEditBlurSaveRef.current = true;
-    setEditingCell(null);
     const key = cellKey(targetCell.w, targetCell.d, targetCell.r, targetCell.c);
+    const committedEdit = commitCurrentEditForContextMenu?.();
+    setEditingCell(null);
     const shouldKeepRangeSelection = selectedKeys?.size > 1 && selectedKeys.has(key);
     if (!shouldKeepRangeSelection) {
       selectSingleCell(targetCell);
@@ -136,6 +139,7 @@ export default function useScheduleContextMenuOpening({
       ...(Object.prototype.hasOwnProperty.call(pendingDisplayValues || {}, key)
         ? { content: String(pendingDisplayValues[key] ?? '') }
         : {}),
+      ...(committedEdit?.key === key ? { content: String(committedEdit.value ?? '') } : {}),
     };
     const { patientChart, patientName } = parseSchedulerPatientIdentity(currentMemo?.content || '');
     setActiveContextSubmenu(null);
@@ -184,10 +188,11 @@ export default function useScheduleContextMenuOpening({
 
     window.setTimeout(() => {
       skipNextEditBlurSaveRef.current = false;
-    }, 0);
+    }, CONTEXT_MENU_DISMISS_GRACE_MS);
   }, [
     buildContextMenuBodyPartOptions,
     cellKey,
+    commitCurrentEditForContextMenu,
     fetchHistoricalBodyPartOptions,
     getDefaultReservationTime,
     memos,
