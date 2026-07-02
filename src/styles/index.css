@@ -765,18 +765,23 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     line-height: 1.05 !important;
   }
 
+  body.settlement-print .sw-manual-compact-settlement-table {
+    table-layout: auto !important;
+    width: auto !important;
+  }
+
   body.settlement-print .sw-manual-compact-settlement-table thead .prescription-col,
   body.settlement-print .sw-manual-compact-settlement-table tbody td {
     width: auto !important;
-    min-width: 80px !important;
-    padding-left: 1.3mm !important;
-    padding-right: 1.3mm !important;
+    min-width: 70px !important;
+    padding-left: 1.5mm !important;
+    padding-right: 1.5mm !important;
   }
 
   body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table thead .therapist-col,
   body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table thead .grand-col {
     width: auto !important;
-    min-width: 160px !important;
+    min-width: 140px !important;
   }
 
   body.settlement-print .sw-manual-settlement-stack .sw-settlement-table-wrap {
@@ -917,15 +922,16 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;
-    padding: 0 !important;
+    padding: 5mm 5mm !important;
     overflow: visible !important;
   }
 
   body.manual-settlement-print .sw-manual-settlement-container {
     display: flex !important;
     flex-direction: row !important;
+    flex-wrap: nowrap !important;
     align-items: flex-start !important;
-    gap: 30pt !important;
+    gap: 24px !important;
     width: 100% !important;
     max-width: 100% !important;
   }
@@ -933,7 +939,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.manual-settlement-print .sw-manual-settlement-stack,
   body.manual-settlement-print .sw-manual-settlement-stack .sw-settlement-card {
     width: auto !important;
-    max-width: 65% !important;
+    max-width: 62% !important;
     min-width: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -958,8 +964,9 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   }
 
   body.manual-settlement-print .sw-manual-summary-card {
-    width: 280pt !important;
-    max-width: 32% !important;
+    flex: 0 0 35% !important;
+    width: 35% !important;
+    max-width: 35% !important;
     min-width: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
