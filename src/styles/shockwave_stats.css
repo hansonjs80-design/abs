@@ -4646,9 +4646,9 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 }
 
 .sw-stats-body--settlement .sw-settlement-stack.sw-settlement-stack--shockwave {
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
   gap: 18px;
 }
 
@@ -4657,14 +4657,15 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 }
 
 .sw-stats-body--settlement .sw-settlement-stack--shockwave .sw-settlement-main-card {
-  width: 100%;
+  width: max-content;
+  max-width: none;
 }
 
 .sw-settlement-main-card .sw-settlement-table-wrap {
-  width: 100%;
-  max-width: 100%;
-  display: block;
-  overflow-x: auto !important;
+  width: max-content;
+  max-width: none;
+  display: inline-block;
+  overflow-x: hidden !important;
 }
 
 .sw-settlement-support-row {
@@ -4673,7 +4674,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   align-items: start;
   gap: 18px;
   width: max-content;
-  max-width: 100%;
+  max-width: none;
 }
 
 .sw-stats-body--settlement .sw-settlement-support-row .sw-settlement-card {
