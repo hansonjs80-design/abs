@@ -1225,6 +1225,36 @@ export default function MonthlyTherapistConfig({
                 </select>
               </label>
 
+              <label className="monthly-text-style-field" style={{ gridColumn: '1 / -1' }}>
+                <span>시간 열 글자 크기</span>
+                <div className="monthly-text-style-size-row">
+                  <input
+                    type="range"
+                    min={8}
+                    max={16}
+                    step={1}
+                    value={schedulerTextSettings.time_font_size ?? DEFAULT_SCHEDULER_TEXT_SETTINGS.time_font_size}
+                    onChange={(e) => setSchedulerTextSettings((prev) => ({
+                      ...prev,
+                      time_font_size: Number(e.target.value) || DEFAULT_SCHEDULER_TEXT_SETTINGS.time_font_size,
+                    }))}
+                  />
+                  <input
+                    type="number"
+                    className="monthly-operating-input monthly-text-style-number"
+                    min={8}
+                    max={16}
+                    step={1}
+                    value={schedulerTextSettings.time_font_size ?? DEFAULT_SCHEDULER_TEXT_SETTINGS.time_font_size}
+                    onChange={(e) => setSchedulerTextSettings((prev) => ({
+                      ...prev,
+                      time_font_size: Number(e.target.value) || DEFAULT_SCHEDULER_TEXT_SETTINGS.time_font_size,
+                    }))}
+                  />
+                  <span className="monthly-text-style-unit">px</span>
+                </div>
+              </label>
+
               {/* 2. 날짜 헤더 설정 */}
               <label className="monthly-text-style-field">
                 <span>날짜 헤더 글자 크기</span>
@@ -1426,6 +1456,18 @@ export default function MonthlyTherapistConfig({
                     }}
                   >
                     치료사1
+                  </div>
+                </div>
+
+                <div className="monthly-text-style-preview-row">
+                  <div className="monthly-text-style-preview-title">시간 열 미리보기</div>
+                  <div
+                    className="monthly-text-style-preview-cell monthly-text-style-preview-cell--time"
+                    style={{
+                      fontSize: `${schedulerTextSettings.time_font_size ?? DEFAULT_SCHEDULER_TEXT_SETTINGS.time_font_size}px`,
+                    }}
+                  >
+                    10:00
                   </div>
                 </div>
 

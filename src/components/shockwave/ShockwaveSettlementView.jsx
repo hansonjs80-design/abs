@@ -130,8 +130,8 @@ export default function ShockwaveSettlementView({
   }
 
   return (
-    <div className="sw-settlement-stack">
-      <div className="sw-settlement-card">
+    <div className="sw-settlement-stack sw-settlement-stack--shockwave">
+      <div className="sw-settlement-card sw-settlement-main-card">
         <div className="sw-settlement-header">
           <h2>{currentMonth}월 충격파 결산</h2>
           <div className="sw-settlement-meta">
@@ -149,7 +149,6 @@ export default function ShockwaveSettlementView({
                     {item?.therapist?.name || ''}
                   </th>
                 ))}
-                <th className="grand-col" colSpan={safePrescriptions.length}>총 합계</th>
               </tr>
               <tr>
                 {settlement.summaryByTherapist.flatMap((item, therapistIndex) =>
@@ -159,11 +158,6 @@ export default function ShockwaveSettlementView({
                     </th>
                   ))
                 )}
-                {safePrescriptions.map((prescription, prescriptionIndex) => (
-                  <th key={`grand-head-${prescription}`} className={`grand-col prescription-col${prescriptionIndex === safePrescriptions.length - 1 ? ' therapist-group-end' : ''}`}>
-                    {prescription}
-                  </th>
-                ))}
               </tr>
             </thead>
             <tbody>
@@ -178,11 +172,6 @@ export default function ShockwaveSettlementView({
                     </td>
                   ))
                 )}
-                {safePrescriptions.map((prescription, prescriptionIndex) => (
-                  <td key={`grand-count-${prescription}`} className={`grand-value${prescriptionIndex === safePrescriptions.length - 1 ? ' therapist-group-end' : ''}`}>
-                    {formatCount(settlement.grandPrescriptionCounts[prescription] || 0)}
-                  </td>
-                ))}
               </tr>
               <tr>
                 <th className="row-label">충격파 합계(건)</th>
@@ -191,7 +180,6 @@ export default function ShockwaveSettlementView({
                     {formatCount(item.totalCount)}
                   </td>
                 ))}
-                <td className="grand-value" colSpan={safePrescriptions.length}>{formatCount(settlement.grandTotalCount)}</td>
               </tr>
               <tr className="settlement-amount-row">
                 <th className="row-label">결산 금액(원)</th>
@@ -200,7 +188,6 @@ export default function ShockwaveSettlementView({
                     {formatCurrency(item.amount)}
                   </td>
                 ))}
-                <td className="grand-value amount" colSpan={safePrescriptions.length}>{formatCurrency(settlement.grandAmount)}</td>
               </tr>
               <tr className="settlement-incentive-row">
                 <th className="row-label">인센티브 ({Number(incentivePercentage) || 0}%)</th>
@@ -209,48 +196,101 @@ export default function ShockwaveSettlementView({
                     {formatCurrency(item.incentive)}
                   </td>
                 ))}
-                <td className="grand-value incentive" colSpan={safePrescriptions.length}>{formatCurrency(settlement.grandIncentive)}</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      <div className="sw-settlement-card">
-        <div className="sw-settlement-header">
-          <h2>{recentPeriodLabel} 충격파 결산/신환 현황</h2>
-          <div className="sw-settlement-meta sw-recent-period-control">
-            <input
-              type="text"
-              value={recentPeriodInput}
-              onChange={(event) => onRecentPeriodInputChange?.(event.target.value)}
-              placeholder="최근 6개월"
-              aria-label="충격파 최근 현황 기간"
-            />
+      <div className="sw-settlement-support-row">
+        <div className="sw-settlement-card sw-grand-total-card">
+          <div className="sw-settlement-header">
+            <h2>총합계</h2>
+            <div className="sw-settlement-meta">
+              <span>{currentMonth}월 전체</span>
+            </div>
+          </div>
+
+          <div className="sw-settlement-table-wrap sw-compact-table-wrap">
+            <table className="sw-settlement-table sw-grand-total-table">
+              <thead>
+                <tr>
+                  <th className="label-col">구분</th>
+                  {safePrescriptions.map((prescription) => (
+                    <th key={`grand-summary-head-${prescription}`} className="prescription-col">
+                      {prescription}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th className="row-label">처방 건수</th>
+                  {safePrescriptions.map((prescription) => (
+                    <td key={`grand-summary-count-${prescription}`} className="grand-value">
+                      {formatCount(settlement.grandPrescriptionCounts[prescription] || 0)}
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <th className="row-label">충격파 합계(건)</th>
+                  <td className="grand-value merged-value" colSpan={safePrescriptions.length}>
+                    {formatCount(settlement.grandTotalCount)}
+                  </td>
+                </tr>
+                <tr className="settlement-amount-row">
+                  <th className="row-label">결산 금액(원)</th>
+                  <td className="grand-value merged-value amount" colSpan={safePrescriptions.length}>
+                    {formatCurrency(settlement.grandAmount)}
+                  </td>
+                </tr>
+                <tr className="settlement-incentive-row">
+                  <th className="row-label">인센티브 ({Number(incentivePercentage) || 0}%)</th>
+                  <td className="grand-value merged-value incentive" colSpan={safePrescriptions.length}>
+                    {formatCurrency(settlement.grandIncentive)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <div className="sw-settlement-table-wrap sw-compact-table-wrap">
-          <table className="sw-summary-table sw-compact-summary-table">
-            <thead>
-              <tr>
-                <th>월</th>
-                <th>건수(건)</th>
-                <th>결산 금액(원)</th>
-                <th>신환(명)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {safeRecentMonthlySummaries.map((item) => (
-                <tr key={item.monthKey}>
-                  <th className="month-label">{item.label}</th>
-                  <td>{formatCount(item.totalCount)}</td>
-                  <td className="amount">{formatCurrency(item.amount)}</td>
-                  <td className="new-patient">{item.newPatientCount}명</td>
+        <div className="sw-settlement-card sw-recent-summary-card">
+          <div className="sw-settlement-header">
+            <h2>{recentPeriodLabel} 충격파 결산/신환 현황</h2>
+            <div className="sw-settlement-meta sw-recent-period-control">
+              <input
+                type="text"
+                value={recentPeriodInput}
+                onChange={(event) => onRecentPeriodInputChange?.(event.target.value)}
+                placeholder="최근 6개월"
+                aria-label="충격파 최근 현황 기간"
+              />
+            </div>
+          </div>
+
+          <div className="sw-settlement-table-wrap sw-compact-table-wrap">
+            <table className="sw-summary-table sw-compact-summary-table">
+              <thead>
+                <tr>
+                  <th>월</th>
+                  <th>건수(건)</th>
+                  <th>결산 금액(원)</th>
+                  <th>신환(명)</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {safeRecentMonthlySummaries.map((item) => (
+                  <tr key={item.monthKey}>
+                    <th className="month-label">{item.label}</th>
+                    <td>{formatCount(item.totalCount)}</td>
+                    <td className="amount">{formatCurrency(item.amount)}</td>
+                    <td className="new-patient">{item.newPatientCount}명</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

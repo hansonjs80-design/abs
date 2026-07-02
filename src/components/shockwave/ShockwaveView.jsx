@@ -2986,6 +2986,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           '--sw-row-height': `${rowHeight}px`,
           '--sw-cell-font-size': `${effectiveSchedulerTextSettings.font_size}px`,
           '--sw-cell-font-weight': effectiveSchedulerTextSettings.font_weight,
+          '--sw-time-font-size': `${effectiveSchedulerTextSettings.time_font_size}px`,
           '--sw-header-font-size': `${effectiveSchedulerTextSettings.header_font_size}px`,
           '--sw-header-font-weight': effectiveSchedulerTextSettings.header_font_weight,
           '--sw-header-row-height': `${effectiveSchedulerTextSettings.header_height}px`,

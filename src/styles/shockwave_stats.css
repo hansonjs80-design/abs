@@ -4645,6 +4645,112 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   border-bottom: 0 !important;
 }
 
+.sw-stats-body--settlement .sw-settlement-stack.sw-settlement-stack--shockwave {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  gap: 18px;
+}
+
+.sw-stats-body--settlement .sw-settlement-stack--shockwave .sw-settlement-card {
+  min-width: 0;
+}
+
+.sw-stats-body--settlement .sw-settlement-stack--shockwave .sw-settlement-main-card {
+  width: 100%;
+}
+
+.sw-settlement-main-card .sw-settlement-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  display: block;
+  overflow-x: auto !important;
+}
+
+.sw-settlement-support-row {
+  display: grid;
+  grid-template-columns: minmax(420px, max-content) minmax(500px, max-content);
+  align-items: start;
+  gap: 18px;
+  width: max-content;
+  max-width: 100%;
+}
+
+.sw-stats-body--settlement .sw-settlement-support-row .sw-settlement-card {
+  width: auto;
+  max-width: 100%;
+  align-self: start;
+}
+
+.sw-grand-total-card,
+.sw-recent-summary-card {
+  background: #ffffff;
+}
+
+.sw-grand-total-card .sw-settlement-header,
+.sw-recent-summary-card .sw-settlement-header {
+  padding-bottom: 2px;
+}
+
+.sw-grand-total-table {
+  min-width: 0 !important;
+}
+
+.sw-grand-total-table .label-col,
+.sw-grand-total-table .row-label {
+  width: 132px !important;
+  min-width: 132px !important;
+}
+
+.sw-grand-total-table thead .prescription-col,
+.sw-grand-total-table tbody td {
+  width: 78px;
+  min-width: 78px;
+}
+
+.sw-grand-total-table .grand-value {
+  position: static !important;
+  right: auto !important;
+  border-left: 0 !important;
+  background: #ffffff !important;
+}
+
+.sw-grand-total-table .merged-value {
+  min-width: 0;
+}
+
+.sw-grand-total-table .settlement-amount-row .grand-value,
+.sw-grand-total-table .settlement-incentive-row .grand-value {
+  font-size: 1.08rem !important;
+}
+
+.sw-recent-summary-card .sw-summary-table th,
+.sw-recent-summary-card .sw-summary-table td {
+  min-width: 108px;
+}
+
+.sw-recent-summary-card .sw-summary-table th:nth-child(3),
+.sw-recent-summary-card .sw-summary-table td:nth-child(3) {
+  min-width: 150px;
+}
+
+@media (max-width: 1180px) {
+  .sw-settlement-support-row {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .sw-stats-body--settlement .sw-settlement-support-row .sw-settlement-card {
+    width: 100%;
+  }
+
+  .sw-settlement-support-row .sw-settlement-table-wrap {
+    width: 100%;
+    display: block;
+    overflow-x: auto !important;
+  }
+}
+
 /* ── Reload button spin animation ── */
 @keyframes spin-reload {
   from { transform: rotate(0deg); }

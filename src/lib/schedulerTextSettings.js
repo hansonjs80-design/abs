@@ -1,6 +1,7 @@
 export const DEFAULT_SCHEDULER_TEXT_SETTINGS = {
   font_size: 13,
   font_weight: 700,
+  time_font_size: 12,
   header_font_size: 16,
   header_font_weight: 700,
   header_height: 32,
@@ -20,6 +21,13 @@ function normalizeHeaderFontSize(value, defaultVal) {
   const nextValue = Number(value);
   if (!Number.isFinite(nextValue)) return defaultVal;
   const clamped = Math.min(24, Math.max(10, nextValue));
+  return Math.round(clamped * 2) / 2;
+}
+
+function normalizeTimeFontSize(value) {
+  const nextValue = Number(value);
+  if (!Number.isFinite(nextValue)) return DEFAULT_SCHEDULER_TEXT_SETTINGS.time_font_size;
+  const clamped = Math.min(16, Math.max(8, nextValue));
   return Math.round(clamped * 2) / 2;
 }
 
@@ -46,6 +54,7 @@ export function getEffectiveSchedulerTextSettings() {
       return {
         font_size: normalizeFontSize(parsed.font_size),
         font_weight: normalizeFontWeight(parsed.font_weight, DEFAULT_SCHEDULER_TEXT_SETTINGS.font_weight),
+        time_font_size: normalizeTimeFontSize(parsed.time_font_size),
         header_font_size: normalizeHeaderFontSize(parsed.header_font_size, DEFAULT_SCHEDULER_TEXT_SETTINGS.header_font_size),
         header_font_weight: normalizeFontWeight(parsed.header_font_weight, DEFAULT_SCHEDULER_TEXT_SETTINGS.header_font_weight),
         header_height: normalizeHeaderHeight(parsed.header_height, DEFAULT_SCHEDULER_TEXT_SETTINGS.header_height),
@@ -67,6 +76,7 @@ export function setMonthlySchedulerTextSettings(settings, _year, _month, nextCon
     const updated = {
       font_size: normalizeFontSize(nextConfig?.font_size ?? current.font_size),
       font_weight: normalizeFontWeight(nextConfig?.font_weight ?? current.font_weight, DEFAULT_SCHEDULER_TEXT_SETTINGS.font_weight),
+      time_font_size: normalizeTimeFontSize(nextConfig?.time_font_size ?? current.time_font_size),
       header_font_size: normalizeHeaderFontSize(nextConfig?.header_font_size ?? current.header_font_size, DEFAULT_SCHEDULER_TEXT_SETTINGS.header_font_size),
       header_font_weight: normalizeFontWeight(nextConfig?.header_font_weight ?? current.header_font_weight, DEFAULT_SCHEDULER_TEXT_SETTINGS.header_font_weight),
       header_height: normalizeHeaderHeight(nextConfig?.header_height ?? current.header_height, DEFAULT_SCHEDULER_TEXT_SETTINGS.header_height),

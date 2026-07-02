@@ -11,6 +11,7 @@
   --sw-row-height: 23px;
   --sw-cell-font-size: 13px;
   --sw-cell-font-weight: 700;
+  --sw-time-font-size: 12px;
   --sw-header-font-size: 16px;
   --sw-therapist-font-size: 14px;
   --sw-grid-line: #b7b7b7;
@@ -794,16 +795,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: var(--sw-time-font-size, 12px);
   font-weight: 700;
   color: #000;
   background: var(--bg-secondary);
   border-right: 2px solid #000;
+  padding: 0 1px;
   user-select: none;
   transition: opacity var(--transition-fast), visibility var(--transition-fast);
   min-height: 0;
   height: 100%;
-  line-height: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+  letter-spacing: 0;
+  line-height: 0.95;
 }
 
 .sw-time-label.hidden {
@@ -3953,4 +3960,17 @@
 
 .monthly-text-style-preview-cell--prescription {
   /* 임시 처방 컬러나 스타일을 줄 수 있음 */
+}
+
+.monthly-text-style-preview-cell--time {
+  min-width: 41px;
+  width: 41px;
+  height: 23px;
+  padding: 0 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0.95;
+  overflow: hidden;
+  white-space: nowrap;
 }
