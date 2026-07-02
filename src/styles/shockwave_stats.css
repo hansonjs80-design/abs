@@ -4688,24 +4688,38 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   background: #ffffff;
 }
 
+.sw-stats-body--settlement .sw-settlement-stack--shockwave .sw-grand-total-card {
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
 .sw-grand-total-card .sw-settlement-header,
 .sw-recent-summary-card .sw-settlement-header {
   padding-bottom: 2px;
 }
 
 .sw-grand-total-card .sw-settlement-header {
-  padding: 10px 12px;
-  border: 1px solid #d8e1ec;
-  border-radius: 9px;
-  background: #f1f5f9;
+  padding: 0 2px 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .sw-grand-total-table {
   min-width: 0 !important;
 }
 
+.sw-settlement-stack--shockwave .sw-grand-total-card .sw-settlement-table-wrap {
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
 .sw-grand-total-table thead tr:first-child > * {
-  background: #f1f5f9 !important;
+  background: #e6f1ff !important;
+  color: #16324f !important;
 }
 
 .sw-grand-total-table .label-col,

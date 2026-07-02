@@ -85,6 +85,8 @@ function cleanupPrintState() {
   document.body.classList.remove('hide-last-week');
   document.body.classList.remove('new-patient-print');
   document.body.classList.remove('settlement-print');
+  document.body.classList.remove('manual-settlement-print');
+  document.body.classList.remove('shockwave-settlement-print');
   delete document.body.dataset.calendarWeeks;
   restoreHiddenMemoRows();
 }
@@ -169,6 +171,9 @@ export default function PrintButton({ isStaffSchedule }) {
     
     if (calendarOnly) {
       document.body.classList.remove('new-patient-print');
+      document.body.classList.remove('settlement-print');
+      document.body.classList.remove('manual-settlement-print');
+      document.body.classList.remove('shockwave-settlement-print');
       document.body.classList.add('calendar-only-print');
 
       // 주차 수 결정
@@ -197,12 +202,20 @@ export default function PrintButton({ isStaffSchedule }) {
       if (isNewPatientPortraitPrint) {
         document.body.classList.add('new-patient-print');
         document.body.classList.remove('settlement-print');
+        document.body.classList.remove('manual-settlement-print');
+        document.body.classList.remove('shockwave-settlement-print');
       } else if (isSettlementPrint) {
+        const isManualSettlementPrint = Boolean(document.querySelector('.sw-manual-settlement-stack'));
+        const isShockwaveSettlementPrint = Boolean(document.querySelector('.sw-settlement-stack--shockwave'));
         document.body.classList.remove('new-patient-print');
         document.body.classList.add('settlement-print');
+        document.body.classList.toggle('manual-settlement-print', isManualSettlementPrint);
+        document.body.classList.toggle('shockwave-settlement-print', isShockwaveSettlementPrint);
       } else {
         document.body.classList.remove('new-patient-print');
         document.body.classList.remove('settlement-print');
+        document.body.classList.remove('manual-settlement-print');
+        document.body.classList.remove('shockwave-settlement-print');
       }
     }
     

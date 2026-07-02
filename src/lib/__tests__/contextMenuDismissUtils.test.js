@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   CONTEXT_MENU_DISMISS_GRACE_MS,
+  isSchedulerCellContextMenuTarget,
   shouldIgnoreContextMenuDismissEvent,
 } from '../contextMenuDismissUtils.js';
 
@@ -38,5 +39,24 @@ describe('context menu dismiss guard', () => {
       ),
       true
     );
+  });
+});
+
+describe('scheduler cell context menu target detection', () => {
+  it('detects events that came from a scheduler cell descendant', () => {
+    const target = {
+      closest: (selector) => (selector === '.sw-cell' ? { id: 'cell-0-0-0-0' } : null),
+    };
+
+    assert.equal(isSchedulerCellContextMenuTarget(target), true);
+  });
+
+  it('ignores targets outside scheduler cells', () => {
+    const target = {
+      closest: () => null,
+    };
+
+    assert.equal(isSchedulerCellContextMenuTarget(target), false);
+    assert.equal(isSchedulerCellContextMenuTarget(null), false);
   });
 });

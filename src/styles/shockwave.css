@@ -478,6 +478,22 @@
   line-height: 1;
 }
 
+.sw-cell.has-fill-bg,
+.sw-cell.staff-off,
+.sw-cell.staff-blocked,
+.sw-cell.green,
+.sw-cell.preserve,
+.sw-cell.cancelled,
+.sw-cell.holiday-bg,
+.sw-cell.other-month-bg,
+.sw-cell.other-month-muted-block,
+.sw-cell.disabled {
+  background-clip: border-box;
+  box-shadow:
+    inset 0 -1px 0 var(--sw-cell-fill-color, transparent),
+    0 1px 0 var(--sw-cell-fill-color, transparent);
+}
+
 .sw-cell-display {
   position: relative;
   z-index: 2;
@@ -624,6 +640,7 @@
 }
 
 .sw-cell.staff-off {
+  --sw-cell-fill-color: #93c47e;
   background: #93c47e;
   color: var(--text-primary);
 }
@@ -635,14 +652,17 @@
 /* 점심시간 셀에 설정된 투명도 제거하여 온전한 #93c37d 표시 */
 
 .sw-cell.green {
+  --sw-cell-fill-color: var(--sw-green);
   background: var(--sw-green);
 }
 
 .sw-cell.preserve {
+  --sw-cell-fill-color: var(--sw-preserve);
   background: var(--sw-preserve);
 }
 
 .sw-cell.cancelled {
+  --sw-cell-fill-color: #f4cccc;
   background: #f4cccc;
 }
 
@@ -695,16 +715,19 @@
 }
 
 .sw-cell.holiday-bg {
+  --sw-cell-fill-color: #f8c2c2;
   background: #f8c2c2;
 }
 
 .sw-cell.other-month-bg {
+  --sw-cell-fill-color: #f3f4f6;
   background: #f3f4f6;
   color: var(--text-primary);
   cursor: default;
 }
 
 .sw-cell.other-month-muted-block {
+  --sw-cell-fill-color: #b8b8b8;
   background: #b8b8b8;
   color: #111827;
 }
@@ -828,11 +851,13 @@
 
 /* 비활성(disabled) 시간대 및 점심시간 셀 */
 .sw-disabled-row .sw-cell, .sw-cell.disabled {
+  --sw-cell-fill-color: #93c37d;
   background: #93c37d;
   cursor: cell;
 }
 
 .sw-cell.other-month-bg.disabled {
+  --sw-cell-fill-color: #b8b8b8;
   background: #b8b8b8;
   color: #111827;
 }

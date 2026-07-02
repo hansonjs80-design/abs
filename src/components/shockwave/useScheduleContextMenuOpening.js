@@ -120,6 +120,7 @@ export default function useScheduleContextMenuOpening({
   const handleCellContextMenu = useCallback((event, w, d, r, c, currentPrescription, slotTime = '') => {
     event.preventDefault();
     event.stopPropagation();
+    event.nativeEvent?.stopImmediatePropagation?.();
     const targetCell = normalizeCellToMergeMaster
       ? normalizeCellToMergeMaster({ w, d, r, c })
       : { w, d, r, c };

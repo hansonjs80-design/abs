@@ -460,8 +460,17 @@ const MemoizedCell = memo(({
     inlineStyle.borderRight = 'none';
   }
 
-  if (dayInfo.isCurrentMonth && cellData?.bg_color) inlineStyle.backgroundColor = cellData.bg_color;
-  else if (dayInfo.isCurrentMonth && !hasDisplayText && staffBlockRule?.bg_color) inlineStyle.backgroundColor = staffBlockRule.bg_color;
+  let fillBackgroundColor = null;
+  if (dayInfo.isCurrentMonth && cellData?.bg_color) {
+    fillBackgroundColor = cellData.bg_color;
+  } else if (dayInfo.isCurrentMonth && !hasDisplayText && staffBlockRule?.bg_color) {
+    fillBackgroundColor = staffBlockRule.bg_color;
+  }
+  if (fillBackgroundColor) {
+    inlineStyle.backgroundColor = fillBackgroundColor;
+    inlineStyle['--sw-cell-fill-color'] = fillBackgroundColor;
+    cls += ' has-fill-bg';
+  }
   
   if (dayInfo.isCurrentMonth && staffBlockRule?.font_color) inlineStyle.color = staffBlockRule.font_color;
 

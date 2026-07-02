@@ -804,14 +804,14 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     line-height: 1.05 !important;
   }
 
-  body.settlement-print .sw-settlement-card:last-of-type {
+  body.settlement-print:not(.manual-settlement-print) .sw-settlement-card:last-of-type {
     width: 55% !important;
     max-width: 55% !important;
     min-width: 0 !important;
     margin: 8mm 0 0 2.5% !important;
   }
 
-  body.settlement-print .sw-settlement-card:last-of-type .sw-settlement-header {
+  body.settlement-print:not(.manual-settlement-print) .sw-settlement-card:last-of-type .sw-settlement-header {
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
@@ -820,21 +820,21 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     margin-bottom: 3mm !important;
   }
 
-  body.settlement-print .sw-settlement-card:last-of-type .sw-settlement-header h2 {
+  body.settlement-print:not(.manual-settlement-print) .sw-settlement-card:last-of-type .sw-settlement-header h2 {
     font-size: 11pt !important;
     white-space: nowrap !important;
     display: block !important;
     margin: 0 !important;
   }
 
-  body.settlement-print .sw-settlement-card:last-of-type .sw-settlement-meta {
+  body.settlement-print:not(.manual-settlement-print) .sw-settlement-card:last-of-type .sw-settlement-meta {
     display: flex !important;
     align-items: center !important;
     white-space: nowrap !important;
   }
 
-  body.settlement-print .sw-settlement-card:last-of-type .sw-compact-table-wrap,
-  body.settlement-print .sw-settlement-card:last-of-type .sw-six-month-summary-wrap {
+  body.settlement-print:not(.manual-settlement-print) .sw-settlement-card:last-of-type .sw-compact-table-wrap,
+  body.settlement-print:not(.manual-settlement-print) .sw-settlement-card:last-of-type .sw-six-month-summary-wrap {
     width: 100% !important;
     margin: 0 !important;
   }
@@ -899,7 +899,100 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     width: 42% !important;
   }
 
-  body.settlement-print .sw-manual-summary-card {
+  body.manual-settlement-print .sw-stats-body--settlement {
+    display: grid !important;
+    grid-template-columns: minmax(0, 70%) minmax(0, 27%) !important;
+    column-gap: 3% !important;
+    align-items: start !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  body.manual-settlement-print .sw-manual-settlement-stack,
+  body.manual-settlement-print .sw-manual-settlement-stack .sw-settlement-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.manual-settlement-print .sw-manual-settlement-stack .sw-settlement-header {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 0 3mm !important;
+    gap: 2mm !important;
+  }
+
+  body.manual-settlement-print .sw-manual-settlement-stack .sw-settlement-table-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  body.manual-settlement-print .sw-manual-summary-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.manual-settlement-print .sw-manual-summary-card .sw-settlement-header {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 0 3mm !important;
+    gap: 1mm !important;
+    align-items: stretch !important;
+    flex-direction: column !important;
+  }
+
+  body.manual-settlement-print .sw-manual-summary-card .sw-settlement-header h2 {
+    font-size: 9.4pt !important;
+    line-height: 1.12 !important;
+    white-space: normal !important;
+  }
+
+  body.manual-settlement-print .sw-manual-summary-card .sw-settlement-meta {
+    justify-content: flex-start !important;
+  }
+
+  body.manual-settlement-print .sw-manual-summary-card .sw-settlement-meta span {
+    display: none !important;
+  }
+
+  body.manual-settlement-print .sw-manual-summary-card .sw-summary-table th,
+  body.manual-settlement-print .sw-manual-summary-card .sw-summary-table td {
+    padding: 1.25mm 0.7mm !important;
+    font-size: 8.6pt !important;
+    line-height: 1.08 !important;
+    white-space: nowrap !important;
+  }
+
+  body.manual-settlement-print .sw-manual-summary-card .sw-summary-table thead th {
+    font-size: 8.8pt !important;
+  }
+
+  body.manual-settlement-print .sw-manual-summary-card .sw-summary-table th:first-child,
+  body.manual-settlement-print .sw-manual-summary-card .sw-summary-table td:first-child {
+    width: 25% !important;
+  }
+
+  body.manual-settlement-print .sw-manual-summary-card .sw-summary-table th:nth-child(2),
+  body.manual-settlement-print .sw-manual-summary-card .sw-summary-table td:nth-child(2),
+  body.manual-settlement-print .sw-manual-summary-card .sw-summary-table th:nth-child(4),
+  body.manual-settlement-print .sw-manual-summary-card .sw-summary-table td:nth-child(4) {
+    width: 16% !important;
+  }
+
+  body.manual-settlement-print .sw-manual-summary-card .sw-summary-table th:nth-child(3),
+  body.manual-settlement-print .sw-manual-summary-card .sw-summary-table td:nth-child(3) {
+    width: 43% !important;
+  }
+
+  body.settlement-print:not(.manual-settlement-print) .sw-manual-summary-card {
     width: 47% !important;
     max-width: 47% !important;
   }

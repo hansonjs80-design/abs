@@ -1,5 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { shouldIgnoreContextMenuDismissEvent } from '../../lib/contextMenuDismissUtils';
+import {
+  isSchedulerCellContextMenuTarget,
+  shouldIgnoreContextMenuDismissEvent,
+} from '../../lib/contextMenuDismissUtils';
 import { isPatientHistoryShortcut } from '../../lib/scheduleKeyboardUtils';
 
 export default function useScheduleGlobalEvents({
@@ -92,6 +95,7 @@ export default function useScheduleGlobalEvents({
     const el = viewRef.current;
     if (!el) return undefined;
     const handleContext = (event) => {
+      if (isSchedulerCellContextMenuTarget(event.target)) return;
       if (!selectedKeys || selectedKeys.size === 0 || editingCell) {
         setContextMenu(null);
         return;
