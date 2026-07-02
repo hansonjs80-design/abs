@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { buildManualTherapyUnmergePayload } from '../../lib/manualTherapyMergeUtils';
+import { mergeSchedulePayloadIntoPendingContextSaves } from '../../lib/schedulePrescriptionChangeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import {
   buildClearReservationGroupPayload,
@@ -360,6 +361,7 @@ export default function useScheduleContextMenuActions({
               body_part: memo.body_part || null,
             };
             applyImmediateCellDisplay?.(fallbackPayload, { keepContextMenuOpen: Boolean(contextMenu) });
+            mergeSchedulePayloadIntoPendingContextSaves(saveDebounceRef.current.pending, fallbackPayload);
             updateContextMemoSnapshot(key, memo, {
               content: updatedContent,
               merge_span: fallbackPayload.merge_span,
@@ -375,6 +377,7 @@ export default function useScheduleContextMenuActions({
 
       if (payloadByKey.size > 0) {
         const payload = Array.from(payloadByKey.values());
+        mergeSchedulePayloadIntoPendingContextSaves(saveDebounceRef.current.pending, payload);
         applyImmediateCellDisplay?.(payload, { keepContextMenuOpen: Boolean(contextMenu) });
         applyImmediateMergeSpan?.(payload);
         const success = await saveShockwaveMemosBulk(payload);

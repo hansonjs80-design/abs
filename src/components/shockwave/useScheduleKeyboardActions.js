@@ -13,6 +13,7 @@ import { updateDoseTagForPrescriptionContent } from '../../lib/schedulerContentF
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 import { getPrescriptionScheduleSettings } from '../../lib/prescriptionScheduleSettings';
 import { buildManualTherapyUnmergePayload } from '../../lib/manualTherapyMergeUtils';
+import { mergeSchedulePayloadIntoPendingShortcutSaves } from '../../lib/schedulePrescriptionChangeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import {
   buildClearReservationGroupPayload,
@@ -181,6 +182,11 @@ export default function useScheduleKeyboardActions({
       };
     });
   }, [cellKey, contextMenu, setContextMenu]);
+
+  const syncPendingShortcutSavesFromPayload = useCallback((payload = []) => {
+    mergeSchedulePayloadIntoPendingShortcutSaves(timeDebounceRef.current.pending, payload);
+    mergeSchedulePayloadIntoPendingShortcutSaves(visitDebounceRef.current.pending, payload);
+  }, []);
 
   const applyReservationTimeDelta = useCallback((deltaMinutes) => {
     const keys = Array.from(selectedKeys || []);
@@ -524,6 +530,7 @@ export default function useScheduleKeyboardActions({
           applyMergeSpanRef.current?.(manualTherapyMerge.payload);
           applyPayloadToLatestRefs(manualTherapyMerge.payload);
           updateOpenContextMenuSnapshotFromPayload(manualTherapyMerge.payload);
+          syncPendingShortcutSavesFromPayload(manualTherapyMerge.payload);
 
           const success = await saveBulkRef.current?.(manualTherapyMerge.payload);
           if (success) {
@@ -532,6 +539,7 @@ export default function useScheduleKeyboardActions({
             applyCellDisplayRef.current?.(undoSnapshot);
             applyMergeSpanRef.current?.(undoSnapshot);
             applyPayloadToLatestRefs(undoSnapshot);
+            syncPendingShortcutSavesFromPayload(undoSnapshot);
             addToast?.('도수치료 자동 병합 저장에 실패했습니다.', 'error');
           }
           continue;
@@ -557,6 +565,7 @@ export default function useScheduleKeyboardActions({
             applyMergeSpanRef.current?.(unmergePayload.payload);
             applyPayloadToLatestRefs(unmergePayload.payload);
             updateOpenContextMenuSnapshotFromPayload(unmergePayload.payload);
+            syncPendingShortcutSavesFromPayload(unmergePayload.payload);
 
             const success = await saveBulkRef.current?.(unmergePayload.payload);
             if (success) {
@@ -565,6 +574,7 @@ export default function useScheduleKeyboardActions({
               applyCellDisplayRef.current?.(undoSnapshot);
               applyMergeSpanRef.current?.(undoSnapshot);
               applyPayloadToLatestRefs(undoSnapshot);
+              syncPendingShortcutSavesFromPayload(undoSnapshot);
               addToast?.('병합 해제 저장에 실패했습니다.', 'error');
             }
             continue;
@@ -593,6 +603,7 @@ export default function useScheduleKeyboardActions({
         applyCellDisplayRef.current?.(fallbackPayload, { keepContextMenuOpen: Boolean(contextMenu) });
         applyPayloadToLatestRefs([fallbackPayload]);
         updateOpenContextMenuSnapshotFromPayload(fallbackPayload);
+        syncPendingShortcutSavesFromPayload(fallbackPayload);
         const success = await saveMemo(
           currentYear,
           currentMonth,
@@ -612,6 +623,7 @@ export default function useScheduleKeyboardActions({
           applyCellDisplayRef.current?.(undoSnapshot, { keepContextMenuOpen: Boolean(contextMenu) });
           applyPayloadToLatestRefs(undoSnapshot);
           updateOpenContextMenuSnapshotFromPayload(undoSnapshot);
+          syncPendingShortcutSavesFromPayload(undoSnapshot);
           addToast?.('처방 저장에 실패했습니다.', 'error');
         }
       }
@@ -625,7 +637,7 @@ export default function useScheduleKeyboardActions({
     })();
 
     return true;
-  }, [addToast, applyPayloadToLatestRefs, cellKey, contextMenu, currentMonth, currentYear, editingCell, getLatestSelectedCell, pendingRef, rowCount, shockwaveSettings, updateOpenContextMenuSnapshotFromPayload]);
+  }, [addToast, applyPayloadToLatestRefs, cellKey, contextMenu, currentMonth, currentYear, editingCell, getLatestSelectedCell, pendingRef, rowCount, shockwaveSettings, syncPendingShortcutSavesFromPayload, updateOpenContextMenuSnapshotFromPayload]);
 
   const moveSelectedCellsByRow = useCallback((rowDelta) => {
     const activeCell = getLatestSelectedCell();
