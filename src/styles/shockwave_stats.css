@@ -4711,10 +4711,9 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 }
 
 .sw-settlement-stack--shockwave .sw-grand-total-card .sw-settlement-table-wrap {
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  background: transparent !important;
+  border: 3px solid #94a3b8 !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
 }
 
 .sw-grand-total-table thead tr:first-child > * {
@@ -4802,4 +4801,28 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   background: #c7dcff;
   color: #1e3a8a;
   border-color: #6b9cf0;
+}
+
+/* 도수치료 결산 탭 내 가로 배치 */
+.sw-manual-settlement-container {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 20px;
+  width: max-content;
+}
+
+.sw-stats-body--settlement .sw-manual-settlement-stack {
+  min-width: auto;
+  width: max-content;
+}
+
+.sw-stats-body--settlement .sw-manual-settlement-stack .sw-settlement-card {
+  min-width: auto;
+  width: max-content;
+}
+
+.sw-stats-body--settlement .sw-manual-summary-card {
+  min-width: auto;
+  width: max-content;
 }

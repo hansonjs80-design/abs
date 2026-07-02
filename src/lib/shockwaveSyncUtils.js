@@ -96,6 +96,9 @@ export function parseTherapyInfo(rawContent) {
   name = name.trim();
   if (!name || /^\d+$/.test(name.replace(/\*/g, ''))) return null;
 
+  // 한글 이름 뒤에 붙은 도수 태그(영문/숫자 조합) 제거 (예: 박병수DC -> 박병수)
+  name = name.replace(/([가-힣]{2,})([a-zA-Z\d]+)$/, '$1').trim();
+
   return {
     patient_name: name,
     chart_number: chart,

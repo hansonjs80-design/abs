@@ -657,7 +657,7 @@ export default function ManualTherapyStatsPage() {
                     {isLoading && logs.length === 0 ? (
                       <SettlementSkeleton />
                     ) : (
-                      <>
+                      <div className="sw-manual-settlement-container">
                         <ManualTherapyStatsView
                           currentMonth={currentMonth}
                           logs={logs}
@@ -675,7 +675,7 @@ export default function ManualTherapyStatsPage() {
                           settings={shockwaveSettings}
                           selectedTherapistNames={selectedTherapistNames}
                         />
-                      </>
+                      </div>
                     )}
                   </div>
                 </ManualTherapySettlementErrorBoundary>

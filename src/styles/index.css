@@ -914,14 +914,20 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   }
 
   body.manual-settlement-print .sw-stats-body--settlement {
-    display: grid !important;
-    grid-template-columns: minmax(0, 57%) minmax(0, 40%) !important;
-    column-gap: 3% !important;
-    align-items: start !important;
+    display: block !important;
     width: 100% !important;
     max-width: 100% !important;
     padding: 0 !important;
     overflow: visible !important;
+  }
+
+  body.manual-settlement-print .sw-manual-settlement-container {
+    display: grid !important;
+    grid-template-columns: minmax(0, 63%) minmax(0, 34%) !important;
+    column-gap: 3% !important;
+    align-items: start !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   body.manual-settlement-print .sw-manual-settlement-stack,

@@ -5,7 +5,8 @@ export function parseSchedulerPatientIdentity(content) {
   const stripPatientSuffix = (value) => {
     const withoutVisit = String(value || '').trim().replace(/(\((-|\d+|\*)\)|\*)+$/g, '').trim();
     const noteSuffix = getNonVisitParentheticalSuffix(withoutVisit);
-    return noteSuffix ? withoutVisit.slice(0, -noteSuffix.length).trim() : withoutVisit;
+    const base = noteSuffix ? withoutVisit.slice(0, -noteSuffix.length).trim() : withoutVisit;
+    return base.replace(/([가-힣]{2,})([a-zA-Z\d]+)$/, '$1').trim();
   };
 
   if (cellContent.includes('/')) {
