@@ -314,6 +314,7 @@ export default function ShockwaveSettlementView({
           </div>
         </>
       ) : (
+        <>
         <div className="sw-settlement-vertical-layout">
           <div className="sw-settlement-vertical-header-wrap">
             <div className="sw-settlement-header">
@@ -450,47 +451,49 @@ export default function ShockwaveSettlementView({
                 </div>
               </div>
 
-              {/* 최근 6개월 충격파 결산/신환 현황 */}
-              <div className="sw-settlement-card sw-recent-summary-card sw-vertical-recent-card">
-                <div className="sw-settlement-header">
-                  <h2>{recentPeriodLabel} 충격파 결산/신환 현황</h2>
-                  <div className="sw-settlement-meta sw-recent-period-control">
-                    <input
-                      type="text"
-                      value={recentPeriodInput}
-                      onChange={(event) => onRecentPeriodInputChange?.(event.target.value)}
-                      placeholder="최근 6개월"
-                      aria-label="충격파 최근 현황 기간"
-                    />
-                  </div>
-                </div>
-
-                <div className="sw-settlement-table-wrap sw-compact-table-wrap">
-                  <table className="sw-summary-table sw-compact-summary-table">
-                    <thead>
-                      <tr>
-                        <th>월</th>
-                        <th>건수(건)</th>
-                        <th>결산 금액(원)</th>
-                        <th>신환(명)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {safeRecentMonthlySummaries.map((item) => (
-                        <tr key={item.monthKey}>
-                          <th className="month-label">{item.label}</th>
-                          <td>{formatCount(item.totalCount)}</td>
-                          <td className="amount">{formatCurrency(item.amount)}</td>
-                          <td className="new-patient">{item.newPatientCount}명</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
               </div>
             </div>
           </div>
-        </div>
+
+          {/* 최근 6개월 충격파 결산/신환 현황 */}
+          <div className="sw-settlement-card sw-recent-summary-card sw-vertical-recent-card">
+            <div className="sw-settlement-header">
+              <h2>{recentPeriodLabel} 충격파 결산/신환 현황</h2>
+              <div className="sw-settlement-meta sw-recent-period-control">
+                <input
+                  type="text"
+                  value={recentPeriodInput}
+                  onChange={(event) => onRecentPeriodInputChange?.(event.target.value)}
+                  placeholder="최근 6개월"
+                  aria-label="충격파 최근 현황 기간"
+                />
+              </div>
+            </div>
+
+            <div className="sw-settlement-table-wrap sw-compact-table-wrap">
+              <table className="sw-summary-table sw-compact-summary-table">
+                <thead>
+                  <tr>
+                    <th>월</th>
+                    <th>건수(건)</th>
+                    <th>결산 금액(원)</th>
+                    <th>신환(명)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {safeRecentMonthlySummaries.map((item) => (
+                    <tr key={item.monthKey}>
+                      <th className="month-label">{item.label}</th>
+                      <td>{formatCount(item.totalCount)}</td>
+                      <td className="amount">{formatCurrency(item.amount)}</td>
+                      <td className="new-patient">{item.newPatientCount}명</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
