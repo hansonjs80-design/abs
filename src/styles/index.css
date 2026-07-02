@@ -931,7 +931,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     flex-direction: row !important;
     flex-wrap: nowrap !important;
     align-items: flex-start !important;
-    gap: 24px !important;
+    gap: 32px !important;
     width: 100% !important;
     max-width: 100% !important;
   }
@@ -939,7 +939,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.manual-settlement-print .sw-manual-settlement-stack,
   body.manual-settlement-print .sw-manual-settlement-stack .sw-settlement-card {
     width: auto !important;
-    max-width: 62% !important;
+    max-width: 60% !important;
     min-width: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -951,10 +951,38 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   }
 
   body.manual-settlement-print .sw-manual-settlement-stack .sw-settlement-header {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
     width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 0 3mm !important;
-    gap: 2mm !important;
+    margin: 0 0 4mm 0 !important;
+    gap: 12px !important;
+  }
+
+  body.manual-settlement-print .sw-manual-settlement-stack .sw-settlement-header h2 {
+    font-size: 13pt !important;
+    white-space: nowrap !important;
+    margin: 0 !important;
+  }
+
+  body.manual-settlement-print .sw-manual-settlement-stack .sw-settlement-meta {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    margin: 0 !important;
+  }
+
+  body.settlement-print .sw-manual-settlement-stack .sw-settlement-meta span {
+    display: inline-flex !important;
+    white-space: nowrap !important;
+    font-size: 9.5pt !important;
+    padding: 1mm 2mm !important;
+    border: 1px solid #94a3b8 !important;
+    border-radius: 3mm !important;
+    background: #ffffff !important;
   }
 
   body.manual-settlement-print .sw-manual-settlement-stack .sw-settlement-table-wrap {
@@ -963,48 +991,135 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     margin: 0 !important;
   }
 
+  /* 테이블 내 폰트 정밀 동기화 */
+  body.manual-settlement-print .sw-manual-compact-settlement-table {
+    font-size: 9.5pt !important;
+  }
+
+  body.manual-settlement-print .sw-manual-compact-settlement-table thead th {
+    font-size: 10pt !important;
+    font-weight: 800 !important;
+    padding: 1.5mm 1mm !important;
+  }
+
+  body.manual-settlement-print .sw-manual-compact-settlement-table thead .therapist-col,
+  body.manual-settlement-print .sw-manual-compact-settlement-table thead .grand-col,
+  body.manual-settlement-print .sw-manual-compact-settlement-table thead .prescription-col {
+    font-size: 10pt !important;
+    font-weight: 800 !important;
+  }
+
+  body.manual-settlement-print .sw-manual-compact-settlement-table tbody tr td,
+  body.manual-settlement-print .sw-manual-compact-settlement-table tbody tr th {
+    font-size: 9.5pt !important;
+    font-weight: 500 !important;
+    padding: 1.5mm 1mm !important;
+  }
+
+  body.manual-settlement-print .sw-manual-compact-settlement-table tbody tr:nth-child(1) td,
+  body.manual-settlement-print .sw-manual-compact-settlement-table tbody tr:nth-child(2) td {
+    font-size: 10pt !important;
+    font-weight: 800 !important;
+  }
+
+  body.manual-settlement-print .sw-manual-compact-settlement-table tbody tr:nth-child(3) td,
+  body.manual-settlement-print .sw-manual-compact-settlement-table tbody tr:nth-child(4) td {
+    font-size: 10pt !important;
+    font-weight: 800 !important;
+  }
+
+  body.manual-settlement-print .sw-manual-compact-settlement-table .settlement-amount-row td,
+  body.manual-settlement-print .sw-manual-compact-settlement-table .settlement-incentive-row td {
+    font-size: 10.5pt !important;
+    font-weight: 900 !important;
+  }
+
+  body.manual-settlement-print .sw-manual-compact-settlement-table .label-col,
+  body.manual-settlement-print .sw-manual-compact-settlement-table .row-label {
+    width: 140px !important;
+    min-width: 140px !important;
+    max-width: 140px !important;
+    font-size: 10pt !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+    padding-left: 0 !important;
+  }
+
+  body.manual-settlement-print .sw-manual-compact-settlement-table thead .prescription-col,
+  body.manual-settlement-print .sw-manual-compact-settlement-table tbody td {
+    width: 100px !important;
+    min-width: 100px !important;
+    max-width: 100px !important;
+  }
+
+  /* 우측 현황 테이블 */
   body.manual-settlement-print .sw-manual-summary-card {
-    flex: 0 0 35% !important;
-    width: 35% !important;
-    max-width: 35% !important;
+    flex: 0 0 auto !important;
+    width: 320px !important;
+    max-width: 38% !important;
     min-width: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
   }
 
   body.manual-settlement-print .sw-manual-summary-card .sw-settlement-header {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
     width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 0 3mm !important;
-    gap: 1mm !important;
-    align-items: stretch !important;
-    flex-direction: column !important;
+    margin: 0 0 4mm 0 !important;
+    gap: 12px !important;
   }
 
   body.manual-settlement-print .sw-manual-summary-card .sw-settlement-header h2 {
-    font-size: 12pt !important;
-    line-height: 1.12 !important;
-    white-space: normal !important;
+    font-size: 13pt !important;
+    white-space: nowrap !important;
+    margin: 0 !important;
   }
 
   body.manual-settlement-print .sw-manual-summary-card .sw-settlement-meta {
-    justify-content: flex-start !important;
+    display: flex !important;
+    align-items: center !important;
+    margin: 0 !important;
   }
 
   body.manual-settlement-print .sw-manual-summary-card .sw-settlement-meta span {
     display: none !important;
   }
 
+  body.manual-settlement-print .sw-manual-summary-card .sw-settlement-meta input {
+    border: none !important;
+    background: transparent !important;
+    font-size: 9.5pt !important;
+    font-weight: 800 !important;
+    width: 70px !important;
+    text-align: right !important;
+  }
+
+  body.manual-settlement-print .sw-manual-summary-card .sw-summary-table {
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+
   body.manual-settlement-print .sw-manual-summary-card .sw-summary-table th,
   body.manual-settlement-print .sw-manual-summary-card .sw-summary-table td {
-    padding: 1.6mm 1mm !important;
-    font-size: 10.8pt !important;
-    line-height: 1.12 !important;
-    white-space: nowrap !important;
+    padding: 1.5mm 1mm !important;
+    font-size: 9.5pt !important;
+    line-height: 1.15 !important;
   }
 
   body.manual-settlement-print .sw-manual-summary-card .sw-summary-table thead th {
-    font-size: 11.6pt !important;
+    font-weight: 800 !important;
+    font-size: 10pt !important;
+  }
+
+  body.manual-settlement-print .sw-manual-summary-card .sw-summary-table tbody tr:first-child th,
+  body.manual-settlement-print .sw-manual-summary-card .sw-summary-table tbody tr:first-child td {
+    font-size: 10pt !important;
+    font-weight: 900 !important;
   }
 
   body.manual-settlement-print .sw-manual-summary-card .sw-summary-table th:first-child,
