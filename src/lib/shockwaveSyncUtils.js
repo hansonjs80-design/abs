@@ -489,6 +489,7 @@ export function formatStatsRowForScheduler(row) {
 
   let suffix = '';
   if (visitCount === '-') suffix = '(-)';
+  else if (hasStar && (!visitCount || visitCount === '1' || visitCount === '*')) suffix = '*';
   else if (visitCount) suffix = `(${visitCount})`;
   else if (hasStar) suffix = '*';
 
