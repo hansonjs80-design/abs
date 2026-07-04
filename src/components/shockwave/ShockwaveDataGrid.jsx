@@ -443,13 +443,21 @@ export default function ShockwaveDataGrid({
     const rect = target.getBoundingClientRect();
     const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 1024;
     const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 768;
-    const tooltipWidth = Math.min(224, Math.max(154, viewportWidth - 24));
+    const items = Array.isArray(tooltip.items) ? tooltip.items : [];
+    const textWeight = items.reduce((sum, item) => {
+      const labelLength = String(item?.label || '').length;
+      const countLength = String(item?.count ?? '').length;
+      return sum + labelLength + countLength + 4;
+    }, 0);
+    const desiredWidth = Math.min(520, Math.max(220, 126 + textWeight * 8));
+    const tooltipWidth = Math.min(desiredWidth, Math.max(220, viewportWidth - 24));
     const halfWidth = tooltipWidth / 2;
     const minX = 12 + halfWidth;
     const maxX = viewportWidth - 12 - halfWidth;
     const rawX = rect.left + rect.width / 2;
     const x = Math.min(Math.max(rawX, minX), Math.max(minX, maxX));
-    const estimatedHeight = 94;
+    const estimatedRows = Math.max(1, Math.ceil((items.length * 78) / tooltipWidth));
+    const estimatedHeight = 58 + estimatedRows * 27;
     const showAbove = rect.bottom + estimatedHeight + 12 > viewportHeight && rect.top > estimatedHeight + 12;
     setCountTooltip({
       ...tooltip,
@@ -1647,11 +1655,10 @@ export default function ShockwaveDataGrid({
             </div>
           </div>
           <div className="sw-grid-count-tooltip-line">
-            {countTooltip.items.map(({ label, count }, idx) => (
-              <React.Fragment key={label}>
-                {idx > 0 && <span className="sw-grid-count-tooltip-divider">|</span>}
-                <span>{label} {count}건</span>
-              </React.Fragment>
+            {countTooltip.items.map(({ label, count }) => (
+              <span className="sw-grid-count-tooltip-item" key={label}>
+                {label} {count}건
+              </span>
             ))}
           </div>
         </div>

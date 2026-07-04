@@ -17,6 +17,12 @@ import { normalizeManualTherapyLogRows } from '../lib/manualTherapyLogUtils';
 import { isAdminUser } from '../lib/authPermissions';
 const MANUAL_THERAPY_SHEET_ID = '1-R_p3eyxwXISFTYX5G7_ec5L0kgUIhNbIwA9AdEj-9U';
 
+function normalizePrescriptionKey(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+
 class ManualTherapyStatsPageErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -118,9 +124,36 @@ export default function ManualTherapyStatsPage() {
     () => getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'manual_therapy'),
     [shockwaveSettings, currentYear, currentMonth]
   );
-  const prescriptions = useMemo(
-    () => effectiveSettlementSettings.prescriptions,
+  const allPrescriptions = useMemo(
+    () => (Array.isArray(effectiveSettlementSettings.prescriptions)
+      ? effectiveSettlementSettings.prescriptions.filter(Boolean)
+      : []),
     [effectiveSettlementSettings]
+  );
+  const hiddenPrescriptionKeys = useMemo(
+    () => new Set(
+      (Array.isArray(effectiveSettlementSettings.hidden_prescriptions)
+        ? effectiveSettlementSettings.hidden_prescriptions
+        : []
+      ).map(normalizePrescriptionKey)
+    ),
+    [effectiveSettlementSettings]
+  );
+  const prescriptions = useMemo(
+    () => allPrescriptions.filter(
+      (prescription) => !hiddenPrescriptionKeys.has(normalizePrescriptionKey(prescription))
+    ),
+    [allPrescriptions, hiddenPrescriptionKeys]
+  );
+  const visibleLogs = useMemo(
+    () => {
+      if (!hiddenPrescriptionKeys.size) return logs;
+      return logs.filter((log) => {
+        const normalizedPrescription = normalizePrescriptionKey(log?.prescription);
+        return !normalizedPrescription || !hiddenPrescriptionKeys.has(normalizedPrescription);
+      });
+    },
+    [logs, hiddenPrescriptionKeys]
   );
 
   // Therapist filter state (lifted from ShockwaveDataGrid)
@@ -178,7 +211,7 @@ export default function ManualTherapyStatsPage() {
       if (error) throw error;
       if (currentFetchId !== fetchIdRef.current) return [];
       logsLoadedKeyRef.current = monthKey;
-      const normalizedLogs = normalizeManualTherapyLogRows(data, prescriptions, {
+      const normalizedLogs = normalizeManualTherapyLogRows(data, allPrescriptions, {
         memos: memosOverride || shockwaveMemos,
         year: currentYear,
         month: currentMonth,
@@ -196,7 +229,7 @@ export default function ManualTherapyStatsPage() {
         setIsLogsLoading(false);
       }
     }
-  }, [addToast, currentMonth, currentYear, prescriptions, shockwaveMemos]);
+  }, [addToast, allPrescriptions, currentMonth, currentYear, shockwaveMemos]);
 
   useEffect(() => {
     loadManualTherapists();
@@ -607,14 +640,14 @@ export default function ManualTherapyStatsPage() {
             <div className="sw-stats-panel">
               {activeSection === 'grid' && (
                 <div className="sw-stats-body sw-stats-body--grid fade-transition-wrapper">
-                  {isLoading && logs.length === 0 ? (
+                  {isLoading && visibleLogs.length === 0 ? (
                     <GridSkeleton rows={12} cols={8} />
                   ) : (
                     <>
                       <div className="sw-grid-card">
                         <div className="sw-grid-card-table">
                           <ShockwaveDataGrid
-                            logs={logs}
+                            logs={visibleLogs}
                             therapists={displayBaseTherapists}
                             monthlyTherapists={monthlyManualTherapists}
                             currentYear={currentYear}
@@ -654,13 +687,13 @@ export default function ManualTherapyStatsPage() {
               {activeSection === 'settlement' && (
                 <ManualTherapySettlementErrorBoundary>
                   <div className="sw-stats-body sw-stats-body--settlement fade-transition-wrapper">
-                    {isLoading && logs.length === 0 ? (
+                    {isLoading && visibleLogs.length === 0 ? (
                       <SettlementSkeleton />
                     ) : (
                       <div className="sw-manual-settlement-container">
                         <ManualTherapyStatsView
                           currentMonth={currentMonth}
-                          logs={logs}
+                          logs={visibleLogs}
                           therapists={displayBaseTherapists}
                           monthlyTherapists={monthlyManualTherapists}
                           prescriptions={prescriptions}

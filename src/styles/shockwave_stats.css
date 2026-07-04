@@ -881,8 +881,9 @@
   top: calc(100% + 8px);
   left: 50%;
   z-index: 160;
-  min-width: 210px;
-  max-width: 320px;
+  box-sizing: border-box;
+  min-width: 220px;
+  max-width: min(520px, calc(100vw - 24px));
   padding: 10px 12px;
   border: 1px solid rgba(15, 23, 42, 0.16);
   border-radius: 8px;
@@ -893,7 +894,7 @@
   pointer-events: none;
   transform: translate(-50%, -2px);
   transition: opacity 120ms ease, transform 120ms ease;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .sw-grid-count-tooltip--fixed {
@@ -947,7 +948,8 @@
 
 .sw-grid-count-tooltip-line {
   display: flex;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 6px 10px;
   align-items: center;
   justify-content: center;
   margin-top: 7px;
@@ -958,8 +960,10 @@
   text-align: center;
 }
 
-.sw-grid-count-tooltip-divider {
-  color: rgba(15, 23, 42, 0.42);
+.sw-grid-count-tooltip-item {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
 }
 
 .gc-total.sticky-right-last-2,

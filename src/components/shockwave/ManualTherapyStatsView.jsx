@@ -42,8 +42,8 @@ export default function ManualTherapyStatsView({
     return allDisplayTherapists.filter((t) => nameSet.has(t.name));
   }, [allDisplayTherapists, selectedTherapistNames]);
   const safePrescriptions = useMemo(() => {
-    const next = Array.isArray(prescriptions) ? prescriptions.filter(Boolean) : [];
-    return next.length > 0 ? next : ['40분', '60분'];
+    if (Array.isArray(prescriptions)) return prescriptions.filter(Boolean);
+    return ['40분', '60분'];
   }, [prescriptions]);
   const safePriceEntries = useMemo(
     () => (prescriptionPrices && typeof prescriptionPrices === 'object' && !Array.isArray(prescriptionPrices) ? prescriptionPrices : {}),

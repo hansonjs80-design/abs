@@ -93,6 +93,17 @@ export default function ManualTherapySixMonthStats({
         logDate.getMonth() + 1,
         'manual_therapy'
       );
+      const hiddenPrescriptionSet = new Set(
+        (Array.isArray(monthSettings.hidden_prescriptions)
+          ? monthSettings.hidden_prescriptions
+          : []
+        ).map(normalizePrescriptionKey)
+      );
+      const visiblePrescriptionSet = new Set(
+        (Array.isArray(monthSettings.prescriptions) ? monthSettings.prescriptions : [])
+          .map(normalizePrescriptionKey)
+          .filter((prescription) => prescription && !hiddenPrescriptionSet.has(prescription))
+      );
       const normalizedPriceMap = Object.fromEntries(
         Object.entries(monthSettings.prescription_prices || {}).map(([key, amount]) => [
           normalizePrescriptionKey(key),
@@ -101,6 +112,9 @@ export default function ManualTherapySixMonthStats({
       );
       const count = Number.parseInt(String(log?.prescription_count ?? '1'), 10) || 1;
       const normalizedPrescription = normalizePrescriptionKey(log?.prescription);
+      if (!normalizedPrescription) return;
+      if (hiddenPrescriptionSet.has(normalizedPrescription)) return;
+      if (visiblePrescriptionSet.size > 0 && !visiblePrescriptionSet.has(normalizedPrescription)) return;
       const unitPrice = normalizedPriceMap[normalizedPrescription] || 0;
       const isNewPatient = String(log?.patient_name || '').includes('*');
 
