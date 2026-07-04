@@ -16,7 +16,9 @@ import {
   getPrescriptionScheduleSettings,
 } from '../../lib/prescriptionScheduleSettings';
 import {
+  getScheduleDayDateKey,
   isUnmarkedSameDaySchedulerLog,
+  shouldUseScheduleRowForPatientHistory,
   shouldUseScheduleContentForPatientHistory,
 } from '../../lib/schedulerHistoryCandidateUtils';
 import {
@@ -408,12 +410,12 @@ export default function useSchedulerAutoText({
       )
     );
     const buildUnknownPatientResult = () => {
-      const result = {
+      return {
         text: markUnknownPatient(rawName),
+        prescription: initialPrescription || '',
+        bodyPart: '',
         mergeSpan: clearPatientMergeSpan(),
       };
-      if (initialPrescription) result.prescription = initialPrescription;
-      return result;
     };
     const currentBodyParts = splitBodyParts(memos[memoKey]?.body_part || '');
 
@@ -516,25 +518,21 @@ export default function useSchedulerAutoText({
         : [...filteredShockwave, ...filteredManual];
 
       if (!userRemovedDoseTag) {
-        const filteredSchedules = (preloadedData.scheduleSchedules || []).filter((s) => {
-          const content = s.content || '';
-          if (!shouldUseScheduleContentForPatientHistory(content)) return false;
-          const parsed = parseSchedulerPatientIdentity(content);
-          return matchesSearchIdentity(parsed.patientChart, parsed.patientName);
-        });
-
-        for (const s of filteredSchedules) {
+        for (const s of (preloadedData.scheduleSchedules || [])) {
           try {
             const calWeeks = generateShockwaveCalendar(s.year, s.month);
             const dayInfo = calWeeks[s.week_index]?.[s.day_index];
             if (!dayInfo) continue;
-            const dd = dayInfo.date;
-            const dateStr = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`;
-
-            if (dateStr > targetDate) continue;
+            if (!shouldUseScheduleRowForPatientHistory(s, dayInfo, {
+              targetDate,
+              targetRowIndex: r,
+              targetColIndex: c,
+            })) continue;
 
             const content = s.content || '';
             const parsed = parseSchedulerPatientIdentity(content);
+            if (!matchesSearchIdentity(parsed.patientChart, parsed.patientName)) continue;
+            const dateStr = getScheduleDayDateKey(dayInfo);
             const visitSuffix = getExplicitVisitSuffix(content);
             const visitCount = visitSuffix.replace(/[()]/g, '') || '';
 
@@ -568,7 +566,7 @@ export default function useSchedulerAutoText({
         .limit(500);
 
       const scheduleQuery = supabase.from('shockwave_schedules')
-        .select('id, year, month, week_index, day_index, content, prescription, body_part, merge_span')
+        .select('id, year, month, week_index, day_index, row_index, col_index, content, prescription, body_part, merge_span')
         .neq('content', '')
         .order('year', { ascending: false })
         .order('month', { ascending: false })
@@ -622,15 +620,16 @@ export default function useSchedulerAutoText({
             const calWeeks = generateShockwaveCalendar(s.year, s.month);
             const dayInfo = calWeeks[s.week_index]?.[s.day_index];
             if (!dayInfo) continue;
-            const dd = dayInfo.date;
-            const dateStr = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`;
-
-            if (dateStr > targetDate) continue;
+            if (!shouldUseScheduleRowForPatientHistory(s, dayInfo, {
+              targetDate,
+              targetRowIndex: r,
+              targetColIndex: c,
+            })) continue;
 
             const content = s.content || '';
-            if (!shouldUseScheduleContentForPatientHistory(content)) continue;
             const parsed = parseSchedulerPatientIdentity(content);
             if (!matchesSearchIdentity(parsed.patientChart, parsed.patientName)) continue;
+            const dateStr = getScheduleDayDateKey(dayInfo);
 
             const visitSuffix = getExplicitVisitSuffix(content);
             const visitCount = visitSuffix.replace(/[()]/g, '') || '';
@@ -668,6 +667,7 @@ export default function useSchedulerAutoText({
       return userRemovedDoseTag
         ? {
             text: rawName,
+            prescription: '',
             bodyPart: '',
             mergeSpan: clearPatientMergeSpan(),
           }
@@ -872,7 +872,11 @@ export default function useSchedulerAutoText({
       if (optionChart && selectedChart) return optionChart === selectedChart;
       return normalizeNameForMatch(option?.cleanName) === normalizeNameForMatch(selected?.cleanName);
     });
-    if (localSchedulerOption) {
+    const localSchedulerOptionIsFreshEnough = localSchedulerOption && (
+      !selected?.lastDate ||
+      String(localSchedulerOption.lastDate || '') >= String(selected.lastDate || '')
+    );
+    if (localSchedulerOptionIsFreshEnough) {
       const mergedBodyParts = Array.from(new Set([
         ...(Array.isArray(localSchedulerOption.bodyParts) ? localSchedulerOption.bodyParts : []),
         ...(Array.isArray(selected.bodyParts) ? selected.bodyParts : []),

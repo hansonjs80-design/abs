@@ -478,7 +478,7 @@ export default function useScheduleClipboardActions({
         manualQuery = manualQuery.order('date', { ascending: false }).limit(500);
 
         let scheduleQuery = supabase.from('shockwave_schedules')
-          .select('id, year, month, week_index, day_index, content, prescription, body_part, merge_span')
+          .select('id, year, month, week_index, day_index, row_index, col_index, content, prescription, body_part, merge_span')
           .neq('content', '');
         const scheduleOrConditions = [];
         uniqueCharts.forEach((c) => scheduleOrConditions.push(`content.ilike.*${c}*`));

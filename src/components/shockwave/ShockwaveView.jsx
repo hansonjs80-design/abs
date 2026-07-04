@@ -2119,6 +2119,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     return { key: activeKey, value: nextValue };
   }, [currentMonth, currentYear, editValue, editingCell, setPendingDisplayValues]);
 
+  const invalidateCellSavesForPayload = useCallback((payload) => {
+    (Array.isArray(payload) ? payload : [payload]).filter(Boolean).forEach((item) => {
+      const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+      if (!key.includes('undefined')) {
+        cellSaveVersionRef.current[key] = (cellSaveVersionRef.current[key] || 0) + 1;
+      }
+    });
+  }, []);
+
   useEffect(() => {
     return () => {
       flushEditDraft();
@@ -2167,6 +2176,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     clearImmediateCellDisplay,
     addToast,
     setContextMenu,
+    onDeletePayloadStart: invalidateCellSavesForPayload,
   });
 
   const selectionInfo = computeSelectionInfo();

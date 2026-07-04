@@ -14,6 +14,10 @@ import {
 import { supabase } from '../../lib/supabaseClient';
 import { get4060PrescriptionFromContent, has4060Pattern } from '../../lib/schedulerContentFormat';
 import {
+  getScheduleDayDateKey,
+  shouldUseScheduleRowForPatientHistory,
+} from '../../lib/schedulerHistoryCandidateUtils';
+import {
   applyVisitCountToSchedulerContent,
   getExplicitVisitSuffix,
   parseSchedulerPatientIdentity,
@@ -365,8 +369,8 @@ export default function usePatientHistoryActions({
           const calWeeks = getCachedCalendar(s.year, s.month);
           const dayInfo = calWeeks[s.week_index]?.[s.day_index];
           if (!dayInfo) continue;
-          const dd = dayInfo.date;
-          const dateStr = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`;
+          if (!shouldUseScheduleRowForPatientHistory(s, dayInfo)) continue;
+          const dateStr = getScheduleDayDateKey(dayInfo);
 
           const content = s.content || '';
           const parsed = parseSchedulerPatientIdentity(content);

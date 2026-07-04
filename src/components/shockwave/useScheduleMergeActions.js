@@ -22,6 +22,7 @@ export default function useScheduleMergeActions({
   clearImmediateCellDisplay,
   addToast,
   setContextMenu,
+  onDeletePayloadStart,
 }) {
   const deleteCells = useCallback(async (keys) => {
     const deleteBatch = buildDeleteCellsPayload({
@@ -55,6 +56,7 @@ export default function useScheduleMergeActions({
     });
     const oldMemos = Array.from(oldMemoByKey.values());
     if (payload.length > 0) {
+      onDeletePayloadStart?.(payload);
       recordUndo({ type: 'bulk-edit', oldMemos });
       payload.forEach((item) => {
         const draftYear = item.year ?? currentYear;
@@ -93,6 +95,7 @@ export default function useScheduleMergeActions({
     applyImmediateMergeSpan,
     clearImmediateCellDisplay,
     addToast,
+    onDeletePayloadStart,
   ]);
 
   const tryMergeSelection = useCallback(async () => {

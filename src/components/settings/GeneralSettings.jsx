@@ -152,13 +152,7 @@ export default function GeneralSettings() {
     const globalIntervals = globalScheduleIntervalRef.current || {};
     const nextSharedInterval = Number(swSettings.interval_minutes) || Number(globalIntervals.interval_minutes) || 20;
     const nextDeviceTimeLabelInterval = Number(swSettings.time_label_interval_minutes) || nextSharedInterval;
-    const persistedGlobalTimeLabelInterval = Number(globalIntervals.time_label_interval_minutes)
-      || Number(globalIntervals.interval_minutes)
-      || nextSharedInterval;
 
-    saveShockwaveDeviceScheduleSettings?.({
-      time_label_interval_minutes: nextDeviceTimeLabelInterval,
-    });
     const success = await saveShockwaveSettings({
       id: swSettings.id,
       start_time: swSettings.start_time + ':00',
@@ -186,6 +180,10 @@ export default function GeneralSettings() {
       manual_therapy_visit_line_break_prescriptions: swSettings.manual_therapy_visit_line_break_prescriptions || [],
     });
     if (success) {
+      // 기기별 시간열 설정은 DB 저장 성공 후에 적용 (이벤트 디스패치 경합 방지)
+      saveShockwaveDeviceScheduleSettings?.({
+        time_label_interval_minutes: nextDeviceTimeLabelInterval,
+      });
       globalScheduleIntervalRef.current = {
         interval_minutes: nextSharedInterval,
         time_label_interval_minutes: nextDeviceTimeLabelInterval,
@@ -194,7 +192,11 @@ export default function GeneralSettings() {
         loadShockwaveSettings?.({ force: true }),
         loadShockwaveMemos?.(currentYear, currentMonth, { force: true }),
       ]);
+      // DB에서 다시 읽어 UI 폼 상태도 갱신
+      await loadSettings();
       addToast('시간표 설정이 저장되었습니다. 기본 병합은 전체 기기에 공통 적용되고, 시간열 표시는 이 기기에만 적용됩니다.', 'success');
+    } else {
+      addToast('설정 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.', 'error');
     }
   };
 

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  shouldUseScheduleRowForPatientHistory,
   isUnmarkedSameDaySchedulerLog,
   shouldUseScheduleContentForPatientHistory,
 } from '../schedulerHistoryCandidateUtils.js';
@@ -49,6 +50,73 @@ describe('scheduler history candidate filtering', () => {
         source: 'scheduler',
       }, '2026-07-02'),
       false
+    );
+  });
+
+  it('ignores adjacent-month mirrored schedule rows when building history', () => {
+    assert.equal(
+      shouldUseScheduleRowForPatientHistory(
+        {
+          content: '6245/박병수(13)',
+          row_index: 1,
+          col_index: 2,
+        },
+        {
+          year: 2026,
+          month: 6,
+          day: 29,
+          isCurrentMonth: false,
+        }
+      ),
+      false
+    );
+  });
+
+  it('does not use the current editing cell as its own latest history', () => {
+    assert.equal(
+      shouldUseScheduleRowForPatientHistory(
+        {
+          content: '6245/박병수(3)',
+          row_index: 10,
+          col_index: 1,
+        },
+        {
+          year: 2026,
+          month: 7,
+          day: 16,
+          isCurrentMonth: true,
+        },
+        {
+          targetDate: '2026-07-16',
+          targetRowIndex: 10,
+          targetColIndex: 1,
+        }
+      ),
+      false
+    );
+  });
+
+  it('keeps other real schedule rows on or before the target date', () => {
+    assert.equal(
+      shouldUseScheduleRowForPatientHistory(
+        {
+          content: '6245/박병수(2)',
+          row_index: 7,
+          col_index: 1,
+        },
+        {
+          year: 2026,
+          month: 7,
+          day: 9,
+          isCurrentMonth: true,
+        },
+        {
+          targetDate: '2026-07-16',
+          targetRowIndex: 10,
+          targetColIndex: 1,
+        }
+      ),
+      true
     );
   });
 });
