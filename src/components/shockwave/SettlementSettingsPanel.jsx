@@ -2,6 +2,11 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { setMonthlySettlementSettings } from '../../lib/settlementSettings';
 import { extractDoseTagFromPrescription, normalizeDoseTagInput } from '../../lib/schedulerContentFormat';
 
+const normalizeDurationStepMinutes = (value) => {
+  const numeric = Number(value) || 0;
+  return Math.max(0, Math.round(numeric / 5) * 5);
+};
+
 export default function SettlementSettingsPanel({
   type = 'shockwave',
   year,
@@ -250,7 +255,7 @@ export default function SettlementSettingsPanel({
     });
     const cleanedDurations = {};
     cleanedPrescriptions.forEach((prescription) => {
-      const duration = Number(draft.duration_minutes?.[prescription]) || 0;
+      const duration = normalizeDurationStepMinutes(draft.duration_minutes?.[prescription]);
       if (duration > 0) cleanedDurations[prescription] = duration;
     });
     const cleanedLineBreaks = (draft.visit_line_break_prescriptions || [])
@@ -418,7 +423,7 @@ export default function SettlementSettingsPanel({
                       type="number"
                       className="form-input settlement-duration-input"
                       min={0}
-                      step={10}
+                      step={5}
                       value={draft.duration_minutes?.[prescription] ?? ''}
                       placeholder="0"
                       title="스케줄 셀 자동 병합 시간"

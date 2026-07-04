@@ -79,6 +79,8 @@ import {
   buildSchedulerMemoSortKey,
   getNonVisitParentheticalSuffix,
   addBodyPartToMap,
+  getScheduleDefaultMergeRowSpan,
+  getScheduleDisplaySlotMinutes,
 } from '../../lib/schedulerUtils';
 
 const PATIENT_HISTORY_GROUPS = [
@@ -112,6 +114,7 @@ const PATIENT_HISTORY_EMPTY_BODY_FILTER = '__empty__';
 
 const HIDDEN_BODY_PART_OPTIONS_STORAGE_KEY = 'shockwave-hidden-body-part-options-by-patient';
 const EMPTY_SCHEDULE_MERGE_SPAN = { rowSpan: 1, colSpan: 1, mergedInto: null };
+const SCHEDULE_INTERNAL_BORDER_COLOR = '#d9d9d9';
 const isComposingInputEvent = (event) => Boolean(
   event?.nativeEvent?.isComposing ||
   event?.isComposing ||
@@ -168,10 +171,10 @@ function saveSchedulerInputAfterComposition({
 }
 
 function getPlainTextDefaultRowSpan({ intervalMinutes, timeLabelIntervalMinutes }) {
-  const gridInterval = Math.max(1, Number(intervalMinutes) || Number(timeLabelIntervalMinutes) || 10);
-  const configuredMinutes = Math.max(gridInterval, Number(intervalMinutes) || gridInterval);
-  const configuredRowSpan = Math.max(1, Math.ceil(configuredMinutes / gridInterval));
-  return Math.max(configuredRowSpan, gridInterval === 10 ? 2 : 1);
+  return getScheduleDefaultMergeRowSpan({
+    interval_minutes: intervalMinutes,
+    time_label_interval_minutes: timeLabelIntervalMinutes,
+  });
 }
 
 const DEFAULT_CONTEXT_PRESCRIPTION_COLORS = {
@@ -391,6 +394,7 @@ const MemoizedCell = memo(({
   cellData, pendingContent, pendingMergeSpan, mergeSpan, editingCell, imePreviewCell, selectedKeys, selectedCell, clipboardSource,
   workState, staffBlockRule, effectivePrescriptionColors,
   reservationGroupEdge,
+  cellBorderBottomColor,
   visitLineBreakPrescriptions,
   editValue, setEditValue,
   handleCellMouseDown, handleCellMouseEnter, setHoverCell, handleCellDoubleClick, handleCellContextMenu,
@@ -436,31 +440,28 @@ const MemoizedCell = memo(({
     cls += ` ants-active ${clipboardSource.mode === 'cut' ? 'ants-red' : 'ants-blue'}`;
   }
 
-  if (dayInfo.isCurrentMonth && !isSelected && !hasDisplayText && !cellData?.bg_color && workState === 'off') {
-    cls += ' staff-off';
-  } else if (dayInfo.isCurrentMonth && !hasDisplayText && staffBlockRule?.bg_color) {
-    cls += ' staff-blocked';
-  } else if (!dayInfo.isCurrentMonth && !dayInfo.isHoliday && (
+  const hasDisabledSlotBackground = slotInfo.disabled && !displayData.hasDisplayText;
+  const hasTreatmentCompleteBackground = isTreatmentCompleteBg(cellData?.bg_color);
+  const hasTreatmentCancelBackground = isTreatmentCancelBg(cellData?.bg_color);
+  const hasStaffOffBackground = dayInfo.isCurrentMonth && !isSelected && !hasDisplayText && !cellData?.bg_color && workState === 'off';
+  const hasStaffBlockedBackground = dayInfo.isCurrentMonth && !hasDisplayText && Boolean(staffBlockRule?.bg_color);
+  const hasOtherMonthMutedBackground = !dayInfo.isCurrentMonth && !dayInfo.isHoliday && (
     workState === 'off' ||
     workState === 'night' ||
     workState === 'early-leave' ||
     cellData?.bg_color === SCHEDULER_HOLIDAY_BG ||
     staffBlockRule?.bg_color
-  )) {
+  );
+
+  if (hasStaffOffBackground) {
+    cls += ' staff-off';
+  } else if (hasStaffBlockedBackground) {
+    cls += ' staff-blocked';
+  } else if (hasOtherMonthMutedBackground) {
     cls += ' other-month-muted-block';
   } else if (dayInfo.isCurrentMonth && !isSelected && workState === 'early-leave') {
     // Assuming isLastHourSlot logic is true if passed as such, wait, we need to know. 
     // We pass it in as part of workState or check it here
-  }
-
-  let inlineStyle = {
-    gridColumn: `${gridColumnStart}${effectiveMergeSpan.colSpan > 1 ? ` / span ${effectiveMergeSpan.colSpan}` : ''}`,
-    gridRow: `${gridRowStart}${visualRowSpan > 1 ? ` / span ${visualRowSpan}` : ''}`,
-    borderBottom: isLastRenderedRow ? 'none' : `1px solid ${HORIZONTAL_BORDER_COLOR}`,
-  };
-
-  if (colIdx + effectiveMergeSpan.colSpan - 1 === colCount - 1) {
-    inlineStyle.borderRight = 'none';
   }
 
   let fillBackgroundColor = null;
@@ -469,6 +470,30 @@ const MemoizedCell = memo(({
   } else if (dayInfo.isCurrentMonth && !hasDisplayText && staffBlockRule?.bg_color) {
     fillBackgroundColor = staffBlockRule.bg_color;
   }
+  const hasFilledScheduleBackground = Boolean(
+    fillBackgroundColor ||
+    dayInfo.isHoliday ||
+    !dayInfo.isCurrentMonth ||
+    hasDisabledSlotBackground ||
+    hasTreatmentCompleteBackground ||
+    hasTreatmentCancelBackground ||
+    hasStaffOffBackground ||
+    hasStaffBlockedBackground ||
+    hasOtherMonthMutedBackground
+  );
+
+  let inlineStyle = {
+    gridColumn: `${gridColumnStart}${effectiveMergeSpan.colSpan > 1 ? ` / span ${effectiveMergeSpan.colSpan}` : ''}`,
+    gridRow: `${gridRowStart}${visualRowSpan > 1 ? ` / span ${visualRowSpan}` : ''}`,
+    borderBottom: isLastRenderedRow
+      ? 'none'
+      : `1px solid ${hasFilledScheduleBackground ? HORIZONTAL_BORDER_COLOR : (cellBorderBottomColor || HORIZONTAL_BORDER_COLOR)}`,
+  };
+
+  if (colIdx + effectiveMergeSpan.colSpan - 1 === colCount - 1) {
+    inlineStyle.borderRight = 'none';
+  }
+
   if (fillBackgroundColor) {
     inlineStyle.backgroundColor = fillBackgroundColor;
     inlineStyle['--sw-cell-fill-color'] = fillBackgroundColor;
@@ -731,6 +756,7 @@ const MemoizedCell = memo(({
   if (prevProps.staffBlockRule?.bg_color !== nextProps.staffBlockRule?.bg_color) return false;
   if (prevProps.staffBlockRule?.font_color !== nextProps.staffBlockRule?.font_color) return false;
   if (prevProps.staffBlockRule?.keyword !== nextProps.staffBlockRule?.keyword) return false;
+  if (prevProps.cellBorderBottomColor !== nextProps.cellBorderBottomColor) return false;
   if (prevProps.visitLineBreakPrescriptions !== nextProps.visitLineBreakPrescriptions) return false;
   if (JSON.stringify(prevProps.reservationGroupEdge || null) !== JSON.stringify(nextProps.reservationGroupEdge || null)) return false;
   
@@ -1142,7 +1168,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const expectedPrescriptionRowSpan = targetPres
         ? getManualTherapyRowSpan(targetPres, {
             durationMinutesMap: prescriptionScheduleSettings?.durationMinutesMap,
-            slotMinutes: settings?.interval_minutes || 10,
+            slotMinutes: getScheduleDisplaySlotMinutes(settings, 10),
           })
         : 1;
       const expectedPlainTextRowSpan = getPlainTextDefaultRowSpan({
@@ -1195,7 +1221,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           mergeSpan: memos[key]?.merge_span,
           durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,
           doseTags: prescriptionScheduleSettings.doseTags,
-          slotMinutes: settings?.interval_minutes || 10,
+          slotMinutes: getScheduleDisplaySlotMinutes(settings, 10),
         });
         let updates = manualTherapyMerge.ok ? manualTherapyMerge.payload : null;
         if (!updates && expectedRowSpan > 1 && rowIndex + expectedRowSpan <= baseTimeSlots.length) {
@@ -1742,7 +1768,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       mergeSpan: newMergeSpan || withCellReservationTime(oldMergeSpan),
       durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,
       doseTags: prescriptionScheduleSettings.doseTags,
-      slotMinutes: settings?.interval_minutes || 20,
+      slotMinutes: getScheduleDisplaySlotMinutes(settings, 20),
       oldContent,
       oldPrescription,
     });
@@ -3116,6 +3142,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               const gridCols = showTimeCol
                 ? `${TIME_COL_WIDTH}px ${therapistColsCSS}`
                 : therapistColsCSS;
+              const interval = Math.max(1, Number(settings?.interval_minutes) || 10);
+              const labelInterval = Math.max(interval, Number(settings?.time_label_interval_minutes) || interval);
+              const labelSpan = Math.max(1, Math.round(labelInterval / interval));
+              const getScheduleCellBorderColor = (startSlotRenderIndex, visualRowSpan = 1) => {
+                const endSlotRenderIndex = startSlotRenderIndex + Math.max(1, visualRowSpan) - 1;
+                return (endSlotRenderIndex + 1) % labelSpan === 0
+                  ? HORIZONTAL_BORDER_COLOR
+                  : SCHEDULE_INTERNAL_BORDER_COLOR;
+              };
 
               let headerClass = 'sw-day-header-cell';
               if (dayInfo.isHoliday) headerClass += ' holiday';
@@ -3192,10 +3227,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       
                       // 1. Time Label
                       if (showTimeCol) {
-                        const interval = Math.max(1, Number(settings?.interval_minutes) || 10);
-                        const labelInterval = Math.max(interval, Number(settings?.time_label_interval_minutes) || interval);
-                        const labelSpan = Math.round(labelInterval / interval);
-
                         if (slotInfo.showLabel) {
                           const hoverRowIdx = Number(hoverCell?.rowIdx);
                           const isHoverWithinTimeLabel = hoverCell?.weekIdx === weekIdx
@@ -3268,6 +3299,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             visualRowSpan = daySlots.filter(s => s.idx >= rowIdx && s.idx <= endRowIdx).length;
                           }
                           const finalMergeSpan = { ...mergeSpan, rowSpan: visualRowSpan };
+                          const isCellLastRenderedRow = slotRenderIndex + visualRowSpan >= daySlots.length;
+                          const cellBorderBottomColor = getScheduleCellBorderColor(slotRenderIndex, visualRowSpan);
 
                           const dateKey = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}`;
                           const therapistName = getTherapistNameForDate(colIdx, dayInfo.day) || '';
@@ -3283,13 +3316,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               cellKey={key}
                               weekIdx={weekIdx} dayIdx={dayIdx} rowIdx={rowIdx} colIdx={colIdx}
                               dayInfo={dayInfo} slotInfo={slotInfo} showTimeCol={showTimeCol}
-                              gridRowStart={gridRowStart} isLastRenderedRow={isLastRenderedRow} colCount={colCount}
+                              gridRowStart={gridRowStart} isLastRenderedRow={isCellLastRenderedRow} colCount={colCount}
                               cellData={displayCellData} pendingContent={content} pendingMergeSpan={renderPendingMergeSpans[key]} mergeSpan={finalMergeSpan}
                               editingCell={editingCell} imePreviewCell={imePreviewCell}
                               selectedKeys={selectedKeys} selectedCell={selectedCell} clipboardSource={clipboardSource}
                               workState={workState} staffBlockRule={staffBlockRule}
                               effectivePrescriptionColors={effectivePrescriptionColors}
                               reservationGroupEdge={reservationGroupEdgeMap[key]}
+                              cellBorderBottomColor={cellBorderBottomColor}
                               visitLineBreakPrescriptions={prescriptionScheduleSettings.visitLineBreakPrescriptions}
                               editValue={editValue} setEditValue={setEditValue}
                               handleCellMouseDown={handleCellMouseDown} handleCellMouseEnter={handleCellMouseEnter}
@@ -3340,7 +3374,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         handleCellDoubleClick, handleCellContextMenu,
         handleEditKeyDown, scheduleEditDraftAutosave, promoteFocusedInputToEditor, handleCellSave,
         cellKey, getEffectiveMergeSpan, rowHeight, canManageSchedulerSettings,
-        prescriptionScheduleSettings.visitLineBreakPrescriptions
+        prescriptionScheduleSettings.visitLineBreakPrescriptions,
+        getDefaultEditingMergeSpanForKey,
+        handleTimeLabelMouseLeave,
+        handleTimeLabelMouseMove,
+        hoverCell?.rowIdx,
+        hoverCell?.weekIdx,
+        settings?.interval_minutes,
+        settings?.time_label_interval_minutes
       ])}
       </div>
       {contextMenu && (
@@ -4297,12 +4338,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
             if (sStart && sEnd) {
               const t1 = sStart.time || sStart.label;
               const t2_time = new Date(`2000-01-01T${sEnd.time || sEnd.label}:00`);
-              t2_time.setMinutes(t2_time.getMinutes() + (settings?.interval_minutes || 30));
+              const slotMinutes = getScheduleDisplaySlotMinutes(settings, 30);
+              t2_time.setMinutes(t2_time.getMinutes() + slotMinutes);
               const t2_hh = String(t2_time.getHours()).padStart(2, '0');
               const t2_mm = String(t2_time.getMinutes()).padStart(2, '0');
               const t2 = `${t2_hh}:${t2_mm}`;
               
-              const diffMin = (selectionInfo.maxRow - selectionInfo.minRow + 1) * (settings?.interval_minutes || 30);
+              const diffMin = (selectionInfo.maxRow - selectionInfo.minRow + 1) * slotMinutes;
               const hrs = Math.floor(diffMin / 60);
               const mns = diffMin % 60;
               let dStr = '';

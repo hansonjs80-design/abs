@@ -51,6 +51,56 @@ export const TREATMENT_CANCEL_BG = '#f4cccc';
 export const SCHEDULER_HOLIDAY_BG = '#93c47d';
 export const shockwaveScheduleScrollMemory = new Map();
 
+function normalizePositiveMinuteValue(value, fallback) {
+  const minutes = Number(value);
+  return Number.isFinite(minutes) && minutes > 0 ? minutes : fallback;
+}
+
+export function getScheduleDisplaySlotMinutes(settings = {}, fallback = 10) {
+  const baseFallback = normalizePositiveMinuteValue(fallback, 10);
+  return normalizePositiveMinuteValue(
+    settings?.interval_minutes,
+    normalizePositiveMinuteValue(settings?.time_label_interval_minutes, baseFallback)
+  );
+}
+
+export function getScheduleDefaultMergeMinutes(settings = {}, fallback = 20) {
+  const displaySlotMinutes = getScheduleDisplaySlotMinutes(settings, fallback);
+  return normalizePositiveMinuteValue(settings?.interval_minutes, displaySlotMinutes);
+}
+
+export function getScheduleDefaultMergeRowSpan(settings = {}) {
+  const displaySlotMinutes = getScheduleDisplaySlotMinutes(settings, 10);
+  const defaultMergeMinutes = Math.max(
+    displaySlotMinutes,
+    getScheduleDefaultMergeMinutes(settings, displaySlotMinutes)
+  );
+  return Math.max(
+    Math.ceil(defaultMergeMinutes / displaySlotMinutes),
+    displaySlotMinutes === 10 ? 2 : 1
+  );
+}
+
+export function getClosestScheduleSlotIndexByTime(slots = [], reservationTime) {
+  const targetMinutes = timeValueToMinutes(reservationTime);
+  if (targetMinutes === null) return null;
+
+  let bestIndex = null;
+  let bestDistance = Infinity;
+  slots.forEach((slot) => {
+    const slotIndex = Number(slot?.idx);
+    const slotMinutes = timeValueToMinutes(slot?.time || slot?.fullLabel || slot?.label);
+    if (!Number.isFinite(slotIndex) || slotMinutes === null) return;
+    const distance = Math.abs(slotMinutes - targetMinutes);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = slotIndex;
+    }
+  });
+
+  return bestIndex;
+}
+
 // ── Pending Draft Storage ──
 
 export function getShockwaveScheduleScrollKey(year, month) {

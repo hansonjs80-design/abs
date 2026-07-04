@@ -1,7 +1,10 @@
 import { useCallback, useMemo } from 'react';
 
 import { generateShockwaveCalendar } from '../../lib/calendarUtils';
-import { getReservationTimeFromMergeSpan } from '../../lib/schedulerUtils';
+import {
+  getReservationTimeFromMergeSpan,
+  getScheduleDisplaySlotMinutes,
+} from '../../lib/schedulerUtils';
 import { getDateOverridesForMonth } from '../../lib/schedulerOperatingHours';
 
 const DEFAULT_START_TIME = '09:00';
@@ -64,7 +67,7 @@ export default function useScheduleTimeSlots({
 
     const startMinutes = startCandidates.length ? Math.min(...startCandidates) : timeToMinutes(DEFAULT_START_TIME);
     const endMinutes = endCandidates.length ? Math.max(...endCandidates) : timeToMinutes(DEFAULT_END_TIME);
-    const interval = normalizePositiveMinutes(settings.interval_minutes, 10);
+    const interval = getScheduleDisplaySlotMinutes(settings, 10);
     const labelInterval = normalizePositiveMinutes(settings.time_label_interval_minutes, interval);
     if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes) || startMinutes >= endMinutes || interval <= 0) {
       return Array.from({ length: 31 }, (_, index) => ({ label: `Row ${index}`, time: '' }));
@@ -129,7 +132,7 @@ export default function useScheduleTimeSlots({
     const slot = dayInfo ? getTimeSlotsForDay(dayInfo).find((item) => item.idx === r) : null;
     const slotTime = slot?.time || slot?.label || baseTimeSlots?.[r]?.time || baseTimeSlots?.[r]?.label || '';
     if (slotTime) return slotTime;
-    const interval = normalizePositiveMinutes(settings?.interval_minutes, 10);
+    const interval = getScheduleDisplaySlotMinutes(settings, 10);
     if (!settings?.start_time || !interval || !Number.isFinite(Number(r))) return '';
     const start = new Date(`2000-01-01T${settings.start_time}`);
     if (Number.isNaN(start.getTime())) return '';

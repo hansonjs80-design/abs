@@ -152,3 +152,41 @@ test('buildManualTherapyAutoMergePayload creates a 2-slot merge for plain text c
   assert.equal(result.payload.length, 2);
   assert.deepEqual(result.payload[0].merge_span, { rowSpan: 2, colSpan: 1, mergedInto: null });
 });
+
+test('buildManualTherapyAutoMergePayload keeps plain text in one slot when slotMinutes is 15', () => {
+  const result = buildManualTherapyAutoMergePayload({
+    ...baseArgs,
+    content: '홍길동',
+    prescription: '',
+    slotMinutes: 15,
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'not-merged');
+});
+
+test('buildManualTherapyAutoMergePayload does not merge a 15 minute prescription in a 15 minute slot', () => {
+  const result = buildManualTherapyAutoMergePayload({
+    ...baseArgs,
+    content: '1234/홍길동15',
+    prescription: '15분',
+    slotMinutes: 15,
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'not-merged');
+});
+
+test('buildManualTherapyAutoMergePayload merges prescriptions longer than a 15 minute slot', () => {
+  const result = buildManualTherapyAutoMergePayload({
+    ...baseArgs,
+    content: '1234/홍길동20',
+    prescription: '20분',
+    slotMinutes: 15,
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.resolvedPrescription, '20분');
+  assert.equal(result.payload.length, 2);
+  assert.deepEqual(result.payload[0].merge_span, { rowSpan: 2, colSpan: 1, mergedInto: null });
+});

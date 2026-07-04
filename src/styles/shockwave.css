@@ -488,10 +488,7 @@
 .sw-cell.other-month-bg,
 .sw-cell.other-month-muted-block,
 .sw-cell.disabled {
-  background-clip: border-box;
-  box-shadow:
-    inset 0 -1px 0 var(--sw-cell-fill-color, transparent),
-    0 1px 0 var(--sw-cell-fill-color, transparent);
+  background-clip: padding-box;
 }
 
 .sw-cell-display {

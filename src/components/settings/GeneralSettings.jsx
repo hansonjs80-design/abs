@@ -6,6 +6,8 @@ import { useSchedule } from '../../contexts/ScheduleContext';
 import { SQL_SETUP_SCRIPT, DB_USAGE_CHECK_SQL } from '../../lib/sqlSnippets';
 import { loadScheduleDeviceSettings } from '../../lib/scheduleDeviceSettings';
 
+const SHOCKWAVE_SETTINGS_BACKUP_KEY = 'abs.shockwaveSettingsBackup.v1';
+
 export default function GeneralSettings() {
   const { addToast } = useToast();
   const {
@@ -15,6 +17,7 @@ export default function GeneralSettings() {
     loadShockwaveSettings,
     saveShockwaveSettings,
     saveShockwaveDeviceScheduleSettings,
+    shockwaveMemos,
   } = useSchedule();
   const globalScheduleIntervalRef = useRef({
     interval_minutes: 20,
@@ -71,6 +74,25 @@ export default function GeneralSettings() {
     window.open('https://supabase.com/dashboard', '_blank', 'noopener,noreferrer');
   };
 
+  const backupCurrentScheduleBeforeSettingsSave = () => {
+    if (typeof window === 'undefined') return true;
+    try {
+      const snapshot = {
+        created_at: new Date().toISOString(),
+        year: currentYear,
+        month: currentMonth,
+        settings: swSettings,
+        schedule_memos: shockwaveMemos || {},
+      };
+      window.localStorage.setItem(SHOCKWAVE_SETTINGS_BACKUP_KEY, JSON.stringify(snapshot));
+      window.__lastShockwaveSettingsBackup = snapshot;
+      return true;
+    } catch (error) {
+      console.error('Failed to create shockwave settings backup:', error);
+      return false;
+    }
+  };
+
   const loadSettings = async () => {
     try {
       const { data, error } = await supabase.from('shockwave_settings').select('*').order('updated_at', { ascending: false }).limit(1).single();
@@ -121,6 +143,12 @@ export default function GeneralSettings() {
   };
 
   const handleSaveSettings = async () => {
+    const backupOk = backupCurrentScheduleBeforeSettingsSave();
+    if (!backupOk) {
+      addToast('저장 전 로컬 백업을 만들지 못했습니다. 저장을 중단했습니다.', 'error');
+      return;
+    }
+
     const globalIntervals = globalScheduleIntervalRef.current || {};
     const nextSharedInterval = Number(swSettings.interval_minutes) || Number(globalIntervals.interval_minutes) || 20;
     const nextDeviceTimeLabelInterval = Number(swSettings.time_label_interval_minutes) || nextSharedInterval;

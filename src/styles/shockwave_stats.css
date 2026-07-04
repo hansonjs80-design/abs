@@ -4897,8 +4897,8 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   display: flex !important;
   flex-direction: column !important;
   gap: 16px !important;
-  flex: 0 0 350px !important;
-  width: 350px !important;
+  flex: 0 0 420px !important;
+  width: 420px !important;
   min-width: 0 !important;
 }
 
@@ -5045,15 +5045,15 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   color: #1e3a8a !important;
 }
 
-/* 우측 요약 카드 (너비: 350px) */
+/* 우측 요약 카드 (너비: 420px) */
 .sw-vertical-summary-card {
   background: #ffffff !important;
   border: 1px solid #94a3b8 !important;
   border-radius: 6px !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
-  width: 350px !important;
-  max-width: 350px !important;
-  overflow: hidden !important;
+  width: 420px !important;
+  max-width: 420px !important;
+  overflow: visible !important;
 }
 
 .sw-vertical-summary-card .sw-settlement-header {
@@ -5069,46 +5069,46 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   color: #1e293b !important;
 }
 
-/* 총결산 테이블 열 너비 지정 (합계: 350px) */
+/* 총결산 테이블 열 너비 지정 (합계: 420px) */
 .sw-vertical-summary-table th:first-child,
 .sw-vertical-summary-table td:first-child {
-  width: 90px !important;
+  width: 100px !important;
 }
 .sw-vertical-summary-table th:nth-child(2),
 .sw-vertical-summary-table td:nth-child(2) {
-  width: 70px !important;
+  width: 80px !important;
 }
 .sw-vertical-summary-table th:nth-child(3),
 .sw-vertical-summary-table td:nth-child(3) {
-  width: 95px !important;
+  width: 120px !important;
 }
 .sw-vertical-summary-table th:nth-child(4),
 .sw-vertical-summary-table td:nth-child(4) {
-  width: 95px !important;
+  width: 120px !important;
 }
 
-/* 처방별 총결산 테이블 열 너비 지정 (합계: 350px) */
+/* 처방별 총결산 테이블 열 너비 지정 (합계: 420px) */
 .sw-vertical-prescription-summary-table th:first-child,
 .sw-vertical-prescription-summary-table td:first-child {
-  width: 100px !important;
+  width: 110px !important;
 }
 .sw-vertical-prescription-summary-table th:nth-child(2),
 .sw-vertical-prescription-summary-table td:nth-child(2) {
-  width: 60px !important;
+  width: 70px !important;
 }
 .sw-vertical-prescription-summary-table th:nth-child(3),
 .sw-vertical-prescription-summary-table td:nth-child(3) {
-  width: 95px !important;
+  width: 120px !important;
 }
 .sw-vertical-prescription-summary-table th:nth-child(4),
 .sw-vertical-prescription-summary-table td:nth-child(4) {
-  width: 95px !important;
+  width: 120px !important;
 }
 
 /* 하단 최근 현황 카드 보정 */
 .sw-vertical-recent-card {
   margin: 16px 0 0 0 !important;
-  width: 740px !important;
+  width: 810px !important;
   max-width: 100% !important;
 }
 
