@@ -29,7 +29,6 @@ import {
 } from '../lib/shockwaveScheduleSanitize';
 import {
   getPendingDraftId,
-  getShockwaveScheduleScrollKey,
   readDeletedScheduleDrafts,
   readPendingScheduleDrafts,
   rememberDeletedScheduleDraft,
@@ -100,6 +99,7 @@ export function ScheduleProvider({ children }) {
   const calendarSlotSettingsSaveRequestRef = useRef(0);
   const shockwaveSettingsLoadRequestRef = useRef(0);
   const shockwaveSettingsSaveRequestRef = useRef(0);
+  const loadShockwaveMemosRef = useRef(null);
   const therapistsRef = useRef(therapists);
   const manualTherapistsRef = useRef(manualTherapists);
   const shockwaveSettingsRefCache = useRef(shockwaveSettings);
@@ -922,6 +922,8 @@ export function ScheduleProvider({ children }) {
   // 충격파 스케줄러 환경설정 저장
   const saveShockwaveSettings = useCallback(async (newSettings) => {
     const requestId = ++shockwaveSettingsSaveRequestRef.current;
+    const { year: activeYear, month: activeMonth } = currentDateRef.current;
+    const currentSettings = shockwaveSettingsRefCache.current;
     try {
       const nextUpdatedAt = new Date().toISOString();
       const { data: latestRow } = await supabase
@@ -931,9 +933,9 @@ export function ScheduleProvider({ children }) {
         .limit(1)
         .maybeSingle();
 
-      const targetId = latestRow?.id || newSettings.id || shockwaveSettings?.id || '00000000-0000-0000-0000-000000000000';
+      const targetId = latestRow?.id || newSettings.id || currentSettings?.id || '00000000-0000-0000-0000-000000000000';
 
-      const oldInterval = shockwaveSettingsRefCache.current?.interval_minutes || shockwaveSettings?.interval_minutes || 20;
+      const oldInterval = currentSettings?.interval_minutes || 20;
       const newInterval = newSettings.interval_minutes;
       if (oldInterval !== newInterval && Number.isFinite(oldInterval) && Number.isFinite(newInterval)) {
         console.info(
@@ -1064,7 +1066,7 @@ export function ScheduleProvider({ children }) {
         
         // 태그 명칭 또는 처방별 시간(duration) 변경에 따른 일괄 동기화 마이그레이션 실행
         try {
-          const oldSettings = shockwaveSettingsRefCache.current || shockwaveSettings;
+          const oldSettings = currentSettings;
           if (oldSettings) {
             const tagMappings = [];
 
@@ -1098,8 +1100,8 @@ export function ScheduleProvider({ children }) {
               const { data: schedules, error: fetchErr } = await supabase
                 .from('shockwave_schedules')
                 .select('*')
-                .eq('year', currentYear)
-                .eq('month', currentMonth);
+                .eq('year', activeYear)
+                .eq('month', activeMonth);
 
               if (!fetchErr && schedules && schedules.length > 0) {
                 const updatedSchedules = [];
@@ -1109,7 +1111,7 @@ export function ScheduleProvider({ children }) {
                   let nextContent = s.content || '';
 
                   for (const mapping of tagMappings) {
-                    const escapedOld = mapping.oldTag.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                    const escapedOld = mapping.oldTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                     const regex = new RegExp(`([^/\\d\\s]+)${escapedOld}(\\s*\\(-?\\d*\\)|\\s*\\*)?$`, 'u');
                     if (regex.test(nextContent)) {
                       nextContent = nextContent.replace(regex, `$1${mapping.newTag}$2`);
@@ -1172,14 +1174,14 @@ export function ScheduleProvider({ children }) {
       
       // 설정 저장 완료 후 즉시 서버에서 메모를 강제 리로드하여 로컬 캐시를 동기화
       loadCacheRef.current.shockwaveMemos = null;
-      loadShockwaveMemos(currentYear, currentMonth, { force: true });
+      loadShockwaveMemosRef.current?.(activeYear, activeMonth, { force: true });
 
       return true;
     } catch (err) {
       console.error('Failed to save shockwave settings:', err);
       return false;
     }
-  }, [shockwaveSettings?.id]);
+  }, []);
 
   // 충격파 스케줄 로드 (단일 쿼리 + 캐시 키)
   const loadShockwaveMemos = useCallback(async (year, month, options = {}) => {
@@ -1253,6 +1255,10 @@ export function ScheduleProvider({ children }) {
       endLoading();
     }
   }, [waitForShockwaveWrites, shouldKeepShockwaveMemo, beginLoading, endLoading, reconcileLoadedShockwaveMemosWithLocalWrites, mergeLoadedShockwaveMemosWithLocalRecovery]);
+
+  useEffect(() => {
+    loadShockwaveMemosRef.current = loadShockwaveMemos;
+  }, [loadShockwaveMemos]);
 
   const refreshCurrentScheduleFromServer = useCallback((reason = 'manual', options = {}) => {
     if (realtimeRefreshTimerRef.current) {

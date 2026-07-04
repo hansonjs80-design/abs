@@ -15,7 +15,6 @@ export default function useSchedulePendingPersistence({
   loadedMemosKey,
   memos,
   onSaveMemo,
-  pendingDisplayValues,
   setPendingDisplayValues,
 }) {
   // 중복 정리 방지: memos 변경에 따른 pendingDisplayValues 정리는 

@@ -40,7 +40,7 @@ async function run() {
   const scale = 0.5;
 
   // 2. Perform scaling and sliding conflict resolution for master cells
-  for (const [gkey, items] of Object.entries(groups)) {
+  for (const items of Object.values(groups)) {
     // Sort items by original row_index to preserve chronological order
     items.sort((a, b) => a.row_index - b.row_index);
 

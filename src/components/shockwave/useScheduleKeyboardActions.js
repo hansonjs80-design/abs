@@ -417,7 +417,7 @@ export default function useScheduleKeyboardActions({
         addToast?.(shouldClear ? '동시간 예약을 취소했습니다.' : '동시간 예약으로 설정했습니다.', 'success');
       }
     });
-  }, [addToast, applyPayloadToLatestRefs, cellKey, currentMonth, currentYear, getLatestSelectedCell]);
+  }, [addToast, applyPayloadToLatestRefs, cellKey, currentMonth, currentYear, getLatestSelectedCell, pendingRef]);
 
   const applyPrescriptionShortcut = useCallback((event) => {
     const activeCell = getLatestSelectedCell();
@@ -897,7 +897,6 @@ export default function useScheduleKeyboardActions({
     getLatestSelectedCell,
     pendingRef,
     selectedCellRef,
-    shockwaveSettings?.interval_minutes,
     shockwaveSettings,
   ]);
 
@@ -1290,7 +1289,6 @@ export default function useScheduleKeyboardActions({
     contextMenu,
     clipboardSource,
     editingCell,
-    selectedKeys,
     currentYear,
     currentMonth,
     imeOpenRef,

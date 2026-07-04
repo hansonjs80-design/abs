@@ -232,7 +232,7 @@ export function buildReservationGroupPayload({
   currentYear,
   currentMonth,
   getDefaultReservationTime,
-  mode,
+  mode: _mode,
 }) {
   const targetKeys = Array.from(new Set(Array.from(keys || [])))
     .filter((key) => {

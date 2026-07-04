@@ -42,8 +42,8 @@ export function buildManualTherapyAutoMergePayload({
   durationMinutesMap = {},
   doseTags = {},
   slotMinutes,
-  oldContent = '',
-  oldPrescription = '',
+  oldContent: _oldContent = '',
+  oldPrescription: _oldPrescription = '',
   ...rest
 }) {
   const finalSlotMinutes = Number(slotMinutes) || 20;

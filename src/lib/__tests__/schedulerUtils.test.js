@@ -6,6 +6,7 @@ import {
   buildSchedulerCellDisplay,
   getNonVisitParentheticalSuffix,
   isOnlySchedulerVisitSuffixChange,
+  isStaleNumericVisitRestoreAfterNewPatientAutoFormat,
   markSchedulerContentAsNewPatient,
   normalizeSchedulerVisitSuffix,
   stepVisitShortcutInputValue,
@@ -141,6 +142,21 @@ describe('scheduler visit suffix normalization', () => {
     assert.equal(isOnlySchedulerVisitSuffixChange('6281/이지운60(-)', '6281/이지운60*'), true);
     assert.equal(isOnlySchedulerVisitSuffixChange('6281/이지운60(2)', '6281/이지운40(2)'), false);
     assert.equal(isOnlySchedulerVisitSuffixChange('6281/이지운60(2)', '6281/이지운60(메모)(2)'), false);
+  });
+
+  it('detects stale numeric visit restores after new-patient auto-formatting', () => {
+    assert.equal(
+      isStaleNumericVisitRestoreAfterNewPatientAutoFormat('4566/김은영*', '4566/김은영(3)', '4566/김은영*'),
+      true
+    );
+    assert.equal(
+      isStaleNumericVisitRestoreAfterNewPatientAutoFormat('4566/김은영*', '4566/김은영(3)', ''),
+      false
+    );
+    assert.equal(
+      isStaleNumericVisitRestoreAfterNewPatientAutoFormat('4566/김은영(2)', '4566/김은영(3)', '4566/김은영(2)'),
+      false
+    );
   });
 });
 

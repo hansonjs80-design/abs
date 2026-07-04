@@ -72,6 +72,7 @@ import {
   applyVisitCountToSchedulerContent,
   stepVisitShortcutInputValue,
   isOnlySchedulerVisitSuffixChange,
+  isStaleNumericVisitRestoreAfterNewPatientAutoFormat,
   getMemoListFromMergeSpan,
   stepReservationTimeWithinCellBase,
   buildMergeSpanWithReservationTime,
@@ -509,7 +510,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     loadedMemosKey,
     memos,
     onSaveMemo: queuedOnSaveMemo,
-    pendingDisplayValues,
     setPendingDisplayValues,
   });
 
@@ -611,8 +611,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     activeColRatios,
     dayColWidth,
     rowHeight,
-    setRowHeight,
-    setDayColWidth,
     startColResize,
     startDayResize,
     startRowResize,
@@ -829,7 +827,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         await onLoadMemos(currentYear, currentMonth);
       }
     })();
-  }, [loadedMemosKey, currentYear, currentMonth, settings, memos, baseTimeSlots.length, saveShockwaveMemosBulk, onLoadMemos, prescriptionScheduleSettings.durationMinutesMap, prescriptionScheduleSettings.doseTags]);
+  }, [loadedMemosKey, currentYear, currentMonth, settings, memos, baseTimeSlots.length, saveShockwaveMemosBulk, onLoadMemos, prescriptionScheduleSettings.durationMinutesMap, prescriptionScheduleSettings.doseTags, cellKey, getDefaultReservationTime]);
 
   const isEditableTarget = useCallback((target) => {
     return (
@@ -1238,6 +1236,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     }
     const hasManualParentheticalNote = Boolean(getNonVisitParentheticalSuffix(immediateContent));
     const isVisitOnlyEdit = !hasForcedCellUpdate && isOnlySchedulerVisitSuffixChange(oldContent, immediateContent);
+    const shouldIgnoreStaleNumericVisitRestore = !hasForcedCellUpdate && isStaleNumericVisitRestoreAfterNewPatientAutoFormat(
+      oldContent,
+      immediateContent,
+      pendingDisplayValues[key]
+    );
+    if (shouldIgnoreStaleNumericVisitRestore) {
+      const stableNewPatientContent = normalizeSchedulerVisitSuffix(oldContent);
+      setEditingCell(null);
+      setPendingDisplayValues((prev) => ({ ...prev, [key]: stableNewPatientContent }));
+      removePendingScheduleDraft(currentYear, currentMonth, key);
+      return;
+    }
     let result;
     try {
       result = hasManualParentheticalNote || isVisitOnlyEdit
@@ -1629,7 +1639,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const errMsg = window.lastDbError?.message || window.lastDbError?.error_description || (typeof window.lastDbError === 'string' ? window.lastDbError : '') || '상세 에러 없음';
       addToast(`저장 실패 (${errMsg})`, 'error');
     }
-  }, [editValue, currentYear, currentMonth, settings, memos, effectiveMemos, pendingMergeSpans, baseTimeSlots.length, queuedOnSaveMemo, addToast, buildSchedulerAutoText, recordUndo, buildMemoSnapshotForKeys, queuedSaveShockwaveMemosBulk, applyImmediateCellDisplay, applyImmediateMergeSpan, clearImmediateCellDisplay, cellKey, setPendingDisplayValues, prescriptionScheduleSettings.doseTags, prescriptionScheduleSettings.durationMinutesMap, getDefaultEditingMergeSpanForKey, getDefaultReservationTime]);
+  }, [editValue, currentYear, currentMonth, settings, memos, effectiveMemos, pendingMergeSpans, pendingDisplayValues, baseTimeSlots.length, queuedOnSaveMemo, addToast, buildSchedulerAutoText, recordUndo, buildMemoSnapshotForKeys, queuedSaveShockwaveMemosBulk, applyImmediateCellDisplay, applyImmediateMergeSpan, clearImmediateCellDisplay, cellKey, setPendingDisplayValues, prescriptionScheduleSettings.doseTags, prescriptionScheduleSettings.durationMinutesMap, getDefaultEditingMergeSpanForKey, getDefaultReservationTime]);
 
   handleCellSaveRef.current = handleCellSave;
 

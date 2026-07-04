@@ -56,7 +56,7 @@ export function normalizeSchedulerVisitSuffix(content) {
   if (!raw) return raw;
 
   // x숫자 패턴(예: x2, x3)을 대문자 X숫자(X2, X3)로 강제 정규화
-  raw = raw.replace(/(?:\b|([가-힣a-zA-Z\d()\[\]]))x(\d+)/gi, (match, p1, p2) => (p1 || '') + 'X' + p2);
+  raw = raw.replace(/(?:\b|([가-힣a-zA-Z\d()[\]]))x(\d+)/gi, (match, p1, p2) => (p1 || '') + 'X' + p2);
 
   const suffix = getExplicitVisitSuffix(raw);
   if (!suffix) return raw;
@@ -87,6 +87,19 @@ export function isOnlySchedulerVisitSuffixChange(previousContent, nextContent) {
   const previousBase = previousSuffix ? previousRaw.slice(0, -previousSuffix.length).trim() : previousRaw;
   const nextBase = nextSuffix ? nextRaw.slice(0, -nextSuffix.length).trim() : nextRaw;
   return previousBase === nextBase;
+}
+
+export function isStaleNumericVisitRestoreAfterNewPatientAutoFormat(previousContent, nextContent, pendingContent) {
+  const previous = normalizeSchedulerVisitSuffix(previousContent);
+  const next = normalizeSchedulerVisitSuffix(nextContent);
+  const pending = normalizeSchedulerVisitSuffix(pendingContent);
+  if (!previous || !next || !pending) return false;
+  if (pending !== previous) return false;
+  if (!isOnlySchedulerVisitSuffixChange(previous, next)) return false;
+
+  const previousSuffix = getExplicitVisitSuffix(previous);
+  const nextSuffix = getExplicitVisitSuffix(next);
+  return previousSuffix === '*' && /^\(\d+\)$/.test(nextSuffix);
 }
 
 export function getNonVisitParentheticalSuffix(content) {
