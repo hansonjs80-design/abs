@@ -16,8 +16,9 @@ export default function useStaffScheduleState({
   staffMemos,
   therapists,
 }) {
-  const getTherapistNameForDate = useCallback((slotIndex, day) => {
-    if (!monthlyTherapists || monthlyTherapists.length === 0) {
+  const getTherapistNameForDate = useCallback((slotIndex, day, year = currentYear, month = currentMonth) => {
+    const isCurrentScheduleMonth = Number(year) === Number(currentYear) && Number(month) === Number(currentMonth);
+    if (!isCurrentScheduleMonth || !monthlyTherapists || monthlyTherapists.length === 0) {
       return therapists[slotIndex]?.name || '';
     }
     const match = monthlyTherapists.find(
@@ -25,27 +26,25 @@ export default function useStaffScheduleState({
     );
     if (match !== undefined) return match.therapist_name || '';
     return therapists[slotIndex]?.name || '';
-  }, [monthlyTherapists, therapists]);
+  }, [currentMonth, currentYear, monthlyTherapists, therapists]);
 
   const normalizeStaffBlockKeyword = useCallback((value) => normalizeStaffScheduleRuleText(value), []);
-  const effectiveStaffBlockRules = useMemo(
-    () => getEffectiveStaffScheduleBlockRules(settings, currentYear, currentMonth).rules,
-    [settings, currentYear, currentMonth]
-  );
+  const getStaffBlockRulesForMonth = useCallback((year, month) => (
+    getEffectiveStaffScheduleBlockRules(settings, year, month).rules
+  ), [settings]);
 
   const therapistShiftByDate = useMemo(() => {
     const map = {};
-    const blockRuleKeywords = (effectiveStaffBlockRules || [])
-      .filter((rule) => rule?.enabled !== false && rule?.keyword)
-      .map((rule) => normalizeStaffBlockKeyword(rule.keyword))
-      .filter(Boolean);
-
     Object.values(staffMemos || {}).forEach((item) => {
       if (!item?.content) return;
 
       const dateKey = `${item.year}-${item.month}-${item.day}`;
       const text = String(item.content).trim();
       const compactText = normalizeStaffBlockKeyword(text);
+      const blockRuleKeywords = (getStaffBlockRulesForMonth(item.year, item.month) || [])
+        .filter((rule) => rule?.enabled !== false && rule?.keyword)
+        .map((rule) => normalizeStaffBlockKeyword(rule.keyword))
+        .filter(Boolean);
       if (!compactText.includes('pt/')) return;
       if (blockRuleKeywords.some((keyword) => compactText.includes(keyword))) return;
 
@@ -75,24 +74,19 @@ export default function useStaffScheduleState({
     });
 
     return map;
-  }, [staffMemos, normalizeStaffBlockKeyword, effectiveStaffBlockRules]);
+  }, [staffMemos, normalizeStaffBlockKeyword, getStaffBlockRulesForMonth]);
 
   const staffScheduleBlocksByDate = useMemo(() => {
     const map = {};
-    const rules = (effectiveStaffBlockRules || []).filter((rule) => (
-      rule?.enabled !== false && rule?.keyword && rule?.start_time && rule?.end_time
-    ));
-    if (rules.length === 0) return map;
-
-    const getCurrentTherapistNames = (day) => (
+    const getCurrentTherapistNames = (day, year, month) => (
       Array.from({ length: colCount }, (_, slotIndex) => (
-        normalizeNameForMatch(getTherapistNameForDate(slotIndex, day))
+        normalizeNameForMatch(getTherapistNameForDate(slotIndex, day, year, month))
       )).filter(Boolean)
     );
 
-    const extractMentionedTherapistNames = (rawText, day) => {
+    const extractMentionedTherapistNames = (rawText, day, year, month) => {
       const normalizedText = normalizeNameForMatch(rawText);
-      const currentNames = getCurrentTherapistNames(day);
+      const currentNames = getCurrentTherapistNames(day, year, month);
       return currentNames.filter((normalizedName) => normalizedText.includes(normalizedName));
     };
 
@@ -100,15 +94,21 @@ export default function useStaffScheduleState({
       const text = String(item?.content || '').trim();
       if (!text) return;
       const slashIndex = text.indexOf('/');
+      const rules = (getStaffBlockRulesForMonth(item.year, item.month) || []).filter((rule) => (
+        rule?.enabled !== false && rule?.keyword && rule?.start_time && rule?.end_time
+      ));
+      if (rules.length === 0) return;
 
       const day = Number(item.day);
-      const currentTherapistNames = getCurrentTherapistNames(day);
+      const currentTherapistNames = getCurrentTherapistNames(day, item.year, item.month);
       const prefix = slashIndex >= 0 ? text.slice(0, slashIndex).trim() : text;
       const normalizedPrefix = normalizeStaffBlockKeyword(prefix);
       const normalizedText = normalizeStaffBlockKeyword(text);
       const names = extractMentionedTherapistNames(
         slashIndex >= 0 ? text.slice(slashIndex + 1) : text,
-        day
+        day,
+        item.year,
+        item.month
       );
       if (names.length === 0) return;
 
@@ -145,7 +145,7 @@ export default function useStaffScheduleState({
     });
 
     return map;
-  }, [staffMemos, effectiveStaffBlockRules, normalizeStaffBlockKeyword, colCount, getTherapistNameForDate]);
+  }, [staffMemos, getStaffBlockRulesForMonth, normalizeStaffBlockKeyword, colCount, getTherapistNameForDate]);
 
   const getStaffScheduleBlockForCell = useCallback((dateKey, therapistName, slotTime) => {
     if (!dateKey || !therapistName || !slotTime) return null;

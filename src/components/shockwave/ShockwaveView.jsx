@@ -2169,7 +2169,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (!slotInfo) return;
 
     const dateKey = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}`;
-    const therapistName = getTherapistNameForDate(cell.c, dayInfo.day) || '';
+    const therapistName = getTherapistNameForDate(cell.c, dayInfo.day, dayInfo.year, dayInfo.month) || '';
     const staffBlockRule = getStaffScheduleBlockForCell(dateKey, therapistName, slotInfo.time);
 
     const movedCells = movedKeys
@@ -2747,7 +2747,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                         else if (isToday) nameClass += ' today';
                         return (
                           <div key={ci} className={nameClass} style={ci === colCount - 1 ? { borderRight: 'none' } : undefined}>
-                            {getTherapistNameForDate(ci, dayInfo.day) || `치료사${ci + 1}`}
+                            {getTherapistNameForDate(ci, dayInfo.day, dayInfo.year, dayInfo.month) || `치료사${ci + 1}`}
                           </div>
                         );
                       })}
@@ -2861,7 +2861,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                           const cellBorderBottomColor = getScheduleCellBorderColor(slotRenderIndex, visualRowSpan);
 
                           const dateKey = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}`;
-                          const therapistName = getTherapistNameForDate(colIdx, dayInfo.day) || '';
+                          const therapistName = getTherapistNameForDate(colIdx, dayInfo.day, dayInfo.year, dayInfo.month) || '';
                           let workState = getTherapistWorkState(dateKey, therapistName);
                           if (workState === 'early-leave' && isLastHourSlot(dayInfo, slotInfo.time)) {
                             workState = 'off';

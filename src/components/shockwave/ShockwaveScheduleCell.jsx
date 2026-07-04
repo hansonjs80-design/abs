@@ -145,11 +145,17 @@ const MemoizedCell = memo(({
   const hasTreatmentCancelBackground = isTreatmentCancelBg(cellData?.bg_color);
   const hasStaffOffBackground = isCurrentMonthCell && !isSelected && !hasDisplayText && !cellData?.bg_color && workState === 'off';
   const hasStaffBlockedBackground = isCurrentMonthCell && !hasDisplayText && Boolean(staffBlockRule?.bg_color);
+  const hasOtherMonthStaffBackground = !isCurrentMonthCell && !hasDisplayText && !cellData?.bg_color && (
+    workState === 'off' ||
+    Boolean(staffBlockRule?.bg_color)
+  );
 
   if (hasStaffOffBackground) {
     cls += ' staff-off';
   } else if (hasStaffBlockedBackground) {
     cls += ' staff-blocked';
+  } else if (hasOtherMonthStaffBackground) {
+    cls += ' other-month-muted-block';
   }
 
   let fillBackgroundColor = null;
@@ -166,7 +172,8 @@ const MemoizedCell = memo(({
     hasTreatmentCompleteBackground ||
     hasTreatmentCancelBackground ||
     hasStaffOffBackground ||
-    hasStaffBlockedBackground
+    hasStaffBlockedBackground ||
+    hasOtherMonthStaffBackground
   );
 
   let inlineStyle = {
