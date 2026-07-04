@@ -24,6 +24,7 @@ import {
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 import { getPrescriptionFromConfiguredDoseTag, getPrescriptionScheduleSettings } from '../../lib/prescriptionScheduleSettings';
 import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
+import { getScheduleCellKey } from '../../lib/scheduleSelectionUtils';
 import { useToast } from '../common/Toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../lib/authPermissions';
@@ -769,7 +770,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           updates = [];
           for (let rowOffset = 0; rowOffset < expectedRowSpan; rowOffset += 1) {
             const targetRow = rowIndex + rowOffset;
-            const targetKey = cellKey(weekIndex, dayIndex, targetRow, colIndex);
+            const targetKey = getScheduleCellKey(weekIndex, dayIndex, targetRow, colIndex);
             const targetMemo = memos[targetKey] || {};
             const targetMergeSpan = targetMemo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
             const isCurrentMergeChild = targetMergeSpan.mergedInto === key;
@@ -827,7 +828,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         await onLoadMemos(currentYear, currentMonth);
       }
     })();
-  }, [loadedMemosKey, currentYear, currentMonth, settings, memos, baseTimeSlots.length, saveShockwaveMemosBulk, onLoadMemos, prescriptionScheduleSettings.durationMinutesMap, prescriptionScheduleSettings.doseTags, cellKey, getDefaultReservationTime]);
+  }, [loadedMemosKey, currentYear, currentMonth, settings, memos, baseTimeSlots.length, saveShockwaveMemosBulk, onLoadMemos, prescriptionScheduleSettings.durationMinutesMap, prescriptionScheduleSettings.doseTags, getDefaultReservationTime]);
 
   const isEditableTarget = useCallback((target) => {
     return (
