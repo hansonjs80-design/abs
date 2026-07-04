@@ -12,21 +12,30 @@ export default function useStaffScheduleState({
   currentYear,
   effectiveDayOverrides,
   monthlyTherapists,
+  monthlyTherapistsByMonth = {},
   settings,
   staffMemos,
   therapists,
 }) {
-  const getTherapistNameForDate = useCallback((slotIndex, day, year = currentYear, month = currentMonth) => {
+  const getMonthlyTherapistsForDate = useCallback((year = currentYear, month = currentMonth) => {
+    const monthKey = `${Number(year)}-${Number(month)}`;
+    const cachedRows = monthlyTherapistsByMonth?.[monthKey];
+    if (Array.isArray(cachedRows)) return cachedRows;
     const isCurrentScheduleMonth = Number(year) === Number(currentYear) && Number(month) === Number(currentMonth);
-    if (!isCurrentScheduleMonth || !monthlyTherapists || monthlyTherapists.length === 0) {
+    return isCurrentScheduleMonth ? (monthlyTherapists || []) : [];
+  }, [currentMonth, currentYear, monthlyTherapists, monthlyTherapistsByMonth]);
+
+  const getTherapistNameForDate = useCallback((slotIndex, day, year = currentYear, month = currentMonth) => {
+    const monthlyRows = getMonthlyTherapistsForDate(year, month);
+    if (!monthlyRows || monthlyRows.length === 0) {
       return therapists[slotIndex]?.name || '';
     }
-    const match = monthlyTherapists.find(
+    const match = monthlyRows.find(
       (therapist) => therapist.slot_index === slotIndex && day >= therapist.start_day && day <= therapist.end_day
     );
     if (match !== undefined) return match.therapist_name || '';
     return therapists[slotIndex]?.name || '';
-  }, [currentMonth, currentYear, monthlyTherapists, therapists]);
+  }, [currentMonth, currentYear, getMonthlyTherapistsForDate, therapists]);
 
   const normalizeStaffBlockKeyword = useCallback((value) => normalizeStaffScheduleRuleText(value), []);
   const getStaffBlockRulesForMonth = useCallback((year, month) => (

@@ -53,7 +53,9 @@ export default function ShockwavePage() {
     shockwaveMemosLoadedKey,
     loadShockwaveMemos,
     loadMonthlyTherapists,
+    loadVisibleMonthlyTherapists,
     monthlyTherapistLoadKeys,
+    monthlyTherapistVisibleLoadKeys,
     saveShockwaveMemo,
     holidays,
     loadHolidays,
@@ -89,6 +91,7 @@ export default function ShockwavePage() {
       loadShockwaveMemos(currentYear, currentMonth),
       loadHolidays(currentYear, currentMonth),
       loadMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
+      loadVisibleMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
       loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy'),
     ]).then((results) => {
       if (cancelled) return;
@@ -101,10 +104,11 @@ export default function ShockwavePage() {
     return () => {
       cancelled = true;
     };
-  }, [currentYear, currentMonth, loadStaffMemos, loadShockwaveMemos, loadHolidays, loadMonthlyTherapists, loadAttempt]);
+  }, [currentYear, currentMonth, loadStaffMemos, loadShockwaveMemos, loadHolidays, loadMonthlyTherapists, loadVisibleMonthlyTherapists, loadAttempt]);
 
   const monthKey = `${currentYear}-${currentMonth}`;
-  const monthlyTherapistsReady = monthlyTherapistLoadKeys?.shockwave === monthKey;
+  const monthlyTherapistsReady = monthlyTherapistLoadKeys?.shockwave === monthKey
+    && monthlyTherapistVisibleLoadKeys?.shockwave === monthKey;
   const shockwaveMemosReady = shockwaveMemosLoadedKey === monthKey;
 
   return (

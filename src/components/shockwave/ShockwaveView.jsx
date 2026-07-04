@@ -316,7 +316,7 @@ const ContextMenuLocalInputGroup = ({ placeholder, buttonLabel, onSubmit, imeOpe
 };
 
 export default function ShockwaveView({ therapists, settings, memos = {}, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
-  const { currentYear, currentMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings, clipboardRef, clipboardSource, setClipboardSource } = useSchedule();
+  const { currentYear, currentMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, monthlyTherapistsByMonth, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings, clipboardRef, clipboardSource, setClipboardSource } = useSchedule();
   const { addToast } = useToast();
   const { user } = useAuth();
   const canManageSchedulerSettings = isAdminUser(user);
@@ -604,8 +604,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   );
 
   const monthlyTherapistSlotCount = useMemo(
-    () => (monthlyTherapists || []).reduce((max, item) => Math.max(max, (Number(item?.slot_index) || 0) + 1), 0),
-    [monthlyTherapists]
+    () => {
+      const visibleRows = Object.values(monthlyTherapistsByMonth?.shockwave || {}).flat();
+      return [...(monthlyTherapists || []), ...visibleRows].reduce(
+        (max, item) => Math.max(max, (Number(item?.slot_index) || 0) + 1),
+        0
+      );
+    },
+    [monthlyTherapists, monthlyTherapistsByMonth?.shockwave]
   );
   const colCount = Math.max(1, therapists.length, monthlyTherapistSlotCount);
   const {
@@ -638,6 +644,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     currentYear,
     effectiveDayOverrides,
     monthlyTherapists,
+    monthlyTherapistsByMonth: monthlyTherapistsByMonth?.shockwave || {},
     settings,
     staffMemos,
     therapists,
