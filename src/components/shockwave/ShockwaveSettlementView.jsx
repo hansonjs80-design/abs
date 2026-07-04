@@ -1,5 +1,27 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
+
+const SETTLEMENT_VIEW_MODE_STORAGE_KEY = 'shockwave:settlement:viewMode';
+const VIEW_MODES = new Set(['horizontal', 'vertical']);
+
+function readStoredViewMode() {
+  if (typeof window === 'undefined') return 'horizontal';
+  try {
+    const stored = window.localStorage.getItem(SETTLEMENT_VIEW_MODE_STORAGE_KEY);
+    return VIEW_MODES.has(stored) ? stored : 'horizontal';
+  } catch {
+    return 'horizontal';
+  }
+}
+
+function writeStoredViewMode(nextViewMode) {
+  if (typeof window === 'undefined' || !VIEW_MODES.has(nextViewMode)) return;
+  try {
+    window.localStorage.setItem(SETTLEMENT_VIEW_MODE_STORAGE_KEY, nextViewMode);
+  } catch {
+    // localStorage may be unavailable in private browsing or restricted contexts.
+  }
+}
 
 function normalizePrescriptionKey(value) {
   return String(value || '')
@@ -34,7 +56,12 @@ export default function ShockwaveSettlementView({
   monthlyTherapists,
   selectedTherapistNames,
 }) {
-  const [viewMode, setViewMode] = useState('horizontal'); // 'horizontal' | 'vertical'
+  const [viewMode, setViewMode] = useState(readStoredViewMode); // 'horizontal' | 'vertical'
+  const handleViewModeChange = useCallback((nextViewMode) => {
+    if (!VIEW_MODES.has(nextViewMode)) return;
+    setViewMode(nextViewMode);
+    writeStoredViewMode(nextViewMode);
+  }, []);
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
   const allDisplayTherapists = useMemo(
@@ -142,14 +169,14 @@ export default function ShockwaveSettlementView({
                   <button
                     type="button"
                     className={`sw-view-mode-btn ${viewMode === 'horizontal' ? 'active' : ''}`}
-                    onClick={() => setViewMode('horizontal')}
+                    onClick={() => handleViewModeChange('horizontal')}
                   >
                     가로 보기
                   </button>
                   <button
                     type="button"
                     className={`sw-view-mode-btn ${viewMode === 'vertical' ? 'active' : ''}`}
-                    onClick={() => setViewMode('vertical')}
+                    onClick={() => handleViewModeChange('vertical')}
                   >
                     세로 보기
                   </button>
@@ -324,14 +351,14 @@ export default function ShockwaveSettlementView({
                   <button
                     type="button"
                     className={`sw-view-mode-btn ${viewMode === 'horizontal' ? 'active' : ''}`}
-                    onClick={() => setViewMode('horizontal')}
+                    onClick={() => handleViewModeChange('horizontal')}
                   >
                     가로 보기
                   </button>
                   <button
                     type="button"
                     className={`sw-view-mode-btn ${viewMode === 'vertical' ? 'active' : ''}`}
-                    onClick={() => setViewMode('vertical')}
+                    onClick={() => handleViewModeChange('vertical')}
                   >
                     세로 보기
                   </button>

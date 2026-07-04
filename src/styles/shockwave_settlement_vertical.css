@@ -133,6 +133,7 @@
   font-weight: 800 !important;
   line-height: 1.08 !important;
   letter-spacing: 0 !important;
+  text-align: center !important;
 }
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table thead th,
@@ -216,7 +217,7 @@
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table th:first-child,
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table td:first-child {
-  width: 18% !important;
+  width: 21% !important;
 }
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table th:nth-child(2),
@@ -229,12 +230,12 @@
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table th:nth-child(3),
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table td:nth-child(3) {
-  width: 30% !important;
+  width: 35% !important;
 }
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table th:nth-child(4),
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table td:nth-child(4) {
-  width: 38% !important;
+  width: 30% !important;
 }
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table th:first-child,
@@ -277,6 +278,17 @@
   text-align: center !important;
   padding-left: 8px !important;
   padding-right: 8px !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody td.amount-val,
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody td.incentive-val,
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table tbody td.amount-val,
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table tbody td.incentive-val,
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table tbody td.amount-val,
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table tbody td.incentive-val {
+  text-align: center !important;
+  padding-left: 6px !important;
+  padding-right: 6px !important;
 }
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-recent-card {
@@ -549,6 +561,7 @@
     text-overflow: clip !important;
     word-break: keep-all !important;
     letter-spacing: 0 !important;
+    text-align: center !important;
   }
 
   body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table thead th,
@@ -583,7 +596,7 @@
 
   body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table th:first-child,
   body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table td:first-child {
-    width: 18% !important;
+    width: 21% !important;
   }
 
   body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table th:nth-child(2),
@@ -594,12 +607,12 @@
 
   body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table th:nth-child(3),
   body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table td:nth-child(3) {
-    width: 30% !important;
+    width: 35% !important;
   }
 
   body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table th:nth-child(4),
   body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table td:nth-child(4) {
-    width: 38% !important;
+    width: 30% !important;
   }
 
   body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table th:first-child,
@@ -657,7 +670,8 @@
   body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody td.incentive-val,
   body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table tbody td.incentive-val,
   body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table tbody td.incentive-val {
-    text-align: right !important;
+    text-align: center !important;
+    padding-left: var(--sw-print-cell-x) !important;
     padding-right: var(--sw-print-cell-x) !important;
   }
 

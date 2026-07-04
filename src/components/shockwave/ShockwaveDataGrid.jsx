@@ -376,13 +376,17 @@ export default function ShockwaveDataGrid({
     if (!therapist) return null;
     const summary = dateSummaries.get(row.date);
     const counts = summary?.byTherapistPrescription?.[therapist.name] || {};
-    const items = prescriptions.map(p => ({ label: p, count: counts[p] || 0 }));
+    const items = prescriptions
+      .map(p => ({ label: p, count: Number(counts[p]) || 0 }))
+      .filter(item => item.count > 0);
+    const totalCount = items.reduce((sum, item) => sum + item.count, 0);
+    if (totalCount <= 0) return null;
     return {
       date: formatFullDateLabel(row.date),
       therapistName: therapist.name,
       therapistColor: THERAPIST_COLORS[tIdx % THERAPIST_COLORS.length],
       tooltipAccentColor: getTooltipAccentColor(THERAPIST_COLORS[tIdx % THERAPIST_COLORS.length]),
-      totalCount: items.reduce((sum, item) => sum + item.count, 0),
+      totalCount,
       items,
     };
   }, [dateSummaries, formatFullDateLabel, prescriptions, totalCountColIndex, visibleTherapists]);
@@ -1656,8 +1660,9 @@ export default function ShockwaveDataGrid({
           </div>
           <div className="sw-grid-count-tooltip-line">
             {countTooltip.items.map(({ label, count }) => (
-              <span className="sw-grid-count-tooltip-item" key={label}>
-                {label} {count}건
+              <span className="sw-grid-count-tooltip-item sw-grid-count-tooltip-item--counted" key={label}>
+                <span className="sw-grid-count-tooltip-prescription">{label}</span>
+                <span className="sw-grid-count-tooltip-count">{count}건</span>
               </span>
             ))}
           </div>

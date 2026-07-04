@@ -949,11 +949,11 @@
 .sw-grid-count-tooltip-line {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 10px;
+  gap: 6px 7px;
   align-items: center;
   justify-content: center;
-  margin-top: 7px;
-  color: #0f172a;
+  margin-top: 8px;
+  color: #64748b;
   font-size: 14px;
   font-weight: 700;
   line-height: 1.25;
@@ -963,7 +963,26 @@
 .sw-grid-count-tooltip-item {
   display: inline-flex;
   align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  padding: 3px 7px;
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.54);
   white-space: nowrap;
+}
+
+.sw-grid-count-tooltip-item--counted {
+  font-weight: 900;
+}
+
+.sw-grid-count-tooltip-prescription {
+  color: #0f172a;
+}
+
+.sw-grid-count-tooltip-count {
+  color: var(--tooltip-accent-color, #c2410c);
 }
 
 .gc-total.sticky-right-last-2,
