@@ -17,6 +17,12 @@ function findPrescriptionByDoseTag(content, doseTags = {}, durationMinutesMap = 
   ))?.[0] || '';
 }
 
+export function hasTrailingTextAfterVisitSuffix(content = '') {
+  const text = String(content || '').trim();
+  if (!text) return false;
+  return /(?:\((-|\d+|\*)\)|\*)(?=\S).+$/u.test(text);
+}
+
 export function resolveManualTherapyAutoPrescription({
   content = '',
   prescription = '',
@@ -62,8 +68,9 @@ export function buildManualTherapyAutoMergePayload({
   // 10분 단위일 때 내용이 존재하면 무조건 최소 2칸 강제 병합 보장
   let targetRowSpan = rowSpan;
   const hasTextContent = String(content || '').trim() && String(content || '').trim() !== '\u200B';
+  const hasVisitTrailingText = hasTrailingTextAfterVisitSuffix(content);
 
-  if (finalSlotMinutes === 10 && hasTextContent) {
+  if ((finalSlotMinutes === 10 && hasTextContent) || hasVisitTrailingText) {
     targetRowSpan = Math.max(2, rowSpan);
   }
 

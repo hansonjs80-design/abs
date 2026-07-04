@@ -236,6 +236,17 @@ describe('scheduler cell display splitting', () => {
       hasDisplayText: true,
     });
   });
+
+  it('splits trailing text after visit suffix for wrapped merged cells', () => {
+    assert.deepEqual(buildSchedulerCellDisplay('13015/한동군(1)도수예약', null), {
+      mainText: '13015/한동군(1)도수예약',
+      baseText: '13015/한동군',
+      noteSuffix: '도수예약',
+      visitSuffix: '(1)',
+      noteAfterVisit: true,
+      hasDisplayText: true,
+    });
+  });
 });
 
 describe('keyboard layout normalization for body part shortcuts', () => {

@@ -181,6 +181,17 @@ export function buildSchedulerCellDisplay(content, mergeSpan) {
   const hasDisplayText = Boolean(mainText || memoList.length);
   const visitSuffix = getExplicitVisitSuffix(mainText);
   const noteSuffix = getNonVisitParentheticalSuffix(mainText);
+  const visitTrailingNoteMatch = !visitSuffix && mainText.match(/^(.*?)(\((-|\d+|\*)\)|\*)(\S.*)$/u);
+  if (visitTrailingNoteMatch) {
+    return {
+      mainText,
+      baseText: visitTrailingNoteMatch[1],
+      visitSuffix: visitTrailingNoteMatch[2],
+      noteSuffix: visitTrailingNoteMatch[4],
+      noteAfterVisit: true,
+      hasDisplayText,
+    };
+  }
   const textWithoutVisitSuffix = visitSuffix ? mainText.slice(0, -visitSuffix.length).trimEnd() : mainText;
   const baseText = noteSuffix ? textWithoutVisitSuffix.slice(0, -noteSuffix.length) : textWithoutVisitSuffix;
 

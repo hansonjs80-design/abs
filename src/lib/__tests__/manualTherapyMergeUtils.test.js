@@ -204,3 +204,33 @@ test('buildManualTherapyUnmergePayload clears a merged shockwave prescription wh
   assert.equal(result.payload[1].prescription, null);
   assert.equal(result.payload[1].merge_span.meta.intentional_clear, true);
 });
+
+test('buildManualTherapyUnmergePayload clears a merged prescription when prescription is removed', () => {
+  const result = buildManualTherapyUnmergePayload({
+    ...baseArgs,
+    key: '0-1-4-2',
+    memos: {
+      '0-1-4-2': {
+        content: '6245/박병수(1)',
+        bg_color: '#fff1b8',
+        prescription: 'F4.0',
+        body_part: 'Lt. Plantar',
+        merge_span: { rowSpan: 2, colSpan: 1, mergedInto: null },
+      },
+      '0-1-5-2': { merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-1-4-2' } },
+    },
+    content: '6245/박병수(1)',
+    bgColor: '#fff1b8',
+    prescription: '',
+    bodyPart: 'Lt. Plantar',
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.affectedKeys, ['0-1-4-2', '0-1-5-2']);
+  assert.deepEqual(result.payload[0].merge_span, { rowSpan: 1, colSpan: 1, mergedInto: null });
+  assert.equal(result.payload[0].prescription, '');
+  assert.equal(result.payload[0].body_part, 'Lt. Plantar');
+  assert.equal(result.payload[1].content, '');
+  assert.equal(result.payload[1].prescription, null);
+  assert.equal(result.payload[1].merge_span.meta.intentional_clear, true);
+});

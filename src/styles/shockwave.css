@@ -866,6 +866,12 @@
   background: var(--bg-secondary);
 }
 
+.sw-cell.merged-master .sw-cell-main {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.05;
+}
+
 .sw-cell.merged-master.preserve {
   background: var(--sw-preserve);
 }

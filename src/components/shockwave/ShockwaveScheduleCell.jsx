@@ -249,18 +249,34 @@ const MemoizedCell = memo(({
       {displayData.hasDisplayText ? (
         <span className="sw-cell-main">
           <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
-          {displayData.noteSuffix ? (
+          {displayData.noteAfterVisit ? (
             <>
-              {visualRowSpan > 1 ? <br /> : null}
-              <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.noteSuffix}</span>
+              {displayData.visitSuffix
+                ? renderSchedulerVisitSuffix(displayData.visitSuffix, visitSuffixClassName, visitSuffixColor ? { color: visitSuffixColor } : undefined)
+                : null}
+              {displayData.noteSuffix ? (
+                <>
+                  {visualRowSpan > 1 ? <br /> : null}
+                  <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.noteSuffix}</span>
+                </>
+              ) : null}
             </>
-          ) : null}
-          {displayData.visitSuffix ? (
+          ) : (
             <>
-              {shouldBreakVisitLine && !displayData.noteSuffix ? <br /> : null}
-              {renderSchedulerVisitSuffix(displayData.visitSuffix, visitSuffixClassName, visitSuffixColor ? { color: visitSuffixColor } : undefined)}
+              {displayData.noteSuffix ? (
+                <>
+                  {visualRowSpan > 1 ? <br /> : null}
+                  <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.noteSuffix}</span>
+                </>
+              ) : null}
+              {displayData.visitSuffix ? (
+                <>
+                  {shouldBreakVisitLine && !displayData.noteSuffix ? <br /> : null}
+                  {renderSchedulerVisitSuffix(displayData.visitSuffix, visitSuffixClassName, visitSuffixColor ? { color: visitSuffixColor } : undefined)}
+                </>
+              ) : null}
             </>
-          ) : null}
+          )}
         </span>
       ) : null}
     </div>

@@ -1444,7 +1444,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return;
     }
 
-    if (newContent.trim() && finalPrescription && finalPrescriptionRowSpan <= 1) {
+    if (newContent.trim() && shouldWritePrescription && finalPrescriptionRowSpan <= 1) {
       const prescriptionUnmerge = buildManualTherapyUnmergePayload({
         key,
         memos: effectiveMemos,
