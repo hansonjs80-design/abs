@@ -12,7 +12,7 @@ import { buildBlankScheduleCleanupPayload, sanitizeBlankScheduleCellData } from 
 import { markIntentionalClearPayload } from '../../lib/scheduleMergeUtils';
 import { buildClearReservationGroupPayload, getReservationGroupFromMergeSpan, selectionHasReservationGroup } from '../../lib/scheduleReservationGroupUtils';
 import { isTreatmentCancelBg, isTreatmentCompleteBg } from '../../lib/scheduleStatusUtils';
-import { getManualTherapyRowSpan } from '../../lib/manualTherapyMergeUtils';
+import { buildManualTherapyUnmergePayload, getManualTherapyRowSpan } from '../../lib/manualTherapyMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import {
   get4060PrescriptionFromContent,
@@ -1335,6 +1335,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const finalBodyPart = newContent.trim()
       ? (hasBodyPartResult ? newBodyPart : oldBodyPart)
       : null;
+    const scheduleSlotMinutes = getScheduleDisplaySlotMinutes(settings, 20);
+    const finalPrescriptionRowSpan = finalPrescription
+      ? getManualTherapyRowSpan(finalPrescription, {
+          durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,
+          slotMinutes: scheduleSlotMinutes,
+        })
+      : 1;
     const plainTextDefaultRowSpan = getPlainTextDefaultRowSpan({
       intervalMinutes: settings?.interval_minutes,
       timeLabelIntervalMinutes: settings?.time_label_interval_minutes,
@@ -1359,6 +1366,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     };
     const shouldUsePlainTextDefaultMerge = Boolean(
       newContent.trim() &&
+      !finalPrescription &&
       !(newMergeSpan?.mergedInto) &&
       (!newMergeSpan || (newMergeSpan.rowSpan || 1) <= 1) &&
       canApplyPlainTextDefaultMerge()
@@ -1434,6 +1442,53 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         addToast(`저장 실패 (${errMsg})`, 'error');
       }
       return;
+    }
+
+    if (newContent.trim() && finalPrescription && finalPrescriptionRowSpan <= 1) {
+      const prescriptionUnmerge = buildManualTherapyUnmergePayload({
+        key,
+        memos: effectiveMemos,
+        pendingMergeSpans,
+        currentYear,
+        currentMonth,
+        content: newContent,
+        bgColor: targetBgColor,
+        prescription: finalPrescription,
+        bodyPart: finalBodyPart,
+      });
+
+      if (prescriptionUnmerge.ok) {
+        const combinedPayload = combineWithReservationGroupBreak(prescriptionUnmerge.payload);
+        const undoKeys = getUndoKeysWithReservationGroupBreak(prescriptionUnmerge.affectedKeys);
+        const displayKey = prescriptionUnmerge.masterKey || key;
+
+        setPendingDisplayValues((prev) => {
+          const next = { ...prev };
+          undoKeys.forEach((undoKey) => {
+            delete next[undoKey];
+          });
+          next[displayKey] = newContent;
+          return next;
+        });
+        applyImmediateCellDisplay(combinedPayload);
+        applyImmediateMergeSpan(combinedPayload);
+        recordUndo({
+          type: 'bulk-edit',
+          oldMemos: buildMemoSnapshotForKeys(undoKeys, { includePendingDisplay: false }),
+        });
+        const success = await queuedSaveShockwaveMemosBulk(combinedPayload);
+        if (success) {
+          undoKeys.forEach((undoKey) => {
+            removePendingScheduleDraft(currentYear, currentMonth, undoKey);
+          });
+          clearImmediateCellDisplay(combinedPayload);
+        } else {
+          rememberPendingScheduleDraft(currentYear, currentMonth, displayKey, newContent);
+          const errMsg = window.lastDbError?.message || window.lastDbError?.error_description || (typeof window.lastDbError === 'string' ? window.lastDbError : '') || '상세 에러 없음';
+          addToast(`저장 실패 (${errMsg})`, 'error');
+        }
+        return;
+      }
     }
 
     if (!newContent.trim()) {
