@@ -33,6 +33,7 @@ import {
   getMemoListFromMergeSpan,
   getNonVisitParentheticalSuffix,
   getSchedulerHistoryTypeLabel,
+  markSchedulerContentAsNewPatient,
   normalizeBodyPartKey,
   normalizeSchedulerVisitSuffix,
   parseSchedulerPatientIdentity,
@@ -149,11 +150,8 @@ export default function useSchedulerAutoText({
 
   const markUnknownPatient = useCallback((text) => {
     const value = String(text || '').trim();
-    if (!value || value.includes('*')) return value;
-    const explicitVisitSuffix = getExplicitVisitSuffix(value);
-    if (!explicitVisitSuffix) return normalize4060StarOrder(`${value}*`);
-    const base = value.slice(0, -explicitVisitSuffix.length).trim();
-    return normalize4060StarOrder(`${base}*${explicitVisitSuffix}`);
+    if (!value) return value;
+    return normalize4060StarOrder(markSchedulerContentAsNewPatient(value));
   }, []);
 
   const findLatestSchedulerMemoMeta = useCallback((targetCell, chartNumber, cleanName, options = {}) => {

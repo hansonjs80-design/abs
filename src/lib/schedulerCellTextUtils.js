@@ -68,6 +68,13 @@ export function normalizeSchedulerVisitSuffix(content) {
   return suffix ? `${base}${suffix === '(*)' ? '*' : suffix}` : base;
 }
 
+export function markSchedulerContentAsNewPatient(content) {
+  const raw = normalizeSchedulerVisitSuffix(content);
+  if (!raw) return raw;
+  const base = raw.replace(/(\((-|\d+|\*)\)|\*)+$/g, '').trim();
+  return base ? `${base}*` : raw;
+}
+
 export function isOnlySchedulerVisitSuffixChange(previousContent, nextContent) {
   const previousRaw = normalizeSchedulerVisitSuffix(previousContent);
   const nextRaw = normalizeSchedulerVisitSuffix(nextContent);

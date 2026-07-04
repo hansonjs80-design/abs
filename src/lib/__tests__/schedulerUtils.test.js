@@ -6,6 +6,7 @@ import {
   buildSchedulerCellDisplay,
   getNonVisitParentheticalSuffix,
   isOnlySchedulerVisitSuffixChange,
+  markSchedulerContentAsNewPatient,
   normalizeSchedulerVisitSuffix,
   stepVisitShortcutInputValue,
   stepVisitInputValue,
@@ -108,6 +109,12 @@ describe('scheduler visit suffix normalization', () => {
       patientChart: '12745',
       patientName: '신금란',
     });
+  });
+
+  it('marks a changed chart patient as a new patient and removes old visit suffixes', () => {
+    assert.equal(markSchedulerContentAsNewPatient('4566/김은영(3)'), '4566/김은영*');
+    assert.equal(markSchedulerContentAsNewPatient('4566/김은영(*)'), '4566/김은영*');
+    assert.equal(markSchedulerContentAsNewPatient('4566/김은영*'), '4566/김은영*');
   });
 
   it('replaces special visit markers with explicit numeric visits', () => {
