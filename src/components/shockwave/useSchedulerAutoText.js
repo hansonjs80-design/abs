@@ -23,6 +23,7 @@ import {
 } from '../../lib/schedulerHistoryCandidateUtils';
 import {
   addBodyPartToMap,
+  appendSchedulerInlineNote,
   buildManualNamePart,
   buildMergeSpanWithBodyPartOptions,
   buildMergeSpanWithMemoList,
@@ -37,6 +38,7 @@ import {
   normalizeBodyPartKey,
   normalizeSchedulerVisitSuffix,
   parseSchedulerPatientIdentity,
+  splitSchedulerInlineNote,
   splitBodyParts,
   stripReservationTimeFromMergeSpan,
 } from '../../lib/schedulerUtils';
@@ -188,9 +190,13 @@ export default function useSchedulerAutoText({
 
   const parseSchedulerPatientText = useCallback((text) => {
     const raw = String(text || '').trim();
-    if (!raw.includes('/')) return null;
+    const inlineNote = splitSchedulerInlineNote(raw);
+    const rawForParse = inlineNote.hasInlineNote
+      ? `${inlineNote.baseText}${inlineNote.visitSuffix || ''}`.trim()
+      : raw;
+    if (!rawForParse.includes('/')) return null;
 
-    const match = raw.match(/^([^/]+)\/(.+?(?:\d{2,3})?)((\(-?\d*\))|\*)?$/);
+    const match = rawForParse.match(/^([^/]+)\/(.+?(?:\d{2,3})?)((\(-?\d*\))|\*)?$/);
     if (!match) return null;
 
     const chartNumber = String(match[1] || '').trim();
@@ -363,6 +369,16 @@ export default function useSchedulerAutoText({
       ...(Array.isArray(config?.manualTherapy?.prescriptions) ? config.manualTherapy.prescriptions : []),
     ].map((prescription) => String(prescription || '').trim()).filter(Boolean));
     rawName = normalizeConfiguredDoseTagInContent(rawName, config.doseTags);
+    const inlineNoteInfo = splitSchedulerInlineNote(rawName);
+    let rawNameForMatching = inlineNoteInfo.hasInlineNote
+      ? `${inlineNoteInfo.baseText}${inlineNoteInfo.visitSuffix || ''}`.trim()
+      : rawName;
+    const withInlineNote = (text) => {
+      const baseText = normalizeSchedulerVisitSuffix(text);
+      return inlineNoteInfo.hasInlineNote
+        ? normalizeSchedulerVisitSuffix(appendSchedulerInlineNote(baseText, inlineNoteInfo.noteText))
+        : baseText;
+    };
     const normalizeImportedPrescription = (prescription) => {
       const value = String(prescription || '').trim();
       if (!value) return '';
@@ -381,10 +397,11 @@ export default function useSchedulerAutoText({
     };
 
     let initialPrescription = undefined;
-    if (hasDoseTagPattern(rawName)) {
-      rawName = normalize4060StarOrder(rawName);
-      initialPrescription = getPrescriptionFromConfiguredDoseTag(settings, parsedYear, parsedMonth, rawName)
-        || get4060PrescriptionFromContent(rawName)
+    if (hasDoseTagPattern(rawNameForMatching)) {
+      rawNameForMatching = normalize4060StarOrder(rawNameForMatching);
+      rawName = withInlineNote(rawNameForMatching);
+      initialPrescription = getPrescriptionFromConfiguredDoseTag(settings, parsedYear, parsedMonth, rawNameForMatching)
+        || get4060PrescriptionFromContent(rawNameForMatching)
         || undefined;
     }
     const taggedManualPrescription = initialPrescription && getManualDoseTag(initialPrescription)
@@ -392,12 +409,12 @@ export default function useSchedulerAutoText({
       : '';
 
     let manualSession = null;
-    const inputParenMatch = rawName.match(/\((\d+)\)$/);
+    const inputParenMatch = rawNameForMatching.match(/\((\d+)\)$/);
     if (inputParenMatch) {
       manualSession = parseInt(inputParenMatch[1], 10);
     }
-    const explicitVisitSuffix = getExplicitVisitSuffix(rawName);
-    const explicitNoteSuffix = getNonVisitParentheticalSuffix(rawName);
+    const explicitVisitSuffix = getExplicitVisitSuffix(rawNameForMatching);
+    const explicitNoteSuffix = getNonVisitParentheticalSuffix(rawNameForMatching);
 
     const targetDate = `${parsedYear}-${String(parsedMonth).padStart(2, '0')}-${String(parsedDay).padStart(2, '0')}`;
     const memoKey = `${w}-${d}-${r}-${c}`;
@@ -409,7 +426,7 @@ export default function useSchedulerAutoText({
     );
     const buildUnknownPatientResult = () => {
       return {
-        text: markUnknownPatient(rawName),
+        text: withInlineNote(markUnknownPatient(rawNameForMatching)),
         prescription: initialPrescription || '',
         bodyPart: '',
         mergeSpan: clearPatientMergeSpan(),
@@ -418,12 +435,12 @@ export default function useSchedulerAutoText({
     const currentBodyParts = splitBodyParts(memos[memoKey]?.body_part || '');
 
     const previousContent = originalContent !== undefined ? String(originalContent).trim() : String(memos[memoKey]?.content || '').trim();
-    const userRemovedDoseTag = hasDoseTagPattern(previousContent) && !hasDoseTagPattern(rawName);
+    const userRemovedDoseTag = hasDoseTagPattern(previousContent) && !hasDoseTagPattern(rawNameForMatching);
 
-    const contentTag = getConfiguredDoseTagFromContent(rawName, config.doseTags);
+    const contentTag = getConfiguredDoseTagFromContent(rawNameForMatching, config.doseTags);
     const cleanRawNameForIdentity = contentTag
-      ? stripDoseTagFromContent(rawName, contentTag)
-      : strip4060FromContent(rawName);
+      ? stripDoseTagFromContent(rawNameForMatching, contentTag)
+      : strip4060FromContent(rawNameForMatching);
 
     const parsedIdentity = parseSchedulerPatientIdentity(cleanRawNameForIdentity);
     const searchChart = parsedIdentity.patientChart ? String(parsedIdentity.patientChart).trim() : null;
@@ -438,7 +455,7 @@ export default function useSchedulerAutoText({
     };
 
     if (explicitNoteSuffix) {
-      return { text: rawName };
+      return { text: withInlineNote(rawNameForMatching) };
     }
 
     const schedulerOptions = findSchedulerHistoryCandidates({ w, d, r, c }, cleanRawNameForIdentity, targetDate)
@@ -448,15 +465,15 @@ export default function useSchedulerAutoText({
       const sortedSchedulerOptions = sortAutoFillOptions(schedulerOptions);
       const selected = pickManualOptionForDosePrescription(sortedSchedulerOptions, taggedManualPrescription)
         || sortedSchedulerOptions[0];
-      if (!selected) return { text: rawName };
+      if (!selected) return { text: withInlineNote(rawNameForMatching) };
 
-      const inputHasDoseTag = hasDoseTagPattern(rawName);
+      const inputHasDoseTag = hasDoseTagPattern(rawNameForMatching);
       const baseMerge = searchChart ? (selected.mergeSpan || clearPatientMergeSpan()) : selected.mergeSpan;
       const finalMergeSpan = buildMergeSpanWithBodyPartOptions(baseMerge, selected.bodyParts);
 
       if (inputHasDoseTag) {
         return {
-          text: rawName,
+          text: withInlineNote(rawNameForMatching),
           prescription: firstConfiguredPrescription(taggedManualPrescription, initialPrescription) || undefined,
           bodyPart: selected.latestBodyPart || '',
           mergeSpan: finalMergeSpan,
@@ -477,7 +494,7 @@ export default function useSchedulerAutoText({
         : selected.nextText;
 
       return {
-        text: (explicitVisitSuffix || explicitNoteSuffix) ? rawName : selectedText,
+        text: (explicitVisitSuffix || explicitNoteSuffix) ? withInlineNote(rawNameForMatching) : withInlineNote(selectedText),
         prescription: shouldOmitSelectedPrescription ? '' : autoPrescription,
         bodyPart: selected.latestBodyPart || '',
         mergeSpan: finalMergeSpan,
@@ -664,7 +681,7 @@ export default function useSchedulerAutoText({
 
       return userRemovedDoseTag
         ? {
-            text: rawName,
+            text: withInlineNote(rawNameForMatching),
             prescription: '',
             bodyPart: '',
             mergeSpan: clearPatientMergeSpan(),
@@ -852,7 +869,9 @@ export default function useSchedulerAutoText({
 
     if (options.length === 0) {
       const fallbackResult = {
-        text: userRemovedDoseTag ? rawName : markUnknownPatient(rawName),
+        text: userRemovedDoseTag
+          ? withInlineNote(rawNameForMatching)
+          : withInlineNote(markUnknownPatient(rawNameForMatching)),
       };
       if (initialPrescription !== undefined) {
         fallbackResult.prescription = initialPrescription;
@@ -863,7 +882,7 @@ export default function useSchedulerAutoText({
     const sortedOptions = sortAutoFillOptions(options);
     let selected = pickManualOptionForDosePrescription(sortedOptions, taggedManualPrescription)
       || sortedOptions[0];
-    if (!selected) return { text: rawName };
+    if (!selected) return { text: withInlineNote(rawNameForMatching) };
     const localSchedulerOption = sortAutoFillOptions(schedulerOptions).find((option) => {
       const optionChart = String(option?.chartNumber || '').trim();
       const selectedChart = String(selected?.chartNumber || '').trim();
@@ -917,12 +936,12 @@ export default function useSchedulerAutoText({
       { exclude4060: userRemovedDoseTag }
     );
 
-    if (has4060Pattern(rawName) && initialPrescription !== undefined) {
+    if (has4060Pattern(rawNameForMatching) && initialPrescription !== undefined) {
       const baseMerge = searchChart
         ? (selected.mergeSpan || inheritedMergeSpan || clearPatientMergeSpan())
         : (selected.mergeSpan || inheritedMergeSpan);
       return {
-        text: normalizeSchedulerVisitSuffix(rawName),
+        text: withInlineNote(rawNameForMatching),
         prescription: firstConfiguredPrescription(taggedManualPrescription, initialPrescription),
         bodyPart: effectiveBodyPart,
         mergeSpan: buildMergeSpanWithBodyPartOptions(baseMerge, selected.bodyParts),
@@ -931,9 +950,9 @@ export default function useSchedulerAutoText({
 
     let autoText = `${selected.chartNumber}/${selected.namePart}`;
     if (!selected.doseTag && !userRemovedDoseTag && !shouldOmitSelectedPrescription) {
-      const pureChartInput = /^\d+$/.test(rawName.replace(/\(\d+\)$/, '').trim());
+      const pureChartInput = /^\d+$/.test(rawNameForMatching.replace(/\(\d+\)$/, '').trim());
       if (!pureChartInput) {
-        const inputDoseMatch = rawName.match(/(\d{2,3})(?:\(\d+\))?$/);
+        const inputDoseMatch = rawNameForMatching.match(/(\d{2,3})(?:\(\d+\))?$/);
         if (inputDoseMatch) {
           autoText += inputDoseMatch[1];
         }
@@ -960,7 +979,7 @@ export default function useSchedulerAutoText({
         const defaultPrescription = finalAutoPrescription || normalizeImportedPrescription(selected.latestPrescription || selected.prescription) || validSelectedPrescriptions[0] || '';
         const baseMerge = buildMergeSpanWithMemoList(inheritedMergeSpan, getMemoListFromMergeSpan(inheritedMergeSpan));
         return {
-          text: normalizeSchedulerVisitSuffix(`${selected.chartNumber}/${selected.namePart}${explicitVisitSuffix || explicitNoteSuffix || `(${effectiveVisitCount})`}`),
+          text: withInlineNote(`${selected.chartNumber}/${selected.namePart}${explicitVisitSuffix || explicitNoteSuffix || `(${effectiveVisitCount})`}`),
           prescription: defaultPrescription,
           bodyPart: searchChart ? (defaultBodyPart || '') : defaultBodyPart,
           mergeSpan: buildMergeSpanWithBodyPartOptions(baseMerge, selected.bodyParts),
@@ -983,10 +1002,10 @@ export default function useSchedulerAutoText({
           settings,
         });
 
-        if (!dialogResult) return { text: rawName };
+        if (!dialogResult) return { text: withInlineNote(rawNameForMatching) };
 
         return {
-          text: normalizeSchedulerVisitSuffix(`${dialogResult.chartNumber}/${dialogResult.namePart}${explicitVisitSuffix || explicitNoteSuffix || `(${dialogResult.visitCount})`}`),
+          text: withInlineNote(`${dialogResult.chartNumber}/${dialogResult.namePart}${explicitVisitSuffix || explicitNoteSuffix || `(${dialogResult.visitCount})`}`),
           prescription: dialogResult.prescription,
           bodyPart: searchChart ? (dialogResult.bodyPart || '') : dialogResult.bodyPart,
           mergeSpan: buildMergeSpanWithMemoList(inheritedMergeSpan, dialogResult.memoList),
@@ -1002,7 +1021,7 @@ export default function useSchedulerAutoText({
     const finalMergeSpan = buildMergeSpanWithBodyPartOptions(baseMerge, selected.bodyParts);
 
     return {
-      text: autoText,
+      text: withInlineNote(autoText),
       prescription: finalAutoPrescription,
       bodyPart: effectiveBodyPart,
       mergeSpan: finalMergeSpan,

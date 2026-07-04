@@ -1,5 +1,6 @@
 import { buildManualTherapyMergePayload, getManualTherapyRowSpan } from './manualTherapyMergeUtils.js';
 import { get4060PrescriptionFromContent, getConfiguredDoseTagFromContent, normalizeDoseTagInput } from './schedulerContentFormat.js';
+import { splitSchedulerInlineNote } from './schedulerCellTextUtils.js';
 
 function getDoseTagFromContent(content = '', doseTags = {}) {
   const configuredTag = getConfiguredDoseTagFromContent(content, doseTags);
@@ -18,9 +19,7 @@ function findPrescriptionByDoseTag(content, doseTags = {}, durationMinutesMap = 
 }
 
 export function hasTrailingTextAfterVisitSuffix(content = '') {
-  const text = String(content || '').trim();
-  if (!text) return false;
-  return /(?:\((-|\d+|\*)\)|\*)(?=\S).+$/u.test(text);
+  return splitSchedulerInlineNote(content).hasInlineNote;
 }
 
 export function resolveManualTherapyAutoPrescription({

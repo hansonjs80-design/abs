@@ -8,6 +8,7 @@
 import { has4060Pattern } from './schedulerContentFormat.js';
 import { toProperCase } from './bodyPartFormatUtils.js';
 import {
+  appendSchedulerInlineNote,
   applyVisitCountToSchedulerContent,
   buildSchedulerCellDisplay,
   getExplicitVisitSuffix,
@@ -20,11 +21,13 @@ import {
   normalizeSchedulerVisitSuffix,
   normalizeVisitInputValue,
   parseSchedulerPatientIdentity,
+  splitSchedulerInlineNote,
   stepVisitShortcutInputValue,
   stepVisitInputValue,
 } from './schedulerCellTextUtils.js';
 
 export {
+  appendSchedulerInlineNote,
   applyVisitCountToSchedulerContent,
   buildSchedulerCellDisplay,
   getExplicitVisitSuffix,
@@ -37,6 +40,7 @@ export {
   normalizeSchedulerVisitSuffix,
   normalizeVisitInputValue,
   parseSchedulerPatientIdentity,
+  splitSchedulerInlineNote,
   stepVisitShortcutInputValue,
   stepVisitInputValue,
 };

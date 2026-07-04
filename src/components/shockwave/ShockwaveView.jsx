@@ -1444,7 +1444,20 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return;
     }
 
-    if (newContent.trim() && shouldWritePrescription && finalPrescriptionRowSpan <= 1) {
+    const currentEffectiveMergeSpan = pendingMergeSpans[key] || oldMergeSpan || EMPTY_SCHEDULE_MERGE_SPAN;
+    const isCurrentlyMergedCell = Boolean(
+      currentEffectiveMergeSpan?.mergedInto ||
+      (currentEffectiveMergeSpan?.rowSpan || 1) > 1 ||
+      (currentEffectiveMergeSpan?.colSpan || 1) > 1
+    );
+    const shouldUnmergeSingleSlotContent = Boolean(
+      newContent.trim() &&
+      finalPrescriptionRowSpan <= 1 &&
+      !shouldUsePlainTextDefaultMerge &&
+      (shouldWritePrescription || isCurrentlyMergedCell)
+    );
+
+    if (shouldUnmergeSingleSlotContent) {
       const prescriptionUnmerge = buildManualTherapyUnmergePayload({
         key,
         memos: effectiveMemos,

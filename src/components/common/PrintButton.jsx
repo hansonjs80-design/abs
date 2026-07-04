@@ -167,7 +167,11 @@ export default function PrintButton({ isStaffSchedule }) {
 
   const handlePrint = (orientation, calendarOnly = false, forceWeeks = null) => {
     const isNewPatientPortraitPrint = !calendarOnly && orientation === 'portrait' && Boolean(document.querySelector('.sw-new-patient-table'));
-    setPrintOrientation(isNewPatientPortraitPrint ? 'A4 portrait' : orientation, isNewPatientPortraitPrint ? '8mm 5mm 6mm' : '6mm');
+    const isSettlementPrint = !calendarOnly && Boolean(document.querySelector('.sw-settlement-table'));
+    const printMargin = isNewPatientPortraitPrint
+      ? '8mm 5mm 6mm'
+      : (isSettlementPrint ? (orientation === 'portrait' ? '4mm' : '5mm') : '6mm');
+    setPrintOrientation(isNewPatientPortraitPrint ? 'A4 portrait' : orientation, printMargin);
     
     if (calendarOnly) {
       document.body.classList.remove('new-patient-print');
@@ -198,7 +202,6 @@ export default function PrintButton({ isStaffSchedule }) {
       document.body.classList.remove('hide-last-week');
       delete document.body.dataset.calendarWeeks;
       
-      const isSettlementPrint = Boolean(document.querySelector('.sw-settlement-table'));
       if (isNewPatientPortraitPrint) {
         document.body.classList.add('new-patient-print');
         document.body.classList.remove('settlement-print');

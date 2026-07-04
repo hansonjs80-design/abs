@@ -5,10 +5,12 @@ import {
   applyVisitCountToSchedulerContent,
   buildSchedulerCellDisplay,
   getNonVisitParentheticalSuffix,
+  getSchedulerVisitInputValue,
   isOnlySchedulerVisitSuffixChange,
   isStaleNumericVisitRestoreAfterNewPatientAutoFormat,
   markSchedulerContentAsNewPatient,
   normalizeSchedulerVisitSuffix,
+  splitSchedulerInlineNote,
   stepVisitShortcutInputValue,
   stepVisitInputValue,
   parseSchedulerPatientIdentity,
@@ -54,6 +56,21 @@ describe('scheduler cell patient parsing', () => {
       patientName: '손연희',
     });
     assert.equal(getNonVisitParentheticalSuffix('3275/손연희(진료후도수)*'), '(진료후도수)');
+  });
+
+  it('parses patient identity while ignoring inline scheduler notes', () => {
+    assert.deepEqual(parseSchedulerPatientIdentity('13015/한동군(1)o*'), {
+      patientChart: '13015',
+      patientName: '한동군',
+    });
+    assert.deepEqual(parseSchedulerPatientIdentity('234/주한솔 진료후 도수'), {
+      patientChart: '234',
+      patientName: '주한솔',
+    });
+    assert.deepEqual(parseSchedulerPatientIdentity('주한솔 도수예약'), {
+      patientChart: '',
+      patientName: '주한솔',
+    });
   });
 
   it('can clear a transient deleted draft marker after a failed delete save', () => {
@@ -110,6 +127,20 @@ describe('scheduler visit suffix normalization', () => {
       patientChart: '12745',
       patientName: '신금란',
     });
+  });
+
+  it('keeps trailing inline notes separate from visit suffixes', () => {
+    assert.equal(getSchedulerVisitInputValue('13015/한동군(1)o*'), '1');
+    assert.equal(normalizeSchedulerVisitSuffix('13015/한동군(1)o*'), '13015/한동군(1) o*');
+    assert.deepEqual(splitSchedulerInlineNote('234/주한솔 진료후 도수'), {
+      baseText: '234/주한솔',
+      visitSuffix: '',
+      noteText: '진료후 도수',
+      hasInlineNote: true,
+      noteAfterVisit: false,
+    });
+    assert.equal(markSchedulerContentAsNewPatient('4566/김은영(3) 도수예약'), '4566/김은영* 도수예약');
+    assert.equal(applyVisitCountToSchedulerContent('4566/김은영(3) 도수예약', '4'), '4566/김은영(4) 도수예약');
   });
 
   it('marks a changed chart patient as a new patient and removes old visit suffixes', () => {
@@ -242,6 +273,17 @@ describe('scheduler cell display splitting', () => {
       mainText: '13015/한동군(1)도수예약',
       baseText: '13015/한동군',
       noteSuffix: '도수예약',
+      visitSuffix: '(1)',
+      noteAfterVisit: true,
+      hasDisplayText: true,
+    });
+  });
+
+  it('splits compact visit notes that include a trailing star as display notes', () => {
+    assert.deepEqual(buildSchedulerCellDisplay('13015/한동군(1)o*', null), {
+      mainText: '13015/한동군(1)o*',
+      baseText: '13015/한동군',
+      noteSuffix: 'o*',
       visitSuffix: '(1)',
       noteAfterVisit: true,
       hasDisplayText: true,

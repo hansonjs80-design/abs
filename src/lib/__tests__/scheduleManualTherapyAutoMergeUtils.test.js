@@ -168,6 +168,8 @@ test('buildManualTherapyAutoMergePayload keeps plain text in one slot when slotM
 
 test('buildManualTherapyAutoMergePayload merges visit cells with trailing note text', () => {
   assert.equal(hasTrailingTextAfterVisitSuffix('13015/한동군(1)도수예약'), true);
+  assert.equal(hasTrailingTextAfterVisitSuffix('13015/한동군(1)o*'), true);
+  assert.equal(hasTrailingTextAfterVisitSuffix('주한솔 도수예약'), true);
   assert.equal(hasTrailingTextAfterVisitSuffix('13015/한동군(1)'), false);
 
   const result = buildManualTherapyAutoMergePayload({
@@ -182,6 +184,21 @@ test('buildManualTherapyAutoMergePayload merges visit cells with trailing note t
   assert.equal(result.payload.length, 2);
   assert.deepEqual(result.payload[0].merge_span, { rowSpan: 2, colSpan: 1, mergedInto: null });
   assert.equal(result.payload[0].content, '13015/한동군(1)도수예약');
+});
+
+test('buildManualTherapyAutoMergePayload merges patient text with inline reservation notes', () => {
+  const result = buildManualTherapyAutoMergePayload({
+    ...baseArgs,
+    content: '234/주한솔(2) 진료후 도수',
+    prescription: '',
+    slotMinutes: 15,
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.resolvedPrescription, '');
+  assert.equal(result.payload.length, 2);
+  assert.deepEqual(result.payload[0].merge_span, { rowSpan: 2, colSpan: 1, mergedInto: null });
+  assert.equal(result.payload[0].content, '234/주한솔(2) 진료후 도수');
 });
 
 test('buildManualTherapyAutoMergePayload does not merge a 15 minute prescription in a 15 minute slot', () => {
