@@ -959,6 +959,21 @@ export function ScheduleProvider({ children }) {
           const updates = buildShockwaveIntervalRealignmentUpdates(allSchedules, newSettings);
           if (updates.length > 0) {
             const insertChunkSize = 200;
+            
+            // 1단계: UNIQUE 제약조건 충돌 방지를 위해 임시 격리 영역(row_index + 10000)으로 일시적 이동
+            const tempUpdates = updates.map((item) => ({
+              ...item,
+              row_index: item.row_index + 10000,
+            }));
+            for (let i = 0; i < tempUpdates.length; i += insertChunkSize) {
+              const chunk = tempUpdates.slice(i, i + insertChunkSize);
+              const { error: tempUpsertErr } = await supabase
+                .from('shockwave_schedules')
+                .upsert(chunk, { onConflict: 'id' });
+              if (tempUpsertErr) throw tempUpsertErr;
+            }
+
+            // 2단계: 최종 목적지인 원래의 새 row_index로 안전하게 이동
             for (let i = 0; i < updates.length; i += insertChunkSize) {
               const chunk = updates.slice(i, i + insertChunkSize);
               const { error: upsertErr } = await supabase
@@ -966,6 +981,7 @@ export function ScheduleProvider({ children }) {
                 .upsert(chunk, { onConflict: 'id' });
               if (upsertErr) throw upsertErr;
             }
+
             console.info(
               `[ScheduleContext] Successfully migrated ${updates.length} schedules to the new interval slots.`
             );

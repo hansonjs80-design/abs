@@ -164,7 +164,7 @@ export default function GeneralSettings() {
       start_time: swSettings.start_time + ':00',
       end_time: swSettings.end_time + ':00',
       interval_minutes: nextSharedInterval,
-      time_label_interval_minutes: persistedGlobalTimeLabelInterval,
+      time_label_interval_minutes: nextDeviceTimeLabelInterval,
       day_overrides: swSettings.day_overrides || {},
       date_overrides: swSettings.date_overrides || {},
       prescriptions: swSettings.prescriptions,
@@ -188,7 +188,7 @@ export default function GeneralSettings() {
     if (success) {
       globalScheduleIntervalRef.current = {
         interval_minutes: nextSharedInterval,
-        time_label_interval_minutes: persistedGlobalTimeLabelInterval,
+        time_label_interval_minutes: nextDeviceTimeLabelInterval,
       };
       await Promise.allSettled([
         loadShockwaveSettings?.({ force: true }),

@@ -30,6 +30,9 @@ test('buildShockwaveIntervalRealignmentUpdates moves a timed cell to the closest
   assert.equal(updates.length, 1);
   assert.equal(updates[0].id, 'row-1');
   assert.equal(updates[0].row_index, 2);
+  assert.equal(updates[0].week_index, 0);
+  assert.equal(updates[0].day_index, 1);
+  assert.equal(updates[0].col_index, 2);
   assert.equal(updates[0].merge_span.meta.reservation_time, '09:29');
 });
 

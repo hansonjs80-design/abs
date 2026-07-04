@@ -105,7 +105,7 @@ export function buildShockwaveIntervalRealignmentUpdates(rows = [], settings = {
         const isMaster = rowOffset === 0 && colOffset === 0;
         const sourceMergeSpan = normalizeMergeSpan(sourceRow.merge_span);
         groupUpdates.push({
-          id: sourceRow.id,
+          ...sourceRow,
           row_index: nextRowIndex + rowOffset,
           merge_span: isMaster
             ? { ...mergeSpan, rowSpan, colSpan, mergedInto: null }
