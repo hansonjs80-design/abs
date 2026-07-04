@@ -71,8 +71,15 @@
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-card .sw-settlement-header h2,
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-header h3 {
-  font-size: 14px !important;
   line-height: 1.2 !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-card .sw-settlement-header h2 {
+  font-size: 16px !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-header h3 {
+  font-size: 15px !important;
 }
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-table-wrap {
@@ -97,7 +104,7 @@
   table-layout: fixed !important;
   border: 1px solid #64748b !important;
   border-collapse: collapse !important;
-  font-size: 13px !important;
+  font-size: 14px !important;
 }
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table {
@@ -115,19 +122,19 @@
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table td,
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table th,
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table td {
-  padding: 9px 10px !important;
+  padding: 6px 8px !important;
   border-right: 1px solid #cbd5e1 !important;
   border-bottom: 1px solid #cbd5e1 !important;
-  font-size: 13px !important;
+  font-size: 14px !important;
   font-weight: 800 !important;
-  line-height: 1.22 !important;
+  line-height: 1.14 !important;
   letter-spacing: 0 !important;
 }
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table thead th,
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table thead th,
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table thead th {
-  font-size: 13px !important;
+  font-size: 14px !important;
   font-weight: 900 !important;
 }
 
@@ -139,6 +146,22 @@
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row td {
   border-top: 1.8px solid #475569 !important;
   border-bottom: 0 !important;
+  color: #0f172a !important;
+  font-size: 15px !important;
+  line-height: 1.16 !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table tbody tr.grand-total-row th,
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table tbody tr.grand-total-row td {
+  color: #1d4ed8 !important;
+  font-size: 16px !important;
+  line-height: 1.16 !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row td:nth-child(2),
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table tbody tr.grand-total-row td:nth-child(2) {
+  text-align: right !important;
+  padding-right: 10px !important;
 }
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table th,
@@ -214,7 +237,14 @@
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody td.prescription-name {
   text-align: center !important;
-  padding-left: 10px !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table tbody td.prescription-name {
+  text-align: center !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
 }
 
 @media print {
