@@ -57,10 +57,13 @@ const isActiveManualTherapyPrescription = (prescription, activeSet) => (
 
 const buildCurrentPrescriptionSet = (settings, year, month) => {
   const config = getPrescriptionScheduleSettings(settings, year, month);
-  return new Set([
-    ...(Array.isArray(config?.shockwave?.prescriptions) ? config.shockwave.prescriptions : []),
-    ...(Array.isArray(config?.manualTherapy?.prescriptions) ? config.manualTherapy.prescriptions : []),
-  ].map((prescription) => String(prescription || '').trim()).filter(Boolean));
+  const source = Array.isArray(config?.schedulerPrescriptions?.all)
+    ? config.schedulerPrescriptions.all
+    : [
+        ...(Array.isArray(config?.shockwave?.prescriptions) ? config.shockwave.prescriptions : []),
+        ...(Array.isArray(config?.manualTherapy?.prescriptions) ? config.manualTherapy.prescriptions : []),
+      ];
+  return new Set(source.map((prescription) => String(prescription || '').trim()).filter(Boolean));
 };
 
 const isCurrentConfiguredPrescription = (prescription, currentPrescriptionSet) => {

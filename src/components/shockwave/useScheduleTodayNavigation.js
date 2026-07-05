@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { isSameDate } from '../../lib/calendarUtils';
 import { shockwaveScheduleScrollMemory } from '../../lib/schedulerUtils';
 
-const SCHEDULE_TODAY_SCROLL_TOP_OFFSET = 96;
+const SCHEDULE_TODAY_SCROLL_TOP_OFFSET = 76;
 
 const getWeekTop = (weekEl) => {
   if (!weekEl || typeof window === 'undefined') return 0;

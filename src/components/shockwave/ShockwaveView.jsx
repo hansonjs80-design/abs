@@ -499,11 +499,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       : ['14%', '10%', '13%', '19%', '20%', '7%', '9%', '8%']
   ), [patientHistoryLogGroups.length]);
   const patientHistoryPrescriptionOptions = useMemo(() => ({
-    shockwave: Array.isArray(prescriptionScheduleSettings?.shockwave?.prescriptions)
-      ? prescriptionScheduleSettings.shockwave.prescriptions.filter(Boolean)
+    shockwave: Array.isArray(prescriptionScheduleSettings?.schedulerPrescriptions?.shockwave)
+      ? prescriptionScheduleSettings.schedulerPrescriptions.shockwave.filter(Boolean)
       : [],
-    manual: Array.isArray(prescriptionScheduleSettings?.manualTherapy?.prescriptions)
-      ? prescriptionScheduleSettings.manualTherapy.prescriptions.filter(Boolean)
+    manual: Array.isArray(prescriptionScheduleSettings?.schedulerPrescriptions?.manualTherapy)
+      ? prescriptionScheduleSettings.schedulerPrescriptions.manualTherapy.filter(Boolean)
       : [],
   }), [prescriptionScheduleSettings]);
   const updatePatientHistoryModalLog = useCallback((historyRowKey, updater) => {

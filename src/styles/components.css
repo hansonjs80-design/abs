@@ -314,7 +314,7 @@
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   gap: 16px;
-  padding: 16px 24px 0px;
+  padding: 1px 24px 0px;
   transition: all var(--transition-normal);
 }
 
@@ -331,7 +331,7 @@
   position: relative;
   z-index: 20;
   min-width: 0;
-  padding: 8px 0 0;
+  padding: 3px 0 0;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -824,7 +824,7 @@
   .top-tabs-shell {
     justify-content: flex-start;
     gap: 8px;
-    padding: 10px 10px 0;
+    padding: 0 10px 0;
   }
 
   .top-tabs {

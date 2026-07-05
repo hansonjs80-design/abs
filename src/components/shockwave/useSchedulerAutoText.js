@@ -365,13 +365,19 @@ export default function useSchedulerAutoText({
     const parsedMonth = dayInfo.month || (dayInfo.date instanceof Date ? dayInfo.date.getMonth() + 1 : (dayInfo.date ? new Date(dayInfo.date).getMonth() + 1 : undefined));
     const parsedDay = dayInfo.day || (dayInfo.date instanceof Date ? dayInfo.date.getDate() : (dayInfo.date ? new Date(dayInfo.date).getDate() : undefined));
     const config = getPrescriptionScheduleSettings(settings, parsedYear, parsedMonth);
-    const manualTherapyPrescriptions = Array.isArray(config?.manualTherapy?.prescriptions)
-      ? config.manualTherapy.prescriptions
+    const manualTherapyPrescriptions = Array.isArray(config?.schedulerPrescriptions?.manualTherapy)
+      ? config.schedulerPrescriptions.manualTherapy
       : [];
-    const configuredPrescriptionSet = new Set([
-      ...(Array.isArray(config?.shockwave?.prescriptions) ? config.shockwave.prescriptions : []),
-      ...manualTherapyPrescriptions,
-    ].map((prescription) => String(prescription || '').trim()).filter(Boolean));
+    const configuredPrescriptionSet = new Set(
+      (Array.isArray(config?.schedulerPrescriptions?.all)
+        ? config.schedulerPrescriptions.all
+        : [
+            ...(Array.isArray(config?.shockwave?.prescriptions) ? config.shockwave.prescriptions : []),
+            ...manualTherapyPrescriptions,
+          ])
+        .map((prescription) => String(prescription || '').trim())
+        .filter(Boolean)
+    );
     rawName = normalizeConfiguredDoseTagInContent(rawName, config.doseTags);
     const inlineNoteInfo = splitSchedulerInlineNote(rawName);
     let rawNameForMatching = inlineNoteInfo.hasInlineNote
