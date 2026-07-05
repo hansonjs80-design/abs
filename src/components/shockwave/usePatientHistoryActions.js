@@ -12,15 +12,24 @@ import {
   getPrescriptionScheduleSettings,
 } from '../../lib/prescriptionScheduleSettings';
 import { supabase } from '../../lib/supabaseClient';
-import { get4060PrescriptionFromContent, has4060Pattern } from '../../lib/schedulerContentFormat';
+import {
+  extractDoseTagFromPrescription,
+  get4060PrescriptionFromContent,
+  has4060Pattern,
+  updateDoseTagForPrescriptionContent,
+} from '../../lib/schedulerContentFormat';
 import {
   getScheduleDayDateKey,
   shouldUseScheduleRowForPatientHistory,
 } from '../../lib/schedulerHistoryCandidateUtils';
 import {
   applyVisitCountToSchedulerContent,
+  buildMergeSpanWithBodyPartOptions,
+  formatBodyPartInput,
+  getBodyPartOptionsFromMergeSpan,
   getExplicitVisitSuffix,
   parseSchedulerPatientIdentity,
+  splitBodyParts,
 } from '../../lib/schedulerUtils';
 
 const getPatientHistoryTreatmentGroup = ({ type, prescription, content }) => {
@@ -73,6 +82,8 @@ const withPatientHistoryRowMeta = (log) => ({
   ...log,
   _history_row_key: getPatientHistoryRowKey(log),
   _original_visit_count: String(log.visit_count || ''),
+  _original_prescription: String(log.prescription || ''),
+  _original_body_part: String(log.body_part || ''),
 });
 
 const getPatientHistoryScheduleOverrideKey = (log = {}) => {
@@ -93,6 +104,12 @@ const getPreservedBodyPart = (...values) => {
     if (text) return text;
   }
   return null;
+};
+
+const getHistoryLogTableName = (log = {}) => {
+  if (log.type === 'shockwave') return 'shockwave_patient_logs';
+  if (log.type === 'manual') return 'manual_therapy_patient_logs';
+  return '';
 };
 
 const resolveTherapistNameForHistory = ({
@@ -644,6 +661,200 @@ export default function usePatientHistoryActions({
     setPatientHistoryModalData,
   ]);
 
+  const buildContentWithPrescription = useCallback((content, oldPrescription, newPrescription) => {
+    const prescriptionScheduleSettings = getPrescriptionScheduleSettings(settings, currentYear, currentMonth);
+    const doseTag = prescriptionScheduleSettings.doseTags?.[newPrescription]
+      || extractDoseTagFromPrescription(newPrescription);
+    const previousDoseTag = prescriptionScheduleSettings.doseTags?.[oldPrescription]
+      || extractDoseTagFromPrescription(oldPrescription);
+    return updateDoseTagForPrescriptionContent(
+      content,
+      doseTag,
+      previousDoseTag,
+      prescriptionScheduleSettings.doseTags
+    );
+  }, [currentMonth, currentYear, settings]);
+
+  const saveScheduleCellHistoryField = useCallback(async (targetKey, field, rawValue, log = {}) => {
+    const parts = String(targetKey || '').split('-').map(Number);
+    if (parts.length !== 4 || parts.some((part) => !Number.isFinite(part))) return false;
+    const [w, d, r, c] = parts;
+    const memo = memos[targetKey] || {};
+    const content = Object.prototype.hasOwnProperty.call(pendingDisplayValues, targetKey)
+      ? pendingDisplayValues[targetKey]
+      : (memo.content || '');
+    if (!String(content || '').trim()) return true;
+
+    const prescriptionScheduleSettings = getPrescriptionScheduleSettings(settings, currentYear, currentMonth);
+    const normalizedValue = field === 'body_part'
+      ? formatBodyPartInput(rawValue)
+      : String(rawValue || '').trim();
+    const nextPrescription = field === 'prescription'
+      ? normalizedValue
+      : String(memo.prescription || log.prescription || '').trim();
+    const nextBodyPart = field === 'body_part'
+      ? normalizedValue
+      : (getPreservedBodyPart(memo.body_part, log.body_part) || '');
+    const updatedContent = field === 'prescription'
+      ? buildContentWithPrescription(content, memo.prescription || log.prescription || '', nextPrescription)
+      : content;
+    const nextBodyParts = splitBodyParts(nextBodyPart);
+    const nextBodyPartOptions = field === 'body_part'
+      ? Array.from(new Set([
+          ...getBodyPartOptionsFromMergeSpan(memo.merge_span),
+          ...nextBodyParts,
+        ].filter(Boolean)))
+      : getBodyPartOptionsFromMergeSpan(memo.merge_span);
+    const nextMergeSpan = field === 'body_part'
+      ? buildMergeSpanWithBodyPartOptions(memo.merge_span, nextBodyPartOptions)
+      : memo.merge_span;
+
+    const basePayload = {
+      year: currentYear,
+      month: currentMonth,
+      week_index: w,
+      day_index: d,
+      row_index: r,
+      col_index: c,
+      content: updatedContent,
+      bg_color: memo.bg_color || null,
+      prescription: nextPrescription || null,
+      body_part: nextBodyPart || null,
+      merge_span: nextMergeSpan || { rowSpan: 1, colSpan: 1, mergedInto: null },
+    };
+
+    const manualTherapyMerge = buildManualTherapyAutoMergePayload({
+      key: targetKey,
+      memos,
+      currentYear,
+      currentMonth,
+      rowCount: baseTimeSlotsLength,
+      content: updatedContent,
+      bgColor: memo.bg_color || null,
+      prescription: nextPrescription,
+      bodyPart: nextBodyPart || null,
+      mergeSpan: basePayload.merge_span,
+      durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,
+      doseTags: prescriptionScheduleSettings.doseTags,
+      slotMinutes: settings?.interval_minutes || 10,
+    });
+    const savePayload = manualTherapyMerge.ok ? manualTherapyMerge.payload : [basePayload];
+
+    setPendingDisplayValues((prev) => {
+      const next = { ...prev };
+      savePayload.forEach((item) => {
+        next[`${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`] = String(item.content ?? '');
+      });
+      return next;
+    });
+    applyImmediateCellDisplay?.(savePayload, { keepContextMenuOpen: true });
+    applyImmediateMergeSpan?.(savePayload);
+
+    const success = await saveShockwaveMemosBulk(savePayload);
+    if (success) {
+      clearImmediateCellDisplay?.(savePayload);
+      patientHistoryResultCacheRef.current.clear();
+      addToast(field === 'prescription' ? '처방이 수정되었습니다.' : '부위가 수정되었습니다.', 'success');
+      return true;
+    }
+
+    addToast(field === 'prescription' ? '처방 수정 실패' : '부위 수정 실패', 'error');
+    return false;
+  }, [
+    addToast,
+    applyImmediateCellDisplay,
+    applyImmediateMergeSpan,
+    baseTimeSlotsLength,
+    buildContentWithPrescription,
+    clearImmediateCellDisplay,
+    currentMonth,
+    currentYear,
+    memos,
+    pendingDisplayValues,
+    saveShockwaveMemosBulk,
+    setPendingDisplayValues,
+    settings,
+  ]);
+
+  const updateLinkedScheduleRowField = useCallback(async (scheduleId, field, value, oldPrescription = '') => {
+    if (!scheduleId) return;
+    const updatePayload = { updated_at: new Date().toISOString() };
+
+    if (field === 'prescription') {
+      const { data, error: fetchError } = await supabase
+        .from('shockwave_schedules')
+        .select('content, prescription')
+        .eq('id', scheduleId)
+        .single();
+      if (fetchError) throw fetchError;
+      updatePayload.prescription = value || null;
+      if (data) {
+        updatePayload.content = buildContentWithPrescription(
+          data.content || '',
+          oldPrescription || data.prescription || '',
+          value
+        );
+      }
+    } else if (field === 'body_part') {
+      updatePayload.body_part = value || null;
+    }
+
+    const { error } = await supabase
+      .from('shockwave_schedules')
+      .update(updatePayload)
+      .eq('id', scheduleId);
+    if (error) throw error;
+  }, [buildContentWithPrescription]);
+
+  const handleUpdatePatientHistoryField = useCallback(async (log, field, rawValue) => {
+    if (!['prescription', 'body_part'].includes(field)) return false;
+    const newValue = field === 'body_part'
+      ? formatBodyPartInput(rawValue)
+      : String(rawValue || '').trim();
+
+    try {
+      if (log.id === 'draft' || log.isCurrentCell) {
+        if (!selectedCell) return false;
+        const key = cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c);
+        return saveScheduleCellHistoryField(key, field, newValue, log);
+      }
+
+      if (String(log.id || '').startsWith('draft-')) {
+        return saveScheduleCellHistoryField(log.schedule_cell_key, field, newValue, log);
+      }
+
+      if (log.type === 'schedule') {
+        await updateLinkedScheduleRowField(log.id, field, newValue, log.prescription || '');
+      } else {
+        const tableName = getHistoryLogTableName(log);
+        if (tableName) {
+          const { error } = await supabase
+            .from(tableName)
+            .update({ [field]: newValue || null })
+            .eq('id', log.id);
+          if (error) throw error;
+        }
+        if (log.schedule_id) {
+          await updateLinkedScheduleRowField(log.schedule_id, field, newValue, log.prescription || '');
+        }
+      }
+
+      patientHistoryResultCacheRef.current.clear();
+      addToast(field === 'prescription' ? '처방이 수정되었습니다.' : '부위가 수정되었습니다.', 'success');
+      return true;
+    } catch (e) {
+      console.error(e);
+      addToast(field === 'prescription' ? '처방 수정 실패' : '부위 수정 실패', 'error');
+      return false;
+    }
+  }, [
+    addToast,
+    cellKey,
+    saveScheduleCellHistoryField,
+    selectedCell,
+    updateLinkedScheduleRowField,
+  ]);
+
   const handleUpdateLogVisitCount = useCallback(async (log, newValue) => {
     if (log.id === 'draft' || log.type === 'draft') return false;
 
@@ -984,6 +1195,7 @@ export default function usePatientHistoryActions({
   return {
     fetchPatientHistory,
     handleUpdateLogVisitCount,
+    handleUpdatePatientHistoryField,
     handleUpdateCurrentCellVisitCount,
     handleUpdateDraftHistoryVisitCount,
     handleOpenPatientHistoryModal,

@@ -324,6 +324,7 @@
   gap: 10px;
   padding-bottom: 9px;
   flex: 0 0 auto;
+  transform: translateY(15px);
 }
 
 .top-tabs {
@@ -834,6 +835,7 @@
     gap: 0;
     padding-bottom: 6px;
     flex: 0 0 auto;
+    transform: translateY(10px);
   }
 
   .top-tabs-current-date {

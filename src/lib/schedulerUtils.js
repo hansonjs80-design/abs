@@ -243,6 +243,31 @@ export function getManualDoseTag(prescription) {
   return match ? match[1] : '';
 }
 
+function normalizePrescriptionAliasKey(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9가-힣]/g, '');
+}
+
+export function normalizeManualTherapyPrescriptionAlias(prescription, manualPrescriptions = []) {
+  const value = String(prescription || '').trim();
+  if (!value) return '';
+
+  const prescriptions = (Array.isArray(manualPrescriptions) ? manualPrescriptions : [])
+    .map((item) => String(item || '').trim())
+    .filter(Boolean);
+  const valueKey = normalizePrescriptionAliasKey(value);
+  const directMatch = prescriptions.find((item) => normalizePrescriptionAliasKey(item) === valueKey);
+  if (directMatch) return directMatch;
+
+  const doseTag = getManualDoseTag(value);
+  if (!doseTag) return '';
+  const doseMatch = prescriptions.find((item) => getManualDoseTag(item) === doseTag);
+  if (doseMatch) return doseMatch;
+
+  return /^(40|60)$/u.test(doseTag) ? `${doseTag}분` : '';
+}
+
 export function buildManualNamePart(patientName, prescription) {
   const cleanName = String(patientName || '').replace(/\*/g, '').trim();
   const doseTag = getManualDoseTag(prescription);

@@ -82,6 +82,7 @@ import {
   addBodyPartToMap,
   getScheduleDefaultMergeRowSpan,
   getScheduleDisplaySlotMinutes,
+  formatBodyPartInput,
 } from '../../lib/schedulerUtils';
 
 const PATIENT_HISTORY_GROUPS = [
@@ -494,9 +495,27 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }, [patientHistoryLogGroups.length]);
   const patientHistoryColumnWidths = useMemo(() => (
     patientHistoryLogGroups.length >= 2
-      ? ['18%', '11%', '8.5%', '18.5%', '18%', '7%', '9%', '10%']
-      : ['15%', '11%', '9%', '20%', '22%', '7%', '9%', '7%']
+      ? ['16%', '10%', '12%', '17%', '17%', '7%', '9%', '12%']
+      : ['14%', '10%', '13%', '19%', '20%', '7%', '9%', '8%']
   ), [patientHistoryLogGroups.length]);
+  const patientHistoryPrescriptionOptions = useMemo(() => ({
+    shockwave: Array.isArray(prescriptionScheduleSettings?.shockwave?.prescriptions)
+      ? prescriptionScheduleSettings.shockwave.prescriptions.filter(Boolean)
+      : [],
+    manual: Array.isArray(prescriptionScheduleSettings?.manualTherapy?.prescriptions)
+      ? prescriptionScheduleSettings.manualTherapy.prescriptions.filter(Boolean)
+      : [],
+  }), [prescriptionScheduleSettings]);
+  const updatePatientHistoryModalLog = useCallback((historyRowKey, updater) => {
+    setPatientHistoryModalData((prev) => ({
+      ...prev,
+      logs: (prev.logs || []).map((item) => {
+        const itemKey = item._history_row_key || item.id;
+        if (itemKey !== historyRowKey) return item;
+        return typeof updater === 'function' ? updater(item) : { ...item, ...updater };
+      }),
+    }));
+  }, []);
 
   // Presence 기능 비활성화 – 실시간 데이터 동기화만 유지
 
@@ -1711,7 +1730,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (wasDeletedAfterSaveStarted() || !isSaveVersionCurrent()) return;
     if (success) {
       removePendingScheduleDraft(currentYear, currentMonth, key);
-      clearImmediateCellDisplay(finalSinglePayload, { force: !newContent.trim() });
+      if (!newContent.trim()) {
+        clearImmediateCellDisplay(finalSinglePayload, { force: true });
+      }
     } else {
       if (!newContent.trim()) removeDeletedScheduleDraft(currentYear, currentMonth, key);
       rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
@@ -1920,6 +1941,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const {
     fetchPatientHistory,
     handleUpdateLogVisitCount,
+    handleUpdatePatientHistoryField,
     handleUpdateCurrentCellVisitCount,
     handleUpdateDraftHistoryVisitCount,
     handleOpenPatientHistoryModal,
@@ -3739,6 +3761,55 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 ? (group.key === 'manual' ? '#fedfbb' : '#c8ebfd')
                                 : undefined;
                               const historyRowFontWeight = isCurrentHistoryRow ? 800 : 400;
+                              const currentPrescriptionValue = String(log.prescription || '');
+                              const configuredPrescriptionOptions = patientHistoryPrescriptionOptions[group.key] || patientHistoryPrescriptionOptions.shockwave || [];
+                              const prescriptionOptions = Array.from(new Set([
+                                currentPrescriptionValue,
+                                ...configuredPrescriptionOptions,
+                              ].map((value) => String(value || '').trim()).filter(Boolean)));
+                              const historyEditFieldStyle = {
+                                width: '100%',
+                                minWidth: 0,
+                                border: '1px solid rgba(148, 163, 184, 0.55)',
+                                borderRadius: '5px',
+                                background: '#fff',
+                                color: 'var(--text-primary, #1f2937)',
+                                fontSize: '0.78rem',
+                                fontWeight: historyRowFontWeight,
+                                padding: '2px 5px',
+                                outline: 'none',
+                                boxSizing: 'border-box',
+                              };
+                              const handleHistoryPrescriptionChange = async (event) => {
+                                const nextValue = event.target.value;
+                                const originalValue = log._original_prescription ?? '';
+                                updatePatientHistoryModalLog(historyRowKey, {
+                                  prescription: nextValue,
+                                });
+                                if (nextValue === originalValue) return;
+
+                                const success = await handleUpdatePatientHistoryField(log, 'prescription', nextValue);
+                                updatePatientHistoryModalLog(historyRowKey, (item) => (
+                                  success
+                                    ? { ...item, prescription: nextValue, _original_prescription: nextValue }
+                                    : { ...item, prescription: originalValue }
+                                ));
+                              };
+                              const handleHistoryBodyPartBlur = async (event) => {
+                                const nextValue = formatBodyPartInput(event.target.value);
+                                const originalValue = log._original_body_part ?? '';
+                                updatePatientHistoryModalLog(historyRowKey, {
+                                  body_part: nextValue,
+                                });
+                                if (nextValue === originalValue) return;
+
+                                const success = await handleUpdatePatientHistoryField(log, 'body_part', nextValue);
+                                updatePatientHistoryModalLog(historyRowKey, (item) => (
+                                  success
+                                    ? { ...item, body_part: nextValue, _original_body_part: nextValue }
+                                    : { ...item, body_part: originalValue }
+                                ));
+                              };
                               return (
                               <tr
                                 key={historyRowKey}
@@ -3763,10 +3834,46 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 >
                                   {log.chart_number || '-'}
                                 </td>
-                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, color: log.type === 'manual' ? 'var(--brand-primary)' : 'inherit', fontWeight: historyRowFontWeight }}>
-                                  {log.prescription}
+                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, color: log.type === 'manual' ? 'var(--brand-primary)' : 'inherit', fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
+                                  <select
+                                    aria-label="처방 수정"
+                                    value={currentPrescriptionValue}
+                                    onChange={handleHistoryPrescriptionChange}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onClick={(e) => e.stopPropagation()}
+                                    style={historyEditFieldStyle}
+                                  >
+                                    <option value="">처방 없음</option>
+                                    {prescriptionOptions.map((prescription) => (
+                                      <option key={`${historyRowKey}-prescription-${prescription}`} value={prescription}>
+                                        {prescription}
+                                      </option>
+                                    ))}
+                                  </select>
                                 </td>
-                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }}>{log.body_part}</td>
+                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="text"
+                                    value={log.body_part || ''}
+                                    placeholder="부위"
+                                    aria-label="부위 수정"
+                                    style={{ ...historyEditFieldStyle, textAlign: 'center' }}
+                                    onChange={(event) => {
+                                      updatePatientHistoryModalLog(historyRowKey, {
+                                        body_part: event.target.value,
+                                      });
+                                    }}
+                                    onBlur={handleHistoryBodyPartBlur}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        e.currentTarget.blur();
+                                      }
+                                    }}
+                                  />
+                                </td>
                                 <td
                                   title={log.memo || ''}
                                   style={{ textAlign: 'left', backgroundColor: currentCellRowBackground, color: 'var(--text-secondary)', fontSize: '0.85em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: historyRowFontWeight }}

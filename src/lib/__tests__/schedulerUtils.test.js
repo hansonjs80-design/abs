@@ -32,6 +32,7 @@ import {
   rememberDeletedScheduleDraft,
   rememberPendingScheduleDraft,
   removeDeletedScheduleDraft,
+  normalizeManualTherapyPrescriptionAlias,
   SHOCKWAVE_DELETED_DRAFTS_KEY,
   SHOCKWAVE_PENDING_DRAFTS_KEY,
   wasScheduleDraftDeletedAfter,
@@ -177,6 +178,14 @@ describe('scheduler visit suffix normalization', () => {
     assert.equal(markSchedulerContentAsNewPatient('4566/김은영(3)'), '4566/김은영*');
     assert.equal(markSchedulerContentAsNewPatient('4566/김은영(*)'), '4566/김은영*');
     assert.equal(markSchedulerContentAsNewPatient('4566/김은영*'), '4566/김은영*');
+  });
+
+  it('normalizes manual therapy prescription aliases from dose tags', () => {
+    const manualPrescriptions = ['40분', '60분'];
+    assert.equal(normalizeManualTherapyPrescriptionAlias('40', manualPrescriptions), '40분');
+    assert.equal(normalizeManualTherapyPrescriptionAlias('도수40', manualPrescriptions), '40분');
+    assert.equal(normalizeManualTherapyPrescriptionAlias('40분', manualPrescriptions), '40분');
+    assert.equal(normalizeManualTherapyPrescriptionAlias('F2.5', manualPrescriptions), '');
   });
 
   it('replaces special visit markers with explicit numeric visits', () => {

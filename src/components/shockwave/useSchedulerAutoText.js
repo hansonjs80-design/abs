@@ -35,6 +35,7 @@ import {
   getNonVisitParentheticalSuffix,
   getSchedulerHistoryTypeLabel,
   markSchedulerContentAsNewPatient,
+  normalizeManualTherapyPrescriptionAlias,
   normalizeBodyPartKey,
   normalizeSchedulerVisitSuffix,
   parseSchedulerPatientIdentity,
@@ -364,9 +365,12 @@ export default function useSchedulerAutoText({
     const parsedMonth = dayInfo.month || (dayInfo.date instanceof Date ? dayInfo.date.getMonth() + 1 : (dayInfo.date ? new Date(dayInfo.date).getMonth() + 1 : undefined));
     const parsedDay = dayInfo.day || (dayInfo.date instanceof Date ? dayInfo.date.getDate() : (dayInfo.date ? new Date(dayInfo.date).getDate() : undefined));
     const config = getPrescriptionScheduleSettings(settings, parsedYear, parsedMonth);
+    const manualTherapyPrescriptions = Array.isArray(config?.manualTherapy?.prescriptions)
+      ? config.manualTherapy.prescriptions
+      : [];
     const configuredPrescriptionSet = new Set([
       ...(Array.isArray(config?.shockwave?.prescriptions) ? config.shockwave.prescriptions : []),
-      ...(Array.isArray(config?.manualTherapy?.prescriptions) ? config.manualTherapy.prescriptions : []),
+      ...manualTherapyPrescriptions,
     ].map((prescription) => String(prescription || '').trim()).filter(Boolean));
     rawName = normalizeConfiguredDoseTagInContent(rawName, config.doseTags);
     const inlineNoteInfo = splitSchedulerInlineNote(rawName);
@@ -379,17 +383,26 @@ export default function useSchedulerAutoText({
         ? normalizeSchedulerVisitSuffix(appendSchedulerInlineNote(baseText, inlineNoteInfo.noteText))
         : baseText;
     };
-    const normalizeImportedPrescription = (prescription) => {
+    const normalizeImportedPrescription = (prescription, options = {}) => {
       const value = String(prescription || '').trim();
       if (!value) return '';
-      return configuredPrescriptionSet.size === 0 || configuredPrescriptionSet.has(value) ? value : '';
+      if (configuredPrescriptionSet.size === 0 || configuredPrescriptionSet.has(value)) return value;
+      return options.allowManualAlias
+        ? normalizeManualTherapyPrescriptionAlias(value, manualTherapyPrescriptions)
+        : '';
     };
-    const isConfiguredPrescription = (prescription) => {
+    const isConfiguredPrescription = (prescription, options = {}) => {
       const value = String(prescription || '').trim();
-      return !value || configuredPrescriptionSet.size === 0 || configuredPrescriptionSet.has(value);
+      if (!value || configuredPrescriptionSet.size === 0 || configuredPrescriptionSet.has(value)) return true;
+      return options.allowManualAlias
+        ? Boolean(normalizeManualTherapyPrescriptionAlias(value, manualTherapyPrescriptions))
+        : false;
     };
     const firstConfiguredPrescription = (...prescriptions) => (
-      prescriptions.map(normalizeImportedPrescription).find(Boolean) || ''
+      prescriptions.map((prescription) => normalizeImportedPrescription(prescription)).find(Boolean) || ''
+    );
+    const normalizeSelectedPrescription = (prescription, selectedType) => (
+      normalizeImportedPrescription(prescription, { allowManualAlias: selectedType === 'manual' })
     );
     const hasDoseTagPattern = (text) => {
       if (!text) return false;
@@ -483,12 +496,16 @@ export default function useSchedulerAutoText({
       const autoPrescription = (taggedManualPrescription || initialPrescription !== undefined)
         ? firstConfiguredPrescription(taggedManualPrescription, initialPrescription)
         : (hasDoseTagPattern(selected.nextText)
-          ? (normalizeImportedPrescription(selected.latestPrescription || selected.prescription) || undefined)
+          ? (normalizeImportedPrescription(selected.latestPrescription || selected.prescription, { allowManualAlias: true }) || undefined)
           : (searchChart
-            ? normalizeImportedPrescription(selected.latestPrescription || selected.prescription)
-            : (normalizeImportedPrescription(selected.latestPrescription || selected.prescription) || undefined)));
+            ? normalizeImportedPrescription(selected.latestPrescription || selected.prescription, { allowManualAlias: true })
+            : (normalizeImportedPrescription(selected.latestPrescription || selected.prescription, { allowManualAlias: true }) || undefined)));
       const selectedPrescription = selected.latestPrescription || selected.prescription || '';
-      const shouldOmitSelectedPrescription = !isConfiguredPrescription(selectedPrescription);
+      const selectedHasManualDose = hasDoseTagPattern(selected.nextText)
+        || Boolean(normalizeManualTherapyPrescriptionAlias(selectedPrescription, manualTherapyPrescriptions));
+      const shouldOmitSelectedPrescription = !isConfiguredPrescription(selectedPrescription, {
+        allowManualAlias: selectedHasManualDose,
+      });
       const selectedText = shouldOmitSelectedPrescription
         ? normalizeSchedulerVisitSuffix(`${selected.chartNumber}/${strip4060FromContent(selected.namePart)}(1)`)
         : selected.nextText;
@@ -502,7 +519,7 @@ export default function useSchedulerAutoText({
     };
 
     const manualPrescriptionSet = new Set(
-      (Array.isArray(settings?.manual_therapy_prescriptions) ? settings.manual_therapy_prescriptions : [])
+      manualTherapyPrescriptions
         .map((prescription) => String(prescription || '').trim())
         .filter(Boolean)
     );
@@ -510,6 +527,7 @@ export default function useSchedulerAutoText({
       const prescription = String(record?.prescription || '').trim();
       const patientName = String(record?.patient_name || '').trim();
       if (manualPrescriptionSet.has(prescription)) return true;
+      if (normalizeManualTherapyPrescriptionAlias(prescription, manualTherapyPrescriptions)) return true;
       if (/^(40|60)분$/u.test(prescription)) return true;
       return has4060Pattern(content) || has4060Pattern(patientName);
     };
@@ -810,10 +828,15 @@ export default function useSchedulerAutoText({
       }
 
       const itemPrescription = getHistoryPrescription(item);
-      const isCurrentPrescription = isConfiguredPrescription(itemPrescription);
+      const isCurrentPrescription = isConfiguredPrescription(itemPrescription, {
+        allowManualAlias: item.type === 'manual',
+      });
       const cleanPatientName = String(item.patient_name).replace(/\*/g, '').trim();
+      const normalizedItemPrescription = item.type === 'manual'
+        ? normalizeSelectedPrescription(itemPrescription, item.type) || itemPrescription
+        : itemPrescription;
       let namePart = item.type === 'manual' && isCurrentPrescription
-        ? buildManualNamePart(cleanPatientName, itemPrescription)
+        ? buildManualNamePart(cleanPatientName, normalizedItemPrescription)
         : strip4060FromContent(cleanPatientName);
       if (userRemovedDoseTag) {
         namePart = strip4060FromContent(namePart);
@@ -915,7 +938,10 @@ export default function useSchedulerAutoText({
         bodyParts: mergedBodyParts,
         prescriptions: mergedPrescriptions,
         mergeSpan: localSchedulerOption.mergeSpan || selected.mergeSpan,
-        isCurrentPrescription: selected.isCurrentPrescription && isConfiguredPrescription(localPrescription || selected.latestPrescription || selected.prescription),
+        isCurrentPrescription: selected.isCurrentPrescription && isConfiguredPrescription(
+          localPrescription || selected.latestPrescription || selected.prescription,
+          { allowManualAlias: selected.type === 'manual' }
+        ),
       };
     }
     if (!selected.chartNumber) {
@@ -940,7 +966,9 @@ export default function useSchedulerAutoText({
     }
 
     const selectedPrescription = selected.latestPrescription || selected.prescription || '';
-    const shouldOmitSelectedPrescription = !isConfiguredPrescription(selectedPrescription);
+    const shouldOmitSelectedPrescription = !isConfiguredPrescription(selectedPrescription, {
+      allowManualAlias: selected.type === 'manual',
+    });
     const effectiveVisitCount = shouldOmitSelectedPrescription
       ? 1
       : (selected.preferredNextVisit || selected.nextVisit);
@@ -986,19 +1014,24 @@ export default function useSchedulerAutoText({
     const autoPrescription = (taggedManualPrescription || initialPrescription !== undefined)
       ? firstConfiguredPrescription(taggedManualPrescription, initialPrescription)
       : (userRemovedDoseTag
-        ? normalizeImportedPrescription(selected.latestPrescription || selected.prescription)
+        ? normalizeSelectedPrescription(selected.latestPrescription || selected.prescription, selected.type)
         : (has4060Pattern(autoText)
-          ? (normalizeImportedPrescription(selected.latestPrescription || selected.prescription) || undefined)
+          ? (normalizeSelectedPrescription(selected.latestPrescription || selected.prescription, selected.type) || undefined)
           : (shouldOverwriteContent
-            ? normalizeImportedPrescription(selected.latestPrescription || selected.prescription)
-            : (normalizeImportedPrescription(selected.latestPrescription || selected.prescription) || undefined))));
+            ? normalizeSelectedPrescription(selected.latestPrescription || selected.prescription, selected.type)
+            : (normalizeSelectedPrescription(selected.latestPrescription || selected.prescription, selected.type) || undefined))));
     const finalAutoPrescription = shouldOmitSelectedPrescription ? '' : autoPrescription;
-    const validSelectedPrescriptions = selected.prescriptions.map(normalizeImportedPrescription).filter(Boolean);
+    const validSelectedPrescriptions = selected.prescriptions
+      .map((prescription) => normalizeSelectedPrescription(prescription, selected.type))
+      .filter(Boolean);
     const needsDialog = (selected.bodyParts.length >= 2 && !selected.preferredBodyPart) || validSelectedPrescriptions.length >= 2;
     if (needsDialog) {
       if (skipDialog) {
         const defaultBodyPart = selected.preferredBodyPart || selected.bodyParts[0] || selected.latestBodyPart || '';
-        const defaultPrescription = finalAutoPrescription || normalizeImportedPrescription(selected.latestPrescription || selected.prescription) || validSelectedPrescriptions[0] || '';
+        const defaultPrescription = finalAutoPrescription
+          || normalizeSelectedPrescription(selected.latestPrescription || selected.prescription, selected.type)
+          || validSelectedPrescriptions[0]
+          || '';
         const baseMerge = buildMergeSpanWithMemoList(inheritedMergeSpan, getMemoListFromMergeSpan(inheritedMergeSpan));
         return {
           text: withInlineNote(`${selected.chartNumber}/${selected.namePart}${explicitVisitSuffix || explicitNoteSuffix || `(${effectiveVisitCount})`}`),
