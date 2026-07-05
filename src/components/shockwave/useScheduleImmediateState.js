@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
+import { removeDeletedScheduleDraft } from '../../lib/schedulerUtils.js';
 
 function getUpdateKey(item) {
   if (!item) return '';
@@ -261,6 +262,9 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
       }
       const key = getUpdateKey(item);
       if (!isValidKey(key)) return;
+      if (String(item.content ?? '').trim()) {
+        removeDeletedScheduleDraft(item.year ?? currentYear, item.month ?? currentMonth, key);
+      }
       const override = { ...nextOverrides[key], content: String(item.content ?? '') };
       if (Object.prototype.hasOwnProperty.call(item, 'bg_color')) override.bg_color = item.bg_color ?? null;
       if (item.merge_span || item.mergeSpan) override.merge_span = item.merge_span || item.mergeSpan;

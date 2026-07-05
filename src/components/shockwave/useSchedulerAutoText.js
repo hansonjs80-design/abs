@@ -905,6 +905,9 @@ export default function useSchedulerAutoText({
       const localPrescription = localSchedulerOption.latestPrescription || localSchedulerOption.prescription || '';
       selected = {
         ...selected,
+        chartNumber: selected.chartNumber || localSchedulerOption.chartNumber || '',
+        cleanName: selected.cleanName || localSchedulerOption.cleanName || '',
+        namePart: selected.namePart || localSchedulerOption.namePart || '',
         prescription: localPrescription || selected.prescription,
         latestPrescription: localPrescription || selected.latestPrescription,
         latestBodyPart: localSchedulerOption.latestBodyPart || selected.latestBodyPart,
@@ -914,6 +917,23 @@ export default function useSchedulerAutoText({
         mergeSpan: localSchedulerOption.mergeSpan || selected.mergeSpan,
         isCurrentPrescription: selected.isCurrentPrescription && isConfiguredPrescription(localPrescription || selected.latestPrescription || selected.prescription),
       };
+    }
+    if (!selected.chartNumber) {
+      const fallbackChartOption = sortedOptions.find((option) => (
+        String(option?.chartNumber || '').trim() &&
+        normalizeNameForMatch(option?.cleanName) === normalizeNameForMatch(selected?.cleanName)
+      )) || schedulerOptions.find((option) => (
+        String(option?.chartNumber || '').trim() &&
+        normalizeNameForMatch(option?.cleanName) === normalizeNameForMatch(selected?.cleanName)
+      ));
+      if (fallbackChartOption) {
+        selected = {
+          ...selected,
+          chartNumber: String(fallbackChartOption.chartNumber || '').trim(),
+          namePart: selected.namePart || fallbackChartOption.namePart || selected.cleanName || '',
+          cleanName: selected.cleanName || fallbackChartOption.cleanName || '',
+        };
+      }
     }
     if (hasExplicitSearchName && normalizeNameForMatch(selected.cleanName) !== searchName) {
       return buildUnknownPatientResult();
@@ -948,7 +968,9 @@ export default function useSchedulerAutoText({
       };
     }
 
-    let autoText = `${selected.chartNumber}/${selected.namePart}`;
+    let autoText = selected.chartNumber
+      ? `${selected.chartNumber}/${selected.namePart}`
+      : selected.namePart;
     if (!selected.doseTag && !userRemovedDoseTag && !shouldOmitSelectedPrescription) {
       const pureChartInput = /^\d+$/.test(rawNameForMatching.replace(/\(\d+\)$/, '').trim());
       if (!pureChartInput) {

@@ -28,11 +28,13 @@ import {
 import {
   readDeletedScheduleDrafts,
   readPendingScheduleDrafts,
+  getDeletedScheduleDraftTime,
   rememberDeletedScheduleDraft,
   rememberPendingScheduleDraft,
   removeDeletedScheduleDraft,
   SHOCKWAVE_DELETED_DRAFTS_KEY,
   SHOCKWAVE_PENDING_DRAFTS_KEY,
+  wasScheduleDraftDeletedAfter,
 } from '../schedulerUtils.js';
 
 describe('scheduler cell patient parsing', () => {
@@ -91,6 +93,34 @@ describe('scheduler cell patient parsing', () => {
       removeDeletedScheduleDraft(2026, 6, '2-5-12-0');
       assert.equal(storage.has(SHOCKWAVE_DELETED_DRAFTS_KEY), false);
       assert.deepEqual(readDeletedScheduleDrafts(), {});
+    } finally {
+      globalThis.window = originalWindow;
+    }
+  });
+
+  it('keeps a deleted draft marker when a pending draft is blank', () => {
+    const originalWindow = globalThis.window;
+    const storage = new Map();
+    try {
+      globalThis.window = {
+        localStorage: {
+          getItem: (key) => storage.get(key) ?? null,
+          setItem: (key, value) => storage.set(key, value),
+          removeItem: (key) => storage.delete(key),
+        },
+      };
+
+      rememberDeletedScheduleDraft(2026, 6, '2-5-12-0');
+      const deletedAt = getDeletedScheduleDraftTime(2026, 6, '2-5-12-0');
+      assert.equal(deletedAt > 0, true);
+
+      rememberPendingScheduleDraft(2026, 6, '2-5-12-0', '', { source: 'editing-draft' });
+      assert.equal(getDeletedScheduleDraftTime(2026, 6, '2-5-12-0'), deletedAt);
+      assert.equal(wasScheduleDraftDeletedAfter(2026, 6, '2-5-12-0', deletedAt - 1), true);
+      assert.equal(wasScheduleDraftDeletedAfter(2026, 6, '2-5-12-0', deletedAt + 1), false);
+
+      rememberPendingScheduleDraft(2026, 6, '2-5-12-0', '6245/박병수(1)', { source: 'editing-draft' });
+      assert.equal(getDeletedScheduleDraftTime(2026, 6, '2-5-12-0'), 0);
     } finally {
       globalThis.window = originalWindow;
     }

@@ -57,13 +57,12 @@ import {
   TREATMENT_COMPLETE_BG,
   TREATMENT_CANCEL_BG,
   SCHEDULER_HOLIDAY_BG,
-  getPendingDraftId,
   getShockwaveScheduleScrollKey,
-  readDeletedScheduleDrafts,
   rememberDeletedScheduleDraft,
   rememberPendingScheduleDraft,
   removeDeletedScheduleDraft,
   removePendingScheduleDraft,
+  wasScheduleDraftDeletedAfter,
   splitBodyParts,
   normalizeBodyPartKey,
   parseSchedulerPatientIdentity,
@@ -930,7 +929,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const nextValue = value ?? '';
     setPendingDisplayValues((prev) => ({ ...prev, [key]: nextValue }));
     editDraftRef.current = { key, value: nextValue, dirty: true };
-    rememberPendingScheduleDraft(currentYear, currentMonth, key, nextValue, { source: 'editing-draft' });
+    if (String(nextValue || '').trim()) {
+      rememberPendingScheduleDraft(currentYear, currentMonth, key, nextValue, { source: 'editing-draft' });
+    } else {
+      cellSaveVersionRef.current[key] = (cellSaveVersionRef.current[key] || 0) + 1;
+      rememberDeletedScheduleDraft(currentYear, currentMonth, key);
+      removePendingScheduleDraft(currentYear, currentMonth, key);
+    }
     // DB 저장은 handleCellSave(편집 완료 시)에서 처방 정보와 함께 수행.
     // 여기서 미리 저장하면 처방 없이 저장되어 노란색 '처방 없음'이 잠깐 보이는 문제 발생.
     if (editAutosaveTimerRef.current) {
@@ -1193,10 +1198,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const saveVersion = (cellSaveVersionRef.current[key] || 0) + 1;
     cellSaveVersionRef.current[key] = saveVersion;
     const saveStartedAt = Date.now();
-    const wasDeletedAfterSaveStarted = () => {
-      const deletedDraft = readDeletedScheduleDrafts()[getPendingDraftId(currentYear, currentMonth, key)];
-      return Number(deletedDraft?.updatedAt || 0) >= saveStartedAt;
-    };
+    const wasDeletedAfterSaveStarted = () => wasScheduleDraftDeletedAfter(currentYear, currentMonth, key, saveStartedAt);
+    const isSaveVersionCurrent = () => cellSaveVersionRef.current[key] === saveVersion;
     if (editDraftRef.current?.key === key) {
       editDraftRef.current = null;
     }
@@ -1266,7 +1269,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       result = { text: immediateContent };
     }
     if (wasDeletedAfterSaveStarted()) return;
-    if (cellSaveVersionRef.current[key] !== saveVersion) return;
+    if (!isSaveVersionCurrent()) return;
     const newContent = normalizeSchedulerVisitSuffix(
       normalize4060StarOrder(typeof result === 'string' ? result : (result?.text || ''))
     );
@@ -1433,6 +1436,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         oldMemos: buildMemoSnapshotForKeys(undoKeys, { includePendingDisplay: false }),
       });
       const success = await queuedSaveShockwaveMemosBulk(combinedPayload);
+      if (wasDeletedAfterSaveStarted() || !isSaveVersionCurrent()) return;
       if (success) {
         removePendingScheduleDraft(currentYear, currentMonth, key);
         clearImmediateCellDisplay(combinedPayload);
@@ -1490,6 +1494,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           oldMemos: buildMemoSnapshotForKeys(undoKeys, { includePendingDisplay: false }),
         });
         const success = await queuedSaveShockwaveMemosBulk(combinedPayload);
+        if (wasDeletedAfterSaveStarted() || !isSaveVersionCurrent()) return;
         if (success) {
           undoKeys.forEach((undoKey) => {
             removePendingScheduleDraft(currentYear, currentMonth, undoKey);
@@ -1572,6 +1577,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         payload.forEach((item) => {
           const draftKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
           rememberDeletedScheduleDraft(currentYear, currentMonth, draftKey);
+          cellSaveVersionRef.current[draftKey] = (cellSaveVersionRef.current[draftKey] || 0) + 1;
           removePendingScheduleDraft(currentYear, currentMonth, draftKey);
         });
         const success = await queuedSaveShockwaveMemosBulk(combinedPayload);
@@ -1630,6 +1636,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         oldMemos: buildMemoSnapshotForKeys(undoKeys, { includePendingDisplay: false }),
       });
       const success = await queuedSaveShockwaveMemosBulk(combinedPayload);
+      if (wasDeletedAfterSaveStarted() || !isSaveVersionCurrent()) return;
       if (success) {
         removePendingScheduleDraft(currentYear, currentMonth, key);
         clearImmediateCellDisplay(combinedPayload);
@@ -1701,6 +1708,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           finalPrescription,
           finalBodyPart
         );
+    if (wasDeletedAfterSaveStarted() || !isSaveVersionCurrent()) return;
     if (success) {
       removePendingScheduleDraft(currentYear, currentMonth, key);
       clearImmediateCellDisplay(finalSinglePayload, { force: !newContent.trim() });

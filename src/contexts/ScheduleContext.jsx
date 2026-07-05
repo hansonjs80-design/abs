@@ -32,6 +32,7 @@ import {
   readDeletedScheduleDrafts,
   readPendingScheduleDrafts,
   rememberDeletedScheduleDraft,
+  wasScheduleDraftDeletedAfter,
 } from '../lib/schedulerUtils';
 
 const ScheduleContext = createContext();
@@ -1344,7 +1345,9 @@ export function ScheduleProvider({ children }) {
     return enqueueShockwaveWrite([key], async () => {
       const previousMemo = shockwaveMemosRef.current[key];
       let writeStartedAtMs = 0;
+      const wasDeletedAfterWriteStarted = () => wasScheduleDraftDeletedAfter(year, month, key, writeStartedAtMs);
       const isWriteStillCurrent = () => {
+        if (wasDeletedAfterWriteStarted()) return false;
         const currentLocalWrite = localShockwaveWriteTimeRef.current.get(key);
         if (!currentLocalWrite || !writeStartedAtMs) return true;
         const currentLocalWriteMs = new Date(currentLocalWrite).getTime();
@@ -1366,13 +1369,20 @@ export function ScheduleProvider({ children }) {
       if (prescription !== undefined) upsertData.prescription = prescription;
       if (body_part !== undefined) upsertData.body_part = body_part;
 
+      let canonicalUpsertData = canonicalizeShockwaveScheduleItemDate(upsertData);
+      const canonicalKey = `${canonicalUpsertData.week_index}-${canonicalUpsertData.day_index}-${canonicalUpsertData.row_index}-${canonicalUpsertData.col_index}`;
+      if (
+        wasScheduleDraftDeletedAfter(canonicalUpsertData.year, canonicalUpsertData.month, canonicalKey, 0) &&
+        shouldKeepShockwaveMemo(canonicalUpsertData)
+      ) {
+        return true;
+      }
+
       setShockwaveMemos(prev => {
         const updated = { ...optimisticMemo, ...upsertData };
         return applyShockwaveMemoStateUpdate(prev, key, updated, shouldKeepShockwaveMemo);
       });
 
-      let canonicalUpsertData = canonicalizeShockwaveScheduleItemDate(upsertData);
-      const canonicalKey = `${canonicalUpsertData.week_index}-${canonicalUpsertData.day_index}-${canonicalUpsertData.row_index}-${canonicalUpsertData.col_index}`;
       let savedCanonicalMemo = null;
 
       if (!shouldKeepShockwaveMemo(canonicalUpsertData)) {
@@ -1411,6 +1421,9 @@ export function ScheduleProvider({ children }) {
       }
 
       loadCacheRef.current.shockwaveMemos = null;
+      if (wasDeletedAfterWriteStarted()) {
+        return true;
+      }
       const savedMemo = sanitizeShockwaveScheduleItemForDisplay(
         mapShockwaveScheduleItemToVisibleMonth(savedCanonicalMemo, year, month) || { ...optimisticMemo, ...upsertData }
       );
@@ -1486,6 +1499,7 @@ export function ScheduleProvider({ children }) {
     return enqueueShockwaveWrite(targetKeys, async () => {
       let previousMemos = {};
       let writeStartedAtMs = 0;
+      const canonicalMemosArrayRef = { current: new Map() };
       const canApplyClientState = () => (
         typeof shouldApplyClientState === 'function'
           ? shouldApplyClientState() !== false
@@ -1493,6 +1507,16 @@ export function ScheduleProvider({ children }) {
       );
       const isKeyWriteStillCurrent = (key) => {
         if (!canApplyClientState()) return false;
+        const [weekIndex, dayIndex, rowIndex, colIndex] = String(key).split('-').map(Number);
+        const sourceItem = canonicalMemosArrayRef.current?.get(key);
+        const draftYear = sourceItem?.year ?? currentYear;
+        const draftMonth = sourceItem?.month ?? currentMonth;
+        const draftKey = [weekIndex, dayIndex, rowIndex, colIndex].every(Number.isFinite)
+          ? key
+          : '';
+        if (draftKey && wasScheduleDraftDeletedAfter(draftYear, draftMonth, draftKey, writeStartedAtMs)) {
+          return false;
+        }
         const currentLocalWrite = localShockwaveWriteTimeRef.current.get(key);
         if (!currentLocalWrite || !writeStartedAtMs) return true;
         const currentLocalWriteMs = new Date(currentLocalWrite).getTime();
@@ -1501,17 +1525,27 @@ export function ScheduleProvider({ children }) {
 
       try {
       const currentMemosSnapshot = shockwaveMemosRef.current;
+      const writeMemosArray = memosArray.filter((item) => {
+        const canonicalItem = canonicalizeShockwaveScheduleItemDate(item);
+        const canonicalKey = `${canonicalItem.week_index}-${canonicalItem.day_index}-${canonicalItem.row_index}-${canonicalItem.col_index}`;
+        const hasActiveDelete = wasScheduleDraftDeletedAfter(canonicalItem.year, canonicalItem.month, canonicalKey, 0);
+        return !hasActiveDelete ||
+          isIntentionalClearScheduleItem(canonicalItem) ||
+          !shouldKeepShockwaveMemo(canonicalItem);
+      });
+      if (writeMemosArray.length === 0) return true;
+      const writeTargetKeys = writeMemosArray.map((item) => `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`);
       const nowStr = new Date().toISOString();
       writeStartedAtMs = new Date(nowStr).getTime();
       const optimisticSnapshot = buildOptimisticShockwaveMemos(
         currentMemosSnapshot,
-        memosArray,
+        writeMemosArray,
         nowStr
       );
       previousMemos = optimisticSnapshot.previousMemos;
       if (canApplyClientState()) {
-        targetKeys.forEach((key) => lastWriteTimeRef.current.set(key, nowStr));
-        targetKeys.forEach((key) => localShockwaveWriteTimeRef.current.set(key, nowStr));
+        writeTargetKeys.forEach((key) => lastWriteTimeRef.current.set(key, nowStr));
+        writeTargetKeys.forEach((key) => localShockwaveWriteTimeRef.current.set(key, nowStr));
       }
 
       if (canApplyClientState()) {
@@ -1524,10 +1558,14 @@ export function ScheduleProvider({ children }) {
         });
       }
 
-      const canonicalMemosArray = memosArray.map((item) => canonicalizeShockwaveScheduleItemDate(item));
+      const canonicalMemosArray = writeMemosArray.map((item) => canonicalizeShockwaveScheduleItemDate(item));
+      canonicalMemosArray.forEach((item) => {
+        const visibleKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+        canonicalMemosArrayRef.current.set(visibleKey, item);
+      });
       const canonicalLocalSnapshot = { ...previousMemos };
       canonicalMemosArray.forEach((item, index) => {
-        const originalKey = targetKeys[index];
+        const originalKey = writeTargetKeys[index];
         const canonicalKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
         const localMemo = previousMemos[originalKey] || currentMemosSnapshot[originalKey];
         if (localMemo) canonicalLocalSnapshot[canonicalKey] = localMemo;

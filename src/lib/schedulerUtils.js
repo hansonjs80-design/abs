@@ -154,6 +154,19 @@ export function rememberDeletedScheduleDraft(year, month, key) {
   writeDeletedScheduleDrafts(deletedDrafts);
 }
 
+export function getDeletedScheduleDraftTime(year, month, key) {
+  if (!key) return 0;
+  const deletedDraft = readDeletedScheduleDrafts()[getPendingDraftId(year, month, key)];
+  const updatedAt = Number(deletedDraft?.updatedAt || 0);
+  return Number.isFinite(updatedAt) ? updatedAt : 0;
+}
+
+export function wasScheduleDraftDeletedAfter(year, month, key, timestamp) {
+  const deletedAt = getDeletedScheduleDraftTime(year, month, key);
+  const compareTime = Number(timestamp || 0);
+  return deletedAt > 0 && deletedAt >= compareTime;
+}
+
 export function removeDeletedScheduleDraft(year, month, key) {
   if (!key) return;
   const deletedDrafts = readDeletedScheduleDrafts();
@@ -198,9 +211,11 @@ export function rememberPendingScheduleDraft(year, month, key, value, options = 
     updatedAt: Date.now(),
   };
   writePendingScheduleDrafts(drafts);
-  const deletedDrafts = readDeletedScheduleDrafts();
-  delete deletedDrafts[getPendingDraftId(year, month, key)];
-  writeDeletedScheduleDrafts(deletedDrafts);
+  if (String(value ?? '').trim()) {
+    const deletedDrafts = readDeletedScheduleDrafts();
+    delete deletedDrafts[getPendingDraftId(year, month, key)];
+    writeDeletedScheduleDrafts(deletedDrafts);
+  }
 }
 
 export function removePendingScheduleDraft(year, month, key) {
