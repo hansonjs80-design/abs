@@ -141,6 +141,7 @@ const MemoizedCell = memo(({
   }
 
   const hasDisabledSlotBackground = isCurrentMonthCell && slotInfo.disabled && !displayData.hasDisplayText;
+  const hasOtherMonthDisabledSlotBackground = !isCurrentMonthCell && slotInfo.disabled && !displayData.hasDisplayText;
   const hasTreatmentCompleteBackground = isTreatmentCompleteBg(cellData?.bg_color);
   const hasTreatmentCancelBackground = isTreatmentCancelBg(cellData?.bg_color);
   const hasStaffOffBackground = isCurrentMonthCell && !isSelected && !hasDisplayText && !cellData?.bg_color && workState === 'off';
@@ -164,11 +165,11 @@ const MemoizedCell = memo(({
   } else if (isCurrentMonthCell && !hasDisplayText && staffBlockRule?.bg_color) {
     fillBackgroundColor = staffBlockRule.bg_color;
   }
-  const hasFilledScheduleBackground = Boolean(
+  const shouldUseUniformFillBorder = Boolean(
     fillBackgroundColor ||
     dayInfo.isHoliday ||
-    !isCurrentMonthCell ||
     hasDisabledSlotBackground ||
+    hasOtherMonthDisabledSlotBackground ||
     hasTreatmentCompleteBackground ||
     hasTreatmentCancelBackground ||
     hasStaffOffBackground ||
@@ -181,7 +182,7 @@ const MemoizedCell = memo(({
     gridRow: `${gridRowStart}${visualRowSpan > 1 ? ` / span ${visualRowSpan}` : ''}`,
     borderBottom: isLastRenderedRow
       ? 'none'
-      : `1px solid ${hasFilledScheduleBackground ? HORIZONTAL_BORDER_COLOR : (cellBorderBottomColor || HORIZONTAL_BORDER_COLOR)}`,
+      : `1px solid ${shouldUseUniformFillBorder ? HORIZONTAL_BORDER_COLOR : (cellBorderBottomColor || HORIZONTAL_BORDER_COLOR)}`,
   };
 
   if (colIdx + effectiveMergeSpan.colSpan - 1 === colCount - 1) {
@@ -305,6 +306,7 @@ const MemoizedCell = memo(({
           <input
             ref={(isEditing || isPrimary) ? editInputRef : null}
             className="sw-cell-input"
+            data-cell-key={cellKey}
             data-hidden-input={!isEditing && !isImePreview ? 'true' : undefined}
             defaultValue={isEditing ? editValue : ''}
             onMouseDown={(e) => {

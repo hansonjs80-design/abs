@@ -117,6 +117,9 @@ const PATIENT_HISTORY_EMPTY_BODY_FILTER = '__empty__';
 const HIDDEN_BODY_PART_OPTIONS_STORAGE_KEY = 'shockwave-hidden-body-part-options-by-patient';
 const EMPTY_SCHEDULE_MERGE_SPAN = { rowSpan: 1, colSpan: 1, mergedInto: null };
 const SCHEDULE_INTERNAL_BORDER_COLOR = '#d9d9d9';
+const normalizeCommittedSchedulerContent = (value) => normalizeSchedulerVisitSuffix(
+  normalize4060StarOrder(String(value ?? '').trim())
+);
 function getPlainTextDefaultRowSpan({ intervalMinutes, timeLabelIntervalMinutes }) {
   return getScheduleDefaultMergeRowSpan({
     interval_minutes: intervalMinutes,
@@ -1049,8 +1052,23 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const [editW, editD, editR, editC] = editingCell.split('-').map(Number);
       if ([editW, editD, editR, editC].every(Number.isFinite)) {
         const value = editInputRef.current?.value ?? editValue;
+        const draft = editDraftRef.current;
+        const visibleValue = Object.prototype.hasOwnProperty.call(pendingDisplayValues || {}, editingCell)
+          ? pendingDisplayValues[editingCell]
+          : (effectiveMemos[editingCell]?.content ?? '');
+        const isCleanCommittedDraft = (
+          draft?.key === editingCell &&
+          draft.dirty === false &&
+          normalizeCommittedSchedulerContent(value) === normalizeCommittedSchedulerContent(visibleValue)
+        );
         skipNextEditBlurSaveRef.current = true;
-        handleCellSaveRef.current?.(editW, editD, editR, editC, value);
+        if (isCleanCommittedDraft) {
+          setEditingCell(null);
+          removePendingScheduleDraft(currentYear, currentMonth, editingCell);
+        } else {
+          handleCellSaveRef.current?.(editW, editD, editR, editC, value);
+          setEditingCell(null);
+        }
         window.setTimeout(() => {
           skipNextEditBlurSaveRef.current = false;
         }, 0);
@@ -1079,7 +1097,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       dragSelectionRef.current = { anchor: cell };
     }
     if (!editingCell) setEditingCell(null);
-  }, [selectedCell, selectedKeys, editingCell, editValue, buildRangeKeys, selectSingleCell, normalizeCellToMergeMaster, cellKey, focusSelectedCellInput]);
+  }, [selectedCell, selectedKeys, editingCell, editValue, pendingDisplayValues, effectiveMemos, currentYear, currentMonth, buildRangeKeys, selectSingleCell, normalizeCellToMergeMaster, cellKey, focusSelectedCellInput]);
 
   const handleCellMouseEnter = useCallback((w, d, r, c) => {
     if (!dragSelectionRef.current) return;
@@ -1292,6 +1310,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const newContent = normalizeSchedulerVisitSuffix(
       normalize4060StarOrder(typeof result === 'string' ? result : (result?.text || ''))
     );
+    if (editInputRef.current?.dataset?.cellKey === key) {
+      editInputRef.current.value = newContent;
+      setEditValue(newContent);
+      editDraftRef.current = { key, value: newContent, dirty: false };
+    }
     let newPrescription = forcedPrescription !== undefined ? forcedPrescription : result?.prescription;
     const newBodyPart = forcedBodyPart !== undefined ? forcedBodyPart : (result?.bodyPart !== undefined ? result.bodyPart : oldBodyPart);
     const cellReservationTime = getDefaultReservationTime(w, d, r);
