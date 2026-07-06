@@ -95,9 +95,15 @@ export default function ShockwavePage() {
       loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy'),
     ]).then((results) => {
       if (cancelled) return;
-      const rejected = results.find((result) => result.status === 'rejected');
-      if (rejected) {
-        console.error('Shockwave tab month loaders failed:', rejected.reason);
+      const failed = results.find((result, index) => (
+        result.status === 'rejected' ||
+        (index === 1 && result.value === null)
+      ));
+      if (failed) {
+        console.error(
+          'Shockwave tab month loaders failed:',
+          failed.status === 'rejected' ? failed.reason : 'shockwave schedule returned empty load result'
+        );
         setLoadError('스케줄 데이터를 불러오지 못했습니다. 다시 시도해 주세요.');
       }
     });
