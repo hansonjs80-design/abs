@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Shield } from 'lucide-react';
+import { DatabaseBackup, Shield } from 'lucide-react';
 import { isAdminUser } from '../lib/authPermissions';
 import GeneralSettings from '../components/settings/GeneralSettings';
 import LoginSettings from '../components/settings/LoginSettings';
+import BackupSettings from '../components/settings/BackupSettings';
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
@@ -33,6 +34,13 @@ export default function SettingsPage() {
             로그인 관리
           </button>
         )}
+        <button
+          type="button"
+          className={`btn btn-sm ${settingsSection === 'backup' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setSettingsSection('backup')}
+        >
+          <DatabaseBackup size={16} /> 백업
+        </button>
       </div>
 
       {settingsSection === 'general' && (
@@ -58,6 +66,7 @@ export default function SettingsPage() {
       )}
 
       {settingsSection === 'login' && <LoginSettings canManageLogin={canManageLogin} />}
+      {settingsSection === 'backup' && <BackupSettings />}
     </div>
   );
 }

@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "test": "node --test \"src/**/*.test.js\"",
     "preview": "vite preview",
+    "restore:supabase-backup": "node scripts/restore-supabase-backup.mjs",
     "auto-push": "bash scripts/auto-push.sh"
   },
   "dependencies": {

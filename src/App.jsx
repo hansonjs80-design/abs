@@ -6,6 +6,7 @@ import { ScheduleProvider } from './contexts/ScheduleContext';
 import { PresenceProvider } from './contexts/PresenceContext';
 import { ToastProvider } from './components/common/Toast';
 import Layout from './components/layout/Layout';
+import BackupRuntime from './components/backup/BackupRuntime';
 import { canAccessPath, getFirstAllowedPath } from './lib/authPermissions';
 
 const LoginPage = React.lazy(() => import('./pages/LoginPage'));
@@ -133,6 +134,7 @@ export default function App() {
         <AuthProvider>
           <ToastProvider>
             <GlobalErrorBoundary>
+              <BackupRuntime />
               <AppRoutes />
             </GlobalErrorBoundary>
           </ToastProvider>

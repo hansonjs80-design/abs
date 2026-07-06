@@ -5,10 +5,16 @@ node_modules/
 .env
 .env.local
 .env.*.local
+.env.backup
+.env.backup.local
 
 # build
 dist/
 build/
+
+# local database backups
+backups/
+supabase-backups/
 
 # misc
 .DS_Store
