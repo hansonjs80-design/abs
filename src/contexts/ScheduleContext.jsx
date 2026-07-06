@@ -39,7 +39,7 @@ const ScheduleContext = createContext();
 const LOCAL_WRITE_STALE_GUARD_MS = 1200;
 const SHOCKWAVE_MEMO_VIEW_CACHE_LIMIT = 8;
 const SHOCKWAVE_RAW_MONTH_CACHE_LIMIT = 12;
-const SHOCKWAVE_MONTH_LOAD_RETRY_COUNT = 1;
+const SHOCKWAVE_MONTH_LOAD_RETRY_COUNT = 0;
 const SHOCKWAVE_MONTH_LOAD_RETRY_DELAY_MS = 250;
 const SHOCKWAVE_BACKGROUND_REFRESH_DEBOUNCE_MS = 500;
 const SHOCKWAVE_BACKGROUND_REFRESH_MIN_INTERVAL_MS = 12000;
@@ -71,6 +71,23 @@ function rememberShockwaveRawMonthCache(cacheRef, cacheKey, rows) {
     const oldestKey = cache.keys().next().value;
     cache.delete(oldestKey);
   }
+}
+
+function buildShockwaveMemoMapFromRows(rows, year, month, shouldKeepShockwaveMemo) {
+  const memoMap = {};
+  rows.forEach(item => {
+    if (!shouldKeepShockwaveMemo(item)) return;
+    const visibleItem = sanitizeShockwaveScheduleItemForDisplay(
+      mapShockwaveScheduleItemToVisibleMonth(item, year, month)
+    );
+    if (!visibleItem) return;
+    const key = `${visibleItem.week_index}-${visibleItem.day_index}-${visibleItem.row_index}-${visibleItem.col_index}`;
+    const existing = memoMap[key];
+    const existingTime = existing?.updated_at ? Date.parse(existing.updated_at) : 0;
+    const nextTime = visibleItem?.updated_at ? Date.parse(visibleItem.updated_at) : 0;
+    if (!existing || nextTime >= existingTime) memoMap[key] = visibleItem;
+  });
+  return memoMap;
 }
 
 function waitForShockwaveMonthRetry() {
@@ -1375,29 +1392,6 @@ export function ScheduleProvider({ children }) {
     return rowsPromise;
   }, []);
 
-  const loadShockwaveRowsForVisibleMonths = useCallback(async (year, month, options = {}) => {
-    const visibleMonths = getVisibleShockwaveScheduleMonths(year, month);
-    const rowsByMonth = await Promise.allSettled(
-      visibleMonths.map((target) => loadShockwaveRawMonthRows(target, options))
-    );
-    const rows = [];
-    rowsByMonth.forEach((result, index) => {
-      if (result.status === 'fulfilled') {
-        rows.push(...(result.value || []));
-        return;
-      }
-
-      const target = visibleMonths[index];
-      const cacheKey = getShockwaveRawMonthCacheKey(target.year, target.month);
-      const cachedRows = shockwaveRawMonthRowsCacheRef.current.get(cacheKey);
-      if (Array.isArray(cachedRows)) {
-        rows.push(...cachedRows);
-      }
-      console.warn(`Failed to load shockwave visible month ${cacheKey}; using cached or empty rows.`, result.reason);
-    });
-    return rows;
-  }, [loadShockwaveRawMonthRows]);
-
   // 충격파 스케줄 로드 (실제 완료 기준 캐시 + 중복 요청 공유)
   const loadShockwaveMemos = useCallback(async (year, month, options = {}) => {
     const cacheKey = getShockwaveMemoViewCacheKey(year, month);
@@ -1423,24 +1417,8 @@ export function ScheduleProvider({ children }) {
     if (shouldTrackLoading) beginLoading();
     let loadPromise;
     loadPromise = (async () => {
-      try {
-        await waitForShockwaveWrites();
-
-        const allData = await loadShockwaveRowsForVisibleMonths(year, month, { force: options.force === true });
-
-        const memoMap = {};
-        allData.forEach(item => {
-          if (!shouldKeepShockwaveMemo(item)) return;
-          const visibleItem = sanitizeShockwaveScheduleItemForDisplay(
-            mapShockwaveScheduleItemToVisibleMonth(item, year, month)
-          );
-          if (!visibleItem) return;
-          const key = `${visibleItem.week_index}-${visibleItem.day_index}-${visibleItem.row_index}-${visibleItem.col_index}`;
-          const existing = memoMap[key];
-          const existingTime = existing?.updated_at ? Date.parse(existing.updated_at) : 0;
-          const nextTime = visibleItem?.updated_at ? Date.parse(visibleItem.updated_at) : 0;
-          if (!existing || nextTime >= existingTime) memoMap[key] = visibleItem;
-        });
+      const applyRowsToView = (rows) => {
+        const memoMap = buildShockwaveMemoMapFromRows(rows, year, month, shouldKeepShockwaveMemo);
         const reconciledMemoMap = options.skipLocalRecovery === true
           ? reconcileLoadedShockwaveMemosWithLocalWrites(memoMap)
           : mergeLoadedShockwaveMemosWithLocalRecovery(
@@ -1449,12 +1427,73 @@ export function ScheduleProvider({ children }) {
               reconcileLoadedShockwaveMemosWithLocalWrites(memoMap)
             );
         rememberShockwaveMemoViewCache(shockwaveMemoViewCacheRef, cacheKey, reconciledMemoMap);
-        if (shockwaveMemosLoadRequestRef.current !== requestId) return reconciledMemoMap;
-        loadCacheRef.current.shockwaveMemos = cacheKey;
-        shockwaveMemosRef.current = reconciledMemoMap;
-        setShockwaveMemosLoadedKey(cacheKey);
-        setShockwaveMemos(reconciledMemoMap);
         return reconciledMemoMap;
+      };
+
+      const applyMemoMapIfLatest = (memoMap) => {
+        if (
+          shockwaveMemosLoadRequestRef.current !== requestId ||
+          currentDateRef.current.year !== year ||
+          currentDateRef.current.month !== month
+        ) {
+          return false;
+        }
+        loadCacheRef.current.shockwaveMemos = cacheKey;
+        shockwaveMemosRef.current = memoMap;
+        setShockwaveMemosLoadedKey(cacheKey);
+        setShockwaveMemos(memoMap);
+        return true;
+      };
+
+      try {
+        await waitForShockwaveWrites();
+
+        const visibleMonths = getVisibleShockwaveScheduleMonths(year, month);
+        const currentTarget = visibleMonths.find((target) => (
+          Number(target.year) === Number(year) && Number(target.month) === Number(month)
+        )) || { year, month };
+        const adjacentTargets = visibleMonths.filter((target) => (
+          Number(target.year) !== Number(year) || Number(target.month) !== Number(month)
+        ));
+        const getCachedRows = (target) => {
+          const rawCacheKey = getShockwaveRawMonthCacheKey(target.year, target.month);
+          const cachedRows = shockwaveRawMonthRowsCacheRef.current.get(rawCacheKey);
+          return Array.isArray(cachedRows) ? cachedRows : [];
+        };
+
+        const currentRows = await loadShockwaveRawMonthRows(currentTarget, { force: options.force === true });
+        const initialRows = [
+          ...currentRows,
+          ...adjacentTargets.flatMap(getCachedRows),
+        ];
+        const initialMemoMap = applyRowsToView(initialRows);
+        applyMemoMapIfLatest(initialMemoMap);
+
+        if (adjacentTargets.length > 0 && options.skipAdjacentRefresh !== true) {
+          Promise.allSettled(adjacentTargets.map((target) => (
+            loadShockwaveRawMonthRows(target, { force: options.force === true })
+          ))).then((results) => {
+            if (
+              shockwaveMemosLoadRequestRef.current !== requestId ||
+              currentDateRef.current.year !== year ||
+              currentDateRef.current.month !== month
+            ) {
+              return;
+            }
+            const adjacentRows = results.flatMap((result, index) => {
+              if (result.status === 'fulfilled') return result.value || [];
+              const target = adjacentTargets[index];
+              const rawCacheKey = getShockwaveRawMonthCacheKey(target.year, target.month);
+              const cachedRows = shockwaveRawMonthRowsCacheRef.current.get(rawCacheKey);
+              console.warn(`Failed to load adjacent shockwave month ${rawCacheKey}; using cached or empty rows.`, result.reason);
+              return Array.isArray(cachedRows) ? cachedRows : [];
+            });
+            const nextMemoMap = applyRowsToView([...currentRows, ...adjacentRows]);
+            applyMemoMapIfLatest(nextMemoMap);
+          });
+        }
+
+        return initialMemoMap;
       } catch (err) {
         console.error('Failed to load shockwave memos:', err);
         const fallbackMemoMap = shockwaveMemoViewCacheRef.current.get(cacheKey);
@@ -1480,7 +1519,7 @@ export function ScheduleProvider({ children }) {
 
     shockwaveMemoViewLoadPromisesRef.current.set(cacheKey, loadPromise);
     return loadPromise;
-  }, [waitForShockwaveWrites, loadShockwaveRowsForVisibleMonths, shouldKeepShockwaveMemo, beginLoading, endLoading, reconcileLoadedShockwaveMemosWithLocalWrites, mergeLoadedShockwaveMemosWithLocalRecovery]);
+  }, [waitForShockwaveWrites, loadShockwaveRawMonthRows, shouldKeepShockwaveMemo, beginLoading, endLoading, reconcileLoadedShockwaveMemosWithLocalWrites, mergeLoadedShockwaveMemosWithLocalRecovery]);
 
   useEffect(() => {
     loadShockwaveMemosRef.current = loadShockwaveMemos;
