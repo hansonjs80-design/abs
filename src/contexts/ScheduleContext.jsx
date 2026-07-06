@@ -41,6 +41,8 @@ const SHOCKWAVE_MEMO_VIEW_CACHE_LIMIT = 8;
 const SHOCKWAVE_RAW_MONTH_CACHE_LIMIT = 12;
 const SHOCKWAVE_MONTH_LOAD_RETRY_COUNT = 1;
 const SHOCKWAVE_MONTH_LOAD_RETRY_DELAY_MS = 250;
+const SHOCKWAVE_BACKGROUND_REFRESH_DEBOUNCE_MS = 500;
+const SHOCKWAVE_BACKGROUND_REFRESH_MIN_INTERVAL_MS = 12000;
 
 function getShockwaveMemoViewCacheKey(year, month) {
   return `${year}-${month}`;
@@ -150,6 +152,7 @@ export function ScheduleProvider({ children }) {
   const shockwaveRawMonthRowsLoadPromisesRef = useRef(new Map());
   const shockwaveScheduleCacheVersionRef = useRef(0);
   const realtimeRefreshTimerRef = useRef(null);
+  const lastBackgroundRefreshAtRef = useRef(0);
   const staffMemosRef = useRef(staffMemos);
   const staffMemoSaveRequestRef = useRef(new Map());
   const staffMemosLoadRequestRef = useRef(0);
@@ -1276,9 +1279,11 @@ export function ScheduleProvider({ children }) {
     if (!options.force) {
       const cachedRows = shockwaveRawMonthRowsCacheRef.current.get(cacheKey);
       if (cachedRows) return cachedRows;
+    }
 
-      const pendingRows = shockwaveRawMonthRowsLoadPromisesRef.current.get(cacheKey);
-      if (pendingRows) return pendingRows;
+    const pendingRows = shockwaveRawMonthRowsLoadPromisesRef.current.get(cacheKey);
+    if (pendingRows) {
+      return pendingRows;
     }
 
     let rowsPromise;
@@ -1306,9 +1311,7 @@ export function ScheduleProvider({ children }) {
       }
     });
 
-    if (!options.force) {
-      shockwaveRawMonthRowsLoadPromisesRef.current.set(cacheKey, rowsPromise);
-    }
+    shockwaveRawMonthRowsLoadPromisesRef.current.set(cacheKey, rowsPromise);
     return rowsPromise;
   }, []);
 
@@ -1336,12 +1339,13 @@ export function ScheduleProvider({ children }) {
       return shockwaveMemosRef.current;
     }
 
-    const pendingLoad = options.force ? null : shockwaveMemoViewLoadPromisesRef.current.get(cacheKey);
+    const pendingLoad = shockwaveMemoViewLoadPromisesRef.current.get(cacheKey);
     if (pendingLoad) return pendingLoad;
 
     const requestId = ++shockwaveMemosLoadRequestRef.current;
+    const shouldTrackLoading = options.silent !== true;
 
-    beginLoading();
+    if (shouldTrackLoading) beginLoading();
     let loadPromise;
     loadPromise = (async () => {
       try {
@@ -1392,16 +1396,14 @@ export function ScheduleProvider({ children }) {
         }
         return null;
       } finally {
-        endLoading();
+        if (shouldTrackLoading) endLoading();
         if (shockwaveMemoViewLoadPromisesRef.current.get(cacheKey) === loadPromise) {
           shockwaveMemoViewLoadPromisesRef.current.delete(cacheKey);
         }
       }
     })();
 
-    if (!options.force) {
-      shockwaveMemoViewLoadPromisesRef.current.set(cacheKey, loadPromise);
-    }
+    shockwaveMemoViewLoadPromisesRef.current.set(cacheKey, loadPromise);
     return loadPromise;
   }, [waitForShockwaveWrites, loadShockwaveRowsForVisibleMonths, shouldKeepShockwaveMemo, beginLoading, endLoading, reconcileLoadedShockwaveMemosWithLocalWrites, mergeLoadedShockwaveMemosWithLocalRecovery]);
 
@@ -1414,29 +1416,53 @@ export function ScheduleProvider({ children }) {
       clearTimeout(realtimeRefreshTimerRef.current);
     }
 
+    const now = Date.now();
+    const minInterval = Number(options.minIntervalMs ?? 0);
+    if (minInterval > 0 && now - lastBackgroundRefreshAtRef.current < minInterval) {
+      return;
+    }
+
     realtimeRefreshTimerRef.current = setTimeout(() => {
       realtimeRefreshTimerRef.current = null;
+      lastBackgroundRefreshAtRef.current = Date.now();
       const { year, month } = currentDateRef.current;
       loadCacheRef.current.staffMemos = null;
-      loadCacheRef.current.shockwaveMemos = null;
-      shockwaveScheduleCacheVersionRef.current += 1;
-      shockwaveMemoViewCacheRef.current.clear();
-      shockwaveMemoViewLoadPromisesRef.current.clear();
-      shockwaveRawMonthRowsCacheRef.current.clear();
-      shockwaveRawMonthRowsLoadPromisesRef.current.clear();
+      if (options.invalidateCache === true) {
+        loadCacheRef.current.shockwaveMemos = null;
+        shockwaveScheduleCacheVersionRef.current += 1;
+        shockwaveMemoViewCacheRef.current.clear();
+        shockwaveMemoViewLoadPromisesRef.current.clear();
+        shockwaveRawMonthRowsCacheRef.current.clear();
+        shockwaveRawMonthRowsLoadPromisesRef.current.clear();
+      }
 
-      Promise.allSettled([
-        loadShockwaveMemos(year, month, { force: true, skipLocalRecovery: options.skipLocalRecovery === true }),
-        loadStaffMemos(year, month, { force: true, includeAdjacentMonths: true }),
-      ]).then((results) => {
+      const tasks = [];
+      const labels = [];
+      if (options.includeShockwave !== false) {
+        tasks.push(loadShockwaveMemos(year, month, {
+          force: options.force === true,
+          silent: options.silent !== false,
+          skipLocalRecovery: options.skipLocalRecovery === true,
+        }));
+        labels.push('shockwave_schedules');
+      }
+      if (options.includeStaff !== false) {
+        tasks.push(loadStaffMemos(year, month, {
+          force: options.forceStaff === true || options.force === true,
+          includeAdjacentMonths: true,
+        }));
+        labels.push('staff_schedules');
+      }
+
+      Promise.allSettled(tasks).then((results) => {
         results.forEach((result, index) => {
           if (result.status === 'rejected') {
-            const target = index === 0 ? 'shockwave_schedules' : 'staff_schedules';
+            const target = labels[index] || 'schedule';
             console.error(`Failed to refresh ${target} after realtime ${reason}:`, result.reason);
           }
         });
       });
-    }, 250);
+    }, Number(options.debounceMs ?? SHOCKWAVE_BACKGROUND_REFRESH_DEBOUNCE_MS));
   }, [loadShockwaveMemos, loadStaffMemos]);
 
   useEffect(() => () => {
@@ -1451,14 +1477,23 @@ export function ScheduleProvider({ children }) {
 
     const refreshWhenVisible = () => {
       if (document.visibilityState === 'visible') {
-        refreshCurrentScheduleFromServer('visibility');
+        refreshCurrentScheduleFromServer('visibility', {
+          force: true,
+          minIntervalMs: SHOCKWAVE_BACKGROUND_REFRESH_MIN_INTERVAL_MS,
+        });
       }
     };
     const refreshWhenOnline = () => {
-      refreshCurrentScheduleFromServer('online');
+      refreshCurrentScheduleFromServer('online', {
+        force: true,
+        invalidateCache: true,
+      });
     };
     const refreshWhenFocused = () => {
-      refreshCurrentScheduleFromServer('focus');
+      refreshCurrentScheduleFromServer('focus', {
+        force: true,
+        minIntervalMs: SHOCKWAVE_BACKGROUND_REFRESH_MIN_INTERVAL_MS,
+      });
     };
 
     document.addEventListener('visibilitychange', refreshWhenVisible);
@@ -2151,11 +2186,9 @@ export function ScheduleProvider({ children }) {
             if (!item) return;
             const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
             if (shockwaveWriteQueueRef.current.has(key)) {
-              refreshCurrentScheduleFromServer('shockwave-local-write', { skipLocalRecovery: true });
               return;
             }
             if (shouldIgnoreStaleShockwaveServerItem(key, item)) {
-              refreshCurrentScheduleFromServer('shockwave-stale-guard', { skipLocalRecovery: true });
               return;
             }
 
@@ -2164,7 +2197,6 @@ export function ScheduleProvider({ children }) {
             }
 
             setShockwaveMemos(prev => applyRealtimeShockwaveMemoUpdate(prev, key, item, shouldKeepShockwaveMemo));
-            refreshCurrentScheduleFromServer('shockwave-event', { skipLocalRecovery: true });
           } else if (payload.old && payload.eventType === 'DELETE') {
             const deleteId = payload.old?.id;
             let targetKey = null;
@@ -2193,9 +2225,13 @@ export function ScheduleProvider({ children }) {
                 delete next[targetKey];
                 return next;
               });
-              refreshCurrentScheduleFromServer('shockwave-delete', { skipLocalRecovery: true });
             } else {
-              refreshCurrentScheduleFromServer('shockwave-delete-unmapped', { skipLocalRecovery: true });
+              refreshCurrentScheduleFromServer('shockwave-delete-unmapped', {
+                force: true,
+                includeStaff: false,
+                invalidateCache: true,
+                skipLocalRecovery: true,
+              });
             }
           }
         }
@@ -2209,7 +2245,6 @@ export function ScheduleProvider({ children }) {
             const key = `${item.year}-${item.month}-${item.day}-${item.slot_index}`;
             if (staffMemoSaveRequestRef.current.has(key)) return;
             setStaffMemos(prev => ({ ...prev, [key]: item }));
-            refreshCurrentScheduleFromServer('staff-event', { skipLocalRecovery: true });
           } else if (payload.old && payload.eventType === 'DELETE') {
             const item = payload.old;
             if (item.year === currentYear && item.month === currentMonth) {
@@ -2220,17 +2255,19 @@ export function ScheduleProvider({ children }) {
                 delete next[key];
                 return next;
               });
-              refreshCurrentScheduleFromServer('staff-delete', { skipLocalRecovery: true });
             }
           }
         }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          refreshCurrentScheduleFromServer('subscribed');
+          return;
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.warn(`Schedule realtime ${status}; refreshing current month from database.`);
-          refreshCurrentScheduleFromServer(status.toLowerCase());
+          refreshCurrentScheduleFromServer(status.toLowerCase(), {
+            force: true,
+            invalidateCache: true,
+          });
         }
       });
 
