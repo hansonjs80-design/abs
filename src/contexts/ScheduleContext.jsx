@@ -37,6 +37,53 @@ import {
 
 const ScheduleContext = createContext();
 const LOCAL_WRITE_STALE_GUARD_MS = 1200;
+const SHOCKWAVE_MEMO_VIEW_CACHE_LIMIT = 8;
+
+function getShockwaveMemoViewCacheKey(year, month) {
+  return `${year}-${month}`;
+}
+
+function rememberShockwaveMemoViewCache(cacheRef, cacheKey, memoMap) {
+  const cache = cacheRef.current;
+  if (cache.has(cacheKey)) cache.delete(cacheKey);
+  cache.set(cacheKey, memoMap);
+  while (cache.size > SHOCKWAVE_MEMO_VIEW_CACHE_LIMIT) {
+    const oldestKey = cache.keys().next().value;
+    cache.delete(oldestKey);
+  }
+}
+
+async function fetchShockwaveScheduleRowsForMonth(target) {
+  const rows = [];
+  let page = 0;
+  let hasMore = true;
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from('shockwave_schedules')
+      .select('*')
+      .eq('year', target.year)
+      .eq('month', target.month)
+      .order('week_index', { ascending: true })
+      .order('day_index', { ascending: true })
+      .order('row_index', { ascending: true })
+      .order('col_index', { ascending: true })
+      .range(page * 1000, (page + 1) * 1000 - 1);
+
+    if (error) throw error;
+    if (data) rows.push(...data);
+    if (!data || data.length < 1000) hasMore = false;
+    page++;
+  }
+  return rows;
+}
+
+async function fetchShockwaveScheduleRowsForVisibleMonths(year, month) {
+  const visibleMonths = getVisibleShockwaveScheduleMonths(year, month);
+  const rowsByMonth = await Promise.all(
+    visibleMonths.map((target) => fetchShockwaveScheduleRowsForMonth(target))
+  );
+  return rowsByMonth.flat();
+}
 
 export function ScheduleProvider({ children }) {
   const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
@@ -84,6 +131,7 @@ export function ScheduleProvider({ children }) {
   const lastWriteTimeRef = useRef(new Map());
   const localShockwaveWriteTimeRef = useRef(new Map());
   const loadCacheRef = useRef({ staffMemos: null, shockwaveMemos: null, holidays: null });
+  const shockwaveMemoViewCacheRef = useRef(new Map());
   const realtimeRefreshTimerRef = useRef(null);
   const staffMemosRef = useRef(staffMemos);
   const staffMemoSaveRequestRef = useRef(new Map());
@@ -1195,6 +1243,7 @@ export function ScheduleProvider({ children }) {
       
       // 설정 저장 완료 후 즉시 서버에서 메모를 강제 리로드하여 로컬 캐시를 동기화
       loadCacheRef.current.shockwaveMemos = null;
+      shockwaveMemoViewCacheRef.current.clear();
       loadShockwaveMemosRef.current?.(activeYear, activeMonth, { force: true });
 
       return true;
@@ -1206,7 +1255,15 @@ export function ScheduleProvider({ children }) {
 
   // 충격파 스케줄 로드 (단일 쿼리 + 캐시 키)
   const loadShockwaveMemos = useCallback(async (year, month, options = {}) => {
-    const cacheKey = `${year}-${month}`;
+    const cacheKey = getShockwaveMemoViewCacheKey(year, month);
+    const cachedMemoMap = options.force ? null : shockwaveMemoViewCacheRef.current.get(cacheKey);
+    if (cachedMemoMap) {
+      loadCacheRef.current.shockwaveMemos = cacheKey;
+      shockwaveMemosRef.current = cachedMemoMap;
+      setShockwaveMemosLoadedKey(cacheKey);
+      setShockwaveMemos(cachedMemoMap);
+      return cachedMemoMap;
+    }
     if (!options.force && loadCacheRef.current.shockwaveMemos === cacheKey) {
       setShockwaveMemosLoadedKey(cacheKey);
       return shockwaveMemosRef.current;
@@ -1218,29 +1275,7 @@ export function ScheduleProvider({ children }) {
     try {
       await waitForShockwaveWrites();
 
-      const allData = [];
-      const visibleMonths = getVisibleShockwaveScheduleMonths(year, month);
-      for (const target of visibleMonths) {
-        let page = 0;
-        let hasMore = true;
-        while (hasMore) {
-          const { data, error } = await supabase
-            .from('shockwave_schedules')
-            .select('*')
-            .eq('year', target.year)
-            .eq('month', target.month)
-            .order('week_index', { ascending: true })
-            .order('day_index', { ascending: true })
-            .order('row_index', { ascending: true })
-            .order('col_index', { ascending: true })
-            .range(page * 1000, (page + 1) * 1000 - 1);
-
-          if (error) throw error;
-          if (data) allData.push(...data);
-          if (!data || data.length < 1000) hasMore = false;
-          page++;
-        }
-      }
+      const allData = await fetchShockwaveScheduleRowsForVisibleMonths(year, month);
 
       const memoMap = {};
       allData.forEach(item => {
@@ -1263,6 +1298,8 @@ export function ScheduleProvider({ children }) {
             reconcileLoadedShockwaveMemosWithLocalWrites(memoMap)
           );
       if (loadCacheRef.current.shockwaveMemos !== cacheKey || shockwaveMemosLoadRequestRef.current !== requestId) return reconciledMemoMap;
+      rememberShockwaveMemoViewCache(shockwaveMemoViewCacheRef, cacheKey, reconciledMemoMap);
+      shockwaveMemosRef.current = reconciledMemoMap;
       setShockwaveMemosLoadedKey(cacheKey);
       setShockwaveMemos(reconciledMemoMap);
       return reconciledMemoMap;
@@ -1270,6 +1307,7 @@ export function ScheduleProvider({ children }) {
       console.error('Failed to load shockwave memos:', err);
       if (shockwaveMemosLoadRequestRef.current === requestId) {
         loadCacheRef.current.shockwaveMemos = null;
+        if (options.force) shockwaveMemoViewCacheRef.current.delete(cacheKey);
       }
       return null;
     } finally {
@@ -1291,6 +1329,7 @@ export function ScheduleProvider({ children }) {
       const { year, month } = currentDateRef.current;
       loadCacheRef.current.staffMemos = null;
       loadCacheRef.current.shockwaveMemos = null;
+      shockwaveMemoViewCacheRef.current.clear();
 
       Promise.allSettled([
         loadShockwaveMemos(year, month, { force: true, skipLocalRecovery: options.skipLocalRecovery === true }),
@@ -1421,6 +1460,7 @@ export function ScheduleProvider({ children }) {
       }
 
       loadCacheRef.current.shockwaveMemos = null;
+      shockwaveMemoViewCacheRef.current.clear();
       if (wasDeletedAfterWriteStarted()) {
         return true;
       }
@@ -1627,6 +1667,7 @@ export function ScheduleProvider({ children }) {
           })
         : [];
       loadCacheRef.current.shockwaveMemos = null;
+      shockwaveMemoViewCacheRef.current.clear();
       const nextShockwaveMemos = { ...shockwaveMemosRef.current };
       currentViewRelevantData.forEach(item => {
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
