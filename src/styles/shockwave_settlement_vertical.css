@@ -496,7 +496,8 @@
     box-shadow: none !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
-    overflow: hidden !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
   }
 
   body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-card {
@@ -1136,10 +1137,13 @@
 @media print {
   html[data-print-orientation="portrait"],
   html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print {
-    width: 210mm !important;
-    max-width: 210mm !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
     overflow-x: hidden !important;
     overflow-y: visible !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
   }
 
   html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print {
@@ -1184,5 +1188,138 @@
     grid-template-columns: var(--sw-print-left-width) var(--sw-print-right-width) !important;
     gap: var(--sw-print-gap) !important;
     justify-content: start !important;
+  }
+}
+
+@media print {
+  html[data-print-orientation="portrait"],
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print {
+    --sw-print-settlement-width: 170mm;
+    --sw-print-left-width: 101mm;
+    --sw-print-right-width: 65mm;
+    --sw-print-gap: 3mm;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    background: #ffffff !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print *,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print *::before,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print *::after {
+    box-sizing: border-box !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  html[data-print-orientation="portrait"]::-webkit-scrollbar,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print::-webkit-scrollbar,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print *::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print #root,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .app-layout,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .app-main,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .app-content,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-stats-container,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-stats-layout,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-stats-panel,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-stats-body,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-stats-body--settlement {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    transform: none !important;
+  }
+
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-stats-body--settlement .sw-settlement-stack,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-layout {
+    display: block !important;
+    width: var(--sw-print-settlement-width) !important;
+    max-width: var(--sw-print-settlement-width) !important;
+    min-width: 0 !important;
+    margin: 0 auto 0 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-header-wrap,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-body {
+    width: var(--sw-print-settlement-width) !important;
+    max-width: var(--sw-print-settlement-width) !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+    overflow: visible !important;
+  }
+
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-body {
+    display: grid !important;
+    grid-template-columns: var(--sw-print-left-width) var(--sw-print-right-width) !important;
+    gap: var(--sw-print-gap) !important;
+    align-items: start !important;
+    justify-content: start !important;
+  }
+
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-table-wrap,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-compact-table-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical table {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed !important;
+  }
+
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-recent-card {
+    break-before: page !important;
+    page-break-before: always !important;
+    width: var(--sw-print-settlement-width) !important;
+    max-width: var(--sw-print-settlement-width) !important;
+    min-width: 0 !important;
+    margin: 0 auto 0 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-recent-card .sw-settlement-header {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 0 2mm !important;
+    overflow: hidden !important;
+  }
+
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-recent-card .sw-compact-table-wrap,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-recent-card .sw-summary-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
   }
 }

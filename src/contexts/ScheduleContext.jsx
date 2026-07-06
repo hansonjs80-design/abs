@@ -43,6 +43,7 @@ const SHOCKWAVE_MONTH_LOAD_RETRY_COUNT = 1;
 const SHOCKWAVE_MONTH_LOAD_RETRY_DELAY_MS = 250;
 const SHOCKWAVE_BACKGROUND_REFRESH_DEBOUNCE_MS = 500;
 const SHOCKWAVE_BACKGROUND_REFRESH_MIN_INTERVAL_MS = 12000;
+const SCHEDULE_QUERY_TIMEOUT_MS = 9000;
 
 function getShockwaveMemoViewCacheKey(year, month) {
   return `${year}-${month}`;
@@ -76,21 +77,40 @@ function waitForShockwaveMonthRetry() {
   return new Promise((resolve) => setTimeout(resolve, SHOCKWAVE_MONTH_LOAD_RETRY_DELAY_MS));
 }
 
+function withScheduleQueryTimeout(queryPromise, label, timeoutMs = SCHEDULE_QUERY_TIMEOUT_MS) {
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${label} query timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  return Promise.race([
+    Promise.resolve(queryPromise),
+    timeoutPromise,
+  ]).finally(() => {
+    clearTimeout(timeoutId);
+  });
+}
+
 async function fetchShockwaveScheduleRowsForMonth(target) {
   const rows = [];
   let page = 0;
   let hasMore = true;
   while (hasMore) {
-    const { data, error } = await supabase
-      .from('shockwave_schedules')
-      .select('*')
-      .eq('year', target.year)
-      .eq('month', target.month)
-      .order('week_index', { ascending: true })
-      .order('day_index', { ascending: true })
-      .order('row_index', { ascending: true })
-      .order('col_index', { ascending: true })
-      .range(page * 1000, (page + 1) * 1000 - 1);
+    const { data, error } = await withScheduleQueryTimeout(
+      supabase
+        .from('shockwave_schedules')
+        .select('*')
+        .eq('year', target.year)
+        .eq('month', target.month)
+        .order('week_index', { ascending: true })
+        .order('day_index', { ascending: true })
+        .order('row_index', { ascending: true })
+        .order('col_index', { ascending: true })
+        .range(page * 1000, (page + 1) * 1000 - 1),
+      `shockwave_schedules ${target.year}-${target.month} page ${page + 1}`
+    );
 
     if (error) throw error;
     if (data) rows.push(...data);
@@ -307,7 +327,15 @@ export function ScheduleProvider({ children }) {
   const waitForShockwaveWrites = useCallback(async () => {
     const pendingWrites = Array.from(shockwaveWriteQueueRef.current.values());
     if (pendingWrites.length === 0) return;
-    await Promise.allSettled(pendingWrites);
+    try {
+      await withScheduleQueryTimeout(
+        Promise.allSettled(pendingWrites),
+        'pending shockwave writes',
+        3000
+      );
+    } catch (err) {
+      console.warn('Pending shockwave writes did not settle before schedule load; continuing with local recovery.', err);
+    }
   }, []);
 
   const shouldKeepShockwaveMemo = useCallback((memo) => {
@@ -572,22 +600,26 @@ export function ScheduleProvider({ children }) {
 
       const memoMap = {};
 
-      await Promise.all(targetMonths.map(async (target) => {
+      const staffMonthResults = await Promise.allSettled(targetMonths.map(async (target) => {
+        const targetMemoMap = {};
         let page = 0;
         let hasMore = true;
         while (hasMore) {
-          const { data, error } = await supabase
-            .from('staff_schedules')
-            .select('*')
-            .eq('year', target.year)
-            .eq('month', target.month)
-            .range(page * 1000, (page + 1) * 1000 - 1);
+          const { data, error } = await withScheduleQueryTimeout(
+            supabase
+              .from('staff_schedules')
+              .select('*')
+              .eq('year', target.year)
+              .eq('month', target.month)
+              .range(page * 1000, (page + 1) * 1000 - 1),
+            `staff_schedules ${target.year}-${target.month} page ${page + 1}`
+          );
             
           if (error) throw error;
           
           (data || []).forEach(item => {
             const key = `${item.year}-${item.month}-${item.day}-${item.slot_index}`;
-            memoMap[key] = {
+            targetMemoMap[key] = {
               ...item,
               content: normalizeStaffDeptNameSpacing(item.content || ''),
             };
@@ -596,7 +628,17 @@ export function ScheduleProvider({ children }) {
           if (!data || data.length < 1000) hasMore = false;
           page++;
         }
+        return targetMemoMap;
       }));
+
+      staffMonthResults.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          Object.assign(memoMap, result.value || {});
+          return;
+        }
+        const target = targetMonths[index];
+        console.warn(`Failed to load staff schedules ${target.year}-${target.month}; continuing with available months.`, result.reason);
+      });
 
       if (loadCacheRef.current.staffMemos !== cacheKey || staffMemosLoadRequestRef.current !== requestId) return memoMap;
       setStaffMemos(memoMap);
@@ -687,11 +729,14 @@ export function ScheduleProvider({ children }) {
       const afterNextMonth = month === 11 ? 1 : month === 12 ? 2 : month + 2;
       const endStr = `${afterNextYear}-${String(afterNextMonth).padStart(2, '0')}-01`;
 
-      const { data, error } = await supabase
-        .from('holidays')
-        .select('*')
-        .gte('date', startDate)
-        .lt('date', endStr);
+      const { data, error } = await withScheduleQueryTimeout(
+        supabase
+          .from('holidays')
+          .select('*')
+          .gte('date', startDate)
+          .lt('date', endStr),
+        `holidays ${startDate}-${endStr}`
+      );
 
       if (error) throw error;
 
@@ -729,11 +774,14 @@ export function ScheduleProvider({ children }) {
     const requestId = (therapistRosterLoadRequestRef.current.shockwave || 0) + 1;
     therapistRosterLoadRequestRef.current.shockwave = requestId;
     try {
-      const { data, error } = await supabase
-        .from('shockwave_therapists')
-        .select('*')
-        .eq('is_active', true)
-        .order('slot_index');
+      const { data, error } = await withScheduleQueryTimeout(
+        supabase
+          .from('shockwave_therapists')
+          .select('*')
+          .eq('is_active', true)
+          .order('slot_index'),
+        'shockwave_therapists'
+      );
 
       if (error) throw error;
 
@@ -757,11 +805,14 @@ export function ScheduleProvider({ children }) {
     const requestId = (therapistRosterLoadRequestRef.current.manual_therapy || 0) + 1;
     therapistRosterLoadRequestRef.current.manual_therapy = requestId;
     try {
-      const { data, error } = await supabase
-        .from('manual_therapy_therapists')
-        .select('*')
-        .eq('is_active', true)
-        .order('slot_index');
+      const { data, error } = await withScheduleQueryTimeout(
+        supabase
+          .from('manual_therapy_therapists')
+          .select('*')
+          .eq('is_active', true)
+          .order('slot_index'),
+        'manual_therapy_therapists'
+      );
 
       if (error) throw error;
 
@@ -840,12 +891,15 @@ export function ScheduleProvider({ children }) {
     }
     const requestId = ++shockwaveSettingsLoadRequestRef.current;
     try {
-      const { data, error } = await supabase
-        .from('shockwave_settings')
-        .select('*')
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .single();
+      const { data, error } = await withScheduleQueryTimeout(
+        supabase
+          .from('shockwave_settings')
+          .select('*')
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .single(),
+        'shockwave_settings'
+      );
 
       if (error && error.code !== 'PGRST116') throw error; // PGRST116 is empty row
 
@@ -943,12 +997,15 @@ export function ScheduleProvider({ children }) {
       }
     };
     try {
-      const { data, error } = await supabase
-        .from('staff_calendar_settings')
-        .select('*')
-        .eq('year', year)
-        .eq('month', month)
-        .maybeSingle();
+      const { data, error } = await withScheduleQueryTimeout(
+        supabase
+          .from('staff_calendar_settings')
+          .select('*')
+          .eq('year', year)
+          .eq('month', month)
+          .maybeSingle(),
+        `staff_calendar_settings ${year}-${month}`
+      );
 
       if (error) throw error;
 
@@ -960,12 +1017,15 @@ export function ScheduleProvider({ children }) {
         // 이전 달 설정이 있으면 복사, 없으면 기본값
         const prevMonth = month === 1 ? 12 : month - 1;
         const prevYear = month === 1 ? year - 1 : year;
-        const { data: prevData } = await supabase
-          .from('staff_calendar_settings')
-          .select('week_slot_counts')
-          .eq('year', prevYear)
-          .eq('month', prevMonth)
-          .maybeSingle();
+        const { data: prevData } = await withScheduleQueryTimeout(
+          supabase
+            .from('staff_calendar_settings')
+            .select('week_slot_counts')
+            .eq('year', prevYear)
+            .eq('month', prevMonth)
+            .maybeSingle(),
+          `staff_calendar_settings previous ${prevYear}-${prevMonth}`
+        );
 
         const defaults = prevData?.week_slot_counts || { '0': 6, '1': 6, '2': 6, '3': 6, '4': 6 };
         const value = { year, month, week_slot_counts: defaults };
@@ -1317,10 +1377,25 @@ export function ScheduleProvider({ children }) {
 
   const loadShockwaveRowsForVisibleMonths = useCallback(async (year, month, options = {}) => {
     const visibleMonths = getVisibleShockwaveScheduleMonths(year, month);
-    const rowsByMonth = await Promise.all(
+    const rowsByMonth = await Promise.allSettled(
       visibleMonths.map((target) => loadShockwaveRawMonthRows(target, options))
     );
-    return rowsByMonth.flat();
+    const rows = [];
+    rowsByMonth.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        rows.push(...(result.value || []));
+        return;
+      }
+
+      const target = visibleMonths[index];
+      const cacheKey = getShockwaveRawMonthCacheKey(target.year, target.month);
+      const cachedRows = shockwaveRawMonthRowsCacheRef.current.get(cacheKey);
+      if (Array.isArray(cachedRows)) {
+        rows.push(...cachedRows);
+      }
+      console.warn(`Failed to load shockwave visible month ${cacheKey}; using cached or empty rows.`, result.reason);
+    });
+    return rows;
   }, [loadShockwaveRawMonthRows]);
 
   // 충격파 스케줄 로드 (실제 완료 기준 캐시 + 중복 요청 공유)
@@ -1908,14 +1983,17 @@ export function ScheduleProvider({ children }) {
   }, [currentYear, currentMonth, therapists, manualTherapists, monthlyTherapists, monthlyManualTherapists, shouldKeepShockwaveMemo, protectExistingScheduleContent, enqueueShockwaveWrite, isCurrentScheduleMonth]);
 
   const resolveMonthlyTherapistRows = useCallback(async (year, month, type = 'shockwave', options = {}) => {
-    const { data, error } = await supabase
-      .from('shockwave_monthly_therapists')
-      .select('*')
-      .eq('year', year)
-      .eq('month', month)
-      .eq('type', type)
-      .order('slot_index')
-      .order('start_day');
+    const { data, error } = await withScheduleQueryTimeout(
+      supabase
+        .from('shockwave_monthly_therapists')
+        .select('*')
+        .eq('year', year)
+        .eq('month', month)
+        .eq('type', type)
+        .order('slot_index')
+        .order('start_day'),
+      `shockwave_monthly_therapists ${type} ${year}-${month}`
+    );
 
     if (error) throw error;
     if (data && data.length > 0) return data;
@@ -1923,16 +2001,19 @@ export function ScheduleProvider({ children }) {
     // 해당 월 데이터 없음 → 가장 최근 이전 월 설정을 상속 (최근 12개월만 스캔)
     const currentValue = year * 12 + month;
     const lookbackYear = year - 1;
-    const { data: previousRows, error: prevError } = await supabase
-      .from('shockwave_monthly_therapists')
-      .select('*')
-      .eq('type', type)
-      .gte('year', lookbackYear)
-      .order('year', { ascending: false })
-      .order('month', { ascending: false })
-      .order('slot_index')
-      .order('start_day')
-      .limit(50);
+    const { data: previousRows, error: prevError } = await withScheduleQueryTimeout(
+      supabase
+        .from('shockwave_monthly_therapists')
+        .select('*')
+        .eq('type', type)
+        .gte('year', lookbackYear)
+        .order('year', { ascending: false })
+        .order('month', { ascending: false })
+        .order('slot_index')
+        .order('start_day')
+        .limit(50),
+      `shockwave_monthly_therapists previous ${type} ${year}-${month}`
+    );
 
     const previousMonths = (previousRows || []).filter((item) => {
       const itemYear = Number(item.year);
@@ -1973,11 +2054,14 @@ export function ScheduleProvider({ children }) {
     let baseTherapists = type === 'manual_therapy' ? manualTherapistsRef.current : therapistsRef.current;
     if (!baseTherapists || baseTherapists.length === 0) {
       const tableName = type === 'manual_therapy' ? 'manual_therapy_therapists' : 'shockwave_therapists';
-      const { data: defaultRows, error: defaultError } = await supabase
-        .from(tableName)
-        .select('*')
-        .eq('is_active', true)
-        .order('slot_index');
+      const { data: defaultRows, error: defaultError } = await withScheduleQueryTimeout(
+        supabase
+          .from(tableName)
+          .select('*')
+          .eq('is_active', true)
+          .order('slot_index'),
+        `${tableName} monthly fallback`
+      );
 
       if (!defaultError && Array.isArray(defaultRows)) {
         baseTherapists = defaultRows;
@@ -2040,13 +2124,21 @@ export function ScheduleProvider({ children }) {
     const requestId = (monthlyTherapistVisibleLoadRequestRef.current[type] || 0) + 1;
     monthlyTherapistVisibleLoadRequestRef.current[type] = requestId;
     const visibleMonths = getVisibleShockwaveScheduleMonths(year, month);
-    const loadedEntries = await Promise.all(visibleMonths.map(async (target) => {
+    const monthResults = await Promise.allSettled(visibleMonths.map(async (target) => {
       const monthKey = `${target.year}-${target.month}`;
       const cached = monthlyTherapistsByMonthRef.current[type]?.[monthKey];
       if (Array.isArray(cached) && cached.length > 0) return [monthKey, cached];
       const rows = await resolveMonthlyTherapistRows(target.year, target.month, type);
       return [monthKey, rows];
     }));
+    const loadedEntries = monthResults.map((result, index) => {
+      if (result.status === 'fulfilled') return result.value;
+      const target = visibleMonths[index];
+      const monthKey = `${target.year}-${target.month}`;
+      const cached = monthlyTherapistsByMonthRef.current[type]?.[monthKey];
+      console.warn(`Failed to load visible monthly therapists ${type} ${monthKey}; using cached or empty rows.`, result.reason);
+      return [monthKey, Array.isArray(cached) ? cached : []];
+    });
 
     if (monthlyTherapistVisibleLoadRequestRef.current[type] !== requestId) {
       return monthlyTherapistsByMonthRef.current[type] || {};
@@ -2117,12 +2209,15 @@ export function ScheduleProvider({ children }) {
     const requestId = ++noticesLoadRequestRef.current;
     const monthPrefix = Number(year) * 10000 + Number(month) * 100;
     try {
-      const { data, error } = await supabase
-        .from('notices')
-        .select('*')
-        .gte('slot_index', monthPrefix)
-        .lt('slot_index', monthPrefix + 100)
-        .order('slot_index');
+      const { data, error } = await withScheduleQueryTimeout(
+        supabase
+          .from('notices')
+          .select('*')
+          .gte('slot_index', monthPrefix)
+          .lt('slot_index', monthPrefix + 100)
+          .order('slot_index'),
+        `notices ${year}-${month}`
+      );
 
       if (error) throw error;
       const normalized = (data || []).map((notice) => normalizeNoticeSlot(notice, year, month));
