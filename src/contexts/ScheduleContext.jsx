@@ -121,10 +121,6 @@ async function fetchShockwaveScheduleRowsForMonth(target) {
         .select('*')
         .eq('year', target.year)
         .eq('month', target.month)
-        .order('week_index', { ascending: true })
-        .order('day_index', { ascending: true })
-        .order('row_index', { ascending: true })
-        .order('col_index', { ascending: true })
         .range(page * 1000, (page + 1) * 1000 - 1),
       `shockwave_schedules ${target.year}-${target.month} page ${page + 1}`
     );
@@ -658,7 +654,18 @@ export function ScheduleProvider({ children }) {
       });
 
       if (loadCacheRef.current.staffMemos !== cacheKey || staffMemosLoadRequestRef.current !== requestId) return memoMap;
-      setStaffMemos(memoMap);
+      setStaffMemos(prev => {
+        const nextMemos = { ...prev };
+        targetMonths.forEach(target => {
+          const prefix = `${target.year}-${target.month}-`;
+          Object.keys(nextMemos).forEach(key => {
+            if (key.startsWith(prefix)) {
+              delete nextMemos[key];
+            }
+          });
+        });
+        return Object.assign(nextMemos, memoMap);
+      });
       return memoMap;
     } catch (err) {
       console.error('Failed to load staff memos:', err);
@@ -1431,13 +1438,16 @@ export function ScheduleProvider({ children }) {
       };
 
       const applyMemoMapIfLatest = (memoMap) => {
-        if (
-          shockwaveMemosLoadRequestRef.current !== requestId ||
-          currentDateRef.current.year !== year ||
-          currentDateRef.current.month !== month
-        ) {
+        const isCurrent =
+          currentDateRef.current.year === year &&
+          currentDateRef.current.month === month;
+
+        if (!isCurrent) {
           return false;
         }
+
+        // 현재 보려는 달과 이 프로미스가 로드한 달이 일치한다면, 
+        // requestId가 일치하지 않더라도(달 이동 후 복귀 등) 데이터 업데이트를 허용합니다.
         loadCacheRef.current.shockwaveMemos = cacheKey;
         shockwaveMemosRef.current = memoMap;
         setShockwaveMemosLoadedKey(cacheKey);
@@ -1455,45 +1465,40 @@ export function ScheduleProvider({ children }) {
         const adjacentTargets = visibleMonths.filter((target) => (
           Number(target.year) !== Number(year) || Number(target.month) !== Number(month)
         ));
-        const getCachedRows = (target) => {
-          const rawCacheKey = getShockwaveRawMonthCacheKey(target.year, target.month);
-          const cachedRows = shockwaveRawMonthRowsCacheRef.current.get(rawCacheKey);
-          return Array.isArray(cachedRows) ? cachedRows : [];
-        };
 
-        const currentRows = await loadShockwaveRawMonthRows(currentTarget, { force: options.force === true });
-        const initialRows = [
-          ...currentRows,
-          ...adjacentTargets.flatMap(getCachedRows),
-        ];
-        const initialMemoMap = applyRowsToView(initialRows);
-        applyMemoMapIfLatest(initialMemoMap);
+        // 현재 달과 이전/이후 달 데이터를 병렬로 모두 가져옵니다.
+        const targets = [currentTarget, ...adjacentTargets];
+        const results = await Promise.allSettled(targets.map((target) =>
+          loadShockwaveRawMonthRows(target, { force: options.force === true })
+        ));
 
-        if (adjacentTargets.length > 0 && options.skipAdjacentRefresh !== true) {
-          Promise.allSettled(adjacentTargets.map((target) => (
-            loadShockwaveRawMonthRows(target, { force: options.force === true })
-          ))).then((results) => {
-            if (
-              shockwaveMemosLoadRequestRef.current !== requestId ||
-              currentDateRef.current.year !== year ||
-              currentDateRef.current.month !== month
-            ) {
-              return;
-            }
-            const adjacentRows = results.flatMap((result, index) => {
-              if (result.status === 'fulfilled') return result.value || [];
-              const target = adjacentTargets[index];
-              const rawCacheKey = getShockwaveRawMonthCacheKey(target.year, target.month);
-              const cachedRows = shockwaveRawMonthRowsCacheRef.current.get(rawCacheKey);
-              console.warn(`Failed to load adjacent shockwave month ${rawCacheKey}; using cached or empty rows.`, result.reason);
-              return Array.isArray(cachedRows) ? cachedRows : [];
-            });
-            const nextMemoMap = applyRowsToView([...currentRows, ...adjacentRows]);
-            applyMemoMapIfLatest(nextMemoMap);
-          });
+        const isCurrent =
+          currentDateRef.current.year === year &&
+          currentDateRef.current.month === month;
+
+        if (!isCurrent) {
+          return null;
         }
 
-        return initialMemoMap;
+        // 현재 달(currentTarget) 로드가 실패했다면 fallback 로직을 태우기 위해 throw 처리합니다.
+        const currentResult = results[0];
+        if (currentResult && currentResult.status === 'rejected') {
+          throw currentResult.reason || new Error(`Failed to load current month schedules for ${year}-${month}`);
+        }
+
+        const allRows = results.flatMap((result, index) => {
+          if (result.status === 'fulfilled') return result.value || [];
+          const target = targets[index];
+          const rawCacheKey = getShockwaveRawMonthCacheKey(target.year, target.month);
+          const cachedRows = shockwaveRawMonthRowsCacheRef.current.get(rawCacheKey);
+          console.warn(`Failed to load shockwave month ${rawCacheKey}; using cached or empty rows.`, result.reason);
+          return Array.isArray(cachedRows) ? cachedRows : [];
+        });
+
+        const finalMemoMap = applyRowsToView(allRows);
+        applyMemoMapIfLatest(finalMemoMap);
+
+        return finalMemoMap;
       } catch (err) {
         console.error('Failed to load shockwave memos:', err);
         const fallbackMemoMap = shockwaveMemoViewCacheRef.current.get(cacheKey);

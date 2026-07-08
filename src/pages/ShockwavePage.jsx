@@ -134,6 +134,7 @@ export default function ShockwavePage() {
             therapists={therapists}
             settings={shockwaveSettings}
             memos={shockwaveMemos}
+            memosLoadedKey={shockwaveMemosLoadedKey}
             onLoadMemos={loadShockwaveMemos}
             onSaveMemo={saveShockwaveMemo}
             holidays={holidays}

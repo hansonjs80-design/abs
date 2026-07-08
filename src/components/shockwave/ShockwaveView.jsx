@@ -318,7 +318,7 @@ const ContextMenuLocalInputGroup = ({ placeholder, buttonLabel, onSubmit, imeOpe
   );
 };
 
-export default function ShockwaveView({ therapists, settings, memos = {}, onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
+export default function ShockwaveView({ therapists, settings, memos = {}, memosLoadedKey = '', onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
   const { currentYear, currentMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, monthlyTherapistsByMonth, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings, clipboardRef, clipboardSource, setClipboardSource } = useSchedule();
   const { addToast } = useToast();
   const { user } = useAuth();
@@ -695,18 +695,24 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   });
 
   useEffect(() => {
+    const monthKey = getShockwaveScheduleScrollKey(currentYear, currentMonth);
+    setPendingDisplayValues({});
+    if (memosLoadedKey === monthKey) {
+      setLoadedMemosKey(monthKey);
+      return undefined;
+    }
+
     let cancelled = false;
     setLoadedMemosKey('');
-    setPendingDisplayValues({});
     Promise.resolve(onLoadMemos(currentYear, currentMonth)).finally(() => {
       if (!cancelled) {
-        setLoadedMemosKey(getShockwaveScheduleScrollKey(currentYear, currentMonth));
+        setLoadedMemosKey(monthKey);
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [currentYear, currentMonth, onLoadMemos, setPendingDisplayValues]);
+  }, [currentYear, currentMonth, memosLoadedKey, onLoadMemos, setPendingDisplayValues]);
 
   // ── 기존 40/60 셀과 빈 셀 잔여 메타데이터 보정 ──
   const prescriptionPatchKeyRef = useRef(null);
