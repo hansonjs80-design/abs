@@ -3275,6 +3275,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                 <div className="context-menu-divider" />
 
                 <div className="context-menu-meta-section">
+                  {/* 당장은 필요가 없어 예약시간 부분을 숨김 처리합니다.
                   <div className="context-menu-item context-menu-item-inline-edit context-menu-meta-item context-menu-time-item" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} style={{ cursor: 'default' }}>
                     <label className="context-menu-time-editor" style={{ width: '100%', margin: 0, padding: 0 }}>
                       <span className="context-menu-time-label">예약시간 :</span>
@@ -3349,6 +3350,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                       </span>
                     </label>
                   </div>
+                  */}
 
                   <div
                     className={`context-menu-item has-submenu context-menu-meta-item context-menu-prescription-item${activeContextSubmenu === 'prescription' ? ' is-submenu-open' : ''}`}
