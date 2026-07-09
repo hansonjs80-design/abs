@@ -3,10 +3,44 @@ import { useAuth } from '../contexts/AuthContext';
 
 const LAST_LOGIN_ID_KEY = 'clinic-last-login-id';
 
+const setCookieBackup = (key, value) => {
+  if (typeof document === 'undefined') return;
+  try {
+    const maxAge = 60 * 60 * 24 * 365 * 10; // 10 years
+    document.cookie = `${encodeURIComponent(key)}=${encodeURIComponent(value)}; max-age=${maxAge}; path=/; SameSite=Lax`;
+  } catch {
+    // Ignored
+  }
+};
+
+const getCookieBackup = (key) => {
+  if (typeof document === 'undefined') return null;
+  try {
+    const name = encodeURIComponent(key) + "=";
+    const decodedCookie = decodeURIComponent(document.cookie);
+    const ca = decodedCookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i].trim();
+      if (c.indexOf(name) === 0) {
+        return c.substring(name.length, c.length);
+      }
+    }
+  } catch {
+    // Ignored
+  }
+  return null;
+};
+
 const readLastLoginId = () => {
   if (typeof window === 'undefined') return '';
   try {
-    const saved = window.localStorage.getItem(LAST_LOGIN_ID_KEY);
+    let saved = window.localStorage.getItem(LAST_LOGIN_ID_KEY);
+    if (!saved) {
+      saved = getCookieBackup(LAST_LOGIN_ID_KEY);
+      if (saved) {
+        window.localStorage.setItem(LAST_LOGIN_ID_KEY, saved);
+      }
+    }
     return saved ? saved : '';
   } catch {
     return '';
@@ -17,6 +51,7 @@ const writeLastLoginId = (email) => {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(LAST_LOGIN_ID_KEY, email);
+    setCookieBackup(LAST_LOGIN_ID_KEY, email);
   } catch {
     // localStorage may be unavailable
   }
