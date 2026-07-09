@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 
 function setCookieBackup(key, value) {
   if (typeof document === 'undefined') return;
@@ -56,6 +56,7 @@ export function usePersistentNumber(key, initialValue, min = 0) {
   });
 
   const valueRef = useRef(value);
+  valueRef.current = value; // 렌더링 시점에 항상 최신 값 업데이트 유지
 
   const setPersistentValue = useCallback((newValue) => {
     setValue(prev => {
@@ -75,22 +76,6 @@ export function usePersistentNumber(key, initialValue, min = 0) {
       return next;
     });
   }, [key]);
-
-  // Sync on mount/key change just in case, but rely on setPersistentValue mostly
-  useEffect(() => {
-    valueRef.current = value;
-    if (typeof window !== 'undefined') {
-      try {
-        if (Number.isFinite(value)) {
-          const strVal = String(value);
-          window.localStorage.setItem(key, strVal);
-          setCookieBackup(key, strVal);
-        }
-      } catch {
-        // Ignored
-      }
-    }
-  }, [key, value]);
 
   return [value, setPersistentValue, valueRef];
 }
@@ -121,6 +106,7 @@ export function usePersistentJson(key, initialValue) {
   });
 
   const valueRef = useRef(value);
+  valueRef.current = value; // 렌더링 시점에 항상 최신 값 업데이트 유지
 
   const setPersistentValue = useCallback((newValue) => {
     setValue(prev => {
@@ -138,19 +124,6 @@ export function usePersistentJson(key, initialValue) {
       return next;
     });
   }, [key]);
-
-  useEffect(() => {
-    valueRef.current = value;
-    if (typeof window !== 'undefined') {
-      try {
-        const strVal = JSON.stringify(value);
-        window.localStorage.setItem(key, strVal);
-        setCookieBackup(key, strVal);
-      } catch {
-        // Ignored
-      }
-    }
-  }, [key, value]);
 
   return [value, setPersistentValue, valueRef];
 }
