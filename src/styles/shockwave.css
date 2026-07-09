@@ -475,7 +475,7 @@
   height: 100%;
   min-width: 0;
   overflow: hidden;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .sw-cell.has-fill-bg,
@@ -508,7 +508,7 @@
 .sw-cell-main,
 .sw-cell-note {
   display: block;
-  line-height: 1;
+  line-height: 1.2;
   max-width: 100%;
   overflow: hidden;
   white-space: nowrap;
