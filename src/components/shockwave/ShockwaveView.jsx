@@ -3581,7 +3581,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                   onFocusCapture={() => setActiveContextSubmenu('memo')}
                 >
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'pre-wrap' }}>
-                    메모 : {contextMenuMemoDrafts.length > 0 ? `\n${contextMenuMemoDrafts.map((m) => `• ${m}`).join('\n')}` : '없음'}
+                    메모 : {contextMenuMemoDrafts.length === 1 
+                      ? contextMenuMemoDrafts[0] 
+                      : contextMenuMemoDrafts.length > 1 
+                        ? `\n${contextMenuMemoDrafts.map((m) => `• ${m}`).join('\n')}` 
+                        : '없음'}
                   </span>
                   <div className="context-menu-submenu context-menu-submenu--memo">
                     <div className="context-menu-editor-panel">
@@ -4156,7 +4160,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
           if (hasHoverContent && cellPrescription) text += `\n💊 처방: ${cellPrescription}`;
           if (hasHoverContent && cellData?.body_part) text += `\n🦴 부위: ${cellData.body_part}`;
           const memoList = getMemoListFromMergeSpan(cellData?.merge_span);
-          if (memoList.length > 0) {
+          if (memoList.length === 1) {
+            text += `\n📝 메모: ${memoList[0]}`;
+          } else if (memoList.length > 1) {
             text += `\n📝 메모:\n${memoList.map((m) => `  • ${m}`).join('\n')}`;
           }
           hoverTooltipText = text;
