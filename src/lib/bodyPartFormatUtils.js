@@ -127,7 +127,7 @@ const KOREAN_BODY_PART_MAP = {
 };
 
 const KOREAN_BODY_DIRECTION_PREFIXES = [
-  { prefixes: ['왼쪽', '좌측', '왼'], value: 'Lt.' },
+  { prefixes: ['왼쪽', '좌측', '왼', '좌'], value: 'Lt.' },
   { prefixes: ['오른쪽', '오른', '우측', '오', '우'], value: 'Rt.' },
   { prefixes: ['양쪽', '양'], value: 'Both' },
 ];
