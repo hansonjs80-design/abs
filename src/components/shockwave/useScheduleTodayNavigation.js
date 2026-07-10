@@ -127,7 +127,7 @@ export default function useScheduleTodayNavigation({
       const isNextWeekShortcut = (event.metaKey || event.ctrlKey) &&
         !event.altKey &&
         !event.shiftKey &&
-        (event.code === 'KeyN' || key === 'n' || key === 'ㅜ');
+        (event.code === 'KeyN' || key === 'n' || key === 'ㅜ' || key === ' ' || event.code === 'Space');
       if (!isNextWeekShortcut) return;
       event.__shockwaveNextWeekHandled = true;
       event.preventDefault();
