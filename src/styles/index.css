@@ -967,7 +967,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table {
     width: 100% !important;
     border-collapse: collapse !important;
-    border: 1px solid #64748b !important;
+    border: 1px solid #cbd5e1 !important;
     table-layout: fixed !important;
   }
 
@@ -1248,6 +1248,16 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     overflow: hidden !important;
   }
 
+  html[data-print-orientation="portrait"] body.shockwave-settlement-print,
+  html[data-print-orientation="portrait"] body.shockwave-settlement-print * {
+    overflow: visible !important;
+  }
+  html[data-print-orientation="portrait"] body.shockwave-settlement-print ::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
   html[data-print-orientation="portrait"] body.shockwave-settlement-print .sw-stats-body--settlement {
     width: 100% !important;
     max-width: 100% !important;
@@ -1264,26 +1274,26 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   }
 
   html[data-print-orientation="portrait"] body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-header-wrap {
-    width: 196mm !important;
+    width: 180mm !important;
     max-width: 100% !important;
     margin: 0 auto 3mm !important;
   }
 
   html[data-print-orientation="portrait"] body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-body {
     display: grid !important;
-    grid-template-columns: minmax(0, 114mm) minmax(0, 78mm) !important;
+    grid-template-columns: minmax(0, 102mm) minmax(0, 74mm) !important;
     column-gap: 4mm !important;
     align-items: start !important;
     justify-content: center !important;
-    width: 196mm !important;
-    max-width: 196mm !important;
+    width: 180mm !important;
+    max-width: 180mm !important;
     margin: 0 auto !important;
     overflow: hidden !important;
   }
 
   html[data-print-orientation="portrait"] body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-left {
-    width: 114mm !important;
-    max-width: 114mm !important;
+    width: 102mm !important;
+    max-width: 102mm !important;
     min-width: 0 !important;
     flex: none !important;
     gap: 3mm !important;
