@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 
-import { getEffectiveSchedulerTextSettings } from '../../lib/schedulerTextSettings';
+import { getEffectiveSchedulerTextSettings, syncLoadTextSettings } from '../../lib/schedulerTextSettings';
 import { filterPrescriptionColorMap, normalizePrescriptionColorKey } from '../../lib/schedulerUtils';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 
@@ -97,6 +97,17 @@ export default function useScheduleViewState({
       window.removeEventListener('scheduler-text-settings-changed', handleTextSettingsChanged);
     };
   }, [settings, currentYear, currentMonth]);
+
+  // 마운트 시 DB에서 기기별 글자 크기 설정 복원
+  useEffect(() => {
+    let active = true;
+    syncLoadTextSettings().then((loaded) => {
+      if (active && loaded) {
+        setEffectiveSchedulerTextSettings(loaded);
+      }
+    });
+    return () => { active = false; };
+  }, []);
 
   return {
     effectivePrescriptionColors,
