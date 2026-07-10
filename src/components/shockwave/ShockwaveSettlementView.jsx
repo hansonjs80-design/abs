@@ -386,21 +386,23 @@ export default function ShockwaveSettlementView({
                         </tr>
                       </thead>
                       <tbody>
-                        {safePrescriptions.map((prescription) => {
-                          const count = item.countsByPrescription[prescription] || 0;
-                          const unitPrice = normalizedPriceMap[normalizePrescriptionKey(prescription)] || 0;
-                          const prescriptionAmount = count * unitPrice;
-                          const prescriptionIncentive = Math.round(prescriptionAmount * ((Number(incentivePercentage) || 0) / 100));
+                        {safePrescriptions
+                          .filter((prescription) => (item.countsByPrescription[prescription] || 0) > 0)
+                          .map((prescription) => {
+                            const count = item.countsByPrescription[prescription] || 0;
+                            const unitPrice = normalizedPriceMap[normalizePrescriptionKey(prescription)] || 0;
+                            const prescriptionAmount = count * unitPrice;
+                            const prescriptionIncentive = Math.round(prescriptionAmount * ((Number(incentivePercentage) || 0) / 100));
 
-                          return (
-                            <tr key={prescription}>
-                              <td className="prescription-name">{prescription}</td>
-                              <td className="count-val">{count > 0 ? `${count}건` : '-'}</td>
-                              <td className="amount-val">{prescriptionAmount > 0 ? formatCurrency(prescriptionAmount) : '-'}</td>
-                              <td className="incentive-val">{prescriptionIncentive > 0 ? formatCurrency(prescriptionIncentive) : '-'}</td>
-                            </tr>
-                          );
-                        })}
+                            return (
+                              <tr key={prescription}>
+                                <td className="prescription-name">{prescription}</td>
+                                <td className="count-val">{count > 0 ? `${count}건` : '-'}</td>
+                                <td className="amount-val">{prescriptionAmount > 0 ? formatCurrency(prescriptionAmount) : '-'}</td>
+                                <td className="incentive-val">{prescriptionIncentive > 0 ? formatCurrency(prescriptionIncentive) : '-'}</td>
+                              </tr>
+                            );
+                          })}
                         <tr className="vertical-total-row">
                           <th>합계</th>
                           <td>{item.totalCount > 0 ? `${item.totalCount}건` : '-'}</td>
@@ -458,21 +460,23 @@ export default function ShockwaveSettlementView({
                       </tr>
                     </thead>
                     <tbody>
-                      {safePrescriptions.map((prescription) => {
-                        const count = settlement.grandPrescriptionCounts[prescription] || 0;
-                        const unitPrice = normalizedPriceMap[normalizePrescriptionKey(prescription)] || 0;
-                        const prescriptionAmount = count * unitPrice;
-                        const prescriptionIncentive = Math.round(prescriptionAmount * ((Number(incentivePercentage) || 0) / 100));
+                      {safePrescriptions
+                        .filter((prescription) => (settlement.grandPrescriptionCounts[prescription] || 0) > 0)
+                        .map((prescription) => {
+                          const count = settlement.grandPrescriptionCounts[prescription] || 0;
+                          const unitPrice = normalizedPriceMap[normalizePrescriptionKey(prescription)] || 0;
+                          const prescriptionAmount = count * unitPrice;
+                          const prescriptionIncentive = Math.round(prescriptionAmount * ((Number(incentivePercentage) || 0) / 100));
 
-                        return (
-                          <tr key={prescription}>
-                            <td className="prescription-name">{prescription}</td>
-                            <td className="count-val">{count > 0 ? `${count}건` : '-'}</td>
-                            <td className="amount-val">{prescriptionAmount > 0 ? formatCurrency(prescriptionAmount) : '-'}</td>
-                            <td className="incentive-val">{prescriptionIncentive > 0 ? formatCurrency(prescriptionIncentive) : '-'}</td>
-                          </tr>
-                        );
-                      })}
+                          return (
+                            <tr key={prescription}>
+                              <td className="prescription-name">{prescription}</td>
+                              <td className="count-val">{count > 0 ? `${count}건` : '-'}</td>
+                              <td className="amount-val">{prescriptionAmount > 0 ? formatCurrency(prescriptionAmount) : '-'}</td>
+                              <td className="incentive-val">{prescriptionIncentive > 0 ? formatCurrency(prescriptionIncentive) : '-'}</td>
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </table>
                 </div>

@@ -967,7 +967,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table {
     width: 100% !important;
     border-collapse: collapse !important;
-    border: 1px solid #cbd5e1 !important;
+    border: 2px solid #94a3b8 !important;
     table-layout: fixed !important;
   }
 
@@ -980,8 +980,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     padding: 1.2mm 1mm !important;
     font-size: 8.5pt !important;
     line-height: 1.25 !important;
-    border-right: 1px solid #cbd5e1 !important;
-    border-bottom: 1px solid #cbd5e1 !important;
+    border-right: 1px solid #94a3b8 !important;
+    border-bottom: 1px solid #94a3b8 !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
@@ -1071,8 +1071,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row td {
     background: #f8fafc !important;
     font-weight: 800 !important;
-    border-top: 1px solid #475569 !important;
-    border-bottom: 1px solid #475569 !important;
+    border-top: 1px solid #94a3b8 !important;
+    border-bottom: 1px solid #94a3b8 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -1081,8 +1081,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table tbody tr.grand-total-row td {
     background: #eff6ff !important;
     font-weight: 900 !important;
-    border-top: 1px solid #1d4ed8 !important;
-    border-bottom: 1px solid #1d4ed8 !important;
+    border-top: 1px solid #94a3b8 !important;
+    border-bottom: 1px solid #94a3b8 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
