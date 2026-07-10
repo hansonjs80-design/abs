@@ -127,10 +127,29 @@ export default function ShockwaveDataGrid({
     if (isAllTherapistsSelected || selectedTherapistSet.size === 0) return displayTherapists;
     return displayTherapists.filter((therapist) => selectedTherapistSet.has(therapist.name));
   }, [displayTherapists, isAllTherapistsSelected, selectedTherapistSet]);
-  const prescriptions = useMemo(() => {
+  const allPrescriptions = useMemo(() => {
     const source = prescriptionsProp || settings?.prescriptions || ['F1.5', 'F/Rdc', 'F/R'];
     return Array.isArray(source) ? source.filter(Boolean) : ['F1.5', 'F/Rdc', 'F/R'];
   }, [prescriptionsProp, settings?.prescriptions]);
+
+  // 0건인 처방 열 숨김: 당월 데이터에서 1건 이상 있는 처방만 표시
+  const prescriptions = useMemo(() => {
+    const totals = {};
+    allPrescriptions.forEach(p => { totals[p] = 0; });
+
+    safeInputLogs.forEach(log => {
+      if (!log?.prescription) return;
+      const count = parseInt(String(log.prescription_count ?? '').trim(), 10) || 0;
+      const matched = allPrescriptions.find(p => prescriptionsMatch(log.prescription, p));
+      if (matched) {
+        totals[matched] += count;
+      }
+    });
+
+    const filtered = allPrescriptions.filter(p => (totals[p] || 0) > 0);
+    // 모두 0건이면 전체 처방 표시 (빈 테이블 방지)
+    return filtered.length > 0 ? filtered : allPrescriptions;
+  }, [allPrescriptions, safeInputLogs]);
   const gridTitle = title || `${currentYear}년 ${String(currentMonth).padStart(2, '0')}월 충격파 현황`;
   const runSyncForDate = useCallback(async () => {
     // 통계/현황 탭은 스케줄 표를 다시 쓰지 않는다.
