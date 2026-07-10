@@ -1328,6 +1328,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     max-width: 100% !important;
     min-width: 0 !important;
     overflow: hidden !important;
+    height: fit-content !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    flex: none !important;
   }
 
   html[data-print-orientation="portrait"] body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-table-wrap,
