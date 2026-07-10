@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePersistentNumber, usePersistentJson } from '../../hooks/usePersistentState';
+import { supabase } from '../../lib/supabaseClient';
 
 import {
   SHOCKWAVE_DAY_COL_WIDTH_KEY,
@@ -15,6 +16,104 @@ const MIN_COL_RATIO = 0.2;
 const MOBILE_RESIZE_LOCK_KEY = 'clinic-schedule-mobile-resize-locked';
 const ROW_HEIGHT_RESIZE_SENSITIVITY = 0.5;
 const ROW_HEIGHT_PRECISION = 0.5;
+
+const SETTINGS_ROW_ID = '00000000-0000-0000-0000-000000000000';
+
+// 기기 지문 생성 (해상도 및 유저 에이전트 기반)
+const getDeviceFingerprint = () => {
+  if (typeof window === 'undefined') return 'default-device';
+  try {
+    const screenInfo = `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}`;
+    const userAgent = window.navigator.userAgent;
+    const raw = `${screenInfo}-${userAgent}`;
+    let hash = 0;
+    for (let i = 0; i < raw.length; i++) {
+      const char = raw.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash;
+    }
+    return `dev_${Math.abs(hash)}`;
+  } catch {
+    return 'default-device';
+  }
+};
+
+// DB에서 기기 설정 복원
+async function syncLoadDeviceSettings(setColRatios, setDayColWidth, setRowHeight) {
+  try {
+    const { data, error } = await supabase
+      .from('shockwave_settings')
+      .select('monthly_settlement_settings')
+      .eq('id', SETTINGS_ROW_ID)
+      .single();
+
+    if (error || !data) return;
+    const dbDeviceSettings = data.monthly_settlement_settings?.device_settings;
+    if (!dbDeviceSettings) return;
+
+    const deviceId = getDeviceFingerprint();
+    const mySettings = dbDeviceSettings[deviceId];
+    if (!mySettings) return;
+
+    // 로컬 상태 및 로컬스토리지 동기화 복원
+    if (mySettings.colRatios) {
+      setColRatios(mySettings.colRatios);
+    }
+    if (mySettings.dayColWidth) {
+      setDayColWidth(mySettings.dayColWidth);
+    }
+    if (mySettings.rowHeight) {
+      setRowHeight(mySettings.rowHeight);
+    }
+  } catch (err) {
+    console.error('Failed to load device settings from DB:', err);
+  }
+}
+
+// DB에 기기 설정 백업 (디바운스 적용)
+let backupTimeout = null;
+function syncSaveDeviceSettings(colRatios, dayColWidth, rowHeight) {
+  if (backupTimeout) clearTimeout(backupTimeout);
+  
+  backupTimeout = setTimeout(async () => {
+    try {
+      const { data, error: selectErr } = await supabase
+        .from('shockwave_settings')
+        .select('monthly_settlement_settings')
+        .eq('id', SETTINGS_ROW_ID)
+        .single();
+
+      if (selectErr) return;
+
+      const deviceId = getDeviceFingerprint();
+      const existingSettlementSettings = data?.monthly_settlement_settings || {};
+      const existingDeviceSettings = existingSettlementSettings.device_settings || {};
+
+      const updatedDeviceSettings = {
+        ...existingDeviceSettings,
+        [deviceId]: {
+          colRatios,
+          dayColWidth,
+          rowHeight,
+          updatedAt: new Date().toISOString()
+        }
+      };
+
+      const updatedSettlementSettings = {
+        ...existingSettlementSettings,
+        device_settings: updatedDeviceSettings
+      };
+
+      await supabase
+        .from('shockwave_settings')
+        .update({ monthly_settlement_settings: updatedSettlementSettings })
+        .eq('id', SETTINGS_ROW_ID);
+
+    } catch (err) {
+      console.error('Failed to save device settings to DB:', err);
+    }
+  }, 1500);
+}
 
 const clampRowHeight = (value) => (
   Math.max(
@@ -71,6 +170,36 @@ export default function useScheduleResizeState({ colCount }) {
   const [dayColWidth, setDayColWidth] = usePersistentNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, 0);
   const [rowHeight, setRowHeight] = usePersistentNumber(SHOCKWAVE_ROW_HEIGHT_KEY, 23, MIN_SCHEDULE_ROW_HEIGHT);
 
+  // 마운트 시 서버 DB로부터 크기 동기화
+  useEffect(() => {
+    syncLoadDeviceSettings(setColRatios, setDayColWidth, setRowHeight);
+  }, [setColRatios, setDayColWidth, setRowHeight]);
+
+  // DB 백업용 래퍼 함수들
+  const updateRowHeight = useCallback((newValue) => {
+    setRowHeight(prev => {
+      const next = typeof newValue === 'function' ? newValue(prev) : newValue;
+      syncSaveDeviceSettings(colRatios, dayColWidth, next);
+      return next;
+    });
+  }, [colRatios, dayColWidth, setRowHeight]);
+
+  const updateDayColWidth = useCallback((newValue) => {
+    setDayColWidth(prev => {
+      const next = typeof newValue === 'function' ? newValue(prev) : newValue;
+      syncSaveDeviceSettings(colRatios, next, rowHeight);
+      return next;
+    });
+  }, [colRatios, rowHeight, setDayColWidth]);
+
+  const updateColRatios = useCallback((newValue) => {
+    setColRatios(prev => {
+      const next = typeof newValue === 'function' ? newValue(prev) : newValue;
+      syncSaveDeviceSettings(next, dayColWidth, rowHeight);
+      return next;
+    });
+  }, [dayColWidth, rowHeight, setColRatios]);
+
   const colResizeRef = useRef({ active: false, colIdx: -1, startX: 0, startRatios: [], containerWidth: 0 });
   const dayResizeRef = useRef({ active: false, startX: 0 });
   const rowResizeRef = useRef({ active: false, startY: 0, startHeight: 23 });
@@ -79,12 +208,12 @@ export default function useScheduleResizeState({ colCount }) {
     if (!Array.isArray(colRatios)) return;
     if (colRatios.length >= colCount) return;
 
-    setColRatios((prev) => {
+    updateColRatios((prev) => {
       if (!Array.isArray(prev)) return Array(colCount).fill(1);
       if (prev.length < colCount) return [...prev, ...Array(colCount - prev.length).fill(1)];
       return prev;
     });
-  }, [colRatios, colCount, setColRatios]);
+  }, [colRatios, colCount, updateColRatios]);
 
   const activeColRatios = useMemo(() => {
     if (!Array.isArray(colRatios)) return null;
@@ -111,11 +240,11 @@ export default function useScheduleResizeState({ colCount }) {
       const point = getPointerClient(moveEvent);
       const delta = point.y - rowResizeRef.current.startY;
       latestHeight = clampRowHeight(rowResizeRef.current.startHeight + (delta * ROW_HEIGHT_RESIZE_SENSITIVITY));
-      setRowHeight(latestHeight);
+      updateRowHeight(latestHeight);
     };
     const onUp = (upEvent) => {
       rowResizeRef.current.active = false;
-      setRowHeight(latestHeight); // Final write
+      updateRowHeight(latestHeight); // Final write
       maybeLockMobileResize(upEvent);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
@@ -130,7 +259,7 @@ export default function useScheduleResizeState({ colCount }) {
     window.addEventListener('touchend', onUp);
     window.addEventListener('touchcancel', onUp);
     window.addEventListener('blur', onUp);
-  }, [rowHeight, setRowHeight]);
+  }, [rowHeight, updateRowHeight]);
 
   const startColResize = useCallback((event, colIdx, timeColPx = 0, currentRatios = null) => {
     event.preventDefault();
@@ -160,7 +289,7 @@ export default function useScheduleResizeState({ colCount }) {
       nextRatios[currentColIdx] = Math.max(MIN_COL_RATIO, startRatiosValue[currentColIdx] + deltaRatio);
       nextRatios[currentColIdx + 1] = Math.max(MIN_COL_RATIO, startRatiosValue[currentColIdx + 1] - deltaRatio);
       latestRatios = nextRatios;
-      setColRatios(prev => {
+      updateColRatios(prev => {
         const full = Array.isArray(prev) ? [...prev] : [];
         for (let i = 0; i < nextRatios.length; i++) {
           full[i] = nextRatios[i];
@@ -170,7 +299,7 @@ export default function useScheduleResizeState({ colCount }) {
     };
     const onUp = (upEvent) => {
       colResizeRef.current.active = false;
-      setColRatios(prev => {
+      updateColRatios(prev => {
         const full = Array.isArray(prev) ? [...prev] : [];
         for (let i = 0; i < latestRatios.length; i++) {
           full[i] = latestRatios[i];
@@ -191,7 +320,7 @@ export default function useScheduleResizeState({ colCount }) {
     window.addEventListener('touchend', onUp);
     window.addEventListener('touchcancel', onUp);
     window.addEventListener('blur', onUp);
-  }, [colCount, setColRatios]);
+  }, [colCount, updateColRatios]);
 
   const startDayResize = useCallback((event, showTimeCol) => {
     event.preventDefault();
@@ -212,11 +341,11 @@ export default function useScheduleResizeState({ colCount }) {
       const point = getPointerClient(moveEvent);
       const delta = point.x - dayResizeRef.current.startX;
       latestWidth = Math.max(minDayWidth, normalizedDayWidth + delta);
-      setDayColWidth(latestWidth);
+      updateDayColWidth(latestWidth);
     };
     const onUp = (upEvent) => {
       dayResizeRef.current.active = false;
-      setDayColWidth(latestWidth); // Final write
+      updateDayColWidth(latestWidth); // Final write
       maybeLockMobileResize(upEvent);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
@@ -231,14 +360,14 @@ export default function useScheduleResizeState({ colCount }) {
     window.addEventListener('touchend', onUp);
     window.addEventListener('touchcancel', onUp);
     window.addEventListener('blur', onUp);
-  }, [dayColWidth, setDayColWidth]);
+  }, [dayColWidth, updateDayColWidth]);
 
   return {
     activeColRatios,
     dayColWidth,
     rowHeight,
-    setRowHeight,
-    setDayColWidth,
+    setRowHeight: updateRowHeight,
+    setDayColWidth: updateDayColWidth,
     startColResize,
     startDayResize,
     startRowResize,
