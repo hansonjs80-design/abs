@@ -924,9 +924,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   }
 
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-card {
-    border: none !important;
+    border: 2px solid #94a3b8 !important;
+    border-radius: 5px !important;
     box-shadow: none !important;
-    background: transparent !important;
+    background: #ffffff !important;
     page-break-inside: avoid !important;
     width: 333px !important;
     max-width: 333px !important;
@@ -943,8 +944,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-header {
     padding: 1.5mm 1.2mm !important;
-    border: 1px solid #64748b !important;
-    border-bottom: none !important;
+    border: none !important;
+    border-bottom: 1px solid #94a3b8 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -962,7 +963,13 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     margin: 0 !important;
   }
 
-  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table,
+  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border: none !important;
+    table-layout: fixed !important;
+  }
+
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table,
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table {
     width: 100% !important;
