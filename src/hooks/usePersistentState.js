@@ -4,7 +4,8 @@ function setCookieBackup(key, value) {
   if (typeof document === 'undefined') return;
   try {
     const maxAge = 60 * 60 * 24 * 365 * 10; // 10 years
-    document.cookie = `${encodeURIComponent(key)}=${encodeURIComponent(value)}; max-age=${maxAge}; path=/; SameSite=Lax`;
+    // SameSite 정책 생략 및 표준 규격으로 브라우저 호환성 극대화
+    document.cookie = `${encodeURIComponent(key)}=${encodeURIComponent(value)}; max-age=${maxAge}; path=/`;
   } catch {
     // Ignored
   }
@@ -14,12 +15,12 @@ function getCookieBackup(key) {
   if (typeof document === 'undefined') return null;
   try {
     const name = encodeURIComponent(key) + "=";
-    const decodedCookie = decodeURIComponent(document.cookie);
-    const ca = decodedCookie.split(';');
+    const ca = document.cookie.split(';');
     for (let i = 0; i < ca.length; i++) {
       let c = ca[i].trim();
       if (c.indexOf(name) === 0) {
-        return c.substring(name.length, c.length);
+        // 개별 타겟 값만 안전하게 디코딩하여 다른 쿠키 인코딩 에러 간섭 차단
+        return decodeURIComponent(c.substring(name.length));
       }
     }
   } catch {
