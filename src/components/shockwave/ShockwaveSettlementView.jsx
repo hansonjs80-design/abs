@@ -148,6 +148,12 @@ export default function ShockwaveSettlementView({
     };
   }, [safeLogs, displayTherapists, safePrescriptions, normalizedPriceMap, incentivePercentage]);
 
+  const horizontalPrescriptions = useMemo(() => {
+    return safePrescriptions.filter(
+      (prescription) => (settlement.grandPrescriptionCounts[prescription] || 0) > 0
+    );
+  }, [safePrescriptions, settlement.grandPrescriptionCounts]);
+
   if (!displayTherapists.length) {
     return (
       <div className="sw-stats-empty">
@@ -191,15 +197,15 @@ export default function ShockwaveSettlementView({
                   <tr>
                     <th className="label-col" rowSpan={2}>구분</th>
                     {settlement.summaryByTherapist.map((item, therapistIndex) => (
-                      <th key={item?.therapist?.id || item?.therapist?.name || therapistIndex} colSpan={safePrescriptions.length} className={`therapist-col therapist-group-end therapist-tone-${therapistIndex % 5}`}>
+                      <th key={item?.therapist?.id || item?.therapist?.name || therapistIndex} colSpan={horizontalPrescriptions.length} className={`therapist-col therapist-group-end therapist-tone-${therapistIndex % 5}`}>
                         {item?.therapist?.name || ''}
                       </th>
                     ))}
                   </tr>
                   <tr>
                     {settlement.summaryByTherapist.flatMap((item, therapistIndex) =>
-                      safePrescriptions.map((prescription, prescriptionIndex) => (
-                        <th key={`${item?.therapist?.id || item?.therapist?.name || therapistIndex}-${prescription}`} className={`prescription-col therapist-tone-${therapistIndex % 5}-sub${prescriptionIndex === safePrescriptions.length - 1 ? ' therapist-group-end' : ''}`}>
+                      horizontalPrescriptions.map((prescription, prescriptionIndex) => (
+                        <th key={`${item?.therapist?.id || item?.therapist?.name || therapistIndex}-${prescription}`} className={`prescription-col therapist-tone-${therapistIndex % 5}-sub${prescriptionIndex === horizontalPrescriptions.length - 1 ? ' therapist-group-end' : ''}`}>
                           {prescription}
                         </th>
                       ))
@@ -210,8 +216,8 @@ export default function ShockwaveSettlementView({
                   <tr>
                     <th className="row-label">처방 건수</th>
                     {settlement.summaryByTherapist.flatMap((item, therapistIndex) =>
-                      safePrescriptions.map((prescription, prescriptionIndex) => (
-                        <td key={`count-${item?.therapist?.id || item?.therapist?.name || therapistIndex}-${prescription}`} className={`therapist-tone-${therapistIndex % 5}-cell${prescriptionIndex === safePrescriptions.length - 1 ? ' therapist-group-end' : ''}`}>
+                      horizontalPrescriptions.map((prescription, prescriptionIndex) => (
+                        <td key={`count-${item?.therapist?.id || item?.therapist?.name || therapistIndex}-${prescription}`} className={`therapist-tone-${therapistIndex % 5}-cell${prescriptionIndex === horizontalPrescriptions.length - 1 ? ' therapist-group-end' : ''}`}>
                           {settlement.grandPrescriptionCounts[prescription] >= 0
                             ? item.countsByPrescription[prescription] || 0
                             : 0}
@@ -222,7 +228,7 @@ export default function ShockwaveSettlementView({
                   <tr>
                     <th className="row-label">충격파 합계(건)</th>
                     {settlement.summaryByTherapist.map((item, therapistIndex) => (
-                      <td key={`total-count-${item?.therapist?.id || item?.therapist?.name || therapistIndex}`} colSpan={safePrescriptions.length} className={`merged-value therapist-group-end therapist-tone-${therapistIndex % 5}-cell`}>
+                      <td key={`total-count-${item?.therapist?.id || item?.therapist?.name || therapistIndex}`} colSpan={horizontalPrescriptions.length} className={`merged-value therapist-group-end therapist-tone-${therapistIndex % 5}-cell`}>
                         {formatCount(item.totalCount)}
                       </td>
                     ))}
@@ -230,7 +236,7 @@ export default function ShockwaveSettlementView({
                   <tr className="settlement-amount-row">
                     <th className="row-label">결산 금액(원)</th>
                     {settlement.summaryByTherapist.map((item, therapistIndex) => (
-                      <td key={`amount-${item?.therapist?.id || item?.therapist?.name || therapistIndex}`} colSpan={safePrescriptions.length} className={`merged-value amount therapist-group-end therapist-tone-${therapistIndex % 5}-cell`}>
+                      <td key={`amount-${item?.therapist?.id || item?.therapist?.name || therapistIndex}`} colSpan={horizontalPrescriptions.length} className={`merged-value amount therapist-group-end therapist-tone-${therapistIndex % 5}-cell`}>
                         {formatCurrency(item.amount)}
                       </td>
                     ))}
@@ -238,7 +244,7 @@ export default function ShockwaveSettlementView({
                   <tr className="settlement-incentive-row">
                     <th className="row-label">인센티브 ({Number(incentivePercentage) || 0}%)</th>
                     {settlement.summaryByTherapist.map((item, therapistIndex) => (
-                      <td key={`incentive-${item?.therapist?.id || item?.therapist?.name || therapistIndex}`} colSpan={safePrescriptions.length} className={`merged-value incentive therapist-group-end therapist-tone-${therapistIndex % 5}-cell`}>
+                      <td key={`incentive-${item?.therapist?.id || item?.therapist?.name || therapistIndex}`} colSpan={horizontalPrescriptions.length} className={`merged-value incentive therapist-group-end therapist-tone-${therapistIndex % 5}-cell`}>
                         {formatCurrency(item.incentive)}
                       </td>
                     ))}
@@ -262,7 +268,7 @@ export default function ShockwaveSettlementView({
                   <thead>
                     <tr>
                       <th className="label-col">구분</th>
-                      {safePrescriptions.map((prescription) => (
+                      {horizontalPrescriptions.map((prescription) => (
                         <th key={`grand-summary-head-${prescription}`} className="prescription-col">
                           {prescription}
                         </th>
@@ -272,7 +278,7 @@ export default function ShockwaveSettlementView({
                   <tbody>
                     <tr>
                       <th className="row-label">처방 건수</th>
-                      {safePrescriptions.map((prescription) => (
+                      {horizontalPrescriptions.map((prescription) => (
                         <td key={`grand-summary-count-${prescription}`} className="grand-value">
                           {formatCount(settlement.grandPrescriptionCounts[prescription] || 0)}
                         </td>
@@ -280,19 +286,19 @@ export default function ShockwaveSettlementView({
                     </tr>
                     <tr>
                       <th className="row-label">충격파 합계(건)</th>
-                      <td className="grand-value merged-value" colSpan={safePrescriptions.length}>
+                      <td className="grand-value merged-value" colSpan={horizontalPrescriptions.length}>
                         {formatCount(settlement.grandTotalCount)}
                       </td>
                     </tr>
                     <tr className="settlement-amount-row">
                       <th className="row-label">결산 금액(원)</th>
-                      <td className="grand-value merged-value amount" colSpan={safePrescriptions.length}>
+                      <td className="grand-value merged-value amount" colSpan={horizontalPrescriptions.length}>
                         {formatCurrency(settlement.grandAmount)}
                       </td>
                     </tr>
                     <tr className="settlement-incentive-row">
                       <th className="row-label">인센티브 ({Number(incentivePercentage) || 0}%)</th>
-                      <td className="grand-value merged-value incentive" colSpan={safePrescriptions.length}>
+                      <td className="grand-value merged-value incentive" colSpan={horizontalPrescriptions.length}>
                         {formatCurrency(settlement.grandIncentive)}
                       </td>
                     </tr>
