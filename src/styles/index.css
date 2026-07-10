@@ -931,6 +931,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     page-break-inside: avoid !important;
     width: 333px !important;
     max-width: 333px !important;
+    height: fit-content !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    flex: none !important;
   }
 
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-card {
@@ -968,6 +972,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     border-collapse: collapse !important;
     border: none !important;
     table-layout: fixed !important;
+    height: auto !important;
   }
 
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table,

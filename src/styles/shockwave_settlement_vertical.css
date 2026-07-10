@@ -63,6 +63,10 @@
   border-radius: 5px !important;
   background: #ffffff !important;
   box-shadow: none !important;
+  height: fit-content !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  flex: none !important;
 }
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-header {
@@ -107,6 +111,9 @@
   border-radius: 0 !important;
   box-shadow: none !important;
   overflow: visible !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
 }
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-card .sw-settlement-table-wrap {
@@ -129,6 +136,7 @@
   border: 2px solid #94a3b8 !important;
   border-collapse: collapse !important;
   font-size: 15px !important;
+  height: auto !important;
 }
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table {
