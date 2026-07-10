@@ -888,20 +888,39 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     max-width: 100% !important;
   }
 
+  /* 가로 스크롤바 강제 제거 및 overflow 제어 */
+  body.settlement-print, 
+  body.settlement-print * {
+    overflow: visible !important;
+  }
+  body.settlement-print .sw-settlement-table-wrap,
+  body.settlement-print .sw-compact-table-wrap,
+  body.settlement-print .sw-settlement-vertical-body,
+  body.settlement-print .sw-settlement-vertical-left,
+  body.settlement-print .sw-settlement-vertical-right {
+    overflow: visible !important;
+    overflow-x: hidden !important;
+  }
+  body.settlement-print ::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-left {
     display: flex !important;
     flex-direction: column !important;
     gap: 4mm !important;
-    width: 370px !important;
-    flex: 0 0 370px !important;
+    width: 333px !important;
+    flex: 0 0 333px !important;
   }
 
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-right {
     display: flex !important;
     flex-direction: column !important;
     gap: 4mm !important;
-    width: 350px !important;
-    flex: 0 0 350px !important;
+    width: 332px !important;
+    flex: 0 0 332px !important;
   }
 
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-card {
@@ -909,8 +928,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     box-shadow: none !important;
     background: transparent !important;
     page-break-inside: avoid !important;
-    width: 370px !important;
-    max-width: 370px !important;
+    width: 333px !important;
+    max-width: 333px !important;
   }
 
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-card {
@@ -918,8 +937,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     box-shadow: none !important;
     background: transparent !important;
     page-break-inside: avoid !important;
-    width: 350px !important;
-    max-width: 350px !important;
+    width: 332px !important;
+    max-width: 332px !important;
   }
 
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-header {
@@ -961,8 +980,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     padding: 1.2mm 1mm !important;
     font-size: 8.5pt !important;
     line-height: 1.25 !important;
-    border-right: 0.8px solid #94a3b8 !important;
-    border-bottom: 0.8px solid #94a3b8 !important;
+    border-right: 1px solid #cbd5e1 !important;
+    border-bottom: 1px solid #cbd5e1 !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
@@ -979,31 +998,31 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   /* 테이블 열 인쇄 너비 매핑 (화면 설정과 일치) */
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table th:first-child,
-  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table td:first-child { width: 110px !important; }
+  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table td:first-child { width: 99px !important; }
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table th:nth-child(2),
-  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table td:nth-child(2) { width: 60px !important; }
+  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table td:nth-child(2) { width: 54px !important; }
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table th:nth-child(3),
-  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table td:nth-child(3) { width: 100px !important; }
+  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table td:nth-child(3) { width: 90px !important; }
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table th:nth-child(4),
-  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table td:nth-child(4) { width: 100px !important; }
+  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table td:nth-child(4) { width: 90px !important; }
 
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table th:first-child,
-  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table td:first-child { width: 90px !important; }
+  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table td:first-child { width: 85px !important; }
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table th:nth-child(2),
-  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table td:nth-child(2) { width: 70px !important; }
+  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table td:nth-child(2) { width: 66px !important; }
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table th:nth-child(3),
-  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table td:nth-child(3) { width: 95px !important; }
+  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table td:nth-child(3) { width: 90px !important; }
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table th:nth-child(4),
-  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table td:nth-child(4) { width: 95px !important; }
+  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table td:nth-child(4) { width: 90px !important; }
 
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table th:first-child,
-  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table td:first-child { width: 100px !important; }
+  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table td:first-child { width: 95px !important; }
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table th:nth-child(2),
-  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table td:nth-child(2) { width: 60px !important; }
+  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table td:nth-child(2) { width: 57px !important; }
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table th:nth-child(3),
-  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table td:nth-child(3) { width: 95px !important; }
+  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table td:nth-child(3) { width: 90px !important; }
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table th:nth-child(4),
-  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table td:nth-child(4) { width: 95px !important; }
+  body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-prescription-summary-table td:nth-child(4) { width: 90px !important; }
 
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table thead th,
   body.settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table thead th,
@@ -1053,7 +1072,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     background: #f8fafc !important;
     font-weight: 800 !important;
     border-top: 1px solid #475569 !important;
-    border-bottom: 2px double #475569 !important;
+    border-bottom: 1px solid #475569 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -1063,7 +1082,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     background: #eff6ff !important;
     font-weight: 900 !important;
     border-top: 1px solid #1d4ed8 !important;
-    border-bottom: 2px double #1d4ed8 !important;
+    border-bottom: 1px solid #1d4ed8 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -1272,8 +1291,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   }
 
   html[data-print-orientation="portrait"] body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-right {
-    width: 78mm !important;
-    max-width: 78mm !important;
+    width: 74mm !important;
+    max-width: 74mm !important;
     min-width: 0 !important;
     flex: none !important;
     gap: 3mm !important;

@@ -73,7 +73,7 @@ export default function ShockwaveSettlementView({
     const nameSet = new Set(selectedTherapistNames);
     return allDisplayTherapists.filter((t) => nameSet.has(t.name));
   }, [allDisplayTherapists, selectedTherapistNames]);
-  const safePrescriptions = useMemo(() => (Array.isArray(prescriptions) ? prescriptions.filter(Boolean) : []), [prescriptions]);
+  const safePrescriptions = useMemo(() => (Array.isArray(prescriptions) ? prescriptions.filter((p) => p && String(p).trim() !== '') : []), [prescriptions]);
   const safeRecentMonthlySummaries = useMemo(
     () => (Array.isArray(recentMonthlySummaries) ? recentMonthlySummaries.filter(Boolean) : []),
     [recentMonthlySummaries]
