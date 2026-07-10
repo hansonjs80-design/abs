@@ -1866,6 +1866,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     effectivePrescriptionColors,
     effectiveSchedulerTextSettings,
     hasCompletableSelection,
+    isTextSettingsLoading,
     shortcutLabels,
     treatmentCompleteButtonLabel,
   } = useScheduleViewState({
@@ -2744,7 +2745,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   return (
     <>
       <div 
-        className={`shockwave-view animate-fade-in${(isScheduleMonthLoading || isDeviceSettingsLoading) ? ' is-month-loading' : ''}`}
+        className={`shockwave-view animate-fade-in${(isScheduleMonthLoading || isDeviceSettingsLoading || isTextSettingsLoading) ? ' is-month-loading' : ''}`}
         ref={viewRef} 
         tabIndex={0} 
         style={{

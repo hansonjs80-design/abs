@@ -85,6 +85,8 @@ export default function useScheduleViewState({
     getEffectiveSchedulerTextSettings(settings, currentYear, currentMonth)
   );
 
+  const [isTextSettingsLoading, setIsTextSettingsLoading] = useState(true);
+
   useEffect(() => {
     setEffectiveSchedulerTextSettings(getEffectiveSchedulerTextSettings(settings, currentYear, currentMonth));
     
@@ -102,9 +104,14 @@ export default function useScheduleViewState({
   useEffect(() => {
     let active = true;
     syncLoadTextSettings().then((loaded) => {
-      if (active && loaded) {
-        setEffectiveSchedulerTextSettings(loaded);
+      if (active) {
+        if (loaded) {
+          setEffectiveSchedulerTextSettings(loaded);
+        }
+        setIsTextSettingsLoading(false);
       }
+    }).catch(() => {
+      if (active) setIsTextSettingsLoading(false);
     });
     return () => { active = false; };
   }, []);
@@ -114,6 +121,7 @@ export default function useScheduleViewState({
     effectiveSchedulerTextSettings,
     hasCompletableSelection,
     hasCompletedSelection,
+    isTextSettingsLoading,
     shortcutLabels,
     treatmentCompleteButtonLabel,
   };
