@@ -643,6 +643,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     startDayResize,
     startRowResize,
     therapistColsCSS,
+    isDeviceSettingsLoading,
   } = useScheduleResizeState({ colCount });
   const effectiveDayOverrides = useMemo(
     () => getMonthlyDayOverrides(settings?.day_overrides, currentYear, currentMonth),
@@ -2743,7 +2744,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   return (
     <>
       <div 
-        className={`shockwave-view animate-fade-in${isScheduleMonthLoading ? ' is-month-loading' : ''}`}
+        className={`shockwave-view animate-fade-in${(isScheduleMonthLoading || isDeviceSettingsLoading) ? ' is-month-loading' : ''}`}
         ref={viewRef} 
         tabIndex={0} 
         style={{
@@ -2767,7 +2768,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
           if (tooltipRef.current) positionTooltip(e.clientX, e.clientY);
         }}
       >
-      {isScheduleMonthLoading && (
+      {(isScheduleMonthLoading || isDeviceSettingsLoading) && (
         <div className="shockwave-month-loading" role="status" aria-live="polite">
           <div className="shockwave-month-loading-card">
             <span className="shockwave-month-loading-spinner" />
@@ -2775,7 +2776,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
           </div>
         </div>
       )}
-      {useMemo(() => weeks.map((weekDays, weekIdx) => {
+      {!isDeviceSettingsLoading && useMemo(() => weeks.map((weekDays, weekIdx) => {
         const daysContainerWidth = dayColWidth
           ? dayColWidth * weekDays.length + TIME_COL_WIDTH + 4
           : null;

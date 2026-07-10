@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePersistentNumber, usePersistentJson } from '../../hooks/usePersistentState';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -169,10 +169,21 @@ export default function useScheduleResizeState({ colCount }) {
   const [colRatios, setColRatios] = usePersistentJson(SHOCKWAVE_COL_RATIOS_KEY, null);
   const [dayColWidth, setDayColWidth] = usePersistentNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, 0);
   const [rowHeight, setRowHeight] = usePersistentNumber(SHOCKWAVE_ROW_HEIGHT_KEY, 23, MIN_SCHEDULE_ROW_HEIGHT);
+  const [isDeviceSettingsLoading, setIsDeviceSettingsLoading] = useState(true);
 
   // 마운트 시 서버 DB로부터 크기 동기화
   useEffect(() => {
-    syncLoadDeviceSettings(setColRatios, setDayColWidth, setRowHeight);
+    let active = true;
+    async function load() {
+      await syncLoadDeviceSettings(setColRatios, setDayColWidth, setRowHeight);
+      if (active) {
+        setIsDeviceSettingsLoading(false);
+      }
+    }
+    load();
+    return () => {
+      active = false;
+    };
   }, [setColRatios, setDayColWidth, setRowHeight]);
 
   // DB 백업용 래퍼 함수들
@@ -372,5 +383,6 @@ export default function useScheduleResizeState({ colCount }) {
     startDayResize,
     startRowResize,
     therapistColsCSS,
+    isDeviceSettingsLoading,
   };
 }
