@@ -2776,10 +2776,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
           </div>
         </div>
       )}
-      {!isDeviceSettingsLoading && useMemo(() => weeks.map((weekDays, weekIdx) => {
-        const daysContainerWidth = dayColWidth
-          ? dayColWidth * weekDays.length + TIME_COL_WIDTH + 4
-          : null;
+      {useMemo(() => {
+        if (isDeviceSettingsLoading) return null;
+        return weeks.map((weekDays, weekIdx) => {
+          const daysContainerWidth = dayColWidth
+            ? dayColWidth * weekDays.length + TIME_COL_WIDTH + 4
+            : null;
         return (
         <div
           key={weekIdx}
@@ -3055,8 +3057,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
           />
         </div>
         );
-      }), [
-        weeks, dayColWidth, todayWeekIdx, today, getTimeSlotsForDay,
+      });
+      }, [
+        isDeviceSettingsLoading, weeks, dayColWidth, todayWeekIdx, today, getTimeSlotsForDay,
         therapistColsCSS, colCount, getTherapistNameForDate, activeColRatios,
         startColResize, startDayResize, startRowResize,
         renderMemos, renderPendingDisplayValues, renderPendingMergeSpans, renderPendingCellBgColors, reservationGroupEdgeMap, editingCell, imePreviewCell,
