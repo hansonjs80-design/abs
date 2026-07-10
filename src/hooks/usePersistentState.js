@@ -3,9 +3,11 @@ import { useState, useRef, useCallback } from 'react';
 function setCookieBackup(key, value) {
   if (typeof document === 'undefined') return;
   try {
-    const maxAge = 60 * 60 * 24 * 365 * 10; // 10 years
-    // SameSite 정책 생략 및 표준 규격으로 브라우저 호환성 극대화
-    document.cookie = `${encodeURIComponent(key)}=${encodeURIComponent(value)}; max-age=${maxAge}; path=/`;
+    const d = new Date();
+    d.setTime(d.getTime() + (365 * 24 * 60 * 60 * 1000 * 10)); // 10 years
+    const expires = "expires=" + d.toUTCString();
+    // max-age와 expires를 함께 명시하여 구형 브라우저 및 특정 OS 크롬 환경에서도 세션 쿠키로 오인받지 않도록 보장
+    document.cookie = `${encodeURIComponent(key)}=${encodeURIComponent(value)}; ${expires}; path=/`;
   } catch {
     // Ignored
   }

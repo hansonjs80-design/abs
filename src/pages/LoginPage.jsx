@@ -6,8 +6,10 @@ const LAST_LOGIN_ID_KEY = 'clinic-last-login-id';
 const setCookieBackup = (key, value) => {
   if (typeof document === 'undefined') return;
   try {
-    const maxAge = 60 * 60 * 24 * 365 * 10; // 10 years
-    document.cookie = `${encodeURIComponent(key)}=${encodeURIComponent(value)}; max-age=${maxAge}; path=/`;
+    const d = new Date();
+    d.setTime(d.getTime() + (365 * 24 * 60 * 60 * 1000 * 10)); // 10 years
+    const expires = "expires=" + d.toUTCString();
+    document.cookie = `${encodeURIComponent(key)}=${encodeURIComponent(value)}; ${expires}; path=/`;
   } catch {
     // Ignored
   }
