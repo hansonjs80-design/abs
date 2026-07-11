@@ -1,19 +1,32 @@
 import { useEffect, useRef, useState } from 'react';
+import { ArrowDown, ArrowUp, Trash2 } from 'lucide-react';
 import { normalizeBodyPartKey } from '../../lib/schedulerUtils';
 
 export default function BodyPartKeyboardPanel({
-  availableParts,
-  currentParts,
+  availableParts = [],
+  currentParts = [],
   onAdd,
   onDelete,
+  onEdit,
+  onMove,
+  onRemove,
   onToggle,
   imeOpenRef,
   autoFocus = false,
 }) {
   const [inputValue, setInputValue] = useState('');
   const [focusIndex, setFocusIndex] = useState(0);
+  const [selectedDrafts, setSelectedDrafts] = useState([]);
   const inputRef = useRef(null);
   const itemRefs = useRef([]);
+  const selectedParts = currentParts.map((part) => String(part || '').trim()).filter(Boolean);
+  const selectedPartSignature = selectedParts.join('\u001f');
+  const selectedKeySet = new Set(selectedParts.map((part) => normalizeBodyPartKey(part)));
+  const selectableParts = availableParts.filter((part) => !selectedKeySet.has(normalizeBodyPartKey(part)));
+
+  useEffect(() => {
+    setSelectedDrafts(selectedPartSignature ? selectedPartSignature.split('\u001f') : []);
+  }, [selectedPartSignature]);
 
   useEffect(() => {
     if (!autoFocus) return undefined;
@@ -42,7 +55,7 @@ export default function BodyPartKeyboardPanel({
   }, [autoFocus]);
 
   const focusTarget = (nextIndex) => {
-    const maxIndex = availableParts.length;
+    const maxIndex = selectableParts.length;
     const boundedIndex = Math.max(0, Math.min(maxIndex, nextIndex));
     setFocusIndex(boundedIndex);
     if (boundedIndex === 0) {
@@ -69,14 +82,14 @@ export default function BodyPartKeyboardPanel({
       submitInput();
       return;
     }
-    if (event.key === 'ArrowDown' && availableParts.length > 0) {
+    if (event.key === 'ArrowDown' && selectableParts.length > 0) {
       event.preventDefault();
       focusTarget(1);
       return;
     }
-    if (event.key === 'ArrowUp' && availableParts.length > 0) {
+    if (event.key === 'ArrowUp' && selectableParts.length > 0) {
       event.preventDefault();
-      focusTarget(availableParts.length);
+      focusTarget(selectableParts.length);
     }
   };
 
@@ -84,7 +97,7 @@ export default function BodyPartKeyboardPanel({
     event.stopPropagation();
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      focusTarget(index === availableParts.length - 1 ? 0 : index + 2);
+      focusTarget(index === selectableParts.length - 1 ? 0 : index + 2);
       return;
     }
     if (event.key === 'ArrowUp') {
@@ -95,12 +108,23 @@ export default function BodyPartKeyboardPanel({
     if (event.key === 'Backspace' || event.key === 'Delete') {
       event.preventDefault();
       onDelete(part);
-      focusTarget(Math.min(index + 1, Math.max(0, availableParts.length - 1)));
+      focusTarget(Math.min(index + 1, Math.max(0, selectableParts.length - 1)));
       return;
     }
     if (event.key === ' ' || event.key === 'Spacebar' || event.key === 'Enter') {
       event.preventDefault();
       onToggle(part);
+    }
+  };
+
+  const commitSelectedDraft = (index, value) => {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) {
+      onRemove?.(index);
+      return;
+    }
+    if (trimmed !== selectedParts[index]) {
+      onEdit?.(index, trimmed);
     }
   };
 
@@ -110,9 +134,99 @@ export default function BodyPartKeyboardPanel({
       onMouseDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
     >
-      {availableParts.length > 0 ? (
+      {selectedParts.length > 0 ? (
+        <div className="context-menu-body-selected-list">
+          {selectedParts.map((part, index) => {
+            const draftValue = selectedDrafts[index] ?? part;
+            const canReorderParts = selectedParts.length > 1;
+            return (
+              <div key={`${normalizeBodyPartKey(part)}-${index}`} className="context-menu-body-selected-item">
+                <input
+                  type="text"
+                  className="context-menu-input context-menu-input--body-part"
+                  value={draftValue}
+                  aria-label={`부위 ${index + 1} 수정`}
+                  title="부위 수정"
+                  onChange={(event) => {
+                    event.stopPropagation();
+                    const value = event.target.value;
+                    setSelectedDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? value : item));
+                  }}
+                  onBlur={(event) => {
+                    event.stopPropagation();
+                    commitSelectedDraft(index, event.target.value);
+                  }}
+                  onKeyDown={(event) => {
+                    event.stopPropagation();
+                    if (event.nativeEvent?.isComposing || event.keyCode === 229) return;
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      commitSelectedDraft(index, event.currentTarget.value);
+                      event.currentTarget.blur();
+                    }
+                  }}
+                  onMouseDown={(event) => event.stopPropagation()}
+                  onClick={(event) => event.stopPropagation()}
+                />
+                <div className="context-menu-body-selected-actions">
+                  {canReorderParts ? (
+                    <>
+                      <button
+                        type="button"
+                        className="context-menu-note-icon-button"
+                        aria-label="부위 위로 이동"
+                        title="위로 이동"
+                        disabled={index === 0}
+                        onMouseDown={(event) => event.stopPropagation()}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          onMove?.(index, 'up');
+                        }}
+                      >
+                        <ArrowUp size={14} strokeWidth={2.4} />
+                      </button>
+                      <button
+                        type="button"
+                        className="context-menu-note-icon-button"
+                        aria-label="부위 아래로 이동"
+                        title="아래로 이동"
+                        disabled={index === selectedParts.length - 1}
+                        onMouseDown={(event) => event.stopPropagation()}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          onMove?.(index, 'down');
+                        }}
+                      >
+                        <ArrowDown size={14} strokeWidth={2.4} />
+                      </button>
+                    </>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="context-menu-note-icon-button context-menu-note-remove"
+                    aria-label="부위 삭제"
+                    title="삭제"
+                    onMouseDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      onRemove?.(index);
+                    }}
+                  >
+                    <Trash2 size={14} strokeWidth={2.3} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {selectableParts.length > 0 ? (
         <div className="context-menu-checklist">
-          {availableParts.map((part, index) => {
+          {selectableParts.map((part, index) => {
             const partKey = normalizeBodyPartKey(part);
             const isChecked = currentParts.some((item) => normalizeBodyPartKey(item) === partKey);
             return (

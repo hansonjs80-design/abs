@@ -562,18 +562,68 @@ export default function useScheduleContextMenuActions({
       const keys = getContextTargetKeys();
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
+      const targetIndex = Number(action.index);
+      const nextPart = formatBodyPartInput(action.value);
+      if (!Number.isInteger(targetIndex) || !nextPart) return;
       for (const key of keys) {
         const memo = getMemoForAction(key);
-        const parts = (memo.body_part || '').split(',').map(p => p.trim()).filter(Boolean);
-        parts[action.index] = formatBodyPartInput(action.value);
+        const parts = splitBodyParts(memo.body_part || '');
+        if (targetIndex < 0 || targetIndex >= parts.length) continue;
+        const previousPart = parts[targetIndex];
+        parts[targetIndex] = nextPart;
         const updated = parts.filter(Boolean).join(', ');
-        const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, getBodyPartOptionList(memo, splitBodyParts(updated)));
+        const nextOptions = getBodyPartOptionList(memo, splitBodyParts(updated));
+        const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, nextOptions);
+        rememberBodyPartOptions(nextOptions);
+        setContextMenuBodyPartOptions?.((prev) => {
+          const optionsMap = new Map();
+          const previousKey = normalizeBodyPartKey(previousPart);
+          (prev || []).forEach((part) => {
+            const partKey = normalizeBodyPartKey(part);
+            addBodyPartToMap(optionsMap, partKey === previousKey ? nextPart : part);
+          });
+          nextOptions.forEach((part) => addBodyPartToMap(optionsMap, part));
+          return Array.from(optionsMap.values());
+        });
+        applyImmediateMeta(key, memo, { merge_span: nextMergeSpan, body_part: updated });
+        updateContextMemoSnapshot(key, memo, { merge_span: nextMergeSpan, body_part: updated });
         const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan, body_part: updated });
         if (success) anyChanged = true;
       }
       if (anyChanged) {
         recordUndo({ type: 'bulk-edit', oldMemos });
         addToast('부위가 수정되었습니다.', 'success');
+      }
+      return;
+    }
+    else if (action?.type === 'bodyPartMove') {
+      const keys = getContextTargetKeys();
+      const oldMemos = buildMemoSnapshotForKeys(keys);
+      const fromIndex = Number(action.index);
+      const direction = action.direction === 'up' ? -1 : action.direction === 'down' ? 1 : 0;
+      if (!Number.isInteger(fromIndex) || direction === 0) return;
+
+      let anyChanged = false;
+      for (const key of keys) {
+        const memo = getMemoForAction(key);
+        const parts = splitBodyParts(memo.body_part || '');
+        const toIndex = fromIndex + direction;
+        if (parts.length < 2 || fromIndex < 0 || fromIndex >= parts.length || toIndex < 0 || toIndex >= parts.length) continue;
+        const nextParts = [...parts];
+        const [moved] = nextParts.splice(fromIndex, 1);
+        nextParts.splice(toIndex, 0, moved);
+        const updated = nextParts.join(', ');
+        const nextOptions = getBodyPartOptionList(memo, nextParts);
+        const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, nextOptions);
+        rememberBodyPartOptions(nextOptions);
+        applyImmediateMeta(key, memo, { merge_span: nextMergeSpan, body_part: updated });
+        updateContextMemoSnapshot(key, memo, { merge_span: nextMergeSpan, body_part: updated });
+        const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan, body_part: updated });
+        if (success) anyChanged = true;
+      }
+      if (anyChanged) {
+        recordUndo({ type: 'bulk-edit', oldMemos });
+        addToast('부위 순서를 변경했습니다.', 'success');
       }
       return;
     }

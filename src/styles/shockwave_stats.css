@@ -2339,11 +2339,49 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 }
 
 .shockwave-row {
-  grid-template-columns: 24px minmax(92px, 150px) minmax(70px, 112px) minmax(70px, 88px) minmax(72px, 92px) minmax(72px, 92px) 40px minmax(90px, 140px) 36px 24px auto;
+  grid-template-columns: 62px minmax(92px, 150px) minmax(70px, 112px) minmax(70px, 88px) minmax(72px, 92px) minmax(72px, 92px) 40px minmax(90px, 140px) 36px 24px auto;
 }
 
 .manual-therapy-row {
-  grid-template-columns: 24px minmax(92px, 150px) minmax(70px, 112px) minmax(70px, 88px) minmax(72px, 92px) minmax(72px, 92px) 40px minmax(90px, 140px) 36px 24px auto;
+  grid-template-columns: 62px minmax(92px, 150px) minmax(70px, 112px) minmax(70px, 88px) minmax(72px, 92px) minmax(72px, 92px) 40px minmax(90px, 140px) 36px 24px auto;
+}
+
+.settlement-order-label {
+  text-align: center;
+}
+
+.settlement-order-controls {
+  display: grid;
+  grid-template-columns: 22px 22px 12px;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.settlement-order-button {
+  width: 22px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+}
+
+.settlement-order-button:hover:not(:disabled) {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.settlement-order-button:disabled {
+  opacity: 0.34;
+  cursor: not-allowed;
 }
 
 .settlement-drag-handle {
@@ -2354,7 +2392,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   font-size: 1.1rem;
   cursor: grab;
   user-select: none;
-  height: 34px;
+  height: 26px;
 }
 
 .settlement-drag-handle:active {
@@ -2646,11 +2684,11 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   }
 
   .shockwave-row {
-    grid-template-columns: 1fr 80px 1fr 34px 22px auto;
+    grid-template-columns: 62px 1fr 80px 1fr 34px 22px auto;
   }
   
   .manual-therapy-row {
-    grid-template-columns: 1fr 80px 80px 1fr 34px 22px auto;
+    grid-template-columns: 62px 1fr 80px 80px 1fr 34px 22px auto;
   }
 }
 

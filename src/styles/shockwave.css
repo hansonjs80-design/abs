@@ -1284,6 +1284,7 @@
 .shockwave-context-menu.schedule-context-menu .context-menu-body-item {
   order: 2;
   color: #111827;
+  align-items: flex-start;
   font-size: 0.9rem !important;
   font-weight: 800 !important;
 }
@@ -1305,13 +1306,11 @@
 .shockwave-context-menu.schedule-context-menu .context-menu-item > .context-menu-body-summary--stacked {
   display: flex;
   height: auto;
-  min-height: 40px;
+  min-height: 27px;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 4px;
-  padding-top: 7px;
-  padding-bottom: 7px;
+  gap: 2px;
   line-height: 1.35;
   overflow: visible;
   text-overflow: clip;
@@ -1321,6 +1320,63 @@
 .context-menu-body-summary-label,
 .sw-custom-tooltip-body-label {
   white-space: nowrap;
+}
+
+.context-menu-body-summary-label {
+  font-weight: 800;
+}
+
+.context-menu-body-summary-values {
+  color: #172033;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.sw-custom-tooltip-list-block {
+  --tooltip-list-icon-width: 1.35em;
+  min-width: 0;
+}
+
+.sw-custom-tooltip-list-heading {
+  display: grid;
+  grid-template-columns: var(--tooltip-list-icon-width) max-content;
+  column-gap: 4px;
+  align-items: baseline;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.sw-custom-tooltip-list-icon {
+  display: inline-block;
+  width: var(--tooltip-list-icon-width);
+  text-align: center;
+}
+
+.sw-custom-tooltip-list-items {
+  margin-left: calc(var(--tooltip-list-icon-width) + 4px);
+  margin-top: 1px;
+  min-width: 0;
+}
+
+.sw-custom-tooltip-list-row {
+  position: relative;
+  min-width: 0;
+}
+
+.sw-custom-tooltip-list-marker {
+  position: absolute;
+  left: -0.75em;
+  width: 0.55em;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.sw-custom-tooltip-list-text {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
 }
 
 .body-part-stack {
@@ -1340,6 +1396,9 @@
 
 .shockwave-context-menu.schedule-context-menu .context-menu-visit-item {
   order: 3;
+  color: #111827;
+  font-size: 0.9rem !important;
+  font-weight: 800 !important;
 }
 
 .shockwave-context-menu.schedule-context-menu .context-menu-time-item {
@@ -1348,6 +1407,16 @@
 
 .shockwave-context-menu.schedule-context-menu .context-menu-memo-item {
   order: 5;
+  color: #111827;
+  font-size: 0.9rem !important;
+  font-weight: 800 !important;
+}
+
+.shockwave-context-menu.schedule-context-menu .context-menu-visit-editor > span:first-child,
+.shockwave-context-menu.schedule-context-menu .context-menu-memo-item > span:first-child {
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 .shockwave-context-menu button:hover:not(:disabled) {
@@ -2333,18 +2402,19 @@
 .context-menu-body-summary {
   list-style: none;
   width: 100%;
-  height: 40px;
+  height: auto;
+  min-height: 27px;
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
-  padding: 0 10px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  border-radius: 10px;
-  background: var(--bg-input, #fff);
-  color: var(--text-primary);
-  font-size: 0.8rem;
-  font-weight: 700;
-  line-height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #111827;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2391,6 +2461,32 @@
   max-height: 132px;
   overflow-y: auto;
   padding-right: 2px;
+}
+
+.context-menu-body-selected-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.context-menu-body-selected-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: 9px;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: #eff6ff;
+}
+
+.context-menu-body-selected-actions {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 3px;
 }
 
 .context-menu-body-tags {
@@ -2811,7 +2907,8 @@
   word-break: break-word;
 }
 
-.context-menu-input--memo {
+.context-menu-input--memo,
+.context-menu-input--body-part {
   flex: 1 1 auto;
   padding: 5px 8px;
   min-width: 0;

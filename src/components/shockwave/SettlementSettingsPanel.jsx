@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ArrowDown, ArrowUp } from 'lucide-react';
 import { setMonthlySettlementSettings } from '../../lib/settlementSettings';
 import { normalizeScheduleShortcutValue } from '../../lib/scheduleKeyboardUtils';
 import { extractDoseTagFromPrescription, normalizeDoseTagInput } from '../../lib/schedulerContentFormat';
@@ -92,6 +93,21 @@ export default function SettlementSettingsPanel({
   const handleDragEnd = () => {
     setDraggedIndex(null);
   };
+
+  const movePrescription = useCallback((index, direction) => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    setDraft((prev) => {
+      if (targetIndex < 0 || targetIndex >= prev.prescriptions.length) return prev;
+      const nextPrescriptions = [...prev.prescriptions];
+      [nextPrescriptions[index], nextPrescriptions[targetIndex]] = [nextPrescriptions[targetIndex], nextPrescriptions[index]];
+      return {
+        ...prev,
+        prescriptions: nextPrescriptions,
+      };
+    });
+    setPrescriptionRenameKeys({});
+    setDraggedIndex(null);
+  }, []);
 
   /** 처방별 셀 태그 값을 반환 (사용자 지정 → 자동 추출 순) */
   const getDoseTag = (prescription) => {
@@ -330,7 +346,7 @@ export default function SettlementSettingsPanel({
         <div className="settlement-settings-grid">
           <div className="settlement-settings-list">
             <div className={`settlement-settings-row settlement-settings-header-row ${isManualTherapy ? 'manual-therapy-row' : 'shockwave-row'}`}>
-              <span></span>
+              <span className="settlement-label settlement-order-label">순서</span>
               <span className="settlement-label">처방 이름</span>
               <span className="settlement-label">셀 태그</span>
               <span className="settlement-label">단축키</span>
@@ -354,8 +370,42 @@ export default function SettlementSettingsPanel({
                   onDragOver={(e) => handleDragOver(e, index)}
                   onDragEnd={handleDragEnd}
                 >
-                  <div className="settlement-drag-handle" title="드래그하여 순서 조정">
-                    ⋮⋮
+                  <div className="settlement-order-controls">
+                    <button
+                      type="button"
+                      className="settlement-order-button"
+                      aria-label={`${prescription} 위로 이동`}
+                      title="위로 이동"
+                      disabled={index === 0}
+                      draggable="false"
+                      onMouseDown={(event) => event.stopPropagation()}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        movePrescription(index, 'up');
+                      }}
+                    >
+                      <ArrowUp size={13} strokeWidth={2.5} />
+                    </button>
+                    <button
+                      type="button"
+                      className="settlement-order-button"
+                      aria-label={`${prescription} 아래로 이동`}
+                      title="아래로 이동"
+                      disabled={index === draft.prescriptions.length - 1}
+                      draggable="false"
+                      onMouseDown={(event) => event.stopPropagation()}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        movePrescription(index, 'down');
+                      }}
+                    >
+                      <ArrowDown size={13} strokeWidth={2.5} />
+                    </button>
+                    <div className="settlement-drag-handle" title="드래그하여 순서 조정">
+                      ⋮⋮
+                    </div>
                   </div>
                   <input
                     className="form-input settlement-prescription-input"

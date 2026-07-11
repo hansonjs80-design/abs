@@ -18,6 +18,7 @@ export default function ContextMenuMemoList({
             className="context-menu-input context-menu-input--memo"
             value={item}
             aria-label={`메모 ${index + 1} 수정`}
+            title="메모 수정"
             onChange={(event) => {
               event.stopPropagation();
               onDraftChange(index, event.target.value);
