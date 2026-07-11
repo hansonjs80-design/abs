@@ -714,6 +714,40 @@ export default function useScheduleContextMenuActions({
       }
       return;
     }
+    else if (action?.type === 'memoMove') {
+      const keys = getContextTargetKeys();
+      const oldMemos = buildMemoSnapshotForKeys(keys);
+      const fromIndex = Number(action.index);
+      const direction = action.direction === 'up' ? -1 : action.direction === 'down' ? 1 : 0;
+      if (!Number.isInteger(fromIndex) || direction === 0) return;
+
+      const reorderList = (list) => {
+        if (!Array.isArray(list) || list.length < 2) return list;
+        const toIndex = fromIndex + direction;
+        if (fromIndex < 0 || fromIndex >= list.length || toIndex < 0 || toIndex >= list.length) return list;
+        const next = [...list];
+        const [moved] = next.splice(fromIndex, 1);
+        next.splice(toIndex, 0, moved);
+        return next;
+      };
+
+      let anyChanged = false;
+      setContextMenuMemoDrafts((prev) => reorderList(prev));
+      for (const key of keys) {
+        const memo = getMemoForAction(key);
+        const memoList = getMemoListFromMergeSpan(memo.merge_span);
+        const nextMemoList = reorderList(memoList);
+        if (nextMemoList === memoList) continue;
+        const nextMergeSpan = buildMergeSpanWithMemoList(memo.merge_span, nextMemoList);
+        const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan });
+        if (success) anyChanged = true;
+      }
+      if (anyChanged) {
+        recordUndo({ type: 'bulk-edit', oldMemos });
+        addToast('메모 순서를 변경했습니다.', 'success');
+      }
+      return;
+    }
     else if (action?.type === 'reservationTime') {
       const keys = getContextTargetKeys();
       const clearGroupBatch = buildClearReservationGroupPayload({

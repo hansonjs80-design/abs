@@ -97,7 +97,7 @@ const MemoizedCell = memo(({
   visitLineBreakPrescriptions,
   editValue, setEditValue,
   handleCellMouseDown, handleCellMouseEnter, setHoverCell, handleCellDoubleClick, handleCellContextMenu,
-  editInputRef, handleCellSave, handleEditKeyDown, imeOpenRef, setImePreviewCell, editDraftRef, scheduleEditDraftAutosave, promoteFocusedInputToEditor, skipNextEditBlurSaveRef
+  editInputRef, handleCellSave, handleEditKeyDown, handleKeyDown, imeOpenRef, setImePreviewCell, editDraftRef, scheduleEditDraftAutosave, promoteFocusedInputToEditor, skipNextEditBlurSaveRef
 }) => {
   const resizerRef = useRef(null);
   const content = pendingContent || '';
@@ -337,6 +337,10 @@ const MemoizedCell = memo(({
               }
             }}
             onKeyDown={e => {
+              if (!isEditing && !isImePreview && (e.metaKey || e.ctrlKey || e.altKey) && handleKeyDown) {
+                handleKeyDown(e);
+                if (e.defaultPrevented) return;
+              }
               if (e.key === 'Enter') {
                 if (isComposingInputEvent(e)) {
                   saveSchedulerInputAfterComposition({

@@ -10,6 +10,35 @@ function cloneMergeSpan(mergeSpan) {
   return mergeSpan || DEFAULT_MERGE_SPAN;
 }
 
+function getMemoListFromMergeSpan(mergeSpan) {
+  const list = mergeSpan?.meta?.memo_list;
+  return Array.isArray(list) ? list.map((item) => String(item || '').trim()).filter(Boolean) : [];
+}
+
+function mergeMemoLists(...lists) {
+  const merged = [];
+  const seen = new Set();
+  lists.flat().forEach((item) => {
+    const value = String(item || '').trim();
+    if (!value || seen.has(value)) return;
+    seen.add(value);
+    merged.push(value);
+  });
+  return merged;
+}
+
+function buildMergeSpanWithMemoList(mergeSpan, memoList) {
+  const next = { ...(mergeSpan || DEFAULT_MERGE_SPAN) };
+  const nextMeta = { ...(next.meta || {}) };
+  const list = mergeMemoLists(memoList);
+  if (list.length > 0) nextMeta.memo_list = list;
+  else delete nextMeta.memo_list;
+
+  if (Object.keys(nextMeta).length > 0) next.meta = nextMeta;
+  else delete next.meta;
+  return next;
+}
+
 function clearVisitCopyLinkFromMergeSpan(mergeSpan) {
   const base = cloneMergeSpan(mergeSpan);
   const nextMeta = { ...(base.meta || {}) };
@@ -195,6 +224,7 @@ export function buildMergeSelectionPayload({
   const oldMemos = [];
   const payload = [];
   const combinedContent = [];
+  const selectedMemoList = [];
   let mergedPrescription = '';
   let mergedBodyPart = '';
 
@@ -206,15 +236,19 @@ export function buildMergeSelectionPayload({
       oldMemos.push(buildScheduleMemoSnapshot({ key, memo, currentYear, currentMonth }));
 
       if (isAlreadyMerged) {
+        const nextMergeSpan = isMaster
+          ? buildMergeSpanWithMemoList(DEFAULT_MERGE_SPAN, getMemoListFromMergeSpan(memo?.merge_span))
+          : DEFAULT_MERGE_SPAN;
         payload.push(buildScheduleCellPayload({
           key,
           currentYear,
           currentMonth,
           memo,
-          overrides: { merge_span: DEFAULT_MERGE_SPAN },
+          overrides: { merge_span: nextMergeSpan },
         }));
       } else {
         if (memo?.content) combinedContent.push(memo.content);
+        selectedMemoList.push(...getMemoListFromMergeSpan(memo?.merge_span));
         if (!mergedPrescription && memo?.prescription) mergedPrescription = memo.prescription;
         if (!mergedBodyPart && memo?.body_part) mergedBodyPart = memo.body_part;
         payload.push(buildScheduleCellPayload({
@@ -240,6 +274,7 @@ export function buildMergeSelectionPayload({
         item.content = mergedText;
         item.prescription = item.prescription || mergedPrescription || null;
         item.body_part = item.body_part || mergedBodyPart || null;
+        item.merge_span = buildMergeSpanWithMemoList(item.merge_span, selectedMemoList);
       }
     });
   }

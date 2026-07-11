@@ -1,10 +1,36 @@
+import { convertKoreanQwertyMistypeToEnglish } from './keyboardLayoutUtils.js';
+
 export function isMetaEvent(event) {
   return Boolean(event?.metaKey || event?.ctrlKey);
 }
 
+export function normalizeScheduleShortcutValue(value) {
+  const rawKey = String(value || '').trim();
+  if (!rawKey) return '';
+  if (rawKey === 'Spacebar' || rawKey === ' ') return ' ';
+  if (rawKey.length === 1) {
+    return convertKoreanQwertyMistypeToEnglish(rawKey).toUpperCase();
+  }
+  return rawKey.toUpperCase();
+}
+
+export function getScheduleShortcutKey(event) {
+  const code = String(event?.code || '');
+  const digitMatch = code.match(/^(?:Digit|Numpad)([0-9])$/);
+  if (digitMatch) return digitMatch[1];
+
+  const alphaMatch = code.match(/^Key([A-Z])$/);
+  if (alphaMatch) return alphaMatch[1];
+
+  if (code === 'Space') return ' ';
+
+  const rawKey = typeof event?.key === 'string' ? event.key.trim() : '';
+  if (!rawKey) return '';
+  return normalizeScheduleShortcutValue(rawKey);
+}
+
 function isKey(event, code, key) {
-  const eventKey = typeof event?.key === 'string' ? event.key.toLowerCase() : '';
-  return event?.code === code || eventKey === key;
+  return event?.code === code || getScheduleShortcutKey(event) === String(key || '').toUpperCase();
 }
 
 export function isPatientHistoryShortcut(event) {

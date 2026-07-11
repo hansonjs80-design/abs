@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { isSameDate } from '../../lib/calendarUtils';
+import { getScheduleShortcutKey, isMetaEvent } from '../../lib/scheduleKeyboardUtils';
 import { shockwaveScheduleScrollMemory } from '../../lib/schedulerUtils';
 
 const SCHEDULE_TODAY_SCROLL_TOP_OFFSET = 76;
@@ -99,12 +100,7 @@ export default function useScheduleTodayNavigation({
 
   useEffect(() => {
     const handleTodayShortcut = (event) => {
-      const key = String(event.key || '').toLowerCase();
-      const isOpenShortcut = (event.metaKey || event.ctrlKey) && (
-        event.code === 'KeyT' ||
-        key === 't' ||
-        key === 'ㅅ'
-      );
+      const isOpenShortcut = isMetaEvent(event) && getScheduleShortcutKey(event) === 'T';
       if (!isOpenShortcut) return;
       event.preventDefault();
       event.stopPropagation();
@@ -123,11 +119,11 @@ export default function useScheduleTodayNavigation({
   useEffect(() => {
     const handleNextWeekShortcut = (event) => {
       if (event.__shockwaveNextWeekHandled) return;
-      const key = String(event.key || '').toLowerCase();
-      const isNextWeekShortcut = (event.metaKey || event.ctrlKey) &&
+      const shortcutKey = getScheduleShortcutKey(event);
+      const isNextWeekShortcut = isMetaEvent(event) &&
         !event.altKey &&
         !event.shiftKey &&
-        (event.code === 'KeyN' || key === 'n' || key === 'ㅜ' || key === ' ' || event.code === 'Space');
+        (shortcutKey === 'N' || shortcutKey === ' ');
       if (!isNextWeekShortcut) return;
       event.__shockwaveNextWeekHandled = true;
       event.preventDefault();

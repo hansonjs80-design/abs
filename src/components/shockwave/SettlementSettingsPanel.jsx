@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { setMonthlySettlementSettings } from '../../lib/settlementSettings';
+import { normalizeScheduleShortcutValue } from '../../lib/scheduleKeyboardUtils';
 import { extractDoseTagFromPrescription, normalizeDoseTagInput } from '../../lib/schedulerContentFormat';
 
 const normalizeDurationStepMinutes = (value) => {
@@ -410,7 +411,7 @@ export default function SettlementSettingsPanel({
                       title="Cmd/Ctrl + 숫자/영문으로 처방 단축키 설정"
                       maxLength={1}
                       onChange={(event) => {
-                        const val = event.target.value.replace(/[^1-9a-zA-Z]/g, '').toUpperCase();
+                        const val = normalizeScheduleShortcutValue(event.target.value).replace(/[^1-9A-Z]/g, '');
                         setDraft((prev) => ({
                           ...prev,
                           shortcuts: { ...(prev.shortcuts || {}), [prescription]: val },

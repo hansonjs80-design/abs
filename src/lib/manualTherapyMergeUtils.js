@@ -37,6 +37,35 @@ function normalizeMergeSpan(mergeSpan) {
   return mergeSpan || DEFAULT_MERGE_SPAN;
 }
 
+function getMemoListFromMergeSpan(mergeSpan) {
+  const list = mergeSpan?.meta?.memo_list;
+  return Array.isArray(list) ? list.map((item) => String(item || '').trim()).filter(Boolean) : [];
+}
+
+function mergeMemoLists(...lists) {
+  const merged = [];
+  const seen = new Set();
+  lists.flat().forEach((item) => {
+    const value = String(item || '').trim();
+    if (!value || seen.has(value)) return;
+    seen.add(value);
+    merged.push(value);
+  });
+  return merged;
+}
+
+function buildMergeSpanWithMemoList(mergeSpan, memoList) {
+  const next = { ...normalizeMergeSpan(mergeSpan) };
+  const nextMeta = { ...(next.meta || {}) };
+  const list = mergeMemoLists(memoList);
+  if (list.length > 0) nextMeta.memo_list = list;
+  else delete nextMeta.memo_list;
+
+  if (Object.keys(nextMeta).length > 0) next.meta = nextMeta;
+  else delete next.meta;
+  return next;
+}
+
 function getCurrentMergeSpan({ key, memos, pendingMergeSpans }) {
   return pendingMergeSpans?.[key] || memos?.[key]?.merge_span || DEFAULT_MERGE_SPAN;
 }
@@ -96,6 +125,14 @@ export function buildManualTherapyMergePayload({
   }
 
   const currentFootprint = collectCurrentFootprint({ key, memos, pendingMergeSpans });
+  const currentSpan = getCurrentMergeSpan({ key, memos, pendingMergeSpans });
+  const currentMasterKey = currentSpan?.mergedInto || key;
+  const currentMasterSpan = getCurrentMergeSpan({ key: currentMasterKey, memos, pendingMergeSpans });
+  const masterMemoList = mergeMemoLists(
+    getMemoListFromMergeSpan(mergeSpan),
+    getMemoListFromMergeSpan(currentMasterSpan),
+    getMemoListFromMergeSpan(memos?.[key]?.merge_span)
+  );
   const targetFootprint = new Set();
   for (let row = r; row < r + targetRowSpan; row += 1) {
     targetFootprint.add(getScheduleCellKey(w, d, row, c));
@@ -111,12 +148,12 @@ export function buildManualTherapyMergePayload({
   }
 
   const affectedKeys = new Set([...currentFootprint, ...targetFootprint]);
-  const masterMergeSpan = {
-    ...normalizeMergeSpan(mergeSpan),
+  const masterMergeSpan = buildMergeSpanWithMemoList({
+    ...normalizeMergeSpan(mergeSpan || currentMasterSpan),
     rowSpan: targetRowSpan,
     colSpan: 1,
     mergedInto: null,
-  };
+  }, masterMemoList);
 
   const payloadByKey = new Map();
   payloadByKey.set(key, buildScheduleCellPayload({
@@ -189,6 +226,10 @@ export function buildManualTherapyUnmergePayload({
   const currentSpan = getCurrentMergeSpan({ key, memos, pendingMergeSpans });
   const masterKey = currentSpan?.mergedInto || key;
   const masterSpan = getCurrentMergeSpan({ key: masterKey, memos, pendingMergeSpans });
+  const masterMemoList = mergeMemoLists(
+    getMemoListFromMergeSpan(masterSpan),
+    getMemoListFromMergeSpan(memos?.[masterKey]?.merge_span)
+  );
   const rowSpan = Math.max(1, masterSpan?.rowSpan || 1);
   const colSpan = Math.max(1, masterSpan?.colSpan || 1);
 
@@ -217,7 +258,7 @@ export function buildManualTherapyUnmergePayload({
           overrides: {
             content,
             bg_color: bgColor,
-            merge_span: DEFAULT_MERGE_SPAN,
+            merge_span: buildMergeSpanWithMemoList(DEFAULT_MERGE_SPAN, masterMemoList),
             prescription,
             body_part: bodyPart,
           },

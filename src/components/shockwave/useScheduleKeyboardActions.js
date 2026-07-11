@@ -24,6 +24,7 @@ import {
   selectionHasReservationGroup,
 } from '../../lib/scheduleReservationGroupUtils';
 import {
+  getScheduleShortcutKey,
   getEditingCellKeyAction,
   isBodyPartMenuShortcut,
   isGridNavigationKey,
@@ -33,6 +34,7 @@ import {
   isSameReservationGroupShortcut,
   isTreatmentCancelShortcut,
   isTreatmentCompleteShortcut,
+  normalizeScheduleShortcutValue,
 } from '../../lib/scheduleKeyboardUtils';
 import { buildMoveScheduleSelectionPayload } from '../../lib/scheduleMoveUtils';
 import useScheduleMovePersistence from './useScheduleMovePersistence';
@@ -423,24 +425,10 @@ export default function useScheduleKeyboardActions({
     const activeCell = getLatestSelectedCell();
     if (!activeCell || editingCell) return false;
 
-    const isDigitOrAlphaCode = /^(Digit[1-9]|Key[A-Z])$/.test(event.code);
-    const isDigitOrAlphaKey = /^[1-9a-zA-Z]$/.test(event.key);
     const isMeta = event.metaKey || event.ctrlKey;
     const isMetaOrAltOrShift = isMeta || event.altKey || (event.shiftKey && isMeta);
-    if (!isMetaOrAltOrShift || (!isDigitOrAlphaKey && !isDigitOrAlphaCode)) return false;
-
-    let keyNum = '';
-    const digitMatch = event.code.match(/^Digit([1-9])$/);
-    if (digitMatch) {
-      keyNum = digitMatch[1];
-    } else {
-      const alphaMatch = event.code.match(/^Key([A-Z])$/);
-      if (alphaMatch) {
-        keyNum = alphaMatch[1];
-      } else {
-        keyNum = event.key.toUpperCase();
-      }
-    }
+    const keyNum = getScheduleShortcutKey(event);
+    if (!isMetaOrAltOrShift || !/^[1-9A-Z]$/.test(keyNum)) return false;
     const effectiveManualSettings = getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'manual_therapy');
     const effectiveShockwaveSettings = getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'shockwave');
     const prescriptionScheduleSettings = getPrescriptionScheduleSettings(shockwaveSettings, currentYear, currentMonth);
@@ -448,11 +436,11 @@ export default function useScheduleKeyboardActions({
 
     const manualShortcuts = effectiveManualSettings?.shortcuts || {};
     const manualPrescription = Object.keys(manualShortcuts).find((prescription) => (
-      manualShortcuts[prescription] === keyNum && !hiddenPrescriptions.includes(prescription)
+      normalizeScheduleShortcutValue(manualShortcuts[prescription]) === keyNum && !hiddenPrescriptions.includes(prescription)
     ));
     const shockwaveShortcuts = effectiveShockwaveSettings?.shortcuts || {};
     const shockwavePrescription = Object.keys(shockwaveShortcuts).find((prescription) => (
-      shockwaveShortcuts[prescription] === keyNum && !hiddenPrescriptions.includes(prescription)
+      normalizeScheduleShortcutValue(shockwaveShortcuts[prescription]) === keyNum && !hiddenPrescriptions.includes(prescription)
     ));
     const targetPrescription = manualPrescription || shockwavePrescription || '';
     if (!targetPrescription) return false;
@@ -1255,13 +1243,15 @@ export default function useScheduleKeyboardActions({
       return;
     }
 
-    if (isMeta && e.code === 'KeyC') {
+    const shortcutKey = getScheduleShortcutKey(e);
+
+    if (isMeta && shortcutKey === 'C') {
       e.preventDefault();
       handleCopySelection();
       return;
     }
 
-    if (isMeta && e.code === 'KeyX') {
+    if (isMeta && shortcutKey === 'X') {
       e.preventDefault();
       handleCutSelection();
       return;

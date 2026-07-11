@@ -7,6 +7,7 @@
  */
 import { has4060Pattern } from './schedulerContentFormat.js';
 import { toProperCase } from './bodyPartFormatUtils.js';
+import { convertKoreanQwertyMistypeToEnglish } from './keyboardLayoutUtils.js';
 import {
   appendSchedulerInlineNote,
   applyVisitCountToSchedulerContent,
@@ -507,7 +508,7 @@ export function clearVisitCopyLinkFromMergeSpan(mergeSpan) {
 
 export function isUndoShortcutEvent(event) {
   if (!event || !(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey) return false;
-  const key = String(event.key || '').toLowerCase();
+  const key = convertKoreanQwertyMistypeToEnglish(String(event.key || '').toLowerCase());
   return event.code === 'KeyZ' || key === 'z';
 }
 

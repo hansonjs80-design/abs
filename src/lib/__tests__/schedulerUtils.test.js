@@ -29,6 +29,7 @@ import {
   readDeletedScheduleDrafts,
   readPendingScheduleDrafts,
   getDeletedScheduleDraftTime,
+  isUndoShortcutEvent,
   rememberDeletedScheduleDraft,
   rememberPendingScheduleDraft,
   removeDeletedScheduleDraft,
@@ -335,6 +336,12 @@ describe('keyboard layout normalization for body part shortcuts', () => {
     assert.equal(convertKoreanQwertyMistypeToEnglish('ㅊㅌ'), 'cx');
     assert.equal(convertKoreanQwertyMistypeToEnglish('ㅣㅌ'), 'lx');
     assert.equal(convertKoreanQwertyMistypeToEnglish('ㄱㅅ ㅊㅌ'), 'rt cx');
+  });
+
+  it('detects undo shortcuts when a Mac command key arrives with Korean keyboard output', () => {
+    assert.equal(isUndoShortcutEvent({ metaKey: true, code: '', key: 'ㅋ' }), true);
+    assert.equal(isUndoShortcutEvent({ ctrlKey: true, code: 'KeyZ', key: 'z' }), true);
+    assert.equal(isUndoShortcutEvent({ metaKey: true, shiftKey: true, code: 'KeyZ', key: 'z' }), false);
   });
 });
 

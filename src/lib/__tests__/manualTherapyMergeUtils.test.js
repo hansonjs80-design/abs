@@ -62,6 +62,30 @@ test('buildManualTherapyMergePayload creates a 3-row merge for 60 minutes', () =
   assert.equal(result.payload[2].merge_span.mergedInto, '0-1-4-2');
 });
 
+test('buildManualTherapyMergePayload preserves memo list metadata on the merged master', () => {
+  const result = buildManualTherapyMergePayload({
+    ...baseArgs,
+    key: '0-1-4-2',
+    memos: {
+      '0-1-4-2': {
+        content: '1234/홍길동(2)',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null, meta: { memo_list: ['주의'] } },
+      },
+    },
+    content: '1234/홍길동40(2)',
+    prescription: '40분',
+    bodyPart: 'Lumbar',
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.payload[0].merge_span, {
+    rowSpan: 2,
+    colSpan: 1,
+    mergedInto: null,
+    meta: { memo_list: ['주의'] },
+  });
+});
+
 test('buildManualTherapyMergePayload blocks occupied rows below the target', () => {
   const result = buildManualTherapyMergePayload({
     ...baseArgs,
@@ -171,6 +195,38 @@ test('buildManualTherapyUnmergePayload clears a manual therapy merge when changi
   assert.equal(result.payload[0].prescription, 'F/R');
   assert.equal(result.payload[1].content, '');
   assert.equal(result.payload[1].prescription, null);
+  assert.equal(result.payload[1].merge_span.meta.intentional_clear, true);
+  assert.equal(result.payload[2].merge_span.meta.intentional_clear, true);
+});
+
+test('buildManualTherapyUnmergePayload preserves memo list metadata on the unmerged master', () => {
+  const result = buildManualTherapyUnmergePayload({
+    ...baseArgs,
+    key: '0-1-4-2',
+    memos: {
+      '0-1-4-2': {
+        content: '1234/홍길동60(2)',
+        bg_color: '#fff1b8',
+        prescription: '60분',
+        body_part: 'Lumbar',
+        merge_span: { rowSpan: 3, colSpan: 1, mergedInto: null, meta: { memo_list: ['주의'] } },
+      },
+      '0-1-5-2': { merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-1-4-2' } },
+      '0-1-6-2': { merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-1-4-2' } },
+    },
+    content: '1234/홍길동(2)',
+    bgColor: '#fff1b8',
+    prescription: 'F/R',
+    bodyPart: 'Lumbar',
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.payload[0].merge_span, {
+    rowSpan: 1,
+    colSpan: 1,
+    mergedInto: null,
+    meta: { memo_list: ['주의'] },
+  });
   assert.equal(result.payload[1].merge_span.meta.intentional_clear, true);
   assert.equal(result.payload[2].merge_span.meta.intentional_clear, true);
 });

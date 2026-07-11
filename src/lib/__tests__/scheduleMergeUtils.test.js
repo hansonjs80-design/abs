@@ -69,6 +69,41 @@ describe('schedule merge payload helpers', () => {
     assert.equal(payload[1].body_part, 'Lumbar');
   });
 
+  it('keeps memo list metadata on the master cell when merging selected cells', () => {
+    const memos = {
+      '0-0-1-1': {
+        content: '123/홍길동',
+        bg_color: '#fff',
+        merge_span: { ...defaultSpan, meta: { memo_list: ['주의'] } },
+      },
+      '0-0-1-2': {
+        content: '추가 내용',
+        bg_color: null,
+        merge_span: { ...defaultSpan, meta: { memo_list: ['다음 방문 확인'] } },
+      },
+    };
+
+    const { payload } = buildMergeSelectionPayload({
+      selection: {
+        w: 0,
+        d: 0,
+        minRow: 1,
+        maxRow: 1,
+        minCol: 1,
+        maxCol: 2,
+        masterKey: '0-0-1-1',
+        isMergedMaster: false,
+      },
+      memos,
+      currentYear: 2026,
+      currentMonth: 5,
+      cellKey,
+    });
+
+    assert.deepEqual(payload[0].merge_span.meta.memo_list, ['주의', '다음 방문 확인']);
+    assert.equal(payload[1].merge_span.meta, undefined);
+  });
+
   it('builds an unmerge payload that preserves each cell content and clears merge spans', () => {
     const memos = {
       '0-0-2-1': {
@@ -103,6 +138,41 @@ describe('schedule merge payload helpers', () => {
     assert.deepEqual(payload.map((item) => item.merge_span), [defaultSpan, defaultSpan]);
     assert.equal(payload[0].content, '123/홍길동');
     assert.equal(payload[1].content, '');
+  });
+
+  it('keeps memo list metadata on the master cell when unmerging', () => {
+    const memos = {
+      '0-0-2-1': {
+        content: '123/홍길동',
+        bg_color: '#fff',
+        merge_span: { rowSpan: 1, colSpan: 2, mergedInto: null, meta: { memo_list: ['주의'] } },
+      },
+      '0-0-2-2': {
+        content: '',
+        bg_color: null,
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-0-2-1' },
+      },
+    };
+
+    const { payload } = buildMergeSelectionPayload({
+      selection: {
+        w: 0,
+        d: 0,
+        minRow: 2,
+        maxRow: 2,
+        minCol: 1,
+        maxCol: 2,
+        masterKey: '0-0-2-1',
+        isMergedMaster: true,
+      },
+      memos,
+      currentYear: 2026,
+      currentMonth: 5,
+      cellKey,
+    });
+
+    assert.deepEqual(payload[0].merge_span, { ...defaultSpan, meta: { memo_list: ['주의'] } });
+    assert.deepEqual(payload[1].merge_span, defaultSpan);
   });
 
   it('deleting a merged child clears the whole merge rectangle', () => {

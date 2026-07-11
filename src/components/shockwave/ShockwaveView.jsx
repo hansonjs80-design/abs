@@ -24,14 +24,18 @@ import {
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 import { getPrescriptionFromConfiguredDoseTag, getPrescriptionScheduleSettings } from '../../lib/prescriptionScheduleSettings';
 import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
+import { getScheduleShortcutKey, normalizeScheduleShortcutValue } from '../../lib/scheduleKeyboardUtils';
 import { getScheduleCellKey } from '../../lib/scheduleSelectionUtils';
 import { useToast } from '../common/Toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../lib/authPermissions';
 import MonthlyTherapistConfig from './MonthlyTherapistConfig';
 import SchedulerPatientSelector from './SchedulerPatientSelector';
+import BodyPartStack from './BodyPartStack';
 import BodyPartKeyboardPanel from './BodyPartKeyboardPanel';
+import ContextMenuMemoList from './ContextMenuMemoList';
 import MemoizedCell from './ShockwaveScheduleCell';
+import ShockwaveHoverTooltip from './ShockwaveHoverTooltip';
 import useContextMenuPositioning from './useContextMenuPositioning';
 import usePatientHistoryActions from './usePatientHistoryActions';
 import useSchedulerAutoText from './useSchedulerAutoText';
@@ -74,7 +78,6 @@ import {
   isOnlySchedulerVisitSuffixChange,
   isStaleNumericVisitRestoreAfterNewPatientAutoFormat,
   getMemoListFromMergeSpan,
-  stepReservationTimeWithinCellBase,
   buildMergeSpanWithReservationTime,
   isUndoShortcutEvent,
   buildSchedulerMemoSortKey,
@@ -366,7 +369,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const [, setContextMenuNoteInput] = useState('');
   const [contextMenuMemoDrafts, setContextMenuMemoDrafts] = useState([]);
   const [contextMenuVisitInput, setContextMenuVisitInput] = useState('');
-  const [contextMenuReservationInput, setContextMenuReservationInput] = useState('');
+  const [, setContextMenuReservationInput] = useState('');
 
   const {
     pendingCellBgColors,
@@ -2139,18 +2142,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     handleContextAction({ type: 'visitCount', value: nextValue });
   }, [contextMenuVisitInput, handleContextAction]);
 
-  const stepContextMenuReservationInput = useCallback((delta) => {
-    if (!contextMenu) return;
-    const baseTime = contextMenu.defaultReservationTime || getDefaultReservationTime(
-      contextMenu.weekIdx,
-      contextMenu.dayIdx,
-      contextMenu.rowIdx
-    );
-    const nextTime = stepReservationTimeWithinCellBase(contextMenuReservationInput, baseTime, delta);
-    flushSync(() => setContextMenuReservationInput(nextTime));
-    handleContextAction({ type: 'reservationTime', value: nextTime });
-  }, [contextMenu, contextMenuReservationInput, getDefaultReservationTime, handleContextAction]);
-
   const focusEditInputImmediately = useCallback(() => {
     const input = editInputRef.current;
     if (!input) return;
@@ -2472,27 +2463,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const handleEditKeyDown = useCallback((e, w, d, r, c) => {
     const isMeta = e.metaKey || e.ctrlKey;
     const hasValue = Boolean(e.target.value?.trim());
+    const shortcutKey = getScheduleShortcutKey(e);
 
     // 1. Ctrl/Cmd + [1-9]/[A-Z] (처방 단축키)
-    const isDigitOrAlphaCode = /^(Digit[1-9]|Key[A-Z])$/.test(e.code);
-    const isDigitOrAlphaKey = /^[1-9a-zA-Z]$/.test(e.key);
     const isMetaOrAltOrShift = isMeta || e.altKey || (e.shiftKey && isMeta);
-
-    let keyNum = '';
-    if (isDigitOrAlphaCode) {
-      const digitMatch = e.code.match(/^Digit([1-9])$/);
-      if (digitMatch) {
-        keyNum = digitMatch[1];
-      } else {
-        const alphaMatch = e.code.match(/^Key([A-Z])$/);
-        if (alphaMatch) keyNum = alphaMatch[1];
-      }
-    } else if (isDigitOrAlphaKey) {
-      keyNum = e.key.toUpperCase();
-    }
+    const keyNum = /^[1-9A-Z]$/.test(shortcutKey) ? shortcutKey : '';
 
     // 복사(C), 붙여넣기(V), 전체선택(A), 잘라내기(X), 실행취소(Z), 찾기(F) 및 완료(S), 취소(D), 공휴일(B) 등의 주요 편집 조작 단축키 보존
-    const isReservedEditorKey = /^[ACXZFSDB]$/i.test(keyNum);
+    const isReservedEditorKey = /^[ACVXZFSDB]$/i.test(keyNum);
     const isValidShortcut = isMetaOrAltOrShift && keyNum && !isReservedEditorKey;
 
     if (isValidShortcut) {
@@ -2503,9 +2481,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         const effectiveShockwaveSettings = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'shockwave');
 
         const manualShortcuts = effectiveManualSettings?.shortcuts || {};
-        const manualPrescription = Object.keys(manualShortcuts).find((prescription) => manualShortcuts[prescription] === keyNum);
+        const manualPrescription = Object.keys(manualShortcuts).find((prescription) => normalizeScheduleShortcutValue(manualShortcuts[prescription]) === keyNum);
         const shockwaveShortcuts = effectiveShockwaveSettings?.shortcuts || {};
-        const shockwavePrescription = Object.keys(shockwaveShortcuts).find((prescription) => shockwaveShortcuts[prescription] === keyNum);
+        const shockwavePrescription = Object.keys(shockwaveShortcuts).find((prescription) => normalizeScheduleShortcutValue(shockwaveShortcuts[prescription]) === keyNum);
         const targetPrescription = manualPrescription || shockwavePrescription || '';
 
         if (targetPrescription) {
@@ -2540,7 +2518,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     }
 
     // 3. Ctrl/Cmd + S (치료 완료 토글)
-    if ((e.key === 's' || e.key === 'S') && isMeta) {
+    if (shortcutKey === 'S' && isMeta) {
       e.preventDefault();
       e.stopPropagation();
       if (hasValue) {
@@ -2556,7 +2534,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     }
 
     // 4. Ctrl/Cmd + D (예약 취소 토글)
-    if ((e.key === 'd' || e.key === 'D') && isMeta) {
+    if (shortcutKey === 'D' && isMeta) {
       e.preventDefault();
       e.stopPropagation();
       if (hasValue) {
@@ -2572,7 +2550,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     }
 
     // 5. Ctrl/Cmd + B (공휴일/녹색 배경 토글)
-    if ((e.key === 'b' || e.key === 'B') && isMeta) {
+    if (shortcutKey === 'B' && isMeta) {
       e.preventDefault();
       e.stopPropagation();
       if (hasValue) {
@@ -3026,6 +3004,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                               setHoverCell={setHoverCell} handleCellDoubleClick={handleCellDoubleClick}
                               handleCellContextMenu={handleCellContextMenu} editInputRef={editInputRef}
                               handleCellSave={handleCellSave} handleEditKeyDown={handleEditKeyDown}
+                              handleKeyDown={handleKeyDown}
                               imeOpenRef={imeOpenRef} setImePreviewCell={setImePreviewCell}
                               editDraftRef={editDraftRef} scheduleEditDraftAutosave={scheduleEditDraftAutosave}
                               promoteFocusedInputToEditor={promoteFocusedInputToEditor}
@@ -3069,7 +3048,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         isLastHourSlot, effectivePrescriptionColors, editValue,
         handleCellMouseDown, handleCellMouseEnter, setHoverCell,
         handleCellDoubleClick, handleCellContextMenu,
-        handleEditKeyDown, scheduleEditDraftAutosave, promoteFocusedInputToEditor, handleCellSave,
+        handleEditKeyDown, handleKeyDown, scheduleEditDraftAutosave, promoteFocusedInputToEditor, handleCellSave,
         cellKey, getEffectiveMergeSpan, rowHeight, canManageSchedulerSettings,
         prescriptionScheduleSettings.visitLineBreakPrescriptions,
         getDefaultEditingMergeSpanForKey,
@@ -3446,8 +3425,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                     onMouseEnter={() => setActiveContextSubmenu('body')}
                     onFocusCapture={() => setActiveContextSubmenu('body')}
                   >
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      부위 : {currentParts.join(', ') || '없음'}
+                    <span className="context-menu-body-summary">
+                      <span className="context-menu-body-summary-label">부위 :</span>
+                      <BodyPartStack parts={currentParts} className="context-menu-body-summary-values" />
                     </span>
                     <div className="context-menu-submenu context-menu-submenu--body">
                       <div className="context-menu-editor-panel">
@@ -3606,41 +3586,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                           </span>
                         </div>
                         <div className="context-menu-inline-memo-box">
-                          {contextMenuMemoDrafts.length > 0 ? (
-                            <div className="context-menu-note-list">
-                              {contextMenuMemoDrafts.map((item, index) => (
-                                <div key={`${index}-${item}`} className="context-menu-note-item">
-                                  <input
-                                    type="text"
-                                    className="context-menu-input context-menu-input--memo"
-                                    value={item}
-                                    onChange={(e) => {
-                                      e.stopPropagation();
-                                      const value = e.target.value;
-                                      setContextMenuMemoDrafts((prev) => prev.map((memo, memoIndex) => memoIndex === index ? value : memo));
-                                    }}
-                                    onBlur={(e) => {
-                                      e.stopPropagation();
-                                      handleContextAction({ type: 'memoUpdate', index, value: e.target.value });
-                                    }}
-                                    onMouseDown={e => e.stopPropagation()}
-                                    onClick={e => e.stopPropagation()}
-                                  />
-                                  <button
-                                    type="button"
-                                    className="context-menu-note-remove"
-                                    onMouseDown={e => e.stopPropagation()}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleContextAction({ type: 'memoRemove', index });
-                                    }}
-                                  >
-                                    삭제
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          ) : null}
+                          <ContextMenuMemoList
+                            memos={contextMenuMemoDrafts}
+                            onDraftChange={(index, value) => {
+                              setContextMenuMemoDrafts((prev) => prev.map((memo, memoIndex) => memoIndex === index ? value : memo));
+                            }}
+                            onAction={handleContextAction}
+                          />
                           <ContextMenuLocalInputGroup
                             placeholder="새 메모 추가"
                             buttonLabel="추가"
@@ -4175,28 +4127,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
           hoverTooltipText = text;
         }
 
-        return hoverCell && hoverTooltipText && (
-          <div
-            ref={tooltipRef}
-            className="sw-custom-tooltip"
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              opacity: 0,
-            }}
-          >
-            {hoverTooltipText.split('\n').map((line, i) => (
-              <div key={i} className={i === 0 ? 'sw-custom-tooltip-time' : undefined}>
-                {i === 0 && line.startsWith('⏱') ? (
-                  <>
-                    <span className="sw-custom-tooltip-clock">⏱</span>
-                    {line.slice(1)}
-                  </>
-                ) : line}
-              </div>
-            ))}
-          </div>
+        return (
+          <ShockwaveHoverTooltip
+            tooltipRef={tooltipRef}
+            text={hoverTooltipText}
+            visible={Boolean(hoverCell)}
+          />
         );
       })()}
 
