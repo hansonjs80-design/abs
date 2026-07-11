@@ -3567,12 +3567,22 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                   onMouseEnter={() => setActiveContextSubmenu('memo')}
                   onFocusCapture={() => setActiveContextSubmenu('memo')}
                 >
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'pre-wrap' }}>
-                    메모 : {contextMenuMemoDrafts.length === 1 
-                      ? contextMenuMemoDrafts[0] 
-                      : contextMenuMemoDrafts.length > 1 
-                        ? `\n${contextMenuMemoDrafts.map((m) => `• ${m}`).join('\n')}` 
-                        : '없음'}
+                  <span className={`context-menu-memo-summary${contextMenuMemoDrafts.length > 1 ? ' context-menu-memo-summary--stacked' : ''}`}>
+                    <span className="context-menu-memo-summary-label">메모 :</span>
+                    {contextMenuMemoDrafts.length === 0 ? (
+                      <span className="context-menu-memo-summary-text">없음</span>
+                    ) : contextMenuMemoDrafts.length === 1 ? (
+                      <span className="context-menu-memo-summary-text">{contextMenuMemoDrafts[0]}</span>
+                    ) : (
+                      <span className="context-menu-memo-summary-list">
+                        {contextMenuMemoDrafts.map((memo, index) => (
+                          <span key={`${memo}-${index}`} className="context-menu-memo-summary-row">
+                            <span className="context-menu-memo-summary-marker">•</span>
+                            <span className="context-menu-memo-summary-text">{memo}</span>
+                          </span>
+                        ))}
+                      </span>
+                    )}
                   </span>
                   <div className="context-menu-submenu context-menu-submenu--memo">
                     <div className="context-menu-editor-panel">

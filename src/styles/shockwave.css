@@ -1329,7 +1329,7 @@
 .context-menu-body-summary-values {
   color: #172033;
   font-size: 0.9rem;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.22;
 }
 
@@ -1430,10 +1430,61 @@
 }
 
 .shockwave-context-menu.schedule-context-menu .context-menu-visit-editor > span:first-child,
-.shockwave-context-menu.schedule-context-menu .context-menu-memo-item > span:first-child {
+.shockwave-context-menu.schedule-context-menu .context-menu-memo-summary-label {
   font-size: 0.9rem;
   font-weight: 800;
   line-height: 1.18;
+}
+
+.context-menu-memo-summary {
+  display: inline-flex;
+  align-items: baseline;
+  min-width: 0;
+  max-width: 100%;
+  gap: 4px;
+  overflow: hidden;
+  line-height: 1.18;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-menu-memo-summary--stacked {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  overflow: visible;
+  white-space: normal;
+}
+
+.context-menu-memo-summary-list {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  flex-direction: column;
+  gap: 0;
+}
+
+.context-menu-memo-summary-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  min-width: 0;
+  column-gap: 4px;
+}
+
+.context-menu-memo-summary-marker,
+.context-menu-memo-summary-text {
+  color: #172033;
+  font-weight: 500;
+}
+
+.context-menu-memo-summary-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
 }
 
 .shockwave-context-menu button:hover:not(:disabled) {
