@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Pencil, Trash2 } from 'lucide-react';
 import { normalizeBodyPartKey } from '../../lib/schedulerUtils';
 
 export default function BodyPartKeyboardPanel({
@@ -17,8 +17,10 @@ export default function BodyPartKeyboardPanel({
   const [inputValue, setInputValue] = useState('');
   const [focusIndex, setFocusIndex] = useState(0);
   const [selectedDrafts, setSelectedDrafts] = useState([]);
+  const [editingSelectedIndex, setEditingSelectedIndex] = useState(null);
   const inputRef = useRef(null);
   const itemRefs = useRef([]);
+  const selectedInputRefs = useRef([]);
   const selectedParts = currentParts.map((part) => String(part || '').trim()).filter(Boolean);
   const selectedPartSignature = selectedParts.join('\u001f');
   const selectedKeySet = new Set(selectedParts.map((part) => normalizeBodyPartKey(part)));
@@ -26,7 +28,17 @@ export default function BodyPartKeyboardPanel({
 
   useEffect(() => {
     setSelectedDrafts(selectedPartSignature ? selectedPartSignature.split('\u001f') : []);
+    setEditingSelectedIndex(null);
   }, [selectedPartSignature]);
+
+  useEffect(() => {
+    if (editingSelectedIndex === null) return undefined;
+    const frameId = requestAnimationFrame(() => {
+      selectedInputRefs.current[editingSelectedIndex]?.focus({ preventScroll: true });
+      selectedInputRefs.current[editingSelectedIndex]?.select();
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, [editingSelectedIndex]);
 
   useEffect(() => {
     if (!autoFocus) return undefined;
@@ -153,39 +165,70 @@ export default function BodyPartKeyboardPanel({
                   onMouseDown={(event) => event.stopPropagation()}
                   onClick={(event) => event.stopPropagation()}
                 />
-                <input
-                  type="text"
-                  className="context-menu-input context-menu-input--body-part"
-                  value={draftValue}
-                  aria-label={`부위 ${index + 1} 수정`}
-                  title="부위 수정"
-                  onChange={(event) => {
-                    event.stopPropagation();
-                    const value = event.target.value;
-                    setSelectedDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? value : item));
-                  }}
-                  onBlur={(event) => {
-                    event.stopPropagation();
-                    commitSelectedDraft(index, event.target.value);
-                  }}
-                  onKeyDown={(event) => {
-                    event.stopPropagation();
-                    if (event.nativeEvent?.isComposing || event.keyCode === 229) return;
-                    if (event.key === 'Enter') {
-                      event.preventDefault();
-                      commitSelectedDraft(index, event.currentTarget.value);
-                      event.currentTarget.blur();
-                    }
-                  }}
-                  onMouseDown={(event) => event.stopPropagation()}
-                  onClick={(event) => event.stopPropagation()}
-                />
+                {editingSelectedIndex === index ? (
+                  <input
+                    ref={(node) => {
+                      selectedInputRefs.current[index] = node;
+                    }}
+                    type="text"
+                    className="context-menu-input context-menu-input--body-part"
+                    value={draftValue}
+                    aria-label={`부위 ${index + 1} 수정`}
+                    title="부위 수정"
+                    onChange={(event) => {
+                      event.stopPropagation();
+                      const value = event.target.value;
+                      setSelectedDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? value : item));
+                    }}
+                    onBlur={(event) => {
+                      event.stopPropagation();
+                      commitSelectedDraft(index, event.target.value);
+                      setEditingSelectedIndex(null);
+                    }}
+                    onKeyDown={(event) => {
+                      event.stopPropagation();
+                      if (event.nativeEvent?.isComposing || event.keyCode === 229) return;
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        commitSelectedDraft(index, event.currentTarget.value);
+                        setEditingSelectedIndex(null);
+                        event.currentTarget.blur();
+                      }
+                      if (event.key === 'Escape') {
+                        event.preventDefault();
+                        setSelectedDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? part : item));
+                        setEditingSelectedIndex(null);
+                      }
+                    }}
+                    onMouseDown={(event) => event.stopPropagation()}
+                    onClick={(event) => event.stopPropagation()}
+                  />
+                ) : (
+                  <span className="context-menu-list-text" title={part}>{part}</span>
+                )}
                 <div className="context-menu-body-selected-actions">
+                  {editingSelectedIndex === index ? null : (
+                    <button
+                      type="button"
+                      className="context-menu-note-icon-button"
+                      aria-label="부위 수정"
+                      title="수정"
+                      onMouseDown={(event) => event.stopPropagation()}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setSelectedDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? part : item));
+                        setEditingSelectedIndex(index);
+                      }}
+                    >
+                      <Pencil size={13} strokeWidth={2.4} />
+                    </button>
+                  )}
                   {canReorderParts ? (
-                    <>
+                    <div className="context-menu-note-reorder-stack">
                       <button
                         type="button"
-                        className="context-menu-note-icon-button"
+                        className="context-menu-note-icon-button context-menu-note-order-button"
                         aria-label="부위 위로 이동"
                         title="위로 이동"
                         disabled={index === 0}
@@ -196,11 +239,11 @@ export default function BodyPartKeyboardPanel({
                           onMove?.(index, 'up');
                         }}
                       >
-                        <ArrowUp size={14} strokeWidth={2.4} />
+                        <ArrowUp size={11} strokeWidth={2.5} />
                       </button>
                       <button
                         type="button"
-                        className="context-menu-note-icon-button"
+                        className="context-menu-note-icon-button context-menu-note-order-button"
                         aria-label="부위 아래로 이동"
                         title="아래로 이동"
                         disabled={index === selectedParts.length - 1}
@@ -211,9 +254,9 @@ export default function BodyPartKeyboardPanel({
                           onMove?.(index, 'down');
                         }}
                       >
-                        <ArrowDown size={14} strokeWidth={2.4} />
+                        <ArrowDown size={11} strokeWidth={2.5} />
                       </button>
-                    </>
+                    </div>
                   ) : null}
                   <button
                     type="button"
@@ -289,7 +332,7 @@ export default function BodyPartKeyboardPanel({
         <div className="context-menu-empty">등록된 부위가 없습니다.</div>
       ) : null}
 
-      <div className="context-menu-input-row" style={{ marginTop: '8px' }}>
+      <div className="context-menu-input-row" style={{ marginTop: '5px' }}>
         <input
           ref={inputRef}
           type="text"

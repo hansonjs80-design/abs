@@ -7,7 +7,11 @@ export default function ContextMenuBodySummary({ parts }) {
   return (
     <span className={`context-menu-body-summary${isStacked ? ' context-menu-body-summary--stacked' : ''}`}>
       <span className="context-menu-body-summary-label">부위 :</span>
-      <BodyPartStack parts={list} className="context-menu-body-summary-values" />
+      <BodyPartStack
+        parts={list}
+        className="context-menu-body-summary-values"
+        showMarkers={isStacked}
+      />
     </span>
   );
 }
