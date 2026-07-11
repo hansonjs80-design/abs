@@ -1302,6 +1302,22 @@
   text-overflow: ellipsis;
 }
 
+.shockwave-context-menu.schedule-context-menu .context-menu-item > .context-menu-body-summary--stacked {
+  display: flex;
+  height: auto;
+  min-height: 40px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+  line-height: 1.35;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
 .context-menu-body-summary-label,
 .sw-custom-tooltip-body-label {
   white-space: nowrap;

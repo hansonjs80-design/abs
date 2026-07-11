@@ -31,8 +31,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../lib/authPermissions';
 import MonthlyTherapistConfig from './MonthlyTherapistConfig';
 import SchedulerPatientSelector from './SchedulerPatientSelector';
-import BodyPartStack from './BodyPartStack';
 import BodyPartKeyboardPanel from './BodyPartKeyboardPanel';
+import ContextMenuBodySummary from './ContextMenuBodySummary';
 import ContextMenuMemoList from './ContextMenuMemoList';
 import MemoizedCell from './ShockwaveScheduleCell';
 import ShockwaveHoverTooltip from './ShockwaveHoverTooltip';
@@ -3425,10 +3425,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                     onMouseEnter={() => setActiveContextSubmenu('body')}
                     onFocusCapture={() => setActiveContextSubmenu('body')}
                   >
-                    <span className="context-menu-body-summary">
-                      <span className="context-menu-body-summary-label">부위 :</span>
-                      <BodyPartStack parts={currentParts} className="context-menu-body-summary-values" />
-                    </span>
+                    <ContextMenuBodySummary parts={currentParts} />
                     <div className="context-menu-submenu context-menu-submenu--body">
                       <div className="context-menu-editor-panel">
                         <div className="context-menu-inline-column">
