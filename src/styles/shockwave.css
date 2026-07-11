@@ -1233,7 +1233,7 @@
   margin-left: -5px;
   margin-right: -5px;
   margin-bottom: -5px;
-  padding: 6px 5px 8px 5px;
+  padding: 5px 5px 6px 5px;
   background: #e7edf6;
   border-radius: 0 0 12px 12px;
 }
@@ -1416,7 +1416,7 @@
 .shockwave-context-menu.schedule-context-menu .context-menu-memo-item > span:first-child {
   font-size: 0.9rem;
   font-weight: 800;
-  line-height: 1.35;
+  line-height: 1.18;
 }
 
 .shockwave-context-menu button:hover:not(:disabled) {
@@ -2472,14 +2472,21 @@
 
 .context-menu-body-selected-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
-  padding: 6px 8px;
+  padding: 5px 7px;
   border-radius: 9px;
   border: 1px solid rgba(37, 99, 235, 0.2);
   background: #eff6ff;
+}
+
+.context-menu-body-selected-checkbox {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
 }
 
 .context-menu-body-selected-actions {
@@ -2662,6 +2669,7 @@
   color: var(--text-primary);
   font-size: 0.85rem;
   font-weight: 600;
+  line-height: 1.18;
   white-space: nowrap;
 }
 
@@ -2810,7 +2818,7 @@
   align-items: center;
   justify-content: center;
   color: #000;
-  font-size: 1.16rem;
+  font-size: 1.05rem;
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0;
@@ -2822,7 +2830,7 @@
 .context-menu-visit-input {
   width: 26px;
   min-width: 26px;
-  height: 24px;
+  height: 20px;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -2831,7 +2839,7 @@
   cursor: text;
   box-shadow: none;
   appearance: textfield;
-  line-height: 24px;
+  line-height: 20px;
   text-align: center;
 }
 
@@ -2867,13 +2875,13 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  min-height: 24px;
+  min-height: 20px;
 }
 
 .context-menu-visit-step {
-  width: 19px;
-  min-width: 19px;
-  height: 21px;
+  width: 18px;
+  min-width: 18px;
+  height: 19px;
   padding: 0 !important;
   border: 1px solid rgba(148, 163, 184, 0.36) !important;
   border-radius: 7px !important;

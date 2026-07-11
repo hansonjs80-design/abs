@@ -142,6 +142,18 @@ export default function BodyPartKeyboardPanel({
             return (
               <div key={`${normalizeBodyPartKey(part)}-${index}`} className="context-menu-body-selected-item">
                 <input
+                  type="checkbox"
+                  className="context-menu-body-selected-checkbox"
+                  checked
+                  aria-label={`${part} 선택 해제`}
+                  onChange={(event) => {
+                    event.stopPropagation();
+                    onToggle(part);
+                  }}
+                  onMouseDown={(event) => event.stopPropagation()}
+                  onClick={(event) => event.stopPropagation()}
+                />
+                <input
                   type="text"
                   className="context-menu-input context-menu-input--body-part"
                   value={draftValue}
