@@ -3111,6 +3111,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
               || '#0f172a';
             const currentBodyPart = currentMemo?.body_part || '';
             const currentParts = splitBodyParts(currentBodyPart);
+            const hasMultipleCurrentParts = currentParts.length > 1;
+            const contextMenuBodyItemClassName = [
+              'context-menu-item has-submenu context-menu-meta-item context-menu-body-item',
+              hasMultipleCurrentParts ? 'context-menu-body-item--stacked' : '',
+              activeContextSubmenu === 'body' ? 'is-submenu-open' : '',
+            ].filter(Boolean).join(' ');
             const { patientChart, patientName } = parseSchedulerPatientIdentity(currentMemo?.content || '');
             const bodyPartPatientKey = patientChart
               ? `chart:${String(patientChart).trim()}`
@@ -3421,7 +3427,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                   </div>
 
                   <div
-                    className={`context-menu-item has-submenu context-menu-meta-item context-menu-body-item${activeContextSubmenu === 'body' ? ' is-submenu-open' : ''}`}
+                    className={contextMenuBodyItemClassName}
                     onMouseEnter={() => setActiveContextSubmenu('body')}
                     onFocusCapture={() => setActiveContextSubmenu('body')}
                   >

@@ -1290,6 +1290,11 @@
   font-weight: 800 !important;
 }
 
+.shockwave-context-menu.schedule-context-menu .context-menu-body-item--stacked {
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+}
+
 .context-menu-body-summary,
 .sw-custom-tooltip-body-line {
   display: grid;
@@ -1317,6 +1322,19 @@
   overflow: visible;
   text-overflow: clip;
   white-space: normal;
+}
+
+.shockwave-context-menu.schedule-context-menu .context-menu-body-summary--stacked .context-menu-body-summary-label {
+  line-height: 1.08;
+}
+
+.shockwave-context-menu.schedule-context-menu .context-menu-body-summary--stacked .context-menu-body-summary-values {
+  gap: 0;
+  line-height: 1.08;
+}
+
+.shockwave-context-menu.schedule-context-menu .context-menu-body-summary--stacked .body-part-stack-row {
+  line-height: 1.08;
 }
 
 .context-menu-body-summary-label,
