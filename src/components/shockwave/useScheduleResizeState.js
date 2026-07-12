@@ -16,7 +16,7 @@ const MIN_COL_RATIO = 0.2;
 const MOBILE_RESIZE_LOCK_KEY = 'clinic-schedule-mobile-resize-locked';
 const ROW_HEIGHT_RESIZE_SENSITIVITY = 0.5;
 const ROW_HEIGHT_PRECISION = 0.5;
-const COL_RESIZE_DOUBLE_CLICK_MS = 1400;
+const COL_RESIZE_DOUBLE_CLICK_MS = 500;
 const COL_RESIZE_CLICK_MOVE_TOLERANCE = 3;
 
 const SETTINGS_ROW_ID = '00000000-0000-0000-0000-000000000000';
@@ -174,6 +174,11 @@ const maybeLockMobileResize = (event) => {
   }
 };
 
+const normalizeColRatios = (ratios, colCount) => Array.from({ length: colCount }, (_, idx) => {
+  const value = Number(ratios?.[idx]);
+  return Number.isFinite(value) && value > 0 ? Math.max(MIN_COL_RATIO, value) : 1;
+});
+
 export default function useScheduleResizeState({ colCount }) {
   const [colRatios, setColRatios] = usePersistentJson(SHOCKWAVE_COL_RATIOS_KEY, null);
   const [dayColWidth, setDayColWidth] = usePersistentNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, 0);
@@ -225,21 +230,9 @@ export default function useScheduleResizeState({ colCount }) {
   const dayResizeRef = useRef({ active: false, startX: 0 });
   const rowResizeRef = useRef({ active: false, startY: 0, startHeight: 23 });
 
-  useEffect(() => {
-    if (!Array.isArray(colRatios)) return;
-    if (colRatios.length >= colCount) return;
-
-    updateColRatios((prev) => {
-      if (!Array.isArray(prev)) return Array(colCount).fill(1);
-      if (prev.length < colCount) return [...prev, ...Array(colCount - prev.length).fill(1)];
-      return prev;
-    });
-  }, [colRatios, colCount, updateColRatios]);
-
   const activeColRatios = useMemo(() => {
     if (!Array.isArray(colRatios)) return null;
-    if (colRatios.length >= colCount) return colRatios.slice(0, colCount);
-    return [...colRatios, ...Array(colCount - colRatios.length).fill(1)];
+    return normalizeColRatios(colRatios, colCount);
   }, [colRatios, colCount]);
 
   const therapistColsCSS = useMemo(() => {
@@ -294,10 +287,14 @@ export default function useScheduleResizeState({ colCount }) {
     if (!shouldStartMobileResize(event)) return;
     const now = Date.now();
     const lastClick = colResizeClickRef.current;
-    const isDoubleClickReset = event.type === 'mousedown' &&
-      lastClick.colIdx === colIdx &&
-      !lastClick.moved &&
-      now - lastClick.time <= COL_RESIZE_DOUBLE_CLICK_MS;
+    const isDoubleClickReset = event.type === 'mousedown' && (
+      event.detail >= 2 ||
+      (
+        lastClick.colIdx === colIdx &&
+        !lastClick.moved &&
+        now - lastClick.time <= COL_RESIZE_DOUBLE_CLICK_MS
+      )
+    );
     if (isDoubleClickReset) {
       colResizeRef.current.active = false;
       colResizeClickRef.current = { time: 0, colIdx: -1, moved: false };
@@ -306,7 +303,7 @@ export default function useScheduleResizeState({ colCount }) {
     }
     colResizeClickRef.current = { time: now, colIdx, moved: false };
     const startPoint = getPointerClient(event);
-    const cur = currentRatios ? [...currentRatios] : Array(colCount).fill(1);
+    const cur = currentRatios ? normalizeColRatios(currentRatios, colCount) : Array(colCount).fill(1);
     const wrapper = event.currentTarget.closest('.sw-therapist-header-wrapper');
     const containerWidth = Math.max(1, (wrapper?.getBoundingClientRect().width || 1) - timeColPx);
     colResizeRef.current = {
@@ -317,15 +314,16 @@ export default function useScheduleResizeState({ colCount }) {
       containerWidth,
     };
     let latestRatios = cur;
+    let didResize = false;
     const onMove = (moveEvent) => {
       moveEvent.preventDefault?.();
       if (!colResizeRef.current.active) return;
       const { startRatios: startRatiosValue, containerWidth: width, colIdx: currentColIdx, startX } = colResizeRef.current;
       const point = getPointerClient(moveEvent);
       const delta = point.x - startX;
-      if (Math.abs(delta) > COL_RESIZE_CLICK_MOVE_TOLERANCE) {
-        colResizeClickRef.current.moved = true;
-      }
+      if (Math.abs(delta) <= COL_RESIZE_CLICK_MOVE_TOLERANCE) return;
+      didResize = true;
+      colResizeClickRef.current.moved = true;
       const totalRatio = startRatiosValue.reduce((sum, ratio) => sum + ratio, 0);
       const deltaRatio = (delta / width) * totalRatio;
       const nextRatios = [...startRatiosValue];
@@ -342,13 +340,15 @@ export default function useScheduleResizeState({ colCount }) {
     };
     const onUp = (upEvent) => {
       colResizeRef.current.active = false;
-      updateColRatios(prev => {
-        const full = Array.isArray(prev) ? [...prev] : [];
-        for (let i = 0; i < latestRatios.length; i++) {
-          full[i] = latestRatios[i];
-        }
-        return full;
-      });
+      if (didResize) {
+        updateColRatios(prev => {
+          const full = Array.isArray(prev) ? [...prev] : [];
+          for (let i = 0; i < latestRatios.length; i++) {
+            full[i] = latestRatios[i];
+          }
+          return full;
+        });
+      }
       maybeLockMobileResize(upEvent);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
