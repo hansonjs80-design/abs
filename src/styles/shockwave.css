@@ -1668,6 +1668,7 @@
 .context-menu-submenu--memo {
   min-width: 260px;
   max-width: min(320px, calc(100vw - 36px));
+  overflow-x: hidden;
   padding: 9px;
 }
 
@@ -2512,6 +2513,7 @@
   width: 100%;
   min-width: 0;
   max-width: 100%;
+  overflow-x: hidden;
 }
 
 .context-menu-body-summary {
@@ -2574,6 +2576,8 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 3px;
   max-height: 126px;
+  max-width: 100%;
+  overflow-x: hidden;
   overflow-y: auto;
   padding-right: 2px;
 }
@@ -2583,6 +2587,8 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 3px;
   margin-bottom: 5px;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .context-menu-body-selected-item {
@@ -2591,6 +2597,7 @@
   align-items: center;
   gap: 5px;
   min-width: 0;
+  max-width: 100%;
   padding: 3px 5px;
   border-radius: 8px;
   border: 1px solid rgba(37, 99, 235, 0.2);
@@ -2658,6 +2665,7 @@
   justify-content: space-between;
   gap: 5px;
   min-width: 0;
+  max-width: 100%;
   padding: 3px 5px 3px 7px;
   border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.16);
@@ -2731,6 +2739,7 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 6px;
   min-width: 0;
+  max-width: 100%;
 }
 
 .context-menu-input {
@@ -2773,6 +2782,8 @@
   gap: 5px;
   margin-bottom: 6px;
   max-height: 150px;
+  max-width: 100%;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 
@@ -3025,6 +3036,7 @@
   align-items: center;
   gap: 6px;
   min-width: 0;
+  max-width: 100%;
   padding: 4px 6px;
   border-radius: 8px;
   border: 1px solid rgba(148, 163, 184, 0.16);
