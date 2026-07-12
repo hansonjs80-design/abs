@@ -386,6 +386,7 @@ describe('Korean body part normalization', () => {
     assert.equal(toProperCase('햄스'), 'Hamstring');
     assert.equal(toProperCase('팔꿈치'), 'Elbow');
     assert.equal(toProperCase('엘보'), 'Elbow');
+    assert.equal(toProperCase('엘보우'), 'Elbow');
     assert.equal(toProperCase('el'), 'Elbow');
     assert.equal(toProperCase('elb'), 'Elbow');
     assert.equal(toProperCase('손가락'), 'Finger');

@@ -105,6 +105,7 @@ const KOREAN_BODY_PART_MAP = {
   '햄스': 'Hamstring',
   '팔꿈치': 'Elbow',
   '엘보': 'Elbow',
+  '엘보우': 'Elbow',
   '손가락': 'Finger',
   '엄지손가락': 'Thumb',
   '엄지': 'Thumb',
