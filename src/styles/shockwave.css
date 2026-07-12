@@ -1279,7 +1279,9 @@
 
 .context-menu-prescription-value {
   color: var(--context-prescription-color, #111827);
+  font-size: 1.035rem;
   font-weight: 900;
+  line-height: 1.18;
 }
 
 .shockwave-context-menu.schedule-context-menu .context-menu-body-item {
