@@ -430,7 +430,7 @@
   top: 7px;
   height: 2px;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: transparent;
   transition: background-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
@@ -889,13 +889,15 @@
 
 /* 토글 today 보더 */
 .shockwave-day.is-today {
-  z-index: 6;
+  overflow: visible;
+  z-index: 70;
 }
 
 .shockwave-day.is-today::after {
   content: '';
   position: absolute;
   inset: -3px;
+  z-index: 80;
   border: 3px solid var(--sw-today-border);
   border-radius: 3px;
   pointer-events: none;
@@ -936,6 +938,15 @@
     border-top: none;
     box-sizing: border-box;
     overflow: hidden;
+  }
+
+  .shockwave-day.is-today {
+    overflow: visible;
+    z-index: 70;
+  }
+
+  .shockwave-day.is-today::after {
+    z-index: 80;
   }
 
   .shockwave-day:nth-child(n) {

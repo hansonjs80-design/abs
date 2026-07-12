@@ -16,6 +16,8 @@ const MIN_COL_RATIO = 0.2;
 const MOBILE_RESIZE_LOCK_KEY = 'clinic-schedule-mobile-resize-locked';
 const ROW_HEIGHT_RESIZE_SENSITIVITY = 0.5;
 const ROW_HEIGHT_PRECISION = 0.5;
+const COL_RESIZE_DOUBLE_CLICK_MS = 1400;
+const COL_RESIZE_CLICK_MOVE_TOLERANCE = 3;
 
 const SETTINGS_ROW_ID = '00000000-0000-0000-0000-000000000000';
 
@@ -72,10 +74,17 @@ async function syncLoadDeviceSettings(setColRatios, setDayColWidth, setRowHeight
 
 // DB에 기기 설정 백업 (디바운스 적용)
 let backupTimeout = null;
-function syncSaveDeviceSettings(colRatios, dayColWidth, rowHeight) {
+let pendingDeviceSettingsPatch = {};
+function syncSaveDeviceSettings(patch) {
+  pendingDeviceSettingsPatch = {
+    ...pendingDeviceSettingsPatch,
+    ...(patch || {}),
+  };
   if (backupTimeout) clearTimeout(backupTimeout);
   
   backupTimeout = setTimeout(async () => {
+    const patchToSave = pendingDeviceSettingsPatch;
+    pendingDeviceSettingsPatch = {};
     try {
       const { data, error: selectErr } = await supabase
         .from('shockwave_settings')
@@ -88,13 +97,13 @@ function syncSaveDeviceSettings(colRatios, dayColWidth, rowHeight) {
       const deviceId = getDeviceFingerprint();
       const existingSettlementSettings = data?.monthly_settlement_settings || {};
       const existingDeviceSettings = existingSettlementSettings.device_settings || {};
+      const currentDeviceSettings = existingDeviceSettings[deviceId] || {};
 
       const updatedDeviceSettings = {
         ...existingDeviceSettings,
         [deviceId]: {
-          colRatios,
-          dayColWidth,
-          rowHeight,
+          ...currentDeviceSettings,
+          ...patchToSave,
           updatedAt: new Date().toISOString()
         }
       };
@@ -190,28 +199,29 @@ export default function useScheduleResizeState({ colCount }) {
   const updateRowHeight = useCallback((newValue) => {
     setRowHeight(prev => {
       const next = typeof newValue === 'function' ? newValue(prev) : newValue;
-      syncSaveDeviceSettings(colRatios, dayColWidth, next);
+      syncSaveDeviceSettings({ rowHeight: next });
       return next;
     });
-  }, [colRatios, dayColWidth, setRowHeight]);
+  }, [setRowHeight]);
 
   const updateDayColWidth = useCallback((newValue) => {
     setDayColWidth(prev => {
       const next = typeof newValue === 'function' ? newValue(prev) : newValue;
-      syncSaveDeviceSettings(colRatios, next, rowHeight);
+      syncSaveDeviceSettings({ dayColWidth: next });
       return next;
     });
-  }, [colRatios, rowHeight, setDayColWidth]);
+  }, [setDayColWidth]);
 
   const updateColRatios = useCallback((newValue) => {
     setColRatios(prev => {
       const next = typeof newValue === 'function' ? newValue(prev) : newValue;
-      syncSaveDeviceSettings(next, dayColWidth, rowHeight);
+      syncSaveDeviceSettings({ colRatios: next });
       return next;
     });
-  }, [dayColWidth, rowHeight, setColRatios]);
+  }, [setColRatios]);
 
   const colResizeRef = useRef({ active: false, colIdx: -1, startX: 0, startRatios: [], containerWidth: 0 });
+  const colResizeClickRef = useRef({ time: 0, colIdx: -1, moved: false });
   const dayResizeRef = useRef({ active: false, startX: 0 });
   const rowResizeRef = useRef({ active: false, startY: 0, startHeight: 23 });
 
@@ -237,6 +247,12 @@ export default function useScheduleResizeState({ colCount }) {
       ? activeColRatios.map((ratio) => `minmax(0, ${ratio}fr)`).join(' ')
       : `repeat(${colCount}, minmax(0, 1fr))`;
   }, [activeColRatios, colCount]);
+
+  const resetColRatios = useCallback((event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    updateColRatios(Array(colCount).fill(1));
+  }, [colCount, updateColRatios]);
 
   const startRowResize = useCallback((event) => {
     event.preventDefault();
@@ -276,6 +292,19 @@ export default function useScheduleResizeState({ colCount }) {
     event.preventDefault();
     event.stopPropagation();
     if (!shouldStartMobileResize(event)) return;
+    const now = Date.now();
+    const lastClick = colResizeClickRef.current;
+    const isDoubleClickReset = event.type === 'mousedown' &&
+      lastClick.colIdx === colIdx &&
+      !lastClick.moved &&
+      now - lastClick.time <= COL_RESIZE_DOUBLE_CLICK_MS;
+    if (isDoubleClickReset) {
+      colResizeRef.current.active = false;
+      colResizeClickRef.current = { time: 0, colIdx: -1, moved: false };
+      resetColRatios(event);
+      return;
+    }
+    colResizeClickRef.current = { time: now, colIdx, moved: false };
     const startPoint = getPointerClient(event);
     const cur = currentRatios ? [...currentRatios] : Array(colCount).fill(1);
     const wrapper = event.currentTarget.closest('.sw-therapist-header-wrapper');
@@ -294,6 +323,9 @@ export default function useScheduleResizeState({ colCount }) {
       const { startRatios: startRatiosValue, containerWidth: width, colIdx: currentColIdx, startX } = colResizeRef.current;
       const point = getPointerClient(moveEvent);
       const delta = point.x - startX;
+      if (Math.abs(delta) > COL_RESIZE_CLICK_MOVE_TOLERANCE) {
+        colResizeClickRef.current.moved = true;
+      }
       const totalRatio = startRatiosValue.reduce((sum, ratio) => sum + ratio, 0);
       const deltaRatio = (delta / width) * totalRatio;
       const nextRatios = [...startRatiosValue];
@@ -331,7 +363,7 @@ export default function useScheduleResizeState({ colCount }) {
     window.addEventListener('touchend', onUp);
     window.addEventListener('touchcancel', onUp);
     window.addEventListener('blur', onUp);
-  }, [colCount, updateColRatios]);
+  }, [colCount, resetColRatios, updateColRatios]);
 
   const startDayResize = useCallback((event, showTimeCol) => {
     event.preventDefault();
@@ -379,6 +411,7 @@ export default function useScheduleResizeState({ colCount }) {
     rowHeight,
     setRowHeight: updateRowHeight,
     setDayColWidth: updateDayColWidth,
+    resetColRatios,
     startColResize,
     startDayResize,
     startRowResize,

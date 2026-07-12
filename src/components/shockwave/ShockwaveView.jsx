@@ -642,6 +642,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     activeColRatios,
     dayColWidth,
     rowHeight,
+    resetColRatios,
     startColResize,
     startDayResize,
     startRowResize,
@@ -2878,14 +2879,21 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                         <div
                           key={`col-resize-${ci}`}
                           className="sw-col-resize-handle"
+                          title="더블클릭: 치료사 열 같은 너비로 초기화"
+                          aria-label="치료사 열 너비 같은 비율로 초기화"
                           style={{
                             position: 'absolute', top: 0, height: '100%',
                             left: `calc(${timeColPx}px + (100% - ${timeColPx}px) * ${leftPct / 100})`,
                             transform: 'translateX(-4px)',
                           }}
                           onMouseDown={(e) => {
+                            if (e.detail > 1) {
+                              resetColRatios(e);
+                              return;
+                            }
                             startColResize(e, ci, timeColPx, activeColRatios);
                           }}
+                          onDoubleClick={resetColRatios}
                         />
                       );
                     })}
@@ -3041,7 +3049,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       }, [
         isDeviceSettingsLoading, weeks, dayColWidth, todayWeekIdx, today, getTimeSlotsForDay,
         therapistColsCSS, colCount, getTherapistNameForDate, activeColRatios,
-        startColResize, startDayResize, startRowResize,
+        resetColRatios, startColResize, startDayResize, startRowResize,
         renderMemos, renderPendingDisplayValues, renderPendingMergeSpans, renderPendingCellBgColors, reservationGroupEdgeMap, editingCell, imePreviewCell,
         selectedKeys, selectedCell, clipboardSource,
         getTherapistWorkState, getStaffScheduleBlockForCell,
