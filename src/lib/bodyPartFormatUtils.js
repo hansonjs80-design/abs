@@ -87,10 +87,17 @@ const KOREAN_BODY_PART_MAP = {
   '안쪽무릎': 'Medial Knee',
   '내측무릎': 'Medial Knee',
   '무릎내측': 'Medial Knee',
+  '내측': 'Medial',
+  '안쪽': 'Medial',
+  '안': 'Medial',
   '무릎바깥쪽': 'Lateral Knee',
   '바깥쪽무릎': 'Lateral Knee',
   '외측무릎': 'Lateral Knee',
   '무릎외측': 'Lateral Knee',
+  '외측': 'Lateral',
+  '바깥쪽': 'Lateral',
+  '바깥': 'Lateral',
+  '밖': 'Lateral',
   '전완': 'Fore Arm',
   '상완': 'Upper Arm',
   '위팔': 'Upper Arm',
@@ -106,6 +113,8 @@ const KOREAN_BODY_PART_MAP = {
   '팔꿈치': 'Elbow',
   '엘보': 'Elbow',
   '엘보우': 'Elbow',
+  '상과': 'Epicondylitis',
+  '상과염': 'Epicondylitis',
   '손가락': 'Finger',
   '엄지손가락': 'Thumb',
   '엄지': 'Thumb',
@@ -133,19 +142,47 @@ const KOREAN_BODY_DIRECTION_PREFIXES = [
   { prefixes: ['양쪽', '양'], value: 'Both' },
 ];
 
+const KOREAN_BODY_POSITION_MODIFIERS = [
+  { aliases: ['내측', '안쪽', '안'], value: 'Medial' },
+  { aliases: ['외측', '바깥쪽', '바깥', '밖'], value: 'Lateral' },
+];
+
+function getKoreanBodyPartLabel(key) {
+  return KOREAN_BODY_PART_MAP[key] || '';
+}
+
+function normalizeKoreanBodyPartKey(compact) {
+  const directAlias = getKoreanBodyPartLabel(compact);
+  if (directAlias) return directAlias;
+
+  for (const { aliases, value: modifier } of KOREAN_BODY_POSITION_MODIFIERS) {
+    for (const alias of aliases) {
+      if (compact.startsWith(alias)) {
+        const bodyPart = getKoreanBodyPartLabel(compact.slice(alias.length));
+        if (bodyPart) return `${modifier} ${bodyPart}`;
+      }
+      if (compact.endsWith(alias)) {
+        const bodyPart = getKoreanBodyPartLabel(compact.slice(0, -alias.length));
+        if (bodyPart) return `${modifier} ${bodyPart}`;
+      }
+    }
+  }
+
+  return '';
+}
+
 function normalizeKoreanBodyPartAlias(value) {
   const original = String(value || '').trim();
   if (!original) return '';
   const compact = original.replace(/\s+/g, '');
-  if (Object.prototype.hasOwnProperty.call(KOREAN_BODY_PART_MAP, compact)) {
-    return KOREAN_BODY_PART_MAP[compact];
-  }
+  const directAlias = normalizeKoreanBodyPartKey(compact);
+  if (directAlias) return directAlias;
 
   for (const { prefixes, value: direction } of KOREAN_BODY_DIRECTION_PREFIXES) {
     for (const prefix of prefixes) {
       if (!compact.startsWith(prefix)) continue;
       const bodyKey = compact.slice(prefix.length);
-      const bodyPart = KOREAN_BODY_PART_MAP[bodyKey];
+      const bodyPart = normalizeKoreanBodyPartKey(bodyKey);
       if (bodyPart) return `${direction} ${bodyPart}`;
     }
   }
