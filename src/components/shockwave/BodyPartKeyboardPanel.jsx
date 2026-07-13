@@ -270,7 +270,7 @@ export default function BodyPartKeyboardPanel({
                     onClick={(event) => {
                       event.preventDefault();
                       event.stopPropagation();
-                      onRemove?.(index);
+                      onDelete?.(part);
                     }}
                   >
                     <Trash2 size={14} strokeWidth={2.3} />
