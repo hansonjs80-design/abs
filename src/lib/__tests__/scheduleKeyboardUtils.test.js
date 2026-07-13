@@ -8,6 +8,7 @@ import {
   isGridNavigationKey,
   isHolidayBackgroundShortcut,
   isMergeShortcut,
+  isMemoMenuShortcut,
   isPatientHistoryShortcut,
   isSameReservationGroupShortcut,
   isTreatmentCancelShortcut,
@@ -23,8 +24,12 @@ describe('schedule keyboard shortcut detection', () => {
     assert.equal(isPatientHistoryShortcut({ code: 'KeyF', key: 'f' }), false);
   });
 
-  it('detects body part, visit complete, and merge shortcuts', () => {
+  it('detects body part, memo, visit complete, and merge shortcuts', () => {
     assert.equal(isBodyPartMenuShortcut({ metaKey: true, key: 'Enter' }), true);
+    assert.equal(isMemoMenuShortcut({ metaKey: true, code: 'Equal', key: '+' }), true);
+    assert.equal(isMemoMenuShortcut({ ctrlKey: true, code: 'NumpadAdd', key: '+' }), true);
+    assert.equal(isMemoMenuShortcut({ metaKey: true, code: 'Equal', key: '=' }), true);
+    assert.equal(isMemoMenuShortcut({ code: 'Equal', key: '+' }), false);
     assert.equal(isTreatmentCompleteShortcut({ ctrlKey: true, code: 'KeyS', key: 's' }), true);
     assert.equal(isTreatmentCompleteShortcut({ metaKey: true, code: '', key: 'S' }), true);
     assert.equal(isTreatmentCompleteShortcut({ metaKey: true, code: '', key: 'ㄴ' }), true);

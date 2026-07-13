@@ -236,12 +236,21 @@ const ContextMenuLocalInput = ({ value, onChange, onKeyDown, onBlur, className, 
   );
 };
 
-const ContextMenuLocalInputGroup = ({ placeholder, buttonLabel, onSubmit, imeOpenRef, className = "context-menu-input", autoFocus, onInputKeyDown }) => {
+const ContextMenuLocalInputGroup = ({
+  placeholder,
+  buttonLabel,
+  onSubmit,
+  imeOpenRef,
+  className = "context-menu-input",
+  autoFocus,
+  focusSignal = 0,
+  onInputKeyDown,
+}) => {
   const [localValue, setLocalValue] = useState('');
   const inputRef = useRef(null);
 
   useEffect(() => {
-    if (!autoFocus) return undefined;
+    if (!autoFocus && !focusSignal) return undefined;
     let cancelled = false;
     const focusInput = () => {
       if (cancelled || !inputRef.current) return;
@@ -263,7 +272,7 @@ const ContextMenuLocalInputGroup = ({ placeholder, buttonLabel, onSubmit, imeOpe
         cancelAnimationFrame(nestedFrameId);
       }
     };
-  }, [autoFocus, placeholder]);
+  }, [autoFocus, focusSignal, placeholder]);
 
   const handleSubmit = () => {
     const trimmed = localValue.trim();
@@ -368,6 +377,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const [, setContextMenuBodyInput] = useState('');
   const [, setContextMenuNoteInput] = useState('');
   const [contextMenuMemoDrafts, setContextMenuMemoDrafts] = useState([]);
+  const [contextMenuMemoFocusSignal, setContextMenuMemoFocusSignal] = useState(0);
   const [contextMenuVisitInput, setContextMenuVisitInput] = useState('');
   const [, setContextMenuReservationInput] = useState('');
 
@@ -2177,7 +2187,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     });
   }, [effectiveMemos, prepareDefaultEditMerge]);
 
-  const handleOpenBodyPartMenu = useCallback(() => {
+  const openSelectedCellContextSubmenu = useCallback((submenu, { standaloneBodyPart = false, focusMemoInput = false } = {}) => {
     if (!selectedCell) return;
     const { w, d, r, c } = selectedCell;
     const keyStr = cellKey(w, d, r, c);
@@ -2221,9 +2231,22 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     };
     
     handleCellContextMenu(mockEvent, w, d, r, c, memo.prescription || '', '');
-    setContextMenu(prev => prev ? { ...prev, isStandaloneBodyPart: true } : null);
-    setActiveContextSubmenu('body');
+    if (standaloneBodyPart) {
+      setContextMenu(prev => prev ? { ...prev, isStandaloneBodyPart: true } : null);
+    }
+    setActiveContextSubmenu(submenu);
+    if (focusMemoInput) {
+      setContextMenuMemoFocusSignal((signal) => signal + 1);
+    }
   }, [selectedCell, cellKey, effectiveMemos, handleCellContextMenu, setActiveContextSubmenu, setContextMenu, getEffectiveMergeSpan]);
+
+  const handleOpenBodyPartMenu = useCallback(() => {
+    openSelectedCellContextSubmenu('body', { standaloneBodyPart: true });
+  }, [openSelectedCellContextSubmenu]);
+
+  const handleOpenMemoMenu = useCallback(() => {
+    openSelectedCellContextSubmenu('memo', { focusMemoInput: true });
+  }, [openSelectedCellContextSubmenu]);
 
   const positionTooltip = useCallback((clientX, clientY) => {
     const tooltipEl = tooltipRef.current;
@@ -2394,6 +2417,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     setContextMenu,
     getDefaultReservationTime,
     handleOpenBodyPartMenu,
+    handleOpenMemoMenu,
     onSelectionMoved: handleKeyboardSelectionMoved,
   });
 
@@ -2518,7 +2542,21 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       return;
     }
 
-    // 3. Ctrl/Cmd + S (치료 완료 토글)
+    // 3. Ctrl/Cmd + + (메모 입력 메뉴 열기)
+    if ((shortcutKey === '+' || shortcutKey === '=' || e.code === 'Equal' || e.code === 'NumpadAdd') && isMeta) {
+      e.preventDefault();
+      e.stopPropagation();
+      const openMemoMenu = () => handleOpenMemoMenu();
+      if (hasValue) {
+        const currentVal = e.target.value;
+        handleCellSave(w, d, r, c, currentVal).then(openMemoMenu);
+      } else {
+        openMemoMenu();
+      }
+      return;
+    }
+
+    // 4. Ctrl/Cmd + S (치료 완료 토글)
     if (shortcutKey === 'S' && isMeta) {
       e.preventDefault();
       e.stopPropagation();
@@ -2534,7 +2572,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       return;
     }
 
-    // 4. Ctrl/Cmd + D (예약 취소 토글)
+    // 5. Ctrl/Cmd + D (예약 취소 토글)
     if (shortcutKey === 'D' && isMeta) {
       e.preventDefault();
       e.stopPropagation();
@@ -2550,7 +2588,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       return;
     }
 
-    // 5. Ctrl/Cmd + B (공휴일/녹색 배경 토글)
+    // 6. Ctrl/Cmd + B (공휴일/녹색 배경 토글)
     if (shortcutKey === 'B' && isMeta) {
       e.preventDefault();
       e.stopPropagation();
@@ -2564,7 +2602,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       return;
     }
 
-    // 6. Ctrl/Cmd + ↑/↓ (편집 중 회차 증감)
+    // 7. Ctrl/Cmd + ↑/↓ (편집 중 회차 증감)
     if (isMeta && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
       e.preventDefault();
       e.stopPropagation();
@@ -2614,7 +2652,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       const nc = e.shiftKey ? Math.max(0, c - 1) : Math.min(colCount - 1, c + 1);
       selectSingleCell({ w, d, r, c: nc });
     }
-  }, [baseTimeSlots.length, colCount, selectSingleCell, getAdjacentCell, moveEditInputCaret, settings, currentYear, currentMonth, handleCellSave, memos, pendingCellBgColors, cellKey, handleOpenBodyPartMenu, setEditingCell, prescriptionScheduleSettings.doseTags]);
+  }, [baseTimeSlots.length, colCount, selectSingleCell, getAdjacentCell, moveEditInputCaret, settings, currentYear, currentMonth, handleCellSave, memos, pendingCellBgColors, cellKey, handleOpenBodyPartMenu, handleOpenMemoMenu, setEditingCell, prescriptionScheduleSettings.doseTags]);
 
   const handleChartSelectorClose = useCallback((selected) => {
     if (!chartSelector) return;
@@ -3631,6 +3669,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                           <ContextMenuLocalInputGroup
                             placeholder="새 메모 추가"
                             buttonLabel="추가"
+                            focusSignal={contextMenuMemoFocusSignal}
                             onSubmit={(val) => {
                               handleContextAction({ type: 'memoAdd', value: val });
                             }}

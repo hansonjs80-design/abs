@@ -30,6 +30,7 @@ import {
   isGridNavigationKey,
   isHolidayBackgroundShortcut,
   isMergeShortcut,
+  isMemoMenuShortcut,
   isPatientHistoryShortcut,
   isSameReservationGroupShortcut,
   isTreatmentCancelShortcut,
@@ -89,6 +90,7 @@ export default function useScheduleKeyboardActions({
   shockwaveSettings,
   getDefaultReservationTime,
   handleOpenBodyPartMenu,
+  handleOpenMemoMenu,
   onSelectionMoved,
 }) {
   // ── refs로 최신 값 추적 (연속 키 입력 시 stale closure 방지) ──
@@ -1050,6 +1052,15 @@ export default function useScheduleKeyboardActions({
       return;
     }
 
+    if (isMemoMenuShortcut(e)) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (handleOpenMemoMenu) {
+        handleOpenMemoMenu();
+      }
+      return;
+    }
+
     if (e.key === 'Enter') {
       e.preventDefault();
       const key = cellKey(w, d, r, c);
@@ -1302,6 +1313,7 @@ export default function useScheduleKeyboardActions({
     isContextMenuTarget,
     handleOpenPatientHistoryModal,
     handleOpenBodyPartMenu,
+    handleOpenMemoMenu,
     flushPendingMoveSave,
     setEditingCell,
     setClipboardSource,

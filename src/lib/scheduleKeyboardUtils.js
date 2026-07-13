@@ -41,6 +41,15 @@ export function isBodyPartMenuShortcut(event) {
   return isMetaEvent(event) && event?.key === 'Enter';
 }
 
+export function isMemoMenuShortcut(event) {
+  return isMetaEvent(event) && (
+    event?.code === 'Equal' ||
+    event?.code === 'NumpadAdd' ||
+    event?.key === '+' ||
+    event?.key === '='
+  );
+}
+
 export function isTreatmentCompleteShortcut(event) {
   return isMetaEvent(event) && isKey(event, 'KeyS', 's');
 }
