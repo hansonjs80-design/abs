@@ -1357,3 +1357,79 @@
     overflow: hidden !important;
   }
 }
+
+@media print {
+  body.settlement-print.shockwave-settlement-print,
+  body.settlement-print.shockwave-settlement-print * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    scrollbar-gutter: auto !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print::-webkit-scrollbar,
+  body.settlement-print.shockwave-settlement-print *::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+    background: transparent !important;
+  }
+
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-stats-body--settlement,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-layout,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-body,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-table-wrap,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-compact-table-wrap {
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+  }
+
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-card {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    padding: 0 !important;
+    border: var(--sw-print-frame-border) !important;
+    background: #ffffff !important;
+    line-height: normal !important;
+    overflow: hidden !important;
+  }
+
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-card .sw-settlement-table-wrap {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: #ffffff !important;
+    line-height: normal !important;
+    overflow: hidden !important;
+  }
+
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table {
+    display: table !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-collapse: collapse !important;
+    line-height: normal !important;
+  }
+
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table thead,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tr {
+    height: auto !important;
+    min-height: 0 !important;
+    line-height: normal !important;
+  }
+
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row th,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row td {
+    border-top: var(--sw-print-frame-border) !important;
+    border-bottom: var(--sw-print-frame-border) !important;
+  }
+}
