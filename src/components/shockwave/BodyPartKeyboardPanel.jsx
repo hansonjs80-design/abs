@@ -136,7 +136,10 @@ export default function BodyPartKeyboardPanel({
       return;
     }
     if (trimmed !== selectedParts[index]) {
-      onEdit?.(index, trimmed);
+      const nextParts = selectedParts.map((part, partIndex) => (
+        partIndex === index ? trimmed : (selectedDrafts[partIndex] ?? part)
+      ));
+      onEdit?.(index, trimmed, nextParts);
     }
   };
 

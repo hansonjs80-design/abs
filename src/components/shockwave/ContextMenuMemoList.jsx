@@ -30,7 +30,12 @@ export default function ContextMenuMemoList({
 
   const canReorderMemos = memoList.length > 1;
   const commitMemoEdit = (index, value) => {
-    onAction({ type: 'memoUpdate', index, value });
+    const nextValue = String(value || '').trim();
+    const nextMemos = memoList
+      .map((memo, memoIndex) => (memoIndex === index ? nextValue : memo))
+      .map((memo) => String(memo || '').trim())
+      .filter(Boolean);
+    onAction({ type: 'memoUpdate', index, value: nextValue, memos: nextMemos });
     setEditingIndex(null);
   };
 

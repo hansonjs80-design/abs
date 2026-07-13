@@ -104,6 +104,23 @@ export default function useScheduleContextMenuActions({
       nextParts.forEach((part) => addBodyPartToMap(optionsMap, part));
       return Array.from(optionsMap.values());
     };
+    const getBodyPartEditParts = (memo = {}, targetIndex, nextPart, actionParts) => {
+      const sourceParts = Array.isArray(actionParts) && actionParts.length > 0
+        ? actionParts
+        : splitBodyParts(memo.body_part || '');
+      return sourceParts
+        .map((part, index) => formatBodyPartInput(index === targetIndex ? nextPart : part))
+        .filter(Boolean);
+    };
+    const getMemoUpdateList = (memo = {}, targetIndex, nextValue, actionMemos) => {
+      if (Array.isArray(actionMemos)) {
+        return actionMemos.map((item) => String(item || '').trim()).filter(Boolean);
+      }
+      return getMemoListFromMergeSpan(memo.merge_span)
+        .map((item, index) => (index === targetIndex ? nextValue : item))
+        .map((item) => String(item || '').trim())
+        .filter(Boolean);
+    };
     const saveMemoMeta = (key, memo = {}, overrides = {}) => {
       const [w, d, r, c] = key.split('-').map(Number);
       const pick = (name, fallback) => (
@@ -570,11 +587,10 @@ export default function useScheduleContextMenuActions({
         const parts = splitBodyParts(memo.body_part || '');
         if (targetIndex < 0 || targetIndex >= parts.length) continue;
         const previousPart = parts[targetIndex];
-        parts[targetIndex] = nextPart;
-        const updated = parts.filter(Boolean).join(', ');
-        const nextOptions = getBodyPartOptionList(memo, splitBodyParts(updated));
+        const nextParts = getBodyPartEditParts(memo, targetIndex, nextPart, action.parts);
+        const updated = nextParts.join(', ');
+        const nextOptions = nextParts;
         const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, nextOptions);
-        rememberBodyPartOptions(nextOptions);
         setContextMenuBodyPartOptions?.((prev) => {
           const optionsMap = new Map();
           const previousKey = normalizeBodyPartKey(previousPart);
@@ -749,12 +765,21 @@ export default function useScheduleContextMenuActions({
       const oldMemos = buildMemoSnapshotForKeys(keys);
       let anyChanged = false;
       const nextValue = String(action.value || '').trim();
-      setContextMenuMemoDrafts((prev) => prev.map((item, index) => index === action.index ? nextValue : item).filter(Boolean));
+      const targetIndex = Number(action.index);
+      if (!Number.isInteger(targetIndex)) return;
+      const nextDrafts = getMemoUpdateList({}, targetIndex, nextValue, action.memos);
+      if (Array.isArray(action.memos)) {
+        setContextMenuMemoDrafts(nextDrafts);
+      } else {
+        setContextMenuMemoDrafts((prev) => (
+          prev.map((item, index) => (index === targetIndex ? nextValue : item)).filter(Boolean)
+        ));
+      }
       for (const key of keys) {
         const memo = getMemoForAction(key);
-        const memoList = getMemoListFromMergeSpan(memo.merge_span);
-        const nextMemoList = memoList.map((item, index) => index === action.index ? nextValue : item).filter(Boolean);
+        const nextMemoList = getMemoUpdateList(memo, targetIndex, nextValue, action.memos);
         const nextMergeSpan = buildMergeSpanWithMemoList(memo.merge_span, nextMemoList);
+        updateContextMemoSnapshot(key, memo, { merge_span: nextMergeSpan });
         const success = await saveMemoMeta(key, memo, { merge_span: nextMergeSpan });
         if (success) anyChanged = true;
       }
