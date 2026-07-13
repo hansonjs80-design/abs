@@ -1433,3 +1433,103 @@
     border-bottom: var(--sw-print-frame-border) !important;
   }
 }
+
+/* 세로 결산표는 테이블 자체가 폭에 맞게 고정되므로 스크롤 래퍼가 필요 없다.
+   Windows처럼 스크롤바가 실제 공간을 차지하는 환경에서 합계 아래 빈 행처럼 보이는 현상을 차단한다. */
+:is(.animate-fade-in, .sw-stats-container, .sw-stats-layout, .sw-stats-panel, .sw-stats-body--settlement):has(.sw-settlement-stack--shockwave.sw-settlement-stack--vertical) {
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+.sw-stats-body--settlement:has(.sw-settlement-stack--shockwave.sw-settlement-stack--vertical) .sw-settlement-stack--shockwave.sw-settlement-stack--vertical {
+  width: min(100%, 920px) !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical :is(.sw-vertical-therapist-card, .sw-vertical-summary-card) .sw-settlement-table-wrap {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+  overflow: clip !important;
+  scrollbar-gutter: auto !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  line-height: 0 !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-recent-card :is(.sw-settlement-table-wrap, .sw-compact-table-wrap) {
+  overflow-x: hidden !important;
+  scrollbar-gutter: auto !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical :is(.sw-settlement-table-wrap, .sw-compact-table-wrap)::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical :is(.sw-vertical-therapist-table, .sw-vertical-summary-table, .sw-vertical-prescription-summary-table) {
+  display: table !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  line-height: normal !important;
+  vertical-align: top !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row th,
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row td {
+  border-bottom: 1px solid #475569 !important;
+  box-shadow: none !important;
+}
+
+@media print {
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print :is(
+    #root,
+    .animate-fade-in,
+    .app-layout,
+    .app-main,
+    .app-content,
+    .sw-stats-container,
+    .sw-stats-layout,
+    .sw-stats-panel,
+    .sw-stats-body,
+    .sw-stats-body--settlement,
+    .sw-settlement-stack--shockwave.sw-settlement-stack--vertical,
+    .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-layout,
+    .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-body,
+    .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-left,
+    .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-right
+  ),
+  html[data-print-orientation="portrait"],
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print {
+    overflow: visible !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    scrollbar-gutter: auto !important;
+  }
+
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical :is(.sw-settlement-table-wrap, .sw-compact-table-wrap) {
+    overflow: hidden !important;
+    overflow: clip !important;
+    overflow-x: clip !important;
+    overflow-y: clip !important;
+    scrollbar-gutter: auto !important;
+  }
+}
