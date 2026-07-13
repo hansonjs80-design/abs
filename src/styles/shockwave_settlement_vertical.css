@@ -1,6 +1,272 @@
 /* Shockwave settlement vertical layout overrides.
    Kept separate from shockwave_stats.css so screen and print layout tuning is easier to maintain. */
 
+/* 충격파 세로형 결산 화면 레이아웃 */
+.sw-settlement-vertical-layout {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.sw-settlement-vertical-header-wrap {
+  width: 100% !important;
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+}
+
+.sw-settlement-vertical-body {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 20px !important;
+  align-items: flex-start !important;
+  width: 100% !important;
+}
+
+.sw-settlement-vertical-left {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  flex: 0 0 370px !important;
+  width: 370px !important;
+  min-width: 0 !important;
+}
+
+.sw-settlement-vertical-right {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  flex: 0 0 420px !important;
+  width: 420px !important;
+  min-width: 0 !important;
+}
+
+.sw-vertical-therapist-card {
+  background: #ffffff !important;
+  border: 1px solid #94a3b8 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+  width: 370px !important;
+  max-width: 370px !important;
+  overflow: hidden !important;
+}
+
+.sw-vertical-therapist-header {
+  padding: 8px 12px !important;
+  border-bottom: 1.5px solid #64748b !important;
+}
+
+.sw-vertical-therapist-header h3 {
+  margin: 0 !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: #1e293b !important;
+}
+
+.sw-vertical-therapist-header.therapist-tone-0 { background-color: #fef9c3 !important; }
+.sw-vertical-therapist-header.therapist-tone-1 { background-color: #f3e8ff !important; }
+.sw-vertical-therapist-header.therapist-tone-2 { background-color: #e0f2fe !important; }
+.sw-vertical-therapist-header.therapist-tone-3 { background-color: #fee2e2 !important; }
+.sw-vertical-therapist-header.therapist-tone-4 { background-color: #dcfce7 !important; }
+
+/* 세로 보기 테이블 기본 포맷 */
+.sw-vertical-therapist-table,
+.sw-vertical-summary-table,
+.sw-vertical-prescription-summary-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-size: 11px !important;
+  table-layout: fixed !important;
+}
+
+.sw-vertical-therapist-table th,
+.sw-vertical-therapist-table td,
+.sw-vertical-summary-table th,
+.sw-vertical-summary-table td,
+.sw-vertical-prescription-summary-table th,
+.sw-vertical-prescription-summary-table td {
+  padding: 6px 8px !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+  border-right: 1px solid #cbd5e1 !important;
+  line-height: 1.3 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.sw-vertical-therapist-table th:last-child,
+.sw-vertical-therapist-table td:last-child,
+.sw-vertical-summary-table th:last-child,
+.sw-vertical-summary-table td:last-child,
+.sw-vertical-prescription-summary-table th:last-child,
+.sw-vertical-prescription-summary-table td:last-child {
+  border-right: none !important;
+}
+
+/* 치료사 테이블 열 너비 지정 (합계: 370px) */
+.sw-vertical-therapist-table th:first-child,
+.sw-vertical-therapist-table td:first-child {
+  width: 110px !important;
+}
+
+.sw-vertical-therapist-table th:nth-child(2),
+.sw-vertical-therapist-table td:nth-child(2) {
+  width: 60px !important;
+}
+
+.sw-vertical-therapist-table th:nth-child(3),
+.sw-vertical-therapist-table td:nth-child(3) {
+  width: 100px !important;
+}
+
+.sw-vertical-therapist-table th:nth-child(4),
+.sw-vertical-therapist-table td:nth-child(4) {
+  width: 100px !important;
+}
+
+.sw-vertical-therapist-table thead th,
+.sw-vertical-summary-table thead th,
+.sw-vertical-prescription-summary-table thead th {
+  background: #f8fafc !important;
+  font-weight: 800 !important;
+  color: #334155 !important;
+  border-bottom: 1.5px solid #64748b !important;
+  text-align: center !important;
+}
+
+.sw-vertical-therapist-table tbody td.prescription-name,
+.sw-vertical-prescription-summary-table tbody td.prescription-name {
+  font-weight: 700 !important;
+  color: #334155 !important;
+  text-align: left !important;
+  padding-left: 12px !important;
+}
+
+.sw-vertical-therapist-table tbody td.count-val,
+.sw-vertical-prescription-summary-table tbody td.count-val {
+  font-weight: 600 !important;
+  color: #475569 !important;
+  text-align: right !important;
+  padding-right: 12px !important;
+}
+
+.sw-vertical-therapist-table tbody td.amount-val,
+.sw-vertical-prescription-summary-table tbody td.amount-val,
+.sw-vertical-summary-table tbody td.amount-val {
+  font-weight: 700 !important;
+  color: #1e40af !important;
+  text-align: right !important;
+  padding-right: 12px !important;
+}
+
+.sw-vertical-therapist-table tbody td.incentive-val,
+.sw-vertical-prescription-summary-table tbody td.incentive-val,
+.sw-vertical-summary-table tbody td.incentive-val {
+  font-weight: 700 !important;
+  color: #6d28d9 !important;
+  text-align: right !important;
+  padding-right: 12px !important;
+}
+
+/* 합계 행 스타일 - 엑셀 회계 장부 형식 */
+.sw-vertical-therapist-table tbody tr.vertical-total-row th,
+.sw-vertical-therapist-table tbody tr.vertical-total-row td {
+  background: #f8fafc !important;
+  font-weight: 800 !important;
+  border-top: 1px solid #475569 !important;
+  border-bottom: 2px double #475569 !important;
+  color: #1f2937 !important;
+}
+
+.sw-vertical-summary-table tbody tr.grand-total-row th,
+.sw-vertical-summary-table tbody tr.grand-total-row td {
+  background: #eff6ff !important;
+  font-weight: 900 !important;
+  border-top: 1px solid #1d4ed8 !important;
+  border-bottom: 2px double #1d4ed8 !important;
+  color: #1e3a8a !important;
+}
+
+/* 우측 요약 카드 (너비: 420px) */
+.sw-vertical-summary-card {
+  background: #ffffff !important;
+  border: 1px solid #94a3b8 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+  width: 420px !important;
+  max-width: 420px !important;
+  overflow: visible !important;
+}
+
+.sw-vertical-summary-card .sw-settlement-header {
+  background: #f1f5f9 !important;
+  padding: 8px 12px !important;
+  border-bottom: 1.5px solid #64748b !important;
+  margin: 0 !important;
+}
+
+.sw-vertical-summary-card .sw-settlement-header h2 {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: #1e293b !important;
+}
+
+/* 총결산 테이블 열 너비 지정 (합계: 420px) */
+.sw-vertical-summary-table th:first-child,
+.sw-vertical-summary-table td:first-child {
+  width: 100px !important;
+}
+
+.sw-vertical-summary-table th:nth-child(2),
+.sw-vertical-summary-table td:nth-child(2) {
+  width: 80px !important;
+}
+
+.sw-vertical-summary-table th:nth-child(3),
+.sw-vertical-summary-table td:nth-child(3) {
+  width: 120px !important;
+}
+
+.sw-vertical-summary-table th:nth-child(4),
+.sw-vertical-summary-table td:nth-child(4) {
+  width: 120px !important;
+}
+
+/* 처방별 총결산 테이블 열 너비 지정 (합계: 420px) */
+.sw-vertical-prescription-summary-table th:first-child,
+.sw-vertical-prescription-summary-table td:first-child {
+  width: 110px !important;
+}
+
+.sw-vertical-prescription-summary-table th:nth-child(2),
+.sw-vertical-prescription-summary-table td:nth-child(2) {
+  width: 70px !important;
+}
+
+.sw-vertical-prescription-summary-table th:nth-child(3),
+.sw-vertical-prescription-summary-table td:nth-child(3) {
+  width: 120px !important;
+}
+
+.sw-vertical-prescription-summary-table th:nth-child(4),
+.sw-vertical-prescription-summary-table td:nth-child(4) {
+  width: 120px !important;
+}
+
+/* 하단 최근 현황 카드 보정 */
+.sw-vertical-recent-card {
+  margin: 16px 0 0 0 !important;
+  width: 810px !important;
+  max-width: 100% !important;
+}
+
+.sw-vertical-recent-card .sw-settlement-header {
+  border-bottom: 1.5px solid #64748b !important;
+}
+
 /* 화면 가로 스크롤바 강제 숨김 및 overflow 제어 */
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical,
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical * {

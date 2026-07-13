@@ -192,13 +192,16 @@ export default function ShockwaveSettlementView({
 
   return (
     <div className={`sw-settlement-stack sw-settlement-stack--shockwave ${viewMode === 'vertical' ? 'sw-settlement-stack--vertical' : ''} ${viewMode === 'horizontal2' ? 'sw-settlement-stack--horizontal2' : ''}`}>
+      <div className="sw-settlement-view-mode-row">
+        {viewModeSelector}
+      </div>
+
       {viewMode === 'horizontal' ? (
         <>
           <div className="sw-settlement-card sw-settlement-main-card">
             <div className="sw-settlement-header">
               <h2>{currentMonth}월 충격파 결산</h2>
               <div className="sw-settlement-meta">
-                {viewModeSelector}
                 <span>인센티브 {Number(incentivePercentage) || 0}%</span>
               </div>
             </div>
@@ -369,7 +372,6 @@ export default function ShockwaveSettlementView({
           recentPeriodInput={recentPeriodInput}
           recentPeriodLabel={recentPeriodLabel}
           settlement={settlement}
-          viewModeSelector={viewModeSelector}
         />
       ) : (
         <>
@@ -378,7 +380,6 @@ export default function ShockwaveSettlementView({
             <div className="sw-settlement-header">
               <h2>{currentMonth}월 충격파 결산</h2>
               <div className="sw-settlement-meta">
-                {viewModeSelector}
                 <span>인센티브 {Number(incentivePercentage) || 0}%</span>
               </div>
             </div>

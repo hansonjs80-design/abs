@@ -45,10 +45,9 @@ export default function ShockwaveSettlementHorizontalCompactView({
   onRecentPeriodInputChange,
   prescriptions,
   settlement,
-  viewModeSelector,
 }) {
   const incentiveRate = (Number(incentivePercentage) || 0) / 100;
-  const displayedPrescriptions = prescriptions.length > 0 ? prescriptions : ['-'];
+  const visibleTherapistSummaries = settlement.summaryByTherapist.filter((item) => item.totalCount > 0);
 
   return (
     <div className="sw-horizontal2-layout">
@@ -56,15 +55,17 @@ export default function ShockwaveSettlementHorizontalCompactView({
         <div className="sw-horizontal2-title-row">
           <h2>{currentMonth}월 충격파 결산</h2>
           <div className="sw-settlement-meta">
-            {viewModeSelector}
             <span>인센티브 {Number(incentivePercentage) || 0}%</span>
           </div>
         </div>
 
         <div className="sw-horizontal2-therapist-list">
-          {settlement.summaryByTherapist.map((item, therapistIndex) => {
+          {visibleTherapistSummaries.map((item, therapistIndex) => {
             const toneClass = `therapist-tone-${therapistIndex % 5}`;
             const therapistKey = item.therapist.id || item.therapist.name || therapistIndex;
+            const displayedPrescriptions = prescriptions.filter((prescription) => (
+              (item.countsByPrescription[prescription] || 0) > 0
+            ));
             return (
               <section key={therapistKey} className="sw-horizontal2-therapist-section">
                 <table className="sw-settlement-table sw-horizontal2-therapist-table">
@@ -86,7 +87,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                       return (
                         <tr key={`${therapistKey}-${prescription}`}>
                           {prescriptionIndex === 0 && (
-                            <th className={`therapist-name-col ${toneClass}`} rowSpan={displayedPrescriptions.length + 1}>
+                            <th className={`therapist-name-col ${toneClass}`} rowSpan={displayedPrescriptions.length}>
                               <TherapistNameStack name={item.therapist.name} />
                             </th>
                           )}
@@ -98,6 +99,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                       );
                     })}
                     <tr className={`horizontal2-total-row ${toneClass}`}>
+                      <th className="therapist-total-spacer" aria-hidden="true"></th>
                       <th>합계</th>
                       <td>{formatOptionalCount(item.totalCount)}</td>
                       <td className="amount-val">{formatCurrency(item.amount)}</td>
