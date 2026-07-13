@@ -262,7 +262,7 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   width: 46px !important;
   padding-left: 2px !important;
   padding-right: 2px !important;
-  font-size: 13.2px !important;
+  font-size: 14.2px !important;
   color: #7f1d1d !important;
   font-weight: 900 !important;
   border-bottom: 2px solid #64748b !important;
@@ -339,13 +339,14 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 }
 
 .sw-horizontal2-therapist-table .horizontal2-header-row {
-  height: 23.2px !important;
+  height: 30px !important;
 }
 
 .sw-horizontal2-therapist-table .horizontal2-header-row th:not(.therapist-name-col) {
-  height: 23.2px !important;
+  height: 30px !important;
   padding-top: 1px !important;
   padding-bottom: 1px !important;
+  font-size: 15px !important;
   line-height: 1 !important;
 }
 
@@ -362,12 +363,12 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 }
 
 .sw-horizontal2-therapist-total-table .horizontal2-total-row {
-  height: 19.3px !important;
+  height: 27px !important;
 }
 
 .sw-horizontal2-therapist-total-table .horizontal2-total-row > th,
 .sw-horizontal2-therapist-total-table .horizontal2-total-row > td {
-  height: 19.3px !important;
+  height: 27px !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
   font-size: 14.6px !important;
@@ -625,13 +626,14 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .horizontal2-header-row {
-    height: 4.28mm !important;
+    height: 5.5mm !important;
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .horizontal2-header-row th:not(.therapist-name-col) {
-    height: 4.28mm !important;
+    height: 5.5mm !important;
     padding-top: 0.25mm !important;
     padding-bottom: 0.25mm !important;
+    font-size: 9.3pt !important;
     line-height: 0.95 !important;
   }
 
@@ -654,6 +656,10 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table tbody th,
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table tbody td {
     font-size: 7.8pt !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .therapist-name-col {
+    font-size: 8.4pt !important;
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table tbody tr:not(.current-period-row) th,
@@ -700,12 +706,12 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-total-table .horizontal2-total-row {
-    height: 4.14mm !important;
+    height: 5.8mm !important;
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-total-table .horizontal2-total-row > th,
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-total-table .horizontal2-total-row > td {
-    height: 4.14mm !important;
+    height: 5.8mm !important;
     padding-top: 0.2mm !important;
     padding-bottom: 0.2mm !important;
     font-size: 9pt !important;
