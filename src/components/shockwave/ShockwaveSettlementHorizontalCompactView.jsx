@@ -85,7 +85,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                       const prescriptionAmount = count * unitPrice;
                       const prescriptionIncentive = Math.round(prescriptionAmount * incentiveRate);
                       return (
-                        <tr key={`${therapistKey}-${prescription}`}>
+                        <tr key={`${therapistKey}-${prescription}`} className="horizontal2-content-row">
                           {prescriptionIndex === 0 && (
                             <th className={`therapist-name-col ${toneClass}`} rowSpan={displayedPrescriptions.length}>
                               <TherapistNameStack name={item.therapist.name} />
@@ -98,10 +98,13 @@ export default function ShockwaveSettlementHorizontalCompactView({
                         </tr>
                       );
                     })}
+                  </tbody>
+                </table>
+                <table className="sw-settlement-table sw-horizontal2-therapist-total-table">
+                  <tbody>
                     <tr className={`horizontal2-total-row ${toneClass}`}>
-                      <th className="therapist-total-spacer" aria-hidden="true"></th>
-                      <th>합계</th>
-                      <td>{formatOptionalCount(item.totalCount)}</td>
+                      <th className="horizontal2-total-label">합계</th>
+                      <td className="count-val">{formatOptionalCount(item.totalCount)}</td>
                       <td className="amount-val">{formatCurrency(item.amount)}</td>
                       <td className="incentive-val">{formatCurrency(item.incentive)}</td>
                     </tr>
