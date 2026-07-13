@@ -2187,11 +2187,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     });
   }, [effectiveMemos, prepareDefaultEditMerge]);
 
-  const openSelectedCellContextSubmenu = useCallback((submenu, { standaloneBodyPart = false, focusMemoInput = false } = {}) => {
+  const openSelectedCellContextSubmenu = useCallback((submenu, { standaloneSubmenu = false, focusMemoInput = false } = {}) => {
     if (!selectedCell) return;
     const { w, d, r, c } = selectedCell;
     const keyStr = cellKey(w, d, r, c);
     const memo = effectiveMemos[keyStr] || {};
+    const standalonePanelWidth = submenu === 'memo' ? 340 : 320;
     
     let targetX = window.innerWidth / 2;
     let targetY = window.innerHeight / 2;
@@ -2208,9 +2209,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       targetX = rect.right + 8; // 셀 바로 우측
       targetY = rect.top;
       
-      // 우측 공간이 팝업창 너비(약 260px)보다 부족하면 좌측에 배치
-      if (targetX + 260 > window.innerWidth) {
-        targetX = Math.max(10, rect.left - 260);
+      // 우측 공간이 입력 패널 너비보다 부족하면 좌측에 배치
+      if (targetX + standalonePanelWidth > window.innerWidth) {
+        targetX = Math.max(10, rect.left - standalonePanelWidth);
       }
     } else {
       // DOM을 못 찾을 경우 폴백 (마우스 위치)
@@ -2218,8 +2219,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       const mouseY = tooltipMousePosRef.current?.y || targetY;
       targetX = mouseX + 160;
       targetY = Math.max(10, mouseY + 15);
-      if (targetX + 280 > window.innerWidth) {
-        targetX = Math.max(10, mouseX - 260);
+      if (targetX + standalonePanelWidth > window.innerWidth) {
+        targetX = Math.max(10, mouseX - standalonePanelWidth);
       }
     }
     
@@ -2231,8 +2232,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     };
     
     handleCellContextMenu(mockEvent, w, d, r, c, memo.prescription || '', '');
-    if (standaloneBodyPart) {
-      setContextMenu(prev => prev ? { ...prev, isStandaloneBodyPart: true } : null);
+    if (standaloneSubmenu) {
+      setContextMenu(prev => prev ? { ...prev, isStandaloneSubmenu: true } : null);
     }
     setActiveContextSubmenu(submenu);
     if (focusMemoInput) {
@@ -2241,11 +2242,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   }, [selectedCell, cellKey, effectiveMemos, handleCellContextMenu, setActiveContextSubmenu, setContextMenu, getEffectiveMergeSpan]);
 
   const handleOpenBodyPartMenu = useCallback(() => {
-    openSelectedCellContextSubmenu('body', { standaloneBodyPart: true });
+    openSelectedCellContextSubmenu('body', { standaloneSubmenu: true });
   }, [openSelectedCellContextSubmenu]);
 
   const handleOpenMemoMenu = useCallback(() => {
-    openSelectedCellContextSubmenu('memo', { focusMemoInput: true });
+    openSelectedCellContextSubmenu('memo', { standaloneSubmenu: true, focusMemoInput: true });
   }, [openSelectedCellContextSubmenu]);
 
   const positionTooltip = useCallback((clientX, clientY) => {
@@ -3109,7 +3110,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       {contextMenu && (
         <div
           ref={contextMenuRef}
-          className={`shockwave-context-menu schedule-context-menu ${contextMenu.isNearRightEdge ? 'submenu-pop-left' : ''} ${contextMenu.isStandaloneBodyPart ? 'standalone-mode' : ''}`}
+          className={`shockwave-context-menu schedule-context-menu ${contextMenu.isNearRightEdge ? 'submenu-pop-left' : ''} ${(contextMenu.isStandaloneSubmenu || contextMenu.isStandaloneBodyPart) ? 'standalone-mode' : ''}`}
           style={{
             top: contextMenu.y,
             left: contextMenu.x,

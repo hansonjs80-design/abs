@@ -4112,7 +4112,7 @@
   backdrop-filter: blur(1px);
 }
 
-/* Standalone Body Part Submenu Mode */
+/* Standalone submenu mode for keyboard-opened panels */
 .shockwave-context-menu.standalone-mode {
   padding: 0 !important;
   border: none !important;

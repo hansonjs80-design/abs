@@ -83,9 +83,12 @@ export default function useContextMenuPositioning({
       setContextSubmenuOffsetY(0);
       return undefined;
     }
-    const frame = window.requestAnimationFrame(repositionContextSubmenu);
+    const frame = window.requestAnimationFrame(() => {
+      repositionContextMenu();
+      repositionContextSubmenu();
+    });
     return () => window.cancelAnimationFrame(frame);
-  }, [contextMenu, activeContextSubmenu, repositionContextSubmenu]);
+  }, [contextMenu, activeContextSubmenu, repositionContextMenu, repositionContextSubmenu]);
 
   return { contextSubmenuOffsetY };
 }
