@@ -70,7 +70,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
               <section key={therapistKey} className="sw-horizontal2-therapist-section">
                 <table className="sw-settlement-table sw-horizontal2-therapist-table">
                   <tbody>
-                    <tr className="horizontal2-header-row">
+                    <tr className={`horizontal2-header-row ${toneClass}`}>
                       <th className={`therapist-name-col ${toneClass}`} rowSpan={displayedPrescriptions.length + 1}>
                         <TherapistNameStack name={item.therapist.name} />
                       </th>

@@ -350,6 +350,18 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   line-height: 1 !important;
 }
 
+.sw-horizontal2-therapist-table .horizontal2-header-row.therapist-tone-0 th:not(.therapist-name-col) {
+  background: #ffd966 !important;
+}
+
+.sw-horizontal2-therapist-table .horizontal2-header-row.therapist-tone-1 th:not(.therapist-name-col) {
+  background: #b4a7d6 !important;
+}
+
+.sw-horizontal2-therapist-table .horizontal2-header-row.therapist-tone-2 th:not(.therapist-name-col) {
+  background: #93c47d !important;
+}
+
 .sw-horizontal2-therapist-table tbody tr.horizontal2-content-row {
   height: 22.2px !important;
 }
@@ -659,6 +671,18 @@ body.shockwave-settlement-print .sw-view-mode-btn {
     padding-bottom: 0.25mm !important;
     font-size: 9.3pt !important;
     line-height: 0.95 !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .horizontal2-header-row.therapist-tone-0 th:not(.therapist-name-col) {
+    background: #ffd966 !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .horizontal2-header-row.therapist-tone-1 th:not(.therapist-name-col) {
+    background: #b4a7d6 !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .horizontal2-header-row.therapist-tone-2 th:not(.therapist-name-col) {
+    background: #93c47d !important;
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .therapist-label-col,
