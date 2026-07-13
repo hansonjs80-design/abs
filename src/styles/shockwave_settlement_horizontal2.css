@@ -70,6 +70,10 @@
   gap: 9px !important;
 }
 
+.sw-horizontal2-right {
+  gap: 9px !important;
+}
+
 .sw-horizontal2-title-row {
   display: flex !important;
   align-items: center !important;
@@ -148,10 +152,10 @@
 .sw-horizontal2-recent-table th,
 .sw-horizontal2-recent-table td {
   border: 1px solid #94a3b8 !important;
-  padding: 2px 5px !important;
+  padding: 1px 5px !important;
   color: #334155 !important;
   font-size: 12.4px !important;
-  line-height: 1.05 !important;
+  line-height: 1 !important;
   text-align: center !important;
   vertical-align: middle !important;
   white-space: nowrap !important;
@@ -166,7 +170,9 @@
   color: #0f172a !important;
   font-weight: 900 !important;
   font-size: 13.5px !important;
-  line-height: 1.05 !important;
+  line-height: 1.08 !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
 }
 
 .sw-horizontal2-therapist-table .therapist-label-col {
@@ -208,7 +214,10 @@
   width: 46px !important;
   padding-left: 2px !important;
   padding-right: 2px !important;
-  border: 0 !important;
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  border-left: 0 !important;
+  border-right: 2px solid #475569 !important;
   background: transparent !important;
   box-shadow: none !important;
   color: transparent !important;
@@ -219,8 +228,8 @@
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 0 !important;
-  line-height: 0.98 !important;
+  gap: 1px !important;
+  line-height: 1.14 !important;
 }
 
 .sw-horizontal2-therapist-table .therapist-name-col.therapist-tone-0 {
@@ -310,8 +319,11 @@
 }
 
 .sw-horizontal2-therapist-table .horizontal2-total-row .therapist-total-spacer {
-  visibility: hidden !important;
-  border: hidden !important;
+  visibility: visible !important;
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  border-left: 0 !important;
+  border-right: 2px solid #475569 !important;
   background: transparent !important;
   box-shadow: none !important;
   color: transparent !important;
@@ -395,6 +407,7 @@
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-left,
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-right,
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-list {
     gap: 2.4mm !important;
   }
@@ -453,9 +466,9 @@
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table td,
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table th,
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table td {
-    padding: 0.5mm 0.55mm !important;
+    padding: 0.4mm 0.55mm !important;
     font-size: 7.5pt !important;
-    line-height: 1.02 !important;
+    line-height: 1 !important;
     border: 0.45pt solid #64748b !important;
     overflow: hidden !important;
     text-overflow: clip !important;
@@ -471,7 +484,10 @@
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .therapist-total-spacer {
-    border: 0 !important;
+    border-top: 0 !important;
+    border-bottom: 0 !important;
+    border-left: 0 !important;
+    border-right: 0.8pt solid #475569 !important;
     background: transparent !important;
     box-shadow: none !important;
     color: transparent !important;
@@ -545,8 +561,11 @@
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .horizontal2-total-row .therapist-total-spacer {
-    visibility: hidden !important;
-    border: hidden !important;
+    visibility: visible !important;
+    border-top: 0 !important;
+    border-bottom: 0 !important;
+    border-left: 0 !important;
+    border-right: 0.8pt solid #475569 !important;
     background: transparent !important;
     box-shadow: none !important;
     color: transparent !important;
