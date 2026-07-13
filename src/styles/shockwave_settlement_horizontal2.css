@@ -339,11 +339,11 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 }
 
 .sw-horizontal2-therapist-table .horizontal2-header-row {
-  height: 16.8px !important;
+  height: 20.2px !important;
 }
 
 .sw-horizontal2-therapist-table .horizontal2-header-row th:not(.therapist-name-col) {
-  height: 16.8px !important;
+  height: 20.2px !important;
   padding-top: 1px !important;
   padding-bottom: 1px !important;
   line-height: 1 !important;
@@ -362,12 +362,12 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 }
 
 .sw-horizontal2-therapist-total-table .horizontal2-total-row {
-  height: 14px !important;
+  height: 16.8px !important;
 }
 
 .sw-horizontal2-therapist-total-table .horizontal2-total-row > th,
 .sw-horizontal2-therapist-total-table .horizontal2-total-row > td {
-  height: 14px !important;
+  height: 16.8px !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
   line-height: 0.95 !important;
@@ -624,11 +624,11 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .horizontal2-header-row {
-    height: 3.1mm !important;
+    height: 3.72mm !important;
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .horizontal2-header-row th:not(.therapist-name-col) {
-    height: 3.1mm !important;
+    height: 3.72mm !important;
     padding-top: 0.25mm !important;
     padding-bottom: 0.25mm !important;
     line-height: 0.95 !important;
@@ -699,12 +699,12 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-total-table .horizontal2-total-row {
-    height: 3mm !important;
+    height: 3.6mm !important;
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-total-table .horizontal2-total-row > th,
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-total-table .horizontal2-total-row > td {
-    height: 3mm !important;
+    height: 3.6mm !important;
     padding-top: 0.2mm !important;
     padding-bottom: 0.2mm !important;
     line-height: 0.95 !important;
