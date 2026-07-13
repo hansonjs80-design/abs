@@ -57,6 +57,8 @@
 .sw-vertical-therapist-header {
   padding: 8px 12px !important;
   border-bottom: 1.5px solid #64748b !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
 }
 
 .sw-vertical-therapist-header h3 {
@@ -66,11 +68,9 @@
   color: #1e293b !important;
 }
 
-.sw-vertical-therapist-header.therapist-tone-0 { background-color: #fef9c3 !important; }
-.sw-vertical-therapist-header.therapist-tone-1 { background-color: #f3e8ff !important; }
-.sw-vertical-therapist-header.therapist-tone-2 { background-color: #e0f2fe !important; }
-.sw-vertical-therapist-header.therapist-tone-3 { background-color: #fee2e2 !important; }
-.sw-vertical-therapist-header.therapist-tone-4 { background-color: #dcfce7 !important; }
+.sw-vertical-therapist-header.therapist-tone-0 { background-color: #ffd966 !important; }
+.sw-vertical-therapist-header.therapist-tone-1 { background-color: #b4a7d6 !important; }
+.sw-vertical-therapist-header.therapist-tone-2 { background-color: #93c47d !important; }
 
 /* 세로 보기 테이블 기본 포맷 */
 .sw-vertical-therapist-table,
@@ -814,6 +814,24 @@
   body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-header,
   body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-card .sw-settlement-header {
     padding: 0.55mm 0.8mm !important;
+  }
+
+  body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-header.therapist-tone-0 {
+    background-color: #ffd966 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-header.therapist-tone-1 {
+    background-color: #b4a7d6 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-header.therapist-tone-2 {
+    background-color: #93c47d !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-card .sw-settlement-header {
@@ -1765,6 +1783,21 @@
   box-shadow: none !important;
 }
 
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-0 th,
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-0 td {
+  background: #ffe8a3 !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-1 th,
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-1 td {
+  background: #d2cae6 !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-2 th,
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-2 td {
+  background: #bedcb1 !important;
+}
+
 @media print {
   html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print :is(
     #root,
@@ -1797,5 +1830,34 @@
     overflow-x: clip !important;
     overflow-y: clip !important;
     scrollbar-gutter: auto !important;
+  }
+}
+
+@media print {
+  body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-0 th,
+  body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-0 td,
+  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-0 th,
+  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-0 td {
+    background: #ffe8a3 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-1 th,
+  body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-1 td,
+  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-1 th,
+  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-1 td {
+    background: #d2cae6 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-2 th,
+  body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-2 td,
+  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-2 th,
+  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-2 td {
+    background: #bedcb1 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }

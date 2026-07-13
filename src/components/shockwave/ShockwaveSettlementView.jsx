@@ -389,7 +389,7 @@ export default function ShockwaveSettlementView({
             <div className="sw-settlement-vertical-left">
               {settlement.summaryByTherapist.map((item, therapistIndex) => (
                 <div key={item.therapist.id || item.therapist.name} className="sw-vertical-therapist-card">
-                  <div className={`sw-vertical-therapist-header therapist-tone-${therapistIndex % 5}`}>
+                  <div className={`sw-vertical-therapist-header therapist-tone-${therapistIndex % 3}`}>
                     <h3>{item.therapist.name} 치료사</h3>
                   </div>
                   <div className="sw-settlement-table-wrap">
@@ -420,7 +420,7 @@ export default function ShockwaveSettlementView({
                               </tr>
                             );
                           })}
-                        <tr className="vertical-total-row">
+                        <tr className={`vertical-total-row therapist-tone-${therapistIndex % 3}`}>
                           <th>합계</th>
                           <td>{item.totalCount > 0 ? `${item.totalCount}건` : '-'}</td>
                           <td className="amount-val">{item.amount > 0 ? formatCurrency(item.amount) : '-'}</td>
