@@ -9,6 +9,7 @@ import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 import { GridSkeleton, SettlementSkeleton } from '../common/LoadingSkeleton';
 import '../../styles/shockwave_stats.css';
 import '../../styles/shockwave_settlement_vertical.css';
+import '../../styles/shockwave_settlement_horizontal2.css';
 import ShockwaveDataGrid from './ShockwaveDataGrid';
 import ShockwaveSettlementView from './ShockwaveSettlementView';
 import ShockwaveNewPatientsView from './ShockwaveNewPatientsView';

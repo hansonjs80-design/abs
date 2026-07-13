@@ -1,8 +1,9 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
+import ShockwaveSettlementHorizontalCompactView from './ShockwaveSettlementHorizontalCompactView';
 
 const SETTLEMENT_VIEW_MODE_STORAGE_KEY = 'shockwave:settlement:viewMode';
-const VIEW_MODES = new Set(['horizontal', 'vertical']);
+const VIEW_MODES = new Set(['horizontal', 'horizontal2', 'vertical']);
 
 function readStoredViewMode() {
   if (typeof window === 'undefined') return 'horizontal';
@@ -56,7 +57,7 @@ export default function ShockwaveSettlementView({
   monthlyTherapists,
   selectedTherapistNames,
 }) {
-  const [viewMode, setViewMode] = useState(readStoredViewMode); // 'horizontal' | 'vertical'
+  const [viewMode, setViewMode] = useState(readStoredViewMode); // 'horizontal' | 'horizontal2' | 'vertical'
   const handleViewModeChange = useCallback((nextViewMode) => {
     if (!VIEW_MODES.has(nextViewMode)) return;
     setViewMode(nextViewMode);
@@ -163,30 +164,41 @@ export default function ShockwaveSettlementView({
     );
   }
 
+  const viewModeSelector = (
+    <div className="sw-view-mode-selector">
+      <button
+        type="button"
+        className={`sw-view-mode-btn ${viewMode === 'horizontal' ? 'active' : ''}`}
+        onClick={() => handleViewModeChange('horizontal')}
+      >
+        가로보기
+      </button>
+      <button
+        type="button"
+        className={`sw-view-mode-btn ${viewMode === 'horizontal2' ? 'active' : ''}`}
+        onClick={() => handleViewModeChange('horizontal2')}
+      >
+        가로보기 2
+      </button>
+      <button
+        type="button"
+        className={`sw-view-mode-btn ${viewMode === 'vertical' ? 'active' : ''}`}
+        onClick={() => handleViewModeChange('vertical')}
+      >
+        세로보기
+      </button>
+    </div>
+  );
+
   return (
-    <div className={`sw-settlement-stack sw-settlement-stack--shockwave ${viewMode === 'vertical' ? 'sw-settlement-stack--vertical' : ''}`}>
+    <div className={`sw-settlement-stack sw-settlement-stack--shockwave ${viewMode === 'vertical' ? 'sw-settlement-stack--vertical' : ''} ${viewMode === 'horizontal2' ? 'sw-settlement-stack--horizontal2' : ''}`}>
       {viewMode === 'horizontal' ? (
         <>
           <div className="sw-settlement-card sw-settlement-main-card">
             <div className="sw-settlement-header">
               <h2>{currentMonth}월 충격파 결산</h2>
               <div className="sw-settlement-meta">
-                <div className="sw-view-mode-selector">
-                  <button
-                    type="button"
-                    className={`sw-view-mode-btn ${viewMode === 'horizontal' ? 'active' : ''}`}
-                    onClick={() => handleViewModeChange('horizontal')}
-                  >
-                    가로 보기
-                  </button>
-                  <button
-                    type="button"
-                    className={`sw-view-mode-btn ${viewMode === 'vertical' ? 'active' : ''}`}
-                    onClick={() => handleViewModeChange('vertical')}
-                  >
-                    세로 보기
-                  </button>
-                </div>
+                {viewModeSelector}
                 <span>인센티브 {Number(incentivePercentage) || 0}%</span>
               </div>
             </div>
@@ -346,6 +358,19 @@ export default function ShockwaveSettlementView({
             </div>
           </div>
         </>
+      ) : viewMode === 'horizontal2' ? (
+        <ShockwaveSettlementHorizontalCompactView
+          currentMonth={currentMonth}
+          incentivePercentage={incentivePercentage}
+          normalizedPriceMap={normalizedPriceMap}
+          onRecentPeriodInputChange={onRecentPeriodInputChange}
+          prescriptions={safePrescriptions}
+          recentMonthlySummaries={safeRecentMonthlySummaries}
+          recentPeriodInput={recentPeriodInput}
+          recentPeriodLabel={recentPeriodLabel}
+          settlement={settlement}
+          viewModeSelector={viewModeSelector}
+        />
       ) : (
         <>
         <div className="sw-settlement-vertical-layout">
@@ -353,22 +378,7 @@ export default function ShockwaveSettlementView({
             <div className="sw-settlement-header">
               <h2>{currentMonth}월 충격파 결산</h2>
               <div className="sw-settlement-meta">
-                <div className="sw-view-mode-selector">
-                  <button
-                    type="button"
-                    className={`sw-view-mode-btn ${viewMode === 'horizontal' ? 'active' : ''}`}
-                    onClick={() => handleViewModeChange('horizontal')}
-                  >
-                    가로 보기
-                  </button>
-                  <button
-                    type="button"
-                    className={`sw-view-mode-btn ${viewMode === 'vertical' ? 'active' : ''}`}
-                    onClick={() => handleViewModeChange('vertical')}
-                  >
-                    세로 보기
-                  </button>
-                </div>
+                {viewModeSelector}
                 <span>인센티브 {Number(incentivePercentage) || 0}%</span>
               </div>
             </div>

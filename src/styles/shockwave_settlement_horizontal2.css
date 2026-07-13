@@ -1,0 +1,457 @@
+/* 충격파 결산 보기 전환 버튼 */
+.sw-view-mode-selector {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  background: #f8fafc !important;
+  padding: 2px !important;
+  border-radius: 6px !important;
+  border: 1px solid #cbd5e1 !important;
+  margin-right: 12px !important;
+}
+
+.sw-view-mode-btn {
+  border: none !important;
+  background: transparent !important;
+  padding: 4px 10px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  color: #64748b !important;
+  transition: all 0.15s ease !important;
+  outline: none !important;
+  line-height: 1.2 !important;
+}
+
+.sw-view-mode-btn.active {
+  background: #1e3a8a !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* 충격파 결산 가로보기 2 */
+.sw-settlement-stack--horizontal2 {
+  width: max-content !important;
+  max-width: none !important;
+}
+
+.sw-horizontal2-layout {
+  display: grid !important;
+  grid-template-columns: 390px 380px !important;
+  gap: 28px !important;
+  align-items: start !important;
+  width: max-content !important;
+  padding: 18px 22px !important;
+  background: #ffffff !important;
+}
+
+.sw-horizontal2-left,
+.sw-horizontal2-right,
+.sw-horizontal2-therapist-list {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+}
+
+.sw-horizontal2-left,
+.sw-horizontal2-therapist-list {
+  gap: 12px !important;
+}
+
+.sw-horizontal2-title-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  min-height: 24px !important;
+  margin: 0 0 4px !important;
+}
+
+.sw-horizontal2-title-row h2 {
+  margin: 0 !important;
+  color: #0f172a !important;
+  font-size: 16px !important;
+  font-weight: 900 !important;
+  line-height: 1.15 !important;
+  white-space: nowrap !important;
+}
+
+.sw-horizontal2-title-row .sw-settlement-meta {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.sw-horizontal2-title-row .sw-settlement-meta span {
+  color: #334155 !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+}
+
+.sw-horizontal2-recent-title-row {
+  justify-content: flex-start !important;
+}
+
+.sw-horizontal2-period-input {
+  width: 82px !important;
+  height: 24px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 4px !important;
+  padding: 2px 6px !important;
+  color: #334155 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  background: #ffffff !important;
+}
+
+.sw-horizontal2-therapist-table,
+.sw-horizontal2-grand-table,
+.sw-horizontal2-recent-table {
+  border-collapse: collapse !important;
+  table-layout: fixed !important;
+  background: #ffffff !important;
+  border: 2px solid #64748b !important;
+  box-shadow: none !important;
+}
+
+.sw-horizontal2-therapist-table {
+  width: 390px !important;
+}
+
+.sw-horizontal2-grand-table {
+  width: 348px !important;
+  margin: 8px 0 0 40px !important;
+}
+
+.sw-horizontal2-recent-table {
+  width: 380px !important;
+}
+
+.sw-horizontal2-therapist-table th,
+.sw-horizontal2-therapist-table td,
+.sw-horizontal2-grand-table th,
+.sw-horizontal2-grand-table td,
+.sw-horizontal2-recent-table th,
+.sw-horizontal2-recent-table td {
+  border: 1px solid #94a3b8 !important;
+  padding: 3px 5px !important;
+  color: #334155 !important;
+  font-size: 12px !important;
+  line-height: 1.15 !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.sw-horizontal2-therapist-table thead th,
+.sw-horizontal2-recent-table thead th,
+.sw-horizontal2-grand-table tbody tr:first-child th:not(.grand-title) {
+  background: #dbeafe !important;
+  color: #0f172a !important;
+  font-weight: 900 !important;
+}
+
+.sw-horizontal2-therapist-table .therapist-label-col {
+  width: 38px !important;
+}
+
+.sw-horizontal2-therapist-table th:nth-child(2),
+.sw-horizontal2-therapist-table td.prescription-name {
+  width: 72px !important;
+}
+
+.sw-horizontal2-therapist-table th:nth-child(3),
+.sw-horizontal2-therapist-table td.count-val {
+  width: 56px !important;
+}
+
+.sw-horizontal2-therapist-table th:nth-child(4),
+.sw-horizontal2-therapist-table td.amount-val {
+  width: 112px !important;
+}
+
+.sw-horizontal2-therapist-table th:nth-child(5),
+.sw-horizontal2-therapist-table td.incentive-val {
+  width: 112px !important;
+}
+
+.sw-horizontal2-therapist-table .therapist-name-col {
+  width: 38px !important;
+  color: #7f1d1d !important;
+  font-weight: 900 !important;
+}
+
+.sw-horizontal2-therapist-name-stack {
+  display: inline-flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 1px !important;
+  line-height: 1.05 !important;
+}
+
+.sw-horizontal2-therapist-table .therapist-name-col.therapist-tone-0 {
+  background: #fef3c7 !important;
+}
+
+.sw-horizontal2-therapist-table .therapist-name-col.therapist-tone-1 {
+  background: #ede9fe !important;
+  color: #4c1d95 !important;
+}
+
+.sw-horizontal2-therapist-table .therapist-name-col.therapist-tone-2 {
+  background: #dcfce7 !important;
+  color: #14532d !important;
+}
+
+.sw-horizontal2-therapist-table .therapist-name-col.therapist-tone-3 {
+  background: #fee2e2 !important;
+  color: #7f1d1d !important;
+}
+
+.sw-horizontal2-therapist-table .therapist-name-col.therapist-tone-4 {
+  background: #e0f2fe !important;
+  color: #075985 !important;
+}
+
+.sw-horizontal2-therapist-table .prescription-name,
+.sw-horizontal2-therapist-table .count-val,
+.sw-horizontal2-grand-table td,
+.sw-horizontal2-recent-table td,
+.sw-horizontal2-recent-table .month-label {
+  font-weight: 800 !important;
+}
+
+.sw-horizontal2-therapist-table .amount-val,
+.sw-horizontal2-grand-table .amount-val,
+.sw-horizontal2-recent-table .amount-val {
+  color: #0047cc !important;
+  font-weight: 900 !important;
+}
+
+.sw-horizontal2-therapist-table .incentive-val,
+.sw-horizontal2-grand-table .incentive-val {
+  color: #7c3aed !important;
+  font-weight: 900 !important;
+}
+
+.sw-horizontal2-therapist-table .horizontal2-total-row th,
+.sw-horizontal2-therapist-table .horizontal2-total-row td,
+.sw-horizontal2-grand-table .grand-title,
+.sw-horizontal2-grand-table .horizontal2-grand-total-row td {
+  background: #fff7cc !important;
+  color: #003da5 !important;
+  font-weight: 900 !important;
+}
+
+.sw-horizontal2-therapist-table .horizontal2-total-row.therapist-tone-0 th,
+.sw-horizontal2-therapist-table .horizontal2-total-row.therapist-tone-0 td {
+  background: #fff7cc !important;
+}
+
+.sw-horizontal2-therapist-table .horizontal2-total-row.therapist-tone-1 th,
+.sw-horizontal2-therapist-table .horizontal2-total-row.therapist-tone-1 td {
+  background: #ede9fe !important;
+}
+
+.sw-horizontal2-therapist-table .horizontal2-total-row.therapist-tone-2 th,
+.sw-horizontal2-therapist-table .horizontal2-total-row.therapist-tone-2 td {
+  background: #dcfce7 !important;
+}
+
+.sw-horizontal2-therapist-table .horizontal2-total-row.therapist-tone-3 th,
+.sw-horizontal2-therapist-table .horizontal2-total-row.therapist-tone-3 td {
+  background: #fee2e2 !important;
+}
+
+.sw-horizontal2-therapist-table .horizontal2-total-row.therapist-tone-4 th,
+.sw-horizontal2-therapist-table .horizontal2-total-row.therapist-tone-4 td {
+  background: #e0f2fe !important;
+}
+
+.sw-horizontal2-grand-table .grand-title {
+  width: 82px !important;
+  color: #0f172a !important;
+}
+
+.sw-horizontal2-grand-table th:not(.grand-title),
+.sw-horizontal2-grand-table td {
+  width: 88px !important;
+}
+
+.sw-horizontal2-grand-table .horizontal2-grand-total-row .incentive-val {
+  color: #ef0000 !important;
+}
+
+.sw-horizontal2-recent-table th:first-child,
+.sw-horizontal2-recent-table td:first-child {
+  width: 96px !important;
+}
+
+.sw-horizontal2-recent-table th:nth-child(2),
+.sw-horizontal2-recent-table td:nth-child(2) {
+  width: 70px !important;
+}
+
+.sw-horizontal2-recent-table th:nth-child(3),
+.sw-horizontal2-recent-table td:nth-child(3) {
+  width: 132px !important;
+}
+
+.sw-horizontal2-recent-table th:nth-child(4),
+.sw-horizontal2-recent-table td:nth-child(4) {
+  width: 82px !important;
+}
+
+.sw-horizontal2-recent-table .new-patient-val {
+  color: #7c3aed !important;
+  font-weight: 900 !important;
+}
+
+.sw-horizontal2-recent-table .current-period-row th,
+.sw-horizontal2-recent-table .current-period-row td {
+  background: #ede9fe !important;
+  color: #a100ff !important;
+  font-weight: 900 !important;
+}
+
+@media print {
+  body.settlement-print .sw-view-mode-selector,
+  body.settlement-print .sw-horizontal2-title-row .sw-settlement-meta,
+  body.settlement-print .sw-horizontal2-period-input {
+    display: none !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--horizontal2 {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--horizontal2 .sw-horizontal2-layout {
+    display: grid !important;
+    grid-template-columns: 92mm 88mm !important;
+    gap: 8mm !important;
+    align-items: start !important;
+    width: 188mm !important;
+    max-width: 188mm !important;
+    margin: 7mm auto 0 !important;
+    padding: 0 !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-left,
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-list {
+    gap: 3mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-title-row {
+    min-height: 0 !important;
+    margin: 0 0 1.5mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-title-row h2 {
+    font-size: 10.5pt !important;
+    line-height: 1.1 !important;
+    color: #000000 !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table {
+    width: 92mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table {
+    width: 82mm !important;
+    margin: 4mm 0 0 9.5mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table {
+    width: 88mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table,
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table,
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table {
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    border: 0.6pt solid #475569 !important;
+    margin-bottom: 0 !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table th,
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table td,
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table th,
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table td,
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table th,
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table td {
+    padding: 0.9mm 0.8mm !important;
+    font-size: 7.4pt !important;
+    line-height: 1.05 !important;
+    border: 0.45pt solid #64748b !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table thead th,
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table tbody tr:first-child th:not(.grand-title),
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table thead th {
+    font-size: 7pt !important;
+    font-weight: 900 !important;
+    background: #dbeafe !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .therapist-label-col,
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .therapist-name-col {
+    width: 9.5mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table th:nth-child(2),
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table td.prescription-name {
+    width: 17mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table th:nth-child(3),
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table td.count-val {
+    width: 13mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table th:nth-child(4),
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table td.amount-val,
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table th:nth-child(5),
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table td.incentive-val {
+    width: 26.25mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table .grand-title {
+    width: 18mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table th:not(.grand-title),
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table td {
+    width: 21.3mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table th:first-child,
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table td:first-child {
+    width: 24mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table th:nth-child(2),
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table td:nth-child(2) {
+    width: 15mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table th:nth-child(3),
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table td:nth-child(3) {
+    width: 32mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table th:nth-child(4),
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table td:nth-child(4) {
+    width: 17mm !important;
+  }
+}
