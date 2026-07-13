@@ -48,6 +48,9 @@ export default function ShockwaveSettlementHorizontalCompactView({
 }) {
   const incentiveRate = (Number(incentivePercentage) || 0) / 100;
   const visibleTherapistSummaries = settlement.summaryByTherapist.filter((item) => item.totalCount > 0);
+  const displayedPrescriptions = prescriptions.filter((prescription) => (
+    (settlement.grandPrescriptionCounts[prescription] || 0) > 0
+  ));
 
   return (
     <div className="sw-horizontal2-layout">
@@ -63,9 +66,6 @@ export default function ShockwaveSettlementHorizontalCompactView({
           {visibleTherapistSummaries.map((item, therapistIndex) => {
             const toneClass = `therapist-tone-${therapistIndex % 5}`;
             const therapistKey = item.therapist.id || item.therapist.name || therapistIndex;
-            const displayedPrescriptions = prescriptions.filter((prescription) => (
-              (item.countsByPrescription[prescription] || 0) > 0
-            ));
             return (
               <section key={therapistKey} className="sw-horizontal2-therapist-section">
                 <table className="sw-settlement-table sw-horizontal2-therapist-table">
@@ -92,7 +92,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                             </th>
                           )}
                           <td className="prescription-name">{prescription}</td>
-                          <td className="count-val">{formatOptionalCount(count)}</td>
+                          <td className="count-val">{formatCount(count)}</td>
                           <td className="amount-val">{formatCurrency(prescriptionAmount)}</td>
                           <td className="incentive-val">{formatCurrency(prescriptionIncentive)}</td>
                         </tr>

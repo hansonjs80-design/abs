@@ -82,7 +82,7 @@
 .sw-horizontal2-title-row h2 {
   margin: 0 !important;
   color: #0f172a !important;
-  font-size: 15px !important;
+  font-size: 16.5px !important;
   font-weight: 900 !important;
   line-height: 1.15 !important;
   white-space: nowrap !important;
@@ -150,7 +150,7 @@
   border: 1px solid #94a3b8 !important;
   padding: 2px 4px !important;
   color: #334155 !important;
-  font-size: 12px !important;
+  font-size: 10.6px !important;
   line-height: 1.04 !important;
   text-align: center !important;
   vertical-align: middle !important;
@@ -165,7 +165,7 @@
   background: #d9edf2 !important;
   color: #0f172a !important;
   font-weight: 900 !important;
-  font-size: 11.5px !important;
+  font-size: 12.8px !important;
   line-height: 1.08 !important;
 }
 
@@ -207,6 +207,9 @@
   width: 42px !important;
   padding-left: 2px !important;
   padding-right: 2px !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
   color: transparent !important;
 }
 
@@ -386,7 +389,7 @@
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-title-row h2 {
-    font-size: 9.8pt !important;
+    font-size: 10.4pt !important;
     line-height: 1.1 !important;
     color: #000000 !important;
   }
@@ -435,7 +438,7 @@
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table th,
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table td {
     padding: 0.7mm 0.6mm !important;
-    font-size: 7.4pt !important;
+    font-size: 6.6pt !important;
     line-height: 1.05 !important;
     border: 0.45pt solid #64748b !important;
     overflow: hidden !important;
@@ -446,9 +449,16 @@
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table thead th,
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table tbody tr:first-child th:not(.grand-title),
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table thead th {
-    font-size: 7pt !important;
+    font-size: 7.6pt !important;
     font-weight: 900 !important;
     background: #dbeafe !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .therapist-total-spacer {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: transparent !important;
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .therapist-label-col,

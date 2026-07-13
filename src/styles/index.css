@@ -561,6 +561,19 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     display: block !important;
   }
 
+  body.settlement-print .sw-settlement-view-mode-row,
+  body.settlement-print .sw-view-mode-selector,
+  body.shockwave-settlement-print .sw-settlement-view-mode-row,
+  body.shockwave-settlement-print .sw-view-mode-selector {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
   body.new-patient-print .sw-settlement-header,
   body.new-patient-print .sw-settlement-meta,
   body.settlement-print .sw-settlement-header,
