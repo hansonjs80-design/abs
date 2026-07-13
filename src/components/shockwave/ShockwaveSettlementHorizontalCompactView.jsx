@@ -69,28 +69,23 @@ export default function ShockwaveSettlementHorizontalCompactView({
             return (
               <section key={therapistKey} className="sw-horizontal2-therapist-section">
                 <table className="sw-settlement-table sw-horizontal2-therapist-table">
-                  <thead>
-                    <tr>
-                      <th className="therapist-label-col">치료사</th>
+                  <tbody>
+                    <tr className="horizontal2-header-row">
+                      <th className={`therapist-name-col ${toneClass}`} rowSpan={displayedPrescriptions.length + 1}>
+                        <TherapistNameStack name={item.therapist.name} />
+                      </th>
                       <th>처방명</th>
                       <th>건수</th>
                       <th>건별 결산금액</th>
                       <th>건별 인센티브</th>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {displayedPrescriptions.map((prescription, prescriptionIndex) => {
+                    {displayedPrescriptions.map((prescription) => {
                       const count = item.countsByPrescription[prescription] || 0;
                       const unitPrice = normalizedPriceMap[normalizePrescriptionKey(prescription)] || 0;
                       const prescriptionAmount = count * unitPrice;
                       const prescriptionIncentive = Math.round(prescriptionAmount * incentiveRate);
                       return (
                         <tr key={`${therapistKey}-${prescription}`} className="horizontal2-content-row">
-                          {prescriptionIndex === 0 && (
-                            <th className={`therapist-name-col ${toneClass}`} rowSpan={displayedPrescriptions.length}>
-                              <TherapistNameStack name={item.therapist.name} />
-                            </th>
-                          )}
                           <td className="prescription-name">{prescription}</td>
                           <td className="count-val">{formatCount(count)}</td>
                           <td className="amount-val">{formatCurrency(prescriptionAmount)}</td>

@@ -63,6 +63,25 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   overflow: hidden !important;
 }
 
+@media print {
+  .sw-settlement-view-mode-row,
+  .sw-settlement-view-mode-row *,
+  .sw-view-mode-selector,
+  .sw-view-mode-selector *,
+  .sw-view-mode-btn {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    overflow: hidden !important;
+  }
+}
+
 /* 충격파 결산 가로보기 2 */
 .sw-settlement-stack--horizontal2 {
   width: max-content !important;
@@ -94,6 +113,10 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 
 .sw-horizontal2-right {
   gap: 9px !important;
+}
+
+.sw-horizontal2-right .sw-horizontal2-title-row {
+  margin-bottom: 9px !important;
 }
 
 .sw-horizontal2-title-row {
@@ -196,6 +219,7 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 }
 
 .sw-horizontal2-therapist-table thead th,
+.sw-horizontal2-therapist-table .horizontal2-header-row th:not(.therapist-name-col),
 .sw-horizontal2-recent-table thead th,
 .sw-horizontal2-grand-table tbody tr:first-child th:not(.grand-title) {
   background: #d9edf2 !important;
@@ -314,22 +338,48 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   font-weight: 900 !important;
 }
 
+.sw-horizontal2-therapist-table .horizontal2-header-row {
+  height: 16.8px !important;
+}
+
+.sw-horizontal2-therapist-table .horizontal2-header-row th:not(.therapist-name-col) {
+  height: 16.8px !important;
+  padding-top: 1px !important;
+  padding-bottom: 1px !important;
+  line-height: 1 !important;
+}
+
 .sw-horizontal2-therapist-table tbody tr.horizontal2-content-row {
-  height: 18.4px !important;
+  height: 20.2px !important;
 }
 
 .sw-horizontal2-therapist-table tbody tr.horizontal2-content-row > td {
-  height: 18.4px !important;
+  height: 20.2px !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
   font-size: 13.6px !important;
   line-height: 0.92 !important;
 }
 
-.sw-horizontal2-grand-table td,
+.sw-horizontal2-therapist-total-table .horizontal2-total-row {
+  height: 14px !important;
+}
+
+.sw-horizontal2-therapist-total-table .horizontal2-total-row > th,
+.sw-horizontal2-therapist-total-table .horizontal2-total-row > td {
+  height: 14px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  line-height: 0.95 !important;
+}
+
+.sw-horizontal2-grand-table td {
+  font-size: 12.6px !important;
+}
+
 .sw-horizontal2-recent-table tbody th,
 .sw-horizontal2-recent-table tbody td {
-  font-size: 12.6px !important;
+  font-size: 13.4px !important;
 }
 
 .sw-horizontal2-therapist-total-table .horizontal2-total-label {
@@ -473,6 +523,10 @@ body.shockwave-settlement-print .sw-view-mode-btn {
     margin: 0 0 1.2mm !important;
   }
 
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-right .sw-horizontal2-title-row {
+    margin-bottom: 2.4mm !important;
+  }
+
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-title-row h2 {
     font-size: 10.4pt !important;
     line-height: 1.1 !important;
@@ -557,6 +611,7 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table thead th,
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .horizontal2-header-row th:not(.therapist-name-col),
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table tbody tr:first-child th:not(.grand-title),
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table thead th {
     font-size: 7.6pt !important;
@@ -566,6 +621,17 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table thead th {
     font-size: 8.4pt !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .horizontal2-header-row {
+    height: 3.1mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .horizontal2-header-row th:not(.therapist-name-col) {
+    height: 3.1mm !important;
+    padding-top: 0.25mm !important;
+    padding-bottom: 0.25mm !important;
+    line-height: 0.95 !important;
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .therapist-label-col,
@@ -591,12 +657,12 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table tbody tr:not(.current-period-row) th,
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table tbody tr:not(.current-period-row) td {
-    font-size: 7.8pt !important;
+    font-size: 8.1pt !important;
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table tbody tr.current-period-row th,
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table tbody tr.current-period-row td {
-    font-size: 8.2pt !important;
+    font-size: 8.5pt !important;
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table th:nth-child(2),
@@ -630,6 +696,18 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-total-table .horizontal2-total-row .incentive-val {
     color: #9a3412 !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-total-table .horizontal2-total-row {
+    height: 3mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-total-table .horizontal2-total-row > th,
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-total-table .horizontal2-total-row > td {
+    height: 3mm !important;
+    padding-top: 0.2mm !important;
+    padding-bottom: 0.2mm !important;
+    line-height: 0.95 !important;
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table .grand-title {
