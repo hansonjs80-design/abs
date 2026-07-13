@@ -339,11 +339,11 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 }
 
 .sw-horizontal2-therapist-table .horizontal2-header-row {
-  height: 20.2px !important;
+  height: 23.2px !important;
 }
 
 .sw-horizontal2-therapist-table .horizontal2-header-row th:not(.therapist-name-col) {
-  height: 20.2px !important;
+  height: 23.2px !important;
   padding-top: 1px !important;
   padding-bottom: 1px !important;
   line-height: 1 !important;
@@ -362,14 +362,15 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 }
 
 .sw-horizontal2-therapist-total-table .horizontal2-total-row {
-  height: 16.8px !important;
+  height: 19.3px !important;
 }
 
 .sw-horizontal2-therapist-total-table .horizontal2-total-row > th,
 .sw-horizontal2-therapist-total-table .horizontal2-total-row > td {
-  height: 16.8px !important;
+  height: 19.3px !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
+  font-size: 14.6px !important;
   line-height: 0.95 !important;
 }
 
@@ -624,11 +625,11 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .horizontal2-header-row {
-    height: 3.72mm !important;
+    height: 4.28mm !important;
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .horizontal2-header-row th:not(.therapist-name-col) {
-    height: 3.72mm !important;
+    height: 4.28mm !important;
     padding-top: 0.25mm !important;
     padding-bottom: 0.25mm !important;
     line-height: 0.95 !important;
@@ -699,14 +700,15 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-total-table .horizontal2-total-row {
-    height: 3.6mm !important;
+    height: 4.14mm !important;
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-total-table .horizontal2-total-row > th,
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-total-table .horizontal2-total-row > td {
-    height: 3.6mm !important;
+    height: 4.14mm !important;
     padding-top: 0.2mm !important;
     padding-bottom: 0.2mm !important;
+    font-size: 9pt !important;
     line-height: 0.95 !important;
   }
 
