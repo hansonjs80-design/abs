@@ -1798,6 +1798,23 @@
   background: #bedcb1 !important;
 }
 
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-card:first-of-type .sw-settlement-header {
+  background: #ff6d01 !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-card:first-of-type .sw-settlement-header h2 {
+  color: #111827 !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-recent-card .sw-summary-table thead th {
+  background: #9fc5e8 !important;
+  color: #111827 !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
 @media print {
   html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print :is(
     #root,
@@ -1834,6 +1851,26 @@
 }
 
 @media print {
+  body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-card:first-of-type .sw-settlement-header,
+  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-card:first-of-type .sw-settlement-header {
+    background: #ff6d01 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-card:first-of-type .sw-settlement-header h2,
+  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-card:first-of-type .sw-settlement-header h2 {
+    color: #111827 !important;
+  }
+
+  body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-recent-card .sw-summary-table thead th,
+  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-recent-card .sw-summary-table thead th {
+    background: #9fc5e8 !important;
+    color: #111827 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-0 th,
   body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-0 td,
   body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.therapist-tone-0 th,
