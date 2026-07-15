@@ -14,14 +14,20 @@ import MemoSlot from './MemoSlot';
 import { usePersistentNumber } from '../../hooks/usePersistentState';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../lib/authPermissions';
+import {
+  STAFF_CALENDAR_DEVICE_SETTING_KEYS,
+  readLocalStaffCalendarDeviceSettings,
+  syncLoadStaffCalendarDeviceSettings,
+  syncSaveStaffCalendarDeviceSettings,
+} from '../../lib/staffCalendarDeviceSettings';
 
-const COL_W_KEY = 'staff-calendar-col-width';
-const ROW_H_KEY = 'staff-calendar-row-height';
-const DATE_H_KEY = 'staff-calendar-date-row-height';
-const MEMO_FONT_SIZE_KEY = 'staff-calendar-memo-font-size';
-const DATE_FONT_SIZE_KEY = 'staff-calendar-date-font-size';
-const DATE_FONT_WEIGHT_KEY = 'staff-calendar-date-font-weight';
-const WEEKDAY_FONT_SIZE_KEY = 'staff-calendar-weekday-font-size';
+const COL_W_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.colWidth;
+const ROW_H_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.rowHeight;
+const DATE_H_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.dateRowHeight;
+const MEMO_FONT_SIZE_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.memoFontSize;
+const DATE_FONT_SIZE_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.dateFontSize;
+const DATE_FONT_WEIGHT_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.dateFontWeight;
+const WEEKDAY_FONT_SIZE_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.weekdayFontSize;
 const MIN_COL_WIDTH = 30;
 const MIN_ROW_HEIGHT = 28;
 const MIN_DATE_ROW_HEIGHT = 16;
@@ -167,6 +173,77 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   const hiddenInputRef = useRef(null);
   const skipNextBlurSaveRef = useRef(false);
 
+  const applyStaffDeviceSettings = useCallback((settings = {}) => {
+    if (Object.prototype.hasOwnProperty.call(settings, 'colWidth')) setColWidth(settings.colWidth);
+    if (Object.prototype.hasOwnProperty.call(settings, 'rowHeight')) setRowHeight(settings.rowHeight);
+    if (Object.prototype.hasOwnProperty.call(settings, 'dateRowHeight')) setDateRowHeight(settings.dateRowHeight);
+    if (Object.prototype.hasOwnProperty.call(settings, 'memoFontSize')) setMemoFontSize(settings.memoFontSize);
+    if (Object.prototype.hasOwnProperty.call(settings, 'dateFontSize')) setDateFontSize(settings.dateFontSize);
+    if (Object.prototype.hasOwnProperty.call(settings, 'dateFontWeight')) setDateFontWeight(settings.dateFontWeight);
+    if (Object.prototype.hasOwnProperty.call(settings, 'weekdayFontSize')) setWeekdayFontSize(settings.weekdayFontSize);
+  }, [
+    setColWidth,
+    setRowHeight,
+    setDateRowHeight,
+    setMemoFontSize,
+    setDateFontSize,
+    setDateFontWeight,
+    setWeekdayFontSize,
+  ]);
+
+  useEffect(() => {
+    let active = true;
+    const localSnapshot = readLocalStaffCalendarDeviceSettings();
+    if (localSnapshot.hasAny) {
+      syncSaveStaffCalendarDeviceSettings(localSnapshot.values);
+    }
+    syncLoadStaffCalendarDeviceSettings({
+      localSnapshot,
+      applySettings: (settings) => {
+        if (active) applyStaffDeviceSettings(settings);
+      },
+    });
+    return () => {
+      active = false;
+    };
+  }, [applyStaffDeviceSettings]);
+
+  const updateStaffDeviceSetting = useCallback((setter, field, newValue) => {
+    setter((prev) => {
+      const next = typeof newValue === 'function' ? newValue(prev) : newValue;
+      syncSaveStaffCalendarDeviceSettings({ [field]: next });
+      return next;
+    });
+  }, []);
+
+  const updateColWidth = useCallback((newValue) => {
+    updateStaffDeviceSetting(setColWidth, 'colWidth', newValue);
+  }, [setColWidth, updateStaffDeviceSetting]);
+
+  const updateRowHeight = useCallback((newValue) => {
+    updateStaffDeviceSetting(setRowHeight, 'rowHeight', newValue);
+  }, [setRowHeight, updateStaffDeviceSetting]);
+
+  const updateDateRowHeight = useCallback((newValue) => {
+    updateStaffDeviceSetting(setDateRowHeight, 'dateRowHeight', newValue);
+  }, [setDateRowHeight, updateStaffDeviceSetting]);
+
+  const updateMemoFontSize = useCallback((newValue) => {
+    updateStaffDeviceSetting(setMemoFontSize, 'memoFontSize', newValue);
+  }, [setMemoFontSize, updateStaffDeviceSetting]);
+
+  const updateDateFontSize = useCallback((newValue) => {
+    updateStaffDeviceSetting(setDateFontSize, 'dateFontSize', newValue);
+  }, [setDateFontSize, updateStaffDeviceSetting]);
+
+  const updateDateFontWeight = useCallback((newValue) => {
+    updateStaffDeviceSetting(setDateFontWeight, 'dateFontWeight', newValue);
+  }, [setDateFontWeight, updateStaffDeviceSetting]);
+
+  const updateWeekdayFontSize = useCallback((newValue) => {
+    updateStaffDeviceSetting(setWeekdayFontSize, 'weekdayFontSize', newValue);
+  }, [setWeekdayFontSize, updateStaffDeviceSetting]);
+
   const today = getTodayKST();
   const { grid } = useMemo(() => generateCalendarGrid(currentYear, currentMonth, holidays), [currentYear, currentMonth, holidays]);
 
@@ -301,10 +378,10 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     let latestWidth = colWidth || cw;
     const move = (ev) => {
       latestWidth = Math.max(MIN_COL_WIDTH, cw + ev.clientX - sx);
-      setColWidth(latestWidth);
+      updateColWidth(latestWidth);
     };
     const up = () => {
-      setColWidth(latestWidth);
+      updateColWidth(latestWidth);
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mouseup', up);
       window.removeEventListener('blur', up);
@@ -319,10 +396,10 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     let latestHeight = rowHeight || ch;
     const move = (ev) => {
       latestHeight = Math.max(MIN_ROW_HEIGHT, ch + ev.clientY - sy);
-      setRowHeight(latestHeight);
+      updateRowHeight(latestHeight);
     };
     const up = () => {
-      setRowHeight(latestHeight);
+      updateRowHeight(latestHeight);
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mouseup', up);
       window.removeEventListener('blur', up);
@@ -338,10 +415,10 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     let latestHeight = dateRowHeight || startHeight;
     const move = (ev) => {
       latestHeight = Math.min(MAX_DATE_ROW_HEIGHT, Math.max(MIN_DATE_ROW_HEIGHT, startHeight + ev.clientY - sy));
-      setDateRowHeight(latestHeight);
+      updateDateRowHeight(latestHeight);
     };
     const up = () => {
-      setDateRowHeight(latestHeight);
+      updateDateRowHeight(latestHeight);
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mouseup', up);
       window.removeEventListener('blur', up);
@@ -948,7 +1025,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                   <select
                     id="staff-date-font-size"
                     value={dateFontSize}
-                    onChange={(e) => setDateFontSize(Number(e.target.value) || 15)}
+                    onChange={(e) => updateDateFontSize(Number(e.target.value) || 15)}
                     style={{
                       width: 88,
                       padding: '4px 6px',
@@ -972,7 +1049,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                   <select
                     id="staff-weekday-font-size"
                     value={weekdayFontSize}
-                    onChange={(e) => setWeekdayFontSize(Number(e.target.value) || 16)}
+                    onChange={(e) => updateWeekdayFontSize(Number(e.target.value) || 16)}
                     style={{
                       width: 88,
                       padding: '4px 6px',
@@ -996,7 +1073,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                   <select
                     id="staff-date-font-weight"
                     value={dateFontWeight}
-                    onChange={(e) => setDateFontWeight(Number(e.target.value) || 700)}
+                    onChange={(e) => updateDateFontWeight(Number(e.target.value) || 700)}
                     style={{
                       width: 88,
                       padding: '4px 6px',
@@ -1021,7 +1098,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                 <select
                   id="staff-memo-font-size"
                   value={memoFontSize}
-                  onChange={(e) => setMemoFontSize(Number(e.target.value) || 13)}
+                  onChange={(e) => updateMemoFontSize(Number(e.target.value) || 13)}
                   style={{
                     width: 88,
                     padding: '4px 6px',
