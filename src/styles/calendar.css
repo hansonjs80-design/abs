@@ -310,15 +310,30 @@
   line-height: 1.15;
   outline: none;
   border: 1px solid transparent;
-  border-bottom: 1px solid var(--border-color); /* 가로선을 더 명확하게 */
+  border-bottom: 1px solid transparent; /* 실제 가로선은 ::after로 좌우 여백 적용 */
   margin-bottom: 0px; /* 마진을 없애서 테두리끼리 일치시킴 */
   box-sizing: border-box;
   min-width: 0;
 }
 
+.memo-slot::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 0;
+  height: 1px;
+  background: var(--border-color);
+  pointer-events: none;
+}
+
 /* 마지막 슬롯은 하단 셀 테두리와 이중선이 생기지 않도록 보더 제거 */
 .memo-slot:last-child {
   border-bottom: none;
+}
+
+.memo-slot:last-child::after {
+  display: none;
 }
 
 .memo-slot:hover {
