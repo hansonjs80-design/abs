@@ -50,6 +50,7 @@ test('ignores invalid staff calendar values and keeps defaults for full settings
     dateFontWeight: 750,
     lastRowFontWeight: 750,
     memoFontSize: 'abc',
+    weekdayRowHeight: 6,
   });
 
   assert.equal(normalized.colWidth, 0);
@@ -57,6 +58,7 @@ test('ignores invalid staff calendar values and keeps defaults for full settings
   assert.equal(normalized.dateFontWeight, 700);
   assert.equal(normalized.lastRowFontWeight, 700);
   assert.equal(normalized.memoFontSize, 13);
+  assert.equal(normalized.weekdayRowHeight, 12);
 });
 
 test('reads only existing staff calendar local storage keys', () => {

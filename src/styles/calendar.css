@@ -92,7 +92,8 @@
 
 /* 요일 헤더 */
 .calendar-weekday-header {
-  min-height: var(--calendar-weekday-row-height);
+  height: var(--calendar-weekday-row-height);
+  min-height: 0;
   padding: 0 4px;
   display: flex;
   align-items: center;
@@ -107,6 +108,8 @@
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  line-height: 1;
+  overflow: hidden;
 }
 
 .weekday-row-resizer {

@@ -36,7 +36,7 @@ const LIMITS = {
   memoFontSize: { min: 10 },
   dateFontSize: { min: 8 },
   weekdayFontSize: { min: 8 },
-  weekdayRowHeight: { min: 20 },
+  weekdayRowHeight: { min: 12 },
   lastRowFontSize: { min: 8 },
 };
 
