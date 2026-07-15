@@ -315,7 +315,7 @@
 }
 
 .memo-slot {
-  padding: 4px 3px 4px 6px; /* 우측 여백을 6px에서 3px로 줄여 텍스트를 3픽셀 우측으로 이동 (날짜 숫자와 라인 일치) */
+  padding: 0 3px 0 6px; /* 위아래 여백은 없애고 우측 정렬 기준은 유지 */
   font-size: var(--staff-calendar-memo-font-size);
   font-weight: 700;
   border-radius: 2px;
@@ -918,7 +918,7 @@
   }
   .memo-slot {
     font-size: 0.6rem;
-    padding: 1px 3px;
+    padding: 0 3px;
     min-height: 14px;
   }
   .calendar-weekday-header {
