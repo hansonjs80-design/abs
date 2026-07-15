@@ -223,9 +223,11 @@
 .calendar-date-number {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   width: 24px; /* 글자가 10% 커진 만큼 원형 크기도 22px에서 24px로 미세 조정 */
   height: 24px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .today .calendar-date-number {
@@ -274,7 +276,7 @@
   min-height: 0;
   display: grid;
   grid-template-rows: repeat(6, minmax(0, 1fr));
-  padding: 0px 4px 0px; /* 하단 패딩 제거하여 마지막 메모 슬롯이 바닥 테두리에 딱 붙게 함 */
+  padding: 0 0 0 4px; /* 날짜 행과 같은 오른쪽 기준선에 맞추도록 우측 여백 제거 */
   box-sizing: border-box;
   min-width: 0;
 }
@@ -358,7 +360,7 @@
 .memo-slot-input {
   display: block;
   width: 100%;
-  padding: 2px 6px;
+  padding: 2px 3px 2px 6px;
   border: 2px solid var(--brand-primary);
   border-radius: 3px;
   font-size: var(--staff-calendar-memo-font-size);
@@ -795,6 +797,6 @@
     font-size: 0.55rem;
   }
   .calendar-memos {
-    padding: 1px 2px 2px;
+    padding: 1px 1px 2px 2px;
   }
 }

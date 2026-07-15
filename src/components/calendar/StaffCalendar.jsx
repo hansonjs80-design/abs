@@ -466,7 +466,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
         el.style.opacity = '1';
         el.style.pointerEvents = 'auto';
         el.style.zIndex = '20';
-        el.style.padding = '2px 6px';
+        el.style.padding = '2px 3px 2px 6px';
         el.style.border = '2px solid var(--brand-primary)';
         el.style.borderRadius = '3px';
         el.style.fontSize = `${memoFontSize}px`;
