@@ -18,6 +18,7 @@ export default function useScheduleTodayNavigation({
   scheduleScrollKey,
   currentYear,
   currentMonth,
+  isInitialScrollReady = true,
   shortcutLabel,
   setTodayShortcutTooltip,
 }) {
@@ -37,16 +38,20 @@ export default function useScheduleTodayNavigation({
     return idx;
   }, [weeks, today]);
 
+  const isCurrentScheduleMonth = currentYear === today.getFullYear() && currentMonth === today.getMonth() + 1;
+  const shouldAutoScrollToToday = isCurrentScheduleMonth && todayWeekIdx >= 0;
+
   const scrollToTodayWeek = useCallback((instant = false) => {
-    if (todayWeekIdx < 0) return;
+    if (todayWeekIdx < 0 || typeof window === 'undefined') return false;
     const weekEl = weekRefs.current[todayWeekIdx];
-    if (!weekEl) return;
+    if (!weekEl) return false;
     const targetTop = Math.max(0, getWeekTop(weekEl) - SCHEDULE_TODAY_SCROLL_TOP_OFFSET);
     window.scrollTo({
       top: targetTop,
       left: window.scrollX || window.pageXOffset || 0,
       behavior: instant ? 'instant' : 'smooth',
     });
+    return true;
   }, [todayWeekIdx, weekRefs]);
 
   const scrollToNextVisibleWeek = useCallback(() => {
@@ -141,11 +146,23 @@ export default function useScheduleTodayNavigation({
   }, [scrollToNextVisibleWeek]);
 
   const initialScrollDoneRef = useRef(false);
+
   useEffect(() => {
-    if (initialScrollDoneRef.current) return;
-    const timer = setTimeout(() => {
-      if (todayWeekIdx >= 0) {
-        scrollToTodayWeek(true);
+    initialScrollDoneRef.current = false;
+  }, [scheduleScrollKey]);
+
+  useEffect(() => {
+    if (initialScrollDoneRef.current || !isInitialScrollReady) return undefined;
+
+    let retryCount = 0;
+    let timer = null;
+    const tryInitialScroll = () => {
+      if (shouldAutoScrollToToday) {
+        if (!scrollToTodayWeek(true) && retryCount < 5) {
+          retryCount += 1;
+          timer = setTimeout(tryInitialScroll, 80);
+          return;
+        }
       } else {
         const savedPosition = shockwaveScheduleScrollMemory.get(scheduleScrollKey);
         if (savedPosition) {
@@ -155,19 +172,28 @@ export default function useScheduleTodayNavigation({
         }
 
         const firstWeekEl = weekRefs.current[0];
+        if (!firstWeekEl && retryCount < 5) {
+          retryCount += 1;
+          timer = setTimeout(tryInitialScroll, 80);
+          return;
+        }
         if (firstWeekEl) {
           firstWeekEl.scrollIntoView({ behavior: 'instant', block: 'start', inline: 'nearest' });
         }
       }
       initialScrollDoneRef.current = true;
-    }, 80);
-    return () => clearTimeout(timer);
-  }, [scheduleScrollKey, todayWeekIdx, scrollToTodayWeek, weekRefs]);
+    };
+
+    timer = setTimeout(tryInitialScroll, 80);
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [isInitialScrollReady, scheduleScrollKey, scrollToTodayWeek, shouldAutoScrollToToday, weekRefs]);
 
   useEffect(() => {
-    if (!initialScrollDoneRef.current) return;
+    if (!initialScrollDoneRef.current || !isInitialScrollReady) return;
     const timer = setTimeout(() => {
-      if (todayWeekIdx >= 0) {
+      if (shouldAutoScrollToToday) {
         scrollToTodayWeek();
       } else {
         const firstWeekEl = weekRefs.current[0];
@@ -177,7 +203,7 @@ export default function useScheduleTodayNavigation({
       }
     }, 50);
     return () => clearTimeout(timer);
-  }, [currentYear, currentMonth, todayWeekIdx, scrollToTodayWeek, weekRefs]);
+  }, [currentYear, currentMonth, isInitialScrollReady, scrollToTodayWeek, shouldAutoScrollToToday, weekRefs]);
 
   return {
     todayWeekIdx,

@@ -2670,6 +2670,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     return () => window.cancelAnimationFrame(rafId);
   }, [hoverCell, positionTooltip]);
 
+  const isScheduleMonthLoading = loadedMemosKey !== scheduleScrollKey;
   const { todayWeekIdx } = useScheduleTodayNavigation({
     weeks,
     today,
@@ -2677,11 +2678,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     scheduleScrollKey,
     currentYear,
     currentMonth,
+    isInitialScrollReady: !isScheduleMonthLoading && !isDeviceSettingsLoading,
     shortcutLabel: shortcutLabels.today,
     setTodayShortcutTooltip,
   });
 
-  const isScheduleMonthLoading = loadedMemosKey !== scheduleScrollKey;
   const renderMemos = useMemo(
     () => {
       if (isScheduleMonthLoading) return {};
