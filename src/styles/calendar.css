@@ -373,7 +373,7 @@
   pointer-events: none;
 }
 
-.memo-slot.last-row-count > span {
+.memo-slot > span {
   display: flex;
   align-items: center;
   justify-content: flex-end;
