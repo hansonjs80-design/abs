@@ -158,12 +158,16 @@ ALTER TABLE public.manual_therapy_patient_logs ADD COLUMN IF NOT EXISTS source t
   content text,
   font_color text,
   bg_color text,
+  font_size numeric,
+  font_weight integer,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(year, month, day, slot_index)
 );
 ALTER TABLE public.staff_schedules DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.staff_schedules ADD COLUMN IF NOT EXISTS bg_color text;`
+ALTER TABLE public.staff_schedules ADD COLUMN IF NOT EXISTS bg_color text;
+ALTER TABLE public.staff_schedules ADD COLUMN IF NOT EXISTS font_size numeric;
+ALTER TABLE public.staff_schedules ADD COLUMN IF NOT EXISTS font_weight integer;`
   },
   {
     title: '공지사항 및 공휴일',
@@ -229,6 +233,8 @@ CREATE TABLE IF NOT EXISTS public.staff_schedules (
   content text,
   font_color text,
   bg_color text,
+  font_size numeric,
+  font_weight integer,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
   UNIQUE(year, month, day, slot_index)
@@ -466,6 +472,12 @@ ADD COLUMN IF NOT EXISTS source text DEFAULT 'manual';
 
 ALTER TABLE public.staff_schedules
 ADD COLUMN IF NOT EXISTS bg_color text;
+
+ALTER TABLE public.staff_schedules
+ADD COLUMN IF NOT EXISTS font_size numeric;
+
+ALTER TABLE public.staff_schedules
+ADD COLUMN IF NOT EXISTS font_weight integer;
 
 -- =============================================
 -- [월별 치료사 설정] 스케줄러 슬롯별 날짜 범위 기반 치료사 배정

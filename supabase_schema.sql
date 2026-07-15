@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS public.staff_schedules (
   content text NOT NULL DEFAULT '',
   font_color text,
   bg_color text,
+  font_size numeric,
+  font_weight integer,
   created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
   UNIQUE(year, month, day, slot_index)
@@ -28,6 +30,8 @@ CREATE TABLE IF NOT EXISTS public.staff_schedules (
 
 ALTER TABLE public.staff_schedules ADD COLUMN IF NOT EXISTS font_color text;
 ALTER TABLE public.staff_schedules ADD COLUMN IF NOT EXISTS bg_color text;
+ALTER TABLE public.staff_schedules ADD COLUMN IF NOT EXISTS font_size numeric;
+ALTER TABLE public.staff_schedules ADD COLUMN IF NOT EXISTS font_weight integer;
 ALTER TABLE public.staff_schedules ALTER COLUMN content SET DEFAULT '';
 UPDATE public.staff_schedules SET content = '' WHERE content IS NULL;
 ALTER TABLE public.staff_schedules ALTER COLUMN content SET NOT NULL;

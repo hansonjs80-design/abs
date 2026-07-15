@@ -80,6 +80,8 @@ CREATE TABLE IF NOT EXISTS public.staff_schedules (
   content text NOT NULL DEFAULT '',
   font_color text,
   bg_color text,
+  font_size numeric,
+  font_weight integer,
   created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now())
 );
@@ -136,6 +138,8 @@ ALTER TABLE public.shockwave_schedules ADD COLUMN IF NOT EXISTS merge_span jsonb
 ALTER TABLE public.shockwave_schedules ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT timezone('utc'::text, now());
 ALTER TABLE public.staff_schedules ADD COLUMN IF NOT EXISTS font_color text;
 ALTER TABLE public.staff_schedules ADD COLUMN IF NOT EXISTS bg_color text;
+ALTER TABLE public.staff_schedules ADD COLUMN IF NOT EXISTS font_size numeric;
+ALTER TABLE public.staff_schedules ADD COLUMN IF NOT EXISTS font_weight integer;
 ALTER TABLE public.shockwave_monthly_therapists ADD COLUMN IF NOT EXISTS type text DEFAULT 'shockwave';
 ALTER TABLE public.staff_calendar_settings ADD COLUMN IF NOT EXISTS week_slot_counts jsonb DEFAULT '{"0":6,"1":6,"2":6,"3":6,"4":6}'::jsonb;
 

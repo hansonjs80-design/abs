@@ -9,6 +9,7 @@ export default function MemoSlot({
   autoFontColor,
   isDepartmentHidden = false,
   isLastSlot = false,
+  isBeforeLastSlot = false,
 }) {
   const content = memo?.content || '';
   const fontColor = computeMemoFontColor(content);
@@ -16,6 +17,8 @@ export default function MemoSlot({
   // DB에 저장된 커스텀 색상 우선, 없으면 자동 감지 색상 클래스 사용
   const customFontColor = isDepartmentHidden ? null : (dayInfo.isOtherMonth ? null : (autoFontColor || memo?.font_color));
   const customBgColor = isDepartmentHidden ? null : memo?.bg_color;
+  const customFontSize = isDepartmentHidden ? null : Number(memo?.font_size);
+  const customFontWeight = isDepartmentHidden ? null : Number(memo?.font_weight);
 
   let colorClass = '';
   if (!customFontColor) {
@@ -38,12 +41,15 @@ export default function MemoSlot({
   if (isPrimary) stateClass += ' primary-selected';
   if (isEditing) stateClass += ' editing';
   if (isLastSlot) stateClass += ' last-row-count';
+  if (isBeforeLastSlot) stateClass += ' before-last-row-count';
 
   const inlineStyle = {
     position: 'relative', overflow: 'hidden',
   };
   if (customFontColor) inlineStyle.color = customFontColor;
   if (customBgColor) inlineStyle.backgroundColor = customBgColor;
+  if (Number.isFinite(customFontSize) && customFontSize > 0) inlineStyle.fontSize = `${customFontSize}px`;
+  if (Number.isFinite(customFontWeight) && customFontWeight > 0) inlineStyle.fontWeight = customFontWeight;
 
   return (
     <div

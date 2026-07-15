@@ -679,7 +679,7 @@ export function ScheduleProvider({ children }) {
   }, [beginLoading, endLoading]);
 
   // 직원 메모 저장/업데이트
-  const saveStaffMemo = useCallback(async (year, month, day, slotIndex, content, fontColor = undefined, bgColor = undefined) => {
+  const saveStaffMemo = useCallback(async (year, month, day, slotIndex, content, fontColor = undefined, bgColor = undefined, textStyle = undefined) => {
     const key = `${year}-${month}-${day}-${slotIndex}`;
     const normalizedContent = normalizeStaffDeptNameSpacing(content || '');
     const requestId = (staffMemoSaveRequestRef.current.get(key) || 0) + 1;
@@ -694,6 +694,8 @@ export function ScheduleProvider({ children }) {
       };
       if (fontColor !== undefined) upsertData.font_color = fontColor;
       if (bgColor !== undefined) upsertData.bg_color = bgColor;
+      if (textStyle?.fontSize !== undefined) upsertData.font_size = textStyle.fontSize;
+      if (textStyle?.fontWeight !== undefined) upsertData.font_weight = textStyle.fontWeight;
       
       // 낙관적 업데이트 (네트워크 응답 대기 중 화면 깜빡임 방지)
       setStaffMemos(prev => ({

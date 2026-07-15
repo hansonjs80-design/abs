@@ -39,6 +39,7 @@ const MIN_WEEKDAY_ROW_HEIGHT = 20;
 const MAX_WEEKDAY_ROW_HEIGHT = 72;
 const NUMERIC_ONLY_STAFF_COUNT_PATTERN = /^\d+$/;
 const MEMO_FONT_SIZE_OPTIONS = Array.from({ length: 21 }, (_, index) => 10 + index * 0.5);
+const CELL_FONT_SIZE_OPTIONS = Array.from({ length: 25 }, (_, index) => 8 + index * 0.5);
 const LAST_ROW_FONT_SIZE_OPTIONS = Array.from({ length: 25 }, (_, index) => 8 + index * 0.5);
 const DATE_FONT_SIZE_OPTIONS = Array.from({ length: 25 }, (_, index) => 8 + index * 0.5);
 const WEEKDAY_FONT_SIZE_OPTIONS = Array.from({ length: 25 }, (_, index) => 8 + index * 0.5);
@@ -168,6 +169,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   const [clipboardSource, setClipboardSource] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
   const [colorMenu, setColorMenu] = useState(null); // { type: 'font' | 'bg', x: number, y: number }
+  const [textStyleMenu, setTextStyleMenu] = useState(null); // { type: 'size' | 'weight', x: number, y: number }
   const [customColors, setCustomColors] = useState(loadStaffCustomColors);
   const [customColorDraft, setCustomColorDraft] = useState('#000000');
   const [pendingCustomColorType, setPendingCustomColorType] = useState(null);
@@ -175,6 +177,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   const viewRef = useRef(null);
   const contextMenuRef = useRef(null);
   const colorMenuRef = useRef(null);
+  const textStyleMenuRef = useRef(null);
   const customColorInputRef = useRef(null);
   const pendingCustomColorTypeRef = useRef(null);
   const dragRef = useRef(null);
@@ -366,6 +369,8 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
       content: memo.content || '',
       fontColor: memo.font_color ?? null,
       bgColor: memo.bg_color ?? null,
+      fontSize: memo.font_size ?? null,
+      fontWeight: memo.font_weight ?? null,
     };
   }, [dayFromKey, staffMemos]);
 
@@ -389,13 +394,33 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     return `staff-sheets-swatch${extraClass ? ` ${extraClass}` : ''}${selectedClass}`;
   }, [colorMenu, getActiveColorForMenu]);
 
+  const getActiveTextStyleForMenu = useCallback((type) => {
+    const key = selectedCell?.key || [...selectedKeys][0];
+    if (!key) return null;
+    const memo = staffMemos[key] || {};
+    const value = type === 'size' ? memo.font_size : memo.font_weight;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }, [selectedCell, selectedKeys, staffMemos]);
+
   const recordUndo = useCallback((a) => setUndoStack(p => [a, ...p].slice(0, 50)), []);
 
   const doUndo = useCallback(async () => {
     const a = undoStack[0]; if (!a) return;
     setUndoStack(p => p.slice(1));
     if (a.type === 'edit') await saveStaffMemo(a.year, a.month, a.day, a.slot, a.oldVal);
-    else if (a.type === 'bulk') await Promise.all(a.items.map(m => saveStaffMemo(m.year, m.month, m.day, m.slot, m.content, m.fontColor, m.bgColor)));
+    else if (a.type === 'bulk') {
+      await Promise.all(a.items.map(m => saveStaffMemo(
+        m.year,
+        m.month,
+        m.day,
+        m.slot,
+        m.content,
+        m.fontColor,
+        m.bgColor,
+        { fontSize: m.fontSize, fontWeight: m.fontWeight }
+      )));
+    }
   }, [undoStack, saveStaffMemo]);
 
   // ── Resize ──
@@ -598,10 +623,11 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   const deleteCells = useCallback(async (keys) => {
     const items = [], proms = [];
     for (const k of keys || []) {
-      if (staffMemos[k]?.content) {
+      const memo = staffMemos[k] || {};
+      if (memo.content || memo.font_color || memo.bg_color || memo.font_size || memo.font_weight) {
         const { year, month, day, slot } = dayFromKey(k);
         items.push(buildUndoItem(k));
-        proms.push(saveStaffMemo(year, month, day, slot, '', null, null));
+        proms.push(saveStaffMemo(year, month, day, slot, '', null, null, { fontSize: null, fontWeight: null }));
       }
     }
     if (proms.length) { recordUndo({ type: 'bulk', items }); await Promise.all(proms); }
@@ -629,6 +655,8 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
         content: memo.content || '',
         fontColor: getEffectiveMemoFontColor(memo),
         bgColor: memo.bg_color ?? null,
+        fontSize: memo.font_size ?? null,
+        fontWeight: memo.font_weight ?? null,
       });
     });
 
@@ -656,9 +684,26 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
           const oldContent = oldMemo.content || '';
           const oldFontColor = oldMemo.font_color ?? null;
           const oldBgColor = oldMemo.bg_color ?? null;
-          if (oldContent !== v.content || oldFontColor !== v.fontColor || oldBgColor !== v.bgColor) {
+          const oldFontSize = oldMemo.font_size === null || oldMemo.font_size === undefined ? null : Number(oldMemo.font_size);
+          const oldFontWeight = oldMemo.font_weight === null || oldMemo.font_weight === undefined ? null : Number(oldMemo.font_weight);
+          if (
+            oldContent !== v.content
+            || oldFontColor !== v.fontColor
+            || oldBgColor !== v.bgColor
+            || oldFontSize !== v.fontSize
+            || oldFontWeight !== v.fontWeight
+          ) {
             items.push(buildUndoItem(tc.key));
-            proms.push(saveStaffMemo(d.year, d.month, d.day, tc.slot, v.content, v.fontColor, v.bgColor));
+            proms.push(saveStaffMemo(
+              d.year,
+              d.month,
+              d.day,
+              tc.slot,
+              v.content,
+              v.fontColor,
+              v.bgColor,
+              { fontSize: v.fontSize, fontWeight: v.fontWeight }
+            ));
           }
         }
       }
@@ -666,9 +711,9 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
         for (const k of clipboardSource.keys) {
           const { year, month, day, slot } = dayFromKey(k);
           const memo = staffMemos[k] || {};
-          if (memo.content || memo.font_color || memo.bg_color) {
+          if (memo.content || memo.font_color || memo.bg_color || memo.font_size || memo.font_weight) {
             items.push(buildUndoItem(k));
-            proms.push(saveStaffMemo(year, month, day, slot, '', null, null));
+            proms.push(saveStaffMemo(year, month, day, slot, '', null, null, { fontSize: null, fontWeight: null }));
           }
         }
         setClipboardSource(null);
@@ -891,7 +936,26 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
       y = Math.max(10, window.innerHeight - POPUP_H - 10);
     }
 
+    setTextStyleMenu(null);
     setColorMenu((prev) => (prev?.type === type ? null : { type, x, y }));
+  }, []);
+
+  const openTextStyleMenu = useCallback((type, event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const POPUP_W = 154;
+    const POPUP_H = type === 'size' ? 330 : 240;
+    let x = rect.right + 8;
+    let y = rect.top;
+
+    if (x + POPUP_W > window.innerWidth) {
+      x = Math.max(10, rect.left - POPUP_W - 8);
+    }
+    if (y + POPUP_H > window.innerHeight) {
+      y = Math.max(10, window.innerHeight - POPUP_H - 10);
+    }
+
+    setColorMenu(null);
+    setTextStyleMenu((prev) => (prev?.type === type ? null : { type, x, y }));
   }, []);
 
   // 메뉴 위치를 동적으로 재조정
@@ -920,16 +984,20 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     const closeIfOutside = (ev) => {
       const menu = contextMenuRef.current;
       const colorPopup = colorMenuRef.current;
+      const textStylePopup = textStyleMenuRef.current;
       if (menu && menu.contains(ev.target)) return;
       if (colorPopup && colorPopup.contains(ev.target)) return;
+      if (textStylePopup && textStylePopup.contains(ev.target)) return;
       setContextMenu(null);
       setColorMenu(null);
+      setTextStyleMenu(null);
     };
 
     const closeOnEscape = (ev) => {
       if (ev.key !== 'Escape') return;
       setContextMenu(null);
       setColorMenu(null);
+      setTextStyleMenu(null);
     };
 
     window.addEventListener('mousedown', closeIfOutside, true);
@@ -954,7 +1022,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   const ctxAction = useCallback(async (a) => {
     if (contextMenu?.mode === 'text' && await handleTextContextAction(a)) return;
     if (a === 'copy') handleCopy(); else if (a === 'cut') handleCut(); else if (a === 'paste') handlePaste(); else if (a === 'delete') deleteCells(selectedKeys);
-    setContextMenu(null); setColorMenu(null);
+    setContextMenu(null); setColorMenu(null); setTextStyleMenu(null);
   }, [contextMenu, handleTextContextAction, handleCopy, handleCut, handlePaste, deleteCells, selectedKeys]);
 
   const applyColor = useCallback(async (type, color) => {
@@ -974,8 +1042,30 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     }
     if (items.length) recordUndo({ type: 'bulk', items });
     await Promise.all(promises);
-    setContextMenu(null); setColorMenu(null);
+    setContextMenu(null); setColorMenu(null); setTextStyleMenu(null);
     if (promises.length) addToast(type === 'font' ? '글자색 적용' : '배경색 적용', 'success');
+    focusHiddenInput();
+  }, [selectedKeys, staffMemos, dayFromKey, buildUndoItem, recordUndo, saveStaffMemo, addToast, focusHiddenInput]);
+
+  const applyTextStyle = useCallback(async (type, value) => {
+    const promises = [];
+    const items = [];
+    for (const k of selectedKeys) {
+      const { year, month, day, slot } = dayFromKey(k);
+      const memo = staffMemos[k];
+      const currentValue = type === 'size' ? (memo?.font_size ?? null) : (memo?.font_weight ?? null);
+      const normalizedCurrentValue = currentValue === null ? null : Number(currentValue);
+      if (normalizedCurrentValue === value) continue;
+      items.push(buildUndoItem(k));
+      const textStyle = type === 'size'
+        ? { fontSize: value }
+        : { fontWeight: value };
+      promises.push(saveStaffMemo(year, month, day, slot, memo?.content || '', undefined, undefined, textStyle));
+    }
+    if (items.length) recordUndo({ type: 'bulk', items });
+    await Promise.all(promises);
+    setContextMenu(null); setColorMenu(null); setTextStyleMenu(null);
+    if (promises.length) addToast(type === 'size' ? '글자 크기 적용' : '글자 두께 적용', 'success');
     focusHiddenInput();
   }, [selectedKeys, staffMemos, dayFromKey, buildUndoItem, recordUndo, saveStaffMemo, addToast, focusHiddenInput]);
 
@@ -1400,11 +1490,12 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
               </div>
               <div className="calendar-memos" style={{ gridTemplateRows: `repeat(${getSlotCount(wi)}, minmax(0, 1fr))` }}>
                 {Array.from({ length: getSlotCount(wi) }, (_, slot) => {
+                  const slotCount = getSlotCount(wi);
                   const key = memoKey(wi, di, slot);
                   const isSel = selectedKeys.has(key);
                   const isPri = selectedCell?.key === key;
                   const isEd = editingCell === key;
-                  const shouldHideLastRowContent = !showLastRows && slot === getSlotCount(wi) - 1;
+                  const shouldHideLastRowContent = !showLastRows && slot === slotCount - 1;
                   let clipMode = null;
                   if (clipboardSource?.keys?.has(key)) clipMode = clipboardSource.mode;
 
@@ -1414,7 +1505,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                   const memoContent = shouldHideLastRowContent ? '' : (rawMemo?.content || '');
                   const displayMemo = shouldHideLastRowContent
                     ? { ...(rawMemo || {}), content: '' }
-                    : getStaffCalendarDisplayMemo(rawMemo, slot === getSlotCount(wi) - 1);
+                    : getStaffCalendarDisplayMemo(rawMemo, slot === slotCount - 1);
                   const isDepartmentHidden = shouldHideStaffMemoByDepartment(memoContent, hiddenDepartments);
                   const autoFontColor = getAutoFontColorForStaffMemo(memoContent);
 
@@ -1425,7 +1516,8 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                       autoFontColor={autoFontColor}
                       holidayName={holidayName}
                       isDepartmentHidden={isDepartmentHidden}
-                      isLastSlot={slot === getSlotCount(wi) - 1}
+                      isLastSlot={slot === slotCount - 1}
+                      isBeforeLastSlot={slotCount > 1 && slot === slotCount - 2}
                       onMouseDown={(e) => onCellMouseDown(wi, di, slot, e)}
                       onMouseEnter={(e) => onCellMouseEnter(wi, di, slot, e)}
                       onDoubleClick={() => onCellDblClick(wi, di, slot)}
@@ -1461,12 +1553,54 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
             <span className="staff-color-menu-icon staff-color-menu-icon--font" aria-hidden="true">A</span>
             글자색
           </button>
+          <button type="button" className="context-menu-item staff-color-menu-trigger" onClick={(e) => openTextStyleMenu('size', e)}>
+            <span className="staff-color-menu-icon staff-color-menu-icon--size" aria-hidden="true">T</span>
+            글자 크기
+          </button>
+          <button type="button" className="context-menu-item staff-color-menu-trigger" onClick={(e) => openTextStyleMenu('weight', e)}>
+            <span className="staff-color-menu-icon staff-color-menu-icon--weight" aria-hidden="true">B</span>
+            글자 두께
+          </button>
           <button type="button" className="context-menu-item staff-color-menu-trigger" onClick={(e) => openColorMenu('bg', e)}>
             <span className="staff-color-menu-icon staff-color-menu-icon--bg" aria-hidden="true">
               <FillColorIcon />
             </span>
             배경색
           </button>
+        </div>
+      )}
+
+      {textStyleMenu && (
+        <div
+          ref={textStyleMenuRef}
+          className="staff-text-style-menu"
+          style={{ top: textStyleMenu.y, left: textStyleMenu.x, zIndex: 1001, position: 'fixed' }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="staff-text-style-reset"
+            onClick={() => applyTextStyle(textStyleMenu.type, null)}
+          >
+            기본값
+          </button>
+          {(textStyleMenu.type === 'size' ? CELL_FONT_SIZE_OPTIONS : DATE_FONT_WEIGHT_OPTIONS).map((value) => {
+            const activeValue = getActiveTextStyleForMenu(textStyleMenu.type);
+            const isSelected = activeValue === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                className={`staff-text-style-option${isSelected ? ' is-selected' : ''}`}
+                onClick={() => applyTextStyle(textStyleMenu.type, value)}
+                style={textStyleMenu.type === 'size' ? { fontSize: `${value}px` } : { fontWeight: value }}
+              >
+                {textStyleMenu.type === 'size'
+                  ? `${Number.isInteger(value) ? value : value.toFixed(1)}px`
+                  : value}
+              </button>
+            );
+          })}
         </div>
       )}
 
