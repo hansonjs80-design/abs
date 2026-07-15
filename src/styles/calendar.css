@@ -211,9 +211,20 @@
   gap: 6px;
   flex: 0 0 var(--staff-calendar-date-row-height);
   min-height: var(--staff-calendar-date-row-height);
-  border-bottom: 1px solid var(--border-color); /* 날짜 바로 아래에 실선 적용 (더 진하게) */
+  border-bottom: 1px solid transparent; /* 레이아웃 높이는 유지하고 실제 선은 ::after로 좌우 여백 적용 */
   margin-bottom: 0px; /* 불필요한 하단 마진 제거하여 더 붙임 */
   box-sizing: border-box;
+}
+
+.calendar-date::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: -1px;
+  height: 1px;
+  background: var(--border-color);
+  pointer-events: none;
 }
 
 .today .calendar-date {
