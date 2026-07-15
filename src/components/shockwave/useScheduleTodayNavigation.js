@@ -144,16 +144,16 @@ export default function useScheduleTodayNavigation({
   useEffect(() => {
     if (initialScrollDoneRef.current) return;
     const timer = setTimeout(() => {
-      const savedPosition = shockwaveScheduleScrollMemory.get(scheduleScrollKey);
-      if (savedPosition) {
-        window.scrollTo(savedPosition.x || 0, savedPosition.y || 0);
-        initialScrollDoneRef.current = true;
-        return;
-      }
-
       if (todayWeekIdx >= 0) {
         scrollToTodayWeek(true);
       } else {
+        const savedPosition = shockwaveScheduleScrollMemory.get(scheduleScrollKey);
+        if (savedPosition) {
+          window.scrollTo(savedPosition.x || 0, savedPosition.y || 0);
+          initialScrollDoneRef.current = true;
+          return;
+        }
+
         const firstWeekEl = weekRefs.current[0];
         if (firstWeekEl) {
           firstWeekEl.scrollIntoView({ behavior: 'instant', block: 'start', inline: 'nearest' });
