@@ -8,6 +8,7 @@ export default function MemoSlot({
   cellId,
   autoFontColor,
   isDepartmentHidden = false,
+  isLastSlot = false,
 }) {
   const content = memo?.content || '';
   const fontColor = computeMemoFontColor(content);
@@ -36,6 +37,7 @@ export default function MemoSlot({
   if (isSelected) stateClass += ' selected';
   if (isPrimary) stateClass += ' primary-selected';
   if (isEditing) stateClass += ' editing';
+  if (isLastSlot) stateClass += ' last-row-count';
 
   const inlineStyle = {
     position: 'relative', overflow: 'hidden',

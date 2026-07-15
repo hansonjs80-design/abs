@@ -28,12 +28,18 @@ const MEMO_FONT_SIZE_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.memoFontSize;
 const DATE_FONT_SIZE_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.dateFontSize;
 const DATE_FONT_WEIGHT_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.dateFontWeight;
 const WEEKDAY_FONT_SIZE_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.weekdayFontSize;
+const WEEKDAY_ROW_HEIGHT_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.weekdayRowHeight;
+const LAST_ROW_FONT_SIZE_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.lastRowFontSize;
+const LAST_ROW_FONT_WEIGHT_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.lastRowFontWeight;
 const MIN_COL_WIDTH = 30;
 const MIN_ROW_HEIGHT = 28;
 const MIN_DATE_ROW_HEIGHT = 16;
 const MAX_DATE_ROW_HEIGHT = 64;
+const MIN_WEEKDAY_ROW_HEIGHT = 20;
+const MAX_WEEKDAY_ROW_HEIGHT = 72;
 const NUMERIC_ONLY_STAFF_COUNT_PATTERN = /^\d+$/;
 const MEMO_FONT_SIZE_OPTIONS = Array.from({ length: 21 }, (_, index) => 10 + index * 0.5);
+const LAST_ROW_FONT_SIZE_OPTIONS = Array.from({ length: 25 }, (_, index) => 8 + index * 0.5);
 const DATE_FONT_SIZE_OPTIONS = Array.from({ length: 25 }, (_, index) => 8 + index * 0.5);
 const WEEKDAY_FONT_SIZE_OPTIONS = Array.from({ length: 25 }, (_, index) => 8 + index * 0.5);
 const DATE_FONT_WEIGHT_OPTIONS = [500, 600, 700, 800, 900];
@@ -151,6 +157,9 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   const [dateFontSize, setDateFontSize] = usePersistentNumber(DATE_FONT_SIZE_KEY, 15, 8);
   const [dateFontWeight, setDateFontWeight] = usePersistentNumber(DATE_FONT_WEIGHT_KEY, 700, 500);
   const [weekdayFontSize, setWeekdayFontSize] = usePersistentNumber(WEEKDAY_FONT_SIZE_KEY, 16, 8);
+  const [weekdayRowHeight, setWeekdayRowHeight] = usePersistentNumber(WEEKDAY_ROW_HEIGHT_KEY, 32, MIN_WEEKDAY_ROW_HEIGHT);
+  const [lastRowFontSize, setLastRowFontSize] = usePersistentNumber(LAST_ROW_FONT_SIZE_KEY, 13, 8);
+  const [lastRowFontWeight, setLastRowFontWeight] = usePersistentNumber(LAST_ROW_FONT_WEIGHT_KEY, 700, 500);
   const [undoStack, setUndoStack] = useState([]);
   const [selectedCell, setSelectedCell] = useState(null);
   const [, setRangeEnd] = useState(null);
@@ -181,6 +190,9 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     if (Object.prototype.hasOwnProperty.call(settings, 'dateFontSize')) setDateFontSize(settings.dateFontSize);
     if (Object.prototype.hasOwnProperty.call(settings, 'dateFontWeight')) setDateFontWeight(settings.dateFontWeight);
     if (Object.prototype.hasOwnProperty.call(settings, 'weekdayFontSize')) setWeekdayFontSize(settings.weekdayFontSize);
+    if (Object.prototype.hasOwnProperty.call(settings, 'weekdayRowHeight')) setWeekdayRowHeight(settings.weekdayRowHeight);
+    if (Object.prototype.hasOwnProperty.call(settings, 'lastRowFontSize')) setLastRowFontSize(settings.lastRowFontSize);
+    if (Object.prototype.hasOwnProperty.call(settings, 'lastRowFontWeight')) setLastRowFontWeight(settings.lastRowFontWeight);
   }, [
     setColWidth,
     setRowHeight,
@@ -189,6 +201,9 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     setDateFontSize,
     setDateFontWeight,
     setWeekdayFontSize,
+    setWeekdayRowHeight,
+    setLastRowFontSize,
+    setLastRowFontWeight,
   ]);
 
   useEffect(() => {
@@ -243,6 +258,18 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   const updateWeekdayFontSize = useCallback((newValue) => {
     updateStaffDeviceSetting(setWeekdayFontSize, 'weekdayFontSize', newValue);
   }, [setWeekdayFontSize, updateStaffDeviceSetting]);
+
+  const updateWeekdayRowHeight = useCallback((newValue) => {
+    updateStaffDeviceSetting(setWeekdayRowHeight, 'weekdayRowHeight', newValue);
+  }, [setWeekdayRowHeight, updateStaffDeviceSetting]);
+
+  const updateLastRowFontSize = useCallback((newValue) => {
+    updateStaffDeviceSetting(setLastRowFontSize, 'lastRowFontSize', newValue);
+  }, [setLastRowFontSize, updateStaffDeviceSetting]);
+
+  const updateLastRowFontWeight = useCallback((newValue) => {
+    updateStaffDeviceSetting(setLastRowFontWeight, 'lastRowFontWeight', newValue);
+  }, [setLastRowFontWeight, updateStaffDeviceSetting]);
 
   const today = getTodayKST();
   const { grid } = useMemo(() => generateCalendarGrid(currentYear, currentMonth, holidays), [currentYear, currentMonth, holidays]);
@@ -419,6 +446,25 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     };
     const up = () => {
       updateDateRowHeight(latestHeight);
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+      window.removeEventListener('blur', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+    window.addEventListener('blur', up);
+  };
+  const startWeekdayRowResize = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const sy = e.clientY;
+    const startHeight = weekdayRowHeight;
+    let latestHeight = weekdayRowHeight || startHeight;
+    const move = (ev) => {
+      latestHeight = Math.min(MAX_WEEKDAY_ROW_HEIGHT, Math.max(MIN_WEEKDAY_ROW_HEIGHT, startHeight + ev.clientY - sy));
+      updateWeekdayRowHeight(latestHeight);
+    };
+    const up = () => {
+      updateWeekdayRowHeight(latestHeight);
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mouseup', up);
       window.removeEventListener('blur', up);
@@ -979,6 +1025,9 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
         '--staff-calendar-date-font-size': `${dateFontSize}px`,
         '--staff-calendar-date-font-weight': dateFontWeight,
         '--staff-calendar-weekday-font-size': `${weekdayFontSize}px`,
+        '--calendar-weekday-row-height': `${weekdayRowHeight}px`,
+        '--staff-calendar-last-row-font-size': `${lastRowFontSize}px`,
+        '--staff-calendar-last-row-font-weight': lastRowFontWeight,
       }}
     >
       <div className="calendar-print-title">
@@ -1114,6 +1163,56 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                     <option key={size} value={size}>{Number.isInteger(size) ? size : size.toFixed(1)}px</option>
                   ))}
                 </select>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <label htmlFor="staff-last-row-font-size" style={{ fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                    환자수 글자 크기
+                  </label>
+                  <select
+                    id="staff-last-row-font-size"
+                    value={lastRowFontSize}
+                    onChange={(e) => updateLastRowFontSize(Number(e.target.value) || 13)}
+                    style={{
+                      width: 88,
+                      padding: '4px 6px',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: 4,
+                      background: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {LAST_ROW_FONT_SIZE_OPTIONS.map((size) => (
+                      <option key={size} value={size}>{Number.isInteger(size) ? size : size.toFixed(1)}px</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <label htmlFor="staff-last-row-font-weight" style={{ fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                    환자수 글자 두께
+                  </label>
+                  <select
+                    id="staff-last-row-font-weight"
+                    value={lastRowFontWeight}
+                    onChange={(e) => updateLastRowFontWeight(Number(e.target.value) || 700)}
+                    style={{
+                      width: 88,
+                      padding: '4px 6px',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: 4,
+                      background: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {DATE_FONT_WEIGHT_OPTIONS.map((weight) => (
+                      <option key={weight} value={weight}>{weight}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
                 <button
@@ -1277,6 +1376,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
           <div key={`h-${i}`} className={`calendar-weekday-header${i === 0 ? ' sunday' : ''}${i === 6 ? ' saturday' : ''}`} style={{ position: 'relative' }}>
             {day}
             <div className="col-resizer" onMouseDown={startColResize} />
+            <div className="weekday-row-resizer" title="요일 셀 높이 조절" onMouseDown={startWeekdayRowResize} />
           </div>
         ))}
         {grid.map((week, wi) => week.map((dayInfo, di) => {
@@ -1325,6 +1425,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                       autoFontColor={autoFontColor}
                       holidayName={holidayName}
                       isDepartmentHidden={isDepartmentHidden}
+                      isLastSlot={slot === getSlotCount(wi) - 1}
                       onMouseDown={(e) => onCellMouseDown(wi, di, slot, e)}
                       onMouseEnter={(e) => onCellMouseEnter(wi, di, slot, e)}
                       onDoubleClick={() => onCellDblClick(wi, di, slot)}

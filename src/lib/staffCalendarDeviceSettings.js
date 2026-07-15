@@ -8,6 +8,9 @@ export const STAFF_CALENDAR_DEVICE_SETTING_KEYS = {
   dateFontSize: 'staff-calendar-date-font-size',
   dateFontWeight: 'staff-calendar-date-font-weight',
   weekdayFontSize: 'staff-calendar-weekday-font-size',
+  weekdayRowHeight: 'staff-calendar-weekday-row-height',
+  lastRowFontSize: 'staff-calendar-last-row-font-size',
+  lastRowFontWeight: 'staff-calendar-last-row-font-weight',
 };
 
 const SETTINGS_ROW_ID = '00000000-0000-0000-0000-000000000000';
@@ -21,6 +24,9 @@ const DEFAULTS = {
   dateFontSize: 15,
   dateFontWeight: 700,
   weekdayFontSize: 16,
+  weekdayRowHeight: 32,
+  lastRowFontSize: 13,
+  lastRowFontWeight: 700,
 };
 
 const LIMITS = {
@@ -30,10 +36,13 @@ const LIMITS = {
   memoFontSize: { min: 10 },
   dateFontSize: { min: 8 },
   weekdayFontSize: { min: 8 },
+  weekdayRowHeight: { min: 20 },
+  lastRowFontSize: { min: 8 },
 };
 
 const STAFF_CALENDAR_DEVICE_FIELDS = Object.keys(STAFF_CALENDAR_DEVICE_SETTING_KEYS);
-const DATE_FONT_WEIGHT_OPTIONS = new Set([500, 600, 700, 800, 900]);
+const FONT_WEIGHT_FIELDS = new Set(['dateFontWeight', 'lastRowFontWeight']);
+const FONT_WEIGHT_OPTIONS = new Set([500, 600, 700, 800, 900]);
 
 function getStorage(storage) {
   if (storage) return storage;
@@ -48,8 +57,8 @@ function hasOwn(obj, key) {
 function clampNumber(value, field) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return undefined;
-  if (field === 'dateFontWeight') {
-    return DATE_FONT_WEIGHT_OPTIONS.has(numeric) ? numeric : undefined;
+  if (FONT_WEIGHT_FIELDS.has(field)) {
+    return FONT_WEIGHT_OPTIONS.has(numeric) ? numeric : undefined;
   }
   const limit = LIMITS[field];
   if (!limit) return undefined;

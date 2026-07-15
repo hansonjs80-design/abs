@@ -11,6 +11,8 @@
   --staff-calendar-date-font-size: 15px;
   --staff-calendar-date-font-weight: 700;
   --staff-calendar-weekday-font-size: 16px;
+  --staff-calendar-last-row-font-size: 13px;
+  --staff-calendar-last-row-font-weight: 700;
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
@@ -105,6 +107,22 @@
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.weekday-row-resizer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 8px;
+  cursor: row-resize;
+  z-index: 12;
+}
+
+.weekday-row-resizer:hover,
+.weekday-row-resizer:active {
+  background: var(--brand-primary);
+  opacity: 0.45;
 }
 
 .calendar-weekday-header:nth-child(7n) {
@@ -231,6 +249,10 @@
   background: #3b82f6;
 }
 
+.today .calendar-date::after {
+  background: transparent;
+}
+
 .calendar-date-number {
   display: inline-flex;
   align-items: center;
@@ -325,6 +347,11 @@
   height: 1px;
   background: var(--border-color);
   pointer-events: none;
+}
+
+.memo-slot.last-row-count {
+  font-size: var(--staff-calendar-last-row-font-size);
+  font-weight: var(--staff-calendar-last-row-font-weight);
 }
 
 /* 마지막 슬롯은 하단 셀 테두리와 이중선이 생기지 않도록 보더 제거 */
