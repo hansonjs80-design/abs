@@ -13,7 +13,7 @@
   --staff-calendar-weekday-font-size: 16px;
   --staff-calendar-last-row-font-size: 13px;
   --staff-calendar-last-row-font-weight: 700;
-  --staff-calendar-inner-line-color: #dadada;
+  --staff-calendar-inner-line-color: #c9c9c9;
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
