@@ -133,6 +133,11 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     setPortalTarget(document.getElementById('staff-settings-portal'));
   }, []);
 
+  const initialDeviceSettingsRef = useRef(null);
+  if (initialDeviceSettingsRef.current === null) {
+    initialDeviceSettingsRef.current = readLocalStaffCalendarDeviceSettings();
+  }
+
   useEffect(() => {
     if (!canManageCalendarSettings && showSlotSettings) {
       setShowSlotSettings(false);
@@ -161,6 +166,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   const [weekdayRowHeight, setWeekdayRowHeight] = usePersistentNumber(WEEKDAY_ROW_HEIGHT_KEY, 32, MIN_WEEKDAY_ROW_HEIGHT);
   const [lastRowFontSize, setLastRowFontSize] = usePersistentNumber(LAST_ROW_FONT_SIZE_KEY, 13, 8);
   const [lastRowFontWeight, setLastRowFontWeight] = usePersistentNumber(LAST_ROW_FONT_WEIGHT_KEY, 700, 500);
+  const [isDeviceSettingsReady, setIsDeviceSettingsReady] = useState(() => initialDeviceSettingsRef.current.hasAny);
   const [undoStack, setUndoStack] = useState([]);
   const [selectedCell, setSelectedCell] = useState(null);
   const [, setRangeEnd] = useState(null);
@@ -211,7 +217,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
 
   useEffect(() => {
     let active = true;
-    const localSnapshot = readLocalStaffCalendarDeviceSettings();
+    const localSnapshot = initialDeviceSettingsRef.current || readLocalStaffCalendarDeviceSettings();
     if (localSnapshot.hasAny) {
       syncSaveStaffCalendarDeviceSettings(localSnapshot.values);
     }
@@ -220,6 +226,8 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
       applySettings: (settings) => {
         if (active) applyStaffDeviceSettings(settings);
       },
+    }).finally(() => {
+      if (active) setIsDeviceSettingsReady(true);
     });
     return () => {
       active = false;
@@ -1461,77 +1469,83 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
           });
         }}
       />
-      <div className="calendar-grid" style={{ gridTemplateColumns: colWidth ? `repeat(7, ${colWidth}px)` : 'repeat(7, minmax(0, 1fr))' }}>
-        {WEEKDAYS.map((day, i) => (
-          <div key={`h-${i}`} className={`calendar-weekday-header${i === 0 ? ' sunday' : ''}${i === 6 ? ' saturday' : ''}`} style={{ position: 'relative' }}>
-            {day}
-            <div className="col-resizer" onMouseDown={startColResize} />
-            <div className="weekday-row-resizer" title="요일 셀 높이 조절" onMouseDown={startWeekdayRowResize} />
-          </div>
-        ))}
-        {grid.map((week, wi) => week.map((dayInfo, di) => {
-          const isToday = isSameDate(dayInfo.date, today);
-          let cc = 'calendar-cell';
-          if (dayInfo.isOtherMonth) cc += ' other-month';
-          if (dayInfo.isSunday) cc += ' sunday';
-          if (dayInfo.isSaturday) cc += ' saturday';
-          if (dayInfo.isHoliday) cc += ' holiday';
-          if (isToday) cc += ' today';
-
-          return (
-            <div key={`${wi}-${di}`} className={cc} style={{ height: `${rowHeight}px` }}>
-              <div className="calendar-date">
-                <span className="calendar-date-number">{dayInfo.day}</span>
-                <div
-                  className="date-row-resizer"
-                  title="날짜 셀 높이 조절"
-                  onMouseDown={startDateRowResize}
-                />
-              </div>
-              <div className="calendar-memos" style={{ gridTemplateRows: `repeat(${getSlotCount(wi)}, minmax(0, 1fr))` }}>
-                {Array.from({ length: getSlotCount(wi) }, (_, slot) => {
-                  const slotCount = getSlotCount(wi);
-                  const key = memoKey(wi, di, slot);
-                  const isSel = selectedKeys.has(key);
-                  const isPri = selectedCell?.key === key;
-                  const isEd = editingCell === key;
-                  const shouldHideLastRowContent = !showLastRows && slot === slotCount - 1;
-                  let clipMode = null;
-                  if (clipboardSource?.keys?.has(key)) clipMode = clipboardSource.mode;
-
-                  // 공휴일 이름: 첫 번째 슬롯에 표시
-                  const holidayName = (slot === 0 && dayInfo.isHoliday) ? holidayNames.get(dayInfo.key) : null;
-                  const rawMemo = staffMemos[key];
-                  const memoContent = shouldHideLastRowContent ? '' : (rawMemo?.content || '');
-                  const displayMemo = shouldHideLastRowContent
-                    ? { ...(rawMemo || {}), content: '' }
-                    : getStaffCalendarDisplayMemo(rawMemo, slot === slotCount - 1);
-                  const isDepartmentHidden = shouldHideStaffMemoByDepartment(memoContent, hiddenDepartments);
-                  const autoFontColor = getAutoFontColorForStaffMemo(memoContent);
-
-                  return (
-                    <MemoSlot key={slot} memo={displayMemo} dayInfo={dayInfo} slotIndex={slot}
-                      isSelected={isSel} isPrimary={isPri} isEditing={isEd} clipboardMode={clipMode}
-                      cellId={key}
-                      autoFontColor={autoFontColor}
-                      holidayName={holidayName}
-                      isDepartmentHidden={isDepartmentHidden}
-                      isLastSlot={slot === slotCount - 1}
-                      isBeforeLastSlot={slotCount > 1 && slot === slotCount - 2}
-                      onMouseDown={(e) => onCellMouseDown(wi, di, slot, e)}
-                      onMouseEnter={(e) => onCellMouseEnter(wi, di, slot, e)}
-                      onDoubleClick={() => onCellDblClick(wi, di, slot)}
-                      onContextMenu={(e) => onCellCtxMenu(wi, di, slot, e)}
-                    />
-                  );
-                })}
-              </div>
-              {di < 6 && <div className="col-resizer" onMouseDown={startColResize} />}
-              {wi < grid.length - 1 && <div className="row-resizer" onMouseDown={startRowResize} />}
+      {!isDeviceSettingsReady ? (
+        <div className="staff-calendar-loading" role="status" aria-live="polite">
+          근무표 설정 불러오는 중
+        </div>
+      ) : (
+        <div className="calendar-grid" style={{ gridTemplateColumns: colWidth ? `repeat(7, ${colWidth}px)` : 'repeat(7, minmax(0, 1fr))' }}>
+          {WEEKDAYS.map((day, i) => (
+            <div key={`h-${i}`} className={`calendar-weekday-header${i === 0 ? ' sunday' : ''}${i === 6 ? ' saturday' : ''}`} style={{ position: 'relative' }}>
+              {day}
+              <div className="col-resizer" onMouseDown={startColResize} />
+              <div className="weekday-row-resizer" title="요일 셀 높이 조절" onMouseDown={startWeekdayRowResize} />
             </div>
-          );
-        }))}
-      </div>
+          ))}
+          {grid.map((week, wi) => week.map((dayInfo, di) => {
+            const isToday = isSameDate(dayInfo.date, today);
+            let cc = 'calendar-cell';
+            if (dayInfo.isOtherMonth) cc += ' other-month';
+            if (dayInfo.isSunday) cc += ' sunday';
+            if (dayInfo.isSaturday) cc += ' saturday';
+            if (dayInfo.isHoliday) cc += ' holiday';
+            if (isToday) cc += ' today';
+
+            return (
+              <div key={`${wi}-${di}`} className={cc} style={{ height: `${rowHeight}px` }}>
+                <div className="calendar-date">
+                  <span className="calendar-date-number">{dayInfo.day}</span>
+                  <div
+                    className="date-row-resizer"
+                    title="날짜 셀 높이 조절"
+                    onMouseDown={startDateRowResize}
+                  />
+                </div>
+                <div className="calendar-memos" style={{ gridTemplateRows: `repeat(${getSlotCount(wi)}, minmax(0, 1fr))` }}>
+                  {Array.from({ length: getSlotCount(wi) }, (_, slot) => {
+                    const slotCount = getSlotCount(wi);
+                    const key = memoKey(wi, di, slot);
+                    const isSel = selectedKeys.has(key);
+                    const isPri = selectedCell?.key === key;
+                    const isEd = editingCell === key;
+                    const shouldHideLastRowContent = !showLastRows && slot === slotCount - 1;
+                    let clipMode = null;
+                    if (clipboardSource?.keys?.has(key)) clipMode = clipboardSource.mode;
+
+                    // 공휴일 이름: 첫 번째 슬롯에 표시
+                    const holidayName = (slot === 0 && dayInfo.isHoliday) ? holidayNames.get(dayInfo.key) : null;
+                    const rawMemo = staffMemos[key];
+                    const memoContent = shouldHideLastRowContent ? '' : (rawMemo?.content || '');
+                    const displayMemo = shouldHideLastRowContent
+                      ? { ...(rawMemo || {}), content: '' }
+                      : getStaffCalendarDisplayMemo(rawMemo, slot === slotCount - 1);
+                    const isDepartmentHidden = shouldHideStaffMemoByDepartment(memoContent, hiddenDepartments);
+                    const autoFontColor = getAutoFontColorForStaffMemo(memoContent);
+
+                    return (
+                      <MemoSlot key={slot} memo={displayMemo} dayInfo={dayInfo} slotIndex={slot}
+                        isSelected={isSel} isPrimary={isPri} isEditing={isEd} clipboardMode={clipMode}
+                        cellId={key}
+                        autoFontColor={autoFontColor}
+                        holidayName={holidayName}
+                        isDepartmentHidden={isDepartmentHidden}
+                        isLastSlot={slot === slotCount - 1}
+                        isBeforeLastSlot={slotCount > 1 && slot === slotCount - 2}
+                        onMouseDown={(e) => onCellMouseDown(wi, di, slot, e)}
+                        onMouseEnter={(e) => onCellMouseEnter(wi, di, slot, e)}
+                        onDoubleClick={() => onCellDblClick(wi, di, slot)}
+                        onContextMenu={(e) => onCellCtxMenu(wi, di, slot, e)}
+                      />
+                    );
+                  })}
+                </div>
+                {di < 6 && <div className="col-resizer" onMouseDown={startColResize} />}
+                {wi < grid.length - 1 && <div className="row-resizer" onMouseDown={startRowResize} />}
+              </div>
+            );
+          }))}
+        </div>
+      )}
 
       {contextMenu && (
         <div
