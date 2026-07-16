@@ -291,6 +291,20 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     return Number(calendarSlotSettings.week_slot_counts[String(wi)]) || 6;
   }, [calendarSlotSettings]);
 
+  const getMemoGridTemplateRows = useCallback((wi) => {
+    const slotCount = getSlotCount(wi);
+    const calendarBottomBorder = 1;
+    const availableHeight = Math.max(
+      slotCount,
+      Math.round(rowHeight) - Math.round(dateRowHeight) - calendarBottomBorder
+    );
+    const baseHeight = Math.max(1, Math.floor(availableHeight / slotCount));
+    const remainder = availableHeight - baseHeight * slotCount;
+    return Array.from({ length: slotCount }, (_, index) => (
+      `${baseHeight + (index < remainder ? 1 : 0)}px`
+    )).join(' ');
+  }, [dateRowHeight, getSlotCount, rowHeight]);
+
   const staffBlockRules = useMemo(
     () => getEffectiveStaffScheduleBlockRules(shockwaveSettings, currentYear, currentMonth).rules,
     [shockwaveSettings, currentYear, currentMonth]
@@ -1469,11 +1483,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
           });
         }}
       />
-      {!isDeviceSettingsReady ? (
-        <div className="staff-calendar-loading" role="status" aria-live="polite">
-          근무표 설정 불러오는 중
-        </div>
-      ) : (
+      {isDeviceSettingsReady && (
         <div className="calendar-grid" style={{ gridTemplateColumns: colWidth ? `repeat(7, ${colWidth}px)` : 'repeat(7, minmax(0, 1fr))' }}>
           {WEEKDAYS.map((day, i) => (
             <div key={`h-${i}`} className={`calendar-weekday-header${i === 0 ? ' sunday' : ''}${i === 6 ? ' saturday' : ''}`} style={{ position: 'relative' }}>
@@ -1501,7 +1511,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                     onMouseDown={startDateRowResize}
                   />
                 </div>
-                <div className="calendar-memos" style={{ gridTemplateRows: `repeat(${getSlotCount(wi)}, minmax(0, 1fr))` }}>
+                <div className="calendar-memos" style={{ gridTemplateRows: getMemoGridTemplateRows(wi) }}>
                   {Array.from({ length: getSlotCount(wi) }, (_, slot) => {
                     const slotCount = getSlotCount(wi);
                     const key = memoKey(wi, di, slot);
