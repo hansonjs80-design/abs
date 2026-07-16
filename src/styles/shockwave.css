@@ -12,6 +12,7 @@
   --sw-cell-font-size: 13px;
   --sw-cell-font-weight: 700;
   --sw-time-font-size: 12px;
+  --sw-time-font-weight: 700;
   --sw-header-font-size: 16px;
   --sw-therapist-font-size: 14px;
   --sw-grid-line: #b7b7b7;
@@ -816,7 +817,7 @@
   align-items: center;
   justify-content: center;
   font-size: var(--sw-time-font-size, 12px);
-  font-weight: 700;
+  font-weight: var(--sw-time-font-weight, 700);
   color: #000;
   background: var(--bg-secondary);
   border-right: 2px solid #000;

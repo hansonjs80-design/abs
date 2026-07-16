@@ -318,6 +318,7 @@
 }
 
 .memo-slot {
+  position: relative;
   padding: 0 3px 0 6px; /* 위아래 여백은 없애고 우측 정렬 기준은 유지 */
   font-size: var(--staff-calendar-memo-font-size);
   font-weight: 700;
@@ -334,26 +335,21 @@
   text-overflow: clip;
   line-height: 1.15;
   outline: none;
-  border: 1px solid transparent;
-  border-bottom: 1px solid transparent; /* 실제 가로선은 ::after로 좌우 여백 적용 */
+  border: 0;
   margin-bottom: 0px; /* 마진을 없애서 테두리끼리 일치시킴 */
   box-sizing: border-box;
   min-width: 0;
 }
 
-.memo-slot::after {
+.memo-slot + .memo-slot::before {
   content: '';
   position: absolute;
   left: 4px;
   right: 4px;
-  bottom: 0;
+  top: 0;
   height: 1px;
   background: var(--border-color);
   pointer-events: none;
-}
-
-.memo-slot.before-last-row-count::after {
-  display: none;
 }
 
 .memo-slot.last-row-count {
@@ -363,17 +359,6 @@
   line-height: 1;
   padding-top: 0;
   padding-bottom: 0;
-}
-
-.memo-slot.before-last-row-count + .memo-slot.last-row-count::before {
-  content: '';
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  top: 0;
-  height: 1px;
-  background: var(--border-color);
-  pointer-events: none;
 }
 
 .memo-slot > span {
@@ -387,10 +372,6 @@
 /* 마지막 슬롯은 하단 셀 테두리와 이중선이 생기지 않도록 보더 제거 */
 .memo-slot:last-child {
   border-bottom: none;
-}
-
-.memo-slot:last-child::after {
-  display: none;
 }
 
 .memo-slot:hover {
