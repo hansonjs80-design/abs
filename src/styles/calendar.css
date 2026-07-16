@@ -13,6 +13,7 @@
   --staff-calendar-weekday-font-size: 16px;
   --staff-calendar-last-row-font-size: 13px;
   --staff-calendar-last-row-font-weight: 700;
+  --staff-calendar-inner-line-color: #b8c2cf;
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
@@ -244,8 +245,8 @@
   right: 4px;
   bottom: 0;
   height: 1px;
-  background: var(--border-color);
-  transform: scaleY(0.5);
+  background: var(--staff-calendar-inner-line-color);
+  transform: scaleY(0.85);
   transform-origin: bottom;
   pointer-events: none;
 }
@@ -352,8 +353,8 @@
   right: 4px;
   top: 0;
   height: 1px;
-  background: var(--border-color);
-  transform: scaleY(0.5);
+  background: var(--staff-calendar-inner-line-color);
+  transform: scaleY(0.85);
   transform-origin: top;
   pointer-events: none;
 }
