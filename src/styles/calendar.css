@@ -242,9 +242,11 @@
   position: absolute;
   left: 4px;
   right: 4px;
-  bottom: -1px;
+  bottom: 0;
   height: 1px;
   background: var(--border-color);
+  transform: scaleY(0.5);
+  transform-origin: bottom;
   pointer-events: none;
 }
 
@@ -351,6 +353,8 @@
   top: 0;
   height: 1px;
   background: var(--border-color);
+  transform: scaleY(0.5);
+  transform-origin: top;
   pointer-events: none;
 }
 

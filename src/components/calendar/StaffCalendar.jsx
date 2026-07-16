@@ -167,6 +167,9 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   const [lastRowFontSize, setLastRowFontSize] = usePersistentNumber(LAST_ROW_FONT_SIZE_KEY, 13, 8);
   const [lastRowFontWeight, setLastRowFontWeight] = usePersistentNumber(LAST_ROW_FONT_WEIGHT_KEY, 700, 500);
   const [isDeviceSettingsReady, setIsDeviceSettingsReady] = useState(() => initialDeviceSettingsRef.current.hasAny);
+  const renderedRowHeight = Math.max(MIN_ROW_HEIGHT, Math.round(rowHeight));
+  const renderedDateRowHeight = Math.max(MIN_DATE_ROW_HEIGHT, Math.round(dateRowHeight));
+  const renderedWeekdayRowHeight = Math.max(MIN_WEEKDAY_ROW_HEIGHT, Math.round(weekdayRowHeight));
   const [undoStack, setUndoStack] = useState([]);
   const [selectedCell, setSelectedCell] = useState(null);
   const [, setRangeEnd] = useState(null);
@@ -296,14 +299,14 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     const calendarBottomBorder = 1;
     const availableHeight = Math.max(
       slotCount,
-      Math.round(rowHeight) - Math.round(dateRowHeight) - calendarBottomBorder
+      renderedRowHeight - renderedDateRowHeight - calendarBottomBorder
     );
     const baseHeight = Math.max(1, Math.floor(availableHeight / slotCount));
     const remainder = availableHeight - baseHeight * slotCount;
     return Array.from({ length: slotCount }, (_, index) => (
       `${baseHeight + (index < remainder ? 1 : 0)}px`
     )).join(' ');
-  }, [dateRowHeight, getSlotCount, rowHeight]);
+  }, [getSlotCount, renderedDateRowHeight, renderedRowHeight]);
 
   const staffBlockRules = useMemo(
     () => getEffectiveStaffScheduleBlockRules(shockwaveSettings, currentYear, currentMonth).rules,
@@ -1133,11 +1136,11 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
         outline: 'none',
         position: 'relative',
         '--staff-calendar-memo-font-size': `${memoFontSize}px`,
-        '--staff-calendar-date-row-height': `${dateRowHeight}px`,
+        '--staff-calendar-date-row-height': `${renderedDateRowHeight}px`,
         '--staff-calendar-date-font-size': `${dateFontSize}px`,
         '--staff-calendar-date-font-weight': dateFontWeight,
         '--staff-calendar-weekday-font-size': `${weekdayFontSize}px`,
-        '--calendar-weekday-row-height': `${weekdayRowHeight}px`,
+        '--calendar-weekday-row-height': `${renderedWeekdayRowHeight}px`,
         '--staff-calendar-last-row-font-size': `${lastRowFontSize}px`,
         '--staff-calendar-last-row-font-weight': lastRowFontWeight,
       }}
@@ -1502,7 +1505,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
             if (isToday) cc += ' today';
 
             return (
-              <div key={`${wi}-${di}`} className={cc} style={{ height: `${rowHeight}px` }}>
+              <div key={`${wi}-${di}`} className={cc} style={{ height: `${renderedRowHeight}px` }}>
                 <div className="calendar-date">
                   <span className="calendar-date-number">{dayInfo.day}</span>
                   <div
