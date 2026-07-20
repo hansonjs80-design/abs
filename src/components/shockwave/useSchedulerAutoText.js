@@ -16,8 +16,10 @@ import {
   getPrescriptionScheduleSettings,
 } from '../../lib/prescriptionScheduleSettings';
 import {
+  buildScheduleRowsBySchedulerCellKey,
   getScheduleDayDateKey,
   isUnmarkedSameDaySchedulerLog,
+  shouldKeepSchedulerLinkedPatientLog,
   shouldUseScheduleRowForPatientHistory,
   shouldUseScheduleContentForPatientHistory,
 } from '../../lib/schedulerHistoryCandidateUtils';
@@ -537,19 +539,50 @@ export default function useSchedulerAutoText({
       if (/^(40|60)분$/u.test(prescription)) return true;
       return has4060Pattern(content) || has4060Pattern(patientName);
     };
+    const buildKeepSchedulerLinkedLog = (scheduleRows) => {
+      const scheduleRowsByCellKey = buildScheduleRowsBySchedulerCellKey(scheduleRows);
+      return (item) => shouldKeepSchedulerLinkedPatientLog(item, scheduleRowsByCellKey, {
+        targetDate,
+        targetRowIndex: r,
+        targetColIndex: c,
+        patientMatchesSchedule: (historyLog, scheduleIdentity) => (
+          matchesSearchIdentity(scheduleIdentity.patientChart, scheduleIdentity.patientName) &&
+          matchesSearchIdentity(historyLog.chart_number, historyLog.patient_name)
+        ),
+        getLogHistoryGroup: (historyLog) => historyLog.type,
+        getScheduleHistoryGroup: (scheduleRow, content) => (
+          isManualTherapyRecord(
+            { prescription: scheduleRow.prescription, patient_name: content },
+            content
+          )
+            ? 'manual'
+            : 'shockwave'
+        ),
+      });
+    };
+    const isOnOrBeforeTargetDate = (item) => (
+      !targetDate || !item?.date || String(item.date) <= targetDate
+    );
 
     let allData = [];
     if (preloadedData) {
+      const keepSchedulerLinkedLog = buildKeepSchedulerLinkedLog(preloadedData.scheduleSchedules || []);
       const filteredShockwave = (preloadedData.shockwaveLogs || []).filter((item) => {
         if (isUnmarkedSameDaySchedulerLog(item, targetDate)) return false;
-        return matchesSearchIdentity(item.chart_number, item.patient_name);
+        return isOnOrBeforeTargetDate(item) && matchesSearchIdentity(item.chart_number, item.patient_name) && keepSchedulerLinkedLog({
+          ...item,
+          type: isManualTherapyRecord(item) ? 'manual' : 'shockwave',
+        });
       }).map((item) => ({
         ...item,
         type: isManualTherapyRecord(item) ? 'manual' : 'shockwave',
       }));
 
       const filteredManual = (preloadedData.manualLogs || []).filter((item) => {
-        return matchesSearchIdentity(item.chart_number, item.patient_name);
+        return isOnOrBeforeTargetDate(item) && matchesSearchIdentity(item.chart_number, item.patient_name) && keepSchedulerLinkedLog({
+          ...item,
+          type: 'manual',
+        });
       }).map((item) => ({ ...item, type: 'manual' }));
 
       allData = userRemovedDoseTag
@@ -599,7 +632,7 @@ export default function useSchedulerAutoText({
         .limit(500);
 
       const manualQuery = supabase.from('manual_therapy_patient_logs')
-        .select('patient_name, chart_number, visit_count, date, prescription, body_part')
+        .select('patient_name, chart_number, visit_count, date, prescription, body_part, source, scheduler_cell_key')
         .lte('date', targetDate)
         .order('date', { ascending: false })
         .limit(500);
@@ -645,15 +678,18 @@ export default function useSchedulerAutoText({
           ...item,
           type: isManualTherapyRecord(item) ? 'manual' : 'shockwave',
         }));
+      const scheduleData = scheduleRes.data || [];
+      const keepSchedulerLinkedLog = buildKeepSchedulerLinkedLog(scheduleData);
       allData = userRemovedDoseTag
-        ? normalizedShockwaveData.filter((item) => item.type === 'shockwave')
+        ? normalizedShockwaveData.filter((item) => item.type === 'shockwave' && keepSchedulerLinkedLog(item))
         : [
-            ...normalizedShockwaveData,
-            ...(manualRes.data || []).map((item) => ({ ...item, type: 'manual' })),
+            ...normalizedShockwaveData.filter(keepSchedulerLinkedLog),
+            ...(manualRes.data || [])
+              .map((item) => ({ ...item, type: 'manual' }))
+              .filter(keepSchedulerLinkedLog),
           ];
 
       if (!userRemovedDoseTag) {
-        const scheduleData = scheduleRes.data || [];
         for (const s of scheduleData) {
           try {
             const calWeeks = generateShockwaveCalendar(s.year, s.month);

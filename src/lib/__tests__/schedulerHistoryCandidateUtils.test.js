@@ -2,9 +2,14 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  buildPatientHistorySchedulePresenceKeys,
+  buildScheduleRowsBySchedulerCellKey,
+  getSchedulerLinkedLogQueryTargets,
+  shouldUseScheduleContentForPatientHistory,
+  shouldKeepSchedulerLinkedPatientLog,
+  shouldKeepUnkeyedSchedulerLogForPatientHistory,
   shouldUseScheduleRowForPatientHistory,
   isUnmarkedSameDaySchedulerLog,
-  shouldUseScheduleContentForPatientHistory,
 } from '../schedulerHistoryCandidateUtils.js';
 
 describe('scheduler history candidate filtering', () => {
@@ -117,6 +122,253 @@ describe('scheduler history candidate filtering', () => {
         }
       ),
       true
+    );
+  });
+
+  it('groups scheduler-linked log keys by month for live schedule validation', () => {
+    assert.deepEqual(
+      getSchedulerLinkedLogQueryTargets([
+        { scheduler_cell_key: '2026:07:3:0:12:1' },
+        { scheduler_cell_key: '2026:07:3:1:13:2' },
+        { scheduler_cell_key: '2026:08:4:0:8:0' },
+        { scheduler_cell_key: 'invalid' },
+      ]),
+      [
+        {
+          year: 2026,
+          month: 7,
+          weekIndexes: [3],
+          dayIndexes: [0, 1],
+          rowIndexes: [12, 13],
+          colIndexes: [1, 2],
+        },
+        {
+          year: 2026,
+          month: 8,
+          weekIndexes: [4],
+          dayIndexes: [0],
+          rowIndexes: [8],
+          colIndexes: [0],
+        },
+      ]
+    );
+  });
+
+  it('removes a scheduler-linked patient log when the linked schedule cell is gone', () => {
+    assert.equal(
+      shouldKeepSchedulerLinkedPatientLog(
+        {
+          date: '2026-07-27',
+          patient_name: '이지운',
+          chart_number: '6281',
+          source: 'scheduler',
+          scheduler_cell_key: '2026:07:3:0:12:1',
+        },
+        buildScheduleRowsBySchedulerCellKey([])
+      ),
+      false
+    );
+  });
+
+  it('keeps a scheduler-linked patient log only when the live schedule cell still matches', () => {
+    const rowsByKey = buildScheduleRowsBySchedulerCellKey([
+      {
+        year: 2026,
+        month: 7,
+        week_index: 3,
+        day_index: 0,
+        row_index: 12,
+        col_index: 1,
+        content: '6281/이지운40(2)',
+        prescription: '40분',
+      },
+    ]);
+
+    assert.equal(
+      shouldKeepSchedulerLinkedPatientLog(
+        {
+          date: '2026-07-20',
+          patient_name: '이지운',
+          chart_number: '6281',
+          source: 'scheduler',
+          scheduler_cell_key: '2026:07:3:0:12:1',
+          history_group: 'manual',
+        },
+        rowsByKey,
+        {
+          getLogHistoryGroup: (log) => log.history_group,
+          getScheduleHistoryGroup: () => 'manual',
+        }
+      ),
+      true
+    );
+
+    assert.equal(
+      shouldKeepSchedulerLinkedPatientLog(
+        {
+          date: '2026-07-27',
+          patient_name: '다른환자',
+          chart_number: '9999',
+          source: 'scheduler',
+          scheduler_cell_key: '2026:07:3:0:12:1',
+        },
+        rowsByKey
+      ),
+      false
+    );
+  });
+
+  it('keeps a future scheduler-linked patient log when the live schedule cell still exists', () => {
+    const rowsByKey = buildScheduleRowsBySchedulerCellKey([
+      {
+        year: 2026,
+        month: 7,
+        week_index: 4,
+        day_index: 0,
+        row_index: 12,
+        col_index: 1,
+        content: '6281/이지운40(2)',
+        prescription: '40분',
+      },
+    ]);
+
+    assert.equal(
+      shouldKeepSchedulerLinkedPatientLog(
+        {
+          date: '2026-07-27',
+          patient_name: '이지운',
+          chart_number: '6281',
+          source: 'scheduler',
+          scheduler_cell_key: '2026:07:4:0:12:1',
+          history_group: 'manual',
+        },
+        rowsByKey,
+        {
+          getLogHistoryGroup: (log) => log.history_group,
+          getScheduleHistoryGroup: () => 'manual',
+        }
+      ),
+      true
+    );
+  });
+
+  it('removes an unkeyed future scheduler log when no matching schedule row exists', () => {
+    const schedulePresenceKeys = buildPatientHistorySchedulePresenceKeys([
+      {
+        dateStr: '2026-07-27',
+        historyGroup: 'manual',
+        parsed: {
+          patientChart: '9999',
+          patientName: '다른환자',
+        },
+      },
+    ]);
+
+    assert.equal(
+      shouldKeepUnkeyedSchedulerLogForPatientHistory(
+        {
+          date: '2026-07-27',
+          patient_name: '이지운',
+          chart_number: '6281',
+          source: 'scheduler',
+          history_group: 'manual',
+        },
+        schedulePresenceKeys,
+        '2026-07-20'
+      ),
+      false
+    );
+  });
+
+  it('keeps an unkeyed future scheduler log when a matching schedule row exists', () => {
+    const schedulePresenceKeys = buildPatientHistorySchedulePresenceKeys([
+      {
+        dateStr: '2026-07-27',
+        historyGroup: 'manual',
+        parsed: {
+          patientChart: '6281',
+          patientName: '이지운',
+        },
+      },
+    ]);
+
+    assert.equal(
+      shouldKeepUnkeyedSchedulerLogForPatientHistory(
+        {
+          date: '2026-07-27',
+          patient_name: '이지운',
+          chart_number: '6281',
+          source: 'scheduler',
+          history_group: 'manual',
+        },
+        schedulePresenceKeys,
+        '2026-07-20'
+      ),
+      true
+    );
+  });
+
+  it('removes scheduler-linked logs after the selected target date', () => {
+    const rowsByKey = buildScheduleRowsBySchedulerCellKey([
+      {
+        year: 2026,
+        month: 7,
+        week_index: 4,
+        day_index: 0,
+        row_index: 12,
+        col_index: 1,
+        content: '6281/이지운40(2)',
+        prescription: '40분',
+      },
+    ]);
+
+    assert.equal(
+      shouldKeepSchedulerLinkedPatientLog(
+        {
+          date: '2026-07-27',
+          patient_name: '이지운',
+          chart_number: '6281',
+          source: 'scheduler',
+          scheduler_cell_key: '2026:07:4:0:12:1',
+        },
+        rowsByKey,
+        { targetDate: '2026-07-20' }
+      ),
+      false
+    );
+  });
+
+  it('removes scheduler-linked logs when the live schedule treatment group changed', () => {
+    const rowsByKey = buildScheduleRowsBySchedulerCellKey([
+      {
+        year: 2026,
+        month: 7,
+        week_index: 3,
+        day_index: 0,
+        row_index: 12,
+        col_index: 1,
+        content: '6281/이지운(2)',
+        prescription: 'F2.5',
+      },
+    ]);
+
+    assert.equal(
+      shouldKeepSchedulerLinkedPatientLog(
+        {
+          date: '2026-07-27',
+          patient_name: '이지운',
+          chart_number: '6281',
+          source: 'scheduler',
+          scheduler_cell_key: '2026:07:3:0:12:1',
+          history_group: 'manual',
+        },
+        rowsByKey,
+        {
+          getLogHistoryGroup: (log) => log.history_group,
+          getScheduleHistoryGroup: () => 'shockwave',
+        }
+      ),
+      false
     );
   });
 });

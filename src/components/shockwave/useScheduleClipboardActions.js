@@ -468,7 +468,7 @@ export default function useScheduleClipboardActions({
         let shockwaveQuery = supabase.from('shockwave_patient_logs')
           .select('patient_name, chart_number, visit_count, date, prescription, body_part, source, scheduler_cell_key');
         let manualQuery = supabase.from('manual_therapy_patient_logs')
-          .select('patient_name, chart_number, visit_count, date, prescription, body_part');
+          .select('patient_name, chart_number, visit_count, date, prescription, body_part, source, scheduler_cell_key');
 
         if (orFilter) {
           shockwaveQuery = shockwaveQuery.or(orFilter);

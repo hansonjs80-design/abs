@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import { generateShockwaveCalendar } from '../../lib/calendarUtils';
+import { generateShockwaveCalendar, getTodayKST } from '../../lib/calendarUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import {
   buildPatientHistoryCellUpdate,
@@ -19,7 +19,12 @@ import {
   updateDoseTagForPrescriptionContent,
 } from '../../lib/schedulerContentFormat';
 import {
+  buildPatientHistorySchedulePresenceKeys,
+  buildScheduleRowsBySchedulerCellKey,
   getScheduleDayDateKey,
+  getSchedulerLinkedLogQueryTargets,
+  shouldKeepSchedulerLinkedPatientLog,
+  shouldKeepUnkeyedSchedulerLogForPatientHistory,
   shouldUseScheduleRowForPatientHistory,
 } from '../../lib/schedulerHistoryCandidateUtils';
 import {
@@ -113,6 +118,44 @@ const getHistoryLogTableName = (log = {}) => {
   if (log.type === 'shockwave') return 'shockwave_patient_logs';
   if (log.type === 'manual') return 'manual_therapy_patient_logs';
   return '';
+};
+
+const SCHEDULER_LINKED_HISTORY_SCHEDULE_SELECT = [
+  'id',
+  'year',
+  'month',
+  'week_index',
+  'day_index',
+  'row_index',
+  'col_index',
+  'content',
+  'prescription',
+  'body_part',
+  'merge_span',
+].join(',');
+
+const fetchScheduleRowsForSchedulerLinkedLogs = async (logs) => {
+  const targets = getSchedulerLinkedLogQueryTargets(logs);
+  if (targets.length === 0) return buildScheduleRowsBySchedulerCellKey([]);
+
+  const results = await Promise.all(targets.map(async (target) => {
+    let query = supabase
+      .from('shockwave_schedules')
+      .select(SCHEDULER_LINKED_HISTORY_SCHEDULE_SELECT)
+      .eq('year', target.year)
+      .eq('month', target.month);
+
+    if (target.weekIndexes.length > 0) query = query.in('week_index', target.weekIndexes);
+    if (target.dayIndexes.length > 0) query = query.in('day_index', target.dayIndexes);
+    if (target.rowIndexes.length > 0) query = query.in('row_index', target.rowIndexes);
+    if (target.colIndexes.length > 0) query = query.in('col_index', target.colIndexes);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  }));
+
+  return buildScheduleRowsBySchedulerCellKey(results.flat());
 };
 
 const resolveTherapistNameForHistory = ({
@@ -274,6 +317,17 @@ export default function usePatientHistoryActions({
     const activeSelectedContent = typeof options?.selectedContent === 'string'
       ? options.selectedContent
       : null;
+    let selectedDate = '';
+    let selectedKey = activeSelectedKey;
+    let selectedDayInfo = null;
+    if (selectedCell) {
+      const calWeeks = generateShockwaveCalendar(currentYear, currentMonth, holidays);
+      selectedDayInfo = calWeeks[selectedCell.w]?.[selectedCell.d] || null;
+      if (selectedDayInfo) {
+        selectedDate = getScheduleDayDateKey(selectedDayInfo);
+        selectedKey = selectedKey || cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c);
+      }
+    }
     const manualPrescriptionSignature = Array.isArray(settings?.manual_therapy_prescriptions)
       ? settings.manual_therapy_prescriptions.join('|')
       : '';
@@ -284,6 +338,7 @@ export default function usePatientHistoryActions({
       activeSelectedContent ?? '',
       currentYear,
       currentMonth,
+      selectedDate,
       baseTimeSlotsLength,
       colCount,
       manualPrescriptionSignature,
@@ -302,12 +357,12 @@ export default function usePatientHistoryActions({
     try {
       const activeManualPrescriptionSet = buildActiveManualPrescriptionSet(settings);
       const shockwaveQuery = supabase.from('shockwave_patient_logs')
-        .select('id, patient_name, chart_number, visit_count, date, prescription, body_part, therapist_name')
+        .select('id, patient_name, chart_number, visit_count, date, prescription, body_part, therapist_name, source, scheduler_cell_key')
         .order('date', { ascending: false })
         .limit(500);
 
       const manualQuery = supabase.from('manual_therapy_patient_logs')
-        .select('id, patient_name, chart_number, visit_count, date, prescription, body_part, therapist_name')
+        .select('id, patient_name, chart_number, visit_count, date, prescription, body_part, therapist_name, source, scheduler_cell_key')
         .order('date', { ascending: false })
         .limit(500);
 
@@ -330,7 +385,7 @@ export default function usePatientHistoryActions({
 
       const [shockwaveRes, manualRes, scheduleRes] = await Promise.all([shockwaveQuery, manualQuery, scheduleQuery]);
 
-      const allData = [
+      const fetchedLogData = [
         ...(shockwaveRes.data || []).filter((d) => patientHistoryIdentityMatches({
           chartParam,
           nameParam,
@@ -354,6 +409,22 @@ export default function usePatientHistoryActions({
           history_group: 'manual',
         })),
       ];
+      const linkedScheduleRowsByKey = await fetchScheduleRowsForSchedulerLinkedLogs(fetchedLogData);
+      const keepHistoryLog = (log) => shouldKeepSchedulerLinkedPatientLog(log, linkedScheduleRowsByKey, {
+        patientMatchesSchedule: (historyLog, scheduleIdentity) => patientHistoryIdentityMatches({
+          chartParam: historyLog.chart_number,
+          nameParam: historyLog.patient_name,
+          chartValue: scheduleIdentity.patientChart,
+          nameValue: scheduleIdentity.patientName,
+        }),
+        getLogHistoryGroup: (historyLog) => historyLog.history_group || historyLog.type,
+        getScheduleHistoryGroup: (scheduleRow, content) => getPatientHistoryTreatmentGroup({
+          type: 'schedule',
+          prescription: scheduleRow.prescription,
+          content,
+        }),
+      });
+      let allData = fetchedLogData.filter(keepHistoryLog);
 
       const scheduleData = scheduleRes.data || [];
       const scheduleOverrides = new Map();
@@ -429,6 +500,17 @@ export default function usePatientHistoryActions({
           // Ignore malformed schedule rows.
         }
       }
+
+      const today = getTodayKST();
+      const todayDateKey = getScheduleDayDateKey({
+        year: today.getFullYear(),
+        month: today.getMonth() + 1,
+        day: today.getDate(),
+      });
+      const schedulePresenceKeys = buildPatientHistorySchedulePresenceKeys(scheduleRowsWithMeta);
+      allData = allData.filter((log) => (
+        shouldKeepUnkeyedSchedulerLogForPatientHistory(log, schedulePresenceKeys, todayDateKey)
+      ));
 
       await Promise.all([...monthlyPreloadTargets.values()].map((target) => (
         getMonthlyTherapistRows(target.year, target.month, target.historyGroup)
@@ -538,16 +620,8 @@ export default function usePatientHistoryActions({
         return (parseInt(b.visit_count || '0', 10) || 0) - (parseInt(a.visit_count || '0', 10) || 0);
       });
 
-      let selectedDate = '';
       const selectedDateLogs = [];
-      if (selectedCell) {
-        const calWeeks = generateShockwaveCalendar(currentYear, currentMonth, holidays);
-        const dayInfo = calWeeks[selectedCell.w]?.[selectedCell.d];
-        if (dayInfo) {
-          const dd = dayInfo.date;
-          selectedDate = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`;
-          const selectedKey = cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c);
-
+      if (selectedCell && selectedDayInfo && selectedDate) {
           for (let rowIndex = 0; rowIndex < baseTimeSlotsLength; rowIndex++) {
             for (let colIndex = 0; colIndex < colCount; colIndex++) {
               const key = cellKey(selectedCell.w, selectedCell.d, rowIndex, colIndex);
@@ -595,7 +669,7 @@ export default function usePatientHistoryActions({
                 ) || '',
                 therapist_name: resolveTherapistNameForHistory({
                   slotIndex: colIndex,
-                  day: dayInfo.day,
+                  day: selectedDayInfo.day,
                   group: historyGroup,
                   therapists,
                   manualTherapists,
@@ -609,7 +683,6 @@ export default function usePatientHistoryActions({
               });
             }
           }
-        }
       }
 
       let finalLogs = matches;
