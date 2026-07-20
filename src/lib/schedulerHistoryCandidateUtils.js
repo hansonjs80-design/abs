@@ -22,6 +22,19 @@ export function shouldUseScheduleContentForPatientHistory(content) {
 export function shouldUseScheduleRowForPatientHistory(row, dayInfo, options = {}) {
   const content = String(row?.content || '').trim();
   if (!shouldUseScheduleContentForPatientHistory(content)) return false;
+  if (row?.merge_span?.mergedInto) return false;
+
+  const rowCount = Number(options?.rowCount);
+  const colCount = Number(options?.colCount);
+  const rowIndex = Number(row?.row_index);
+  const colIndex = Number(row?.col_index);
+  if (Number.isFinite(rowCount) && rowCount > 0) {
+    if (!Number.isFinite(rowIndex) || rowIndex < 0 || rowIndex >= rowCount) return false;
+  }
+  if (Number.isFinite(colCount) && colCount > 0) {
+    if (!Number.isFinite(colIndex) || colIndex < 0 || colIndex >= colCount) return false;
+  }
+
   if (!dayInfo?.isCurrentMonth) return false;
 
   const dateKey = getScheduleDayDateKey(dayInfo);
@@ -92,7 +105,13 @@ export function buildScheduleRowsBySchedulerCellKey(rows) {
   const byKey = new Map();
   (Array.isArray(rows) ? rows : []).forEach((row) => {
     const key = getScheduleRowSchedulerCellKey(row);
-    if (key) byKey.set(key, row);
+    if (!key) return;
+    const existing = byKey.get(key);
+    const parsedExistingTime = existing?.updated_at ? Date.parse(existing.updated_at) : 0;
+    const parsedNextTime = row?.updated_at ? Date.parse(row.updated_at) : 0;
+    const existingTime = Number.isFinite(parsedExistingTime) ? parsedExistingTime : 0;
+    const nextTime = Number.isFinite(parsedNextTime) ? parsedNextTime : 0;
+    if (!existing || nextTime >= existingTime) byKey.set(key, row);
   });
   return byKey;
 }
@@ -214,6 +233,8 @@ export function shouldKeepSchedulerLinkedPatientLog(log, scheduleRowsByCellKey, 
     targetDate: options.targetDate,
     targetRowIndex: options.targetRowIndex,
     targetColIndex: options.targetColIndex,
+    rowCount: options.rowCount,
+    colCount: options.colCount,
   })) {
     return false;
   }

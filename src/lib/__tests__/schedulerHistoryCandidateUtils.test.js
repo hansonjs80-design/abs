@@ -78,6 +78,67 @@ describe('scheduler history candidate filtering', () => {
     );
   });
 
+  it('ignores hidden merged child rows when building history', () => {
+    assert.equal(
+      shouldUseScheduleRowForPatientHistory(
+        {
+          content: '6281/이지운40(2)',
+          row_index: 12,
+          col_index: 1,
+          merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '4-0-11-1' },
+        },
+        {
+          year: 2026,
+          month: 7,
+          day: 27,
+          isCurrentMonth: true,
+        }
+      ),
+      false
+    );
+  });
+
+  it('ignores rows outside the rendered scheduler table bounds', () => {
+    const dayInfo = {
+      year: 2026,
+      month: 7,
+      day: 27,
+      isCurrentMonth: true,
+    };
+
+    assert.equal(
+      shouldUseScheduleRowForPatientHistory(
+        {
+          content: '6281/이지운40(2)',
+          row_index: 100,
+          col_index: 1,
+        },
+        dayInfo,
+        {
+          rowCount: 40,
+          colCount: 3,
+        }
+      ),
+      false
+    );
+
+    assert.equal(
+      shouldUseScheduleRowForPatientHistory(
+        {
+          content: '6281/이지운40(2)',
+          row_index: 12,
+          col_index: 4,
+        },
+        dayInfo,
+        {
+          rowCount: 40,
+          colCount: 3,
+        }
+      ),
+      false
+    );
+  });
+
   it('does not use the current editing cell as its own latest history', () => {
     assert.equal(
       shouldUseScheduleRowForPatientHistory(
@@ -166,6 +227,45 @@ describe('scheduler history candidate filtering', () => {
           scheduler_cell_key: '2026:07:3:0:12:1',
         },
         buildScheduleRowsBySchedulerCellKey([])
+      ),
+      false
+    );
+  });
+
+  it('uses the newest row for a schedule cell when duplicate coordinates exist', () => {
+    const rowsByKey = buildScheduleRowsBySchedulerCellKey([
+      {
+        year: 2026,
+        month: 7,
+        week_index: 4,
+        day_index: 0,
+        row_index: 12,
+        col_index: 1,
+        content: '6281/이지운40(2)',
+        updated_at: '2026-07-10T00:00:00Z',
+      },
+      {
+        year: 2026,
+        month: 7,
+        week_index: 4,
+        day_index: 0,
+        row_index: 12,
+        col_index: 1,
+        content: '',
+        updated_at: '2026-07-11T00:00:00Z',
+      },
+    ]);
+
+    assert.equal(
+      shouldKeepSchedulerLinkedPatientLog(
+        {
+          date: '2026-07-27',
+          patient_name: '이지운',
+          chart_number: '6281',
+          source: 'scheduler',
+          scheduler_cell_key: '2026:07:4:0:12:1',
+        },
+        rowsByKey
       ),
       false
     );

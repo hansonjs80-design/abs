@@ -21,6 +21,7 @@ import {
 import {
   buildPatientHistorySchedulePresenceKeys,
   buildScheduleRowsBySchedulerCellKey,
+  getScheduleRowSchedulerCellKey,
   getScheduleDayDateKey,
   getSchedulerLinkedLogQueryTargets,
   shouldKeepFuturePatientLogForSchedulePresence,
@@ -132,6 +133,7 @@ const SCHEDULER_LINKED_HISTORY_SCHEDULE_SELECT = [
   'prescription',
   'body_part',
   'merge_span',
+  'updated_at',
 ].join(',');
 
 const fetchScheduleRowsForSchedulerLinkedLogs = async (logs) => {
@@ -367,7 +369,7 @@ export default function usePatientHistoryActions({
         .limit(500);
 
       const scheduleQuery = supabase.from('shockwave_schedules')
-        .select('id, year, month, week_index, day_index, row_index, col_index, content, prescription, body_part')
+        .select(SCHEDULER_LINKED_HISTORY_SCHEDULE_SELECT)
         .neq('content', '')
         .order('year', { ascending: false })
         .order('month', { ascending: false })
@@ -411,6 +413,8 @@ export default function usePatientHistoryActions({
       ];
       const linkedScheduleRowsByKey = await fetchScheduleRowsForSchedulerLinkedLogs(fetchedLogData);
       const keepHistoryLog = (log) => shouldKeepSchedulerLinkedPatientLog(log, linkedScheduleRowsByKey, {
+        rowCount: baseTimeSlotsLength,
+        colCount,
         patientMatchesSchedule: (historyLog, scheduleIdentity) => patientHistoryIdentityMatches({
           chartParam: historyLog.chart_number,
           nameParam: historyLog.patient_name,
@@ -426,7 +430,21 @@ export default function usePatientHistoryActions({
       });
       let allData = fetchedLogData.filter(keepHistoryLog);
 
-      const scheduleData = scheduleRes.data || [];
+      const scheduleCandidates = scheduleRes.data || [];
+      const latestScheduleRowsByKey = await fetchScheduleRowsForSchedulerLinkedLogs(
+        scheduleCandidates.map((row) => ({
+          scheduler_cell_key: getScheduleRowSchedulerCellKey(row),
+        }))
+      );
+      const scheduleData = [];
+      const seenScheduleKeys = new Set();
+      scheduleCandidates.forEach((candidate) => {
+        const key = getScheduleRowSchedulerCellKey(candidate);
+        if (!key || seenScheduleKeys.has(key)) return;
+        seenScheduleKeys.add(key);
+        const latest = latestScheduleRowsByKey.get(key);
+        if (latest) scheduleData.push(latest);
+      });
       const scheduleOverrides = new Map();
       const therapistSignature = (therapists || []).map((item) => item?.name || '').join('|');
       const manualTherapistSignature = (manualTherapists || []).map((item) => item?.name || '').join('|');
@@ -460,7 +478,10 @@ export default function usePatientHistoryActions({
           const calWeeks = getCachedCalendar(s.year, s.month);
           const dayInfo = calWeeks[s.week_index]?.[s.day_index];
           if (!dayInfo) continue;
-          if (!shouldUseScheduleRowForPatientHistory(s, dayInfo)) continue;
+          if (!shouldUseScheduleRowForPatientHistory(s, dayInfo, {
+            rowCount: baseTimeSlotsLength,
+            colCount,
+          })) continue;
           const dateStr = getScheduleDayDateKey(dayInfo);
 
           const content = s.content || '';
