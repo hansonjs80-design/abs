@@ -103,4 +103,112 @@ describe('stats schedule source utilities', () => {
     assert.notEqual(relocated[0], masterKey);
     assert.equal(memoMap[hiddenChildKey]?.content || '', '');
   });
+
+  it('does not count stale covered duplicate cells as extra stats rows', () => {
+    const year = 2026;
+    const month = 6;
+    const { weekIndex, dayIndex } = findCurrentMonthCoord(year, month);
+    const content = '11383/임태용(16)';
+
+    const memoMap = buildScheduleMemoMapForStats([
+      {
+        year,
+        month,
+        week_index: weekIndex,
+        day_index: dayIndex,
+        row_index: 25,
+        col_index: 0,
+        content,
+        bg_color: TREATMENT_COMPLETE_BG,
+        prescription: 'F/R',
+        body_part: 'Rt Ankle',
+        merge_span: { rowSpan: 2, colSpan: 1, mergedInto: null },
+        updated_at: '2026-06-01T00:00:00.000Z',
+      },
+      {
+        year,
+        month,
+        week_index: weekIndex,
+        day_index: dayIndex,
+        row_index: 26,
+        col_index: 0,
+        content,
+        bg_color: TREATMENT_COMPLETE_BG,
+        prescription: 'F/R',
+        body_part: 'Rt Ankle',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+        updated_at: '2026-06-01T00:00:01.000Z',
+      },
+      {
+        year,
+        month,
+        week_index: weekIndex,
+        day_index: dayIndex,
+        row_index: 28,
+        col_index: 0,
+        content,
+        bg_color: TREATMENT_COMPLETE_BG,
+        prescription: 'F/R',
+        body_part: 'Rt Ankle',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+        updated_at: '2026-06-01T00:00:02.000Z',
+      },
+    ], {
+      year,
+      month,
+      settings: { start_time: '09:00', end_time: '19:30', interval_minutes: 10, time_label_interval_minutes: 10 },
+    });
+
+    const entries = Object.entries(memoMap).filter(([, cell]) => cell?.content === content);
+    assert.deepEqual(entries.map(([key]) => key), [
+      `${weekIndex}-${dayIndex}-25-0`,
+      `${weekIndex}-${dayIndex}-28-0`,
+    ]);
+  });
+
+  it('keeps same-patient covered cells when treatment details differ', () => {
+    const year = 2026;
+    const month = 6;
+    const { weekIndex, dayIndex } = findCurrentMonthCoord(year, month);
+    const content = '11383/임태용(16)';
+
+    const memoMap = buildScheduleMemoMapForStats([
+      {
+        year,
+        month,
+        week_index: weekIndex,
+        day_index: dayIndex,
+        row_index: 25,
+        col_index: 0,
+        content,
+        bg_color: TREATMENT_COMPLETE_BG,
+        prescription: 'F/R',
+        body_part: 'Rt Ankle',
+        merge_span: { rowSpan: 2, colSpan: 1, mergedInto: null },
+        updated_at: '2026-06-01T00:00:00.000Z',
+      },
+      {
+        year,
+        month,
+        week_index: weekIndex,
+        day_index: dayIndex,
+        row_index: 26,
+        col_index: 0,
+        content,
+        bg_color: TREATMENT_COMPLETE_BG,
+        prescription: 'F/RDC',
+        body_part: 'Rt Hip',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+        updated_at: '2026-06-01T00:00:01.000Z',
+      },
+    ], {
+      year,
+      month,
+      settings: { start_time: '09:00', end_time: '19:30', interval_minutes: 10, time_label_interval_minutes: 10 },
+    });
+
+    const entries = Object.values(memoMap).filter((cell) => cell?.content === content);
+    assert.equal(entries.length, 2);
+    assert.ok(entries.some((cell) => cell.prescription === 'F/RDC' && cell.body_part === 'Rt Hip'));
+  });
 });

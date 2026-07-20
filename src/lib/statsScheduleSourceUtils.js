@@ -48,6 +48,35 @@ function getScheduleCellKey(item) {
   return `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
 }
 
+function parseScheduleCellKey(key) {
+  const [weekIndex, dayIndex, rowIndex, colIndex] = String(key || '').split('-').map(Number);
+  return { weekIndex, dayIndex, rowIndex, colIndex };
+}
+
+function buildCoveredCellKeys(rows) {
+  const covered = new Set();
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const mergeSpan = row?.merge_span || {};
+    if (mergeSpan.mergedInto) return;
+
+    const rowSpan = Math.max(1, Number(mergeSpan.rowSpan) || 1);
+    const colSpan = Math.max(1, Number(mergeSpan.colSpan) || 1);
+    if (rowSpan <= 1 && colSpan <= 1) return;
+
+    const masterKey = getScheduleCellKey(row);
+    const { weekIndex, dayIndex, rowIndex, colIndex } = parseScheduleCellKey(masterKey);
+    if (![weekIndex, dayIndex, rowIndex, colIndex].every(Number.isFinite)) return;
+
+    for (let r = rowIndex; r < rowIndex + rowSpan; r += 1) {
+      for (let c = colIndex; c < colIndex + colSpan; c += 1) {
+        const key = `${weekIndex}-${dayIndex}-${r}-${c}`;
+        if (key !== masterKey) covered.add(key);
+      }
+    }
+  });
+  return covered;
+}
+
 function getUpdatedAtTime(item) {
   const time = item?.updated_at ? Date.parse(item.updated_at) : 0;
   return Number.isFinite(time) ? time : 0;
@@ -96,12 +125,14 @@ export function buildScheduleMemoMapForStats(rows, { year, month, settings = {} 
   const relocation = relocateHiddenMergedScheduleRows(visibleRows, {
     rowCount: getShockwaveScheduleBaseRowCount(settings, year, month),
   });
+  const coveredKeys = buildCoveredCellKeys(relocation.rows);
 
   return (relocation.rows || []).reduce((memoMap, row) => {
     if (!hasStatsScheduleMemoPayload(row)) return memoMap;
     const visible = sanitizeShockwaveScheduleItemForDisplay(row);
     if (!visible || !hasStatsScheduleMemoPayload(visible)) return memoMap;
     const key = getScheduleCellKey(visible);
+    if (coveredKeys.has(key)) return memoMap;
     const existing = memoMap[key];
     if (!existing || getUpdatedAtTime(visible) >= getUpdatedAtTime(existing)) {
       memoMap[key] = visible;

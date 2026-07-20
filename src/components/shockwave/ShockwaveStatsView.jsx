@@ -282,10 +282,6 @@ export default function ShockwaveStatsView({
   }, [currentYear, currentMonth]);
 
   useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
-
-  useEffect(() => {
     if (safeTherapists.length === 0) return;
 
     const syncKey = `${currentYear}-${currentMonth}:${currentMemosSyncSignature}:${scheduleLayoutSettingsKey}`;
