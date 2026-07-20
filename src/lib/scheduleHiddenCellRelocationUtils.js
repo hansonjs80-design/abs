@@ -1,4 +1,5 @@
 import { getDateOverridesForMonth, getMonthlyDayOverrides } from './schedulerOperatingHours.js';
+import { parseSchedulerPatientIdentity } from './schedulerCellTextUtils.js';
 import { getScheduleDisplaySlotMinutes } from './schedulerUtils.js';
 
 const DEFAULT_MERGE_SPAN = { rowSpan: 1, colSpan: 1, mergedInto: null };
@@ -104,20 +105,66 @@ function normalizeComparableCellText(value) {
   return String(value || '').trim().replace(/\s+/g, ' ');
 }
 
+function normalizeComparablePatientName(value) {
+  return normalizeComparableCellText(value).replace(/\*/g, '').toLowerCase();
+}
+
+function getComparablePatientIdentity(item) {
+  const parsed = parseSchedulerPatientIdentity(item?.content || '');
+  return {
+    chart: normalizeComparableCellText(parsed?.patientChart),
+    name: normalizeComparablePatientName(parsed?.patientName),
+  };
+}
+
+function getComparableTreatmentValue(item, field) {
+  const directValue = normalizeComparableCellText(item?.[field]).toLowerCase();
+  if (directValue) return directValue;
+
+  if (field === 'body_part') {
+    const metaOptions = item?.merge_span?.meta?.body_part_options;
+    if (Array.isArray(metaOptions)) {
+      return metaOptions
+        .map((entry) => normalizeComparableCellText(entry).toLowerCase())
+        .filter(Boolean)
+        .join('|');
+    }
+  }
+
+  return '';
+}
+
+function hasDistinctTreatmentDetails(source, master) {
+  return ['prescription', 'body_part'].some((field) => {
+    const sourceValue = getComparableTreatmentValue(source, field);
+    const masterValue = getComparableTreatmentValue(master, field);
+    if (!sourceValue) return false;
+    if (!masterValue) return true;
+    return sourceValue !== masterValue;
+  });
+}
+
+function hasSamePatientIdentity(source, master) {
+  const sourceIdentity = getComparablePatientIdentity(source);
+  const masterIdentity = getComparablePatientIdentity(master);
+  if (sourceIdentity.chart && masterIdentity.chart && sourceIdentity.chart !== masterIdentity.chart) {
+    return false;
+  }
+  if (sourceIdentity.chart && masterIdentity.chart && sourceIdentity.name && masterIdentity.name) {
+    return sourceIdentity.name === masterIdentity.name;
+  }
+  if (sourceIdentity.chart && masterIdentity.chart) return true;
+  if (sourceIdentity.name && masterIdentity.name) return sourceIdentity.name === masterIdentity.name;
+  return false;
+}
+
 function isSameCoveredAppointment({ source, master }) {
   if (!source || !master) return false;
   const sourceContent = normalizeComparableCellText(source.content);
   const masterContent = normalizeComparableCellText(master.content);
-  if (!sourceContent || sourceContent !== masterContent) return false;
-
-  const treatmentFields = ['prescription', 'body_part'];
-  return treatmentFields.every((field) => {
-    const sourceValue = normalizeComparableCellText(source[field]).toLowerCase();
-    const masterValue = normalizeComparableCellText(master[field]).toLowerCase();
-    if (sourceValue && masterValue) return sourceValue === masterValue;
-    if (sourceValue && !masterValue) return false;
-    return true;
-  });
+  if (!sourceContent || !masterContent) return false;
+  if (hasDistinctTreatmentDetails(source, master)) return false;
+  return sourceContent === masterContent || hasSamePatientIdentity(source, master);
 }
 
 function buildCoveredCellMasterMap(byKey) {

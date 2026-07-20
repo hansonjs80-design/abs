@@ -211,4 +211,77 @@ describe('stats schedule source utilities', () => {
     assert.equal(entries.length, 2);
     assert.ok(entries.some((cell) => cell.prescription === 'F/RDC' && cell.body_part === 'Rt Hip'));
   });
+
+  it('uses visible schedule content over a stale covered star visit marker', () => {
+    const year = 2026;
+    const month = 6;
+    const weeks = generateShockwaveCalendar(year, month);
+    let weekIndex = -1;
+    let dayIndex = -1;
+    weeks.forEach((week, wIndex) => {
+      week.forEach((dayInfo, dIndex) => {
+        if (dayInfo.year === 2026 && dayInfo.month === 6 && dayInfo.day === 8) {
+          weekIndex = wIndex;
+          dayIndex = dIndex;
+        }
+      });
+    });
+    assert.notEqual(weekIndex, -1);
+    const masterContent = '14122/전지환(1)';
+    const staleContent = '14122/전지환*';
+
+    const memoMap = buildScheduleMemoMapForStats([
+      {
+        year,
+        month,
+        week_index: weekIndex,
+        day_index: dayIndex,
+        row_index: 20,
+        col_index: 1,
+        content: masterContent,
+        bg_color: TREATMENT_COMPLETE_BG,
+        prescription: 'F2.5',
+        body_part: 'Lt Elbow',
+        merge_span: { rowSpan: 2, colSpan: 1, mergedInto: null },
+        updated_at: '2026-06-08T00:00:01.000Z',
+      },
+      {
+        year,
+        month,
+        week_index: weekIndex,
+        day_index: dayIndex,
+        row_index: 21,
+        col_index: 1,
+        content: staleContent,
+        bg_color: TREATMENT_COMPLETE_BG,
+        prescription: 'F2.5',
+        body_part: 'Lt Elbow',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+        updated_at: '2026-06-08T00:00:00.000Z',
+      },
+      {
+        year,
+        month,
+        week_index: weekIndex,
+        day_index: dayIndex,
+        row_index: 25,
+        col_index: 1,
+        content: masterContent,
+        bg_color: TREATMENT_COMPLETE_BG,
+        prescription: 'F2.5',
+        body_part: 'Lt Elbow',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+        updated_at: '2026-06-08T00:00:02.000Z',
+      },
+    ], {
+      year,
+      month,
+      settings: { start_time: '09:00', end_time: '19:30', interval_minutes: 10, time_label_interval_minutes: 10 },
+    });
+
+    const visibleEntries = Object.values(memoMap).filter((cell) => cell?.content === masterContent);
+    const staleEntries = Object.values(memoMap).filter((cell) => cell?.content === staleContent);
+    assert.equal(visibleEntries.length, 2);
+    assert.equal(staleEntries.length, 0);
+  });
 });

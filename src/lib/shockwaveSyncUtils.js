@@ -244,6 +244,7 @@ async function runTodayShockwaveScheduleToStatsSync({
   pastDataCache = null,
   existingMonthStats = null,
   collectOnly = false,
+  copyExistingTreatmentDetails = true,
 }) {
   if (!memos) {
     return { skipped: true, reason: 'missing_memos' };
@@ -386,7 +387,9 @@ async function runTodayShockwaveScheduleToStatsSync({
     todayStats = data || [];
   }
 
-  const schedulerEntriesForCopying = todayStats.filter(shouldUseExistingShockwaveSchedulerLogForCopy);
+  const schedulerEntriesForCopying = copyExistingTreatmentDetails
+    ? todayStats.filter(shouldUseExistingShockwaveSchedulerLogForCopy)
+    : [];
   const existingByCellKey = new Map();
   const existingGroups = {};
   schedulerEntriesForCopying.forEach((row) => {
@@ -400,7 +403,9 @@ async function runTodayShockwaveScheduleToStatsSync({
 
   newLogs.forEach((item) => {
     const key = normalizeHistoryPatientName(item.patient_name);
-    const old = existingByCellKey.get(item.scheduler_cell_key) || existingGroups[key]?.shift() || null;
+    const old = copyExistingTreatmentDetails
+      ? existingByCellKey.get(item.scheduler_cell_key) || existingGroups[key]?.shift() || null
+      : null;
 
     const out = {
       scheduler_cell_key: item.scheduler_cell_key,
@@ -618,6 +623,7 @@ export async function syncMonthShockwaveScheduleToStats({
           pastDataCache: rollingPastData,
           existingMonthStats,
           collectOnly: true,
+          copyExistingTreatmentDetails: false,
         });
 
         if (!result.skipped) {
@@ -657,6 +663,7 @@ export async function syncMonthShockwaveScheduleToStats({
       totalDeleted: deletedCount,
       totalUpdated: 0,
       totalUpdates: inserted + deletedCount,
+      rebuiltRows: rebuiltRowsForMonth,
     };
   }
 

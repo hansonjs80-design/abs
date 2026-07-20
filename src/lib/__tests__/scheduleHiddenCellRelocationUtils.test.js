@@ -184,6 +184,43 @@ describe('hidden merged shockwave schedule relocation', () => {
     );
   });
 
+  it('clears a covered stale visit marker for the same chart and patient', () => {
+    const result = relocateHiddenMergedScheduleRows([
+      {
+        year: 2026,
+        month: 6,
+        week_index: 1,
+        day_index: 0,
+        row_index: 18,
+        col_index: 1,
+        content: '14122/전지환(1)',
+        bg_color: '#ffe599',
+        prescription: 'F2.5',
+        body_part: 'Lt Elbow',
+        merge_span: { rowSpan: 2, colSpan: 1, mergedInto: null },
+      },
+      {
+        year: 2026,
+        month: 6,
+        week_index: 1,
+        day_index: 0,
+        row_index: 19,
+        col_index: 1,
+        content: '14122/전지환*',
+        bg_color: '#ffe599',
+        prescription: 'F2.5',
+        body_part: 'Lt Elbow',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+      },
+    ], { rowCount: 40 });
+
+    const map = rowsByKey(result.rows);
+    assert.equal(map.get('1-0-18-1').content, '14122/전지환(1)');
+    assert.equal(map.get('1-0-19-1').content, '');
+    assert.equal(map.get('1-0-19-1').prescription, null);
+    assert.equal(map.get('1-0-19-1').body_part, null);
+  });
+
   it('keeps a covered same-patient cell when its prescription or body part is different', () => {
     const result = relocateHiddenMergedScheduleRows([
       {
