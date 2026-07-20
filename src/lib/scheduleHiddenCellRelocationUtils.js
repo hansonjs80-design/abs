@@ -100,8 +100,28 @@ function hasMeaningfulCellPayload(item) {
   return false;
 }
 
-function getCoveredCellKeys(byKey) {
-  const covered = new Set();
+function normalizeComparableCellText(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ');
+}
+
+function isSameCoveredAppointment({ source, master }) {
+  if (!source || !master) return false;
+  const sourceContent = normalizeComparableCellText(source.content);
+  const masterContent = normalizeComparableCellText(master.content);
+  if (!sourceContent || sourceContent !== masterContent) return false;
+
+  const treatmentFields = ['prescription', 'body_part'];
+  return treatmentFields.every((field) => {
+    const sourceValue = normalizeComparableCellText(source[field]).toLowerCase();
+    const masterValue = normalizeComparableCellText(master[field]).toLowerCase();
+    if (sourceValue && masterValue) return sourceValue === masterValue;
+    if (sourceValue && !masterValue) return false;
+    return true;
+  });
+}
+
+function buildCoveredCellMasterMap(byKey) {
+  const coveredByMaster = new Map();
   byKey.forEach((item, key) => {
     const mergeSpan = cloneMergeSpan(item?.merge_span);
     if (mergeSpan.mergedInto || (mergeSpan.rowSpan <= 1 && mergeSpan.colSpan <= 1)) return;
@@ -109,11 +129,12 @@ function getCoveredCellKeys(byKey) {
     if (![w, d, r, c].every(Number.isFinite)) return;
     for (let row = r; row < r + mergeSpan.rowSpan; row += 1) {
       for (let col = c; col < c + mergeSpan.colSpan; col += 1) {
-        covered.add(`${w}-${d}-${row}-${col}`);
+        const coveredKey = `${w}-${d}-${row}-${col}`;
+        if (coveredKey !== key) coveredByMaster.set(coveredKey, key);
       }
     }
   });
-  return covered;
+  return coveredByMaster;
 }
 
 function isCellCoveredByMaster({ sourceKey, masterKey, byKey }) {
@@ -145,6 +166,26 @@ function buildDestinationMergeSpan(sourceKey, sourceMergeSpan) {
     ...DEFAULT_MERGE_SPAN,
     meta,
   };
+}
+
+function buildClearedHiddenCell(source, masterKey) {
+  const sourceMergeSpan = cloneMergeSpan(source?.merge_span);
+  const nextMergeSpan = sourceMergeSpan.mergedInto
+    ? {
+        rowSpan: sourceMergeSpan.rowSpan,
+        colSpan: sourceMergeSpan.colSpan,
+        mergedInto: masterKey,
+      }
+    : { ...DEFAULT_MERGE_SPAN };
+
+  return buildPayloadItem(source, {
+    content: '',
+    bg_color: null,
+    merge_span: nextMergeSpan,
+    prescription: null,
+    body_part: null,
+    updated_at: source?.updated_at,
+  });
 }
 
 function findExistingRelocationTarget(sourceKey, byKey) {
@@ -223,7 +264,8 @@ export function relocateHiddenMergedScheduleRows(rows, options = {}) {
   const rowCount = getSafeRowCount(options.rowCount, byKey);
   if (rowCount <= 0) return { rows: Array.from(byKey.values()), payload: [] };
 
-  const coveredKeys = getCoveredCellKeys(byKey);
+  const coveredMasterByKey = buildCoveredCellMasterMap(byKey);
+  const coveredKeys = new Set(coveredMasterByKey.keys());
   const reservedKeys = new Set();
   const payloadByKey = new Map();
 
@@ -231,9 +273,12 @@ export function relocateHiddenMergedScheduleRows(rows, options = {}) {
     .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey, undefined, { numeric: true }))
     .forEach(([sourceKey, source]) => {
       const sourceMergeSpan = cloneMergeSpan(source?.merge_span);
-      if (!sourceMergeSpan.mergedInto || !hasVisibleText(source?.content)) return;
+      const explicitMasterKey = sourceMergeSpan.mergedInto || '';
+      const footprintMasterKey = coveredMasterByKey.get(sourceKey) || '';
+      const masterKey = explicitMasterKey || footprintMasterKey;
+      if (!masterKey || !hasVisibleText(source?.content)) return;
 
-      if (!isCellCoveredByMaster({ sourceKey, masterKey: sourceMergeSpan.mergedInto, byKey })) {
+      if (explicitMasterKey && !isCellCoveredByMaster({ sourceKey, masterKey: explicitMasterKey, byKey })) {
         const detached = buildPayloadItem(source, {
           merge_span: { ...DEFAULT_MERGE_SPAN },
         });
@@ -242,10 +287,17 @@ export function relocateHiddenMergedScheduleRows(rows, options = {}) {
         return;
       }
 
+      if (isSameCoveredAppointment({ source, master: byKey.get(masterKey) })) {
+        const clearedDuplicate = buildClearedHiddenCell(source, masterKey);
+        byKey.set(sourceKey, { ...source, ...clearedDuplicate });
+        payloadByKey.set(sourceKey, clearedDuplicate);
+        return;
+      }
+
       const existingTargetKey = findExistingRelocationTarget(sourceKey, byKey);
       const targetKey = existingTargetKey || findRelocationTarget({
         sourceKey,
-        masterKey: sourceMergeSpan.mergedInto,
+        masterKey,
         byKey,
         coveredKeys,
         reservedKeys,
@@ -253,17 +305,7 @@ export function relocateHiddenMergedScheduleRows(rows, options = {}) {
       });
       if (!targetKey) return;
 
-      const clearedSource = buildPayloadItem(source, {
-        content: '',
-        bg_color: null,
-        merge_span: {
-          rowSpan: sourceMergeSpan.rowSpan,
-          colSpan: sourceMergeSpan.colSpan,
-          mergedInto: sourceMergeSpan.mergedInto,
-        },
-        prescription: null,
-        body_part: null,
-      });
+      const clearedSource = buildClearedHiddenCell(source, masterKey);
       byKey.set(sourceKey, { ...source, ...clearedSource });
       payloadByKey.set(sourceKey, clearedSource);
 

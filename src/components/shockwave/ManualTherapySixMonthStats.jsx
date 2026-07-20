@@ -1,7 +1,13 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 import { formatRecentPeriodLabel, parseRecentPeriodMonths } from '../../lib/recentPeriodUtils';
+import { syncMonthManualTherapyScheduleToStats } from '../../lib/manualTherapyUtils';
+import {
+  getRecentScheduleMonthTargets,
+  loadScheduleMemosForStatsMonth,
+  loadStatsMonthlyTherapists,
+} from '../../lib/statsScheduleSourceUtils';
 
 function normalizePrescriptionKey(value) {
   return String(value || '')
@@ -13,12 +19,14 @@ export default function ManualTherapySixMonthStats({
   currentYear,
   currentMonth,
   settings,
+  therapists,
   selectedTherapistNames,
 }) {
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
   const [refreshKey, setRefreshKey] = useState(0);
+  const recentAutoSyncKeyRef = useRef(null);
   const recentPeriodMonths = useMemo(
     () => parseRecentPeriodMonths(recentPeriodInput, 6),
     [recentPeriodInput]
@@ -27,6 +35,81 @@ export default function ManualTherapySixMonthStats({
     () => formatRecentPeriodLabel(recentPeriodMonths),
     [recentPeriodMonths]
   );
+  const safeTherapists = useMemo(
+    () => (Array.isArray(therapists) ? therapists.filter(Boolean) : []),
+    [therapists]
+  );
+
+  useEffect(() => {
+    if (safeTherapists.length === 0) return undefined;
+
+    const therapistKey = safeTherapists
+      .map((therapist, index) => `${therapist?.slot_index ?? index}:${therapist?.name || ''}`)
+      .join('|');
+    const scheduleSettingsKey = JSON.stringify({
+      start_time: settings?.start_time,
+      end_time: settings?.end_time,
+      interval_minutes: settings?.interval_minutes,
+      time_label_interval_minutes: settings?.time_label_interval_minutes,
+      day_overrides: settings?.day_overrides,
+      date_overrides: settings?.date_overrides,
+    });
+    const syncKey = `${currentYear}-${currentMonth}:${recentPeriodMonths}:${therapistKey}:${scheduleSettingsKey}`;
+    if (recentAutoSyncKeyRef.current === syncKey) return undefined;
+    recentAutoSyncKeyRef.current = syncKey;
+
+    let cancelled = false;
+
+    const syncRecentMonthsFromSchedule = async () => {
+      try {
+        setIsLoading(true);
+        const targets = getRecentScheduleMonthTargets({ currentYear, currentMonth, recentPeriodMonths });
+
+        for (const target of targets) {
+          if (cancelled) return;
+          const [targetMemos, targetMonthlyTherapists] = await Promise.all([
+            loadScheduleMemosForStatsMonth({
+              year: target.year,
+              month: target.month,
+              settings,
+            }),
+            loadStatsMonthlyTherapists({
+              year: target.year,
+              month: target.month,
+              type: 'manual_therapy',
+              baseTherapists: safeTherapists,
+            }),
+          ]);
+
+          if (cancelled) return;
+          await syncMonthManualTherapyScheduleToStats({
+            year: target.year,
+            month: target.month,
+            memos: targetMemos,
+            therapists: safeTherapists,
+            monthlyTherapists: targetMonthlyTherapists,
+            upToToday: true,
+            scheduleAuthoritative: true,
+            emitEvent: false,
+            replaceExistingMonthLogs: true,
+          });
+        }
+
+        if (!cancelled) setRefreshKey((value) => value + 1);
+      } catch (error) {
+        console.error('최근 도수치료 통계 자동 동기화 실패:', error);
+        recentAutoSyncKeyRef.current = null;
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    syncRecentMonthsFromSchedule();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentMonth, currentYear, recentPeriodMonths, safeTherapists, settings]);
 
   useEffect(() => {
     async function fetchSixMonths() {

@@ -33,4 +33,15 @@ describe('patient history matching for schedule stats sync', () => {
 
     assert.deepEqual(sortPastLogsLatestFirst(logs).map((log) => log.visit_count), ['4', '3']);
   });
+
+  it('does not treat future rows as past history', () => {
+    const current = { chart_number: '5174', patient_name: '이지운' };
+    const logs = getPastLogsForPatient(current, [
+      { chart_number: '5174', patient_name: '이지운', visit_count: '2', date: '2026-07-27' },
+      { chart_number: '5174', patient_name: '이지운', visit_count: '3', date: '2026-08-24' },
+      { chart_number: '5174', patient_name: '이지운', visit_count: '1', date: '2026-06-11' },
+    ], '2026-06-18');
+
+    assert.deepEqual(logs.map((log) => log.date), ['2026-06-11']);
+  });
 });

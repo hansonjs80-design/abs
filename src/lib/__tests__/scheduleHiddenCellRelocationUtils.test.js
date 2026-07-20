@@ -143,6 +143,85 @@ describe('hidden merged shockwave schedule relocation', () => {
     );
   });
 
+  it('clears a covered child that duplicates the merged master appointment', () => {
+    const result = relocateHiddenMergedScheduleRows([
+      {
+        year: 2026,
+        month: 6,
+        week_index: 0,
+        day_index: 0,
+        row_index: 0,
+        col_index: 0,
+        content: '11383/임태용(16)',
+        bg_color: '#ffe599',
+        prescription: 'F/R',
+        body_part: 'Rt Ankle',
+        merge_span: { rowSpan: 2, colSpan: 1, mergedInto: null },
+      },
+      {
+        year: 2026,
+        month: 6,
+        week_index: 0,
+        day_index: 0,
+        row_index: 1,
+        col_index: 0,
+        content: '11383/임태용(16)',
+        bg_color: '#ffe599',
+        prescription: 'F/R',
+        body_part: 'Rt Ankle',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-0-0-0' },
+      },
+    ], { rowCount: 8 });
+
+    const map = rowsByKey(result.rows);
+    assert.equal(map.get('0-0-0-0').content, '11383/임태용(16)');
+    assert.equal(map.get('0-0-1-0').content, '');
+    assert.equal(map.get('0-0-1-0').prescription, null);
+    assert.equal(map.get('0-0-1-0').body_part, null);
+    assert.deepEqual(
+      result.payload.map((item) => cellKey(item)),
+      ['0-0-1-0']
+    );
+  });
+
+  it('keeps a covered same-patient cell when its prescription or body part is different', () => {
+    const result = relocateHiddenMergedScheduleRows([
+      {
+        year: 2026,
+        month: 6,
+        week_index: 0,
+        day_index: 0,
+        row_index: 0,
+        col_index: 0,
+        content: '11383/임태용(16)',
+        bg_color: '#ffe599',
+        prescription: 'F/R',
+        body_part: 'Rt Ankle',
+        merge_span: { rowSpan: 2, colSpan: 1, mergedInto: null },
+      },
+      {
+        year: 2026,
+        month: 6,
+        week_index: 0,
+        day_index: 0,
+        row_index: 1,
+        col_index: 0,
+        content: '11383/임태용(16)',
+        bg_color: '#ffe599',
+        prescription: 'F/RDC',
+        body_part: 'Rt Hip',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-0-0-0' },
+      },
+    ], { rowCount: 8 });
+
+    const map = rowsByKey(result.rows);
+    const moved = map.get('0-0-2-0');
+    assert.equal(moved.content, '11383/임태용(16)');
+    assert.equal(moved.prescription, 'F/RDC');
+    assert.equal(moved.body_part, 'Rt Hip');
+    assert.equal(map.get('0-0-1-0').content, '');
+  });
+
   it('detaches a stale merged child with content when its master is missing', () => {
     const result = relocateHiddenMergedScheduleRows([
       {

@@ -71,3 +71,101 @@ export function buildScheduleStatsSyncMutation({
     rowsToUpsert,
   };
 }
+
+export function getStatsMonthDateRange(year, month) {
+  const safeYear = Number(year);
+  const safeMonth = Number(month);
+  if (!Number.isFinite(safeYear) || !Number.isFinite(safeMonth)) {
+    return { startDate: '', endDate: '' };
+  }
+
+  const daysInMonth = new Date(safeYear, safeMonth, 0).getDate();
+  return {
+    startDate: `${safeYear}-${String(safeMonth).padStart(2, '0')}-01`,
+    endDate: `${safeYear}-${String(safeMonth).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`,
+  };
+}
+
+export async function fetchStatsRowsForDateRange({
+  supabaseClient,
+  tableName,
+  startDate,
+  endDate,
+  select = '*',
+  pageSize = 1000,
+} = {}) {
+  if (!supabaseClient || !tableName || !startDate || !endDate) return [];
+
+  const rows = [];
+  let page = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data, error } = await supabaseClient
+      .from(tableName)
+      .select(select)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+
+    if (error) throw error;
+    if (Array.isArray(data)) rows.push(...data);
+
+    hasMore = Array.isArray(data) && data.length >= pageSize;
+    page += 1;
+  }
+
+  return rows;
+}
+
+export async function replaceStatsRowsForDateRange({
+  supabaseClient,
+  tableName,
+  startDate,
+  endDate,
+  rows = [],
+  preserveManualSource = false,
+  chunkSize = 500,
+  isFallbackInsertError = () => false,
+  mapFallbackRow = (row) => row,
+} = {}) {
+  if (!supabaseClient || !tableName || !startDate || !endDate) {
+    return { deleted: 0, inserted: 0 };
+  }
+
+  let deleteQuery = supabaseClient
+    .from(tableName)
+    .delete()
+    .gte('date', startDate)
+    .lte('date', endDate);
+
+  if (preserveManualSource) {
+    deleteQuery = deleteQuery.neq('source', 'manual');
+  }
+
+  const { error: deleteError } = await deleteQuery;
+  if (deleteError) throw deleteError;
+
+  const safeRows = Array.isArray(rows) ? rows : [];
+  let inserted = 0;
+
+  for (let i = 0; i < safeRows.length; i += chunkSize) {
+    const chunk = safeRows.slice(i, i + chunkSize);
+    const { error: insertError } = await supabaseClient
+      .from(tableName)
+      .insert(chunk);
+
+    if (insertError) {
+      if (!isFallbackInsertError(insertError)) throw insertError;
+      const fallbackRows = chunk.map(mapFallbackRow);
+      const { error: fallbackInsertError } = await supabaseClient
+        .from(tableName)
+        .insert(fallbackRows);
+      if (fallbackInsertError) throw fallbackInsertError;
+    }
+
+    inserted += chunk.length;
+  }
+
+  return { deleted: null, inserted };
+}

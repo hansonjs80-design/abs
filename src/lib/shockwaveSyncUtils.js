@@ -9,6 +9,9 @@ import {
 } from './patientHistoryMatchUtils.js';
 import {
   buildScheduleStatsSyncMutation,
+  fetchStatsRowsForDateRange,
+  getStatsMonthDateRange,
+  replaceStatsRowsForDateRange,
   shouldOverwriteExistingStatsForScheduleSync,
 } from './scheduleStatsSyncUtils.js';
 export {
@@ -238,6 +241,9 @@ async function runTodayShockwaveScheduleToStatsSync({
   targetDateStr,
   overwriteManual = false,
   scheduleAuthoritative = true,
+  pastDataCache = null,
+  existingMonthStats = null,
+  collectOnly = false,
 }) {
   if (!memos) {
     return { skipped: true, reason: 'missing_memos' };
@@ -309,7 +315,20 @@ async function runTodayShockwaveScheduleToStatsSync({
   });
 
   let pastData = [];
-  if (queryNames.length > 0 || chartNumbers.length > 0) {
+  if (pastDataCache) {
+    const queryNameSet = new Set(queryNames);
+    const chartNumberSet = new Set(chartNumbers);
+    if (queryNameSet.size > 0 || chartNumberSet.size > 0) {
+      pastData = pastDataCache.filter((row) => {
+        const normalizedName = normalizeHistoryPatientName(row?.patient_name);
+        const chartNumber = String(row?.chart_number || '').trim();
+        return (
+          (normalizedName && queryNameSet.has(normalizedName)) ||
+          (chartNumber && chartNumberSet.has(chartNumber))
+        );
+      });
+    }
+  } else if (queryNames.length > 0 || chartNumbers.length > 0) {
     const queries = [];
     if (queryNames.length > 0) {
       queries.push(
@@ -356,12 +375,18 @@ async function runTodayShockwaveScheduleToStatsSync({
     }
   });
 
-  const { data: todayStats } = await supabase
-    .from('shockwave_patient_logs')
-    .select('*')
-    .eq('date', todayDateStrFinal);
+  let todayStats = [];
+  if (Array.isArray(existingMonthStats)) {
+    todayStats = existingMonthStats.filter((row) => row.date === todayDateStrFinal);
+  } else {
+    const { data } = await supabase
+      .from('shockwave_patient_logs')
+      .select('*')
+      .eq('date', todayDateStrFinal);
+    todayStats = data || [];
+  }
 
-  const schedulerEntriesForCopying = (todayStats || []).filter(shouldUseExistingShockwaveSchedulerLogForCopy);
+  const schedulerEntriesForCopying = todayStats.filter(shouldUseExistingShockwaveSchedulerLogForCopy);
   const existingByCellKey = new Map();
   const existingGroups = {};
   schedulerEntriesForCopying.forEach((row) => {
@@ -397,7 +422,7 @@ async function runTodayShockwaveScheduleToStatsSync({
   });
 
   const { toDeleteIds, rowsToUpsert } = buildScheduleStatsSyncMutation({
-    existingRows: todayStats || [],
+    existingRows: todayStats,
     rebuiltRows: rebuiltSchedulerRows,
     overwriteExistingStats: effectiveOverwriteManual,
     isSameRow: (existing, newRow) => (
@@ -410,6 +435,22 @@ async function runTodayShockwaveScheduleToStatsSync({
       Number(existing.prescription_count || 1) === Number(newRow.prescription_count || 1)
     ),
   });
+
+  if (collectOnly) {
+    return {
+      skipped: false,
+      todayDateStr: todayDateStrFinal,
+      extractedCount: newLogs.length,
+      insertedCount: rowsToUpsert.length,
+      updatedCount: 0,
+      deletedCount: toDeleteIds.length,
+      totalUpdates: rowsToUpsert.length + toDeleteIds.length,
+      toDeleteIds,
+      rowsToUpsert,
+      rebuiltRows: rebuiltSchedulerRows,
+      todayStats,
+    };
+  }
 
   if (toDeleteIds.length > 0) {
     const { error: deleteError } = await supabase.from('shockwave_patient_logs').delete().in('id', toDeleteIds);
@@ -471,6 +512,8 @@ export async function syncMonthShockwaveScheduleToStats({
   upToToday = false,
   overwriteManual = false,
   scheduleAuthoritative = true,
+  emitEvent = true,
+  replaceExistingMonthLogs = false,
 }) {
   const today = getTodayKST();
   const effectiveOverwriteManual = shouldOverwriteExistingStatsForScheduleSync({
@@ -485,6 +528,136 @@ export async function syncMonthShockwaveScheduleToStats({
   
   if (upToToday && year === today.getFullYear() && month === today.getMonth() + 1) {
     endDay = today.getDate();
+  }
+
+  const { startDate: startOfMonthStr, endDate: endOfMonthStr } = getStatsMonthDateRange(year, month);
+
+  if (replaceExistingMonthLogs) {
+    const weeks = generateShockwaveCalendar(year, month);
+    const patientNamesSet = new Set();
+    const chartNumbersSet = new Set();
+
+    Object.entries(memos || {}).forEach(([key, cell]) => {
+      const [w, d] = key.split('-').map(Number);
+      const dayInfo = weeks[w]?.[d];
+      if (!dayInfo || !dayInfo.isCurrentMonth) return;
+      if (upToToday && year === today.getFullYear() && month === today.getMonth() + 1) {
+        if (dayInfo.day > today.getDate()) return;
+      }
+      if (String(cell?.bg_color || '').toLowerCase() !== TREATMENT_COMPLETE_BG.toLowerCase()) return;
+
+      const parsed = parseTherapyInfo(cell?.content);
+      if (!parsed) return;
+
+      const cleanName = normalizeHistoryPatientName(parsed.patient_name);
+      if (cleanName) {
+        patientNamesSet.add(cleanName);
+        patientNamesSet.add(`${cleanName}*`);
+      }
+      if (parsed.chart_number) chartNumbersSet.add(String(parsed.chart_number).trim());
+    });
+
+    const historyQueries = [];
+    const patientNames = Array.from(patientNamesSet);
+    const chartNumbers = Array.from(chartNumbersSet);
+    if (patientNames.length > 0) {
+      historyQueries.push(
+        supabase
+          .from('shockwave_patient_logs')
+          .select('patient_name, chart_number, visit_count, body_part, date')
+          .in('patient_name', patientNames)
+          .lt('date', startOfMonthStr)
+          .order('date', { ascending: false })
+      );
+    }
+    if (chartNumbers.length > 0) {
+      historyQueries.push(
+        supabase
+          .from('shockwave_patient_logs')
+          .select('patient_name, chart_number, visit_count, body_part, date')
+          .in('chart_number', chartNumbers)
+          .lt('date', startOfMonthStr)
+          .order('date', { ascending: false })
+      );
+    }
+
+    const historyResults = await Promise.all(historyQueries);
+    const historyError = historyResults.find((result) => result.error)?.error;
+    if (historyError) throw historyError;
+
+    const seenHistoryRows = new Set();
+    const rollingPastData = historyResults.flatMap((result) => result.data || []).filter((row) => {
+      const key = `${row.date}|${row.chart_number}|${row.patient_name}|${row.visit_count}|${row.body_part}`;
+      if (seenHistoryRows.has(key)) return false;
+      seenHistoryRows.add(key);
+      return true;
+    });
+
+    const existingMonthStats = await fetchStatsRowsForDateRange({
+      supabaseClient: supabase,
+      tableName: 'shockwave_patient_logs',
+      startDate: startOfMonthStr,
+      endDate: endOfMonthStr,
+    });
+
+    const rebuiltRowsForMonth = [];
+    const dateErrors = [];
+
+    for (let d = 1; d <= endDay; d++) {
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      try {
+        const result = await runTodayShockwaveScheduleToStatsSync({
+          year,
+          month,
+          memos,
+          therapists,
+          monthlyTherapists,
+          targetDateStr: dateStr,
+          overwriteManual: effectiveOverwriteManual,
+          scheduleAuthoritative: false,
+          pastDataCache: rollingPastData,
+          existingMonthStats,
+          collectOnly: true,
+        });
+
+        if (!result.skipped) {
+          const rebuiltRows = Array.isArray(result.rebuiltRows) ? result.rebuiltRows : [];
+          rebuiltRowsForMonth.push(...rebuiltRows);
+          rollingPastData.push(...rebuiltRows);
+        }
+      } catch (error) {
+        dateErrors.push(`${dateStr}: ${error?.message || error}`);
+      }
+    }
+
+    if (dateErrors.length > 0) {
+      throw new Error(`충격파 월 통계 재계산 실패: ${dateErrors.join(', ')}`);
+    }
+
+    const deletedCount = effectiveOverwriteManual
+      ? existingMonthStats.length
+      : existingMonthStats.filter((row) => row?.source !== 'manual').length;
+    const { inserted } = await replaceStatsRowsForDateRange({
+      supabaseClient: supabase,
+      tableName: 'shockwave_patient_logs',
+      startDate: startOfMonthStr,
+      endDate: endOfMonthStr,
+      rows: rebuiltRowsForMonth,
+      preserveManualSource: !effectiveOverwriteManual,
+      isFallbackInsertError: isMissingSchedulerCellKeyError,
+      mapFallbackRow: omitSchedulerCellKey,
+    });
+
+    if (emitEvent && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('clinic-stats-updated'));
+    }
+
+    return {
+      totalInserted: inserted,
+      totalDeleted: deletedCount,
+      totalUpdated: 0,
+      totalUpdates: inserted + deletedCount,
+    };
   }
 
   let totalInserted = 0;
@@ -517,8 +690,6 @@ export async function syncMonthShockwaveScheduleToStats({
   // If we only synced up to today, delete any future scheduler records for this month
   if (upToToday && year === today.getFullYear() && month === today.getMonth() + 1) {
     const todayDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    const endOfMonthStr = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
-    
     try {
       let query = supabase
         .from('shockwave_patient_logs')
@@ -536,7 +707,7 @@ export async function syncMonthShockwaveScheduleToStats({
     }
   }
 
-  if (typeof window !== 'undefined') {
+  if (emitEvent && typeof window !== 'undefined') {
     window.dispatchEvent(new Event('clinic-stats-updated'));
   }
 

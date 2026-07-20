@@ -17,9 +17,15 @@ export function isSameHistoryPatient(current, past) {
 }
 
 export function getPastLogsForPatient(current, pastData, todayDate) {
-  return (pastData || []).filter((past) => (
-    past?.date !== todayDate && isSameHistoryPatient(current, past)
-  ));
+  const targetDate = String(todayDate || '');
+  return (pastData || []).filter((past) => {
+    const pastDate = String(past?.date || '');
+    return (
+      pastDate &&
+      (!targetDate || pastDate < targetDate) &&
+      isSameHistoryPatient(current, past)
+    );
+  });
 }
 
 export function sortPastLogsLatestFirst(logs) {

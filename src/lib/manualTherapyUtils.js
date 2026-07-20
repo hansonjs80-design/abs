@@ -8,6 +8,9 @@ import {
 } from './patientHistoryMatchUtils';
 import {
   buildScheduleStatsSyncMutation,
+  fetchStatsRowsForDateRange,
+  getStatsMonthDateRange,
+  replaceStatsRowsForDateRange,
   shouldOverwriteExistingStatsForScheduleSync,
 } from './scheduleStatsSyncUtils.js';
 
@@ -343,6 +346,7 @@ async function runTodayManualTherapyScheduleToStatsSync({
       deletedCount: toDeleteIds.length,
       toDeleteIds,
       rowsToUpsert,
+      rebuiltRows,
       todayStats
     };
   }
@@ -407,6 +411,8 @@ export async function syncMonthManualTherapyScheduleToStats({
   upToToday = false,
   overwriteManual = false,
   scheduleAuthoritative = true,
+  emitEvent = true,
+  replaceExistingMonthLogs = false,
 }) {
   const today = getTodayKST();
   const effectiveOverwriteManual = shouldOverwriteExistingStatsForScheduleSync({
@@ -421,6 +427,139 @@ export async function syncMonthManualTherapyScheduleToStats({
   
   if (upToToday && year === today.getFullYear() && month === today.getMonth() + 1) {
     endDay = today.getDate();
+  }
+
+  const { startDate: startOfMonthStr, endDate: endOfMonthStr } = getStatsMonthDateRange(year, month);
+
+  if (replaceExistingMonthLogs) {
+    const weeks = generateShockwaveCalendar(year, month);
+    const patientNamesSet = new Set();
+    const chartNumbersSet = new Set();
+
+    Object.entries(memos || {}).forEach(([key, cell]) => {
+      const [w, d, _r, c] = key.split('-').map(Number);
+      const dayInfo = weeks[w]?.[d];
+      if (!dayInfo || !dayInfo.isCurrentMonth) return;
+      if (upToToday && year === today.getFullYear() && month === today.getMonth() + 1) {
+        if (dayInfo.day > today.getDate()) return;
+      }
+      if (String(cell?.bg_color || '').toLowerCase() !== TREATMENT_COMPLETE_BG.toLowerCase()) return;
+
+      const therapistName = resolveManualTherapistName(c, dayInfo.day, therapists, monthlyTherapists);
+      const parsed = parseManualTherapyEntry(cell?.content, therapists, therapistName);
+      if (!parsed) return;
+
+      const normalizedName = normalizeNameForMatch(parsed.patientName);
+      if (normalizedName) {
+        patientNamesSet.add(normalizedName);
+        patientNamesSet.add(`${normalizedName}*`);
+      }
+      if (parsed.chartNumber) chartNumbersSet.add(String(parsed.chartNumber).trim());
+    });
+
+    const historyQueries = [];
+    const patientNames = Array.from(patientNamesSet);
+    const chartNumbers = Array.from(chartNumbersSet);
+    ['manual_therapy_patient_logs', 'shockwave_patient_logs'].forEach((tableName) => {
+      if (patientNames.length > 0) {
+        historyQueries.push(
+          supabase
+            .from(tableName)
+            .select('patient_name, chart_number, visit_count, body_part, date')
+            .in('patient_name', patientNames)
+            .lt('date', startOfMonthStr)
+            .order('date', { ascending: false })
+        );
+      }
+      if (chartNumbers.length > 0) {
+        historyQueries.push(
+          supabase
+            .from(tableName)
+            .select('patient_name, chart_number, visit_count, body_part, date')
+            .in('chart_number', chartNumbers)
+            .lt('date', startOfMonthStr)
+            .order('date', { ascending: false })
+        );
+      }
+    });
+
+    const historyResults = await Promise.all(historyQueries);
+    const historyError = historyResults.find((result) => result.error)?.error;
+    if (historyError) throw historyError;
+
+    const seenHistoryRows = new Set();
+    const rollingPastData = historyResults.flatMap((result) => result.data || []).filter((row) => {
+      const key = `${row.date}|${row.chart_number}|${row.patient_name}|${row.visit_count}|${row.body_part}`;
+      if (seenHistoryRows.has(key)) return false;
+      seenHistoryRows.add(key);
+      return true;
+    });
+
+    const existingMonthStats = await fetchStatsRowsForDateRange({
+      supabaseClient: supabase,
+      tableName: 'manual_therapy_patient_logs',
+      startDate: startOfMonthStr,
+      endDate: endOfMonthStr,
+    });
+
+    const rebuiltRowsForMonth = [];
+    const dateErrors = [];
+
+    for (let d = 1; d <= endDay; d++) {
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      try {
+        const result = await runTodayManualTherapyScheduleToStatsSync({
+          year,
+          month,
+          memos,
+          therapists,
+          monthlyTherapists,
+          targetDateStr: dateStr,
+          overwriteManual: effectiveOverwriteManual,
+          scheduleAuthoritative: false,
+          pastDataCache: rollingPastData,
+          existingMonthStats,
+          collectOnly: true,
+        });
+
+        if (!result.skipped) {
+          const rebuiltRows = Array.isArray(result.rebuiltRows) ? result.rebuiltRows : [];
+          rebuiltRowsForMonth.push(...rebuiltRows);
+          rollingPastData.push(...rebuiltRows);
+        }
+      } catch (error) {
+        dateErrors.push(`${dateStr}: ${error?.message || error}`);
+      }
+    }
+
+    if (dateErrors.length > 0) {
+      throw new Error(`도수치료 월 통계 재계산 실패: ${dateErrors.join(', ')}`);
+    }
+
+    const deletedCount = effectiveOverwriteManual
+      ? existingMonthStats.length
+      : existingMonthStats.filter((row) => row?.source !== 'manual').length;
+    const { inserted } = await replaceStatsRowsForDateRange({
+      supabaseClient: supabase,
+      tableName: 'manual_therapy_patient_logs',
+      startDate: startOfMonthStr,
+      endDate: endOfMonthStr,
+      rows: rebuiltRowsForMonth,
+      preserveManualSource: !effectiveOverwriteManual,
+      isFallbackInsertError: isMissingSchedulerCellKeyError,
+      mapFallbackRow: omitSchedulerCellKey,
+    });
+
+    if (emitEvent && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('clinic-stats-updated'));
+    }
+
+    return {
+      totalInserted: inserted,
+      totalDeleted: deletedCount,
+      totalUpdated: 0,
+      totalUpdates: inserted + deletedCount,
+    };
   }
 
   let totalInserted = 0;
@@ -496,9 +635,6 @@ export async function syncMonthManualTherapyScheduleToStats({
   const pastDataCache = [...manualHistory, ...shockwaveHistory];
 
   // 3단계: 해당 월 전체의 기존 통계 데이터를 단 1회 일괄 조회합니다.
-  const startOfMonthStr = `${year}-${String(month).padStart(2, '0')}-01`;
-  const endOfMonthStr = `${year}-${String(month).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
-  
   const { data: existingMonthStats, error: statsError } = await supabase
     .from('manual_therapy_patient_logs')
     .select('*')
@@ -624,7 +760,7 @@ export async function syncMonthManualTherapyScheduleToStats({
   }
 
   // 7단계: 모든 벌크 연산 완료 후 이벤트를 단 1회 발생시켜 전역 상태를 업데이트합니다.
-  if (typeof window !== 'undefined') {
+  if (emitEvent && typeof window !== 'undefined') {
     window.dispatchEvent(new Event('clinic-stats-updated'));
   }
 

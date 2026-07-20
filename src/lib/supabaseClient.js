@@ -10,7 +10,7 @@ const createStubQuery = () => {
     then: response.then.bind(response),
     catch: response.catch.bind(response),
   };
-  const chainable = ['select', 'insert', 'upsert', 'update', 'delete', 'limit', 'order', 'eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'match', 'like', 'ilike', 'single'];
+  const chainable = ['select', 'insert', 'upsert', 'update', 'delete', 'limit', 'range', 'order', 'eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'match', 'like', 'ilike', 'single'];
   chainable.forEach((method) => {
     chain[method] = () => chain;
   });

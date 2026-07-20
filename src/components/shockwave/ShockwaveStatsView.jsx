@@ -17,6 +17,12 @@ import SettlementSettingsPanel from './SettlementSettingsPanel';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 import { formatRecentPeriodLabel, parseRecentPeriodMonths } from '../../lib/recentPeriodUtils';
 import { isAdminUser } from '../../lib/authPermissions';
+import {
+  buildScheduleMemoSignature,
+  getRecentScheduleMonthTargets,
+  loadScheduleMemosForStatsMonth,
+  loadStatsMonthlyTherapists,
+} from '../../lib/statsScheduleSourceUtils';
 
 class ShockwaveStatsErrorBoundary extends React.Component {
   constructor(props) {
@@ -53,7 +59,6 @@ export default function ShockwaveStatsView({
   onReloadMemos,
   monthlyTherapistsProp,
   monthlyTherapistsReady = false,
-  memosLoadedKey = '',
   isScheduleLoading = false,
 }) {
   const { addToast } = useToast();
@@ -73,6 +78,7 @@ export default function ShockwaveStatsView({
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
   const [recentLogsRefreshKey, setRecentLogsRefreshKey] = useState(0);
   const lastAutoSyncKeyRef = useRef(null);
+  const recentAutoSyncKeyRef = useRef(null);
   const logsLoadedKeyRef = useRef('');
   const fetchIdRef = useRef(0);
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
@@ -115,6 +121,21 @@ export default function ShockwaveStatsView({
   const recentPeriodLabel = useMemo(
     () => formatRecentPeriodLabel(recentPeriodMonths),
     [recentPeriodMonths]
+  );
+  const currentMemosSyncSignature = useMemo(
+    () => buildScheduleMemoSignature(memos),
+    [memos]
+  );
+  const scheduleLayoutSettingsKey = useMemo(
+    () => JSON.stringify({
+      start_time: shockwaveSettings?.start_time,
+      end_time: shockwaveSettings?.end_time,
+      interval_minutes: shockwaveSettings?.interval_minutes,
+      time_label_interval_minutes: shockwaveSettings?.time_label_interval_minutes,
+      day_overrides: shockwaveSettings?.day_overrides,
+      date_overrides: shockwaveSettings?.date_overrides,
+    }),
+    [shockwaveSettings]
   );
 
   // Therapist filter state (lifted from ShockwaveDataGrid)
@@ -185,37 +206,65 @@ export default function ShockwaveStatsView({
     }
   }, [currentYear, currentMonth, addToast]);
 
+  const syncCurrentMonthFromScheduleSource = useCallback(async ({
+    upToToday = true,
+    overwriteManual = false,
+    emitEvent = false,
+  } = {}) => {
+    if (safeTherapists.length === 0) return null;
+
+    const [sourceMemos, sourceMonthlyTherapists] = await Promise.all([
+      loadScheduleMemosForStatsMonth({
+        year: currentYear,
+        month: currentMonth,
+        settings: shockwaveSettings,
+      }),
+      loadStatsMonthlyTherapists({
+        year: currentYear,
+        month: currentMonth,
+        type: 'shockwave',
+        baseTherapists: safeTherapists,
+      }),
+    ]);
+
+    await syncMonthShockwaveScheduleToStats({
+      year: currentYear,
+      month: currentMonth,
+      memos: sourceMemos,
+      therapists: safeTherapists,
+      monthlyTherapists: sourceMonthlyTherapists,
+      upToToday,
+      overwriteManual,
+      scheduleAuthoritative: true,
+      emitEvent,
+      replaceExistingMonthLogs: true,
+    });
+
+    return {
+      memos: sourceMemos,
+      monthlyTherapists: sourceMonthlyTherapists,
+      therapists: safeTherapists,
+    };
+  }, [currentMonth, currentYear, safeTherapists, shockwaveSettings]);
+
   // 수동 새로고침: 스케줄 메모 + 통계 로그 + 자동동기화 재실행
   const [isReloading, setIsReloading] = useState(false);
   const handleReload = useCallback(async () => {
     setIsReloading(true);
     try {
       // 1. 스케줄 메모를 다시 가져옴
-      const reloaded = onReloadMemos ? await onReloadMemos() : null;
-      const latestMemos = reloaded?.memos;
-      if (!latestMemos) {
+      if (onReloadMemos) await onReloadMemos();
+      const synced = await syncCurrentMonthFromScheduleSource({ upToToday: true, emitEvent: false });
+      if (!synced?.memos) {
         addToast('스케줄 데이터를 불러오지 못해 통계 동기화를 건너뛰었습니다.', 'error');
         return;
       }
-      const latestMonthlyTherapists = reloaded?.monthlyTherapists || monthlyTherapists;
-      const latestTherapists = Array.isArray(reloaded?.therapists) && reloaded.therapists.length > 0
-        ? reloaded.therapists
-        : safeTherapists;
-      if (!latestTherapists.length) {
+      if (!safeTherapists.length) {
         addToast('치료사 목록을 불러오지 못해 통계 동기화를 건너뛰었습니다.', 'error');
         return;
       }
       // 2. 자동동기화 키를 리셋하여 다시 실행되도록
       lastAutoSyncKeyRef.current = null;
-      await syncMonthShockwaveScheduleToStats({
-        year: currentYear,
-        month: currentMonth,
-        memos: latestMemos,
-        therapists: latestTherapists,
-        monthlyTherapists: latestMonthlyTherapists,
-        upToToday: true,
-        scheduleAuthoritative: true,
-      });
       // 3. DB에서 통계 로그 다시 가져옴
       await fetchLogs();
       addToast('통계 데이터를 새로 불러왔습니다.', 'success');
@@ -225,7 +274,7 @@ export default function ShockwaveStatsView({
     } finally {
       setIsReloading(false);
     }
-  }, [onReloadMemos, monthlyTherapists, currentYear, currentMonth, safeTherapists, fetchLogs, addToast]);
+  }, [onReloadMemos, safeTherapists, syncCurrentMonthFromScheduleSource, fetchLogs, addToast]);
 
   useEffect(() => {
     logsLoadedKeyRef.current = '';
@@ -237,12 +286,9 @@ export default function ShockwaveStatsView({
   }, [fetchLogs]);
 
   useEffect(() => {
-    if (!monthlyTherapistsReady) return;
-    if (memosLoadedKey !== `${currentYear}-${currentMonth}`) return;
-    if (!memos || typeof memos !== 'object') return;
     if (safeTherapists.length === 0) return;
 
-    const syncKey = `${currentYear}-${currentMonth}:${memosLoadedKey}`;
+    const syncKey = `${currentYear}-${currentMonth}:${currentMemosSyncSignature}:${scheduleLayoutSettingsKey}`;
     if (lastAutoSyncKeyRef.current === syncKey) return;
     lastAutoSyncKeyRef.current = syncKey;
 
@@ -250,15 +296,7 @@ export default function ShockwaveStatsView({
     (async () => {
       try {
         setIsLogsLoading(true);
-        await syncMonthShockwaveScheduleToStats({
-          year: currentYear,
-          month: currentMonth,
-          memos,
-          therapists: safeTherapists,
-          monthlyTherapists,
-          upToToday: true,
-          scheduleAuthoritative: true,
-        });
+        await syncCurrentMonthFromScheduleSource({ upToToday: true, emitEvent: false });
         if (!cancelled) await fetchLogs();
       } catch (error) {
         console.error('충격파 통계 자동 동기화 실패:', error);
@@ -274,12 +312,11 @@ export default function ShockwaveStatsView({
   }, [
     currentMonth,
     currentYear,
+    currentMemosSyncSignature,
     fetchLogs,
-    memos,
-    memosLoadedKey,
-    monthlyTherapists,
-    monthlyTherapistsReady,
+    scheduleLayoutSettingsKey,
     safeTherapists,
+    syncCurrentMonthFromScheduleSource,
   ]);
 
   useEffect(() => {
@@ -296,6 +333,81 @@ export default function ShockwaveStatsView({
   useEffect(() => {
     loadShockwaveSettings();
   }, [loadShockwaveSettings]);
+
+  useEffect(() => {
+    if (activeSection !== 'settlement') return undefined;
+    if (safeTherapists.length === 0) return undefined;
+
+    const therapistKey = safeTherapists
+      .map((therapist, index) => `${therapist?.slot_index ?? index}:${therapist?.name || ''}`)
+      .join('|');
+    const syncKey = `${currentYear}-${currentMonth}:${recentPeriodMonths}:${therapistKey}:${scheduleLayoutSettingsKey}:${currentMemosSyncSignature}`;
+    if (recentAutoSyncKeyRef.current === syncKey) return undefined;
+    recentAutoSyncKeyRef.current = syncKey;
+
+    let cancelled = false;
+
+    const syncRecentMonthsFromSchedule = async () => {
+      try {
+        setIsLogsLoading(true);
+        const targets = getRecentScheduleMonthTargets({ currentYear, currentMonth, recentPeriodMonths });
+
+        for (const target of targets) {
+          if (cancelled) return;
+          const [targetMemos, targetMonthlyTherapists] = await Promise.all([
+            loadScheduleMemosForStatsMonth({
+              year: target.year,
+              month: target.month,
+              settings: shockwaveSettings,
+            }),
+            loadStatsMonthlyTherapists({
+              year: target.year,
+              month: target.month,
+              type: 'shockwave',
+              baseTherapists: safeTherapists,
+            }),
+          ]);
+
+          if (cancelled) return;
+          await syncMonthShockwaveScheduleToStats({
+            year: target.year,
+            month: target.month,
+            memos: targetMemos,
+            therapists: safeTherapists,
+            monthlyTherapists: targetMonthlyTherapists,
+            upToToday: true,
+            scheduleAuthoritative: true,
+            emitEvent: false,
+            replaceExistingMonthLogs: true,
+          });
+        }
+
+        if (!cancelled) {
+          setRecentLogsRefreshKey((value) => value + 1);
+        }
+      } catch (error) {
+        console.error('최근 충격파 통계 자동 동기화 실패:', error);
+        recentAutoSyncKeyRef.current = null;
+      } finally {
+        if (!cancelled) setIsLogsLoading(false);
+      }
+    };
+
+    syncRecentMonthsFromSchedule();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeSection,
+    currentMonth,
+    currentYear,
+    recentPeriodMonths,
+    currentMemosSyncSignature,
+    safeTherapists,
+    scheduleLayoutSettingsKey,
+    shockwaveSettings,
+  ]);
 
   useEffect(() => {
     if (activeSection !== 'settlement') return undefined;
@@ -433,24 +545,20 @@ export default function ShockwaveStatsView({
 
   // eslint-disable-next-line no-unused-vars
   const handleSyncMonthFromScheduler = async () => {
-    if (!window.confirm(`${currentMonth}월 전체 스케줄을 스케줄러 기준으로 덮어씁니다.\n(수동으로 추가한 내역은 모두 삭제됩니다.) 진행하시겠습니까?`)) return;
+      if (!window.confirm(`${currentMonth}월 전체 스케줄을 스케줄러 기준으로 덮어씁니다.\n(수동으로 추가한 내역은 모두 삭제됩니다.) 진행하시겠습니까?`)) return;
     setIsLogsLoading(true);
     try {
-      const result = await syncMonthShockwaveScheduleToStats({
-        year: currentYear,
-        month: currentMonth,
-        memos,
-        therapists: safeTherapists,
-        monthlyTherapists,
+      const result = await syncCurrentMonthFromScheduleSource({
         upToToday: false,
         overwriteManual: true,
+        emitEvent: false,
       });
 
-      if (result.totalUpdates > 0) {
-        addToast(`전체 월 스케줄 동기화 성공! (추가:${result.totalInserted}, 삭제:${result.totalDeleted})`, 'success');
+      if (result) {
+        addToast('전체 월 스케줄을 스케줄러 기준으로 다시 동기화했습니다.', 'success');
         await fetchLogs();
       } else {
-        addToast('전체 스케줄과 치료 내역 통계가 이미 일치합니다.', 'info');
+        addToast('치료사 목록을 불러오지 못해 전체 월 동기화를 건너뛰었습니다.', 'error');
       }
     } catch (err) {
       console.error(err);
