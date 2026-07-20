@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { formatStatsRowForScheduler, parseTherapyInfo } from '../shockwaveSyncUtils.js';
+import {
+  formatStatsRowForScheduler,
+  parseTherapyInfo,
+  resolveShockwaveSchedulePrescriptionCount,
+  shouldUseExistingShockwaveSchedulerLogForCopy,
+} from '../shockwaveSyncUtils.js';
 
 describe('shockwave scheduler/stat sync formatting', () => {
   it('keeps a new-patient marker when stats rows store the first visit as 1', () => {
@@ -45,5 +50,34 @@ describe('shockwave scheduler/stat sync formatting', () => {
       body_part: '',
       original: '12745/신금란*',
     });
+  });
+
+  it('counts each completed scheduler cell as one prescription even when old stats had larger counts', () => {
+    assert.equal(
+      resolveShockwaveSchedulePrescriptionCount({
+        prescription: '',
+        fallbackPrescription: 'F2.5',
+        fallbackPrescriptionCount: 4,
+      }),
+      1
+    );
+    assert.equal(
+      resolveShockwaveSchedulePrescriptionCount({
+        prescription: 'F4.0',
+        fallbackPrescription: 'F2.5',
+        fallbackPrescriptionCount: 4,
+      }),
+      1
+    );
+  });
+
+  it('does not copy prescription metadata from sheet/manual rows during scheduler sync', () => {
+    assert.equal(shouldUseExistingShockwaveSchedulerLogForCopy({ source: 'sheet' }), false);
+    assert.equal(shouldUseExistingShockwaveSchedulerLogForCopy({ source: 'manual' }), false);
+    assert.equal(shouldUseExistingShockwaveSchedulerLogForCopy({ source: 'scheduler' }), true);
+    assert.equal(
+      shouldUseExistingShockwaveSchedulerLogForCopy({ source: 'manual', scheduler_cell_key: '2026:06:0:0:1:0' }),
+      true
+    );
   });
 });

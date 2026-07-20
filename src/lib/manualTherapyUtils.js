@@ -26,7 +26,20 @@ function buildSchedulerCellKey(year, month, weekIndex, dayIndex, rowIndex, colIn
 
 function isMissingSchedulerCellKeyError(error) {
   const message = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`;
-  return /scheduler_cell_key/i.test(message) || error?.code === '42703';
+  return (
+    error?.code === '42703' ||
+    /scheduler_cell_key.{0,80}(column|field|does not exist|not found|missing)/i.test(message) ||
+    /(column|field|does not exist|not found|missing).{0,80}scheduler_cell_key/i.test(message)
+  );
+}
+
+function isSchedulerCellKeyUpsertUnsupportedError(error) {
+  const message = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`;
+  return (
+    isMissingSchedulerCellKeyError(error) ||
+    error?.code === '42P10' ||
+    /no unique|exclusion constraint|on conflict/i.test(message)
+  );
 }
 
 function omitSchedulerCellKey(row) {
@@ -345,8 +358,10 @@ async function runTodayManualTherapyScheduleToStatsSync({
       .upsert(rowsToUpsert, { onConflict: 'scheduler_cell_key' });
 
     if (upsertError) {
-      if (!isMissingSchedulerCellKeyError(upsertError)) throw upsertError;
-      const fallbackRows = rowsToUpsert.map(omitSchedulerCellKey);
+      if (!isSchedulerCellKeyUpsertUnsupportedError(upsertError)) throw upsertError;
+      const fallbackRows = isMissingSchedulerCellKeyError(upsertError)
+        ? rowsToUpsert.map(omitSchedulerCellKey)
+        : rowsToUpsert;
       const fallbackDeleteIds = (todayStats || [])
         .filter((row) => effectiveOverwriteManual ? true : row.source !== 'manual')
         .map((row) => row.id)
@@ -557,18 +572,23 @@ export async function syncMonthManualTherapyScheduleToStats({
 
       if (upsertError) {
         console.warn('Bulk upsert failed, retrying with fallback...', upsertError);
-        if (!isMissingSchedulerCellKeyError(upsertError)) throw upsertError;
+        if (!isSchedulerCellKeyUpsertUnsupportedError(upsertError)) throw upsertError;
 
-        // Fallback: scheduler_cell_key 컬럼이 유실되었거나 없는 구버전 스키마 대응
-        const fallbackRows = chunk.map(omitSchedulerCellKey);
+        // Fallback: scheduler_cell_key 컬럼 또는 유니크 인덱스가 없는 구버전 스키마 대응
+        const fallbackRows = isMissingSchedulerCellKeyError(upsertError)
+          ? chunk.map(omitSchedulerCellKey)
+          : chunk;
         const uniqueDates = Array.from(new Set(chunk.map(r => r.date)));
         
         for (const uDate of uniqueDates) {
-          const { error: fallbackDeleteError } = await supabase
+          let fallbackDeleteQuery = supabase
             .from('manual_therapy_patient_logs')
             .delete()
-            .eq('date', uDate)
-            .neq('source', 'manual');
+            .eq('date', uDate);
+          if (!effectiveOverwriteManual) {
+            fallbackDeleteQuery = fallbackDeleteQuery.neq('source', 'manual');
+          }
+          const { error: fallbackDeleteError } = await fallbackDeleteQuery;
           if (fallbackDeleteError) throw fallbackDeleteError;
         }
 

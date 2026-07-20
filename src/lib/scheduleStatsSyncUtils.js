@@ -34,11 +34,15 @@ export function buildScheduleStatsSyncMutation({
   const rebuiltCellKeys = new Set(safeRebuiltRows.map((row) => getRowCellKey(row)).filter(Boolean));
 
   if (overwriteExistingStats) {
+    const seenExistingKeys = new Set();
     return {
       toDeleteIds: safeExistingRows
         .filter((row) => {
           const rowKey = getRowCellKey(row);
-          return !rowKey || !rebuiltCellKeys.has(rowKey);
+          if (!rowKey || !rebuiltCellKeys.has(rowKey)) return true;
+          if (seenExistingKeys.has(rowKey)) return true;
+          seenExistingKeys.add(rowKey);
+          return false;
         })
         .map((row) => row?.id)
         .filter(Boolean),

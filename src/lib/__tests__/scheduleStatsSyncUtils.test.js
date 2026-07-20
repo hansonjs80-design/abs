@@ -54,6 +54,7 @@ describe('schedule stats sync utilities', () => {
       existingRows: [
         { id: 'old-manual-1', source: 'manual', scheduler_cell_key: '' },
         { id: 'old-scheduler-1', source: 'scheduler', scheduler_cell_key: '2026:06:0:0:1:0' },
+        { id: 'old-scheduler-duplicate-1', source: 'scheduler', scheduler_cell_key: '2026:06:0:0:1:0' },
         { id: 'old-duplicate-1', source: 'manual', scheduler_cell_key: '2026:06:0:0:2:0' },
         { id: 'old-stale-1', source: 'scheduler', scheduler_cell_key: '2026:06:0:0:9:0' },
       ],
@@ -63,7 +64,7 @@ describe('schedule stats sync utilities', () => {
       ],
     });
 
-    assert.deepEqual(result.toDeleteIds, ['old-manual-1', 'old-stale-1']);
+    assert.deepEqual(result.toDeleteIds, ['old-manual-1', 'old-scheduler-duplicate-1', 'old-stale-1']);
     assert.equal(result.rowsToUpsert.length, 2);
   });
 

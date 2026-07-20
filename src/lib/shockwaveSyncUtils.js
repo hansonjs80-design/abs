@@ -38,7 +38,20 @@ function buildSchedulerCellKey(year, month, weekIndex, dayIndex, rowIndex, colIn
 
 function isMissingSchedulerCellKeyError(error) {
   const message = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`;
-  return /scheduler_cell_key/i.test(message) || error?.code === '42703';
+  return (
+    error?.code === '42703' ||
+    /scheduler_cell_key.{0,80}(column|field|does not exist|not found|missing)/i.test(message) ||
+    /(column|field|does not exist|not found|missing).{0,80}scheduler_cell_key/i.test(message)
+  );
+}
+
+function isSchedulerCellKeyUpsertUnsupportedError(error) {
+  const message = `${error?.message || ''} ${error?.details || ''} ${error?.hint || ''}`;
+  return (
+    isMissingSchedulerCellKeyError(error) ||
+    error?.code === '42P10' ||
+    /no unique|exclusion constraint|on conflict/i.test(message)
+  );
 }
 
 function omitSchedulerCellKey(row) {
@@ -110,6 +123,14 @@ export function parseTherapyInfo(rawContent) {
     body_part: "", // To be auto-filled by sync logic
     original: s
   };
+}
+
+export function shouldUseExistingShockwaveSchedulerLogForCopy(row) {
+  return row?.source === 'scheduler' || Boolean(String(row?.scheduler_cell_key || '').trim());
+}
+
+export function resolveShockwaveSchedulePrescriptionCount({ prescription, fallbackPrescription } = {}) {
+  return prescription || fallbackPrescription ? 1 : '';
 }
 
 function buildSchedulerRowPlacement(items, existingRows) {
@@ -340,7 +361,7 @@ async function runTodayShockwaveScheduleToStatsSync({
     .select('*')
     .eq('date', todayDateStrFinal);
 
-  const schedulerEntriesForCopying = (todayStats || []).filter((row) => row.source !== 'manual');
+  const schedulerEntriesForCopying = (todayStats || []).filter(shouldUseExistingShockwaveSchedulerLogForCopy);
   const existingByCellKey = new Map();
   const existingGroups = {};
   schedulerEntriesForCopying.forEach((row) => {
@@ -365,7 +386,10 @@ async function runTodayShockwaveScheduleToStatsSync({
       body_part: item.body_part,
       therapist_name: item.therapist_name,
       prescription: item.prescription || old?.prescription || '',
-      prescription_count: item.prescription_count !== null ? item.prescription_count : old?.prescription_count || '',
+      prescription_count: resolveShockwaveSchedulePrescriptionCount({
+        prescription: item.prescription,
+        fallbackPrescription: old?.prescription,
+      }),
       source: 'scheduler',
     };
 
@@ -398,8 +422,10 @@ async function runTodayShockwaveScheduleToStatsSync({
       .upsert(rowsToUpsert, { onConflict: 'scheduler_cell_key' });
 
     if (upsertError) {
-      if (!isMissingSchedulerCellKeyError(upsertError)) throw upsertError;
-      const fallbackRows = rowsToUpsert.map(omitSchedulerCellKey);
+      if (!isSchedulerCellKeyUpsertUnsupportedError(upsertError)) throw upsertError;
+      const fallbackRows = isMissingSchedulerCellKeyError(upsertError)
+        ? rowsToUpsert.map(omitSchedulerCellKey)
+        : rowsToUpsert;
       const fallbackDeleteIds = (todayStats || [])
         .filter((row) => effectiveOverwriteManual ? true : row.source !== 'manual')
         .map((row) => row.id)
