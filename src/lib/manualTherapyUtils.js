@@ -6,6 +6,10 @@ import {
   getPastLogsForPatient,
   sortPastLogsLatestFirst,
 } from './patientHistoryMatchUtils';
+import {
+  buildScheduleStatsSyncMutation,
+  shouldOverwriteExistingStatsForScheduleSync,
+} from './scheduleStatsSyncUtils.js';
 
 let todayManualTherapySyncQueue = Promise.resolve();
 
@@ -146,6 +150,7 @@ async function runTodayManualTherapyScheduleToStatsSync({
   monthlyTherapists,
   targetDateStr,
   overwriteManual = false,
+  scheduleAuthoritative = true,
   pastDataCache = null,
   existingMonthStats = null,
   collectOnly = false
@@ -159,6 +164,13 @@ async function runTodayManualTherapyScheduleToStatsSync({
   const todayM = targetDateStr ? parseInt(targetDateStr.split('-')[1], 10) : today.getMonth() + 1;
   const todayD = targetDateStr ? parseInt(targetDateStr.split('-')[2], 10) : today.getDate();
   const todayDateStrFinal = targetDateStr || `${todayY}-${String(todayM).padStart(2, '0')}-${String(todayD).padStart(2, '0')}`;
+  const effectiveOverwriteManual = shouldOverwriteExistingStatsForScheduleSync({
+    year: todayY,
+    month: todayM,
+    overwriteManual,
+    scheduleAuthoritative,
+    today,
+  });
 
   if (!targetDateStr && (todayY !== year || todayM !== month)) {
     return { skipped: true, reason: 'today_outside_current_month', todayDateStr: todayDateStrFinal };
@@ -293,30 +305,19 @@ async function runTodayManualTherapyScheduleToStatsSync({
     source: 'scheduler',
   }));
 
-  const rebuiltCellKeys = new Set(rebuiltRows.map((row) => row.scheduler_cell_key).filter(Boolean));
-  const toDeleteIds = (todayStats || [])
-    .filter((row) => {
-      if (overwriteManual && row.source === 'manual') return true;
-      if (row.source === 'manual') return false;
-      return !row.scheduler_cell_key || !rebuiltCellKeys.has(row.scheduler_cell_key);
-    })
-    .map((row) => row.id)
-    .filter(Boolean);
-
-  const rowsToUpsert = rebuiltRows.filter((newRow) => {
-    const existing = (todayStats || []).find((oldRow) => oldRow.scheduler_cell_key === newRow.scheduler_cell_key);
-    if (!existing) return true; // Insert needed
-    
-    // Check for changes (Update needed)
-    if (existing.patient_name !== newRow.patient_name) return true;
-    if (String(existing.chart_number || '') !== String(newRow.chart_number || '')) return true;
-    if (String(existing.visit_count || '') !== String(newRow.visit_count || '')) return true;
-    if (String(existing.body_part || '') !== String(newRow.body_part || '')) return true;
-    if (existing.therapist_name !== newRow.therapist_name) return true;
-    if (existing.prescription !== newRow.prescription) return true;
-    if (Number(existing.prescription_count || 1) !== Number(newRow.prescription_count || 1)) return true;
-    
-    return false; // Exact match, skip upsert
+  const { toDeleteIds, rowsToUpsert } = buildScheduleStatsSyncMutation({
+    existingRows: todayStats || [],
+    rebuiltRows,
+    overwriteExistingStats: effectiveOverwriteManual,
+    isSameRow: (existing, newRow) => (
+      existing.patient_name === newRow.patient_name &&
+      String(existing.chart_number || '') === String(newRow.chart_number || '') &&
+      String(existing.visit_count || '') === String(newRow.visit_count || '') &&
+      String(existing.body_part || '') === String(newRow.body_part || '') &&
+      existing.therapist_name === newRow.therapist_name &&
+      existing.prescription === newRow.prescription &&
+      Number(existing.prescription_count || 1) === Number(newRow.prescription_count || 1)
+    ),
   });
 
   if (collectOnly) {
@@ -334,7 +335,8 @@ async function runTodayManualTherapyScheduleToStatsSync({
   }
 
   if (toDeleteIds.length > 0) {
-    await supabase.from('manual_therapy_patient_logs').delete().in('id', toDeleteIds);
+    const { error: deleteError } = await supabase.from('manual_therapy_patient_logs').delete().in('id', toDeleteIds);
+    if (deleteError) throw deleteError;
   }
   
   if (rowsToUpsert.length > 0) {
@@ -346,13 +348,15 @@ async function runTodayManualTherapyScheduleToStatsSync({
       if (!isMissingSchedulerCellKeyError(upsertError)) throw upsertError;
       const fallbackRows = rowsToUpsert.map(omitSchedulerCellKey);
       const fallbackDeleteIds = (todayStats || [])
-        .filter((row) => overwriteManual ? true : row.source !== 'manual')
+        .filter((row) => effectiveOverwriteManual ? true : row.source !== 'manual')
         .map((row) => row.id)
         .filter(Boolean);
       if (fallbackDeleteIds.length > 0) {
-        await supabase.from('manual_therapy_patient_logs').delete().in('id', fallbackDeleteIds);
+        const { error: fallbackDeleteError } = await supabase.from('manual_therapy_patient_logs').delete().in('id', fallbackDeleteIds);
+        if (fallbackDeleteError) throw fallbackDeleteError;
       }
-      await supabase.from('manual_therapy_patient_logs').insert(fallbackRows);
+      const { error: fallbackInsertError } = await supabase.from('manual_therapy_patient_logs').insert(fallbackRows);
+      if (fallbackInsertError) throw fallbackInsertError;
     }
   }
 
@@ -379,8 +383,24 @@ export async function syncTodayManualTherapyScheduleToStats(params) {
   return run;
 }
 
-export async function syncMonthManualTherapyScheduleToStats({ year, month, memos, therapists, monthlyTherapists, upToToday = false, overwriteManual = false }) {
+export async function syncMonthManualTherapyScheduleToStats({
+  year,
+  month,
+  memos,
+  therapists,
+  monthlyTherapists,
+  upToToday = false,
+  overwriteManual = false,
+  scheduleAuthoritative = true,
+}) {
   const today = getTodayKST();
+  const effectiveOverwriteManual = shouldOverwriteExistingStatsForScheduleSync({
+    year,
+    month,
+    overwriteManual,
+    scheduleAuthoritative,
+    today,
+  });
   const daysInMonth = new Date(year, month, 0).getDate();
   let endDay = daysInMonth;
   
@@ -489,7 +509,8 @@ export async function syncMonthManualTherapyScheduleToStats({ year, month, memos
         therapists,
         monthlyTherapists,
         targetDateStr: dateStr,
-        overwriteManual,
+        overwriteManual: effectiveOverwriteManual,
+        scheduleAuthoritative: false,
         pastDataCache,
         existingMonthStats: statsCache,
         collectOnly: true
@@ -521,7 +542,7 @@ export async function syncMonthManualTherapyScheduleToStats({ year, month, memos
         .delete()
         .in('id', chunk);
       if (delErr) {
-        console.error('Failed to bulk delete chunk:', delErr);
+        throw delErr;
       }
     }
   }
@@ -543,18 +564,19 @@ export async function syncMonthManualTherapyScheduleToStats({ year, month, memos
         const uniqueDates = Array.from(new Set(chunk.map(r => r.date)));
         
         for (const uDate of uniqueDates) {
-          await supabase
+          const { error: fallbackDeleteError } = await supabase
             .from('manual_therapy_patient_logs')
             .delete()
             .eq('date', uDate)
             .neq('source', 'manual');
+          if (fallbackDeleteError) throw fallbackDeleteError;
         }
 
         const { error: insErr } = await supabase
           .from('manual_therapy_patient_logs')
           .insert(fallbackRows);
         if (insErr) {
-          console.error('Fallback insert failed:', insErr);
+          throw insErr;
         }
       }
     }
@@ -565,12 +587,15 @@ export async function syncMonthManualTherapyScheduleToStats({ year, month, memos
     const todayDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     
     try {
-      const { error } = await supabase
+      let query = supabase
         .from('manual_therapy_patient_logs')
         .delete()
         .gt('date', todayDateStr)
-        .lte('date', endOfMonthStr)
-        .neq('source', 'manual');
+        .lte('date', endOfMonthStr);
+      if (!effectiveOverwriteManual) {
+        query = query.neq('source', 'manual');
+      }
+      const { error } = await query;
         
       if (error) console.error('Failed to cleanup future dates:', error);
     } catch (e) {

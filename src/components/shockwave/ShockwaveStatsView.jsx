@@ -45,7 +45,17 @@ class ShockwaveStatsErrorBoundary extends React.Component {
   }
 }
 
-export default function ShockwaveStatsView({ currentYear, currentMonth, memos, therapists, onReloadMemos, monthlyTherapistsProp, monthlyTherapistsReady = false, isScheduleLoading = false }) {
+export default function ShockwaveStatsView({
+  currentYear,
+  currentMonth,
+  memos,
+  therapists,
+  onReloadMemos,
+  monthlyTherapistsProp,
+  monthlyTherapistsReady = false,
+  memosLoadedKey = '',
+  isScheduleLoading = false,
+}) {
   const { addToast } = useToast();
   const { user } = useAuth();
   const canManageStatsSettings = isAdminUser(user);
@@ -61,6 +71,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   const [extraDraftRows, setExtraDraftRows] = useState(0);
   const [activeSection, setActiveSection] = useState('grid');
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
+  const [recentLogsRefreshKey, setRecentLogsRefreshKey] = useState(0);
   const lastAutoSyncKeyRef = useRef(null);
   const logsLoadedKeyRef = useRef('');
   const fetchIdRef = useRef(0);
@@ -150,7 +161,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
 
       const { data, error } = await supabase
         .from('shockwave_patient_logs')
-        .select('id,date,patient_name,chart_number,visit_count,body_part,therapist_name,prescription,prescription_count,created_at')
+        .select('id,date,patient_name,chart_number,visit_count,body_part,therapist_name,prescription,prescription_count,source,scheduler_cell_key,created_at')
         .gte('date', startStr)
         .lt('date', endStr)
         .order('date', { ascending: true })
@@ -181,11 +192,19 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     try {
       // 1. 스케줄 메모를 다시 가져옴
       const reloaded = onReloadMemos ? await onReloadMemos() : null;
-      const latestMemos = reloaded?.memos || memos;
+      const latestMemos = reloaded?.memos;
+      if (!latestMemos) {
+        addToast('스케줄 데이터를 불러오지 못해 통계 동기화를 건너뛰었습니다.', 'error');
+        return;
+      }
       const latestMonthlyTherapists = reloaded?.monthlyTherapists || monthlyTherapists;
       const latestTherapists = Array.isArray(reloaded?.therapists) && reloaded.therapists.length > 0
         ? reloaded.therapists
         : safeTherapists;
+      if (!latestTherapists.length) {
+        addToast('치료사 목록을 불러오지 못해 통계 동기화를 건너뛰었습니다.', 'error');
+        return;
+      }
       // 2. 자동동기화 키를 리셋하여 다시 실행되도록
       lastAutoSyncKeyRef.current = null;
       await syncMonthShockwaveScheduleToStats({
@@ -195,6 +214,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
         therapists: latestTherapists,
         monthlyTherapists: latestMonthlyTherapists,
         upToToday: true,
+        scheduleAuthoritative: true,
       });
       // 3. DB에서 통계 로그 다시 가져옴
       await fetchLogs();
@@ -205,7 +225,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     } finally {
       setIsReloading(false);
     }
-  }, [onReloadMemos, memos, monthlyTherapists, currentYear, currentMonth, safeTherapists, fetchLogs, addToast]);
+  }, [onReloadMemos, monthlyTherapists, currentYear, currentMonth, safeTherapists, fetchLogs, addToast]);
 
   useEffect(() => {
     logsLoadedKeyRef.current = '';
@@ -217,8 +237,55 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   }, [fetchLogs]);
 
   useEffect(() => {
+    if (!monthlyTherapistsReady) return;
+    if (memosLoadedKey !== `${currentYear}-${currentMonth}`) return;
+    if (!memos || typeof memos !== 'object') return;
+    if (safeTherapists.length === 0) return;
+
+    const syncKey = `${currentYear}-${currentMonth}:${memosLoadedKey}`;
+    if (lastAutoSyncKeyRef.current === syncKey) return;
+    lastAutoSyncKeyRef.current = syncKey;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        setIsLogsLoading(true);
+        await syncMonthShockwaveScheduleToStats({
+          year: currentYear,
+          month: currentMonth,
+          memos,
+          therapists: safeTherapists,
+          monthlyTherapists,
+          upToToday: true,
+          scheduleAuthoritative: true,
+        });
+        if (!cancelled) await fetchLogs();
+      } catch (error) {
+        console.error('충격파 통계 자동 동기화 실패:', error);
+        lastAutoSyncKeyRef.current = null;
+      } finally {
+        if (!cancelled) setIsLogsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    currentMonth,
+    currentYear,
+    fetchLogs,
+    memos,
+    memosLoadedKey,
+    monthlyTherapists,
+    monthlyTherapistsReady,
+    safeTherapists,
+  ]);
+
+  useEffect(() => {
     const handleStatsUpdated = () => {
       fetchLogs();
+      setRecentLogsRefreshKey((value) => value + 1);
     };
     window.addEventListener('clinic-stats-updated', handleStatsUpdated);
     return () => {
@@ -262,7 +329,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     return () => {
       cancelled = true;
     };
-  }, [activeSection, currentYear, currentMonth, recentPeriodMonths]);
+  }, [activeSection, currentYear, currentMonth, recentLogsRefreshKey, recentPeriodMonths]);
 
   const recentMonthlySummaries = useMemo(() => {
     const normalizePrescriptionKey = (value) =>

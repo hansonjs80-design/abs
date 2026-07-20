@@ -39,6 +39,7 @@ export default function ShockwaveStatsPage() {
     therapists,
     loadTherapists,
     shockwaveMemos,
+    shockwaveMemosLoadedKey,
     loadShockwaveMemos,
     loadMonthlyTherapists,
   } = useSchedule();
@@ -115,7 +116,7 @@ export default function ShockwaveStatsPage() {
 
   // 수동 새로고침 콜백
   const handleReloadMemos = useCallback(async () => {
-    await reloadScheduleData({ force: true });
+    return reloadScheduleData({ force: true });
   }, [reloadScheduleData]);
 
   return (
@@ -130,6 +131,7 @@ export default function ShockwaveStatsPage() {
             onReloadMemos={handleReloadMemos}
             monthlyTherapistsProp={localMonthlyTherapists}
             monthlyTherapistsReady={Array.isArray(localMonthlyTherapists)}
+            memosLoadedKey={shockwaveMemosLoadedKey}
             isScheduleLoading={isScheduleLoading}
           />
         </Suspense>

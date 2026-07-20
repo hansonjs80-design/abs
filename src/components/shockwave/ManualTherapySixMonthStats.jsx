@@ -18,6 +18,7 @@ export default function ManualTherapySixMonthStats({
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
+  const [refreshKey, setRefreshKey] = useState(0);
   const recentPeriodMonths = useMemo(
     () => parseRecentPeriodMonths(recentPeriodInput, 6),
     [recentPeriodInput]
@@ -54,7 +55,17 @@ export default function ManualTherapySixMonthStats({
     }
 
     fetchSixMonths();
-  }, [currentMonth, currentYear, recentPeriodMonths]);
+  }, [currentMonth, currentYear, recentPeriodMonths, refreshKey]);
+
+  useEffect(() => {
+    const handleStatsUpdated = () => {
+      setRefreshKey((value) => value + 1);
+    };
+    window.addEventListener('clinic-stats-updated', handleStatsUpdated);
+    return () => {
+      window.removeEventListener('clinic-stats-updated', handleStatsUpdated);
+    };
+  }, []);
 
   const monthKeys = useMemo(() => {
     const keys = [];

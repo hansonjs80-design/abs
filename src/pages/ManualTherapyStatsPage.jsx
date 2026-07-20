@@ -202,7 +202,7 @@ export default function ManualTherapyStatsPage() {
 
       const { data, error } = await supabase
         .from('manual_therapy_patient_logs')
-        .select('id,date,patient_name,chart_number,visit_count,body_part,therapist_name,prescription,prescription_count,scheduler_cell_key,created_at')
+        .select('id,date,patient_name,chart_number,visit_count,body_part,therapist_name,prescription,prescription_count,source,scheduler_cell_key,created_at')
         .gte('date', startStr)
         .lt('date', endStr)
         .order('date', { ascending: true })
@@ -279,6 +279,7 @@ export default function ManualTherapyStatsPage() {
 
         // 3. 스케줄 데이터를 도수치료 통계에 실시간으로 자동 동기화
         const latestTherapists = safeTherapists;
+        if (latestTherapists.length === 0) return;
         await syncMonthManualTherapyScheduleToStats({
           year: currentYear,
           month: currentMonth,
@@ -327,6 +328,10 @@ export default function ManualTherapyStatsPage() {
       const latestTherapists = Array.isArray(reloaded?.therapists) && reloaded.therapists.length > 0
         ? reloaded.therapists
         : safeTherapists;
+      if (!latestTherapists.length) {
+        addToast('도수치료사 목록을 불러오지 못해 통계 동기화를 건너뛰었습니다.', 'error');
+        return;
+      }
       await syncMonthManualTherapyScheduleToStats({
         year: currentYear,
         month: currentMonth,
