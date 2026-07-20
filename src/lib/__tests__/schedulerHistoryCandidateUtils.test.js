@@ -6,6 +6,7 @@ import {
   buildScheduleRowsBySchedulerCellKey,
   getSchedulerLinkedLogQueryTargets,
   shouldUseScheduleContentForPatientHistory,
+  shouldKeepFuturePatientLogForSchedulePresence,
   shouldKeepSchedulerLinkedPatientLog,
   shouldKeepUnkeyedSchedulerLogForPatientHistory,
   shouldUseScheduleRowForPatientHistory,
@@ -302,6 +303,70 @@ describe('scheduler history candidate filtering', () => {
           history_group: 'manual',
         },
         schedulePresenceKeys,
+        '2026-07-20'
+      ),
+      true
+    );
+  });
+
+  it('removes any future patient log when no matching schedule row exists', () => {
+    const schedulePresenceKeys = buildPatientHistorySchedulePresenceKeys([]);
+
+    assert.equal(
+      shouldKeepFuturePatientLogForSchedulePresence(
+        {
+          date: '2026-07-27',
+          patient_name: '이지운',
+          chart_number: '6281',
+          source: 'manual',
+          history_group: 'manual',
+        },
+        schedulePresenceKeys,
+        '2026-07-20'
+      ),
+      false
+    );
+  });
+
+  it('keeps a future patient log only when a matching schedule row exists', () => {
+    const schedulePresenceKeys = buildPatientHistorySchedulePresenceKeys([
+      {
+        dateStr: '2026-07-27',
+        historyGroup: 'manual',
+        parsed: {
+          patientChart: '6281',
+          patientName: '이지운',
+        },
+      },
+    ]);
+
+    assert.equal(
+      shouldKeepFuturePatientLogForSchedulePresence(
+        {
+          date: '2026-07-27',
+          patient_name: '이지운',
+          chart_number: '6281',
+          source: 'manual',
+          history_group: 'manual',
+        },
+        schedulePresenceKeys,
+        '2026-07-20'
+      ),
+      true
+    );
+  });
+
+  it('keeps past patient logs without requiring a matching schedule row', () => {
+    assert.equal(
+      shouldKeepFuturePatientLogForSchedulePresence(
+        {
+          date: '2026-07-13',
+          patient_name: '이지운',
+          chart_number: '6281',
+          source: 'manual',
+          history_group: 'manual',
+        },
+        buildPatientHistorySchedulePresenceKeys([]),
         '2026-07-20'
       ),
       true

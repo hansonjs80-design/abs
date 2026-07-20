@@ -23,8 +23,8 @@ import {
   buildScheduleRowsBySchedulerCellKey,
   getScheduleDayDateKey,
   getSchedulerLinkedLogQueryTargets,
+  shouldKeepFuturePatientLogForSchedulePresence,
   shouldKeepSchedulerLinkedPatientLog,
-  shouldKeepUnkeyedSchedulerLogForPatientHistory,
   shouldUseScheduleRowForPatientHistory,
 } from '../../lib/schedulerHistoryCandidateUtils';
 import {
@@ -509,7 +509,7 @@ export default function usePatientHistoryActions({
       });
       const schedulePresenceKeys = buildPatientHistorySchedulePresenceKeys(scheduleRowsWithMeta);
       allData = allData.filter((log) => (
-        shouldKeepUnkeyedSchedulerLogForPatientHistory(log, schedulePresenceKeys, todayDateKey)
+        shouldKeepFuturePatientLogForSchedulePresence(log, schedulePresenceKeys, todayDateKey)
       ));
 
       await Promise.all([...monthlyPreloadTargets.values()].map((target) => (

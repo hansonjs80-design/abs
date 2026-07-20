@@ -176,6 +176,10 @@ export function shouldKeepUnkeyedSchedulerLogForPatientHistory(log, schedulePres
   const hasSchedulerCellKey = Boolean(String(log?.scheduler_cell_key || '').trim());
   if (source !== 'scheduler' || hasSchedulerCellKey) return true;
 
+  return shouldKeepFuturePatientLogForSchedulePresence(log, schedulePresenceKeys, todayDate);
+}
+
+export function shouldKeepFuturePatientLogForSchedulePresence(log, schedulePresenceKeys, todayDate) {
   const logDate = String(log?.date || '').trim();
   const currentDate = String(todayDate || '').trim();
   if (!logDate || !currentDate || logDate <= currentDate) return true;
