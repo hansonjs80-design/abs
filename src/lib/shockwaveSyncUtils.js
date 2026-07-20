@@ -585,6 +585,7 @@ export async function syncMonthShockwaveScheduleToStats({
   scheduleAuthoritative = true,
   emitEvent = true,
   replaceExistingMonthLogs = false,
+  onRowsRebuilt = null,
 }) {
   const today = getTodayKST();
   const effectiveOverwriteManual = shouldOverwriteExistingStatsForScheduleSync({
@@ -711,6 +712,10 @@ export async function syncMonthShockwaveScheduleToStats({
 
     if (dateErrors.length > 0) {
       throw new Error(`충격파 월 통계 재계산 실패: ${dateErrors.join(', ')}`);
+    }
+
+    if (typeof onRowsRebuilt === 'function') {
+      onRowsRebuilt(rebuiltRowsForMonth);
     }
 
     const deletedCount = effectiveOverwriteManual

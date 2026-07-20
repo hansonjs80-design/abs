@@ -59,13 +59,29 @@ export default function ShockwaveStatsPage() {
     const requestId = ++scheduleReloadRequestRef.current;
     setIsScheduleLoading(true);
     try {
-      const loadedMonthlyTherapists = await loadMonthlyTherapists(currentYear, currentMonth, 'shockwave');
+      const [therapistsResult, memosResult] = await Promise.allSettled([
+        loadMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
+        loadShockwaveMemos(currentYear, currentMonth, { force, silent: true }),
+      ]);
+
+      const loadedMonthlyTherapists = therapistsResult.status === 'fulfilled'
+        ? therapistsResult.value
+        : null;
+      const loadedMemos = memosResult.status === 'fulfilled'
+        ? memosResult.value
+        : null;
+
       if (scheduleReloadRequestRef.current === requestId) {
         if (Array.isArray(loadedMonthlyTherapists)) {
           setLocalMonthlyTherapists(loadedMonthlyTherapists);
         }
+        if (therapistsResult.status === 'rejected') {
+          console.error(therapistsResult.reason);
+        }
+        if (memosResult.status === 'rejected') {
+          console.error(memosResult.reason);
+        }
       }
-      const loadedMemos = await loadShockwaveMemos(currentYear, currentMonth, { force });
       return { memos: loadedMemos, monthlyTherapists: loadedMonthlyTherapists, therapists: therapists };
     } finally {
       if (scheduleReloadRequestRef.current === requestId) {
@@ -84,7 +100,7 @@ export default function ShockwaveStatsPage() {
       try {
         const [therapistsResult, memosResult] = await Promise.allSettled([
           loadMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
-          loadShockwaveMemos(currentYear, currentMonth),
+          loadShockwaveMemos(currentYear, currentMonth, { silent: true }),
         ]);
 
         if (!active || scheduleReloadRequestRef.current !== requestId) return;
