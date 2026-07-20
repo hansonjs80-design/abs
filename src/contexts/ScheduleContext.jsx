@@ -28,6 +28,10 @@ import {
   sanitizeShockwaveScheduleItemForDisplay,
 } from '../lib/shockwaveScheduleSanitize';
 import {
+  getShockwaveScheduleBaseRowCount,
+  relocateHiddenMergedScheduleRows,
+} from '../lib/scheduleHiddenCellRelocationUtils';
+import {
   getPendingDraftId,
   readDeletedScheduleDrafts,
   readPendingScheduleDrafts,
@@ -44,6 +48,7 @@ const SHOCKWAVE_MONTH_LOAD_RETRY_DELAY_MS = 500;
 const SHOCKWAVE_BACKGROUND_REFRESH_DEBOUNCE_MS = 500;
 const SHOCKWAVE_BACKGROUND_REFRESH_MIN_INTERVAL_MS = 12000;
 const SCHEDULE_QUERY_TIMEOUT_MS = 15000;
+const HIDDEN_MERGED_RELOCATION_SOURCE_META_KEY = 'relocated_from_hidden_merge_cell';
 
 function getShockwaveMemoViewCacheKey(year, month) {
   return `${year}-${month}`;
@@ -73,13 +78,21 @@ function rememberShockwaveRawMonthCache(cacheRef, cacheKey, rows) {
   }
 }
 
-function buildShockwaveMemoMapFromRows(rows, year, month, shouldKeepShockwaveMemo) {
+function mapShockwaveRowsToVisibleRows(rows, year, month, shouldKeepShockwaveMemo) {
+  const visibleRows = [];
+  rows.forEach(item => {
+    if (!shouldKeepShockwaveMemo(item)) return;
+    const visibleItem = mapShockwaveScheduleItemToVisibleMonth(item, year, month);
+    if (visibleItem) visibleRows.push(visibleItem);
+  });
+  return visibleRows;
+}
+
+function buildShockwaveMemoMapFromVisibleRows(rows, shouldKeepShockwaveMemo) {
   const memoMap = {};
   rows.forEach(item => {
     if (!shouldKeepShockwaveMemo(item)) return;
-    const visibleItem = sanitizeShockwaveScheduleItemForDisplay(
-      mapShockwaveScheduleItemToVisibleMonth(item, year, month)
-    );
+    const visibleItem = sanitizeShockwaveScheduleItemForDisplay(item);
     if (!visibleItem) return;
     const key = `${visibleItem.week_index}-${visibleItem.day_index}-${visibleItem.row_index}-${visibleItem.col_index}`;
     const existing = memoMap[key];
@@ -88,6 +101,30 @@ function buildShockwaveMemoMapFromRows(rows, year, month, shouldKeepShockwaveMem
     if (!existing || nextTime >= existingTime) memoMap[key] = visibleItem;
   });
   return memoMap;
+}
+
+function getShockwaveScheduleCellKey(item) {
+  return `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+}
+
+function getShockwaveScheduleFullCellKey(item) {
+  return `${item.year}-${item.month}-${getShockwaveScheduleCellKey(item)}`;
+}
+
+function getHiddenMergedRelocationSourceKey(item) {
+  return item?.merge_span?.meta?.[HIDDEN_MERGED_RELOCATION_SOURCE_META_KEY] || '';
+}
+
+function hasShockwaveScheduleVisiblePayload(item) {
+  if (!item) return false;
+  if (String(item.content || '').trim()) return true;
+  if (String(item.prescription || '').trim()) return true;
+  if (String(item.body_part || '').trim()) return true;
+  if (String(item.bg_color || '').trim()) return true;
+  const meta = item.merge_span?.meta;
+  if (Array.isArray(meta?.memo_list) && meta.memo_list.some((entry) => String(entry || '').trim())) return true;
+  if (Array.isArray(meta?.body_part_options) && meta.body_part_options.some((entry) => String(entry || '').trim())) return true;
+  return false;
 }
 
 function waitForShockwaveMonthRetry() {
@@ -184,6 +221,7 @@ export function ScheduleProvider({ children }) {
   const shockwaveRawMonthRowsCacheRef = useRef(new Map());
   const shockwaveRawMonthRowsLoadPromisesRef = useRef(new Map());
   const shockwaveScheduleCacheVersionRef = useRef(0);
+  const hiddenMergedScheduleRelocationWriteRef = useRef(new Set());
   const realtimeRefreshTimerRef = useRef(null);
   const lastBackgroundRefreshAtRef = useRef(0);
   const staffMemosRef = useRef(staffMemos);
@@ -1360,6 +1398,108 @@ export function ScheduleProvider({ children }) {
     }
   }, []);
 
+  const persistHiddenMergedScheduleRelocation = useCallback((payload) => {
+    const visiblePayload = (Array.isArray(payload) ? payload : []).filter(Boolean);
+    if (visiblePayload.length === 0) return;
+
+    const canonicalPayload = visiblePayload
+      .map((item) => canonicalizeShockwaveScheduleItemDate(item))
+      .filter(Boolean)
+      .map((item) => ({
+        year: item.year,
+        month: item.month,
+        week_index: item.week_index,
+        day_index: item.day_index,
+        row_index: item.row_index,
+        col_index: item.col_index,
+        content: item.content || '',
+        bg_color: item.bg_color || null,
+        merge_span: item.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+        prescription: item.prescription || null,
+        body_part: item.body_part || null,
+      }));
+    if (canonicalPayload.length === 0) return;
+
+    const signature = canonicalPayload
+      .map((item) => (
+        `${getShockwaveScheduleFullCellKey(item)}:${String(item.content || '')}:${JSON.stringify(item.merge_span || {})}`
+      ))
+      .sort()
+      .join('|');
+    if (!signature || hiddenMergedScheduleRelocationWriteRef.current.has(signature)) return;
+
+    hiddenMergedScheduleRelocationWriteRef.current.add(signature);
+    const writeKeys = visiblePayload.map((item) => getShockwaveScheduleCellKey(item));
+
+    enqueueShockwaveWrite(writeKeys, async () => {
+      const relocationTargets = canonicalPayload.filter((item) => (
+        getHiddenMergedRelocationSourceKey(item) && String(item.content || '').trim()
+      ));
+      let safePayload = canonicalPayload;
+
+      if (relocationTargets.length > 0) {
+        const currentByFullKey = new Map();
+        const monthKeys = Array.from(new Set(
+          relocationTargets.map((item) => `${item.year}-${item.month}`)
+        ));
+
+        for (const monthKey of monthKeys) {
+          const [targetYear, targetMonth] = monthKey.split('-').map(Number);
+          if (!Number.isFinite(targetYear) || !Number.isFinite(targetMonth)) continue;
+          const rows = await fetchShockwaveScheduleRowsForMonth({ year: targetYear, month: targetMonth });
+          rows.forEach((row) => {
+            currentByFullKey.set(getShockwaveScheduleFullCellKey(row), row);
+          });
+        }
+
+        const blockedSourceFullKeys = new Set();
+        relocationTargets.forEach((target) => {
+          const current = currentByFullKey.get(getShockwaveScheduleFullCellKey(target));
+          const sourceKey = getHiddenMergedRelocationSourceKey(target);
+          const isSameRelocation = getHiddenMergedRelocationSourceKey(current) === sourceKey;
+          if (current && hasShockwaveScheduleVisiblePayload(current) && !isSameRelocation) {
+            blockedSourceFullKeys.add(`${target.year}-${target.month}-${sourceKey}`);
+          }
+        });
+
+        if (blockedSourceFullKeys.size > 0) {
+          safePayload = canonicalPayload.filter((item) => {
+            const sourceKey = getHiddenMergedRelocationSourceKey(item);
+            if (sourceKey) return !blockedSourceFullKeys.has(`${item.year}-${item.month}-${sourceKey}`);
+            return !blockedSourceFullKeys.has(getShockwaveScheduleFullCellKey(item));
+          });
+        }
+      }
+
+      if (safePayload.length === 0) return true;
+
+      const updatedAt = new Date().toISOString();
+      const upsertPayload = safePayload.map((item) => ({
+        ...item,
+        updated_at: updatedAt,
+      }));
+      const { error } = await supabase
+        .from('shockwave_schedules')
+        .upsert(upsertPayload, { onConflict: 'year,month,week_index,day_index,row_index,col_index' });
+
+      if (error) throw error;
+
+      loadCacheRef.current.shockwaveMemos = null;
+      shockwaveScheduleCacheVersionRef.current += 1;
+      shockwaveMemoViewCacheRef.current.clear();
+      shockwaveMemoViewLoadPromisesRef.current.clear();
+      shockwaveRawMonthRowsCacheRef.current.clear();
+      shockwaveRawMonthRowsLoadPromisesRef.current.clear();
+      return true;
+    })
+      .catch((err) => {
+        console.error('Failed to persist hidden merged schedule relocation:', err);
+      })
+      .finally(() => {
+        hiddenMergedScheduleRelocationWriteRef.current.delete(signature);
+      });
+  }, [enqueueShockwaveWrite]);
+
   const loadShockwaveRawMonthRows = useCallback(async (target, options = {}) => {
     const cacheKey = getShockwaveRawMonthCacheKey(target.year, target.month);
     if (!options.force) {
@@ -1427,7 +1567,11 @@ export function ScheduleProvider({ children }) {
     let loadPromise;
     loadPromise = (async () => {
       const applyRowsToView = (rows) => {
-        const memoMap = buildShockwaveMemoMapFromRows(rows, year, month, shouldKeepShockwaveMemo);
+        const visibleRows = mapShockwaveRowsToVisibleRows(rows, year, month, shouldKeepShockwaveMemo);
+        const relocation = relocateHiddenMergedScheduleRows(visibleRows, {
+          rowCount: getShockwaveScheduleBaseRowCount(shockwaveSettingsRefCache.current, year, month),
+        });
+        const memoMap = buildShockwaveMemoMapFromVisibleRows(relocation.rows, shouldKeepShockwaveMemo);
         const reconciledMemoMap = options.skipLocalRecovery === true
           ? reconcileLoadedShockwaveMemosWithLocalWrites(memoMap)
           : mergeLoadedShockwaveMemosWithLocalRecovery(
@@ -1436,6 +1580,9 @@ export function ScheduleProvider({ children }) {
               reconcileLoadedShockwaveMemosWithLocalWrites(memoMap)
             );
         rememberShockwaveMemoViewCache(shockwaveMemoViewCacheRef, cacheKey, reconciledMemoMap);
+        if (relocation.payload.length > 0) {
+          persistHiddenMergedScheduleRelocation(relocation.payload);
+        }
         return reconciledMemoMap;
       };
 
@@ -1526,7 +1673,7 @@ export function ScheduleProvider({ children }) {
 
     shockwaveMemoViewLoadPromisesRef.current.set(cacheKey, loadPromise);
     return loadPromise;
-  }, [waitForShockwaveWrites, loadShockwaveRawMonthRows, shouldKeepShockwaveMemo, beginLoading, endLoading, reconcileLoadedShockwaveMemosWithLocalWrites, mergeLoadedShockwaveMemosWithLocalRecovery]);
+  }, [waitForShockwaveWrites, loadShockwaveRawMonthRows, shouldKeepShockwaveMemo, beginLoading, endLoading, reconcileLoadedShockwaveMemosWithLocalWrites, mergeLoadedShockwaveMemosWithLocalRecovery, persistHiddenMergedScheduleRelocation]);
 
   useEffect(() => {
     loadShockwaveMemosRef.current = loadShockwaveMemos;

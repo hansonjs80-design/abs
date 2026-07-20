@@ -1,5 +1,7 @@
 import { generateShockwaveCalendar } from './calendarUtils.js';
 
+const HIDDEN_MERGED_RELOCATION_SOURCE_META_KEY = 'relocated_from_hidden_merge_cell';
+
 export function findShockwaveCalendarCoordinateByDate(year, month, targetYear, targetMonth, targetDay) {
   const weeks = generateShockwaveCalendar(year, month);
   for (let weekIndex = 0; weekIndex < weeks.length; weekIndex += 1) {
@@ -26,13 +28,29 @@ export function getShockwaveScheduleItemDate(item) {
   return dayInfo;
 }
 
+function remapCellKeyToDay(cellKey, weekIndex, dayIndex) {
+  const [, , rowIndex, colIndex] = String(cellKey || '').split('-');
+  if (rowIndex === undefined || colIndex === undefined) return cellKey;
+  return `${weekIndex}-${dayIndex}-${rowIndex}-${colIndex}`;
+}
+
 function remapMergeSpanToDay(mergeSpan, weekIndex, dayIndex) {
-  if (!mergeSpan?.mergedInto) return mergeSpan;
+  if (!mergeSpan) return mergeSpan;
+  const relocatedSourceKey = mergeSpan.meta?.[HIDDEN_MERGED_RELOCATION_SOURCE_META_KEY];
+  if (!mergeSpan.mergedInto && !relocatedSourceKey) return mergeSpan;
+
+  const nextMergeSpan = { ...mergeSpan };
   const [, , rowIndex, colIndex] = String(mergeSpan.mergedInto).split('-');
-  return {
-    ...mergeSpan,
-    mergedInto: `${weekIndex}-${dayIndex}-${rowIndex}-${colIndex}`,
-  };
+  if (mergeSpan.mergedInto && rowIndex !== undefined && colIndex !== undefined) {
+    nextMergeSpan.mergedInto = `${weekIndex}-${dayIndex}-${rowIndex}-${colIndex}`;
+  }
+  if (relocatedSourceKey) {
+    nextMergeSpan.meta = {
+      ...mergeSpan.meta,
+      [HIDDEN_MERGED_RELOCATION_SOURCE_META_KEY]: remapCellKeyToDay(relocatedSourceKey, weekIndex, dayIndex),
+    };
+  }
+  return nextMergeSpan;
 }
 
 export function canonicalizeShockwaveScheduleItemDate(item) {
