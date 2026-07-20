@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   formatStatsRowForScheduler,
+  getVisibleShockwaveScheduleMemoEntriesForStats,
   parseTherapyInfo,
   resolveShockwaveSchedulePrescriptionCount,
   shouldUseExistingShockwaveSchedulerLogForCopy,
@@ -79,5 +80,60 @@ describe('shockwave scheduler/stat sync formatting', () => {
       shouldUseExistingShockwaveSchedulerLogForCopy({ source: 'manual', scheduler_cell_key: '2026:06:0:0:1:0' }),
       true
     );
+  });
+
+  it('extracts only rendered schedule cells for stats sync', () => {
+    const entries = getVisibleShockwaveScheduleMemoEntriesForStats({
+      '0-0-10-1': {
+        content: '14122/전지환(1)',
+        bg_color: '#fff2cc',
+        prescription: 'F2.5',
+        merge_span: { rowSpan: 2, colSpan: 1, mergedInto: null },
+      },
+      '0-0-11-1': {
+        content: '14122/전지환*',
+        bg_color: '#fff2cc',
+        prescription: 'F2.5',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-0-10-1' },
+      },
+      '0-0-15-1': {
+        content: '14122/전지환(1)',
+        bg_color: '#fff2cc',
+        prescription: 'F2.5',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+      },
+    });
+
+    assert.deepEqual(entries.map(([key]) => key), ['0-0-10-1', '0-0-15-1']);
+  });
+
+  it('ignores completed cells outside the rendered schedule rows and therapist columns', () => {
+    const entries = getVisibleShockwaveScheduleMemoEntriesForStats({
+      '1-0-10-0': {
+        content: '2629/조다슬(3)',
+        bg_color: '#ffe599',
+        prescription: 'F/RDC',
+      },
+      '1-0-11-0': {
+        content: '2629/조다슬(3)',
+        bg_color: '#ffe599',
+        prescription: 'F/RDC',
+      },
+      '1-0-54-0': {
+        content: '2629/조다슬(3)',
+        bg_color: '#ffe599',
+        prescription: 'F/RDC',
+      },
+      '1-0-12-4': {
+        content: '2629/조다슬(3)',
+        bg_color: '#ffe599',
+        prescription: 'F/RDC',
+      },
+    }, {
+      rowCount: 31,
+      colCount: 3,
+    });
+
+    assert.deepEqual(entries.map(([key]) => key), ['1-0-10-0', '1-0-11-0']);
   });
 });

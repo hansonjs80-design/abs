@@ -1898,6 +1898,7 @@ export function ScheduleProvider({ children }) {
               memos: nextShockwaveMemos,
               therapists,
               monthlyTherapists,
+              settings: shockwaveSettingsRefCache.current,
               targetDateStr,
             });
           } catch (syncErr) {
@@ -2123,6 +2124,7 @@ export function ScheduleProvider({ children }) {
                 memos: nextShockwaveMemos,
                 therapists,
                 monthlyTherapists,
+                settings: shockwaveSettingsRefCache.current,
                 targetDateStr,
               });
             } catch (syncErr) {

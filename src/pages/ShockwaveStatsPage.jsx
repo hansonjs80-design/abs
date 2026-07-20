@@ -82,20 +82,34 @@ export default function ShockwaveStatsPage() {
 
     (async () => {
       try {
-        const loadedMonthlyTherapists = await loadMonthlyTherapists(currentYear, currentMonth, 'shockwave');
-        if (active && scheduleReloadRequestRef.current === requestId) {
-          if (Array.isArray(loadedMonthlyTherapists)) {
-            setLocalMonthlyTherapists(loadedMonthlyTherapists);
-          }
+        const [therapistsResult, memosResult] = await Promise.allSettled([
+          loadMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
+          loadShockwaveMemos(currentYear, currentMonth),
+        ]);
+
+        if (!active || scheduleReloadRequestRef.current !== requestId) return;
+
+        if (therapistsResult.status === 'fulfilled' && Array.isArray(therapistsResult.value)) {
+          setLocalMonthlyTherapists(therapistsResult.value);
+        } else if (therapistsResult.status === 'rejected') {
+          console.error(therapistsResult.reason);
         }
-      } catch (err) {
-        console.error(err);
+
+        if (
+          memosResult.status === 'rejected' ||
+          (memosResult.status === 'fulfilled' && memosResult.value === null)
+        ) {
+          console.error(
+            memosResult.status === 'rejected'
+              ? memosResult.reason
+              : 'Shockwave schedule memo load returned null'
+          );
+        }
       } finally {
         if (active && scheduleReloadRequestRef.current === requestId) {
           setIsScheduleLoading(false);
         }
       }
-      loadShockwaveMemos(currentYear, currentMonth).catch(console.error);
     })();
 
     return () => {

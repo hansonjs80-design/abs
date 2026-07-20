@@ -5,6 +5,7 @@ import {
   relocateHiddenMergedScheduleRows,
 } from './scheduleHiddenCellRelocationUtils.js';
 import { sanitizeShockwaveScheduleItemForDisplay } from './shockwaveScheduleSanitize.js';
+import { getExplicitVisitSuffix, parseSchedulerPatientIdentity } from './schedulerCellTextUtils.js';
 
 const SCHEDULE_STATS_QUERY_TIMEOUT_MS = 15000;
 
@@ -82,6 +83,84 @@ function getUpdatedAtTime(item) {
   return Number.isFinite(time) ? time : 0;
 }
 
+function normalizeStatsComparableText(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function normalizeStatsPatientName(value) {
+  return normalizeStatsComparableText(value).replace(/\*/g, '');
+}
+
+function getStatsTreatmentValue(item, field) {
+  const directValue = normalizeStatsComparableText(item?.[field]);
+  if (directValue) return directValue;
+
+  if (field === 'body_part') {
+    const options = item?.merge_span?.meta?.body_part_options;
+    if (Array.isArray(options)) {
+      return options
+        .map(normalizeStatsComparableText)
+        .filter(Boolean)
+        .join('|');
+    }
+  }
+
+  return '';
+}
+
+function getStatsPatientGroupKey(key, item) {
+  const { weekIndex, dayIndex, colIndex } = parseScheduleCellKey(key);
+  if (![weekIndex, dayIndex, colIndex].every(Number.isFinite)) return '';
+
+  const parsed = parseSchedulerPatientIdentity(item?.content || '');
+  const chart = normalizeStatsComparableText(parsed?.patientChart);
+  const name = normalizeStatsPatientName(parsed?.patientName);
+  const identity = chart || name;
+  if (!identity) return '';
+
+  return [
+    weekIndex,
+    dayIndex,
+    colIndex,
+    identity,
+    getStatsTreatmentValue(item, 'prescription'),
+    getStatsTreatmentValue(item, 'body_part'),
+  ].join('|');
+}
+
+function isStarVisitScheduleItem(item) {
+  const suffix = getExplicitVisitSuffix(item?.content || '');
+  return suffix === '*' || suffix === '(*)';
+}
+
+function removeStaleStarVisitDuplicates(memoMap) {
+  const grouped = new Map();
+  Object.entries(memoMap || {}).forEach(([key, item]) => {
+    if (!hasStatsScheduleMemoPayload(item)) return;
+    const groupKey = getStatsPatientGroupKey(key, item);
+    if (!groupKey) return;
+    const entries = grouped.get(groupKey) || [];
+    entries.push({ key, item, isStarVisit: isStarVisitScheduleItem(item) });
+    grouped.set(groupKey, entries);
+  });
+
+  const keysToRemove = new Set();
+  grouped.forEach((entries) => {
+    const hasNonStarVisit = entries.some((entry) => !entry.isStarVisit);
+    if (!hasNonStarVisit) return;
+    entries.forEach((entry) => {
+      if (entry.isStarVisit) keysToRemove.add(entry.key);
+    });
+  });
+
+  if (keysToRemove.size === 0) return memoMap;
+  const nextMemoMap = { ...memoMap };
+  keysToRemove.forEach((key) => {
+    delete nextMemoMap[key];
+  });
+  return nextMemoMap;
+}
+
 export function getRecentScheduleMonthTargets({ currentYear, currentMonth, recentPeriodMonths }) {
   const period = Math.max(1, Number.parseInt(String(recentPeriodMonths || 1), 10) || 1);
   const targets = [];
@@ -127,18 +206,20 @@ export function buildScheduleMemoMapForStats(rows, { year, month, settings = {} 
   });
   const coveredKeys = buildCoveredCellKeys(relocation.rows);
 
-  return (relocation.rows || []).reduce((memoMap, row) => {
-    if (!hasStatsScheduleMemoPayload(row)) return memoMap;
+  const memoMap = (relocation.rows || []).reduce((nextMemoMap, row) => {
+    if (!hasStatsScheduleMemoPayload(row)) return nextMemoMap;
     const visible = sanitizeShockwaveScheduleItemForDisplay(row);
-    if (!visible || !hasStatsScheduleMemoPayload(visible)) return memoMap;
+    if (!visible || !hasStatsScheduleMemoPayload(visible)) return nextMemoMap;
     const key = getScheduleCellKey(visible);
-    if (coveredKeys.has(key)) return memoMap;
-    const existing = memoMap[key];
+    if (coveredKeys.has(key)) return nextMemoMap;
+    const existing = nextMemoMap[key];
     if (!existing || getUpdatedAtTime(visible) >= getUpdatedAtTime(existing)) {
-      memoMap[key] = visible;
+      nextMemoMap[key] = visible;
     }
-    return memoMap;
+    return nextMemoMap;
   }, {});
+
+  return removeStaleStarVisitDuplicates(memoMap);
 }
 
 async function fetchShockwaveScheduleRowsForStorageMonth({ year, month }) {

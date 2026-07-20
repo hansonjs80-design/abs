@@ -4,6 +4,10 @@ import { supabase } from '../../lib/supabaseClient';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 import { getTodayKST } from '../../lib/calendarUtils';
+import {
+  buildShockwaveCountSummaries,
+  toStatsPrescriptionCount,
+} from '../../lib/shockwaveStatsCountUtils';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { useToast } from '../common/Toast';
 import {
@@ -139,7 +143,7 @@ export default function ShockwaveDataGrid({
 
     safeInputLogs.forEach(log => {
       if (!log?.prescription) return;
-      const count = parseInt(String(log.prescription_count ?? '').trim(), 10) || 0;
+      const count = toStatsPrescriptionCount(log.prescription_count);
       const matched = allPrescriptions.find(p => prescriptionsMatch(log.prescription, p));
       if (matched) {
         totals[matched] += count;
@@ -332,54 +336,13 @@ export default function ShockwaveDataGrid({
     (colIdx - FIXED_FIELDS.length) % prescriptions.length === prescriptions.length - 1
   );
   const isBlankValue = (value) => value == null || String(value).trim() === '';
-  const toPrescriptionCount = (value) => {
-    const parsed = parseInt(String(value ?? '').trim(), 10);
-    return Number.isFinite(parsed) ? parsed : 0;
-  };
   const isRowEmpty = (row) => ROW_DATA_FIELDS.every((field) => isBlankValue(row?.[field]));
-  const createEmptyPrescriptionCounts = () => Object.fromEntries(prescriptions.map(p => [p, 0]));
-  const createEmptyTherapistCounts = () => Object.fromEntries(
-    visibleTherapists.map(t => [t.name, createEmptyPrescriptionCounts()])
-  );
-  const createEmptyNewPatientCounts = () => Object.fromEntries(
-    visibleTherapists.map(t => [t.name, 0])
-  );
   const dateSummaries = useMemo(() => {
-    const summaries = new Map();
-    gridData.forEach((row) => {
-      if (!row?.date) return;
-      const current = summaries.get(row.date) || { 
-        total: 0, 
-        newPatient: 0, 
-        byPrescription: createEmptyPrescriptionCounts(),
-        byTherapistPrescription: createEmptyTherapistCounts(),
-        newPatientByTherapist: createEmptyNewPatientCounts(),
-      };
-      if (row.prescription) {
-        const count = toPrescriptionCount(row.prescription_count);
-        current.total += count;
-        const matched = prescriptions.find(p => prescriptionsMatch(row.prescription, p));
-        if (matched) {
-          current.byPrescription[matched] = (current.byPrescription[matched] || 0) + count;
-          if (row.therapist_name) {
-            if (!current.byTherapistPrescription[row.therapist_name]) {
-              current.byTherapistPrescription[row.therapist_name] = createEmptyPrescriptionCounts();
-            }
-            current.byTherapistPrescription[row.therapist_name][matched] =
-              (current.byTherapistPrescription[row.therapist_name][matched] || 0) + count;
-          }
-        }
-      }
-      if (String(row.patient_name || '').includes('*')) {
-        current.newPatient += 1;
-        if (row.therapist_name) {
-          current.newPatientByTherapist[row.therapist_name] =
-            (current.newPatientByTherapist[row.therapist_name] || 0) + 1;
-        }
-      }
-      summaries.set(row.date, current);
-    });
-    return summaries;
+    return buildShockwaveCountSummaries({
+      rows: gridData,
+      prescriptions,
+      therapists: visibleTherapists,
+    }).dateSummaries;
   }, [gridData, prescriptions, visibleTherapists]);
 
   const formatFullDateLabel = useCallback((date) => {
@@ -1328,41 +1291,11 @@ export default function ShockwaveDataGrid({
 
   // ─── 9. COMPUTED TOTALS ───────────────────────────────────
   const { grandTotal, newPatientTotal, therapistTotals } = useMemo(() => {
-    const totalsByTherapist = new Map();
-    visibleTherapists.forEach((therapist) => {
-      totalsByTherapist.set(therapist.name, {
-        total: 0,
-        byPres: Object.fromEntries(prescriptions.map((prescription) => [prescription, 0])),
-      });
+    return buildShockwaveCountSummaries({
+      rows: filteredInputLogs,
+      prescriptions,
+      therapists: visibleTherapists,
     });
-
-    let total = 0;
-    let newPatients = 0;
-
-    filteredInputLogs.forEach((log) => {
-      if (String(log?.patient_name || '').includes('*')) {
-        newPatients += 1;
-      }
-      if (!log?.prescription) return;
-
-      const count = toPrescriptionCount(log.prescription_count);
-      total += count;
-
-      const therapistTotal = totalsByTherapist.get(log.therapist_name);
-      if (!therapistTotal) return;
-
-      therapistTotal.total += count;
-      const matchedPrescription = prescriptions.find((prescription) => prescriptionsMatch(log.prescription, prescription));
-      if (matchedPrescription) {
-        therapistTotal.byPres[matchedPrescription] = (therapistTotal.byPres[matchedPrescription] || 0) + count;
-      }
-    });
-
-    return {
-      grandTotal: total,
-      newPatientTotal: newPatients,
-      therapistTotals: visibleTherapists.map((therapist) => totalsByTherapist.get(therapist.name) || { total: 0, byPres: {} }),
-    };
   }, [filteredInputLogs, visibleTherapists, prescriptions]);
 
   // ─── 10. RENDER ───────────────────────────────────────────

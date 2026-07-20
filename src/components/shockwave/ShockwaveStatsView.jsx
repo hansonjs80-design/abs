@@ -23,6 +23,10 @@ import {
   loadScheduleMemosForStatsMonth,
   loadStatsMonthlyTherapists,
 } from '../../lib/statsScheduleSourceUtils';
+import {
+  normalizePrescriptionKey,
+  toStatsPrescriptionCount,
+} from '../../lib/shockwaveStatsCountUtils';
 
 class ShockwaveStatsErrorBoundary extends React.Component {
   constructor(props) {
@@ -82,6 +86,7 @@ export default function ShockwaveStatsView({
   onReloadMemos,
   monthlyTherapistsProp,
   monthlyTherapistsReady = false,
+  memosLoadedKey = '',
   isScheduleLoading = false,
 }) {
   const { addToast } = useToast();
@@ -145,6 +150,11 @@ export default function ShockwaveStatsView({
     () => formatRecentPeriodLabel(recentPeriodMonths),
     [recentPeriodMonths]
   );
+  const currentScheduleMonthKey = useMemo(
+    () => `${currentYear}-${currentMonth}`,
+    [currentYear, currentMonth]
+  );
+  const isCurrentScheduleReady = memosLoadedKey === currentScheduleMonthKey && !isScheduleLoading;
   const currentMemosSyncSignature = useMemo(
     () => buildScheduleMemoSignature(memos),
     [memos]
@@ -233,22 +243,21 @@ export default function ShockwaveStatsView({
     upToToday = true,
     overwriteManual = false,
     emitEvent = false,
+    sourceMemosOverride = null,
   } = {}) => {
     if (safeTherapists.length === 0) return null;
+    const hasOverride = sourceMemosOverride &&
+      typeof sourceMemosOverride === 'object' &&
+      !Array.isArray(sourceMemosOverride);
+    if (!hasOverride && !isCurrentScheduleReady) return null;
 
-    const [sourceMemos, sourceMonthlyTherapists] = await Promise.all([
-      loadScheduleMemosForStatsMonth({
-        year: currentYear,
-        month: currentMonth,
-        settings: shockwaveSettings,
-      }),
-      loadStatsMonthlyTherapists({
-        year: currentYear,
-        month: currentMonth,
-        type: 'shockwave',
-        baseTherapists: safeTherapists,
-      }),
-    ]);
+    const sourceMemos = hasOverride ? sourceMemosOverride : (memos || {});
+    const sourceMonthlyTherapists = await loadStatsMonthlyTherapists({
+      year: currentYear,
+      month: currentMonth,
+      type: 'shockwave',
+      baseTherapists: safeTherapists,
+    });
 
     const syncResult = await syncMonthShockwaveScheduleToStats({
       year: currentYear,
@@ -256,6 +265,7 @@ export default function ShockwaveStatsView({
       memos: sourceMemos,
       therapists: safeTherapists,
       monthlyTherapists: sourceMonthlyTherapists,
+      settings: shockwaveSettings,
       upToToday,
       overwriteManual,
       scheduleAuthoritative: true,
@@ -272,7 +282,7 @@ export default function ShockwaveStatsView({
         `shockwave-source:${currentYear}-${String(currentMonth).padStart(2, '0')}`
       ),
     };
-  }, [currentMonth, currentYear, safeTherapists, shockwaveSettings]);
+  }, [currentMonth, currentYear, isCurrentScheduleReady, memos, safeTherapists, shockwaveSettings]);
 
   // 수동 새로고침: 스케줄 메모 + 통계 로그 + 자동동기화 재실행
   const [isReloading, setIsReloading] = useState(false);
@@ -280,8 +290,12 @@ export default function ShockwaveStatsView({
     setIsReloading(true);
     try {
       // 1. 스케줄 메모를 다시 가져옴
-      if (onReloadMemos) await onReloadMemos();
-      const synced = await syncCurrentMonthFromScheduleSource({ upToToday: true, emitEvent: false });
+      const reloadResult = onReloadMemos ? await onReloadMemos() : null;
+      const synced = await syncCurrentMonthFromScheduleSource({
+        upToToday: true,
+        emitEvent: false,
+        sourceMemosOverride: reloadResult?.memos,
+      });
       if (!synced?.memos) {
         addToast('스케줄 데이터를 불러오지 못해 통계 동기화를 건너뛰었습니다.', 'error');
         return;
@@ -315,6 +329,7 @@ export default function ShockwaveStatsView({
 
   useEffect(() => {
     if (safeTherapists.length === 0) return;
+    if (!isCurrentScheduleReady) return;
 
     const syncKey = `${currentYear}-${currentMonth}:${currentMemosSyncSignature}:${scheduleLayoutSettingsKey}`;
     if (lastAutoSyncKeyRef.current === syncKey) return;
@@ -347,6 +362,7 @@ export default function ShockwaveStatsView({
     currentYear,
     currentMemosSyncSignature,
     fetchLogs,
+    isCurrentScheduleReady,
     scheduleLayoutSettingsKey,
     safeTherapists,
     syncCurrentMonthFromScheduleSource,
@@ -354,6 +370,7 @@ export default function ShockwaveStatsView({
 
   useEffect(() => {
     const handleStatsUpdated = () => {
+      if (!isCurrentScheduleReady) return;
       lastAutoSyncKeyRef.current = null;
       setRecentLogsRefreshKey((value) => value + 1);
       (async () => {
@@ -375,7 +392,7 @@ export default function ShockwaveStatsView({
     return () => {
       window.removeEventListener('clinic-stats-updated', handleStatsUpdated);
     };
-  }, [currentMonth, currentYear, fetchLogs, syncCurrentMonthFromScheduleSource]);
+  }, [currentMonth, currentYear, fetchLogs, isCurrentScheduleReady, syncCurrentMonthFromScheduleSource]);
 
   useEffect(() => {
     loadShockwaveSettings();
@@ -384,6 +401,7 @@ export default function ShockwaveStatsView({
   useEffect(() => {
     if (activeSection !== 'settlement') return undefined;
     if (safeTherapists.length === 0) return undefined;
+    if (!isCurrentScheduleReady) return undefined;
 
     const therapistKey = safeTherapists
       .map((therapist, index) => `${therapist?.slot_index ?? index}:${therapist?.name || ''}`)
@@ -403,12 +421,17 @@ export default function ShockwaveStatsView({
 
         for (const target of targets) {
           if (cancelled) return;
+          const isDisplayedMonth =
+            Number(target.year) === Number(currentYear) &&
+            Number(target.month) === Number(currentMonth);
           const [targetMemos, targetMonthlyTherapists] = await Promise.all([
-            loadScheduleMemosForStatsMonth({
-              year: target.year,
-              month: target.month,
-              settings: shockwaveSettings,
-            }),
+            isDisplayedMonth
+              ? Promise.resolve(memos || {})
+              : loadScheduleMemosForStatsMonth({
+                  year: target.year,
+                  month: target.month,
+                  settings: shockwaveSettings,
+                }),
             loadStatsMonthlyTherapists({
               year: target.year,
               month: target.month,
@@ -424,6 +447,7 @@ export default function ShockwaveStatsView({
             memos: targetMemos,
             therapists: safeTherapists,
             monthlyTherapists: targetMonthlyTherapists,
+            settings: shockwaveSettings,
             upToToday: true,
             scheduleAuthoritative: true,
             emitEvent: false,
@@ -460,19 +484,14 @@ export default function ShockwaveStatsView({
     recentPeriodMonths,
     recentLogsRefreshKey,
     currentMemosSyncSignature,
+    isCurrentScheduleReady,
+    memos,
     safeTherapists,
     scheduleLayoutSettingsKey,
     shockwaveSettings,
   ]);
 
   const recentMonthlySummaries = useMemo(() => {
-    const normalizePrescriptionKey = (value) =>
-      String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const toCount = (value) => {
-      const parsed = parseInt(String(value ?? '').trim(), 10);
-      return Number.isFinite(parsed) ? parsed : 0;
-    };
-
     return Array.from({ length: recentPeriodMonths }, (_, index) => {
       const targetDate = new Date(currentYear, currentMonth - 1 - index, 1);
       const year = targetDate.getFullYear();
@@ -488,7 +507,7 @@ export default function ShockwaveStatsView({
           .map(normalizePrescriptionKey)
       );
       const settlementLogs = monthlyLogs.filter((log) => monthPrescriptionKeys.has(normalizePrescriptionKey(log?.prescription)));
-      const totalCount = settlementLogs.reduce((sum, log) => sum + toCount(log?.prescription_count || 1), 0);
+      const totalCount = settlementLogs.reduce((sum, log) => sum + toStatsPrescriptionCount(log?.prescription_count), 0);
       const monthPriceMap = Object.fromEntries(
         Object.entries(monthSettings.prescription_prices || {}).map(([key, value]) => [
           normalizePrescriptionKey(key),
@@ -497,7 +516,7 @@ export default function ShockwaveStatsView({
       );
       const amount = settlementLogs.reduce((sum, log) => {
         const price = monthPriceMap[normalizePrescriptionKey(log?.prescription)] || 0;
-        return sum + toCount(log?.prescription_count || 1) * price;
+        return sum + toStatsPrescriptionCount(log?.prescription_count) * price;
       }, 0);
       const newPatientCount = settlementLogs.filter((log) => String(log?.patient_name || '').includes('*')).length;
 
@@ -547,6 +566,7 @@ export default function ShockwaveStatsView({
         memos,
         therapists: safeTherapists,
         monthlyTherapists,
+        settings: shockwaveSettings,
       });
 
       if (result.skipped && result.reason === 'today_outside_current_month') {

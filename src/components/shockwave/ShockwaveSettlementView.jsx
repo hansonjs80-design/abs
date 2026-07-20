@@ -1,5 +1,9 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
+import {
+  normalizePrescriptionKey,
+  toStatsPrescriptionCount,
+} from '../../lib/shockwaveStatsCountUtils';
 import ShockwaveSettlementHorizontalCompactView from './ShockwaveSettlementHorizontalCompactView';
 
 const SETTLEMENT_VIEW_MODE_STORAGE_KEY = 'shockwave:settlement:viewMode';
@@ -22,17 +26,6 @@ function writeStoredViewMode(nextViewMode) {
   } catch {
     // localStorage may be unavailable in private browsing or restricted contexts.
   }
-}
-
-function normalizePrescriptionKey(value) {
-  return String(value || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '');
-}
-
-function toCount(value) {
-  const parsed = parseInt(String(value ?? '').trim(), 10);
-  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function formatCount(value) {
@@ -102,7 +95,7 @@ export default function ShockwaveSettlementView({
           (prescription) => normalizePrescriptionKey(prescription) === normalizedLogPrescription
         );
         if (!matchedPrescription) return;
-        countsByPrescription[matchedPrescription] += toCount(log?.prescription_count || 1);
+        countsByPrescription[matchedPrescription] += toStatsPrescriptionCount(log?.prescription_count);
       });
 
       const totalCount = safePrescriptions.reduce(

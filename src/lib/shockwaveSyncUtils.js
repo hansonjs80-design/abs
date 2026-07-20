@@ -2,6 +2,7 @@ import { supabase } from './supabaseClient.js';
 import { generateShockwaveCalendar, getTodayKST } from './calendarUtils.js';
 import { has4060Pattern, get4060PrescriptionFromContent } from './schedulerContentFormat.js';
 import { TREATMENT_COMPLETE_BG } from './schedulerUtils.js';
+import { getShockwaveScheduleBaseRowCount } from './scheduleHiddenCellRelocationUtils.js';
 import {
   getPastLogsForPatient,
   normalizeHistoryPatientName,
@@ -37,6 +38,64 @@ function buildSchedulerCellKey(year, month, weekIndex, dayIndex, rowIndex, colIn
     rowIndex,
     colIndex,
   ].join(':');
+}
+
+function parseScheduleMemoKey(key) {
+  const [weekIndex, dayIndex, rowIndex, colIndex] = String(key || '').split('-').map(Number);
+  return { weekIndex, dayIndex, rowIndex, colIndex };
+}
+
+function normalizeScheduleMergeSpanForStats(mergeSpan = {}) {
+  const base = mergeSpan && typeof mergeSpan === 'object' ? mergeSpan : {};
+  return {
+    rowSpan: Math.max(1, Number(base.rowSpan) || 1),
+    colSpan: Math.max(1, Number(base.colSpan) || 1),
+    mergedInto: base.mergedInto || null,
+  };
+}
+
+function getStatsTherapistColumnCount(therapists = [], monthlyTherapists = []) {
+  const therapistCount = Array.isArray(therapists) ? therapists.length : 0;
+  const monthlySlotCount = (Array.isArray(monthlyTherapists) ? monthlyTherapists : []).reduce(
+    (max, item) => Math.max(max, (Number(item?.slot_index) || 0) + 1),
+    0
+  );
+  return Math.max(1, therapistCount, monthlySlotCount);
+}
+
+function isScheduleMemoKeyInRenderedBounds(key, { rowCount, colCount } = {}) {
+  const { weekIndex, dayIndex, rowIndex, colIndex } = parseScheduleMemoKey(key);
+  if (![weekIndex, dayIndex, rowIndex, colIndex].every(Number.isFinite)) return false;
+  if (weekIndex < 0 || dayIndex < 0 || rowIndex < 0 || colIndex < 0) return false;
+  if (Number.isFinite(Number(rowCount)) && rowIndex >= Number(rowCount)) return false;
+  if (Number.isFinite(Number(colCount)) && colIndex >= Number(colCount)) return false;
+  return true;
+}
+
+export function getVisibleShockwaveScheduleMemoEntriesForStats(memos = {}, options = {}) {
+  const entries = Object.entries(memos || {});
+  const coveredKeys = new Set();
+
+  entries.forEach(([key, cell]) => {
+    const mergeSpan = normalizeScheduleMergeSpanForStats(cell?.merge_span);
+    if (mergeSpan.mergedInto || (mergeSpan.rowSpan <= 1 && mergeSpan.colSpan <= 1)) return;
+
+    const { weekIndex, dayIndex, rowIndex, colIndex } = parseScheduleMemoKey(key);
+    if (![weekIndex, dayIndex, rowIndex, colIndex].every(Number.isFinite)) return;
+
+    for (let row = rowIndex; row < rowIndex + mergeSpan.rowSpan; row += 1) {
+      for (let col = colIndex; col < colIndex + mergeSpan.colSpan; col += 1) {
+        const coveredKey = `${weekIndex}-${dayIndex}-${row}-${col}`;
+        if (coveredKey !== key) coveredKeys.add(coveredKey);
+      }
+    }
+  });
+
+  return entries.filter(([key, cell]) => {
+    if (!isScheduleMemoKeyInRenderedBounds(key, options)) return false;
+    const mergeSpan = normalizeScheduleMergeSpanForStats(cell?.merge_span);
+    return !mergeSpan.mergedInto && !coveredKeys.has(key);
+  });
 }
 
 function isMissingSchedulerCellKeyError(error) {
@@ -238,6 +297,7 @@ async function runTodayShockwaveScheduleToStatsSync({
   memos,
   therapists,
   monthlyTherapists,
+  settings = {},
   targetDateStr,
   overwriteManual = false,
   scheduleAuthoritative = true,
@@ -255,6 +315,8 @@ async function runTodayShockwaveScheduleToStatsSync({
   const todayM = targetDateStr ? parseInt(targetDateStr.split('-')[1], 10) : today.getMonth() + 1;
   const todayD = targetDateStr ? parseInt(targetDateStr.split('-')[2], 10) : today.getDate();
   const todayDateStrFinal = targetDateStr || `${todayY}-${String(todayM).padStart(2, '0')}-${String(todayD).padStart(2, '0')}`;
+  const renderedRowCount = getShockwaveScheduleBaseRowCount(settings, year, month);
+  const renderedColCount = getStatsTherapistColumnCount(therapists, monthlyTherapists);
   const effectiveOverwriteManual = shouldOverwriteExistingStatsForScheduleSync({
     year: todayY,
     month: todayM,
@@ -271,7 +333,10 @@ async function runTodayShockwaveScheduleToStatsSync({
   const newLogs = [];
 
   // 방문 완료(bg_color === TREATMENT_COMPLETE_BG)된 셀만 통계에 포함
-  Object.entries(memos).forEach(([key, cell]) => {
+  getVisibleShockwaveScheduleMemoEntriesForStats(memos, {
+    rowCount: renderedRowCount,
+    colCount: renderedColCount,
+  }).forEach(([key, cell]) => {
     const [w, d, r, c] = key.split('-').map(Number);
     const dayInfo = weeks[w]?.[d];
     if (!dayInfo || !dayInfo.isCurrentMonth) return;
@@ -514,6 +579,7 @@ export async function syncMonthShockwaveScheduleToStats({
   memos,
   therapists,
   monthlyTherapists,
+  settings = {},
   upToToday = false,
   overwriteManual = false,
   scheduleAuthoritative = true,
@@ -542,7 +608,13 @@ export async function syncMonthShockwaveScheduleToStats({
     const patientNamesSet = new Set();
     const chartNumbersSet = new Set();
 
-    Object.entries(memos || {}).forEach(([key, cell]) => {
+    const renderedRowCount = getShockwaveScheduleBaseRowCount(settings, year, month);
+    const renderedColCount = getStatsTherapistColumnCount(therapists, monthlyTherapists);
+
+    getVisibleShockwaveScheduleMemoEntriesForStats(memos, {
+      rowCount: renderedRowCount,
+      colCount: renderedColCount,
+    }).forEach(([key, cell]) => {
       const [w, d] = key.split('-').map(Number);
       const dayInfo = weeks[w]?.[d];
       if (!dayInfo || !dayInfo.isCurrentMonth) return;
@@ -617,6 +689,7 @@ export async function syncMonthShockwaveScheduleToStats({
           memos,
           therapists,
           monthlyTherapists,
+          settings,
           targetDateStr: dateStr,
           overwriteManual: effectiveOverwriteManual,
           scheduleAuthoritative: false,
@@ -680,6 +753,7 @@ export async function syncMonthShockwaveScheduleToStats({
         memos,
         therapists,
         monthlyTherapists,
+        settings,
         targetDateStr: dateStr,
         overwriteManual: effectiveOverwriteManual,
         scheduleAuthoritative: false
