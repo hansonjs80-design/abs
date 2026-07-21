@@ -5,9 +5,11 @@ import {
 } from '../lib/calendarUtils';
 import {
   canonicalizeShockwaveScheduleItemDate,
+  getShockwaveScheduleItemDate,
   getVisibleShockwaveScheduleMonths,
   isShockwaveCalendarCellInCurrentMonth,
   mapShockwaveScheduleItemToCurrentMonthView,
+  mapShockwaveScheduleItemToVisibleMonth,
 } from '../lib/shockwaveScheduleDateMapping';
 import {
   getPrescriptionScheduleSettings,
@@ -84,11 +86,16 @@ function rememberShockwaveRawMonthCache(cacheRef, cacheKey, rows) {
 }
 
 function mapShockwaveRowsToVisibleRows(rows, year, month, shouldKeepShockwaveMemo, scheduleSettings = {}) {
-  const prescriptionScheduleSettings = getPrescriptionScheduleSettings(scheduleSettings, year, month);
   const visibleRows = [];
   rows.forEach(item => {
     if (!shouldKeepShockwaveMemo(item)) return;
-    const visibleItem = mapShockwaveScheduleItemToCurrentMonthView(item, year, month);
+    const itemDate = getShockwaveScheduleItemDate(item);
+    const visibleItem = mapShockwaveScheduleItemToVisibleMonth(item, year, month);
+    const prescriptionScheduleSettings = getPrescriptionScheduleSettings(
+      scheduleSettings,
+      itemDate?.year || year,
+      itemDate?.month || month
+    );
     if (isInactiveLegacyManualDoseScheduleItem(visibleItem, prescriptionScheduleSettings)) return;
     if (visibleItem) visibleRows.push(visibleItem);
   });
@@ -1622,7 +1629,7 @@ export function ScheduleProvider({ children }) {
       try {
         await waitForShockwaveWrites();
 
-        const targets = [{ year, month }];
+        const targets = getVisibleShockwaveScheduleMonths(year, month);
         const results = await Promise.allSettled(targets.map((target) =>
           loadShockwaveRawMonthRows(target, { force: options.force === true })
         ));
@@ -1636,7 +1643,10 @@ export function ScheduleProvider({ children }) {
         }
 
         // 현재 달(currentTarget) 로드가 실패했다면 fallback 로직을 태우기 위해 throw 처리합니다.
-        const currentResult = results[0];
+        const currentTargetIndex = targets.findIndex((target) => (
+          Number(target.year) === Number(year) && Number(target.month) === Number(month)
+        ));
+        const currentResult = results[currentTargetIndex];
         if (currentResult && currentResult.status === 'rejected') {
           throw currentResult.reason || new Error(`Failed to load current month schedules for ${year}-${month}`);
         }
