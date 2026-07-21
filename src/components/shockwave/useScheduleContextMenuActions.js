@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { buildManualTherapyUnmergePayload } from '../../lib/manualTherapyMergeUtils';
-import { mergeSchedulePayloadIntoPendingContextSaves } from '../../lib/schedulePrescriptionChangeUtils';
+import {
+  getPrescriptionActionSlotMinutes,
+  mergeSchedulePayloadIntoPendingContextSaves,
+  shouldUnmergeSingleSlotPrescription,
+} from '../../lib/schedulePrescriptionChangeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import {
   buildClearReservationGroupPayload,
@@ -275,6 +279,14 @@ export default function useScheduleContextMenuActions({
           ? action.doseTag
           : getActionDoseTagFromPrescription(prescriptionValue, prescriptionScheduleSettings?.doseTags || {});
         const previousDoseTag = prescriptionScheduleSettings?.doseTags?.[memo.prescription] || extractDoseTagFromPrescription(memo.prescription);
+        const scheduleSlotMinutes = getPrescriptionActionSlotMinutes(settings);
+        const currentMergeSpan = pendingMergeSpans?.[key] || memo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+        const shouldUnmergeSingleSlot = shouldUnmergeSingleSlotPrescription({
+          prescription: prescriptionValue,
+          mergeSpan: currentMergeSpan,
+          prescriptionScheduleSettings,
+          settings,
+        });
 
         updatedContent = updateDoseTagForPrescriptionContent(
           updatedContent,
@@ -282,11 +294,48 @@ export default function useScheduleContextMenuActions({
           previousDoseTag,
           prescriptionScheduleSettings?.doseTags || {}
         );
-        if (memo.prescription !== action.value || updatedContent !== getStableMemoContent(key, memo)) {
+        if (memo.prescription !== action.value || updatedContent !== getStableMemoContent(key, memo) || shouldUnmergeSingleSlot) {
           updateContextMemoSnapshot(key, memo, {
             content: updatedContent,
             prescription: prescriptionValue,
           });
+
+          if (shouldUnmergeSingleSlot) {
+            const unmergePayload = buildManualTherapyUnmergePayload({
+              key,
+              memos,
+              pendingMergeSpans,
+              currentYear,
+              currentMonth,
+              content: updatedContent,
+              bgColor: memo.bg_color || null,
+              prescription: action.value,
+              bodyPart: memo.body_part || null,
+            });
+
+            if (unmergePayload.ok) {
+              const contextPayload = unmergePayload.payload.find((item) => (
+                `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}` === key
+              ));
+              if (contextPayload) {
+                updateContextMemoSnapshot(key, memo, {
+                  content: contextPayload.content,
+                  prescription: contextPayload.prescription || null,
+                  merge_span: contextPayload.merge_span || memo.merge_span,
+                  body_part: Object.prototype.hasOwnProperty.call(contextPayload, 'body_part')
+                    ? contextPayload.body_part
+                    : memo.body_part,
+                });
+              }
+              unmergePayload.payload.forEach((item) => {
+                const itemKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+                payloadByKey.set(itemKey, item);
+              });
+              unmergePayload.affectedKeys.forEach((itemKey) => affectedKeys.add(itemKey));
+              anyChanged = true;
+              continue;
+            }
+          }
 
           const manualTherapyMerge = buildManualTherapyAutoMergePayload({
             key,
@@ -302,7 +351,7 @@ export default function useScheduleContextMenuActions({
             mergeSpan: memo.merge_span,
             durationMinutesMap: prescriptionScheduleSettings?.durationMinutesMap || {},
             doseTags: prescriptionScheduleSettings?.doseTags || {},
-            slotMinutes: settings?.interval_minutes || 10,
+            slotMinutes: scheduleSlotMinutes,
           });
 
           if (manualTherapyMerge.ok) {
@@ -1031,8 +1080,7 @@ export default function useScheduleContextMenuActions({
     saveShockwaveMemosBulk,
     rowCount,
     pendingMergeSpans,
-    prescriptionScheduleSettings?.durationMinutesMap,
-    prescriptionScheduleSettings?.doseTags,
+    prescriptionScheduleSettings,
     applyImmediateCellDisplay,
     applyImmediateMergeSpan,
     clearImmediateCellDisplay,

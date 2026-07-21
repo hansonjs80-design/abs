@@ -68,8 +68,9 @@ export function buildManualTherapyAutoMergePayload({
   let targetRowSpan = rowSpan;
   const hasTextContent = String(content || '').trim() && String(content || '').trim() !== '\u200B';
   const hasVisitTrailingText = hasTrailingTextAfterVisitSuffix(content);
+  const hasSingleSlotPrescription = Boolean(finalPrescription) && rowSpan <= 1;
 
-  if ((finalSlotMinutes === 10 && hasTextContent) || hasVisitTrailingText) {
+  if ((finalSlotMinutes === 10 && hasTextContent && !hasSingleSlotPrescription) || hasVisitTrailingText) {
     targetRowSpan = Math.max(2, rowSpan);
   }
 
@@ -79,7 +80,7 @@ export function buildManualTherapyAutoMergePayload({
       reason: 'not-merged',
       payload: [],
       affectedKeys: [],
-      resolvedPrescription: '',
+      resolvedPrescription: finalPrescription,
     };
   }
 

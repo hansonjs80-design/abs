@@ -16,7 +16,11 @@ import {
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 import { getPrescriptionScheduleSettings } from '../../lib/prescriptionScheduleSettings';
 import { buildManualTherapyUnmergePayload } from '../../lib/manualTherapyMergeUtils';
-import { mergeSchedulePayloadIntoPendingShortcutSaves } from '../../lib/schedulePrescriptionChangeUtils';
+import {
+  getPrescriptionActionSlotMinutes,
+  mergeSchedulePayloadIntoPendingShortcutSaves,
+  shouldUnmergeSingleSlotPrescription,
+} from '../../lib/schedulePrescriptionChangeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import {
   buildClearReservationGroupPayload,
@@ -455,6 +459,7 @@ export default function useScheduleKeyboardActions({
     event.stopImmediatePropagation?.();
 
     const doseTag = getActionDoseTagFromPrescription(targetPrescription, prescriptionScheduleSettings.doseTags);
+    const scheduleSlotMinutes = getPrescriptionActionSlotMinutes(shockwaveSettings);
     const rawSelected = selectedKeysRef.current && selectedKeysRef.current.size > 0
       ? selectedKeysRef.current
       : new Set([cellKey(activeCell.w, activeCell.d, activeCell.r, activeCell.c)]);
@@ -494,7 +499,51 @@ export default function useScheduleKeyboardActions({
           prescriptionScheduleSettings.doseTags
         );
 
-        if (memo.prescription === targetPrescription && stableContent === updatedContent) continue;
+        const currentMergeSpan = pendingMergeSpansRef.current?.[key] || memo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+        const shouldUnmergeSingleSlot = shouldUnmergeSingleSlotPrescription({
+          prescription: targetPrescription,
+          mergeSpan: currentMergeSpan,
+          prescriptionScheduleSettings,
+          settings: shockwaveSettings,
+        });
+
+        if (memo.prescription === targetPrescription && stableContent === updatedContent && !shouldUnmergeSingleSlot) continue;
+
+        if (shouldUnmergeSingleSlot) {
+          const unmergePayload = buildManualTherapyUnmergePayload({
+            key,
+            memos: latestMemos,
+            pendingMergeSpans: pendingMergeSpansRef.current,
+            currentYear,
+            currentMonth,
+            content: updatedContent,
+            bgColor: memo.bg_color || null,
+            prescription: targetPrescription,
+            bodyPart: memo.body_part || null,
+          });
+
+          if (unmergePayload.ok) {
+            const undoSnapshot = buildSnapshotRef.current(unmergePayload.affectedKeys);
+            addUndoMemos(undoSnapshot);
+            applyCellDisplayRef.current?.(unmergePayload.payload);
+            applyMergeSpanRef.current?.(unmergePayload.payload);
+            applyPayloadToLatestRefs(unmergePayload.payload);
+            updateOpenContextMenuSnapshotFromPayload(unmergePayload.payload);
+            syncPendingShortcutSavesFromPayload(unmergePayload.payload);
+
+            const success = await saveBulkRef.current?.(unmergePayload.payload);
+            if (success) {
+              anyChanged = true;
+            } else {
+              applyCellDisplayRef.current?.(undoSnapshot);
+              applyMergeSpanRef.current?.(undoSnapshot);
+              applyPayloadToLatestRefs(undoSnapshot);
+              syncPendingShortcutSavesFromPayload(undoSnapshot);
+              addToast?.('병합 해제 저장에 실패했습니다.', 'error');
+            }
+            continue;
+          }
+        }
 
         const manualTherapyMerge = buildManualTherapyAutoMergePayload({
             key,
@@ -510,7 +559,7 @@ export default function useScheduleKeyboardActions({
             mergeSpan: pendingMergeSpansRef.current?.[key] || memo.merge_span,
             durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,
             doseTags: prescriptionScheduleSettings.doseTags,
-            slotMinutes: shockwaveSettings?.interval_minutes || 10,
+            slotMinutes: scheduleSlotMinutes,
             oldContent: memo.content || '',
             oldPrescription: memo.prescription || '',
           });

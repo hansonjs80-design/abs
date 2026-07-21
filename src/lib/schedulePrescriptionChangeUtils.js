@@ -1,3 +1,6 @@
+import { getManualTherapyRowSpan } from './manualTherapyMergeUtils.js';
+import { getScheduleDisplaySlotMinutes } from './schedulerUtils.js';
+
 function getPayloadKey(item) {
   if (!item) return '';
   return item.key || `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
@@ -72,4 +75,40 @@ export function mergeSchedulePayloadIntoPendingShortcutSaves(pendingMap, payload
 
     pendingMap.set(key, nextPending);
   });
+}
+
+export function getPrescriptionActionSlotMinutes(settings = {}) {
+  return getScheduleDisplaySlotMinutes(settings, 10);
+}
+
+export function isMergedScheduleSpan(mergeSpan = {}) {
+  return Boolean(
+    mergeSpan?.mergedInto ||
+    (mergeSpan?.rowSpan || 1) > 1 ||
+    (mergeSpan?.colSpan || 1) > 1
+  );
+}
+
+export function getPrescriptionActionRowSpan({
+  prescription = '',
+  prescriptionScheduleSettings = {},
+  settings = {},
+} = {}) {
+  return getManualTherapyRowSpan(prescription, {
+    durationMinutesMap: prescriptionScheduleSettings?.durationMinutesMap || {},
+    slotMinutes: getPrescriptionActionSlotMinutes(settings),
+  });
+}
+
+export function shouldUnmergeSingleSlotPrescription({
+  prescription = '',
+  mergeSpan = {},
+  prescriptionScheduleSettings = {},
+  settings = {},
+} = {}) {
+  return getPrescriptionActionRowSpan({
+    prescription,
+    prescriptionScheduleSettings,
+    settings,
+  }) <= 1 && isMergedScheduleSpan(mergeSpan);
 }

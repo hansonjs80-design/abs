@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { generateShockwaveCalendar, getTodayKST } from '../../lib/calendarUtils';
+import { buildManualTherapyUnmergePayload } from '../../lib/manualTherapyMergeUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import {
   buildPatientHistoryCellUpdate,
@@ -7,6 +8,10 @@ import {
   patientHistoryIdentityMatches,
 } from '../../lib/patientHistoryModalUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
+import {
+  getPrescriptionActionSlotMinutes,
+  shouldUnmergeSingleSlotPrescription,
+} from '../../lib/schedulePrescriptionChangeUtils';
 import {
   getPrescriptionFromConfiguredDoseTag,
   getPrescriptionScheduleSettings,
@@ -819,6 +824,14 @@ export default function usePatientHistoryActions({
       body_part: nextBodyPart || null,
       merge_span: nextMergeSpan || { rowSpan: 1, colSpan: 1, mergedInto: null },
     };
+    const scheduleSlotMinutes = getPrescriptionActionSlotMinutes(settings);
+    const currentMergeSpan = memo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+    const shouldUnmergeSingleSlot = field === 'prescription' && shouldUnmergeSingleSlotPrescription({
+      prescription: nextPrescription,
+      mergeSpan: currentMergeSpan,
+      prescriptionScheduleSettings,
+      settings,
+    });
 
     const manualTherapyMerge = buildManualTherapyAutoMergePayload({
       key: targetKey,
@@ -833,9 +846,23 @@ export default function usePatientHistoryActions({
       mergeSpan: basePayload.merge_span,
       durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,
       doseTags: prescriptionScheduleSettings.doseTags,
-      slotMinutes: settings?.interval_minutes || 10,
+      slotMinutes: scheduleSlotMinutes,
     });
-    const savePayload = manualTherapyMerge.ok ? manualTherapyMerge.payload : [basePayload];
+    const prescriptionUnmerge = shouldUnmergeSingleSlot
+      ? buildManualTherapyUnmergePayload({
+          key: targetKey,
+          memos,
+          currentYear,
+          currentMonth,
+          content: updatedContent,
+          bgColor: memo.bg_color || null,
+          prescription: nextPrescription || null,
+          bodyPart: nextBodyPart || null,
+        })
+      : null;
+    const savePayload = prescriptionUnmerge?.ok
+      ? prescriptionUnmerge.payload
+      : (manualTherapyMerge.ok ? manualTherapyMerge.payload : [basePayload]);
 
     setPendingDisplayValues((prev) => {
       const next = { ...prev };

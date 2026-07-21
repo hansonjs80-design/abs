@@ -2,8 +2,11 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  getPrescriptionActionRowSpan,
+  isMergedScheduleSpan,
   mergeSchedulePayloadIntoPendingContextSaves,
   mergeSchedulePayloadIntoPendingShortcutSaves,
+  shouldUnmergeSingleSlotPrescription,
 } from '../schedulePrescriptionChangeUtils.js';
 
 describe('schedule prescription change pending save sync', () => {
@@ -93,5 +96,35 @@ describe('schedule prescription change pending save sync', () => {
     assert.equal(pending.get('0-0-1-2').memo.prescription, '60분');
     assert.equal(pending.get('0-0-1-2').stableContent, '1234/홍길동60(2)');
     assert.deepEqual(pending.get('0-0-1-2').nextMergeSpan, nextMergeSpan);
+  });
+
+  it('detects merged cells that should be unmerged for a single-slot prescription', () => {
+    const prescriptionScheduleSettings = {
+      durationMinutesMap: {
+        'F4.0': 20,
+        'F2.5': 10,
+      },
+    };
+    const settings = { interval_minutes: 10, time_label_interval_minutes: 20 };
+    const mergedSpan = { rowSpan: 2, colSpan: 1, mergedInto: null };
+
+    assert.equal(isMergedScheduleSpan(mergedSpan), true);
+    assert.equal(getPrescriptionActionRowSpan({
+      prescription: 'F2.5',
+      prescriptionScheduleSettings,
+      settings,
+    }), 1);
+    assert.equal(shouldUnmergeSingleSlotPrescription({
+      prescription: 'F2.5',
+      mergeSpan: mergedSpan,
+      prescriptionScheduleSettings,
+      settings,
+    }), true);
+    assert.equal(shouldUnmergeSingleSlotPrescription({
+      prescription: 'F4.0',
+      mergeSpan: mergedSpan,
+      prescriptionScheduleSettings,
+      settings,
+    }), false);
   });
 });
