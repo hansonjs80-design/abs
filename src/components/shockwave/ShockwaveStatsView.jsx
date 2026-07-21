@@ -17,6 +17,7 @@ import SettlementSettingsPanel from './SettlementSettingsPanel';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 import { formatRecentPeriodLabel, parseRecentPeriodMonths } from '../../lib/recentPeriodUtils';
 import { isAdminUser } from '../../lib/authPermissions';
+import { TREATMENT_COMPLETE_BG } from '../../lib/schedulerUtils';
 import {
   buildScheduleMemoSignature,
   getRecentScheduleMonthTargets,
@@ -116,6 +117,7 @@ export default function ShockwaveStatsView({
   const [logs, setLogs] = useState([]);
   const [recentLogs, setRecentLogs] = useState([]);
   const [isLogsLoading, setIsLogsLoading] = useState(false);
+  const [currentLogsReadyKey, setCurrentLogsReadyKey] = useState('');
   const [isCurrentSyncing, setIsCurrentSyncing] = useState(false);
   const [isRecentLogsLoading, setIsRecentLogsLoading] = useState(false);
   const [settingsReady, setSettingsReady] = useState(() => (
@@ -134,6 +136,11 @@ export default function ShockwaveStatsView({
   const logsLoadedKeyRef = useRef('');
   const fetchIdRef = useRef(0);
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
+  const markCurrentLogsReady = useCallback(() => {
+    const monthKey = `${currentYear}-${currentMonth}`;
+    logsLoadedKeyRef.current = monthKey;
+    setCurrentLogsReadyKey(monthKey);
+  }, [currentMonth, currentYear]);
 
   useEffect(() => {
     if (!canManageStatsSettings && activeSection === 'settings') {
@@ -178,11 +185,39 @@ export default function ShockwaveStatsView({
     () => `${currentYear}-${currentMonth}`,
     [currentYear, currentMonth]
   );
+  const currentLogsReady = currentLogsReadyKey === currentScheduleMonthKey;
   const isCurrentScheduleReady = settingsReady && memosLoadedKey === currentScheduleMonthKey && !isScheduleLoading;
   const currentMemosSyncSignature = useMemo(
     () => buildScheduleMemoSignature(memos),
     [memos]
   );
+  const gridPrescriptionKeys = useMemo(() => {
+    const keys = new Set();
+
+    if (currentLogsReady) {
+      safeLogs.forEach((log) => {
+        const key = normalizePrescriptionKey(log?.prescription);
+        if (key) keys.add(key);
+      });
+    }
+
+    if (keys.size === 0) {
+      Object.values(memos || {}).forEach((cell) => {
+        if (String(cell?.bg_color || '').toLowerCase() !== TREATMENT_COMPLETE_BG.toLowerCase()) return;
+        const key = normalizePrescriptionKey(cell?.prescription);
+        if (key) keys.add(key);
+      });
+    }
+
+    return keys;
+  }, [currentLogsReady, memos, safeLogs]);
+  const gridPrescriptions = useMemo(() => {
+    if (gridPrescriptionKeys.size === 0) return settlementPrescriptions;
+    const filtered = settlementPrescriptions.filter((prescription) => (
+      gridPrescriptionKeys.has(normalizePrescriptionKey(prescription))
+    ));
+    return filtered.length > 0 ? filtered : settlementPrescriptions;
+  }, [gridPrescriptionKeys, settlementPrescriptions]);
   const scheduleLayoutSettingsKey = useMemo(
     () => JSON.stringify({
       start_time: shockwaveSettings?.start_time,
@@ -247,6 +282,7 @@ export default function ShockwaveStatsView({
 
       if (error) throw error;
       if (currentFetchId !== fetchIdRef.current) return [];
+      setCurrentLogsReadyKey(monthKey);
       logsLoadedKeyRef.current = monthKey;
       setLogs(data || []);
       return data || [];
@@ -340,7 +376,7 @@ export default function ShockwaveStatsView({
         sourceMemosOverride: reloadResult?.memos,
         sourceMonthlyTherapistsOverride: reloadResult?.monthlyTherapists,
         onRowsRebuilt: (nextLogs) => {
-          logsLoadedKeyRef.current = `${currentYear}-${currentMonth}`;
+          markCurrentLogsReady();
           setLogs(nextLogs);
         },
       });
@@ -356,7 +392,7 @@ export default function ShockwaveStatsView({
       lastAutoSyncKeyRef.current = null;
       // 3. 스케줄 원본에서 재생성한 통계 행을 즉시 화면에 반영
       if (Array.isArray(synced.logs)) {
-        logsLoadedKeyRef.current = `${currentYear}-${currentMonth}`;
+        markCurrentLogsReady();
         setLogs(synced.logs);
       } else {
         await fetchLogs();
@@ -368,10 +404,18 @@ export default function ShockwaveStatsView({
     } finally {
       setIsReloading(false);
     }
-  }, [currentMonth, currentYear, onReloadMemos, safeTherapists, syncCurrentMonthFromScheduleSource, fetchLogs, addToast]);
+  }, [
+    onReloadMemos,
+    safeTherapists,
+    syncCurrentMonthFromScheduleSource,
+    fetchLogs,
+    addToast,
+    markCurrentLogsReady,
+  ]);
 
   useEffect(() => {
     logsLoadedKeyRef.current = '';
+    setCurrentLogsReadyKey('');
     setLogs([]);
     currentAutoSyncRunRef.current = { key: '', promise: null };
     lastAutoSyncKeyRef.current = null;
@@ -389,6 +433,7 @@ export default function ShockwaveStatsView({
 
     const applySyncedLogs = (nextLogs) => {
       if (cancelled || !Array.isArray(nextLogs)) return;
+      setCurrentLogsReadyKey(monthKey);
       logsLoadedKeyRef.current = monthKey;
       setLogs(nextLogs);
     };
@@ -411,6 +456,7 @@ export default function ShockwaveStatsView({
       .then(async (synced) => {
         if (cancelled) return;
         if (Array.isArray(synced?.logs)) {
+          setCurrentLogsReadyKey(monthKey);
           logsLoadedKeyRef.current = monthKey;
           setLogs(synced.logs);
           lastAutoSyncKeyRef.current = syncKey;
@@ -461,13 +507,13 @@ export default function ShockwaveStatsView({
             emitEvent: false,
             onRowsRebuilt: (nextLogs) => {
               if (!active) return;
-              logsLoadedKeyRef.current = `${currentYear}-${currentMonth}`;
+              markCurrentLogsReady();
               setLogs(nextLogs);
             },
           });
           if (!active) return;
           if (Array.isArray(synced?.logs)) {
-            logsLoadedKeyRef.current = `${currentYear}-${currentMonth}`;
+            markCurrentLogsReady();
             setLogs(synced.logs);
           } else {
             await fetchLogs();
@@ -486,7 +532,14 @@ export default function ShockwaveStatsView({
       active = false;
       window.removeEventListener('clinic-stats-updated', handleStatsUpdated);
     };
-  }, [currentMonth, currentYear, fetchLogs, isCurrentScheduleReady, syncCurrentMonthFromScheduleSource]);
+  }, [
+    currentMonth,
+    currentYear,
+    fetchLogs,
+    isCurrentScheduleReady,
+    markCurrentLogsReady,
+    syncCurrentMonthFromScheduleSource,
+  ]);
 
   useEffect(() => {
     if (shockwaveSettings?.id && shockwaveSettings.id !== DEFAULT_SETTINGS_ID) {
@@ -974,7 +1027,7 @@ export default function ShockwaveStatsView({
   };
 
   const isInitialDataLoading = isScheduleLoading || isLogsLoading;
-  const showGridSkeleton = isInitialDataLoading && safeLogs.length === 0 && activeSection === 'grid';
+  const showGridSkeleton = (!currentLogsReady || (isInitialDataLoading && safeLogs.length === 0)) && activeSection === 'grid';
   const showSettlementSkeleton = isInitialDataLoading && displayTherapists.length === 0 && activeSection === 'settlement';
 
   return (
@@ -1074,7 +1127,7 @@ export default function ShockwaveStatsView({
                           currentYear={currentYear}
                           currentMonth={currentMonth}
                           fetchLogs={fetchLogs}
-                          prescriptions={settlementPrescriptions}
+                          prescriptions={gridPrescriptions}
                           extraDraftRows={extraDraftRows}
                           totalRecordCount={safeLogs.length}
                           therapistCount={safeTherapists.length}
