@@ -24,6 +24,7 @@ import {
   normalizeDoseTagInput,
   stripDoseTagFromContent,
   updateDoseTagForPrescriptionContent,
+  getActionDoseTagFromPrescription,
 } from '../schedulerContentFormat.js';
 import {
   readDeletedScheduleDrafts,
@@ -283,6 +284,22 @@ describe('manual therapy dose tag formatting', () => {
     assert.equal(
       updateDoseTagForPrescriptionContent('14634/김보람60*', '40', '60', doseTags),
       '14634/김보람40*'
+    );
+  });
+
+  it('only uses configured or 2-3 digit prescription tags for schedule actions', () => {
+    assert.equal(getActionDoseTagFromPrescription('F1.5', {}), '');
+    assert.equal(getActionDoseTagFromPrescription('1.5', {}), '');
+    assert.equal(getActionDoseTagFromPrescription('40분', {}), '40');
+    assert.equal(getActionDoseTagFromPrescription('F1.5', { 'F1.5': 'E' }), 'E');
+    assert.equal(
+      updateDoseTagForPrescriptionContent(
+        '324/주한솔(1)',
+        getActionDoseTagFromPrescription('1.5', {}),
+        '',
+        {}
+      ),
+      '324/주한솔(1)'
     );
   });
 });

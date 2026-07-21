@@ -10,6 +10,7 @@ import {
 } from '../../lib/scheduleReservationGroupUtils';
 import {
   extractDoseTagFromPrescription,
+  getActionDoseTagFromPrescription,
   updateDoseTagForPrescriptionContent,
 } from '../../lib/schedulerContentFormat';
 import {
@@ -270,7 +271,9 @@ export default function useScheduleContextMenuActions({
         let updatedContent = getStableMemoContent(key, memo);
         const prescriptionValue = action.value || '';
         const hasActionDoseTag = Object.prototype.hasOwnProperty.call(action, 'doseTag');
-        const doseNumber = hasActionDoseTag ? action.doseTag : extractDoseTagFromPrescription(prescriptionValue);
+        const doseNumber = hasActionDoseTag
+          ? action.doseTag
+          : getActionDoseTagFromPrescription(prescriptionValue, prescriptionScheduleSettings?.doseTags || {});
         const previousDoseTag = prescriptionScheduleSettings?.doseTags?.[memo.prescription] || extractDoseTagFromPrescription(memo.prescription);
 
         updatedContent = updateDoseTagForPrescriptionContent(

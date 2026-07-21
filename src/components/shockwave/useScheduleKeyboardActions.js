@@ -9,7 +9,10 @@ import {
   getSchedulerVisitInputValue,
   stepVisitShortcutInputValue,
 } from '../../lib/schedulerUtils';
-import { updateDoseTagForPrescriptionContent } from '../../lib/schedulerContentFormat';
+import {
+  getActionDoseTagFromPrescription,
+  updateDoseTagForPrescriptionContent,
+} from '../../lib/schedulerContentFormat';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 import { getPrescriptionScheduleSettings } from '../../lib/prescriptionScheduleSettings';
 import { buildManualTherapyUnmergePayload } from '../../lib/manualTherapyMergeUtils';
@@ -451,8 +454,7 @@ export default function useScheduleKeyboardActions({
     event.stopPropagation();
     event.stopImmediatePropagation?.();
 
-    const autoTagMatch = targetPrescription.match(/(\d{2,3})/);
-    const doseTag = prescriptionScheduleSettings.doseTags?.[targetPrescription] || (autoTagMatch ? autoTagMatch[1] : '');
+    const doseTag = getActionDoseTagFromPrescription(targetPrescription, prescriptionScheduleSettings.doseTags);
     const rawSelected = selectedKeysRef.current && selectedKeysRef.current.size > 0
       ? selectedKeysRef.current
       : new Set([cellKey(activeCell.w, activeCell.d, activeCell.r, activeCell.c)]);

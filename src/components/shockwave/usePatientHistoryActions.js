@@ -14,6 +14,7 @@ import {
 import { supabase } from '../../lib/supabaseClient';
 import {
   extractDoseTagFromPrescription,
+  getActionDoseTagFromPrescription,
   get4060PrescriptionFromContent,
   has4060Pattern,
   updateDoseTagForPrescriptionContent,
@@ -760,8 +761,7 @@ export default function usePatientHistoryActions({
 
   const buildContentWithPrescription = useCallback((content, oldPrescription, newPrescription) => {
     const prescriptionScheduleSettings = getPrescriptionScheduleSettings(settings, currentYear, currentMonth);
-    const doseTag = prescriptionScheduleSettings.doseTags?.[newPrescription]
-      || extractDoseTagFromPrescription(newPrescription);
+    const doseTag = getActionDoseTagFromPrescription(newPrescription, prescriptionScheduleSettings.doseTags);
     const previousDoseTag = prescriptionScheduleSettings.doseTags?.[oldPrescription]
       || extractDoseTagFromPrescription(oldPrescription);
     return updateDoseTagForPrescriptionContent(

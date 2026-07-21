@@ -111,6 +111,17 @@ export function updateDoseTagForPrescriptionContent(text, doseTag, previousDoseT
   return applyDoseTagToContent(stripped, tag);
 }
 
+export function getActionDoseTagFromPrescription(prescription, doseTags = {}) {
+  const value = String(prescription || '').trim();
+  if (!value) return '';
+  if (Object.prototype.hasOwnProperty.call(doseTags || {}, value)) {
+    return doseTags[value] || '';
+  }
+
+  const autoTagMatch = value.match(/(\d{2,3})/);
+  return autoTagMatch ? autoTagMatch[1] : '';
+}
+
 /**
  * Extract the numeric dose tag from a prescription name.
  * e.g. "30분" → "30", "40분" → "40", "프리미엄" → ""

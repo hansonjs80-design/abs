@@ -16,6 +16,7 @@ import { buildManualTherapyUnmergePayload, getManualTherapyRowSpan } from '../..
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import {
   get4060PrescriptionFromContent,
+  getActionDoseTagFromPrescription,
   has4060Pattern,
   normalizeConfiguredDoseTagInContent,
   normalize4060StarOrder,
@@ -2516,8 +2517,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
           const currentVal = e.target.value;
           const currentPrescription = memos[cellKey(w, d, r, c)]?.prescription || '';
           const previousDoseTag = prescriptionScheduleSettings.doseTags?.[currentPrescription] || currentPrescription.match(/(\d{2,3})/)?.[1] || '';
-          const autoTagMatch = targetPrescription.match(/(\d{2,3})/);
-          const doseTag = prescriptionScheduleSettings.doseTags?.[targetPrescription] || (autoTagMatch ? autoTagMatch[1] : '');
+          const doseTag = getActionDoseTagFromPrescription(targetPrescription, prescriptionScheduleSettings.doseTags);
           const updatedContent = updateDoseTagForPrescriptionContent(
             currentVal,
             doseTag,
