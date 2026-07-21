@@ -305,7 +305,6 @@ export default function ShockwaveStatsView({
     emitEvent = false,
     sourceMemosOverride = null,
     sourceMonthlyTherapistsOverride = null,
-    onRowsRebuilt = null,
   } = {}) => {
     if (safeTherapists.length === 0) return null;
     const hasOverride = sourceMemosOverride &&
@@ -338,9 +337,6 @@ export default function ShockwaveStatsView({
       scheduleAuthoritative: true,
       emitEvent,
       replaceExistingMonthLogs: true,
-      onRowsRebuilt: typeof onRowsRebuilt === 'function'
-        ? (rebuiltRows) => onRowsRebuilt(normalizeScheduleSourceLogs(rebuiltRows, sourcePrefix))
-        : null,
     });
 
     return {
@@ -375,10 +371,6 @@ export default function ShockwaveStatsView({
         emitEvent: false,
         sourceMemosOverride: reloadResult?.memos,
         sourceMonthlyTherapistsOverride: reloadResult?.monthlyTherapists,
-        onRowsRebuilt: (nextLogs) => {
-          markCurrentLogsReady();
-          setLogs(nextLogs);
-        },
       });
       if (!synced?.memos) {
         addToast('스케줄 데이터를 불러오지 못해 통계 동기화를 건너뛰었습니다.', 'error');
@@ -431,13 +423,6 @@ export default function ShockwaveStatsView({
 
     let cancelled = false;
 
-    const applySyncedLogs = (nextLogs) => {
-      if (cancelled || !Array.isArray(nextLogs)) return;
-      setCurrentLogsReadyKey(monthKey);
-      logsLoadedKeyRef.current = monthKey;
-      setLogs(nextLogs);
-    };
-
     let syncPromise = currentAutoSyncRunRef.current.key === syncKey
       ? currentAutoSyncRunRef.current.promise
       : null;
@@ -446,7 +431,6 @@ export default function ShockwaveStatsView({
       syncPromise = syncCurrentMonthFromScheduleSource({
         upToToday: true,
         emitEvent: false,
-        onRowsRebuilt: applySyncedLogs,
       });
       currentAutoSyncRunRef.current = { key: syncKey, promise: syncPromise };
     }
@@ -505,11 +489,6 @@ export default function ShockwaveStatsView({
           const synced = await syncCurrentMonthFromScheduleSource({
             upToToday: true,
             emitEvent: false,
-            onRowsRebuilt: (nextLogs) => {
-              if (!active) return;
-              markCurrentLogsReady();
-              setLogs(nextLogs);
-            },
           });
           if (!active) return;
           if (Array.isArray(synced?.logs)) {
