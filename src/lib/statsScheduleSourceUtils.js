@@ -1,5 +1,9 @@
 import { supabase } from './supabaseClient.js';
-import { getVisibleShockwaveScheduleMonths, mapShockwaveScheduleItemToVisibleMonth } from './shockwaveScheduleDateMapping.js';
+import { mapShockwaveScheduleItemToCurrentMonthView } from './shockwaveScheduleDateMapping.js';
+import {
+  getPrescriptionScheduleSettings,
+  isInactiveLegacyManualDoseScheduleItem,
+} from './prescriptionScheduleSettings.js';
 import {
   getShockwaveScheduleBaseRowCount,
   relocateHiddenMergedScheduleRows,
@@ -194,10 +198,12 @@ export function buildScheduleMemoSignature(memos) {
 }
 
 export function buildScheduleMemoMapForStats(rows, { year, month, settings = {} } = {}) {
+  const prescriptionScheduleSettings = getPrescriptionScheduleSettings(settings, year, month);
   const visibleRows = [];
   (Array.isArray(rows) ? rows : []).forEach((row) => {
     if (!hasStatsScheduleMemoPayload(row)) return;
-    const visible = mapShockwaveScheduleItemToVisibleMonth(row, year, month);
+    const visible = mapShockwaveScheduleItemToCurrentMonthView(row, year, month);
+    if (isInactiveLegacyManualDoseScheduleItem(visible, prescriptionScheduleSettings)) return;
     if (visible) visibleRows.push(visible);
   });
 
@@ -248,25 +254,7 @@ async function fetchShockwaveScheduleRowsForStorageMonth({ year, month }) {
 }
 
 export async function loadScheduleMemosForStatsMonth({ year, month, settings = {} }) {
-  const visibleMonths = getVisibleShockwaveScheduleMonths(year, month);
-  const results = await Promise.allSettled(
-    visibleMonths.map((target) => fetchShockwaveScheduleRowsForStorageMonth(target))
-  );
-
-  const currentIndex = visibleMonths.findIndex(
-    (target) => Number(target.year) === Number(year) && Number(target.month) === Number(month)
-  );
-  const currentResult = results[currentIndex];
-  if (currentResult?.status === 'rejected') {
-    throw currentResult.reason;
-  }
-
-  const rows = results.flatMap((result, index) => {
-    if (result.status === 'fulfilled') return result.value || [];
-    const target = visibleMonths[index];
-    console.warn(`Failed to load adjacent schedule month for stats ${target.year}-${target.month}; continuing without it.`, result.reason);
-    return [];
-  });
+  const rows = await fetchShockwaveScheduleRowsForStorageMonth({ year, month });
 
   return buildScheduleMemoMapForStats(rows, { year, month, settings });
 }

@@ -59,12 +59,16 @@ describe('monthly settlement shortcut settings', () => {
     assert.deepEqual(Object.keys(effective.shortcuts), ['F2.0']);
   });
 
-  it('keeps hidden manual therapy prescriptions available for scheduler automation', () => {
+  it('excludes hidden manual therapy prescriptions from scheduler automation', () => {
     const settings = {
       manual_therapy_prescriptions: ['40분', '60분'],
       manual_therapy_dose_tags: {
         '40분': '40',
         '60분': '60',
+      },
+      manual_therapy_duration_minutes: {
+        '40분': 40,
+        '60분': 60,
       },
     };
 
@@ -73,6 +77,9 @@ describe('monthly settlement shortcut settings', () => {
       hidden_prescriptions: ['40분', '60분'],
       dose_tags: {
         '30분': '30',
+      },
+      duration_minutes: {
+        '30분': 30,
       },
     });
 
@@ -84,9 +91,11 @@ describe('monthly settlement shortcut settings', () => {
     assert.deepEqual(config.manualTherapy.prescriptions, ['30분']);
     assert.deepEqual(config.manualTherapy.hidden_prescriptions, ['40분', '60분']);
     assert(config.schedulerPrescriptions.manualTherapy.includes('30분'));
-    assert(config.schedulerPrescriptions.manualTherapy.includes('40분'));
-    assert(config.schedulerPrescriptions.manualTherapy.includes('60분'));
-    assert(config.schedulerPrescriptions.all.includes('40분'));
-    assert(config.schedulerPrescriptions.all.includes('60분'));
+    assert.equal(config.schedulerPrescriptions.manualTherapy.includes('40분'), false);
+    assert.equal(config.schedulerPrescriptions.manualTherapy.includes('60분'), false);
+    assert.equal(config.schedulerPrescriptions.all.includes('40분'), false);
+    assert.equal(config.schedulerPrescriptions.all.includes('60분'), false);
+    assert.deepEqual(config.doseTags, { '30분': '30' });
+    assert.deepEqual(config.durationMinutesMap, { '30분': 30 });
   });
 });

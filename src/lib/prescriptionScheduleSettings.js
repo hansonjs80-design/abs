@@ -1,10 +1,11 @@
 import {
-  DEFAULT_MANUAL_THERAPY_SETTLEMENT,
-  DEFAULT_SHOCKWAVE_SETTLEMENT,
-  buildBaseSettlementSettings,
   getEffectiveSettlementSettings,
 } from './settlementSettings.js';
-import { getConfiguredDoseTagFromContent, normalizeDoseTagInput } from './schedulerContentFormat.js';
+import {
+  get4060PrescriptionFromContent,
+  getConfiguredDoseTagFromContent,
+  normalizeDoseTagInput,
+} from './schedulerContentFormat.js';
 
 function uniquePrescriptionList(...sources) {
   const seen = new Set();
@@ -24,22 +25,30 @@ function uniquePrescriptionList(...sources) {
 
 function buildSchedulerPrescriptionList(settings, year, month, type) {
   const effective = getEffectiveSettlementSettings(settings, year, month, type);
-  const base = buildBaseSettlementSettings(settings, type);
-  const fallback = type === 'manual_therapy'
-    ? DEFAULT_MANUAL_THERAPY_SETTLEMENT
-    : DEFAULT_SHOCKWAVE_SETTLEMENT;
 
-  return uniquePrescriptionList(
-    effective?.prescriptions,
-    base?.prescriptions,
-    effective?.hidden_prescriptions,
-    base?.hidden_prescriptions,
-    effective?.duration_minutes,
-    base?.duration_minutes,
-    effective?.dose_tags,
-    base?.dose_tags,
-    fallback.prescriptions
+  return uniquePrescriptionList(effective?.prescriptions);
+}
+
+function filterPrescriptionMap(source, activePrescriptions) {
+  const activeSet = new Set(
+    (Array.isArray(activePrescriptions) ? activePrescriptions : [])
+      .map((prescription) => String(prescription || '').trim())
+      .filter(Boolean)
   );
+  if (!source || typeof source !== 'object' || Array.isArray(source)) return {};
+  return Object.fromEntries(
+    Object.entries(source).filter(([prescription]) => activeSet.has(String(prescription || '').trim()))
+  );
+}
+
+function filterPrescriptionList(source, activePrescriptions) {
+  const activeSet = new Set(
+    (Array.isArray(activePrescriptions) ? activePrescriptions : [])
+      .map((prescription) => String(prescription || '').trim())
+      .filter(Boolean)
+  );
+  if (!Array.isArray(source)) return [];
+  return source.filter((prescription) => activeSet.has(String(prescription || '').trim()));
 }
 
 export function getPrescriptionScheduleSettings(settings, year, month) {
@@ -57,22 +66,57 @@ export function getPrescriptionScheduleSettings(settings, year, month) {
       all: uniquePrescriptionList(schedulerShockwavePrescriptions, schedulerManualTherapyPrescriptions),
     },
     durationMinutesMap: {
-      ...(shockwave?.duration_minutes || {}),
-      ...(manualTherapy?.duration_minutes || {}),
+      ...filterPrescriptionMap(shockwave?.duration_minutes, schedulerShockwavePrescriptions),
+      ...filterPrescriptionMap(manualTherapy?.duration_minutes, schedulerManualTherapyPrescriptions),
     },
     doseTags: {
-      ...(shockwave?.dose_tags || {}),
-      ...(manualTherapy?.dose_tags || {}),
+      ...filterPrescriptionMap(shockwave?.dose_tags, schedulerShockwavePrescriptions),
+      ...filterPrescriptionMap(manualTherapy?.dose_tags, schedulerManualTherapyPrescriptions),
     },
     visitLineBreakPrescriptions: [
-      ...(shockwave?.visit_line_break_prescriptions || []),
-      ...(manualTherapy?.visit_line_break_prescriptions || []),
+      ...filterPrescriptionList(shockwave?.visit_line_break_prescriptions, schedulerShockwavePrescriptions),
+      ...filterPrescriptionList(manualTherapy?.visit_line_break_prescriptions, schedulerManualTherapyPrescriptions),
     ],
     hiddenPrescriptions: [
       ...(shockwave?.hidden_prescriptions || []),
       ...(manualTherapy?.hidden_prescriptions || []),
     ],
   };
+}
+
+function getActiveSchedulerPrescriptionSet(config = {}) {
+  const source = Array.isArray(config?.schedulerPrescriptions?.all)
+    ? config.schedulerPrescriptions.all
+    : [
+        ...(Array.isArray(config?.shockwave?.prescriptions) ? config.shockwave.prescriptions : []),
+        ...(Array.isArray(config?.manualTherapy?.prescriptions) ? config.manualTherapy.prescriptions : []),
+      ];
+  return new Set(
+    source
+      .map((prescription) => String(prescription || '').trim())
+      .filter(Boolean)
+  );
+}
+
+export function isInactiveLegacyManualDoseScheduleItem(item, config = {}) {
+  const activePrescriptionSet = getActiveSchedulerPrescriptionSet(config);
+  if (activePrescriptionSet.size === 0) return false;
+
+  const content = String(item?.content || '').trim();
+  const configuredDoseTag = getConfiguredDoseTagFromContent(content, config?.doseTags || {});
+  if (configuredDoseTag) return false;
+
+  const legacyContentPrescription = get4060PrescriptionFromContent(content);
+  if (legacyContentPrescription && !activePrescriptionSet.has(legacyContentPrescription)) {
+    return true;
+  }
+
+  const prescription = String(item?.prescription || '').trim();
+  if (/^(?:40|60)분$/u.test(prescription) && !activePrescriptionSet.has(prescription)) {
+    return true;
+  }
+
+  return false;
 }
 
 export function getConfiguredDoseTag(settings, year, month, prescription) {

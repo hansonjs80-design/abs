@@ -125,6 +125,22 @@ test('buildManualTherapyAutoMergePayload resolves a configured prescription from
   assert.equal(result.payload.length, 2);
 });
 
+test('buildManualTherapyAutoMergePayload ignores inactive legacy 40/60 tags when active config is present', () => {
+  const result = buildManualTherapyAutoMergePayload({
+    ...baseArgs,
+    content: '1234/홍길동40',
+    prescription: '40분',
+    durationMinutesMap: { '30분': 30 },
+    doseTags: { '30분': '30' },
+    slotMinutes: 10,
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.resolvedPrescription, '');
+  assert.equal(result.payload.length, 2);
+  assert.equal(result.payload[0].prescription, '');
+});
+
 test('buildManualTherapyAutoMergePayload resolves a decimal configured cell tag', () => {
   const result = buildManualTherapyAutoMergePayload({
     ...baseArgs,

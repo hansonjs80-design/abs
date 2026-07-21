@@ -222,6 +222,46 @@ describe('schedule merge payload helpers', () => {
     assert.equal(payload.every((item) => item.merge_span.rowSpan === 1 && item.merge_span.mergedInto === null), true);
   });
 
+  it('deleting a relocated hidden merge target also clears the hidden source cell', () => {
+    const memos = {
+      '0-1-4-0': {
+        content: '6281/이지운60',
+        prescription: '60분',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-1-3-0' },
+      },
+      '0-1-8-0': {
+        content: '6281/이지운60',
+        prescription: '60분',
+        merge_span: {
+          rowSpan: 1,
+          colSpan: 1,
+          mergedInto: null,
+          meta: { relocated_from_hidden_merge_cell: '0-1-4-0' },
+        },
+      },
+    };
+
+    const { payload } = buildDeleteCellsPayload({
+      keys: new Set(['0-1-8-0']),
+      memos,
+      currentYear: 2026,
+      currentMonth: 7,
+      cellKey,
+    });
+
+    const byKey = new Map(payload.map((item) => [
+      cellKey(item.week_index, item.day_index, item.row_index, item.col_index),
+      item,
+    ]));
+
+    assert.equal(byKey.get('0-1-8-0').content, '');
+    assert.equal(byKey.get('0-1-8-0').prescription, null);
+    assert.equal(byKey.get('0-1-4-0').content, '');
+    assert.equal(byKey.get('0-1-4-0').prescription, null);
+    assert.equal(byKey.get('0-1-4-0').merge_span.mergedInto, '0-1-3-0');
+    assert.equal(byKey.get('0-1-4-0').merge_span.meta.intentional_clear, true);
+  });
+
   it('uses pending display values in delete undo snapshots', () => {
     const memos = {
       '0-0-0-0': { content: '저장전', merge_span: defaultSpan },

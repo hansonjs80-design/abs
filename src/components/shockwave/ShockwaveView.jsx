@@ -740,6 +740,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     if (!memos || Object.keys(memos).length === 0) return;
 
     const fixEntries = [];
+    const activePrescriptionSet = new Set(
+      (Array.isArray(prescriptionScheduleSettings?.schedulerPrescriptions?.all)
+        ? prescriptionScheduleSettings.schedulerPrescriptions.all
+        : [])
+        .map((prescription) => String(prescription || '').trim())
+        .filter(Boolean)
+    );
+    const isActivePrescription = (prescription) => {
+      const value = String(prescription || '').trim();
+      return Boolean(value && activePrescriptionSet.has(value));
+    };
     Object.entries(memos).forEach(([key, memo]) => {
       const content = String(memo?.content || '').trim();
       if (!content) return;
@@ -747,9 +758,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       if (mergeSpan.mergedInto) return;
 
       const normalizedContent = normalizeConfiguredDoseTagInContent(content, prescriptionScheduleSettings.doseTags);
-      const autoPres = getPrescriptionFromConfiguredDoseTag(settings, currentYear, currentMonth, normalizedContent)
-        || get4060PrescriptionFromContent(normalizedContent);
-      const targetPres = autoPres || String(memo?.prescription || '').trim();
+      const configuredAutoPres = getPrescriptionFromConfiguredDoseTag(settings, currentYear, currentMonth, normalizedContent);
+      const legacyAutoPres = get4060PrescriptionFromContent(normalizedContent);
+      const memoPrescription = String(memo?.prescription || '').trim();
+      const targetPres = configuredAutoPres
+        || (isActivePrescription(legacyAutoPres) ? legacyAutoPres : '')
+        || (isActivePrescription(memoPrescription) ? memoPrescription : '');
 
       const expectedPrescriptionRowSpan = targetPres
         ? getManualTherapyRowSpan(targetPres, {
@@ -878,7 +892,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         await onLoadMemos(currentYear, currentMonth);
       }
     })();
-  }, [loadedMemosKey, currentYear, currentMonth, settings, memos, baseTimeSlots.length, saveShockwaveMemosBulk, onLoadMemos, prescriptionScheduleSettings.durationMinutesMap, prescriptionScheduleSettings.doseTags, getDefaultReservationTime]);
+  }, [loadedMemosKey, currentYear, currentMonth, settings, memos, baseTimeSlots.length, saveShockwaveMemosBulk, onLoadMemos, prescriptionScheduleSettings.durationMinutesMap, prescriptionScheduleSettings.doseTags, prescriptionScheduleSettings.schedulerPrescriptions, getDefaultReservationTime]);
 
   const isEditableTarget = useCallback((target) => {
     return (

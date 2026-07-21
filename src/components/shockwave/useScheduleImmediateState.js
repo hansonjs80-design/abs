@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { removeDeletedScheduleDraft } from '../../lib/schedulerUtils.js';
+import { isShockwaveCalendarCellInCurrentMonth } from '../../lib/shockwaveScheduleDateMapping.js';
 
 function getUpdateKey(item) {
   if (!item) return '';
@@ -13,6 +14,22 @@ function normalizeUpdateEntries(updates) {
 
 function isValidKey(key) {
   return Boolean(key && !key.includes('undefined'));
+}
+
+function isCurrentMonthUpdateItem(item, currentYear, currentMonth) {
+  if (!item) return false;
+  if (
+    item.year &&
+    item.month &&
+    (Number(item.year) !== Number(currentYear) || Number(item.month) !== Number(currentMonth))
+  ) {
+    return false;
+  }
+  const key = getUpdateKey(item);
+  if (!isValidKey(key)) return false;
+  const [weekIndex, dayIndex] = key.split('-').map(Number);
+  if (![weekIndex, dayIndex].every(Number.isFinite)) return false;
+  return isShockwaveCalendarCellInCurrentMonth(currentYear, currentMonth, weekIndex, dayIndex);
 }
 
 function getExpectedUpdateMap(updates) {
@@ -245,11 +262,9 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
     const entries = normalizeUpdateEntries(updates);
     const nextValues = {};
     entries.forEach((item) => {
-      if (item.year && item.month && (item.year !== currentYear || item.month !== currentMonth)) {
-        return;
-      }
+      if (!isCurrentMonthUpdateItem(item, currentYear, currentMonth)) return;
       const key = getUpdateKey(item);
-      if (isValidKey(key)) nextValues[key] = String(item.content ?? '');
+      nextValues[key] = String(item.content ?? '');
     });
     if (Object.keys(nextValues).length === 0) return;
 
@@ -257,11 +272,8 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
     
     const nextOverrides = { ...pendingMemoOverridesRef.current };
     entries.forEach((item) => {
-      if (item.year && item.month && (item.year !== currentYear || item.month !== currentMonth)) {
-        return;
-      }
+      if (!isCurrentMonthUpdateItem(item, currentYear, currentMonth)) return;
       const key = getUpdateKey(item);
-      if (!isValidKey(key)) return;
       if (String(item.content ?? '').trim()) {
         removeDeletedScheduleDraft(item.year ?? currentYear, item.month ?? currentMonth, key);
       }
@@ -279,11 +291,8 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
       setPendingMemoOverrides((prev) => {
         const next = { ...prev };
         entries.forEach((item) => {
-          if (item.year && item.month && (item.year !== currentYear || item.month !== currentMonth)) {
-            return;
-          }
+          if (!isCurrentMonthUpdateItem(item, currentYear, currentMonth)) return;
           const key = getUpdateKey(item);
-          if (!isValidKey(key)) return;
           const override = { ...next[key], content: String(item.content ?? '') };
           if (Object.prototype.hasOwnProperty.call(item, 'bg_color')) override.bg_color = item.bg_color ?? null;
           if (item.merge_span || item.mergeSpan) override.merge_span = item.merge_span || item.mergeSpan;
@@ -301,12 +310,10 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
   const applyImmediateMergeSpan = useCallback((updates) => {
     const nextSpans = {};
     normalizeUpdateEntries(updates).forEach((item) => {
-      if (item.year && item.month && (item.year !== currentYear || item.month !== currentMonth)) {
-        return;
-      }
+      if (!isCurrentMonthUpdateItem(item, currentYear, currentMonth)) return;
       const key = getUpdateKey(item);
       const mergeSpan = item.mergeSpan || item.merge_span;
-      if (isValidKey(key) && mergeSpan) nextSpans[key] = mergeSpan;
+      if (mergeSpan) nextSpans[key] = mergeSpan;
     });
     if (Object.keys(nextSpans).length === 0) return;
 
@@ -321,11 +328,9 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
     const { keepContextMenuOpen = false } = options;
     const nextBgColors = {};
     normalizeUpdateEntries(updates).forEach((item) => {
-      if (item.year && item.month && (item.year !== currentYear || item.month !== currentMonth)) {
-        return;
-      }
+      if (!isCurrentMonthUpdateItem(item, currentYear, currentMonth)) return;
       const key = getUpdateKey(item);
-      if (isValidKey(key)) nextBgColors[key] = item.bg_color || null;
+      nextBgColors[key] = item.bg_color || null;
     });
     if (Object.keys(nextBgColors).length === 0) return;
 

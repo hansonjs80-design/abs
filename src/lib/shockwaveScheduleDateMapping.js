@@ -101,6 +101,32 @@ export function mapShockwaveScheduleItemToVisibleMonth(item, viewYear, viewMonth
   };
 }
 
+export function isShockwaveCalendarCellInCurrentMonth(year, month, weekIndex, dayIndex) {
+  const weeks = generateShockwaveCalendar(Number(year), Number(month));
+  const dayInfo = weeks[Number(weekIndex)]?.[Number(dayIndex)];
+  return Boolean(
+    dayInfo?.isCurrentMonth &&
+    Number(dayInfo.year) === Number(year) &&
+    Number(dayInfo.month) === Number(month)
+  );
+}
+
+export function mapShockwaveScheduleItemToCurrentMonthView(item, viewYear, viewMonth) {
+  const visibleItem = mapShockwaveScheduleItemToVisibleMonth(item, viewYear, viewMonth);
+  if (!visibleItem) return null;
+  if (
+    !isShockwaveCalendarCellInCurrentMonth(
+      viewYear,
+      viewMonth,
+      visibleItem.week_index,
+      visibleItem.day_index
+    )
+  ) {
+    return null;
+  }
+  return visibleItem;
+}
+
 export function getVisibleShockwaveScheduleMonths(year, month) {
   const seen = new Set();
   const months = [];

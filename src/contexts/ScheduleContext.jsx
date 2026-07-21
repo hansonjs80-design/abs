@@ -6,8 +6,13 @@ import {
 import {
   canonicalizeShockwaveScheduleItemDate,
   getVisibleShockwaveScheduleMonths,
-  mapShockwaveScheduleItemToVisibleMonth,
+  isShockwaveCalendarCellInCurrentMonth,
+  mapShockwaveScheduleItemToCurrentMonthView,
 } from '../lib/shockwaveScheduleDateMapping';
+import {
+  getPrescriptionScheduleSettings,
+  isInactiveLegacyManualDoseScheduleItem,
+} from '../lib/prescriptionScheduleSettings';
 import {
   applyScheduleDeviceSettings,
   saveScheduleDeviceSettings,
@@ -78,11 +83,13 @@ function rememberShockwaveRawMonthCache(cacheRef, cacheKey, rows) {
   }
 }
 
-function mapShockwaveRowsToVisibleRows(rows, year, month, shouldKeepShockwaveMemo) {
+function mapShockwaveRowsToVisibleRows(rows, year, month, shouldKeepShockwaveMemo, scheduleSettings = {}) {
+  const prescriptionScheduleSettings = getPrescriptionScheduleSettings(scheduleSettings, year, month);
   const visibleRows = [];
   rows.forEach(item => {
     if (!shouldKeepShockwaveMemo(item)) return;
-    const visibleItem = mapShockwaveScheduleItemToVisibleMonth(item, year, month);
+    const visibleItem = mapShockwaveScheduleItemToCurrentMonthView(item, year, month);
+    if (isInactiveLegacyManualDoseScheduleItem(visibleItem, prescriptionScheduleSettings)) return;
     if (visibleItem) visibleRows.push(visibleItem);
   });
   return visibleRows;
@@ -515,6 +522,8 @@ export function ScheduleProvider({ children }) {
     Object.values(readPendingScheduleDrafts()).forEach((draft) => {
       if (Number(draft?.year) !== Number(year) || Number(draft?.month) !== Number(month) || !draft?.key) return;
       const key = String(draft.key);
+      const [weekIndex, dayIndex] = key.split('-').map(Number);
+      if (!isShockwaveCalendarCellInCurrentMonth(year, month, weekIndex, dayIndex)) return;
       applyRecoveredMemo(
         key,
         {
@@ -1567,7 +1576,13 @@ export function ScheduleProvider({ children }) {
     let loadPromise;
     loadPromise = (async () => {
       const applyRowsToView = (rows) => {
-        const visibleRows = mapShockwaveRowsToVisibleRows(rows, year, month, shouldKeepShockwaveMemo);
+        const visibleRows = mapShockwaveRowsToVisibleRows(
+          rows,
+          year,
+          month,
+          shouldKeepShockwaveMemo,
+          shockwaveSettingsRefCache.current
+        );
         const relocation = relocateHiddenMergedScheduleRows(visibleRows, {
           rowCount: getShockwaveScheduleBaseRowCount(shockwaveSettingsRefCache.current, year, month),
         });
@@ -1607,16 +1622,7 @@ export function ScheduleProvider({ children }) {
       try {
         await waitForShockwaveWrites();
 
-        const visibleMonths = getVisibleShockwaveScheduleMonths(year, month);
-        const currentTarget = visibleMonths.find((target) => (
-          Number(target.year) === Number(year) && Number(target.month) === Number(month)
-        )) || { year, month };
-        const adjacentTargets = visibleMonths.filter((target) => (
-          Number(target.year) !== Number(year) || Number(target.month) !== Number(month)
-        ));
-
-        // 현재 달과 이전/이후 달 데이터를 병렬로 모두 가져옵니다.
-        const targets = [currentTarget, ...adjacentTargets];
+        const targets = [{ year, month }];
         const results = await Promise.allSettled(targets.map((target) =>
           loadShockwaveRawMonthRows(target, { force: options.force === true })
         ));
@@ -1866,13 +1872,20 @@ export function ScheduleProvider({ children }) {
         return true;
       }
       const savedMemo = sanitizeShockwaveScheduleItemForDisplay(
-        mapShockwaveScheduleItemToVisibleMonth(savedCanonicalMemo, year, month) || { ...optimisticMemo, ...upsertData }
+        mapShockwaveScheduleItemToCurrentMonthView(savedCanonicalMemo, year, month) ||
+        (
+          isShockwaveCalendarCellInCurrentMonth(year, month, weekIndex, dayIndex)
+            ? { ...optimisticMemo, ...upsertData }
+            : null
+        )
       );
       if (isWriteStillCurrent() && savedCanonicalMemo?.updated_at) {
         lastWriteTimeRef.current.set(key, savedCanonicalMemo.updated_at);
         localShockwaveWriteTimeRef.current.set(key, savedCanonicalMemo.updated_at);
       }
-      const nextShockwaveMemos = { ...shockwaveMemosRef.current, [key]: savedMemo };
+      const nextShockwaveMemos = { ...shockwaveMemosRef.current };
+      if (shouldKeepShockwaveMemo(savedMemo)) nextShockwaveMemos[key] = savedMemo;
+      else delete nextShockwaveMemos[key];
       
       if (isWriteStillCurrent() && isCurrentScheduleMonth(year, month)) {
         setShockwaveMemos(prev => {
@@ -2059,7 +2072,7 @@ export function ScheduleProvider({ children }) {
         ...clearPayloads,
       ]
         .map((item) => sanitizeShockwaveScheduleItemForDisplay(
-          mapShockwaveScheduleItemToVisibleMonth(item, currentYear, currentMonth)
+          mapShockwaveScheduleItemToCurrentMonthView(item, currentYear, currentMonth)
         ))
         .filter(Boolean);
       const currentViewRelevantData = canApplyClientState()
@@ -2471,7 +2484,7 @@ export function ScheduleProvider({ children }) {
         (payload) => {
           if (payload.new) {
             const item = sanitizeShockwaveScheduleItemForDisplay(
-              mapShockwaveScheduleItemToVisibleMonth(payload.new, currentYear, currentMonth)
+              mapShockwaveScheduleItemToCurrentMonthView(payload.new, currentYear, currentMonth)
             );
             if (!item) return;
             const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
@@ -2501,7 +2514,7 @@ export function ScheduleProvider({ children }) {
             }
 
             if (!targetKey) {
-              const item = mapShockwaveScheduleItemToVisibleMonth(payload.old, currentYear, currentMonth);
+              const item = mapShockwaveScheduleItemToCurrentMonthView(payload.old, currentYear, currentMonth);
               if (item) {
                 targetKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
               }

@@ -8,6 +8,7 @@ import {
   buildScheduleMemoMapForStats,
   getRecentScheduleMonthTargets,
 } from '../statsScheduleSourceUtils.js';
+import { setMonthlySettlementSettings } from '../settlementSettings.js';
 
 function findCurrentMonthCoord(year, month) {
   const weeks = generateShockwaveCalendar(year, month);
@@ -102,6 +103,111 @@ describe('stats schedule source utilities', () => {
     assert.ok(relocated);
     assert.notEqual(relocated[0], masterKey);
     assert.equal(memoMap[hiddenChildKey]?.content || '', '');
+  });
+
+  it('does not include adjacent-month schedules in the selected month stats source', () => {
+    const memoMap = buildScheduleMemoMapForStats([
+      {
+        year: 2026,
+        month: 6,
+        week_index: 4,
+        day_index: 0,
+        row_index: 0,
+        col_index: 1,
+        content: '5345/이진영(2)',
+        bg_color: TREATMENT_COMPLETE_BG,
+        prescription: 'F/R',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+        updated_at: '2026-06-29T00:00:00.000Z',
+      },
+      {
+        year: 2026,
+        month: 7,
+        week_index: 0,
+        day_index: 2,
+        row_index: 0,
+        col_index: 1,
+        content: '6245/박병수(1)',
+        bg_color: TREATMENT_COMPLETE_BG,
+        prescription: 'F2.5',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+        updated_at: '2026-07-01T00:00:00.000Z',
+      },
+      {
+        year: 2026,
+        month: 8,
+        week_index: 0,
+        day_index: 5,
+        row_index: 0,
+        col_index: 1,
+        content: '11383/임태용(1)',
+        bg_color: TREATMENT_COMPLETE_BG,
+        prescription: 'F/R',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+        updated_at: '2026-08-01T00:00:00.000Z',
+      },
+    ], {
+      year: 2026,
+      month: 7,
+      settings: { start_time: '09:00', end_time: '18:00', interval_minutes: 10, time_label_interval_minutes: 10 },
+    });
+
+    assert.deepEqual(
+      Object.values(memoMap).map((cell) => cell.content),
+      ['6245/박병수(1)']
+    );
+  });
+
+  it('excludes inactive legacy manual dose tags from the selected month stats source', () => {
+    const year = 2026;
+    const month = 7;
+    const { weekIndex, dayIndex } = findCurrentMonthCoord(year, month);
+    const baseSettings = {
+      start_time: '09:00',
+      end_time: '18:00',
+      interval_minutes: 10,
+      time_label_interval_minutes: 10,
+      manual_therapy_prescriptions: ['40분', '60분'],
+      manual_therapy_dose_tags: {
+        '40분': '40',
+        '60분': '60',
+      },
+      manual_therapy_duration_minutes: {
+        '40분': 40,
+        '60분': 60,
+      },
+    };
+    const settings = {
+      ...baseSettings,
+      monthly_settlement_settings: setMonthlySettlementSettings(baseSettings, year, month, 'manual_therapy', {
+        prescriptions: ['30분'],
+        hidden_prescriptions: ['40분', '60분'],
+        dose_tags: { '30분': '30' },
+        duration_minutes: { '30분': 30 },
+      }),
+    };
+
+    const memoMap = buildScheduleMemoMapForStats([
+      {
+        year,
+        month,
+        week_index: weekIndex,
+        day_index: dayIndex,
+        row_index: 28,
+        col_index: 0,
+        content: '6281/이지운60',
+        bg_color: TREATMENT_COMPLETE_BG,
+        prescription: '60분',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+        updated_at: '2026-07-21T00:00:00.000Z',
+      },
+    ], {
+      year,
+      month,
+      settings,
+    });
+
+    assert.equal(Object.values(memoMap).some((cell) => cell?.content === '6281/이지운60'), false);
   });
 
   it('does not count stale covered duplicate cells as extra stats rows', () => {

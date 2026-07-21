@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   canonicalizeShockwaveScheduleItemDate,
   getVisibleShockwaveScheduleMonths,
+  mapShockwaveScheduleItemToCurrentMonthView,
   mapShockwaveScheduleItemToVisibleMonth,
 } from '../shockwaveScheduleDateMapping.js';
 
@@ -55,4 +56,28 @@ test('loads all months represented by a shockwave calendar view', () => {
     .map((item) => `${item.year}-${item.month}`);
 
   assert.deepEqual(visibleMonths, ['2026-6', '2026-7']);
+});
+
+test('does not map adjacent-month schedules into a current month view', () => {
+  const june29Row = {
+    year: 2026,
+    month: 6,
+    week_index: 4,
+    day_index: 0,
+    row_index: 0,
+    col_index: 1,
+    content: 'previous month patient',
+  };
+  const aug1Row = {
+    year: 2026,
+    month: 8,
+    week_index: 0,
+    day_index: 5,
+    row_index: 0,
+    col_index: 1,
+    content: 'next month patient',
+  };
+
+  assert.equal(mapShockwaveScheduleItemToCurrentMonthView(june29Row, 2026, 7), null);
+  assert.equal(mapShockwaveScheduleItemToCurrentMonthView(aug1Row, 2026, 7), null);
 });

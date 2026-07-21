@@ -1,5 +1,6 @@
 const DEFAULT_MERGE_SPAN = { rowSpan: 1, colSpan: 1, mergedInto: null };
 const INTENTIONAL_CLEAR_META_KEY = 'intentional_clear';
+const RELOCATED_FROM_HIDDEN_MERGE_CELL_META_KEY = 'relocated_from_hidden_merge_cell';
 
 function parseKey(key) {
   const [w, d, r, c] = String(key || '').split('-').map(Number);
@@ -8,6 +9,13 @@ function parseKey(key) {
 
 function cloneMergeSpan(mergeSpan) {
   return mergeSpan || DEFAULT_MERGE_SPAN;
+}
+
+function getRelocatedHiddenSourceKey(memo) {
+  const sourceKey = String(memo?.merge_span?.meta?.[RELOCATED_FROM_HIDDEN_MERGE_CELL_META_KEY] || '').trim();
+  if (!sourceKey) return '';
+  const { w, d, r, c } = parseKey(sourceKey);
+  return [w, d, r, c].every(Number.isFinite) ? sourceKey : '';
 }
 
 function getMemoListFromMergeSpan(mergeSpan) {
@@ -144,6 +152,15 @@ export function buildDeleteCellsPayload({
   cellKey,
 }) {
   const affectedKeys = getExpandedMergeKeys(keys, memos, cellKey, pendingMergeSpans);
+  const relocatedHiddenSourceKeys = new Set();
+
+  Array.from(affectedKeys).forEach((key) => {
+    const sourceKey = getRelocatedHiddenSourceKey(memos?.[key]);
+    if (!sourceKey || affectedKeys.has(sourceKey)) return;
+    affectedKeys.add(sourceKey);
+    relocatedHiddenSourceKeys.add(sourceKey);
+  });
+
   const oldMemos = [];
   const oldMemoKeys = new Set();
   const payloadByKey = new Map();
@@ -163,15 +180,21 @@ export function buildDeleteCellsPayload({
   };
 
   for (const key of affectedKeys) {
+    const memo = memos?.[key];
+    const nextMergeSpan = relocatedHiddenSourceKeys.has(key) && memo?.merge_span?.mergedInto
+      ? cloneMergeSpan(memo.merge_span)
+      : DEFAULT_MERGE_SPAN;
+
     addOldMemo(key);
     payloadByKey.set(key, markIntentionalClearPayload(buildScheduleCellPayload({
       key,
       currentYear,
       currentMonth,
+      memo,
       overrides: {
         content: '',
         bg_color: null,
-        merge_span: DEFAULT_MERGE_SPAN,
+        merge_span: nextMergeSpan,
         prescription: null,
         body_part: null,
       },

@@ -421,8 +421,10 @@ export default function useSchedulerAutoText({
     if (hasDoseTagPattern(rawNameForMatching)) {
       rawNameForMatching = normalize4060StarOrder(rawNameForMatching);
       rawName = withInlineNote(rawNameForMatching);
-      initialPrescription = getPrescriptionFromConfiguredDoseTag(settings, parsedYear, parsedMonth, rawNameForMatching)
-        || get4060PrescriptionFromContent(rawNameForMatching)
+      const configuredDosePrescription = getPrescriptionFromConfiguredDoseTag(settings, parsedYear, parsedMonth, rawNameForMatching);
+      const legacyDosePrescription = get4060PrescriptionFromContent(rawNameForMatching);
+      initialPrescription = configuredDosePrescription
+        || (configuredPrescriptionSet.has(legacyDosePrescription) ? legacyDosePrescription : '')
         || undefined;
     }
     const taggedManualPrescription = initialPrescription && getManualDoseTag(initialPrescription)

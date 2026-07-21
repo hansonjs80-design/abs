@@ -18,6 +18,23 @@ function findPrescriptionByDoseTag(content, doseTags = {}, durationMinutesMap = 
   ))?.[0] || '';
 }
 
+function hasActivePrescriptionConfig(durationMinutesMap = {}, doseTags = {}) {
+  return (
+    (durationMinutesMap && typeof durationMinutesMap === 'object' && Object.keys(durationMinutesMap).length > 0) ||
+    (doseTags && typeof doseTags === 'object' && Object.keys(doseTags).length > 0)
+  );
+}
+
+function isConfiguredAutoPrescription(prescription, durationMinutesMap = {}, doseTags = {}) {
+  const value = String(prescription || '').trim();
+  if (!value) return false;
+  if (!hasActivePrescriptionConfig(durationMinutesMap, doseTags)) return true;
+  return (
+    Object.prototype.hasOwnProperty.call(durationMinutesMap || {}, value) ||
+    Object.prototype.hasOwnProperty.call(doseTags || {}, value)
+  );
+}
+
 export function hasTrailingTextAfterVisitSuffix(content = '') {
   return splitSchedulerInlineNote(content).hasInlineNote;
 }
@@ -33,10 +50,20 @@ export function resolveManualTherapyAutoPrescription({
   if (doseTagPrescription) return doseTagPrescription;
 
   const contentPrescription = get4060PrescriptionFromContent(content);
-  if (getManualTherapyRowSpan(contentPrescription, { durationMinutesMap, slotMinutes }) > 1) return contentPrescription;
+  if (
+    isConfiguredAutoPrescription(contentPrescription, durationMinutesMap, doseTags) &&
+    getManualTherapyRowSpan(contentPrescription, { durationMinutesMap, slotMinutes }) > 1
+  ) {
+    return contentPrescription;
+  }
 
   const explicitPrescription = String(prescription || '').trim();
-  if (getManualTherapyRowSpan(explicitPrescription, { durationMinutesMap, slotMinutes }) > 1) return explicitPrescription;
+  if (
+    isConfiguredAutoPrescription(explicitPrescription, durationMinutesMap, doseTags) &&
+    getManualTherapyRowSpan(explicitPrescription, { durationMinutesMap, slotMinutes }) > 1
+  ) {
+    return explicitPrescription;
+  }
 
   return '';
 }
@@ -61,7 +88,9 @@ export function buildManualTherapyAutoMergePayload({
     slotMinutes: finalSlotMinutes,
   });
 
-  const finalPrescription = resolvedPrescription || prescription || '';
+  const explicitPrescription = String(prescription || '').trim();
+  const finalPrescription = resolvedPrescription ||
+    (isConfiguredAutoPrescription(explicitPrescription, durationMinutesMap, doseTags) ? explicitPrescription : '');
   const rowSpan = getManualTherapyRowSpan(finalPrescription, { durationMinutesMap, slotMinutes: finalSlotMinutes });
 
   // 10분 단위일 때 내용이 존재하면 무조건 최소 2칸 강제 병합 보장
