@@ -1,0 +1,1839 @@
+.sw-stats-body--settlement {
+  overflow: auto;
+  padding: 18px;
+  background: #f5f7fb;
+}
+
+.sw-stats-empty {
+  display: flex;
+  min-height: 220px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.empty-subtext {
+  color: var(--text-tertiary);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.sw-settlement-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 16px;
+  border: 1px solid #d9e2ef;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+}
+
+.sw-settlement-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sw-settlement-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  padding-bottom: 2px;
+}
+
+.sw-settlement-header h2 {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: #172033;
+  letter-spacing: 0;
+}
+
+.sw-settlement-meta {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid #dbe5f1;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #1f2a3d;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.sw-settlement-meta span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 7px;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px #e5ebf3;
+}
+
+.sw-settlement-table-wrap {
+  overflow: auto;
+  border: 1px solid #cfd8e6;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.sw-settlement-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+.sw-settlement-table th,
+.sw-settlement-table td {
+  padding: 9px 8px;
+  text-align: center;
+  border-right: 1px solid #d4deeb;
+  border-bottom: 1px solid #d4deeb;
+  white-space: nowrap;
+  font-size: 0.86rem;
+  line-height: 1.2;
+}
+
+.sw-settlement-table thead th {
+  z-index: 4;
+  background: #eef3f9;
+  color: #172033;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.sw-settlement-table thead .label-col {
+  position: sticky;
+  left: 0;
+  z-index: 7;
+  background: #dce5f0;
+  width: 112px;
+  min-width: 112px;
+  border-right: 2px solid #a9b6c8;
+}
+
+.sw-settlement-table thead .therapist-col {
+  color: var(--therapist-text, #172033);
+  font-size: 0.96rem;
+  text-align: center;
+  vertical-align: middle;
+  border-left: 2px solid var(--therapist-accent, #64748b);
+  border-right: 2px solid var(--therapist-accent, #64748b);
+  box-shadow: inset 0 -2px 0 var(--therapist-accent, #64748b);
+}
+
+.sw-settlement-table thead .prescription-col {
+  color: #273449;
+  font-size: 0.8rem;
+  font-weight: 900;
+  border-left: 1px solid var(--therapist-line, #cbd5e1);
+}
+
+.sw-settlement-table thead .grand-col {
+  position: sticky;
+  right: 0;
+  z-index: 7;
+  background: #d9e2ee;
+  width: 112px;
+  min-width: 112px;
+  border-left: 2px solid #94a3b8;
+}
+
+.sw-settlement-table .row-label {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: #f7f9fc;
+  color: #1f2937;
+  font-weight: 900;
+  text-align: center;
+  padding-left: 7px;
+  padding-right: 7px;
+  border-right: 2px solid #a9b6c8;
+}
+
+.sw-settlement-table tbody td {
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.sw-settlement-table .merged-value {
+  background: var(--therapist-bg-strong, #f8fbff);
+}
+
+.sw-settlement-table .grand-value {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  background: #e8eef6;
+  color: #0f172a;
+  font-weight: 900;
+  border-left: 2px solid #94a3b8;
+}
+
+.sw-settlement-table .amount {
+  color: #1454b8;
+}
+
+.sw-settlement-table .incentive {
+  color: #7357c8;
+}
+
+.sw-settlement-table tbody tr:hover .row-label,
+.sw-settlement-table tbody tr:hover td {
+  filter: saturate(1.04) brightness(0.985);
+}
+
+.sw-settlement-table .therapist-tone-0,
+.sw-settlement-table .therapist-tone-0-sub,
+.sw-settlement-table .therapist-tone-0-cell {
+  --therapist-accent: #c2410c;
+  --therapist-line: #fdba74;
+  --therapist-text: #7c2d12;
+  --therapist-bg-strong: #fff1e6;
+}
+
+.sw-settlement-table .therapist-tone-1,
+.sw-settlement-table .therapist-tone-1-sub,
+.sw-settlement-table .therapist-tone-1-cell {
+  --therapist-accent: #7a62d6;
+  --therapist-line: #c8bcf5;
+  --therapist-text: #453579;
+  --therapist-bg-strong: #f2efff;
+}
+
+.sw-settlement-table .therapist-tone-2,
+.sw-settlement-table .therapist-tone-2-sub,
+.sw-settlement-table .therapist-tone-2-cell {
+  --therapist-accent: #2f8a5e;
+  --therapist-line: #a8d9bf;
+  --therapist-text: #22543b;
+  --therapist-bg-strong: #edf9f2;
+}
+
+.sw-settlement-table .therapist-tone-3,
+.sw-settlement-table .therapist-tone-3-sub,
+.sw-settlement-table .therapist-tone-3-cell {
+  --therapist-accent: #bd6f24;
+  --therapist-line: #f1c392;
+  --therapist-text: #7a4215;
+  --therapist-bg-strong: #fff3e7;
+}
+
+.sw-settlement-table .therapist-tone-4,
+.sw-settlement-table .therapist-tone-4-sub,
+.sw-settlement-table .therapist-tone-4-cell {
+  --therapist-accent: #c95b89;
+  --therapist-line: #efb7cd;
+  --therapist-text: #76334f;
+  --therapist-bg-strong: #fff0f6;
+}
+
+.sw-settlement-table .therapist-tone-0 {
+  background: linear-gradient(180deg, #ffedd5 0%, #fff7ed 100%);
+}
+
+.sw-settlement-table .therapist-tone-1 {
+  background: linear-gradient(180deg, #e8e0ff 0%, #f5f1ff 100%);
+}
+
+.sw-settlement-table .therapist-tone-2 {
+  background: linear-gradient(180deg, #d9f0e3 0%, #effaf4 100%);
+}
+
+.sw-settlement-table .therapist-tone-3 {
+  background: linear-gradient(180deg, #ffe6ca 0%, #fff5eb 100%);
+}
+
+.sw-settlement-table .therapist-tone-4 {
+  background: linear-gradient(180deg, #ffddea 0%, #fff2f7 100%);
+}
+
+.sw-settlement-table .therapist-tone-0-sub,
+.sw-settlement-table .therapist-tone-0-cell {
+  background: #fff8f1;
+}
+
+.sw-settlement-table .therapist-tone-1-sub,
+.sw-settlement-table .therapist-tone-1-cell {
+  background: #f8f4ff;
+}
+
+.sw-settlement-table .therapist-tone-2-sub,
+.sw-settlement-table .therapist-tone-2-cell {
+  background: #f3fbf6;
+}
+
+.sw-settlement-table .therapist-tone-3-sub,
+.sw-settlement-table .therapist-tone-3-cell {
+  background: #fff8f0;
+}
+
+.sw-settlement-table .therapist-tone-4-sub,
+.sw-settlement-table .therapist-tone-4-cell {
+  background: #fff5fa;
+}
+
+.sw-settlement-table .therapist-tone-0-cell,
+.sw-settlement-table .therapist-tone-1-cell,
+.sw-settlement-table .therapist-tone-2-cell,
+.sw-settlement-table .therapist-tone-3-cell,
+.sw-settlement-table .therapist-tone-4-cell {
+  border-left: 1px solid var(--therapist-line, #cbd5e1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
+}
+
+.sw-settlement-table tr:last-child td,
+.sw-settlement-table tr:last-child th {
+  border-bottom: none;
+}
+
+.sw-settlement-table tr th:last-child,
+.sw-settlement-table tr td:last-child {
+  border-right: none;
+}
+
+.sw-manual-compact-settlement-table {
+  width: max-content;
+  max-width: none;
+  min-width: 0;
+  table-layout: auto;
+}
+
+.sw-manual-settlement-table-wrap {
+  width: auto;
+  max-width: 100%;
+  align-self: flex-start;
+  display: inline-block;
+}
+
+.sw-compact-table-wrap {
+  width: auto;
+  max-width: 100%;
+  align-self: flex-start;
+  display: inline-block;
+}
+
+.sw-compact-settlement-table,
+.sw-compact-summary-table,
+.sw-compact-new-patient-table {
+  width: max-content;
+  max-width: none;
+  min-width: 0;
+  table-layout: auto;
+}
+
+.sw-compact-settlement-table thead .label-col {
+  width: 102px;
+  min-width: 102px;
+}
+
+.sw-compact-settlement-table thead .therapist-col {
+  min-width: 96px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.sw-compact-settlement-table thead .prescription-col {
+  width: 58px;
+  min-width: 58px;
+  max-width: 72px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.sw-compact-settlement-table thead .grand-col {
+  width: 104px;
+  min-width: 104px;
+}
+
+.sw-compact-settlement-table tbody td {
+  min-width: 58px;
+}
+
+.sw-manual-compact-settlement-table th,
+.sw-manual-compact-settlement-table td {
+  padding: 10px 9px;
+  font-size: 1rem;
+  line-height: 1.28;
+  letter-spacing: 0;
+}
+
+.sw-manual-compact-settlement-table thead .label-col {
+  width: 92px;
+  min-width: 92px;
+  background: #dbe5f1;
+  color: #1e293b;
+}
+
+.sw-manual-compact-settlement-table thead .therapist-col {
+  min-width: 96px;
+  padding: 10px 9px;
+  font-size: 1.05rem;
+}
+
+.sw-manual-compact-settlement-table thead .prescription-col {
+  width: 52px;
+  min-width: 52px;
+  max-width: 60px;
+  padding: 8px 6px;
+  background: #f3f6fa;
+  color: #334155;
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.sw-manual-compact-settlement-table thead .grand-col {
+  width: 108px;
+  min-width: 108px;
+  background: #dbe5f1;
+  color: #1e293b;
+}
+
+.sw-manual-compact-settlement-table .row-label {
+  background: #f6f8fb;
+  color: #1f2a3d;
+  font-size: 1.02rem;
+  font-weight: 900;
+}
+
+.sw-manual-compact-settlement-table tbody td {
+  min-width: 52px;
+  padding-left: 8px;
+  padding-right: 8px;
+  font-weight: 900;
+  color: #243247;
+}
+
+.sw-manual-compact-settlement-table .merged-value {
+  padding-left: 12px;
+  padding-right: 12px;
+  font-size: 1.02rem;
+}
+
+.sw-manual-compact-settlement-table .grand-value {
+  background: #e8eef6;
+  font-size: 1.04rem;
+}
+
+.sw-manual-compact-settlement-table .therapist-tone-0 {
+  background: linear-gradient(180deg, #dbeafe 0%, #edf5ff 100%);
+}
+
+.sw-manual-compact-settlement-table .therapist-tone-1 {
+  background: linear-gradient(180deg, #e9e4ff 0%, #f6f3ff 100%);
+}
+
+.sw-manual-compact-settlement-table .therapist-tone-2 {
+  background: linear-gradient(180deg, #dcf5e7 0%, #f0fbf5 100%);
+}
+
+.sw-manual-compact-settlement-table .therapist-tone-3 {
+  background: linear-gradient(180deg, #ffead2 0%, #fff6ec 100%);
+}
+
+.sw-manual-compact-settlement-table .therapist-tone-4 {
+  background: linear-gradient(180deg, #ffe2ed 0%, #fff3f8 100%);
+}
+
+.sw-manual-compact-settlement-table .therapist-tone-0-sub,
+.sw-manual-compact-settlement-table .therapist-tone-0-cell {
+  background: #f4f8ff;
+}
+
+.sw-manual-compact-settlement-table .therapist-tone-1-sub,
+.sw-manual-compact-settlement-table .therapist-tone-1-cell {
+  background: #f8f5ff;
+}
+
+.sw-manual-compact-settlement-table .therapist-tone-2-sub,
+.sw-manual-compact-settlement-table .therapist-tone-2-cell {
+  background: #f3fbf7;
+}
+
+.sw-manual-compact-settlement-table .therapist-tone-3-sub,
+.sw-manual-compact-settlement-table .therapist-tone-3-cell {
+  background: #fff8f0;
+}
+
+.sw-manual-compact-settlement-table .therapist-tone-4-sub,
+.sw-manual-compact-settlement-table .therapist-tone-4-cell {
+  background: #fff5f9;
+}
+
+.sw-manual-compact-settlement-table .amount {
+  color: #1d4ed8;
+}
+
+.sw-manual-compact-settlement-table .incentive {
+  color: #6d48e5;
+}
+
+/* Settlement tables: clean operational layout shared by shockwave and manual therapy. */
+.sw-stats-body--settlement {
+  padding: 18px;
+  background: #ffffff;
+}
+
+.sw-settlement-stack {
+  gap: 16px;
+}
+
+.sw-settlement-card {
+  width: 100%;
+  max-width: 100%;
+  padding: 16px;
+  gap: 12px;
+  border: 1px solid #dce3ed;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.sw-settlement-header {
+  align-items: flex-start;
+  padding: 0;
+}
+
+.sw-settlement-header h2 {
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #162033;
+  letter-spacing: 0;
+}
+
+.sw-settlement-meta {
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.sw-settlement-meta span {
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid #d9e2ef;
+  border-radius: 7px;
+  background: #f8fafc;
+  color: #334155;
+  box-shadow: none;
+}
+
+.sw-recent-period-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sw-recent-period-control input {
+  width: 112px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #cbd7e5;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1f2a3d;
+  font-size: 0.98rem;
+  font-weight: 800;
+  text-align: center;
+  outline: none;
+}
+
+.sw-recent-period-control input:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
+.sw-settlement-table-wrap,
+.sw-compact-table-wrap,
+.sw-manual-settlement-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  display: block;
+  align-self: stretch;
+  overflow: auto;
+  border: 1px solid #cfd8e5;
+  border-radius: 7px;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.sw-settlement-table,
+.sw-compact-settlement-table,
+.sw-manual-compact-settlement-table {
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
+  border-collapse: collapse;
+  border-spacing: 0;
+  table-layout: auto;
+}
+
+.sw-settlement-table th,
+.sw-settlement-table td,
+.sw-manual-compact-settlement-table th,
+.sw-manual-compact-settlement-table td {
+  height: 38px;
+  padding: 8px 11px;
+  border-right: 1px solid #d8e1ec;
+  border-bottom: 1px solid #d8e1ec;
+  color: #1f2a3d;
+  font-size: 0.86rem;
+  line-height: 1.25;
+  letter-spacing: 0;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.sw-settlement-table thead th,
+.sw-manual-compact-settlement-table thead th {
+  background: #eef3f8;
+  color: #263244;
+  font-weight: 900;
+}
+
+.sw-settlement-table thead .label-col,
+.sw-settlement-table .row-label,
+.sw-settlement-table thead .grand-col,
+.sw-settlement-table .grand-value,
+.sw-manual-compact-settlement-table thead .label-col,
+.sw-manual-compact-settlement-table .row-label,
+.sw-manual-compact-settlement-table thead .grand-col,
+.sw-manual-compact-settlement-table .grand-value {
+  position: static;
+  left: auto;
+  right: auto;
+  z-index: auto;
+}
+
+.sw-settlement-table thead .label-col,
+.sw-manual-compact-settlement-table thead .label-col {
+  width: 128px;
+  min-width: 128px;
+  background: #edf2f7;
+  color: #1f2a3d;
+  border-right: 1px solid #d0dae7;
+}
+
+.sw-settlement-table .row-label,
+.sw-manual-compact-settlement-table .row-label {
+  width: 128px;
+  min-width: 128px;
+  background: #f8fafc;
+  color: #243247;
+  font-size: 0.86rem;
+  font-weight: 900;
+  text-align: left;
+}
+
+.sw-settlement-table thead .therapist-col,
+.sw-manual-compact-settlement-table thead .therapist-col {
+  min-width: 112px;
+  padding: 9px 12px;
+  border-left: 1px solid var(--therapist-line, #cfd8e5);
+  border-right: 1px solid var(--therapist-line, #cfd8e5);
+  border-top: 2px solid var(--therapist-accent, #64748b);
+  background: var(--therapist-head, #f3f6fa);
+  color: var(--therapist-text, #243247);
+  box-shadow: none;
+  font-size: 0.9rem;
+}
+
+.sw-settlement-table thead .prescription-col,
+.sw-manual-compact-settlement-table thead .prescription-col {
+  width: 72px;
+  min-width: 72px;
+  max-width: none;
+  padding: 7px 9px;
+  background: var(--therapist-subhead, #f8fafc);
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 800;
+  border-left: 1px solid var(--therapist-line, #cfd8e5);
+}
+
+.sw-settlement-table tbody td,
+.sw-manual-compact-settlement-table tbody td {
+  min-width: 72px;
+  background: #ffffff;
+  color: #1f2a3d;
+  font-weight: 800;
+}
+
+.sw-settlement-table .merged-value,
+.sw-manual-compact-settlement-table .merged-value {
+  padding-left: 12px;
+  padding-right: 12px;
+  background: var(--therapist-cell, #ffffff);
+  font-size: 0.88rem;
+}
+
+.sw-settlement-table thead .grand-col,
+.sw-manual-compact-settlement-table thead .grand-col {
+  width: 126px;
+  min-width: 126px;
+  background: #e7edf5;
+  color: #172033;
+  border-left: 1px solid #bcc8d8;
+}
+
+.sw-settlement-table .grand-value,
+.sw-manual-compact-settlement-table .grand-value {
+  min-width: 126px;
+  background: #eef3f8;
+  color: #172033;
+  font-size: 0.88rem;
+  font-weight: 900;
+  border-left: 1px solid #bcc8d8;
+}
+
+.sw-settlement-table .amount,
+.sw-manual-compact-settlement-table .amount {
+  color: #1454b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.sw-settlement-table .incentive,
+.sw-manual-compact-settlement-table .incentive {
+  color: #6f55c7;
+  font-variant-numeric: tabular-nums;
+}
+
+.sw-settlement-table .therapist-tone-0,
+.sw-settlement-table .therapist-tone-0-sub,
+.sw-settlement-table .therapist-tone-0-cell,
+.sw-manual-compact-settlement-table .therapist-tone-0,
+.sw-manual-compact-settlement-table .therapist-tone-0-sub,
+.sw-manual-compact-settlement-table .therapist-tone-0-cell {
+  --therapist-accent: #c2410c;
+  --therapist-line: #fed7aa;
+  --therapist-text: #7c2d12;
+  --therapist-head: #ffedd5;
+  --therapist-subhead: #fff7ed;
+  --therapist-cell: #fffaf5;
+}
+
+.sw-settlement-table .therapist-tone-1,
+.sw-settlement-table .therapist-tone-1-sub,
+.sw-settlement-table .therapist-tone-1-cell,
+.sw-manual-compact-settlement-table .therapist-tone-1,
+.sw-manual-compact-settlement-table .therapist-tone-1-sub,
+.sw-manual-compact-settlement-table .therapist-tone-1-cell {
+  --therapist-accent: #7a62d6;
+  --therapist-line: #d9d0f3;
+  --therapist-text: #4d3d80;
+  --therapist-head: #f0edff;
+  --therapist-subhead: #f8f6ff;
+  --therapist-cell: #fbfaff;
+}
+
+.sw-settlement-table .therapist-tone-2,
+.sw-settlement-table .therapist-tone-2-sub,
+.sw-settlement-table .therapist-tone-2-cell,
+.sw-manual-compact-settlement-table .therapist-tone-2,
+.sw-manual-compact-settlement-table .therapist-tone-2-sub,
+.sw-manual-compact-settlement-table .therapist-tone-2-cell {
+  --therapist-accent: #318765;
+  --therapist-line: #c8e0d4;
+  --therapist-text: #245946;
+  --therapist-head: #eaf7f0;
+  --therapist-subhead: #f4fbf7;
+  --therapist-cell: #f8fcfa;
+}
+
+.sw-settlement-table .therapist-tone-3,
+.sw-settlement-table .therapist-tone-3-sub,
+.sw-settlement-table .therapist-tone-3-cell,
+.sw-manual-compact-settlement-table .therapist-tone-3,
+.sw-manual-compact-settlement-table .therapist-tone-3-sub,
+.sw-manual-compact-settlement-table .therapist-tone-3-cell {
+  --therapist-accent: #b7742a;
+  --therapist-line: #e8d5bd;
+  --therapist-text: #704817;
+  --therapist-head: #fff2e3;
+  --therapist-subhead: #fff8f1;
+  --therapist-cell: #fffaf5;
+}
+
+.sw-settlement-table .therapist-tone-4,
+.sw-settlement-table .therapist-tone-4-sub,
+.sw-settlement-table .therapist-tone-4-cell,
+.sw-manual-compact-settlement-table .therapist-tone-4,
+.sw-manual-compact-settlement-table .therapist-tone-4-sub,
+.sw-manual-compact-settlement-table .therapist-tone-4-cell {
+  --therapist-accent: #be5c86;
+  --therapist-line: #eccbda;
+  --therapist-text: #763c56;
+  --therapist-head: #fff0f6;
+  --therapist-subhead: #fff7fa;
+  --therapist-cell: #fffafd;
+}
+
+.sw-settlement-table .therapist-tone-0,
+.sw-settlement-table .therapist-tone-1,
+.sw-settlement-table .therapist-tone-2,
+.sw-settlement-table .therapist-tone-3,
+.sw-settlement-table .therapist-tone-4,
+.sw-manual-compact-settlement-table .therapist-tone-0,
+.sw-manual-compact-settlement-table .therapist-tone-1,
+.sw-manual-compact-settlement-table .therapist-tone-2,
+.sw-manual-compact-settlement-table .therapist-tone-3,
+.sw-manual-compact-settlement-table .therapist-tone-4 {
+  background: var(--therapist-head);
+}
+
+.sw-settlement-table .therapist-tone-0-sub,
+.sw-settlement-table .therapist-tone-1-sub,
+.sw-settlement-table .therapist-tone-2-sub,
+.sw-settlement-table .therapist-tone-3-sub,
+.sw-settlement-table .therapist-tone-4-sub,
+.sw-manual-compact-settlement-table .therapist-tone-0-sub,
+.sw-manual-compact-settlement-table .therapist-tone-1-sub,
+.sw-manual-compact-settlement-table .therapist-tone-2-sub,
+.sw-manual-compact-settlement-table .therapist-tone-3-sub,
+.sw-manual-compact-settlement-table .therapist-tone-4-sub {
+  background: var(--therapist-subhead);
+}
+
+.sw-settlement-table .therapist-tone-0-cell,
+.sw-settlement-table .therapist-tone-1-cell,
+.sw-settlement-table .therapist-tone-2-cell,
+.sw-settlement-table .therapist-tone-3-cell,
+.sw-settlement-table .therapist-tone-4-cell,
+.sw-manual-compact-settlement-table .therapist-tone-0-cell,
+.sw-manual-compact-settlement-table .therapist-tone-1-cell,
+.sw-manual-compact-settlement-table .therapist-tone-2-cell,
+.sw-manual-compact-settlement-table .therapist-tone-3-cell,
+.sw-manual-compact-settlement-table .therapist-tone-4-cell {
+  background: var(--therapist-cell);
+  border-left: 1px solid var(--therapist-line);
+  box-shadow: none;
+}
+
+.sw-settlement-table tbody tr:hover th,
+.sw-settlement-table tbody tr:hover td,
+.sw-manual-compact-settlement-table tbody tr:hover th,
+.sw-manual-compact-settlement-table tbody tr:hover td {
+  background-color: #f2f6fb;
+  filter: none;
+}
+
+.sw-settlement-table tr:last-child td,
+.sw-settlement-table tr:last-child th,
+.sw-manual-compact-settlement-table tr:last-child td,
+.sw-manual-compact-settlement-table tr:last-child th {
+  border-bottom: none;
+}
+
+.sw-settlement-table tr th:last-child,
+.sw-settlement-table tr td:last-child,
+.sw-manual-compact-settlement-table tr th:last-child,
+.sw-manual-compact-settlement-table tr td:last-child {
+  border-right: none;
+}
+
+.sw-summary-table th,
+.sw-summary-table td {
+  padding: 10px 14px;
+  border-right: 1px solid #d8e1ec;
+  border-bottom: 1px solid #d8e1ec;
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+
+.sw-summary-table {
+  border-collapse: collapse;
+}
+
+.sw-summary-table thead th {
+  background: #eef3f8;
+  color: #263244;
+  font-weight: 900;
+}
+
+.sw-summary-table tbody th {
+  background: #f8fafc;
+  color: #243247;
+  font-weight: 900;
+  text-align: left;
+}
+
+.sw-summary-table tr:last-child td,
+.sw-summary-table tr:last-child th {
+  border-bottom: none;
+}
+
+.sw-summary-table tr th:last-child,
+.sw-summary-table tr td:last-child {
+  border-right: none;
+}
+
+.sw-summary-table thead th {
+  background: #e8eef6;
+  color: #1f2a3d;
+  font-size: 1.04rem;
+  font-weight: 900;
+}
+
+.sw-summary-table tbody th.month-label {
+  background: #f7f9fc;
+  color: #334155;
+  font-size: 1.02rem;
+  font-weight: 900;
+}
+
+.sw-summary-table tbody td {
+  color: #243247;
+  font-weight: 800;
+}
+
+.sw-summary-table tbody td.amount {
+  color: #1d4ed8;
+  font-size: 1.04rem;
+}
+
+.sw-summary-table tbody td.new-patient {
+  color: #475569;
+  font-size: 1.04rem;
+}
+
+.sw-settlement-settings-card {
+  max-width: 920px;
+}
+
+.sw-settlement-settings-subtext {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.settlement-settings-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) 180px;
+  gap: 18px;
+  align-items: start;
+}
+
+.settlement-settings-list {
+  display: grid;
+  gap: 8px;
+  max-width: 980px;
+}
+
+.settlement-settings-row {
+  display: grid;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid #dbe3ee;
+  border-radius: 12px;
+  background: #f8fafc;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
+}
+
+.shockwave-row {
+  grid-template-columns: 62px minmax(92px, 150px) minmax(70px, 112px) minmax(70px, 88px) minmax(72px, 92px) minmax(72px, 92px) 40px minmax(90px, 140px) 36px 24px auto;
+}
+
+.manual-therapy-row {
+  grid-template-columns: 62px minmax(92px, 150px) minmax(70px, 112px) minmax(70px, 88px) minmax(72px, 92px) minmax(72px, 92px) 40px minmax(90px, 140px) 36px 24px auto;
+}
+
+.settlement-order-label {
+  text-align: center;
+}
+
+.settlement-order-controls {
+  display: grid;
+  grid-template-columns: 22px 22px 12px;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.settlement-order-button {
+  width: 22px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+}
+
+.settlement-order-button:hover:not(:disabled) {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.settlement-order-button:disabled {
+  opacity: 0.34;
+  cursor: not-allowed;
+}
+
+.settlement-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  cursor: grab;
+  user-select: none;
+  height: 26px;
+}
+
+.settlement-drag-handle:active {
+  cursor: grabbing;
+}
+
+.settlement-settings-row.dragging {
+  opacity: 0.4;
+  border: 1px dashed #1a73e8;
+  background: #eff6ff;
+}
+
+.settlement-hidden-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  height: 34px;
+}
+
+.settlement-hidden-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.settlement-settings-header-row {
+  border: none;
+  background: transparent;
+  padding: 0 10px 0;
+  box-shadow: none;
+}
+
+.settlement-settings-header-row .settlement-label {
+  color: #475569;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.settlement-settings-header-row .settlement-label:first-child {
+  text-align: left;
+}
+
+.settlement-dose-tag-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.settlement-dose-tag-input {
+  width: 54px;
+  height: 34px;
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-align: center;
+  padding: 0 4px;
+  color: #1e40af;
+}
+
+.settlement-dose-tag-input::placeholder {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.settlement-dose-tag-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 58px;
+  min-height: 22px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 0.76rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.settlement-shortcut-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.settlement-shortcut-prefix {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.settlement-shortcut-input {
+  width: 24px;
+  height: 30px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-align: center;
+  padding: 0 2px;
+  color: #c2410c;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+
+.settlement-shortcut-input::placeholder {
+  color: #cbd5e1;
+}
+
+.settlement-duration-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.settlement-duration-input {
+  width: 54px;
+  height: 30px;
+  padding: 0 4px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.settlement-duration-unit {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.settlement-linebreak-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  cursor: pointer;
+}
+
+.settlement-linebreak-toggle input {
+  appearance: none;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #e2e8f0;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.settlement-linebreak-toggle input::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.2);
+  transition: transform 120ms ease;
+}
+
+.settlement-linebreak-toggle input:checked {
+  border-color: #2563eb;
+  background: #3b82f6;
+}
+
+.settlement-linebreak-toggle input:checked::after {
+  transform: translateX(16px);
+}
+
+.settlement-linebreak-toggle input:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+.settlement-prescription-input,
+.settlement-price-input,
+.settlement-add-input {
+  height: 34px;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.settlement-prescription-input:focus,
+.settlement-price-input:focus,
+.settlement-dose-tag-input:focus,
+.settlement-duration-input:focus,
+.settlement-add-input:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18);
+}
+
+.settlement-settings-unit {
+  color: #475569;
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.settlement-color-input {
+  width: 34px;
+  height: 34px;
+  padding: 2px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.settlement-add-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 250px;
+  margin-top: 2px;
+}
+
+.settlement-add-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.settlement-add-button {
+  width: 36px;
+  height: 34px;
+  border: 1px solid #93c5fd;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 1.25rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.12);
+}
+
+.settlement-add-button:hover {
+  background: #dbeafe;
+  border-color: #60a5fa;
+}
+
+.settlement-add-button:active {
+  transform: translateY(1px);
+}
+
+.settlement-incentive-box {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef4fb 100%);
+}
+
+.settlement-incentive-box > span {
+  color: #1e293b;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.settlement-incentive-box > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.settlement-incentive-box input {
+  height: 38px;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.settlement-incentive-box em {
+  color: #475569;
+  font-style: normal;
+  font-weight: 900;
+}
+
+@media (max-width: 860px) {
+  .settlement-settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shockwave-row {
+    grid-template-columns: 62px 1fr 80px 1fr 34px 22px auto;
+  }
+
+  .manual-therapy-row {
+    grid-template-columns: 62px 1fr 80px 80px 1fr 34px 22px auto;
+  }
+}
+
+.sw-summary-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.sw-summary-table th,
+.sw-summary-table td {
+  padding: 12px 14px;
+  text-align: center;
+  border-right: 1px solid #dbe3ee;
+  border-bottom: 1px solid #dbe3ee;
+  white-space: nowrap;
+}
+
+.sw-summary-table thead th {
+  background: #eef4fb;
+  color: #334155;
+  font-weight: 800;
+}
+
+.sw-summary-table tbody th.month-label {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 800;
+}
+
+.sw-summary-table tbody td {
+  background: #ffffff;
+  color: #334155;
+  font-weight: 700;
+}
+
+.sw-summary-table tbody td.amount {
+  color: #1d4ed8;
+}
+
+.sw-summary-table tbody td.new-patient {
+  color: #7c3aed;
+}
+
+.sw-summary-table tr:last-child td,
+.sw-summary-table tr:last-child th {
+  border-bottom: none;
+}
+
+.sw-summary-table tr th:last-child,
+.sw-summary-table tr td:last-child {
+  border-right: none;
+}
+
+.sw-compact-summary-table th,
+.sw-compact-summary-table td {
+  padding: 9px 14px;
+  font-size: 0.88rem;
+}
+
+.sw-compact-summary-table th:nth-child(1) {
+  width: 82px;
+}
+
+.sw-compact-summary-table th:nth-child(2),
+.sw-compact-summary-table th:nth-child(4) {
+  width: 92px;
+}
+
+.sw-compact-summary-table th:nth-child(3) {
+  width: 140px;
+}
+
+.sw-new-patient-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: separate;
+  border-spacing: 0;
+  background:
+    linear-gradient(90deg, rgba(219, 234, 254, 0.12) 0%, rgba(219, 234, 254, 0.12) 50%, rgba(241, 245, 249, 0) 50%, rgba(241, 245, 249, 0) 100%);
+}
+
+.sw-new-patient-table th,
+.sw-new-patient-table td {
+  padding: 12px 10px;
+  text-align: center;
+  border-right: 1px solid #dbe3ee;
+  border-bottom: 1px solid #dbe3ee;
+  white-space: nowrap;
+}
+
+.sw-new-patient-table thead th {
+  background: #eef4fb;
+  color: #334155;
+  font-weight: 800;
+}
+
+.sw-new-patient-table thead .therapist-col {
+  background: #dce9f9;
+  font-size: 0.98rem;
+  position: relative;
+  letter-spacing: -0.01em;
+}
+
+.sw-new-patient-table thead .sub-col {
+  background: #f5f8fc;
+  color: #475569;
+  font-size: 0.84rem;
+}
+
+.sw-new-patient-table .therapist-tone-0 {
+  background: linear-gradient(180deg, #ffedd5 0%, #fff7ed 100%);
+}
+
+.sw-new-patient-table .therapist-tone-1 {
+  background: linear-gradient(180deg, #ece3ff 0%, #f5efff 100%);
+}
+
+.sw-new-patient-table .therapist-tone-2 {
+  background: linear-gradient(180deg, #dcf5e7 0%, #eefbf4 100%);
+}
+
+.sw-new-patient-table .therapist-tone-3 {
+  background: linear-gradient(180deg, #ffe9d2 0%, #fff4ea 100%);
+}
+
+.sw-new-patient-table .therapist-tone-4 {
+  background: linear-gradient(180deg, #ffe0ec 0%, #fff1f7 100%);
+}
+
+.sw-new-patient-table .therapist-tone-0-sub {
+  background: #fff7ed;
+}
+
+.sw-new-patient-table .therapist-tone-1-sub {
+  background: #f4efff;
+}
+
+.sw-new-patient-table .therapist-tone-2-sub {
+  background: #edf9f2;
+}
+
+.sw-new-patient-table .therapist-tone-3-sub {
+  background: #fff6ee;
+}
+
+.sw-new-patient-table .therapist-tone-4-sub {
+  background: #fff2f8;
+}
+
+.sw-new-patient-table tbody td {
+  background: #ffffff;
+  color: #334155;
+  font-weight: 700;
+}
+
+.sw-new-patient-table tbody td.therapist-tone-0-cell {
+  background: #fffaf5;
+}
+
+.sw-new-patient-table tbody td.therapist-tone-1-cell {
+  background: #fcfbff;
+}
+
+.sw-new-patient-table tbody td.therapist-tone-2-cell {
+  background: #fbfffd;
+}
+
+.sw-new-patient-table tbody td.therapist-tone-3-cell {
+  background: #fffdf9;
+}
+
+.sw-new-patient-table tbody td.therapist-tone-4-cell {
+  background: #fffafd;
+}
+
+.sw-new-patient-table tbody td.patient-name {
+  text-align: left;
+  padding-left: 14px;
+}
+
+.sw-new-patient-table tbody td.visit-count {
+  color: #7c3aed;
+}
+
+.sw-new-patient-table .therapist-group-start {
+  border-left: 2px solid #93b5dd;
+}
+
+.sw-new-patient-table .therapist-group-end {
+  border-right: 2px solid #c2d5ea;
+}
+
+.sw-new-patient-table tbody tr:hover td.therapist-tone-0-cell {
+  background: #ffedd5;
+}
+
+.sw-new-patient-table tbody tr:hover td.therapist-tone-1-cell {
+  background: #f3efff;
+}
+
+.sw-new-patient-table tbody tr:hover td.therapist-tone-2-cell {
+  background: #edf8f2;
+}
+
+.sw-new-patient-table tbody tr:hover td.therapist-tone-3-cell {
+  background: #fff3e7;
+}
+
+.sw-new-patient-table tbody tr:hover td.therapist-tone-4-cell {
+  background: #fff0f7;
+}
+
+.sw-new-patient-table tr:last-child td,
+.sw-new-patient-table tr:last-child th {
+  border-bottom: none;
+}
+
+.sw-new-patient-table tr th:last-child,
+.sw-new-patient-table tr td:last-child {
+  border-right: none;
+}
+
+.sw-compact-new-patient-table th,
+.sw-compact-new-patient-table td {
+  padding: 9px 8px;
+  font-size: 0.84rem;
+}
+
+.sw-compact-new-patient-table thead .therapist-col {
+  min-width: 250px;
+}
+
+.sw-compact-new-patient-table thead .sub-col:nth-child(4n + 1),
+.sw-compact-new-patient-table tbody td:nth-child(4n + 1) {
+  width: 58px;
+  min-width: 58px;
+}
+
+.sw-compact-new-patient-table thead .sub-col:nth-child(4n + 2),
+.sw-compact-new-patient-table tbody td:nth-child(4n + 2) {
+  width: 78px;
+  min-width: 78px;
+}
+
+.sw-compact-new-patient-table thead .sub-col:nth-child(4n + 3),
+.sw-compact-new-patient-table tbody td:nth-child(4n + 3) {
+  width: 88px;
+  min-width: 88px;
+}
+
+.sw-compact-new-patient-table thead .sub-col:nth-child(4n),
+.sw-compact-new-patient-table tbody td:nth-child(4n) {
+  width: 52px;
+  min-width: 52px;
+}
+
+.sw-manual-summary-table,
+.sw-manual-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.sw-manual-summary-table {
+  min-width: 420px;
+}
+
+.sw-manual-detail-table {
+  min-width: 920px;
+}
+
+.sw-manual-summary-table th,
+.sw-manual-summary-table td,
+.sw-manual-detail-table th,
+.sw-manual-detail-table td {
+  padding: 9px 10px;
+  text-align: center;
+  border-right: 1px solid #d8e1ec;
+  border-bottom: 1px solid #d8e1ec;
+  color: #263244;
+  font-size: 0.86rem;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.sw-manual-summary-table thead th,
+.sw-manual-detail-table thead th {
+  background: #eef3f8;
+  color: #263244;
+  font-weight: 900;
+}
+
+.sw-manual-summary-table thead .therapist-col {
+  background: #dce9f9;
+  font-size: 0.9rem;
+}
+
+.sw-manual-summary-table tbody td,
+.sw-manual-detail-table tbody td {
+  background: #ffffff;
+  color: #334155;
+  font-weight: 700;
+}
+
+.sw-manual-detail-table tbody td.patient-name {
+  text-align: left;
+  padding-left: 12px;
+}
+
+.sw-manual-summary-table .duration-40,
+.sw-manual-detail-table .duration-40 {
+  color: #2563eb;
+}
+
+.sw-manual-summary-table .duration-60,
+.sw-manual-detail-table .duration-60 {
+  color: #7c3aed;
+}
+
+.sw-manual-summary-table .total-count {
+  color: #0f766e;
+}
+
+.sw-manual-detail-table .manual-empty {
+  color: #64748b;
+  font-weight: 700;
+  background: #f8fafc;
+}
+
+.sw-manual-summary-table tr:last-child td,
+.sw-manual-summary-table tr:last-child th,
+.sw-manual-detail-table tr:last-child td,
+.sw-manual-detail-table tr:last-child th {
+  border-bottom: none;
+}
+
+.sw-manual-summary-table tr th:last-child,
+.sw-manual-summary-table tr td:last-child,
+.sw-manual-detail-table tr th:last-child,
+.sw-manual-detail-table tr td:last-child {
+  border-right: none;
+}
+
+/* New patient table: stronger therapist grouping and cleaner alignment. */
+.sw-new-patient-table,
+.sw-compact-new-patient-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #ffffff;
+}
+
+.sw-new-patient-table th,
+.sw-new-patient-table td,
+.sw-compact-new-patient-table th,
+.sw-compact-new-patient-table td {
+  height: 42px;
+  padding: 10px 12px;
+  border-right: 1px solid #d8e1ee;
+  border-bottom: 1px solid #d8e1ee;
+  color: #263244;
+  font-size: 0.94rem;
+  font-weight: 750;
+  letter-spacing: 0;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.sw-new-patient-table thead th,
+.sw-compact-new-patient-table thead th {
+  background: #f2f6fb;
+  color: #243247;
+  font-weight: 900;
+}
+
+.sw-new-patient-table thead .therapist-col,
+.sw-compact-new-patient-table thead .therapist-col {
+  min-width: 268px;
+  border-top: 2px solid var(--new-patient-accent, #64748b);
+  border-left: 2px solid var(--new-patient-line, #cbd5e1);
+  border-right: 2px solid var(--new-patient-line, #cbd5e1);
+  background: var(--new-patient-head, #edf2f7);
+  color: var(--new-patient-text, #243247);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.sw-new-patient-table thead .sub-col,
+.sw-compact-new-patient-table thead .sub-col {
+  background: var(--new-patient-subhead, #f8fafc);
+  color: #475569;
+  font-size: 0.88rem;
+  font-weight: 900;
+  border-left: 1px solid var(--new-patient-line, #d8e1ee);
+}
+
+.sw-new-patient-table tbody td,
+.sw-compact-new-patient-table tbody td {
+  background: var(--new-patient-cell, #ffffff);
+}
+
+.sw-new-patient-table tbody td.patient-name,
+.sw-compact-new-patient-table tbody td.patient-name {
+  text-align: center;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.sw-new-patient-table tbody td.visit-count,
+.sw-compact-new-patient-table tbody td.visit-count {
+  color: #6d4fd2;
+  font-weight: 900;
+}
+
+.sw-new-patient-table .therapist-group-start,
+.sw-compact-new-patient-table .therapist-group-start {
+  border-left: 2px solid var(--new-patient-line, #cbd5e1);
+}
+
+.sw-new-patient-table .therapist-group-end,
+.sw-compact-new-patient-table .therapist-group-end {
+  border-right: 2px solid var(--new-patient-line, #cbd5e1);
+}
+
+.sw-new-patient-table .therapist-tone-0,
+.sw-new-patient-table .therapist-tone-0-sub,
+.sw-new-patient-table .therapist-tone-0-cell {
+  --new-patient-accent: #c2410c;
+  --new-patient-line: #fed7aa;
+  --new-patient-text: #7c2d12;
+  --new-patient-head: #ffedd5;
+  --new-patient-subhead: #fff7ed;
+  --new-patient-cell: #fffaf5;
+}
+
+.sw-new-patient-table .therapist-tone-1,
+.sw-new-patient-table .therapist-tone-1-sub,
+.sw-new-patient-table .therapist-tone-1-cell {
+  --new-patient-accent: #7a62d6;
+  --new-patient-line: #cfc4ef;
+  --new-patient-text: #4d3d80;
+  --new-patient-head: #eeeaff;
+  --new-patient-subhead: #f7f4ff;
+  --new-patient-cell: #fbf9ff;
+}
+
+.sw-new-patient-table .therapist-tone-2,
+.sw-new-patient-table .therapist-tone-2-sub,
+.sw-new-patient-table .therapist-tone-2-cell {
+  --new-patient-accent: #318765;
+  --new-patient-line: #bddbcc;
+  --new-patient-text: #245946;
+  --new-patient-head: #e7f5ee;
+  --new-patient-subhead: #f2faf6;
+  --new-patient-cell: #f8fcfa;
+}
+
+.sw-new-patient-table .therapist-tone-3,
+.sw-new-patient-table .therapist-tone-3-sub,
+.sw-new-patient-table .therapist-tone-3-cell {
+  --new-patient-accent: #b7742a;
+  --new-patient-line: #e2ccb1;
+  --new-patient-text: #704817;
+  --new-patient-head: #fff0df;
+  --new-patient-subhead: #fff7ee;
+  --new-patient-cell: #fffaf4;
+}
+
+.sw-new-patient-table .therapist-tone-4,
+.sw-new-patient-table .therapist-tone-4-sub,
+.sw-new-patient-table .therapist-tone-4-cell {
+  --new-patient-accent: #be5c86;
+  --new-patient-line: #e8c4d4;
+  --new-patient-text: #763c56;
+  --new-patient-head: #ffedf5;
+  --new-patient-subhead: #fff6fa;
+  --new-patient-cell: #fffafd;
+}
+
+.sw-new-patient-table .therapist-tone-0,
+.sw-new-patient-table .therapist-tone-1,
+.sw-new-patient-table .therapist-tone-2,
+.sw-new-patient-table .therapist-tone-3,
+.sw-new-patient-table .therapist-tone-4 {
+  background: var(--new-patient-head);
+}
+
+.sw-new-patient-table .therapist-tone-0-sub,
+.sw-new-patient-table .therapist-tone-1-sub,
+.sw-new-patient-table .therapist-tone-2-sub,
+.sw-new-patient-table .therapist-tone-3-sub,
+.sw-new-patient-table .therapist-tone-4-sub {
+  background: var(--new-patient-subhead);
+}
+
+.sw-new-patient-table tbody td.therapist-tone-0-cell,
+.sw-new-patient-table tbody td.therapist-tone-1-cell,
+.sw-new-patient-table tbody td.therapist-tone-2-cell,
+.sw-new-patient-table tbody td.therapist-tone-3-cell,
+.sw-new-patient-table tbody td.therapist-tone-4-cell {
+  background: var(--new-patient-cell);
+  border-left: 1px solid var(--new-patient-line);
+}
+
+.sw-new-patient-table tbody tr:hover td.therapist-tone-0-cell,
+.sw-new-patient-table tbody tr:hover td.therapist-tone-1-cell,
+.sw-new-patient-table tbody tr:hover td.therapist-tone-2-cell,
+.sw-new-patient-table tbody tr:hover td.therapist-tone-3-cell,
+.sw-new-patient-table tbody tr:hover td.therapist-tone-4-cell {
+  background: #eef4fb;
+}
+
+/* Carry therapist group separators through the new patient table body. */
+.sw-new-patient-table thead .sub-col:nth-child(4n + 1),
+.sw-new-patient-table tbody td:nth-child(4n + 1),
+.sw-compact-new-patient-table thead .sub-col:nth-child(4n + 1),
+.sw-compact-new-patient-table tbody td:nth-child(4n + 1) {
+  border-left: 2px solid var(--new-patient-line, #9fb0c4);
+}
+
+.sw-new-patient-table thead .sub-col:nth-child(4n),
+.sw-new-patient-table tbody td:nth-child(4n),
+.sw-compact-new-patient-table thead .sub-col:nth-child(4n),
+.sw-compact-new-patient-table tbody td:nth-child(4n) {
+  border-right: 2px solid var(--new-patient-line, #9fb0c4);
+}
+
+.sw-new-patient-table tbody td.therapist-group-start,
+.sw-compact-new-patient-table tbody td.therapist-group-start {
+  border-left-width: 2px;
+}
+
+.sw-new-patient-table tbody td.therapist-group-end,
+.sw-compact-new-patient-table tbody td.therapist-group-end {
+  border-right-width: 2px;
+}
