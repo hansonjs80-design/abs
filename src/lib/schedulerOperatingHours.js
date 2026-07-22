@@ -61,6 +61,47 @@ export function setMonthlyDayOverrides(dayOverrides, year, month, overrides) {
   };
 }
 
+const DAY_OVERRIDE_TIME_FIELDS = ['start_time', 'end_time', 'lunch_start', 'lunch_end'];
+
+export function applyDayOverrideTemplate(dayOverrides, dayIds, template) {
+  const source = normalizeDayOverrides(dayOverrides);
+  const next = { ...source };
+  const selectedDays = [...new Set(dayIds || [])]
+    .map(Number)
+    .filter((dayId) => Number.isInteger(dayId) && dayId >= 0 && dayId <= 6);
+
+  selectedDays.forEach((dayId) => {
+    const dayKey = String(dayId);
+    const updatedDay = { ...(source[dayKey] || source[dayId] || {}) };
+
+    DAY_OVERRIDE_TIME_FIELDS.forEach((field) => {
+      if (field.startsWith('lunch_') && template?.no_lunch === true) return;
+      const value = String(template?.[field] || '').trim();
+      if (value) {
+        updatedDay[field] = value;
+      } else {
+        delete updatedDay[field];
+      }
+    });
+
+    if (template?.no_lunch === true) {
+      updatedDay.no_lunch = true;
+      delete updatedDay.lunch_start;
+      delete updatedDay.lunch_end;
+    } else {
+      delete updatedDay.no_lunch;
+    }
+
+    if (Object.keys(updatedDay).length === 0) {
+      delete next[dayKey];
+    } else {
+      next[dayKey] = updatedDay;
+    }
+  });
+
+  return next;
+}
+
 export function getDateOverridesForMonth(dateOverrides, year, month) {
   const source = dateOverrides && typeof dateOverrides === 'object' ? dateOverrides : {};
   const prefix = getMonthKey(year, month);

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
+  applyDayOverrideTemplate,
   DAY_NAMES,
   getDateOverridesForMonth,
   getMonthlyDayOverrides,
@@ -22,6 +23,10 @@ import {
   matchDisplayRule,
   parseDeptNameMemo,
 } from '../../lib/staffDisplayRules';
+import './MonthlyTherapistConfig.css';
+
+const WEEKLY_OPERATING_DAYS = [1, 2, 3, 4, 5, 6];
+const STANDARD_WEEKDAYS = [1, 2, 3, 4, 5];
 
 /**
  * 월별 치료사 설정 모달
@@ -53,6 +58,15 @@ export default function MonthlyTherapistConfig({
   const [shockwaveSlots, setShockwaveSlots] = useState(null);
   const [manualSlots, setManualSlots] = useState(null);
   const [dayOverrides, setDayOverrides] = useState({});
+  const [selectedWeeklyDays, setSelectedWeeklyDays] = useState(STANDARD_WEEKDAYS);
+  const [weeklyBulkValues, setWeeklyBulkValues] = useState({
+    start_time: settings?.start_time?.slice(0, 5) || '09:00',
+    end_time: settings?.end_time?.slice(0, 5) || '18:00',
+    lunch_start: '13:00',
+    lunch_end: '14:00',
+    no_lunch: false,
+  });
+  const [weeklyBulkFeedback, setWeeklyBulkFeedback] = useState('');
   const [dateOverrides, setDateOverrides] = useState({});
   const [staffBlockRules, setStaffBlockRules] = useState([]);
   const [staffDisplayRules, setStaffDisplayRules] = useState([]);
@@ -253,6 +267,53 @@ export default function MonthlyTherapistConfig({
       return updated;
     });
   }, []);
+
+  const toggleWeeklyBulkDay = useCallback((dow) => {
+    setSelectedWeeklyDays((prev) => (
+      prev.includes(dow)
+        ? prev.filter((dayId) => dayId !== dow)
+        : [...prev, dow].sort((a, b) => a - b)
+    ));
+    setWeeklyBulkFeedback('');
+  }, []);
+
+  const selectWeeklyBulkDays = useCallback((days) => {
+    setSelectedWeeklyDays(days);
+    setWeeklyBulkFeedback('');
+  }, []);
+
+  const updateWeeklyBulkValue = useCallback((field, value) => {
+    setWeeklyBulkValues((prev) => ({
+      ...prev,
+      [field]: value,
+      ...(field === 'no_lunch' && value
+        ? { lunch_start: '', lunch_end: '' }
+        : {}),
+    }));
+    setWeeklyBulkFeedback('');
+  }, []);
+
+  const loadFirstSelectedWeeklyDay = useCallback(() => {
+    const sourceDay = selectedWeeklyDays[0];
+    if (!sourceDay) return;
+    const source = dayOverrides[sourceDay] || {};
+    const noLunch = source.no_lunch === true;
+    setWeeklyBulkValues({
+      start_time: source.start_time || settings?.start_time?.slice(0, 5) || '09:00',
+      end_time: source.end_time || settings?.end_time?.slice(0, 5) || '18:00',
+      lunch_start: noLunch ? '' : (source.lunch_start || '13:00'),
+      lunch_end: noLunch ? '' : (source.lunch_end || '14:00'),
+      no_lunch: noLunch,
+    });
+    setWeeklyBulkFeedback(`${DAY_NAMES[sourceDay]}요일 설정을 입력칸에 불러왔습니다.`);
+  }, [dayOverrides, selectedWeeklyDays, settings]);
+
+  const applyWeeklyBulkValues = useCallback(() => {
+    if (selectedWeeklyDays.length === 0) return;
+    setDayOverrides((prev) => applyDayOverrideTemplate(prev, selectedWeeklyDays, weeklyBulkValues));
+    const selectedNames = selectedWeeklyDays.map((dow) => DAY_NAMES[dow]).join('·');
+    setWeeklyBulkFeedback(`${selectedNames}요일에 적용했습니다. 아래에서 확인한 뒤 저장해 주세요.`);
+  }, [selectedWeeklyDays, weeklyBulkValues]);
 
   const updateDateOverride = useCallback((dateKey, field, value) => {
     setDateOverrides((prev) => {
@@ -557,9 +618,121 @@ export default function MonthlyTherapistConfig({
   const renderWeeklySettings = () => (
     <>
       <div className="monthly-therapist-desc">
-        {year}년 {month}월에만 적용할 요일별 운영시간입니다. 비워둔 항목은 기본 운영시간을 사용합니다.
+        {year}년 {month}월에만 적용합니다. 빠른 설정으로 여러 요일을 한 번에 바꾸고, 아래 표에서 요일별로 조정할 수 있습니다.
       </div>
       <div className="monthly-therapist-body monthly-therapist-body--settings">
+        <section className="monthly-weekly-quick" aria-labelledby="monthly-weekly-quick-title">
+          <div className="monthly-weekly-quick-header">
+            <div>
+              <div id="monthly-weekly-quick-title" className="monthly-weekly-quick-title">빠른 일괄 설정</div>
+              <div className="monthly-weekly-quick-subtitle">적용할 요일을 고른 뒤 시간을 한 번만 입력하세요.</div>
+            </div>
+            <span className="monthly-weekly-unsaved-badge">저장 전 미리 적용</span>
+          </div>
+
+          <div className="monthly-weekly-presets" aria-label="요일 빠른 선택">
+            <button type="button" onClick={() => selectWeeklyBulkDays(STANDARD_WEEKDAYS)}>월~금</button>
+            <button type="button" onClick={() => selectWeeklyBulkDays(WEEKLY_OPERATING_DAYS)}>월~토</button>
+            <button type="button" onClick={() => selectWeeklyBulkDays([])}>선택 해제</button>
+          </div>
+
+          <div className="monthly-weekly-day-chips" aria-label="적용할 요일">
+            {WEEKLY_OPERATING_DAYS.map((dow) => {
+              const selected = selectedWeeklyDays.includes(dow);
+              return (
+                <button
+                  type="button"
+                  key={dow}
+                  className={`monthly-weekly-day-chip${selected ? ' selected' : ''}`}
+                  aria-pressed={selected}
+                  onClick={() => toggleWeeklyBulkDay(dow)}
+                >
+                  {DAY_NAMES[dow]}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="monthly-weekly-quick-fields">
+            <label>
+              <span>시작</span>
+              <input
+                type="time"
+                step="300"
+                className="monthly-operating-input"
+                value={weeklyBulkValues.start_time}
+                onChange={(e) => updateWeeklyBulkValue('start_time', e.target.value)}
+              />
+            </label>
+            <label>
+              <span>종료</span>
+              <input
+                type="time"
+                step="300"
+                className="monthly-operating-input"
+                value={weeklyBulkValues.end_time}
+                onChange={(e) => updateWeeklyBulkValue('end_time', e.target.value)}
+              />
+            </label>
+            <label>
+              <span>점심 시작</span>
+              <input
+                type="time"
+                step="300"
+                className="monthly-operating-input"
+                value={weeklyBulkValues.no_lunch ? '' : weeklyBulkValues.lunch_start}
+                disabled={weeklyBulkValues.no_lunch}
+                onChange={(e) => updateWeeklyBulkValue('lunch_start', e.target.value)}
+              />
+            </label>
+            <label>
+              <span>점심 종료</span>
+              <input
+                type="time"
+                step="300"
+                className="monthly-operating-input"
+                value={weeklyBulkValues.no_lunch ? '' : weeklyBulkValues.lunch_end}
+                disabled={weeklyBulkValues.no_lunch}
+                onChange={(e) => updateWeeklyBulkValue('lunch_end', e.target.value)}
+              />
+            </label>
+            <label className="monthly-weekly-no-lunch">
+              <input
+                type="checkbox"
+                checked={weeklyBulkValues.no_lunch}
+                onChange={(e) => updateWeeklyBulkValue('no_lunch', e.target.checked)}
+              />
+              <span>점심 없음</span>
+            </label>
+          </div>
+
+          <div className="monthly-weekly-quick-actions">
+            <div className={`monthly-weekly-feedback${weeklyBulkFeedback ? ' visible' : ''}`} aria-live="polite">
+              {weeklyBulkFeedback || `${selectedWeeklyDays.length}개 요일 선택됨`}
+            </div>
+            <button
+              type="button"
+              className="monthly-weekly-load-button"
+              disabled={selectedWeeklyDays.length === 0}
+              onClick={loadFirstSelectedWeeklyDay}
+            >
+              첫 선택 요일 불러오기
+            </button>
+            <button
+              type="button"
+              className="monthly-weekly-apply-button"
+              disabled={selectedWeeklyDays.length === 0}
+              onClick={applyWeeklyBulkValues}
+            >
+              선택 요일에 적용
+            </button>
+          </div>
+        </section>
+
+        <div className="monthly-weekly-detail-heading">
+          <span>요일별 상세 조정</span>
+          <span>현재 저장값은 그대로 불러왔습니다.</span>
+        </div>
         <div className="monthly-operating-table-wrap">
           <table className="monthly-operating-table">
             <thead>
@@ -573,7 +746,7 @@ export default function MonthlyTherapistConfig({
               </tr>
             </thead>
             <tbody>
-              {[1, 2, 3, 4, 5, 6].map((dow) => {
+              {WEEKLY_OPERATING_DAYS.map((dow) => {
                 const override = dayOverrides[dow] || {};
                 const isNoLunch = override.no_lunch === true;
                 return (
