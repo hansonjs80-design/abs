@@ -688,6 +688,59 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     padding: 2mm 1mm !important;
   }
 
+  body.settlement-print.shockwave-settlement-print .sw-horizontal-settlement-main-table th,
+  body.settlement-print.shockwave-settlement-print .sw-horizontal-settlement-main-table td {
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+    padding: 1.8mm 0.7mm !important;
+    font-size: 12.5pt !important;
+    line-height: 1.12 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print
+    .sw-horizontal-settlement-main-table thead .therapist-col {
+    padding: 2mm 0.7mm !important;
+    font-size: 14pt !important;
+    line-height: 1.08 !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print
+    .sw-horizontal-settlement-main-table thead .prescription-col {
+    padding: 1.8mm 0.5mm !important;
+    font-size: 12.5pt !important;
+    line-height: 1.08 !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print
+    .sw-horizontal-settlement-main-table .label-col,
+  body.settlement-print.shockwave-settlement-print
+    .sw-horizontal-settlement-main-table .row-label {
+    width: 19% !important;
+    padding-left: 0.5mm !important;
+    padding-right: 0.5mm !important;
+    font-size: 13pt !important;
+    line-height: 1.08 !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print
+    .sw-horizontal-settlement-main-table tbody tr:nth-child(1) td,
+  body.settlement-print.shockwave-settlement-print
+    .sw-horizontal-settlement-main-table tbody tr:nth-child(2) td {
+    font-size: 14.5pt !important;
+    font-weight: 900 !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print
+    .sw-horizontal-settlement-main-table .settlement-amount-row td,
+  body.settlement-print.shockwave-settlement-print
+    .sw-horizontal-settlement-main-table .settlement-incentive-row td {
+    font-size: 15.5pt !important;
+    font-weight: 900 !important;
+  }
+
   body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table thead .therapist-col,
   body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table thead .grand-col,
   body.settlement-print:not(.manual-settlement-print) .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table thead .therapist-col,
@@ -1232,7 +1285,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   body.shockwave-settlement-print .sw-settlement-stack--shockwave .sw-grand-total-card .sw-settlement-table-wrap {
     border: 1.2px solid #94a3b8 !important;
-    border-radius: 0 !important;
+    border-radius: 2.5mm !important;
     box-shadow: none !important;
     background: #ffffff !important;
     overflow: hidden !important;

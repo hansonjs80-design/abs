@@ -211,7 +211,7 @@ export default function ShockwaveSettlementView({
             </div>
 
             <div className="sw-settlement-table-wrap sw-compact-table-wrap">
-              <table className="sw-settlement-table sw-compact-settlement-table">
+              <table className="sw-settlement-table sw-compact-settlement-table sw-horizontal-settlement-main-table">
                 <thead>
                   <tr>
                     <th className="label-col" rowSpan={2}>구분</th>
