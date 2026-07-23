@@ -65,6 +65,23 @@ describe('shockwave stats count utilities', () => {
     ]);
   });
 
+  it('can always filter prescriptions per therapist for the horizontal settlement view', () => {
+    const groups = buildTherapistPrescriptionDisplayGroups({
+      prescriptions: ['F2.0', 'F2.5', 'F3.0', 'F4.0'],
+      therapists: [{ name: '주한솔' }, { name: '신수민' }],
+      rows: [
+        { therapist_name: '주한솔', prescription: 'F2.5', prescription_count: 2 },
+        { therapist_name: '신수민', prescription: 'F4.0', prescription_count: 1 },
+      ],
+      sharedPrescriptionLimit: 0,
+    });
+
+    assert.deepEqual(groups.map((group) => group.prescriptions), [
+      ['F2.5'],
+      ['F4.0'],
+    ]);
+  });
+
   it('uses the three most common prescriptions for a therapist with no treatments', () => {
     const groups = buildTherapistPrescriptionDisplayGroups({
       prescriptions: ['F2.0', 'F2.5', 'F3.0', 'F4.0', 'F4.0 DC'],

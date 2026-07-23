@@ -1521,11 +1521,12 @@
 .sw-stats-body--settlement .sw-settlement-stack--shockwave .sw-grand-total-card {
   border: 0 !important;
   box-shadow: none !important;
-  padding: 0 !important;
+  padding: 18px 0 0 !important;
 }
 
 .sw-grand-total-card .sw-settlement-header,
 .sw-recent-summary-card .sw-settlement-header {
+  min-height: 36px;
   padding-bottom: 2px;
 }
 
