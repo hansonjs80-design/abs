@@ -1809,6 +1809,11 @@
   print-color-adjust: exact !important;
 }
 
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row td.incentive-val:last-child,
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table tbody tr.grand-total-row td.incentive-val:last-child {
+  color: #9a3412 !important;
+}
+
 @media print {
   html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print :is(
     #root,
@@ -1886,5 +1891,12 @@
     background: #bedcb1 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row td.incentive-val:last-child,
+  body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table tbody tr.grand-total-row td.incentive-val:last-child,
+  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row td.incentive-val:last-child,
+  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table tbody tr.grand-total-row td.incentive-val:last-child {
+    color: #9a3412 !important;
   }
 }
