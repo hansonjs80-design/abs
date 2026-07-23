@@ -87,6 +87,7 @@ function cleanupPrintState() {
   document.body.classList.remove('settlement-print');
   document.body.classList.remove('manual-settlement-print');
   document.body.classList.remove('shockwave-settlement-print');
+  document.body.classList.remove('vertical-settlement-print');
   delete document.body.dataset.calendarWeeks;
   restoreHiddenMemoRows();
 }
@@ -154,8 +155,11 @@ export default function PrintButton({ isStaffSchedule }) {
 
   const handlePrint = (orientation, calendarOnly = false, forceWeeks = null) => {
     const isNewPatientPortraitPrint = !calendarOnly && orientation === 'portrait' && Boolean(document.querySelector('.sw-new-patient-table'));
-    const isSettlementPrint = !calendarOnly && Boolean(document.querySelector(
-      '.sw-settlement-table, .sw-settlement-stack--shockwave, .sw-manual-settlement-stack',
+    const isVerticalSettlementPrint = !calendarOnly && Boolean(document.querySelector(
+      '.sw-settlement-stack--shockwave.sw-settlement-stack--vertical',
+    ));
+    const isSettlementPrint = !calendarOnly && !isVerticalSettlementPrint && Boolean(document.querySelector(
+      '.sw-settlement-table, .sw-manual-settlement-stack',
     ));
     const printMargin = isNewPatientPortraitPrint
       ? '8mm 5mm 6mm'
@@ -167,6 +171,7 @@ export default function PrintButton({ isStaffSchedule }) {
       document.body.classList.remove('settlement-print');
       document.body.classList.remove('manual-settlement-print');
       document.body.classList.remove('shockwave-settlement-print');
+      document.body.classList.remove('vertical-settlement-print');
       document.body.classList.add('calendar-only-print');
 
       // 주차 수 결정
@@ -196,10 +201,18 @@ export default function PrintButton({ isStaffSchedule }) {
         document.body.classList.remove('settlement-print');
         document.body.classList.remove('manual-settlement-print');
         document.body.classList.remove('shockwave-settlement-print');
+        document.body.classList.remove('vertical-settlement-print');
+      } else if (isVerticalSettlementPrint) {
+        document.body.classList.remove('new-patient-print');
+        document.body.classList.remove('settlement-print');
+        document.body.classList.remove('manual-settlement-print');
+        document.body.classList.remove('shockwave-settlement-print');
+        document.body.classList.add('vertical-settlement-print');
       } else if (isSettlementPrint) {
         const isManualSettlementPrint = Boolean(document.querySelector('.sw-manual-settlement-stack'));
         const isShockwaveSettlementPrint = Boolean(document.querySelector('.sw-settlement-stack--shockwave'));
         document.body.classList.remove('new-patient-print');
+        document.body.classList.remove('vertical-settlement-print');
         document.body.classList.add('settlement-print');
         document.body.classList.toggle('manual-settlement-print', isManualSettlementPrint);
         document.body.classList.toggle('shockwave-settlement-print', isShockwaveSettlementPrint);
@@ -208,6 +221,7 @@ export default function PrintButton({ isStaffSchedule }) {
         document.body.classList.remove('settlement-print');
         document.body.classList.remove('manual-settlement-print');
         document.body.classList.remove('shockwave-settlement-print');
+        document.body.classList.remove('vertical-settlement-print');
       }
     }
     

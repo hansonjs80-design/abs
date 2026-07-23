@@ -369,12 +369,17 @@ export default function ShockwaveSettlementView({
       ) : (
         <>
         <div className="sw-settlement-vertical-layout">
-          <div className="sw-settlement-vertical-header-wrap">
-            <div className="sw-settlement-header">
-              <h2>{currentMonth}월 충격파 결산</h2>
-              <div className="sw-settlement-meta">
-                <span>인센티브 {Number(incentivePercentage) || 0}%</span>
+          <div className="sw-settlement-vertical-heading-row">
+            <div className="sw-settlement-vertical-header-wrap">
+              <div className="sw-settlement-header">
+                <h2>{currentMonth}월 충격파 결산</h2>
+                <div className="sw-settlement-meta">
+                  <span>인센티브 {Number(incentivePercentage) || 0}%</span>
+                </div>
               </div>
+            </div>
+            <div className="sw-settlement-header sw-settlement-vertical-summary-heading">
+              <h2>{currentMonth}월 총 결산</h2>
             </div>
           </div>
 
@@ -429,9 +434,6 @@ export default function ShockwaveSettlementView({
             <div className="sw-settlement-vertical-right">
               {/* [월] 총 결산 */}
               <div className="sw-settlement-card sw-vertical-summary-card">
-                <div className="sw-settlement-header">
-                  <h2>{currentMonth}월 총 결산</h2>
-                </div>
                 <div className="sw-settlement-table-wrap">
                   <table className="sw-vertical-summary-table">
                     <thead>

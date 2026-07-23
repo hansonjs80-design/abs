@@ -499,8 +499,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   }
 
   .sw-grid-card-header,
-  body:not(.new-patient-print):not(.settlement-print) .sw-settlement-header,
-  body:not(.new-patient-print):not(.settlement-print) .sw-settlement-meta {
+  body:not(.new-patient-print):not(.settlement-print):not(.vertical-settlement-print) .sw-settlement-header,
+  body:not(.new-patient-print):not(.settlement-print):not(.vertical-settlement-print) .sw-settlement-meta {
     display: none !important;
   }
 

@@ -283,13 +283,21 @@
   height: 0 !important;
 }
 
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-heading-row,
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-body {
   display: grid !important;
   grid-template-columns: minmax(398px, 459px) minmax(370px, 437px) !important;
   gap: 24px !important;
-  align-items: start !important;
   justify-content: start !important;
   width: 100% !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-heading-row {
+  align-items: end !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-body {
+  align-items: start !important;
 }
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-left,
@@ -312,11 +320,27 @@
 }
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-header-wrap {
-  width: min(100%, 459px) !important;
-  max-width: 459px !important;
+  width: 100% !important;
+  max-width: 100% !important;
   border: 0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-summary-heading {
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-summary-heading h2 {
+  margin: 0 !important;
+  color: #1d4ed8 !important;
+  font-size: 16px !important;
+  line-height: 1.2 !important;
+  font-weight: 900 !important;
 }
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-card,
