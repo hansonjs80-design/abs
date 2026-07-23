@@ -5,6 +5,7 @@ import { normalizeNameForMatch } from '../../lib/memoParser';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 import { getTodayKST } from '../../lib/calendarUtils';
 import {
+  buildTherapistPrescriptionDisplayGroups,
   buildShockwaveCountSummaries,
   toStatsPrescriptionCount,
 } from '../../lib/shockwaveStatsCountUtils';
@@ -154,6 +155,30 @@ export default function ShockwaveDataGrid({
     // 모두 0건이면 전체 처방 표시 (빈 테이블 방지)
     return filtered.length > 0 ? filtered : allPrescriptions;
   }, [allPrescriptions, safeInputLogs]);
+  const therapistPrescriptionGroups = useMemo(
+    () => buildTherapistPrescriptionDisplayGroups({
+      rows: safeInputLogs,
+      prescriptions,
+      therapists: visibleTherapists,
+    }),
+    [prescriptions, safeInputLogs, visibleTherapists]
+  );
+  const therapistPrescriptionColumns = useMemo(
+    () => therapistPrescriptionGroups.flatMap((group, therapistIndex) => (
+      group.prescriptions.map((prescription, prescriptionIndex) => ({
+        therapist: group.therapist,
+        therapistIndex,
+        prescription,
+        isGroupStart: prescriptionIndex === 0,
+        isGroupEnd: prescriptionIndex === group.prescriptions.length - 1,
+      }))
+    )),
+    [therapistPrescriptionGroups]
+  );
+  const getTherapistPrescriptionColumn = useCallback(
+    (colIndex) => therapistPrescriptionColumns[colIndex - FIXED_FIELDS.length] || null,
+    [therapistPrescriptionColumns]
+  );
   const gridTitle = title || `${currentYear}년 ${String(currentMonth).padStart(2, '0')}월 충격파 현황`;
   const runSyncForDate = useCallback(async () => {
     // 통계/현황 탭은 스케줄 표를 다시 쓰지 않는다.
@@ -291,7 +316,7 @@ export default function ShockwaveDataGrid({
 
   const frozenColumnCount = 0;
 
-  const totalCountColIndex = FIXED_FIELDS.length + visibleTherapists.length * prescriptions.length;
+  const totalCountColIndex = FIXED_FIELDS.length + therapistPrescriptionColumns.length;
   const newPatientColIndex = totalCountColIndex + 1;
   const totalColCount = newPatientColIndex + 1;
   const therapistColumnWidth = useMemo(() => {
@@ -303,9 +328,9 @@ export default function ShockwaveDataGrid({
   }, [visibleTherapists.length]);
   const gridMinWidth = useMemo(() => {
     const fixedWidth = FIXED_FIELDS.reduce((sum, field) => sum + field.w, 0);
-    const therapistWidth = visibleTherapists.length * prescriptions.length * therapistColumnWidth;
+    const therapistWidth = therapistPrescriptionColumns.length * therapistColumnWidth;
     return fixedWidth + therapistWidth + SUMMARY_COL_WIDTH * 2;
-  }, [visibleTherapists.length, prescriptions.length, therapistColumnWidth]);
+  }, [therapistPrescriptionColumns.length, therapistColumnWidth]);
   const getColumnWidth = useCallback((colIndex) => {
     if (colIndex < FIXED_FIELDS.length) return FIXED_FIELDS[colIndex]?.w || 48;
     if (colIndex >= FIXED_FIELDS.length && colIndex < totalCountColIndex) return therapistColumnWidth;
@@ -328,12 +353,12 @@ export default function ShockwaveDataGrid({
   const isTherapistGroupStartCol = (colIdx) => (
     colIdx >= FIXED_FIELDS.length &&
     colIdx < totalCountColIndex &&
-    (colIdx - FIXED_FIELDS.length) % prescriptions.length === 0
+    getTherapistPrescriptionColumn(colIdx)?.isGroupStart
   );
   const isTherapistGroupEndCol = (colIdx) => (
     colIdx >= FIXED_FIELDS.length &&
     colIdx < totalCountColIndex &&
-    (colIdx - FIXED_FIELDS.length) % prescriptions.length === prescriptions.length - 1
+    getTherapistPrescriptionColumn(colIdx)?.isGroupEnd
   );
   const isBlankValue = (value) => value == null || String(value).trim() === '';
   const isRowEmpty = (row) => ROW_DATA_FIELDS.every((field) => isBlankValue(row?.[field]));
@@ -353,12 +378,13 @@ export default function ShockwaveDataGrid({
 
   const getTherapistCountTooltip = useCallback((row, colIdx) => {
     if (!row?.date || colIdx < FIXED_FIELDS.length || colIdx >= totalCountColIndex) return null;
-    const tIdx = Math.floor((colIdx - FIXED_FIELDS.length) / prescriptions.length);
-    const therapist = visibleTherapists[tIdx];
+    const column = getTherapistPrescriptionColumn(colIdx);
+    const therapist = column?.therapist;
+    const tIdx = column?.therapistIndex;
     if (!therapist) return null;
     const summary = dateSummaries.get(row.date);
     const counts = summary?.byTherapistPrescription?.[therapist.name] || {};
-    const items = prescriptions
+    const items = (therapistPrescriptionGroups[tIdx]?.prescriptions || [])
       .map(p => ({ label: p, count: Number(counts[p]) || 0 }))
       .filter(item => item.count > 0);
     const totalCount = items.reduce((sum, item) => sum + item.count, 0);
@@ -371,7 +397,13 @@ export default function ShockwaveDataGrid({
       totalCount,
       items,
     };
-  }, [dateSummaries, formatFullDateLabel, prescriptions, totalCountColIndex, visibleTherapists]);
+  }, [
+    dateSummaries,
+    formatFullDateLabel,
+    getTherapistPrescriptionColumn,
+    therapistPrescriptionGroups,
+    totalCountColIndex,
+  ]);
 
   // ─── 2. CELL VALUE HELPERS ────────────────────────────────
   const getVal = (row, colIdx) => {
@@ -396,11 +428,10 @@ export default function ShockwaveDataGrid({
       if (!row._isFirst) return '';
       return dateSummaries.get(row.date)?.newPatient || '';
     }
-    const tIdx = Math.floor((colIdx - FIXED_FIELDS.length) / prescriptions.length);
-    const pIdx = (colIdx - FIXED_FIELDS.length) % prescriptions.length;
-    const t = visibleTherapists[tIdx];
+    const column = getTherapistPrescriptionColumn(colIdx);
+    const t = column?.therapist;
     if (!t) return '';
-    const pres = prescriptions[pIdx];
+    const pres = column.prescription;
     if (row.therapist_name === t.name && prescriptionsMatch(row.prescription, pres)) {
       return (row.prescription_count !== null && row.prescription_count !== undefined) ? row.prescription_count : '1';
     }
@@ -706,11 +737,10 @@ export default function ShockwaveDataGrid({
         if (error) throw error;
       }
     } else {
-      const tIdx = Math.floor((c - FIXED_FIELDS.length) / prescriptions.length);
-      const pIdx = (c - FIXED_FIELDS.length) % prescriptions.length;
-      const t = visibleTherapists[tIdx];
+      const column = getTherapistPrescriptionColumn(c);
+      const t = column?.therapist;
       if (!t) return;
-      const pres = prescriptions[pIdx];
+      const pres = column.prescription;
       const intVal = parseInt(val.trim(), 10) || 0;
 
       if (row.isDraft) {
@@ -935,11 +965,10 @@ export default function ShockwaveDataGrid({
             }
           }
         } else {
-          const tIdx = Math.floor((c - FIXED_FIELDS.length) / prescriptions.length);
-          const pIdx = (c - FIXED_FIELDS.length) % prescriptions.length;
-          const t = visibleTherapists[tIdx];
+          const column = getTherapistPrescriptionColumn(c);
+          const t = column?.therapist;
           if (!t) continue;
-          const pres = prescriptions[pIdx];
+          const pres = column.prescription;
           const expectedName = t.name;
           undoChanges.push({ id: row.id, field: 'prescription_stats', oldVal: { t: row.therapist_name, p: row.prescription, c: row.prescription_count }, newVal: { t: expectedName, p: pres, c: v } });
           if (!row.isDraft) {
@@ -1004,10 +1033,9 @@ export default function ShockwaveDataGrid({
           updatePayload[field] = '';
           undoChanges.push({ id: row.id, field, oldVal, newVal: '' });
         } else {
-          const tIdx = Math.floor((c - FIXED_FIELDS.length) / prescriptions.length);
-          const pIdx = (c - FIXED_FIELDS.length) % prescriptions.length;
-          const t = visibleTherapists[tIdx];
-          if (t && row.therapist_name === t.name && prescriptionsMatch(row.prescription, prescriptions[pIdx])) {
+          const column = getTherapistPrescriptionColumn(c);
+          const t = column?.therapist;
+          if (t && row.therapist_name === t.name && prescriptionsMatch(row.prescription, column.prescription)) {
             updatePayload.therapist_name = '';
             updatePayload.prescription = '';
             updatePayload.prescription_count = '';
@@ -1310,9 +1338,12 @@ export default function ShockwaveDataGrid({
       <table className="sw-grid-table" style={{ minWidth: `${gridMinWidth}px` }}>
         <colgroup>
           {FIXED_FIELDS.map((f) => <col key={f.id} style={{ width: f.w, minWidth: f.w }} />)}
-          {visibleTherapists.map(t => prescriptions.map(p => (
-            <col key={`${t.key}-${p}`} style={{ width: therapistColumnWidth, minWidth: therapistColumnWidth }} />
-          )))}
+          {therapistPrescriptionColumns.map((column) => (
+            <col
+              key={`${column.therapist.key}-${column.prescription}`}
+              style={{ width: therapistColumnWidth, minWidth: therapistColumnWidth }}
+            />
+          ))}
           <col style={{ width: SUMMARY_COL_WIDTH, minWidth: SUMMARY_COL_WIDTH }} />
           <col style={{ width: SUMMARY_COL_WIDTH, minWidth: SUMMARY_COL_WIDTH }} />
         </colgroup>
@@ -1341,9 +1372,9 @@ export default function ShockwaveDataGrid({
                 {f.label}
               </th>
             ))}
-            {visibleTherapists.map((t, idx) => (
-              <th key={`tn-${t.key}`} colSpan={prescriptions.length} className={`hdr-therapist ${idx > 0 ? 'therapist-group-start' : ''} therapist-group-end`} style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}>
-                {t.displayName} ( {therapistTotals[idx]?.total || 0}건 )
+            {therapistPrescriptionGroups.map((group, idx) => (
+              <th key={`tn-${group.therapist.key}`} colSpan={group.prescriptions.length} className={`hdr-therapist ${idx > 0 ? 'therapist-group-start' : ''} therapist-group-end`} style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}>
+                {group.therapist.displayName} ( {therapistTotals[idx]?.total || 0}건 )
               </th>
             ))}
             <th rowSpan={2} className="hdr-total total-group-start">총건수</th>
@@ -1352,8 +1383,8 @@ export default function ShockwaveDataGrid({
 
           {/* Row 3: Prescription Names */}
           <tr className="sw-header-row sw-header-row-prescriptions">
-            {visibleTherapists.map((t, idx) => prescriptions.map((p, pIdx) => (
-              <th key={`${t.key}-${pIdx}`} className={`hdr-pres ${pIdx === 0 ? 'therapist-group-start' : ''} ${pIdx === prescriptions.length - 1 ? 'therapist-group-end' : ''}`} style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}>
+            {therapistPrescriptionGroups.map((group, idx) => group.prescriptions.map((p, pIdx) => (
+              <th key={`${group.therapist.key}-${pIdx}`} className={`hdr-pres ${pIdx === 0 ? 'therapist-group-start' : ''} ${pIdx === group.prescriptions.length - 1 ? 'therapist-group-end' : ''}`} style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}>
                 {p}
               </th>
             )))}
@@ -1361,10 +1392,10 @@ export default function ShockwaveDataGrid({
 
           {/* Row 4: Column-wise totals (Prescription Totals + Grand Totals) */}
           <tr className="sw-header-row sw-header-row-prescription-totals">
-            {visibleTherapists.map((t, idx) => prescriptions.map((p, pIdx) => (
+            {therapistPrescriptionGroups.map((group, idx) => group.prescriptions.map((p, pIdx) => (
               <th
-                key={`${t.key}-${pIdx}-inner`}
-                className={`hdr-pres-total ${pIdx === 0 ? 'therapist-group-start' : ''} ${pIdx === prescriptions.length - 1 ? 'therapist-group-end' : ''}`}
+                key={`${group.therapist.key}-${pIdx}-inner`}
+                className={`hdr-pres-total ${pIdx === 0 ? 'therapist-group-start' : ''} ${pIdx === group.prescriptions.length - 1 ? 'therapist-group-end' : ''}`}
                 style={{ backgroundColor: THERAPIST_TOTAL_COLORS[idx % THERAPIST_TOTAL_COLORS.length] }}
               >
                 {therapistTotals[idx]?.byPres[p] || 0}

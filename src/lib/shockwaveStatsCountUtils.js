@@ -11,6 +11,72 @@ export function toStatsPrescriptionCount(value) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 
+export function buildTherapistPrescriptionDisplayGroups({
+  rows = [],
+  prescriptions = [],
+  therapists = [],
+  sharedPrescriptionLimit = 4,
+  emptyTherapistPrescriptionLimit = 3,
+} = {}) {
+  const safeRows = Array.isArray(rows) ? rows.filter(Boolean) : [];
+  const safePrescriptions = Array.isArray(prescriptions) ? prescriptions.filter(Boolean) : [];
+  const safeTherapists = Array.isArray(therapists) ? therapists.filter(Boolean) : [];
+
+  if (safePrescriptions.length <= sharedPrescriptionLimit) {
+    return safeTherapists.map((therapist) => ({
+      therapist,
+      prescriptions: [...safePrescriptions],
+    }));
+  }
+
+  const globalTotals = createEmptyPrescriptionCounts(safePrescriptions);
+  const totalsByTherapist = new Map(
+    safeTherapists.map((therapist) => [
+      therapist.name,
+      createEmptyPrescriptionCounts(safePrescriptions),
+    ])
+  );
+
+  safeRows.forEach((row) => {
+    const matchedPrescription = safePrescriptions.find((prescription) =>
+      statsPrescriptionsMatch(row?.prescription, prescription)
+    );
+    if (!matchedPrescription) return;
+
+    const count = toStatsPrescriptionCount(row?.prescription_count);
+    globalTotals[matchedPrescription] += count;
+
+    const therapistTotals = totalsByTherapist.get(row?.therapist_name);
+    if (therapistTotals) {
+      therapistTotals[matchedPrescription] += count;
+    }
+  });
+
+  const prescriptionOrder = new Map(
+    safePrescriptions.map((prescription, index) => [prescription, index])
+  );
+  const fallbackPrescriptions = [...safePrescriptions]
+    .sort((a, b) => (
+      (globalTotals[b] || 0) - (globalTotals[a] || 0) ||
+      (prescriptionOrder.get(a) || 0) - (prescriptionOrder.get(b) || 0)
+    ))
+    .slice(0, Math.min(emptyTherapistPrescriptionLimit, safePrescriptions.length));
+
+  return safeTherapists.map((therapist) => {
+    const therapistTotals = totalsByTherapist.get(therapist.name) || {};
+    const usedPrescriptions = safePrescriptions.filter(
+      (prescription) => (therapistTotals[prescription] || 0) > 0
+    );
+
+    return {
+      therapist,
+      prescriptions: usedPrescriptions.length > 0
+        ? usedPrescriptions
+        : [...fallbackPrescriptions],
+    };
+  });
+}
+
 function createEmptyPrescriptionCounts(prescriptions) {
   return Object.fromEntries(prescriptions.map((prescription) => [prescription, 0]));
 }
