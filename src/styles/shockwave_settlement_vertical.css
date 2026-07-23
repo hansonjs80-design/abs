@@ -312,6 +312,8 @@
 }
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-header-wrap {
+  width: min(100%, 459px) !important;
+  max-width: 459px !important;
   border: 0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -1843,6 +1845,14 @@
 }
 
 @media print {
+  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-header-wrap,
+  html[data-print-orientation="portrait"] body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-header-wrap {
+    width: var(--sw-print-left-width) !important;
+    max-width: var(--sw-print-left-width) !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+
   body.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-recent-card .sw-summary-table thead th,
   body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-recent-card .sw-summary-table thead th {
     background: #9fc5e8 !important;

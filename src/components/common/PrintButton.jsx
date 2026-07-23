@@ -154,7 +154,9 @@ export default function PrintButton({ isStaffSchedule }) {
 
   const handlePrint = (orientation, calendarOnly = false, forceWeeks = null) => {
     const isNewPatientPortraitPrint = !calendarOnly && orientation === 'portrait' && Boolean(document.querySelector('.sw-new-patient-table'));
-    const isSettlementPrint = !calendarOnly && Boolean(document.querySelector('.sw-settlement-table'));
+    const isSettlementPrint = !calendarOnly && Boolean(document.querySelector(
+      '.sw-settlement-table, .sw-settlement-stack--shockwave, .sw-manual-settlement-stack',
+    ));
     const printMargin = isNewPatientPortraitPrint
       ? '8mm 5mm 6mm'
       : (isSettlementPrint ? (orientation === 'portrait' ? '4mm' : '5mm') : '6mm');
