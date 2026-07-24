@@ -15,6 +15,7 @@
   --sw-time-font-weight: 700;
   --sw-header-font-size: 16px;
   --sw-therapist-font-size: 14px;
+  --sw-text-optical-center-offset: 0.06em;
   --sw-grid-line: #b7b7b7;
   --sw-mobile-grid-line: rgba(82, 82, 82, 0.56);
   --sw-mobile-strong-line: #000000;
@@ -559,9 +560,9 @@
   vertical-align: baseline;
 }
 
-.sw-cell-main > span:first-child {
+.sw-cell-text {
   display: inline-block;
-  transform: translateY(0.025em);
+  transform: translateY(var(--sw-text-optical-center-offset));
 }
 
 .sw-cell-visit-paren,
@@ -575,7 +576,7 @@
 }
 
 .sw-cell-visit-number {
-  transform: translateY(0.012em);
+  transform: translateY(var(--sw-text-optical-center-offset));
 }
 
 .sw-cell-visit-suffix--empty {
@@ -866,6 +867,12 @@
   white-space: nowrap;
   letter-spacing: 0;
   line-height: 0.95;
+}
+
+.sw-time-label-text {
+  display: inline-block;
+  line-height: 1;
+  transform: translateY(var(--sw-text-optical-center-offset));
 }
 
 .sw-time-label.hidden {

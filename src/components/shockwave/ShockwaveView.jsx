@@ -2600,7 +2600,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                   <div className="sw-therapist-header-wrapper" style={{ position: 'relative' }}>
                     <div className="sw-therapist-header" style={{ gridTemplateColumns: gridCols }}>
                       {showTimeCol && (
-                        <div className="sw-time-label" style={{ borderBottom: 'none' }}>시간</div>
+                        <div className="sw-time-label" style={{ borderBottom: 'none' }}>
+                          <span className="sw-time-label-text">시간</span>
+                        </div>
                       )}
                       {Array.from({ length: colCount }, (_, ci) => {
                         let nameClass = 'sw-therapist-name';
@@ -2681,7 +2683,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                               onMouseMove={(e) => handleTimeLabelMouseMove(e, weekIdx, dayIdx, slotRenderIndex, labelSpan, daySlots)}
                               onMouseLeave={handleTimeLabelMouseLeave}
                             >
-                              {displayTimeLabel}
+                              <span className="sw-time-label-text">{displayTimeLabel}</span>
                             </div>
                           );
                         }
