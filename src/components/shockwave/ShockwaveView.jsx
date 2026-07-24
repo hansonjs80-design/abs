@@ -9,6 +9,10 @@ import {
 } from '../../lib/contextMenuDismissUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import { buildBlankScheduleCleanupPayload, sanitizeBlankScheduleCellData } from '../../lib/scheduleBlankCellCleanupUtils';
+import {
+  MAX_SCHEDULE_TIME_COL_WIDTH,
+  MIN_SCHEDULE_TIME_COL_WIDTH,
+} from '../../lib/scheduleGridSizeUtils';
 import { markIntentionalClearPayload } from '../../lib/scheduleMergeUtils';
 import { buildClearReservationGroupPayload, getReservationGroupFromMergeSpan, selectionHasReservationGroup } from '../../lib/scheduleReservationGroupUtils';
 import { isTreatmentCancelBg, isTreatmentCompleteBg } from '../../lib/scheduleStatusUtils';
@@ -74,7 +78,6 @@ import {
 } from './shockwaveViewUtils';
 import {
   HORIZONTAL_BORDER_COLOR,
-  TIME_COL_WIDTH,
   TREATMENT_COMPLETE_BG,
   TREATMENT_CANCEL_BG,
   SCHEDULER_HOLIDAY_BG,
@@ -385,10 +388,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     activeColRatios,
     dayColWidth,
     rowHeight,
+    timeColWidth,
     resetColRatios,
+    resetTimeColWidth,
+    resizeTimeColWidthBy,
     startColResize,
     startDayResize,
     startRowResize,
+    startTimeColResize,
     therapistColsCSS,
     isDeviceSettingsLoading,
   } = useScheduleResizeState({ colCount });
@@ -2478,6 +2485,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
           '--sw-therapist-row-height': `${effectiveSchedulerTextSettings.therapist_height}px`,
           '--sw-therapist-cols': therapistColsCSS,
           '--sw-day-col-width': dayColWidth ? `${dayColWidth}px` : 'none',
+          '--sw-time-col-width': `${timeColWidth}px`,
         }}
         onMouseLeave={() => setHoverCell(null)}
         onMouseMove={(e) => {
@@ -2497,7 +2505,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         if (isDeviceSettingsLoading) return null;
         return weeks.map((weekDays, weekIdx) => {
           const daysContainerWidth = dayColWidth
-            ? dayColWidth * weekDays.length + TIME_COL_WIDTH + 4
+            ? dayColWidth * weekDays.length + timeColWidth + 4
             : null;
         return (
         <div
@@ -2552,7 +2560,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
               // 첫 번째 요일에만 시간 열 표사
               const showTimeCol = dayIdx === 0;
               const gridCols = showTimeCol
-                ? `${TIME_COL_WIDTH}px ${therapistColsCSS}`
+                ? `${timeColWidth}px ${therapistColsCSS}`
                 : therapistColsCSS;
               const interval = Math.max(1, Number(settings?.interval_minutes) || 10);
               const labelInterval = Math.max(interval, Number(settings?.time_label_interval_minutes) || interval);
@@ -2570,8 +2578,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
               else if (isToday) headerClass += ' today';
               else if (dayInfo.dow === 6) headerClass += ' saturday';
 
-              const targetColWidth = showTimeCol && dayColWidth ? dayColWidth + TIME_COL_WIDTH : dayColWidth;
-              const flexBasis = showTimeCol ? TIME_COL_WIDTH : 0;
+              const targetColWidth = showTimeCol && dayColWidth ? dayColWidth + timeColWidth : dayColWidth;
+              const flexBasis = showTimeCol ? timeColWidth : 0;
               const dayFlexStyle = targetColWidth
                 ? { flex: `0 0 ${targetColWidth}px`, width: `${targetColWidth}px`, minWidth: 0 }
                 : { flex: `1 1 ${flexBasis}px`, minWidth: 0 };
@@ -2611,7 +2619,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                       const ratios = activeColRatios || Array(colCount).fill(1);
                       const totalR = ratios.reduce((a, b) => a + b, 0);
                       const leftPct = ratios.slice(0, ci + 1).reduce((a, b) => a + b, 0) / totalR * 100;
-                      const timeColPx = showTimeCol ? TIME_COL_WIDTH : 0;
+                      const timeColPx = showTimeCol ? timeColWidth : 0;
                       return (
                         <div
                           key={`col-resize-${ci}`}
@@ -2761,6 +2769,31 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                     })}
                   </div>
 
+                  {showTimeCol && (
+                    <div
+                      className="sw-time-col-resize-handle"
+                      role="separator"
+                      aria-orientation="vertical"
+                      aria-label={`시간 열 너비 조절, 현재 ${timeColWidth}px`}
+                      aria-valuemin={MIN_SCHEDULE_TIME_COL_WIDTH}
+                      aria-valuemax={MAX_SCHEDULE_TIME_COL_WIDTH}
+                      aria-valuenow={timeColWidth}
+                      title={`시간 열 너비 조절 (${timeColWidth}px) · 더블클릭: 기본 너비`}
+                      tabIndex={0}
+                      style={{ left: `${timeColWidth}px` }}
+                      onMouseDown={startTimeColResize}
+                      onTouchStart={startTimeColResize}
+                      onDoubleClick={resetTimeColWidth}
+                      onKeyDown={(event) => {
+                        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const direction = event.key === 'ArrowLeft' ? -1 : 1;
+                        resizeTimeColWidthBy(direction * (event.shiftKey ? 5 : 1));
+                      }}
+                    />
+                  )}
+
                   {(
                     <div
                       className="sw-day-resize-handle"
@@ -2784,9 +2817,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         );
       });
       }, [
-        isDeviceSettingsLoading, weeks, dayColWidth, todayWeekIdx, today, getTimeSlotsForDay,
+        isDeviceSettingsLoading, weeks, dayColWidth, timeColWidth, todayWeekIdx, today, getTimeSlotsForDay,
         therapistColsCSS, colCount, getTherapistNameForDate, activeColRatios,
-        resetColRatios, startColResize, startDayResize, startRowResize,
+        resetColRatios, resetTimeColWidth, resizeTimeColWidthBy,
+        startColResize, startDayResize, startRowResize, startTimeColResize,
         renderMemos, renderPendingDisplayValues, renderPendingMergeSpans, renderPendingCellBgColors, reservationGroupEdgeMap, editingCell, imePreviewCell,
         selectedKeys, selectedCell, clipboardSource,
         getTherapistWorkState, getStaffScheduleBlockForCell,

@@ -8,6 +8,7 @@
 import { has4060Pattern } from './schedulerContentFormat.js';
 import { toProperCase } from './bodyPartFormatUtils.js';
 import { convertKoreanQwertyMistypeToEnglish } from './keyboardLayoutUtils.js';
+import { DEFAULT_SCHEDULE_TIME_COL_WIDTH } from './scheduleGridSizeUtils.js';
 import {
   appendSchedulerInlineNote,
   applyVisitCountToSchedulerContent,
@@ -48,10 +49,11 @@ export {
 
 // ── Constants ──
 export const HORIZONTAL_BORDER_COLOR = '#b7b7b7';
-export const TIME_COL_WIDTH = 41;
+export const TIME_COL_WIDTH = DEFAULT_SCHEDULE_TIME_COL_WIDTH;
 export const SHOCKWAVE_DAY_COL_WIDTH_KEY = 'shockwave-day-col-width';
 export const SHOCKWAVE_COL_RATIOS_KEY = 'shockwave-col-ratios';
 export const SHOCKWAVE_ROW_HEIGHT_KEY = 'shockwave-row-height';
+export const SHOCKWAVE_TIME_COL_WIDTH_KEY = 'shockwave-time-col-width';
 export const SHOCKWAVE_PENDING_DRAFTS_KEY = 'shockwave-pending-cell-drafts-v1';
 export const SHOCKWAVE_DELETED_DRAFTS_KEY = 'shockwave-deleted-cell-drafts-v1';
 export const SHOCKWAVE_PENDING_DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000;

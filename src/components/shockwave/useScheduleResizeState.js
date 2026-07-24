@@ -6,11 +6,13 @@ import {
   getDeviceSettingsIdentity,
 } from '../../lib/deviceSettingsIdentity';
 import { enqueueShockwaveSettingsJsonPatch } from '../../lib/shockwaveSettingsJsonSync';
+import { clampScheduleTimeColWidth } from '../../lib/scheduleGridSizeUtils';
 
 import {
   SHOCKWAVE_DAY_COL_WIDTH_KEY,
   SHOCKWAVE_COL_RATIOS_KEY,
   SHOCKWAVE_ROW_HEIGHT_KEY,
+  SHOCKWAVE_TIME_COL_WIDTH_KEY,
   TIME_COL_WIDTH,
 } from '../../lib/schedulerUtils';
 
@@ -27,7 +29,7 @@ const COL_RESIZE_CLICK_MOVE_TOLERANCE = 3;
 const SETTINGS_ROW_ID = '00000000-0000-0000-0000-000000000000';
 
 // DB에서 기기 설정 복원
-async function syncLoadDeviceSettings(setColRatios, setDayColWidth, setRowHeight) {
+async function syncLoadDeviceSettings(setColRatios, setDayColWidth, setRowHeight, setTimeColWidth) {
   try {
     const { data, error } = await supabase
       .from('shockwave_settings')
@@ -54,6 +56,14 @@ async function syncLoadDeviceSettings(setColRatios, setDayColWidth, setRowHeight
     }
     if (mySettings.rowHeight) {
       setRowHeight(mySettings.rowHeight);
+    }
+    if (
+      mySettings.timeColWidth !== null
+      && mySettings.timeColWidth !== undefined
+      && mySettings.timeColWidth !== ''
+      && Number.isFinite(Number(mySettings.timeColWidth))
+    ) {
+      setTimeColWidth(clampScheduleTimeColWidth(mySettings.timeColWidth));
     }
   } catch (err) {
     console.error('Failed to load device settings from DB:', err);
@@ -159,13 +169,21 @@ export default function useScheduleResizeState({ colCount }) {
   const [colRatios, setColRatios] = usePersistentJson(SHOCKWAVE_COL_RATIOS_KEY, null);
   const [dayColWidth, setDayColWidth] = usePersistentNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, 0);
   const [rowHeight, setRowHeight] = usePersistentNumber(SHOCKWAVE_ROW_HEIGHT_KEY, 23, MIN_SCHEDULE_ROW_HEIGHT);
+  const [storedTimeColWidth, setTimeColWidth] = usePersistentNumber(
+    SHOCKWAVE_TIME_COL_WIDTH_KEY,
+    TIME_COL_WIDTH,
+  );
+  const timeColWidth = useMemo(
+    () => clampScheduleTimeColWidth(storedTimeColWidth),
+    [storedTimeColWidth],
+  );
   const [isDeviceSettingsLoading, setIsDeviceSettingsLoading] = useState(true);
 
   // 마운트 시 서버 DB로부터 크기 동기화
   useEffect(() => {
     let active = true;
     async function load() {
-      await syncLoadDeviceSettings(setColRatios, setDayColWidth, setRowHeight);
+      await syncLoadDeviceSettings(setColRatios, setDayColWidth, setRowHeight, setTimeColWidth);
       if (active) {
         setIsDeviceSettingsLoading(false);
       }
@@ -174,7 +192,7 @@ export default function useScheduleResizeState({ colCount }) {
     return () => {
       active = false;
     };
-  }, [setColRatios, setDayColWidth, setRowHeight]);
+  }, [setColRatios, setDayColWidth, setRowHeight, setTimeColWidth]);
 
   // DB 백업용 래퍼 함수들
   const updateRowHeight = useCallback((newValue) => {
@@ -193,6 +211,17 @@ export default function useScheduleResizeState({ colCount }) {
     });
   }, [setDayColWidth]);
 
+  const updateTimeColWidth = useCallback((newValue) => {
+    setTimeColWidth(prev => {
+      const candidate = typeof newValue === 'function' ? newValue(prev) : newValue;
+      const next = clampScheduleTimeColWidth(candidate);
+      if (next !== prev) {
+        syncSaveDeviceSettings({ timeColWidth: next });
+      }
+      return next;
+    });
+  }, [setTimeColWidth]);
+
   const updateColRatios = useCallback((newValue) => {
     setColRatios(prev => {
       const next = typeof newValue === 'function' ? newValue(prev) : newValue;
@@ -204,6 +233,7 @@ export default function useScheduleResizeState({ colCount }) {
   const colResizeRef = useRef({ active: false, colIdx: -1, startX: 0, startRatios: [], containerWidth: 0 });
   const colResizeClickRef = useRef({ time: 0, colIdx: -1, moved: false });
   const dayResizeRef = useRef({ active: false, startX: 0 });
+  const timeResizeRef = useRef({ active: false, startX: 0, startWidth: TIME_COL_WIDTH });
   const rowResizeRef = useRef({ active: false, startY: 0, startHeight: 23 });
 
   const activeColRatios = useMemo(() => {
@@ -222,6 +252,65 @@ export default function useScheduleResizeState({ colCount }) {
     event?.stopPropagation?.();
     updateColRatios(Array(colCount).fill(1));
   }, [colCount, updateColRatios]);
+
+  const resetTimeColWidth = useCallback((event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    updateTimeColWidth(TIME_COL_WIDTH);
+  }, [updateTimeColWidth]);
+
+  const resizeTimeColWidthBy = useCallback((delta) => {
+    updateTimeColWidth((currentWidth) => currentWidth + delta);
+  }, [updateTimeColWidth]);
+
+  const startTimeColResize = useCallback((event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!shouldStartMobileResize(event)) return;
+    if (event.type === 'mousedown' && event.detail > 1) {
+      resetTimeColWidth(event);
+      return;
+    }
+
+    const startPoint = getPointerClient(event);
+    const startWidth = clampScheduleTimeColWidth(timeColWidth);
+    timeResizeRef.current = { active: true, startX: startPoint.x, startWidth };
+    let latestWidth = startWidth;
+    let didResize = false;
+
+    const onMove = (moveEvent) => {
+      moveEvent.preventDefault?.();
+      if (!timeResizeRef.current.active) return;
+      const point = getPointerClient(moveEvent);
+      const delta = point.x - timeResizeRef.current.startX;
+      const nextWidth = clampScheduleTimeColWidth(timeResizeRef.current.startWidth + delta);
+      if (nextWidth === latestWidth) return;
+      didResize = true;
+      latestWidth = nextWidth;
+      updateTimeColWidth(nextWidth);
+    };
+
+    const onUp = (upEvent) => {
+      timeResizeRef.current.active = false;
+      if (didResize) {
+        updateTimeColWidth(latestWidth);
+        maybeLockMobileResize(upEvent);
+      }
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onUp);
+      window.removeEventListener('touchcancel', onUp);
+      window.removeEventListener('blur', onUp);
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onUp);
+    window.addEventListener('touchcancel', onUp);
+    window.addEventListener('blur', onUp);
+  }, [resetTimeColWidth, timeColWidth, updateTimeColWidth]);
 
   const startRowResize = useCallback((event) => {
     event.preventDefault();
@@ -350,7 +439,7 @@ export default function useScheduleResizeState({ colCount }) {
     const dayElement = event.currentTarget.closest('.shockwave-day');
     const currentDayWidth = dayElement?.getBoundingClientRect().width || minDayWidth;
     const normalizedDayWidth = showTimeCol
-      ? Math.max(minDayWidth, currentDayWidth - TIME_COL_WIDTH)
+      ? Math.max(minDayWidth, currentDayWidth - timeColWidth)
       : currentDayWidth;
     dayResizeRef.current = { active: true, startX: startPoint.x };
     let latestWidth = dayColWidth || normalizedDayWidth;
@@ -379,18 +468,22 @@ export default function useScheduleResizeState({ colCount }) {
     window.addEventListener('touchend', onUp);
     window.addEventListener('touchcancel', onUp);
     window.addEventListener('blur', onUp);
-  }, [dayColWidth, updateDayColWidth]);
+  }, [dayColWidth, timeColWidth, updateDayColWidth]);
 
   return {
     activeColRatios,
     dayColWidth,
     rowHeight,
+    timeColWidth,
     setRowHeight: updateRowHeight,
     setDayColWidth: updateDayColWidth,
     resetColRatios,
+    resetTimeColWidth,
+    resizeTimeColWidthBy,
     startColResize,
     startDayResize,
     startRowResize,
+    startTimeColResize,
     therapistColsCSS,
     isDeviceSettingsLoading,
   };

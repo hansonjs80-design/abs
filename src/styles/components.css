@@ -475,7 +475,12 @@
 }
 
 .top-tab:not(.active):hover {
-  background: var(--tab-hover-bg);
+  background: var(--tab-active-surface, #ffffff);
+  color: var(--tab-active-border);
+  border-top: 3px solid var(--tab-active-border);
+  border-right-color: rgba(0, 0, 0, 0.08);
+  border-left-color: rgba(0, 0, 0, 0.08);
+  border-bottom-color: var(--tab-active-surface, #ffffff);
   opacity: 1;
   padding: 7px 20px 5px;
   transform: translateY(0); /* 축소된 헤더에서도 아래 선과 틈 없이 맞춤 */

@@ -393,6 +393,40 @@
   background: rgba(66, 133, 244, 0.5);
 }
 
+/* 시간 열 우측 경계 너비 조정 핸들 */
+.sw-time-col-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  padding: 0;
+  border: 0;
+  transform: translateX(-4px);
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 90;
+  background: transparent;
+  outline: none;
+}
+
+.sw-time-col-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 2px;
+  background: rgba(37, 99, 235, 0);
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.sw-time-col-resize-handle:hover::after,
+.sw-time-col-resize-handle:active::after,
+.sw-time-col-resize-handle:focus-visible::after {
+  background: rgba(37, 99, 235, 0.72);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.72);
+}
+
 /* 날짜 열 너비 조정 핸들 */
 .sw-day-resize-handle {
   position: absolute;
@@ -906,8 +940,8 @@
 }
 
 .shockwave-day.is-today.has-time-col::after {
-  /* 41px (TIME_COL_WIDTH) 만큼 시간표 영역을 제외하고 테두리 적용 */
-  left: calc(41px - 3px);
+  /* 현재 기기의 시간 열 너비만큼 시간표 영역을 제외하고 테두리 적용 */
+  left: calc(var(--sw-time-col-width, 41px) - 3px);
 }
 
 @media (max-width: 1200px) {
