@@ -314,7 +314,7 @@
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   gap: 16px;
-  padding: 1px 24px 0px;
+  padding: 0 24px;
   transition: all var(--transition-normal);
 }
 
@@ -331,7 +331,7 @@
       env(titlebar-area-x, 0px) -
       env(titlebar-area-width, 100vw)
     );
-    min-height: max(50px, env(titlebar-area-height, 0px));
+    min-height: max(44px, env(titlebar-area-height, 0px));
     padding-left: max(24px, var(--wco-left-reserve));
     padding-right: max(24px, calc(var(--wco-right-reserve) + 8px));
     -webkit-app-region: drag;
@@ -369,17 +369,20 @@
 .top-tabs-actions {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
-  padding-bottom: 9px;
+  margin-right: 12px;
+  margin-left: auto;
+  padding-bottom: 2px;
   flex: 0 0 auto;
-  transform: translateY(15px);
+  transform: translateY(8px);
 }
 
 .top-tabs {
   position: relative;
   z-index: 20;
   min-width: 0;
-  padding: 3px 0 0;
+  padding: 1px 0 0;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -407,13 +410,16 @@
 }
 
 .top-tabs-current-date {
+  flex: 0 0 13.25em;
   margin-right: 6px;
   color: #111827;
   font-size: clamp(1.18rem, 1.45vw, 1.58rem);
   font-weight: 900;
   line-height: 1.05;
   white-space: nowrap;
+  text-align: right;
   letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .top-tabs-actions .print-toggle {
@@ -440,10 +446,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  min-height: 38px;
+  min-height: 32px;
   margin-left: 0;
   margin-bottom: 0px;
-  padding: 8px 20px 6px;
+  padding: 6px 20px 4px;
   border: 1px solid rgba(0, 0, 0, 0.06);
   border-bottom: 0;
   background-clip: padding-box;
@@ -471,8 +477,8 @@
 .top-tab:not(.active):hover {
   background: var(--tab-hover-bg);
   opacity: 1;
-  padding: 10px 20px 8px;
-  transform: translateY(1px); /* hover 시에도 아래 선과 틈 없이 닿도록 하향 조정 */
+  padding: 7px 20px 5px;
+  transform: translateY(0); /* 축소된 헤더에서도 아래 선과 틈 없이 맞춤 */
   box-shadow: 
     0 -2px 8px rgba(0, 0, 0, 0.04),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -588,6 +594,7 @@
 
 .top-tab:not(.active) .tab-content-active {
   max-width: 0;
+  height: 0;
   opacity: 0;
   pointer-events: none;
 }
@@ -626,8 +633,8 @@
   border-bottom: 2px solid var(--tab-active-surface, #ffffff); /* slightly thicker to fully cover shell border */
   border-top: 3px solid var(--tab-active-border);
   margin-bottom: -2.5px; /* perfectly overlap and cover shell border */
-  padding: 12px 24px 10px;
-  min-height: 48px;
+  padding: 9px 24px 7px;
+  min-height: 41px;
   transform: none;
   box-shadow: 0 -4px 8px -2px rgba(0, 0, 0, 0.08);
   z-index: 40;
@@ -814,11 +821,11 @@
 
 .top-tab.month-tab {
   gap: 7px;
-  padding: 6px 16px 6px 12px;
+  padding: 4px 16px 4px 12px;
 }
 
 .top-tab.month-tab.active {
-  padding: 7px 20px 3px 14px;
+  padding: 5px 20px 2px 14px;
 }
 
 .month-picker.tab-variant {
@@ -881,6 +888,7 @@
 
   .top-tabs-actions {
     gap: 0;
+    margin-right: 0;
     padding-bottom: 6px;
     flex: 0 0 auto;
     transform: translateY(10px);
