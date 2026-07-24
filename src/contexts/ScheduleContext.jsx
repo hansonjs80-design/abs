@@ -46,6 +46,7 @@ import {
   wasScheduleDraftDeletedAfter,
 } from '../lib/schedulerUtils';
 import { saveMonthlyTherapistConfigs } from '../lib/monthlyTherapistPersistence';
+import { saveTherapistRosterSafely } from '../lib/therapistRosterPersistence';
 
 const ScheduleContext = createContext();
 const LOCAL_WRITE_STALE_GUARD_MS = 1200;
@@ -250,6 +251,10 @@ export function ScheduleProvider({ children }) {
   const monthlyTherapistSaveRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
   const therapistRosterLoadRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
   const therapistRosterSaveRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
+  const therapistRosterSaveQueueRef = useRef({
+    shockwave: Promise.resolve(),
+    manual_therapy: Promise.resolve(),
+  });
   const noticesLoadRequestRef = useRef(0);
   const noticeSaveRequestRef = useRef(new Map());
   const holidaysLoadRequestRef = useRef(0);
@@ -915,53 +920,30 @@ export function ScheduleProvider({ children }) {
     const requestKey = type === 'manual_therapy' ? 'manual_therapy' : 'shockwave';
     const requestId = (therapistRosterSaveRequestRef.current[requestKey] || 0) + 1;
     therapistRosterSaveRequestRef.current[requestKey] = requestId;
-    try {
-      const { error: deactivateError } = await supabase
-        .from(tableName)
-        .update({ is_active: false })
-        .eq('is_active', true);
-
-      if (deactivateError) throw deactivateError;
-
-      const rows = (Array.isArray(roster) ? roster : [])
-        .map((item, index) => ({
-          name: String(item?.name ?? item ?? '').trim(),
-          slot_index: index,
-          is_active: true,
-        }))
-        .filter((item) => item.name);
-
-      if (rows.length === 0) {
+    const saveTask = async () => {
+      try {
+        const savedData = await saveTherapistRosterSafely({
+          supabaseClient: supabase,
+          tableName,
+          roster,
+        });
         if (therapistRosterSaveRequestRef.current[requestKey] === requestId) {
           therapistRosterLoadRequestRef.current[requestKey] += 1;
-          // Ref 캐시도 즉시 갱신
-          if (type === 'manual_therapy') { manualTherapistsRef.current = []; }
-          else { therapistsRef.current = []; }
-          setter([]);
+          if (type === 'manual_therapy') manualTherapistsRef.current = savedData;
+          else therapistsRef.current = savedData;
+          setter(savedData);
         }
         return true;
+      } catch (err) {
+        console.error(`[ScheduleContext] saveTherapistRoster(${type}) 실패:`, err);
+        return false;
       }
-
-      const { data, error: insertError } = await supabase
-        .from(tableName)
-        .insert(rows)
-        .select('*')
-        .order('slot_index');
-
-      if (insertError) throw insertError;
-      if (therapistRosterSaveRequestRef.current[requestKey] === requestId) {
-        therapistRosterLoadRequestRef.current[requestKey] += 1;
-        const savedData = data || rows;
-        // Ref 캐시도 즉시 갱신
-        if (type === 'manual_therapy') { manualTherapistsRef.current = savedData; }
-        else { therapistsRef.current = savedData; }
-        setter(savedData);
-      }
-      return true;
-    } catch (err) {
-      console.error(`[ScheduleContext] saveTherapistRoster(${type}) 실패:`, err);
-      return false;
-    }
+    };
+    const queuedSave = therapistRosterSaveQueueRef.current[requestKey]
+      .catch(() => {})
+      .then(saveTask);
+    therapistRosterSaveQueueRef.current[requestKey] = queuedSave;
+    return queuedSave;
   }, []);
 
   // 충격파 스케줄러 환경설정 로드 (캐시 지원)
