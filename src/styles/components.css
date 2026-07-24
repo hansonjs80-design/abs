@@ -784,14 +784,14 @@
   --tab-text-color: #263244;
 }
 
-/* 4. Stats MT (Purple) */
+/* 4. Stats MT (Dusty Rose) */
 .top-tab--stats-mt {
-  --tab-bg: #d1b6ff;
-  --tab-hover-bg: #f3e8ff;
+  --tab-bg: #e6b8af;
+  --tab-hover-bg: #f8e2de;
   --tab-active-surface: #f8fafc;
   --tab-active-bg: #f8fafc;
-  --tab-active-border: #7b2eff;
-  --tab-shadow: rgba(123, 46, 255, 0.2);
+  --tab-active-border: #b14530;
+  --tab-shadow: rgba(177, 69, 48, 0.2);
   --tab-text-color: #263244;
 }
 
