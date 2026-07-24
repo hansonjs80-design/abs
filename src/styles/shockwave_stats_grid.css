@@ -658,19 +658,83 @@
   white-space: normal;
 }
 
+.sw-grid-count-tooltip--prescription-patients
+  .sw-grid-count-tooltip-item--prescription-color {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border-color: color-mix(
+    in srgb,
+    var(--prescription-cell-color, #64748b) 30%,
+    transparent
+  );
+  background: #fff;
+}
+
+.sw-grid-count-tooltip--prescription-patients
+  .sw-grid-count-tooltip-item--prescription-color
+  .sw-grid-count-tooltip-item-summary {
+  align-items: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 30px;
+  padding: 4px 7px;
+  background: color-mix(
+    in srgb,
+    var(--prescription-cell-color, #64748b) 18%,
+    #fff
+  );
+}
+
+.sw-grid-count-tooltip--prescription-patients
+  .sw-grid-count-tooltip-item--prescription-color
+  .sw-grid-count-tooltip-patients {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 5px 7px;
+  border-top-color: color-mix(
+    in srgb,
+    var(--prescription-cell-color, #64748b) 22%,
+    transparent
+  );
+  background: #fff;
+}
+
 .sw-grid-count-tooltip--therapist-patients .sw-grid-count-tooltip-item {
   flex-direction: column;
   align-items: stretch;
   width: 100%;
   box-sizing: border-box;
-  background: #fff;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border-color: color-mix(
+    in srgb,
+    var(--therapist-cell-accent-color, #334155) 32%,
+    transparent
+  );
+  border-radius: 7px;
+  background: color-mix(
+    in srgb,
+    var(--therapist-cell-color, #fff) 58%,
+    #fff
+  );
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
   white-space: normal;
 }
 
 .sw-grid-count-tooltip--therapist-patients .sw-grid-count-tooltip-item-summary {
-  margin: -3px -7px 0;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
   padding: 5px 7px;
-  border-radius: 5px 5px 0 0;
+  border-radius: 0;
+  background: color-mix(
+    in srgb,
+    var(--therapist-cell-color, #fff) 84%,
+    var(--therapist-cell-accent-color, #334155)
+  );
 }
 
 .sw-grid-count-tooltip-item {
@@ -728,6 +792,20 @@
   flex-wrap: nowrap;
   align-items: stretch;
   gap: 2px;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 6px 7px;
+  border-top-color: color-mix(
+    in srgb,
+    var(--therapist-cell-accent-color, #334155) 22%,
+    transparent
+  );
+  background: color-mix(
+    in srgb,
+    var(--therapist-cell-color, #fff) 58%,
+    #fff
+  );
 }
 
 .sw-grid-count-tooltip--therapist-patients .sw-grid-count-tooltip-patient {
@@ -766,7 +844,9 @@
     --patient-indicator-color,
     var(--tooltip-accent-color, #334155)
   );
-  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.2);
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.14),
+    0 0 0 2px rgba(255, 255, 255, 0.72);
 }
 
 .sw-grid-count-tooltip--prescription-patients .sw-grid-count-tooltip-patient::after {

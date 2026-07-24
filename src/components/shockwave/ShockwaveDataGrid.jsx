@@ -4,6 +4,8 @@ import { supabase } from '../../lib/supabaseClient';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 import { getTodayKST } from '../../lib/calendarUtils';
+import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
+import { getPrescriptionColor } from '../../lib/schedulerUtils';
 import {
   buildTherapistPrescriptionDisplayGroups,
   buildShockwaveCountSummaries,
@@ -69,8 +71,21 @@ const TOOLTIP_ACCENT_COLORS = {
   '#ffdced': '#be185d',
 };
 
+const PATIENT_INDICATOR_COLORS = {
+  '#dbeafe': '#3b82f6',
+  '#ffedd5': '#f97316',
+  '#e9ddff': '#8b5cf6',
+  '#d8f3ea': '#10b981',
+  '#ffe7c7': '#f59e0b',
+  '#ffdced': '#ec4899',
+};
+
 function getTooltipAccentColor(backgroundColor) {
   return TOOLTIP_ACCENT_COLORS[String(backgroundColor || '').toLowerCase()] || '#1e293b';
+}
+
+function getPatientIndicatorColor(backgroundColor) {
+  return PATIENT_INDICATOR_COLORS[String(backgroundColor || '').toLowerCase()] || '#3b82f6';
 }
 
 export default function ShockwaveDataGrid({
@@ -155,6 +170,14 @@ export default function ShockwaveDataGrid({
     // 모두 0건이면 전체 처방 표시 (빈 테이블 방지)
     return filtered.length > 0 ? filtered : allPrescriptions;
   }, [allPrescriptions, safeInputLogs]);
+  const effectivePrescriptionColors = useMemo(() => (
+    getEffectiveSettlementSettings(
+      settings,
+      currentYear,
+      currentMonth,
+      tableName === 'manual_therapy_patient_logs' ? 'manual_therapy' : 'shockwave'
+    ).prescription_colors || {}
+  ), [currentMonth, currentYear, settings, tableName]);
   const therapistPrescriptionGroups = useMemo(
     () => buildTherapistPrescriptionDisplayGroups({
       rows: safeInputLogs,
@@ -391,21 +414,28 @@ export default function ShockwaveDataGrid({
         label: p,
         count: Number(counts[p]) || 0,
         patientNames: patientNames[p] || [],
+        prescriptionColor: getPrescriptionColor(
+          p,
+          effectivePrescriptionColors
+        ),
       }))
       .filter(item => item.count > 0);
     const totalCount = items.reduce((sum, item) => sum + item.count, 0);
     if (totalCount <= 0) return null;
+    const therapistColor = THERAPIST_COLORS[tIdx % THERAPIST_COLORS.length];
     return {
       date: formatFullDateLabel(row.date),
       therapistName: therapist.name,
-      therapistColor: THERAPIST_COLORS[tIdx % THERAPIST_COLORS.length],
-      tooltipAccentColor: getTooltipAccentColor(THERAPIST_COLORS[tIdx % THERAPIST_COLORS.length]),
+      therapistColor,
+      backgroundColor: `color-mix(in srgb, ${therapistColor} 42%, #fff)`,
+      tooltipAccentColor: getTooltipAccentColor(therapistColor),
       totalCount,
       layout: 'prescription-patients',
       items,
     };
   }, [
     dateSummaries,
+    effectivePrescriptionColors,
     formatFullDateLabel,
     getTherapistPrescriptionColumn,
     therapistPrescriptionGroups,
@@ -421,7 +451,7 @@ export default function ShockwaveDataGrid({
     return {
       date: formatFullDateLabel(row.date),
       summaryLabel: `총 ${totalCount}건`,
-      backgroundColor: '#e2e8f0',
+      backgroundColor: '#f1f5f9',
       tooltipAccentColor: '#334155',
       unit: '건',
       layout: 'prescription-patients',
@@ -429,19 +459,29 @@ export default function ShockwaveDataGrid({
         .map((prescription) => ({
           label: prescription,
           count: Number(summary?.byPrescription?.[prescription]) || 0,
+          prescriptionColor: getPrescriptionColor(
+            prescription,
+            effectivePrescriptionColors
+          ),
           patientItems: visibleTherapists.flatMap((therapist, therapistIndex) => (
             summary?.patientNamesByTherapistPrescription?.[therapist.name]?.[prescription] || []
           ).map((patientName) => ({
             name: patientName,
             therapistName: therapist.displayName || therapist.name,
-            indicatorColor: getTooltipAccentColor(
+            indicatorColor: getPatientIndicatorColor(
               THERAPIST_COLORS[therapistIndex % THERAPIST_COLORS.length]
             ),
           }))),
         }))
         .filter((item) => item.count > 0),
     };
-  }, [dateSummaries, formatFullDateLabel, prescriptions, visibleTherapists]);
+  }, [
+    dateSummaries,
+    effectivePrescriptionColors,
+    formatFullDateLabel,
+    prescriptions,
+    visibleTherapists,
+  ]);
 
   const getNewPatientTooltip = useCallback((row) => {
     if (!row?.date || !row._isFirst) return null;
@@ -1763,7 +1803,7 @@ export default function ShockwaveDataGrid({
                 const cellStyle = {
                   ...frozenStyle,
                   ...(isDateGroupMergedCol
-                    ? isSingleDateGroupMergedCol
+                    ? isSingleDateGroupMergedCol || isTotalCol || isNewPatientCol
                       ? { verticalAlign: 'middle', paddingTop: 0, paddingBottom: 0 }
                       : { verticalAlign: 'top', paddingTop: '4px' }
                     : {})
@@ -1830,6 +1870,7 @@ export default function ShockwaveDataGrid({
               count,
               patientNames = [],
               patientItems = [],
+              prescriptionColor,
               therapistColor,
               therapistAccentColor,
             }) => {
@@ -1843,18 +1884,24 @@ export default function ShockwaveDataGrid({
                     'sw-grid-count-tooltip-item',
                     'sw-grid-count-tooltip-item--counted',
                     patients.length > 0 ? 'sw-grid-count-tooltip-item--with-patients' : '',
+                    prescriptionColor
+                      ? 'sw-grid-count-tooltip-item--prescription-color'
+                      : '',
                   ].filter(Boolean).join(' ')}
                   key={label}
-                >
-                  <span
-                    className="sw-grid-count-tooltip-item-summary"
-                    style={therapistColor
+                  style={
+                    therapistColor
                       ? {
-                        backgroundColor: therapistColor,
+                        '--therapist-cell-color': therapistColor,
+                        '--therapist-cell-accent-color': therapistAccentColor,
                         '--tooltip-accent-color': therapistAccentColor,
                       }
-                      : undefined}
-                  >
+                      : prescriptionColor
+                        ? { '--prescription-cell-color': prescriptionColor }
+                        : undefined
+                  }
+                >
+                  <span className="sw-grid-count-tooltip-item-summary">
                     <span className="sw-grid-count-tooltip-prescription">{label}</span>
                     <span className="sw-grid-count-tooltip-count">{count}{countTooltip.unit || '건'}</span>
                   </span>
