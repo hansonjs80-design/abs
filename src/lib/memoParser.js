@@ -3,18 +3,9 @@
  * ============================================*/
 
 import { FONT_COLORS, CLINIC_DEPT_MAP } from './constants';
+import { normalizeNameForMatch } from './nameMatchUtils.js';
 export { has4060Pattern, normalize4060StarOrder, strip4060FromContent } from './schedulerContentFormat';
-
-/**
- * 이름 정규화 (매칭용)
- * 원본: normalizeNameForMatch_
- */
-export function normalizeNameForMatch(s) {
-  return String(s || '')
-    .trim()
-    .replace(/[*\d\s().-]/g, '')
-    .toLowerCase();
-}
+export { normalizeNameForMatch } from './nameMatchUtils.js';
 
 /**
  * 부서/이름 전용 표기 판별

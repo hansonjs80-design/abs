@@ -1,13 +1,13 @@
 import {
   normalize4060StarOrder,
-} from '../../lib/schedulerContentFormat';
+} from '../../lib/schedulerContentFormat.js';
 import {
   getScheduleDefaultMergeRowSpan,
   normalizeBodyPartKey,
   normalizeSchedulerVisitSuffix,
   normalizeVisitInputValue,
   splitBodyParts,
-} from '../../lib/schedulerUtils';
+} from '../../lib/schedulerUtils.js';
 
 export const PATIENT_HISTORY_GROUPS = [
   { key: 'shockwave', label: '충격파 내역' },
@@ -127,4 +127,70 @@ export function buildPatientHistoryBodyFilterOptions(logs = []) {
     { key: PATIENT_HISTORY_ALL_BODY_FILTER, label: '전체', count: logs.length },
     ...Array.from(partMap.values()).sort((a, b) => a.label.localeCompare(b.label, 'ko')),
   ];
+}
+
+export function buildPatientHistoryLogGroups({
+  logs = [],
+  bodyFilters = {},
+  selectedGroupKey = 'shockwave',
+} = {}) {
+  const groupMap = new Map(
+    PATIENT_HISTORY_GROUPS.map((group) => [group.key, { ...group, logs: [] }])
+  );
+  logs.forEach((log) => {
+    const groupKey = getPatientHistoryGroupKey(log);
+    const group = groupMap.get(groupKey) || groupMap.get('shockwave');
+    group.logs.push(log);
+  });
+
+  const orderedGroups = [...PATIENT_HISTORY_GROUPS].sort((a, b) => {
+    if (a.key === selectedGroupKey) return -1;
+    if (b.key === selectedGroupKey) return 1;
+    return 0;
+  });
+
+  return orderedGroups
+    .map((group) => {
+      const rawGroup = groupMap.get(group.key);
+      if (!rawGroup || rawGroup.logs.length === 0) return null;
+      const bodyFilterOptions = buildPatientHistoryBodyFilterOptions(rawGroup.logs);
+      const requestedFilter = bodyFilters[rawGroup.key] || PATIENT_HISTORY_ALL_BODY_FILTER;
+      const activeBodyFilter = bodyFilterOptions.some((option) => option.key === requestedFilter)
+        ? requestedFilter
+        : PATIENT_HISTORY_ALL_BODY_FILTER;
+      const filteredLogs = activeBodyFilter === PATIENT_HISTORY_ALL_BODY_FILTER
+        ? rawGroup.logs
+        : rawGroup.logs.filter((log) => (
+          getPatientHistoryBodyFilterParts(log).some((part) => part.key === activeBodyFilter)
+        ));
+      return {
+        ...rawGroup,
+        logs: filteredLogs,
+        totalLogs: rawGroup.logs,
+        bodyFilterOptions,
+        activeBodyFilter,
+      };
+    })
+    .filter(Boolean);
+}
+
+export function getPatientHistoryModalLayout(groupCount) {
+  if (groupCount >= 2) {
+    return {
+      maxWidth: 1260,
+      width: '92%',
+      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    };
+  }
+  return {
+    maxWidth: groupCount === 1 ? 735 : 580,
+    width: '80%',
+    gridTemplateColumns: 'minmax(0, 1fr)',
+  };
+}
+
+export function getPatientHistoryColumnWidths(groupCount) {
+  return groupCount >= 2
+    ? ['16%', '10%', '12%', '17%', '17%', '7%', '9%', '12%']
+    : ['14%', '10%', '13%', '19%', '20%', '7%', '9%', '8%'];
 }

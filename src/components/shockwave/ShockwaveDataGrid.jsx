@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect } from 'react';
 /* eslint-disable react-hooks/exhaustive-deps */
 import { supabase } from '../../lib/supabaseClient';
-import { normalizeNameForMatch } from '../../lib/memoParser';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 import { getTodayKST } from '../../lib/calendarUtils';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
@@ -11,6 +10,10 @@ import {
   buildShockwaveCountSummaries,
   toStatsPrescriptionCount,
 } from '../../lib/shockwaveStatsCountUtils';
+import {
+  buildShockwavePatientHistoryIndex,
+  findLatestPatientHistoryLog,
+} from '../../lib/shockwavePatientHistoryIndex';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { useToast } from '../common/Toast';
 import {
@@ -110,6 +113,10 @@ export default function ShockwaveDataGrid({
   const safeInputLogs = useMemo(
     () => (Array.isArray(logs) ? logs.filter(Boolean) : []),
     [logs]
+  );
+  const patientHistoryIndex = useMemo(
+    () => buildShockwavePatientHistoryIndex(safeInputLogs),
+    [safeInputLogs]
   );
   const safeTherapists = useMemo(
     () => (Array.isArray(therapists) ? therapists.filter(Boolean) : []),
@@ -815,11 +822,8 @@ export default function ShockwaveDataGrid({
 
       if (field === 'patient_name' && v.trim()) {
         const queryName = v.trim().replace(/\*/g, '').replace(/\(-\)/g, '').trim();
-        const normalizedQueryName = normalizeNameForMatch(queryName);
-        const pastLogs = safeInputLogs.filter((l) => l.id !== row.id && normalizeNameForMatch(l.patient_name) === normalizedQueryName);
-        if (pastLogs.length > 0) {
-          pastLogs.sort((a, b) => (a.date !== b.date ? b.date.localeCompare(a.date) : (parseInt(b.visit_count || '0') || 0) - (parseInt(a.visit_count || '0') || 0)));
-          const lastLog = pastLogs[0];
+        const lastLog = findLatestPatientHistoryLog(patientHistoryIndex, queryName, row.id);
+        if (lastLog) {
           updatePayload.patient_name = queryName;
           updatePayload.chart_number = lastLog.chart_number || '';
           updatePayload.body_part = lastLog.body_part || '';
@@ -829,11 +833,8 @@ export default function ShockwaveDataGrid({
       }
 
       if (row.isDraft) {
-        let fallbackDate = `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`;
-        if (safeInputLogs.length > 0) {
-            const validDates = safeInputLogs.map(l => l.date).filter(Boolean).sort();
-            if (validDates.length > 0) fallbackDate = validDates[validDates.length - 1];
-        }
+        const fallbackDate = patientHistoryIndex.latestDate ||
+          `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`;
         const nextDraft = {
           date: row.date || fallbackDate,
           patient_name: row.patient_name || '',
@@ -878,11 +879,8 @@ export default function ShockwaveDataGrid({
 
       if (row.isDraft) {
         if (!val.trim()) return;
-        let fallbackDate = `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`;
-        if (safeInputLogs.length > 0) {
-            const validDates = safeInputLogs.map(l => l.date).filter(Boolean).sort();
-            if (validDates.length > 0) fallbackDate = validDates[validDates.length - 1];
-        }
+        const fallbackDate = patientHistoryIndex.latestDate ||
+          `${currentYear}-${String(currentMonth).padStart(2,'0')}-01`;
         const nextDraft = {
           date: row.date || fallbackDate,
           patient_name: row.patient_name || '',

@@ -60,16 +60,14 @@ import useScheduleTimeSlots from './useScheduleTimeSlots';
 import useScheduleUndoActions from './useScheduleUndoActions';
 import useScheduleViewState from './useScheduleViewState';
 import {
-  buildPatientHistoryBodyFilterOptions,
+  buildPatientHistoryLogGroups,
   DEFAULT_CONTEXT_PRESCRIPTION_COLORS,
   EMPTY_SCHEDULE_MERGE_SPAN,
-  getPatientHistoryBodyFilterParts,
-  getPatientHistoryGroupKey,
+  getPatientHistoryColumnWidths,
+  getPatientHistoryModalLayout,
   getPlainTextDefaultRowSpan,
   loadHiddenBodyPartOptionsByPatient,
   normalizeCommittedSchedulerContent,
-  PATIENT_HISTORY_ALL_BODY_FILTER,
-  PATIENT_HISTORY_GROUPS,
   saveHiddenBodyPartOptionsByPatient,
   SCHEDULE_INTERNAL_BORDER_COLOR,
   stepContextMenuVisitValue,
@@ -236,60 +234,19 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     }
     return 'shockwave';
   }, [editValue, editingCell, effectiveMemos, pendingDisplayValues, selectedCell, settings?.manual_therapy_prescriptions]);
-  const patientHistoryLogGroups = useMemo(() => {
-    const groupMap = new Map(PATIENT_HISTORY_GROUPS.map((group) => [group.key, { ...group, logs: [] }]));
-    (patientHistoryModalData.logs || []).forEach((log) => {
-      const groupKey = getPatientHistoryGroupKey(log);
-      const group = groupMap.get(groupKey) || groupMap.get('shockwave');
-      group.logs.push(log);
-    });
-    const orderedGroups = [...PATIENT_HISTORY_GROUPS].sort((a, b) => {
-      if (a.key === selectedPatientHistoryGroupKey) return -1;
-      if (b.key === selectedPatientHistoryGroupKey) return 1;
-      return 0;
-    });
-    return orderedGroups
-      .map((group) => {
-        const rawGroup = groupMap.get(group.key);
-        if (!rawGroup || rawGroup.logs.length === 0) return null;
-        const bodyFilterOptions = buildPatientHistoryBodyFilterOptions(rawGroup.logs);
-        const requestedFilter = patientHistoryBodyFilters[rawGroup.key] || PATIENT_HISTORY_ALL_BODY_FILTER;
-        const activeBodyFilter = bodyFilterOptions.some((option) => option.key === requestedFilter)
-          ? requestedFilter
-          : PATIENT_HISTORY_ALL_BODY_FILTER;
-        const logs = activeBodyFilter === PATIENT_HISTORY_ALL_BODY_FILTER
-          ? rawGroup.logs
-          : rawGroup.logs.filter((log) => getPatientHistoryBodyFilterParts(log).some((part) => part.key === activeBodyFilter));
-        return {
-          ...rawGroup,
-          logs,
-          totalLogs: rawGroup.logs,
-          bodyFilterOptions,
-          activeBodyFilter,
-        };
-      })
-      .filter(Boolean);
-  }, [patientHistoryBodyFilters, patientHistoryModalData.logs, selectedPatientHistoryGroupKey]);
-  const patientHistoryModalLayout = useMemo(() => {
-    const groupCount = patientHistoryLogGroups.length;
-    if (groupCount >= 2) {
-      return {
-        maxWidth: 1260,
-        width: '92%',
-        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-      };
-    }
-    return {
-      maxWidth: groupCount === 1 ? 735 : 580,
-      width: '80%',
-      gridTemplateColumns: 'minmax(0, 1fr)',
-    };
-  }, [patientHistoryLogGroups.length]);
-  const patientHistoryColumnWidths = useMemo(() => (
-    patientHistoryLogGroups.length >= 2
-      ? ['16%', '10%', '12%', '17%', '17%', '7%', '9%', '12%']
-      : ['14%', '10%', '13%', '19%', '20%', '7%', '9%', '8%']
-  ), [patientHistoryLogGroups.length]);
+  const patientHistoryLogGroups = useMemo(() => buildPatientHistoryLogGroups({
+    logs: patientHistoryModalData.logs,
+    bodyFilters: patientHistoryBodyFilters,
+    selectedGroupKey: selectedPatientHistoryGroupKey,
+  }), [patientHistoryBodyFilters, patientHistoryModalData.logs, selectedPatientHistoryGroupKey]);
+  const patientHistoryModalLayout = useMemo(
+    () => getPatientHistoryModalLayout(patientHistoryLogGroups.length),
+    [patientHistoryLogGroups.length]
+  );
+  const patientHistoryColumnWidths = useMemo(
+    () => getPatientHistoryColumnWidths(patientHistoryLogGroups.length),
+    [patientHistoryLogGroups.length]
+  );
   const patientHistoryPrescriptionOptions = useMemo(() => ({
     shockwave: Array.isArray(prescriptionScheduleSettings?.schedulerPrescriptions?.shockwave)
       ? prescriptionScheduleSettings.schedulerPrescriptions.shockwave.filter(Boolean)
