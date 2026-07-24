@@ -659,7 +659,7 @@
 .top-tab--stats-mt.active:hover > span,
 .top-tab--stats-sw.active .month-nav-btn,
 .top-tab--stats-mt.active .month-nav-btn {
-  color: #d97706 !important;
+  color: var(--tab-active-border) !important;
 }
 
 .top-tab--stats-sw.active,
@@ -672,13 +672,13 @@
 
 .top-tab--stats-sw.active .month-nav-btn,
 .top-tab--stats-mt.active .month-nav-btn {
-  border-color: #d97706 !important;
+  border-color: var(--tab-active-border) !important;
 }
 
 .top-tab--stats-sw.active .month-nav-btn svg,
 .top-tab--stats-mt.active .month-nav-btn svg {
-  color: #d97706 !important;
-  stroke: #d97706 !important;
+  color: var(--tab-active-border) !important;
+  stroke: var(--tab-active-border) !important;
 }
 
 .top-tab.active:hover {
@@ -775,24 +775,24 @@
 
 /* 3. Stats SW (Purple) */
 .top-tab--stats-sw {
-  --tab-bg: #fbbc04;
-  --tab-hover-bg: #fff8df;
+  --tab-bg: #782afc;
+  --tab-hover-bg: #f3e8ff;
   --tab-active-surface: #f8fafc;
   --tab-active-bg: #f8fafc;
-  --tab-active-border: #fbbc04;
-  --tab-shadow: rgba(234, 179, 8, 0.2);
-  --tab-text-color: #263244;
+  --tab-active-border: #782afc;
+  --tab-shadow: rgba(120, 42, 252, 0.2);
+  --tab-text-color: #ffffff;
 }
 
 /* 4. Stats MT (Purple) */
 .top-tab--stats-mt {
-  --tab-bg: #fbbc04;
-  --tab-hover-bg: #fff8df;
+  --tab-bg: #782afc;
+  --tab-hover-bg: #f3e8ff;
   --tab-active-surface: #f8fafc;
   --tab-active-bg: #f8fafc;
-  --tab-active-border: #fbbc04;
-  --tab-shadow: rgba(202, 138, 4, 0.2);
-  --tab-text-color: #263244;
+  --tab-active-border: #782afc;
+  --tab-shadow: rgba(120, 42, 252, 0.2);
+  --tab-text-color: #ffffff;
 }
 
 /* 5. Stats PT (Purple) */
