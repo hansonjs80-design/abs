@@ -318,6 +318,54 @@
   transition: all var(--transition-normal);
 }
 
+/*
+ * Chrome/Edge 데스크톱 PWA: Windows 기본 제목 표시줄 대신 앱 탭을
+ * 제목 표시줄 영역까지 확장한다. 일반 브라우저 탭과 미지원 환경은
+ * 기존 standalone 레이아웃을 그대로 사용한다.
+ */
+@media (display-mode: window-controls-overlay) {
+  .top-tabs-shell {
+    --wco-left-reserve: env(titlebar-area-x, 0px);
+    --wco-right-reserve: calc(
+      100vw -
+      env(titlebar-area-x, 0px) -
+      env(titlebar-area-width, 100vw)
+    );
+    min-height: max(50px, env(titlebar-area-height, 0px));
+    padding-left: max(24px, var(--wco-left-reserve));
+    padding-right: max(24px, calc(var(--wco-right-reserve) + 8px));
+    -webkit-app-region: drag;
+    app-region: drag;
+  }
+
+  .top-tabs-shell button,
+  .top-tabs-shell input,
+  .top-tabs-shell select,
+  .top-tabs-shell a,
+  .top-tabs-shell [role='button'],
+  .top-tabs-shell [role='tab'] {
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+  }
+
+  .top-tabs-current-date {
+    -webkit-app-region: drag;
+    app-region: drag;
+    user-select: none;
+  }
+
+  .login-page {
+    padding-top: max(24px, calc(env(titlebar-area-height, 0px) + 24px));
+    -webkit-app-region: drag;
+    app-region: drag;
+  }
+
+  .login-card {
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+  }
+}
+
 .top-tabs-actions {
   display: inline-flex;
   align-items: center;

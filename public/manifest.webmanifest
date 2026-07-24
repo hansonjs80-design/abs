@@ -4,6 +4,7 @@
   "description": "병원 직원 근무표 및 충격파 환자 스케줄 관리 시스템",
   "start_url": "/",
   "scope": "/",
+  "display_override": ["window-controls-overlay"],
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#3b82f6",
