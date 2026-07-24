@@ -1,4 +1,9 @@
 import { supabase } from './supabaseClient.js';
+import {
+  getDeviceSettingsForIdentity,
+  getDeviceSettingsIdentity,
+} from './deviceSettingsIdentity.js';
+import { enqueueShockwaveSettingsJsonPatch } from './shockwaveSettingsJsonSync.js';
 
 export const DEFAULT_SCHEDULER_TEXT_SETTINGS = {
   font_size: 13,
@@ -50,25 +55,6 @@ function normalizeHeaderHeight(value, defaultVal) {
 export const SCHEDULER_TEXT_SETTINGS_KEY = 'shockwave-scheduler-text-settings';
 
 const SETTINGS_ROW_ID = '00000000-0000-0000-0000-000000000000';
-
-// 기기 지문 생성 (useScheduleResizeState.js와 동일한 알고리즘)
-const getDeviceFingerprint = () => {
-  if (typeof window === 'undefined') return 'default-device';
-  try {
-    const screenInfo = `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}`;
-    const userAgent = window.navigator.userAgent;
-    const raw = `${screenInfo}-${userAgent}`;
-    let hash = 0;
-    for (let i = 0; i < raw.length; i++) {
-      const char = raw.charCodeAt(i);
-      hash = (hash << 5) - hash + char;
-      hash = hash & hash;
-    }
-    return `dev_${Math.abs(hash)}`;
-  } catch {
-    return 'default-device';
-  }
-};
 
 function normalizeTextConfig(parsed) {
   if (!parsed) return null;
@@ -139,8 +125,10 @@ export async function syncLoadTextSettings() {
     const deviceTextSettings = data.monthly_settlement_settings?.device_text_settings;
     if (!deviceTextSettings) return null;
 
-    const deviceId = getDeviceFingerprint();
-    const mySettings = deviceTextSettings[deviceId];
+    const mySettings = getDeviceSettingsForIdentity(
+      deviceTextSettings,
+      getDeviceSettingsIdentity()
+    );
     if (!mySettings) return null;
 
     const normalized = normalizeTextConfig(mySettings);
@@ -163,35 +151,21 @@ export function syncSaveTextSettings(textSettings) {
 
   textBackupTimeout = setTimeout(async () => {
     try {
-      const { data, error: selectErr } = await supabase
-        .from('shockwave_settings')
-        .select('monthly_settlement_settings')
-        .eq('id', SETTINGS_ROW_ID)
-        .single();
-
-      if (selectErr) return;
-
-      const deviceId = getDeviceFingerprint();
-      const existingSettlementSettings = data?.monthly_settlement_settings || {};
-      const existingTextSettings = existingSettlementSettings.device_text_settings || {};
-
-      const updatedTextSettings = {
-        ...existingTextSettings,
-        [deviceId]: {
-          ...textSettings,
-          updatedAt: new Date().toISOString(),
-        },
-      };
-
-      const updatedSettlementSettings = {
-        ...existingSettlementSettings,
-        device_text_settings: updatedTextSettings,
-      };
-
-      await supabase
-        .from('shockwave_settings')
-        .update({ monthly_settlement_settings: updatedSettlementSettings })
-        .eq('id', SETTINGS_ROW_ID);
+      const { deviceId } = getDeviceSettingsIdentity();
+      await enqueueShockwaveSettingsJsonPatch({
+        supabaseClient: supabase,
+        scope: 'scheduler-text-device-settings',
+        mutate: (existingSettlementSettings) => ({
+          ...existingSettlementSettings,
+          device_text_settings: {
+            ...(existingSettlementSettings.device_text_settings || {}),
+            [deviceId]: {
+              ...textSettings,
+              updatedAt: new Date().toISOString(),
+            },
+          },
+        }),
+      });
     } catch (err) {
       console.error('Failed to save device text settings to DB:', err);
     }

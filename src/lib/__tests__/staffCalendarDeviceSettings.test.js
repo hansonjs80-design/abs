@@ -24,6 +24,7 @@ test('normalizes staff calendar device settings without dropping existing large 
     memoFontSize: 21.5,
     dateFontSize: 19.5,
     weekdayFontSize: 20.5,
+    weekdayFontWeight: 900,
     weekdayRowHeight: 82,
     lastRowFontSize: 22.5,
     dateFontWeight: 800,
@@ -37,6 +38,7 @@ test('normalizes staff calendar device settings without dropping existing large 
     memoFontSize: 21.5,
     dateFontSize: 19.5,
     weekdayFontSize: 20.5,
+    weekdayFontWeight: 900,
     weekdayRowHeight: 82,
     lastRowFontSize: 22.5,
     dateFontWeight: 800,
@@ -48,6 +50,7 @@ test('ignores invalid staff calendar values and keeps defaults for full settings
   const normalized = normalizeStaffCalendarDeviceSettings({
     rowHeight: 12,
     dateFontWeight: 750,
+    weekdayFontWeight: 750,
     lastRowFontWeight: 750,
     memoFontSize: 'abc',
     weekdayRowHeight: 6,
@@ -56,6 +59,7 @@ test('ignores invalid staff calendar values and keeps defaults for full settings
   assert.equal(normalized.colWidth, 0);
   assert.equal(normalized.rowHeight, 28);
   assert.equal(normalized.dateFontWeight, 700);
+  assert.equal(normalized.weekdayFontWeight, 800);
   assert.equal(normalized.lastRowFontWeight, 700);
   assert.equal(normalized.memoFontSize, 13);
   assert.equal(normalized.weekdayRowHeight, 12);
@@ -66,6 +70,7 @@ test('reads only existing staff calendar local storage keys', () => {
     [STAFF_CALENDAR_DEVICE_SETTING_KEYS.colWidth]: '144',
     [STAFF_CALENDAR_DEVICE_SETTING_KEYS.rowHeight]: '126.5',
     [STAFF_CALENDAR_DEVICE_SETTING_KEYS.dateFontWeight]: '900',
+    [STAFF_CALENDAR_DEVICE_SETTING_KEYS.weekdayFontWeight]: '800',
     [STAFF_CALENDAR_DEVICE_SETTING_KEYS.weekdayRowHeight]: '38',
     [STAFF_CALENDAR_DEVICE_SETTING_KEYS.lastRowFontSize]: '14.5',
     [STAFF_CALENDAR_DEVICE_SETTING_KEYS.lastRowFontWeight]: '800',
@@ -79,6 +84,7 @@ test('reads only existing staff calendar local storage keys', () => {
     colWidth: 144,
     rowHeight: 126.5,
     dateFontWeight: 900,
+    weekdayFontWeight: 800,
     weekdayRowHeight: 38,
     lastRowFontSize: 14.5,
     lastRowFontWeight: 800,
@@ -87,6 +93,7 @@ test('reads only existing staff calendar local storage keys', () => {
     colWidth: true,
     rowHeight: true,
     dateFontWeight: true,
+    weekdayFontWeight: true,
     weekdayRowHeight: true,
     lastRowFontSize: true,
     lastRowFontWeight: true,

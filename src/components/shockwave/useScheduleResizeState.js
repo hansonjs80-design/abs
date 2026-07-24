@@ -1,6 +1,11 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePersistentNumber, usePersistentJson } from '../../hooks/usePersistentState';
 import { supabase } from '../../lib/supabaseClient';
+import {
+  getDeviceSettingsForIdentity,
+  getDeviceSettingsIdentity,
+} from '../../lib/deviceSettingsIdentity';
+import { enqueueShockwaveSettingsJsonPatch } from '../../lib/shockwaveSettingsJsonSync';
 
 import {
   SHOCKWAVE_DAY_COL_WIDTH_KEY,
@@ -21,25 +26,6 @@ const COL_RESIZE_CLICK_MOVE_TOLERANCE = 3;
 
 const SETTINGS_ROW_ID = '00000000-0000-0000-0000-000000000000';
 
-// 기기 지문 생성 (해상도 및 유저 에이전트 기반)
-const getDeviceFingerprint = () => {
-  if (typeof window === 'undefined') return 'default-device';
-  try {
-    const screenInfo = `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}`;
-    const userAgent = window.navigator.userAgent;
-    const raw = `${screenInfo}-${userAgent}`;
-    let hash = 0;
-    for (let i = 0; i < raw.length; i++) {
-      const char = raw.charCodeAt(i);
-      hash = (hash << 5) - hash + char;
-      hash = hash & hash;
-    }
-    return `dev_${Math.abs(hash)}`;
-  } catch {
-    return 'default-device';
-  }
-};
-
 // DB에서 기기 설정 복원
 async function syncLoadDeviceSettings(setColRatios, setDayColWidth, setRowHeight) {
   try {
@@ -53,8 +39,10 @@ async function syncLoadDeviceSettings(setColRatios, setDayColWidth, setRowHeight
     const dbDeviceSettings = data.monthly_settlement_settings?.device_settings;
     if (!dbDeviceSettings) return;
 
-    const deviceId = getDeviceFingerprint();
-    const mySettings = dbDeviceSettings[deviceId];
+    const mySettings = getDeviceSettingsForIdentity(
+      dbDeviceSettings,
+      getDeviceSettingsIdentity()
+    );
     if (!mySettings) return;
 
     // 로컬 상태 및 로컬스토리지 동기화 복원
@@ -86,38 +74,26 @@ function syncSaveDeviceSettings(patch) {
     const patchToSave = pendingDeviceSettingsPatch;
     pendingDeviceSettingsPatch = {};
     try {
-      const { data, error: selectErr } = await supabase
-        .from('shockwave_settings')
-        .select('monthly_settlement_settings')
-        .eq('id', SETTINGS_ROW_ID)
-        .single();
-
-      if (selectErr) return;
-
-      const deviceId = getDeviceFingerprint();
-      const existingSettlementSettings = data?.monthly_settlement_settings || {};
-      const existingDeviceSettings = existingSettlementSettings.device_settings || {};
-      const currentDeviceSettings = existingDeviceSettings[deviceId] || {};
-
-      const updatedDeviceSettings = {
-        ...existingDeviceSettings,
-        [deviceId]: {
-          ...currentDeviceSettings,
-          ...patchToSave,
-          updatedAt: new Date().toISOString()
-        }
-      };
-
-      const updatedSettlementSettings = {
-        ...existingSettlementSettings,
-        device_settings: updatedDeviceSettings
-      };
-
-      await supabase
-        .from('shockwave_settings')
-        .update({ monthly_settlement_settings: updatedSettlementSettings })
-        .eq('id', SETTINGS_ROW_ID);
-
+      const { deviceId } = getDeviceSettingsIdentity();
+      await enqueueShockwaveSettingsJsonPatch({
+        supabaseClient: supabase,
+        scope: 'scheduler-grid-device-settings',
+        mutate: (existingSettlementSettings) => {
+          const existingDeviceSettings = existingSettlementSettings.device_settings || {};
+          const currentDeviceSettings = existingDeviceSettings[deviceId] || {};
+          return {
+            ...existingSettlementSettings,
+            device_settings: {
+              ...existingDeviceSettings,
+              [deviceId]: {
+                ...currentDeviceSettings,
+                ...patchToSave,
+                updatedAt: new Date().toISOString(),
+              },
+            },
+          };
+        },
+      });
     } catch (err) {
       console.error('Failed to save device settings to DB:', err);
     }

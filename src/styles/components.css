@@ -1264,6 +1264,8 @@
   max-width: 420px;
   position: relative;
   overflow: hidden;
+  text-align: left;
+  cursor: pointer;
 }
 
 .toast::before {
@@ -1277,6 +1279,7 @@
 
 .toast-success::before { background: var(--success); }
 .toast-error::before { background: var(--error); }
+.toast-warning::before { background: var(--warning, #f59e0b); }
 .toast-info::before { background: var(--info); }
 
 @keyframes slideInRight {

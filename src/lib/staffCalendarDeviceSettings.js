@@ -1,4 +1,9 @@
 import { supabase } from './supabaseClient.js';
+import {
+  getDeviceSettingsForIdentity,
+  getDeviceSettingsIdentity,
+} from './deviceSettingsIdentity.js';
+import { enqueueShockwaveSettingsJsonPatch } from './shockwaveSettingsJsonSync.js';
 
 export const STAFF_CALENDAR_DEVICE_SETTING_KEYS = {
   colWidth: 'staff-calendar-col-width',
@@ -8,12 +13,12 @@ export const STAFF_CALENDAR_DEVICE_SETTING_KEYS = {
   dateFontSize: 'staff-calendar-date-font-size',
   dateFontWeight: 'staff-calendar-date-font-weight',
   weekdayFontSize: 'staff-calendar-weekday-font-size',
+  weekdayFontWeight: 'staff-calendar-weekday-font-weight',
   weekdayRowHeight: 'staff-calendar-weekday-row-height',
   lastRowFontSize: 'staff-calendar-last-row-font-size',
   lastRowFontWeight: 'staff-calendar-last-row-font-weight',
 };
 
-const SETTINGS_ROW_ID = '00000000-0000-0000-0000-000000000000';
 const DEVICE_SETTINGS_FIELD = 'staff_calendar_device_settings';
 
 const DEFAULTS = {
@@ -24,6 +29,7 @@ const DEFAULTS = {
   dateFontSize: 15,
   dateFontWeight: 700,
   weekdayFontSize: 16,
+  weekdayFontWeight: 800,
   weekdayRowHeight: 32,
   lastRowFontSize: 13,
   lastRowFontWeight: 700,
@@ -41,7 +47,7 @@ const LIMITS = {
 };
 
 const STAFF_CALENDAR_DEVICE_FIELDS = Object.keys(STAFF_CALENDAR_DEVICE_SETTING_KEYS);
-const FONT_WEIGHT_FIELDS = new Set(['dateFontWeight', 'lastRowFontWeight']);
+const FONT_WEIGHT_FIELDS = new Set(['dateFontWeight', 'weekdayFontWeight', 'lastRowFontWeight']);
 const FONT_WEIGHT_OPTIONS = new Set([500, 600, 700, 800, 900]);
 
 function getStorage(storage) {
@@ -84,21 +90,7 @@ export function normalizeStaffCalendarDeviceSettings(settings = {}) {
 }
 
 export function getStaffCalendarDeviceFingerprint() {
-  if (typeof window === 'undefined') return 'default-device';
-  try {
-    const screenInfo = `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}`;
-    const userAgent = window.navigator.userAgent;
-    const raw = `${screenInfo}-${userAgent}`;
-    let hash = 0;
-    for (let i = 0; i < raw.length; i += 1) {
-      const char = raw.charCodeAt(i);
-      hash = (hash << 5) - hash + char;
-      hash &= hash;
-    }
-    return `dev_${Math.abs(hash)}`;
-  } catch {
-    return 'default-device';
-  }
+  return getDeviceSettingsIdentity().deviceId;
 }
 
 export function readLocalStaffCalendarDeviceSettings(storageArg) {
@@ -138,7 +130,7 @@ async function loadSettingsRow() {
     .single();
 
   const { data, error } = await query;
-  if (error) return null;
+  if (error) throw error;
   if (!data || Array.isArray(data)) return null;
   return data;
 }
@@ -153,9 +145,9 @@ export async function syncLoadStaffCalendarDeviceSettings({ localSnapshot, apply
     const row = await loadSettingsRow();
     if (!row) return null;
 
-    const deviceId = getStaffCalendarDeviceFingerprint();
+    const identity = getDeviceSettingsIdentity();
     const deviceSettingsMap = getDeviceSettingsMap(row.monthly_settlement_settings);
-    const mySettings = deviceSettingsMap[deviceId];
+    const mySettings = getDeviceSettingsForIdentity(deviceSettingsMap, identity);
     if (!mySettings) return null;
 
     const normalized = normalizeStaffCalendarDeviceSettingsPatch(mySettings);
@@ -194,33 +186,26 @@ export function syncSaveStaffCalendarDeviceSettings(patch) {
     pendingPatch = {};
 
     try {
-      const row = await loadSettingsRow();
-      if (!row) return;
-
-      const deviceId = getStaffCalendarDeviceFingerprint();
-      const monthlySettings = row.monthly_settlement_settings || {};
-      const deviceSettingsMap = getDeviceSettingsMap(monthlySettings);
-      const currentDeviceSettings = deviceSettingsMap[deviceId] || {};
-
-      const nextDeviceSettingsMap = {
-        ...deviceSettingsMap,
-        [deviceId]: {
-          ...currentDeviceSettings,
-          ...patchToSave,
-          updatedAt: new Date().toISOString(),
+      const { deviceId } = getDeviceSettingsIdentity();
+      await enqueueShockwaveSettingsJsonPatch({
+        supabaseClient: supabase,
+        scope: 'staff-calendar-device-settings',
+        mutate: (monthlySettings) => {
+          const deviceSettingsMap = getDeviceSettingsMap(monthlySettings);
+          const currentDeviceSettings = deviceSettingsMap[deviceId] || {};
+          return {
+            ...monthlySettings,
+            [DEVICE_SETTINGS_FIELD]: {
+              ...deviceSettingsMap,
+              [deviceId]: {
+                ...currentDeviceSettings,
+                ...patchToSave,
+                updatedAt: new Date().toISOString(),
+              },
+            },
+          };
         },
-      };
-
-      const nextMonthlySettings = {
-        ...monthlySettings,
-        [DEVICE_SETTINGS_FIELD]: nextDeviceSettingsMap,
-      };
-
-      const targetId = row.id || SETTINGS_ROW_ID;
-      await supabase
-        .from('shockwave_settings')
-        .update({ monthly_settlement_settings: nextMonthlySettings })
-        .eq('id', targetId);
+      });
     } catch (err) {
       console.error('Failed to save staff calendar device settings:', err);
     }

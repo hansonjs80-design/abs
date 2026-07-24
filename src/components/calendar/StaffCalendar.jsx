@@ -28,6 +28,7 @@ const MEMO_FONT_SIZE_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.memoFontSize;
 const DATE_FONT_SIZE_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.dateFontSize;
 const DATE_FONT_WEIGHT_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.dateFontWeight;
 const WEEKDAY_FONT_SIZE_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.weekdayFontSize;
+const WEEKDAY_FONT_WEIGHT_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.weekdayFontWeight;
 const WEEKDAY_ROW_HEIGHT_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.weekdayRowHeight;
 const LAST_ROW_FONT_SIZE_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.lastRowFontSize;
 const LAST_ROW_FONT_WEIGHT_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.lastRowFontWeight;
@@ -43,7 +44,7 @@ const CELL_FONT_SIZE_OPTIONS = Array.from({ length: 25 }, (_, index) => 8 + inde
 const LAST_ROW_FONT_SIZE_OPTIONS = Array.from({ length: 25 }, (_, index) => 8 + index * 0.5);
 const DATE_FONT_SIZE_OPTIONS = Array.from({ length: 25 }, (_, index) => 8 + index * 0.5);
 const WEEKDAY_FONT_SIZE_OPTIONS = Array.from({ length: 25 }, (_, index) => 8 + index * 0.5);
-const DATE_FONT_WEIGHT_OPTIONS = [500, 600, 700, 800, 900];
+const FONT_WEIGHT_OPTIONS = [500, 600, 700, 800, 900];
 const STAFF_CUSTOM_COLORS_KEY = 'staff-calendar-custom-colors';
 const SHEETS_COLOR_GRID = [
   ['#000000', '#434343', '#666666', '#999999', '#b7b7b7', '#cccccc', '#d9d9d9', '#efefef', '#f3f3f3', '#ffffff'],
@@ -163,6 +164,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   const [dateFontSize, setDateFontSize] = usePersistentNumber(DATE_FONT_SIZE_KEY, 15, 8);
   const [dateFontWeight, setDateFontWeight] = usePersistentNumber(DATE_FONT_WEIGHT_KEY, 700, 500);
   const [weekdayFontSize, setWeekdayFontSize] = usePersistentNumber(WEEKDAY_FONT_SIZE_KEY, 16, 8);
+  const [weekdayFontWeight, setWeekdayFontWeight] = usePersistentNumber(WEEKDAY_FONT_WEIGHT_KEY, 800, 500);
   const [weekdayRowHeight, setWeekdayRowHeight] = usePersistentNumber(WEEKDAY_ROW_HEIGHT_KEY, 32, MIN_WEEKDAY_ROW_HEIGHT);
   const [lastRowFontSize, setLastRowFontSize] = usePersistentNumber(LAST_ROW_FONT_SIZE_KEY, 13, 8);
   const [lastRowFontWeight, setLastRowFontWeight] = usePersistentNumber(LAST_ROW_FONT_WEIGHT_KEY, 700, 500);
@@ -202,6 +204,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     if (Object.prototype.hasOwnProperty.call(settings, 'dateFontSize')) setDateFontSize(settings.dateFontSize);
     if (Object.prototype.hasOwnProperty.call(settings, 'dateFontWeight')) setDateFontWeight(settings.dateFontWeight);
     if (Object.prototype.hasOwnProperty.call(settings, 'weekdayFontSize')) setWeekdayFontSize(settings.weekdayFontSize);
+    if (Object.prototype.hasOwnProperty.call(settings, 'weekdayFontWeight')) setWeekdayFontWeight(settings.weekdayFontWeight);
     if (Object.prototype.hasOwnProperty.call(settings, 'weekdayRowHeight')) setWeekdayRowHeight(settings.weekdayRowHeight);
     if (Object.prototype.hasOwnProperty.call(settings, 'lastRowFontSize')) setLastRowFontSize(settings.lastRowFontSize);
     if (Object.prototype.hasOwnProperty.call(settings, 'lastRowFontWeight')) setLastRowFontWeight(settings.lastRowFontWeight);
@@ -213,6 +216,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     setDateFontSize,
     setDateFontWeight,
     setWeekdayFontSize,
+    setWeekdayFontWeight,
     setWeekdayRowHeight,
     setLastRowFontSize,
     setLastRowFontWeight,
@@ -272,6 +276,10 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   const updateWeekdayFontSize = useCallback((newValue) => {
     updateStaffDeviceSetting(setWeekdayFontSize, 'weekdayFontSize', newValue);
   }, [setWeekdayFontSize, updateStaffDeviceSetting]);
+
+  const updateWeekdayFontWeight = useCallback((newValue) => {
+    updateStaffDeviceSetting(setWeekdayFontWeight, 'weekdayFontWeight', newValue);
+  }, [setWeekdayFontWeight, updateStaffDeviceSetting]);
 
   const updateWeekdayRowHeight = useCallback((newValue) => {
     updateStaffDeviceSetting(setWeekdayRowHeight, 'weekdayRowHeight', newValue);
@@ -1140,6 +1148,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
         '--staff-calendar-date-font-size': `${dateFontSize}px`,
         '--staff-calendar-date-font-weight': dateFontWeight,
         '--staff-calendar-weekday-font-size': `${weekdayFontSize}px`,
+        '--staff-calendar-weekday-font-weight': weekdayFontWeight,
         '--calendar-weekday-row-height': `${renderedWeekdayRowHeight}px`,
         '--staff-calendar-last-row-font-size': `${lastRowFontSize}px`,
         '--staff-calendar-last-row-font-weight': lastRowFontWeight,
@@ -1249,7 +1258,31 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                       fontWeight: 600,
                     }}
                   >
-                    {DATE_FONT_WEIGHT_OPTIONS.map((weight) => (
+                    {FONT_WEIGHT_OPTIONS.map((weight) => (
+                      <option key={weight} value={weight}>{weight}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <label htmlFor="staff-weekday-font-weight" style={{ fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                    요일 글자 두께
+                  </label>
+                  <select
+                    id="staff-weekday-font-weight"
+                    value={weekdayFontWeight}
+                    onChange={(e) => updateWeekdayFontWeight(Number(e.target.value) || 800)}
+                    style={{
+                      width: 88,
+                      padding: '4px 6px',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: 4,
+                      background: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {FONT_WEIGHT_OPTIONS.map((weight) => (
                       <option key={weight} value={weight}>{weight}</option>
                     ))}
                   </select>
@@ -1323,7 +1356,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                       fontWeight: 600,
                     }}
                   >
-                    {DATE_FONT_WEIGHT_OPTIONS.map((weight) => (
+                    {FONT_WEIGHT_OPTIONS.map((weight) => (
                       <option key={weight} value={weight}>{weight}</option>
                     ))}
                   </select>
@@ -1611,7 +1644,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
           >
             기본값
           </button>
-          {(textStyleMenu.type === 'size' ? CELL_FONT_SIZE_OPTIONS : DATE_FONT_WEIGHT_OPTIONS).map((value) => {
+          {(textStyleMenu.type === 'size' ? CELL_FONT_SIZE_OPTIONS : FONT_WEIGHT_OPTIONS).map((value) => {
             const activeValue = getActiveTextStyleForMenu(textStyleMenu.type);
             const isSelected = activeValue === value;
             return (

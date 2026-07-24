@@ -11,6 +11,7 @@
   --staff-calendar-date-font-size: 15px;
   --staff-calendar-date-font-weight: 700;
   --staff-calendar-weekday-font-size: 16px;
+  --staff-calendar-weekday-font-weight: 800;
   --staff-calendar-last-row-font-size: 13px;
   --staff-calendar-last-row-font-weight: 700;
   --staff-calendar-inner-line-color: #c9c9c9;
@@ -102,7 +103,7 @@
   box-sizing: border-box;
   text-align: center;
   font-size: var(--staff-calendar-weekday-font-size);
-  font-weight: 800; /* 기존 700(Bold)에서 800(Extra Bold)으로 더 두껍게 */
+  font-weight: var(--staff-calendar-weekday-font-weight);
   background: #fff;
   border-bottom: 1px solid var(--text-primary);
   border-right: 0.5px solid var(--text-primary); /* 세로선을 0.5px 두께로 얇고 샤프하게 설정 */
