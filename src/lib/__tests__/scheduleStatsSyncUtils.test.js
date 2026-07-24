@@ -2,9 +2,43 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  applyScheduleStatsMutation,
   buildScheduleStatsSyncMutation,
   shouldOverwriteExistingStatsForScheduleSync,
 } from '../scheduleStatsSyncUtils.js';
+
+function createStatsSupabaseMock({
+  upsertError = null,
+  insertError = null,
+  deleteError = null,
+} = {}) {
+  const calls = [];
+  return {
+    calls,
+    from(tableName) {
+      calls.push({ operation: 'from', tableName });
+      const builder = {
+        upsert(rows, options) {
+          calls.push({ operation: 'upsert', rows, options });
+          return Promise.resolve({ error: upsertError });
+        },
+        insert(rows) {
+          calls.push({ operation: 'insert', rows });
+          return Promise.resolve({ error: insertError });
+        },
+        delete() {
+          calls.push({ operation: 'delete' });
+          return builder;
+        },
+        in(column, values) {
+          calls.push({ operation: 'deleteIds', column, values });
+          return Promise.resolve({ error: deleteError });
+        },
+      };
+      return builder;
+    },
+  };
+}
 
 describe('schedule stats sync utilities', () => {
   it('treats previous months as schedule-authoritative during automatic sync', () => {
@@ -84,5 +118,86 @@ describe('schedule stats sync utilities', () => {
 
     assert.deepEqual(result.toDeleteIds, ['stale-scheduler']);
     assert.deepEqual(result.rowsToUpsert, []);
+  });
+
+  it('keeps a manual row authoritative when it shares a scheduler cell key', () => {
+    const result = buildScheduleStatsSyncMutation({
+      overwriteExistingStats: false,
+      existingRows: [
+        { id: 'manual', source: 'manual', scheduler_cell_key: 'same-key', patient_name: '수동 입력' },
+        { id: 'scheduler-duplicate', source: 'scheduler', scheduler_cell_key: 'same-key', patient_name: '이전 동기화' },
+      ],
+      rebuiltRows: [
+        { scheduler_cell_key: 'same-key', patient_name: '스케줄 입력' },
+      ],
+      isSameRow: (existing, next) => existing.patient_name === next.patient_name,
+    });
+
+    assert.deepEqual(result.toDeleteIds, ['scheduler-duplicate']);
+    assert.deepEqual(result.rowsToUpsert, []);
+  });
+
+  it('saves changed rows before deleting stale ids', async () => {
+    const client = createStatsSupabaseMock();
+
+    await applyScheduleStatsMutation({
+      supabaseClient: client,
+      tableName: 'shockwave_patient_logs',
+      existingRows: [{ id: 'stale', source: 'scheduler' }],
+      toDeleteIds: ['stale'],
+      rowsToUpsert: [{ scheduler_cell_key: 'new-key', patient_name: '환자' }],
+    });
+
+    const operations = client.calls.map((call) => call.operation);
+    assert.ok(operations.indexOf('upsert') < operations.indexOf('deleteIds'));
+  });
+
+  it('does not delete stale rows when saving changed rows fails', async () => {
+    const client = createStatsSupabaseMock({
+      upsertError: new Error('network failure'),
+    });
+
+    await assert.rejects(
+      applyScheduleStatsMutation({
+        supabaseClient: client,
+        tableName: 'shockwave_patient_logs',
+        existingRows: [{ id: 'stale', source: 'scheduler' }],
+        toDeleteIds: ['stale'],
+        rowsToUpsert: [{ scheduler_cell_key: 'new-key', patient_name: '환자' }],
+      }),
+      /network failure/
+    );
+
+    assert.equal(client.calls.some((call) => call.operation === 'deleteIds'), false);
+  });
+
+  it('inserts fallback rows before cleaning up replaceable legacy rows', async () => {
+    const unsupportedError = Object.assign(new Error('missing scheduler_cell_key'), { code: '42703' });
+    const client = createStatsSupabaseMock({ upsertError: unsupportedError });
+
+    const result = await applyScheduleStatsMutation({
+      supabaseClient: client,
+      tableName: 'shockwave_patient_logs',
+      existingRows: [
+        { id: 'scheduler-old', source: 'scheduler' },
+        { id: 'manual-keep', source: 'manual' },
+      ],
+      toDeleteIds: ['scheduler-old'],
+      rowsToUpsert: [{ scheduler_cell_key: 'new-key', patient_name: '환자' }],
+      isFallbackUpsertError: (error) => error?.code === '42703',
+      mapFallbackRow: (row) => {
+        const fallbackRow = { ...row };
+        delete fallbackRow.scheduler_cell_key;
+        return fallbackRow;
+      },
+    });
+
+    const operations = client.calls.map((call) => call.operation);
+    assert.ok(operations.indexOf('insert') < operations.indexOf('deleteIds'));
+    assert.deepEqual(
+      client.calls.find((call) => call.operation === 'deleteIds')?.values,
+      ['scheduler-old']
+    );
+    assert.equal(result.usedFallback, true);
   });
 });

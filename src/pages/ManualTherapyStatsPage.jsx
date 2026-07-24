@@ -20,7 +20,6 @@ import {
   loadScheduleMemosForStatsMonth,
   loadStatsMonthlyTherapists,
 } from '../lib/statsScheduleSourceUtils';
-const MANUAL_THERAPY_SHEET_ID = '1-R_p3eyxwXISFTYX5G7_ec5L0kgUIhNbIwA9AdEj-9U';
 
 function normalizePrescriptionKey(value) {
   return String(value || '')
@@ -464,131 +463,6 @@ export default function ManualTherapyStatsPage() {
       setIsLogsLoading(false);
     }
   }, [addToast, currentMonth, fetchLogs, syncCurrentManualStatsFromScheduleSource]);
-
-  // eslint-disable-next-line no-unused-vars
-  const handleImportFromGoogleSheet = useCallback(async () => {
-    if (!window.confirm('현재 월의 도수치료 현황 데이터를 구글 시트 B:I 기준으로 다시 불러옵니다.\n기존 이번 달 도수치료 현황 데이터는 교체됩니다. 진행할까요?')) {
-      return;
-    }
-
-    setIsLogsLoading(true);
-    try {
-      const sheetName = `${String(currentYear).slice(-2)}.${String(currentMonth).padStart(2, '0')}`;
-      const rows = await new Promise((resolve, reject) => {
-        const callbackName = `manualTherapyImport_${Date.now()}`;
-        const script = document.createElement('script');
-
-        window[callbackName] = (data) => {
-          try {
-            delete window[callbackName];
-            script.remove();
-            if (!data || data.status !== 'ok' || !data.table?.rows) {
-              reject(new Error('구글 시트 응답 형식이 올바르지 않습니다.'));
-              return;
-            }
-
-            const normalizedRows = data.table.rows.map((row) =>
-              (row.c || []).map((cell) => cell?.f ?? cell?.v ?? '')
-            );
-            resolve(normalizedRows);
-          } catch (error) {
-            reject(error);
-          }
-        };
-
-        script.src =
-          `https://docs.google.com/spreadsheets/d/${MANUAL_THERAPY_SHEET_ID}/gviz/tq?` +
-          `tq=${encodeURIComponent('select B,C,D,E,F,G,H,I')}&` +
-          `tqx=responseHandler:${callbackName}&sheet=${encodeURIComponent(sheetName)}`;
-        script.onerror = () => {
-          delete window[callbackName];
-          script.remove();
-          reject(new Error(`${sheetName} 시트를 불러오지 못했습니다.`));
-        };
-        document.body.appendChild(script);
-      });
-
-      const therapistHeaders = rows[2] || [];
-      const prescriptionHeaders = rows[3] || [];
-      const dynamicColumns = [];
-      let activeTherapistName = '';
-
-      for (let colIndex = 5; colIndex < therapistHeaders.length; colIndex += 1) {
-        const therapistCell = String(therapistHeaders[colIndex] || '').trim();
-        const prescriptionCell = String(prescriptionHeaders[colIndex] || '').trim();
-
-        if (therapistCell.includes('총건수') || prescriptionCell.includes('건')) break;
-        if (therapistCell) {
-          activeTherapistName = therapistCell.replace(/\s*\(.+\)\s*$/, '').trim();
-        }
-        if (!activeTherapistName || !prescriptionCell) continue;
-
-        dynamicColumns.push({
-          colIndex,
-          therapistName: activeTherapistName,
-          prescription: prescriptionCell,
-        });
-      }
-
-      let currentDateLabel = '';
-      const importedRows = [];
-
-      rows.slice(5).forEach((row) => {
-        const dateCell = String(row[0] || '').trim();
-        if (dateCell) currentDateLabel = dateCell;
-        if (!currentDateLabel) return;
-
-        const [mm, dd] = currentDateLabel.split('/');
-        if (!mm || !dd) return;
-        const isoDate = `${currentYear}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
-
-        dynamicColumns.forEach(({ colIndex, therapistName, prescription }) => {
-          const rawCount = String(row[colIndex] || '').trim();
-          const parsedCount = parseInt(rawCount, 10);
-          if (!Number.isFinite(parsedCount) || parsedCount <= 0) return;
-
-          importedRows.push({
-            date: isoDate,
-            patient_name: String(row[1] || '').trim(),
-            chart_number: String(row[2] || '').trim(),
-            visit_count: String(row[3] || '').trim(),
-            body_part: String(row[4] || '').trim(),
-            therapist_name: therapistName,
-            prescription,
-            prescription_count: parsedCount,
-            source: 'sheet',
-          });
-        });
-      });
-
-      const startStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
-      const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
-      const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
-      const endStr = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
-
-      const { error: deleteError } = await supabase
-        .from('manual_therapy_patient_logs')
-        .delete()
-        .gte('date', startStr)
-        .lt('date', endStr);
-      if (deleteError) throw deleteError;
-
-      if (importedRows.length > 0) {
-        const { error: insertError } = await supabase
-          .from('manual_therapy_patient_logs')
-          .insert(importedRows);
-        if (insertError) throw insertError;
-      }
-
-      await fetchLogs();
-      addToast(`${sheetName} 시트에서 ${importedRows.length}건을 가져왔습니다.`, 'success');
-    } catch (error) {
-      console.error(error);
-      addToast('구글 시트 B:I 가져오기에 실패했습니다.', 'error');
-    } finally {
-      setIsLogsLoading(false);
-    }
-  }, [addToast, currentMonth, currentYear, fetchLogs]);
 
   const handleSaveSettlementSettings = useCallback(async (nextSettings) => {
     const ok = await saveShockwaveSettings(nextSettings);

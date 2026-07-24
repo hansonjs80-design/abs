@@ -1187,12 +1187,12 @@ export default function ShockwaveDataGrid({
     }
 
     try {
-      if (deleteIds.length > 0) {
-        const { error } = await supabase.from(tableName).delete().in('id', deleteIds);
-        if (error) throw error;
-      }
       if (upsertPayloads.length > 0) {
         const { error } = await supabase.from(tableName).upsert(upsertPayloads);
+        if (error) throw error;
+      }
+      if (deleteIds.length > 0) {
+        const { error } = await supabase.from(tableName).delete().in('id', deleteIds);
         if (error) throw error;
       }
     } catch (error) {

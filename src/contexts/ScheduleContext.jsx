@@ -45,6 +45,7 @@ import {
   rememberDeletedScheduleDraft,
   wasScheduleDraftDeletedAfter,
 } from '../lib/schedulerUtils';
+import { saveMonthlyTherapistConfigs } from '../lib/monthlyTherapistPersistence';
 
 const ScheduleContext = createContext();
 const LOCAL_WRITE_STALE_GUARD_MS = 1200;
@@ -2380,36 +2381,16 @@ export function ScheduleProvider({ children }) {
     const requestId = (monthlyTherapistSaveRequestRef.current[type] || 0) + 1;
     monthlyTherapistSaveRequestRef.current[type] = requestId;
     try {
-      const { error: deleteError } = await supabase
-        .from('shockwave_monthly_therapists')
-        .delete()
-        .eq('year', year)
-        .eq('month', month)
-        .eq('type', type);
-
-      if (deleteError) throw deleteError;
-
-      if (configs.length > 0) {
-        const rows = configs.map((c) => ({
-          year,
-          month,
-          slot_index: c.slot_index,
-          therapist_name: c.therapist_name ?? '',
-          start_day: c.start_day,
-          end_day: c.end_day,
-          type,
-          created_at: new Date().toISOString(),
-        }));
-
-        const { error: insertError } = await supabase
-          .from('shockwave_monthly_therapists')
-          .insert(rows);
-
-        if (insertError) throw insertError;
-      }
+      const savedConfigs = await saveMonthlyTherapistConfigs({
+        supabaseClient: supabase,
+        year,
+        month,
+        configs,
+        type,
+      });
 
       if (monthlyTherapistSaveRequestRef.current[type] === requestId) {
-        const nextConfigs = configs.map((c) => ({ ...c, year, month, type }));
+        const nextConfigs = savedConfigs.map((config) => ({ ...config }));
         monthlyTherapistLoadRequestRef.current[type] += 1;
         setter(nextConfigs);
         setMonthlyTherapistsMonthCache(year, month, type, nextConfigs);

@@ -7,6 +7,7 @@ import {
   sortPastLogsLatestFirst,
 } from './patientHistoryMatchUtils';
 import {
+  applyScheduleStatsMutation,
   buildScheduleStatsSyncMutation,
   fetchStatsRowsForDateRange,
   getStatsMonthDateRange,
@@ -351,33 +352,18 @@ async function runTodayManualTherapyScheduleToStatsSync({
     };
   }
 
-  if (toDeleteIds.length > 0) {
-    const { error: deleteError } = await supabase.from('manual_therapy_patient_logs').delete().in('id', toDeleteIds);
-    if (deleteError) throw deleteError;
-  }
-  
-  if (rowsToUpsert.length > 0) {
-    const { error: upsertError } = await supabase
-      .from('manual_therapy_patient_logs')
-      .upsert(rowsToUpsert, { onConflict: 'scheduler_cell_key' });
-
-    if (upsertError) {
-      if (!isSchedulerCellKeyUpsertUnsupportedError(upsertError)) throw upsertError;
-      const fallbackRows = isMissingSchedulerCellKeyError(upsertError)
-        ? rowsToUpsert.map(omitSchedulerCellKey)
-        : rowsToUpsert;
-      const fallbackDeleteIds = (todayStats || [])
-        .filter((row) => effectiveOverwriteManual ? true : row.source !== 'manual')
-        .map((row) => row.id)
-        .filter(Boolean);
-      if (fallbackDeleteIds.length > 0) {
-        const { error: fallbackDeleteError } = await supabase.from('manual_therapy_patient_logs').delete().in('id', fallbackDeleteIds);
-        if (fallbackDeleteError) throw fallbackDeleteError;
-      }
-      const { error: fallbackInsertError } = await supabase.from('manual_therapy_patient_logs').insert(fallbackRows);
-      if (fallbackInsertError) throw fallbackInsertError;
-    }
-  }
+  await applyScheduleStatsMutation({
+    supabaseClient: supabase,
+    tableName: 'manual_therapy_patient_logs',
+    existingRows: todayStats,
+    toDeleteIds,
+    rowsToUpsert,
+    overwriteExistingStats: effectiveOverwriteManual,
+    isFallbackUpsertError: isSchedulerCellKeyUpsertUnsupportedError,
+    mapFallbackRow: (row, error) => (
+      isMissingSchedulerCellKeyError(error) ? omitSchedulerCellKey(row) : row
+    ),
+  });
 
   return {
     skipped: false,
@@ -545,9 +531,12 @@ export async function syncMonthManualTherapyScheduleToStats({
       startDate: startOfMonthStr,
       endDate: endOfMonthStr,
       rows: rebuiltRowsForMonth,
+      existingRows: existingMonthStats,
       preserveManualSource: !effectiveOverwriteManual,
-      isFallbackInsertError: isMissingSchedulerCellKeyError,
-      mapFallbackRow: omitSchedulerCellKey,
+      isFallbackInsertError: isSchedulerCellKeyUpsertUnsupportedError,
+      mapFallbackRow: (row, error) => (
+        isMissingSchedulerCellKeyError(error) ? omitSchedulerCellKey(row) : row
+      ),
     });
 
     if (emitEvent && typeof window !== 'undefined') {
@@ -683,60 +672,20 @@ export async function syncMonthManualTherapyScheduleToStats({
     }
   }
 
-  // 5단계: 수집된 삭제 대상 ID들과 업서트 대상 행들을 일괄(Bulk) 쿼리로 처리합니다.
-  if (allToDeleteIds.length > 0) {
-    const chunkSize = 100;
-    for (let i = 0; i < allToDeleteIds.length; i += chunkSize) {
-      const chunk = allToDeleteIds.slice(i, i + chunkSize);
-      const { error: delErr } = await supabase
-        .from('manual_therapy_patient_logs')
-        .delete()
-        .in('id', chunk);
-      if (delErr) {
-        throw delErr;
-      }
-    }
-  }
-
-  if (allRowsToUpsert.length > 0) {
-    const chunkSize = 100;
-    for (let i = 0; i < allRowsToUpsert.length; i += chunkSize) {
-      const chunk = allRowsToUpsert.slice(i, i + chunkSize);
-      const { error: upsertError } = await supabase
-        .from('manual_therapy_patient_logs')
-        .upsert(chunk, { onConflict: 'scheduler_cell_key' });
-
-      if (upsertError) {
-        console.warn('Bulk upsert failed, retrying with fallback...', upsertError);
-        if (!isSchedulerCellKeyUpsertUnsupportedError(upsertError)) throw upsertError;
-
-        // Fallback: scheduler_cell_key 컬럼 또는 유니크 인덱스가 없는 구버전 스키마 대응
-        const fallbackRows = isMissingSchedulerCellKeyError(upsertError)
-          ? chunk.map(omitSchedulerCellKey)
-          : chunk;
-        const uniqueDates = Array.from(new Set(chunk.map(r => r.date)));
-        
-        for (const uDate of uniqueDates) {
-          let fallbackDeleteQuery = supabase
-            .from('manual_therapy_patient_logs')
-            .delete()
-            .eq('date', uDate);
-          if (!effectiveOverwriteManual) {
-            fallbackDeleteQuery = fallbackDeleteQuery.neq('source', 'manual');
-          }
-          const { error: fallbackDeleteError } = await fallbackDeleteQuery;
-          if (fallbackDeleteError) throw fallbackDeleteError;
-        }
-
-        const { error: insErr } = await supabase
-          .from('manual_therapy_patient_logs')
-          .insert(fallbackRows);
-        if (insErr) {
-          throw insErr;
-        }
-      }
-    }
-  }
+  // 5단계: 새 행 저장이 모두 성공한 뒤 오래된 행만 ID로 정리합니다.
+  await applyScheduleStatsMutation({
+    supabaseClient: supabase,
+    tableName: 'manual_therapy_patient_logs',
+    existingRows: statsCache,
+    toDeleteIds: allToDeleteIds,
+    rowsToUpsert: allRowsToUpsert,
+    overwriteExistingStats: effectiveOverwriteManual,
+    chunkSize: 100,
+    isFallbackUpsertError: isSchedulerCellKeyUpsertUnsupportedError,
+    mapFallbackRow: (row, error) => (
+      isMissingSchedulerCellKeyError(error) ? omitSchedulerCellKey(row) : row
+    ),
+  });
 
   // 6단계: 동기화를 오늘까지만 진행한 경우, 월말까지의 잔여 미래 데이터를 청소합니다.
   if (upToToday && year === today.getFullYear() && month === today.getMonth() + 1) {

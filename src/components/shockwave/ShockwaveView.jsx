@@ -34,11 +34,14 @@ import MonthlyTherapistConfig from './MonthlyTherapistConfig';
 import SchedulerPatientSelector from './SchedulerPatientSelector';
 import BodyPartKeyboardPanel from './BodyPartKeyboardPanel';
 import ContextMenuBodySummary from './ContextMenuBodySummary';
+import { ContextMenuLocalInput } from './ContextMenuLocalInput';
+import { ContextMenuLocalInputGroup } from './ContextMenuLocalInputGroup';
 import ContextMenuMemoList from './ContextMenuMemoList';
 import MemoizedCell from './ShockwaveScheduleCell';
 import ShockwaveHoverTooltip from './ShockwaveHoverTooltip';
 import useContextMenuPositioning from './useContextMenuPositioning';
 import usePatientHistoryActions from './usePatientHistoryActions';
+import useShockwaveTooltipPositioning from './useShockwaveTooltipPositioning';
 import useSchedulerAutoText from './useSchedulerAutoText';
 import useScheduleClipboardActions from './useScheduleClipboardActions';
 import useScheduleContextMenuActions from './useScheduleContextMenuActions';
@@ -56,6 +59,21 @@ import useScheduleTodayNavigation from './useScheduleTodayNavigation';
 import useScheduleTimeSlots from './useScheduleTimeSlots';
 import useScheduleUndoActions from './useScheduleUndoActions';
 import useScheduleViewState from './useScheduleViewState';
+import {
+  buildPatientHistoryBodyFilterOptions,
+  DEFAULT_CONTEXT_PRESCRIPTION_COLORS,
+  EMPTY_SCHEDULE_MERGE_SPAN,
+  getPatientHistoryBodyFilterParts,
+  getPatientHistoryGroupKey,
+  getPlainTextDefaultRowSpan,
+  loadHiddenBodyPartOptionsByPatient,
+  normalizeCommittedSchedulerContent,
+  PATIENT_HISTORY_ALL_BODY_FILTER,
+  PATIENT_HISTORY_GROUPS,
+  saveHiddenBodyPartOptionsByPatient,
+  SCHEDULE_INTERNAL_BORDER_COLOR,
+  stepContextMenuVisitValue,
+} from './shockwaveViewUtils';
 import {
   HORIZONTAL_BORDER_COLOR,
   TIME_COL_WIDTH,
@@ -84,252 +102,9 @@ import {
   buildSchedulerMemoSortKey,
   getNonVisitParentheticalSuffix,
   addBodyPartToMap,
-  getScheduleDefaultMergeRowSpan,
   getScheduleDisplaySlotMinutes,
   formatBodyPartInput,
 } from '../../lib/schedulerUtils';
-
-const PATIENT_HISTORY_GROUPS = [
-  { key: 'shockwave', label: '충격파 내역' },
-  { key: 'manual', label: '도수치료 내역' },
-];
-
-const stepContextMenuVisitValue = (value, delta) => {
-  const normalized = normalizeVisitInputValue(value);
-
-  if (!normalized) {
-    if (delta > 0) return '*';
-    if (delta < 0) return '-';
-    return '';
-  }
-
-  let currentIndex = 0;
-  if (normalized === '-') currentIndex = 0;
-  else if (normalized === '*') currentIndex = 1;
-  else currentIndex = (parseInt(normalized, 10) || 1) + 1;
-
-  const nextIndex = currentIndex + delta;
-
-  if (nextIndex <= 0) return '-';
-  if (nextIndex === 1) return '*';
-  return String(nextIndex - 1);
-};
-
-const PATIENT_HISTORY_ALL_BODY_FILTER = '__all__';
-const PATIENT_HISTORY_EMPTY_BODY_FILTER = '__empty__';
-
-const HIDDEN_BODY_PART_OPTIONS_STORAGE_KEY = 'shockwave-hidden-body-part-options-by-patient';
-const EMPTY_SCHEDULE_MERGE_SPAN = { rowSpan: 1, colSpan: 1, mergedInto: null };
-const SCHEDULE_INTERNAL_BORDER_COLOR = '#d9d9d9';
-const normalizeCommittedSchedulerContent = (value) => normalizeSchedulerVisitSuffix(
-  normalize4060StarOrder(String(value ?? '').trim())
-);
-function getPlainTextDefaultRowSpan({ intervalMinutes, timeLabelIntervalMinutes }) {
-  return getScheduleDefaultMergeRowSpan({
-    interval_minutes: intervalMinutes,
-    time_label_interval_minutes: timeLabelIntervalMinutes,
-  });
-}
-
-const DEFAULT_CONTEXT_PRESCRIPTION_COLORS = {
-  'F/R': '#0f172a',
-  'F/Rdc': '#64748b',
-  'F/RDC': '#64748b',
-  'F1.5': '#7c3aed',
-  '40분': '#9a3412',
-  '60분': '#9a3412',
-};
-
-const loadHiddenBodyPartOptionsByPatient = () => {
-  if (typeof window === 'undefined') return {};
-  try {
-    const raw = window.localStorage.getItem(HIDDEN_BODY_PART_OPTIONS_STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
-    return Object.entries(parsed).reduce((acc, [patientKey, keys]) => {
-      if (!patientKey || !Array.isArray(keys)) return acc;
-      const uniqueKeys = Array.from(new Set(
-        keys.map((key) => String(key || '').trim()).filter(Boolean)
-      ));
-      if (uniqueKeys.length > 0) acc[patientKey] = uniqueKeys;
-      return acc;
-    }, {});
-  } catch {
-    return {};
-  }
-};
-
-const saveHiddenBodyPartOptionsByPatient = (value) => {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(HIDDEN_BODY_PART_OPTIONS_STORAGE_KEY, JSON.stringify(value || {}));
-  } catch {
-    // localStorage may be unavailable in private browsing or restricted contexts.
-  }
-};
-
-const getPatientHistoryGroupKey = (log) => (
-  log?.history_group || (log?.type === 'manual' ? 'manual' : 'shockwave')
-);
-
-const getPatientHistoryBodyFilterParts = (log = {}) => {
-  const parts = splitBodyParts(log.body_part || '');
-  if (parts.length === 0) {
-    return [{ key: PATIENT_HISTORY_EMPTY_BODY_FILTER, label: '부위 없음' }];
-  }
-  const partMap = new Map();
-  parts.forEach((part) => {
-    const key = normalizeBodyPartKey(part);
-    if (!key || partMap.has(key)) return;
-    partMap.set(key, { key, label: part });
-  });
-  return Array.from(partMap.values());
-};
-
-const buildPatientHistoryBodyFilterOptions = (logs = []) => {
-  const partMap = new Map();
-  logs.forEach((log) => {
-    getPatientHistoryBodyFilterParts(log).forEach((part) => {
-      const current = partMap.get(part.key) || { ...part, count: 0 };
-      current.count += 1;
-      partMap.set(part.key, current);
-    });
-  });
-
-  return [
-    { key: PATIENT_HISTORY_ALL_BODY_FILTER, label: '전체', count: logs.length },
-    ...Array.from(partMap.values()).sort((a, b) => a.label.localeCompare(b.label, 'ko')),
-  ];
-};
-
-const ContextMenuLocalInput = ({ value, onChange, onKeyDown, onBlur, className, placeholder, autoFocus, onCompositionStart, onCompositionEnd, inputMode, pattern }) => {
-  const [localValue, setLocalValue] = useState(value || '');
-  
-  useEffect(() => { setLocalValue(value || ''); }, [value]);
-
-  return (
-    <input
-      type="text"
-      className={className}
-      placeholder={placeholder}
-      autoFocus={autoFocus}
-      autoComplete="off"
-      inputMode={inputMode}
-      pattern={pattern}
-      value={localValue}
-      onChange={(e) => {
-        e.stopPropagation();
-        setLocalValue(e.target.value);
-        if (onChange) onChange(e.target.value);
-      }}
-      onKeyDown={(e) => {
-        if (onKeyDown) onKeyDown(e, localValue);
-      }}
-      onBlur={(e) => {
-        if (onBlur) onBlur(e, localValue);
-      }}
-      onCompositionStart={onCompositionStart}
-      onCompositionEnd={onCompositionEnd}
-      onMouseDown={e => e.stopPropagation()}
-      onClick={e => e.stopPropagation()}
-    />
-  );
-};
-
-const ContextMenuLocalInputGroup = ({
-  placeholder,
-  buttonLabel,
-  onSubmit,
-  imeOpenRef,
-  className = "context-menu-input",
-  autoFocus,
-  focusSignal = 0,
-  onInputKeyDown,
-}) => {
-  const [localValue, setLocalValue] = useState('');
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    if (!autoFocus && !focusSignal) return undefined;
-    let cancelled = false;
-    const focusInput = () => {
-      if (cancelled || !inputRef.current) return;
-      inputRef.current.focus({ preventScroll: true });
-      inputRef.current.select();
-    };
-
-    focusInput();
-    let nestedFrameId = null;
-    const frameId = requestAnimationFrame(() => {
-      focusInput();
-      nestedFrameId = requestAnimationFrame(focusInput);
-    });
-
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(frameId);
-      if (nestedFrameId !== null) {
-        cancelAnimationFrame(nestedFrameId);
-      }
-    };
-  }, [autoFocus, focusSignal, placeholder]);
-
-  const handleSubmit = () => {
-    const trimmed = localValue.trim();
-    if (trimmed) {
-      onSubmit(trimmed);
-      setLocalValue('');
-    }
-  };
-
-  return (
-    <div className="context-menu-input-row" style={{ marginTop: '8px' }}>
-      <input
-        ref={inputRef}
-        type="text"
-        placeholder={placeholder}
-        className={className}
-        autoComplete="off"
-        autoFocus={autoFocus}
-        value={localValue}
-        onChange={(e) => {
-          e.stopPropagation();
-          setLocalValue(e.target.value);
-        }}
-        onKeyDown={(e) => {
-          e.stopPropagation();
-          if (e.nativeEvent?.isComposing || e.keyCode === 229) return;
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            handleSubmit();
-            return;
-          }
-          if (onInputKeyDown) onInputKeyDown(e);
-        }}
-        onCompositionStart={() => {
-          if (imeOpenRef) imeOpenRef.current = true;
-        }}
-        onCompositionEnd={() => {
-          if (imeOpenRef) imeOpenRef.current = false;
-        }}
-        onMouseDown={e => e.stopPropagation()}
-        onClick={e => e.stopPropagation()}
-      />
-      <button
-        type="button"
-        className="context-menu-inline-button"
-        onMouseDown={e => e.stopPropagation()}
-        onClick={(e) => {
-          e.stopPropagation();
-          handleSubmit();
-        }}
-      >
-        {buttonLabel}
-      </button>
-    </div>
-  );
-};
 
 export default function ShockwaveView({ therapists, settings, memos = {}, memosLoadedKey = '', onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
   const { currentYear, currentMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, monthlyTherapistsByMonth, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings, clipboardRef, clipboardSource, setClipboardSource } = useSchedule();
@@ -2264,67 +2039,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     openSelectedCellContextSubmenu('memo', { standaloneSubmenu: true, focusMemoInput: true });
   }, [openSelectedCellContextSubmenu]);
 
-  const positionTooltip = useCallback((clientX, clientY) => {
-    const tooltipEl = tooltipRef.current;
-    if (!tooltipEl) return;
-
-    const offset = 14;
-    const edgePadding = 8;
-    const { width, height } = tooltipEl.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    let left = clientX + offset;
-    let top = clientY + offset;
-
-    // 부위 팝업(contextMenu)이 열려있으면 툴팁을 커서 위쪽에 배치하여 겹침 방지
-    if (contextMenu) {
-      top = clientY - height - offset;
-    }
-
-    if (left + width + edgePadding > viewportWidth) {
-      left = clientX - width - offset;
-    }
-    if (top + height + edgePadding > viewportHeight) {
-      top = clientY - height - offset;
-    }
-    if (top < edgePadding) {
-      top = edgePadding;
-    }
-
-    left = Math.min(Math.max(edgePadding, left), Math.max(edgePadding, viewportWidth - width - edgePadding));
-    top = Math.min(Math.max(edgePadding, top), Math.max(edgePadding, viewportHeight - height - edgePadding));
-
-    tooltipEl.style.left = `${left}px`;
-    tooltipEl.style.top = `${top}px`;
-    tooltipEl.style.opacity = hoverCell ? '1' : '0';
-  }, [hoverCell, contextMenu]);
-
-  const handleTimeLabelMouseMove = useCallback((e, weekIdx, dayIdx, startSlotRenderIndex, labelSpan, daySlots) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const relativeY = e.clientY - rect.top;
-    const slotHeight = rect.height / labelSpan;
-    const offset = Math.floor(relativeY / slotHeight);
-    const targetSlotRenderIndex = Math.min(startSlotRenderIndex + offset, startSlotRenderIndex + labelSpan - 1);
-    const slotInfo = daySlots[targetSlotRenderIndex];
-    if (slotInfo) {
-      setHoverCell({
-        weekIdx,
-        dayIdx,
-        rowIdx: slotInfo.idx,
-        colIdx: -1,
-        staffBlockRule: null,
-        slotInfo,
-        selectionInfo: null,
-      });
-      tooltipMousePosRef.current = { x: e.clientX, y: e.clientY };
-      if (tooltipRef.current) positionTooltip(e.clientX, e.clientY);
-    }
-  }, [positionTooltip]);
-
-  const handleTimeLabelMouseLeave = useCallback(() => {
-    setHoverCell(null);
-  }, []);
+  const {
+    handleTimeLabelMouseLeave,
+    handleTimeLabelMouseMove,
+    positionTooltip,
+  } = useShockwaveTooltipPositioning({
+    contextMenu,
+    hoverCell,
+    setHoverCell,
+    tooltipMousePosRef,
+    tooltipRef,
+  });
 
   const handleKeyboardSelectionMoved = useCallback((cell, movedKeys = []) => {
     if (!cell) return;

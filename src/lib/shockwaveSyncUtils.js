@@ -9,6 +9,7 @@ import {
   sortPastLogsLatestFirst,
 } from './patientHistoryMatchUtils.js';
 import {
+  applyScheduleStatsMutation,
   buildScheduleStatsSyncMutation,
   fetchStatsRowsForDateRange,
   getStatsMonthDateRange,
@@ -522,33 +523,18 @@ async function runTodayShockwaveScheduleToStatsSync({
     };
   }
 
-  if (toDeleteIds.length > 0) {
-    const { error: deleteError } = await supabase.from('shockwave_patient_logs').delete().in('id', toDeleteIds);
-    if (deleteError) throw deleteError;
-  }
-  
-  if (rowsToUpsert.length > 0) {
-    const { error: upsertError } = await supabase
-      .from('shockwave_patient_logs')
-      .upsert(rowsToUpsert, { onConflict: 'scheduler_cell_key' });
-
-    if (upsertError) {
-      if (!isSchedulerCellKeyUpsertUnsupportedError(upsertError)) throw upsertError;
-      const fallbackRows = isMissingSchedulerCellKeyError(upsertError)
-        ? rowsToUpsert.map(omitSchedulerCellKey)
-        : rowsToUpsert;
-      const fallbackDeleteIds = (todayStats || [])
-        .filter((row) => effectiveOverwriteManual ? true : row.source !== 'manual')
-        .map((row) => row.id)
-        .filter(Boolean);
-      if (fallbackDeleteIds.length > 0) {
-        const { error: fallbackDeleteError } = await supabase.from('shockwave_patient_logs').delete().in('id', fallbackDeleteIds);
-        if (fallbackDeleteError) throw fallbackDeleteError;
-      }
-      const { error: fallbackInsertError } = await supabase.from('shockwave_patient_logs').insert(fallbackRows);
-      if (fallbackInsertError) throw fallbackInsertError;
-    }
-  }
+  await applyScheduleStatsMutation({
+    supabaseClient: supabase,
+    tableName: 'shockwave_patient_logs',
+    existingRows: todayStats,
+    toDeleteIds,
+    rowsToUpsert,
+    overwriteExistingStats: effectiveOverwriteManual,
+    isFallbackUpsertError: isSchedulerCellKeyUpsertUnsupportedError,
+    mapFallbackRow: (row, error) => (
+      isMissingSchedulerCellKeyError(error) ? omitSchedulerCellKey(row) : row
+    ),
+  });
 
   return {
     skipped: false,
@@ -727,9 +713,12 @@ export async function syncMonthShockwaveScheduleToStats({
       startDate: startOfMonthStr,
       endDate: endOfMonthStr,
       rows: rebuiltRowsForMonth,
+      existingRows: existingMonthStats,
       preserveManualSource: !effectiveOverwriteManual,
-      isFallbackInsertError: isMissingSchedulerCellKeyError,
-      mapFallbackRow: omitSchedulerCellKey,
+      isFallbackInsertError: isSchedulerCellKeyUpsertUnsupportedError,
+      mapFallbackRow: (row, error) => (
+        isMissingSchedulerCellKeyError(error) ? omitSchedulerCellKey(row) : row
+      ),
     });
 
     if (emitEvent && typeof window !== 'undefined') {
