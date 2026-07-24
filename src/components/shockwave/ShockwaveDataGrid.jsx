@@ -448,11 +448,13 @@ export default function ShockwaveDataGrid({
       tooltipAccentColor: '#047857',
       unit: '명',
       layout: 'therapist-patients',
-      items: visibleTherapists.map((therapist) => ({
-        label: therapist.displayName || therapist.name,
-        count: Number(summary?.newPatientByTherapist?.[therapist.name]) || 0,
-        patientNames: summary?.newPatientNamesByTherapist?.[therapist.name] || [],
-      })),
+      items: visibleTherapists
+        .map((therapist) => ({
+          label: therapist.displayName || therapist.name,
+          count: Number(summary?.newPatientByTherapist?.[therapist.name]) || 0,
+          patientNames: summary?.newPatientNamesByTherapist?.[therapist.name] || [],
+        }))
+        .filter((item) => item.count > 0),
     };
   }, [dateSummaries, formatFullDateLabel, visibleTherapists]);
 
