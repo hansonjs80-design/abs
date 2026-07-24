@@ -204,9 +204,9 @@ export default function PrintButton({ isStaffSchedule }) {
         document.body.classList.remove('vertical-settlement-print');
       } else if (isVerticalSettlementPrint) {
         document.body.classList.remove('new-patient-print');
-        document.body.classList.remove('settlement-print');
         document.body.classList.remove('manual-settlement-print');
-        document.body.classList.remove('shockwave-settlement-print');
+        document.body.classList.add('settlement-print');
+        document.body.classList.add('shockwave-settlement-print');
         document.body.classList.add('vertical-settlement-print');
       } else if (isSettlementPrint) {
         const isManualSettlementPrint = Boolean(document.querySelector('.sw-manual-settlement-stack'));

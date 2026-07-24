@@ -1924,3 +1924,61 @@
     color: #9a3412 !important;
   }
 }
+
+/* 우측 결산표도 좌측 치료사 표와 동일한 외곽선과 라운딩을 사용한다. */
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-right :is(
+  .sw-vertical-summary-card,
+  .sw-vertical-recent-card
+) :is(
+  .sw-settlement-table-wrap,
+  .sw-compact-table-wrap
+) {
+  border: 2px solid #94a3b8 !important;
+  border-radius: 5px !important;
+  background: #ffffff !important;
+  overflow: hidden !important;
+  overflow: clip !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-right :is(
+  .sw-vertical-summary-table,
+  .sw-vertical-prescription-summary-table,
+  .sw-summary-table
+) {
+  border: 0 !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row th,
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row td {
+  border-bottom: 0 !important;
+}
+
+@media print {
+  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-card,
+  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-right :is(
+    .sw-vertical-summary-card,
+    .sw-vertical-recent-card
+  ) :is(
+    .sw-settlement-table-wrap,
+    .sw-compact-table-wrap
+  ) {
+    border: var(--sw-print-frame-border) !important;
+    border-radius: 1.2mm !important;
+    background: #ffffff !important;
+    overflow: hidden !important;
+    overflow: clip !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-right :is(
+    .sw-vertical-summary-table,
+    .sw-vertical-prescription-summary-table,
+    .sw-summary-table
+  ) {
+    border: 0 !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row th,
+  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row td {
+    border-bottom: 0 !important;
+  }
+}

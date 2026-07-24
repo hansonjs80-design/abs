@@ -405,6 +405,48 @@ export default function ShockwaveDataGrid({
     totalCountColIndex,
   ]);
 
+  const getTotalCountTooltip = useCallback((row) => {
+    if (!row?.date || !row._isFirst) return null;
+    const summary = dateSummaries.get(row.date);
+    const totalCount = Number(summary?.total) || 0;
+    if (totalCount <= 0) return null;
+
+    return {
+      date: formatFullDateLabel(row.date),
+      summaryLabel: `총건수 ${totalCount}건`,
+      backgroundColor: '#e2e8f0',
+      tooltipAccentColor: '#334155',
+      unit: '건',
+      layout: 'list',
+      items: prescriptions
+        .map((prescription) => ({
+          label: prescription,
+          count: Number(summary?.byPrescription?.[prescription]) || 0,
+        }))
+        .filter((item) => item.count > 0),
+    };
+  }, [dateSummaries, formatFullDateLabel, prescriptions]);
+
+  const getNewPatientTooltip = useCallback((row) => {
+    if (!row?.date || !row._isFirst) return null;
+    const summary = dateSummaries.get(row.date);
+    const totalCount = Number(summary?.newPatient) || 0;
+    if (totalCount <= 0) return null;
+
+    return {
+      date: formatFullDateLabel(row.date),
+      summaryLabel: `신환 ${totalCount}명`,
+      backgroundColor: '#dcfce7',
+      tooltipAccentColor: '#047857',
+      unit: '명',
+      layout: 'list',
+      items: visibleTherapists.map((therapist) => ({
+        label: therapist.displayName || therapist.name,
+        count: Number(summary?.newPatientByTherapist?.[therapist.name]) || 0,
+      })),
+    };
+  }, [dateSummaries, formatFullDateLabel, visibleTherapists]);
+
   // ─── 2. CELL VALUE HELPERS ────────────────────────────────
   const getVal = (row, colIdx) => {
     if (colIdx === 0) {
@@ -466,8 +508,11 @@ export default function ShockwaveDataGrid({
       const countLength = String(item?.count ?? '').length;
       return sum + labelLength + countLength + 4;
     }, 0);
-    const desiredWidth = Math.min(520, Math.max(220, 126 + textWeight * 8));
-    const tooltipWidth = Math.min(desiredWidth, Math.max(220, viewportWidth - 24));
+    const isListTooltip = tooltip.layout === 'list';
+    const desiredWidth = isListTooltip
+      ? 190
+      : Math.min(520, Math.max(220, 126 + textWeight * 8));
+    const tooltipWidth = Math.min(desiredWidth, Math.max(160, viewportWidth - 24));
     const halfWidth = tooltipWidth / 2;
     const minX = 12 + halfWidth;
     const maxX = viewportWidth - 12 - halfWidth;
@@ -1326,6 +1371,75 @@ export default function ShockwaveDataGrid({
     });
   }, [filteredInputLogs, visibleTherapists, prescriptions]);
 
+  const grandCountTooltipData = useMemo(() => {
+    if (tableName === 'manual_therapy_patient_logs' || grandTotal <= 0) return null;
+
+    const prescriptionCounts = Object.fromEntries(
+      prescriptions.map((prescription) => [prescription, 0])
+    );
+    dateSummaries.forEach((summary) => {
+      prescriptions.forEach((prescription) => {
+        prescriptionCounts[prescription] += Number(summary?.byPrescription?.[prescription]) || 0;
+      });
+    });
+
+    return {
+      date: `${Number(currentYear)}년 ${Number(currentMonth)}월`,
+      summaryLabel: `총건수 ${grandTotal}건`,
+      backgroundColor: '#e2e8f0',
+      tooltipAccentColor: '#334155',
+      unit: '건',
+      layout: 'list',
+      items: prescriptions
+        .map((prescription) => ({
+          label: prescription,
+          count: prescriptionCounts[prescription],
+        }))
+        .filter((item) => item.count > 0),
+    };
+  }, [
+    currentMonth,
+    currentYear,
+    dateSummaries,
+    grandTotal,
+    prescriptions,
+    tableName,
+  ]);
+
+  const grandNewPatientTooltipData = useMemo(() => {
+    if (tableName === 'manual_therapy_patient_logs' || newPatientTotal <= 0) return null;
+
+    const therapistCounts = Object.fromEntries(
+      visibleTherapists.map((therapist) => [therapist.name, 0])
+    );
+    dateSummaries.forEach((summary) => {
+      visibleTherapists.forEach((therapist) => {
+        therapistCounts[therapist.name] +=
+          Number(summary?.newPatientByTherapist?.[therapist.name]) || 0;
+      });
+    });
+
+    return {
+      date: `${Number(currentYear)}년 ${Number(currentMonth)}월`,
+      summaryLabel: `신환 ${newPatientTotal}명`,
+      backgroundColor: '#dcfce7',
+      tooltipAccentColor: '#047857',
+      unit: '명',
+      layout: 'list',
+      items: visibleTherapists.map((therapist) => ({
+        label: therapist.displayName || therapist.name,
+        count: therapistCounts[therapist.name],
+      })),
+    };
+  }, [
+    currentMonth,
+    currentYear,
+    dateSummaries,
+    newPatientTotal,
+    tableName,
+    visibleTherapists,
+  ]);
+
   // ─── 10. RENDER ───────────────────────────────────────────
   const gridWrapperClassName = [
     'sw-grid-wrapper',
@@ -1401,8 +1515,24 @@ export default function ShockwaveDataGrid({
                 {therapistTotals[idx]?.byPres[p] || 0}
               </th>
             )))}
-            <th className="hdr-grand-total total-group-start">{grandTotal}건</th>
-            <th className="hdr-grand-total hdr-new-patient-total">{newPatientTotal}명</th>
+            <th
+              className={`hdr-grand-total total-group-start ${grandCountTooltipData ? 'hdr-grand-total--hoverable' : ''}`}
+              onMouseEnter={grandCountTooltipData
+                ? (event) => showCountTooltip(event.currentTarget, grandCountTooltipData)
+                : undefined}
+              onMouseLeave={grandCountTooltipData ? hideCountTooltip : undefined}
+            >
+              {grandTotal}건
+            </th>
+            <th
+              className={`hdr-grand-total hdr-new-patient-total ${grandNewPatientTooltipData ? 'hdr-grand-total--hoverable' : ''}`}
+              onMouseEnter={grandNewPatientTooltipData
+                ? (event) => showCountTooltip(event.currentTarget, grandNewPatientTooltipData)
+                : undefined}
+              onMouseLeave={grandNewPatientTooltipData ? hideCountTooltip : undefined}
+            >
+              {newPatientTotal}명
+            </th>
           </tr>
         </thead>
 
@@ -1556,27 +1686,21 @@ export default function ShockwaveDataGrid({
                 const countTooltipData = (!isTotalCol && !isNewPatientCol && ci >= FIXED_FIELDS.length && ci < totalCountColIndex)
                   ? getTherapistCountTooltip(row, ci)
                   : null;
+                let cellTooltipData = countTooltipData;
                 let displayVal = val;
                 if (isTotalCol && val !== '') {
-                  const summary = dateSummaries.get(row.date);
-                  if (summary?.byPrescription) {
-                    const counts = prescriptions.map(p => summary.byPrescription[p] || 0);
-                    const countsStr = counts.join('/');
-                    displayVal = (
-                      <div className="sw-grid-total-cell">
-                        <span className="sw-grid-summary-main-number">{val}</span>
-                        <span className="sw-grid-summary-breakdown">({countsStr})</span>
-                      </div>
-                    );
-                  }
+                  cellTooltipData = getTotalCountTooltip(row);
+                  displayVal = (
+                    <div className="sw-grid-total-cell sw-grid-count-hover">
+                      <span className="sw-grid-summary-main-number">{val}</span>
+                    </div>
+                  );
                 }
                 if (isNewPatientCol && val !== '') {
-                  const summary = dateSummaries.get(row.date);
-                  const counts = visibleTherapists.map(t => summary?.newPatientByTherapist?.[t.name] || 0);
+                  cellTooltipData = getNewPatientTooltip(row);
                   displayVal = (
-                    <div className="sw-grid-new-patient-cell">
+                    <div className="sw-grid-new-patient-cell sw-grid-count-hover">
                       <span className="sw-grid-new-patient-total">{val}</span>
-                      <span className="sw-grid-new-patient-breakdown">({counts.join('/')})</span>
                     </div>
                   );
                 }
@@ -1607,9 +1731,9 @@ export default function ShockwaveDataGrid({
                     onMouseDown={e => (ci === 0 ? onRowHeaderMouseDown(e, ri) : onMouseDown(e, ri, ci))}
                     onMouseEnter={(e) => {
                       onMouseEnter(ri, ci);
-                      if (countTooltipData) showCountTooltip(e.currentTarget, countTooltipData);
+                      if (cellTooltipData) showCountTooltip(e.currentTarget, cellTooltipData);
                     }}
-                    onMouseLeave={countTooltipData ? hideCountTooltip : undefined}
+                    onMouseLeave={cellTooltipData ? hideCountTooltip : undefined}
                     onDoubleClick={() => onDblClick(ri, ci)}
                     onContextMenu={e => (ci === 0 ? onRowHeaderContextMenu(e, ri) : onCtxMenu(e, ri, ci))}
                   >
@@ -1625,27 +1749,32 @@ export default function ShockwaveDataGrid({
 
       {countTooltip && (
         <div
-          className={`sw-grid-count-tooltip sw-grid-count-tooltip--fixed sw-grid-count-tooltip--${countTooltip.placement}`}
+          className={[
+            'sw-grid-count-tooltip',
+            'sw-grid-count-tooltip--fixed',
+            `sw-grid-count-tooltip--${countTooltip.placement}`,
+            countTooltip.layout === 'list' ? 'sw-grid-count-tooltip--list' : '',
+          ].filter(Boolean).join(' ')}
           role="tooltip"
           style={{
             left: `${countTooltip.x}px`,
             top: `${countTooltip.y}px`,
             width: `${countTooltip.width}px`,
-            backgroundColor: countTooltip.therapistColor,
+            backgroundColor: countTooltip.backgroundColor || countTooltip.therapistColor,
             '--tooltip-accent-color': countTooltip.tooltipAccentColor,
           }}
         >
           <div className="sw-grid-count-tooltip-header">
             <div className="sw-grid-count-tooltip-date">{countTooltip.date}</div>
             <div className="sw-grid-count-tooltip-name">
-              {countTooltip.therapistName} {countTooltip.totalCount}건
+              {countTooltip.summaryLabel || `${countTooltip.therapistName} ${countTooltip.totalCount}건`}
             </div>
           </div>
           <div className="sw-grid-count-tooltip-line">
             {countTooltip.items.map(({ label, count }) => (
               <span className="sw-grid-count-tooltip-item sw-grid-count-tooltip-item--counted" key={label}>
                 <span className="sw-grid-count-tooltip-prescription">{label}</span>
-                <span className="sw-grid-count-tooltip-count">{count}건</span>
+                <span className="sw-grid-count-tooltip-count">{count}{countTooltip.unit || '건'}</span>
               </span>
             ))}
           </div>

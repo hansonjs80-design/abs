@@ -1293,6 +1293,23 @@
   border-bottom: 4px solid #94a3b8 !important;
 }
 
+/* Draw the shockwave grid's right edge once on the table so row borders never create a stepped seam. */
+.sw-grid-wrapper--shockwave .sw-grid-table {
+  border-right: 3px solid #94a3b8;
+  border-radius: 10px 10px 0 0;
+}
+
+.sw-grid-wrapper--shockwave .sw-grid-table .grid-title,
+.sw-grid-wrapper--shockwave .sw-grid-table thead .hdr-new-patient,
+.sw-grid-wrapper--shockwave .sw-grid-table thead .hdr-new-patient-total,
+.sw-grid-wrapper--shockwave .sw-grid-table tbody .gc-new-patient {
+  border-right: 0 !important;
+}
+
+.sw-grid-wrapper--shockwave .sw-grid-table tbody .therapist-group-end {
+  border-right: 2px solid var(--grid-divider) !important;
+}
+
 /* New-patient tables use one wrapper frame so colspan rows stay even. */
 .sw-new-patient-table,
 .sw-compact-new-patient-table {
