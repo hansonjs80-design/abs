@@ -560,9 +560,9 @@
   vertical-align: baseline;
 }
 
-.sw-cell-text {
+.sw-cell-main > span:first-child {
   display: inline-block;
-  transform: translateY(var(--sw-text-optical-center-offset));
+  transform: translateY(0.025em);
 }
 
 .sw-cell-visit-paren,
@@ -576,7 +576,7 @@
 }
 
 .sw-cell-visit-number {
-  transform: translateY(var(--sw-text-optical-center-offset));
+  transform: translateY(0.012em);
 }
 
 .sw-cell-visit-suffix--empty {

@@ -249,7 +249,7 @@ const MemoizedCell = memo(({
     <div className="sw-cell-display" style={pointerEvents ? { pointerEvents } : undefined}>
       {displayData.hasDisplayText ? (
         <span className="sw-cell-main">
-          <span className="sw-cell-text" style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
+          <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
           {displayData.noteAfterVisit ? (
             <>
               {displayData.visitSuffix
@@ -258,7 +258,7 @@ const MemoizedCell = memo(({
               {displayData.noteSuffix ? (
                 <>
                   {visualRowSpan > 1 ? <br /> : null}
-                  <span className="sw-cell-text" style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.noteSuffix}</span>
+                  <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.noteSuffix}</span>
                 </>
               ) : null}
             </>
@@ -267,7 +267,7 @@ const MemoizedCell = memo(({
               {displayData.noteSuffix ? (
                 <>
                   {visualRowSpan > 1 ? <br /> : null}
-                  <span className="sw-cell-text" style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.noteSuffix}</span>
+                  <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.noteSuffix}</span>
                 </>
               ) : null}
               {displayData.visitSuffix ? (
