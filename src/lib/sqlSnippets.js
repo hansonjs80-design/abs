@@ -193,7 +193,7 @@ ALTER TABLE public.holidays DISABLE ROW LEVEL SECURITY;`
   },
   {
     title: '로그인 사용자 및 권한 테이블',
-    description: '앱 내부 로그인 계정, 비밀번호, 탭별 접근 권한을 관리합니다.',
+    description: '기존 앱 로그인 계정과 탭별 접근 권한을 보존합니다. 기본 관리자 비밀번호는 자동 생성하지 않습니다.',
     sql: `CREATE TABLE IF NOT EXISTS public.app_users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   username text NOT NULL UNIQUE,
@@ -211,15 +211,7 @@ ALTER TABLE public.app_users ADD COLUMN IF NOT EXISTS display_name text NOT NULL
 ALTER TABLE public.app_users ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'user';
 ALTER TABLE public.app_users ADD COLUMN IF NOT EXISTS permissions jsonb NOT NULL DEFAULT '{}';
 ALTER TABLE public.app_users ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
-INSERT INTO public.app_users (username, password, display_name, role, permissions, is_active)
-VALUES ('admin', '1', '관리자', 'admin', '{"staff_schedule":true,"shockwave":true,"shockwave_stats":true,"manual_therapy_stats":true,"settings":true}'::jsonb, true)
-ON CONFLICT (username) DO UPDATE SET
-  password = EXCLUDED.password,
-  display_name = EXCLUDED.display_name,
-  role = EXCLUDED.role,
-  permissions = EXCLUDED.permissions,
-  is_active = true,
-  updated_at = now();`
+-- 기본 관리자 계정이나 비밀번호는 자동 생성하지 않습니다.`
   }
 ];
 
@@ -533,22 +525,8 @@ ADD COLUMN IF NOT EXISTS permissions jsonb NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE public.app_users
 ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
 
-INSERT INTO public.app_users (username, password, display_name, role, permissions, is_active)
-VALUES (
-  'admin',
-  '1',
-  '관리자',
-  'admin',
-  '{"staff_schedule":true,"shockwave":true,"shockwave_stats":true,"manual_therapy_stats":true,"pt_stats":true,"settings":true}'::jsonb,
-  true
-)
-ON CONFLICT (username) DO UPDATE SET
-  password = EXCLUDED.password,
-  display_name = EXCLUDED.display_name,
-  role = EXCLUDED.role,
-  permissions = EXCLUDED.permissions,
-  is_active = true,
-  updated_at = timezone('utc'::text, now());`;
+-- 보안상 기본 관리자 계정이나 비밀번호는 자동 생성하지 않습니다.
+-- 관리자는 Supabase Auth의 app_metadata.role='admin' 또는 로그인 관리 화면에서 명시적으로 구성합니다.`;
 
 export const DB_USAGE_CHECK_SQL = `-- 1. 현재 DB 전체 크기
 select

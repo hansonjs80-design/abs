@@ -420,22 +420,8 @@ CREATE TRIGGER set_app_users_updated_at
 BEFORE UPDATE ON public.app_users
 FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
-INSERT INTO public.app_users (username, password, display_name, role, permissions, is_active)
-VALUES (
-  'admin',
-  '1',
-  '관리자',
-  'admin',
-  '{"staff_schedule":true,"shockwave":true,"shockwave_stats":true,"manual_therapy_stats":true,"pt_stats":true,"settings":true}'::jsonb,
-  true
-)
-ON CONFLICT (username) DO UPDATE SET
-  password = EXCLUDED.password,
-  display_name = EXCLUDED.display_name,
-  role = EXCLUDED.role,
-  permissions = EXCLUDED.permissions,
-  is_active = true,
-  updated_at = timezone('utc'::text, now());
+-- 보안상 기본 관리자 비밀번호를 자동 생성하거나 기존 관리자 비밀번호를 덮어쓰지 않습니다.
+-- 관리자는 Supabase Auth의 app_metadata.role='admin' 또는 기존 로그인 관리 화면에서 명시적으로 구성합니다.
 
 -- 9. Staff calendar slot settings
 CREATE TABLE IF NOT EXISTS public.staff_calendar_settings (

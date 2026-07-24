@@ -1,7 +1,6 @@
 import { Calendar, ClipboardList, Hand, Settings, Zap, Activity } from 'lucide-react';
 
 export const ADMIN_USERNAME = 'admin';
-export const DEFAULT_ADMIN_PASSWORD = '1';
 
 export const APP_TABS = [
   { key: 'staff_schedule', path: '/', icon: Calendar, label: '직원 근무표', shortLabel: '근무표', monthLabel: '직원 근무표', tabClass: 'top-tab--calendar' },
@@ -22,15 +21,21 @@ export function normalizeUsername(value) {
 }
 
 export function isAdminUser(user) {
-  const username = normalizeUsername(user?.username || user?.email);
-  return user?.isAdmin === true || user?.app_role === 'admin' || username === ADMIN_USERNAME;
+  return user?.isAdmin === true ||
+    user?.app_role === 'admin' ||
+    user?.app_metadata?.role === 'admin';
 }
 
 export function normalizePermissions(permissions, user) {
   if (isAdminUser(user)) return { ...DEFAULT_USER_PERMISSIONS };
-  if (!permissions || typeof permissions !== 'object') return { ...DEFAULT_USER_PERMISSIONS };
+  const effectivePermissions = permissions && typeof permissions === 'object'
+    ? permissions
+    : user?.app_metadata?.permissions;
+  if (!effectivePermissions || typeof effectivePermissions !== 'object') {
+    return { ...DEFAULT_USER_PERMISSIONS };
+  }
   return APP_TABS.reduce((acc, tab) => {
-    acc[tab.key] = permissions[tab.key] !== false;
+    acc[tab.key] = effectivePermissions[tab.key] !== false;
     return acc;
   }, {});
 }

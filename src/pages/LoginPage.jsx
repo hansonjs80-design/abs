@@ -98,7 +98,7 @@ export default function LoginPage() {
 
     try {
       const normalizedEmail = email.trim().toLowerCase();
-      const normalizedPassword = password.trim();
+      const normalizedPassword = password;
 
       if (isSignUp) {
         const result = await signUp(normalizedEmail, normalizedPassword, { name: name.trim() });

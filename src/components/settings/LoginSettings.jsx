@@ -5,7 +5,6 @@ import { Users } from 'lucide-react';
 import {
   ADMIN_USERNAME,
   APP_TABS,
-  DEFAULT_ADMIN_PASSWORD,
   createDefaultPermissions,
   normalizeUsername,
 } from '../../lib/authPermissions';
@@ -28,25 +27,14 @@ export default function LoginSettings({ canManageLogin }) {
     try {
       const { data, error } = await supabase
         .from('app_users')
-        .select('*')
+        .select('id, username, display_name, role, permissions, is_active, created_at, updated_at')
         .order('role', { ascending: true })
         .order('username', { ascending: true });
       if (error) throw error;
       const rows = data || [];
-      if (rows.length === 0) {
-        await supabase.from('app_users').insert({
-          username: ADMIN_USERNAME,
-          password: DEFAULT_ADMIN_PASSWORD,
-          display_name: '관리자',
-          role: 'admin',
-          permissions: createDefaultPermissions(),
-          is_active: true,
-        });
-        loadAppUsers();
-        return;
-      }
       setAppUsers(rows.map((row) => ({
         ...row,
+        password: '',
         permissions: {
           ...createDefaultPermissions(),
           ...(row.permissions || {}),
@@ -123,14 +111,13 @@ export default function LoginSettings({ canManageLogin }) {
   const saveAppUser = async (row) => {
     const username = normalizeUsername(row.username);
     const password = String(row.password || '').trim();
-    if (!username || !password) {
-      addToast('아이디와 비밀번호는 비워둘 수 없습니다.', 'error');
+    if (!username) {
+      addToast('아이디는 비워둘 수 없습니다.', 'error');
       return;
     }
     const isAdminRow = username === ADMIN_USERNAME || row.role === 'admin';
     const payload = {
       username,
-      password: username === ADMIN_USERNAME ? DEFAULT_ADMIN_PASSWORD : password,
       display_name: String(row.display_name || '').trim() || username,
       role: isAdminRow ? 'admin' : 'user',
       permissions: isAdminRow ? createDefaultPermissions() : {
@@ -140,6 +127,7 @@ export default function LoginSettings({ canManageLogin }) {
       is_active: Boolean(row.is_active),
       updated_at: new Date().toISOString(),
     };
+    if (password) payload.password = password;
 
     try {
       const { error } = await supabase.from('app_users').update(payload).eq('id', row.id);
@@ -162,18 +150,21 @@ export default function LoginSettings({ canManageLogin }) {
     }
   };
 
-  const removeAppUser = async (row) => {
+  const deactivateAppUser = async (row) => {
     if (normalizeUsername(row.username) === ADMIN_USERNAME || row.role === 'admin') {
-      addToast('admin 계정은 삭제할 수 없습니다.', 'error');
+      addToast('관리자 계정은 비활성화할 수 없습니다.', 'error');
       return;
     }
     try {
-      const { error } = await supabase.from('app_users').delete().eq('id', row.id);
+      const { error } = await supabase
+        .from('app_users')
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq('id', row.id);
       if (error) throw error;
-      addToast('사용자가 삭제되었습니다.', 'success');
+      addToast('사용자가 비활성화되었습니다.', 'success');
       loadAppUsers();
     } catch (err) {
-      addToast('사용자 삭제 실패: ' + (err.message || err), 'error');
+      addToast('사용자 비활성화 실패: ' + (err.message || err), 'error');
     }
   };
 
@@ -205,6 +196,7 @@ export default function LoginSettings({ canManageLogin }) {
           />
           <input
             className="form-input"
+            type="password"
             placeholder="비밀번호"
             value={newAppUser.password}
             onChange={(e) => setNewAppUser((prev) => ({ ...prev, password: e.target.value }))}
@@ -263,8 +255,10 @@ export default function LoginSettings({ canManageLogin }) {
                     <td style={{ padding: 8 }}>
                       <input
                         className="form-input"
-                        value={row.username === ADMIN_USERNAME ? DEFAULT_ADMIN_PASSWORD : (row.password || '')}
-                        disabled={row.username === ADMIN_USERNAME}
+                        type="password"
+                        value={row.password || ''}
+                        placeholder="변경할 때만 입력"
+                        autoComplete="new-password"
                         onChange={(e) => updateAppUserLocal(row.id, 'password', e.target.value)}
                       />
                     </td>
@@ -326,7 +320,13 @@ export default function LoginSettings({ canManageLogin }) {
                     <td style={{ padding: 8 }}>
                       <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
                         <button className="btn btn-primary btn-sm" onClick={() => saveAppUser(row)}>저장</button>
-                        <button className="btn btn-danger btn-sm" disabled={adminRow} onClick={() => removeAppUser(row)}>삭제</button>
+                        <button
+                          className="btn btn-danger btn-sm"
+                          disabled={adminRow || row.is_active === false}
+                          onClick={() => deactivateAppUser(row)}
+                        >
+                          비활성화
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -337,7 +337,8 @@ export default function LoginSettings({ canManageLogin }) {
         </div>
 
         <p style={{ margin: 0, color: 'var(--text-tertiary)', fontSize: '0.78rem' }}>
-          admin 계정은 전체 권한을 항상 가지며 삭제할 수 없습니다. 초기 admin 비밀번호는 1입니다.
+          기존 비밀번호는 화면에 표시하지 않습니다. 비밀번호를 바꿀 때만 새 값을 입력하세요.
+          관리자 계정은 전체 권한을 가지며 비활성화할 수 없습니다.
         </p>
       </div>
     </div>
