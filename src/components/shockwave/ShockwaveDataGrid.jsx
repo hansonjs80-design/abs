@@ -429,11 +429,19 @@ export default function ShockwaveDataGrid({
         .map((prescription) => ({
           label: prescription,
           count: Number(summary?.byPrescription?.[prescription]) || 0,
-          patientNames: summary?.patientNamesByPrescription?.[prescription] || [],
+          patientItems: visibleTherapists.flatMap((therapist, therapistIndex) => (
+            summary?.patientNamesByTherapistPrescription?.[therapist.name]?.[prescription] || []
+          ).map((patientName) => ({
+            name: patientName,
+            therapistName: therapist.displayName || therapist.name,
+            indicatorColor: getTooltipAccentColor(
+              THERAPIST_COLORS[therapistIndex % THERAPIST_COLORS.length]
+            ),
+          }))),
         }))
         .filter((item) => item.count > 0),
     };
-  }, [dateSummaries, formatFullDateLabel, prescriptions]);
+  }, [dateSummaries, formatFullDateLabel, prescriptions, visibleTherapists]);
 
   const getNewPatientTooltip = useCallback((row) => {
     if (!row?.date || !row._isFirst) return null;
@@ -444,15 +452,21 @@ export default function ShockwaveDataGrid({
     return {
       date: formatFullDateLabel(row.date),
       summaryLabel: `총 ${totalCount}명`,
-      backgroundColor: '#dcfce7',
+      backgroundColor: '#ffffff',
       tooltipAccentColor: '#047857',
       unit: '명',
       layout: 'therapist-patients',
       items: visibleTherapists
-        .map((therapist) => ({
+        .map((therapist, therapistIndex) => ({
           label: therapist.displayName || therapist.name,
           count: Number(summary?.newPatientByTherapist?.[therapist.name]) || 0,
           patientNames: summary?.newPatientNamesByTherapist?.[therapist.name] || [],
+          therapistColor: THERAPIST_COLORS[
+            therapistIndex % THERAPIST_COLORS.length
+          ],
+          therapistAccentColor: getTooltipAccentColor(
+            THERAPIST_COLORS[therapistIndex % THERAPIST_COLORS.length]
+          ),
         }))
         .filter((item) => item.count > 0),
     };
@@ -539,7 +553,12 @@ export default function ShockwaveDataGrid({
     const x = Math.min(Math.max(rawX, minX), Math.max(minX, maxX));
     const estimatedRows = Math.max(1, Math.ceil((items.length * 78) / tooltipWidth));
     const prescriptionPatientRows = isPrescriptionPatientsTooltip
-      ? Math.max(1, ...items.map((item) => (item.patientNames || []).length))
+      ? Math.max(
+        1,
+        ...items.map((item) => (
+          item.patientItems?.length || item.patientNames?.length || 0
+        ))
+      )
       : 0;
     const therapistPatientRows = isTherapistPatientsTooltip
       ? items.reduce((sum, item) => sum + Math.max(1, (item.patientNames || []).length), 0)
@@ -1806,33 +1825,60 @@ export default function ShockwaveDataGrid({
             </div>
           </div>
           <div className="sw-grid-count-tooltip-line">
-            {countTooltip.items.map(({ label, count, patientNames = [] }) => (
-              <span
-                className={[
-                  'sw-grid-count-tooltip-item',
-                  'sw-grid-count-tooltip-item--counted',
-                  patientNames.length > 0 ? 'sw-grid-count-tooltip-item--with-patients' : '',
-                ].filter(Boolean).join(' ')}
-                key={label}
-              >
-                <span className="sw-grid-count-tooltip-item-summary">
-                  <span className="sw-grid-count-tooltip-prescription">{label}</span>
-                  <span className="sw-grid-count-tooltip-count">{count}{countTooltip.unit || '건'}</span>
-                </span>
-                {patientNames.length > 0 && (
-                  <span className="sw-grid-count-tooltip-patients">
-                    {patientNames.map((patientName, patientIndex) => (
-                      <span
-                        className="sw-grid-count-tooltip-patient"
-                        key={`${patientName}-${patientIndex}`}
-                      >
-                        {patientName}
-                      </span>
-                    ))}
+            {countTooltip.items.map(({
+              label,
+              count,
+              patientNames = [],
+              patientItems = [],
+              therapistColor,
+              therapistAccentColor,
+            }) => {
+              const patients = patientItems.length > 0
+                ? patientItems
+                : patientNames.map((name) => ({ name }));
+
+              return (
+                <span
+                  className={[
+                    'sw-grid-count-tooltip-item',
+                    'sw-grid-count-tooltip-item--counted',
+                    patients.length > 0 ? 'sw-grid-count-tooltip-item--with-patients' : '',
+                  ].filter(Boolean).join(' ')}
+                  key={label}
+                >
+                  <span
+                    className="sw-grid-count-tooltip-item-summary"
+                    style={therapistColor
+                      ? {
+                        backgroundColor: therapistColor,
+                        '--tooltip-accent-color': therapistAccentColor,
+                      }
+                      : undefined}
+                  >
+                    <span className="sw-grid-count-tooltip-prescription">{label}</span>
+                    <span className="sw-grid-count-tooltip-count">{count}{countTooltip.unit || '건'}</span>
                   </span>
-                )}
-              </span>
-            ))}
+                  {patients.length > 0 && (
+                    <span className="sw-grid-count-tooltip-patients">
+                      {patients.map((patient, patientIndex) => (
+                        <span
+                          className="sw-grid-count-tooltip-patient"
+                          key={`${patient.name}-${patient.therapistName || ''}-${patientIndex}`}
+                          style={patient.indicatorColor
+                            ? { '--patient-indicator-color': patient.indicatorColor }
+                            : undefined}
+                          title={patient.therapistName
+                            ? `담당 치료사: ${patient.therapistName}`
+                            : undefined}
+                        >
+                          {patient.name}
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                </span>
+              );
+            })}
           </div>
         </div>
       )}
