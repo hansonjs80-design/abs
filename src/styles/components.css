@@ -755,7 +755,7 @@
 
 /* 1. Calendar (Blue) */
 .top-tab--calendar {
-  --tab-bg: #f97316;
+  --tab-bg: #ff9629;
   --tab-hover-bg: #ea580c;
   --tab-active-bg: #ea580c;
   --tab-active-border: #ea580c;
@@ -765,34 +765,34 @@
 
 /* 2. Shockwave (Green) */
 .top-tab--shockwave {
-  --tab-bg: #22c55e;
-  --tab-hover-bg: #16a34a;
-  --tab-active-bg: #16a34a;
-  --tab-active-border: #15803d;
-  --tab-shadow: rgba(22, 163, 74, 0.18);
+  --tab-bg: #00e10d;
+  --tab-hover-bg: #049a00;
+  --tab-active-bg: #049a00;
+  --tab-active-border: #049a00;
+  --tab-shadow: rgba(4, 154, 0, 0.18);
   --tab-text-color: #111827;
 }
 
 /* 3. Stats SW (Purple) */
 .top-tab--stats-sw {
-  --tab-bg: #782afc;
+  --tab-bg: #d1b6ff;
   --tab-hover-bg: #f3e8ff;
   --tab-active-surface: #f8fafc;
   --tab-active-bg: #f8fafc;
-  --tab-active-border: #782afc;
-  --tab-shadow: rgba(120, 42, 252, 0.2);
-  --tab-text-color: #ffffff;
+  --tab-active-border: #7b2eff;
+  --tab-shadow: rgba(123, 46, 255, 0.2);
+  --tab-text-color: #263244;
 }
 
 /* 4. Stats MT (Purple) */
 .top-tab--stats-mt {
-  --tab-bg: #782afc;
+  --tab-bg: #d1b6ff;
   --tab-hover-bg: #f3e8ff;
   --tab-active-surface: #f8fafc;
   --tab-active-bg: #f8fafc;
-  --tab-active-border: #782afc;
-  --tab-shadow: rgba(120, 42, 252, 0.2);
-  --tab-text-color: #ffffff;
+  --tab-active-border: #7b2eff;
+  --tab-shadow: rgba(123, 46, 255, 0.2);
+  --tab-text-color: #263244;
 }
 
 /* 5. Stats PT (Purple) */
