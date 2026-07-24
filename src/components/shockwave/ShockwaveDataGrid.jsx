@@ -416,11 +416,17 @@ export default function ShockwaveDataGrid({
     const counts = summary?.byTherapistPrescription?.[therapist.name] || {};
     const patientNames =
       summary?.patientNamesByTherapistPrescription?.[therapist.name] || {};
+    const therapistColor = THERAPIST_COLORS[tIdx % THERAPIST_COLORS.length];
+    const patientIndicatorColor = getPatientIndicatorColor(therapistColor);
     const items = (therapistPrescriptionGroups[tIdx]?.prescriptions || [])
       .map(p => ({
         label: p,
         count: Number(counts[p]) || 0,
-        patientNames: patientNames[p] || [],
+        patientItems: (patientNames[p] || []).map((name) => ({
+          name,
+          therapistName: therapist.displayName || therapist.name,
+          indicatorColor: patientIndicatorColor,
+        })),
         prescriptionColor: getPrescriptionColor(
           p,
           effectivePrescriptionColors
@@ -429,7 +435,6 @@ export default function ShockwaveDataGrid({
       .filter(item => item.count > 0);
     const totalCount = items.reduce((sum, item) => sum + item.count, 0);
     if (totalCount <= 0) return null;
-    const therapistColor = THERAPIST_COLORS[tIdx % THERAPIST_COLORS.length];
     return {
       date: formatFullDateLabel(row.date),
       therapistName: therapist.name,
