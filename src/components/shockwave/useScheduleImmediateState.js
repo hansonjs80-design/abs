@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { removeDeletedScheduleDraft } from '../../lib/schedulerUtils.js';
-import { isShockwaveCalendarCellInCurrentMonth } from '../../lib/shockwaveScheduleDateMapping.js';
+import {
+  isShockwaveScheduleItemVisibleInView,
+  removeDeletedShockwaveScheduleItem,
+} from '../../lib/scheduleDraftIdentityUtils.js';
 
 function getUpdateKey(item) {
   if (!item) return '';
@@ -14,22 +16,6 @@ function normalizeUpdateEntries(updates) {
 
 function isValidKey(key) {
   return Boolean(key && !key.includes('undefined'));
-}
-
-function isCurrentMonthUpdateItem(item, currentYear, currentMonth) {
-  if (!item) return false;
-  if (
-    item.year &&
-    item.month &&
-    (Number(item.year) !== Number(currentYear) || Number(item.month) !== Number(currentMonth))
-  ) {
-    return false;
-  }
-  const key = getUpdateKey(item);
-  if (!isValidKey(key)) return false;
-  const [weekIndex, dayIndex] = key.split('-').map(Number);
-  if (![weekIndex, dayIndex].every(Number.isFinite)) return false;
-  return isShockwaveCalendarCellInCurrentMonth(currentYear, currentMonth, weekIndex, dayIndex);
 }
 
 function getExpectedUpdateMap(updates) {
@@ -262,7 +248,7 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
     const entries = normalizeUpdateEntries(updates);
     const nextValues = {};
     entries.forEach((item) => {
-      if (!isCurrentMonthUpdateItem(item, currentYear, currentMonth)) return;
+      if (!isShockwaveScheduleItemVisibleInView(item, currentYear, currentMonth)) return;
       const key = getUpdateKey(item);
       nextValues[key] = String(item.content ?? '');
     });
@@ -272,10 +258,10 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
     
     const nextOverrides = { ...pendingMemoOverridesRef.current };
     entries.forEach((item) => {
-      if (!isCurrentMonthUpdateItem(item, currentYear, currentMonth)) return;
+      if (!isShockwaveScheduleItemVisibleInView(item, currentYear, currentMonth)) return;
       const key = getUpdateKey(item);
       if (String(item.content ?? '').trim()) {
-        removeDeletedScheduleDraft(item.year ?? currentYear, item.month ?? currentMonth, key);
+        removeDeletedShockwaveScheduleItem(item, currentYear, currentMonth);
       }
       const override = { ...nextOverrides[key], content: String(item.content ?? '') };
       if (Object.prototype.hasOwnProperty.call(item, 'bg_color')) override.bg_color = item.bg_color ?? null;
@@ -291,7 +277,7 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
       setPendingMemoOverrides((prev) => {
         const next = { ...prev };
         entries.forEach((item) => {
-          if (!isCurrentMonthUpdateItem(item, currentYear, currentMonth)) return;
+          if (!isShockwaveScheduleItemVisibleInView(item, currentYear, currentMonth)) return;
           const key = getUpdateKey(item);
           const override = { ...next[key], content: String(item.content ?? '') };
           if (Object.prototype.hasOwnProperty.call(item, 'bg_color')) override.bg_color = item.bg_color ?? null;
@@ -310,7 +296,7 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
   const applyImmediateMergeSpan = useCallback((updates) => {
     const nextSpans = {};
     normalizeUpdateEntries(updates).forEach((item) => {
-      if (!isCurrentMonthUpdateItem(item, currentYear, currentMonth)) return;
+      if (!isShockwaveScheduleItemVisibleInView(item, currentYear, currentMonth)) return;
       const key = getUpdateKey(item);
       const mergeSpan = item.mergeSpan || item.merge_span;
       if (mergeSpan) nextSpans[key] = mergeSpan;
@@ -328,7 +314,7 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
     const { keepContextMenuOpen = false } = options;
     const nextBgColors = {};
     normalizeUpdateEntries(updates).forEach((item) => {
-      if (!isCurrentMonthUpdateItem(item, currentYear, currentMonth)) return;
+      if (!isShockwaveScheduleItemVisibleInView(item, currentYear, currentMonth)) return;
       const key = getUpdateKey(item);
       nextBgColors[key] = item.bg_color || null;
     });

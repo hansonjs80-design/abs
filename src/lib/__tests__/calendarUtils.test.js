@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   canonicalizeShockwaveScheduleItemDate,
   getVisibleShockwaveScheduleMonths,
+  isShockwaveCalendarCellVisible,
   mapShockwaveScheduleItemToCurrentMonthView,
   mapShockwaveScheduleItemToVisibleMonth,
 } from '../shockwaveScheduleDateMapping.js';
@@ -80,4 +81,10 @@ test('does not map adjacent-month schedules into a current month view', () => {
 
   assert.equal(mapShockwaveScheduleItemToCurrentMonthView(june29Row, 2026, 7), null);
   assert.equal(mapShockwaveScheduleItemToCurrentMonthView(aug1Row, 2026, 7), null);
+});
+
+test('treats leading and trailing calendar dates as visible schedule cells', () => {
+  assert.equal(isShockwaveCalendarCellVisible(2026, 7, 0, 1), true);
+  assert.equal(isShockwaveCalendarCellVisible(2026, 7, 4, 5), true);
+  assert.equal(isShockwaveCalendarCellVisible(2026, 7, 8, 0), false);
 });

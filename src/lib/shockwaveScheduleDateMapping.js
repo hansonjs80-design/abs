@@ -111,6 +111,11 @@ export function isShockwaveCalendarCellInCurrentMonth(year, month, weekIndex, da
   );
 }
 
+export function isShockwaveCalendarCellVisible(year, month, weekIndex, dayIndex) {
+  const weeks = generateShockwaveCalendar(Number(year), Number(month));
+  return Boolean(weeks[Number(weekIndex)]?.[Number(dayIndex)]);
+}
+
 export function mapShockwaveScheduleItemToCurrentMonthView(item, viewYear, viewMonth) {
   const visibleItem = mapShockwaveScheduleItemToVisibleMonth(item, viewYear, viewMonth);
   if (!visibleItem) return null;

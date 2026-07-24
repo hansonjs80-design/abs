@@ -7,10 +7,10 @@ import {
   canonicalizeShockwaveScheduleItemDate,
   getShockwaveScheduleItemDate,
   getVisibleShockwaveScheduleMonths,
-  isShockwaveCalendarCellInCurrentMonth,
-  mapShockwaveScheduleItemToCurrentMonthView,
+  isShockwaveCalendarCellVisible,
   mapShockwaveScheduleItemToVisibleMonth,
 } from '../lib/shockwaveScheduleDateMapping';
+import { wasShockwaveScheduleItemDeletedAfter } from '../lib/scheduleDraftIdentityUtils';
 import {
   getPrescriptionScheduleSettings,
   isInactiveLegacyManualDoseScheduleItem,
@@ -531,7 +531,7 @@ export function ScheduleProvider({ children }) {
       if (Number(draft?.year) !== Number(year) || Number(draft?.month) !== Number(month) || !draft?.key) return;
       const key = String(draft.key);
       const [weekIndex, dayIndex] = key.split('-').map(Number);
-      if (!isShockwaveCalendarCellInCurrentMonth(year, month, weekIndex, dayIndex)) return;
+      if (!isShockwaveCalendarCellVisible(year, month, weekIndex, dayIndex)) return;
       applyRecoveredMemo(
         key,
         {
@@ -1798,7 +1798,20 @@ export function ScheduleProvider({ children }) {
     return enqueueShockwaveWrite([key], async () => {
       const previousMemo = shockwaveMemosRef.current[key];
       let writeStartedAtMs = 0;
-      const wasDeletedAfterWriteStarted = () => wasScheduleDraftDeletedAfter(year, month, key, writeStartedAtMs);
+      const visibleWriteItem = {
+        year,
+        month,
+        week_index: weekIndex,
+        day_index: dayIndex,
+        row_index: rowIndex,
+        col_index: colIndex,
+      };
+      const wasDeletedAfterWriteStarted = () => wasShockwaveScheduleItemDeletedAfter(
+        visibleWriteItem,
+        year,
+        month,
+        writeStartedAtMs
+      );
       const isWriteStillCurrent = () => {
         if (wasDeletedAfterWriteStarted()) return false;
         const currentLocalWrite = localShockwaveWriteTimeRef.current.get(key);
@@ -1883,12 +1896,8 @@ export function ScheduleProvider({ children }) {
         return true;
       }
       const savedMemo = sanitizeShockwaveScheduleItemForDisplay(
-        mapShockwaveScheduleItemToCurrentMonthView(savedCanonicalMemo, year, month) ||
-        (
-          isShockwaveCalendarCellInCurrentMonth(year, month, weekIndex, dayIndex)
-            ? { ...optimisticMemo, ...upsertData }
-            : null
-        )
+        mapShockwaveScheduleItemToVisibleMonth(savedCanonicalMemo, year, month) ||
+        { ...optimisticMemo, ...upsertData }
       );
       if (isWriteStillCurrent() && savedCanonicalMemo?.updated_at) {
         lastWriteTimeRef.current.set(key, savedCanonicalMemo.updated_at);
@@ -1973,14 +1982,16 @@ export function ScheduleProvider({ children }) {
       );
       const isKeyWriteStillCurrent = (key) => {
         if (!canApplyClientState()) return false;
-        const [weekIndex, dayIndex, rowIndex, colIndex] = String(key).split('-').map(Number);
         const sourceItem = canonicalMemosArrayRef.current?.get(key);
-        const draftYear = sourceItem?.year ?? currentYear;
-        const draftMonth = sourceItem?.month ?? currentMonth;
-        const draftKey = [weekIndex, dayIndex, rowIndex, colIndex].every(Number.isFinite)
-          ? key
-          : '';
-        if (draftKey && wasScheduleDraftDeletedAfter(draftYear, draftMonth, draftKey, writeStartedAtMs)) {
+        if (
+          sourceItem &&
+          wasShockwaveScheduleItemDeletedAfter(
+            sourceItem.visibleItem,
+            currentYear,
+            currentMonth,
+            writeStartedAtMs
+          )
+        ) {
           return false;
         }
         const currentLocalWrite = localShockwaveWriteTimeRef.current.get(key);
@@ -2025,9 +2036,10 @@ export function ScheduleProvider({ children }) {
       }
 
       const canonicalMemosArray = writeMemosArray.map((item) => canonicalizeShockwaveScheduleItemDate(item));
-      canonicalMemosArray.forEach((item) => {
-        const visibleKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-        canonicalMemosArrayRef.current.set(visibleKey, item);
+      writeMemosArray.forEach((item, index) => {
+        canonicalMemosArrayRef.current.set(writeTargetKeys[index], {
+          visibleItem: item,
+        });
       });
       const canonicalLocalSnapshot = { ...previousMemos };
       canonicalMemosArray.forEach((item, index) => {
@@ -2059,10 +2071,6 @@ export function ScheduleProvider({ children }) {
         updated_at: new Date().toISOString()
       }));
       const deletePayloads = clearPayloads;
-      deletePayloads.forEach((item) => {
-        const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-        rememberDeletedScheduleDraft(item.year, item.month, key);
-      });
 
       let data = [];
       if (upsertPayloads.length > 0) {
@@ -2077,15 +2085,25 @@ export function ScheduleProvider({ children }) {
         if (error) throw error;
         data = upsertData || [];
       }
+      deletePayloads.forEach((item) => {
+        const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+        rememberDeletedScheduleDraft(item.year, item.month, key);
+      });
 
       const viewRelevantData = [
         ...data,
         ...clearPayloads,
       ]
         .map((item) => sanitizeShockwaveScheduleItemForDisplay(
-          mapShockwaveScheduleItemToCurrentMonthView(item, currentYear, currentMonth)
+          mapShockwaveScheduleItemToVisibleMonth(item, currentYear, currentMonth)
         ))
         .filter(Boolean);
+      const viewIntentionalClearKeys = new Set(
+        clearPayloads
+          .map((item) => mapShockwaveScheduleItemToVisibleMonth(item, currentYear, currentMonth))
+          .filter(Boolean)
+          .map((item) => `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`)
+      );
       const currentViewRelevantData = canApplyClientState()
         ? viewRelevantData.filter((item) => {
             const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
@@ -2105,8 +2123,7 @@ export function ScheduleProvider({ children }) {
           lastWriteTimeRef.current.set(key, item.updated_at);
           localShockwaveWriteTimeRef.current.set(key, item.updated_at);
         }
-        const fullKey = `${item.year}-${item.month}-${key}`;
-        const merged = intentionalClearKeys.has(fullKey) ? item : { ...nextShockwaveMemos[key], ...item };
+        const merged = viewIntentionalClearKeys.has(key) ? item : { ...nextShockwaveMemos[key], ...item };
         if (shouldKeepShockwaveMemo(merged)) nextShockwaveMemos[key] = merged;
         else delete nextShockwaveMemos[key];
       });
@@ -2116,8 +2133,7 @@ export function ScheduleProvider({ children }) {
           const next = { ...prev };
           currentViewRelevantData.forEach(item => {
             const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-            const fullKey = `${item.year}-${item.month}-${key}`;
-            const merged = intentionalClearKeys.has(fullKey) ? item : { ...next[key], ...item };
+            const merged = viewIntentionalClearKeys.has(key) ? item : { ...next[key], ...item };
             if (shouldKeepShockwaveMemo(merged)) next[key] = merged;
             else delete next[key];
           });
@@ -2475,7 +2491,7 @@ export function ScheduleProvider({ children }) {
         (payload) => {
           if (payload.new) {
             const item = sanitizeShockwaveScheduleItemForDisplay(
-              mapShockwaveScheduleItemToCurrentMonthView(payload.new, currentYear, currentMonth)
+              mapShockwaveScheduleItemToVisibleMonth(payload.new, currentYear, currentMonth)
             );
             if (!item) return;
             const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
@@ -2505,7 +2521,7 @@ export function ScheduleProvider({ children }) {
             }
 
             if (!targetKey) {
-              const item = mapShockwaveScheduleItemToCurrentMonthView(payload.old, currentYear, currentMonth);
+              const item = mapShockwaveScheduleItemToVisibleMonth(payload.old, currentYear, currentMonth);
               if (item) {
                 targetKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
               }

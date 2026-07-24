@@ -3,8 +3,12 @@ import {
   buildDeleteCellsPayload,
   buildMergeSelectionPayload,
 } from '../../lib/scheduleMergeUtils.js';
+import {
+  rememberDeletedShockwaveScheduleItem,
+  removeDeletedShockwaveScheduleItem,
+} from '../../lib/scheduleDraftIdentityUtils.js';
 import { buildClearReservationGroupPayload } from '../../lib/scheduleReservationGroupUtils.js';
-import { rememberDeletedScheduleDraft, removeDeletedScheduleDraft, removePendingScheduleDraft } from '../../lib/schedulerUtils.js';
+import { removePendingScheduleDraft } from '../../lib/schedulerUtils.js';
 
 export default function useScheduleMergeActions({
   currentYear,
@@ -49,6 +53,11 @@ export default function useScheduleMergeActions({
     deleteBatch.payload.forEach((item) => {
       payloadByKey.set(`${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`, item);
     });
+    const deletedKeys = new Set(
+      deleteBatch.payload.map((item) => (
+        `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`
+      ))
+    );
     const payload = Array.from(payloadByKey.values());
     const oldMemoByKey = new Map();
     [...(clearGroupBatch.oldMemos || []), ...deleteBatch.oldMemos].forEach((item) => {
@@ -59,11 +68,12 @@ export default function useScheduleMergeActions({
       onDeletePayloadStart?.(payload);
       recordUndo({ type: 'bulk-edit', oldMemos });
       payload.forEach((item) => {
+        const visibleKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+        if (!deletedKeys.has(visibleKey)) return;
         const draftYear = item.year ?? currentYear;
         const draftMonth = item.month ?? currentMonth;
-        const draftKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-        rememberDeletedScheduleDraft(draftYear, draftMonth, draftKey);
-        removePendingScheduleDraft(draftYear, draftMonth, draftKey);
+        rememberDeletedShockwaveScheduleItem(item, currentYear, currentMonth);
+        removePendingScheduleDraft(draftYear, draftMonth, visibleKey);
       });
       applyImmediateCellDisplay(payload);
       applyImmediateMergeSpan(payload);
@@ -72,10 +82,9 @@ export default function useScheduleMergeActions({
         clearImmediateCellDisplay(payload, { force: true });
       } else {
         payload.forEach((item) => {
-          const draftYear = item.year ?? currentYear;
-          const draftMonth = item.month ?? currentMonth;
-          const draftKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-          removeDeletedScheduleDraft(draftYear, draftMonth, draftKey);
+          const visibleKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+          if (!deletedKeys.has(visibleKey)) return;
+          removeDeletedShockwaveScheduleItem(item, currentYear, currentMonth);
         });
         applyImmediateCellDisplay(oldMemos);
         applyImmediateMergeSpan(oldMemos);

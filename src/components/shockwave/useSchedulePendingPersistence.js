@@ -8,7 +8,7 @@ import {
   removePendingScheduleDraft,
   removePendingScheduleDraftIfValue,
 } from '../../lib/schedulerUtils';
-import { isShockwaveCalendarCellInCurrentMonth } from '../../lib/shockwaveScheduleDateMapping.js';
+import { isShockwaveCalendarCellVisible } from '../../lib/shockwaveScheduleDateMapping.js';
 
 export default function useSchedulePendingPersistence({
   currentMonth,
@@ -51,7 +51,7 @@ export default function useSchedulePendingPersistence({
       draft?.key &&
       (() => {
         const [weekIndex, dayIndex] = String(draft.key).split('-').map(Number);
-        return isShockwaveCalendarCellInCurrentMonth(currentYear, currentMonth, weekIndex, dayIndex);
+        return isShockwaveCalendarCellVisible(currentYear, currentMonth, weekIndex, dayIndex);
       })()
     ));
     if (currentDrafts.length === 0) return;
