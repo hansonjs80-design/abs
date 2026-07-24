@@ -87,8 +87,25 @@ function createEmptyTherapistCounts({ therapists, prescriptions }) {
   );
 }
 
+function createEmptyPrescriptionPatientNames(prescriptions) {
+  return Object.fromEntries(prescriptions.map((prescription) => [prescription, []]));
+}
+
+function createEmptyTherapistPrescriptionPatientNames({ therapists, prescriptions }) {
+  return Object.fromEntries(
+    therapists.map((therapist) => [
+      therapist.name,
+      createEmptyPrescriptionPatientNames(prescriptions),
+    ])
+  );
+}
+
 function createEmptyNewPatientCounts(therapists) {
   return Object.fromEntries(therapists.map((therapist) => [therapist.name, 0]));
+}
+
+function createEmptyNewPatientNames(therapists) {
+  return Object.fromEntries(therapists.map((therapist) => [therapist.name, []]));
 }
 
 export function buildShockwaveCountSummaries({
@@ -119,11 +136,17 @@ export function buildShockwaveCountSummaries({
           total: 0,
           newPatient: 0,
           byPrescription: createEmptyPrescriptionCounts(safePrescriptions),
+          patientNamesByPrescription: createEmptyPrescriptionPatientNames(safePrescriptions),
           byTherapistPrescription: createEmptyTherapistCounts({
             therapists: safeTherapists,
             prescriptions: safePrescriptions,
           }),
+          patientNamesByTherapistPrescription: createEmptyTherapistPrescriptionPatientNames({
+            therapists: safeTherapists,
+            prescriptions: safePrescriptions,
+          }),
           newPatientByTherapist: createEmptyNewPatientCounts(safeTherapists),
+          newPatientNamesByTherapist: createEmptyNewPatientNames(safeTherapists),
         }
       : null;
 
@@ -149,6 +172,27 @@ export function buildShockwaveCountSummaries({
       }
       current.byTherapistPrescription[row.therapist_name][matchedPrescription] =
         (current.byTherapistPrescription[row.therapist_name][matchedPrescription] || 0) + count;
+
+      const patientName = String(row?.patient_name || '').replace(/\*/g, '').trim();
+      if (patientName) {
+        const prescriptionPatientNames =
+          current.patientNamesByPrescription[matchedPrescription] || [];
+        current.patientNamesByPrescription[matchedPrescription] = prescriptionPatientNames;
+        if (!prescriptionPatientNames.includes(patientName)) {
+          prescriptionPatientNames.push(patientName);
+        }
+
+        const therapistPatientNames =
+          current.patientNamesByTherapistPrescription[row.therapist_name] ||
+          createEmptyPrescriptionPatientNames(safePrescriptions);
+        current.patientNamesByTherapistPrescription[row.therapist_name] = therapistPatientNames;
+        const therapistPrescriptionPatientNames =
+          therapistPatientNames[matchedPrescription] || [];
+        therapistPatientNames[matchedPrescription] = therapistPrescriptionPatientNames;
+        if (!therapistPrescriptionPatientNames.includes(patientName)) {
+          therapistPrescriptionPatientNames.push(patientName);
+        }
+      }
     }
 
     if (String(row?.patient_name || '').includes('*')) {
@@ -157,6 +201,14 @@ export function buildShockwaveCountSummaries({
         current.newPatient += 1;
         current.newPatientByTherapist[row.therapist_name] =
           (current.newPatientByTherapist[row.therapist_name] || 0) + 1;
+        const patientName = String(row?.patient_name || '').replace(/\*/g, '').trim();
+        if (patientName) {
+          const patientNames = current.newPatientNamesByTherapist[row.therapist_name] || [];
+          current.newPatientNamesByTherapist[row.therapist_name] = patientNames;
+          if (!patientNames.includes(patientName)) {
+            patientNames.push(patientName);
+          }
+        }
       }
     }
 

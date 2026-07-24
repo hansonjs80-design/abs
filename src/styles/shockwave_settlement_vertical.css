@@ -1954,22 +1954,21 @@
 }
 
 @media print {
-  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-card,
-  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-right :is(
+  body.vertical-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-card,
+  body.vertical-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-right :is(
     .sw-vertical-summary-card,
     .sw-vertical-recent-card
   ) :is(
     .sw-settlement-table-wrap,
     .sw-compact-table-wrap
   ) {
-    border: var(--sw-print-frame-border) !important;
+    border: 1px solid #475569 !important;
     border-radius: 1.2mm !important;
-    background: #ffffff !important;
     overflow: hidden !important;
     overflow: clip !important;
   }
 
-  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-right :is(
+  body.vertical-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-right :is(
     .sw-vertical-summary-table,
     .sw-vertical-prescription-summary-table,
     .sw-summary-table
@@ -1977,8 +1976,8 @@
     border: 0 !important;
   }
 
-  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row th,
-  body.settlement-print.shockwave-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row td {
+  body.vertical-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row th,
+  body.vertical-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row td {
     border-bottom: 0 !important;
   }
 }

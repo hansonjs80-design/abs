@@ -133,6 +133,43 @@
 
 .sw-grid-wrapper--shockwave .grid-title {
   border-radius: 9px 9px 0 0;
+  overflow: visible;
+}
+
+/*
+ * The title stays fixed while body rows scroll underneath it. Redraw the two
+ * frame corners above that scrolling layer so straight body borders cannot
+ * bleed through the rounded viewport corners.
+ */
+.sw-grid-wrapper--shockwave .grid-title::before,
+.sw-grid-wrapper--shockwave .grid-title::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  z-index: 2;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+}
+
+.sw-grid-wrapper--shockwave .grid-title::before {
+  left: -3px;
+  background: radial-gradient(
+    circle at 10px 10px,
+    transparent 0 7px,
+    var(--grid-strong) 7px 10px,
+    var(--bg-primary) 10px
+  );
+}
+
+.sw-grid-wrapper--shockwave .grid-title::after {
+  right: -3px;
+  background: radial-gradient(
+    circle at 0 10px,
+    transparent 0 7px,
+    var(--grid-strong) 7px 10px,
+    var(--bg-primary) 10px
+  );
 }
 
 .sw-grid-wrapper--manual {
@@ -591,6 +628,44 @@
   box-sizing: border-box;
 }
 
+.sw-grid-count-tooltip--prescription-patients {
+  min-width: 220px;
+  max-width: min(720px, calc(100vw - 24px));
+}
+
+.sw-grid-count-tooltip--therapist-patients {
+  min-width: 220px;
+  max-width: 220px;
+}
+
+.sw-grid-count-tooltip--therapist-patients .sw-grid-count-tooltip-line {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.sw-grid-count-tooltip--prescription-patients .sw-grid-count-tooltip-line {
+  flex-flow: row nowrap;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.sw-grid-count-tooltip--prescription-patients .sw-grid-count-tooltip-item {
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 0;
+  box-sizing: border-box;
+  white-space: normal;
+}
+
+.sw-grid-count-tooltip--therapist-patients .sw-grid-count-tooltip-item {
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  box-sizing: border-box;
+  white-space: normal;
+}
+
 .sw-grid-count-tooltip-item {
   display: inline-flex;
   align-items: center;
@@ -606,6 +681,81 @@
 
 .sw-grid-count-tooltip-item--counted {
   font-weight: 900;
+}
+
+.sw-grid-count-tooltip-item-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.sw-grid-count-tooltip-patients {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 5px;
+  margin-top: 4px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(15, 23, 42, 0.12);
+  color: #334155;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.sw-grid-count-tooltip-patient {
+  display: inline-flex;
+  align-items: center;
+}
+
+.sw-grid-count-tooltip-patient:not(:last-child)::after {
+  content: "·";
+  margin-left: 5px;
+  color: #94a3b8;
+}
+
+.sw-grid-count-tooltip--therapist-patients .sw-grid-count-tooltip-patients {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.sw-grid-count-tooltip--therapist-patients .sw-grid-count-tooltip-patient {
+  justify-content: flex-start;
+}
+
+.sw-grid-count-tooltip--therapist-patients .sw-grid-count-tooltip-patient::before {
+  content: "•";
+  margin-right: 5px;
+  color: var(--tooltip-accent-color, #047857);
+}
+
+.sw-grid-count-tooltip--therapist-patients .sw-grid-count-tooltip-patient::after {
+  content: none;
+}
+
+.sw-grid-count-tooltip--prescription-patients .sw-grid-count-tooltip-patients {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.sw-grid-count-tooltip--prescription-patients .sw-grid-count-tooltip-patient {
+  justify-content: flex-start;
+}
+
+.sw-grid-count-tooltip--prescription-patients .sw-grid-count-tooltip-patient::before {
+  content: "•";
+  margin-right: 5px;
+  color: var(--tooltip-accent-color, #334155);
+}
+
+.sw-grid-count-tooltip--prescription-patients .sw-grid-count-tooltip-patient::after {
+  content: none;
 }
 
 .sw-grid-count-tooltip-prescription {

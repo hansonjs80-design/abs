@@ -20,7 +20,7 @@ describe('shockwave stats count utilities', () => {
       therapists: [{ name: '주한솔' }, { name: '신수민' }],
       rows: [
         { date: '2026-06-01', therapist_name: '주한솔', patient_name: '환자*', prescription: 'F2.5', prescription_count: null },
-        { date: '2026-06-01', therapist_name: '주한솔', prescription: 'F/R', prescription_count: '2' },
+        { date: '2026-06-01', therapist_name: '주한솔', patient_name: '두번째 환자', prescription: 'F/R', prescription_count: '2' },
         { date: '2026-06-01', therapist_name: '숨김', prescription: 'F2.5', prescription_count: '10' },
         { date: '2026-06-01', therapist_name: '주한솔', prescription: '숨김처방', prescription_count: '10' },
       ],
@@ -32,6 +32,18 @@ describe('shockwave stats count utilities', () => {
     assert.deepEqual(dateSummary.byPrescription, { 'F2.5': 1, 'F/R': 2 });
     assert.equal(dateSummary.newPatient, 1);
     assert.deepEqual(dateSummary.newPatientByTherapist, { 주한솔: 1, 신수민: 0 });
+    assert.deepEqual(dateSummary.newPatientNamesByTherapist, {
+      주한솔: ['환자'],
+      신수민: [],
+    });
+    assert.deepEqual(dateSummary.patientNamesByPrescription, {
+      'F2.5': ['환자'],
+      'F/R': ['두번째 환자'],
+    });
+    assert.deepEqual(dateSummary.patientNamesByTherapistPrescription, {
+      주한솔: { 'F2.5': ['환자'], 'F/R': ['두번째 환자'] },
+      신수민: { 'F2.5': [], 'F/R': [] },
+    });
     assert.deepEqual(summary.therapistTotals[0].byPres, { 'F2.5': 1, 'F/R': 2 });
     assert.deepEqual(summary.therapistTotals[1].byPres, { 'F2.5': 0, 'F/R': 0 });
   });

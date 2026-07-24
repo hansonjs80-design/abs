@@ -384,8 +384,14 @@ export default function ShockwaveDataGrid({
     if (!therapist) return null;
     const summary = dateSummaries.get(row.date);
     const counts = summary?.byTherapistPrescription?.[therapist.name] || {};
+    const patientNames =
+      summary?.patientNamesByTherapistPrescription?.[therapist.name] || {};
     const items = (therapistPrescriptionGroups[tIdx]?.prescriptions || [])
-      .map(p => ({ label: p, count: Number(counts[p]) || 0 }))
+      .map(p => ({
+        label: p,
+        count: Number(counts[p]) || 0,
+        patientNames: patientNames[p] || [],
+      }))
       .filter(item => item.count > 0);
     const totalCount = items.reduce((sum, item) => sum + item.count, 0);
     if (totalCount <= 0) return null;
@@ -395,6 +401,7 @@ export default function ShockwaveDataGrid({
       therapistColor: THERAPIST_COLORS[tIdx % THERAPIST_COLORS.length],
       tooltipAccentColor: getTooltipAccentColor(THERAPIST_COLORS[tIdx % THERAPIST_COLORS.length]),
       totalCount,
+      layout: 'prescription-patients',
       items,
     };
   }, [
@@ -413,15 +420,16 @@ export default function ShockwaveDataGrid({
 
     return {
       date: formatFullDateLabel(row.date),
-      summaryLabel: `총건수 ${totalCount}건`,
+      summaryLabel: `총 ${totalCount}건`,
       backgroundColor: '#e2e8f0',
       tooltipAccentColor: '#334155',
       unit: '건',
-      layout: 'list',
+      layout: 'prescription-patients',
       items: prescriptions
         .map((prescription) => ({
           label: prescription,
           count: Number(summary?.byPrescription?.[prescription]) || 0,
+          patientNames: summary?.patientNamesByPrescription?.[prescription] || [],
         }))
         .filter((item) => item.count > 0),
     };
@@ -435,14 +443,15 @@ export default function ShockwaveDataGrid({
 
     return {
       date: formatFullDateLabel(row.date),
-      summaryLabel: `신환 ${totalCount}명`,
+      summaryLabel: `총 ${totalCount}명`,
       backgroundColor: '#dcfce7',
       tooltipAccentColor: '#047857',
       unit: '명',
-      layout: 'list',
+      layout: 'therapist-patients',
       items: visibleTherapists.map((therapist) => ({
         label: therapist.displayName || therapist.name,
         count: Number(summary?.newPatientByTherapist?.[therapist.name]) || 0,
+        patientNames: summary?.newPatientNamesByTherapist?.[therapist.name] || [],
       })),
     };
   }, [dateSummaries, formatFullDateLabel, visibleTherapists]);
@@ -509,9 +518,17 @@ export default function ShockwaveDataGrid({
       return sum + labelLength + countLength + 4;
     }, 0);
     const isListTooltip = tooltip.layout === 'list';
+    const isPrescriptionPatientsTooltip = tooltip.layout === 'prescription-patients';
+    const isTherapistPatientsTooltip = tooltip.layout === 'therapist-patients';
+    const isPatientNamesTooltip =
+      isPrescriptionPatientsTooltip || isTherapistPatientsTooltip;
     const desiredWidth = isListTooltip
       ? 190
-      : Math.min(520, Math.max(220, 126 + textWeight * 8));
+      : isPrescriptionPatientsTooltip
+        ? Math.min(720, Math.max(220, items.length * 135))
+        : isTherapistPatientsTooltip
+          ? 220
+          : Math.min(520, Math.max(220, 126 + textWeight * 8));
     const tooltipWidth = Math.min(desiredWidth, Math.max(160, viewportWidth - 24));
     const halfWidth = tooltipWidth / 2;
     const minX = 12 + halfWidth;
@@ -519,7 +536,17 @@ export default function ShockwaveDataGrid({
     const rawX = rect.left + rect.width / 2;
     const x = Math.min(Math.max(rawX, minX), Math.max(minX, maxX));
     const estimatedRows = Math.max(1, Math.ceil((items.length * 78) / tooltipWidth));
-    const estimatedHeight = 58 + estimatedRows * 27;
+    const prescriptionPatientRows = isPrescriptionPatientsTooltip
+      ? Math.max(1, ...items.map((item) => (item.patientNames || []).length))
+      : 0;
+    const therapistPatientRows = isTherapistPatientsTooltip
+      ? items.reduce((sum, item) => sum + Math.max(1, (item.patientNames || []).length), 0)
+      : 0;
+    const estimatedHeight = isPrescriptionPatientsTooltip
+      ? 92 + prescriptionPatientRows * 18
+      : isPatientNamesTooltip
+        ? 58 + items.length * 34 + therapistPatientRows * 18
+        : 58 + estimatedRows * 27;
     const showAbove = rect.bottom + estimatedHeight + 12 > viewportHeight && rect.top > estimatedHeight + 12;
     setCountTooltip({
       ...tooltip,
@@ -1385,7 +1412,7 @@ export default function ShockwaveDataGrid({
 
     return {
       date: `${Number(currentYear)}년 ${Number(currentMonth)}월`,
-      summaryLabel: `총건수 ${grandTotal}건`,
+      summaryLabel: `총 ${grandTotal}건`,
       backgroundColor: '#e2e8f0',
       tooltipAccentColor: '#334155',
       unit: '건',
@@ -1421,7 +1448,7 @@ export default function ShockwaveDataGrid({
 
     return {
       date: `${Number(currentYear)}년 ${Number(currentMonth)}월`,
-      summaryLabel: `신환 ${newPatientTotal}명`,
+      summaryLabel: `총 ${newPatientTotal}명`,
       backgroundColor: '#dcfce7',
       tooltipAccentColor: '#047857',
       unit: '명',
@@ -1754,6 +1781,12 @@ export default function ShockwaveDataGrid({
             'sw-grid-count-tooltip--fixed',
             `sw-grid-count-tooltip--${countTooltip.placement}`,
             countTooltip.layout === 'list' ? 'sw-grid-count-tooltip--list' : '',
+            countTooltip.layout === 'prescription-patients'
+              ? 'sw-grid-count-tooltip--prescription-patients'
+              : '',
+            countTooltip.layout === 'therapist-patients'
+              ? 'sw-grid-count-tooltip--therapist-patients'
+              : '',
           ].filter(Boolean).join(' ')}
           role="tooltip"
           style={{
@@ -1771,10 +1804,31 @@ export default function ShockwaveDataGrid({
             </div>
           </div>
           <div className="sw-grid-count-tooltip-line">
-            {countTooltip.items.map(({ label, count }) => (
-              <span className="sw-grid-count-tooltip-item sw-grid-count-tooltip-item--counted" key={label}>
-                <span className="sw-grid-count-tooltip-prescription">{label}</span>
-                <span className="sw-grid-count-tooltip-count">{count}{countTooltip.unit || '건'}</span>
+            {countTooltip.items.map(({ label, count, patientNames = [] }) => (
+              <span
+                className={[
+                  'sw-grid-count-tooltip-item',
+                  'sw-grid-count-tooltip-item--counted',
+                  patientNames.length > 0 ? 'sw-grid-count-tooltip-item--with-patients' : '',
+                ].filter(Boolean).join(' ')}
+                key={label}
+              >
+                <span className="sw-grid-count-tooltip-item-summary">
+                  <span className="sw-grid-count-tooltip-prescription">{label}</span>
+                  <span className="sw-grid-count-tooltip-count">{count}{countTooltip.unit || '건'}</span>
+                </span>
+                {patientNames.length > 0 && (
+                  <span className="sw-grid-count-tooltip-patients">
+                    {patientNames.map((patientName, patientIndex) => (
+                      <span
+                        className="sw-grid-count-tooltip-patient"
+                        key={`${patientName}-${patientIndex}`}
+                      >
+                        {patientName}
+                      </span>
+                    ))}
+                  </span>
+                )}
               </span>
             ))}
           </div>
