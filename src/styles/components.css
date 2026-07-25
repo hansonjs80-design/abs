@@ -858,18 +858,30 @@
 }
 
 .top-tab.active .month-nav-btn {
-  background: #ffffff;
+  background: color-mix(in srgb, var(--tab-active-border) 14%, transparent);
   color: var(--tab-active-border);
-  border-color: var(--tab-active-border);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  border: 0;
+  box-shadow: none;
 }
 
 .top-tab.active .month-nav-btn svg {
   color: var(--tab-active-border);
   stroke: var(--tab-active-border);
+  stroke-width: 2.2;
 }
 
-.top-tab.active .month-nav-btn:hover,
+.top-tab.active .month-picker.tab-variant .month-nav-btn:hover,
+.top-tab.active .month-picker.tab-variant .month-nav-btn:focus-visible {
+  background: color-mix(in srgb, var(--tab-active-border) 20%, transparent);
+  color: inherit !important;
+  transform: translateY(-1px);
+}
+
+.top-tab.active .month-picker.tab-variant .month-nav-btn:active {
+  background: color-mix(in srgb, var(--tab-active-border) 26%, transparent);
+  transform: translateY(0);
+}
+
 .top-tab.active .month-picker-label:hover {
   background: rgba(255, 255, 255, 0.22);
   color: inherit !important;
