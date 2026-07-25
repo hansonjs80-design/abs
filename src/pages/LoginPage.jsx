@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import {
+  clearSupabaseConnectionSettings,
+  hasSupabaseConnectionOverride,
+} from '../lib/supabaseConnectionSettings';
 
 const LAST_LOGIN_ID_KEY = 'clinic-last-login-id';
 
@@ -89,6 +93,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
+  const [hasCustomSupabaseConnection] = useState(() => hasSupabaseConnectionOverride());
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -116,6 +121,20 @@ export default function LoginPage() {
       setError(getAuthMessage(err, isSignUp));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRestoreSupabaseConnection = () => {
+    const confirmed = window.confirm(
+      '이 기기에 저장된 Supabase 연결 설정을 지우고 앱 기본 서버로 복원할까요?',
+    );
+    if (!confirmed) return;
+
+    try {
+      clearSupabaseConnectionSettings();
+      window.location.reload();
+    } catch {
+      setError('기본 Supabase 서버로 복원하지 못했습니다. 브라우저 저장소 권한을 확인해 주세요.');
     }
   };
 
@@ -208,6 +227,15 @@ export default function LoginPage() {
             {isSignUp ? '로그인' : '회원가입'}
           </button>
         </div>
+
+        {hasCustomSupabaseConnection && (
+          <div className="login-connection-recovery">
+            <span>이 기기에 저장된 Supabase 서버 설정을 사용 중입니다.</span>
+            <button type="button" onClick={handleRestoreSupabaseConnection}>
+              기본 서버로 복원
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

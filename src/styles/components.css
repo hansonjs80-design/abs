@@ -1476,6 +1476,32 @@
   cursor: pointer;
 }
 
+.login-connection-recovery {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color-light);
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+}
+
+.login-connection-recovery button {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: var(--brand-primary);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.login-connection-recovery button:hover {
+  text-decoration: underline;
+}
+
 /* ── 공지 보드 ── */
 .notice-board {
   background: var(--bg-card);

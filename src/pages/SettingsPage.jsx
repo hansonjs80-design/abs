@@ -5,6 +5,7 @@ import { isAdminUser } from '../lib/authPermissions';
 import GeneralSettings from '../components/settings/GeneralSettings';
 import LoginSettings from '../components/settings/LoginSettings';
 import BackupSettings from '../components/settings/BackupSettings';
+import SupabaseConnectionSettings from '../components/settings/SupabaseConnectionSettings';
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
@@ -45,6 +46,7 @@ export default function SettingsPage() {
 
       {settingsSection === 'general' && (
         <>
+          {canManageLogin && <SupabaseConnectionSettings />}
           <GeneralSettings />
           
           {/* 계정 */}

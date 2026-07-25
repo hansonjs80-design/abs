@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
+import { loadSupabaseConnectionSettings } from './supabaseConnectionSettings.js';
 
-const supabaseEnv = import.meta.env || {};
-const supabaseUrl = supabaseEnv.VITE_SUPABASE_URL;
-const supabaseKey = supabaseEnv.VITE_SUPABASE_KEY;
+export const supabaseConnectionSettings = loadSupabaseConnectionSettings();
+const supabaseUrl = supabaseConnectionSettings.connection.url;
+const supabaseKey = supabaseConnectionSettings.connection.anonKey;
 
 const createStubQuery = () => {
   const response = Promise.resolve({ data: [], error: null });
