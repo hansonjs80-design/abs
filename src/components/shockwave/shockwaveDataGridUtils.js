@@ -38,19 +38,59 @@ export function prescriptionsMatch(a, b) {
 export function isSameTherapistPrescriptionFilter(filter, therapistName, prescription) {
   if (!filter) return false;
   return (
-    filter.therapistName === therapistName
+    (filter.therapistName || null) === (therapistName || null)
     && prescriptionsMatch(filter.prescription, prescription)
   );
 }
 
-export function filterRowsByTherapistPrescription(rows, filter) {
+export function isSameNewPatientFilter(filter, date = null) {
+  if (!filter?.newPatientOnly) return false;
+  return (
+    !filter.therapistName
+    && !filter.prescription
+    && (filter.date || null) === (date || null)
+  );
+}
+
+export function filterRowsByPatientView(rows, filter) {
   const safeRows = Array.isArray(rows) ? rows : [];
-  if (!filter?.therapistName || !filter?.prescription) return safeRows;
+  if (
+    !filter?.therapistName
+    && !filter?.prescription
+    && !filter?.newPatientOnly
+    && !filter?.date
+  ) {
+    return safeRows;
+  }
 
   return safeRows.filter((row) => (
-    row?.therapist_name === filter.therapistName
-    && prescriptionsMatch(row?.prescription, filter.prescription)
+    (
+      !filter.prescription
+      || prescriptionsMatch(row?.prescription, filter.prescription)
+    )
+    && (
+      !filter.therapistName
+      || row?.therapist_name === filter.therapistName
+    )
+    && (
+      !filter.newPatientOnly
+      || String(row?.patient_name || '').includes('*')
+    )
+    && (
+      !filter.date
+      || row?.date === filter.date
+    )
   ));
+}
+
+export function buildPatientViewRows(rows, filter) {
+  const filteredRows = filterRowsByPatientView(rows, filter);
+  if (!filter?.newPatientOnly) return filteredRows;
+
+  return filteredRows.map((row) => ({
+    ...row,
+    prescription_count: 1,
+  }));
 }
 
 export function toDateKey(date) {

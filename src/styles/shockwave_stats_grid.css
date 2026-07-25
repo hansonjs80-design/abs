@@ -356,16 +356,22 @@
   border-bottom: 1px solid var(--grid-strong) !important;
 }
 
+.sw-grid-wrapper--shockwave .hdr-therapist--filterable,
+.sw-grid-wrapper--shockwave .hdr-pres--filterable,
 .sw-grid-wrapper--shockwave .hdr-pres-total--filterable {
   cursor: zoom-in;
   user-select: none;
   transition: filter 120ms ease, outline-color 120ms ease;
 }
 
+.sw-grid-wrapper--shockwave .hdr-therapist--filterable:hover,
+.sw-grid-wrapper--shockwave .hdr-pres--filterable:hover,
 .sw-grid-wrapper--shockwave .hdr-pres-total--filterable:hover {
   filter: saturate(1.12) brightness(0.97);
 }
 
+.sw-grid-wrapper--shockwave .hdr-therapist--filter-active,
+.sw-grid-wrapper--shockwave .hdr-pres--filter-active,
 .sw-grid-wrapper--shockwave .hdr-pres-total--filter-active {
   cursor: zoom-out;
   outline: 3px solid #7b2eff;
@@ -414,6 +420,22 @@
   border-right: 1px solid var(--grid-strong) !important;
   border-bottom: 1px solid var(--grid-strong) !important;
   border-top: none !important;
+}
+
+.sw-grid-wrapper--shockwave .hdr-new-patient-total--filterable {
+  cursor: zoom-in;
+  user-select: none;
+  transition: filter 120ms ease, outline-color 120ms ease;
+}
+
+.sw-grid-wrapper--shockwave .hdr-new-patient-total--filterable:hover {
+  filter: saturate(1.12) brightness(0.97);
+}
+
+.sw-grid-wrapper--shockwave .hdr-new-patient-total--filter-active {
+  cursor: zoom-out;
+  outline: 3px solid #047857;
+  outline-offset: -3px;
 }
 
 /* Sticky Rows Alignment */
@@ -498,6 +520,22 @@
   border-left: 1px solid var(--grid-strong) !important;
   border-right: 1px solid var(--grid-strong) !important;
   background-color: var(--grid-new-cell-bg) !important;
+}
+
+.sw-grid-wrapper--shockwave .gc-new-patient--filterable {
+  cursor: zoom-in;
+  user-select: none;
+  transition: filter 120ms ease, outline-color 120ms ease;
+}
+
+.sw-grid-wrapper--shockwave .gc-new-patient--filterable:hover {
+  filter: saturate(1.12) brightness(0.97);
+}
+
+.sw-grid-wrapper--shockwave .gc-new-patient--filter-active {
+  cursor: zoom-out;
+  outline: 3px solid #047857;
+  outline-offset: -3px;
 }
 
 .sw-grid-new-patient-cell,

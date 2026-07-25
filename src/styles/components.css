@@ -390,6 +390,8 @@
 }
 
 .top-tabs-track {
+  --top-tab-edge-duration: 560ms;
+  --top-tab-edge-easing: cubic-bezier(0.22, 1, 0.36, 1);
   position: relative;
   display: flex;
   align-items: flex-end;
@@ -402,6 +404,24 @@
 .top-tab-with-date {
   display: inline-flex;
   align-items: center;
+}
+
+.top-tab-motion > .top-tab {
+  transform-origin: center bottom;
+  will-change: transform, padding, min-height;
+  transition:
+    min-height var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    padding var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    margin-bottom var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    font-size var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    border-width var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    border-color var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    border-radius var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    background-color var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    color var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    box-shadow var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    opacity var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    transform var(--top-tab-edge-duration) var(--top-tab-edge-easing);
 }
 
 .top-tabs-track > .top-tab:first-child,
@@ -506,9 +526,9 @@
   white-space: nowrap;
   vertical-align: bottom;
   transition:
-    max-width 760ms cubic-bezier(0.16, 1, 0.3, 1),
-    margin-right 760ms cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 260ms ease;
+    max-width var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    margin-right var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    opacity var(--top-tab-edge-duration) var(--top-tab-edge-easing);
 }
 
 .top-tab.active .tab-month-prefix {
@@ -517,42 +537,9 @@
   opacity: 1;
 }
 
-.measuring-tab-width .tab-content-active {
-  max-width: none !important;
-  opacity: 1 !important;
-}
-
-.measuring-tab-width .tab-month-prefix {
-  max-width: 9.8em !important;
-  margin-right: 0.35em !important;
-  opacity: 1 !important;
-}
-
-.measuring-tab-width .month-picker.tab-variant .month-nav-btn {
-  opacity: 1 !important;
-  transform: none !important;
-}
-
 .tab-month-title {
   display: inline-block;
   white-space: nowrap;
-  transform: translateX(0);
-  transition: transform 760ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.month-picker.tab-variant .month-nav-btn {
-  opacity: 0;
-  transform: translateY(1px) scale(0.92);
-  transition:
-    opacity 360ms ease,
-    transform 520ms cubic-bezier(0.16, 1, 0.3, 1),
-    background-color 320ms ease,
-    border-color 320ms ease;
-}
-
-.top-tab.active .month-picker.tab-variant .month-nav-btn {
-  opacity: 1;
-  transform: translateY(0) scale(1);
 }
 
 .top-tab * {
@@ -580,55 +567,6 @@
   opacity: 0.9;
   z-index: 1;
   clip-path: inset(-100vh -100vw 0px -100vw); /* 2px -> 0px로 하단 잘림을 제거하여 가로선과 들뜸 없이 밀착 */
-}
-
-.tab-content-switcher {
-  display: inline-flex;
-  align-items: center;
-}
-
-.tab-content-inactive,
-.tab-content-active {
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;
-  overflow: hidden;
-  transition:
-    max-width 640ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.top-tab:not(.active) .tab-content-active {
-  max-width: 0;
-  height: 0;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.top-tab.active .tab-content-active {
-  max-width: var(--tab-active-content-width, 320px);
-  opacity: 1;
-  pointer-events: auto;
-  overflow: hidden;
-  transition:
-    max-width 760ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.top-tab.active .tab-content-active:has(.month-picker.dropdown-open) {
-  overflow: visible;
-}
-
-.top-tab:not(.active) .tab-content-inactive {
-  max-width: var(--tab-inactive-content-width, 220px);
-  opacity: 1;
-  pointer-events: auto;
-  transition:
-    max-width 520ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.top-tab.active .tab-content-inactive {
-  max-width: 0;
-  opacity: 0;
-  pointer-events: none;
 }
 
 .top-tab.active {
@@ -834,16 +772,31 @@
 }
 
 .month-picker.tab-variant {
+  gap: 0;
+  transition: gap var(--top-tab-edge-duration) var(--top-tab-edge-easing);
+}
+
+.top-tab:not(.active) .month-picker.tab-variant {
+  pointer-events: none;
+}
+
+.top-tab.active .month-picker.tab-variant {
   gap: 4px;
+  pointer-events: auto;
 }
 
 .month-picker.tab-variant .month-picker-label {
-  min-width: 104px;
+  min-width: 0;
   padding: 1px 4px;
-  font-size: 0.98rem;
+  font-size: 1.05rem;
   line-height: 1.2;
   color: inherit;
   font-weight: 900;
+  transition:
+    font-size var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    line-height var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    color var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    background-color 320ms ease;
 }
 
 .top-tab.active .month-picker.tab-variant .month-picker-label {
@@ -852,16 +805,39 @@
 }
 
 .month-picker.tab-variant .month-nav-btn {
-  width: 23px;
+  width: 0;
+  min-width: 0;
+  max-width: 0;
   height: 23px;
+  padding: 0;
+  border: 0;
   border-radius: 7px;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translateY(1px);
+  transition:
+    width var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    min-width var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    max-width var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    opacity var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    transform var(--top-tab-edge-duration) var(--top-tab-edge-easing),
+    background-color 320ms ease,
+    border-color 320ms ease;
 }
 
-.top-tab.active .month-nav-btn {
+.top-tab.active .month-picker.tab-variant .month-nav-btn {
+  width: 23px;
+  min-width: 23px;
+  max-width: 23px;
   background: color-mix(in srgb, var(--tab-active-border) 14%, transparent);
   color: var(--tab-active-border);
   border: 0;
   box-shadow: none;
+  opacity: 1;
+  overflow: visible;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .top-tab.active .month-nav-btn svg {
@@ -939,7 +915,7 @@
     gap: 0;
   }
 
-  .top-tab:not(.active) .tab-content-switcher,
+  .top-tab:not(.active) .month-picker.tab-variant .month-picker-label,
   .top-tab:not(.active) .top-tab-inner > span {
     width: 0;
     max-width: 0;

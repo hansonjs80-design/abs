@@ -22,9 +22,10 @@ import {
   SUMMARY_COL_WIDTH,
   THERAPIST_COLORS,
   THERAPIST_TOTAL_COLORS,
-  filterRowsByTherapistPrescription,
+  buildPatientViewRows,
   findNearestDateRowIndex,
   isEditableShortcutTarget,
+  isSameNewPatientFilter,
   isSameTherapistPrescriptionFilter,
   prescriptionsMatch,
   toDateKey,
@@ -130,7 +131,7 @@ export default function ShockwaveDataGrid({
     [safeTherapists, monthlyTherapists]
   );
   const [internalSelectedNames, setInternalSelectedNames] = useState([]);
-  const [prescriptionPatientFilter, setPrescriptionPatientFilter] = useState(null);
+  const [patientViewFilter, setPatientViewFilter] = useState(null);
   const isControlled = externalSelectedNames !== undefined && onSelectedTherapistNamesChange !== undefined;
   const selectedTherapistNames = isControlled ? externalSelectedNames : internalSelectedNames;
   const therapistNameList = useMemo(
@@ -160,13 +161,13 @@ export default function ShockwaveDataGrid({
   }, [isAllTherapistsSelected, safeInputLogs, selectedTherapistSet]);
   const filteredInputLogs = useMemo(() => {
     if (!isPrescriptionPatientFilterEnabled) return therapistFilteredInputLogs;
-    return filterRowsByTherapistPrescription(
+    return buildPatientViewRows(
       therapistFilteredInputLogs,
-      prescriptionPatientFilter
+      patientViewFilter
     );
   }, [
     isPrescriptionPatientFilterEnabled,
-    prescriptionPatientFilter,
+    patientViewFilter,
     therapistFilteredInputLogs,
   ]);
   const visibleTherapists = useMemo(() => {
@@ -333,7 +334,7 @@ export default function ShockwaveDataGrid({
     }
 
     // Read-only stats pages should not pay to render unused editable draft rows.
-    const draftsNeeded = prescriptionPatientFilter
+    const draftsNeeded = patientViewFilter
       ? 0
       : readOnly
         ? Math.max(0, extraDraftRows)
@@ -354,7 +355,7 @@ export default function ShockwaveDataGrid({
     extraDraftRows,
     filteredInputLogs,
     insertedDraftRows,
-    prescriptionPatientFilter,
+    patientViewFilter,
     readOnly,
   ]);
 
@@ -370,22 +371,22 @@ export default function ShockwaveDataGrid({
   useEffect(() => {
     setInsertedDraftRows([]);
     setDraftCellValues({});
-    setPrescriptionPatientFilter(null);
+    setPatientViewFilter(null);
   }, [currentYear, currentMonth, tableName]);
 
   useEffect(() => {
-    if (!prescriptionPatientFilter) return;
-    const therapistIsVisible = visibleTherapists.some(
-      (therapist) => therapist.name === prescriptionPatientFilter.therapistName
+    if (!patientViewFilter) return;
+    const therapistIsVisible = (
+      !patientViewFilter.therapistName
+      || visibleTherapists.some(
+        (therapist) => therapist.name === patientViewFilter.therapistName
+      )
     );
-    const matchingLogExists = safeInputLogs.some((log) => (
-      log?.therapist_name === prescriptionPatientFilter.therapistName
-      && prescriptionsMatch(log?.prescription, prescriptionPatientFilter.prescription)
-    ));
+    const matchingLogExists = filteredInputLogs.length > 0;
     if (!therapistIsVisible || !matchingLogExists) {
-      setPrescriptionPatientFilter(null);
+      setPatientViewFilter(null);
     }
-  }, [prescriptionPatientFilter, safeInputLogs, visibleTherapists]);
+  }, [filteredInputLogs, patientViewFilter, visibleTherapists]);
 
   const frozenColumnCount = 0;
 
@@ -609,12 +610,22 @@ export default function ShockwaveDataGrid({
   const [countTooltip, setCountTooltip] = useState(null);
   const [mergedCells, setMergedCells] = useState({}); // key "r-c" -> {rs, cs}
 
-  const togglePrescriptionPatientFilter = useCallback((therapistName, prescription) => {
+  const togglePatientFilter = useCallback((therapistName, prescription) => {
     if (!isPrescriptionPatientFilterEnabled) return;
-    setPrescriptionPatientFilter((current) => (
+    setPatientViewFilter((current) => (
       isSameTherapistPrescriptionFilter(current, therapistName, prescription)
         ? null
         : { therapistName, prescription }
+    ));
+    setCountTooltip(null);
+  }, [isPrescriptionPatientFilterEnabled]);
+
+  const toggleNewPatientFilter = useCallback((date = null) => {
+    if (!isPrescriptionPatientFilterEnabled) return;
+    setPatientViewFilter((current) => (
+      isSameNewPatientFilter(current, date)
+        ? null
+        : { newPatientOnly: true, date: date || null }
     ));
     setCountTooltip(null);
   }, [isPrescriptionPatientFilterEnabled]);
@@ -627,7 +638,7 @@ export default function ShockwaveDataGrid({
     setCtxMenu(null);
     setCountTooltip(null);
     setClipboardSource(null);
-  }, [prescriptionPatientFilter]);
+  }, [patientViewFilter]);
 
   const wrapRef = useRef(null);
   const inputRef = useRef(null);
@@ -1517,13 +1528,26 @@ export default function ShockwaveDataGrid({
   }, [ctxMenu]);
 
   // ─── 9. COMPUTED TOTALS ───────────────────────────────────
-  const { grandTotal, newPatientTotal, therapistTotals } = useMemo(() => {
+  const {
+    dateSummaries: headerDateSummaries,
+    grandTotal,
+    newPatientTotal,
+    therapistTotals,
+  } = useMemo(() => {
     return buildShockwaveCountSummaries({
-      rows: therapistFilteredInputLogs,
+      rows: patientViewFilter?.newPatientOnly
+        ? filteredInputLogs
+        : therapistFilteredInputLogs,
       prescriptions,
       therapists: visibleTherapists,
     });
-  }, [prescriptions, therapistFilteredInputLogs, visibleTherapists]);
+  }, [
+    filteredInputLogs,
+    patientViewFilter?.newPatientOnly,
+    prescriptions,
+    therapistFilteredInputLogs,
+    visibleTherapists,
+  ]);
 
   const grandCountTooltipData = useMemo(() => {
     if (tableName === 'manual_therapy_patient_logs' || grandTotal <= 0) return null;
@@ -1531,7 +1555,7 @@ export default function ShockwaveDataGrid({
     const prescriptionCounts = Object.fromEntries(
       prescriptions.map((prescription) => [prescription, 0])
     );
-    dateSummaries.forEach((summary) => {
+    headerDateSummaries.forEach((summary) => {
       prescriptions.forEach((prescription) => {
         prescriptionCounts[prescription] += Number(summary?.byPrescription?.[prescription]) || 0;
       });
@@ -1554,8 +1578,8 @@ export default function ShockwaveDataGrid({
   }, [
     currentMonth,
     currentYear,
-    dateSummaries,
     grandTotal,
+    headerDateSummaries,
     prescriptions,
     tableName,
   ]);
@@ -1566,7 +1590,7 @@ export default function ShockwaveDataGrid({
     const therapistCounts = Object.fromEntries(
       visibleTherapists.map((therapist) => [therapist.name, 0])
     );
-    dateSummaries.forEach((summary) => {
+    headerDateSummaries.forEach((summary) => {
       visibleTherapists.forEach((therapist) => {
         therapistCounts[therapist.name] +=
           Number(summary?.newPatientByTherapist?.[therapist.name]) || 0;
@@ -1588,11 +1612,17 @@ export default function ShockwaveDataGrid({
   }, [
     currentMonth,
     currentYear,
-    dateSummaries,
+    headerDateSummaries,
     newPatientTotal,
     tableName,
     visibleTherapists,
   ]);
+  const canFilterMonthlyNewPatients =
+    isPrescriptionPatientFilterEnabled && newPatientTotal > 0;
+  const isMonthlyNewPatientFilterActive = isSameNewPatientFilter(
+    patientViewFilter,
+    null
+  );
 
   // ─── 10. RENDER ───────────────────────────────────────────
   const gridWrapperClassName = [
@@ -1621,12 +1651,12 @@ export default function ShockwaveDataGrid({
           <tr className="sw-header-row sw-header-row-title">
             <th
               colSpan={totalColCount}
-              className={`grid-title ${prescriptionPatientFilter ? 'grid-title--filter-active' : ''}`}
-              onDoubleClick={prescriptionPatientFilter
-                ? () => setPrescriptionPatientFilter(null)
+              className={`grid-title ${patientViewFilter ? 'grid-title--filter-active' : ''}`}
+              onDoubleClick={patientViewFilter
+                ? () => setPatientViewFilter(null)
                 : undefined}
-              title={prescriptionPatientFilter
-                ? '더블클릭하여 치료사·처방 환자 필터 해제'
+              title={patientViewFilter
+                ? '더블클릭하여 현황 필터 해제'
                 : undefined}
             >
               <div className="grid-title-inner">
@@ -1649,22 +1679,79 @@ export default function ShockwaveDataGrid({
                 {f.label}
               </th>
             ))}
-            {therapistPrescriptionGroups.map((group, idx) => (
-              <th key={`tn-${group.therapist.key}`} colSpan={group.prescriptions.length} className={`hdr-therapist ${idx > 0 ? 'therapist-group-start' : ''} therapist-group-end`} style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}>
-                {group.therapist.displayName} ( {therapistTotals[idx]?.total || 0}건 )
-              </th>
-            ))}
+            {therapistPrescriptionGroups.map((group, idx) => {
+              const therapistCount = therapistTotals[idx]?.total || 0;
+              const canFilter = isPrescriptionPatientFilterEnabled && therapistCount > 0;
+              const isActiveFilter = isSameTherapistPrescriptionFilter(
+                patientViewFilter,
+                group.therapist.name,
+                null
+              );
+              return (
+                <th
+                  key={`tn-${group.therapist.key}`}
+                  colSpan={group.prescriptions.length}
+                  className={[
+                    'hdr-therapist',
+                    idx > 0 ? 'therapist-group-start' : '',
+                    'therapist-group-end',
+                    canFilter ? 'hdr-therapist--filterable' : '',
+                    isActiveFilter ? 'hdr-therapist--filter-active' : '',
+                  ].filter(Boolean).join(' ')}
+                  style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}
+                  onDoubleClick={canFilter
+                    ? () => togglePatientFilter(group.therapist.name, null)
+                    : undefined}
+                  title={canFilter
+                    ? isActiveFilter
+                      ? '더블클릭하여 치료사 현황 필터 해제'
+                      : `${group.therapist.displayName} 치료사 현황만 보기 (더블클릭)`
+                    : undefined}
+                >
+                  {group.therapist.displayName} ( {therapistCount}건 )
+                </th>
+              );
+            })}
             <th rowSpan={2} className="hdr-total total-group-start">총건수</th>
             <th rowSpan={2} className="hdr-total hdr-new-patient">{secondarySummaryLabel}</th>
           </tr>
 
           {/* Row 3: Prescription Names */}
           <tr className="sw-header-row sw-header-row-prescriptions">
-            {therapistPrescriptionGroups.map((group, idx) => group.prescriptions.map((p, pIdx) => (
-              <th key={`${group.therapist.key}-${pIdx}`} className={`hdr-pres ${pIdx === 0 ? 'therapist-group-start' : ''} ${pIdx === group.prescriptions.length - 1 ? 'therapist-group-end' : ''}`} style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}>
-                {p}
-              </th>
-            )))}
+            {therapistPrescriptionGroups.map((group, idx) => group.prescriptions.map((p, pIdx) => {
+              const prescriptionHasPatients = therapistTotals.some(
+                (total) => (total?.byPres?.[p] || 0) > 0
+              );
+              const canFilter = isPrescriptionPatientFilterEnabled && prescriptionHasPatients;
+              const isActiveFilter = isSameTherapistPrescriptionFilter(
+                patientViewFilter,
+                null,
+                p
+              );
+              return (
+                <th
+                  key={`${group.therapist.key}-${pIdx}`}
+                  className={[
+                    'hdr-pres',
+                    pIdx === 0 ? 'therapist-group-start' : '',
+                    pIdx === group.prescriptions.length - 1 ? 'therapist-group-end' : '',
+                    canFilter ? 'hdr-pres--filterable' : '',
+                    isActiveFilter ? 'hdr-pres--filter-active' : '',
+                  ].filter(Boolean).join(' ')}
+                  style={{ backgroundColor: THERAPIST_COLORS[idx % THERAPIST_COLORS.length] }}
+                  onDoubleClick={canFilter
+                    ? () => togglePatientFilter(null, p)
+                    : undefined}
+                  title={canFilter
+                    ? isActiveFilter
+                      ? '더블클릭하여 전체 치료사 처방 필터 해제'
+                      : `${p} 처방 환자를 모든 치료사에서 보기 (더블클릭)`
+                    : undefined}
+                >
+                  {p}
+                </th>
+              );
+            }))}
           </tr>
 
           {/* Row 4: Column-wise totals (Prescription Totals + Grand Totals) */}
@@ -1673,7 +1760,7 @@ export default function ShockwaveDataGrid({
               const prescriptionCount = therapistTotals[idx]?.byPres[p] || 0;
               const canFilter = isPrescriptionPatientFilterEnabled && prescriptionCount > 0;
               const isActiveFilter = isSameTherapistPrescriptionFilter(
-                prescriptionPatientFilter,
+                patientViewFilter,
                 group.therapist.name,
                 p
               );
@@ -1689,7 +1776,7 @@ export default function ShockwaveDataGrid({
                   ].filter(Boolean).join(' ')}
                   style={{ backgroundColor: THERAPIST_TOTAL_COLORS[idx % THERAPIST_TOTAL_COLORS.length] }}
                   onDoubleClick={canFilter
-                    ? () => togglePrescriptionPatientFilter(group.therapist.name, p)
+                    ? () => togglePatientFilter(group.therapist.name, p)
                     : undefined}
                   title={canFilter
                     ? isActiveFilter
@@ -1711,11 +1798,25 @@ export default function ShockwaveDataGrid({
               {grandTotal}건
             </th>
             <th
-              className={`hdr-grand-total hdr-new-patient-total ${grandNewPatientTooltipData ? 'hdr-grand-total--hoverable' : ''}`}
+              className={[
+                'hdr-grand-total',
+                'hdr-new-patient-total',
+                grandNewPatientTooltipData ? 'hdr-grand-total--hoverable' : '',
+                canFilterMonthlyNewPatients ? 'hdr-new-patient-total--filterable' : '',
+                isMonthlyNewPatientFilterActive ? 'hdr-new-patient-total--filter-active' : '',
+              ].filter(Boolean).join(' ')}
               onMouseEnter={grandNewPatientTooltipData
                 ? (event) => showCountTooltip(event.currentTarget, grandNewPatientTooltipData)
                 : undefined}
               onMouseLeave={grandNewPatientTooltipData ? hideCountTooltip : undefined}
+              onDoubleClick={canFilterMonthlyNewPatients
+                ? () => toggleNewPatientFilter(null)
+                : undefined}
+              title={canFilterMonthlyNewPatients
+                ? isMonthlyNewPatientFilterActive
+                  ? '더블클릭하여 당월 전체 신환 필터 해제'
+                  : '당월 전체 신환 현황만 보기 (더블클릭)'
+                : undefined}
             >
               {newPatientTotal}명
             </th>
@@ -1757,6 +1858,13 @@ export default function ShockwaveDataGrid({
                 const isFoc = focus?.r === ri && focus?.c === ci;
                 const isEdit = editing?.r === ri && editing?.c === ci;
                 let val = getVal(row, ci);
+                const canFilterDateNewPatients =
+                  isPrescriptionPatientFilterEnabled
+                  && isNewPatientCol
+                  && val !== '';
+                const isDateNewPatientFilterActive =
+                  canFilterDateNewPatients
+                  && isSameNewPatientFilter(patientViewFilter, row.date);
 
                 let groupCls = '';
                 if (isDateGroupMergedCol) {
@@ -1782,6 +1890,8 @@ export default function ShockwaveDataGrid({
                 if (ci >= FIXED_FIELDS.length && ci < totalCountColIndex) cls += ' gc-therapist-value';
                 if (isTotalCol) cls += ' gc-total total-group-start';
                 if (isNewPatientCol) cls += ' gc-total gc-new-patient';
+                if (canFilterDateNewPatients) cls += ' gc-new-patient--filterable';
+                if (isDateNewPatientFilterActive) cls += ' gc-new-patient--filter-active';
                 if (isTherapistGroupStartCol(ci)) cls += ' therapist-group-start';
                 if (isTherapistGroupEndCol(ci)) cls += ' therapist-group-end';
 
@@ -1920,7 +2030,9 @@ export default function ShockwaveDataGrid({
                       if (cellTooltipData) showCountTooltip(e.currentTarget, cellTooltipData);
                     }}
                     onMouseLeave={cellTooltipData ? hideCountTooltip : undefined}
-                    onDoubleClick={() => onDblClick(ri, ci)}
+                    onDoubleClick={canFilterDateNewPatients
+                      ? () => toggleNewPatientFilter(row.date)
+                      : () => onDblClick(ri, ci)}
                     onContextMenu={e => (ci === 0 ? onRowHeaderContextMenu(e, ri) : onCtxMenu(e, ri, ci))}
                   >
                     {displayVal}

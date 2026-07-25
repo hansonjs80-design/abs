@@ -1,9 +1,15 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MonthPicker from '../common/MonthPicker';
 import PrintButton from '../common/PrintButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAllowedTabs } from '../../lib/authPermissions';
+import {
+  buildTopTabTransition,
+  getTopTabMotionClasses,
+} from './topTabTransitionUtils';
+
+const TAB_EDGE_TRANSITION_MS = 600;
 
 export default function TopTabs() {
   const location = useLocation();
@@ -12,11 +18,9 @@ export default function TopTabs() {
   const items = useMemo(() => getAllowedTabs(user), [user]);
   const [now, setNow] = useState(() => new Date());
   const [optimisticPath, setOptimisticPath] = useState(null);
+  const [tabTransition, setTabTransition] = useState(null);
   const routeTimerRef = useRef(null);
-  const measureFrameRef = useRef(null);
-  const tabWrapRefs = useRef(new Map());
-  const activeContentRefs = useRef(new Map());
-  const inactiveContentRefs = useRef(new Map());
+  const transitionTimerRef = useRef(null);
 
   useEffect(() => {
     setOptimisticPath(null);
@@ -27,8 +31,8 @@ export default function TopTabs() {
       if (routeTimerRef.current) {
         window.clearTimeout(routeTimerRef.current);
       }
-      if (measureFrameRef.current) {
-        window.cancelAnimationFrame(measureFrameRef.current);
+      if (transitionTimerRef.current) {
+        window.clearTimeout(transitionTimerRef.current);
       }
     };
   }, []);
@@ -37,50 +41,6 @@ export default function TopTabs() {
     const timer = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(timer);
   }, []);
-
-  const measureTabContentWidths = useCallback(() => {
-    measureFrameRef.current = null;
-    items.forEach((item) => {
-      const wrap = tabWrapRefs.current.get(item.path);
-      if (!wrap) return;
-
-      const activeEl = activeContentRefs.current.get(item.path);
-      const inactiveEl = inactiveContentRefs.current.get(item.path);
-      if (activeEl) {
-        wrap.classList.add('measuring-tab-width');
-        wrap.style.setProperty('--tab-active-content-width', `${activeEl.scrollWidth}px`);
-        wrap.classList.remove('measuring-tab-width');
-      }
-      if (inactiveEl) {
-        wrap.style.setProperty('--tab-inactive-content-width', `${inactiveEl.scrollWidth}px`);
-      }
-    });
-  }, [items]);
-
-  const scheduleTabContentWidthMeasure = useCallback(() => {
-    if (measureFrameRef.current) {
-      window.cancelAnimationFrame(measureFrameRef.current);
-    }
-    measureFrameRef.current = window.requestAnimationFrame(measureTabContentWidths);
-  }, [measureTabContentWidths]);
-
-  useLayoutEffect(() => {
-    measureTabContentWidths();
-  }, [measureTabContentWidths]);
-
-  useEffect(() => {
-    if (typeof ResizeObserver === 'undefined') return undefined;
-    const observer = new ResizeObserver(scheduleTabContentWidthMeasure);
-    activeContentRefs.current.forEach((el) => observer.observe(el));
-    inactiveContentRefs.current.forEach((el) => observer.observe(el));
-    return () => {
-      observer.disconnect();
-      if (measureFrameRef.current) {
-        window.cancelAnimationFrame(measureFrameRef.current);
-        measureFrameRef.current = null;
-      }
-    };
-  }, [scheduleTabContentWidthMeasure]);
 
   const formatDateTime = (date) => {
     const y = date.getFullYear();
@@ -104,8 +64,16 @@ export default function TopTabs() {
     if (routeTimerRef.current) {
       window.clearTimeout(routeTimerRef.current);
     }
-    measureTabContentWidths();
+    if (transitionTimerRef.current) {
+      window.clearTimeout(transitionTimerRef.current);
+    }
+    const currentPath = optimisticPath || location.pathname;
+    setTabTransition(buildTopTabTransition(items, currentPath, path));
     setOptimisticPath(path);
+    transitionTimerRef.current = window.setTimeout(() => {
+      transitionTimerRef.current = null;
+      setTabTransition(null);
+    }, TAB_EDGE_TRANSITION_MS);
     routeTimerRef.current = window.setTimeout(() => {
       routeTimerRef.current = null;
       navigate(path);
@@ -122,15 +90,12 @@ export default function TopTabs() {
             const isActive = item.path === '/'
               ? currentPath === '/'
               : currentPath === item.path;
+            const motionClasses = getTopTabMotionClasses(tabTransition, item.path);
 
             return (
               <span
                 key={item.path}
-                className="top-tab-with-date"
-                ref={(node) => {
-                  if (node) tabWrapRefs.current.set(item.path, node);
-                  else tabWrapRefs.current.delete(item.path);
-                }}
+                className={`top-tab-with-date${motionClasses}`}
               >
                 <div
                   className={`top-tab ${item.tabClass}${isActive ? ' active' : ''}${isActive && item.monthLabel ? ' month-tab' : ''}`}
@@ -152,26 +117,7 @@ export default function TopTabs() {
                   <div className="top-tab-inner">
                     <Icon size={18} />
                     {item.monthLabel ? (
-                      <div className="tab-content-switcher">
-                        <span
-                          className="tab-content-inactive"
-                          ref={(node) => {
-                            if (node) inactiveContentRefs.current.set(item.path, node);
-                            else inactiveContentRefs.current.delete(item.path);
-                          }}
-                        >
-                          <span>{item.label}</span>
-                        </span>
-                        <span
-                          className="tab-content-active"
-                          ref={(node) => {
-                            if (node) activeContentRefs.current.set(item.path, node);
-                            else activeContentRefs.current.delete(item.path);
-                          }}
-                        >
-                          <MonthPicker suffix={item.monthLabel} variant="tab" />
-                        </span>
-                      </div>
+                      <MonthPicker suffix={item.monthLabel} variant="tab" />
                     ) : (
                       <span>{item.label}</span>
                     )}
