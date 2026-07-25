@@ -19,7 +19,6 @@ const getWeekTop = (weekEl) => {
 export default function useScheduleTodayNavigation({
   weeks,
   today,
-  viewRef,
   weekRefs,
   scheduleScrollKey,
   currentYear,
@@ -164,9 +163,6 @@ export default function useScheduleTodayNavigation({
   }, [scrollToNextVisibleWeek]);
 
   useEffect(() => {
-    const scheduleView = viewRef?.current;
-    if (!scheduleView) return undefined;
-
     let isWheelGestureActive = false;
     let releaseTimer = null;
     const releaseWheelGesture = () => {
@@ -190,15 +186,15 @@ export default function useScheduleTodayNavigation({
       scrollToAdjacentVisibleWeek(direction);
     };
 
-    scheduleView.addEventListener('wheel', handleWeekWheelShortcut, {
+    window.addEventListener('wheel', handleWeekWheelShortcut, {
       capture: true,
       passive: false,
     });
     return () => {
       if (releaseTimer) window.clearTimeout(releaseTimer);
-      scheduleView.removeEventListener('wheel', handleWeekWheelShortcut, true);
+      window.removeEventListener('wheel', handleWeekWheelShortcut, true);
     };
-  }, [scrollToAdjacentVisibleWeek, viewRef]);
+  }, [scrollToAdjacentVisibleWeek]);
 
   const initialScrollDoneRef = useRef(false);
 

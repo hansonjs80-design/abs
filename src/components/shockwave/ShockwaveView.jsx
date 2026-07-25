@@ -2377,7 +2377,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const { todayWeekIdx } = useScheduleTodayNavigation({
     weeks,
     today,
-    viewRef,
     weekRefs,
     scheduleScrollKey,
     currentYear,
