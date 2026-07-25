@@ -68,11 +68,20 @@ export default function useScheduleTodayNavigation({
   const scrollToAdjacentVisibleWeek = useCallback((direction) => {
     if (!weeks.length || typeof window === 'undefined') return false;
     const topOffset = getScheduleStickyTopOffset();
-    const anchorY = (window.scrollY || window.pageYOffset || 0) + topOffset + 1;
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    const anchorY = scrollY + topOffset + 1;
     const weekTops = weekRefs.current
       .slice(0, weeks.length)
       .map((weekEl) => (weekEl ? getWeekTop(weekEl) : Number.NaN));
-    const currentWeekIdx = getVisibleScheduleWeekIndex(weekTops, anchorY);
+    const scrollHeight = Math.max(
+      document.documentElement?.scrollHeight || 0,
+      document.body?.scrollHeight || 0,
+    );
+    const currentWeekIdx = getVisibleScheduleWeekIndex(weekTops, anchorY, {
+      scrollY,
+      viewportHeight: window.innerHeight,
+      scrollHeight,
+    });
     if (currentWeekIdx < 0) return false;
 
     const weekOffset = direction < 0 ? -1 : 1;

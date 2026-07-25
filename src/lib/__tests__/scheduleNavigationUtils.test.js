@@ -54,6 +54,28 @@ test('visible schedule week follows the sticky-header scroll anchor', () => {
   assert.equal(getVisibleScheduleWeekIndex(weekTops, 1301), 3);
 });
 
+test('visible schedule week recognizes a last week clipped by the page bottom', () => {
+  const weekTops = [100, 1200, 2300, 3400, 4500];
+  const clippedLastWeekAnchor = 4300;
+
+  assert.equal(
+    getVisibleScheduleWeekIndex(weekTops, clippedLastWeekAnchor, {
+      scrollY: 4240,
+      viewportHeight: 1240,
+      scrollHeight: 5480,
+    }),
+    4,
+  );
+  assert.equal(
+    getVisibleScheduleWeekIndex(weekTops, clippedLastWeekAnchor, {
+      scrollY: 4230,
+      viewportHeight: 1240,
+      scrollHeight: 5480,
+    }),
+    3,
+  );
+});
+
 test('visible schedule week ignores missing refs and rejects unusable input', () => {
   assert.equal(getVisibleScheduleWeekIndex([Number.NaN, 500, 900], 200), 1);
   assert.equal(getVisibleScheduleWeekIndex([], 200), -1);
