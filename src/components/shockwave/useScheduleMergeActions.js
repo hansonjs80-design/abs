@@ -143,7 +143,6 @@ export default function useScheduleMergeActions({
       const success = await saveShockwaveMemosBulk(payload);
       if (success) {
         clearImmediateCellDisplay(payload);
-        addToast(isAlreadyMerged ? '병합이 해제되었습니다' : '셀이 병합되었습니다', 'info');
       } else {
         applyImmediateCellDisplay(oldMemos);
         applyImmediateMergeSpan(oldMemos);
