@@ -1,4 +1,4 @@
-import { toProperCase } from '../../lib/shockwaveSyncUtils';
+import { toProperCase } from '../../lib/shockwaveSyncUtils.js';
 
 export const THERAPIST_COLORS = [
   '#ffedd5',
@@ -33,6 +33,24 @@ function normalizePrescriptionKey(value) {
 
 export function prescriptionsMatch(a, b) {
   return normalizePrescriptionKey(a) === normalizePrescriptionKey(b);
+}
+
+export function isSameTherapistPrescriptionFilter(filter, therapistName, prescription) {
+  if (!filter) return false;
+  return (
+    filter.therapistName === therapistName
+    && prescriptionsMatch(filter.prescription, prescription)
+  );
+}
+
+export function filterRowsByTherapistPrescription(rows, filter) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  if (!filter?.therapistName || !filter?.prescription) return safeRows;
+
+  return safeRows.filter((row) => (
+    row?.therapist_name === filter.therapistName
+    && prescriptionsMatch(row?.prescription, filter.prescription)
+  ));
 }
 
 export function toDateKey(date) {

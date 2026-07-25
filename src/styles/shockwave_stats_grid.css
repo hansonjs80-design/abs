@@ -356,6 +356,26 @@
   border-bottom: 1px solid var(--grid-strong) !important;
 }
 
+.sw-grid-wrapper--shockwave .hdr-pres-total--filterable {
+  cursor: zoom-in;
+  user-select: none;
+  transition: filter 120ms ease, outline-color 120ms ease;
+}
+
+.sw-grid-wrapper--shockwave .hdr-pres-total--filterable:hover {
+  filter: saturate(1.12) brightness(0.97);
+}
+
+.sw-grid-wrapper--shockwave .hdr-pres-total--filter-active {
+  cursor: zoom-out;
+  outline: 3px solid #7b2eff;
+  outline-offset: -3px;
+}
+
+.sw-grid-wrapper--shockwave .grid-title--filter-active {
+  cursor: zoom-out;
+}
+
 /* Summary Columns */
 .hdr-total {
   background: var(--grid-summary-bg) !important;

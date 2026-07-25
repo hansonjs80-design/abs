@@ -3,6 +3,7 @@ import {
 } from '../../lib/schedulerContentFormat.js';
 import {
   getScheduleDefaultMergeRowSpan,
+  getMemoListFromMergeSpan,
   normalizeBodyPartKey,
   normalizeSchedulerVisitSuffix,
   normalizeVisitInputValue,
@@ -193,4 +194,106 @@ export function getPatientHistoryColumnWidths(groupCount) {
   return groupCount >= 2
     ? ['16%', '10%', '12%', '17%', '17%', '7%', '9%', '12%']
     : ['14%', '10%', '13%', '19%', '20%', '7%', '9%', '8%'];
+}
+
+export function buildShockwaveHoverTooltipText({
+  hoverCell,
+  renderMemos = {},
+  pendingDisplayValues = {},
+  pendingMergeSpans = {},
+  selectedKeys,
+  cellKey,
+  getTimeSlotsForDay,
+  getReservationTimeForMemo,
+  slotMinutes = 30,
+} = {}) {
+  if (!hoverCell) return '';
+
+  const {
+    weekIdx,
+    dayIdx,
+    rowIdx,
+    colIdx,
+    staffBlockRule,
+    slotInfo,
+    selectionInfo,
+  } = hoverCell;
+  const keyStr = cellKey(weekIdx, dayIdx, rowIdx, colIdx);
+  const cellData = renderMemos[keyStr] || {};
+  const content = typeof pendingDisplayValues[keyStr] === 'string'
+    ? pendingDisplayValues[keyStr]
+    : cellData.content;
+  const hasHoverContent = Boolean(String(content || '').trim() && content !== '\u200B');
+  const cellPrescription = cellData.prescription || '';
+  const isSelectionHover = (
+    selectionInfo
+    && selectionInfo.w === weekIdx
+    && selectionInfo.d === dayIdx
+    && selectionInfo.minRow !== selectionInfo.maxRow
+    && selectedKeys
+    && selectedKeys.has(keyStr)
+  );
+
+  let text = '';
+  if (isSelectionHover) {
+    const daySlots = getTimeSlotsForDay(weekIdx, dayIdx);
+    const selectionStart = daySlots.find((slot) => slot.idx === selectionInfo.minRow);
+    const selectionEnd = daySlots.find((slot) => slot.idx === selectionInfo.maxRow);
+    if (selectionStart && selectionEnd) {
+      const startTime = selectionStart.time || selectionStart.label;
+      const endTime = new Date(`2000-01-01T${selectionEnd.time || selectionEnd.label}:00`);
+      endTime.setMinutes(endTime.getMinutes() + slotMinutes);
+      const endHour = String(endTime.getHours()).padStart(2, '0');
+      const endMinute = String(endTime.getMinutes()).padStart(2, '0');
+
+      const durationMinutes = (
+        selectionInfo.maxRow - selectionInfo.minRow + 1
+      ) * slotMinutes;
+      const durationHours = Math.floor(durationMinutes / 60);
+      const remainingMinutes = durationMinutes % 60;
+      let durationText = '';
+      if (durationHours > 0) durationText += `${durationHours}시간`;
+      if (remainingMinutes > 0) {
+        durationText += `${durationHours > 0 ? ' ' : ''}${remainingMinutes}분`;
+      }
+
+      text = `⏱ ${startTime} ~ ${endHour}:${endMinute} (총 ${durationText})`;
+      if (hasHoverContent) text += `\n👤 ${content}`;
+    } else {
+      const mergeSpanForHover = pendingMergeSpans[keyStr] || cellData.merge_span;
+      const optimisticCellData = { ...cellData, merge_span: mergeSpanForHover };
+      const reservationTime = getReservationTimeForMemo(
+        optimisticCellData,
+        weekIdx,
+        dayIdx,
+        rowIdx
+      );
+      text = `⏱ ${reservationTime || slotInfo.label}`;
+      if (hasHoverContent) text += `\n👤 ${content}`;
+    }
+  } else {
+    const mergeSpanForHover = pendingMergeSpans[keyStr] || cellData.merge_span;
+    const optimisticCellData = { ...cellData, merge_span: mergeSpanForHover };
+    const reservationTime = getReservationTimeForMemo(
+      optimisticCellData,
+      weekIdx,
+      dayIdx,
+      rowIdx
+    );
+    text = `⏱ ${reservationTime || slotInfo.label}`;
+    if (hasHoverContent) text += `\n👤 ${content}`;
+  }
+
+  if (staffBlockRule) text += `\n근무표: ${staffBlockRule.keyword}`;
+  if (hasHoverContent && cellPrescription) text += `\n💊 처방: ${cellPrescription}`;
+  if (hasHoverContent && cellData?.body_part) text += `\n🦴 부위: ${cellData.body_part}`;
+
+  const memoList = getMemoListFromMergeSpan(cellData?.merge_span);
+  if (memoList.length === 1) {
+    text += `\n📝 메모: ${memoList[0]}`;
+  } else if (memoList.length > 1) {
+    text += `\n📝 메모:\n${memoList.map((memo) => `  • ${memo}`).join('\n')}`;
+  }
+
+  return text;
 }
