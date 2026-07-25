@@ -8,7 +8,7 @@ import {
 } from '../../lib/scheduleNavigationUtils';
 import { shockwaveScheduleScrollMemory } from '../../lib/schedulerUtils';
 
-const WEEK_WHEEL_GESTURE_RELEASE_MS = 500;
+const WEEK_WHEEL_TARGET_RESET_MS = 800;
 
 const getWeekTop = (weekEl) => {
   if (!weekEl || typeof window === 'undefined') return 0;
@@ -64,7 +64,7 @@ export default function useScheduleTodayNavigation({
     return scrollToWeek(weekEl, instant ? 'instant' : 'smooth');
   }, [scrollToWeek, todayWeekIdx, weekRefs]);
 
-  const scrollToAdjacentVisibleWeek = useCallback((direction) => {
+  const scrollToAdjacentVisibleWeek = useCallback((direction, fromWeekIdx = null) => {
     if (!weeks.length || typeof window === 'undefined') return false;
     const topOffset = getScheduleStickyTopOffset();
     const scrollY = window.scrollY || window.pageYOffset || 0;
@@ -76,17 +76,24 @@ export default function useScheduleTodayNavigation({
       document.documentElement?.scrollHeight || 0,
       document.body?.scrollHeight || 0,
     );
-    const currentWeekIdx = getVisibleScheduleWeekIndex(weekTops, anchorY, {
-      scrollY,
-      viewportHeight: window.innerHeight,
-      scrollHeight,
-    });
+    const hasRequestedStartWeek = Number.isInteger(fromWeekIdx)
+      && fromWeekIdx >= 0
+      && fromWeekIdx < weeks.length;
+    const currentWeekIdx = hasRequestedStartWeek
+      ? fromWeekIdx
+      : getVisibleScheduleWeekIndex(weekTops, anchorY, {
+        scrollY,
+        viewportHeight: window.innerHeight,
+        scrollHeight,
+      });
     if (currentWeekIdx < 0) return false;
 
     const weekOffset = direction < 0 ? -1 : 1;
     const targetWeekIdx = currentWeekIdx + weekOffset;
     if (targetWeekIdx < 0 || targetWeekIdx >= weeks.length) return false;
-    return scrollToWeek(weekRefs.current[targetWeekIdx]);
+    return scrollToWeek(weekRefs.current[targetWeekIdx])
+      ? targetWeekIdx
+      : false;
   }, [scrollToWeek, weekRefs, weeks.length]);
 
   const scrollToNextVisibleWeek = useCallback(() => {
@@ -163,15 +170,14 @@ export default function useScheduleTodayNavigation({
   }, [scrollToNextVisibleWeek]);
 
   useEffect(() => {
-    let isWheelGestureActive = false;
-    let releaseTimer = null;
-    const releaseWheelGesture = () => {
-      isWheelGestureActive = false;
-      releaseTimer = null;
-    };
-    const scheduleWheelGestureRelease = () => {
-      if (releaseTimer) window.clearTimeout(releaseTimer);
-      releaseTimer = window.setTimeout(releaseWheelGesture, WEEK_WHEEL_GESTURE_RELEASE_MS);
+    let wheelTargetWeekIdx = null;
+    let targetResetTimer = null;
+    const scheduleTargetReset = () => {
+      if (targetResetTimer) window.clearTimeout(targetResetTimer);
+      targetResetTimer = window.setTimeout(() => {
+        wheelTargetWeekIdx = null;
+        targetResetTimer = null;
+      }, WEEK_WHEEL_TARGET_RESET_MS);
     };
     const handleWeekWheelShortcut = (event) => {
       const direction = getScheduleWheelWeekDirection(event);
@@ -179,11 +185,11 @@ export default function useScheduleTodayNavigation({
 
       event.preventDefault();
       event.stopPropagation();
-      scheduleWheelGestureRelease();
-      if (isWheelGestureActive) return;
-
-      isWheelGestureActive = true;
-      scrollToAdjacentVisibleWeek(direction);
+      const targetWeekIdx = scrollToAdjacentVisibleWeek(direction, wheelTargetWeekIdx);
+      if (Number.isInteger(targetWeekIdx)) {
+        wheelTargetWeekIdx = targetWeekIdx;
+      }
+      scheduleTargetReset();
     };
 
     window.addEventListener('wheel', handleWeekWheelShortcut, {
@@ -191,7 +197,7 @@ export default function useScheduleTodayNavigation({
       passive: false,
     });
     return () => {
-      if (releaseTimer) window.clearTimeout(releaseTimer);
+      if (targetResetTimer) window.clearTimeout(targetResetTimer);
       window.removeEventListener('wheel', handleWeekWheelShortcut, true);
     };
   }, [scrollToAdjacentVisibleWeek]);
