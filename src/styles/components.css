@@ -390,8 +390,8 @@
 }
 
 .top-tabs-track {
-  --top-tab-edge-duration: 560ms;
-  --top-tab-edge-easing: cubic-bezier(0.22, 1, 0.36, 1);
+  --top-tab-edge-duration: 320ms;
+  --top-tab-edge-easing: cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   display: flex;
   align-items: flex-end;
@@ -489,7 +489,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
   transform: translateY(2px); /* 아래 가로선(오렌지색 선)에 밀착되도록 아래로 1px 더 내림 */
   transform-origin: bottom center;
-  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: all 320ms cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
   overflow: hidden;
 }
@@ -546,7 +546,7 @@
   transition:
     background-color 320ms ease,
     border-color 320ms ease,
-    transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .top-tab > .top-tab-inner > span,

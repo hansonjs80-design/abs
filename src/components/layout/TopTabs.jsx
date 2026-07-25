@@ -9,7 +9,7 @@ import {
   getTopTabMotionClasses,
 } from './topTabTransitionUtils';
 
-const TAB_EDGE_TRANSITION_MS = 600;
+const TAB_EDGE_TRANSITION_MS = 320;
 
 export default function TopTabs() {
   const location = useLocation();
@@ -19,7 +19,6 @@ export default function TopTabs() {
   const [now, setNow] = useState(() => new Date());
   const [optimisticPath, setOptimisticPath] = useState(null);
   const [tabTransition, setTabTransition] = useState(null);
-  const routeTimerRef = useRef(null);
   const transitionTimerRef = useRef(null);
 
   useEffect(() => {
@@ -28,9 +27,6 @@ export default function TopTabs() {
 
   useEffect(() => {
     return () => {
-      if (routeTimerRef.current) {
-        window.clearTimeout(routeTimerRef.current);
-      }
       if (transitionTimerRef.current) {
         window.clearTimeout(transitionTimerRef.current);
       }
@@ -61,23 +57,17 @@ export default function TopTabs() {
   const handleTabChange = (path, isActive) => {
     if (isActive) return;
     notifyBeforeTabChange();
-    if (routeTimerRef.current) {
-      window.clearTimeout(routeTimerRef.current);
-    }
     if (transitionTimerRef.current) {
       window.clearTimeout(transitionTimerRef.current);
     }
     const currentPath = optimisticPath || location.pathname;
     setTabTransition(buildTopTabTransition(items, currentPath, path));
     setOptimisticPath(path);
+    navigate(path);
     transitionTimerRef.current = window.setTimeout(() => {
       transitionTimerRef.current = null;
       setTabTransition(null);
     }, TAB_EDGE_TRANSITION_MS);
-    routeTimerRef.current = window.setTimeout(() => {
-      routeTimerRef.current = null;
-      navigate(path);
-    }, 140);
   };
 
   return (
