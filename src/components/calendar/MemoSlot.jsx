@@ -44,7 +44,8 @@ export default function MemoSlot({
   if (isBeforeLastSlot) stateClass += ' before-last-row-count';
 
   const inlineStyle = {
-    position: 'relative', overflow: 'hidden',
+    position: 'relative',
+    ...(clipboardMode ? {} : { overflow: 'hidden' }),
   };
   if (customFontColor) inlineStyle.color = customFontColor;
   if (customBgColor) inlineStyle.backgroundColor = customBgColor;

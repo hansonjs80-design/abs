@@ -2157,21 +2157,28 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 .ants-red { --ants-color: #ef4444; }
 
 .ants-active {
-  position: relative;
-  overflow: visible !important;
+  position: relative !important;
+  z-index: 20 !important;
+  outline: 2px dashed var(--ants-color, #3b82f6) !important;
+  outline-offset: -2px !important;
+  animation: ants-pulse 1.2s linear infinite !important;
 }
+
 .ants-active::before {
   content: "";
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  border: 2px dashed var(--ants-color, #3b82f6);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box !important;
+  border: 2px dashed var(--ants-color, #3b82f6) !important;
   pointer-events: none;
-  z-index: 10;
-  animation: ants-pulse 1s tablet infinite;
+  z-index: 25;
 }
 
 @keyframes ants-pulse {
   0% { opacity: 1; }
-  50% { opacity: 0.3; }
+  50% { opacity: 0.35; }
   100% { opacity: 1; }
 }
