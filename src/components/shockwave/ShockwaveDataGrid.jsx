@@ -151,7 +151,7 @@ export default function ShockwaveDataGrid({
     [selectedTherapistNames]
   );
   const isAllTherapistsSelected = selectedTherapistNames.length === therapistNameList.length;
-  const isPrescriptionPatientFilterEnabled = tableName !== 'manual_therapy_patient_logs';
+  const isPrescriptionPatientFilterEnabled = true;
   const therapistFilteredInputLogs = useMemo(() => {
     return (
       isAllTherapistsSelected || selectedTherapistSet.size === 0
@@ -2030,9 +2030,18 @@ export default function ShockwaveDataGrid({
                       if (cellTooltipData) showCountTooltip(e.currentTarget, cellTooltipData);
                     }}
                     onMouseLeave={cellTooltipData ? hideCountTooltip : undefined}
-                    onDoubleClick={canFilterDateNewPatients
-                      ? () => toggleNewPatientFilter(row.date)
-                      : () => onDblClick(ri, ci)}
+                    onDoubleClick={() => {
+                      if (canFilterDateNewPatients) {
+                        toggleNewPatientFilter(row.date);
+                      } else if (readOnly && ci >= FIXED_FIELDS.length && ci < totalCountColIndex) {
+                        const colInfo = getTherapistPrescriptionColumn(ci);
+                        if (colInfo?.therapist?.name) {
+                          togglePatientFilter(colInfo.therapist.name, colInfo.prescription || null);
+                        }
+                      } else {
+                        onDblClick(ri, ci);
+                      }
+                    }}
                     onContextMenu={e => (ci === 0 ? onRowHeaderContextMenu(e, ri) : onCtxMenu(e, ri, ci))}
                   >
                     {displayVal}
