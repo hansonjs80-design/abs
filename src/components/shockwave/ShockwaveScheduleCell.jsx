@@ -182,7 +182,7 @@ const MemoizedCell = memo(({
     gridRow: `${gridRowStart}${visualRowSpan > 1 ? ` / span ${visualRowSpan}` : ''}`,
     borderBottom: isLastRenderedRow
       ? 'none'
-      : `1px solid ${cellBorderBottomColor || HORIZONTAL_BORDER_COLOR}`,
+      : `1px solid ${shouldUseUniformFillBorder ? HORIZONTAL_BORDER_COLOR : (cellBorderBottomColor || HORIZONTAL_BORDER_COLOR)}`,
   };
 
   if (colIdx + effectiveMergeSpan.colSpan - 1 === colCount - 1) {
