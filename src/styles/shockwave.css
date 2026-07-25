@@ -910,6 +910,14 @@
   cursor: pointer;
 }
 
+.sw-cell.merged-master.other-month-bg {
+  background: #f3f4f6;
+}
+
+.sw-cell.merged-master.other-month-muted-block {
+  background: #b8b8b8;
+}
+
 .sw-cell.merged-master .sw-cell-main {
   white-space: normal;
   overflow-wrap: anywhere;
