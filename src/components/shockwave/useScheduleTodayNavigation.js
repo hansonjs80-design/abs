@@ -8,7 +8,7 @@ import {
 } from '../../lib/scheduleNavigationUtils';
 import { shockwaveScheduleScrollMemory } from '../../lib/schedulerUtils';
 
-const WEEK_WHEEL_GESTURE_RELEASE_MS = 180;
+const WEEK_WHEEL_GESTURE_RELEASE_MS = 500;
 
 const getWeekTop = (weekEl) => {
   if (!weekEl || typeof window === 'undefined') return 0;
