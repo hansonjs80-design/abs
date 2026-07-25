@@ -285,7 +285,11 @@ const MemoizedCell = memo(({
 
   if (showInput) {
     return (
-      <div id={`cell-${cellKey}`} className={`sw-cell ${isEditing ? 'editing' : ''} ${cls}`} style={inlineStyle}
+      <div
+        id={`cell-${cellKey}`}
+        data-merge-master={visualRowSpan > 1 || effectiveMergeSpan.colSpan > 1 ? 'true' : undefined}
+        className={`sw-cell ${isEditing ? 'editing' : ''} ${cls}`}
+        style={inlineStyle}
         onMouseDown={(e) => { handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e); }}
         onMouseEnter={() => {
           handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
@@ -395,6 +399,7 @@ const MemoizedCell = memo(({
   return (
     <div
       id={`cell-${cellKey}`}
+      data-merge-master={visualRowSpan > 1 || effectiveMergeSpan.colSpan > 1 ? 'true' : undefined}
       className={cls}
       style={inlineStyle}
       onMouseDown={(e) => { handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e); }}

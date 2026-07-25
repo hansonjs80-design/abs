@@ -84,6 +84,39 @@ describe('schedule selection merge helpers', () => {
     assert.equal(info.isMergedMaster, true);
   });
 
+  it('reports selections that cross into another date instead of treating them as mergeable', () => {
+    const info = computeScheduleSelectionInfo({
+      selectedCell: { w: 0, d: 1, r: 4, c: 1 },
+      selectedKeys: new Set([
+        '0-0-4-1',
+        '0-1-4-1',
+      ]),
+      memos: {},
+    });
+
+    assert.equal(info.selectionMultiple, false);
+    assert.equal(info.selectedKeyCount, 2);
+    assert.equal(info.selectedKeyCountInActiveDay, 1);
+    assert.equal(info.hasCrossDaySelection, true);
+  });
+
+  it('keeps a same-date multi-cell selection mergeable', () => {
+    const info = computeScheduleSelectionInfo({
+      selectedCell: { w: 0, d: 1, r: 4, c: 2 },
+      selectedKeys: new Set([
+        '0-1-4-1',
+        '0-1-4-2',
+      ]),
+      memos: {},
+    });
+
+    assert.equal(info.selectionMultiple, true);
+    assert.equal(info.selectedKeyCount, 2);
+    assert.equal(info.selectedKeyCountInActiveDay, 2);
+    assert.equal(info.hasCrossDaySelection, false);
+    assert.equal(info.masterKey, '0-1-4-1');
+  });
+
   it('deduplicates selected merged children to their master key', () => {
     const memos = {
       '0-0-0-0': { merge_span: masterSpan(1, 2) },

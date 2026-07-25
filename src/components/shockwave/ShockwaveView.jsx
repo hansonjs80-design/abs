@@ -1617,7 +1617,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     memos: effectiveMemos,
     pendingDisplayValues,
     pendingMergeSpans,
-    selectedKeys,
+    selectSingleCell,
     cellKey,
     computeSelectionInfo,
     saveShockwaveMemosBulk: queuedSaveShockwaveMemosBulk,

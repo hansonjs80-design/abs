@@ -107,6 +107,63 @@ describe('schedule blank cell cleanup helpers', () => {
     assert.equal(payload.length, 0);
   });
 
+  it('keeps a structurally valid blank merged area visible and interactive', () => {
+    const memos = {
+      '0-0-2-1': {
+        content: '',
+        merge_span: { rowSpan: 2, colSpan: 2, mergedInto: null },
+      },
+      '0-0-2-2': {
+        content: '',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-0-2-1' },
+      },
+      '0-0-3-1': {
+        content: '',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-0-2-1' },
+      },
+      '0-0-3-2': {
+        content: '',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-0-2-1' },
+      },
+    };
+
+    const payload = buildBlankScheduleCleanupPayload({
+      memos,
+      currentYear: 2026,
+      currentMonth: 5,
+    });
+    const result = sanitizeBlankScheduleCellData({
+      key: '0-0-2-1',
+      memos,
+      cellData: memos['0-0-2-1'],
+    });
+
+    assert.equal(payload.length, 0);
+    assert.equal(result.wasSanitized, false);
+    assert.equal(result.cellData.merge_span.rowSpan, 2);
+    assert.equal(result.cellData.merge_span.colSpan, 2);
+  });
+
+  it('keeps a valid optimistic blank merge before server state catches up', () => {
+    const memos = {
+      '0-0-2-1': { content: '', merge_span: defaultSpan },
+      '0-0-3-1': { content: '', merge_span: defaultSpan },
+    };
+    const pendingMergeSpans = {
+      '0-0-2-1': { rowSpan: 2, colSpan: 1, mergedInto: null },
+      '0-0-3-1': { rowSpan: 1, colSpan: 1, mergedInto: '0-0-2-1' },
+    };
+
+    const result = sanitizeBlankScheduleCellData({
+      key: '0-0-2-1',
+      memos,
+      cellData: memos['0-0-2-1'],
+      pendingMergeSpans,
+    });
+
+    assert.equal(result.wasSanitized, false);
+  });
+
   it('cleans stale merged child metadata when the master is gone', () => {
     const payload = buildBlankScheduleCleanupPayload({
       memos: {
@@ -129,6 +186,27 @@ describe('schedule blank cell cleanup helpers', () => {
       },
       defaultSpan
     );
+  });
+
+  it('cleans every blank part of an incomplete merge footprint', () => {
+    const memos = {
+      '0-0-2-1': {
+        content: '',
+        merge_span: { rowSpan: 2, colSpan: 2, mergedInto: null },
+      },
+      '0-0-2-2': {
+        content: '',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-0-2-1' },
+      },
+    };
+
+    const payload = buildBlankScheduleCleanupPayload({
+      memos,
+      currentYear: 2026,
+      currentMonth: 5,
+    });
+
+    assert.deepEqual(payload.map(keyOf).sort(), ['0-0-2-1', '0-0-2-2']);
   });
 
   it('keeps blank cells with user memo markers', () => {
@@ -200,7 +278,7 @@ describe('schedule blank cell cleanup helpers', () => {
     assert.deepEqual(result.mergeSpan, defaultSpan);
   });
 
-  it('cleans blank cells with active merge spans if they have no other metadata', () => {
+  it('cleans a stale blank merge master that has no linked children', () => {
     const memos = {
       '0-0-3-1': {
         content: '',

@@ -16,7 +16,7 @@ export default function useScheduleMergeActions({
   memos,
   pendingDisplayValues,
   pendingMergeSpans,
-  selectedKeys,
+  selectSingleCell,
   cellKey,
   computeSelectionInfo,
   saveShockwaveMemosBulk,
@@ -113,8 +113,12 @@ export default function useScheduleMergeActions({
     const isAlreadyMerged = selection.isMergedMaster &&
                             selection.selectionRowSpan === (selection.masterSpan?.rowSpan || 1) &&
                             selection.selectionColSpan === (selection.masterSpan?.colSpan || 1);
-    const hasMultipleSelectedCells = (selectedKeys?.size || 0) > 1;
-    if (!isAlreadyMerged && !selection.selectionMultiple && !hasMultipleSelectedCells) return;
+    if (!isAlreadyMerged && selection.hasCrossDaySelection) {
+      addToast('셀 병합은 같은 날짜 안에서 선택한 셀끼리만 가능합니다.', 'info');
+      setContextMenu(null);
+      return;
+    }
+    if (!isAlreadyMerged && !selection.selectionMultiple) return;
 
     const { oldMemos, payload } = buildMergeSelectionPayload({
       selection,
@@ -128,6 +132,12 @@ export default function useScheduleMergeActions({
       recordUndo({ type: 'bulk-edit', oldMemos });
       applyImmediateCellDisplay(payload);
       applyImmediateMergeSpan(payload);
+      selectSingleCell({
+        w: selection.w,
+        d: selection.d,
+        r: selection.minRow,
+        c: selection.minCol,
+      }, { normalize: false });
       setContextMenu(null);
 
       const success = await saveShockwaveMemosBulk(payload);
@@ -149,7 +159,7 @@ export default function useScheduleMergeActions({
     addToast,
     cellKey,
     recordUndo,
-    selectedKeys,
+    selectSingleCell,
     setContextMenu,
     applyImmediateCellDisplay,
     applyImmediateMergeSpan,

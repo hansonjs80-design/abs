@@ -68,10 +68,15 @@ export function computeScheduleSelectionInfo({
   let minCol = Infinity;
   let maxCol = -Infinity;
   let hasValid = false;
+  let selectedKeyCount = 0;
+  let selectedKeyCountInActiveDay = 0;
 
   Array.from(selectedKeys).forEach((key) => {
     const { w: kw, d: kd, r, c } = parseScheduleCellKey(key);
+    if (![kw, kd, r, c].every(Number.isFinite)) return;
+    selectedKeyCount += 1;
     if (kw !== w || kd !== d) return;
+    selectedKeyCountInActiveDay += 1;
     hasValid = true;
     minRow = Math.min(minRow, r);
     maxRow = Math.max(maxRow, r);
@@ -118,6 +123,9 @@ export function computeScheduleSelectionInfo({
     selectionColSpan,
     isMergedMaster,
     selectionMultiple: selectionRowSpan > 1 || selectionColSpan > 1,
+    selectedKeyCount,
+    selectedKeyCountInActiveDay,
+    hasCrossDaySelection: selectedKeyCountInActiveDay !== selectedKeyCount,
   };
 }
 

@@ -35,6 +35,65 @@ function masterHasVisibleContent({ masterKey, memos, pendingDisplayValues }) {
   return hasVisibleText(getContentForKey({ key: masterKey, memos, pendingDisplayValues }));
 }
 
+function getDirectMergeSpan({ key, memos, pendingMergeSpans }) {
+  return pendingMergeSpans?.[key] || memos?.[key]?.merge_span;
+}
+
+function isCellInsideMasterSpan({ key, masterKey, masterSpan }) {
+  const cell = parseScheduleCellKey(key);
+  const master = parseScheduleCellKey(masterKey);
+  if (![cell.w, cell.d, cell.r, cell.c, master.w, master.d, master.r, master.c].every(Number.isFinite)) {
+    return false;
+  }
+
+  const rowSpan = Math.max(1, Number(masterSpan?.rowSpan) || 1);
+  const colSpan = Math.max(1, Number(masterSpan?.colSpan) || 1);
+  return (
+    cell.w === master.w &&
+    cell.d === master.d &&
+    cell.r >= master.r &&
+    cell.r < master.r + rowSpan &&
+    cell.c >= master.c &&
+    cell.c < master.c + colSpan
+  );
+}
+
+function hasCompleteMergeFootprint({ masterKey, masterSpan, memos, pendingMergeSpans }) {
+  if (!masterSpan || masterSpan.mergedInto) return false;
+  const rowSpan = Math.max(1, Number(masterSpan.rowSpan) || 1);
+  const colSpan = Math.max(1, Number(masterSpan.colSpan) || 1);
+  if (rowSpan === 1 && colSpan === 1) return false;
+
+  const master = parseScheduleCellKey(masterKey);
+  if (![master.w, master.d, master.r, master.c].every(Number.isFinite)) return false;
+
+  for (let row = master.r; row < master.r + rowSpan; row += 1) {
+    for (let col = master.c; col < master.c + colSpan; col += 1) {
+      const childKey = `${master.w}-${master.d}-${row}-${col}`;
+      if (childKey === masterKey) continue;
+      const childSpan = getDirectMergeSpan({ key: childKey, memos, pendingMergeSpans });
+      if (childSpan?.mergedInto !== masterKey) return false;
+    }
+  }
+
+  return true;
+}
+
+function isStructurallyValidActiveMerge({ key, memos, pendingMergeSpans }) {
+  const mergeSpan = getDirectMergeSpan({ key, memos, pendingMergeSpans });
+  if (!mergeSpan) return false;
+
+  const masterKey = mergeSpan.mergedInto || key;
+  const masterSpan = mergeSpan.mergedInto
+    ? getDirectMergeSpan({ key: masterKey, memos, pendingMergeSpans })
+    : mergeSpan;
+  if (!hasCompleteMergeFootprint({ masterKey, masterSpan, memos, pendingMergeSpans })) {
+    return false;
+  }
+
+  return !mergeSpan.mergedInto || isCellInsideMasterSpan({ key, masterKey, masterSpan });
+}
+
 export function isVisuallyEmptyDirtyScheduleCell({
   key,
   memos,
@@ -50,9 +109,15 @@ export function isVisuallyEmptyDirtyScheduleCell({
   const mergeSpan = getEffectiveScheduleMergeSpan({ key, memos, pendingMergeSpans });
   if (hasMemoList(memo.merge_span) || hasMemoList(mergeSpan)) return false;
 
-  // Active merged cells (whether master or child) should not be treated as visually empty dirty cells to be cleaned up.
+  // A deliberately merged blank area is still meaningful UI state. Keep it when
+  // the master footprint and child links agree, including during optimistic saves.
+  if (isStructurallyValidActiveMerge({ key, memos, pendingMergeSpans })) {
+    return false;
+  }
+
+  // Incomplete merge metadata can be left behind by older data or interrupted
+  // writes. Only those structurally invalid blank spans should be sanitized.
   if (!isDefaultMergeSpan(memo.merge_span) || !isDefaultMergeSpan(mergeSpan)) {
-    // If the master cell is completely empty (no content, no prescription, no body part), treat it as a stale merge and allow cleanup.
     const isMasterEmpty = !hasVisibleText(content) && !memo.prescription && !memo.body_part;
     const originalMergedInto = memo?.merge_span?.mergedInto || mergeSpan?.mergedInto;
     if (originalMergedInto) {

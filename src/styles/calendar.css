@@ -222,6 +222,13 @@
   background: var(--cal-other-month-bg) !important;
 }
 
+.calendar-cell.today {
+  --staff-calendar-today-color: #3b82f6;
+  z-index: 2;
+  outline: 2px solid var(--staff-calendar-today-color);
+  outline-offset: 0;
+}
+
 /* 날짜 번호 */
 .calendar-date {
   position: relative;
@@ -253,7 +260,7 @@
 }
 
 .today .calendar-date {
-  background: #3b82f6;
+  background: var(--staff-calendar-today-color, #3b82f6);
 }
 
 .today .calendar-date::after {
