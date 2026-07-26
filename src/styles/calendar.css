@@ -224,9 +224,11 @@
 
 .calendar-cell.today {
   --staff-calendar-today-color: #3b82f6;
-  z-index: 2;
+  position: relative;
+  z-index: 5;
   outline: 2px solid var(--staff-calendar-today-color);
-  outline-offset: 0;
+  outline-offset: -2px;
+  border-color: var(--staff-calendar-today-color) !important;
 }
 
 /* 날짜 번호 */
