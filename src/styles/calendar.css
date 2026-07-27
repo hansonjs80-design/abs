@@ -123,8 +123,11 @@
 .calendar-cell:has(.date-row-resizer:hover),
 .calendar-cell:has(.date-row-resizer:active),
 .calendar-weekday-header:has(.weekday-row-resizer:hover),
-.calendar-weekday-header:has(.weekday-row-resizer:active) {
+.calendar-weekday-header:has(.weekday-row-resizer:active),
+.calendar-weekday-header:has(.col-resizer:hover),
+.calendar-weekday-header:has(.col-resizer:active) {
   overflow: visible !important;
+  z-index: 9999 !important;
 }
 
 .weekday-row-resizer {
@@ -142,7 +145,8 @@
   left: -3000px !important;
   right: -3000px !important;
   width: 6000px !important;
-  background: var(--brand-primary) !important;
+  background: transparent !important;
+  border-bottom: 1.5px solid #3b82f6 !important;
   opacity: 0.75 !important;
   z-index: 9999 !important;
 }
@@ -188,7 +192,8 @@
   top: -3000px !important;
   bottom: -3000px !important;
   height: 6000px !important;
-  background: var(--brand-primary) !important;
+  background: transparent !important;
+  border-right: 1.5px solid #3b82f6 !important;
   opacity: 0.75 !important;
   z-index: 9999 !important;
 }
@@ -206,7 +211,8 @@
   left: -3000px !important;
   right: -3000px !important;
   width: 6000px !important;
-  background: var(--brand-primary) !important;
+  background: transparent !important;
+  border-bottom: 1.5px solid #3b82f6 !important;
   opacity: 0.75 !important;
   z-index: 9999 !important;
 }
@@ -226,7 +232,8 @@
   left: -3000px !important;
   right: -3000px !important;
   width: 6000px !important;
-  background: var(--brand-primary) !important;
+  background: transparent !important;
+  border-bottom: 1.5px solid #3b82f6 !important;
   opacity: 0.75 !important;
   z-index: 9999 !important;
 }
