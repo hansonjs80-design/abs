@@ -1012,8 +1012,6 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   }, [contextMenu]);
 
   useEffect(() => {
-    if (!contextMenu) return;
-
     const closeIfOutside = (ev) => {
       const menu = contextMenuRef.current;
       const colorPopup = colorMenuRef.current;
@@ -1021,16 +1019,43 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
       if (menu && menu.contains(ev.target)) return;
       if (colorPopup && colorPopup.contains(ev.target)) return;
       if (textStylePopup && textStylePopup.contains(ev.target)) return;
+
       setContextMenu(null);
       setColorMenu(null);
       setTextStyleMenu(null);
+
+      if (ev.target.closest('.staff-context-menu, .staff-color-menu, .staff-text-style-menu, .modal, .modal-backdrop, .toast-container, button, input, select, textarea')) {
+        return;
+      }
+      if (ev.target.closest('.memo-slot, .calendar-cell, [data-cell-id]')) {
+        return;
+      }
+
+      if (editingCell) {
+        commitActiveEdit();
+        setEditingCell(null);
+      }
+      setSelectedCell(null);
+      setRangeEnd(null);
+      setSelectedKeys(new Set());
+      setClipboardSource(null);
+      resetInputToHidden();
     };
 
     const closeOnEscape = (ev) => {
       if (ev.key !== 'Escape') return;
+      if (editingCell) {
+        commitActiveEdit();
+        setEditingCell(null);
+      }
+      setSelectedCell(null);
+      setRangeEnd(null);
+      setSelectedKeys(new Set());
+      setClipboardSource(null);
       setContextMenu(null);
       setColorMenu(null);
       setTextStyleMenu(null);
+      resetInputToHidden();
     };
 
     window.addEventListener('mousedown', closeIfOutside, true);
@@ -1041,7 +1066,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
       window.removeEventListener('touchstart', closeIfOutside, true);
       window.removeEventListener('keydown', closeOnEscape, true);
     };
-  }, [contextMenu]);
+  }, [editingCell, commitActiveEdit, resetInputToHidden]);
 
   useEffect(() => {
     const h = () => {
