@@ -295,8 +295,14 @@
   position: relative;
   z-index: 10;
   border: 2px solid var(--staff-calendar-today-color) !important;
-  margin-left: -1.5px;
+  margin-left: -1px;
+  margin-right: -1px;
   margin-top: -1px;
+  margin-bottom: -1px;
+}
+
+.calendar-cell.today.is-last-row {
+  margin-bottom: -2.5px !important;
 }
 
 /* 날짜 번호 */
