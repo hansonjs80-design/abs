@@ -301,7 +301,7 @@
   border-top-color: var(--staff-calendar-today-color) !important;
   border-bottom-color: var(--staff-calendar-today-color) !important;
   border-right-color: var(--staff-calendar-today-color) !important;
-  border-left-color: var(--staff-calendar-today-color) !important;
+  border-left: none !important;
   margin: 0 !important;
 }
 
