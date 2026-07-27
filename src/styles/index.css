@@ -359,7 +359,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   body.calendar-only-print .memo-slot {
     min-height: 0 !important;
-    padding: 0 !important;
+    padding: 0 4px 0 0 !important; /* 날짜와 동일한 4px 우측 여백 */
     font-size: 1.15rem !important; /* 5주차 넉넉한 공간에 맞춰 시원하게 확대 */
     line-height: 1.25 !important;
     font-weight: 800 !important;
@@ -481,7 +481,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.calendar-only-print[data-calendar-weeks="6"] .memo-slot,
   html[data-calendar-weeks="6"] body.calendar-only-print .memo-slot {
     min-height: 0 !important;
-    padding: 0 !important;
+    padding: 0 4px 0 0 !important;
     font-size: 1.0rem !important;
     line-height: 1.2 !important;
     font-weight: 800 !important;
@@ -506,7 +506,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   }
   body.hide-last-week .memo-slot {
     min-height: 0 !important;
-    padding: 0 !important; /* 내부 여백 완전 제거 */
+    padding: 0 4px 0 0 !important;
     font-size: 1.0rem !important; /* 1.15rem -> 1.0rem으로 동일하게 맞추어 균일한 가독성 제공 */
     line-height: 1 !important;
     font-weight: 800 !important;
