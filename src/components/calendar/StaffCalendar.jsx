@@ -151,12 +151,15 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
       if (showSlotSettings && slotSettingsRef.current && !slotSettingsRef.current.contains(e.target)) {
         setShowSlotSettings(false);
       }
-      const isInsideCellOrMenu =
+      const isInsideCalendarGrid =
+        e.target.closest('.calendar-grid') ||
         e.target.closest('.calendar-cell') ||
+        e.target.closest('.memo-slot') ||
+        e.target.closest('.calendar-weekday-header') ||
         e.target.closest('.staff-color-picker-popover') ||
         e.target.closest('.context-menu');
 
-      if (!isInsideCellOrMenu) {
+      if (!isInsideCalendarGrid) {
         setSelectedCell(null);
         setSelectedKeys(new Set());
       }
