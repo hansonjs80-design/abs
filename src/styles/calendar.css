@@ -584,8 +584,8 @@
   flex-direction: column;
   gap: 16px;
   margin-top: 0;
-  width: clamp(300px, 17vw, 340px);
-  min-width: 300px;
+  width: clamp(255px, 14.5vw, 290px);
+  min-width: 255px;
   min-height: 0;
   align-self: stretch;
 }
