@@ -302,7 +302,7 @@
 }
 
 .calendar-cell.today.is-last-row {
-  margin-bottom: -2.5px !important;
+  margin-bottom: -3.5px !important;
 }
 
 /* 날짜 번호 */
