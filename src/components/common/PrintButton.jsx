@@ -185,6 +185,7 @@ export default function PrintButton({ isStaffSchedule }) {
         weekCount = info.totalWeeks;
       }
       document.body.dataset.calendarWeeks = String(weekCount);
+      document.documentElement.dataset.calendarWeeks = String(weekCount);
 
       // 5주로 강제 인쇄 시 6주차 행 숨기기
       if (forceWeeks === 5 && weekInfo?.totalWeeks === 6) {
@@ -197,6 +198,7 @@ export default function PrintButton({ isStaffSchedule }) {
       document.body.classList.remove('calendar-only-print');
       document.body.classList.remove('hide-last-week');
       delete document.body.dataset.calendarWeeks;
+      delete document.documentElement.dataset.calendarWeeks;
       
       if (isNewPatientPortraitPrint) {
         document.body.classList.add('new-patient-print');
