@@ -83,13 +83,14 @@
 
 .calendar-grid {
   display: inline-grid;
+  position: relative;
   border: 2px solid var(--text-secondary); /* 전체 달력 외곽선: 2px 두께의 진한 색(slate-600) */
   border-radius: 4px; /* 사각에 가까운 테두리 */
   background: var(--bg-card);
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.10), 0 12px 28px rgba(15, 23, 42, 0.08);
   width: max-content;
   min-width: 0;
-  overflow: visible;
+  overflow: hidden;
 }
 
 /* 요일 헤더 */
@@ -126,8 +127,12 @@
 
 .weekday-row-resizer:hover,
 .weekday-row-resizer:active {
+  left: -2000px;
+  right: -2000px;
+  width: auto;
   background: var(--brand-primary);
-  opacity: 0.45;
+  opacity: 0.65;
+  z-index: 50;
 }
 
 .calendar-weekday-header:nth-child(7n) {
@@ -168,8 +173,12 @@
   z-index: 10;
 }
 .col-resizer:hover, .col-resizer:active {
+  top: -2000px;
+  bottom: -2000px;
+  height: auto;
   background: var(--brand-primary);
-  opacity: 0.5;
+  opacity: 0.65;
+  z-index: 50;
 }
 
 .row-resizer {
@@ -182,8 +191,12 @@
   z-index: 10;
 }
 .row-resizer:hover, .row-resizer:active {
+  left: -2000px;
+  right: -2000px;
+  width: auto;
   background: var(--brand-primary);
-  opacity: 0.5;
+  opacity: 0.65;
+  z-index: 50;
 }
 
 .date-row-resizer {
@@ -198,8 +211,12 @@
 
 .date-row-resizer:hover,
 .date-row-resizer:active {
+  left: -2000px;
+  right: -2000px;
+  width: auto;
   background: var(--brand-primary);
-  opacity: 0.5;
+  opacity: 0.65;
+  z-index: 50;
 }
 
 .calendar-cell:nth-child(7n) {
