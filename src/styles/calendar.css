@@ -115,6 +115,18 @@
   overflow: hidden;
 }
 
+/* 리사이즈 활성/호버 시 부모 셀의 overflow: hidden을 해제하여 전체 라인 가이드선이 가로지르도록 설정 */
+.calendar-cell:has(.col-resizer:hover),
+.calendar-cell:has(.col-resizer:active),
+.calendar-cell:has(.row-resizer:hover),
+.calendar-cell:has(.row-resizer:active),
+.calendar-cell:has(.date-row-resizer:hover),
+.calendar-cell:has(.date-row-resizer:active),
+.calendar-weekday-header:has(.weekday-row-resizer:hover),
+.calendar-weekday-header:has(.weekday-row-resizer:active) {
+  overflow: visible !important;
+}
+
 .weekday-row-resizer {
   position: absolute;
   left: 0;
@@ -127,12 +139,12 @@
 
 .weekday-row-resizer:hover,
 .weekday-row-resizer:active {
-  left: -2000px;
-  right: -2000px;
-  width: auto;
-  background: var(--brand-primary);
-  opacity: 0.65;
-  z-index: 50;
+  left: -3000px !important;
+  right: -3000px !important;
+  width: 6000px !important;
+  background: var(--brand-primary) !important;
+  opacity: 0.75 !important;
+  z-index: 9999 !important;
 }
 
 .calendar-weekday-header:nth-child(7n) {
@@ -173,12 +185,12 @@
   z-index: 10;
 }
 .col-resizer:hover, .col-resizer:active {
-  top: -2000px;
-  bottom: -2000px;
-  height: auto;
-  background: var(--brand-primary);
-  opacity: 0.65;
-  z-index: 50;
+  top: -3000px !important;
+  bottom: -3000px !important;
+  height: 6000px !important;
+  background: var(--brand-primary) !important;
+  opacity: 0.75 !important;
+  z-index: 9999 !important;
 }
 
 .row-resizer {
@@ -191,12 +203,12 @@
   z-index: 10;
 }
 .row-resizer:hover, .row-resizer:active {
-  left: -2000px;
-  right: -2000px;
-  width: auto;
-  background: var(--brand-primary);
-  opacity: 0.65;
-  z-index: 50;
+  left: -3000px !important;
+  right: -3000px !important;
+  width: 6000px !important;
+  background: var(--brand-primary) !important;
+  opacity: 0.75 !important;
+  z-index: 9999 !important;
 }
 
 .date-row-resizer {
@@ -211,12 +223,12 @@
 
 .date-row-resizer:hover,
 .date-row-resizer:active {
-  left: -2000px;
-  right: -2000px;
-  width: auto;
-  background: var(--brand-primary);
-  opacity: 0.65;
-  z-index: 50;
+  left: -3000px !important;
+  right: -3000px !important;
+  width: 6000px !important;
+  background: var(--brand-primary) !important;
+  opacity: 0.75 !important;
+  z-index: 9999 !important;
 }
 
 .calendar-cell:nth-child(7n) {
