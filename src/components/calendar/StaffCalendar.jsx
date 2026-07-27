@@ -145,12 +145,27 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     }
   }, [canManageCalendarSettings, showSlotSettings]);
 
-  // 설정 팝업 외부 클릭 시 닫기
+  // 설정 팝업 및 빈곳 클릭 시 셀 선택 해제
   useEffect(() => {
-    if (!showSlotSettings) return;
     const handleClickOutside = (e) => {
-      if (slotSettingsRef.current && !slotSettingsRef.current.contains(e.target)) {
+      if (showSlotSettings && slotSettingsRef.current && !slotSettingsRef.current.contains(e.target)) {
         setShowSlotSettings(false);
+      }
+      if (
+        !e.target.closest('.calendar-cell') &&
+        !e.target.closest('.calendar-weekday-header') &&
+        !e.target.closest('.staff-color-picker-popover') &&
+        !e.target.closest('.context-menu') &&
+        !e.target.closest('.notice-board') &&
+        !e.target.closest('.today-panel') &&
+        !e.target.closest('.notice-department-filter') &&
+        !e.target.closest('button') &&
+        !e.target.closest('input') &&
+        !e.target.closest('textarea') &&
+        !e.target.closest('select')
+      ) {
+        setSelectedCell(null);
+        setSelectedKeys(new Set());
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -864,6 +879,13 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'z' || e.code === 'KeyZ')) { e.preventDefault(); doUndo(); return; }
     if (!selectedCell) return;
     if (editingCell) { if (e.key === 'Escape') { e.preventDefault(); setEditingCell(null); resetInputToHidden(); focusHiddenInput(); } return; }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      setSelectedCell(null);
+      setSelectedKeys(new Set());
+      setClipboardSource(null);
+      return;
+    }
 
     const meta = e.metaKey || e.ctrlKey;
     if (e.key === 'Enter' || e.key === 'F2') { e.preventDefault(); beginEdit(selectedCell.key, staffMemos[selectedCell.key]?.content || '', true); return; }

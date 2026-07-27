@@ -652,10 +652,24 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       if (contextMenu && !isContextMenuTarget(e.target)) {
         setContextMenu(null);
       }
+      if (
+        !e.target.closest('.shockwave-schedule-cell') &&
+        !e.target.closest('.shockwave-context-menu') &&
+        !e.target.closest('.sw-stats-sidebar') &&
+        !e.target.closest('.sw-sidebar-filter') &&
+        !e.target.closest('button') &&
+        !e.target.closest('input') &&
+        !e.target.closest('textarea') &&
+        !e.target.closest('select') &&
+        !e.target.closest('.context-menu')
+      ) {
+        setSelectedCell(null);
+        setSelectedKeys(new Set());
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [contextMenu, isContextMenuTarget]);
+  }, [contextMenu, isContextMenuTarget, setSelectedCell, setSelectedKeys]);
 
   const {
     buildMemoSnapshotForKeys,
@@ -696,6 +710,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       } else if (e.key === 'Escape') {
         if (contextMenu) {
           setContextMenu(null);
+        } else if (editingCell) {
+          setEditingCell(null);
+        } else if (selectedCell || selectedKeys?.size > 0) {
+          setSelectedCell(null);
+          setSelectedKeys(new Set());
+          setClipboardSource(null);
         } else {
           setClipboardSource(null);
         }
@@ -707,7 +727,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       window.removeEventListener('keydown', handleGlobalKeyDown, true);
       document.removeEventListener('keydown', handleGlobalKeyDown, true);
     };
-  }, [doUndo, contextMenu, clipboardSource, setClipboardSource]);
+  }, [doUndo, contextMenu, clipboardSource, setClipboardSource, editingCell, selectedCell, selectedKeys, setEditingCell, setSelectedCell, setSelectedKeys]);
 
   const {
     cellKey,
