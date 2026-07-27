@@ -321,6 +321,9 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     display: flex !important;
     flex-direction: column !important;
     margin-left: 0 !important;
+    padding-left: 1.5mm !important; /* 기본 여백 선택 시 좌측 미세 잘림 방지 패딩 */
+    padding-right: 1.5mm !important;
+    box-sizing: border-box !important;
   }
 
   body.calendar-only-print .calendar-grid {
@@ -409,6 +412,41 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.calendar-only-print .calendar-memos {
     gap: 0 !important;
     padding: 0 !important;
+  }
+
+  /* ── 4주차만 있는 달력: 5주차/6주차 빈 셀 숨김 및 4개 행 1:1 균등 가득 채움 ── */
+  body.calendar-only-print[data-calendar-weeks="4"] .calendar-cell:nth-child(n+36),
+  html[data-calendar-weeks="4"] body.calendar-only-print .calendar-cell:nth-child(n+36) {
+    display: none !important;
+  }
+
+  body.calendar-only-print[data-calendar-weeks="4"] .calendar-grid,
+  html[data-calendar-weeks="4"] body.calendar-only-print .calendar-grid {
+    grid-template-rows: auto repeat(4, minmax(0, 1fr)) !important;
+    height: 100% !important;
+    flex: 1 !important;
+  }
+
+  body.calendar-only-print[data-calendar-weeks="4"] .calendar-date,
+  html[data-calendar-weeks="4"] body.calendar-only-print .calendar-date {
+    flex: 0 0 30px !important;
+    font-size: 1.6rem !important;
+    font-weight: 800 !important;
+    padding: 0 4px !important;
+    line-height: 30px !important;
+  }
+
+  body.calendar-only-print[data-calendar-weeks="4"] .calendar-date-number,
+  html[data-calendar-weeks="4"] body.calendar-only-print .calendar-date-number {
+    font-size: 1.6rem !important;
+    font-weight: 800 !important;
+  }
+
+  body.calendar-only-print[data-calendar-weeks="4"] .memo-slot,
+  html[data-calendar-weeks="4"] body.calendar-only-print .memo-slot {
+    font-size: 1.25rem !important;
+    line-height: 1.3 !important;
+    font-weight: 800 !important;
   }
 
   /* ── 6주차 달력: A4 가로 전체 세로 높이(calc(100vh - 28px)) 및 6개 주차 1:1 균등 가득 채움 ── */

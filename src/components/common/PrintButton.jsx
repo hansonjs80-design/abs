@@ -116,16 +116,26 @@ function detectCalendarWeekInfo() {
 
   const weekdayHeaders = calendarGrid.querySelectorAll('.calendar-weekday-header').length;
   const allCells = Array.from(calendarGrid.children).slice(weekdayHeaders); // 요일 헤더 제외
-  const totalWeeks = Math.round(allCells.length / 7);
+  const rawTotalWeeks = Math.round(allCells.length / 7);
+
+  // 이번 달 일자(other-month가 아닌 셀)가 포함된 실제 주차 수 판별
+  let actualWeeks = 0;
+  for (let w = 0; w < rawTotalWeeks; w++) {
+    const weekCells = allCells.slice(w * 7, (w + 1) * 7);
+    const hasCurrentMonthCell = weekCells.some(cell => !cell.classList.contains('other-month'));
+    if (hasCurrentMonthCell) {
+      actualWeeks = w + 1;
+    }
+  }
+
+  const totalWeeks = actualWeeks >= 4 ? actualWeeks : rawTotalWeeks;
 
   if (totalWeeks <= 5) return { totalWeeks, lastWeekHasWeekday: true };
 
   // 마지막 주(6주차)의 셀 확인: 이번 달 평일(월~토)이 있는지
-  const lastWeekCells = allCells.slice((totalWeeks - 1) * 7);
+  const lastWeekCells = allCells.slice((rawTotalWeeks - 1) * 7);
   const lastWeekHasWeekday = lastWeekCells.some((cell, colIdx) => {
-    // colIdx 0 = 일요일 → 평일이 아님
     if (colIdx === 0) return false;
-    // other-month 클래스가 없으면 이번 달 셀
     return !cell.classList.contains('other-month');
   });
 
@@ -163,9 +173,10 @@ export default function PrintButton({ isStaffSchedule }) {
     const isSettlementPrint = !effectiveCalendarOnly && !isVerticalSettlementPrint && Boolean(document.querySelector(
       '.sw-settlement-table, .sw-manual-settlement-stack',
     ));
+    // 기본 여백 인쇄 시에도 좌측이 미세하게 잘리지 않도록 좌우 여백을 8mm로 안전하게 확보
     const printMargin = isNewPatientPortraitPrint
       ? '8mm 5mm 6mm'
-      : (isSettlementPrint ? (orientation === 'portrait' ? '4mm' : '5mm') : (effectiveCalendarOnly ? '4mm 4mm 4mm 4mm' : '6mm'));
+      : (isSettlementPrint ? (orientation === 'portrait' ? '4mm' : '5mm') : (effectiveCalendarOnly ? '5mm 8mm 5mm 8mm' : '6mm'));
     setPrintOrientation(isNewPatientPortraitPrint ? 'A4 portrait' : orientation, printMargin);
     
     if (effectiveCalendarOnly) {
