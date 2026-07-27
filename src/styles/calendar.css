@@ -294,15 +294,19 @@
   --staff-calendar-today-color: #3b82f6;
   position: relative;
   z-index: 10;
-  border: 2px solid var(--staff-calendar-today-color) !important;
-  margin-left: -1px;
-  margin-right: -1px;
+  border-top: 1px solid var(--staff-calendar-today-color) !important;
+  border-bottom: 1px solid var(--staff-calendar-today-color) !important;
+  border-left: 0.5px solid var(--staff-calendar-today-color) !important;
+  border-right: 0.5px solid var(--staff-calendar-today-color) !important;
   margin-top: -1px;
-  margin-bottom: -1px;
+  margin-left: -0.5px;
+  margin-right: 0;
+  margin-bottom: 0;
 }
 
 .calendar-cell.today.is-last-row {
-  margin-bottom: -3.5px !important;
+  border-bottom: 2px solid var(--staff-calendar-today-color) !important;
+  margin-bottom: -2px !important;
 }
 
 /* 날짜 번호 */
