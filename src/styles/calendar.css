@@ -415,13 +415,23 @@
 .memo-slot:focus,
 .memo-slot.selected,
 .memo-slot.primary-selected {
-  position: relative;
-  z-index: 8;
-  outline: 2px solid #3b82f6;
-  outline-offset: -2px;
-  box-shadow: inset 0 0 0 2px #3b82f6;
-  background: rgba(59, 130, 246, 0.08);
-  border-color: transparent;
+  position: relative !important;
+  z-index: 25 !important;
+  outline: 2px solid #3b82f6 !important;
+  outline-offset: -1px !important;
+  box-shadow: inset 0 0 0 2px #3b82f6 !important;
+  background: rgba(59, 130, 246, 0.08) !important;
+  border-color: transparent !important;
+}
+
+/* 선택된 슬롯 자체 및 바로 뒤 슬롯의 상단 회색 가로선 제거하여 파란선 전면 노출 */
+.memo-slot.selected::before,
+.memo-slot.primary-selected::before,
+.memo-slot:focus::before,
+.memo-slot.selected + .memo-slot::before,
+.memo-slot.primary-selected + .memo-slot::before,
+.memo-slot:focus + .memo-slot::before {
+  display: none !important;
 }
 
 .other-month .memo-slot.selected {
