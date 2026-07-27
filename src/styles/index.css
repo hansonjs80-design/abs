@@ -286,7 +286,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     display: none !important;
   }
 
-  body.calendar-only-print .staff-side {
+  body.calendar-only-print .staff-side,
+  body.calendar-only-print .today-panel,
+  body.calendar-only-print .notice-board,
+  body.calendar-only-print #staff-settings-portal {
     display: none !important;
   }
 

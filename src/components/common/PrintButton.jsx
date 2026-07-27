@@ -154,11 +154,13 @@ export default function PrintButton({ isStaffSchedule }) {
   }, []);
 
   const handlePrint = (orientation, calendarOnly = false, forceWeeks = null) => {
-    const isNewPatientPortraitPrint = !calendarOnly && orientation === 'portrait' && Boolean(document.querySelector('.sw-new-patient-table'));
-    const isVerticalSettlementPrint = !calendarOnly && Boolean(document.querySelector(
+    // 근무표 탭(isStaffSchedule)에서 인쇄 시 가로/세로 모든 인쇄 모드에서 우측 3개 창(.staff-side) 숨김 처리
+    const effectiveCalendarOnly = calendarOnly || isStaffSchedule;
+    const isNewPatientPortraitPrint = !effectiveCalendarOnly && orientation === 'portrait' && Boolean(document.querySelector('.sw-new-patient-table'));
+    const isVerticalSettlementPrint = !effectiveCalendarOnly && Boolean(document.querySelector(
       '.sw-settlement-stack--shockwave.sw-settlement-stack--vertical',
     ));
-    const isSettlementPrint = !calendarOnly && !isVerticalSettlementPrint && Boolean(document.querySelector(
+    const isSettlementPrint = !effectiveCalendarOnly && !isVerticalSettlementPrint && Boolean(document.querySelector(
       '.sw-settlement-table, .sw-manual-settlement-stack',
     ));
     const printMargin = isNewPatientPortraitPrint
@@ -166,7 +168,7 @@ export default function PrintButton({ isStaffSchedule }) {
       : (isSettlementPrint ? (orientation === 'portrait' ? '4mm' : '5mm') : '6mm');
     setPrintOrientation(isNewPatientPortraitPrint ? 'A4 portrait' : orientation, printMargin);
     
-    if (calendarOnly) {
+    if (effectiveCalendarOnly) {
       document.body.classList.remove('new-patient-print');
       document.body.classList.remove('settlement-print');
       document.body.classList.remove('manual-settlement-print');
