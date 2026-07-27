@@ -225,10 +225,24 @@
 .calendar-cell.today {
   --staff-calendar-today-color: #3b82f6;
   position: relative;
-  z-index: 5;
+  z-index: 10;
   outline: 2px solid var(--staff-calendar-today-color);
   outline-offset: -2px;
   border-color: var(--staff-calendar-today-color) !important;
+  box-shadow:
+    inset 2px 0 0 var(--staff-calendar-today-color),
+    inset -2px 0 0 var(--staff-calendar-today-color),
+    inset 0 2px 0 var(--staff-calendar-today-color),
+    inset 0 -2px 0 var(--staff-calendar-today-color);
+}
+
+.calendar-cell.today.is-last-row {
+  border-bottom: 3.5px solid var(--staff-calendar-today-color) !important;
+  box-shadow:
+    inset 2px 0 0 var(--staff-calendar-today-color),
+    inset -2px 0 0 var(--staff-calendar-today-color),
+    inset 0 2px 0 var(--staff-calendar-today-color),
+    inset 0 -4px 0 var(--staff-calendar-today-color);
 }
 
 /* 날짜 번호 */

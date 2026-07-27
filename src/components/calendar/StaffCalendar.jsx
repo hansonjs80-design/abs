@@ -1535,7 +1535,12 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
             if (dayInfo.isSunday) cc += ' sunday';
             if (dayInfo.isSaturday) cc += ' saturday';
             if (dayInfo.isHoliday) cc += ' holiday';
-            if (isToday) cc += ' today';
+            if (isToday) {
+              cc += ' today';
+              if (wi === grid.length - 1) cc += ' is-last-row';
+              if (di === 0) cc += ' is-first-col';
+              if (di === 6) cc += ' is-last-col';
+            }
 
             return (
               <div key={`${wi}-${di}`} className={cc} style={{ height: `${renderedRowHeight}px` }}>
