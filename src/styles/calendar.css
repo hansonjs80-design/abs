@@ -304,11 +304,6 @@
   margin-bottom: 0;
 }
 
-.calendar-cell.today.is-last-row {
-  border-bottom: 2px solid var(--staff-calendar-today-color) !important;
-  margin-bottom: -2px !important;
-}
-
 /* 날짜 번호 */
 .calendar-date {
   position: relative;
