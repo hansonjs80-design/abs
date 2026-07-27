@@ -297,39 +297,6 @@
   border: 2px solid var(--staff-calendar-today-color) !important;
   margin-left: -1.5px;
   margin-top: -1px;
-  overflow: visible !important;
-}
-
-.calendar-cell.today:not(.is-last-row) {
-  border-bottom: 2px solid transparent !important;
-}
-
-.calendar-cell.today:not(.is-last-row)::after {
-  content: '';
-  position: absolute;
-  left: -2px;
-  right: -2px;
-  bottom: -2.5px;
-  height: 3.5px;
-  background: var(--staff-calendar-today-color);
-  z-index: 20;
-  pointer-events: none;
-}
-
-.calendar-cell.today.is-last-row {
-  border-bottom: 2px solid transparent !important;
-}
-
-.calendar-cell.today.is-last-row::after {
-  content: '';
-  position: absolute;
-  left: -2px;
-  right: -2px;
-  bottom: -4.7px;
-  height: 4.0px;
-  background: var(--staff-calendar-today-color);
-  z-index: 20;
-  pointer-events: none;
 }
 
 /* 날짜 번호 */
