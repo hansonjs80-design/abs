@@ -652,19 +652,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       if (contextMenu && !isContextMenuTarget(e.target)) {
         setContextMenu(null);
       }
-      const isInsideScheduler =
-        e.target.closest('.shockwave-view') ||
+      const isInsideCellOrMenu =
         e.target.closest('.shockwave-schedule-cell') ||
         e.target.closest('.shockwave-context-menu') ||
-        e.target.closest('.sw-stats-sidebar') ||
-        e.target.closest('.sw-sidebar-filter') ||
-        e.target.closest('.context-menu') ||
-        e.target.closest('button') ||
-        e.target.closest('input') ||
-        e.target.closest('textarea') ||
-        e.target.closest('select');
+        e.target.closest('.context-menu');
 
-      if (!isInsideScheduler) {
+      if (!isInsideCellOrMenu) {
         setSelectedCell(null);
         setSelectedKeys(new Set());
       }
