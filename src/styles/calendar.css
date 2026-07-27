@@ -290,6 +290,10 @@
   background: var(--cal-other-month-bg) !important;
 }
 
+.calendar-cell:has(+ .calendar-cell.today) {
+  border-right-color: #3b82f6 !important;
+}
+
 .calendar-cell.today {
   --staff-calendar-today-color: #3b82f6;
   position: relative;
@@ -297,9 +301,8 @@
   border-top-color: var(--staff-calendar-today-color) !important;
   border-bottom-color: var(--staff-calendar-today-color) !important;
   border-right-color: var(--staff-calendar-today-color) !important;
-  border-left: 0.5px solid var(--staff-calendar-today-color) !important;
+  border-left-color: var(--staff-calendar-today-color) !important;
   margin: 0 !important;
-  margin-left: -0.5px !important;
 }
 
 /* 날짜 번호 */
