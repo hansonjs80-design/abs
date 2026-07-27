@@ -257,8 +257,8 @@
   position: absolute;
   left: -2px;
   right: -2px;
-  bottom: -5.5px;
-  height: 5.5px;
+  bottom: -5.0px;
+  height: 4.7px;
   background: var(--staff-calendar-today-color);
   z-index: 20;
   pointer-events: none;
