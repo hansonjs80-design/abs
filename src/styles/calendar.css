@@ -232,8 +232,8 @@
 }
 
 .calendar-cell.today.is-last-row {
-  border-bottom: 2px solid var(--staff-calendar-today-color) !important;
-  margin-bottom: -2.5px;
+  border-bottom: 3px solid var(--staff-calendar-today-color) !important;
+  margin-bottom: -4px;
 }
 
 /* 날짜 번호 */
