@@ -229,6 +229,7 @@
   border: 2px solid var(--staff-calendar-today-color) !important;
   margin-left: -1.5px;
   margin-top: -1px;
+  overflow: visible !important;
 }
 
 .calendar-cell.today.is-last-row {
@@ -240,8 +241,8 @@
   position: absolute;
   left: -2px;
   right: -2px;
-  bottom: -2px;
-  height: 2px;
+  bottom: -6px;
+  height: 3px;
   background: var(--staff-calendar-today-color);
   z-index: 20;
   pointer-events: none;
