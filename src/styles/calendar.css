@@ -142,13 +142,20 @@
 
 .weekday-row-resizer:hover,
 .weekday-row-resizer:active {
-  left: -3000px !important;
-  right: -3000px !important;
-  width: 6000px !important;
   background: transparent !important;
-  border-bottom: 1.5px solid #3b82f6 !important;
-  opacity: 0.75 !important;
-  z-index: 9999 !important;
+}
+
+.weekday-row-resizer:hover::after,
+.weekday-row-resizer:active::after {
+  content: '';
+  position: absolute;
+  left: -3000px;
+  right: -3000px;
+  bottom: 3px;
+  height: 2.5px;
+  background: #3b82f6;
+  z-index: 99999;
+  pointer-events: none;
 }
 
 .calendar-weekday-header:nth-child(7n) {
@@ -188,14 +195,23 @@
   cursor: col-resize;
   z-index: 10;
 }
-.col-resizer:hover, .col-resizer:active {
-  top: -3000px !important;
-  bottom: -3000px !important;
-  height: 6000px !important;
+
+.col-resizer:hover,
+.col-resizer:active {
   background: transparent !important;
-  border-right: 1.5px solid #3b82f6 !important;
-  opacity: 0.75 !important;
-  z-index: 9999 !important;
+}
+
+.col-resizer:hover::after,
+.col-resizer:active::after {
+  content: '';
+  position: absolute;
+  top: -3000px;
+  bottom: -3000px;
+  right: 3px;
+  width: 2.5px;
+  background: #3b82f6;
+  z-index: 99999;
+  pointer-events: none;
 }
 
 .row-resizer {
@@ -207,14 +223,23 @@
   cursor: row-resize;
   z-index: 10;
 }
-.row-resizer:hover, .row-resizer:active {
-  left: -3000px !important;
-  right: -3000px !important;
-  width: 6000px !important;
+
+.row-resizer:hover,
+.row-resizer:active {
   background: transparent !important;
-  border-bottom: 1.5px solid #3b82f6 !important;
-  opacity: 0.75 !important;
-  z-index: 9999 !important;
+}
+
+.row-resizer:hover::after,
+.row-resizer:active::after {
+  content: '';
+  position: absolute;
+  left: -3000px;
+  right: -3000px;
+  bottom: 3px;
+  height: 2.5px;
+  background: #3b82f6;
+  z-index: 99999;
+  pointer-events: none;
 }
 
 .date-row-resizer {
@@ -229,13 +254,20 @@
 
 .date-row-resizer:hover,
 .date-row-resizer:active {
-  left: -3000px !important;
-  right: -3000px !important;
-  width: 6000px !important;
   background: transparent !important;
-  border-bottom: 1.5px solid #3b82f6 !important;
-  opacity: 0.75 !important;
-  z-index: 9999 !important;
+}
+
+.date-row-resizer:hover::after,
+.date-row-resizer:active::after {
+  content: '';
+  position: absolute;
+  left: -3000px;
+  right: -3000px;
+  bottom: 3px;
+  height: 2.5px;
+  background: #3b82f6;
+  z-index: 99999;
+  pointer-events: none;
 }
 
 .calendar-cell:nth-child(7n) {
