@@ -414,49 +414,26 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     padding: 0 !important;
   }
 
-  /* ── 4주차만 있는 달력: 5주차/6주차 빈 셀 숨김 및 4개 행 1:1 균등 가득 채움 ── */
+  /* ── 4주차만 있는 달력: 5주 달력과 같은 주간 행 높이를 유지하고 마지막 한 주만 비움 ── */
   body.calendar-only-print[data-calendar-weeks="4"] .calendar-cell:nth-child(n+36),
   html[data-calendar-weeks="4"] body.calendar-only-print .calendar-cell:nth-child(n+36) {
     display: none !important;
   }
 
+  /*
+   * 5주 기준 전체 높이(100vh - 28px)에서 제목 34px와 요일 28px를 제외한
+   * 주간 행 하나의 높이(20vh - 18px)만 뺀 값입니다.
+   * 네 줄을 A4 전체에 늘리지 않고 5주 달력의 마지막 주가 없는 모양으로 출력합니다.
+   */
+  body.calendar-only-print[data-calendar-weeks="4"] .staff-calendar,
+  html[data-calendar-weeks="4"] body.calendar-only-print .staff-calendar {
+    height: calc(80vh - 10px) !important;
+    min-height: calc(80vh - 10px) !important;
+  }
+
   body.calendar-only-print[data-calendar-weeks="4"] .calendar-grid,
   html[data-calendar-weeks="4"] body.calendar-only-print .calendar-grid {
     grid-template-rows: auto repeat(4, minmax(0, 1fr)) !important;
-    height: 100% !important;
-    flex: 1 !important;
-  }
-
-  body.calendar-only-print[data-calendar-weeks="4"] .calendar-date,
-  html[data-calendar-weeks="4"] body.calendar-only-print .calendar-date {
-    flex: 0 0 26px !important;
-    font-size: 1.35rem !important;
-    font-weight: 800 !important;
-    padding: 0 4px !important;
-    line-height: 26px !important;
-  }
-
-  body.calendar-only-print[data-calendar-weeks="4"] .calendar-date-number,
-  html[data-calendar-weeks="4"] body.calendar-only-print .calendar-date-number {
-    font-size: 1.35rem !important;
-    font-weight: 800 !important;
-  }
-
-  body.calendar-only-print[data-calendar-weeks="4"] .memo-slot,
-  html[data-calendar-weeks="4"] body.calendar-only-print .memo-slot {
-    font-size: 1.05rem !important;
-    line-height: 1.2 !important;
-    font-weight: 800 !important;
-    white-space: nowrap !important;
-    text-overflow: ellipsis !important;
-    overflow: hidden !important;
-  }
-
-  body.calendar-only-print[data-calendar-weeks="4"] .calendar-memos,
-  html[data-calendar-weeks="4"] body.calendar-only-print .calendar-memos {
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: space-evenly !important;
     height: 100% !important;
     flex: 1 !important;
   }
