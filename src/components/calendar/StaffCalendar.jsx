@@ -145,25 +145,28 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     }
   }, [canManageCalendarSettings, showSlotSettings]);
 
-  // 설정 팝업 및 빈곳 클릭 시 셀 선택 해제
+  // 설정 팝업 및 외부 빈곳 클릭 시 셀 선택 해제
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (showSlotSettings && slotSettingsRef.current && !slotSettingsRef.current.contains(e.target)) {
         setShowSlotSettings(false);
       }
-      if (
-        !e.target.closest('.calendar-cell') &&
-        !e.target.closest('.calendar-weekday-header') &&
-        !e.target.closest('.staff-color-picker-popover') &&
-        !e.target.closest('.context-menu') &&
-        !e.target.closest('.notice-board') &&
-        !e.target.closest('.today-panel') &&
-        !e.target.closest('.notice-department-filter') &&
-        !e.target.closest('button') &&
-        !e.target.closest('input') &&
-        !e.target.closest('textarea') &&
-        !e.target.closest('select')
-      ) {
+      const isInsideCalendar =
+        e.target.closest('.staff-calendar') ||
+        e.target.closest('.calendar-grid') ||
+        e.target.closest('.calendar-cell') ||
+        e.target.closest('.calendar-weekday-header') ||
+        e.target.closest('.staff-color-picker-popover') ||
+        e.target.closest('.context-menu') ||
+        e.target.closest('.notice-board') ||
+        e.target.closest('.today-panel') ||
+        e.target.closest('.notice-department-filter') ||
+        e.target.closest('button') ||
+        e.target.closest('input') ||
+        e.target.closest('textarea') ||
+        e.target.closest('select');
+
+      if (!isInsideCalendar) {
         setSelectedCell(null);
         setSelectedKeys(new Set());
       }
