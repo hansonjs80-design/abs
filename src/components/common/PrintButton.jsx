@@ -165,7 +165,7 @@ export default function PrintButton({ isStaffSchedule }) {
     ));
     const printMargin = isNewPatientPortraitPrint
       ? '8mm 5mm 6mm'
-      : (isSettlementPrint ? (orientation === 'portrait' ? '4mm' : '5mm') : '6mm');
+      : (isSettlementPrint ? (orientation === 'portrait' ? '4mm' : '5mm') : (effectiveCalendarOnly ? '4mm 4mm 4mm 4mm' : '6mm'));
     setPrintOrientation(isNewPatientPortraitPrint ? 'A4 portrait' : orientation, printMargin);
     
     if (effectiveCalendarOnly) {
