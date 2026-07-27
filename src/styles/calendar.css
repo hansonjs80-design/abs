@@ -242,7 +242,7 @@
   left: -2px;
   right: -2px;
   bottom: -4.5px;
-  height: 3.5px;
+  height: 4.5px;
   background: var(--staff-calendar-today-color);
   z-index: 20;
   pointer-events: none;
