@@ -1638,22 +1638,20 @@
 
 .notice-department-filter-list {
   display: flex;
-  flex-wrap: nowrap;
-  gap: 6px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  flex-wrap: wrap;
+  gap: 4px 8px;
   padding-bottom: 1px;
 }
 
 .notice-department-check {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 28px;
-  padding: 4px 9px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #ffffff;
+  gap: 4px;
+  min-height: 24px;
+  padding: 2px 4px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
   color: #1f2937;
   font-size: 0.86rem;
   font-weight: 800;
@@ -1661,14 +1659,14 @@
   user-select: none;
   flex: 0 0 auto;
   white-space: nowrap;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  box-shadow: none;
+  transition: color var(--transition-fast);
 }
 
 .notice-department-check:has(input:checked) {
-  border-color: #93c5fd;
-  background: #eff6ff;
-  color: #1e3a8a;
+  border: none;
+  background: transparent;
+  color: #1d4ed8;
 }
 
 .notice-department-check input {
