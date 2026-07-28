@@ -1289,8 +1289,9 @@
 }
 
 .sw-grid-table tbody tr:last-child > *,
-.sw-grid-table tr:last-child > * {
-  border-bottom: 4px solid #94a3b8 !important;
+.sw-grid-table tr:last-child > *,
+.sw-grid-table tbody .gc-grid-bottom {
+  border-bottom: 3px solid #94a3b8 !important;
 }
 
 /* Draw the shockwave grid's right edge once on the table so row borders never create a stepped seam. */

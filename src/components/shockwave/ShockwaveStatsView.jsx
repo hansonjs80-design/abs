@@ -124,7 +124,6 @@ export default function ShockwaveStatsView({
     Boolean(shockwaveSettings?.id) && shockwaveSettings.id !== DEFAULT_SETTINGS_ID
   ));
   const isLoading = isLogsLoading || isScheduleLoading || isCurrentSyncing || isRecentLogsLoading;
-  const [extraDraftRows, setExtraDraftRows] = useState(0);
   const [activeSection, setActiveSection] = useState('grid');
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
   const [recentLogsRefreshKey, setRecentLogsRefreshKey] = useState(0);
@@ -739,10 +738,6 @@ export default function ShockwaveStatsView({
   }, [addToast, loadShockwaveSettings, saveShockwaveSettings]);
 
   useEffect(() => {
-    setExtraDraftRows(0);
-  }, [currentYear, currentMonth]);
-
-  useEffect(() => {
     setActiveSection('grid');
   }, [currentYear, currentMonth]);
 
@@ -909,38 +904,26 @@ export default function ShockwaveStatsView({
               {showGridSkeleton ? (
                 <GridSkeleton rows={15} cols={8} />
               ) : (
-                <>
-                  <div className="sw-grid-card">
-                    <div className="sw-grid-card-table">
-                      <ShockwaveStatsErrorBoundary>
-                        <ShockwaveDataGrid
-                          logs={safeLogs}
-                          therapists={displayBaseTherapists}
-                          monthlyTherapists={monthlyTherapists}
-                          currentYear={currentYear}
-                          currentMonth={currentMonth}
-                          fetchLogs={fetchLogs}
-                          prescriptions={gridPrescriptions}
-                          extraDraftRows={extraDraftRows}
-                          totalRecordCount={safeLogs.length}
-                          therapistCount={safeTherapists.length}
-                          selectedTherapistNames={selectedTherapistNames}
-                          onSelectedTherapistNamesChange={setSelectedTherapistNames}
-                          readOnly
-                        />
-                      </ShockwaveStatsErrorBoundary>
-                    </div>
+                <div className="sw-grid-card">
+                  <div className="sw-grid-card-table">
+                    <ShockwaveStatsErrorBoundary>
+                      <ShockwaveDataGrid
+                        logs={safeLogs}
+                        therapists={displayBaseTherapists}
+                        monthlyTherapists={monthlyTherapists}
+                        currentYear={currentYear}
+                        currentMonth={currentMonth}
+                        fetchLogs={fetchLogs}
+                        prescriptions={gridPrescriptions}
+                        totalRecordCount={safeLogs.length}
+                        therapistCount={safeTherapists.length}
+                        selectedTherapistNames={selectedTherapistNames}
+                        onSelectedTherapistNamesChange={setSelectedTherapistNames}
+                        readOnly
+                      />
+                    </ShockwaveStatsErrorBoundary>
                   </div>
-
-                  <div className="sw-stats-footer">
-                    <button
-                      className="btn btn-secondary sw-add-rows-btn"
-                      onClick={() => setExtraDraftRows((prev) => prev + 10)}
-                    >
-                      + 10행 추가
-                    </button>
-                  </div>
-                </>
+                </div>
               )}
             </div>
           )}

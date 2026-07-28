@@ -87,7 +87,6 @@ export default function ManualTherapyStatsPage() {
   const [isLogsLoading, setIsLogsLoading] = useState(false);
   const [isScheduleLoading, setIsScheduleLoading] = useState(false);
   const isLoading = isLogsLoading || isScheduleLoading;
-  const [extraDraftRows, setExtraDraftRows] = useState(0);
   const [localMonthlyTherapists, setLocalMonthlyTherapists] = useState(null);
   const lastAutoSyncKeyRef = useRef(null);
   const scheduleReloadRequestRef = useRef(0);
@@ -403,7 +402,6 @@ export default function ManualTherapyStatsPage() {
   }, [fetchLogs]);
 
   useEffect(() => {
-    setExtraDraftRows(0);
     setActiveSection('grid');
   }, [currentMonth, currentYear]);
 
@@ -560,43 +558,31 @@ export default function ManualTherapyStatsPage() {
                   {isLoading && visibleLogs.length === 0 ? (
                     <GridSkeleton rows={12} cols={8} />
                   ) : (
-                    <>
-                      <div className="sw-grid-card">
-                        <div className="sw-grid-card-table">
-                          <ShockwaveDataGrid
-                            logs={visibleLogs}
-                            therapists={displayBaseTherapists}
-                            monthlyTherapists={monthlyManualTherapists}
-                            currentYear={currentYear}
-                            currentMonth={currentMonth}
-                            fetchLogs={fetchLogs}
-                            extraDraftRows={extraDraftRows}
-                            onApplyTodaySchedule={handleSyncFromScheduler}
-                            isApplyingTodaySchedule={isLoading}
-                            onApplyMonthSchedule={handleSyncMonthFromScheduler}
-                            isApplyingMonthSchedule={isLoading}
-                            tableName="manual_therapy_patient_logs"
-                            prescriptions={prescriptions}
-                            frozenColumnCount={shockwaveSettings?.frozen_columns ?? 6}
-                            title={`${currentYear}년 ${String(currentMonth).padStart(2, '0')}월 도수치료 현황`}
-                            applyTodayLabel="오늘 도수 스케줄 적용"
-                            secondarySummaryLabel="신환"
-                            selectedTherapistNames={selectedTherapistNames}
-                            onSelectedTherapistNamesChange={setSelectedTherapistNames}
-                            readOnly
-                          />
-                        </div>
+                    <div className="sw-grid-card">
+                      <div className="sw-grid-card-table">
+                        <ShockwaveDataGrid
+                          logs={visibleLogs}
+                          therapists={displayBaseTherapists}
+                          monthlyTherapists={monthlyManualTherapists}
+                          currentYear={currentYear}
+                          currentMonth={currentMonth}
+                          fetchLogs={fetchLogs}
+                          onApplyTodaySchedule={handleSyncFromScheduler}
+                          isApplyingTodaySchedule={isLoading}
+                          onApplyMonthSchedule={handleSyncMonthFromScheduler}
+                          isApplyingMonthSchedule={isLoading}
+                          tableName="manual_therapy_patient_logs"
+                          prescriptions={prescriptions}
+                          frozenColumnCount={shockwaveSettings?.frozen_columns ?? 6}
+                          title={`${currentYear}년 ${String(currentMonth).padStart(2, '0')}월 도수치료 현황`}
+                          applyTodayLabel="오늘 도수 스케줄 적용"
+                          secondarySummaryLabel="신환"
+                          selectedTherapistNames={selectedTherapistNames}
+                          onSelectedTherapistNamesChange={setSelectedTherapistNames}
+                          readOnly
+                        />
                       </div>
-
-                      <div className="sw-stats-footer">
-                        <button
-                          className="btn btn-secondary sw-add-rows-btn"
-                          onClick={() => setExtraDraftRows((prev) => prev + 10)}
-                        >
-                          + 10행 추가
-                        </button>
-                      </div>
-                    </>
+                    </div>
                   )}
                 </div>
               )}
