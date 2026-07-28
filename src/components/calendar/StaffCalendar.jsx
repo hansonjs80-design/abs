@@ -24,6 +24,7 @@ import { getStaffMemoEditorPosition } from '../../lib/staffCalendarEditorUtils';
 import {
   getResizePointerClient,
   isTouchResizeEvent,
+  resolveTouchResizeStart,
 } from '../../lib/resizePointerUtils';
 
 const COL_W_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.colWidth;
@@ -473,9 +474,22 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   }, [undoStack, saveStaffMemo]);
 
   // ── Resize ──
+  const mobileWidthResizeArmedUntilRef = useRef(0);
   const startColResize = (e) => {
     e.preventDefault(); e.stopPropagation();
-    if (isTouchResizeEvent(e) && !window.confirm('근무표 가로 너비를 조정할까요?')) return;
+    if (isTouchResizeEvent(e)) {
+      const resizeStart = resolveTouchResizeStart(
+        e,
+        mobileWidthResizeArmedUntilRef.current,
+        {
+          confirmResize: () => window.confirm(
+            '근무표 가로 너비를 조정할까요?\n\n예를 누른 뒤 핸들을 다시 터치하여 드래그해 주세요.'
+          ),
+        }
+      );
+      mobileWidthResizeArmedUntilRef.current = resizeStart.armedUntil;
+      if (!resizeStart.shouldStart) return;
+    }
     const sx = getResizePointerClient(e).x;
     const cw = colWidth || e.currentTarget.parentElement?.offsetWidth || MIN_COL_WIDTH;
     let latestWidth = colWidth || cw;

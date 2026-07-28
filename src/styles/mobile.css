@@ -5,11 +5,39 @@
 @media screen and (max-width: 768px) {
   html {
     font-size: 14px;
+    background: var(--bg-primary);
   }
 
   body {
     line-height: 1.55;
-    overscroll-behavior-x: none;
+    background: var(--bg-primary);
+    overscroll-behavior: none;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-width: 0;
+    min-height: 100%;
+  }
+
+  html,
+  body,
+  .app-content,
+  .staff-calendar,
+  .shockwave-view {
+    scrollbar-width: none;
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  .app-content::-webkit-scrollbar,
+  .staff-calendar::-webkit-scrollbar,
+  .shockwave-view::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
   }
 
   .app-layout,
@@ -21,25 +49,28 @@
   .app-content {
     width: 100%;
     min-width: 0;
-    padding: 12px;
-    padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+    padding: 0;
+    padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px));
     overflow-x: hidden;
     overscroll-behavior-x: none;
+    touch-action: pan-x pan-y pinch-zoom;
   }
 
   /* 현재 화면만 보여 주는 작은 상단 헤더 */
   .top-tabs-shell {
     width: 100%;
     max-width: 100vw;
-    min-height: 58px;
+    min-height: 46px;
     align-items: center;
     justify-content: flex-start;
-    gap: 8px;
-    padding: max(8px, env(safe-area-inset-top, 0px)) 10px 8px;
+    gap: 4px;
+    padding: max(3px, env(safe-area-inset-top, 0px)) 3px 3px;
     overflow: visible;
-    background: rgba(255, 255, 255, 0.96);
-    border-bottom-color: #dbe3ec;
-    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.08);
+    background: transparent;
+    border-bottom-color: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   .top-tabs {
@@ -72,9 +103,9 @@
   .top-tab--settings.active {
     width: 100%;
     min-width: 0;
-    min-height: 42px;
+    min-height: 38px;
     margin: 0;
-    padding: 7px 9px;
+    padding: 4px 7px;
     justify-content: center;
     overflow: visible;
     border: 1px solid color-mix(in srgb, var(--tab-active-border) 30%, #dbe3ec);
@@ -155,8 +186,8 @@
   }
 
   .top-tabs-actions .print-toggle {
-    width: 42px;
-    height: 42px;
+    width: 38px;
+    height: 38px;
     border: 1px solid #dbe3ec;
     border-radius: 12px;
     background: #ffffff;
@@ -173,13 +204,13 @@
   /* 엄지손가락으로 쉽게 이동할 수 있는 하단 메뉴 */
   .bottom-nav {
     display: block;
-    height: calc(68px + env(safe-area-inset-bottom, 0px));
-    padding: 5px 5px env(safe-area-inset-bottom, 0px);
-    background: rgba(255, 255, 255, 0.97);
-    border-top: 1px solid #d7e0ea;
-    box-shadow: 0 -6px 20px rgba(15, 23, 42, 0.1);
-    backdrop-filter: saturate(180%) blur(18px);
-    -webkit-backdrop-filter: saturate(180%) blur(18px);
+    height: calc(48px + env(safe-area-inset-bottom, 0px));
+    padding: 2px 3px env(safe-area-inset-bottom, 0px);
+    background: transparent;
+    border-top: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   .bottom-nav-items {
@@ -188,22 +219,24 @@
     justify-content: space-around;
     width: 100%;
     height: 100%;
-    gap: 2px;
+    gap: 3px;
   }
 
   .bottom-nav-item {
     flex: 1 1 0;
     min-width: 0;
-    min-height: 54px;
-    padding: 5px 2px 4px;
+    min-height: 42px;
+    padding: 3px 2px 2px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    border-radius: 11px;
+    gap: 1px;
+    border: 1px solid color-mix(in srgb, var(--tab-active-border) 22%, #dbe3ec);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--tab-active-border) 5%, rgba(255, 255, 255, 0.92));
     color: #64748b;
-    font-size: 0.72rem;
+    font-size: 0.66rem;
     font-weight: 800;
     line-height: 1.05;
     text-align: center;
@@ -212,8 +245,8 @@
   }
 
   .bottom-nav-item svg {
-    width: 20px;
-    height: 20px;
+    width: 17px;
+    height: 17px;
     flex: 0 0 auto;
   }
 
@@ -388,7 +421,7 @@
     grid-template-columns: minmax(0, 1fr);
     width: 100%;
     min-width: 0;
-    gap: 14px;
+    gap: 8px;
     overflow: visible;
   }
 
@@ -401,7 +434,7 @@
     overflow-x: auto;
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 3px;
+    padding-bottom: 0;
   }
 
   .staff-calendar-toolbar {
@@ -417,28 +450,27 @@
   }
 
   .calendar-grid {
-    width: max(100%, 364px) !important;
-    min-width: 364px !important;
-    grid-template-columns: repeat(7, minmax(52px, 1fr)) !important;
+    width: 100% !important;
+    min-width: 0 !important;
   }
 
   .calendar-cell {
-    min-height: 82px;
+    min-height: 0;
   }
 
   .calendar-date {
     padding: 4px 4px 2px;
-    font-size: clamp(12px, var(--staff-calendar-date-font-size), 15px);
+    font-size: var(--staff-calendar-date-font-size);
   }
 
   .calendar-date-number {
-    width: 23px;
-    height: 23px;
+    width: min(23px, var(--staff-calendar-date-row-height));
+    height: min(23px, var(--staff-calendar-date-row-height));
   }
 
   .calendar-weekday-header {
     padding: 0 2px;
-    font-size: clamp(11px, var(--staff-calendar-weekday-font-size), 14px);
+    font-size: var(--staff-calendar-weekday-font-size);
     letter-spacing: 0;
   }
 
@@ -447,9 +479,9 @@
   }
 
   .memo-slot {
-    min-height: 15px;
+    min-height: 0;
     padding: 0 3px;
-    font-size: clamp(10px, var(--staff-calendar-memo-font-size), 12px);
+    font-size: var(--staff-calendar-memo-font-size);
     line-height: 1.2;
   }
 
@@ -458,7 +490,7 @@
     grid-template-columns: minmax(0, 1fr);
     width: 100%;
     min-width: 0;
-    gap: 14px;
+    gap: 8px;
   }
 
   .today-panel,
@@ -489,9 +521,9 @@
 
   .shockwave-day,
   .shockwave-day:nth-child(n) {
-    flex: 0 0 min(84vw, 360px) !important;
-    width: min(84vw, 360px) !important;
-    min-width: min(84vw, 360px) !important;
+    flex: 0 0 var(--sw-mobile-day-width) !important;
+    width: var(--sw-mobile-day-width) !important;
+    min-width: var(--sw-mobile-day-width) !important;
     border-right: 2px solid var(--sw-mobile-strong-line, #000);
     border-top: none;
     border-bottom: none;
@@ -504,23 +536,23 @@
   }
 
   .sw-cell {
-    min-height: 20px;
-    font-size: clamp(10px, var(--sw-cell-font-size), 12px);
+    min-height: 0;
+    font-size: var(--sw-cell-font-size);
     line-height: 1.15;
   }
 
   .sw-cell-note {
-    font-size: 9.5px;
+    font-size: 0.82em;
     line-height: 1.15;
   }
 
   .sw-day-header-cell,
   .sw-week-header-cell {
-    font-size: 12px;
+    font-size: var(--sw-header-font-size);
   }
 
   .sw-therapist-name {
-    font-size: 11px;
+    font-size: var(--sw-therapist-font-size);
   }
 
   .patient-search-overlay {
@@ -767,13 +799,13 @@
 
 @media screen and (max-width: 380px) {
   .app-content {
-    padding: 10px;
-    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    padding: 0;
+    padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px));
   }
 
   .top-tabs-shell {
-    padding-right: 8px;
-    padding-left: 8px;
+    padding-right: 3px;
+    padding-left: 3px;
   }
 
   .top-tab.active,

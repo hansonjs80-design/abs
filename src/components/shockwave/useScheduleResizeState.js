@@ -10,6 +10,7 @@ import { clampScheduleTimeColWidth } from '../../lib/scheduleGridSizeUtils';
 import {
   getResizePointerClient,
   isTouchResizeEvent,
+  resolveTouchResizeStart,
 } from '../../lib/resizePointerUtils';
 
 import {
@@ -139,17 +140,12 @@ const setMobileResizeLocked = (locked) => {
   window.localStorage.setItem(MOBILE_RESIZE_LOCK_KEY, locked ? 'true' : 'false');
 };
 
-const shouldStartMobileResize = (event, { confirmWidthResize = false } = {}) => {
+const shouldStartMobileResize = (event) => {
   if (!isTouchResizeEvent(event)) return true;
-  const isLocked = getMobileResizeLocked();
-  if (!isLocked && !confirmWidthResize) return true;
-  const confirmed = window.confirm(
-    isLocked
-      ? '고정된 너비/높이 설정을 다시 조정할까요?'
-      : '가로 너비를 조정할까요?'
-  );
-  if (confirmed && isLocked) setMobileResizeLocked(false);
-  return confirmed;
+  if (!getMobileResizeLocked()) return true;
+  const shouldUnlock = window.confirm('고정된 너비/높이 설정을 다시 조정할까요?');
+  if (shouldUnlock) setMobileResizeLocked(false);
+  return shouldUnlock;
 };
 
 const maybeLockMobileResize = (event) => {
@@ -177,6 +173,25 @@ export default function useScheduleResizeState({ colCount }) {
     [storedTimeColWidth],
   );
   const [isDeviceSettingsLoading, setIsDeviceSettingsLoading] = useState(true);
+  const mobileWidthResizeArmedUntilRef = useRef(0);
+
+  const shouldStartMobileWidthResize = useCallback((event) => {
+    const isLocked = getMobileResizeLocked();
+    const result = resolveTouchResizeStart(
+      event,
+      mobileWidthResizeArmedUntilRef.current,
+      {
+        confirmResize: () => window.confirm(
+          isLocked
+            ? '고정된 가로 너비를 다시 조정할까요?\n\n예를 누른 뒤 핸들을 다시 터치하여 드래그해 주세요.'
+            : '가로 너비를 조정할까요?\n\n예를 누른 뒤 핸들을 다시 터치하여 드래그해 주세요.'
+        ),
+      }
+    );
+    mobileWidthResizeArmedUntilRef.current = result.armedUntil;
+    if (result.confirmed && isLocked) setMobileResizeLocked(false);
+    return result.shouldStart;
+  }, []);
 
   // 마운트 시 서버 DB로부터 크기 동기화
   useEffect(() => {
@@ -265,7 +280,7 @@ export default function useScheduleResizeState({ colCount }) {
   const startTimeColResize = useCallback((event) => {
     event.preventDefault();
     event.stopPropagation();
-    if (!shouldStartMobileResize(event, { confirmWidthResize: true })) return;
+    if (!shouldStartMobileWidthResize(event)) return;
     if (event.type === 'mousedown' && event.detail > 1) {
       resetTimeColWidth(event);
       return;
@@ -309,7 +324,7 @@ export default function useScheduleResizeState({ colCount }) {
     window.addEventListener('touchend', onUp);
     window.addEventListener('touchcancel', onUp);
     window.addEventListener('blur', onUp);
-  }, [resetTimeColWidth, timeColWidth, updateTimeColWidth]);
+  }, [resetTimeColWidth, shouldStartMobileWidthResize, timeColWidth, updateTimeColWidth]);
 
   const startRowResize = useCallback((event) => {
     event.preventDefault();
@@ -348,7 +363,7 @@ export default function useScheduleResizeState({ colCount }) {
   const startColResize = useCallback((event, colIdx, timeColPx = 0, currentRatios = null) => {
     event.preventDefault();
     event.stopPropagation();
-    if (!shouldStartMobileResize(event, { confirmWidthResize: true })) return;
+    if (!shouldStartMobileWidthResize(event)) return;
     const now = Date.now();
     const lastClick = colResizeClickRef.current;
     const isDoubleClickReset = event.type === 'mousedown' && (
@@ -412,8 +427,8 @@ export default function useScheduleResizeState({ colCount }) {
           }
           return full;
         });
+        maybeLockMobileResize(upEvent);
       }
-      maybeLockMobileResize(upEvent);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
       window.removeEventListener('touchmove', onMove);
@@ -427,12 +442,12 @@ export default function useScheduleResizeState({ colCount }) {
     window.addEventListener('touchend', onUp);
     window.addEventListener('touchcancel', onUp);
     window.addEventListener('blur', onUp);
-  }, [colCount, resetColRatios, updateColRatios]);
+  }, [colCount, resetColRatios, shouldStartMobileWidthResize, updateColRatios]);
 
   const startDayResize = useCallback((event, showTimeCol) => {
     event.preventDefault();
     event.stopPropagation();
-    if (!shouldStartMobileResize(event, { confirmWidthResize: true })) return;
+    if (!shouldStartMobileWidthResize(event)) return;
     const startPoint = getResizePointerClient(event);
     const minDayWidth = getMinScheduleDayWidth(event);
     const dayElement = event.currentTarget.closest('.shockwave-day');
@@ -442,18 +457,24 @@ export default function useScheduleResizeState({ colCount }) {
       : currentDayWidth;
     dayResizeRef.current = { active: true, startX: startPoint.x };
     let latestWidth = dayColWidth || normalizedDayWidth;
+    let didResize = false;
     const onMove = (moveEvent) => {
       moveEvent.preventDefault?.();
       if (!dayResizeRef.current.active) return;
       const point = getResizePointerClient(moveEvent);
       const delta = point.x - dayResizeRef.current.startX;
-      latestWidth = Math.max(minDayWidth, normalizedDayWidth + delta);
+      const nextWidth = Math.max(minDayWidth, normalizedDayWidth + delta);
+      if (nextWidth === latestWidth) return;
+      didResize = true;
+      latestWidth = nextWidth;
       updateDayColWidth(latestWidth);
     };
     const onUp = (upEvent) => {
       dayResizeRef.current.active = false;
-      updateDayColWidth(latestWidth); // Final write
-      maybeLockMobileResize(upEvent);
+      if (didResize) {
+        updateDayColWidth(latestWidth); // Final write
+        maybeLockMobileResize(upEvent);
+      }
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
       window.removeEventListener('touchmove', onMove);
@@ -467,7 +488,7 @@ export default function useScheduleResizeState({ colCount }) {
     window.addEventListener('touchend', onUp);
     window.addEventListener('touchcancel', onUp);
     window.addEventListener('blur', onUp);
-  }, [dayColWidth, timeColWidth, updateDayColWidth]);
+  }, [dayColWidth, shouldStartMobileWidthResize, timeColWidth, updateDayColWidth]);
 
   return {
     activeColRatios,

@@ -2503,7 +2503,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
           '--sw-therapist-font-weight': effectiveSchedulerTextSettings.therapist_font_weight,
           '--sw-therapist-row-height': `${effectiveSchedulerTextSettings.therapist_height}px`,
           '--sw-therapist-cols': therapistColsCSS,
-          '--sw-day-col-width': dayColWidth ? `${dayColWidth}px` : 'none',
           '--sw-time-col-width': `${timeColWidth}px`,
         }}
         onMouseLeave={() => setHoverCell(null)}
@@ -2599,9 +2598,21 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
 
               const targetColWidth = showTimeCol && dayColWidth ? dayColWidth + timeColWidth : dayColWidth;
               const flexBasis = showTimeCol ? timeColWidth : 0;
+              const mobileDayWidth = targetColWidth
+                ? `${targetColWidth}px`
+                : 'min(84vw, 360px)';
               const dayFlexStyle = targetColWidth
-                ? { flex: `0 0 ${targetColWidth}px`, width: `${targetColWidth}px`, minWidth: 0 }
-                : { flex: `1 1 ${flexBasis}px`, minWidth: 0 };
+                ? {
+                    flex: `0 0 ${targetColWidth}px`,
+                    width: `${targetColWidth}px`,
+                    minWidth: 0,
+                    '--sw-mobile-day-width': mobileDayWidth,
+                  }
+                : {
+                    flex: `1 1 ${flexBasis}px`,
+                    minWidth: 0,
+                    '--sw-mobile-day-width': mobileDayWidth,
+                  };
 
               return (
                 <div key={dayIdx} className={`shockwave-day${isToday ? ' is-today' : ''}${showTimeCol ? ' has-time-col' : ''}`} style={dayFlexStyle}>

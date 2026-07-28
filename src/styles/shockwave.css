@@ -1112,29 +1112,29 @@
   }
 
   .sw-cell {
-    font-size: min(11px, var(--sw-cell-font-size));
-    min-height: 20px;
+    font-size: var(--sw-cell-font-size);
+    min-height: 0;
     letter-spacing: 0;
   }
 
   .sw-cell-note {
-    font-size: 9px;
+    font-size: 0.82em;
   }
 
   .sw-week-header-cell {
-    font-size: 12px;
+    font-size: var(--sw-header-font-size);
   }
 
   .sw-day-header-cell {
-    font-size: 12px;
-    font-weight: 900;
-    padding: 6px 2px;
+    font-size: var(--sw-header-font-size);
+    font-weight: var(--sw-header-font-weight);
+    padding: 0 2px;
   }
 
   .sw-therapist-name {
-    font-size: 11px;
-    font-weight: 900;
-    padding: 4px 2px;
+    font-size: var(--sw-therapist-font-size);
+    font-weight: var(--sw-therapist-font-weight);
+    padding: 0 2px;
   }
 }
 
