@@ -1,4 +1,5 @@
 import { computeMemoFontColor } from '../../lib/memoParser';
+import { getStaffMemoDisplayText } from '../../lib/staffCalendarEditorUtils';
 
 export default function MemoSlot({ 
   memo, dayInfo,
@@ -19,6 +20,12 @@ export default function MemoSlot({
   const customBgColor = isDepartmentHidden ? null : memo?.bg_color;
   const customFontSize = isDepartmentHidden ? null : Number(memo?.font_size);
   const customFontWeight = isDepartmentHidden ? null : Number(memo?.font_weight);
+  const displayText = getStaffMemoDisplayText({
+    content,
+    holidayName,
+    isEditing,
+    isDepartmentHidden,
+  });
 
   let colorClass = '';
   if (!customFontColor) {
@@ -60,7 +67,7 @@ export default function MemoSlot({
       onMouseEnter={onMouseEnter}
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
-      title={isDepartmentHidden ? '' : content}
+      title={isEditing || isDepartmentHidden ? '' : content}
       style={inlineStyle}
     >
       <span style={{
@@ -69,7 +76,7 @@ export default function MemoSlot({
         width: '100%', textAlign: 'right',
         ...(holidayName && !content ? { color: '#e53e3e', fontWeight: 600 } : {}),
       }}>
-        {isDepartmentHidden ? '' : (content || holidayName || '')}
+        {displayText}
       </span>
     </div>
   );

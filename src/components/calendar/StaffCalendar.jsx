@@ -20,6 +20,7 @@ import {
   syncLoadStaffCalendarDeviceSettings,
   syncSaveStaffCalendarDeviceSettings,
 } from '../../lib/staffCalendarDeviceSettings';
+import { getStaffMemoEditorPosition } from '../../lib/staffCalendarEditorUtils';
 
 const COL_W_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.colWidth;
 const ROW_H_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.rowHeight;
@@ -573,19 +574,25 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
       if (el && cellEl) {
         const rect = cellEl.getBoundingClientRect();
         const parentRect = viewRef.current.getBoundingClientRect();
+        const editorPosition = getStaffMemoEditorPosition(rect, parentRect, {
+          scrollLeft: viewRef.current.scrollLeft,
+          scrollTop: viewRef.current.scrollTop,
+        });
+        const cellStyle = window.getComputedStyle(cellEl);
         el.style.position = 'absolute';
-        el.style.top = `${rect.top - parentRect.top}px`;
-        el.style.left = `${rect.left - parentRect.left}px`;
+        el.style.top = `${editorPosition.top}px`;
+        el.style.left = `${editorPosition.left}px`;
         el.style.width = `${rect.width}px`;
         el.style.height = `${rect.height}px`;
         el.style.opacity = '1';
         el.style.pointerEvents = 'auto';
-        el.style.zIndex = '20';
+        el.style.zIndex = '50';
         el.style.padding = '2px 3px 2px 6px';
         el.style.border = '2px solid var(--brand-primary)';
         el.style.borderRadius = '3px';
-        el.style.fontSize = `${memoFontSize}px`;
-        el.style.fontWeight = '600';
+        el.style.fontSize = cellStyle.fontSize || `${memoFontSize}px`;
+        el.style.fontWeight = '700';
+        el.style.lineHeight = '1.15';
         el.style.textAlign = 'right';
         el.style.boxSizing = 'border-box';
         el.style.background = 'var(--bg-input, #fff)';
@@ -624,6 +631,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
       el.style.borderRadius = '0';
       el.style.fontSize = 'inherit';
       el.style.fontWeight = 'inherit';
+      el.style.lineHeight = 'normal';
       el.style.textAlign = 'left';
       el.style.background = 'transparent';
       el.style.color = 'inherit';

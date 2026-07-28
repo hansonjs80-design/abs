@@ -1,0 +1,822 @@
+/* =============================================
+ * 모바일 전용 레이아웃 및 가독성 보정
+ * ============================================*/
+
+@media screen and (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+
+  body {
+    line-height: 1.55;
+    overscroll-behavior-x: none;
+  }
+
+  .app-layout,
+  .app-main {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .app-content {
+    width: 100%;
+    min-width: 0;
+    padding: 12px;
+    padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+  }
+
+  /* 현재 화면만 보여 주는 작은 상단 헤더 */
+  .top-tabs-shell {
+    width: 100%;
+    max-width: 100vw;
+    min-height: 58px;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: max(8px, env(safe-area-inset-top, 0px)) 10px 8px;
+    overflow: visible;
+    background: rgba(255, 255, 255, 0.96);
+    border-bottom-color: #dbe3ec;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.08);
+  }
+
+  .top-tabs {
+    flex: 1 1 auto;
+    width: 0;
+    min-width: 0;
+    padding: 0;
+  }
+
+  .top-tabs-track {
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+  }
+
+  .top-tab-with-date:not(:has(.top-tab.active)) {
+    display: none;
+  }
+
+  .top-tab-with-date:has(.top-tab.active) {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .top-tab.active,
+  .top-tab.active:hover,
+  .top-tab.month-tab.active,
+  .top-tab--settings.active {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    margin: 0;
+    padding: 7px 9px;
+    justify-content: center;
+    overflow: visible;
+    border: 1px solid color-mix(in srgb, var(--tab-active-border) 30%, #dbe3ec);
+    border-left: 4px solid var(--tab-active-border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--tab-active-border) 7%, #ffffff);
+    box-shadow: none;
+    color: var(--tab-active-border);
+    font-size: 1rem;
+    font-weight: 900;
+    transform: none;
+  }
+
+  .top-tab.active::before,
+  .top-tab.active::after {
+    display: none;
+  }
+
+  .top-tab.active .top-tab-inner {
+    width: 100%;
+    min-width: 0;
+    gap: 5px;
+    justify-content: center;
+  }
+
+  .top-tab.active > .top-tab-inner > svg {
+    width: 19px;
+    height: 19px;
+    flex: 0 0 auto;
+  }
+
+  .top-tab.active .month-picker.tab-variant {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: space-between;
+    gap: 3px;
+  }
+
+  .top-tab.active .month-picker.tab-variant .month-picker-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0 2px !important;
+    overflow: hidden;
+    font-size: 1rem;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .top-tab.active .tab-month-prefix {
+    max-width: none;
+    margin-right: 0.28em;
+  }
+
+  .top-tab.active .month-picker.tab-variant .month-nav-btn {
+    width: 30px;
+    min-width: 30px;
+    max-width: 30px;
+    height: 30px;
+    border-radius: 9px;
+  }
+
+  .month-picker.tab-variant .month-dropdown-wrapper.css-hover-dropdown {
+    left: 50%;
+    max-width: calc(100vw - 28px);
+  }
+
+  .month-picker.tab-variant .month-dropdown {
+    width: min(282px, calc(100vw - 28px));
+  }
+
+  .top-tabs-actions {
+    flex: 0 0 auto;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    transform: none;
+  }
+
+  .top-tabs-actions .print-toggle {
+    width: 42px;
+    height: 42px;
+    border: 1px solid #dbe3ec;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #334155;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  }
+
+  .print-orientation-menu {
+    position: fixed;
+    top: 62px;
+    right: 10px;
+  }
+
+  /* 엄지손가락으로 쉽게 이동할 수 있는 하단 메뉴 */
+  .bottom-nav {
+    display: block;
+    height: calc(68px + env(safe-area-inset-bottom, 0px));
+    padding: 5px 5px env(safe-area-inset-bottom, 0px);
+    background: rgba(255, 255, 255, 0.97);
+    border-top: 1px solid #d7e0ea;
+    box-shadow: 0 -6px 20px rgba(15, 23, 42, 0.1);
+    backdrop-filter: saturate(180%) blur(18px);
+    -webkit-backdrop-filter: saturate(180%) blur(18px);
+  }
+
+  .bottom-nav-items {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+    width: 100%;
+    height: 100%;
+    gap: 2px;
+  }
+
+  .bottom-nav-item {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 54px;
+    padding: 5px 2px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border-radius: 11px;
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1.05;
+    text-align: center;
+    white-space: nowrap;
+    transition: color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
+  }
+
+  .bottom-nav-item svg {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+  }
+
+  .bottom-nav-item.active {
+    background: color-mix(in srgb, var(--tab-active-border) 11%, #ffffff);
+    color: var(--tab-active-border);
+  }
+
+  .bottom-nav-item:active {
+    transform: scale(0.96);
+  }
+
+  /* 공통 카드, 설정, 폼 */
+  .page-header {
+    margin-bottom: 14px;
+  }
+
+  .page-title {
+    font-size: 1.35rem;
+    line-height: 1.25;
+  }
+
+  .card {
+    border-radius: 14px;
+  }
+
+  .card-header {
+    padding: 15px 16px;
+  }
+
+  .card-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 1.05rem;
+    line-height: 1.3;
+  }
+
+  .card-body {
+    padding: 16px;
+  }
+
+  .settings-section {
+    margin-bottom: 22px;
+  }
+
+  .settings-title {
+    margin-bottom: 10px;
+    font-size: 1.05rem;
+  }
+
+  .settings-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    padding: 13px 0;
+  }
+
+  .settings-row-label {
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  .settings-row-desc {
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+  }
+
+  .supabase-connection-field {
+    font-size: 0.92rem;
+  }
+
+  .app-content .supabase-connection-field .form-input {
+    font-size: 16px;
+  }
+
+  .supabase-connection-notice span,
+  .supabase-connection-footer p {
+    font-size: 0.86rem;
+    line-height: 1.5;
+  }
+
+  .form-label {
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .form-input,
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  .form-input {
+    min-height: 46px;
+    padding: 11px 13px;
+  }
+
+  .btn {
+    min-height: 42px;
+    padding: 9px 15px;
+    font-size: 0.92rem;
+  }
+
+  .toast-container {
+    top: 70px;
+    left: 12px;
+    right: 12px;
+    gap: 8px;
+  }
+
+  .toast {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    padding: 13px 16px;
+    font-size: 0.9rem;
+  }
+
+  /* 로그인 */
+  .login-page {
+    padding: 18px;
+  }
+
+  .login-card {
+    max-width: 390px;
+    padding: 28px 24px;
+    border-radius: 20px;
+  }
+
+  .login-logo {
+    width: 58px;
+    height: 58px;
+    margin-bottom: 17px;
+  }
+
+  .login-title {
+    font-size: 1.65rem;
+    line-height: 1.25;
+  }
+
+  .login-subtitle {
+    margin-top: 5px;
+    margin-bottom: 26px;
+    color: var(--text-secondary);
+    font-size: 0.94rem;
+    line-height: 1.45;
+  }
+
+  .login-btn {
+    min-height: 50px;
+    font-size: 1rem;
+  }
+
+  .login-switch {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
+
+  .login-connection-recovery {
+    align-items: flex-start;
+    font-size: 0.8rem;
+    line-height: 1.45;
+  }
+
+  /* 직원 근무표: 화면을 채우되 작은 기기에서는 달력 안에서만 스크롤 */
+  .staff-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+    gap: 14px;
+    overflow: visible;
+  }
+
+  .staff-calendar {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    align-items: stretch;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 3px;
+  }
+
+  .staff-calendar-toolbar {
+    position: sticky;
+    left: 0;
+    width: 100%;
+    min-width: 0;
+    padding: 3px 2px;
+  }
+
+  .staff-calendar-title {
+    font-size: 1.2rem;
+  }
+
+  .calendar-grid {
+    width: max(100%, 364px) !important;
+    min-width: 364px !important;
+    grid-template-columns: repeat(7, minmax(52px, 1fr)) !important;
+  }
+
+  .calendar-cell {
+    min-height: 82px;
+  }
+
+  .calendar-date {
+    padding: 4px 4px 2px;
+    font-size: clamp(12px, var(--staff-calendar-date-font-size), 15px);
+  }
+
+  .calendar-date-number {
+    width: 23px;
+    height: 23px;
+  }
+
+  .calendar-weekday-header {
+    padding: 0 2px;
+    font-size: clamp(11px, var(--staff-calendar-weekday-font-size), 14px);
+    letter-spacing: 0;
+  }
+
+  .calendar-memos {
+    padding: 2px 2px 3px;
+  }
+
+  .memo-slot {
+    min-height: 15px;
+    padding: 0 3px;
+    font-size: clamp(10px, var(--staff-calendar-memo-font-size), 12px);
+    line-height: 1.2;
+  }
+
+  .staff-side {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+    gap: 14px;
+  }
+
+  .today-panel,
+  .notice-board {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* 충격파/도수 스케줄: 하루 단위로 읽고 좌우로 넘김 */
+  .shockwave-view {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scroll-padding-left: 0;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .shockwave-week {
+    width: max-content !important;
+    min-width: max-content !important;
+  }
+
+  .shockwave-days {
+    width: max-content !important;
+  }
+
+  .shockwave-day,
+  .shockwave-day:nth-child(n) {
+    flex: 0 0 min(84vw, 360px) !important;
+    width: min(84vw, 360px) !important;
+    min-width: min(84vw, 360px) !important;
+    border-right: 2px solid var(--sw-mobile-strong-line, #000);
+    border-top: none;
+    border-bottom: none;
+    scroll-snap-align: start;
+    overflow: hidden;
+  }
+
+  .shockwave-day.is-today {
+    overflow: visible;
+  }
+
+  .sw-cell {
+    min-height: 20px;
+    font-size: clamp(10px, var(--sw-cell-font-size), 12px);
+    line-height: 1.15;
+  }
+
+  .sw-cell-note {
+    font-size: 9.5px;
+    line-height: 1.15;
+  }
+
+  .sw-day-header-cell,
+  .sw-week-header-cell {
+    font-size: 12px;
+  }
+
+  .sw-therapist-name {
+    font-size: 11px;
+  }
+
+  .patient-search-overlay {
+    padding: 12px;
+  }
+
+  .patient-search-modal {
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    padding: 22px 18px;
+    border-radius: 18px;
+  }
+
+  .patient-search-input {
+    min-height: 48px;
+    padding: 12px 14px;
+    font-size: 16px;
+  }
+
+  /* 충격파/도수 통계: 왼쪽 메뉴를 상단의 2열 도구막대로 전환 */
+  .sw-stats-container {
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .sw-stats-layout {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: 12px;
+  }
+
+  .sw-stats-sidebar {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    min-width: 0;
+    flex: none;
+    gap: 7px;
+    padding: 8px;
+    border: 1px solid var(--border-color-light);
+    border-radius: 14px;
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .sw-stats-side-tab {
+    min-height: 44px;
+    padding: 8px 6px;
+    border-radius: 9px;
+    font-size: 0.86rem;
+    line-height: 1.25;
+    box-shadow: none;
+  }
+
+  .sw-stats-side-tab:hover {
+    transform: none;
+  }
+
+  .sw-stats-sidebar > div:not(.sw-sidebar-filter) {
+    grid-column: 1 / -1;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .sw-stats-sidebar > div:not(.sw-sidebar-filter) .sw-stats-side-tab {
+    min-height: 40px;
+  }
+
+  .sw-sidebar-filter {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 9px;
+  }
+
+  .sw-sidebar-filter-title {
+    margin-bottom: 7px;
+    text-align: left;
+    font-size: 0.78rem;
+  }
+
+  .sw-sidebar-filter-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .sw-sidebar-filter-chip {
+    flex: 1 1 100px;
+    width: auto;
+    min-height: 36px;
+    padding: 6px 9px;
+    font-size: 0.84rem;
+  }
+
+  .sw-sidebar-filter-chip input {
+    width: 16px;
+    height: 16px;
+  }
+
+  .sw-sidebar-filter-reset {
+    min-height: 36px;
+    margin-top: 7px;
+    font-size: 0.82rem;
+  }
+
+  .sw-stats-panel,
+  .sw-stats-body,
+  .sw-grid-card,
+  .sw-settlement-card {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .sw-stats-body--grid {
+    padding: 0;
+  }
+
+  .sw-grid-card {
+    gap: 12px;
+  }
+
+  .sw-grid-card-header,
+  .sw-stats-header,
+  .sw-settlement-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+  }
+
+  .sw-grid-card-title h2,
+  .sw-stats-summary h2,
+  .sw-settlement-header h2 {
+    font-size: 1.15rem;
+    line-height: 1.35;
+  }
+
+  .sw-grid-card-title p {
+    font-size: 0.86rem;
+    line-height: 1.45;
+  }
+
+  .sw-grid-card-meta,
+  .sw-settlement-meta {
+    width: 100%;
+    gap: 6px;
+  }
+
+  .sw-grid-card-meta span,
+  .sw-settlement-meta span {
+    padding: 7px 9px;
+    font-size: 0.8rem;
+  }
+
+  .sw-grid-card-table,
+  .sw-settlement-table-wrap,
+  .sw-new-patient-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 물리치료 통계 */
+  .pt-stats-container {
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    gap: 14px;
+  }
+
+  .pt-stats-header {
+    align-items: flex-start;
+    margin-bottom: 2px;
+  }
+
+  .pt-stats-title h1 {
+    font-size: 1.35rem;
+    line-height: 1.25;
+  }
+
+  .pt-stats-title p {
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .pt-stats-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    margin-bottom: 4px;
+  }
+
+  .pt-stats-tab-btn {
+    min-height: 42px;
+    padding: 8px 10px;
+    font-size: 0.92rem;
+    line-height: 1.25;
+  }
+
+  .pt-stats-controls {
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 8px;
+    padding: 14px;
+  }
+
+  .pt-stats-controls-label {
+    flex-basis: 100%;
+    margin-right: 0;
+    font-size: 0.9rem;
+  }
+
+  .pt-stats-checkbox-group {
+    gap: 8px 12px;
+  }
+
+  .pt-stats-checkbox {
+    min-height: 34px;
+    gap: 7px;
+    font-size: 0.92rem;
+  }
+
+  .pt-stats-checkbox input {
+    width: 18px;
+    height: 18px;
+  }
+
+  .excel-table {
+    font-size: 0.88rem;
+  }
+
+  .excel-table th,
+  .excel-table td {
+    padding: 9px 11px;
+  }
+}
+
+@media screen and (max-width: 380px) {
+  .app-content {
+    padding: 10px;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .top-tabs-shell {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .top-tab.active,
+  .top-tab.active:hover,
+  .top-tab.month-tab.active,
+  .top-tab--settings.active {
+    padding-right: 6px;
+    padding-left: 6px;
+  }
+
+  .top-tab.active > .top-tab-inner > svg {
+    display: none;
+  }
+
+  .top-tab.active .month-picker.tab-variant .month-picker-label {
+    font-size: 0.94rem;
+  }
+
+  .bottom-nav {
+    padding-right: 2px;
+    padding-left: 2px;
+  }
+
+  .bottom-nav-items {
+    gap: 0;
+  }
+
+  .bottom-nav-item {
+    padding-right: 1px;
+    padding-left: 1px;
+    font-size: 0.68rem;
+  }
+}
+
+@media screen and (max-width: 768px) and (max-height: 620px) {
+  .login-page {
+    align-items: flex-start;
+    overflow-y: auto;
+  }
+}
+
+@media print {
+  .bottom-nav {
+    display: none !important;
+  }
+}

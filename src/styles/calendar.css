@@ -510,6 +510,10 @@
   overflow: hidden;
 }
 
+.memo-slot.editing > span {
+  visibility: hidden;
+}
+
 .memo-slot-input {
   display: block;
   width: 100%;
