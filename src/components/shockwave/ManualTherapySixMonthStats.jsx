@@ -157,6 +157,7 @@ export default function ManualTherapySixMonthStats({
     }
     return keys;
   }, [currentMonth, currentYear, recentPeriodMonths]);
+  const selectedMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
 
   const monthlySummaries = useMemo(() => {
     const base = monthKeys.map((month) => ({
@@ -244,7 +245,10 @@ export default function ManualTherapySixMonthStats({
           </thead>
           <tbody>
             {monthlySummaries.map((summary) => (
-              <tr key={summary.key}>
+              <tr
+                key={summary.key}
+                className={summary.key === selectedMonthKey ? 'sw-current-month-summary-row' : undefined}
+              >
                 <th className="month-label">{summary.label}</th>
                 <td>{summary.totalCount > 0 ? summary.totalCount : '-'}</td>
                 <td className="amount">{summary.amount > 0 ? `${summary.amount.toLocaleString('ko-KR')}원` : '-'}</td>
