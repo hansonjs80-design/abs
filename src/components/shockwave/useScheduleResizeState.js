@@ -7,6 +7,10 @@ import {
 } from '../../lib/deviceSettingsIdentity';
 import { enqueueShockwaveSettingsJsonPatch } from '../../lib/shockwaveSettingsJsonSync';
 import { clampScheduleTimeColWidth } from '../../lib/scheduleGridSizeUtils';
+import {
+  getResizePointerClient,
+  isTouchResizeEvent,
+} from '../../lib/resizePointerUtils';
 
 import {
   SHOCKWAVE_DAY_COL_WIDTH_KEY,
@@ -117,16 +121,6 @@ const clampRowHeight = (value) => (
   )
 );
 
-const getPointerClient = (event) => {
-  const touch = event.touches?.[0] || event.changedTouches?.[0];
-  return {
-    x: touch?.clientX ?? event.clientX ?? 0,
-    y: touch?.clientY ?? event.clientY ?? 0,
-  };
-};
-
-const isTouchResizeEvent = (event) => Boolean(event?.touches?.length || event?.changedTouches?.length);
-
 const getMinScheduleDayWidth = (event) => {
   if (isTouchResizeEvent(event)) return MIN_SCHEDULE_DAY_WIDTH_MOBILE;
   if (typeof window !== 'undefined' && window.matchMedia?.('(max-width: 768px)').matches) {
@@ -145,12 +139,17 @@ const setMobileResizeLocked = (locked) => {
   window.localStorage.setItem(MOBILE_RESIZE_LOCK_KEY, locked ? 'true' : 'false');
 };
 
-const shouldStartMobileResize = (event) => {
+const shouldStartMobileResize = (event, { confirmWidthResize = false } = {}) => {
   if (!isTouchResizeEvent(event)) return true;
-  if (!getMobileResizeLocked()) return true;
-  const shouldUnlock = window.confirm('고정된 너비/높이 설정을 다시 조정할까요?');
-  if (shouldUnlock) setMobileResizeLocked(false);
-  return shouldUnlock;
+  const isLocked = getMobileResizeLocked();
+  if (!isLocked && !confirmWidthResize) return true;
+  const confirmed = window.confirm(
+    isLocked
+      ? '고정된 너비/높이 설정을 다시 조정할까요?'
+      : '가로 너비를 조정할까요?'
+  );
+  if (confirmed && isLocked) setMobileResizeLocked(false);
+  return confirmed;
 };
 
 const maybeLockMobileResize = (event) => {
@@ -266,13 +265,13 @@ export default function useScheduleResizeState({ colCount }) {
   const startTimeColResize = useCallback((event) => {
     event.preventDefault();
     event.stopPropagation();
-    if (!shouldStartMobileResize(event)) return;
+    if (!shouldStartMobileResize(event, { confirmWidthResize: true })) return;
     if (event.type === 'mousedown' && event.detail > 1) {
       resetTimeColWidth(event);
       return;
     }
 
-    const startPoint = getPointerClient(event);
+    const startPoint = getResizePointerClient(event);
     const startWidth = clampScheduleTimeColWidth(timeColWidth);
     timeResizeRef.current = { active: true, startX: startPoint.x, startWidth };
     let latestWidth = startWidth;
@@ -281,7 +280,7 @@ export default function useScheduleResizeState({ colCount }) {
     const onMove = (moveEvent) => {
       moveEvent.preventDefault?.();
       if (!timeResizeRef.current.active) return;
-      const point = getPointerClient(moveEvent);
+      const point = getResizePointerClient(moveEvent);
       const delta = point.x - timeResizeRef.current.startX;
       const nextWidth = clampScheduleTimeColWidth(timeResizeRef.current.startWidth + delta);
       if (nextWidth === latestWidth) return;
@@ -316,13 +315,13 @@ export default function useScheduleResizeState({ colCount }) {
     event.preventDefault();
     event.stopPropagation();
     if (!shouldStartMobileResize(event)) return;
-    const startPoint = getPointerClient(event);
+    const startPoint = getResizePointerClient(event);
     rowResizeRef.current = { active: true, startY: startPoint.y, startHeight: rowHeight };
     let latestHeight = rowHeight;
     const onMove = (moveEvent) => {
       moveEvent.preventDefault?.();
       if (!rowResizeRef.current.active) return;
-      const point = getPointerClient(moveEvent);
+      const point = getResizePointerClient(moveEvent);
       const delta = point.y - rowResizeRef.current.startY;
       latestHeight = clampRowHeight(rowResizeRef.current.startHeight + (delta * ROW_HEIGHT_RESIZE_SENSITIVITY));
       updateRowHeight(latestHeight);
@@ -349,7 +348,7 @@ export default function useScheduleResizeState({ colCount }) {
   const startColResize = useCallback((event, colIdx, timeColPx = 0, currentRatios = null) => {
     event.preventDefault();
     event.stopPropagation();
-    if (!shouldStartMobileResize(event)) return;
+    if (!shouldStartMobileResize(event, { confirmWidthResize: true })) return;
     const now = Date.now();
     const lastClick = colResizeClickRef.current;
     const isDoubleClickReset = event.type === 'mousedown' && (
@@ -367,7 +366,7 @@ export default function useScheduleResizeState({ colCount }) {
       return;
     }
     colResizeClickRef.current = { time: now, colIdx, moved: false };
-    const startPoint = getPointerClient(event);
+    const startPoint = getResizePointerClient(event);
     const cur = currentRatios ? normalizeColRatios(currentRatios, colCount) : Array(colCount).fill(1);
     const wrapper = event.currentTarget.closest('.sw-therapist-header-wrapper');
     const containerWidth = Math.max(1, (wrapper?.getBoundingClientRect().width || 1) - timeColPx);
@@ -384,7 +383,7 @@ export default function useScheduleResizeState({ colCount }) {
       moveEvent.preventDefault?.();
       if (!colResizeRef.current.active) return;
       const { startRatios: startRatiosValue, containerWidth: width, colIdx: currentColIdx, startX } = colResizeRef.current;
-      const point = getPointerClient(moveEvent);
+      const point = getResizePointerClient(moveEvent);
       const delta = point.x - startX;
       if (Math.abs(delta) <= COL_RESIZE_CLICK_MOVE_TOLERANCE) return;
       didResize = true;
@@ -433,8 +432,8 @@ export default function useScheduleResizeState({ colCount }) {
   const startDayResize = useCallback((event, showTimeCol) => {
     event.preventDefault();
     event.stopPropagation();
-    if (!shouldStartMobileResize(event)) return;
-    const startPoint = getPointerClient(event);
+    if (!shouldStartMobileResize(event, { confirmWidthResize: true })) return;
+    const startPoint = getResizePointerClient(event);
     const minDayWidth = getMinScheduleDayWidth(event);
     const dayElement = event.currentTarget.closest('.shockwave-day');
     const currentDayWidth = dayElement?.getBoundingClientRect().width || minDayWidth;
@@ -446,7 +445,7 @@ export default function useScheduleResizeState({ colCount }) {
     const onMove = (moveEvent) => {
       moveEvent.preventDefault?.();
       if (!dayResizeRef.current.active) return;
-      const point = getPointerClient(moveEvent);
+      const point = getResizePointerClient(moveEvent);
       const delta = point.x - dayResizeRef.current.startX;
       latestWidth = Math.max(minDayWidth, normalizedDayWidth + delta);
       updateDayColWidth(latestWidth);

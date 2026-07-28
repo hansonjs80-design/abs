@@ -1,4 +1,4 @@
-import { memo, useRef } from 'react';
+import { memo, useCallback, useEffect, useRef } from 'react';
 
 import {
   CONTEXT_MENU_DISMISS_GRACE_MS,
@@ -17,6 +17,10 @@ const isComposingInputEvent = (event) => Boolean(
   event?.isComposing ||
   event?.keyCode === 229
 );
+
+const SCHEDULE_CELL_LONG_PRESS_MS = 550;
+const SCHEDULE_CELL_LONG_PRESS_MOVE_TOLERANCE_PX = 12;
+const SCHEDULE_CELL_NATIVE_CONTEXT_MENU_SUPPRESS_MS = 1000;
 
 function saveSchedulerInputValueOnce({
   event,
@@ -100,6 +104,8 @@ const MemoizedCell = memo(({
   editInputRef, handleCellSave, handleEditKeyDown, handleKeyDown, imeOpenRef, setImePreviewCell, editDraftRef, scheduleEditDraftAutosave, promoteFocusedInputToEditor, skipNextEditBlurSaveRef
 }) => {
   const resizerRef = useRef(null);
+  const longPressStateRef = useRef(null);
+  const suppressNativeContextMenuUntilRef = useRef(0);
   const content = pendingContent || '';
   const effectiveMergeSpan = pendingMergeSpan || mergeSpan;
   const cellMemoList = getMemoListFromMergeSpan(effectiveMergeSpan);
@@ -115,6 +121,108 @@ const MemoizedCell = memo(({
   const isSelected = selectedKeys.has(cellKey);
   const isPrimary = selectedCell && selectedCell.w === weekIdx && selectedCell.d === dayIdx && selectedCell.r === rowIdx && selectedCell.c === colIdx;
   const gridColumnStart = showTimeCol ? colIdx + 2 : colIdx + 1;
+
+  const clearLongPress = useCallback(() => {
+    const currentState = longPressStateRef.current;
+    if (currentState?.timerId) {
+      window.clearTimeout(currentState.timerId);
+    }
+    longPressStateRef.current = null;
+    return Boolean(currentState?.triggered);
+  }, []);
+
+  useEffect(() => clearLongPress, [clearLongPress]);
+
+  const handleCellTouchStart = useCallback((event) => {
+    if (event.touches.length !== 1 || isEditing) {
+      clearLongPress();
+      return;
+    }
+
+    clearLongPress();
+    const touch = event.touches[0];
+    const nextState = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      triggered: false,
+      timerId: null,
+    };
+    longPressStateRef.current = nextState;
+    nextState.timerId = window.setTimeout(() => {
+      if (longPressStateRef.current !== nextState) return;
+      nextState.timerId = null;
+      nextState.triggered = true;
+      suppressNativeContextMenuUntilRef.current =
+        Date.now() + SCHEDULE_CELL_NATIVE_CONTEXT_MENU_SUPPRESS_MS;
+      handleCellContextMenu({
+        preventDefault: () => {},
+        stopPropagation: () => {},
+        nativeEvent: { stopImmediatePropagation: () => {} },
+        clientX: nextState.startX,
+        clientY: nextState.startY,
+      }, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);
+    }, SCHEDULE_CELL_LONG_PRESS_MS);
+  }, [
+    cellPrescription,
+    clearLongPress,
+    colIdx,
+    dayIdx,
+    handleCellContextMenu,
+    isEditing,
+    rowIdx,
+    slotInfo.label,
+    slotInfo.time,
+    weekIdx,
+  ]);
+
+  const handleCellTouchMove = useCallback((event) => {
+    const currentState = longPressStateRef.current;
+    if (!currentState || currentState.triggered || event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    const movedDistance = Math.hypot(
+      touch.clientX - currentState.startX,
+      touch.clientY - currentState.startY
+    );
+    if (movedDistance > SCHEDULE_CELL_LONG_PRESS_MOVE_TOLERANCE_PX) {
+      clearLongPress();
+    }
+  }, [clearLongPress]);
+
+  const handleCellTouchEnd = useCallback((event) => {
+    const wasLongPress = clearLongPress();
+    if (!wasLongPress) return;
+    event.preventDefault();
+    event.stopPropagation();
+  }, [clearLongPress]);
+
+  const handleCellContextMenuRequest = useCallback((event) => {
+    if (Date.now() < suppressNativeContextMenuUntilRef.current) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.nativeEvent?.stopImmediatePropagation?.();
+      return;
+    }
+    clearLongPress();
+    handleCellContextMenu(
+      event,
+      weekIdx,
+      dayIdx,
+      rowIdx,
+      colIdx,
+      cellPrescription,
+      slotInfo.time || slotInfo.label
+    );
+  }, [
+    cellPrescription,
+    clearLongPress,
+    colIdx,
+    dayIdx,
+    handleCellContextMenu,
+    rowIdx,
+    slotInfo.label,
+    slotInfo.time,
+    weekIdx,
+  ]);
 
   let visualRowSpan = 1;
   if (effectiveMergeSpan.rowSpan > 1) {
@@ -297,10 +405,12 @@ const MemoizedCell = memo(({
           setHoverCell({ weekIdx, dayIdx, rowIdx, colIdx, staffBlockRule, slotInfo, isMergedView: false });
         }}
         onMouseLeave={() => setHoverCell(null)}
+        onTouchStart={handleCellTouchStart}
+        onTouchMove={handleCellTouchMove}
+        onTouchEnd={handleCellTouchEnd}
+        onTouchCancel={clearLongPress}
         onDoubleClick={(e) => { handleCellDoubleClick(e, weekIdx, dayIdx, rowIdx, colIdx, content); }}
-        onContextMenu={(e) => {
-          handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);
-        }}
+        onContextMenu={handleCellContextMenuRequest}
       >
         {!isEditing && !isImePreview && renderDisplay('none')}
         <div
@@ -409,10 +519,12 @@ const MemoizedCell = memo(({
         setHoverCell({ weekIdx, dayIdx, rowIdx, colIdx, staffBlockRule, slotInfo, isMergedView: true });
       }}
       onMouseLeave={() => setHoverCell(null)}
+      onTouchStart={handleCellTouchStart}
+      onTouchMove={handleCellTouchMove}
+      onTouchEnd={handleCellTouchEnd}
+      onTouchCancel={clearLongPress}
       onDoubleClick={(e) => { handleCellDoubleClick(e, weekIdx, dayIdx, rowIdx, colIdx, content); }}
-      onContextMenu={(e) => {
-        handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);
-      }}
+      onContextMenu={handleCellContextMenuRequest}
     >
       {renderDisplay()}
     </div>

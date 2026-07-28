@@ -385,6 +385,7 @@
 .sw-col-resize-handle {
   width: 8px;
   cursor: col-resize;
+  touch-action: none;
   z-index: 30;
   background: transparent;
 }
@@ -436,6 +437,7 @@
   height: calc(100% + 4px);
   width: 5px;
   cursor: col-resize;
+  touch-action: none;
   z-index: 40;
   background: transparent;
 }
@@ -1029,13 +1031,23 @@
     border-bottom-color: var(--sw-mobile-strong-line);
   }
 
+  .sw-col-resize-handle {
+    width: 18px !important;
+    transform: translateX(-9px) !important;
+  }
+
+  .sw-day-resize-handle {
+    right: -8px;
+    width: 16px;
+  }
+
   .sw-week-header-cell,
   .sw-time-label {
     border-right-color: var(--sw-mobile-strong-line);
   }
 
   .sw-time-label {
-    border-bottom-color: transparent !important;
+    border-bottom-color: var(--sw-mobile-grid-line) !important;
     box-sizing: border-box;
     min-height: 0;
     height: 100%;
@@ -1058,6 +1070,7 @@
     background-clip: padding-box;
     contain: paint;
     overflow: hidden;
+    -webkit-touch-callout: none;
   }
 
   .sw-cell.selected {

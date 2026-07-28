@@ -21,6 +21,10 @@ import {
   syncSaveStaffCalendarDeviceSettings,
 } from '../../lib/staffCalendarDeviceSettings';
 import { getStaffMemoEditorPosition } from '../../lib/staffCalendarEditorUtils';
+import {
+  getResizePointerClient,
+  isTouchResizeEvent,
+} from '../../lib/resizePointerUtils';
 
 const COL_W_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.colWidth;
 const ROW_H_KEY = STAFF_CALENDAR_DEVICE_SETTING_KEYS.rowHeight;
@@ -471,20 +475,29 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   // ── Resize ──
   const startColResize = (e) => {
     e.preventDefault(); e.stopPropagation();
-    const sx = e.clientX, cw = colWidth || e.target.parentElement.offsetWidth;
+    if (isTouchResizeEvent(e) && !window.confirm('근무표 가로 너비를 조정할까요?')) return;
+    const sx = getResizePointerClient(e).x;
+    const cw = colWidth || e.currentTarget.parentElement?.offsetWidth || MIN_COL_WIDTH;
     let latestWidth = colWidth || cw;
     const move = (ev) => {
-      latestWidth = Math.max(MIN_COL_WIDTH, cw + ev.clientX - sx);
+      ev.preventDefault?.();
+      latestWidth = Math.max(MIN_COL_WIDTH, cw + getResizePointerClient(ev).x - sx);
       updateColWidth(latestWidth);
     };
     const up = () => {
       updateColWidth(latestWidth);
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mouseup', up);
+      window.removeEventListener('touchmove', move);
+      window.removeEventListener('touchend', up);
+      window.removeEventListener('touchcancel', up);
       window.removeEventListener('blur', up);
     };
     window.addEventListener('mousemove', move);
     window.addEventListener('mouseup', up);
+    window.addEventListener('touchmove', move, { passive: false });
+    window.addEventListener('touchend', up);
+    window.addEventListener('touchcancel', up);
     window.addEventListener('blur', up);
   };
   const startRowResize = (e) => {
@@ -1575,7 +1588,11 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
           {WEEKDAYS.map((day, i) => (
             <div key={`h-${i}`} className={`calendar-weekday-header${i === 0 ? ' sunday' : ''}${i === 6 ? ' saturday' : ''}`} style={{ position: 'relative' }}>
               {day}
-              <div className="col-resizer" onMouseDown={startColResize} />
+              <div
+                className="col-resizer"
+                onMouseDown={startColResize}
+                onTouchStart={startColResize}
+              />
               <div className="weekday-row-resizer" title="요일 셀 높이 조절" onMouseDown={startWeekdayRowResize} />
             </div>
           ))}
@@ -1641,7 +1658,13 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                     );
                   })}
                 </div>
-                {di < 6 && <div className="col-resizer" onMouseDown={startColResize} />}
+                {di < 6 && (
+                  <div
+                    className="col-resizer"
+                    onMouseDown={startColResize}
+                    onTouchStart={startColResize}
+                  />
+                )}
                 {wi < grid.length - 1 && <div className="row-resizer" onMouseDown={startRowResize} />}
               </div>
             );

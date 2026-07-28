@@ -2659,6 +2659,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                             }
                             startColResize(e, ci, timeColPx, activeColRatios);
                           }}
+                          onTouchStart={(e) => {
+                            startColResize(e, ci, timeColPx, activeColRatios);
+                          }}
                           onDoubleClick={resetColRatios}
                         />
                       );
@@ -2819,6 +2822,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                     <div
                       className="sw-day-resize-handle"
                       onMouseDown={(e) => {
+                        startDayResize(e, showTimeCol);
+                      }}
+                      onTouchStart={(e) => {
                         startDayResize(e, showTimeCol);
                       }}
                     />

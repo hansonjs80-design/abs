@@ -193,6 +193,7 @@
   width: 8px;
   height: 100%;
   cursor: col-resize;
+  touch-action: none;
   z-index: 10;
 }
 
@@ -978,6 +979,10 @@
 }
 
 @media (max-width: 768px) {
+  .col-resizer {
+    right: -8px;
+    width: 16px;
+  }
   .staff-side {
     grid-template-columns: 1fr;
   }
