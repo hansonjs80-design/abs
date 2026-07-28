@@ -765,7 +765,7 @@
   --sw-cell-fill-color: #f3f4f6;
   background: #f3f4f6;
   color: var(--text-primary);
-  cursor: default;
+  cursor: pointer;
 }
 
 .sw-cell.other-month-muted-block {
@@ -901,7 +901,7 @@
 .sw-disabled-row .sw-cell, .sw-cell.disabled {
   --sw-cell-fill-color: #93c37d;
   background: #93c37d;
-  cursor: cell;
+  cursor: pointer;
 }
 
 .sw-cell.other-month-bg.disabled {
