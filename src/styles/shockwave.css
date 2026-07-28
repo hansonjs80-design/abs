@@ -629,6 +629,15 @@
   filter: brightness(var(--hover-brightness));
 }
 
+.sw-cell.current-month-cell:not(.selected):not(.primary-selected):not(.editing):hover {
+  filter: none;
+  box-shadow: inset 0 0 0 9999px rgba(15, 23, 42, 0.04);
+}
+
+[data-theme="dark"] .sw-cell.current-month-cell:not(.selected):not(.primary-selected):not(.editing):hover {
+  box-shadow: inset 0 0 0 9999px rgba(255, 255, 255, 0.06);
+}
+
 .sw-cell.has-memo::after {
   content: "";
   position: absolute;

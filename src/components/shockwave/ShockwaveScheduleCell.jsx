@@ -122,6 +122,7 @@ const MemoizedCell = memo(({
   }
 
   let cls = 'sw-cell';
+  if (isCurrentMonthCell) cls += ' current-month-cell';
   if (colIdx + effectiveMergeSpan.colSpan - 1 === colCount - 1) cls += ' last-col';
   if (dayInfo.isHoliday) cls += ' holiday-bg';
   else if (!isCurrentMonthCell) cls += ' other-month-bg disabled-cell';
