@@ -84,6 +84,49 @@ export function getPrescriptionScheduleSettings(settings, year, month) {
   };
 }
 
+export function normalizePrescriptionGroupKey(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]/gu, '');
+}
+
+function buildPrescriptionGroupKeySet(prescriptions) {
+  return new Set(
+    (Array.isArray(prescriptions) ? prescriptions : [])
+      .map(normalizePrescriptionGroupKey)
+      .filter(Boolean)
+  );
+}
+
+export function getScheduleItemTreatmentGroup(item, settings, year, month) {
+  const config = getPrescriptionScheduleSettings(settings, year, month);
+  const manualPrescriptions = config.schedulerPrescriptions?.manualTherapy || [];
+  const shockwavePrescriptions = config.schedulerPrescriptions?.shockwave || [];
+  const manualKeys = buildPrescriptionGroupKeySet(manualPrescriptions);
+  const shockwaveKeys = buildPrescriptionGroupKeySet(shockwavePrescriptions);
+  const prescriptionKey = normalizePrescriptionGroupKey(item?.prescription);
+
+  if (prescriptionKey && manualKeys.has(prescriptionKey)) return 'manual_therapy';
+  if (prescriptionKey && shockwaveKeys.has(prescriptionKey)) return 'shockwave';
+
+  const content = String(item?.content || '').trim();
+  const manualDoseTags = filterPrescriptionMap(config.manualTherapy?.dose_tags, manualPrescriptions);
+  const shockwaveDoseTags = filterPrescriptionMap(config.shockwave?.dose_tags, shockwavePrescriptions);
+  if (getConfiguredDoseTagFromContent(content, manualDoseTags)) return 'manual_therapy';
+  if (getConfiguredDoseTagFromContent(content, shockwaveDoseTags)) return 'shockwave';
+
+  const legacyManualPrescription = get4060PrescriptionFromContent(content);
+  if (
+    legacyManualPrescription &&
+    manualKeys.has(normalizePrescriptionGroupKey(legacyManualPrescription))
+  ) {
+    return 'manual_therapy';
+  }
+
+  return '';
+}
+
 function getActiveSchedulerPrescriptionSet(config = {}) {
   const source = Array.isArray(config?.schedulerPrescriptions?.all)
     ? config.schedulerPrescriptions.all

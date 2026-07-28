@@ -20,12 +20,7 @@ import {
   loadScheduleMemosForStatsMonth,
   loadStatsMonthlyTherapists,
 } from '../lib/statsScheduleSourceUtils';
-
-function normalizePrescriptionKey(value) {
-  return String(value || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '');
-}
+import { normalizePrescriptionGroupKey } from '../lib/prescriptionScheduleSettings';
 
 class ManualTherapyStatsPageErrorBoundary extends React.Component {
   constructor(props) {
@@ -143,25 +138,29 @@ export default function ManualTherapyStatsPage() {
       (Array.isArray(effectiveSettlementSettings.hidden_prescriptions)
         ? effectiveSettlementSettings.hidden_prescriptions
         : []
-      ).map(normalizePrescriptionKey)
+      ).map(normalizePrescriptionGroupKey)
     ),
     [effectiveSettlementSettings]
   );
   const prescriptions = useMemo(
     () => allPrescriptions.filter(
-      (prescription) => !hiddenPrescriptionKeys.has(normalizePrescriptionKey(prescription))
+      (prescription) => !hiddenPrescriptionKeys.has(normalizePrescriptionGroupKey(prescription))
     ),
     [allPrescriptions, hiddenPrescriptionKeys]
   );
+  const activePrescriptionKeys = useMemo(
+    () => new Set(allPrescriptions.map(normalizePrescriptionGroupKey).filter(Boolean)),
+    [allPrescriptions]
+  );
   const visibleLogs = useMemo(
     () => {
-      if (!hiddenPrescriptionKeys.size) return logs;
       return logs.filter((log) => {
-        const normalizedPrescription = normalizePrescriptionKey(log?.prescription);
-        return !normalizedPrescription || !hiddenPrescriptionKeys.has(normalizedPrescription);
+        const treatmentKey = normalizePrescriptionGroupKey(log?.prescription);
+        if (!treatmentKey || !activePrescriptionKeys.has(treatmentKey)) return false;
+        return !hiddenPrescriptionKeys.has(treatmentKey);
       });
     },
-    [logs, hiddenPrescriptionKeys]
+    [activePrescriptionKeys, logs, hiddenPrescriptionKeys]
   );
 
   // Therapist filter state (lifted from ShockwaveDataGrid)
@@ -223,6 +222,7 @@ export default function ManualTherapyStatsPage() {
         memos: memosOverride || shockwaveMemos,
         year: currentYear,
         month: currentMonth,
+        settings: shockwaveSettings,
       });
       setLogs(normalizedLogs);
       return normalizedLogs;
@@ -237,7 +237,7 @@ export default function ManualTherapyStatsPage() {
         setIsLogsLoading(false);
       }
     }
-  }, [addToast, allPrescriptions, currentMonth, currentYear, shockwaveMemos]);
+  }, [addToast, allPrescriptions, currentMonth, currentYear, shockwaveMemos, shockwaveSettings]);
 
   useEffect(() => {
     loadManualTherapists();
@@ -290,6 +290,7 @@ export default function ManualTherapyStatsPage() {
       memos: sourceMemos,
       therapists: safeTherapists,
       monthlyTherapists: sourceMonthlyTherapists,
+      settings: shockwaveSettings,
       upToToday,
       overwriteManual,
       scheduleAuthoritative: true,
@@ -415,6 +416,7 @@ export default function ManualTherapyStatsPage() {
         memos: shockwaveMemos,
         therapists: safeTherapists,
         monthlyTherapists: monthlyManualTherapists,
+        settings: shockwaveSettings,
       });
 
       if (result.skipped && result.reason === 'today_outside_current_month') {
@@ -438,7 +440,7 @@ export default function ManualTherapyStatsPage() {
     } finally {
       setIsLogsLoading(false);
     }
-  }, [addToast, currentMonth, currentYear, fetchLogs, safeTherapists, shockwaveMemos, monthlyManualTherapists]);
+  }, [addToast, currentMonth, currentYear, fetchLogs, safeTherapists, shockwaveMemos, monthlyManualTherapists, shockwaveSettings]);
 
   const handleSyncMonthFromScheduler = useCallback(async () => {
     if (!window.confirm(`${currentMonth}월 전체 도수치료 스케줄을 스케줄러 기준으로 덮어씁니다.\n(수동으로 추가한 내역은 모두 삭제됩니다.) 진행하시겠습니까?`)) return;
@@ -632,7 +634,7 @@ export default function ManualTherapyStatsPage() {
           {activeSection === 'new-patients' && (
             <div className="sw-stats-body sw-stats-body--settlement fade-transition-wrapper">
               <ShockwaveNewPatientsView
-                logs={logs}
+                logs={visibleLogs}
                 therapists={displayBaseTherapists}
                 currentMonth={currentMonth}
                 title={`${currentMonth}월 도수치료 신규환자`}

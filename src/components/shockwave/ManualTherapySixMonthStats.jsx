@@ -8,12 +8,7 @@ import {
   loadScheduleMemosForStatsMonth,
   loadStatsMonthlyTherapists,
 } from '../../lib/statsScheduleSourceUtils';
-
-function normalizePrescriptionKey(value) {
-  return String(value || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '');
-}
+import { normalizePrescriptionGroupKey } from '../../lib/prescriptionScheduleSettings';
 
 export default function ManualTherapySixMonthStats({
   currentYear,
@@ -88,6 +83,7 @@ export default function ManualTherapySixMonthStats({
             memos: targetMemos,
             therapists: safeTherapists,
             monthlyTherapists: targetMonthlyTherapists,
+            settings,
             upToToday: true,
             scheduleAuthoritative: true,
             emitEvent: false,
@@ -191,21 +187,21 @@ export default function ManualTherapySixMonthStats({
         (Array.isArray(monthSettings.hidden_prescriptions)
           ? monthSettings.hidden_prescriptions
           : []
-        ).map(normalizePrescriptionKey)
+        ).map(normalizePrescriptionGroupKey)
       );
       const visiblePrescriptionSet = new Set(
         (Array.isArray(monthSettings.prescriptions) ? monthSettings.prescriptions : [])
-          .map(normalizePrescriptionKey)
+          .map(normalizePrescriptionGroupKey)
           .filter((prescription) => prescription && !hiddenPrescriptionSet.has(prescription))
       );
       const normalizedPriceMap = Object.fromEntries(
         Object.entries(monthSettings.prescription_prices || {}).map(([key, amount]) => [
-          normalizePrescriptionKey(key),
+          normalizePrescriptionGroupKey(key),
           Number(amount) || 0,
         ])
       );
       const count = Number.parseInt(String(log?.prescription_count ?? '1'), 10) || 1;
-      const normalizedPrescription = normalizePrescriptionKey(log?.prescription);
+      const normalizedPrescription = normalizePrescriptionGroupKey(log?.prescription);
       if (!normalizedPrescription) return;
       if (hiddenPrescriptionSet.has(normalizedPrescription)) return;
       if (visiblePrescriptionSet.size > 0 && !visiblePrescriptionSet.has(normalizedPrescription)) return;

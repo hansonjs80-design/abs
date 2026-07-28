@@ -117,4 +117,79 @@ describe('manual therapy log normalization', () => {
       ]
     );
   });
+
+  it('uses configured dose tags to clean names and keeps new-patient state from the scheduler', () => {
+    assert.deepEqual(
+      normalizeManualTherapyLogRows(
+        [
+          {
+            patient_name: '주한솔M*',
+            chart_number: '12345',
+            visit_count: '1',
+            prescription: '도수 M',
+            prescription_count: 1,
+            scheduler_cell_key: '2026:07:0:1:2:0',
+          },
+        ],
+        ['도수 M'],
+        {
+          year: 2026,
+          month: 7,
+          settings: {
+            prescriptions: ['F/R'],
+            manual_therapy_prescriptions: ['도수 M'],
+            manual_therapy_dose_tags: { '도수 M': 'M' },
+          },
+          memos: {
+            '0-1-2-0': {
+              content: '12345/주한솔M(2)',
+              prescription: '도수 M',
+            },
+          },
+        }
+      ),
+      [
+        {
+          patient_name: '주한솔',
+          chart_number: '12345',
+          visit_count: '2',
+          prescription: '도수 M',
+          prescription_count: 1,
+          scheduler_cell_key: '2026:07:0:1:2:0',
+          body_part: '',
+        },
+      ]
+    );
+  });
+
+  it('excludes stale shockwave rows even when an old log was marked as a new patient', () => {
+    assert.deepEqual(
+      normalizeManualTherapyLogRows(
+        [
+          {
+            patient_name: '신소망*',
+            prescription: 'F/R',
+            scheduler_cell_key: '2026:07:0:1:2:0',
+          },
+        ],
+        ['도수 M'],
+        {
+          year: 2026,
+          month: 7,
+          settings: {
+            prescriptions: ['F/R'],
+            manual_therapy_prescriptions: ['도수 M'],
+            manual_therapy_dose_tags: { '도수 M': 'M' },
+          },
+          memos: {
+            '0-1-2-0': {
+              content: '12345/신소망*',
+              prescription: 'F/R',
+            },
+          },
+        }
+      ),
+      []
+    );
+  });
 });

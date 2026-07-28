@@ -5,7 +5,10 @@ import {
   getEffectiveSettlementSettings,
   setMonthlySettlementSettings,
 } from '../settlementSettings.js';
-import { getPrescriptionScheduleSettings } from '../prescriptionScheduleSettings.js';
+import {
+  getPrescriptionScheduleSettings,
+  getScheduleItemTreatmentGroup,
+} from '../prescriptionScheduleSettings.js';
 
 describe('monthly settlement shortcut settings', () => {
   it('keeps an explicitly blank monthly shortcut instead of falling back to defaults', () => {
@@ -97,5 +100,36 @@ describe('monthly settlement shortcut settings', () => {
     assert.equal(config.schedulerPrescriptions.all.includes('60분'), false);
     assert.deepEqual(config.doseTags, { '30분': '30' });
     assert.deepEqual(config.durationMinutesMap, { '30분': 30 });
+  });
+
+  it('routes configured manual therapy prescriptions away from shockwave stats', () => {
+    const settings = {
+      prescriptions: ['F/R'],
+      manual_therapy_prescriptions: ['맞춤 도수'],
+      manual_therapy_dose_tags: {
+        '맞춤 도수': 'MT30',
+      },
+    };
+
+    assert.equal(
+      getScheduleItemTreatmentGroup({
+        content: '12345/홍길동(2)',
+        prescription: ' 맞춤-도수 ',
+      }, settings, 2026, 7),
+      'manual_therapy'
+    );
+    assert.equal(
+      getScheduleItemTreatmentGroup({
+        content: '12345/홍길동MT30(2)',
+      }, settings, 2026, 7),
+      'manual_therapy'
+    );
+    assert.equal(
+      getScheduleItemTreatmentGroup({
+        content: '12345/홍길동(2)',
+        prescription: 'F/R',
+      }, settings, 2026, 7),
+      'shockwave'
+    );
   });
 });

@@ -2,6 +2,11 @@ import { supabase } from './supabaseClient';
 import { generateShockwaveCalendar, getTodayKST } from './calendarUtils';
 import { normalizeNameForMatch } from './memoParser';
 import { TREATMENT_COMPLETE_BG } from './schedulerUtils';
+import { parseConfiguredManualTherapyEntry } from './manualTherapyEntryUtils.js';
+import {
+  getConfiguredDoseTag,
+  getScheduleItemTreatmentGroup,
+} from './prescriptionScheduleSettings.js';
 import {
   getPastLogsForPatient,
   sortPastLogsLatestFirst,
@@ -74,9 +79,26 @@ export function formatVisitLabel(value) {
   return `${normalized}회`;
 }
 
-export function parseManualTherapyEntry(rawContent, therapists, fallbackTherapistName = '') {
+export function parseManualTherapyEntry(
+  rawContent,
+  therapists,
+  fallbackTherapistName = '',
+  { prescription = '', doseTag = '' } = {}
+) {
   const source = String(rawContent || '').trim();
-  if (!source || !/\d{2,3}/.test(source)) return null;
+  const configuredPrescription = String(prescription || '').trim();
+  if (!source) return null;
+
+  if (configuredPrescription) {
+    return parseConfiguredManualTherapyEntry(
+      source,
+      fallbackTherapistName,
+      configuredPrescription,
+      doseTag
+    );
+  }
+
+  if (!/\d{2,3}/.test(source)) return null;
 
   let chartNumber = '';
   let rest = source;
@@ -165,6 +187,7 @@ async function runTodayManualTherapyScheduleToStatsSync({
   memos,
   therapists,
   monthlyTherapists,
+  settings = {},
   targetDateStr,
   overwriteManual = false,
   scheduleAuthoritative = true,
@@ -205,9 +228,13 @@ async function runTodayManualTherapyScheduleToStatsSync({
 
     // 방문 완료된 셀만 통계에 포함
     if (String(cell?.bg_color || '').toLowerCase() !== TREATMENT_COMPLETE_BG.toLowerCase()) return;
+    if (getScheduleItemTreatmentGroup(cell, settings, year, month) !== 'manual_therapy') return;
 
     const therapistName = resolveManualTherapistName(c, dayInfo.day, therapists, monthlyTherapists);
-    const parsed = parseManualTherapyEntry(cell?.content, therapists, therapistName);
+    const parsed = parseManualTherapyEntry(cell?.content, therapists, therapistName, {
+      prescription: cell?.prescription,
+      doseTag: getConfiguredDoseTag(settings, year, month, cell?.prescription),
+    });
     if (!parsed) return;
 
     newLogs.push({
@@ -394,6 +421,7 @@ export async function syncMonthManualTherapyScheduleToStats({
   memos,
   therapists,
   monthlyTherapists,
+  settings = {},
   upToToday = false,
   overwriteManual = false,
   scheduleAuthoritative = true,
@@ -430,9 +458,13 @@ export async function syncMonthManualTherapyScheduleToStats({
         if (dayInfo.day > today.getDate()) return;
       }
       if (String(cell?.bg_color || '').toLowerCase() !== TREATMENT_COMPLETE_BG.toLowerCase()) return;
+      if (getScheduleItemTreatmentGroup(cell, settings, year, month) !== 'manual_therapy') return;
 
       const therapistName = resolveManualTherapistName(c, dayInfo.day, therapists, monthlyTherapists);
-      const parsed = parseManualTherapyEntry(cell?.content, therapists, therapistName);
+      const parsed = parseManualTherapyEntry(cell?.content, therapists, therapistName, {
+        prescription: cell?.prescription,
+        doseTag: getConfiguredDoseTag(settings, year, month, cell?.prescription),
+      });
       if (!parsed) return;
 
       const normalizedName = normalizeNameForMatch(parsed.patientName);
@@ -500,6 +532,7 @@ export async function syncMonthManualTherapyScheduleToStats({
           memos,
           therapists,
           monthlyTherapists,
+          settings,
           targetDateStr: dateStr,
           overwriteManual: effectiveOverwriteManual,
           scheduleAuthoritative: false,
@@ -569,9 +602,13 @@ export async function syncMonthManualTherapyScheduleToStats({
     }
 
     if (String(cell?.bg_color || '').toLowerCase() !== TREATMENT_COMPLETE_BG.toLowerCase()) return;
+    if (getScheduleItemTreatmentGroup(cell, settings, year, month) !== 'manual_therapy') return;
 
     const therapistName = resolveManualTherapistName(c, dayInfo.day, therapists, monthlyTherapists);
-    const parsed = parseManualTherapyEntry(cell?.content, therapists, therapistName);
+    const parsed = parseManualTherapyEntry(cell?.content, therapists, therapistName, {
+      prescription: cell?.prescription,
+      doseTag: getConfiguredDoseTag(settings, year, month, cell?.prescription),
+    });
     if (!parsed) return;
 
     const norm = normalizeNameForMatch(parsed.patientName);
@@ -648,6 +685,7 @@ export async function syncMonthManualTherapyScheduleToStats({
         memos,
         therapists,
         monthlyTherapists,
+        settings,
         targetDateStr: dateStr,
         overwriteManual: effectiveOverwriteManual,
         scheduleAuthoritative: false,

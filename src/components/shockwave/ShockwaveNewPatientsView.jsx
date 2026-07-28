@@ -84,7 +84,7 @@ export default function ShockwaveNewPatientsView({
         })
         .map((item) => ({
           date: formatMonthDay(item.firstDate),
-          patientName: item.patientName,
+          patientName: `${item.patientName}*`,
           bodyPart: item.bodyPart || '-',
           visitLabel: `${item.latestVisitCount}회`,
         }));

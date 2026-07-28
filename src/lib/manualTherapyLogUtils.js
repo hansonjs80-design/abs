@@ -1,3 +1,11 @@
+import { parseConfiguredManualTherapyEntry } from './manualTherapyEntryUtils.js';
+import {
+  getPrescriptionScheduleSettings,
+  getScheduleItemTreatmentGroup,
+  normalizePrescriptionGroupKey,
+} from './prescriptionScheduleSettings.js';
+import { getConfiguredDoseTagFromContent } from './schedulerContentFormat.js';
+
 function normalizePrescriptionKey(value) {
   return String(value || '')
     .toLowerCase()
@@ -26,11 +34,66 @@ function parseSchedulerCellKey(value) {
   };
 }
 
-function parseManualSchedulerContent(cell, prescriptions = []) {
+function getManualSchedulerPrescription(cell, settings, year, month) {
+  const config = getPrescriptionScheduleSettings(settings, year, month);
+  const manualPrescriptions = config.schedulerPrescriptions?.manualTherapy || [];
+  const prescriptionByKey = new Map(
+    manualPrescriptions.map((prescription) => [
+      normalizePrescriptionGroupKey(prescription),
+      prescription,
+    ])
+  );
+  const explicitPrescription = prescriptionByKey.get(
+    normalizePrescriptionGroupKey(cell?.prescription)
+  );
+  if (explicitPrescription) return explicitPrescription;
+
+  const manualDoseTags = Object.fromEntries(
+    manualPrescriptions
+      .map((prescription) => [prescription, config.manualTherapy?.dose_tags?.[prescription]])
+      .filter(([, doseTag]) => doseTag)
+  );
+  const contentDoseTag = getConfiguredDoseTagFromContent(cell?.content, manualDoseTags);
+  if (!contentDoseTag) return '';
+
+  return Object.entries(manualDoseTags).find(([, doseTag]) => (
+    String(doseTag || '').toLowerCase() === String(contentDoseTag).toLowerCase()
+  ))?.[0] || '';
+}
+
+function parseManualSchedulerContent(cell, prescriptions = [], options = {}) {
   const isCellObject = cell && typeof cell === 'object';
   const content = isCellObject ? cell.content : cell;
   const raw = String(content || '').trim();
   if (!raw) return null;
+
+  const year = Number(options?.year);
+  const month = Number(options?.month);
+  const settings = options?.settings || {};
+  if (isCellObject && year && month) {
+    const treatmentGroup = getScheduleItemTreatmentGroup(cell, settings, year, month);
+    if (treatmentGroup !== 'manual_therapy') return null;
+
+    const configuredPrescription = getManualSchedulerPrescription(cell, settings, year, month);
+    if (!configuredPrescription) return null;
+    const config = getPrescriptionScheduleSettings(settings, year, month);
+    const doseTag = config.manualTherapy?.dose_tags?.[configuredPrescription] || '';
+    const parsed = parseConfiguredManualTherapyEntry(
+      raw,
+      '',
+      configuredPrescription,
+      doseTag
+    );
+    if (!parsed) return null;
+
+    return {
+      patient_name: parsed.patientName,
+      chart_number: parsed.chartNumber,
+      visit_count: parsed.visitCount,
+      prescription: configuredPrescription,
+      prescription_count: 1,
+    };
+  }
 
   let chartNumber = '';
   let namePart = raw;
@@ -116,8 +179,17 @@ export function normalizeManualTherapyLogRows(rows, prescriptions = [], options 
       && (!month || keyInfo.month === month)
       ? memos[keyInfo.memoKey]
       : null;
+    const scheduleTreatmentGroup = scheduleCell
+      ? getScheduleItemTreatmentGroup(scheduleCell, options?.settings || {}, keyInfo.year, keyInfo.month)
+      : '';
+    if (scheduleCell && scheduleTreatmentGroup === 'shockwave') return null;
+
     const scheduleOverride = scheduleCell
-      ? parseManualSchedulerContent(scheduleCell, prescriptions)
+      ? parseManualSchedulerContent(scheduleCell, prescriptions, {
+          settings: options?.settings,
+          year: keyInfo.year,
+          month: keyInfo.month,
+        })
       : null;
     const normalized = normalizeManualTherapyLogRow(row, prescriptions);
 
@@ -129,5 +201,5 @@ export function normalizeManualTherapyLogRows(rows, prescriptions = [], options 
       chart_number: scheduleOverride.chart_number || normalized.chart_number || '',
       body_part: scheduleCell.body_part || normalized.body_part || '',
     };
-  });
+  }).filter(Boolean);
 }

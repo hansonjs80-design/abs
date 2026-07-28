@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient.js';
 import { generateShockwaveCalendar, getTodayKST } from './calendarUtils.js';
 import { has4060Pattern, get4060PrescriptionFromContent } from './schedulerContentFormat.js';
+import { getScheduleItemTreatmentGroup } from './prescriptionScheduleSettings.js';
 import { TREATMENT_COMPLETE_BG } from './schedulerUtils.js';
 import { getShockwaveScheduleBaseRowCount } from './scheduleHiddenCellRelocationUtils.js';
 import {
@@ -345,6 +346,7 @@ async function runTodayShockwaveScheduleToStatsSync({
 
     // 방문 완료된 셀만 통계에 포함
     if (String(cell?.bg_color || '').toLowerCase() !== TREATMENT_COMPLETE_BG.toLowerCase()) return;
+    if (getScheduleItemTreatmentGroup(cell, settings, year, month) === 'manual_therapy') return;
 
     const parsed = parseTherapyInfo(cell?.content);
     if (!parsed) return;
@@ -609,6 +611,7 @@ export async function syncMonthShockwaveScheduleToStats({
         if (dayInfo.day > today.getDate()) return;
       }
       if (String(cell?.bg_color || '').toLowerCase() !== TREATMENT_COMPLETE_BG.toLowerCase()) return;
+      if (getScheduleItemTreatmentGroup(cell, settings, year, month) === 'manual_therapy') return;
 
       const parsed = parseTherapyInfo(cell?.content);
       if (!parsed) return;
