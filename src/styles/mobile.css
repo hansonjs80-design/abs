@@ -51,7 +51,7 @@
     width: 100%;
     min-width: 0;
     padding: 0;
-    padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(34px + env(safe-area-inset-bottom, 0px));
     overflow-x: hidden;
     overscroll-behavior-x: none;
     touch-action: pan-x pan-y pinch-zoom;
@@ -205,8 +205,8 @@
   /* 엄지손가락으로 쉽게 이동할 수 있는 하단 메뉴 */
   .bottom-nav {
     display: block;
-    height: calc(48px + env(safe-area-inset-bottom, 0px));
-    padding: 2px 3px env(safe-area-inset-bottom, 0px);
+    height: calc(32px + env(safe-area-inset-bottom, 0px));
+    padding: 1px 2px env(safe-area-inset-bottom, 0px);
     background: transparent;
     border-top: 0;
     box-shadow: none;
@@ -220,34 +220,27 @@
     justify-content: space-around;
     width: 100%;
     height: 100%;
-    gap: 3px;
+    gap: 2px;
   }
 
   .bottom-nav-item {
     flex: 1 1 0;
     min-width: 0;
-    min-height: 42px;
-    padding: 3px 2px 2px;
+    min-height: 30px;
+    padding: 1px;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 1px;
     border: 1px solid color-mix(in srgb, var(--tab-active-border) 22%, #dbe3ec);
-    border-radius: 10px;
+    border-radius: 7px;
     background: color-mix(in srgb, var(--tab-active-border) 5%, rgba(255, 255, 255, 0.92));
     color: #64748b;
-    font-size: 0.66rem;
-    font-weight: 800;
-    line-height: 1.05;
-    text-align: center;
-    white-space: nowrap;
     transition: color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
   }
 
   .bottom-nav-item svg {
-    width: 17px;
-    height: 17px;
+    width: 18px;
+    height: 18px;
     flex: 0 0 auto;
   }
 
@@ -829,7 +822,7 @@
 @media screen and (max-width: 380px) {
   .app-content {
     padding: 0;
-    padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(34px + env(safe-area-inset-bottom, 0px));
   }
 
   .top-tabs-shell {
@@ -865,7 +858,6 @@
   .bottom-nav-item {
     padding-right: 1px;
     padding-left: 1px;
-    font-size: 0.68rem;
   }
 }
 

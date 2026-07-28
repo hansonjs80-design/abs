@@ -5,6 +5,7 @@ import test from 'node:test';
 const mobileCssUrl = new URL('../../styles/mobile.css', import.meta.url);
 const shockwaveCssUrl = new URL('../../styles/shockwave.css', import.meta.url);
 const indexHtmlUrl = new URL('../../../index.html', import.meta.url);
+const bottomNavUrl = new URL('../../components/layout/BottomNav.jsx', import.meta.url);
 
 test('mobile tables keep device typography and size variables authoritative', async () => {
   const [mobileCss, shockwaveCss] = await Promise.all([
@@ -74,4 +75,20 @@ test('mobile adjacent-month schedule cells keep their horizontal grid line', asy
     shockwaveCss,
     /\.sw-cell\.other-month-bg\s*\{[^}]*border-bottom-color:\s*var\(--sw-mobile-grid-line\) !important;/s
   );
+});
+
+test('mobile bottom navigation uses compact icon-only tabs', async () => {
+  const [mobileCss, bottomNav] = await Promise.all([
+    readFile(mobileCssUrl, 'utf8'),
+    readFile(bottomNavUrl, 'utf8'),
+  ]);
+
+  assert.match(
+    mobileCss,
+    /\.bottom-nav\s*\{[^}]*height:\s*calc\(32px \+ env\(safe-area-inset-bottom, 0px\)\);/s
+  );
+  assert.match(mobileCss, /\.bottom-nav-item\s*\{[^}]*min-height:\s*30px;/s);
+  assert.match(mobileCss, /\.bottom-nav-item svg\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;/s);
+  assert.match(bottomNav, /aria-label=\{item\.shortLabel \|\| item\.label\}/);
+  assert.doesNotMatch(bottomNav, /<span>\{item\.shortLabel \|\| item\.label\}<\/span>/);
 });

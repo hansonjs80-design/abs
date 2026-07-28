@@ -24,9 +24,10 @@ export default function BottomNav() {
               className={({ isActive }) => `bottom-nav-item ${item.tabClass}${isActive ? ' active' : ''}`}
               end={item.path === '/'}
               onClick={() => notifyBeforeNavigate(item.path)}
+              aria-label={item.shortLabel || item.label}
+              title={item.shortLabel || item.label}
             >
-              <Icon size={20} aria-hidden="true" />
-              <span>{item.shortLabel || item.label}</span>
+              <Icon size={18} aria-hidden="true" />
             </NavLink>
           );
         })}
