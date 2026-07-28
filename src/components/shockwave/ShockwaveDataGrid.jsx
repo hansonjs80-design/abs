@@ -1572,12 +1572,17 @@ export default function ShockwaveDataGrid({
         .map((prescription) => ({
           label: prescription,
           count: prescriptionCounts[prescription],
+          prescriptionColor: getPrescriptionColor(
+            prescription,
+            effectivePrescriptionColors
+          ),
         }))
         .filter((item) => item.count > 0),
     };
   }, [
     currentMonth,
     currentYear,
+    effectivePrescriptionColors,
     grandTotal,
     headerDateSummaries,
     prescriptions,

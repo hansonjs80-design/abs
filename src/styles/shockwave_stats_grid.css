@@ -696,6 +696,20 @@
   box-sizing: border-box;
 }
 
+.sw-grid-count-tooltip--list
+  .sw-grid-count-tooltip-item--prescription-color {
+  border-color: color-mix(
+    in srgb,
+    var(--prescription-cell-color, #64748b) 24%,
+    rgba(15, 23, 42, 0.12)
+  );
+  background: color-mix(
+    in srgb,
+    var(--prescription-cell-color, #64748b) 14%,
+    #fff
+  );
+}
+
 .sw-grid-count-tooltip--prescription-patients {
   min-width: 220px;
   max-width: min(720px, calc(100vw - 24px));

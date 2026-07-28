@@ -53,6 +53,7 @@ test('mobile viewport allows pinch zoom while table resize handles stay drag-spe
 
   assert.match(indexHtml, /maximum-scale=5\.0/);
   assert.match(indexHtml, /user-scalable=yes/);
+  assert.match(indexHtml, /viewport-fit=cover/);
   assert.match(mobileCss, /touch-action:\s*pan-x pan-y pinch-zoom/);
   assert.match(shockwaveCss, /\.sw-col-resize-handle\s*\{[^}]*touch-action:\s*none;/s);
   assert.match(shockwaveCss, /\.sw-day-resize-handle\s*\{[^}]*touch-action:\s*none;/s);
@@ -63,7 +64,7 @@ test('mobile schedule cell content keeps visible inner spacing', async () => {
 
   assert.match(
     shockwaveCss,
-    /@media \(max-width: 768px\)[\s\S]*?\.sw-cell-display\s*\{[^}]*padding:\s*2px 5px;/s
+    /@media \(max-width: 768px\)[\s\S]*?\.sw-cell-display\s*\{[^}]*padding:\s*1px 2px;/s
   );
   assert.match(shockwaveCss, /\.sw-cell-main\s*\{[^}]*max-height:\s*100%;/s);
 });
