@@ -538,6 +538,16 @@
   outline-offset: -3px;
 }
 
+.sw-grid-wrapper .hdr-therapist--filterable,
+.sw-grid-wrapper .hdr-pres--filterable,
+.sw-grid-wrapper .hdr-pres-total--filterable,
+.sw-grid-wrapper .hdr-new-patient-total--filterable,
+.sw-grid-wrapper .gc-new-patient--filterable,
+.sw-grid-wrapper .gc-patient-filterable,
+.sw-grid-wrapper .grid-title--filter-active {
+  cursor: pointer;
+}
+
 .sw-grid-new-patient-cell,
 .sw-grid-total-cell {
   min-height: calc(var(--sw-grid-row-height) - 2px);

@@ -1888,6 +1888,7 @@ export default function ShockwaveDataGrid({
                 }
                 if (ci < FIXED_FIELDS.length && FIXED_FIELDS[ci]?.bold) cls += ' gc-bold';
                 if (ci >= FIXED_FIELDS.length && ci < totalCountColIndex) cls += ' gc-therapist-value';
+                if (readOnly && ci >= FIXED_FIELDS.length && ci < totalCountColIndex) cls += ' gc-patient-filterable';
                 if (isTotalCol) cls += ' gc-total total-group-start';
                 if (isNewPatientCol) cls += ' gc-total gc-new-patient';
                 if (isDateGroupMergedCol && row._isFirst && ri + rs === gridData.length) {
