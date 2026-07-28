@@ -1065,7 +1065,6 @@
   }
 
   .sw-cell {
-    border-bottom-color: transparent !important;
     box-sizing: border-box;
     background-clip: padding-box;
     contain: paint;
@@ -1084,30 +1083,8 @@
   .sw-cell.staff-off,
   .sw-cell.staff-blocked,
   .sw-cell.disabled {
-    border-bottom-color: transparent !important;
     background-image: none;
     box-shadow: none;
-  }
-
-  .sw-cell.other-month-bg {
-    border-bottom-color: var(--sw-mobile-grid-line) !important;
-  }
-
-  .sw-schedule-body::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    background-image: repeating-linear-gradient(
-      to bottom,
-      transparent 0,
-      transparent calc(var(--sw-row-height) - 1px),
-      var(--sw-mobile-grid-line) calc(var(--sw-row-height) - 1px),
-      var(--sw-mobile-grid-line) var(--sw-row-height)
-    );
-    background-position: 0 0;
-    background-size: 100% var(--sw-row-height);
   }
 
   .sw-time-label,

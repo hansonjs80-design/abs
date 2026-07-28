@@ -57,6 +57,11 @@
     touch-action: pan-x pan-y pinch-zoom;
   }
 
+  .app-content[data-mobile-pinch-zoom] {
+    width: 100% !important;
+    zoom: var(--mobile-content-zoom);
+  }
+
   /* 현재 화면만 보여 주는 작은 상단 헤더 */
   .top-tabs-shell {
     width: 100%;

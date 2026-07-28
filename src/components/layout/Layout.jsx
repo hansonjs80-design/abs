@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import useMobilePinchZoom from '../../hooks/useMobilePinchZoom';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
@@ -7,6 +8,8 @@ import TopTabs from './TopTabs';
 
 export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const contentRef = useRef(null);
+  useMobilePinchZoom(contentRef);
 
   const toggleSidebar = () => {
     if (window.innerWidth <= 768) setMobileOpen(!mobileOpen);
@@ -22,7 +25,7 @@ export default function Layout() {
       <div className="app-main">
         <Header onMenuToggle={toggleSidebar} />
         <TopTabs />
-        <main className="app-content">
+        <main ref={contentRef} className="app-content">
           <Outlet />
         </main>
         <BottomNav />

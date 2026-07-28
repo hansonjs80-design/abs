@@ -6,6 +6,9 @@ const mobileCssUrl = new URL('../../styles/mobile.css', import.meta.url);
 const shockwaveCssUrl = new URL('../../styles/shockwave.css', import.meta.url);
 const indexHtmlUrl = new URL('../../../index.html', import.meta.url);
 const bottomNavUrl = new URL('../../components/layout/BottomNav.jsx', import.meta.url);
+const layoutUrl = new URL('../../components/layout/Layout.jsx', import.meta.url);
+const mobilePinchZoomHookUrl = new URL('../../hooks/useMobilePinchZoom.js', import.meta.url);
+const scheduleCellUrl = new URL('../../components/shockwave/ShockwaveScheduleCell.jsx', import.meta.url);
 
 test('mobile tables keep device typography and size variables authoritative', async () => {
   const [mobileCss, shockwaveCss] = await Promise.all([
@@ -44,17 +47,30 @@ test('mobile table viewport removes outer padding and visible scrollbars', async
   );
 });
 
-test('mobile viewport allows pinch zoom while table resize handles stay drag-specific', async () => {
-  const [indexHtml, mobileCss, shockwaveCss] = await Promise.all([
+test('mobile viewport allows native zoom-in and custom zoom-out while resize handles stay drag-specific', async () => {
+  const [indexHtml, mobileCss, shockwaveCss, layout, mobilePinchZoomHook] = await Promise.all([
     readFile(indexHtmlUrl, 'utf8'),
     readFile(mobileCssUrl, 'utf8'),
     readFile(shockwaveCssUrl, 'utf8'),
+    readFile(layoutUrl, 'utf8'),
+    readFile(mobilePinchZoomHookUrl, 'utf8'),
   ]);
 
   assert.match(indexHtml, /maximum-scale=5\.0/);
+  assert.match(indexHtml, /minimum-scale=0\.5/);
   assert.match(indexHtml, /user-scalable=yes/);
   assert.match(indexHtml, /viewport-fit=cover/);
   assert.match(mobileCss, /touch-action:\s*pan-x pan-y pinch-zoom/);
+  assert.match(mobileCss, /zoom:\s*var\(--mobile-content-zoom\)/);
+  assert.match(
+    mobileCss,
+    /\.app-content\[data-mobile-pinch-zoom\]\s*\{[^}]*width:\s*100% !important;/s
+  );
+  assert.match(layout, /useMobilePinchZoom\(contentRef\)/);
+  assert.match(
+    mobilePinchZoomHook,
+    /addEventListener\('gesturechange',\s*handleGestureChange,\s*\{[^}]*passive:\s*false/s
+  );
   assert.match(shockwaveCss, /\.sw-col-resize-handle\s*\{[^}]*touch-action:\s*none;/s);
   assert.match(shockwaveCss, /\.sw-day-resize-handle\s*\{[^}]*touch-action:\s*none;/s);
 });
@@ -69,12 +85,20 @@ test('mobile schedule cell content keeps visible inner spacing', async () => {
   assert.match(shockwaveCss, /\.sw-cell-main\s*\{[^}]*max-height:\s*100%;/s);
 });
 
-test('mobile adjacent-month schedule cells keep their horizontal grid line', async () => {
-  const shockwaveCss = await readFile(shockwaveCssUrl, 'utf8');
+test('mobile schedule cells preserve the desktop horizontal border calculation', async () => {
+  const [shockwaveCss, scheduleCell] = await Promise.all([
+    readFile(shockwaveCssUrl, 'utf8'),
+    readFile(scheduleCellUrl, 'utf8'),
+  ]);
 
-  assert.match(
+  assert.doesNotMatch(
     shockwaveCss,
-    /\.sw-cell\.other-month-bg\s*\{[^}]*border-bottom-color:\s*var\(--sw-mobile-grid-line\) !important;/s
+    /\.sw-cell\s*\{[^}]*border-bottom-color:\s*transparent\s*!important;/s
+  );
+  assert.doesNotMatch(shockwaveCss, /\.sw-schedule-body::before\s*\{/);
+  assert.match(
+    scheduleCell,
+    /borderBottom:\s*isLastRenderedRow[\s\S]*shouldUseUniformFillBorder\s*\?\s*HORIZONTAL_BORDER_COLOR[\s\S]*cellBorderBottomColor/
   );
 });
 
