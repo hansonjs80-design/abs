@@ -1,8 +1,9 @@
-import { memo, useCallback, useEffect, useRef } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 
 import {
   CONTEXT_MENU_DISMISS_GRACE_MS,
 } from '../../lib/contextMenuDismissUtils';
+import { getMobileScheduleCellFitFontSize } from '../../lib/scheduleCellTextFitUtils';
 import { getReservationGroupFromMergeSpan } from '../../lib/scheduleReservationGroupUtils';
 import { isTreatmentCancelBg, isTreatmentCompleteBg } from '../../lib/scheduleStatusUtils';
 import {
@@ -98,12 +99,15 @@ const MemoizedCell = memo(({
   workState, staffBlockRule, effectivePrescriptionColors,
   reservationGroupEdge,
   cellBorderBottomColor,
+  cellFontSize,
   visitLineBreakPrescriptions,
   editValue, setEditValue,
   handleCellMouseDown, handleCellMouseEnter, setHoverCell, handleCellDoubleClick, handleCellContextMenu,
   editInputRef, handleCellSave, handleEditKeyDown, handleKeyDown, imeOpenRef, setImePreviewCell, editDraftRef, scheduleEditDraftAutosave, promoteFocusedInputToEditor, skipNextEditBlurSaveRef
 }) => {
   const resizerRef = useRef(null);
+  const displayRef = useRef(null);
+  const mainTextRef = useRef(null);
   const longPressStateRef = useRef(null);
   const suppressNativeContextMenuUntilRef = useRef(0);
   const content = pendingContent || '';
@@ -353,11 +357,101 @@ const MemoizedCell = memo(({
     cls += ' merged-master';
   }
 
+  useLayoutEffect(() => {
+    const display = displayRef.current;
+    const mainText = mainTextRef.current;
+    if (!display || !mainText || typeof window === 'undefined') return undefined;
+
+    const mobileQuery = window.matchMedia(
+      '(max-width: 768px), ((hover: none) and (pointer: coarse) and (orientation: landscape))'
+    );
+    let animationFrameId = null;
+
+    const resetFit = () => {
+      mainText.style.fontSize = '';
+      delete mainText.dataset.mobileFit;
+    };
+
+    const measureAndFit = () => {
+      animationFrameId = null;
+      resetFit();
+      if (!mobileQuery.matches) return;
+
+      const displayStyle = window.getComputedStyle(display);
+      const configuredFontSize =
+        Number(cellFontSize) || Number.parseFloat(window.getComputedStyle(mainText).fontSize);
+      const availableWidth = display.clientWidth
+        - Number.parseFloat(displayStyle.paddingLeft || 0)
+        - Number.parseFloat(displayStyle.paddingRight || 0);
+      const availableHeight = display.clientHeight
+        - Number.parseFloat(displayStyle.paddingTop || 0)
+        - Number.parseFloat(displayStyle.paddingBottom || 0);
+
+      let fittedFontSize = getMobileScheduleCellFitFontSize({
+        baseFontSize: configuredFontSize,
+        contentWidth: mainText.scrollWidth,
+        contentHeight: mainText.scrollHeight,
+        availableWidth,
+        availableHeight,
+      });
+
+      if (fittedFontSize >= configuredFontSize) return;
+
+      mainText.style.fontSize = `${fittedFontSize}px`;
+      mainText.dataset.mobileFit = 'true';
+
+      const correctedFontSize = getMobileScheduleCellFitFontSize({
+        baseFontSize: fittedFontSize,
+        contentWidth: mainText.scrollWidth,
+        contentHeight: mainText.scrollHeight,
+        availableWidth,
+        availableHeight,
+      });
+
+      if (correctedFontSize < fittedFontSize) {
+        fittedFontSize = correctedFontSize;
+        mainText.style.fontSize = `${fittedFontSize}px`;
+      }
+    };
+
+    const scheduleFit = () => {
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+      animationFrameId = window.requestAnimationFrame(measureAndFit);
+    };
+
+    measureAndFit();
+    const resizeObserver = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(scheduleFit)
+      : null;
+    resizeObserver?.observe(display);
+    mobileQuery.addEventListener?.('change', scheduleFit);
+
+    return () => {
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+      resizeObserver?.disconnect();
+      mobileQuery.removeEventListener?.('change', scheduleFit);
+      resetFit();
+    };
+  }, [
+    cellFontSize,
+    displayData.baseText,
+    displayData.noteSuffix,
+    displayData.noteAfterVisit,
+    displayData.visitSuffix,
+    effectiveMergeSpan.colSpan,
+    shouldBreakVisitLine,
+    visualRowSpan,
+  ]);
+
   const showInput = isPrimary || isEditing;
   const renderDisplay = (pointerEvents) => (
-    <div className="sw-cell-display" style={pointerEvents ? { pointerEvents } : undefined}>
+    <div ref={displayRef} className="sw-cell-display" style={pointerEvents ? { pointerEvents } : undefined}>
       {displayData.hasDisplayText ? (
-        <span className="sw-cell-main">
+        <span ref={mainTextRef} className="sw-cell-main">
           <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
           {displayData.noteAfterVisit ? (
             <>
@@ -572,6 +666,7 @@ const MemoizedCell = memo(({
   if (prevProps.staffBlockRule?.font_color !== nextProps.staffBlockRule?.font_color) return false;
   if (prevProps.staffBlockRule?.keyword !== nextProps.staffBlockRule?.keyword) return false;
   if (prevProps.cellBorderBottomColor !== nextProps.cellBorderBottomColor) return false;
+  if (prevProps.cellFontSize !== nextProps.cellFontSize) return false;
   if (prevProps.visitLineBreakPrescriptions !== nextProps.visitLineBreakPrescriptions) return false;
   if (JSON.stringify(prevProps.reservationGroupEdge || null) !== JSON.stringify(nextProps.reservationGroupEdge || null)) return false;
 

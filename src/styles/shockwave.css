@@ -1089,6 +1089,10 @@
     box-shadow: none;
   }
 
+  .sw-cell.other-month-bg {
+    border-bottom-color: var(--sw-mobile-grid-line) !important;
+  }
+
   .sw-schedule-body::before {
     content: "";
     position: absolute;
@@ -1115,6 +1119,15 @@
     font-size: var(--sw-cell-font-size);
     min-height: 0;
     letter-spacing: 0;
+  }
+
+  .sw-cell-display {
+    box-sizing: border-box;
+    padding: 2px 5px;
+  }
+
+  .sw-cell-main {
+    max-height: 100%;
   }
 
   .sw-cell-note {

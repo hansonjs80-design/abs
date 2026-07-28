@@ -978,7 +978,7 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 768px), ((hover: none) and (pointer: coarse) and (orientation: landscape)) {
   .col-resizer {
     right: -8px;
     width: 16px;

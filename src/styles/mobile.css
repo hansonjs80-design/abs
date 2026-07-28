@@ -2,7 +2,8 @@
  * 모바일 전용 레이아웃 및 가독성 보정
  * ============================================*/
 
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 768px),
+  screen and (hover: none) and (pointer: coarse) and (orientation: landscape) {
   html {
     font-size: 14px;
     background: var(--bg-primary);
@@ -794,6 +795,34 @@
   .excel-table th,
   .excel-table td {
     padding: 9px 11px;
+  }
+}
+
+@media screen and (hover: none) and (pointer: coarse) and (orientation: landscape) {
+  html,
+  body,
+  #root,
+  .app-layout,
+  .app-main,
+  .app-content {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  .app-content,
+  .top-tabs-shell,
+  .bottom-nav {
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .staff-calendar,
+  .shockwave-view {
+    margin-right: 0;
+    margin-left: 0;
   }
 }
 

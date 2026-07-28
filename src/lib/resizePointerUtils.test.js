@@ -51,13 +51,31 @@ test('confirmed touch resize arms the next touch instead of starting the current
 
   assert.deepEqual(firstTouch, {
     shouldStart: false,
-    armedUntil: 11000,
+    armedUntil: 31000,
     confirmed: true,
+  });
+
+  const compatibilityMouseDown = resolveTouchResizeStart(
+    { clientX: 100, clientY: 40 },
+    firstTouch.armedUntil,
+    {
+      now: 1200,
+      confirmResize: () => {
+        confirmCalls += 1;
+        return true;
+      },
+    }
+  );
+
+  assert.deepEqual(compatibilityMouseDown, {
+    shouldStart: false,
+    armedUntil: 31000,
+    confirmed: false,
   });
 
   const dragTouch = resolveTouchResizeStart(
     { touches: [{ clientX: 100, clientY: 40 }] },
-    firstTouch.armedUntil,
+    compatibilityMouseDown.armedUntil,
     {
       now: 1500,
       confirmResize: () => {
@@ -73,6 +91,18 @@ test('confirmed touch resize arms the next touch instead of starting the current
     confirmed: false,
   });
   assert.equal(confirmCalls, 1);
+});
+
+test('normal mouse resize starts immediately when no touch resize is armed', () => {
+  assert.deepEqual(resolveTouchResizeStart(
+    { clientX: 100, clientY: 40 },
+    0,
+    { now: 1200 }
+  ), {
+    shouldStart: true,
+    armedUntil: 0,
+    confirmed: false,
+  });
 });
 
 test('expired or cancelled touch resize does not start dragging', () => {

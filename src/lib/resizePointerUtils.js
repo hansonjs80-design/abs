@@ -10,7 +10,7 @@ export function isTouchResizeEvent(event) {
   return Boolean(event?.touches?.length || event?.changedTouches?.length);
 }
 
-export const MOBILE_TOUCH_RESIZE_ARM_MS = 10000;
+export const MOBILE_TOUCH_RESIZE_ARM_MS = 30000;
 
 export function resolveTouchResizeStart(event, armedUntil = 0, {
   now = Date.now(),
@@ -18,6 +18,13 @@ export function resolveTouchResizeStart(event, armedUntil = 0, {
   armDurationMs = MOBILE_TOUCH_RESIZE_ARM_MS,
 } = {}) {
   if (!isTouchResizeEvent(event)) {
+    if (Number(armedUntil) > Number(now)) {
+      return {
+        shouldStart: false,
+        armedUntil: Number(armedUntil),
+        confirmed: false,
+      };
+    }
     return { shouldStart: true, armedUntil: 0, confirmed: false };
   }
 

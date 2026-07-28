@@ -2786,6 +2786,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                               effectivePrescriptionColors={effectivePrescriptionColors}
                               reservationGroupEdge={reservationGroupEdgeMap[key]}
                               cellBorderBottomColor={cellBorderBottomColor}
+                              cellFontSize={effectiveSchedulerTextSettings.font_size}
                               visitLineBreakPrescriptions={prescriptionScheduleSettings.visitLineBreakPrescriptions}
                               editValue={editValue} setEditValue={setEditValue}
                               handleCellMouseDown={handleCellMouseDown} handleCellMouseEnter={handleCellMouseEnter}
@@ -2867,6 +2868,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         handleCellDoubleClick, handleCellContextMenu,
         handleEditKeyDown, handleKeyDown, scheduleEditDraftAutosave, promoteFocusedInputToEditor, handleCellSave,
         cellKey, getEffectiveMergeSpan, rowHeight, canManageSchedulerSettings,
+        effectiveSchedulerTextSettings.font_size,
         prescriptionScheduleSettings.visitLineBreakPrescriptions,
         getDefaultEditingMergeSpanForKey,
         handleTimeLabelMouseLeave,
