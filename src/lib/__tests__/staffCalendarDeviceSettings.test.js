@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 
 import {
   STAFF_CALENDAR_DEVICE_SETTING_KEYS,
+  buildStaffCalendarDeviceSettingsMap,
   normalizeStaffCalendarDeviceSettings,
   normalizeStaffCalendarDeviceSettingsPatch,
+  persistLocalStaffCalendarDeviceSettingsPatch,
   readLocalStaffCalendarDeviceSettings,
 } from '../staffCalendarDeviceSettings.js';
 
@@ -98,4 +100,61 @@ test('reads only existing staff calendar local storage keys', () => {
     lastRowFontSize: true,
     lastRowFontWeight: true,
   });
+});
+
+test('persists every desktop table and font-weight setting locally', () => {
+  const storage = createStorage();
+
+  const normalized = persistLocalStaffCalendarDeviceSettingsPatch({
+    colWidth: 188,
+    rowHeight: 144,
+    dateRowHeight: 34,
+    memoFontSize: 14.5,
+    dateFontSize: 17,
+    dateFontWeight: 900,
+    weekdayFontSize: 18,
+    weekdayFontWeight: 800,
+    weekdayRowHeight: 38,
+    lastRowFontSize: 15,
+    lastRowFontWeight: 900,
+  }, storage);
+
+  assert.deepEqual(readLocalStaffCalendarDeviceSettings(storage).values, normalized);
+});
+
+test('backs up one desktop profile under installation and stable device ids', () => {
+  const identity = {
+    deviceId: 'desktop-installation-id',
+    legacyDeviceId: 'desktop-stable-id',
+  };
+  const nextMap = buildStaffCalendarDeviceSettingsMap({
+    monthlySettings: {
+      staff_calendar_device_settings: {
+        anotherDevice: { rowHeight: 90 },
+        'desktop-stable-id': {
+          colWidth: 164,
+          dateFontWeight: 800,
+        },
+      },
+    },
+    identity,
+    patch: {
+      rowHeight: 138,
+      weekdayFontWeight: 900,
+      lastRowFontWeight: 800,
+    },
+    updatedAt: '2026-07-29T00:00:00.000Z',
+  });
+
+  const expectedDeviceSettings = {
+    colWidth: 164,
+    rowHeight: 138,
+    dateFontWeight: 800,
+    weekdayFontWeight: 900,
+    lastRowFontWeight: 800,
+    updatedAt: '2026-07-29T00:00:00.000Z',
+  };
+  assert.deepEqual(nextMap['desktop-installation-id'], expectedDeviceSettings);
+  assert.deepEqual(nextMap['desktop-stable-id'], expectedDeviceSettings);
+  assert.deepEqual(nextMap.anotherDevice, { rowHeight: 90 });
 });

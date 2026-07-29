@@ -10,6 +10,7 @@ export default function PatientHistoryApplyConfirmDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="patient-history-apply-confirm-title"
+      data-preserve-schedule-selection="true"
       style={{
         position: 'fixed',
         top: 0,

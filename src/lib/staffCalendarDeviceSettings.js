@@ -49,6 +49,7 @@ const LIMITS = {
 const STAFF_CALENDAR_DEVICE_FIELDS = Object.keys(STAFF_CALENDAR_DEVICE_SETTING_KEYS);
 const FONT_WEIGHT_FIELDS = new Set(['dateFontWeight', 'weekdayFontWeight', 'lastRowFontWeight']);
 const FONT_WEIGHT_OPTIONS = new Set([500, 600, 700, 800, 900]);
+const REMOTE_SAVE_DEBOUNCE_MS = 300;
 
 function getStorage(storage) {
   if (storage) return storage;
@@ -121,6 +122,25 @@ export function readLocalStaffCalendarDeviceSettings(storageArg) {
   };
 }
 
+export function persistLocalStaffCalendarDeviceSettingsPatch(settings, storageArg) {
+  const storage = getStorage(storageArg);
+  const normalized = normalizeStaffCalendarDeviceSettingsPatch(settings);
+  if (!storage) return normalized;
+
+  STAFF_CALENDAR_DEVICE_FIELDS.forEach((field) => {
+    if (!hasOwn(normalized, field)) return;
+    try {
+      storage.setItem(
+        STAFF_CALENDAR_DEVICE_SETTING_KEYS[field],
+        String(normalized[field])
+      );
+    } catch {
+      // Keep the in-memory setting usable when browser storage is unavailable.
+    }
+  });
+  return normalized;
+}
+
 async function loadSettingsRow() {
   const query = supabase
     .from('shockwave_settings')
@@ -138,6 +158,36 @@ async function loadSettingsRow() {
 function getDeviceSettingsMap(monthlySettings) {
   const map = monthlySettings?.[DEVICE_SETTINGS_FIELD];
   return map && typeof map === 'object' && !Array.isArray(map) ? map : {};
+}
+
+export function buildStaffCalendarDeviceSettingsMap({
+  monthlySettings,
+  identity,
+  patch,
+  updatedAt,
+}) {
+  const normalizedPatch = normalizeStaffCalendarDeviceSettingsPatch(patch);
+  const deviceSettingsMap = getDeviceSettingsMap(monthlySettings);
+  const currentDeviceSettings =
+    getDeviceSettingsForIdentity(deviceSettingsMap, identity) || {};
+  const nextDeviceSettings = {
+    ...currentDeviceSettings,
+    ...normalizedPatch,
+    updatedAt,
+  };
+  const nextMap = {
+    ...deviceSettingsMap,
+    [identity.deviceId]: nextDeviceSettings,
+  };
+
+  if (
+    identity.legacyDeviceId &&
+    identity.legacyDeviceId !== identity.deviceId
+  ) {
+    nextMap[identity.legacyDeviceId] = nextDeviceSettings;
+  }
+
+  return nextMap;
 }
 
 export async function syncLoadStaffCalendarDeviceSettings({ localSnapshot, applySettings } = {}) {
@@ -172,7 +222,7 @@ let backupTimeout = null;
 let pendingPatch = {};
 
 export function syncSaveStaffCalendarDeviceSettings(patch) {
-  const normalizedPatch = normalizeStaffCalendarDeviceSettingsPatch(patch);
+  const normalizedPatch = persistLocalStaffCalendarDeviceSettingsPatch(patch);
   if (Object.keys(normalizedPatch).length === 0) return;
   pendingPatch = {
     ...pendingPatch,
@@ -186,28 +236,24 @@ export function syncSaveStaffCalendarDeviceSettings(patch) {
     pendingPatch = {};
 
     try {
-      const { deviceId } = getDeviceSettingsIdentity();
+      const identity = getDeviceSettingsIdentity();
       await enqueueShockwaveSettingsJsonPatch({
         supabaseClient: supabase,
         scope: 'staff-calendar-device-settings',
         mutate: (monthlySettings) => {
-          const deviceSettingsMap = getDeviceSettingsMap(monthlySettings);
-          const currentDeviceSettings = deviceSettingsMap[deviceId] || {};
           return {
             ...monthlySettings,
-            [DEVICE_SETTINGS_FIELD]: {
-              ...deviceSettingsMap,
-              [deviceId]: {
-                ...currentDeviceSettings,
-                ...patchToSave,
-                updatedAt: new Date().toISOString(),
-              },
-            },
+            [DEVICE_SETTINGS_FIELD]: buildStaffCalendarDeviceSettingsMap({
+              monthlySettings,
+              identity,
+              patch: patchToSave,
+              updatedAt: new Date().toISOString(),
+            }),
           };
         },
       });
     } catch (err) {
       console.error('Failed to save staff calendar device settings:', err);
     }
-  }, 1500);
+  }, REMOTE_SAVE_DEBOUNCE_MS);
 }

@@ -141,9 +141,6 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   }, []);
 
   const initialDeviceSettingsRef = useRef(null);
-  if (initialDeviceSettingsRef.current === null) {
-    initialDeviceSettingsRef.current = readLocalStaffCalendarDeviceSettings();
-  }
 
   useEffect(() => {
     if (!canManageCalendarSettings && showSlotSettings) {
@@ -185,6 +182,12 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   const [weekdayRowHeight, setWeekdayRowHeight] = usePersistentNumber(WEEKDAY_ROW_HEIGHT_KEY, 32, MIN_WEEKDAY_ROW_HEIGHT);
   const [lastRowFontSize, setLastRowFontSize] = usePersistentNumber(LAST_ROW_FONT_SIZE_KEY, 13, 8);
   const [lastRowFontWeight, setLastRowFontWeight] = usePersistentNumber(LAST_ROW_FONT_WEIGHT_KEY, 700, 500);
+  if (initialDeviceSettingsRef.current === null) {
+    // Persistent-number hooks restore cookie backups into localStorage first.
+    // Capture the snapshot afterwards so a desktop app restart cannot let an
+    // older remote backup overwrite the values recovered on this device.
+    initialDeviceSettingsRef.current = readLocalStaffCalendarDeviceSettings();
+  }
   const [isDeviceSettingsReady, setIsDeviceSettingsReady] = useState(() => initialDeviceSettingsRef.current.hasAny);
   const renderedRowHeight = Math.max(MIN_ROW_HEIGHT, Math.round(rowHeight));
   const renderedDateRowHeight = Math.max(MIN_DATE_ROW_HEIGHT, Math.round(dateRowHeight));

@@ -5,6 +5,7 @@ import {
   buildPatientHistoryCellUpdate,
   getPatientHistorySearchTarget,
   patientHistoryIdentityMatches,
+  resolvePatientHistoryApplyTarget,
 } from '../patientHistoryModalUtils.js';
 
 describe('patient history modal search target', () => {
@@ -59,6 +60,16 @@ describe('patient history identity matching', () => {
 });
 
 describe('patient history apply payload', () => {
+  it('keeps the captured schedule cell after modal clicks clear the live selection', () => {
+    assert.deepEqual(
+      resolvePatientHistoryApplyTarget(
+        { w: 1, d: 2, r: 18, c: 0 },
+        null
+      ),
+      { w: 1, d: 2, r: 18, c: 0 }
+    );
+  });
+
   it('builds shockwave cell content from a selected history row', () => {
     const update = buildPatientHistoryCellUpdate({
       chart_number: '14634',

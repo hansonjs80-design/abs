@@ -6,6 +6,7 @@ import {
   buildPatientHistoryCellUpdate,
   getPatientHistorySearchTarget,
   patientHistoryIdentityMatches,
+  resolvePatientHistoryApplyTarget,
 } from '../../lib/patientHistoryModalUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import {
@@ -315,6 +316,7 @@ export default function usePatientHistoryActions({
   clearImmediateCellDisplay,
   setPatientHistoryModalOpen,
   setPatientHistoryModalData,
+  patientHistoryTargetCellRef,
 }) {
   const patientHistoryResultCacheRef = useRef(new Map());
   const monthlyTherapistRowsCacheRef = useRef(new Map());
@@ -328,12 +330,21 @@ export default function usePatientHistoryActions({
     let selectedDate = '';
     let selectedKey = activeSelectedKey;
     let selectedDayInfo = null;
-    if (selectedCell) {
+    const targetCell = resolvePatientHistoryApplyTarget(
+      patientHistoryTargetCellRef?.current,
+      selectedCell
+    );
+    if (targetCell) {
       const calWeeks = generateShockwaveCalendar(currentYear, currentMonth, holidays);
-      selectedDayInfo = calWeeks[selectedCell.w]?.[selectedCell.d] || null;
+      selectedDayInfo = calWeeks[targetCell.w]?.[targetCell.d] || null;
       if (selectedDayInfo) {
         selectedDate = getScheduleDayDateKey(selectedDayInfo);
-        selectedKey = selectedKey || cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c);
+        selectedKey = selectedKey || cellKey(
+          targetCell.w,
+          targetCell.d,
+          targetCell.r,
+          targetCell.c
+        );
       }
     }
     const manualPrescriptionSignature = Array.isArray(settings?.manual_therapy_prescriptions)
@@ -762,6 +773,7 @@ export default function usePatientHistoryActions({
     colCount,
     cellKey,
     setPatientHistoryModalData,
+    patientHistoryTargetCellRef,
   ]);
 
   const buildContentWithPrescription = useCallback((content, oldPrescription, newPrescription) => {
@@ -1197,11 +1209,15 @@ export default function usePatientHistoryActions({
 
   const handleOpenPatientHistoryModal = useCallback(async () => {
     try {
-      if (!selectedCell) {
+      const targetCell = resolvePatientHistoryApplyTarget(null, selectedCell);
+      if (!targetCell) {
         alert('디버그: 선택된 셀이 없습니다.');
         return;
       }
-      const { w, d, r, c } = selectedCell;
+      if (patientHistoryTargetCellRef) {
+        patientHistoryTargetCellRef.current = targetCell;
+      }
+      const { w, d, r, c } = targetCell;
       const key = cellKey(w, d, r, c);
       const content = editingCell === key
         ? (editInputRef.current?.value ?? editValue)
@@ -1232,11 +1248,18 @@ export default function usePatientHistoryActions({
       console.error(e);
       alert(`디버그 에러 발생: ${e.message}`);
     }
-  }, [selectedCell, cellKey, editingCell, editInputRef, editValue, memos, pendingDisplayValues, fetchPatientHistory, setPatientHistoryModalOpen, setPatientHistoryModalData]);
+  }, [selectedCell, cellKey, editingCell, editInputRef, editValue, memos, pendingDisplayValues, fetchPatientHistory, setPatientHistoryModalOpen, setPatientHistoryModalData, patientHistoryTargetCellRef]);
 
   const handleApplyHistoryToCell = useCallback((log) => {
-    if (!selectedCell) return;
-    const { w, d, r, c } = selectedCell;
+    const targetCell = resolvePatientHistoryApplyTarget(
+      patientHistoryTargetCellRef?.current,
+      selectedCell
+    );
+    if (!targetCell) {
+      addToast('적용할 스케줄 셀을 찾지 못했습니다.', 'error');
+      return;
+    }
+    const { w, d, r, c } = targetCell;
     const key = cellKey(w, d, r, c);
 
     const currentMemo = memos[key] || {};
@@ -1314,6 +1337,7 @@ export default function usePatientHistoryActions({
     applyImmediateCellDisplay,
     applyImmediateMergeSpan,
     clearImmediateCellDisplay,
+    patientHistoryTargetCellRef,
   ]);
 
   return {

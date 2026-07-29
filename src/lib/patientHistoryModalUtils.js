@@ -48,6 +48,18 @@ export function patientHistoryIdentityMatches({
   return false;
 }
 
+export function resolvePatientHistoryApplyTarget(capturedCell, selectedCell) {
+  const target = capturedCell || selectedCell;
+  if (!target) return null;
+  const normalized = {
+    w: Number(target.w),
+    d: Number(target.d),
+    r: Number(target.r),
+    c: Number(target.c),
+  };
+  return Object.values(normalized).every(Number.isFinite) ? normalized : null;
+}
+
 export function buildPatientHistoryCellUpdate(log, currentMemo = {}, options = {}) {
   const chart = String(log?.chart_number || '').trim();
   const name = String(log?.patient_name || '').replace(/\*/g, '').trim();

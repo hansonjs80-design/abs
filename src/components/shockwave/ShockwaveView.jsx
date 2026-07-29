@@ -219,6 +219,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const [patientHistoryModalData, setPatientHistoryModalData] = useState({ loading: false, logs: [], searchName: '', searchChart: '' });
   const [patientHistoryBodyFilters, setPatientHistoryBodyFilters] = useState({});
   const [pendingPatientHistoryApplyLog, setPendingPatientHistoryApplyLog] = useState(null);
+  const patientHistoryTargetCellRef = useRef(null);
   const selectedPatientHistoryGroupKey = useMemo(() => {
     if (!selectedCell) return 'shockwave';
     const key = `${selectedCell.w}-${selectedCell.d}-${selectedCell.r}-${selectedCell.c}`;
@@ -658,7 +659,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         e.target.closest('.shockwave-schedule-cell') ||
         e.target.closest('.shockwave-cell') ||
         e.target.closest('.shockwave-context-menu') ||
-        e.target.closest('.context-menu');
+        e.target.closest('.context-menu') ||
+        e.target.closest('[data-preserve-schedule-selection="true"]');
 
       if (!isInsideScheduleGrid) {
         setSelectedCell(null);
@@ -1790,10 +1792,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     clearImmediateCellDisplay,
     setPatientHistoryModalOpen,
     setPatientHistoryModalData,
+    patientHistoryTargetCellRef,
   });
 
   const closePatientHistoryModal = useCallback(() => {
     setPendingPatientHistoryApplyLog(null);
+    patientHistoryTargetCellRef.current = null;
     setPatientHistoryModalOpen(false);
   }, []);
 
@@ -1807,6 +1811,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     const targetLog = pendingPatientHistoryApplyLog;
     setPendingPatientHistoryApplyLog(null);
     handleApplyHistoryToCell(targetLog);
+    patientHistoryTargetCellRef.current = null;
     setPatientHistoryModalOpen(false);
   }, [handleApplyHistoryToCell, pendingPatientHistoryApplyLog]);
 
@@ -3466,7 +3471,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       />
 
       {patientHistoryModalOpen && (
-        <div ref={patientHistoryModalOverlayRef} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999999, overscrollBehavior: 'none' }}>
+        <div
+          ref={patientHistoryModalOverlayRef}
+          data-preserve-schedule-selection="true"
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999999, overscrollBehavior: 'none' }}
+        >
           <div style={{ background: 'var(--bg-primary, #fff)', maxWidth: patientHistoryModalLayout.maxWidth, width: patientHistoryModalLayout.width, borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--border-color, #eee)', background: 'var(--bg-secondary, #f8f9fa)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
