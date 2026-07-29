@@ -13,6 +13,33 @@ export function invalidateScheduleCellSaveVersions(versionMap, items) {
   return target;
 }
 
+export function supersedeDeletedScheduleCellDrafts(
+  versionMap,
+  discardedDrafts,
+  items,
+  getDiscardedValue
+) {
+  const targetVersions = versionMap && typeof versionMap === 'object' ? versionMap : {};
+  const targetDrafts = discardedDrafts instanceof Map ? discardedDrafts : new Map();
+  const deletedKeys = [];
+
+  (Array.isArray(items) ? items : [items]).filter(Boolean).forEach((item) => {
+    const key = getScheduleMemoKey(item);
+    if (!key || key.includes('undefined')) return;
+
+    targetVersions[key] = (Number(targetVersions[key]) || 0) + 1;
+    const discardedValue = typeof getDiscardedValue === 'function'
+      ? getDiscardedValue(key, item)
+      : '';
+    if (String(discardedValue ?? '').trim()) {
+      targetDrafts.set(key, discardedValue);
+    }
+    deletedKeys.push(key);
+  });
+
+  return deletedKeys;
+}
+
 export function consumeSupersededScheduleDraft(discardedDrafts, key, value) {
   if (!(discardedDrafts instanceof Map) || !discardedDrafts.has(key)) return false;
   const discardedValue = String(discardedDrafts.get(key) ?? '').trim();

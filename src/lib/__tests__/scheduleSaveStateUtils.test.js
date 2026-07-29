@@ -9,6 +9,7 @@ import {
   consumeSupersededScheduleDraft,
   invalidateScheduleCellSaveVersions,
   rollbackShockwaveMemoState,
+  supersedeDeletedScheduleCellDrafts,
 } from '../scheduleSaveStateUtils.js';
 
 const shouldKeepMemo = (memo) => Boolean(memo?.content || memo?.bg_color);
@@ -64,6 +65,32 @@ describe('schedule save state helpers', () => {
     assert.equal(clearSupersededScheduleInputValue(input, '0-0-2-1'), true);
     assert.equal(input.value, '');
     assert.equal(clearSupersededScheduleInputValue(input, '0-0-3-1'), false);
+  });
+
+  it('invalidates and remembers deleted cell drafts before a late blur can save them again', () => {
+    const versions = {
+      '0-0-2-1': 4,
+    };
+    const discardedDrafts = new Map();
+    const deletedKeys = supersedeDeletedScheduleCellDrafts(
+      versions,
+      discardedDrafts,
+      [{
+        week_index: 0,
+        day_index: 0,
+        row_index: 2,
+        col_index: 1,
+      }],
+      () => '9307/주한솔(2)'
+    );
+
+    assert.deepEqual(deletedKeys, ['0-0-2-1']);
+    assert.equal(versions['0-0-2-1'], 5);
+    assert.equal(discardedDrafts.get('0-0-2-1'), '9307/주한솔(2)');
+    assert.equal(
+      consumeSupersededScheduleDraft(discardedDrafts, '0-0-2-1', '9307/주한솔(2)'),
+      true
+    );
   });
 
   it('rolls a failed optimistic single-cell save back to the previous memo', () => {

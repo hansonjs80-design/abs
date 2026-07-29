@@ -65,7 +65,7 @@ export default function useScheduleMergeActions({
     });
     const oldMemos = Array.from(oldMemoByKey.values());
     if (payload.length > 0) {
-      onDeletePayloadStart?.(payload);
+      onDeletePayloadStart?.(deleteBatch.payload);
       recordUndo({ type: 'bulk-edit', oldMemos });
       payload.forEach((item) => {
         const visibleKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;

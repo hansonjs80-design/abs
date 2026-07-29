@@ -20,6 +20,7 @@ import {
   clearSupersededScheduleInputValue,
   consumeSupersededScheduleDraft,
   invalidateScheduleCellSaveVersions,
+  supersedeDeletedScheduleCellDrafts,
 } from '../../lib/scheduleSaveStateUtils';
 import { isTreatmentCancelBg, isTreatmentCompleteBg } from '../../lib/scheduleStatusUtils';
 import { buildManualTherapyUnmergePayload, getManualTherapyRowSpan } from '../../lib/manualTherapyMergeUtils';
@@ -367,7 +368,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const handleCellSaveRef = useRef(null);
   const editDraftRef = useRef(null);
   const editAutosaveTimerRef = useRef(null);
-  const supersededPatientHistoryDraftsRef = useRef(new Map());
+  const supersededScheduleDraftsRef = useRef(new Map());
   const defaultEditMergeSpanRef = useRef({});
   const cellSaveVersionRef = useRef({});
   const saveMemoRef = useRef(queuedOnSaveMemo);
@@ -753,7 +754,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
 
   const scheduleEditDraftAutosave = useCallback((key, value) => {
     const nextValue = value ?? '';
-    supersededPatientHistoryDraftsRef.current.delete(key);
+    supersededScheduleDraftsRef.current.delete(key);
     setPendingDisplayValues((prev) => ({ ...prev, [key]: nextValue }));
     editDraftRef.current = { key, value: nextValue, dirty: true };
     if (String(nextValue || '').trim()) {
@@ -1042,7 +1043,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       forcedBgColor === undefined &&
       forcedBodyPart === undefined &&
       consumeSupersededScheduleDraft(
-        supersededPatientHistoryDraftsRef.current,
+        supersededScheduleDraftsRef.current,
         key,
         finalValue
       )
@@ -1620,6 +1621,67 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     return { key: activeKey, value: nextValue };
   }, [currentMonth, currentYear, editValue, editingCell, setPendingDisplayValues]);
 
+  const prepareCellDeletion = useCallback((payload) => {
+    const activeDraft = editDraftRef.current;
+    const activeInput = editInputRef.current;
+    const deletedKeys = supersedeDeletedScheduleCellDrafts(
+      cellSaveVersionRef.current,
+      supersededScheduleDraftsRef.current,
+      payload,
+      (key) => {
+        if (activeDraft?.key === key && String(activeDraft.value || '').trim()) {
+          return activeDraft.value;
+        }
+        if (
+          activeInput?.dataset?.cellKey === key &&
+          String(activeInput.value || '').trim()
+        ) {
+          return activeInput.value;
+        }
+        if (Object.prototype.hasOwnProperty.call(pendingDisplayValuesRef.current, key)) {
+          return pendingDisplayValuesRef.current[key];
+        }
+        return effectiveMemos[key]?.content || '';
+      }
+    );
+    if (deletedKeys.length === 0) return;
+
+    const deletedKeySet = new Set(deletedKeys);
+    let shouldSkipBlurSave = false;
+    deletedKeys.forEach((key) => {
+      removePendingScheduleDraft(currentYear, currentMonth, key);
+      delete defaultEditMergeSpanRef.current[key];
+      if (clearSupersededScheduleInputValue(activeInput, key)) {
+        shouldSkipBlurSave = true;
+      }
+    });
+
+    if (activeDraft?.key && deletedKeySet.has(activeDraft.key)) {
+      editDraftRef.current = null;
+      shouldSkipBlurSave = true;
+    }
+    if (editingCell && deletedKeySet.has(editingCell)) {
+      setEditingCell(null);
+      shouldSkipBlurSave = true;
+    }
+    if (editAutosaveTimerRef.current) {
+      clearTimeout(editAutosaveTimerRef.current);
+      editAutosaveTimerRef.current = null;
+    }
+    if (shouldSkipBlurSave) {
+      skipNextEditBlurSaveRef.current = true;
+      window.setTimeout(() => {
+        skipNextEditBlurSaveRef.current = false;
+      }, 0);
+    }
+  }, [
+    currentMonth,
+    currentYear,
+    editingCell,
+    effectiveMemos,
+    pendingDisplayValuesRef,
+  ]);
+
   const invalidateCellSavesForPayload = useCallback((payload) => {
     invalidateScheduleCellSaveVersions(cellSaveVersionRef.current, payload);
   }, []);
@@ -1672,7 +1734,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     clearImmediateCellDisplay,
     addToast,
     setContextMenu,
-    onDeletePayloadStart: invalidateCellSavesForPayload,
+    onDeletePayloadStart: prepareCellDeletion,
   });
 
   const selectionInfo = computeSelectionInfo();
@@ -1870,7 +1932,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
             : '')
     );
     if (String(discardedValue || '').trim()) {
-      supersededPatientHistoryDraftsRef.current.set(targetKey, discardedValue);
+      supersededScheduleDraftsRef.current.set(targetKey, discardedValue);
     }
 
     // defaultValue does not reset the mounted hidden input after editing ends.
