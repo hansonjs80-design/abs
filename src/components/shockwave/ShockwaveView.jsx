@@ -8,6 +8,7 @@ import {
   shouldIgnoreContextMenuDismissEvent,
 } from '../../lib/contextMenuDismissUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
+import { isNameOnlyPatientHistoryDraft } from '../../lib/patientHistoryModalUtils';
 import { buildBlankScheduleCleanupPayload, sanitizeBlankScheduleCellData } from '../../lib/scheduleBlankCellCleanupUtils';
 import {
   MAX_SCHEDULE_TIME_COL_WIDTH,
@@ -220,6 +221,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const [patientHistoryBodyFilters, setPatientHistoryBodyFilters] = useState({});
   const [pendingPatientHistoryApplyLog, setPendingPatientHistoryApplyLog] = useState(null);
   const patientHistoryTargetCellRef = useRef(null);
+  const deferredPatientHistoryAutoFillRef = useRef(null);
   const selectedPatientHistoryGroupKey = useMemo(() => {
     if (!selectedCell) return 'shockwave';
     const key = `${selectedCell.w}-${selectedCell.d}-${selectedCell.r}-${selectedCell.c}`;
@@ -1795,11 +1797,74 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     patientHistoryTargetCellRef,
   });
 
+  const handleOpenPatientHistoryFromShortcut = useCallback(() => {
+    const targetCell = selectedCellRef.current || selectedCell;
+    if (targetCell) {
+      patientHistoryTargetCellRef.current = targetCell;
+      const key = cellKey(targetCell.w, targetCell.d, targetCell.r, targetCell.c);
+      const activeDraft = editDraftRef.current;
+      const activeEditKey = editingCell || activeDraft?.key;
+      const inputValue = editInputRef.current?.dataset?.cellKey === key
+        ? editInputRef.current.value
+        : (activeDraft?.key === key ? activeDraft.value : editValue);
+
+      if (activeEditKey === key && isNameOnlyPatientHistoryDraft(inputValue)) {
+        // Moving focus into the history modal normally blurs and saves the
+        // editor. Hold that save until the user applies a row or closes.
+        skipNextEditBlurSaveRef.current = true;
+        deferredPatientHistoryAutoFillRef.current = {
+          key,
+          value: String(inputValue || '').trim(),
+          targetCell: { ...targetCell },
+        };
+      } else {
+        deferredPatientHistoryAutoFillRef.current = null;
+      }
+    }
+
+    handleOpenPatientHistoryModal();
+  }, [cellKey, editValue, editingCell, handleOpenPatientHistoryModal, selectedCell]);
+
+  const discardDeferredPatientHistoryAutoFill = useCallback(() => {
+    const deferred = deferredPatientHistoryAutoFillRef.current;
+    deferredPatientHistoryAutoFillRef.current = null;
+    skipNextEditBlurSaveRef.current = false;
+    if (!deferred) return;
+
+    if (editDraftRef.current?.key === deferred.key) {
+      editDraftRef.current = null;
+    }
+    if (editAutosaveTimerRef.current) {
+      clearTimeout(editAutosaveTimerRef.current);
+      editAutosaveTimerRef.current = null;
+    }
+    const previewMerge = defaultEditMergeSpanRef.current[deferred.key];
+    delete defaultEditMergeSpanRef.current[deferred.key];
+    if (previewMerge?.revertUpdates?.length) {
+      applyImmediateMergeSpan(previewMerge.revertUpdates);
+    }
+    removePendingScheduleDraft(currentYear, currentMonth, deferred.key);
+    setEditingCell(null);
+  }, [applyImmediateMergeSpan, currentMonth, currentYear]);
+
   const closePatientHistoryModal = useCallback(() => {
+    const deferred = deferredPatientHistoryAutoFillRef.current;
+    deferredPatientHistoryAutoFillRef.current = null;
+    skipNextEditBlurSaveRef.current = false;
     setPendingPatientHistoryApplyLog(null);
     patientHistoryTargetCellRef.current = null;
     setPatientHistoryModalOpen(false);
-  }, []);
+
+    if (!deferred) return;
+    const { w, d, r, c } = deferred.targetCell;
+    setEditingCell(null);
+    Promise.resolve(
+      handleCellSaveRef.current?.(w, d, r, c, deferred.value)
+    ).catch((error) => {
+      console.error('Failed to run deferred patient automation after closing history:', error);
+      addToast('환자 자동화 적용에 실패했습니다.', 'error');
+    });
+  }, [addToast]);
 
   const requestApplyPatientHistoryToCell = useCallback((log) => {
     if (!log) return;
@@ -1810,10 +1875,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     if (!pendingPatientHistoryApplyLog) return;
     const targetLog = pendingPatientHistoryApplyLog;
     setPendingPatientHistoryApplyLog(null);
+    discardDeferredPatientHistoryAutoFill();
     handleApplyHistoryToCell(targetLog);
     patientHistoryTargetCellRef.current = null;
     setPatientHistoryModalOpen(false);
-  }, [handleApplyHistoryToCell, pendingPatientHistoryApplyLog]);
+  }, [discardDeferredPatientHistoryAutoFill, handleApplyHistoryToCell, pendingPatientHistoryApplyLog]);
 
   useEffect(() => {
     if (!patientHistoryModalOpen) return;
@@ -2134,7 +2200,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     doUndo,
     isEditableTarget,
     isContextMenuTarget,
-    handleOpenPatientHistoryModal,
+    handleOpenPatientHistoryModal: handleOpenPatientHistoryFromShortcut,
     buildMemoSnapshotForKeys,
     onSaveMemo: queuedOnSaveMemo,
     saveShockwaveMemosBulk: queuedSaveShockwaveMemosBulk,
@@ -2161,7 +2227,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     editingCell,
     handleKeyDown,
     handlePasteSelection,
-    handleOpenPatientHistoryModal,
+    handleOpenPatientHistoryModal: handleOpenPatientHistoryFromShortcut,
     isEditableTarget,
     isContextMenuTarget,
     setActiveContextSubmenu,

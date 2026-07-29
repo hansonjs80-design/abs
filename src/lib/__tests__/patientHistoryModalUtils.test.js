@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   buildPatientHistoryCellUpdate,
   getPatientHistorySearchTarget,
+  isNameOnlyPatientHistoryDraft,
   patientHistoryIdentityMatches,
   resolvePatientHistoryApplyTarget,
 } from '../patientHistoryModalUtils.js';
@@ -31,6 +32,15 @@ describe('patient history modal search target', () => {
       searchName: '손연희',
       searchChart: '3275',
     });
+  });
+
+  it('defers automatic completion only while a plain patient name is being edited', () => {
+    assert.equal(isNameOnlyPatientHistoryDraft('주한솔'), true);
+    assert.equal(isNameOnlyPatientHistoryDraft('  주한솔  '), true);
+    assert.equal(isNameOnlyPatientHistoryDraft('9307/주한솔'), false);
+    assert.equal(isNameOnlyPatientHistoryDraft('주한솔(2)'), false);
+    assert.equal(isNameOnlyPatientHistoryDraft('주한솔40'), false);
+    assert.equal(isNameOnlyPatientHistoryDraft(''), false);
   });
 });
 

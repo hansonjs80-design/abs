@@ -28,6 +28,17 @@ export function getPatientHistorySearchTarget(content) {
   };
 }
 
+export function isNameOnlyPatientHistoryDraft(content) {
+  const rawContent = String(content || '').trim();
+  if (!rawContent) return false;
+
+  const parsed = parseSchedulerPatientIdentity(rawContent);
+  const patientName = String(parsed.patientName || '').trim();
+  const patientChart = String(parsed.patientChart || '').trim();
+
+  return Boolean(patientName && !patientChart && rawContent === patientName);
+}
+
 export function patientHistoryIdentityMatches({
   chartParam,
   nameParam,

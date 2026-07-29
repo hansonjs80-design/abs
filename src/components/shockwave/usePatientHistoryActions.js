@@ -1209,7 +1209,10 @@ export default function usePatientHistoryActions({
 
   const handleOpenPatientHistoryModal = useCallback(async () => {
     try {
-      const targetCell = resolvePatientHistoryApplyTarget(null, selectedCell);
+      const targetCell = resolvePatientHistoryApplyTarget(
+        patientHistoryTargetCellRef?.current,
+        selectedCell
+      );
       if (!targetCell) {
         alert('디버그: 선택된 셀이 없습니다.');
         return;
