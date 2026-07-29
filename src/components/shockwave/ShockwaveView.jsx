@@ -16,7 +16,11 @@ import {
 } from '../../lib/scheduleGridSizeUtils';
 import { markIntentionalClearPayload } from '../../lib/scheduleMergeUtils';
 import { buildClearReservationGroupPayload, getReservationGroupFromMergeSpan, selectionHasReservationGroup } from '../../lib/scheduleReservationGroupUtils';
-import { invalidateScheduleCellSaveVersions } from '../../lib/scheduleSaveStateUtils';
+import {
+  clearSupersededScheduleInputValue,
+  consumeSupersededScheduleDraft,
+  invalidateScheduleCellSaveVersions,
+} from '../../lib/scheduleSaveStateUtils';
 import { isTreatmentCancelBg, isTreatmentCompleteBg } from '../../lib/scheduleStatusUtils';
 import { buildManualTherapyUnmergePayload, getManualTherapyRowSpan } from '../../lib/manualTherapyMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
@@ -363,6 +367,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const handleCellSaveRef = useRef(null);
   const editDraftRef = useRef(null);
   const editAutosaveTimerRef = useRef(null);
+  const supersededPatientHistoryDraftsRef = useRef(new Map());
   const defaultEditMergeSpanRef = useRef({});
   const cellSaveVersionRef = useRef({});
   const saveMemoRef = useRef(queuedOnSaveMemo);
@@ -748,6 +753,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
 
   const scheduleEditDraftAutosave = useCallback((key, value) => {
     const nextValue = value ?? '';
+    supersededPatientHistoryDraftsRef.current.delete(key);
     setPendingDisplayValues((prev) => ({ ...prev, [key]: nextValue }));
     editDraftRef.current = { key, value: nextValue, dirty: true };
     if (String(nextValue || '').trim()) {
@@ -1031,6 +1037,27 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const handleCellSave = useCallback(async (w, d, r, c, nextValue, forcedPrescription, forcedBgColor, forcedBodyPart) => {
     const finalValue = nextValue !== undefined ? nextValue : (editInputRef.current?.value ?? editValue);
     const key = cellKey(w, d, r, c);
+    if (
+      forcedPrescription === undefined &&
+      forcedBgColor === undefined &&
+      forcedBodyPart === undefined &&
+      consumeSupersededScheduleDraft(
+        supersededPatientHistoryDraftsRef.current,
+        key,
+        finalValue
+      )
+    ) {
+      if (editDraftRef.current?.key === key) {
+        editDraftRef.current = null;
+      }
+      if (editAutosaveTimerRef.current) {
+        clearTimeout(editAutosaveTimerRef.current);
+        editAutosaveTimerRef.current = null;
+      }
+      setEditingCell(null);
+      removePendingScheduleDraft(currentYear, currentMonth, key);
+      return false;
+    }
     const saveVersion = (cellSaveVersionRef.current[key] || 0) + 1;
     cellSaveVersionRef.current[key] = saveVersion;
     const saveStartedAt = Date.now();
@@ -1826,23 +1853,45 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     const deferred = deferredPatientHistoryAutoFillRef.current;
     deferredPatientHistoryAutoFillRef.current = null;
     skipNextEditBlurSaveRef.current = false;
-    if (!deferred) return;
+    const targetCell = deferred?.targetCell || patientHistoryTargetCellRef.current;
+    const targetKey = deferred?.key || (
+      targetCell
+        ? cellKey(targetCell.w, targetCell.d, targetCell.r, targetCell.c)
+        : ''
+    );
+    if (!targetKey) return;
 
-    if (editDraftRef.current?.key === deferred.key) {
+    const activeDraft = editDraftRef.current;
+    const discardedValue = deferred?.value ?? (
+      activeDraft?.key === targetKey
+        ? activeDraft.value
+        : (editInputRef.current?.dataset?.cellKey === targetKey
+            ? editInputRef.current.value
+            : '')
+    );
+    if (String(discardedValue || '').trim()) {
+      supersededPatientHistoryDraftsRef.current.set(targetKey, discardedValue);
+    }
+
+    // defaultValue does not reset the mounted hidden input after editing ends.
+    // Empty the abandoned DOM value so focusing another cell cannot blur-save
+    // the original name over the history row that was just applied.
+    clearSupersededScheduleInputValue(editInputRef.current, targetKey);
+    if (editDraftRef.current?.key === targetKey) {
       editDraftRef.current = null;
     }
     if (editAutosaveTimerRef.current) {
       clearTimeout(editAutosaveTimerRef.current);
       editAutosaveTimerRef.current = null;
     }
-    const previewMerge = defaultEditMergeSpanRef.current[deferred.key];
-    delete defaultEditMergeSpanRef.current[deferred.key];
+    const previewMerge = defaultEditMergeSpanRef.current[targetKey];
+    delete defaultEditMergeSpanRef.current[targetKey];
     if (previewMerge?.revertUpdates?.length) {
       applyImmediateMergeSpan(previewMerge.revertUpdates);
     }
-    removePendingScheduleDraft(currentYear, currentMonth, deferred.key);
+    removePendingScheduleDraft(currentYear, currentMonth, targetKey);
     setEditingCell(null);
-  }, [applyImmediateMergeSpan, currentMonth, currentYear]);
+  }, [applyImmediateMergeSpan, cellKey, currentMonth, currentYear]);
 
   const closePatientHistoryModal = useCallback(() => {
     const deferred = deferredPatientHistoryAutoFillRef.current;

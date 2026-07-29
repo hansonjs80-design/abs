@@ -13,6 +13,20 @@ export function invalidateScheduleCellSaveVersions(versionMap, items) {
   return target;
 }
 
+export function consumeSupersededScheduleDraft(discardedDrafts, key, value) {
+  if (!(discardedDrafts instanceof Map) || !discardedDrafts.has(key)) return false;
+  const discardedValue = String(discardedDrafts.get(key) ?? '').trim();
+  const incomingValue = String(value ?? '').trim();
+  discardedDrafts.delete(key);
+  return discardedValue === incomingValue;
+}
+
+export function clearSupersededScheduleInputValue(input, key) {
+  if (!input || input.dataset?.cellKey !== key) return false;
+  input.value = '';
+  return true;
+}
+
 export function applyShockwaveMemoStateUpdate(prev, key, memo, shouldKeepMemo) {
   const next = { ...(prev || {}) };
   if (shouldKeepMemo(memo)) next[key] = memo;

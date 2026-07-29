@@ -5,6 +5,8 @@ import {
   applyRealtimeShockwaveMemoUpdate,
   applyShockwaveMemoStateUpdate,
   buildOptimisticShockwaveMemos,
+  clearSupersededScheduleInputValue,
+  consumeSupersededScheduleDraft,
   invalidateScheduleCellSaveVersions,
   rollbackShockwaveMemoState,
 } from '../scheduleSaveStateUtils.js';
@@ -27,6 +29,41 @@ describe('schedule save state helpers', () => {
 
     assert.equal(versions['0-0-2-1'], 5);
     assert.notEqual(versions['0-0-2-1'], staleSaveVersion);
+  });
+
+  it('consumes the abandoned name draft instead of saving it after history apply', () => {
+    const discardedDrafts = new Map([
+      ['0-0-2-1', '주한솔'],
+    ]);
+
+    assert.equal(
+      consumeSupersededScheduleDraft(discardedDrafts, '0-0-2-1', ' 주한솔 '),
+      true
+    );
+    assert.equal(discardedDrafts.has('0-0-2-1'), false);
+  });
+
+  it('allows a genuinely new edit after clearing the abandoned history draft', () => {
+    const discardedDrafts = new Map([
+      ['0-0-2-1', '주한솔'],
+    ]);
+
+    assert.equal(
+      consumeSupersededScheduleDraft(discardedDrafts, '0-0-2-1', '9307/주한솔(2)'),
+      false
+    );
+    assert.equal(discardedDrafts.has('0-0-2-1'), false);
+  });
+
+  it('clears the mounted hidden input so a later cell click cannot blur-save the old name', () => {
+    const input = {
+      dataset: { cellKey: '0-0-2-1' },
+      value: '주한솔',
+    };
+
+    assert.equal(clearSupersededScheduleInputValue(input, '0-0-2-1'), true);
+    assert.equal(input.value, '');
+    assert.equal(clearSupersededScheduleInputValue(input, '0-0-3-1'), false);
   });
 
   it('rolls a failed optimistic single-cell save back to the previous memo', () => {
