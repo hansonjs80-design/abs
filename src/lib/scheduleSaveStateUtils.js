@@ -3,6 +3,16 @@ export function getScheduleMemoKey(item) {
   return `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
 }
 
+export function invalidateScheduleCellSaveVersions(versionMap, items) {
+  const target = versionMap && typeof versionMap === 'object' ? versionMap : {};
+  (Array.isArray(items) ? items : [items]).filter(Boolean).forEach((item) => {
+    const key = getScheduleMemoKey(item);
+    if (!key || key.includes('undefined')) return;
+    target[key] = (Number(target[key]) || 0) + 1;
+  });
+  return target;
+}
+
 export function applyShockwaveMemoStateUpdate(prev, key, memo, shouldKeepMemo) {
   const next = { ...(prev || {}) };
   if (shouldKeepMemo(memo)) next[key] = memo;

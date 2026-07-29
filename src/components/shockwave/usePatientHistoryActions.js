@@ -317,6 +317,7 @@ export default function usePatientHistoryActions({
   setPatientHistoryModalOpen,
   setPatientHistoryModalData,
   patientHistoryTargetCellRef,
+  invalidateCellSavesForPayload,
 }) {
   const patientHistoryResultCacheRef = useRef(new Map());
   const monthlyTherapistRowsCacheRef = useRef(new Map());
@@ -1302,6 +1303,11 @@ export default function usePatientHistoryActions({
     });
     const savePayload = manualTherapyMerge.ok ? manualTherapyMerge.payload : [payload];
 
+    // A name-only blur automation may already be resolving in the background.
+    // Invalidate it before applying history so its stale result cannot repaint
+    // or persist over the explicitly selected patient row.
+    invalidateCellSavesForPayload?.(savePayload);
+
     if (manualTherapyMerge.reason === 'occupied') {
       addToast('아래 셀이 비어있지 않아 자동 병합하지 않았습니다.', 'warning');
     } else if (manualTherapyMerge.reason === 'bounds') {
@@ -1341,6 +1347,7 @@ export default function usePatientHistoryActions({
     applyImmediateMergeSpan,
     clearImmediateCellDisplay,
     patientHistoryTargetCellRef,
+    invalidateCellSavesForPayload,
   ]);
 
   return {

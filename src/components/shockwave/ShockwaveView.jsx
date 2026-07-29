@@ -16,6 +16,7 @@ import {
 } from '../../lib/scheduleGridSizeUtils';
 import { markIntentionalClearPayload } from '../../lib/scheduleMergeUtils';
 import { buildClearReservationGroupPayload, getReservationGroupFromMergeSpan, selectionHasReservationGroup } from '../../lib/scheduleReservationGroupUtils';
+import { invalidateScheduleCellSaveVersions } from '../../lib/scheduleSaveStateUtils';
 import { isTreatmentCancelBg, isTreatmentCompleteBg } from '../../lib/scheduleStatusUtils';
 import { buildManualTherapyUnmergePayload, getManualTherapyRowSpan } from '../../lib/manualTherapyMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
@@ -1593,12 +1594,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   }, [currentMonth, currentYear, editValue, editingCell, setPendingDisplayValues]);
 
   const invalidateCellSavesForPayload = useCallback((payload) => {
-    (Array.isArray(payload) ? payload : [payload]).filter(Boolean).forEach((item) => {
-      const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
-      if (!key.includes('undefined')) {
-        cellSaveVersionRef.current[key] = (cellSaveVersionRef.current[key] || 0) + 1;
-      }
-    });
+    invalidateScheduleCellSaveVersions(cellSaveVersionRef.current, payload);
   }, []);
 
   useEffect(() => {
@@ -1786,7 +1782,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     baseTimeSlotsLength: baseTimeSlots.length,
     colCount,
     cellKey,
-    saveShockwaveMemosBulk,
+    saveShockwaveMemosBulk: queuedSaveShockwaveMemosBulk,
     addToast,
     setPendingDisplayValues,
     applyImmediateCellDisplay,
@@ -1795,6 +1791,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     setPatientHistoryModalOpen,
     setPatientHistoryModalData,
     patientHistoryTargetCellRef,
+    invalidateCellSavesForPayload,
   });
 
   const handleOpenPatientHistoryFromShortcut = useCallback(() => {

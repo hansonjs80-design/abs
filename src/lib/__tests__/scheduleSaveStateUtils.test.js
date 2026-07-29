@@ -5,12 +5,30 @@ import {
   applyRealtimeShockwaveMemoUpdate,
   applyShockwaveMemoStateUpdate,
   buildOptimisticShockwaveMemos,
+  invalidateScheduleCellSaveVersions,
   rollbackShockwaveMemoState,
 } from '../scheduleSaveStateUtils.js';
 
 const shouldKeepMemo = (memo) => Boolean(memo?.content || memo?.bg_color);
 
 describe('schedule save state helpers', () => {
+  it('invalidates an older cell save before patient history applies a newer value', () => {
+    const versions = {
+      '0-0-2-1': 4,
+    };
+    const staleSaveVersion = versions['0-0-2-1'];
+
+    invalidateScheduleCellSaveVersions(versions, [{
+      week_index: 0,
+      day_index: 0,
+      row_index: 2,
+      col_index: 1,
+    }]);
+
+    assert.equal(versions['0-0-2-1'], 5);
+    assert.notEqual(versions['0-0-2-1'], staleSaveVersion);
+  });
+
   it('rolls a failed optimistic single-cell save back to the previous memo', () => {
     const previous = {
       '0-0-0-0': { content: '1234/홍길동', bg_color: null },
