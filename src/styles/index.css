@@ -44,7 +44,7 @@
   --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
 
   /* 달력 색상 (Refined) */
-  --cal-sunday-bg: #fecaca;
+  --cal-sunday-bg: #fed2d2; /* 기존 연한 빨강에 흰색을 약 15% 혼합 */
   --cal-sunday-text: #e11d48;
   --cal-saturday-bg: rgba(59, 130, 246, 0.22);
   --cal-saturday-text: #2563eb;
