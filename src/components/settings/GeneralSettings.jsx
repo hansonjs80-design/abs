@@ -328,7 +328,7 @@ export default function GeneralSettings() {
             }}
           >
             {holidays.map(h => (
-              <div key={h.id} className="settings-row" style={{ margin: 0 }}>
+              <div key={h.id} className="settings-row holiday-settings-row" style={{ margin: 0 }}>
                 <div>
                   <div className="settings-row-label">{h.date}</div>
                   <div className="settings-row-desc">{h.name || '(이름 없음)'}</div>

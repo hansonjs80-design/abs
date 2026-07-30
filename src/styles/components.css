@@ -1819,6 +1819,10 @@
   border-bottom: 1px solid var(--border-color-light);
 }
 
+.holiday-settings-row {
+  background: #fed2d2;
+}
+
 .settings-row-label {
   font-weight: 500;
 }

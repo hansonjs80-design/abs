@@ -14,7 +14,7 @@
   --staff-calendar-weekday-font-weight: 800;
   --staff-calendar-last-row-font-size: 13px;
   --staff-calendar-last-row-font-weight: 700;
-  --staff-calendar-inner-line-color: #c9c9c9;
+  --staff-calendar-inner-line-color: #cecece; /* 기존 내부 가로선에 흰색을 약 10% 혼합 */
   --staff-calendar-outer-line-color: #676767;
   display: inline-flex;
   flex-direction: column;
