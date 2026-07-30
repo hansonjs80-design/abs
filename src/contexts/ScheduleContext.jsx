@@ -48,6 +48,7 @@ import {
 import { saveMonthlyTherapistConfigs } from '../lib/monthlyTherapistPersistence';
 import { saveTherapistRosterSafely } from '../lib/therapistRosterPersistence';
 import {
+  collectVisibleScheduleMonthRows,
   partitionVisibleScheduleMonthTargets,
   shiftScheduleMonth,
 } from '../lib/scheduleMonthLoadUtils';
@@ -1572,41 +1573,101 @@ export function ScheduleProvider({ children }) {
     return rowsPromise;
   }, []);
 
-  const prefetchShockwaveVisibleMonthRows = useCallback((year, month) => {
-    const missingTargets = getVisibleShockwaveScheduleMonths(year, month).filter((target) => {
-      const cacheKey = getShockwaveRawMonthCacheKey(target.year, target.month);
-      return !Array.isArray(shockwaveRawMonthRowsCacheRef.current.get(cacheKey));
-    });
-    if (missingTargets.length === 0) return;
-
-    Promise.allSettled(missingTargets.map((target) => loadShockwaveRawMonthRows(target)))
-      .then((results) => {
-        results.forEach((result, index) => {
-          if (result.status === 'rejected') {
-            const target = missingTargets[index];
-            console.warn(
-              `Failed to prefetch shockwave month ${target.year}-${target.month}.`,
-              result.reason
-            );
-          }
-        });
-      })
-      .catch((error) => {
-        console.warn('Failed to prefetch visible shockwave months:', error);
-      });
-  }, [loadShockwaveRawMonthRows]);
-
   // 충격파 스케줄 로드 (실제 완료 기준 캐시 + 중복 요청 공유)
   const loadShockwaveMemos = useCallback(async (year, month, options = {}) => {
     const cacheKey = getShockwaveMemoViewCacheKey(year, month);
+    const applyRowsToView = (rows) => {
+      const visibleRows = mapShockwaveRowsToVisibleRows(
+        rows,
+        year,
+        month,
+        shouldKeepShockwaveMemo,
+        shockwaveSettingsRefCache.current
+      );
+      const relocation = relocateHiddenMergedScheduleRows(visibleRows, {
+        rowCount: getShockwaveScheduleBaseRowCount(shockwaveSettingsRefCache.current, year, month),
+      });
+      const memoMap = buildShockwaveMemoMapFromVisibleRows(relocation.rows, shouldKeepShockwaveMemo);
+      const reconciledMemoMap = options.skipLocalRecovery === true
+        ? reconcileLoadedShockwaveMemosWithLocalWrites(memoMap)
+        : mergeLoadedShockwaveMemosWithLocalRecovery(
+            year,
+            month,
+            reconcileLoadedShockwaveMemosWithLocalWrites(memoMap)
+          );
+      rememberShockwaveMemoViewCache(shockwaveMemoViewCacheRef, cacheKey, reconciledMemoMap);
+      if (relocation.payload.length > 0) {
+        persistHiddenMergedScheduleRelocation(relocation.payload);
+      }
+      return reconciledMemoMap;
+    };
+
+    const applyMemoMapIfLatest = (memoMap) => {
+      const isCurrent =
+        currentDateRef.current.year === year &&
+        currentDateRef.current.month === month;
+
+      if (!isCurrent) {
+        return false;
+      }
+
+      loadCacheRef.current.shockwaveMemos = cacheKey;
+      shockwaveMemosRef.current = memoMap;
+      setShockwaveMemosLoadedKey(cacheKey);
+      setShockwaveMemos(memoMap);
+      return true;
+    };
+
     const cachedMemoMap = options.force ? null : shockwaveMemoViewCacheRef.current.get(cacheKey);
     if (cachedMemoMap) {
-      prefetchShockwaveVisibleMonthRows(year, month);
-      loadCacheRef.current.shockwaveMemos = cacheKey;
-      shockwaveMemosRef.current = cachedMemoMap;
-      setShockwaveMemosLoadedKey(cacheKey);
-      setShockwaveMemos(cachedMemoMap);
-      return cachedMemoMap;
+      const targets = getVisibleShockwaveScheduleMonths(year, month);
+      const collectCachedRows = () => {
+        return collectVisibleScheduleMonthRows(targets, year, month, (target) => {
+          const rawCacheKey = getShockwaveRawMonthCacheKey(target.year, target.month);
+          return shockwaveRawMonthRowsCacheRef.current.get(rawCacheKey);
+        });
+      };
+
+      const cachedRowsSnapshot = collectCachedRows();
+      const rebuiltMemoMap = cachedRowsSnapshot.hasCurrentMonthRows
+        ? applyRowsToView(cachedRowsSnapshot.rows)
+        : cachedMemoMap;
+      applyMemoMapIfLatest(rebuiltMemoMap);
+
+      const { missingTargets } = cachedRowsSnapshot;
+      if (missingTargets.length > 0) {
+        const viewLoadCacheVersion = shockwaveScheduleCacheVersionRef.current;
+        Promise.allSettled(missingTargets.map((target) => loadShockwaveRawMonthRows(target)))
+          .then((results) => {
+            if (
+              currentDateRef.current.year !== year ||
+              currentDateRef.current.month !== month ||
+              shockwaveScheduleCacheVersionRef.current !== viewLoadCacheVersion
+            ) {
+              return;
+            }
+
+            results.forEach((result, index) => {
+              if (result.status === 'rejected') {
+                const target = missingTargets[index];
+                console.warn(
+                  `Failed to refresh cached shockwave view ${target.year}-${target.month}.`,
+                  result.reason
+                );
+              }
+            });
+
+            const completedRows = collectCachedRows();
+            if (completedRows.hasCurrentMonthRows) {
+              applyMemoMapIfLatest(applyRowsToView(completedRows.rows));
+            }
+          })
+          .catch((error) => {
+            console.warn('Failed to refresh cached shockwave view:', error);
+          });
+      }
+
+      return rebuiltMemoMap;
     }
     if (!options.force && loadCacheRef.current.shockwaveMemos === cacheKey) {
       setShockwaveMemosLoadedKey(cacheKey);
@@ -1622,50 +1683,6 @@ export function ScheduleProvider({ children }) {
     if (shouldTrackLoading) beginLoading();
     let loadPromise;
     loadPromise = (async () => {
-      const applyRowsToView = (rows) => {
-        const visibleRows = mapShockwaveRowsToVisibleRows(
-          rows,
-          year,
-          month,
-          shouldKeepShockwaveMemo,
-          shockwaveSettingsRefCache.current
-        );
-        const relocation = relocateHiddenMergedScheduleRows(visibleRows, {
-          rowCount: getShockwaveScheduleBaseRowCount(shockwaveSettingsRefCache.current, year, month),
-        });
-        const memoMap = buildShockwaveMemoMapFromVisibleRows(relocation.rows, shouldKeepShockwaveMemo);
-        const reconciledMemoMap = options.skipLocalRecovery === true
-          ? reconcileLoadedShockwaveMemosWithLocalWrites(memoMap)
-          : mergeLoadedShockwaveMemosWithLocalRecovery(
-              year,
-              month,
-              reconcileLoadedShockwaveMemosWithLocalWrites(memoMap)
-            );
-        rememberShockwaveMemoViewCache(shockwaveMemoViewCacheRef, cacheKey, reconciledMemoMap);
-        if (relocation.payload.length > 0) {
-          persistHiddenMergedScheduleRelocation(relocation.payload);
-        }
-        return reconciledMemoMap;
-      };
-
-      const applyMemoMapIfLatest = (memoMap) => {
-        const isCurrent =
-          currentDateRef.current.year === year &&
-          currentDateRef.current.month === month;
-
-        if (!isCurrent) {
-          return false;
-        }
-
-        // 현재 보려는 달과 이 프로미스가 로드한 달이 일치한다면, 
-        // requestId가 일치하지 않더라도(달 이동 후 복귀 등) 데이터 업데이트를 허용합니다.
-        loadCacheRef.current.shockwaveMemos = cacheKey;
-        shockwaveMemosRef.current = memoMap;
-        setShockwaveMemosLoadedKey(cacheKey);
-        setShockwaveMemos(memoMap);
-        return true;
-      };
-
       try {
         await waitForShockwaveWrites();
 
@@ -1763,7 +1780,7 @@ export function ScheduleProvider({ children }) {
 
     shockwaveMemoViewLoadPromisesRef.current.set(cacheKey, loadPromise);
     return loadPromise;
-  }, [waitForShockwaveWrites, loadShockwaveRawMonthRows, prefetchShockwaveVisibleMonthRows, shouldKeepShockwaveMemo, beginLoading, endLoading, reconcileLoadedShockwaveMemosWithLocalWrites, mergeLoadedShockwaveMemosWithLocalRecovery, persistHiddenMergedScheduleRelocation]);
+  }, [waitForShockwaveWrites, loadShockwaveRawMonthRows, shouldKeepShockwaveMemo, beginLoading, endLoading, reconcileLoadedShockwaveMemosWithLocalWrites, mergeLoadedShockwaveMemosWithLocalRecovery, persistHiddenMergedScheduleRelocation]);
 
   useEffect(() => {
     loadShockwaveMemosRef.current = loadShockwaveMemos;

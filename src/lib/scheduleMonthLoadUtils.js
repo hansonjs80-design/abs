@@ -11,6 +11,42 @@ export function partitionVisibleScheduleMonthTargets(targets, currentYear, curre
   };
 }
 
+export function collectVisibleScheduleMonthRows(
+  targets,
+  currentYear,
+  currentMonth,
+  getCachedRows
+) {
+  const safeTargets = Array.isArray(targets) ? targets.filter(Boolean) : [];
+  const rows = [];
+  const missingTargets = [];
+  let hasCurrentMonthRows = false;
+
+  safeTargets.forEach((target) => {
+    const cachedRows = typeof getCachedRows === 'function'
+      ? getCachedRows(target)
+      : null;
+    if (!Array.isArray(cachedRows)) {
+      missingTargets.push(target);
+      return;
+    }
+
+    rows.push(...cachedRows);
+    if (
+      Number(target?.year) === Number(currentYear) &&
+      Number(target?.month) === Number(currentMonth)
+    ) {
+      hasCurrentMonthRows = true;
+    }
+  });
+
+  return {
+    rows,
+    missingTargets,
+    hasCurrentMonthRows,
+  };
+}
+
 export function shiftScheduleMonth(year, month, delta) {
   const absoluteMonth = Number(year) * 12 + (Number(month) - 1) + Number(delta);
   return {
