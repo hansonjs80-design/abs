@@ -44,6 +44,7 @@ export function collectVisibleScheduleMonthRows(
     rows,
     missingTargets,
     hasCurrentMonthRows,
+    isComplete: hasCurrentMonthRows && missingTargets.length === 0,
   };
 }
 

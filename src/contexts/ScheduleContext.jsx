@@ -49,7 +49,6 @@ import { saveMonthlyTherapistConfigs } from '../lib/monthlyTherapistPersistence'
 import { saveTherapistRosterSafely } from '../lib/therapistRosterPersistence';
 import {
   collectVisibleScheduleMonthRows,
-  partitionVisibleScheduleMonthTargets,
   shiftScheduleMonth,
 } from '../lib/scheduleMonthLoadUtils';
 
@@ -1629,7 +1628,7 @@ export function ScheduleProvider({ children }) {
       };
 
       const cachedRowsSnapshot = collectCachedRows();
-      const rebuiltMemoMap = cachedRowsSnapshot.hasCurrentMonthRows
+      const rebuiltMemoMap = cachedRowsSnapshot.isComplete
         ? applyRowsToView(cachedRowsSnapshot.rows)
         : cachedMemoMap;
       applyMemoMapIfLatest(rebuiltMemoMap);
@@ -1658,9 +1657,13 @@ export function ScheduleProvider({ children }) {
             });
 
             const completedRows = collectCachedRows();
-            if (completedRows.hasCurrentMonthRows) {
-              applyMemoMapIfLatest(applyRowsToView(completedRows.rows));
+            if (!completedRows.isComplete) {
+              console.warn(
+                `Cached shockwave view ${cacheKey} remains unchanged because visible month rows are incomplete.`
+              );
+              return;
             }
+            applyMemoMapIfLatest(applyRowsToView(completedRows.rows));
           })
           .catch((error) => {
             console.warn('Failed to refresh cached shockwave view:', error);
@@ -1687,16 +1690,10 @@ export function ScheduleProvider({ children }) {
         await waitForShockwaveWrites();
 
         const targets = getVisibleShockwaveScheduleMonths(year, month);
-        const { currentTarget, adjacentTargets } = partitionVisibleScheduleMonthTargets(
-          targets,
-          year,
-          month
-        );
         const viewLoadCacheVersion = shockwaveScheduleCacheVersionRef.current;
-        const currentRows = await loadShockwaveRawMonthRows(
-          currentTarget,
-          { force: options.force === true }
-        );
+        const results = await Promise.allSettled(targets.map((target) => (
+          loadShockwaveRawMonthRows(target, { force: options.force === true })
+        )));
 
         const isCurrent =
           currentDateRef.current.year === year &&
@@ -1705,56 +1702,41 @@ export function ScheduleProvider({ children }) {
         if (!isCurrent) {
           return null;
         }
+        if (shockwaveScheduleCacheVersionRef.current !== viewLoadCacheVersion) {
+          return shockwaveMemosRef.current;
+        }
 
-        const immediateRows = [...(currentRows || [])];
-        const adjacentLoadTargets = [];
-        adjacentTargets.forEach((target) => {
-          const rawCacheKey = getShockwaveRawMonthCacheKey(target.year, target.month);
-          const cachedRows = shockwaveRawMonthRowsCacheRef.current.get(rawCacheKey);
-          if (Array.isArray(cachedRows)) immediateRows.push(...cachedRows);
-          if (options.force === true || !Array.isArray(cachedRows)) {
-            adjacentLoadTargets.push(target);
+        results.forEach((result, index) => {
+          if (result.status === 'rejected') {
+            const target = targets[index];
+            console.warn(
+              `Failed to load visible shockwave month ${target.year}-${target.month}; checking the previous raw cache.`,
+              result.reason
+            );
           }
         });
 
-        const immediateMemoMap = applyRowsToView(immediateRows);
-        applyMemoMapIfLatest(immediateMemoMap);
-
-        if (adjacentLoadTargets.length > 0) {
-          Promise.allSettled(adjacentLoadTargets.map((target) => (
-            loadShockwaveRawMonthRows(target, { force: options.force === true })
-          ))).then((results) => {
-            if (
-              currentDateRef.current.year !== year ||
-              currentDateRef.current.month !== month ||
-              shockwaveScheduleCacheVersionRef.current !== viewLoadCacheVersion
-            ) {
-              return;
-            }
-
-            results.forEach((result, index) => {
-              if (result.status === 'rejected') {
-                const target = adjacentLoadTargets[index];
-                console.warn(
-                  `Failed to load adjacent shockwave month ${target.year}-${target.month}; keeping the current month visible.`,
-                  result.reason
-                );
-              }
-            });
-
-            const completedRows = [...(currentRows || [])];
-            adjacentTargets.forEach((target) => {
-              const rawCacheKey = getShockwaveRawMonthCacheKey(target.year, target.month);
-              const cachedRows = shockwaveRawMonthRowsCacheRef.current.get(rawCacheKey);
-              if (Array.isArray(cachedRows)) completedRows.push(...cachedRows);
-            });
-            applyMemoMapIfLatest(applyRowsToView(completedRows));
-          }).catch((error) => {
-            console.warn('Failed to complete adjacent shockwave month loading:', error);
-          });
+        const completedRows = collectVisibleScheduleMonthRows(
+          targets,
+          year,
+          month,
+          (target) => {
+            const rawCacheKey = getShockwaveRawMonthCacheKey(target.year, target.month);
+            return shockwaveRawMonthRowsCacheRef.current.get(rawCacheKey);
+          }
+        );
+        if (!completedRows.isComplete) {
+          const missingMonthKeys = completedRows.missingTargets
+            .map((target) => `${target.year}-${target.month}`)
+            .join(', ');
+          throw new Error(
+            `Visible shockwave schedule months are incomplete: ${missingMonthKeys || cacheKey}`
+          );
         }
 
-        return immediateMemoMap;
+        const finalMemoMap = applyRowsToView(completedRows.rows);
+        applyMemoMapIfLatest(finalMemoMap);
+        return finalMemoMap;
       } catch (err) {
         console.error('Failed to load shockwave memos:', err);
         const fallbackMemoMap = shockwaveMemoViewCacheRef.current.get(cacheKey);

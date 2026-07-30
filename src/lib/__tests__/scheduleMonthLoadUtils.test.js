@@ -94,6 +94,7 @@ describe('schedule month loading priority', () => {
     assert.deepEqual(incompleteView.rows.map((row) => row.id), ['previous', 'current']);
     assert.deepEqual(incompleteView.missingTargets, [{ year: 2026, month: 8 }]);
     assert.equal(incompleteView.hasCurrentMonthRows, true);
+    assert.equal(incompleteView.isComplete, false);
 
     cachedRows.set('2026-8', [{ id: 'next' }]);
     const completedView = collectVisibleScheduleMonthRows(
@@ -109,5 +110,29 @@ describe('schedule month loading priority', () => {
     ]);
     assert.deepEqual(completedView.missingTargets, []);
     assert.equal(completedView.hasCurrentMonthRows, true);
+    assert.equal(completedView.isComplete, true);
+  });
+
+  it('does not treat adjacent rows without the displayed month as a complete view', () => {
+    const targets = [
+      { year: 2026, month: 6 },
+      { year: 2026, month: 7 },
+      { year: 2026, month: 8 },
+    ];
+    const cachedRows = new Map([
+      ['2026-6', [{ id: 'previous' }]],
+      ['2026-8', [{ id: 'next' }]],
+    ]);
+
+    const view = collectVisibleScheduleMonthRows(
+      targets,
+      2026,
+      7,
+      (target) => cachedRows.get(`${target.year}-${target.month}`)
+    );
+
+    assert.deepEqual(view.missingTargets, [{ year: 2026, month: 7 }]);
+    assert.equal(view.hasCurrentMonthRows, false);
+    assert.equal(view.isComplete, false);
   });
 });
