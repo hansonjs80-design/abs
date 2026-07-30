@@ -21,6 +21,10 @@ import {
   loadStatsMonthlyTherapists,
 } from '../lib/statsScheduleSourceUtils';
 import { normalizePrescriptionGroupKey } from '../lib/prescriptionScheduleSettings';
+import {
+  shouldKeepStatsSectionMounted,
+  shouldPrepareStatsSecondarySections,
+} from '../lib/statsSectionLoadingUtils';
 
 class ManualTherapyStatsPageErrorBoundary extends React.Component {
   constructor(props) {
@@ -471,6 +475,21 @@ export default function ManualTherapyStatsPage() {
     addToast(ok ? '이번 달 도수치료 결산 설정을 저장했습니다.' : '결산 설정 저장에 실패했습니다.', ok ? 'success' : 'error');
   }, [addToast, loadShockwaveSettings, saveShockwaveSettings]);
 
+  const secondarySectionsReady = shouldPrepareStatsSecondarySections({
+    dataReady: monthlyTherapistsReady,
+    isPrimaryLoading: isLoading,
+  });
+  const keepSettlementMounted = shouldKeepStatsSectionMounted({
+    activeSection,
+    targetSection: 'settlement',
+    secondarySectionsReady,
+  });
+  const keepNewPatientsMounted = shouldKeepStatsSectionMounted({
+    activeSection,
+    targetSection: 'new-patients',
+    secondarySectionsReady,
+  });
+
   return (
     <div className="animate-fade-in" style={{ height: '100%', overflow: 'auto' }}>
       <ManualTherapyStatsPageErrorBoundary>
@@ -588,9 +607,12 @@ export default function ManualTherapyStatsPage() {
                 </div>
               )}
 
-              {activeSection === 'settlement' && (
+              {keepSettlementMounted && (
                 <ManualTherapySettlementErrorBoundary>
-                  <div className="sw-stats-body sw-stats-body--settlement fade-transition-wrapper">
+                  <div
+                    className="sw-stats-body sw-stats-body--settlement fade-transition-wrapper"
+                    hidden={activeSection !== 'settlement'}
+                  >
                     {isLoading && visibleLogs.length === 0 ? (
                       <SettlementSkeleton />
                     ) : (
@@ -618,8 +640,11 @@ export default function ManualTherapyStatsPage() {
                 </ManualTherapySettlementErrorBoundary>
               )}
 
-          {activeSection === 'new-patients' && (
-            <div className="sw-stats-body sw-stats-body--settlement fade-transition-wrapper">
+          {keepNewPatientsMounted && (
+            <div
+              className="sw-stats-body sw-stats-body--settlement fade-transition-wrapper"
+              hidden={activeSection !== 'new-patients'}
+            >
               <ShockwaveNewPatientsView
                 logs={visibleLogs}
                 therapists={displayBaseTherapists}

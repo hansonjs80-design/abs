@@ -28,6 +28,11 @@ import {
   normalizePrescriptionKey,
   toStatsPrescriptionCount,
 } from '../../lib/shockwaveStatsCountUtils';
+import {
+  isDisplayedStatsMonth,
+  shouldKeepStatsSectionMounted,
+  shouldPrepareStatsSecondarySections,
+} from '../../lib/statsSectionLoadingUtils';
 
 class ShockwaveStatsErrorBoundary extends React.Component {
   constructor(props) {
@@ -123,8 +128,9 @@ export default function ShockwaveStatsView({
   const [settingsReady, setSettingsReady] = useState(() => (
     Boolean(shockwaveSettings?.id) && shockwaveSettings.id !== DEFAULT_SETTINGS_ID
   ));
-  const isLoading = isLogsLoading || isScheduleLoading || isCurrentSyncing || isRecentLogsLoading;
   const [activeSection, setActiveSection] = useState('grid');
+  const isPrimaryLoading = isLogsLoading || isScheduleLoading || isCurrentSyncing;
+  const isLoading = isPrimaryLoading || (activeSection === 'settlement' && isRecentLogsLoading);
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
   const [recentLogsRefreshKey, setRecentLogsRefreshKey] = useState(0);
   const lastAutoSyncKeyRef = useRef(null);
@@ -547,20 +553,19 @@ export default function ShockwaveStatsView({
   }, [loadShockwaveSettings, shockwaveSettings?.id]);
 
   useEffect(() => {
-    if (activeSection !== 'settlement') return;
-    if (safeLogs.length === 0) return;
+    if (!currentLogsReady) return;
     setRecentLogs((prev) => replaceLogsForStatsMonth(prev, currentYear, currentMonth, safeLogs));
-  }, [activeSection, currentMonth, currentYear, safeLogs]);
+  }, [currentLogsReady, currentMonth, currentYear, safeLogs]);
 
   useEffect(() => {
-    if (activeSection !== 'settlement') return undefined;
     if (safeTherapists.length === 0) return undefined;
     if (!isCurrentScheduleReady) return undefined;
+    if (!currentLogsReady || isCurrentSyncing) return undefined;
 
     const therapistKey = safeTherapists
       .map((therapist, index) => `${therapist?.slot_index ?? index}:${therapist?.name || ''}`)
       .join('|');
-    const syncKey = `${currentYear}-${currentMonth}:${recentPeriodMonths}:${therapistKey}:${scheduleLayoutSettingsKey}:${currentMemosSyncSignature}:${recentLogsRefreshKey}`;
+    const syncKey = `${currentYear}-${currentMonth}:${recentPeriodMonths}:${therapistKey}:${scheduleLayoutSettingsKey}:${recentLogsRefreshKey}`;
     if (recentAutoSyncKeyRef.current === syncKey) return undefined;
 
     let cancelled = false;
@@ -581,25 +586,20 @@ export default function ShockwaveStatsView({
       let sourceRecentLogs = [];
 
       for (const target of targets) {
-        const isDisplayedMonth =
-          Number(target.year) === Number(currentYear) &&
-          Number(target.month) === Number(currentMonth);
+        if (isDisplayedStatsMonth(target, currentYear, currentMonth)) continue;
+
         const [targetMemos, targetMonthlyTherapists] = await Promise.all([
-          isDisplayedMonth
-            ? Promise.resolve(memos || {})
-            : loadScheduleMemosForStatsMonth({
-                year: target.year,
-                month: target.month,
-                settings: shockwaveSettings,
-              }),
-          isDisplayedMonth && monthlyTherapistsReady
-            ? Promise.resolve(monthlyTherapists)
-            : loadStatsMonthlyTherapists({
-                year: target.year,
-                month: target.month,
-                type: 'shockwave',
-                baseTherapists: safeTherapists,
-              }),
+          loadScheduleMemosForStatsMonth({
+            year: target.year,
+            month: target.month,
+            settings: shockwaveSettings,
+          }),
+          loadStatsMonthlyTherapists({
+            year: target.year,
+            month: target.month,
+            type: 'shockwave',
+            baseTherapists: safeTherapists,
+          }),
         ]);
 
         const syncResult = await syncMonthShockwaveScheduleToStats({
@@ -672,16 +672,13 @@ export default function ShockwaveStatsView({
       cancelled = true;
     };
   }, [
-    activeSection,
     currentMonth,
     currentYear,
+    currentLogsReady,
     recentPeriodMonths,
     recentLogsRefreshKey,
-    currentMemosSyncSignature,
+    isCurrentSyncing,
     isCurrentScheduleReady,
-    memos,
-    monthlyTherapists,
-    monthlyTherapistsReady,
     safeTherapists,
     scheduleLayoutSettingsKey,
     shockwaveSettings,
@@ -817,6 +814,20 @@ export default function ShockwaveStatsView({
   const isInitialDataLoading = isScheduleLoading || isLogsLoading;
   const showGridSkeleton = (!currentLogsReady || (isInitialDataLoading && safeLogs.length === 0)) && activeSection === 'grid';
   const showSettlementSkeleton = isInitialDataLoading && displayTherapists.length === 0 && activeSection === 'settlement';
+  const secondarySectionsReady = shouldPrepareStatsSecondarySections({
+    dataReady: currentLogsReady,
+    isPrimaryLoading,
+  });
+  const keepSettlementMounted = shouldKeepStatsSectionMounted({
+    activeSection,
+    targetSection: 'settlement',
+    secondarySectionsReady,
+  });
+  const keepNewPatientsMounted = shouldKeepStatsSectionMounted({
+    activeSection,
+    targetSection: 'new-patients',
+    secondarySectionsReady,
+  });
 
   return (
     <div className="sw-stats-container sw-stats-container--shockwave animate-fade-in">
@@ -928,8 +939,11 @@ export default function ShockwaveStatsView({
             </div>
           )}
 
-          {activeSection === 'settlement' && (
-            <div className="sw-stats-body sw-stats-body--settlement fade-transition-wrapper">
+          {keepSettlementMounted && (
+            <div
+              className="sw-stats-body sw-stats-body--settlement fade-transition-wrapper"
+              hidden={activeSection !== 'settlement'}
+            >
               {showSettlementSkeleton ? (
                 <SettlementSkeleton />
               ) : (
@@ -951,8 +965,11 @@ export default function ShockwaveStatsView({
             </div>
           )}
 
-          {activeSection === 'new-patients' && (
-            <div className="sw-stats-body sw-stats-body--settlement fade-transition-wrapper">
+          {keepNewPatientsMounted && (
+            <div
+              className="sw-stats-body sw-stats-body--settlement fade-transition-wrapper"
+              hidden={activeSection !== 'new-patients'}
+            >
               <ShockwaveNewPatientsView
                 logs={safeLogs}
                 therapists={displayBaseTherapists}

@@ -9,6 +9,7 @@ import {
   loadStatsMonthlyTherapists,
 } from '../../lib/statsScheduleSourceUtils';
 import { normalizePrescriptionGroupKey } from '../../lib/prescriptionScheduleSettings';
+import { isDisplayedStatsMonth } from '../../lib/statsSectionLoadingUtils';
 
 export default function ManualTherapySixMonthStats({
   currentYear,
@@ -62,6 +63,8 @@ export default function ManualTherapySixMonthStats({
 
         for (const target of targets) {
           if (cancelled) return;
+          if (isDisplayedStatsMonth(target, currentYear, currentMonth)) continue;
+
           const [targetMemos, targetMonthlyTherapists] = await Promise.all([
             loadScheduleMemosForStatsMonth({
               year: target.year,
