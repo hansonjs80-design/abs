@@ -62,6 +62,21 @@ export const TREATMENT_CANCEL_BG = '#f4cccc';
 export const SCHEDULER_HOLIDAY_BG = '#93c47d';
 export const shockwaveScheduleScrollMemory = new Map();
 
+export function getScheduleCellBottomBorderColor({
+  cellBorderBottomColor,
+  horizontalBorderColor = HORIZONTAL_BORDER_COLOR,
+  fillBackgroundColor = null,
+  hasTreatmentCompleteBackground = false,
+  shouldUseUniformFillBorder = false,
+} = {}) {
+  const hasNonCompleteFillBackground = Boolean(
+    fillBackgroundColor && !hasTreatmentCompleteBackground
+  );
+  return (hasNonCompleteFillBackground || shouldUseUniformFillBorder)
+    ? horizontalBorderColor
+    : (cellBorderBottomColor || horizontalBorderColor);
+}
+
 function normalizePositiveMinuteValue(value, fallback) {
   const minutes = Number(value);
   return Number.isFinite(minutes) && minutes > 0 ? minutes : fallback;

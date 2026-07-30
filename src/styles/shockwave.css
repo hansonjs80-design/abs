@@ -761,6 +761,8 @@
 .sw-cell.holiday-bg {
   --sw-cell-fill-color: #f8c2c2;
   background: #f8c2c2;
+  border-right-color: var(--sw-cell-fill-color);
+  border-bottom-color: var(--sw-cell-fill-color) !important;
 }
 
 .sw-cell.other-month-bg {

@@ -30,6 +30,7 @@ import {
   readDeletedScheduleDrafts,
   readPendingScheduleDrafts,
   getDeletedScheduleDraftTime,
+  getScheduleCellBottomBorderColor,
   isUndoShortcutEvent,
   rememberDeletedScheduleDraft,
   rememberPendingScheduleDraft,
@@ -39,6 +40,34 @@ import {
   SHOCKWAVE_PENDING_DRAFTS_KEY,
   wasScheduleDraftDeletedAfter,
 } from '../schedulerUtils.js';
+
+describe('scheduler cell border color', () => {
+  it('keeps the original horizontal line when completion fills normal or merged cells', () => {
+    const normalCellBorder = getScheduleCellBottomBorderColor({
+      cellBorderBottomColor: '#d9d9d9',
+      horizontalBorderColor: '#b7b7b7',
+      fillBackgroundColor: '#ffe599',
+      hasTreatmentCompleteBackground: true,
+    });
+    const mergedCellBorder = getScheduleCellBottomBorderColor({
+      cellBorderBottomColor: '#d9d9d9',
+      horizontalBorderColor: '#b7b7b7',
+      fillBackgroundColor: '#ffe599',
+      hasTreatmentCompleteBackground: true,
+    });
+
+    assert.equal(normalCellBorder, '#d9d9d9');
+    assert.equal(mergedCellBorder, '#d9d9d9');
+  });
+
+  it('continues using the uniform line for non-status cell fills', () => {
+    assert.equal(getScheduleCellBottomBorderColor({
+      cellBorderBottomColor: '#d9d9d9',
+      horizontalBorderColor: '#b7b7b7',
+      fillBackgroundColor: '#93c47e',
+    }), '#b7b7b7');
+  });
+});
 
 describe('scheduler cell patient parsing', () => {
   it('parses chart number and patient name while ignoring numeric visit suffixes', () => {

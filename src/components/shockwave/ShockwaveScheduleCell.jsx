@@ -9,6 +9,7 @@ import { isTreatmentCancelBg, isTreatmentCompleteBg } from '../../lib/scheduleSt
 import {
   HORIZONTAL_BORDER_COLOR,
   buildSchedulerCellDisplay,
+  getScheduleCellBottomBorderColor,
   getMemoListFromMergeSpan,
 } from '../../lib/schedulerUtils';
 import { has4060Pattern } from '../../lib/schedulerContentFormat';
@@ -119,6 +120,9 @@ const MemoizedCell = memo(({
   const displayData = buildSchedulerCellDisplay(content, effectiveMergeSpan);
   const hasDisplayText = displayData.hasDisplayText && content.trim() && content.trim() !== '\u200B';
   const isCurrentMonthCell = dayInfo.isCurrentMonth !== false;
+  const hasCalendarHolidayBackground = Boolean(
+    dayInfo.isHoliday || (isCurrentMonthCell && dayInfo.dow === 0)
+  );
 
   const isEditing = editingCell === cellKey;
   const isImePreview = imePreviewCell === cellKey;
@@ -236,7 +240,7 @@ const MemoizedCell = memo(({
   let cls = 'sw-cell';
   if (isCurrentMonthCell) cls += ' current-month-cell';
   if (colIdx + effectiveMergeSpan.colSpan - 1 === colCount - 1) cls += ' last-col';
-  if (dayInfo.isHoliday) cls += ' holiday-bg';
+  if (hasCalendarHolidayBackground) cls += ' holiday-bg';
   else if (!isCurrentMonthCell) cls += ' other-month-bg disabled-cell';
 
   if (slotInfo.disabled && !displayData.hasDisplayText) cls += ' disabled';
@@ -279,23 +283,28 @@ const MemoizedCell = memo(({
     fillBackgroundColor = staffBlockRule.bg_color;
   }
   const shouldUseUniformFillBorder = Boolean(
-    fillBackgroundColor ||
-    dayInfo.isHoliday ||
+    hasCalendarHolidayBackground ||
     hasDisabledSlotBackground ||
     hasOtherMonthDisabledSlotBackground ||
-    hasTreatmentCompleteBackground ||
     hasTreatmentCancelBackground ||
     hasStaffOffBackground ||
     hasStaffBlockedBackground ||
     hasOtherMonthStaffBackground
   );
+  const bottomBorderColor = getScheduleCellBottomBorderColor({
+    cellBorderBottomColor,
+    horizontalBorderColor: HORIZONTAL_BORDER_COLOR,
+    fillBackgroundColor,
+    hasTreatmentCompleteBackground,
+    shouldUseUniformFillBorder,
+  });
 
   let inlineStyle = {
     gridColumn: `${gridColumnStart}${effectiveMergeSpan.colSpan > 1 ? ` / span ${effectiveMergeSpan.colSpan}` : ''}`,
     gridRow: `${gridRowStart}${visualRowSpan > 1 ? ` / span ${visualRowSpan}` : ''}`,
     borderBottom: isLastRenderedRow
       ? 'none'
-      : `1px solid ${shouldUseUniformFillBorder ? HORIZONTAL_BORDER_COLOR : (cellBorderBottomColor || HORIZONTAL_BORDER_COLOR)}`,
+      : `1px solid ${bottomBorderColor}`,
   };
 
   if (colIdx + effectiveMergeSpan.colSpan - 1 === colCount - 1) {
@@ -681,6 +690,7 @@ const MemoizedCell = memo(({
 
   if (prevProps.dayInfo?.isHoliday !== nextProps.dayInfo?.isHoliday) return false;
   if (prevProps.dayInfo?.isCurrentMonth !== nextProps.dayInfo?.isCurrentMonth) return false;
+  if (prevProps.dayInfo?.dow !== nextProps.dayInfo?.dow) return false;
 
   return true;
 });

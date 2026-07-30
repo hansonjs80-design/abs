@@ -445,6 +445,11 @@
   pointer-events: none;
 }
 
+.calendar-cell.sunday:not(.other-month) .memo-slot + .memo-slot::before,
+.calendar-cell.holiday:not(.other-month) .memo-slot + .memo-slot::before {
+  background: var(--cal-sunday-bg);
+}
+
 .memo-slot.last-row-count {
   font-size: var(--staff-calendar-last-row-font-size);
   font-weight: var(--staff-calendar-last-row-font-weight);

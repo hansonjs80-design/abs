@@ -98,7 +98,16 @@ test('mobile schedule cells preserve the desktop horizontal border calculation',
   assert.doesNotMatch(shockwaveCss, /\.sw-schedule-body::before\s*\{/);
   assert.match(
     scheduleCell,
-    /borderBottom:\s*isLastRenderedRow[\s\S]*shouldUseUniformFillBorder\s*\?\s*HORIZONTAL_BORDER_COLOR[\s\S]*cellBorderBottomColor/
+    /const bottomBorderColor = getScheduleCellBottomBorderColor\([\s\S]*borderBottom:\s*isLastRenderedRow[\s\S]*`1px solid \$\{bottomBorderColor\}`/
+  );
+});
+
+test('schedule holiday cells use their fill color for internal borders', async () => {
+  const shockwaveCss = await readFile(shockwaveCssUrl, 'utf8');
+
+  assert.match(
+    shockwaveCss,
+    /\.sw-cell\.holiday-bg\s*\{[^}]*--sw-cell-fill-color:\s*#f8c2c2;[^}]*border-right-color:\s*var\(--sw-cell-fill-color\);[^}]*border-bottom-color:\s*var\(--sw-cell-fill-color\)\s*!important;/s
   );
 });
 
