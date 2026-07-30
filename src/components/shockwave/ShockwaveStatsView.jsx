@@ -30,6 +30,7 @@ import {
 } from '../../lib/shockwaveStatsCountUtils';
 import {
   isDisplayedStatsMonth,
+  loadStatsMonthsTogether,
   shouldKeepStatsSectionMounted,
   shouldPrepareStatsSecondarySections,
 } from '../../lib/statsSectionLoadingUtils';
@@ -569,25 +570,12 @@ export default function ShockwaveStatsView({
     if (recentAutoSyncKeyRef.current === syncKey) return undefined;
 
     let cancelled = false;
-    const applyMonthLogs = (target, monthRows) => {
-      const normalized = normalizeScheduleSourceLogs(
-        monthRows,
-        `shockwave-source:${target.year}-${String(target.month).padStart(2, '0')}`
-      );
-      if (!cancelled) {
-        setRecentLogs((prev) => replaceLogsForStatsMonth(prev, target.year, target.month, normalized));
-      }
-      return normalized;
-    };
 
     const runRecentSync = async () => {
       setIsRecentLogsLoading(true);
-      const targets = getRecentScheduleMonthTargets({ currentYear, currentMonth, recentPeriodMonths });
-      let sourceRecentLogs = [];
-
-      for (const target of targets) {
-        if (isDisplayedStatsMonth(target, currentYear, currentMonth)) continue;
-
+      const targets = getRecentScheduleMonthTargets({ currentYear, currentMonth, recentPeriodMonths })
+        .filter((target) => !isDisplayedStatsMonth(target, currentYear, currentMonth));
+      const monthSources = await loadStatsMonthsTogether(targets, async (target) => {
         const [targetMemos, targetMonthlyTherapists] = await Promise.all([
           loadScheduleMemosForStatsMonth({
             year: target.year,
@@ -602,6 +590,11 @@ export default function ShockwaveStatsView({
           }),
         ]);
 
+        return { target, targetMemos, targetMonthlyTherapists };
+      });
+
+      let sourceRecentLogs = [];
+      for (const { target, targetMemos, targetMonthlyTherapists } of monthSources) {
         const syncResult = await syncMonthShockwaveScheduleToStats({
           year: target.year,
           month: target.month,
@@ -613,17 +606,9 @@ export default function ShockwaveStatsView({
           scheduleAuthoritative: true,
           emitEvent: false,
           replaceExistingMonthLogs: true,
-          onRowsRebuilt: (rebuiltRows) => {
-            const normalized = applyMonthLogs(target, rebuiltRows);
-            sourceRecentLogs = replaceLogsForStatsMonth(
-              sourceRecentLogs,
-              target.year,
-              target.month,
-              normalized
-            );
-          },
         });
-        const normalized = normalizeScheduleSourceLogs(
+
+        const monthLogs = normalizeScheduleSourceLogs(
           syncResult?.rebuiltRows,
           `shockwave-source:${target.year}-${String(target.month).padStart(2, '0')}`
         );
@@ -631,9 +616,8 @@ export default function ShockwaveStatsView({
           sourceRecentLogs,
           target.year,
           target.month,
-          normalized
+          monthLogs
         );
-        if (!cancelled) setRecentLogs(sourceRecentLogs);
       }
 
       return sourceRecentLogs;
@@ -960,6 +944,7 @@ export default function ShockwaveStatsView({
                   recentPeriodLabel={recentPeriodLabel}
                   onRecentPeriodInputChange={setRecentPeriodInput}
                   selectedTherapistNames={selectedTherapistNames}
+                  recentSummariesLoading={isRecentLogsLoading}
                 />
               )}
             </div>

@@ -44,6 +44,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
   recentPeriodLabel,
   onRecentPeriodInputChange,
   prescriptions,
+  recentSummariesLoading = false,
   settlement,
 }) {
   const incentiveRate = (Number(incentivePercentage) || 0) / 100;
@@ -150,14 +151,20 @@ export default function ShockwaveSettlementHorizontalCompactView({
             </tr>
           </thead>
           <tbody>
-            {recentMonthlySummaries.map((item, index) => (
-              <tr key={item.monthKey} className={index === 0 ? 'current-period-row' : ''}>
-                <th className="month-label">{item.label}</th>
-                <td>{formatCount(item.totalCount)}</td>
-                <td className="amount-val">{formatTotalCurrency(item.amount)}</td>
-                <td className="new-patient-val">{Number(item.newPatientCount || 0).toLocaleString('ko-KR')}명</td>
+            {recentSummariesLoading ? (
+              <tr>
+                <td colSpan={4}>최근 현황 불러오는 중...</td>
               </tr>
-            ))}
+            ) : (
+              recentMonthlySummaries.map((item, index) => (
+                <tr key={item.monthKey} className={index === 0 ? 'current-period-row' : ''}>
+                  <th className="month-label">{item.label}</th>
+                  <td>{formatCount(item.totalCount)}</td>
+                  <td className="amount-val">{formatTotalCurrency(item.amount)}</td>
+                  <td className="new-patient-val">{Number(item.newPatientCount || 0).toLocaleString('ko-KR')}명</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

@@ -50,6 +50,7 @@ export default function ShockwaveSettlementView({
   onRecentPeriodInputChange,
   monthlyTherapists,
   selectedTherapistNames,
+  recentSummariesLoading = false,
 }) {
   const [viewMode, setViewMode] = useState(readStoredViewMode); // 'horizontal' | 'horizontal2' | 'vertical'
   const handleViewModeChange = useCallback((nextViewMode) => {
@@ -355,14 +356,20 @@ export default function ShockwaveSettlementView({
                     </tr>
                   </thead>
                   <tbody>
-                    {safeRecentMonthlySummaries.map((item) => (
-                      <tr key={item.monthKey}>
-                        <th className="month-label">{item.label}</th>
-                        <td>{formatCount(item.totalCount)}</td>
-                        <td className="amount">{formatCurrency(item.amount)}</td>
-                        <td className="new-patient">{item.newPatientCount}명</td>
+                    {recentSummariesLoading ? (
+                      <tr>
+                        <td colSpan={4}>최근 현황 불러오는 중...</td>
                       </tr>
-                    ))}
+                    ) : (
+                      safeRecentMonthlySummaries.map((item) => (
+                        <tr key={item.monthKey}>
+                          <th className="month-label">{item.label}</th>
+                          <td>{formatCount(item.totalCount)}</td>
+                          <td className="amount">{formatCurrency(item.amount)}</td>
+                          <td className="new-patient">{item.newPatientCount}명</td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -380,6 +387,7 @@ export default function ShockwaveSettlementView({
           recentPeriodInput={recentPeriodInput}
           recentPeriodLabel={recentPeriodLabel}
           settlement={settlement}
+          recentSummariesLoading={recentSummariesLoading}
         />
       ) : (
         <>
@@ -535,14 +543,20 @@ export default function ShockwaveSettlementView({
                       </tr>
                     </thead>
                     <tbody>
-                      {safeRecentMonthlySummaries.map((item) => (
-                        <tr key={item.monthKey}>
-                          <th className="month-label">{item.label}</th>
-                          <td>{formatCount(item.totalCount)}</td>
-                          <td className="amount">{formatCurrency(item.amount)}</td>
-                          <td className="new-patient">{item.newPatientCount}명</td>
+                      {recentSummariesLoading ? (
+                        <tr>
+                          <td colSpan={4}>최근 현황 불러오는 중...</td>
                         </tr>
-                      ))}
+                      ) : (
+                        safeRecentMonthlySummaries.map((item) => (
+                          <tr key={item.monthKey}>
+                            <th className="month-label">{item.label}</th>
+                            <td>{formatCount(item.totalCount)}</td>
+                            <td className="amount">{formatCurrency(item.amount)}</td>
+                            <td className="new-patient">{item.newPatientCount}명</td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
