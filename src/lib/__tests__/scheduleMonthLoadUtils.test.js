@@ -3,10 +3,12 @@ import { describe, it } from 'node:test';
 
 import {
   collectVisibleScheduleMonthRows,
+  getScheduleRealtimePayloadKind,
   normalizeLoadedScheduleMonthKey,
   partitionVisibleScheduleMonthTargets,
   shiftScheduleMonth,
   shouldKeepScheduleMounted,
+  updateCachedScheduleRowsFromRealtime,
 } from '../scheduleMonthLoadUtils.js';
 
 describe('schedule month loading priority', () => {
@@ -134,5 +136,80 @@ describe('schedule month loading priority', () => {
     assert.deepEqual(view.missingTargets, [{ year: 2026, month: 7 }]);
     assert.equal(view.hasCurrentMonthRows, false);
     assert.equal(view.isComplete, false);
+  });
+
+  it('keeps raw month rows aligned with realtime upserts and deletes', () => {
+    const originalRows = [
+      {
+        id: 'row-a',
+        year: 2026,
+        month: 7,
+        week_index: 4,
+        day_index: 2,
+        row_index: 3,
+        col_index: 1,
+        content: '이전 내용',
+        prescription: 'F2.5',
+      },
+    ];
+
+    const updatedRows = updateCachedScheduleRowsFromRealtime(originalRows, {
+      id: 'row-a',
+      year: 2026,
+      month: 7,
+      week_index: 4,
+      day_index: 2,
+      row_index: 3,
+      col_index: 1,
+      content: '실시간 변경',
+    });
+    assert.notEqual(updatedRows, originalRows);
+    assert.equal(updatedRows[0].content, '실시간 변경');
+    assert.equal(updatedRows[0].prescription, 'F2.5');
+
+    const insertedRows = updateCachedScheduleRowsFromRealtime(updatedRows, {
+      id: 'row-b',
+      year: 2026,
+      month: 7,
+      week_index: 4,
+      day_index: 3,
+      row_index: 5,
+      col_index: 1,
+      content: '새 내용',
+    });
+    assert.deepEqual(insertedRows.map((row) => row.id), ['row-a', 'row-b']);
+
+    const deletedRows = updateCachedScheduleRowsFromRealtime(
+      insertedRows,
+      { id: 'row-a' },
+      { remove: true }
+    );
+    assert.deepEqual(deletedRows.map((row) => row.id), ['row-b']);
+  });
+
+  it('does not change raw month rows for an unrelated realtime delete', () => {
+    const rows = [{ id: 'row-a', content: '유지' }];
+    assert.equal(
+      updateCachedScheduleRowsFromRealtime(rows, { id: 'missing' }, { remove: true }),
+      rows
+    );
+  });
+
+  it('recognizes a Supabase delete even when its new record is an empty object', () => {
+    assert.equal(getScheduleRealtimePayloadKind({
+      eventType: 'DELETE',
+      new: {},
+      old: { id: 'row-a' },
+    }), 'delete');
+    assert.equal(getScheduleRealtimePayloadKind({
+      eventType: 'UPDATE',
+      new: { id: 'row-a', content: '변경' },
+      old: { id: 'row-a', content: '이전' },
+    }), 'upsert');
+    assert.equal(getScheduleRealtimePayloadKind({
+      eventType: 'INSERT',
+      new: {},
+      old: {},
+    }), 'unknown');
   });
 });
