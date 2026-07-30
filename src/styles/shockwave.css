@@ -640,6 +640,13 @@
   box-shadow: inset 0 0 0 9999px rgba(255, 255, 255, 0.06);
 }
 
+@media (hover: hover) and (pointer: fine) {
+  html.platform-windows:not([data-theme="dark"])
+  .sw-cell.current-month-cell:not(.has-fill-bg):not(.staff-off):not(.staff-blocked):not(.green):not(.preserve):not(.cancelled):not(.holiday-bg):not(.other-month-bg):not(.other-month-muted-block):not(.disabled):not(.selected):not(.primary-selected):not(.editing):hover {
+    box-shadow: inset 0 0 0 9999px rgba(15, 23, 42, 0.08);
+  }
+}
+
 .sw-cell.has-memo::after {
   content: "";
   position: absolute;
