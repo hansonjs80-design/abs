@@ -556,14 +556,17 @@
 
 .today-panel-header {
   padding: 10px 14px;
-  background: #3b82f6;
-  color: white;
+  background: #cfe2f3;
+  color: #0000ff;
   font-weight: 800;
-  font-size: 1.16rem;
+  font-size: 1.26rem;
+  line-height: 1.2;
   display: flex;
   align-items: center;
   gap: 10px;
-  border-bottom: 1px solid rgba(30, 64, 175, 0.32);
+  min-height: 50px;
+  box-sizing: border-box;
+  border-bottom: 3px solid rgba(30, 64, 175, 0.32);
   letter-spacing: 0;
 }
 

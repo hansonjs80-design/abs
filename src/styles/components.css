@@ -1516,13 +1516,16 @@
 
 .notice-board-header {
   padding: 10px 14px;
-  background: #fbbc04;
-  border-bottom: 1px solid #e2a100;
+  background: #fff2cc;
+  border-bottom: 3px solid #f1c232;
   font-weight: 800;
-  font-size: 1.14rem;
+  font-size: 1.24rem;
+  line-height: 1.2;
   display: flex;
   align-items: center;
   gap: 9px;
+  min-height: 50px;
+  box-sizing: border-box;
   color: #000000;
   letter-spacing: 0;
   border-radius: 8px 8px 0 0;
