@@ -90,19 +90,6 @@ export default function ShockwavePage() {
       loadMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
     ]);
 
-    Promise.allSettled([
-      loadStaffMemos(currentYear, currentMonth, { includeAdjacentMonths: true }),
-      loadHolidays(currentYear, currentMonth),
-      loadVisibleMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
-      loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy'),
-    ]).then((results) => {
-      results.forEach((result, index) => {
-        if (result.status === 'rejected') {
-          console.warn('Shockwave tab background month loader failed:', index, result.reason);
-        }
-      });
-    });
-
     criticalLoads.then((results) => {
       if (cancelled) return;
       const failed = results.find((result, index) => (
@@ -115,7 +102,21 @@ export default function ShockwavePage() {
           failed.status === 'rejected' ? failed.reason : 'shockwave schedule returned empty load result'
         );
         setLoadError('스케줄 데이터를 불러오지 못했습니다. 다시 시도해 주세요.');
+        return;
       }
+
+      Promise.allSettled([
+        loadStaffMemos(currentYear, currentMonth, { includeAdjacentMonths: true }),
+        loadHolidays(currentYear, currentMonth),
+        loadVisibleMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
+        loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy'),
+      ]).then((backgroundResults) => {
+        backgroundResults.forEach((result, index) => {
+          if (result.status === 'rejected') {
+            console.warn('Shockwave tab background month loader failed:', index, result.reason);
+          }
+        });
+      });
     });
     return () => {
       cancelled = true;
