@@ -639,27 +639,52 @@ export function ScheduleProvider({ children }) {
     });
   }, []);
 
+  const applyCachedScheduleMonthState = useCallback((year, month) => {
+    const monthKey = getShockwaveMemoViewCacheKey(year, month);
+    const cachedMemos = shockwaveMemoViewCacheRef.current.get(monthKey);
+    if (cachedMemos) {
+      loadCacheRef.current.shockwaveMemos = monthKey;
+      shockwaveMemosRef.current = cachedMemos;
+      setShockwaveMemosLoadedKey(monthKey);
+      setShockwaveMemos(cachedMemos);
+    }
+
+    const cachedTherapists = monthlyTherapistsByMonthRef.current.shockwave?.[monthKey];
+    if (Array.isArray(cachedTherapists)) {
+      monthlyTherapistLoadRequestRef.current.shockwave += 1;
+      monthlyTherapistsRef.current = cachedTherapists;
+      setMonthlyTherapists(cachedTherapists);
+      setMonthlyTherapistLoadedKey('shockwave', monthKey);
+    }
+  }, [setMonthlyTherapistLoadedKey]);
+
   const navigateMonth = useCallback((delta) => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('clinic-before-route-change'));
+    }
     loadCacheRef.current = { staffMemos: null, shockwaveMemos: null, holidays: null };
-    setShockwaveMemosLoadedKey('');
     const nextDate = shiftScheduleMonth(
       currentDateRef.current.year,
       currentDateRef.current.month,
       delta
     );
+    applyCachedScheduleMonthState(nextDate.year, nextDate.month);
     currentDateRef.current = nextDate;
     setCurrentYear(nextDate.year);
     setCurrentMonth(nextDate.month);
-  }, []);
+  }, [applyCachedScheduleMonthState]);
 
   const goToMonth = useCallback((year, month) => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('clinic-before-route-change'));
+    }
     loadCacheRef.current = { staffMemos: null, shockwaveMemos: null, holidays: null };
-    setShockwaveMemosLoadedKey('');
     const nextDate = { year: Number(year), month: Number(month) };
+    applyCachedScheduleMonthState(nextDate.year, nextDate.month);
     currentDateRef.current = nextDate;
     setCurrentYear(nextDate.year);
     setCurrentMonth(nextDate.month);
-  }, []);
+  }, [applyCachedScheduleMonthState]);
 
   // 직원 메모 로드 (캐시 키로 중복 방지)
   const loadStaffMemos = useCallback(async (year, month, options = {}) => {

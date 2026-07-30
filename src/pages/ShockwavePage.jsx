@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSchedule } from '../contexts/ScheduleContext';
 import ShockwaveView from '../components/shockwave/ShockwaveView';
+import { shouldKeepScheduleMounted } from '../lib/scheduleMonthLoadUtils';
 
 class ShockwavePageErrorBoundary extends React.Component {
   constructor(props) {
@@ -84,6 +85,7 @@ export default function ShockwavePage() {
 
   useEffect(() => {
     let cancelled = false;
+    let backgroundTimerId = null;
     setLoadError('');
     const criticalLoads = Promise.allSettled([
       loadShockwaveMemos(currentYear, currentMonth),
@@ -105,37 +107,49 @@ export default function ShockwavePage() {
         return;
       }
 
-      Promise.allSettled([
-        loadStaffMemos(currentYear, currentMonth, { includeAdjacentMonths: true }),
-        loadHolidays(currentYear, currentMonth),
-        loadVisibleMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
-        loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy'),
-      ]).then((backgroundResults) => {
-        backgroundResults.forEach((result, index) => {
-          if (result.status === 'rejected') {
-            console.warn('Shockwave tab background month loader failed:', index, result.reason);
-          }
+      backgroundTimerId = window.setTimeout(() => {
+        if (cancelled) return;
+        Promise.allSettled([
+          loadStaffMemos(currentYear, currentMonth, { includeAdjacentMonths: true }),
+          loadHolidays(currentYear, currentMonth),
+          loadVisibleMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
+          loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy'),
+        ]).then((backgroundResults) => {
+          backgroundResults.forEach((result, index) => {
+            if (result.status === 'rejected') {
+              console.warn('Shockwave tab background month loader failed:', index, result.reason);
+            }
+          });
         });
-      });
+      }, 0);
     });
     return () => {
       cancelled = true;
+      if (backgroundTimerId !== null) {
+        window.clearTimeout(backgroundTimerId);
+      }
     };
   }, [currentYear, currentMonth, loadStaffMemos, loadShockwaveMemos, loadHolidays, loadMonthlyTherapists, loadVisibleMonthlyTherapists, loadAttempt]);
 
   const monthKey = `${currentYear}-${currentMonth}`;
   const monthlyTherapistsReady = monthlyTherapistLoadKeys?.shockwave === monthKey;
   const shockwaveMemosReady = shockwaveMemosLoadedKey === monthKey;
+  const currentMonthReady = monthlyTherapistsReady && shockwaveMemosReady;
+  const keepScheduleMounted = shouldKeepScheduleMounted({
+    currentMonthReady,
+    lastLoadedMonthKey: shockwaveMemosLoadedKey,
+    loadError,
+  });
 
   return (
     <ShockwavePageErrorBoundary>
       <div className="animate-fade-in">
-        {monthlyTherapistsReady && shockwaveMemosReady ? (
+        {keepScheduleMounted ? (
           <ShockwaveView
             therapists={therapists}
             settings={shockwaveSettings}
             memos={shockwaveMemos}
-            memosLoadedKey={shockwaveMemosLoadedKey}
+            memosLoadedKey={currentMonthReady ? shockwaveMemosLoadedKey : ''}
             onLoadMemos={loadShockwaveMemos}
             onSaveMemo={saveShockwaveMemo}
             holidays={holidays}

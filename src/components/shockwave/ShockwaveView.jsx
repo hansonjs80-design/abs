@@ -153,7 +153,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const [selectedKeys, setSelectedKeys] = useState(() => new Set());
   const [editingCell, setEditingCell] = useState(null);       // "w-d-r-c" 키 문자열
   const [editValue, setEditValue] = useState('');
-  const [loadedMemosKey, setLoadedMemosKey] = useState('');
+  const loadedMemosKey = memosLoadedKey;
   const [contextMenu, setContextMenu] = useState(null); // { x, y, weekIdx, dayIdx, rowIdx, colIdx, currentPrescription }
   const [activeContextSubmenu, setActiveContextSubmenu] = useState(null);
   const [contextMenuBodyPartOptions, setContextMenuBodyPartOptions] = useState([]);
@@ -174,6 +174,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     pendingDisplayValuesRef,
     pendingMemoOverridesRef,
     setPendingDisplayValues,
+    resetImmediateScheduleState,
     applyImmediateCellBg,
     applyImmediateCellDisplay,
     applyImmediateMergeSpan,
@@ -293,10 +294,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     onSaveMemo: queuedOnSaveMemo,
     setPendingDisplayValues,
   });
-
-  useEffect(() => {
-    loadShockwaveSettings?.();
-  }, [loadShockwaveSettings, currentYear, currentMonth]);
 
   useEffect(() => {
     const refreshSettingsOnFocus = () => {
@@ -459,26 +456,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     settings,
     setChartSelector,
   });
-
-  useEffect(() => {
-    const monthKey = getShockwaveScheduleScrollKey(currentYear, currentMonth);
-    setPendingDisplayValues({});
-    if (memosLoadedKey === monthKey) {
-      setLoadedMemosKey(monthKey);
-      return undefined;
-    }
-
-    let cancelled = false;
-    setLoadedMemosKey('');
-    Promise.resolve(onLoadMemos(currentYear, currentMonth)).finally(() => {
-      if (!cancelled) {
-        setLoadedMemosKey(monthKey);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [currentYear, currentMonth, memosLoadedKey, onLoadMemos, setPendingDisplayValues]);
 
   // ── 기존 40/60 셀과 빈 셀 잔여 메타데이터 보정 ──
   const prescriptionPatchKeyRef = useRef(null);
@@ -797,6 +774,69 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     window.addEventListener('clinic-before-route-change', flushEditDraft);
     return () => window.removeEventListener('clinic-before-route-change', flushEditDraft);
   }, [flushEditDraft]);
+
+  const previousScheduleMonthRef = useRef(
+    getShockwaveScheduleScrollKey(currentYear, currentMonth)
+  );
+  useEffect(() => {
+    const monthKey = getShockwaveScheduleScrollKey(currentYear, currentMonth);
+    if (previousScheduleMonthRef.current === monthKey) return;
+    previousScheduleMonthRef.current = monthKey;
+
+    dragSelectionRef.current = null;
+    selectedCellRef.current = null;
+    editDraftRef.current = null;
+    defaultEditMergeSpanRef.current = {};
+    supersededScheduleDraftsRef.current = new Map();
+    cellSaveVersionRef.current = {};
+    imeOpenRef.current = false;
+    if (editAutosaveTimerRef.current) {
+      clearTimeout(editAutosaveTimerRef.current);
+      editAutosaveTimerRef.current = null;
+    }
+
+    skipNextEditBlurSaveRef.current = true;
+    window.setTimeout(() => {
+      skipNextEditBlurSaveRef.current = false;
+    }, 0);
+
+    chartSelector?.resolve?.(null);
+    patientHistoryTargetCellRef.current = null;
+    deferredPatientHistoryAutoFillRef.current = null;
+    resetImmediateScheduleState();
+    setSelectedCell(null);
+    setRangeEnd(null);
+    setSelectedKeys(new Set());
+    setEditingCell(null);
+    setEditValue('');
+    setContextMenu(null);
+    setActiveContextSubmenu(null);
+    setContextMenuBodyPartOptions([]);
+    setContextMenuHiddenBodyPartKeys(new Set());
+    setContextMenuMemoDrafts([]);
+    setContextMenuVisitInput('');
+    setHoverCell(null);
+    setTodayShortcutTooltip(null);
+    setChartSelector(null);
+    setImePreviewCell(null);
+    setShowTherapistConfig(false);
+    setPatientHistoryModalOpen(false);
+    setPatientHistoryModalData({
+      loading: false,
+      logs: [],
+      searchName: '',
+      searchChart: '',
+    });
+    setPatientHistoryBodyFilters({});
+    setPendingPatientHistoryApplyLog(null);
+    setClipboardSource(null);
+  }, [
+    chartSelector,
+    currentMonth,
+    currentYear,
+    resetImmediateScheduleState,
+    setClipboardSource,
+  ]);
 
   const focusSelectedCellInput = useCallback(() => {
     requestAnimationFrame(() => {
@@ -2668,6 +2708,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         className={`shockwave-view animate-fade-in${(isScheduleMonthLoading || isDeviceSettingsLoading || isTextSettingsLoading) ? ' is-month-loading' : ''}`}
         ref={viewRef} 
         tabIndex={0} 
+        aria-busy={isScheduleMonthLoading || isDeviceSettingsLoading}
         style={{
           outline: 'none',
           '--sw-row-height': `${rowHeight}px`,

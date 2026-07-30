@@ -171,6 +171,17 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
   const pendingMemoOverridesRef = useRef({});
   const pendingCellBgColorsRef = useRef({});
 
+  const resetImmediateScheduleState = useCallback(() => {
+    pendingDisplayValuesRef.current = {};
+    pendingMergeSpansRef.current = {};
+    pendingMemoOverridesRef.current = {};
+    pendingCellBgColorsRef.current = {};
+    setPendingDisplayValues({});
+    setPendingMergeSpans({});
+    setPendingMemoOverrides({});
+    setPendingCellBgColors({});
+  }, []);
+
   useEffect(() => {
     flushSync(() => {
       setPendingCellBgColors((prev) => {
@@ -464,6 +475,7 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
     pendingMemoOverridesRef,
     pendingCellBgColorsRef,
     setPendingDisplayValues,
+    resetImmediateScheduleState,
     applyImmediateCellBg,
     applyImmediateCellDisplay,
     applyImmediateMergeSpan,

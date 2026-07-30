@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   partitionVisibleScheduleMonthTargets,
   shiftScheduleMonth,
+  shouldKeepScheduleMounted,
 } from '../scheduleMonthLoadUtils.js';
 
 describe('schedule month loading priority', () => {
@@ -37,5 +38,28 @@ describe('schedule month loading priority', () => {
     assert.deepEqual(january, { year: 2027, month: 1 });
     assert.deepEqual(february, { year: 2027, month: 2 });
     assert.deepEqual(shiftScheduleMonth(2027, 1, -1), { year: 2026, month: 12 });
+  });
+
+  it('keeps the scheduler mounted while the next month is loading', () => {
+    assert.equal(shouldKeepScheduleMounted({
+      currentMonthReady: false,
+      lastLoadedMonthKey: '2026-7',
+      loadError: '',
+    }), true);
+    assert.equal(shouldKeepScheduleMounted({
+      currentMonthReady: false,
+      lastLoadedMonthKey: '',
+      loadError: '',
+    }), false);
+    assert.equal(shouldKeepScheduleMounted({
+      currentMonthReady: false,
+      lastLoadedMonthKey: '2026-7',
+      loadError: 'failed',
+    }), false);
+    assert.equal(shouldKeepScheduleMounted({
+      currentMonthReady: true,
+      lastLoadedMonthKey: '2026-7',
+      loadError: 'non-critical warning',
+    }), true);
   });
 });

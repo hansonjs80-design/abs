@@ -18,3 +18,12 @@ export function shiftScheduleMonth(year, month, delta) {
     month: ((absoluteMonth % 12) + 12) % 12 + 1,
   };
 }
+
+export function shouldKeepScheduleMounted({
+  currentMonthReady,
+  lastLoadedMonthKey,
+  loadError,
+}) {
+  if (currentMonthReady) return true;
+  return Boolean(lastLoadedMonthKey) && !loadError;
+}
