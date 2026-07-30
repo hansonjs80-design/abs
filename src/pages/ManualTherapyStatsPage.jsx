@@ -247,13 +247,15 @@ export default function ManualTherapyStatsPage() {
     const requestId = ++scheduleReloadRequestRef.current;
     setIsScheduleLoading(true);
     try {
-      const loadedMonthlyTherapists = await loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy');
+      const [loadedMonthlyTherapists, loadedMemos] = await Promise.all([
+        loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy'),
+        loadShockwaveMemos(currentYear, currentMonth, { force }),
+      ]);
       if (scheduleReloadRequestRef.current === requestId) {
         if (Array.isArray(loadedMonthlyTherapists)) {
           setLocalMonthlyTherapists(loadedMonthlyTherapists);
         }
       }
-      const loadedMemos = await loadShockwaveMemos(currentYear, currentMonth, { force });
       return { memos: loadedMemos, monthlyTherapists: loadedMonthlyTherapists, therapists: safeTherapists };
     } finally {
       if (scheduleReloadRequestRef.current === requestId) {
@@ -315,22 +317,21 @@ export default function ManualTherapyStatsPage() {
 
     (async () => {
       try {
-        // 1. 월별 치료사 데이터 로드
-        const loadedMonthlyTherapists = await loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy');
+        // 1. 서로 독립적인 월별 치료사/스케줄 데이터를 동시에 로드
+        const [loadedMonthlyTherapists, loadedMemos] = await Promise.all([
+          loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy'),
+          loadShockwaveMemos(currentYear, currentMonth),
+        ]);
         if (!active || scheduleReloadRequestRef.current !== requestId) return;
         if (Array.isArray(loadedMonthlyTherapists)) {
           setLocalMonthlyTherapists(loadedMonthlyTherapists);
         }
 
-        // 2. 스케줄 메모 데이터 로드
-        const loadedMemos = await loadShockwaveMemos(currentYear, currentMonth);
-        if (!active || scheduleReloadRequestRef.current !== requestId) return;
-
-        // 3. 스케줄 원본을 다시 읽어 도수치료 통계를 스케줄 기준으로 자동 동기화
+        // 2. 스케줄 원본을 다시 읽어 도수치료 통계를 스케줄 기준으로 자동 동기화
         const synced = await syncCurrentManualStatsFromScheduleSource({ upToToday: true, emitEvent: false });
         if (!active || scheduleReloadRequestRef.current !== requestId) return;
 
-        // 4. 동기화 완료 후 최신 도수치료 로그 조회
+        // 3. 동기화 완료 후 최신 도수치료 로그 조회
         if (active && scheduleReloadRequestRef.current === requestId) {
           await fetchLogs({ memosOverride: synced?.memos || loadedMemos || {} });
         }

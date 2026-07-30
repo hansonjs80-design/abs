@@ -8,12 +8,16 @@ import { ToastProvider } from './components/common/Toast';
 import Layout from './components/layout/Layout';
 import BackupRuntime from './components/backup/BackupRuntime';
 import { canAccessPath, getFirstAllowedPath } from './lib/authPermissions';
+import {
+  loadManualTherapyStatsPage,
+  loadShockwaveStatsPage,
+} from './lib/statsRoutePreload';
 
 const LoginPage = React.lazy(() => import('./pages/LoginPage'));
 const StaffSchedulePage = React.lazy(() => import('./pages/StaffSchedulePage'));
 const ShockwavePage = React.lazy(() => import('./pages/ShockwavePage'));
-const ShockwaveStatsPage = React.lazy(() => import('./pages/ShockwaveStatsPage'));
-const ManualTherapyStatsPage = React.lazy(() => import('./pages/ManualTherapyStatsPage'));
+const ShockwaveStatsPage = React.lazy(loadShockwaveStatsPage);
+const ManualTherapyStatsPage = React.lazy(loadManualTherapyStatsPage);
 const PhysicalTherapyStatsPage = React.lazy(() => import('./pages/PhysicalTherapyStatsPage'));
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
 

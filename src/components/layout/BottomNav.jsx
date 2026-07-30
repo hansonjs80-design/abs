@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAllowedTabs } from '../../lib/authPermissions';
+import { preloadStatsRoute } from '../../lib/statsRoutePreload';
 
 export default function BottomNav() {
   const { user } = useAuth();
@@ -24,6 +25,9 @@ export default function BottomNav() {
               className={({ isActive }) => `bottom-nav-item ${item.tabClass}${isActive ? ' active' : ''}`}
               end={item.path === '/'}
               onClick={() => notifyBeforeNavigate(item.path)}
+              onPointerEnter={() => preloadStatsRoute(item.path)}
+              onFocus={() => preloadStatsRoute(item.path)}
+              onTouchStart={() => preloadStatsRoute(item.path)}
               aria-label={item.shortLabel || item.label}
               title={item.shortLabel || item.label}
             >

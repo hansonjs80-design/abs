@@ -8,6 +8,7 @@ import {
   buildTopTabTransition,
   getTopTabMotionClasses,
 } from './topTabTransitionUtils';
+import { isStatsRoutePath, preloadStatsRoute } from '../../lib/statsRoutePreload';
 
 const TAB_EDGE_TRANSITION_MS = 320;
 
@@ -37,6 +38,27 @@ export default function TopTabs() {
     const timer = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    const preloadablePaths = items
+      .map((item) => item.path)
+      .filter(isStatsRoutePath);
+    if (preloadablePaths.length === 0) return undefined;
+
+    const preload = () => {
+      preloadablePaths.forEach((path) => {
+        preloadStatsRoute(path);
+      });
+    };
+
+    if (typeof window.requestIdleCallback === 'function') {
+      const idleId = window.requestIdleCallback(preload, { timeout: 2000 });
+      return () => window.cancelIdleCallback?.(idleId);
+    }
+
+    const timeoutId = window.setTimeout(preload, 800);
+    return () => window.clearTimeout(timeoutId);
+  }, [items]);
 
   const formatDateTime = (date) => {
     const y = date.getFullYear();
@@ -90,12 +112,15 @@ export default function TopTabs() {
                 <div
                   className={`top-tab ${item.tabClass}${isActive ? ' active' : ''}${isActive && item.monthLabel ? ' month-tab' : ''}`}
                   onClick={() => handleTabChange(item.path, isActive)}
+                  onPointerEnter={() => preloadStatsRoute(item.path)}
+                  onFocus={() => preloadStatsRoute(item.path)}
                   onMouseDown={(e) => {
                     if (isActive) {
                       e.stopPropagation();
                     }
                   }}
                   onTouchStart={(e) => {
+                    preloadStatsRoute(item.path);
                     if (isActive) {
                       e.stopPropagation();
                     }

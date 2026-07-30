@@ -1,7 +1,8 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSchedule } from '../contexts/ScheduleContext';
+import { loadShockwaveStatsView } from '../lib/statsRoutePreload';
 
-const ShockwaveStatsView = React.lazy(() => import('../components/shockwave/ShockwaveStatsView'));
+const ShockwaveStatsView = React.lazy(loadShockwaveStatsView);
 
 class ShockwaveStatsPageErrorBoundary extends React.Component {
   constructor(props) {
