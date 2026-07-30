@@ -384,7 +384,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     font-weight: 800 !important;
   }
 
-  /* 인쇄 시 오늘 날짜 하이라이트 및 파란선 테두리를 검은선으로 변경 */
+  /* 인쇄 시 오늘 날짜 하이라이트를 제거하고 근무표 외곽선 색을 유지 */
   body.calendar-only-print .today .calendar-date {
     background: transparent !important;
   }
@@ -400,12 +400,12 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   }
 
   body.calendar-only-print .calendar-cell:has(+ .calendar-cell.today) {
-    border-right-color: var(--text-primary, #000000) !important;
+    border-right-color: var(--staff-calendar-outer-line-color, #676767) !important;
   }
   body.calendar-only-print .calendar-cell.today {
-    border-top-color: var(--text-primary, #000000) !important;
-    border-bottom-color: var(--text-primary, #000000) !important;
-    border-right-color: var(--text-primary, #000000) !important;
+    border-top-color: var(--staff-calendar-outer-line-color, #676767) !important;
+    border-bottom-color: var(--staff-calendar-outer-line-color, #676767) !important;
+    border-right-color: var(--staff-calendar-outer-line-color, #676767) !important;
   }
 
   /* 메모 컨테이너 여백 완전 제거 */
