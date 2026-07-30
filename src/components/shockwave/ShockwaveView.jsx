@@ -114,6 +114,7 @@ import {
   getScheduleDisplaySlotMinutes,
   formatBodyPartInput,
 } from '../../lib/schedulerUtils';
+import { normalizeLoadedScheduleMonthKey } from '../../lib/scheduleMonthLoadUtils';
 
 export default function ShockwaveView({ therapists, settings, memos = {}, memosLoadedKey = '', onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
   const { currentYear, currentMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, monthlyTherapistsByMonth, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings, clipboardRef, clipboardSource, setClipboardSource } = useSchedule();
@@ -153,7 +154,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const [selectedKeys, setSelectedKeys] = useState(() => new Set());
   const [editingCell, setEditingCell] = useState(null);       // "w-d-r-c" 키 문자열
   const [editValue, setEditValue] = useState('');
-  const loadedMemosKey = memosLoadedKey;
+  const loadedMemosKey = normalizeLoadedScheduleMonthKey(
+    memosLoadedKey,
+    currentYear,
+    currentMonth
+  );
   const [contextMenu, setContextMenu] = useState(null); // { x, y, weekIdx, dayIdx, rowIdx, colIdx, currentPrescription }
   const [activeContextSubmenu, setActiveContextSubmenu] = useState(null);
   const [contextMenuBodyPartOptions, setContextMenuBodyPartOptions] = useState([]);

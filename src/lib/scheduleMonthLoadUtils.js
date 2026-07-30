@@ -27,3 +27,11 @@ export function shouldKeepScheduleMounted({
   if (currentMonthReady) return true;
   return Boolean(lastLoadedMonthKey) && !loadError;
 }
+
+export function normalizeLoadedScheduleMonthKey(loadedMonthKey, year, month) {
+  const canonicalKey = `${Number(year)}-${String(Number(month)).padStart(2, '0')}`;
+  const contextKey = `${Number(year)}-${Number(month)}`;
+  return loadedMonthKey === canonicalKey || loadedMonthKey === contextKey
+    ? canonicalKey
+    : String(loadedMonthKey || '');
+}

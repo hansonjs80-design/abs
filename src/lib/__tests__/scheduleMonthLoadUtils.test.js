@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  normalizeLoadedScheduleMonthKey,
   partitionVisibleScheduleMonthTargets,
   shiftScheduleMonth,
   shouldKeepScheduleMounted,
@@ -61,5 +62,13 @@ describe('schedule month loading priority', () => {
       lastLoadedMonthKey: '2026-7',
       loadError: 'non-critical warning',
     }), true);
+  });
+
+  it('normalizes the context month key to the scheduler view key', () => {
+    assert.equal(normalizeLoadedScheduleMonthKey('2026-7', 2026, 7), '2026-07');
+    assert.equal(normalizeLoadedScheduleMonthKey('2026-07', 2026, 7), '2026-07');
+    assert.equal(normalizeLoadedScheduleMonthKey('2026-10', 2026, 10), '2026-10');
+    assert.equal(normalizeLoadedScheduleMonthKey('2026-6', 2026, 7), '2026-6');
+    assert.equal(normalizeLoadedScheduleMonthKey('', 2026, 7), '');
   });
 });
