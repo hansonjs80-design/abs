@@ -95,6 +95,11 @@ export default function ManualTherapyStatsPage() {
   const lastAutoSyncKeyRef = useRef(null);
   const scheduleReloadRequestRef = useRef(0);
   const logsLoadedKeyRef = useRef('');
+  const shockwaveMemosRef = useRef(shockwaveMemos);
+
+  useEffect(() => {
+    shockwaveMemosRef.current = shockwaveMemos;
+  }, [shockwaveMemos]);
 
   useEffect(() => {
     if (!canManageStatsSettings && activeSection === 'settings') {
@@ -222,7 +227,7 @@ export default function ManualTherapyStatsPage() {
       if (currentFetchId !== fetchIdRef.current) return [];
       logsLoadedKeyRef.current = monthKey;
       const normalizedLogs = normalizeManualTherapyLogRows(data, allPrescriptions, {
-        memos: memosOverride || shockwaveMemos,
+        memos: memosOverride ?? shockwaveMemosRef.current,
         year: currentYear,
         month: currentMonth,
         settings: shockwaveSettings,
@@ -240,7 +245,7 @@ export default function ManualTherapyStatsPage() {
         setIsLogsLoading(false);
       }
     }
-  }, [addToast, allPrescriptions, currentMonth, currentYear, shockwaveMemos, shockwaveSettings]);
+  }, [addToast, allPrescriptions, currentMonth, currentYear, shockwaveSettings]);
 
   useEffect(() => {
     loadManualTherapists();

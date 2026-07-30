@@ -56,6 +56,26 @@ describe('stats schedule source utilities', () => {
     assert.notEqual(after, before);
   });
 
+  it('keeps the schedule memo signature stable when only cache object identity changes', () => {
+    const memo = {
+      content: '11840/조흥륜(2)',
+      bg_color: TREATMENT_COMPLETE_BG,
+      prescription: 'F2.5',
+      body_part: 'Lt. Knee',
+      updated_at: '2026-07-30T00:00:00.000Z',
+      merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+    };
+    const before = buildScheduleMemoSignature({ '0-0-1-0': memo });
+    const after = buildScheduleMemoSignature({
+      '0-0-1-0': {
+        ...memo,
+        merge_span: { ...memo.merge_span },
+      },
+    });
+
+    assert.equal(after, before);
+  });
+
   it('builds stats memos from visible schedule rows and relocates hidden merged content', () => {
     const year = 2026;
     const month = 6;
