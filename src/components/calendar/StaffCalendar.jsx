@@ -612,10 +612,14 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
           scrollTop: viewRef.current.scrollTop,
         });
         const cellStyle = window.getComputedStyle(cellEl);
+        const dateCellStyle = window.getComputedStyle(
+          cellEl.closest('.calendar-cell') || cellEl
+        );
         const memo = staffMemos[key] || {};
         const editorColors = getStaffMemoEditorColors({
           backgroundColor: memo.bg_color,
           fontColor: getEffectiveMemoFontColor(memo),
+          computedBackgroundColor: dateCellStyle.backgroundColor,
           computedColor: cellStyle.color,
         });
         el.style.position = 'absolute';

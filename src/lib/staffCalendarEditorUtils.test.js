@@ -34,27 +34,44 @@ test('staff memo editor position includes calendar scroll offsets', () => {
   );
 });
 
-test('staff memo editor keeps the configured cell background and font colors', () => {
+test('staff memo editor slightly lightens the configured cell background and keeps its font color', () => {
   assert.deepEqual(
     getStaffMemoEditorColors({
       backgroundColor: '#93c47d',
       fontColor: '#0000ff',
+      computedBackgroundColor: 'rgba(59, 130, 246, 0.22)',
       computedColor: 'rgb(30, 41, 59)',
     }),
     {
-      background: '#93c47d',
+      background: 'color-mix(in srgb, #93c47d 88%, white 12%)',
       color: '#0000ff',
     }
+  );
+});
+
+test('staff memo editor slightly lightens saturday and holiday date backgrounds', () => {
+  assert.equal(
+    getStaffMemoEditorColors({
+      computedBackgroundColor: 'rgba(59, 130, 246, 0.22)',
+    }).background,
+    'color-mix(in srgb, rgba(59, 130, 246, 0.22) 88%, white 12%)'
+  );
+  assert.equal(
+    getStaffMemoEditorColors({
+      computedBackgroundColor: 'rgb(254, 210, 210)',
+    }).background,
+    'color-mix(in srgb, rgb(254, 210, 210) 88%, white 12%)'
   );
 });
 
 test('staff memo editor falls back to the rendered text color and default background', () => {
   assert.deepEqual(
     getStaffMemoEditorColors({
+      computedBackgroundColor: 'rgba(0, 0, 0, 0)',
       computedColor: 'rgb(229, 62, 62)',
     }),
     {
-      background: 'var(--bg-input, #fff)',
+      background: 'color-mix(in srgb, var(--bg-input, #fff) 88%, white 12%)',
       color: 'rgb(229, 62, 62)',
     }
   );

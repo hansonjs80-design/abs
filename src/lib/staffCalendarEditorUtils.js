@@ -22,10 +22,22 @@ export function getStaffMemoEditorPosition(
 export function getStaffMemoEditorColors({
   backgroundColor = '',
   fontColor = '',
+  computedBackgroundColor = '',
   computedColor = '',
 } = {}) {
+  const renderedBackground = String(computedBackgroundColor || '').trim();
+  const hasRenderedBackground = (
+    renderedBackground
+    && renderedBackground !== 'transparent'
+    && !/^rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\)$/i.test(renderedBackground)
+  );
+  const baseBackground =
+    String(backgroundColor || '').trim()
+    || (hasRenderedBackground ? renderedBackground : '')
+    || 'var(--bg-input, #fff)';
+
   return {
-    background: String(backgroundColor || '').trim() || 'var(--bg-input, #fff)',
+    background: `color-mix(in srgb, ${baseBackground} 88%, white 12%)`,
     color:
       String(fontColor || '').trim()
       || String(computedColor || '').trim()
