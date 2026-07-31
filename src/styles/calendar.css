@@ -488,6 +488,12 @@
     pointer-events: none;
     background: rgba(15, 23, 42, 0.06);
   }
+
+  html.platform-windows:not([data-theme="dark"])
+  .calendar-cell:not(.sunday):not(.saturday):not(.holiday):not(.other-month)
+  .memo-slot:not(.has-custom-background):hover:not(.selected):not(.primary-selected):not(:focus):not(.editing)::after {
+    background: rgba(15, 23, 42, 0.08);
+  }
 }
 
 .memo-slot:focus,

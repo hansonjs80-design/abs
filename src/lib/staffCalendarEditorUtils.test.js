@@ -9,6 +9,7 @@ import {
 } from './staffCalendarEditorUtils.js';
 
 const calendarCssUrl = new URL('../styles/calendar.css', import.meta.url);
+const memoSlotUrl = new URL('../components/calendar/MemoSlot.jsx', import.meta.url);
 
 test('staff memo editor hides the rendered cell text while editing', () => {
   assert.equal(getStaffMemoDisplayText({
@@ -119,6 +120,22 @@ test('staff memo hover darkens inherited and custom backgrounds with an overlay'
   assert.match(
     calendarCss,
     /@media \(hover: hover\) and \(pointer: fine\)\s*\{[^}]*\.memo-slot:hover:not\(\.selected\):not\(\.primary-selected\):not\(:focus\):not\(\.editing\)::after\s*\{[^}]*background:\s*rgba\(15,\s*23,\s*42,\s*0\.06\);/s
+  );
+});
+
+test('staff memo hover is slightly stronger only for plain white cells on Windows', async () => {
+  const [calendarCss, memoSlotSource] = await Promise.all([
+    readFile(calendarCssUrl, 'utf8'),
+    readFile(memoSlotUrl, 'utf8'),
+  ]);
+
+  assert.match(
+    calendarCss,
+    /html\.platform-windows:not\(\[data-theme="dark"\]\)\s*\.calendar-cell:not\(\.sunday\):not\(\.saturday\):not\(\.holiday\):not\(\.other-month\)\s*\.memo-slot:not\(\.has-custom-background\):hover:not\(\.selected\):not\(\.primary-selected\):not\(:focus\):not\(\.editing\)::after\s*\{[^}]*background:\s*rgba\(15,\s*23,\s*42,\s*0\.08\);/s
+  );
+  assert.match(
+    memoSlotSource,
+    /if \(customBgColor\) stateClass \+= ' has-custom-background';/
   );
 });
 

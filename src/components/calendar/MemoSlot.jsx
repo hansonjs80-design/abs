@@ -57,6 +57,7 @@ export default function MemoSlot({
   if (isEditing) stateClass += ' editing';
   if (isLastSlot) stateClass += ' last-row-count';
   if (isBeforeLastSlot) stateClass += ' before-last-row-count';
+  if (customBgColor) stateClass += ' has-custom-background';
 
   const inlineStyle = {
     position: 'relative',
