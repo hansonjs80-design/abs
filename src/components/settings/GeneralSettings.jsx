@@ -1,10 +1,23 @@
 import { useRef, useState, useEffect } from 'react';
-import { Database, Copy } from 'lucide-react';
+import {
+  CalendarDays,
+  Copy,
+  Database,
+  Pencil,
+  Plus,
+  Save,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { useToast } from '../common/Toast';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { SQL_SETUP_SCRIPT, DB_USAGE_CHECK_SQL } from '../../lib/sqlSnippets';
 import { loadScheduleDeviceSettings } from '../../lib/scheduleDeviceSettings';
+import {
+  buildHolidayUpdateRequest,
+  getHolidayEditDraft,
+} from '../../lib/holidaySettingsUtils';
 
 const SHOCKWAVE_SETTINGS_BACKUP_KEY = 'abs.shockwaveSettingsBackup.v1';
 
@@ -15,6 +28,7 @@ export default function GeneralSettings() {
     currentMonth,
     loadShockwaveMemos,
     loadShockwaveSettings,
+    loadHolidays: reloadScheduleHolidays,
     saveShockwaveSettings,
     saveShockwaveDeviceScheduleSettings,
     shockwaveMemos,
@@ -26,6 +40,8 @@ export default function GeneralSettings() {
   
   const [holidays, setHolidays] = useState([]);
   const [newHoliday, setNewHoliday] = useState({ date: '', name: '' });
+  const [editingHoliday, setEditingHoliday] = useState(null);
+  const [savingHolidayId, setSavingHolidayId] = useState(null);
   
   const [swSettings, setSwSettings] = useState({ 
     id: '00000000-0000-0000-0000-000000000000',
@@ -200,7 +216,7 @@ export default function GeneralSettings() {
     }
   };
 
-  const loadHolidays = async () => {
+  const loadHolidayList = async () => {
     const { data } = await supabase
       .from('holidays')
       .select('*')
@@ -209,9 +225,16 @@ export default function GeneralSettings() {
   };
 
   useEffect(() => {
-    loadHolidays();
+    loadHolidayList();
     loadSettings();
   }, []);
+
+  const refreshHolidayData = async () => {
+    await Promise.allSettled([
+      loadHolidayList(),
+      reloadScheduleHolidays?.(currentYear, currentMonth, { force: true }),
+    ]);
+  };
 
   const addHoliday = async () => {
     if (!newHoliday.date) return;
@@ -222,12 +245,55 @@ export default function GeneralSettings() {
     if (error) { addToast('추가 실패: ' + error.message, 'error'); return; }
     addToast('공휴일이 추가되었습니다', 'success');
     setNewHoliday({ date: '', name: '' });
-    loadHolidays();
+    await refreshHolidayData();
+  };
+
+  const startHolidayEdit = (holiday) => {
+    setEditingHoliday(getHolidayEditDraft(holiday));
+  };
+
+  const cancelHolidayEdit = () => {
+    if (savingHolidayId) return;
+    setEditingHoliday(null);
+  };
+
+  const updateHoliday = async () => {
+    const request = buildHolidayUpdateRequest(editingHoliday, holidays);
+    if (!request.ok) {
+      addToast(request.message, 'error');
+      return;
+    }
+
+    setSavingHolidayId(request.id);
+    try {
+      const { error } = await supabase
+        .from('holidays')
+        .update(request.payload)
+        .eq('id', request.id);
+      if (error) {
+        addToast('수정 실패: ' + error.message, 'error');
+        return;
+      }
+
+      setEditingHoliday(null);
+      addToast('공휴일이 수정되었습니다', 'success');
+      await refreshHolidayData();
+    } catch (error) {
+      addToast(`수정 실패: ${error?.message || '알 수 없는 오류'}`, 'error');
+    } finally {
+      setSavingHolidayId(null);
+    }
   };
 
   const removeHoliday = async (id) => {
     const { error } = await supabase.from('holidays').delete().eq('id', id);
-    if (!error) { addToast('삭제되었습니다', 'success'); loadHolidays(); }
+    if (error) {
+      addToast('삭제 실패: ' + error.message, 'error');
+      return;
+    }
+    if (editingHoliday?.id === String(id)) setEditingHoliday(null);
+    addToast('삭제되었습니다', 'success');
+    await refreshHolidayData();
   };
 
   return (
@@ -294,52 +360,167 @@ export default function GeneralSettings() {
       </div>
 
       {/* 공휴일 관리 */}
-      <div className="card" style={{ marginBottom: 24 }}>
+      <div className="card holiday-settings-card" style={{ marginBottom: 24 }}>
         <div className="card-header">
-          <span className="card-title"><Database size={18} /> 공휴일 관리</span>
+          <div>
+            <span className="card-title"><CalendarDays size={18} /> 공휴일 관리</span>
+            <p className="holiday-settings-summary">근무표와 스케줄에 표시할 공휴일을 관리합니다.</p>
+          </div>
         </div>
         <div className="card-body">
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-            <input
-              className="form-input"
-              style={{ flex: 1, minWidth: 140 }}
-              type="date"
-              value={newHoliday.date}
-              onChange={e => setNewHoliday(p => ({ ...p, date: e.target.value }))}
-            />
-            <input
-              className="form-input"
-              style={{ flex: 1, minWidth: 120 }}
-              placeholder="공휴일 이름 (선택)"
-              value={newHoliday.name}
-              onChange={e => setNewHoliday(p => ({ ...p, name: e.target.value }))}
-            />
-            <button className="btn btn-primary btn-sm" onClick={addHoliday}>추가</button>
-          </div>
-
-          <div
-            style={{
-              maxHeight: 320,
-              overflowY: holidays.length > 5 ? 'auto' : 'visible',
-              paddingRight: holidays.length > 5 ? 6 : 0,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 10,
+          <form
+            className="holiday-settings-create"
+            onSubmit={(event) => {
+              event.preventDefault();
+              addHoliday();
             }}
           >
-            {holidays.map(h => (
-              <div key={h.id} className="settings-row holiday-settings-row" style={{ margin: 0 }}>
-                <div>
-                  <div className="settings-row-label">{h.date}</div>
-                  <div className="settings-row-desc">{h.name || '(이름 없음)'}</div>
+            <div className="holiday-settings-create-title">새 공휴일 추가</div>
+            <div className="holiday-settings-create-fields">
+              <label className="holiday-settings-field">
+                <span className="holiday-settings-field-label">날짜</span>
+                <input
+                  className="form-input"
+                  type="date"
+                  required
+                  value={newHoliday.date}
+                  onChange={event => setNewHoliday(prev => ({
+                    ...prev,
+                    date: event.target.value,
+                  }))}
+                />
+              </label>
+              <label className="holiday-settings-field">
+                <span className="holiday-settings-field-label">공휴일 이름</span>
+                <input
+                  className="form-input"
+                  placeholder="예: 광복절"
+                  value={newHoliday.name}
+                  onChange={event => setNewHoliday(prev => ({
+                    ...prev,
+                    name: event.target.value,
+                  }))}
+                />
+              </label>
+              <button className="btn btn-primary btn-sm holiday-settings-add-button" type="submit">
+                <Plus size={15} />
+                추가
+              </button>
+            </div>
+          </form>
+
+          <div className="holiday-settings-list-header">
+            <span>등록된 공휴일</span>
+            <span className="holiday-settings-count">{holidays.length}개</span>
+          </div>
+
+          <div className={`holiday-settings-list${holidays.length > 5 ? ' holiday-settings-list--scrollable' : ''}`}>
+            {holidays.map(h => {
+              const isEditing = editingHoliday?.id === String(h.id);
+              const isSaving = savingHolidayId === String(h.id);
+              return (
+                <div
+                  key={h.id}
+                  className={`settings-row holiday-settings-row${isEditing ? ' holiday-settings-row--editing' : ''}`}
+                  style={{ margin: 0 }}
+                >
+                  {isEditing ? (
+                    <>
+                      <form
+                        className="holiday-settings-edit-form"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          updateHoliday();
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Escape') {
+                            event.preventDefault();
+                            cancelHolidayEdit();
+                          }
+                        }}
+                      >
+                        <div className="holiday-settings-edit-fields">
+                          <label className="holiday-settings-field">
+                            <span className="holiday-settings-field-label">날짜</span>
+                            <input
+                              className="form-input"
+                              type="date"
+                              value={editingHoliday.date}
+                              disabled={isSaving}
+                              onChange={event => setEditingHoliday(prev => ({
+                                ...prev,
+                                date: event.target.value,
+                              }))}
+                            />
+                          </label>
+                          <label className="holiday-settings-field">
+                            <span className="holiday-settings-field-label">공휴일 이름</span>
+                            <input
+                              className="form-input"
+                              placeholder="공휴일 이름 (선택)"
+                              value={editingHoliday.name}
+                              disabled={isSaving}
+                              onChange={event => setEditingHoliday(prev => ({
+                                ...prev,
+                                name: event.target.value,
+                              }))}
+                            />
+                          </label>
+                        </div>
+                        <div className="holiday-settings-actions">
+                          <button
+                            type="submit"
+                            className="btn btn-primary btn-sm"
+                            disabled={isSaving}
+                          >
+                            <Save size={14} />
+                            {isSaving ? '저장 중...' : '저장'}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            disabled={isSaving}
+                            onClick={cancelHolidayEdit}
+                          >
+                            <X size={14} />
+                            취소
+                          </button>
+                        </div>
+                      </form>
+                    </>
+                  ) : (
+                    <>
+                      <div className="holiday-settings-info">
+                        <div className="settings-row-label">{h.date}</div>
+                        <div className="settings-row-desc">{h.name || '(이름 없음)'}</div>
+                      </div>
+                      <div className="holiday-settings-actions">
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => startHolidayEdit(h)}
+                        >
+                          <Pencil size={14} />
+                          수정
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-sm"
+                          onClick={() => removeHoliday(h.id)}
+                        >
+                          <Trash2 size={14} />
+                          삭제
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
-                <button className="btn btn-danger btn-sm" onClick={() => removeHoliday(h.id)}>삭제</button>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {holidays.length === 0 && (
-            <p style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: 16 }}>
+            <p className="holiday-settings-empty">
               등록된 공휴일이 없습니다
             </p>
           )}

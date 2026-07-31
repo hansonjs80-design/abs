@@ -837,9 +837,9 @@ export function ScheduleProvider({ children }) {
   }, []);
 
   // 공휴일 로드
-  const loadHolidays = useCallback(async (year, month) => {
+  const loadHolidays = useCallback(async (year, month, options = {}) => {
     const cacheKey = `${year}-${month}`;
-    if (loadCacheRef.current.holidays === cacheKey) return;
+    if (!options.force && loadCacheRef.current.holidays === cacheKey) return;
     loadCacheRef.current.holidays = cacheKey;
     const requestId = ++holidaysLoadRequestRef.current;
 

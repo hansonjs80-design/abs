@@ -1814,6 +1814,70 @@
   border-bottom: 1px solid var(--border-color);
 }
 
+.settings-page-header {
+  margin-bottom: 14px;
+}
+
+.settings-page-description {
+  margin: 5px 0 0;
+  color: var(--text-tertiary);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.settings-page-tabs {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 20px;
+  padding: 4px;
+  border: 1px solid var(--border-color-light);
+  border-radius: 11px;
+  background: var(--bg-secondary);
+}
+
+.settings-page-tab {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    box-shadow var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.settings-page-tab:hover {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.settings-page-tab.active {
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  color: var(--brand-primary);
+}
+
+.settings-page-tab:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+.settings-page-content > .card:not(:last-child) {
+  margin-bottom: 18px;
+}
+
 .settings-row {
   display: flex;
   align-items: center;
@@ -1822,8 +1886,147 @@
   border-bottom: 1px solid var(--border-color-light);
 }
 
+.holiday-settings-card .card-header {
+  align-items: flex-start;
+}
+
+.holiday-settings-summary {
+  margin: 5px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--text-tertiary);
+}
+
+.holiday-settings-create {
+  margin-bottom: 20px;
+  padding: 14px;
+  border: 1px solid var(--border-color-light);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+}
+
+.holiday-settings-create-title,
+.holiday-settings-list-header {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.holiday-settings-create-title {
+  margin-bottom: 10px;
+}
+
+.holiday-settings-create-fields {
+  display: grid;
+  grid-template-columns: minmax(145px, 0.8fr) minmax(170px, 1.2fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.holiday-settings-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.holiday-settings-field-label {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.holiday-settings-add-button {
+  min-height: 38px;
+  padding-inline: 16px;
+}
+
+.holiday-settings-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px;
+}
+
+.holiday-settings-count {
+  padding: 3px 9px;
+  border: 1px solid var(--border-color-light);
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+}
+
+.holiday-settings-list {
+  display: flex;
+  max-height: 320px;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.holiday-settings-list--scrollable {
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
 .holiday-settings-row {
   background: #fed2d2;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.holiday-settings-row .settings-row-label {
+  color: #7f1d1d;
+  font-weight: 700;
+}
+
+.holiday-settings-row .settings-row-desc {
+  color: #9f1239;
+}
+
+.holiday-settings-row--editing {
+  align-items: flex-end;
+  border: 1px solid #f3a7a7;
+  box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.08);
+}
+
+.holiday-settings-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.holiday-settings-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.holiday-settings-edit-form {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.holiday-settings-edit-fields {
+  display: grid;
+  grid-template-columns: minmax(145px, 0.8fr) minmax(160px, 1.2fr);
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.holiday-settings-empty {
+  margin: 0;
+  padding: 24px 16px;
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  color: var(--text-tertiary);
+  text-align: center;
 }
 
 .settings-row-label {

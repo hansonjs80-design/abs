@@ -268,6 +268,24 @@
     line-height: 1.25;
   }
 
+  .settings-page-description {
+    font-size: 0.8rem;
+  }
+
+  .settings-page-tabs {
+    display: grid;
+    width: 100%;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    margin-bottom: 14px;
+  }
+
+  .settings-page-tab {
+    min-width: 0;
+    padding-inline: 8px;
+    white-space: nowrap;
+  }
+
   .card {
     border-radius: 14px;
   }
@@ -314,6 +332,33 @@
     font-size: 0.84rem;
     line-height: 1.5;
     color: var(--text-secondary);
+  }
+
+  .holiday-settings-edit-fields {
+    grid-template-columns: 1fr;
+    flex-basis: 100%;
+  }
+
+  .holiday-settings-create-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .holiday-settings-edit-form {
+    flex-basis: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .holiday-settings-actions {
+    width: 100%;
+  }
+
+  .holiday-settings-actions .btn {
+    flex: 1;
+  }
+
+  .holiday-settings-add-button {
+    width: 100%;
   }
 
   .supabase-connection-field {
