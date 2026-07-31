@@ -272,18 +272,83 @@
     font-size: 0.8rem;
   }
 
+  .settings-page {
+    max-width: none;
+    padding: 10px;
+  }
+
+  .settings-page-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 0;
+  }
+
   .settings-page-tabs {
     display: grid;
     width: 100%;
     grid-auto-flow: column;
     grid-auto-columns: 1fr;
-    margin-bottom: 14px;
   }
 
   .settings-page-tab {
     min-width: 0;
     padding-inline: 8px;
     white-space: nowrap;
+  }
+
+  .settings-page-content,
+  .backup-settings {
+    gap: 10px;
+  }
+
+  .settings-page .card-header,
+  .settings-page .card-body {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .schedule-settings-grid,
+  .login-create-grid,
+  .backup-options-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .settings-card-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .settings-card-footer .btn {
+    width: 100%;
+  }
+
+  .db-usage-grid,
+  .backup-notices,
+  .backup-snapshot-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-disclosure-summary {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .login-add-button {
+    grid-column: 1 / -1;
+  }
+
+  .login-users-table-wrap {
+    margin-right: -14px;
+    margin-left: -14px;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+  }
+
+  .backup-snapshot-actions {
+    justify-content: flex-start;
   }
 
   .card {

@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useToast } from '../common/Toast';
-import { Users } from 'lucide-react';
+import {
+  Save,
+  UserPlus,
+  Users,
+  UserX,
+} from 'lucide-react';
 import {
   ADMIN_USERNAME,
   APP_TABS,
@@ -171,68 +176,90 @@ export default function LoginSettings({ canManageLogin }) {
   if (!canManageLogin) return null;
 
   return (
-    <div className="card" style={{ marginBottom: 24 }}>
+    <div className="card settings-card login-settings-card">
       <div className="card-header">
-        <span className="card-title"><Users size={18} /> 로그인 인원 / 권한 관리</span>
+        <div>
+          <span className="card-title"><Users size={18} /> 로그인 관리</span>
+          <p className="settings-card-description">사용자 계정과 화면별 접근 권한을 관리합니다.</p>
+        </div>
+        <span className="settings-count-badge">{appUsers.length}명</span>
       </div>
-      <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(120px, 1fr) minmax(120px, 1fr) minmax(120px, 1fr) 90px auto',
-            gap: 8,
-            alignItems: 'center',
-            padding: 12,
-            border: '1px solid var(--border-color-light)',
-            borderRadius: 12,
-            background: 'var(--bg-secondary)',
+      <div className="card-body login-settings-body">
+        <form
+          className="login-create-panel"
+          onSubmit={(event) => {
+            event.preventDefault();
+            addAppUser();
           }}
         >
-          <input
-            className="form-input"
-            placeholder="아이디"
-            value={newAppUser.username}
-            onChange={(e) => setNewAppUser((prev) => ({ ...prev, username: e.target.value }))}
-          />
-          <input
-            className="form-input"
-            type="password"
-            placeholder="비밀번호"
-            value={newAppUser.password}
-            onChange={(e) => setNewAppUser((prev) => ({ ...prev, password: e.target.value }))}
-          />
-          <input
-            className="form-input"
-            placeholder="표시 이름"
-            value={newAppUser.display_name}
-            onChange={(e) => setNewAppUser((prev) => ({ ...prev, display_name: e.target.value }))}
-          />
-          <select
-            className="form-input"
-            value={newAppUser.role}
-            onChange={(e) => setNewAppUser((prev) => ({
-              ...prev,
-              role: e.target.value,
-              permissions: e.target.value === 'admin' ? createDefaultPermissions() : prev.permissions,
-            }))}
-          >
-            <option value="user">사용자</option>
-            <option value="admin">관리자</option>
-          </select>
-          <button className="btn btn-primary btn-sm" onClick={addAppUser}>인원 추가</button>
+          <div className="settings-subtitle">새 사용자 추가</div>
+          <div className="login-create-grid">
+            <label className="settings-control">
+              <span>아이디</span>
+              <input
+                className="form-input"
+                placeholder="로그인 아이디"
+                value={newAppUser.username}
+                onChange={(e) => setNewAppUser((prev) => ({ ...prev, username: e.target.value }))}
+              />
+            </label>
+            <label className="settings-control">
+              <span>비밀번호</span>
+              <input
+                className="form-input"
+                type="password"
+                placeholder="초기 비밀번호"
+                value={newAppUser.password}
+                onChange={(e) => setNewAppUser((prev) => ({ ...prev, password: e.target.value }))}
+              />
+            </label>
+            <label className="settings-control">
+              <span>표시 이름</span>
+              <input
+                className="form-input"
+                placeholder="화면에 표시할 이름"
+                value={newAppUser.display_name}
+                onChange={(e) => setNewAppUser((prev) => ({ ...prev, display_name: e.target.value }))}
+              />
+            </label>
+            <label className="settings-control">
+              <span>역할</span>
+              <select
+                className="form-input"
+                value={newAppUser.role}
+                onChange={(e) => setNewAppUser((prev) => ({
+                  ...prev,
+                  role: e.target.value,
+                  permissions: e.target.value === 'admin' ? createDefaultPermissions() : prev.permissions,
+                }))}
+              >
+                <option value="user">사용자</option>
+                <option value="admin">관리자</option>
+              </select>
+            </label>
+            <button className="btn btn-primary btn-sm login-add-button" type="submit">
+              <UserPlus size={15} />
+              사용자 추가
+            </button>
+          </div>
+        </form>
+
+        <div className="login-users-header">
+          <span className="settings-subtitle">등록된 사용자</span>
+          <span>비밀번호는 변경할 때만 입력합니다.</span>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', minWidth: 920, borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+        <div className="login-users-table-wrap">
+          <table className="login-users-table">
             <thead>
-              <tr style={{ background: 'var(--bg-tertiary)' }}>
-                <th style={{ padding: 8, textAlign: 'left', borderBottom: '1px solid var(--border-color)' }}>아이디</th>
-                <th style={{ padding: 8, textAlign: 'left', borderBottom: '1px solid var(--border-color)' }}>비밀번호</th>
-                <th style={{ padding: 8, textAlign: 'left', borderBottom: '1px solid var(--border-color)' }}>이름</th>
-                <th style={{ padding: 8, textAlign: 'center', borderBottom: '1px solid var(--border-color)' }}>역할</th>
-                <th style={{ padding: 8, textAlign: 'center', borderBottom: '1px solid var(--border-color)' }}>탭 권한</th>
-                <th style={{ padding: 8, textAlign: 'center', borderBottom: '1px solid var(--border-color)' }}>사용</th>
-                <th style={{ padding: 8, textAlign: 'center', borderBottom: '1px solid var(--border-color)' }}>관리</th>
+              <tr>
+                <th>아이디</th>
+                <th>새 비밀번호</th>
+                <th>표시 이름</th>
+                <th>역할</th>
+                <th>탭 권한</th>
+                <th>사용</th>
+                <th>관리</th>
               </tr>
             </thead>
             <tbody>
@@ -243,8 +270,8 @@ export default function LoginSettings({ canManageLogin }) {
                   ...(row.permissions || {}),
                 };
                 return (
-                  <tr key={row.id} style={{ borderBottom: '1px solid var(--border-color-light)' }}>
-                    <td style={{ padding: 8 }}>
+                  <tr key={row.id}>
+                    <td>
                       <input
                         className="form-input"
                         value={row.username}
@@ -252,7 +279,7 @@ export default function LoginSettings({ canManageLogin }) {
                         onChange={(e) => updateAppUserLocal(row.id, 'username', normalizeUsername(e.target.value))}
                       />
                     </td>
-                    <td style={{ padding: 8 }}>
+                    <td>
                       <input
                         className="form-input"
                         type="password"
@@ -262,14 +289,14 @@ export default function LoginSettings({ canManageLogin }) {
                         onChange={(e) => updateAppUserLocal(row.id, 'password', e.target.value)}
                       />
                     </td>
-                    <td style={{ padding: 8 }}>
+                    <td>
                       <input
                         className="form-input"
                         value={row.display_name || ''}
                         onChange={(e) => updateAppUserLocal(row.id, 'display_name', e.target.value)}
                       />
                     </td>
-                    <td style={{ padding: 8, textAlign: 'center' }}>
+                    <td>
                       <select
                         className="form-input"
                         value={adminRow ? 'admin' : row.role || 'user'}
@@ -280,23 +307,12 @@ export default function LoginSettings({ canManageLogin }) {
                         <option value="admin">관리자</option>
                       </select>
                     </td>
-                    <td style={{ padding: 8 }}>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    <td>
+                      <div className="login-permissions">
                         {APP_TABS.map((tab) => (
                           <label
                             key={`${row.id}-${tab.key}`}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 4,
-                              padding: '4px 8px',
-                              border: '1px solid var(--border-color-light)',
-                              borderRadius: 999,
-                              background: permissions[tab.key] !== false ? 'rgba(34, 197, 94, 0.12)' : 'var(--bg-secondary)',
-                              color: 'var(--text-primary)',
-                              fontWeight: 700,
-                              whiteSpace: 'nowrap',
-                            }}
+                            className={`login-permission-chip${permissions[tab.key] !== false ? ' active' : ''}`}
                           >
                             <input
                               type="checkbox"
@@ -309,36 +325,47 @@ export default function LoginSettings({ canManageLogin }) {
                         ))}
                       </div>
                     </td>
-                    <td style={{ padding: 8, textAlign: 'center' }}>
-                      <input
-                        type="checkbox"
-                        checked={row.is_active !== false}
-                        disabled={adminRow}
-                        onChange={(e) => updateAppUserLocal(row.id, 'is_active', e.target.checked)}
-                      />
+                    <td>
+                      <label className="login-active-toggle">
+                        <input
+                          type="checkbox"
+                          checked={row.is_active !== false}
+                          disabled={adminRow}
+                          onChange={(e) => updateAppUserLocal(row.id, 'is_active', e.target.checked)}
+                        />
+                        <span>{row.is_active !== false ? '사용' : '중지'}</span>
+                      </label>
                     </td>
-                    <td style={{ padding: 8 }}>
-                      <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                        <button className="btn btn-primary btn-sm" onClick={() => saveAppUser(row)}>저장</button>
+                    <td>
+                      <div className="login-row-actions">
+                        <button className="btn btn-primary btn-sm" onClick={() => saveAppUser(row)}>
+                          <Save size={14} />
+                          저장
+                        </button>
                         <button
                           className="btn btn-danger btn-sm"
                           disabled={adminRow || row.is_active === false}
                           onClick={() => deactivateAppUser(row)}
                         >
-                          비활성화
+                          <UserX size={14} />
+                          중지
                         </button>
                       </div>
                     </td>
                   </tr>
                 );
               })}
+              {appUsers.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="login-users-empty">등록된 사용자가 없습니다.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
 
-        <p style={{ margin: 0, color: 'var(--text-tertiary)', fontSize: '0.78rem' }}>
-          기존 비밀번호는 화면에 표시하지 않습니다. 비밀번호를 바꿀 때만 새 값을 입력하세요.
-          관리자 계정은 전체 권한을 가지며 비활성화할 수 없습니다.
+        <p className="settings-help-text login-settings-help">
+          관리자 계정은 모든 탭 권한을 가지며 사용을 중지할 수 없습니다.
         </p>
       </div>
     </div>

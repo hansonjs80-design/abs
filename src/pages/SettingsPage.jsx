@@ -19,52 +19,52 @@ export default function SettingsPage() {
   
   return (
     <div className="animate-fade-in settings-page">
-      <div className="page-header settings-page-header">
-        <div>
+      <header className="settings-page-toolbar">
+        <div className="settings-page-heading">
           <h1 className="page-title">설정</h1>
           <p className="settings-page-description">앱 환경과 계정, 백업 기능을 관리합니다.</p>
         </div>
-      </div>
 
-      <nav className="settings-page-tabs" aria-label="설정 메뉴">
-        <button
-          type="button"
-          className={`settings-page-tab${settingsSection === 'general' ? ' active' : ''}`}
-          onClick={() => setSettingsSection('general')}
-          aria-current={settingsSection === 'general' ? 'page' : undefined}
-        >
-          <Settings2 size={16} />
-          환경 설정
-        </button>
-        {canManageLogin && (
+        <nav className="settings-page-tabs" aria-label="설정 메뉴">
           <button
             type="button"
-            className={`settings-page-tab${settingsSection === 'login' ? ' active' : ''}`}
-            onClick={() => setSettingsSection('login')}
-            aria-current={settingsSection === 'login' ? 'page' : undefined}
+            className={`settings-page-tab${settingsSection === 'general' ? ' active' : ''}`}
+            onClick={() => setSettingsSection('general')}
+            aria-current={settingsSection === 'general' ? 'page' : undefined}
           >
-            <UsersRound size={16} />
-            로그인 관리
+            <Settings2 size={16} />
+            환경 설정
           </button>
-        )}
-        <button
-          type="button"
-          className={`settings-page-tab${settingsSection === 'backup' ? ' active' : ''}`}
-          onClick={() => setSettingsSection('backup')}
-          aria-current={settingsSection === 'backup' ? 'page' : undefined}
-        >
-          <DatabaseBackup size={16} /> 백업
-        </button>
-      </nav>
+          {canManageLogin && (
+            <button
+              type="button"
+              className={`settings-page-tab${settingsSection === 'login' ? ' active' : ''}`}
+              onClick={() => setSettingsSection('login')}
+              aria-current={settingsSection === 'login' ? 'page' : undefined}
+            >
+              <UsersRound size={16} />
+              로그인 관리
+            </button>
+          )}
+          <button
+            type="button"
+            className={`settings-page-tab${settingsSection === 'backup' ? ' active' : ''}`}
+            onClick={() => setSettingsSection('backup')}
+            aria-current={settingsSection === 'backup' ? 'page' : undefined}
+          >
+            <DatabaseBackup size={16} /> 백업
+          </button>
+        </nav>
+      </header>
 
       <div className="settings-page-content">
         {settingsSection === 'general' && (
           <>
-            {canManageLogin && <SupabaseConnectionSettings />}
             <GeneralSettings />
+            {canManageLogin && <SupabaseConnectionSettings />}
 
             {/* 계정 */}
-            <div className="card">
+            <div className="card settings-card settings-account-card">
               <div className="card-header">
                 <span className="card-title"><Shield size={18} /> 계정</span>
               </div>

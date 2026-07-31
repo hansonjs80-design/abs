@@ -1,6 +1,8 @@
 import { useRef, useState, useEffect } from 'react';
 import {
   CalendarDays,
+  Clock3,
+  Code2,
   Copy,
   Database,
   Pencil,
@@ -299,68 +301,71 @@ export default function GeneralSettings() {
   return (
     <>
       {/* 충격파 시간표 관리 */}
-      <div className="card" style={{ marginBottom: 24 }}>
+      <div className="card settings-card schedule-settings-card">
         <div className="card-header">
-          <span className="card-title">⏰ 스케줄 시간표 기본 설정</span>
+          <div>
+            <span className="card-title"><Clock3 size={18} /> 스케줄 시간표</span>
+            <p className="settings-card-description">운영 시간과 표의 기본 표시 방식을 설정합니다.</p>
+          </div>
         </div>
         <div className="card-body">
-          <div className="settings-row" style={{ flexWrap: 'wrap', gap: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="settings-row-label">시작 시간</span>
-              <input type="time" className="form-input" style={{ width: 120 }} value={swSettings.start_time} onChange={e => setSwSettings(p => ({ ...p, start_time: e.target.value }))} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="settings-row-label">종료 시간</span>
-              <input type="time" className="form-input" style={{ width: 120 }} value={swSettings.end_time} onChange={e => setSwSettings(p => ({ ...p, end_time: e.target.value }))} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="settings-row-label">기본 병합</span>
-              <select className="form-input" style={{ width: 100 }} value={swSettings.interval_minutes} onChange={e => setSwSettings(p => ({ ...p, interval_minutes: Number(e.target.value) }))}>
+          <div className="schedule-settings-grid">
+            <label className="settings-control">
+              <span>시작 시간</span>
+              <input type="time" className="form-input" value={swSettings.start_time} onChange={e => setSwSettings(p => ({ ...p, start_time: e.target.value }))} />
+            </label>
+            <label className="settings-control">
+              <span>종료 시간</span>
+              <input type="time" className="form-input" value={swSettings.end_time} onChange={e => setSwSettings(p => ({ ...p, end_time: e.target.value }))} />
+            </label>
+            <label className="settings-control">
+              <span>기본 병합</span>
+              <select className="form-input" value={swSettings.interval_minutes} onChange={e => setSwSettings(p => ({ ...p, interval_minutes: Number(e.target.value) }))}>
                 <option value={10}>10분</option>
                 <option value={15}>15분</option>
                 <option value={20}>20분</option>
                 <option value={30}>30분</option>
                 <option value={60}>60분(1시간)</option>
               </select>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="settings-row-label">시간열 표시</span>
-              <select className="form-input" style={{ width: 100 }} value={swSettings.time_label_interval_minutes} onChange={e => setSwSettings(p => ({ ...p, time_label_interval_minutes: Number(e.target.value) }))}>
+            </label>
+            <label className="settings-control">
+              <span>시간열 표시</span>
+              <select className="form-input" value={swSettings.time_label_interval_minutes} onChange={e => setSwSettings(p => ({ ...p, time_label_interval_minutes: Number(e.target.value) }))}>
                 <option value={10}>10분</option>
                 <option value={15}>15분</option>
                 <option value={20}>20분</option>
                 <option value={30}>30분</option>
                 <option value={60}>60분(1시간)</option>
               </select>
-            </div>
-            <div className="settings-row-desc" style={{ flexBasis: '100%', marginTop: -8 }}>
-              기본 병합은 모든 기기에 공통 적용됩니다. 시간열 표시는 이 기기에서만 다르게 사용할 수 있습니다.
-            </div>
-            <button className="btn btn-primary" onClick={handleSaveSettings}>적용 및 저장</button>
-          </div>
-          <div className="settings-row" style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--border-color-light)' }}>
-            <div>
-              <div className="settings-row-label">🧊 고정 컬럼 개수</div>
-              <div className="settings-row-desc">가로 스크롤 시 왼쪽에 고정할 열의 개수를 지정합니다. (기본 6: #, 날짜, 이름, 차트번호, 회차, 부위)</div>
-            </div>
-            <input 
-              type="number" 
-              className="form-input" 
-              style={{ width: 80 }} 
-              min={0} max={10} 
-              value={swSettings.frozen_columns} 
-              onChange={e => setSwSettings(p => ({ ...p, frozen_columns: parseInt(e.target.value) || 0 }))} 
-            />
+            </label>
+            <label className="settings-control">
+              <span>고정 컬럼 수</span>
+              <input
+                type="number"
+                className="form-input"
+                min={0}
+                max={10}
+                value={swSettings.frozen_columns}
+                onChange={e => setSwSettings(p => ({ ...p, frozen_columns: parseInt(e.target.value) || 0 }))}
+              />
+            </label>
           </div>
 
-          <div style={{ textAlign: 'right', marginTop: 24 }}>
-            <button className="btn btn-primary" onClick={handleSaveSettings}>환경설정 저장</button>
+          <div className="settings-card-footer">
+            <p>
+              기본 병합은 모든 기기에 공통 적용되고, 시간열 표시는 이 기기에만 적용됩니다.
+              고정 컬럼 기본값은 6개입니다.
+            </p>
+            <button className="btn btn-primary" onClick={handleSaveSettings}>
+              <Save size={16} />
+              설정 저장
+            </button>
           </div>
         </div>
       </div>
 
       {/* 공휴일 관리 */}
-      <div className="card holiday-settings-card" style={{ marginBottom: 24 }}>
+      <div className="card settings-card holiday-settings-card">
         <div className="card-header">
           <div>
             <span className="card-title"><CalendarDays size={18} /> 공휴일 관리</span>
@@ -528,111 +533,80 @@ export default function GeneralSettings() {
       </div>
 
       {/* DB 용량 확인 */}
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div className="card-header" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-          <span className="card-title"><Database size={18} /> DB 용량 확인</span>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={openSupabaseDashboard}
-            >
+      <details className="card settings-card settings-disclosure">
+        <summary className="settings-disclosure-summary">
+          <span className="settings-disclosure-icon"><Database size={18} /></span>
+          <span>
+            <strong>DB 용량 확인</strong>
+            <small>Supabase 저장 용량을 점검할 때 사용합니다.</small>
+          </span>
+          <span className="settings-disclosure-hint">열기</span>
+        </summary>
+        <div className="card-body settings-disclosure-body">
+          <div className="settings-inline-actions">
+            <button type="button" className="btn btn-secondary btn-sm" onClick={openSupabaseDashboard}>
               Supabase 열기
             </button>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => handleCopySQL(DB_USAGE_CHECK_SQL)}
-            >
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => handleCopySQL(DB_USAGE_CHECK_SQL)}>
               <Copy size={14} />
               용량 확인 SQL 복사
             </button>
           </div>
-        </div>
-        <div className="card-body">
-          <div
-            style={{
-              display: 'grid',
-              gap: 14,
-              gridTemplateColumns: 'minmax(260px, 360px) minmax(0, 1fr)',
-            }}
-          >
-            <div
-              style={{
-                border: '1px solid var(--border-color-light)',
-                borderRadius: 16,
-                padding: '16px 18px',
-                background: 'var(--bg-tertiary)',
-              }}
-            >
-              <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 10 }}>확인 순서</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+          <div className="db-usage-grid">
+            <div className="db-usage-checklist">
+              <div className="settings-subtitle">확인 순서</div>
+              <div className="db-usage-steps">
                 {dbUsageChecklist.map((item, index) => (
-                  <div key={item} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', color: 'var(--text-secondary)' }}>
-                    <span style={{ minWidth: 20, fontWeight: 800, color: 'var(--primary)' }}>{index + 1}.</span>
+                  <div key={item}>
+                    <span>{index + 1}</span>
                     <span>{item}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8 }}>SQL Editor에서 실행할 코드</div>
+            <div className="settings-code-panel">
+              <div className="settings-subtitle">SQL Editor에서 실행할 코드</div>
               <textarea
+                className="settings-code-textarea"
                 readOnly
                 value={DB_USAGE_CHECK_SQL}
-                style={{
-                  width: '100%',
-                  minHeight: 240,
-                  borderRadius: 16,
-                  border: '1px solid var(--border-color-light)',
-                  background: 'var(--bg-tertiary)',
-                  color: 'var(--text-primary)',
-                  padding: 16,
-                  fontSize: 13,
-                  lineHeight: 1.55,
-                  resize: 'vertical',
-                }}
               />
-              <div style={{ marginTop: 10, color: 'var(--text-tertiary)', fontSize: 13 }}>
+              <div className="settings-help-text">
                 앱 안에서 직접 숫자를 표시하려면 Supabase에 조회용 함수 생성이 추가로 필요합니다. 지금은 설정 탭에서 바로 복사하고 실행할 수 있게 구성했습니다.
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </details>
 
-      <div className="card" style={{ marginTop: 24 }}>
-        <div className="card-header">
-          <span className="card-title"><Copy size={18} /> 전체 SQL 스크립트</span>
-          <button
-            className="btn btn-secondary btn-sm"
-            style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}
-            onClick={() => handleCopySQL(SQL_SETUP_SCRIPT)}
-          >
-            <Copy size={14} />
-            전체 복사
-          </button>
-        </div>
-        <div className="card-body">
+      <details className="card settings-card settings-disclosure">
+        <summary className="settings-disclosure-summary">
+          <span className="settings-disclosure-icon"><Code2 size={18} /></span>
+          <span>
+            <strong>전체 SQL 스크립트</strong>
+            <small>초기 테이블과 기본 데이터 생성용 고급 도구입니다.</small>
+          </span>
+          <span className="settings-disclosure-hint">열기</span>
+        </summary>
+        <div className="card-body settings-disclosure-body">
+          <div className="settings-inline-actions">
+            <button className="btn btn-secondary btn-sm" onClick={() => handleCopySQL(SQL_SETUP_SCRIPT)}>
+              <Copy size={14} />
+              전체 복사
+            </button>
+          </div>
           <textarea
+            className="settings-code-textarea settings-code-textarea--large"
             readOnly
             value={SQL_SETUP_SCRIPT}
-            style={{
-              width: '100%',
-              minHeight: 220,
-              borderRadius: 10,
-              padding: 12,
-              fontFamily: 'Consolas, Menlo, monospace',
-              fontSize: '0.78rem',
-              border: '1px solid var(--border-color)'
-            }}
           />
-          <p style={{ marginTop: 10, fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+          <p className="settings-help-text">
             위 전체 SQL을 복사하면 필요한 테이블과 기본 데이터를 한 번에 생성할 수 있습니다.
           </p>
         </div>
-      </div>
+      </details>
     </>
   );
 }

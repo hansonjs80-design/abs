@@ -87,10 +87,13 @@ export default function SupabaseConnectionSettings() {
   return (
     <div className="card supabase-connection-card">
       <div className="card-header supabase-connection-header">
-        <span className="card-title">
-          <Database size={18} />
-          Supabase 서버 연결
-        </span>
+        <div>
+          <span className="card-title">
+            <Database size={18} />
+            Supabase 서버 연결
+          </span>
+          <p className="settings-card-description">이 기기에서 사용할 데이터 서버를 관리합니다.</p>
+        </div>
         <span className={`supabase-connection-badge ${isUsingDeviceOverride ? 'is-device' : ''}`}>
           {isUsingDeviceOverride ? '이 기기 사용자 설정' : '앱 기본 설정'}
         </span>

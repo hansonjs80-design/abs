@@ -51,23 +51,9 @@ const formatDateTime = (value) => {
 };
 
 function NoticeBox({ children, tone = 'info' }) {
-  const isWarn = tone === 'warning';
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 10,
-        padding: '12px 14px',
-        borderRadius: 8,
-        border: `1px solid ${isWarn ? '#f59e0b' : '#93c5fd'}`,
-        background: isWarn ? '#fffbeb' : '#eff6ff',
-        color: isWarn ? '#92400e' : '#1e3a8a',
-        fontWeight: 700,
-        lineHeight: 1.5,
-      }}
-    >
-      <AlertTriangle size={18} style={{ marginTop: 2, flexShrink: 0 }} />
+    <div className={`backup-notice backup-notice--${tone}`}>
+      <AlertTriangle size={17} />
       <div>{children}</div>
     </div>
   );
@@ -76,15 +62,15 @@ function NoticeBox({ children, tone = 'info' }) {
 function SnapshotSummary({ snapshot }) {
   if (!snapshot) {
     return (
-      <div style={{ padding: 18, color: 'var(--text-secondary)', fontWeight: 700 }}>
+      <div className="backup-snapshot-empty">
         아직 선택된 백업 스냅샷이 없습니다.
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'grid', gap: 10 }}>
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+    <div className="backup-snapshot-summary">
+      <div className="backup-snapshot-pills">
         <span className="backup-pill">생성: {formatDateTime(snapshot.created_at)}</span>
         <span className="backup-pill">전체 {getSnapshotRowCount(snapshot).toLocaleString()}행</span>
         <span className="backup-pill">{snapshot.reason === 'auto' ? '자동 백업' : '수동/가져온 백업'}</span>
@@ -111,8 +97,8 @@ function SnapshotSummary({ snapshot }) {
                     {table.label}
                     {table.sensitive && <span style={{ marginLeft: 6, color: '#b45309' }}>민감정보</span>}
                   </td>
-                  <td style={{ textAlign: 'right' }}>{count.toLocaleString()}행</td>
-                  <td style={{ color: tableBackup?.error ? '#b91c1c' : '#166534', fontWeight: 800 }}>
+                  <td className="backup-table-count">{count.toLocaleString()}행</td>
+                  <td className={tableBackup?.error ? 'backup-table-error' : 'backup-table-success'}>
                     {tableBackup?.error ? tableBackup.error : '완료'}
                   </td>
                 </tr>
@@ -255,19 +241,24 @@ export default function BackupSettings() {
 
   return (
     <div className="backup-settings">
-      <div className="card" style={{ marginBottom: 18 }}>
+      <div className="card settings-card">
         <div className="card-header">
-          <span className="card-title"><HardDrive size={18} /> Supabase 로컬 백업</span>
+          <div>
+            <span className="card-title"><HardDrive size={18} /> 로컬 백업 설정</span>
+            <p className="settings-card-description">Supabase 데이터를 이 브라우저에 안전하게 보관합니다.</p>
+          </div>
         </div>
-        <div className="card-body" style={{ display: 'grid', gap: 14 }}>
-          <NoticeBox tone="warning">
-            백업 탭은 Supabase 데이터를 읽어서 브라우저의 로컬 저장소에 저장합니다. 이 화면에서는 Supabase에 쓰기, 삭제, 복구 작업을 실행하지 않습니다.
-          </NoticeBox>
-          <NoticeBox>
-            DB가 완전히 삭제되면 테이블 구조를 먼저 복구한 뒤 백업 JSON을 별도 복구 스크립트로 넣어야 합니다. 장기 보관은 반드시 JSON 파일로 내보내서 로컬 드라이브나 외장 저장소에 보관하세요.
-          </NoticeBox>
+        <div className="card-body backup-settings-body">
+          <div className="backup-notices">
+            <NoticeBox tone="warning">
+              이 화면은 Supabase 데이터를 읽어 로컬에 백업하며, 서버 데이터는 수정하거나 삭제하지 않습니다.
+            </NoticeBox>
+            <NoticeBox>
+              장기 보관용 백업은 JSON으로 내보내 별도 드라이브에 보관하세요.
+            </NoticeBox>
+          </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+          <div className="backup-options-grid">
             <label className="backup-option-card">
               <input
                 type="checkbox"
@@ -315,7 +306,7 @@ export default function BackupSettings() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div className="backup-primary-actions">
             <button type="button" className="btn btn-primary" onClick={handleSaveSettings}>
               <Save size={16} /> 설정 저장
             </button>
@@ -328,19 +319,23 @@ export default function BackupSettings() {
           </div>
 
           {message && (
-            <div style={{ color: 'var(--text-primary)', fontWeight: 700, padding: '8px 10px', background: 'var(--bg-secondary)', borderRadius: 6 }}>
+            <div className="backup-message">
               {message}
             </div>
           )}
         </div>
       </div>
 
-      <div className="card">
+      <div className="card settings-card">
         <div className="card-header">
-          <span className="card-title"><Activity size={18} /> 백업 스냅샷</span>
+          <div>
+            <span className="card-title"><Activity size={18} /> 백업 스냅샷</span>
+            <p className="settings-card-description">저장된 백업을 확인하거나 JSON 파일로 관리합니다.</p>
+          </div>
+          <span className="settings-count-badge">{snapshots.length}개</span>
         </div>
-        <div className="card-body" style={{ display: 'grid', gap: 14 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 1fr) auto', gap: 10, alignItems: 'center' }}>
+        <div className="card-body backup-snapshot-body">
+          <div className="backup-snapshot-toolbar">
             <select
               className="form-input"
               value={selectedId}
@@ -353,7 +348,7 @@ export default function BackupSettings() {
                 </option>
               ))}
             </select>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <div className="backup-snapshot-actions">
               <button type="button" className="btn btn-secondary btn-sm" onClick={handleExportJson} disabled={!selectedSnapshot}>
                 <Download size={15} /> JSON 내보내기
               </button>
@@ -379,87 +374,13 @@ export default function BackupSettings() {
 
           <SnapshotSummary snapshot={selectedSnapshot} />
 
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', color: 'var(--text-secondary)', fontWeight: 700 }}>
+          <div className="backup-stats">
             <span>저장된 스냅샷: {snapshots.length.toLocaleString()}개</span>
             <span>실시간 변경 로그: {changeEventCount.toLocaleString()}개</span>
             <span>민감정보 포함: 로그인 사용자 테이블</span>
           </div>
         </div>
       </div>
-
-      <style>{`
-        .backup-settings .btn {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-        }
-        .backup-option-card {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 12px;
-          border: 1px solid var(--border-color);
-          border-radius: 8px;
-          background: var(--bg-secondary);
-          cursor: pointer;
-        }
-        .backup-option-card input {
-          width: 18px;
-          height: 18px;
-        }
-        .backup-option-card span {
-          display: grid;
-          gap: 3px;
-        }
-        .backup-option-card small,
-        .backup-field label {
-          color: var(--text-secondary);
-          font-weight: 700;
-        }
-        .backup-field {
-          display: grid;
-          gap: 6px;
-        }
-        .backup-pill {
-          display: inline-flex;
-          align-items: center;
-          min-height: 28px;
-          padding: 4px 10px;
-          border-radius: 999px;
-          background: #dbeafe;
-          color: #1e40af;
-          font-weight: 800;
-        }
-        .backup-pill-warning {
-          background: #fef3c7;
-          color: #92400e;
-        }
-        .backup-table-wrap {
-          border: 1px solid #94a3b8;
-          border-radius: 8px;
-          overflow: auto;
-          max-height: 420px;
-        }
-        .backup-table {
-          width: 100%;
-          min-width: 720px;
-          border-collapse: collapse;
-          font-size: 0.92rem;
-        }
-        .backup-table th,
-        .backup-table td {
-          padding: 8px 10px;
-          border: 1px solid #cbd5e1;
-          text-align: left;
-          vertical-align: middle;
-        }
-        .backup-table th {
-          background: #e2e8f0;
-          color: #0f172a;
-          font-weight: 900;
-        }
-      `}</style>
     </div>
   );
 }
