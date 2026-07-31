@@ -978,16 +978,16 @@
 .shockwave-day.is-today::after {
   content: '';
   position: absolute;
-  inset: 0;
+  inset: -2px;
   z-index: 80;
-  border: 3px solid var(--sw-today-border);
+  border: 4px solid var(--sw-today-border);
   border-radius: 0;
   pointer-events: none;
 }
 
 .shockwave-day.is-today.has-time-col::after {
   /* 현재 기기의 시간 열 너비만큼 시간표 영역을 제외하고 테두리 적용 */
-  left: var(--sw-time-col-width, 41px);
+  left: calc(var(--sw-time-col-width, 41px) - 2px);
 }
 
 @media (max-width: 1200px) {

@@ -111,16 +111,16 @@ test('schedule holiday cells use their fill color for internal borders', async (
   );
 });
 
-test('schedule today border stays flush inside the day without a white halo', async () => {
+test('schedule today border replaces the day boundary without a white halo', async () => {
   const shockwaveCss = await readFile(shockwaveCssUrl, 'utf8');
 
   assert.match(
     shockwaveCss,
-    /\.shockwave-day\.is-today::after\s*\{[^}]*inset:\s*0;[^}]*border:\s*3px solid var\(--sw-today-border\);[^}]*border-radius:\s*0;/s
+    /\.shockwave-day\.is-today::after\s*\{[^}]*inset:\s*-2px;[^}]*border:\s*4px solid var\(--sw-today-border\);[^}]*border-radius:\s*0;/s
   );
   assert.match(
     shockwaveCss,
-    /\.shockwave-day\.is-today\.has-time-col::after\s*\{[^}]*left:\s*var\(--sw-time-col-width,\s*41px\);/s
+    /\.shockwave-day\.is-today\.has-time-col::after\s*\{[^}]*left:\s*calc\(var\(--sw-time-col-width,\s*41px\)\s*-\s*2px\);/s
   );
   assert.doesNotMatch(
     shockwaveCss,
