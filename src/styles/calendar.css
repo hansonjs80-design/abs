@@ -479,8 +479,15 @@
   border-bottom: none;
 }
 
-.memo-slot:hover {
-  filter: brightness(0.95);
+@media (hover: hover) and (pointer: fine) {
+  .memo-slot:hover:not(.selected):not(.primary-selected):not(:focus):not(.editing)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: rgba(15, 23, 42, 0.06);
+  }
 }
 
 .memo-slot:focus,

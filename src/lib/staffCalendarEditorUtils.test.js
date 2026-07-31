@@ -112,6 +112,16 @@ test('staff memo selection keeps the cell background and adds a tint overlay', a
   );
 });
 
+test('staff memo hover darkens inherited and custom backgrounds with an overlay', async () => {
+  const calendarCss = await readFile(calendarCssUrl, 'utf8');
+
+  assert.doesNotMatch(calendarCss, /\.memo-slot:hover\s*\{[^}]*filter:\s*brightness/s);
+  assert.match(
+    calendarCss,
+    /@media \(hover: hover\) and \(pointer: fine\)\s*\{[^}]*\.memo-slot:hover:not\(\.selected\):not\(\.primary-selected\):not\(:focus\):not\(\.editing\)::after\s*\{[^}]*background:\s*rgba\(15,\s*23,\s*42,\s*0\.06\);/s
+  );
+});
+
 test('staff sunday and configured holiday cells use their red fill for every inner line', async () => {
   const calendarCss = await readFile(calendarCssUrl, 'utf8');
 
