@@ -1,10 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import {
   getStaffMemoEditorColors,
   getStaffMemoDisplayText,
   getStaffMemoEditorPosition,
 } from './staffCalendarEditorUtils.js';
+
+const calendarCssUrl = new URL('../styles/calendar.css', import.meta.url);
 
 test('staff memo editor hides the rendered cell text while editing', () => {
   assert.equal(getStaffMemoDisplayText({
@@ -54,5 +57,23 @@ test('staff memo editor falls back to the rendered text color and default backgr
       background: 'var(--bg-input, #fff)',
       color: 'rgb(229, 62, 62)',
     }
+  );
+});
+
+test('staff memo selection keeps the cell background and adds a tint overlay', async () => {
+  const calendarCss = await readFile(calendarCssUrl, 'utf8');
+  const selectionRule = calendarCss.match(
+    /\.memo-slot:focus,\s*\.memo-slot\.selected,\s*\.memo-slot\.primary-selected\s*\{([^}]*)\}/s
+  );
+
+  assert.ok(selectionRule);
+  assert.doesNotMatch(selectionRule[1], /background\s*:/);
+  assert.match(
+    calendarCss,
+    /\.memo-slot:focus::after,\s*\.memo-slot\.selected::after,\s*\.memo-slot\.primary-selected::after\s*\{[^}]*background:\s*rgba\(66,\s*133,\s*244,\s*0\.06\);/s
+  );
+  assert.match(
+    calendarCss,
+    /\.memo-slot\s*>\s*span\s*\{[^}]*position:\s*relative;[^}]*z-index:\s*2;/s
   );
 });

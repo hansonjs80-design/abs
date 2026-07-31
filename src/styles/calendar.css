@@ -460,6 +460,8 @@
 }
 
 .memo-slot > span {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -484,8 +486,18 @@
   outline: 1.7px solid #4285f4 !important;
   outline-offset: -1.7px !important;
   box-shadow: inset 0 0 0 1.7px #4285f4 !important;
-  background: rgba(66, 133, 244, 0.06) !important;
   border-color: transparent !important;
+}
+
+.memo-slot:focus::after,
+.memo-slot.selected::after,
+.memo-slot.primary-selected::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: rgba(66, 133, 244, 0.06);
 }
 
 /* 선택된 슬롯 자체 및 바로 뒤 슬롯의 상단 회색 가로선 제거하여 파란선 전면 노출 */
@@ -499,14 +511,17 @@
 }
 
 .other-month .memo-slot.selected {
-  background: rgba(66, 133, 244, 0.2);
   border-color: transparent;
   color: var(--text-primary);
 }
 
 .other-month .memo-slot.primary-selected {
-  background: rgba(66, 133, 244, 0.2);
   color: var(--text-primary);
+}
+
+.other-month .memo-slot.selected::after,
+.other-month .memo-slot.primary-selected::after {
+  background: rgba(66, 133, 244, 0.2);
 }
 
 .memo-slot.editing {
