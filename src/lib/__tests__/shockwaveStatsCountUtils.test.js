@@ -33,15 +33,15 @@ describe('shockwave stats count utilities', () => {
     assert.equal(dateSummary.newPatient, 1);
     assert.deepEqual(dateSummary.newPatientByTherapist, { 주한솔: 1, 신수민: 0 });
     assert.deepEqual(dateSummary.newPatientNamesByTherapist, {
-      주한솔: ['환자'],
+      주한솔: ['환자*'],
       신수민: [],
     });
     assert.deepEqual(dateSummary.patientNamesByPrescription, {
-      'F2.5': ['환자'],
+      'F2.5': ['환자*'],
       'F/R': ['두번째 환자'],
     });
     assert.deepEqual(dateSummary.patientNamesByTherapistPrescription, {
-      주한솔: { 'F2.5': ['환자'], 'F/R': ['두번째 환자'] },
+      주한솔: { 'F2.5': ['환자*'], 'F/R': ['두번째 환자'] },
       신수민: { 'F2.5': [], 'F/R': [] },
     });
     assert.deepEqual(summary.therapistTotals[0].byPres, { 'F2.5': 1, 'F/R': 2 });

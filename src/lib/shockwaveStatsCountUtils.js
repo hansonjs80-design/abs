@@ -108,6 +108,24 @@ function createEmptyNewPatientNames(therapists) {
   return Object.fromEntries(therapists.map((therapist) => [therapist.name, []]));
 }
 
+function appendTooltipPatientName(patientNames, value) {
+  const rawName = String(value || '').trim();
+  const cleanName = rawName.replace(/\*/g, '').trim();
+  if (!cleanName) return;
+
+  const isNewPatient = rawName.includes('*');
+  const displayName = `${cleanName}${isNewPatient ? '*' : ''}`;
+  const existingIndex = patientNames.findIndex(
+    (name) => String(name || '').replace(/\*/g, '').trim() === cleanName
+  );
+
+  if (existingIndex < 0) {
+    patientNames.push(displayName);
+  } else if (isNewPatient && !String(patientNames[existingIndex] || '').includes('*')) {
+    patientNames[existingIndex] = displayName;
+  }
+}
+
 export function buildShockwaveCountSummaries({
   rows = [],
   prescriptions = [],
@@ -173,14 +191,12 @@ export function buildShockwaveCountSummaries({
       current.byTherapistPrescription[row.therapist_name][matchedPrescription] =
         (current.byTherapistPrescription[row.therapist_name][matchedPrescription] || 0) + count;
 
-      const patientName = String(row?.patient_name || '').replace(/\*/g, '').trim();
-      if (patientName) {
+      const patientName = String(row?.patient_name || '').trim();
+      if (patientName.replace(/\*/g, '').trim()) {
         const prescriptionPatientNames =
           current.patientNamesByPrescription[matchedPrescription] || [];
         current.patientNamesByPrescription[matchedPrescription] = prescriptionPatientNames;
-        if (!prescriptionPatientNames.includes(patientName)) {
-          prescriptionPatientNames.push(patientName);
-        }
+        appendTooltipPatientName(prescriptionPatientNames, patientName);
 
         const therapistPatientNames =
           current.patientNamesByTherapistPrescription[row.therapist_name] ||
@@ -189,9 +205,7 @@ export function buildShockwaveCountSummaries({
         const therapistPrescriptionPatientNames =
           therapistPatientNames[matchedPrescription] || [];
         therapistPatientNames[matchedPrescription] = therapistPrescriptionPatientNames;
-        if (!therapistPrescriptionPatientNames.includes(patientName)) {
-          therapistPrescriptionPatientNames.push(patientName);
-        }
+        appendTooltipPatientName(therapistPrescriptionPatientNames, patientName);
       }
     }
 
@@ -205,9 +219,7 @@ export function buildShockwaveCountSummaries({
         if (patientName) {
           const patientNames = current.newPatientNamesByTherapist[row.therapist_name] || [];
           current.newPatientNamesByTherapist[row.therapist_name] = patientNames;
-          if (!patientNames.includes(patientName)) {
-            patientNames.push(patientName);
-          }
+          appendTooltipPatientName(patientNames, row.patient_name);
         }
       }
     }
