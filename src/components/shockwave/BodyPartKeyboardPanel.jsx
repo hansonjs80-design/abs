@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, Pencil, Trash2 } from 'lucide-react';
 import { normalizeBodyPartKey } from '../../lib/schedulerUtils';
+import {
+  BODY_PART_PRESET_DIRECTIONS,
+  BODY_PART_PRESET_GROUPS,
+  getBodyPartPresetState,
+} from '../../lib/bodyPartPresetUtils';
 
 export default function BodyPartKeyboardPanel({
   availableParts = [],
@@ -11,6 +16,7 @@ export default function BodyPartKeyboardPanel({
   onMove,
   onRemove,
   onToggle,
+  onSetPreset,
   imeOpenRef,
   autoFocus = false,
 }) {
@@ -25,6 +31,19 @@ export default function BodyPartKeyboardPanel({
   const selectedPartSignature = selectedParts.join('\u001f');
   const selectedKeySet = new Set(selectedParts.map((part) => normalizeBodyPartKey(part)));
   const selectableParts = availableParts.filter((part) => !selectedKeySet.has(normalizeBodyPartKey(part)));
+
+  const togglePresetDirection = (item, directionId) => {
+    const { directions } = getBodyPartPresetState(selectedParts, item);
+    const nextDirections = directions.includes(directionId)
+      ? directions.filter((id) => id !== directionId)
+      : [...directions, directionId];
+    onSetPreset?.(item.id, true, nextDirections);
+  };
+
+  const togglePresetSelection = (item) => {
+    const { isSelected } = getBodyPartPresetState(selectedParts, item);
+    onSetPreset?.(item.id, !isSelected, []);
+  };
 
   useEffect(() => {
     setSelectedDrafts(selectedPartSignature ? selectedPartSignature.split('\u001f') : []);
@@ -149,6 +168,57 @@ export default function BodyPartKeyboardPanel({
       onMouseDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
     >
+      <div className="context-menu-body-presets" aria-label="진단별 부위 빠른 입력">
+        {BODY_PART_PRESET_GROUPS.map((group) => (
+          <section key={group.id} className="context-menu-body-preset-group">
+            <h4 className="context-menu-body-preset-title">{group.label}</h4>
+            <div className="context-menu-body-preset-list">
+              {group.items.map((item) => {
+                const { isSelected, directions } = getBodyPartPresetState(selectedParts, item);
+                return (
+                  <div key={item.id} className="context-menu-body-preset-item">
+                    <label className="context-menu-body-preset-label">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        aria-label={`${item.label} 선택`}
+                        onChange={(event) => {
+                          event.stopPropagation();
+                          togglePresetSelection(item);
+                        }}
+                        onMouseDown={(event) => event.stopPropagation()}
+                        onClick={(event) => event.stopPropagation()}
+                      />
+                      <span>{item.label} <small>({item.code})</small></span>
+                    </label>
+                    {isSelected ? (
+                      <span className="context-menu-body-preset-directions" aria-label={`${item.label} 좌우 선택`}>
+                      {BODY_PART_PRESET_DIRECTIONS.map(({ id, label }) => (
+                        <button
+                          key={id}
+                          type="button"
+                          className={`context-menu-body-preset-direction${directions.includes(id) ? ' is-active' : ''}`}
+                          aria-pressed={directions.includes(id)}
+                          onMouseDown={(event) => event.stopPropagation()}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            togglePresetDirection(item, id);
+                          }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                      </span>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
+
       {selectedParts.length > 0 ? (
         <div className="context-menu-body-selected-list">
           {selectedParts.map((part, index) => {

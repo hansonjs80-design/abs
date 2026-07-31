@@ -3531,6 +3531,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                               onMove={(index, direction) => handleContextAction({ type: 'bodyPartMove', index, direction })}
                               onRemove={(index) => handleContextAction({ type: 'bodyPartRemove', index })}
                               onToggle={(value) => handleContextAction({ type: 'bodyPartToggle', value })}
+                              onSetPreset={(presetId, isSelected, directions) => handleContextAction({
+                                type: 'bodyPartPreset',
+                                presetId,
+                                isSelected,
+                                directions,
+                              })}
                               onDelete={(value) => {
                                 const partKey = normalizeBodyPartKey(value);
                                 setContextMenuHiddenBodyPartKeys((prev) => {

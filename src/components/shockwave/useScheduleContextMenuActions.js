@@ -7,6 +7,11 @@ import {
 } from '../../lib/schedulePrescriptionChangeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import {
+  findBodyPartPresetItem,
+  replaceBodyPartPreset,
+  replaceBodyPartPresetOptions,
+} from '../../lib/bodyPartPresetUtils';
+import {
   buildClearReservationGroupPayload,
   buildReservationGroupPayload,
   RESERVATION_GROUP_SAME,
@@ -764,6 +769,75 @@ export default function useScheduleContextMenuActions({
             saveMemoMeta(key, memo, overrides)
           )
         ).then(saveResults => {
+          if (saveResults.some(Boolean) && undoMemos) {
+            recordUndo({ type: 'bulk-edit', oldMemos: undoMemos });
+          }
+        });
+      }, 500);
+
+      return;
+    }
+    else if (action?.type === 'bodyPartPreset') {
+      const presetItem = findBodyPartPresetItem(action.presetId);
+      if (!presetItem) return;
+
+      const keys = getContextTargetKeys();
+      const oldMemos = buildMemoSnapshotForKeys(keys);
+      const computedResults = [];
+
+      for (const key of keys) {
+        const memo = getMemoForAction(key);
+        const currentParts = splitBodyParts(memo.body_part || '');
+        const nextParts = replaceBodyPartPreset(
+          currentParts,
+          presetItem,
+          action.isSelected,
+          action.directions
+        ).map((part) => formatBodyPartInput(part));
+        const updated = nextParts.join(', ');
+        if (updated === currentParts.join(', ')) continue;
+
+        const nextOptions = replaceBodyPartPresetOptions(
+          getBodyPartOptionList(memo, nextParts),
+          presetItem,
+          nextParts
+        );
+        const nextMergeSpan = buildMergeSpanWithBodyPartOptions(memo.merge_span, nextOptions);
+        computedResults.push({ key, memo, updated, nextOptions, nextMergeSpan });
+      }
+      if (computedResults.length === 0) return;
+
+      for (const { key, memo, updated, nextOptions, nextMergeSpan } of computedResults) {
+        setContextMenuBodyPartOptions?.((prev) => replaceBodyPartPresetOptions(
+          prev,
+          presetItem,
+          nextOptions
+        ));
+        applyImmediateMeta(key, memo, { merge_span: nextMergeSpan, body_part: updated });
+        updateContextMemoSnapshot(key, memo, { merge_span: nextMergeSpan, body_part: updated });
+        saveDebounceRef.current.pending.set(key, {
+          memo,
+          overrides: { merge_span: nextMergeSpan, body_part: updated },
+        });
+      }
+
+      if (!saveDebounceRef.current.undoMemos) {
+        saveDebounceRef.current.undoMemos = oldMemos;
+      }
+      if (saveDebounceRef.current.timer) {
+        clearTimeout(saveDebounceRef.current.timer);
+      }
+      saveDebounceRef.current.timer = setTimeout(() => {
+        const pendingSaves = Array.from(saveDebounceRef.current.pending.entries());
+        const undoMemos = saveDebounceRef.current.undoMemos;
+
+        saveDebounceRef.current.pending.clear();
+        saveDebounceRef.current.undoMemos = null;
+        saveDebounceRef.current.timer = null;
+
+        Promise.all(
+          pendingSaves.map(([key, { memo, overrides }]) => saveMemoMeta(key, memo, overrides))
+        ).then((saveResults) => {
           if (saveResults.some(Boolean) && undoMemos) {
             recordUndo({ type: 'bulk-edit', oldMemos: undoMemos });
           }

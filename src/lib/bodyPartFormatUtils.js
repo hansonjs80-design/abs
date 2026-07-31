@@ -201,7 +201,7 @@ export function toProperCase(str) {
   if (!str) return str;
   const koreanAlias = normalizeKoreanBodyPartAlias(str);
   if (koreanAlias) return koreanAlias;
-  return str.split(/([,/\- ]+)/).map(tok => {
+  const normalized = str.split(/([,/\- ]+)/).map(tok => {
     if (/^[,/\- ]+$/.test(tok)) return tok;
     const lower = normalizeBodyShortcutKey(tok);
     if (Object.prototype.hasOwnProperty.call(ABBREV_MAP, lower)) return ABBREV_MAP[lower];
@@ -209,4 +209,7 @@ export function toProperCase(str) {
     if (ALWAYS_UPPER.includes(upper)) return upper;
     return tok.charAt(0).toUpperCase() + tok.slice(1).toLowerCase();
   }).join('');
+  return normalized.replace(/\(([a-z])(\d+(?:\.\d+)?)\)/gi, (_, prefix, digits) => (
+    `(${prefix.toUpperCase()}${digits})`
+  ));
 }
