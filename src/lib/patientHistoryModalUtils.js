@@ -1,4 +1,5 @@
 import { has4060Pattern } from './schedulerContentFormat.js';
+import { getScheduleItemTreatmentGroup } from './prescriptionScheduleSettings.js';
 import {
   normalizeVisitInputValue,
   parseSchedulerPatientIdentity,
@@ -9,6 +10,57 @@ function normalizeNameForHistorySearch(value) {
     .trim()
     .replace(/[*\d\s().-]/g, '')
     .toLowerCase();
+}
+
+function getPatientHistoryPeriod(date, fallbackYear, fallbackMonth) {
+  const match = String(date || '').trim().match(/^(\d{4})-(\d{1,2})(?:-|$)/);
+  const year = Number(match?.[1] || fallbackYear);
+  const month = Number(match?.[2] || fallbackMonth);
+  return {
+    year: Number.isInteger(year) && year > 0 ? year : new Date().getFullYear(),
+    month: Number.isInteger(month) && month >= 1 && month <= 12 ? month : 1,
+  };
+}
+
+export function getConfiguredPatientHistoryTreatmentGroup({
+  prescription = '',
+  content = '',
+  settings,
+  date = '',
+  year,
+  month,
+} = {}) {
+  const period = getPatientHistoryPeriod(date, year, month);
+  const treatmentGroup = getScheduleItemTreatmentGroup(
+    { prescription, content },
+    settings,
+    period.year,
+    period.month
+  );
+  if (treatmentGroup === 'manual_therapy') return 'manual';
+  if (treatmentGroup === 'shockwave') return 'shockwave';
+  return '';
+}
+
+export function getPatientHistoryTreatmentGroup({
+  type = '',
+  prescription = '',
+  content = '',
+  settings,
+  date = '',
+  year,
+  month,
+} = {}) {
+  const configuredGroup = getConfiguredPatientHistoryTreatmentGroup({
+    prescription,
+    content,
+    settings,
+    date,
+    year,
+    month,
+  });
+  if (configuredGroup) return configuredGroup;
+  return type === 'manual' ? 'manual' : 'shockwave';
 }
 
 export function getPatientHistorySearchTarget(content) {

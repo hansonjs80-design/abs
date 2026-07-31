@@ -4,7 +4,9 @@ import { buildManualTherapyUnmergePayload } from '../../lib/manualTherapyMergeUt
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import {
   buildPatientHistoryCellUpdate,
+  getConfiguredPatientHistoryTreatmentGroup,
   getPatientHistorySearchTarget,
+  getPatientHistoryTreatmentGroup,
   patientHistoryIdentityMatches,
   resolvePatientHistoryApplyTarget,
 } from '../../lib/patientHistoryModalUtils';
@@ -22,7 +24,6 @@ import {
   extractDoseTagFromPrescription,
   getActionDoseTagFromPrescription,
   get4060PrescriptionFromContent,
-  has4060Pattern,
   updateDoseTagForPrescriptionContent,
 } from '../../lib/schedulerContentFormat';
 import {
@@ -44,29 +45,6 @@ import {
   parseSchedulerPatientIdentity,
   splitBodyParts,
 } from '../../lib/schedulerUtils';
-
-const getPatientHistoryTreatmentGroup = ({ type, prescription, content }) => {
-  if (type === 'manual') return 'manual';
-  if (has4060Pattern(content || '')) return 'manual';
-  const prescriptionText = String(prescription || '').trim();
-  if (/(?:^|\D)(40|60)\s*분?(?:\D|$)/.test(prescriptionText)) return 'manual';
-  return 'shockwave';
-};
-
-const DEFAULT_MANUAL_THERAPY_PRESCRIPTIONS = ['40분', '60분'];
-
-const normalizePrescriptionForHistory = (value) => String(value || '').trim().toLowerCase();
-
-const buildActiveManualPrescriptionSet = (settings) => {
-  const source = Array.isArray(settings?.manual_therapy_prescriptions)
-    ? settings.manual_therapy_prescriptions
-    : DEFAULT_MANUAL_THERAPY_PRESCRIPTIONS;
-  return new Set(source.map(normalizePrescriptionForHistory).filter(Boolean));
-};
-
-const isActiveManualTherapyPrescription = (prescription, activeSet) => (
-  activeSet.has(normalizePrescriptionForHistory(prescription))
-);
 
 const buildCurrentPrescriptionSet = (settings, year, month) => {
   const config = getPrescriptionScheduleSettings(settings, year, month);
@@ -348,9 +326,13 @@ export default function usePatientHistoryActions({
         );
       }
     }
-    const manualPrescriptionSignature = Array.isArray(settings?.manual_therapy_prescriptions)
-      ? settings.manual_therapy_prescriptions.join('|')
-      : '';
+    const prescriptionClassificationSignature = JSON.stringify({
+      shockwave: settings?.prescriptions || [],
+      manual: settings?.manual_therapy_prescriptions || [],
+      shockwaveDoseTags: settings?.dose_tags || {},
+      manualDoseTags: settings?.manual_therapy_dose_tags || {},
+      monthly: settings?.monthly_settlement_settings || {},
+    });
     const cacheKey = [
       normalizeNameForMatch(nameParam),
       String(chartParam || '').trim(),
@@ -361,7 +343,7 @@ export default function usePatientHistoryActions({
       selectedDate,
       baseTimeSlotsLength,
       colCount,
-      manualPrescriptionSignature,
+      prescriptionClassificationSignature,
     ].join('__');
     const cached = patientHistoryResultCacheRef.current.get(cacheKey);
     if (cached && Date.now() - cached.time < 15000) {
@@ -375,7 +357,6 @@ export default function usePatientHistoryActions({
     }
     setPatientHistoryModalData((prev) => ({ ...prev, loading: true, searchName: nameParam, searchChart: chartParam }));
     try {
-      const activeManualPrescriptionSet = buildActiveManualPrescriptionSet(settings);
       const shockwaveQuery = supabase.from('shockwave_patient_logs')
         .select('id, patient_name, chart_number, visit_count, date, prescription, body_part, therapist_name, source, scheduler_cell_key')
         .order('date', { ascending: false })
@@ -414,7 +395,14 @@ export default function usePatientHistoryActions({
         })).map((d) => ({
           ...d,
           type: 'shockwave',
-          history_group: getPatientHistoryTreatmentGroup({ type: 'shockwave', prescription: d.prescription }),
+          history_group: getPatientHistoryTreatmentGroup({
+            type: 'shockwave',
+            prescription: d.prescription,
+            settings,
+            date: d.date,
+            year: currentYear,
+            month: currentMonth,
+          }),
         })),
         ...(manualRes.data || []).filter((d) => (
           patientHistoryIdentityMatches({
@@ -422,7 +410,13 @@ export default function usePatientHistoryActions({
             nameParam,
             chartValue: d.chart_number,
             nameValue: d.patient_name,
-          }) && isActiveManualTherapyPrescription(d.prescription, activeManualPrescriptionSet)
+          }) && getConfiguredPatientHistoryTreatmentGroup({
+            prescription: d.prescription,
+            settings,
+            date: d.date,
+            year: currentYear,
+            month: currentMonth,
+          }) === 'manual'
         )).map((d) => ({
           ...d,
           type: 'manual',
@@ -444,6 +438,9 @@ export default function usePatientHistoryActions({
           type: 'schedule',
           prescription: scheduleRow.prescription,
           content,
+          settings,
+          year: scheduleRow.year,
+          month: scheduleRow.month,
         }),
       });
       let allData = fetchedLogData.filter(keepHistoryLog);
@@ -520,6 +517,9 @@ export default function usePatientHistoryActions({
             type: 'schedule',
             prescription: schedulePrescription,
             content,
+            settings,
+            year: s.year,
+            month: s.month,
           });
           scheduleRowsWithMeta.push({
             row: s,
@@ -688,6 +688,9 @@ export default function usePatientHistoryActions({
                 type: 'draft',
                 prescription: currentPrescription,
                 content,
+                settings,
+                year: currentYear,
+                month: currentMonth,
               });
               const draftLog = {
                 date: selectedDate,

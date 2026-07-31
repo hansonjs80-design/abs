@@ -3,11 +3,55 @@ import { describe, it } from 'node:test';
 
 import {
   buildPatientHistoryCellUpdate,
+  getConfiguredPatientHistoryTreatmentGroup,
   getPatientHistorySearchTarget,
+  getPatientHistoryTreatmentGroup,
   isNameOnlyPatientHistoryDraft,
   patientHistoryIdentityMatches,
   resolvePatientHistoryApplyTarget,
 } from '../patientHistoryModalUtils.js';
+
+describe('patient history treatment grouping', () => {
+  const settings = {
+    prescriptions: ['F2.5'],
+    manual_therapy_prescriptions: ['40분', '60분'],
+    monthly_settlement_settings: {
+      '2026-07': {
+        shockwave: {
+          prescriptions: ['F2.5'],
+        },
+        manual_therapy: {
+          prescriptions: ['30분'],
+          dose_tags: { '30분': '30' },
+        },
+      },
+    },
+  };
+
+  it('routes a monthly 30 minute manual prescription away from shockwave history', () => {
+    assert.equal(getPatientHistoryTreatmentGroup({
+      type: 'shockwave',
+      prescription: '30분',
+      settings,
+      date: '2026-07-20',
+    }), 'manual');
+    assert.equal(getConfiguredPatientHistoryTreatmentGroup({
+      content: '9307/주한솔30(2)',
+      settings,
+      year: 2026,
+      month: 7,
+    }), 'manual');
+  });
+
+  it('keeps configured shockwave prescriptions in shockwave history', () => {
+    assert.equal(getPatientHistoryTreatmentGroup({
+      type: 'schedule',
+      prescription: 'F2.5',
+      settings,
+      date: '2026-07-20',
+    }), 'shockwave');
+  });
+});
 
 describe('patient history modal search target', () => {
   it('opens as an empty manual search when the selected cell is blank', () => {

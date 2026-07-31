@@ -8,7 +8,10 @@ import {
   shouldIgnoreContextMenuDismissEvent,
 } from '../../lib/contextMenuDismissUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
-import { isNameOnlyPatientHistoryDraft } from '../../lib/patientHistoryModalUtils';
+import {
+  getPatientHistoryTreatmentGroup,
+  isNameOnlyPatientHistoryDraft,
+} from '../../lib/patientHistoryModalUtils';
 import { buildBlankScheduleCleanupPayload, sanitizeBlankScheduleCellData } from '../../lib/scheduleBlankCellCleanupUtils';
 import {
   MAX_SCHEDULE_TIME_COL_WIDTH,
@@ -242,17 +245,24 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       ? editValue
       : (pendingDisplayValues[key] ?? selectedMemo.content ?? '');
     const selectedPrescription = String(selectedMemo.prescription || '').trim();
-    const manualPrescriptions = Array.isArray(settings?.manual_therapy_prescriptions)
-      ? settings.manual_therapy_prescriptions
-      : [];
-    if (
-      has4060Pattern(selectedContent) ||
-      (selectedPrescription && manualPrescriptions.includes(selectedPrescription))
-    ) {
-      return 'manual';
-    }
-    return 'shockwave';
-  }, [editValue, editingCell, effectiveMemos, pendingDisplayValues, selectedCell, settings?.manual_therapy_prescriptions]);
+    return getPatientHistoryTreatmentGroup({
+      type: 'draft',
+      prescription: selectedPrescription,
+      content: selectedContent,
+      settings,
+      year: currentYear,
+      month: currentMonth,
+    });
+  }, [
+    currentMonth,
+    currentYear,
+    editValue,
+    editingCell,
+    effectiveMemos,
+    pendingDisplayValues,
+    selectedCell,
+    settings,
+  ]);
   const patientHistoryLogGroups = useMemo(() => buildPatientHistoryLogGroups({
     logs: patientHistoryModalData.logs,
     bodyFilters: patientHistoryBodyFilters,
