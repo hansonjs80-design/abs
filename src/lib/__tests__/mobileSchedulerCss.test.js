@@ -111,6 +111,23 @@ test('schedule holiday cells use their fill color for internal borders', async (
   );
 });
 
+test('schedule today border stays flush inside the day without a white halo', async () => {
+  const shockwaveCss = await readFile(shockwaveCssUrl, 'utf8');
+
+  assert.match(
+    shockwaveCss,
+    /\.shockwave-day\.is-today::after\s*\{[^}]*inset:\s*0;[^}]*border:\s*3px solid var\(--sw-today-border\);[^}]*border-radius:\s*0;/s
+  );
+  assert.match(
+    shockwaveCss,
+    /\.shockwave-day\.is-today\.has-time-col::after\s*\{[^}]*left:\s*var\(--sw-time-col-width,\s*41px\);/s
+  );
+  assert.doesNotMatch(
+    shockwaveCss,
+    /\.shockwave-day\.is-today::after\s*\{[^}]*box-shadow:/s
+  );
+});
+
 test('mobile bottom navigation uses compact icon-only tabs', async () => {
   const [mobileCss, bottomNav] = await Promise.all([
     readFile(mobileCssUrl, 'utf8'),
