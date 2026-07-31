@@ -8,6 +8,18 @@ export function getStaffMemoDisplayText({
   return content || holidayName || '';
 }
 
+export function getStaffHolidayDisplayStyle({
+  holidayName = '',
+  content = '',
+  isOtherMonth = false,
+} = {}) {
+  if (!holidayName || content) return {};
+  return {
+    color: isOtherMonth ? 'var(--cal-other-month-text)' : '#e53e3e',
+    fontWeight: 600,
+  };
+}
+
 export function getStaffMemoEditorPosition(
   cellRect = {},
   containerRect = {},

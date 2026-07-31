@@ -70,7 +70,7 @@ export function generateCalendarGrid(year, month, holidays = new Set()) {
         dow,
         isOtherMonth,
         isCurrentMonth,
-        isHoliday: isCurrentMonth && isHoliday,
+        isHoliday,
         isSunday,
         isSaturday,
         isSundayOrHoliday: isCurrentMonth && (isSunday || isHoliday),

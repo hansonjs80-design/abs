@@ -1,5 +1,8 @@
 import { computeMemoFontColor } from '../../lib/memoParser';
-import { getStaffMemoDisplayText } from '../../lib/staffCalendarEditorUtils';
+import {
+  getStaffHolidayDisplayStyle,
+  getStaffMemoDisplayText,
+} from '../../lib/staffCalendarEditorUtils';
 
 export default function MemoSlot({ 
   memo, dayInfo,
@@ -25,6 +28,11 @@ export default function MemoSlot({
     holidayName,
     isEditing,
     isDepartmentHidden,
+  });
+  const holidayDisplayStyle = getStaffHolidayDisplayStyle({
+    holidayName,
+    content,
+    isOtherMonth: dayInfo.isOtherMonth,
   });
 
   let colorClass = '';
@@ -74,7 +82,7 @@ export default function MemoSlot({
         pointerEvents: 'none',
         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'clip',
         width: '100%', textAlign: 'right',
-        ...(holidayName && !content ? { color: '#e53e3e', fontWeight: 600 } : {}),
+        ...holidayDisplayStyle,
       }}>
         {displayText}
       </span>

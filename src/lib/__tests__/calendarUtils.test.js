@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { generateCalendarGrid } from '../calendarUtils.js';
 import {
   canonicalizeShockwaveScheduleItemDate,
   getVisibleShockwaveScheduleMonths,
@@ -8,6 +9,18 @@ import {
   mapShockwaveScheduleItemToCurrentMonthView,
   mapShockwaveScheduleItemToVisibleMonth,
 } from '../shockwaveScheduleDateMapping.js';
+
+test('marks configured holidays in adjacent-month staff calendar cells', () => {
+  const holidays = new Set(['2026-6-29', '2026-8-1']);
+  const { grid } = generateCalendarGrid(2026, 7, holidays);
+  const leadingHoliday = grid.flat().find((day) => day.key === '2026-6-29');
+  const trailingHoliday = grid.flat().find((day) => day.key === '2026-8-1');
+
+  assert.equal(leadingHoliday?.isOtherMonth, true);
+  assert.equal(leadingHoliday?.isHoliday, true);
+  assert.equal(trailingHoliday?.isOtherMonth, true);
+  assert.equal(trailingHoliday?.isHoliday, true);
+});
 
 test('canonicalizes a visible next-month cell to the actual month coordinates', () => {
   const displayPayload = {

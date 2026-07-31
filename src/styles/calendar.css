@@ -337,6 +337,11 @@
   pointer-events: none;
 }
 
+.calendar-cell.sunday:not(.other-month) .calendar-date::after,
+.calendar-cell.holiday:not(.other-month) .calendar-date::after {
+  background: var(--cal-sunday-bg);
+}
+
 .today .calendar-date {
   background: var(--staff-calendar-today-color, #3b82f6);
 }
