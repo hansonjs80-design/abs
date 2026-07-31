@@ -20,7 +20,10 @@ import {
   syncLoadStaffCalendarDeviceSettings,
   syncSaveStaffCalendarDeviceSettings,
 } from '../../lib/staffCalendarDeviceSettings';
-import { getStaffMemoEditorPosition } from '../../lib/staffCalendarEditorUtils';
+import {
+  getStaffMemoEditorColors,
+  getStaffMemoEditorPosition,
+} from '../../lib/staffCalendarEditorUtils';
 import {
   getResizePointerClient,
   isTouchResizeEvent,
@@ -609,6 +612,12 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
           scrollTop: viewRef.current.scrollTop,
         });
         const cellStyle = window.getComputedStyle(cellEl);
+        const memo = staffMemos[key] || {};
+        const editorColors = getStaffMemoEditorColors({
+          backgroundColor: memo.bg_color,
+          fontColor: getEffectiveMemoFontColor(memo),
+          computedColor: cellStyle.color,
+        });
         el.style.position = 'absolute';
         el.style.top = `${editorPosition.top}px`;
         el.style.left = `${editorPosition.left}px`;
@@ -621,12 +630,12 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
         el.style.border = '2px solid var(--brand-primary)';
         el.style.borderRadius = '3px';
         el.style.fontSize = cellStyle.fontSize || `${memoFontSize}px`;
-        el.style.fontWeight = '700';
+        el.style.fontWeight = cellStyle.fontWeight || '700';
         el.style.lineHeight = '1.15';
         el.style.textAlign = 'right';
         el.style.boxSizing = 'border-box';
-        el.style.background = 'var(--bg-input, #fff)';
-        el.style.color = 'var(--text-primary, #000)';
+        el.style.background = editorColors.background;
+        el.style.color = editorColors.color;
         el.style.outline = 'none';
         if (preserve) {
           el.value = val;
@@ -642,7 +651,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
         }
       }
     });
-  }, [memoFontSize]);
+  }, [getEffectiveMemoFontColor, memoFontSize, staffMemos]);
 
   const resetInputToHidden = useCallback(() => {
     const el = hiddenInputRef.current;

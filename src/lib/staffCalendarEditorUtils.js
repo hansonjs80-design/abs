@@ -18,3 +18,17 @@ export function getStaffMemoEditorPosition(
     top: Number(cellRect.top || 0) - Number(containerRect.top || 0) + Number(scrollTop || 0),
   };
 }
+
+export function getStaffMemoEditorColors({
+  backgroundColor = '',
+  fontColor = '',
+  computedColor = '',
+} = {}) {
+  return {
+    background: String(backgroundColor || '').trim() || 'var(--bg-input, #fff)',
+    color:
+      String(fontColor || '').trim()
+      || String(computedColor || '').trim()
+      || 'var(--text-primary, #000)',
+  };
+}

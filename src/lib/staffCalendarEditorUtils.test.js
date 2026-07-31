@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  getStaffMemoEditorColors,
   getStaffMemoDisplayText,
   getStaffMemoEditorPosition,
 } from './staffCalendarEditorUtils.js';
@@ -27,5 +28,31 @@ test('staff memo editor position includes calendar scroll offsets', () => {
       { scrollLeft: 208, scrollTop: 16 }
     ),
     { left: 268, top: 136 }
+  );
+});
+
+test('staff memo editor keeps the configured cell background and font colors', () => {
+  assert.deepEqual(
+    getStaffMemoEditorColors({
+      backgroundColor: '#93c47d',
+      fontColor: '#0000ff',
+      computedColor: 'rgb(30, 41, 59)',
+    }),
+    {
+      background: '#93c47d',
+      color: '#0000ff',
+    }
+  );
+});
+
+test('staff memo editor falls back to the rendered text color and default background', () => {
+  assert.deepEqual(
+    getStaffMemoEditorColors({
+      computedColor: 'rgb(229, 62, 62)',
+    }),
+    {
+      background: 'var(--bg-input, #fff)',
+      color: 'rgb(229, 62, 62)',
+    }
   );
 });
