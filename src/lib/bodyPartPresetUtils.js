@@ -4,8 +4,8 @@ const BODY_PART_PRESET_DIRECTION_MAP = {
 };
 
 export const BODY_PART_PRESET_DIRECTIONS = [
-  { id: 'left', label: '좌' },
-  { id: 'right', label: '우' },
+  { id: 'left', label: 'L' },
+  { id: 'right', label: 'R' },
 ];
 
 export const BODY_PART_PRESET_GROUPS = [

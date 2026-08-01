@@ -219,227 +219,230 @@ export default function BodyPartKeyboardPanel({
         ))}
       </div>
 
-      {selectedParts.length > 0 ? (
-        <div className="context-menu-body-selected-list">
-          {selectedParts.map((part, index) => {
-            const draftValue = selectedDrafts[index] ?? part;
-            const canReorderParts = selectedParts.length > 1;
-            return (
-              <div key={`${normalizeBodyPartKey(part)}-${index}`} className="context-menu-body-selected-item">
-                <input
-                  type="checkbox"
-                  className="context-menu-body-selected-checkbox"
-                  checked
-                  aria-label={`${part} 선택 해제`}
-                  onChange={(event) => {
-                    event.stopPropagation();
-                    onToggle(part);
-                  }}
-                  onMouseDown={(event) => event.stopPropagation()}
-                  onClick={(event) => event.stopPropagation()}
-                />
-                {editingSelectedIndex === index ? (
-                  <input
-                    ref={(node) => {
-                      selectedInputRefs.current[index] = node;
-                    }}
-                    type="text"
-                    className="context-menu-input context-menu-input--body-part"
-                    value={draftValue}
-                    aria-label={`부위 ${index + 1} 수정`}
-                    title="부위 수정"
-                    onChange={(event) => {
-                      event.stopPropagation();
-                      const value = event.target.value;
-                      setSelectedDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? value : item));
-                    }}
-                    onBlur={(event) => {
-                      event.stopPropagation();
-                      commitSelectedDraft(index, event.target.value);
-                      setEditingSelectedIndex(null);
-                    }}
-                    onKeyDown={(event) => {
-                      event.stopPropagation();
-                      if (event.nativeEvent?.isComposing || event.keyCode === 229) return;
-                      if (event.key === 'Enter') {
-                        event.preventDefault();
-                        commitSelectedDraft(index, event.currentTarget.value);
-                        setEditingSelectedIndex(null);
-                        event.currentTarget.blur();
-                      }
-                      if (event.key === 'Escape') {
-                        event.preventDefault();
-                        setSelectedDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? part : item));
-                        setEditingSelectedIndex(null);
-                      }
-                    }}
-                    onMouseDown={(event) => event.stopPropagation()}
-                    onClick={(event) => event.stopPropagation()}
-                  />
-                ) : (
-                  <span className="context-menu-list-text" title={part}>{part}</span>
-                )}
-                <div className="context-menu-body-selected-actions">
-                  {editingSelectedIndex === index ? null : (
-                    <button
-                      type="button"
-                      className="context-menu-note-icon-button"
-                      aria-label="부위 수정"
-                      title="수정"
-                      onMouseDown={(event) => event.stopPropagation()}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        setSelectedDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? part : item));
-                        setEditingSelectedIndex(index);
-                      }}
-                    >
-                      <Pencil size={13} strokeWidth={2.4} />
-                    </button>
-                  )}
-                  {canReorderParts ? (
-                    <div className="context-menu-note-reorder-stack">
-                      <button
-                        type="button"
-                        className="context-menu-note-icon-button context-menu-note-order-button"
-                        aria-label="부위 위로 이동"
-                        title="위로 이동"
-                        disabled={index === 0}
-                        onMouseDown={(event) => event.stopPropagation()}
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          onMove?.(index, 'up');
-                        }}
-                      >
-                        <ArrowUp size={11} strokeWidth={2.5} />
-                      </button>
-                      <button
-                        type="button"
-                        className="context-menu-note-icon-button context-menu-note-order-button"
-                        aria-label="부위 아래로 이동"
-                        title="아래로 이동"
-                        disabled={index === selectedParts.length - 1}
-                        onMouseDown={(event) => event.stopPropagation()}
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          onMove?.(index, 'down');
-                        }}
-                      >
-                        <ArrowDown size={11} strokeWidth={2.5} />
-                      </button>
-                    </div>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="context-menu-note-icon-button context-menu-note-remove"
-                    aria-label="부위 삭제"
-                    title="삭제"
-                    onMouseDown={(event) => event.stopPropagation()}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      onDelete?.(part);
-                    }}
-                  >
-                    <Trash2 size={14} strokeWidth={2.3} />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : null}
-
-      {selectableParts.length > 0 ? (
-        <div className="context-menu-checklist">
-          {selectableParts.map((part, index) => {
-            const partKey = normalizeBodyPartKey(part);
-            const isChecked = currentParts.some((item) => normalizeBodyPartKey(item) === partKey);
-            return (
-              <div
-                key={`${partKey}-${index}`}
-                ref={(node) => {
-                  itemRefs.current[index] = node;
-                }}
-                className={`context-menu-check-item${isChecked ? ' is-checked' : ''}${focusIndex === index + 1 ? ' is-keyboard-focused' : ''}`}
-                role="checkbox"
-                aria-checked={isChecked}
-                tabIndex={0}
-                onFocus={() => setFocusIndex(index + 1)}
-                onKeyDown={(event) => handleItemKeyDown(event, part, index)}
-              >
-                <label className="context-menu-check-label">
+      {/* 하단 선택 및 입력 섹션: 상단 처방목록과 구분을 위한 배경/구분선 컨테이너 */}
+      <div className="context-menu-body-bottom-section">
+        {selectedParts.length > 0 ? (
+          <div className="context-menu-body-selected-list">
+            {selectedParts.map((part, index) => {
+              const draftValue = selectedDrafts[index] ?? part;
+              const canReorderParts = selectedParts.length > 1;
+              return (
+                <div key={`${normalizeBodyPartKey(part)}-${index}`} className="context-menu-body-selected-item">
                   <input
                     type="checkbox"
-                    checked={isChecked}
+                    className="context-menu-body-selected-checkbox"
+                    checked
+                    aria-label={`${part} 선택 해제`}
                     onChange={(event) => {
                       event.stopPropagation();
                       onToggle(part);
                     }}
                     onMouseDown={(event) => event.stopPropagation()}
                     onClick={(event) => event.stopPropagation()}
-                    tabIndex={-1}
                   />
-                  <span>{part}</span>
-                </label>
-                <button
-                  type="button"
-                  className="context-menu-body-delete"
-                  title={`${part} 삭제`}
-                  onMouseDown={(event) => event.stopPropagation()}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    onDelete(part);
-                  }}
-                >
-                  x
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      ) : currentParts.length === 0 ? (
-        <div className="context-menu-empty">등록된 부위가 없습니다.</div>
-      ) : null}
+                  {editingSelectedIndex === index ? (
+                    <input
+                      ref={(node) => {
+                        selectedInputRefs.current[index] = node;
+                      }}
+                      type="text"
+                      className="context-menu-input context-menu-input--body-part"
+                      value={draftValue}
+                      aria-label={`부위 ${index + 1} 수정`}
+                      title="부위 수정"
+                      onChange={(event) => {
+                        event.stopPropagation();
+                        const value = event.target.value;
+                        setSelectedDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? value : item));
+                      }}
+                      onBlur={(event) => {
+                        event.stopPropagation();
+                        commitSelectedDraft(index, event.target.value);
+                        setEditingSelectedIndex(null);
+                      }}
+                      onKeyDown={(event) => {
+                        event.stopPropagation();
+                        if (event.nativeEvent?.isComposing || event.keyCode === 229) return;
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          commitSelectedDraft(index, event.currentTarget.value);
+                          setEditingSelectedIndex(null);
+                          event.currentTarget.blur();
+                        }
+                        if (event.key === 'Escape') {
+                          event.preventDefault();
+                          setSelectedDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? part : item));
+                          setEditingSelectedIndex(null);
+                        }
+                      }}
+                      onMouseDown={(event) => event.stopPropagation()}
+                      onClick={(event) => event.stopPropagation()}
+                    />
+                  ) : (
+                    <span className="context-menu-list-text" title={part}>{part}</span>
+                  )}
+                  <div className="context-menu-body-selected-actions">
+                    {editingSelectedIndex === index ? null : (
+                      <button
+                        type="button"
+                        className="context-menu-note-icon-button"
+                        aria-label="부위 수정"
+                        title="수정"
+                        onMouseDown={(event) => event.stopPropagation()}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setSelectedDrafts((prev) => prev.map((item, itemIndex) => itemIndex === index ? part : item));
+                          setEditingSelectedIndex(index);
+                        }}
+                      >
+                        <Pencil size={13} strokeWidth={2.4} />
+                      </button>
+                    )}
+                    {canReorderParts ? (
+                      <div className="context-menu-note-reorder-stack">
+                        <button
+                          type="button"
+                          className="context-menu-note-icon-button context-menu-note-order-button"
+                          aria-label="부위 위로 이동"
+                          title="위로 이동"
+                          disabled={index === 0}
+                          onMouseDown={(event) => event.stopPropagation()}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            onMove?.(index, 'up');
+                          }}
+                        >
+                          <ArrowUp size={11} strokeWidth={2.5} />
+                        </button>
+                        <button
+                          type="button"
+                          className="context-menu-note-icon-button context-menu-note-order-button"
+                          aria-label="부위 아래로 이동"
+                          title="아래로 이동"
+                          disabled={index === selectedParts.length - 1}
+                          onMouseDown={(event) => event.stopPropagation()}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            onMove?.(index, 'down');
+                          }}
+                        >
+                          <ArrowDown size={11} strokeWidth={2.5} />
+                        </button>
+                      </div>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="context-menu-note-icon-button context-menu-note-remove"
+                      aria-label="부위 삭제"
+                      title="삭제"
+                      onMouseDown={(event) => event.stopPropagation()}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        onDelete?.(part);
+                      }}
+                    >
+                      <Trash2 size={14} strokeWidth={2.3} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
 
-      <div className="context-menu-input-row" style={{ marginTop: '5px' }}>
-        <input
-          ref={inputRef}
-          type="text"
-          placeholder="새 부위 추가"
-          className="context-menu-input"
-          autoComplete="off"
-          autoFocus={autoFocus}
-          value={inputValue}
-          onFocus={() => setFocusIndex(0)}
-          onChange={(event) => {
-            event.stopPropagation();
-            setInputValue(event.target.value);
-          }}
-          onKeyDown={handleInputKeyDown}
-          onCompositionStart={() => {
-            if (imeOpenRef) imeOpenRef.current = true;
-          }}
-          onCompositionEnd={() => {
-            if (imeOpenRef) imeOpenRef.current = false;
-          }}
-          onMouseDown={(event) => event.stopPropagation()}
-          onClick={(event) => event.stopPropagation()}
-        />
-        <button
-          type="button"
-          className="context-menu-inline-button"
-          onMouseDown={(event) => event.stopPropagation()}
-          onClick={(event) => {
-            event.stopPropagation();
-            submitInput();
-          }}
-        >
-          추가
-        </button>
+        {selectableParts.length > 0 ? (
+          <div className="context-menu-checklist">
+            {selectableParts.map((part, index) => {
+              const partKey = normalizeBodyPartKey(part);
+              const isChecked = currentParts.some((item) => normalizeBodyPartKey(item) === partKey);
+              return (
+                <div
+                  key={`${partKey}-${index}`}
+                  ref={(node) => {
+                    itemRefs.current[index] = node;
+                  }}
+                  className={`context-menu-check-item${isChecked ? ' is-checked' : ''}${focusIndex === index + 1 ? ' is-keyboard-focused' : ''}`}
+                  role="checkbox"
+                  aria-checked={isChecked}
+                  tabIndex={0}
+                  onFocus={() => setFocusIndex(index + 1)}
+                  onKeyDown={(event) => handleItemKeyDown(event, part, index)}
+                >
+                  <label className="context-menu-check-label">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(event) => {
+                        event.stopPropagation();
+                        onToggle(part);
+                      }}
+                      onMouseDown={(event) => event.stopPropagation()}
+                      onClick={(event) => event.stopPropagation()}
+                      tabIndex={-1}
+                    />
+                    <span>{part}</span>
+                  </label>
+                  <button
+                    type="button"
+                    className="context-menu-body-delete"
+                    title={`${part} 삭제`}
+                    onMouseDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      onDelete(part);
+                    }}
+                  >
+                    x
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ) : currentParts.length === 0 ? (
+          <div className="context-menu-empty">등록된 부위가 없습니다.</div>
+        ) : null}
+
+        <div className="context-menu-input-row" style={{ marginTop: '5px' }}>
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="새 부위 추가"
+            className="context-menu-input"
+            autoComplete="off"
+            autoFocus={autoFocus}
+            value={inputValue}
+            onFocus={() => setFocusIndex(0)}
+            onChange={(event) => {
+              event.stopPropagation();
+              setInputValue(event.target.value);
+            }}
+            onKeyDown={handleInputKeyDown}
+            onCompositionStart={() => {
+              if (imeOpenRef) imeOpenRef.current = true;
+            }}
+            onCompositionEnd={() => {
+              if (imeOpenRef) imeOpenRef.current = false;
+            }}
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+          />
+          <button
+            type="button"
+            className="context-menu-inline-button"
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              submitInput();
+            }}
+          >
+            추가
+          </button>
+        </div>
       </div>
     </div>
   );
