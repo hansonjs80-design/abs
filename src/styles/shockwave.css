@@ -1761,7 +1761,7 @@
   min-width: 260px;
   max-width: min(320px, calc(100vw - 36px));
   overflow: hidden !important;
-  padding: 10px 10px 0 10px !important;
+  padding: 10px 0 0 0 !important;
 }
 
 .context-menu-submenu--memo {
@@ -1918,7 +1918,7 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   margin-bottom: 8px;
-  padding-bottom: 4px;
+  padding: 0 12px 4px 12px !important;
 }
 
 .context-menu-body-preset-group {
@@ -1928,7 +1928,7 @@
 .context-menu-body-preset-title {
   margin: 0 0 5px;
   color: #1e293b;
-  font-size: 0.95rem;
+  font-size: 0.96rem;
   font-weight: 800;
 }
 
@@ -1946,7 +1946,7 @@
   padding: 3px 2px;
   border: none;
   background: transparent;
-  font-size: 0.95rem;
+  font-size: 0.96rem;
 }
 
 .context-menu-body-preset-label {
@@ -1956,7 +1956,7 @@
   color: #0f172a;
   cursor: pointer;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.96rem;
 }
 
 .context-menu-body-preset-label input {
@@ -1971,12 +1971,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.95rem;
+  font-size: 0.96rem;
 }
 
 .context-menu-body-preset-label small {
   color: #334155;
-  font-size: 0.9rem;
+  font-size: 0.91rem;
   font-weight: 700;
 }
 
@@ -2023,14 +2023,16 @@
 
 .context-menu-body-bottom-section {
   margin-top: 10px !important;
-  margin-left: -10px !important;
-  margin-right: -10px !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
   margin-bottom: 0 !important;
-  padding: 10px 12px 12px 12px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 12px 14px 14px 14px !important;
   border-top: 2.5px solid #94a3b8 !important;
   border-bottom-left-radius: 12px !important;
   border-bottom-right-radius: 12px !important;
-  background: #e2e8f0 !important; /* 하단 색칠 구역 좌우/아래 흰 빈공간 완전 0px 소멸 */
+  background: #e2e8f0 !important; /* 하단 색칠 구역 좌우/아래 흰 빈공간 100% 0px 소멸 */
   box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.05);
 }
 
