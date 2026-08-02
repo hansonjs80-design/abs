@@ -1758,8 +1758,9 @@
 }
 
 .context-menu-submenu--body {
-  min-width: 260px;
-  max-width: min(320px, calc(100vw - 36px));
+  min-width: 234px;
+  max-width: min(288px, calc(100vw - 36px));
+  width: min(288px, calc(100vw - 36px));
   overflow: hidden !important;
   padding: 10px 0 0 0 !important;
 }
