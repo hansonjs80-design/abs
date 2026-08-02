@@ -1757,7 +1757,13 @@
   cursor: default;
 }
 
-.context-menu-submenu--body,
+.context-menu-submenu--body {
+  min-width: 260px;
+  max-width: min(320px, calc(100vw - 36px));
+  overflow: hidden !important;
+  padding: 10px 10px 0 10px !important;
+}
+
 .context-menu-submenu--memo {
   min-width: 260px;
   max-width: min(320px, calc(100vw - 36px));
@@ -1900,8 +1906,8 @@
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  overflow: hidden;
-  padding: 4px 2px;
+  overflow: visible !important;
+  padding: 0 !important;
   border: none;
   border-radius: 0;
   background: transparent;
@@ -1912,7 +1918,7 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   margin-bottom: 8px;
-  padding-bottom: 8px;
+  padding-bottom: 4px;
 }
 
 .context-menu-body-preset-group {
@@ -2016,15 +2022,15 @@
 }
 
 .context-menu-body-bottom-section {
-  margin-top: 10px;
-  margin-left: -9px;
-  margin-right: -9px;
-  margin-bottom: -9px;
-  padding: 10px;
-  border-top: 2.5px solid #94a3b8;
-  border-bottom-left-radius: 11px;
-  border-bottom-right-radius: 11px;
-  background: #e2e8f0; /* 팝업 9px 패딩에 -9px 음수 마진으로 완전 0px 밀착하여 하단 좌우 갭 소멸 */
+  margin-top: 10px !important;
+  margin-left: -10px !important;
+  margin-right: -10px !important;
+  margin-bottom: 0 !important;
+  padding: 10px 12px 12px 12px !important;
+  border-top: 2.5px solid #94a3b8 !important;
+  border-bottom-left-radius: 12px !important;
+  border-bottom-right-radius: 12px !important;
+  background: #e2e8f0 !important; /* 하단 색칠 구역 좌우/아래 흰 빈공간 완전 0px 소멸 */
   box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.05);
 }
 
