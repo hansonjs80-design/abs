@@ -1885,8 +1885,7 @@
   letter-spacing: 0.01em;
 }
 
-.context-menu-inline-memo-box,
-.context-menu-body-panel {
+.context-menu-inline-memo-box {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
@@ -1898,7 +1897,14 @@
 }
 
 .context-menu-body-panel {
-  padding: 6px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 4px 2px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
 }
 
 .context-menu-body-presets {
@@ -1907,7 +1913,6 @@
   gap: 6px;
   margin-bottom: 8px;
   padding-bottom: 8px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
 }
 
 .context-menu-body-preset-group {
@@ -1915,15 +1920,15 @@
 }
 
 .context-menu-body-preset-title {
-  margin: 0 0 4px;
-  color: #334155;
-  font-size: 0.76rem;
+  margin: 0 0 5px;
+  color: #1e293b;
+  font-size: 0.84rem;
   font-weight: 800;
 }
 
 .context-menu-body-preset-list {
   display: grid;
-  gap: 2px;
+  gap: 3px;
 }
 
 .context-menu-body-preset-item {
@@ -1935,24 +1940,24 @@
   padding: 3px 2px;
   border: none;
   background: transparent;
-  font-size: 0.78rem;
+  font-size: 0.85rem;
 }
 
 .context-menu-body-preset-label {
   display: flex;
   align-items: center;
   min-width: 0;
-  color: #1e293b;
+  color: #0f172a;
   cursor: pointer;
   font-weight: 700;
-  font-size: 0.78rem;
+  font-size: 0.85rem;
 }
 
 .context-menu-body-preset-label input {
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   flex: 0 0 auto;
-  margin: 0 6px 0 0;
+  margin: 0 7px 0 0;
 }
 
 .context-menu-body-preset-label span {
@@ -1960,12 +1965,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.78rem;
+  font-size: 0.85rem;
 }
 
 .context-menu-body-preset-label small {
   color: #334155;
-  font-size: inherit;
+  font-size: 0.82rem;
   font-weight: 700;
 }
 
@@ -1973,22 +1978,22 @@
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
 }
 
 .context-menu-body-preset-direction {
-  width: 18px;
-  height: 18px;
-  min-width: 18px;
+  width: 19px;
+  height: 19px;
+  min-width: 19px;
   padding: 0;
   border: 1px solid #cbd5e1;
   border-radius: 4px;
   background: #f8fafc;
   color: #64748b;
   cursor: pointer;
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 800;
-  line-height: 16px;
+  line-height: 17px;
   text-align: center;
   display: inline-flex;
   align-items: center;
@@ -2011,12 +2016,12 @@
 }
 
 .context-menu-body-bottom-section {
-  margin-top: 8px;
-  padding: 8px;
-  border-top: 2px solid #cbd5e1;
-  border-radius: 8px;
-  background: #eef2f6;
-  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+  margin-top: 10px;
+  padding: 10px 8px;
+  border-top: 2.5px solid #a0aec0;
+  border-radius: 10px;
+  background: #e2e8f0;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.05);
 }
 
 .context-menu-sheet {
