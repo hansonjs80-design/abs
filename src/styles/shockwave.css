@@ -1981,8 +1981,8 @@
 }
 
 .context-menu-body-preset-label input[type="checkbox"]:checked {
-  background-color: #2563eb !important;
-  border-color: #2563eb !important;
+  background-color: #16a706 !important;
+  border-color: #16a706 !important;
 }
 
 .context-menu-body-preset-label input[type="checkbox"]:checked::after {
