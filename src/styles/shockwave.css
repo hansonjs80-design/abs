@@ -3429,6 +3429,10 @@
   font-weight: 700 !important;
 }
 
+.context-menu-body-selected-actions > .context-menu-note-icon-button {
+  background: transparent !important;
+}
+
 .context-menu-empty {
   padding: 6px 2px;
   font-size: 0.78rem;
