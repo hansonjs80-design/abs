@@ -1960,12 +1960,39 @@
   font-size: 0.96rem;
 }
 
-.context-menu-body-preset-label input {
+.context-menu-body-preset-label input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
   width: 17px;
   height: 17px;
+  min-width: 17px;
+  border: 1.5px solid #16a706;
+  border-radius: 4px;
+  background-color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  outline: none;
+  transition: all 0.15s ease;
   flex: 0 0 auto;
   margin: 0 8px 0 0;
-  accent-color: #16a706;
+}
+
+.context-menu-body-preset-label input[type="checkbox"]:checked {
+  background-color: #16a706 !important;
+  border-color: #16a706 !important;
+}
+
+.context-menu-body-preset-label input[type="checkbox"]:checked::after {
+  content: '';
+  width: 4px;
+  height: 8px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-0.5px, -0.5px);
+  display: block;
 }
 
 .context-menu-body-preset-label span {
@@ -2841,17 +2868,42 @@
   color: #14532d;
 }
 
-.context-menu-body-selected-checkbox {
+.context-menu-body-selected-checkbox,
+.context-menu-check-label input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
   width: 17px;
   height: 17px;
+  min-width: 17px;
+  border: 1.5px solid #16a706;
+  border-radius: 4px;
+  background-color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  outline: none;
+  transition: all 0.15s ease;
   flex: 0 0 auto;
   margin: 0;
-  accent-color: #16a706 !important;
 }
 
 .context-menu-body-selected-checkbox:checked,
-.context-menu-check-label input:checked {
-  accent-color: #16a706 !important;
+.context-menu-check-label input[type="checkbox"]:checked {
+  background-color: #16a706 !important;
+  border-color: #16a706 !important;
+}
+
+.context-menu-body-selected-checkbox:checked::after,
+.context-menu-check-label input[type="checkbox"]:checked::after {
+  content: '';
+  width: 4px;
+  height: 8px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-0.5px, -0.5px);
+  display: block;
 }
 
 .context-menu-body-selected-actions {
