@@ -2846,7 +2846,12 @@
   height: 17px;
   flex: 0 0 auto;
   margin: 0;
-  accent-color: #16a706;
+  accent-color: #16a706 !important;
+}
+
+.context-menu-body-selected-checkbox:checked,
+.context-menu-check-label input:checked {
+  accent-color: #16a706 !important;
 }
 
 .context-menu-body-selected-actions {
