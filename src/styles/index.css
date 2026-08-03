@@ -1862,13 +1862,14 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   html[data-print-orientation="landscape"] body.manual-settlement-print .sw-manual-settlement-stack,
   html[data-print-orientation="landscape"] body.manual-settlement-print .sw-manual-settlement-stack .sw-settlement-card,
+  html[data-print-orientation="landscape"] body.manual-settlement-print .sw-manual-summary-stack,
   html[data-print-orientation="landscape"] body.manual-settlement-print .sw-manual-summary-card {
     display: flex !important;
     flex-direction: column !important;
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
-    height: 100% !important;
+    height: auto !important;
     box-sizing: border-box !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -1884,8 +1885,14 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   html[data-print-orientation="landscape"] body.manual-settlement-print .sw-manual-settlement-stack,
   html[data-print-orientation="landscape"] body.manual-settlement-print .sw-manual-settlement-stack .sw-settlement-card,
+  html[data-print-orientation="landscape"] body.manual-settlement-print .sw-manual-summary-stack,
   html[data-print-orientation="landscape"] body.manual-settlement-print .sw-manual-summary-card {
     height: auto !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print .sw-manual-summary-stack {
+    gap: 3mm !important;
+    align-self: start !important;
   }
 
   html[data-print-orientation="landscape"] body.manual-settlement-print
@@ -2244,6 +2251,71 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     width: 17% !important;
   }
 
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-summary-card .sw-summary-table {
+    height: auto !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-summary-card .sw-summary-table th:first-child,
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-summary-card .sw-summary-table td:first-child {
+    width: 34% !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-summary-card .sw-summary-table th:nth-child(2),
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-summary-card .sw-summary-table td:nth-child(2) {
+    width: 27% !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-summary-card .sw-summary-table th:nth-child(3),
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-summary-card .sw-summary-table td:nth-child(3) {
+    width: 39% !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-summary-card .sw-summary-table th,
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-summary-card .sw-summary-table td {
+    height: 6.8mm !important;
+    padding: 0.8mm 0.5mm !important;
+    font-size: 9.2pt !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-summary-card .sw-summary-table thead th,
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-summary-card .sw-summary-table tbody tr.sw-current-month-summary-row > th,
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-summary-card .sw-summary-table tbody tr.sw-current-month-summary-row > td {
+    font-size: 9.6pt !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print .sw-six-month-ion-input-wrap {
+    gap: 0.8mm !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print .sw-six-month-ion-input-wrap input {
+    height: auto !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: #172033 !important;
+    font-size: inherit !important;
+    font-weight: inherit !important;
+    outline: 0 !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print .sw-manual-ion-saving {
+    display: none !important;
+  }
+
   /* 세로 인쇄를 선택한 경우에는 두 표를 순서대로 배치해 잘림을 방지합니다. */
   html[data-print-orientation="portrait"] body.manual-settlement-print .sw-manual-settlement-container {
     display: block !important;
@@ -2251,6 +2323,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   }
 
   html[data-print-orientation="portrait"] body.manual-settlement-print .sw-manual-settlement-stack,
+  html[data-print-orientation="portrait"] body.manual-settlement-print .sw-manual-summary-stack,
   html[data-print-orientation="portrait"] body.manual-settlement-print .sw-manual-summary-card {
     width: 100% !important;
     max-width: 100% !important;

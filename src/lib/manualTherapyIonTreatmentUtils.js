@@ -30,3 +30,18 @@ export function setManualTherapyIonTreatment(settings, year, month, value) {
     },
   };
 }
+
+export function getRecentManualTherapyIonTreatmentMonths(settings, year, month, count = 6) {
+  return Array.from({ length: count }, (_, index) => {
+    const date = new Date(year, month - 1 - index, 1);
+    const rowYear = date.getFullYear();
+    const rowMonth = date.getMonth() + 1;
+
+    return {
+      year: rowYear,
+      month: rowMonth,
+      key: getMonthKey(rowYear, rowMonth),
+      value: getManualTherapyIonTreatment(settings, rowYear, rowMonth),
+    };
+  });
+}
