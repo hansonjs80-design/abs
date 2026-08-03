@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { normalizeManualTherapyIonTreatment } from '../../lib/manualTherapyIonTreatmentUtils';
 
+function normalizeAmountInput(value) {
+  return String(value || '').replace(/[^0-9]/g, '').replace(/^0+(?=\d)/, '');
+}
+
+function formatAmount(value) {
+  const digits = normalizeAmountInput(value);
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
 export default function ManualTherapyIonTreatmentTable({
   currentMonth,
   value,
@@ -27,10 +36,10 @@ export default function ManualTherapyIonTreatmentTable({
     setDraft((previous) => ({ ...previous, [field]: nextValue }));
   };
 
-  const getInputWidth = (field, minimumWidth) => `${Math.max(
-    minimumWidth,
-    String(draft[field] || '').length + 1
-  )}ch`;
+  const getInputWidth = (field, minimumWidth) => {
+    const displayValue = field === 'amount' ? formatAmount(draft.amount) : String(draft[field] || '');
+    return `${Math.max(minimumWidth, displayValue.length + 1)}ch`;
+  };
 
   return (
     <div className="sw-settlement-card sw-manual-ion-treatment-card">
@@ -73,12 +82,10 @@ export default function ManualTherapyIonTreatmentTable({
               <td>
                 <div className="sw-manual-ion-treatment-input-wrap">
                   <input
-                    type="number"
-                    min="0"
-                    step="1000"
+                    type="text"
                     inputMode="numeric"
-                    value={draft.amount}
-                    onChange={(event) => updateValue('amount', event.target.value)}
+                    value={formatAmount(draft.amount)}
+                    onChange={(event) => updateValue('amount', normalizeAmountInput(event.target.value))}
                     onBlur={save}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter') event.currentTarget.blur();
