@@ -351,10 +351,12 @@
 }
 
 .sw-manual-ion-treatment-input-wrap {
-  display: inline-flex;
+  display: inline-grid;
+  grid-template-columns: auto auto;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  width: max-content;
 }
 
 .sw-manual-ion-treatment-input-wrap span {
@@ -365,15 +367,24 @@
 
 .sw-manual-ion-treatment-table input {
   min-width: 0;
+  height: 34px;
   box-sizing: border-box;
   padding: 7px 8px;
   border: 1px solid #cbd5e1;
   border-radius: 5px;
   background: #ffffff;
-  color: #0f172a;
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a;
+  opacity: 1;
   font: inherit;
   font-weight: 800;
   text-align: center;
+}
+
+.sw-manual-ion-treatment-table input::placeholder {
+  color: #94a3b8;
+  -webkit-text-fill-color: #94a3b8;
+  opacity: 1;
 }
 
 .sw-manual-ion-treatment-table input::-webkit-outer-spin-button,

@@ -1846,7 +1846,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   html[data-print-orientation="landscape"] body.manual-settlement-print .sw-manual-settlement-container {
     display: grid !important;
     grid-template-columns: minmax(0, 1.82fr) minmax(0, 1fr) !important;
-    align-items: stretch !important;
+    align-items: start !important;
     gap: 4mm !important;
     width: 100% !important;
     max-width: 100% !important;
@@ -1882,17 +1882,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     margin-top: 3mm !important;
   }
 
-  html[data-print-orientation="landscape"] body.manual-settlement-print
-    .sw-manual-ion-treatment-card .sw-settlement-header {
-    flex-basis: 7mm !important;
-    height: 7mm !important;
-    min-height: 7mm !important;
-    margin-bottom: 1.2mm !important;
-  }
-
-  html[data-print-orientation="landscape"] body.manual-settlement-print
-    .sw-manual-ion-treatment-card .sw-settlement-header h2 {
-    font-size: 10.5pt !important;
+  html[data-print-orientation="landscape"] body.manual-settlement-print .sw-manual-settlement-stack,
+  html[data-print-orientation="landscape"] body.manual-settlement-print .sw-manual-settlement-stack .sw-settlement-card,
+  html[data-print-orientation="landscape"] body.manual-settlement-print .sw-manual-summary-card {
+    height: auto !important;
   }
 
   html[data-print-orientation="landscape"] body.manual-settlement-print
@@ -1924,15 +1917,18 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   html[data-print-orientation="landscape"] body.manual-settlement-print
     .sw-manual-ion-treatment-input-wrap {
-    display: inline-flex !important;
+    display: inline-grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
     align-items: center !important;
     gap: 1mm !important;
+    width: 100% !important;
   }
 
   html[data-print-orientation="landscape"] body.manual-settlement-print
     .sw-manual-ion-treatment-table input {
     appearance: none !important;
-    width: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
     padding: 0 !important;
     border: 0 !important;
     background: transparent !important;
@@ -1974,6 +1970,19 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     line-height: 1.08 !important;
     letter-spacing: -0.15pt !important;
     white-space: nowrap !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-treatment-card .sw-settlement-header {
+    flex: 0 0 7mm !important;
+    height: 7mm !important;
+    min-height: 7mm !important;
+    margin-bottom: 1.2mm !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-treatment-card .sw-settlement-header h2 {
+    font-size: 10.5pt !important;
   }
 
   html[data-print-orientation="landscape"] body.manual-settlement-print
