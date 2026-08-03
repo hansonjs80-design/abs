@@ -1961,7 +1961,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    margin: 0 0 2.4mm !important;
+    margin: 0 0 1.2mm !important;
     padding: 0 !important;
     gap: 2mm !important;
     align-items: center !important;
