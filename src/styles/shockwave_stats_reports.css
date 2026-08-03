@@ -350,6 +350,19 @@
   font-weight: 900;
 }
 
+.sw-manual-ion-treatment-input-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.sw-manual-ion-treatment-input-wrap span {
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
 .sw-manual-ion-treatment-table input {
   min-width: 0;
   box-sizing: border-box;
@@ -361,6 +374,17 @@
   font: inherit;
   font-weight: 800;
   text-align: center;
+}
+
+.sw-manual-ion-treatment-table input::-webkit-outer-spin-button,
+.sw-manual-ion-treatment-table input::-webkit-inner-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.sw-manual-ion-treatment-table input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
 }
 
 .sw-manual-ion-treatment-table input:focus {

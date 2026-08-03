@@ -51,38 +51,44 @@ export default function ManualTherapyIonTreatmentTable({
             <tr>
               <th>이온치료</th>
               <td>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  inputMode="numeric"
-                  value={draft.count}
-                  onChange={(event) => updateValue('count', event.target.value)}
-                  onBlur={save}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') event.currentTarget.blur();
-                  }}
-                  aria-label="이온치료 건수"
-                  placeholder="0"
-                  style={{ width: getInputWidth('count', 10) }}
-                />
+                <div className="sw-manual-ion-treatment-input-wrap">
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    inputMode="numeric"
+                    value={draft.count}
+                    onChange={(event) => updateValue('count', event.target.value)}
+                    onBlur={save}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') event.currentTarget.blur();
+                    }}
+                    aria-label="이온치료 건수"
+                    placeholder="0"
+                    style={{ width: getInputWidth('count', 10) }}
+                  />
+                  <span aria-hidden="true">건</span>
+                </div>
               </td>
               <td>
-                <input
-                  type="number"
-                  min="0"
-                  step="1000"
-                  inputMode="numeric"
-                  value={draft.amount}
-                  onChange={(event) => updateValue('amount', event.target.value)}
-                  onBlur={save}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') event.currentTarget.blur();
-                  }}
-                  aria-label="이온치료 총액"
-                  placeholder="0"
-                  style={{ width: getInputWidth('amount', 14) }}
-                />
+                <div className="sw-manual-ion-treatment-input-wrap">
+                  <input
+                    type="number"
+                    min="0"
+                    step="1000"
+                    inputMode="numeric"
+                    value={draft.amount}
+                    onChange={(event) => updateValue('amount', event.target.value)}
+                    onBlur={save}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') event.currentTarget.blur();
+                    }}
+                    aria-label="이온치료 총액"
+                    placeholder="0"
+                    style={{ width: getInputWidth('amount', 14) }}
+                  />
+                  <span aria-hidden="true">원</span>
+                </div>
               </td>
             </tr>
           </tbody>

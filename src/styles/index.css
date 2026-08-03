@@ -1923,9 +1923,16 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   }
 
   html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-treatment-input-wrap {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 1mm !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print
     .sw-manual-ion-treatment-table input {
     appearance: none !important;
-    width: 100% !important;
+    width: auto !important;
     padding: 0 !important;
     border: 0 !important;
     background: transparent !important;
@@ -1933,6 +1940,13 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     font: inherit !important;
     font-weight: 800 !important;
     text-align: center !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-treatment-input-wrap span {
+    color: #111827 !important;
+    font: inherit !important;
+    font-weight: 800 !important;
   }
 
   html[data-print-orientation="landscape"] body.manual-settlement-print
