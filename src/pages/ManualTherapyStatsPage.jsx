@@ -14,6 +14,10 @@ import ManualTherapySixMonthStats from '../components/shockwave/ManualTherapySix
 import SettlementSettingsPanel from '../components/shockwave/SettlementSettingsPanel';
 import { getEffectiveSettlementSettings } from '../lib/settlementSettings';
 import { normalizeManualTherapyLogRows } from '../lib/manualTherapyLogUtils';
+import {
+  getManualTherapyIonTreatment,
+  setManualTherapyIonTreatment,
+} from '../lib/manualTherapyIonTreatmentUtils';
 import { isAdminUser } from '../lib/authPermissions';
 import {
   buildScheduleMemoSignature,
@@ -134,6 +138,10 @@ export default function ManualTherapyStatsPage() {
   const effectiveSettlementSettings = useMemo(
     () => getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'manual_therapy'),
     [shockwaveSettings, currentYear, currentMonth]
+  );
+  const ionTreatment = useMemo(
+    () => getManualTherapyIonTreatment(shockwaveSettings, currentYear, currentMonth),
+    [currentMonth, currentYear, shockwaveSettings]
   );
   const allPrescriptions = useMemo(
     () => (Array.isArray(effectiveSettlementSettings.prescriptions)
@@ -480,6 +488,22 @@ export default function ManualTherapyStatsPage() {
     addToast(ok ? '이번 달 도수치료 결산 설정을 저장했습니다.' : '결산 설정 저장에 실패했습니다.', ok ? 'success' : 'error');
   }, [addToast, loadShockwaveSettings, saveShockwaveSettings]);
 
+  const handleSaveIonTreatment = useCallback(async (nextIonTreatment) => {
+    const nextSettings = {
+      ...shockwaveSettings,
+      monthly_settlement_settings: setManualTherapyIonTreatment(
+        shockwaveSettings,
+        currentYear,
+        currentMonth,
+        nextIonTreatment
+      ),
+    };
+    const ok = await saveShockwaveSettings(nextSettings);
+    if (ok) await loadShockwaveSettings();
+    addToast(ok ? '이온치료 현황을 저장했습니다.' : '이온치료 현황 저장에 실패했습니다.', ok ? 'success' : 'error');
+    return ok;
+  }, [addToast, currentMonth, currentYear, loadShockwaveSettings, saveShockwaveSettings, shockwaveSettings]);
+
   const secondarySectionsReady = shouldPrepareStatsSecondarySections({
     dataReady: monthlyTherapistsReady,
     isPrimaryLoading: isLoading,
@@ -631,6 +655,8 @@ export default function ManualTherapyStatsPage() {
                           incentivePercentage={effectiveSettlementSettings.incentive_percentage}
                           prescriptionPrices={effectiveSettlementSettings.prescription_prices}
                           selectedTherapistNames={selectedTherapistNames}
+                          ionTreatment={ionTreatment}
+                          onSaveIonTreatment={handleSaveIonTreatment}
                         />
                         <ManualTherapySixMonthStats
                           currentYear={currentYear}

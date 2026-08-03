@@ -1876,6 +1876,65 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     page-break-inside: avoid !important;
   }
 
+  html[data-print-orientation="landscape"] body.manual-settlement-print .sw-manual-ion-treatment-card {
+    flex: 0 0 auto !important;
+    height: auto !important;
+    margin-top: 3mm !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-treatment-card .sw-settlement-header {
+    flex-basis: 7mm !important;
+    height: 7mm !important;
+    min-height: 7mm !important;
+    margin-bottom: 1.2mm !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-treatment-card .sw-settlement-header h2 {
+    font-size: 10.5pt !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-treatment-table-wrap {
+    width: 100% !important;
+    flex: 0 0 auto !important;
+    overflow: visible !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-treatment-table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    border: 0.45mm solid #64748b !important;
+    border-collapse: collapse !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-treatment-table th,
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-treatment-table td {
+    height: 7.5mm !important;
+    padding: 0.8mm !important;
+    font-size: 10pt !important;
+    text-align: center !important;
+    border-right: 0.25mm solid #aab7c7 !important;
+    border-bottom: 0.25mm solid #aab7c7 !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-ion-treatment-table input {
+    appearance: none !important;
+    width: 100% !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: #111827 !important;
+    font: inherit !important;
+    font-weight: 800 !important;
+    text-align: center !important;
+  }
+
   html[data-print-orientation="landscape"] body.manual-settlement-print
     .sw-manual-settlement-container .sw-settlement-header {
     display: flex !important;

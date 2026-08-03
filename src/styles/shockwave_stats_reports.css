@@ -322,6 +322,59 @@
   display: inline-block;
 }
 
+.sw-manual-ion-treatment-card {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sw-manual-ion-treatment-table-wrap {
+  width: fit-content;
+  max-width: 100%;
+  overflow: auto;
+}
+
+.sw-manual-ion-treatment-table {
+  width: max-content;
+  min-width: 0;
+  table-layout: auto;
+}
+
+.sw-manual-ion-treatment-table th,
+.sw-manual-ion-treatment-table td {
+  width: auto;
+}
+
+.sw-manual-ion-treatment-table tbody th {
+  background: #f7f9fc;
+  color: #1f2937;
+  font-weight: 900;
+}
+
+.sw-manual-ion-treatment-table input {
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 7px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  font-weight: 800;
+  text-align: center;
+}
+
+.sw-manual-ion-treatment-table input:focus {
+  outline: 2px solid #60a5fa;
+  outline-offset: 1px;
+  border-color: #2563eb;
+}
+
+.sw-ion-treatment-save-status {
+  color: #2563eb;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
 .sw-compact-table-wrap {
   width: auto;
   max-width: 100%;

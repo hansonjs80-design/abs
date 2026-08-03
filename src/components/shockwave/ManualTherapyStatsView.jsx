@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
+import ManualTherapyIonTreatmentTable from './ManualTherapyIonTreatmentTable';
 
 function normalizePrescriptionKey(value) {
   return String(value || '')
@@ -29,6 +30,8 @@ export default function ManualTherapyStatsView({
   prescriptionPrices = {},
   monthlyTherapists,
   selectedTherapistNames,
+  ionTreatment,
+  onSaveIonTreatment,
 }) {
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter((item) => item?.name) : []), [therapists]);
@@ -288,6 +291,12 @@ export default function ManualTherapyStatsView({
           </table>
         </div>
       </div>
+
+      <ManualTherapyIonTreatmentTable
+        currentMonth={currentMonth}
+        value={ionTreatment}
+        onSave={onSaveIonTreatment}
+      />
 
     </div>
   );
