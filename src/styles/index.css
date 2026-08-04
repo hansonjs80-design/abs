@@ -578,6 +578,34 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     display: none !important;
   }
 
+  body.stats-grid-print .sw-stats-panel > :not(.sw-stats-body--grid) {
+    display: none !important;
+  }
+
+  body.stats-grid-print .sw-stats-body--grid,
+  body.stats-grid-print .sw-grid-card,
+  body.stats-grid-print .sw-grid-card-table,
+  body.stats-grid-print .sw-grid-shell,
+  body.stats-grid-print .sw-grid-wrapper {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  body.stats-grid-print .sw-grid-table {
+    display: table !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  body.stats-grid-print .sw-grid-table thead {
+    display: table-header-group !important;
+  }
+
+  body.stats-grid-print .sw-grid-table tbody {
+    display: table-row-group !important;
+  }
+
   .sw-grid-shell,
   .sw-grid-card-table,
   .sw-settlement-table-wrap,
