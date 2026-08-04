@@ -106,6 +106,75 @@ function prepareStatsGridPrintFrame(orientation, margin) {
       .sw-grid-table col:nth-child(5) { width: 3.5% !important; }
       .sw-grid-table col:nth-child(6) { width: 12% !important; }
       .sw-grid-table col:nth-last-child(-n + 2) { width: 5.5% !important; }
+      html[data-print-orientation="portrait"] .sw-grid-table { font-size: 6.8pt !important; }
+      html[data-print-orientation="portrait"] .sw-grid-table th,
+      html[data-print-orientation="portrait"] .sw-grid-table td {
+        height: auto !important;
+        min-height: 4.9mm !important;
+        padding: 0.45mm 0.35mm !important;
+        font-size: 6.8pt !important;
+        line-height: 1.1 !important;
+        vertical-align: middle !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
+      }
+      html[data-print-orientation="portrait"] .sw-grid-table th *,
+      html[data-print-orientation="portrait"] .sw-grid-table td * {
+        max-width: 100% !important;
+        min-width: 0 !important;
+        white-space: inherit !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
+      }
+      html[data-print-orientation="portrait"] .sw-grid-table .grid-title {
+        height: 8.5mm !important;
+        max-height: none !important;
+        padding: 0.8mm !important;
+        font-size: 10pt !important;
+        line-height: 1.1 !important;
+        white-space: nowrap !important;
+      }
+      html[data-print-orientation="portrait"] .sw-grid-table thead .hdr-fixed,
+      html[data-print-orientation="portrait"] .sw-grid-table thead .hdr-therapist,
+      html[data-print-orientation="portrait"] .sw-grid-table thead .hdr-pres,
+      html[data-print-orientation="portrait"] .sw-grid-table thead .hdr-pres-total,
+      html[data-print-orientation="portrait"] .sw-grid-table thead .hdr-total,
+      html[data-print-orientation="portrait"] .sw-grid-table thead .hdr-grand-total,
+      html[data-print-orientation="portrait"] .sw-grid-table thead .hdr-new-patient,
+      html[data-print-orientation="portrait"] .sw-grid-table thead .hdr-new-patient-total {
+        min-height: 5.1mm !important;
+        padding: 0.45mm 0.25mm !important;
+        font-size: 6.7pt !important;
+        line-height: 1.05 !important;
+        white-space: normal !important;
+      }
+      html[data-print-orientation="portrait"] .sw-grid-table .gc-bold {
+        padding-left: 0.55mm !important;
+      }
+      html[data-print-orientation="portrait"] .sw-grid-table .sw-grid-count-hover,
+      html[data-print-orientation="portrait"] .sw-grid-table .sw-grid-total-cell,
+      html[data-print-orientation="portrait"] .sw-grid-table .sw-grid-new-patient-cell {
+        width: 100% !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        line-height: inherit !important;
+        white-space: inherit !important;
+      }
+      html[data-print-orientation="portrait"] .sw-grid-table .sw-grid-summary-main-number,
+      html[data-print-orientation="portrait"] .sw-grid-table .sw-grid-new-patient-total,
+      html[data-print-orientation="portrait"] .sw-grid-table .sw-grid-count-value {
+        font-size: 6.8pt !important;
+        line-height: inherit !important;
+        white-space: inherit !important;
+      }
+      html[data-print-orientation="portrait"] .sw-grid-table col:nth-child(1) { width: 2.5% !important; }
+      html[data-print-orientation="portrait"] .sw-grid-table col:nth-child(2) { width: 5.1% !important; }
+      html[data-print-orientation="portrait"] .sw-grid-table col:nth-child(3) { width: 7.4% !important; }
+      html[data-print-orientation="portrait"] .sw-grid-table col:nth-child(4) { width: 6.1% !important; }
+      html[data-print-orientation="portrait"] .sw-grid-table col:nth-child(5) { width: 3.4% !important; }
+      html[data-print-orientation="portrait"] .sw-grid-table col:nth-child(6) { width: 10.5% !important; }
+      html[data-print-orientation="portrait"] .sw-grid-table col:nth-last-child(-n + 2) { width: 5% !important; }
       .sw-grid-count-tooltip,
       .shockwave-context-menu,
       .gc-input[data-hidden-input="true"] { display: none !important; }

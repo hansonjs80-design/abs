@@ -60,6 +60,23 @@ test('current status print uses an isolated print document', async () => {
   );
 });
 
+test('portrait current status print wraps compact cells without shrinking totals below readability', async () => {
+  const printButton = await readFile(printButtonUrl, 'utf8');
+
+  assert.match(
+    printButton,
+    /html\[data-print-orientation="portrait"\] \.sw-grid-table th,[\s\S]*?white-space:\s*normal !important;[\s\S]*?overflow-wrap:\s*anywhere !important;/
+  );
+  assert.match(
+    printButton,
+    /html\[data-print-orientation="portrait"\] \.sw-grid-table \.sw-grid-summary-main-number,[\s\S]*?font-size:\s*6\.8pt !important;/
+  );
+  assert.match(
+    printButton,
+    /html\[data-print-orientation="portrait"\] \.sw-grid-table \.gc-bold\s*\{[\s\S]*?padding-left:\s*0\.55mm !important;/
+  );
+});
+
 test('current status print removes screen-only sticky table positioning', async () => {
   const globalStyles = await readFile(globalStylesUrl, 'utf8');
 
