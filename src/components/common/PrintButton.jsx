@@ -258,9 +258,9 @@ export default function PrintButton({ isStaffSchedule }) {
     
     setIsOpen(false);
     registerPrintCleanup();
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => window.print());
-    });
+    // Keep the browser print request within the user activation that selected the menu item.
+    void document.body.offsetHeight;
+    window.print();
   };
 
   // 6주차 달인데 마지막 주에 평일이 없는 경우 → 5주/6주 선택 옵션 제공

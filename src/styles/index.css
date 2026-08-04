@@ -281,6 +281,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   .shockwave-context-menu,
   .sw-stats-sidebar,
   .pt-stats-tabs,
+  .print-menu-root,
   .print-toggle,
   .theme-toggle {
     display: none !important;
@@ -574,7 +575,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   }
 
   /* 백그라운드에 유지한 다른 통계 탭은 현재 탭 인쇄에 포함하지 않습니다. */
-  .sw-stats-panel > [hidden] {
+  .sw-stats-panel > [hidden],
+  body.settlement-print .sw-stats-panel > [hidden],
+  body.shockwave-settlement-print .sw-stats-panel > [hidden],
+  body.manual-settlement-print .sw-stats-panel > [hidden] {
     display: none !important;
   }
 
