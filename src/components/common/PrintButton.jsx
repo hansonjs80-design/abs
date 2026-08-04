@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Printer } from 'lucide-react';
 
 const PRINT_STYLE_ID = 'clinic-print-orientation-style';
-const STATS_GRID_PRINT_ROOT_ID = 'stats-grid-print-root';
+const STATS_GRID_PRINT_FRAME_ID = 'stats-grid-print-frame';
 
 function hasVisiblePrintTarget(selector) {
   return Array.from(document.querySelectorAll(selector)).some(
@@ -26,24 +26,103 @@ function setPrintOrientation(orientation, margin = '6mm') {
   style.textContent = `@media print { @page { size: ${pageSize}; margin: ${margin}; } }`;
 }
 
-function removeStatsGridPrintRoot() {
-  document.getElementById(STATS_GRID_PRINT_ROOT_ID)?.remove();
+function removeStatsGridPrintFrame() {
+  document.getElementById(STATS_GRID_PRINT_FRAME_ID)?.remove();
 }
 
-function prepareStatsGridPrintRoot() {
-  removeStatsGridPrintRoot();
+function prepareStatsGridPrintFrame(orientation, margin) {
+  removeStatsGridPrintFrame();
 
   const sourceGrid = Array.from(document.querySelectorAll('.sw-stats-body--grid')).find(
     (element) => !element.closest('[hidden]')
   );
   if (!sourceGrid) return false;
 
-  const printRoot = document.createElement('div');
-  printRoot.id = STATS_GRID_PRINT_ROOT_ID;
-  printRoot.className = 'stats-grid-print-root';
-  printRoot.appendChild(sourceGrid.cloneNode(true));
-  document.body.appendChild(printRoot);
-  return true;
+  const frame = document.createElement('iframe');
+  frame.id = STATS_GRID_PRINT_FRAME_ID;
+  frame.title = '현황 표 인쇄';
+  frame.setAttribute('aria-hidden', 'true');
+  frame.style.cssText = 'position:fixed;left:-10000px;top:-10000px;width:1px;height:1px;border:0;pointer-events:none;';
+  document.body.appendChild(frame);
+
+  const printDocument = frame.contentDocument;
+  const printWindow = frame.contentWindow;
+  if (!printDocument || !printWindow) {
+    frame.remove();
+    return false;
+  }
+
+  const styleMarkup = Array.from(document.head.querySelectorAll('style, link[rel="stylesheet"]'))
+    .map((node) => node.outerHTML)
+    .join('');
+  const baseUrl = String(document.baseURI).replace(/"/g, '&quot;');
+  const pageSize = orientation === 'landscape' ? 'A4 landscape' : 'A4 portrait';
+
+  printDocument.open();
+  printDocument.write(`<!doctype html>
+<html data-print-orientation="${orientation}">
+  <head>
+    <base href="${baseUrl}">
+    ${styleMarkup}
+    <style>
+      @page { size: ${pageSize}; margin: ${margin}; }
+      html, body { width: 100%; min-height: auto; margin: 0; padding: 0; background: #fff; }
+      .stats-grid-print-document { width: 100%; margin: 0; padding: 0; }
+      .sw-stats-body--grid,
+      .sw-grid-card,
+      .sw-grid-card-table,
+      .sw-grid-shell,
+      .sw-grid-wrapper { display: block !important; width: 100% !important; height: auto !important; max-height: none !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
+      .sw-grid-table { display: table !important; width: 100% !important; min-width: 0 !important; table-layout: fixed !important; border-collapse: collapse !important; font-size: 8pt !important; }
+      .sw-grid-table thead { display: table-header-group !important; }
+      .sw-grid-table tbody { display: table-row-group !important; }
+      .sw-grid-table tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+      .sw-grid-table,
+      .sw-grid-table thead,
+      .sw-grid-table tbody,
+      .sw-grid-table tr,
+      .sw-grid-table th,
+      .sw-grid-table td { position: static !important; inset: auto !important; z-index: auto !important; transform: none !important; will-change: auto !important; visibility: visible !important; opacity: 1 !important; }
+      .sw-grid-table th,
+      .sw-grid-table td,
+      .sw-grid-table th *,
+      .sw-grid-table td * { color: #172033 !important; visibility: visible !important; opacity: 1 !important; }
+      .sw-grid-table th,
+      .sw-grid-table td { height: 6mm !important; padding: 0 0.7mm !important; font-size: 8pt !important; line-height: 1.15 !important; }
+      .sw-grid-table .grid-title { height: 10mm !important; max-height: 10mm !important; padding: 1mm !important; font-size: 12pt !important; }
+      .sw-grid-table thead .hdr-fixed,
+      .sw-grid-table thead .hdr-therapist,
+      .sw-grid-table thead .hdr-pres,
+      .sw-grid-table thead .hdr-pres-total,
+      .sw-grid-table thead .hdr-total,
+      .sw-grid-table thead .hdr-grand-total,
+      .sw-grid-table thead .hdr-new-patient,
+      .sw-grid-table thead .hdr-new-patient-total { font-size: 8pt !important; }
+      .sw-grid-table col { width: auto !important; min-width: 0 !important; }
+      .sw-grid-table col:nth-child(1) { width: 3% !important; }
+      .sw-grid-table col:nth-child(2) { width: 5% !important; }
+      .sw-grid-table col:nth-child(3) { width: 7% !important; }
+      .sw-grid-table col:nth-child(4) { width: 6% !important; }
+      .sw-grid-table col:nth-child(5) { width: 3.5% !important; }
+      .sw-grid-table col:nth-child(6) { width: 12% !important; }
+      .sw-grid-table col:nth-last-child(-n + 2) { width: 5.5% !important; }
+      .sw-grid-count-tooltip,
+      .shockwave-context-menu,
+      .gc-input[data-hidden-input="true"] { display: none !important; }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    </style>
+  </head>
+  <body>
+    <main class="stats-grid-print-document">${sourceGrid.outerHTML}</main>
+  </body>
+</html>`);
+  printDocument.close();
+
+  return () => {
+    void printDocument.body.offsetHeight;
+    printWindow.focus();
+    printWindow.print();
+  };
 }
 
 /**
@@ -116,7 +195,6 @@ function cleanupPrintState() {
   document.body.classList.remove('shockwave-settlement-print');
   document.body.classList.remove('vertical-settlement-print');
   document.body.classList.remove('stats-grid-print');
-  removeStatsGridPrintRoot();
   delete document.body.dataset.calendarWeeks;
   restoreHiddenMemoRows();
 }
@@ -206,12 +284,14 @@ export default function PrintButton({ isStaffSchedule }) {
       && hasVisiblePrintTarget('.sw-settlement-table, .sw-manual-settlement-stack');
     const isStatsGridPrint = !effectiveCalendarOnly
       && hasVisiblePrintTarget('.sw-stats-body--grid');
-    const hasStatsGridPrintRoot = isStatsGridPrint && prepareStatsGridPrintRoot();
     // 기본 여백 인쇄 시에도 좌측이 미세하게 잘리지 않도록 좌우 여백을 8mm로 안전하게 확보
     const printMargin = isNewPatientPortraitPrint
       ? '8mm 5mm 6mm'
       : (isSettlementPrint ? (orientation === 'portrait' ? '4mm' : '5mm') : (effectiveCalendarOnly ? '5mm 8mm 5mm 8mm' : '6mm'));
     setPrintOrientation(isNewPatientPortraitPrint ? 'A4 portrait' : orientation, printMargin);
+    const statsGridPrinter = isStatsGridPrint
+      ? prepareStatsGridPrintFrame(orientation, printMargin)
+      : null;
     
     if (effectiveCalendarOnly) {
       document.body.classList.remove('new-patient-print');
@@ -220,7 +300,7 @@ export default function PrintButton({ isStaffSchedule }) {
       document.body.classList.remove('shockwave-settlement-print');
       document.body.classList.remove('vertical-settlement-print');
       document.body.classList.remove('stats-grid-print');
-      removeStatsGridPrintRoot();
+      removeStatsGridPrintFrame();
       document.body.classList.add('calendar-only-print');
 
       // 주차 수 결정
@@ -254,7 +334,7 @@ export default function PrintButton({ isStaffSchedule }) {
         document.body.classList.remove('shockwave-settlement-print');
         document.body.classList.remove('vertical-settlement-print');
         document.body.classList.remove('stats-grid-print');
-        removeStatsGridPrintRoot();
+        removeStatsGridPrintFrame();
       } else if (isVerticalSettlementPrint) {
         document.body.classList.remove('new-patient-print');
         document.body.classList.remove('settlement-print');
@@ -262,7 +342,7 @@ export default function PrintButton({ isStaffSchedule }) {
         document.body.classList.remove('shockwave-settlement-print');
         document.body.classList.add('vertical-settlement-print');
         document.body.classList.remove('stats-grid-print');
-        removeStatsGridPrintRoot();
+        removeStatsGridPrintFrame();
       } else if (isSettlementPrint) {
         const isManualSettlementPrint = hasVisiblePrintTarget('.sw-manual-settlement-stack');
         const isShockwaveSettlementPrint = hasVisiblePrintTarget('.sw-settlement-stack--shockwave');
@@ -272,14 +352,14 @@ export default function PrintButton({ isStaffSchedule }) {
         document.body.classList.toggle('manual-settlement-print', isManualSettlementPrint);
         document.body.classList.toggle('shockwave-settlement-print', isShockwaveSettlementPrint);
         document.body.classList.remove('stats-grid-print');
-        removeStatsGridPrintRoot();
+        removeStatsGridPrintFrame();
       } else {
         document.body.classList.remove('new-patient-print');
         document.body.classList.remove('settlement-print');
         document.body.classList.remove('manual-settlement-print');
         document.body.classList.remove('shockwave-settlement-print');
         document.body.classList.remove('vertical-settlement-print');
-        document.body.classList.toggle('stats-grid-print', hasStatsGridPrintRoot);
+        document.body.classList.toggle('stats-grid-print', isStatsGridPrint && !statsGridPrinter);
       }
     }
     
@@ -287,6 +367,10 @@ export default function PrintButton({ isStaffSchedule }) {
     registerPrintCleanup();
     // Keep the browser print request within the user activation that selected the menu item.
     void document.body.offsetHeight;
+    if (statsGridPrinter) {
+      statsGridPrinter();
+      return;
+    }
     window.print();
   };
 

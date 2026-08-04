@@ -44,7 +44,7 @@ test('current status print releases the page-level scroll container', async () =
   );
 });
 
-test('current status print uses an isolated copy outside the app layout', async () => {
+test('current status print uses an isolated print document', async () => {
   const [printButton, globalStyles] = await Promise.all([
     readFile(printButtonUrl, 'utf8'),
     readFile(globalStylesUrl, 'utf8'),
@@ -52,10 +52,19 @@ test('current status print uses an isolated copy outside the app layout', async 
 
   assert.match(
     printButton,
-    /function prepareStatsGridPrintRoot\(\)[\s\S]*?sourceGrid\.cloneNode\(true\)[\s\S]*?document\.body\.appendChild\(printRoot\)/
+    /function prepareStatsGridPrintFrame\(orientation, margin\)[\s\S]*?sourceGrid\.outerHTML[\s\S]*?printWindow\.print\(\)/
   );
   assert.match(
     globalStyles,
-    /body\.stats-grid-print #root\s*\{[\s\S]*?display:\s*none !important;[\s\S]*?body\.stats-grid-print \.stats-grid-print-root\s*\{[\s\S]*?display:\s*block !important;/
+    /body\.stats-grid-print \.sw-stats-panel > :not\(\.sw-stats-body--grid\)\s*\{[\s\S]*?display:\s*none !important;/
+  );
+});
+
+test('current status print removes screen-only sticky table positioning', async () => {
+  const globalStyles = await readFile(globalStylesUrl, 'utf8');
+
+  assert.match(
+    globalStyles,
+    /\.sw-stats-body--grid \.sw-grid-table td\s*\{[\s\S]*?position:\s*static !important;[\s\S]*?z-index:\s*auto !important;[\s\S]*?will-change:\s*auto !important;/
   );
 });

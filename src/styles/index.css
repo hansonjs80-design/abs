@@ -586,18 +586,6 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     display: none !important;
   }
 
-  /* 현황 표는 앱 레이아웃 밖의 전용 인쇄 루트에서 출력합니다. */
-  body.stats-grid-print #root {
-    display: none !important;
-  }
-
-  body.stats-grid-print .stats-grid-print-root {
-    display: block !important;
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
   /*
    * 현황 화면은 페이지 레벨에서 높이 100% 스크롤 컨테이너로 감싸져 있습니다.
    * 표 래퍼만 풀면 이 상위 컨테이너가 인쇄 영역을 0/한 화면 높이로 계산할 수 있어,
@@ -683,9 +671,21 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     padding: 2mm !important;
   }
 
+  /*
+   * 화면용 고정 헤더/열은 Chromium의 Windows 인쇄 레이아웃에서 표 셀을
+   * 겹치게 하거나 내용 없이 그리는 원인이 됩니다. 인쇄에서는 일반 표 흐름만 씁니다.
+   */
+  .sw-stats-body--grid .sw-grid-table,
   .sw-stats-body--grid .sw-grid-table thead,
-  .sw-stats-body--grid .sw-grid-table th {
+  .sw-stats-body--grid .sw-grid-table tbody,
+  .sw-stats-body--grid .sw-grid-table tr,
+  .sw-stats-body--grid .sw-grid-table th,
+  .sw-stats-body--grid .sw-grid-table td {
     position: static !important;
+    inset: auto !important;
+    z-index: auto !important;
+    transform: none !important;
+    will-change: auto !important;
   }
 
   .sw-stats-body--grid .sw-grid-wrapper,
