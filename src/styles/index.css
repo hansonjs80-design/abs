@@ -586,6 +586,34 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     display: none !important;
   }
 
+  /* 현황 표는 앱 레이아웃 밖의 전용 인쇄 루트에서 출력합니다. */
+  body.stats-grid-print #root {
+    display: none !important;
+  }
+
+  body.stats-grid-print .stats-grid-print-root {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /*
+   * 현황 화면은 페이지 레벨에서 높이 100% 스크롤 컨테이너로 감싸져 있습니다.
+   * 표 래퍼만 풀면 이 상위 컨테이너가 인쇄 영역을 0/한 화면 높이로 계산할 수 있어,
+   * Windows 인쇄 미리보기에서 빈 페이지가 나옵니다.
+   */
+  body.stats-grid-print .animate-fade-in,
+  body.stats-grid-print .sw-stats-container,
+  body.stats-grid-print .sw-stats-layout,
+  body.stats-grid-print .sw-stats-panel {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
   body.stats-grid-print .sw-stats-body--grid,
   body.stats-grid-print .sw-grid-card,
   body.stats-grid-print .sw-grid-card-table,

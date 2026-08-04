@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Printer } from 'lucide-react';
 
 const PRINT_STYLE_ID = 'clinic-print-orientation-style';
+const STATS_GRID_PRINT_ROOT_ID = 'stats-grid-print-root';
 
 function hasVisiblePrintTarget(selector) {
   return Array.from(document.querySelectorAll(selector)).some(
@@ -23,6 +24,26 @@ function setPrintOrientation(orientation, margin = '6mm') {
   }
 
   style.textContent = `@media print { @page { size: ${pageSize}; margin: ${margin}; } }`;
+}
+
+function removeStatsGridPrintRoot() {
+  document.getElementById(STATS_GRID_PRINT_ROOT_ID)?.remove();
+}
+
+function prepareStatsGridPrintRoot() {
+  removeStatsGridPrintRoot();
+
+  const sourceGrid = Array.from(document.querySelectorAll('.sw-stats-body--grid')).find(
+    (element) => !element.closest('[hidden]')
+  );
+  if (!sourceGrid) return false;
+
+  const printRoot = document.createElement('div');
+  printRoot.id = STATS_GRID_PRINT_ROOT_ID;
+  printRoot.className = 'stats-grid-print-root';
+  printRoot.appendChild(sourceGrid.cloneNode(true));
+  document.body.appendChild(printRoot);
+  return true;
 }
 
 /**
@@ -95,6 +116,7 @@ function cleanupPrintState() {
   document.body.classList.remove('shockwave-settlement-print');
   document.body.classList.remove('vertical-settlement-print');
   document.body.classList.remove('stats-grid-print');
+  removeStatsGridPrintRoot();
   delete document.body.dataset.calendarWeeks;
   restoreHiddenMemoRows();
 }
@@ -184,6 +206,7 @@ export default function PrintButton({ isStaffSchedule }) {
       && hasVisiblePrintTarget('.sw-settlement-table, .sw-manual-settlement-stack');
     const isStatsGridPrint = !effectiveCalendarOnly
       && hasVisiblePrintTarget('.sw-stats-body--grid');
+    const hasStatsGridPrintRoot = isStatsGridPrint && prepareStatsGridPrintRoot();
     // 기본 여백 인쇄 시에도 좌측이 미세하게 잘리지 않도록 좌우 여백을 8mm로 안전하게 확보
     const printMargin = isNewPatientPortraitPrint
       ? '8mm 5mm 6mm'
@@ -197,6 +220,7 @@ export default function PrintButton({ isStaffSchedule }) {
       document.body.classList.remove('shockwave-settlement-print');
       document.body.classList.remove('vertical-settlement-print');
       document.body.classList.remove('stats-grid-print');
+      removeStatsGridPrintRoot();
       document.body.classList.add('calendar-only-print');
 
       // 주차 수 결정
@@ -230,6 +254,7 @@ export default function PrintButton({ isStaffSchedule }) {
         document.body.classList.remove('shockwave-settlement-print');
         document.body.classList.remove('vertical-settlement-print');
         document.body.classList.remove('stats-grid-print');
+        removeStatsGridPrintRoot();
       } else if (isVerticalSettlementPrint) {
         document.body.classList.remove('new-patient-print');
         document.body.classList.remove('settlement-print');
@@ -237,6 +262,7 @@ export default function PrintButton({ isStaffSchedule }) {
         document.body.classList.remove('shockwave-settlement-print');
         document.body.classList.add('vertical-settlement-print');
         document.body.classList.remove('stats-grid-print');
+        removeStatsGridPrintRoot();
       } else if (isSettlementPrint) {
         const isManualSettlementPrint = hasVisiblePrintTarget('.sw-manual-settlement-stack');
         const isShockwaveSettlementPrint = hasVisiblePrintTarget('.sw-settlement-stack--shockwave');
@@ -246,13 +272,14 @@ export default function PrintButton({ isStaffSchedule }) {
         document.body.classList.toggle('manual-settlement-print', isManualSettlementPrint);
         document.body.classList.toggle('shockwave-settlement-print', isShockwaveSettlementPrint);
         document.body.classList.remove('stats-grid-print');
+        removeStatsGridPrintRoot();
       } else {
         document.body.classList.remove('new-patient-print');
         document.body.classList.remove('settlement-print');
         document.body.classList.remove('manual-settlement-print');
         document.body.classList.remove('shockwave-settlement-print');
         document.body.classList.remove('vertical-settlement-print');
-        document.body.classList.toggle('stats-grid-print', isStatsGridPrint);
+        document.body.classList.toggle('stats-grid-print', hasStatsGridPrintRoot);
       }
     }
     
