@@ -3,6 +3,12 @@ import { Printer } from 'lucide-react';
 
 const PRINT_STYLE_ID = 'clinic-print-orientation-style';
 
+function hasVisiblePrintTarget(selector) {
+  return Array.from(document.querySelectorAll(selector)).some(
+    (element) => !element.closest('[hidden]')
+  );
+}
+
 function setPrintOrientation(orientation, margin = '6mm') {
   document.documentElement.dataset.printOrientation = orientation;
 
@@ -166,13 +172,15 @@ export default function PrintButton({ isStaffSchedule }) {
   const handlePrint = (orientation, calendarOnly = false, forceWeeks = null) => {
     // 근무표 탭(isStaffSchedule)에서 인쇄 시 가로/세로 모든 인쇄 모드에서 우측 3개 창(.staff-side) 숨김 처리
     const effectiveCalendarOnly = calendarOnly || isStaffSchedule;
-    const isNewPatientPortraitPrint = !effectiveCalendarOnly && orientation === 'portrait' && Boolean(document.querySelector('.sw-new-patient-table'));
-    const isVerticalSettlementPrint = !effectiveCalendarOnly && Boolean(document.querySelector(
+    const isNewPatientPortraitPrint = !effectiveCalendarOnly
+      && orientation === 'portrait'
+      && hasVisiblePrintTarget('.sw-new-patient-table');
+    const isVerticalSettlementPrint = !effectiveCalendarOnly && hasVisiblePrintTarget(
       '.sw-settlement-stack--shockwave.sw-settlement-stack--vertical',
-    ));
-    const isSettlementPrint = !effectiveCalendarOnly && !isVerticalSettlementPrint && Boolean(document.querySelector(
-      '.sw-settlement-table, .sw-manual-settlement-stack',
-    ));
+    );
+    const isSettlementPrint = !effectiveCalendarOnly
+      && !isVerticalSettlementPrint
+      && hasVisiblePrintTarget('.sw-settlement-table, .sw-manual-settlement-stack');
     // 기본 여백 인쇄 시에도 좌측이 미세하게 잘리지 않도록 좌우 여백을 8mm로 안전하게 확보
     const printMargin = isNewPatientPortraitPrint
       ? '8mm 5mm 6mm'
@@ -224,8 +232,8 @@ export default function PrintButton({ isStaffSchedule }) {
         document.body.classList.remove('shockwave-settlement-print');
         document.body.classList.add('vertical-settlement-print');
       } else if (isSettlementPrint) {
-        const isManualSettlementPrint = Boolean(document.querySelector('.sw-manual-settlement-stack'));
-        const isShockwaveSettlementPrint = Boolean(document.querySelector('.sw-settlement-stack--shockwave'));
+        const isManualSettlementPrint = hasVisiblePrintTarget('.sw-manual-settlement-stack');
+        const isShockwaveSettlementPrint = hasVisiblePrintTarget('.sw-settlement-stack--shockwave');
         document.body.classList.remove('new-patient-print');
         document.body.classList.remove('vertical-settlement-print');
         document.body.classList.add('settlement-print');
