@@ -128,7 +128,8 @@
   --grid-title-bg: #bfdbfe;
   --sw-grid-row-hover-bg: #dbeafe;
   border-radius: 10px 10px 0 0;
-  clip-path: inset(0 round 10px 10px 0 0);
+  /* fixed count tooltips must not be clipped by the scrolling grid frame */
+  clip-path: none;
 }
 
 .sw-grid-wrapper--shockwave .grid-title {

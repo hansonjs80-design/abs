@@ -573,6 +573,11 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     display: none !important;
   }
 
+  /* 백그라운드에 유지한 다른 통계 탭은 현재 탭 인쇄에 포함하지 않습니다. */
+  .sw-stats-panel > [hidden] {
+    display: none !important;
+  }
+
   .sw-grid-shell,
   .sw-grid-card-table,
   .sw-settlement-table-wrap,
@@ -587,6 +592,90 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     margin: 0 auto 12mm !important; /* 가운데 정렬 및 하단 간격 */
     padding: 0 !important;
     overflow: visible !important;
+  }
+
+  /* 현황 표는 화면에서는 스크롤하지만, 인쇄에서는 모든 행을 페이지별로 이어서 출력합니다. */
+  .sw-stats-body--grid,
+  .sw-stats-body--grid .sw-grid-card,
+  .sw-stats-body--grid .sw-grid-card-table,
+  .sw-stats-body--grid .sw-grid-shell,
+  .sw-stats-body--grid .sw-grid-wrapper {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .sw-stats-body--grid .sw-grid-table {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  .sw-stats-body--grid .sw-grid-table thead {
+    display: table-header-group !important;
+  }
+
+  .sw-stats-body--grid .sw-grid-table tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .sw-stats-body--grid {
+    padding: 2mm !important;
+  }
+
+  .sw-stats-body--grid .sw-grid-table thead,
+  .sw-stats-body--grid .sw-grid-table th {
+    position: static !important;
+  }
+
+  .sw-stats-body--grid .sw-grid-wrapper,
+  .sw-stats-body--grid .sw-grid-table {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .sw-stats-body--grid .sw-grid-table {
+    table-layout: fixed !important;
+    font-size: 6.5pt !important;
+  }
+
+  .sw-stats-body--grid .sw-grid-table col {
+    width: auto !important;
+    min-width: 0 !important;
+  }
+
+  .sw-stats-body--grid .sw-grid-table col:nth-child(1) { width: 3% !important; }
+  .sw-stats-body--grid .sw-grid-table col:nth-child(2) { width: 5% !important; }
+  .sw-stats-body--grid .sw-grid-table col:nth-child(3) { width: 7% !important; }
+  .sw-stats-body--grid .sw-grid-table col:nth-child(4) { width: 6% !important; }
+  .sw-stats-body--grid .sw-grid-table col:nth-child(5) { width: 3.5% !important; }
+  .sw-stats-body--grid .sw-grid-table col:nth-child(6) { width: 12% !important; }
+  .sw-stats-body--grid .sw-grid-table col:nth-last-child(-n + 2) { width: 5.5% !important; }
+
+  .sw-stats-body--grid .sw-grid-table th,
+  .sw-stats-body--grid .sw-grid-table td {
+    height: 5.6mm !important;
+    padding: 0 0.5mm !important;
+    font-size: 6.5pt !important;
+    line-height: 1.1 !important;
+  }
+
+  .sw-stats-body--grid .sw-grid-table .grid-title {
+    height: 9mm !important;
+    max-height: 9mm !important;
+    padding: 1mm !important;
+    font-size: 10pt !important;
+  }
+
+  .sw-stats-body--grid .sw-grid-table thead .hdr-fixed,
+  .sw-stats-body--grid .sw-grid-table thead .hdr-therapist,
+  .sw-stats-body--grid .sw-grid-table thead .hdr-pres,
+  .sw-stats-body--grid .sw-grid-table thead .hdr-pres-total,
+  .sw-stats-body--grid .sw-grid-table thead .hdr-total,
+  .sw-stats-body--grid .sw-grid-table thead .hdr-grand-total,
+  .sw-stats-body--grid .sw-grid-table thead .hdr-new-patient,
+  .sw-stats-body--grid .sw-grid-table thead .hdr-new-patient-total {
+    font-size: 6.5pt !important;
   }
 
   * {
