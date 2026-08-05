@@ -73,7 +73,7 @@ test('current status print repeats the complete table header on every page', asy
   );
 });
 
-test('current status print uses explicit borders and wraps one-prescription therapist counts', async () => {
+test('current status print uses clear table borders and wraps one-prescription therapist counts', async () => {
   const [dataGrid, printButton] = await Promise.all([
     readFile(dataGridUrl, 'utf8'),
     readFile(printButtonUrl, 'utf8'),
@@ -81,11 +81,23 @@ test('current status print uses explicit borders and wraps one-prescription ther
 
   assert.match(
     printButton,
-    /\.sw-grid-table \{[\s\S]*?border:\s*0\.3mm solid #475569 !important;/
+    /\.sw-grid-table \{[\s\S]*?border:\s*0\.45mm solid #1e293b !important;/
   );
   assert.match(
     printButton,
-    /\.sw-grid-table td \{[\s\S]*?border:\s*0\.18mm solid #94a3b8 !important;/
+    /\.sw-grid-table td \{[\s\S]*?border:\s*0\.25mm solid #64748b !important;[\s\S]*?text-align:\s*center !important;/
+  );
+  assert.match(
+    printButton,
+    /\.sw-grid-table \.therapist-group-start,[\s\S]*?border-left:\s*0\.4mm solid #334155 !important;/
+  );
+  assert.match(
+    printButton,
+    /\.sw-grid-table \.tr-date-start td\s*\{[\s\S]*?border-top:\s*0\.4mm solid #334155 !important;/
+  );
+  assert.match(
+    printButton,
+    /\.sw-grid-table \.sw-header-row-therapists > th:nth-child\(6\),[\s\S]*?text-align:\s*left !important;/
   );
   assert.match(dataGrid, /const hasSinglePrescription = group\.prescriptions\.length === 1;/);
   assert.match(dataGrid, /hdr-therapist--single-prescription/);
@@ -109,7 +121,7 @@ test('portrait current status print wraps compact cells without shrinking totals
   );
   assert.match(
     printButton,
-    /html\[data-print-orientation="portrait"\] \.sw-grid-table \.gc-bold\s*\{[\s\S]*?padding-left:\s*0\.55mm !important;/
+    /html\[data-print-orientation="portrait"\] \.sw-grid-table \.gc-bold\s*\{[\s\S]*?padding:\s*0\.45mm 0\.35mm !important;[\s\S]*?text-align:\s*center !important;/
   );
 });
 
