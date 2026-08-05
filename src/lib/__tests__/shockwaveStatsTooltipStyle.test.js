@@ -73,7 +73,7 @@ test('current status print repeats the complete table header on every page', asy
   );
 });
 
-test('current status print uses independent table borders and wraps one-prescription therapist counts', async () => {
+test('current status print mirrors the current status grid borders and wraps one-prescription therapist counts', async () => {
   const [dataGrid, printButton] = await Promise.all([
     readFile(dataGridUrl, 'utf8'),
     readFile(printButtonUrl, 'utf8'),
@@ -81,31 +81,27 @@ test('current status print uses independent table borders and wraps one-prescrip
 
   assert.match(
     printButton,
-    /\.sw-grid-table \{[\s\S]*?outline:\s*0\.65mm solid #0f172a !important;[\s\S]*?border-collapse:\s*separate !important;[\s\S]*?border-spacing:\s*0 !important;/
+    /\.sw-grid-table \{[\s\S]*?border-collapse:\s*separate !important;[\s\S]*?border-spacing:\s*0 !important;/
   );
   assert.match(
     printButton,
-    /\.stats-grid-print-document\s*\{[\s\S]*?box-sizing:\s*border-box;[\s\S]*?padding:\s*0\.8mm;/
+    /\.sw-stats-body--grid \.sw-grid-table\s*\{[\s\S]*?border-left:\s*3px solid #94a3b8 !important;/
   );
   assert.match(
     printButton,
-    /\.sw-grid-table td \{[\s\S]*?border-right:\s*0\.22mm solid #64748b !important;[\s\S]*?border-bottom:\s*0\.22mm solid #64748b !important;[\s\S]*?text-align:\s*center !important;/
+    /\.sw-grid-table td \{[\s\S]*?border-right:\s*1px solid #d5deea !important;[\s\S]*?border-bottom:\s*1px solid #d5deea !important;[\s\S]*?text-align:\s*center !important;/
   );
   assert.match(
     printButton,
-    /\.sw-grid-table \.therapist-group-start,[\s\S]*?border-left:\s*0\.45mm solid #1e293b !important;/
+    /\.sw-grid-table \.grid-title\s*\{[\s\S]*?border-bottom:\s*3px solid #94a3b8 !important;/
   );
   assert.match(
     printButton,
-    /\.sw-grid-table \.tr-date-start > td\s*\{[\s\S]*?border-top:\s*0\.55mm solid #0f172a !important;/
+    /\.sw-grid-table \.tr-date-start > td\s*\{[\s\S]*?border-top:\s*0 !important;[\s\S]*?box-shadow:\s*inset 0 1px 0 #94a3b8 !important;/
   );
   assert.match(
     printButton,
-    /\.sw-grid-table \.sw-header-row-therapists > th:nth-child\(6\)\s*\{[\s\S]*?border-right:\s*0\.45mm solid #1e293b !important;/
-  );
-  assert.match(
-    printButton,
-    /\.sw-grid-table \.fixed-field-last\s*\{[\s\S]*?text-align:\s*left !important;/
+    /\.sw-grid-table \.therapist-group-end\s*\{[\s\S]*?border-right:\s*1px solid #94a3b8 !important;/
   );
   assert.match(dataGrid, /const hasSinglePrescription = group\.prescriptions\.length === 1;/);
   assert.match(dataGrid, /hdr-therapist--single-prescription/);
