@@ -73,7 +73,7 @@ function prepareStatsGridPrintFrame(orientation, margin) {
       .sw-grid-card-table,
       .sw-grid-shell,
       .sw-grid-wrapper { display: block !important; width: 100% !important; height: auto !important; max-height: none !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
-      .sw-grid-table { display: table !important; width: 100% !important; min-width: 0 !important; table-layout: fixed !important; border-collapse: collapse !important; font-size: 8pt !important; }
+      .sw-grid-table { display: table !important; width: 100% !important; min-width: 0 !important; table-layout: fixed !important; border: 0.3mm solid #475569 !important; border-collapse: collapse !important; font-size: 8pt !important; }
       .sw-grid-table thead {
         display: table-header-group !important;
         position: static !important;
@@ -98,7 +98,7 @@ function prepareStatsGridPrintFrame(orientation, margin) {
       .sw-grid-table th *,
       .sw-grid-table td * { color: #172033 !important; visibility: visible !important; opacity: 1 !important; }
       .sw-grid-table th,
-      .sw-grid-table td { height: 6mm !important; padding: 0 0.7mm !important; font-size: 8pt !important; line-height: 1.15 !important; }
+      .sw-grid-table td { height: 6mm !important; padding: 0 0.7mm !important; border: 0.18mm solid #94a3b8 !important; font-size: 8pt !important; line-height: 1.15 !important; }
       .sw-grid-table .grid-title { height: 10mm !important; max-height: 10mm !important; padding: 1mm !important; font-size: 12pt !important; }
       .sw-grid-table thead .hdr-fixed,
       .sw-grid-table thead .hdr-therapist,
@@ -158,6 +158,11 @@ function prepareStatsGridPrintFrame(orientation, margin) {
         font-size: 6.7pt !important;
         line-height: 1.05 !important;
         white-space: normal !important;
+      }
+      html[data-print-orientation="portrait"] .sw-grid-table .hdr-therapist--single-prescription .sw-grid-therapist-count {
+        display: block !important;
+        margin-top: 0.25mm !important;
+        white-space: nowrap !important;
       }
       html[data-print-orientation="portrait"] .sw-grid-table .gc-bold {
         padding-left: 0.55mm !important;

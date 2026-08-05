@@ -73,6 +73,29 @@ test('current status print repeats the complete table header on every page', asy
   );
 });
 
+test('current status print uses explicit borders and wraps one-prescription therapist counts', async () => {
+  const [dataGrid, printButton] = await Promise.all([
+    readFile(dataGridUrl, 'utf8'),
+    readFile(printButtonUrl, 'utf8'),
+  ]);
+
+  assert.match(
+    printButton,
+    /\.sw-grid-table \{[\s\S]*?border:\s*0\.3mm solid #475569 !important;/
+  );
+  assert.match(
+    printButton,
+    /\.sw-grid-table td \{[\s\S]*?border:\s*0\.18mm solid #94a3b8 !important;/
+  );
+  assert.match(dataGrid, /const hasSinglePrescription = group\.prescriptions\.length === 1;/);
+  assert.match(dataGrid, /hdr-therapist--single-prescription/);
+  assert.match(dataGrid, /sw-grid-therapist-count/);
+  assert.match(
+    printButton,
+    /html\[data-print-orientation="portrait"\] \.sw-grid-table \.hdr-therapist--single-prescription \.sw-grid-therapist-count\s*\{[\s\S]*?display:\s*block !important;[\s\S]*?white-space:\s*nowrap !important;/
+  );
+});
+
 test('portrait current status print wraps compact cells without shrinking totals below readability', async () => {
   const printButton = await readFile(printButtonUrl, 'utf8');
 

@@ -1686,6 +1686,7 @@ export default function ShockwaveDataGrid({
             ))}
             {therapistPrescriptionGroups.map((group, idx) => {
               const therapistCount = therapistTotals[idx]?.total || 0;
+              const hasSinglePrescription = group.prescriptions.length === 1;
               const canFilter = isPrescriptionPatientFilterEnabled && therapistCount > 0;
               const isActiveFilter = isSameTherapistPrescriptionFilter(
                 patientViewFilter,
@@ -1700,6 +1701,7 @@ export default function ShockwaveDataGrid({
                     'hdr-therapist',
                     idx > 0 ? 'therapist-group-start' : '',
                     'therapist-group-end',
+                    hasSinglePrescription ? 'hdr-therapist--single-prescription' : '',
                     canFilter ? 'hdr-therapist--filterable' : '',
                     isActiveFilter ? 'hdr-therapist--filter-active' : '',
                   ].filter(Boolean).join(' ')}
@@ -1713,7 +1715,8 @@ export default function ShockwaveDataGrid({
                       : `${group.therapist.displayName} 치료사 현황만 보기 (더블클릭)`
                     : undefined}
                 >
-                  {group.therapist.displayName} ( {therapistCount}건 )
+                  <span className="sw-grid-therapist-name">{group.therapist.displayName}</span>
+                  <span className="sw-grid-therapist-count"> ({therapistCount}건)</span>
                 </th>
               );
             })}
