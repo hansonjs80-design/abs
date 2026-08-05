@@ -60,6 +60,19 @@ test('current status print uses an isolated print document', async () => {
   );
 });
 
+test('current status print repeats the complete table header on every page', async () => {
+  const printButton = await readFile(printButtonUrl, 'utf8');
+
+  assert.match(
+    printButton,
+    /\.sw-grid-table thead\s*\{[\s\S]*?display:\s*table-header-group !important;[\s\S]*?break-after:\s*avoid !important;/
+  );
+  assert.match(
+    printButton,
+    /\.sw-grid-table thead > tr\s*\{[\s\S]*?display:\s*table-row !important;[\s\S]*?page-break-inside:\s*avoid !important;/
+  );
+});
+
 test('portrait current status print wraps compact cells without shrinking totals below readability', async () => {
   const printButton = await readFile(printButtonUrl, 'utf8');
 

@@ -74,7 +74,17 @@ function prepareStatsGridPrintFrame(orientation, margin) {
       .sw-grid-shell,
       .sw-grid-wrapper { display: block !important; width: 100% !important; height: auto !important; max-height: none !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
       .sw-grid-table { display: table !important; width: 100% !important; min-width: 0 !important; table-layout: fixed !important; border-collapse: collapse !important; font-size: 8pt !important; }
-      .sw-grid-table thead { display: table-header-group !important; }
+      .sw-grid-table thead {
+        display: table-header-group !important;
+        position: static !important;
+        break-after: avoid !important;
+        page-break-after: avoid !important;
+      }
+      .sw-grid-table thead > tr {
+        display: table-row !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
       .sw-grid-table tbody { display: table-row-group !important; }
       .sw-grid-table tr { break-inside: avoid !important; page-break-inside: avoid !important; }
       .sw-grid-table,
