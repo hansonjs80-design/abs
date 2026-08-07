@@ -30,6 +30,48 @@ function removeStatsGridPrintFrame() {
   document.getElementById(STATS_GRID_PRINT_FRAME_ID)?.remove();
 }
 
+function expandStatsGridPrintRowSpans(printGrid) {
+  const table = printGrid.querySelector('.sw-grid-table');
+  if (!table) return;
+
+  const bodyRows = Array.from(table.tBodies).flatMap((body) => Array.from(body.rows));
+
+  bodyRows.forEach((row, rowIndex) => {
+    const spanningCells = Array.from(row.cells).filter((cell) => (
+      cell.rowSpan > 1
+      && (cell.classList.contains('gc-date-cell') || cell.classList.contains('gc-total'))
+    ));
+
+    spanningCells.forEach((cell) => {
+      const rowSpan = cell.rowSpan;
+      cell.removeAttribute('rowspan');
+
+      for (let offset = 1; offset < rowSpan; offset += 1) {
+        const targetRow = bodyRows[rowIndex + offset];
+        if (!targetRow) break;
+
+        const placeholder = cell.cloneNode(false);
+        placeholder.removeAttribute('rowspan');
+        placeholder.removeAttribute('colspan');
+        placeholder.removeAttribute('style');
+        placeholder.removeAttribute('title');
+        placeholder.textContent = '';
+
+        if (cell.classList.contains('gc-date-cell')) {
+          const rowIndexCell = targetRow.querySelector('.gc-row-index');
+          if (rowIndexCell) {
+            rowIndexCell.after(placeholder);
+          } else {
+            targetRow.prepend(placeholder);
+          }
+        } else {
+          targetRow.append(placeholder);
+        }
+      }
+    });
+  });
+}
+
 function prepareStatsGridPrintFrame(orientation, margin) {
   removeStatsGridPrintFrame();
 
@@ -37,6 +79,11 @@ function prepareStatsGridPrintFrame(orientation, margin) {
     (element) => !element.closest('[hidden]')
   );
   if (!sourceGrid) return false;
+
+  // Row-spanned date summaries make Chromium keep an entire date group together.
+  // The print copy uses blank per-row cells instead, so page breaks consume the remaining space.
+  const printGrid = sourceGrid.cloneNode(true);
+  expandStatsGridPrintRowSpans(printGrid);
 
   const frame = document.createElement('iframe');
   frame.id = STATS_GRID_PRINT_FRAME_ID;
@@ -67,14 +114,14 @@ function prepareStatsGridPrintFrame(orientation, margin) {
     <style>
       @page { size: ${pageSize}; margin: ${margin}; }
       html, body { width: 100%; min-height: auto; margin: 0; padding: 0; background: #fff; }
-      .stats-grid-print-document { width: 100%; margin: 0; padding: 0; }
-      .sw-stats-body--grid,
-      .sw-grid-card,
-      .sw-grid-card-table,
-      .sw-grid-shell,
-      .sw-grid-wrapper { display: block !important; width: 100% !important; height: auto !important; max-height: none !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
-      .sw-grid-table { display: table !important; width: 100% !important; min-width: 0 !important; table-layout: fixed !important; border: 0 !important; border-collapse: separate !important; border-spacing: 0 !important; font-size: 8pt !important; }
-      .sw-stats-body--grid .sw-grid-table { border-left: 3px solid #94a3b8 !important; }
+      .stats-grid-print-document { width: 100%; min-height: 0 !important; margin: 0; padding: 0; }
+      .stats-grid-print-document .sw-stats-body--grid,
+      .stats-grid-print-document .sw-grid-card,
+      .stats-grid-print-document .sw-grid-card-table,
+      .stats-grid-print-document .sw-grid-shell,
+      .stats-grid-print-document .sw-grid-wrapper { display: block !important; width: 100% !important; height: auto !important; min-height: 0 !important; max-height: none !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
+      .stats-grid-print-document .sw-grid-table { display: table !important; width: 100% !important; min-width: 0 !important; height: auto !important; min-height: 0 !important; max-height: none !important; table-layout: fixed !important; border: 0 !important; border-collapse: separate !important; border-spacing: 0 !important; font-size: 8pt !important; }
+      .stats-grid-print-document .sw-stats-body--grid .sw-grid-table { border-left: 3px solid #94a3b8 !important; }
       .sw-grid-table thead {
         display: table-header-group !important;
         position: static !important;
@@ -100,7 +147,9 @@ function prepareStatsGridPrintFrame(orientation, margin) {
       .sw-grid-table td * { color: #172033 !important; visibility: visible !important; opacity: 1 !important; }
       .sw-grid-table th,
       .sw-grid-table td { height: 6mm !important; padding: 0 0.7mm !important; border: 0 !important; border-right: 1px solid #d5deea !important; border-bottom: 1px solid #d5deea !important; font-size: 8pt !important; line-height: 1.15 !important; text-align: center !important; }
-      .sw-grid-table .grid-title { height: 10mm !important; max-height: 10mm !important; padding: 1mm !important; border-bottom: 3px solid #94a3b8 !important; border-right: 1px solid #94a3b8 !important; font-size: 12pt !important; }
+      .stats-grid-print-document .sw-grid-wrapper--shockwave .grid-title::before,
+      .stats-grid-print-document .sw-grid-wrapper--shockwave .grid-title::after { display: none !important; }
+      .sw-grid-table .grid-title { height: 10mm !important; max-height: 10mm !important; padding: 1mm !important; border-top: 3px solid #94a3b8 !important; border-bottom: 3px solid #94a3b8 !important; border-right: 1px solid #94a3b8 !important; border-radius: 0 !important; font-size: 12pt !important; }
       .sw-grid-table .therapist-group-start { border-left: 0 !important; box-shadow: inset 1px 0 0 #94a3b8 !important; }
       .sw-grid-table .therapist-group-end { border-right: 1px solid #94a3b8 !important; }
       .sw-grid-table .tr-date-start > td { border-top: 0 !important; box-shadow: inset 0 1px 0 #94a3b8 !important; }
@@ -201,7 +250,7 @@ function prepareStatsGridPrintFrame(orientation, margin) {
     </style>
   </head>
   <body>
-    <main class="stats-grid-print-document">${sourceGrid.outerHTML}</main>
+    <main class="stats-grid-print-document">${printGrid.outerHTML}</main>
   </body>
 </html>`);
   printDocument.close();

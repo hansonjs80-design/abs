@@ -52,11 +52,24 @@ test('current status print uses an isolated print document', async () => {
 
   assert.match(
     printButton,
-    /function prepareStatsGridPrintFrame\(orientation, margin\)[\s\S]*?sourceGrid\.outerHTML[\s\S]*?printWindow\.print\(\)/
+    /function prepareStatsGridPrintFrame\(orientation, margin\)[\s\S]*?expandStatsGridPrintRowSpans\(printGrid\)[\s\S]*?printGrid\.outerHTML[\s\S]*?printWindow\.print\(\)/
   );
   assert.match(
     globalStyles,
     /body\.stats-grid-print \.sw-stats-panel > :not\(\.sw-stats-body--grid\)\s*\{[\s\S]*?display:\s*none !important;/
+  );
+});
+
+test('current status print expands date summary row spans before pagination', async () => {
+  const printButton = await readFile(printButtonUrl, 'utf8');
+
+  assert.match(
+    printButton,
+    /function expandStatsGridPrintRowSpans\(printGrid\)[\s\S]*?cell\.rowSpan > 1[\s\S]*?gc-date-cell[\s\S]*?gc-total/
+  );
+  assert.match(
+    printButton,
+    /const rowSpan = cell\.rowSpan;[\s\S]*?cell\.removeAttribute\('rowspan'\)[\s\S]*?placeholder\.textContent = ''[\s\S]*?rowIndexCell\.after\(placeholder\)/
   );
 });
 
@@ -93,7 +106,7 @@ test('current status print mirrors the current status grid borders and wraps one
   );
   assert.match(
     printButton,
-    /\.sw-grid-table \.grid-title\s*\{[\s\S]*?border-bottom:\s*3px solid #94a3b8 !important;/
+    /\.sw-grid-table \.grid-title\s*\{[\s\S]*?border-top:\s*3px solid #94a3b8 !important;[\s\S]*?border-bottom:\s*3px solid #94a3b8 !important;/
   );
   assert.match(
     printButton,
