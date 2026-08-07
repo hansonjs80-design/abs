@@ -52,11 +52,28 @@ test('current status print uses an isolated print document', async () => {
 
   assert.match(
     printButton,
-    /function prepareStatsGridPrintFrame\(orientation, margin\)[\s\S]*?expandStatsGridPrintRowSpans\(printGrid\)[\s\S]*?printGrid\.outerHTML[\s\S]*?printWindow\.print\(\)/
+    /function prepareStatsGridPrintFrame\(orientation, margin\)[\s\S]*?expandStatsGridPrintRowSpans\(printGrid\)[\s\S]*?appendStatsGridPrintHeaderDivider\(printGrid\)[\s\S]*?printGrid\.outerHTML[\s\S]*?printWindow\.print\(\)/
   );
   assert.match(
     globalStyles,
     /body\.stats-grid-print \.sw-stats-panel > :not\(\.sw-stats-body--grid\)\s*\{[\s\S]*?display:\s*none !important;/
+  );
+});
+
+test('current status print repeats one full-width header divider on every page', async () => {
+  const printButton = await readFile(printButtonUrl, 'utf8');
+
+  assert.match(
+    printButton,
+    /function appendStatsGridPrintHeaderDivider\(printGrid\)[\s\S]*?dividerCell\.colSpan = columnCount;[\s\S]*?header\.append\(dividerRow\);/
+  );
+  assert.match(
+    printButton,
+    /\.sw-grid-print-header-divider > th\s*\{[\s\S]*?border-bottom:\s*2px solid #64748b !important;/
+  );
+  assert.match(
+    printButton,
+    /\.sw-grid-table \.grid-title\s*\{[\s\S]*?border-bottom:\s*3px solid #64748b !important;/
   );
 });
 
@@ -106,7 +123,7 @@ test('current status print mirrors the current status grid borders and wraps one
   );
   assert.match(
     printButton,
-    /\.sw-grid-table \.grid-title\s*\{[\s\S]*?border-top:\s*3px solid #94a3b8 !important;[\s\S]*?border-bottom:\s*3px solid #94a3b8 !important;/
+    /\.sw-grid-table \.grid-title\s*\{[^}]*?border-top:\s*3px solid #94a3b8 !important;[^}]*?border-bottom:\s*3px solid #64748b !important;/
   );
   assert.match(
     printButton,
@@ -121,7 +138,7 @@ test('current status print mirrors the current status grid borders and wraps one
   assert.match(dataGrid, /sw-grid-therapist-count/);
   assert.match(
     printButton,
-    /html\[data-print-orientation="portrait"\] \.sw-grid-table \.hdr-therapist--single-prescription \.sw-grid-therapist-count\s*\{[\s\S]*?display:\s*block !important;[\s\S]*?white-space:\s*nowrap !important;/
+    /\.stats-grid-print-document \.sw-grid-table \.hdr-therapist--single-prescription \.sw-grid-therapist-count\s*\{[^}]*?display:\s*block !important;[^}]*?white-space:\s*nowrap !important;/
   );
 });
 
