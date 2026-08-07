@@ -4,11 +4,14 @@ import { buildManualTherapyUnmergePayload } from '../../lib/manualTherapyMergeUt
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import {
   buildPatientHistoryCellUpdate,
+  dedupePatientHistoryLogsByScheduleCell,
   getConfiguredPatientHistoryTreatmentGroup,
   getPatientHistoryMemoText,
+  getPatientHistoryScheduleOverrideKey,
   getPatientHistorySearchTarget,
   getPatientHistoryTreatmentGroup,
   parsePatientHistoryMemoText,
+  patientHistoryLogsShareScheduleCell,
   patientHistoryIdentityMatches,
   resolvePatientHistoryApplyTarget,
 } from '../../lib/patientHistoryModalUtils';
@@ -83,18 +86,6 @@ const withPatientHistoryRowMeta = (log) => ({
   _original_body_part: String(log.body_part || ''),
   _original_memo: String(log.memo || ''),
 });
-
-const getPatientHistoryScheduleOverrideKey = (log = {}) => {
-  const date = String(log.date || '').trim();
-  const chart = String(log.chart_number || '').trim();
-  const name = normalizeNameForMatch(log.patient_name);
-  const group = String(log.history_group || 'shockwave').trim();
-  const bodyPart = String(log.body_part || '').trim().toLowerCase();
-  if (!date) return '';
-  if (chart) return `${date}__${group}__chart__${chart}__body__${bodyPart}`;
-  if (name) return `${date}__${group}__name__${name}__body__${bodyPart}`;
-  return '';
-};
 
 const getPreservedBodyPart = (...values) => {
   for (const value of values) {
@@ -524,7 +515,7 @@ export default function usePatientHistoryActions({
           const visitSuffix = getExplicitVisitSuffix(content);
           const visitCount = visitSuffix.replace(/[()]/g, '') || '';
           const schedulePrescription = s.prescription
-            || getPrescriptionFromConfiguredDoseTag(settings, currentYear, currentMonth, content)
+            || getPrescriptionFromConfiguredDoseTag(settings, s.year, s.month, content)
             || get4060PrescriptionFromContent(content);
           const historyGroup = getPatientHistoryTreatmentGroup({
             type: 'schedule',
@@ -590,6 +581,7 @@ export default function usePatientHistoryActions({
 
           const scheduleLog = {
             id: s.id,
+            schedule_id: s.id,
             date: dateStr,
             patient_name: parsed.patientName || '',
             chart_number: parsed.patientChart || '',
@@ -609,6 +601,7 @@ export default function usePatientHistoryActions({
           if (scheduleOverrideKey) scheduleOverrides.set(scheduleOverrideKey, scheduleLog);
 
           const existingIndex = allData.findIndex((item) => {
+            if (patientHistoryLogsShareScheduleCell(item, scheduleLog)) return true;
             if (item.date !== scheduleLog.date) return false;
             if ((item.history_group || 'shockwave') !== scheduleLog.history_group) return false;
             if (String(item.body_part || '').trim().toLowerCase() !== String(scheduleLog.body_part || '').trim().toLowerCase()) return false;
@@ -670,7 +663,8 @@ export default function usePatientHistoryActions({
         if (!alreadyIncluded) matches.push(override);
       });
 
-      matches.sort((a, b) => {
+      const deduplicatedMatches = dedupePatientHistoryLogsByScheduleCell(matches);
+      deduplicatedMatches.sort((a, b) => {
         if (a.date !== b.date) return b.date.localeCompare(a.date);
         return (parseInt(b.visit_count || '0', 10) || 0) - (parseInt(a.visit_count || '0', 10) || 0);
       });
@@ -744,12 +738,12 @@ export default function usePatientHistoryActions({
           }
       }
 
-      let finalLogs = matches;
+      let finalLogs = deduplicatedMatches;
       if (selectedDate && selectedDateLogs.length > 0) {
         selectedDateLogs.sort((a, b) => (a.sort_index || 0) - (b.sort_index || 0));
         finalLogs = [
           ...selectedDateLogs,
-          ...matches.filter((m) => m.date !== selectedDate),
+          ...deduplicatedMatches.filter((m) => m.date !== selectedDate),
         ].sort((a, b) => {
           if (a.date !== b.date) return b.date.localeCompare(a.date);
           if (a.date === selectedDate && b.date === selectedDate) {

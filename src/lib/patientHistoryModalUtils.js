@@ -112,6 +112,45 @@ export function patientHistoryIdentityMatches({
   return false;
 }
 
+export function getPatientHistoryScheduleOverrideKey(log = {}) {
+  const linkedScheduleId = String(
+    log?.schedule_id || (log?.type === 'schedule' ? log?.id : '') || ''
+  ).trim();
+  if (linkedScheduleId) return `schedule__${linkedScheduleId}`;
+
+  const date = String(log?.date || '').trim();
+  const chart = String(log?.chart_number || '').trim();
+  const name = normalizeNameForHistorySearch(log?.patient_name);
+  const group = String(log?.history_group || 'shockwave').trim();
+  const bodyPart = String(log?.body_part || '').trim().toLowerCase();
+  if (!date) return '';
+  if (chart) return `${date}__${group}__chart__${chart}__body__${bodyPart}`;
+  if (name) return `${date}__${group}__name__${name}__body__${bodyPart}`;
+  return '';
+}
+
+export function patientHistoryLogsShareScheduleCell(left = {}, right = {}) {
+  const leftKey = getPatientHistoryScheduleOverrideKey(left);
+  const rightKey = getPatientHistoryScheduleOverrideKey(right);
+  return Boolean(
+    leftKey &&
+    rightKey &&
+    leftKey.startsWith('schedule__') &&
+    leftKey === rightKey
+  );
+}
+
+export function dedupePatientHistoryLogsByScheduleCell(logs = []) {
+  const seenScheduleKeys = new Set();
+  return (Array.isArray(logs) ? logs : []).filter((log) => {
+    const key = getPatientHistoryScheduleOverrideKey(log);
+    if (!key.startsWith('schedule__')) return true;
+    if (seenScheduleKeys.has(key)) return false;
+    seenScheduleKeys.add(key);
+    return true;
+  });
+}
+
 export function getPatientHistoryMemoText(mergeSpan) {
   return getMemoListFromMergeSpan(mergeSpan)
     .map((item) => String(item || '').trim())

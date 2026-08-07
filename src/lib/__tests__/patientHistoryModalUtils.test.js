@@ -3,13 +3,16 @@ import { describe, it } from 'node:test';
 
 import {
   buildPatientHistoryCellUpdate,
+  dedupePatientHistoryLogsByScheduleCell,
   getConfiguredPatientHistoryTreatmentGroup,
   getPatientHistoryMemoText,
   getPatientHistoryMemoTextareaRows,
+  getPatientHistoryScheduleOverrideKey,
   getPatientHistorySearchTarget,
   getPatientHistoryTreatmentGroup,
   isNameOnlyPatientHistoryDraft,
   parsePatientHistoryMemoText,
+  patientHistoryLogsShareScheduleCell,
   patientHistoryIdentityMatches,
   resolvePatientHistoryApplyTarget,
 } from '../patientHistoryModalUtils.js';
@@ -134,6 +137,48 @@ describe('patient history identity matching', () => {
       nameParam: '김민',
       nameValue: '김민호',
     }), false);
+  });
+});
+
+describe('patient history schedule row matching', () => {
+  it('merges a scheduler-linked therapy log with its live schedule row despite body-part differences', () => {
+    const historyLog = {
+      type: 'manual',
+      schedule_id: 'schedule-row-28',
+      date: '2026-08-28',
+      body_part: 'Lt. Knee',
+    };
+    const scheduleLog = {
+      type: 'schedule',
+      id: 'schedule-row-28',
+      date: '2026-08-28',
+      body_part: '',
+    };
+
+    assert.equal(patientHistoryLogsShareScheduleCell(historyLog, scheduleLog), true);
+    assert.equal(
+      getPatientHistoryScheduleOverrideKey(historyLog),
+      'schedule__schedule-row-28'
+    );
+  });
+
+  it('keeps separate schedule cells distinct when their treatments share a date', () => {
+    assert.equal(patientHistoryLogsShareScheduleCell(
+      { type: 'schedule', id: 'schedule-row-28-a' },
+      { type: 'schedule', id: 'schedule-row-28-b' }
+    ), false);
+  });
+
+  it('removes duplicate history rows only when they point to the same schedule cell', () => {
+    assert.deepEqual(
+      dedupePatientHistoryLogsByScheduleCell([
+        { type: 'manual', schedule_id: 'schedule-row-28' },
+        { type: 'schedule', id: 'schedule-row-28' },
+        { type: 'schedule', id: 'schedule-row-28-other' },
+        { type: 'manual', id: 'manual-log-28' },
+      ]).map((log) => log.id || log.schedule_id),
+      ['schedule-row-28', 'schedule-row-28-other', 'manual-log-28']
+    );
   });
 });
 
