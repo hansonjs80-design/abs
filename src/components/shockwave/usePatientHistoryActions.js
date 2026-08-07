@@ -5,8 +5,10 @@ import { normalizeNameForMatch } from '../../lib/memoParser';
 import {
   buildPatientHistoryCellUpdate,
   getConfiguredPatientHistoryTreatmentGroup,
+  getPatientHistoryMemoText,
   getPatientHistorySearchTarget,
   getPatientHistoryTreatmentGroup,
+  parsePatientHistoryMemoText,
   patientHistoryIdentityMatches,
   resolvePatientHistoryApplyTarget,
 } from '../../lib/patientHistoryModalUtils';
@@ -39,6 +41,7 @@ import {
 import {
   applyVisitCountToSchedulerContent,
   buildMergeSpanWithBodyPartOptions,
+  buildMergeSpanWithMemoList,
   formatBodyPartInput,
   getBodyPartOptionsFromMergeSpan,
   getExplicitVisitSuffix,
@@ -78,6 +81,7 @@ const withPatientHistoryRowMeta = (log) => ({
   _original_visit_count: String(log.visit_count || ''),
   _original_prescription: String(log.prescription || ''),
   _original_body_part: String(log.body_part || ''),
+  _original_memo: String(log.memo || ''),
 });
 
 const getPatientHistoryScheduleOverrideKey = (log = {}) => {
@@ -443,7 +447,16 @@ export default function usePatientHistoryActions({
           month: scheduleRow.month,
         }),
       });
-      let allData = fetchedLogData.filter(keepHistoryLog);
+      const logsWithLinkedScheduleMemos = fetchedLogData.map((log) => {
+        const linkedSchedule = linkedScheduleRowsByKey.get(log.scheduler_cell_key);
+        if (!linkedSchedule) return log;
+        return {
+          ...log,
+          schedule_id: linkedSchedule.id,
+          memo: getPatientHistoryMemoText(linkedSchedule.merge_span),
+        };
+      });
+      let allData = logsWithLinkedScheduleMemos.filter(keepHistoryLog);
 
       const scheduleCandidates = scheduleRes.data || [];
       const latestScheduleRowsByKey = await fetchScheduleRowsForSchedulerLinkedLogs(
@@ -583,6 +596,7 @@ export default function usePatientHistoryActions({
             visit_count: visitCount,
             prescription: schedulePrescription || '',
             body_part: s.body_part || '',
+            memo: getPatientHistoryMemoText(s.merge_span),
             therapist_name: therapistName,
             type: 'schedule',
             history_group: historyGroup,
@@ -614,6 +628,7 @@ export default function usePatientHistoryActions({
               visit_count: scheduleLog.visit_count || allData[existingIndex].visit_count,
               prescription: scheduleLog.prescription || allData[existingIndex].prescription,
               body_part: scheduleLog.body_part || allData[existingIndex].body_part,
+              memo: scheduleLog.memo,
               therapist_name: scheduleLog.therapist_name,
               schedule_id: scheduleLog.id,
             };
@@ -642,6 +657,7 @@ export default function usePatientHistoryActions({
           visit_count: override.visit_count,
           prescription: override.prescription || item.prescription,
           body_part: override.body_part || item.body_part,
+          memo: override.memo,
           therapist_name: override.therapist_name,
           schedule_id: override.id,
         };
@@ -709,6 +725,7 @@ export default function usePatientHistoryActions({
                   memo.body_part,
                   getUniqueMatchingBodyPart(allData, draftLog),
                 ) || '',
+                memo: getPatientHistoryMemoText(memo.merge_span),
                 therapist_name: resolveTherapistNameForHistory({
                   slotIndex: colIndex,
                   day: selectedDayInfo.day,
@@ -916,6 +933,57 @@ export default function usePatientHistoryActions({
     settings,
   ]);
 
+  const saveScheduleCellHistoryMemo = useCallback(async (targetKey, rawValue) => {
+    const parts = String(targetKey || '').split('-').map(Number);
+    if (parts.length !== 4 || parts.some((part) => !Number.isFinite(part))) return false;
+
+    const [w, d, r, c] = parts;
+    const memo = memos[targetKey] || {};
+    const content = Object.prototype.hasOwnProperty.call(pendingDisplayValues, targetKey)
+      ? pendingDisplayValues[targetKey]
+      : (memo.content || '');
+    const payload = [{
+      year: currentYear,
+      month: currentMonth,
+      week_index: w,
+      day_index: d,
+      row_index: r,
+      col_index: c,
+      content,
+      bg_color: memo.bg_color || null,
+      prescription: memo.prescription || null,
+      body_part: memo.body_part || null,
+      merge_span: buildMergeSpanWithMemoList(
+        memo.merge_span,
+        parsePatientHistoryMemoText(rawValue)
+      ),
+    }];
+
+    applyImmediateCellDisplay?.(payload, { keepContextMenuOpen: true });
+    applyImmediateMergeSpan?.(payload);
+
+    const success = await saveShockwaveMemosBulk(payload);
+    if (success) {
+      clearImmediateCellDisplay?.(payload);
+      patientHistoryResultCacheRef.current.clear();
+      addToast('메모가 수정되었습니다.', 'success');
+      return true;
+    }
+
+    addToast('메모 수정 실패', 'error');
+    return false;
+  }, [
+    addToast,
+    applyImmediateCellDisplay,
+    applyImmediateMergeSpan,
+    clearImmediateCellDisplay,
+    currentMonth,
+    currentYear,
+    memos,
+    pendingDisplayValues,
+    saveShockwaveMemosBulk,
+  ]);
+
   const updateLinkedScheduleRowField = useCallback(async (scheduleId, field, value, oldPrescription = '') => {
     if (!scheduleId) return;
     const updatePayload = { updated_at: new Date().toISOString() };
@@ -945,6 +1013,27 @@ export default function usePatientHistoryActions({
       .eq('id', scheduleId);
     if (error) throw error;
   }, [buildContentWithPrescription]);
+
+  const updateLinkedScheduleRowMemo = useCallback(async (scheduleId, rawValue) => {
+    const { data, error: fetchError } = await supabase
+      .from('shockwave_schedules')
+      .select('merge_span')
+      .eq('id', scheduleId)
+      .single();
+    if (fetchError) throw fetchError;
+
+    const { error } = await supabase
+      .from('shockwave_schedules')
+      .update({
+        merge_span: buildMergeSpanWithMemoList(
+          data?.merge_span,
+          parsePatientHistoryMemoText(rawValue)
+        ),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', scheduleId);
+    if (error) throw error;
+  }, []);
 
   const handleUpdatePatientHistoryField = useCallback(async (log, field, rawValue) => {
     if (!['prescription', 'body_part'].includes(field)) return false;
@@ -993,6 +1082,41 @@ export default function usePatientHistoryActions({
     saveScheduleCellHistoryField,
     selectedCell,
     updateLinkedScheduleRowField,
+  ]);
+
+  const handleUpdatePatientHistoryMemo = useCallback(async (log, rawValue) => {
+    try {
+      if (log.id === 'draft' || log.isCurrentCell) {
+        if (!selectedCell) return false;
+        const key = cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c);
+        return saveScheduleCellHistoryMemo(key, rawValue);
+      }
+
+      if (String(log.id || '').startsWith('draft-')) {
+        return saveScheduleCellHistoryMemo(log.schedule_cell_key, rawValue);
+      }
+
+      const scheduleId = log.type === 'schedule' ? log.id : log.schedule_id;
+      if (!scheduleId) {
+        addToast('스케줄과 연결되지 않은 기존 기록은 메모를 수정할 수 없습니다.', 'warning');
+        return false;
+      }
+
+      await updateLinkedScheduleRowMemo(scheduleId, rawValue);
+      patientHistoryResultCacheRef.current.clear();
+      addToast('메모가 수정되었습니다.', 'success');
+      return true;
+    } catch (e) {
+      console.error(e);
+      addToast('메모 수정 실패', 'error');
+      return false;
+    }
+  }, [
+    addToast,
+    cellKey,
+    saveScheduleCellHistoryMemo,
+    selectedCell,
+    updateLinkedScheduleRowMemo,
   ]);
 
   const handleUpdateLogVisitCount = useCallback(async (log, newValue) => {
@@ -1357,6 +1481,7 @@ export default function usePatientHistoryActions({
     fetchPatientHistory,
     handleUpdateLogVisitCount,
     handleUpdatePatientHistoryField,
+    handleUpdatePatientHistoryMemo,
     handleUpdateCurrentCellVisitCount,
     handleUpdateDraftHistoryVisitCount,
     handleOpenPatientHistoryModal,

@@ -4,9 +4,11 @@ import { describe, it } from 'node:test';
 import {
   buildPatientHistoryCellUpdate,
   getConfiguredPatientHistoryTreatmentGroup,
+  getPatientHistoryMemoText,
   getPatientHistorySearchTarget,
   getPatientHistoryTreatmentGroup,
   isNameOnlyPatientHistoryDraft,
+  parsePatientHistoryMemoText,
   patientHistoryIdentityMatches,
   resolvePatientHistoryApplyTarget,
 } from '../patientHistoryModalUtils.js';
@@ -85,6 +87,21 @@ describe('patient history modal search target', () => {
     assert.equal(isNameOnlyPatientHistoryDraft('주한솔(2)'), false);
     assert.equal(isNameOnlyPatientHistoryDraft('주한솔40'), false);
     assert.equal(isNameOnlyPatientHistoryDraft(''), false);
+  });
+});
+
+describe('patient history schedule memos', () => {
+  it('shows the existing scheduler memo list as an editable multiline value', () => {
+    assert.equal(getPatientHistoryMemoText({
+      meta: { memo_list: ['예약 확인', '보호자 동반'] },
+    }), '예약 확인\n보호자 동반');
+  });
+
+  it('keeps one non-empty memo entry per line when saving from the modal', () => {
+    assert.deepEqual(
+      parsePatientHistoryMemoText(' 예약 확인 \n\n보호자 동반\n '),
+      ['예약 확인', '보호자 동반']
+    );
   });
 });
 

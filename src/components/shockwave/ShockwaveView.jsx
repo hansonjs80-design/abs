@@ -1904,6 +1904,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     fetchPatientHistory,
     handleUpdateLogVisitCount,
     handleUpdatePatientHistoryField,
+    handleUpdatePatientHistoryMemo,
     handleUpdateCurrentCellVisitCount,
     handleUpdateDraftHistoryVisitCount,
     handleOpenPatientHistoryModal,
@@ -3894,6 +3895,28 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     : { ...item, body_part: originalValue }
                                 ));
                               };
+                              const currentMemoValue = String(log.memo || '');
+                              const canEditHistoryMemo = Boolean(
+                                log.isCurrentCell
+                                || String(log.id || '').startsWith('draft-')
+                                || log.type === 'schedule'
+                                || log.schedule_id
+                              );
+                              const handleHistoryMemoBlur = async (event) => {
+                                const nextValue = event.target.value;
+                                const originalValue = log._original_memo ?? '';
+                                updatePatientHistoryModalLog(historyRowKey, {
+                                  memo: nextValue,
+                                });
+                                if (nextValue === originalValue) return;
+
+                                const success = await handleUpdatePatientHistoryMemo(log, nextValue);
+                                updatePatientHistoryModalLog(historyRowKey, (item) => (
+                                  success
+                                    ? { ...item, memo: nextValue, _original_memo: nextValue }
+                                    : { ...item, memo: originalValue }
+                                ));
+                              };
                               return (
                               <tr
                                 key={historyRowKey}
@@ -3958,11 +3981,38 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     }}
                                   />
                                 </td>
-                                <td
-                                  title={log.memo || ''}
-                                  style={{ textAlign: 'left', backgroundColor: currentCellRowBackground, color: 'var(--text-secondary)', fontSize: '0.85em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: historyRowFontWeight }}
-                                >
-                                  {log.memo}
+                                <td style={{ textAlign: 'left', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
+                                  <textarea
+                                    rows={2}
+                                    value={currentMemoValue}
+                                    placeholder={canEditHistoryMemo ? '메모' : '-'}
+                                    aria-label="메모 수정"
+                                    disabled={!canEditHistoryMemo}
+                                    title={canEditHistoryMemo ? currentMemoValue : '스케줄과 연결되지 않은 기존 기록입니다.'}
+                                    style={{
+                                      ...historyEditFieldStyle,
+                                      minHeight: '40px',
+                                      lineHeight: 1.35,
+                                      resize: 'vertical',
+                                      textAlign: 'left',
+                                      opacity: canEditHistoryMemo ? 1 : 0.65,
+                                      cursor: canEditHistoryMemo ? 'text' : 'not-allowed',
+                                    }}
+                                    onChange={(event) => {
+                                      updatePatientHistoryModalLog(historyRowKey, {
+                                        memo: event.target.value,
+                                      });
+                                    }}
+                                    onBlur={handleHistoryMemoBlur}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                                        e.preventDefault();
+                                        e.currentTarget.blur();
+                                      }
+                                    }}
+                                  />
                                 </td>
                                 <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
                                   <input

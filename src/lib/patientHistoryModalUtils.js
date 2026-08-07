@@ -1,6 +1,7 @@
 import { has4060Pattern } from './schedulerContentFormat.js';
 import { getScheduleItemTreatmentGroup } from './prescriptionScheduleSettings.js';
 import {
+  getMemoListFromMergeSpan,
   normalizeVisitInputValue,
   parseSchedulerPatientIdentity,
 } from './schedulerCellTextUtils.js';
@@ -109,6 +110,20 @@ export function patientHistoryIdentityMatches({
   if (searchChart) return chartMatches;
   if (searchName) return nameMatches;
   return false;
+}
+
+export function getPatientHistoryMemoText(mergeSpan) {
+  return getMemoListFromMergeSpan(mergeSpan)
+    .map((item) => String(item || '').trim())
+    .filter(Boolean)
+    .join('\n');
+}
+
+export function parsePatientHistoryMemoText(value) {
+  return String(value || '')
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 export function resolvePatientHistoryApplyTarget(capturedCell, selectedCell) {
