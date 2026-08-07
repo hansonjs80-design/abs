@@ -110,11 +110,11 @@ test('current status print mirrors the current status grid borders and wraps one
   );
   assert.match(
     printButton,
-    /\.sw-grid-table \.tr-date-start > td\s*\{[\s\S]*?border-top:\s*0 !important;[\s\S]*?box-shadow:\s*inset 0 1px 0 #94a3b8 !important;/
+    /\.stats-grid-print-document \.sw-grid-table tbody tr\.tr-date-start > td,[\s\S]*?border-top:\s*2px solid #9fb0c4 !important;[\s\S]*?box-shadow:\s*none !important;/
   );
   assert.match(
     printButton,
-    /\.sw-grid-table \.therapist-group-end\s*\{[\s\S]*?border-right:\s*1px solid #94a3b8 !important;/
+    /\.stats-grid-print-document \.sw-grid-table \.therapist-group-end,[\s\S]*?border-right:\s*2px solid #9fb0c4 !important;/
   );
   assert.match(dataGrid, /const hasSinglePrescription = group\.prescriptions\.length === 1;/);
   assert.match(dataGrid, /hdr-therapist--single-prescription/);
@@ -122,6 +122,27 @@ test('current status print mirrors the current status grid borders and wraps one
   assert.match(
     printButton,
     /html\[data-print-orientation="portrait"\] \.sw-grid-table \.hdr-therapist--single-prescription \.sw-grid-therapist-count\s*\{[\s\S]*?display:\s*block !important;[\s\S]*?white-space:\s*nowrap !important;/
+  );
+});
+
+test('current status print keeps only semantic dividers thick and closes the final row frame', async () => {
+  const printButton = await readFile(printButtonUrl, 'utf8');
+
+  assert.match(
+    printButton,
+    /\.stats-grid-print-document \.sw-grid-table td\.gc-date-cell\s*\{[\s\S]*?vertical-align:\s*middle !important;/
+  );
+  assert.match(
+    printButton,
+    /\.stats-grid-print-document \.sw-grid-table \.fixed-field-last,[\s\S]*?border-right:\s*2px solid #9fb0c4 !important;/
+  );
+  assert.match(
+    printButton,
+    /\.stats-grid-print-document \.sw-grid-table tbody tr:last-child > td\s*\{[\s\S]*?border-bottom:\s*3px solid #94a3b8 !important;/
+  );
+  assert.match(
+    printButton,
+    /\.stats-grid-print-document \.sw-stats-body--grid \.sw-grid-table\s*\{[\s\S]*?border:\s*0 !important;/
   );
 });
 

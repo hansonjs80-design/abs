@@ -121,7 +121,7 @@ function prepareStatsGridPrintFrame(orientation, margin) {
       .stats-grid-print-document .sw-grid-shell,
       .stats-grid-print-document .sw-grid-wrapper { display: block !important; width: 100% !important; height: auto !important; min-height: 0 !important; max-height: none !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
       .stats-grid-print-document .sw-grid-table { display: table !important; width: 100% !important; min-width: 0 !important; height: auto !important; min-height: 0 !important; max-height: none !important; table-layout: fixed !important; border: 0 !important; border-collapse: separate !important; border-spacing: 0 !important; font-size: 8pt !important; }
-      .stats-grid-print-document .sw-stats-body--grid .sw-grid-table { border-left: 3px solid #94a3b8 !important; }
+      .stats-grid-print-document .sw-stats-body--grid .sw-grid-table { border: 0 !important; }
       .sw-grid-table thead {
         display: table-header-group !important;
         position: static !important;
@@ -147,13 +147,33 @@ function prepareStatsGridPrintFrame(orientation, margin) {
       .sw-grid-table td * { color: #172033 !important; visibility: visible !important; opacity: 1 !important; }
       .sw-grid-table th,
       .sw-grid-table td { height: 6mm !important; padding: 0 0.7mm !important; border: 0 !important; border-right: 1px solid #d5deea !important; border-bottom: 1px solid #d5deea !important; font-size: 8pt !important; line-height: 1.15 !important; text-align: center !important; }
+      .stats-grid-print-document .sw-grid-table th,
+      .stats-grid-print-document .sw-grid-table td { border-right: 1px solid #d5deea !important; border-bottom: 1px solid #d5deea !important; }
       .stats-grid-print-document .sw-grid-wrapper--shockwave .grid-title::before,
       .stats-grid-print-document .sw-grid-wrapper--shockwave .grid-title::after { display: none !important; }
       .sw-grid-table .grid-title { height: 10mm !important; max-height: 10mm !important; padding: 1mm !important; border-top: 3px solid #94a3b8 !important; border-bottom: 3px solid #94a3b8 !important; border-right: 1px solid #94a3b8 !important; border-radius: 0 !important; font-size: 12pt !important; }
-      .sw-grid-table .therapist-group-start { border-left: 0 !important; box-shadow: inset 1px 0 0 #94a3b8 !important; }
-      .sw-grid-table .therapist-group-end { border-right: 1px solid #94a3b8 !important; }
-      .sw-grid-table .tr-date-start > td { border-top: 0 !important; box-shadow: inset 0 1px 0 #94a3b8 !important; }
-      .sw-grid-table .tr-date-start > td.therapist-group-start { box-shadow: inset 1px 0 0 #94a3b8, inset 0 1px 0 #94a3b8 !important; }
+      .stats-grid-print-document .sw-grid-table tr > :last-child { border-right: 1px solid #d5deea !important; }
+      .stats-grid-print-document .sw-grid-table .therapist-group-start { border-left: 0 !important; box-shadow: none !important; }
+      .stats-grid-print-document .sw-grid-table .therapist-group-end,
+      .stats-grid-print-document .sw-grid-table .fixed-field-last,
+      .stats-grid-print-document .sw-grid-table .hdr-fixed-last { border-right: 2px solid #9fb0c4 !important; }
+      .stats-grid-print-document .sw-grid-table .gc-total,
+      .stats-grid-print-document .sw-grid-table .hdr-total,
+      .stats-grid-print-document .sw-grid-table .hdr-grand-total { border-right: 1px solid #d5deea !important; }
+      .stats-grid-print-document .sw-grid-table td.gc-date-cell { vertical-align: middle !important; }
+      .stats-grid-print-document .sw-grid-table .sw-header-row-title > :first-child,
+      .stats-grid-print-document .sw-grid-table .sw-header-row-therapists > :first-child,
+      .stats-grid-print-document .sw-grid-table tbody tr > :first-child { border-left: 3px solid #94a3b8 !important; }
+      .stats-grid-print-document .sw-grid-table .sw-header-row-title > :last-child,
+      .stats-grid-print-document .sw-grid-table .sw-header-row-therapists > .hdr-new-patient,
+      .stats-grid-print-document .sw-grid-table .sw-header-row-prescription-totals > :last-child,
+      .stats-grid-print-document .sw-grid-table tbody tr > :last-child { border-right: 3px solid #94a3b8 !important; }
+      .stats-grid-print-document .sw-grid-table tbody tr.tr-date-end > td { border-bottom: 0 !important; }
+      .stats-grid-print-document .sw-grid-table tbody tr.tr-date-start > td,
+      .stats-grid-print-document .sw-grid-table tbody tr.tr-date-start > td.fixed-field-last,
+      .stats-grid-print-document .sw-grid-table tbody tr.tr-date-start > td.gc-therapist-value.therapist-group-start,
+      .stats-grid-print-document .sw-grid-table tbody tr.tr-date-start > td.gc-therapist-value.therapist-group-end { border-top: 2px solid #9fb0c4 !important; box-shadow: none !important; }
+      .stats-grid-print-document .sw-grid-table tbody tr:last-child > td { border-bottom: 3px solid #94a3b8 !important; }
       .sw-grid-table .fixed-field-last { text-align: left !important; }
       .sw-grid-table thead .hdr-fixed,
       .sw-grid-table thead .hdr-therapist,
