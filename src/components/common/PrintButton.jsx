@@ -72,23 +72,40 @@ function expandStatsGridPrintRowSpans(printGrid) {
   });
 }
 
-function appendStatsGridPrintHeaderDivider(printGrid) {
+function appendStatsGridPrintHeaderDividers(printGrid) {
   const table = printGrid.querySelector('.sw-grid-table');
   const header = table?.tHead;
-  if (!table || !header || header.querySelector('.sw-grid-print-header-divider')) return;
+  if (
+    !table
+    || !header
+    || header.querySelector('.sw-grid-print-title-divider')
+    || header.querySelector('.sw-grid-print-header-divider')
+  ) return;
 
   const columnCount = table.querySelectorAll('colgroup > col').length;
   if (!columnCount) return;
 
-  const dividerRow = printGrid.ownerDocument.createElement('tr');
-  dividerRow.className = 'sw-grid-print-header-divider';
+  const createDividerRow = (className) => {
+    const dividerRow = printGrid.ownerDocument.createElement('tr');
+    dividerRow.className = className;
 
-  const dividerCell = printGrid.ownerDocument.createElement('th');
-  dividerCell.colSpan = columnCount;
-  dividerCell.setAttribute('aria-hidden', 'true');
+    const dividerCell = printGrid.ownerDocument.createElement('th');
+    dividerCell.colSpan = columnCount;
+    dividerCell.setAttribute('aria-hidden', 'true');
 
-  dividerRow.append(dividerCell);
-  header.append(dividerRow);
+    dividerRow.append(dividerCell);
+    return dividerRow;
+  };
+
+  const titleRow = header.rows[0];
+  if (titleRow) {
+    header.insertBefore(
+      createDividerRow('sw-grid-print-title-divider'),
+      titleRow.nextElementSibling
+    );
+  }
+
+  header.append(createDividerRow('sw-grid-print-header-divider'));
 }
 
 function prepareStatsGridPrintFrame(orientation, margin) {
@@ -103,7 +120,7 @@ function prepareStatsGridPrintFrame(orientation, margin) {
   // The print copy uses blank per-row cells instead, so page breaks consume the remaining space.
   const printGrid = sourceGrid.cloneNode(true);
   expandStatsGridPrintRowSpans(printGrid);
-  appendStatsGridPrintHeaderDivider(printGrid);
+  appendStatsGridPrintHeaderDividers(printGrid);
 
   const frame = document.createElement('iframe');
   frame.id = STATS_GRID_PRINT_FRAME_ID;
@@ -171,12 +188,12 @@ function prepareStatsGridPrintFrame(orientation, margin) {
       .stats-grid-print-document .sw-grid-table td { border-right: 1px solid #d5deea !important; border-bottom: 1px solid #d5deea !important; }
       .stats-grid-print-document .sw-grid-wrapper--shockwave .grid-title::before,
       .stats-grid-print-document .sw-grid-wrapper--shockwave .grid-title::after { display: none !important; }
-      .sw-grid-table .grid-title { height: 10mm !important; max-height: 10mm !important; padding: 1mm !important; border-top: 3px solid #94a3b8 !important; border-bottom: 3px solid #64748b !important; border-right: 1px solid #94a3b8 !important; border-radius: 0 !important; font-size: 12pt !important; }
+      .sw-grid-table .grid-title { height: 10mm !important; max-height: 10mm !important; padding: 1mm !important; border-top: 3px solid #94a3b8 !important; border-bottom: 0 !important; border-right: 1px solid #94a3b8 !important; border-radius: 0 !important; font-size: 12pt !important; }
       .stats-grid-print-document .sw-grid-table tr > :last-child { border-right: 1px solid #d5deea !important; }
       .stats-grid-print-document .sw-grid-table .therapist-group-start { border-left: 0 !important; box-shadow: none !important; }
-      .stats-grid-print-document .sw-grid-table .therapist-group-end,
+      .stats-grid-print-document .sw-grid-table .therapist-group-end { border-right: 2px solid #9fb0c4 !important; }
       .stats-grid-print-document .sw-grid-table .fixed-field-last,
-      .stats-grid-print-document .sw-grid-table .hdr-fixed-last { border-right: 2px solid #9fb0c4 !important; }
+      .stats-grid-print-document .sw-grid-table .hdr-fixed-last { border-right: 2px solid #b9c6d6 !important; }
       .stats-grid-print-document .sw-grid-table .gc-total,
       .stats-grid-print-document .sw-grid-table .hdr-total,
       .stats-grid-print-document .sw-grid-table .hdr-grand-total { border-right: 1px solid #d5deea !important; }
@@ -190,6 +207,7 @@ function prepareStatsGridPrintFrame(orientation, margin) {
       .stats-grid-print-document .sw-grid-table tbody tr > :last-child { border-right: 3px solid #94a3b8 !important; }
       .stats-grid-print-document .sw-grid-table thead .sw-header-row-prescription-totals > th,
       .stats-grid-print-document .sw-grid-table thead .sw-header-row-therapists > th[rowspan="3"] { border-bottom: 0 !important; }
+      .stats-grid-print-document .sw-grid-table thead .sw-grid-print-title-divider > th { height: 0 !important; min-height: 0 !important; max-height: 0 !important; padding: 0 !important; border-top: 0 !important; border-right: 3px solid #94a3b8 !important; border-bottom: 3px solid #64748b !important; border-left: 3px solid #94a3b8 !important; font-size: 0 !important; line-height: 0 !important; }
       .stats-grid-print-document .sw-grid-table thead .sw-grid-print-header-divider > th { height: 2px !important; min-height: 2px !important; max-height: 2px !important; padding: 0 !important; border-top: 0 !important; border-right: 3px solid #94a3b8 !important; border-bottom: 2px solid #64748b !important; border-left: 3px solid #94a3b8 !important; font-size: 0 !important; line-height: 0 !important; }
       .stats-grid-print-document .sw-grid-table tbody tr.tr-date-end > td { border-bottom: 0 !important; }
       .stats-grid-print-document .sw-grid-table tbody tr.tr-date-start > td,
@@ -236,6 +254,11 @@ function prepareStatsGridPrintFrame(orientation, margin) {
         overflow-wrap: anywhere !important;
         word-break: break-word !important;
       }
+      html[data-print-orientation="portrait"] .sw-grid-table td.gc-row-index {
+        white-space: nowrap !important;
+        overflow-wrap: normal !important;
+        word-break: normal !important;
+      }
       html[data-print-orientation="portrait"] .sw-grid-table .grid-title {
         height: 8.5mm !important;
         max-height: none !important;
@@ -275,12 +298,12 @@ function prepareStatsGridPrintFrame(orientation, margin) {
         line-height: inherit !important;
         white-space: inherit !important;
       }
-      html[data-print-orientation="portrait"] .sw-grid-table col:nth-child(1) { width: 2.5% !important; }
+      html[data-print-orientation="portrait"] .sw-grid-table col:nth-child(1) { width: 3.5% !important; }
       html[data-print-orientation="portrait"] .sw-grid-table col:nth-child(2) { width: 5.1% !important; }
       html[data-print-orientation="portrait"] .sw-grid-table col:nth-child(3) { width: 7.4% !important; }
       html[data-print-orientation="portrait"] .sw-grid-table col:nth-child(4) { width: 6.1% !important; }
       html[data-print-orientation="portrait"] .sw-grid-table col:nth-child(5) { width: 3.4% !important; }
-      html[data-print-orientation="portrait"] .sw-grid-table col:nth-child(6) { width: 10.5% !important; }
+      html[data-print-orientation="portrait"] .sw-grid-table col:nth-child(6) { width: 9.5% !important; }
       html[data-print-orientation="portrait"] .sw-grid-table col:nth-last-child(-n + 2) { width: 5% !important; }
       .sw-grid-count-tooltip,
       .shockwave-context-menu,

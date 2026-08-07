@@ -52,7 +52,7 @@ test('current status print uses an isolated print document', async () => {
 
   assert.match(
     printButton,
-    /function prepareStatsGridPrintFrame\(orientation, margin\)[\s\S]*?expandStatsGridPrintRowSpans\(printGrid\)[\s\S]*?appendStatsGridPrintHeaderDivider\(printGrid\)[\s\S]*?printGrid\.outerHTML[\s\S]*?printWindow\.print\(\)/
+    /function prepareStatsGridPrintFrame\(orientation, margin\)[\s\S]*?expandStatsGridPrintRowSpans\(printGrid\)[\s\S]*?appendStatsGridPrintHeaderDividers\(printGrid\)[\s\S]*?printGrid\.outerHTML[\s\S]*?printWindow\.print\(\)/
   );
   assert.match(
     globalStyles,
@@ -60,20 +60,20 @@ test('current status print uses an isolated print document', async () => {
   );
 });
 
-test('current status print repeats one full-width header divider on every page', async () => {
+test('current status print repeats full-width title and header dividers on every page', async () => {
   const printButton = await readFile(printButtonUrl, 'utf8');
 
   assert.match(
     printButton,
-    /function appendStatsGridPrintHeaderDivider\(printGrid\)[\s\S]*?dividerCell\.colSpan = columnCount;[\s\S]*?header\.append\(dividerRow\);/
+    /function appendStatsGridPrintHeaderDividers\(printGrid\)[\s\S]*?dividerCell\.colSpan = columnCount;[\s\S]*?sw-grid-print-title-divider[\s\S]*?sw-grid-print-header-divider/
+  );
+  assert.match(
+    printButton,
+    /\.sw-grid-print-title-divider > th\s*\{[\s\S]*?border-bottom:\s*3px solid #64748b !important;/
   );
   assert.match(
     printButton,
     /\.sw-grid-print-header-divider > th\s*\{[\s\S]*?border-bottom:\s*2px solid #64748b !important;/
-  );
-  assert.match(
-    printButton,
-    /\.sw-grid-table \.grid-title\s*\{[\s\S]*?border-bottom:\s*3px solid #64748b !important;/
   );
 });
 
@@ -123,7 +123,7 @@ test('current status print mirrors the current status grid borders and wraps one
   );
   assert.match(
     printButton,
-    /\.sw-grid-table \.grid-title\s*\{[^}]*?border-top:\s*3px solid #94a3b8 !important;[^}]*?border-bottom:\s*3px solid #64748b !important;/
+    /\.sw-grid-table \.grid-title\s*\{[^}]*?border-top:\s*3px solid #94a3b8 !important;[^}]*?border-bottom:\s*0 !important;/
   );
   assert.match(
     printButton,
@@ -131,7 +131,7 @@ test('current status print mirrors the current status grid borders and wraps one
   );
   assert.match(
     printButton,
-    /\.stats-grid-print-document \.sw-grid-table \.therapist-group-end,[\s\S]*?border-right:\s*2px solid #9fb0c4 !important;/
+    /\.stats-grid-print-document \.sw-grid-table \.therapist-group-end\s*\{[\s\S]*?border-right:\s*2px solid #9fb0c4 !important;/
   );
   assert.match(dataGrid, /const hasSinglePrescription = group\.prescriptions\.length === 1;/);
   assert.match(dataGrid, /hdr-therapist--single-prescription/);
@@ -151,7 +151,7 @@ test('current status print keeps only semantic dividers thick and closes the fin
   );
   assert.match(
     printButton,
-    /\.stats-grid-print-document \.sw-grid-table \.fixed-field-last,[\s\S]*?border-right:\s*2px solid #9fb0c4 !important;/
+    /\.stats-grid-print-document \.sw-grid-table \.fixed-field-last,[\s\S]*?border-right:\s*2px solid #b9c6d6 !important;/
   );
   assert.match(
     printButton,
@@ -177,6 +177,14 @@ test('portrait current status print wraps compact cells without shrinking totals
   assert.match(
     printButton,
     /html\[data-print-orientation="portrait"\] \.sw-grid-table \.gc-bold\s*\{[\s\S]*?padding:\s*0\.45mm 0\.35mm !important;[\s\S]*?text-align:\s*center !important;/
+  );
+  assert.match(
+    printButton,
+    /html\[data-print-orientation="portrait"\] \.sw-grid-table col:nth-child\(1\)\s*\{[\s\S]*?width:\s*3\.5% !important;/
+  );
+  assert.match(
+    printButton,
+    /html\[data-print-orientation="portrait"\] \.sw-grid-table td\.gc-row-index\s*\{[\s\S]*?white-space:\s*nowrap !important;/
   );
 });
 
