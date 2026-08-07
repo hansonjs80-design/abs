@@ -3993,7 +3993,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     title={canEditHistoryMemo ? currentMemoValue : '스케줄과 연결되지 않은 기존 기록입니다.'}
                                     style={{
                                       ...historyEditFieldStyle,
-                                      lineHeight: memoTextareaRows > 1 ? 1.35 : 'normal',
+                                      display: 'block',
+                                      boxSizing: 'border-box',
+                                      height: memoTextareaRows === 1 ? '22px' : undefined,
+                                      minHeight: memoTextareaRows === 1 ? '22px' : undefined,
+                                      margin: '0 auto',
+                                      lineHeight: memoTextareaRows > 1 ? 1.35 : '16px',
                                       resize: memoTextareaRows > 1 ? 'vertical' : 'none',
                                       textAlign: 'left',
                                       opacity: canEditHistoryMemo ? 1 : 0.65,
