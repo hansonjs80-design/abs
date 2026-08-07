@@ -9,6 +9,7 @@ import {
 } from '../../lib/contextMenuDismissUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import {
+  getPatientHistoryMemoTextareaRows,
   getPatientHistoryTreatmentGroup,
   isNameOnlyPatientHistoryDraft,
 } from '../../lib/patientHistoryModalUtils';
@@ -3896,6 +3897,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 ));
                               };
                               const currentMemoValue = String(log.memo || '');
+                              const memoTextareaRows = getPatientHistoryMemoTextareaRows(currentMemoValue);
                               const canEditHistoryMemo = Boolean(
                                 log.isCurrentCell
                                 || String(log.id || '').startsWith('draft-')
@@ -3983,7 +3985,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 </td>
                                 <td style={{ textAlign: 'left', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
                                   <textarea
-                                    rows={2}
+                                    rows={memoTextareaRows}
                                     value={currentMemoValue}
                                     placeholder={canEditHistoryMemo ? '메모' : '-'}
                                     aria-label="메모 수정"
@@ -3991,9 +3993,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     title={canEditHistoryMemo ? currentMemoValue : '스케줄과 연결되지 않은 기존 기록입니다.'}
                                     style={{
                                       ...historyEditFieldStyle,
-                                      minHeight: '40px',
-                                      lineHeight: 1.35,
-                                      resize: 'vertical',
+                                      lineHeight: memoTextareaRows > 1 ? 1.35 : 'normal',
+                                      resize: memoTextareaRows > 1 ? 'vertical' : 'none',
                                       textAlign: 'left',
                                       opacity: canEditHistoryMemo ? 1 : 0.65,
                                       cursor: canEditHistoryMemo ? 'text' : 'not-allowed',

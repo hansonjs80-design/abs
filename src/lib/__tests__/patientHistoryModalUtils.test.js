@@ -5,6 +5,7 @@ import {
   buildPatientHistoryCellUpdate,
   getConfiguredPatientHistoryTreatmentGroup,
   getPatientHistoryMemoText,
+  getPatientHistoryMemoTextareaRows,
   getPatientHistorySearchTarget,
   getPatientHistoryTreatmentGroup,
   isNameOnlyPatientHistoryDraft,
@@ -102,6 +103,12 @@ describe('patient history schedule memos', () => {
       parsePatientHistoryMemoText(' 예약 확인 \n\n보호자 동반\n '),
       ['예약 확인', '보호자 동반']
     );
+  });
+
+  it('uses a normal single-line height until a memo contains a line break', () => {
+    assert.equal(getPatientHistoryMemoTextareaRows(''), 1);
+    assert.equal(getPatientHistoryMemoTextareaRows('예약 확인'), 1);
+    assert.equal(getPatientHistoryMemoTextareaRows('예약 확인\n보호자 동반'), 2);
   });
 });
 

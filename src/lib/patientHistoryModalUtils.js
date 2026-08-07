@@ -126,6 +126,10 @@ export function parsePatientHistoryMemoText(value) {
     .filter(Boolean);
 }
 
+export function getPatientHistoryMemoTextareaRows(value) {
+  return Math.max(1, String(value || '').split(/\r?\n/).length);
+}
+
 export function resolvePatientHistoryApplyTarget(capturedCell, selectedCell) {
   const target = capturedCell || selectedCell;
   if (!target) return null;
