@@ -69,11 +69,11 @@ test('current status print repeats full-width title and header dividers on every
   );
   assert.match(
     printButton,
-    /\.sw-grid-print-title-divider > th\s*\{[\s\S]*?border-bottom:\s*3px solid #64748b !important;/
+    /\.sw-grid-print-title-divider > th\s*\{[\s\S]*?border-bottom:\s*3px solid #b9c6d6 !important;/
   );
   assert.match(
     printButton,
-    /\.sw-grid-print-header-divider > th\s*\{[\s\S]*?border-bottom:\s*2px solid #64748b !important;/
+    /\.sw-grid-print-header-divider > th\s*\{[\s\S]*?border-bottom:\s*2px solid #9fb0c4 !important;/
   );
 });
 
@@ -152,6 +152,14 @@ test('current status print keeps only semantic dividers thick and closes the fin
   assert.match(
     printButton,
     /\.stats-grid-print-document \.sw-grid-table \.fixed-field-last,[\s\S]*?border-right:\s*2px solid #b9c6d6 !important;/
+  );
+  assert.match(
+    printButton,
+    /\.stats-grid-print-document \.sw-grid-table thead \.sw-header-row-therapists > th:nth-child\(6\),[\s\S]*?border-right:\s*2px solid #b9c6d6 !important;/
+  );
+  assert.match(
+    printButton,
+    /\.stats-grid-print-document \.sw-grid-table thead \.hdr-therapist\.therapist-group-end,[\s\S]*?hdr-pres-total\.therapist-group-end,[\s\S]*?gc-therapist-value\.therapist-group-end\s*\{[\s\S]*?border-right:\s*2px solid #9fb0c4 !important;/
   );
   assert.match(
     printButton,

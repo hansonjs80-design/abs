@@ -194,6 +194,12 @@ function prepareStatsGridPrintFrame(orientation, margin) {
       .stats-grid-print-document .sw-grid-table .therapist-group-end { border-right: 2px solid #9fb0c4 !important; }
       .stats-grid-print-document .sw-grid-table .fixed-field-last,
       .stats-grid-print-document .sw-grid-table .hdr-fixed-last { border-right: 2px solid #b9c6d6 !important; }
+      .stats-grid-print-document .sw-grid-table thead .sw-header-row-therapists > th:nth-child(6),
+      .stats-grid-print-document .sw-grid-table tbody td.fixed-field-last { border-right: 2px solid #b9c6d6 !important; }
+      .stats-grid-print-document .sw-grid-table thead .hdr-therapist.therapist-group-end,
+      .stats-grid-print-document .sw-grid-table thead .hdr-pres.therapist-group-end,
+      .stats-grid-print-document .sw-grid-table thead .hdr-pres-total.therapist-group-end,
+      .stats-grid-print-document .sw-grid-table tbody .gc-therapist-value.therapist-group-end { border-right: 2px solid #9fb0c4 !important; }
       .stats-grid-print-document .sw-grid-table .gc-total,
       .stats-grid-print-document .sw-grid-table .hdr-total,
       .stats-grid-print-document .sw-grid-table .hdr-grand-total { border-right: 1px solid #d5deea !important; }
@@ -207,8 +213,8 @@ function prepareStatsGridPrintFrame(orientation, margin) {
       .stats-grid-print-document .sw-grid-table tbody tr > :last-child { border-right: 3px solid #94a3b8 !important; }
       .stats-grid-print-document .sw-grid-table thead .sw-header-row-prescription-totals > th,
       .stats-grid-print-document .sw-grid-table thead .sw-header-row-therapists > th[rowspan="3"] { border-bottom: 0 !important; }
-      .stats-grid-print-document .sw-grid-table thead .sw-grid-print-title-divider > th { height: 0 !important; min-height: 0 !important; max-height: 0 !important; padding: 0 !important; border-top: 0 !important; border-right: 3px solid #94a3b8 !important; border-bottom: 3px solid #64748b !important; border-left: 3px solid #94a3b8 !important; font-size: 0 !important; line-height: 0 !important; }
-      .stats-grid-print-document .sw-grid-table thead .sw-grid-print-header-divider > th { height: 2px !important; min-height: 2px !important; max-height: 2px !important; padding: 0 !important; border-top: 0 !important; border-right: 3px solid #94a3b8 !important; border-bottom: 2px solid #64748b !important; border-left: 3px solid #94a3b8 !important; font-size: 0 !important; line-height: 0 !important; }
+      .stats-grid-print-document .sw-grid-table thead .sw-grid-print-title-divider > th { height: 0 !important; min-height: 0 !important; max-height: 0 !important; padding: 0 !important; border-top: 0 !important; border-right: 3px solid #94a3b8 !important; border-bottom: 3px solid #b9c6d6 !important; border-left: 3px solid #94a3b8 !important; font-size: 0 !important; line-height: 0 !important; }
+      .stats-grid-print-document .sw-grid-table thead .sw-grid-print-header-divider > th { height: 2px !important; min-height: 2px !important; max-height: 2px !important; padding: 0 !important; border-top: 0 !important; border-right: 3px solid #94a3b8 !important; border-bottom: 2px solid #9fb0c4 !important; border-left: 3px solid #94a3b8 !important; font-size: 0 !important; line-height: 0 !important; }
       .stats-grid-print-document .sw-grid-table tbody tr.tr-date-end > td { border-bottom: 0 !important; }
       .stats-grid-print-document .sw-grid-table tbody tr.tr-date-start > td,
       .stats-grid-print-document .sw-grid-table tbody tr.tr-date-start > td.fixed-field-last,
