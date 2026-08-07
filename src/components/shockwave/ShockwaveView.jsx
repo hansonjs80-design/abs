@@ -3818,7 +3818,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                         )}
                       </div>
                       <div className="sw-compact-table-wrap">
-                        <table className="sw-summary-table sw-compact-summary-table patient-history-table" style={{ width: '100%', margin: 0, tableLayout: 'fixed' }}>
+                        <table className="sw-summary-table sw-compact-summary-table patient-history-table" style={{ width: '100%', margin: 0, tableLayout: 'auto' }}>
                           <colgroup>
                             {patientHistoryColumnWidths.map((width, columnIndex) => (
                               <col key={`patient-history-col-${columnIndex}`} style={{ width }} />
@@ -3848,6 +3848,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 : undefined;
                               const historyRowFontWeight = isCurrentHistoryRow ? 800 : 400;
                               const currentPrescriptionValue = String(log.prescription || '');
+                              const bodyPartInputChars = Math.max(
+                                6,
+                                Array.from(String(log.body_part || '')).length + 2
+                              );
                               const configuredPrescriptionOptions = patientHistoryPrescriptionOptions[group.key] || patientHistoryPrescriptionOptions.shockwave || [];
                               const prescriptionOptions = Array.from(new Set([
                                 currentPrescriptionValue,
@@ -3963,10 +3967,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
                                   <input
                                     type="text"
+                                    size={bodyPartInputChars}
                                     value={log.body_part || ''}
                                     placeholder="부위"
                                     aria-label="부위 수정"
-                                    style={{ ...historyEditFieldStyle, textAlign: 'center' }}
+                                    style={{
+                                      ...historyEditFieldStyle,
+                                      width: 'auto',
+                                      minWidth: `${bodyPartInputChars}em`,
+                                      maxWidth: 'none',
+                                      textAlign: 'center',
+                                    }}
                                     onChange={(event) => {
                                       updatePatientHistoryModalLog(historyRowKey, {
                                         body_part: event.target.value,
@@ -4095,7 +4106,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                       background: 'var(--brand-primary, #4f46e5)',
                                       color: '#fff',
                                       borderRadius: '6px',
-                                      padding: '4px 8px',
+                                      padding: '4px 5px',
                                       fontSize: '0.78rem',
                                       fontWeight: 600,
                                       lineHeight: 1.2,
