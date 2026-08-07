@@ -3626,10 +3626,14 @@
 }
 
 .patient-history-table .patient-history-apply-button {
-  width: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 36px;
   max-width: 100%;
   min-height: 22px;
-  padding: 2px 6px !important;
+  padding: 0 !important;
   font-size: 0.78rem !important;
   line-height: 1.1 !important;
   overflow: visible;

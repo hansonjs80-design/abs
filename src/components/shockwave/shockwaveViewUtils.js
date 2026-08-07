@@ -192,8 +192,8 @@ export function getPatientHistoryModalLayout(groupCount) {
 
 export function getPatientHistoryColumnWidths(groupCount) {
   return groupCount >= 2
-    ? ['16%', '10%', '12%', null, '17%', '7%', '9%', '8%']
-    : ['14%', '10%', '13%', null, '20%', '7%', '9%', '5%'];
+    ? ['15%', '10%', '12%', '22%', '17%', '7%', '9%', '8%']
+    : ['13%', '10%', '13%', '25%', '18%', '7%', '9%', '5%'];
 }
 
 export function buildShockwaveHoverTooltipText({
