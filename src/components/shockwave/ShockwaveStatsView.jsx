@@ -855,7 +855,7 @@ export default function ShockwaveStatsView({
               title="스케줄 데이터를 다시 불러와 통계에 반영합니다"
             >
               <RefreshCw size={14} className={isReloading ? 'spin-animation' : ''} />
-              {isReloading ? '새로고침 중...' : '데이터 새로고침'}
+              {isReloading ? '새로 고침 중...' : '새로 고침'}
             </button>
           </div>
 

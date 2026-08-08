@@ -20,8 +20,8 @@
 }
 
 .sw-stats-sidebar {
-  width: 120px;
-  flex: 0 0 120px;
+  width: 96px;
+  flex: 0 0 96px;
   display: flex;
   flex-direction: column;
   gap: 12px;
