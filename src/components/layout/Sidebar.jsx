@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
+import AppIcon from '../common/AppIcon';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAllowedTabs } from '../../lib/authPermissions';
 
@@ -28,7 +29,7 @@ export default function Sidebar({ isOpen, isCollapsed, onClose }) {
       />
       <aside className={`sidebar${isOpen ? ' open' : ''}${isCollapsed ? ' collapsed' : ''}`}>
         <div className="sidebar-header">
-          <div className="sidebar-logo">📅</div>
+          <AppIcon className="sidebar-logo" />
           <div className="sidebar-brand">
             클리닉 스케줄
             <small>Clinic Schedule Manager</small>

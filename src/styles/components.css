@@ -131,17 +131,17 @@
   gap: 14px;
 }
 
+.app-icon {
+  display: block;
+  object-fit: cover;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
 .sidebar-logo {
   width: 44px;
   height: 44px;
   border-radius: var(--radius-md);
-  background: var(--brand-gradient);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.4rem;
-  font-weight: 800;
   flex-shrink: 0;
   box-shadow: var(--shadow-md);
 }
@@ -1383,14 +1383,8 @@
   width: 64px;
   height: 64px;
   border-radius: var(--radius-lg);
-  background: var(--brand-gradient);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.8rem;
-  font-weight: 800;
   margin: 0 auto 20px;
+  box-shadow: var(--shadow-md);
 }
 
 .login-title {

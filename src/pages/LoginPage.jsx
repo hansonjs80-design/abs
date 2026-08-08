@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import AppIcon from '../components/common/AppIcon';
 import {
   clearSupabaseConnectionSettings,
   hasSupabaseConnectionOverride,
@@ -141,7 +142,7 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <div className="login-logo">📅</div>
+        <AppIcon className="login-logo" />
         <h1 className="login-title">클리닉 스케줄</h1>
         <p className="login-subtitle">
           {isSignUp ? '새 계정을 만들어 시작하세요' : '로그인하여 스케줄을 관리하세요'}
