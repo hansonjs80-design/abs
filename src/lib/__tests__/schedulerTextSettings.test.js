@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  buildSchedulerTextSettingsMap,
   DEFAULT_SCHEDULER_TEXT_SETTINGS,
   getEffectiveSchedulerTextSettings,
+  persistLocalSchedulerTextSettings,
+  readLocalSchedulerTextSettings,
   setMonthlySchedulerTextSettings,
   SCHEDULER_TEXT_SETTINGS_KEY,
 } from '../schedulerTextSettings.js';
@@ -63,4 +66,45 @@ test('scheduler text settings saves time font weight with the existing device te
     assert.equal(saved.time_font_size, 13);
     assert.equal(saved.time_font_weight, 600);
   });
+});
+
+test('scheduler text settings local snapshot remains the device source of truth', () => {
+  const storage = {
+    values: new Map(),
+    getItem(key) { return this.values.get(key) ?? null; },
+    setItem(key, value) { this.values.set(key, String(value)); },
+  };
+  persistLocalSchedulerTextSettings({
+    ...DEFAULT_SCHEDULER_TEXT_SETTINGS,
+    font_size: 15.5,
+    header_height: 41,
+  }, storage);
+
+  const snapshot = readLocalSchedulerTextSettings(storage);
+  assert.equal(snapshot.hasValue, true);
+  assert.equal(snapshot.settings.font_size, 15.5);
+  assert.equal(snapshot.settings.header_height, 41);
+});
+
+test('scheduler text settings preserves legacy and other device profiles when saving', () => {
+  const identity = { deviceId: 'device-new', legacyDeviceId: 'device-legacy' };
+  const result = buildSchedulerTextSettingsMap({
+    monthlySettings: {
+      device_text_settings: {
+        'device-legacy': { font_size: 14, header_height: 38 },
+        other: { font_size: 11 },
+      },
+    },
+    identity,
+    settings: {
+      ...DEFAULT_SCHEDULER_TEXT_SETTINGS,
+      font_size: 16,
+    },
+    updatedAt: '2026-08-08T00:00:00.000Z',
+  });
+
+  assert.equal(result['device-new'].font_size, 16);
+  assert.equal(result['device-new'].updatedAt, '2026-08-08T00:00:00.000Z');
+  assert.deepEqual(result['device-legacy'], result['device-new']);
+  assert.deepEqual(result.other, { font_size: 11 });
 });

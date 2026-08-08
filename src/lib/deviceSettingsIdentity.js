@@ -71,3 +71,39 @@ export function getDeviceSettingsForIdentity(settingsMap, identity = getDeviceSe
   if (!settingsMap || typeof settingsMap !== 'object' || Array.isArray(settingsMap)) return null;
   return settingsMap[identity.deviceId] || settingsMap[identity.legacyDeviceId] || null;
 }
+
+/**
+ * 기기별 설정 프로필을 안전하게 갱신합니다.
+ *
+ * 새 설치 ID가 만들어진 뒤에도 예전 지문 프로필의 나머지 값을 이어받고,
+ * 복구용 지문 별칭도 함께 갱신합니다. 각 화면에서 이 병합 규칙을 다시
+ * 구현하지 않도록 기기 설정의 공통 경계에 둡니다.
+ */
+export function buildDeviceSettingsProfileMap({
+  settingsMap,
+  identity = getDeviceSettingsIdentity(),
+  patch = {},
+  updatedAt,
+} = {}) {
+  const currentMap = (
+    settingsMap && typeof settingsMap === 'object' && !Array.isArray(settingsMap)
+  )
+    ? settingsMap
+    : {};
+  const currentProfile = getDeviceSettingsForIdentity(currentMap, identity) || {};
+  const nextProfile = {
+    ...currentProfile,
+    ...patch,
+    ...(updatedAt ? { updatedAt } : {}),
+  };
+  const nextMap = {
+    ...currentMap,
+    [identity.deviceId]: nextProfile,
+  };
+
+  if (identity.legacyDeviceId && identity.legacyDeviceId !== identity.deviceId) {
+    nextMap[identity.legacyDeviceId] = nextProfile;
+  }
+
+  return nextMap;
+}

@@ -1,6 +1,13 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 
-import { getEffectiveSchedulerTextSettings, syncLoadTextSettings } from '../../lib/schedulerTextSettings';
+import {
+  getEffectiveSchedulerTextSettings,
+  readLocalSchedulerTextSettings,
+  SCHEDULER_TEXT_SETTINGS_EVENT,
+  SCHEDULER_TEXT_SETTINGS_KEY,
+  syncLoadTextSettings,
+  syncSaveTextSettings,
+} from '../../lib/schedulerTextSettings';
 import { filterPrescriptionColorMap, normalizePrescriptionColorKey } from '../../lib/schedulerUtils';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 
@@ -81,11 +88,17 @@ export default function useScheduleViewState({
     }, {});
   }, [settings, currentYear, currentMonth]);
 
-  const [effectiveSchedulerTextSettings, setEffectiveSchedulerTextSettings] = useState(() => 
-    getEffectiveSchedulerTextSettings(settings, currentYear, currentMonth)
+  const initialTextSettingsRef = useRef(null);
+  if (initialTextSettingsRef.current === null) {
+    initialTextSettingsRef.current = readLocalSchedulerTextSettings();
+  }
+  const [effectiveSchedulerTextSettings, setEffectiveSchedulerTextSettings] = useState(
+    () => initialTextSettingsRef.current.settings
   );
 
-  const [isTextSettingsLoading, setIsTextSettingsLoading] = useState(true);
+  const [isTextSettingsLoading, setIsTextSettingsLoading] = useState(
+    () => !initialTextSettingsRef.current.hasValue
+  );
 
   useEffect(() => {
     setEffectiveSchedulerTextSettings(getEffectiveSchedulerTextSettings(settings, currentYear, currentMonth));
@@ -94,16 +107,26 @@ export default function useScheduleViewState({
       setEffectiveSchedulerTextSettings(getEffectiveSchedulerTextSettings(settings, currentYear, currentMonth));
     };
     
-    window.addEventListener('scheduler-text-settings-changed', handleTextSettingsChanged);
+    const handleStorage = (event) => {
+      if (event.key === SCHEDULER_TEXT_SETTINGS_KEY) handleTextSettingsChanged();
+    };
+
+    window.addEventListener(SCHEDULER_TEXT_SETTINGS_EVENT, handleTextSettingsChanged);
+    window.addEventListener('storage', handleStorage);
     return () => {
-      window.removeEventListener('scheduler-text-settings-changed', handleTextSettingsChanged);
+      window.removeEventListener(SCHEDULER_TEXT_SETTINGS_EVENT, handleTextSettingsChanged);
+      window.removeEventListener('storage', handleStorage);
     };
   }, [settings, currentYear, currentMonth]);
 
-  // 마운트 시 DB에서 기기별 글자 크기 설정 복원
+  // 로컬 값을 우선 백업하고, 로컬 값이 없을 때만 서버 프로필을 복원합니다.
   useEffect(() => {
     let active = true;
-    syncLoadTextSettings().then((loaded) => {
+    const localSnapshot = initialTextSettingsRef.current || readLocalSchedulerTextSettings();
+    if (localSnapshot.hasValue) {
+      syncSaveTextSettings(localSnapshot.settings);
+    }
+    syncLoadTextSettings({ localSnapshot }).then((loaded) => {
       if (active) {
         if (loaded) {
           setEffectiveSchedulerTextSettings(loaded);

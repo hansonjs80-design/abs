@@ -14,7 +14,7 @@ import {
 import {
   DEFAULT_SCHEDULER_TEXT_SETTINGS,
   getEffectiveSchedulerTextSettings,
-  setMonthlySchedulerTextSettings,
+  saveSchedulerTextSettings,
 } from '../../lib/schedulerTextSettings';
 import {
   DEFAULT_STAFF_DISPLAY_RULES,
@@ -488,16 +488,12 @@ export default function MonthlyTherapistConfig({
     if (success) onClose();
   }, [onSaveSettings, settings, year, month, staffBlockRules, staffDisplayRules, onClose]);
 
-  const handleSaveTextSettings = useCallback(async () => {
-    if (!onSaveSettings || !settings) return;
+  const handleSaveTextSettings = useCallback(() => {
     setSaving(true);
-    const success = await onSaveSettings({
-      ...settings,
-      monthly_settlement_settings: setMonthlySchedulerTextSettings(settings, year, month, schedulerTextSettings),
-    });
+    saveSchedulerTextSettings(schedulerTextSettings);
     setSaving(false);
-    if (success) onClose();
-  }, [onSaveSettings, settings, year, month, schedulerTextSettings, onClose]);
+    onClose();
+  }, [schedulerTextSettings, onClose]);
 
   // ESC 닫기
   useEffect(() => {

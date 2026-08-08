@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  buildDeviceSettingsProfileMap,
   DEVICE_SETTINGS_ID_STORAGE_KEY,
   getDeviceSettingsForIdentity,
   getDeviceSettingsIdentity,
@@ -60,5 +61,30 @@ describe('device settings identity', () => {
       }, identity),
       { dateFontSize: 17 }
     );
+  });
+
+  it('merges a legacy profile into both stable device aliases without touching other devices', () => {
+    const identity = {
+      deviceId: 'dev_new_installation',
+      legacyDeviceId: 'dev_legacy',
+    };
+    const result = buildDeviceSettingsProfileMap({
+      settingsMap: {
+        dev_legacy: { rowHeight: 28, dayColWidth: 180 },
+        other_device: { rowHeight: 42 },
+      },
+      identity,
+      patch: { rowHeight: 31 },
+      updatedAt: '2026-08-08T00:00:00.000Z',
+    });
+
+    const expected = {
+      rowHeight: 31,
+      dayColWidth: 180,
+      updatedAt: '2026-08-08T00:00:00.000Z',
+    };
+    assert.deepEqual(result.dev_new_installation, expected);
+    assert.deepEqual(result.dev_legacy, expected);
+    assert.deepEqual(result.other_device, { rowHeight: 42 });
   });
 });

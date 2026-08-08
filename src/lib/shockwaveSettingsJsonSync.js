@@ -39,6 +39,17 @@ async function loadLatestSettingsRow(supabaseClient) {
   return data;
 }
 
+export async function loadShockwaveSettingsJson({ supabaseClient } = {}) {
+  if (!supabaseClient) throw new Error('설정 저장소가 연결되지 않았습니다.');
+  const row = await loadLatestSettingsRow(supabaseClient);
+  const monthlySettings = row.monthly_settlement_settings;
+  return (
+    monthlySettings && typeof monthlySettings === 'object' && !Array.isArray(monthlySettings)
+  )
+    ? monthlySettings
+    : {};
+}
+
 export async function saveShockwaveSettingsJsonPatch({
   supabaseClient,
   mutate,

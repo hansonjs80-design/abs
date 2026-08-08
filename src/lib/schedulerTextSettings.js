@@ -1,9 +1,13 @@
 import { supabase } from './supabaseClient.js';
 import {
+  buildDeviceSettingsProfileMap,
   getDeviceSettingsForIdentity,
   getDeviceSettingsIdentity,
 } from './deviceSettingsIdentity.js';
-import { enqueueShockwaveSettingsJsonPatch } from './shockwaveSettingsJsonSync.js';
+import {
+  enqueueShockwaveSettingsJsonPatch,
+  loadShockwaveSettingsJson,
+} from './shockwaveSettingsJsonSync.js';
 
 export const DEFAULT_SCHEDULER_TEXT_SETTINGS = {
   font_size: 13,
@@ -18,6 +22,12 @@ export const DEFAULT_SCHEDULER_TEXT_SETTINGS = {
   therapist_height: 29,
 };
 
+export const SCHEDULER_TEXT_SETTINGS_KEY = 'shockwave-scheduler-text-settings';
+export const SCHEDULER_TEXT_SETTINGS_EVENT = 'scheduler-text-settings-changed';
+
+const DEVICE_SETTINGS_FIELD = 'device_text_settings';
+const REMOTE_SAVE_DEBOUNCE_MS = 300;
+
 function normalizeFontSize(value) {
   const nextValue = Number(value);
   if (!Number.isFinite(nextValue)) return DEFAULT_SCHEDULER_TEXT_SETTINGS.font_size;
@@ -25,9 +35,9 @@ function normalizeFontSize(value) {
   return Math.round(clamped * 2) / 2;
 }
 
-function normalizeHeaderFontSize(value, defaultVal) {
+function normalizeHeaderFontSize(value, defaultValue) {
   const nextValue = Number(value);
-  if (!Number.isFinite(nextValue)) return defaultVal;
+  if (!Number.isFinite(nextValue)) return defaultValue;
   const clamped = Math.min(24, Math.max(10, nextValue));
   return Math.round(clamped * 2) / 2;
 }
@@ -39,135 +49,188 @@ function normalizeTimeFontSize(value) {
   return Math.round(clamped * 2) / 2;
 }
 
-function normalizeFontWeight(value, defaultVal = 700) {
+function normalizeFontWeight(value, defaultValue = 700) {
   const nextValue = Number(value);
-  if (!Number.isFinite(nextValue)) return defaultVal;
+  if (!Number.isFinite(nextValue)) return defaultValue;
   const allowed = [500, 600, 700, 800, 900];
-  return allowed.includes(nextValue) ? nextValue : defaultVal;
+  return allowed.includes(nextValue) ? nextValue : defaultValue;
 }
 
-function normalizeHeaderHeight(value, defaultVal) {
+function normalizeHeaderHeight(value, defaultValue) {
   const nextValue = Number(value);
-  if (!Number.isFinite(nextValue)) return defaultVal;
+  if (!Number.isFinite(nextValue)) return defaultValue;
   return Math.min(80, Math.max(10, Math.round(nextValue)));
 }
 
-export const SCHEDULER_TEXT_SETTINGS_KEY = 'shockwave-scheduler-text-settings';
-
-const SETTINGS_ROW_ID = '00000000-0000-0000-0000-000000000000';
-
-function normalizeTextConfig(parsed) {
-  if (!parsed) return null;
+export function normalizeSchedulerTextSettings(settings = {}) {
   return {
-    font_size: normalizeFontSize(parsed.font_size),
-    font_weight: normalizeFontWeight(parsed.font_weight, DEFAULT_SCHEDULER_TEXT_SETTINGS.font_weight),
-    time_font_size: normalizeTimeFontSize(parsed.time_font_size),
-    time_font_weight: normalizeFontWeight(parsed.time_font_weight, DEFAULT_SCHEDULER_TEXT_SETTINGS.time_font_weight),
-    header_font_size: normalizeHeaderFontSize(parsed.header_font_size, DEFAULT_SCHEDULER_TEXT_SETTINGS.header_font_size),
-    header_font_weight: normalizeFontWeight(parsed.header_font_weight, DEFAULT_SCHEDULER_TEXT_SETTINGS.header_font_weight),
-    header_height: normalizeHeaderHeight(parsed.header_height, DEFAULT_SCHEDULER_TEXT_SETTINGS.header_height),
-    therapist_font_size: normalizeHeaderFontSize(parsed.therapist_font_size, DEFAULT_SCHEDULER_TEXT_SETTINGS.therapist_font_size),
-    therapist_font_weight: normalizeFontWeight(parsed.therapist_font_weight, DEFAULT_SCHEDULER_TEXT_SETTINGS.therapist_font_weight),
-    therapist_height: normalizeHeaderHeight(parsed.therapist_height, DEFAULT_SCHEDULER_TEXT_SETTINGS.therapist_height),
+    font_size: normalizeFontSize(settings.font_size),
+    font_weight: normalizeFontWeight(
+      settings.font_weight,
+      DEFAULT_SCHEDULER_TEXT_SETTINGS.font_weight
+    ),
+    time_font_size: normalizeTimeFontSize(settings.time_font_size),
+    time_font_weight: normalizeFontWeight(
+      settings.time_font_weight,
+      DEFAULT_SCHEDULER_TEXT_SETTINGS.time_font_weight
+    ),
+    header_font_size: normalizeHeaderFontSize(
+      settings.header_font_size,
+      DEFAULT_SCHEDULER_TEXT_SETTINGS.header_font_size
+    ),
+    header_font_weight: normalizeFontWeight(
+      settings.header_font_weight,
+      DEFAULT_SCHEDULER_TEXT_SETTINGS.header_font_weight
+    ),
+    header_height: normalizeHeaderHeight(
+      settings.header_height,
+      DEFAULT_SCHEDULER_TEXT_SETTINGS.header_height
+    ),
+    therapist_font_size: normalizeHeaderFontSize(
+      settings.therapist_font_size,
+      DEFAULT_SCHEDULER_TEXT_SETTINGS.therapist_font_size
+    ),
+    therapist_font_weight: normalizeFontWeight(
+      settings.therapist_font_weight,
+      DEFAULT_SCHEDULER_TEXT_SETTINGS.therapist_font_weight
+    ),
+    therapist_height: normalizeHeaderHeight(
+      settings.therapist_height,
+      DEFAULT_SCHEDULER_TEXT_SETTINGS.therapist_height
+    ),
   };
 }
 
-export function getEffectiveSchedulerTextSettings() {
-  if (typeof window === 'undefined') return DEFAULT_SCHEDULER_TEXT_SETTINGS;
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(SCHEDULER_TEXT_SETTINGS_KEY) || 'null');
-    const normalized = normalizeTextConfig(parsed);
-    if (normalized) return normalized;
-  } catch {
-    // Ignored
-  }
-  return DEFAULT_SCHEDULER_TEXT_SETTINGS;
+function getStorage(storageArg) {
+  if (storageArg) return storageArg;
+  if (typeof window === 'undefined') return null;
+  return window.localStorage;
 }
 
-export function setMonthlySchedulerTextSettings(settings, _year, _month, nextConfig) {
-  if (typeof window === 'undefined') return settings?.monthly_settlement_settings || {};
-  try {
-    const current = getEffectiveSchedulerTextSettings();
-    const updated = {
-      font_size: normalizeFontSize(nextConfig?.font_size ?? current.font_size),
-      font_weight: normalizeFontWeight(nextConfig?.font_weight ?? current.font_weight, DEFAULT_SCHEDULER_TEXT_SETTINGS.font_weight),
-      time_font_size: normalizeTimeFontSize(nextConfig?.time_font_size ?? current.time_font_size),
-      time_font_weight: normalizeFontWeight(nextConfig?.time_font_weight ?? current.time_font_weight, DEFAULT_SCHEDULER_TEXT_SETTINGS.time_font_weight),
-      header_font_size: normalizeHeaderFontSize(nextConfig?.header_font_size ?? current.header_font_size, DEFAULT_SCHEDULER_TEXT_SETTINGS.header_font_size),
-      header_font_weight: normalizeFontWeight(nextConfig?.header_font_weight ?? current.header_font_weight, DEFAULT_SCHEDULER_TEXT_SETTINGS.header_font_weight),
-      header_height: normalizeHeaderHeight(nextConfig?.header_height ?? current.header_height, DEFAULT_SCHEDULER_TEXT_SETTINGS.header_height),
-      therapist_font_size: normalizeHeaderFontSize(nextConfig?.therapist_font_size ?? current.therapist_font_size, DEFAULT_SCHEDULER_TEXT_SETTINGS.therapist_font_size),
-      therapist_font_weight: normalizeFontWeight(nextConfig?.therapist_font_weight ?? current.therapist_font_weight, DEFAULT_SCHEDULER_TEXT_SETTINGS.therapist_font_weight),
-      therapist_height: normalizeHeaderHeight(nextConfig?.therapist_height ?? current.therapist_height, DEFAULT_SCHEDULER_TEXT_SETTINGS.therapist_height),
-    };
-    window.localStorage.setItem(SCHEDULER_TEXT_SETTINGS_KEY, JSON.stringify(updated));
-    window.dispatchEvent(new Event('scheduler-text-settings-changed'));
+function dispatchTextSettingsChanged() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(SCHEDULER_TEXT_SETTINGS_EVENT));
+}
 
-    // 기기별 DB 백업
-    syncSaveTextSettings(updated);
-  } catch {
-    // Ignored
+export function readLocalSchedulerTextSettings(storageArg) {
+  const storage = getStorage(storageArg);
+  if (!storage) {
+    return { settings: DEFAULT_SCHEDULER_TEXT_SETTINGS, hasValue: false };
   }
-  
+  try {
+    const raw = storage.getItem(SCHEDULER_TEXT_SETTINGS_KEY);
+    if (!raw) {
+      return { settings: DEFAULT_SCHEDULER_TEXT_SETTINGS, hasValue: false };
+    }
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return { settings: DEFAULT_SCHEDULER_TEXT_SETTINGS, hasValue: false };
+    }
+    return { settings: normalizeSchedulerTextSettings(parsed), hasValue: true };
+  } catch {
+    return { settings: DEFAULT_SCHEDULER_TEXT_SETTINGS, hasValue: false };
+  }
+}
+
+export function persistLocalSchedulerTextSettings(settings, storageArg) {
+  const normalized = normalizeSchedulerTextSettings(settings);
+  const storage = getStorage(storageArg);
+  if (storage) {
+    try {
+      storage.setItem(SCHEDULER_TEXT_SETTINGS_KEY, JSON.stringify(normalized));
+    } catch {
+      // The current UI still uses the normalized in-memory settings.
+    }
+  }
+  return normalized;
+}
+
+export function getEffectiveSchedulerTextSettings() {
+  return readLocalSchedulerTextSettings().settings;
+}
+
+export function buildSchedulerTextSettingsMap({
+  monthlySettings,
+  identity,
+  settings,
+  updatedAt,
+}) {
+  const currentMap = monthlySettings?.[DEVICE_SETTINGS_FIELD];
+  return buildDeviceSettingsProfileMap({
+    settingsMap: currentMap,
+    identity,
+    patch: normalizeSchedulerTextSettings(settings),
+    updatedAt,
+  });
+}
+
+export function saveSchedulerTextSettings(nextConfig) {
+  const current = getEffectiveSchedulerTextSettings();
+  const normalized = persistLocalSchedulerTextSettings({
+    ...current,
+    ...(nextConfig || {}),
+  });
+  dispatchTextSettingsChanged();
+  syncSaveTextSettings(normalized);
+  return normalized;
+}
+
+// Legacy callers still receive the untouched shared settings JSON. Display
+// settings are device-only and are persisted through the isolated path above.
+export function setMonthlySchedulerTextSettings(settings, _year, _month, nextConfig) {
+  saveSchedulerTextSettings(nextConfig);
   return settings?.monthly_settlement_settings || {};
 }
 
-// DB에서 기기별 글자 크기 설정 복원
-export async function syncLoadTextSettings() {
+export async function syncLoadTextSettings({ localSnapshot } = {}) {
+  const local = localSnapshot || readLocalSchedulerTextSettings();
+  if (local.hasValue) return local.settings;
+
   try {
-    const { data, error } = await supabase
-      .from('shockwave_settings')
-      .select('monthly_settlement_settings')
-      .eq('id', SETTINGS_ROW_ID)
-      .single();
-
-    if (error || !data) return null;
-    const deviceTextSettings = data.monthly_settlement_settings?.device_text_settings;
-    if (!deviceTextSettings) return null;
-
-    const mySettings = getDeviceSettingsForIdentity(
+    const monthlySettings = await loadShockwaveSettingsJson({ supabaseClient: supabase });
+    const deviceTextSettings = monthlySettings?.[DEVICE_SETTINGS_FIELD];
+    const remoteSettings = getDeviceSettingsForIdentity(
       deviceTextSettings,
       getDeviceSettingsIdentity()
     );
-    if (!mySettings) return null;
+    if (!remoteSettings) return null;
 
-    const normalized = normalizeTextConfig(mySettings);
-    if (!normalized) return null;
-
-    // 로컬스토리지에도 동기화
-    window.localStorage.setItem(SCHEDULER_TEXT_SETTINGS_KEY, JSON.stringify(normalized));
-    window.dispatchEvent(new Event('scheduler-text-settings-changed'));
+    const normalized = persistLocalSchedulerTextSettings(remoteSettings);
+    dispatchTextSettingsChanged();
     return normalized;
-  } catch (err) {
-    console.error('Failed to load device text settings from DB:', err);
+  } catch (error) {
+    console.error('Failed to load device text settings from DB:', error);
     return null;
   }
 }
 
-// DB에 기기별 글자 크기 설정 백업 (디바운스 적용)
 let textBackupTimeout = null;
+let pendingTextSettings = null;
+
 export function syncSaveTextSettings(textSettings) {
+  pendingTextSettings = normalizeSchedulerTextSettings(textSettings);
   if (textBackupTimeout) clearTimeout(textBackupTimeout);
 
   textBackupTimeout = setTimeout(async () => {
+    const settingsToSave = pendingTextSettings;
+    pendingTextSettings = null;
     try {
-      const { deviceId } = getDeviceSettingsIdentity();
+      const identity = getDeviceSettingsIdentity();
       await enqueueShockwaveSettingsJsonPatch({
         supabaseClient: supabase,
         scope: 'scheduler-text-device-settings',
-        mutate: (existingSettlementSettings) => ({
-          ...existingSettlementSettings,
-          device_text_settings: {
-            ...(existingSettlementSettings.device_text_settings || {}),
-            [deviceId]: {
-              ...textSettings,
-              updatedAt: new Date().toISOString(),
-            },
-          },
+        mutate: (monthlySettings) => ({
+          ...monthlySettings,
+          [DEVICE_SETTINGS_FIELD]: buildSchedulerTextSettingsMap({
+            monthlySettings,
+            identity,
+            settings: settingsToSave,
+            updatedAt: new Date().toISOString(),
+          }),
         }),
       });
-    } catch (err) {
-      console.error('Failed to save device text settings to DB:', err);
+    } catch (error) {
+      console.error('Failed to save device text settings to DB:', error);
     }
-  }, 1500);
+  }, REMOTE_SAVE_DEBOUNCE_MS);
 }

@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient.js';
 import {
+  buildDeviceSettingsProfileMap,
   getDeviceSettingsForIdentity,
   getDeviceSettingsIdentity,
 } from './deviceSettingsIdentity.js';
@@ -168,26 +169,12 @@ export function buildStaffCalendarDeviceSettingsMap({
 }) {
   const normalizedPatch = normalizeStaffCalendarDeviceSettingsPatch(patch);
   const deviceSettingsMap = getDeviceSettingsMap(monthlySettings);
-  const currentDeviceSettings =
-    getDeviceSettingsForIdentity(deviceSettingsMap, identity) || {};
-  const nextDeviceSettings = {
-    ...currentDeviceSettings,
-    ...normalizedPatch,
+  return buildDeviceSettingsProfileMap({
+    settingsMap: deviceSettingsMap,
+    identity,
+    patch: normalizedPatch,
     updatedAt,
-  };
-  const nextMap = {
-    ...deviceSettingsMap,
-    [identity.deviceId]: nextDeviceSettings,
-  };
-
-  if (
-    identity.legacyDeviceId &&
-    identity.legacyDeviceId !== identity.deviceId
-  ) {
-    nextMap[identity.legacyDeviceId] = nextDeviceSettings;
-  }
-
-  return nextMap;
+  });
 }
 
 export async function syncLoadStaffCalendarDeviceSettings({ localSnapshot, applySettings } = {}) {

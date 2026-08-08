@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePersistentNumber, usePersistentJson } from '../../hooks/usePersistentState';
-import { supabase } from '../../lib/supabaseClient';
 import {
-  getDeviceSettingsForIdentity,
-  getDeviceSettingsIdentity,
-} from '../../lib/deviceSettingsIdentity';
-import { enqueueShockwaveSettingsJsonPatch } from '../../lib/shockwaveSettingsJsonSync';
+  readLocalSchedulerGridDeviceSettings,
+  SCHEDULER_GRID_DEVICE_SETTING_KEYS,
+  syncLoadSchedulerGridDeviceSettings,
+  syncSaveSchedulerGridDeviceSettings,
+} from '../../lib/schedulerGridDeviceSettings';
 import { clampScheduleTimeColWidth } from '../../lib/scheduleGridSizeUtils';
 import {
   getResizePointerClient,
@@ -30,90 +30,6 @@ const ROW_HEIGHT_RESIZE_SENSITIVITY = 0.5;
 const ROW_HEIGHT_PRECISION = 0.5;
 const COL_RESIZE_DOUBLE_CLICK_MS = 500;
 const COL_RESIZE_CLICK_MOVE_TOLERANCE = 3;
-
-const SETTINGS_ROW_ID = '00000000-0000-0000-0000-000000000000';
-
-// DB에서 기기 설정 복원
-async function syncLoadDeviceSettings(setColRatios, setDayColWidth, setRowHeight, setTimeColWidth) {
-  try {
-    const { data, error } = await supabase
-      .from('shockwave_settings')
-      .select('monthly_settlement_settings')
-      .eq('id', SETTINGS_ROW_ID)
-      .single();
-
-    if (error || !data) return;
-    const dbDeviceSettings = data.monthly_settlement_settings?.device_settings;
-    if (!dbDeviceSettings) return;
-
-    const mySettings = getDeviceSettingsForIdentity(
-      dbDeviceSettings,
-      getDeviceSettingsIdentity()
-    );
-    if (!mySettings) return;
-
-    // 로컬 상태 및 로컬스토리지 동기화 복원
-    if (mySettings.colRatios) {
-      setColRatios(mySettings.colRatios);
-    }
-    if (mySettings.dayColWidth) {
-      setDayColWidth(mySettings.dayColWidth);
-    }
-    if (mySettings.rowHeight) {
-      setRowHeight(mySettings.rowHeight);
-    }
-    if (
-      mySettings.timeColWidth !== null
-      && mySettings.timeColWidth !== undefined
-      && mySettings.timeColWidth !== ''
-      && Number.isFinite(Number(mySettings.timeColWidth))
-    ) {
-      setTimeColWidth(clampScheduleTimeColWidth(mySettings.timeColWidth));
-    }
-  } catch (err) {
-    console.error('Failed to load device settings from DB:', err);
-  }
-}
-
-// DB에 기기 설정 백업 (디바운스 적용)
-let backupTimeout = null;
-let pendingDeviceSettingsPatch = {};
-function syncSaveDeviceSettings(patch) {
-  pendingDeviceSettingsPatch = {
-    ...pendingDeviceSettingsPatch,
-    ...(patch || {}),
-  };
-  if (backupTimeout) clearTimeout(backupTimeout);
-  
-  backupTimeout = setTimeout(async () => {
-    const patchToSave = pendingDeviceSettingsPatch;
-    pendingDeviceSettingsPatch = {};
-    try {
-      const { deviceId } = getDeviceSettingsIdentity();
-      await enqueueShockwaveSettingsJsonPatch({
-        supabaseClient: supabase,
-        scope: 'scheduler-grid-device-settings',
-        mutate: (existingSettlementSettings) => {
-          const existingDeviceSettings = existingSettlementSettings.device_settings || {};
-          const currentDeviceSettings = existingDeviceSettings[deviceId] || {};
-          return {
-            ...existingSettlementSettings,
-            device_settings: {
-              ...existingDeviceSettings,
-              [deviceId]: {
-                ...currentDeviceSettings,
-                ...patchToSave,
-                updatedAt: new Date().toISOString(),
-              },
-            },
-          };
-        },
-      });
-    } catch (err) {
-      console.error('Failed to save device settings to DB:', err);
-    }
-  }, 1500);
-}
 
 const clampRowHeight = (value) => (
   Math.max(
@@ -172,7 +88,14 @@ export default function useScheduleResizeState({ colCount }) {
     () => clampScheduleTimeColWidth(storedTimeColWidth),
     [storedTimeColWidth],
   );
-  const [isDeviceSettingsLoading, setIsDeviceSettingsLoading] = useState(true);
+  const initialDeviceSettingsRef = useRef(null);
+  if (initialDeviceSettingsRef.current === null) {
+    // Persistent hooks restore their cookie backup before this snapshot.
+    initialDeviceSettingsRef.current = readLocalSchedulerGridDeviceSettings();
+  }
+  const [isDeviceSettingsLoading, setIsDeviceSettingsLoading] = useState(
+    () => !initialDeviceSettingsRef.current.hasAny
+  );
   const mobileWidthResizeArmedUntilRef = useRef(0);
 
   const shouldStartMobileWidthResize = useCallback((event) => {
@@ -193,11 +116,36 @@ export default function useScheduleResizeState({ colCount }) {
     return result.shouldStart;
   }, []);
 
-  // 마운트 시 서버 DB로부터 크기 동기화
+  const applyDeviceSettings = useCallback((deviceSettings = {}) => {
+    if (Object.prototype.hasOwnProperty.call(deviceSettings, 'colRatios')) {
+      setColRatios(deviceSettings.colRatios);
+    }
+    if (Object.prototype.hasOwnProperty.call(deviceSettings, 'dayColWidth')) {
+      setDayColWidth(deviceSettings.dayColWidth);
+    }
+    if (Object.prototype.hasOwnProperty.call(deviceSettings, 'rowHeight')) {
+      setRowHeight(deviceSettings.rowHeight);
+    }
+    if (Object.prototype.hasOwnProperty.call(deviceSettings, 'timeColWidth')) {
+      setTimeColWidth(deviceSettings.timeColWidth);
+    }
+  }, [setColRatios, setDayColWidth, setRowHeight, setTimeColWidth]);
+
+  // 이 기기의 로컬 값을 우선 사용하고, 없는 항목만 서버 백업에서 복원합니다.
   useEffect(() => {
     let active = true;
+    const localSnapshot = initialDeviceSettingsRef.current
+      || readLocalSchedulerGridDeviceSettings();
+    if (localSnapshot.hasAny) {
+      syncSaveSchedulerGridDeviceSettings(localSnapshot.values);
+    }
     async function load() {
-      await syncLoadDeviceSettings(setColRatios, setDayColWidth, setRowHeight, setTimeColWidth);
+      await syncLoadSchedulerGridDeviceSettings({
+        localSnapshot,
+        applySettings: (deviceSettings) => {
+          if (active) applyDeviceSettings(deviceSettings);
+        },
+      });
       if (active) {
         setIsDeviceSettingsLoading(false);
       }
@@ -206,13 +154,23 @@ export default function useScheduleResizeState({ colCount }) {
     return () => {
       active = false;
     };
-  }, [setColRatios, setDayColWidth, setRowHeight, setTimeColWidth]);
+  }, [applyDeviceSettings]);
+
+  useEffect(() => {
+    const deviceSettingKeys = new Set(Object.values(SCHEDULER_GRID_DEVICE_SETTING_KEYS));
+    const handleStorage = (event) => {
+      if (!deviceSettingKeys.has(event.key)) return;
+      applyDeviceSettings(readLocalSchedulerGridDeviceSettings().values);
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [applyDeviceSettings]);
 
   // DB 백업용 래퍼 함수들
   const updateRowHeight = useCallback((newValue) => {
     setRowHeight(prev => {
       const next = typeof newValue === 'function' ? newValue(prev) : newValue;
-      syncSaveDeviceSettings({ rowHeight: next });
+      syncSaveSchedulerGridDeviceSettings({ rowHeight: next });
       return next;
     });
   }, [setRowHeight]);
@@ -220,7 +178,7 @@ export default function useScheduleResizeState({ colCount }) {
   const updateDayColWidth = useCallback((newValue) => {
     setDayColWidth(prev => {
       const next = typeof newValue === 'function' ? newValue(prev) : newValue;
-      syncSaveDeviceSettings({ dayColWidth: next });
+      syncSaveSchedulerGridDeviceSettings({ dayColWidth: next });
       return next;
     });
   }, [setDayColWidth]);
@@ -230,7 +188,7 @@ export default function useScheduleResizeState({ colCount }) {
       const candidate = typeof newValue === 'function' ? newValue(prev) : newValue;
       const next = clampScheduleTimeColWidth(candidate);
       if (next !== prev) {
-        syncSaveDeviceSettings({ timeColWidth: next });
+        syncSaveSchedulerGridDeviceSettings({ timeColWidth: next });
       }
       return next;
     });
@@ -239,7 +197,7 @@ export default function useScheduleResizeState({ colCount }) {
   const updateColRatios = useCallback((newValue) => {
     setColRatios(prev => {
       const next = typeof newValue === 'function' ? newValue(prev) : newValue;
-      syncSaveDeviceSettings({ colRatios: next });
+      syncSaveSchedulerGridDeviceSettings({ colRatios: next });
       return next;
     });
   }, [setColRatios]);
