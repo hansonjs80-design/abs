@@ -1,5 +1,9 @@
 import { supabase } from './supabaseClient.js';
 import {
+  readStorageValueWithCookieBackup,
+  writeStorageValueWithCookieBackup,
+} from './browserStorageBackup.js';
+import {
   buildDeviceSettingsProfileMap,
   getDeviceSettingsForIdentity,
   getDeviceSettingsIdentity,
@@ -88,12 +92,7 @@ export function readLocalSchedulerGridDeviceSettings(storageArg) {
 
   DEVICE_SETTING_FIELDS.forEach((field) => {
     const key = SCHEDULER_GRID_DEVICE_SETTING_KEYS[field];
-    let raw = null;
-    try {
-      raw = storage.getItem(key);
-    } catch {
-      raw = null;
-    }
+    const raw = readStorageValueWithCookieBackup(key, storage);
     if (raw === null || raw === '') return;
 
     let value = raw;
@@ -127,11 +126,11 @@ export function persistLocalSchedulerGridDeviceSettingsPatch(settings, storageAr
     const value = field === 'colRatios'
       ? JSON.stringify(normalized[field])
       : String(normalized[field]);
-    try {
-      storage.setItem(SCHEDULER_GRID_DEVICE_SETTING_KEYS[field], value);
-    } catch {
-      // The in-memory UI state remains usable if browser storage is restricted.
-    }
+    writeStorageValueWithCookieBackup(
+      SCHEDULER_GRID_DEVICE_SETTING_KEYS[field],
+      value,
+      storage
+    );
   });
   return normalized;
 }

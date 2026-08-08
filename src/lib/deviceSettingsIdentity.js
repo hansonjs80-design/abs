@@ -1,3 +1,8 @@
+import {
+  readStorageValueWithCookieBackup,
+  writeStorageValueWithCookieBackup,
+} from './browserStorageBackup.js';
+
 export const DEVICE_SETTINGS_ID_STORAGE_KEY = 'abs-device-settings-id-v1';
 
 function hashText(value) {
@@ -49,22 +54,33 @@ export function getDeviceSettingsIdentity({ browser: browserArg, storage: storag
   const browser = getBrowserContext(browserArg);
   const legacyDeviceId = getLegacyDeviceFingerprint(browser);
   const storage = storageArg || browser?.localStorage;
-  if (!storage) {
+  if (!browser) {
     return { deviceId: legacyDeviceId, legacyDeviceId };
   }
 
-  try {
-    const storedId = storage.getItem(DEVICE_SETTINGS_ID_STORAGE_KEY);
-    if (isStoredDeviceSettingsId(storedId)) {
-      return { deviceId: storedId, legacyDeviceId };
-    }
-
-    const deviceId = createDeviceSettingsId(legacyDeviceId, browser);
-    storage.setItem(DEVICE_SETTINGS_ID_STORAGE_KEY, deviceId);
-    return { deviceId, legacyDeviceId };
-  } catch {
-    return { deviceId: legacyDeviceId, legacyDeviceId };
+  const storedId = readStorageValueWithCookieBackup(
+    DEVICE_SETTINGS_ID_STORAGE_KEY,
+    storage,
+    browser.document
+  );
+  if (isStoredDeviceSettingsId(storedId)) {
+    writeStorageValueWithCookieBackup(
+      DEVICE_SETTINGS_ID_STORAGE_KEY,
+      storedId,
+      storage,
+      browser.document
+    );
+    return { deviceId: storedId, legacyDeviceId };
   }
+
+  const deviceId = createDeviceSettingsId(legacyDeviceId, browser);
+  writeStorageValueWithCookieBackup(
+    DEVICE_SETTINGS_ID_STORAGE_KEY,
+    deviceId,
+    storage,
+    browser.document
+  );
+  return { deviceId, legacyDeviceId };
 }
 
 export function getDeviceSettingsForIdentity(settingsMap, identity = getDeviceSettingsIdentity()) {

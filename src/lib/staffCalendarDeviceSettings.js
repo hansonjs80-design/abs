@@ -1,5 +1,9 @@
 import { supabase } from './supabaseClient.js';
 import {
+  readStorageValueWithCookieBackup,
+  writeStorageValueWithCookieBackup,
+} from './browserStorageBackup.js';
+import {
   buildDeviceSettingsProfileMap,
   getDeviceSettingsForIdentity,
   getDeviceSettingsIdentity,
@@ -103,12 +107,7 @@ export function readLocalStaffCalendarDeviceSettings(storageArg) {
 
   STAFF_CALENDAR_DEVICE_FIELDS.forEach((field) => {
     const key = STAFF_CALENDAR_DEVICE_SETTING_KEYS[field];
-    let raw = null;
-    try {
-      raw = storage.getItem(key);
-    } catch {
-      raw = null;
-    }
+    const raw = readStorageValueWithCookieBackup(key, storage);
     if (raw === null || raw === '') return;
     const normalized = normalizeStaffCalendarDeviceSettingsPatch({ [field]: raw });
     if (!hasOwn(normalized, field)) return;
@@ -130,14 +129,11 @@ export function persistLocalStaffCalendarDeviceSettingsPatch(settings, storageAr
 
   STAFF_CALENDAR_DEVICE_FIELDS.forEach((field) => {
     if (!hasOwn(normalized, field)) return;
-    try {
-      storage.setItem(
-        STAFF_CALENDAR_DEVICE_SETTING_KEYS[field],
-        String(normalized[field])
-      );
-    } catch {
-      // Keep the in-memory setting usable when browser storage is unavailable.
-    }
+    writeStorageValueWithCookieBackup(
+      STAFF_CALENDAR_DEVICE_SETTING_KEYS[field],
+      normalized[field],
+      storage
+    );
   });
   return normalized;
 }

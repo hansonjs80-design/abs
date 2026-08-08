@@ -21,6 +21,20 @@ function createStorage(initial = {}) {
   };
 }
 
+function createCookieDocument() {
+  const values = new Map();
+  return {
+    get cookie() {
+      return Array.from(values, ([key, value]) => `${key}=${value}`).join('; ');
+    },
+    set cookie(serialized) {
+      const [pair] = String(serialized).split(';');
+      const separator = pair.indexOf('=');
+      values.set(pair.slice(0, separator), pair.slice(separator + 1));
+    },
+  };
+}
+
 const browser = {
   screen: { width: 1920, height: 1080, colorDepth: 24 },
   navigator: { userAgent: 'test-browser' },
@@ -87,4 +101,29 @@ describe('device settings identity', () => {
     assert.deepEqual(result.dev_legacy, expected);
     assert.deepEqual(result.other_device, { rowHeight: 42 });
   });
+
+  for (const [browserName, userAgent] of [
+    ['Chrome', 'Mozilla/5.0 Chrome/140.0.0.0 Safari/537.36'],
+    ['Edge', 'Mozilla/5.0 Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0'],
+  ]) {
+    it(`restores the same ${browserName} device id after app restart clears local storage`, () => {
+      const document = createCookieDocument();
+      const browserContext = { ...browser, navigator: { userAgent }, document };
+      const first = getDeviceSettingsIdentity({
+        browser: browserContext,
+        storage: createStorage(),
+      });
+      const restartedStorage = createStorage();
+      const restored = getDeviceSettingsIdentity({
+        browser: browserContext,
+        storage: restartedStorage,
+      });
+
+      assert.equal(restored.deviceId, first.deviceId);
+      assert.equal(
+        restartedStorage.getItem(DEVICE_SETTINGS_ID_STORAGE_KEY),
+        first.deviceId
+      );
+    });
+  }
 });

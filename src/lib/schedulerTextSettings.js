@@ -1,5 +1,9 @@
 import { supabase } from './supabaseClient.js';
 import {
+  readStorageValueWithCookieBackup,
+  writeStorageValueWithCookieBackup,
+} from './browserStorageBackup.js';
+import {
   buildDeviceSettingsProfileMap,
   getDeviceSettingsForIdentity,
   getDeviceSettingsIdentity,
@@ -112,13 +116,14 @@ function dispatchTextSettingsChanged() {
   window.dispatchEvent(new Event(SCHEDULER_TEXT_SETTINGS_EVENT));
 }
 
-export function readLocalSchedulerTextSettings(storageArg) {
+export function readLocalSchedulerTextSettings(storageArg, documentArg) {
   const storage = getStorage(storageArg);
-  if (!storage) {
-    return { settings: DEFAULT_SCHEDULER_TEXT_SETTINGS, hasValue: false };
-  }
   try {
-    const raw = storage.getItem(SCHEDULER_TEXT_SETTINGS_KEY);
+    const raw = readStorageValueWithCookieBackup(
+      SCHEDULER_TEXT_SETTINGS_KEY,
+      storage,
+      documentArg
+    );
     if (!raw) {
       return { settings: DEFAULT_SCHEDULER_TEXT_SETTINGS, hasValue: false };
     }
@@ -132,16 +137,15 @@ export function readLocalSchedulerTextSettings(storageArg) {
   }
 }
 
-export function persistLocalSchedulerTextSettings(settings, storageArg) {
+export function persistLocalSchedulerTextSettings(settings, storageArg, documentArg) {
   const normalized = normalizeSchedulerTextSettings(settings);
   const storage = getStorage(storageArg);
-  if (storage) {
-    try {
-      storage.setItem(SCHEDULER_TEXT_SETTINGS_KEY, JSON.stringify(normalized));
-    } catch {
-      // The current UI still uses the normalized in-memory settings.
-    }
-  }
+  writeStorageValueWithCookieBackup(
+    SCHEDULER_TEXT_SETTINGS_KEY,
+    JSON.stringify(normalized),
+    storage,
+    documentArg
+  );
   return normalized;
 }
 
