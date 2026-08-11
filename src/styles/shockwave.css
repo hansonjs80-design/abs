@@ -828,7 +828,8 @@
   box-sizing: border-box;
   z-index: 101;
   border: 2px solid #1a73e8; /* Google blue */
-  background: white;
+  background-color: inherit;
+  color: inherit;
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
@@ -871,7 +872,9 @@
   border: none !important;
   outline: none !important;
   background: transparent !important;
-  color: #000;
+  color: inherit;
+  -webkit-text-fill-color: currentColor;
+  caret-color: currentColor;
   white-space: pre !important;
 }
 
