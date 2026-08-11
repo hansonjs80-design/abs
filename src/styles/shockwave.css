@@ -828,13 +828,13 @@
   box-sizing: border-box;
   z-index: 101;
   border: 2px solid #1a73e8; /* Google blue */
-  background-color: inherit;
+  background-color: var(--sw-cell-fill-color, #fff);
   color: inherit;
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
 .sw-cell-input-wrapper.is-single-row {
-  height: calc(200% + 2px);
+  height: calc(150% + 2px);
 }
 
 .sw-cell-input-wrapper.hidden {

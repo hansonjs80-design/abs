@@ -4,16 +4,24 @@ import test from 'node:test';
 
 const shockwaveCssUrl = new URL('../../styles/shockwave.css', import.meta.url);
 
-test('schedule editor inherits the rendered cell colors in every month', async () => {
+test('schedule editor keeps cell fills and uses white for cells without a fill', async () => {
   const shockwaveCss = await readFile(shockwaveCssUrl, 'utf8');
 
   assert.match(
     shockwaveCss,
-    /\.sw-cell-input-wrapper\s*\{[^}]*background-color:\s*inherit;[^}]*color:\s*inherit;/s
+    /\.sw-cell-input-wrapper\s*\{[^}]*background-color:\s*var\(--sw-cell-fill-color,\s*#fff\);[^}]*color:\s*inherit;/s
   );
   assert.match(
     shockwaveCss,
     /\.sw-cell-input\s*\{[^}]*color:\s*inherit;[^}]*-webkit-text-fill-color:\s*currentColor;[^}]*caret-color:\s*currentColor;/s
+  );
+  assert.match(
+    shockwaveCss,
+    /\.sw-cell-input-wrapper\.is-single-row\s*\{[^}]*height:\s*calc\(150% \+ 2px\);/s
+  );
+  assert.doesNotMatch(
+    shockwaveCss,
+    /\.sw-cell-input-wrapper\.is-single-row\s*\{[^}]*height:\s*calc\(200% \+ 2px\);/s
   );
   assert.match(
     shockwaveCss,
