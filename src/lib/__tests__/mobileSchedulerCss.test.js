@@ -9,6 +9,7 @@ const bottomNavUrl = new URL('../../components/layout/BottomNav.jsx', import.met
 const layoutUrl = new URL('../../components/layout/Layout.jsx', import.meta.url);
 const mobilePinchZoomHookUrl = new URL('../../hooks/useMobilePinchZoom.js', import.meta.url);
 const scheduleCellUrl = new URL('../../components/shockwave/ShockwaveScheduleCell.jsx', import.meta.url);
+const shockwaveViewUrl = new URL('../../components/shockwave/ShockwaveView.jsx', import.meta.url);
 
 test('mobile tables keep device typography and size variables authoritative', async () => {
   const [mobileCss, shockwaveCss] = await Promise.all([
@@ -112,11 +113,14 @@ test('schedule holiday cells use their fill color for internal borders', async (
 });
 
 test('schedule today border replaces the day boundary without a white halo', async () => {
-  const shockwaveCss = await readFile(shockwaveCssUrl, 'utf8');
+  const [shockwaveCss, shockwaveView] = await Promise.all([
+    readFile(shockwaveCssUrl, 'utf8'),
+    readFile(shockwaveViewUrl, 'utf8'),
+  ]);
 
   assert.match(
     shockwaveCss,
-    /\.shockwave-day\.is-today::after\s*\{[^}]*inset:\s*-2px;[^}]*z-index:\s*110;[^}]*border:\s*4px solid var\(--sw-today-border\);[^}]*border-radius:\s*0;[^}]*pointer-events:\s*none;/s
+    /\.shockwave-day\.is-today::after\s*\{[^}]*inset:\s*-2px;[^}]*z-index:\s*80;[^}]*border:\s*4px solid var\(--sw-today-border\);[^}]*border-radius:\s*0;[^}]*pointer-events:\s*none;/s
   );
   assert.match(
     shockwaveCss,
@@ -128,7 +132,15 @@ test('schedule today border replaces the day boundary without a white halo', asy
   );
   assert.match(
     shockwaveCss,
-    /@media \(max-width: 768px\),[\s\S]*?\.shockwave-day\.is-today::after\s*\{[^}]*z-index:\s*110;/s
+    /@media \(max-width: 768px\),[\s\S]*?\.shockwave-day\.is-today::after\s*\{[^}]*z-index:\s*80;/s
+  );
+  assert.match(
+    shockwaveCss,
+    /\.sw-schedule-body\.has-editing-cell\s*\{[^}]*isolation:\s*auto;/s
+  );
+  assert.match(
+    shockwaveView,
+    /const isEditingDay = editingCell\?\.startsWith\(`\$\{weekIdx\}-\$\{dayIdx\}-`\);[\s\S]*className=\{`sw-schedule-body\$\{isEditingDay \? ' has-editing-cell' : ''\}`\}/s
   );
 });
 

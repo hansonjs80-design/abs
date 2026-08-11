@@ -2819,6 +2819,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
           <div className="shockwave-days" style={{ position: 'relative', width: '100%' }}>
             {weekDays.map((dayInfo, dayIdx) => {
               const isToday = isSameDate(dayInfo.date, today);
+              const isEditingDay = editingCell?.startsWith(`${weekIdx}-${dayIdx}-`);
               const daySlots = getTimeSlotsForDay(dayInfo);
               // 첫 번째 요일에만 시간 열 표사
               const showTimeCol = dayIdx === 0;
@@ -2925,7 +2926,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                   </div>
 
                   {/* 스케줄 바디 */}
-                  <div className="sw-schedule-body" style={{ display: 'grid', gridTemplateColumns: gridCols, gridAutoRows: 'var(--sw-row-height)' }}>
+                  <div className={`sw-schedule-body${isEditingDay ? ' has-editing-cell' : ''}`} style={{ display: 'grid', gridTemplateColumns: gridCols, gridAutoRows: 'var(--sw-row-height)' }}>
                     {daySlots.flatMap((slotInfo, slotRenderIndex) => {
                       const rowIdx = slotInfo.idx;
                       const gridRowStart = slotRenderIndex + 1;
