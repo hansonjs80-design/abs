@@ -3812,7 +3812,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                       onChange={handleSelectPatientHistoryChart}
                       style={{ border: '1px solid var(--border-color, #cbd5e1)', borderRadius: '6px', background: 'var(--bg-primary, #fff)', color: 'var(--brand-primary)', padding: '4px 28px 4px 8px', fontSize: '0.95rem', fontWeight: 700, cursor: patientHistoryModalData.loading ? 'wait' : 'pointer' }}
                     >
-                      <option value="">{patientHistoryModalData.searchName} (전체)</option>
+                      <option value="">동명이인 전체</option>
                       {patientHistoryModalData.chartOptions.map((option) => (
                         <option key={option.chartNumber} value={option.chartNumber}>
                           {option.patientName} ({option.chartNumber})

@@ -92,6 +92,16 @@ export function getPatientHistoryNameOnlySearchTarget(content) {
   };
 }
 
+export function getPatientHistoryCandidateQueryTarget(searchName = '', searchChart = '') {
+  const normalizedName = normalizeNameForHistorySearch(searchName);
+  if (normalizedName) return { type: 'name', value: normalizedName };
+
+  const chartNumber = String(searchChart || '').trim();
+  if (chartNumber) return { type: 'chart', value: chartNumber };
+
+  return { type: '', value: '' };
+}
+
 export function getPatientHistoryChartOptions(logs = [], searchName = '') {
   const normalizedSearchName = normalizeNameForHistorySearch(searchName);
   if (!normalizedSearchName) return [];

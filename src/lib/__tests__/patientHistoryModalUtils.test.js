@@ -5,6 +5,7 @@ import {
   buildPatientHistoryCellUpdate,
   dedupePatientHistoryLogsByScheduleCell,
   getConfiguredPatientHistoryTreatmentGroup,
+  getPatientHistoryCandidateQueryTarget,
   getPatientHistoryChartOptions,
   getPatientHistoryBodyPartText,
   getPatientHistoryBodyPartTextareaRows,
@@ -116,6 +117,17 @@ describe('patient history modal search target', () => {
       { patientName: '김보람', chartNumber: '204' },
       { patientName: '김보람', chartNumber: '14634' },
     ]);
+  });
+
+  it('looks up same-name candidates even when the selected cell already has a chart number', () => {
+    assert.deepEqual(
+      getPatientHistoryCandidateQueryTarget('김은영', '6222'),
+      { type: 'name', value: '김은영' }
+    );
+    assert.deepEqual(
+      getPatientHistoryCandidateQueryTarget('', '6222'),
+      { type: 'chart', value: '6222' }
+    );
   });
 
   it('keeps name and chart only when there is no same-name chart alternative', () => {

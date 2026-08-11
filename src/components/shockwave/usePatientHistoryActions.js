@@ -6,6 +6,7 @@ import {
   buildPatientHistoryCellUpdate,
   dedupePatientHistoryLogsByScheduleCell,
   getConfiguredPatientHistoryTreatmentGroup,
+  getPatientHistoryCandidateQueryTarget,
   getPatientHistoryChartOptions,
   getPatientHistoryMemoText,
   getPatientHistoryScheduleOverrideKey,
@@ -342,25 +343,19 @@ export default function usePatientHistoryActions({
       colCount,
       prescriptionClassificationSignature,
     ].join('__');
-    const setLoadedPatientHistory = (logs) => {
-      setPatientHistoryModalData((prev) => {
-        const sameName = normalizeNameForMatch(prev.searchName) === normalizeNameForMatch(nameParam);
-        const chartOptions = chartParam
-          ? (sameName ? (prev.chartOptions || []) : [])
-          : getPatientHistoryChartOptions(logs, nameParam);
-        return {
-          ...prev,
-          loading: false,
-          logs,
-          searchName: nameParam,
-          searchChart: resolvePatientHistorySearchChart(chartParam, chartOptions),
-          chartOptions,
-        };
-      });
+    const setLoadedPatientHistory = (logs, chartOptions = []) => {
+      setPatientHistoryModalData((prev) => ({
+        ...prev,
+        loading: false,
+        logs,
+        searchName: nameParam,
+        searchChart: resolvePatientHistorySearchChart(chartParam, chartOptions),
+        chartOptions,
+      }));
     };
     const cached = patientHistoryResultCacheRef.current.get(cacheKey);
     if (cached && Date.now() - cached.time < 15000) {
-      setLoadedPatientHistory(cached.logs);
+      setLoadedPatientHistory(cached.logs, cached.chartOptions || []);
       return;
     }
     setPatientHistoryModalData((prev) => ({
@@ -390,20 +385,50 @@ export default function usePatientHistoryActions({
         .order('month', { ascending: false })
         .limit(1000);
 
-      if (chartParam) {
-        shockwaveQuery.eq('chart_number', chartParam);
-        manualQuery.eq('chart_number', chartParam);
-        scheduleQuery.ilike('content', `%${chartParam}%`);
-      } else if (nameParam) {
-        shockwaveQuery.ilike('patient_name', `%${nameParam}%`);
-        manualQuery.ilike('patient_name', `%${nameParam}%`);
-        scheduleQuery.ilike('content', `%${nameParam}%`);
+      const candidateQueryTarget = getPatientHistoryCandidateQueryTarget(nameParam, chartParam);
+      if (candidateQueryTarget.type === 'name') {
+        shockwaveQuery.ilike('patient_name', `%${candidateQueryTarget.value}%`);
+        manualQuery.ilike('patient_name', `%${candidateQueryTarget.value}%`);
+        scheduleQuery.ilike('content', `%${candidateQueryTarget.value}%`);
+      } else if (candidateQueryTarget.type === 'chart') {
+        shockwaveQuery.eq('chart_number', candidateQueryTarget.value);
+        manualQuery.eq('chart_number', candidateQueryTarget.value);
+        scheduleQuery.ilike('content', `%${candidateQueryTarget.value}%`);
       }
 
       const [shockwaveRes, manualRes, scheduleRes] = await Promise.all([shockwaveQuery, manualQuery, scheduleQuery]);
+      const shockwaveRows = shockwaveRes.data || [];
+      const manualRows = manualRes.data || [];
+      const scheduleCandidates = scheduleRes.data || [];
+      const chartOptionCandidates = [
+        ...shockwaveRows,
+        ...manualRows,
+        ...scheduleCandidates.map((row) => {
+          const parsed = parseSchedulerPatientIdentity(row.content || '');
+          return {
+            patient_name: parsed.patientName || '',
+            chart_number: parsed.patientChart || '',
+          };
+        }),
+        ...Object.values(memos || {}).map((memo) => {
+          const parsed = parseSchedulerPatientIdentity(memo?.content || '');
+          return {
+            patient_name: parsed.patientName || '',
+            chart_number: parsed.patientChart || '',
+          };
+        }),
+      ];
+      if (activeSelectedContent) {
+        const parsed = parseSchedulerPatientIdentity(activeSelectedContent);
+        chartOptionCandidates.push({
+          patient_name: parsed.patientName || '',
+          chart_number: parsed.patientChart || '',
+        });
+      }
+      const chartOptions = getPatientHistoryChartOptions(chartOptionCandidates, nameParam);
 
       const fetchedLogData = [
-        ...(shockwaveRes.data || []).filter((d) => patientHistoryIdentityMatches({
+        ...shockwaveRows.filter((d) => patientHistoryIdentityMatches({
           chartParam,
           nameParam,
           chartValue: d.chart_number,
@@ -420,7 +445,7 @@ export default function usePatientHistoryActions({
             month: currentMonth,
           }),
         })),
-        ...(manualRes.data || []).filter((d) => (
+        ...manualRows.filter((d) => (
           patientHistoryIdentityMatches({
             chartParam,
             nameParam,
@@ -470,7 +495,6 @@ export default function usePatientHistoryActions({
       });
       let allData = logsWithLinkedScheduleMemos.filter(keepHistoryLog);
 
-      const scheduleCandidates = scheduleRes.data || [];
       const latestScheduleRowsByKey = await fetchScheduleRowsForSchedulerLinkedLogs(
         scheduleCandidates.map((row) => ({
           scheduler_cell_key: getScheduleRowSchedulerCellKey(row),
@@ -777,12 +801,13 @@ export default function usePatientHistoryActions({
       patientHistoryResultCacheRef.current.set(cacheKey, {
         time: Date.now(),
         logs: logsWithMeta,
+        chartOptions,
       });
       if (patientHistoryResultCacheRef.current.size > 30) {
         const oldestKey = patientHistoryResultCacheRef.current.keys().next().value;
         patientHistoryResultCacheRef.current.delete(oldestKey);
       }
-      setLoadedPatientHistory(logsWithMeta);
+      setLoadedPatientHistory(logsWithMeta, chartOptions);
     } catch (e) {
       console.error(e);
       alert(`디버그 에러 발생: ${e.message}`);
