@@ -5,12 +5,14 @@ import {
   buildPatientHistoryCellUpdate,
   dedupePatientHistoryLogsByScheduleCell,
   getConfiguredPatientHistoryTreatmentGroup,
+  getPatientHistoryChartOptions,
   getPatientHistoryBodyPartText,
   getPatientHistoryBodyPartTextareaRows,
   getPatientHistoryListTextAlign,
   getPatientHistoryMemoDisplayText,
   getPatientHistoryMemoText,
   getPatientHistoryMemoTextareaRows,
+  getPatientHistoryNameOnlySearchTarget,
   getPatientHistoryScheduleOverrideKey,
   getPatientHistorySearchTarget,
   getPatientHistoryTreatmentGroup,
@@ -19,6 +21,7 @@ import {
   parsePatientHistoryMemoText,
   patientHistoryLogsShareScheduleCell,
   patientHistoryIdentityMatches,
+  resolvePatientHistorySearchChart,
   resolvePatientHistoryApplyTarget,
 } from '../patientHistoryModalUtils.js';
 
@@ -87,6 +90,43 @@ describe('patient history modal search target', () => {
       searchName: '손연희',
       searchChart: '3275',
     });
+  });
+
+  it('drops the chart number when the displayed name is searched again', () => {
+    assert.deepEqual(getPatientHistoryNameOnlySearchTarget('14634/김보람(3)'), {
+      shouldFetch: true,
+      searchName: '김보람',
+      searchChart: '',
+    });
+    assert.deepEqual(getPatientHistoryNameOnlySearchTarget('김보람'), {
+      shouldFetch: true,
+      searchName: '김보람',
+      searchChart: '',
+    });
+  });
+
+  it('builds one dropdown option per chart number for exact same-name patients', () => {
+    assert.deepEqual(getPatientHistoryChartOptions([
+      { patient_name: '김보람', chart_number: '14634' },
+      { patient_name: '김보람', chart_number: '14634' },
+      { patient_name: '김보람', chart_number: '204' },
+      { patient_name: '김보람', chart_number: '' },
+      { patient_name: '김보람A', chart_number: '999' },
+    ], '김보람'), [
+      { patientName: '김보람', chartNumber: '204' },
+      { patientName: '김보람', chartNumber: '14634' },
+    ]);
+  });
+
+  it('keeps name and chart only when there is no same-name chart alternative', () => {
+    assert.equal(resolvePatientHistorySearchChart('', [
+      { patientName: '김보람', chartNumber: '14634' },
+    ]), '14634');
+    assert.equal(resolvePatientHistorySearchChart('', [
+      { patientName: '김보람', chartNumber: '204' },
+      { patientName: '김보람', chartNumber: '14634' },
+    ]), '');
+    assert.equal(resolvePatientHistorySearchChart('14634', []), '14634');
   });
 
   it('defers automatic completion only while a plain patient name is being edited', () => {

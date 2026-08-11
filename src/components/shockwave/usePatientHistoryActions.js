@@ -6,6 +6,7 @@ import {
   buildPatientHistoryCellUpdate,
   dedupePatientHistoryLogsByScheduleCell,
   getConfiguredPatientHistoryTreatmentGroup,
+  getPatientHistoryChartOptions,
   getPatientHistoryMemoText,
   getPatientHistoryScheduleOverrideKey,
   getPatientHistorySearchTarget,
@@ -13,6 +14,7 @@ import {
   parsePatientHistoryMemoText,
   patientHistoryLogsShareScheduleCell,
   patientHistoryIdentityMatches,
+  resolvePatientHistorySearchChart,
   resolvePatientHistoryApplyTarget,
 } from '../../lib/patientHistoryModalUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
@@ -340,17 +342,36 @@ export default function usePatientHistoryActions({
       colCount,
       prescriptionClassificationSignature,
     ].join('__');
+    const setLoadedPatientHistory = (logs) => {
+      setPatientHistoryModalData((prev) => {
+        const sameName = normalizeNameForMatch(prev.searchName) === normalizeNameForMatch(nameParam);
+        const chartOptions = chartParam
+          ? (sameName ? (prev.chartOptions || []) : [])
+          : getPatientHistoryChartOptions(logs, nameParam);
+        return {
+          ...prev,
+          loading: false,
+          logs,
+          searchName: nameParam,
+          searchChart: resolvePatientHistorySearchChart(chartParam, chartOptions),
+          chartOptions,
+        };
+      });
+    };
     const cached = patientHistoryResultCacheRef.current.get(cacheKey);
     if (cached && Date.now() - cached.time < 15000) {
-      setPatientHistoryModalData({
-        loading: false,
-        logs: cached.logs,
-        searchName: nameParam,
-        searchChart: chartParam,
-      });
+      setLoadedPatientHistory(cached.logs);
       return;
     }
-    setPatientHistoryModalData((prev) => ({ ...prev, loading: true, searchName: nameParam, searchChart: chartParam }));
+    setPatientHistoryModalData((prev) => ({
+      ...prev,
+      loading: true,
+      searchName: nameParam,
+      searchChart: chartParam,
+      chartOptions: normalizeNameForMatch(prev.searchName) === normalizeNameForMatch(nameParam)
+        ? (prev.chartOptions || [])
+        : [],
+    }));
     try {
       const shockwaveQuery = supabase.from('shockwave_patient_logs')
         .select('id, patient_name, chart_number, visit_count, date, prescription, body_part, therapist_name, source, scheduler_cell_key')
@@ -761,12 +782,7 @@ export default function usePatientHistoryActions({
         const oldestKey = patientHistoryResultCacheRef.current.keys().next().value;
         patientHistoryResultCacheRef.current.delete(oldestKey);
       }
-      setPatientHistoryModalData({
-        loading: false,
-        logs: logsWithMeta,
-        searchName: nameParam,
-        searchChart: chartParam,
-      });
+      setLoadedPatientHistory(logsWithMeta);
     } catch (e) {
       console.error(e);
       alert(`디버그 에러 발생: ${e.message}`);

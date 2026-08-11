@@ -81,6 +81,45 @@ export function getPatientHistorySearchTarget(content) {
   };
 }
 
+export function getPatientHistoryNameOnlySearchTarget(content) {
+  const parsed = parseSchedulerPatientIdentity(String(content || '').trim());
+  const searchName = normalizeNameForHistorySearch(parsed.patientName || content);
+
+  return {
+    shouldFetch: Boolean(searchName),
+    searchName,
+    searchChart: '',
+  };
+}
+
+export function getPatientHistoryChartOptions(logs = [], searchName = '') {
+  const normalizedSearchName = normalizeNameForHistorySearch(searchName);
+  if (!normalizedSearchName) return [];
+
+  const charts = new Map();
+  (Array.isArray(logs) ? logs : []).forEach((log) => {
+    if (normalizeNameForHistorySearch(log?.patient_name) !== normalizedSearchName) return;
+    const chartNumber = String(log?.chart_number || '').trim();
+    if (!chartNumber || charts.has(chartNumber)) return;
+    charts.set(chartNumber, {
+      chartNumber,
+      patientName: String(log?.patient_name || searchName).trim() || searchName,
+    });
+  });
+
+  return [...charts.values()].sort((left, right) => (
+    left.chartNumber.localeCompare(right.chartNumber, 'ko', { numeric: true })
+  ));
+}
+
+export function resolvePatientHistorySearchChart(searchChart = '', chartOptions = []) {
+  const requestedChart = String(searchChart || '').trim();
+  if (requestedChart) return requestedChart;
+  return chartOptions.length === 1
+    ? String(chartOptions[0]?.chartNumber || '').trim()
+    : '';
+}
+
 export function isNameOnlyPatientHistoryDraft(content) {
   const rawContent = String(content || '').trim();
   if (!rawContent) return false;
