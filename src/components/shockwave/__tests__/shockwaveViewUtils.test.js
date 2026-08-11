@@ -27,14 +27,15 @@ describe('shockwave view patient history model', () => {
 
   it('returns stable modal sizing for single and split layouts', () => {
     assert.equal(getPatientHistoryModalLayout(1).maxWidth, 735);
-    assert.equal(getPatientHistoryModalLayout(2).maxWidth, 1260);
+    assert.equal(getPatientHistoryModalLayout(2).maxWidth, 1446);
+    assert.equal(getPatientHistoryModalLayout(2).width, '96%');
     assert.deepEqual(
       getPatientHistoryColumnWidths(1),
-      ['13%', '10%', '13%', '25%', '18%', '7%', '9%', '5%']
+      ['13%', '10%', '12%', '25%', '20%', '7%', '8%', '5%']
     );
     assert.deepEqual(
       getPatientHistoryColumnWidths(2),
-      ['15%', '10%', '12%', '22%', '17%', '7%', '9%', '8%']
+      getPatientHistoryColumnWidths(1)
     );
   });
 });

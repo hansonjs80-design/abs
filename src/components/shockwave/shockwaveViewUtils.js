@@ -178,8 +178,8 @@ export function buildPatientHistoryLogGroups({
 export function getPatientHistoryModalLayout(groupCount) {
   if (groupCount >= 2) {
     return {
-      maxWidth: 1260,
-      width: '92%',
+      maxWidth: 1446,
+      width: '96%',
       gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
     };
   }
@@ -191,9 +191,8 @@ export function getPatientHistoryModalLayout(groupCount) {
 }
 
 export function getPatientHistoryColumnWidths(groupCount) {
-  return groupCount >= 2
-    ? ['15%', '10%', '12%', '22%', '17%', '7%', '9%', '8%']
-    : ['13%', '10%', '13%', '25%', '18%', '7%', '9%', '5%'];
+  void groupCount;
+  return ['13%', '10%', '12%', '25%', '20%', '7%', '8%', '5%'];
 }
 
 export function buildShockwaveHoverTooltipText({
