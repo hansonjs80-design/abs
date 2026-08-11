@@ -3644,3 +3644,28 @@
   height: 22px;
   font-size: 0.9rem;
 }
+
+.patient-history-overflow-field {
+  width: 100%;
+  min-width: 0;
+}
+
+.patient-history-overflow-tooltip {
+  position: fixed;
+  z-index: 10000;
+  visibility: hidden;
+  width: max-content;
+  max-width: min(420px, calc(100vw - 24px));
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 7px;
+  background: rgba(15, 23, 42, 0.96);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.24);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  white-space: pre-wrap;
+}

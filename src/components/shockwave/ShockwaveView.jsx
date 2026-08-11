@@ -12,7 +12,9 @@ import {
   getPatientHistoryMemoTextareaRows,
   getPatientHistoryTreatmentGroup,
   isNameOnlyPatientHistoryDraft,
+  parsePatientHistoryMemoText,
 } from '../../lib/patientHistoryModalUtils';
+import { formatPatientHistoryOverflowTooltipItems } from '../../lib/patientHistoryOverflowTooltipUtils';
 import { buildBlankScheduleCleanupPayload, sanitizeBlankScheduleCellData } from '../../lib/scheduleBlankCellCleanupUtils';
 import {
   MAX_SCHEDULE_TIME_COL_WIDTH,
@@ -54,6 +56,7 @@ import { ContextMenuLocalInputGroup } from './ContextMenuLocalInputGroup';
 import ContextMenuMemoList from './ContextMenuMemoList';
 import MemoizedCell from './ShockwaveScheduleCell';
 import ShockwaveHoverTooltip from './ShockwaveHoverTooltip';
+import PatientHistoryOverflowField from './PatientHistoryOverflowField';
 import PatientHistoryApplyConfirmDialog from './PatientHistoryApplyConfirmDialog';
 import useContextMenuPositioning from './useContextMenuPositioning';
 import usePatientHistoryActions from './usePatientHistoryActions';
@@ -3961,64 +3964,71 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                   </select>
                                 </td>
                                 <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
-                                  <input
-                                    type="text"
-                                    value={log.body_part || ''}
-                                    placeholder="부위"
-                                    aria-label="부위 수정"
-                                    style={{ ...historyEditFieldStyle, textAlign: 'center' }}
-                                    onChange={(event) => {
-                                      updatePatientHistoryModalLog(historyRowKey, {
-                                        body_part: event.target.value,
-                                      });
-                                    }}
-                                    onBlur={handleHistoryBodyPartBlur}
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                    onClick={(e) => e.stopPropagation()}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        e.currentTarget.blur();
-                                      }
-                                    }}
-                                  />
+                                  <PatientHistoryOverflowField
+                                    value={formatPatientHistoryOverflowTooltipItems(splitBodyParts(log.body_part))}
+                                  >
+                                    <input
+                                      type="text"
+                                      value={log.body_part || ''}
+                                      placeholder="부위"
+                                      aria-label="부위 수정"
+                                      style={{ ...historyEditFieldStyle, textAlign: 'center' }}
+                                      onChange={(event) => {
+                                        updatePatientHistoryModalLog(historyRowKey, {
+                                          body_part: event.target.value,
+                                        });
+                                      }}
+                                      onBlur={handleHistoryBodyPartBlur}
+                                      onMouseDown={(e) => e.stopPropagation()}
+                                      onClick={(e) => e.stopPropagation()}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          e.preventDefault();
+                                          e.currentTarget.blur();
+                                        }
+                                      }}
+                                    />
+                                  </PatientHistoryOverflowField>
                                 </td>
                                 <td style={{ textAlign: 'left', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
-                                  <textarea
-                                    rows={memoTextareaRows}
-                                    value={currentMemoValue}
-                                    placeholder={canEditHistoryMemo ? '메모' : '-'}
-                                    aria-label="메모 수정"
-                                    disabled={!canEditHistoryMemo}
-                                    title={canEditHistoryMemo ? currentMemoValue : '스케줄과 연결되지 않은 기존 기록입니다.'}
-                                    style={{
-                                      ...historyEditFieldStyle,
-                                      display: 'block',
-                                      boxSizing: 'border-box',
-                                      height: memoTextareaRows === 1 ? '22px' : undefined,
-                                      minHeight: memoTextareaRows === 1 ? '22px' : undefined,
-                                      margin: '0 auto',
-                                      lineHeight: memoTextareaRows > 1 ? 1.35 : '16px',
-                                      resize: memoTextareaRows > 1 ? 'vertical' : 'none',
-                                      textAlign: 'left',
-                                      opacity: canEditHistoryMemo ? 1 : 0.65,
-                                      cursor: canEditHistoryMemo ? 'text' : 'not-allowed',
-                                    }}
-                                    onChange={(event) => {
-                                      updatePatientHistoryModalLog(historyRowKey, {
-                                        memo: event.target.value,
-                                      });
-                                    }}
-                                    onBlur={handleHistoryMemoBlur}
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                    onClick={(e) => e.stopPropagation()}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                                        e.preventDefault();
-                                        e.currentTarget.blur();
-                                      }
-                                    }}
-                                  />
+                                  <PatientHistoryOverflowField
+                                    value={formatPatientHistoryOverflowTooltipItems(parsePatientHistoryMemoText(currentMemoValue))}
+                                  >
+                                    <textarea
+                                      rows={memoTextareaRows}
+                                      value={currentMemoValue}
+                                      placeholder={canEditHistoryMemo ? '메모' : '-'}
+                                      aria-label="메모 수정"
+                                      disabled={!canEditHistoryMemo}
+                                      style={{
+                                        ...historyEditFieldStyle,
+                                        display: 'block',
+                                        boxSizing: 'border-box',
+                                        height: memoTextareaRows === 1 ? '22px' : undefined,
+                                        minHeight: memoTextareaRows === 1 ? '22px' : undefined,
+                                        margin: '0 auto',
+                                        lineHeight: memoTextareaRows > 1 ? 1.35 : '16px',
+                                        resize: memoTextareaRows > 1 ? 'vertical' : 'none',
+                                        textAlign: 'left',
+                                        opacity: canEditHistoryMemo ? 1 : 0.65,
+                                        cursor: canEditHistoryMemo ? 'text' : 'not-allowed',
+                                      }}
+                                      onChange={(event) => {
+                                        updatePatientHistoryModalLog(historyRowKey, {
+                                          memo: event.target.value,
+                                        });
+                                      }}
+                                      onBlur={handleHistoryMemoBlur}
+                                      onMouseDown={(e) => e.stopPropagation()}
+                                      onClick={(e) => e.stopPropagation()}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                                          e.preventDefault();
+                                          e.currentTarget.blur();
+                                        }
+                                      }}
+                                    />
+                                  </PatientHistoryOverflowField>
                                 </td>
                                 <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
                                   <input
