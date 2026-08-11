@@ -25,6 +25,10 @@ test('schedule editor keeps cell fills and uses white for cells without a fill',
   );
   assert.match(
     shockwaveCss,
+    /\.sw-cell-input-wrapper\.is-single-row \.sw-cell-input\s*\{[^}]*height:\s*var\(--sw-row-height,\s*23px\);[^}]*line-height:\s*normal;/s
+  );
+  assert.match(
+    shockwaveCss,
     /\.sw-cell\.other-month-bg\s*\{[^}]*background:\s*#f3f4f6;[^}]*color:\s*var\(--text-primary\);/s
   );
   assert.doesNotMatch(

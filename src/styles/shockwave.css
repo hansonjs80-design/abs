@@ -878,6 +878,11 @@
   white-space: pre !important;
 }
 
+.sw-cell-input-wrapper.is-single-row .sw-cell-input {
+  height: var(--sw-row-height, 23px);
+  line-height: normal;
+}
+
 /* 시간 레이블 (좌측 첫 번째 열) */
 .sw-time-label {
   box-sizing: border-box;
