@@ -122,6 +122,14 @@ export function getActionDoseTagFromPrescription(prescription, doseTags = {}) {
   return autoTagMatch ? autoTagMatch[1] : '';
 }
 
+export function applyPrescriptionDoseTagToContent(text, prescription, doseTags = {}) {
+  const configuredTag = getActionDoseTagFromPrescription(prescription, doseTags);
+  const legacyTagMatch = String(prescription || '').match(/(\d{2,3})/);
+  const legacyTag = legacyTagMatch ? legacyTagMatch[1] : '';
+
+  return updateDoseTagForPrescriptionContent(text, configuredTag, legacyTag, doseTags);
+}
+
 /**
  * Extract the numeric dose tag from a prescription name.
  * e.g. "30분" → "30", "40분" → "40", "프리미엄" → ""

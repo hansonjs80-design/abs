@@ -3,7 +3,9 @@ import { generateShockwaveCalendar } from '../../lib/calendarUtils';
 import { incrementSessionCount, normalizeNameForMatch } from '../../lib/memoParser';
 import { supabase } from '../../lib/supabaseClient';
 import {
+  applyPrescriptionDoseTagToContent,
   get4060PrescriptionFromContent,
+  getActionDoseTagFromPrescription,
   has4060Pattern,
   normalizeConfiguredDoseTagInContent,
   normalize4060StarOrder,
@@ -26,7 +28,6 @@ import {
 import {
   addBodyPartToMap,
   appendSchedulerInlineNote,
-  buildManualNamePart,
   buildMergeSpanWithBodyPartOptions,
   buildMergeSpanWithMemoList,
   buildSchedulerMemoSortKey,
@@ -511,6 +512,10 @@ export default function useSchedulerAutoText({
             ? normalizeImportedPrescription(selected.latestPrescription || selected.prescription, { allowManualAlias: true })
             : (normalizeImportedPrescription(selected.latestPrescription || selected.prescription, { allowManualAlias: true }) || undefined)));
       const selectedPrescription = selected.latestPrescription || selected.prescription || '';
+      const normalizedManualPrescription = normalizeSelectedPrescription(selectedPrescription, 'manual');
+      const selectedTextWithConfiguredTag = normalizedManualPrescription
+        ? applyPrescriptionDoseTagToContent(selected.nextText, normalizedManualPrescription, config.doseTags)
+        : selected.nextText;
       const selectedHasManualDose = hasDoseTagPattern(selected.nextText)
         || Boolean(normalizeManualTherapyPrescriptionAlias(selectedPrescription, manualTherapyPrescriptions));
       const shouldOmitSelectedPrescription = !isConfiguredPrescription(selectedPrescription, {
@@ -518,7 +523,7 @@ export default function useSchedulerAutoText({
       });
       const selectedText = shouldOmitSelectedPrescription
         ? normalizeSchedulerVisitSuffix(`${selected.chartNumber}/${strip4060FromContent(selected.namePart)}(1)`)
-        : selected.nextText;
+        : selectedTextWithConfiguredTag;
 
       return {
         text: (explicitVisitSuffix || explicitNoteSuffix) ? withInlineNote(rawNameForMatching) : withInlineNote(selectedText),
@@ -760,7 +765,12 @@ export default function useSchedulerAutoText({
     matches.forEach((item) => {
       const chartNumber = String(item.chart_number || '').trim();
       const itemPrescriptionForMeta = getHistoryPrescription(item);
-      const doseTag = item.type === 'manual' ? getManualDoseTag(itemPrescriptionForMeta) : '';
+      const normalizedItemPrescriptionForTag = item.type === 'manual'
+        ? normalizeSelectedPrescription(itemPrescriptionForMeta, item.type) || itemPrescriptionForMeta
+        : itemPrescriptionForMeta;
+      const doseTag = item.type === 'manual'
+        ? getActionDoseTagFromPrescription(normalizedItemPrescriptionForTag, config.doseTags)
+        : '';
       const candidateKey = chartNumber ? `${chartNumber}__${item.type}` : `${normalizeNameForMatch(item.patient_name)}__${item.type}`;
       if (!candidateMap.has(candidateKey)) {
         candidateMap.set(candidateKey, {
@@ -880,10 +890,13 @@ export default function useSchedulerAutoText({
         ? normalizeSelectedPrescription(itemPrescription, item.type) || itemPrescription
         : itemPrescription;
       let namePart = item.type === 'manual' && isCurrentPrescription
-        ? buildManualNamePart(cleanPatientName, normalizedItemPrescription)
+        ? applyPrescriptionDoseTagToContent(cleanPatientName, normalizedItemPrescription, config.doseTags)
         : strip4060FromContent(cleanPatientName);
       if (userRemovedDoseTag) {
-        namePart = strip4060FromContent(namePart);
+        namePart = stripDoseTagFromContent(
+          namePart,
+          getConfiguredDoseTagFromContent(namePart, config.doseTags)
+        );
       }
       const latestBodyPart = getHistoryBodyPart(item)
         || candidate.latestNonEmptyBodyPart

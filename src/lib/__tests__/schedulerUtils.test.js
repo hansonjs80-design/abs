@@ -19,6 +19,7 @@ import { convertKoreanQwertyMistypeToEnglish } from '../keyboardLayoutUtils.js';
 import { toProperCase } from '../bodyPartFormatUtils.js';
 import {
   applyDoseTagToContent,
+  applyPrescriptionDoseTagToContent,
   getConfiguredDoseTagFromContent,
   normalizeConfiguredDoseTagInContent,
   normalizeDoseTagInput,
@@ -313,6 +314,19 @@ describe('manual therapy dose tag formatting', () => {
     assert.equal(
       updateDoseTagForPrescriptionContent('14634/김보람60*', '40', '60', doseTags),
       '14634/김보람40*'
+    );
+  });
+
+  it('uses the configured cell tag instead of a number from the prescription name', () => {
+    const doseTags = { '30분': 'M' };
+
+    assert.equal(
+      applyPrescriptionDoseTagToContent('6222/김은영30(6)', '30분', doseTags),
+      '6222/김은영M(6)'
+    );
+    assert.equal(
+      applyPrescriptionDoseTagToContent('김은영', '30분', doseTags),
+      '김은영M'
     );
   });
 

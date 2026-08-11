@@ -3801,42 +3801,45 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
               <button onClick={closePatientHistoryModal} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', padding: '0 4px', color: 'var(--text-secondary, #666)' }}>✕</button>
             </div>
             <div ref={patientHistoryModalBodyRef} style={{ padding: '14px 18px', maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain' }}>
-              <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', fontSize: '1.05rem', fontWeight: 600 }}>
-                <div>
-                  검색 대상:{' '}
-                  {patientHistoryModalData.searchName ? (
-                    <button
-                      type="button"
-                      aria-label={`${patientHistoryModalData.searchName} 이름만으로 다시 검색`}
-                      title="이름만으로 다시 검색"
-                      disabled={patientHistoryModalData.loading}
-                      onClick={handleSearchPatientHistoryByName}
-                      style={{ border: 'none', background: 'none', padding: 0, color: 'var(--brand-primary)', font: 'inherit', fontWeight: 'inherit', textDecoration: 'underline', textUnderlineOffset: '2px', cursor: patientHistoryModalData.loading ? 'wait' : 'pointer' }}
-                    >
-                      {patientHistoryModalData.searchName}
-                    </button>
-                  ) : null}{' '}
-                  {patientHistoryModalData.searchChart ? `(${patientHistoryModalData.searchChart})` : ''}
-                </div>
+              <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem', fontWeight: 600 }}>
+                <span>검색 대상:</span>
                 {(patientHistoryModalData.chartOptions || []).length > 1 ? (
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary, #64748b)' }}>
-                    <span>동명이인 {patientHistoryModalData.chartOptions.length}명</span>
+                  <>
                     <select
-                      aria-label="동명이인 챠트번호 선택"
+                      aria-label="검색 대상 이름 및 챠트번호 선택"
                       value={patientHistoryModalData.searchChart || ''}
                       disabled={patientHistoryModalData.loading}
                       onChange={handleSelectPatientHistoryChart}
-                      style={{ border: '1px solid var(--border-color, #cbd5e1)', borderRadius: '6px', background: 'var(--bg-primary, #fff)', color: 'var(--text-primary, #1f2937)', padding: '4px 7px', fontSize: '0.85rem', cursor: patientHistoryModalData.loading ? 'wait' : 'pointer' }}
+                      style={{ border: '1px solid var(--border-color, #cbd5e1)', borderRadius: '6px', background: 'var(--bg-primary, #fff)', color: 'var(--brand-primary)', padding: '4px 28px 4px 8px', fontSize: '0.95rem', fontWeight: 700, cursor: patientHistoryModalData.loading ? 'wait' : 'pointer' }}
                     >
-                      <option value="">이름 전체</option>
+                      <option value="">{patientHistoryModalData.searchName} (전체)</option>
                       {patientHistoryModalData.chartOptions.map((option) => (
                         <option key={option.chartNumber} value={option.chartNumber}>
                           {option.patientName} ({option.chartNumber})
                         </option>
                       ))}
                     </select>
-                  </label>
-                ) : null}
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary, #64748b)' }}>
+                      동명이인 {patientHistoryModalData.chartOptions.length}명
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    {patientHistoryModalData.searchName ? (
+                      <button
+                        type="button"
+                        aria-label={`${patientHistoryModalData.searchName} 이름만으로 다시 검색`}
+                        title="이름만으로 다시 검색"
+                        disabled={patientHistoryModalData.loading}
+                        onClick={handleSearchPatientHistoryByName}
+                        style={{ border: 'none', background: 'none', padding: 0, color: 'var(--brand-primary)', font: 'inherit', fontWeight: 'inherit', textDecoration: 'underline', textUnderlineOffset: '2px', cursor: patientHistoryModalData.loading ? 'wait' : 'pointer' }}
+                      >
+                        {patientHistoryModalData.searchName}
+                      </button>
+                    ) : null}{' '}
+                    {patientHistoryModalData.searchChart ? `(${patientHistoryModalData.searchChart})` : ''}
+                  </>
+                )}
               </div>
               
               {patientHistoryModalData.loading ? (
