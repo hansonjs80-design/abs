@@ -116,7 +116,7 @@ test('schedule today border replaces the day boundary without a white halo', asy
 
   assert.match(
     shockwaveCss,
-    /\.shockwave-day\.is-today::after\s*\{[^}]*inset:\s*-2px;[^}]*border:\s*4px solid var\(--sw-today-border\);[^}]*border-radius:\s*0;/s
+    /\.shockwave-day\.is-today::after\s*\{[^}]*inset:\s*-2px;[^}]*z-index:\s*110;[^}]*border:\s*4px solid var\(--sw-today-border\);[^}]*border-radius:\s*0;[^}]*pointer-events:\s*none;/s
   );
   assert.match(
     shockwaveCss,
@@ -125,6 +125,10 @@ test('schedule today border replaces the day boundary without a white halo', asy
   assert.doesNotMatch(
     shockwaveCss,
     /\.shockwave-day\.is-today::after\s*\{[^}]*box-shadow:/s
+  );
+  assert.match(
+    shockwaveCss,
+    /@media \(max-width: 768px\),[\s\S]*?\.shockwave-day\.is-today::after\s*\{[^}]*z-index:\s*110;/s
   );
 });
 
