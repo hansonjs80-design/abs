@@ -7,6 +7,7 @@ import {
   getConfiguredPatientHistoryTreatmentGroup,
   getPatientHistoryBodyPartText,
   getPatientHistoryBodyPartTextareaRows,
+  getPatientHistoryMemoDisplayText,
   getPatientHistoryMemoText,
   getPatientHistoryMemoTextareaRows,
   getPatientHistoryScheduleOverrideKey,
@@ -108,6 +109,10 @@ describe('patient history schedule memos', () => {
       ['Rt. Shoulder', 'Lt. Knee'],
     );
     assert.equal(getPatientHistoryBodyPartText('Rt. Shoulder'), 'Rt. Shoulder');
+    assert.equal(
+      getPatientHistoryBodyPartText('경추근막통증(M79180)'),
+      '경추근막통증(M79180)',
+    );
     assert.equal(getPatientHistoryBodyPartTextareaRows('Rt. Shoulder'), 1);
     assert.equal(getPatientHistoryBodyPartTextareaRows('Rt. Shoulder, Lt. Knee'), 2);
   });
@@ -120,8 +125,20 @@ describe('patient history schedule memos', () => {
 
   it('keeps one non-empty memo entry per line when saving from the modal', () => {
     assert.deepEqual(
-      parsePatientHistoryMemoText(' 예약 확인 \n\n보호자 동반\n '),
+      parsePatientHistoryMemoText(' • 예약 확인 \n\n• 보호자 동반\n '),
       ['예약 확인', '보호자 동반']
+    );
+  });
+
+  it('shows bullets only when the memo cell contains multiple entries', () => {
+    assert.equal(getPatientHistoryMemoDisplayText('예약 확인'), '예약 확인');
+    assert.equal(
+      getPatientHistoryMemoDisplayText('예약 확인\n보호자 동반'),
+      '• 예약 확인\n• 보호자 동반',
+    );
+    assert.equal(
+      getPatientHistoryMemoDisplayText('예약 확인\n'),
+      '예약 확인\n',
     );
   });
 

@@ -11,6 +11,7 @@ import { normalizeNameForMatch } from '../../lib/memoParser';
 import {
   getPatientHistoryBodyPartText,
   getPatientHistoryBodyPartTextareaRows,
+  getPatientHistoryMemoDisplayText,
   getPatientHistoryMemoTextareaRows,
   getPatientHistoryTreatmentGroup,
   isNameOnlyPatientHistoryDraft,
@@ -3910,7 +3911,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                               const bodyPartTextareaRows = getPatientHistoryBodyPartTextareaRows(currentBodyPartValue);
                               const hasMultipleBodyParts = bodyPartTextareaRows > 1;
                               const currentMemoValue = String(log.memo || '');
+                              const memoTextareaValue = getPatientHistoryMemoDisplayText(currentMemoValue);
                               const memoTextareaRows = getPatientHistoryMemoTextareaRows(currentMemoValue);
+                              const hasMultipleMemos = memoTextareaRows > 1;
                               const canEditHistoryMemo = Boolean(
                                 log.isCurrentCell
                                 || String(log.id || '').startsWith('draft-')
@@ -3918,7 +3921,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 || log.schedule_id
                               );
                               const handleHistoryMemoBlur = async (event) => {
-                                const nextValue = event.target.value;
+                                const nextValue = parsePatientHistoryMemoText(event.target.value).join('\n');
                                 const originalValue = log._original_memo ?? '';
                                 updatePatientHistoryModalLog(historyRowKey, {
                                   memo: nextValue,
@@ -3993,8 +3996,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                         margin: '0 auto',
                                         lineHeight: bodyPartTextareaRows > 1 ? 1.35 : '16px',
                                         paddingLeft: hasMultipleBodyParts ? '7px' : '5px',
+                                        overflowWrap: 'normal',
+                                        overflowX: 'hidden',
                                         resize: 'none',
                                         textAlign: hasMultipleBodyParts ? 'left' : 'center',
+                                        whiteSpace: 'pre',
+                                        wordBreak: 'normal',
                                       }}
                                       onChange={(event) => {
                                         updatePatientHistoryModalLog(historyRowKey, {
@@ -4015,11 +4022,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 </td>
                                 <td style={{ textAlign: 'left', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
                                   <PatientHistoryOverflowField
-                                    value={formatPatientHistoryOverflowTooltipItems(parsePatientHistoryMemoText(currentMemoValue))}
+                                    value={formatPatientHistoryOverflowTooltipItems(
+                                      parsePatientHistoryMemoText(currentMemoValue),
+                                      { showBullets: true },
+                                    )}
                                   >
                                     <textarea
                                       rows={memoTextareaRows}
-                                      value={currentMemoValue}
+                                      value={memoTextareaValue}
                                       placeholder={canEditHistoryMemo ? '메모' : '-'}
                                       aria-label="메모 수정"
                                       disabled={!canEditHistoryMemo}
@@ -4031,8 +4041,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                         minHeight: memoTextareaRows === 1 ? '22px' : undefined,
                                         margin: '0 auto',
                                         lineHeight: memoTextareaRows > 1 ? 1.35 : '16px',
+                                        overflowWrap: 'normal',
+                                        overflowX: 'hidden',
+                                        paddingLeft: hasMultipleMemos ? '7px' : '5px',
                                         resize: memoTextareaRows > 1 ? 'vertical' : 'none',
                                         textAlign: 'left',
+                                        whiteSpace: 'pre',
+                                        wordBreak: 'normal',
                                         opacity: canEditHistoryMemo ? 1 : 0.65,
                                         cursor: canEditHistoryMemo ? 'text' : 'not-allowed',
                                       }}
