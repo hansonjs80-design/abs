@@ -3663,7 +3663,7 @@
   padding: 8px 10px;
   border: 1px solid rgba(15, 23, 42, 0.18);
   border-radius: 7px;
-  background: #f3f4f6;
+  background-color: #e2e8f0 !important;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.2);
   color: #1f2937;
   font-size: 0.82rem;

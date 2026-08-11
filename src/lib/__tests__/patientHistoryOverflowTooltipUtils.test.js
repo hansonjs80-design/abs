@@ -53,6 +53,6 @@ test('patient history overflow tooltip stays above the modal with a light gray s
   const modalZIndex = Number(shockwaveView.match(/zIndex:\s*(\d+),\s*overscrollBehavior/)?.[1]);
 
   assert.ok(tooltipZIndex > modalZIndex);
-  assert.match(tooltipRule, /background:\s*#f3f4f6;/);
+  assert.match(tooltipRule, /background-color:\s*#e2e8f0\s*!important;/);
   assert.match(tooltipRule, /color:\s*#1f2937;/);
 });
