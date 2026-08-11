@@ -7,6 +7,7 @@ import {
   getConfiguredPatientHistoryTreatmentGroup,
   getPatientHistoryBodyPartText,
   getPatientHistoryBodyPartTextareaRows,
+  getPatientHistoryListTextAlign,
   getPatientHistoryMemoDisplayText,
   getPatientHistoryMemoText,
   getPatientHistoryMemoTextareaRows,
@@ -146,6 +147,12 @@ describe('patient history schedule memos', () => {
     assert.equal(getPatientHistoryMemoTextareaRows(''), 1);
     assert.equal(getPatientHistoryMemoTextareaRows('예약 확인'), 1);
     assert.equal(getPatientHistoryMemoTextareaRows('예약 확인\n보호자 동반'), 2);
+  });
+
+  it('centers one body or memo item and left-aligns a list', () => {
+    assert.equal(getPatientHistoryListTextAlign(0), 'center');
+    assert.equal(getPatientHistoryListTextAlign(1), 'center');
+    assert.equal(getPatientHistoryListTextAlign(2), 'left');
   });
 });
 

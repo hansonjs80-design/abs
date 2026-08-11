@@ -204,6 +204,10 @@ export function getPatientHistoryMemoTextareaRows(value) {
   return Math.max(1, String(value || '').split(/\r?\n/).length);
 }
 
+export function getPatientHistoryListTextAlign(itemCount) {
+  return Number(itemCount) > 1 ? 'left' : 'center';
+}
+
 export function resolvePatientHistoryApplyTarget(capturedCell, selectedCell) {
   const target = capturedCell || selectedCell;
   if (!target) return null;

@@ -11,6 +11,7 @@ import { normalizeNameForMatch } from '../../lib/memoParser';
 import {
   getPatientHistoryBodyPartText,
   getPatientHistoryBodyPartTextareaRows,
+  getPatientHistoryListTextAlign,
   getPatientHistoryMemoDisplayText,
   getPatientHistoryMemoTextareaRows,
   getPatientHistoryTreatmentGroup,
@@ -3907,13 +3908,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 ));
                               };
                               const currentBodyPartValue = String(log.body_part || '');
+                              const currentBodyPartItems = parsePatientHistoryBodyPartText(currentBodyPartValue);
                               const bodyPartTextareaValue = getPatientHistoryBodyPartText(currentBodyPartValue);
                               const bodyPartTextareaRows = getPatientHistoryBodyPartTextareaRows(currentBodyPartValue);
-                              const hasMultipleBodyParts = bodyPartTextareaRows > 1;
+                              const hasMultipleBodyParts = currentBodyPartItems.length > 1;
+                              const bodyPartTextAlign = getPatientHistoryListTextAlign(currentBodyPartItems.length);
                               const currentMemoValue = String(log.memo || '');
+                              const currentMemoItems = parsePatientHistoryMemoText(currentMemoValue);
                               const memoTextareaValue = getPatientHistoryMemoDisplayText(currentMemoValue);
                               const memoTextareaRows = getPatientHistoryMemoTextareaRows(currentMemoValue);
-                              const hasMultipleMemos = memoTextareaRows > 1;
+                              const hasMultipleMemos = currentMemoItems.length > 1;
+                              const memoTextAlign = getPatientHistoryListTextAlign(currentMemoItems.length);
                               const canEditHistoryMemo = Boolean(
                                 log.isCurrentCell
                                 || String(log.id || '').startsWith('draft-')
@@ -3976,10 +3981,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     ))}
                                   </select>
                                 </td>
-                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
+                                <td style={{ textAlign: bodyPartTextAlign, backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
                                   <PatientHistoryOverflowField
                                     value={formatPatientHistoryOverflowTooltipItems(
-                                      parsePatientHistoryBodyPartText(currentBodyPartValue),
+                                      currentBodyPartItems,
                                       { showBullets: true },
                                     )}
                                   >
@@ -3999,7 +4004,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                         overflowWrap: 'normal',
                                         overflowX: 'hidden',
                                         resize: 'none',
-                                        textAlign: hasMultipleBodyParts ? 'left' : 'center',
+                                        textAlign: bodyPartTextAlign,
                                         whiteSpace: 'pre',
                                         wordBreak: 'normal',
                                       }}
@@ -4020,10 +4025,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     />
                                   </PatientHistoryOverflowField>
                                 </td>
-                                <td style={{ textAlign: 'left', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
+                                <td style={{ textAlign: memoTextAlign, backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
                                   <PatientHistoryOverflowField
                                     value={formatPatientHistoryOverflowTooltipItems(
-                                      parsePatientHistoryMemoText(currentMemoValue),
+                                      currentMemoItems,
                                       { showBullets: true },
                                     )}
                                   >
@@ -4045,7 +4050,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                         overflowX: 'hidden',
                                         paddingLeft: hasMultipleMemos ? '7px' : '5px',
                                         resize: memoTextareaRows > 1 ? 'vertical' : 'none',
-                                        textAlign: 'left',
+                                        textAlign: memoTextAlign,
                                         whiteSpace: 'pre',
                                         wordBreak: 'normal',
                                         opacity: canEditHistoryMemo ? 1 : 0.65,
