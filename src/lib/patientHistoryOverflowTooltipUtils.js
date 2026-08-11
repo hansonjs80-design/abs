@@ -1,7 +1,10 @@
-export function formatPatientHistoryOverflowTooltipItems(items = []) {
-  return (Array.isArray(items) ? items : [items])
+export function formatPatientHistoryOverflowTooltipItems(items = [], { showBullets = false } = {}) {
+  const normalizedItems = (Array.isArray(items) ? items : [items])
     .map((item) => String(item || '').trim())
-    .filter(Boolean)
+    .filter(Boolean);
+
+  return normalizedItems
+    .map((item) => (showBullets && normalizedItems.length > 1 ? `• ${item}` : item))
     .join('\n');
 }
 

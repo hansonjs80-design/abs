@@ -3908,6 +3908,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                               const currentBodyPartValue = String(log.body_part || '');
                               const bodyPartTextareaValue = getPatientHistoryBodyPartText(currentBodyPartValue);
                               const bodyPartTextareaRows = getPatientHistoryBodyPartTextareaRows(currentBodyPartValue);
+                              const hasMultipleBodyParts = bodyPartTextareaRows > 1;
                               const currentMemoValue = String(log.memo || '');
                               const memoTextareaRows = getPatientHistoryMemoTextareaRows(currentMemoValue);
                               const canEditHistoryMemo = Boolean(
@@ -3974,7 +3975,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 </td>
                                 <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
                                   <PatientHistoryOverflowField
-                                    value={formatPatientHistoryOverflowTooltipItems(parsePatientHistoryBodyPartText(currentBodyPartValue))}
+                                    value={formatPatientHistoryOverflowTooltipItems(
+                                      parsePatientHistoryBodyPartText(currentBodyPartValue),
+                                      { showBullets: true },
+                                    )}
                                   >
                                     <textarea
                                       rows={bodyPartTextareaRows}
@@ -3988,8 +3992,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                         minHeight: bodyPartTextareaRows === 1 ? '22px' : undefined,
                                         margin: '0 auto',
                                         lineHeight: bodyPartTextareaRows > 1 ? 1.35 : '16px',
+                                        paddingLeft: hasMultipleBodyParts ? '7px' : '5px',
                                         resize: 'none',
-                                        textAlign: 'center',
+                                        textAlign: hasMultipleBodyParts ? 'left' : 'center',
                                       }}
                                       onChange={(event) => {
                                         updatePatientHistoryModalLog(historyRowKey, {

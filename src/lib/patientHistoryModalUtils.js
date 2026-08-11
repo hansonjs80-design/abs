@@ -161,12 +161,20 @@ export function getPatientHistoryMemoText(mergeSpan) {
 export function parsePatientHistoryBodyPartText(value) {
   return String(value || '')
     .split(/[,\r\n]+/)
-    .map((item) => item.trim())
+    .map((item) => item.replace(/^\s*•\s*/, '').trim())
     .filter(Boolean);
 }
 
 export function getPatientHistoryBodyPartText(value) {
-  return parsePatientHistoryBodyPartText(value).join('\n');
+  const displayItems = String(value || '')
+    .replace(/\r\n/g, '\n')
+    .split(/[,\n]/)
+    .map((item) => item.replace(/^\s*•\s*/, '').trim());
+  const itemCount = displayItems.filter(Boolean).length;
+
+  return displayItems
+    .map((item) => (item && itemCount > 1 ? `• ${item}` : item))
+    .join('\n');
 }
 
 export function getPatientHistoryBodyPartTextareaRows(value) {

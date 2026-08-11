@@ -7,8 +7,15 @@ import {
 
 test('patient history overflow tooltip shows multiple values on separate lines', () => {
   assert.equal(
-    formatPatientHistoryOverflowTooltipItems([' Rt. Shoulder ', 'Lt. Knee']),
-    'Rt. Shoulder\nLt. Knee',
+    formatPatientHistoryOverflowTooltipItems(
+      [' Rt. Shoulder ', 'Lt. Knee'],
+      { showBullets: true },
+    ),
+    '• Rt. Shoulder\n• Lt. Knee',
+  );
+  assert.equal(
+    formatPatientHistoryOverflowTooltipItems(['Rt. Shoulder'], { showBullets: true }),
+    'Rt. Shoulder',
   );
   assert.equal(
     formatPatientHistoryOverflowTooltipItems(['첫 메모', '', '둘째 메모']),

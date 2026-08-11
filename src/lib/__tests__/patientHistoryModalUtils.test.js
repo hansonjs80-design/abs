@@ -101,12 +101,13 @@ describe('patient history schedule memos', () => {
   it('shows multiple body parts as separate editable lines without changing the saved list format', () => {
     assert.equal(
       getPatientHistoryBodyPartText('Rt. Shoulder, Lt. Knee'),
-      'Rt. Shoulder\nLt. Knee',
+      '• Rt. Shoulder\n• Lt. Knee',
     );
     assert.deepEqual(
-      parsePatientHistoryBodyPartText(' Rt. Shoulder\n\nLt. Knee '),
+      parsePatientHistoryBodyPartText(' • Rt. Shoulder\n\n• Lt. Knee '),
       ['Rt. Shoulder', 'Lt. Knee'],
     );
+    assert.equal(getPatientHistoryBodyPartText('Rt. Shoulder'), 'Rt. Shoulder');
     assert.equal(getPatientHistoryBodyPartTextareaRows('Rt. Shoulder'), 1);
     assert.equal(getPatientHistoryBodyPartTextareaRows('Rt. Shoulder, Lt. Knee'), 2);
   });
