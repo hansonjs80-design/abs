@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import {
   formatPatientHistoryOverflowTooltipItems,
   getPatientHistoryOverflowTooltipPosition,
 } from '../patientHistoryOverflowTooltipUtils.js';
+
+const shockwaveCssUrl = new URL('../../styles/shockwave.css', import.meta.url);
+const shockwaveViewUrl = new URL('../../components/shockwave/ShockwaveView.jsx', import.meta.url);
 
 test('patient history overflow tooltip shows multiple values on separate lines', () => {
   assert.equal(
@@ -37,4 +41,18 @@ test('patient history overflow tooltip stays in the viewport and flips above low
     viewportWidth: 320,
     viewportHeight: 500,
   }), { left: 128, top: 312 });
+});
+
+test('patient history overflow tooltip stays above the modal with a white surface', async () => {
+  const [shockwaveCss, shockwaveView] = await Promise.all([
+    readFile(shockwaveCssUrl, 'utf8'),
+    readFile(shockwaveViewUrl, 'utf8'),
+  ]);
+  const tooltipRule = shockwaveCss.match(/\.patient-history-overflow-tooltip\s*\{([^}]*)\}/s)?.[1] || '';
+  const tooltipZIndex = Number(tooltipRule.match(/z-index:\s*(\d+)/)?.[1]);
+  const modalZIndex = Number(shockwaveView.match(/zIndex:\s*(\d+),\s*overscrollBehavior/)?.[1]);
+
+  assert.ok(tooltipZIndex > modalZIndex);
+  assert.match(tooltipRule, /background:\s*#fff;/);
+  assert.match(tooltipRule, /color:\s*#1f2937;/);
 });
