@@ -1,19 +1,8 @@
-const OVERFLOW_TOLERANCE_PX = 1;
-
 export function formatPatientHistoryOverflowTooltipItems(items = []) {
   return (Array.isArray(items) ? items : [items])
     .map((item) => String(item || '').trim())
     .filter(Boolean)
     .join('\n');
-}
-
-export function isPatientHistoryFieldOverflowing(element) {
-  if (!element) return false;
-
-  return (
-    element.scrollWidth > element.clientWidth + OVERFLOW_TOLERANCE_PX
-    || element.scrollHeight > element.clientHeight + OVERFLOW_TOLERANCE_PX
-  );
 }
 
 export function getPatientHistoryOverflowTooltipPosition({

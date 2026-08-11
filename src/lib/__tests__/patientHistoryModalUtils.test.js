@@ -5,12 +5,15 @@ import {
   buildPatientHistoryCellUpdate,
   dedupePatientHistoryLogsByScheduleCell,
   getConfiguredPatientHistoryTreatmentGroup,
+  getPatientHistoryBodyPartText,
+  getPatientHistoryBodyPartTextareaRows,
   getPatientHistoryMemoText,
   getPatientHistoryMemoTextareaRows,
   getPatientHistoryScheduleOverrideKey,
   getPatientHistorySearchTarget,
   getPatientHistoryTreatmentGroup,
   isNameOnlyPatientHistoryDraft,
+  parsePatientHistoryBodyPartText,
   parsePatientHistoryMemoText,
   patientHistoryLogsShareScheduleCell,
   patientHistoryIdentityMatches,
@@ -95,6 +98,19 @@ describe('patient history modal search target', () => {
 });
 
 describe('patient history schedule memos', () => {
+  it('shows multiple body parts as separate editable lines without changing the saved list format', () => {
+    assert.equal(
+      getPatientHistoryBodyPartText('Rt. Shoulder, Lt. Knee'),
+      'Rt. Shoulder\nLt. Knee',
+    );
+    assert.deepEqual(
+      parsePatientHistoryBodyPartText(' Rt. Shoulder\n\nLt. Knee '),
+      ['Rt. Shoulder', 'Lt. Knee'],
+    );
+    assert.equal(getPatientHistoryBodyPartTextareaRows('Rt. Shoulder'), 1);
+    assert.equal(getPatientHistoryBodyPartTextareaRows('Rt. Shoulder, Lt. Knee'), 2);
+  });
+
   it('shows the existing scheduler memo list as an editable multiline value', () => {
     assert.equal(getPatientHistoryMemoText({
       meta: { memo_list: ['예약 확인', '보호자 동반'] },

@@ -158,6 +158,21 @@ export function getPatientHistoryMemoText(mergeSpan) {
     .join('\n');
 }
 
+export function parsePatientHistoryBodyPartText(value) {
+  return String(value || '')
+    .split(/[,\r\n]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+export function getPatientHistoryBodyPartText(value) {
+  return parsePatientHistoryBodyPartText(value).join('\n');
+}
+
+export function getPatientHistoryBodyPartTextareaRows(value) {
+  return Math.max(1, parsePatientHistoryBodyPartText(value).length);
+}
+
 export function parsePatientHistoryMemoText(value) {
   return String(value || '')
     .split(/\r?\n/)

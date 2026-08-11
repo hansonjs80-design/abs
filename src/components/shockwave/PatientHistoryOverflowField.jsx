@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import {
-  getPatientHistoryOverflowTooltipPosition,
-  isPatientHistoryFieldOverflowing,
-} from '../../lib/patientHistoryOverflowTooltipUtils';
+import { getPatientHistoryOverflowTooltipPosition } from '../../lib/patientHistoryOverflowTooltipUtils';
 
 function captureRect(rect) {
   return {
@@ -27,7 +24,7 @@ export default function PatientHistoryOverflowField({ value, children }) {
 
   const showTooltipIfNeeded = useCallback(() => {
     const field = wrapperRef.current?.querySelector('input, textarea');
-    if (!field || !text || !isPatientHistoryFieldOverflowing(field)) {
+    if (!field || !text) {
       hideTooltip();
       return;
     }

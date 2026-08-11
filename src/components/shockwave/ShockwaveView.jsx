@@ -9,9 +9,12 @@ import {
 } from '../../lib/contextMenuDismissUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import {
+  getPatientHistoryBodyPartText,
+  getPatientHistoryBodyPartTextareaRows,
   getPatientHistoryMemoTextareaRows,
   getPatientHistoryTreatmentGroup,
   isNameOnlyPatientHistoryDraft,
+  parsePatientHistoryBodyPartText,
   parsePatientHistoryMemoText,
 } from '../../lib/patientHistoryModalUtils';
 import { formatPatientHistoryOverflowTooltipItems } from '../../lib/patientHistoryOverflowTooltipUtils';
@@ -3885,7 +3888,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 ));
                               };
                               const handleHistoryBodyPartBlur = async (event) => {
-                                const nextValue = formatBodyPartInput(event.target.value);
+                                const nextValue = parsePatientHistoryBodyPartText(event.target.value)
+                                  .map((item) => formatBodyPartInput(item))
+                                  .filter(Boolean)
+                                  .join(', ');
                                 const originalValue = log._original_body_part ?? '';
                                 updatePatientHistoryModalLog(historyRowKey, {
                                   body_part: nextValue,
@@ -3899,6 +3905,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     : { ...item, body_part: originalValue }
                                 ));
                               };
+                              const currentBodyPartValue = String(log.body_part || '');
+                              const bodyPartTextareaValue = getPatientHistoryBodyPartText(currentBodyPartValue);
+                              const bodyPartTextareaRows = getPatientHistoryBodyPartTextareaRows(currentBodyPartValue);
                               const currentMemoValue = String(log.memo || '');
                               const memoTextareaRows = getPatientHistoryMemoTextareaRows(currentMemoValue);
                               const canEditHistoryMemo = Boolean(
@@ -3965,14 +3974,23 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 </td>
                                 <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
                                   <PatientHistoryOverflowField
-                                    value={formatPatientHistoryOverflowTooltipItems(splitBodyParts(log.body_part))}
+                                    value={formatPatientHistoryOverflowTooltipItems(parsePatientHistoryBodyPartText(currentBodyPartValue))}
                                   >
-                                    <input
-                                      type="text"
-                                      value={log.body_part || ''}
+                                    <textarea
+                                      rows={bodyPartTextareaRows}
+                                      value={bodyPartTextareaValue}
                                       placeholder="부위"
                                       aria-label="부위 수정"
-                                      style={{ ...historyEditFieldStyle, textAlign: 'center' }}
+                                      style={{
+                                        ...historyEditFieldStyle,
+                                        display: 'block',
+                                        height: bodyPartTextareaRows === 1 ? '22px' : undefined,
+                                        minHeight: bodyPartTextareaRows === 1 ? '22px' : undefined,
+                                        margin: '0 auto',
+                                        lineHeight: bodyPartTextareaRows > 1 ? 1.35 : '16px',
+                                        resize: 'none',
+                                        textAlign: 'center',
+                                      }}
                                       onChange={(event) => {
                                         updatePatientHistoryModalLog(historyRowKey, {
                                           body_part: event.target.value,
@@ -3982,7 +4000,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                       onMouseDown={(e) => e.stopPropagation()}
                                       onClick={(e) => e.stopPropagation()}
                                       onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
+                                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                                           e.preventDefault();
                                           e.currentTarget.blur();
                                         }

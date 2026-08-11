@@ -3,7 +3,6 @@ import test from 'node:test';
 import {
   formatPatientHistoryOverflowTooltipItems,
   getPatientHistoryOverflowTooltipPosition,
-  isPatientHistoryFieldOverflowing,
 } from '../patientHistoryOverflowTooltipUtils.js';
 
 test('patient history overflow tooltip shows multiple values on separate lines', () => {
@@ -15,27 +14,6 @@ test('patient history overflow tooltip shows multiple values on separate lines',
     formatPatientHistoryOverflowTooltipItems(['첫 메모', '', '둘째 메모']),
     '첫 메모\n둘째 메모',
   );
-});
-
-test('patient history overflow tooltip only opens for clipped field content', () => {
-  assert.equal(isPatientHistoryFieldOverflowing({
-    scrollWidth: 121,
-    clientWidth: 100,
-    scrollHeight: 22,
-    clientHeight: 22,
-  }), true);
-  assert.equal(isPatientHistoryFieldOverflowing({
-    scrollWidth: 100,
-    clientWidth: 100,
-    scrollHeight: 48,
-    clientHeight: 22,
-  }), true);
-  assert.equal(isPatientHistoryFieldOverflowing({
-    scrollWidth: 101,
-    clientWidth: 100,
-    scrollHeight: 23,
-    clientHeight: 22,
-  }), false);
 });
 
 test('patient history overflow tooltip stays in the viewport and flips above lower rows', () => {

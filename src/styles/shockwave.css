@@ -3650,6 +3650,10 @@
   min-width: 0;
 }
 
+.patient-history-overflow-field > textarea:disabled {
+  pointer-events: none;
+}
+
 .patient-history-overflow-tooltip {
   position: fixed;
   z-index: 10000;
