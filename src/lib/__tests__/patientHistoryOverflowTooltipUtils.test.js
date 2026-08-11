@@ -43,7 +43,7 @@ test('patient history overflow tooltip stays in the viewport and flips above low
   }), { left: 128, top: 312 });
 });
 
-test('patient history overflow tooltip stays above the modal with a white surface', async () => {
+test('patient history overflow tooltip stays above the modal with a light gray surface', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
     readFile(shockwaveViewUrl, 'utf8'),
@@ -53,6 +53,6 @@ test('patient history overflow tooltip stays above the modal with a white surfac
   const modalZIndex = Number(shockwaveView.match(/zIndex:\s*(\d+),\s*overscrollBehavior/)?.[1]);
 
   assert.ok(tooltipZIndex > modalZIndex);
-  assert.match(tooltipRule, /background:\s*#fff;/);
+  assert.match(tooltipRule, /background:\s*#f3f4f6;/);
   assert.match(tooltipRule, /color:\s*#1f2937;/);
 });
