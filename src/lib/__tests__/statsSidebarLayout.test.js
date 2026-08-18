@@ -31,3 +31,17 @@ test('both stats refresh buttons use the shorter label', async () => {
     assert.doesNotMatch(source, /'데이터 새로고침'/);
   }
 });
+
+test('stats therapist filters wait for the current monthly roster before rendering names', async () => {
+  const [shockwaveStats, manualStats] = await Promise.all([
+    readFile(shockwaveStatsUrl, 'utf8'),
+    readFile(manualStatsUrl, 'utf8'),
+  ]);
+
+  for (const source of [shockwaveStats, manualStats]) {
+    assert.match(
+      source,
+      /\(\) => \(monthlyTherapistsReady \? safeTherapists : \[\]\)/
+    );
+  }
+});

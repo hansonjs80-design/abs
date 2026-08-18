@@ -156,8 +156,8 @@ export default function ShockwaveStatsView({
   }, [activeSection, canManageStatsSettings]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
   const displayBaseTherapists = useMemo(
-    () => safeTherapists,
-    [safeTherapists]
+    () => (monthlyTherapistsReady ? safeTherapists : []),
+    [monthlyTherapistsReady, safeTherapists]
   );
   const currentScheduleMonthKey = useMemo(
     () => `${currentYear}-${currentMonth}`,
