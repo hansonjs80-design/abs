@@ -6,6 +6,7 @@ import {
   buildPatientHistoryLogGroups,
   getPatientHistoryColumnWidths,
   getPatientHistoryModalLayout,
+  getPatientHistoryPrescriptionColor,
 } from '../shockwaveViewUtils.js';
 
 describe('shockwave view patient history model', () => {
@@ -74,6 +75,20 @@ describe('shockwave view patient history model', () => {
     assert.deepEqual(
       getPatientHistoryColumnWidths(2),
       getPatientHistoryColumnWidths(1)
+    );
+  });
+
+  it('uses each configured prescription color in the patient history list', () => {
+    const colorMap = {
+      'F2.5': '#2563eb',
+      'F2.5(본인)': '#db2777',
+    };
+
+    assert.equal(getPatientHistoryPrescriptionColor('F2.5', colorMap), '#2563eb');
+    assert.equal(getPatientHistoryPrescriptionColor('F 2.5(본인)', colorMap), '#db2777');
+    assert.equal(
+      getPatientHistoryPrescriptionColor('색상 미설정', colorMap),
+      'var(--text-primary, #1f2937)'
     );
   });
 });

@@ -91,6 +91,7 @@ import {
   EMPTY_SCHEDULE_MERGE_SPAN,
   getPatientHistoryColumnWidths,
   getPatientHistoryModalLayout,
+  getPatientHistoryPrescriptionColor,
   getPlainTextDefaultRowSpan,
   loadHiddenBodyPartOptionsByPatient,
   normalizeCommittedSchedulerContent,
@@ -4001,6 +4002,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 currentPrescriptionValue,
                                 ...configuredPrescriptionOptions,
                               ].map((value) => String(value || '').trim()).filter(Boolean)));
+                              const currentPrescriptionColor = getPatientHistoryPrescriptionColor(
+                                currentPrescriptionValue,
+                                effectivePrescriptionColors
+                              );
                               const historyEditFieldStyle = {
                                 width: '100%',
                                 minWidth: 0,
@@ -4111,11 +4116,23 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     onChange={handleHistoryPrescriptionChange}
                                     onMouseDown={(e) => e.stopPropagation()}
                                     onClick={(e) => e.stopPropagation()}
-                                    style={historyEditFieldStyle}
+                                    style={{
+                                      ...historyEditFieldStyle,
+                                      color: currentPrescriptionColor,
+                                    }}
                                   >
-                                    <option value="">처방 없음</option>
+                                    <option value="" style={{ color: 'var(--text-primary, #1f2937)' }}>처방 없음</option>
                                     {prescriptionOptions.map((prescription) => (
-                                      <option key={`${historyRowKey}-prescription-${prescription}`} value={prescription}>
+                                      <option
+                                        key={`${historyRowKey}-prescription-${prescription}`}
+                                        value={prescription}
+                                        style={{
+                                          color: getPatientHistoryPrescriptionColor(
+                                            prescription,
+                                            effectivePrescriptionColors
+                                          ),
+                                        }}
+                                      >
                                         {prescription}
                                       </option>
                                     ))}

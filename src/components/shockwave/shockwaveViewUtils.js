@@ -4,6 +4,7 @@ import {
 import {
   getScheduleDefaultMergeRowSpan,
   getMemoListFromMergeSpan,
+  getPrescriptionColor,
   normalizeBodyPartKey,
   normalizeSchedulerVisitSuffix,
   normalizeVisitInputValue,
@@ -27,6 +28,12 @@ export const DEFAULT_CONTEXT_PRESCRIPTION_COLORS = {
   '40분': '#9a3412',
   '60분': '#9a3412',
 };
+
+export function getPatientHistoryPrescriptionColor(prescription, colorMap) {
+  return getPrescriptionColor(prescription, colorMap)
+    || DEFAULT_CONTEXT_PRESCRIPTION_COLORS[prescription]
+    || 'var(--text-primary, #1f2937)';
+}
 
 const PATIENT_HISTORY_EMPTY_BODY_FILTER = '__empty__';
 const PATIENT_HISTORY_EMPTY_PRESCRIPTION_FILTER = '__empty__';
