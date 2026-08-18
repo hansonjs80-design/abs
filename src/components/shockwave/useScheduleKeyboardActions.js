@@ -32,6 +32,7 @@ import {
 } from '../../lib/scheduleReservationGroupUtils';
 import {
   getScheduleShortcutKey,
+  getShiftArrowMoveDelta,
   getEditingCellKeyAction,
   isBodyPartMenuShortcut,
   isGridNavigationKey,
@@ -680,7 +681,7 @@ export default function useScheduleKeyboardActions({
     return true;
   }, [addToast, applyPayloadToLatestRefs, cellKey, contextMenu, currentMonth, currentYear, editingCell, getLatestSelectedCell, pendingRef, rowCount, shockwaveSettings, syncPendingShortcutSavesFromPayload, updateOpenContextMenuSnapshotFromPayload]);
 
-  const moveSelectedCellsByRow = useCallback((rowDelta) => {
+  const moveSelectedCells = useCallback(({ rowDelta = 0, colDelta = 0 }) => {
     const activeCell = getLatestSelectedCell();
     const selectedCellKey = activeCell ? cellKey(activeCell.w, activeCell.d, activeCell.r, activeCell.c) : null;
     let moveKeys = selectedKeysRef.current;
@@ -711,7 +712,9 @@ export default function useScheduleKeyboardActions({
       pendingDisplayValues: pendingRef.current,
       pendingMergeSpans: pendingMergeSpansRef.current,
       rowDelta,
+      colDelta,
       rowCount,
+      colCount,
       currentYear,
       currentMonth,
     });
@@ -928,6 +931,7 @@ export default function useScheduleKeyboardActions({
     currentMonth,
     currentYear,
     applyPayloadToLatestRefs,
+    colCount,
     rowCount,
     schedulePendingMoveSave,
     selectSingleCell,
@@ -1221,14 +1225,15 @@ export default function useScheduleKeyboardActions({
     if (isGridNavigationKey(e)) {
       e.preventDefault();
 
-      if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      const moveDelta = getShiftArrowMoveDelta(e);
+      if (moveDelta) {
         e.stopPropagation();
         e.stopImmediatePropagation?.();
         if (e.__shockwaveScheduleMoveHandled) {
           return;
         }
         e.__shockwaveScheduleMoveHandled = true;
-        moveSelectedCellsByRow(e.key === 'ArrowUp' ? -1 : 1);
+        moveSelectedCells(moveDelta);
         return;
       }
 
@@ -1372,7 +1377,7 @@ export default function useScheduleKeyboardActions({
     setRangeEnd,
     setSelectedKeys,
     handleReservationTimeShortcut,
-    moveSelectedCellsByRow,
+    moveSelectedCells,
     onSelectionMoved,
     memos,
     getLatestSelectedCell,

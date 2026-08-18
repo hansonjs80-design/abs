@@ -27,8 +27,11 @@ function cleanMergeSpan(mergeSpan) {
   return cloned;
 }
 
-function normalizeMasterSpan(mergeSpan) {
-  const span = cleanMergeSpan(stripReservationTimeFromMergeSpan(mergeSpan));
+function normalizeMasterSpan(mergeSpan, { preserveReservationTime = false } = {}) {
+  const normalizedMergeSpan = preserveReservationTime
+    ? mergeSpan
+    : stripReservationTimeFromMergeSpan(mergeSpan);
+  const span = cleanMergeSpan(normalizedMergeSpan);
   return {
     ...span,
     rowSpan: Math.max(1, span.rowSpan || 1),
@@ -160,8 +163,10 @@ export function buildMoveScheduleSelectionPayload({
   memos,
   pendingDisplayValues = {},
   pendingMergeSpans = {},
-  rowDelta,
+  rowDelta = 0,
+  colDelta = 0,
   rowCount,
+  colCount,
   currentYear,
   currentMonth,
 }) {
@@ -178,14 +183,18 @@ export function buildMoveScheduleSelectionPayload({
       pendingMergeSpans,
     })
   )));
-  if (!masterKeys.size || !rowDelta || !rowCount) {
+  const isVerticalMove = Boolean(rowDelta) && !colDelta;
+  const isHorizontalMove = Boolean(colDelta) && !rowDelta;
+  const moveDelta = isVerticalMove ? rowDelta : colDelta;
+  const moveLimit = isVerticalMove ? rowCount : colCount;
+  if (!masterKeys.size || (!isVerticalMove && !isHorizontalMove) || !moveLimit) {
     return { ok: false, reason: 'empty', oldMemos: [], payload: [], movedKeys: [] };
   }
 
-  let currentDelta = rowDelta;
+  let currentDelta = moveDelta;
   let moveItems = [];
   let sourceFootprintKeys = new Set();
-  const maxAttempts = rowCount + 2;
+  const maxAttempts = moveLimit + 2;
   let attempt = 0;
   let success = false;
 
@@ -200,15 +209,22 @@ export function buildMoveScheduleSelectionPayload({
       const content = Object.prototype.hasOwnProperty.call(pendingDisplayValues, key)
         ? String(pendingDisplayValues[key] || '')
         : (memo.content || '');
-      const span = normalizeMasterSpan(getEffectiveScheduleMergeSpan({
-        key,
-        memos,
-        pendingMergeSpans,
-      }));
+      const span = normalizeMasterSpan(
+        getEffectiveScheduleMergeSpan({
+          key,
+          memos,
+          pendingMergeSpans,
+        }),
+        { preserveReservationTime: isHorizontalMove }
+      );
       const { w, d, r, c } = parseScheduleCellKey(key);
-      const targetRow = r + currentDelta;
+      const targetRow = r + (isVerticalMove ? currentDelta : 0);
+      const targetCol = c + (isHorizontalMove ? currentDelta : 0);
 
-      if (targetRow < 0 || targetRow + span.rowSpan > rowCount) {
+      if (
+        targetRow < 0 || targetRow + span.rowSpan > rowCount ||
+        targetCol < 0 || targetCol + span.colSpan > colCount
+      ) {
         boundsError = true;
         break;
       }
@@ -216,11 +232,12 @@ export function buildMoveScheduleSelectionPayload({
       addFootprintKeys({ key, rowSpan: span.rowSpan, colSpan: span.colSpan, targetSet: sourceFootprintKeys });
       moveItems.push({
         key,
-        targetKey: getScheduleCellKey(w, d, targetRow, c),
+        targetKey: getScheduleCellKey(w, d, targetRow, targetCol),
         memo,
         content,
         span,
         r,
+        c,
       });
     }
 
@@ -271,20 +288,23 @@ export function buildMoveScheduleSelectionPayload({
         memos,
         pendingMergeSpans,
       }) || DEFAULT_MERGE_SPAN;
-      const { r: r_master } = parseScheduleCellKey(masterKey);
+      const { r: r_master, c: c_master } = parseScheduleCellKey(masterKey);
       const occRowSpan = Math.max(1, occMasterMergeSpan.rowSpan || 1);
+      const occColSpan = Math.max(1, occMasterMergeSpan.colSpan || 1);
 
-      const r_source = item.r;
-      const sourceRowSpan = item.span.rowSpan;
+      const sourcePosition = isVerticalMove ? item.r : item.c;
+      const occupiedPosition = isVerticalMove ? r_master : c_master;
+      const occupiedSpan = isVerticalMove ? occRowSpan : occColSpan;
+      const sourceSpan = isVerticalMove ? item.span.rowSpan : item.span.colSpan;
 
-      if (rowDelta > 0) {
-        return (r_master + occRowSpan) - r_source;
+      if (moveDelta > 0) {
+        return (occupiedPosition + occupiedSpan) - sourcePosition;
       }
-      return r_master - sourceRowSpan - r_source;
+      return occupiedPosition - sourceSpan - sourcePosition;
     });
 
     let nextDelta;
-    if (rowDelta > 0) {
+    if (moveDelta > 0) {
       nextDelta = Math.max(...nextDeltas);
       if (nextDelta <= currentDelta) {
         nextDelta = currentDelta + 1;

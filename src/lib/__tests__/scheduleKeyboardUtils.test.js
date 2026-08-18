@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   getEditingCellKeyAction,
   getScheduleShortcutKey,
+  getShiftArrowMoveDelta,
   isBodyPartMenuShortcut,
   isGridNavigationKey,
   isHolidayBackgroundShortcut,
@@ -57,5 +58,13 @@ describe('schedule keyboard shortcut detection', () => {
     assert.equal(getEditingCellKeyAction({ key: 'ArrowLeft' }), 'allow-input');
     assert.equal(getEditingCellKeyAction({ key: 'ArrowRight' }), 'allow-input');
     assert.equal(getEditingCellKeyAction({ key: 'Escape' }), 'close-edit');
+  });
+
+  it('maps shift plus every arrow key to a schedule move delta', () => {
+    assert.deepEqual(getShiftArrowMoveDelta({ shiftKey: true, key: 'ArrowUp' }), { rowDelta: -1, colDelta: 0 });
+    assert.deepEqual(getShiftArrowMoveDelta({ shiftKey: true, key: 'ArrowDown' }), { rowDelta: 1, colDelta: 0 });
+    assert.deepEqual(getShiftArrowMoveDelta({ shiftKey: true, key: 'ArrowLeft' }), { rowDelta: 0, colDelta: -1 });
+    assert.deepEqual(getShiftArrowMoveDelta({ shiftKey: true, key: 'ArrowRight' }), { rowDelta: 0, colDelta: 1 });
+    assert.equal(getShiftArrowMoveDelta({ shiftKey: false, key: 'ArrowLeft' }), null);
   });
 });

@@ -74,6 +74,22 @@ export function isGridNavigationKey(event) {
   return ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event?.key);
 }
 
+export function getShiftArrowMoveDelta(event) {
+  if (!event?.shiftKey) return null;
+  switch (event.key) {
+    case 'ArrowUp':
+      return { rowDelta: -1, colDelta: 0 };
+    case 'ArrowDown':
+      return { rowDelta: 1, colDelta: 0 };
+    case 'ArrowLeft':
+      return { rowDelta: 0, colDelta: -1 };
+    case 'ArrowRight':
+      return { rowDelta: 0, colDelta: 1 };
+    default:
+      return null;
+  }
+}
+
 export function getEditingCellKeyAction(event) {
   if (event?.key === 'Escape') return 'close-edit';
   return 'allow-input';

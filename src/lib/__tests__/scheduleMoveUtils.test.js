@@ -7,6 +7,7 @@ const defaultArgs = {
   currentYear: 2026,
   currentMonth: 5,
   rowCount: 10,
+  colCount: 4,
 };
 
 const keyOf = (item) => `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
@@ -78,6 +79,125 @@ describe('schedule move payload helpers', () => {
     assert.equal(moved.content, '123/홍길동(2)');
     assert.equal(moved.prescription, 'F/R');
     assert.equal(moved.body_part, 'Lumbar');
+  });
+
+  it('moves a single selected cell left or right while preserving treatment fields', () => {
+    const memos = {
+      '0-0-2-1': {
+        content: '123/홍길동(2)',
+        bg_color: '#fee',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: null },
+        prescription: 'F/R',
+        body_part: 'Lumbar',
+      },
+    };
+
+    const movedRight = buildMoveScheduleSelectionPayload({
+      ...defaultArgs,
+      selectedKeys: new Set(['0-0-2-1']),
+      memos,
+      colDelta: 1,
+    });
+
+    assert.equal(movedRight.ok, true);
+    assert.deepEqual(movedRight.movedKeys, ['0-0-2-2']);
+    const rightCell = movedRight.payload.find((item) => keyOf(item) === '0-0-2-2');
+    assert.equal(rightCell.content, '123/홍길동(2)');
+    assert.equal(rightCell.prescription, 'F/R');
+    assert.equal(rightCell.body_part, 'Lumbar');
+
+    const movedLeft = buildMoveScheduleSelectionPayload({
+      ...defaultArgs,
+      selectedKeys: new Set(['0-0-2-1']),
+      memos,
+      colDelta: -1,
+    });
+
+    assert.equal(movedLeft.ok, true);
+    assert.deepEqual(movedLeft.movedKeys, ['0-0-2-0']);
+  });
+
+  it('moves a vertically merged cell horizontally and keeps its custom reservation time', () => {
+    const memos = {
+      '0-0-2-1': {
+        content: '123/홍길동(2)',
+        merge_span: {
+          rowSpan: 2,
+          colSpan: 1,
+          mergedInto: null,
+          meta: { reservation_time: '09:10', memo_list: ['주의'] },
+        },
+      },
+      '0-0-3-1': {
+        content: '',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-0-2-1' },
+      },
+    };
+
+    const result = buildMoveScheduleSelectionPayload({
+      ...defaultArgs,
+      selectedKeys: new Set(['0-0-2-1']),
+      memos,
+      colDelta: 1,
+    });
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.movedKeys, ['0-0-2-2']);
+    assert.deepEqual(
+      result.payload.find((item) => keyOf(item) === '0-0-2-2').merge_span,
+      {
+        rowSpan: 2,
+        colSpan: 1,
+        mergedInto: null,
+        meta: { reservation_time: '09:10', memo_list: ['주의'] },
+      }
+    );
+    assert.deepEqual(
+      result.payload.find((item) => keyOf(item) === '0-0-3-2').merge_span,
+      { rowSpan: 1, colSpan: 1, mergedInto: '0-0-2-2' }
+    );
+  });
+
+  it('skips over a horizontally merged occupied cell', () => {
+    const result = buildMoveScheduleSelectionPayload({
+      ...defaultArgs,
+      selectedKeys: new Set(['0-0-2-0']),
+      memos: {
+        '0-0-2-0': { content: 'A' },
+        '0-0-2-1': {
+          content: 'B',
+          merge_span: { rowSpan: 1, colSpan: 2, mergedInto: null },
+        },
+        '0-0-2-2': {
+          content: '',
+          merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-0-2-1' },
+        },
+      },
+      colDelta: 1,
+    });
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.movedKeys, ['0-0-2-3']);
+  });
+
+  it('blocks horizontal moves at the left and right table edges', () => {
+    const leftResult = buildMoveScheduleSelectionPayload({
+      ...defaultArgs,
+      selectedKeys: new Set(['0-0-2-0']),
+      memos: { '0-0-2-0': { content: 'A' } },
+      colDelta: -1,
+    });
+    const rightResult = buildMoveScheduleSelectionPayload({
+      ...defaultArgs,
+      selectedKeys: new Set(['0-0-2-3']),
+      memos: { '0-0-2-3': { content: 'A' } },
+      colDelta: 1,
+    });
+
+    assert.equal(leftResult.ok, false);
+    assert.equal(leftResult.reason, 'bounds');
+    assert.equal(rightResult.ok, false);
+    assert.equal(rightResult.reason, 'bounds');
   });
 
   it('skips moves when the destination contains another reservation', () => {
