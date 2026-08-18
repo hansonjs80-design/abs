@@ -19,6 +19,9 @@ export function buildStatsDisplayPrescriptions({
   rows = [],
   hiddenPrescriptions = [],
 } = {}) {
+  const safeConfiguredPrescriptions = Array.isArray(configuredPrescriptions)
+    ? configuredPrescriptions
+    : [];
   const hiddenKeys = new Set(
     (Array.isArray(hiddenPrescriptions) ? hiddenPrescriptions : [])
       .map(normalizePrescriptionKey)
@@ -33,10 +36,15 @@ export function buildStatsDisplayPrescriptions({
     prescriptionsByKey.set(key, prescription);
   };
 
-  (Array.isArray(configuredPrescriptions) ? configuredPrescriptions : [])
-    .forEach(addPrescription);
-  (Array.isArray(rows) ? rows : [])
-    .forEach((row) => addPrescription(row?.prescription));
+  const hasConfiguredPrescriptions = safeConfiguredPrescriptions
+    .some((prescription) => normalizePrescriptionKey(prescription));
+
+  if (hasConfiguredPrescriptions) {
+    safeConfiguredPrescriptions.forEach(addPrescription);
+  } else {
+    (Array.isArray(rows) ? rows : [])
+      .forEach((row) => addPrescription(row?.prescription));
+  }
 
   return [...prescriptionsByKey.values()];
 }

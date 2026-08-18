@@ -50,8 +50,15 @@ describe('shockwave stats count utilities', () => {
     assert.deepEqual(displayGroups[0].prescriptions, prescriptions);
   });
 
-  it('adds a newly used qualified prescription from completed rows before settings refresh', () => {
+  it('uses the current configured label and order instead of stale completed-row labels', () => {
     const rows = [
+      {
+        date: '2026-08-17',
+        therapist_name: '주한솔',
+        patient_name: '이전환자',
+        prescription: 'F2.5(본인부담)',
+        prescription_count: 1,
+      },
       {
         date: '2026-08-18',
         therapist_name: '주한솔',
@@ -61,7 +68,7 @@ describe('shockwave stats count utilities', () => {
       },
     ];
     const prescriptions = buildStatsDisplayPrescriptions({
-      configuredPrescriptions: ['F2.5'],
+      configuredPrescriptions: ['F2.5(본인)', 'F2.5'],
       rows,
     });
     const summary = buildShockwaveCountSummaries({
@@ -70,7 +77,8 @@ describe('shockwave stats count utilities', () => {
       rows,
     });
 
-    assert.deepEqual(prescriptions, ['F2.5', 'F2.5(본인)']);
+    assert.deepEqual(prescriptions, ['F2.5(본인)', 'F2.5']);
+    assert.equal(summary.dateSummaries.get('2026-08-17').total, 0);
     assert.equal(summary.dateSummaries.get('2026-08-18').byPrescription['F2.5(본인)'], 1);
     assert.equal(summary.newPatientTotal, 1);
     assert.deepEqual(summary.dateSummaries.get('2026-08-18').newPatientNamesByTherapist, {
@@ -78,9 +86,19 @@ describe('shockwave stats count utilities', () => {
     });
   });
 
+  it('falls back to completed-row prescriptions only when no configured list is available', () => {
+    assert.deepEqual(buildStatsDisplayPrescriptions({
+      configuredPrescriptions: [],
+      rows: [
+        { prescription: 'F2.5(본인)' },
+        { prescription: 'F2.5' },
+      ],
+    }), ['F2.5(본인)', 'F2.5']);
+  });
+
   it('keeps hidden completed prescriptions out of the display list', () => {
     assert.deepEqual(buildStatsDisplayPrescriptions({
-      configuredPrescriptions: ['F2.5'],
+      configuredPrescriptions: ['F2.5', 'F2.5(본인)'],
       rows: [{ prescription: ' F 2.5 (본인) ' }],
       hiddenPrescriptions: ['f2.5본인'],
     }), ['F2.5']);
