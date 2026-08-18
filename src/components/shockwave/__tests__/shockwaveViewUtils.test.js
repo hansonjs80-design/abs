@@ -25,6 +25,44 @@ describe('shockwave view patient history model', () => {
     assert.equal(groups[0].totalLogs.length, 2);
   });
 
+  it('filters by body and prescription together and recalculates both option counts', () => {
+    const groups = buildPatientHistoryLogGroups({
+      selectedGroupKey: 'manual',
+      bodyFilters: { manual: 'shoulder' },
+      prescriptionFilters: { manual: '40분' },
+      logs: [
+        { id: 'manual-1', history_group: 'manual', body_part: 'Shoulder', prescription: '40분' },
+        { id: 'manual-2', history_group: 'manual', body_part: 'Shoulder', prescription: '60분' },
+        { id: 'manual-3', history_group: 'manual', body_part: 'Lumbar', prescription: '40분' },
+        { id: 'manual-4', history_group: 'manual', body_part: 'Lumbar', prescription: '30분' },
+        { id: 'manual-5', history_group: 'manual', body_part: '', prescription: '' },
+      ],
+    });
+
+    assert.deepEqual(groups[0].logs.map((log) => log.id), ['manual-1']);
+    assert.equal(groups[0].activeBodyFilter, 'shoulder');
+    assert.equal(groups[0].activePrescriptionFilter, '40분');
+    assert.deepEqual(
+      groups[0].bodyFilterOptions.map(({ label, count }) => [label, count]),
+      [
+        ['전체', 2],
+        ['부위 없음', 0],
+        ['Lumbar', 1],
+        ['Shoulder', 1],
+      ]
+    );
+    assert.deepEqual(
+      groups[0].prescriptionFilterOptions.map(({ label, count }) => [label, count]),
+      [
+        ['전체', 2],
+        ['30분', 0],
+        ['40분', 1],
+        ['60분', 1],
+        ['처방 없음', 0],
+      ]
+    );
+  });
+
   it('returns stable modal sizing for single and split layouts', () => {
     assert.equal(getPatientHistoryModalLayout(1).maxWidth, 735);
     assert.equal(getPatientHistoryModalLayout(2).maxWidth, 1446);

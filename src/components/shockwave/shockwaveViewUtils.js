@@ -16,6 +16,7 @@ export const PATIENT_HISTORY_GROUPS = [
 ];
 
 export const PATIENT_HISTORY_ALL_BODY_FILTER = '__all__';
+export const PATIENT_HISTORY_ALL_PRESCRIPTION_FILTER = '__all__';
 export const EMPTY_SCHEDULE_MERGE_SPAN = { rowSpan: 1, colSpan: 1, mergedInto: null };
 export const SCHEDULE_INTERNAL_BORDER_COLOR = '#d9d9d9';
 export const DEFAULT_CONTEXT_PRESCRIPTION_COLORS = {
@@ -28,6 +29,7 @@ export const DEFAULT_CONTEXT_PRESCRIPTION_COLORS = {
 };
 
 const PATIENT_HISTORY_EMPTY_BODY_FILTER = '__empty__';
+const PATIENT_HISTORY_EMPTY_PRESCRIPTION_FILTER = '__empty__';
 const HIDDEN_BODY_PART_OPTIONS_STORAGE_KEY = 'shockwave-hidden-body-part-options-by-patient';
 
 export function stepContextMenuVisitValue(value, delta) {
@@ -114,25 +116,73 @@ export function getPatientHistoryBodyFilterParts(log = {}) {
   return Array.from(partMap.values());
 }
 
-export function buildPatientHistoryBodyFilterOptions(logs = []) {
+export function buildPatientHistoryBodyFilterOptions(logs = [], countLogs = logs) {
   const partMap = new Map();
   logs.forEach((log) => {
     getPatientHistoryBodyFilterParts(log).forEach((part) => {
-      const current = partMap.get(part.key) || { ...part, count: 0 };
+      if (!partMap.has(part.key)) partMap.set(part.key, { ...part, count: 0 });
+    });
+  });
+  countLogs.forEach((log) => {
+    getPatientHistoryBodyFilterParts(log).forEach((part) => {
+      const current = partMap.get(part.key);
+      if (!current) return;
       current.count += 1;
-      partMap.set(part.key, current);
     });
   });
 
   return [
-    { key: PATIENT_HISTORY_ALL_BODY_FILTER, label: '전체', count: logs.length },
+    { key: PATIENT_HISTORY_ALL_BODY_FILTER, label: '전체', count: countLogs.length },
     ...Array.from(partMap.values()).sort((a, b) => a.label.localeCompare(b.label, 'ko')),
   ];
+}
+
+export function getPatientHistoryPrescriptionFilterPart(log = {}) {
+  const prescription = String(log.prescription || '').trim();
+  if (!prescription) {
+    return { key: PATIENT_HISTORY_EMPTY_PRESCRIPTION_FILTER, label: '처방 없음' };
+  }
+  return { key: prescription.toLowerCase(), label: prescription };
+}
+
+export function buildPatientHistoryPrescriptionFilterOptions(logs = [], countLogs = logs) {
+  const prescriptionMap = new Map();
+  logs.forEach((log) => {
+    const prescription = getPatientHistoryPrescriptionFilterPart(log);
+    if (!prescriptionMap.has(prescription.key)) {
+      prescriptionMap.set(prescription.key, { ...prescription, count: 0 });
+    }
+  });
+  countLogs.forEach((log) => {
+    const prescription = getPatientHistoryPrescriptionFilterPart(log);
+    const current = prescriptionMap.get(prescription.key);
+    if (current) current.count += 1;
+  });
+
+  return [
+    { key: PATIENT_HISTORY_ALL_PRESCRIPTION_FILTER, label: '전체', count: countLogs.length },
+    ...Array.from(prescriptionMap.values()).sort((a, b) => a.label.localeCompare(b.label, 'ko')),
+  ];
+}
+
+function filterPatientHistoryLogsByBody(logs, bodyFilter) {
+  if (bodyFilter === PATIENT_HISTORY_ALL_BODY_FILTER) return logs;
+  return logs.filter((log) => (
+    getPatientHistoryBodyFilterParts(log).some((part) => part.key === bodyFilter)
+  ));
+}
+
+function filterPatientHistoryLogsByPrescription(logs, prescriptionFilter) {
+  if (prescriptionFilter === PATIENT_HISTORY_ALL_PRESCRIPTION_FILTER) return logs;
+  return logs.filter((log) => (
+    getPatientHistoryPrescriptionFilterPart(log).key === prescriptionFilter
+  ));
 }
 
 export function buildPatientHistoryLogGroups({
   logs = [],
   bodyFilters = {},
+  prescriptionFilters = {},
   selectedGroupKey = 'shockwave',
 } = {}) {
   const groupMap = new Map(
@@ -154,22 +204,44 @@ export function buildPatientHistoryLogGroups({
     .map((group) => {
       const rawGroup = groupMap.get(group.key);
       if (!rawGroup || rawGroup.logs.length === 0) return null;
-      const bodyFilterOptions = buildPatientHistoryBodyFilterOptions(rawGroup.logs);
-      const requestedFilter = bodyFilters[rawGroup.key] || PATIENT_HISTORY_ALL_BODY_FILTER;
-      const activeBodyFilter = bodyFilterOptions.some((option) => option.key === requestedFilter)
-        ? requestedFilter
+      const rawBodyFilterOptions = buildPatientHistoryBodyFilterOptions(rawGroup.logs);
+      const rawPrescriptionFilterOptions = buildPatientHistoryPrescriptionFilterOptions(rawGroup.logs);
+      const requestedBodyFilter = bodyFilters[rawGroup.key] || PATIENT_HISTORY_ALL_BODY_FILTER;
+      const requestedPrescriptionFilter = prescriptionFilters[rawGroup.key]
+        || PATIENT_HISTORY_ALL_PRESCRIPTION_FILTER;
+      const activeBodyFilter = rawBodyFilterOptions.some((option) => option.key === requestedBodyFilter)
+        ? requestedBodyFilter
         : PATIENT_HISTORY_ALL_BODY_FILTER;
-      const filteredLogs = activeBodyFilter === PATIENT_HISTORY_ALL_BODY_FILTER
-        ? rawGroup.logs
-        : rawGroup.logs.filter((log) => (
-          getPatientHistoryBodyFilterParts(log).some((part) => part.key === activeBodyFilter)
-        ));
+      const activePrescriptionFilter = rawPrescriptionFilterOptions.some(
+        (option) => option.key === requestedPrescriptionFilter
+      )
+        ? requestedPrescriptionFilter
+        : PATIENT_HISTORY_ALL_PRESCRIPTION_FILTER;
+      const bodyFilteredLogs = filterPatientHistoryLogsByBody(rawGroup.logs, activeBodyFilter);
+      const prescriptionFilteredLogs = filterPatientHistoryLogsByPrescription(
+        rawGroup.logs,
+        activePrescriptionFilter
+      );
+      const filteredLogs = filterPatientHistoryLogsByPrescription(
+        bodyFilteredLogs,
+        activePrescriptionFilter
+      );
+      const bodyFilterOptions = buildPatientHistoryBodyFilterOptions(
+        rawGroup.logs,
+        prescriptionFilteredLogs
+      );
+      const prescriptionFilterOptions = buildPatientHistoryPrescriptionFilterOptions(
+        rawGroup.logs,
+        bodyFilteredLogs
+      );
       return {
         ...rawGroup,
         logs: filteredLogs,
         totalLogs: rawGroup.logs,
         bodyFilterOptions,
         activeBodyFilter,
+        prescriptionFilterOptions,
+        activePrescriptionFilter,
       };
     })
     .filter(Boolean);

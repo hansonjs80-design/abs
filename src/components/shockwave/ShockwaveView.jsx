@@ -244,6 +244,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const [patientHistoryModalOpen, setPatientHistoryModalOpen] = useState(false);
   const [patientHistoryModalData, setPatientHistoryModalData] = useState({ loading: false, logs: [], searchName: '', searchChart: '', chartOptions: [] });
   const [patientHistoryBodyFilters, setPatientHistoryBodyFilters] = useState({});
+  const [patientHistoryPrescriptionFilters, setPatientHistoryPrescriptionFilters] = useState({});
   const [pendingPatientHistoryApplyLog, setPendingPatientHistoryApplyLog] = useState(null);
   const patientHistoryTargetCellRef = useRef(null);
   const deferredPatientHistoryAutoFillRef = useRef(null);
@@ -276,8 +277,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const patientHistoryLogGroups = useMemo(() => buildPatientHistoryLogGroups({
     logs: patientHistoryModalData.logs,
     bodyFilters: patientHistoryBodyFilters,
+    prescriptionFilters: patientHistoryPrescriptionFilters,
     selectedGroupKey: selectedPatientHistoryGroupKey,
-  }), [patientHistoryBodyFilters, patientHistoryModalData.logs, selectedPatientHistoryGroupKey]);
+  }), [
+    patientHistoryBodyFilters,
+    patientHistoryModalData.logs,
+    patientHistoryPrescriptionFilters,
+    selectedPatientHistoryGroupKey,
+  ]);
   const patientHistoryModalLayout = useMemo(
     () => getPatientHistoryModalLayout(patientHistoryLogGroups.length),
     [patientHistoryLogGroups.length]
@@ -853,6 +860,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       searchChart: '',
     });
     setPatientHistoryBodyFilters({});
+    setPatientHistoryPrescriptionFilters({});
     setPendingPatientHistoryApplyLog(null);
     setClipboardSource(null);
   }, [
@@ -3876,7 +3884,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                         <span>
                           {group.label} <span style={{ color: 'var(--text-secondary, #6b7280)', fontWeight: 700 }}>{group.logs.length}건</span>
                         </span>
-                        {group.bodyFilterOptions.length > 1 && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'flex-end',
+                            flexWrap: 'wrap',
+                            gap: '6px',
+                          }}
+                        >
                           <select
                             aria-label={`${group.label} 부위 필터`}
                             value={group.activeBodyFilter}
@@ -3890,8 +3906,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                             onMouseDown={(event) => event.stopPropagation()}
                             onClick={(event) => event.stopPropagation()}
                             style={{
-                              maxWidth: '190px',
-                              minWidth: '118px',
+                              maxWidth: '180px',
+                              minWidth: '142px',
                               border: '1px solid rgba(148, 163, 184, 0.45)',
                               borderRadius: '7px',
                               background: '#fff',
@@ -3903,12 +3919,51 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                             }}
                           >
                             {group.bodyFilterOptions.map((option) => (
-                              <option key={option.key} value={option.key}>
-                                {option.label} {option.count}회
+                              <option
+                                key={option.key}
+                                value={option.key}
+                                disabled={option.count === 0 && option.key !== group.activeBodyFilter}
+                              >
+                                부위: {option.label} {option.count}건
                               </option>
                             ))}
                           </select>
-                        )}
+                          <select
+                            aria-label={`${group.label} 처방 필터`}
+                            value={group.activePrescriptionFilter}
+                            onChange={(event) => {
+                              const value = event.target.value;
+                              setPatientHistoryPrescriptionFilters((prev) => ({
+                                ...prev,
+                                [group.key]: value,
+                              }));
+                            }}
+                            onMouseDown={(event) => event.stopPropagation()}
+                            onClick={(event) => event.stopPropagation()}
+                            style={{
+                              maxWidth: '180px',
+                              minWidth: '142px',
+                              border: '1px solid rgba(148, 163, 184, 0.45)',
+                              borderRadius: '7px',
+                              background: '#fff',
+                              color: 'var(--text-primary, #1f2937)',
+                              fontSize: '0.8rem',
+                              fontWeight: 800,
+                              padding: '3px 7px',
+                              outline: 'none',
+                            }}
+                          >
+                            {group.prescriptionFilterOptions.map((option) => (
+                              <option
+                                key={option.key}
+                                value={option.key}
+                                disabled={option.count === 0 && option.key !== group.activePrescriptionFilter}
+                              >
+                                처방: {option.label} {option.count}건
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
                       <div className="sw-compact-table-wrap">
                         <table className="sw-summary-table sw-compact-summary-table patient-history-table" style={{ width: '100%', margin: 0, tableLayout: 'fixed' }}>
