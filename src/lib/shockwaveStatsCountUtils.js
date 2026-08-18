@@ -1,5 +1,8 @@
 export function normalizePrescriptionKey(value) {
-  return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return String(value || '')
+    .normalize('NFKC')
+    .toLocaleLowerCase('ko-KR')
+    .replace(/[^\p{L}\p{N}]/gu, '');
 }
 
 export function statsPrescriptionsMatch(a, b) {

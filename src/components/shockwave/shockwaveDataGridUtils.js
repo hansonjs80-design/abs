@@ -1,4 +1,5 @@
 import { toProperCase } from '../../lib/shockwaveSyncUtils.js';
+import { normalizePrescriptionKey } from '../../lib/shockwaveStatsCountUtils.js';
 
 export const THERAPIST_COLORS = [
   '#ffedd5',
@@ -26,10 +27,6 @@ export const FIXED_FIELDS = [
   { id: 'visit', label: '회차', field: 'visit_count', w: 43 },
   { id: 'body', label: '부위', field: 'body_part', w: 114 },
 ];
-
-function normalizePrescriptionKey(value) {
-  return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-}
 
 export function prescriptionsMatch(a, b) {
   return normalizePrescriptionKey(a) === normalizePrescriptionKey(b);

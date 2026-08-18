@@ -4,6 +4,8 @@ import { describe, it } from 'node:test';
 import {
   buildTherapistPrescriptionDisplayGroups,
   buildShockwaveCountSummaries,
+  normalizePrescriptionKey,
+  statsPrescriptionsMatch,
   toStatsPrescriptionCount,
 } from '../shockwaveStatsCountUtils.js';
 
@@ -12,6 +14,39 @@ describe('shockwave stats count utilities', () => {
     assert.equal(toStatsPrescriptionCount(null), 1);
     assert.equal(toStatsPrescriptionCount(''), 1);
     assert.equal(toStatsPrescriptionCount('2'), 2);
+  });
+
+  it('keeps Korean parenthetical qualifiers distinct while ignoring visual punctuation', () => {
+    assert.equal(normalizePrescriptionKey('F2.5'), 'f25');
+    assert.equal(normalizePrescriptionKey(' F 2.5 (본인) '), 'f25본인');
+    assert.equal(statsPrescriptionsMatch('F2.5', 'F2.5(본인)'), false);
+    assert.equal(statsPrescriptionsMatch('F 2.5 (본인)', 'f2.5본인'), true);
+  });
+
+  it('counts base and qualified prescriptions in separate current and settlement columns', () => {
+    const prescriptions = ['F2.5', 'F2.5(본인)'];
+    const therapists = [{ name: '주한솔' }];
+    const rows = [
+      { date: '2026-08-18', therapist_name: '주한솔', prescription: 'F2.5', prescription_count: 2 },
+      { date: '2026-08-18', therapist_name: '주한솔', prescription: 'F2.5(본인)', prescription_count: 1 },
+    ];
+    const summary = buildShockwaveCountSummaries({ prescriptions, therapists, rows });
+    const displayGroups = buildTherapistPrescriptionDisplayGroups({
+      prescriptions,
+      therapists,
+      rows,
+      sharedPrescriptionLimit: 0,
+    });
+
+    assert.deepEqual(summary.dateSummaries.get('2026-08-18').byPrescription, {
+      'F2.5': 2,
+      'F2.5(본인)': 1,
+    });
+    assert.deepEqual(summary.therapistTotals[0].byPres, {
+      'F2.5': 2,
+      'F2.5(본인)': 1,
+    });
+    assert.deepEqual(displayGroups[0].prescriptions, prescriptions);
   });
 
   it('uses the same visible therapist and prescription filters for totals', () => {

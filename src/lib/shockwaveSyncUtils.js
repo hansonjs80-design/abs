@@ -3,6 +3,7 @@ import { generateShockwaveCalendar, getTodayKST } from './calendarUtils.js';
 import { has4060Pattern, get4060PrescriptionFromContent } from './schedulerContentFormat.js';
 import { getScheduleItemTreatmentGroup } from './prescriptionScheduleSettings.js';
 import { TREATMENT_COMPLETE_BG } from './schedulerUtils.js';
+import { normalizePrescriptionKey } from './shockwaveStatsCountUtils.js';
 import { getShockwaveScheduleBaseRowCount } from './scheduleHiddenCellRelocationUtils.js';
 import {
   getPastLogsForPatient,
@@ -23,11 +24,6 @@ export {
   normalizeBodyShortcutKey,
   toProperCase,
 } from './bodyPartFormatUtils.js';
-
-/** 처방명 비교용 정규화 – 띄어쓰기·슬래시·대소문자 무시 */
-function normalizePrescriptionKeySync(value) {
-  return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-}
 
 let todaySchedulerSyncQueue = Promise.resolve();
 
@@ -504,7 +500,7 @@ async function runTodayShockwaveScheduleToStatsSync({
       String(existing.visit_count || '') === String(newRow.visit_count || '') &&
       String(existing.body_part || '') === String(newRow.body_part || '') &&
       existing.therapist_name === newRow.therapist_name &&
-      normalizePrescriptionKeySync(existing.prescription) === normalizePrescriptionKeySync(newRow.prescription) &&
+      normalizePrescriptionKey(existing.prescription) === normalizePrescriptionKey(newRow.prescription) &&
       Number(existing.prescription_count || 1) === Number(newRow.prescription_count || 1)
     ),
   });

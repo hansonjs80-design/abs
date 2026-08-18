@@ -33,6 +33,23 @@ describe('shockwave data grid prescription patient filter', () => {
     assert.deepEqual(filtered.map((row) => row.id), [1, 3]);
   });
 
+  it('does not mix a base prescription with its Korean-qualified variant', () => {
+    const qualifiedRows = [
+      { id: 10, prescription: 'F2.5' },
+      { id: 11, prescription: 'F2.5(본인)' },
+      { id: 12, prescription: 'F 2.5 (본인)' },
+    ];
+
+    assert.deepEqual(
+      filterRowsByPatientView(qualifiedRows, { prescription: 'F2.5' }).map((row) => row.id),
+      [10]
+    );
+    assert.deepEqual(
+      filterRowsByPatientView(qualifiedRows, { prescription: 'F2.5(본인)' }).map((row) => row.id),
+      [11, 12]
+    );
+  });
+
   it('shows every prescription for one therapist when prescription is omitted', () => {
     const filtered = filterRowsByPatientView(rows, {
       therapistName: '주한솔',

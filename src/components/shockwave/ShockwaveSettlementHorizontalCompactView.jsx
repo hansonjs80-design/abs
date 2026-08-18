@@ -1,10 +1,5 @@
 import React from 'react';
-
-function normalizePrescriptionKey(value) {
-  return String(value || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '');
-}
+import { normalizePrescriptionKey } from '../../lib/shockwaveStatsCountUtils.js';
 
 function formatCount(value) {
   return `${Number(value || 0).toLocaleString('ko-KR')}건`;
