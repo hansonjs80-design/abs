@@ -23,6 +23,7 @@ export const STAFF_CALENDAR_DEVICE_SETTING_KEYS = {
   lastRowFontSize: 'staff-calendar-last-row-font-size',
   lastRowFontWeight: 'staff-calendar-last-row-font-weight',
 };
+export const STAFF_CALENDAR_PROFILE_STORAGE_KEY = 'staff-calendar-device-profile-v1';
 
 const DEVICE_SETTINGS_FIELD = 'staff_calendar_device_settings';
 
@@ -59,7 +60,11 @@ const REMOTE_SAVE_DEBOUNCE_MS = 300;
 function getStorage(storage) {
   if (storage) return storage;
   if (typeof window === 'undefined') return null;
-  return window.localStorage;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
 }
 
 function hasOwn(obj, key) {
@@ -99,15 +104,31 @@ export function getStaffCalendarDeviceFingerprint() {
   return getDeviceSettingsIdentity().deviceId;
 }
 
-export function readLocalStaffCalendarDeviceSettings(storageArg) {
+export function readLocalStaffCalendarDeviceSettings(storageArg, documentArg) {
   const storage = getStorage(storageArg);
   const values = {};
   const present = {};
-  if (!storage) return { values, present, hasAny: false };
+
+  const profileRaw = readStorageValueWithCookieBackup(
+    STAFF_CALENDAR_PROFILE_STORAGE_KEY,
+    storage,
+    documentArg
+  );
+  if (profileRaw) {
+    try {
+      const profile = normalizeStaffCalendarDeviceSettingsPatch(JSON.parse(profileRaw));
+      Object.assign(values, profile);
+      Object.keys(profile).forEach((field) => {
+        present[field] = true;
+      });
+    } catch {
+      // Individual field backups below can still restore a valid profile.
+    }
+  }
 
   STAFF_CALENDAR_DEVICE_FIELDS.forEach((field) => {
     const key = STAFF_CALENDAR_DEVICE_SETTING_KEYS[field];
-    const raw = readStorageValueWithCookieBackup(key, storage);
+    const raw = readStorageValueWithCookieBackup(key, storage, documentArg);
     if (raw === null || raw === '') return;
     const normalized = normalizeStaffCalendarDeviceSettingsPatch({ [field]: raw });
     if (!hasOwn(normalized, field)) return;
@@ -122,17 +143,29 @@ export function readLocalStaffCalendarDeviceSettings(storageArg) {
   };
 }
 
-export function persistLocalStaffCalendarDeviceSettingsPatch(settings, storageArg) {
+export function persistLocalStaffCalendarDeviceSettingsPatch(settings, storageArg, documentArg) {
   const storage = getStorage(storageArg);
   const normalized = normalizeStaffCalendarDeviceSettingsPatch(settings);
-  if (!storage) return normalized;
+  const existing = readLocalStaffCalendarDeviceSettings(storage, documentArg).values;
+  const completeProfile = {
+    ...existing,
+    ...normalized,
+  };
+
+  writeStorageValueWithCookieBackup(
+    STAFF_CALENDAR_PROFILE_STORAGE_KEY,
+    JSON.stringify(completeProfile),
+    storage,
+    documentArg
+  );
 
   STAFF_CALENDAR_DEVICE_FIELDS.forEach((field) => {
     if (!hasOwn(normalized, field)) return;
     writeStorageValueWithCookieBackup(
       STAFF_CALENDAR_DEVICE_SETTING_KEYS[field],
       normalized[field],
-      storage
+      storage,
+      documentArg
     );
   });
   return normalized;

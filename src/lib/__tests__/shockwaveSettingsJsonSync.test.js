@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { saveShockwaveSettingsJsonPatch } from '../shockwaveSettingsJsonSync.js';
+import {
+  mergeMonthlySettingsPreservingDeviceProfiles,
+  saveShockwaveSettingsJsonPatch,
+} from '../shockwaveSettingsJsonSync.js';
 
 function createSettingsClient({
   initialSettings = {},
@@ -71,6 +74,32 @@ function createSettingsClient({
 }
 
 describe('shockwave settings JSON sync', () => {
+  it('keeps the latest device display profiles when a stale general settings object is saved', () => {
+    const merged = mergeMonthlySettingsPreservingDeviceProfiles({
+      staff_calendar_device_settings: {
+        thisDevice: { rowHeight: 148, memoFontSize: 15 },
+        otherDevice: { rowHeight: 112 },
+      },
+      device_settings: {
+        thisDevice: { rowHeight: 31 },
+      },
+    }, {
+      global_departments: ['도수치료실'],
+      staff_calendar_device_settings: {
+        thisDevice: { rowHeight: 120 },
+      },
+    });
+
+    assert.deepEqual(merged.staff_calendar_device_settings, {
+      thisDevice: { rowHeight: 148, memoFontSize: 15 },
+      otherDevice: { rowHeight: 112 },
+    });
+    assert.deepEqual(merged.device_settings, {
+      thisDevice: { rowHeight: 31 },
+    });
+    assert.deepEqual(merged.global_departments, ['도수치료실']);
+  });
+
   it('preserves unrelated JSON fields while applying a patch', async () => {
     const client = createSettingsClient({
       initialSettings: {

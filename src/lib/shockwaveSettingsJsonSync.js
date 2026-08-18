@@ -2,8 +2,38 @@ export const DEVICE_SETTINGS_SYNC_EVENT = 'abs:device-settings-sync';
 
 const DEFAULT_SETTINGS_ROW_ID = '00000000-0000-0000-0000-000000000000';
 const DEFAULT_MAX_ATTEMPTS = 3;
+const DEVICE_PROFILE_FIELDS = [
+  'device_settings',
+  'device_text_settings',
+  'staff_calendar_device_settings',
+];
 
 let settingsJsonWriteQueue = Promise.resolve();
+
+function asSettingsObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+export function mergeMonthlySettingsPreservingDeviceProfiles(currentSettings, requestedSettings) {
+  const current = asSettingsObject(currentSettings);
+  const requested = asSettingsObject(requestedSettings);
+  const merged = {
+    ...current,
+    ...requested,
+  };
+
+  DEVICE_PROFILE_FIELDS.forEach((field) => {
+    const currentProfiles = asSettingsObject(current[field]);
+    const requestedProfiles = asSettingsObject(requested[field]);
+    if (Object.keys(currentProfiles).length === 0 && Object.keys(requestedProfiles).length === 0) return;
+    merged[field] = {
+      ...requestedProfiles,
+      ...currentProfiles,
+    };
+  });
+
+  return merged;
+}
 
 function isRetryableSyncError(error) {
   const message = `${error?.message || ''} ${error?.details || ''}`.toLowerCase();

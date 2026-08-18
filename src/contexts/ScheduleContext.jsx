@@ -53,6 +53,7 @@ import {
   shiftScheduleMonth,
   updateCachedScheduleRowsFromRealtime,
 } from '../lib/scheduleMonthLoadUtils';
+import { mergeMonthlySettingsPreservingDeviceProfiles } from '../lib/shockwaveSettingsJsonSync';
 
 const ScheduleContext = createContext();
 const LOCAL_WRITE_STALE_GUARD_MS = 1200;
@@ -1173,7 +1174,7 @@ export function ScheduleProvider({ children }) {
       const nextUpdatedAt = new Date().toISOString();
       const { data: latestRow } = await supabase
         .from('shockwave_settings')
-        .select('id')
+        .select('id, monthly_settlement_settings')
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -1266,12 +1267,16 @@ export function ScheduleProvider({ children }) {
         staff_schedule_block_rules: newSettings.staff_schedule_block_rules || {},
         updated_at: nextUpdatedAt
       };
+      const mergedMonthlySettings = mergeMonthlySettingsPreservingDeviceProfiles(
+        latestRow?.monthly_settlement_settings,
+        newSettings.monthly_settlement_settings
+      );
       const payload = {
         ...basePayload,
         monthly_settlement_settings: {
-          ...(newSettings.monthly_settlement_settings || {}),
+          ...mergedMonthlySettings,
           __schedule_display: {
-            ...((newSettings.monthly_settlement_settings || {}).__schedule_display || {}),
+            ...(mergedMonthlySettings.__schedule_display || {}),
             time_label_interval_minutes: newSettings.time_label_interval_minutes || newSettings.interval_minutes || 20,
           },
         }
@@ -1307,7 +1312,12 @@ export function ScheduleProvider({ children }) {
       }
       if (shockwaveSettingsSaveRequestRef.current === requestId) {
         shockwaveSettingsLoadRequestRef.current += 1;
-        const updatedSettings = applyScheduleDeviceSettings({ ...newSettings, id: targetId, updated_at: nextUpdatedAt });
+        const updatedSettings = applyScheduleDeviceSettings({
+          ...newSettings,
+          id: targetId,
+          monthly_settlement_settings: payload.monthly_settlement_settings,
+          updated_at: nextUpdatedAt,
+        });
         
         // 태그 명칭 또는 처방별 시간(duration) 변경에 따른 일괄 동기화 마이그레이션 실행
         try {

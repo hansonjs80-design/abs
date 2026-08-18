@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   STAFF_CALENDAR_DEVICE_SETTING_KEYS,
+  STAFF_CALENDAR_PROFILE_STORAGE_KEY,
   buildStaffCalendarDeviceSettingsMap,
   normalizeStaffCalendarDeviceSettings,
   normalizeStaffCalendarDeviceSettingsPatch,
@@ -15,6 +16,20 @@ function createStorage(entries = {}) {
   return {
     getItem: (key) => (map.has(key) ? map.get(key) : null),
     setItem: (key, value) => map.set(key, String(value)),
+  };
+}
+
+function createCookieDocument() {
+  const values = new Map();
+  return {
+    get cookie() {
+      return Array.from(values, ([key, value]) => `${key}=${value}`).join('; ');
+    },
+    set cookie(serialized) {
+      const [pair] = String(serialized).split(';');
+      const separator = pair.indexOf('=');
+      values.set(pair.slice(0, separator), pair.slice(separator + 1));
+    },
   };
 }
 
@@ -120,6 +135,36 @@ test('persists every desktop table and font-weight setting locally', () => {
   }, storage);
 
   assert.deepEqual(readLocalStaffCalendarDeviceSettings(storage).values, normalized);
+  assert.ok(storage.getItem(STAFF_CALENDAR_PROFILE_STORAGE_KEY));
+});
+
+test('restores the complete staff calendar profile after storage is unavailable and the app restarts', () => {
+  const unavailableStorage = {
+    getItem() { throw new Error('blocked'); },
+    setItem() { throw new Error('blocked'); },
+  };
+  const restartedStorage = createStorage();
+  const document = createCookieDocument();
+  const expected = {
+    colWidth: 196,
+    rowHeight: 148,
+    dateRowHeight: 36,
+    memoFontSize: 15,
+    dateFontSize: 17,
+    dateFontWeight: 900,
+    weekdayFontSize: 18,
+    weekdayFontWeight: 800,
+    weekdayRowHeight: 40,
+    lastRowFontSize: 16,
+    lastRowFontWeight: 900,
+  };
+
+  persistLocalStaffCalendarDeviceSettingsPatch(expected, unavailableStorage, document);
+  const restored = readLocalStaffCalendarDeviceSettings(restartedStorage, document);
+
+  assert.deepEqual(restored.values, expected);
+  assert.equal(restored.hasAny, true);
+  assert.ok(restartedStorage.getItem(STAFF_CALENDAR_PROFILE_STORAGE_KEY));
 });
 
 test('backs up one desktop profile under installation and stable device ids', () => {
