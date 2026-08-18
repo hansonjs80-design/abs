@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  buildStatsDisplayPrescriptions,
   buildTherapistPrescriptionDisplayGroups,
   buildShockwaveCountSummaries,
   normalizePrescriptionKey,
@@ -47,6 +48,42 @@ describe('shockwave stats count utilities', () => {
       'F2.5(본인)': 1,
     });
     assert.deepEqual(displayGroups[0].prescriptions, prescriptions);
+  });
+
+  it('adds a newly used qualified prescription from completed rows before settings refresh', () => {
+    const rows = [
+      {
+        date: '2026-08-18',
+        therapist_name: '주한솔',
+        patient_name: '신규환자*',
+        prescription: 'F2.5(본인)',
+        prescription_count: null,
+      },
+    ];
+    const prescriptions = buildStatsDisplayPrescriptions({
+      configuredPrescriptions: ['F2.5'],
+      rows,
+    });
+    const summary = buildShockwaveCountSummaries({
+      prescriptions,
+      therapists: [{ name: '주한솔' }],
+      rows,
+    });
+
+    assert.deepEqual(prescriptions, ['F2.5', 'F2.5(본인)']);
+    assert.equal(summary.dateSummaries.get('2026-08-18').byPrescription['F2.5(본인)'], 1);
+    assert.equal(summary.newPatientTotal, 1);
+    assert.deepEqual(summary.dateSummaries.get('2026-08-18').newPatientNamesByTherapist, {
+      주한솔: ['신규환자*'],
+    });
+  });
+
+  it('keeps hidden completed prescriptions out of the display list', () => {
+    assert.deepEqual(buildStatsDisplayPrescriptions({
+      configuredPrescriptions: ['F2.5'],
+      rows: [{ prescription: ' F 2.5 (본인) ' }],
+      hiddenPrescriptions: ['f2.5본인'],
+    }), ['F2.5']);
   });
 
   it('uses the same visible therapist and prescription filters for totals', () => {

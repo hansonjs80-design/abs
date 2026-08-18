@@ -25,6 +25,7 @@ import {
   loadStatsMonthlyTherapists,
 } from '../../lib/statsScheduleSourceUtils';
 import {
+  buildStatsDisplayPrescriptions,
   normalizePrescriptionKey,
   toStatsPrescriptionCount,
 } from '../../lib/shockwaveStatsCountUtils';
@@ -158,18 +159,22 @@ export default function ShockwaveStatsView({
     () => safeTherapists,
     [safeTherapists]
   );
+  const currentScheduleMonthKey = useMemo(
+    () => `${currentYear}-${currentMonth}`,
+    [currentYear, currentMonth]
+  );
+  const currentLogsReady = currentLogsReadyKey === currentScheduleMonthKey;
   const effectiveSettlementSettings = useMemo(
     () => getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'shockwave'),
     [shockwaveSettings, currentYear, currentMonth]
   );
   const settlementPrescriptions = useMemo(
-    () => {
-      const hiddenSet = new Set(effectiveSettlementSettings.hidden_prescriptions || []);
-      return (effectiveSettlementSettings.prescriptions || []).filter((prescription) => (
-        prescription && !hiddenSet.has(prescription)
-      ));
-    },
-    [effectiveSettlementSettings]
+    () => buildStatsDisplayPrescriptions({
+      configuredPrescriptions: effectiveSettlementSettings.prescriptions,
+      rows: currentLogsReady ? safeLogs : [],
+      hiddenPrescriptions: effectiveSettlementSettings.hidden_prescriptions,
+    }),
+    [currentLogsReady, effectiveSettlementSettings, safeLogs]
   );
   const settlementPrices = useMemo(
     () => effectiveSettlementSettings.prescription_prices,
@@ -187,11 +192,6 @@ export default function ShockwaveStatsView({
     () => formatRecentPeriodLabel(recentPeriodMonths),
     [recentPeriodMonths]
   );
-  const currentScheduleMonthKey = useMemo(
-    () => `${currentYear}-${currentMonth}`,
-    [currentYear, currentMonth]
-  );
-  const currentLogsReady = currentLogsReadyKey === currentScheduleMonthKey;
   const isCurrentScheduleReady = settingsReady && memosLoadedKey === currentScheduleMonthKey && !isScheduleLoading;
   const currentMemosSyncSignature = useMemo(
     () => buildScheduleMemoSignature(memos),

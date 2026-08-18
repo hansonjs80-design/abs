@@ -14,6 +14,33 @@ export function toStatsPrescriptionCount(value) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 
+export function buildStatsDisplayPrescriptions({
+  configuredPrescriptions = [],
+  rows = [],
+  hiddenPrescriptions = [],
+} = {}) {
+  const hiddenKeys = new Set(
+    (Array.isArray(hiddenPrescriptions) ? hiddenPrescriptions : [])
+      .map(normalizePrescriptionKey)
+      .filter(Boolean)
+  );
+  const prescriptionsByKey = new Map();
+
+  const addPrescription = (value) => {
+    const prescription = String(value || '').trim();
+    const key = normalizePrescriptionKey(prescription);
+    if (!key || hiddenKeys.has(key) || prescriptionsByKey.has(key)) return;
+    prescriptionsByKey.set(key, prescription);
+  };
+
+  (Array.isArray(configuredPrescriptions) ? configuredPrescriptions : [])
+    .forEach(addPrescription);
+  (Array.isArray(rows) ? rows : [])
+    .forEach((row) => addPrescription(row?.prescription));
+
+  return [...prescriptionsByKey.values()];
+}
+
 export function buildTherapistPrescriptionDisplayGroups({
   rows = [],
   prescriptions = [],
