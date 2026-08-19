@@ -3633,7 +3633,28 @@
   vertical-align: middle;
 }
 
+.patient-history-table .patient-history-row-number-cell {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  border-right: 1px solid var(--border-color, #d7dde5);
+  background: var(--bg-secondary, #f8fafc) !important;
+  color: var(--text-secondary, #64748b);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  text-align: center;
+}
+
+.patient-history-table thead .patient-history-row-number-cell {
+  z-index: 3;
+  background: var(--patient-history-column-header-bg, var(--bg-secondary)) !important;
+}
+
 .patient-history-table tbody tr.patient-history-current-row td {
+  background-color: var(--patient-history-current-row-bg) !important;
+}
+
+.patient-history-table tbody tr.patient-history-current-row .patient-history-row-number-cell {
   background-color: var(--patient-history-current-row-bg) !important;
 }
 

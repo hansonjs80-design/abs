@@ -56,3 +56,19 @@ test('patient history overflow tooltip stays above the modal with a light gray s
   assert.match(tooltipRule, /background-color:\s*#e2e8f0\s*!important;/);
   assert.match(tooltipRule, /color:\s*#1f2937;/);
 });
+
+test('patient history tables show a pinned spreadsheet-style row number column', async () => {
+  const [shockwaveCss, shockwaveView] = await Promise.all([
+    readFile(shockwaveCssUrl, 'utf8'),
+    readFile(shockwaveViewUrl, 'utf8'),
+  ]);
+  const rowNumberRule = shockwaveCss.match(
+    /\.patient-history-table \.patient-history-row-number-cell\s*\{([^}]*)\}/s
+  )?.[1] || '';
+
+  assert.match(rowNumberRule, /position:\s*sticky;/);
+  assert.match(rowNumberRule, /left:\s*0;/);
+  assert.match(shockwaveView, /<th className="patient-history-row-number-cell">번호<\/th>/);
+  assert.match(shockwaveView, /aria-label={`행 번호 \$\{idx \+ 1\}`}/);
+  assert.match(shockwaveView, /\{idx \+ 1\}/);
+});

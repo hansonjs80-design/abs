@@ -3975,6 +3975,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                           </colgroup>
                           <thead>
                             <tr>
+                              <th className="patient-history-row-number-cell">번호</th>
                               <th style={{ textAlign: 'center' }}>날짜</th>
                               <th style={{ textAlign: 'center' }}>챠트</th>
                               <th style={{ textAlign: 'center' }}>처방</th>
@@ -4097,6 +4098,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 }}
                                 title={log.id === 'draft' ? "현재 선택된 셀의 날짜를 기반으로 한 임시 항목입니다" : undefined}
                               >
+                                <td
+                                  className="patient-history-row-number-cell"
+                                  aria-label={`행 번호 ${idx + 1}`}
+                                >
+                                  {idx + 1}
+                                </td>
                                 <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, whiteSpace: 'nowrap', fontWeight: historyRowFontWeight }}>
                                   {log.date}
                                   {isCurrentHistoryRow && (
