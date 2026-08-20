@@ -3607,8 +3607,8 @@
 
 .patient-history-group-header {
   display: grid;
-  gap: 7px;
-  padding: 8px 10px 10px;
+  gap: 4px;
+  padding: 6px 8px 7px;
   border-bottom: 1px solid var(--border-color, #d7dde5);
   background: var(--patient-history-group-header-bg);
   color: var(--text-primary, #1f2937);
@@ -3618,14 +3618,15 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
-  padding: 0 2px;
+  gap: 8px;
+  padding: 0 1px;
+  font-size: 0.86rem;
   font-weight: 900;
 }
 
 .patient-history-group-count {
   color: var(--text-secondary, #64748b);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
   font-weight: 800;
   white-space: nowrap;
@@ -3633,18 +3634,19 @@
 
 .patient-history-filter-sections {
   display: grid;
-  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
 }
 
 .patient-history-filter-section {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
+  grid-template-columns: 34px minmax(0, 1fr);
   align-items: start;
-  gap: 7px;
+  gap: 4px;
   min-width: 0;
-  padding: 6px 7px;
+  padding: 3px 4px;
   border: 1px solid;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .patient-history-filter-section--body {
@@ -3661,10 +3663,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 24px;
-  border-radius: 6px;
+  min-height: 19px;
+  border-radius: 4px;
   background: rgba(255, 255, 255, 0.78);
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 900;
 }
 
@@ -3679,24 +3681,24 @@
 .patient-history-filter-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
-  max-height: 58px;
+  max-height: 41px;
   overflow-y: auto;
 }
 
 .patient-history-filter-option {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  min-height: 24px;
-  padding: 2px 6px 2px 5px;
+  gap: 3px;
+  min-height: 19px;
+  padding: 1px 4px;
   border: 1px solid rgba(148, 163, 184, 0.46);
-  border-radius: 6px;
+  border-radius: 5px;
   background: rgba(255, 255, 255, 0.92);
   color: var(--text-primary, #1f2937);
   cursor: pointer;
-  font-size: 0.76rem;
+  font-size: 0.69rem;
   font-weight: 800;
   line-height: 1;
   white-space: nowrap;
@@ -3725,8 +3727,8 @@
 }
 
 .patient-history-filter-option input {
-  width: 13px;
-  height: 13px;
+  width: 11px;
+  height: 11px;
   margin: 0;
   cursor: inherit;
 }
@@ -3740,12 +3742,12 @@
 }
 
 .patient-history-filter-count {
-  min-width: 15px;
-  padding: 2px 4px;
+  min-width: 12px;
+  padding: 1px 3px;
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.18);
   color: var(--text-secondary, #64748b);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
