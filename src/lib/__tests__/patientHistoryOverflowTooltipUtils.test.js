@@ -269,10 +269,13 @@ test('patient history body and memo text use the shared content size with shorte
     2
   );
   assert.match(detailFieldRule, /font-size:\s*0\.82rem\s*!important;/);
+  assert.match(detailFieldRule, /overflow-y:\s*hidden\s*!important;/);
+  assert.match(detailFieldRule, /resize:\s*none\s*!important;/);
   assert.match(tableCellRule, /padding:\s*1px 3px\s*!important;/);
   assert.match(tableCellRule, /height:\s*20px;/);
   assert.match(shockwaveView, /bodyPartTextareaRows === 1 \? '19px'/);
   assert.match(shockwaveView, /memoTextareaRows === 1 \? '19px'/);
+  assert.doesNotMatch(shockwaveView, /resize:\s*memoTextareaRows/);
 });
 
 test('patient history column headers use one compact readable type size', async () => {

@@ -3881,6 +3881,8 @@
 
 .patient-history-table .patient-history-edit-field--detail {
   font-size: 0.82rem !important;
+  overflow-y: hidden !important;
+  resize: none !important;
 }
 
 .patient-history-table .patient-history-edit-field--prescription {

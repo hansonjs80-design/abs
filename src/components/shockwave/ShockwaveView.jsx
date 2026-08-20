@@ -4159,7 +4159,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                         overflowWrap: 'normal',
                                         overflowX: 'hidden',
                                         paddingLeft: hasMultipleMemos ? '7px' : '5px',
-                                        resize: memoTextareaRows > 1 ? 'vertical' : 'none',
+                                        resize: 'none',
                                         textAlign: memoTextAlign,
                                         whiteSpace: 'pre',
                                         wordBreak: 'normal',
