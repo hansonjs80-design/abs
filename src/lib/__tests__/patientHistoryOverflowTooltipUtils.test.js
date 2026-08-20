@@ -69,10 +69,15 @@ test('patient history tables show a pinned spreadsheet-style row number column',
   const rowNumberRule = shockwaveCss.match(
     /\.patient-history-table \.patient-history-row-number-cell\s*\{([^}]*)\}/s
   )?.[1] || '';
+  const rowNumberHeaderRule = shockwaveCss.match(
+    /\.patient-history-table thead \.patient-history-row-number-cell\s*\{([^}]*)\}/s
+  )?.[1] || '';
 
   assert.match(rowNumberRule, /position:\s*sticky;/);
   assert.match(rowNumberRule, /left:\s*0;/);
   assert.match(rowNumberRule, /font-size:\s*0\.8rem;/);
+  assert.match(rowNumberHeaderRule, /color:\s*var\(--text-primary, #1f2937\);/);
+  assert.match(rowNumberHeaderRule, /font-size:\s*0\.78rem;/);
   assert.match(shockwaveView, /<th className="patient-history-row-number-cell">번호<\/th>/);
   assert.match(shockwaveView, /aria-label={`행 번호 \$\{idx \+ 1\}`}/);
   assert.match(shockwaveView, /\{idx \+ 1\}/);
@@ -195,11 +200,20 @@ test('patient history body and memo text use smaller type with shorter data rows
     2
   );
   assert.match(detailFieldRule, /font-size:\s*0\.78rem\s*!important;/);
-  assert.match(tableCellRule, /padding-top:\s*2px\s*!important;/);
-  assert.match(tableCellRule, /padding-bottom:\s*2px\s*!important;/);
-  assert.match(tableCellRule, /height:\s*21px;/);
-  assert.match(shockwaveView, /bodyPartTextareaRows === 1 \? '20px'/);
-  assert.match(shockwaveView, /memoTextareaRows === 1 \? '20px'/);
+  assert.match(tableCellRule, /padding:\s*1px 3px\s*!important;/);
+  assert.match(tableCellRule, /height:\s*20px;/);
+  assert.match(shockwaveView, /bodyPartTextareaRows === 1 \? '19px'/);
+  assert.match(shockwaveView, /memoTextareaRows === 1 \? '19px'/);
+});
+
+test('patient history column headers use one compact readable type size', async () => {
+  const shockwaveCss = await readFile(shockwaveCssUrl, 'utf8');
+  const tableHeaderRule = shockwaveCss.match(
+    /\.patient-history-table\.sw-summary-table thead th,[\s\S]*?\.patient-history-table\.sw-compact-summary-table thead th\s*\{([^}]*)\}/s
+  )?.[1] || '';
+
+  assert.match(tableHeaderRule, /font-size:\s*0\.78rem\s*!important;/);
+  assert.match(tableHeaderRule, /line-height:\s*1\.12;/);
 });
 
 test('patient history prescription dropdown keeps its height and uses a smaller tightly spaced arrow', async () => {
