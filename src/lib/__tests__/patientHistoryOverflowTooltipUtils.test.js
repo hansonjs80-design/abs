@@ -226,7 +226,7 @@ test('patient history column headers use one compact readable type size', async 
   assert.match(tableHeaderRule, /line-height:\s*1\.12;/);
 });
 
-test('patient history prescription dropdown keeps its height and uses a smaller tightly spaced arrow', async () => {
+test('patient history prescription dropdown keeps its height and uses the requested type size with a tightly spaced arrow', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
     readFile(shockwaveViewUrl, 'utf8'),
@@ -243,6 +243,22 @@ test('patient history prescription dropdown keeps its height and uses a smaller 
   assert.match(prescriptionSelect, /backgroundPosition:\s*'right 3px center'/);
   assert.match(prescriptionSelect, /backgroundSize:\s*'6px 4px'/);
   assert.match(prescriptionSelect, /padding:\s*'2px 11px 2px 5px'/);
-  assert.match(prescriptionFieldRule, /font-size:\s*0\.74rem\s*!important;/);
+  assert.match(prescriptionFieldRule, /font-size:\s*0\.82rem\s*!important;/);
   assert.doesNotMatch(prescriptionSelect, /(?:minH|h)eight:\s*'20px'/);
+});
+
+test('patient history date chart and therapist cells use compact text', async () => {
+  const [shockwaveCss, shockwaveView] = await Promise.all([
+    readFile(shockwaveCssUrl, 'utf8'),
+    readFile(shockwaveViewUrl, 'utf8'),
+  ]);
+  const compactCellRule = shockwaveCss.match(
+    /\.patient-history-table tbody \.patient-history-compact-text-cell\s*\{([^}]*)\}/s
+  )?.[1] || '';
+
+  assert.equal(
+    shockwaveView.match(/className="patient-history-compact-text-cell"/g)?.length,
+    3
+  );
+  assert.match(compactCellRule, /font-size:\s*0\.7rem;/);
 });

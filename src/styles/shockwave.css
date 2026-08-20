@@ -3787,6 +3787,10 @@
   vertical-align: middle;
 }
 
+.patient-history-table tbody .patient-history-compact-text-cell {
+  font-size: 0.7rem;
+}
+
 .patient-history-table .patient-history-row-number-cell {
   position: sticky;
   left: 0;
@@ -3863,7 +3867,7 @@
 }
 
 .patient-history-table .patient-history-edit-field--prescription {
-  font-size: 0.74rem !important;
+  font-size: 0.82rem !important;
 }
 
 .patient-history-table .patient-history-edit-field:focus:not(:disabled) {
