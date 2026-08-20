@@ -3687,8 +3687,11 @@
 .patient-history-filter-options {
   display: flex;
   flex-wrap: wrap;
+  align-content: flex-start;
   column-gap: 2px;
   row-gap: 3px;
+  box-sizing: border-box;
+  width: 100%;
   min-width: 0;
   max-height: 41px;
   overflow-y: auto;
@@ -3696,6 +3699,7 @@
 
 .patient-history-filter-option {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 2px;
   min-height: 19px;

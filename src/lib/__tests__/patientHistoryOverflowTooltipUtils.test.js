@@ -135,8 +135,13 @@ test('patient history checkbox filters share width by content in a compact layou
   assert.match(sectionRule, /flex-basis:\s*0;/);
   assert.match(sectionRule, /box-sizing:\s*border-box;/);
   assert.match(sectionRule, /padding:\s*3px;/);
+  assert.match(optionsRule, /flex-wrap:\s*wrap;/);
+  assert.match(optionsRule, /align-content:\s*flex-start;/);
+  assert.match(optionsRule, /box-sizing:\s*border-box;/);
+  assert.match(optionsRule, /width:\s*100%;/);
   assert.match(optionsRule, /max-height:\s*41px;/);
   assert.match(optionsRule, /column-gap:\s*2px;/);
+  assert.match(optionRule, /flex:\s*0 0 auto;/);
   assert.match(optionRule, /min-height:\s*19px;/);
   assert.match(optionRule, /gap:\s*2px;/);
   assert.match(optionRule, /padding:\s*1px 2px;/);
