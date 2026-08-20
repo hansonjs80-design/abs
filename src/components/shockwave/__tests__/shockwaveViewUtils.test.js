@@ -141,7 +141,7 @@ describe('shockwave view patient history model', () => {
     assert.equal(getPatientHistoryModalLayout(2).width, '96%');
     assert.deepEqual(
       getPatientHistoryColumnWidths(1),
-      ['5.3%', '12.6%', '8.6%', '10.7%', '26.3%', '17.5%', '6.7%', '7.6%', '4.7%']
+      ['4.8%', '11.4%', '7.8%', '9.7%', '28.9%', '20.1%', '6.1%', '6.9%', '4.3%']
     );
     assert.ok(
       Math.abs(
