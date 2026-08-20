@@ -3634,7 +3634,7 @@
 
 .patient-history-filter-sections {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 13fr) minmax(0, 7fr);
   gap: 5px;
 }
 

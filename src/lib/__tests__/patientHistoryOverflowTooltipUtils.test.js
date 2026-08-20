@@ -100,7 +100,7 @@ test('patient history body and prescription filters render as separate checkbox 
   assert.match(shockwaveCss, /\.patient-history-filter-section--prescription\s*\{/);
 });
 
-test('patient history checkbox filters stay compact in a two-column layout', async () => {
+test('patient history checkbox filters keep a wider body section in a compact layout', async () => {
   const shockwaveCss = await readFile(shockwaveCssUrl, 'utf8');
   const headerRule = shockwaveCss.match(
     /\.patient-history-group-header\s*\{([^}]*)\}/s
@@ -116,7 +116,10 @@ test('patient history checkbox filters stay compact in a two-column layout', asy
   )?.[1] || '';
 
   assert.match(headerRule, /padding:\s*6px 8px 7px;/);
-  assert.match(sectionsRule, /grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);/);
+  assert.match(
+    sectionsRule,
+    /grid-template-columns:\s*minmax\(0, 13fr\) minmax\(0, 7fr\);/
+  );
   assert.match(optionsRule, /max-height:\s*41px;/);
   assert.match(optionRule, /min-height:\s*19px;/);
   assert.match(optionRule, /font-size:\s*0\.69rem;/);
