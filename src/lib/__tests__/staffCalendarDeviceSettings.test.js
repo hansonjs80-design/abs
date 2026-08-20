@@ -167,6 +167,37 @@ test('restores the complete staff calendar profile after storage is unavailable 
   assert.ok(restartedStorage.getItem(STAFF_CALENDAR_PROFILE_STORAGE_KEY));
 });
 
+test('prefers and repairs the complete profile when abrupt shutdown leaves stale date field mirrors', () => {
+  const expectedDateSettings = {
+    dateRowHeight: 42,
+    dateFontSize: 18.5,
+    dateFontWeight: 900,
+  };
+  const storage = createStorage({
+    [STAFF_CALENDAR_PROFILE_STORAGE_KEY]: JSON.stringify({
+      rowHeight: 152,
+      ...expectedDateSettings,
+    }),
+    [STAFF_CALENDAR_DEVICE_SETTING_KEYS.dateRowHeight]: '28',
+    [STAFF_CALENDAR_DEVICE_SETTING_KEYS.dateFontSize]: '15',
+    [STAFF_CALENDAR_DEVICE_SETTING_KEYS.dateFontWeight]: '700',
+  });
+  const document = createCookieDocument();
+
+  const restored = readLocalStaffCalendarDeviceSettings(storage, document);
+
+  assert.deepEqual(restored.values, {
+    rowHeight: 152,
+    ...expectedDateSettings,
+  });
+  Object.entries(expectedDateSettings).forEach(([field, value]) => {
+    assert.equal(
+      storage.getItem(STAFF_CALENDAR_DEVICE_SETTING_KEYS[field]),
+      String(value)
+    );
+  });
+});
+
 test('backs up one desktop profile under installation and stable device ids', () => {
   const identity = {
     deviceId: 'desktop-installation-id',

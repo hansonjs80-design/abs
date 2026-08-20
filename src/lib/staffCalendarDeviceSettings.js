@@ -109,23 +109,6 @@ export function readLocalStaffCalendarDeviceSettings(storageArg, documentArg) {
   const values = {};
   const present = {};
 
-  const profileRaw = readStorageValueWithCookieBackup(
-    STAFF_CALENDAR_PROFILE_STORAGE_KEY,
-    storage,
-    documentArg
-  );
-  if (profileRaw) {
-    try {
-      const profile = normalizeStaffCalendarDeviceSettingsPatch(JSON.parse(profileRaw));
-      Object.assign(values, profile);
-      Object.keys(profile).forEach((field) => {
-        present[field] = true;
-      });
-    } catch {
-      // Individual field backups below can still restore a valid profile.
-    }
-  }
-
   STAFF_CALENDAR_DEVICE_FIELDS.forEach((field) => {
     const key = STAFF_CALENDAR_DEVICE_SETTING_KEYS[field];
     const raw = readStorageValueWithCookieBackup(key, storage, documentArg);
@@ -135,6 +118,33 @@ export function readLocalStaffCalendarDeviceSettings(storageArg, documentArg) {
     values[field] = normalized[field];
     present[field] = true;
   });
+
+  const profileRaw = readStorageValueWithCookieBackup(
+    STAFF_CALENDAR_PROFILE_STORAGE_KEY,
+    storage,
+    documentArg
+  );
+  if (profileRaw) {
+    try {
+      const profile = normalizeStaffCalendarDeviceSettingsPatch(JSON.parse(profileRaw));
+
+      // The complete profile is written before its legacy per-field mirrors.
+      // Treat it as the atomic source of truth after an abrupt browser or OS
+      // shutdown, then repair any stale individual values for older hooks.
+      Object.assign(values, profile);
+      Object.keys(profile).forEach((field) => {
+        present[field] = true;
+        writeStorageValueWithCookieBackup(
+          STAFF_CALENDAR_DEVICE_SETTING_KEYS[field],
+          profile[field],
+          storage,
+          documentArg
+        );
+      });
+    } catch {
+      // Individual field backups above can still restore a valid profile.
+    }
+  }
 
   return {
     values,
@@ -237,6 +247,39 @@ export async function syncLoadStaffCalendarDeviceSettings({ localSnapshot, apply
 let backupTimeout = null;
 let pendingPatch = {};
 
+export async function flushPendingStaffCalendarDeviceSettings() {
+  if (backupTimeout) {
+    clearTimeout(backupTimeout);
+    backupTimeout = null;
+  }
+
+  const patchToSave = pendingPatch;
+  pendingPatch = {};
+  if (Object.keys(patchToSave).length === 0) return null;
+
+  try {
+    const identity = getDeviceSettingsIdentity();
+    return await enqueueShockwaveSettingsJsonPatch({
+      supabaseClient: supabase,
+      scope: 'staff-calendar-device-settings',
+      mutate: (monthlySettings) => {
+        return {
+          ...monthlySettings,
+          [DEVICE_SETTINGS_FIELD]: buildStaffCalendarDeviceSettingsMap({
+            monthlySettings,
+            identity,
+            patch: patchToSave,
+            updatedAt: new Date().toISOString(),
+          }),
+        };
+      },
+    });
+  } catch (err) {
+    console.error('Failed to save staff calendar device settings:', err);
+    return null;
+  }
+}
+
 export function syncSaveStaffCalendarDeviceSettings(patch) {
   const normalizedPatch = persistLocalStaffCalendarDeviceSettingsPatch(patch);
   if (Object.keys(normalizedPatch).length === 0) return;
@@ -247,29 +290,7 @@ export function syncSaveStaffCalendarDeviceSettings(patch) {
 
   if (backupTimeout) clearTimeout(backupTimeout);
 
-  backupTimeout = setTimeout(async () => {
-    const patchToSave = pendingPatch;
-    pendingPatch = {};
-
-    try {
-      const identity = getDeviceSettingsIdentity();
-      await enqueueShockwaveSettingsJsonPatch({
-        supabaseClient: supabase,
-        scope: 'staff-calendar-device-settings',
-        mutate: (monthlySettings) => {
-          return {
-            ...monthlySettings,
-            [DEVICE_SETTINGS_FIELD]: buildStaffCalendarDeviceSettingsMap({
-              monthlySettings,
-              identity,
-              patch: patchToSave,
-              updatedAt: new Date().toISOString(),
-            }),
-          };
-        },
-      });
-    } catch (err) {
-      console.error('Failed to save staff calendar device settings:', err);
-    }
+  backupTimeout = setTimeout(() => {
+    void flushPendingStaffCalendarDeviceSettings();
   }, REMOTE_SAVE_DEBOUNCE_MS);
 }
