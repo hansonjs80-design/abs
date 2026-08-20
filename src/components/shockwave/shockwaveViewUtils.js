@@ -172,17 +172,43 @@ export function buildPatientHistoryPrescriptionFilterOptions(logs = [], countLog
   ];
 }
 
-function filterPatientHistoryLogsByBody(logs, bodyFilter) {
-  if (bodyFilter === PATIENT_HISTORY_ALL_BODY_FILTER) return logs;
+export function togglePatientHistoryFilterSelection(selection, optionKey) {
+  if (optionKey === PATIENT_HISTORY_ALL_BODY_FILTER) return [];
+  const selectedKeys = Array.isArray(selection)
+    ? selection
+    : (selection && selection !== PATIENT_HISTORY_ALL_BODY_FILTER ? [selection] : []);
+  const nextKeys = new Set(selectedKeys);
+  if (nextKeys.has(optionKey)) nextKeys.delete(optionKey);
+  else nextKeys.add(optionKey);
+  return Array.from(nextKeys);
+}
+
+function normalizePatientHistoryFilterSelection(selection, options) {
+  const selectedKeys = Array.isArray(selection)
+    ? selection
+    : (selection ? [selection] : []);
+  if (selectedKeys.includes(PATIENT_HISTORY_ALL_BODY_FILTER)) return [];
+  const validKeys = new Set(
+    options
+      .map((option) => option.key)
+      .filter((key) => key !== PATIENT_HISTORY_ALL_BODY_FILTER)
+  );
+  return Array.from(new Set(selectedKeys.filter((key) => validKeys.has(key))));
+}
+
+function filterPatientHistoryLogsByBody(logs, bodyFilters) {
+  if (bodyFilters.length === 0) return logs;
+  const selectedKeys = new Set(bodyFilters);
   return logs.filter((log) => (
-    getPatientHistoryBodyFilterParts(log).some((part) => part.key === bodyFilter)
+    getPatientHistoryBodyFilterParts(log).some((part) => selectedKeys.has(part.key))
   ));
 }
 
-function filterPatientHistoryLogsByPrescription(logs, prescriptionFilter) {
-  if (prescriptionFilter === PATIENT_HISTORY_ALL_PRESCRIPTION_FILTER) return logs;
+function filterPatientHistoryLogsByPrescription(logs, prescriptionFilters) {
+  if (prescriptionFilters.length === 0) return logs;
+  const selectedKeys = new Set(prescriptionFilters);
   return logs.filter((log) => (
-    getPatientHistoryPrescriptionFilterPart(log).key === prescriptionFilter
+    selectedKeys.has(getPatientHistoryPrescriptionFilterPart(log).key)
   ));
 }
 
@@ -213,25 +239,22 @@ export function buildPatientHistoryLogGroups({
       if (!rawGroup || rawGroup.logs.length === 0) return null;
       const rawBodyFilterOptions = buildPatientHistoryBodyFilterOptions(rawGroup.logs);
       const rawPrescriptionFilterOptions = buildPatientHistoryPrescriptionFilterOptions(rawGroup.logs);
-      const requestedBodyFilter = bodyFilters[rawGroup.key] || PATIENT_HISTORY_ALL_BODY_FILTER;
-      const requestedPrescriptionFilter = prescriptionFilters[rawGroup.key]
-        || PATIENT_HISTORY_ALL_PRESCRIPTION_FILTER;
-      const activeBodyFilter = rawBodyFilterOptions.some((option) => option.key === requestedBodyFilter)
-        ? requestedBodyFilter
-        : PATIENT_HISTORY_ALL_BODY_FILTER;
-      const activePrescriptionFilter = rawPrescriptionFilterOptions.some(
-        (option) => option.key === requestedPrescriptionFilter
-      )
-        ? requestedPrescriptionFilter
-        : PATIENT_HISTORY_ALL_PRESCRIPTION_FILTER;
-      const bodyFilteredLogs = filterPatientHistoryLogsByBody(rawGroup.logs, activeBodyFilter);
+      const activeBodyFilters = normalizePatientHistoryFilterSelection(
+        bodyFilters[rawGroup.key],
+        rawBodyFilterOptions
+      );
+      const activePrescriptionFilters = normalizePatientHistoryFilterSelection(
+        prescriptionFilters[rawGroup.key],
+        rawPrescriptionFilterOptions
+      );
+      const bodyFilteredLogs = filterPatientHistoryLogsByBody(rawGroup.logs, activeBodyFilters);
       const prescriptionFilteredLogs = filterPatientHistoryLogsByPrescription(
         rawGroup.logs,
-        activePrescriptionFilter
+        activePrescriptionFilters
       );
       const filteredLogs = filterPatientHistoryLogsByPrescription(
         bodyFilteredLogs,
-        activePrescriptionFilter
+        activePrescriptionFilters
       );
       const bodyFilterOptions = buildPatientHistoryBodyFilterOptions(
         rawGroup.logs,
@@ -246,9 +269,9 @@ export function buildPatientHistoryLogGroups({
         logs: filteredLogs,
         totalLogs: rawGroup.logs,
         bodyFilterOptions,
-        activeBodyFilter,
+        activeBodyFilters,
         prescriptionFilterOptions,
-        activePrescriptionFilter,
+        activePrescriptionFilters,
       };
     })
     .filter(Boolean);

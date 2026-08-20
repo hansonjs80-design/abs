@@ -7,6 +7,7 @@ import {
   getPatientHistoryColumnWidths,
   getPatientHistoryModalLayout,
   getPatientHistoryPrescriptionColor,
+  togglePatientHistoryFilterSelection,
 } from '../shockwaveViewUtils.js';
 
 describe('shockwave view patient history model', () => {
@@ -24,6 +25,7 @@ describe('shockwave view patient history model', () => {
     assert.equal(groups[0].key, 'manual');
     assert.deepEqual(groups[0].logs.map((log) => log.id), ['manual-1']);
     assert.equal(groups[0].totalLogs.length, 2);
+    assert.deepEqual(groups[0].activeBodyFilters, ['shoulder']);
   });
 
   it('filters by body and prescription together and recalculates both option counts', () => {
@@ -41,8 +43,8 @@ describe('shockwave view patient history model', () => {
     });
 
     assert.deepEqual(groups[0].logs.map((log) => log.id), ['manual-1']);
-    assert.equal(groups[0].activeBodyFilter, 'shoulder');
-    assert.equal(groups[0].activePrescriptionFilter, '40분');
+    assert.deepEqual(groups[0].activeBodyFilters, ['shoulder']);
+    assert.deepEqual(groups[0].activePrescriptionFilters, ['40분']);
     assert.deepEqual(
       groups[0].bodyFilterOptions.map(({ label, count }) => [label, count]),
       [
@@ -62,6 +64,54 @@ describe('shockwave view patient history model', () => {
         ['처방 없음', 0],
       ]
     );
+  });
+
+  it('combines checked values within each filter and intersects body with prescription', () => {
+    const groups = buildPatientHistoryLogGroups({
+      selectedGroupKey: 'manual',
+      bodyFilters: { manual: ['shoulder', 'lumbar'] },
+      prescriptionFilters: { manual: ['40분', '60분'] },
+      logs: [
+        { id: 'manual-1', history_group: 'manual', body_part: 'Shoulder', prescription: '40분' },
+        { id: 'manual-2', history_group: 'manual', body_part: 'Shoulder', prescription: '60분' },
+        { id: 'manual-3', history_group: 'manual', body_part: 'Lumbar', prescription: '40분' },
+        { id: 'manual-4', history_group: 'manual', body_part: 'Lumbar', prescription: '30분' },
+        { id: 'manual-5', history_group: 'manual', body_part: 'Knee', prescription: '40분' },
+      ],
+    });
+
+    assert.deepEqual(groups[0].logs.map((log) => log.id), [
+      'manual-1',
+      'manual-2',
+      'manual-3',
+    ]);
+    assert.deepEqual(groups[0].activeBodyFilters, ['shoulder', 'lumbar']);
+    assert.deepEqual(groups[0].activePrescriptionFilters, ['40분', '60분']);
+    assert.deepEqual(
+      groups[0].bodyFilterOptions.map(({ label, count }) => [label, count]),
+      [
+        ['전체', 4],
+        ['Knee', 1],
+        ['Lumbar', 1],
+        ['Shoulder', 2],
+      ]
+    );
+    assert.deepEqual(
+      groups[0].prescriptionFilterOptions.map(({ label, count }) => [label, count]),
+      [
+        ['전체', 4],
+        ['30분', 1],
+        ['40분', 2],
+        ['60분', 1],
+      ]
+    );
+  });
+
+  it('toggles checkbox selections and uses all as a reset', () => {
+    assert.deepEqual(togglePatientHistoryFilterSelection(undefined, 'shoulder'), ['shoulder']);
+    assert.deepEqual(togglePatientHistoryFilterSelection(['shoulder'], 'lumbar'), ['shoulder', 'lumbar']);
+    assert.deepEqual(togglePatientHistoryFilterSelection(['shoulder', 'lumbar'], 'shoulder'), ['lumbar']);
+    assert.deepEqual(togglePatientHistoryFilterSelection(['lumbar'], '__all__'), []);
   });
 
   it('returns stable modal sizing for single and split layouts', () => {

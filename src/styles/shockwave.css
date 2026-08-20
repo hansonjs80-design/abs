@@ -3605,6 +3605,151 @@
   overflow-x: hidden !important;
 }
 
+.patient-history-group-header {
+  display: grid;
+  gap: 7px;
+  padding: 8px 10px 10px;
+  border-bottom: 1px solid var(--border-color, #d7dde5);
+  background: var(--patient-history-group-header-bg);
+  color: var(--text-primary, #1f2937);
+}
+
+.patient-history-group-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 2px;
+  font-weight: 900;
+}
+
+.patient-history-group-count {
+  color: var(--text-secondary, #64748b);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.patient-history-filter-sections {
+  display: grid;
+  gap: 6px;
+}
+
+.patient-history-filter-section {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: start;
+  gap: 7px;
+  min-width: 0;
+  padding: 6px 7px;
+  border: 1px solid;
+  border-radius: 8px;
+}
+
+.patient-history-filter-section--body {
+  border-color: rgba(2, 132, 199, 0.34);
+  background: rgba(224, 242, 254, 0.72);
+}
+
+.patient-history-filter-section--prescription {
+  border-color: rgba(124, 58, 237, 0.3);
+  background: rgba(243, 232, 255, 0.72);
+}
+
+.patient-history-filter-title {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.78);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.patient-history-filter-section--body .patient-history-filter-title {
+  color: #0369a1;
+}
+
+.patient-history-filter-section--prescription .patient-history-filter-title {
+  color: #6d28d9;
+}
+
+.patient-history-filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+  max-height: 58px;
+  overflow-y: auto;
+}
+
+.patient-history-filter-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 2px 6px 2px 5px;
+  border: 1px solid rgba(148, 163, 184, 0.46);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text-primary, #1f2937);
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.patient-history-filter-option:hover {
+  border-color: rgba(71, 85, 105, 0.62);
+  background: #fff;
+}
+
+.patient-history-filter-section--body .patient-history-filter-option.is-checked {
+  border-color: #0284c7;
+  background: #fff;
+  color: #075985;
+}
+
+.patient-history-filter-section--prescription .patient-history-filter-option.is-checked {
+  border-color: #7c3aed;
+  background: #fff;
+  color: #5b21b6;
+}
+
+.patient-history-filter-option.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
+.patient-history-filter-option input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  cursor: inherit;
+}
+
+.patient-history-filter-section--body .patient-history-filter-option input {
+  accent-color: #0284c7;
+}
+
+.patient-history-filter-section--prescription .patient-history-filter-option input {
+  accent-color: #7c3aed;
+}
+
+.patient-history-filter-count {
+  min-width: 15px;
+  padding: 2px 4px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  color: var(--text-secondary, #64748b);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
 .patient-history-table {
   font-size: 0.86rem;
 }

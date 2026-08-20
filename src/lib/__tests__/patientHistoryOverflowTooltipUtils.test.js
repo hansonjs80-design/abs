@@ -8,6 +8,10 @@ import {
 
 const shockwaveCssUrl = new URL('../../styles/shockwave.css', import.meta.url);
 const shockwaveViewUrl = new URL('../../components/shockwave/ShockwaveView.jsx', import.meta.url);
+const patientHistoryFiltersUrl = new URL(
+  '../../components/shockwave/PatientHistoryFilters.jsx',
+  import.meta.url
+);
 
 test('patient history overflow tooltip shows multiple values on separate lines', () => {
   assert.equal(
@@ -71,6 +75,23 @@ test('patient history tables show a pinned spreadsheet-style row number column',
   assert.match(shockwaveView, /<th className="patient-history-row-number-cell">번호<\/th>/);
   assert.match(shockwaveView, /aria-label={`행 번호 \$\{idx \+ 1\}`}/);
   assert.match(shockwaveView, /\{idx \+ 1\}/);
+});
+
+test('patient history body and prescription filters render as separate checkbox groups', async () => {
+  const [patientHistoryFilters, shockwaveCss, shockwaveView] = await Promise.all([
+    readFile(patientHistoryFiltersUrl, 'utf8'),
+    readFile(shockwaveCssUrl, 'utf8'),
+    readFile(shockwaveViewUrl, 'utf8'),
+  ]);
+
+  assert.match(shockwaveView, /<PatientHistoryFilters/);
+  assert.match(patientHistoryFilters, /tone="body"/);
+  assert.match(patientHistoryFilters, /tone="prescription"/);
+  assert.match(patientHistoryFilters, /type="checkbox"/);
+  assert.match(patientHistoryFilters, /group\.activeBodyFilters/);
+  assert.match(patientHistoryFilters, /group\.activePrescriptionFilters/);
+  assert.match(shockwaveCss, /\.patient-history-filter-section--body\s*\{/);
+  assert.match(shockwaveCss, /\.patient-history-filter-section--prescription\s*\{/);
 });
 
 test('manual patient history header omits its bottom border without changing shockwave rows', async () => {

@@ -64,6 +64,7 @@ import MemoizedCell from './ShockwaveScheduleCell';
 import ShockwaveHoverTooltip from './ShockwaveHoverTooltip';
 import PatientHistoryOverflowField from './PatientHistoryOverflowField';
 import PatientHistoryApplyConfirmDialog from './PatientHistoryApplyConfirmDialog';
+import PatientHistoryFilters from './PatientHistoryFilters';
 import useContextMenuPositioning from './useContextMenuPositioning';
 import usePatientHistoryActions from './usePatientHistoryActions';
 import useShockwaveTooltipPositioning from './useShockwaveTooltipPositioning';
@@ -98,6 +99,7 @@ import {
   saveHiddenBodyPartOptionsByPatient,
   SCHEDULE_INTERNAL_BORDER_COLOR,
   stepContextMenuVisitValue,
+  togglePatientHistoryFilterSelection,
 } from './shockwaveViewUtils';
 import {
   HORIZONTAL_BORDER_COLOR,
@@ -3869,102 +3871,34 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                         '--patient-history-column-header-bg': group.key === 'manual' ? '#fff3e6' : '#e0f2fe',
                       }}
                     >
-                      <div
-                        style={{
-                          background: 'var(--patient-history-group-header-bg)',
-                          color: 'var(--text-primary, #1f2937)',
-                          fontWeight: 800,
-                          padding: '8px 12px',
-                          borderBottom: '1px solid var(--border-color, #d7dde5)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '10px',
-                        }}
-                      >
-                        <span>
-                          {group.label} <span style={{ color: 'var(--text-secondary, #6b7280)', fontWeight: 700 }}>{group.logs.length}건</span>
-                        </span>
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'flex-end',
-                            flexWrap: 'wrap',
-                            gap: '6px',
-                          }}
-                        >
-                          <select
-                            aria-label={`${group.label} 부위 필터`}
-                            value={group.activeBodyFilter}
-                            onChange={(event) => {
-                              const value = event.target.value;
-                              setPatientHistoryBodyFilters((prev) => ({
-                                ...prev,
-                                [group.key]: value,
-                              }));
-                            }}
-                            onMouseDown={(event) => event.stopPropagation()}
-                            onClick={(event) => event.stopPropagation()}
-                            style={{
-                              maxWidth: '180px',
-                              minWidth: '142px',
-                              border: '1px solid rgba(148, 163, 184, 0.45)',
-                              borderRadius: '7px',
-                              background: '#fff',
-                              color: 'var(--text-primary, #1f2937)',
-                              fontSize: '0.8rem',
-                              fontWeight: 800,
-                              padding: '3px 7px',
-                              outline: 'none',
-                            }}
-                          >
-                            {group.bodyFilterOptions.map((option) => (
-                              <option
-                                key={option.key}
-                                value={option.key}
-                                disabled={option.count === 0 && option.key !== group.activeBodyFilter}
-                              >
-                                부위: {option.label} {option.count}건
-                              </option>
-                            ))}
-                          </select>
-                          <select
-                            aria-label={`${group.label} 처방 필터`}
-                            value={group.activePrescriptionFilter}
-                            onChange={(event) => {
-                              const value = event.target.value;
-                              setPatientHistoryPrescriptionFilters((prev) => ({
-                                ...prev,
-                                [group.key]: value,
-                              }));
-                            }}
-                            onMouseDown={(event) => event.stopPropagation()}
-                            onClick={(event) => event.stopPropagation()}
-                            style={{
-                              maxWidth: '180px',
-                              minWidth: '142px',
-                              border: '1px solid rgba(148, 163, 184, 0.45)',
-                              borderRadius: '7px',
-                              background: '#fff',
-                              color: 'var(--text-primary, #1f2937)',
-                              fontSize: '0.8rem',
-                              fontWeight: 800,
-                              padding: '3px 7px',
-                              outline: 'none',
-                            }}
-                          >
-                            {group.prescriptionFilterOptions.map((option) => (
-                              <option
-                                key={option.key}
-                                value={option.key}
-                                disabled={option.count === 0 && option.key !== group.activePrescriptionFilter}
-                              >
-                                처방: {option.label} {option.count}건
-                              </option>
-                            ))}
-                          </select>
+                      <div className="patient-history-group-header">
+                        <div className="patient-history-group-title-row">
+                          <span>{group.label}</span>
+                          <span className="patient-history-group-count">
+                            {group.logs.length} / {group.totalLogs.length}건
+                          </span>
                         </div>
+                        <PatientHistoryFilters
+                          group={group}
+                          onBodyFilterToggle={(optionKey) => {
+                            setPatientHistoryBodyFilters((prev) => ({
+                              ...prev,
+                              [group.key]: togglePatientHistoryFilterSelection(
+                                prev[group.key],
+                                optionKey
+                              ),
+                            }));
+                          }}
+                          onPrescriptionFilterToggle={(optionKey) => {
+                            setPatientHistoryPrescriptionFilters((prev) => ({
+                              ...prev,
+                              [group.key]: togglePatientHistoryFilterSelection(
+                                prev[group.key],
+                                optionKey
+                              ),
+                            }));
+                          }}
+                        />
                       </div>
                       <div className="sw-compact-table-wrap">
                         <table
