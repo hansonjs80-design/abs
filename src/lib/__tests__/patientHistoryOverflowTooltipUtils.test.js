@@ -243,6 +243,6 @@ test('patient history prescription dropdown keeps its height and uses a smaller 
   assert.match(prescriptionSelect, /backgroundPosition:\s*'right 3px center'/);
   assert.match(prescriptionSelect, /backgroundSize:\s*'6px 4px'/);
   assert.match(prescriptionSelect, /padding:\s*'2px 11px 2px 5px'/);
-  assert.match(prescriptionFieldRule, /font-size:\s*0\.7rem\s*!important;/);
+  assert.match(prescriptionFieldRule, /font-size:\s*0\.74rem\s*!important;/);
   assert.doesNotMatch(prescriptionSelect, /(?:minH|h)eight:\s*'20px'/);
 });
