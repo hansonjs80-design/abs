@@ -3862,6 +3862,10 @@
   font-size: 0.78rem !important;
 }
 
+.patient-history-table .patient-history-edit-field--prescription {
+  font-size: 0.7rem !important;
+}
+
 .patient-history-table .patient-history-edit-field:focus:not(:disabled) {
   background-color: rgba(255, 255, 255, 0.34) !important;
   box-shadow: inset 0 -2px 0 rgba(37, 99, 235, 0.56) !important;

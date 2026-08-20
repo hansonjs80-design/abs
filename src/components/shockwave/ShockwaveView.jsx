@@ -4054,7 +4054,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 </td>
                                 <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, color: log.type === 'manual' ? 'var(--brand-primary)' : 'inherit', fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
                                   <select
-                                    className="patient-history-edit-field"
+                                    className="patient-history-edit-field patient-history-edit-field--prescription"
                                     aria-label="처방 수정"
                                     value={currentPrescriptionValue}
                                     onChange={handleHistoryPrescriptionChange}

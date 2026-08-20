@@ -227,14 +227,22 @@ test('patient history column headers use one compact readable type size', async 
 });
 
 test('patient history prescription dropdown keeps its height and uses a smaller tightly spaced arrow', async () => {
-  const shockwaveView = await readFile(shockwaveViewUrl, 'utf8');
+  const [shockwaveCss, shockwaveView] = await Promise.all([
+    readFile(shockwaveCssUrl, 'utf8'),
+    readFile(shockwaveViewUrl, 'utf8'),
+  ]);
   const prescriptionSelect = shockwaveView.match(
     /<select\s+[\s\S]*?aria-label="처방 수정"[\s\S]*?<\/select>/
   )?.[0] || '';
+  const prescriptionFieldRule = shockwaveCss.match(
+    /\.patient-history-table \.patient-history-edit-field--prescription\s*\{([^}]*)\}/s
+  )?.[1] || '';
 
+  assert.match(prescriptionSelect, /patient-history-edit-field--prescription/);
   assert.match(prescriptionSelect, /appearance:\s*'none'/);
   assert.match(prescriptionSelect, /backgroundPosition:\s*'right 3px center'/);
   assert.match(prescriptionSelect, /backgroundSize:\s*'6px 4px'/);
   assert.match(prescriptionSelect, /padding:\s*'2px 11px 2px 5px'/);
+  assert.match(prescriptionFieldRule, /font-size:\s*0\.7rem\s*!important;/);
   assert.doesNotMatch(prescriptionSelect, /(?:minH|h)eight:\s*'20px'/);
 });
