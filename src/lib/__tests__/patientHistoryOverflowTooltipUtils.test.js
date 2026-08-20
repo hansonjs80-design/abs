@@ -161,6 +161,16 @@ test('current patient history row border includes the pinned number cell as one 
   assert.doesNotMatch(shockwaveView, /outline:\s*isCurrentHistoryRow/);
 });
 
+test('current patient history row uses light treatment-specific backgrounds', async () => {
+  const shockwaveView = await readFile(shockwaveViewUrl, 'utf8');
+
+  assert.match(
+    shockwaveView,
+    /group\.key === 'manual' \? '#fff1e3' : '#e6f6fe'/
+  );
+  assert.doesNotMatch(shockwaveView, /#fedfbb|#c8ebfd/);
+});
+
 test('editable patient history values use flat cell styling until focused', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),

@@ -3931,7 +3931,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 : '';
                               const isCurrentHistoryRow = Boolean(log.isCurrentCell || (selectedHistoryCellId && log.id === selectedHistoryCellId));
                               const currentCellRowBackground = isCurrentHistoryRow
-                                ? (group.key === 'manual' ? '#fedfbb' : '#c8ebfd')
+                                ? (group.key === 'manual' ? '#fff1e3' : '#e6f6fe')
                                 : undefined;
                               const historyRowFontWeight = isCurrentHistoryRow ? 800 : 400;
                               const currentPrescriptionValue = String(log.prescription || '');
