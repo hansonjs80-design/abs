@@ -123,11 +123,43 @@ export function getPatientHistoryBodyFilterParts(log = {}) {
   return Array.from(partMap.values());
 }
 
+function getPatientHistoryFilterOptionRecency(log, sequence) {
+  return {
+    latestDate: String(log?.date || ''),
+    latestSequence: sequence,
+  };
+}
+
+function isNewerPatientHistoryFilterOption(next, current) {
+  if (!current) return true;
+  if (next.latestDate !== current.latestDate) {
+    return next.latestDate > current.latestDate;
+  }
+  return next.latestSequence < current.latestSequence;
+}
+
+function sortPatientHistoryFilterOptionsByRecency(options) {
+  return options
+    .sort((a, b) => (
+      b.latestDate.localeCompare(a.latestDate)
+      || a.latestSequence - b.latestSequence
+      || a.label.localeCompare(b.label, 'ko')
+    ))
+    .map(({ key, label, count }) => ({ key, label, count }));
+}
+
 export function buildPatientHistoryBodyFilterOptions(logs = [], countLogs = logs) {
   const partMap = new Map();
-  logs.forEach((log) => {
-    getPatientHistoryBodyFilterParts(log).forEach((part) => {
-      if (!partMap.has(part.key)) partMap.set(part.key, { ...part, count: 0 });
+  logs.forEach((log, logIndex) => {
+    getPatientHistoryBodyFilterParts(log).forEach((part, partIndex) => {
+      const current = partMap.get(part.key);
+      const recency = getPatientHistoryFilterOptionRecency(
+        log,
+        (logIndex * 1000) + partIndex
+      );
+      if (isNewerPatientHistoryFilterOption(recency, current)) {
+        partMap.set(part.key, { ...part, count: current?.count || 0, ...recency });
+      }
     });
   });
   countLogs.forEach((log) => {
@@ -140,7 +172,7 @@ export function buildPatientHistoryBodyFilterOptions(logs = [], countLogs = logs
 
   return [
     { key: PATIENT_HISTORY_ALL_BODY_FILTER, label: '전체', count: countLogs.length },
-    ...Array.from(partMap.values()).sort((a, b) => a.label.localeCompare(b.label, 'ko')),
+    ...sortPatientHistoryFilterOptionsByRecency(Array.from(partMap.values())),
   ];
 }
 
@@ -154,10 +186,15 @@ export function getPatientHistoryPrescriptionFilterPart(log = {}) {
 
 export function buildPatientHistoryPrescriptionFilterOptions(logs = [], countLogs = logs) {
   const prescriptionMap = new Map();
-  logs.forEach((log) => {
+  logs.forEach((log, logIndex) => {
     const prescription = getPatientHistoryPrescriptionFilterPart(log);
-    if (!prescriptionMap.has(prescription.key)) {
-      prescriptionMap.set(prescription.key, { ...prescription, count: 0 });
+    const current = prescriptionMap.get(prescription.key);
+    const recency = getPatientHistoryFilterOptionRecency(log, logIndex);
+    if (isNewerPatientHistoryFilterOption(recency, current)) {
+      prescriptionMap.set(
+        prescription.key,
+        { ...prescription, count: current?.count || 0, ...recency }
+      );
     }
   });
   countLogs.forEach((log) => {
@@ -168,7 +205,7 @@ export function buildPatientHistoryPrescriptionFilterOptions(logs = [], countLog
 
   return [
     { key: PATIENT_HISTORY_ALL_PRESCRIPTION_FILTER, label: '전체', count: countLogs.length },
-    ...Array.from(prescriptionMap.values()).sort((a, b) => a.label.localeCompare(b.label, 'ko')),
+    ...sortPatientHistoryFilterOptionsByRecency(Array.from(prescriptionMap.values())),
   ];
 }
 

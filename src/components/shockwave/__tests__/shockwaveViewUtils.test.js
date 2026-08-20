@@ -49,18 +49,18 @@ describe('shockwave view patient history model', () => {
       groups[0].bodyFilterOptions.map(({ label, count }) => [label, count]),
       [
         ['전체', 2],
-        ['부위 없음', 0],
-        ['Lumbar', 1],
         ['Shoulder', 1],
+        ['Lumbar', 1],
+        ['부위 없음', 0],
       ]
     );
     assert.deepEqual(
       groups[0].prescriptionFilterOptions.map(({ label, count }) => [label, count]),
       [
         ['전체', 2],
-        ['30분', 0],
         ['40분', 1],
         ['60분', 1],
+        ['30분', 0],
         ['처방 없음', 0],
       ]
     );
@@ -91,19 +91,40 @@ describe('shockwave view patient history model', () => {
       groups[0].bodyFilterOptions.map(({ label, count }) => [label, count]),
       [
         ['전체', 4],
-        ['Knee', 1],
-        ['Lumbar', 1],
         ['Shoulder', 2],
+        ['Lumbar', 1],
+        ['Knee', 1],
       ]
     );
     assert.deepEqual(
       groups[0].prescriptionFilterOptions.map(({ label, count }) => [label, count]),
       [
         ['전체', 4],
-        ['30분', 1],
         ['40분', 2],
         ['60분', 1],
+        ['30분', 1],
       ]
+    );
+  });
+
+  it('orders body and prescription checkbox options by their newest history date', () => {
+    const groups = buildPatientHistoryLogGroups({
+      selectedGroupKey: 'manual',
+      logs: [
+        { id: 'older', date: '2026-05-10', history_group: 'manual', body_part: 'Shoulder', prescription: '40분' },
+        { id: 'newer', date: '2026-08-10', history_group: 'manual', body_part: 'Knee', prescription: '60분' },
+        { id: 'middle', date: '2026-07-10', history_group: 'manual', body_part: 'Lumbar', prescription: '30분' },
+        { id: 'newest', date: '2026-09-10', history_group: 'manual', body_part: 'Shoulder', prescription: '40분' },
+      ],
+    });
+
+    assert.deepEqual(
+      groups[0].bodyFilterOptions.map(({ label }) => label),
+      ['전체', 'Shoulder', 'Knee', 'Lumbar']
+    );
+    assert.deepEqual(
+      groups[0].prescriptionFilterOptions.map(({ label }) => label),
+      ['전체', '40분', '60분', '30분']
     );
   });
 
