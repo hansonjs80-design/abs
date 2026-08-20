@@ -5,6 +5,7 @@ import {
   buildShockwaveHoverTooltipText,
   buildPatientHistoryLogGroups,
   getPatientHistoryColumnWidths,
+  getPatientHistoryFilterWidthWeight,
   getPatientHistoryModalLayout,
   getPatientHistoryPrescriptionColor,
   togglePatientHistoryFilterSelection,
@@ -135,14 +136,30 @@ describe('shockwave view patient history model', () => {
     assert.deepEqual(togglePatientHistoryFilterSelection(['lumbar'], '__all__'), []);
   });
 
+  it('allocates more filter width to the section with more option content', () => {
+    const bodyWeight = getPatientHistoryFilterWidthWeight([
+      { label: '전체', count: 3 },
+      { label: '어깨', count: 3 },
+    ]);
+    const prescriptionWeight = getPatientHistoryFilterWidthWeight([
+      { label: '전체', count: 3 },
+      { label: 'F2.5', count: 1 },
+      { label: 'F2.5(본인)', count: 1 },
+      { label: 'F3.0', count: 1 },
+    ]);
+
+    assert.ok(prescriptionWeight > bodyWeight);
+    assert.equal(getPatientHistoryFilterWidthWeight([]), 1);
+  });
+
   it('returns stable modal sizing for single and split layouts', () => {
-    assert.equal(getPatientHistoryModalLayout(1).maxWidth, 748);
-    assert.equal(getPatientHistoryModalLayout(1).width, '82%');
-    assert.equal(getPatientHistoryModalLayout(2).maxWidth, 1471);
-    assert.equal(getPatientHistoryModalLayout(2).width, '98%');
+    assert.equal(getPatientHistoryModalLayout(1).maxWidth, 758);
+    assert.equal(getPatientHistoryModalLayout(1).width, '83%');
+    assert.equal(getPatientHistoryModalLayout(2).maxWidth, 1490);
+    assert.equal(getPatientHistoryModalLayout(2).width, '99%');
     assert.deepEqual(
       getPatientHistoryColumnWidths(1),
-      ['4.1%', '12.9%', '7.7%', '8.4%', '28.4%', '22.7%', '5.3%', '6.8%', '3.7%']
+      ['4.05%', '12.73%', '7.60%', '9.54%', '28.03%', '22.41%', '5.24%', '6.72%', '3.68%']
     );
     assert.ok(
       Math.abs(
@@ -159,6 +176,7 @@ describe('shockwave view patient history model', () => {
       .map((width) => (Number.parseFloat(width) / 100) * getPatientHistoryModalLayout(1).maxWidth);
     assert.ok(projectedWidths[1] >= (735 * 0.114) * 1.15);
     assert.ok(projectedWidths[2] >= 735 * 0.078);
+    assert.ok(projectedWidths[3] >= (748 * 0.084) * 1.15);
     assert.ok(projectedWidths[7] >= 735 * 0.069);
   });
 

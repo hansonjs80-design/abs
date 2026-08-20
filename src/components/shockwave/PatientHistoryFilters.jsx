@@ -1,3 +1,5 @@
+import { getPatientHistoryFilterWidthWeight } from './shockwaveViewUtils';
+
 const ALL_FILTER_KEY = '__all__';
 
 function PatientHistoryFilterSection({
@@ -13,6 +15,7 @@ function PatientHistoryFilterSection({
       className={`patient-history-filter-section patient-history-filter-section--${tone}`}
       role="group"
       aria-label={`${ariaLabel} 필터`}
+      style={{ '--patient-history-filter-weight': getPatientHistoryFilterWidthWeight(options) }}
     >
       <span className="patient-history-filter-title">{label}</span>
       <div className="patient-history-filter-options">

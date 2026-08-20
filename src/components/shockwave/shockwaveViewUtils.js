@@ -209,6 +209,18 @@ export function buildPatientHistoryPrescriptionFilterOptions(logs = [], countLog
   ];
 }
 
+export function getPatientHistoryFilterWidthWeight(options = []) {
+  const totalWeight = options.reduce((sum, option) => {
+    const labelWeight = Array.from(String(option?.label || '')).reduce(
+      (weight, character) => weight + (character.charCodeAt(0) > 255 ? 1.7 : 1),
+      0
+    );
+    const countWeight = String(option?.count ?? '').length;
+    return sum + Math.max(7, labelWeight + countWeight + 5);
+  }, 0);
+  return Math.max(1, Number(totalWeight.toFixed(2)));
+}
+
 export function togglePatientHistoryFilterSelection(selection, optionKey) {
   if (optionKey === PATIENT_HISTORY_ALL_BODY_FILTER) return [];
   const selectedKeys = Array.isArray(selection)
@@ -317,21 +329,21 @@ export function buildPatientHistoryLogGroups({
 export function getPatientHistoryModalLayout(groupCount) {
   if (groupCount >= 2) {
     return {
-      maxWidth: 1471,
-      width: '98%',
+      maxWidth: 1490,
+      width: '99%',
       gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
     };
   }
   return {
-    maxWidth: groupCount === 1 ? 748 : 580,
-    width: groupCount === 1 ? '82%' : '80%',
+    maxWidth: groupCount === 1 ? 758 : 580,
+    width: groupCount === 1 ? '83%' : '80%',
     gridTemplateColumns: 'minmax(0, 1fr)',
   };
 }
 
 export function getPatientHistoryColumnWidths(groupCount) {
   void groupCount;
-  return ['4.1%', '12.9%', '7.7%', '8.4%', '28.4%', '22.7%', '5.3%', '6.8%', '3.7%'];
+  return ['4.05%', '12.73%', '7.60%', '9.54%', '28.03%', '22.41%', '5.24%', '6.72%', '3.68%'];
 }
 
 export function buildShockwaveHoverTooltipText({

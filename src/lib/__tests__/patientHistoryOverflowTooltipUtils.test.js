@@ -96,6 +96,8 @@ test('patient history body and prescription filters render as separate checkbox 
   assert.match(patientHistoryFilters, /type="checkbox"/);
   assert.match(patientHistoryFilters, /group\.activeBodyFilters/);
   assert.match(patientHistoryFilters, /group\.activePrescriptionFilters/);
+  assert.match(patientHistoryFilters, /getPatientHistoryFilterWidthWeight\(options\)/);
+  assert.match(patientHistoryFilters, /--patient-history-filter-weight/);
   assert.match(shockwaveCss, /\.patient-history-filter-section--body\s*\{/);
   assert.match(shockwaveCss, /\.patient-history-filter-section--prescription\s*\{/);
 });
@@ -124,11 +126,14 @@ test('patient history checkbox filters share width by content in a compact layou
   assert.match(headerRule, /padding:\s*6px 8px 7px;/);
   assert.match(sectionsRule, /display:\s*flex;/);
   assert.match(sectionsRule, /align-items:\s*flex-start;/);
+  assert.match(sectionsRule, /width:\s*100%;/);
+  assert.match(sectionsRule, /min-width:\s*0;/);
   assert.doesNotMatch(sectionsRule, /grid-template-columns:/);
   assert.match(sectionRule, /grid-template-columns:\s*30px minmax\(0, 1fr\);/);
-  assert.match(sectionRule, /flex:\s*1 1 max-content;/);
-  assert.match(sectionRule, /width:\s*max-content;/);
-  assert.match(sectionRule, /max-width:\s*100%;/);
+  assert.match(sectionRule, /flex-grow:\s*var\(--patient-history-filter-weight, 1\);/);
+  assert.match(sectionRule, /flex-shrink:\s*1;/);
+  assert.match(sectionRule, /flex-basis:\s*0;/);
+  assert.match(sectionRule, /box-sizing:\s*border-box;/);
   assert.match(sectionRule, /padding:\s*3px;/);
   assert.match(optionsRule, /max-height:\s*41px;/);
   assert.match(optionsRule, /column-gap:\s*2px;/);
@@ -331,7 +336,7 @@ test('patient history data cells stay consistent with a compact apply button lab
 
   assert.match(bodyCellRule, /font-size:\s*0\.82rem;/);
   assert.match(inputRule, /font-size:\s*0\.82rem;/);
-  assert.match(therapistCellRule, /font-size:\s*0\.81rem;/);
+  assert.match(therapistCellRule, /font-size:\s*0\.82rem;/);
   assert.match(shockwaveView, /className="patient-history-therapist-cell"/);
   assert.match(applyButtonRule, /font-size:\s*0\.74rem\s*!important;/);
   assert.match(shockwaveView, /fontSize:\s*'0\.82rem'.*?>현재 셀<\/span>/s);

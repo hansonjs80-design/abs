@@ -3636,16 +3636,19 @@
   display: flex;
   align-items: flex-start;
   gap: 5px;
+  width: 100%;
+  min-width: 0;
 }
 
 .patient-history-filter-section {
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr);
-  flex: 1 1 max-content;
+  flex-grow: var(--patient-history-filter-weight, 1);
+  flex-shrink: 1;
+  flex-basis: 0;
   align-items: start;
   gap: 3px;
-  width: max-content;
-  max-width: 100%;
+  box-sizing: border-box;
   min-width: 0;
   padding: 3px;
   border: 1px solid;
@@ -3794,7 +3797,7 @@
 }
 
 .patient-history-table .patient-history-therapist-cell {
-  font-size: 0.81rem;
+  font-size: 0.82rem;
 }
 
 .patient-history-table .patient-history-row-number-cell {
