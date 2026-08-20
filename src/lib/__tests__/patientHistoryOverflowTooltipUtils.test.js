@@ -186,7 +186,7 @@ test('current patient history row uses light treatment-specific backgrounds', as
   assert.doesNotMatch(shockwaveView, /#fedfbb|#c8ebfd/);
 });
 
-test('editable patient history values use flat cell styling until focused', async () => {
+test('patient history edit fields keep a flat base style until focused', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
     readFile(shockwaveViewUrl, 'utf8'),
@@ -206,6 +206,50 @@ test('editable patient history values use flat cell styling until focused', asyn
   assert.match(editFieldRule, /background-color:\s*transparent\s*!important;/);
   assert.match(editFieldRule, /box-shadow:\s*none\s*!important;/);
   assert.match(editFieldFocusRule, /box-shadow:\s*inset 0 -2px 0/);
+});
+
+test('patient history cursors distinguish editable and read-only cells', async () => {
+  const [shockwaveCss, shockwaveView] = await Promise.all([
+    readFile(shockwaveCssUrl, 'utf8'),
+    readFile(shockwaveViewUrl, 'utf8'),
+  ]);
+  const bodyCellRule = shockwaveCss.match(
+    /\.patient-history-table tbody td\s*\{([^}]*)\}/s
+  )?.[1] || '';
+  const tableHeaderRule = shockwaveCss.match(
+    /\.patient-history-table\.sw-summary-table thead th,[\s\S]*?\.patient-history-table\.sw-compact-summary-table thead th\s*\{([^}]*)\}/s
+  )?.[1] || '';
+  const editableFieldRule = shockwaveCss.match(
+    /\.patient-history-table \.patient-history-edit-field:not\(:disabled\)\s*\{([^}]*)\}/s
+  )?.[1] || '';
+  const disabledFieldRule = shockwaveCss.match(
+    /\.patient-history-table \.patient-history-edit-field:disabled\s*\{([^}]*)\}/s
+  )?.[1] || '';
+
+  assert.match(bodyCellRule, /cursor:\s*default;/);
+  assert.match(tableHeaderRule, /cursor:\s*default;/);
+  assert.match(editableFieldRule, /cursor:\s*text;/);
+  assert.match(disabledFieldRule, /cursor:\s*default;/);
+  assert.doesNotMatch(shockwaveView, /cursor:\s*canEditHistoryMemo\s*\?\s*'text'\s*:\s*'not-allowed'/);
+});
+
+test('patient history editable values use compact inset fields without changing type size', async () => {
+  const [shockwaveCss, shockwaveView] = await Promise.all([
+    readFile(shockwaveCssUrl, 'utf8'),
+    readFile(shockwaveViewUrl, 'utf8'),
+  ]);
+  const insetFieldRule = shockwaveCss.match(
+    /\.patient-history-table \.patient-history-edit-field--inset\s*\{([^}]*)\}/s
+  )?.[1] || '';
+
+  assert.equal(
+    shockwaveView.match(/patient-history-edit-field--inset/g)?.length,
+    4
+  );
+  assert.match(insetFieldRule, /width:\s*calc\(100% - 2px\)\s*!important;/);
+  assert.match(insetFieldRule, /border:\s*1px solid/);
+  assert.match(insetFieldRule, /border-radius:\s*3px\s*!important;/);
+  assert.doesNotMatch(insetFieldRule, /font-size:/);
 });
 
 test('patient history body and memo text use the shared content size with shorter data rows', async () => {

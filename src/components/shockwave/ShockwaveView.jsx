@@ -4054,7 +4054,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 </td>
                                 <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, color: log.type === 'manual' ? 'var(--brand-primary)' : 'inherit', fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
                                   <select
-                                    className="patient-history-edit-field patient-history-edit-field--prescription"
+                                    className="patient-history-edit-field patient-history-edit-field--inset patient-history-edit-field--prescription"
                                     aria-label="처방 수정"
                                     value={currentPrescriptionValue}
                                     onChange={handleHistoryPrescriptionChange}
@@ -4097,7 +4097,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     )}
                                   >
                                     <textarea
-                                      className="patient-history-edit-field patient-history-edit-field--detail"
+                                      className="patient-history-edit-field patient-history-edit-field--inset patient-history-edit-field--detail"
                                       rows={bodyPartTextareaRows}
                                       value={bodyPartTextareaValue}
                                       placeholder="부위"
@@ -4142,7 +4142,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     )}
                                   >
                                     <textarea
-                                      className="patient-history-edit-field patient-history-edit-field--detail"
+                                      className="patient-history-edit-field patient-history-edit-field--inset patient-history-edit-field--detail"
                                       rows={memoTextareaRows}
                                       value={memoTextareaValue}
                                       placeholder={canEditHistoryMemo ? '메모' : '-'}
@@ -4164,7 +4164,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                         whiteSpace: 'pre',
                                         wordBreak: 'normal',
                                         opacity: canEditHistoryMemo ? 1 : 0.65,
-                                        cursor: canEditHistoryMemo ? 'text' : 'not-allowed',
                                       }}
                                       onChange={(event) => {
                                         updatePatientHistoryModalLog(historyRowKey, {
@@ -4185,7 +4184,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 </td>
                                 <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
                                   <input
-                                    className="patient-history-edit-field"
+                                    className="patient-history-edit-field patient-history-edit-field--inset"
                                     type="text"
                                     inputMode="text"
                                     value={log.visit_count || ''}
