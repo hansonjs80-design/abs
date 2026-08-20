@@ -4247,6 +4247,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                   />
                                 </td>
                                 <td
+                                  className="patient-history-therapist-cell"
                                   title={log.therapist_name || ''}
                                   style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: historyRowFontWeight }}
                                 >
@@ -4264,7 +4265,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                       color: '#fff',
                                       borderRadius: '6px',
                                       padding: '4px 5px',
-                                      fontSize: '0.78rem',
+                                      fontSize: '0.74rem',
                                       fontWeight: 600,
                                       lineHeight: 1.2,
                                       cursor: 'pointer',

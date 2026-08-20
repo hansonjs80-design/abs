@@ -3790,6 +3790,10 @@
   vertical-align: middle;
 }
 
+.patient-history-table .patient-history-therapist-cell {
+  font-size: 0.80rem;
+}
+
 .patient-history-table .patient-history-row-number-cell {
   position: sticky;
   left: 0;
@@ -3843,7 +3847,7 @@
   max-width: 100%;
   min-height: 19px;
   padding: 0 !important;
-  font-size: 0.78rem !important;
+  font-size: 0.74rem !important;
   line-height: 1.1 !important;
   overflow: visible;
   text-align: center;

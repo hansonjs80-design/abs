@@ -320,13 +320,18 @@ test('patient history data cells stay consistent with a compact apply button lab
   const inputRule = shockwaveCss.match(
     /\.patient-history-table input\s*\{([^}]*)\}/s
   )?.[1] || '';
+  const therapistCellRule = shockwaveCss.match(
+    /\.patient-history-table \.patient-history-therapist-cell\s*\{([^}]*)\}/s
+  )?.[1] || '';
   const applyButtonRule = shockwaveCss.match(
     /\.patient-history-table \.patient-history-apply-button\s*\{([^}]*)\}/s
   )?.[1] || '';
 
   assert.match(bodyCellRule, /font-size:\s*0\.82rem;/);
   assert.match(inputRule, /font-size:\s*0\.82rem;/);
-  assert.match(applyButtonRule, /font-size:\s*0\.78rem\s*!important;/);
+  assert.match(therapistCellRule, /font-size:\s*0\.80rem;/);
+  assert.match(shockwaveView, /className="patient-history-therapist-cell"/);
+  assert.match(applyButtonRule, /font-size:\s*0\.74rem\s*!important;/);
   assert.match(shockwaveView, /fontSize:\s*'0\.82rem'.*?>현재 셀<\/span>/s);
   assert.doesNotMatch(shockwaveView, /patient-history-compact-text-cell/);
 });
