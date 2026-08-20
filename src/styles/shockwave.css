@@ -3901,6 +3901,8 @@
 
 .patient-history-table .patient-history-edit-field--prescription {
   font-size: 0.82rem !important;
+  text-align: center;
+  text-align-last: center;
 }
 
 .patient-history-table .patient-history-edit-field:focus:not(:disabled) {

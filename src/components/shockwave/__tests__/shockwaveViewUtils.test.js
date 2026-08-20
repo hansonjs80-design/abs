@@ -153,13 +153,13 @@ describe('shockwave view patient history model', () => {
   });
 
   it('returns stable modal sizing for single and split layouts', () => {
-    assert.equal(getPatientHistoryModalLayout(1).maxWidth, 770);
-    assert.equal(getPatientHistoryModalLayout(1).width, '84%');
-    assert.equal(getPatientHistoryModalLayout(2).maxWidth, 1514);
+    assert.equal(getPatientHistoryModalLayout(1).maxWidth, 780);
+    assert.equal(getPatientHistoryModalLayout(1).width, '85%');
+    assert.equal(getPatientHistoryModalLayout(2).maxWidth, 1534);
     assert.equal(getPatientHistoryModalLayout(2).width, '100%');
     assert.deepEqual(
       getPatientHistoryColumnWidths(1),
-      ['4.01%', '12.56%', '7.51%', '10.80%', '27.62%', '22.09%', '5.16%', '6.62%', '3.63%']
+      ['3.98%', '12.42%', '7.44%', '11.73%', '27.29%', '21.83%', '5.12%', '6.56%', '3.63%']
     );
     assert.ok(
       Math.abs(
@@ -176,7 +176,7 @@ describe('shockwave view patient history model', () => {
       .map((width) => (Number.parseFloat(width) / 100) * getPatientHistoryModalLayout(1).maxWidth);
     assert.ok(projectedWidths[1] >= (735 * 0.114) * 1.15);
     assert.ok(projectedWidths[2] >= 735 * 0.078);
-    assert.ok(projectedWidths[3] >= (758 * 0.0954) * 1.149);
+    assert.ok(projectedWidths[3] >= (770 * 0.108) * 1.1);
     assert.ok(projectedWidths[7] >= 735 * 0.069);
   });
 
