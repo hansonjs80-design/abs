@@ -75,7 +75,7 @@ test('patient history tables show a pinned spreadsheet-style row number column',
 
   assert.match(rowNumberRule, /position:\s*sticky;/);
   assert.match(rowNumberRule, /left:\s*0;/);
-  assert.match(rowNumberRule, /font-size:\s*0\.8rem;/);
+  assert.match(rowNumberRule, /font-size:\s*0\.82rem;/);
   assert.match(rowNumberHeaderRule, /color:\s*var\(--text-primary, #1f2937\);/);
   assert.match(rowNumberHeaderRule, /font-size:\s*0\.78rem;/);
   assert.match(shockwaveView, /<th className="patient-history-row-number-cell">번호<\/th>/);
@@ -193,7 +193,7 @@ test('editable patient history values use flat cell styling until focused', asyn
   assert.match(editFieldFocusRule, /box-shadow:\s*inset 0 -2px 0/);
 });
 
-test('patient history body and memo text use smaller type with shorter data rows', async () => {
+test('patient history body and memo text use the shared content size with shorter data rows', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
     readFile(shockwaveViewUrl, 'utf8'),
@@ -209,7 +209,7 @@ test('patient history body and memo text use smaller type with shorter data rows
     shockwaveView.match(/patient-history-edit-field--detail/g)?.length,
     2
   );
-  assert.match(detailFieldRule, /font-size:\s*0\.78rem\s*!important;/);
+  assert.match(detailFieldRule, /font-size:\s*0\.82rem\s*!important;/);
   assert.match(tableCellRule, /padding:\s*1px 3px\s*!important;/);
   assert.match(tableCellRule, /height:\s*20px;/);
   assert.match(shockwaveView, /bodyPartTextareaRows === 1 \? '19px'/);
@@ -247,18 +247,24 @@ test('patient history prescription dropdown keeps its height and uses the reques
   assert.doesNotMatch(prescriptionSelect, /(?:minH|h)eight:\s*'20px'/);
 });
 
-test('patient history date chart and therapist cells use compact text', async () => {
+test('patient history data cells and controls use one consistent content size', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
     readFile(shockwaveViewUrl, 'utf8'),
   ]);
-  const compactCellRule = shockwaveCss.match(
-    /\.patient-history-table tbody \.patient-history-compact-text-cell\s*\{([^}]*)\}/s
+  const bodyCellRule = shockwaveCss.match(
+    /\.patient-history-table tbody td\s*\{([^}]*)\}/s
+  )?.[1] || '';
+  const inputRule = shockwaveCss.match(
+    /\.patient-history-table input\s*\{([^}]*)\}/s
+  )?.[1] || '';
+  const applyButtonRule = shockwaveCss.match(
+    /\.patient-history-table \.patient-history-apply-button\s*\{([^}]*)\}/s
   )?.[1] || '';
 
-  assert.equal(
-    shockwaveView.match(/className="patient-history-compact-text-cell"/g)?.length,
-    3
-  );
-  assert.match(compactCellRule, /font-size:\s*0\.7rem;/);
+  assert.match(bodyCellRule, /font-size:\s*0\.82rem;/);
+  assert.match(inputRule, /font-size:\s*0\.82rem;/);
+  assert.match(applyButtonRule, /font-size:\s*0\.82rem\s*!important;/);
+  assert.match(shockwaveView, /fontSize:\s*'0\.82rem'.*?>현재 셀<\/span>/s);
+  assert.doesNotMatch(shockwaveView, /patient-history-compact-text-cell/);
 });

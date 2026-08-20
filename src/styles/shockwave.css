@@ -3783,12 +3783,8 @@
 }
 
 .patient-history-table tbody td {
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   vertical-align: middle;
-}
-
-.patient-history-table tbody .patient-history-compact-text-cell {
-  font-size: 0.7rem;
 }
 
 .patient-history-table .patient-history-row-number-cell {
@@ -3798,7 +3794,7 @@
   border-right: 1px solid var(--border-color, #d7dde5);
   background: var(--bg-secondary, #f8fafc) !important;
   color: var(--text-secondary, #64748b);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-variant-numeric: tabular-nums;
   font-weight: 800;
   text-align: center;
@@ -3844,7 +3840,7 @@
   max-width: 100%;
   min-height: 19px;
   padding: 0 !important;
-  font-size: 0.78rem !important;
+  font-size: 0.82rem !important;
   line-height: 1.1 !important;
   overflow: visible;
   text-align: center;
@@ -3852,7 +3848,7 @@
 
 .patient-history-table input {
   height: 19px;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
 }
 
 .patient-history-table .patient-history-edit-field {
@@ -3863,7 +3859,7 @@
 }
 
 .patient-history-table .patient-history-edit-field--detail {
-  font-size: 0.78rem !important;
+  font-size: 0.82rem !important;
 }
 
 .patient-history-table .patient-history-edit-field--prescription {

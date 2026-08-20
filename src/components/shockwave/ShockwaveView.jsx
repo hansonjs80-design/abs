@@ -4040,14 +4040,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 >
                                   {idx + 1}
                                 </td>
-                                <td className="patient-history-compact-text-cell" style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, whiteSpace: 'nowrap', fontWeight: historyRowFontWeight }}>
+                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, whiteSpace: 'nowrap', fontWeight: historyRowFontWeight }}>
                                   {log.date}
                                   {isCurrentHistoryRow && (
-                                    <span style={{ fontSize: '0.76rem', color: 'var(--brand-primary)', display: 'block', marginTop: '2px', fontWeight: 800 }}>현재 셀</span>
+                                    <span style={{ fontSize: '0.82rem', color: 'var(--brand-primary)', display: 'block', marginTop: '2px', fontWeight: 800 }}>현재 셀</span>
                                   )}
                                 </td>
                                 <td
-                                  className="patient-history-compact-text-cell"
                                   title={log.chart_number || ''}
                                   style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: historyRowFontWeight }}
                                 >
@@ -4249,7 +4248,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                   />
                                 </td>
                                 <td
-                                  className="patient-history-compact-text-cell"
                                   title={log.therapist_name || ''}
                                   style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: historyRowFontWeight }}
                                 >
@@ -4267,7 +4265,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                       color: '#fff',
                                       borderRadius: '6px',
                                       padding: '4px 5px',
-                                      fontSize: '0.78rem',
+                                      fontSize: '0.82rem',
                                       fontWeight: 600,
                                       lineHeight: 1.2,
                                       cursor: 'pointer',
