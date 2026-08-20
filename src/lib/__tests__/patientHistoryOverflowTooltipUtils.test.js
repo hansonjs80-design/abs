@@ -72,3 +72,15 @@ test('patient history tables show a pinned spreadsheet-style row number column',
   assert.match(shockwaveView, /aria-label={`행 번호 \$\{idx \+ 1\}`}/);
   assert.match(shockwaveView, /\{idx \+ 1\}/);
 });
+
+test('patient history prescription dropdown uses a compact box and tight left padding', async () => {
+  const shockwaveView = await readFile(shockwaveViewUrl, 'utf8');
+  const prescriptionSelect = shockwaveView.match(
+    /<select\s+aria-label="처방 수정"[\s\S]*?<\/select>/
+  )?.[0] || '';
+
+  assert.match(prescriptionSelect, /width:\s*'calc\(100% - 3px\)'/);
+  assert.match(prescriptionSelect, /height:\s*'20px'/);
+  assert.match(prescriptionSelect, /margin:\s*'0 3px 0 0'/);
+  assert.match(prescriptionSelect, /padding:\s*'1px 2px'/);
+});

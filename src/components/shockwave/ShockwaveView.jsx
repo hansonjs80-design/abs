@@ -4125,6 +4125,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     onClick={(e) => e.stopPropagation()}
                                     style={{
                                       ...historyEditFieldStyle,
+                                      display: 'block',
+                                      width: 'calc(100% - 3px)',
+                                      height: '20px',
+                                      minHeight: '20px',
+                                      margin: '0 3px 0 0',
+                                      padding: '1px 2px',
                                       color: currentPrescriptionColor,
                                     }}
                                   >
