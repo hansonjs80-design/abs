@@ -136,12 +136,13 @@ describe('shockwave view patient history model', () => {
   });
 
   it('returns stable modal sizing for single and split layouts', () => {
-    assert.equal(getPatientHistoryModalLayout(1).maxWidth, 735);
-    assert.equal(getPatientHistoryModalLayout(2).maxWidth, 1446);
-    assert.equal(getPatientHistoryModalLayout(2).width, '96%');
+    assert.equal(getPatientHistoryModalLayout(1).maxWidth, 748);
+    assert.equal(getPatientHistoryModalLayout(1).width, '82%');
+    assert.equal(getPatientHistoryModalLayout(2).maxWidth, 1471);
+    assert.equal(getPatientHistoryModalLayout(2).width, '98%');
     assert.deepEqual(
       getPatientHistoryColumnWidths(1),
-      ['4.2%', '11.4%', '7.8%', '8.5%', '28.9%', '23.1%', '5.4%', '6.9%', '3.8%']
+      ['4.1%', '12.9%', '7.7%', '8.4%', '28.4%', '22.7%', '5.3%', '6.8%', '3.7%']
     );
     assert.ok(
       Math.abs(
@@ -153,6 +154,12 @@ describe('shockwave view patient history model', () => {
       getPatientHistoryColumnWidths(2),
       getPatientHistoryColumnWidths(1)
     );
+
+    const projectedWidths = getPatientHistoryColumnWidths(1)
+      .map((width) => (Number.parseFloat(width) / 100) * getPatientHistoryModalLayout(1).maxWidth);
+    assert.ok(projectedWidths[1] >= (735 * 0.114) * 1.15);
+    assert.ok(projectedWidths[2] >= 735 * 0.078);
+    assert.ok(projectedWidths[7] >= 735 * 0.069);
   });
 
   it('uses each configured prescription color in the patient history list', () => {

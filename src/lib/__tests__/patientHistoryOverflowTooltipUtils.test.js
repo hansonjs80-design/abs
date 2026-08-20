@@ -309,7 +309,7 @@ test('patient history prescription dropdown keeps its height and uses the reques
   assert.doesNotMatch(prescriptionSelect, /(?:minH|h)eight:\s*'20px'/);
 });
 
-test('patient history data cells and controls use one consistent content size', async () => {
+test('patient history data cells stay consistent with a compact apply button label', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
     readFile(shockwaveViewUrl, 'utf8'),
@@ -326,7 +326,7 @@ test('patient history data cells and controls use one consistent content size', 
 
   assert.match(bodyCellRule, /font-size:\s*0\.82rem;/);
   assert.match(inputRule, /font-size:\s*0\.82rem;/);
-  assert.match(applyButtonRule, /font-size:\s*0\.82rem\s*!important;/);
+  assert.match(applyButtonRule, /font-size:\s*0\.78rem\s*!important;/);
   assert.match(shockwaveView, /fontSize:\s*'0\.82rem'.*?>현재 셀<\/span>/s);
   assert.doesNotMatch(shockwaveView, /patient-history-compact-text-cell/);
 });

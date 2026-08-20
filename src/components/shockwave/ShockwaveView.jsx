@@ -4264,7 +4264,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                       color: '#fff',
                                       borderRadius: '6px',
                                       padding: '4px 5px',
-                                      fontSize: '0.82rem',
+                                      fontSize: '0.78rem',
                                       fontWeight: 600,
                                       lineHeight: 1.2,
                                       cursor: 'pointer',

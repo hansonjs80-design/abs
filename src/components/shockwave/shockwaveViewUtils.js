@@ -317,21 +317,21 @@ export function buildPatientHistoryLogGroups({
 export function getPatientHistoryModalLayout(groupCount) {
   if (groupCount >= 2) {
     return {
-      maxWidth: 1446,
-      width: '96%',
+      maxWidth: 1471,
+      width: '98%',
       gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
     };
   }
   return {
-    maxWidth: groupCount === 1 ? 735 : 580,
-    width: '80%',
+    maxWidth: groupCount === 1 ? 748 : 580,
+    width: groupCount === 1 ? '82%' : '80%',
     gridTemplateColumns: 'minmax(0, 1fr)',
   };
 }
 
 export function getPatientHistoryColumnWidths(groupCount) {
   void groupCount;
-  return ['4.2%', '11.4%', '7.8%', '8.5%', '28.9%', '23.1%', '5.4%', '6.9%', '3.8%'];
+  return ['4.1%', '12.9%', '7.7%', '8.4%', '28.4%', '22.7%', '5.3%', '6.8%', '3.7%'];
 }
 
 export function buildShockwaveHoverTooltipText({
