@@ -111,8 +111,14 @@ test('patient history checkbox filters keep a wider body section in a compact la
   const optionsRule = shockwaveCss.match(
     /\.patient-history-filter-options\s*\{([^}]*)\}/s
   )?.[1] || '';
+  const sectionRule = shockwaveCss.match(
+    /\.patient-history-filter-section\s*\{([^}]*)\}/s
+  )?.[1] || '';
   const optionRule = shockwaveCss.match(
     /\.patient-history-filter-option\s*\{([^}]*)\}/s
+  )?.[1] || '';
+  const countRule = shockwaveCss.match(
+    /\.patient-history-filter-count\s*\{([^}]*)\}/s
   )?.[1] || '';
 
   assert.match(headerRule, /padding:\s*6px 8px 7px;/);
@@ -120,9 +126,15 @@ test('patient history checkbox filters keep a wider body section in a compact la
     sectionsRule,
     /grid-template-columns:\s*minmax\(0, 13fr\) minmax\(0, 7fr\);/
   );
+  assert.match(sectionRule, /grid-template-columns:\s*30px minmax\(0, 1fr\);/);
+  assert.match(sectionRule, /padding:\s*3px;/);
   assert.match(optionsRule, /max-height:\s*41px;/);
+  assert.match(optionsRule, /column-gap:\s*2px;/);
   assert.match(optionRule, /min-height:\s*19px;/);
+  assert.match(optionRule, /gap:\s*2px;/);
+  assert.match(optionRule, /padding:\s*1px 2px;/);
   assert.match(optionRule, /font-size:\s*0\.69rem;/);
+  assert.match(countRule, /padding:\s*1px 2px;/);
 });
 
 test('manual patient history header omits its bottom border without changing shockwave rows', async () => {

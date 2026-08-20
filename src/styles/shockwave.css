@@ -3640,11 +3640,11 @@
 
 .patient-history-filter-section {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-columns: 30px minmax(0, 1fr);
   align-items: start;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
-  padding: 3px 4px;
+  padding: 3px;
   border: 1px solid;
   border-radius: 6px;
 }
@@ -3681,7 +3681,8 @@
 .patient-history-filter-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px;
+  column-gap: 2px;
+  row-gap: 3px;
   min-width: 0;
   max-height: 41px;
   overflow-y: auto;
@@ -3690,9 +3691,9 @@
 .patient-history-filter-option {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
   min-height: 19px;
-  padding: 1px 4px;
+  padding: 1px 2px;
   border: 1px solid rgba(148, 163, 184, 0.46);
   border-radius: 5px;
   background: rgba(255, 255, 255, 0.92);
@@ -3742,8 +3743,8 @@
 }
 
 .patient-history-filter-count {
-  min-width: 12px;
-  padding: 1px 3px;
+  min-width: 11px;
+  padding: 1px 2px;
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.18);
   color: var(--text-secondary, #64748b);
