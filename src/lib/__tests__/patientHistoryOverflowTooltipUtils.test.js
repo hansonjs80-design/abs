@@ -72,6 +72,7 @@ test('patient history tables show a pinned spreadsheet-style row number column',
 
   assert.match(rowNumberRule, /position:\s*sticky;/);
   assert.match(rowNumberRule, /left:\s*0;/);
+  assert.match(rowNumberRule, /font-size:\s*0\.78rem;/);
   assert.match(shockwaveView, /<th className="patient-history-row-number-cell">번호<\/th>/);
   assert.match(shockwaveView, /aria-label={`행 번호 \$\{idx \+ 1\}`}/);
   assert.match(shockwaveView, /\{idx \+ 1\}/);
@@ -152,10 +153,32 @@ test('current patient history row border includes the pinned number cell as one 
   assert.doesNotMatch(shockwaveView, /outline:\s*isCurrentHistoryRow/);
 });
 
+test('editable patient history values use flat cell styling until focused', async () => {
+  const [shockwaveCss, shockwaveView] = await Promise.all([
+    readFile(shockwaveCssUrl, 'utf8'),
+    readFile(shockwaveViewUrl, 'utf8'),
+  ]);
+  const editFieldRule = shockwaveCss.match(
+    /\.patient-history-table \.patient-history-edit-field\s*\{([^}]*)\}/s
+  )?.[1] || '';
+  const editFieldFocusRule = shockwaveCss.match(
+    /\.patient-history-table \.patient-history-edit-field:focus:not\(:disabled\)\s*\{([^}]*)\}/s
+  )?.[1] || '';
+
+  assert.equal(
+    shockwaveView.match(/className="patient-history-edit-field"/g)?.length,
+    4
+  );
+  assert.match(editFieldRule, /border:\s*0\s*!important;/);
+  assert.match(editFieldRule, /background-color:\s*transparent\s*!important;/);
+  assert.match(editFieldRule, /box-shadow:\s*none\s*!important;/);
+  assert.match(editFieldFocusRule, /box-shadow:\s*inset 0 -2px 0/);
+});
+
 test('patient history prescription dropdown keeps its height and uses a smaller tightly spaced arrow', async () => {
   const shockwaveView = await readFile(shockwaveViewUrl, 'utf8');
   const prescriptionSelect = shockwaveView.match(
-    /<select\s+aria-label="처방 수정"[\s\S]*?<\/select>/
+    /<select\s+[\s\S]*?aria-label="처방 수정"[\s\S]*?<\/select>/
   )?.[0] || '';
 
   assert.match(prescriptionSelect, /appearance:\s*'none'/);

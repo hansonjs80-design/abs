@@ -3947,15 +3947,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                               const historyEditFieldStyle = {
                                 width: '100%',
                                 minWidth: 0,
-                                border: '1px solid rgba(148, 163, 184, 0.55)',
-                                borderRadius: '5px',
-                                background: '#fff',
+                                border: 'none',
+                                borderRadius: 0,
+                                background: 'transparent',
                                 color: 'var(--text-primary, #1f2937)',
-                                fontSize: '0.78rem',
-                                fontWeight: historyRowFontWeight,
+                                fontSize: 'inherit',
+                                fontWeight: 'inherit',
                                 padding: '2px 5px',
                                 outline: 'none',
                                 boxSizing: 'border-box',
+                                boxShadow: 'none',
                               };
                               const handleHistoryPrescriptionChange = async (event) => {
                                 const nextValue = event.target.value;
@@ -4053,6 +4054,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 </td>
                                 <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, color: log.type === 'manual' ? 'var(--brand-primary)' : 'inherit', fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
                                   <select
+                                    className="patient-history-edit-field"
                                     aria-label="처방 수정"
                                     value={currentPrescriptionValue}
                                     onChange={handleHistoryPrescriptionChange}
@@ -4095,6 +4097,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     )}
                                   >
                                     <textarea
+                                      className="patient-history-edit-field"
                                       rows={bodyPartTextareaRows}
                                       value={bodyPartTextareaValue}
                                       placeholder="부위"
@@ -4139,6 +4142,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     )}
                                   >
                                     <textarea
+                                      className="patient-history-edit-field"
                                       rows={memoTextareaRows}
                                       value={memoTextareaValue}
                                       placeholder={canEditHistoryMemo ? '메모' : '-'}
@@ -4181,11 +4185,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 </td>
                                 <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
                                   <input
+                                    className="patient-history-edit-field"
                                     type="text"
                                     inputMode="text"
                                     value={log.visit_count || ''}
                                     placeholder="-"
-                                    style={{ width: '36px', textAlign: 'center', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '1px 2px', outline: 'none' }}
+                                    style={{ width: '100%', minWidth: 0, textAlign: 'center', border: 'none', borderRadius: 0, background: 'transparent', padding: '1px 2px', outline: 'none', boxSizing: 'border-box', boxShadow: 'none', font: 'inherit', fontWeight: 'inherit' }}
                                     onChange={(e) => {
                                       const rawVal = e.target.value.trim();
                                       const val = rawVal === '*' || rawVal === '-'

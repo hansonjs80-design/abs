@@ -3791,6 +3791,7 @@
   border-right: 1px solid var(--border-color, #d7dde5);
   background: var(--bg-secondary, #f8fafc) !important;
   color: var(--text-secondary, #64748b);
+  font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
   font-weight: 800;
   text-align: center;
@@ -3835,6 +3836,19 @@
 .patient-history-table input {
   height: 22px;
   font-size: 0.9rem;
+}
+
+.patient-history-table .patient-history-edit-field {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.patient-history-table .patient-history-edit-field:focus:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.34) !important;
+  box-shadow: inset 0 -2px 0 rgba(37, 99, 235, 0.56) !important;
+  outline: none !important;
 }
 
 .patient-history-overflow-field {
