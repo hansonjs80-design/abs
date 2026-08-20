@@ -100,7 +100,7 @@ test('patient history body and prescription filters render as separate checkbox 
   assert.match(shockwaveCss, /\.patient-history-filter-section--prescription\s*\{/);
 });
 
-test('patient history checkbox filters keep a wider body section in a compact layout', async () => {
+test('patient history checkbox filters share width by content in a compact layout', async () => {
   const shockwaveCss = await readFile(shockwaveCssUrl, 'utf8');
   const headerRule = shockwaveCss.match(
     /\.patient-history-group-header\s*\{([^}]*)\}/s
@@ -122,11 +122,13 @@ test('patient history checkbox filters keep a wider body section in a compact la
   )?.[1] || '';
 
   assert.match(headerRule, /padding:\s*6px 8px 7px;/);
-  assert.match(
-    sectionsRule,
-    /grid-template-columns:\s*minmax\(0, 13fr\) minmax\(0, 7fr\);/
-  );
+  assert.match(sectionsRule, /display:\s*flex;/);
+  assert.match(sectionsRule, /align-items:\s*flex-start;/);
+  assert.doesNotMatch(sectionsRule, /grid-template-columns:/);
   assert.match(sectionRule, /grid-template-columns:\s*30px minmax\(0, 1fr\);/);
+  assert.match(sectionRule, /flex:\s*1 1 max-content;/);
+  assert.match(sectionRule, /width:\s*max-content;/);
+  assert.match(sectionRule, /max-width:\s*100%;/);
   assert.match(sectionRule, /padding:\s*3px;/);
   assert.match(optionsRule, /max-height:\s*41px;/);
   assert.match(optionsRule, /column-gap:\s*2px;/);
@@ -329,7 +331,7 @@ test('patient history data cells stay consistent with a compact apply button lab
 
   assert.match(bodyCellRule, /font-size:\s*0\.82rem;/);
   assert.match(inputRule, /font-size:\s*0\.82rem;/);
-  assert.match(therapistCellRule, /font-size:\s*0\.80rem;/);
+  assert.match(therapistCellRule, /font-size:\s*0\.81rem;/);
   assert.match(shockwaveView, /className="patient-history-therapist-cell"/);
   assert.match(applyButtonRule, /font-size:\s*0\.74rem\s*!important;/);
   assert.match(shockwaveView, /fontSize:\s*'0\.82rem'.*?>현재 셀<\/span>/s);
