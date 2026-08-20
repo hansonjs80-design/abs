@@ -3629,6 +3629,10 @@
   white-space: nowrap;
 }
 
+.patient-history-table--manual thead th {
+  border-bottom: 0 !important;
+}
+
 .patient-history-table tbody td {
   vertical-align: middle;
 }
@@ -3652,10 +3656,18 @@
 
 .patient-history-table tbody tr.patient-history-current-row td {
   background-color: var(--patient-history-current-row-bg) !important;
+  border-top: 2px solid rgba(37, 99, 235, 0.38) !important;
+  border-bottom: 2px solid rgba(37, 99, 235, 0.38) !important;
 }
 
 .patient-history-table tbody tr.patient-history-current-row .patient-history-row-number-cell {
   background-color: var(--patient-history-current-row-bg) !important;
+  border-left: 2px solid rgba(37, 99, 235, 0.38) !important;
+  box-shadow: inset 3px 0 0 var(--brand-primary, #2563eb);
+}
+
+.patient-history-table tbody tr.patient-history-current-row td:last-child {
+  border-right: 2px solid rgba(37, 99, 235, 0.38) !important;
 }
 
 .patient-history-table .patient-history-apply-button {

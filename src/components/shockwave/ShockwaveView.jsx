@@ -3967,7 +3967,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                         </div>
                       </div>
                       <div className="sw-compact-table-wrap">
-                        <table className="sw-summary-table sw-compact-summary-table patient-history-table" style={{ width: '100%', margin: 0, tableLayout: 'fixed' }}>
+                        <table
+                          className={`sw-summary-table sw-compact-summary-table patient-history-table patient-history-table--${group.key}`}
+                          style={{ width: '100%', margin: 0, tableLayout: 'fixed' }}
+                        >
                           <colgroup>
                             {patientHistoryColumnWidths.map((width, columnIndex) => (
                               <col key={`patient-history-col-${columnIndex}`} style={{ width }} />
@@ -4092,8 +4095,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 className={isCurrentHistoryRow ? 'patient-history-current-row' : undefined}
                                 style={{
                                   '--patient-history-current-row-bg': currentCellRowBackground,
-                                  boxShadow: isCurrentHistoryRow ? 'inset 4px 0 0 var(--brand-primary, #2563eb)' : undefined,
-                                  outline: isCurrentHistoryRow ? '1px solid rgba(37, 99, 235, 0.38)' : undefined,
                                   fontWeight: historyRowFontWeight,
                                 }}
                                 title={log.id === 'draft' ? "현재 선택된 셀의 날짜를 기반으로 한 임시 항목입니다" : undefined}
@@ -4125,12 +4126,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     onClick={(e) => e.stopPropagation()}
                                     style={{
                                       ...historyEditFieldStyle,
-                                      display: 'block',
-                                      width: 'calc(100% - 3px)',
-                                      height: '20px',
-                                      minHeight: '20px',
-                                      margin: '0 3px 0 0',
-                                      padding: '1px 2px',
+                                      appearance: 'none',
+                                      WebkitAppearance: 'none',
+                                      backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%226%22 height=%224%22 viewBox=%220 0 6 4%22%3E%3Cpath d=%22M1 1l2 2 2-2%22 fill=%22none%22 stroke=%22%2364748b%22 stroke-width=%221%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E")',
+                                      backgroundRepeat: 'no-repeat',
+                                      backgroundPosition: 'right 3px center',
+                                      backgroundSize: '6px 4px',
+                                      padding: '2px 11px 2px 5px',
                                       color: currentPrescriptionColor,
                                     }}
                                   >

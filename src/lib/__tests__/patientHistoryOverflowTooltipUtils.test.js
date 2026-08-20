@@ -73,14 +73,51 @@ test('patient history tables show a pinned spreadsheet-style row number column',
   assert.match(shockwaveView, /\{idx \+ 1\}/);
 });
 
-test('patient history prescription dropdown uses a compact box and tight left padding', async () => {
+test('manual patient history header omits its bottom border without changing shockwave rows', async () => {
+  const [shockwaveCss, shockwaveView] = await Promise.all([
+    readFile(shockwaveCssUrl, 'utf8'),
+    readFile(shockwaveViewUrl, 'utf8'),
+  ]);
+  const manualHeaderRule = shockwaveCss.match(
+    /\.patient-history-table--manual thead th\s*\{([^}]*)\}/s
+  )?.[1] || '';
+
+  assert.match(shockwaveView, /patient-history-table--\$\{group\.key\}/);
+  assert.match(manualHeaderRule, /border-bottom:\s*0\s*!important;/);
+  assert.doesNotMatch(shockwaveCss, /\.patient-history-table--shockwave thead th\s*\{[^}]*border-bottom/s);
+});
+
+test('current patient history row border includes the pinned number cell as one thicker outline', async () => {
+  const [shockwaveCss, shockwaveView] = await Promise.all([
+    readFile(shockwaveCssUrl, 'utf8'),
+    readFile(shockwaveViewUrl, 'utf8'),
+  ]);
+  const currentRowCellsRule = shockwaveCss.match(
+    /\.patient-history-table tbody tr\.patient-history-current-row td\s*\{([^}]*)\}/s
+  )?.[1] || '';
+  const currentRowNumberRule = shockwaveCss.match(
+    /\.patient-history-table tbody tr\.patient-history-current-row \.patient-history-row-number-cell\s*\{([^}]*)\}/s
+  )?.[1] || '';
+  const currentRowLastCellRule = shockwaveCss.match(
+    /\.patient-history-table tbody tr\.patient-history-current-row td:last-child\s*\{([^}]*)\}/s
+  )?.[1] || '';
+
+  assert.match(currentRowCellsRule, /border-top:\s*2px solid/);
+  assert.match(currentRowCellsRule, /border-bottom:\s*2px solid/);
+  assert.match(currentRowNumberRule, /border-left:\s*2px solid/);
+  assert.match(currentRowLastCellRule, /border-right:\s*2px solid/);
+  assert.doesNotMatch(shockwaveView, /outline:\s*isCurrentHistoryRow/);
+});
+
+test('patient history prescription dropdown keeps its height and uses a smaller tightly spaced arrow', async () => {
   const shockwaveView = await readFile(shockwaveViewUrl, 'utf8');
   const prescriptionSelect = shockwaveView.match(
     /<select\s+aria-label="처방 수정"[\s\S]*?<\/select>/
   )?.[0] || '';
 
-  assert.match(prescriptionSelect, /width:\s*'calc\(100% - 3px\)'/);
-  assert.match(prescriptionSelect, /height:\s*'20px'/);
-  assert.match(prescriptionSelect, /margin:\s*'0 3px 0 0'/);
-  assert.match(prescriptionSelect, /padding:\s*'1px 2px'/);
+  assert.match(prescriptionSelect, /appearance:\s*'none'/);
+  assert.match(prescriptionSelect, /backgroundPosition:\s*'right 3px center'/);
+  assert.match(prescriptionSelect, /backgroundSize:\s*'6px 4px'/);
+  assert.match(prescriptionSelect, /padding:\s*'2px 11px 2px 5px'/);
+  assert.doesNotMatch(prescriptionSelect, /(?:minH|h)eight:\s*'20px'/);
 });
