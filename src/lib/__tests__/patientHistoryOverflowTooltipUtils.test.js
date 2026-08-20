@@ -72,7 +72,7 @@ test('patient history tables show a pinned spreadsheet-style row number column',
 
   assert.match(rowNumberRule, /position:\s*sticky;/);
   assert.match(rowNumberRule, /left:\s*0;/);
-  assert.match(rowNumberRule, /font-size:\s*0\.78rem;/);
+  assert.match(rowNumberRule, /font-size:\s*0\.8rem;/);
   assert.match(shockwaveView, /<th className="patient-history-row-number-cell">번호<\/th>/);
   assert.match(shockwaveView, /aria-label={`행 번호 \$\{idx \+ 1\}`}/);
   assert.match(shockwaveView, /\{idx \+ 1\}/);
@@ -148,6 +148,9 @@ test('current patient history row border includes the pinned number cell as one 
 
   assert.match(currentRowCellsRule, /border-top:\s*2px solid/);
   assert.match(currentRowCellsRule, /border-bottom:\s*2px solid/);
+  assert.match(currentRowCellsRule, /height:\s*23px;/);
+  assert.match(currentRowCellsRule, /padding-top:\s*3px\s*!important;/);
+  assert.match(currentRowCellsRule, /padding-bottom:\s*3px\s*!important;/);
   assert.match(currentRowNumberRule, /border-left:\s*2px solid/);
   assert.match(currentRowLastCellRule, /border-right:\s*2px solid/);
   assert.doesNotMatch(shockwaveView, /outline:\s*isCurrentHistoryRow/);
@@ -166,13 +169,37 @@ test('editable patient history values use flat cell styling until focused', asyn
   )?.[1] || '';
 
   assert.equal(
-    shockwaveView.match(/className="patient-history-edit-field"/g)?.length,
+    shockwaveView.match(/className="patient-history-edit-field/g)?.length,
     4
   );
   assert.match(editFieldRule, /border:\s*0\s*!important;/);
   assert.match(editFieldRule, /background-color:\s*transparent\s*!important;/);
   assert.match(editFieldRule, /box-shadow:\s*none\s*!important;/);
   assert.match(editFieldFocusRule, /box-shadow:\s*inset 0 -2px 0/);
+});
+
+test('patient history body and memo text use smaller type with shorter data rows', async () => {
+  const [shockwaveCss, shockwaveView] = await Promise.all([
+    readFile(shockwaveCssUrl, 'utf8'),
+    readFile(shockwaveViewUrl, 'utf8'),
+  ]);
+  const tableCellRule = shockwaveCss.match(
+    /\.patient-history-table\.sw-summary-table th,[\s\S]*?\.patient-history-table\.sw-compact-summary-table td\s*\{([^}]*)\}/s
+  )?.[1] || '';
+  const detailFieldRule = shockwaveCss.match(
+    /\.patient-history-table \.patient-history-edit-field--detail\s*\{([^}]*)\}/s
+  )?.[1] || '';
+
+  assert.equal(
+    shockwaveView.match(/patient-history-edit-field--detail/g)?.length,
+    2
+  );
+  assert.match(detailFieldRule, /font-size:\s*0\.78rem\s*!important;/);
+  assert.match(tableCellRule, /padding-top:\s*2px\s*!important;/);
+  assert.match(tableCellRule, /padding-bottom:\s*2px\s*!important;/);
+  assert.match(tableCellRule, /height:\s*21px;/);
+  assert.match(shockwaveView, /bodyPartTextareaRows === 1 \? '20px'/);
+  assert.match(shockwaveView, /memoTextareaRows === 1 \? '20px'/);
 });
 
 test('patient history prescription dropdown keeps its height and uses a smaller tightly spaced arrow', async () => {

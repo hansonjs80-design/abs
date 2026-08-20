@@ -3760,10 +3760,10 @@
 .patient-history-table.sw-summary-table td,
 .patient-history-table.sw-compact-summary-table th,
 .patient-history-table.sw-compact-summary-table td {
-  padding: 3px 4px !important;
-  padding-top: 3px !important;
-  padding-bottom: 3px !important;
-  height: 23px;
+  padding: 2px 4px !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+  height: 21px;
   line-height: 1.12;
   overflow: hidden;
 }
@@ -3791,7 +3791,7 @@
   border-right: 1px solid var(--border-color, #d7dde5);
   background: var(--bg-secondary, #f8fafc) !important;
   color: var(--text-secondary, #64748b);
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
   font-weight: 800;
   text-align: center;
@@ -3806,6 +3806,9 @@
   background-color: var(--patient-history-current-row-bg) !important;
   border-top: 2px solid rgba(37, 99, 235, 0.38) !important;
   border-bottom: 2px solid rgba(37, 99, 235, 0.38) !important;
+  height: 23px;
+  padding-top: 3px !important;
+  padding-bottom: 3px !important;
 }
 
 .patient-history-table tbody tr.patient-history-current-row .patient-history-row-number-cell {
@@ -3818,6 +3821,11 @@
   border-right: 2px solid rgba(37, 99, 235, 0.38) !important;
 }
 
+.patient-history-table tbody tr.patient-history-current-row .patient-history-edit-field,
+.patient-history-table tbody tr.patient-history-current-row .patient-history-apply-button {
+  min-height: 22px !important;
+}
+
 .patient-history-table .patient-history-apply-button {
   display: inline-flex;
   align-items: center;
@@ -3825,7 +3833,7 @@
   box-sizing: border-box;
   width: 36px;
   max-width: 100%;
-  min-height: 22px;
+  min-height: 20px;
   padding: 0 !important;
   font-size: 0.78rem !important;
   line-height: 1.1 !important;
@@ -3834,7 +3842,7 @@
 }
 
 .patient-history-table input {
-  height: 22px;
+  height: 20px;
   font-size: 0.9rem;
 }
 
@@ -3843,6 +3851,10 @@
   border-radius: 0 !important;
   background-color: transparent !important;
   box-shadow: none !important;
+}
+
+.patient-history-table .patient-history-edit-field--detail {
+  font-size: 0.78rem !important;
 }
 
 .patient-history-table .patient-history-edit-field:focus:not(:disabled) {

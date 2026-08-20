@@ -4097,7 +4097,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     )}
                                   >
                                     <textarea
-                                      className="patient-history-edit-field"
+                                      className="patient-history-edit-field patient-history-edit-field--detail"
                                       rows={bodyPartTextareaRows}
                                       value={bodyPartTextareaValue}
                                       placeholder="부위"
@@ -4105,10 +4105,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                       style={{
                                         ...historyEditFieldStyle,
                                         display: 'block',
-                                        height: bodyPartTextareaRows === 1 ? '22px' : undefined,
-                                        minHeight: bodyPartTextareaRows === 1 ? '22px' : undefined,
+                                        height: bodyPartTextareaRows === 1 ? '20px' : undefined,
+                                        minHeight: bodyPartTextareaRows === 1 ? '20px' : undefined,
                                         margin: '0 auto',
-                                        lineHeight: bodyPartTextareaRows > 1 ? 1.35 : '16px',
+                                        lineHeight: bodyPartTextareaRows > 1 ? 1.3 : '15px',
                                         paddingLeft: hasMultipleBodyParts ? '7px' : '5px',
                                         overflowWrap: 'normal',
                                         overflowX: 'hidden',
@@ -4142,7 +4142,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     )}
                                   >
                                     <textarea
-                                      className="patient-history-edit-field"
+                                      className="patient-history-edit-field patient-history-edit-field--detail"
                                       rows={memoTextareaRows}
                                       value={memoTextareaValue}
                                       placeholder={canEditHistoryMemo ? '메모' : '-'}
@@ -4152,10 +4152,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                         ...historyEditFieldStyle,
                                         display: 'block',
                                         boxSizing: 'border-box',
-                                        height: memoTextareaRows === 1 ? '22px' : undefined,
-                                        minHeight: memoTextareaRows === 1 ? '22px' : undefined,
+                                        height: memoTextareaRows === 1 ? '20px' : undefined,
+                                        minHeight: memoTextareaRows === 1 ? '20px' : undefined,
                                         margin: '0 auto',
-                                        lineHeight: memoTextareaRows > 1 ? 1.35 : '16px',
+                                        lineHeight: memoTextareaRows > 1 ? 1.3 : '15px',
                                         overflowWrap: 'normal',
                                         overflowX: 'hidden',
                                         paddingLeft: hasMultipleMemos ? '7px' : '5px',
