@@ -228,13 +228,16 @@ test('manual patient history header omits its bottom border without changing sho
   assert.doesNotMatch(shockwaveCss, /\.patient-history-table--shockwave thead th\s*\{[^}]*border-bottom/s);
 });
 
-test('patient history tables use a stronger scoped line color throughout', async () => {
+test('patient history tables use a black table border and keep scoped inner line colors', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
     readFile(shockwaveViewUrl, 'utf8'),
   ]);
   const tableCellRule = shockwaveCss.match(
     /\.patient-history-table\.sw-summary-table th,[\s\S]*?\.patient-history-table\.sw-compact-summary-table td\s*\{([^}]*)\}/
+  )?.[1] || '';
+  const tableRule = shockwaveCss.match(
+    /\.patient-history-table\.sw-summary-table\.sw-compact-summary-table\s*\{([^}]*)\}/s
   )?.[1] || '';
   const groupHeaderRule = shockwaveCss.match(
     /\.patient-history-group-header\s*\{([^}]*)\}/s
@@ -248,6 +251,7 @@ test('patient history tables use a stronger scoped line color throughout', async
     shockwaveView,
     /border: '1px solid var\(--patient-history-border-color, #c5cfdb\)'/
   );
+  assert.match(tableRule, /border:\s*2px solid #000\s*!important;/);
   assert.match(tableCellRule, /border-right-color:\s*var\(--patient-history-border-color, #c5cfdb\)\s*!important;/);
   assert.match(tableCellRule, /border-bottom-color:\s*var\(--patient-history-border-color, #c5cfdb\)\s*!important;/);
   assert.match(groupHeaderRule, /border-bottom:\s*1px solid var\(--patient-history-border-color, #c5cfdb\);/);

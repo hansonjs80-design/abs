@@ -3929,6 +3929,10 @@
   font-size: 0.86rem;
 }
 
+.patient-history-table.sw-summary-table.sw-compact-summary-table {
+  border: 2px solid #000 !important;
+}
+
 .patient-history-table.sw-summary-table th,
 .patient-history-table.sw-summary-table td,
 .patient-history-table.sw-compact-summary-table th,
