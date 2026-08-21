@@ -3797,13 +3797,10 @@
 }
 
 .patient-history-filter-section {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
+  display: block;
   flex-grow: var(--patient-history-filter-weight, 1);
   flex-shrink: 1;
   flex-basis: 0;
-  align-items: start;
-  gap: 2px;
   box-sizing: border-box;
   min-width: 0;
   padding: 2px;
@@ -3819,27 +3816,6 @@
 .patient-history-filter-section--prescription {
   border-color: rgba(124, 58, 237, 0.3);
   background: #f3e8ff;
-}
-
-.patient-history-filter-title {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 19px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.78);
-  font-size: 0.7rem;
-  font-weight: 900;
-}
-
-.patient-history-filter-section--body .patient-history-filter-title {
-  background: #e2e8f0;
-  color: #334155;
-}
-
-.patient-history-filter-section--prescription .patient-history-filter-title {
-  background: #ede9fe;
-  color: #6d28d9;
 }
 
 .patient-history-filter-options {

@@ -83,7 +83,7 @@ test('patient history tables show a pinned spreadsheet-style row number column',
   assert.match(shockwaveView, /\{idx \+ 1\}/);
 });
 
-test('patient history body and prescription filters render as separate checkbox groups', async () => {
+test('patient history prescription and body filters render as unlabeled checkbox groups in that order', async () => {
   const [patientHistoryFilters, shockwaveCss, shockwaveView] = await Promise.all([
     readFile(patientHistoryFiltersUrl, 'utf8'),
     readFile(shockwaveCssUrl, 'utf8'),
@@ -96,10 +96,17 @@ test('patient history body and prescription filters render as separate checkbox 
   assert.match(patientHistoryFilters, /type="checkbox"/);
   assert.match(patientHistoryFilters, /group\.activeBodyFilters/);
   assert.match(patientHistoryFilters, /group\.activePrescriptionFilters/);
+  assert.match(
+    patientHistoryFilters,
+    /activeFilters=\{group\.activePrescriptionFilters\}[\s\S]*?tone="prescription"[\s\S]*?activeFilters=\{group\.activeBodyFilters\}[\s\S]*?tone="body"/
+  );
+  assert.doesNotMatch(patientHistoryFilters, /patient-history-filter-title/);
+  assert.doesNotMatch(patientHistoryFilters, /label="(?:처방|부위)"/);
   assert.match(patientHistoryFilters, /getPatientHistoryFilterWidthWeight\(options\)/);
   assert.match(patientHistoryFilters, /--patient-history-filter-weight/);
   assert.match(shockwaveCss, /\.patient-history-filter-section--body\s*\{/);
   assert.match(shockwaveCss, /\.patient-history-filter-section--prescription\s*\{/);
+  assert.doesNotMatch(shockwaveCss, /\.patient-history-filter-title/);
 });
 
 test('patient history filter cells keep body gray and prescription purple backgrounds', async () => {
@@ -158,12 +165,12 @@ test('patient history checkbox filters share width by content in a compact layou
   assert.match(sectionsRule, /width:\s*100%;/);
   assert.match(sectionsRule, /min-width:\s*0;/);
   assert.doesNotMatch(sectionsRule, /grid-template-columns:/);
-  assert.match(sectionRule, /grid-template-columns:\s*28px minmax\(0, 1fr\);/);
+  assert.match(sectionRule, /display:\s*block;/);
+  assert.doesNotMatch(sectionRule, /grid-template-columns:/);
   assert.match(sectionRule, /flex-grow:\s*var\(--patient-history-filter-weight, 1\);/);
   assert.match(sectionRule, /flex-shrink:\s*1;/);
   assert.match(sectionRule, /flex-basis:\s*0;/);
   assert.match(sectionRule, /box-sizing:\s*border-box;/);
-  assert.match(sectionRule, /gap:\s*2px;/);
   assert.match(sectionRule, /padding:\s*2px;/);
   assert.match(optionsRule, /flex-wrap:\s*wrap;/);
   assert.match(optionsRule, /align-content:\s*flex-start;/);

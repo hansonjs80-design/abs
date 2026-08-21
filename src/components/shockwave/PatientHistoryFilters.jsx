@@ -5,7 +5,6 @@ const ALL_FILTER_KEY = '__all__';
 function PatientHistoryFilterSection({
   activeFilters,
   ariaLabel,
-  label,
   onToggle,
   options,
   tone,
@@ -17,7 +16,6 @@ function PatientHistoryFilterSection({
       aria-label={`${ariaLabel} 필터`}
       style={{ '--patient-history-filter-weight': getPatientHistoryFilterWidthWeight(options) }}
     >
-      <span className="patient-history-filter-title">{label}</span>
       <div className="patient-history-filter-options">
         {options.map((option) => {
           const isChecked = option.key === ALL_FILTER_KEY
@@ -53,20 +51,18 @@ export default function PatientHistoryFilters({
   return (
     <div className="patient-history-filter-sections">
       <PatientHistoryFilterSection
-        activeFilters={group.activeBodyFilters}
-        ariaLabel={`${group.label} 부위`}
-        label="부위"
-        onToggle={onBodyFilterToggle}
-        options={group.bodyFilterOptions}
-        tone="body"
-      />
-      <PatientHistoryFilterSection
         activeFilters={group.activePrescriptionFilters}
         ariaLabel={`${group.label} 처방`}
-        label="처방"
         onToggle={onPrescriptionFilterToggle}
         options={group.prescriptionFilterOptions}
         tone="prescription"
+      />
+      <PatientHistoryFilterSection
+        activeFilters={group.activeBodyFilters}
+        ariaLabel={`${group.label} 부위`}
+        onToggle={onBodyFilterToggle}
+        options={group.bodyFilterOptions}
+        tone="body"
       />
     </div>
   );
