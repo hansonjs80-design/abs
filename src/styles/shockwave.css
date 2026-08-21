@@ -3761,7 +3761,7 @@
   display: grid;
   gap: 4px;
   padding: 6px 8px 7px;
-  border-bottom: 1px solid var(--border-color, #d7dde5);
+  border-bottom: 1px solid var(--patient-history-border-color, #c5cfdb);
   background: var(--patient-history-group-header-bg);
   color: var(--text-primary, #1f2937);
 }
@@ -3959,6 +3959,8 @@
   height: 20px;
   line-height: 1.12;
   overflow: hidden;
+  border-right-color: var(--patient-history-border-color, #c5cfdb) !important;
+  border-bottom-color: var(--patient-history-border-color, #c5cfdb) !important;
 }
 
 .patient-history-table.sw-summary-table thead th,
@@ -3990,7 +3992,7 @@
   position: sticky;
   left: 0;
   z-index: 1;
-  border-right: 1px solid var(--border-color, #d7dde5);
+  border-right: 1px solid var(--patient-history-border-color, #c5cfdb);
   background: var(--bg-secondary, #f8fafc) !important;
   color: var(--text-secondary, #64748b);
   font-size: 0.82rem;
@@ -4008,8 +4010,8 @@
 
 .patient-history-table tbody tr.patient-history-current-row td {
   background-color: var(--patient-history-current-row-bg) !important;
-  border-top: 2px solid rgba(37, 99, 235, 0.38) !important;
-  border-bottom: 2px solid rgba(37, 99, 235, 0.38) !important;
+  border-top: 2px solid rgba(37, 99, 235, 0.46) !important;
+  border-bottom: 2px solid rgba(37, 99, 235, 0.46) !important;
   height: 23px;
   padding-top: 3px !important;
   padding-bottom: 3px !important;
@@ -4017,12 +4019,12 @@
 
 .patient-history-table tbody tr.patient-history-current-row .patient-history-row-number-cell {
   background-color: var(--patient-history-current-row-bg) !important;
-  border-left: 2px solid rgba(37, 99, 235, 0.38) !important;
+  border-left: 2px solid rgba(37, 99, 235, 0.46) !important;
   box-shadow: inset 3px 0 0 var(--brand-primary, #2563eb);
 }
 
 .patient-history-table tbody tr.patient-history-current-row td:last-child {
-  border-right: 2px solid rgba(37, 99, 235, 0.38) !important;
+  border-right: 2px solid rgba(37, 99, 235, 0.46) !important;
 }
 
 .patient-history-table tbody tr.patient-history-current-row .patient-history-edit-field,

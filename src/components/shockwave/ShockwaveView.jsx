@@ -3884,10 +3884,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                     <div
                       key={group.key}
                       style={{
-                        border: '1px solid var(--border-color, #d7dde5)',
+                        border: '1px solid var(--patient-history-border-color, #c5cfdb)',
                         borderRadius: '8px',
                         overflow: 'hidden',
                         background: 'var(--bg-primary, #fff)',
+                        '--patient-history-border-color': '#c5cfdb',
                         '--patient-history-group-header-bg': group.key === 'manual' ? '#fed7aa' : '#bae6fd',
                         '--patient-history-column-header-bg': group.key === 'manual' ? '#fff3e6' : '#e0f2fe',
                       }}

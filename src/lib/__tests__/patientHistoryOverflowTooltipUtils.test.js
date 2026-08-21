@@ -198,6 +198,32 @@ test('manual patient history header omits its bottom border without changing sho
   assert.doesNotMatch(shockwaveCss, /\.patient-history-table--shockwave thead th\s*\{[^}]*border-bottom/s);
 });
 
+test('patient history tables use a stronger scoped line color throughout', async () => {
+  const [shockwaveCss, shockwaveView] = await Promise.all([
+    readFile(shockwaveCssUrl, 'utf8'),
+    readFile(shockwaveViewUrl, 'utf8'),
+  ]);
+  const tableCellRule = shockwaveCss.match(
+    /\.patient-history-table\.sw-summary-table th,[\s\S]*?\.patient-history-table\.sw-compact-summary-table td\s*\{([^}]*)\}/
+  )?.[1] || '';
+  const groupHeaderRule = shockwaveCss.match(
+    /\.patient-history-group-header\s*\{([^}]*)\}/s
+  )?.[1] || '';
+  const numberCellRule = shockwaveCss.match(
+    /\.patient-history-table \.patient-history-row-number-cell\s*\{([^}]*)\}/s
+  )?.[1] || '';
+
+  assert.match(shockwaveView, /'--patient-history-border-color': '#c5cfdb'/);
+  assert.match(
+    shockwaveView,
+    /border: '1px solid var\(--patient-history-border-color, #c5cfdb\)'/
+  );
+  assert.match(tableCellRule, /border-right-color:\s*var\(--patient-history-border-color, #c5cfdb\)\s*!important;/);
+  assert.match(tableCellRule, /border-bottom-color:\s*var\(--patient-history-border-color, #c5cfdb\)\s*!important;/);
+  assert.match(groupHeaderRule, /border-bottom:\s*1px solid var\(--patient-history-border-color, #c5cfdb\);/);
+  assert.match(numberCellRule, /border-right:\s*1px solid var\(--patient-history-border-color, #c5cfdb\);/);
+});
+
 test('current patient history row border includes the pinned number cell as one thicker outline', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
@@ -215,11 +241,14 @@ test('current patient history row border includes the pinned number cell as one 
 
   assert.match(currentRowCellsRule, /border-top:\s*2px solid/);
   assert.match(currentRowCellsRule, /border-bottom:\s*2px solid/);
+  assert.match(currentRowCellsRule, /rgba\(37, 99, 235, 0\.46\)/);
   assert.match(currentRowCellsRule, /height:\s*23px;/);
   assert.match(currentRowCellsRule, /padding-top:\s*3px\s*!important;/);
   assert.match(currentRowCellsRule, /padding-bottom:\s*3px\s*!important;/);
   assert.match(currentRowNumberRule, /border-left:\s*2px solid/);
+  assert.match(currentRowNumberRule, /rgba\(37, 99, 235, 0\.46\)/);
   assert.match(currentRowLastCellRule, /border-right:\s*2px solid/);
+  assert.match(currentRowLastCellRule, /rgba\(37, 99, 235, 0\.46\)/);
   assert.doesNotMatch(shockwaveView, /outline:\s*isCurrentHistoryRow/);
 });
 
