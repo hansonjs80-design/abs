@@ -177,7 +177,11 @@ test('patient history checkbox filters share width by content in a compact layou
   assert.match(optionRule, /gap:\s*1px;/);
   assert.match(optionRule, /padding:\s*1px;/);
   assert.match(optionRule, /font-size:\s*0\.69rem;/);
+  assert.match(countRule, /display:\s*inline-flex;/);
+  assert.match(countRule, /align-items:\s*center;/);
+  assert.match(countRule, /justify-content:\s*center;/);
   assert.match(countRule, /padding:\s*1px;/);
+  assert.match(countRule, /line-height:\s*1;/);
 });
 
 test('manual patient history header omits its bottom border without changing shockwave rows', async () => {

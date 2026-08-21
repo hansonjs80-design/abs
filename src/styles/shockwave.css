@@ -3930,6 +3930,9 @@
 }
 
 .patient-history-filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 11px;
   padding: 1px;
   border-radius: 999px;
@@ -3937,6 +3940,7 @@
   color: var(--text-secondary, #64748b);
   font-size: 0.62rem;
   font-variant-numeric: tabular-nums;
+  line-height: 1;
   text-align: center;
 }
 
