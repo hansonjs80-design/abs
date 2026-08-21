@@ -397,6 +397,9 @@ test('patient history prescription dropdown keeps its height and uses the reques
   const prescriptionFieldRule = shockwaveCss.match(
     /\.patient-history-table \.patient-history-edit-field--prescription\s*\{([^}]*)\}/s
   )?.[1] || '';
+  const prescriptionOptionRule = shockwaveCss.match(
+    /\.patient-history-table \.patient-history-edit-field--prescription option\s*\{([^}]*)\}/s
+  )?.[1] || '';
 
   assert.match(prescriptionSelect, /patient-history-edit-field--prescription/);
   assert.match(prescriptionSelect, /appearance:\s*'none'/);
@@ -406,6 +409,8 @@ test('patient history prescription dropdown keeps its height and uses the reques
   assert.match(prescriptionFieldRule, /font-size:\s*0\.82rem\s*!important;/);
   assert.match(prescriptionFieldRule, /text-align:\s*center;/);
   assert.match(prescriptionFieldRule, /text-align-last:\s*center;/);
+  assert.match(prescriptionOptionRule, /text-align:\s*left;/);
+  assert.match(prescriptionOptionRule, /text-align-last:\s*left;/);
   assert.doesNotMatch(prescriptionSelect, /(?:minH|h)eight:\s*'20px'/);
 });
 
