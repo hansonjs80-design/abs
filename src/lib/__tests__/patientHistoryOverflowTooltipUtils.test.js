@@ -102,6 +102,35 @@ test('patient history body and prescription filters render as separate checkbox 
   assert.match(shockwaveCss, /\.patient-history-filter-section--prescription\s*\{/);
 });
 
+test('patient history filter cells keep body gray and prescription purple backgrounds', async () => {
+  const shockwaveCss = await readFile(shockwaveCssUrl, 'utf8');
+  const bodySectionRule = shockwaveCss.match(
+    /\.patient-history-filter-section--body\s*\{([^}]*)\}/s
+  )?.[1] || '';
+  const prescriptionSectionRule = shockwaveCss.match(
+    /\.patient-history-filter-section--prescription\s*\{([^}]*)\}/s
+  )?.[1] || '';
+  const bodyOptionRule = shockwaveCss.match(
+    /\.patient-history-filter-section--body \.patient-history-filter-option\s*\{([^}]*)\}/s
+  )?.[1] || '';
+  const prescriptionOptionRule = shockwaveCss.match(
+    /\.patient-history-filter-section--prescription \.patient-history-filter-option\s*\{([^}]*)\}/s
+  )?.[1] || '';
+  const bodyCheckedRule = shockwaveCss.match(
+    /\.patient-history-filter-section--body \.patient-history-filter-option\.is-checked\s*\{([^}]*)\}/s
+  )?.[1] || '';
+  const prescriptionCheckedRule = shockwaveCss.match(
+    /\.patient-history-filter-section--prescription \.patient-history-filter-option\.is-checked\s*\{([^}]*)\}/s
+  )?.[1] || '';
+
+  assert.match(bodySectionRule, /background:\s*#f1f5f9;/);
+  assert.match(bodyOptionRule, /background:\s*#f1f5f9;/);
+  assert.match(bodyCheckedRule, /background:\s*#f1f5f9;/);
+  assert.match(prescriptionSectionRule, /background:\s*#f3e8ff;/);
+  assert.match(prescriptionOptionRule, /background:\s*#f3e8ff;/);
+  assert.match(prescriptionCheckedRule, /background:\s*#f3e8ff;/);
+});
+
 test('patient history checkbox filters share width by content in a compact layout', async () => {
   const shockwaveCss = await readFile(shockwaveCssUrl, 'utf8');
   const headerRule = shockwaveCss.match(

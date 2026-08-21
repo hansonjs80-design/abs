@@ -3807,13 +3807,13 @@
 }
 
 .patient-history-filter-section--body {
-  border-color: rgba(2, 132, 199, 0.34);
-  background: rgba(224, 242, 254, 0.72);
+  border-color: rgba(100, 116, 139, 0.34);
+  background: #f1f5f9;
 }
 
 .patient-history-filter-section--prescription {
   border-color: rgba(124, 58, 237, 0.3);
-  background: rgba(243, 232, 255, 0.72);
+  background: #f3e8ff;
 }
 
 .patient-history-filter-title {
@@ -3828,10 +3828,12 @@
 }
 
 .patient-history-filter-section--body .patient-history-filter-title {
-  color: #0369a1;
+  background: #e2e8f0;
+  color: #334155;
 }
 
 .patient-history-filter-section--prescription .patient-history-filter-title {
+  background: #ede9fe;
   color: #6d28d9;
 }
 
@@ -3866,21 +3868,45 @@
   white-space: nowrap;
 }
 
+.patient-history-filter-section--body .patient-history-filter-option {
+  background: #f1f5f9;
+}
+
+.patient-history-filter-section--prescription .patient-history-filter-option {
+  background: #f3e8ff;
+}
+
 .patient-history-filter-option:hover {
   border-color: rgba(71, 85, 105, 0.62);
   background: #fff;
 }
 
+.patient-history-filter-section--body .patient-history-filter-option:hover {
+  background: #e2e8f0;
+}
+
+.patient-history-filter-section--prescription .patient-history-filter-option:hover {
+  background: #e9d5ff;
+}
+
 .patient-history-filter-section--body .patient-history-filter-option.is-checked {
   border-color: #0284c7;
-  background: #fff;
+  background: #f1f5f9;
   color: #075985;
 }
 
 .patient-history-filter-section--prescription .patient-history-filter-option.is-checked {
   border-color: #7c3aed;
-  background: #fff;
+  background: #f3e8ff;
   color: #5b21b6;
+}
+
+.patient-history-filter-section--body .patient-history-filter-option.is-checked:hover {
+  background: #e2e8f0;
+}
+
+.patient-history-filter-section--prescription .patient-history-filter-option.is-checked:hover {
+  background: #e9d5ff;
 }
 
 .patient-history-filter-option.is-disabled {
