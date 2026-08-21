@@ -40,3 +40,20 @@ test('schedule editor keeps cell fills and uses white for cells without a fill',
     /\.sw-cell-input\s*\{[^}]*color:\s*#000;/s
   );
 });
+
+test('selected schedule cells use the thicker blue outline while viewing and editing', async () => {
+  const shockwaveCss = await readFile(shockwaveCssUrl, 'utf8');
+
+  assert.match(
+    shockwaveCss,
+    /\.sw-cell\.selected::before\s*\{[^}]*border:\s*2px solid #4285f4;/s
+  );
+  assert.match(
+    shockwaveCss,
+    /\.sw-cell\.selected\.editing::before\s*\{[^}]*border-width:\s*2px;/s
+  );
+  assert.match(
+    shockwaveCss,
+    /@media \(max-width: 768px\)[\s\S]*?\.sw-cell\.selected::before\s*\{[^}]*inset:\s*0;/s
+  );
+});
