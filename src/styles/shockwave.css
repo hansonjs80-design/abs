@@ -2903,9 +2903,7 @@
   left: 0;
   z-index: 540;
   box-sizing: border-box;
-  width: max(100%, 174px);
-  max-height: 196px;
-  overflow-y: auto;
+  width: max(100%, 148px);
   padding: 4px;
   border: 1px solid rgba(148, 163, 184, 0.38);
   border-radius: 9px;
@@ -2942,11 +2940,15 @@
 }
 
 .shockwave-context-menu .context-menu-prescription-dropdown-option:hover,
-.shockwave-context-menu .context-menu-prescription-dropdown-option:focus-visible,
+.shockwave-context-menu .context-menu-prescription-dropdown-option:focus-visible {
+  background: #dbeafe;
+  color: #174a83;
+  outline: none;
+}
+
 .shockwave-context-menu .context-menu-prescription-dropdown-option.is-selected {
   background: #edf4ff;
   color: #174a83;
-  outline: none;
 }
 
 .context-menu-prescription-option-shortcut {

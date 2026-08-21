@@ -38,7 +38,7 @@ export default function ContextMenuPrescriptionSelect({
   const toggleDropdown = () => {
     if (!isOpen && rootRef.current) {
       const rect = rootRef.current.getBoundingClientRect();
-      const estimatedListHeight = Math.min(196, (options.length + 1) * 33 + 8);
+      const estimatedListHeight = (options.length + 1) * 33 + 8;
       const spaceBelow = window.innerHeight - rect.bottom - 12;
       setOpensUpward(spaceBelow < estimatedListHeight && rect.top > spaceBelow);
     }

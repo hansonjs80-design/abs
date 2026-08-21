@@ -20,6 +20,17 @@ test('context menu prescription dropdowns show current monthly shortcuts on the 
   assert.match(view, /shortcuts=\{effectiveManualSettings\?\.shortcuts \|\| \{\}\}/);
   assert.match(select, /context-menu-prescription-option-shortcut/);
   assert.match(select, /formatScheduleShortcutLabel/);
+  assert.match(select, /const estimatedListHeight = \(options\.length \+ 1\) \* 33 \+ 8;/);
+  const dropdownListRule = css.match(
+    /\.context-menu-prescription-dropdown-list\s*\{([^}]*)\}/s
+  )?.[1] || '';
+  assert.doesNotMatch(dropdownListRule, /max-height:/);
+  assert.doesNotMatch(dropdownListRule, /overflow-y:\s*auto;/);
+  assert.match(dropdownListRule, /width:\s*max\(100%, 148px\);/);
+  assert.match(
+    css,
+    /\.context-menu-prescription-dropdown-option:hover,[^{]*\{[^}]*background:\s*#dbeafe;/s
+  );
   assert.match(
     css,
     /\.context-menu-prescription-dropdown-option\s*\{[^}]*display:\s*flex;[^}]*justify-content:\s*space-between;/s
