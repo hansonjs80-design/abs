@@ -1794,6 +1794,12 @@
   padding: 8px;
   border-radius: 11px;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14), 0 4px 10px rgba(15, 23, 42, 0.08);
+  overflow: visible;
+}
+
+.context-menu-submenu--prescription .context-menu-editor-panel,
+.context-menu-submenu--prescription .context-menu-inline-column {
+  overflow: visible;
 }
 
 .context-menu-submenu--prescription .context-menu-inline-label {
@@ -2630,6 +2636,7 @@
 
 .context-menu-prescription-select-group {
   display: flex;
+  position: relative;
   min-width: 0;
   flex-direction: column;
   gap: 5px;
@@ -2838,6 +2845,119 @@
   outline: none;
   line-height: 38px;
   box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.context-menu-prescription-dropdown {
+  position: relative;
+  min-width: 0;
+  width: 100%;
+}
+
+.shockwave-context-menu .context-menu-prescription-trigger {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  padding: 0 9px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 10px;
+  background: var(--bg-input, #fff);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: left;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.shockwave-context-menu .context-menu-prescription-trigger:hover,
+.shockwave-context-menu .context-menu-prescription-trigger:focus-visible,
+.shockwave-context-menu .context-menu-prescription-trigger[aria-expanded="true"] {
+  border-color: #8aa8d6;
+  background: #f8fbff;
+  outline: none;
+}
+
+.context-menu-prescription-trigger-text,
+.context-menu-prescription-option-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-menu-prescription-trigger-arrow {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid #64748b;
+}
+
+.context-menu-prescription-dropdown-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 540;
+  box-sizing: border-box;
+  width: max(100%, 174px);
+  max-height: 196px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  border-radius: 9px;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
+}
+
+.context-menu-prescription-dropdown--end .context-menu-prescription-dropdown-list {
+  right: 0;
+  left: auto;
+}
+
+.context-menu-prescription-dropdown-list.opens-upward {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.shockwave-context-menu .context-menu-prescription-dropdown-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 31px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #223047;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.shockwave-context-menu .context-menu-prescription-dropdown-option:hover,
+.shockwave-context-menu .context-menu-prescription-dropdown-option:focus-visible,
+.shockwave-context-menu .context-menu-prescription-dropdown-option.is-selected {
+  background: #edf4ff;
+  color: #174a83;
+  outline: none;
+}
+
+.context-menu-prescription-option-shortcut {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: #8290a5;
+  font-size: 0.69rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .context-menu-checklist {

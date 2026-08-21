@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  formatScheduleShortcutLabel,
   getEditingCellKeyAction,
   getScheduleShortcutKey,
   getShiftArrowMoveDelta,
@@ -50,6 +51,12 @@ describe('schedule keyboard shortcut detection', () => {
     assert.equal(getScheduleShortcutKey({ code: 'Space', key: '' }), ' ');
     assert.equal(normalizeScheduleShortcutValue('a'), 'A');
     assert.equal(normalizeScheduleShortcutValue('ㅁ'), 'A');
+  });
+
+  it('formats configured prescription shortcuts for Windows and Apple menus', () => {
+    assert.equal(formatScheduleShortcutLabel('3', 'Ctrl'), 'Ctrl+3');
+    assert.equal(formatScheduleShortcutLabel('ㅁ', '⌘'), '⌘A');
+    assert.equal(formatScheduleShortcutLabel('', 'Ctrl'), '');
   });
 
   it('keeps arrow keys as grid navigation only outside cell editing', () => {

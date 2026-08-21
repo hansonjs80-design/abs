@@ -60,6 +60,7 @@ import ContextMenuBodySummary from './ContextMenuBodySummary';
 import { ContextMenuLocalInput } from './ContextMenuLocalInput';
 import { ContextMenuLocalInputGroup } from './ContextMenuLocalInputGroup';
 import ContextMenuMemoList from './ContextMenuMemoList';
+import ContextMenuPrescriptionSelect from './ContextMenuPrescriptionSelect';
 import MemoizedCell from './ShockwaveScheduleCell';
 import ShockwaveHoverTooltip from './ShockwaveHoverTooltip';
 import PatientHistoryOverflowField from './PatientHistoryOverflowField';
@@ -3490,12 +3491,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                   <span className="context-menu-current-prescription" style={{ marginLeft: '6px' }}>{previousPrescriptionValue}</span>
                                 ) : null}
                               </label>
-                              <select
-                                className="context-menu-select"
+                              <ContextMenuPrescriptionSelect
+                                ariaLabel="충격파 처방 선택"
                                 value={shockwavePrescriptions.includes(currentPrescription) ? currentPrescription : ''}
-                                onChange={(e) => {
-                                  e.stopPropagation();
-                                  const prescription = e.target.value || null;
+                                options={shockwavePrescriptions}
+                                shortcuts={effectiveShockwaveSettings?.shortcuts || {}}
+                                shortcutModifier={shortcutLabels.modifier}
+                                onChange={(nextPrescription) => {
+                                  const prescription = nextPrescription || null;
                                   const hasDoseTag = prescription && Object.prototype.hasOwnProperty.call(allDoseTags, prescription);
                                   const autoDoseTag = prescription?.match(/(\d{2,3})/)?.[1] || '';
                                   handleContextAction({
@@ -3504,14 +3507,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     doseTag: hasDoseTag ? allDoseTags[prescription] : autoDoseTag,
                                   });
                                 }}
-                                onMouseDown={e => e.stopPropagation()}
-                                onClick={e => e.stopPropagation()}
-                              >
-                                <option value="">처방 없음</option>
-                                {shockwavePrescriptions.map((pres) => (
-                                  <option key={pres} value={pres}>{pres}</option>
-                                ))}
-                              </select>
+                              />
                             </div>
                             <div className="context-menu-prescription-select-group">
                               <label className="context-menu-prescription-select-label">
@@ -3520,12 +3516,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                   <span className="context-menu-current-prescription" style={{ marginLeft: '6px' }}>{previousPrescriptionValue}</span>
                                 ) : null}
                               </label>
-                              <select
-                                className="context-menu-select"
+                              <ContextMenuPrescriptionSelect
+                                ariaLabel="도수치료 처방 선택"
                                 value={manualTherapyPrescriptions.includes(currentPrescription) ? currentPrescription : ''}
-                                onChange={(e) => {
-                                  e.stopPropagation();
-                                  const prescription = e.target.value || null;
+                                options={manualTherapyPrescriptions}
+                                shortcuts={effectiveManualSettings?.shortcuts || {}}
+                                shortcutModifier={shortcutLabels.modifier}
+                                align="end"
+                                onChange={(nextPrescription) => {
+                                  const prescription = nextPrescription || null;
                                   const hasDoseTag = prescription && Object.prototype.hasOwnProperty.call(manualDoseTags, prescription);
                                   const autoDoseTag = prescription?.match(/(\d{2,3})/)?.[1] || '';
                                   handleContextAction({
@@ -3534,14 +3533,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     doseTag: hasDoseTag ? manualDoseTags[prescription] : autoDoseTag,
                                   });
                                 }}
-                                onMouseDown={e => e.stopPropagation()}
-                                onClick={e => e.stopPropagation()}
-                              >
-                                <option value="">처방 없음</option>
-                                {manualTherapyPrescriptions.map((pres) => (
-                                  <option key={pres} value={pres}>{pres}</option>
-                                ))}
-                              </select>
+                              />
                             </div>
                           </div>
                         </div>

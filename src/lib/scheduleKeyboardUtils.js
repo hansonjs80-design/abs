@@ -14,6 +14,13 @@ export function normalizeScheduleShortcutValue(value) {
   return rawKey.toUpperCase();
 }
 
+export function formatScheduleShortcutLabel(value, modifier = 'Ctrl') {
+  const normalized = normalizeScheduleShortcutValue(value);
+  if (!normalized) return '';
+  const keyLabel = normalized === ' ' ? 'Space' : normalized;
+  return modifier === '⌘' ? `⌘${keyLabel}` : `${modifier}+${keyLabel}`;
+}
+
 export function getScheduleShortcutKey(event) {
   const code = String(event?.code || '');
   const digitMatch = code.match(/^(?:Digit|Numpad)([0-9])$/);
