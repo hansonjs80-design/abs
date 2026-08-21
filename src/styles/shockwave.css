@@ -4093,6 +4093,10 @@
   outline: none !important;
 }
 
+.patient-history-table .patient-history-visit-count-field.has-visit-sequence {
+  background-color: var(--patient-history-visit-sequence-bg) !important;
+}
+
 .patient-history-overflow-field {
   width: 100%;
   min-width: 0;

@@ -246,7 +246,7 @@ test('patient history edit fields keep a flat base style until focused', async (
   )?.[1] || '';
 
   assert.equal(
-    shockwaveView.match(/className="patient-history-edit-field/g)?.length,
+    shockwaveView.match(/className=(?:"patient-history-edit-field|\{`patient-history-edit-field)/g)?.length,
     4
   );
   assert.match(editFieldRule, /border:\s*0\s*!important;/);
@@ -297,6 +297,24 @@ test('patient history editable values use compact inset fields without changing 
   assert.match(insetFieldRule, /border:\s*1px solid/);
   assert.match(insetFieldRule, /border-radius:\s*3px\s*!important;/);
   assert.doesNotMatch(insetFieldRule, /font-size:/);
+});
+
+test('patient history visit count fields show derived sequence background colors', async () => {
+  const [shockwaveCss, shockwaveView] = await Promise.all([
+    readFile(shockwaveCssUrl, 'utf8'),
+    readFile(shockwaveViewUrl, 'utf8'),
+  ]);
+  const sequenceFieldRule = shockwaveCss.match(
+    /\.patient-history-table \.patient-history-visit-count-field\.has-visit-sequence\s*\{([^}]*)\}/s
+  )?.[1] || '';
+
+  assert.match(shockwaveView, /const visitSequenceColor = group\.visitSequenceColors\?\.\[idx\] \|\| null;/);
+  assert.match(shockwaveView, /patient-history-visit-count-field\$\{visitSequenceColor \? ' has-visit-sequence' : ''\}/);
+  assert.match(shockwaveView, /'--patient-history-visit-sequence-bg': visitSequenceColor/);
+  assert.match(
+    sequenceFieldRule,
+    /background-color:\s*var\(--patient-history-visit-sequence-bg\)\s*!important;/
+  );
 });
 
 test('patient history body and memo text use the shared content size with shorter data rows', async () => {

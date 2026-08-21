@@ -29,6 +29,18 @@ describe('shockwave view patient history model', () => {
     assert.deepEqual(groups[0].activeBodyFilters, ['shoulder']);
   });
 
+  it('derives visit sequence colors from the currently visible group rows', () => {
+    const groups = buildPatientHistoryLogGroups({
+      logs: [
+        { id: 'visit-3', history_group: 'shockwave', date: '2026-08-03', visit_count: '3' },
+        { id: 'visit-2', history_group: 'shockwave', date: '2026-08-02', visit_count: '2' },
+        { id: 'visit-1', history_group: 'shockwave', date: '2026-08-01', visit_count: '1' },
+      ],
+    });
+
+    assert.deepEqual(groups[0].visitSequenceColors, ['#fee2e2', '#fee2e2', '#fee2e2']);
+  });
+
   it('filters by body and prescription together and recalculates both option counts', () => {
     const groups = buildPatientHistoryLogGroups({
       selectedGroupKey: 'manual',

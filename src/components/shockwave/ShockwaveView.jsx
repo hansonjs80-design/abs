@@ -3947,6 +3947,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                           <tbody>
                             {group.logs.map((log, idx) => {
                               const historyRowKey = log._history_row_key || `${group.key}-${log.id || log.date}-${idx}`;
+                              const visitSequenceColor = group.visitSequenceColors?.[idx] || null;
                               const selectedHistoryCellId = selectedCell
                                 ? `draft-${selectedCell.w}-${selectedCell.d}-${selectedCell.r}-${selectedCell.c}`
                                 : '';
@@ -4205,12 +4206,26 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 </td>
                                 <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
                                   <input
-                                    className="patient-history-edit-field patient-history-edit-field--inset"
+                                    className={`patient-history-edit-field patient-history-edit-field--inset patient-history-visit-count-field${visitSequenceColor ? ' has-visit-sequence' : ''}`}
                                     type="text"
                                     inputMode="text"
                                     value={log.visit_count || ''}
                                     placeholder="-"
-                                    style={{ width: '100%', minWidth: 0, textAlign: 'center', border: 'none', borderRadius: 0, background: 'transparent', padding: '1px 2px', outline: 'none', boxSizing: 'border-box', boxShadow: 'none', font: 'inherit', fontWeight: 'inherit' }}
+                                    style={{
+                                      width: '100%',
+                                      minWidth: 0,
+                                      textAlign: 'center',
+                                      border: 'none',
+                                      borderRadius: 0,
+                                      background: 'transparent',
+                                      padding: '1px 2px',
+                                      outline: 'none',
+                                      boxSizing: 'border-box',
+                                      boxShadow: 'none',
+                                      font: 'inherit',
+                                      fontWeight: 'inherit',
+                                      '--patient-history-visit-sequence-bg': visitSequenceColor,
+                                    }}
                                     onChange={(e) => {
                                       const rawVal = e.target.value.trim();
                                       const val = rawVal === '*' || rawVal === '-'

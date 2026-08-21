@@ -10,6 +10,7 @@ import {
   normalizeVisitInputValue,
   splitBodyParts,
 } from '../../lib/schedulerUtils.js';
+import { getPatientHistoryVisitSequenceColors } from '../../lib/patientHistoryVisitSequenceUtils.js';
 
 export const PATIENT_HISTORY_GROUPS = [
   { key: 'shockwave', label: '충격파 내역' },
@@ -316,6 +317,7 @@ export function buildPatientHistoryLogGroups({
       return {
         ...rawGroup,
         logs: filteredLogs,
+        visitSequenceColors: getPatientHistoryVisitSequenceColors(filteredLogs),
         totalLogs: rawGroup.logs,
         bodyFilterOptions,
         activeBodyFilters,
