@@ -71,4 +71,8 @@ test('context menu prescription dropdowns show current monthly shortcuts on the 
     css,
     /\.context-menu-prescription-trigger-text,[^{]*\{[^}]*color:\s*var\(--context-prescription-option-color, inherit\);/s
   );
+  assert.match(
+    css,
+    /\.context-menu-prescription-trigger-text\s*\{[^}]*font-weight:\s*900;/s
+  );
 });

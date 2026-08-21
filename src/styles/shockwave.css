@@ -2895,6 +2895,10 @@
   color: var(--context-prescription-option-color, inherit);
 }
 
+.context-menu-prescription-trigger-text {
+  font-weight: 900;
+}
+
 .context-menu-prescription-trigger-arrow {
   width: 0;
   height: 0;
