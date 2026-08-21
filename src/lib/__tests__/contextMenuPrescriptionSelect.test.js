@@ -29,7 +29,7 @@ test('context menu prescription dropdowns show current monthly shortcuts on the 
   assert.match(dropdownListRule, /width:\s*max\(100%, 148px\);/);
   assert.match(
     css,
-    /\.context-menu-prescription-dropdown-option:hover,[^{]*\{[^}]*background:\s*#dbeafe;/s
+    /\.context-menu-prescription-dropdown-option:hover,[^{]*\{[^}]*background:\s*#c7ddf7;/s
   );
   assert.match(
     css,

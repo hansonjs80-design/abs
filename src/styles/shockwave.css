@@ -2941,7 +2941,7 @@
 
 .shockwave-context-menu .context-menu-prescription-dropdown-option:hover,
 .shockwave-context-menu .context-menu-prescription-dropdown-option:focus-visible {
-  background: #dbeafe;
+  background: #c7ddf7;
   color: #174a83;
   outline: none;
 }
@@ -3108,6 +3108,14 @@
 .context-menu-check-item.is-checked {
   border: 1px solid #16a706;
   background: #dcfce7;
+}
+
+.context-menu-check-item:hover:not(.is-checked) {
+  background: #e2e8f0;
+}
+
+.context-menu-check-item.is-checked:hover {
+  background: #bbf7d0;
 }
 
 .context-menu-check-item:focus,
