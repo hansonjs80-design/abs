@@ -14,13 +14,13 @@ const log = (visitCount, date = '2026-08-01') => ({
 describe('patient history visit sequence colors', () => {
   it('uses the requested light red through violet palette order', () => {
     assert.deepEqual(PATIENT_HISTORY_VISIT_SEQUENCE_COLORS, [
-      '#fee2e2',
-      '#ffedd5',
-      '#fef9c3',
-      '#dcfce7',
-      '#dbeafe',
-      '#e0e7ff',
-      '#f3e8ff',
+      '#fecaca',
+      '#fed7aa',
+      '#fef08a',
+      '#bbf7d0',
+      '#bfdbfe',
+      '#c7d2fe',
+      '#e9d5ff',
     ]);
   });
 

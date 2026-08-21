@@ -307,10 +307,14 @@ test('patient history visit count fields show derived sequence background colors
   const sequenceFieldRule = shockwaveCss.match(
     /\.patient-history-table \.patient-history-visit-count-field\.has-visit-sequence\s*\{([^}]*)\}/s
   )?.[1] || '';
+  const visitCountFieldRule = shockwaveCss.match(
+    /\.patient-history-table \.patient-history-visit-count-field\s*\{([^}]*)\}/s
+  )?.[1] || '';
 
   assert.match(shockwaveView, /const visitSequenceColor = group\.visitSequenceColors\?\.\[idx\] \|\| null;/);
   assert.match(shockwaveView, /patient-history-visit-count-field\$\{visitSequenceColor \? ' has-visit-sequence' : ''\}/);
   assert.match(shockwaveView, /'--patient-history-visit-sequence-bg': visitSequenceColor/);
+  assert.match(visitCountFieldRule, /font-weight:\s*800\s*!important;/);
   assert.match(
     sequenceFieldRule,
     /background-color:\s*var\(--patient-history-visit-sequence-bg\)\s*!important;/

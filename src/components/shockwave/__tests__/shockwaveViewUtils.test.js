@@ -38,7 +38,7 @@ describe('shockwave view patient history model', () => {
       ],
     });
 
-    assert.deepEqual(groups[0].visitSequenceColors, ['#fee2e2', '#fee2e2', '#fee2e2']);
+    assert.deepEqual(groups[0].visitSequenceColors, ['#fecaca', '#fecaca', '#fecaca']);
   });
 
   it('filters by body and prescription together and recalculates both option counts', () => {
