@@ -3897,7 +3897,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                         <div className="patient-history-group-title-row">
                           <span>{group.label}</span>
                           <span className="patient-history-group-count">
-                            {group.logs.length} / {group.totalLogs.length}건
+                            ({group.logs.length}/{group.totalLogs.length})건
                           </span>
                         </div>
                         <PatientHistoryFilters

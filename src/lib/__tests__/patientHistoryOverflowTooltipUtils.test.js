@@ -109,6 +109,28 @@ test('patient history prescription and body filters render as unlabeled checkbox
   assert.doesNotMatch(shockwaveCss, /\.patient-history-filter-title/);
 });
 
+test('patient history group count follows the title in a larger compact format', async () => {
+  const [shockwaveCss, shockwaveView] = await Promise.all([
+    readFile(shockwaveCssUrl, 'utf8'),
+    readFile(shockwaveViewUrl, 'utf8'),
+  ]);
+  const titleRowRule = shockwaveCss.match(
+    /\.patient-history-group-title-row\s*\{([^}]*)\}/s
+  )?.[1] || '';
+  const countRule = shockwaveCss.match(
+    /\.patient-history-group-count\s*\{([^}]*)\}/s
+  )?.[1] || '';
+
+  assert.match(
+    shockwaveView,
+    /\(\{group\.logs\.length\}\/\{group\.totalLogs\.length\}\)건/
+  );
+  assert.match(titleRowRule, /justify-content:\s*flex-start;/);
+  assert.match(titleRowRule, /gap:\s*4px;/);
+  assert.match(countRule, /font-size:\s*0\.76rem;/);
+  assert.match(countRule, /white-space:\s*nowrap;/);
+});
+
 test('patient history filter cells keep body gray and prescription purple backgrounds', async () => {
   const shockwaveCss = await readFile(shockwaveCssUrl, 'utf8');
   const bodySectionRule = shockwaveCss.match(

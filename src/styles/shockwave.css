@@ -3773,8 +3773,8 @@
 .patient-history-group-title-row {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 4px;
   padding: 0 1px;
   font-size: 0.86rem;
   font-weight: 900;
@@ -3782,7 +3782,7 @@
 
 .patient-history-group-count {
   color: var(--text-secondary, #64748b);
-  font-size: 0.72rem;
+  font-size: 0.76rem;
   font-variant-numeric: tabular-nums;
   font-weight: 800;
   white-space: nowrap;
