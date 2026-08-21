@@ -1345,7 +1345,7 @@
   margin-right: -5px;
   margin-bottom: -5px;
   padding: 5px 5px 6px 5px;
-  background: #e7edf6;
+  background: #d8e0ea;
   border-radius: 0 0 12px 12px;
 }
 
@@ -2944,16 +2944,32 @@
   text-align: left;
 }
 
+.shockwave-context-menu .context-menu-prescription-dropdown-option.is-selected {
+  background: #dbeafe;
+  color: #0f4c81;
+  font-weight: 900;
+  box-shadow: inset 3px 0 0 #2563eb, inset 0 0 0 1px #60a5fa;
+}
+
+.shockwave-context-menu .context-menu-prescription-dropdown-option.is-selected::before {
+  content: '✓';
+  flex: 0 0 auto;
+  color: #1d4ed8;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
 .shockwave-context-menu .context-menu-prescription-dropdown-option:hover,
 .shockwave-context-menu .context-menu-prescription-dropdown-option:focus-visible {
-  background: #c7ddf7;
+  background: #8fbced;
   color: #174a83;
+  font-weight: 900;
   outline: none;
 }
 
-.shockwave-context-menu .context-menu-prescription-dropdown-option.is-selected {
-  background: #edf4ff;
-  color: #174a83;
+.shockwave-context-menu .context-menu-prescription-dropdown-option:hover .context-menu-prescription-option-shortcut,
+.shockwave-context-menu .context-menu-prescription-dropdown-option:focus-visible .context-menu-prescription-option-shortcut {
+  font-weight: 900;
 }
 
 .context-menu-prescription-option-shortcut {
@@ -3116,11 +3132,11 @@
 }
 
 .context-menu-check-item:hover:not(.is-checked) {
-  background: #e2e8f0;
+  background: #e5e7eb;
 }
 
 .context-menu-check-item.is-checked:hover {
-  background: #bbf7d0;
+  background: #e5e7eb;
 }
 
 .context-menu-check-item:focus,

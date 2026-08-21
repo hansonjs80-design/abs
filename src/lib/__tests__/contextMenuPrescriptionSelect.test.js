@@ -29,7 +29,19 @@ test('context menu prescription dropdowns show current monthly shortcuts on the 
   assert.match(dropdownListRule, /width:\s*max\(100%, 148px\);/);
   assert.match(
     css,
-    /\.context-menu-prescription-dropdown-option:hover,[^{]*\{[^}]*background:\s*#c7ddf7;/s
+    /\.context-menu-prescription-dropdown-option:hover,[^{]*\{[^}]*background:\s*#8fbced;[^}]*font-weight:\s*900;/s
+  );
+  assert.match(
+    css,
+    /\.context-menu-prescription-dropdown-option:hover \.context-menu-prescription-option-shortcut,[^{]*\{[^}]*font-weight:\s*900;/s
+  );
+  assert.match(
+    css,
+    /\.context-menu-prescription-dropdown-option\.is-selected\s*\{[^}]*background:\s*#dbeafe;[^}]*font-weight:\s*900;[^}]*box-shadow:\s*inset 3px 0 0 #2563eb,/s
+  );
+  assert.match(
+    css,
+    /\.context-menu-prescription-dropdown-option\.is-selected::before\s*\{[^}]*content:\s*'✓';/s
   );
   assert.match(
     css,

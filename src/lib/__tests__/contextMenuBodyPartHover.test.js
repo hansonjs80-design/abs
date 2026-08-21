@@ -17,10 +17,10 @@ test('context menu body-part checkbox rows use stronger hover backgrounds', asyn
   assert.match(bodyPartPanel, /context-menu-check-item/);
   assert.match(
     css,
-    /\.context-menu-check-item:hover:not\(\.is-checked\)\s*\{[^}]*background:\s*#e2e8f0;/s
+    /\.context-menu-check-item:hover:not\(\.is-checked\)\s*\{[^}]*background:\s*#e5e7eb;/s
   );
   assert.match(
     css,
-    /\.context-menu-check-item\.is-checked:hover\s*\{[^}]*background:\s*#bbf7d0;/s
+    /\.context-menu-check-item\.is-checked:hover\s*\{[^}]*background:\s*#e5e7eb;/s
   );
 });

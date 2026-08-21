@@ -12,7 +12,11 @@ test('schedule context menu white action rows use a stronger scoped hover backgr
   const metaHoverRule = css.match(
     /\.context-menu-meta-section \.context-menu-meta-item:hover:not\(:disabled\),[^{]*\{([^}]*)\}/s
   )?.[1] || '';
+  const metaSectionRule = css.match(
+    /\.shockwave-context-menu\.schedule-context-menu \.context-menu-meta-section\s*\{([^}]*)\}/s
+  )?.[1] || '';
 
   assert.match(actionHoverRule, /background:\s*rgba\(37, 99, 235, 0\.14\)\s*!important;/);
   assert.match(metaHoverRule, /background:\s*rgba\(37, 99, 235, 0\.08\)\s*!important;/);
+  assert.match(metaSectionRule, /background:\s*#d8e0ea;/);
 });
