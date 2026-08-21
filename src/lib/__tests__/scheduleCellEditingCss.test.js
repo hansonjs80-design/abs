@@ -46,11 +46,11 @@ test('selected schedule cells use the thicker blue outline while viewing and edi
 
   assert.match(
     shockwaveCss,
-    /\.sw-cell\.selected::before\s*\{[^}]*border:\s*2px solid #4285f4;/s
+    /\.sw-cell\.selected::before\s*\{[^}]*border:\s*1\.85px solid #4285f4;/s
   );
   assert.match(
     shockwaveCss,
-    /\.sw-cell\.selected\.editing::before\s*\{[^}]*border-width:\s*2px;/s
+    /\.sw-cell\.selected\.editing::before\s*\{[^}]*border-width:\s*1\.85px;/s
   );
   assert.match(
     shockwaveCss,
