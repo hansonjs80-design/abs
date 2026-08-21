@@ -1815,7 +1815,7 @@
 
 .context-menu-submenu--prescription .context-menu-current-prescription {
   margin-left: 0;
-  color: #64748b;
+  color: var(--context-prescription-color, #64748b);
   font-size: 0.92em;
 }
 
@@ -2828,7 +2828,7 @@
 }
 
 .context-menu-current-prescription {
-  color: #64748b;
+  color: var(--context-prescription-color, #64748b);
   font-size: 0.8rem;
   font-weight: 800;
   white-space: nowrap;
@@ -2892,6 +2892,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--context-prescription-option-color, inherit);
 }
 
 .context-menu-prescription-trigger-arrow {

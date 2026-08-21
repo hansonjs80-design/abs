@@ -18,6 +18,18 @@ test('context menu prescription dropdowns show current monthly shortcuts on the 
 
   assert.match(view, /shortcuts=\{effectiveShockwaveSettings\?\.shortcuts \|\| \{\}\}/);
   assert.match(view, /shortcuts=\{effectiveManualSettings\?\.shortcuts \|\| \{\}\}/);
+  assert.match(view, /const contextMenuPrescriptionColors = \{/);
+  assert.equal(
+    view.match(/prescriptionColors=\{contextMenuPrescriptionColors\}/g)?.length,
+    2
+  );
+  assert.equal(
+    view.match(/'--context-prescription-color': previousPrescriptionColor/g)?.length,
+    2
+  );
+  assert.match(select, /getPrescriptionColor\(prescription, prescriptionColors\)/);
+  assert.match(select, /'--context-prescription-option-color': prescriptionColor/);
+  assert.match(select, /'--context-prescription-option-color': selectedColor/);
   assert.match(select, /context-menu-prescription-option-shortcut/);
   assert.match(select, /formatScheduleShortcutLabel/);
   assert.match(select, /const estimatedListHeight = \(options\.length \+ 1\) \* 33 \+ 8;/);
@@ -50,5 +62,13 @@ test('context menu prescription dropdowns show current monthly shortcuts on the 
   assert.match(
     css,
     /\.context-menu-prescription-option-shortcut\s*\{[^}]*margin-left:\s*auto;[^}]*text-align:\s*right;/s
+  );
+  assert.match(
+    css,
+    /\.context-menu-current-prescription\s*\{[^}]*color:\s*var\(--context-prescription-color, #64748b\);/s
+  );
+  assert.match(
+    css,
+    /\.context-menu-prescription-trigger-text,[^{]*\{[^}]*color:\s*var\(--context-prescription-option-color, inherit\);/s
   );
 });

@@ -1,11 +1,13 @@
 import { useEffect, useId, useRef, useState } from 'react';
 
 import { formatScheduleShortcutLabel } from '../../lib/scheduleKeyboardUtils';
+import { getPrescriptionColor } from '../../lib/schedulerUtils';
 
 export default function ContextMenuPrescriptionSelect({
   ariaLabel,
   value,
   options = [],
+  prescriptionColors = {},
   shortcuts = {},
   shortcutModifier,
   align = 'start',
@@ -16,6 +18,7 @@ export default function ContextMenuPrescriptionSelect({
   const rootRef = useRef(null);
   const listboxId = useId();
   const selectedLabel = options.includes(value) ? value : '처방 없음';
+  const selectedColor = getPrescriptionColor(value, prescriptionColors);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -64,7 +67,12 @@ export default function ContextMenuPrescriptionSelect({
         aria-controls={listboxId}
         onClick={toggleDropdown}
       >
-        <span className="context-menu-prescription-trigger-text">{selectedLabel}</span>
+        <span
+          className="context-menu-prescription-trigger-text"
+          style={selectedColor ? { '--context-prescription-option-color': selectedColor } : undefined}
+        >
+          {selectedLabel}
+        </span>
         <span className="context-menu-prescription-trigger-arrow" aria-hidden="true" />
       </button>
       {isOpen && (
@@ -84,6 +92,7 @@ export default function ContextMenuPrescriptionSelect({
             <span className="context-menu-prescription-option-name">처방 없음</span>
           </button>
           {options.map((prescription) => {
+            const prescriptionColor = getPrescriptionColor(prescription, prescriptionColors);
             const shortcutLabel = formatScheduleShortcutLabel(
               shortcuts[prescription],
               shortcutModifier
@@ -96,6 +105,7 @@ export default function ContextMenuPrescriptionSelect({
                 className={`context-menu-prescription-dropdown-option${isSelected ? ' is-selected' : ''}`}
                 role="option"
                 aria-selected={isSelected}
+                style={prescriptionColor ? { '--context-prescription-option-color': prescriptionColor } : undefined}
                 onClick={() => selectPrescription(prescription)}
               >
                 <span className="context-menu-prescription-option-name">{prescription}</span>

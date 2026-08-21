@@ -3225,14 +3225,19 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
               ...(settings?.manual_therapy_dose_tags || {}),
               ...(effectiveManualSettings?.dose_tags || {}),
             };
+            const contextMenuPrescriptionColors = {
+              ...DEFAULT_CONTEXT_PRESCRIPTION_COLORS,
+              ...(effectivePrescriptionColors || {}),
+            };
             const currentPrescriptionClass = shockwavePrescriptions.includes(currentPrescription)
               ? ' is-shockwave'
               : manualTherapyPrescriptions.includes(currentPrescription)
                 ? ' is-manual'
                 : '';
-            const currentPrescriptionColor = effectivePrescriptionColors?.[currentPrescription]
-              || DEFAULT_CONTEXT_PRESCRIPTION_COLORS[currentPrescription]
-              || '#0f172a';
+            const currentPrescriptionColor = getPatientHistoryPrescriptionColor(
+              currentPrescription,
+              contextMenuPrescriptionColors
+            );
             const currentBodyPart = currentMemo?.body_part || '';
             const currentParts = splitBodyParts(currentBodyPart);
             const hasMultipleCurrentParts = currentParts.length > 1;
@@ -3286,6 +3291,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
               })
               .sort((a, b) => a.localeCompare(b, 'ko'));
             const previousPrescriptionValue = previousPrescription?.value || '';
+            const previousPrescriptionColor = previousPrescriptionValue
+              ? getPatientHistoryPrescriptionColor(
+                previousPrescriptionValue,
+                contextMenuPrescriptionColors
+              )
+              : null;
             const selectedHasSameReservationGroup = selectionHasReservationGroup({
               keys: selectedKeys,
               memos: renderMemos,
@@ -3488,13 +3499,22 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                               <label className="context-menu-prescription-select-label">
                                 충격파
                                 {previousPrescriptionValue && shockwavePrescriptions.includes(previousPrescriptionValue) ? (
-                                  <span className="context-menu-current-prescription" style={{ marginLeft: '6px' }}>{previousPrescriptionValue}</span>
+                                  <span
+                                    className="context-menu-current-prescription"
+                                    style={{
+                                      marginLeft: '6px',
+                                      '--context-prescription-color': previousPrescriptionColor,
+                                    }}
+                                  >
+                                    {previousPrescriptionValue}
+                                  </span>
                                 ) : null}
                               </label>
                               <ContextMenuPrescriptionSelect
                                 ariaLabel="충격파 처방 선택"
                                 value={shockwavePrescriptions.includes(currentPrescription) ? currentPrescription : ''}
                                 options={shockwavePrescriptions}
+                                prescriptionColors={contextMenuPrescriptionColors}
                                 shortcuts={effectiveShockwaveSettings?.shortcuts || {}}
                                 shortcutModifier={shortcutLabels.modifier}
                                 onChange={(nextPrescription) => {
@@ -3513,13 +3533,22 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                               <label className="context-menu-prescription-select-label">
                                 도수치료
                                 {previousPrescriptionValue && manualTherapyPrescriptions.includes(previousPrescriptionValue) ? (
-                                  <span className="context-menu-current-prescription" style={{ marginLeft: '6px' }}>{previousPrescriptionValue}</span>
+                                  <span
+                                    className="context-menu-current-prescription"
+                                    style={{
+                                      marginLeft: '6px',
+                                      '--context-prescription-color': previousPrescriptionColor,
+                                    }}
+                                  >
+                                    {previousPrescriptionValue}
+                                  </span>
                                 ) : null}
                               </label>
                               <ContextMenuPrescriptionSelect
                                 ariaLabel="도수치료 처방 선택"
                                 value={manualTherapyPrescriptions.includes(currentPrescription) ? currentPrescription : ''}
                                 options={manualTherapyPrescriptions}
+                                prescriptionColors={contextMenuPrescriptionColors}
                                 shortcuts={effectiveManualSettings?.shortcuts || {}}
                                 shortcutModifier={shortcutLabels.modifier}
                                 align="end"
