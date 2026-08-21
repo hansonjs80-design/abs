@@ -18,5 +18,5 @@ test('schedule context menu white action rows use a stronger scoped hover backgr
 
   assert.match(actionHoverRule, /background:\s*rgba\(37, 99, 235, 0\.14\)\s*!important;/);
   assert.match(metaHoverRule, /background:\s*rgba\(37, 99, 235, 0\.08\)\s*!important;/);
-  assert.match(metaSectionRule, /background:\s*#d8e0ea;/);
+  assert.match(metaSectionRule, /background:\s*#e7edf6;/);
 });
