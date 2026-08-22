@@ -100,6 +100,13 @@ export function normalizeStaffCalendarDeviceSettings(settings = {}) {
   };
 }
 
+export function mergeStaffCalendarDeviceSettingsForBackup(remoteSettings, localSnapshot) {
+  return normalizeStaffCalendarDeviceSettingsPatch({
+    ...normalizeStaffCalendarDeviceSettingsPatch(remoteSettings),
+    ...normalizeStaffCalendarDeviceSettingsPatch(localSnapshot?.values),
+  });
+}
+
 export function getStaffCalendarDeviceFingerprint() {
   return getDeviceSettingsIdentity().deviceId;
 }

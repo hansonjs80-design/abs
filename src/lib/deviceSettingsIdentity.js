@@ -30,6 +30,43 @@ export function getLegacyDeviceFingerprint(browserArg) {
   }
 }
 
+function getBrowserFamily(userAgent) {
+  if (/Edg(?:A|iOS)?\//i.test(userAgent)) return 'edge';
+  if (/OPR\//i.test(userAgent)) return 'opera';
+  if (/(?:Chrome|CriOS)\//i.test(userAgent)) return 'chrome';
+  if (/(?:Firefox|FxiOS)\//i.test(userAgent)) return 'firefox';
+  if (/Safari\//i.test(userAgent) && /Version\//i.test(userAgent)) return 'safari';
+  return 'other';
+}
+
+function getPlatformFamily(browser, userAgent) {
+  const explicitPlatform = String(
+    browser?.navigator?.userAgentData?.platform || browser?.navigator?.platform || ''
+  ).trim().toLowerCase();
+  if (explicitPlatform) return explicitPlatform;
+  if (/Windows/i.test(userAgent)) return 'windows';
+  if (/Mac OS|Macintosh/i.test(userAgent)) return 'macos';
+  if (/Android/i.test(userAgent)) return 'android';
+  if (/iPhone|iPad|iPod/i.test(userAgent)) return 'ios';
+  if (/Linux/i.test(userAgent)) return 'linux';
+  return 'unknown';
+}
+
+export function getStableRecoveryDeviceFingerprint(browserArg) {
+  const browser = getBrowserContext(browserArg);
+  if (!browser) return 'default-device';
+  try {
+    const userAgent = String(browser.navigator?.userAgent || '');
+    const screenInfo = `${browser.screen.width}x${browser.screen.height}x${browser.screen.colorDepth}`;
+    const browserFamily = getBrowserFamily(userAgent);
+    const platformFamily = getPlatformFamily(browser, userAgent);
+    const hardwareInfo = `${browser.navigator?.hardwareConcurrency || 0}x${browser.navigator?.deviceMemory || 0}`;
+    return `dev_stable_${hashText(`${screenInfo}-${browserFamily}-${platformFamily}-${hardwareInfo}`)}`;
+  } catch {
+    return 'default-device';
+  }
+}
+
 function createDeviceSettingsId(legacyDeviceId, browser) {
   try {
     const randomId = browser?.crypto?.randomUUID?.().replaceAll('-', '');
@@ -53,9 +90,10 @@ function isStoredDeviceSettingsId(value) {
 export function getDeviceSettingsIdentity({ browser: browserArg, storage: storageArg } = {}) {
   const browser = getBrowserContext(browserArg);
   const legacyDeviceId = getLegacyDeviceFingerprint(browser);
+  const recoveryDeviceId = getStableRecoveryDeviceFingerprint(browser);
   const storage = storageArg || browser?.localStorage;
   if (!browser) {
-    return { deviceId: legacyDeviceId, legacyDeviceId };
+    return { deviceId: legacyDeviceId, legacyDeviceId, recoveryDeviceId };
   }
 
   const storedId = readStorageValueWithCookieBackup(
@@ -70,7 +108,7 @@ export function getDeviceSettingsIdentity({ browser: browserArg, storage: storag
       storage,
       browser.document
     );
-    return { deviceId: storedId, legacyDeviceId };
+    return { deviceId: storedId, legacyDeviceId, recoveryDeviceId };
   }
 
   const deviceId = createDeviceSettingsId(legacyDeviceId, browser);
@@ -80,12 +118,15 @@ export function getDeviceSettingsIdentity({ browser: browserArg, storage: storag
     storage,
     browser.document
   );
-  return { deviceId, legacyDeviceId };
+  return { deviceId, legacyDeviceId, recoveryDeviceId };
 }
 
 export function getDeviceSettingsForIdentity(settingsMap, identity = getDeviceSettingsIdentity()) {
   if (!settingsMap || typeof settingsMap !== 'object' || Array.isArray(settingsMap)) return null;
-  return settingsMap[identity.deviceId] || settingsMap[identity.legacyDeviceId] || null;
+  return settingsMap[identity.deviceId]
+    || settingsMap[identity.legacyDeviceId]
+    || settingsMap[identity.recoveryDeviceId]
+    || null;
 }
 
 /**
@@ -119,6 +160,13 @@ export function buildDeviceSettingsProfileMap({
 
   if (identity.legacyDeviceId && identity.legacyDeviceId !== identity.deviceId) {
     nextMap[identity.legacyDeviceId] = nextProfile;
+  }
+  if (
+    identity.recoveryDeviceId &&
+    identity.recoveryDeviceId !== identity.deviceId &&
+    identity.recoveryDeviceId !== identity.legacyDeviceId
+  ) {
+    nextMap[identity.recoveryDeviceId] = nextProfile;
   }
 
   return nextMap;

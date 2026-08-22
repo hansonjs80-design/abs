@@ -7,6 +7,7 @@ import {
   getDeviceSettingsForIdentity,
   getDeviceSettingsIdentity,
   getLegacyDeviceFingerprint,
+  getStableRecoveryDeviceFingerprint,
 } from '../deviceSettingsIdentity.js';
 
 function createStorage(initial = {}) {
@@ -50,6 +51,7 @@ describe('device settings identity', () => {
     assert.equal(first.deviceId, second.deviceId);
     assert.match(first.deviceId, /^dev_\d+_12345678123412341234$/);
     assert.equal(first.legacyDeviceId, getLegacyDeviceFingerprint(browser));
+    assert.equal(first.recoveryDeviceId, getStableRecoveryDeviceFingerprint(browser));
   });
 
   it('uses an existing stored identifier without replacing it', () => {
@@ -81,6 +83,7 @@ describe('device settings identity', () => {
     const identity = {
       deviceId: 'dev_new_installation',
       legacyDeviceId: 'dev_legacy',
+      recoveryDeviceId: 'dev_stable_recovery',
     };
     const result = buildDeviceSettingsProfileMap({
       settingsMap: {
@@ -99,7 +102,79 @@ describe('device settings identity', () => {
     };
     assert.deepEqual(result.dev_new_installation, expected);
     assert.deepEqual(result.dev_legacy, expected);
+    assert.deepEqual(result.dev_stable_recovery, expected);
     assert.deepEqual(result.other_device, { rowHeight: 42 });
+  });
+
+  it('restores the same device profile after a later browser-version update clears installation storage', () => {
+    const dayOneBrowser = {
+      ...browser,
+      navigator: {
+        ...browser.navigator,
+        platform: 'MacIntel',
+        hardwareConcurrency: 8,
+        deviceMemory: 8,
+        userAgent: 'Mozilla/5.0 Chrome/140.0.0.0 Safari/537.36',
+      },
+      crypto: { randomUUID: () => '11111111-1111-1111-1111-111111111111' },
+    };
+    const nextDayBrowser = {
+      ...dayOneBrowser,
+      navigator: {
+        ...dayOneBrowser.navigator,
+        userAgent: 'Mozilla/5.0 Chrome/141.0.0.0 Safari/537.36',
+      },
+      crypto: { randomUUID: () => '22222222-2222-2222-2222-222222222222' },
+    };
+    const dayOneIdentity = getDeviceSettingsIdentity({
+      browser: dayOneBrowser,
+      storage: createStorage(),
+    });
+    const nextDayIdentity = getDeviceSettingsIdentity({
+      browser: nextDayBrowser,
+      storage: createStorage(),
+    });
+    const settingsMap = buildDeviceSettingsProfileMap({
+      settingsMap: {},
+      identity: dayOneIdentity,
+      patch: { rowHeight: 146, dateFontSize: 18 },
+      updatedAt: '2026-08-21T12:00:00.000Z',
+    });
+
+    assert.notEqual(nextDayIdentity.deviceId, dayOneIdentity.deviceId);
+    assert.notEqual(nextDayIdentity.legacyDeviceId, dayOneIdentity.legacyDeviceId);
+    assert.equal(nextDayIdentity.recoveryDeviceId, dayOneIdentity.recoveryDeviceId);
+    assert.deepEqual(
+      getDeviceSettingsForIdentity(settingsMap, nextDayIdentity),
+      {
+        rowHeight: 146,
+        dateFontSize: 18,
+        updatedAt: '2026-08-21T12:00:00.000Z',
+      }
+    );
+  });
+
+  it('keeps Chrome and Edge recovery aliases separate on the same computer', () => {
+    const chromeBrowser = {
+      ...browser,
+      navigator: {
+        ...browser.navigator,
+        platform: 'Win32',
+        userAgent: 'Mozilla/5.0 Chrome/140.0.0.0 Safari/537.36',
+      },
+    };
+    const edgeBrowser = {
+      ...chromeBrowser,
+      navigator: {
+        ...chromeBrowser.navigator,
+        userAgent: 'Mozilla/5.0 Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0',
+      },
+    };
+
+    assert.notEqual(
+      getStableRecoveryDeviceFingerprint(chromeBrowser),
+      getStableRecoveryDeviceFingerprint(edgeBrowser)
+    );
   });
 
   for (const [browserName, userAgent] of [

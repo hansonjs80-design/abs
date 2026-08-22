@@ -3843,7 +3843,7 @@
   background: rgba(255, 255, 255, 0.92);
   color: var(--text-primary, #1f2937);
   cursor: pointer;
-  font-size: 0.71rem;
+  font-size: 0.80rem;
   font-weight: 800;
   line-height: 1;
   white-space: nowrap;
@@ -3919,7 +3919,7 @@
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.18);
   color: var(--text-secondary, #64748b);
-  font-size: 0.64rem;
+  font-size: 0.80rem;
   font-variant-numeric: tabular-nums;
   line-height: 1;
   text-align: center;

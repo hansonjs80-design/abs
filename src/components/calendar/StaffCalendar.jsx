@@ -17,6 +17,7 @@ import { isAdminUser } from '../../lib/authPermissions';
 import {
   STAFF_CALENDAR_DEVICE_SETTING_KEYS,
   flushPendingStaffCalendarDeviceSettings,
+  mergeStaffCalendarDeviceSettingsForBackup,
   readLocalStaffCalendarDeviceSettings,
   syncLoadStaffCalendarDeviceSettings,
   syncSaveStaffCalendarDeviceSettings,
@@ -257,6 +258,13 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
       applySettings: (settings) => {
         if (active) applyStaffDeviceSettings(settings);
       },
+    }).then((remoteSettings) => {
+      if (!active || !remoteSettings) return;
+      const completeProfile = mergeStaffCalendarDeviceSettingsForBackup(
+        remoteSettings,
+        localSnapshot
+      );
+      syncSaveStaffCalendarDeviceSettings(completeProfile);
     }).finally(() => {
       if (active) setIsDeviceSettingsReady(true);
     });

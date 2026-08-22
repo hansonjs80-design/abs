@@ -328,16 +328,25 @@ export function buildPatientHistoryLogGroups({
     .filter(Boolean);
 }
 
+const PATIENT_HISTORY_BASE_COLUMN_WIDTHS = [3.98, 12.42, 7.44, 11.73, 27.29, 21.83, 5.12, 6.56, 3.63];
+const PATIENT_HISTORY_APPLY_COLUMN_SCALE = 1.1;
+const PATIENT_HISTORY_COLUMN_WIDTH_SCALE = (
+  PATIENT_HISTORY_BASE_COLUMN_WIDTHS.slice(0, -1).reduce((sum, width) => sum + width, 0)
+  + PATIENT_HISTORY_BASE_COLUMN_WIDTHS.at(-1) * PATIENT_HISTORY_APPLY_COLUMN_SCALE
+) / 100;
+
 export function getPatientHistoryModalLayout(groupCount) {
   if (groupCount >= 2) {
     return {
-      maxWidth: 1534,
+      maxWidth: Math.ceil(1534 * PATIENT_HISTORY_COLUMN_WIDTH_SCALE),
       width: '100%',
       gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
     };
   }
   return {
-    maxWidth: groupCount === 1 ? 780 : 580,
+    maxWidth: groupCount === 1
+      ? Math.ceil(780 * PATIENT_HISTORY_COLUMN_WIDTH_SCALE)
+      : 580,
     width: groupCount === 1 ? '85%' : '80%',
     gridTemplateColumns: 'minmax(0, 1fr)',
   };
@@ -345,7 +354,13 @@ export function getPatientHistoryModalLayout(groupCount) {
 
 export function getPatientHistoryColumnWidths(groupCount) {
   void groupCount;
-  return ['3.98%', '12.42%', '7.44%', '11.73%', '27.29%', '21.83%', '5.12%', '6.56%', '3.63%'];
+  const expandedWidths = PATIENT_HISTORY_BASE_COLUMN_WIDTHS.map((width, index) => (
+    index === PATIENT_HISTORY_BASE_COLUMN_WIDTHS.length - 1
+      ? width * PATIENT_HISTORY_APPLY_COLUMN_SCALE
+      : width
+  ));
+  const totalWidth = expandedWidths.reduce((sum, width) => sum + width, 0);
+  return expandedWidths.map((width) => `${(width / totalWidth) * 100}%`);
 }
 
 export function buildShockwaveHoverTooltipText({

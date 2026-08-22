@@ -5,6 +5,7 @@ import {
   STAFF_CALENDAR_DEVICE_SETTING_KEYS,
   STAFF_CALENDAR_PROFILE_STORAGE_KEY,
   buildStaffCalendarDeviceSettingsMap,
+  mergeStaffCalendarDeviceSettingsForBackup,
   normalizeStaffCalendarDeviceSettings,
   normalizeStaffCalendarDeviceSettingsPatch,
   persistLocalStaffCalendarDeviceSettingsPatch,
@@ -138,6 +139,31 @@ test('persists every desktop table and font-weight setting locally', () => {
   assert.ok(storage.getItem(STAFF_CALENDAR_PROFILE_STORAGE_KEY));
 });
 
+test('backs up a complete restored profile while keeping newer local fields authoritative', () => {
+  const merged = mergeStaffCalendarDeviceSettingsForBackup(
+    {
+      colWidth: 184,
+      rowHeight: 132,
+      dateFontSize: 16,
+      weekdayFontWeight: 800,
+      updatedAt: '2026-08-21T12:00:00.000Z',
+    },
+    {
+      values: {
+        rowHeight: 148,
+        dateFontSize: 18,
+      },
+    }
+  );
+
+  assert.deepEqual(merged, {
+    colWidth: 184,
+    rowHeight: 148,
+    dateFontSize: 18,
+    weekdayFontWeight: 800,
+  });
+});
+
 test('restores the complete staff calendar profile after storage is unavailable and the app restarts', () => {
   const unavailableStorage = {
     getItem() { throw new Error('blocked'); },
@@ -202,6 +228,7 @@ test('backs up one desktop profile under installation and stable device ids', ()
   const identity = {
     deviceId: 'desktop-installation-id',
     legacyDeviceId: 'desktop-stable-id',
+    recoveryDeviceId: 'desktop-versionless-recovery-id',
   };
   const nextMap = buildStaffCalendarDeviceSettingsMap({
     monthlySettings: {
@@ -232,5 +259,6 @@ test('backs up one desktop profile under installation and stable device ids', ()
   };
   assert.deepEqual(nextMap['desktop-installation-id'], expectedDeviceSettings);
   assert.deepEqual(nextMap['desktop-stable-id'], expectedDeviceSettings);
+  assert.deepEqual(nextMap['desktop-versionless-recovery-id'], expectedDeviceSettings);
   assert.deepEqual(nextMap.anotherDevice, { rowHeight: 90 });
 });
