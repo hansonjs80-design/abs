@@ -2119,22 +2119,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     if (targetCell) {
       const normalizedCell = normalizeCellToMergeMaster(targetCell);
       selectSingleCell(normalizedCell, { normalize: false });
-      const targetKey = cellKey(
-        normalizedCell.w,
-        normalizedCell.d,
-        normalizedCell.r,
-        normalizedCell.c
-      );
-      requestAnimationFrame(() => {
-        document.getElementById(`cell-${targetKey}`)?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-          inline: 'center',
-        });
-      });
     }
     setPendingPatientHistoryNavigation(null);
-  }, [cellKey, normalizeCellToMergeMaster, pendingPatientHistoryNavigation, selectSingleCell]);
+  }, [normalizeCellToMergeMaster, pendingPatientHistoryNavigation, selectSingleCell]);
 
   const requestApplyPatientHistoryToCell = useCallback((log) => {
     if (!log) return;

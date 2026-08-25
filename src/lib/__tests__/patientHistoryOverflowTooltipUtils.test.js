@@ -490,7 +490,8 @@ test('patient history date cells expose single-click schedule navigation and sel
   assert.doesNotMatch(shockwaveView, /handlePatientHistoryDateDoubleClick/);
   assert.match(shockwaveView, /targetDate:\s*pendingPatientHistoryNavigation\?\.date \|\| null/);
   assert.match(shockwaveView, /selectSingleCell\(normalizedCell, \{ normalize: false \}\)/);
-  assert.match(shockwaveView, /document\.getElementById\(`cell-\$\{targetKey\}`\)\?\.scrollIntoView/);
+  assert.doesNotMatch(shockwaveView, /document\.getElementById\(`cell-\$\{targetKey\}`\)\?\.scrollIntoView/);
+  assert.match(shockwaveView, /onTargetDateScrolled:\s*handlePatientHistoryDateScrollComplete/);
   assert.match(patientHistoryActions, /scheduler_cell_key:\s*getScheduleRowSchedulerCellKey\(s\)/);
   assert.match(dateCellRule, /cursor:\s*pointer;/);
 });

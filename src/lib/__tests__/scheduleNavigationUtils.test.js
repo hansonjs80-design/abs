@@ -9,6 +9,12 @@ import {
   getScheduleStickyTopOffset,
   getVisibleScheduleWeekIndex,
 } from '../scheduleNavigationUtils.js';
+import { readFile } from 'node:fs/promises';
+
+const scheduleTodayNavigationUrl = new URL(
+  '../../components/shockwave/useScheduleTodayNavigation.js',
+  import.meta.url
+);
 
 test('schedule date navigation resolves the week containing the exact local date', () => {
   const weeks = [
@@ -42,6 +48,14 @@ test('schedule scroll offset falls back safely when the header is unavailable', 
     getScheduleStickyTopOffset({ querySelector: () => null }),
     DEFAULT_SCHEDULE_STICKY_TOP_OFFSET,
   );
+});
+
+test('schedule week navigation preserves horizontal scroll while aligning the week vertically', async () => {
+  const source = await readFile(scheduleTodayNavigationUrl, 'utf8');
+
+  assert.match(source, /const targetTop = Math\.max\(0, getWeekTop\(weekEl\) - topOffset\)/);
+  assert.match(source, /left:\s*window\.scrollX \|\| window\.pageXOffset \|\| 0/);
+  assert.doesNotMatch(source, /scrollToWeek[\s\S]*?left:\s*0,/);
 });
 
 test('schedule wheel shortcut maps upward and downward gestures to adjacent weeks', () => {
