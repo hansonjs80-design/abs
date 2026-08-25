@@ -627,6 +627,7 @@ export default function usePatientHistoryActions({
           const scheduleLog = {
             id: s.id,
             schedule_id: s.id,
+            scheduler_cell_key: getScheduleRowSchedulerCellKey(s),
             date: dateStr,
             patient_name: parsed.patientName || '',
             chart_number: parsed.patientChart || '',
@@ -669,6 +670,7 @@ export default function usePatientHistoryActions({
               memo: scheduleLog.memo,
               therapist_name: scheduleLog.therapist_name,
               schedule_id: scheduleLog.id,
+              scheduler_cell_key: scheduleLog.scheduler_cell_key,
             };
           } else {
             allData.push(scheduleLog);
@@ -698,6 +700,7 @@ export default function usePatientHistoryActions({
           memo: override.memo,
           therapist_name: override.therapist_name,
           schedule_id: override.id,
+          scheduler_cell_key: override.scheduler_cell_key,
         };
       });
 

@@ -251,7 +251,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const [patientHistoryBodyFilters, setPatientHistoryBodyFilters] = useState({});
   const [patientHistoryPrescriptionFilters, setPatientHistoryPrescriptionFilters] = useState({});
   const [pendingPatientHistoryApplyLog, setPendingPatientHistoryApplyLog] = useState(null);
-  const [pendingPatientHistoryNavigationDate, setPendingPatientHistoryNavigationDate] = useState(null);
+  const [pendingPatientHistoryNavigation, setPendingPatientHistoryNavigation] = useState(null);
   const patientHistoryTargetCellRef = useRef(null);
   const deferredPatientHistoryAutoFillRef = useRef(null);
   const selectedPatientHistoryGroupKey = useMemo(() => {
@@ -2100,14 +2100,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     });
   }, [addToast]);
 
-  const handlePatientHistoryDateDoubleClick = useCallback((dateValue) => {
-    const target = getPatientHistoryScheduleNavigationTarget(dateValue);
+  const handlePatientHistoryDateClick = useCallback((log) => {
+    const target = getPatientHistoryScheduleNavigationTarget(log);
     if (!target) {
       addToast('이동할 스케줄 날짜를 확인하지 못했습니다.', 'error');
       return;
     }
 
-    setPendingPatientHistoryNavigationDate(target.date);
+    setPendingPatientHistoryNavigation(target);
     closePatientHistoryModal();
     if (target.year !== currentYear || target.month !== currentMonth) {
       goToMonth(target.year, target.month);
@@ -2115,8 +2115,26 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   }, [addToast, closePatientHistoryModal, currentMonth, currentYear, goToMonth]);
 
   const handlePatientHistoryDateScrollComplete = useCallback(() => {
-    setPendingPatientHistoryNavigationDate(null);
-  }, []);
+    const targetCell = pendingPatientHistoryNavigation?.cell;
+    if (targetCell) {
+      const normalizedCell = normalizeCellToMergeMaster(targetCell);
+      selectSingleCell(normalizedCell, { normalize: false });
+      const targetKey = cellKey(
+        normalizedCell.w,
+        normalizedCell.d,
+        normalizedCell.r,
+        normalizedCell.c
+      );
+      requestAnimationFrame(() => {
+        document.getElementById(`cell-${targetKey}`)?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'center',
+        });
+      });
+    }
+    setPendingPatientHistoryNavigation(null);
+  }, [cellKey, normalizeCellToMergeMaster, pendingPatientHistoryNavigation, selectSingleCell]);
 
   const requestApplyPatientHistoryToCell = useCallback((log) => {
     if (!log) return;
@@ -2724,7 +2742,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     currentYear,
     currentMonth,
     isInitialScrollReady: !isScheduleMonthLoading && !isDeviceSettingsLoading,
-    targetDate: pendingPatientHistoryNavigationDate,
+    targetDate: pendingPatientHistoryNavigation?.date || null,
     onTargetDateScrolled: handlePatientHistoryDateScrollComplete,
     shortcutLabel: shortcutLabels.today,
     setTodayShortcutTooltip,
@@ -4087,8 +4105,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 </td>
                                 <td
                                   className="patient-history-date-cell"
-                                  title={`${log.date} 스케줄 주차로 이동하려면 더블 클릭하세요`}
-                                  onDoubleClick={() => handlePatientHistoryDateDoubleClick(log.date)}
+                                  title={`${log.date} 스케줄 주차로 이동하려면 클릭하세요`}
+                                  onClick={() => handlePatientHistoryDateClick(log)}
                                   style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, whiteSpace: 'nowrap', fontWeight: historyRowFontWeight }}
                                 >
                                   {log.date}

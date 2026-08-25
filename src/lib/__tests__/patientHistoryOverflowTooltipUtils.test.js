@@ -471,17 +471,26 @@ test('patient history data cells stay consistent with a compact apply button lab
   assert.doesNotMatch(shockwaveView, /patient-history-compact-text-cell/);
 });
 
-test('patient history date cells expose the double-click schedule navigation action', async () => {
-  const [shockwaveCss, shockwaveView] = await Promise.all([
+test('patient history date cells expose single-click schedule navigation and selection', async () => {
+  const patientHistoryActionsUrl = new URL(
+    '../../components/shockwave/usePatientHistoryActions.js',
+    import.meta.url
+  );
+  const [shockwaveCss, shockwaveView, patientHistoryActions] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
     readFile(shockwaveViewUrl, 'utf8'),
+    readFile(patientHistoryActionsUrl, 'utf8'),
   ]);
   const dateCellRule = shockwaveCss.match(
     /\.patient-history-table \.patient-history-date-cell\s*\{([^}]*)\}/s
   )?.[1] || '';
 
   assert.match(shockwaveView, /className="patient-history-date-cell"/);
-  assert.match(shockwaveView, /onDoubleClick=\{\(\) => handlePatientHistoryDateDoubleClick\(log\.date\)\}/);
-  assert.match(shockwaveView, /targetDate:\s*pendingPatientHistoryNavigationDate/);
+  assert.match(shockwaveView, /onClick=\{\(\) => handlePatientHistoryDateClick\(log\)\}/);
+  assert.doesNotMatch(shockwaveView, /handlePatientHistoryDateDoubleClick/);
+  assert.match(shockwaveView, /targetDate:\s*pendingPatientHistoryNavigation\?\.date \|\| null/);
+  assert.match(shockwaveView, /selectSingleCell\(normalizedCell, \{ normalize: false \}\)/);
+  assert.match(shockwaveView, /document\.getElementById\(`cell-\$\{targetKey\}`\)\?\.scrollIntoView/);
+  assert.match(patientHistoryActions, /scheduler_cell_key:\s*getScheduleRowSchedulerCellKey\(s\)/);
   assert.match(dateCellRule, /cursor:\s*pointer;/);
 });

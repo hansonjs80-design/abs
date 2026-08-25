@@ -207,7 +207,10 @@ describe('shockwave view patient history model', () => {
   });
 
   it('parses a patient-history date into a local schedule navigation target', () => {
-    const target = getPatientHistoryScheduleNavigationTarget('2026-08-31');
+    const target = getPatientHistoryScheduleNavigationTarget({
+      date: '2026-08-31',
+      scheduler_cell_key: '2026:08:1:2:3:4',
+    });
 
     assert.deepEqual(
       { year: target.year, month: target.month, day: target.day },
@@ -216,6 +219,23 @@ describe('shockwave view patient history model', () => {
     assert.equal(target.date.getFullYear(), 2026);
     assert.equal(target.date.getMonth(), 7);
     assert.equal(target.date.getDate(), 31);
+    assert.deepEqual(target.cell, { w: 1, d: 2, r: 3, c: 4 });
+    assert.deepEqual(
+      getPatientHistoryScheduleNavigationTarget({
+        id: 'draft-2-3-4-5',
+        type: 'draft',
+        date: '2026-08-31',
+        schedule_cell_key: '2-3-4-5',
+      })?.cell,
+      { w: 2, d: 3, r: 4, c: 5 }
+    );
+    assert.equal(
+      getPatientHistoryScheduleNavigationTarget({
+        date: '2026-08-31',
+        scheduler_cell_key: '2026:07:1:2:3:4',
+      })?.cell,
+      null
+    );
     assert.equal(getPatientHistoryScheduleNavigationTarget('2026-02-30'), null);
     assert.equal(getPatientHistoryScheduleNavigationTarget('날짜 없음'), null);
   });

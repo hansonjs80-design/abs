@@ -11,6 +11,7 @@ import {
   splitBodyParts,
 } from '../../lib/schedulerUtils.js';
 import { getPatientHistoryVisitSequenceColors } from '../../lib/patientHistoryVisitSequenceUtils.js';
+import { parseSchedulerCellKey } from '../../lib/schedulerHistoryCandidateUtils.js';
 
 export const PATIENT_HISTORY_GROUPS = [
   { key: 'shockwave', label: '충격파 내역' },
@@ -363,7 +364,11 @@ export function getPatientHistoryColumnWidths(groupCount) {
   return expandedWidths.map((width) => `${(width / totalWidth) * 100}%`);
 }
 
-export function getPatientHistoryScheduleNavigationTarget(dateValue) {
+export function getPatientHistoryScheduleNavigationTarget(logOrDate) {
+  const log = logOrDate && typeof logOrDate === 'object' && !(logOrDate instanceof Date)
+    ? logOrDate
+    : { date: logOrDate };
+  const dateValue = log.date;
   const match = String(dateValue || '').trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:$|T)/);
   if (!match) return null;
 
@@ -379,7 +384,41 @@ export function getPatientHistoryScheduleNavigationTarget(dateValue) {
     || date.getDate() !== day
   ) return null;
 
-  return { date, year, month, day };
+  const toScheduleCell = (value) => {
+    const [w, d, r, c] = value.map(Number);
+    if (![w, d, r, c].every((item) => Number.isInteger(item) && item >= 0)) return null;
+    return { w, d, r, c };
+  };
+  const canonicalCell = parseSchedulerCellKey(log.scheduler_cell_key);
+  let cell = null;
+  if (canonicalCell?.year === year && canonicalCell?.month === month) {
+    cell = toScheduleCell([
+      canonicalCell.week_index,
+      canonicalCell.day_index,
+      canonicalCell.row_index,
+      canonicalCell.col_index,
+    ]);
+  }
+
+  if (!cell) {
+    const directYear = Number(log.year ?? year);
+    const directMonth = Number(log.month ?? month);
+    if (directYear === year && directMonth === month) {
+      cell = toScheduleCell([
+        log.week_index,
+        log.day_index,
+        log.row_index,
+        log.col_index,
+      ]);
+    }
+  }
+
+  if (!cell && (log.type === 'draft' || String(log.id || '').startsWith('draft-'))) {
+    const draftParts = String(log.schedule_cell_key || '').split('-');
+    if (draftParts.length === 4) cell = toScheduleCell(draftParts);
+  }
+
+  return { date, year, month, day, cell };
 }
 
 export function buildShockwaveHoverTooltipText({
