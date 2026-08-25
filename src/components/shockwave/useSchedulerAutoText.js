@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { generateShockwaveCalendar } from '../../lib/calendarUtils';
-import { incrementSessionCount, normalizeNameForMatch } from '../../lib/memoParser';
+import { normalizeNameForMatch } from '../../lib/memoParser';
+import { incrementSessionCount } from '../../lib/scheduleVisitCountUtils';
 import { supabase } from '../../lib/supabaseClient';
 import {
   applyPrescriptionDoseTagToContent,

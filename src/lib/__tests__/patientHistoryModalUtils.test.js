@@ -24,6 +24,7 @@ import {
   patientHistoryIdentityMatches,
   resolvePatientHistorySearchChart,
   resolvePatientHistoryApplyTarget,
+  shouldIncrementPatientHistoryApplyVisit,
 } from '../patientHistoryModalUtils.js';
 
 describe('patient history treatment grouping', () => {
@@ -301,6 +302,33 @@ describe('patient history apply payload', () => {
     assert.equal(update.body_part, 'Lumbar');
   });
 
+  it('increments history apply visits with the same cross-date rule as copy and paste', () => {
+    assert.equal(shouldIncrementPatientHistoryApplyVisit('2026-08-20', '2026-08-21'), true);
+    assert.equal(shouldIncrementPatientHistoryApplyVisit('2026-08-21', '2026-08-21'), false);
+    assert.equal(shouldIncrementPatientHistoryApplyVisit('', '2026-08-21'), false);
+
+    assert.equal(buildPatientHistoryCellUpdate({
+      chart_number: '14634',
+      patient_name: '김보람',
+      visit_count: '3',
+      history_group: 'shockwave',
+    }, {}, { incrementVisitCount: true }).content, '14634/김보람(4)');
+
+    assert.equal(buildPatientHistoryCellUpdate({
+      chart_number: '14634',
+      patient_name: '김보람',
+      visit_count: '*',
+      history_group: 'shockwave',
+    }, {}, { incrementVisitCount: true }).content, '14634/김보람(2)');
+
+    assert.equal(buildPatientHistoryCellUpdate({
+      chart_number: '14634',
+      patient_name: '김보람',
+      visit_count: '-',
+      history_group: 'shockwave',
+    }, {}, { incrementVisitCount: true }).content, '14634/김보람(-)');
+  });
+
   it('keeps special visit markers when applying a selected history row', () => {
     assert.equal(buildPatientHistoryCellUpdate({
       chart_number: '14634',
@@ -369,6 +397,7 @@ describe('patient history apply payload', () => {
       omitPrescription: true,
       omitPrescriptionDoseTag: true,
       resetVisitCount: true,
+      incrementVisitCount: true,
     });
 
     assert.equal(update.content, '13015/한동균(1)');

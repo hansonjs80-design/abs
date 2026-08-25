@@ -1,4 +1,5 @@
 import { has4060Pattern } from './schedulerContentFormat.js';
+import { incrementSessionCount } from './scheduleVisitCountUtils.js';
 import { getScheduleItemTreatmentGroup } from './prescriptionScheduleSettings.js';
 import {
   getMemoListFromMergeSpan,
@@ -269,6 +270,12 @@ export function resolvePatientHistoryApplyTarget(capturedCell, selectedCell) {
   return Object.values(normalized).every(Number.isFinite) ? normalized : null;
 }
 
+export function shouldIncrementPatientHistoryApplyVisit(sourceDate, targetDate) {
+  const source = String(sourceDate || '').trim();
+  const target = String(targetDate || '').trim();
+  return Boolean(source && target && source !== target);
+}
+
 export function buildPatientHistoryCellUpdate(log, currentMemo = {}, options = {}) {
   const chart = String(log?.chart_number || '').trim();
   const name = String(log?.patient_name || '').replace(/\*/g, '').trim();
@@ -295,6 +302,10 @@ export function buildPatientHistoryCellUpdate(log, currentMemo = {}, options = {
     content = `${content}*`;
   } else if (visitCount) {
     content = `${content}(${visitCount})`;
+  }
+
+  if (options.incrementVisitCount && !options.resetVisitCount) {
+    content = incrementSessionCount(content);
   }
 
   return {

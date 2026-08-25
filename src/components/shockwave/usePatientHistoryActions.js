@@ -17,6 +17,7 @@ import {
   patientHistoryIdentityMatches,
   resolvePatientHistorySearchChart,
   resolvePatientHistoryApplyTarget,
+  shouldIncrementPatientHistoryApplyVisit,
 } from '../../lib/patientHistoryModalUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import {
@@ -1435,10 +1436,14 @@ export default function usePatientHistoryActions({
     const currentPrescriptionSet = buildCurrentPrescriptionSet(settings, currentYear, currentMonth);
     const logPrescription = String(log?.prescription || '').trim();
     const shouldOmitPrescription = !isCurrentConfiguredPrescription(logPrescription, currentPrescriptionSet);
+    const targetDayInfo = generateShockwaveCalendar(currentYear, currentMonth, holidays)[w]?.[d];
+    const targetDate = getScheduleDayDateKey(targetDayInfo);
     const cellUpdate = buildPatientHistoryCellUpdate(log, currentMemo, {
       omitPrescription: shouldOmitPrescription,
       omitPrescriptionDoseTag: shouldOmitPrescription,
       resetVisitCount: shouldOmitPrescription,
+      incrementVisitCount: !shouldOmitPrescription
+        && shouldIncrementPatientHistoryApplyVisit(log?.date, targetDate),
     });
     const prescriptionScheduleSettings = getPrescriptionScheduleSettings(settings, currentYear, currentMonth);
 
@@ -1502,6 +1507,7 @@ export default function usePatientHistoryActions({
     cellKey,
     currentYear,
     currentMonth,
+    holidays,
     settings,
     memos,
     baseTimeSlotsLength,

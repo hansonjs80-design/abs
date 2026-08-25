@@ -6,6 +6,7 @@ import { FONT_COLORS, CLINIC_DEPT_MAP } from './constants';
 import { normalizeNameForMatch } from './nameMatchUtils.js';
 export { has4060Pattern, normalize4060StarOrder, strip4060FromContent } from './schedulerContentFormat';
 export { normalizeNameForMatch } from './nameMatchUtils.js';
+export { incrementSessionCount } from './scheduleVisitCountUtils.js';
 
 /**
  * 부서/이름 전용 표기 판별
@@ -170,43 +171,4 @@ export function getMemoShockwaveType(parsed) {
   if (parsed.isMorning) return 'morning';
   if (parsed.isAfternoon) return 'afternoon';
   return null;
-}
-
-/**
- * 충격파 셀 내용의 회수(세션 횟수) 증가
- * 
- * 지원 패턴:
- *   - 1234/이름(3)       → 1234/이름(4)
- *   - 1234/이름*         → 1234/이름(2)   (* = 1회)
- *   - 1234/이름40(3)     → 1234/이름40(4)
- *   - 1234/이름60*       → 1234/이름60(2) (* = 1회)
- *   - 1234/이름(회수없음) → 그대로 반환
- * 
- * @param {string} text - 셀 내용
- * @returns {string} 회수가 1 증가된 셀 내용
- */
-export function incrementSessionCount(text) {
-  const s = String(text || '').trim();
-  if (!s) return s;
-
-  // 패턴: chartNo/name[dose_tag]*(count) 또는 chartNo/name[dose_tag]*
-  // 1) 괄호 안에 숫자가 있는 경우: 1234/이름(3) 또는 1234/이름30(3)
-  const parenMatch = s.match(/^(.+?\/.*?[가-힣a-zA-Z])(\d{2,3})?(\(\d+\))$/);
-  if (parenMatch) {
-    const prefix = parenMatch[1];
-    const suffixDose = parenMatch[2] || '';
-    const count = parseInt(parenMatch[3].replace(/[()]/g, ''), 10);
-    return `${prefix}${suffixDose}(${count + 1})`;
-  }
-
-  // 2) *로 끝나는 경우: 1234/이름* 또는 1234/이름30*  → 1회로 간주 → (2)
-  const starMatch = s.match(/^(.+?\/.*?[가-힣a-zA-Z])(\d{2,3})?(\*+)$/);
-  if (starMatch) {
-    const prefix = starMatch[1];
-    const suffixDose = starMatch[2] || '';
-    return `${prefix}${suffixDose}(2)`;
-  }
-
-  // 매칭 안 되면 그대로 반환
-  return s;
 }

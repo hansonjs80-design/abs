@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { incrementSessionCount } from '../../lib/memoParser';
+import { incrementSessionCount } from '../../lib/scheduleVisitCountUtils';
 import {
   buildMergeSpanWithVisitCopyLink,
   clearVisitCopyLinkFromMergeSpan,
