@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { isSameDate } from '../../lib/calendarUtils';
 import { getScheduleShortcutKey, isMetaEvent } from '../../lib/scheduleKeyboardUtils';
 import {
+  getScheduleWeekIndexForDate,
   getScheduleStickyTopOffset,
   getScheduleWheelWeekDirection,
   getVisibleScheduleWeekIndex,
@@ -24,6 +25,8 @@ export default function useScheduleTodayNavigation({
   currentYear,
   currentMonth,
   isInitialScrollReady = true,
+  targetDate = null,
+  onTargetDateScrolled,
   shortcutLabel,
   setTodayShortcutTooltip,
 }) {
@@ -63,6 +66,23 @@ export default function useScheduleTodayNavigation({
     const weekEl = weekRefs.current[todayWeekIdx];
     return scrollToWeek(weekEl, instant ? 'instant' : 'smooth');
   }, [scrollToWeek, todayWeekIdx, weekRefs]);
+
+  const isTargetScheduleMonth = targetDate instanceof Date
+    && !Number.isNaN(targetDate.getTime())
+    && currentYear === targetDate.getFullYear()
+    && currentMonth === targetDate.getMonth() + 1;
+  const targetWeekIdx = useMemo(
+    () => (isTargetScheduleMonth ? getScheduleWeekIndexForDate(weeks, targetDate) : -1),
+    [isTargetScheduleMonth, targetDate, weeks]
+  );
+
+  const scrollToTargetDateWeek = useCallback((instant = false) => {
+    if (targetWeekIdx < 0 || typeof window === 'undefined') return false;
+    return scrollToWeek(
+      weekRefs.current[targetWeekIdx],
+      instant ? 'instant' : 'smooth'
+    );
+  }, [scrollToWeek, targetWeekIdx, weekRefs]);
 
   const scrollToAdjacentVisibleWeek = useCallback((direction, fromWeekIdx = null) => {
     if (!weeks.length || typeof window === 'undefined') return false;
@@ -203,13 +223,44 @@ export default function useScheduleTodayNavigation({
   }, [scrollToAdjacentVisibleWeek]);
 
   const initialScrollDoneRef = useRef(false);
+  const skipNextMonthAutoScrollRef = useRef(false);
 
   useEffect(() => {
     initialScrollDoneRef.current = false;
   }, [scheduleScrollKey]);
 
   useEffect(() => {
-    if (initialScrollDoneRef.current || !isInitialScrollReady) return undefined;
+    if (!targetDate || !isInitialScrollReady || targetWeekIdx < 0) return undefined;
+
+    let retryCount = 0;
+    let timer = null;
+    const tryTargetScroll = () => {
+      if (scrollToTargetDateWeek()) {
+        initialScrollDoneRef.current = true;
+        skipNextMonthAutoScrollRef.current = true;
+        onTargetDateScrolled?.();
+        return;
+      }
+      if (retryCount < 5) {
+        retryCount += 1;
+        timer = setTimeout(tryTargetScroll, 80);
+      }
+    };
+
+    timer = setTimeout(tryTargetScroll, 50);
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [
+    isInitialScrollReady,
+    onTargetDateScrolled,
+    scrollToTargetDateWeek,
+    targetDate,
+    targetWeekIdx,
+  ]);
+
+  useEffect(() => {
+    if (targetDate || initialScrollDoneRef.current || !isInitialScrollReady) return undefined;
 
     let retryCount = 0;
     let timer = null;
@@ -245,10 +296,14 @@ export default function useScheduleTodayNavigation({
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [isInitialScrollReady, scheduleScrollKey, scrollToTodayWeek, scrollToWeek, shouldAutoScrollToToday, weekRefs]);
+  }, [isInitialScrollReady, scheduleScrollKey, scrollToTodayWeek, scrollToWeek, shouldAutoScrollToToday, targetDate, weekRefs]);
 
   useEffect(() => {
-    if (!initialScrollDoneRef.current || !isInitialScrollReady) return;
+    if (targetDate || !initialScrollDoneRef.current || !isInitialScrollReady) return;
+    if (skipNextMonthAutoScrollRef.current) {
+      skipNextMonthAutoScrollRef.current = false;
+      return;
+    }
     const timer = setTimeout(() => {
       if (shouldAutoScrollToToday) {
         scrollToTodayWeek();
@@ -260,10 +315,11 @@ export default function useScheduleTodayNavigation({
       }
     }, 50);
     return () => clearTimeout(timer);
-  }, [currentYear, currentMonth, isInitialScrollReady, scrollToTodayWeek, scrollToWeek, shouldAutoScrollToToday, weekRefs]);
+  }, [currentYear, currentMonth, isInitialScrollReady, scrollToTodayWeek, scrollToWeek, shouldAutoScrollToToday, targetDate, weekRefs]);
 
   return {
     todayWeekIdx,
+    scrollToTargetDateWeek,
     scrollToTodayWeek,
     updateTodayShortcutTooltip,
   };

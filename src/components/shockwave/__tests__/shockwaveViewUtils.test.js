@@ -8,6 +8,7 @@ import {
   getPatientHistoryFilterWidthWeight,
   getPatientHistoryModalLayout,
   getPatientHistoryPrescriptionColor,
+  getPatientHistoryScheduleNavigationTarget,
   togglePatientHistoryFilterSelection,
 } from '../shockwaveViewUtils.js';
 
@@ -203,6 +204,20 @@ describe('shockwave view patient history model', () => {
       getPatientHistoryPrescriptionColor('색상 미설정', colorMap),
       'var(--text-primary, #1f2937)'
     );
+  });
+
+  it('parses a patient-history date into a local schedule navigation target', () => {
+    const target = getPatientHistoryScheduleNavigationTarget('2026-08-31');
+
+    assert.deepEqual(
+      { year: target.year, month: target.month, day: target.day },
+      { year: 2026, month: 8, day: 31 }
+    );
+    assert.equal(target.date.getFullYear(), 2026);
+    assert.equal(target.date.getMonth(), 7);
+    assert.equal(target.date.getDate(), 31);
+    assert.equal(getPatientHistoryScheduleNavigationTarget('2026-02-30'), null);
+    assert.equal(getPatientHistoryScheduleNavigationTarget('날짜 없음'), null);
   });
 });
 

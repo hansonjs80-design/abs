@@ -363,6 +363,25 @@ export function getPatientHistoryColumnWidths(groupCount) {
   return expandedWidths.map((width) => `${(width / totalWidth) * 100}%`);
 }
 
+export function getPatientHistoryScheduleNavigationTarget(dateValue) {
+  const match = String(dateValue || '').trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:$|T)/);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (year < 1900 || month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+  const date = new Date(year, month - 1, day);
+  if (
+    date.getFullYear() !== year
+    || date.getMonth() + 1 !== month
+    || date.getDate() !== day
+  ) return null;
+
+  return { date, year, month, day };
+}
+
 export function buildShockwaveHoverTooltipText({
   hoverCell,
   renderMemos = {},

@@ -3964,6 +3964,16 @@
   vertical-align: middle;
 }
 
+.patient-history-table .patient-history-date-cell {
+  cursor: pointer;
+  user-select: none;
+}
+
+.patient-history-table .patient-history-date-cell:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .patient-history-table .patient-history-therapist-cell {
   font-size: 0.82rem;
 }

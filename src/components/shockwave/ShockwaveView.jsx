@@ -94,6 +94,7 @@ import {
   getPatientHistoryColumnWidths,
   getPatientHistoryModalLayout,
   getPatientHistoryPrescriptionColor,
+  getPatientHistoryScheduleNavigationTarget,
   getPlainTextDefaultRowSpan,
   loadHiddenBodyPartOptionsByPatient,
   normalizeCommittedSchedulerContent,
@@ -134,7 +135,7 @@ import {
 import { normalizeLoadedScheduleMonthKey } from '../../lib/scheduleMonthLoadUtils';
 
 export default function ShockwaveView({ therapists, settings, memos = {}, memosLoadedKey = '', onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
-  const { currentYear, currentMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, monthlyTherapistsByMonth, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings, clipboardRef, clipboardSource, setClipboardSource } = useSchedule();
+  const { currentYear, currentMonth, goToMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, monthlyTherapistsByMonth, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings, clipboardRef, clipboardSource, setClipboardSource } = useSchedule();
   const { addToast } = useToast();
   const { user } = useAuth();
   const canManageSchedulerSettings = isAdminUser(user);
@@ -250,6 +251,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const [patientHistoryBodyFilters, setPatientHistoryBodyFilters] = useState({});
   const [patientHistoryPrescriptionFilters, setPatientHistoryPrescriptionFilters] = useState({});
   const [pendingPatientHistoryApplyLog, setPendingPatientHistoryApplyLog] = useState(null);
+  const [pendingPatientHistoryNavigationDate, setPendingPatientHistoryNavigationDate] = useState(null);
   const patientHistoryTargetCellRef = useRef(null);
   const deferredPatientHistoryAutoFillRef = useRef(null);
   const selectedPatientHistoryGroupKey = useMemo(() => {
@@ -2098,6 +2100,24 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     });
   }, [addToast]);
 
+  const handlePatientHistoryDateDoubleClick = useCallback((dateValue) => {
+    const target = getPatientHistoryScheduleNavigationTarget(dateValue);
+    if (!target) {
+      addToast('이동할 스케줄 날짜를 확인하지 못했습니다.', 'error');
+      return;
+    }
+
+    setPendingPatientHistoryNavigationDate(target.date);
+    closePatientHistoryModal();
+    if (target.year !== currentYear || target.month !== currentMonth) {
+      goToMonth(target.year, target.month);
+    }
+  }, [addToast, closePatientHistoryModal, currentMonth, currentYear, goToMonth]);
+
+  const handlePatientHistoryDateScrollComplete = useCallback(() => {
+    setPendingPatientHistoryNavigationDate(null);
+  }, []);
+
   const requestApplyPatientHistoryToCell = useCallback((log) => {
     if (!log) return;
     setPendingPatientHistoryApplyLog(log);
@@ -2704,6 +2724,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     currentYear,
     currentMonth,
     isInitialScrollReady: !isScheduleMonthLoading && !isDeviceSettingsLoading,
+    targetDate: pendingPatientHistoryNavigationDate,
+    onTargetDateScrolled: handlePatientHistoryDateScrollComplete,
     shortcutLabel: shortcutLabels.today,
     setTodayShortcutTooltip,
   });
@@ -4063,7 +4085,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 >
                                   {idx + 1}
                                 </td>
-                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, whiteSpace: 'nowrap', fontWeight: historyRowFontWeight }}>
+                                <td
+                                  className="patient-history-date-cell"
+                                  title={`${log.date} 스케줄 주차로 이동하려면 더블 클릭하세요`}
+                                  onDoubleClick={() => handlePatientHistoryDateDoubleClick(log.date)}
+                                  style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, whiteSpace: 'nowrap', fontWeight: historyRowFontWeight }}
+                                >
                                   {log.date}
                                   {isCurrentHistoryRow && (
                                     <span style={{ fontSize: '0.82rem', color: 'var(--brand-primary)', display: 'block', marginTop: '2px', fontWeight: 800 }}>현재 셀</span>

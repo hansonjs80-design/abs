@@ -42,6 +42,23 @@ export function getVisibleScheduleWeekIndex(weekTops, anchorY, scrollMetrics = n
   return currentWeekIdx >= 0 ? currentWeekIdx : firstWeekIdx;
 }
 
+export function getScheduleWeekIndexForDate(weeks, targetDate) {
+  if (!Array.isArray(weeks) || !(targetDate instanceof Date) || Number.isNaN(targetDate.getTime())) {
+    return -1;
+  }
+
+  return weeks.findIndex((weekDays) => (
+    Array.isArray(weekDays) && weekDays.some((dayInfo) => {
+      const date = dayInfo?.date;
+      return date instanceof Date
+        && !Number.isNaN(date.getTime())
+        && date.getFullYear() === targetDate.getFullYear()
+        && date.getMonth() === targetDate.getMonth()
+        && date.getDate() === targetDate.getDate();
+    })
+  ));
+}
+
 export function getScheduleStickyTopOffset(documentObject) {
   const resolvedDocument = documentObject
     || (typeof document !== 'undefined' ? document : null);

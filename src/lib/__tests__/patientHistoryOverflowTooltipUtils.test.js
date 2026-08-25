@@ -470,3 +470,18 @@ test('patient history data cells stay consistent with a compact apply button lab
   assert.match(shockwaveView, /fontSize:\s*'0\.82rem'.*?>현재 셀<\/span>/s);
   assert.doesNotMatch(shockwaveView, /patient-history-compact-text-cell/);
 });
+
+test('patient history date cells expose the double-click schedule navigation action', async () => {
+  const [shockwaveCss, shockwaveView] = await Promise.all([
+    readFile(shockwaveCssUrl, 'utf8'),
+    readFile(shockwaveViewUrl, 'utf8'),
+  ]);
+  const dateCellRule = shockwaveCss.match(
+    /\.patient-history-table \.patient-history-date-cell\s*\{([^}]*)\}/s
+  )?.[1] || '';
+
+  assert.match(shockwaveView, /className="patient-history-date-cell"/);
+  assert.match(shockwaveView, /onDoubleClick=\{\(\) => handlePatientHistoryDateDoubleClick\(log\.date\)\}/);
+  assert.match(shockwaveView, /targetDate:\s*pendingPatientHistoryNavigationDate/);
+  assert.match(dateCellRule, /cursor:\s*pointer;/);
+});

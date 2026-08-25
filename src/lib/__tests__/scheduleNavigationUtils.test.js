@@ -4,10 +4,22 @@ import test from 'node:test';
 import {
   DEFAULT_SCHEDULE_STICKY_TOP_OFFSET,
   SCHEDULE_STICKY_HEADER_GAP,
+  getScheduleWeekIndexForDate,
   getScheduleWheelWeekDirection,
   getScheduleStickyTopOffset,
   getVisibleScheduleWeekIndex,
 } from '../scheduleNavigationUtils.js';
+
+test('schedule date navigation resolves the week containing the exact local date', () => {
+  const weeks = [
+    [{ date: new Date(2026, 7, 24) }, { date: new Date(2026, 7, 30) }],
+    [{ date: new Date(2026, 7, 31) }, { date: new Date(2026, 8, 6) }],
+  ];
+
+  assert.equal(getScheduleWeekIndexForDate(weeks, new Date(2026, 7, 31)), 1);
+  assert.equal(getScheduleWeekIndexForDate(weeks, new Date(2026, 8, 7)), -1);
+  assert.equal(getScheduleWeekIndexForDate(weeks, new Date('invalid')), -1);
+});
 
 test('schedule scroll offset follows the rendered sticky header bottom', () => {
   const documentObject = {
