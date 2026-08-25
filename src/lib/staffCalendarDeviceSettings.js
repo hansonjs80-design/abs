@@ -5,6 +5,7 @@ import {
 } from './browserStorageBackup.js';
 import {
   buildDeviceSettingsProfileMap,
+  getDurableDeviceSettingsIdentity,
   getDeviceSettingsForIdentity,
   getDeviceSettingsIdentity,
 } from './deviceSettingsIdentity.js';
@@ -56,6 +57,7 @@ const STAFF_CALENDAR_DEVICE_FIELDS = Object.keys(STAFF_CALENDAR_DEVICE_SETTING_K
 const FONT_WEIGHT_FIELDS = new Set(['dateFontWeight', 'weekdayFontWeight', 'lastRowFontWeight']);
 const FONT_WEIGHT_OPTIONS = new Set([500, 600, 700, 800, 900]);
 const REMOTE_SAVE_DEBOUNCE_MS = 300;
+const REMOTE_SAVE_RETRY_MS = 10000;
 
 function getStorage(storage) {
   if (storage) return storage;
@@ -225,10 +227,12 @@ export function buildStaffCalendarDeviceSettingsMap({
 
 export async function syncLoadStaffCalendarDeviceSettings({ localSnapshot, applySettings } = {}) {
   try {
-    const row = await loadSettingsRow();
+    const [row, identity] = await Promise.all([
+      loadSettingsRow(),
+      getDurableDeviceSettingsIdentity(),
+    ]);
     if (!row) return null;
 
-    const identity = getDeviceSettingsIdentity();
     const deviceSettingsMap = getDeviceSettingsMap(row.monthly_settlement_settings);
     const mySettings = getDeviceSettingsForIdentity(deviceSettingsMap, identity);
     if (!mySettings) return null;
@@ -265,7 +269,7 @@ export async function flushPendingStaffCalendarDeviceSettings() {
   if (Object.keys(patchToSave).length === 0) return null;
 
   try {
-    const identity = getDeviceSettingsIdentity();
+    const identity = await getDurableDeviceSettingsIdentity();
     return await enqueueShockwaveSettingsJsonPatch({
       supabaseClient: supabase,
       scope: 'staff-calendar-device-settings',
@@ -282,6 +286,15 @@ export async function flushPendingStaffCalendarDeviceSettings() {
       },
     });
   } catch (err) {
+    pendingPatch = {
+      ...patchToSave,
+      ...pendingPatch,
+    };
+    if (!backupTimeout) {
+      backupTimeout = setTimeout(() => {
+        void flushPendingStaffCalendarDeviceSettings();
+      }, REMOTE_SAVE_RETRY_MS);
+    }
     console.error('Failed to save staff calendar device settings:', err);
     return null;
   }

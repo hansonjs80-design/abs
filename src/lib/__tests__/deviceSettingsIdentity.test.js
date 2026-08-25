@@ -5,6 +5,7 @@ import {
   buildDeviceSettingsProfileMap,
   DEVICE_SETTINGS_ID_STORAGE_KEY,
   getDeviceSettingsForIdentity,
+  getDurableDeviceSettingsIdentity,
   getDeviceSettingsIdentity,
   getLegacyDeviceFingerprint,
   getStableRecoveryDeviceFingerprint,
@@ -175,6 +176,83 @@ describe('device settings identity', () => {
       getStableRecoveryDeviceFingerprint(chromeBrowser),
       getStableRecoveryDeviceFingerprint(edgeBrowser)
     );
+  });
+
+  it('restores the exact installation id from durable storage after a next-day local reset', async () => {
+    const firstStorage = createStorage();
+    const nextDayStorage = createStorage();
+    const document = createCookieDocument();
+    let durableDeviceId = null;
+    const durableStore = {
+      async read() { return durableDeviceId; },
+      async write(deviceId) { durableDeviceId = deviceId; },
+    };
+    const firstBrowser = {
+      ...browser,
+      document,
+      navigator: {
+        ...browser.navigator,
+        storage: { persist: async () => true },
+      },
+      crypto: { randomUUID: () => '11111111-1111-1111-1111-111111111111' },
+    };
+    const firstIdentity = await getDurableDeviceSettingsIdentity({
+      browser: firstBrowser,
+      storage: firstStorage,
+      durableStore,
+    });
+
+    document.cookie = `${encodeURIComponent(DEVICE_SETTINGS_ID_STORAGE_KEY)}=`;
+    const nextDayBrowser = {
+      ...firstBrowser,
+      crypto: { randomUUID: () => '22222222-2222-2222-2222-222222222222' },
+    };
+    const restoredIdentity = await getDurableDeviceSettingsIdentity({
+      browser: nextDayBrowser,
+      storage: nextDayStorage,
+      durableStore,
+    });
+
+    assert.equal(durableDeviceId, firstIdentity.deviceId);
+    assert.equal(restoredIdentity.deviceId, firstIdentity.deviceId);
+    assert.equal(
+      nextDayStorage.getItem(DEVICE_SETTINGS_ID_STORAGE_KEY),
+      firstIdentity.deviceId
+    );
+  });
+
+  it('keeps identical desktop fingerprints separate when their durable ids differ', async () => {
+    const firstDevice = await getDurableDeviceSettingsIdentity({
+      browser,
+      storage: createStorage(),
+      durableStore: {
+        async read() { return 'dev_exact_desktop_a'; },
+        async write() {},
+      },
+    });
+    const secondDevice = await getDurableDeviceSettingsIdentity({
+      browser,
+      storage: createStorage(),
+      durableStore: {
+        async read() { return 'dev_exact_desktop_b'; },
+        async write() {},
+      },
+    });
+    const settingsMap = {
+      [firstDevice.deviceId]: { colWidth: 171, rowHeight: 124 },
+      [secondDevice.deviceId]: { colWidth: 184, rowHeight: 140 },
+      [firstDevice.recoveryDeviceId]: { colWidth: 145, rowHeight: 114 },
+    };
+
+    assert.equal(firstDevice.recoveryDeviceId, secondDevice.recoveryDeviceId);
+    assert.deepEqual(getDeviceSettingsForIdentity(settingsMap, firstDevice), {
+      colWidth: 171,
+      rowHeight: 124,
+    });
+    assert.deepEqual(getDeviceSettingsForIdentity(settingsMap, secondDevice), {
+      colWidth: 184,
+      rowHeight: 140,
+    });
   });
 
   for (const [browserName, userAgent] of [

@@ -4,6 +4,11 @@ import {
 } from './browserStorageBackup.js';
 
 export const DEVICE_SETTINGS_ID_STORAGE_KEY = 'abs-device-settings-id-v1';
+export const DEVICE_SETTINGS_ID_DATABASE_NAME = 'abs-device-settings-v1';
+
+const DEVICE_SETTINGS_ID_STORE_NAME = 'identity';
+const DEVICE_SETTINGS_ID_RECORD_KEY = 'device-settings-id';
+const DURABLE_IDENTITY_TIMEOUT_MS = 3000;
 
 function hashText(value) {
   let hash = 0;
@@ -87,6 +92,103 @@ function isStoredDeviceSettingsId(value) {
   );
 }
 
+function persistDeviceSettingsId(deviceId, browser, storage) {
+  if (!isStoredDeviceSettingsId(deviceId)) return false;
+  writeStorageValueWithCookieBackup(
+    DEVICE_SETTINGS_ID_STORAGE_KEY,
+    deviceId,
+    storage,
+    browser?.document
+  );
+  return true;
+}
+
+function openDeviceIdentityDatabase(browser) {
+  const indexedDB = browser?.indexedDB;
+  if (!indexedDB?.open) return Promise.resolve(null);
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DEVICE_SETTINGS_ID_DATABASE_NAME, 1);
+    request.onupgradeneeded = () => {
+      const database = request.result;
+      if (!database.objectStoreNames.contains(DEVICE_SETTINGS_ID_STORE_NAME)) {
+        database.createObjectStore(DEVICE_SETTINGS_ID_STORE_NAME);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('기기 식별자 저장소를 열지 못했습니다.'));
+  });
+}
+
+function createIndexedDbDeviceIdentityStore(browser) {
+  if (!browser?.indexedDB?.open) return null;
+  return {
+    async read() {
+      const database = await openDeviceIdentityDatabase(browser);
+      if (!database) return null;
+      try {
+        return await new Promise((resolve, reject) => {
+          const transaction = database.transaction(DEVICE_SETTINGS_ID_STORE_NAME, 'readonly');
+          const request = transaction.objectStore(DEVICE_SETTINGS_ID_STORE_NAME).get(
+            DEVICE_SETTINGS_ID_RECORD_KEY
+          );
+          request.onsuccess = () => resolve(request.result || null);
+          request.onerror = () => reject(request.error || new Error('기기 식별자를 읽지 못했습니다.'));
+        });
+      } finally {
+        database.close();
+      }
+    },
+    async write(deviceId) {
+      const database = await openDeviceIdentityDatabase(browser);
+      if (!database) return;
+      try {
+        await new Promise((resolve, reject) => {
+          const transaction = database.transaction(DEVICE_SETTINGS_ID_STORE_NAME, 'readwrite');
+          transaction.objectStore(DEVICE_SETTINGS_ID_STORE_NAME).put(
+            deviceId,
+            DEVICE_SETTINGS_ID_RECORD_KEY
+          );
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = () => reject(
+            transaction.error || new Error('기기 식별자를 저장하지 못했습니다.')
+          );
+          transaction.onabort = () => reject(
+            transaction.error || new Error('기기 식별자 저장이 중단됐습니다.')
+          );
+        });
+      } finally {
+        database.close();
+      }
+    },
+  };
+}
+
+async function requestPersistentBrowserStorage(browser) {
+  try {
+    await browser?.navigator?.storage?.persist?.();
+  } catch {
+    // The redundant identity copy still works when persistence cannot be granted.
+  }
+}
+
+function withDurableIdentityTimeout(promise) {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error('기기 식별자 복구 시간이 초과됐습니다.'));
+    }, DURABLE_IDENTITY_TIMEOUT_MS);
+    Promise.resolve(promise).then(
+      (value) => {
+        clearTimeout(timeout);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      }
+    );
+  });
+}
+
 export function getDeviceSettingsIdentity({ browser: browserArg, storage: storageArg } = {}) {
   const browser = getBrowserContext(browserArg);
   const legacyDeviceId = getLegacyDeviceFingerprint(browser);
@@ -102,23 +204,50 @@ export function getDeviceSettingsIdentity({ browser: browserArg, storage: storag
     browser.document
   );
   if (isStoredDeviceSettingsId(storedId)) {
-    writeStorageValueWithCookieBackup(
-      DEVICE_SETTINGS_ID_STORAGE_KEY,
-      storedId,
-      storage,
-      browser.document
-    );
+    persistDeviceSettingsId(storedId, browser, storage);
     return { deviceId: storedId, legacyDeviceId, recoveryDeviceId };
   }
 
   const deviceId = createDeviceSettingsId(legacyDeviceId, browser);
-  writeStorageValueWithCookieBackup(
-    DEVICE_SETTINGS_ID_STORAGE_KEY,
-    deviceId,
-    storage,
-    browser.document
-  );
+  persistDeviceSettingsId(deviceId, browser, storage);
   return { deviceId, legacyDeviceId, recoveryDeviceId };
+}
+
+/**
+ * localStorage와 cookie가 시작 시점에 비어 있어도 IndexedDB에 남은 설치 ID를
+ * 먼저 복구합니다. 동일한 화면/브라우저 지문을 가진 여러 데스크톱이 공용
+ * fallback 프로필을 덮어쓰지 않도록 원격 설정을 읽고 쓰기 전에 호출합니다.
+ */
+export async function getDurableDeviceSettingsIdentity({
+  browser: browserArg,
+  storage: storageArg,
+  durableStore: durableStoreArg,
+} = {}) {
+  const browser = getBrowserContext(browserArg);
+  const storage = storageArg || browser?.localStorage;
+  const currentIdentity = getDeviceSettingsIdentity({ browser, storage });
+  if (!browser) return currentIdentity;
+
+  const durableStore = durableStoreArg || createIndexedDbDeviceIdentityStore(browser);
+  if (!durableStore) return currentIdentity;
+
+  try {
+    const durableId = await withDurableIdentityTimeout(durableStore.read());
+    if (isStoredDeviceSettingsId(durableId)) {
+      persistDeviceSettingsId(durableId, browser, storage);
+      await requestPersistentBrowserStorage(browser);
+      return {
+        ...currentIdentity,
+        deviceId: durableId,
+      };
+    }
+
+    await withDurableIdentityTimeout(durableStore.write(currentIdentity.deviceId));
+    await requestPersistentBrowserStorage(browser);
+  } catch {
+    // Continue with the localStorage/cookie identity when IndexedDB is unavailable.
+  }
+  return currentIdentity;
 }
 
 export function getDeviceSettingsForIdentity(settingsMap, identity = getDeviceSettingsIdentity()) {
