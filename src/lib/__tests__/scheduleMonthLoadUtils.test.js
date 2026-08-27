@@ -6,6 +6,8 @@ import {
   collectUniqueScheduleMonthTargets,
   collectVisibleScheduleMonthRows,
   getScheduleRealtimePayloadKind,
+  getStaffScheduleViewKey,
+  isStaffScheduleViewReady,
   normalizeLoadedScheduleMonthKey,
   partitionVisibleScheduleMonthTargets,
   shiftScheduleMonth,
@@ -14,6 +16,13 @@ import {
 } from '../scheduleMonthLoadUtils.js';
 
 describe('schedule month loading priority', () => {
+  it('applies staff schedule colors only after the target view has loaded', () => {
+    assert.equal(getStaffScheduleViewKey(2026, 8, true), '2026-8-adj');
+    assert.equal(isStaffScheduleViewReady('2026-8-adj', 2026, 8, true), true);
+    assert.equal(isStaffScheduleViewReady('2026-7-adj', 2026, 8, true), false);
+    assert.equal(isStaffScheduleViewReady('2026-8-single', 2026, 8, true), false);
+  });
+
   it('stores a preloaded screen only when its complete cache version is still current', () => {
     assert.equal(canStorePreloadedScheduleView({
       expectedVersion: 4,

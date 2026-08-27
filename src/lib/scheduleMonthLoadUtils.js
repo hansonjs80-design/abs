@@ -42,6 +42,23 @@ export function canStorePreloadedScheduleView({
   );
 }
 
+export function getStaffScheduleViewKey(year, month, includeAdjacentMonths = false) {
+  return `${Number(year)}-${Number(month)}-${includeAdjacentMonths ? 'adj' : 'single'}`;
+}
+
+export function isStaffScheduleViewReady(
+  loadedViewKey,
+  year,
+  month,
+  includeAdjacentMonths = false
+) {
+  return loadedViewKey === getStaffScheduleViewKey(
+    year,
+    month,
+    includeAdjacentMonths
+  );
+}
+
 export function collectVisibleScheduleMonthRows(
   targets,
   currentYear,

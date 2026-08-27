@@ -52,6 +52,7 @@ import {
   collectUniqueScheduleMonthTargets,
   collectVisibleScheduleMonthRows,
   getScheduleRealtimePayloadKind,
+  getStaffScheduleViewKey,
   shiftScheduleMonth,
   updateCachedScheduleRowsFromRealtime,
 } from '../lib/scheduleMonthLoadUtils';
@@ -208,6 +209,7 @@ export function ScheduleProvider({ children }) {
   const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth() + 1);
   const [staffMemos, setStaffMemos] = useState({});
+  const [staffMemosLoadedKey, setStaffMemosLoadedKey] = useState('');
   const [holidays, setHolidays] = useState(new Set());
   const [holidayNames, setHolidayNames] = useState(new Map());
   const [therapists, setTherapists] = useState([]);
@@ -264,6 +266,7 @@ export function ScheduleProvider({ children }) {
   const shockwaveRealtimeReloadTimerRef = useRef(null);
   const lastBackgroundRefreshAtRef = useRef(0);
   const staffMemosRef = useRef(staffMemos);
+  const staffMemosLoadedKeyRef = useRef(staffMemosLoadedKey);
   const staffMemoSaveRequestRef = useRef(new Map());
   const staffMemosLoadRequestRef = useRef(0);
   const shockwaveMemosRef = useRef(shockwaveMemos);
@@ -296,6 +299,11 @@ export function ScheduleProvider({ children }) {
   useEffect(() => {
     staffMemosRef.current = staffMemos;
   }, [staffMemos]);
+
+  const setStaffMemosViewLoadedKey = useCallback((key) => {
+    staffMemosLoadedKeyRef.current = key;
+    setStaffMemosLoadedKey(key);
+  }, []);
 
   useEffect(() => {
     shockwaveMemosRef.current = shockwaveMemos;
@@ -752,10 +760,17 @@ export function ScheduleProvider({ children }) {
 
   // 직원 메모 로드 (캐시 키로 중복 방지)
   const loadStaffMemos = useCallback(async (year, month, options = {}) => {
-    const cacheKey = `${year}-${month}-${options.includeAdjacentMonths ? 'adj' : 'single'}`;
+    const cacheKey = getStaffScheduleViewKey(
+      year,
+      month,
+      options.includeAdjacentMonths === true
+    );
     if (!options.force && loadCacheRef.current.staffMemos === cacheKey) return staffMemosRef.current;
     loadCacheRef.current.staffMemos = cacheKey;
     const requestId = ++staffMemosLoadRequestRef.current;
+    if (staffMemosLoadedKeyRef.current !== cacheKey || options.force === true) {
+      setStaffMemosViewLoadedKey('');
+    }
 
     beginLoading();
     try {
@@ -800,28 +815,38 @@ export function ScheduleProvider({ children }) {
         return targetMemoMap;
       }));
 
-      staffMonthResults.forEach((result, index) => {
-        if (result.status === 'fulfilled') {
-          Object.assign(memoMap, result.value || {});
-          return;
+      const failedMonthIndex = staffMonthResults.findIndex((result) => (
+        result.status === 'rejected'
+      ));
+      if (failedMonthIndex >= 0) {
+        const target = targetMonths[failedMonthIndex];
+        console.warn(
+          `Failed to load the complete staff schedule view at ${target.year}-${target.month}.`,
+          staffMonthResults[failedMonthIndex].reason
+        );
+        if (staffMemosLoadRequestRef.current === requestId) {
+          loadCacheRef.current.staffMemos = null;
         }
-        const target = targetMonths[index];
-        console.warn(`Failed to load staff schedules ${target.year}-${target.month}; continuing with available months.`, result.reason);
+        return null;
+      }
+      staffMonthResults.forEach((result) => {
+        Object.assign(memoMap, result.value || {});
       });
 
       if (loadCacheRef.current.staffMemos !== cacheKey || staffMemosLoadRequestRef.current !== requestId) return memoMap;
-      setStaffMemos(prev => {
-        const nextMemos = { ...prev };
-        targetMonths.forEach(target => {
-          const prefix = `${target.year}-${target.month}-`;
-          Object.keys(nextMemos).forEach(key => {
-            if (key.startsWith(prefix)) {
-              delete nextMemos[key];
-            }
-          });
+      const nextMemos = { ...staffMemosRef.current };
+      targetMonths.forEach(target => {
+        const prefix = `${target.year}-${target.month}-`;
+        Object.keys(nextMemos).forEach(key => {
+          if (key.startsWith(prefix)) {
+            delete nextMemos[key];
+          }
         });
-        return Object.assign(nextMemos, memoMap);
       });
+      Object.assign(nextMemos, memoMap);
+      staffMemosRef.current = nextMemos;
+      setStaffMemos(nextMemos);
+      setStaffMemosViewLoadedKey(cacheKey);
       return memoMap;
     } catch (err) {
       console.error('Failed to load staff memos:', err);
@@ -832,7 +857,7 @@ export function ScheduleProvider({ children }) {
     } finally {
       endLoading();
     }
-  }, [beginLoading, endLoading]);
+  }, [beginLoading, endLoading, setStaffMemosViewLoadedKey]);
 
   // 직원 메모 저장/업데이트
   const saveStaffMemo = useCallback(async (year, month, day, slotIndex, content, fontColor = undefined, bgColor = undefined, textStyle = undefined) => {
@@ -3001,7 +3026,7 @@ export function ScheduleProvider({ children }) {
       currentYear, currentMonth,
       setCurrentYear, setCurrentMonth,
       navigateMonth, goToMonth,
-      staffMemos, loadStaffMemos, saveStaffMemo,
+      staffMemos, staffMemosLoadedKey, loadStaffMemos, saveStaffMemo,
       holidays, holidayNames, loadHolidays,
       therapists, loadTherapists,
       manualTherapists, loadManualTherapists,
