@@ -29,6 +29,19 @@ export function collectUniqueScheduleMonthTargets(...targetGroups) {
   return targets;
 }
 
+export function canStorePreloadedScheduleView({
+  expectedVersion,
+  currentVersion,
+  isComplete,
+  hasRelocations,
+}) {
+  return (
+    Number(expectedVersion) === Number(currentVersion) &&
+    isComplete === true &&
+    hasRelocations !== true
+  );
+}
+
 export function collectVisibleScheduleMonthRows(
   targets,
   currentYear,

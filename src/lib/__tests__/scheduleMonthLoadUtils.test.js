@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  canStorePreloadedScheduleView,
   collectUniqueScheduleMonthTargets,
   collectVisibleScheduleMonthRows,
   getScheduleRealtimePayloadKind,
@@ -13,6 +14,33 @@ import {
 } from '../scheduleMonthLoadUtils.js';
 
 describe('schedule month loading priority', () => {
+  it('stores a preloaded screen only when its complete cache version is still current', () => {
+    assert.equal(canStorePreloadedScheduleView({
+      expectedVersion: 4,
+      currentVersion: 4,
+      isComplete: true,
+      hasRelocations: false,
+    }), true);
+    assert.equal(canStorePreloadedScheduleView({
+      expectedVersion: 4,
+      currentVersion: 5,
+      isComplete: true,
+      hasRelocations: false,
+    }), false);
+    assert.equal(canStorePreloadedScheduleView({
+      expectedVersion: 4,
+      currentVersion: 4,
+      isComplete: false,
+      hasRelocations: false,
+    }), false);
+    assert.equal(canStorePreloadedScheduleView({
+      expectedVersion: 4,
+      currentVersion: 4,
+      isComplete: true,
+      hasRelocations: true,
+    }), false);
+  });
+
   it('deduplicates the current and neighboring view months for background preloading', () => {
     assert.deepEqual(collectUniqueScheduleMonthTargets(
       [
