@@ -9,7 +9,10 @@ import {
   loadStatsMonthlyTherapists,
 } from '../../lib/statsScheduleSourceUtils';
 import { normalizePrescriptionGroupKey } from '../../lib/prescriptionScheduleSettings';
-import { isDisplayedStatsMonth } from '../../lib/statsSectionLoadingUtils';
+import {
+  isDisplayedStatsMonth,
+  loadStatsMonthsWithConcurrency,
+} from '../../lib/statsSectionLoadingUtils';
 
 export default function ManualTherapySixMonthStats({
   currentYear,
@@ -58,13 +61,11 @@ export default function ManualTherapySixMonthStats({
 
     const syncRecentMonthsFromSchedule = async () => {
       try {
-        setIsLoading(true);
-        const targets = getRecentScheduleMonthTargets({ currentYear, currentMonth, recentPeriodMonths });
+        const targets = getRecentScheduleMonthTargets({ currentYear, currentMonth, recentPeriodMonths })
+          .filter((target) => !isDisplayedStatsMonth(target, currentYear, currentMonth));
 
-        for (const target of targets) {
-          if (cancelled) return;
-          if (isDisplayedStatsMonth(target, currentYear, currentMonth)) continue;
-
+        await loadStatsMonthsWithConcurrency(targets, async (target) => {
+          if (cancelled) return null;
           const [targetMemos, targetMonthlyTherapists] = await Promise.all([
             loadScheduleMemosForStatsMonth({
               year: target.year,
@@ -80,7 +81,7 @@ export default function ManualTherapySixMonthStats({
           ]);
 
           if (cancelled) return;
-          await syncMonthManualTherapyScheduleToStats({
+          return syncMonthManualTherapyScheduleToStats({
             year: target.year,
             month: target.month,
             memos: targetMemos,
@@ -92,14 +93,12 @@ export default function ManualTherapySixMonthStats({
             emitEvent: false,
             replaceExistingMonthLogs: true,
           });
-        }
+        }, 2);
 
         if (!cancelled) setRefreshKey((value) => value + 1);
       } catch (error) {
         console.error('최근 도수치료 통계 자동 동기화 실패:', error);
         recentAutoSyncKeyRef.current = null;
-      } finally {
-        if (!cancelled) setIsLoading(false);
       }
     };
 
@@ -121,7 +120,7 @@ export default function ManualTherapySixMonthStats({
 
         const { data, error } = await supabase
           .from('manual_therapy_patient_logs')
-          .select('*')
+          .select('id,date,patient_name,therapist_name,prescription,prescription_count')
           .gte('date', startStr)
           .lt('date', endStr)
           .order('date', { ascending: true });
@@ -156,6 +155,8 @@ export default function ManualTherapySixMonthStats({
       keys.push({
         key: `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`,
         label: `${monthDate.getFullYear()}년 ${String(monthDate.getMonth() + 1).padStart(2, '0')}월`,
+        year: monthDate.getFullYear(),
+        month: monthDate.getMonth() + 1,
       });
     }
     return keys;
@@ -163,28 +164,11 @@ export default function ManualTherapySixMonthStats({
   const selectedMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
 
   const monthlySummaries = useMemo(() => {
-    const base = monthKeys.map((month) => ({
-      ...month,
-      totalCount: 0,
-      amount: 0,
-      newPatientCount: 0,
-    }));
-    const summaryMap = Object.fromEntries(base.map((month) => [month.key, month]));
-    const filterSet = selectedTherapistNames && selectedTherapistNames.length > 0 ? new Set(selectedTherapistNames) : null;
-
-    logs.forEach((log) => {
-      if (filterSet && !filterSet.has(log?.therapist_name)) return;
-      const logDate = new Date(log?.date);
-      if (Number.isNaN(logDate.getTime())) return;
-
-      const monthKey = `${logDate.getFullYear()}-${String(logDate.getMonth() + 1).padStart(2, '0')}`;
-      const target = summaryMap[monthKey];
-      if (!target) return;
-
+    const base = monthKeys.map((month) => {
       const monthSettings = getEffectiveSettlementSettings(
         settings,
-        logDate.getFullYear(),
-        logDate.getMonth() + 1,
+        month.year,
+        month.month,
         'manual_therapy'
       );
       const hiddenPrescriptionSet = new Set(
@@ -204,12 +188,33 @@ export default function ManualTherapySixMonthStats({
           Number(amount) || 0,
         ])
       );
+      return {
+        ...month,
+        totalCount: 0,
+        amount: 0,
+        newPatientCount: 0,
+        hiddenPrescriptionSet,
+        visiblePrescriptionSet,
+        normalizedPriceMap,
+      };
+    });
+    const summaryMap = Object.fromEntries(base.map((month) => [month.key, month]));
+    const filterSet = selectedTherapistNames && selectedTherapistNames.length > 0 ? new Set(selectedTherapistNames) : null;
+
+    logs.forEach((log) => {
+      if (filterSet && !filterSet.has(log?.therapist_name)) return;
+      const monthKey = String(log?.date || '').slice(0, 7);
+      const target = summaryMap[monthKey];
+      if (!target) return;
       const count = Number.parseInt(String(log?.prescription_count ?? '1'), 10) || 1;
       const normalizedPrescription = normalizePrescriptionGroupKey(log?.prescription);
       if (!normalizedPrescription) return;
-      if (hiddenPrescriptionSet.has(normalizedPrescription)) return;
-      if (visiblePrescriptionSet.size > 0 && !visiblePrescriptionSet.has(normalizedPrescription)) return;
-      const unitPrice = normalizedPriceMap[normalizedPrescription] || 0;
+      if (target.hiddenPrescriptionSet.has(normalizedPrescription)) return;
+      if (
+        target.visiblePrescriptionSet.size > 0 &&
+        !target.visiblePrescriptionSet.has(normalizedPrescription)
+      ) return;
+      const unitPrice = target.normalizedPriceMap[normalizedPrescription] || 0;
       const isNewPatient = String(log?.patient_name || '').includes('*');
 
       target.totalCount += count;
@@ -217,7 +222,15 @@ export default function ManualTherapySixMonthStats({
       if (isNewPatient) target.newPatientCount += 1;
     });
 
-    return base;
+    return base.map((summary) => ({
+      key: summary.key,
+      label: summary.label,
+      year: summary.year,
+      month: summary.month,
+      totalCount: summary.totalCount,
+      amount: summary.amount,
+      newPatientCount: summary.newPatientCount,
+    }));
   }, [logs, monthKeys, settings, selectedTherapistNames]);
 
   return (

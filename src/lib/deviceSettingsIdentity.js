@@ -44,7 +44,7 @@ function getBrowserFamily(userAgent) {
   return 'other';
 }
 
-function getPlatformFamily(browser, userAgent) {
+function getLegacyPlatformFamily(browser, userAgent) {
   const explicitPlatform = String(
     browser?.navigator?.userAgentData?.platform || browser?.navigator?.platform || ''
   ).trim().toLowerCase();
@@ -57,6 +57,35 @@ function getPlatformFamily(browser, userAgent) {
   return 'unknown';
 }
 
+function getPlatformFamily(browser, userAgent) {
+  const explicitPlatform = String(
+    browser?.navigator?.userAgentData?.platform || browser?.navigator?.platform || ''
+  ).trim().toLowerCase();
+  const platformText = `${explicitPlatform} ${userAgent}`;
+
+  if (/windows|win32|win64|wow64/i.test(platformText)) return 'windows';
+  if (/mac|macintosh/i.test(platformText)) return 'macos';
+  if (/android/i.test(platformText)) return 'android';
+  if (/iphone|ipad|ipod|ios/i.test(platformText)) return 'ios';
+  if (/linux/i.test(platformText)) return 'linux';
+  return explicitPlatform || 'unknown';
+}
+
+function getLegacyStableRecoveryDeviceFingerprint(browserArg) {
+  const browser = getBrowserContext(browserArg);
+  if (!browser) return 'default-device';
+  try {
+    const userAgent = String(browser.navigator?.userAgent || '');
+    const screenInfo = `${browser.screen.width}x${browser.screen.height}x${browser.screen.colorDepth}`;
+    const browserFamily = getBrowserFamily(userAgent);
+    const platformFamily = getLegacyPlatformFamily(browser, userAgent);
+    const hardwareInfo = `${browser.navigator?.hardwareConcurrency || 0}x${browser.navigator?.deviceMemory || 0}`;
+    return `dev_stable_${hashText(`${screenInfo}-${browserFamily}-${platformFamily}-${hardwareInfo}`)}`;
+  } catch {
+    return 'default-device';
+  }
+}
+
 export function getStableRecoveryDeviceFingerprint(browserArg) {
   const browser = getBrowserContext(browserArg);
   if (!browser) return 'default-device';
@@ -65,11 +94,17 @@ export function getStableRecoveryDeviceFingerprint(browserArg) {
     const screenInfo = `${browser.screen.width}x${browser.screen.height}x${browser.screen.colorDepth}`;
     const browserFamily = getBrowserFamily(userAgent);
     const platformFamily = getPlatformFamily(browser, userAgent);
-    const hardwareInfo = `${browser.navigator?.hardwareConcurrency || 0}x${browser.navigator?.deviceMemory || 0}`;
-    return `dev_stable_${hashText(`${screenInfo}-${browserFamily}-${platformFamily}-${hardwareInfo}`)}`;
+    return `dev_stable_v2_${hashText(`${screenInfo}-${browserFamily}-${platformFamily}`)}`;
   } catch {
     return 'default-device';
   }
+}
+
+function getRecoveryDeviceIds(browser) {
+  return Array.from(new Set([
+    getStableRecoveryDeviceFingerprint(browser),
+    getLegacyStableRecoveryDeviceFingerprint(browser),
+  ].filter(Boolean)));
 }
 
 function createDeviceSettingsId(legacyDeviceId, browser) {
@@ -192,10 +227,11 @@ function withDurableIdentityTimeout(promise) {
 export function getDeviceSettingsIdentity({ browser: browserArg, storage: storageArg } = {}) {
   const browser = getBrowserContext(browserArg);
   const legacyDeviceId = getLegacyDeviceFingerprint(browser);
-  const recoveryDeviceId = getStableRecoveryDeviceFingerprint(browser);
+  const recoveryDeviceIds = getRecoveryDeviceIds(browser);
+  const recoveryDeviceId = recoveryDeviceIds[0];
   const storage = storageArg || browser?.localStorage;
   if (!browser) {
-    return { deviceId: legacyDeviceId, legacyDeviceId, recoveryDeviceId };
+    return { deviceId: legacyDeviceId, legacyDeviceId, recoveryDeviceId, recoveryDeviceIds };
   }
 
   const storedId = readStorageValueWithCookieBackup(
@@ -205,12 +241,12 @@ export function getDeviceSettingsIdentity({ browser: browserArg, storage: storag
   );
   if (isStoredDeviceSettingsId(storedId)) {
     persistDeviceSettingsId(storedId, browser, storage);
-    return { deviceId: storedId, legacyDeviceId, recoveryDeviceId };
+    return { deviceId: storedId, legacyDeviceId, recoveryDeviceId, recoveryDeviceIds };
   }
 
   const deviceId = createDeviceSettingsId(legacyDeviceId, browser);
   persistDeviceSettingsId(deviceId, browser, storage);
-  return { deviceId, legacyDeviceId, recoveryDeviceId };
+  return { deviceId, legacyDeviceId, recoveryDeviceId, recoveryDeviceIds };
 }
 
 /**
@@ -252,10 +288,16 @@ export async function getDurableDeviceSettingsIdentity({
 
 export function getDeviceSettingsForIdentity(settingsMap, identity = getDeviceSettingsIdentity()) {
   if (!settingsMap || typeof settingsMap !== 'object' || Array.isArray(settingsMap)) return null;
-  return settingsMap[identity.deviceId]
-    || settingsMap[identity.legacyDeviceId]
-    || settingsMap[identity.recoveryDeviceId]
-    || null;
+  const candidateIds = Array.from(new Set([
+    identity.deviceId,
+    identity.legacyDeviceId,
+    ...(Array.isArray(identity.recoveryDeviceIds) ? identity.recoveryDeviceIds : []),
+    identity.recoveryDeviceId,
+  ].filter(Boolean)));
+  for (const candidateId of candidateIds) {
+    if (settingsMap[candidateId]) return settingsMap[candidateId];
+  }
+  return null;
 }
 
 /**
@@ -290,13 +332,18 @@ export function buildDeviceSettingsProfileMap({
   if (identity.legacyDeviceId && identity.legacyDeviceId !== identity.deviceId) {
     nextMap[identity.legacyDeviceId] = nextProfile;
   }
-  if (
-    identity.recoveryDeviceId &&
-    identity.recoveryDeviceId !== identity.deviceId &&
-    identity.recoveryDeviceId !== identity.legacyDeviceId
-  ) {
-    nextMap[identity.recoveryDeviceId] = nextProfile;
-  }
+  const recoveryDeviceIds = Array.from(new Set([
+    ...(Array.isArray(identity.recoveryDeviceIds) ? identity.recoveryDeviceIds : []),
+    identity.recoveryDeviceId,
+  ].filter(Boolean)));
+  recoveryDeviceIds.forEach((recoveryDeviceId) => {
+    if (
+      recoveryDeviceId !== identity.deviceId &&
+      recoveryDeviceId !== identity.legacyDeviceId
+    ) {
+      nextMap[recoveryDeviceId] = nextProfile;
+    }
+  });
 
   return nextMap;
 }

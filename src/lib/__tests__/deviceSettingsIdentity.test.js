@@ -155,6 +155,62 @@ describe('device settings identity', () => {
     );
   });
 
+  it('keeps the Windows recovery alias stable across Chromium platform API differences', () => {
+    const legacyPlatformBrowser = {
+      ...browser,
+      navigator: {
+        ...browser.navigator,
+        platform: 'Win32',
+        hardwareConcurrency: 8,
+        deviceMemory: 8,
+        userAgent: 'Mozilla/5.0 Chrome/140.0.0.0 Safari/537.36',
+      },
+    };
+    const clientHintsBrowser = {
+      ...legacyPlatformBrowser,
+      navigator: {
+        ...legacyPlatformBrowser.navigator,
+        platform: '',
+        userAgentData: { platform: 'Windows' },
+        hardwareConcurrency: 4,
+        deviceMemory: undefined,
+      },
+    };
+
+    assert.equal(
+      getStableRecoveryDeviceFingerprint(legacyPlatformBrowser),
+      getStableRecoveryDeviceFingerprint(clientHintsBrowser)
+    );
+  });
+
+  it('restores a profile saved under the previous Windows recovery alias', () => {
+    const windowsBrowser = {
+      ...browser,
+      navigator: {
+        ...browser.navigator,
+        platform: 'Win32',
+        hardwareConcurrency: 8,
+        deviceMemory: 8,
+        userAgent: 'Mozilla/5.0 Chrome/140.0.0.0 Safari/537.36',
+      },
+    };
+    const identity = getDeviceSettingsIdentity({
+      browser: windowsBrowser,
+      storage: createStorage(),
+    });
+    const previousRecoveryId = identity.recoveryDeviceIds.find(
+      (deviceId) => deviceId !== identity.recoveryDeviceId
+    );
+
+    assert.ok(previousRecoveryId);
+    assert.deepEqual(
+      getDeviceSettingsForIdentity({
+        [previousRecoveryId]: { colWidth: 188, rowHeight: 146 },
+      }, identity),
+      { colWidth: 188, rowHeight: 146 }
+    );
+  });
+
   it('keeps Chrome and Edge recovery aliases separate on the same computer', () => {
     const chromeBrowser = {
       ...browser,

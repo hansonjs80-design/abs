@@ -31,7 +31,7 @@ import {
 } from '../../lib/shockwaveStatsCountUtils';
 import {
   isDisplayedStatsMonth,
-  loadStatsMonthsTogether,
+  loadStatsMonthsWithConcurrency,
   shouldKeepStatsSectionMounted,
   shouldPrepareStatsSecondarySections,
 } from '../../lib/statsSectionLoadingUtils';
@@ -134,7 +134,6 @@ export default function ShockwaveStatsView({
   const isPrimaryLoading = isLogsLoading || isScheduleLoading || isCurrentSyncing;
   const isLoading = isPrimaryLoading || (activeSection === 'settlement' && isRecentLogsLoading);
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
-  const [recentLogsRefreshKey, setRecentLogsRefreshKey] = useState(0);
   const lastAutoSyncKeyRef = useRef(null);
   const recentAutoSyncKeyRef = useRef(null);
   const currentAutoSyncRunRef = useRef({ key: '', promise: null });
@@ -142,6 +141,7 @@ export default function ShockwaveStatsView({
   const settingsLoadPromiseRef = useRef(null);
   const logsLoadedKeyRef = useRef('');
   const fetchIdRef = useRef(0);
+  const recentFetchIdRef = useRef(0);
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
   const markCurrentLogsReady = useCallback(() => {
     const monthKey = `${currentYear}-${currentMonth}`;
@@ -304,6 +304,38 @@ export default function ShockwaveStatsView({
       }
     }
   }, [currentYear, currentMonth, addToast]);
+
+  const fetchRecentLogs = useCallback(async ({ showLoading = true } = {}) => {
+    const currentFetchId = ++recentFetchIdRef.current;
+    if (showLoading) setIsRecentLogsLoading(true);
+    try {
+      const startDate = new Date(currentYear, currentMonth - recentPeriodMonths, 1);
+      const endDate = new Date(currentYear, currentMonth, 1);
+      const startStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-01`;
+      const endStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-01`;
+      const { data, error } = await supabase
+        .from('shockwave_patient_logs')
+        .select('id,date,patient_name,therapist_name,prescription,prescription_count,source,scheduler_cell_key,created_at')
+        .gte('date', startStr)
+        .lt('date', endStr)
+        .order('date', { ascending: true });
+
+      if (error) throw error;
+      if (currentFetchId !== recentFetchIdRef.current) return null;
+      const nextLogs = Array.isArray(data) ? data : [];
+      setRecentLogs(nextLogs);
+      return nextLogs;
+    } catch (error) {
+      if (currentFetchId === recentFetchIdRef.current) {
+        console.error('최근 충격파 통계 조회 실패:', error);
+      }
+      return null;
+    } finally {
+      if (currentFetchId === recentFetchIdRef.current) {
+        setIsRecentLogsLoading(false);
+      }
+    }
+  }, [currentMonth, currentYear, recentPeriodMonths]);
 
   const syncCurrentMonthFromScheduleSource = useCallback(async ({
     upToToday = true,
@@ -488,7 +520,6 @@ export default function ShockwaveStatsView({
     const handleStatsUpdated = () => {
       if (!active || !isCurrentScheduleReady) return;
       lastAutoSyncKeyRef.current = null;
-      setRecentLogsRefreshKey((value) => value + 1);
       setIsCurrentSyncing(true);
       (async () => {
         try {
@@ -559,6 +590,10 @@ export default function ShockwaveStatsView({
   }, [currentLogsReady, currentMonth, currentYear, safeLogs]);
 
   useEffect(() => {
+    void fetchRecentLogs();
+  }, [fetchRecentLogs]);
+
+  useEffect(() => {
     if (safeTherapists.length === 0) return undefined;
     if (!isCurrentScheduleReady) return undefined;
     if (!currentLogsReady || isCurrentSyncing) return undefined;
@@ -566,16 +601,15 @@ export default function ShockwaveStatsView({
     const therapistKey = safeTherapists
       .map((therapist, index) => `${therapist?.slot_index ?? index}:${therapist?.name || ''}`)
       .join('|');
-    const syncKey = `${currentYear}-${currentMonth}:${recentPeriodMonths}:${therapistKey}:${scheduleLayoutSettingsKey}:${recentLogsRefreshKey}`;
+    const syncKey = `${currentYear}-${currentMonth}:${recentPeriodMonths}:${therapistKey}:${scheduleLayoutSettingsKey}`;
     if (recentAutoSyncKeyRef.current === syncKey) return undefined;
 
     let cancelled = false;
 
     const runRecentSync = async () => {
-      setIsRecentLogsLoading(true);
       const targets = getRecentScheduleMonthTargets({ currentYear, currentMonth, recentPeriodMonths })
         .filter((target) => !isDisplayedStatsMonth(target, currentYear, currentMonth));
-      const monthSources = await loadStatsMonthsTogether(targets, async (target) => {
+      const monthSources = await loadStatsMonthsWithConcurrency(targets, async (target) => {
         const [targetMemos, targetMonthlyTherapists] = await Promise.all([
           loadScheduleMemosForStatsMonth({
             year: target.year,
@@ -591,10 +625,9 @@ export default function ShockwaveStatsView({
         ]);
 
         return { target, targetMemos, targetMonthlyTherapists };
-      });
+      }, 2);
 
-      let sourceRecentLogs = [];
-      for (const { target, targetMemos, targetMonthlyTherapists } of monthSources) {
+      await loadStatsMonthsWithConcurrency(monthSources, async ({ target, targetMemos, targetMonthlyTherapists }) => {
         const syncResult = await syncMonthShockwaveScheduleToStats({
           year: target.year,
           month: target.month,
@@ -608,19 +641,11 @@ export default function ShockwaveStatsView({
           replaceExistingMonthLogs: true,
         });
 
-        const monthLogs = normalizeScheduleSourceLogs(
+        return normalizeScheduleSourceLogs(
           syncResult?.rebuiltRows,
           `shockwave-source:${target.year}-${String(target.month).padStart(2, '0')}`
         );
-        sourceRecentLogs = replaceLogsForStatsMonth(
-          sourceRecentLogs,
-          target.year,
-          target.month,
-          monthLogs
-        );
-      }
-
-      return sourceRecentLogs;
+      }, 2);
     };
 
     let syncPromise = recentAutoSyncRunRef.current.key === syncKey
@@ -630,14 +655,13 @@ export default function ShockwaveStatsView({
     if (!syncPromise) {
       syncPromise = runRecentSync();
       recentAutoSyncRunRef.current = { key: syncKey, promise: syncPromise };
-    } else {
-      setIsRecentLogsLoading(true);
     }
 
     syncPromise
-      .then((nextRecentLogs) => {
+      .then(async () => {
         if (cancelled) return;
-        setRecentLogs(nextRecentLogs || []);
+        await fetchRecentLogs({ showLoading: false });
+        if (cancelled) return;
         recentAutoSyncKeyRef.current = syncKey;
       })
       .catch((error) => {
@@ -649,7 +673,6 @@ export default function ShockwaveStatsView({
         if (recentAutoSyncRunRef.current.promise === syncPromise) {
           recentAutoSyncRunRef.current = { key: '', promise: null };
         }
-        if (!cancelled) setIsRecentLogsLoading(false);
       });
 
     return () => {
@@ -659,8 +682,8 @@ export default function ShockwaveStatsView({
     currentMonth,
     currentYear,
     currentLogsReady,
+    fetchRecentLogs,
     recentPeriodMonths,
-    recentLogsRefreshKey,
     isCurrentSyncing,
     isCurrentScheduleReady,
     safeTherapists,

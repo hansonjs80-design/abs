@@ -229,6 +229,10 @@ test('backs up one desktop profile under installation and stable device ids', ()
     deviceId: 'desktop-installation-id',
     legacyDeviceId: 'desktop-stable-id',
     recoveryDeviceId: 'desktop-versionless-recovery-id',
+    recoveryDeviceIds: [
+      'desktop-versionless-recovery-id',
+      'desktop-legacy-recovery-id',
+    ],
   };
   const nextMap = buildStaffCalendarDeviceSettingsMap({
     monthlySettings: {
@@ -260,5 +264,6 @@ test('backs up one desktop profile under installation and stable device ids', ()
   assert.deepEqual(nextMap['desktop-installation-id'], expectedDeviceSettings);
   assert.deepEqual(nextMap['desktop-stable-id'], expectedDeviceSettings);
   assert.deepEqual(nextMap['desktop-versionless-recovery-id'], expectedDeviceSettings);
+  assert.deepEqual(nextMap['desktop-legacy-recovery-id'], expectedDeviceSettings);
   assert.deepEqual(nextMap.anotherDevice, { rowHeight: 90 });
 });

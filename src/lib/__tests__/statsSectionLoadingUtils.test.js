@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   isDisplayedStatsMonth,
   loadStatsMonthsTogether,
+  loadStatsMonthsWithConcurrency,
   shouldKeepStatsSectionMounted,
   shouldPrepareStatsSecondarySections,
 } from '../statsSectionLoadingUtils.js';
@@ -67,5 +68,22 @@ describe('statistics secondary section preparation', () => {
     finishes.get(6)('June');
 
     assert.deepEqual(await resultPromise, ['May', 'June', 'July']);
+  });
+
+  it('limits expensive month refresh work while preserving result order', async () => {
+    const targets = [{ month: 3 }, { month: 4 }, { month: 5 }, { month: 6 }];
+    let active = 0;
+    let maxActive = 0;
+
+    const result = await loadStatsMonthsWithConcurrency(targets, async (target) => {
+      active += 1;
+      maxActive = Math.max(maxActive, active);
+      await new Promise((resolve) => setTimeout(resolve, target.month % 2 ? 8 : 2));
+      active -= 1;
+      return `${target.month}월`;
+    }, 2);
+
+    assert.equal(maxActive, 2);
+    assert.deepEqual(result, ['3월', '4월', '5월', '6월']);
   });
 });
