@@ -53,6 +53,7 @@ import {
   collectVisibleScheduleMonthRows,
   getScheduleRealtimePayloadKind,
   getStaffScheduleViewKey,
+  isStaffScheduleViewReady,
   shiftScheduleMonth,
   updateCachedScheduleRowsFromRealtime,
 } from '../lib/scheduleMonthLoadUtils';
@@ -768,7 +769,14 @@ export function ScheduleProvider({ children }) {
     if (!options.force && loadCacheRef.current.staffMemos === cacheKey) return staffMemosRef.current;
     loadCacheRef.current.staffMemos = cacheKey;
     const requestId = ++staffMemosLoadRequestRef.current;
-    if (staffMemosLoadedKeyRef.current !== cacheKey || options.force === true) {
+    // 같은 월의 focus/visibility 강제 갱신은 현재 색상을 유지한 채
+    // 백그라운드에서 교체한다. 실제 월이 바뀔 때만 이전 뷰를 숨긴다.
+    if (!isStaffScheduleViewReady(
+      staffMemosLoadedKeyRef.current,
+      year,
+      month,
+      options.includeAdjacentMonths === true
+    )) {
       setStaffMemosViewLoadedKey('');
     }
 

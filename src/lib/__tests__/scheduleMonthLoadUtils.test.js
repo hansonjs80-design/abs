@@ -23,6 +23,13 @@ describe('schedule month loading priority', () => {
     assert.equal(isStaffScheduleViewReady('2026-8-single', 2026, 8, true), false);
   });
 
+  it('keeps the active staff color view ready during a same-month background refresh', () => {
+    const loadedViewKey = getStaffScheduleViewKey(2026, 8, true);
+
+    assert.equal(isStaffScheduleViewReady(loadedViewKey, 2026, 8, true), true);
+    assert.equal(isStaffScheduleViewReady(loadedViewKey, 2026, 9, true), false);
+  });
+
   it('stores a preloaded screen only when its complete cache version is still current', () => {
     assert.equal(canStorePreloadedScheduleView({
       expectedVersion: 4,
