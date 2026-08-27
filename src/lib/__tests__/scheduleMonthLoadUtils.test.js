@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  collectUniqueScheduleMonthTargets,
   collectVisibleScheduleMonthRows,
   getScheduleRealtimePayloadKind,
   normalizeLoadedScheduleMonthKey,
@@ -12,6 +13,32 @@ import {
 } from '../scheduleMonthLoadUtils.js';
 
 describe('schedule month loading priority', () => {
+  it('deduplicates the current and neighboring view months for background preloading', () => {
+    assert.deepEqual(collectUniqueScheduleMonthTargets(
+      [
+        { year: 2026, month: 6 },
+        { year: 2026, month: 7 },
+        { year: 2026, month: 8 },
+      ],
+      [
+        { year: 2026, month: 5 },
+        { year: 2026, month: 6 },
+        { year: 2026, month: 7 },
+      ],
+      [
+        { year: 2026, month: 7 },
+        { year: 2026, month: 8 },
+        { year: 2026, month: 9 },
+      ]
+    ), [
+      { year: 2026, month: 6 },
+      { year: 2026, month: 7 },
+      { year: 2026, month: 8 },
+      { year: 2026, month: 5 },
+      { year: 2026, month: 9 },
+    ]);
+  });
+
   it('separates the displayed month from adjacent visible months', () => {
     const result = partitionVisibleScheduleMonthTargets([
       { year: 2026, month: 6 },

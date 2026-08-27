@@ -53,6 +53,7 @@ export default function ShockwavePage() {
     shockwaveMemos,
     shockwaveMemosLoadedKey,
     loadShockwaveMemos,
+    preloadShockwaveNavigationMonths,
     loadMonthlyTherapists,
     loadVisibleMonthlyTherapists,
     monthlyTherapistLoadKeys,
@@ -110,6 +111,7 @@ export default function ShockwavePage() {
       backgroundTimerId = window.setTimeout(() => {
         if (cancelled) return;
         Promise.allSettled([
+          preloadShockwaveNavigationMonths(currentYear, currentMonth),
           loadStaffMemos(currentYear, currentMonth, { includeAdjacentMonths: true }),
           loadHolidays(currentYear, currentMonth),
           loadVisibleMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
@@ -129,7 +131,7 @@ export default function ShockwavePage() {
         window.clearTimeout(backgroundTimerId);
       }
     };
-  }, [currentYear, currentMonth, loadStaffMemos, loadShockwaveMemos, loadHolidays, loadMonthlyTherapists, loadVisibleMonthlyTherapists, loadAttempt]);
+  }, [currentYear, currentMonth, loadStaffMemos, loadShockwaveMemos, preloadShockwaveNavigationMonths, loadHolidays, loadMonthlyTherapists, loadVisibleMonthlyTherapists, loadAttempt]);
 
   const monthKey = `${currentYear}-${currentMonth}`;
   const monthlyTherapistsReady = monthlyTherapistLoadKeys?.shockwave === monthKey;

@@ -48,6 +48,7 @@ import {
 import { saveMonthlyTherapistConfigs } from '../lib/monthlyTherapistPersistence';
 import { saveTherapistRosterSafely } from '../lib/therapistRosterPersistence';
 import {
+  collectUniqueScheduleMonthTargets,
   collectVisibleScheduleMonthRows,
   getScheduleRealtimePayloadKind,
   shiftScheduleMonth,
@@ -236,6 +237,7 @@ export function ScheduleProvider({ children }) {
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [calendarSlotSettings, setCalendarSlotSettings] = useState(null);
   const loadingCountRef = useRef(0);
+  const shockwaveWriteChainRef = useRef(new Map());
   const shockwaveWriteQueueRef = useRef(new Map());
   const lastWriteTimeRef = useRef(new Map());
   const localShockwaveWriteTimeRef = useRef(new Map());
@@ -382,11 +384,29 @@ export function ScheduleProvider({ children }) {
   const enqueueShockwaveWrite = useCallback((keys, task) => {
     const targetKeys = Array.from(new Set((keys || []).filter(Boolean)));
     const previousWrites = targetKeys
-      .map((key) => shockwaveWriteQueueRef.current.get(key))
+      .map((key) => shockwaveWriteChainRef.current.get(key))
       .filter(Boolean);
     const queuedWrite = Promise
       .allSettled(previousWrites)
       .then(task);
+
+    targetKeys.forEach((key) => shockwaveWriteChainRef.current.set(key, queuedWrite));
+    queuedWrite.then(
+      () => {
+        targetKeys.forEach((key) => {
+          if (shockwaveWriteChainRef.current.get(key) === queuedWrite) {
+            shockwaveWriteChainRef.current.delete(key);
+          }
+        });
+      },
+      () => {
+        targetKeys.forEach((key) => {
+          if (shockwaveWriteChainRef.current.get(key) === queuedWrite) {
+            shockwaveWriteChainRef.current.delete(key);
+          }
+        });
+      }
+    );
 
     // API 호출이 끝난 후 1.2초간 실시간 이벤트를 무시하도록 락을 유지하는 쿨다운 체인 생성
     const cooldownDelayPromise = queuedWrite.then(() => {
@@ -406,7 +426,8 @@ export function ScheduleProvider({ children }) {
   }, []);
 
   const waitForShockwaveWrites = useCallback(async () => {
-    const pendingWrites = Array.from(shockwaveWriteQueueRef.current.values());
+    // 실시간 이벤트 억제용 1.2초 쿨다운이 아니라 실제 저장 작업만 기다린다.
+    const pendingWrites = Array.from(new Set(shockwaveWriteChainRef.current.values()));
     if (pendingWrites.length === 0) return;
     try {
       await withScheduleQueryTimeout(
@@ -1706,13 +1727,11 @@ export function ScheduleProvider({ children }) {
         });
       };
 
-      const cachedRowsSnapshot = collectCachedRows();
-      const rebuiltMemoMap = cachedRowsSnapshot.isComplete
-        ? applyRowsToView(cachedRowsSnapshot.rows)
-        : cachedMemoMap;
-      applyMemoMapIfLatest(rebuiltMemoMap);
+      // 완성된 화면 캐시는 즉시 그대로 사용한다. 원시 행을 다시 조립하면
+      // 데이터가 많은 현재 달로 복귀할 때 같은 화면을 연속 두 번 렌더링하게 된다.
+      applyMemoMapIfLatest(cachedMemoMap);
 
-      const { missingTargets } = cachedRowsSnapshot;
+      const { missingTargets } = collectCachedRows();
       if (missingTargets.length > 0) {
         const viewLoadCacheVersion = shockwaveScheduleCacheVersionRef.current;
         Promise.allSettled(missingTargets.map((target) => loadShockwaveRawMonthRows(target)))
@@ -1749,7 +1768,7 @@ export function ScheduleProvider({ children }) {
           });
       }
 
-      return rebuiltMemoMap;
+      return cachedMemoMap;
     }
     if (!options.force && loadCacheRef.current.shockwaveMemos === cacheKey) {
       setShockwaveMemosLoadedKey(cacheKey);
@@ -1842,6 +1861,37 @@ export function ScheduleProvider({ children }) {
     shockwaveMemoViewLoadPromisesRef.current.set(cacheKey, loadPromise);
     return loadPromise;
   }, [waitForShockwaveWrites, loadShockwaveRawMonthRows, shouldKeepShockwaveMemo, beginLoading, endLoading, reconcileLoadedShockwaveMemosWithLocalWrites, mergeLoadedShockwaveMemosWithLocalRecovery, persistHiddenMergedScheduleRelocation]);
+
+  const preloadShockwaveNavigationMonths = useCallback(async (year, month) => {
+    const previousMonth = shiftScheduleMonth(year, month, -1);
+    const nextMonth = shiftScheduleMonth(year, month, 1);
+    const targets = collectUniqueScheduleMonthTargets(
+      getVisibleShockwaveScheduleMonths(year, month),
+      getVisibleShockwaveScheduleMonths(previousMonth.year, previousMonth.month),
+      getVisibleShockwaveScheduleMonths(nextMonth.year, nextMonth.month)
+    );
+    const missingTargets = targets.filter((target) => (
+      !shockwaveRawMonthRowsCacheRef.current.has(
+        getShockwaveRawMonthCacheKey(target.year, target.month)
+      )
+    ));
+
+    if (missingTargets.length === 0) return [];
+
+    const results = await Promise.allSettled(
+      missingTargets.map((target) => loadShockwaveRawMonthRows(target))
+    );
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        const target = missingTargets[index];
+        console.warn(
+          `Failed to preload shockwave navigation month ${target.year}-${target.month}.`,
+          result.reason
+        );
+      }
+    });
+    return results;
+  }, [loadShockwaveRawMonthRows]);
 
   useEffect(() => {
     loadShockwaveMemosRef.current = loadShockwaveMemos;
@@ -2540,10 +2590,9 @@ export function ScheduleProvider({ children }) {
     const monthResults = await Promise.allSettled(visibleMonths.map(async (target) => {
       const monthKey = `${target.year}-${target.month}`;
       const cached = monthlyTherapistsByMonthRef.current[type]?.[monthKey];
-      if (Array.isArray(cached)) return [monthKey, cached];
+      if (Array.isArray(cached)) return [monthKey, cached, false];
       const rows = await loadMonthlyTherapistRowsShared(target.year, target.month, type);
-      setMonthlyTherapistsMonthCache(target.year, target.month, type, rows);
-      return [monthKey, rows];
+      return [monthKey, rows, true];
     }));
     const loadedEntries = monthResults.flatMap((result, index) => {
       if (result.status === 'fulfilled') return [result.value];
@@ -2558,17 +2607,23 @@ export function ScheduleProvider({ children }) {
       return monthlyTherapistsByMonthRef.current[type] || {};
     }
 
-    monthlyTherapistsByMonthRef.current = {
-      ...monthlyTherapistsByMonthRef.current,
-      [type]: {
-        ...(monthlyTherapistsByMonthRef.current[type] || {}),
-        ...Object.fromEntries(loadedEntries),
-      },
-    };
-    setMonthlyTherapistsByMonth(monthlyTherapistsByMonthRef.current);
-    setMonthlyTherapistVisibleLoadKeys((prev) => ({ ...prev, [type]: visibleKey }));
+    const fetchedEntries = loadedEntries.filter((entry) => entry[2] === true);
+    if (fetchedEntries.length > 0) {
+      monthlyTherapistsByMonthRef.current = {
+        ...monthlyTherapistsByMonthRef.current,
+        [type]: {
+          ...(monthlyTherapistsByMonthRef.current[type] || {}),
+          ...Object.fromEntries(fetchedEntries.map(([monthKey, rows]) => [monthKey, rows])),
+        },
+      };
+      // 인접 월 여러 건을 한 번에 반영해 큰 스케줄 표의 반복 렌더링을 피한다.
+      setMonthlyTherapistsByMonth(monthlyTherapistsByMonthRef.current);
+    }
+    setMonthlyTherapistVisibleLoadKeys((prev) => (
+      prev[type] === visibleKey ? prev : { ...prev, [type]: visibleKey }
+    ));
     return monthlyTherapistsByMonthRef.current[type];
-  }, [loadMonthlyTherapistRowsShared, setMonthlyTherapistsMonthCache]);
+  }, [loadMonthlyTherapistRowsShared]);
 
   // 월별 치료사 설정 저장 (type: 'shockwave' | 'manual_therapy')
   const saveMonthlyTherapists = useCallback(async (year, month, configs, type = 'shockwave') => {
@@ -2792,7 +2847,7 @@ export function ScheduleProvider({ children }) {
       manualTherapists, loadManualTherapists,
       saveTherapistRoster,
       shockwaveSettings, loadShockwaveSettings, saveShockwaveSettings, saveShockwaveDeviceScheduleSettings,
-      shockwaveMemos, shockwaveMemosLoadedKey, loadShockwaveMemos, saveShockwaveMemo, saveShockwaveMemosBulk,
+      shockwaveMemos, shockwaveMemosLoadedKey, loadShockwaveMemos, preloadShockwaveNavigationMonths, saveShockwaveMemo, saveShockwaveMemosBulk,
       monthlyTherapists, monthlyManualTherapists, monthlyTherapistsByMonth, monthlyTherapistLoadKeys, monthlyTherapistVisibleLoadKeys, loadMonthlyTherapists, loadVisibleMonthlyTherapists, saveMonthlyTherapists,
       notices, loadNotices, saveNotice,
       calendarSlotSettings, loadCalendarSlotSettings, saveCalendarSlotSettings,

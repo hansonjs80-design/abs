@@ -11,6 +11,24 @@ export function partitionVisibleScheduleMonthTargets(targets, currentYear, curre
   };
 }
 
+export function collectUniqueScheduleMonthTargets(...targetGroups) {
+  const seen = new Set();
+  const targets = [];
+
+  targetGroups.flat().filter(Boolean).forEach((target) => {
+    const year = Number(target?.year);
+    const month = Number(target?.month);
+    if (!Number.isFinite(year) || !Number.isFinite(month)) return;
+
+    const key = `${year}-${month}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    targets.push({ year, month });
+  });
+
+  return targets;
+}
+
 export function collectVisibleScheduleMonthRows(
   targets,
   currentYear,
