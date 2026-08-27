@@ -1,9 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import {
   isShockwaveScheduleItemVisibleInView,
   removeDeletedShockwaveScheduleItem,
 } from '../../lib/scheduleDraftIdentityUtils.js';
+import {
+  getScheduleImmediateStateMonthKey,
+  scopeScheduleImmediateState,
+} from '../../lib/scheduleImmediateStateUtils.js';
 
 function getUpdateKey(item) {
   if (!item) return '';
@@ -166,12 +170,16 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
   const [pendingMemoOverrides, setPendingMemoOverrides] = useState({});
   const [pendingCellBgColors, setPendingCellBgColors] = useState({});
 
+  const activeMonthKey = getScheduleImmediateStateMonthKey(currentYear, currentMonth);
+  const immediateStateMonthKeyRef = useRef(activeMonthKey);
+
   const pendingDisplayValuesRef = useRef({});
   const pendingMergeSpansRef = useRef({});
   const pendingMemoOverridesRef = useRef({});
   const pendingCellBgColorsRef = useRef({});
 
   const resetImmediateScheduleState = useCallback(() => {
+    immediateStateMonthKeyRef.current = activeMonthKey;
     pendingDisplayValuesRef.current = {};
     pendingMergeSpansRef.current = {};
     pendingMemoOverridesRef.current = {};
@@ -180,7 +188,17 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
     setPendingMergeSpans({});
     setPendingMemoOverrides({});
     setPendingCellBgColors({});
-  }, []);
+  }, [activeMonthKey]);
+
+  // Month navigation can reuse this large component for speed. Keep the
+  // optimistic editing layer owned by the month that created it so an old
+  // cell value or background never appears during the first target-month
+  // render. The layout reset also clears refs before the browser can paint or
+  // accept input for the new month.
+  useLayoutEffect(() => {
+    if (immediateStateMonthKeyRef.current === activeMonthKey) return;
+    resetImmediateScheduleState();
+  }, [activeMonthKey, resetImmediateScheduleState]);
 
   useEffect(() => {
     flushSync(() => {
@@ -466,10 +484,30 @@ export default function useScheduleImmediateState({ memos, setContextMenu, setEd
   }, [memos]);
 
   return {
-    pendingCellBgColors,
-    pendingDisplayValues,
-    pendingMemoOverrides,
-    pendingMergeSpans,
+    pendingCellBgColors: scopeScheduleImmediateState(
+      pendingCellBgColors,
+      immediateStateMonthKeyRef.current,
+      currentYear,
+      currentMonth
+    ),
+    pendingDisplayValues: scopeScheduleImmediateState(
+      pendingDisplayValues,
+      immediateStateMonthKeyRef.current,
+      currentYear,
+      currentMonth
+    ),
+    pendingMemoOverrides: scopeScheduleImmediateState(
+      pendingMemoOverrides,
+      immediateStateMonthKeyRef.current,
+      currentYear,
+      currentMonth
+    ),
+    pendingMergeSpans: scopeScheduleImmediateState(
+      pendingMergeSpans,
+      immediateStateMonthKeyRef.current,
+      currentYear,
+      currentMonth
+    ),
     pendingDisplayValuesRef,
     pendingMergeSpansRef,
     pendingMemoOverridesRef,

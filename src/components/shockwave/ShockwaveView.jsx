@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { useSchedule } from '../../contexts/ScheduleContext';
 
@@ -816,7 +816,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const previousScheduleMonthRef = useRef(
     getShockwaveScheduleScrollKey(currentYear, currentMonth)
   );
-  useEffect(() => {
+  useLayoutEffect(() => {
     const monthKey = getShockwaveScheduleScrollKey(currentYear, currentMonth);
     if (previousScheduleMonthRef.current === monthKey) return;
     previousScheduleMonthRef.current = monthKey;
