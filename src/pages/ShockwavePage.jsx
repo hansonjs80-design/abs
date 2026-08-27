@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSchedule } from '../contexts/ScheduleContext';
 import ShockwaveView from '../components/shockwave/ShockwaveView';
 import {
-  isStaffScheduleViewReady,
+  isScheduleVisualViewReady,
   shouldKeepScheduleMounted,
 } from '../lib/scheduleMonthLoadUtils';
 
@@ -62,8 +62,10 @@ export default function ShockwavePage() {
     loadMonthlyTherapists,
     loadVisibleMonthlyTherapists,
     monthlyTherapistLoadKeys,
+    monthlyTherapistVisibleLoadKeys,
     saveShockwaveMemo,
     holidays,
+    holidaysLoadedKey,
     loadHolidays,
     staffMemos,
     staffMemosLoadedKey,
@@ -94,27 +96,19 @@ export default function ShockwavePage() {
     let cancelled = false;
     let backgroundTimerId = null;
     setLoadError('');
-    Promise.resolve(
-      loadStaffMemos(currentYear, currentMonth, { includeAdjacentMonths: true })
-    ).then((result) => {
-      if (!cancelled && result === null) {
-        console.warn('Shockwave tab staff schedule loader returned no data.');
-      }
-    }).catch((error) => {
-      if (!cancelled) {
-        console.warn('Shockwave tab staff schedule loader failed:', error);
-      }
-    });
     const criticalLoads = Promise.allSettled([
       loadShockwaveMemos(currentYear, currentMonth),
       loadMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
+      loadStaffMemos(currentYear, currentMonth, { includeAdjacentMonths: true }),
+      loadVisibleMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
+      loadHolidays(currentYear, currentMonth),
     ]);
 
     criticalLoads.then((results) => {
       if (cancelled) return;
-      const failed = results.find((result, index) => (
+      const failed = results.find((result) => (
         result.status === 'rejected' ||
-        (index === 0 && result.value === null)
+        result.value === null
       ));
       if (failed) {
         console.error(
@@ -129,8 +123,6 @@ export default function ShockwavePage() {
         if (cancelled) return;
         Promise.allSettled([
           preloadShockwaveNavigationMonths(currentYear, currentMonth),
-          loadHolidays(currentYear, currentMonth),
-          loadVisibleMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
           loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy'),
         ]).then((backgroundResults) => {
           backgroundResults.forEach((result, index) => {
@@ -149,16 +141,15 @@ export default function ShockwavePage() {
     };
   }, [currentYear, currentMonth, loadStaffMemos, loadShockwaveMemos, preloadShockwaveNavigationMonths, loadHolidays, loadMonthlyTherapists, loadVisibleMonthlyTherapists, loadAttempt]);
 
-  const monthKey = `${currentYear}-${currentMonth}`;
-  const monthlyTherapistsReady = monthlyTherapistLoadKeys?.shockwave === monthKey;
-  const shockwaveMemosReady = shockwaveMemosLoadedKey === monthKey;
-  const staffMemosReady = isStaffScheduleViewReady(
+  const currentMonthReady = isScheduleVisualViewReady({
+    year: currentYear,
+    month: currentMonth,
+    shockwaveMemosLoadedKey,
+    monthlyTherapistLoadedKey: monthlyTherapistLoadKeys?.shockwave,
+    visibleTherapistLoadedKey: monthlyTherapistVisibleLoadKeys?.shockwave,
     staffMemosLoadedKey,
-    currentYear,
-    currentMonth,
-    true
-  );
-  const currentMonthReady = monthlyTherapistsReady && shockwaveMemosReady;
+    holidaysLoadedKey,
+  });
   const keepScheduleMounted = shouldKeepScheduleMounted({
     currentMonthReady,
     lastLoadedMonthKey: shockwaveMemosLoadedKey,
@@ -177,7 +168,7 @@ export default function ShockwavePage() {
             onLoadMemos={loadShockwaveMemos}
             onSaveMemo={saveShockwaveMemo}
             holidays={holidays}
-            staffMemos={staffMemosReady ? staffMemos : EMPTY_STAFF_MEMOS}
+            staffMemos={currentMonthReady ? staffMemos : EMPTY_STAFF_MEMOS}
           />
         ) : loadError ? (
           <div style={{ padding: 24 }}>

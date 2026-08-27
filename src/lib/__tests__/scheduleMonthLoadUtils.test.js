@@ -7,6 +7,7 @@ import {
   collectVisibleScheduleMonthRows,
   getScheduleRealtimePayloadKind,
   getStaffScheduleViewKey,
+  isScheduleVisualViewReady,
   isStaffScheduleViewReady,
   normalizeLoadedScheduleMonthKey,
   partitionVisibleScheduleMonthTargets,
@@ -28,6 +29,28 @@ describe('schedule month loading priority', () => {
 
     assert.equal(isStaffScheduleViewReady(loadedViewKey, 2026, 8, true), true);
     assert.equal(isStaffScheduleViewReady(loadedViewKey, 2026, 9, true), false);
+  });
+
+  it('reveals a target month only after every visual schedule layer is ready', () => {
+    const readyView = {
+      year: 2026,
+      month: 8,
+      shockwaveMemosLoadedKey: '2026-8',
+      monthlyTherapistLoadedKey: '2026-8',
+      visibleTherapistLoadedKey: '2026-8',
+      staffMemosLoadedKey: '2026-8-adj',
+      holidaysLoadedKey: '2026-8',
+    };
+
+    assert.equal(isScheduleVisualViewReady(readyView), true);
+    Object.keys(readyView)
+      .filter((key) => key.endsWith('LoadedKey'))
+      .forEach((key) => {
+        assert.equal(isScheduleVisualViewReady({
+          ...readyView,
+          [key]: '',
+        }), false, `${key} must be ready before reveal`);
+      });
   });
 
   it('stores a preloaded screen only when its complete cache version is still current', () => {

@@ -26,9 +26,11 @@
 }
 
 .shockwave-view.is-month-loading .shockwave-week {
-  opacity: 0.16;
+  opacity: 0;
+  visibility: hidden;
   pointer-events: none;
   user-select: none;
+  transition: none;
 }
 
 .shockwave-month-loading {
@@ -87,7 +89,7 @@
   min-width: 1000px; /* 너무 좁아지면 스크롤되도록 최소 너비 유지 */
   position: relative;
   opacity: 1;
-  transition: opacity 140ms ease-out;
+  transition: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

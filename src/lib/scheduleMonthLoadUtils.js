@@ -59,6 +59,25 @@ export function isStaffScheduleViewReady(
   );
 }
 
+export function isScheduleVisualViewReady({
+  year,
+  month,
+  shockwaveMemosLoadedKey,
+  monthlyTherapistLoadedKey,
+  visibleTherapistLoadedKey,
+  staffMemosLoadedKey,
+  holidaysLoadedKey,
+}) {
+  const monthKey = `${Number(year)}-${Number(month)}`;
+  return (
+    shockwaveMemosLoadedKey === monthKey &&
+    monthlyTherapistLoadedKey === monthKey &&
+    visibleTherapistLoadedKey === monthKey &&
+    holidaysLoadedKey === monthKey &&
+    isStaffScheduleViewReady(staffMemosLoadedKey, year, month, true)
+  );
+}
+
 export function collectVisibleScheduleMonthRows(
   targets,
   currentYear,

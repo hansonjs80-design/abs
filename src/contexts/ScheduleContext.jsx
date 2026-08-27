@@ -213,6 +213,7 @@ export function ScheduleProvider({ children }) {
   const [staffMemosLoadedKey, setStaffMemosLoadedKey] = useState('');
   const [holidays, setHolidays] = useState(new Set());
   const [holidayNames, setHolidayNames] = useState(new Map());
+  const [holidaysLoadedKey, setHolidaysLoadedKey] = useState('');
   const [therapists, setTherapists] = useState([]);
   const [manualTherapists, setManualTherapists] = useState([]);
   const [shockwaveSettings, setShockwaveSettings] = useState({
@@ -286,6 +287,7 @@ export function ScheduleProvider({ children }) {
   const noticesLoadRequestRef = useRef(0);
   const noticeSaveRequestRef = useRef(new Map());
   const holidaysLoadRequestRef = useRef(0);
+  const holidaysLoadedKeyRef = useRef(holidaysLoadedKey);
   const calendarSlotSettingsLoadRequestRef = useRef(0);
   const calendarSlotSettingsSaveRequestRef = useRef(0);
   const shockwaveSettingsLoadRequestRef = useRef(0);
@@ -304,6 +306,11 @@ export function ScheduleProvider({ children }) {
   const setStaffMemosViewLoadedKey = useCallback((key) => {
     staffMemosLoadedKeyRef.current = key;
     setStaffMemosLoadedKey(key);
+  }, []);
+
+  const setHolidaysViewLoadedKey = useCallback((key) => {
+    holidaysLoadedKeyRef.current = key;
+    setHolidaysLoadedKey(key);
   }, []);
 
   useEffect(() => {
@@ -932,9 +939,12 @@ export function ScheduleProvider({ children }) {
   // 공휴일 로드
   const loadHolidays = useCallback(async (year, month, options = {}) => {
     const cacheKey = `${year}-${month}`;
-    if (!options.force && loadCacheRef.current.holidays === cacheKey) return;
+    if (!options.force && loadCacheRef.current.holidays === cacheKey) return true;
     loadCacheRef.current.holidays = cacheKey;
     const requestId = ++holidaysLoadRequestRef.current;
+    if (holidaysLoadedKeyRef.current !== cacheKey) {
+      setHolidaysViewLoadedKey('');
+    }
 
     try {
       const prevYear = month === 1 ? year - 1 : year;
@@ -972,13 +982,16 @@ export function ScheduleProvider({ children }) {
       if (loadCacheRef.current.holidays !== cacheKey || holidaysLoadRequestRef.current !== requestId) return;
       setHolidays(holSet);
       setHolidayNames(holNames);
+      setHolidaysViewLoadedKey(cacheKey);
+      return holSet;
     } catch (err) {
       console.error('Failed to load holidays:', err);
       if (holidaysLoadRequestRef.current === requestId) {
         loadCacheRef.current.holidays = null;
       }
+      return null;
     }
-  }, []);
+  }, [setHolidaysViewLoadedKey]);
 
   // 치료사 로드
   const loadTherapists = useCallback(async (options = {}) => {
@@ -3035,7 +3048,7 @@ export function ScheduleProvider({ children }) {
       setCurrentYear, setCurrentMonth,
       navigateMonth, goToMonth,
       staffMemos, staffMemosLoadedKey, loadStaffMemos, saveStaffMemo,
-      holidays, holidayNames, loadHolidays,
+      holidays, holidayNames, holidaysLoadedKey, loadHolidays,
       therapists, loadTherapists,
       manualTherapists, loadManualTherapists,
       saveTherapistRoster,
