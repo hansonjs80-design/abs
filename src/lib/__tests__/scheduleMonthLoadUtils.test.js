@@ -5,6 +5,8 @@ import {
   canStorePreloadedScheduleView,
   collectUniqueScheduleMonthTargets,
   collectVisibleScheduleMonthRows,
+  doesAdjacentScheduleViewCoverMonth,
+  doesStaffScheduleViewCoverMonth,
   getScheduleRealtimePayloadKind,
   getStaffScheduleViewKey,
   isScheduleVisualViewReady,
@@ -31,6 +33,18 @@ describe('schedule month loading priority', () => {
     assert.equal(isStaffScheduleViewReady(loadedViewKey, 2026, 9, true), false);
   });
 
+  it('reuses adjacent visual data for immediate previous and next month navigation', () => {
+    assert.equal(doesAdjacentScheduleViewCoverMonth('2026-8', 2026, 7), true);
+    assert.equal(doesAdjacentScheduleViewCoverMonth('2026-8', 2026, 9), true);
+    assert.equal(doesAdjacentScheduleViewCoverMonth('2026-8', 2026, 10), false);
+    assert.equal(doesAdjacentScheduleViewCoverMonth('2026-12', 2027, 1), true);
+
+    assert.equal(doesStaffScheduleViewCoverMonth('2026-8-adj', 2026, 7), true);
+    assert.equal(doesStaffScheduleViewCoverMonth('2026-8-adj', 2026, 9), true);
+    assert.equal(doesStaffScheduleViewCoverMonth('2026-8-adj', 2026, 10), false);
+    assert.equal(doesStaffScheduleViewCoverMonth('2026-8-single', 2026, 9), false);
+  });
+
   it('reveals a target month only after every visual schedule layer is ready', () => {
     const readyView = {
       year: 2026,
@@ -51,6 +65,22 @@ describe('schedule month loading priority', () => {
           [key]: '',
         }), false, `${key} must be ready before reveal`);
       });
+
+    assert.equal(isScheduleVisualViewReady({
+      ...readyView,
+      year: 2026,
+      month: 9,
+      shockwaveMemosLoadedKey: '2026-9',
+      monthlyTherapistLoadedKey: '2026-9',
+    }), true, 'adjacent auxiliary data should allow an immediate next-month reveal');
+
+    assert.equal(isScheduleVisualViewReady({
+      ...readyView,
+      year: 2026,
+      month: 10,
+      shockwaveMemosLoadedKey: '2026-10',
+      monthlyTherapistLoadedKey: '2026-10',
+    }), false, 'a month outside the prepared range must wait for auxiliary data');
   });
 
   it('stores a preloaded screen only when its complete cache version is still current', () => {

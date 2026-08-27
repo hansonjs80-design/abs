@@ -51,9 +51,10 @@ import {
   canStorePreloadedScheduleView,
   collectUniqueScheduleMonthTargets,
   collectVisibleScheduleMonthRows,
+  doesAdjacentScheduleViewCoverMonth,
+  doesStaffScheduleViewCoverMonth,
   getScheduleRealtimePayloadKind,
   getStaffScheduleViewKey,
-  isStaffScheduleViewReady,
   shiftScheduleMonth,
   updateCachedScheduleRowsFromRealtime,
 } from '../lib/scheduleMonthLoadUtils';
@@ -776,13 +777,12 @@ export function ScheduleProvider({ children }) {
     if (!options.force && loadCacheRef.current.staffMemos === cacheKey) return staffMemosRef.current;
     loadCacheRef.current.staffMemos = cacheKey;
     const requestId = ++staffMemosLoadRequestRef.current;
-    // 같은 월의 focus/visibility 강제 갱신은 현재 색상을 유지한 채
-    // 백그라운드에서 교체한다. 실제 월이 바뀔 때만 이전 뷰를 숨긴다.
-    if (!isStaffScheduleViewReady(
+    // 같은 월의 강제 갱신과 이미 준비된 인접 월 이동은 현재 색상을
+    // 유지한 채 백그라운드에서 교체한다. 준비 범위 밖에서만 숨긴다.
+    if (!doesStaffScheduleViewCoverMonth(
       staffMemosLoadedKeyRef.current,
       year,
-      month,
-      options.includeAdjacentMonths === true
+      month
     )) {
       setStaffMemosViewLoadedKey('');
     }
@@ -942,7 +942,11 @@ export function ScheduleProvider({ children }) {
     if (!options.force && loadCacheRef.current.holidays === cacheKey) return true;
     loadCacheRef.current.holidays = cacheKey;
     const requestId = ++holidaysLoadRequestRef.current;
-    if (holidaysLoadedKeyRef.current !== cacheKey) {
+    if (!doesAdjacentScheduleViewCoverMonth(
+      holidaysLoadedKeyRef.current,
+      year,
+      month
+    )) {
       setHolidaysViewLoadedKey('');
     }
 

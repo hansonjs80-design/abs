@@ -59,6 +59,25 @@ export function isStaffScheduleViewReady(
   );
 }
 
+function getScheduleMonthDistance(leftYear, leftMonth, rightYear, rightMonth) {
+  const left = Number(leftYear) * 12 + (Number(leftMonth) - 1);
+  const right = Number(rightYear) * 12 + (Number(rightMonth) - 1);
+  return Math.abs(left - right);
+}
+
+export function doesAdjacentScheduleViewCoverMonth(loadedViewKey, year, month) {
+  const match = String(loadedViewKey || '').match(/^(\d+)-(\d+)$/);
+  if (!match) return false;
+  return getScheduleMonthDistance(match[1], match[2], year, month) <= 1;
+}
+
+export function doesStaffScheduleViewCoverMonth(loadedViewKey, year, month) {
+  const match = String(loadedViewKey || '').match(/^(\d+)-(\d+)-(adj|single)$/);
+  if (!match) return false;
+  const distance = getScheduleMonthDistance(match[1], match[2], year, month);
+  return match[3] === 'adj' ? distance <= 1 : distance === 0;
+}
+
 export function isScheduleVisualViewReady({
   year,
   month,
@@ -72,9 +91,9 @@ export function isScheduleVisualViewReady({
   return (
     shockwaveMemosLoadedKey === monthKey &&
     monthlyTherapistLoadedKey === monthKey &&
-    visibleTherapistLoadedKey === monthKey &&
-    holidaysLoadedKey === monthKey &&
-    isStaffScheduleViewReady(staffMemosLoadedKey, year, month, true)
+    doesAdjacentScheduleViewCoverMonth(visibleTherapistLoadedKey, year, month) &&
+    doesAdjacentScheduleViewCoverMonth(holidaysLoadedKey, year, month) &&
+    doesStaffScheduleViewCoverMonth(staffMemosLoadedKey, year, month)
   );
 }
 

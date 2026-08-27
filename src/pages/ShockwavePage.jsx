@@ -96,12 +96,22 @@ export default function ShockwavePage() {
     let cancelled = false;
     let backgroundTimerId = null;
     setLoadError('');
-    const criticalLoads = Promise.allSettled([
-      loadShockwaveMemos(currentYear, currentMonth),
-      loadMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
+    const auxiliaryLoads = [
       loadStaffMemos(currentYear, currentMonth, { includeAdjacentMonths: true }),
       loadVisibleMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
       loadHolidays(currentYear, currentMonth),
+    ];
+    Promise.allSettled(auxiliaryLoads).then((results) => {
+      if (cancelled) return;
+      results.forEach((result, index) => {
+        if (result.status === 'rejected' || result.value === null) {
+          console.warn('Shockwave tab auxiliary visual loader failed:', index, result);
+        }
+      });
+    });
+    const criticalLoads = Promise.allSettled([
+      loadShockwaveMemos(currentYear, currentMonth),
+      loadMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
     ]);
 
     criticalLoads.then((results) => {
