@@ -371,6 +371,7 @@ test('patient history escape dismisses cell interaction state before closing the
     shockwaveView,
     /if \(dismissPatientHistoryCellInteraction\(\)\) return;\s*closePatientHistoryModal\(\);/,
   );
+  assert.match(shockwaveView, /if \(patientHistoryModalOpen && e\.key === 'Escape'\) return;/);
   assert.match(cellInteractions, /if \(action === 'close-editor'\)[\s\S]*setContextMenu\(null\);[\s\S]*setActiveContextSubmenu\(null\);/);
   assert.match(cellInteractions, /if \(action === 'clear-clipboard'\)[\s\S]*setClipboardCell\(null\);/);
   assert.match(cellInteractions, /if \(action === 'clear-selection'\)[\s\S]*setSelectedCell\(null\);/);

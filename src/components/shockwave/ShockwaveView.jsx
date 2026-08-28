@@ -99,6 +99,7 @@ import {
   getPlainTextDefaultRowSpan,
   loadHiddenBodyPartOptionsByPatient,
   normalizeCommittedSchedulerContent,
+  resolvePatientHistoryGroupTargetCell,
   saveHiddenBodyPartOptionsByPatient,
   SCHEDULE_INTERNAL_BORDER_COLOR,
   stepContextMenuVisitValue,
@@ -255,8 +256,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const patientHistoryTargetCellRef = useRef(null);
   const deferredPatientHistoryAutoFillRef = useRef(null);
   const selectedPatientHistoryGroupKey = useMemo(() => {
-    if (!selectedCell) return 'shockwave';
-    const key = `${selectedCell.w}-${selectedCell.d}-${selectedCell.r}-${selectedCell.c}`;
+    const groupTargetCell = resolvePatientHistoryGroupTargetCell({
+      modalOpen: patientHistoryModalOpen,
+      capturedCell: patientHistoryTargetCellRef.current,
+      selectedCell,
+    });
+    if (!groupTargetCell) return 'shockwave';
+    const key = `${groupTargetCell.w}-${groupTargetCell.d}-${groupTargetCell.r}-${groupTargetCell.c}`;
     const selectedMemo = effectiveMemos[key] || {};
     const selectedContent = editingCell === key
       ? editValue
@@ -277,6 +283,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     editingCell,
     effectiveMemos,
     pendingDisplayValues,
+    patientHistoryModalOpen,
     selectedCell,
     settings,
   ]);
@@ -715,6 +722,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
 
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
+      if (patientHistoryModalOpen && e.key === 'Escape') return;
       if (clipboardSource && (e.key === 'Escape' || e.key === 'Backspace' || isUndoShortcutEvent(e))) {
         e.preventDefault();
         e.stopPropagation();
@@ -751,7 +759,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       window.removeEventListener('keydown', handleGlobalKeyDown, true);
       document.removeEventListener('keydown', handleGlobalKeyDown, true);
     };
-  }, [doUndo, contextMenu, clipboardSource, setClipboardSource, editingCell, selectedCell, selectedKeys, setEditingCell, setSelectedCell, setSelectedKeys]);
+  }, [doUndo, contextMenu, clipboardSource, patientHistoryModalOpen, setClipboardSource, editingCell, selectedCell, selectedKeys, setEditingCell, setSelectedCell, setSelectedKeys]);
 
   const {
     cellKey,
@@ -2626,7 +2634,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       return;
     }
 
-    // 3. Ctrl/Cmd + . (메모 입력 메뉴 열기)
+    // 3. Ctrl/Cmd + + (메모 입력 메뉴 열기)
     if (isMemoMenuShortcut(e)) {
       e.preventDefault();
       e.stopPropagation();
@@ -3831,6 +3839,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                               ({contextMenuMemoDrafts.length > 0 ? `${contextMenuMemoDrafts.length}개` : '없음'})
                             </span>
                           </span>
+                          <span className="context-menu-shortcut">{shortcutLabels.memo}</span>
                         </div>
                         <div className="context-menu-inline-memo-box">
                           <ContextMenuMemoList

@@ -9,6 +9,7 @@ import {
   getPatientHistoryModalLayout,
   getPatientHistoryPrescriptionColor,
   getPatientHistoryScheduleNavigationTarget,
+  resolvePatientHistoryGroupTargetCell,
   togglePatientHistoryFilterSelection,
 } from '../shockwaveViewUtils.js';
 
@@ -28,6 +29,22 @@ describe('shockwave view patient history model', () => {
     assert.deepEqual(groups[0].logs.map((log) => log.id), ['manual-1']);
     assert.equal(groups[0].totalLogs.length, 2);
     assert.deepEqual(groups[0].activeBodyFilters, ['shoulder']);
+  });
+
+  it('keeps the captured schedule cell as the group-order source while history is open', () => {
+    const capturedCell = { w: 0, d: 1, r: 2, c: 3 };
+    const selectedCell = { w: 1, d: 2, r: 3, c: 4 };
+
+    assert.equal(resolvePatientHistoryGroupTargetCell({
+      modalOpen: true,
+      capturedCell,
+      selectedCell: null,
+    }), capturedCell);
+    assert.equal(resolvePatientHistoryGroupTargetCell({
+      modalOpen: false,
+      capturedCell,
+      selectedCell,
+    }), selectedCell);
   });
 
   it('derives visit sequence colors from the currently visible group rows', () => {

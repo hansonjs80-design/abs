@@ -50,9 +50,10 @@ export function isBodyPartMenuShortcut(event) {
 
 export function isMemoMenuShortcut(event) {
   return isMetaEvent(event) && (
-    event?.code === 'Period' ||
-    event?.code === 'NumpadDecimal' ||
-    event?.key === '.'
+    event?.code === 'Equal' ||
+    event?.code === 'NumpadAdd' ||
+    event?.key === '+' ||
+    event?.key === '='
   );
 }
 

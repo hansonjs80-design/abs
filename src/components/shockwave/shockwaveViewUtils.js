@@ -329,6 +329,15 @@ export function buildPatientHistoryLogGroups({
     .filter(Boolean);
 }
 
+export function resolvePatientHistoryGroupTargetCell({
+  modalOpen = false,
+  capturedCell = null,
+  selectedCell = null,
+} = {}) {
+  if (modalOpen && capturedCell) return capturedCell;
+  return selectedCell;
+}
+
 const PATIENT_HISTORY_BASE_COLUMN_WIDTHS = [3.98, 12.42, 7.44, 11.73, 27.29, 21.83, 5.12, 6.56, 3.63];
 const PATIENT_HISTORY_APPLY_COLUMN_SCALE = 1.1;
 const PATIENT_HISTORY_COLUMN_WIDTH_SCALE = (

@@ -8,6 +8,7 @@ import {
   syncLoadTextSettings,
   syncSaveTextSettings,
 } from '../../lib/schedulerTextSettings';
+import { formatScheduleShortcutLabel } from '../../lib/scheduleKeyboardUtils';
 import { filterPrescriptionColorMap, normalizePrescriptionColorKey } from '../../lib/schedulerUtils';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 
@@ -50,6 +51,7 @@ export default function useScheduleViewState({
       copy: join(mod, 'C'),
       cut: join(mod, 'X'),
       paste: join(mod, 'V'),
+      memo: formatScheduleShortcutLabel('+', mod),
       merge: join(mod, 'G'),
       complete: join(mod, 'S'),
       cancel: join(mod, 'D'),
