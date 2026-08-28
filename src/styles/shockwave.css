@@ -1262,6 +1262,10 @@
   max-width: calc(100vw - 24px);
 }
 
+.shockwave-context-menu.patient-history-context-menu {
+  z-index: 1000001;
+}
+
 .context-menu-action-panel {
   display: contents; /* Grid box 제거, 리스트 형태로 병합되도록 */
 }
@@ -4073,6 +4077,39 @@
   font-size: 0.82rem !important;
   overflow-y: hidden !important;
   resize: none !important;
+}
+
+.patient-history-table .patient-history-data-cell--selectable {
+  position: relative;
+  cursor: cell;
+  outline: none;
+}
+
+.patient-history-table .patient-history-data-cell--selectable .patient-history-edit-field--detail {
+  pointer-events: none;
+  cursor: cell;
+  user-select: none;
+}
+
+.patient-history-table .patient-history-data-cell--selectable.is-selected {
+  z-index: 1;
+  box-shadow: inset 0 0 0 2px #2563eb !important;
+}
+
+.patient-history-table .patient-history-data-cell--selectable.is-selected::after {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 5px;
+  height: 5px;
+  border: 1px solid #ffffff;
+  background: #2563eb;
+  content: '';
+  pointer-events: none;
+}
+
+.patient-history-table .patient-history-data-cell--selectable.is-readonly {
+  cursor: copy;
 }
 
 .patient-history-table .patient-history-edit-field--prescription {

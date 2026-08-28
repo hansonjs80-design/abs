@@ -68,6 +68,7 @@ import PatientHistoryApplyConfirmDialog from './PatientHistoryApplyConfirmDialog
 import PatientHistoryFilters from './PatientHistoryFilters';
 import useContextMenuPositioning from './useContextMenuPositioning';
 import usePatientHistoryActions from './usePatientHistoryActions';
+import usePatientHistoryCellInteractions from './usePatientHistoryCellInteractions';
 import useShockwaveTooltipPositioning from './useShockwaveTooltipPositioning';
 import useSchedulerAutoText from './useSchedulerAutoText';
 import useScheduleClipboardActions from './useScheduleClipboardActions';
@@ -130,7 +131,6 @@ import {
   getNonVisitParentheticalSuffix,
   addBodyPartToMap,
   getScheduleDisplaySlotMinutes,
-  formatBodyPartInput,
 } from '../../lib/schedulerUtils';
 import { normalizeLoadedScheduleMonthKey } from '../../lib/scheduleMonthLoadUtils';
 
@@ -1963,6 +1963,28 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     invalidateCellSavesForPayload,
   });
 
+  const {
+    handlePatientHistoryContextAction,
+    openPatientHistoryCellEditor,
+    selectPatientHistoryCell,
+    selectedPatientHistoryCell,
+  } = usePatientHistoryCellInteractions({
+    modalOpen: patientHistoryModalOpen,
+    logs: patientHistoryModalData.logs,
+    contextMenu,
+    updateModalLog: updatePatientHistoryModalLog,
+    updateHistoryField: handleUpdatePatientHistoryField,
+    updateHistoryMemo: handleUpdatePatientHistoryMemo,
+    addToast,
+    setClipboardSource,
+    setContextMenu,
+    setActiveContextSubmenu,
+    setContextMenuBodyPartOptions,
+    setContextMenuHiddenBodyPartKeys,
+    setContextMenuMemoDrafts,
+    setContextMenuMemoFocusSignal,
+  });
+
   const handleOpenPatientHistoryFromShortcut = useCallback(() => {
     const targetCell = selectedCellRef.current || selectedCell;
     if (targetCell) {
@@ -2150,6 +2172,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation?.();
+      if (contextMenu?.patientHistoryCell) {
+        setContextMenu(null);
+        return;
+      }
       closePatientHistoryModal();
     };
 
@@ -2159,7 +2185,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       window.removeEventListener('keydown', handlePatientHistoryEscape, true);
       document.removeEventListener('keydown', handlePatientHistoryEscape, true);
     };
-  }, [patientHistoryModalOpen, closePatientHistoryModal]);
+  }, [patientHistoryModalOpen, closePatientHistoryModal, contextMenu?.patientHistoryCell]);
 
   useEffect(() => {
     if (!patientHistoryModalOpen) return;
@@ -2214,7 +2240,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     };
   }, [patientHistoryModalOpen]);
 
-  const handleContextAction = useScheduleContextMenuActions({
+  const handleScheduleContextAction = useScheduleContextMenuActions({
     selectedKeys,
     contextMenu,
     memos: effectiveMemos,
@@ -2247,6 +2273,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     applyImmediateMergeSpan,
     clearImmediateCellDisplay,
   });
+
+  const handleContextAction = useCallback(async (action) => {
+    if (contextMenu?.patientHistoryCell) {
+      await handlePatientHistoryContextAction(action);
+      return;
+    }
+    await handleScheduleContextAction(action);
+  }, [contextMenu?.patientHistoryCell, handlePatientHistoryContextAction, handleScheduleContextAction]);
 
   const stepContextMenuVisitInput = useCallback((delta) => {
     const nextValue = stepContextMenuVisitValue(contextMenuVisitInput, delta);
@@ -2721,6 +2755,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   }, [hoverCell, positionTooltip]);
 
   const isScheduleMonthLoading = loadedMemosKey !== scheduleScrollKey;
+  const handleNavigateToTodayMonth = useCallback((targetToday) => {
+    if (!(targetToday instanceof Date) || Number.isNaN(targetToday.getTime())) return;
+    setPendingPatientHistoryNavigation({
+      date: new Date(targetToday.getTime()),
+      cell: null,
+      source: 'today-shortcut',
+    });
+    goToMonth(targetToday.getFullYear(), targetToday.getMonth() + 1);
+  }, [goToMonth]);
   const { todayWeekIdx } = useScheduleTodayNavigation({
     weeks,
     today,
@@ -2731,6 +2774,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     isInitialScrollReady: !isScheduleMonthLoading && !isDeviceSettingsLoading,
     targetDate: pendingPatientHistoryNavigation?.date || null,
     onTargetDateScrolled: handlePatientHistoryDateScrollComplete,
+    onNavigateToTodayMonth: handleNavigateToTodayMonth,
     shortcutLabel: shortcutLabels.today,
     setTodayShortcutTooltip,
   });
@@ -3214,7 +3258,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       {contextMenu && (
         <div
           ref={contextMenuRef}
-          className={`shockwave-context-menu schedule-context-menu ${contextMenu.isNearRightEdge ? 'submenu-pop-left' : ''} ${(contextMenu.isStandaloneSubmenu || contextMenu.isStandaloneBodyPart) ? 'standalone-mode' : ''}`}
+          className={`shockwave-context-menu schedule-context-menu${contextMenu.patientHistoryCell ? ' patient-history-context-menu' : ''} ${contextMenu.isNearRightEdge ? 'submenu-pop-left' : ''} ${(contextMenu.isStandaloneSubmenu || contextMenu.isStandaloneBodyPart) ? 'standalone-mode' : ''}`}
           style={{
             top: contextMenu.y,
             left: contextMenu.x,
@@ -4023,24 +4067,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     : { ...item, prescription: originalValue }
                                 ));
                               };
-                              const handleHistoryBodyPartBlur = async (event) => {
-                                const nextValue = parsePatientHistoryBodyPartText(event.target.value)
-                                  .map((item) => formatBodyPartInput(item))
-                                  .filter(Boolean)
-                                  .join(', ');
-                                const originalValue = log._original_body_part ?? '';
-                                updatePatientHistoryModalLog(historyRowKey, {
-                                  body_part: nextValue,
-                                });
-                                if (nextValue === originalValue) return;
-
-                                const success = await handleUpdatePatientHistoryField(log, 'body_part', nextValue);
-                                updatePatientHistoryModalLog(historyRowKey, (item) => (
-                                  success
-                                    ? { ...item, body_part: nextValue, _original_body_part: nextValue }
-                                    : { ...item, body_part: originalValue }
-                                ));
-                              };
                               const currentBodyPartValue = String(log.body_part || '');
                               const currentBodyPartItems = parsePatientHistoryBodyPartText(currentBodyPartValue);
                               const bodyPartTextareaValue = getPatientHistoryBodyPartText(currentBodyPartValue);
@@ -4059,20 +4085,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 || log.type === 'schedule'
                                 || log.schedule_id
                               );
-                              const handleHistoryMemoBlur = async (event) => {
-                                const nextValue = parsePatientHistoryMemoText(event.target.value).join('\n');
-                                const originalValue = log._original_memo ?? '';
-                                updatePatientHistoryModalLog(historyRowKey, {
-                                  memo: nextValue,
-                                });
-                                if (nextValue === originalValue) return;
-
-                                const success = await handleUpdatePatientHistoryMemo(log, nextValue);
-                                updatePatientHistoryModalLog(historyRowKey, (item) => (
-                                  success
-                                    ? { ...item, memo: nextValue, _original_memo: nextValue }
-                                    : { ...item, memo: originalValue }
-                                ));
+                              const bodyPartHistoryCell = {
+                                id: `${historyRowKey}:body_part`,
+                                rowKey: historyRowKey,
+                                field: 'body_part',
+                                canEdit: true,
+                              };
+                              const memoHistoryCell = {
+                                id: `${historyRowKey}:memo`,
+                                rowKey: historyRowKey,
+                                field: 'memo',
+                                canEdit: canEditHistoryMemo,
                               };
                               return (
                               <tr
@@ -4144,7 +4167,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     ))}
                                   </select>
                                 </td>
-                                <td style={{ textAlign: bodyPartTextAlign, backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
+                                <td
+                                  className={`patient-history-data-cell patient-history-data-cell--selectable${selectedPatientHistoryCell?.id === bodyPartHistoryCell.id ? ' is-selected' : ''}`}
+                                  tabIndex={0}
+                                  aria-selected={selectedPatientHistoryCell?.id === bodyPartHistoryCell.id}
+                                  title="한 번 클릭: 셀 선택 · 두 번 클릭: 부위 편집"
+                                  style={{ textAlign: bodyPartTextAlign, backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }}
+                                  onMouseDown={(event) => event.preventDefault()}
+                                  onClick={(event) => selectPatientHistoryCell(event, bodyPartHistoryCell)}
+                                  onDoubleClick={(event) => openPatientHistoryCellEditor(event, bodyPartHistoryCell)}
+                                >
                                   <PatientHistoryOverflowField
                                     value={formatPatientHistoryOverflowTooltipItems(
                                       currentBodyPartItems,
@@ -4156,7 +4188,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                       rows={bodyPartTextareaRows}
                                       value={bodyPartTextareaValue}
                                       placeholder="부위"
-                                      aria-label="부위 수정"
+                                      aria-label="부위 셀"
+                                      readOnly
+                                      tabIndex={-1}
                                       style={{
                                         ...historyEditFieldStyle,
                                         display: 'block',
@@ -4172,24 +4206,21 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                         whiteSpace: 'pre',
                                         wordBreak: 'normal',
                                       }}
-                                      onChange={(event) => {
-                                        updatePatientHistoryModalLog(historyRowKey, {
-                                          body_part: event.target.value,
-                                        });
-                                      }}
-                                      onBlur={handleHistoryBodyPartBlur}
-                                      onMouseDown={(e) => e.stopPropagation()}
-                                      onClick={(e) => e.stopPropagation()}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                                          e.preventDefault();
-                                          e.currentTarget.blur();
-                                        }
-                                      }}
                                     />
                                   </PatientHistoryOverflowField>
                                 </td>
-                                <td style={{ textAlign: memoTextAlign, backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
+                                <td
+                                  className={`patient-history-data-cell patient-history-data-cell--selectable${selectedPatientHistoryCell?.id === memoHistoryCell.id ? ' is-selected' : ''}${canEditHistoryMemo ? '' : ' is-readonly'}`}
+                                  tabIndex={0}
+                                  aria-selected={selectedPatientHistoryCell?.id === memoHistoryCell.id}
+                                  title={canEditHistoryMemo
+                                    ? '한 번 클릭: 셀 선택 · 두 번 클릭: 메모 편집'
+                                    : '한 번 클릭: 셀 선택 및 복사 · 연결된 스케줄이 없어 수정할 수 없음'}
+                                  style={{ textAlign: memoTextAlign, backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }}
+                                  onMouseDown={(event) => event.preventDefault()}
+                                  onClick={(event) => selectPatientHistoryCell(event, memoHistoryCell)}
+                                  onDoubleClick={(event) => openPatientHistoryCellEditor(event, memoHistoryCell)}
+                                >
                                   <PatientHistoryOverflowField
                                     value={formatPatientHistoryOverflowTooltipItems(
                                       currentMemoItems,
@@ -4201,8 +4232,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                       rows={memoTextareaRows}
                                       value={memoTextareaValue}
                                       placeholder={canEditHistoryMemo ? '메모' : '-'}
-                                      aria-label="메모 수정"
-                                      disabled={!canEditHistoryMemo}
+                                      aria-label="메모 셀"
+                                      readOnly
+                                      tabIndex={-1}
                                       style={{
                                         ...historyEditFieldStyle,
                                         display: 'block',
@@ -4219,20 +4251,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                         whiteSpace: 'pre',
                                         wordBreak: 'normal',
                                         opacity: canEditHistoryMemo ? 1 : 0.65,
-                                      }}
-                                      onChange={(event) => {
-                                        updatePatientHistoryModalLog(historyRowKey, {
-                                          memo: event.target.value,
-                                        });
-                                      }}
-                                      onBlur={handleHistoryMemoBlur}
-                                      onMouseDown={(e) => e.stopPropagation()}
-                                      onClick={(e) => e.stopPropagation()}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                                          e.preventDefault();
-                                          e.currentTarget.blur();
-                                        }
                                       }}
                                     />
                                   </PatientHistoryOverflowField>

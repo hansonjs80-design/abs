@@ -27,6 +27,7 @@ export default function useScheduleTodayNavigation({
   isInitialScrollReady = true,
   targetDate = null,
   onTargetDateScrolled,
+  onNavigateToTodayMonth,
   shortcutLabel,
   setTodayShortcutTooltip,
 }) {
@@ -154,6 +155,10 @@ export default function useScheduleTodayNavigation({
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation?.();
+      if (!isCurrentScheduleMonth) {
+        onNavigateToTodayMonth?.(today);
+        return;
+      }
       scrollToTodayWeek();
     };
 
@@ -163,7 +168,7 @@ export default function useScheduleTodayNavigation({
       window.removeEventListener('keydown', handleTodayShortcut, true);
       document.removeEventListener('keydown', handleTodayShortcut, true);
     };
-  }, [scrollToTodayWeek]);
+  }, [isCurrentScheduleMonth, onNavigateToTodayMonth, scrollToTodayWeek, today]);
 
   useEffect(() => {
     const handleNextWeekShortcut = (event) => {

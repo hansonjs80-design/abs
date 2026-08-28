@@ -58,6 +58,14 @@ test('schedule week navigation preserves horizontal scroll while aligning the we
   assert.doesNotMatch(source, /scrollToWeek[\s\S]*?left:\s*0,/);
 });
 
+test('today shortcut requests the current month before scrolling when another month is open', async () => {
+  const source = await readFile(scheduleTodayNavigationUrl, 'utf8');
+
+  assert.match(source, /if \(!isCurrentScheduleMonth\) \{/);
+  assert.match(source, /onNavigateToTodayMonth\?\.\(today\)/);
+  assert.match(source, /onNavigateToTodayMonth, scrollToTodayWeek, today/);
+});
+
 test('schedule wheel shortcut maps upward and downward gestures to adjacent weeks', () => {
   assert.equal(getScheduleWheelWeekDirection({ ctrlKey: true, deltaY: -120 }), -1);
   assert.equal(getScheduleWheelWeekDirection({ ctrlKey: true, deltaY: 120 }), 1);
