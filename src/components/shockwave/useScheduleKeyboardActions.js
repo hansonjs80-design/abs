@@ -49,6 +49,7 @@ import { buildMoveScheduleSelectionPayload } from '../../lib/scheduleMoveUtils';
 import useScheduleMovePersistence from './useScheduleMovePersistence';
 
 export default function useScheduleKeyboardActions({
+  disabled = false,
   contextMenu,
   clipboardSource,
   setClipboardSource,
@@ -947,6 +948,7 @@ export default function useScheduleKeyboardActions({
 
   useEffect(() => {
     const handleEarlyReservationShortcut = (event) => {
+      if (disabled) return;
       const activeCell = getLatestSelectedCell();
       if (!activeCell || editingCell || contextMenu) return;
       if (!isReservationTimeShortcutEvent(event)) return;
@@ -963,6 +965,7 @@ export default function useScheduleKeyboardActions({
     };
   }, [
     contextMenu,
+    disabled,
     editingCell,
     getLatestSelectedCell,
     handleReservationTimeShortcut,
@@ -973,6 +976,7 @@ export default function useScheduleKeyboardActions({
 
   useEffect(() => {
     const handleEarlyBackgroundShortcut = (event) => {
+      if (disabled) return;
       const activeCell = getLatestSelectedCell();
       if (!activeCell || editingCell || contextMenu) return;
       if (!isHolidayBackgroundShortcut(event)) return;
@@ -994,6 +998,7 @@ export default function useScheduleKeyboardActions({
     };
   }, [
     contextMenu,
+    disabled,
     editingCell,
     getLatestSelectedCell,
     isContextMenuTarget,
@@ -1003,6 +1008,7 @@ export default function useScheduleKeyboardActions({
 
   useEffect(() => {
     const handleEarlyPrescriptionShortcut = (event) => {
+      if (disabled) return;
       if (event.__shockwavePrescriptionHandled) return;
       if (applyPrescriptionShortcut(event)) {
         event.__shockwavePrescriptionHandled = true;
@@ -1015,10 +1021,11 @@ export default function useScheduleKeyboardActions({
       window.removeEventListener('keydown', handleEarlyPrescriptionShortcut, { capture: true });
       document.removeEventListener('keydown', handleEarlyPrescriptionShortcut, { capture: true });
     };
-  }, [applyPrescriptionShortcut]);
+  }, [applyPrescriptionShortcut, disabled]);
 
   useEffect(() => {
     const handleContextMenuTreatmentCompleteShortcut = (event) => {
+      if (disabled) return;
       const activeCell = getLatestSelectedCell();
       if (!contextMenu || !activeCell || editingCell) return;
       if (!isTreatmentCompleteShortcut(event)) return;
@@ -1036,9 +1043,10 @@ export default function useScheduleKeyboardActions({
       window.removeEventListener('keydown', handleContextMenuTreatmentCompleteShortcut, { capture: true });
       document.removeEventListener('keydown', handleContextMenuTreatmentCompleteShortcut, { capture: true });
     };
-  }, [contextMenu, editingCell, getLatestSelectedCell, handleToggleTreatmentComplete]);
+  }, [contextMenu, disabled, editingCell, getLatestSelectedCell, handleToggleTreatmentComplete]);
 
   return useCallback((e) => {
+    if (disabled) return;
     if (e.defaultPrevented) return;
     if (e.__shockwaveBackgroundHandled) return;
     if (e.__shockwavePrescriptionHandled) return;
@@ -1344,6 +1352,7 @@ export default function useScheduleKeyboardActions({
     }
   }, [
     contextMenu,
+    disabled,
     clipboardSource,
     editingCell,
     currentYear,

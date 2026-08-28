@@ -6,6 +6,7 @@ import {
 import { isPatientHistoryShortcut } from '../../lib/scheduleKeyboardUtils';
 
 export default function useScheduleGlobalEvents({
+  keyboardDisabled = false,
   viewRef,
   contextMenuRef,
   contextMenu,
@@ -36,6 +37,7 @@ export default function useScheduleGlobalEvents({
 
   useEffect(() => {
     const handleGlobalCmdF = (e) => {
+      if (keyboardDisabled) return;
       if (isPatientHistoryShortcut(e) && selectedCellRef.current) {
         e.preventDefault();
         e.stopPropagation();
@@ -45,10 +47,11 @@ export default function useScheduleGlobalEvents({
 
     window.addEventListener('keydown', handleGlobalCmdF, { capture: true });
     return () => window.removeEventListener('keydown', handleGlobalCmdF, { capture: true });
-  }, [selectedCellRef]);
+  }, [keyboardDisabled, selectedCellRef]);
 
   useEffect(() => {
     const handlePasteEvent = (event) => {
+      if (keyboardDisabled) return;
       if (!selectedCell) return;
 
       const target = event.target;
@@ -68,10 +71,11 @@ export default function useScheduleGlobalEvents({
 
     window.addEventListener('paste', handlePasteEvent, true);
     return () => window.removeEventListener('paste', handlePasteEvent, true);
-  }, [selectedCell, handlePasteSelection, isContextMenuTarget]);
+  }, [keyboardDisabled, selectedCell, handlePasteSelection, isContextMenuTarget]);
 
   useEffect(() => {
     const handleWindowKeyDown = (event) => {
+      if (keyboardDisabled) return;
       const target = event.target;
       if (isContextMenuTarget(target)) return;
       if (isEditableTarget(target)) return;
@@ -80,7 +84,7 @@ export default function useScheduleGlobalEvents({
 
     window.addEventListener('keydown', handleWindowKeyDown, true);
     return () => window.removeEventListener('keydown', handleWindowKeyDown, true);
-  }, [handleKeyDown, isEditableTarget, isContextMenuTarget]);
+  }, [handleKeyDown, isEditableTarget, isContextMenuTarget, keyboardDisabled]);
 
   useEffect(() => {
     const handleMouseUp = () => {

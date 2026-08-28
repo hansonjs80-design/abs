@@ -361,6 +361,21 @@ test('patient history selection and clipboard outlines stay on the inner detail 
   assert.equal(shockwaveView.match(/patientHistoryClipboardCell\?\.id ===/g)?.length, 2);
 });
 
+test('patient history clipboard shortcuts suspend the background schedule keyboard handlers', async () => {
+  const [shockwaveView, keyboardActions, globalEvents] = await Promise.all([
+    readFile(shockwaveViewUrl, 'utf8'),
+    readFile(new URL('../../components/shockwave/useScheduleKeyboardActions.js', import.meta.url), 'utf8'),
+    readFile(new URL('../../components/shockwave/useScheduleGlobalEvents.js', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(shockwaveView, /useScheduleKeyboardActions\(\{\s*disabled:\s*patientHistoryModalOpen,/);
+  assert.match(shockwaveView, /useScheduleGlobalEvents\(\{\s*keyboardDisabled:\s*patientHistoryModalOpen,/);
+  assert.match(keyboardActions, /const handleEarlyPrescriptionShortcut = \(event\) => \{\s*if \(disabled\) return;/);
+  assert.match(keyboardActions, /return useCallback\(\(e\) => \{\s*if \(disabled\) return;/);
+  assert.match(globalEvents, /const handleWindowKeyDown = \(event\) => \{\s*if \(keyboardDisabled\) return;/);
+  assert.match(globalEvents, /const handlePasteEvent = \(event\) => \{\s*if \(keyboardDisabled\) return;/);
+});
+
 test('patient history escape dismisses cell interaction state before closing the modal', async () => {
   const [shockwaveView, cellInteractions] = await Promise.all([
     readFile(shockwaveViewUrl, 'utf8'),

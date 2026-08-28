@@ -2459,6 +2459,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   }, [cellKey, getStaffScheduleBlockForCell, getTherapistNameForDate, getTimeSlotsForDay, positionTooltip, weeks]);
 
   const handleKeyDown = useScheduleKeyboardActions({
+    disabled: patientHistoryModalOpen,
     contextMenu,
     clipboardSource,
     setClipboardSource,
@@ -2515,6 +2516,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   });
 
   useScheduleGlobalEvents({
+    keyboardDisabled: patientHistoryModalOpen,
     viewRef,
     contextMenuRef,
     contextMenu,
