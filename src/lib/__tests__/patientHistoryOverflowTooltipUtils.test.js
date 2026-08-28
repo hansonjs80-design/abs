@@ -383,6 +383,23 @@ test('patient history cell clipboard keeps an immediate selected-cell reference'
   assert.match(cellInteractions, /window\.addEventListener\('copy', handleClipboardWrite, true\);/);
   assert.match(cellInteractions, /window\.addEventListener\('cut', handleClipboardWrite, true\);/);
   assert.match(cellInteractions, /event\.clipboardData\?\.setData\('text\/plain', nextClipboard\.plainText\);/);
+  assert.match(cellInteractions, /window\.addEventListener\('mousedown', handleOutsideMouseDown, true\);/);
+  assert.match(
+    cellInteractions,
+    /if \(!selectedCellRef\.current && !clipboardRef\.current\) return;\s*clearCellSelection\(\{ clearClipboard: true \}\);/,
+  );
+  assert.match(
+    cellInteractions,
+    /if \(isPatientHistoryCellEditorShortcut\(event\)\)[\s\S]*?openEditorAtRect\(activeCell, cellElement\.getBoundingClientRect\(\)\);/,
+  );
+  assert.match(
+    cellInteractions,
+    /if \(isUndoShortcutEvent\(event\)\)[\s\S]*?undoLastHistoryChange\(\);/,
+  );
+  assert.match(
+    cellInteractions,
+    /recordHistoryUndo\(\[[\s\S]*?previousValue: sourcePreviousValue,[\s\S]*?clearClipboardCell\(\);/,
+  );
   assert.doesNotMatch(
     cellInteractions,
     /const clipboardMode = getPatientHistoryCellClipboardMode\(event\);[\s\S]{0,120}event\.preventDefault\(\);/,

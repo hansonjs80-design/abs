@@ -190,6 +190,11 @@ export function isPatientHistoryCellClearShortcut(event) {
   return key === 'Delete' || key === 'Backspace';
 }
 
+export function isPatientHistoryCellEditorShortcut(event) {
+  if (!event || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return false;
+  return String(event.key || '') === 'Enter';
+}
+
 export function getPatientHistoryCellClipboardMode(event) {
   if (!event?.metaKey && !event?.ctrlKey) return null;
   const shortcutKey = getScheduleShortcutKey(event);
@@ -209,6 +214,28 @@ export function getPatientHistoryEscapeAction({
   return 'close-modal';
 }
 
+export function buildPatientHistoryUndoAction(changes = []) {
+  const normalizedChanges = changes.filter((change) => (
+    change?.cell
+    && normalizePatientHistoryCellValue(change.cell.field, change.previousValue)
+      !== normalizePatientHistoryCellValue(change.cell.field, change.nextValue)
+  ));
+  if (normalizedChanges.length === 0) return null;
+  return {
+    changes: normalizedChanges.map((change) => ({
+      ...change,
+      cell: { ...change.cell },
+    })),
+  };
+}
+
+export function getPatientHistoryUndoRestoreChanges(action) {
+  return [...(action?.changes || [])].reverse().map((change) => ({
+    cell: { ...change.cell },
+    value: change.previousValue,
+  }));
+}
+
 export function getPatientHistoryEditorPlacement({
   rect,
   field,
@@ -220,7 +247,7 @@ export function getPatientHistoryEditorPlacement({
   const safeViewportWidth = Math.max(0, Number(viewportWidth) || 0);
   const safeViewportGap = Math.max(0, Number(viewportGap) || 0);
   const safeCellGap = Math.max(0, Number(cellGap) || 0);
-  const desiredWidth = field === 'memo' ? 320 : 288;
+  const desiredWidth = field === 'memo' ? 272 : 288;
   const maxEditorWidth = Math.max(0, safeViewportWidth - (safeViewportGap * 2));
   const editorWidth = Math.min(desiredWidth, maxEditorWidth);
   const cellLeft = Math.max(safeViewportGap, Number(rect?.left) || safeViewportGap);

@@ -4,12 +4,15 @@ import { describe, it } from 'node:test';
 import {
   applyPatientHistoryBodyPartAction,
   applyPatientHistoryMemoAction,
+  buildPatientHistoryUndoAction,
   getPatientHistoryEscapeAction,
   getPatientHistoryEditorPlacement,
   getPatientHistoryCellClipboardMode,
   getPatientHistoryCellClipboardText,
+  getPatientHistoryUndoRestoreChanges,
   isPatientHistoryEditorAction,
   isPatientHistoryCellClearShortcut,
+  isPatientHistoryCellEditorShortcut,
   normalizePatientHistoryCellValue,
 } from '../patientHistoryCellInteractionUtils.js';
 
@@ -78,6 +81,43 @@ describe('patient history memo cell actions', () => {
     assert.equal(isPatientHistoryCellClearShortcut({ key: 'Enter' }), false);
   });
 
+  it('opens the selected history editor with an unmodified Enter key', () => {
+    assert.equal(isPatientHistoryCellEditorShortcut({ key: 'Enter' }), true);
+    assert.equal(isPatientHistoryCellEditorShortcut({ key: 'Enter', isComposing: true }), false);
+    assert.equal(isPatientHistoryCellEditorShortcut({ key: 'Enter', ctrlKey: true }), false);
+    assert.equal(isPatientHistoryCellEditorShortcut({ key: ' ' }), false);
+  });
+
+  it('restores a cut and paste as one undo action in reverse mutation order', () => {
+    const sourceCell = { id: 'source', rowKey: 'row-1', field: 'memo' };
+    const targetCell = { id: 'target', rowKey: 'row-2', field: 'memo' };
+    const action = buildPatientHistoryUndoAction([
+      {
+        cell: targetCell,
+        previousValue: '대상 메모',
+        nextValue: '원본 메모',
+      },
+      {
+        cell: sourceCell,
+        previousValue: '원본 메모',
+        nextValue: '',
+      },
+    ]);
+
+    assert.deepEqual(getPatientHistoryUndoRestoreChanges(action), [
+      { cell: sourceCell, value: '원본 메모' },
+      { cell: targetCell, value: '대상 메모' },
+    ]);
+  });
+
+  it('does not record an undo action when paste keeps the same normalized value', () => {
+    assert.equal(buildPatientHistoryUndoAction([{
+      cell: { id: 'same', rowKey: 'row-1', field: 'body_part' },
+      previousValue: 'Lt. 어깨, Rt. 무릎',
+      nextValue: 'Lt. 어깨\nRt. 무릎',
+    }]), null);
+  });
+
   it('recognizes copy and cut by physical key even with a Korean input layout', () => {
     assert.equal(getPatientHistoryCellClipboardMode({ metaKey: true, code: 'KeyC', key: 'ㅊ' }), 'copy');
     assert.equal(getPatientHistoryCellClipboardMode({ ctrlKey: true, code: 'KeyX', key: 'ㅌ' }), 'cut');
@@ -110,7 +150,7 @@ describe('patient history memo cell actions', () => {
       viewportWidth: 1400,
     }), {
       x: 1048,
-      width: 320,
+      width: 272,
       side: 'right',
     });
   });
@@ -121,8 +161,8 @@ describe('patient history memo cell actions', () => {
       field: 'memo',
       viewportWidth: 1280,
     }), {
-      x: 950,
-      width: 320,
+      x: 998,
+      width: 272,
       side: 'overlap',
     });
   });

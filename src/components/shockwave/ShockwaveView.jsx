@@ -4190,7 +4190,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                   className={`patient-history-data-cell patient-history-data-cell--selectable${selectedPatientHistoryCell?.id === bodyPartHistoryCell.id ? ' is-selected' : ''}${patientHistoryClipboardCell?.id === bodyPartHistoryCell.id ? ` is-clipboard-source is-clipboard-${patientHistoryClipboardCell.mode}` : ''}`}
                                   tabIndex={0}
                                   aria-selected={selectedPatientHistoryCell?.id === bodyPartHistoryCell.id}
-                                  title="한 번 클릭: 셀 선택 · 두 번 클릭: 부위 편집"
+                                  title="한 번 클릭: 셀 선택 · Enter/두 번 클릭: 부위 편집"
                                   style={{ textAlign: bodyPartTextAlign, backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }}
                                   onMouseDown={(event) => event.preventDefault()}
                                   onClick={(event) => selectPatientHistoryCell(event, bodyPartHistoryCell)}
@@ -4233,7 +4233,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                   tabIndex={0}
                                   aria-selected={selectedPatientHistoryCell?.id === memoHistoryCell.id}
                                   title={canEditHistoryMemo
-                                    ? '한 번 클릭: 셀 선택 · 두 번 클릭: 메모 편집'
+                                    ? '한 번 클릭: 셀 선택 · Enter/두 번 클릭: 메모 편집'
                                     : '한 번 클릭: 셀 선택 및 복사 · 연결된 스케줄이 없어 수정할 수 없음'}
                                   style={{ textAlign: memoTextAlign, backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }}
                                   onMouseDown={(event) => event.preventDefault()}

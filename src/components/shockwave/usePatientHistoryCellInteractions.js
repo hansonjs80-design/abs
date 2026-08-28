@@ -2,19 +2,22 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   applyPatientHistoryBodyPartAction,
   applyPatientHistoryMemoAction,
+  buildPatientHistoryUndoAction,
   getPatientHistoryEscapeAction,
   getPatientHistoryEditorPlacement,
   getPatientHistoryCellClipboardMode,
   getPatientHistoryCellClipboardText,
+  getPatientHistoryUndoRestoreChanges,
   isPatientHistoryEditorAction,
   isPatientHistoryCellClearShortcut,
+  isPatientHistoryCellEditorShortcut,
   normalizePatientHistoryCellValue,
 } from '../../lib/patientHistoryCellInteractionUtils';
 import {
   parsePatientHistoryBodyPartText,
   parsePatientHistoryMemoText,
 } from '../../lib/patientHistoryModalUtils';
-import { buildMergeSpanWithMemoList } from '../../lib/schedulerUtils';
+import { buildMergeSpanWithMemoList, isUndoShortcutEvent } from '../../lib/schedulerUtils';
 
 const getHistoryRowKey = (log) => log?._history_row_key || log?.id;
 
@@ -46,6 +49,8 @@ export default function usePatientHistoryCellInteractions({
   const logsRef = useRef(logs || []);
   const selectedCellRef = useRef(null);
   const clipboardRef = useRef(null);
+  const undoStackRef = useRef([]);
+  const undoInProgressRef = useRef(false);
 
   useEffect(() => {
     logsRef.current = logs || [];
@@ -68,7 +73,28 @@ export default function usePatientHistoryCellInteractions({
     return nextLog;
   }, [findLog, updateModalLog]);
 
-  const persistCellValue = useCallback(async (cell, rawValue) => {
+  const clearClipboardCell = useCallback(() => {
+    clipboardRef.current = null;
+    setClipboardCell(null);
+  }, []);
+
+  const clearCellSelection = useCallback(({ clearClipboard = false } = {}) => {
+    selectedCellRef.current = null;
+    setSelectedCell(null);
+    setClipboardSource(null);
+    if (clearClipboard) clearClipboardCell();
+  }, [clearClipboardCell, setClipboardSource]);
+
+  const recordHistoryUndo = useCallback((changes) => {
+    const action = buildPatientHistoryUndoAction(changes);
+    if (!action) return;
+    undoStackRef.current = [
+      action,
+      ...undoStackRef.current,
+    ].slice(0, 50);
+  }, []);
+
+  const persistCellValue = useCallback(async (cell, rawValue, { recordUndo = true } = {}) => {
     const log = findLog(cell?.rowKey);
     if (!log || !cell?.field) return false;
     if (cell.field === 'memo' && !cell.canEdit) {
@@ -90,8 +116,15 @@ export default function usePatientHistoryCellInteractions({
         ? { ...latest, [cell.field]: nextValue, [originalKey]: nextValue }
         : { ...latest, [cell.field]: currentValue }
     ));
+    if (success && recordUndo) {
+      recordHistoryUndo([{
+        cell,
+        previousValue: currentValue,
+        nextValue,
+      }]);
+    }
     return Boolean(success);
-  }, [addToast, findLog, patchLog, updateHistoryField, updateHistoryMemo]);
+  }, [addToast, findLog, patchLog, recordHistoryUndo, updateHistoryField, updateHistoryMemo]);
 
   const updateEditorDisplay = useCallback((cell, value) => {
     if (!cell) return;
@@ -119,6 +152,44 @@ export default function usePatientHistoryCellInteractions({
     });
   }, [setContextMenu, setContextMenuBodyPartOptions, setContextMenuMemoDrafts]);
 
+  const undoLastHistoryChange = useCallback(async () => {
+    if (undoInProgressRef.current) return true;
+    const [action, ...remainingActions] = undoStackRef.current;
+    if (!action) {
+      addToast('되돌릴 내역 셀 변경이 없습니다.', 'info');
+      return true;
+    }
+
+    undoStackRef.current = remainingActions;
+    undoInProgressRef.current = true;
+    let success = true;
+    try {
+      const restoreChanges = getPatientHistoryUndoRestoreChanges(action);
+      for (const change of restoreChanges) {
+        const restored = await persistCellValue(change.cell, change.value, {
+          recordUndo: false,
+        });
+        if (!restored) {
+          success = false;
+          break;
+        }
+        updateEditorDisplay(change.cell, change.value);
+      }
+    } finally {
+      undoInProgressRef.current = false;
+    }
+
+    if (!success) {
+      undoStackRef.current = [action, ...undoStackRef.current].slice(0, 50);
+      addToast('내역 셀 변경을 되돌리지 못했습니다.', 'warning');
+      return true;
+    }
+
+    clearClipboardCell();
+    addToast('내역 셀 변경을 되돌렸습니다.', 'success');
+    return true;
+  }, [addToast, clearClipboardCell, persistCellValue, updateEditorDisplay]);
+
   const selectCell = useCallback((event, cell) => {
     event.preventDefault();
     event.stopPropagation();
@@ -129,11 +200,9 @@ export default function usePatientHistoryCellInteractions({
     event.currentTarget?.focus?.({ preventScroll: true });
   }, [contextMenu?.patientHistoryCell, setClipboardSource, setContextMenu]);
 
-  const openEditor = useCallback((event, cell) => {
-    event.preventDefault();
-    event.stopPropagation();
+  const openEditorAtRect = useCallback((cell, rect) => {
     const log = findLog(cell.rowKey);
-    if (!log) return;
+    if (!log || !rect) return;
     if (cell.field === 'memo' && !cell.canEdit) {
       addToast('스케줄과 연결되지 않은 기존 기록은 메모를 수정할 수 없습니다.', 'warning');
       return;
@@ -142,7 +211,6 @@ export default function usePatientHistoryCellInteractions({
     selectedCellRef.current = cell;
     setSelectedCell(cell);
     setClipboardSource(null);
-    const rect = event.currentTarget.getBoundingClientRect();
     const viewportGap = 10;
     const editorPlacement = getPatientHistoryEditorPlacement({
       rect,
@@ -194,6 +262,12 @@ export default function usePatientHistoryCellInteractions({
     setContextMenuMemoDrafts,
     setContextMenuMemoFocusSignal,
   ]);
+
+  const openEditor = useCallback((event, cell) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openEditorAtRect(cell, event.currentTarget?.getBoundingClientRect?.());
+  }, [openEditorAtRect]);
 
   const handleContextAction = useCallback(async (action) => {
     const cell = contextMenu?.patientHistoryCell;
@@ -253,8 +327,7 @@ export default function usePatientHistoryCellInteractions({
     });
 
     if (action === 'clear-clipboard') {
-      clipboardRef.current = null;
-      setClipboardCell(null);
+      clearClipboardCell();
       return true;
     }
     if (action === 'close-editor') {
@@ -263,18 +336,17 @@ export default function usePatientHistoryCellInteractions({
       return true;
     }
     if (action === 'clear-selection') {
-      selectedCellRef.current = null;
-      setSelectedCell(null);
-      setClipboardSource(null);
+      clearCellSelection();
       return true;
     }
     return false;
   }, [
     clipboardCell,
+    clearCellSelection,
+    clearClipboardCell,
     contextMenu?.patientHistoryCell,
     selectedCell,
     setActiveContextSubmenu,
-    setClipboardSource,
     setContextMenu,
   ]);
 
@@ -287,7 +359,25 @@ export default function usePatientHistoryCellInteractions({
         isEditableElement(event.target)
         && event.target?.closest?.('.patient-history-search-input, .patient-history-edit-field--prescription')
       ) return;
-      if (!selectedCellRef.current) return;
+      if (isUndoShortcutEvent(event)) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        undoLastHistoryChange();
+        return;
+      }
+      const activeCell = selectedCellRef.current;
+      if (!activeCell) return;
+      if (isPatientHistoryCellEditorShortcut(event)) {
+        const cellElement = event.target?.closest?.('.patient-history-data-cell--selectable')
+          || document.activeElement?.closest?.('.patient-history-data-cell--selectable');
+        if (!cellElement) return;
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        openEditorAtRect(activeCell, cellElement.getBoundingClientRect());
+        return;
+      }
       if (isPatientHistoryCellClearShortcut(event)) {
         event.preventDefault();
         event.stopPropagation();
@@ -352,41 +442,107 @@ export default function usePatientHistoryCellInteractions({
       const normalizedPastedText = pastedText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
       const isInternalClipboard = internalClipboard
         && normalizedPastedText === String(internalClipboard.plainText || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-      const success = await persistCellValue(activeCell, normalizedPastedText);
+      const activeLog = findLog(activeCell.rowKey);
+      const targetPreviousValue = normalizePatientHistoryCellValue(
+        activeCell.field,
+        activeLog?.[activeCell.field],
+      );
+      const success = await persistCellValue(activeCell, normalizedPastedText, { recordUndo: false });
       if (!success) return;
       if (!isInternalClipboard) {
-        setClipboardCell({ id: activeCell.id, mode: 'paste' });
+        recordHistoryUndo([{
+          cell: activeCell,
+          previousValue: targetPreviousValue,
+          nextValue: normalizedPastedText,
+        }]);
+        clearClipboardCell();
         return;
       }
-      if (internalClipboard.mode !== 'cut') return;
+      if (internalClipboard.mode !== 'cut') {
+        recordHistoryUndo([{
+          cell: activeCell,
+          previousValue: targetPreviousValue,
+          nextValue: normalizedPastedText,
+        }]);
+        clearClipboardCell();
+        return;
+      }
 
       const sourceCell = internalClipboard.sourceCell;
       if (!sourceCell || sourceCell.id === activeCell.id) {
-        clipboardRef.current = { ...internalClipboard, mode: 'copy' };
-        setClipboardCell({ id: activeCell.id, mode: 'copy' });
+        recordHistoryUndo([{
+          cell: activeCell,
+          previousValue: targetPreviousValue,
+          nextValue: normalizedPastedText,
+        }]);
+        clearClipboardCell();
         return;
       }
-      const cleared = await persistCellValue(sourceCell, '');
+      const sourceLog = findLog(sourceCell.rowKey);
+      const sourcePreviousValue = normalizePatientHistoryCellValue(
+        sourceCell.field,
+        sourceLog?.[sourceCell.field],
+      );
+      const cleared = await persistCellValue(sourceCell, '', { recordUndo: false });
       if (cleared) {
-        clipboardRef.current = null;
-        setClipboardCell({ id: activeCell.id, mode: 'paste' });
+        recordHistoryUndo([
+          {
+            cell: activeCell,
+            previousValue: targetPreviousValue,
+            nextValue: normalizedPastedText,
+          },
+          {
+            cell: sourceCell,
+            previousValue: sourcePreviousValue,
+            nextValue: '',
+          },
+        ]);
+        clearClipboardCell();
         addToast('잘라낸 셀을 이동했습니다.', 'success');
       } else {
+        recordHistoryUndo([{
+          cell: activeCell,
+          previousValue: targetPreviousValue,
+          nextValue: normalizedPastedText,
+        }]);
+        clearClipboardCell();
         addToast('붙여넣기는 완료됐지만 원본 셀을 비우지 못했습니다.', 'warning');
       }
+    };
+
+    const handleOutsideMouseDown = (event) => {
+      if (event.target?.closest?.(
+        '.patient-history-data-cell--selectable, .patient-history-context-menu',
+      )) return;
+      if (!selectedCellRef.current && !clipboardRef.current) return;
+      clearCellSelection({ clearClipboard: true });
     };
 
     window.addEventListener('keydown', handleKeyDown, true);
     window.addEventListener('copy', handleClipboardWrite, true);
     window.addEventListener('cut', handleClipboardWrite, true);
     window.addEventListener('paste', handlePaste, true);
+    window.addEventListener('mousedown', handleOutsideMouseDown, true);
     return () => {
       window.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('copy', handleClipboardWrite, true);
       window.removeEventListener('cut', handleClipboardWrite, true);
       window.removeEventListener('paste', handlePaste, true);
+      window.removeEventListener('mousedown', handleOutsideMouseDown, true);
     };
-  }, [clearSelectedCell, copyOrCut, modalOpen, persistCellValue, addToast]);
+  }, [
+    addToast,
+    clearCellSelection,
+    clearClipboardCell,
+    clearSelectedCell,
+    copyOrCut,
+    findLog,
+    modalOpen,
+    openEditorAtRect,
+    persistCellValue,
+    recordHistoryUndo,
+    undoLastHistoryChange,
+  ]);
 
   useEffect(() => {
     if (modalOpen) return;
@@ -394,6 +550,7 @@ export default function usePatientHistoryCellInteractions({
     setSelectedCell(null);
     setClipboardCell(null);
     clipboardRef.current = null;
+    undoStackRef.current = [];
     setContextMenu((prev) => (prev?.patientHistoryCell ? null : prev));
   }, [modalOpen, setContextMenu]);
 
