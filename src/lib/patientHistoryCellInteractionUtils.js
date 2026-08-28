@@ -10,6 +10,7 @@ import {
   formatBodyPartInput,
   normalizeBodyPartKey,
 } from './schedulerUtils.js';
+import { getScheduleShortcutKey } from './scheduleKeyboardUtils.js';
 
 export const PATIENT_HISTORY_BODY_ACTION_TYPES = new Set([
   'bodyPart',
@@ -187,6 +188,14 @@ export function isPatientHistoryEditorAction(field, action) {
 export function isPatientHistoryCellClearShortcut(event) {
   const key = String(event?.key || '');
   return key === 'Delete' || key === 'Backspace';
+}
+
+export function getPatientHistoryCellClipboardMode(event) {
+  if (!event?.metaKey && !event?.ctrlKey) return null;
+  const shortcutKey = getScheduleShortcutKey(event);
+  if (shortcutKey === 'C') return 'copy';
+  if (shortcutKey === 'X') return 'cut';
+  return null;
 }
 
 export function getPatientHistoryEscapeAction({

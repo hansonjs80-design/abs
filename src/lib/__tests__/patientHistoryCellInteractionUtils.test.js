@@ -5,6 +5,7 @@ import {
   applyPatientHistoryBodyPartAction,
   applyPatientHistoryMemoAction,
   getPatientHistoryEscapeAction,
+  getPatientHistoryCellClipboardMode,
   getPatientHistoryCellClipboardText,
   isPatientHistoryEditorAction,
   isPatientHistoryCellClearShortcut,
@@ -74,6 +75,13 @@ describe('patient history memo cell actions', () => {
     assert.equal(isPatientHistoryCellClearShortcut({ key: 'Delete' }), true);
     assert.equal(isPatientHistoryCellClearShortcut({ key: 'Backspace' }), true);
     assert.equal(isPatientHistoryCellClearShortcut({ key: 'Enter' }), false);
+  });
+
+  it('recognizes copy and cut by physical key even with a Korean input layout', () => {
+    assert.equal(getPatientHistoryCellClipboardMode({ metaKey: true, code: 'KeyC', key: 'ㅊ' }), 'copy');
+    assert.equal(getPatientHistoryCellClipboardMode({ ctrlKey: true, code: 'KeyX', key: 'ㅌ' }), 'cut');
+    assert.equal(getPatientHistoryCellClipboardMode({ code: 'KeyC', key: 'c' }), null);
+    assert.equal(getPatientHistoryCellClipboardMode({ metaKey: true, code: 'KeyV', key: 'ㅍ' }), null);
   });
 
   it('dismisses clipboard and selection states before closing the history modal', () => {

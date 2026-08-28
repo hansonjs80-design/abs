@@ -3,6 +3,7 @@ import {
   applyPatientHistoryBodyPartAction,
   applyPatientHistoryMemoAction,
   getPatientHistoryEscapeAction,
+  getPatientHistoryCellClipboardMode,
   getPatientHistoryCellClipboardText,
   isPatientHistoryEditorAction,
   isPatientHistoryCellClearShortcut,
@@ -281,13 +282,12 @@ export default function usePatientHistoryCellInteractions({
         clearSelectedCell();
         return;
       }
-      const isMeta = event.metaKey || event.ctrlKey;
-      const key = String(event.key || '').toUpperCase();
-      if (!isMeta || (key !== 'C' && key !== 'X')) return;
+      const clipboardMode = getPatientHistoryCellClipboardMode(event);
+      if (!clipboardMode) return;
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation?.();
-      copyOrCut(key === 'X' ? 'cut' : 'copy');
+      copyOrCut(clipboardMode);
     };
 
     const handlePaste = async (event) => {
