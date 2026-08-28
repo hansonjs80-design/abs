@@ -2172,10 +2172,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
 
   useEffect(() => {
     if (!patientHistoryModalOpen) return;
-    requestAnimationFrame(() => {
+    const focusFrame = requestAnimationFrame(() => {
       patientHistorySearchInputRef.current?.focus({ preventScroll: true });
       patientHistorySearchInputRef.current?.select?.();
     });
+    return () => cancelAnimationFrame(focusFrame);
+  }, [patientHistoryModalOpen]);
+
+  useEffect(() => {
+    if (!patientHistoryModalOpen) return;
 
     const handlePatientHistoryEscape = (event) => {
       if (event.key !== 'Escape') return;
@@ -3272,6 +3277,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
             top: contextMenu.y,
             left: contextMenu.x,
             '--context-submenu-offset-y': `${contextSubmenuOffsetY}px`,
+            '--patient-history-editor-width': contextMenu.patientHistoryEditorWidth
+              ? `${contextMenu.patientHistoryEditorWidth}px`
+              : undefined,
           }}
           onKeyDown={(e) => e.stopPropagation()}
           onKeyUp={(e) => e.stopPropagation()}

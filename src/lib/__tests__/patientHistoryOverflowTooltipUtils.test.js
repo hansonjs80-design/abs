@@ -375,6 +375,10 @@ test('patient history cell clipboard keeps an immediate selected-cell reference'
   assert.match(cellInteractions, /const selectedCellRef = useRef\(null\);/);
   assert.match(cellInteractions, /selectedCellRef\.current = cell;\s*setSelectedCell\(cell\);/);
   assert.match(cellInteractions, /const activeCell = selectedCellRef\.current;\s*if \(!activeCell\) return;/);
+  assert.match(
+    cellInteractions,
+    /if \(isPatientHistoryCellClearShortcut\(event\)\)[\s\S]*?clearSelectedCell\(\);/,
+  );
   assert.match(cellInteractions, /if \(!modalOpen\) return undefined;/);
   assert.match(cellInteractions, /window\.addEventListener\('copy', handleClipboardWrite, true\);/);
   assert.match(cellInteractions, /window\.addEventListener\('cut', handleClipboardWrite, true\);/);
@@ -383,6 +387,17 @@ test('patient history cell clipboard keeps an immediate selected-cell reference'
     cellInteractions,
     /const clipboardMode = getPatientHistoryCellClipboardMode\(event\);[\s\S]{0,120}event\.preventDefault\(\);/,
   );
+});
+
+test('patient history search autofocus runs only when the modal opens', async () => {
+  const shockwaveView = await readFile(shockwaveViewUrl, 'utf8');
+  const focusEffect = shockwaveView.match(
+    /useEffect\(\(\) => \{\s*if \(!patientHistoryModalOpen\) return;\s*const focusFrame = requestAnimationFrame[\s\S]*?\}, \[patientHistoryModalOpen\]\);/,
+  )?.[0] || '';
+
+  assert.match(focusEffect, /patientHistorySearchInputRef\.current\?\.focus/);
+  assert.match(focusEffect, /cancelAnimationFrame\(focusFrame\)/);
+  assert.doesNotMatch(focusEffect, /dismissPatientHistoryCellInteraction/);
 });
 
 test('patient history clipboard shortcuts suspend the background schedule keyboard handlers', async () => {

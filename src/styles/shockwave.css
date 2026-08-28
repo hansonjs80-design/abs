@@ -3722,6 +3722,11 @@
   box-shadow: none !important;
 }
 
+.shockwave-context-menu.patient-history-context-menu.standalone-mode {
+  width: var(--patient-history-editor-width, auto) !important;
+  max-width: calc(100vw - 20px) !important;
+}
+
 /* Hide all direct children EXCEPT .context-menu-meta-section */
 .shockwave-context-menu.standalone-mode > *:not(.context-menu-meta-section) {
   display: none !important;
@@ -3765,6 +3770,16 @@
   pointer-events: auto; /* Re-enable clicks */
   min-width: max-content;
   overflow-x: hidden !important;
+}
+
+.shockwave-context-menu.patient-history-context-menu.standalone-mode
+  > .context-menu-meta-section
+  > .is-submenu-open
+  > .context-menu-submenu {
+  box-sizing: border-box;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
 }
 
 .patient-history-group-header {

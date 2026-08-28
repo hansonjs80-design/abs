@@ -208,3 +208,42 @@ export function getPatientHistoryEscapeAction({
   if (hasSelectedCell) return 'clear-selection';
   return 'close-modal';
 }
+
+export function getPatientHistoryEditorPlacement({
+  rect,
+  field,
+  viewportWidth,
+  viewportGap = 10,
+  cellGap = 8,
+  minimumRightWidth = 220,
+} = {}) {
+  const safeViewportWidth = Math.max(0, Number(viewportWidth) || 0);
+  const safeViewportGap = Math.max(0, Number(viewportGap) || 0);
+  const safeCellGap = Math.max(0, Number(cellGap) || 0);
+  const desiredWidth = field === 'memo' ? 320 : 288;
+  const maxEditorWidth = Math.max(0, safeViewportWidth - (safeViewportGap * 2));
+  const editorWidth = Math.min(desiredWidth, maxEditorWidth);
+  const cellLeft = Math.max(safeViewportGap, Number(rect?.left) || safeViewportGap);
+  const cellRight = Math.max(cellLeft, Number(rect?.right) || cellLeft);
+  const rightX = cellRight + safeCellGap;
+  const rightSpace = Math.max(0, safeViewportWidth - safeViewportGap - rightX);
+  const usableRightWidth = Math.min(editorWidth, rightSpace);
+
+  if (usableRightWidth >= Math.min(editorWidth, minimumRightWidth)) {
+    return {
+      x: rightX,
+      width: usableRightWidth,
+      side: 'right',
+    };
+  }
+
+  const closestVisibleX = Math.max(
+    safeViewportGap,
+    Math.min(cellLeft, safeViewportWidth - safeViewportGap - editorWidth),
+  );
+  return {
+    x: closestVisibleX,
+    width: Math.min(editorWidth, safeViewportWidth - safeViewportGap - closestVisibleX),
+    side: 'overlap',
+  };
+}

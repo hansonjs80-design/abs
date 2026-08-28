@@ -5,6 +5,7 @@ import {
   applyPatientHistoryBodyPartAction,
   applyPatientHistoryMemoAction,
   getPatientHistoryEscapeAction,
+  getPatientHistoryEditorPlacement,
   getPatientHistoryCellClipboardMode,
   getPatientHistoryCellClipboardText,
   isPatientHistoryEditorAction,
@@ -100,5 +101,29 @@ describe('patient history memo cell actions', () => {
     }), 'close-editor');
     assert.equal(getPatientHistoryEscapeAction({ hasSelectedCell: true }), 'clear-selection');
     assert.equal(getPatientHistoryEscapeAction(), 'close-modal');
+  });
+
+  it('keeps the history editor immediately to the right when usable space remains', () => {
+    assert.deepEqual(getPatientHistoryEditorPlacement({
+      rect: { left: 900, right: 1040 },
+      field: 'memo',
+      viewportWidth: 1400,
+    }), {
+      x: 1048,
+      width: 320,
+      side: 'right',
+    });
+  });
+
+  it('keeps the history editor close to a right-edge cell instead of jumping far left', () => {
+    assert.deepEqual(getPatientHistoryEditorPlacement({
+      rect: { left: 1032, right: 1165 },
+      field: 'memo',
+      viewportWidth: 1280,
+    }), {
+      x: 950,
+      width: 320,
+      side: 'overlap',
+    });
   });
 });

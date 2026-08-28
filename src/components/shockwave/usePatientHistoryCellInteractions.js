@@ -3,6 +3,7 @@ import {
   applyPatientHistoryBodyPartAction,
   applyPatientHistoryMemoAction,
   getPatientHistoryEscapeAction,
+  getPatientHistoryEditorPlacement,
   getPatientHistoryCellClipboardMode,
   getPatientHistoryCellClipboardText,
   isPatientHistoryEditorAction,
@@ -142,12 +143,13 @@ export default function usePatientHistoryCellInteractions({
     setSelectedCell(cell);
     setClipboardSource(null);
     const rect = event.currentTarget.getBoundingClientRect();
-    const panelWidth = cell.field === 'memo' ? 340 : 320;
     const viewportGap = 10;
-    let x = rect.right + 8;
-    if (x + panelWidth > window.innerWidth - viewportGap) {
-      x = Math.max(viewportGap, rect.left - panelWidth - 8);
-    }
+    const editorPlacement = getPatientHistoryEditorPlacement({
+      rect,
+      field: cell.field,
+      viewportWidth: window.innerWidth,
+      viewportGap,
+    });
     const y = Math.min(
       Math.max(viewportGap, rect.top),
       Math.max(viewportGap, window.innerHeight - 360),
@@ -159,7 +161,7 @@ export default function usePatientHistoryCellInteractions({
     setContextMenuMemoDrafts(memoItems);
     setActiveContextSubmenu(cell.field === 'body_part' ? 'body' : 'memo');
     setContextMenu({
-      x,
+      x: editorPlacement.x,
       y,
       weekIdx: Number(log.week_index) || 0,
       dayIdx: Number(log.day_index) || 0,
@@ -168,6 +170,7 @@ export default function usePatientHistoryCellInteractions({
       currentPrescription: log.prescription || '',
       isNearRightEdge: false,
       isStandaloneSubmenu: true,
+      patientHistoryEditorWidth: editorPlacement.width,
       openedAt: Date.now(),
       patientHistoryCell: cell,
       memoSnapshot: {
