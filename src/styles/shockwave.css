@@ -4098,12 +4098,20 @@
   position: relative;
   cursor: cell;
   outline: none;
+  touch-action: none;
+  user-select: none;
 }
 
 .patient-history-table .patient-history-data-cell--selectable .patient-history-edit-field--detail {
   pointer-events: none;
   cursor: cell;
   user-select: none;
+}
+
+.patient-history-table .patient-history-data-cell--selectable .patient-history-edit-field--inline-editing {
+  pointer-events: auto;
+  cursor: text;
+  user-select: text;
 }
 
 .patient-history-table .patient-history-data-cell--selectable.is-selected {
@@ -4115,6 +4123,32 @@
   border-color: #2563eb !important;
   background-color: rgba(239, 246, 255, 0.94) !important;
   box-shadow: inset 0 0 0 1px #2563eb !important;
+}
+
+.patient-history-table .patient-history-data-cell--selectable.is-fill-preview .patient-history-edit-field--detail {
+  border-color: #0f766e !important;
+  background-color: rgba(204, 251, 241, 0.92) !important;
+  box-shadow: inset 0 0 0 1px #0f766e !important;
+}
+
+.patient-history-fill-handle {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  z-index: 5;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 1px solid #ffffff;
+  border-radius: 1px;
+  background: #2563eb;
+  box-shadow: 0 0 0 1px #1d4ed8;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.patient-history-fill-handle:hover {
+  background: #1d4ed8;
 }
 
 .patient-history-table .patient-history-data-cell--selectable.is-clipboard-source .patient-history-edit-field--detail {
@@ -4176,6 +4210,7 @@
 }
 
 .patient-history-overflow-field {
+  position: relative;
   width: 100%;
   min-width: 0;
 }

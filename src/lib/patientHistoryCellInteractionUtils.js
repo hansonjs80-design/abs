@@ -9,6 +9,7 @@ import {
 import {
   formatBodyPartInput,
   normalizeBodyPartKey,
+  normalizeVisitInputValue,
 } from './schedulerUtils.js';
 import { getScheduleShortcutKey } from './scheduleKeyboardUtils.js';
 
@@ -31,6 +32,23 @@ export const PATIENT_HISTORY_MEMO_ACTION_TYPES = new Set([
   'memoMove',
 ]);
 
+export function getPatientHistoryCellFromElement(element) {
+  if (!element) return null;
+  const {
+    patientHistoryCellId,
+    patientHistoryRowKey,
+    patientHistoryField,
+    patientHistoryCanEdit,
+  } = element.dataset || {};
+  if (!patientHistoryCellId || !patientHistoryRowKey || !patientHistoryField) return null;
+  return {
+    id: patientHistoryCellId,
+    rowKey: patientHistoryRowKey,
+    field: patientHistoryField,
+    canEdit: patientHistoryCanEdit !== 'false',
+  };
+}
+
 export function normalizePatientHistoryCellValue(field, rawValue) {
   if (field === 'body_part') {
     return parsePatientHistoryBodyPartText(rawValue)
@@ -40,6 +58,9 @@ export function normalizePatientHistoryCellValue(field, rawValue) {
   }
   if (field === 'memo') {
     return parsePatientHistoryMemoText(rawValue).join('\n');
+  }
+  if (field === 'visit_count') {
+    return normalizeVisitInputValue(rawValue);
   }
   return String(rawValue || '').trim();
 }
@@ -193,6 +214,41 @@ export function isPatientHistoryCellClearShortcut(event) {
 export function isPatientHistoryCellEditorShortcut(event) {
   if (!event || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return false;
   return String(event.key || '') === 'Enter';
+}
+
+export function getPatientHistoryCellNavigationDirection(event) {
+  if (!event || event.isComposing || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) {
+    return null;
+  }
+  const key = String(event.key || '');
+  return ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key) ? key : null;
+}
+
+export function getPatientHistoryCellDirectInputText(event) {
+  if (!event || event.ctrlKey || event.metaKey || event.altKey) return null;
+  if (event.isComposing || event.key === 'Process' || event.keyCode === 229) return '';
+  const key = String(event.key || '');
+  return key.length === 1 ? key : null;
+}
+
+export function getPatientHistoryInlineEditInitialValue(field, rawValue, initialText) {
+  const currentValue = normalizePatientHistoryCellValue(field, rawValue);
+  if (initialText === undefined) return currentValue;
+
+  const typedText = String(initialText ?? '');
+  if (field === 'memo') {
+    return currentValue ? `${currentValue}\n${typedText}` : typedText;
+  }
+  if (field === 'visit_count') return typedText;
+  return currentValue;
+}
+
+export function buildPatientHistoryVisitFillValues(rawValue, targetCount) {
+  const normalizedValue = normalizePatientHistoryCellValue('visit_count', rawValue);
+  if (!/^\d+$/.test(normalizedValue)) return [];
+  const startValue = Number.parseInt(normalizedValue, 10);
+  const safeTargetCount = Math.max(0, Number.parseInt(targetCount, 10) || 0);
+  return Array.from({ length: safeTargetCount }, (_, index) => String(startValue + index + 1));
 }
 
 export function getPatientHistoryCellClipboardMode(event) {

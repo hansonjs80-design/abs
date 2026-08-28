@@ -9,18 +9,10 @@ import {
 } from '../../lib/contextMenuDismissUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import {
-  getPatientHistoryBodyPartText,
-  getPatientHistoryBodyPartTextareaRows,
-  getPatientHistoryListTextAlign,
-  getPatientHistoryMemoDisplayText,
-  getPatientHistoryMemoTextareaRows,
   getPatientHistoryNameOnlySearchTarget,
   getPatientHistoryTreatmentGroup,
   isNameOnlyPatientHistoryDraft,
-  parsePatientHistoryBodyPartText,
-  parsePatientHistoryMemoText,
 } from '../../lib/patientHistoryModalUtils';
-import { formatPatientHistoryOverflowTooltipItems } from '../../lib/patientHistoryOverflowTooltipUtils';
 import { buildBlankScheduleCleanupPayload, sanitizeBlankScheduleCellData } from '../../lib/scheduleBlankCellCleanupUtils';
 import {
   MAX_SCHEDULE_TIME_COL_WIDTH,
@@ -63,8 +55,8 @@ import ContextMenuMemoList from './ContextMenuMemoList';
 import ContextMenuPrescriptionSelect from './ContextMenuPrescriptionSelect';
 import MemoizedCell from './ShockwaveScheduleCell';
 import ShockwaveHoverTooltip from './ShockwaveHoverTooltip';
-import PatientHistoryOverflowField from './PatientHistoryOverflowField';
 import PatientHistoryApplyConfirmDialog from './PatientHistoryApplyConfirmDialog';
+import PatientHistoryEditableCells from './PatientHistoryEditableCells';
 import PatientHistoryFilters from './PatientHistoryFilters';
 import useContextMenuPositioning from './useContextMenuPositioning';
 import usePatientHistoryActions from './usePatientHistoryActions';
@@ -1971,13 +1963,35 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     invalidateCellSavesForPayload,
   });
 
+  const handleUpdatePatientHistoryVisitCount = useCallback(async (log, nextValue) => {
+    if (log.id === 'draft' || log.isCurrentCell) {
+      return handleUpdateCurrentCellVisitCount(nextValue, log);
+    }
+    if (String(log.id || '').startsWith('draft-')) {
+      return handleUpdateDraftHistoryVisitCount(log, nextValue);
+    }
+    return handleUpdateLogVisitCount(log, nextValue);
+  }, [
+    handleUpdateCurrentCellVisitCount,
+    handleUpdateDraftHistoryVisitCount,
+    handleUpdateLogVisitCount,
+  ]);
+
   const {
+    cancelPatientHistoryInlineCellEdit,
+    commitPatientHistoryInlineCellEdit,
     dismissPatientHistoryCellInteraction,
     handlePatientHistoryContextAction,
     openPatientHistoryCellEditor,
     patientHistoryClipboardCell,
+    patientHistoryInlineEditor,
+    patientHistorySelectedCellIds,
+    patientHistoryVisitFillCellIds,
     selectPatientHistoryCell,
     selectedPatientHistoryCell,
+    startPatientHistoryCellRangeSelection,
+    startPatientHistoryVisitFill,
+    updatePatientHistoryInlineCellDraft,
   } = usePatientHistoryCellInteractions({
     modalOpen: patientHistoryModalOpen,
     logs: patientHistoryModalData.logs,
@@ -1985,6 +1999,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     updateModalLog: updatePatientHistoryModalLog,
     updateHistoryField: handleUpdatePatientHistoryField,
     updateHistoryMemo: handleUpdatePatientHistoryMemo,
+    updateHistoryVisitCount: handleUpdatePatientHistoryVisitCount,
     addToast,
     setClipboardSource,
     setContextMenu,
@@ -4086,36 +4101,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     : { ...item, prescription: originalValue }
                                 ));
                               };
-                              const currentBodyPartValue = String(log.body_part || '');
-                              const currentBodyPartItems = parsePatientHistoryBodyPartText(currentBodyPartValue);
-                              const bodyPartTextareaValue = getPatientHistoryBodyPartText(currentBodyPartValue);
-                              const bodyPartTextareaRows = getPatientHistoryBodyPartTextareaRows(currentBodyPartValue);
-                              const hasMultipleBodyParts = currentBodyPartItems.length > 1;
-                              const bodyPartTextAlign = getPatientHistoryListTextAlign(currentBodyPartItems.length);
-                              const currentMemoValue = String(log.memo || '');
-                              const currentMemoItems = parsePatientHistoryMemoText(currentMemoValue);
-                              const memoTextareaValue = getPatientHistoryMemoDisplayText(currentMemoValue);
-                              const memoTextareaRows = getPatientHistoryMemoTextareaRows(currentMemoValue);
-                              const hasMultipleMemos = currentMemoItems.length > 1;
-                              const memoTextAlign = getPatientHistoryListTextAlign(currentMemoItems.length);
-                              const canEditHistoryMemo = Boolean(
-                                log.isCurrentCell
-                                || String(log.id || '').startsWith('draft-')
-                                || log.type === 'schedule'
-                                || log.schedule_id
-                              );
-                              const bodyPartHistoryCell = {
-                                id: `${historyRowKey}:body_part`,
-                                rowKey: historyRowKey,
-                                field: 'body_part',
-                                canEdit: true,
-                              };
-                              const memoHistoryCell = {
-                                id: `${historyRowKey}:memo`,
-                                rowKey: historyRowKey,
-                                field: 'memo',
-                                canEdit: canEditHistoryMemo,
-                              };
                               return (
                               <tr
                                 key={historyRowKey}
@@ -4186,172 +4171,26 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     ))}
                                   </select>
                                 </td>
-                                <td
-                                  className={`patient-history-data-cell patient-history-data-cell--selectable${selectedPatientHistoryCell?.id === bodyPartHistoryCell.id ? ' is-selected' : ''}${patientHistoryClipboardCell?.id === bodyPartHistoryCell.id ? ` is-clipboard-source is-clipboard-${patientHistoryClipboardCell.mode}` : ''}`}
-                                  tabIndex={0}
-                                  aria-selected={selectedPatientHistoryCell?.id === bodyPartHistoryCell.id}
-                                  title="한 번 클릭: 셀 선택 · Enter/두 번 클릭: 부위 편집"
-                                  style={{ textAlign: bodyPartTextAlign, backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }}
-                                  onMouseDown={(event) => event.preventDefault()}
-                                  onClick={(event) => selectPatientHistoryCell(event, bodyPartHistoryCell)}
-                                  onDoubleClick={(event) => openPatientHistoryCellEditor(event, bodyPartHistoryCell)}
-                                >
-                                  <PatientHistoryOverflowField
-                                    value={formatPatientHistoryOverflowTooltipItems(
-                                      currentBodyPartItems,
-                                      { showBullets: true },
-                                    )}
-                                  >
-                                    <textarea
-                                      className="patient-history-edit-field patient-history-edit-field--inset patient-history-edit-field--detail"
-                                      rows={bodyPartTextareaRows}
-                                      value={bodyPartTextareaValue}
-                                      placeholder="부위"
-                                      aria-label="부위 셀"
-                                      readOnly
-                                      tabIndex={-1}
-                                      style={{
-                                        ...historyEditFieldStyle,
-                                        display: 'block',
-                                        height: bodyPartTextareaRows === 1 ? '19px' : undefined,
-                                        minHeight: bodyPartTextareaRows === 1 ? '19px' : undefined,
-                                        margin: '0 auto',
-                                        lineHeight: bodyPartTextareaRows > 1 ? 1.3 : '15px',
-                                        paddingLeft: hasMultipleBodyParts ? '7px' : '5px',
-                                        overflowWrap: 'normal',
-                                        overflowX: 'hidden',
-                                        resize: 'none',
-                                        textAlign: bodyPartTextAlign,
-                                        whiteSpace: 'pre',
-                                        wordBreak: 'normal',
-                                      }}
-                                    />
-                                  </PatientHistoryOverflowField>
-                                </td>
-                                <td
-                                  className={`patient-history-data-cell patient-history-data-cell--selectable${selectedPatientHistoryCell?.id === memoHistoryCell.id ? ' is-selected' : ''}${patientHistoryClipboardCell?.id === memoHistoryCell.id ? ` is-clipboard-source is-clipboard-${patientHistoryClipboardCell.mode}` : ''}${canEditHistoryMemo ? '' : ' is-readonly'}`}
-                                  tabIndex={0}
-                                  aria-selected={selectedPatientHistoryCell?.id === memoHistoryCell.id}
-                                  title={canEditHistoryMemo
-                                    ? '한 번 클릭: 셀 선택 · Enter/두 번 클릭: 메모 편집'
-                                    : '한 번 클릭: 셀 선택 및 복사 · 연결된 스케줄이 없어 수정할 수 없음'}
-                                  style={{ textAlign: memoTextAlign, backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }}
-                                  onMouseDown={(event) => event.preventDefault()}
-                                  onClick={(event) => selectPatientHistoryCell(event, memoHistoryCell)}
-                                  onDoubleClick={(event) => openPatientHistoryCellEditor(event, memoHistoryCell)}
-                                >
-                                  <PatientHistoryOverflowField
-                                    value={formatPatientHistoryOverflowTooltipItems(
-                                      currentMemoItems,
-                                      { showBullets: true },
-                                    )}
-                                  >
-                                    <textarea
-                                      className="patient-history-edit-field patient-history-edit-field--inset patient-history-edit-field--detail"
-                                      rows={memoTextareaRows}
-                                      value={memoTextareaValue}
-                                      placeholder={canEditHistoryMemo ? '메모' : '-'}
-                                      aria-label="메모 셀"
-                                      readOnly
-                                      tabIndex={-1}
-                                      style={{
-                                        ...historyEditFieldStyle,
-                                        display: 'block',
-                                        boxSizing: 'border-box',
-                                        height: memoTextareaRows === 1 ? '19px' : undefined,
-                                        minHeight: memoTextareaRows === 1 ? '19px' : undefined,
-                                        margin: '0 auto',
-                                        lineHeight: memoTextareaRows > 1 ? 1.3 : '15px',
-                                        overflowWrap: 'normal',
-                                        overflowX: 'hidden',
-                                        paddingLeft: hasMultipleMemos ? '7px' : '5px',
-                                        resize: 'none',
-                                        textAlign: memoTextAlign,
-                                        whiteSpace: 'pre',
-                                        wordBreak: 'normal',
-                                        opacity: canEditHistoryMemo ? 1 : 0.65,
-                                      }}
-                                    />
-                                  </PatientHistoryOverflowField>
-                                </td>
-                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
-                                  <input
-                                    className={`patient-history-edit-field patient-history-edit-field--inset patient-history-visit-count-field${visitSequenceColor ? ' has-visit-sequence' : ''}`}
-                                    type="text"
-                                    inputMode="text"
-                                    value={log.visit_count || ''}
-                                    placeholder="-"
-                                    style={{
-                                      width: '100%',
-                                      minWidth: 0,
-                                      textAlign: 'center',
-                                      border: 'none',
-                                      borderRadius: 0,
-                                      background: 'transparent',
-                                      padding: '1px 2px',
-                                      outline: 'none',
-                                      boxSizing: 'border-box',
-                                      boxShadow: 'none',
-                                      font: 'inherit',
-                                      fontWeight: 'inherit',
-                                      '--patient-history-visit-sequence-bg': visitSequenceColor,
-                                    }}
-                                    onChange={(e) => {
-                                      const rawVal = e.target.value.trim();
-                                      const val = rawVal === '*' || rawVal === '-'
-                                        ? rawVal
-                                        : normalizeVisitInputValue(rawVal);
-                                      setPatientHistoryModalData(prev => ({
-                                        ...prev,
-                                        logs: prev.logs.map(l => (l._history_row_key || l.id) === historyRowKey ? { ...l, visit_count: val } : l)
-                                      }));
-                                    }}
-                                    onBlur={async (e) => {
-                                      const newVal = normalizeVisitInputValue(e.target.value);
-                                      if (newVal !== e.target.value) e.target.value = newVal;
-                                      const originalVal = log._original_visit_count ?? '';
-                                      if (newVal !== originalVal) {
-                                        if (log.id === 'draft' || isCurrentHistoryRow) {
-                                          const success = await handleUpdateCurrentCellVisitCount(newVal, log);
-                                          setPatientHistoryModalData(prev => ({
-                                            ...prev,
-                                            logs: prev.logs.map(l => (l._history_row_key || l.id) === historyRowKey
-                                              ? (success
-                                                ? { ...l, visit_count: newVal, _original_visit_count: newVal }
-                                                : { ...l, visit_count: originalVal })
-                                              : l)
-                                          }));
-                                        } else if (String(log.id || '').startsWith('draft-')) {
-                                          const success = await handleUpdateDraftHistoryVisitCount(log, newVal);
-                                          setPatientHistoryModalData(prev => ({
-                                            ...prev,
-                                            logs: prev.logs.map(l => (l._history_row_key || l.id) === historyRowKey
-                                              ? (success
-                                                ? { ...l, visit_count: newVal, _original_visit_count: newVal }
-                                                : { ...l, visit_count: originalVal })
-                                              : l)
-                                          }));
-                                        } else {
-                                          const success = await handleUpdateLogVisitCount(log, newVal);
-                                          setPatientHistoryModalData(prev => ({
-                                            ...prev,
-                                            logs: prev.logs.map(l => {
-                                              if ((l._history_row_key || l.id) !== historyRowKey) return l;
-                                              return success
-                                                ? { ...l, visit_count: newVal, _original_visit_count: newVal }
-                                                : { ...l, visit_count: originalVal };
-                                            })
-                                          }));
-                                        }
-                                      }
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        e.target.blur();
-                                      }
-                                    }}
-                                  />
-                                </td>
+                                <PatientHistoryEditableCells
+                                  log={log}
+                                  historyRowKey={historyRowKey}
+                                  currentCellRowBackground={currentCellRowBackground}
+                                  historyRowFontWeight={historyRowFontWeight}
+                                  historyEditFieldStyle={historyEditFieldStyle}
+                                  visitSequenceColor={visitSequenceColor}
+                                  patientHistoryClipboardCell={patientHistoryClipboardCell}
+                                  patientHistoryInlineEditor={patientHistoryInlineEditor}
+                                  patientHistorySelectedCellIds={patientHistorySelectedCellIds}
+                                  patientHistoryVisitFillCellIds={patientHistoryVisitFillCellIds}
+                                  selectedPatientHistoryCell={selectedPatientHistoryCell}
+                                  cancelPatientHistoryInlineCellEdit={cancelPatientHistoryInlineCellEdit}
+                                  commitPatientHistoryInlineCellEdit={commitPatientHistoryInlineCellEdit}
+                                  openPatientHistoryCellEditor={openPatientHistoryCellEditor}
+                                  selectPatientHistoryCell={selectPatientHistoryCell}
+                                  startPatientHistoryCellRangeSelection={startPatientHistoryCellRangeSelection}
+                                  startPatientHistoryVisitFill={startPatientHistoryVisitFill}
+                                  updatePatientHistoryInlineCellDraft={updatePatientHistoryInlineCellDraft}
+                                />
                                 <td
                                   className="patient-history-therapist-cell"
                                   title={log.therapist_name || ''}

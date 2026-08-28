@@ -13,7 +13,7 @@ function captureRect(rect) {
   };
 }
 
-export default function PatientHistoryOverflowField({ value, children }) {
+export default function PatientHistoryOverflowField({ value, children, disabled = false }) {
   const wrapperRef = useRef(null);
   const [anchorRect, setAnchorRect] = useState(null);
   const text = String(value || '').trim();
@@ -23,6 +23,10 @@ export default function PatientHistoryOverflowField({ value, children }) {
   }, []);
 
   const showTooltipIfNeeded = useCallback(() => {
+    if (disabled) {
+      hideTooltip();
+      return;
+    }
     const field = wrapperRef.current?.querySelector('input, textarea');
     if (!field || !text) {
       hideTooltip();
@@ -30,7 +34,7 @@ export default function PatientHistoryOverflowField({ value, children }) {
     }
 
     setAnchorRect(captureRect(field.getBoundingClientRect()));
-  }, [hideTooltip, text]);
+  }, [disabled, hideTooltip, text]);
 
   useEffect(() => {
     if (!anchorRect) return undefined;

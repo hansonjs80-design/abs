@@ -4,11 +4,15 @@ import { describe, it } from 'node:test';
 import {
   applyPatientHistoryBodyPartAction,
   applyPatientHistoryMemoAction,
+  buildPatientHistoryVisitFillValues,
   buildPatientHistoryUndoAction,
+  getPatientHistoryCellDirectInputText,
   getPatientHistoryEscapeAction,
   getPatientHistoryEditorPlacement,
   getPatientHistoryCellClipboardMode,
   getPatientHistoryCellClipboardText,
+  getPatientHistoryCellNavigationDirection,
+  getPatientHistoryInlineEditInitialValue,
   getPatientHistoryUndoRestoreChanges,
   isPatientHistoryEditorAction,
   isPatientHistoryCellClearShortcut,
@@ -86,6 +90,38 @@ describe('patient history memo cell actions', () => {
     assert.equal(isPatientHistoryCellEditorShortcut({ key: 'Enter', isComposing: true }), false);
     assert.equal(isPatientHistoryCellEditorShortcut({ key: 'Enter', ctrlKey: true }), false);
     assert.equal(isPatientHistoryCellEditorShortcut({ key: ' ' }), false);
+  });
+
+  it('normalizes visit-count clipboard values and recognizes unmodified arrow navigation', () => {
+    assert.equal(normalizePatientHistoryCellValue('visit_count', ' 12회 '), '12');
+    assert.equal(normalizePatientHistoryCellValue('visit_count', '*'), '*');
+    assert.equal(getPatientHistoryCellClipboardText('visit_count', '3'), '3');
+    assert.equal(getPatientHistoryCellNavigationDirection({ key: 'ArrowLeft' }), 'ArrowLeft');
+    assert.equal(getPatientHistoryCellNavigationDirection({ key: 'ArrowDown' }), 'ArrowDown');
+    assert.equal(getPatientHistoryCellNavigationDirection({ key: 'ArrowUp', shiftKey: true }), null);
+    assert.equal(getPatientHistoryCellNavigationDirection({ key: 'Enter' }), null);
+  });
+
+  it('starts direct typing for memo and visit cells with spreadsheet-style values', () => {
+    assert.equal(getPatientHistoryCellDirectInputText({ key: '새' }), '새');
+    assert.equal(getPatientHistoryCellDirectInputText({ key: '4' }), '4');
+    assert.equal(getPatientHistoryCellDirectInputText({ key: 'Process', keyCode: 229 }), '');
+    assert.equal(getPatientHistoryCellDirectInputText({ key: 'c', metaKey: true }), null);
+    assert.equal(getPatientHistoryCellDirectInputText({ key: 'Enter' }), null);
+    assert.equal(
+      getPatientHistoryInlineEditInitialValue('memo', '기존 메모', '새'),
+      '기존 메모\n새',
+    );
+    assert.equal(getPatientHistoryInlineEditInitialValue('memo', '', '새'), '새');
+    assert.equal(getPatientHistoryInlineEditInitialValue('visit_count', '8', '2'), '2');
+    assert.equal(getPatientHistoryInlineEditInitialValue('visit_count', '8'), '8');
+  });
+
+  it('builds increasing visit counts for the dragged fill range', () => {
+    assert.deepEqual(buildPatientHistoryVisitFillValues('3', 4), ['4', '5', '6', '7']);
+    assert.deepEqual(buildPatientHistoryVisitFillValues('3회', 2), ['4', '5']);
+    assert.deepEqual(buildPatientHistoryVisitFillValues('*', 3), []);
+    assert.deepEqual(buildPatientHistoryVisitFillValues('', 3), []);
   });
 
   it('restores a cut and paste as one undo action in reverse mutation order', () => {

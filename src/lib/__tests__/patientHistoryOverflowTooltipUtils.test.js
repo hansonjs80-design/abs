@@ -8,10 +8,22 @@ import {
 
 const shockwaveCssUrl = new URL('../../styles/shockwave.css', import.meta.url);
 const shockwaveViewUrl = new URL('../../components/shockwave/ShockwaveView.jsx', import.meta.url);
+const patientHistoryEditableCellsUrl = new URL(
+  '../../components/shockwave/PatientHistoryEditableCells.jsx',
+  import.meta.url,
+);
 const patientHistoryFiltersUrl = new URL(
   '../../components/shockwave/PatientHistoryFilters.jsx',
   import.meta.url
 );
+
+async function readPatientHistoryRenderSource() {
+  const [viewSource, editableCellsSource] = await Promise.all([
+    readFile(shockwaveViewUrl, 'utf8'),
+    readFile(patientHistoryEditableCellsUrl, 'utf8'),
+  ]);
+  return `${viewSource}\n${editableCellsSource}`;
+}
 
 test('patient history overflow tooltip shows multiple values on separate lines', () => {
   assert.equal(
@@ -295,7 +307,7 @@ test('current patient history row uses light treatment-specific backgrounds', as
 test('patient history edit fields keep a flat base style until focused', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
-    readFile(shockwaveViewUrl, 'utf8'),
+    readPatientHistoryRenderSource(),
   ]);
   const editFieldRule = shockwaveCss.match(
     /\.patient-history-table \.patient-history-edit-field\s*\{([^}]*)\}/s
@@ -342,7 +354,7 @@ test('patient history cursors distinguish editable and read-only cells', async (
 test('patient history selection and clipboard outlines stay on the inner detail field', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
-    readFile(shockwaveViewUrl, 'utf8'),
+    readPatientHistoryRenderSource(),
   ]);
   const selectedCellRule = shockwaveCss.match(
     /\.patient-history-table \.patient-history-data-cell--selectable\.is-selected\s*\{([^}]*)\}/s
@@ -363,7 +375,7 @@ test('patient history selection and clipboard outlines stay on the inner detail 
   assert.match(clipboardFieldRule, /border-color:\s*#2563eb\s*!important;/);
   assert.match(clipboardOverlayRule, /border:\s*2px dashed #2563eb;/);
   assert.match(clipboardOverlayRule, /pointer-events:\s*none;/);
-  assert.equal(shockwaveView.match(/patientHistoryClipboardCell\?\.id ===/g)?.length, 2);
+  assert.equal(shockwaveView.match(/patientHistoryClipboardCell\?\.id ===/g)?.length, 3);
 });
 
 test('patient history cell clipboard keeps an immediate selected-cell reference', async () => {
@@ -373,7 +385,10 @@ test('patient history cell clipboard keeps an immediate selected-cell reference'
   );
 
   assert.match(cellInteractions, /const selectedCellRef = useRef\(null\);/);
-  assert.match(cellInteractions, /selectedCellRef\.current = cell;\s*setSelectedCell\(cell\);/);
+  assert.match(
+    cellInteractions,
+    /selectedCellRef\.current = primaryCell;\s*setSelectedCell\(primaryCell\);/,
+  );
   assert.match(cellInteractions, /const activeCell = selectedCellRef\.current;\s*if \(!activeCell\) return;/);
   assert.match(
     cellInteractions,
@@ -390,7 +405,7 @@ test('patient history cell clipboard keeps an immediate selected-cell reference'
   );
   assert.match(
     cellInteractions,
-    /if \(isPatientHistoryCellEditorShortcut\(event\)\)[\s\S]*?openEditorAtRect\(activeCell, cellElement\.getBoundingClientRect\(\)\);/,
+    /if \(isPatientHistoryCellEditorShortcut\(event\)\)[\s\S]*?if \(activeCell\.field !== 'body_part'\)[\s\S]*?beginInlineCellEdit\(activeCell, cellElement\);[\s\S]*?openEditorAtRect\(activeCell, cellElement\.getBoundingClientRect\(\)\);/,
   );
   assert.match(
     cellInteractions,
@@ -404,6 +419,86 @@ test('patient history cell clipboard keeps an immediate selected-cell reference'
     cellInteractions,
     /const clipboardMode = getPatientHistoryCellClipboardMode\(event\);[\s\S]{0,120}event\.preventDefault\(\);/,
   );
+});
+
+test('patient history cells support range selection, direct typing, and visit fill handles', async () => {
+  const [shockwaveView, cellInteractions, dragInteractions, shockwaveCss] = await Promise.all([
+    readPatientHistoryRenderSource(),
+    readFile(
+      new URL('../../components/shockwave/usePatientHistoryCellInteractions.js', import.meta.url),
+      'utf8',
+    ),
+    readFile(
+      new URL('../../components/shockwave/usePatientHistoryDragInteractions.js', import.meta.url),
+      'utf8',
+    ),
+    readFile(shockwaveCssUrl, 'utf8'),
+  ]);
+
+  assert.match(cellInteractions, /const directInputText = getPatientHistoryCellDirectInputText\(event\);/);
+  assert.match(
+    cellInteractions,
+    /beginInlineCellEdit\(activeCell, cellElement, \{ initialText: directInputText \}\);/,
+  );
+  assert.match(dragInteractions, /const updateRangeSelectionTarget = useCallback/);
+  assert.match(dragInteractions, /setCellSelection\(cells, drag\.sourceCell\);/);
+  assert.match(dragInteractions, /buildPatientHistoryVisitFillValues\(drag\.sourceValue, drag\.targetCells\.length\)/);
+  assert.match(dragInteractions, /rollbackSucceeded/);
+  assert.equal(shockwaveView.match(/startPatientHistoryCellRangeSelection\(event,/g)?.length, 3);
+  assert.match(shockwaveView, /className="patient-history-fill-handle"/);
+  assert.match(shockwaveView, /startPatientHistoryVisitFill\(event, visitHistoryCell\)/);
+  assert.match(
+    shockwaveCss,
+    /\.patient-history-fill-handle\s*\{[^}]*width:\s*8px;[^}]*height:\s*8px;/s,
+  );
+  assert.match(
+    shockwaveCss,
+    /\.patient-history-data-cell--selectable\.is-fill-preview \.patient-history-edit-field--detail/s,
+  );
+});
+
+test('patient history memo and visit double click activate inline field editors', async () => {
+  const [shockwaveView, cellInteractions, shockwaveCss, overflowField] = await Promise.all([
+    readPatientHistoryRenderSource(),
+    readFile(
+      new URL('../../components/shockwave/usePatientHistoryCellInteractions.js', import.meta.url),
+      'utf8',
+    ),
+    readFile(shockwaveCssUrl, 'utf8'),
+    readFile(
+      new URL('../../components/shockwave/PatientHistoryOverflowField.jsx', import.meta.url),
+      'utf8',
+    ),
+  ]);
+
+  assert.match(
+    cellInteractions,
+    /if \(cell\.field !== 'body_part'\) \{\s*beginInlineCellEdit\(cell, event\.currentTarget\);\s*return;/,
+  );
+  assert.match(cellInteractions, /field\.focus\(\{ preventScroll: true \}\);/);
+  assert.match(cellInteractions, /\['memo', 'visit_count'\]\.includes\(cell\?\.field\)/);
+  assert.match(
+    shockwaveView,
+    /readOnly=\{!isMemoInlineEditing\}[\s\S]*?onChange=\{\(event\) =>[\s\S]*?updatePatientHistoryInlineCellDraft/,
+  );
+  assert.match(
+    shockwaveView,
+    /onBlur=\{\(event\) =>[\s\S]*?commitPatientHistoryInlineCellEdit/,
+  );
+  assert.match(
+    shockwaveCss,
+    /\.patient-history-edit-field--inline-editing\s*\{[^}]*pointer-events:\s*auto;[^}]*cursor:\s*text;[^}]*user-select:\s*text;/s,
+  );
+  assert.match(overflowField, /if \(disabled\) \{\s*hideTooltip\(\);\s*return;/);
+  assert.match(shockwaveView, /field: 'visit_count',[\s\S]*?canEdit: true/);
+  assert.match(shockwaveView, /readOnly=\{!isVisitInlineEditing\}/);
+  assert.match(shockwaveView, /data-patient-history-field=\{visitHistoryCell\.field\}/);
+  assert.match(
+    cellInteractions,
+    /const navigationDirection = getPatientHistoryCellNavigationDirection\(event\);[\s\S]*?moveSelectedCell\(navigationDirection\)/,
+  );
+  assert.match(cellInteractions, /direction === 'ArrowLeft' \|\| direction === 'ArrowRight'/);
+  assert.match(cellInteractions, /direction === 'ArrowUp' \? -1 : 1/);
 });
 
 test('patient history search autofocus runs only when the modal opens', async () => {
@@ -451,7 +546,7 @@ test('patient history escape dismisses cell interaction state before closing the
 test('patient history editable values use compact inset fields without changing type size', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
-    readFile(shockwaveViewUrl, 'utf8'),
+    readPatientHistoryRenderSource(),
   ]);
   const insetFieldRule = shockwaveCss.match(
     /\.patient-history-table \.patient-history-edit-field--inset\s*\{([^}]*)\}/s
@@ -470,7 +565,7 @@ test('patient history editable values use compact inset fields without changing 
 test('patient history visit count fields show derived sequence background colors', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
-    readFile(shockwaveViewUrl, 'utf8'),
+    readPatientHistoryRenderSource(),
   ]);
   const sequenceFieldRule = shockwaveCss.match(
     /\.patient-history-table \.patient-history-visit-count-field\.has-visit-sequence\s*\{([^}]*)\}/s
@@ -492,7 +587,7 @@ test('patient history visit count fields show derived sequence background colors
 test('patient history body and memo text use the shared content size with shorter data rows', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
-    readFile(shockwaveViewUrl, 'utf8'),
+    readPatientHistoryRenderSource(),
   ]);
   const tableCellRule = shockwaveCss.match(
     /\.patient-history-table\.sw-summary-table th,[\s\S]*?\.patient-history-table\.sw-compact-summary-table td\s*\{([^}]*)\}/s
@@ -503,7 +598,7 @@ test('patient history body and memo text use the shared content size with shorte
 
   assert.equal(
     shockwaveView.match(/patient-history-edit-field--detail/g)?.length,
-    2
+    3
   );
   assert.match(detailFieldRule, /font-size:\s*0\.82rem\s*!important;/);
   assert.match(detailFieldRule, /overflow-y:\s*hidden\s*!important;/);
@@ -511,8 +606,8 @@ test('patient history body and memo text use the shared content size with shorte
   assert.match(tableCellRule, /padding:\s*1px 3px\s*!important;/);
   assert.match(tableCellRule, /height:\s*20px;/);
   assert.match(shockwaveView, /bodyPartTextareaRows === 1 \? '19px'/);
-  assert.match(shockwaveView, /memoTextareaRows === 1 \? '19px'/);
-  assert.doesNotMatch(shockwaveView, /resize:\s*memoTextareaRows/);
+  assert.match(shockwaveView, /activeMemoTextareaRows === 1 \? '19px'/);
+  assert.doesNotMatch(shockwaveView, /resize:\s*activeMemoTextareaRows/);
 });
 
 test('patient history column headers use one compact readable type size', async () => {

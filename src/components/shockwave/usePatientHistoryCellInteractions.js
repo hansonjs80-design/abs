@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import {
   applyPatientHistoryBodyPartAction,
   applyPatientHistoryMemoAction,
   buildPatientHistoryUndoAction,
+  getPatientHistoryCellDirectInputText,
+  getPatientHistoryCellNavigationDirection,
   getPatientHistoryEscapeAction,
   getPatientHistoryEditorPlacement,
+  getPatientHistoryInlineEditInitialValue,
+  getPatientHistoryCellFromElement,
   getPatientHistoryCellClipboardMode,
   getPatientHistoryCellClipboardText,
   getPatientHistoryUndoRestoreChanges,
@@ -18,6 +23,7 @@ import {
   parsePatientHistoryMemoText,
 } from '../../lib/patientHistoryModalUtils';
 import { buildMergeSpanWithMemoList, isUndoShortcutEvent } from '../../lib/schedulerUtils';
+import usePatientHistoryDragInteractions from './usePatientHistoryDragInteractions';
 
 const getHistoryRowKey = (log) => log?._history_row_key || log?.id;
 
@@ -35,6 +41,7 @@ export default function usePatientHistoryCellInteractions({
   updateModalLog,
   updateHistoryField,
   updateHistoryMemo,
+  updateHistoryVisitCount,
   addToast,
   setClipboardSource,
   setContextMenu,
@@ -45,10 +52,14 @@ export default function usePatientHistoryCellInteractions({
   setContextMenuMemoFocusSignal,
 }) {
   const [selectedCell, setSelectedCell] = useState(null);
+  const [selectedCellIds, setSelectedCellIds] = useState([]);
   const [clipboardCell, setClipboardCell] = useState(null);
+  const [inlineEditor, setInlineEditor] = useState(null);
   const logsRef = useRef(logs || []);
   const selectedCellRef = useRef(null);
+  const selectedCellsRef = useRef([]);
   const clipboardRef = useRef(null);
+  const inlineEditorRef = useRef(null);
   const undoStackRef = useRef([]);
   const undoInProgressRef = useRef(false);
 
@@ -80,10 +91,21 @@ export default function usePatientHistoryCellInteractions({
 
   const clearCellSelection = useCallback(({ clearClipboard = false } = {}) => {
     selectedCellRef.current = null;
+    selectedCellsRef.current = [];
     setSelectedCell(null);
+    setSelectedCellIds([]);
     setClipboardSource(null);
     if (clearClipboard) clearClipboardCell();
   }, [clearClipboardCell, setClipboardSource]);
+
+  const setCellSelection = useCallback((cells, primaryCell = cells?.[0] || null) => {
+    const nextCells = (cells || []).filter(Boolean);
+    selectedCellsRef.current = nextCells;
+    selectedCellRef.current = primaryCell;
+    setSelectedCell(primaryCell);
+    setSelectedCellIds(nextCells.map((cell) => cell.id));
+    setClipboardSource(null);
+  }, [setClipboardSource]);
 
   const recordHistoryUndo = useCallback((changes) => {
     const action = buildPatientHistoryUndoAction(changes);
@@ -103,14 +125,20 @@ export default function usePatientHistoryCellInteractions({
     }
 
     const nextValue = normalizePatientHistoryCellValue(cell.field, rawValue);
-    const originalKey = cell.field === 'body_part' ? '_original_body_part' : '_original_memo';
+    const originalKey = cell.field === 'body_part'
+      ? '_original_body_part'
+      : cell.field === 'memo'
+        ? '_original_memo'
+        : '_original_visit_count';
     const currentValue = normalizePatientHistoryCellValue(cell.field, log[cell.field]);
     if (nextValue === currentValue) return true;
 
     patchLog(cell.rowKey, { [cell.field]: nextValue });
     const success = cell.field === 'body_part'
       ? await updateHistoryField(log, 'body_part', nextValue)
-      : await updateHistoryMemo(log, nextValue);
+      : cell.field === 'memo'
+        ? await updateHistoryMemo(log, nextValue)
+        : await updateHistoryVisitCount(log, nextValue);
     patchLog(cell.rowKey, (latest) => (
       success
         ? { ...latest, [cell.field]: nextValue, [originalKey]: nextValue }
@@ -124,11 +152,20 @@ export default function usePatientHistoryCellInteractions({
       }]);
     }
     return Boolean(success);
-  }, [addToast, findLog, patchLog, recordHistoryUndo, updateHistoryField, updateHistoryMemo]);
+  }, [
+    addToast,
+    findLog,
+    patchLog,
+    recordHistoryUndo,
+    updateHistoryField,
+    updateHistoryMemo,
+    updateHistoryVisitCount,
+  ]);
 
   const updateEditorDisplay = useCallback((cell, value) => {
     if (!cell) return;
     const normalizedValue = normalizePatientHistoryCellValue(cell.field, value);
+    if (cell.field === 'visit_count') return;
     const memoItems = cell.field === 'memo'
       ? parsePatientHistoryMemoText(normalizedValue)
       : null;
@@ -190,15 +227,160 @@ export default function usePatientHistoryCellInteractions({
     return true;
   }, [addToast, clearClipboardCell, persistCellValue, updateEditorDisplay]);
 
+  const commitInlineCellEdit = useCallback(async (cell, rawValue) => {
+    const activeEditor = inlineEditorRef.current;
+    if (!activeEditor || activeEditor.cell?.id !== cell?.id) return true;
+
+    const nextValue = normalizePatientHistoryCellValue(cell.field, rawValue ?? activeEditor.value);
+    inlineEditorRef.current = null;
+    setInlineEditor(null);
+    return persistCellValue(cell, nextValue);
+  }, [persistCellValue]);
+
+  const cancelInlineCellEdit = useCallback((cell) => {
+    if (inlineEditorRef.current?.cell?.id !== cell?.id) return false;
+    inlineEditorRef.current = null;
+    setInlineEditor(null);
+    return true;
+  }, []);
+
+  const updateInlineCellDraft = useCallback((cell, rawValue) => {
+    if (inlineEditorRef.current?.cell?.id !== cell?.id) return;
+    const nextEditor = {
+      ...inlineEditorRef.current,
+      value: String(rawValue ?? ''),
+    };
+    inlineEditorRef.current = nextEditor;
+    setInlineEditor(nextEditor);
+  }, []);
+
+  const beginInlineCellEdit = useCallback((cell, cellElement, { initialText } = {}) => {
+    const log = findLog(cell?.rowKey);
+    if (!log || !['memo', 'visit_count'].includes(cell?.field)) return;
+    if (!cell.canEdit) {
+      addToast('이 내역 셀은 수정할 수 없습니다.', 'warning');
+      return;
+    }
+
+    const currentEditor = inlineEditorRef.current;
+    if (currentEditor && currentEditor.cell?.id !== cell.id) {
+      commitInlineCellEdit(currentEditor.cell, currentEditor.value);
+    }
+
+    const nextEditor = {
+      cell: { ...cell },
+      value: getPatientHistoryInlineEditInitialValue(
+        cell.field,
+        log[cell.field],
+        initialText,
+      ),
+    };
+    inlineEditorRef.current = nextEditor;
+    flushSync(() => {
+      setInlineEditor(nextEditor);
+    });
+    setCellSelection([cell], cell);
+    clearClipboardCell();
+    setContextMenu(null);
+    setActiveContextSubmenu(null);
+
+    const field = cellElement?.querySelector?.('textarea, input');
+    if (!field) return;
+    field.focus({ preventScroll: true });
+    const caretPosition = field.value.length;
+    field.setSelectionRange?.(caretPosition, caretPosition);
+  }, [
+    addToast,
+    clearClipboardCell,
+    commitInlineCellEdit,
+    findLog,
+    setActiveContextSubmenu,
+    setContextMenu,
+    setCellSelection,
+  ]);
+
+  const closePatientHistoryContextMenu = useCallback(() => {
+    if (contextMenu?.patientHistoryCell) setContextMenu(null);
+  }, [contextMenu?.patientHistoryCell, setContextMenu]);
+
+  const {
+    cancelPatientHistoryRangeSelection,
+    cancelPatientHistoryVisitFill,
+    consumePatientHistorySuppressedSelectionClick,
+    patientHistoryVisitFillCellIds,
+    startPatientHistoryCellRangeSelection,
+    startPatientHistoryVisitFill,
+  } = usePatientHistoryDragInteractions({
+    modalOpen,
+    inlineEditorRef,
+    findLog,
+    persistCellValue,
+    recordHistoryUndo,
+    addToast,
+    clearClipboardCell,
+    setCellSelection,
+    commitInlineCellEdit,
+    closeContextMenu: closePatientHistoryContextMenu,
+  });
+
   const selectCell = useCallback((event, cell) => {
     event.preventDefault();
     event.stopPropagation();
-    selectedCellRef.current = cell;
-    setSelectedCell(cell);
-    setClipboardSource(null);
+    if (consumePatientHistorySuppressedSelectionClick()) return;
+    const currentEditor = inlineEditorRef.current;
+    if (currentEditor && currentEditor.cell?.id !== cell.id) {
+      commitInlineCellEdit(currentEditor.cell, currentEditor.value);
+    }
+    setCellSelection([cell], cell);
     if (contextMenu?.patientHistoryCell) setContextMenu(null);
     event.currentTarget?.focus?.({ preventScroll: true });
-  }, [contextMenu?.patientHistoryCell, setClipboardSource, setContextMenu]);
+  }, [
+    commitInlineCellEdit,
+    consumePatientHistorySuppressedSelectionClick,
+    contextMenu?.patientHistoryCell,
+    setCellSelection,
+    setContextMenu,
+  ]);
+
+  const moveSelectedCell = useCallback((direction) => {
+    const activeCell = selectedCellRef.current;
+    if (!activeCell) return false;
+    const currentElement = Array.from(document.querySelectorAll(
+      '.patient-history-data-cell--selectable[data-patient-history-cell-id]',
+    )).find((element) => element.dataset.patientHistoryCellId === activeCell.id);
+    if (!currentElement) return false;
+
+    let targetElement = null;
+    if (direction === 'ArrowLeft' || direction === 'ArrowRight') {
+      const rowCells = Array.from(currentElement.parentElement?.children || [])
+        .filter((element) => element.matches?.('.patient-history-data-cell--selectable'));
+      const currentIndex = rowCells.indexOf(currentElement);
+      const nextIndex = currentIndex + (direction === 'ArrowLeft' ? -1 : 1);
+      targetElement = rowCells[nextIndex] || null;
+    } else {
+      const body = currentElement.closest('tbody');
+      const rows = Array.from(body?.children || []);
+      const currentRowIndex = rows.indexOf(currentElement.parentElement);
+      const rowOffset = direction === 'ArrowUp' ? -1 : 1;
+      for (
+        let rowIndex = currentRowIndex + rowOffset;
+        rowIndex >= 0 && rowIndex < rows.length;
+        rowIndex += rowOffset
+      ) {
+        targetElement = Array.from(rows[rowIndex].children).find(
+          (element) => element.dataset?.patientHistoryField === activeCell.field,
+        ) || null;
+        if (targetElement) break;
+      }
+    }
+
+    const targetCell = getPatientHistoryCellFromElement(targetElement);
+    if (!targetCell) return false;
+    setCellSelection([targetCell], targetCell);
+    if (contextMenu?.patientHistoryCell) setContextMenu(null);
+    targetElement.focus({ preventScroll: true });
+    return true;
+  }, [contextMenu?.patientHistoryCell, setCellSelection, setContextMenu]);
 
   const openEditorAtRect = useCallback((cell, rect) => {
     const log = findLog(cell.rowKey);
@@ -208,9 +390,7 @@ export default function usePatientHistoryCellInteractions({
       return;
     }
 
-    selectedCellRef.current = cell;
-    setSelectedCell(cell);
-    setClipboardSource(null);
+    setCellSelection([cell], cell);
     const viewportGap = 10;
     const editorPlacement = getPatientHistoryEditorPlacement({
       rect,
@@ -255,7 +435,7 @@ export default function usePatientHistoryCellInteractions({
     addToast,
     findLog,
     setActiveContextSubmenu,
-    setClipboardSource,
+    setCellSelection,
     setContextMenu,
     setContextMenuBodyPartOptions,
     setContextMenuHiddenBodyPartKeys,
@@ -266,8 +446,12 @@ export default function usePatientHistoryCellInteractions({
   const openEditor = useCallback((event, cell) => {
     event.preventDefault();
     event.stopPropagation();
+    if (cell.field !== 'body_part') {
+      beginInlineCellEdit(cell, event.currentTarget);
+      return;
+    }
     openEditorAtRect(cell, event.currentTarget?.getBoundingClientRect?.());
-  }, [openEditorAtRect]);
+  }, [beginInlineCellEdit, openEditorAtRect]);
 
   const handleContextAction = useCallback(async (action) => {
     const cell = contextMenu?.patientHistoryCell;
@@ -310,16 +494,48 @@ export default function usePatientHistoryCellInteractions({
   }, [addToast, findLog, setClipboardSource]);
 
   const clearSelectedCell = useCallback(async () => {
-    const activeCell = selectedCellRef.current;
-    if (!activeCell) return;
-    if (activeCell.field === 'memo' && !activeCell.canEdit) {
+    const activeCells = selectedCellsRef.current.length > 0
+      ? selectedCellsRef.current
+      : [selectedCellRef.current].filter(Boolean);
+    if (activeCells.length === 0) return;
+    if (activeCells.some((cell) => cell.field === 'memo' && !cell.canEdit)) {
       addToast('스케줄과 연결되지 않은 기존 기록은 메모를 삭제할 수 없습니다.', 'warning');
       return;
     }
-    await persistCellValue(activeCell, '');
-  }, [addToast, persistCellValue]);
+    const appliedChanges = [];
+    for (const cell of activeCells) {
+      const log = findLog(cell.rowKey);
+      const previousValue = normalizePatientHistoryCellValue(cell.field, log?.[cell.field]);
+      if (!previousValue) continue;
+      const success = await persistCellValue(cell, '', { recordUndo: false });
+      if (!success) {
+        let rollbackSucceeded = true;
+        for (const change of [...appliedChanges].reverse()) {
+          const restored = await persistCellValue(change.cell, change.previousValue, {
+            recordUndo: false,
+          });
+          if (!restored) rollbackSucceeded = false;
+        }
+        addToast(
+          rollbackSucceeded
+            ? '선택 범위를 삭제하지 못해 변경 전 상태로 되돌렸습니다.'
+            : '선택 범위를 일부 되돌리지 못했습니다. 해당 셀을 확인해 주세요.',
+          'warning',
+        );
+        return;
+      }
+      appliedChanges.push({ cell, previousValue, nextValue: '' });
+    }
+    if (appliedChanges.length > 0) recordHistoryUndo(appliedChanges);
+  }, [addToast, findLog, persistCellValue, recordHistoryUndo]);
 
   const dismissCellInteraction = useCallback(() => {
+    if (cancelPatientHistoryVisitFill() || cancelPatientHistoryRangeSelection()) return true;
+    const activeInlineEditor = inlineEditorRef.current;
+    if (activeInlineEditor?.cell) {
+      cancelInlineCellEdit(activeInlineEditor.cell);
+      return true;
+    }
     const action = getPatientHistoryEscapeAction({
       hasClipboardCell: Boolean(clipboardCell),
       hasContextMenu: Boolean(contextMenu?.patientHistoryCell),
@@ -342,6 +558,9 @@ export default function usePatientHistoryCellInteractions({
     return false;
   }, [
     clipboardCell,
+    cancelPatientHistoryRangeSelection,
+    cancelInlineCellEdit,
+    cancelPatientHistoryVisitFill,
     clearCellSelection,
     clearClipboardCell,
     contextMenu?.patientHistoryCell,
@@ -357,7 +576,9 @@ export default function usePatientHistoryCellInteractions({
       if (event.target?.closest?.('.patient-history-context-menu')) return;
       if (
         isEditableElement(event.target)
-        && event.target?.closest?.('.patient-history-search-input, .patient-history-edit-field--prescription')
+        && event.target?.closest?.(
+          '.patient-history-search-input, .patient-history-edit-field--prescription, .patient-history-edit-field--inline-editing',
+        )
       ) return;
       if (isUndoShortcutEvent(event)) {
         event.preventDefault();
@@ -368,6 +589,13 @@ export default function usePatientHistoryCellInteractions({
       }
       const activeCell = selectedCellRef.current;
       if (!activeCell) return;
+      const navigationDirection = getPatientHistoryCellNavigationDirection(event);
+      if (navigationDirection && moveSelectedCell(navigationDirection)) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        return;
+      }
       if (isPatientHistoryCellEditorShortcut(event)) {
         const cellElement = event.target?.closest?.('.patient-history-data-cell--selectable')
           || document.activeElement?.closest?.('.patient-history-data-cell--selectable');
@@ -375,7 +603,11 @@ export default function usePatientHistoryCellInteractions({
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation?.();
-        openEditorAtRect(activeCell, cellElement.getBoundingClientRect());
+        if (activeCell.field !== 'body_part') {
+          beginInlineCellEdit(activeCell, cellElement);
+        } else {
+          openEditorAtRect(activeCell, cellElement.getBoundingClientRect());
+        }
         return;
       }
       if (isPatientHistoryCellClearShortcut(event)) {
@@ -383,6 +615,20 @@ export default function usePatientHistoryCellInteractions({
         event.stopPropagation();
         event.stopImmediatePropagation?.();
         clearSelectedCell();
+        return;
+      }
+      const directInputText = getPatientHistoryCellDirectInputText(event);
+      if (
+        directInputText !== null
+        && ['memo', 'visit_count'].includes(activeCell.field)
+      ) {
+        const cellElement = event.target?.closest?.('.patient-history-data-cell--selectable')
+          || document.activeElement?.closest?.('.patient-history-data-cell--selectable');
+        if (!cellElement) return;
+        if (directInputText !== '') event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        beginInlineCellEdit(activeCell, cellElement, { initialText: directInputText });
         return;
       }
       const clipboardMode = getPatientHistoryCellClipboardMode(event);
@@ -396,7 +642,9 @@ export default function usePatientHistoryCellInteractions({
       if (event.target?.closest?.('.patient-history-context-menu')) return;
       if (
         isEditableElement(event.target)
-        && event.target?.closest?.('.patient-history-search-input, .patient-history-edit-field--prescription')
+        && event.target?.closest?.(
+          '.patient-history-search-input, .patient-history-edit-field--prescription, .patient-history-edit-field--inline-editing',
+        )
       ) return;
       const activeCell = selectedCellRef.current;
       if (!activeCell) return;
@@ -428,7 +676,9 @@ export default function usePatientHistoryCellInteractions({
       if (event.target?.closest?.('.patient-history-context-menu')) return;
       if (
         isEditableElement(event.target)
-        && event.target?.closest?.('.patient-history-search-input, .patient-history-edit-field--prescription')
+        && event.target?.closest?.(
+          '.patient-history-search-input, .patient-history-edit-field--prescription, .patient-history-edit-field--inline-editing',
+        )
       ) return;
       const activeCell = selectedCellRef.current;
       if (!activeCell) return;
@@ -532,12 +782,14 @@ export default function usePatientHistoryCellInteractions({
     };
   }, [
     addToast,
+    beginInlineCellEdit,
     clearCellSelection,
     clearClipboardCell,
     clearSelectedCell,
     copyOrCut,
     findLog,
     modalOpen,
+    moveSelectedCell,
     openEditorAtRect,
     persistCellValue,
     recordHistoryUndo,
@@ -547,19 +799,31 @@ export default function usePatientHistoryCellInteractions({
   useEffect(() => {
     if (modalOpen) return;
     selectedCellRef.current = null;
+    selectedCellsRef.current = [];
     setSelectedCell(null);
+    setSelectedCellIds([]);
     setClipboardCell(null);
     clipboardRef.current = null;
+    inlineEditorRef.current = null;
+    setInlineEditor(null);
     undoStackRef.current = [];
     setContextMenu((prev) => (prev?.patientHistoryCell ? null : prev));
   }, [modalOpen, setContextMenu]);
 
   return {
     dismissPatientHistoryCellInteraction: dismissCellInteraction,
+    cancelPatientHistoryInlineCellEdit: cancelInlineCellEdit,
+    commitPatientHistoryInlineCellEdit: commitInlineCellEdit,
     handlePatientHistoryContextAction: handleContextAction,
     openPatientHistoryCellEditor: openEditor,
     patientHistoryClipboardCell: clipboardCell,
+    patientHistoryInlineEditor: inlineEditor,
+    patientHistorySelectedCellIds: selectedCellIds,
+    patientHistoryVisitFillCellIds,
     selectPatientHistoryCell: selectCell,
     selectedPatientHistoryCell: selectedCell,
+    startPatientHistoryCellRangeSelection,
+    startPatientHistoryVisitFill,
+    updatePatientHistoryInlineCellDraft: updateInlineCellDraft,
   };
 }
