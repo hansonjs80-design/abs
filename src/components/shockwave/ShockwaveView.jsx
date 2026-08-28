@@ -48,7 +48,7 @@ import {
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 import { getPrescriptionFromConfiguredDoseTag, getPrescriptionScheduleSettings } from '../../lib/prescriptionScheduleSettings';
 import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
-import { getScheduleShortcutKey, normalizeScheduleShortcutValue } from '../../lib/scheduleKeyboardUtils';
+import { getScheduleShortcutKey, isMemoMenuShortcut, normalizeScheduleShortcutValue } from '../../lib/scheduleKeyboardUtils';
 import { getScheduleCellKey } from '../../lib/scheduleSelectionUtils';
 import { useToast } from '../common/Toast';
 import { useAuth } from '../../contexts/AuthContext';
@@ -1964,6 +1964,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   });
 
   const {
+    dismissPatientHistoryCellInteraction,
     handlePatientHistoryContextAction,
     openPatientHistoryCellEditor,
     patientHistoryClipboardCell,
@@ -2173,10 +2174,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation?.();
-      if (contextMenu?.patientHistoryCell) {
-        setContextMenu(null);
-        return;
-      }
+      if (dismissPatientHistoryCellInteraction()) return;
       closePatientHistoryModal();
     };
 
@@ -2186,7 +2184,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       window.removeEventListener('keydown', handlePatientHistoryEscape, true);
       document.removeEventListener('keydown', handlePatientHistoryEscape, true);
     };
-  }, [patientHistoryModalOpen, closePatientHistoryModal, contextMenu?.patientHistoryCell]);
+  }, [patientHistoryModalOpen, closePatientHistoryModal, dismissPatientHistoryCellInteraction]);
 
   useEffect(() => {
     if (!patientHistoryModalOpen) return;
@@ -2628,8 +2626,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       return;
     }
 
-    // 3. Ctrl/Cmd + + (메모 입력 메뉴 열기)
-    if ((shortcutKey === '+' || shortcutKey === '=' || e.code === 'Equal' || e.code === 'NumpadAdd') && isMeta) {
+    // 3. Ctrl/Cmd + . (메모 입력 메뉴 열기)
+    if (isMemoMenuShortcut(e)) {
       e.preventDefault();
       e.stopPropagation();
       const openMemoMenu = () => handleOpenMemoMenu();

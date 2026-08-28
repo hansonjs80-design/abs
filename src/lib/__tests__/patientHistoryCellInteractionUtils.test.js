@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   applyPatientHistoryBodyPartAction,
   applyPatientHistoryMemoAction,
+  getPatientHistoryEscapeAction,
   getPatientHistoryCellClipboardText,
   isPatientHistoryEditorAction,
   isPatientHistoryCellClearShortcut,
@@ -73,5 +74,23 @@ describe('patient history memo cell actions', () => {
     assert.equal(isPatientHistoryCellClearShortcut({ key: 'Delete' }), true);
     assert.equal(isPatientHistoryCellClearShortcut({ key: 'Backspace' }), true);
     assert.equal(isPatientHistoryCellClearShortcut({ key: 'Enter' }), false);
+  });
+
+  it('dismisses clipboard and selection states before closing the history modal', () => {
+    assert.equal(getPatientHistoryEscapeAction({
+      hasClipboardCell: true,
+      hasContextMenu: true,
+      hasSelectedCell: true,
+    }), 'close-editor');
+    assert.equal(getPatientHistoryEscapeAction({
+      hasClipboardCell: true,
+      hasSelectedCell: true,
+    }), 'clear-clipboard');
+    assert.equal(getPatientHistoryEscapeAction({
+      hasContextMenu: true,
+      hasSelectedCell: true,
+    }), 'close-editor');
+    assert.equal(getPatientHistoryEscapeAction({ hasSelectedCell: true }), 'clear-selection');
+    assert.equal(getPatientHistoryEscapeAction(), 'close-modal');
   });
 });

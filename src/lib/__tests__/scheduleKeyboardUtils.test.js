@@ -28,10 +28,11 @@ describe('schedule keyboard shortcut detection', () => {
 
   it('detects body part, memo, visit complete, and merge shortcuts', () => {
     assert.equal(isBodyPartMenuShortcut({ metaKey: true, key: 'Enter' }), true);
-    assert.equal(isMemoMenuShortcut({ metaKey: true, code: 'Equal', key: '+' }), true);
-    assert.equal(isMemoMenuShortcut({ ctrlKey: true, code: 'NumpadAdd', key: '+' }), true);
-    assert.equal(isMemoMenuShortcut({ metaKey: true, code: 'Equal', key: '=' }), true);
-    assert.equal(isMemoMenuShortcut({ code: 'Equal', key: '+' }), false);
+    assert.equal(isMemoMenuShortcut({ metaKey: true, code: 'Period', key: '.' }), true);
+    assert.equal(isMemoMenuShortcut({ ctrlKey: true, code: 'NumpadDecimal', key: '.' }), true);
+    assert.equal(isMemoMenuShortcut({ metaKey: true, code: '', key: '.' }), true);
+    assert.equal(isMemoMenuShortcut({ code: 'Period', key: '.' }), false);
+    assert.equal(isMemoMenuShortcut({ metaKey: true, code: 'Equal', key: '+' }), false);
     assert.equal(isTreatmentCompleteShortcut({ ctrlKey: true, code: 'KeyS', key: 's' }), true);
     assert.equal(isTreatmentCompleteShortcut({ metaKey: true, code: '', key: 'S' }), true);
     assert.equal(isTreatmentCompleteShortcut({ metaKey: true, code: '', key: 'ㄴ' }), true);

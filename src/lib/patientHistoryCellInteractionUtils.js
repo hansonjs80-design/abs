@@ -188,3 +188,14 @@ export function isPatientHistoryCellClearShortcut(event) {
   const key = String(event?.key || '');
   return key === 'Delete' || key === 'Backspace';
 }
+
+export function getPatientHistoryEscapeAction({
+  hasClipboardCell = false,
+  hasContextMenu = false,
+  hasSelectedCell = false,
+} = {}) {
+  if (hasContextMenu) return 'close-editor';
+  if (hasClipboardCell) return 'clear-clipboard';
+  if (hasSelectedCell) return 'clear-selection';
+  return 'close-modal';
+}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   applyPatientHistoryBodyPartAction,
   applyPatientHistoryMemoAction,
+  getPatientHistoryEscapeAction,
   getPatientHistoryCellClipboardText,
   isPatientHistoryEditorAction,
   isPatientHistoryCellClearShortcut,
@@ -235,6 +236,38 @@ export default function usePatientHistoryCellInteractions({
     await persistCellValue(selectedCell, '');
   }, [addToast, persistCellValue, selectedCell]);
 
+  const dismissCellInteraction = useCallback(() => {
+    const action = getPatientHistoryEscapeAction({
+      hasClipboardCell: Boolean(clipboardCell),
+      hasContextMenu: Boolean(contextMenu?.patientHistoryCell),
+      hasSelectedCell: Boolean(selectedCell),
+    });
+
+    if (action === 'clear-clipboard') {
+      clipboardRef.current = null;
+      setClipboardCell(null);
+      return true;
+    }
+    if (action === 'close-editor') {
+      setContextMenu(null);
+      setActiveContextSubmenu(null);
+      return true;
+    }
+    if (action === 'clear-selection') {
+      setSelectedCell(null);
+      setClipboardSource(null);
+      return true;
+    }
+    return false;
+  }, [
+    clipboardCell,
+    contextMenu?.patientHistoryCell,
+    selectedCell,
+    setActiveContextSubmenu,
+    setClipboardSource,
+    setContextMenu,
+  ]);
+
   useEffect(() => {
     if (!modalOpen || !selectedCell) return undefined;
 
@@ -310,6 +343,7 @@ export default function usePatientHistoryCellInteractions({
   }, [modalOpen, setContextMenu]);
 
   return {
+    dismissPatientHistoryCellInteraction: dismissCellInteraction,
     handlePatientHistoryContextAction: handleContextAction,
     openPatientHistoryCellEditor: openEditor,
     patientHistoryClipboardCell: clipboardCell,

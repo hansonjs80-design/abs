@@ -361,6 +361,21 @@ test('patient history selection and clipboard outlines stay on the inner detail 
   assert.equal(shockwaveView.match(/patientHistoryClipboardCell\?\.id ===/g)?.length, 2);
 });
 
+test('patient history escape dismisses cell interaction state before closing the modal', async () => {
+  const [shockwaveView, cellInteractions] = await Promise.all([
+    readFile(shockwaveViewUrl, 'utf8'),
+    readFile(new URL('../../components/shockwave/usePatientHistoryCellInteractions.js', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(
+    shockwaveView,
+    /if \(dismissPatientHistoryCellInteraction\(\)\) return;\s*closePatientHistoryModal\(\);/,
+  );
+  assert.match(cellInteractions, /if \(action === 'close-editor'\)[\s\S]*setContextMenu\(null\);[\s\S]*setActiveContextSubmenu\(null\);/);
+  assert.match(cellInteractions, /if \(action === 'clear-clipboard'\)[\s\S]*setClipboardCell\(null\);/);
+  assert.match(cellInteractions, /if \(action === 'clear-selection'\)[\s\S]*setSelectedCell\(null\);/);
+});
+
 test('patient history editable values use compact inset fields without changing type size', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
