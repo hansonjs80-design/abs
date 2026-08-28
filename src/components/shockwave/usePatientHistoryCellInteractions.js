@@ -43,6 +43,7 @@ export default function usePatientHistoryCellInteractions({
   const [selectedCell, setSelectedCell] = useState(null);
   const [clipboardCell, setClipboardCell] = useState(null);
   const logsRef = useRef(logs || []);
+  const selectedCellRef = useRef(null);
   const clipboardRef = useRef(null);
 
   useEffect(() => {
@@ -120,6 +121,7 @@ export default function usePatientHistoryCellInteractions({
   const selectCell = useCallback((event, cell) => {
     event.preventDefault();
     event.stopPropagation();
+    selectedCellRef.current = cell;
     setSelectedCell(cell);
     setClipboardSource(null);
     if (contextMenu?.patientHistoryCell) setContextMenu(null);
@@ -136,6 +138,7 @@ export default function usePatientHistoryCellInteractions({
       return;
     }
 
+    selectedCellRef.current = cell;
     setSelectedCell(cell);
     setClipboardSource(null);
     const rect = event.currentTarget.getBoundingClientRect();
@@ -207,35 +210,37 @@ export default function usePatientHistoryCellInteractions({
   }, [contextMenu?.patientHistoryCell, findLog, persistCellValue, updateEditorDisplay]);
 
   const copyOrCut = useCallback((mode) => {
-    if (!selectedCell) return;
-    if (mode === 'cut' && selectedCell.field === 'memo' && !selectedCell.canEdit) {
+    const activeCell = selectedCellRef.current;
+    if (!activeCell) return;
+    if (mode === 'cut' && activeCell.field === 'memo' && !activeCell.canEdit) {
       addToast('스케줄과 연결되지 않은 기존 기록은 메모를 잘라낼 수 없습니다.', 'warning');
       return;
     }
-    const log = findLog(selectedCell.rowKey);
+    const log = findLog(activeCell.rowKey);
     if (!log) return;
-    const plainText = getPatientHistoryCellClipboardText(selectedCell.field, log[selectedCell.field]);
+    const plainText = getPatientHistoryCellClipboardText(activeCell.field, log[activeCell.field]);
     clipboardRef.current = {
       mode,
-      sourceCell: { ...selectedCell },
+      sourceCell: { ...activeCell },
       plainText,
     };
-    setClipboardCell({ id: selectedCell.id, mode });
+    setClipboardCell({ id: activeCell.id, mode });
     setClipboardSource(null);
     navigator.clipboard?.writeText(plainText).catch(() => {
       console.debug('Patient history clipboard sync failed.');
     });
     addToast(mode === 'cut' ? '잘라내기됨 (붙여넣기 시 원본 삭제)' : '복사됨', 'info');
-  }, [addToast, findLog, selectedCell, setClipboardSource]);
+  }, [addToast, findLog, setClipboardSource]);
 
   const clearSelectedCell = useCallback(async () => {
-    if (!selectedCell) return;
-    if (selectedCell.field === 'memo' && !selectedCell.canEdit) {
+    const activeCell = selectedCellRef.current;
+    if (!activeCell) return;
+    if (activeCell.field === 'memo' && !activeCell.canEdit) {
       addToast('스케줄과 연결되지 않은 기존 기록은 메모를 삭제할 수 없습니다.', 'warning');
       return;
     }
-    await persistCellValue(selectedCell, '');
-  }, [addToast, persistCellValue, selectedCell]);
+    await persistCellValue(activeCell, '');
+  }, [addToast, persistCellValue]);
 
   const dismissCellInteraction = useCallback(() => {
     const action = getPatientHistoryEscapeAction({
@@ -255,6 +260,7 @@ export default function usePatientHistoryCellInteractions({
       return true;
     }
     if (action === 'clear-selection') {
+      selectedCellRef.current = null;
       setSelectedCell(null);
       setClipboardSource(null);
       return true;
@@ -270,11 +276,15 @@ export default function usePatientHistoryCellInteractions({
   ]);
 
   useEffect(() => {
-    if (!modalOpen || !selectedCell) return undefined;
+    if (!modalOpen) return undefined;
 
     const handleKeyDown = (event) => {
-      if (isEditableElement(event.target)) return;
       if (event.target?.closest?.('.patient-history-context-menu')) return;
+      if (
+        isEditableElement(event.target)
+        && event.target?.closest?.('.patient-history-search-input, .patient-history-edit-field--prescription')
+      ) return;
+      if (!selectedCellRef.current) return;
       if (isPatientHistoryCellClearShortcut(event)) {
         event.preventDefault();
         event.stopPropagation();
@@ -284,14 +294,51 @@ export default function usePatientHistoryCellInteractions({
       }
       const clipboardMode = getPatientHistoryCellClipboardMode(event);
       if (!clipboardMode) return;
-      event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation?.();
       copyOrCut(clipboardMode);
     };
 
+    const handleClipboardWrite = (event) => {
+      if (event.target?.closest?.('.patient-history-context-menu')) return;
+      if (
+        isEditableElement(event.target)
+        && event.target?.closest?.('.patient-history-search-input, .patient-history-edit-field--prescription')
+      ) return;
+      const activeCell = selectedCellRef.current;
+      if (!activeCell) return;
+
+      const mode = event.type === 'cut' ? 'cut' : 'copy';
+      const currentClipboard = clipboardRef.current;
+      if (
+        !currentClipboard
+        || currentClipboard.mode !== mode
+        || currentClipboard.sourceCell?.id !== activeCell.id
+      ) {
+        copyOrCut(mode);
+      }
+
+      const nextClipboard = clipboardRef.current;
+      if (
+        !nextClipboard
+        || nextClipboard.mode !== mode
+        || nextClipboard.sourceCell?.id !== activeCell.id
+      ) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      event.clipboardData?.setData('text/plain', nextClipboard.plainText);
+    };
+
     const handlePaste = async (event) => {
-      if (isEditableElement(event.target)) return;
+      if (event.target?.closest?.('.patient-history-context-menu')) return;
+      if (
+        isEditableElement(event.target)
+        && event.target?.closest?.('.patient-history-search-input, .patient-history-edit-field--prescription')
+      ) return;
+      const activeCell = selectedCellRef.current;
+      if (!activeCell) return;
       const pastedText = event.clipboardData?.getData('text/plain');
       const internalClipboard = clipboardRef.current;
       if (typeof pastedText !== 'string') return;
@@ -302,24 +349,24 @@ export default function usePatientHistoryCellInteractions({
       const normalizedPastedText = pastedText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
       const isInternalClipboard = internalClipboard
         && normalizedPastedText === String(internalClipboard.plainText || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-      const success = await persistCellValue(selectedCell, normalizedPastedText);
+      const success = await persistCellValue(activeCell, normalizedPastedText);
       if (!success) return;
       if (!isInternalClipboard) {
-        setClipboardCell({ id: selectedCell.id, mode: 'paste' });
+        setClipboardCell({ id: activeCell.id, mode: 'paste' });
         return;
       }
       if (internalClipboard.mode !== 'cut') return;
 
       const sourceCell = internalClipboard.sourceCell;
-      if (!sourceCell || sourceCell.id === selectedCell.id) {
+      if (!sourceCell || sourceCell.id === activeCell.id) {
         clipboardRef.current = { ...internalClipboard, mode: 'copy' };
-        setClipboardCell({ id: selectedCell.id, mode: 'copy' });
+        setClipboardCell({ id: activeCell.id, mode: 'copy' });
         return;
       }
       const cleared = await persistCellValue(sourceCell, '');
       if (cleared) {
         clipboardRef.current = null;
-        setClipboardCell({ id: selectedCell.id, mode: 'paste' });
+        setClipboardCell({ id: activeCell.id, mode: 'paste' });
         addToast('잘라낸 셀을 이동했습니다.', 'success');
       } else {
         addToast('붙여넣기는 완료됐지만 원본 셀을 비우지 못했습니다.', 'warning');
@@ -327,15 +374,20 @@ export default function usePatientHistoryCellInteractions({
     };
 
     window.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('copy', handleClipboardWrite, true);
+    window.addEventListener('cut', handleClipboardWrite, true);
     window.addEventListener('paste', handlePaste, true);
     return () => {
       window.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('copy', handleClipboardWrite, true);
+      window.removeEventListener('cut', handleClipboardWrite, true);
       window.removeEventListener('paste', handlePaste, true);
     };
-  }, [clearSelectedCell, copyOrCut, modalOpen, persistCellValue, selectedCell, addToast]);
+  }, [clearSelectedCell, copyOrCut, modalOpen, persistCellValue, addToast]);
 
   useEffect(() => {
     if (modalOpen) return;
+    selectedCellRef.current = null;
     setSelectedCell(null);
     setClipboardCell(null);
     clipboardRef.current = null;

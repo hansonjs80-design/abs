@@ -353,12 +353,36 @@ test('patient history selection and clipboard outlines stay on the inner detail 
   const clipboardFieldRule = shockwaveCss.match(
     /\.patient-history-table \.patient-history-data-cell--selectable\.is-clipboard-source \.patient-history-edit-field--detail\s*\{([^}]*)\}/s
   )?.[1] || '';
+  const clipboardOverlayRule = shockwaveCss.match(
+    /\.patient-history-table \.patient-history-data-cell--selectable\.is-clipboard-source \.patient-history-overflow-field::after\s*\{([^}]*)\}/s
+  )?.[1] || '';
 
   assert.match(selectedCellRule, /box-shadow:\s*none\s*!important;/);
   assert.match(selectedFieldRule, /border-color:\s*#2563eb\s*!important;/);
   assert.match(selectedFieldRule, /box-shadow:\s*inset 0 0 0 1px #2563eb\s*!important;/);
-  assert.match(clipboardFieldRule, /border:\s*2px dashed #2563eb\s*!important;/);
+  assert.match(clipboardFieldRule, /border-color:\s*#2563eb\s*!important;/);
+  assert.match(clipboardOverlayRule, /border:\s*2px dashed #2563eb;/);
+  assert.match(clipboardOverlayRule, /pointer-events:\s*none;/);
   assert.equal(shockwaveView.match(/patientHistoryClipboardCell\?\.id ===/g)?.length, 2);
+});
+
+test('patient history cell clipboard keeps an immediate selected-cell reference', async () => {
+  const cellInteractions = await readFile(
+    new URL('../../components/shockwave/usePatientHistoryCellInteractions.js', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(cellInteractions, /const selectedCellRef = useRef\(null\);/);
+  assert.match(cellInteractions, /selectedCellRef\.current = cell;\s*setSelectedCell\(cell\);/);
+  assert.match(cellInteractions, /const activeCell = selectedCellRef\.current;\s*if \(!activeCell\) return;/);
+  assert.match(cellInteractions, /if \(!modalOpen\) return undefined;/);
+  assert.match(cellInteractions, /window\.addEventListener\('copy', handleClipboardWrite, true\);/);
+  assert.match(cellInteractions, /window\.addEventListener\('cut', handleClipboardWrite, true\);/);
+  assert.match(cellInteractions, /event\.clipboardData\?\.setData\('text\/plain', nextClipboard\.plainText\);/);
+  assert.doesNotMatch(
+    cellInteractions,
+    /const clipboardMode = getPatientHistoryCellClipboardMode\(event\);[\s\S]{0,120}event\.preventDefault\(\);/,
+  );
 });
 
 test('patient history clipboard shortcuts suspend the background schedule keyboard handlers', async () => {

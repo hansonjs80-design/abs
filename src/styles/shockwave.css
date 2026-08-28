@@ -4103,14 +4103,32 @@
 }
 
 .patient-history-table .patient-history-data-cell--selectable.is-clipboard-source .patient-history-edit-field--detail {
-  border: 2px dashed #2563eb !important;
+  border-color: #2563eb !important;
   background-color: rgba(239, 246, 255, 0.94) !important;
   box-shadow: none !important;
+}
+
+.patient-history-table .patient-history-data-cell--selectable.is-clipboard-source .patient-history-overflow-field {
+  position: relative;
+}
+
+.patient-history-table .patient-history-data-cell--selectable.is-clipboard-source .patient-history-overflow-field::after {
+  position: absolute;
+  inset: 0 1px;
+  z-index: 2;
+  border: 2px dashed #2563eb;
+  border-radius: 3px;
+  content: '';
+  pointer-events: none;
 }
 
 .patient-history-table .patient-history-data-cell--selectable.is-clipboard-cut .patient-history-edit-field--detail {
   border-color: #ea580c !important;
   background-color: rgba(255, 247, 237, 0.96) !important;
+}
+
+.patient-history-table .patient-history-data-cell--selectable.is-clipboard-cut .patient-history-overflow-field::after {
+  border-color: #ea580c;
 }
 
 .patient-history-table .patient-history-data-cell--selectable.is-readonly {

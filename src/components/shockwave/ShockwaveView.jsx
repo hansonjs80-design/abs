@@ -3891,6 +3891,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                   <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary, #666)' }}>검색:</span>
                   <input 
                     ref={patientHistorySearchInputRef}
+                    className="patient-history-search-input"
                     type="text" 
                     placeholder="이름/차트번호" 
                     defaultValue={patientHistoryModalData.searchChart || patientHistoryModalData.searchName}
