@@ -183,3 +183,8 @@ export function isPatientHistoryEditorAction(field, action) {
     ? PATIENT_HISTORY_BODY_ACTION_TYPES.has(action.type)
     : field === 'memo' && PATIENT_HISTORY_MEMO_ACTION_TYPES.has(action.type);
 }
+
+export function isPatientHistoryCellClearShortcut(event) {
+  const key = String(event?.key || '');
+  return key === 'Delete' || key === 'Backspace';
+}

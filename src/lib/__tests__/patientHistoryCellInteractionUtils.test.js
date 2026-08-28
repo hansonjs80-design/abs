@@ -6,6 +6,7 @@ import {
   applyPatientHistoryMemoAction,
   getPatientHistoryCellClipboardText,
   isPatientHistoryEditorAction,
+  isPatientHistoryCellClearShortcut,
   normalizePatientHistoryCellValue,
 } from '../patientHistoryCellInteractionUtils.js';
 
@@ -66,5 +67,11 @@ describe('patient history memo cell actions', () => {
     assert.equal(isPatientHistoryEditorAction('body_part', { type: 'bodyPartPreset' }), true);
     assert.equal(isPatientHistoryEditorAction('memo', { type: 'memoUpdate' }), true);
     assert.equal(isPatientHistoryEditorAction('memo', { type: 'prescription' }), false);
+  });
+
+  it('recognizes the same delete and backspace keys used by the schedule table', () => {
+    assert.equal(isPatientHistoryCellClearShortcut({ key: 'Delete' }), true);
+    assert.equal(isPatientHistoryCellClearShortcut({ key: 'Backspace' }), true);
+    assert.equal(isPatientHistoryCellClearShortcut({ key: 'Enter' }), false);
   });
 });

@@ -339,6 +339,28 @@ test('patient history cursors distinguish editable and read-only cells', async (
   assert.doesNotMatch(shockwaveView, /cursor:\s*canEditHistoryMemo\s*\?\s*'text'\s*:\s*'not-allowed'/);
 });
 
+test('patient history selection and clipboard outlines stay on the inner detail field', async () => {
+  const [shockwaveCss, shockwaveView] = await Promise.all([
+    readFile(shockwaveCssUrl, 'utf8'),
+    readFile(shockwaveViewUrl, 'utf8'),
+  ]);
+  const selectedCellRule = shockwaveCss.match(
+    /\.patient-history-table \.patient-history-data-cell--selectable\.is-selected\s*\{([^}]*)\}/s
+  )?.[1] || '';
+  const selectedFieldRule = shockwaveCss.match(
+    /\.patient-history-table \.patient-history-data-cell--selectable\.is-selected \.patient-history-edit-field--detail\s*\{([^}]*)\}/s
+  )?.[1] || '';
+  const clipboardFieldRule = shockwaveCss.match(
+    /\.patient-history-table \.patient-history-data-cell--selectable\.is-clipboard-source \.patient-history-edit-field--detail\s*\{([^}]*)\}/s
+  )?.[1] || '';
+
+  assert.match(selectedCellRule, /box-shadow:\s*none\s*!important;/);
+  assert.match(selectedFieldRule, /border-color:\s*#2563eb\s*!important;/);
+  assert.match(selectedFieldRule, /box-shadow:\s*inset 0 0 0 1px #2563eb\s*!important;/);
+  assert.match(clipboardFieldRule, /border:\s*2px dashed #2563eb\s*!important;/);
+  assert.equal(shockwaveView.match(/patientHistoryClipboardCell\?\.id ===/g)?.length, 2);
+});
+
 test('patient history editable values use compact inset fields without changing type size', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),

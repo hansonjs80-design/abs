@@ -1966,6 +1966,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const {
     handlePatientHistoryContextAction,
     openPatientHistoryCellEditor,
+    patientHistoryClipboardCell,
     selectPatientHistoryCell,
     selectedPatientHistoryCell,
   } = usePatientHistoryCellInteractions({
@@ -4168,7 +4169,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                   </select>
                                 </td>
                                 <td
-                                  className={`patient-history-data-cell patient-history-data-cell--selectable${selectedPatientHistoryCell?.id === bodyPartHistoryCell.id ? ' is-selected' : ''}`}
+                                  className={`patient-history-data-cell patient-history-data-cell--selectable${selectedPatientHistoryCell?.id === bodyPartHistoryCell.id ? ' is-selected' : ''}${patientHistoryClipboardCell?.id === bodyPartHistoryCell.id ? ` is-clipboard-source is-clipboard-${patientHistoryClipboardCell.mode}` : ''}`}
                                   tabIndex={0}
                                   aria-selected={selectedPatientHistoryCell?.id === bodyPartHistoryCell.id}
                                   title="한 번 클릭: 셀 선택 · 두 번 클릭: 부위 편집"
@@ -4210,7 +4211,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                   </PatientHistoryOverflowField>
                                 </td>
                                 <td
-                                  className={`patient-history-data-cell patient-history-data-cell--selectable${selectedPatientHistoryCell?.id === memoHistoryCell.id ? ' is-selected' : ''}${canEditHistoryMemo ? '' : ' is-readonly'}`}
+                                  className={`patient-history-data-cell patient-history-data-cell--selectable${selectedPatientHistoryCell?.id === memoHistoryCell.id ? ' is-selected' : ''}${patientHistoryClipboardCell?.id === memoHistoryCell.id ? ` is-clipboard-source is-clipboard-${patientHistoryClipboardCell.mode}` : ''}${canEditHistoryMemo ? '' : ' is-readonly'}`}
                                   tabIndex={0}
                                   aria-selected={selectedPatientHistoryCell?.id === memoHistoryCell.id}
                                   title={canEditHistoryMemo

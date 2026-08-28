@@ -4,6 +4,7 @@ import {
   applyPatientHistoryMemoAction,
   getPatientHistoryCellClipboardText,
   isPatientHistoryEditorAction,
+  isPatientHistoryCellClearShortcut,
   normalizePatientHistoryCellValue,
 } from '../../lib/patientHistoryCellInteractionUtils';
 import {
@@ -38,6 +39,7 @@ export default function usePatientHistoryCellInteractions({
   setContextMenuMemoFocusSignal,
 }) {
   const [selectedCell, setSelectedCell] = useState(null);
+  const [clipboardCell, setClipboardCell] = useState(null);
   const logsRef = useRef(logs || []);
   const clipboardRef = useRef(null);
 
@@ -216,6 +218,7 @@ export default function usePatientHistoryCellInteractions({
       sourceCell: { ...selectedCell },
       plainText,
     };
+    setClipboardCell({ id: selectedCell.id, mode });
     setClipboardSource(null);
     navigator.clipboard?.writeText(plainText).catch(() => {
       console.debug('Patient history clipboard sync failed.');
@@ -223,11 +226,28 @@ export default function usePatientHistoryCellInteractions({
     addToast(mode === 'cut' ? '잘라내기됨 (붙여넣기 시 원본 삭제)' : '복사됨', 'info');
   }, [addToast, findLog, selectedCell, setClipboardSource]);
 
+  const clearSelectedCell = useCallback(async () => {
+    if (!selectedCell) return;
+    if (selectedCell.field === 'memo' && !selectedCell.canEdit) {
+      addToast('스케줄과 연결되지 않은 기존 기록은 메모를 삭제할 수 없습니다.', 'warning');
+      return;
+    }
+    await persistCellValue(selectedCell, '');
+  }, [addToast, persistCellValue, selectedCell]);
+
   useEffect(() => {
     if (!modalOpen || !selectedCell) return undefined;
 
     const handleKeyDown = (event) => {
       if (isEditableElement(event.target)) return;
+      if (event.target?.closest?.('.patient-history-context-menu')) return;
+      if (isPatientHistoryCellClearShortcut(event)) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        clearSelectedCell();
+        return;
+      }
       const isMeta = event.metaKey || event.ctrlKey;
       const key = String(event.key || '').toUpperCase();
       if (!isMeta || (key !== 'C' && key !== 'X')) return;
@@ -250,16 +270,23 @@ export default function usePatientHistoryCellInteractions({
       const isInternalClipboard = internalClipboard
         && normalizedPastedText === String(internalClipboard.plainText || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
       const success = await persistCellValue(selectedCell, normalizedPastedText);
-      if (!success || !isInternalClipboard || internalClipboard.mode !== 'cut') return;
+      if (!success) return;
+      if (!isInternalClipboard) {
+        setClipboardCell({ id: selectedCell.id, mode: 'paste' });
+        return;
+      }
+      if (internalClipboard.mode !== 'cut') return;
 
       const sourceCell = internalClipboard.sourceCell;
       if (!sourceCell || sourceCell.id === selectedCell.id) {
         clipboardRef.current = { ...internalClipboard, mode: 'copy' };
+        setClipboardCell({ id: selectedCell.id, mode: 'copy' });
         return;
       }
       const cleared = await persistCellValue(sourceCell, '');
       if (cleared) {
         clipboardRef.current = null;
+        setClipboardCell({ id: selectedCell.id, mode: 'paste' });
         addToast('잘라낸 셀을 이동했습니다.', 'success');
       } else {
         addToast('붙여넣기는 완료됐지만 원본 셀을 비우지 못했습니다.', 'warning');
@@ -272,11 +299,12 @@ export default function usePatientHistoryCellInteractions({
       window.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('paste', handlePaste, true);
     };
-  }, [copyOrCut, modalOpen, persistCellValue, selectedCell, addToast]);
+  }, [clearSelectedCell, copyOrCut, modalOpen, persistCellValue, selectedCell, addToast]);
 
   useEffect(() => {
     if (modalOpen) return;
     setSelectedCell(null);
+    setClipboardCell(null);
     clipboardRef.current = null;
     setContextMenu((prev) => (prev?.patientHistoryCell ? null : prev));
   }, [modalOpen, setContextMenu]);
@@ -284,6 +312,7 @@ export default function usePatientHistoryCellInteractions({
   return {
     handlePatientHistoryContextAction: handleContextAction,
     openPatientHistoryCellEditor: openEditor,
+    patientHistoryClipboardCell: clipboardCell,
     selectPatientHistoryCell: selectCell,
     selectedPatientHistoryCell: selectedCell,
   };
