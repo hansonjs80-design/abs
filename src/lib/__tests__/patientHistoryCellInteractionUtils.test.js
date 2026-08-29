@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   applyPatientHistoryBodyPartAction,
   applyPatientHistoryMemoAction,
+  buildPatientHistoryCellFillValues,
   buildPatientHistoryVisitFillValues,
   buildPatientHistoryUndoAction,
   getPatientHistoryCellDirectInputText,
@@ -12,12 +13,14 @@ import {
   getPatientHistoryCellClipboardMode,
   getPatientHistoryCellClipboardText,
   getPatientHistoryCellNavigationDirection,
+  getPatientHistoryVisitCountShortcutDelta,
   getPatientHistoryInlineEditInitialValue,
   getPatientHistoryUndoRestoreChanges,
   isPatientHistoryEditorAction,
   isPatientHistoryCellClearShortcut,
   isPatientHistoryCellEditorShortcut,
   normalizePatientHistoryCellValue,
+  stepPatientHistoryVisitCount,
 } from '../patientHistoryCellInteractionUtils.js';
 
 describe('patient history body-part cell actions', () => {
@@ -120,8 +123,41 @@ describe('patient history memo cell actions', () => {
   it('builds increasing visit counts for the dragged fill range', () => {
     assert.deepEqual(buildPatientHistoryVisitFillValues('3', 4), ['4', '5', '6', '7']);
     assert.deepEqual(buildPatientHistoryVisitFillValues('3회', 2), ['4', '5']);
-    assert.deepEqual(buildPatientHistoryVisitFillValues('*', 3), []);
+    assert.deepEqual(buildPatientHistoryVisitFillValues('*', 3), ['2', '3', '4']);
     assert.deepEqual(buildPatientHistoryVisitFillValues('', 3), []);
+  });
+
+  it('copies body-part and memo values through their dragged fill ranges', () => {
+    assert.deepEqual(
+      buildPatientHistoryCellFillValues('body_part', 'Lt. 어깨\nRt. 무릎', 2),
+      ['Lt. 어깨, Rt. 무릎', 'Lt. 어깨, Rt. 무릎'],
+    );
+    assert.deepEqual(
+      buildPatientHistoryCellFillValues('memo', '첫 메모\n둘째 메모', 2),
+      ['첫 메모\n둘째 메모', '첫 메모\n둘째 메모'],
+    );
+  });
+
+  it('steps a selected visit cell with the same command arrow sequence as the schedule', () => {
+    assert.equal(
+      getPatientHistoryVisitCountShortcutDelta({ key: 'ArrowUp', metaKey: true }, 'visit_count'),
+      1,
+    );
+    assert.equal(
+      getPatientHistoryVisitCountShortcutDelta({ key: 'ArrowDown', ctrlKey: true }, 'visit_count'),
+      -1,
+    );
+    assert.equal(
+      getPatientHistoryVisitCountShortcutDelta({ key: 'ArrowUp' }, 'visit_count'),
+      0,
+    );
+    assert.equal(
+      getPatientHistoryVisitCountShortcutDelta({ key: 'ArrowUp', metaKey: true }, 'memo'),
+      0,
+    );
+    assert.equal(stepPatientHistoryVisitCount('*', 1), '1');
+    assert.equal(stepPatientHistoryVisitCount('1', 1), '2');
+    assert.equal(stepPatientHistoryVisitCount('1', -1), '*');
   });
 
   it('restores a cut and paste as one undo action in reverse mutation order', () => {

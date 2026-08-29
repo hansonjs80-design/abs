@@ -6,6 +6,7 @@ import {
   buildPatientHistoryUndoAction,
   getPatientHistoryCellDirectInputText,
   getPatientHistoryCellNavigationDirection,
+  getPatientHistoryVisitCountShortcutDelta,
   getPatientHistoryEscapeAction,
   getPatientHistoryEditorPlacement,
   getPatientHistoryInlineEditInitialValue,
@@ -17,6 +18,7 @@ import {
   isPatientHistoryCellClearShortcut,
   isPatientHistoryCellEditorShortcut,
   normalizePatientHistoryCellValue,
+  stepPatientHistoryVisitCount,
 } from '../../lib/patientHistoryCellInteractionUtils';
 import {
   parsePatientHistoryBodyPartText,
@@ -305,11 +307,11 @@ export default function usePatientHistoryCellInteractions({
 
   const {
     cancelPatientHistoryRangeSelection,
-    cancelPatientHistoryVisitFill,
+    cancelPatientHistoryCellFill,
     consumePatientHistorySuppressedSelectionClick,
-    patientHistoryVisitFillCellIds,
+    patientHistoryFillCellIds,
+    startPatientHistoryCellFill,
     startPatientHistoryCellRangeSelection,
-    startPatientHistoryVisitFill,
   } = usePatientHistoryDragInteractions({
     modalOpen,
     inlineEditorRef,
@@ -529,8 +531,18 @@ export default function usePatientHistoryCellInteractions({
     if (appliedChanges.length > 0) recordHistoryUndo(appliedChanges);
   }, [addToast, findLog, persistCellValue, recordHistoryUndo]);
 
+  const stepSelectedVisitCount = useCallback(async (cell, delta) => {
+    const log = findLog(cell?.rowKey);
+    if (!log || cell?.field !== 'visit_count') return false;
+    const currentValue = normalizePatientHistoryCellValue('visit_count', log.visit_count);
+    if (!currentValue) return true;
+    const nextValue = stepPatientHistoryVisitCount(currentValue, delta);
+    if (nextValue === currentValue) return true;
+    return persistCellValue(cell, nextValue);
+  }, [findLog, persistCellValue]);
+
   const dismissCellInteraction = useCallback(() => {
-    if (cancelPatientHistoryVisitFill() || cancelPatientHistoryRangeSelection()) return true;
+    if (cancelPatientHistoryCellFill() || cancelPatientHistoryRangeSelection()) return true;
     const activeInlineEditor = inlineEditorRef.current;
     if (activeInlineEditor?.cell) {
       cancelInlineCellEdit(activeInlineEditor.cell);
@@ -560,7 +572,7 @@ export default function usePatientHistoryCellInteractions({
     clipboardCell,
     cancelPatientHistoryRangeSelection,
     cancelInlineCellEdit,
-    cancelPatientHistoryVisitFill,
+    cancelPatientHistoryCellFill,
     clearCellSelection,
     clearClipboardCell,
     contextMenu?.patientHistoryCell,
@@ -589,6 +601,17 @@ export default function usePatientHistoryCellInteractions({
       }
       const activeCell = selectedCellRef.current;
       if (!activeCell) return;
+      const visitCountDelta = getPatientHistoryVisitCountShortcutDelta(
+        event,
+        activeCell.field,
+      );
+      if (visitCountDelta) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        void stepSelectedVisitCount(activeCell, visitCountDelta);
+        return;
+      }
       const navigationDirection = getPatientHistoryCellNavigationDirection(event);
       if (navigationDirection && moveSelectedCell(navigationDirection)) {
         event.preventDefault();
@@ -793,6 +816,7 @@ export default function usePatientHistoryCellInteractions({
     openEditorAtRect,
     persistCellValue,
     recordHistoryUndo,
+    stepSelectedVisitCount,
     undoLastHistoryChange,
   ]);
 
@@ -819,11 +843,11 @@ export default function usePatientHistoryCellInteractions({
     patientHistoryClipboardCell: clipboardCell,
     patientHistoryInlineEditor: inlineEditor,
     patientHistorySelectedCellIds: selectedCellIds,
-    patientHistoryVisitFillCellIds,
+    patientHistoryFillCellIds,
     selectPatientHistoryCell: selectCell,
     selectedPatientHistoryCell: selectedCell,
+    startPatientHistoryCellFill,
     startPatientHistoryCellRangeSelection,
-    startPatientHistoryVisitFill,
     updatePatientHistoryInlineCellDraft: updateInlineCellDraft,
   };
 }

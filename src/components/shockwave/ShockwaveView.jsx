@@ -1986,11 +1986,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     patientHistoryClipboardCell,
     patientHistoryInlineEditor,
     patientHistorySelectedCellIds,
-    patientHistoryVisitFillCellIds,
+    patientHistoryFillCellIds,
     selectPatientHistoryCell,
     selectedPatientHistoryCell,
+    startPatientHistoryCellFill,
     startPatientHistoryCellRangeSelection,
-    startPatientHistoryVisitFill,
     updatePatientHistoryInlineCellDraft,
   } = usePatientHistoryCellInteractions({
     modalOpen: patientHistoryModalOpen,
@@ -4181,14 +4181,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                   patientHistoryClipboardCell={patientHistoryClipboardCell}
                                   patientHistoryInlineEditor={patientHistoryInlineEditor}
                                   patientHistorySelectedCellIds={patientHistorySelectedCellIds}
-                                  patientHistoryVisitFillCellIds={patientHistoryVisitFillCellIds}
+                                  patientHistoryFillCellIds={patientHistoryFillCellIds}
                                   selectedPatientHistoryCell={selectedPatientHistoryCell}
                                   cancelPatientHistoryInlineCellEdit={cancelPatientHistoryInlineCellEdit}
                                   commitPatientHistoryInlineCellEdit={commitPatientHistoryInlineCellEdit}
                                   openPatientHistoryCellEditor={openPatientHistoryCellEditor}
                                   selectPatientHistoryCell={selectPatientHistoryCell}
+                                  startPatientHistoryCellFill={startPatientHistoryCellFill}
                                   startPatientHistoryCellRangeSelection={startPatientHistoryCellRangeSelection}
-                                  startPatientHistoryVisitFill={startPatientHistoryVisitFill}
                                   updatePatientHistoryInlineCellDraft={updatePatientHistoryInlineCellDraft}
                                 />
                                 <td

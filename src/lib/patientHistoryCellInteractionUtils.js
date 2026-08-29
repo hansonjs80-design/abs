@@ -10,6 +10,7 @@ import {
   formatBodyPartInput,
   normalizeBodyPartKey,
   normalizeVisitInputValue,
+  stepVisitShortcutInputValue,
 } from './schedulerUtils.js';
 import { getScheduleShortcutKey } from './scheduleKeyboardUtils.js';
 
@@ -224,6 +225,26 @@ export function getPatientHistoryCellNavigationDirection(event) {
   return ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key) ? key : null;
 }
 
+export function getPatientHistoryVisitCountShortcutDelta(event, field) {
+  if (
+    !event
+    || event.isComposing
+    || field !== 'visit_count'
+    || (!event.ctrlKey && !event.metaKey)
+    || event.altKey
+    || event.shiftKey
+  ) return 0;
+  if (event.key === 'ArrowUp') return 1;
+  if (event.key === 'ArrowDown') return -1;
+  return 0;
+}
+
+export function stepPatientHistoryVisitCount(rawValue, delta) {
+  const currentValue = normalizePatientHistoryCellValue('visit_count', rawValue);
+  if (!currentValue || !delta) return currentValue;
+  return stepVisitShortcutInputValue(currentValue, delta);
+}
+
 export function getPatientHistoryCellDirectInputText(event) {
   if (!event || event.ctrlKey || event.metaKey || event.altKey) return null;
   if (event.isComposing || event.key === 'Process' || event.keyCode === 229) return '';
@@ -245,10 +266,22 @@ export function getPatientHistoryInlineEditInitialValue(field, rawValue, initial
 
 export function buildPatientHistoryVisitFillValues(rawValue, targetCount) {
   const normalizedValue = normalizePatientHistoryCellValue('visit_count', rawValue);
-  if (!/^\d+$/.test(normalizedValue)) return [];
-  const startValue = Number.parseInt(normalizedValue, 10);
+  if (normalizedValue !== '*' && !/^\d+$/.test(normalizedValue)) return [];
+  const startValue = normalizedValue === '*'
+    ? 1
+    : Number.parseInt(normalizedValue, 10);
   const safeTargetCount = Math.max(0, Number.parseInt(targetCount, 10) || 0);
   return Array.from({ length: safeTargetCount }, (_, index) => String(startValue + index + 1));
+}
+
+export function buildPatientHistoryCellFillValues(field, rawValue, targetCount) {
+  if (field === 'visit_count') {
+    return buildPatientHistoryVisitFillValues(rawValue, targetCount);
+  }
+  if (!['body_part', 'memo'].includes(field)) return [];
+  const safeTargetCount = Math.max(0, Number.parseInt(targetCount, 10) || 0);
+  const sourceValue = normalizePatientHistoryCellValue(field, rawValue);
+  return Array.from({ length: safeTargetCount }, () => sourceValue);
 }
 
 export function getPatientHistoryCellClipboardMode(event) {

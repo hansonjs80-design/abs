@@ -421,7 +421,7 @@ test('patient history cell clipboard keeps an immediate selected-cell reference'
   );
 });
 
-test('patient history cells support range selection, direct typing, and visit fill handles', async () => {
+test('patient history cells support range selection, direct typing, and fill handles', async () => {
   const [shockwaveView, cellInteractions, dragInteractions, shockwaveCss] = await Promise.all([
     readPatientHistoryRenderSource(),
     readFile(
@@ -442,19 +442,34 @@ test('patient history cells support range selection, direct typing, and visit fi
   );
   assert.match(dragInteractions, /const updateRangeSelectionTarget = useCallback/);
   assert.match(dragInteractions, /setCellSelection\(cells, drag\.sourceCell\);/);
-  assert.match(dragInteractions, /buildPatientHistoryVisitFillValues\(drag\.sourceValue, drag\.targetCells\.length\)/);
+  assert.match(dragInteractions, /buildPatientHistoryCellFillValues\([\s\S]*?drag\.targetCells\.length/);
   assert.match(dragInteractions, /rollbackSucceeded/);
   assert.equal(shockwaveView.match(/startPatientHistoryCellRangeSelection\(event,/g)?.length, 3);
-  assert.match(shockwaveView, /className="patient-history-fill-handle"/);
-  assert.match(shockwaveView, /startPatientHistoryVisitFill\(event, visitHistoryCell\)/);
+  assert.equal(shockwaveView.match(/className="patient-history-fill-handle"/g)?.length, 3);
+  assert.match(shockwaveView, /startPatientHistoryCellFill\(event, bodyPartHistoryCell\)/);
+  assert.match(shockwaveView, /startPatientHistoryCellFill\(event, memoHistoryCell\)/);
+  assert.match(shockwaveView, /startPatientHistoryCellFill\(event, visitHistoryCell\)/);
   assert.match(
     shockwaveCss,
-    /\.patient-history-fill-handle\s*\{[^}]*width:\s*8px;[^}]*height:\s*8px;/s,
+    /\.patient-history-fill-handle\s*\{[^}]*width:\s*6px;[^}]*height:\s*6px;/s,
   );
   assert.match(
     shockwaveCss,
     /\.patient-history-data-cell--selectable\.is-fill-preview \.patient-history-edit-field--detail/s,
   );
+});
+
+test('patient history clipboard outline survives selecting a paste target', async () => {
+  const dragInteractions = await readFile(
+    new URL('../../components/shockwave/usePatientHistoryDragInteractions.js', import.meta.url),
+    'utf8',
+  );
+  const startRangeSelection = dragInteractions.match(
+    /const startRangeSelection = useCallback\(\(event, cell\) => \{([\s\S]*?)\n\s{2}\}, \[/,
+  )?.[1] || '';
+
+  assert.match(startRangeSelection, /setCellSelection\(\[cell\], cell\);/);
+  assert.doesNotMatch(startRangeSelection, /clearClipboardCell\(\);/);
 });
 
 test('patient history memo and visit double click activate inline field editors', async () => {
@@ -493,6 +508,10 @@ test('patient history memo and visit double click activate inline field editors'
   assert.match(shockwaveView, /field: 'visit_count',[\s\S]*?canEdit: true/);
   assert.match(shockwaveView, /readOnly=\{!isVisitInlineEditing\}/);
   assert.match(shockwaveView, /data-patient-history-field=\{visitHistoryCell\.field\}/);
+  assert.match(
+    shockwaveView,
+    /<PatientHistoryOverflowField disabled value=\{activeVisitCountValue\}>/,
+  );
   assert.match(
     cellInteractions,
     /const navigationDirection = getPatientHistoryCellNavigationDirection\(event\);[\s\S]*?moveSelectedCell\(navigationDirection\)/,

@@ -18,16 +18,16 @@ export default function PatientHistoryEditableCells({
   historyEditFieldStyle,
   visitSequenceColor,
   patientHistoryClipboardCell,
+  patientHistoryFillCellIds,
   patientHistoryInlineEditor,
   patientHistorySelectedCellIds,
-  patientHistoryVisitFillCellIds,
   selectedPatientHistoryCell,
   cancelPatientHistoryInlineCellEdit,
   commitPatientHistoryInlineCellEdit,
   openPatientHistoryCellEditor,
   selectPatientHistoryCell,
+  startPatientHistoryCellFill,
   startPatientHistoryCellRangeSelection,
-  startPatientHistoryVisitFill,
   updatePatientHistoryInlineCellDraft,
 }) {
   const currentBodyPartValue = String(log.body_part || '');
@@ -83,7 +83,7 @@ export default function PatientHistoryEditableCells({
   return (
     <>
       <td
-        className={`patient-history-data-cell patient-history-data-cell--selectable${patientHistorySelectedCellIds.includes(bodyPartHistoryCell.id) ? ' is-selected' : ''}${patientHistoryClipboardCell?.id === bodyPartHistoryCell.id ? ` is-clipboard-source is-clipboard-${patientHistoryClipboardCell.mode}` : ''}`}
+        className={`patient-history-data-cell patient-history-data-cell--selectable${patientHistorySelectedCellIds.includes(bodyPartHistoryCell.id) ? ' is-selected' : ''}${patientHistoryFillCellIds.includes(bodyPartHistoryCell.id) ? ' is-fill-preview' : ''}${patientHistoryClipboardCell?.id === bodyPartHistoryCell.id ? ` is-clipboard-source is-clipboard-${patientHistoryClipboardCell.mode}` : ''}`}
         data-patient-history-cell-id={bodyPartHistoryCell.id}
         data-patient-history-row-key={bodyPartHistoryCell.rowKey}
         data-patient-history-field={bodyPartHistoryCell.field}
@@ -123,10 +123,21 @@ export default function PatientHistoryEditableCells({
               wordBreak: 'normal',
             }}
           />
+          {selectedPatientHistoryCell?.id === bodyPartHistoryCell.id
+            && !patientHistoryClipboardCell && (
+            <button
+              type="button"
+              className="patient-history-fill-handle"
+              aria-label="부위 내용 복사 채우기 핸들"
+              title="끌어서 같은 부위 내용을 복사"
+              tabIndex={-1}
+              onPointerDown={(event) => startPatientHistoryCellFill(event, bodyPartHistoryCell)}
+            />
+          )}
         </PatientHistoryOverflowField>
       </td>
       <td
-        className={`patient-history-data-cell patient-history-data-cell--selectable${patientHistorySelectedCellIds.includes(memoHistoryCell.id) ? ' is-selected' : ''}${patientHistoryClipboardCell?.id === memoHistoryCell.id ? ` is-clipboard-source is-clipboard-${patientHistoryClipboardCell.mode}` : ''}${canEditHistoryMemo ? '' : ' is-readonly'}`}
+        className={`patient-history-data-cell patient-history-data-cell--selectable${patientHistorySelectedCellIds.includes(memoHistoryCell.id) ? ' is-selected' : ''}${patientHistoryFillCellIds.includes(memoHistoryCell.id) ? ' is-fill-preview' : ''}${patientHistoryClipboardCell?.id === memoHistoryCell.id ? ` is-clipboard-source is-clipboard-${patientHistoryClipboardCell.mode}` : ''}${canEditHistoryMemo ? '' : ' is-readonly'}`}
         data-patient-history-cell-id={memoHistoryCell.id}
         data-patient-history-row-key={memoHistoryCell.rowKey}
         data-patient-history-field={memoHistoryCell.field}
@@ -194,10 +205,23 @@ export default function PatientHistoryEditableCells({
               }
             }}
           />
+          {selectedPatientHistoryCell?.id === memoHistoryCell.id
+            && canEditHistoryMemo
+            && !isMemoInlineEditing
+            && !patientHistoryClipboardCell && (
+            <button
+              type="button"
+              className="patient-history-fill-handle"
+              aria-label="메모 내용 복사 채우기 핸들"
+              title="끌어서 같은 메모 내용을 복사"
+              tabIndex={-1}
+              onPointerDown={(event) => startPatientHistoryCellFill(event, memoHistoryCell)}
+            />
+          )}
         </PatientHistoryOverflowField>
       </td>
       <td
-        className={`patient-history-data-cell patient-history-data-cell--selectable${patientHistorySelectedCellIds.includes(visitHistoryCell.id) ? ' is-selected' : ''}${patientHistoryVisitFillCellIds.includes(visitHistoryCell.id) ? ' is-fill-preview' : ''}${patientHistoryClipboardCell?.id === visitHistoryCell.id ? ` is-clipboard-source is-clipboard-${patientHistoryClipboardCell.mode}` : ''}`}
+        className={`patient-history-data-cell patient-history-data-cell--selectable${patientHistorySelectedCellIds.includes(visitHistoryCell.id) ? ' is-selected' : ''}${patientHistoryFillCellIds.includes(visitHistoryCell.id) ? ' is-fill-preview' : ''}${patientHistoryClipboardCell?.id === visitHistoryCell.id ? ` is-clipboard-source is-clipboard-${patientHistoryClipboardCell.mode}` : ''}`}
         data-patient-history-cell-id={visitHistoryCell.id}
         data-patient-history-row-key={visitHistoryCell.rowKey}
         data-patient-history-field={visitHistoryCell.field}
@@ -216,7 +240,7 @@ export default function PatientHistoryEditableCells({
         onClick={(event) => selectPatientHistoryCell(event, visitHistoryCell)}
         onDoubleClick={(event) => openPatientHistoryCellEditor(event, visitHistoryCell)}
       >
-        <PatientHistoryOverflowField disabled={isVisitInlineEditing} value={activeVisitCountValue}>
+        <PatientHistoryOverflowField disabled value={activeVisitCountValue}>
           <input
             className={`patient-history-edit-field patient-history-edit-field--inset patient-history-edit-field--detail patient-history-visit-count-field${visitSequenceColor ? ' has-visit-sequence' : ''}${isVisitInlineEditing ? ' patient-history-edit-field--inline-editing' : ''}`}
             type="text"
@@ -268,7 +292,7 @@ export default function PatientHistoryEditableCells({
               aria-label="회차 연속 입력 핸들"
               title="끌어서 회차를 1씩 증가"
               tabIndex={-1}
-              onPointerDown={(event) => startPatientHistoryVisitFill(event, visitHistoryCell)}
+              onPointerDown={(event) => startPatientHistoryCellFill(event, visitHistoryCell)}
             />
           )}
         </PatientHistoryOverflowField>

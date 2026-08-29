@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  buildPatientHistoryVisitFillValues,
+  buildPatientHistoryCellFillValues,
   getPatientHistoryCellFromElement,
   normalizePatientHistoryCellValue,
 } from '../../lib/patientHistoryCellInteractionUtils';
 
 const SELECTABLE_CELL_SELECTOR = '.patient-history-data-cell--selectable[data-patient-history-cell-id]';
-const VISIT_CELL_SELECTOR = `${SELECTABLE_CELL_SELECTOR}[data-patient-history-field="visit_count"]`;
 
 export default function usePatientHistoryDragInteractions({
   modalOpen,
@@ -20,8 +19,8 @@ export default function usePatientHistoryDragInteractions({
   commitInlineCellEdit,
   closeContextMenu,
 }) {
-  const [visitFillPreviewCellIds, setVisitFillPreviewCellIds] = useState([]);
-  const visitFillDragRef = useRef(null);
+  const [fillPreviewCellIds, setFillPreviewCellIds] = useState([]);
+  const fillDragRef = useRef(null);
   const rangeSelectionDragRef = useRef(null);
   const suppressNextClickRef = useRef(false);
   const suppressClickTimerRef = useRef(null);
@@ -103,7 +102,6 @@ export default function usePatientHistoryDragInteractions({
 
     suppressNextClickRef.current = false;
     setCellSelection([cell], cell);
-    clearClipboardCell();
     closeContextMenu();
     sourceElement.focus({ preventScroll: true });
     rangeSelectionDragRef.current = {
@@ -115,23 +113,24 @@ export default function usePatientHistoryDragInteractions({
       hasMoved: false,
     };
   }, [
-    clearClipboardCell,
     closeContextMenu,
     commitInlineCellEdit,
     inlineEditorRef,
     setCellSelection,
   ]);
 
-  const updateVisitFillTarget = useCallback((clientX, clientY) => {
-    const drag = visitFillDragRef.current;
+  const updateCellFillTarget = useCallback((clientX, clientY) => {
+    const drag = fillDragRef.current;
     if (!drag) return;
-    const targetElement = document.elementFromPoint(clientX, clientY)?.closest?.(VISIT_CELL_SELECTOR);
+    const targetElement = document.elementFromPoint(clientX, clientY)?.closest?.(
+      drag.fieldSelector,
+    );
     if (!targetElement || targetElement.closest('tbody') !== drag.tableBody) return;
 
-    const targetIndex = drag.visitElements.indexOf(targetElement);
+    const targetIndex = drag.fieldElements.indexOf(targetElement);
     if (targetIndex < 0 || targetIndex === drag.sourceIndex) {
       drag.targetCells = [];
-      setVisitFillPreviewCellIds([]);
+      setFillPreviewCellIds([]);
       return;
     }
 
@@ -142,25 +141,29 @@ export default function usePatientHistoryDragInteractions({
       step > 0 ? index <= targetIndex : index >= targetIndex;
       index += step
     ) {
-      const cell = getPatientHistoryCellFromElement(drag.visitElements[index]);
+      const cell = getPatientHistoryCellFromElement(drag.fieldElements[index]);
       if (cell?.canEdit) targetCells.push(cell);
     }
     drag.targetCells = targetCells;
-    setVisitFillPreviewCellIds(targetCells.map((cell) => cell.id));
+    setFillPreviewCellIds(targetCells.map((cell) => cell.id));
   }, []);
 
-  const finishVisitFill = useCallback(async () => {
-    const drag = visitFillDragRef.current;
-    visitFillDragRef.current = null;
-    setVisitFillPreviewCellIds([]);
+  const finishCellFill = useCallback(async () => {
+    const drag = fillDragRef.current;
+    fillDragRef.current = null;
+    setFillPreviewCellIds([]);
     if (!drag?.targetCells?.length) return;
 
-    const nextValues = buildPatientHistoryVisitFillValues(drag.sourceValue, drag.targetCells.length);
+    const nextValues = buildPatientHistoryCellFillValues(
+      drag.field,
+      drag.sourceValue,
+      drag.targetCells.length,
+    );
     const appliedChanges = [];
     for (let index = 0; index < drag.targetCells.length; index += 1) {
       const cell = drag.targetCells[index];
       const log = findLog(cell.rowKey);
-      const previousValue = normalizePatientHistoryCellValue('visit_count', log?.visit_count);
+      const previousValue = normalizePatientHistoryCellValue(drag.field, log?.[drag.field]);
       const nextValue = nextValues[index];
       if (previousValue === nextValue) continue;
       const success = await persistCellValue(cell, nextValue, { recordUndo: false });
@@ -174,8 +177,8 @@ export default function usePatientHistoryDragInteractions({
         }
         addToast(
           rollbackSucceeded
-            ? '회차 연속 입력을 저장하지 못해 변경 전 상태로 되돌렸습니다.'
-            : '회차 연속 입력을 일부 되돌리지 못했습니다. 해당 셀을 확인해 주세요.',
+            ? '셀 채우기를 저장하지 못해 변경 전 상태로 되돌렸습니다.'
+            : '셀 채우기를 일부 되돌리지 못했습니다. 해당 셀을 확인해 주세요.',
           'warning',
         );
         return;
@@ -185,43 +188,51 @@ export default function usePatientHistoryDragInteractions({
 
     if (appliedChanges.length > 0) {
       recordHistoryUndo(appliedChanges);
-      addToast(`회차 ${appliedChanges.length}개 셀을 연속 입력했습니다.`, 'success');
+      const label = drag.field === 'visit_count' ? '회차 연속 입력' : '내용 복사';
+      addToast(`${label}을 ${appliedChanges.length}개 셀에 적용했습니다.`, 'success');
     }
   }, [addToast, findLog, persistCellValue, recordHistoryUndo]);
 
-  const cancelVisitFill = useCallback(() => {
-    if (!visitFillDragRef.current) return false;
-    visitFillDragRef.current = null;
-    setVisitFillPreviewCellIds([]);
+  const cancelCellFill = useCallback(() => {
+    if (!fillDragRef.current) return false;
+    fillDragRef.current = null;
+    setFillPreviewCellIds([]);
     return true;
   }, []);
 
-  const startVisitFill = useCallback((event, cell) => {
+  const startCellFill = useCallback((event, cell) => {
     if (event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
-    const sourceElement = event.currentTarget?.closest?.(VISIT_CELL_SELECTOR);
+    const fieldSelector = `${SELECTABLE_CELL_SELECTOR}[data-patient-history-field="${cell?.field}"]`;
+    const sourceElement = event.currentTarget?.closest?.(fieldSelector);
     const tableBody = sourceElement?.closest?.('tbody');
     const log = findLog(cell?.rowKey);
-    const sourceValue = normalizePatientHistoryCellValue('visit_count', log?.visit_count);
-    if (!sourceElement || !tableBody || buildPatientHistoryVisitFillValues(sourceValue, 1).length === 0) {
-      addToast('숫자가 입력된 회차 셀에서만 연속 입력할 수 있습니다.', 'info');
+    const sourceValue = normalizePatientHistoryCellValue(cell?.field, log?.[cell?.field]);
+    if (
+      !sourceElement
+      || !tableBody
+      || buildPatientHistoryCellFillValues(cell?.field, sourceValue, 1).length === 0
+    ) {
+      addToast('숫자 또는 *가 입력된 회차 셀에서만 연속 입력할 수 있습니다.', 'info');
       return;
     }
 
-    const visitElements = Array.from(tableBody.querySelectorAll(VISIT_CELL_SELECTOR));
-    const sourceIndex = visitElements.indexOf(sourceElement);
+    const fieldElements = Array.from(tableBody.querySelectorAll(fieldSelector));
+    const sourceIndex = fieldElements.indexOf(sourceElement);
     if (sourceIndex < 0) return;
     setCellSelection([cell], cell);
     clearClipboardCell();
-    visitFillDragRef.current = {
+    fillDragRef.current = {
+      field: cell.field,
+      fieldSelector,
       sourceValue,
       tableBody,
-      visitElements,
+      fieldElements,
       sourceIndex,
       targetCells: [],
     };
-    setVisitFillPreviewCellIds([]);
+    setFillPreviewCellIds([]);
     event.currentTarget?.setPointerCapture?.(event.pointerId);
   }, [addToast, clearClipboardCell, findLog, setCellSelection]);
 
@@ -229,20 +240,20 @@ export default function usePatientHistoryDragInteractions({
     if (!modalOpen) return undefined;
 
     const handlePointerMove = (event) => {
-      if (visitFillDragRef.current) {
+      if (fillDragRef.current) {
         event.preventDefault();
-        updateVisitFillTarget(event.clientX, event.clientY);
+        updateCellFillTarget(event.clientX, event.clientY);
       } else if (rangeSelectionDragRef.current) {
         event.preventDefault();
         updateRangeSelectionTarget(event.clientX, event.clientY);
       }
     };
     const handlePointerUp = () => {
-      if (visitFillDragRef.current) void finishVisitFill();
+      if (fillDragRef.current) void finishCellFill();
       else finishRangeSelection();
     };
     const handlePointerCancel = () => {
-      cancelVisitFill();
+      cancelCellFill();
       cancelRangeSelection();
     };
 
@@ -256,22 +267,22 @@ export default function usePatientHistoryDragInteractions({
     };
   }, [
     cancelRangeSelection,
-    cancelVisitFill,
+    cancelCellFill,
+    finishCellFill,
     finishRangeSelection,
-    finishVisitFill,
     modalOpen,
+    updateCellFillTarget,
     updateRangeSelectionTarget,
-    updateVisitFillTarget,
   ]);
 
   useEffect(() => {
     if (modalOpen) return;
-    visitFillDragRef.current = null;
+    fillDragRef.current = null;
     rangeSelectionDragRef.current = null;
     suppressNextClickRef.current = false;
     window.clearTimeout(suppressClickTimerRef.current);
     suppressClickTimerRef.current = null;
-    setVisitFillPreviewCellIds([]);
+    setFillPreviewCellIds([]);
     return () => {
       window.clearTimeout(suppressClickTimerRef.current);
     };
@@ -279,10 +290,10 @@ export default function usePatientHistoryDragInteractions({
 
   return {
     cancelPatientHistoryRangeSelection: cancelRangeSelection,
-    cancelPatientHistoryVisitFill: cancelVisitFill,
+    cancelPatientHistoryCellFill: cancelCellFill,
     consumePatientHistorySuppressedSelectionClick: consumeSuppressedSelectionClick,
-    patientHistoryVisitFillCellIds: visitFillPreviewCellIds,
+    patientHistoryFillCellIds: fillPreviewCellIds,
+    startPatientHistoryCellFill: startCellFill,
     startPatientHistoryCellRangeSelection: startRangeSelection,
-    startPatientHistoryVisitFill: startVisitFill,
   };
 }
