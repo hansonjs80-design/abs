@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  buildShockwaveSettlementPrintColumnWidths,
   buildStatsDisplayPrescriptions,
   buildTherapistPrescriptionDisplayGroups,
   buildShockwaveCountSummaries,
@@ -22,6 +23,38 @@ describe('shockwave stats count utilities', () => {
     assert.equal(normalizePrescriptionKey(' F 2.5 (본인) '), 'f25본인');
     assert.equal(statsPrescriptionsMatch('F2.5', 'F2.5(본인)'), false);
     assert.equal(statsPrescriptionsMatch('F 2.5 (본인)', 'f2.5본인'), true);
+  });
+
+  it('allocates wider print columns to long prescription labels', () => {
+    const columns = buildShockwaveSettlementPrintColumnWidths([
+      { prescriptions: ['F2.5(본인)', 'F2.0'] },
+    ]);
+
+    assert.equal(columns.length, 2);
+    assert.equal(columns[0].prescription, 'F2.5(본인)');
+    assert.ok(columns[0].widthPercent > columns[1].widthPercent);
+    assert.equal(
+      Math.round(columns.reduce((sum, column) => sum + column.widthPercent, 0)),
+      81,
+    );
+    assert.equal(
+      Math.round((columns[0].widthPercent / columns[1].widthPercent) * 100),
+      122,
+    );
+  });
+
+  it('reserves enough print width for a therapist with one prescription', () => {
+    const columns = buildShockwaveSettlementPrintColumnWidths([
+      { prescriptions: ['F2.0', 'F2.5'] },
+      { prescriptions: ['F2.5'] },
+    ]);
+
+    assert.equal(columns[2].isSingleTherapistColumn, true);
+    assert.ok(columns[2].widthPercent > columns[0].widthPercent);
+    assert.equal(
+      Math.round(columns.reduce((sum, column) => sum + column.widthPercent, 0)),
+      81,
+    );
   });
 
   it('counts base and qualified prescriptions in separate current and settlement columns', () => {

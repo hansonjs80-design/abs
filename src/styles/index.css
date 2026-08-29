@@ -944,6 +944,16 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   }
 
   body.settlement-print.shockwave-settlement-print
+    .sw-horizontal-settlement-main-table col.sw-shockwave-settlement-label-column {
+    width: 19% !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print
+    .sw-horizontal-settlement-main-table col.sw-shockwave-settlement-prescription-column {
+    width: var(--sw-shockwave-print-column-width) !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print
     .sw-horizontal-settlement-main-table tbody tr:nth-child(1) td,
   body.settlement-print.shockwave-settlement-print
     .sw-horizontal-settlement-main-table tbody tr:nth-child(2) td {
@@ -957,6 +967,14 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     .sw-horizontal-settlement-main-table .settlement-incentive-row td {
     font-size: 15.5pt !important;
     font-weight: 900 !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print
+    .sw-horizontal-settlement-main-table td.merged-value--single-prescription {
+    padding-left: 0.25mm !important;
+    padding-right: 0.25mm !important;
+    font-size: 13.5pt !important;
+    letter-spacing: -0.2pt !important;
   }
 
   body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table thead .therapist-col,
@@ -2022,6 +2040,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     box-sizing: border-box !important;
     margin: 0 !important;
     padding: 0 !important;
+    gap: 0.6mm !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
@@ -2104,13 +2123,13 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   html[data-print-orientation="landscape"] body.manual-settlement-print
     .sw-manual-settlement-container .sw-settlement-header {
     display: flex !important;
-    flex: 0 0 12mm !important;
-    height: 12mm !important;
-    min-height: 12mm !important;
+    flex: 0 0 7mm !important;
+    height: 7mm !important;
+    min-height: 7mm !important;
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    margin: 0 0 1.2mm !important;
+    margin: 0 0 0.6mm !important;
     padding: 0 !important;
     gap: 2mm !important;
     align-items: center !important;
@@ -2133,7 +2152,7 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     flex: 0 0 7mm !important;
     height: 7mm !important;
     min-height: 7mm !important;
-    margin-bottom: 1.2mm !important;
+    margin-bottom: 0.6mm !important;
   }
 
   html[data-print-orientation="landscape"] body.manual-settlement-print
@@ -2446,6 +2465,9 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   html[data-print-orientation="landscape"] body.manual-settlement-print .sw-six-month-ion-input-wrap {
     gap: 0.8mm !important;
+    font: inherit !important;
+    font-weight: inherit !important;
+    line-height: inherit !important;
   }
 
   html[data-print-orientation="landscape"] body.manual-settlement-print .sw-six-month-ion-input-wrap input {
@@ -2456,9 +2478,19 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     border-radius: 0 !important;
     background: transparent !important;
     color: #172033 !important;
+    font-family: inherit !important;
     font-size: inherit !important;
     font-weight: inherit !important;
+    line-height: inherit !important;
     outline: 0 !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print .sw-six-month-ion-input-wrap span {
+    color: #172033 !important;
+    font-family: inherit !important;
+    font-size: inherit !important;
+    font-weight: inherit !important;
+    line-height: inherit !important;
   }
 
   html[data-print-orientation="landscape"] body.manual-settlement-print .sw-manual-ion-saving {

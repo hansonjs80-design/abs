@@ -14,6 +14,38 @@ export function toStatsPrescriptionCount(value) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 
+export function getShockwaveSettlementPrintColumnWeight(prescription) {
+  const compactLabel = String(prescription || '').replace(/\s+/g, '');
+  const isLongLabel = /[()[\]{}]/.test(compactLabel) || Array.from(compactLabel).length >= 6;
+  return isLongLabel ? 1.1 : 0.9;
+}
+
+export function buildShockwaveSettlementPrintColumnWidths(
+  prescriptionGroups,
+  valueAreaPercent = 81,
+) {
+  const columns = (Array.isArray(prescriptionGroups) ? prescriptionGroups : [])
+    .flatMap((group) => {
+      const prescriptions = Array.isArray(group?.prescriptions) ? group.prescriptions : [];
+      const isSingleTherapistColumn = prescriptions.length === 1;
+      return prescriptions.map((prescription) => ({
+        prescription,
+        isSingleTherapistColumn,
+      }));
+    });
+  const weights = columns.map(({ prescription, isSingleTherapistColumn }) => (
+    getShockwaveSettlementPrintColumnWeight(prescription)
+    * (isSingleTherapistColumn ? 1.25 : 1)
+  ));
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+  if (totalWeight <= 0) return [];
+
+  return columns.map((column, index) => ({
+    ...column,
+    widthPercent: (Number(valueAreaPercent) || 0) * (weights[index] / totalWeight),
+  }));
+}
+
 export function buildStatsDisplayPrescriptions({
   configuredPrescriptions = [],
   rows = [],
