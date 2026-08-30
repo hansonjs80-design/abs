@@ -2185,6 +2185,13 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   }
 
   html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-settlement-stack .sw-settlement-meta-total,
+  html[data-print-orientation="landscape"] body.manual-settlement-print
+    .sw-manual-settlement-stack .sw-settlement-meta-sales {
+    display: none !important;
+  }
+
+  html[data-print-orientation="landscape"] body.manual-settlement-print
     .sw-manual-settlement-main-card .sw-manual-settlement-table-wrap,
   html[data-print-orientation="landscape"] body.manual-settlement-print
     .sw-manual-summary-card .sw-six-month-summary-wrap {

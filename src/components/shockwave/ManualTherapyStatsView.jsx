@@ -168,9 +168,9 @@ export default function ManualTherapyStatsView({
         <div className="sw-settlement-header">
           <h2>{currentMonth}월 도수치료 결산</h2>
           <div className="sw-settlement-meta">
-            <span>총 {formatCount(settlement.grandTotalCount)}</span>
-            <span>매출 {formatCurrency(settlement.grandAmount)}</span>
-            <span>인센티브 {Number(incentivePercentage) || 0}%</span>
+            <span className="sw-settlement-meta-total">총 {formatCount(settlement.grandTotalCount)}</span>
+            <span className="sw-settlement-meta-sales">매출 {formatCurrency(settlement.grandAmount)}</span>
+            <span className="sw-settlement-meta-incentive">인센티브 {Number(incentivePercentage) || 0}%</span>
           </div>
         </div>
 

@@ -8,6 +8,10 @@ const shockwaveSettlementUrl = new URL(
   '../../components/shockwave/ShockwaveSettlementView.jsx',
   import.meta.url,
 );
+const manualTherapySettlementUrl = new URL(
+  '../../components/shockwave/ManualTherapyStatsView.jsx',
+  import.meta.url,
+);
 
 test('shockwave landscape print uses label-aware prescription columns', async () => {
   const [indexCss, settlementView] = await Promise.all([
@@ -63,5 +67,20 @@ test('manual ion print keeps numbers and units on the same typography', async ()
   assert.match(
     indexCss,
     /\.sw-six-month-ion-input-wrap span\s*\{[^}]*font-size:\s*inherit !important;[^}]*font-weight:\s*inherit !important;[^}]*line-height:\s*inherit !important;/s,
+  );
+});
+
+test('manual settlement print keeps only the incentive header badge', async () => {
+  const [indexCss, settlementView] = await Promise.all([
+    readFile(indexCssUrl, 'utf8'),
+    readFile(manualTherapySettlementUrl, 'utf8'),
+  ]);
+
+  assert.match(settlementView, /className="sw-settlement-meta-total">총 /);
+  assert.match(settlementView, /className="sw-settlement-meta-sales">매출 /);
+  assert.match(settlementView, /className="sw-settlement-meta-incentive">인센티브 /);
+  assert.match(
+    indexCss,
+    /body\.manual-settlement-print[\s\S]*?\.sw-settlement-meta-total,[\s\S]*?body\.manual-settlement-print[\s\S]*?\.sw-settlement-meta-sales\s*\{[^}]*display:\s*none !important;/s,
   );
 });
