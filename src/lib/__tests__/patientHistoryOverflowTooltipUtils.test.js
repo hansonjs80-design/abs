@@ -371,6 +371,7 @@ test('patient history selection and clipboard outlines stay on the inner detail 
 
   assert.match(selectedCellRule, /box-shadow:\s*none\s*!important;/);
   assert.match(selectedFieldRule, /border-color:\s*#2563eb\s*!important;/);
+  assert.match(selectedFieldRule, /background-color:\s*rgba\(239, 246, 255, 0\.94\)\s*!important;/);
   assert.match(selectedFieldRule, /box-shadow:\s*inset 0 0 0 1px #2563eb\s*!important;/);
   assert.match(clipboardFieldRule, /border-color:\s*#2563eb\s*!important;/);
   assert.match(clipboardOverlayRule, /border:\s*2px dashed #2563eb;/);
@@ -461,7 +462,11 @@ test('patient history cells support range selection, direct typing, and fill han
   );
   assert.match(
     shockwaveCss,
-    /\.patient-history-table tbody tr:hover > td,[\s\S]*?:has\(\.patient-history-data-cell--selectable\.is-selected\) > td,[\s\S]*?background-color:\s*#e2e8f0 !important;/s,
+    /\.patient-history-table tbody tr:hover > td\s*\{\s*background-color:\s*#e2e8f0 !important;\s*\}/,
+  );
+  assert.match(
+    shockwaveCss,
+    /:has\(\.patient-history-data-cell--selectable\.is-selected\) > td,[\s\S]*?:has\(\.patient-history-data-cell--selectable\.is-fill-preview\) > td[\s\S]*?background-color:\s*#e2e8f0 !important;/s,
   );
   assert.doesNotMatch(
     shockwaveCss,

@@ -4114,7 +4114,10 @@
   user-select: text;
 }
 
-.patient-history-table tbody tr:hover > td,
+.patient-history-table tbody tr:hover > td {
+  background-color: #e2e8f0 !important;
+}
+
 .patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-selected) > td,
 .patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-fill-preview) > td {
   background-color: #e2e8f0 !important;
