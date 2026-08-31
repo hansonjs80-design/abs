@@ -1887,7 +1887,7 @@
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table thead th,
 .sw-manual-summary-card .sw-summary-table thead th {
-  font-size: 1.4rem !important;
+  font-size: 1.3rem !important;
   line-height: 1.15;
   font-weight: 900;
 }
@@ -2007,6 +2007,10 @@
 }
 
 @media screen {
+  .sw-manual-settlement-container .sw-settlement-header h2 {
+    font-size: 1.3rem !important;
+  }
+
   .sw-manual-summary-card:not(.sw-manual-ion-summary-card)
     .sw-summary-table tbody th,
   .sw-manual-summary-card:not(.sw-manual-ion-summary-card)
