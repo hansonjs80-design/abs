@@ -4116,12 +4116,7 @@
 
 .patient-history-table tbody tr:hover > td,
 .patient-history-table tbody tr.patient-history-row--hovered > td {
-  background-color: #cbd5e1 !important;
-}
-
-.patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-selected) > td,
-.patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-fill-preview) > td {
-  background-color: #cbd5e1 !important;
+  background-color: #bec9d6 !important;
 }
 
 .patient-history-table .patient-history-data-cell--selectable.is-selected {

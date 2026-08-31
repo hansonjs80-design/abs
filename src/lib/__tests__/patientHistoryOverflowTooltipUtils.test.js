@@ -462,13 +462,13 @@ test('patient history cells support range selection, direct typing, and fill han
   );
   assert.match(
     shockwaveCss,
-    /\.patient-history-table tbody tr:hover > td,\s*\.patient-history-table tbody tr\.patient-history-row--hovered > td\s*\{\s*background-color:\s*#cbd5e1 !important;\s*\}/,
+    /\.patient-history-table tbody tr:hover > td,\s*\.patient-history-table tbody tr\.patient-history-row--hovered > td\s*\{\s*background-color:\s*#bec9d6 !important;\s*\}/,
   );
   assert.match(shockwaveView, /classList\.add\('patient-history-row--hovered'\)/);
   assert.match(shockwaveView, /classList\.remove\('patient-history-row--hovered'\)/);
-  assert.match(
+  assert.doesNotMatch(
     shockwaveCss,
-    /:has\(\.patient-history-data-cell--selectable\.is-selected\) > td,[\s\S]*?:has\(\.patient-history-data-cell--selectable\.is-fill-preview\) > td[\s\S]*?background-color:\s*#cbd5e1 !important;/s,
+    /tbody tr:has\(\.patient-history-data-cell--selectable\.(?:is-selected|is-fill-preview)\) > td/,
   );
   assert.doesNotMatch(
     shockwaveCss,
