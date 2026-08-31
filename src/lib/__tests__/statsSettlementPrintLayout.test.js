@@ -16,6 +16,10 @@ const manualTherapySettlementUrl = new URL(
   '../../components/shockwave/ManualTherapyStatsView.jsx',
   import.meta.url,
 );
+const manualTherapySixMonthStatsUrl = new URL(
+  '../../components/shockwave/ManualTherapySixMonthStats.jsx',
+  import.meta.url,
+);
 
 test('shockwave landscape print uses label-aware prescription columns', async () => {
   const [indexCss, settlementView] = await Promise.all([
@@ -151,4 +155,11 @@ test('manual settlement screen enlarges section titles and compacts only body ro
     refinementsCss,
     /\.sw-six-month-ion-input-wrap input\s*\{[^}]*height:\s*30px;[^}]*font:\s*inherit;/s,
   );
+});
+
+test('manual settlement recent-period header omits the redundant aggregate badge', async () => {
+  const sixMonthStats = await readFile(manualTherapySixMonthStatsUrl, 'utf8');
+
+  assert.doesNotMatch(sixMonthStats, /개월 집계/);
+  assert.match(sixMonthStats, /aria-label="도수치료 최근 현황 기간"/);
 });

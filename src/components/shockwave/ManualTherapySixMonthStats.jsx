@@ -22,7 +22,6 @@ export default function ManualTherapySixMonthStats({
   selectedTherapistNames,
 }) {
   const [logs, setLogs] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
   const [refreshKey, setRefreshKey] = useState(0);
   const recentAutoSyncKeyRef = useRef(null);
@@ -111,7 +110,6 @@ export default function ManualTherapySixMonthStats({
 
   useEffect(() => {
     async function fetchSixMonths() {
-      setIsLoading(true);
       try {
         const startDate = new Date(currentYear, currentMonth - recentPeriodMonths, 1);
         const endDate = new Date(currentYear, currentMonth, 1);
@@ -130,8 +128,6 @@ export default function ManualTherapySixMonthStats({
       } catch (error) {
         console.error(error);
         setLogs([]);
-      } finally {
-        setIsLoading(false);
       }
     }
 
@@ -245,7 +241,6 @@ export default function ManualTherapySixMonthStats({
             placeholder="최근 6개월"
             aria-label="도수치료 최근 현황 기간"
           />
-          {isLoading ? <span>불러오는 중...</span> : <span>{monthKeys.length}개월 집계</span>}
         </div>
       </div>
 
