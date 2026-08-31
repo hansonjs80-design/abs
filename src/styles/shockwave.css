@@ -4120,15 +4120,6 @@
   background-color: #e2e8f0 !important;
 }
 
-.patient-history-table tbody tr:hover
-  .patient-history-edit-field--inset:not(.patient-history-visit-count-field),
-.patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-selected)
-  .patient-history-edit-field--inset:not(.patient-history-visit-count-field),
-.patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-fill-preview)
-  .patient-history-edit-field--inset:not(.patient-history-visit-count-field) {
-  background-color: rgba(226, 232, 240, 0.94) !important;
-}
-
 .patient-history-table .patient-history-data-cell--selectable.is-selected {
   z-index: 1;
   box-shadow: none !important;

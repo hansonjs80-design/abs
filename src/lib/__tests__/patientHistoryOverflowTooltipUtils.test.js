@@ -463,9 +463,9 @@ test('patient history cells support range selection, direct typing, and fill han
     shockwaveCss,
     /\.patient-history-table tbody tr:hover > td,[\s\S]*?:has\(\.patient-history-data-cell--selectable\.is-selected\) > td,[\s\S]*?background-color:\s*#e2e8f0 !important;/s,
   );
-  assert.match(
+  assert.doesNotMatch(
     shockwaveCss,
-    /tr:hover[\s\S]*?\.patient-history-edit-field--inset:not\(\.patient-history-visit-count-field\),[\s\S]*?background-color:\s*rgba\(226, 232, 240, 0\.94\) !important;/s,
+    /\.patient-history-table tbody tr:hover\s+\.patient-history-edit-field--inset/,
   );
 });
 
