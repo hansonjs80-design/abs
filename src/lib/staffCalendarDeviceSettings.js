@@ -9,6 +9,10 @@ import {
   getDeviceSettingsForIdentity,
   getDeviceSettingsIdentity,
 } from './deviceSettingsIdentity.js';
+import {
+  readDurableBrowserValue,
+  writeDurableBrowserValue,
+} from './durableBrowserStorage.js';
 import { enqueueShockwaveSettingsJsonPatch } from './shockwaveSettingsJsonSync.js';
 
 export const STAFF_CALENDAR_DEVICE_SETTING_KEYS = {
@@ -25,6 +29,7 @@ export const STAFF_CALENDAR_DEVICE_SETTING_KEYS = {
   lastRowFontWeight: 'staff-calendar-last-row-font-weight',
 };
 export const STAFF_CALENDAR_PROFILE_STORAGE_KEY = 'staff-calendar-device-profile-v1';
+export const STAFF_CALENDAR_DURABLE_PROFILE_KEY = 'staff-calendar-device-profile-v2';
 
 const DEVICE_SETTINGS_FIELD = 'staff_calendar_device_settings';
 
@@ -58,6 +63,8 @@ const FONT_WEIGHT_FIELDS = new Set(['dateFontWeight', 'weekdayFontWeight', 'last
 const FONT_WEIGHT_OPTIONS = new Set([500, 600, 700, 800, 900]);
 const REMOTE_SAVE_DEBOUNCE_MS = 300;
 const REMOTE_SAVE_RETRY_MS = 10000;
+
+let durableBackupQueue = Promise.resolve();
 
 function getStorage(storage) {
   if (storage) return storage;
@@ -107,6 +114,56 @@ export function mergeStaffCalendarDeviceSettingsForBackup(remoteSettings, localS
     ...normalizeStaffCalendarDeviceSettingsPatch(remoteSettings),
     ...normalizeStaffCalendarDeviceSettingsPatch(localSnapshot?.values),
   });
+}
+
+function getProfileTimestamp(profile) {
+  const timestamp = Date.parse(profile?.savedAt || profile?.updatedAt || '');
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+export function parseDurableStaffCalendarDeviceProfile(value) {
+  if (!value) return null;
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+    const values = normalizeStaffCalendarDeviceSettingsPatch(parsed?.values);
+    if (Object.keys(values).length === 0) return null;
+    return {
+      values,
+      savedAt: typeof parsed?.savedAt === 'string' ? parsed.savedAt : '',
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function mergeStaffCalendarDeviceSettingsSources({
+  remoteSettings,
+  durableProfile,
+  localSnapshot,
+} = {}) {
+  const remoteValues = normalizeStaffCalendarDeviceSettingsPatch(remoteSettings);
+  const durableValues = normalizeStaffCalendarDeviceSettingsPatch(durableProfile?.values);
+  const localValues = normalizeStaffCalendarDeviceSettingsPatch(localSnapshot?.values);
+  const fallbackValues = getProfileTimestamp(durableProfile) > getProfileTimestamp(remoteSettings)
+    ? { ...remoteValues, ...durableValues }
+    : { ...durableValues, ...remoteValues };
+  return normalizeStaffCalendarDeviceSettingsPatch({
+    ...fallbackValues,
+    ...localValues,
+  });
+}
+
+function enqueueDurableStaffCalendarProfileBackup(values) {
+  const normalized = normalizeStaffCalendarDeviceSettingsPatch(values);
+  if (Object.keys(normalized).length === 0) return durableBackupQueue;
+  const profile = {
+    values: normalized,
+    savedAt: new Date().toISOString(),
+  };
+  durableBackupQueue = durableBackupQueue
+    .catch(() => {})
+    .then(() => writeDurableBrowserValue(STAFF_CALENDAR_DURABLE_PROFILE_KEY, profile));
+  return durableBackupQueue;
 }
 
 export function getStaffCalendarDeviceFingerprint() {
@@ -226,33 +283,45 @@ export function buildStaffCalendarDeviceSettingsMap({
 }
 
 export async function syncLoadStaffCalendarDeviceSettings({ localSnapshot, applySettings } = {}) {
-  try {
-    const [row, identity] = await Promise.all([
-      loadSettingsRow(),
-      getDurableDeviceSettingsIdentity(),
-    ]);
-    if (!row) return null;
+  const local = localSnapshot || readLocalStaffCalendarDeviceSettings();
+  const [rowResult, identityResult, durableResult] = await Promise.allSettled([
+    loadSettingsRow(),
+    getDurableDeviceSettingsIdentity(),
+    readDurableBrowserValue(STAFF_CALENDAR_DURABLE_PROFILE_KEY),
+  ]);
 
-    const deviceSettingsMap = getDeviceSettingsMap(row.monthly_settlement_settings);
-    const mySettings = getDeviceSettingsForIdentity(deviceSettingsMap, identity);
-    if (!mySettings) return null;
-
-    const normalized = normalizeStaffCalendarDeviceSettingsPatch(mySettings);
-    const local = localSnapshot || readLocalStaffCalendarDeviceSettings();
-    const patch = {};
-    STAFF_CALENDAR_DEVICE_FIELDS.forEach((field) => {
-      if (local.present?.[field]) return;
-      if (hasOwn(normalized, field)) patch[field] = normalized[field];
-    });
-
-    if (Object.keys(patch).length > 0) {
-      applySettings?.(patch);
+  let remoteSettings = null;
+  if (rowResult.status === 'fulfilled' && identityResult.status === 'fulfilled') {
+    const row = rowResult.value;
+    if (row) {
+      const deviceSettingsMap = getDeviceSettingsMap(row.monthly_settlement_settings);
+      remoteSettings = getDeviceSettingsForIdentity(deviceSettingsMap, identityResult.value);
     }
-    return normalized;
-  } catch (err) {
-    console.error('Failed to load staff calendar device settings:', err);
+  }
+
+  const durableProfile = durableResult.status === 'fulfilled'
+    ? parseDurableStaffCalendarDeviceProfile(durableResult.value)
+    : null;
+  const merged = mergeStaffCalendarDeviceSettingsSources({
+    remoteSettings,
+    durableProfile,
+    localSnapshot: local,
+  });
+  if (Object.keys(merged).length === 0) {
+    const loadError = rowResult.status === 'rejected' ? rowResult.reason : null;
+    if (loadError) console.error('Failed to load staff calendar device settings:', loadError);
     return null;
   }
+
+  const patch = {};
+  STAFF_CALENDAR_DEVICE_FIELDS.forEach((field) => {
+    if (local.present?.[field]) return;
+    if (hasOwn(merged, field)) patch[field] = merged[field];
+  });
+  persistLocalStaffCalendarDeviceSettingsPatch(merged);
+  void enqueueDurableStaffCalendarProfileBackup(merged);
+  if (Object.keys(patch).length > 0) applySettings?.(patch);
+  return merged;
 }
 
 let backupTimeout = null;
@@ -303,6 +372,8 @@ export async function flushPendingStaffCalendarDeviceSettings() {
 export function syncSaveStaffCalendarDeviceSettings(patch) {
   const normalizedPatch = persistLocalStaffCalendarDeviceSettingsPatch(patch);
   if (Object.keys(normalizedPatch).length === 0) return;
+  const completeLocalProfile = readLocalStaffCalendarDeviceSettings().values;
+  void enqueueDurableStaffCalendarProfileBackup(completeLocalProfile);
   pendingPatch = {
     ...pendingPatch,
     ...normalizedPatch,

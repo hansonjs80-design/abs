@@ -4114,7 +4114,8 @@
   user-select: text;
 }
 
-.patient-history-table tbody tr:hover > td {
+.patient-history-table tbody tr:hover > td,
+.patient-history-table tbody tr.patient-history-row--hovered > td {
   background-color: #cbd5e1 !important;
 }
 

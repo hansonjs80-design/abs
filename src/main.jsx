@@ -2,6 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
 import { isWindowsPlatform } from './lib/platformUtils.js'
+import { cleanupLegacyServiceWorkerAndCaches } from './lib/legacyServiceWorkerCleanup.js'
+import { requestPersistentBrowserStorage } from './lib/durableBrowserStorage.js'
 import './styles/index.css'
 import './styles/components.css'
 import './styles/calendar.css'
@@ -15,22 +17,12 @@ if (typeof document !== 'undefined' && isWindowsPlatform()) {
 
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.getRegistrations().then((registrations) => {
-      registrations.forEach((registration) => {
-        registration.unregister().catch(() => {});
-      });
-    });
-
-    if ('caches' in window) {
-      caches.keys().then((cacheNames) => {
-        cacheNames.forEach((cacheName) => {
-          if (cacheName.startsWith('workbox-') || cacheName.includes('supabase-cache')) {
-            caches.delete(cacheName).catch(() => {});
-          }
-        });
-      });
-    }
+    void cleanupLegacyServiceWorkerAndCaches(window)
   });
+}
+
+if (typeof window !== 'undefined') {
+  void requestPersistentBrowserStorage(window)
 }
 
 createRoot(document.getElementById('root')).render(

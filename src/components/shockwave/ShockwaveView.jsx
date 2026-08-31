@@ -4105,6 +4105,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                               <tr
                                 key={historyRowKey}
                                 className={isCurrentHistoryRow ? 'patient-history-current-row' : undefined}
+                                onMouseEnter={(event) => {
+                                  event.currentTarget.classList.add('patient-history-row--hovered');
+                                }}
+                                onMouseLeave={(event) => {
+                                  event.currentTarget.classList.remove('patient-history-row--hovered');
+                                }}
                                 style={{
                                   '--patient-history-current-row-bg': currentCellRowBackground,
                                   fontWeight: historyRowFontWeight,

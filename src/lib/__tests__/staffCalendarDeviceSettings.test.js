@@ -3,14 +3,81 @@ import assert from 'node:assert/strict';
 
 import {
   STAFF_CALENDAR_DEVICE_SETTING_KEYS,
+  STAFF_CALENDAR_DURABLE_PROFILE_KEY,
   STAFF_CALENDAR_PROFILE_STORAGE_KEY,
   buildStaffCalendarDeviceSettingsMap,
   mergeStaffCalendarDeviceSettingsForBackup,
+  mergeStaffCalendarDeviceSettingsSources,
   normalizeStaffCalendarDeviceSettings,
   normalizeStaffCalendarDeviceSettingsPatch,
+  parseDurableStaffCalendarDeviceProfile,
   persistLocalStaffCalendarDeviceSettingsPatch,
   readLocalStaffCalendarDeviceSettings,
 } from '../staffCalendarDeviceSettings.js';
+
+test('uses a newer durable profile after browser-local staff settings disappear', () => {
+  const merged = mergeStaffCalendarDeviceSettingsSources({
+    remoteSettings: {
+      rowHeight: 132,
+      memoFontSize: 14,
+      updatedAt: '2026-08-30T09:00:00.000Z',
+    },
+    durableProfile: {
+      values: {
+        rowHeight: 148,
+        dateFontSize: 18,
+      },
+      savedAt: '2026-08-31T09:00:00.000Z',
+    },
+    localSnapshot: {
+      values: {},
+      present: {},
+    },
+  });
+
+  assert.deepEqual(merged, {
+    rowHeight: 148,
+    memoFontSize: 14,
+    dateFontSize: 18,
+  });
+});
+
+test('keeps current local staff settings authoritative over durable and remote backups', () => {
+  const merged = mergeStaffCalendarDeviceSettingsSources({
+    remoteSettings: {
+      rowHeight: 132,
+      dateFontWeight: 700,
+      updatedAt: '2026-08-31T09:00:00.000Z',
+    },
+    durableProfile: {
+      values: { rowHeight: 148, memoFontSize: 15 },
+      savedAt: '2026-08-30T09:00:00.000Z',
+    },
+    localSnapshot: {
+      values: { rowHeight: 156, dateFontWeight: 900 },
+      present: { rowHeight: true, dateFontWeight: true },
+    },
+  });
+
+  assert.deepEqual(merged, {
+    rowHeight: 156,
+    memoFontSize: 15,
+    dateFontWeight: 900,
+  });
+});
+
+test('parses only valid staff calendar values from the durable backup envelope', () => {
+  const parsed = parseDurableStaffCalendarDeviceProfile(JSON.stringify({
+    values: { rowHeight: 144, dateFontSize: 18, memoFontSize: 'invalid' },
+    savedAt: '2026-08-31T09:00:00.000Z',
+  }));
+
+  assert.equal(STAFF_CALENDAR_DURABLE_PROFILE_KEY, 'staff-calendar-device-profile-v2');
+  assert.deepEqual(parsed, {
+    values: { rowHeight: 144, dateFontSize: 18 },
+    savedAt: '2026-08-31T09:00:00.000Z',
+  });
+});
 
 function createStorage(entries = {}) {
   const map = new Map(Object.entries(entries));
