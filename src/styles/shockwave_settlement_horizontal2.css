@@ -720,6 +720,39 @@ body.shockwave-settlement-print .sw-view-mode-btn {
     font-size: 8.5pt !important;
   }
 
+  /* 가로보기2 인쇄: 표 크기는 유지하고 결산 요약 표의 글자만 한 단계 확대합니다. */
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table .grand-title {
+    font-size: 8.4pt !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print
+    .sw-horizontal2-grand-table tbody tr:first-child th:not(.grand-title) {
+    font-size: 8.2pt !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print
+    .sw-horizontal2-grand-table .horizontal2-grand-total-row td {
+    font-size: 8.4pt !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table thead th {
+    font-size: 9pt !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print
+    .sw-horizontal2-recent-table tbody tr:not(.current-period-row) th,
+  body.settlement-print.shockwave-settlement-print
+    .sw-horizontal2-recent-table tbody tr:not(.current-period-row) td {
+    font-size: 8.7pt !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print
+    .sw-horizontal2-recent-table tbody tr.current-period-row th,
+  body.settlement-print.shockwave-settlement-print
+    .sw-horizontal2-recent-table tbody tr.current-period-row td {
+    font-size: 9.1pt !important;
+  }
+
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table th:nth-child(2),
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table td.prescription-name,
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-total-table .horizontal2-total-label {

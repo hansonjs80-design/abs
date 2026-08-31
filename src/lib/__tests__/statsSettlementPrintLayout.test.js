@@ -4,6 +4,10 @@ import test from 'node:test';
 
 const indexCssUrl = new URL('../../styles/index.css', import.meta.url);
 const refinementsCssUrl = new URL('../../styles/shockwave_stats_refinements.css', import.meta.url);
+const horizontal2CssUrl = new URL(
+  '../../styles/shockwave_settlement_horizontal2.css',
+  import.meta.url,
+);
 const shockwaveSettlementUrl = new URL(
   '../../components/shockwave/ShockwaveSettlementView.jsx',
   import.meta.url,
@@ -68,6 +72,18 @@ test('manual ion print keeps numbers and units on the same typography', async ()
     indexCss,
     /\.sw-six-month-ion-input-wrap span\s*\{[^}]*font-size:\s*inherit !important;[^}]*font-weight:\s*inherit !important;[^}]*line-height:\s*inherit !important;/s,
   );
+  assert.match(
+    indexCss,
+    /\.sw-manual-ion-summary-card \.sw-summary-table th,[\s\S]*?\.sw-manual-ion-summary-card \.sw-summary-table td\s*\{[^}]*height:\s*6\.8mm !important;[^}]*font-size:\s*10\.3pt !important;/s,
+  );
+  assert.match(
+    indexCss,
+    /\.sw-manual-ion-summary-card \.sw-summary-table thead th\s*\{[^}]*font-size:\s*11\.3pt !important;/s,
+  );
+  assert.match(
+    indexCss,
+    /\.sw-manual-ion-summary-card \.sw-summary-table tbody tr\.sw-current-month-summary-row > th,[\s\S]*?font-size:\s*11pt !important;/s,
+  );
 });
 
 test('manual settlement print keeps only the incentive header badge', async () => {
@@ -83,4 +99,31 @@ test('manual settlement print keeps only the incentive header badge', async () =
     indexCss,
     /body\.manual-settlement-print[\s\S]*?\.sw-settlement-meta-total,[\s\S]*?body\.manual-settlement-print[\s\S]*?\.sw-settlement-meta-sales\s*\{[^}]*display:\s*none !important;/s,
   );
+});
+
+test('shockwave horizontal2 print enlarges summary text without resizing tables', async () => {
+  const horizontal2Css = await readFile(horizontal2CssUrl, 'utf8');
+
+  assert.match(
+    horizontal2Css,
+    /\.sw-horizontal2-grand-table \.grand-title\s*\{[^}]*font-size:\s*8\.4pt !important;/s,
+  );
+  assert.match(
+    horizontal2Css,
+    /\.sw-horizontal2-grand-table \.horizontal2-grand-total-row td\s*\{[^}]*font-size:\s*8\.4pt !important;/s,
+  );
+  assert.match(
+    horizontal2Css,
+    /\.sw-horizontal2-recent-table thead th\s*\{[^}]*font-size:\s*9pt !important;/s,
+  );
+  assert.match(
+    horizontal2Css,
+    /\.sw-horizontal2-recent-table tbody tr:not\(\.current-period-row\) th,[\s\S]*?font-size:\s*8\.7pt !important;/s,
+  );
+  assert.match(
+    horizontal2Css,
+    /\.sw-horizontal2-recent-table tbody tr\.current-period-row th,[\s\S]*?font-size:\s*9\.1pt !important;/s,
+  );
+  assert.match(horizontal2Css, /\.sw-horizontal2-grand-table\s*\{[^}]*width:\s*87mm !important;/s);
+  assert.match(horizontal2Css, /\.sw-horizontal2-recent-table\s*\{[^}]*width:\s*88mm !important;/s);
 });

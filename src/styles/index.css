@@ -2458,16 +2458,19 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     .sw-manual-ion-summary-card .sw-summary-table td {
     height: 6.8mm !important;
     padding: 0.8mm 0.5mm !important;
-    font-size: 9.2pt !important;
+    font-size: 10.3pt !important;
   }
 
   html[data-print-orientation="landscape"] body.manual-settlement-print
-    .sw-manual-ion-summary-card .sw-summary-table thead th,
+    .sw-manual-ion-summary-card .sw-summary-table thead th {
+    font-size: 11.3pt !important;
+  }
+
   html[data-print-orientation="landscape"] body.manual-settlement-print
     .sw-manual-ion-summary-card .sw-summary-table tbody tr.sw-current-month-summary-row > th,
   html[data-print-orientation="landscape"] body.manual-settlement-print
     .sw-manual-ion-summary-card .sw-summary-table tbody tr.sw-current-month-summary-row > td {
-    font-size: 9.6pt !important;
+    font-size: 11pt !important;
   }
 
   html[data-print-orientation="landscape"] body.manual-settlement-print .sw-six-month-ion-input-wrap {
