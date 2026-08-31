@@ -97,6 +97,7 @@ export default function PatientHistoryEditableCells({
         onDoubleClick={(event) => openPatientHistoryCellEditor(event, bodyPartHistoryCell)}
       >
         <PatientHistoryOverflowField
+          disabled
           value={formatPatientHistoryOverflowTooltipItems(currentBodyPartItems, { showBullets: true })}
         >
           <textarea
@@ -159,7 +160,7 @@ export default function PatientHistoryEditableCells({
         onDoubleClick={(event) => openPatientHistoryCellEditor(event, memoHistoryCell)}
       >
         <PatientHistoryOverflowField
-          disabled={isMemoInlineEditing}
+          disabled
           value={formatPatientHistoryOverflowTooltipItems(currentMemoItems, { showBullets: true })}
         >
           <textarea

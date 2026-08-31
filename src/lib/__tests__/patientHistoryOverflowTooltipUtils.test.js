@@ -462,13 +462,13 @@ test('patient history cells support range selection, direct typing, and fill han
   );
   assert.match(
     shockwaveCss,
-    /\.patient-history-table tbody tr:hover > td,\s*\.patient-history-table tbody tr\.patient-history-row--hovered > td\s*\{\s*background-color:\s*#bec9d6 !important;\s*\}/,
+    /\.patient-history-table tbody tr:hover > td,\s*\.patient-history-table tbody tr\.patient-history-row--hovered > td\s*\{\s*background-color:\s*#aeb9c7 !important;\s*\}/,
   );
   assert.match(shockwaveView, /classList\.add\('patient-history-row--hovered'\)/);
   assert.match(shockwaveView, /classList\.remove\('patient-history-row--hovered'\)/);
-  assert.doesNotMatch(
+  assert.match(
     shockwaveCss,
-    /tbody tr:has\(\.patient-history-data-cell--selectable\.(?:is-selected|is-fill-preview)\) > td/,
+    /:has\(\.patient-history-data-cell--selectable\.is-selected\) > td,[\s\S]*?:has\(\.patient-history-data-cell--selectable\.is-fill-preview\) > td[\s\S]*?background-color:\s*#cbd5e1 !important;/s,
   );
   assert.doesNotMatch(
     shockwaveCss,
@@ -522,6 +522,11 @@ test('patient history memo and visit double click activate inline field editors'
     /\.patient-history-edit-field--inline-editing\s*\{[^}]*pointer-events:\s*auto;[^}]*cursor:\s*text;[^}]*user-select:\s*text;/s,
   );
   assert.match(overflowField, /if \(disabled\) \{\s*hideTooltip\(\);\s*return;/);
+  assert.equal(
+    shockwaveView.match(/<PatientHistoryOverflowField\s+disabled/g)?.length,
+    3,
+  );
+  assert.doesNotMatch(shockwaveView, /disabled=\{isMemoInlineEditing\}/);
   assert.match(shockwaveView, /field: 'visit_count',[\s\S]*?canEdit: true/);
   assert.match(shockwaveView, /readOnly=\{!isVisitInlineEditing\}/);
   assert.match(shockwaveView, /data-patient-history-field=\{visitHistoryCell\.field\}/);
