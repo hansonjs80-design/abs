@@ -4114,6 +4114,20 @@
   user-select: text;
 }
 
+.patient-history-table tbody tr:hover > td,
+.patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-selected) > td,
+.patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-fill-preview) > td {
+  background-color: #f1f5f9 !important;
+}
+
+.patient-history-table tbody tr:hover .patient-history-edit-field--inset,
+.patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-selected)
+  .patient-history-edit-field--inset,
+.patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-fill-preview)
+  .patient-history-edit-field--inset {
+  background-color: rgba(241, 245, 249, 0.94) !important;
+}
+
 .patient-history-table .patient-history-data-cell--selectable.is-selected {
   z-index: 1;
   box-shadow: none !important;

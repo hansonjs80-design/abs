@@ -441,8 +441,10 @@ test('patient history cells support range selection, direct typing, and fill han
     /beginInlineCellEdit\(activeCell, cellElement, \{ initialText: directInputText \}\);/,
   );
   assert.match(dragInteractions, /const updateRangeSelectionTarget = useCallback/);
+  assert.match(dragInteractions, /targetIndex === drag\.targetIndex/);
   assert.match(dragInteractions, /setCellSelection\(cells, drag\.sourceCell\);/);
   assert.match(dragInteractions, /buildPatientHistoryCellFillValues\([\s\S]*?drag\.targetCells\.length/);
+  assert.match(dragInteractions, /runPatientHistoryTasksWithConcurrency\(/);
   assert.match(dragInteractions, /rollbackSucceeded/);
   assert.equal(shockwaveView.match(/startPatientHistoryCellRangeSelection\(event,/g)?.length, 3);
   assert.equal(shockwaveView.match(/className="patient-history-fill-handle"/g)?.length, 3);
@@ -456,6 +458,10 @@ test('patient history cells support range selection, direct typing, and fill han
   assert.match(
     shockwaveCss,
     /\.patient-history-data-cell--selectable\.is-fill-preview \.patient-history-edit-field--detail/s,
+  );
+  assert.match(
+    shockwaveCss,
+    /\.patient-history-table tbody tr:hover > td,[\s\S]*?:has\(\.patient-history-data-cell--selectable\.is-selected\) > td,[\s\S]*?background-color:\s*#f1f5f9 !important;/s,
   );
 });
 

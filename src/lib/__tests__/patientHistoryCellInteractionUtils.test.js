@@ -20,6 +20,7 @@ import {
   isPatientHistoryCellClearShortcut,
   isPatientHistoryCellEditorShortcut,
   normalizePatientHistoryCellValue,
+  runPatientHistoryTasksWithConcurrency,
   stepPatientHistoryVisitCount,
 } from '../patientHistoryCellInteractionUtils.js';
 
@@ -136,6 +137,25 @@ describe('patient history memo cell actions', () => {
       buildPatientHistoryCellFillValues('memo', '첫 메모\n둘째 메모', 2),
       ['첫 메모\n둘째 메모', '첫 메모\n둘째 메모'],
     );
+  });
+
+  it('persists dragged fill cells concurrently while preserving result order', async () => {
+    let activeWorkers = 0;
+    let maxActiveWorkers = 0;
+    const results = await runPatientHistoryTasksWithConcurrency(
+      [1, 2, 3, 4, 5],
+      async (value) => {
+        activeWorkers += 1;
+        maxActiveWorkers = Math.max(maxActiveWorkers, activeWorkers);
+        await new Promise((resolve) => setTimeout(resolve, 4));
+        activeWorkers -= 1;
+        return value * 2;
+      },
+      2,
+    );
+
+    assert.deepEqual(results, [2, 4, 6, 8, 10]);
+    assert.equal(maxActiveWorkers, 2);
   });
 
   it('steps a selected visit cell with the same command arrow sequence as the schedule', () => {

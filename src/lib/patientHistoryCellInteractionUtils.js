@@ -284,6 +284,34 @@ export function buildPatientHistoryCellFillValues(field, rawValue, targetCount) 
   return Array.from({ length: safeTargetCount }, () => sourceValue);
 }
 
+export async function runPatientHistoryTasksWithConcurrency(
+  items,
+  worker,
+  concurrency = 6,
+) {
+  const sourceItems = Array.isArray(items) ? items : [];
+  if (sourceItems.length === 0) return [];
+
+  const parsedConcurrency = Number.parseInt(concurrency, 10);
+  const workerCount = Math.min(
+    sourceItems.length,
+    Math.max(1, Number.isFinite(parsedConcurrency) ? parsedConcurrency : 1),
+  );
+  const results = new Array(sourceItems.length);
+  let nextIndex = 0;
+
+  const runners = Array.from({ length: workerCount }, async () => {
+    while (nextIndex < sourceItems.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await worker(sourceItems[currentIndex], currentIndex);
+    }
+  });
+
+  await Promise.all(runners);
+  return results;
+}
+
 export function getPatientHistoryCellClipboardMode(event) {
   if (!event?.metaKey && !event?.ctrlKey) return null;
   const shortcutKey = getScheduleShortcutKey(event);

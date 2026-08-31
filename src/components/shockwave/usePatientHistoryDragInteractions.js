@@ -3,6 +3,7 @@ import {
   buildPatientHistoryCellFillValues,
   getPatientHistoryCellFromElement,
   normalizePatientHistoryCellValue,
+  runPatientHistoryTasksWithConcurrency,
 } from '../../lib/patientHistoryCellInteractionUtils';
 
 const SELECTABLE_CELL_SELECTOR = '.patient-history-data-cell--selectable[data-patient-history-cell-id]';
@@ -35,9 +36,14 @@ export default function usePatientHistoryDragInteractions({
 
     const targetRow = targetElement.closest('tr');
     const targetRowIndex = drag.rows.indexOf(targetRow);
-    const targetColumnIndex = Array.from(targetRow?.querySelectorAll(SELECTABLE_CELL_SELECTOR) || [])
-      .indexOf(targetElement);
+    const targetColumnIndex = drag.rowCells[targetRowIndex]?.indexOf(targetElement) ?? -1;
     if (targetRowIndex < 0 || targetColumnIndex < 0) return;
+    if (
+      targetRowIndex === drag.targetRowIndex
+      && targetColumnIndex === drag.targetColumnIndex
+    ) return;
+    drag.targetRowIndex = targetRowIndex;
+    drag.targetColumnIndex = targetColumnIndex;
 
     const rowStart = Math.min(drag.sourceRowIndex, targetRowIndex);
     const rowEnd = Math.max(drag.sourceRowIndex, targetRowIndex);
@@ -45,7 +51,7 @@ export default function usePatientHistoryDragInteractions({
     const columnEnd = Math.max(drag.sourceColumnIndex, targetColumnIndex);
     const cells = [];
     for (let rowIndex = rowStart; rowIndex <= rowEnd; rowIndex += 1) {
-      const rowCells = Array.from(drag.rows[rowIndex]?.querySelectorAll(SELECTABLE_CELL_SELECTOR) || []);
+      const rowCells = drag.rowCells[rowIndex] || [];
       for (let columnIndex = columnStart; columnIndex <= columnEnd; columnIndex += 1) {
         const cell = getPatientHistoryCellFromElement(rowCells[columnIndex]);
         if (cell) cells.push(cell);
@@ -108,8 +114,11 @@ export default function usePatientHistoryDragInteractions({
       sourceCell: { ...cell },
       tableBody,
       rows,
+      rowCells: rows.map((row) => Array.from(row.querySelectorAll(SELECTABLE_CELL_SELECTOR))),
       sourceRowIndex,
       sourceColumnIndex,
+      targetRowIndex: sourceRowIndex,
+      targetColumnIndex: sourceColumnIndex,
       hasMoved: false,
     };
   }, [
@@ -128,6 +137,8 @@ export default function usePatientHistoryDragInteractions({
     if (!targetElement || targetElement.closest('tbody') !== drag.tableBody) return;
 
     const targetIndex = drag.fieldElements.indexOf(targetElement);
+    if (targetIndex === drag.targetIndex) return;
+    drag.targetIndex = targetIndex;
     if (targetIndex < 0 || targetIndex === drag.sourceIndex) {
       drag.targetCells = [];
       setFillPreviewCellIds([]);
@@ -141,7 +152,7 @@ export default function usePatientHistoryDragInteractions({
       step > 0 ? index <= targetIndex : index >= targetIndex;
       index += step
     ) {
-      const cell = getPatientHistoryCellFromElement(drag.fieldElements[index]);
+      const cell = drag.fieldCells[index];
       if (cell?.canEdit) targetCells.push(cell);
     }
     drag.targetCells = targetCells;
@@ -159,31 +170,39 @@ export default function usePatientHistoryDragInteractions({
       drag.sourceValue,
       drag.targetCells.length,
     );
-    const appliedChanges = [];
+    const pendingChanges = [];
     for (let index = 0; index < drag.targetCells.length; index += 1) {
       const cell = drag.targetCells[index];
       const log = findLog(cell.rowKey);
       const previousValue = normalizePatientHistoryCellValue(drag.field, log?.[drag.field]);
       const nextValue = nextValues[index];
       if (previousValue === nextValue) continue;
-      const success = await persistCellValue(cell, nextValue, { recordUndo: false });
-      if (!success) {
-        let rollbackSucceeded = true;
-        for (const change of [...appliedChanges].reverse()) {
-          const restored = await persistCellValue(change.cell, change.previousValue, {
-            recordUndo: false,
-          });
-          if (!restored) rollbackSucceeded = false;
-        }
-        addToast(
-          rollbackSucceeded
-            ? '셀 채우기를 저장하지 못해 변경 전 상태로 되돌렸습니다.'
-            : '셀 채우기를 일부 되돌리지 못했습니다. 해당 셀을 확인해 주세요.',
-          'warning',
-        );
-        return;
+      pendingChanges.push({ cell, previousValue, nextValue });
+    }
+
+    const results = await runPatientHistoryTasksWithConcurrency(
+      pendingChanges,
+      async (change) => ({
+        ...change,
+        success: await persistCellValue(change.cell, change.nextValue, { recordUndo: false }),
+      }),
+    );
+    const appliedChanges = results.filter((change) => change.success);
+    if (appliedChanges.length !== pendingChanges.length) {
+      let rollbackSucceeded = true;
+      for (const change of [...appliedChanges].reverse()) {
+        const restored = await persistCellValue(change.cell, change.previousValue, {
+          recordUndo: false,
+        });
+        if (!restored) rollbackSucceeded = false;
       }
-      appliedChanges.push({ cell, previousValue, nextValue });
+      addToast(
+        rollbackSucceeded
+          ? '셀 채우기를 저장하지 못해 변경 전 상태로 되돌렸습니다.'
+          : '셀 채우기를 일부 되돌리지 못했습니다. 해당 셀을 확인해 주세요.',
+        'warning',
+      );
+      return;
     }
 
     if (appliedChanges.length > 0) {
@@ -219,6 +238,7 @@ export default function usePatientHistoryDragInteractions({
     }
 
     const fieldElements = Array.from(tableBody.querySelectorAll(fieldSelector));
+    const fieldCells = fieldElements.map((element) => getPatientHistoryCellFromElement(element));
     const sourceIndex = fieldElements.indexOf(sourceElement);
     if (sourceIndex < 0) return;
     setCellSelection([cell], cell);
@@ -229,7 +249,9 @@ export default function usePatientHistoryDragInteractions({
       sourceValue,
       tableBody,
       fieldElements,
+      fieldCells,
       sourceIndex,
+      targetIndex: sourceIndex,
       targetCells: [],
     };
     setFillPreviewCellIds([]);
