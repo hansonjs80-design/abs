@@ -1887,7 +1887,7 @@
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table thead th,
 .sw-manual-summary-card .sw-summary-table thead th {
-  font-size: 1.3rem !important;
+  font-size: 1.4rem !important;
   line-height: 1.15;
   font-weight: 900;
 }
@@ -2004,6 +2004,22 @@
   margin-top: 5px;
   color: #4b5a70;
   font-size: 0.76rem;
+}
+
+@media screen {
+  .sw-manual-summary-card:not(.sw-manual-ion-summary-card)
+    .sw-summary-table tbody th,
+  .sw-manual-summary-card:not(.sw-manual-ion-summary-card)
+    .sw-summary-table tbody td {
+    height: 36px;
+    padding-block: 6px;
+  }
+
+  .sw-manual-ion-summary-card .sw-summary-table tbody th,
+  .sw-manual-ion-summary-card .sw-summary-table tbody td {
+    height: 34px;
+    padding-block: 2px;
+  }
 }
 
 @media (max-width: 1280px) {

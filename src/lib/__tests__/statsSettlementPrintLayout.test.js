@@ -127,3 +127,24 @@ test('shockwave horizontal2 print enlarges summary text without resizing tables'
   assert.match(horizontal2Css, /\.sw-horizontal2-grand-table\s*\{[^}]*width:\s*87mm !important;/s);
   assert.match(horizontal2Css, /\.sw-horizontal2-recent-table\s*\{[^}]*width:\s*88mm !important;/s);
 });
+
+test('manual settlement screen enlarges table headers and compacts only body rows', async () => {
+  const refinementsCss = await readFile(refinementsCssUrl, 'utf8');
+
+  assert.match(
+    refinementsCss,
+    /\.sw-manual-settlement-main-card \.sw-manual-compact-settlement-table thead th,[\s\S]*?\.sw-manual-summary-card \.sw-summary-table thead th\s*\{[^}]*font-size:\s*1\.4rem !important;/s,
+  );
+  assert.match(
+    refinementsCss,
+    /@media screen\s*\{[\s\S]*?\.sw-manual-summary-card:not\(\.sw-manual-ion-summary-card\)[\s\S]*?tbody td\s*\{[^}]*height:\s*36px;[^}]*padding-block:\s*6px;/s,
+  );
+  assert.match(
+    refinementsCss,
+    /@media screen\s*\{[\s\S]*?\.sw-manual-ion-summary-card \.sw-summary-table tbody th,[\s\S]*?tbody td\s*\{[^}]*height:\s*34px;[^}]*padding-block:\s*2px;/s,
+  );
+  assert.match(
+    refinementsCss,
+    /\.sw-six-month-ion-input-wrap input\s*\{[^}]*height:\s*30px;[^}]*font:\s*inherit;/s,
+  );
+});
