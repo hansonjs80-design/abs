@@ -116,6 +116,7 @@ export default function PatientHistoryEditableCells({
               margin: '0 auto',
               lineHeight: bodyPartTextareaRows > 1 ? 1.3 : '15px',
               paddingLeft: hasMultipleBodyParts ? '7px' : '5px',
+              paddingRight: '20px',
               overflowWrap: 'normal',
               overflowX: 'hidden',
               resize: 'none',
@@ -123,6 +124,21 @@ export default function PatientHistoryEditableCells({
               whiteSpace: 'pre',
               wordBreak: 'normal',
             }}
+          />
+          <button
+            type="button"
+            className="patient-history-body-part-menu-trigger"
+            aria-label="부위 목록 열기"
+            aria-haspopup="menu"
+            title="마우스를 올리면 부위 목록 열기"
+            tabIndex={-1}
+            onMouseEnter={(event) => openPatientHistoryCellEditor(event, bodyPartHistoryCell)}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onClick={(event) => event.stopPropagation()}
+            onDoubleClick={(event) => event.stopPropagation()}
           />
           {selectedPatientHistoryCell?.id === bodyPartHistoryCell.id
             && !patientHistoryClipboardCell && (

@@ -4116,7 +4116,7 @@
 
 .patient-history-table tbody tr:hover > td,
 .patient-history-table tbody tr.patient-history-row--hovered > td {
-  background-color: #aeb9c7 !important;
+  background-color: #94a3b8 !important;
 }
 
 .patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-selected) > td,
@@ -4159,6 +4159,45 @@
 
 .patient-history-fill-handle:hover {
   background: #1d4ed8;
+}
+
+.patient-history-body-part-menu-trigger {
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  z-index: 4;
+  width: 16px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.patient-history-body-part-menu-trigger::before {
+  position: absolute;
+  top: 50%;
+  left: 6px;
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 6px solid #475569;
+  content: '';
+  transform: translateY(-50%);
+}
+
+.patient-history-body-part-menu-trigger:hover,
+.patient-history-body-part-menu-trigger:focus-visible {
+  background: rgba(71, 85, 105, 0.14);
+  outline: none;
+}
+
+.patient-history-body-part-menu-trigger:hover::before,
+.patient-history-body-part-menu-trigger:focus-visible::before {
+  border-left-color: #0f172a;
 }
 
 .patient-history-table .patient-history-data-cell--selectable.is-clipboard-source .patient-history-edit-field--detail {

@@ -462,7 +462,7 @@ test('patient history cells support range selection, direct typing, and fill han
   );
   assert.match(
     shockwaveCss,
-    /\.patient-history-table tbody tr:hover > td,\s*\.patient-history-table tbody tr\.patient-history-row--hovered > td\s*\{\s*background-color:\s*#aeb9c7 !important;\s*\}/,
+    /\.patient-history-table tbody tr:hover > td,\s*\.patient-history-table tbody tr\.patient-history-row--hovered > td\s*\{\s*background-color:\s*#94a3b8 !important;\s*\}/,
   );
   assert.match(shockwaveView, /classList\.add\('patient-history-row--hovered'\)/);
   assert.match(shockwaveView, /classList\.remove\('patient-history-row--hovered'\)/);
@@ -527,6 +527,14 @@ test('patient history memo and visit double click activate inline field editors'
     3,
   );
   assert.doesNotMatch(shockwaveView, /disabled=\{isMemoInlineEditing\}/);
+  assert.match(
+    shockwaveView,
+    /className="patient-history-body-part-menu-trigger"[\s\S]*?onMouseEnter=\{\(event\) => openPatientHistoryCellEditor\(event, bodyPartHistoryCell\)\}/,
+  );
+  assert.match(
+    shockwaveCss,
+    /\.patient-history-body-part-menu-trigger::before\s*\{[^}]*border-left:\s*6px solid #475569;[^}]*\}/s,
+  );
   assert.match(shockwaveView, /field: 'visit_count',[\s\S]*?canEdit: true/);
   assert.match(shockwaveView, /readOnly=\{!isVisitInlineEditing\}/);
   assert.match(shockwaveView, /data-patient-history-field=\{visitHistoryCell\.field\}/);
