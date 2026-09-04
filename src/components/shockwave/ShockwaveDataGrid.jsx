@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 import { getTodayKST } from '../../lib/calendarUtils';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
+import { formatBodyPartPresetDisplayText } from '../../lib/bodyPartPresetUtils';
 import { getPrescriptionColor } from '../../lib/schedulerUtils';
 import {
   buildTherapistPrescriptionDisplayGroups,
@@ -1866,6 +1867,9 @@ export default function ShockwaveDataGrid({
                 const isFoc = focus?.r === ri && focus?.c === ci;
                 const isEdit = editing?.r === ri && editing?.c === ci;
                 let val = getVal(row, ci);
+                if (ci < FIXED_FIELDS.length && FIXED_FIELDS[ci]?.field === 'body_part' && !isEdit) {
+                  val = formatBodyPartPresetDisplayText(val);
+                }
                 const canFilterDateNewPatients =
                   isPrescriptionPatientFilterEnabled
                   && isNewPatientCol

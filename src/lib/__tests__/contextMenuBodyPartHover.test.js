@@ -53,7 +53,7 @@ test('context menu body-part checkbox rows use stronger hover backgrounds', asyn
   );
   assert.match(
     css,
-    /\.shockwave-context-menu button\.context-menu-body-preset-direction:hover:not\(:disabled\)\s*\{[^}]*background:\s*#eff6ff;[^}]*border-color:\s*#93c5fd;/s
+    /\.shockwave-context-menu button\.context-menu-body-preset-direction:hover:not\(:disabled\)\s*\{[^}]*background:\s*#eff6ff;[^}]*border-color:\s*#93c5fd;[^}]*border-width:\s*2px;/s
   );
   assert.match(
     css,
@@ -94,6 +94,7 @@ test('context menu body-part checkbox rows use stronger hover backgrounds', asyn
   assert.match(bodyPartPanel, /<Pencil size=\{13\}/);
   assert.match(bodyPartPanel, /<Trash2 size=\{14\}/);
   assert.match(bodyPartPanel, /const displayLabel = item\.displayLabel \|\| item\.label;/);
+  assert.match(bodyPartPanel, /const displayPart = formatBodyPartPresetDisplayValue\(part\);/);
   assert.match(bodyPartPanel, /const isPresetPart = Boolean\(findBodyPartPresetItemByValue\(part\)\);/);
   assert.match(bodyPartPanel, /editingSelectedIndex === index \|\| isPresetPart \? null/);
 });

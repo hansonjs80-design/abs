@@ -13,6 +13,7 @@ import {
   parsePatientHistoryMemoText,
 } from '../../lib/patientHistoryModalUtils';
 import { formatPatientHistoryOverflowTooltipItems } from '../../lib/patientHistoryOverflowTooltipUtils';
+import { formatBodyPartPresetDisplayValue } from '../../lib/bodyPartPresetUtils';
 import PatientHistoryOverflowField from './PatientHistoryOverflowField';
 
 export default function PatientHistoryEditableCells({
@@ -106,7 +107,10 @@ export default function PatientHistoryEditableCells({
       >
         <PatientHistoryOverflowField
           disabled
-          value={formatPatientHistoryOverflowTooltipItems(currentBodyPartItems, { showBullets: true })}
+          value={formatPatientHistoryOverflowTooltipItems(
+            currentBodyPartItems.map((part) => formatBodyPartPresetDisplayValue(part)),
+            { showBullets: true }
+          )}
         >
           <textarea
             className="patient-history-edit-field patient-history-edit-field--inset patient-history-edit-field--detail"

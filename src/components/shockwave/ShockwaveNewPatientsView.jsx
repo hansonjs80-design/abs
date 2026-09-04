@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
+import { formatBodyPartPresetDisplayText } from '../../lib/bodyPartPresetUtils';
 
 function normalizePatientName(value) {
   return String(value || '').replace(/\*/g, '').trim();
@@ -175,7 +176,7 @@ export default function ShockwaveNewPatientsView({
                         {patient?.patientName || ''}
                       </td>,
                       <td key={`${tKey}-${rowIndex}-body`} className={toneClass}>
-                        {patient?.bodyPart || ''}
+                        {formatBodyPartPresetDisplayText(patient?.bodyPart)}
                       </td>,
                       <td key={`${tKey}-${rowIndex}-visit`} className={`visit-count ${toneClass} therapist-group-end`}>
                         {patient?.visitLabel || ''}

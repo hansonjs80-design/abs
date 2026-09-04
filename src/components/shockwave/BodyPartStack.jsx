@@ -1,9 +1,11 @@
 import { splitBodyParts } from '../../lib/schedulerUtils';
+import { formatBodyPartPresetDisplayValue } from '../../lib/bodyPartPresetUtils';
 
 export function normalizeBodyPartStackParts(parts) {
-  return Array.isArray(parts)
+  const list = Array.isArray(parts)
     ? parts.map((part) => String(part || '').trim()).filter(Boolean)
     : splitBodyParts(parts);
+  return list.map((part) => formatBodyPartPresetDisplayValue(part));
 }
 
 export default function BodyPartStack({ parts, className = '', showMarkers = false }) {

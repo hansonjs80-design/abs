@@ -5,6 +5,7 @@ import {
   BODY_PART_PRESET_DIRECTIONS,
   BODY_PART_PRESET_GROUPS,
   findBodyPartPresetItemByValue,
+  formatBodyPartPresetDisplayValue,
   getBodyPartPresetState,
 } from '../../lib/bodyPartPresetUtils';
 
@@ -227,6 +228,7 @@ export default function BodyPartKeyboardPanel({
           <div className="context-menu-body-selected-list">
             {selectedParts.map((part, index) => {
               const draftValue = selectedDrafts[index] ?? part;
+              const displayPart = formatBodyPartPresetDisplayValue(part);
               const canReorderParts = selectedParts.length > 1;
               const isPresetPart = Boolean(findBodyPartPresetItemByValue(part));
               return (
@@ -282,7 +284,7 @@ export default function BodyPartKeyboardPanel({
                       onClick={(event) => event.stopPropagation()}
                     />
                   ) : (
-                    <span className="context-menu-list-text" title={part}>{part}</span>
+                    <span className="context-menu-list-text" title={displayPart}>{displayPart}</span>
                   )}
                   <div className="context-menu-body-selected-actions">
                     {editingSelectedIndex === index || isPresetPart ? null : (
@@ -361,6 +363,7 @@ export default function BodyPartKeyboardPanel({
           <div className="context-menu-checklist">
             {selectableParts.map((part, index) => {
               const partKey = normalizeBodyPartKey(part);
+              const displayPart = formatBodyPartPresetDisplayValue(part);
               const isChecked = currentParts.some((item) => normalizeBodyPartKey(item) === partKey);
               return (
                 <div
@@ -387,12 +390,12 @@ export default function BodyPartKeyboardPanel({
                       onClick={(event) => event.stopPropagation()}
                       tabIndex={-1}
                     />
-                    <span>{part}</span>
+                    <span>{displayPart}</span>
                   </label>
                   <button
                     type="button"
                     className="context-menu-body-delete"
-                    title={`${part} 삭제`}
+                    title={`${displayPart} 삭제`}
                     onMouseDown={(event) => event.stopPropagation()}
                     onClick={(event) => {
                       event.preventDefault();

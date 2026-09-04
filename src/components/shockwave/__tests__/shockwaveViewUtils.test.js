@@ -159,6 +159,21 @@ describe('shockwave view patient history model', () => {
     );
   });
 
+  it('groups legacy spaced and compact preset labels into one body filter', () => {
+    const groups = buildPatientHistoryLogGroups({
+      selectedGroupKey: 'shockwave',
+      logs: [
+        { id: 'legacy', date: '2026-08-10', history_group: 'shockwave', body_part: 'Rt. 석회성 건염(M6521)' },
+        { id: 'compact', date: '2026-08-11', history_group: 'shockwave', body_part: 'Rt. 석회성건염(M6521)' },
+      ],
+    });
+
+    assert.deepEqual(
+      groups[0].bodyFilterOptions.map(({ label, count }) => [label, count]),
+      [['전체', 2], ['Rt. 석회성건염(M6521)', 2]]
+    );
+  });
+
   it('toggles checkbox selections and uses all as a reset', () => {
     assert.deepEqual(togglePatientHistoryFilterSelection(undefined, 'shoulder'), ['shoulder']);
     assert.deepEqual(togglePatientHistoryFilterSelection(['shoulder'], 'lumbar'), ['shoulder', 'lumbar']);
@@ -336,5 +351,27 @@ describe('shockwave hover tooltip model', () => {
     });
 
     assert.equal(text, '⏱ 10:00 ~ 11:00 (총 1시간)\n👤 200/김환자(1)');
+  });
+
+  it('uses compact preset labels in scheduler cell hover details', () => {
+    const text = buildShockwaveHoverTooltipText({
+      hoverCell: {
+        weekIdx: 0,
+        dayIdx: 1,
+        rowIdx: 2,
+        colIdx: 0,
+        slotInfo: { label: '10:00' },
+      },
+      renderMemos: {
+        '0-1-2-0': {
+          content: '100/홍길동(2)',
+          body_part: 'Rt. 석회성 건염(M6521), 외측 상과염(M771)',
+        },
+      },
+      cellKey,
+      getReservationTimeForMemo: () => '10:00',
+    });
+
+    assert.match(text, /🦴 부위: Rt\. 석회성건염\(M6521\), 외측상과염\(M771\)/);
   });
 });

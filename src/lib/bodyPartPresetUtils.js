@@ -13,7 +13,12 @@ export const BODY_PART_PRESET_GROUPS = [
     id: 'shoulder',
     label: '어깨',
     items: [
-      { id: 'calcific-tendinitis', label: '석회성 건염', code: 'M6521' },
+      {
+        id: 'calcific-tendinitis',
+        label: '석회성건염',
+        aliases: ['석회성 건염'],
+        code: 'M6521',
+      },
       { id: 'rotator-cuff-tendinopathy', label: '회전근개건병증', code: 'M751' },
     ],
   },
@@ -21,7 +26,12 @@ export const BODY_PART_PRESET_GROUPS = [
     id: 'elbow',
     label: '팔꿈치',
     items: [
-      { id: 'lateral-epicondylitis', label: '외측 상과염', code: 'M771' },
+      {
+        id: 'lateral-epicondylitis',
+        label: '외측상과염',
+        aliases: ['외측 상과염'],
+        code: 'M771',
+      },
       { id: 'medial-epicondylitis', label: '내측상과염', code: 'M770' },
     ],
   },
@@ -53,7 +63,12 @@ export const BODY_PART_PRESET_GROUPS = [
     id: 'foot',
     label: '족부',
     items: [
-      { id: 'plantar-fasciitis', label: '족저 근막염', code: 'M722' },
+      {
+        id: 'plantar-fasciitis',
+        label: '족저근막염',
+        aliases: ['족저 근막염'],
+        code: 'M722',
+      },
     ],
   },
   {
@@ -63,8 +78,8 @@ export const BODY_PART_PRESET_GROUPS = [
       { id: 'cervical-myofascial-pain', label: '경추근막통증', code: 'M79180' },
       {
         id: 'lumbar-spine-myofascial-pain',
-        label: '요추/척추부 근막통',
-        displayLabel: '요추/척추부근막통',
+        label: '요추/척추부근막통',
+        aliases: ['요추/척추부 근막통'],
         code: 'M79180',
       },
     ],
@@ -84,6 +99,28 @@ function normalizePresetValue(value) {
     .trim();
 }
 
+function getBodyPartPresetLabels(item) {
+  return Array.from(new Set([
+    item?.label,
+    ...(Array.isArray(item?.aliases) ? item.aliases : []),
+  ].map((label) => String(label || '').trim()).filter(Boolean)));
+}
+
+function buildBodyPartPresetValueForLabel(item, label, directionId) {
+  const bodyPart = `${label}(${String(item?.code || '').toUpperCase()})`;
+  const direction = BODY_PART_PRESET_DIRECTION_MAP[directionId];
+  return direction ? `${direction} ${bodyPart}` : bodyPart;
+}
+
+function isBodyPartPresetValueForDirection(value, item, directionId) {
+  const normalizedValue = normalizePresetValue(value);
+  return getBodyPartPresetLabels(item).some((label) => (
+    normalizedValue === normalizePresetValue(
+      buildBodyPartPresetValueForLabel(item, label, directionId)
+    )
+  ));
+}
+
 export function findBodyPartPresetItem(presetId) {
   return BODY_PART_PRESET_ITEMS.find((item) => item.id === presetId) || null;
 }
@@ -94,41 +131,62 @@ export function findBodyPartPresetItemByValue(value) {
 
 export function buildBodyPartPresetValue(item, directionId) {
   if (!item) return '';
-  const bodyPart = `${item.label}(${String(item.code || '').toUpperCase()})`;
-  const direction = BODY_PART_PRESET_DIRECTION_MAP[directionId];
-  return direction ? `${direction} ${bodyPart}` : bodyPart;
+  return buildBodyPartPresetValueForLabel(item, item.label, directionId);
 }
 
 export function getBodyPartPresetState(currentParts, item) {
   if (!item) return { isSelected: false, directions: [] };
-  const selectedKeys = new Set(
-    (currentParts || []).map((part) => normalizePresetValue(part))
-  );
   const directions = BODY_PART_PRESET_DIRECTIONS
-    .filter(({ id }) => selectedKeys.has(normalizePresetValue(buildBodyPartPresetValue(item, id))))
+    .filter(({ id }) => (currentParts || []).some((part) => (
+      isBodyPartPresetValueForDirection(part, item, id)
+    )))
     .map(({ id }) => id);
   const isSelected = directions.length > 0
-    || selectedKeys.has(normalizePresetValue(buildBodyPartPresetValue(item)));
+    || (currentParts || []).some((part) => (
+      isBodyPartPresetValueForDirection(part, item)
+    ));
   return { isSelected, directions };
 }
 
 export function isBodyPartPresetValue(value, item) {
   if (!item) return false;
-  const normalizedValue = normalizePresetValue(value);
   return [undefined, ...BODY_PART_PRESET_DIRECTIONS.map(({ id }) => id)]
-    .some((id) => normalizedValue === normalizePresetValue(buildBodyPartPresetValue(item, id)));
+    .some((id) => isBodyPartPresetValueForDirection(value, item, id));
+}
+
+export function formatBodyPartPresetDisplayValue(value) {
+  const normalizedValue = String(value || '').trim();
+  const item = findBodyPartPresetItemByValue(normalizedValue);
+  if (!item) return normalizedValue;
+
+  const direction = BODY_PART_PRESET_DIRECTIONS.find(({ id }) => (
+    isBodyPartPresetValueForDirection(normalizedValue, item, id)
+  ));
+  return buildBodyPartPresetValue(item, direction?.id);
+}
+
+export function formatBodyPartPresetDisplayText(value) {
+  return String(value || '')
+    .split(',')
+    .map((part) => formatBodyPartPresetDisplayValue(part))
+    .filter(Boolean)
+    .join(', ');
 }
 
 export function replaceBodyPartPreset(currentParts, item, isSelected, directionIds = []) {
   if (!item) return Array.isArray(currentParts) ? [...currentParts] : [];
 
   const presetValueKeys = new Set(
-    [undefined, ...BODY_PART_PRESET_DIRECTIONS.map(({ id }) => id)]
-      .map((id) => normalizePresetValue(buildBodyPartPresetValue(item, id)))
+    getBodyPartPresetLabels(item).flatMap((label) => (
+      [undefined, ...BODY_PART_PRESET_DIRECTIONS.map(({ id }) => id)]
+        .map((id) => normalizePresetValue(
+          buildBodyPartPresetValueForLabel(item, label, id)
+        ))
+    ))
   );
   const preservedParts = (currentParts || []).filter((part) => (
     !presetValueKeys.has(normalizePresetValue(part))
-  ));
+  )).map((part) => formatBodyPartPresetDisplayValue(part));
   if (!isSelected) return preservedParts;
 
   const requestedDirections = new Set(directionIds || []);
@@ -143,15 +201,18 @@ export function replaceBodyPartPreset(currentParts, item, isSelected, directionI
 
 export function replaceBodyPartPresetOptions(options, item, nextParts) {
   const nextValueKeys = new Set(
-    (nextParts || []).map((part) => normalizePresetValue(part))
+    (nextParts || []).map((part) => normalizePresetValue(
+      formatBodyPartPresetDisplayValue(part)
+    ))
   );
   const optionMap = new Map();
   [...(options || []), ...(nextParts || [])]
     .filter((part) => !isBodyPartPresetValue(part, item)
-      || nextValueKeys.has(normalizePresetValue(part)))
+      || nextValueKeys.has(normalizePresetValue(formatBodyPartPresetDisplayValue(part))))
     .forEach((part) => {
-      const key = normalizePresetValue(part);
-      if (key && !optionMap.has(key)) optionMap.set(key, part);
+      const displayPart = formatBodyPartPresetDisplayValue(part);
+      const key = normalizePresetValue(displayPart);
+      if (key && !optionMap.has(key)) optionMap.set(key, displayPart);
     });
   return Array.from(optionMap.values());
 }

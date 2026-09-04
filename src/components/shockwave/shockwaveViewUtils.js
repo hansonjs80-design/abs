@@ -12,6 +12,7 @@ import {
 } from '../../lib/schedulerUtils.js';
 import { getPatientHistoryVisitSequenceColors } from '../../lib/patientHistoryVisitSequenceUtils.js';
 import { parseSchedulerCellKey } from '../../lib/schedulerHistoryCandidateUtils.js';
+import { formatBodyPartPresetDisplayValue } from '../../lib/bodyPartPresetUtils.js';
 
 export const PATIENT_HISTORY_GROUPS = [
   { key: 'shockwave', label: '충격파 내역' },
@@ -118,9 +119,10 @@ export function getPatientHistoryBodyFilterParts(log = {}) {
 
   const partMap = new Map();
   parts.forEach((part) => {
-    const key = normalizeBodyPartKey(part);
+    const displayPart = formatBodyPartPresetDisplayValue(part);
+    const key = normalizeBodyPartKey(displayPart);
     if (!key || partMap.has(key)) return;
-    partMap.set(key, { key, label: part });
+    partMap.set(key, { key, label: displayPart });
   });
   return Array.from(partMap.values());
 }
@@ -531,7 +533,11 @@ export function buildShockwaveHoverTooltipText({
 
   if (staffBlockRule) text += `\n근무표: ${staffBlockRule.keyword}`;
   if (hasHoverContent && cellPrescription) text += `\n💊 처방: ${cellPrescription}`;
-  if (hasHoverContent && cellData?.body_part) text += `\n🦴 부위: ${cellData.body_part}`;
+  if (hasHoverContent && cellData?.body_part) {
+    const bodyParts = splitBodyParts(cellData.body_part)
+      .map((part) => formatBodyPartPresetDisplayValue(part));
+    text += `\n🦴 부위: ${bodyParts.join(', ')}`;
+  }
 
   const memoList = getMemoListFromMergeSpan(cellData?.merge_span);
   if (memoList.length === 1) {

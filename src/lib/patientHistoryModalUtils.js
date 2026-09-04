@@ -1,6 +1,7 @@
 import { has4060Pattern } from './schedulerContentFormat.js';
 import { incrementSessionCount } from './scheduleVisitCountUtils.js';
 import { getScheduleItemTreatmentGroup } from './prescriptionScheduleSettings.js';
+import { formatBodyPartPresetDisplayValue } from './bodyPartPresetUtils.js';
 import {
   getMemoListFromMergeSpan,
   normalizeVisitInputValue,
@@ -223,7 +224,10 @@ export function getPatientHistoryBodyPartText(value) {
   const itemCount = displayItems.filter(Boolean).length;
 
   return displayItems
-    .map((item) => (item && itemCount > 1 ? `• ${item}` : item))
+    .map((item) => {
+      const displayItem = formatBodyPartPresetDisplayValue(item);
+      return displayItem && itemCount > 1 ? `• ${displayItem}` : displayItem;
+    })
     .join('\n');
 }
 

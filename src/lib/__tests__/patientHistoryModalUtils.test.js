@@ -167,6 +167,10 @@ describe('patient history schedule memos', () => {
       getPatientHistoryBodyPartText('경추근막통증(M79180)'),
       '경추근막통증(M79180)',
     );
+    assert.equal(
+      getPatientHistoryBodyPartText('Rt. 석회성 건염(M6521), 족저 근막염(M722)'),
+      '• Rt. 석회성건염(M6521)\n• 족저근막염(M722)',
+    );
     assert.equal(getPatientHistoryBodyPartTextareaRows('Rt. Shoulder'), 1);
     assert.equal(getPatientHistoryBodyPartTextareaRows('Rt. Shoulder, Lt. Knee'), 2);
   });

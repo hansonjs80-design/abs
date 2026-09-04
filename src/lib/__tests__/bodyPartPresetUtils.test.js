@@ -5,6 +5,8 @@ import {
   buildBodyPartPresetValue,
   findBodyPartPresetItem,
   findBodyPartPresetItemByValue,
+  formatBodyPartPresetDisplayText,
+  formatBodyPartPresetDisplayValue,
   getBodyPartPresetState,
   replaceBodyPartPreset,
   replaceBodyPartPresetOptions,
@@ -14,15 +16,31 @@ describe('bodyPartPresetUtils', () => {
   const calcificTendinitis = findBodyPartPresetItem('calcific-tendinitis');
 
   it('formats preset values consistently', () => {
-    assert.equal(buildBodyPartPresetValue(calcificTendinitis, 'left'), 'Lt. 석회성 건염(M6521)');
-    assert.equal(buildBodyPartPresetValue(calcificTendinitis, 'right'), 'Rt. 석회성 건염(M6521)');
+    assert.equal(buildBodyPartPresetValue(calcificTendinitis, 'left'), 'Lt. 석회성건염(M6521)');
+    assert.equal(buildBodyPartPresetValue(calcificTendinitis, 'right'), 'Rt. 석회성건염(M6521)');
   });
 
-  it('uses the compact lumbar label only in the preset list', () => {
+  it('uses the compact lumbar label in the preset list and stored value', () => {
     const lumbarMyofascialPain = findBodyPartPresetItem('lumbar-spine-myofascial-pain');
 
-    assert.equal(lumbarMyofascialPain.displayLabel, '요추/척추부근막통');
-    assert.equal(buildBodyPartPresetValue(lumbarMyofascialPain), '요추/척추부 근막통(M79180)');
+    assert.equal(lumbarMyofascialPain.label, '요추/척추부근막통');
+    assert.equal(buildBodyPartPresetValue(lumbarMyofascialPain), '요추/척추부근막통(M79180)');
+  });
+
+  it('shows legacy spaced preset values with the compact canonical labels', () => {
+    assert.equal(
+      formatBodyPartPresetDisplayValue('Lt. 석회성 건염 (m6521)'),
+      'Lt. 석회성건염(M6521)'
+    );
+    assert.equal(
+      formatBodyPartPresetDisplayValue('외측 상과염(M771)'),
+      '외측상과염(M771)'
+    );
+    assert.equal(
+      formatBodyPartPresetDisplayText('Rt. 족저 근막염(M722), 요추/척추부 근막통(M79180)'),
+      'Rt. 족저근막염(M722), 요추/척추부근막통(M79180)'
+    );
+    assert.equal(formatBodyPartPresetDisplayValue('사용자 직접 입력 부위'), '사용자 직접 입력 부위');
   });
 
   it('distinguishes preset-generated values from custom body parts', () => {
@@ -48,7 +66,7 @@ describe('bodyPartPresetUtils', () => {
         true,
         []
       ),
-      ['Lt. 외측 상과염(M771)', '석회성 건염(M6521)']
+      ['Lt. 외측상과염(M771)', '석회성건염(M6521)']
     );
   });
 
@@ -60,7 +78,7 @@ describe('bodyPartPresetUtils', () => {
         true,
         ['left', 'right']
       ),
-      ['Rt. 족저 근막염(M722)', 'Lt. 석회성 건염(M6521)', 'Rt. 석회성 건염(M6521)']
+      ['Rt. 족저근막염(M722)', 'Lt. 석회성건염(M6521)', 'Rt. 석회성건염(M6521)']
     );
     assert.deepEqual(
       replaceBodyPartPreset(
@@ -68,7 +86,7 @@ describe('bodyPartPresetUtils', () => {
         calcificTendinitis,
         false
       ),
-      ['Rt. 족저 근막염(M722)']
+      ['Rt. 족저근막염(M722)']
     );
   });
 
@@ -90,7 +108,7 @@ describe('bodyPartPresetUtils', () => {
         calcificTendinitis,
         ['Lt. 석회성 건염(M6521)']
       ),
-      ['Rt. 족저 근막염(M722)', 'Lt. 석회성 건염(M6521)']
+      ['Rt. 족저근막염(M722)', 'Lt. 석회성건염(M6521)']
     );
   });
 });
