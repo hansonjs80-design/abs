@@ -1808,9 +1808,9 @@
 }
 
 .context-menu-submenu--body {
-  min-width: 234px;
-  max-width: min(288px, calc(100vw - 36px));
-  width: min(288px, calc(100vw - 36px));
+  min-width: min(288px, calc(100vw - 36px));
+  max-width: min(420px, calc(100vw - 36px));
+  width: max-content;
   overflow-x: hidden !important;
   overflow-y: auto !important;
   padding: 10px 0 0 0 !important;
@@ -1961,8 +1961,9 @@
 }
 
 .context-menu-body-panel {
-  width: 100%;
-  min-width: 0;
+  width: max-content;
+  min-width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
   overflow: visible !important;
   padding: 0 !important;
@@ -2058,9 +2059,10 @@
 
 .context-menu-body-preset-label span {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
   font-size: 0.96rem;
 }
 
@@ -3064,6 +3066,10 @@
 }
 
 .context-menu-body-selected-item .context-menu-list-text {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
   font-size: 0.98rem;
   font-weight: 800;
   color: #14532d;
@@ -3209,9 +3215,10 @@
 .context-menu-check-label span {
   min-width: 0;
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
   text-align: left;
   color: #111827;
   font-weight: 800;

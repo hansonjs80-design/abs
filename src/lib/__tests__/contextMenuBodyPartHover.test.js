@@ -47,6 +47,22 @@ test('context menu body-part checkbox rows use stronger hover backgrounds', asyn
     css,
     /\.context-menu-body-selected-list\s*\{[^}]*gap:\s*1\.8px;[^}]*margin-bottom:\s*5px;/s
   );
+  assert.match(
+    css,
+    /\.context-menu-submenu--body\s*\{[^}]*min-width:\s*min\(288px, calc\(100vw - 36px\)\);[^}]*max-width:\s*min\(420px, calc\(100vw - 36px\)\);[^}]*width:\s*max-content;/s
+  );
+  assert.match(
+    css,
+    /\.context-menu-body-panel\s*\{[^}]*width:\s*max-content;[^}]*min-width:\s*100%;[^}]*max-width:\s*100%;/s
+  );
+  assert.match(
+    css,
+    /\.context-menu-body-selected-item \.context-menu-list-text\s*\{[^}]*overflow:\s*visible;[^}]*overflow-wrap:\s*anywhere;[^}]*text-overflow:\s*clip;[^}]*white-space:\s*normal;[^}]*font-size:\s*0\.98rem;/s
+  );
+  assert.match(
+    css,
+    /\.context-menu-check-label span\s*\{[^}]*overflow:\s*visible;[^}]*overflow-wrap:\s*anywhere;[^}]*text-overflow:\s*clip;[^}]*white-space:\s*normal;/s
+  );
   assert.match(bodyPartPanel, /<Pencil size=\{13\}/);
   assert.match(bodyPartPanel, /<Trash2 size=\{14\}/);
 });
