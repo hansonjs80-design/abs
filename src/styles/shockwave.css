@@ -2025,9 +2025,9 @@
 .context-menu-body-preset-label input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
-  width: 17px;
-  height: 17px;
-  min-width: 17px;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
   border: 1.5px solid #94a3b8;
   border-radius: 4px;
   background-color: #ffffff;
