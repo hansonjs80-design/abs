@@ -54,6 +54,17 @@ export default function SettlementSettingsPanel({
   const [prescriptionRenameKeys, setPrescriptionRenameKeys] = useState({});
   const [draggedIndex, setDraggedIndex] = useState(null);
 
+  const isAppleShortcutPlatform = useMemo(() => {
+    if (typeof navigator === 'undefined') return false;
+    return /Mac|iPhone|iPad|iPod/i.test(`${navigator.platform || ''} ${navigator.userAgent || ''}`);
+  }, []);
+  const shortcutPrefix = isManualTherapy
+    ? (isAppleShortcutPlatform ? 'Option+' : 'Alt+')
+    : (isAppleShortcutPlatform ? 'Cmd+' : 'Ctrl+');
+  const shortcutTitle = isManualTherapy
+    ? `${isAppleShortcutPlatform ? 'Option' : 'Alt'} + 숫자로 도수치료 처방 단축키 설정`
+    : `${isAppleShortcutPlatform ? 'Cmd' : 'Ctrl'} + 숫자/영문으로 충격파 처방 단축키 설정`;
+
   const title = isManualTherapy ? '도수치료 결산 설정' : '충격파 결산 설정';
   const addPlaceholder = isManualTherapy ? '+ 도수 처방' : '+ 처방';
   const sourceText = useMemo(() => {
@@ -453,15 +464,16 @@ export default function SettlementSettingsPanel({
                     )}
                   </div>
                   <div className="settlement-shortcut-group">
-                    <span className="settlement-shortcut-prefix">Cmd+</span>
+                    <span className="settlement-shortcut-prefix">{shortcutPrefix}</span>
                     <input
                       className="form-input settlement-shortcut-input"
                       value={draft.shortcuts?.[prescription] || ''}
                       placeholder="—"
-                      title="Cmd/Ctrl + 숫자/영문으로 처방 단축키 설정"
+                      title={shortcutTitle}
                       maxLength={1}
                       onChange={(event) => {
-                        const val = normalizeScheduleShortcutValue(event.target.value).replace(/[^1-9A-Z]/g, '');
+                        const allowedPattern = isManualTherapy ? /[^1-9]/g : /[^1-9A-Z]/g;
+                        const val = normalizeScheduleShortcutValue(event.target.value).replace(allowedPattern, '');
                         setDraft((prev) => ({
                           ...prev,
                           shortcuts: { ...(prev.shortcuts || {}), [prescription]: val },

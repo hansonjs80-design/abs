@@ -40,7 +40,11 @@ import {
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 import { getPrescriptionFromConfiguredDoseTag, getPrescriptionScheduleSettings } from '../../lib/prescriptionScheduleSettings';
 import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
-import { getScheduleShortcutKey, isMemoMenuShortcut, normalizeScheduleShortcutValue } from '../../lib/scheduleKeyboardUtils';
+import {
+  getScheduleShortcutKey,
+  isMemoMenuShortcut,
+  resolveSchedulePrescriptionShortcut,
+} from '../../lib/scheduleKeyboardUtils';
 import {
   buildScheduleRenderMergeSpans,
   getScheduleCellKey,
@@ -2615,40 +2619,35 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     const hasValue = Boolean(e.target.value?.trim());
     const shortcutKey = getScheduleShortcutKey(e);
 
-    // 1. Ctrl/Cmd + [1-9]/[A-Z] (처방 단축키)
-    const isMetaOrAltOrShift = isMeta || e.altKey || (e.shiftKey && isMeta);
-    const keyNum = /^[1-9A-Z]$/.test(shortcutKey) ? shortcutKey : '';
-
     // 복사(C), 붙여넣기(V), 전체선택(A), 잘라내기(X), 실행취소(Z), 찾기(F) 및 완료(S), 취소(D), 공휴일(B) 등의 주요 편집 조작 단축키 보존
-    const isReservedEditorKey = /^[ACVXZFSDB]$/i.test(keyNum);
-    const isValidShortcut = isMetaOrAltOrShift && keyNum && !isReservedEditorKey;
+    const isReservedEditorKey = isMeta && /^[ACVXZFSDB]$/i.test(shortcutKey);
+    const effectiveManualSettings = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'manual_therapy');
+    const effectiveShockwaveSettings = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'shockwave');
+    const shortcutMatch = isReservedEditorKey
+      ? null
+      : resolveSchedulePrescriptionShortcut(e, {
+          manualShortcuts: effectiveManualSettings?.shortcuts,
+          shockwaveShortcuts: effectiveShockwaveSettings?.shortcuts,
+          hiddenPrescriptions: prescriptionScheduleSettings.hiddenPrescriptions,
+        });
 
-    if (isValidShortcut) {
+    if (shortcutMatch) {
       e.preventDefault();
       e.stopPropagation();
       if (hasValue) {
-        const effectiveManualSettings = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'manual_therapy');
-        const effectiveShockwaveSettings = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'shockwave');
+        const targetPrescription = shortcutMatch.prescription;
 
-        const manualShortcuts = effectiveManualSettings?.shortcuts || {};
-        const manualPrescription = Object.keys(manualShortcuts).find((prescription) => normalizeScheduleShortcutValue(manualShortcuts[prescription]) === keyNum);
-        const shockwaveShortcuts = effectiveShockwaveSettings?.shortcuts || {};
-        const shockwavePrescription = Object.keys(shockwaveShortcuts).find((prescription) => normalizeScheduleShortcutValue(shockwaveShortcuts[prescription]) === keyNum);
-        const targetPrescription = manualPrescription || shockwavePrescription || '';
-
-        if (targetPrescription) {
-          const currentVal = e.target.value;
-          const currentPrescription = memos[cellKey(w, d, r, c)]?.prescription || '';
-          const previousDoseTag = prescriptionScheduleSettings.doseTags?.[currentPrescription] || currentPrescription.match(/(\d{2,3})/)?.[1] || '';
-          const doseTag = getActionDoseTagFromPrescription(targetPrescription, prescriptionScheduleSettings.doseTags);
-          const updatedContent = updateDoseTagForPrescriptionContent(
-            currentVal,
-            doseTag,
-            previousDoseTag,
-            prescriptionScheduleSettings.doseTags
-          );
-          handleCellSave(w, d, r, c, updatedContent, targetPrescription);
-        }
+        const currentVal = e.target.value;
+        const currentPrescription = memos[cellKey(w, d, r, c)]?.prescription || '';
+        const previousDoseTag = prescriptionScheduleSettings.doseTags?.[currentPrescription] || currentPrescription.match(/(\d{2,3})/)?.[1] || '';
+        const doseTag = getActionDoseTagFromPrescription(targetPrescription, prescriptionScheduleSettings.doseTags);
+        const updatedContent = updateDoseTagForPrescriptionContent(
+          currentVal,
+          doseTag,
+          previousDoseTag,
+          prescriptionScheduleSettings.doseTags
+        );
+        handleCellSave(w, d, r, c, updatedContent, targetPrescription);
       }
       return;
     }
@@ -2776,7 +2775,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       const nc = e.shiftKey ? Math.max(0, c - 1) : Math.min(colCount - 1, c + 1);
       selectSingleCell({ w, d, r, c: nc });
     }
-  }, [baseTimeSlots.length, colCount, selectSingleCell, getAdjacentCell, moveEditInputCaret, settings, currentYear, currentMonth, handleCellSave, memos, pendingCellBgColors, cellKey, handleOpenBodyPartMenu, handleOpenMemoMenu, setEditingCell, prescriptionScheduleSettings.doseTags]);
+  }, [baseTimeSlots.length, colCount, selectSingleCell, getAdjacentCell, moveEditInputCaret, settings, currentYear, currentMonth, handleCellSave, memos, pendingCellBgColors, cellKey, handleOpenBodyPartMenu, handleOpenMemoMenu, setEditingCell, prescriptionScheduleSettings.doseTags, prescriptionScheduleSettings.hiddenPrescriptions]);
 
   const handleChartSelectorClose = useCallback((selected) => {
     if (!chartSelector) return;
@@ -3705,7 +3704,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 options={manualTherapyPrescriptions}
                                 prescriptionColors={contextMenuPrescriptionColors}
                                 shortcuts={effectiveManualSettings?.shortcuts || {}}
-                                shortcutModifier={shortcutLabels.modifier}
+                                shortcutModifier={shortcutLabels.manualPrescriptionModifier}
                                 align="end"
                                 onChange={(nextPrescription) => {
                                   const prescription = nextPrescription || null;

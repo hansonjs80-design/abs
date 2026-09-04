@@ -36,6 +36,44 @@ export function getScheduleShortcutKey(event) {
   return normalizeScheduleShortcutValue(rawKey);
 }
 
+function findPrescriptionByShortcut(shortcuts, shortcutKey, hiddenPrescriptions) {
+  return Object.keys(shortcuts || {}).find((prescription) => (
+    normalizeScheduleShortcutValue(shortcuts[prescription]) === shortcutKey
+      && !hiddenPrescriptions.has(prescription)
+  ));
+}
+
+export function resolveSchedulePrescriptionShortcut(event, {
+  manualShortcuts = {},
+  shockwaveShortcuts = {},
+  hiddenPrescriptions = [],
+} = {}) {
+  const shortcutKey = getScheduleShortcutKey(event);
+  const hidden = new Set(hiddenPrescriptions || []);
+  const isManualModifier = Boolean(
+    event?.altKey && !event?.metaKey && !event?.ctrlKey && !event?.shiftKey
+  );
+
+  if (isManualModifier && /^[1-9]$/.test(shortcutKey)) {
+    const prescription = findPrescriptionByShortcut(manualShortcuts, shortcutKey, hidden);
+    return prescription
+      ? { type: 'manual_therapy', prescription, shortcutKey }
+      : null;
+  }
+
+  const isShockwaveModifier = Boolean(
+    (event?.metaKey || event?.ctrlKey) && !event?.altKey
+  );
+  if (isShockwaveModifier && /^[1-9A-Z]$/.test(shortcutKey)) {
+    const prescription = findPrescriptionByShortcut(shockwaveShortcuts, shortcutKey, hidden);
+    return prescription
+      ? { type: 'shockwave', prescription, shortcutKey }
+      : null;
+  }
+
+  return null;
+}
+
 function isKey(event, code, key) {
   return event?.code === code || getScheduleShortcutKey(event) === String(key || '').toUpperCase();
 }

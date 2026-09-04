@@ -306,3 +306,94 @@ export function buildShockwaveCountSummaries({
     ),
   };
 }
+
+export function buildManualTherapySettlementSummary({
+  rows = [],
+  prescriptions = [],
+  therapists = [],
+  prescriptionPrices = {},
+  incentivePercentage = 0,
+} = {}) {
+  const safeRows = Array.isArray(rows) ? rows.filter(Boolean) : [];
+  const safePrescriptions = Array.isArray(prescriptions) ? prescriptions.filter(Boolean) : [];
+  const safeTherapists = Array.isArray(therapists) ? therapists.filter((item) => item?.name) : [];
+  const priceEntries = prescriptionPrices && typeof prescriptionPrices === 'object' && !Array.isArray(prescriptionPrices)
+    ? prescriptionPrices
+    : {};
+  const normalizedPriceMap = new Map(
+    Object.entries(priceEntries).map(([prescription, amount]) => [
+      normalizePrescriptionKey(prescription),
+      Number(amount) || 0,
+    ])
+  );
+  const incentiveRate = (Number(incentivePercentage) || 0) / 100;
+
+  const summaryByTherapist = safeTherapists.map((therapist) => {
+    const countsByPrescription = createEmptyPrescriptionCounts(safePrescriptions);
+
+    safeRows.forEach((entry) => {
+      if (entry?.therapist_name !== therapist.name) return;
+      const matchedPrescription = safePrescriptions.find((prescription) => (
+        statsPrescriptionsMatch(prescription, entry?.prescription)
+      ));
+      if (!matchedPrescription) return;
+      countsByPrescription[matchedPrescription] += toStatsPrescriptionCount(entry?.prescription_count);
+    });
+
+    const totalCount = safePrescriptions.reduce(
+      (sum, prescription) => sum + (countsByPrescription[prescription] || 0),
+      0
+    );
+    const amountsByPrescription = Object.fromEntries(
+      safePrescriptions.map((prescription) => [
+        prescription,
+        (countsByPrescription[prescription] || 0)
+          * (normalizedPriceMap.get(normalizePrescriptionKey(prescription)) || 0),
+      ])
+    );
+    const amount = safePrescriptions.reduce(
+      (sum, prescription) => sum + (amountsByPrescription[prescription] || 0),
+      0
+    );
+    const incentivesByPrescription = Object.fromEntries(
+      safePrescriptions.map((prescription) => [
+        prescription,
+        Math.round((amountsByPrescription[prescription] || 0) * incentiveRate),
+      ])
+    );
+
+    return {
+      therapist: {
+        ...therapist,
+        id: therapist.key || therapist.id || therapist.name,
+        name: therapist.displayName || therapist.name,
+      },
+      countsByPrescription,
+      amountsByPrescription,
+      incentivesByPrescription,
+      totalCount,
+      amount,
+      incentive: Math.round(amount * incentiveRate),
+    };
+  });
+
+  const sumByPrescription = (field) => Object.fromEntries(
+    safePrescriptions.map((prescription) => [
+      prescription,
+      summaryByTherapist.reduce(
+        (sum, item) => sum + (item[field]?.[prescription] || 0),
+        0
+      ),
+    ])
+  );
+
+  return {
+    summaryByTherapist,
+    grandPrescriptionCounts: sumByPrescription('countsByPrescription'),
+    grandPrescriptionAmounts: sumByPrescription('amountsByPrescription'),
+    grandPrescriptionIncentives: sumByPrescription('incentivesByPrescription'),
+    grandTotalCount: summaryByTherapist.reduce((sum, item) => sum + item.totalCount, 0),
+    grandAmount: summaryByTherapist.reduce((sum, item) => sum + item.amount, 0),
+    grandIncentive: summaryByTherapist.reduce((sum, item) => sum + item.incentive, 0),
+  };
+}

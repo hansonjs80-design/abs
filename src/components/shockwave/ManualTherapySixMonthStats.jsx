@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
+import {
+  buildPrescriptionClassificationSignature,
+  getEffectiveSettlementSettings,
+} from '../../lib/settlementSettings';
 import { formatRecentPeriodLabel, parseRecentPeriodMonths } from '../../lib/recentPeriodUtils';
 import { syncMonthManualTherapyScheduleToStats } from '../../lib/manualTherapyUtils';
 import {
@@ -52,7 +55,16 @@ export default function ManualTherapySixMonthStats({
       day_overrides: settings?.day_overrides,
       date_overrides: settings?.date_overrides,
     });
-    const syncKey = `${currentYear}-${currentMonth}:${recentPeriodMonths}:${therapistKey}:${scheduleSettingsKey}`;
+    const recentMonthTargets = getRecentScheduleMonthTargets({
+      currentYear,
+      currentMonth,
+      recentPeriodMonths,
+    });
+    const prescriptionSettingsKey = buildPrescriptionClassificationSignature(
+      settings,
+      recentMonthTargets
+    );
+    const syncKey = `${currentYear}-${currentMonth}:${recentPeriodMonths}:${therapistKey}:${scheduleSettingsKey}:${prescriptionSettingsKey}`;
     if (recentAutoSyncKeyRef.current === syncKey) return undefined;
     recentAutoSyncKeyRef.current = syncKey;
 
@@ -60,7 +72,7 @@ export default function ManualTherapySixMonthStats({
 
     const syncRecentMonthsFromSchedule = async () => {
       try {
-        const targets = getRecentScheduleMonthTargets({ currentYear, currentMonth, recentPeriodMonths })
+        const targets = recentMonthTargets
           .filter((target) => !isDisplayedStatsMonth(target, currentYear, currentMonth));
 
         await loadStatsMonthsWithConcurrency(targets, async (target) => {

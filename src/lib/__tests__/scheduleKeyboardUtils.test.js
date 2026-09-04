@@ -16,6 +16,7 @@ import {
   isTreatmentCancelShortcut,
   isTreatmentCompleteShortcut,
   normalizeScheduleShortcutValue,
+  resolveSchedulePrescriptionShortcut,
 } from '../scheduleKeyboardUtils.js';
 
 describe('schedule keyboard shortcut detection', () => {
@@ -57,9 +58,82 @@ describe('schedule keyboard shortcut detection', () => {
   it('formats configured prescription shortcuts for Windows and Apple menus', () => {
     assert.equal(formatScheduleShortcutLabel('3', 'Ctrl'), 'Ctrl+3');
     assert.equal(formatScheduleShortcutLabel('ㅁ', '⌘'), '⌘A');
+    assert.equal(formatScheduleShortcutLabel('4', 'Alt'), 'Alt+4');
+    assert.equal(formatScheduleShortcutLabel('4', '⌥'), '⌥+4');
     assert.equal(formatScheduleShortcutLabel('+', 'Ctrl'), 'Ctrl++');
     assert.equal(formatScheduleShortcutLabel('+', '⌘'), '⌘+');
     assert.equal(formatScheduleShortcutLabel('', 'Ctrl'), '');
+  });
+
+  it('uses Alt or Option digits only for manual therapy prescriptions', () => {
+    const shortcuts = {
+      manualShortcuts: { '도수 30분': '4', '도수 영문': 'A' },
+      shockwaveShortcuts: { F2: '4' },
+    };
+
+    assert.deepEqual(
+      resolveSchedulePrescriptionShortcut(
+        { altKey: true, code: 'Digit4', key: '¢' },
+        shortcuts
+      ),
+      { type: 'manual_therapy', prescription: '도수 30분', shortcutKey: '4' }
+    );
+    assert.equal(
+      resolveSchedulePrescriptionShortcut(
+        { altKey: true, code: 'KeyA', key: 'å' },
+        shortcuts
+      ),
+      null
+    );
+    assert.equal(
+      resolveSchedulePrescriptionShortcut(
+        { altKey: true, shiftKey: true, code: 'Digit4', key: '€' },
+        shortcuts
+      ),
+      null
+    );
+  });
+
+  it('keeps Ctrl or Command prescription shortcuts exclusive to shockwave', () => {
+    const shortcuts = {
+      manualShortcuts: { '도수 30분': '4' },
+      shockwaveShortcuts: { F2: '4', F3: 'A' },
+    };
+
+    assert.deepEqual(
+      resolveSchedulePrescriptionShortcut(
+        { metaKey: true, code: 'Digit4', key: '4' },
+        shortcuts
+      ),
+      { type: 'shockwave', prescription: 'F2', shortcutKey: '4' }
+    );
+    assert.deepEqual(
+      resolveSchedulePrescriptionShortcut(
+        { ctrlKey: true, code: 'KeyA', key: 'a' },
+        shortcuts
+      ),
+      { type: 'shockwave', prescription: 'F3', shortcutKey: 'A' }
+    );
+    assert.equal(
+      resolveSchedulePrescriptionShortcut(
+        { metaKey: true, altKey: true, code: 'Digit4', key: '4' },
+        shortcuts
+      ),
+      null
+    );
+  });
+
+  it('does not resolve hidden prescriptions', () => {
+    assert.equal(
+      resolveSchedulePrescriptionShortcut(
+        { altKey: true, code: 'Digit2', key: '™' },
+        {
+          manualShortcuts: { '도수 60분': '2' },
+          hiddenPrescriptions: ['도수 60분'],
+        }
+      ),
+      null
+    );
   });
 
   it('keeps arrow keys as grid navigation only outside cell editing', () => {

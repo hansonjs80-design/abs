@@ -1,16 +1,6 @@
 import React, { useMemo } from 'react';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
-
-function normalizePrescriptionKey(value) {
-  return String(value || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '');
-}
-
-function toCount(value) {
-  const parsed = parseInt(String(value ?? '').trim(), 10);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
+import { buildManualTherapySettlementSummary } from '../../lib/shockwaveStatsCountUtils';
 
 function formatCount(value) {
   return `${value}건`;
@@ -45,109 +35,13 @@ export default function ManualTherapyStatsView({
     if (Array.isArray(prescriptions)) return prescriptions.filter(Boolean);
     return ['40분', '60분'];
   }, [prescriptions]);
-  const safePriceEntries = useMemo(
-    () => (prescriptionPrices && typeof prescriptionPrices === 'object' && !Array.isArray(prescriptionPrices) ? prescriptionPrices : {}),
-    [prescriptionPrices]
-  );
-
-  const normalizedPriceMap = useMemo(() => {
-    return Object.fromEntries(
-      Object.entries(safePriceEntries).map(([key, amount]) => [
-        normalizePrescriptionKey(key),
-        Number(amount) || 0,
-      ])
-    );
-  }, [safePriceEntries]);
-
-  const settlement = useMemo(() => {
-    const summaryByTherapist = displayTherapists.map((therapist) => {
-      const countsByPrescription = Object.fromEntries(
-        safePrescriptions.map((prescription) => [prescription, 0])
-      );
-
-      const therapistLogs = safeLogs.filter((entry) => entry.therapist_name === therapist.name);
-      therapistLogs.forEach((entry) => {
-        const matchedPrescription = safePrescriptions.find(
-          (prescription) => normalizePrescriptionKey(prescription) === normalizePrescriptionKey(entry?.prescription)
-        );
-        if (!matchedPrescription) return;
-        countsByPrescription[matchedPrescription] += toCount(entry?.prescription_count || 1);
-      });
-
-      const totalCount = safePrescriptions.reduce(
-        (sum, prescription) => sum + (countsByPrescription[prescription] || 0),
-        0
-      );
-      const amountsByPrescription = Object.fromEntries(
-        safePrescriptions.map((prescription) => {
-          const unitPrice = normalizedPriceMap[normalizePrescriptionKey(prescription)] || 0;
-          return [prescription, (countsByPrescription[prescription] || 0) * unitPrice];
-        })
-      );
-      const amount = safePrescriptions.reduce((sum, prescription) => sum + amountsByPrescription[prescription], 0);
-      const incentivesByPrescription = Object.fromEntries(
-        safePrescriptions.map((prescription) => [
-          prescription,
-          Math.round((amountsByPrescription[prescription] || 0) * ((Number(incentivePercentage) || 0) / 100))
-        ])
-      );
-      const incentive = Math.round(amount * ((Number(incentivePercentage) || 0) / 100));
-
-      return {
-        therapist: { ...therapist, id: therapist.key || therapist.id || therapist.name, name: therapist.displayName || therapist.name },
-        countsByPrescription,
-        amountsByPrescription,
-        incentivesByPrescription,
-        totalCount,
-        amount,
-        incentive,
-      };
-    });
-
-    const grandPrescriptionCounts = Object.fromEntries(
-      safePrescriptions.map((prescription) => [
-        prescription,
-        summaryByTherapist.reduce(
-          (sum, item) => sum + (item.countsByPrescription[prescription] || 0),
-          0
-        ),
-      ])
-    );
-
-    const grandPrescriptionAmounts = Object.fromEntries(
-      safePrescriptions.map((prescription) => [
-        prescription,
-        summaryByTherapist.reduce(
-          (sum, item) => sum + (item.amountsByPrescription[prescription] || 0),
-          0
-        ),
-      ])
-    );
-
-    const grandPrescriptionIncentives = Object.fromEntries(
-      safePrescriptions.map((prescription) => [
-        prescription,
-        summaryByTherapist.reduce(
-          (sum, item) => sum + (item.incentivesByPrescription[prescription] || 0),
-          0
-        ),
-      ])
-    );
-
-    const grandTotalCount = summaryByTherapist.reduce((sum, item) => sum + item.totalCount, 0);
-    const grandAmount = summaryByTherapist.reduce((sum, item) => sum + item.amount, 0);
-    const grandIncentive = summaryByTherapist.reduce((sum, item) => sum + item.incentive, 0);
-
-    return {
-      summaryByTherapist,
-      grandPrescriptionCounts,
-      grandPrescriptionAmounts,
-      grandPrescriptionIncentives,
-      grandTotalCount,
-      grandAmount,
-      grandIncentive,
-    };
-  }, [incentivePercentage, normalizedPriceMap, safeLogs, safePrescriptions, displayTherapists]);
+  const settlement = useMemo(() => buildManualTherapySettlementSummary({
+    rows: safeLogs,
+    prescriptions: safePrescriptions,
+    therapists: displayTherapists,
+    prescriptionPrices,
+    incentivePercentage,
+  }), [displayTherapists, incentivePercentage, prescriptionPrices, safeLogs, safePrescriptions]);
 
   const showGrandTotal = settlement.summaryByTherapist.length > 1;
   const showPrescriptionBreakdown = safePrescriptions.length > 1;

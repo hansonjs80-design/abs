@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  buildPrescriptionClassificationSignature,
   getEffectiveSettlementSettings,
   setMonthlySettlementSettings,
 } from '../settlementSettings.js';
@@ -130,6 +131,39 @@ describe('monthly settlement shortcut settings', () => {
         prescription: 'F/R',
       }, settings, 2026, 7),
       'shockwave'
+    );
+  });
+
+  it('changes the stats sync signature when a target month prescription changes', () => {
+    const baseSettings = {
+      prescriptions: ['F2.5'],
+      manual_therapy_prescriptions: ['이전도수'],
+      manual_therapy_dose_tags: { 이전도수: 'OLD' },
+    };
+    const targets = [{ year: 2026, month: 9 }];
+    const before = buildPrescriptionClassificationSignature(baseSettings, targets);
+    const monthly_settlement_settings = setMonthlySettlementSettings(
+      baseSettings,
+      2026,
+      9,
+      'manual_therapy',
+      {
+        prescriptions: ['이번달도수'],
+        dose_tags: { 이번달도수: 'NEW' },
+      }
+    );
+    const after = buildPrescriptionClassificationSignature({
+      ...baseSettings,
+      monthly_settlement_settings,
+    }, targets);
+
+    assert.notEqual(after, before);
+    assert.equal(
+      buildPrescriptionClassificationSignature({
+        ...baseSettings,
+        device_settings: { browser: { rowHeight: 32 } },
+      }, targets),
+      before
     );
   });
 });

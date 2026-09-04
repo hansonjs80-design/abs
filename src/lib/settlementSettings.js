@@ -162,6 +162,27 @@ export function getEffectiveSettlementSettings(settings, year, month, type = 'sh
   };
 }
 
+export function buildPrescriptionClassificationSignature(settings, monthTargets = []) {
+  const targets = Array.isArray(monthTargets) ? monthTargets : [];
+  return JSON.stringify(targets.map(({ year, month }) => {
+    const shockwave = getEffectiveSettlementSettings(settings, year, month, 'shockwave');
+    const manualTherapy = getEffectiveSettlementSettings(settings, year, month, 'manual_therapy');
+    const toClassificationFields = (value) => ({
+      prescriptions: Array.isArray(value?.prescriptions) ? value.prescriptions : [],
+      dose_tags: value?.dose_tags || {},
+      hidden_prescriptions: Array.isArray(value?.hidden_prescriptions)
+        ? value.hidden_prescriptions
+        : [],
+    });
+
+    return {
+      month_key: getMonthKey(year, month),
+      shockwave: toClassificationFields(shockwave),
+      manual_therapy: toClassificationFields(manualTherapy),
+    };
+  }));
+}
+
 export function setMonthlySettlementSettings(settings, year, month, type, nextConfig) {
   const monthKey = getMonthKey(year, month);
   const existing = settings?.monthly_settlement_settings && typeof settings.monthly_settlement_settings === 'object'

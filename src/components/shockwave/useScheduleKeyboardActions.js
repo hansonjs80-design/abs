@@ -43,7 +43,7 @@ import {
   isSameReservationGroupShortcut,
   isTreatmentCancelShortcut,
   isTreatmentCompleteShortcut,
-  normalizeScheduleShortcutValue,
+  resolveSchedulePrescriptionShortcut,
 } from '../../lib/scheduleKeyboardUtils';
 import { buildMoveScheduleSelectionPayload } from '../../lib/scheduleMoveUtils';
 import useScheduleMovePersistence from './useScheduleMovePersistence';
@@ -436,25 +436,18 @@ export default function useScheduleKeyboardActions({
     const activeCell = getLatestSelectedCell();
     if (!activeCell || editingCell) return false;
 
-    const isMeta = event.metaKey || event.ctrlKey;
-    const isMetaOrAltOrShift = isMeta || event.altKey || (event.shiftKey && isMeta);
-    const keyNum = getScheduleShortcutKey(event);
-    if (!isMetaOrAltOrShift || !/^[1-9A-Z]$/.test(keyNum)) return false;
     const effectiveManualSettings = getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'manual_therapy');
     const effectiveShockwaveSettings = getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'shockwave');
     const prescriptionScheduleSettings = getPrescriptionScheduleSettings(shockwaveSettings, currentYear, currentMonth);
     const hiddenPrescriptions = prescriptionScheduleSettings?.hiddenPrescriptions || [];
-
-    const manualShortcuts = effectiveManualSettings?.shortcuts || {};
-    const manualPrescription = Object.keys(manualShortcuts).find((prescription) => (
-      normalizeScheduleShortcutValue(manualShortcuts[prescription]) === keyNum && !hiddenPrescriptions.includes(prescription)
-    ));
-    const shockwaveShortcuts = effectiveShockwaveSettings?.shortcuts || {};
-    const shockwavePrescription = Object.keys(shockwaveShortcuts).find((prescription) => (
-      normalizeScheduleShortcutValue(shockwaveShortcuts[prescription]) === keyNum && !hiddenPrescriptions.includes(prescription)
-    ));
-    const targetPrescription = manualPrescription || shockwavePrescription || '';
-    if (!targetPrescription) return false;
+    const shortcutMatch = resolveSchedulePrescriptionShortcut(event, {
+      manualShortcuts: effectiveManualSettings?.shortcuts,
+      shockwaveShortcuts: effectiveShockwaveSettings?.shortcuts,
+      hiddenPrescriptions,
+    });
+    if (!shortcutMatch) return false;
+    const targetPrescription = shortcutMatch.prescription;
+    const isManualPrescription = shortcutMatch.type === 'manual_therapy';
 
     event.preventDefault();
     event.stopPropagation();
@@ -588,7 +581,7 @@ export default function useScheduleKeyboardActions({
           continue;
         }
 
-        if (!manualPrescription) {
+        if (!isManualPrescription) {
           const unmergePayload = buildManualTherapyUnmergePayload({
             key,
             memos: latestMemos,

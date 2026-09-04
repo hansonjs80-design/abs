@@ -48,6 +48,7 @@ export default function useScheduleViewState({
     const join = (...keys) => isAppleShortcutPlatform ? keys.join('') : keys.join('+');
     return {
       modifier: mod,
+      manualPrescriptionModifier: isAppleShortcutPlatform ? '⌥' : 'Alt',
       copy: join(mod, 'C'),
       cut: join(mod, 'X'),
       paste: join(mod, 'V'),

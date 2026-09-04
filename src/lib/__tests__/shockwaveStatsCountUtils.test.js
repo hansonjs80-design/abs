@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  buildManualTherapySettlementSummary,
   buildShockwaveSettlementPrintColumnWidths,
   buildStatsDisplayPrescriptions,
   buildTherapistPrescriptionDisplayGroups,
@@ -23,6 +24,32 @@ describe('shockwave stats count utilities', () => {
     assert.equal(normalizePrescriptionKey(' F 2.5 (본인) '), 'f25본인');
     assert.equal(statsPrescriptionsMatch('F2.5', 'F2.5(본인)'), false);
     assert.equal(statsPrescriptionsMatch('F 2.5 (본인)', 'f2.5본인'), true);
+  });
+
+  it('counts only the current Korean manual prescriptions without merging old labels', () => {
+    const summary = buildManualTherapySettlementSummary({
+      prescriptions: ['일반도수', '본인도수'],
+      therapists: [{ name: '주한솔' }],
+      prescriptionPrices: {
+        일반도수: 10000,
+        본인도수: 20000,
+        작년도수: 90000,
+      },
+      incentivePercentage: 10,
+      rows: [
+        { therapist_name: '주한솔', prescription: '작년도수', prescription_count: 7 },
+        { therapist_name: '주한솔', prescription: '일반도수', prescription_count: 2 },
+        { therapist_name: '주한솔', prescription: '본인도수', prescription_count: 1 },
+      ],
+    });
+
+    assert.deepEqual(summary.summaryByTherapist[0].countsByPrescription, {
+      일반도수: 2,
+      본인도수: 1,
+    });
+    assert.equal(summary.grandTotalCount, 3);
+    assert.equal(summary.grandAmount, 40000);
+    assert.equal(summary.grandIncentive, 4000);
   });
 
   it('allocates wider print columns to long prescription labels', () => {
