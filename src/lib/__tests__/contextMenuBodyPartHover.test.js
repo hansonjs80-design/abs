@@ -41,7 +41,11 @@ test('context menu body-part checkbox rows use stronger hover backgrounds', asyn
   );
   assert.match(
     css,
-    /\.context-menu-body-preset-label input\[type="checkbox"\]\s*\{[^}]*width:\s*16px;[^}]*height:\s*16px;[^}]*min-width:\s*16px;/s
+    /\.context-menu-body-preset-label input\[type="checkbox"\]\s*\{[^}]*width:\s*14px;[^}]*height:\s*14px;[^}]*min-width:\s*14px;[^}]*align-self:\s*center;/s
+  );
+  assert.match(
+    css,
+    /\.context-menu-body-preset-label span\s*\{[^}]*display:\s*inline-flex;[^}]*align-items:\s*center;[^}]*font-size:\s*0\.96rem;[^}]*line-height:\s*1;[^}]*transform:\s*translateY\(0\.5px\);/s
   );
   assert.match(
     css,

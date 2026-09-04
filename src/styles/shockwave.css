@@ -2025,9 +2025,9 @@
 .context-menu-body-preset-label input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  min-width: 16px;
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
   border: 1.5px solid #94a3b8;
   border-radius: 4px;
   background-color: #ffffff;
@@ -2039,6 +2039,7 @@
   outline: none;
   transition: all 0.15s ease;
   flex: 0 0 auto;
+  align-self: center;
   margin: 0 8px 0 0;
 }
 
@@ -2058,18 +2059,23 @@
 }
 
 .context-menu-body-preset-label span {
+  display: inline-flex;
+  align-items: center;
   min-width: 0;
   overflow: visible;
   overflow-wrap: anywhere;
   text-overflow: clip;
   white-space: normal;
   font-size: 0.96rem;
+  line-height: 1;
+  transform: translateY(0.5px);
 }
 
 .context-menu-body-preset-label small {
   color: #334155;
   font-size: 0.91rem;
   font-weight: 700;
+  line-height: 1;
 }
 
 .context-menu-body-preset-directions {
