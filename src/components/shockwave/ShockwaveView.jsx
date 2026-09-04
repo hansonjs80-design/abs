@@ -412,7 +412,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const cellSaveVersionRef = useRef({});
   const saveMemoRef = useRef(queuedOnSaveMemo);
   const scheduleDateRef = useRef({ year: currentYear, month: currentMonth });
-  const { contextSubmenuOffsetY } = useContextMenuPositioning({
+  const { contextSubmenuOffsetX, contextSubmenuOffsetY } = useContextMenuPositioning({
     activeContextSubmenu,
     contextMenu,
     contextMenuRef,
@@ -3330,6 +3330,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
           style={{
             top: contextMenu.y,
             left: contextMenu.x,
+            '--context-submenu-offset-x': `${contextSubmenuOffsetX}px`,
             '--context-submenu-offset-y': `${contextSubmenuOffsetY}px`,
             '--patient-history-editor-width': contextMenu.patientHistoryEditorWidth
               ? `${contextMenu.patientHistoryEditorWidth}px`

@@ -143,7 +143,8 @@ test('ignores invalid staff calendar values and keeps defaults for full settings
 
   assert.equal(normalized.colWidth, 0);
   assert.equal(normalized.rowHeight, 28);
-  assert.equal(normalized.dateFontWeight, 700);
+  assert.equal(normalized.dateFontSize, 16);
+  assert.equal(normalized.dateFontWeight, 800);
   assert.equal(normalized.weekdayFontWeight, 800);
   assert.equal(normalized.lastRowFontWeight, 700);
   assert.equal(normalized.memoFontSize, 13);

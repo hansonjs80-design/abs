@@ -22,6 +22,7 @@ import {
   isPatientHistoryCellClearShortcut,
   isPatientHistoryCellEditorShortcut,
   normalizePatientHistoryCellValue,
+  removeEmptyPatientHistoryMemoLine,
   runPatientHistoryTasksWithConcurrency,
   stepPatientHistoryVisitCount,
 } from '../patientHistoryCellInteractionUtils.js';
@@ -184,6 +185,35 @@ describe('patient history memo cell actions', () => {
     assert.equal(replaced.value, '• 첫 메모\n• \n• ');
     assert.equal(replaced.selectionStart, replaced.value.length);
     assert.equal(replaced.selectionEnd, replaced.value.length);
+  });
+
+  it('removes an empty memo bullet row and places the caret after the previous line', () => {
+    const twoLineMemo = '• 첫 메모\n• ';
+    assert.deepEqual(
+      removeEmptyPatientHistoryMemoLine(twoLineMemo, twoLineMemo.length, twoLineMemo.length),
+      {
+        value: '첫 메모',
+        selectionStart: 4,
+        selectionEnd: 4,
+      },
+    );
+
+    const middleEmptyLine = '• 첫째\n• \n• 셋째';
+    const emptyLineCaret = middleEmptyLine.indexOf('\n') + 3;
+    assert.deepEqual(
+      removeEmptyPatientHistoryMemoLine(middleEmptyLine, emptyLineCaret, emptyLineCaret),
+      {
+        value: '• 첫째\n• 셋째',
+        selectionStart: 4,
+        selectionEnd: 4,
+      },
+    );
+  });
+
+  it('keeps normal Backspace behavior outside an empty memo bullet row', () => {
+    assert.equal(removeEmptyPatientHistoryMemoLine('첫 메모', 0, 0), null);
+    assert.equal(removeEmptyPatientHistoryMemoLine('• 첫 메모\n• 둘째', 12, 12), null);
+    assert.equal(removeEmptyPatientHistoryMemoLine('• 첫 메모\n• ', 8, 9), null);
   });
 
   it('builds increasing visit counts for the dragged fill range', () => {

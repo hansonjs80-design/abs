@@ -519,6 +519,10 @@ test('patient history memo and visit double click activate inline field editors'
     shockwaveView,
     /event\.key === 'Enter' && !event\.altKey && !isComposing[\s\S]*?insertPatientHistoryMemoLineBreak/,
   );
+  assert.match(
+    shockwaveView,
+    /event\.key === 'Backspace'[\s\S]*?removeEmptyPatientHistoryMemoLine[\s\S]*?field\.setSelectionRange/,
+  );
   assert.match(shockwaveView, /event\.nativeEvent\?\.isComposing/);
   assert.match(
     shockwaveView,

@@ -23,4 +23,14 @@ test('context menu body-part checkbox rows use stronger hover backgrounds', asyn
     css,
     /\.context-menu-check-item\.is-checked:hover\s*\{[^}]*background:\s*#e5e7eb;/s
   );
+  assert.match(
+    css,
+    /\.context-menu-body-preset-item\s*\{[^}]*padding:\s*0 2px;[^}]*font-size:\s*0\.86rem;[^}]*line-height:\s*1;/s
+  );
+  assert.match(
+    css,
+    /\.context-menu-check-item\s*\{[^}]*padding:\s*0 5px 0 7px;[^}]*font-size:\s*0\.855rem;[^}]*line-height:\s*1;/s
+  );
+  assert.match(bodyPartPanel, /<Pencil size=\{12\}/);
+  assert.match(bodyPartPanel, /<Trash2 size=\{13\}/);
 });

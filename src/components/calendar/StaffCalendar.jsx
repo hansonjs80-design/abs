@@ -185,8 +185,8 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   const [rowHeight, setRowHeight] = usePersistentNumber(ROW_H_KEY, 120, MIN_ROW_HEIGHT);
   const [dateRowHeight, setDateRowHeight] = usePersistentNumber(DATE_H_KEY, 28, MIN_DATE_ROW_HEIGHT);
   const [memoFontSize, setMemoFontSize] = usePersistentNumber(MEMO_FONT_SIZE_KEY, 13, 10);
-  const [dateFontSize, setDateFontSize] = usePersistentNumber(DATE_FONT_SIZE_KEY, 15, 8);
-  const [dateFontWeight, setDateFontWeight] = usePersistentNumber(DATE_FONT_WEIGHT_KEY, 700, 500);
+  const [dateFontSize, setDateFontSize] = usePersistentNumber(DATE_FONT_SIZE_KEY, 16, 8);
+  const [dateFontWeight, setDateFontWeight] = usePersistentNumber(DATE_FONT_WEIGHT_KEY, 800, 500);
   const [weekdayFontSize, setWeekdayFontSize] = usePersistentNumber(WEEKDAY_FONT_SIZE_KEY, 16, 8);
   const [weekdayFontWeight, setWeekdayFontWeight] = usePersistentNumber(WEEKDAY_FONT_WEIGHT_KEY, 800, 500);
   const [weekdayRowHeight, setWeekdayRowHeight] = usePersistentNumber(WEEKDAY_ROW_HEIGHT_KEY, 32, MIN_WEEKDAY_ROW_HEIGHT);

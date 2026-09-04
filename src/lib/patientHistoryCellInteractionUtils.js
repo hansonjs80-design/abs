@@ -337,6 +337,37 @@ export function insertPatientHistoryMemoLineBreak(rawValue, selectionStart, sele
   );
 }
 
+export function removeEmptyPatientHistoryMemoLine(rawValue, selectionStart, selectionEnd) {
+  const normalizedValue = String(rawValue ?? '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+  const start = Number.isFinite(selectionStart)
+    ? Math.min(Math.max(0, selectionStart), normalizedValue.length)
+    : normalizedValue.length;
+  const end = Number.isFinite(selectionEnd)
+    ? Math.min(Math.max(start, selectionEnd), normalizedValue.length)
+    : start;
+  if (start !== end) return null;
+
+  const rawLines = normalizedValue.split('\n');
+  const { index, column } = getPatientHistoryMemoCursorPosition(rawLines, start);
+  if (index === 0) return null;
+
+  const currentLine = rawLines[index];
+  const prefixLength = currentLine.match(PATIENT_HISTORY_MEMO_BULLET_PREFIX)?.[0].length || 0;
+  const content = currentLine.replace(PATIENT_HISTORY_MEMO_BULLET_PREFIX, '');
+  if (content.length > 0 || column > prefixLength) return null;
+
+  const nextLines = rawLines.filter((_, lineIndex) => lineIndex !== index);
+  const nextValue = nextLines.join('\n');
+  const previousLineEnd = nextLines.slice(0, index).join('\n').length;
+  return formatPatientHistoryMemoEditDraft(
+    nextValue,
+    previousLineEnd,
+    previousLineEnd,
+  );
+}
+
 export function buildPatientHistoryVisitFillValues(rawValue, targetCount) {
   const normalizedValue = normalizePatientHistoryCellValue('visit_count', rawValue);
   if (normalizedValue !== '*' && !/^\d+$/.test(normalizedValue)) return [];

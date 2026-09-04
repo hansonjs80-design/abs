@@ -296,7 +296,7 @@ export default function BodyPartKeyboardPanel({
                           setEditingSelectedIndex(index);
                         }}
                       >
-                        <Pencil size={13} strokeWidth={2.4} />
+                        <Pencil size={12} strokeWidth={2.4} />
                       </button>
                     )}
                     {canReorderParts ? (
@@ -314,7 +314,7 @@ export default function BodyPartKeyboardPanel({
                             onMove?.(index, 'up');
                           }}
                         >
-                          <ArrowUp size={11} strokeWidth={2.5} />
+                          <ArrowUp size={10} strokeWidth={2.5} />
                         </button>
                         <button
                           type="button"
@@ -329,7 +329,7 @@ export default function BodyPartKeyboardPanel({
                             onMove?.(index, 'down');
                           }}
                         >
-                          <ArrowDown size={11} strokeWidth={2.5} />
+                          <ArrowDown size={10} strokeWidth={2.5} />
                         </button>
                       </div>
                     ) : null}
@@ -345,7 +345,7 @@ export default function BodyPartKeyboardPanel({
                         onDelete?.(part);
                       }}
                     >
-                      <Trash2 size={14} strokeWidth={2.3} />
+                      <Trash2 size={13} strokeWidth={2.3} />
                     </button>
                   </div>
                 </div>
