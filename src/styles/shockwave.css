@@ -1975,7 +1975,8 @@
 .context-menu-body-presets {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 6px;
+  /* 그룹 사이만 넓혀 최상단 제목에는 추가 위 여백을 만들지 않는다. */
+  gap: 7.2px;
   margin-bottom: 8px;
   padding: 0 12px 4px 12px !important;
 }
@@ -1988,7 +1989,7 @@
   /* 제목 위쪽 여백은 유지하고 첫 체크박스 행까지의 간격만 30% 축소 */
   margin: 0 0 2.5px;
   color: #1e293b;
-  font-size: 0.96rem;
+  font-size: calc(0.96rem + 1px);
   font-weight: 800;
 }
 
