@@ -57,3 +57,20 @@ test('selected schedule cells use the thicker blue outline while viewing and edi
     /@media \(max-width: 768px\)[\s\S]*?\.sw-cell\.selected::before\s*\{[^}]*inset:\s*0;/s
   );
 });
+
+test('copied merged schedule cells use one clipped outer dotted border', async () => {
+  const shockwaveCss = await readFile(shockwaveCssUrl, 'utf8');
+
+  assert.match(
+    shockwaveCss,
+    /\.sw-cell\.ants-active\s*\{[^}]*outline:\s*none !important;[^}]*animation:\s*none !important;/s
+  );
+  assert.match(
+    shockwaveCss,
+    /\.sw-cell\.ants-active::before,\s*\.sw-cell\.merged-master\.ants-active::before\s*\{[^}]*inset:\s*0;[^}]*border:\s*2px dashed var\(--ants-color,\s*#3b82f6\);/s
+  );
+  assert.match(
+    shockwaveCss,
+    /\.sw-cell\.merged-master\.ants-active\s*\{[^}]*overflow:\s*hidden;/s
+  );
+});

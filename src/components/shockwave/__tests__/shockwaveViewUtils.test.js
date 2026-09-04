@@ -183,9 +183,9 @@ describe('shockwave view patient history model', () => {
   });
 
   it('returns stable modal sizing for single and split layouts', () => {
-    assert.equal(getPatientHistoryModalLayout(1).maxWidth, 783);
+    assert.equal(getPatientHistoryModalLayout(1).maxWidth, 800);
     assert.equal(getPatientHistoryModalLayout(1).width, '85%');
-    assert.equal(getPatientHistoryModalLayout(2).maxWidth, 1540);
+    assert.equal(getPatientHistoryModalLayout(2).maxWidth, 1574);
     assert.equal(getPatientHistoryModalLayout(2).width, '100%');
     const columnWidths = getPatientHistoryColumnWidths(1);
     assert.ok(
@@ -204,6 +204,7 @@ describe('shockwave view patient history model', () => {
     assert.ok(projectedWidths[1] >= (735 * 0.114) * 1.15);
     assert.ok(projectedWidths[2] >= 735 * 0.078);
     assert.ok(projectedWidths[3] >= (770 * 0.108) * 1.1);
+    assert.ok(projectedWidths[5] >= (780 * 0.2183) * 1.1);
     assert.ok(projectedWidths[7] >= 735 * 0.069);
     assert.ok(projectedWidths[8] >= (780 * 0.0363) * 1.1);
     assert.ok(projectedWidths[8] < (780 * 0.0363) * 1.11);

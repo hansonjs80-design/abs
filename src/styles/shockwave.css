@@ -706,6 +706,28 @@
   z-index: 4;
 }
 
+/* 스케줄 셀은 전역 outline과 가상 요소가 겹치지 않도록 한 겹만 표시한다. */
+.sw-cell.ants-active {
+  outline: none !important;
+  animation: none !important;
+}
+
+.sw-cell.ants-active::before,
+.sw-cell.merged-master.ants-active::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px dashed var(--ants-color, #3b82f6);
+  box-sizing: border-box;
+  animation: ants-pulse 1s linear infinite;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.sw-cell.merged-master.ants-active {
+  overflow: hidden;
+}
+
 .sw-cell.staff-off {
   --sw-cell-fill-color: #93c47e;
   background: #93c47e;
@@ -1799,9 +1821,9 @@
   top: -6px;
   left: calc(100% + 4px);
   right: auto;
-  width: min(204px, calc(100vw - 36px));
+  width: min(213px, calc(100vw - 36px));
   min-width: 0;
-  max-width: min(204px, calc(100vw - 36px));
+  max-width: min(213px, calc(100vw - 36px));
   padding: 8px;
   border-radius: 11px;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14), 0 4px 10px rgba(15, 23, 42, 0.08);
@@ -2640,7 +2662,7 @@
 
 .context-menu-prescription-row--dual {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
   gap: 10px;
   width: 100%;
 }
@@ -2776,8 +2798,8 @@
 
 @media (max-width: 560px) {
   .context-menu-submenu--prescription {
-    width: min(204px, calc(100vw - 28px));
-    max-width: min(204px, calc(100vw - 28px));
+    width: min(213px, calc(100vw - 28px));
+    max-width: min(213px, calc(100vw - 28px));
   }
 
   .context-menu-prescription-row--dual {
@@ -2896,7 +2918,7 @@
 .context-menu-prescription-option-name {
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
   white-space: nowrap;
   color: var(--context-prescription-option-color, inherit);
 }

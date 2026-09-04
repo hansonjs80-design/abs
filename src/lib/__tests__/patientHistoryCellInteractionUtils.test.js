@@ -114,9 +114,17 @@ describe('patient history memo cell actions', () => {
     assert.equal(getPatientHistoryCellDirectInputText({ key: 'Enter' }), null);
     assert.equal(
       getPatientHistoryInlineEditInitialValue('memo', '기존 메모', '새'),
-      '기존 메모\n새',
+      '• 기존 메모\n• 새',
     );
     assert.equal(getPatientHistoryInlineEditInitialValue('memo', '', '새'), '새');
+    assert.equal(
+      getPatientHistoryInlineEditInitialValue('memo', '첫 메모\n둘째 메모'),
+      '• 첫 메모\n• 둘째 메모',
+    );
+    assert.equal(
+      getPatientHistoryInlineEditInitialValue('memo', '첫 메모\n둘째 메모', '새'),
+      '• 첫 메모\n• 둘째 메모\n• 새',
+    );
     assert.equal(getPatientHistoryInlineEditInitialValue('visit_count', '8', '2'), '2');
     assert.equal(getPatientHistoryInlineEditInitialValue('visit_count', '8'), '8');
   });

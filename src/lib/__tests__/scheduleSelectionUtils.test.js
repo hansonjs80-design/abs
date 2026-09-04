@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  buildScheduleRenderMergeSpans,
   computeScheduleSelectionInfo,
   getEffectiveScheduleMergeSpan,
   normalizeScheduleCellToMergeMaster,
@@ -130,5 +131,56 @@ describe('schedule selection merge helpers', () => {
       }),
       new Set(['0-0-0-0'])
     );
+  });
+
+  it('builds one render footprint from a merged master even while child metadata is missing', () => {
+    const renderSpans = buildScheduleRenderMergeSpans({
+      memos: {
+        '0-0-2-1': { merge_span: masterSpan(2, 1) },
+      },
+    });
+
+    assert.deepEqual(renderSpans['0-0-2-1'], masterSpan(2, 1));
+    assert.deepEqual(renderSpans['0-0-3-1'], childSpan('0-0-2-1'));
+    assert.deepEqual(
+      normalizeScheduleKeysToMergeMasters({
+        keys: new Set(['0-0-3-1']),
+        memos: {},
+        pendingMergeSpans: renderSpans,
+      }),
+      new Set(['0-0-2-1'])
+    );
+  });
+
+  it('uses optimistic merge metadata as one render footprint before saved memos refresh', () => {
+    const renderSpans = buildScheduleRenderMergeSpans({
+      memos: {
+        '0-0-4-2': { merge_span: masterSpan(1, 1) },
+        '0-0-5-2': { merge_span: masterSpan(1, 1) },
+      },
+      pendingMergeSpans: {
+        '0-0-4-2': masterSpan(2, 1),
+        '0-0-5-2': childSpan('0-0-4-2'),
+      },
+    });
+
+    assert.deepEqual(renderSpans['0-0-4-2'], masterSpan(2, 1));
+    assert.deepEqual(renderSpans['0-0-5-2'], childSpan('0-0-4-2'));
+  });
+
+  it('shows an optimistic unmerge without keeping the stored master footprint', () => {
+    const renderSpans = buildScheduleRenderMergeSpans({
+      memos: {
+        '0-0-6-0': { merge_span: masterSpan(2, 1) },
+        '0-0-7-0': { merge_span: childSpan('0-0-6-0') },
+      },
+      pendingMergeSpans: {
+        '0-0-6-0': masterSpan(1, 1),
+        '0-0-7-0': masterSpan(1, 1),
+      },
+    });
+
+    assert.deepEqual(renderSpans['0-0-6-0'], masterSpan(1, 1));
+    assert.deepEqual(renderSpans['0-0-7-0'], masterSpan(1, 1));
   });
 });

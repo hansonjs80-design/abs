@@ -41,7 +41,12 @@ import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 import { getPrescriptionFromConfiguredDoseTag, getPrescriptionScheduleSettings } from '../../lib/prescriptionScheduleSettings';
 import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
 import { getScheduleShortcutKey, isMemoMenuShortcut, normalizeScheduleShortcutValue } from '../../lib/scheduleKeyboardUtils';
-import { getScheduleCellKey } from '../../lib/scheduleSelectionUtils';
+import {
+  buildScheduleRenderMergeSpans,
+  getScheduleCellKey,
+  normalizeScheduleCellToMergeMaster,
+  normalizeScheduleKeysToMergeMasters,
+} from '../../lib/scheduleSelectionUtils';
 import { useToast } from '../common/Toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../lib/authPermissions';
@@ -2827,6 +2832,40 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     () => (isScheduleMonthLoading ? {} : pendingCellBgColors),
     [isScheduleMonthLoading, pendingCellBgColors]
   );
+  const renderMergeSpans = useMemo(
+    () => buildScheduleRenderMergeSpans({
+      memos: renderMemos,
+      pendingMergeSpans: renderPendingMergeSpans,
+    }),
+    [renderMemos, renderPendingMergeSpans]
+  );
+  const renderSelectedKeys = useMemo(
+    () => normalizeScheduleKeysToMergeMasters({
+      keys: selectedKeys,
+      memos: renderMemos,
+      pendingMergeSpans: renderMergeSpans,
+    }),
+    [renderMergeSpans, renderMemos, selectedKeys]
+  );
+  const renderSelectedCell = useMemo(
+    () => normalizeScheduleCellToMergeMaster({
+      cell: selectedCell,
+      memos: renderMemos,
+      pendingMergeSpans: renderMergeSpans,
+    }),
+    [renderMergeSpans, renderMemos, selectedCell]
+  );
+  const renderClipboardSource = useMemo(() => {
+    if (!clipboardSource) return null;
+    return {
+      ...clipboardSource,
+      keys: normalizeScheduleKeysToMergeMasters({
+        keys: clipboardSource.keys,
+        memos: renderMemos,
+        pendingMergeSpans: renderMergeSpans,
+      }),
+    };
+  }, [clipboardSource, renderMergeSpans, renderMemos]);
   const reservationGroupEdgeMap = useMemo(() => {
     if (isScheduleMonthLoading) return {};
     const groups = new Map();
@@ -3140,7 +3179,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                           : rawCellData;
                         const rawContent = normalizeSchedulerVisitSuffix(renderPendingDisplayValues[key] ?? rawCellData?.content ?? '');
                         const defaultEditingMergeSpan = getDefaultEditingMergeSpanForKey(key);
-                        const rawMergeSpan = defaultEditingMergeSpan || getEffectiveMergeSpan(key, renderMemos);
+                        const rawMergeSpan = defaultEditingMergeSpan || renderMergeSpans[key] || EMPTY_SCHEDULE_MERGE_SPAN;
                         const sanitizedBlankCell = sanitizeBlankScheduleCellData({
                           key,
                           memos: renderMemos,
@@ -3186,7 +3225,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                               gridRowStart={gridRowStart} isLastRenderedRow={isCellLastRenderedRow} colCount={colCount}
                               cellData={displayCellData} pendingContent={content} pendingMergeSpan={renderPendingMergeSpans[key]} mergeSpan={finalMergeSpan}
                               editingCell={editingCell} imePreviewCell={imePreviewCell}
-                              selectedKeys={selectedKeys} selectedCell={selectedCell} clipboardSource={clipboardSource}
+                              selectedKeys={renderSelectedKeys} selectedCell={renderSelectedCell} clipboardSource={renderClipboardSource}
                               workState={workState} staffBlockRule={staffBlockRule}
                               effectivePrescriptionColors={effectivePrescriptionColors}
                               reservationGroupEdge={reservationGroupEdgeMap[key]}
@@ -3265,14 +3304,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         therapistColsCSS, colCount, getTherapistNameForDate, activeColRatios,
         resetColRatios, resetTimeColWidth, resizeTimeColWidthBy,
         startColResize, startDayResize, startRowResize, startTimeColResize,
-        renderMemos, renderPendingDisplayValues, renderPendingMergeSpans, renderPendingCellBgColors, reservationGroupEdgeMap, editingCell, imePreviewCell,
-        selectedKeys, selectedCell, clipboardSource,
+        renderMemos, renderPendingDisplayValues, renderPendingMergeSpans, renderPendingCellBgColors, renderMergeSpans, reservationGroupEdgeMap, editingCell, imePreviewCell,
+        renderSelectedKeys, renderSelectedCell, renderClipboardSource,
         getTherapistWorkState, getStaffScheduleBlockForCell,
         isLastHourSlot, effectivePrescriptionColors, editValue,
         handleCellMouseDown, handleCellMouseEnter, setHoverCell,
         handleCellDoubleClick, handleCellContextMenu,
         handleEditKeyDown, handleKeyDown, scheduleEditDraftAutosave, promoteFocusedInputToEditor, handleCellSave,
-        cellKey, getEffectiveMergeSpan, rowHeight, canManageSchedulerSettings,
+        cellKey, rowHeight, canManageSchedulerSettings,
         effectiveSchedulerTextSettings.font_size,
         prescriptionScheduleSettings.visitLineBreakPrescriptions,
         getDefaultEditingMergeSpanForKey,
@@ -3598,7 +3637,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                       <div className="context-menu-editor-panel">
                         <div className="context-menu-inline-column">
                           <div className="context-menu-prescription-row context-menu-prescription-row--dual">
-                            <div className="context-menu-prescription-select-group">
+                            <div className="context-menu-prescription-select-group context-menu-prescription-select-group--shockwave">
                               <label className="context-menu-prescription-select-label">
                                 충격파
                                 {previousPrescriptionValue && shockwavePrescriptions.includes(previousPrescriptionValue) ? (
@@ -3632,7 +3671,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 }}
                               />
                             </div>
-                            <div className="context-menu-prescription-select-group">
+                            <div className="context-menu-prescription-select-group context-menu-prescription-select-group--manual">
                               <label className="context-menu-prescription-select-label">
                                 도수치료
                                 {previousPrescriptionValue && manualTherapyPrescriptions.includes(previousPrescriptionValue) ? (

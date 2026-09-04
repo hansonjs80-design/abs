@@ -3,6 +3,7 @@ import {
   replaceBodyPartPreset,
 } from './bodyPartPresetUtils.js';
 import {
+  getPatientHistoryMemoDisplayText,
   parsePatientHistoryBodyPartText,
   parsePatientHistoryMemoText,
 } from './patientHistoryModalUtils.js';
@@ -254,11 +255,17 @@ export function getPatientHistoryCellDirectInputText(event) {
 
 export function getPatientHistoryInlineEditInitialValue(field, rawValue, initialText) {
   const currentValue = normalizePatientHistoryCellValue(field, rawValue);
-  if (initialText === undefined) return currentValue;
+  if (initialText === undefined) {
+    return field === 'memo'
+      ? getPatientHistoryMemoDisplayText(currentValue)
+      : currentValue;
+  }
 
   const typedText = String(initialText ?? '');
   if (field === 'memo') {
-    return currentValue ? `${currentValue}\n${typedText}` : typedText;
+    return getPatientHistoryMemoDisplayText(
+      currentValue ? `${currentValue}\n${typedText}` : typedText,
+    );
   }
   if (field === 'visit_count') return typedText;
   return currentValue;

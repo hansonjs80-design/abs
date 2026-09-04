@@ -339,10 +339,19 @@ export function resolvePatientHistoryGroupTargetCell({
 }
 
 const PATIENT_HISTORY_BASE_COLUMN_WIDTHS = [3.98, 12.42, 7.44, 11.73, 27.29, 21.83, 5.12, 6.56, 3.63];
+const PATIENT_HISTORY_MEMO_COLUMN_INDEX = 5;
+const PATIENT_HISTORY_MEMO_COLUMN_SCALE = 1.1;
 const PATIENT_HISTORY_APPLY_COLUMN_SCALE = 1.1;
 const PATIENT_HISTORY_COLUMN_WIDTH_SCALE = (
-  PATIENT_HISTORY_BASE_COLUMN_WIDTHS.slice(0, -1).reduce((sum, width) => sum + width, 0)
-  + PATIENT_HISTORY_BASE_COLUMN_WIDTHS.at(-1) * PATIENT_HISTORY_APPLY_COLUMN_SCALE
+  PATIENT_HISTORY_BASE_COLUMN_WIDTHS.reduce((sum, width, index) => {
+    if (index === PATIENT_HISTORY_MEMO_COLUMN_INDEX) {
+      return sum + width * PATIENT_HISTORY_MEMO_COLUMN_SCALE;
+    }
+    if (index === PATIENT_HISTORY_BASE_COLUMN_WIDTHS.length - 1) {
+      return sum + width * PATIENT_HISTORY_APPLY_COLUMN_SCALE;
+    }
+    return sum + width;
+  }, 0)
 ) / 100;
 
 export function getPatientHistoryModalLayout(groupCount) {
@@ -365,9 +374,11 @@ export function getPatientHistoryModalLayout(groupCount) {
 export function getPatientHistoryColumnWidths(groupCount) {
   void groupCount;
   const expandedWidths = PATIENT_HISTORY_BASE_COLUMN_WIDTHS.map((width, index) => (
-    index === PATIENT_HISTORY_BASE_COLUMN_WIDTHS.length - 1
-      ? width * PATIENT_HISTORY_APPLY_COLUMN_SCALE
-      : width
+    index === PATIENT_HISTORY_MEMO_COLUMN_INDEX
+      ? width * PATIENT_HISTORY_MEMO_COLUMN_SCALE
+      : index === PATIENT_HISTORY_BASE_COLUMN_WIDTHS.length - 1
+        ? width * PATIENT_HISTORY_APPLY_COLUMN_SCALE
+        : width
   ));
   const totalWidth = expandedWidths.reduce((sum, width) => sum + width, 0);
   return expandedWidths.map((width) => `${(width / totalWidth) * 100}%`);

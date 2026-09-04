@@ -161,6 +161,69 @@ export function normalizeScheduleKeysToMergeMasters({
   return normalized;
 }
 
+export function buildScheduleRenderMergeSpans({
+  memos = {},
+  pendingMergeSpans = {},
+}) {
+  const directSpans = {};
+  const knownKeys = new Set([
+    ...Object.keys(memos || {}),
+    ...Object.keys(pendingMergeSpans || {}),
+  ]);
+
+  knownKeys.forEach((key) => {
+    directSpans[key] = pendingMergeSpans[key] || memos[key]?.merge_span || defaultMergeSpan();
+  });
+
+  const renderSpans = {};
+  const coveredKeys = new Set();
+  const masters = Object.entries(directSpans)
+    .filter(([, span]) => (
+      !span?.mergedInto && ((span?.rowSpan || 1) > 1 || (span?.colSpan || 1) > 1)
+    ))
+    .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey, undefined, { numeric: true }));
+
+  masters.forEach(([masterKey, masterSpan]) => {
+    if (coveredKeys.has(masterKey)) return;
+    const { w, d, r, c } = parseScheduleCellKey(masterKey);
+    if (![w, d, r, c].every(Number.isFinite)) return;
+
+    const rowSpan = Math.max(1, masterSpan.rowSpan || 1);
+    const colSpan = Math.max(1, masterSpan.colSpan || 1);
+    renderSpans[masterKey] = masterSpan;
+    coveredKeys.add(masterKey);
+
+    for (let row = r; row < r + rowSpan; row += 1) {
+      for (let col = c; col < c + colSpan; col += 1) {
+        const childKey = getScheduleCellKey(w, d, row, col);
+        if (childKey === masterKey || coveredKeys.has(childKey)) continue;
+        renderSpans[childKey] = {
+          rowSpan: 1,
+          colSpan: 1,
+          mergedInto: masterKey,
+        };
+        coveredKeys.add(childKey);
+      }
+    }
+  });
+
+  knownKeys.forEach((key) => {
+    if (renderSpans[key]) return;
+    const directSpan = directSpans[key] || defaultMergeSpan();
+    if (!directSpan.mergedInto) {
+      renderSpans[key] = directSpan;
+      return;
+    }
+
+    const masterSpan = renderSpans[directSpan.mergedInto];
+    renderSpans[key] = masterSpan && !masterSpan.mergedInto
+      ? directSpan
+      : { ...directSpan, rowSpan: 1, colSpan: 1, mergedInto: null };
+  });
+
+  return renderSpans;
+}
+
 export function buildScheduleRangeKeys(anchor, target) {
   if (!anchor || !target) return new Set();
   if (anchor.w !== target.w || anchor.d !== target.d) {

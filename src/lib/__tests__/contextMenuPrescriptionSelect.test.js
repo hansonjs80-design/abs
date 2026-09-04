@@ -75,4 +75,28 @@ test('context menu prescription dropdowns show current monthly shortcuts on the 
     css,
     /\.context-menu-prescription-trigger-text\s*\{[^}]*font-weight:\s*900;/s
   );
+  assert.match(
+    view,
+    /context-menu-prescription-select-group context-menu-prescription-select-group--shockwave/
+  );
+  assert.match(
+    view,
+    /context-menu-prescription-select-group context-menu-prescription-select-group--manual/
+  );
+  assert.match(
+    css,
+    /\.context-menu-submenu--prescription\s*\{[^}]*width:\s*min\(213px, calc\(100vw - 36px\)\);[^}]*max-width:\s*min\(213px, calc\(100vw - 36px\)\);/s
+  );
+  assert.match(
+    css,
+    /\.context-menu-prescription-row--dual\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1\.1fr\) minmax\(0, 1fr\);/s
+  );
+  assert.match(
+    css,
+    /\.context-menu-prescription-trigger-text,[^{]*\{[^}]*text-overflow:\s*clip;/s
+  );
+  assert.doesNotMatch(
+    css.match(/\.context-menu-prescription-trigger-text,[^{]*\{([^}]*)\}/s)?.[1] || '',
+    /text-overflow:\s*ellipsis;/
+  );
 });
