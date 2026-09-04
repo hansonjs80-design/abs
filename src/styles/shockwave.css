@@ -1785,6 +1785,7 @@
 
 .context-menu-submenu {
   position: absolute;
+  box-sizing: border-box;
   top: -6px; /* align with parent padding */
   left: calc(100% + 4px); /* pop out to the right */
   transform: translate(
@@ -1812,7 +1813,7 @@
   width: min(288px, calc(100vw - 36px));
   overflow-x: hidden !important;
   overflow-y: auto !important;
-  padding: 9px 0 0 0 !important;
+  padding: 10px 0 0 0 !important;
 }
 
 .context-menu-submenu--memo {
@@ -1973,9 +1974,9 @@
 .context-menu-body-presets {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 4px;
-  margin-bottom: 6px;
-  padding: 0 11px 3px 11px !important;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 0 12px 4px 12px !important;
 }
 
 .context-menu-body-preset-group {
@@ -1983,48 +1984,49 @@
 }
 
 .context-menu-body-preset-title {
+  /* 제목 위쪽 여백은 건드리지 않고 첫 체크박스 행까지의 간격만 40% 축소 */
   margin: 0 0 3px;
   color: #1e293b;
-  font-size: 0.86rem;
+  font-size: 0.96rem;
   font-weight: 800;
-  line-height: 1.05;
 }
 
 .context-menu-body-preset-list {
   display: grid;
-  gap: 1px;
+  /* 체크박스 행 사이 간격만 40% 축소 */
+  gap: 1.8px;
 }
 
 .context-menu-body-preset-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 5px;
+  gap: 6px;
   min-width: 0;
-  padding: 0 2px;
+  padding: 3px 2px;
   border: none;
   background: transparent;
-  font-size: 0.86rem;
-  line-height: 1;
+  font-size: 0.96rem;
 }
 
 .context-menu-body-preset-label {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
   min-width: 0;
+  overflow: hidden;
   color: #0f172a;
   cursor: pointer;
   font-weight: 700;
-  font-size: 0.86rem;
-  line-height: 1;
+  font-size: 0.96rem;
 }
 
 .context-menu-body-preset-label input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
-  width: 15px;
-  height: 15px;
-  min-width: 15px;
+  width: 17px;
+  height: 17px;
+  min-width: 17px;
   border: 1.5px solid #94a3b8;
   border-radius: 4px;
   background-color: #ffffff;
@@ -2036,7 +2038,7 @@
   outline: none;
   transition: all 0.15s ease;
   flex: 0 0 auto;
-  margin: 0 7px 0 0;
+  margin: 0 8px 0 0;
 }
 
 .context-menu-body-preset-label input[type="checkbox"]:checked {
@@ -2047,7 +2049,7 @@
 .context-menu-body-preset-label input[type="checkbox"]:checked::after {
   content: '';
   width: 4px;
-  height: 7px;
+  height: 8px;
   border: solid #ffffff;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg) translate(-0.5px, -0.5px);
@@ -2059,13 +2061,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.86rem;
-  line-height: 1;
+  font-size: 0.96rem;
 }
 
 .context-menu-body-preset-label small {
   color: #334155;
-  font-size: 0.82rem;
+  font-size: 0.91rem;
   font-weight: 700;
 }
 
@@ -2073,22 +2074,23 @@
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
+  margin-left: auto;
 }
 
 .context-menu-body-preset-direction {
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
   padding: 0;
   border: 1px solid #cbd5e1;
   border-radius: 5px;
   background: #f8fafc;
   color: #64748b;
   cursor: pointer;
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 800;
-  line-height: 18px;
+  line-height: 20px;
   text-align: center;
   display: inline-flex;
   align-items: center;
@@ -2111,13 +2113,13 @@
 }
 
 .context-menu-body-bottom-section {
-  margin-top: 6px !important;
+  margin-top: 10px !important;
   margin-left: 0 !important;
   margin-right: 0 !important;
   margin-bottom: 0 !important;
   width: 100% !important;
   box-sizing: border-box !important;
-  padding: 8px 13px 10px 13px !important;
+  padding: 12px 14px 14px 14px !important;
   border-top: 2.5px solid #94a3b8 !important;
   border-bottom-left-radius: 12px !important;
   border-bottom-right-radius: 12px !important;
@@ -3028,7 +3030,8 @@
 .context-menu-checklist {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 1px;
+  /* 체크박스 행 사이 간격만 40% 축소 */
+  gap: 1.8px;
   max-height: 126px;
   max-width: 100%;
   overflow-x: hidden;
@@ -3039,8 +3042,9 @@
 .context-menu-body-selected-list {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 1px;
-  margin-bottom: 4px;
+  /* 선택된 체크박스 행 사이 간격만 40% 축소 */
+  gap: 1.8px;
+  margin-bottom: 5px;
   max-width: 100%;
   overflow-x: hidden;
 }
@@ -3049,10 +3053,10 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   min-width: 0;
   max-width: 100%;
-  padding: 1px 7px;
+  padding: 5px 8px;
   border-radius: 8px;
   border: 1px solid #16a706;
   background: #dcfce7;
@@ -3060,7 +3064,7 @@
 }
 
 .context-menu-body-selected-item .context-menu-list-text {
-  font-size: 0.88rem;
+  font-size: 0.98rem;
   font-weight: 800;
   color: #14532d;
 }
@@ -3069,9 +3073,9 @@
 .context-menu-check-label input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
-  width: 15px;
-  height: 15px;
-  min-width: 15px;
+  width: 17px;
+  height: 17px;
+  min-width: 17px;
   border: 1.5px solid #16a706;
   border-radius: 4px;
   background-color: #ffffff;
@@ -3096,7 +3100,7 @@
 .context-menu-check-label input[type="checkbox"]:checked::after {
   content: '';
   width: 4px;
-  height: 7px;
+  height: 8px;
   border: solid #ffffff;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg) translate(-0.5px, -0.5px);
@@ -3111,9 +3115,9 @@
 }
 
 .context-menu-body-selected-actions .context-menu-note-icon-button {
-  width: 20px;
-  height: 20px;
-  flex-basis: 20px;
+  width: 22px;
+  height: 22px;
+  flex-basis: 22px;
   border-radius: 7px;
 }
 
@@ -3155,15 +3159,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 4px;
+  gap: 5px;
   min-width: 0;
   max-width: 100%;
-  padding: 0 5px 0 7px;
+  padding: 4px 6px 4px 8px;
   border-radius: 8px;
   border: none;
   background: #ffffff;
-  font-size: 0.855rem;
-  line-height: 1;
+  font-size: 0.95rem;
+  line-height: 1.15;
   color: var(--text-primary);
   cursor: pointer;
 }
@@ -3191,7 +3195,7 @@
 .context-menu-check-label {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   min-width: 0;
   flex: 1;
   overflow: hidden;
@@ -3214,14 +3218,14 @@
 }
 
 .context-menu-body-delete {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 16px;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
   border: none;
   border-radius: 999px;
   background: transparent;
   color: #b91c1c;
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 900;
   line-height: 1;
   display: inline-flex;

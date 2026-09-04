@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import {
   getBrowserViewport,
   getFloatingPanelViewportOffset,
@@ -92,19 +92,44 @@ export default function useContextMenuPositioning({
     };
   }, [contextMenu, repositionContextMenu, repositionContextSubmenu]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!contextMenu || !activeContextSubmenu) {
       setContextSubmenuOffset((prev) => (
         prev.x === 0 && prev.y === 0 ? prev : { x: 0, y: 0 }
       ));
       return undefined;
     }
-    const frame = window.requestAnimationFrame(() => {
+
+    let frame = window.requestAnimationFrame(() => {
       repositionContextMenu();
       repositionContextSubmenu();
     });
-    return () => window.cancelAnimationFrame(frame);
-  }, [contextMenu, activeContextSubmenu, repositionContextMenu, repositionContextSubmenu]);
+
+    const submenu = contextMenuRef.current?.querySelector(
+      '.has-submenu.is-submenu-open > .context-menu-submenu',
+    );
+    const resizeObserver = submenu && window.ResizeObserver
+      ? new window.ResizeObserver(() => {
+        window.cancelAnimationFrame(frame);
+        frame = window.requestAnimationFrame(() => {
+          repositionContextMenu();
+          repositionContextSubmenu();
+        });
+      })
+      : null;
+    if (submenu && resizeObserver) resizeObserver.observe(submenu);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      resizeObserver?.disconnect();
+    };
+  }, [
+    contextMenu,
+    activeContextSubmenu,
+    contextMenuRef,
+    repositionContextMenu,
+    repositionContextSubmenu,
+  ]);
 
   return {
     contextSubmenuOffsetX: contextSubmenuOffset.x,

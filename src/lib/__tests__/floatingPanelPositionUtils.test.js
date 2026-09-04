@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
@@ -40,5 +41,31 @@ test('uses visual viewport dimensions and offsets when they are available', () =
       },
     }),
     { width: 900, height: 600, offsetLeft: 40, offsetTop: 25 },
+  );
+});
+
+test('repositions an open context submenu whenever its rendered size changes', async () => {
+  const [positioningHook, css] = await Promise.all([
+    readFile(
+      new URL('../../components/shockwave/useContextMenuPositioning.js', import.meta.url),
+      'utf8',
+    ),
+    readFile(new URL('../../styles/shockwave.css', import.meta.url), 'utf8'),
+  ]);
+
+  assert.match(positioningHook, /useLayoutEffect\(\(\) => \{/);
+  assert.match(positioningHook, /new window\.ResizeObserver/);
+  assert.match(positioningHook, /resizeObserver\.observe\(submenu\)/);
+  assert.match(
+    css,
+    /\.context-menu-submenu\s*\{[^}]*box-sizing:\s*border-box;/s,
+  );
+  assert.match(
+    css,
+    /\.context-menu-body-preset-label\s*\{[^}]*flex:\s*1 1 auto;[^}]*overflow:\s*hidden;/s,
+  );
+  assert.match(
+    css,
+    /\.context-menu-body-preset-directions\s*\{[^}]*flex:\s*0 0 auto;[^}]*margin-left:\s*auto;/s,
   );
 });
