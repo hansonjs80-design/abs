@@ -412,7 +412,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const cellSaveVersionRef = useRef({});
   const saveMemoRef = useRef(queuedOnSaveMemo);
   const scheduleDateRef = useRef({ year: currentYear, month: currentMonth });
-  const { contextSubmenuOffsetX, contextSubmenuOffsetY } = useContextMenuPositioning({
+  const {
+    bodySubmenuMaxWidth,
+    bodySubmenuOpenLeft,
+    contextSubmenuOffsetX,
+    contextSubmenuOffsetY,
+  } = useContextMenuPositioning({
     activeContextSubmenu,
     contextMenu,
     contextMenuRef,
@@ -3326,10 +3331,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       {contextMenu && (
         <div
           ref={contextMenuRef}
-          className={`shockwave-context-menu schedule-context-menu${contextMenu.patientHistoryCell ? ' patient-history-context-menu' : ''} ${contextMenu.isNearRightEdge ? 'submenu-pop-left' : ''} ${(contextMenu.isStandaloneSubmenu || contextMenu.isStandaloneBodyPart) ? 'standalone-mode' : ''}`}
+          className={`shockwave-context-menu schedule-context-menu${contextMenu.patientHistoryCell ? ' patient-history-context-menu' : ''} ${(
+            activeContextSubmenu === 'body' && bodySubmenuOpenLeft !== null
+              ? bodySubmenuOpenLeft
+              : contextMenu.isNearRightEdge
+          ) ? 'submenu-pop-left' : ''} ${(contextMenu.isStandaloneSubmenu || contextMenu.isStandaloneBodyPart) ? 'standalone-mode' : ''}`}
           style={{
             top: contextMenu.y,
             left: contextMenu.x,
+            '--context-body-submenu-max-width': bodySubmenuMaxWidth !== null
+              ? `${bodySubmenuMaxWidth}px`
+              : undefined,
             '--context-submenu-offset-x': `${contextSubmenuOffsetX}px`,
             '--context-submenu-offset-y': `${contextSubmenuOffsetY}px`,
             '--patient-history-editor-width': contextMenu.patientHistoryEditorWidth

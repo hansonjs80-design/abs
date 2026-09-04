@@ -1808,8 +1808,8 @@
 }
 
 .context-menu-submenu--body {
-  min-width: min(288px, calc(100vw - 36px));
-  max-width: min(420px, calc(100vw - 36px));
+  min-width: min(288px, var(--context-body-submenu-max-width, calc(100vw - 36px)));
+  max-width: min(420px, calc(100vw - 36px), var(--context-body-submenu-max-width, calc(100vw - 36px)));
   width: max-content;
   overflow-x: hidden !important;
   overflow-y: auto !important;

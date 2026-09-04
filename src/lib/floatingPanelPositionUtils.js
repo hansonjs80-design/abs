@@ -19,6 +19,44 @@ export function getFloatingPanelViewportOffset(rect, viewport = {}, gap = 12) {
   return { x, y };
 }
 
+export function getAnchoredFloatingPanelLayout({
+  panelRect,
+  anchorRect,
+  viewport = {},
+  viewportGap = 12,
+  panelGap = 4,
+  preferLeft = false,
+}) {
+  const safeViewportGap = Math.max(0, Number(viewportGap) || 0);
+  const safePanelGap = Math.max(0, Number(panelGap) || 0);
+  const viewportLeft = Number(viewport.offsetLeft) || 0;
+  const viewportWidth = Math.max(0, Number(viewport.width) || 0);
+  const minLeft = viewportLeft + safeViewportGap;
+  const maxRight = viewportLeft + viewportWidth - safeViewportGap;
+  const panelWidth = Math.max(
+    0,
+    Number(panelRect?.width)
+      || (Number(panelRect?.right) - Number(panelRect?.left))
+      || 0,
+  );
+  const leftSpace = Math.max(0, Number(anchorRect?.left) - safePanelGap - minLeft);
+  const rightSpace = Math.max(0, maxRight - Number(anchorRect?.right) - safePanelGap);
+  const fitsLeft = panelWidth <= leftSpace;
+  const fitsRight = panelWidth <= rightSpace;
+
+  let openLeft = Boolean(preferLeft);
+  if (fitsLeft !== fitsRight) {
+    openLeft = fitsLeft;
+  } else if (!fitsLeft && !fitsRight) {
+    openLeft = leftSpace >= rightSpace;
+  }
+
+  return {
+    openLeft,
+    maxWidth: openLeft ? leftSpace : rightSpace,
+  };
+}
+
 export function getBrowserViewport(windowObject) {
   const visualViewport = windowObject?.visualViewport;
   return {

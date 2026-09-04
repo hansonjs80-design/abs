@@ -57,7 +57,7 @@ test('context menu body-part checkbox rows use stronger hover backgrounds', asyn
   );
   assert.match(
     css,
-    /\.context-menu-submenu--body\s*\{[^}]*min-width:\s*min\(288px, calc\(100vw - 36px\)\);[^}]*max-width:\s*min\(420px, calc\(100vw - 36px\)\);[^}]*width:\s*max-content;/s
+    /\.context-menu-submenu--body\s*\{[^}]*min-width:\s*min\(288px, var\(--context-body-submenu-max-width, calc\(100vw - 36px\)\)\);[^}]*max-width:\s*min\(420px, calc\(100vw - 36px\), var\(--context-body-submenu-max-width, calc\(100vw - 36px\)\)\);[^}]*width:\s*max-content;/s
   );
   assert.match(
     css,

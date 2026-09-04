@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
+  getAnchoredFloatingPanelLayout,
   getBrowserViewport,
   getFloatingPanelViewportOffset,
 } from '../floatingPanelPositionUtils.js';
@@ -44,6 +45,42 @@ test('uses visual viewport dimensions and offsets when they are available', () =
   );
 });
 
+test('places a wide submenu beside the context menu without overlapping it', () => {
+  const viewport = { width: 1366, height: 768, offsetLeft: 0, offsetTop: 0 };
+
+  assert.deepEqual(
+    getAnchoredFloatingPanelLayout({
+      panelRect: { width: 420 },
+      anchorRect: { left: 800, right: 1024 },
+      viewport,
+      preferLeft: false,
+    }),
+    { openLeft: true, maxWidth: 784 },
+  );
+
+  assert.deepEqual(
+    getAnchoredFloatingPanelLayout({
+      panelRect: { width: 420 },
+      anchorRect: { left: 12, right: 236 },
+      viewport,
+      preferLeft: true,
+    }),
+    { openLeft: false, maxWidth: 1114 },
+  );
+});
+
+test('limits a body submenu to the larger free side when neither side fits', () => {
+  assert.deepEqual(
+    getAnchoredFloatingPanelLayout({
+      panelRect: { width: 420 },
+      anchorRect: { left: 160, right: 384 },
+      viewport: { width: 520, height: 700, offsetLeft: 0, offsetTop: 0 },
+      preferLeft: false,
+    }),
+    { openLeft: true, maxWidth: 144 },
+  );
+});
+
 test('repositions an open context submenu whenever its rendered size changes', async () => {
   const [positioningHook, css] = await Promise.all([
     readFile(
@@ -56,9 +93,15 @@ test('repositions an open context submenu whenever its rendered size changes', a
   assert.match(positioningHook, /useLayoutEffect\(\(\) => \{/);
   assert.match(positioningHook, /new window\.ResizeObserver/);
   assert.match(positioningHook, /resizeObserver\.observe\(submenu\)/);
+  assert.match(positioningHook, /getAnchoredFloatingPanelLayout/);
+  assert.match(positioningHook, /!menu\.classList\.contains\('standalone-mode'\)/);
   assert.match(
     css,
     /\.context-menu-submenu\s*\{[^}]*box-sizing:\s*border-box;/s,
+  );
+  assert.match(
+    css,
+    /\.context-menu-submenu--body\s*\{[^}]*--context-body-submenu-max-width/s,
   );
   assert.match(
     css,

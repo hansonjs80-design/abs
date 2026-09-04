@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import {
+  getAnchoredFloatingPanelLayout,
   getBrowserViewport,
   getFloatingPanelViewportOffset,
 } from '../../lib/floatingPanelPositionUtils';
@@ -13,6 +14,18 @@ export default function useContextMenuPositioning({
   setContextMenu,
 }) {
   const [contextSubmenuOffset, setContextSubmenuOffset] = useState({ x: 0, y: 0 });
+  const [bodySubmenuLayout, setBodySubmenuLayout] = useState({
+    openLeft: null,
+    maxWidth: null,
+  });
+
+  const resetBodySubmenuLayout = useCallback(() => {
+    setBodySubmenuLayout((prev) => (
+      prev.openLeft === null && prev.maxWidth === null
+        ? prev
+        : { openLeft: null, maxWidth: null }
+    ));
+  }, []);
 
   const repositionContextMenu = useCallback(() => {
     if (!contextMenuRef.current) return;
@@ -38,6 +51,7 @@ export default function useContextMenuPositioning({
       setContextSubmenuOffset((prev) => (
         prev.x === 0 && prev.y === 0 ? prev : { x: 0, y: 0 }
       ));
+      resetBodySubmenuLayout();
       return;
     }
 
@@ -46,6 +60,7 @@ export default function useContextMenuPositioning({
       setContextSubmenuOffset((prev) => (
         prev.x === 0 && prev.y === 0 ? prev : { x: 0, y: 0 }
       ));
+      resetBodySubmenuLayout();
       return;
     }
 
@@ -53,15 +68,40 @@ export default function useContextMenuPositioning({
     submenu.style.transform = 'translate(0px, 0px)';
     const rect = submenu.getBoundingClientRect();
     submenu.style.transform = previousTransform;
-    const nextOffset = getFloatingPanelViewportOffset(
+    const viewport = getBrowserViewport(window);
+    const viewportOffset = getFloatingPanelViewportOffset(
       rect,
-      getBrowserViewport(window),
+      viewport,
       VIEWPORT_GAP,
     );
+    const isBodySubmenu = submenu.classList.contains('context-menu-submenu--body')
+      && !menu.classList.contains('standalone-mode');
+    let nextOffset = viewportOffset;
+
+    if (isBodySubmenu) {
+      const anchoredLayout = getAnchoredFloatingPanelLayout({
+        panelRect: rect,
+        anchorRect: menu.getBoundingClientRect(),
+        viewport,
+        viewportGap: VIEWPORT_GAP,
+        panelGap: 4,
+        preferLeft: menu.classList.contains('submenu-pop-left'),
+      });
+      nextOffset = { x: 0, y: viewportOffset.y };
+      setBodySubmenuLayout((prev) => (
+        prev.openLeft === anchoredLayout.openLeft
+          && prev.maxWidth === anchoredLayout.maxWidth
+          ? prev
+          : anchoredLayout
+      ));
+    } else {
+      resetBodySubmenuLayout();
+    }
+
     setContextSubmenuOffset((prev) => (
       prev.x === nextOffset.x && prev.y === nextOffset.y ? prev : nextOffset
     ));
-  }, [activeContextSubmenu, contextMenuRef]);
+  }, [activeContextSubmenu, contextMenuRef, resetBodySubmenuLayout]);
 
   useEffect(() => {
     if (!contextMenu) return undefined;
@@ -132,6 +172,8 @@ export default function useContextMenuPositioning({
   ]);
 
   return {
+    bodySubmenuMaxWidth: bodySubmenuLayout.maxWidth,
+    bodySubmenuOpenLeft: bodySubmenuLayout.openLeft,
     contextSubmenuOffsetX: contextSubmenuOffset.x,
     contextSubmenuOffsetY: contextSubmenuOffset.y,
   };
