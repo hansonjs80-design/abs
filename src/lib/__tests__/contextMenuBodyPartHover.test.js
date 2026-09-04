@@ -53,7 +53,7 @@ test('context menu body-part checkbox rows use stronger hover backgrounds', asyn
   );
   assert.match(
     css,
-    /\.shockwave-context-menu button\.context-menu-body-preset-direction:hover:not\(:disabled\)\s*\{[^}]*background:\s*#eff6ff;[^}]*border-color:\s*#93c5fd;[^}]*border-width:\s*2px;/s
+    /\.shockwave-context-menu button\.context-menu-body-preset-direction:hover:not\(:disabled\)\s*\{[^}]*background:\s*#eff6ff;[^}]*border-color:\s*#2563eb;[^}]*border-width:\s*2px;[^}]*color:\s*#2563eb;/s
   );
   assert.match(
     css,
