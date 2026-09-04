@@ -175,13 +175,14 @@ export default function BodyPartKeyboardPanel({
             <div className="context-menu-body-preset-list">
               {group.items.map((item) => {
                 const { isSelected, directions } = getBodyPartPresetState(selectedParts, item);
+                const displayLabel = item.displayLabel || item.label;
                 return (
                   <div key={item.id} className="context-menu-body-preset-item">
                     <label className="context-menu-body-preset-label">
                       <input
                         type="checkbox"
                         checked={isSelected}
-                        aria-label={`${item.label} 선택`}
+                        aria-label={`${displayLabel} 선택`}
                         onChange={(event) => {
                           event.stopPropagation();
                           togglePresetSelection(item);
@@ -189,10 +190,10 @@ export default function BodyPartKeyboardPanel({
                         onMouseDown={(event) => event.stopPropagation()}
                         onClick={(event) => event.stopPropagation()}
                       />
-                      <span>{item.label} <small>({item.code})</small></span>
+                      <span>{displayLabel} <small>({item.code})</small></span>
                     </label>
                     {isSelected ? (
-                      <span className="context-menu-body-preset-directions" aria-label={`${item.label} 좌우 선택`}>
+                      <span className="context-menu-body-preset-directions" aria-label={`${displayLabel} 좌우 선택`}>
                       {BODY_PART_PRESET_DIRECTIONS.map(({ id, label }) => (
                         <button
                           key={id}

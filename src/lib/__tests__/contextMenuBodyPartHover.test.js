@@ -33,11 +33,27 @@ test('context menu body-part checkbox rows use stronger hover backgrounds', asyn
   );
   assert.match(
     css,
-    /\.context-menu-body-preset-title\s*\{[^}]*margin:\s*0 0 3\.5px;/s
+    /\.context-menu-body-preset-title\s*\{[^}]*margin:\s*0 0 2\.5px;/s
   );
   assert.match(
     css,
-    /\.context-menu-body-preset-item\s*\{[^}]*padding:\s*3px 2px;/s
+    /\.context-menu-body-preset-item\s*\{[^}]*padding:\s*3px 2px;[^}]*border-radius:\s*6px;/s
+  );
+  assert.match(
+    css,
+    /\.context-menu-body-preset-item:hover\s*\{[^}]*background:\s*#b3b3b3;/s
+  );
+  assert.match(
+    css,
+    /\.context-menu-body-preset-directions\s*\{[^}]*gap:\s*2px;/s
+  );
+  assert.match(
+    css,
+    /\.shockwave-context-menu button\.context-menu-body-preset-direction\s*\{[^}]*width:\s*22px;[^}]*height:\s*22px;[^}]*padding:\s*0;[^}]*border:\s*1px solid #cbd5e1;[^}]*border-radius:\s*5px;[^}]*background:\s*#f8fafc;/s
+  );
+  assert.match(
+    css,
+    /\.shockwave-context-menu button\.context-menu-body-preset-direction:hover:not\(:disabled\)\s*\{[^}]*background:\s*#eff6ff;[^}]*border-color:\s*#93c5fd;/s
   );
   assert.match(
     css,
@@ -77,4 +93,5 @@ test('context menu body-part checkbox rows use stronger hover backgrounds', asyn
   );
   assert.match(bodyPartPanel, /<Pencil size=\{13\}/);
   assert.match(bodyPartPanel, /<Trash2 size=\{14\}/);
+  assert.match(bodyPartPanel, /const displayLabel = item\.displayLabel \|\| item\.label;/);
 });

@@ -61,7 +61,12 @@ export const BODY_PART_PRESET_GROUPS = [
     label: '척추부',
     items: [
       { id: 'cervical-myofascial-pain', label: '경추근막통증', code: 'M79180' },
-      { id: 'lumbar-spine-myofascial-pain', label: '요추/척추부 근막통', code: 'M79180' },
+      {
+        id: 'lumbar-spine-myofascial-pain',
+        label: '요추/척추부 근막통',
+        displayLabel: '요추/척추부근막통',
+        code: 'M79180',
+      },
     ],
   },
 ];

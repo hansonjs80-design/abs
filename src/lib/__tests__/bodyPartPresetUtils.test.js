@@ -17,6 +17,13 @@ describe('bodyPartPresetUtils', () => {
     assert.equal(buildBodyPartPresetValue(calcificTendinitis, 'right'), 'Rt. 석회성 건염(M6521)');
   });
 
+  it('uses the compact lumbar label only in the preset list', () => {
+    const lumbarMyofascialPain = findBodyPartPresetItem('lumbar-spine-myofascial-pain');
+
+    assert.equal(lumbarMyofascialPain.displayLabel, '요추/척추부근막통');
+    assert.equal(buildBodyPartPresetValue(lumbarMyofascialPain), '요추/척추부 근막통(M79180)');
+  });
+
   it('recognizes diagnosis selection and directions despite spacing and case differences', () => {
     assert.deepEqual(
       getBodyPartPresetState(['lt. 석회성 건염 (m6521)', 'Rt. 석회성 건염(M6521)'], calcificTendinitis),
