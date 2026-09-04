@@ -1985,8 +1985,8 @@
 }
 
 .context-menu-body-preset-title {
-  /* 제목 위쪽 여백은 건드리지 않고 첫 체크박스 행까지의 간격만 40% 축소 */
-  margin: 0 0 3px;
+  /* 제목 위쪽 여백은 유지하고 첫 체크박스 행까지의 간격만 30% 축소 */
+  margin: 0 0 3.5px;
   color: #1e293b;
   font-size: 0.96rem;
   font-weight: 800;
@@ -1994,8 +1994,8 @@
 
 .context-menu-body-preset-list {
   display: grid;
-  /* 체크박스 행 사이 간격만 40% 축소 */
-  gap: 1.8px;
+  /* 흰색 상단의 체크박스 행 사이 간격만 30% 축소 */
+  gap: 2.1px;
 }
 
 .context-menu-body-preset-item {
@@ -3032,8 +3032,7 @@
 .context-menu-checklist {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  /* 체크박스 행 사이 간격만 40% 축소 */
-  gap: 1.8px;
+  gap: 3px;
   max-height: 126px;
   max-width: 100%;
   overflow-x: hidden;
@@ -3044,8 +3043,7 @@
 .context-menu-body-selected-list {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  /* 선택된 체크박스 행 사이 간격만 40% 축소 */
-  gap: 1.8px;
+  gap: 3px;
   margin-bottom: 5px;
   max-width: 100%;
   overflow-x: hidden;

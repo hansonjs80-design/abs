@@ -25,7 +25,7 @@ test('context menu body-part checkbox rows use stronger hover backgrounds', asyn
   );
   assert.match(
     css,
-    /\.context-menu-body-preset-list\s*\{[^}]*gap:\s*1\.8px;/s
+    /\.context-menu-body-preset-list\s*\{[^}]*gap:\s*2\.1px;/s
   );
   assert.match(
     css,
@@ -33,7 +33,7 @@ test('context menu body-part checkbox rows use stronger hover backgrounds', asyn
   );
   assert.match(
     css,
-    /\.context-menu-body-preset-title\s*\{[^}]*margin:\s*0 0 3px;/s
+    /\.context-menu-body-preset-title\s*\{[^}]*margin:\s*0 0 3\.5px;/s
   );
   assert.match(
     css,
@@ -41,11 +41,11 @@ test('context menu body-part checkbox rows use stronger hover backgrounds', asyn
   );
   assert.match(
     css,
-    /\.context-menu-checklist\s*\{[^}]*gap:\s*1\.8px;/s
+    /\.context-menu-checklist\s*\{[^}]*gap:\s*3px;/s
   );
   assert.match(
     css,
-    /\.context-menu-body-selected-list\s*\{[^}]*gap:\s*1\.8px;[^}]*margin-bottom:\s*5px;/s
+    /\.context-menu-body-selected-list\s*\{[^}]*gap:\s*3px;[^}]*margin-bottom:\s*5px;/s
   );
   assert.match(
     css,
