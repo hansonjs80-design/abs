@@ -517,6 +517,11 @@ test('patient history memo and visit double click activate inline field editors'
   assert.match(shockwaveView, /activeMemoLineCount = isMemoInlineEditing/);
   assert.match(
     shockwaveView,
+    /event\.key === 'Enter' && !event\.altKey && !isComposing[\s\S]*?insertPatientHistoryMemoLineBreak/,
+  );
+  assert.match(shockwaveView, /event\.nativeEvent\?\.isComposing/);
+  assert.match(
+    shockwaveView,
     /onBlur=\{\(event\) =>[\s\S]*?commitPatientHistoryInlineCellEdit/,
   );
   assert.match(

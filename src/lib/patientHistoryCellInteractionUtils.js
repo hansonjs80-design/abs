@@ -318,6 +318,25 @@ export function formatPatientHistoryMemoEditDraft(rawValue, selectionStart, sele
   };
 }
 
+export function insertPatientHistoryMemoLineBreak(rawValue, selectionStart, selectionEnd) {
+  const normalizedValue = String(rawValue ?? '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+  const start = Number.isFinite(selectionStart)
+    ? Math.min(Math.max(0, selectionStart), normalizedValue.length)
+    : normalizedValue.length;
+  const end = Number.isFinite(selectionEnd)
+    ? Math.min(Math.max(start, selectionEnd), normalizedValue.length)
+    : start;
+  const valueWithLineBreak = `${normalizedValue.slice(0, start)}\n${normalizedValue.slice(end)}`;
+
+  return formatPatientHistoryMemoEditDraft(
+    valueWithLineBreak,
+    start + 1,
+    start + 1,
+  );
+}
+
 export function buildPatientHistoryVisitFillValues(rawValue, targetCount) {
   const normalizedValue = normalizePatientHistoryCellValue('visit_count', rawValue);
   if (normalizedValue !== '*' && !/^\d+$/.test(normalizedValue)) return [];

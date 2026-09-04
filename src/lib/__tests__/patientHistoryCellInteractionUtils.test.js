@@ -17,6 +17,7 @@ import {
   getPatientHistoryVisitCountShortcutDelta,
   getPatientHistoryInlineEditInitialValue,
   getPatientHistoryUndoRestoreChanges,
+  insertPatientHistoryMemoLineBreak,
   isPatientHistoryEditorAction,
   isPatientHistoryCellClearShortcut,
   isPatientHistoryCellEditorShortcut,
@@ -159,6 +160,30 @@ describe('patient history memo cell actions', () => {
         selectionEnd: 3,
       },
     );
+  });
+
+  it('inserts a bulleted memo line directly for every Enter key line break', () => {
+    const twoLineMemo = '• 첫 메모\n• 둘째 메모';
+    const appended = insertPatientHistoryMemoLineBreak(
+      twoLineMemo,
+      twoLineMemo.length,
+      twoLineMemo.length,
+    );
+    assert.equal(appended.value, '• 첫 메모\n• 둘째 메모\n• ');
+    assert.equal(appended.selectionStart, appended.value.length);
+    assert.equal(appended.selectionEnd, appended.value.length);
+
+    const selectedText = '• 첫 메모\n• 바꿀 메모';
+    const selectionStart = selectedText.indexOf('바꿀');
+    const selectionEnd = selectedText.length;
+    const replaced = insertPatientHistoryMemoLineBreak(
+      selectedText,
+      selectionStart,
+      selectionEnd,
+    );
+    assert.equal(replaced.value, '• 첫 메모\n• \n• ');
+    assert.equal(replaced.selectionStart, replaced.value.length);
+    assert.equal(replaced.selectionEnd, replaced.value.length);
   });
 
   it('builds increasing visit counts for the dragged fill range', () => {

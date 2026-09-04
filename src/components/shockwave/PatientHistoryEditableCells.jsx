@@ -1,5 +1,6 @@
 import {
   formatPatientHistoryMemoEditDraft,
+  insertPatientHistoryMemoLineBreak,
 } from '../../lib/patientHistoryCellInteractionUtils';
 import {
   getPatientHistoryBodyPartText,
@@ -233,6 +234,9 @@ export default function PatientHistoryEditableCells({
             onClick={(event) => event.stopPropagation()}
             onDoubleClick={(event) => event.stopPropagation()}
             onKeyDown={(event) => {
+              const isComposing = event.isComposing
+                || event.nativeEvent?.isComposing
+                || event.keyCode === 229;
               if (event.key === 'Escape') {
                 event.preventDefault();
                 event.stopPropagation();
@@ -241,6 +245,23 @@ export default function PatientHistoryEditableCells({
               } else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
                 event.preventDefault();
                 event.currentTarget.blur();
+              } else if (event.key === 'Enter' && !event.altKey && !isComposing) {
+                event.preventDefault();
+                event.stopPropagation();
+                const field = event.currentTarget;
+                const formattedDraft = insertPatientHistoryMemoLineBreak(
+                  field.value,
+                  field.selectionStart,
+                  field.selectionEnd,
+                );
+                updatePatientHistoryInlineCellDraft(memoHistoryCell, formattedDraft.value);
+                window.requestAnimationFrame(() => {
+                  if (document.activeElement !== field) return;
+                  field.setSelectionRange(
+                    formattedDraft.selectionStart,
+                    formattedDraft.selectionEnd,
+                  );
+                });
               }
             }}
           />
