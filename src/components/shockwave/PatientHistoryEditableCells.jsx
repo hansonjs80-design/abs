@@ -1,4 +1,7 @@
 import {
+  formatPatientHistoryMemoEditDraft,
+} from '../../lib/patientHistoryCellInteractionUtils';
+import {
   getPatientHistoryBodyPartText,
   getPatientHistoryBodyPartTextareaRows,
   getPatientHistoryListTextAlign,
@@ -69,8 +72,11 @@ export default function PatientHistoryEditableCells({
     : memoTextareaValue;
   const activeMemoTextareaRows = getPatientHistoryMemoTextareaRows(activeMemoTextareaValue);
   const activeMemoItems = parsePatientHistoryMemoText(activeMemoTextareaValue);
-  const hasMultipleMemos = activeMemoItems.length > 1;
-  const activeMemoTextAlign = getPatientHistoryListTextAlign(activeMemoItems.length);
+  const activeMemoLineCount = isMemoInlineEditing
+    ? activeMemoTextareaRows
+    : activeMemoItems.length;
+  const hasMultipleMemos = activeMemoLineCount > 1;
+  const activeMemoTextAlign = getPatientHistoryListTextAlign(activeMemoLineCount);
   const isVisitInlineEditing = patientHistoryInlineEditor?.cell?.id === visitHistoryCell.id;
   const activeVisitCountValue = isVisitInlineEditing
     ? patientHistoryInlineEditor.value
@@ -204,7 +210,23 @@ export default function PatientHistoryEditableCells({
               wordBreak: 'normal',
               opacity: canEditHistoryMemo ? 1 : 0.65,
             }}
-            onChange={(event) => updatePatientHistoryInlineCellDraft(memoHistoryCell, event.target.value)}
+            onChange={(event) => {
+              const field = event.currentTarget;
+              const formattedDraft = formatPatientHistoryMemoEditDraft(
+                field.value,
+                field.selectionStart,
+                field.selectionEnd,
+              );
+              updatePatientHistoryInlineCellDraft(memoHistoryCell, formattedDraft.value);
+              if (formattedDraft.value === field.value) return;
+              window.requestAnimationFrame(() => {
+                if (document.activeElement !== field) return;
+                field.setSelectionRange(
+                  formattedDraft.selectionStart,
+                  formattedDraft.selectionEnd,
+                );
+              });
+            }}
             onBlur={(event) => commitPatientHistoryInlineCellEdit(memoHistoryCell, event.target.value)}
             onMouseDown={(event) => event.stopPropagation()}
             onPointerDown={(event) => event.stopPropagation()}

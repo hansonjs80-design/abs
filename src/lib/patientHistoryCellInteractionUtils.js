@@ -271,6 +271,53 @@ export function getPatientHistoryInlineEditInitialValue(field, rawValue, initial
   return currentValue;
 }
 
+const PATIENT_HISTORY_MEMO_BULLET_PREFIX = /^\s*•\s*/u;
+
+function getPatientHistoryMemoCursorPosition(lines, position) {
+  let remaining = Math.max(0, Number.isFinite(position) ? position : 0);
+  for (let index = 0; index < lines.length; index += 1) {
+    const lineLength = lines[index].length;
+    if (remaining <= lineLength || index === lines.length - 1) {
+      return { index, column: Math.min(remaining, lineLength) };
+    }
+    remaining -= lineLength + 1;
+  }
+  return { index: 0, column: 0 };
+}
+
+export function formatPatientHistoryMemoEditDraft(rawValue, selectionStart, selectionEnd) {
+  const normalizedValue = String(rawValue ?? '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+  const rawLines = normalizedValue.split('\n');
+  const contentLines = rawLines.map((line) => line.replace(PATIENT_HISTORY_MEMO_BULLET_PREFIX, ''));
+  const usesBullets = rawLines.length > 1;
+  const formattedLines = contentLines.map((line) => (usesBullets ? `• ${line}` : line));
+  const value = formattedLines.join('\n');
+
+  const mapSelectionPosition = (position) => {
+    const rawPosition = Number.isFinite(position)
+      ? Math.min(Math.max(0, position), normalizedValue.length)
+      : normalizedValue.length;
+    const { index, column } = getPatientHistoryMemoCursorPosition(rawLines, rawPosition);
+    const rawPrefixLength = rawLines[index].match(PATIENT_HISTORY_MEMO_BULLET_PREFIX)?.[0].length || 0;
+    const contentColumn = Math.min(
+      Math.max(0, column - rawPrefixLength),
+      contentLines[index].length,
+    );
+    const formattedLineStart = formattedLines
+      .slice(0, index)
+      .reduce((sum, line) => sum + line.length + 1, 0);
+    return formattedLineStart + (usesBullets ? 2 : 0) + contentColumn;
+  };
+
+  return {
+    value,
+    selectionStart: mapSelectionPosition(selectionStart),
+    selectionEnd: mapSelectionPosition(selectionEnd ?? selectionStart),
+  };
+}
+
 export function buildPatientHistoryVisitFillValues(rawValue, targetCount) {
   const normalizedValue = normalizePatientHistoryCellValue('visit_count', rawValue);
   if (normalizedValue !== '*' && !/^\d+$/.test(normalizedValue)) return [];

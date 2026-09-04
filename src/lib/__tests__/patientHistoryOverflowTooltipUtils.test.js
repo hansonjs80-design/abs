@@ -511,8 +511,10 @@ test('patient history memo and visit double click activate inline field editors'
   assert.match(cellInteractions, /\['memo', 'visit_count'\]\.includes\(cell\?\.field\)/);
   assert.match(
     shockwaveView,
-    /readOnly=\{!isMemoInlineEditing\}[\s\S]*?onChange=\{\(event\) =>[\s\S]*?updatePatientHistoryInlineCellDraft/,
+    /readOnly=\{!isMemoInlineEditing\}[\s\S]*?onChange=\{\(event\) =>[\s\S]*?formatPatientHistoryMemoEditDraft[\s\S]*?updatePatientHistoryInlineCellDraft/,
   );
+  assert.match(shockwaveView, /window\.requestAnimationFrame\(\(\) => \{/);
+  assert.match(shockwaveView, /activeMemoLineCount = isMemoInlineEditing/);
   assert.match(
     shockwaveView,
     /onBlur=\{\(event\) =>[\s\S]*?commitPatientHistoryInlineCellEdit/,

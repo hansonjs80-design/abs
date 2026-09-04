@@ -7,6 +7,7 @@ import {
   buildPatientHistoryCellFillValues,
   buildPatientHistoryVisitFillValues,
   buildPatientHistoryUndoAction,
+  formatPatientHistoryMemoEditDraft,
   getPatientHistoryCellDirectInputText,
   getPatientHistoryEscapeAction,
   getPatientHistoryEditorPlacement,
@@ -127,6 +128,37 @@ describe('patient history memo cell actions', () => {
     );
     assert.equal(getPatientHistoryInlineEditInitialValue('visit_count', '8', '2'), '2');
     assert.equal(getPatientHistoryInlineEditInitialValue('visit_count', '8'), '8');
+  });
+
+  it('adds memo bullets as soon as editing creates a second line', () => {
+    assert.deepEqual(
+      formatPatientHistoryMemoEditDraft('첫 메모\n', 5, 5),
+      {
+        value: '• 첫 메모\n• ',
+        selectionStart: 9,
+        selectionEnd: 9,
+      },
+    );
+    assert.deepEqual(
+      formatPatientHistoryMemoEditDraft('• 첫 메모\n둘째', 9, 9),
+      {
+        value: '• 첫 메모\n• 둘째',
+        selectionStart: 11,
+        selectionEnd: 11,
+      },
+    );
+    assert.equal(
+      normalizePatientHistoryCellValue('memo', '• 첫 메모\n• '),
+      '첫 메모',
+    );
+    assert.deepEqual(
+      formatPatientHistoryMemoEditDraft('• 한 줄', 5, 5),
+      {
+        value: '한 줄',
+        selectionStart: 3,
+        selectionEnd: 3,
+      },
+    );
   });
 
   it('builds increasing visit counts for the dragged fill range', () => {
