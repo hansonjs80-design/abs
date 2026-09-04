@@ -25,6 +25,7 @@ import {
   resolveScheduleMemosForStatsMonth,
 } from '../lib/statsScheduleSourceUtils';
 import { normalizePrescriptionGroupKey } from '../lib/prescriptionScheduleSettings';
+import { getTodayKST } from '../lib/calendarUtils';
 import {
   shouldKeepStatsSectionMounted,
   shouldPrepareStatsSecondarySections,
@@ -81,6 +82,7 @@ export default function ManualTherapyStatsPage() {
     manualTherapists,
     loadManualTherapists,
     shockwaveMemos,
+    shockwaveMemosLoadedKey,
     loadShockwaveMemos,
     shockwaveSettings,
     loadShockwaveSettings,
@@ -212,7 +214,7 @@ export default function ManualTherapyStatsPage() {
     });
   }, []);
 
-  const fetchLogs = useCallback(async ({ memosOverride = null, scheduleAuthoritative = false } = {}) => {
+  const fetchLogs = useCallback(async ({ memosOverride = null, scheduleAuthoritative = null } = {}) => {
     const currentFetchId = ++fetchIdRef.current;
     const monthKey = `${currentYear}-${currentMonth}`;
     const hasCurrentMonthLogs = logsLoadedKeyRef.current === monthKey;
@@ -222,24 +224,35 @@ export default function ManualTherapyStatsPage() {
       const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
       const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
       const endStr = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+      const today = getTodayKST();
+      const isCurrentCalendarMonth = (
+        today.getFullYear() === currentYear &&
+        today.getMonth() + 1 === currentMonth
+      );
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('manual_therapy_patient_logs')
         .select('id,date,patient_name,chart_number,visit_count,body_part,therapist_name,prescription,prescription_count,source,scheduler_cell_key,created_at')
-        .gte('date', startStr)
-        .lt('date', endStr)
+        .gte('date', startStr);
+      query = isCurrentCalendarMonth
+        ? query.lte('date', todayStr)
+        : query.lt('date', endStr);
+
+      const { data, error } = await query
         .order('date', { ascending: true })
         .order('created_at', { ascending: true });
 
       if (error) throw error;
       if (currentFetchId !== fetchIdRef.current) return [];
       logsLoadedKeyRef.current = monthKey;
+      const currentScheduleIsLoaded = shockwaveMemosLoadedKey === monthKey;
       const normalizedLogs = normalizeManualTherapyLogRows(data, allPrescriptions, {
         memos: memosOverride ?? shockwaveMemosRef.current,
         year: currentYear,
         month: currentMonth,
         settings: shockwaveSettings,
-        scheduleAuthoritative,
+        scheduleAuthoritative: scheduleAuthoritative ?? currentScheduleIsLoaded,
       });
       setLogs(normalizedLogs);
       return normalizedLogs;
@@ -254,7 +267,7 @@ export default function ManualTherapyStatsPage() {
         setIsLogsLoading(false);
       }
     }
-  }, [addToast, allPrescriptions, currentMonth, currentYear, shockwaveSettings]);
+  }, [addToast, allPrescriptions, currentMonth, currentYear, shockwaveMemosLoadedKey, shockwaveSettings]);
 
   useEffect(() => {
     loadManualTherapists();
@@ -349,6 +362,9 @@ export default function ManualTherapyStatsPage() {
         if (Array.isArray(loadedMonthlyTherapists)) {
           setLocalMonthlyTherapists(loadedMonthlyTherapists);
         }
+        if (!loadedMemos || typeof loadedMemos !== 'object') {
+          throw new Error('현재 월 스케줄 화면 데이터를 불러오지 못했습니다.');
+        }
 
         // 2. 스케줄 원본을 다시 읽어 도수치료 통계를 스케줄 기준으로 자동 동기화
         const synced = await syncCurrentManualStatsFromScheduleSource({
@@ -405,6 +421,9 @@ export default function ManualTherapyStatsPage() {
     setIsReloading(true);
     try {
       const reloaded = await reloadScheduleData({ force: true });
+      if (!reloaded?.memos || typeof reloaded.memos !== 'object') {
+        throw new Error('현재 월 스케줄 화면 데이터를 불러오지 못했습니다.');
+      }
       lastAutoSyncKeyRef.current = null;
       const synced = await syncCurrentManualStatsFromScheduleSource({
         upToToday: true,
@@ -485,6 +504,9 @@ export default function ManualTherapyStatsPage() {
     setIsLogsLoading(true);
     try {
       const reloaded = await reloadScheduleData({ force: true });
+      if (!reloaded?.memos || typeof reloaded.memos !== 'object') {
+        throw new Error('현재 월 스케줄 화면 데이터를 불러오지 못했습니다.');
+      }
       const result = await syncCurrentManualStatsFromScheduleSource({
         upToToday: false,
         overwriteManual: true,
@@ -691,6 +713,7 @@ export default function ManualTherapyStatsPage() {
                             therapists={displayBaseTherapists}
                             settings={shockwaveSettings}
                             selectedTherapistNames={selectedTherapistNames}
+                            currentMonthLogs={visibleLogs}
                           />
                           <ManualTherapySixMonthIonTreatment
                             currentYear={currentYear}

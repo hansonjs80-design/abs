@@ -10,6 +10,7 @@ import {
   getRecentScheduleMonthTargets,
   loadScheduleMemosForStatsMonth,
   loadStatsMonthlyTherapists,
+  replaceCurrentStatsMonthLogs,
 } from '../../lib/statsScheduleSourceUtils';
 import { normalizePrescriptionGroupKey } from '../../lib/prescriptionScheduleSettings';
 import {
@@ -23,6 +24,7 @@ export default function ManualTherapySixMonthStats({
   settings,
   therapists,
   selectedTherapistNames,
+  currentMonthLogs = [],
 }) {
   const [logs, setLogs] = useState([]);
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
@@ -170,6 +172,12 @@ export default function ManualTherapySixMonthStats({
     return keys;
   }, [currentMonth, currentYear, recentPeriodMonths]);
   const selectedMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+  const scheduleVerifiedLogs = useMemo(() => replaceCurrentStatsMonthLogs({
+    logs,
+    currentMonthLogs,
+    year: currentYear,
+    month: currentMonth,
+  }), [currentMonth, currentMonthLogs, currentYear, logs]);
 
   const monthlySummaries = useMemo(() => {
     const base = monthKeys.map((month) => {
@@ -209,7 +217,7 @@ export default function ManualTherapySixMonthStats({
     const summaryMap = Object.fromEntries(base.map((month) => [month.key, month]));
     const filterSet = selectedTherapistNames && selectedTherapistNames.length > 0 ? new Set(selectedTherapistNames) : null;
 
-    logs.forEach((log) => {
+    scheduleVerifiedLogs.forEach((log) => {
       if (filterSet && !filterSet.has(log?.therapist_name)) return;
       const monthKey = String(log?.date || '').slice(0, 7);
       const target = summaryMap[monthKey];
@@ -239,7 +247,7 @@ export default function ManualTherapySixMonthStats({
       amount: summary.amount,
       newPatientCount: summary.newPatientCount,
     }));
-  }, [logs, monthKeys, settings, selectedTherapistNames]);
+  }, [monthKeys, scheduleVerifiedLogs, settings, selectedTherapistNames]);
 
   return (
     <div className="sw-settlement-card sw-manual-summary-card">

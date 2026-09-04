@@ -19,6 +19,8 @@ import {
   replaceStatsRowsForDateRange,
   shouldOverwriteExistingStatsForScheduleSync,
 } from './scheduleStatsSyncUtils.js';
+import { getShockwaveScheduleBaseRowCount } from './scheduleHiddenCellRelocationUtils.js';
+import { getVisibleShockwaveScheduleMemoEntriesForStats } from './shockwaveSyncUtils.js';
 
 let todayManualTherapySyncQueue = Promise.resolve();
 
@@ -64,6 +66,29 @@ function toVisitNumber(value) {
   if (value === '-') return '-';
   const parsed = parseInt(String(value ?? '').trim(), 10);
   return Number.isFinite(parsed) ? String(parsed) : '';
+}
+
+function getManualStatsTherapistColumnCount(therapists = [], monthlyTherapists = []) {
+  const therapistCount = Array.isArray(therapists) ? therapists.length : 0;
+  const monthlySlotCount = (Array.isArray(monthlyTherapists) ? monthlyTherapists : []).reduce(
+    (max, item) => Math.max(max, (Number(item?.slot_index) || 0) + 1),
+    0
+  );
+  return Math.max(1, therapistCount, monthlySlotCount);
+}
+
+function getRenderedManualScheduleEntries({
+  year,
+  month,
+  memos,
+  therapists,
+  monthlyTherapists,
+  settings,
+}) {
+  return getVisibleShockwaveScheduleMemoEntriesForStats(memos, {
+    rowCount: getShockwaveScheduleBaseRowCount(settings, year, month),
+    colCount: getManualStatsTherapistColumnCount(therapists, monthlyTherapists),
+  });
 }
 
 export function formatMonthDay(dateText) {
@@ -220,7 +245,14 @@ async function runTodayManualTherapyScheduleToStatsSync({
   const newLogs = [];
 
   // 방문 완료(bg_color === TREATMENT_COMPLETE_BG)된 셀만 통계에 포함
-  Object.entries(memos).forEach(([key, cell]) => {
+  getRenderedManualScheduleEntries({
+    year,
+    month,
+    memos,
+    therapists,
+    monthlyTherapists,
+    settings,
+  }).forEach(([key, cell]) => {
     const [w, d, r, c] = key.split('-').map(Number);
     const dayInfo = weeks[w]?.[d];
     if (!dayInfo || !dayInfo.isCurrentMonth) return;
@@ -450,7 +482,14 @@ export async function syncMonthManualTherapyScheduleToStats({
     const patientNamesSet = new Set();
     const chartNumbersSet = new Set();
 
-    Object.entries(memos || {}).forEach(([key, cell]) => {
+    getRenderedManualScheduleEntries({
+      year,
+      month,
+      memos,
+      therapists,
+      monthlyTherapists,
+      settings,
+    }).forEach(([key, cell]) => {
       const [w, d, _r, c] = key.split('-').map(Number);
       const dayInfo = weeks[w]?.[d];
       if (!dayInfo || !dayInfo.isCurrentMonth) return;
@@ -593,7 +632,14 @@ export async function syncMonthManualTherapyScheduleToStats({
   const patientNamesSet = new Set();
   const chartNumbersSet = new Set();
 
-  Object.entries(memos || {}).forEach(([key, cell]) => {
+  getRenderedManualScheduleEntries({
+    year,
+    month,
+    memos,
+    therapists,
+    monthlyTherapists,
+    settings,
+  }).forEach(([key, cell]) => {
     const [w, d, _r, c] = key.split('-').map(Number);
     const dayInfo = weeks[w]?.[d];
     if (!dayInfo || !dayInfo.isCurrentMonth) return;

@@ -208,6 +208,7 @@ export function normalizeManualTherapyLogRows(rows, prescriptions = [], options 
           month: keyInfo.month,
         })
       : null;
+    if (scheduleAuthoritative && isScheduleBackedRow && !scheduleOverride) return null;
     const normalized = normalizeManualTherapyLogRow(row, prescriptions);
 
     if (!scheduleOverride) return normalized;

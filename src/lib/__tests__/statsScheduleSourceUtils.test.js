@@ -7,6 +7,7 @@ import {
   buildScheduleMemoSignature,
   buildScheduleMemoMapForStats,
   getRecentScheduleMonthTargets,
+  replaceCurrentStatsMonthLogs,
   resolveScheduleMemosForStatsMonth,
 } from '../statsScheduleSourceUtils.js';
 import { setMonthlySettlementSettings } from '../settlementSettings.js';
@@ -60,6 +61,26 @@ describe('stats schedule source utilities', () => {
 
     assert.equal(result, visibleMemos);
     assert.equal(fallbackCalls, 0);
+  });
+
+  it('replaces current-month database rows with schedule-verified rows in recent summaries', () => {
+    assert.deepEqual(
+      replaceCurrentStatsMonthLogs({
+        year: 2026,
+        month: 9,
+        logs: [
+          { id: 'aug', date: '2026-08-31' },
+          { id: 'ghost', date: '2026-09-10' },
+        ],
+        currentMonthLogs: [
+          { id: 'verified', date: '2026-09-04' },
+        ],
+      }),
+      [
+        { id: 'aug', date: '2026-08-31' },
+        { id: 'verified', date: '2026-09-04' },
+      ]
+    );
   });
 
   it('changes the schedule memo signature when visible content changes', () => {

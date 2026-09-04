@@ -277,6 +277,21 @@ export async function resolveScheduleMemosForStatsMonth({
   return fallbackLoader({ year, month, settings });
 }
 
+export function replaceCurrentStatsMonthLogs({
+  logs = [],
+  currentMonthLogs = [],
+  year,
+  month,
+} = {}) {
+  const monthKey = `${Number(year)}-${String(Number(month)).padStart(2, '0')}`;
+  return [
+    ...(Array.isArray(logs) ? logs : []).filter(
+      (log) => String(log?.date || '').slice(0, 7) !== monthKey
+    ),
+    ...(Array.isArray(currentMonthLogs) ? currentMonthLogs : []),
+  ];
+}
+
 async function fetchActiveTherapistsForStats(type) {
   const tableName = type === 'manual_therapy' ? 'manual_therapy_therapists' : 'shockwave_therapists';
   const { data, error } = await withScheduleStatsQueryTimeout(
