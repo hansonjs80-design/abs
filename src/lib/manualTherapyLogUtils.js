@@ -5,6 +5,7 @@ import {
   normalizePrescriptionGroupKey,
 } from './prescriptionScheduleSettings.js';
 import { getConfiguredDoseTagFromContent } from './schedulerContentFormat.js';
+import { TREATMENT_COMPLETE_BG } from './schedulerUtils.js';
 
 function normalizePrescriptionKey(value) {
   return String(value || '')
@@ -171,17 +172,33 @@ export function normalizeManualTherapyLogRows(rows, prescriptions = [], options 
   const memos = options?.memos && typeof options.memos === 'object' ? options.memos : {};
   const year = Number(options?.year);
   const month = Number(options?.month);
+  const scheduleAuthoritative = options?.scheduleAuthoritative === true;
 
   return (Array.isArray(rows) ? rows : []).map((row) => {
     const keyInfo = parseSchedulerCellKey(row?.scheduler_cell_key);
+    const targetsSelectedMonth = Boolean(
+      keyInfo &&
+      (!year || keyInfo.year === year) &&
+      (!month || keyInfo.month === month)
+    );
     const scheduleCell = keyInfo
-      && (!year || keyInfo.year === year)
-      && (!month || keyInfo.month === month)
+      && targetsSelectedMonth
       ? memos[keyInfo.memoKey]
       : null;
     const scheduleTreatmentGroup = scheduleCell
       ? getScheduleItemTreatmentGroup(scheduleCell, options?.settings || {}, keyInfo.year, keyInfo.month)
       : '';
+    const isScheduleBackedRow = row?.source !== 'manual' && Boolean(
+      row?.source === 'scheduler' || keyInfo
+    );
+
+    if (scheduleAuthoritative && isScheduleBackedRow) {
+      const isCompleted = String(scheduleCell?.bg_color || '').toLowerCase()
+        === TREATMENT_COMPLETE_BG.toLowerCase();
+      if (!targetsSelectedMonth || !scheduleCell || !isCompleted || scheduleTreatmentGroup !== 'manual_therapy') {
+        return null;
+      }
+    }
     if (scheduleCell && scheduleTreatmentGroup === 'shockwave') return null;
 
     const scheduleOverride = scheduleCell

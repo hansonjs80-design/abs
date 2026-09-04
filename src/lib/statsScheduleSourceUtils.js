@@ -259,6 +259,24 @@ export async function loadScheduleMemosForStatsMonth({ year, month, settings = {
   return buildScheduleMemoMapForStats(rows, { year, month, settings });
 }
 
+export async function resolveScheduleMemosForStatsMonth({
+  year,
+  month,
+  settings = {},
+  visibleMemos = null,
+  fallbackLoader = loadScheduleMemosForStatsMonth,
+} = {}) {
+  if (
+    visibleMemos !== null &&
+    typeof visibleMemos === 'object' &&
+    !Array.isArray(visibleMemos)
+  ) {
+    return visibleMemos;
+  }
+
+  return fallbackLoader({ year, month, settings });
+}
+
 async function fetchActiveTherapistsForStats(type) {
   const tableName = type === 'manual_therapy' ? 'manual_therapy_therapists' : 'shockwave_therapists';
   const { data, error } = await withScheduleStatsQueryTimeout(

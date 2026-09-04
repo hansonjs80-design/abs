@@ -21,8 +21,8 @@ import {
 import { isAdminUser } from '../lib/authPermissions';
 import {
   buildScheduleMemoSignature,
-  loadScheduleMemosForStatsMonth,
   loadStatsMonthlyTherapists,
+  resolveScheduleMemosForStatsMonth,
 } from '../lib/statsScheduleSourceUtils';
 import { normalizePrescriptionGroupKey } from '../lib/prescriptionScheduleSettings';
 import {
@@ -212,7 +212,7 @@ export default function ManualTherapyStatsPage() {
     });
   }, []);
 
-  const fetchLogs = useCallback(async ({ memosOverride = null } = {}) => {
+  const fetchLogs = useCallback(async ({ memosOverride = null, scheduleAuthoritative = false } = {}) => {
     const currentFetchId = ++fetchIdRef.current;
     const monthKey = `${currentYear}-${currentMonth}`;
     const hasCurrentMonthLogs = logsLoadedKeyRef.current === monthKey;
@@ -239,6 +239,7 @@ export default function ManualTherapyStatsPage() {
         year: currentYear,
         month: currentMonth,
         settings: shockwaveSettings,
+        scheduleAuthoritative,
       });
       setLogs(normalizedLogs);
       return normalizedLogs;
@@ -285,21 +286,26 @@ export default function ManualTherapyStatsPage() {
     upToToday = true,
     overwriteManual = false,
     emitEvent = false,
+    memosOverride = null,
+    monthlyTherapistsOverride = null,
   } = {}) => {
     if (safeTherapists.length === 0) return null;
 
     const [sourceMemos, sourceMonthlyTherapists] = await Promise.all([
-      loadScheduleMemosForStatsMonth({
+      resolveScheduleMemosForStatsMonth({
         year: currentYear,
         month: currentMonth,
         settings: shockwaveSettings,
+        visibleMemos: memosOverride,
       }),
-      loadStatsMonthlyTherapists({
-        year: currentYear,
-        month: currentMonth,
-        type: 'manual_therapy',
-        baseTherapists: safeTherapists,
-      }),
+      Array.isArray(monthlyTherapistsOverride)
+        ? Promise.resolve(monthlyTherapistsOverride)
+        : loadStatsMonthlyTherapists({
+            year: currentYear,
+            month: currentMonth,
+            type: 'manual_therapy',
+            baseTherapists: safeTherapists,
+          }),
     ]);
 
     await syncMonthManualTherapyScheduleToStats({
@@ -345,12 +351,20 @@ export default function ManualTherapyStatsPage() {
         }
 
         // 2. 스케줄 원본을 다시 읽어 도수치료 통계를 스케줄 기준으로 자동 동기화
-        const synced = await syncCurrentManualStatsFromScheduleSource({ upToToday: true, emitEvent: false });
+        const synced = await syncCurrentManualStatsFromScheduleSource({
+          upToToday: true,
+          emitEvent: false,
+          memosOverride: loadedMemos,
+          monthlyTherapistsOverride: loadedMonthlyTherapists,
+        });
         if (!active || scheduleReloadRequestRef.current !== requestId) return;
 
         // 3. 동기화 완료 후 최신 도수치료 로그 조회
         if (active && scheduleReloadRequestRef.current === requestId) {
-          await fetchLogs({ memosOverride: synced?.memos || loadedMemos || {} });
+          await fetchLogs({
+            memosOverride: synced?.memos ?? loadedMemos ?? {},
+            scheduleAuthoritative: true,
+          });
         }
       } catch (err) {
         console.error('달 이동 중 도수치료 통계 자동 동기화 실패:', err);
@@ -392,12 +406,20 @@ export default function ManualTherapyStatsPage() {
     try {
       const reloaded = await reloadScheduleData({ force: true });
       lastAutoSyncKeyRef.current = null;
-      const synced = await syncCurrentManualStatsFromScheduleSource({ upToToday: true, emitEvent: false });
+      const synced = await syncCurrentManualStatsFromScheduleSource({
+        upToToday: true,
+        emitEvent: false,
+        memosOverride: reloaded?.memos,
+        monthlyTherapistsOverride: reloaded?.monthlyTherapists,
+      });
       if (!synced) {
         addToast('도수치료사 목록을 불러오지 못해 통계 동기화를 건너뛰었습니다.', 'error');
         return;
       }
-      await fetchLogs({ memosOverride: synced?.memos || reloaded?.memos || shockwaveMemos });
+      await fetchLogs({
+        memosOverride: synced?.memos ?? reloaded?.memos ?? shockwaveMemos,
+        scheduleAuthoritative: true,
+      });
       addToast('도수치료 통계 데이터를 새로 불러왔습니다.', 'success');
     } catch (err) {
       console.error(err);
@@ -462,15 +484,18 @@ export default function ManualTherapyStatsPage() {
     if (!window.confirm(`${currentMonth}월 전체 도수치료 스케줄을 스케줄러 기준으로 덮어씁니다.\n(수동으로 추가한 내역은 모두 삭제됩니다.) 진행하시겠습니까?`)) return;
     setIsLogsLoading(true);
     try {
+      const reloaded = await reloadScheduleData({ force: true });
       const result = await syncCurrentManualStatsFromScheduleSource({
         upToToday: false,
         overwriteManual: true,
         emitEvent: false,
+        memosOverride: reloaded?.memos,
+        monthlyTherapistsOverride: reloaded?.monthlyTherapists,
       });
 
       if (result) {
         addToast('전체 월 도수치료 스케줄을 스케줄러 기준으로 다시 동기화했습니다.', 'success');
-        await fetchLogs({ memosOverride: result.memos });
+        await fetchLogs({ memosOverride: result.memos, scheduleAuthoritative: true });
       } else {
         addToast('도수치료사 목록을 불러오지 못해 전체 월 동기화를 건너뛰었습니다.', 'error');
       }
@@ -480,7 +505,7 @@ export default function ManualTherapyStatsPage() {
     } finally {
       setIsLogsLoading(false);
     }
-  }, [addToast, currentMonth, fetchLogs, syncCurrentManualStatsFromScheduleSource]);
+  }, [addToast, currentMonth, fetchLogs, reloadScheduleData, syncCurrentManualStatsFromScheduleSource]);
 
   const handleSaveSettlementSettings = useCallback(async (nextSettings) => {
     const ok = await saveShockwaveSettings(nextSettings);

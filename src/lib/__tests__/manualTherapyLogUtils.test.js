@@ -192,4 +192,75 @@ describe('manual therapy log normalization', () => {
       []
     );
   });
+
+  it('excludes a stale scheduler log that is absent from the authoritative visible schedule', () => {
+    assert.deepEqual(
+      normalizeManualTherapyLogRows(
+        [
+          {
+            patient_name: '김상희',
+            prescription: '40분',
+            source: 'scheduler',
+            scheduler_cell_key: '2026:09:0:3:45:0',
+          },
+          {
+            patient_name: '사용자입력',
+            prescription: '40분',
+            source: 'manual',
+          },
+        ],
+        ['30분', '40분', '60분'],
+        {
+          year: 2026,
+          month: 9,
+          settings: {
+            prescriptions: ['F/R'],
+            manual_therapy_prescriptions: ['30분', '40분', '60분'],
+          },
+          memos: {},
+          scheduleAuthoritative: true,
+        }
+      ),
+      [
+        {
+          patient_name: '사용자입력',
+          prescription: '40분',
+          source: 'manual',
+        },
+      ]
+    );
+  });
+
+  it('excludes a scheduler log when the visible schedule cell is no longer completed', () => {
+    assert.deepEqual(
+      normalizeManualTherapyLogRows(
+        [
+          {
+            patient_name: '한동균',
+            prescription: '40분',
+            source: 'scheduler',
+            scheduler_cell_key: '2026:09:0:3:49:0',
+          },
+        ],
+        ['30분', '40분', '60분'],
+        {
+          year: 2026,
+          month: 9,
+          settings: {
+            prescriptions: ['F/R'],
+            manual_therapy_prescriptions: ['30분', '40분', '60분'],
+          },
+          memos: {
+            '0-3-49-0': {
+              content: '13015/한동균40(31)',
+              bg_color: null,
+              prescription: '40분',
+            },
+          },
+          scheduleAuthoritative: true,
+        }
+      ),
+      []
+    );
+  });
 });

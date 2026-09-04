@@ -7,6 +7,7 @@ import {
   buildScheduleMemoSignature,
   buildScheduleMemoMapForStats,
   getRecentScheduleMonthTargets,
+  resolveScheduleMemosForStatsMonth,
 } from '../statsScheduleSourceUtils.js';
 import { setMonthlySettlementSettings } from '../settlementSettings.js';
 
@@ -35,6 +36,30 @@ describe('stats schedule source utilities', () => {
         { year: 2026, month: 7 },
       ]
     );
+  });
+
+  it('uses the exact visible schedule snapshot without reloading stale server rows', async () => {
+    let fallbackCalls = 0;
+    const visibleMemos = {};
+
+    const result = await resolveScheduleMemosForStatsMonth({
+      year: 2026,
+      month: 9,
+      visibleMemos,
+      fallbackLoader: async () => {
+        fallbackCalls += 1;
+        return {
+          '0-3-45-0': {
+            content: '11483/김상희40(2)',
+            bg_color: TREATMENT_COMPLETE_BG,
+            prescription: '40분',
+          },
+        };
+      },
+    });
+
+    assert.equal(result, visibleMemos);
+    assert.equal(fallbackCalls, 0);
   });
 
   it('changes the schedule memo signature when visible content changes', () => {
