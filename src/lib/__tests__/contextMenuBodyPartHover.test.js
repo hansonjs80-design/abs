@@ -45,7 +45,7 @@ test('context menu body-part checkbox rows use stronger hover backgrounds', asyn
   );
   assert.match(
     css,
-    /\.context-menu-body-preset-directions\s*\{[^}]*gap:\s*2px;/s
+    /\.context-menu-body-preset-directions\s*\{[^}]*gap:\s*2px;[^}]*margin-left:\s*auto;[^}]*margin-right:\s*20px;/s
   );
   assert.match(
     css,
@@ -77,7 +77,7 @@ test('context menu body-part checkbox rows use stronger hover backgrounds', asyn
   );
   assert.match(
     css,
-    /\.context-menu-submenu--body\s*\{[^}]*min-width:\s*min\(288px, var\(--context-body-submenu-max-width, calc\(100vw - 36px\)\)\);[^}]*max-width:\s*min\(420px, calc\(100vw - 36px\), var\(--context-body-submenu-max-width, calc\(100vw - 36px\)\)\);[^}]*width:\s*max-content;/s
+    /\.context-menu-submenu--body\s*\{[^}]*min-width:\s*min\(288px, var\(--context-body-submenu-max-width, calc\(100vw - 36px\)\)\);[^}]*max-width:\s*min\(400px, calc\(100vw - 36px\), var\(--context-body-submenu-max-width, calc\(100vw - 36px\)\)\);[^}]*width:\s*max-content;/s
   );
   assert.match(
     css,
@@ -94,4 +94,6 @@ test('context menu body-part checkbox rows use stronger hover backgrounds', asyn
   assert.match(bodyPartPanel, /<Pencil size=\{13\}/);
   assert.match(bodyPartPanel, /<Trash2 size=\{14\}/);
   assert.match(bodyPartPanel, /const displayLabel = item\.displayLabel \|\| item\.label;/);
+  assert.match(bodyPartPanel, /const isPresetPart = Boolean\(findBodyPartPresetItemByValue\(part\)\);/);
+  assert.match(bodyPartPanel, /editingSelectedIndex === index \|\| isPresetPart \? null/);
 });

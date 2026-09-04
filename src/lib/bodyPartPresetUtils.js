@@ -88,6 +88,10 @@ export function findBodyPartPresetItem(presetId) {
   return BODY_PART_PRESET_ITEMS.find((item) => item.id === presetId) || null;
 }
 
+export function findBodyPartPresetItemByValue(value) {
+  return BODY_PART_PRESET_ITEMS.find((item) => isBodyPartPresetValue(value, item)) || null;
+}
+
 export function buildBodyPartPresetValue(item, directionId) {
   if (!item) return '';
   const bodyPart = `${item.label}(${String(item.code || '').toUpperCase()})`;

@@ -4,6 +4,7 @@ import { normalizeBodyPartKey } from '../../lib/schedulerUtils';
 import {
   BODY_PART_PRESET_DIRECTIONS,
   BODY_PART_PRESET_GROUPS,
+  findBodyPartPresetItemByValue,
   getBodyPartPresetState,
 } from '../../lib/bodyPartPresetUtils';
 
@@ -227,6 +228,7 @@ export default function BodyPartKeyboardPanel({
             {selectedParts.map((part, index) => {
               const draftValue = selectedDrafts[index] ?? part;
               const canReorderParts = selectedParts.length > 1;
+              const isPresetPart = Boolean(findBodyPartPresetItemByValue(part));
               return (
                 <div key={`${normalizeBodyPartKey(part)}-${index}`} className="context-menu-body-selected-item">
                   <input
@@ -283,7 +285,7 @@ export default function BodyPartKeyboardPanel({
                     <span className="context-menu-list-text" title={part}>{part}</span>
                   )}
                   <div className="context-menu-body-selected-actions">
-                    {editingSelectedIndex === index ? null : (
+                    {editingSelectedIndex === index || isPresetPart ? null : (
                       <button
                         type="button"
                         className="context-menu-note-icon-button"

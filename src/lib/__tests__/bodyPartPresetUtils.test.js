@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   buildBodyPartPresetValue,
   findBodyPartPresetItem,
+  findBodyPartPresetItemByValue,
   getBodyPartPresetState,
   replaceBodyPartPreset,
   replaceBodyPartPresetOptions,
@@ -22,6 +23,14 @@ describe('bodyPartPresetUtils', () => {
 
     assert.equal(lumbarMyofascialPain.displayLabel, '요추/척추부근막통');
     assert.equal(buildBodyPartPresetValue(lumbarMyofascialPain), '요추/척추부 근막통(M79180)');
+  });
+
+  it('distinguishes preset-generated values from custom body parts', () => {
+    assert.equal(
+      findBodyPartPresetItemByValue('Rt. 석회성 건염(M6521)')?.id,
+      'calcific-tendinitis'
+    );
+    assert.equal(findBodyPartPresetItemByValue('사용자 직접 입력 부위'), null);
   });
 
   it('recognizes diagnosis selection and directions despite spacing and case differences', () => {
@@ -55,11 +64,22 @@ describe('bodyPartPresetUtils', () => {
     );
     assert.deepEqual(
       replaceBodyPartPreset(
-        ['Lt. 석회성 건염(M6521)', 'Rt. 족저 근막염(M722)'],
+        ['Lt. 석회성 건염(M6521)', 'Rt. 석회성 건염(M6521)', 'Rt. 족저 근막염(M722)'],
         calcificTendinitis,
         false
       ),
       ['Rt. 족저 근막염(M722)']
+    );
+  });
+
+  it('removes an unchecked preset from both the selected and lower reusable lists', () => {
+    const currentParts = ['Lt. 석회성 건염(M6521)', '사용자 직접 입력 부위'];
+    const nextParts = replaceBodyPartPreset(currentParts, calcificTendinitis, false);
+
+    assert.deepEqual(nextParts, ['사용자 직접 입력 부위']);
+    assert.deepEqual(
+      replaceBodyPartPresetOptions(currentParts, calcificTendinitis, nextParts),
+      ['사용자 직접 입력 부위']
     );
   });
 

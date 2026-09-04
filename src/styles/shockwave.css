@@ -1809,7 +1809,7 @@
 
 .context-menu-submenu--body {
   min-width: min(288px, var(--context-body-submenu-max-width, calc(100vw - 36px)));
-  max-width: min(420px, calc(100vw - 36px), var(--context-body-submenu-max-width, calc(100vw - 36px)));
+  max-width: min(400px, calc(100vw - 36px), var(--context-body-submenu-max-width, calc(100vw - 36px)));
   width: max-content;
   overflow-x: hidden !important;
   overflow-y: auto !important;
@@ -2091,6 +2091,7 @@
   align-items: center;
   gap: 2px;
   margin-left: auto;
+  margin-right: 20px;
 }
 
 .shockwave-context-menu button.context-menu-body-preset-direction {
