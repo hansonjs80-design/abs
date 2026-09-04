@@ -1996,6 +1996,8 @@
   display: grid;
   /* 흰색 상단의 체크박스 행 사이 간격만 30% 축소 */
   gap: 2.1px;
+  width: calc(100% - 5px);
+  margin-left: 5px;
 }
 
 .context-menu-body-preset-item {
