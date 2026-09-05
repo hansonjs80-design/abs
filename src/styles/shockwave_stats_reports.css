@@ -1035,12 +1035,9 @@
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
 }
 
-.shockwave-row {
-  grid-template-columns: 62px minmax(92px, 150px) minmax(70px, 112px) minmax(70px, 88px) minmax(72px, 92px) minmax(72px, 92px) 40px 58px minmax(105px, 135px) minmax(116px, 146px) 36px auto;
-}
-
+.shockwave-row,
 .manual-therapy-row {
-  grid-template-columns: 62px minmax(92px, 150px) minmax(70px, 112px) minmax(70px, 88px) minmax(72px, 92px) minmax(72px, 92px) 40px 58px minmax(105px, 135px) minmax(116px, 146px) 36px auto;
+  grid-template-columns: 62px minmax(92px, 150px) minmax(70px, 112px) minmax(70px, 88px) minmax(72px, 92px) minmax(72px, 92px) 40px 58px minmax(105px, 135px) minmax(116px, 146px) 36px 70px;
 }
 
 .settlement-order-label {
@@ -1133,9 +1130,9 @@
 }
 
 .settlement-settings-header-row {
-  border: none;
+  border: 1px solid transparent;
   background: transparent;
-  padding: 0 10px 0;
+  padding: 0 8px;
   box-shadow: none;
 }
 
@@ -1147,7 +1144,7 @@
 }
 
 .settlement-settings-header-row .settlement-label:first-child {
-  text-align: left;
+  text-align: center;
 }
 
 .settlement-dose-tag-group {
@@ -1422,12 +1419,9 @@
     grid-template-columns: 1fr;
   }
 
-  .shockwave-row {
-    grid-template-columns: 62px 1fr 80px 80px 1fr 72px 40px 58px minmax(105px, 1fr) minmax(116px, 1fr) 36px auto;
-  }
-
+  .shockwave-row,
   .manual-therapy-row {
-    grid-template-columns: 62px 1fr 80px 80px 1fr 72px 40px 58px minmax(105px, 1fr) minmax(116px, 1fr) 36px auto;
+    grid-template-columns: 62px minmax(92px, 1fr) 80px 80px minmax(72px, 1fr) 72px 40px 58px minmax(105px, 1fr) minmax(116px, 1fr) 36px 70px;
   }
 }
 

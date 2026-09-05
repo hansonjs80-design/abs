@@ -47,3 +47,20 @@ test('manual therapy shortcut settings show Alt or Option and accept digits only
   assert.match(viewState, /manualPrescriptionModifier: isAppleShortcutPlatform \? '⌥' : 'Alt'/);
   assert.match(viewState, /shinjangPrescriptionModifier: isAppleShortcutPlatform \? '⌘⇧' : 'Ctrl\+Shift'/);
 });
+
+test('shockwave and manual therapy setting headers share the same fixed action column geometry as their rows', async () => {
+  const styles = await readFile(stylesUrl, 'utf8');
+
+  assert.match(
+    styles,
+    /\.shockwave-row,\s*\.manual-therapy-row\s*\{[^}]*grid-template-columns:[^;}]*36px 70px;/s
+  );
+  assert.match(
+    styles,
+    /\.settlement-settings-header-row\s*\{[^}]*border:\s*1px solid transparent;[^}]*padding:\s*0 8px;/s
+  );
+  assert.doesNotMatch(
+    styles,
+    /\.(?:shockwave|manual-therapy)-row\s*\{[^}]*grid-template-columns:[^;}]*36px auto;/s
+  );
+});
