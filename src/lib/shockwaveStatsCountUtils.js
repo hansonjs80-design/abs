@@ -5,6 +5,13 @@ export function normalizePrescriptionKey(value) {
     .replace(/[^\p{L}\p{N}]/gu, '');
 }
 
+export function getIncentiveRateBadgeStyle(value) {
+  const percentage = Math.max(0, Number(value) || 0);
+  return {
+    '--sw-incentive-hue': Math.round(percentage * 67) % 360,
+  };
+}
+
 export function statsPrescriptionsMatch(a, b) {
   return normalizePrescriptionKey(a) === normalizePrescriptionKey(b);
 }

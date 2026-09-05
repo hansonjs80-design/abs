@@ -413,6 +413,17 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   line-height: 0.92 !important;
 }
 
+.sw-horizontal2-layout--prescription-incentives .sw-horizontal2-therapist-table tbody tr.horizontal2-content-row,
+.sw-horizontal2-layout--prescription-incentives .sw-horizontal2-therapist-table tbody tr.horizontal2-content-row > td {
+  height: 44px !important;
+}
+
+.sw-horizontal2-layout--prescription-incentives .sw-horizontal2-therapist-table tbody tr.horizontal2-content-row > td {
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+  line-height: 1.08 !important;
+}
+
 .sw-horizontal2-therapist-total-table .horizontal2-total-row {
   height: 27px !important;
 }

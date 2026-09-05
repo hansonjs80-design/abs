@@ -8,6 +8,7 @@ import {
   buildStatsDisplayPrescriptions,
   buildTherapistPrescriptionDisplayGroups,
   buildTherapistCompletedPrescriptionGroups,
+  getIncentiveRateBadgeStyle,
   getTherapistCompletedPrescriptions,
   buildShockwaveCountSummaries,
   normalizePrescriptionKey,
@@ -16,6 +17,19 @@ import {
 } from '../shockwaveStatsCountUtils.js';
 
 describe('shockwave stats count utilities', () => {
+  it('assigns stable distinct badge hues to different incentive percentages', () => {
+    const sevenPercentStyle = getIncentiveRateBadgeStyle(7);
+    const fifteenPercentStyle = getIncentiveRateBadgeStyle(15);
+
+    assert.deepEqual(sevenPercentStyle, { '--sw-incentive-hue': 109 });
+    assert.deepEqual(fifteenPercentStyle, { '--sw-incentive-hue': 285 });
+    assert.notEqual(
+      sevenPercentStyle['--sw-incentive-hue'],
+      fifteenPercentStyle['--sw-incentive-hue'],
+    );
+    assert.deepEqual(getIncentiveRateBadgeStyle('invalid'), { '--sw-incentive-hue': 0 });
+  });
+
   it('subtracts cryo prices only from selected prescriptions before incentive calculation', () => {
     const adjustedPrices = buildCryoAdjustedPrescriptionPrices({
       prescriptionPrices: {

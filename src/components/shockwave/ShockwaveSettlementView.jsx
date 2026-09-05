@@ -5,6 +5,7 @@ import {
   buildShockwaveSettlementPrintColumnWidths,
   buildTherapistCompletedPrescriptionGroups,
   buildTherapistPrescriptionDisplayGroups,
+  getIncentiveRateBadgeStyle,
   getTherapistCompletedPrescriptions,
   normalizePrescriptionKey,
   toStatsPrescriptionCount,
@@ -142,12 +143,16 @@ export default function ShockwaveSettlementView({
     : `인센티브 (${Number(incentivePercentage) || 0}%)`;
   const renderPrescriptionLabel = (prescription) => {
     if (!prescription) return '—';
+    const prescriptionIncentivePercentage = getIncentivePercentage(prescription);
     return (
       <span className="sw-prescription-incentive-label">
         <span>{prescription}</span>
         {usesPrescriptionIncentives && (
-          <span className="sw-prescription-incentive-rate">
-            인센 {formatPercentage(getIncentivePercentage(prescription))}
+          <span
+            className="sw-prescription-incentive-rate"
+            style={getIncentiveRateBadgeStyle(prescriptionIncentivePercentage)}
+          >
+            인센 {formatPercentage(prescriptionIncentivePercentage)}
           </span>
         )}
       </span>

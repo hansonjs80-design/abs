@@ -14,6 +14,8 @@ const scheduleContextUrl = new URL('../../contexts/ScheduleContext.jsx', import.
 const loginSettingsUrl = new URL('../../components/settings/LoginSettings.jsx', import.meta.url);
 const shockwaveStatsViewUrl = new URL('../../components/shockwave/ShockwaveStatsView.jsx', import.meta.url);
 const scheduleViewUrl = new URL('../../components/shockwave/ShockwaveView.jsx', import.meta.url);
+const statsCssUrl = new URL('../../styles/shockwave_stats.css', import.meta.url);
+const horizontal2CssUrl = new URL('../../styles/shockwave_settlement_horizontal2.css', import.meta.url);
 
 describe('shinjang spray statistics UI', () => {
   it('registers the top-level route and permission tab', async () => {
@@ -100,7 +102,7 @@ describe('shinjang spray statistics UI', () => {
     assert.match(settlementSource, /handleViewModeChange\('vertical', targetPricingMode\)/);
     assert.match(settlementSource, /처방별 인센티브/);
     assert.match(settlementSource, /sw-prescription-incentive-rate/);
-    assert.match(settlementSource, /formatPercentage\(getIncentivePercentage\(prescription\)\)/);
+    assert.match(settlementSource, /formatPercentage\(prescriptionIncentivePercentage\)/);
   });
 
   it('shows only prescriptions actually completed by each therapist in compact settlement', async () => {
@@ -111,6 +113,22 @@ describe('shinjang spray statistics UI', () => {
     assert.match(source, /sw-prescription-incentive-rate/);
     assert.match(source, /rowSpan=\{therapistPrescriptions\.length \+ 1\}/);
     assert.match(source, /therapistPrescriptions\.map/);
+  });
+
+  it('styles prescription incentive badges by percentage with room in compact rows', async () => {
+    const [sharedSettlementSource, compactSettlementSource, statsCss, horizontal2Css] = await Promise.all([
+      readFile(sharedSettlementViewUrl, 'utf8'),
+      readFile(compactSettlementViewUrl, 'utf8'),
+      readFile(statsCssUrl, 'utf8'),
+      readFile(horizontal2CssUrl, 'utf8'),
+    ]);
+
+    assert.match(sharedSettlementSource, /style=\{getIncentiveRateBadgeStyle\(prescriptionIncentivePercentage\)\}/);
+    assert.match(compactSettlementSource, /sw-horizontal2-layout--prescription-incentives/);
+    assert.match(compactSettlementSource, /style=\{getIncentiveRateBadgeStyle\(prescriptionIncentivePercentage\)\}/);
+    assert.match(statsCss, /font-size:\s*calc\(0\.7rem \+ 2px\)/);
+    assert.match(statsCss, /--sw-incentive-hue/);
+    assert.match(horizontal2Css, /sw-horizontal2-layout--prescription-incentives[\s\S]*?padding-top:\s*4px !important;[\s\S]*?padding-bottom:\s*4px !important;/);
   });
 
   it('adds a monthly shinjang therapist tab and applies it to every shinjang statistics section', async () => {
