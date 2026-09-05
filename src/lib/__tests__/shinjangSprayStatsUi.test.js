@@ -50,12 +50,11 @@ describe('shinjang spray statistics UI', () => {
   });
 
   it('combines shockwave and manual logs and exposes per-prescription incentive settings', async () => {
-    const [pageSource, settingsSource, statsViewSource, settlementSource, compactSettlementSource] = await Promise.all([
+    const [pageSource, settingsSource, statsViewSource, settlementSource] = await Promise.all([
       readFile(pageUrl, 'utf8'),
       readFile(settingsPanelUrl, 'utf8'),
       readFile(statsViewUrl, 'utf8'),
       readFile(sharedSettlementViewUrl, 'utf8'),
-      readFile(compactSettlementViewUrl, 'utf8'),
     ]);
     assert.match(pageSource, /shockwave_patient_logs/);
     assert.match(pageSource, /manual_therapy_patient_logs/);
@@ -92,9 +91,9 @@ describe('shinjang spray statistics UI', () => {
     assert.match(statsViewSource, /treatmentLabel="신장분사"/);
     assert.match(statsViewSource, /incentivePercentages=\{incentivePercentages\}/);
     assert.match(pageSource, /hiddenIncentivePercentages=\{canManageSettings \? \[\] : \[15\]\}/);
+    assert.equal((pageSource.match(/hiddenIncentivePercentages=/g) || []).length, 1);
     assert.match(statsViewSource, /hiddenIncentivePercentages=\{hiddenIncentivePercentages\}/);
-    assert.match(settlementSource, /isSettlementIncentiveRateVisible/);
-    assert.match(compactSettlementSource, /getVisibleSettlementIncentiveTotal/);
+    assert.match(settlementSource, /filterVisibleSettlementPrescriptions/);
     assert.match(statsViewSource, /cryoPrescriptions=\{cryoPrescriptions\}/);
     assert.match(statsViewSource, /viewModeStorageKey=\{SHINJANG_VIEW_MODE_STORAGE_KEY\}/);
     assert.match(statsViewSource, /showOnlyTherapistPrescriptions/);

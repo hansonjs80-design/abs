@@ -10,8 +10,8 @@ import {
   buildStatsDisplayPrescriptions,
   buildTherapistPrescriptionDisplayGroups,
   buildTherapistCompletedPrescriptionGroups,
+  filterVisibleSettlementPrescriptions,
   getIncentiveRateBadgeStyle,
-  getVisibleSettlementIncentiveTotal,
   getTherapistCompletedPrescriptions,
   isSettlementIncentiveRateVisible,
   buildShockwaveCountSummaries,
@@ -74,18 +74,19 @@ describe('shockwave stats count utilities', () => {
     ]);
   });
 
-  it('hides only restricted incentive rates and excludes them from visible totals', () => {
-    const breakdown = [
-      { percentage: 7, incentive: 7350 },
-      { percentage: 15, incentive: 31500 },
-      { percentage: 15.5, incentive: 2000 },
-    ];
-
+  it('hides only prescriptions with restricted incentive rates from settlement', () => {
     assert.equal(isSettlementIncentiveRateVisible(7, [15]), true);
     assert.equal(isSettlementIncentiveRateVisible('15', [15]), false);
     assert.equal(isSettlementIncentiveRateVisible(15.5, [15]), true);
-    assert.equal(getVisibleSettlementIncentiveTotal(breakdown, [15]), 9350);
-    assert.equal(getVisibleSettlementIncentiveTotal(breakdown, []), 40850);
+    assert.deepEqual(filterVisibleSettlementPrescriptions({
+      prescriptions: ['7% 처방', '15% 처방', '15.5% 처방'],
+      incentivePercentages: {
+        '7% 처방': 7,
+        '15% 처방': 15,
+        '15.5% 처방': 15.5,
+      },
+      hiddenIncentivePercentages: [15],
+    }), ['7% 처방', '15.5% 처방']);
   });
 
   it('assigns stable distinct badge hues to different incentive percentages', () => {

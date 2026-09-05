@@ -2,8 +2,6 @@ import React from 'react';
 import {
   getIncentiveRateBadgeStyle,
   getTherapistCompletedPrescriptions,
-  getVisibleSettlementIncentiveTotal,
-  isSettlementIncentiveRateVisible,
   normalizePrescriptionKey,
 } from '../../lib/shockwaveStatsCountUtils.js';
 
@@ -46,7 +44,6 @@ export default function ShockwaveSettlementHorizontalCompactView({
   currentMonth,
   incentivePercentage,
   incentivePercentages = {},
-  hiddenIncentivePercentages = [],
   incentiveLabel,
   isCryoAdjusted = false,
   normalizedPriceMap,
@@ -70,14 +67,6 @@ export default function ShockwaveSettlementHorizontalCompactView({
   );
   const getIncentivePercentage = (prescription) => (
     (normalizedIncentiveMap[normalizePrescriptionKey(prescription)] ?? incentiveRate) * 100
-  );
-  const isIncentivePercentageVisible = (percentage) => isSettlementIncentiveRateVisible(
-    percentage,
-    hiddenIncentivePercentages,
-  );
-  const getDisplayedIncentiveTotal = (breakdown) => getVisibleSettlementIncentiveTotal(
-    breakdown,
-    hiddenIncentivePercentages,
   );
   const showPrescriptionIncentiveRates = Object.keys(normalizedIncentiveMap).length > 0;
   const visibleTherapistSummaries = showOnlyTherapistPrescriptions
@@ -140,7 +129,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                             {prescription ? (
                               <span className="sw-prescription-incentive-label">
                                 <span>{prescription}</span>
-                                {showPrescriptionIncentiveRates && isIncentivePercentageVisible(prescriptionIncentivePercentage) && (
+                                {showPrescriptionIncentiveRates && (
                                   <span
                                     className="sw-prescription-incentive-rate"
                                     style={getIncentiveRateBadgeStyle(prescriptionIncentivePercentage)}
@@ -153,11 +142,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                           </td>
                           <td className="count-val">{formatCount(count)}</td>
                           <td className="amount-val">{formatCurrency(prescriptionAmount)}</td>
-                          <td className="incentive-val">
-                            {isIncentivePercentageVisible(prescriptionIncentivePercentage)
-                              ? formatCurrency(prescriptionIncentive)
-                              : ''}
-                          </td>
+                          <td className="incentive-val">{formatCurrency(prescriptionIncentive)}</td>
                         </tr>
                       );
                     })}
@@ -175,7 +160,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                       <th className="horizontal2-total-label">합계</th>
                       <td className="count-val">{formatOptionalCount(item.totalCount)}</td>
                       <td className="amount-val">{formatCurrency(item.amount)}</td>
-                      <td className="incentive-val">{formatCurrency(getDisplayedIncentiveTotal(item.incentiveRateBreakdown))}</td>
+                      <td className="incentive-val">{formatCurrency(item.incentive)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -201,7 +186,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
             <tr className="horizontal2-grand-total-row">
               <td>{formatCount(settlement.grandTotalCount)}</td>
               <td className="amount-val">{formatTotalCurrency(settlement.grandAmount)}</td>
-              <td className="incentive-val">{formatTotalCurrency(getDisplayedIncentiveTotal(settlement.grandIncentiveRateBreakdown))}</td>
+              <td className="incentive-val">{formatTotalCurrency(settlement.grandIncentive)}</td>
             </tr>
           </tbody>
         </table>

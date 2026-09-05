@@ -7,10 +7,9 @@ import {
   buildShockwaveSettlementPrintColumnWidths,
   buildTherapistCompletedPrescriptionGroups,
   buildTherapistPrescriptionDisplayGroups,
+  filterVisibleSettlementPrescriptions,
   getIncentiveRateBadgeStyle,
   getTherapistCompletedPrescriptions,
-  getVisibleSettlementIncentiveTotal,
-  isSettlementIncentiveRateVisible,
   normalizePrescriptionKey,
   toStatsPrescriptionCount,
 } from '../../lib/shockwaveStatsCountUtils';
@@ -142,19 +141,21 @@ export default function ShockwaveSettlementView({
     ])
   ), [incentivePercentages]);
   const usesPrescriptionIncentives = Object.keys(normalizedIncentiveMap).length > 0;
-  const hidesAnyIncentiveRate = hiddenIncentivePercentages.length > 0;
-  const isIncentivePercentageVisible = (percentage) => isSettlementIncentiveRateVisible(
-    percentage,
-    hiddenIncentivePercentages,
-  );
-  const getDisplayedIncentiveTotal = (breakdown) => getVisibleSettlementIncentiveTotal(
-    breakdown,
-    hiddenIncentivePercentages,
-  );
   const getIncentivePercentage = useCallback((prescription) => (
     normalizedIncentiveMap[normalizePrescriptionKey(prescription)]
       ?? Math.max(0, Number(incentivePercentage) || 0)
   ), [incentivePercentage, normalizedIncentiveMap]);
+  const settlementPrescriptions = useMemo(() => filterVisibleSettlementPrescriptions({
+    prescriptions: safePrescriptions,
+    incentivePercentages: normalizedIncentiveMap,
+    hiddenIncentivePercentages,
+    fallbackIncentivePercentage: incentivePercentage,
+  }), [
+    hiddenIncentivePercentages,
+    incentivePercentage,
+    normalizedIncentiveMap,
+    safePrescriptions,
+  ]);
   const incentiveLabel = usesPrescriptionIncentives
     ? '처방별 인센티브'
     : `인센티브 ${Number(incentivePercentage) || 0}%`;
@@ -167,7 +168,7 @@ export default function ShockwaveSettlementView({
     return (
       <span className="sw-prescription-incentive-label">
         <span>{prescription}</span>
-        {usesPrescriptionIncentives && isIncentivePercentageVisible(prescriptionIncentivePercentage) && (
+        {usesPrescriptionIncentives && (
           <span
             className="sw-prescription-incentive-rate"
             style={getIncentiveRateBadgeStyle(prescriptionIncentivePercentage)}
@@ -182,31 +183,31 @@ export default function ShockwaveSettlementView({
   const settlement = useMemo(() => {
     const summaryByTherapist = displayTherapists.map((therapist) => {
       const countsByPrescription = Object.fromEntries(
-        safePrescriptions.map((prescription) => [prescription, 0])
+        settlementPrescriptions.map((prescription) => [prescription, 0])
       );
 
       const therapistLogs = safeLogs.filter((log) => log?.therapist_name === therapist.name);
 
       therapistLogs.forEach((log) => {
         const normalizedLogPrescription = normalizePrescriptionKey(log?.prescription);
-        const matchedPrescription = safePrescriptions.find(
+        const matchedPrescription = settlementPrescriptions.find(
           (prescription) => normalizePrescriptionKey(prescription) === normalizedLogPrescription
         );
         if (!matchedPrescription) return;
         countsByPrescription[matchedPrescription] += toStatsPrescriptionCount(log?.prescription_count);
       });
 
-      const totalCount = safePrescriptions.reduce(
+      const totalCount = settlementPrescriptions.reduce(
         (sum, prescription) => sum + (countsByPrescription[prescription] || 0),
         0
       );
 
-      const amount = safePrescriptions.reduce((sum, prescription) => {
+      const amount = settlementPrescriptions.reduce((sum, prescription) => {
         const unitPrice = normalizedPriceMap[normalizePrescriptionKey(prescription)] || 0;
         return sum + (countsByPrescription[prescription] || 0) * unitPrice;
       }, 0);
 
-      const incentive = safePrescriptions.reduce((sum, prescription) => {
+      const incentive = settlementPrescriptions.reduce((sum, prescription) => {
         const unitPrice = normalizedPriceMap[normalizePrescriptionKey(prescription)] || 0;
         const prescriptionAmount = (countsByPrescription[prescription] || 0) * unitPrice;
         return sum + Math.round(
@@ -216,7 +217,7 @@ export default function ShockwaveSettlementView({
 
       const incentiveRateBreakdown = buildSettlementIncentiveRateBreakdown({
         countsByPrescription,
-        prescriptions: safePrescriptions,
+        prescriptions: settlementPrescriptions,
         prescriptionPrices: normalizedPriceMap,
         incentivePercentages: normalizedIncentiveMap,
         fallbackIncentivePercentage: incentivePercentage,
@@ -233,7 +234,7 @@ export default function ShockwaveSettlementView({
     });
 
     const grandPrescriptionCounts = Object.fromEntries(
-      safePrescriptions.map((prescription) => [
+      settlementPrescriptions.map((prescription) => [
         prescription,
         summaryByTherapist.reduce(
           (sum, item) => sum + (item.countsByPrescription[prescription] || 0),
@@ -247,7 +248,7 @@ export default function ShockwaveSettlementView({
     const grandIncentive = summaryByTherapist.reduce((sum, item) => sum + item.incentive, 0);
     const grandIncentiveRateBreakdown = buildSettlementIncentiveRateBreakdown({
       countsByPrescription: grandPrescriptionCounts,
-      prescriptions: safePrescriptions,
+      prescriptions: settlementPrescriptions,
       prescriptionPrices: normalizedPriceMap,
       incentivePercentages: normalizedIncentiveMap,
       fallbackIncentivePercentage: incentivePercentage,
@@ -269,14 +270,14 @@ export default function ShockwaveSettlementView({
     normalizedIncentiveMap,
     normalizedPriceMap,
     safeLogs,
-    safePrescriptions,
+    settlementPrescriptions,
   ]);
 
   const horizontalPrescriptions = useMemo(() => {
-    return safePrescriptions.filter(
+    return settlementPrescriptions.filter(
       (prescription) => (settlement.grandPrescriptionCounts[prescription] || 0) > 0
     );
-  }, [safePrescriptions, settlement.grandPrescriptionCounts]);
+  }, [settlement.grandPrescriptionCounts, settlementPrescriptions]);
   const baseHorizontalSummaryPrescriptions = useMemo(() => (
     horizontalPrescriptions.length > 0
       ? horizontalPrescriptions
@@ -309,12 +310,12 @@ export default function ShockwaveSettlementView({
     const groups = showOnlyTherapistPrescriptions
       ? buildTherapistCompletedPrescriptionGroups({
           summaries: displayedTherapistSummaries,
-          prescriptions: safePrescriptions,
+          prescriptions: settlementPrescriptions,
           preserveEmptyColumn: true,
         })
       : buildTherapistPrescriptionDisplayGroups({
           rows: safeLogs,
-          prescriptions: safePrescriptions,
+          prescriptions: settlementPrescriptions,
           therapists: displayTherapists,
           sharedPrescriptionLimit: 0,
           emptyTherapistPrescriptionLimit: 3,
@@ -337,7 +338,7 @@ export default function ShockwaveSettlementView({
     incentivePercentage,
     normalizedIncentiveMap,
     safeLogs,
-    safePrescriptions,
+    settlementPrescriptions,
     showIncentiveRateSubtotals,
     showOnlyTherapistPrescriptions,
   ]);
@@ -518,24 +519,22 @@ export default function ShockwaveSettlementView({
                           >
                             {rateGroup.percentage === null
                               ? formatCurrency(0)
-                              : isIncentivePercentageVisible(rateGroup.percentage)
-                                ? formatCurrency(
-                                    getIncentiveRateSummary(
-                                      item.incentiveRateBreakdown,
-                                      rateGroup.percentage
-                                    ).incentive
-                                  )
-                                : ''}
+                              : formatCurrency(
+                                  getIncentiveRateSummary(
+                                    item.incentiveRateBreakdown,
+                                    rateGroup.percentage
+                                  ).incentive
+                                )}
                           </td>
                         ));
                       })}
                     </tr>
                   )}
                   <tr className={`settlement-incentive-row${showIncentiveRateSubtotals ? ' settlement-rate-total-row' : ''}`}>
-                    <th className="row-label">{showIncentiveRateSubtotals ? (hidesAnyIncentiveRate ? '표시 인센티브 합계' : '전체 인센티브 합계') : incentiveRowLabel}</th>
+                    <th className="row-label">{showIncentiveRateSubtotals ? '전체 인센티브 합계' : incentiveRowLabel}</th>
                     {displayedTherapistSummaries.map((item, therapistIndex) => (
                       <td key={`incentive-${item?.therapist?.id || item?.therapist?.name || therapistIndex}`} colSpan={horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length || 1} className={`merged-value incentive therapist-group-end therapist-tone-${therapistIndex % 5}-cell${horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length === 1 ? ' merged-value--single-prescription' : ''}`}>
-                        {formatCurrency(getDisplayedIncentiveTotal(item.incentiveRateBreakdown))}
+                        {formatCurrency(item.incentive)}
                       </td>
                     ))}
                   </tr>
@@ -614,22 +613,20 @@ export default function ShockwaveSettlementView({
                             className="grand-value merged-value incentive"
                             colSpan={rateGroup.prescriptions.length}
                           >
-                            {isIncentivePercentageVisible(rateGroup.percentage)
-                              ? formatCurrency(
-                                  getIncentiveRateSummary(
-                                    settlement.grandIncentiveRateBreakdown,
-                                    rateGroup.percentage
-                                  ).incentive
-                                )
-                              : ''}
+                            {formatCurrency(
+                              getIncentiveRateSummary(
+                                settlement.grandIncentiveRateBreakdown,
+                                rateGroup.percentage
+                              ).incentive
+                            )}
                           </td>
                         ))}
                       </tr>
                     )}
                     <tr className={`settlement-incentive-row${showIncentiveRateSubtotals ? ' settlement-rate-total-row' : ''}`}>
-                      <th className="row-label">{showIncentiveRateSubtotals ? (hidesAnyIncentiveRate ? '표시 인센티브 합계' : '전체 인센티브 합계') : incentiveRowLabel}</th>
+                      <th className="row-label">{showIncentiveRateSubtotals ? '전체 인센티브 합계' : incentiveRowLabel}</th>
                       <td className="grand-value merged-value incentive" colSpan={horizontalSummaryPrescriptions.length}>
-                        {formatCurrency(getDisplayedIncentiveTotal(settlement.grandIncentiveRateBreakdown))}
+                        {formatCurrency(settlement.grandIncentive)}
                       </td>
                     </tr>
                   </tbody>
@@ -689,12 +686,11 @@ export default function ShockwaveSettlementView({
           currentMonth={currentMonth}
           incentivePercentage={incentivePercentage}
           incentivePercentages={incentivePercentages}
-          hiddenIncentivePercentages={hiddenIncentivePercentages}
           incentiveLabel={incentiveLabel}
           isCryoAdjusted={isCryoAdjusted}
           normalizedPriceMap={normalizedPriceMap}
           onRecentPeriodInputChange={onRecentPeriodInputChange}
-          prescriptions={safePrescriptions}
+          prescriptions={settlementPrescriptions}
           recentMonthlySummaries={displayedRecentMonthlySummaries}
           recentPeriodInput={recentPeriodInput}
           recentPeriodLabel={recentPeriodLabel}
@@ -726,7 +722,7 @@ export default function ShockwaveSettlementView({
               {displayedTherapistSummaries.map((item, therapistIndex) => {
                 const completedPrescriptions = getTherapistCompletedPrescriptions(
                   item,
-                  safePrescriptions
+                  settlementPrescriptions
                 );
                 const therapistPrescriptions = completedPrescriptions.length > 0
                   ? completedPrescriptions
@@ -765,9 +761,7 @@ export default function ShockwaveSettlementView({
                                 <td className="count-val">{count > 0 ? `${count}건` : '-'}</td>
                                 <td className="amount-val">{prescriptionAmount > 0 ? formatCurrency(prescriptionAmount) : '-'}</td>
                                 <td className="incentive-val">
-                                  {isIncentivePercentageVisible(prescriptionIncentivePercentage)
-                                    ? prescriptionIncentive > 0 ? formatCurrency(prescriptionIncentive) : '-'
-                                    : ''}
+                                  {prescriptionIncentive > 0 ? formatCurrency(prescriptionIncentive) : '-'}
                                 </td>
                               </tr>
                             );
@@ -777,8 +771,8 @@ export default function ShockwaveSettlementView({
                           <td>{item.totalCount > 0 ? `${item.totalCount}건` : '-'}</td>
                           <td className="amount-val">{item.amount > 0 ? formatCurrency(item.amount) : '-'}</td>
                           <td className="incentive-val">
-                            {getDisplayedIncentiveTotal(item.incentiveRateBreakdown) > 0
-                              ? formatCurrency(getDisplayedIncentiveTotal(item.incentiveRateBreakdown))
+                            {item.incentive > 0
+                              ? formatCurrency(item.incentive)
                               : '-'}
                           </td>
                         </tr>
@@ -808,7 +802,7 @@ export default function ShockwaveSettlementView({
                         <th>총 합계</th>
                         <td>{settlement.grandTotalCount}건</td>
                         <td className="amount-val">{formatCurrency(settlement.grandAmount)}</td>
-                        <td className="incentive-val">{formatCurrency(getDisplayedIncentiveTotal(settlement.grandIncentiveRateBreakdown))}</td>
+                        <td className="incentive-val">{formatCurrency(settlement.grandIncentive)}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -831,7 +825,7 @@ export default function ShockwaveSettlementView({
                       </tr>
                     </thead>
                     <tbody>
-                      {safePrescriptions
+                      {settlementPrescriptions
                         .filter((prescription) => (settlement.grandPrescriptionCounts[prescription] || 0) > 0)
                         .map((prescription) => {
                           const count = settlement.grandPrescriptionCounts[prescription] || 0;
@@ -848,9 +842,7 @@ export default function ShockwaveSettlementView({
                               <td className="count-val">{count > 0 ? `${count}건` : '-'}</td>
                               <td className="amount-val">{prescriptionAmount > 0 ? formatCurrency(prescriptionAmount) : '-'}</td>
                               <td className="incentive-val">
-                                {isIncentivePercentageVisible(prescriptionIncentivePercentage)
-                                  ? prescriptionIncentive > 0 ? formatCurrency(prescriptionIncentive) : '-'
-                                  : ''}
+                                {prescriptionIncentive > 0 ? formatCurrency(prescriptionIncentive) : '-'}
                               </td>
                             </tr>
                           );

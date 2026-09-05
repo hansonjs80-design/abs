@@ -152,16 +152,29 @@ export function isSettlementIncentiveRateVisible(
     .some((hiddenPercentage) => Number(hiddenPercentage) === normalizedPercentage);
 }
 
-export function getVisibleSettlementIncentiveTotal(
-  incentiveRateBreakdown = [],
+export function filterVisibleSettlementPrescriptions({
+  prescriptions = [],
+  incentivePercentages = {},
   hiddenIncentivePercentages = [],
-) {
-  return (Array.isArray(incentiveRateBreakdown) ? incentiveRateBreakdown : [])
-    .filter((summary) => isSettlementIncentiveRateVisible(
-      summary?.percentage,
-      hiddenIncentivePercentages,
-    ))
-    .reduce((sum, summary) => sum + (Number(summary?.incentive) || 0), 0);
+  fallbackIncentivePercentage = 0,
+} = {}) {
+  const normalizedIncentiveMap = new Map(
+    Object.entries(
+      incentivePercentages && typeof incentivePercentages === 'object' && !Array.isArray(incentivePercentages)
+        ? incentivePercentages
+        : {}
+    ).map(([prescription, percentage]) => [
+      normalizePrescriptionKey(prescription),
+      Math.max(0, Number(percentage) || 0),
+    ])
+  );
+  const fallbackPercentage = Math.max(0, Number(fallbackIncentivePercentage) || 0);
+
+  return (Array.isArray(prescriptions) ? prescriptions : []).filter((prescription) => {
+    const percentage = normalizedIncentiveMap.get(normalizePrescriptionKey(prescription))
+      ?? fallbackPercentage;
+    return isSettlementIncentiveRateVisible(percentage, hiddenIncentivePercentages);
+  });
 }
 
 export function getShockwaveSettlementPrintColumnWeight(prescription) {
