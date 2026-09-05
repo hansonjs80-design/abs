@@ -46,6 +46,7 @@ export const DEFAULT_MANUAL_THERAPY_SETTLEMENT = {
 
 export const DEFAULT_SHINJANG_SPRAY_SETTLEMENT = {
   prescription_incentive_percentages: {},
+  therapist_names: null,
 };
 
 export function getMonthKey(year, month) {
@@ -253,6 +254,9 @@ export function getEffectiveShinjangSpraySettings(settings, year, month) {
       ...DEFAULT_SHINJANG_SPRAY_SETTLEMENT.prescription_incentive_percentages,
       ...(override?.prescription_incentive_percentages || {}),
     },
+    therapist_names: Array.isArray(override?.therapist_names)
+      ? override.therapist_names.map((name) => String(name || '').trim()).filter(Boolean)
+      : DEFAULT_SHINJANG_SPRAY_SETTLEMENT.therapist_names,
     source_month_key: inheritedMonthKey || null,
     target_month_key: monthKey,
   };
@@ -276,6 +280,9 @@ export function setMonthlyShinjangSpraySettings(settings, year, month, nextConfi
       ])
       .filter(([prescription]) => prescription)
   );
+  const therapistNames = Array.isArray(nextConfig?.therapist_names)
+    ? [...new Set(nextConfig.therapist_names.map((name) => String(name || '').trim()).filter(Boolean))]
+    : [];
 
   return {
     ...existing,
@@ -283,6 +290,7 @@ export function setMonthlyShinjangSpraySettings(settings, year, month, nextConfi
       ...(existing[monthKey] || {}),
       shinjang_spray: {
         prescription_incentive_percentages: prescriptionIncentivePercentages,
+        therapist_names: therapistNames,
       },
     },
   };

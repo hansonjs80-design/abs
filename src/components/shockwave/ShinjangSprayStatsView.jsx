@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { buildShinjangSpraySettlementSummary } from '../../lib/shinjangSprayStatsUtils';
 
 function formatCount(value) {
@@ -30,13 +30,15 @@ export default function ShinjangSprayStatsView({
   prescriptionPrices = {},
   incentivePercentages = {},
 }) {
+  const [isCryoAdjusted, setIsCryoAdjusted] = useState(false);
   const summary = useMemo(() => buildShinjangSpraySettlementSummary({
     rows,
     therapists,
     prescriptions,
     prescriptionPrices,
     incentivePercentages,
-  }), [incentivePercentages, prescriptionPrices, prescriptions, rows, therapists]);
+    isCryoAdjusted,
+  }), [incentivePercentages, isCryoAdjusted, prescriptionPrices, prescriptions, rows, therapists]);
   const therapistGroups = useMemo(() => {
     const groups = new Map();
     summary.detailRows.forEach((detail) => {
@@ -61,14 +63,32 @@ export default function ShinjangSprayStatsView({
     <div className="sw-settlement-stack shinjang-spray-settlement-stack">
       <section className="sw-settlement-card shinjang-spray-settlement-card">
         <div className="sw-settlement-header shinjang-spray-settlement-header">
-          <div>
-            <h2>{currentYear}년 {String(currentMonth).padStart(2, '0')}월 신장분사 통계</h2>
-            <p className="shinjang-spray-description">
-              충격파·도수 처방 중 이름에 <strong>(신장분사)</strong>가 포함된 기록을 합산합니다.
-            </p>
+          <div className="shinjang-spray-settlement-heading">
+            <div>
+              <h2>
+                {currentYear}년 {String(currentMonth).padStart(2, '0')}월{' '}
+                {isCryoAdjusted ? '신장분사 크라이오 반영 결산' : '신장분사 결산'}
+              </h2>
+              <p className="shinjang-spray-description">
+                충격파·도수 처방 중 이름에 <strong>(신장분사)</strong>가 포함된 기록을 합산합니다.
+              </p>
+            </div>
+            <button
+              type="button"
+              className={`shinjang-spray-cryo-mode-button${isCryoAdjusted ? ' active' : ''}`}
+              aria-pressed={isCryoAdjusted}
+              onClick={() => setIsCryoAdjusted((current) => !current)}
+            >
+              크라이오 반영 통계
+            </button>
           </div>
           <div className="sw-settlement-meta">
             <span className="sw-settlement-meta-total">총 {formatCount(summary.grandTotalCount)}</span>
+            {isCryoAdjusted && (
+              <span className="shinjang-spray-meta-deduction">
+                크라이오 차감 {formatCurrency(summary.grandCryoDeduction)}
+              </span>
+            )}
             <span className="sw-settlement-meta-sales">결산 {formatCurrency(summary.grandAmount)}</span>
             <span className="sw-settlement-meta-incentive">인센티브 {formatCurrency(summary.grandIncentive)}</span>
           </div>
@@ -88,7 +108,9 @@ export default function ShinjangSprayStatsView({
                   <th>처방</th>
                   <th>원본 통계</th>
                   <th>건수</th>
-                  <th>처방 단가</th>
+                  <th>원본 단가</th>
+                  <th>크라이오 차감</th>
+                  <th>적용 단가</th>
                   <th>결산 금액</th>
                   <th>인센티브율</th>
                   <th>인센티브</th>
@@ -106,6 +128,12 @@ export default function ShinjangSprayStatsView({
                       <th className="shinjang-spray-prescription-cell">{detail.prescription}</th>
                       <td><span className="shinjang-spray-source-badge">{formatTreatmentTypes(detail.treatmentTypes)}</span></td>
                       <td>{formatCount(detail.count)}</td>
+                      <td>{detail.baseUnitPrice ? formatCurrency(detail.baseUnitPrice) : '—'}</td>
+                      <td className={isCryoAdjusted && detail.isCryo ? 'cryo-deduction' : ''}>
+                        {isCryoAdjusted && detail.isCryo
+                          ? (detail.hasMixedCryoPrices ? '혼합' : `-${formatCurrency(detail.cryoPrice)}`)
+                          : '—'}
+                      </td>
                       <td>{detail.hasMixedUnitPrices ? '혼합 단가' : formatCurrency(detail.unitPrice)}</td>
                       <td className="amount">{formatCurrency(detail.amount)}</td>
                       <td>{formatPercentage(detail.incentivePercentage)}</td>
@@ -115,6 +143,8 @@ export default function ShinjangSprayStatsView({
                   <tr key={`${group.therapist.id}-subtotal`} className="shinjang-spray-subtotal-row">
                     <th colSpan={2}>치료사 소계</th>
                     <td>{formatCount(group.totalCount)}</td>
+                    <td>—</td>
+                    <td>{isCryoAdjusted ? `-${formatCurrency(group.rows.reduce((sum, row) => sum + row.cryoDeduction, 0))}` : '—'}</td>
                     <td>—</td>
                     <td className="amount">{formatCurrency(group.amount)}</td>
                     <td>—</td>
@@ -126,6 +156,8 @@ export default function ShinjangSprayStatsView({
                 <tr>
                   <th colSpan={3}>전체 합계</th>
                   <td>{formatCount(summary.grandTotalCount)}</td>
+                  <td>—</td>
+                  <td>{isCryoAdjusted ? `-${formatCurrency(summary.grandCryoDeduction)}` : '—'}</td>
                   <td>—</td>
                   <td>{formatCurrency(summary.grandAmount)}</td>
                   <td>처방별 적용</td>

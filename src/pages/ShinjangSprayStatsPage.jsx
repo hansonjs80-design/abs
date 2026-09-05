@@ -3,7 +3,8 @@ import { RefreshCw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchedule } from '../contexts/ScheduleContext';
 import { useToast } from '../components/common/Toast';
-import { SettlementSkeleton } from '../components/common/LoadingSkeleton';
+import { GridSkeleton, SettlementSkeleton } from '../components/common/LoadingSkeleton';
+import ShockwaveDataGrid from '../components/shockwave/ShockwaveDataGrid';
 import ShinjangSprayStatsView from '../components/shockwave/ShinjangSprayStatsView';
 import ShinjangSpraySettingsPanel from '../components/shockwave/ShinjangSpraySettingsPanel';
 import { supabase } from '../lib/supabaseClient';
@@ -11,6 +12,8 @@ import { isAdminUser } from '../lib/authPermissions';
 import { getTodayKST } from '../lib/calendarUtils';
 import { buildDisplayTherapists } from '../lib/therapistDisplayUtils';
 import { normalizeManualTherapyLogRows } from '../lib/manualTherapyLogUtils';
+import { syncMonthManualTherapyScheduleToStats } from '../lib/manualTherapyUtils';
+import { syncMonthShockwaveScheduleToStats } from '../lib/shockwaveSyncUtils';
 import {
   getEffectiveSettlementSettings,
   getEffectiveShinjangSpraySettings,
@@ -88,7 +91,7 @@ export default function ShinjangSprayStatsPage() {
   const { user } = useAuth();
   const { addToast } = useToast();
   const canManageSettings = isAdminUser(user);
-  const [activeSection, setActiveSection] = useState('settlement');
+  const [activeSection, setActiveSection] = useState('grid');
   const [shockwaveLogs, setShockwaveLogs] = useState([]);
   const [manualLogs, setManualLogs] = useState([]);
   const [localShockwaveTherapists, setLocalShockwaveTherapists] = useState([]);
@@ -110,7 +113,7 @@ export default function ShinjangSprayStatsPage() {
 
   useEffect(() => {
     if (!canManageSettings && activeSection === 'settings') {
-      setActiveSection('settlement');
+      setActiveSection('grid');
     }
   }, [activeSection, canManageSettings]);
 
@@ -125,8 +128,6 @@ export default function ShinjangSprayStatsPage() {
         loadedMonthlyManual,
         loadedMemos,
         loadedSettings,
-        shockwaveResult,
-        manualResult,
       ] = await Promise.all([
         loadTherapists({ force }),
         loadManualTherapists({ force }),
@@ -134,12 +135,8 @@ export default function ShinjangSprayStatsPage() {
         loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy'),
         loadShockwaveMemos(currentYear, currentMonth, { force, silent: true }),
         loadShockwaveSettings({ force }),
-        buildMonthQuery('shockwave_patient_logs', currentYear, currentMonth),
-        buildMonthQuery('manual_therapy_patient_logs', currentYear, currentMonth),
       ]);
       if (requestId !== requestIdRef.current) return;
-      if (shockwaveResult.error) throw shockwaveResult.error;
-      if (manualResult.error) throw manualResult.error;
 
       const settingsForMonth = loadedSettings || settingsRef.current || {};
       const manualSettings = getEffectiveSettlementSettings(
@@ -151,6 +148,53 @@ export default function ShinjangSprayStatsPage() {
       const memosForMonth = loadedMemos && typeof loadedMemos === 'object'
         ? loadedMemos
         : memosRef.current;
+      const hasAuthoritativeSchedule = Boolean(loadedMemos && typeof loadedMemos === 'object');
+
+      if (hasAuthoritativeSchedule) {
+        const syncTasks = [];
+        if (Array.isArray(loadedShockwaveTherapists) && loadedShockwaveTherapists.length > 0) {
+          syncTasks.push(syncMonthShockwaveScheduleToStats({
+            year: currentYear,
+            month: currentMonth,
+            memos: memosForMonth,
+            therapists: loadedShockwaveTherapists,
+            monthlyTherapists: loadedMonthlyShockwave,
+            settings: settingsForMonth,
+            upToToday: true,
+            scheduleAuthoritative: true,
+            emitEvent: false,
+            replaceExistingMonthLogs: true,
+          }));
+        }
+        if (Array.isArray(loadedManualTherapists) && loadedManualTherapists.length > 0) {
+          syncTasks.push(syncMonthManualTherapyScheduleToStats({
+            year: currentYear,
+            month: currentMonth,
+            memos: memosForMonth,
+            therapists: loadedManualTherapists,
+            monthlyTherapists: loadedMonthlyManual,
+            settings: settingsForMonth,
+            upToToday: true,
+            scheduleAuthoritative: true,
+            emitEvent: false,
+            replaceExistingMonthLogs: true,
+          }));
+        }
+        const syncResults = await Promise.allSettled(syncTasks);
+        syncResults.forEach((result) => {
+          if (result.status === 'rejected') {
+            console.error('Shinjang spray source statistics sync failed:', result.reason);
+          }
+        });
+      }
+
+      const [shockwaveResult, manualResult] = await Promise.all([
+        buildMonthQuery('shockwave_patient_logs', currentYear, currentMonth),
+        buildMonthQuery('manual_therapy_patient_logs', currentYear, currentMonth),
+      ]);
+      if (requestId !== requestIdRef.current) return;
+      if (shockwaveResult.error) throw shockwaveResult.error;
+      if (manualResult.error) throw manualResult.error;
       const normalizedManualLogs = normalizeManualTherapyLogRows(
         manualResult.data || [],
         manualSettings.prescriptions,
@@ -159,7 +203,7 @@ export default function ShinjangSprayStatsPage() {
           year: currentYear,
           month: currentMonth,
           settings: settingsForMonth,
-          scheduleAuthoritative: loadedMemos && typeof loadedMemos === 'object',
+          scheduleAuthoritative: hasAuthoritativeSchedule,
         }
       );
 
@@ -193,6 +237,12 @@ export default function ShinjangSprayStatsPage() {
   }, [refreshData]);
 
   useEffect(() => {
+    const handleStatsUpdated = () => refreshData();
+    window.addEventListener('clinic-stats-updated', handleStatsUpdated);
+    return () => window.removeEventListener('clinic-stats-updated', handleStatsUpdated);
+  }, [refreshData]);
+
+  useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') refreshData({ force: true });
     };
@@ -222,7 +272,20 @@ export default function ShinjangSprayStatsPage() {
     manualTherapyRows: manualLogs,
     shockwavePrescriptionPrices: shockwaveSettlementSettings.prescription_prices,
     manualTherapyPrescriptionPrices: manualSettlementSettings.prescription_prices,
-  }), [manualLogs, manualSettlementSettings.prescription_prices, shockwaveLogs, shockwaveSettlementSettings.prescription_prices]);
+    shockwaveCryoPrescriptions: shockwaveSettlementSettings.cryo_prescriptions,
+    shockwaveCryoPrices: shockwaveSettlementSettings.cryo_prices,
+    manualTherapyCryoPrescriptions: manualSettlementSettings.cryo_prescriptions,
+    manualTherapyCryoPrices: manualSettlementSettings.cryo_prices,
+  }), [
+    manualLogs,
+    manualSettlementSettings.cryo_prescriptions,
+    manualSettlementSettings.cryo_prices,
+    manualSettlementSettings.prescription_prices,
+    shockwaveLogs,
+    shockwaveSettlementSettings.cryo_prescriptions,
+    shockwaveSettlementSettings.cryo_prices,
+    shockwaveSettlementSettings.prescription_prices,
+  ]);
   const prescriptions = useMemo(() => buildShinjangSprayPrescriptions({
     configuredPrescriptions: [
       ...shockwaveSettlementSettings.prescriptions,
@@ -234,7 +297,15 @@ export default function ShinjangSprayStatsPage() {
     ...shockwaveSettlementSettings.prescription_prices,
     ...manualSettlementSettings.prescription_prices,
   }), [manualSettlementSettings.prescription_prices, shockwaveSettlementSettings.prescription_prices]);
-  const displayTherapists = useMemo(() => buildUniqueTherapists({
+  const cryoPrescriptions = useMemo(() => ([
+    ...shockwaveSettlementSettings.cryo_prescriptions,
+    ...manualSettlementSettings.cryo_prescriptions,
+  ]), [manualSettlementSettings.cryo_prescriptions, shockwaveSettlementSettings.cryo_prescriptions]);
+  const cryoPrices = useMemo(() => ({
+    ...shockwaveSettlementSettings.cryo_prices,
+    ...manualSettlementSettings.cryo_prices,
+  }), [manualSettlementSettings.cryo_prices, shockwaveSettlementSettings.cryo_prices]);
+  const availableTherapists = useMemo(() => buildUniqueTherapists({
     rows: combinedRows,
     shockwaveTherapists: localShockwaveTherapists.length > 0 ? localShockwaveTherapists : therapists,
     manualTherapists: localManualTherapists.length > 0 ? localManualTherapists : manualTherapists,
@@ -249,8 +320,41 @@ export default function ShinjangSprayStatsPage() {
     monthlyShockwaveTherapists,
     therapists,
   ]);
+  const displayTherapists = useMemo(() => {
+    if (!Array.isArray(spraySettings.therapist_names)) return availableTherapists;
+    const configuredNames = new Set(spraySettings.therapist_names);
+    return availableTherapists.filter((therapist) => configuredNames.has(therapist.name));
+  }, [availableTherapists, spraySettings.therapist_names]);
+  const therapistNameList = useMemo(
+    () => displayTherapists.map((therapist) => therapist.name).filter(Boolean),
+    [displayTherapists]
+  );
+  const therapistNameKey = useMemo(() => therapistNameList.join('\u0001'), [therapistNameList]);
+  const [selectedTherapistNames, setSelectedTherapistNames] = useState([]);
+  useEffect(() => {
+    setSelectedTherapistNames(therapistNameList);
+  }, [therapistNameKey, therapistNameList]);
+  const selectedTherapistSet = useMemo(
+    () => new Set(selectedTherapistNames),
+    [selectedTherapistNames]
+  );
+  const selectedDisplayTherapists = useMemo(() => (
+    displayTherapists.filter((therapist) => selectedTherapistSet.has(therapist.name))
+  ), [displayTherapists, selectedTherapistSet]);
+  const toggleTherapistFilter = useCallback((name) => {
+    setSelectedTherapistNames((current) => {
+      if (current.includes(name)) {
+        if (current.length <= 1) return current;
+        return current.filter((item) => item !== name);
+      }
+      return [...current, name];
+    });
+  }, []);
 
-  const handleSaveSettings = useCallback(async (prescriptionIncentivePercentages) => {
+  const handleSaveSettings = useCallback(async ({
+    prescriptionIncentivePercentages,
+    therapistNames,
+  }) => {
     const settingsToUpdate = settingsRef.current || shockwaveSettings || {};
     const nextSettings = {
       ...settingsToUpdate,
@@ -258,7 +362,10 @@ export default function ShinjangSprayStatsPage() {
         settingsToUpdate,
         currentYear,
         currentMonth,
-        { prescription_incentive_percentages: prescriptionIncentivePercentages }
+        {
+          prescription_incentive_percentages: prescriptionIncentivePercentages,
+          therapist_names: therapistNames,
+        }
       ),
     };
     const ok = await saveShockwaveSettings(nextSettings);
@@ -267,7 +374,7 @@ export default function ShinjangSprayStatsPage() {
       await loadShockwaveSettings({ force: true });
     }
     addToast(
-      ok ? '이번 달 신장분사 인센티브 설정을 저장했습니다.' : '신장분사 설정 저장에 실패했습니다.',
+      ok ? '이번 달 신장분사 치료사·인센티브 설정을 저장했습니다.' : '신장분사 설정 저장에 실패했습니다.',
       ok ? 'success' : 'error'
     );
     return ok;
@@ -288,10 +395,17 @@ export default function ShinjangSprayStatsPage() {
           <aside className="sw-stats-sidebar">
             <button
               type="button"
-              className={`sw-stats-side-tab sw-stats-side-tab--shinjang${activeSection === 'settlement' ? ' active' : ''}`}
+              className={`sw-stats-side-tab sw-stats-side-tab--grid${activeSection === 'grid' ? ' active' : ''}`}
+              onClick={() => setActiveSection('grid')}
+            >
+              신장분사 현황
+            </button>
+            <button
+              type="button"
+              className={`sw-stats-side-tab sw-stats-side-tab--settlement${activeSection === 'settlement' ? ' active' : ''}`}
               onClick={() => setActiveSection('settlement')}
             >
-              신장분사 통계
+              신장분사 결산
             </button>
             {canManageSettings && (
               <button
@@ -315,9 +429,69 @@ export default function ShinjangSprayStatsPage() {
                 {isLoading ? '새로 고침 중...' : '새로 고침'}
               </button>
             </div>
+            {therapistNameList.length > 1 && (
+              <div className="sw-sidebar-filter" aria-label="치료사 필터">
+                <div className="sw-sidebar-filter-title">치료사 필터</div>
+                <div className="sw-sidebar-filter-list">
+                  {displayTherapists.map((therapist, index) => {
+                    const isSelected = selectedTherapistSet.has(therapist.name);
+                    const isLastSelected = isSelected && selectedTherapistNames.length <= 1;
+                    return (
+                      <label
+                        key={therapist.key || therapist.name}
+                        className={`sw-sidebar-filter-chip tone-${index % 5} ${isSelected ? 'is-active' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          disabled={isLastSelected}
+                          onChange={() => toggleTherapistFilter(therapist.name)}
+                        />
+                        <span>{therapist.displayName || therapist.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  className="sw-sidebar-filter-reset"
+                  onClick={() => setSelectedTherapistNames(therapistNameList)}
+                >
+                  전체 선택
+                </button>
+              </div>
+            )}
           </aside>
 
           <main className="sw-stats-panel">
+            {activeSection === 'grid' && (
+              <div className="sw-stats-body sw-stats-body--grid fade-transition-wrapper">
+                {isLoading && combinedRows.length === 0 ? (
+                  <GridSkeleton rows={12} cols={8} />
+                ) : (
+                  <div className="sw-grid-card">
+                    <div className="sw-grid-card-table">
+                      <ShockwaveDataGrid
+                        logs={combinedRows}
+                        therapists={displayTherapists}
+                        monthlyTherapists={[]}
+                        currentYear={currentYear}
+                        currentMonth={currentMonth}
+                        fetchLogs={refreshData}
+                        prescriptions={prescriptions}
+                        totalRecordCount={combinedRows.length}
+                        therapistCount={displayTherapists.length}
+                        title={`${currentYear}년 ${String(currentMonth).padStart(2, '0')}월 신장분사 현황`}
+                        secondarySummaryLabel="신환"
+                        selectedTherapistNames={selectedTherapistNames}
+                        onSelectedTherapistNamesChange={setSelectedTherapistNames}
+                        readOnly
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             {activeSection === 'settlement' && (
               <div className="sw-stats-body sw-stats-body--settlement fade-transition-wrapper">
                 {isLoading && combinedRows.length === 0 ? (
@@ -327,7 +501,7 @@ export default function ShinjangSprayStatsPage() {
                     currentYear={currentYear}
                     currentMonth={currentMonth}
                     rows={combinedRows}
-                    therapists={displayTherapists}
+                    therapists={selectedDisplayTherapists}
                     prescriptions={prescriptions}
                     prescriptionPrices={prescriptionPrices}
                     incentivePercentages={spraySettings.prescription_incentive_percentages}
@@ -342,6 +516,9 @@ export default function ShinjangSprayStatsPage() {
                   month={currentMonth}
                   prescriptions={prescriptions}
                   prescriptionPrices={prescriptionPrices}
+                  cryoPrescriptions={cryoPrescriptions}
+                  cryoPrices={cryoPrices}
+                  therapists={availableTherapists}
                   effectiveSettings={spraySettings}
                   onSave={handleSaveSettings}
                 />

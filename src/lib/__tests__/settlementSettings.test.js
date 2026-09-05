@@ -31,6 +31,7 @@ describe('monthly settlement shortcut settings', () => {
           'F2.5(신장분사)': 7.5,
           '도수 40분(신장분사)': 11,
         },
+        therapist_names: ['주한솔', ' 김치료 ', '주한솔'],
       }
     );
     const nextSettings = { ...settings, monthly_settlement_settings };
@@ -45,6 +46,17 @@ describe('monthly settlement shortcut settings', () => {
         'F2.5(신장분사)': 7.5,
         '도수 40분(신장분사)': 11,
       }
+    );
+    assert.deepEqual(
+      getEffectiveShinjangSpraySettings(nextSettings, 2026, 10).therapist_names,
+      ['주한솔', '김치료']
+    );
+  });
+
+  it('uses every available shinjang spray therapist until a monthly list is saved', () => {
+    assert.equal(
+      getEffectiveShinjangSpraySettings({}, 2026, 9).therapist_names,
+      null
     );
   });
 

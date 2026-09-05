@@ -1,5 +1,5 @@
-.sw-stats-container--shinjang .sw-stats-side-tab--shinjang:hover,
-.sw-stats-container--shinjang .sw-stats-side-tab--shinjang.active {
+.sw-stats-container--shinjang .sw-stats-side-tab--grid:hover,
+.sw-stats-container--shinjang .sw-stats-side-tab--grid.active {
   border-color: #67e8f9;
   background: #cffafe;
 }
@@ -19,13 +19,54 @@
   color: #0e7490;
 }
 
+.shinjang-spray-settlement-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.shinjang-spray-cryo-mode-button {
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid #67e8f9;
+  border-radius: 6px;
+  background: #ecfeff;
+  color: #0e7490;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.shinjang-spray-cryo-mode-button:hover {
+  border-color: #22d3ee;
+  background: #cffafe;
+}
+
+.shinjang-spray-cryo-mode-button.active {
+  border-color: #0e7490;
+  background: #0e7490;
+  color: #fff;
+}
+
+.shinjang-spray-cryo-mode-button:focus-visible {
+  outline: 2px solid #67e8f9;
+  outline-offset: 2px;
+}
+
+.shinjang-spray-meta-deduction {
+  color: #b45309;
+}
+
 .shinjang-spray-table-wrap {
   max-width: 100%;
 }
 
 .shinjang-spray-table {
   width: 100%;
-  min-width: 840px;
+  min-width: 1080px;
   border-collapse: separate;
   border-spacing: 0;
   table-layout: auto;
@@ -88,6 +129,10 @@
   color: #7357c8;
 }
 
+.shinjang-spray-table .cryo-deduction {
+  color: #b45309;
+}
+
 .shinjang-spray-table .shinjang-spray-subtotal-row th,
 .shinjang-spray-table .shinjang-spray-subtotal-row td {
   background: #f1f5f9;
@@ -114,9 +159,109 @@
   border-radius: 12px;
 }
 
+.shinjang-spray-cryo-settings-note {
+  margin: 0;
+  padding: 11px 14px;
+  border-bottom: 1px solid #bae6fd;
+  background: #f0f9ff;
+  color: #0e7490;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.shinjang-spray-therapist-settings {
+  display: grid;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
+  background: #f0f9ff;
+}
+
+.shinjang-spray-settings-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.shinjang-spray-settings-section-heading h3 {
+  margin: 0;
+  color: #164e63;
+  font-size: 0.94rem;
+  font-weight: 900;
+}
+
+.shinjang-spray-settings-section-heading p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.shinjang-spray-select-all-button {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid #67e8f9;
+  border-radius: 7px;
+  background: #ecfeff;
+  color: #0e7490;
+  font-size: 0.76rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.shinjang-spray-select-all-button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.shinjang-spray-therapist-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.shinjang-spray-therapist-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.shinjang-spray-therapist-option.is-active {
+  border-color: #0891b2;
+  background: #cffafe;
+  color: #164e63;
+}
+
+.shinjang-spray-therapist-option input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: #0891b2;
+}
+
+.shinjang-spray-setting-empty {
+  padding: 12px;
+  color: #64748b;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
 .shinjang-spray-settings-row {
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) 180px 180px;
+  grid-template-columns: minmax(240px, 1fr) 150px 110px 150px 170px;
   align-items: center;
   min-height: 56px;
   border-bottom: 1px solid #e2e8f0;
@@ -142,6 +287,27 @@
 .shinjang-spray-settings-price {
   color: #1454b8;
   font-weight: 800;
+}
+
+.shinjang-spray-settings-cryo-price {
+  color: #b45309;
+  font-weight: 800;
+}
+
+.shinjang-spray-cryo-status {
+  justify-self: start;
+  margin-left: 14px;
+  padding: 4px 8px !important;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.shinjang-spray-cryo-status.is-active {
+  background: #ffedd5;
+  color: #9a3412;
 }
 
 .shinjang-spray-percentage-field {
@@ -171,7 +337,7 @@
   }
 
   .shinjang-spray-settings-row {
-    min-width: 660px;
+    min-width: 860px;
   }
 }
 
@@ -187,5 +353,9 @@
   .shinjang-spray-settlement-card {
     width: 100%;
     box-shadow: none;
+  }
+
+  .shinjang-spray-cryo-mode-button {
+    display: none !important;
   }
 }

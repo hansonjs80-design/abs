@@ -43,11 +43,15 @@ describe('shinjang spray statistics', () => {
       ],
       shockwavePrescriptionPrices: { 'F2.5(신장분사)': 70000 },
       manualTherapyPrescriptionPrices: { '도수40(신장분사)': 90000 },
+      manualTherapyCryoPrescriptions: ['도수40(신장분사)'],
+      manualTherapyCryoPrices: { '도수40(신장분사)': 15000 },
     });
 
     assert.equal(rows.length, 1);
     assert.equal(rows[0].treatment_type, 'manual_therapy');
     assert.equal(rows[0].unit_price, 90000);
+    assert.equal(rows[0].cryo_price, 15000);
+    assert.equal(rows[0].cryo_adjusted_unit_price, 75000);
   });
 
   it('keeps configured order and applies different incentive rates by prescription', () => {
@@ -77,5 +81,37 @@ describe('shinjang spray statistics', () => {
       summary.detailRows.map((row) => [row.prescription, row.incentive]),
       [['A(신장분사)', 5000], ['B(신장분사)', 10000]]
     );
+  });
+
+  it('subtracts source cryo prices before applying each prescription incentive', () => {
+    const rows = mergeShinjangSprayLogs({
+      shockwaveRows: [
+        { therapist_name: '주한솔', prescription: 'A(신장분사)', prescription_count: 2 },
+      ],
+      manualTherapyRows: [
+        { therapist_name: '주한솔', prescription: 'B(신장분사)', prescription_count: 1 },
+      ],
+      shockwavePrescriptionPrices: { 'A(신장분사)': 70000 },
+      manualTherapyPrescriptionPrices: { 'B(신장분사)': 90000 },
+      shockwaveCryoPrescriptions: ['A(신장분사)'],
+      shockwaveCryoPrices: { 'A(신장분사)': 15000 },
+      manualTherapyCryoPrescriptions: ['B(신장분사)'],
+      manualTherapyCryoPrices: { 'B(신장분사)': 10000 },
+    });
+    const summary = buildShinjangSpraySettlementSummary({
+      rows,
+      prescriptions: ['A(신장분사)', 'B(신장분사)'],
+      therapists: [{ name: '주한솔' }],
+      incentivePercentages: {
+        'A(신장분사)': 10,
+        'B(신장분사)': 5,
+      },
+      isCryoAdjusted: true,
+    });
+
+    assert.equal(summary.grandBaseAmount, 230000);
+    assert.equal(summary.grandCryoDeduction, 40000);
+    assert.equal(summary.grandAmount, 190000);
+    assert.equal(summary.grandIncentive, 15000);
   });
 });

@@ -40,6 +40,38 @@ function getNormalizedMapValue(values, prescription) {
   return match?.[1];
 }
 
+function isConfiguredPrescription(values, prescription) {
+  return (Array.isArray(values) ? values : []).some((configuredPrescription) => (
+    statsPrescriptionsMatch(configuredPrescription, prescription)
+  ));
+}
+
+function buildSourceRow({
+  row,
+  treatmentType,
+  prescriptionPrices,
+  cryoPrescriptions,
+  cryoPrices,
+}) {
+  const unitPrice = Math.max(
+    0,
+    Number(getNormalizedMapValue(prescriptionPrices, row?.prescription)) || 0
+  );
+  const isCryo = isConfiguredPrescription(cryoPrescriptions, row?.prescription);
+  const cryoPrice = isCryo
+    ? Math.max(0, Number(getNormalizedMapValue(cryoPrices, row?.prescription)) || 0)
+    : 0;
+
+  return {
+    ...row,
+    treatment_type: treatmentType,
+    unit_price: unitPrice,
+    is_cryo: isCryo,
+    cryo_price: cryoPrice,
+    cryo_adjusted_unit_price: Math.max(0, unitPrice - cryoPrice),
+  };
+}
+
 export function isShinjangSprayPrescription(value) {
   return normalizeMarkerText(value).includes('(신장분사)');
 }
@@ -49,23 +81,25 @@ export function mergeShinjangSprayLogs({
   manualTherapyRows = [],
   shockwavePrescriptionPrices = {},
   manualTherapyPrescriptionPrices = {},
+  shockwaveCryoPrescriptions = [],
+  shockwaveCryoPrices = {},
+  manualTherapyCryoPrescriptions = [],
+  manualTherapyCryoPrices = {},
 } = {}) {
   const candidates = [
-    ...(Array.isArray(shockwaveRows) ? shockwaveRows : []).map((row) => ({
-      ...row,
-      treatment_type: 'shockwave',
-      unit_price: Math.max(0, Number(getNormalizedMapValue(
-        shockwavePrescriptionPrices,
-        row?.prescription
-      )) || 0),
+    ...(Array.isArray(shockwaveRows) ? shockwaveRows : []).map((row) => buildSourceRow({
+      row,
+      treatmentType: 'shockwave',
+      prescriptionPrices: shockwavePrescriptionPrices,
+      cryoPrescriptions: shockwaveCryoPrescriptions,
+      cryoPrices: shockwaveCryoPrices,
     })),
-    ...(Array.isArray(manualTherapyRows) ? manualTherapyRows : []).map((row) => ({
-      ...row,
-      treatment_type: 'manual_therapy',
-      unit_price: Math.max(0, Number(getNormalizedMapValue(
-        manualTherapyPrescriptionPrices,
-        row?.prescription
-      )) || 0),
+    ...(Array.isArray(manualTherapyRows) ? manualTherapyRows : []).map((row) => buildSourceRow({
+      row,
+      treatmentType: 'manual_therapy',
+      prescriptionPrices: manualTherapyPrescriptionPrices,
+      cryoPrescriptions: manualTherapyCryoPrescriptions,
+      cryoPrices: manualTherapyCryoPrices,
     })),
   ].filter((row) => isShinjangSprayPrescription(row?.prescription));
   const rowsByKey = new Map();
@@ -112,6 +146,7 @@ export function buildShinjangSpraySettlementSummary({
   therapists = [],
   prescriptionPrices = {},
   incentivePercentages = {},
+  isCryoAdjusted = false,
 } = {}) {
   const safeRows = Array.isArray(rows) ? rows.filter(Boolean) : [];
   const safePrescriptions = Array.isArray(prescriptions) ? prescriptions.filter(Boolean) : [];
@@ -136,12 +171,22 @@ export function buildShinjangSpraySettlementSummary({
         0,
         Number(getNormalizedMapValue(prescriptionPrices, prescription)) || 0
       );
-      const amount = matchingRows.reduce((sum, row) => {
+      const baseAmount = matchingRows.reduce((sum, row) => {
         const rowCount = toStatsPrescriptionCount(row?.prescription_count);
-        const unitPrice = Number.isFinite(Number(row?.unit_price))
+        const baseUnitPrice = Number.isFinite(Number(row?.unit_price))
           ? Math.max(0, Number(row.unit_price))
           : configuredUnitPrice;
-        return sum + (rowCount * unitPrice);
+        return sum + (rowCount * baseUnitPrice);
+      }, 0);
+      const amount = matchingRows.reduce((sum, row) => {
+        const rowCount = toStatsPrescriptionCount(row?.prescription_count);
+        const baseUnitPrice = Number.isFinite(Number(row?.unit_price))
+          ? Math.max(0, Number(row.unit_price))
+          : configuredUnitPrice;
+        const appliedUnitPrice = isCryoAdjusted && row?.is_cryo
+          ? Math.max(0, Number(row?.cryo_adjusted_unit_price) || 0)
+          : baseUnitPrice;
+        return sum + (rowCount * appliedUnitPrice);
       }, 0);
       const incentivePercentage = Math.max(
         0,
@@ -153,9 +198,23 @@ export function buildShinjangSpraySettlementSummary({
       )];
       const rowUnitPrices = [...new Set(
         matchingRows.map((row) => (
+          isCryoAdjusted && row?.is_cryo
+            ? Math.max(0, Number(row?.cryo_adjusted_unit_price) || 0)
+            : Number.isFinite(Number(row?.unit_price))
+              ? Math.max(0, Number(row.unit_price))
+              : configuredUnitPrice
+        ))
+      )];
+      const baseUnitPrices = [...new Set(
+        matchingRows.map((row) => (
           Number.isFinite(Number(row?.unit_price))
             ? Math.max(0, Number(row.unit_price))
             : configuredUnitPrice
+        ))
+      )];
+      const cryoPriceValues = [...new Set(
+        matchingRows.filter((row) => row?.is_cryo).map((row) => (
+          Math.max(0, Number(row?.cryo_price) || 0)
         ))
       )];
 
@@ -170,6 +229,12 @@ export function buildShinjangSpraySettlementSummary({
         treatmentTypes,
         unitPrice: rowUnitPrices.length === 1 ? rowUnitPrices[0] : configuredUnitPrice,
         hasMixedUnitPrices: rowUnitPrices.length > 1,
+        baseUnitPrice: baseUnitPrices.length === 1 ? baseUnitPrices[0] : configuredUnitPrice,
+        cryoPrice: cryoPriceValues.length === 1 ? cryoPriceValues[0] : 0,
+        hasMixedCryoPrices: cryoPriceValues.length > 1,
+        isCryo: matchingRows.some((row) => row?.is_cryo),
+        baseAmount,
+        cryoDeduction: Math.max(0, baseAmount - amount),
         amount,
         incentivePercentage,
         incentive,
@@ -181,6 +246,8 @@ export function buildShinjangSpraySettlementSummary({
     detailRows,
     grandTotalCount: detailRows.reduce((sum, row) => sum + row.count, 0),
     grandAmount: detailRows.reduce((sum, row) => sum + row.amount, 0),
+    grandBaseAmount: detailRows.reduce((sum, row) => sum + row.baseAmount, 0),
+    grandCryoDeduction: detailRows.reduce((sum, row) => sum + row.cryoDeduction, 0),
     grandIncentive: detailRows.reduce((sum, row) => sum + row.incentive, 0),
   };
 }
