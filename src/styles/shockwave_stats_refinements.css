@@ -1732,6 +1732,49 @@
   white-space: nowrap;
 }
 
+.sw-manual-settlement-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sw-manual-cryo-mode-button {
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid #67e8f9;
+  border-radius: 6px;
+  background: #ecfeff;
+  color: #0e7490;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.sw-manual-cryo-mode-button:hover {
+  border-color: #22d3ee;
+  background: #cffafe;
+}
+
+.sw-manual-cryo-mode-button.active {
+  border-color: #0e7490;
+  background: #0e7490;
+  color: #ffffff;
+}
+
+.sw-manual-cryo-mode-button:focus-visible {
+  outline: 2px solid #67e8f9;
+  outline-offset: 2px;
+}
+
+@media print {
+  .sw-manual-cryo-mode-button {
+    display: none !important;
+  }
+}
+
 .sw-manual-settlement-container .sw-settlement-meta {
   flex: 0 0 auto;
   flex-wrap: nowrap;
@@ -2035,5 +2078,46 @@
 
   .sw-manual-summary-card .sw-summary-table {
     min-width: 640px;
+  }
+}
+
+/* Keep long manual-therapy amount and incentive labels fully readable. */
+.sw-manual-settlement-container--readable {
+  grid-template-columns: minmax(760px, 1.9fr) minmax(360px, 0.82fr);
+}
+
+.sw-manual-settlement-container--readable:has(.sw-manual-settlement-stack--narrow) {
+  grid-template-columns: 620px minmax(480px, 600px);
+  width: min(100%, 1238px);
+}
+
+.sw-manual-settlement-container--readable
+  .sw-manual-settlement-main-card .sw-manual-compact-settlement-table {
+  min-width: 820px;
+}
+
+.sw-manual-settlement-container--readable
+  .sw-manual-settlement-main-card .sw-manual-settlement-label-column,
+.sw-manual-settlement-container--readable
+  .sw-manual-settlement-main-card .sw-manual-compact-settlement-table .label-col,
+.sw-manual-settlement-container--readable
+  .sw-manual-settlement-main-card .sw-manual-compact-settlement-table .row-label {
+  width: 230px;
+  min-width: 230px;
+  max-width: 230px;
+  overflow: visible;
+  text-overflow: unset;
+}
+
+.sw-manual-settlement-container--readable
+  .sw-manual-settlement-main-card .sw-manual-compact-settlement-table--narrow {
+  min-width: 600px;
+}
+
+@media (max-width: 1280px) {
+  .sw-manual-settlement-container--readable,
+  .sw-manual-settlement-container--readable:has(.sw-manual-settlement-stack--narrow) {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
   }
 }

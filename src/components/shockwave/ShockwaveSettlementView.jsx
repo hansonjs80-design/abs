@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 import {
+  buildCryoAdjustedPrescriptionPrices,
   buildShockwaveSettlementPrintColumnWidths,
   buildTherapistPrescriptionDisplayGroups,
   normalizePrescriptionKey,
@@ -44,6 +45,8 @@ export default function ShockwaveSettlementView({
   currentMonth,
   prescriptions,
   prescriptionPrices,
+  cryoPrescriptions = [],
+  cryoPrices = {},
   incentivePercentage,
   recentMonthlySummaries = [],
   recentPeriodInput = '최근 6개월',
@@ -54,11 +57,14 @@ export default function ShockwaveSettlementView({
   recentSummariesLoading = false,
 }) {
   const [viewMode, setViewMode] = useState(readStoredViewMode); // 'horizontal' | 'horizontal2' | 'vertical'
-  const handleViewModeChange = useCallback((nextViewMode) => {
+  const [pricingMode, setPricingMode] = useState('standard'); // 'standard' | 'cryo'
+  const handleViewModeChange = useCallback((nextViewMode, nextPricingMode = 'standard') => {
     if (!VIEW_MODES.has(nextViewMode)) return;
     setViewMode(nextViewMode);
+    setPricingMode(nextPricingMode === 'cryo' ? 'cryo' : 'standard');
     writeStoredViewMode(nextViewMode);
   }, []);
+  const isCryoAdjusted = pricingMode === 'cryo';
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
   const allDisplayTherapists = useMemo(
@@ -75,14 +81,31 @@ export default function ShockwaveSettlementView({
     () => (Array.isArray(recentMonthlySummaries) ? recentMonthlySummaries.filter(Boolean) : []),
     [recentMonthlySummaries]
   );
+  const displayedRecentMonthlySummaries = useMemo(() => {
+    if (!isCryoAdjusted) return safeRecentMonthlySummaries;
+    return safeRecentMonthlySummaries.map((item) => ({
+      ...item,
+      amount: item.cryoAdjustedAmount ?? item.amount,
+    }));
+  }, [isCryoAdjusted, safeRecentMonthlySummaries]);
+
+  const effectivePrescriptionPrices = useMemo(() => (
+    isCryoAdjusted
+      ? buildCryoAdjustedPrescriptionPrices({
+        prescriptionPrices,
+        cryoPrescriptions,
+        cryoPrices,
+      })
+      : prescriptionPrices || {}
+  ), [cryoPrescriptions, cryoPrices, isCryoAdjusted, prescriptionPrices]);
 
   const normalizedPriceMap = useMemo(() => {
-    const entries = Object.entries(prescriptionPrices || {}).map(([key, amount]) => [
+    const entries = Object.entries(effectivePrescriptionPrices).map(([key, amount]) => [
       normalizePrescriptionKey(key),
       Number(amount) || 0,
     ]);
     return Object.fromEntries(entries);
-  }, [prescriptionPrices]);
+  }, [effectivePrescriptionPrices]);
 
   const settlement = useMemo(() => {
     const summaryByTherapist = displayTherapists.map((therapist) => {
@@ -174,26 +197,26 @@ export default function ShockwaveSettlementView({
     );
   }
 
-  const viewModeSelector = (
-    <div className="sw-view-mode-selector">
+  const renderViewModeSelector = (targetPricingMode, ariaLabel) => (
+    <div className="sw-view-mode-selector" aria-label={ariaLabel}>
       <button
         type="button"
-        className={`sw-view-mode-btn ${viewMode === 'horizontal' ? 'active' : ''}`}
-        onClick={() => handleViewModeChange('horizontal')}
+        className={`sw-view-mode-btn ${pricingMode === targetPricingMode && viewMode === 'horizontal' ? 'active' : ''}`}
+        onClick={() => handleViewModeChange('horizontal', targetPricingMode)}
       >
         가로보기
       </button>
       <button
         type="button"
-        className={`sw-view-mode-btn ${viewMode === 'horizontal2' ? 'active' : ''}`}
-        onClick={() => handleViewModeChange('horizontal2')}
+        className={`sw-view-mode-btn ${pricingMode === targetPricingMode && viewMode === 'horizontal2' ? 'active' : ''}`}
+        onClick={() => handleViewModeChange('horizontal2', targetPricingMode)}
       >
         가로보기 2
       </button>
       <button
         type="button"
-        className={`sw-view-mode-btn ${viewMode === 'vertical' ? 'active' : ''}`}
-        onClick={() => handleViewModeChange('vertical')}
+        className={`sw-view-mode-btn ${pricingMode === targetPricingMode && viewMode === 'vertical' ? 'active' : ''}`}
+        onClick={() => handleViewModeChange('vertical', targetPricingMode)}
       >
         세로보기
       </button>
@@ -203,14 +226,18 @@ export default function ShockwaveSettlementView({
   return (
     <div className={`sw-settlement-stack sw-settlement-stack--shockwave ${viewMode === 'vertical' ? 'sw-settlement-stack--vertical' : ''} ${viewMode === 'horizontal2' ? 'sw-settlement-stack--horizontal2' : ''}`}>
       <div className="sw-settlement-view-mode-row">
-        {viewModeSelector}
+        {renderViewModeSelector('standard', '기본 충격파 결산 보기 방식')}
+        <div className="sw-cryo-view-mode-group">
+          <span className="sw-cryo-view-mode-label">크라이오 반영 통계</span>
+          {renderViewModeSelector('cryo', '크라이오 반영 충격파 결산 보기 방식')}
+        </div>
       </div>
 
       {viewMode === 'horizontal' ? (
         <>
           <div className="sw-settlement-card sw-settlement-main-card">
             <div className="sw-settlement-header">
-              <h2>{currentMonth}월 충격파 결산</h2>
+              <h2>{currentMonth}월 {isCryoAdjusted ? '충격파 크라이오 반영 결산' : '충격파 결산'}</h2>
               <div className="sw-settlement-meta">
                 <span>인센티브 {Number(incentivePercentage) || 0}%</span>
               </div>
@@ -348,7 +375,7 @@ export default function ShockwaveSettlementView({
 
             <div className="sw-settlement-card sw-recent-summary-card">
               <div className="sw-settlement-header">
-                <h2>{recentPeriodLabel} 충격파 결산/신환 현황</h2>
+                <h2>{recentPeriodLabel} {isCryoAdjusted ? '충격파 크라이오 반영 결산/신환 현황' : '충격파 결산/신환 현황'}</h2>
                 <div className="sw-settlement-meta sw-recent-period-control">
                   <input
                     type="text"
@@ -376,7 +403,7 @@ export default function ShockwaveSettlementView({
                         <td colSpan={4}>최근 현황 불러오는 중...</td>
                       </tr>
                     ) : (
-                      safeRecentMonthlySummaries.map((item) => (
+                      displayedRecentMonthlySummaries.map((item) => (
                         <tr key={item.monthKey}>
                           <th className="month-label">{item.label}</th>
                           <td>{formatCount(item.totalCount)}</td>
@@ -395,10 +422,11 @@ export default function ShockwaveSettlementView({
         <ShockwaveSettlementHorizontalCompactView
           currentMonth={currentMonth}
           incentivePercentage={incentivePercentage}
+          isCryoAdjusted={isCryoAdjusted}
           normalizedPriceMap={normalizedPriceMap}
           onRecentPeriodInputChange={onRecentPeriodInputChange}
           prescriptions={safePrescriptions}
-          recentMonthlySummaries={safeRecentMonthlySummaries}
+          recentMonthlySummaries={displayedRecentMonthlySummaries}
           recentPeriodInput={recentPeriodInput}
           recentPeriodLabel={recentPeriodLabel}
           settlement={settlement}
@@ -410,7 +438,7 @@ export default function ShockwaveSettlementView({
           <div className="sw-settlement-vertical-heading-row">
             <div className="sw-settlement-vertical-header-wrap">
               <div className="sw-settlement-header">
-                <h2>{currentMonth}월 충격파 결산</h2>
+                <h2>{currentMonth}월 {isCryoAdjusted ? '충격파 크라이오 반영 결산' : '충격파 결산'}</h2>
                 <div className="sw-settlement-meta">
                   <span>인센티브 {Number(incentivePercentage) || 0}%</span>
                 </div>
@@ -535,7 +563,7 @@ export default function ShockwaveSettlementView({
               {/* 최근 6개월 충격파 결산/신환 현황 */}
               <div className="sw-settlement-card sw-recent-summary-card sw-vertical-recent-card">
                 <div className="sw-settlement-header">
-                  <h2>{recentPeriodLabel} 충격파 결산/신환 현황</h2>
+                  <h2>{recentPeriodLabel} {isCryoAdjusted ? '충격파 크라이오 반영 결산/신환 현황' : '충격파 결산/신환 현황'}</h2>
                   <div className="sw-settlement-meta sw-recent-period-control">
                     <input
                       type="text"
@@ -563,7 +591,7 @@ export default function ShockwaveSettlementView({
                           <td colSpan={4}>최근 현황 불러오는 중...</td>
                         </tr>
                       ) : (
-                        safeRecentMonthlySummaries.map((item) => (
+                        displayedRecentMonthlySummaries.map((item) => (
                           <tr key={item.monthKey}>
                             <th className="month-label">{item.label}</th>
                             <td>{formatCount(item.totalCount)}</td>

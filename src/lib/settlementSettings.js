@@ -5,6 +5,8 @@ export const DEFAULT_SHOCKWAVE_SETTLEMENT = {
     'F/Rdc': 70000,
     'F/R': 80000,
   },
+  cryo_prescriptions: [],
+  cryo_prices: {},
   shortcuts: {
     'F/R': '1',
     'F/Rdc': '2',
@@ -23,6 +25,8 @@ export const DEFAULT_MANUAL_THERAPY_SETTLEMENT = {
     '40분': 0,
     '60분': 0,
   },
+  cryo_prescriptions: [],
+  cryo_prices: {},
   shortcuts: {
     '40분': '4',
     '60분': '6',
@@ -38,6 +42,10 @@ export const DEFAULT_MANUAL_THERAPY_SETTLEMENT = {
   visit_line_break_prescriptions: ['40분', '60분'],
   hidden_prescriptions: [],
   incentive_percentage: 0,
+};
+
+export const DEFAULT_SHINJANG_SPRAY_SETTLEMENT = {
+  prescription_incentive_percentages: {},
 };
 
 export function getMonthKey(year, month) {
@@ -79,6 +87,8 @@ export function buildBaseSettlementSettings(settings, type = 'shockwave') {
       ...fallback.prescription_prices,
       ...(settings?.prescription_prices || {}),
     },
+    cryo_prescriptions: fallback.cryo_prescriptions,
+    cryo_prices: fallback.cryo_prices,
     prescription_colors: settings?.prescription_colors || {},
     shortcuts: {
       ...fallback.shortcuts,
@@ -134,6 +144,13 @@ export function getEffectiveSettlementSettings(settings, year, month, type = 'sh
     prescription_prices: {
       ...base.prescription_prices,
       ...(override?.prescription_prices || {}),
+    },
+    cryo_prescriptions: Array.isArray(override?.cryo_prescriptions)
+      ? override.cryo_prescriptions.filter(Boolean)
+      : base.cryo_prescriptions,
+    cryo_prices: {
+      ...base.cryo_prices,
+      ...(override?.cryo_prices || {}),
     },
     prescription_colors: {
       ...base.prescription_colors,
@@ -196,6 +213,10 @@ export function setMonthlySettlementSettings(settings, year, month, type, nextCo
       [type]: {
         prescriptions: Array.isArray(nextConfig?.prescriptions) ? nextConfig.prescriptions.filter(Boolean) : [],
         prescription_prices: nextConfig?.prescription_prices || {},
+        cryo_prescriptions: Array.isArray(nextConfig?.cryo_prescriptions)
+          ? nextConfig.cryo_prescriptions.filter(Boolean)
+          : [],
+        cryo_prices: nextConfig?.cryo_prices || {},
         prescription_colors: nextConfig?.prescription_colors || {},
         shortcuts: nextConfig?.shortcuts || {},
         ...(nextConfig?.dose_tags ? { dose_tags: nextConfig.dose_tags } : {}),
@@ -208,6 +229,60 @@ export function setMonthlySettlementSettings(settings, year, month, type, nextCo
           : [],
         incentive_percentage: Number(nextConfig?.incentive_percentage) || 0,
         incentive_overridden: true,
+      },
+    },
+  };
+}
+
+export function getEffectiveShinjangSpraySettings(settings, year, month) {
+  const monthKey = getMonthKey(year, month);
+  const monthlySettings = settings?.monthly_settlement_settings;
+  const monthlyEntries = monthlySettings && typeof monthlySettings === 'object' && !Array.isArray(monthlySettings)
+    ? monthlySettings
+    : {};
+  const inheritedMonthKey = Object.keys(monthlyEntries)
+    .filter((key) => compareMonthKeys(key, monthKey) <= 0 && monthlyEntries[key]?.shinjang_spray)
+    .sort(compareMonthKeys)
+    .pop();
+  const override = inheritedMonthKey
+    ? monthlyEntries[inheritedMonthKey]?.shinjang_spray
+    : null;
+
+  return {
+    prescription_incentive_percentages: {
+      ...DEFAULT_SHINJANG_SPRAY_SETTLEMENT.prescription_incentive_percentages,
+      ...(override?.prescription_incentive_percentages || {}),
+    },
+    source_month_key: inheritedMonthKey || null,
+    target_month_key: monthKey,
+  };
+}
+
+export function setMonthlyShinjangSpraySettings(settings, year, month, nextConfig) {
+  const monthKey = getMonthKey(year, month);
+  const existing = settings?.monthly_settlement_settings
+    && typeof settings.monthly_settlement_settings === 'object'
+    && !Array.isArray(settings.monthly_settlement_settings)
+    ? settings.monthly_settlement_settings
+    : {};
+  const rawPercentages = nextConfig?.prescription_incentive_percentages;
+  const prescriptionIncentivePercentages = Object.fromEntries(
+    Object.entries(rawPercentages && typeof rawPercentages === 'object' && !Array.isArray(rawPercentages)
+      ? rawPercentages
+      : {})
+      .map(([prescription, percentage]) => [
+        String(prescription || '').trim(),
+        Math.max(0, Number(percentage) || 0),
+      ])
+      .filter(([prescription]) => prescription)
+  );
+
+  return {
+    ...existing,
+    [monthKey]: {
+      ...(existing[monthKey] || {}),
+      shinjang_spray: {
+        prescription_incentive_percentages: prescriptionIncentivePercentages,
       },
     },
   };

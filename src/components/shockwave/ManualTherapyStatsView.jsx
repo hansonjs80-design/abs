@@ -1,6 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
-import { buildManualTherapySettlementSummary } from '../../lib/shockwaveStatsCountUtils';
+import {
+  buildCryoAdjustedPrescriptionPrices,
+  buildManualTherapySettlementSummary,
+} from '../../lib/shockwaveStatsCountUtils';
 
 function formatCount(value) {
   return `${value}건`;
@@ -17,9 +20,12 @@ export default function ManualTherapyStatsView({
   prescriptions = ['40분', '60분'],
   incentivePercentage = 0,
   prescriptionPrices = {},
+  cryoPrescriptions = [],
+  cryoPrices = {},
   monthlyTherapists,
   selectedTherapistNames,
 }) {
+  const [isCryoAdjusted, setIsCryoAdjusted] = useState(false);
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter((item) => item?.name) : []), [therapists]);
   const allDisplayTherapists = useMemo(
@@ -35,13 +41,22 @@ export default function ManualTherapyStatsView({
     if (Array.isArray(prescriptions)) return prescriptions.filter(Boolean);
     return ['40분', '60분'];
   }, [prescriptions]);
+  const effectivePrescriptionPrices = useMemo(() => (
+    isCryoAdjusted
+      ? buildCryoAdjustedPrescriptionPrices({
+        prescriptionPrices,
+        cryoPrescriptions,
+        cryoPrices,
+      })
+      : prescriptionPrices
+  ), [cryoPrescriptions, cryoPrices, isCryoAdjusted, prescriptionPrices]);
   const settlement = useMemo(() => buildManualTherapySettlementSummary({
     rows: safeLogs,
     prescriptions: safePrescriptions,
     therapists: displayTherapists,
-    prescriptionPrices,
+    prescriptionPrices: effectivePrescriptionPrices,
     incentivePercentage,
-  }), [displayTherapists, incentivePercentage, prescriptionPrices, safeLogs, safePrescriptions]);
+  }), [displayTherapists, effectivePrescriptionPrices, incentivePercentage, safeLogs, safePrescriptions]);
 
   const showGrandTotal = settlement.summaryByTherapist.length > 1;
   const showPrescriptionBreakdown = safePrescriptions.length > 1;
@@ -60,7 +75,17 @@ export default function ManualTherapyStatsView({
     <div className={`sw-settlement-stack sw-manual-settlement-stack${isNarrowSettlement ? ' sw-manual-settlement-stack--narrow' : ''}`}>
       <div className="sw-settlement-card sw-manual-settlement-main-card">
         <div className="sw-settlement-header">
-          <h2>{currentMonth}월 도수치료 결산</h2>
+          <div className="sw-manual-settlement-heading">
+            <h2>{currentMonth}월 {isCryoAdjusted ? '도수치료 크라이오 반영 결산' : '도수치료 결산'}</h2>
+            <button
+              type="button"
+              className={`sw-manual-cryo-mode-button${isCryoAdjusted ? ' active' : ''}`}
+              aria-pressed={isCryoAdjusted}
+              onClick={() => setIsCryoAdjusted((current) => !current)}
+            >
+              크라이오 반영 통계
+            </button>
+          </div>
           <div className="sw-settlement-meta">
             <span className="sw-settlement-meta-total">총 {formatCount(settlement.grandTotalCount)}</span>
             <span className="sw-settlement-meta-sales">매출 {formatCurrency(settlement.grandAmount)}</span>

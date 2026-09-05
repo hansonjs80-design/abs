@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  buildCryoAdjustedPrescriptionPrices,
   buildManualTherapySettlementSummary,
   buildShockwaveSettlementPrintColumnWidths,
   buildStatsDisplayPrescriptions,
@@ -13,6 +14,42 @@ import {
 } from '../shockwaveStatsCountUtils.js';
 
 describe('shockwave stats count utilities', () => {
+  it('subtracts cryo prices only from selected prescriptions before incentive calculation', () => {
+    const adjustedPrices = buildCryoAdjustedPrescriptionPrices({
+      prescriptionPrices: {
+        'F2.5': 70000,
+        'F4.0': 90000,
+        'F1.0': 10000,
+      },
+      cryoPrescriptions: [' F 2.5 ', 'F1.0'],
+      cryoPrices: {
+        'F2.5': 15000,
+        'F4.0': 20000,
+        'F1.0': 12000,
+      },
+    });
+
+    assert.deepEqual(adjustedPrices, {
+      'F2.5': 55000,
+      'F4.0': 90000,
+      'F1.0': 0,
+    });
+
+    const summary = buildManualTherapySettlementSummary({
+      prescriptions: ['F2.5', 'F4.0'],
+      therapists: [{ name: '주한솔' }],
+      prescriptionPrices: adjustedPrices,
+      incentivePercentage: 10,
+      rows: [
+        { therapist_name: '주한솔', prescription: 'F2.5', prescription_count: 2 },
+        { therapist_name: '주한솔', prescription: 'F4.0', prescription_count: 1 },
+      ],
+    });
+
+    assert.equal(summary.grandAmount, 200000);
+    assert.equal(summary.grandIncentive, 20000);
+  });
+
   it('counts missing scheduler prescription_count as one completed cell', () => {
     assert.equal(toStatsPrescriptionCount(null), 1);
     assert.equal(toStatsPrescriptionCount(''), 1);

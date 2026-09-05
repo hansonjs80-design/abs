@@ -25,6 +25,7 @@ import {
   loadStatsMonthlyTherapists,
 } from '../../lib/statsScheduleSourceUtils';
 import {
+  buildCryoAdjustedPrescriptionPrices,
   buildStatsDisplayPrescriptions,
   normalizePrescriptionKey,
   toStatsPrescriptionCount,
@@ -719,8 +720,22 @@ export default function ShockwaveStatsView({
           Number(value) || 0,
         ])
       );
+      const monthCryoAdjustedPriceMap = Object.fromEntries(
+        Object.entries(buildCryoAdjustedPrescriptionPrices({
+          prescriptionPrices: monthSettings.prescription_prices,
+          cryoPrescriptions: monthSettings.cryo_prescriptions,
+          cryoPrices: monthSettings.cryo_prices,
+        })).map(([key, value]) => [
+          normalizePrescriptionKey(key),
+          Number(value) || 0,
+        ])
+      );
       const amount = settlementLogs.reduce((sum, log) => {
         const price = monthPriceMap[normalizePrescriptionKey(log?.prescription)] || 0;
+        return sum + toStatsPrescriptionCount(log?.prescription_count) * price;
+      }, 0);
+      const cryoAdjustedAmount = settlementLogs.reduce((sum, log) => {
+        const price = monthCryoAdjustedPriceMap[normalizePrescriptionKey(log?.prescription)] || 0;
         return sum + toStatsPrescriptionCount(log?.prescription_count) * price;
       }, 0);
       const newPatientCount = settlementLogs.filter((log) => String(log?.patient_name || '').includes('*')).length;
@@ -730,6 +745,7 @@ export default function ShockwaveStatsView({
         label: `${year}년 ${String(month).padStart(2, '0')}월`,
         totalCount,
         amount,
+        cryoAdjustedAmount,
         newPatientCount,
       };
     });
@@ -961,6 +977,8 @@ export default function ShockwaveStatsView({
                   currentMonth={currentMonth}
                   prescriptions={settlementPrescriptions}
                   prescriptionPrices={settlementPrices}
+                  cryoPrescriptions={effectiveSettlementSettings.cryo_prescriptions}
+                  cryoPrices={effectiveSettlementSettings.cryo_prices}
                   incentivePercentage={incentivePercentage}
                   recentMonthlySummaries={recentMonthlySummaries}
                   recentPeriodInput={recentPeriodInput}

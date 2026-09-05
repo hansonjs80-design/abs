@@ -695,7 +695,7 @@ export default function ManualTherapyStatsPage() {
                     {isLoading && visibleLogs.length === 0 ? (
                       <SettlementSkeleton />
                     ) : (
-                      <div className="sw-manual-settlement-container">
+                      <div className="sw-manual-settlement-container sw-manual-settlement-container--readable">
                         <ManualTherapyStatsView
                           currentMonth={currentMonth}
                           logs={visibleLogs}
@@ -704,6 +704,8 @@ export default function ManualTherapyStatsPage() {
                           prescriptions={prescriptions}
                           incentivePercentage={effectiveSettlementSettings.incentive_percentage}
                           prescriptionPrices={effectiveSettlementSettings.prescription_prices}
+                          cryoPrescriptions={effectiveSettlementSettings.cryo_prescriptions}
+                          cryoPrices={effectiveSettlementSettings.cryo_prices}
                           selectedTherapistNames={selectedTherapistNames}
                         />
                         <div className="sw-manual-summary-stack">

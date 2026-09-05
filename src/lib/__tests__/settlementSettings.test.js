@@ -4,7 +4,9 @@ import { describe, it } from 'node:test';
 import {
   buildPrescriptionClassificationSignature,
   getEffectiveSettlementSettings,
+  getEffectiveShinjangSpraySettings,
   setMonthlySettlementSettings,
+  setMonthlyShinjangSpraySettings,
 } from '../settlementSettings.js';
 import {
   getPrescriptionScheduleSettings,
@@ -12,6 +14,84 @@ import {
 } from '../prescriptionScheduleSettings.js';
 
 describe('monthly settlement shortcut settings', () => {
+  it('stores and inherits per-prescription shinjang spray incentive percentages', () => {
+    const settings = {
+      monthly_settlement_settings: {
+        '2026-08': {
+          shockwave: { prescriptions: ['F2.5(신장분사)'] },
+        },
+      },
+    };
+    const monthly_settlement_settings = setMonthlyShinjangSpraySettings(
+      settings,
+      2026,
+      9,
+      {
+        prescription_incentive_percentages: {
+          'F2.5(신장분사)': 7.5,
+          '도수 40분(신장분사)': 11,
+        },
+      }
+    );
+    const nextSettings = { ...settings, monthly_settlement_settings };
+
+    assert.deepEqual(
+      monthly_settlement_settings['2026-08'].shockwave,
+      { prescriptions: ['F2.5(신장분사)'] }
+    );
+    assert.deepEqual(
+      getEffectiveShinjangSpraySettings(nextSettings, 2026, 10).prescription_incentive_percentages,
+      {
+        'F2.5(신장분사)': 7.5,
+        '도수 40분(신장분사)': 11,
+      }
+    );
+  });
+
+  it('stores and inherits cryo selections and prices separately for each treatment type', () => {
+    const settings = {
+      prescriptions: ['F2.5', 'F4.0'],
+      manual_therapy_prescriptions: ['40분', '60분'],
+    };
+    const shockwaveMonthlySettings = setMonthlySettlementSettings(
+      settings,
+      2026,
+      9,
+      'shockwave',
+      {
+        prescriptions: ['F2.5', 'F4.0'],
+        cryo_prescriptions: ['F2.5'],
+        cryo_prices: {
+          'F2.5': 15000,
+          'F4.0': 20000,
+        },
+      }
+    );
+    const monthly_settlement_settings = setMonthlySettlementSettings(
+      { ...settings, monthly_settlement_settings: shockwaveMonthlySettings },
+      2026,
+      9,
+      'manual_therapy',
+      {
+        prescriptions: ['40분', '60분'],
+        cryo_prescriptions: ['60분'],
+        cryo_prices: {
+          '40분': 10000,
+          '60분': 12000,
+        },
+      }
+    );
+    const nextSettings = { ...settings, monthly_settlement_settings };
+
+    const shockwave = getEffectiveSettlementSettings(nextSettings, 2026, 10, 'shockwave');
+    const manualTherapy = getEffectiveSettlementSettings(nextSettings, 2026, 10, 'manual_therapy');
+
+    assert.deepEqual(shockwave.cryo_prescriptions, ['F2.5']);
+    assert.deepEqual(shockwave.cryo_prices, { 'F2.5': 15000, 'F4.0': 20000 });
+    assert.deepEqual(manualTherapy.cryo_prescriptions, ['60분']);
+    assert.deepEqual(manualTherapy.cryo_prices, { '40분': 10000, '60분': 12000 });
+  });
+
   it('keeps an explicitly blank monthly shortcut instead of falling back to defaults', () => {
     const settings = {
       shortcuts: {

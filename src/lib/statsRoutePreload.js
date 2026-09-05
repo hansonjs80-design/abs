@@ -1,5 +1,6 @@
 export const loadShockwaveStatsPage = () => import('../pages/ShockwaveStatsPage.jsx');
 export const loadManualTherapyStatsPage = () => import('../pages/ManualTherapyStatsPage.jsx');
+export const loadShinjangSprayStatsPage = () => import('../pages/ShinjangSprayStatsPage.jsx');
 export const loadShockwaveStatsView = () => import('../components/shockwave/ShockwaveStatsView.jsx');
 
 const statsRouteLoaders = Object.freeze({
@@ -8,6 +9,7 @@ const statsRouteLoaders = Object.freeze({
     loadShockwaveStatsView(),
   ]),
   '/manual-therapy-stats': loadManualTherapyStatsPage,
+  '/shinjang-spray-stats': loadShinjangSprayStatsPage,
 });
 
 export function isStatsRoutePath(path) {

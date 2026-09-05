@@ -1,0 +1,191 @@
+.sw-stats-container--shinjang .sw-stats-side-tab--shinjang:hover,
+.sw-stats-container--shinjang .sw-stats-side-tab--shinjang.active {
+  border-color: #67e8f9;
+  background: #cffafe;
+}
+
+.shinjang-spray-settlement-card,
+.shinjang-spray-settings-card {
+  width: 100%;
+}
+
+.shinjang-spray-description {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.shinjang-spray-description strong {
+  color: #0e7490;
+}
+
+.shinjang-spray-table-wrap {
+  max-width: 100%;
+}
+
+.shinjang-spray-table {
+  width: 100%;
+  min-width: 840px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: auto;
+}
+
+.shinjang-spray-table th,
+.shinjang-spray-table td {
+  padding: 10px 12px;
+  border-right: 1px solid #d4deeb;
+  border-bottom: 1px solid #d4deeb;
+  color: #172033;
+  font-size: 0.86rem;
+  font-weight: 750;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.shinjang-spray-table thead th {
+  background: #e6f8fb;
+  color: #155e75;
+  font-weight: 900;
+}
+
+.shinjang-spray-table tbody td,
+.shinjang-spray-table tbody th {
+  background: var(--therapist-bg-strong, #fff);
+}
+
+.shinjang-spray-table .shinjang-spray-therapist-cell {
+  min-width: 112px;
+  border-left: 4px solid var(--therapist-accent, #0891b2);
+  color: var(--therapist-text, #164e63);
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.shinjang-spray-prescription-cell {
+  min-width: 180px;
+  text-align: left !important;
+}
+
+.shinjang-spray-source-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid #a5f3fc;
+  border-radius: 999px;
+  background: #ecfeff;
+  color: #0e7490;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.shinjang-spray-table .amount {
+  color: #1454b8;
+}
+
+.shinjang-spray-table .incentive {
+  color: #7357c8;
+}
+
+.shinjang-spray-table .shinjang-spray-subtotal-row th,
+.shinjang-spray-table .shinjang-spray-subtotal-row td {
+  background: #f1f5f9;
+  font-weight: 900;
+}
+
+.shinjang-spray-table tfoot th,
+.shinjang-spray-table tfoot td {
+  padding: 11px 12px;
+  border-right: 1px solid #a8c3cc;
+  background: #cffafe;
+  color: #164e63;
+  font-weight: 950;
+  text-align: center;
+}
+
+.shinjang-spray-empty {
+  width: 100%;
+}
+
+.shinjang-spray-settings-list {
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+}
+
+.shinjang-spray-settings-row {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) 180px 180px;
+  align-items: center;
+  min-height: 56px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.shinjang-spray-settings-row:last-child {
+  border-bottom: 0;
+}
+
+.shinjang-spray-settings-row > * {
+  padding: 9px 14px;
+}
+
+.shinjang-spray-settings-header-row {
+  min-height: 42px;
+  background: #e6f8fb;
+  color: #155e75;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.shinjang-spray-settings-price {
+  color: #1454b8;
+  font-weight: 800;
+}
+
+.shinjang-spray-percentage-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shinjang-spray-percentage-field .form-input {
+  width: 110px;
+  text-align: right;
+}
+
+.shinjang-spray-percentage-field span {
+  color: #475569;
+  font-weight: 900;
+}
+
+@media (max-width: 900px) {
+  .shinjang-spray-settlement-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .shinjang-spray-settings-list {
+    overflow-x: auto;
+  }
+
+  .shinjang-spray-settings-row {
+    min-width: 660px;
+  }
+}
+
+@media print {
+  .sw-stats-container--shinjang .sw-stats-sidebar {
+    display: none !important;
+  }
+
+  .sw-stats-container--shinjang .sw-stats-layout {
+    display: block;
+  }
+
+  .shinjang-spray-settlement-card {
+    width: 100%;
+    box-shadow: none;
+  }
+}

@@ -22,6 +22,8 @@ export default function SettlementSettingsPanel({
   const buildInitialDraft = useCallback(() => ({
     prescriptions: effectiveSettings?.prescriptions || [],
     prescription_prices: effectiveSettings?.prescription_prices || {},
+    cryo_prescriptions: effectiveSettings?.cryo_prescriptions || [],
+    cryo_prices: effectiveSettings?.cryo_prices || {},
     prescription_colors: effectiveSettings?.prescription_colors || settings?.prescription_colors || {},
     incentive_percentage: effectiveSettings?.incentive_percentage ?? 0,
     dose_tags: effectiveSettings?.dose_tags || (isManualTherapy ? settings?.manual_therapy_dose_tags : settings?.dose_tags) || {},
@@ -151,13 +153,17 @@ export default function SettlementSettingsPanel({
         itemIndex === index ? nextValue : item
       ));
       const nextPrices = { ...prev.prescription_prices };
+      const nextCryoPrices = { ...(prev.cryo_prices || {}) };
       const nextDoseTags = { ...prev.dose_tags };
       const nextDurations = { ...(prev.duration_minutes || {}) };
+      const nextCryoPrescriptions = new Set(prev.cryo_prescriptions || []);
       const nextLineBreaks = new Set(prev.visit_line_break_prescriptions || []);
       const nextHidden = new Set(prev.hidden_prescriptions || []);
       if (previousName !== nextValue) {
         nextPrices[nextValue] = nextPrices[previousName] ?? 0;
         delete nextPrices[previousName];
+        nextCryoPrices[nextValue] = nextCryoPrices[previousName] ?? 0;
+        delete nextCryoPrices[previousName];
         const nextColors = { ...(prev.prescription_colors || {}) };
         nextColors[nextValue] = nextColors[previousName] || '#000000';
         delete nextColors[previousName];
@@ -173,6 +179,10 @@ export default function SettlementSettingsPanel({
           nextLineBreaks.delete(previousName);
           nextLineBreaks.add(nextValue);
         }
+        if (nextCryoPrescriptions.has(previousName)) {
+          nextCryoPrescriptions.delete(previousName);
+          nextCryoPrescriptions.add(nextValue);
+        }
         if (nextHidden.has(previousName)) {
           nextHidden.delete(previousName);
           nextHidden.add(nextValue);
@@ -186,6 +196,8 @@ export default function SettlementSettingsPanel({
           ...prev,
           prescriptions: nextPrescriptions,
           prescription_prices: nextPrices,
+          cryo_prescriptions: Array.from(nextCryoPrescriptions),
+          cryo_prices: nextCryoPrices,
           prescription_colors: nextColors,
           dose_tags: nextDoseTags,
           duration_minutes: nextDurations,
@@ -216,11 +228,13 @@ export default function SettlementSettingsPanel({
     setDraft((prev) => {
       const target = prev.prescriptions[index];
       const nextPrices = { ...prev.prescription_prices };
+      const nextCryoPrices = { ...(prev.cryo_prices || {}) };
       const nextColors = { ...(prev.prescription_colors || {}) };
       const nextDoseTags = { ...prev.dose_tags };
       const nextDurations = { ...(prev.duration_minutes || {}) };
       const nextShortcuts = { ...prev.shortcuts };
       delete nextPrices[target];
+      delete nextCryoPrices[target];
       delete nextColors[target];
       delete nextDoseTags[target];
       delete nextDurations[target];
@@ -229,6 +243,8 @@ export default function SettlementSettingsPanel({
         ...prev,
         prescriptions: prev.prescriptions.filter((_, itemIndex) => itemIndex !== index),
         prescription_prices: nextPrices,
+        cryo_prescriptions: (prev.cryo_prescriptions || []).filter((item) => item !== target),
+        cryo_prices: nextCryoPrices,
         prescription_colors: nextColors,
         dose_tags: nextDoseTags,
         duration_minutes: nextDurations,
@@ -250,6 +266,10 @@ export default function SettlementSettingsPanel({
         prescription_prices: {
           ...prev.prescription_prices,
           [nextValue]: prev.prescription_prices?.[nextValue] ?? 0,
+        },
+        cryo_prices: {
+          ...(prev.cryo_prices || {}),
+          [nextValue]: prev.cryo_prices?.[nextValue] ?? 0,
         },
         prescription_colors: {
           ...(prev.prescription_colors || {}),
@@ -290,6 +310,12 @@ export default function SettlementSettingsPanel({
       .filter((prescription) => cleanedPrescriptions.includes(prescription));
     const cleanedHiddenPrescriptions = (draft.hidden_prescriptions || [])
       .filter((prescription) => cleanedPrescriptions.includes(prescription));
+    const cleanedCryoPrescriptions = (draft.cryo_prescriptions || [])
+      .filter((prescription) => cleanedPrescriptions.includes(prescription));
+    const cleanedCryoPrices = cleanedPrescriptions.reduce((acc, prescription) => {
+      acc[prescription] = Math.max(0, Number(draft.cryo_prices?.[prescription]) || 0);
+      return acc;
+    }, {});
     const cleanedShortcuts = {};
     cleanedPrescriptions.forEach(prescription => {
       cleanedShortcuts[prescription] = String(draft.shortcuts[prescription] || '').trim();
@@ -298,6 +324,8 @@ export default function SettlementSettingsPanel({
     const cleaned = {
       prescriptions: cleanedPrescriptions,
       prescription_prices: draft.prescription_prices,
+      cryo_prescriptions: cleanedCryoPrescriptions,
+      cryo_prices: cleanedCryoPrices,
       prescription_colors: cleanedColors,
       incentive_percentage: Number(draft.incentive_percentage) || 0,
       shortcuts: cleanedShortcuts,
@@ -364,14 +392,16 @@ export default function SettlementSettingsPanel({
               <span className="settlement-label">치료시간</span>
               <span className="settlement-label">회차 줄바꿈</span>
               <span className="settlement-label">숨김</span>
+              <span className="settlement-label">크라이오</span>
               <span className="settlement-label">단가</span>
+              <span className="settlement-label">크라이오 가격</span>
               <span className="settlement-label">색</span>
-              <span></span>
               <span></span>
             </div>
             {draft.prescriptions.map((prescription, index) => {
               const doseTag = getDoseTag(prescription);
               const isHidden = (draft.hidden_prescriptions || []).includes(prescription);
+              const isCryoEnabled = (draft.cryo_prescriptions || []).includes(prescription);
               return (
                 <div
                   key={`${prescription}-${index}`}
@@ -537,23 +567,68 @@ export default function SettlementSettingsPanel({
                       }}
                     />
                   </label>
-                  <input
-                    type="number"
-                    className="form-input settlement-price-input"
-                    min={0}
-                    step={1000}
-                    value={draft.prescription_prices?.[prescription] ?? 0}
-                    onChange={(event) => {
-                      const value = Number(event.target.value) || 0;
-                      setDraft((prev) => ({
-                        ...prev,
-                        prescription_prices: {
-                          ...prev.prescription_prices,
-                          [prescription]: value,
-                        },
-                      }));
-                    }}
-                  />
+                  <label className="settlement-cryo-toggle" title="이 처방에 크라이오 치료를 함께 적용">
+                    <input
+                      type="checkbox"
+                      aria-label={`${prescription} 크라이오 적용`}
+                      checked={isCryoEnabled}
+                      onChange={(event) => {
+                        setDraft((prev) => {
+                          const next = new Set(prev.cryo_prescriptions || []);
+                          if (event.target.checked) next.add(prescription);
+                          else next.delete(prescription);
+                          return {
+                            ...prev,
+                            cryo_prescriptions: Array.from(next),
+                          };
+                        });
+                      }}
+                    />
+                  </label>
+                  <div className="settlement-price-group">
+                    <input
+                      type="number"
+                      className="form-input settlement-price-input"
+                      aria-label={`${prescription} 단가`}
+                      min={0}
+                      step={1000}
+                      value={draft.prescription_prices?.[prescription] ?? 0}
+                      onChange={(event) => {
+                        const value = Number(event.target.value) || 0;
+                        setDraft((prev) => ({
+                          ...prev,
+                          prescription_prices: {
+                            ...prev.prescription_prices,
+                            [prescription]: value,
+                          },
+                        }));
+                      }}
+                    />
+                    <span className="settlement-settings-unit">원</span>
+                  </div>
+                  <div className={`settlement-price-group settlement-cryo-price-group${isCryoEnabled ? '' : ' is-disabled'}`}>
+                    <input
+                      type="number"
+                      className="form-input settlement-price-input settlement-cryo-price-input"
+                      aria-label={`${prescription} 크라이오 가격`}
+                      title={isCryoEnabled ? '크라이오 추가 가격' : '크라이오를 선택하면 가격을 입력할 수 있습니다.'}
+                      min={0}
+                      step={1000}
+                      disabled={!isCryoEnabled}
+                      value={draft.cryo_prices?.[prescription] ?? 0}
+                      onChange={(event) => {
+                        const value = Math.max(0, Number(event.target.value) || 0);
+                        setDraft((prev) => ({
+                          ...prev,
+                          cryo_prices: {
+                            ...(prev.cryo_prices || {}),
+                            [prescription]: value,
+                          },
+                        }));
+                      }}
+                    />
+                    <span className="settlement-settings-unit">원</span>
+                  </div>
                   <input
                     type="color"
                     className="settlement-color-input"
@@ -570,7 +645,6 @@ export default function SettlementSettingsPanel({
                       }));
                     }}
                   />
-                  <span className="settlement-settings-unit">원</span>
                   <button type="button" className="btn btn-secondary btn-sm" onClick={() => removePrescription(index)}>
                     삭제
                   </button>

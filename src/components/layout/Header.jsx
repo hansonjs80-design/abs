@@ -11,6 +11,7 @@ export default function Header({ onMenuToggle }) {
     '/shockwave': '충격파/도수 스케줄',
     '/shockwave-stats': '충격파 통계',
     '/manual-therapy-stats': '도수치료 통계',
+    '/shinjang-spray-stats': '신장분사 통계',
     '/settings': '설정 / 관리',
   };
 
@@ -25,7 +26,7 @@ export default function Header({ onMenuToggle }) {
         {(location.pathname === '/' || location.pathname === '/shockwave') && (
           <MonthPicker suffix={pageLabel} />
         )}
-        {(location.pathname === '/shockwave-stats' || location.pathname === '/manual-therapy-stats' || location.pathname === '/settings') && (
+        {(location.pathname === '/shockwave-stats' || location.pathname === '/manual-therapy-stats' || location.pathname === '/shinjang-spray-stats' || location.pathname === '/settings') && (
           <div className="header-title" style={{ fontSize: '1.2rem' }}>{pageLabel}</div>
         )}
       </div>

@@ -14,6 +14,39 @@ export function toStatsPrescriptionCount(value) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 
+export function buildCryoAdjustedPrescriptionPrices({
+  prescriptionPrices = {},
+  cryoPrescriptions = [],
+  cryoPrices = {},
+} = {}) {
+  const priceEntries = prescriptionPrices && typeof prescriptionPrices === 'object' && !Array.isArray(prescriptionPrices)
+    ? prescriptionPrices
+    : {};
+  const cryoPrescriptionKeys = new Set(
+    (Array.isArray(cryoPrescriptions) ? cryoPrescriptions : [])
+      .map(normalizePrescriptionKey)
+      .filter(Boolean)
+  );
+  const normalizedCryoPriceMap = new Map(
+    Object.entries(cryoPrices && typeof cryoPrices === 'object' && !Array.isArray(cryoPrices) ? cryoPrices : {})
+      .map(([prescription, amount]) => [
+        normalizePrescriptionKey(prescription),
+        Math.max(0, Number(amount) || 0),
+      ])
+  );
+
+  return Object.fromEntries(
+    Object.entries(priceEntries).map(([prescription, amount]) => {
+      const prescriptionKey = normalizePrescriptionKey(prescription);
+      const basePrice = Math.max(0, Number(amount) || 0);
+      const cryoPrice = cryoPrescriptionKeys.has(prescriptionKey)
+        ? normalizedCryoPriceMap.get(prescriptionKey) || 0
+        : 0;
+      return [prescription, Math.max(0, basePrice - cryoPrice)];
+    })
+  );
+}
+
 export function getShockwaveSettlementPrintColumnWeight(prescription) {
   const compactLabel = String(prescription || '').replace(/\s+/g, '');
   const isLongLabel = /[()[\]{}]/.test(compactLabel) || Array.from(compactLabel).length >= 6;

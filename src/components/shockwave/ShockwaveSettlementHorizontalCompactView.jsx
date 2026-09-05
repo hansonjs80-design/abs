@@ -33,6 +33,7 @@ function TherapistNameStack({ name }) {
 export default function ShockwaveSettlementHorizontalCompactView({
   currentMonth,
   incentivePercentage,
+  isCryoAdjusted = false,
   normalizedPriceMap,
   recentMonthlySummaries,
   recentPeriodInput,
@@ -52,7 +53,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
     <div className="sw-horizontal2-layout">
       <div className="sw-horizontal2-left">
         <div className="sw-horizontal2-title-row">
-          <h2>{currentMonth}월 충격파 결산</h2>
+          <h2>{currentMonth}월 {isCryoAdjusted ? '충격파 크라이오 반영 결산' : '충격파 결산'}</h2>
           <div className="sw-settlement-meta">
             <span>인센티브 {Number(incentivePercentage) || 0}%</span>
           </div>
@@ -125,7 +126,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
 
       <div className="sw-horizontal2-right">
         <div className="sw-horizontal2-title-row sw-horizontal2-recent-title-row">
-          <h2>{recentPeriodLabel} 충격파 결산/신환 현황</h2>
+          <h2>{recentPeriodLabel} {isCryoAdjusted ? '충격파 크라이오 반영 결산/신환 현황' : '충격파 결산/신환 현황'}</h2>
           <input
             className="sw-horizontal2-period-input"
             type="text"

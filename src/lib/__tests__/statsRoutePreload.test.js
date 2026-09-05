@@ -10,6 +10,7 @@ describe('statistics route preloading', () => {
   it('preloads only supported statistics routes', () => {
     assert.equal(isStatsRoutePath('/shockwave-stats'), true);
     assert.equal(isStatsRoutePath('/manual-therapy-stats'), true);
+    assert.equal(isStatsRoutePath('/shinjang-spray-stats'), true);
     assert.equal(isStatsRoutePath('/shockwave'), false);
   });
 
