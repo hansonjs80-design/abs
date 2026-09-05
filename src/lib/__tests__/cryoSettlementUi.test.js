@@ -30,12 +30,12 @@ test('shockwave settlement keeps three standard views and adds three cryo-adjust
   assert.match(statsView, /cryoAdjustedAmount/);
   assert.match(statsView, /cryoPrescriptions=\{effectiveSettlementSettings\.cryo_prescriptions\}/);
   assert.match(statsView, /cryoPrices=\{effectiveSettlementSettings\.cryo_prices\}/);
-  assert.match(settlementView, /renderViewModeSelector\('standard', '기본 충격파 결산 보기 방식'\)/);
-  assert.match(settlementView, /renderViewModeSelector\('cryo', '크라이오 반영 충격파 결산 보기 방식'\)/);
+  assert.match(settlementView, /renderViewModeSelector\('standard', `기본 \$\{treatmentLabel\} 결산 보기 방식`\)/);
+  assert.match(settlementView, /renderViewModeSelector\('cryo', `크라이오 반영 \$\{treatmentLabel\} 결산 보기 방식`\)/);
   assert.match(settlementView, /크라이오 반영 통계/);
   assert.match(settlementView, /buildCryoAdjustedPrescriptionPrices/);
   assert.match(settlementView, /amount:\s*item\.cryoAdjustedAmount \?\? item\.amount/);
-  assert.match(horizontal2View, /isCryoAdjusted \? '충격파 크라이오 반영 결산' : '충격파 결산'/);
+  assert.match(horizontal2View, /\{treatmentLabel\}\{isCryoAdjusted \? ' 크라이오 반영' : ''\} 결산/);
 });
 
 test('manual therapy settlement toggles the same table to cryo-adjusted prices', async () => {

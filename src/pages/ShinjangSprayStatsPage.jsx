@@ -21,6 +21,8 @@ import {
   setMonthlyShinjangSpraySettings,
 } from '../lib/settlementSettings';
 import {
+  applyMonthlyShinjangSprayTherapists,
+  buildShinjangSprayDefaultTherapists,
   buildShinjangSprayPrescriptions,
   mergeShinjangSprayLogs,
 } from '../lib/shinjangSprayStatsUtils';
@@ -31,10 +33,8 @@ const LOG_FIELDS = 'id,date,patient_name,chart_number,visit_count,body_part,ther
 
 function buildUniqueTherapists({
   rows,
-  shockwaveTherapists,
-  manualTherapists,
-  monthlyShockwaveTherapists,
-  monthlyManualTherapists,
+  shinjangSprayTherapists,
+  monthlyShinjangSprayTherapists,
 }) {
   const therapistsByName = new Map();
   const add = (therapist) => {
@@ -49,8 +49,10 @@ function buildUniqueTherapists({
     });
   };
 
-  buildDisplayTherapists(shockwaveTherapists, monthlyShockwaveTherapists).forEach(add);
-  buildDisplayTherapists(manualTherapists, monthlyManualTherapists).forEach(add);
+  buildDisplayTherapists(
+    shinjangSprayTherapists,
+    monthlyShinjangSprayTherapists
+  ).forEach(add);
   (Array.isArray(rows) ? rows : []).forEach(add);
   return [...therapistsByName.values()];
 }
@@ -97,8 +99,7 @@ export default function ShinjangSprayStatsPage() {
   const [manualLogs, setManualLogs] = useState([]);
   const [localShockwaveTherapists, setLocalShockwaveTherapists] = useState([]);
   const [localManualTherapists, setLocalManualTherapists] = useState([]);
-  const [monthlyShockwaveTherapists, setMonthlyShockwaveTherapists] = useState([]);
-  const [monthlyManualTherapists, setMonthlyManualTherapists] = useState([]);
+  const [monthlyShinjangSprayTherapists, setMonthlyShinjangSprayTherapists] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);
   const settingsRef = useRef(shockwaveSettings);
@@ -127,6 +128,7 @@ export default function ShinjangSprayStatsPage() {
         loadedManualTherapists,
         loadedMonthlyShockwave,
         loadedMonthlyManual,
+        loadedMonthlyShinjangSpray,
         loadedMemos,
         loadedSettings,
       ] = await Promise.all([
@@ -134,6 +136,7 @@ export default function ShinjangSprayStatsPage() {
         loadManualTherapists({ force }),
         loadMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
         loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy'),
+        loadMonthlyTherapists(currentYear, currentMonth, 'shinjang_spray'),
         loadShockwaveMemos(currentYear, currentMonth, { force, silent: true }),
         loadShockwaveSettings({ force }),
       ]);
@@ -210,8 +213,9 @@ export default function ShinjangSprayStatsPage() {
 
       setLocalShockwaveTherapists(Array.isArray(loadedShockwaveTherapists) ? loadedShockwaveTherapists : []);
       setLocalManualTherapists(Array.isArray(loadedManualTherapists) ? loadedManualTherapists : []);
-      setMonthlyShockwaveTherapists(Array.isArray(loadedMonthlyShockwave) ? loadedMonthlyShockwave : []);
-      setMonthlyManualTherapists(Array.isArray(loadedMonthlyManual) ? loadedMonthlyManual : []);
+      setMonthlyShinjangSprayTherapists(
+        Array.isArray(loadedMonthlyShinjangSpray) ? loadedMonthlyShinjangSpray : []
+      );
       setShockwaveLogs(shockwaveResult.data || []);
       setManualLogs(normalizedManualLogs);
     } catch (error) {
@@ -256,7 +260,7 @@ export default function ShinjangSprayStatsPage() {
     currentYear,
     currentMonth
   ), [currentMonth, currentYear, shockwaveSettings]);
-  const combinedRows = useMemo(() => mergeShinjangSprayLogs({
+  const sourceCombinedRows = useMemo(() => mergeShinjangSprayLogs({
     shockwaveRows: shockwaveLogs,
     manualTherapyRows: manualLogs,
     shockwavePrescriptionPrices: spraySettings.prescription_prices,
@@ -272,25 +276,36 @@ export default function ShinjangSprayStatsPage() {
     spraySettings.cryo_prices,
     spraySettings.prescription_prices,
   ]);
+  const combinedRows = useMemo(() => applyMonthlyShinjangSprayTherapists(
+    sourceCombinedRows,
+    monthlyShinjangSprayTherapists
+  ), [monthlyShinjangSprayTherapists, sourceCombinedRows]);
   const prescriptions = useMemo(() => buildShinjangSprayPrescriptions({
     configuredPrescriptions: spraySettings.prescriptions,
     rows: combinedRows,
   }), [combinedRows, spraySettings.prescriptions]);
   const prescriptionPrices = spraySettings.prescription_prices;
-  const availableTherapists = useMemo(() => buildUniqueTherapists({
-    rows: combinedRows,
-    shockwaveTherapists: localShockwaveTherapists.length > 0 ? localShockwaveTherapists : therapists,
-    manualTherapists: localManualTherapists.length > 0 ? localManualTherapists : manualTherapists,
-    monthlyShockwaveTherapists,
-    monthlyManualTherapists,
+  const shinjangSprayTherapists = useMemo(() => buildShinjangSprayDefaultTherapists({
+    shockwaveTherapists: localShockwaveTherapists.length > 0
+      ? localShockwaveTherapists
+      : therapists,
+    manualTherapists: localManualTherapists.length > 0
+      ? localManualTherapists
+      : manualTherapists,
   }), [
-    combinedRows,
     localManualTherapists,
     localShockwaveTherapists,
     manualTherapists,
-    monthlyManualTherapists,
-    monthlyShockwaveTherapists,
     therapists,
+  ]);
+  const availableTherapists = useMemo(() => buildUniqueTherapists({
+    rows: combinedRows,
+    shinjangSprayTherapists,
+    monthlyShinjangSprayTherapists,
+  }), [
+    combinedRows,
+    monthlyShinjangSprayTherapists,
+    shinjangSprayTherapists,
   ]);
   const displayTherapists = useMemo(() => {
     if (!Array.isArray(spraySettings.therapist_names)) return availableTherapists;
@@ -494,6 +509,8 @@ export default function ShinjangSprayStatsPage() {
                     prescriptions={prescriptions}
                     prescriptionPrices={prescriptionPrices}
                     incentivePercentages={spraySettings.prescription_incentive_percentages}
+                    cryoPrescriptions={spraySettings.cryo_prescriptions}
+                    cryoPrices={spraySettings.cryo_prices}
                   />
                 )}
               </div>

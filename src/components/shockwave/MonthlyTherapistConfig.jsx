@@ -23,6 +23,7 @@ import {
   matchDisplayRule,
   parseDeptNameMemo,
 } from '../../lib/staffDisplayRules';
+import { buildShinjangSprayDefaultTherapists } from '../../lib/shinjangSprayStatsUtils';
 import './MonthlyTherapistConfig.css';
 
 const WEEKLY_OPERATING_DAYS = [1, 2, 3, 4, 5, 6];
@@ -30,7 +31,7 @@ const STANDARD_WEEKDAYS = [1, 2, 3, 4, 5];
 
 /**
  * 월별 치료사 설정 모달
- * - 충격파 / 도수치료 탭 분리
+ * - 충격파 / 도수치료 / 신장분사 탭 분리
  * - 슬롯(열) 번호별로 날짜 범위 + 치료사 이름 설정
  * - 같은 슬롯에 여러 기간을 분할 설정 가능
  * - 빈 이름 = 해당 기간 비활성
@@ -42,6 +43,7 @@ export default function MonthlyTherapistConfig({
   manualTherapists,        // 도수치료 기본 치료사 목록
   monthlyTherapists,       // 현재 월별 충격파 설정
   monthlyManualTherapists, // 현재 월별 도수치료 설정
+  monthlyShinjangSprayTherapists, // 현재 월별 신장분사 설정
   onSave,                  // (year, month, configs, type) => Promise<boolean>
   onSaveRoster,            // (type, roster) => Promise<boolean>
   settings,
@@ -49,14 +51,23 @@ export default function MonthlyTherapistConfig({
   onClose,
 }) {
   const [configSection, setConfigSection] = useState('therapists'); // therapists | weekly | dates | staffBlocks | textStyle
-  const [activeTab, setActiveTab] = useState('shockwave'); // 'shockwave' | 'manual_therapy'
+  const [activeTab, setActiveTab] = useState('shockwave'); // 'shockwave' | 'manual_therapy' | 'shinjang_spray'
 
-  const currentTherapists = activeTab === 'manual_therapy' ? manualTherapists : therapists;
+  const shinjangSprayTherapists = useMemo(() => buildShinjangSprayDefaultTherapists({
+    shockwaveTherapists: therapists,
+    manualTherapists,
+  }), [manualTherapists, therapists]);
+  const currentTherapists = activeTab === 'manual_therapy'
+    ? manualTherapists
+    : activeTab === 'shinjang_spray'
+      ? shinjangSprayTherapists
+      : therapists;
   const lastDay = new Date(year, month, 0).getDate();
 
   // 탭별 로컬 편집 상태
   const [shockwaveSlots, setShockwaveSlots] = useState(null);
   const [manualSlots, setManualSlots] = useState(null);
+  const [shinjangSpraySlots, setShinjangSpraySlots] = useState(null);
   const [dayOverrides, setDayOverrides] = useState({});
   const [selectedWeeklyDays, setSelectedWeeklyDays] = useState(STANDARD_WEEKDAYS);
   const [weeklyBulkValues, setWeeklyBulkValues] = useState({
@@ -82,10 +93,13 @@ export default function MonthlyTherapistConfig({
     no_lunch: false,
   });
 
-  const buildSlots = useCallback((therapistList, monthlyData) => {
+  const buildSlots = useCallback((therapistList, monthlyData, monthlyDefinesSlotCount = false) => {
     const ld = new Date(year, month, 0).getDate();
-    const therapistCount = Array.isArray(therapistList) ? therapistList.length : 0;
-    const monthlyMaxSlot = (Array.isArray(monthlyData) ? monthlyData : []).reduce(
+    const safeMonthlyData = Array.isArray(monthlyData) ? monthlyData : [];
+    const therapistCount = monthlyDefinesSlotCount && safeMonthlyData.length > 0
+      ? 0
+      : Array.isArray(therapistList) ? therapistList.length : 0;
+    const monthlyMaxSlot = safeMonthlyData.reduce(
       (max, item) => Math.max(max, Number(item?.slot_index) || 0),
       -1
     );
@@ -131,8 +145,31 @@ export default function MonthlyTherapistConfig({
     }
   }, [manualTherapists, monthlyManualTherapists, buildSlots, manualSlots]);
 
-  const slots = activeTab === 'manual_therapy' ? manualSlots : shockwaveSlots;
-  const setSlots = activeTab === 'manual_therapy' ? setManualSlots : setShockwaveSlots;
+  useEffect(() => {
+    if (!shinjangSpraySlots) {
+      setShinjangSpraySlots(buildSlots(
+        shinjangSprayTherapists,
+        monthlyShinjangSprayTherapists,
+        true
+      ));
+    }
+  }, [
+    buildSlots,
+    monthlyShinjangSprayTherapists,
+    shinjangSpraySlots,
+    shinjangSprayTherapists,
+  ]);
+
+  const slots = activeTab === 'manual_therapy'
+    ? manualSlots
+    : activeTab === 'shinjang_spray'
+      ? shinjangSpraySlots
+      : shockwaveSlots;
+  const setSlots = activeTab === 'manual_therapy'
+    ? setManualSlots
+    : activeTab === 'shinjang_spray'
+      ? setShinjangSpraySlots
+      : setShockwaveSlots;
   const slotIndexes = useMemo(
     () => Object.keys(slots || {}).map(Number).sort((a, b) => a - b),
     [slots]
@@ -399,7 +436,9 @@ export default function MonthlyTherapistConfig({
       });
     });
 
-    const rosterSuccess = onSaveRoster ? await onSaveRoster(activeTab, roster) : true;
+    const rosterSuccess = activeTab === 'shinjang_spray' || !onSaveRoster
+      ? true
+      : await onSaveRoster(activeTab, roster);
     const success = rosterSuccess && await onSave(year, month, configs, activeTab);
     setSaving(false);
     if (success) onClose();
@@ -522,6 +561,13 @@ export default function MonthlyTherapistConfig({
           onClick={() => setActiveTab('manual_therapy')}
         >
           도수 치료사
+        </button>
+        <button
+          type="button"
+          className={`monthly-therapist-tab${activeTab === 'shinjang_spray' ? ' active' : ''}`}
+          onClick={() => setActiveTab('shinjang_spray')}
+        >
+          신장분사 치료사
         </button>
       </div>
 
@@ -1770,7 +1816,7 @@ export default function MonthlyTherapistConfig({
             {saving
               ? '저장 중...'
               : configSection === 'therapists'
-                ? `${activeTab === 'manual_therapy' ? '도수치료' : '충격파'} 저장`
+                ? `${activeTab === 'manual_therapy' ? '도수치료' : activeTab === 'shinjang_spray' ? '신장분사' : '충격파'} 저장`
                 : configSection === 'staffBlocks'
                   ? '근무표 연동 저장'
                   : configSection === 'textStyle'

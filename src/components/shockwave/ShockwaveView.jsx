@@ -145,7 +145,7 @@ import {
 import { normalizeLoadedScheduleMonthKey } from '../../lib/scheduleMonthLoadUtils';
 
 export default function ShockwaveView({ therapists, settings, memos = {}, memosLoadedKey = '', onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
-  const { currentYear, currentMonth, goToMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, monthlyTherapistsByMonth, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings, clipboardRef, clipboardSource, setClipboardSource } = useSchedule();
+  const { currentYear, currentMonth, goToMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, monthlyShinjangSprayTherapists, monthlyTherapistsByMonth, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings, clipboardRef, clipboardSource, setClipboardSource } = useSchedule();
   const { addToast } = useToast();
   const { user } = useAuth();
   const canManageSchedulerSettings = isAdminUser(user);
@@ -4456,6 +4456,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
           manualTherapists={manualTherapists}
           monthlyTherapists={monthlyTherapists}
           monthlyManualTherapists={monthlyManualTherapists}
+          monthlyShinjangSprayTherapists={monthlyShinjangSprayTherapists}
           onSave={saveMonthlyTherapists}
           onSaveRoster={saveTherapistRoster}
           settings={settings}

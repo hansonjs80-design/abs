@@ -157,9 +157,12 @@
   border-radius: 10px 0 0 10px;
 }
 
+.monthly-therapist-tab + .monthly-therapist-tab {
+  border-left: none;
+}
+
 .monthly-therapist-tab:last-child {
   border-radius: 0 10px 10px 0;
-  border-left: none;
 }
 
 .monthly-therapist-tab.active {

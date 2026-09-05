@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   buildMonthlyTherapistSavePlan,
+  getMonthlyTherapistConfigKey,
   normalizeMonthlyTherapistConfigs,
   saveMonthlyTherapistConfigs,
 } from '../monthlyTherapistPersistence.js';
@@ -85,6 +86,20 @@ describe('monthly therapist persistence', () => {
 
     assert.equal(plan.rowsToUpsert.length, 2);
     assert.deepEqual(plan.staleIds, ['stale']);
+  });
+
+  it('keeps shinjang spray as an independent monthly therapist type', () => {
+    const [row] = normalizeMonthlyTherapistConfigs({
+      year: 2026,
+      month: 9,
+      type: 'shinjang_spray',
+      configs: [
+        { slot_index: 0, therapist_name: '신장치료사', start_day: 1, end_day: 30 },
+      ],
+    });
+
+    assert.equal(row.type, 'shinjang_spray');
+    assert.equal(getMonthlyTherapistConfigKey(row), '2026:9:0:1:shinjang_spray');
   });
 
   it('upserts the new settings before deleting stale row ids', async () => {

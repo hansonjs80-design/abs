@@ -12,20 +12,20 @@ import ShockwaveSettlementHorizontalCompactView from './ShockwaveSettlementHoriz
 const SETTLEMENT_VIEW_MODE_STORAGE_KEY = 'shockwave:settlement:viewMode';
 const VIEW_MODES = new Set(['horizontal', 'horizontal2', 'vertical']);
 
-function readStoredViewMode() {
+function readStoredViewMode(storageKey = SETTLEMENT_VIEW_MODE_STORAGE_KEY) {
   if (typeof window === 'undefined') return 'horizontal';
   try {
-    const stored = window.localStorage.getItem(SETTLEMENT_VIEW_MODE_STORAGE_KEY);
+    const stored = window.localStorage.getItem(storageKey);
     return VIEW_MODES.has(stored) ? stored : 'horizontal';
   } catch {
     return 'horizontal';
   }
 }
 
-function writeStoredViewMode(nextViewMode) {
+function writeStoredViewMode(nextViewMode, storageKey = SETTLEMENT_VIEW_MODE_STORAGE_KEY) {
   if (typeof window === 'undefined' || !VIEW_MODES.has(nextViewMode)) return;
   try {
-    window.localStorage.setItem(SETTLEMENT_VIEW_MODE_STORAGE_KEY, nextViewMode);
+    window.localStorage.setItem(storageKey, nextViewMode);
   } catch {
     // localStorage may be unavailable in private browsing or restricted contexts.
   }
@@ -48,6 +48,7 @@ export default function ShockwaveSettlementView({
   cryoPrescriptions = [],
   cryoPrices = {},
   incentivePercentage,
+  incentivePercentages,
   recentMonthlySummaries = [],
   recentPeriodInput = '최근 6개월',
   recentPeriodLabel = '최근 6개월',
@@ -55,15 +56,18 @@ export default function ShockwaveSettlementView({
   monthlyTherapists,
   selectedTherapistNames,
   recentSummariesLoading = false,
+  treatmentLabel = '충격파',
+  showRecentSummaries = true,
+  viewModeStorageKey = SETTLEMENT_VIEW_MODE_STORAGE_KEY,
 }) {
-  const [viewMode, setViewMode] = useState(readStoredViewMode); // 'horizontal' | 'horizontal2' | 'vertical'
+  const [viewMode, setViewMode] = useState(() => readStoredViewMode(viewModeStorageKey)); // 'horizontal' | 'horizontal2' | 'vertical'
   const [pricingMode, setPricingMode] = useState('standard'); // 'standard' | 'cryo'
   const handleViewModeChange = useCallback((nextViewMode, nextPricingMode = 'standard') => {
     if (!VIEW_MODES.has(nextViewMode)) return;
     setViewMode(nextViewMode);
     setPricingMode(nextPricingMode === 'cryo' ? 'cryo' : 'standard');
-    writeStoredViewMode(nextViewMode);
-  }, []);
+    writeStoredViewMode(nextViewMode, viewModeStorageKey);
+  }, [viewModeStorageKey]);
   const isCryoAdjusted = pricingMode === 'cryo';
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
@@ -106,6 +110,27 @@ export default function ShockwaveSettlementView({
     ]);
     return Object.fromEntries(entries);
   }, [effectivePrescriptionPrices]);
+  const normalizedIncentiveMap = useMemo(() => Object.fromEntries(
+    Object.entries(
+      incentivePercentages && typeof incentivePercentages === 'object'
+        ? incentivePercentages
+        : {}
+    ).map(([prescription, percentage]) => [
+      normalizePrescriptionKey(prescription),
+      Math.max(0, Number(percentage) || 0),
+    ])
+  ), [incentivePercentages]);
+  const usesPrescriptionIncentives = Object.keys(normalizedIncentiveMap).length > 0;
+  const getIncentivePercentage = useCallback((prescription) => (
+    normalizedIncentiveMap[normalizePrescriptionKey(prescription)]
+      ?? Math.max(0, Number(incentivePercentage) || 0)
+  ), [incentivePercentage, normalizedIncentiveMap]);
+  const incentiveLabel = usesPrescriptionIncentives
+    ? '처방별 인센티브'
+    : `인센티브 ${Number(incentivePercentage) || 0}%`;
+  const incentiveRowLabel = usesPrescriptionIncentives
+    ? '인센티브 (처방별)'
+    : `인센티브 (${Number(incentivePercentage) || 0}%)`;
 
   const settlement = useMemo(() => {
     const summaryByTherapist = displayTherapists.map((therapist) => {
@@ -134,7 +159,13 @@ export default function ShockwaveSettlementView({
         return sum + (countsByPrescription[prescription] || 0) * unitPrice;
       }, 0);
 
-      const incentive = Math.round(amount * ((Number(incentivePercentage) || 0) / 100));
+      const incentive = safePrescriptions.reduce((sum, prescription) => {
+        const unitPrice = normalizedPriceMap[normalizePrescriptionKey(prescription)] || 0;
+        const prescriptionAmount = (countsByPrescription[prescription] || 0) * unitPrice;
+        return sum + Math.round(
+          prescriptionAmount * (getIncentivePercentage(prescription) / 100)
+        );
+      }, 0);
 
       return {
         therapist: { ...therapist, id: therapist.key || therapist.id || therapist.name, name: therapist.displayName || therapist.name },
@@ -166,7 +197,7 @@ export default function ShockwaveSettlementView({
       grandAmount,
       grandIncentive,
     };
-  }, [safeLogs, displayTherapists, safePrescriptions, normalizedPriceMap, incentivePercentage]);
+  }, [safeLogs, displayTherapists, safePrescriptions, normalizedPriceMap, getIncentivePercentage]);
 
   const horizontalPrescriptions = useMemo(() => {
     return safePrescriptions.filter(
@@ -191,7 +222,7 @@ export default function ShockwaveSettlementView({
   if (!displayTherapists.length) {
     return (
       <div className="sw-stats-empty">
-        활성화된 치료사가 없어 결산표를 계산할 수 없습니다.
+        활성화된 {treatmentLabel} 치료사가 없어 결산표를 계산할 수 없습니다.
         <div className="empty-subtext">설정 탭에서 치료사와 결산 기준을 먼저 저장해 주세요.</div>
       </div>
     );
@@ -226,10 +257,10 @@ export default function ShockwaveSettlementView({
   return (
     <div className={`sw-settlement-stack sw-settlement-stack--shockwave ${viewMode === 'vertical' ? 'sw-settlement-stack--vertical' : ''} ${viewMode === 'horizontal2' ? 'sw-settlement-stack--horizontal2' : ''}`}>
       <div className="sw-settlement-view-mode-row">
-        {renderViewModeSelector('standard', '기본 충격파 결산 보기 방식')}
+        {renderViewModeSelector('standard', `기본 ${treatmentLabel} 결산 보기 방식`)}
         <div className="sw-cryo-view-mode-group">
           <span className="sw-cryo-view-mode-label">크라이오 반영 통계</span>
-          {renderViewModeSelector('cryo', '크라이오 반영 충격파 결산 보기 방식')}
+          {renderViewModeSelector('cryo', `크라이오 반영 ${treatmentLabel} 결산 보기 방식`)}
         </div>
       </div>
 
@@ -237,9 +268,9 @@ export default function ShockwaveSettlementView({
         <>
           <div className="sw-settlement-card sw-settlement-main-card">
             <div className="sw-settlement-header">
-              <h2>{currentMonth}월 {isCryoAdjusted ? '충격파 크라이오 반영 결산' : '충격파 결산'}</h2>
+              <h2>{currentMonth}월 {treatmentLabel}{isCryoAdjusted ? ' 크라이오 반영' : ''} 결산</h2>
               <div className="sw-settlement-meta">
-                <span>인센티브 {Number(incentivePercentage) || 0}%</span>
+                <span>{incentiveLabel}</span>
               </div>
             </div>
 
@@ -292,7 +323,7 @@ export default function ShockwaveSettlementView({
                     )}
                   </tr>
                   <tr>
-                    <th className="row-label">충격파 합계(건)</th>
+                    <th className="row-label">{treatmentLabel} 합계(건)</th>
                     {settlement.summaryByTherapist.map((item, therapistIndex) => (
                       <td key={`total-count-${item?.therapist?.id || item?.therapist?.name || therapistIndex}`} colSpan={horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length || 1} className={`merged-value therapist-group-end therapist-tone-${therapistIndex % 5}-cell${horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length === 1 ? ' merged-value--single-prescription' : ''}`}>
                         {formatCount(item.totalCount)}
@@ -308,7 +339,7 @@ export default function ShockwaveSettlementView({
                     ))}
                   </tr>
                   <tr className="settlement-incentive-row">
-                    <th className="row-label">인센티브 ({Number(incentivePercentage) || 0}%)</th>
+                    <th className="row-label">{incentiveRowLabel}</th>
                     {settlement.summaryByTherapist.map((item, therapistIndex) => (
                       <td key={`incentive-${item?.therapist?.id || item?.therapist?.name || therapistIndex}`} colSpan={horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length || 1} className={`merged-value incentive therapist-group-end therapist-tone-${therapistIndex % 5}-cell${horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length === 1 ? ' merged-value--single-prescription' : ''}`}>
                         {formatCurrency(item.incentive)}
@@ -320,7 +351,7 @@ export default function ShockwaveSettlementView({
             </div>
           </div>
 
-          <div className="sw-settlement-support-row">
+          <div className={`sw-settlement-support-row${showRecentSummaries ? '' : ' sw-settlement-support-row--single'}`}>
             <div className="sw-settlement-card sw-grand-total-card">
               <div className="sw-settlement-header">
                 <h2>총합계</h2>
@@ -351,7 +382,7 @@ export default function ShockwaveSettlementView({
                       ))}
                     </tr>
                     <tr>
-                      <th className="row-label">충격파 합계(건)</th>
+                      <th className="row-label">{treatmentLabel} 합계(건)</th>
                       <td className="grand-value merged-value" colSpan={horizontalPrescriptions.length}>
                         {formatCount(settlement.grandTotalCount)}
                       </td>
@@ -363,7 +394,7 @@ export default function ShockwaveSettlementView({
                       </td>
                     </tr>
                     <tr className="settlement-incentive-row">
-                      <th className="row-label">인센티브 ({Number(incentivePercentage) || 0}%)</th>
+                      <th className="row-label">{incentiveRowLabel}</th>
                       <td className="grand-value merged-value incentive" colSpan={horizontalPrescriptions.length}>
                         {formatCurrency(settlement.grandIncentive)}
                       </td>
@@ -373,16 +404,17 @@ export default function ShockwaveSettlementView({
               </div>
             </div>
 
+            {showRecentSummaries && (
             <div className="sw-settlement-card sw-recent-summary-card">
               <div className="sw-settlement-header">
-                <h2>{recentPeriodLabel} {isCryoAdjusted ? '충격파 크라이오 반영 결산/신환 현황' : '충격파 결산/신환 현황'}</h2>
+                <h2>{recentPeriodLabel} {treatmentLabel}{isCryoAdjusted ? ' 크라이오 반영' : ''} 결산/신환 현황</h2>
                 <div className="sw-settlement-meta sw-recent-period-control">
                   <input
                     type="text"
                     value={recentPeriodInput}
                     onChange={(event) => onRecentPeriodInputChange?.(event.target.value)}
                     placeholder="최근 6개월"
-                    aria-label="충격파 최근 현황 기간"
+                    aria-label={`${treatmentLabel} 최근 현황 기간`}
                   />
                 </div>
               </div>
@@ -416,12 +448,15 @@ export default function ShockwaveSettlementView({
                 </table>
               </div>
             </div>
+            )}
           </div>
         </>
       ) : viewMode === 'horizontal2' ? (
         <ShockwaveSettlementHorizontalCompactView
           currentMonth={currentMonth}
           incentivePercentage={incentivePercentage}
+          incentivePercentages={incentivePercentages}
+          incentiveLabel={incentiveLabel}
           isCryoAdjusted={isCryoAdjusted}
           normalizedPriceMap={normalizedPriceMap}
           onRecentPeriodInputChange={onRecentPeriodInputChange}
@@ -431,6 +466,8 @@ export default function ShockwaveSettlementView({
           recentPeriodLabel={recentPeriodLabel}
           settlement={settlement}
           recentSummariesLoading={recentSummariesLoading}
+          treatmentLabel={treatmentLabel}
+          showRecentSummaries={showRecentSummaries}
         />
       ) : (
         <>
@@ -438,9 +475,9 @@ export default function ShockwaveSettlementView({
           <div className="sw-settlement-vertical-heading-row">
             <div className="sw-settlement-vertical-header-wrap">
               <div className="sw-settlement-header">
-                <h2>{currentMonth}월 {isCryoAdjusted ? '충격파 크라이오 반영 결산' : '충격파 결산'}</h2>
+                <h2>{currentMonth}월 {treatmentLabel}{isCryoAdjusted ? ' 크라이오 반영' : ''} 결산</h2>
                 <div className="sw-settlement-meta">
-                  <span>인센티브 {Number(incentivePercentage) || 0}%</span>
+                  <span>{incentiveLabel}</span>
                 </div>
               </div>
             </div>
@@ -473,7 +510,9 @@ export default function ShockwaveSettlementView({
                             const count = item.countsByPrescription[prescription] || 0;
                             const unitPrice = normalizedPriceMap[normalizePrescriptionKey(prescription)] || 0;
                             const prescriptionAmount = count * unitPrice;
-                            const prescriptionIncentive = Math.round(prescriptionAmount * ((Number(incentivePercentage) || 0) / 100));
+                            const prescriptionIncentive = Math.round(
+                              prescriptionAmount * (getIncentivePercentage(prescription) / 100)
+                            );
 
                             return (
                               <tr key={prescription}>
@@ -544,7 +583,9 @@ export default function ShockwaveSettlementView({
                           const count = settlement.grandPrescriptionCounts[prescription] || 0;
                           const unitPrice = normalizedPriceMap[normalizePrescriptionKey(prescription)] || 0;
                           const prescriptionAmount = count * unitPrice;
-                          const prescriptionIncentive = Math.round(prescriptionAmount * ((Number(incentivePercentage) || 0) / 100));
+                          const prescriptionIncentive = Math.round(
+                            prescriptionAmount * (getIncentivePercentage(prescription) / 100)
+                          );
 
                           return (
                             <tr key={prescription}>
@@ -561,16 +602,17 @@ export default function ShockwaveSettlementView({
               </div>
 
               {/* 최근 6개월 충격파 결산/신환 현황 */}
+              {showRecentSummaries && (
               <div className="sw-settlement-card sw-recent-summary-card sw-vertical-recent-card">
                 <div className="sw-settlement-header">
-                  <h2>{recentPeriodLabel} {isCryoAdjusted ? '충격파 크라이오 반영 결산/신환 현황' : '충격파 결산/신환 현황'}</h2>
+                  <h2>{recentPeriodLabel} {treatmentLabel}{isCryoAdjusted ? ' 크라이오 반영' : ''} 결산/신환 현황</h2>
                   <div className="sw-settlement-meta sw-recent-period-control">
                     <input
                       type="text"
                       value={recentPeriodInput}
                       onChange={(event) => onRecentPeriodInputChange?.(event.target.value)}
                       placeholder="최근 6개월"
-                      aria-label="충격파 최근 현황 기간"
+                      aria-label={`${treatmentLabel} 최근 현황 기간`}
                     />
                   </div>
                 </div>
@@ -604,6 +646,7 @@ export default function ShockwaveSettlementView({
                   </table>
                 </div>
               </div>
+              )}
             </div>
           </div>
         </div>

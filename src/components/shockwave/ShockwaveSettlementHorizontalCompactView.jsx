@@ -33,6 +33,8 @@ function TherapistNameStack({ name }) {
 export default function ShockwaveSettlementHorizontalCompactView({
   currentMonth,
   incentivePercentage,
+  incentivePercentages = {},
+  incentiveLabel,
   isCryoAdjusted = false,
   normalizedPriceMap,
   recentMonthlySummaries,
@@ -42,20 +44,31 @@ export default function ShockwaveSettlementHorizontalCompactView({
   prescriptions,
   recentSummariesLoading = false,
   settlement,
+  treatmentLabel = '충격파',
+  showRecentSummaries = true,
 }) {
   const incentiveRate = (Number(incentivePercentage) || 0) / 100;
+  const normalizedIncentiveMap = Object.fromEntries(
+    Object.entries(incentivePercentages || {}).map(([prescription, percentage]) => [
+      normalizePrescriptionKey(prescription),
+      Math.max(0, Number(percentage) || 0) / 100,
+    ])
+  );
+  const getIncentiveRate = (prescription) => (
+    normalizedIncentiveMap[normalizePrescriptionKey(prescription)] ?? incentiveRate
+  );
   const visibleTherapistSummaries = settlement.summaryByTherapist.filter((item) => item.totalCount > 0);
   const displayedPrescriptions = prescriptions.filter((prescription) => (
     (settlement.grandPrescriptionCounts[prescription] || 0) > 0
   ));
 
   return (
-    <div className="sw-horizontal2-layout">
+    <div className={`sw-horizontal2-layout${showRecentSummaries ? '' : ' sw-horizontal2-layout--single'}`}>
       <div className="sw-horizontal2-left">
         <div className="sw-horizontal2-title-row">
-          <h2>{currentMonth}월 {isCryoAdjusted ? '충격파 크라이오 반영 결산' : '충격파 결산'}</h2>
+          <h2>{currentMonth}월 {treatmentLabel}{isCryoAdjusted ? ' 크라이오 반영' : ''} 결산</h2>
           <div className="sw-settlement-meta">
-            <span>인센티브 {Number(incentivePercentage) || 0}%</span>
+            <span>{incentiveLabel || `인센티브 ${Number(incentivePercentage) || 0}%`}</span>
           </div>
         </div>
 
@@ -80,7 +93,9 @@ export default function ShockwaveSettlementHorizontalCompactView({
                       const count = item.countsByPrescription[prescription] || 0;
                       const unitPrice = normalizedPriceMap[normalizePrescriptionKey(prescription)] || 0;
                       const prescriptionAmount = count * unitPrice;
-                      const prescriptionIncentive = Math.round(prescriptionAmount * incentiveRate);
+                      const prescriptionIncentive = Math.round(
+                        prescriptionAmount * getIncentiveRate(prescription)
+                      );
                       return (
                         <tr key={`${therapistKey}-${prescription}`} className="horizontal2-content-row">
                           <td className="prescription-name">{prescription}</td>
@@ -124,16 +139,17 @@ export default function ShockwaveSettlementHorizontalCompactView({
         </table>
       </div>
 
+      {showRecentSummaries && (
       <div className="sw-horizontal2-right">
         <div className="sw-horizontal2-title-row sw-horizontal2-recent-title-row">
-          <h2>{recentPeriodLabel} {isCryoAdjusted ? '충격파 크라이오 반영 결산/신환 현황' : '충격파 결산/신환 현황'}</h2>
+          <h2>{recentPeriodLabel} {treatmentLabel}{isCryoAdjusted ? ' 크라이오 반영' : ''} 결산/신환 현황</h2>
           <input
             className="sw-horizontal2-period-input"
             type="text"
             value={recentPeriodInput}
             onChange={(event) => onRecentPeriodInputChange?.(event.target.value)}
             placeholder="최근 6개월"
-            aria-label="충격파 최근 현황 기간"
+            aria-label={`${treatmentLabel} 최근 현황 기간`}
           />
         </div>
 
@@ -164,6 +180,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }

@@ -134,6 +134,7 @@ export default function ShockwavePage() {
         Promise.allSettled([
           preloadShockwaveNavigationMonths(currentYear, currentMonth),
           loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy'),
+          loadMonthlyTherapists(currentYear, currentMonth, 'shinjang_spray'),
         ]).then((backgroundResults) => {
           backgroundResults.forEach((result, index) => {
             if (result.status === 'rejected') {

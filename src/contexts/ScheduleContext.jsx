@@ -46,6 +46,7 @@ import {
   wasScheduleDraftDeletedAfter,
 } from '../lib/schedulerUtils';
 import { saveMonthlyTherapistConfigs } from '../lib/monthlyTherapistPersistence';
+import { buildShinjangSprayDefaultTherapists } from '../lib/shinjangSprayStatsUtils';
 import { saveTherapistRosterSafely } from '../lib/therapistRosterPersistence';
 import {
   canStorePreloadedScheduleView,
@@ -243,9 +244,10 @@ export function ScheduleProvider({ children }) {
   const [shockwaveMemosLoadedKey, setShockwaveMemosLoadedKey] = useState('');
   const [monthlyTherapists, setMonthlyTherapists] = useState([]);
   const [monthlyManualTherapists, setMonthlyManualTherapists] = useState([]);
-  const [monthlyTherapistsByMonth, setMonthlyTherapistsByMonth] = useState({ shockwave: {}, manual_therapy: {} });
-  const [monthlyTherapistVisibleLoadKeys, setMonthlyTherapistVisibleLoadKeys] = useState({ shockwave: '', manual_therapy: '' });
-  const [monthlyTherapistLoadKeys, setMonthlyTherapistLoadKeys] = useState({ shockwave: '', manual_therapy: '' });
+  const [monthlyShinjangSprayTherapists, setMonthlyShinjangSprayTherapists] = useState([]);
+  const [monthlyTherapistsByMonth, setMonthlyTherapistsByMonth] = useState({ shockwave: {}, manual_therapy: {}, shinjang_spray: {} });
+  const [monthlyTherapistVisibleLoadKeys, setMonthlyTherapistVisibleLoadKeys] = useState({ shockwave: '', manual_therapy: '', shinjang_spray: '' });
+  const [monthlyTherapistLoadKeys, setMonthlyTherapistLoadKeys] = useState({ shockwave: '', manual_therapy: '', shinjang_spray: '' });
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
@@ -275,10 +277,10 @@ export function ScheduleProvider({ children }) {
   const shockwaveMemosRef = useRef(shockwaveMemos);
   const currentDateRef = useRef({ year: currentYear, month: currentMonth });
   const shockwaveMemosLoadRequestRef = useRef(0);
-  const monthlyTherapistLoadRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
-  const monthlyTherapistVisibleLoadRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
+  const monthlyTherapistLoadRequestRef = useRef({ shockwave: 0, manual_therapy: 0, shinjang_spray: 0 });
+  const monthlyTherapistVisibleLoadRequestRef = useRef({ shockwave: 0, manual_therapy: 0, shinjang_spray: 0 });
   const monthlyTherapistRowsLoadPromisesRef = useRef(new Map());
-  const monthlyTherapistSaveRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
+  const monthlyTherapistSaveRequestRef = useRef({ shockwave: 0, manual_therapy: 0, shinjang_spray: 0 });
   const therapistRosterLoadRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
   const therapistRosterSaveRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
   const therapistRosterSaveQueueRef = useRef({
@@ -332,6 +334,7 @@ export function ScheduleProvider({ children }) {
 
   const monthlyTherapistsRef = useRef(monthlyTherapists);
   const monthlyManualTherapistsRef = useRef(monthlyManualTherapists);
+  const monthlyShinjangSprayTherapistsRef = useRef(monthlyShinjangSprayTherapists);
 
   useEffect(() => {
     monthlyTherapistsRef.current = monthlyTherapists;
@@ -340,6 +343,10 @@ export function ScheduleProvider({ children }) {
   useEffect(() => {
     monthlyManualTherapistsRef.current = monthlyManualTherapists;
   }, [monthlyManualTherapists]);
+
+  useEffect(() => {
+    monthlyShinjangSprayTherapistsRef.current = monthlyShinjangSprayTherapists;
+  }, [monthlyShinjangSprayTherapists]);
 
   // ─── CLIPBOARD GLOBAL STATE ────────────────────────────────
   const clipboardRef = useRef({ content: '', mode: null });
@@ -2701,25 +2708,67 @@ export function ScheduleProvider({ children }) {
       }));
     }
 
-    // 이전 달도 없음 → 기본 therapists 테이블에서 생성
+    // 이전 달도 없음 → 유형별 기본 치료사 목록에서 생성
     const lastDay = new Date(year, month, 0).getDate();
-    let baseTherapists = type === 'manual_therapy' ? manualTherapistsRef.current : therapistsRef.current;
+    let baseTherapists = type === 'manual_therapy'
+      ? manualTherapistsRef.current
+      : type === 'shinjang_spray'
+        ? buildShinjangSprayDefaultTherapists({
+          shockwaveTherapists: therapistsRef.current,
+          manualTherapists: manualTherapistsRef.current,
+        })
+        : therapistsRef.current;
     if (!baseTherapists || baseTherapists.length === 0) {
-      const tableName = type === 'manual_therapy' ? 'manual_therapy_therapists' : 'shockwave_therapists';
-      const { data: defaultRows, error: defaultError } = await withScheduleQueryTimeout(
-        supabase
-          .from(tableName)
-          .select('*')
-          .eq('is_active', true)
-          .order('slot_index'),
-        `${tableName} monthly fallback`
-      );
-
-      if (!defaultError && Array.isArray(defaultRows)) {
-        baseTherapists = defaultRows;
+      if (type === 'shinjang_spray') {
+        const [shockwaveResult, manualResult] = await Promise.all([
+          withScheduleQueryTimeout(
+            supabase
+              .from('shockwave_therapists')
+              .select('*')
+              .eq('is_active', true)
+              .order('slot_index'),
+            'shockwave_therapists shinjang monthly fallback'
+          ),
+          withScheduleQueryTimeout(
+            supabase
+              .from('manual_therapy_therapists')
+              .select('*')
+              .eq('is_active', true)
+              .order('slot_index'),
+            'manual_therapy_therapists shinjang monthly fallback'
+          ),
+        ]);
+        const shockwaveRows = !shockwaveResult.error && Array.isArray(shockwaveResult.data)
+          ? shockwaveResult.data
+          : [];
+        const manualRows = !manualResult.error && Array.isArray(manualResult.data)
+          ? manualResult.data
+          : [];
+        baseTherapists = buildShinjangSprayDefaultTherapists({
+          shockwaveTherapists: shockwaveRows,
+          manualTherapists: manualRows,
+        });
         if (options.updateRoster === true) {
-          if (type === 'manual_therapy') setManualTherapists(defaultRows);
-          else setTherapists(defaultRows);
+          if (shockwaveRows.length > 0) setTherapists(shockwaveRows);
+          if (manualRows.length > 0) setManualTherapists(manualRows);
+        }
+      } else {
+        const tableName = type === 'manual_therapy' ? 'manual_therapy_therapists' : 'shockwave_therapists';
+        const { data: defaultRows, error: defaultError } = await withScheduleQueryTimeout(
+          supabase
+            .from(tableName)
+            .select('*')
+            .eq('is_active', true)
+            .order('slot_index'),
+          `${tableName} monthly fallback`
+        );
+
+        if (!defaultError && Array.isArray(defaultRows)) {
+          baseTherapists = defaultRows;
+          if (options.updateRoster === true) {
+            if (type === 'manual_therapy') setManualTherapists(defaultRows);
+            else setTherapists(defaultRows);
+          }
         }
       }
     }
@@ -2751,12 +2800,20 @@ export function ScheduleProvider({ children }) {
     return loadPromise;
   }, [resolveMonthlyTherapistRows]);
 
-  // 월별 치료사 설정 로드 (type: 'shockwave' | 'manual_therapy')
+  // 월별 치료사 설정 로드 (type: 'shockwave' | 'manual_therapy' | 'shinjang_spray')
   const loadMonthlyTherapists = useCallback(async (year, month, type = 'shockwave') => {
-    const setter = type === 'manual_therapy' ? setMonthlyManualTherapists : setMonthlyTherapists;
+    const setter = type === 'manual_therapy'
+      ? setMonthlyManualTherapists
+      : type === 'shinjang_spray'
+        ? setMonthlyShinjangSprayTherapists
+        : setMonthlyTherapists;
     const loadKey = `${year}-${month}`;
     if (monthlyTherapistLoadKeysRef.current[type] === loadKey) {
-      const currentList = type === 'manual_therapy' ? monthlyManualTherapistsRef.current : monthlyTherapistsRef.current;
+      const currentList = type === 'manual_therapy'
+        ? monthlyManualTherapistsRef.current
+        : type === 'shinjang_spray'
+          ? monthlyShinjangSprayTherapistsRef.current
+          : monthlyTherapistsRef.current;
       if (Array.isArray(currentList)) {
         setMonthlyTherapistsMonthCache(year, month, type, currentList);
         return currentList;
@@ -2835,9 +2892,13 @@ export function ScheduleProvider({ children }) {
     return monthlyTherapistsByMonthRef.current[type];
   }, [loadMonthlyTherapistRowsShared]);
 
-  // 월별 치료사 설정 저장 (type: 'shockwave' | 'manual_therapy')
+  // 월별 치료사 설정 저장 (type: 'shockwave' | 'manual_therapy' | 'shinjang_spray')
   const saveMonthlyTherapists = useCallback(async (year, month, configs, type = 'shockwave') => {
-    const setter = type === 'manual_therapy' ? setMonthlyManualTherapists : setMonthlyTherapists;
+    const setter = type === 'manual_therapy'
+      ? setMonthlyManualTherapists
+      : type === 'shinjang_spray'
+        ? setMonthlyShinjangSprayTherapists
+        : setMonthlyTherapists;
     const requestId = (monthlyTherapistSaveRequestRef.current[type] || 0) + 1;
     monthlyTherapistSaveRequestRef.current[type] = requestId;
     try {
@@ -3058,7 +3119,7 @@ export function ScheduleProvider({ children }) {
       saveTherapistRoster,
       shockwaveSettings, loadShockwaveSettings, saveShockwaveSettings, saveShockwaveDeviceScheduleSettings,
       shockwaveMemos, shockwaveMemosLoadedKey, loadShockwaveMemos, preloadShockwaveNavigationMonths, saveShockwaveMemo, saveShockwaveMemosBulk,
-      monthlyTherapists, monthlyManualTherapists, monthlyTherapistsByMonth, monthlyTherapistLoadKeys, monthlyTherapistVisibleLoadKeys, loadMonthlyTherapists, loadVisibleMonthlyTherapists, saveMonthlyTherapists,
+      monthlyTherapists, monthlyManualTherapists, monthlyShinjangSprayTherapists, monthlyTherapistsByMonth, monthlyTherapistLoadKeys, monthlyTherapistVisibleLoadKeys, loadMonthlyTherapists, loadVisibleMonthlyTherapists, saveMonthlyTherapists,
       notices, loadNotices, saveNotice,
       calendarSlotSettings, loadCalendarSlotSettings, saveCalendarSlotSettings,
       loading,

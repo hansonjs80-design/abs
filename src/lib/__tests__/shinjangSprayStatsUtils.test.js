@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  applyMonthlyShinjangSprayTherapists,
+  buildShinjangSprayDefaultTherapists,
   buildShinjangSprayPrescriptions,
   buildShinjangSpraySettlementSummary,
   isShinjangSprayPrescription,
@@ -9,6 +11,64 @@ import {
 } from '../shinjangSprayStatsUtils.js';
 
 describe('shinjang spray statistics', () => {
+  it('builds the default shinjang roster by scheduler column', () => {
+    assert.deepEqual(
+      buildShinjangSprayDefaultTherapists({
+        shockwaveTherapists: [
+          { id: 's0', slot_index: 0, name: '충격파1' },
+          { id: 's2', slot_index: 2, name: '충격파3' },
+        ],
+        manualTherapists: [
+          { id: 'm0', slot_index: 0, name: '도수1' },
+          { id: 'm1', slot_index: 1, name: '도수2' },
+        ],
+      }).map((therapist) => [therapist.slot_index, therapist.name]),
+      [[0, '충격파1'], [1, '도수2'], [2, '충격파3']]
+    );
+  });
+
+  it('reassigns scheduler-linked rows with the shinjang monthly therapist ranges', () => {
+    const legacyRow = {
+      id: 'legacy',
+      date: '2026-09-12',
+      therapist_name: '수동치료사',
+      prescription: '수동(신장분사)',
+    };
+    const rows = applyMonthlyShinjangSprayTherapists([
+      {
+        id: 'first-half',
+        date: '2026-09-12',
+        therapist_name: '기존치료사',
+        scheduler_cell_key: '2026:09:1:5:3:1',
+      },
+      {
+        id: 'second-half',
+        date: '2026-09-20',
+        therapist_name: '기존치료사',
+        scheduler_cell_key: '2026:09:2:6:3:1',
+      },
+      {
+        id: 'inactive',
+        date: '2026-09-20',
+        therapist_name: '기존치료사',
+        scheduler_cell_key: '2026:09:2:6:3:2',
+      },
+      legacyRow,
+    ], [
+      { slot_index: 1, therapist_name: '신장전반', start_day: 1, end_day: 15 },
+      { slot_index: 1, therapist_name: '신장후반', start_day: 16, end_day: 30 },
+      { slot_index: 2, therapist_name: '', start_day: 1, end_day: 30 },
+    ]);
+
+    assert.deepEqual(rows.map((row) => row.therapist_name), [
+      '신장전반',
+      '신장후반',
+      '',
+      '수동치료사',
+    ]);
+    assert.strictEqual(rows[3], legacyRow);
+  });
+
   it('recognizes the marker with normalized width and spaces', () => {
     assert.equal(isShinjangSprayPrescription('F2.5 (신장분사)'), true);
     assert.equal(isShinjangSprayPrescription('도수（신장분사）'), true);

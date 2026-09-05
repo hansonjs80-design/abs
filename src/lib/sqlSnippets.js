@@ -482,7 +482,7 @@ CREATE TABLE IF NOT EXISTS public.shockwave_monthly_therapists (
   therapist_name text NOT NULL DEFAULT '', -- 치료사 이름 (빈 문자열 = 해당 기간 비활성)
   start_day integer NOT NULL DEFAULT 1,    -- 시작일 (1~31)
   end_day integer NOT NULL DEFAULT 31,     -- 종료일 (1~31, 해당 월의 마지막 날까지)
-  type text NOT NULL DEFAULT 'shockwave',  -- 'shockwave' 또는 'manual_therapy'
+  type text NOT NULL DEFAULT 'shockwave',  -- 'shockwave', 'manual_therapy' 또는 'shinjang_spray'
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
   UNIQUE(year, month, slot_index, start_day, type)
 );

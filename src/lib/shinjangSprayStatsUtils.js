@@ -3,6 +3,7 @@ import {
   statsPrescriptionsMatch,
   toStatsPrescriptionCount,
 } from './shockwaveStatsCountUtils.js';
+import { parseSchedulerCellKey } from './schedulerHistoryCandidateUtils.js';
 
 function normalizeMarkerText(value) {
   return String(value || '')
@@ -38,6 +39,77 @@ function getNormalizedMapValue(values, prescription) {
     statsPrescriptionsMatch(configuredPrescription, prescription)
   ));
   return match?.[1];
+}
+
+function getTherapistSlotMap(therapists) {
+  const slots = new Map();
+  (Array.isArray(therapists) ? therapists : []).forEach((therapist, index) => {
+    if (!therapist) return;
+    const configuredSlot = Number(therapist.slot_index);
+    const slotIndex = Number.isInteger(configuredSlot) && configuredSlot >= 0
+      ? configuredSlot
+      : index;
+    if (!slots.has(slotIndex)) slots.set(slotIndex, therapist);
+  });
+  return slots;
+}
+
+export function buildShinjangSprayDefaultTherapists({
+  shockwaveTherapists = [],
+  manualTherapists = [],
+} = {}) {
+  const shockwaveSlots = getTherapistSlotMap(shockwaveTherapists);
+  const manualSlots = getTherapistSlotMap(manualTherapists);
+  const maxSlotIndex = Math.max(
+    -1,
+    ...shockwaveSlots.keys(),
+    ...manualSlots.keys()
+  );
+
+  return Array.from({ length: maxSlotIndex + 1 }, (_, slotIndex) => {
+    const source = shockwaveSlots.get(slotIndex) || manualSlots.get(slotIndex) || {};
+    return {
+      ...source,
+      id: source.id || `shinjang-spray-slot-${slotIndex}`,
+      slot_index: slotIndex,
+      name: String(source.name || source.therapist_name || '').trim(),
+    };
+  });
+}
+
+export function applyMonthlyShinjangSprayTherapists(rows, monthlyTherapists) {
+  const safeRows = Array.isArray(rows) ? rows.filter(Boolean) : [];
+  const configs = Array.isArray(monthlyTherapists) ? monthlyTherapists.filter(Boolean) : [];
+  if (configs.length === 0) return safeRows;
+
+  const configsBySlot = new Map();
+  configs.forEach((config) => {
+    const slotIndex = Number(config.slot_index);
+    if (!Number.isInteger(slotIndex) || slotIndex < 0) return;
+    if (!configsBySlot.has(slotIndex)) configsBySlot.set(slotIndex, []);
+    configsBySlot.get(slotIndex).push(config);
+  });
+
+  return safeRows.map((row) => {
+    const cell = parseSchedulerCellKey(row?.scheduler_cell_key);
+    if (!cell) return row;
+
+    const dateMatch = String(row?.date || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (!dateMatch) return row;
+    const [, dateYear, dateMonth, dateDay] = dateMatch.map(Number);
+    if (dateYear !== cell.year || dateMonth !== cell.month) return row;
+
+    const match = (configsBySlot.get(cell.col_index) || []).find((config) => (
+      dateDay >= Number(config.start_day)
+      && dateDay <= Number(config.end_day)
+    ));
+    if (match === undefined) return row;
+
+    return {
+      ...row,
+      therapist_name: String(match.therapist_name || '').trim(),
+    };
+  });
 }
 
 function isConfiguredPrescription(values, prescription) {

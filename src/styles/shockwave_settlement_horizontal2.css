@@ -133,6 +133,10 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   background: #ffffff !important;
 }
 
+.sw-horizontal2-layout--single {
+  grid-template-columns: 420px !important;
+}
+
 .sw-horizontal2-left,
 .sw-horizontal2-right,
 .sw-horizontal2-therapist-list {

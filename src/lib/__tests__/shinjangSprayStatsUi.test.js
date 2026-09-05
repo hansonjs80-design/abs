@@ -7,6 +7,9 @@ const permissionsUrl = new URL('../authPermissions.js', import.meta.url);
 const pageUrl = new URL('../../pages/ShinjangSprayStatsPage.jsx', import.meta.url);
 const settingsPanelUrl = new URL('../../components/shockwave/ShinjangSpraySettingsPanel.jsx', import.meta.url);
 const statsViewUrl = new URL('../../components/shockwave/ShinjangSprayStatsView.jsx', import.meta.url);
+const sharedSettlementViewUrl = new URL('../../components/shockwave/ShockwaveSettlementView.jsx', import.meta.url);
+const monthlyTherapistConfigUrl = new URL('../../components/shockwave/MonthlyTherapistConfig.jsx', import.meta.url);
+const scheduleContextUrl = new URL('../../contexts/ScheduleContext.jsx', import.meta.url);
 const loginSettingsUrl = new URL('../../components/settings/LoginSettings.jsx', import.meta.url);
 const shockwaveStatsViewUrl = new URL('../../components/shockwave/ShockwaveStatsView.jsx', import.meta.url);
 
@@ -25,10 +28,11 @@ describe('shinjang spray statistics UI', () => {
   });
 
   it('combines shockwave and manual logs and exposes per-prescription incentive settings', async () => {
-    const [pageSource, settingsSource, statsViewSource] = await Promise.all([
+    const [pageSource, settingsSource, statsViewSource, settlementSource] = await Promise.all([
       readFile(pageUrl, 'utf8'),
       readFile(settingsPanelUrl, 'utf8'),
       readFile(statsViewUrl, 'utf8'),
+      readFile(sharedSettlementViewUrl, 'utf8'),
     ]);
     assert.match(pageSource, /shockwave_patient_logs/);
     assert.match(pageSource, /manual_therapy_patient_logs/);
@@ -53,9 +57,33 @@ describe('shinjang spray statistics UI', () => {
     assert.match(settingsSource, /cryoPrescriptions/);
     assert.match(settingsSource, /aria-label="신장분사 집계 치료사 설정"/);
     assert.match(settingsSource, /이번 달 설정 저장/);
-    assert.match(statsViewSource, /크라이오 반영 통계/);
-    assert.match(statsViewSource, /isCryoAdjusted/);
-    assert.match(statsViewSource, /크라이오 차감/);
+    assert.match(statsViewSource, /treatmentLabel="신장분사"/);
+    assert.match(statsViewSource, /incentivePercentages=\{incentivePercentages\}/);
+    assert.match(statsViewSource, /cryoPrescriptions=\{cryoPrescriptions\}/);
+    assert.match(statsViewSource, /viewModeStorageKey=\{SHINJANG_VIEW_MODE_STORAGE_KEY\}/);
+    assert.match(settlementSource, /크라이오 반영 통계/);
+    assert.match(settlementSource, /handleViewModeChange\('horizontal2', targetPricingMode\)/);
+    assert.match(settlementSource, /handleViewModeChange\('vertical', targetPricingMode\)/);
+    assert.match(settlementSource, /처방별 인센티브/);
+  });
+
+  it('adds a monthly shinjang therapist tab and applies it to every shinjang statistics section', async () => {
+    const [pageSource, configSource, contextSource] = await Promise.all([
+      readFile(pageUrl, 'utf8'),
+      readFile(monthlyTherapistConfigUrl, 'utf8'),
+      readFile(scheduleContextUrl, 'utf8'),
+    ]);
+
+    assert.match(configSource, /activeTab === 'shinjang_spray'/);
+    assert.match(configSource, />\s*신장분사 치료사\s*<\/button>/);
+    assert.match(configSource, /monthlyShinjangSprayTherapists/);
+    assert.match(configSource, /activeTab === 'shinjang_spray' \|\| !onSaveRoster/);
+    assert.match(contextSource, /monthlyShinjangSprayTherapists/);
+    assert.match(contextSource, /shinjang_spray: \{\}/);
+    assert.match(pageSource, /loadMonthlyTherapists\(currentYear, currentMonth, 'shinjang_spray'\)/);
+    assert.match(pageSource, /applyMonthlyShinjangSprayTherapists/);
+    assert.match(pageSource, /rows=\{combinedRows\}/);
+    assert.match(pageSource, /logs=\{combinedRows\}/);
   });
 
   it('keeps shinjang marker rows out of the regular shockwave statistics UI', async () => {
