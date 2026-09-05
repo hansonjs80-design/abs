@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   buildCryoAdjustedPrescriptionPrices,
   buildManualTherapySettlementSummary,
+  buildSettlementIncentiveRateBreakdown,
   buildShockwaveSettlementPrintColumnWidths,
   buildStatsDisplayPrescriptions,
   buildTherapistPrescriptionDisplayGroups,
@@ -17,6 +18,44 @@ import {
 } from '../shockwaveStatsCountUtils.js';
 
 describe('shockwave stats count utilities', () => {
+  it('groups settlement counts and incentives by every configured incentive rate', () => {
+    const breakdown = buildSettlementIncentiveRateBreakdown({
+      countsByPrescription: {
+        '신장분사 3.0 DC': 1,
+        '신장분사 1': 2,
+        '신장분사 미래': 3,
+      },
+      prescriptions: ['신장분사 3.0 DC', '신장분사 1', '신장분사 미래'],
+      prescriptionPrices: {
+        '신장분사3.0DC': 105000,
+        '신장분사 1': 105000,
+        '신장분사 미래': 10000,
+      },
+      incentivePercentages: {
+        ' 신장분사 3.0 DC ': 7,
+        '신장분사 1': 15,
+        '신장분사 미래': 12.5,
+      },
+    });
+
+    assert.deepEqual(breakdown, [
+      { percentage: 7, count: 1, amount: 105000, incentive: 7350 },
+      { percentage: 12.5, count: 3, amount: 30000, incentive: 3750 },
+      { percentage: 15, count: 2, amount: 210000, incentive: 31500 },
+    ]);
+  });
+
+  it('omits incentive-rate rows that have no completed prescriptions', () => {
+    assert.deepEqual(buildSettlementIncentiveRateBreakdown({
+      countsByPrescription: { '신장분사 1': 0, '신장분사 2': 2 },
+      prescriptions: ['신장분사 1', '신장분사 2'],
+      prescriptionPrices: { '신장분사 1': 100000, '신장분사 2': 50000 },
+      incentivePercentages: { '신장분사 1': 7, '신장분사 2': 15 },
+    }), [
+      { percentage: 15, count: 2, amount: 100000, incentive: 15000 },
+    ]);
+  });
+
   it('assigns stable distinct badge hues to different incentive percentages', () => {
     const sevenPercentStyle = getIncentiveRateBadgeStyle(7);
     const fifteenPercentStyle = getIncentiveRateBadgeStyle(15);

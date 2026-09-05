@@ -98,6 +98,13 @@ export default function ShockwaveSettlementHorizontalCompactView({
             return (
               <section key={therapistKey} className="sw-horizontal2-therapist-section">
                 <table className="sw-settlement-table sw-horizontal2-therapist-table">
+                  <colgroup>
+                    <col className="sw-horizontal2-therapist-name-column" />
+                    <col className="sw-horizontal2-prescription-column" />
+                    <col className="sw-horizontal2-count-column" />
+                    <col className="sw-horizontal2-amount-column" />
+                    <col className="sw-horizontal2-incentive-column" />
+                  </colgroup>
                   <tbody>
                     <tr className={`horizontal2-header-row ${toneClass}`}>
                       <th className={`therapist-name-col ${toneClass}`} rowSpan={therapistPrescriptions.length + 1}>
@@ -142,6 +149,12 @@ export default function ShockwaveSettlementHorizontalCompactView({
                   </tbody>
                 </table>
                 <table className="sw-settlement-table sw-horizontal2-therapist-total-table">
+                  <colgroup>
+                    <col className="sw-horizontal2-prescription-column" />
+                    <col className="sw-horizontal2-count-column" />
+                    <col className="sw-horizontal2-amount-column" />
+                    <col className="sw-horizontal2-incentive-column" />
+                  </colgroup>
                   <tbody>
                     <tr className={`horizontal2-total-row ${toneClass}`}>
                       <th className="horizontal2-total-label">합계</th>
@@ -157,6 +170,12 @@ export default function ShockwaveSettlementHorizontalCompactView({
         </div>
 
         <table className="sw-settlement-table sw-horizontal2-grand-table">
+          <colgroup>
+            <col className="sw-horizontal2-prescription-column" />
+            <col className="sw-horizontal2-count-column" />
+            <col className="sw-horizontal2-amount-column" />
+            <col className="sw-horizontal2-incentive-column" />
+          </colgroup>
           <tbody>
             <tr>
               <th className="grand-title" rowSpan={2}>{currentMonth}월 총 결산</th>

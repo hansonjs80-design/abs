@@ -247,6 +247,27 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   width: 410px !important;
 }
 
+.sw-horizontal2-therapist-name-column {
+  width: 46px !important;
+}
+
+.sw-horizontal2-prescription-column {
+  width: 76px !important;
+}
+
+.sw-horizontal2-layout--shinjang .sw-horizontal2-prescription-column {
+  width: 112px !important;
+}
+
+.sw-horizontal2-count-column {
+  width: 58px !important;
+}
+
+.sw-horizontal2-amount-column,
+.sw-horizontal2-incentive-column {
+  width: 120px !important;
+}
+
 .sw-horizontal2-recent-table {
   width: 372px !important;
 }
@@ -519,8 +540,12 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 }
 
 .sw-horizontal2-grand-table .grand-title {
-  width: 86px !important;
+  width: 76px !important;
   color: #0f172a !important;
+}
+
+.sw-horizontal2-layout--shinjang .sw-horizontal2-grand-table .grand-title {
+  width: 112px !important;
 }
 
 .sw-horizontal2-grand-table th:nth-child(2),
@@ -532,7 +557,7 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 .sw-horizontal2-grand-table td:nth-child(2),
 .sw-horizontal2-grand-table th:nth-child(4),
 .sw-horizontal2-grand-table td:nth-child(3) {
-  width: 115px !important;
+  width: 120px !important;
 }
 
 .sw-horizontal2-grand-table .horizontal2-grand-total-row .incentive-val {
@@ -642,6 +667,23 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table {
     width: 98mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-name-column {
+    width: 11mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-prescription-column {
+    width: 18mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-count-column {
+    width: 13mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-amount-column,
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-incentive-column {
+    width: 28mm !important;
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-total-table {
@@ -869,19 +911,19 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table .grand-title {
-    width: 20mm !important;
+    width: 18mm !important;
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table th:nth-child(2),
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table td:nth-child(1) {
-    width: 14mm !important;
+    width: 13mm !important;
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table th:nth-child(3),
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table td:nth-child(2),
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table th:nth-child(4),
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table td:nth-child(3) {
-    width: 26.5mm !important;
+    width: 28mm !important;
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table th:first-child,

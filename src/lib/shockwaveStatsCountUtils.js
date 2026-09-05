@@ -54,6 +54,61 @@ export function buildCryoAdjustedPrescriptionPrices({
   );
 }
 
+export function buildSettlementIncentiveRateBreakdown({
+  countsByPrescription = {},
+  prescriptions = [],
+  prescriptionPrices = {},
+  incentivePercentages = {},
+  fallbackIncentivePercentage = 0,
+} = {}) {
+  const normalizedPriceMap = new Map(
+    Object.entries(
+      prescriptionPrices && typeof prescriptionPrices === 'object' && !Array.isArray(prescriptionPrices)
+        ? prescriptionPrices
+        : {}
+    ).map(([prescription, amount]) => [
+      normalizePrescriptionKey(prescription),
+      Math.max(0, Number(amount) || 0),
+    ])
+  );
+  const normalizedIncentiveMap = new Map(
+    Object.entries(
+      incentivePercentages && typeof incentivePercentages === 'object' && !Array.isArray(incentivePercentages)
+        ? incentivePercentages
+        : {}
+    ).map(([prescription, percentage]) => [
+      normalizePrescriptionKey(prescription),
+      Math.max(0, Number(percentage) || 0),
+    ])
+  );
+  const fallbackPercentage = Math.max(0, Number(fallbackIncentivePercentage) || 0);
+  const summariesByPercentage = new Map();
+
+  (Array.isArray(prescriptions) ? prescriptions : []).forEach((prescription) => {
+    const count = Math.max(0, Number(countsByPrescription?.[prescription]) || 0);
+    if (count <= 0) return;
+
+    const prescriptionKey = normalizePrescriptionKey(prescription);
+    const percentage = normalizedIncentiveMap.get(prescriptionKey) ?? fallbackPercentage;
+    const amount = count * (normalizedPriceMap.get(prescriptionKey) || 0);
+    const incentive = Math.round(amount * (percentage / 100));
+    const current = summariesByPercentage.get(percentage) || {
+      percentage,
+      count: 0,
+      amount: 0,
+      incentive: 0,
+    };
+
+    current.count += count;
+    current.amount += amount;
+    current.incentive += incentive;
+    summariesByPercentage.set(percentage, current);
+  });
+
+  return [...summariesByPercentage.values()]
+    .sort((a, b) => a.percentage - b.percentage);
+}
+
 export function getShockwaveSettlementPrintColumnWeight(prescription) {
   const compactLabel = String(prescription || '').replace(/\s+/g, '');
   const isLongLabel = /[()[\]{}]/.test(compactLabel) || Array.from(compactLabel).length >= 6;
