@@ -446,23 +446,30 @@ export default function usePatientHistoryActions({
             month: currentMonth,
           }),
         })),
-        ...manualRows.filter((d) => (
-          patientHistoryIdentityMatches({
-            chartParam,
-            nameParam,
-            chartValue: d.chart_number,
-            nameValue: d.patient_name,
-          }) && getConfiguredPatientHistoryTreatmentGroup({
+        ...manualRows.filter((d) => {
+          const historyGroup = getConfiguredPatientHistoryTreatmentGroup({
             prescription: d.prescription,
             settings,
             date: d.date,
             year: currentYear,
             month: currentMonth,
-          }) === 'manual'
-        )).map((d) => ({
+          });
+          return patientHistoryIdentityMatches({
+            chartParam,
+            nameParam,
+            chartValue: d.chart_number,
+            nameValue: d.patient_name,
+          }) && (historyGroup === 'manual' || historyGroup === 'shinjang');
+        }).map((d) => ({
           ...d,
           type: 'manual',
-          history_group: 'manual',
+          history_group: getConfiguredPatientHistoryTreatmentGroup({
+            prescription: d.prescription,
+            settings,
+            date: d.date,
+            year: currentYear,
+            month: currentMonth,
+          }),
         })),
       ];
       const linkedScheduleRowsByKey = await fetchScheduleRowsForSchedulerLinkedLogs(fetchedLogData);

@@ -12,6 +12,8 @@ describe('shinjang spray statistics', () => {
   it('recognizes the marker with normalized width and spaces', () => {
     assert.equal(isShinjangSprayPrescription('F2.5 (신장분사)'), true);
     assert.equal(isShinjangSprayPrescription('도수（신장분사）'), true);
+    assert.equal(isShinjangSprayPrescription('F3.0(신장분사DC)'), true);
+    assert.equal(isShinjangSprayPrescription('특수 신장분사 처방'), true);
     assert.equal(isShinjangSprayPrescription('F2.5'), false);
   });
 
@@ -54,12 +56,20 @@ describe('shinjang spray statistics', () => {
     assert.equal(rows[0].cryo_adjusted_unit_price, 75000);
   });
 
-  it('keeps configured order and applies different incentive rates by prescription', () => {
+  it('keeps real log prescription names and uses a generic fallback before the first treatment', () => {
     const prescriptions = buildShinjangSprayPrescriptions({
       configuredPrescriptions: ['A(신장분사)', 'B(신장분사)', '일반처방'],
-      rows: [{ prescription: 'C(신장분사)' }],
+      rows: [
+        { prescription: 'B(신장분사)' },
+        { prescription: 'F3.0(신장분사DC)' },
+      ],
     });
-    assert.deepEqual(prescriptions, ['A(신장분사)', 'B(신장분사)', 'C(신장분사)']);
+    assert.deepEqual(prescriptions, ['B(신장분사)', 'F3.0(신장분사DC)']);
+    assert.deepEqual(buildShinjangSprayPrescriptions({ rows: [] }), ['신장분사']);
+  });
+
+  it('applies different incentive rates by prescription', () => {
+    const prescriptions = ['A(신장분사)', 'B(신장분사)'];
 
     const summary = buildShinjangSpraySettlementSummary({
       rows: [

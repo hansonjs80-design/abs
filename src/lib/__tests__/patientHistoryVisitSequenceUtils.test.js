@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  getPatientHistoryGroupedVisitSequenceColors,
   getPatientHistoryVisitSequenceColors,
   PATIENT_HISTORY_VISIT_SEQUENCE_COLORS,
 } from '../patientHistoryVisitSequenceUtils.js';
@@ -100,5 +101,22 @@ describe('patient history visit sequence colors', () => {
       ]),
       [null, null, null]
     );
+  });
+
+  it('colors consecutive visits independently by treatment and prescription', () => {
+    const rows = [
+      { ...log('3', '2026-09-03'), history_group: 'manual', prescription: '40분' },
+      { ...log('2', '2026-09-02'), history_group: 'manual', prescription: '40분' },
+      { ...log('3', '2026-09-03'), history_group: 'shockwave', prescription: 'F2.5' },
+      { ...log('2', '2026-09-02'), history_group: 'shockwave', prescription: 'F2.5' },
+      { ...log('3', '2026-09-03'), history_group: 'shinjang', prescription: 'F3.0(신장분사DC)' },
+      { ...log('2', '2026-09-02'), history_group: 'shinjang', prescription: 'F3.0(신장분사DC)' },
+    ];
+    const colors = getPatientHistoryGroupedVisitSequenceColors(rows);
+
+    assert.deepEqual(colors.slice(0, 2), ['#fed7aa', '#fed7aa']);
+    assert.deepEqual(colors.slice(2, 4), ['#bfdbfe', '#bfdbfe']);
+    assert.deepEqual(colors.slice(4, 6), ['#bbf7d0', '#bbf7d0']);
+    assert.equal(new Set([colors[0], colors[2], colors[4]]).size, 3);
   });
 });

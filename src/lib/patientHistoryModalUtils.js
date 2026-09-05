@@ -41,6 +41,7 @@ export function getConfiguredPatientHistoryTreatmentGroup({
     period.month
   );
   if (treatmentGroup === 'manual_therapy') return 'manual';
+  if (treatmentGroup === 'shinjang_spray') return 'shinjang';
   if (treatmentGroup === 'shockwave') return 'shockwave';
   return '';
 }
@@ -63,6 +64,7 @@ export function getPatientHistoryTreatmentGroup({
     month,
   });
   if (configuredGroup) return configuredGroup;
+  if (type === 'shinjang' || type === 'shinjang_spray') return 'shinjang';
   return type === 'manual' ? 'manual' : 'shockwave';
 }
 

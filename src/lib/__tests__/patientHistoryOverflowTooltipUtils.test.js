@@ -121,6 +121,23 @@ test('patient history prescription and body filters render as unlabeled checkbox
   assert.doesNotMatch(shockwaveCss, /\.patient-history-filter-title/);
 });
 
+test('patient history exposes three treatment filters, selectable sorting, and treatment-colored row numbers', async () => {
+  const [shockwaveCss, shockwaveView] = await Promise.all([
+    readFile(shockwaveCssUrl, 'utf8'),
+    readFile(shockwaveViewUrl, 'utf8'),
+  ]);
+
+  assert.match(shockwaveView, /patientHistoryTreatmentFilterOptions\.map/);
+  assert.match(shockwaveView, /togglePatientHistoryTreatmentSelection/);
+  assert.match(shockwaveView, /PATIENT_HISTORY_SORT_OPTIONS\.map/);
+  assert.match(shockwaveView, /aria-label="스케줄 내역 정렬 기준"/);
+  assert.match(shockwaveView, /patient-history-row-number-cell--\$\{historyTreatmentGroup\}/);
+  assert.match(shockwaveCss, /\.patient-history-treatment-filter--shockwave\.is-checked/);
+  assert.match(shockwaveCss, /\.patient-history-treatment-filter--manual\.is-checked/);
+  assert.match(shockwaveCss, /\.patient-history-treatment-filter--shinjang\.is-checked/);
+  assert.match(shockwaveCss, /\.patient-history-row-number-cell--shinjang/);
+});
+
 test('patient history group count follows the title in a larger compact format', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
@@ -299,8 +316,11 @@ test('current patient history row uses light treatment-specific backgrounds', as
 
   assert.match(
     shockwaveView,
-    /group\.key === 'manual' \? '#fff1e3' : '#e6f6fe'/
+    /historyTreatmentGroup === 'manual'/
   );
+  assert.match(shockwaveView, /\? '#fff1e3'/);
+  assert.match(shockwaveView, /\? '#ecfdf5'/);
+  assert.match(shockwaveView, /: '#e6f6fe'/);
   assert.doesNotMatch(shockwaveView, /#fedfbb|#c8ebfd/);
 });
 

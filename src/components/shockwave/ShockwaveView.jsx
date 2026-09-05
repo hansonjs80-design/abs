@@ -37,7 +37,10 @@ import {
   normalize4060StarOrder,
   updateDoseTagForPrescriptionContent,
 } from '../../lib/schedulerContentFormat';
-import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
+import {
+  getEffectiveSettlementSettings,
+  getEffectiveShinjangSpraySettings,
+} from '../../lib/settlementSettings';
 import { getPrescriptionFromConfiguredDoseTag, getPrescriptionScheduleSettings } from '../../lib/prescriptionScheduleSettings';
 import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
 import {
@@ -91,8 +94,10 @@ import useScheduleViewState from './useScheduleViewState';
 import {
   buildShockwaveHoverTooltipText,
   buildPatientHistoryLogGroups,
+  buildPatientHistoryTreatmentFilterOptions,
   DEFAULT_CONTEXT_PRESCRIPTION_COLORS,
   EMPTY_SCHEDULE_MERGE_SPAN,
+  getPatientHistoryGroupKey,
   getPatientHistoryColumnWidths,
   getPatientHistoryModalLayout,
   getPatientHistoryPrescriptionColor,
@@ -100,11 +105,14 @@ import {
   getPlainTextDefaultRowSpan,
   loadHiddenBodyPartOptionsByPatient,
   normalizeCommittedSchedulerContent,
+  PATIENT_HISTORY_GROUPS,
+  PATIENT_HISTORY_SORT_OPTIONS,
   resolvePatientHistoryGroupTargetCell,
   saveHiddenBodyPartOptionsByPatient,
   SCHEDULE_INTERNAL_BORDER_COLOR,
   stepContextMenuVisitValue,
   togglePatientHistoryFilterSelection,
+  togglePatientHistoryTreatmentSelection,
 } from './shockwaveViewUtils';
 import {
   HORIZONTAL_BORDER_COLOR,
@@ -252,6 +260,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const [patientHistoryModalData, setPatientHistoryModalData] = useState({ loading: false, logs: [], searchName: '', searchChart: '', chartOptions: [] });
   const [patientHistoryBodyFilters, setPatientHistoryBodyFilters] = useState({});
   const [patientHistoryPrescriptionFilters, setPatientHistoryPrescriptionFilters] = useState({});
+  const [patientHistoryTreatmentFilters, setPatientHistoryTreatmentFilters] = useState(
+    () => PATIENT_HISTORY_GROUPS.map((group) => group.key)
+  );
+  const [patientHistorySortOrder, setPatientHistorySortOrder] = useState('date');
   const [pendingPatientHistoryApplyLog, setPendingPatientHistoryApplyLog] = useState(null);
   const [pendingPatientHistoryNavigation, setPendingPatientHistoryNavigation] = useState(null);
   const patientHistoryTargetCellRef = useRef(null);
@@ -293,15 +305,23 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     bodyFilters: patientHistoryBodyFilters,
     prescriptionFilters: patientHistoryPrescriptionFilters,
     selectedGroupKey: selectedPatientHistoryGroupKey,
+    selectedTreatmentGroups: patientHistoryTreatmentFilters,
+    sortOrder: patientHistorySortOrder,
   }), [
     patientHistoryBodyFilters,
     patientHistoryModalData.logs,
     patientHistoryPrescriptionFilters,
+    patientHistorySortOrder,
+    patientHistoryTreatmentFilters,
     selectedPatientHistoryGroupKey,
   ]);
+  const patientHistoryTreatmentFilterOptions = useMemo(
+    () => buildPatientHistoryTreatmentFilterOptions(patientHistoryModalData.logs),
+    [patientHistoryModalData.logs]
+  );
   const patientHistoryModalLayout = useMemo(
-    () => getPatientHistoryModalLayout(patientHistoryLogGroups.length),
-    [patientHistoryLogGroups.length]
+    () => getPatientHistoryModalLayout(patientHistoryLogGroups),
+    [patientHistoryLogGroups]
   );
   const patientHistoryColumnWidths = useMemo(
     () => getPatientHistoryColumnWidths(patientHistoryLogGroups.length),
@@ -313,6 +333,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       : [],
     manual: Array.isArray(prescriptionScheduleSettings?.schedulerPrescriptions?.manualTherapy)
       ? prescriptionScheduleSettings.schedulerPrescriptions.manualTherapy.filter(Boolean)
+      : [],
+    shinjang: Array.isArray(prescriptionScheduleSettings?.schedulerPrescriptions?.shinjangSpray)
+      ? prescriptionScheduleSettings.schedulerPrescriptions.shinjangSpray.filter(Boolean)
       : [],
   }), [prescriptionScheduleSettings]);
   const updatePatientHistoryModalLog = useCallback((historyRowKey, updater) => {
@@ -881,6 +904,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     });
     setPatientHistoryBodyFilters({});
     setPatientHistoryPrescriptionFilters({});
+    setPatientHistoryTreatmentFilters(PATIENT_HISTORY_GROUPS.map((group) => group.key));
+    setPatientHistorySortOrder('date');
     setPendingPatientHistoryApplyLog(null);
     setClipboardSource(null);
   }, [
@@ -3364,16 +3389,21 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
             const currentPrescription = currentMemo?.prescription || '';
             const effectiveManualSettings = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'manual_therapy');
             const effectiveShockwaveSettings = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'shockwave');
+            const effectiveShinjangSettings = getEffectiveShinjangSpraySettings(settings, currentYear, currentMonth);
             const hiddenPrescriptions = prescriptionScheduleSettings?.hiddenPrescriptions || [];
+            const shinjangPrescriptions = Array.isArray(effectiveShinjangSettings?.prescriptions)
+              ? effectiveShinjangSettings.prescriptions.filter((pres) => pres && !hiddenPrescriptions.includes(pres))
+              : [];
             const shockwavePrescriptions = Array.isArray(effectiveShockwaveSettings?.prescriptions)
-              ? effectiveShockwaveSettings.prescriptions.filter((pres) => pres && !hiddenPrescriptions.includes(pres))
+              ? effectiveShockwaveSettings.prescriptions.filter((pres) => pres && !shinjangPrescriptions.includes(pres) && !String(pres).includes('신장분사') && !hiddenPrescriptions.includes(pres))
               : [];
             const manualTherapyPrescriptions = Array.isArray(effectiveManualSettings?.prescriptions)
-              ? effectiveManualSettings.prescriptions.filter((pres) => pres && !shockwavePrescriptions.includes(pres) && !hiddenPrescriptions.includes(pres))
+              ? effectiveManualSettings.prescriptions.filter((pres) => pres && !shockwavePrescriptions.includes(pres) && !shinjangPrescriptions.includes(pres) && !String(pres).includes('신장분사') && !hiddenPrescriptions.includes(pres))
               : [];
             const allDoseTags = {
               ...(effectiveShockwaveSettings?.dose_tags || {}),
               ...(effectiveManualSettings?.dose_tags || {}),
+              ...(effectiveShinjangSettings?.dose_tags || {}),
             };
             const manualDoseTags = {
               ...(settings?.manual_therapy_dose_tags || {}),
@@ -3387,7 +3417,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
               ? ' is-shockwave'
               : manualTherapyPrescriptions.includes(currentPrescription)
                 ? ' is-manual'
-                : '';
+                : shinjangPrescriptions.includes(currentPrescription)
+                  ? ' is-shinjang'
+                  : '';
             const currentPrescriptionColor = getPatientHistoryPrescriptionColor(
               currentPrescription,
               contextMenuPrescriptionColors
@@ -3648,7 +3680,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                     <div className="context-menu-submenu context-menu-submenu--prescription">
                       <div className="context-menu-editor-panel">
                         <div className="context-menu-inline-column">
-                          <div className="context-menu-prescription-row context-menu-prescription-row--dual">
+                          <div className="context-menu-prescription-row context-menu-prescription-row--triple">
                             <div className="context-menu-prescription-select-group context-menu-prescription-select-group--shockwave">
                               <label className="context-menu-prescription-select-label">
                                 충격파
@@ -3714,6 +3746,41 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                     type: 'prescription',
                                     value: prescription,
                                     doseTag: hasDoseTag ? manualDoseTags[prescription] : autoDoseTag,
+                                  });
+                                }}
+                              />
+                            </div>
+                            <div className="context-menu-prescription-select-group context-menu-prescription-select-group--shinjang">
+                              <label className="context-menu-prescription-select-label">
+                                신장분사
+                                {previousPrescriptionValue && shinjangPrescriptions.includes(previousPrescriptionValue) ? (
+                                  <span
+                                    className="context-menu-current-prescription"
+                                    style={{
+                                      marginLeft: '6px',
+                                      '--context-prescription-color': previousPrescriptionColor,
+                                    }}
+                                  >
+                                    {previousPrescriptionValue}
+                                  </span>
+                                ) : null}
+                              </label>
+                              <ContextMenuPrescriptionSelect
+                                ariaLabel="신장분사 처방 선택"
+                                value={shinjangPrescriptions.includes(currentPrescription) ? currentPrescription : ''}
+                                options={shinjangPrescriptions}
+                                prescriptionColors={contextMenuPrescriptionColors}
+                                shortcuts={{}}
+                                shortcutModifier=""
+                                align="end"
+                                onChange={(nextPrescription) => {
+                                  const prescription = nextPrescription || null;
+                                  const hasDoseTag = prescription && Object.prototype.hasOwnProperty.call(allDoseTags, prescription);
+                                  const autoDoseTag = prescription?.match(/(\d{2,3})/)?.[1] || '';
+                                  handleContextAction({
+                                    type: 'prescription',
+                                    value: prescription,
+                                    doseTag: hasDoseTag ? allDoseTags[prescription] : autoDoseTag,
                                   });
                                 }}
                               />
@@ -4029,6 +4096,43 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                   </>
                 )}
               </div>
+
+              <div className="patient-history-view-controls">
+                <fieldset className="patient-history-treatment-filters">
+                  <legend>치료 구분</legend>
+                  {patientHistoryTreatmentFilterOptions.map((option) => {
+                    const isChecked = patientHistoryTreatmentFilters.includes(option.key);
+                    return (
+                      <label
+                        key={`patient-history-treatment-${option.key}`}
+                        className={`patient-history-treatment-filter patient-history-treatment-filter--${option.key}${isChecked ? ' is-checked' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => setPatientHistoryTreatmentFilters((current) => (
+                            togglePatientHistoryTreatmentSelection(current, option.key)
+                          ))}
+                        />
+                        <span>{option.label.replace(' 내역', '')}</span>
+                        <span className="patient-history-treatment-count">{option.count}</span>
+                      </label>
+                    );
+                  })}
+                </fieldset>
+                <label className="patient-history-sort-control">
+                  <span>정렬</span>
+                  <select
+                    aria-label="스케줄 내역 정렬 기준"
+                    value={patientHistorySortOrder}
+                    onChange={(event) => setPatientHistorySortOrder(event.target.value)}
+                  >
+                    {PATIENT_HISTORY_SORT_OPTIONS.map((option) => (
+                      <option key={option.key} value={option.key}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
               
               {patientHistoryModalData.loading ? (
                 <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>내역을 불러오는 중...</div>
@@ -4045,8 +4149,20 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                         overflow: 'hidden',
                         background: 'var(--bg-primary, #fff)',
                         '--patient-history-border-color': '#c5cfdb',
-                        '--patient-history-group-header-bg': group.key === 'manual' ? '#fed7aa' : '#bae6fd',
-                        '--patient-history-column-header-bg': group.key === 'manual' ? '#fff3e6' : '#e0f2fe',
+                        '--patient-history-group-header-bg': group.key === 'manual'
+                          ? '#fed7aa'
+                          : group.key === 'shinjang'
+                            ? '#a7f3d0'
+                            : group.key === 'all'
+                              ? '#e2e8f0'
+                              : '#bae6fd',
+                        '--patient-history-column-header-bg': group.key === 'manual'
+                          ? '#fff3e6'
+                          : group.key === 'shinjang'
+                            ? '#ecfdf5'
+                            : group.key === 'all'
+                              ? '#f8fafc'
+                              : '#e0f2fe',
                       }}
                     >
                       <div className="patient-history-group-header">
@@ -4105,16 +4221,23 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                             {group.logs.map((log, idx) => {
                               const historyRowKey = log._history_row_key || `${group.key}-${log.id || log.date}-${idx}`;
                               const visitSequenceColor = group.visitSequenceColors?.[idx] || null;
+                              const historyTreatmentGroup = getPatientHistoryGroupKey(log);
                               const selectedHistoryCellId = selectedCell
                                 ? `draft-${selectedCell.w}-${selectedCell.d}-${selectedCell.r}-${selectedCell.c}`
                                 : '';
                               const isCurrentHistoryRow = Boolean(log.isCurrentCell || (selectedHistoryCellId && log.id === selectedHistoryCellId));
                               const currentCellRowBackground = isCurrentHistoryRow
-                                ? (group.key === 'manual' ? '#fff1e3' : '#e6f6fe')
+                                ? (historyTreatmentGroup === 'manual'
+                                  ? '#fff1e3'
+                                  : historyTreatmentGroup === 'shinjang'
+                                    ? '#ecfdf5'
+                                    : '#e6f6fe')
                                 : undefined;
                               const historyRowFontWeight = isCurrentHistoryRow ? 800 : 400;
                               const currentPrescriptionValue = String(log.prescription || '');
-                              const configuredPrescriptionOptions = patientHistoryPrescriptionOptions[group.key] || patientHistoryPrescriptionOptions.shockwave || [];
+                              const configuredPrescriptionOptions = patientHistoryPrescriptionOptions[historyTreatmentGroup]
+                                || patientHistoryPrescriptionOptions.shockwave
+                                || [];
                               const prescriptionOptions = Array.from(new Set([
                                 currentPrescriptionValue,
                                 ...configuredPrescriptionOptions,
@@ -4169,7 +4292,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 title={log.id === 'draft' ? "현재 선택된 셀의 날짜를 기반으로 한 임시 항목입니다" : undefined}
                               >
                                 <td
-                                  className="patient-history-row-number-cell"
+                                  className={`patient-history-row-number-cell patient-history-row-number-cell--${historyTreatmentGroup}`}
                                   aria-label={`행 번호 ${idx + 1}`}
                                 >
                                   {idx + 1}
@@ -4191,7 +4314,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 >
                                   {log.chart_number || '-'}
                                 </td>
-                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, color: log.type === 'manual' ? 'var(--brand-primary)' : 'inherit', fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
+                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
                                   <select
                                     className="patient-history-edit-field patient-history-edit-field--inset patient-history-edit-field--prescription"
                                     aria-label="처방 수정"

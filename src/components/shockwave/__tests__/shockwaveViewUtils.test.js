@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   buildShockwaveHoverTooltipText,
   buildPatientHistoryLogGroups,
+  buildPatientHistoryTreatmentFilterOptions,
   getPatientHistoryColumnWidths,
   getPatientHistoryFilterWidthWeight,
   getPatientHistoryModalLayout,
@@ -11,6 +12,7 @@ import {
   getPatientHistoryScheduleNavigationTarget,
   resolvePatientHistoryGroupTargetCell,
   togglePatientHistoryFilterSelection,
+  togglePatientHistoryTreatmentSelection,
 } from '../shockwaveViewUtils.js';
 
 describe('shockwave view patient history model', () => {
@@ -56,7 +58,70 @@ describe('shockwave view patient history model', () => {
       ],
     });
 
-    assert.deepEqual(groups[0].visitSequenceColors, ['#fecaca', '#fecaca', '#fecaca']);
+    assert.deepEqual(groups[0].visitSequenceColors, ['#bfdbfe', '#bfdbfe', '#bfdbfe']);
+  });
+
+  it('combines all three treatment groups chronologically and splits exactly two selections', () => {
+    const logs = [
+      { id: 'manual', history_group: 'manual', date: '2026-09-02', prescription: '40분' },
+      { id: 'shockwave', history_group: 'shockwave', date: '2026-09-03', prescription: 'F2.5' },
+      { id: 'shinjang', history_group: 'shinjang', date: '2026-09-01', prescription: 'F3.0(신장분사DC)' },
+    ];
+    const combined = buildPatientHistoryLogGroups({
+      logs,
+      selectedTreatmentGroups: ['shockwave', 'manual', 'shinjang'],
+    });
+    assert.equal(combined.length, 1);
+    assert.equal(combined[0].key, 'all');
+    assert.deepEqual(combined[0].logs.map((log) => log.id), [
+      'shockwave',
+      'manual',
+      'shinjang',
+    ]);
+
+    const split = buildPatientHistoryLogGroups({
+      logs,
+      selectedGroupKey: 'manual',
+      selectedTreatmentGroups: ['shockwave', 'manual'],
+    });
+    assert.deepEqual(split.map((group) => group.key), ['manual', 'shockwave']);
+  });
+
+  it('sorts selected history rows by prescription or body while keeping recent rows first within a label', () => {
+    const logs = [
+      { id: 'b-new', history_group: 'shockwave', date: '2026-09-03', prescription: 'B', body_part: 'Shoulder' },
+      { id: 'a-old', history_group: 'manual', date: '2026-09-01', prescription: 'A', body_part: 'Knee' },
+      { id: 'a-new', history_group: 'shinjang', date: '2026-09-02', prescription: 'A', body_part: 'Lumbar' },
+    ];
+    const build = (sortOrder) => buildPatientHistoryLogGroups({
+      logs,
+      selectedTreatmentGroups: ['shockwave', 'manual', 'shinjang'],
+      sortOrder,
+    })[0].logs.map((log) => log.id);
+
+    assert.deepEqual(build('prescription'), ['a-new', 'a-old', 'b-new']);
+    assert.deepEqual(build('body'), ['a-old', 'a-new', 'b-new']);
+  });
+
+  it('tracks treatment filter counts and never lets the final treatment be unchecked', () => {
+    const options = buildPatientHistoryTreatmentFilterOptions([
+      { history_group: 'shockwave' },
+      { history_group: 'shinjang' },
+      { history_group: 'shinjang' },
+    ]);
+    assert.deepEqual(options.map(({ key, count }) => [key, count]), [
+      ['shockwave', 1],
+      ['manual', 0],
+      ['shinjang', 2],
+    ]);
+    assert.deepEqual(
+      togglePatientHistoryTreatmentSelection(['shockwave', 'manual', 'shinjang'], 'manual'),
+      ['shockwave', 'shinjang']
+    );
+    assert.deepEqual(
+      togglePatientHistoryTreatmentSelection(['shinjang'], 'shinjang'),
+      ['shinjang']
+    );
   });
 
   it('filters by body and prescription together and recalculates both option counts', () => {
@@ -202,6 +267,7 @@ describe('shockwave view patient history model', () => {
     assert.equal(getPatientHistoryModalLayout(1).width, '85%');
     assert.equal(getPatientHistoryModalLayout(2).maxWidth, 1574);
     assert.equal(getPatientHistoryModalLayout(2).width, '100%');
+    assert.equal(getPatientHistoryModalLayout([{ key: 'all' }]).width, '95%');
     const columnWidths = getPatientHistoryColumnWidths(1);
     assert.ok(
       Math.abs(

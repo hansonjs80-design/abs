@@ -1,5 +1,6 @@
 import {
   getEffectiveSettlementSettings,
+  getEffectiveShinjangSpraySettings,
 } from './settlementSettings.js';
 import {
   get4060PrescriptionFromContent,
@@ -54,32 +55,57 @@ function filterPrescriptionList(source, activePrescriptions) {
 export function getPrescriptionScheduleSettings(settings, year, month) {
   const shockwave = getEffectiveSettlementSettings(settings, year, month, 'shockwave');
   const manualTherapy = getEffectiveSettlementSettings(settings, year, month, 'manual_therapy');
-  const schedulerShockwavePrescriptions = buildSchedulerPrescriptionList(settings, year, month, 'shockwave');
-  const schedulerManualTherapyPrescriptions = buildSchedulerPrescriptionList(settings, year, month, 'manual_therapy');
+  const shinjangSpray = getEffectiveShinjangSpraySettings(settings, year, month);
+  const isShinjangSpray = (prescription) => String(prescription || '').includes('신장분사');
+  const schedulerShinjangSprayPrescriptions = uniquePrescriptionList(shinjangSpray.prescriptions)
+    .filter((prescription) => !shinjangSpray.hidden_prescriptions.includes(prescription));
+  const shinjangPrescriptionKeys = new Set(
+    schedulerShinjangSprayPrescriptions.map(normalizePrescriptionGroupKey)
+  );
+  const schedulerShockwavePrescriptions = buildSchedulerPrescriptionList(settings, year, month, 'shockwave')
+    .filter((prescription) => (
+      !isShinjangSpray(prescription)
+      && !shinjangPrescriptionKeys.has(normalizePrescriptionGroupKey(prescription))
+    ));
+  const schedulerManualTherapyPrescriptions = buildSchedulerPrescriptionList(settings, year, month, 'manual_therapy')
+    .filter((prescription) => (
+      !isShinjangSpray(prescription)
+      && !shinjangPrescriptionKeys.has(normalizePrescriptionGroupKey(prescription))
+    ));
 
   return {
     shockwave,
     manualTherapy,
+    shinjangSpray,
     schedulerPrescriptions: {
       shockwave: schedulerShockwavePrescriptions,
       manualTherapy: schedulerManualTherapyPrescriptions,
-      all: uniquePrescriptionList(schedulerShockwavePrescriptions, schedulerManualTherapyPrescriptions),
+      shinjangSpray: schedulerShinjangSprayPrescriptions,
+      all: uniquePrescriptionList(
+        schedulerShockwavePrescriptions,
+        schedulerManualTherapyPrescriptions,
+        schedulerShinjangSprayPrescriptions
+      ),
     },
     durationMinutesMap: {
       ...filterPrescriptionMap(shockwave?.duration_minutes, schedulerShockwavePrescriptions),
       ...filterPrescriptionMap(manualTherapy?.duration_minutes, schedulerManualTherapyPrescriptions),
+      ...filterPrescriptionMap(shinjangSpray?.duration_minutes, schedulerShinjangSprayPrescriptions),
     },
     doseTags: {
       ...filterPrescriptionMap(shockwave?.dose_tags, schedulerShockwavePrescriptions),
       ...filterPrescriptionMap(manualTherapy?.dose_tags, schedulerManualTherapyPrescriptions),
+      ...filterPrescriptionMap(shinjangSpray?.dose_tags, schedulerShinjangSprayPrescriptions),
     },
     visitLineBreakPrescriptions: [
       ...filterPrescriptionList(shockwave?.visit_line_break_prescriptions, schedulerShockwavePrescriptions),
       ...filterPrescriptionList(manualTherapy?.visit_line_break_prescriptions, schedulerManualTherapyPrescriptions),
+      ...filterPrescriptionList(shinjangSpray?.visit_line_break_prescriptions, schedulerShinjangSprayPrescriptions),
     ],
     hiddenPrescriptions: [
       ...(shockwave?.hidden_prescriptions || []),
       ...(manualTherapy?.hidden_prescriptions || []),
+      ...(shinjangSpray?.hidden_prescriptions || []),
     ],
   };
 }
@@ -101,18 +127,32 @@ function buildPrescriptionGroupKeySet(prescriptions) {
 
 export function getScheduleItemTreatmentGroup(item, settings, year, month) {
   const config = getPrescriptionScheduleSettings(settings, year, month);
+  const shinjangSprayPrescriptions = config.schedulerPrescriptions?.shinjangSpray || [];
   const manualPrescriptions = config.schedulerPrescriptions?.manualTherapy || [];
   const shockwavePrescriptions = config.schedulerPrescriptions?.shockwave || [];
+  const shinjangSprayKeys = buildPrescriptionGroupKeySet(shinjangSprayPrescriptions);
   const manualKeys = buildPrescriptionGroupKeySet(manualPrescriptions);
   const shockwaveKeys = buildPrescriptionGroupKeySet(shockwavePrescriptions);
   const prescriptionKey = normalizePrescriptionGroupKey(item?.prescription);
 
+  if (
+    prescriptionKey
+    && (
+      shinjangSprayKeys.has(prescriptionKey)
+      || String(item?.prescription || '').includes('신장분사')
+    )
+  ) return 'shinjang_spray';
   if (prescriptionKey && manualKeys.has(prescriptionKey)) return 'manual_therapy';
   if (prescriptionKey && shockwaveKeys.has(prescriptionKey)) return 'shockwave';
 
   const content = String(item?.content || '').trim();
+  const shinjangSprayDoseTags = filterPrescriptionMap(
+    config.shinjangSpray?.dose_tags,
+    shinjangSprayPrescriptions
+  );
   const manualDoseTags = filterPrescriptionMap(config.manualTherapy?.dose_tags, manualPrescriptions);
   const shockwaveDoseTags = filterPrescriptionMap(config.shockwave?.dose_tags, shockwavePrescriptions);
+  if (getConfiguredDoseTagFromContent(content, shinjangSprayDoseTags)) return 'shinjang_spray';
   if (getConfiguredDoseTagFromContent(content, manualDoseTags)) return 'manual_therapy';
   if (getConfiguredDoseTagFromContent(content, shockwaveDoseTags)) return 'shockwave';
 

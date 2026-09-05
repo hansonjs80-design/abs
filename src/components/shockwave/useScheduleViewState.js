@@ -10,7 +10,10 @@ import {
 } from '../../lib/schedulerTextSettings';
 import { formatScheduleShortcutLabel } from '../../lib/scheduleKeyboardUtils';
 import { filterPrescriptionColorMap, normalizePrescriptionColorKey } from '../../lib/schedulerUtils';
-import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
+import {
+  getEffectiveSettlementSettings,
+  getEffectiveShinjangSpraySettings,
+} from '../../lib/settlementSettings';
 
 export default function useScheduleViewState({
   currentMonth,
@@ -64,6 +67,7 @@ export default function useScheduleViewState({
   const effectivePrescriptionColors = useMemo(() => {
     const shockwaveSettlement = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'shockwave');
     const manualSettlement = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'manual_therapy');
+    const shinjangSpraySettlement = getEffectiveShinjangSpraySettings(settings, currentYear, currentMonth);
     const monthlyEntries = settings?.monthly_settlement_settings && typeof settings.monthly_settlement_settings === 'object'
       ? settings.monthly_settlement_settings
       : {};
@@ -81,8 +85,10 @@ export default function useScheduleViewState({
       ...(settings?.prescription_colors || {}),
       ...filterPrescriptionColorMap(shockwaveSettlement.prescription_colors, shockwaveSettlement.prescriptions),
       ...filterPrescriptionColorMap(manualSettlement.prescription_colors, manualSettlement.prescriptions),
+      ...filterPrescriptionColorMap(shinjangSpraySettlement.prescription_colors, shinjangSpraySettlement.prescriptions),
       ...buildDirectMonthColors('shockwave'),
       ...buildDirectMonthColors('manual_therapy'),
+      ...buildDirectMonthColors('shinjang_spray'),
     };
     return Object.entries(colors).reduce((acc, [key, value]) => {
       if (!key || !value) return acc;

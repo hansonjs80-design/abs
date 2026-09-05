@@ -40,6 +40,9 @@ describe('patient history treatment grouping', () => {
           prescriptions: ['30분'],
           dose_tags: { '30분': '30' },
         },
+        shinjang_spray: {
+          prescriptions: ['F3.0(신장분사DC)'],
+        },
       },
     },
   };
@@ -66,6 +69,15 @@ describe('patient history treatment grouping', () => {
       settings,
       date: '2026-07-20',
     }), 'shockwave');
+  });
+
+  it('routes any configured shinjang marker prescription into shinjang history', () => {
+    assert.equal(getPatientHistoryTreatmentGroup({
+      type: 'shockwave',
+      prescription: 'F3.0(신장분사DC)',
+      settings,
+      date: '2026-07-20',
+    }), 'shinjang');
   });
 });
 

@@ -5,6 +5,7 @@ import { useSchedule } from '../contexts/ScheduleContext';
 import { useToast } from '../components/common/Toast';
 import { GridSkeleton, SettlementSkeleton } from '../components/common/LoadingSkeleton';
 import ShockwaveDataGrid from '../components/shockwave/ShockwaveDataGrid';
+import ShockwaveNewPatientsView from '../components/shockwave/ShockwaveNewPatientsView';
 import ShinjangSprayStatsView from '../components/shockwave/ShinjangSprayStatsView';
 import ShinjangSpraySettingsPanel from '../components/shockwave/ShinjangSpraySettingsPanel';
 import { supabase } from '../lib/supabaseClient';
@@ -250,18 +251,6 @@ export default function ShinjangSprayStatsPage() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [refreshData]);
 
-  const shockwaveSettlementSettings = useMemo(() => getEffectiveSettlementSettings(
-    shockwaveSettings,
-    currentYear,
-    currentMonth,
-    'shockwave'
-  ), [currentMonth, currentYear, shockwaveSettings]);
-  const manualSettlementSettings = useMemo(() => getEffectiveSettlementSettings(
-    shockwaveSettings,
-    currentYear,
-    currentMonth,
-    'manual_therapy'
-  ), [currentMonth, currentYear, shockwaveSettings]);
   const spraySettings = useMemo(() => getEffectiveShinjangSpraySettings(
     shockwaveSettings,
     currentYear,
@@ -270,41 +259,24 @@ export default function ShinjangSprayStatsPage() {
   const combinedRows = useMemo(() => mergeShinjangSprayLogs({
     shockwaveRows: shockwaveLogs,
     manualTherapyRows: manualLogs,
-    shockwavePrescriptionPrices: shockwaveSettlementSettings.prescription_prices,
-    manualTherapyPrescriptionPrices: manualSettlementSettings.prescription_prices,
-    shockwaveCryoPrescriptions: shockwaveSettlementSettings.cryo_prescriptions,
-    shockwaveCryoPrices: shockwaveSettlementSettings.cryo_prices,
-    manualTherapyCryoPrescriptions: manualSettlementSettings.cryo_prescriptions,
-    manualTherapyCryoPrices: manualSettlementSettings.cryo_prices,
+    shockwavePrescriptionPrices: spraySettings.prescription_prices,
+    manualTherapyPrescriptionPrices: spraySettings.prescription_prices,
+    shockwaveCryoPrescriptions: spraySettings.cryo_prescriptions,
+    shockwaveCryoPrices: spraySettings.cryo_prices,
+    manualTherapyCryoPrescriptions: spraySettings.cryo_prescriptions,
+    manualTherapyCryoPrices: spraySettings.cryo_prices,
   }), [
     manualLogs,
-    manualSettlementSettings.cryo_prescriptions,
-    manualSettlementSettings.cryo_prices,
-    manualSettlementSettings.prescription_prices,
     shockwaveLogs,
-    shockwaveSettlementSettings.cryo_prescriptions,
-    shockwaveSettlementSettings.cryo_prices,
-    shockwaveSettlementSettings.prescription_prices,
+    spraySettings.cryo_prescriptions,
+    spraySettings.cryo_prices,
+    spraySettings.prescription_prices,
   ]);
   const prescriptions = useMemo(() => buildShinjangSprayPrescriptions({
-    configuredPrescriptions: [
-      ...shockwaveSettlementSettings.prescriptions,
-      ...manualSettlementSettings.prescriptions,
-    ],
+    configuredPrescriptions: spraySettings.prescriptions,
     rows: combinedRows,
-  }), [combinedRows, manualSettlementSettings.prescriptions, shockwaveSettlementSettings.prescriptions]);
-  const prescriptionPrices = useMemo(() => ({
-    ...shockwaveSettlementSettings.prescription_prices,
-    ...manualSettlementSettings.prescription_prices,
-  }), [manualSettlementSettings.prescription_prices, shockwaveSettlementSettings.prescription_prices]);
-  const cryoPrescriptions = useMemo(() => ([
-    ...shockwaveSettlementSettings.cryo_prescriptions,
-    ...manualSettlementSettings.cryo_prescriptions,
-  ]), [manualSettlementSettings.cryo_prescriptions, shockwaveSettlementSettings.cryo_prescriptions]);
-  const cryoPrices = useMemo(() => ({
-    ...shockwaveSettlementSettings.cryo_prices,
-    ...manualSettlementSettings.cryo_prices,
-  }), [manualSettlementSettings.cryo_prices, shockwaveSettlementSettings.cryo_prices]);
+  }), [combinedRows, spraySettings.prescriptions]);
+  const prescriptionPrices = spraySettings.prescription_prices;
   const availableTherapists = useMemo(() => buildUniqueTherapists({
     rows: combinedRows,
     shockwaveTherapists: localShockwaveTherapists.length > 0 ? localShockwaveTherapists : therapists,
@@ -352,6 +324,11 @@ export default function ShinjangSprayStatsPage() {
   }, []);
 
   const handleSaveSettings = useCallback(async ({
+    prescriptions: nextPrescriptions,
+    prescriptionPrices: nextPrescriptionPrices,
+    cryoPrescriptions: nextCryoPrescriptions,
+    cryoPrices: nextCryoPrices,
+    prescriptionColors: nextPrescriptionColors,
     prescriptionIncentivePercentages,
     therapistNames,
   }) => {
@@ -363,6 +340,11 @@ export default function ShinjangSprayStatsPage() {
         currentYear,
         currentMonth,
         {
+          prescriptions: nextPrescriptions,
+          prescription_prices: nextPrescriptionPrices,
+          cryo_prescriptions: nextCryoPrescriptions,
+          cryo_prices: nextCryoPrices,
+          prescription_colors: nextPrescriptionColors,
           prescription_incentive_percentages: prescriptionIncentivePercentages,
           therapist_names: therapistNames,
         }
@@ -374,7 +356,7 @@ export default function ShinjangSprayStatsPage() {
       await loadShockwaveSettings({ force: true });
     }
     addToast(
-      ok ? '이번 달 신장분사 치료사·인센티브 설정을 저장했습니다.' : '신장분사 설정 저장에 실패했습니다.',
+      ok ? '이번 달 신장분사 처방·크라이오·인센티브 설정을 저장했습니다.' : '신장분사 설정 저장에 실패했습니다.',
       ok ? 'success' : 'error'
     );
     return ok;
@@ -406,6 +388,13 @@ export default function ShinjangSprayStatsPage() {
               onClick={() => setActiveSection('settlement')}
             >
               신장분사 결산
+            </button>
+            <button
+              type="button"
+              className={`sw-stats-side-tab sw-stats-side-tab--new-patients${activeSection === 'new-patients' ? ' active' : ''}`}
+              onClick={() => setActiveSection('new-patients')}
+            >
+              신환
             </button>
             {canManageSettings && (
               <button
@@ -509,15 +498,23 @@ export default function ShinjangSprayStatsPage() {
                 )}
               </div>
             )}
+            {activeSection === 'new-patients' && (
+              <div className="sw-stats-body sw-stats-body--settlement fade-transition-wrapper">
+                <ShockwaveNewPatientsView
+                  logs={combinedRows}
+                  therapists={displayTherapists}
+                  monthlyTherapists={[]}
+                  currentMonth={currentMonth}
+                  title={`${currentMonth}월 신장분사 신환`}
+                  selectedTherapistNames={selectedTherapistNames}
+                />
+              </div>
+            )}
             {canManageSettings && activeSection === 'settings' && (
               <div className="sw-stats-body sw-stats-body--settlement fade-transition-wrapper">
                 <ShinjangSpraySettingsPanel
                   year={currentYear}
                   month={currentMonth}
-                  prescriptions={prescriptions}
-                  prescriptionPrices={prescriptionPrices}
-                  cryoPrescriptions={cryoPrescriptions}
-                  cryoPrices={cryoPrices}
                   therapists={availableTherapists}
                   effectiveSettings={spraySettings}
                   onSave={handleSaveSettings}

@@ -36,6 +36,7 @@ import {
   shouldKeepStatsSectionMounted,
   shouldPrepareStatsSecondarySections,
 } from '../../lib/statsSectionLoadingUtils';
+import { isShinjangSprayPrescription } from '../../lib/shinjangSprayStatsUtils';
 
 class ShockwaveStatsErrorBoundary extends React.Component {
   constructor(props) {
@@ -144,6 +145,16 @@ export default function ShockwaveStatsView({
   const fetchIdRef = useRef(0);
   const recentFetchIdRef = useRef(0);
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
+  const visibleShockwaveLogs = useMemo(
+    () => safeLogs.filter((log) => !isShinjangSprayPrescription(log?.prescription)),
+    [safeLogs]
+  );
+  const visibleRecentLogs = useMemo(
+    () => (Array.isArray(recentLogs) ? recentLogs : []).filter(
+      (log) => !isShinjangSprayPrescription(log?.prescription)
+    ),
+    [recentLogs]
+  );
   const markCurrentLogsReady = useCallback(() => {
     const monthKey = `${currentYear}-${currentMonth}`;
     logsLoadedKeyRef.current = monthKey;
@@ -172,10 +183,10 @@ export default function ShockwaveStatsView({
   const settlementPrescriptions = useMemo(
     () => buildStatsDisplayPrescriptions({
       configuredPrescriptions: effectiveSettlementSettings.prescriptions,
-      rows: currentLogsReady ? safeLogs : [],
+      rows: currentLogsReady ? visibleShockwaveLogs : [],
       hiddenPrescriptions: effectiveSettlementSettings.hidden_prescriptions,
     }),
-    [currentLogsReady, effectiveSettlementSettings, safeLogs]
+    [currentLogsReady, effectiveSettlementSettings, visibleShockwaveLogs]
   );
   const settlementPrices = useMemo(
     () => effectiveSettlementSettings.prescription_prices,
@@ -202,7 +213,7 @@ export default function ShockwaveStatsView({
     const keys = new Set();
 
     if (currentLogsReady) {
-      safeLogs.forEach((log) => {
+      visibleShockwaveLogs.forEach((log) => {
         const key = normalizePrescriptionKey(log?.prescription);
         if (key) keys.add(key);
       });
@@ -217,7 +228,7 @@ export default function ShockwaveStatsView({
     }
 
     return keys;
-  }, [currentLogsReady, memos, safeLogs]);
+  }, [currentLogsReady, memos, visibleShockwaveLogs]);
   const gridPrescriptions = useMemo(() => {
     if (gridPrescriptionKeys.size === 0) return settlementPrescriptions;
     const filtered = settlementPrescriptions.filter((prescription) => (
@@ -693,9 +704,14 @@ export default function ShockwaveStatsView({
   ]);
 
   const recentLogsForSummaries = useMemo(() => {
-    if (safeLogs.length === 0) return recentLogs;
-    return replaceLogsForStatsMonth(recentLogs, currentYear, currentMonth, safeLogs);
-  }, [currentMonth, currentYear, recentLogs, safeLogs]);
+    if (visibleShockwaveLogs.length === 0) return visibleRecentLogs;
+    return replaceLogsForStatsMonth(
+      visibleRecentLogs,
+      currentYear,
+      currentMonth,
+      visibleShockwaveLogs
+    );
+  }, [currentMonth, currentYear, visibleRecentLogs, visibleShockwaveLogs]);
 
   const recentMonthlySummaries = useMemo(() => {
     return Array.from({ length: recentPeriodMonths }, (_, index) => {
@@ -835,7 +851,7 @@ export default function ShockwaveStatsView({
   };
 
   const isInitialDataLoading = isScheduleLoading || isLogsLoading;
-  const showGridSkeleton = (!currentLogsReady || (isInitialDataLoading && safeLogs.length === 0)) && activeSection === 'grid';
+  const showGridSkeleton = (!currentLogsReady || (isInitialDataLoading && visibleShockwaveLogs.length === 0)) && activeSection === 'grid';
   const showSettlementSkeleton = isInitialDataLoading && displayTherapists.length === 0 && activeSection === 'settlement';
   const secondarySectionsReady = shouldPrepareStatsSecondarySections({
     dataReady: currentLogsReady,
@@ -942,14 +958,14 @@ export default function ShockwaveStatsView({
                   <div className="sw-grid-card-table">
                     <ShockwaveStatsErrorBoundary>
                       <ShockwaveDataGrid
-                        logs={safeLogs}
+                        logs={visibleShockwaveLogs}
                         therapists={displayBaseTherapists}
                         monthlyTherapists={monthlyTherapists}
                         currentYear={currentYear}
                         currentMonth={currentMonth}
                         fetchLogs={fetchLogs}
                         prescriptions={gridPrescriptions}
-                        totalRecordCount={safeLogs.length}
+                        totalRecordCount={visibleShockwaveLogs.length}
                         therapistCount={safeTherapists.length}
                         selectedTherapistNames={selectedTherapistNames}
                         onSelectedTherapistNamesChange={setSelectedTherapistNames}
@@ -971,7 +987,7 @@ export default function ShockwaveStatsView({
                 <SettlementSkeleton />
               ) : (
                 <ShockwaveSettlementView
-                  logs={safeLogs}
+                  logs={visibleShockwaveLogs}
                   therapists={displayBaseTherapists}
                   monthlyTherapists={monthlyTherapists}
                   currentMonth={currentMonth}
@@ -997,7 +1013,7 @@ export default function ShockwaveStatsView({
               hidden={activeSection !== 'new-patients'}
             >
               <ShockwaveNewPatientsView
-                logs={safeLogs}
+                logs={visibleShockwaveLogs}
                 therapists={displayBaseTherapists}
                 monthlyTherapists={monthlyTherapists}
                 currentMonth={currentMonth}

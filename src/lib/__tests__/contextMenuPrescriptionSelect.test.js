@@ -29,11 +29,11 @@ test('context menu prescription dropdowns show current monthly shortcuts on the 
   assert.match(view, /const contextMenuPrescriptionColors = \{/);
   assert.equal(
     view.match(/prescriptionColors=\{contextMenuPrescriptionColors\}/g)?.length,
-    2
+    3
   );
   assert.equal(
     view.match(/'--context-prescription-color': previousPrescriptionColor/g)?.length,
-    2
+    3
   );
   assert.match(select, /getPrescriptionColor\(prescription, prescriptionColors\)/);
   assert.match(select, /'--context-prescription-option-color': prescriptionColor/);
@@ -92,12 +92,17 @@ test('context menu prescription dropdowns show current monthly shortcuts on the 
     /context-menu-prescription-select-group context-menu-prescription-select-group--manual/
   );
   assert.match(
+    view,
+    /context-menu-prescription-select-group context-menu-prescription-select-group--shinjang/
+  );
+  assert.match(view, /ariaLabel="신장분사 처방 선택"/);
+  assert.match(
     css,
-    /\.context-menu-submenu--prescription\s*\{[^}]*width:\s*min\(213px, calc\(100vw - 36px\)\);[^}]*max-width:\s*min\(213px, calc\(100vw - 36px\)\);/s
+    /\.context-menu-submenu--prescription\s*\{[^}]*width:\s*min\(318px, calc\(100vw - 36px\)\);[^}]*max-width:\s*min\(318px, calc\(100vw - 36px\)\);/s
   );
   assert.match(
     css,
-    /\.context-menu-prescription-row--dual\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1\.1fr\) minmax\(0, 1fr\);/s
+    /\.context-menu-prescription-row--triple\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);/s
   );
   assert.match(
     css,

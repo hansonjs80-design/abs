@@ -1,45 +1,37 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
-function getMappedValue(values, prescription) {
-  const target = String(prescription || '')
-    .normalize('NFKC')
-    .toLocaleLowerCase('ko-KR')
-    .replace(/[^\p{L}\p{N}]/gu, '');
-  return Object.entries(values || {}).find(([key]) => (
-    String(key || '')
-      .normalize('NFKC')
-      .toLocaleLowerCase('ko-KR')
-      .replace(/[^\p{L}\p{N}]/gu, '') === target
-  ))?.[1];
+function buildInitialDraft(effectiveSettings) {
+  return {
+    prescriptions: Array.isArray(effectiveSettings?.prescriptions)
+      ? effectiveSettings.prescriptions.filter(Boolean)
+      : ['신장분사'],
+    prescriptionPrices: { ...(effectiveSettings?.prescription_prices || {}) },
+    cryoPrescriptions: [...(effectiveSettings?.cryo_prescriptions || [])],
+    cryoPrices: { ...(effectiveSettings?.cryo_prices || {}) },
+    prescriptionColors: { ...(effectiveSettings?.prescription_colors || {}) },
+    incentivePercentages: {
+      ...(effectiveSettings?.prescription_incentive_percentages || {}),
+    },
+  };
 }
 
-function isMappedPrescription(values, prescription) {
-  return (Array.isArray(values) ? values : []).some((value) => (
-    String(value || '')
-      .normalize('NFKC')
-      .toLocaleLowerCase('ko-KR')
-      .replace(/[^\p{L}\p{N}]/gu, '')
-      === String(prescription || '')
-        .normalize('NFKC')
-        .toLocaleLowerCase('ko-KR')
-        .replace(/[^\p{L}\p{N}]/gu, '')
-  ));
+function normalizeNewPrescriptionName(value) {
+  const name = String(value || '').trim();
+  if (!name) return '';
+  return name.includes('신장분사') ? name : `${name}(신장분사)`;
 }
 
 export default function ShinjangSpraySettingsPanel({
   year,
   month,
-  prescriptions = [],
-  prescriptionPrices = {},
-  cryoPrescriptions = [],
-  cryoPrices = {},
   therapists = [],
   effectiveSettings,
   onSave,
 }) {
-  const effectivePercentages = useMemo(() => ({
-    ...(effectiveSettings?.prescription_incentive_percentages || {}),
-  }), [effectiveSettings?.prescription_incentive_percentages]);
+  const initialDraft = useMemo(
+    () => buildInitialDraft(effectiveSettings),
+    [effectiveSettings]
+  );
   const therapistNameList = useMemo(() => (
     (Array.isArray(therapists) ? therapists : [])
       .map((therapist) => String(therapist?.name || '').trim())
@@ -50,32 +42,97 @@ export default function ShinjangSpraySettingsPanel({
     const configuredNames = new Set(effectiveSettings.therapist_names);
     return therapistNameList.filter((name) => configuredNames.has(name));
   }, [effectiveSettings?.therapist_names, therapistNameList]);
-  const [draft, setDraft] = useState(effectivePercentages);
+  const [draft, setDraft] = useState(initialDraft);
   const [draftTherapistNames, setDraftTherapistNames] = useState(effectiveTherapistNames);
+  const [newPrescriptionName, setNewPrescriptionName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    setDraft(effectivePercentages);
+    setDraft(initialDraft);
     setDraftTherapistNames(effectiveTherapistNames);
-  }, [effectivePercentages, effectiveTherapistNames]);
+  }, [effectiveTherapistNames, initialDraft]);
 
   const sourceText = useMemo(() => {
-    if (!effectiveSettings?.source_month_key) return '아직 저장된 설정이 없어 인센티브율 0%를 적용합니다.';
+    if (!effectiveSettings?.source_month_key) return '기존 신장분사 처방 설정을 사용 중입니다.';
     if (effectiveSettings.source_month_key === effectiveSettings.target_month_key) {
-      return '이번 달에 직접 저장한 처방별 인센티브 설정입니다.';
+      return '이번 달에 직접 저장한 신장분사 처방·인센티브 설정입니다.';
     }
     return `${effectiveSettings.source_month_key} 설정을 이어받아 적용 중입니다.`;
   }, [effectiveSettings?.source_month_key, effectiveSettings?.target_month_key]);
 
+  const updateMapValue = useCallback((field, prescription, value) => {
+    setDraft((current) => ({
+      ...current,
+      [field]: {
+        ...current[field],
+        [prescription]: value,
+      },
+    }));
+  }, []);
+
+  const addPrescription = useCallback(() => {
+    const prescription = normalizeNewPrescriptionName(newPrescriptionName);
+    if (!prescription) return;
+    setDraft((current) => {
+      if (current.prescriptions.includes(prescription)) return current;
+      return {
+        ...current,
+        prescriptions: [...current.prescriptions, prescription],
+        prescriptionPrices: { ...current.prescriptionPrices, [prescription]: 0 },
+        cryoPrices: { ...current.cryoPrices, [prescription]: 0 },
+        prescriptionColors: {
+          ...current.prescriptionColors,
+          [prescription]: current.prescriptionColors[prescription] || '#0f766e',
+        },
+        incentivePercentages: { ...current.incentivePercentages, [prescription]: 0 },
+      };
+    });
+    setNewPrescriptionName('');
+  }, [newPrescriptionName]);
+
+  const removePrescription = useCallback((prescription) => {
+    setDraft((current) => {
+      const removeMapKey = (source) => {
+        const next = { ...source };
+        delete next[prescription];
+        return next;
+      };
+      return {
+        ...current,
+        prescriptions: current.prescriptions.filter((item) => item !== prescription),
+        prescriptionPrices: removeMapKey(current.prescriptionPrices),
+        cryoPrescriptions: current.cryoPrescriptions.filter((item) => item !== prescription),
+        cryoPrices: removeMapKey(current.cryoPrices),
+        prescriptionColors: removeMapKey(current.prescriptionColors),
+        incentivePercentages: removeMapKey(current.incentivePercentages),
+      };
+    });
+  }, []);
+
   const handleSave = async () => {
-    const cleaned = Object.fromEntries(prescriptions.map((prescription) => [
+    const prescriptions = draft.prescriptions
+      .map((prescription) => String(prescription || '').trim())
+      .filter(Boolean);
+    const buildNumberMap = (source) => Object.fromEntries(prescriptions.map((prescription) => [
       prescription,
-      Math.max(0, Number(getMappedValue(draft, prescription)) || 0),
+      Math.max(0, Number(source?.[prescription]) || 0),
     ]));
+    const prescriptionColors = Object.fromEntries(prescriptions.map((prescription) => [
+      prescription,
+      draft.prescriptionColors?.[prescription] || '#0f766e',
+    ]));
+
     setIsSaving(true);
     try {
       await onSave({
-        prescriptionIncentivePercentages: cleaned,
+        prescriptions,
+        prescriptionPrices: buildNumberMap(draft.prescriptionPrices),
+        cryoPrescriptions: draft.cryoPrescriptions.filter((prescription) => (
+          prescriptions.includes(prescription)
+        )),
+        cryoPrices: buildNumberMap(draft.cryoPrices),
+        prescriptionColors,
+        prescriptionIncentivePercentages: buildNumberMap(draft.incentivePercentages),
         therapistNames: draftTherapistNames,
       });
     } finally {
@@ -87,7 +144,7 @@ export default function ShinjangSpraySettingsPanel({
     <section className="sw-settlement-card shinjang-spray-settings-card">
       <div className="sw-settlement-header">
         <div>
-          <h2>{year}년 {String(month).padStart(2, '0')}월 신장분사 인센티브 설정</h2>
+          <h2>{year}년 {String(month).padStart(2, '0')}월 신장분사 설정</h2>
           <p className="sw-settlement-settings-subtext">{sourceText}</p>
         </div>
         <button
@@ -104,7 +161,7 @@ export default function ShinjangSpraySettingsPanel({
         <div className="shinjang-spray-settings-section-heading">
           <div>
             <h3>집계 치료사</h3>
-            <p>신장분사 현황과 결산에 표시할 치료사를 선택합니다.</p>
+            <p>신장분사 현황·결산·신환에 표시할 치료사를 선택합니다.</p>
           </div>
           <button
             type="button"
@@ -133,13 +190,11 @@ export default function ShinjangSpraySettingsPanel({
                     type="checkbox"
                     checked={isChecked}
                     disabled={isLastChecked}
-                    onChange={(event) => {
-                      setDraftTherapistNames((current) => (
-                        event.target.checked
-                          ? [...current, name]
-                          : current.filter((item) => item !== name)
-                      ));
-                    }}
+                    onChange={(event) => setDraftTherapistNames((current) => (
+                      event.target.checked
+                        ? [...current, name]
+                        : current.filter((item) => item !== name)
+                    ))}
                   />
                   <span>{therapist.displayName || name}</span>
                 </label>
@@ -149,60 +204,114 @@ export default function ShinjangSpraySettingsPanel({
         )}
       </div>
 
-      {prescriptions.length === 0 ? (
-        <div className="sw-stats-empty shinjang-spray-empty">
-          <span>설정할 신장분사 처방이 없습니다.</span>
-          <span className="empty-subtext">충격파 또는 도수치료 설정에서 처방 이름에 (신장분사)를 넣어주세요.</span>
+      <div className="shinjang-spray-settings-list">
+        <p className="shinjang-spray-cryo-settings-note">
+          처방별 금액·크라이오 차감·인센티브율을 각각 설정합니다.
+        </p>
+        <div className="shinjang-spray-settings-row shinjang-spray-settings-header-row">
+          <span>처방 이름</span>
+          <span>처방 단가</span>
+          <span>크라이오</span>
+          <span>크라이오 가격</span>
+          <span>인센티브율</span>
+          <span>색</span>
+          <span />
         </div>
-      ) : (
-        <div className="shinjang-spray-settings-list">
-          <p className="shinjang-spray-cryo-settings-note">
-            크라이오 적용 여부와 가격은 충격파·도수치료 설정에서 자동으로 연동됩니다.
-          </p>
-          <div className="shinjang-spray-settings-row shinjang-spray-settings-header-row">
-            <span>처방 이름</span>
-            <span>원본 처방 단가</span>
-            <span>크라이오</span>
-            <span>크라이오 가격</span>
-            <span>인센티브율</span>
-          </div>
-          {prescriptions.map((prescription) => {
-            const isCryo = isMappedPrescription(cryoPrescriptions, prescription);
-            return (
-              <div className="shinjang-spray-settings-row" key={prescription}>
-                <strong>{prescription}</strong>
-                <span className="shinjang-spray-settings-price">
-                  {Number(getMappedValue(prescriptionPrices, prescription) || 0).toLocaleString('ko-KR')}원
-                </span>
-                <span className={`shinjang-spray-cryo-status${isCryo ? ' is-active' : ''}`}>
-                  {isCryo ? '적용' : '미적용'}
-                </span>
-                <span className="shinjang-spray-settings-cryo-price">
-                  {isCryo
-                    ? `${Number(getMappedValue(cryoPrices, prescription) || 0).toLocaleString('ko-KR')}원`
-                    : '—'}
-                </span>
-                <label className="shinjang-spray-percentage-field">
-                  <input
-                    type="number"
-                    className="form-input"
-                    min={0}
-                    step={0.1}
-                    value={getMappedValue(draft, prescription) ?? ''}
-                    placeholder="0"
-                    aria-label={`${prescription} 인센티브율`}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      setDraft((current) => ({ ...current, [prescription]: value }));
-                    }}
-                  />
-                  <span>%</span>
-                </label>
-              </div>
-            );
-          })}
+        {draft.prescriptions.map((prescription) => {
+          const isCryo = draft.cryoPrescriptions.includes(prescription);
+          return (
+            <div className="shinjang-spray-settings-row" key={prescription}>
+              <strong>{prescription}</strong>
+              <label className="shinjang-spray-number-field">
+                <input
+                  type="number"
+                  className="form-input"
+                  min={0}
+                  step={1000}
+                  value={draft.prescriptionPrices[prescription] ?? 0}
+                  aria-label={`${prescription} 처방 단가`}
+                  onChange={(event) => updateMapValue('prescriptionPrices', prescription, event.target.value)}
+                />
+                <span>원</span>
+              </label>
+              <label className="shinjang-spray-cryo-toggle">
+                <input
+                  type="checkbox"
+                  checked={isCryo}
+                  aria-label={`${prescription} 크라이오 적용`}
+                  onChange={(event) => setDraft((current) => ({
+                    ...current,
+                    cryoPrescriptions: event.target.checked
+                      ? [...current.cryoPrescriptions, prescription]
+                      : current.cryoPrescriptions.filter((item) => item !== prescription),
+                  }))}
+                />
+              </label>
+              <label className="shinjang-spray-number-field">
+                <input
+                  type="number"
+                  className="form-input"
+                  min={0}
+                  step={1000}
+                  disabled={!isCryo}
+                  value={draft.cryoPrices[prescription] ?? 0}
+                  aria-label={`${prescription} 크라이오 가격`}
+                  onChange={(event) => updateMapValue('cryoPrices', prescription, event.target.value)}
+                />
+                <span>원</span>
+              </label>
+              <label className="shinjang-spray-number-field">
+                <input
+                  type="number"
+                  className="form-input"
+                  min={0}
+                  step={0.1}
+                  value={draft.incentivePercentages[prescription] ?? 0}
+                  aria-label={`${prescription} 인센티브율`}
+                  onChange={(event) => updateMapValue('incentivePercentages', prescription, event.target.value)}
+                />
+                <span>%</span>
+              </label>
+              <input
+                type="color"
+                className="shinjang-spray-color-input"
+                value={draft.prescriptionColors[prescription] || '#0f766e'}
+                aria-label={`${prescription} 색`}
+                onChange={(event) => updateMapValue('prescriptionColors', prescription, event.target.value)}
+              />
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => removePrescription(prescription)}
+              >
+                삭제
+              </button>
+            </div>
+          );
+        })}
+        <div className="shinjang-spray-add-row">
+          <input
+            className="form-input"
+            value={newPrescriptionName}
+            placeholder="+ 신장분사 처방"
+            aria-label="신장분사 처방 이름"
+            onChange={(event) => setNewPrescriptionName(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter') return;
+              event.preventDefault();
+              addPrescription();
+            }}
+          />
+          <button
+            type="button"
+            className="shinjang-spray-add-button"
+            aria-label="신장분사 처방 추가"
+            onClick={addPrescription}
+          >
+            +
+          </button>
         </div>
-      )}
+      </div>
     </section>
   );
 }

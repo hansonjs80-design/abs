@@ -1827,9 +1827,9 @@
   top: -6px;
   left: calc(100% + 4px);
   right: auto;
-  width: min(213px, calc(100vw - 36px));
+  width: min(318px, calc(100vw - 36px));
   min-width: 0;
-  max-width: min(213px, calc(100vw - 36px));
+  max-width: min(318px, calc(100vw - 36px));
   padding: 8px;
   border-radius: 11px;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14), 0 4px 10px rgba(15, 23, 42, 0.08);
@@ -2691,9 +2691,9 @@
   min-width: 0;
 }
 
-.context-menu-prescription-row--dual {
+.context-menu-prescription-row--triple {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   width: 100%;
 }
@@ -2829,11 +2829,11 @@
 
 @media (max-width: 560px) {
   .context-menu-submenu--prescription {
-    width: min(213px, calc(100vw - 28px));
-    max-width: min(213px, calc(100vw - 28px));
+    width: min(240px, calc(100vw - 28px));
+    max-width: min(240px, calc(100vw - 28px));
   }
 
-  .context-menu-prescription-row--dual {
+  .context-menu-prescription-row--triple {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -3840,6 +3840,107 @@
   max-width: 100% !important;
 }
 
+.patient-history-view-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 7px 9px;
+  border: 1px solid #d7dee8;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.patient-history-treatment-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.patient-history-treatment-filters legend {
+  float: left;
+  margin-right: 3px;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.patient-history-treatment-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 7px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #fff;
+  color: #475569;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.patient-history-treatment-filter input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  cursor: inherit;
+}
+
+.patient-history-treatment-filter--shockwave.is-checked {
+  border-color: #60a5fa;
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.patient-history-treatment-filter--manual.is-checked {
+  border-color: #fb923c;
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.patient-history-treatment-filter--shinjang.is-checked {
+  border-color: #34d399;
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.patient-history-treatment-count {
+  min-width: 15px;
+  padding: 1px 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.patient-history-sort-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.patient-history-sort-control select {
+  height: 30px;
+  padding: 0 26px 0 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #1e293b;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
 .patient-history-group-header {
   display: grid;
   gap: 4px;
@@ -4068,6 +4169,21 @@
   font-variant-numeric: tabular-nums;
   font-weight: 800;
   text-align: center;
+}
+
+.patient-history-table tbody .patient-history-row-number-cell--shockwave {
+  background: #dbeafe !important;
+  color: #1e40af;
+}
+
+.patient-history-table tbody .patient-history-row-number-cell--manual {
+  background: #ffedd5 !important;
+  color: #9a3412;
+}
+
+.patient-history-table tbody .patient-history-row-number-cell--shinjang {
+  background: #d1fae5 !important;
+  color: #065f46;
 }
 
 .patient-history-table thead .patient-history-row-number-cell {
@@ -4344,4 +4460,15 @@
   overflow-wrap: anywhere;
   pointer-events: none;
   white-space: pre-wrap;
+}
+
+@media (max-width: 900px) {
+  .patient-history-view-controls {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .patient-history-treatment-filters {
+    flex-wrap: wrap;
+  }
 }

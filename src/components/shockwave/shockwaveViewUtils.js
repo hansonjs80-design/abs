@@ -10,13 +10,20 @@ import {
   normalizeVisitInputValue,
   splitBodyParts,
 } from '../../lib/schedulerUtils.js';
-import { getPatientHistoryVisitSequenceColors } from '../../lib/patientHistoryVisitSequenceUtils.js';
+import { getPatientHistoryGroupedVisitSequenceColors } from '../../lib/patientHistoryVisitSequenceUtils.js';
 import { parseSchedulerCellKey } from '../../lib/schedulerHistoryCandidateUtils.js';
 import { formatBodyPartPresetDisplayValue } from '../../lib/bodyPartPresetUtils.js';
 
 export const PATIENT_HISTORY_GROUPS = [
   { key: 'shockwave', label: '충격파 내역' },
   { key: 'manual', label: '도수치료 내역' },
+  { key: 'shinjang', label: '신장분사 내역' },
+];
+
+export const PATIENT_HISTORY_SORT_OPTIONS = [
+  { key: 'date', label: '날짜순' },
+  { key: 'prescription', label: '처방순' },
+  { key: 'body', label: '부위순' },
 ];
 
 export const PATIENT_HISTORY_ALL_BODY_FILTER = '__all__';
@@ -108,7 +115,39 @@ export function saveHiddenBodyPartOptionsByPatient(value) {
 }
 
 export function getPatientHistoryGroupKey(log) {
-  return log?.history_group || (log?.type === 'manual' ? 'manual' : 'shockwave');
+  const configuredGroup = String(log?.history_group || '').trim();
+  if (configuredGroup === 'shinjang_spray') return 'shinjang';
+  if (PATIENT_HISTORY_GROUPS.some((group) => group.key === configuredGroup)) {
+    return configuredGroup;
+  }
+  return log?.type === 'manual' ? 'manual' : 'shockwave';
+}
+
+export function buildPatientHistoryTreatmentFilterOptions(logs = []) {
+  const counts = new Map(PATIENT_HISTORY_GROUPS.map((group) => [group.key, 0]));
+  (Array.isArray(logs) ? logs : []).forEach((log) => {
+    const key = getPatientHistoryGroupKey(log);
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
+  return PATIENT_HISTORY_GROUPS.map((group) => ({
+    ...group,
+    count: counts.get(group.key) || 0,
+  }));
+}
+
+export function togglePatientHistoryTreatmentSelection(selection, optionKey) {
+  const validKeys = PATIENT_HISTORY_GROUPS.map((group) => group.key);
+  const selectedKeys = new Set(
+    Array.isArray(selection) && selection.length > 0
+      ? selection.filter((key) => validKeys.includes(key))
+      : validKeys
+  );
+  if (selectedKeys.has(optionKey)) {
+    if (selectedKeys.size > 1) selectedKeys.delete(optionKey);
+  } else if (validKeys.includes(optionKey)) {
+    selectedKeys.add(optionKey);
+  }
+  return validKeys.filter((key) => selectedKeys.has(key));
 }
 
 export function getPatientHistoryBodyFilterParts(log = {}) {
@@ -265,11 +304,92 @@ function filterPatientHistoryLogsByPrescription(logs, prescriptionFilters) {
   ));
 }
 
+export function sortPatientHistoryLogs(logs = [], sortOrder = 'date') {
+  const source = Array.isArray(logs) ? logs : [];
+  const compareDate = (left, right) => (
+    String(right?.date || '').localeCompare(String(left?.date || ''))
+  );
+  const compareSchedulePosition = (left, right) => {
+    const leftPosition = parseSchedulerCellKey(left?.scheduler_cell_key);
+    const rightPosition = parseSchedulerCellKey(right?.scheduler_cell_key);
+    if (!leftPosition || !rightPosition) return 0;
+    return leftPosition.row_index - rightPosition.row_index
+      || leftPosition.col_index - rightPosition.col_index;
+  };
+  const compareLabel = (left, right, field) => (
+    String(left?.[field] || '').trim().localeCompare(
+      String(right?.[field] || '').trim(),
+      'ko',
+      { numeric: true }
+    )
+  );
+
+  return source
+    .map((log, index) => ({ log, index }))
+    .sort((left, right) => {
+      const primary = sortOrder === 'prescription'
+        ? compareLabel(left.log, right.log, 'prescription')
+        : sortOrder === 'body'
+          ? compareLabel(left.log, right.log, 'body_part')
+          : compareDate(left.log, right.log);
+      return primary
+        || compareDate(left.log, right.log)
+        || compareSchedulePosition(left.log, right.log)
+        || left.index - right.index;
+    })
+    .map(({ log }) => log);
+}
+
+function buildFilteredPatientHistoryGroup({
+  group,
+  rawLogs,
+  filterKey,
+  bodyFilters,
+  prescriptionFilters,
+  sortOrder,
+}) {
+  const rawBodyFilterOptions = buildPatientHistoryBodyFilterOptions(rawLogs);
+  const rawPrescriptionFilterOptions = buildPatientHistoryPrescriptionFilterOptions(rawLogs);
+  const activeBodyFilters = normalizePatientHistoryFilterSelection(
+    bodyFilters[filterKey],
+    rawBodyFilterOptions
+  );
+  const activePrescriptionFilters = normalizePatientHistoryFilterSelection(
+    prescriptionFilters[filterKey],
+    rawPrescriptionFilterOptions
+  );
+  const bodyFilteredLogs = filterPatientHistoryLogsByBody(rawLogs, activeBodyFilters);
+  const prescriptionFilteredLogs = filterPatientHistoryLogsByPrescription(
+    rawLogs,
+    activePrescriptionFilters
+  );
+  const filteredLogs = sortPatientHistoryLogs(
+    filterPatientHistoryLogsByPrescription(bodyFilteredLogs, activePrescriptionFilters),
+    sortOrder
+  );
+
+  return {
+    ...group,
+    logs: filteredLogs,
+    visitSequenceColors: getPatientHistoryGroupedVisitSequenceColors(
+      filteredLogs,
+      getPatientHistoryGroupKey
+    ),
+    totalLogs: rawLogs,
+    bodyFilterOptions: buildPatientHistoryBodyFilterOptions(rawLogs, prescriptionFilteredLogs),
+    activeBodyFilters,
+    prescriptionFilterOptions: buildPatientHistoryPrescriptionFilterOptions(rawLogs, bodyFilteredLogs),
+    activePrescriptionFilters,
+  };
+}
+
 export function buildPatientHistoryLogGroups({
   logs = [],
   bodyFilters = {},
   prescriptionFilters = {},
   selectedGroupKey = 'shockwave',
+  selectedTreatmentGroups,
+  sortOrder = 'date',
 } = {}) {
   const groupMap = new Map(
     PATIENT_HISTORY_GROUPS.map((group) => [group.key, { ...group, logs: [] }])
@@ -280,7 +400,28 @@ export function buildPatientHistoryLogGroups({
     group.logs.push(log);
   });
 
-  const orderedGroups = [...PATIENT_HISTORY_GROUPS].sort((a, b) => {
+  const hasExplicitTreatmentSelection = Array.isArray(selectedTreatmentGroups);
+  const selectedKeys = hasExplicitTreatmentSelection && selectedTreatmentGroups.length > 0
+    ? PATIENT_HISTORY_GROUPS
+      .map((group) => group.key)
+      .filter((key) => selectedTreatmentGroups.includes(key))
+    : PATIENT_HISTORY_GROUPS.map((group) => group.key);
+
+  if (hasExplicitTreatmentSelection && selectedKeys.length >= 3) {
+    const combinedLogs = selectedKeys.flatMap((key) => groupMap.get(key)?.logs || []);
+    return [buildFilteredPatientHistoryGroup({
+      group: { key: 'all', label: '전체 치료 내역', treatmentKeys: selectedKeys },
+      rawLogs: combinedLogs,
+      filterKey: 'all',
+      bodyFilters,
+      prescriptionFilters,
+      sortOrder,
+    })];
+  }
+
+  const orderedGroups = PATIENT_HISTORY_GROUPS
+    .filter((group) => selectedKeys.includes(group.key))
+    .sort((a, b) => {
     if (a.key === selectedGroupKey) return -1;
     if (b.key === selectedGroupKey) return 1;
     return 0;
@@ -289,44 +430,15 @@ export function buildPatientHistoryLogGroups({
   return orderedGroups
     .map((group) => {
       const rawGroup = groupMap.get(group.key);
-      if (!rawGroup || rawGroup.logs.length === 0) return null;
-      const rawBodyFilterOptions = buildPatientHistoryBodyFilterOptions(rawGroup.logs);
-      const rawPrescriptionFilterOptions = buildPatientHistoryPrescriptionFilterOptions(rawGroup.logs);
-      const activeBodyFilters = normalizePatientHistoryFilterSelection(
-        bodyFilters[rawGroup.key],
-        rawBodyFilterOptions
-      );
-      const activePrescriptionFilters = normalizePatientHistoryFilterSelection(
-        prescriptionFilters[rawGroup.key],
-        rawPrescriptionFilterOptions
-      );
-      const bodyFilteredLogs = filterPatientHistoryLogsByBody(rawGroup.logs, activeBodyFilters);
-      const prescriptionFilteredLogs = filterPatientHistoryLogsByPrescription(
-        rawGroup.logs,
-        activePrescriptionFilters
-      );
-      const filteredLogs = filterPatientHistoryLogsByPrescription(
-        bodyFilteredLogs,
-        activePrescriptionFilters
-      );
-      const bodyFilterOptions = buildPatientHistoryBodyFilterOptions(
-        rawGroup.logs,
-        prescriptionFilteredLogs
-      );
-      const prescriptionFilterOptions = buildPatientHistoryPrescriptionFilterOptions(
-        rawGroup.logs,
-        bodyFilteredLogs
-      );
-      return {
-        ...rawGroup,
-        logs: filteredLogs,
-        visitSequenceColors: getPatientHistoryVisitSequenceColors(filteredLogs),
-        totalLogs: rawGroup.logs,
-        bodyFilterOptions,
-        activeBodyFilters,
-        prescriptionFilterOptions,
-        activePrescriptionFilters,
-      };
+      if (!rawGroup || (!hasExplicitTreatmentSelection && rawGroup.logs.length === 0)) return null;
+      return buildFilteredPatientHistoryGroup({
+        group,
+        rawLogs: rawGroup.logs,
+        filterKey: group.key,
+        bodyFilters,
+        prescriptionFilters,
+        sortOrder,
+      });
     })
     .filter(Boolean);
 }
@@ -356,12 +468,22 @@ const PATIENT_HISTORY_COLUMN_WIDTH_SCALE = (
   }, 0)
 ) / 100;
 
-export function getPatientHistoryModalLayout(groupCount) {
+export function getPatientHistoryModalLayout(groupsOrCount) {
+  const groups = Array.isArray(groupsOrCount) ? groupsOrCount : null;
+  const groupCount = groups ? groups.length : Number(groupsOrCount || 0);
+  const isCombined = groups?.length === 1 && groups[0]?.key === 'all';
   if (groupCount >= 2) {
     return {
       maxWidth: Math.ceil(1534 * PATIENT_HISTORY_COLUMN_WIDTH_SCALE),
       width: '100%',
       gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    };
+  }
+  if (isCombined) {
+    return {
+      maxWidth: Math.ceil(1180 * PATIENT_HISTORY_COLUMN_WIDTH_SCALE),
+      width: '95%',
+      gridTemplateColumns: 'minmax(0, 1fr)',
     };
   }
   return {

@@ -73,7 +73,7 @@ function buildSourceRow({
 }
 
 export function isShinjangSprayPrescription(value) {
-  return normalizeMarkerText(value).includes('(신장분사)');
+  return normalizeMarkerText(value).includes('신장분사');
 }
 
 export function mergeShinjangSprayLogs({
@@ -126,6 +126,10 @@ export function buildShinjangSprayPrescriptions({
   configuredPrescriptions = [],
   rows = [],
 } = {}) {
+  const configuredOrder = new Map(
+    (Array.isArray(configuredPrescriptions) ? configuredPrescriptions : [])
+      .map((prescription, index) => [normalizePrescriptionKey(prescription), index])
+  );
   const prescriptionsByKey = new Map();
   const add = (value) => {
     const prescription = String(value || '').trim();
@@ -135,9 +139,14 @@ export function buildShinjangSprayPrescriptions({
     prescriptionsByKey.set(key, prescription);
   };
 
-  (Array.isArray(configuredPrescriptions) ? configuredPrescriptions : []).forEach(add);
   (Array.isArray(rows) ? rows : []).forEach((row) => add(row?.prescription));
-  return [...prescriptionsByKey.values()];
+  if (prescriptionsByKey.size === 0) return ['신장분사'];
+  return [...prescriptionsByKey.entries()]
+    .sort(([leftKey], [rightKey]) => (
+      (configuredOrder.get(leftKey) ?? Number.MAX_SAFE_INTEGER)
+      - (configuredOrder.get(rightKey) ?? Number.MAX_SAFE_INTEGER)
+    ))
+    .map(([, prescription]) => prescription);
 }
 
 export function buildShinjangSpraySettlementSummary({

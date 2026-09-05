@@ -15,10 +15,7 @@ function formatPercentage(value) {
 }
 
 function formatTreatmentTypes(types) {
-  const labels = (Array.isArray(types) ? types : []).map((type) => (
-    type === 'manual_therapy' ? '도수' : '충격파'
-  ));
-  return [...new Set(labels)].join(' · ') || '—';
+  return Array.isArray(types) && types.length > 0 ? '신장분사' : '—';
 }
 
 export default function ShinjangSprayStatsView({
@@ -70,7 +67,7 @@ export default function ShinjangSprayStatsView({
                 {isCryoAdjusted ? '신장분사 크라이오 반영 결산' : '신장분사 결산'}
               </h2>
               <p className="shinjang-spray-description">
-                충격파·도수 처방 중 이름에 <strong>(신장분사)</strong>가 포함된 기록을 합산합니다.
+                처방 이름에 <strong>신장분사</strong>가 포함된 기록을 처방별로 합산합니다.
               </p>
             </div>
             <button
@@ -97,7 +94,7 @@ export default function ShinjangSprayStatsView({
         {summary.detailRows.length === 0 ? (
           <div className="sw-stats-empty shinjang-spray-empty">
             <span>이번 달 신장분사 처방 기록이 없습니다.</span>
-            <span className="empty-subtext">처방 이름에 (신장분사)를 포함하면 이 탭에 자동으로 집계됩니다.</span>
+            <span className="empty-subtext">신장분사 설정에서 처방을 추가한 뒤 스케줄에 적용해 주세요.</span>
           </div>
         ) : (
           <div className="sw-settlement-table-wrap shinjang-spray-table-wrap">
@@ -106,7 +103,7 @@ export default function ShinjangSprayStatsView({
                 <tr>
                   <th>치료사</th>
                   <th>처방</th>
-                  <th>원본 통계</th>
+                  <th>분류</th>
                   <th>건수</th>
                   <th>원본 단가</th>
                   <th>크라이오 차감</th>

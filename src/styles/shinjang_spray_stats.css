@@ -154,7 +154,8 @@
 }
 
 .shinjang-spray-settings-list {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid #cbd5e1;
   border-radius: 12px;
 }
@@ -261,8 +262,9 @@
 
 .shinjang-spray-settings-row {
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) 150px 110px 150px 170px;
+  grid-template-columns: minmax(220px, 1fr) 150px 82px 150px 145px 64px 72px;
   align-items: center;
+  min-width: 1040px;
   min-height: 56px;
   border-bottom: 1px solid #e2e8f0;
   background: #fff;
@@ -284,46 +286,68 @@
   font-weight: 900;
 }
 
-.shinjang-spray-settings-price {
-  color: #1454b8;
-  font-weight: 800;
-}
-
-.shinjang-spray-settings-cryo-price {
-  color: #b45309;
-  font-weight: 800;
-}
-
-.shinjang-spray-cryo-status {
-  justify-self: start;
-  margin-left: 14px;
-  padding: 4px 8px !important;
-  border-radius: 999px;
-  background: #f1f5f9;
-  color: #64748b;
-  font-size: 0.72rem;
-  font-weight: 850;
-}
-
-.shinjang-spray-cryo-status.is-active {
-  background: #ffedd5;
-  color: #9a3412;
-}
-
-.shinjang-spray-percentage-field {
+.shinjang-spray-number-field {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  color: #475569;
+  font-weight: 800;
 }
 
-.shinjang-spray-percentage-field .form-input {
-  width: 110px;
+.shinjang-spray-number-field .form-input {
+  width: 100%;
+  min-width: 0;
   text-align: right;
 }
 
-.shinjang-spray-percentage-field span {
-  color: #475569;
+.shinjang-spray-cryo-toggle {
+  display: flex;
+  justify-content: center;
+}
+
+.shinjang-spray-cryo-toggle input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: #ea580c;
+}
+
+.shinjang-spray-color-input {
+  width: 38px;
+  height: 32px;
+  padding: 2px !important;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.shinjang-spray-add-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.shinjang-spray-add-row .form-input {
+  max-width: 360px;
+}
+
+.shinjang-spray-add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: #0891b2;
+  color: #fff;
+  font-size: 1.25rem;
   font-weight: 900;
+  cursor: pointer;
 }
 
 @media (max-width: 900px) {
@@ -337,7 +361,7 @@
   }
 
   .shinjang-spray-settings-row {
-    min-width: 860px;
+    min-width: 1040px;
   }
 }
 

@@ -45,6 +45,19 @@ export const DEFAULT_MANUAL_THERAPY_SETTLEMENT = {
 };
 
 export const DEFAULT_SHINJANG_SPRAY_SETTLEMENT = {
+  prescriptions: ['신장분사'],
+  prescription_prices: {
+    '신장분사': 0,
+  },
+  cryo_prescriptions: [],
+  cryo_prices: {},
+  prescription_colors: {
+    '신장분사': '#0f766e',
+  },
+  dose_tags: {},
+  duration_minutes: {},
+  visit_line_break_prescriptions: [],
+  hidden_prescriptions: [],
   prescription_incentive_percentages: {},
   therapist_names: null,
 };
@@ -185,6 +198,7 @@ export function buildPrescriptionClassificationSignature(settings, monthTargets 
   return JSON.stringify(targets.map(({ year, month }) => {
     const shockwave = getEffectiveSettlementSettings(settings, year, month, 'shockwave');
     const manualTherapy = getEffectiveSettlementSettings(settings, year, month, 'manual_therapy');
+    const shinjangSpray = getEffectiveShinjangSpraySettings(settings, year, month);
     const toClassificationFields = (value) => ({
       prescriptions: Array.isArray(value?.prescriptions) ? value.prescriptions : [],
       dose_tags: value?.dose_tags || {},
@@ -197,6 +211,7 @@ export function buildPrescriptionClassificationSignature(settings, monthTargets 
       month_key: getMonthKey(year, month),
       shockwave: toClassificationFields(shockwave),
       manual_therapy: toClassificationFields(manualTherapy),
+      shinjang_spray: toClassificationFields(shinjangSpray),
     };
   }));
 }
@@ -248,11 +263,50 @@ export function getEffectiveShinjangSpraySettings(settings, year, month) {
   const override = inheritedMonthKey
     ? monthlyEntries[inheritedMonthKey]?.shinjang_spray
     : null;
+  const overridePrescriptions = Array.isArray(override?.prescriptions)
+    ? override.prescriptions.map((prescription) => String(prescription || '').trim()).filter(Boolean)
+    : null;
+  const prescriptions = overridePrescriptions !== null
+    ? overridePrescriptions
+    : DEFAULT_SHINJANG_SPRAY_SETTLEMENT.prescriptions;
+  const activePrescriptionSet = new Set(prescriptions);
+  const filterMap = (values) => Object.fromEntries(
+    Object.entries(values || {}).filter(([prescription]) => activePrescriptionSet.has(prescription))
+  );
+  const filterList = (values) => (Array.isArray(values) ? values : [])
+    .filter((prescription) => activePrescriptionSet.has(prescription));
 
   return {
+    prescriptions,
+    prescription_prices: {
+      ...DEFAULT_SHINJANG_SPRAY_SETTLEMENT.prescription_prices,
+      ...filterMap(override?.prescription_prices),
+    },
+    cryo_prescriptions: Array.isArray(override?.cryo_prescriptions)
+      ? filterList(override.cryo_prescriptions)
+      : DEFAULT_SHINJANG_SPRAY_SETTLEMENT.cryo_prescriptions,
+    cryo_prices: {
+      ...filterMap(override?.cryo_prices),
+    },
+    prescription_colors: {
+      ...DEFAULT_SHINJANG_SPRAY_SETTLEMENT.prescription_colors,
+      ...filterMap(override?.prescription_colors),
+    },
+    dose_tags: {
+      ...filterMap(override?.dose_tags),
+    },
+    duration_minutes: {
+      ...filterMap(override?.duration_minutes),
+    },
+    visit_line_break_prescriptions: Array.isArray(override?.visit_line_break_prescriptions)
+      ? filterList(override.visit_line_break_prescriptions)
+      : DEFAULT_SHINJANG_SPRAY_SETTLEMENT.visit_line_break_prescriptions,
+    hidden_prescriptions: Array.isArray(override?.hidden_prescriptions)
+      ? filterList(override.hidden_prescriptions)
+      : [],
     prescription_incentive_percentages: {
       ...DEFAULT_SHINJANG_SPRAY_SETTLEMENT.prescription_incentive_percentages,
-      ...(override?.prescription_incentive_percentages || {}),
+      ...filterMap(override?.prescription_incentive_percentages),
     },
     therapist_names: Array.isArray(override?.therapist_names)
       ? override.therapist_names.map((name) => String(name || '').trim()).filter(Boolean)
@@ -269,8 +323,21 @@ export function setMonthlyShinjangSpraySettings(settings, year, month, nextConfi
     && !Array.isArray(settings.monthly_settlement_settings)
     ? settings.monthly_settlement_settings
     : {};
+  const therapistNames = Array.isArray(nextConfig?.therapist_names)
+    ? [...new Set(nextConfig.therapist_names.map((name) => String(name || '').trim()).filter(Boolean))]
+    : [];
+  const prescriptions = Array.isArray(nextConfig?.prescriptions)
+    ? [...new Set(nextConfig.prescriptions.map((value) => String(value || '').trim()).filter(Boolean))]
+    : [];
+  const activePrescriptionSet = new Set(prescriptions);
+  const filterMap = (values) => Object.fromEntries(
+    Object.entries(values && typeof values === 'object' && !Array.isArray(values) ? values : {})
+      .filter(([prescription]) => activePrescriptionSet.has(prescription))
+  );
+  const filterList = (values) => (Array.isArray(values) ? values : [])
+    .filter((prescription) => activePrescriptionSet.has(prescription));
   const rawPercentages = nextConfig?.prescription_incentive_percentages;
-  const prescriptionIncentivePercentages = Object.fromEntries(
+  const prescriptionIncentivePercentages = filterMap(Object.fromEntries(
     Object.entries(rawPercentages && typeof rawPercentages === 'object' && !Array.isArray(rawPercentages)
       ? rawPercentages
       : {})
@@ -279,16 +346,22 @@ export function setMonthlyShinjangSpraySettings(settings, year, month, nextConfi
         Math.max(0, Number(percentage) || 0),
       ])
       .filter(([prescription]) => prescription)
-  );
-  const therapistNames = Array.isArray(nextConfig?.therapist_names)
-    ? [...new Set(nextConfig.therapist_names.map((name) => String(name || '').trim()).filter(Boolean))]
-    : [];
+  ));
 
   return {
     ...existing,
     [monthKey]: {
       ...(existing[monthKey] || {}),
       shinjang_spray: {
+        prescriptions,
+        prescription_prices: filterMap(nextConfig?.prescription_prices),
+        cryo_prescriptions: filterList(nextConfig?.cryo_prescriptions),
+        cryo_prices: filterMap(nextConfig?.cryo_prices),
+        prescription_colors: filterMap(nextConfig?.prescription_colors),
+        dose_tags: filterMap(nextConfig?.dose_tags),
+        duration_minutes: filterMap(nextConfig?.duration_minutes),
+        visit_line_break_prescriptions: filterList(nextConfig?.visit_line_break_prescriptions),
+        hidden_prescriptions: filterList(nextConfig?.hidden_prescriptions),
         prescription_incentive_percentages: prescriptionIncentivePercentages,
         therapist_names: therapistNames,
       },
