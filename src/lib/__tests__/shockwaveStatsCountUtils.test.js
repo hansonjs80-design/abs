@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   buildCryoAdjustedPrescriptionPrices,
+  buildIncentiveRatePrescriptionGroups,
   buildManualTherapySettlementSummary,
   buildSettlementIncentiveRateBreakdown,
   buildShockwaveSettlementPrintColumnWidths,
@@ -53,6 +54,21 @@ describe('shockwave stats count utilities', () => {
       incentivePercentages: { '신장분사 1': 7, '신장분사 2': 15 },
     }), [
       { percentage: 15, count: 2, amount: 100000, incentive: 15000 },
+    ]);
+  });
+
+  it('places every prescription with the same incentive rate into one column group', () => {
+    assert.deepEqual(buildIncentiveRatePrescriptionGroups({
+      prescriptions: ['15% 첫 처방', '7% 첫 처방', '15% 둘째 처방', '7% 둘째 처방'],
+      incentivePercentages: {
+        '15% 첫 처방': 15,
+        '7% 첫 처방': 7,
+        '15% 둘째 처방': 15,
+        '7% 둘째 처방': 7,
+      },
+    }), [
+      { percentage: 7, prescriptions: ['7% 첫 처방', '7% 둘째 처방'] },
+      { percentage: 15, prescriptions: ['15% 첫 처방', '15% 둘째 처방'] },
     ]);
   });
 

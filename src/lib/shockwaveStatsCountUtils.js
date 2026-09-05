@@ -109,6 +109,38 @@ export function buildSettlementIncentiveRateBreakdown({
     .sort((a, b) => a.percentage - b.percentage);
 }
 
+export function buildIncentiveRatePrescriptionGroups({
+  prescriptions = [],
+  incentivePercentages = {},
+  fallbackIncentivePercentage = 0,
+} = {}) {
+  const normalizedIncentiveMap = new Map(
+    Object.entries(
+      incentivePercentages && typeof incentivePercentages === 'object' && !Array.isArray(incentivePercentages)
+        ? incentivePercentages
+        : {}
+    ).map(([prescription, percentage]) => [
+      normalizePrescriptionKey(prescription),
+      Math.max(0, Number(percentage) || 0),
+    ])
+  );
+  const fallbackPercentage = Math.max(0, Number(fallbackIncentivePercentage) || 0);
+  const groupsByPercentage = new Map();
+
+  (Array.isArray(prescriptions) ? prescriptions : [])
+    .filter((prescription) => prescription && String(prescription).trim())
+    .forEach((prescription) => {
+      const percentage = normalizedIncentiveMap.get(normalizePrescriptionKey(prescription))
+        ?? fallbackPercentage;
+      const group = groupsByPercentage.get(percentage) || { percentage, prescriptions: [] };
+      group.prescriptions.push(prescription);
+      groupsByPercentage.set(percentage, group);
+    });
+
+  return [...groupsByPercentage.values()]
+    .sort((a, b) => a.percentage - b.percentage);
+}
+
 export function getShockwaveSettlementPrintColumnWeight(prescription) {
   const compactLabel = String(prescription || '').replace(/\s+/g, '');
   const isLongLabel = /[()[\]{}]/.test(compactLabel) || Array.from(compactLabel).length >= 6;

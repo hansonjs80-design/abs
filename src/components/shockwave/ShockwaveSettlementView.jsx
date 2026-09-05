@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 import {
   buildCryoAdjustedPrescriptionPrices,
+  buildIncentiveRatePrescriptionGroups,
   buildSettlementIncentiveRateBreakdown,
   buildShockwaveSettlementPrintColumnWidths,
   buildTherapistCompletedPrescriptionGroups,
@@ -264,14 +265,36 @@ export default function ShockwaveSettlementView({
       (prescription) => (settlement.grandPrescriptionCounts[prescription] || 0) > 0
     );
   }, [safePrescriptions, settlement.grandPrescriptionCounts]);
-  const horizontalSummaryPrescriptions = horizontalPrescriptions.length > 0
-    ? horizontalPrescriptions
-    : showOnlyTherapistPrescriptions
-      ? [null]
-      : horizontalPrescriptions;
+  const baseHorizontalSummaryPrescriptions = useMemo(() => (
+    horizontalPrescriptions.length > 0
+      ? horizontalPrescriptions
+      : showOnlyTherapistPrescriptions
+        ? [null]
+        : horizontalPrescriptions
+  ), [horizontalPrescriptions, showOnlyTherapistPrescriptions]);
   const displayedTherapistSummaries = settlement.summaryByTherapist;
-  const horizontalTherapistPrescriptionGroups = useMemo(() => (
-    showOnlyTherapistPrescriptions
+  const showIncentiveRateSubtotals = treatmentLabel === '신장분사'
+    && usesPrescriptionIncentives
+    && settlement.incentiveRatePercentages.length > 0;
+  const horizontalSummaryIncentiveRateGroups = useMemo(() => (
+    showIncentiveRateSubtotals
+      ? buildIncentiveRatePrescriptionGroups({
+          prescriptions: baseHorizontalSummaryPrescriptions,
+          incentivePercentages: normalizedIncentiveMap,
+          fallbackIncentivePercentage: incentivePercentage,
+        })
+      : []
+  ), [
+    baseHorizontalSummaryPrescriptions,
+    incentivePercentage,
+    normalizedIncentiveMap,
+    showIncentiveRateSubtotals,
+  ]);
+  const horizontalSummaryPrescriptions = horizontalSummaryIncentiveRateGroups.length > 0
+    ? horizontalSummaryIncentiveRateGroups.flatMap((group) => group.prescriptions)
+    : baseHorizontalSummaryPrescriptions;
+  const horizontalTherapistPrescriptionGroups = useMemo(() => {
+    const groups = showOnlyTherapistPrescriptions
       ? buildTherapistCompletedPrescriptionGroups({
           summaries: displayedTherapistSummaries,
           prescriptions: safePrescriptions,
@@ -283,21 +306,52 @@ export default function ShockwaveSettlementView({
           therapists: displayTherapists,
           sharedPrescriptionLimit: 0,
           emptyTherapistPrescriptionLimit: 3,
-        })
-  ), [
+        });
+    if (!showIncentiveRateSubtotals) return groups;
+
+    return groups.map((group) => {
+      const rateGroups = buildIncentiveRatePrescriptionGroups({
+        prescriptions: group.prescriptions,
+        incentivePercentages: normalizedIncentiveMap,
+        fallbackIncentivePercentage: incentivePercentage,
+      });
+      return rateGroups.length > 0
+        ? { ...group, prescriptions: rateGroups.flatMap((rateGroup) => rateGroup.prescriptions) }
+        : group;
+    });
+  }, [
     displayTherapists,
     displayedTherapistSummaries,
+    incentivePercentage,
+    normalizedIncentiveMap,
     safeLogs,
     safePrescriptions,
+    showIncentiveRateSubtotals,
     showOnlyTherapistPrescriptions,
+  ]);
+  const horizontalTherapistIncentiveRateGroups = useMemo(() => (
+    showIncentiveRateSubtotals
+      ? horizontalTherapistPrescriptionGroups.map((group) => {
+          const rateGroups = buildIncentiveRatePrescriptionGroups({
+            prescriptions: group.prescriptions,
+            incentivePercentages: normalizedIncentiveMap,
+            fallbackIncentivePercentage: incentivePercentage,
+          });
+          return rateGroups.length > 0
+            ? rateGroups
+            : [{ percentage: null, prescriptions: group.prescriptions.length > 0 ? group.prescriptions : [null] }];
+        })
+      : []
+  ), [
+    horizontalTherapistPrescriptionGroups,
+    incentivePercentage,
+    normalizedIncentiveMap,
+    showIncentiveRateSubtotals,
   ]);
   const horizontalPrintColumns = useMemo(
     () => buildShockwaveSettlementPrintColumnWidths(horizontalTherapistPrescriptionGroups),
     [horizontalTherapistPrescriptionGroups]
   );
-  const showIncentiveRateSubtotals = treatmentLabel === '신장분사'
-    && usesPrescriptionIncentives
-    && settlement.incentiveRatePercentages.length > 0;
 
   if (!displayTherapists.length) {
     return (
@@ -402,16 +456,27 @@ export default function ShockwaveSettlementView({
                       ))
                     )}
                   </tr>
-                  {showIncentiveRateSubtotals && settlement.incentiveRatePercentages.map((percentage) => (
-                    <tr key={`rate-count-${percentage}`} className="settlement-rate-subtotal-row">
-                      <th className="row-label">{treatmentLabel} 합계 ({formatPercentage(percentage)})</th>
-                      {displayedTherapistSummaries.map((item, therapistIndex) => (
-                        <td key={`rate-count-${percentage}-${item?.therapist?.id || item?.therapist?.name || therapistIndex}`} colSpan={horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length || 1} className={`merged-value therapist-group-end therapist-tone-${therapistIndex % 5}-cell${horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length === 1 ? ' merged-value--single-prescription' : ''}`}>
-                          {formatCount(getIncentiveRateSummary(item.incentiveRateBreakdown, percentage).count)}
-                        </td>
-                      ))}
+                  {showIncentiveRateSubtotals && (
+                    <tr className="settlement-rate-subtotal-row">
+                      <th className="row-label">{treatmentLabel} 합계(건)</th>
+                      {displayedTherapistSummaries.flatMap((item, therapistIndex) => {
+                        const rateGroups = horizontalTherapistIncentiveRateGroups[therapistIndex] || [];
+                        return rateGroups.map((rateGroup, rateGroupIndex) => (
+                          <td
+                            key={`rate-count-${item?.therapist?.id || item?.therapist?.name || therapistIndex}-${rateGroup.percentage ?? 'empty'}`}
+                            colSpan={rateGroup.prescriptions.length || 1}
+                            className={`merged-value therapist-tone-${therapistIndex % 5}-cell${rateGroupIndex === rateGroups.length - 1 ? ' therapist-group-end' : ''}${horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length === 1 ? ' merged-value--single-prescription' : ''}`}
+                          >
+                            {formatCount(
+                              rateGroup.percentage === null
+                                ? 0
+                                : getIncentiveRateSummary(item.incentiveRateBreakdown, rateGroup.percentage).count
+                            )}
+                          </td>
+                        ));
+                      })}
                     </tr>
-                  ))}
+                  )}
                   <tr className={showIncentiveRateSubtotals ? 'settlement-rate-total-row' : undefined}>
                     <th className="row-label">{showIncentiveRateSubtotals ? `${treatmentLabel} 전체 합계(건)` : `${treatmentLabel} 합계(건)`}</th>
                     {displayedTherapistSummaries.map((item, therapistIndex) => (
@@ -428,16 +493,27 @@ export default function ShockwaveSettlementView({
                       </td>
                     ))}
                   </tr>
-                  {showIncentiveRateSubtotals && settlement.incentiveRatePercentages.map((percentage) => (
-                    <tr key={`rate-incentive-${percentage}`} className="settlement-incentive-row settlement-rate-subtotal-row">
-                      <th className="row-label">인센티브 합계 ({formatPercentage(percentage)})</th>
-                      {displayedTherapistSummaries.map((item, therapistIndex) => (
-                        <td key={`rate-incentive-${percentage}-${item?.therapist?.id || item?.therapist?.name || therapistIndex}`} colSpan={horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length || 1} className={`merged-value incentive therapist-group-end therapist-tone-${therapistIndex % 5}-cell${horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length === 1 ? ' merged-value--single-prescription' : ''}`}>
-                          {formatCurrency(getIncentiveRateSummary(item.incentiveRateBreakdown, percentage).incentive)}
-                        </td>
-                      ))}
+                  {showIncentiveRateSubtotals && (
+                    <tr className="settlement-incentive-row settlement-rate-subtotal-row">
+                      <th className="row-label">인센티브 합계</th>
+                      {displayedTherapistSummaries.flatMap((item, therapistIndex) => {
+                        const rateGroups = horizontalTherapistIncentiveRateGroups[therapistIndex] || [];
+                        return rateGroups.map((rateGroup, rateGroupIndex) => (
+                          <td
+                            key={`rate-incentive-${item?.therapist?.id || item?.therapist?.name || therapistIndex}-${rateGroup.percentage ?? 'empty'}`}
+                            colSpan={rateGroup.prescriptions.length || 1}
+                            className={`merged-value incentive therapist-tone-${therapistIndex % 5}-cell${rateGroupIndex === rateGroups.length - 1 ? ' therapist-group-end' : ''}${horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length === 1 ? ' merged-value--single-prescription' : ''}`}
+                          >
+                            {formatCurrency(
+                              rateGroup.percentage === null
+                                ? 0
+                                : getIncentiveRateSummary(item.incentiveRateBreakdown, rateGroup.percentage).incentive
+                            )}
+                          </td>
+                        ));
+                      })}
                     </tr>
-                  ))}
+                  )}
                   <tr className={`settlement-incentive-row${showIncentiveRateSubtotals ? ' settlement-rate-total-row' : ''}`}>
                     <th className="row-label">{showIncentiveRateSubtotals ? '전체 인센티브 합계' : incentiveRowLabel}</th>
                     {displayedTherapistSummaries.map((item, therapistIndex) => (
@@ -481,14 +557,25 @@ export default function ShockwaveSettlementView({
                         </td>
                       ))}
                     </tr>
-                    {showIncentiveRateSubtotals && settlement.grandIncentiveRateBreakdown.map((summary) => (
-                      <tr key={`grand-rate-count-${summary.percentage}`} className="settlement-rate-subtotal-row">
-                        <th className="row-label">{treatmentLabel} 합계 ({formatPercentage(summary.percentage)})</th>
-                        <td className="grand-value merged-value" colSpan={horizontalSummaryPrescriptions.length}>
-                          {formatCount(summary.count)}
-                        </td>
+                    {showIncentiveRateSubtotals && (
+                      <tr className="settlement-rate-subtotal-row">
+                        <th className="row-label">{treatmentLabel} 합계(건)</th>
+                        {horizontalSummaryIncentiveRateGroups.map((rateGroup) => (
+                          <td
+                            key={`grand-rate-count-${rateGroup.percentage}`}
+                            className="grand-value merged-value"
+                            colSpan={rateGroup.prescriptions.length}
+                          >
+                            {formatCount(
+                              getIncentiveRateSummary(
+                                settlement.grandIncentiveRateBreakdown,
+                                rateGroup.percentage
+                              ).count
+                            )}
+                          </td>
+                        ))}
                       </tr>
-                    ))}
+                    )}
                     <tr className={showIncentiveRateSubtotals ? 'settlement-rate-total-row' : undefined}>
                       <th className="row-label">{showIncentiveRateSubtotals ? `${treatmentLabel} 전체 합계(건)` : `${treatmentLabel} 합계(건)`}</th>
                       <td className="grand-value merged-value" colSpan={horizontalSummaryPrescriptions.length}>
@@ -501,14 +588,25 @@ export default function ShockwaveSettlementView({
                         {formatCurrency(settlement.grandAmount)}
                       </td>
                     </tr>
-                    {showIncentiveRateSubtotals && settlement.grandIncentiveRateBreakdown.map((summary) => (
-                      <tr key={`grand-rate-incentive-${summary.percentage}`} className="settlement-incentive-row settlement-rate-subtotal-row">
-                        <th className="row-label">인센티브 합계 ({formatPercentage(summary.percentage)})</th>
-                        <td className="grand-value merged-value incentive" colSpan={horizontalSummaryPrescriptions.length}>
-                          {formatCurrency(summary.incentive)}
-                        </td>
+                    {showIncentiveRateSubtotals && (
+                      <tr className="settlement-incentive-row settlement-rate-subtotal-row">
+                        <th className="row-label">인센티브 합계</th>
+                        {horizontalSummaryIncentiveRateGroups.map((rateGroup) => (
+                          <td
+                            key={`grand-rate-incentive-${rateGroup.percentage}`}
+                            className="grand-value merged-value incentive"
+                            colSpan={rateGroup.prescriptions.length}
+                          >
+                            {formatCurrency(
+                              getIncentiveRateSummary(
+                                settlement.grandIncentiveRateBreakdown,
+                                rateGroup.percentage
+                              ).incentive
+                            )}
+                          </td>
+                        ))}
                       </tr>
-                    ))}
+                    )}
                     <tr className={`settlement-incentive-row${showIncentiveRateSubtotals ? ' settlement-rate-total-row' : ''}`}>
                       <th className="row-label">{showIncentiveRateSubtotals ? '전체 인센티브 합계' : incentiveRowLabel}</th>
                       <td className="grand-value merged-value incentive" colSpan={horizontalSummaryPrescriptions.length}>
