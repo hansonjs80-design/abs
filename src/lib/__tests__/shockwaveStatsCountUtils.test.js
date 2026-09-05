@@ -11,7 +11,9 @@ import {
   buildTherapistPrescriptionDisplayGroups,
   buildTherapistCompletedPrescriptionGroups,
   getIncentiveRateBadgeStyle,
+  getVisibleSettlementIncentiveTotal,
   getTherapistCompletedPrescriptions,
+  isSettlementIncentiveRateVisible,
   buildShockwaveCountSummaries,
   normalizePrescriptionKey,
   statsPrescriptionsMatch,
@@ -70,6 +72,20 @@ describe('shockwave stats count utilities', () => {
       { percentage: 7, prescriptions: ['7% 첫 처방', '7% 둘째 처방'] },
       { percentage: 15, prescriptions: ['15% 첫 처방', '15% 둘째 처방'] },
     ]);
+  });
+
+  it('hides only restricted incentive rates and excludes them from visible totals', () => {
+    const breakdown = [
+      { percentage: 7, incentive: 7350 },
+      { percentage: 15, incentive: 31500 },
+      { percentage: 15.5, incentive: 2000 },
+    ];
+
+    assert.equal(isSettlementIncentiveRateVisible(7, [15]), true);
+    assert.equal(isSettlementIncentiveRateVisible('15', [15]), false);
+    assert.equal(isSettlementIncentiveRateVisible(15.5, [15]), true);
+    assert.equal(getVisibleSettlementIncentiveTotal(breakdown, [15]), 9350);
+    assert.equal(getVisibleSettlementIncentiveTotal(breakdown, []), 40850);
   });
 
   it('assigns stable distinct badge hues to different incentive percentages', () => {

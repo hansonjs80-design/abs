@@ -12,6 +12,7 @@ export default function ShinjangSprayStatsView({
   prescriptions = [],
   prescriptionPrices = {},
   incentivePercentages = {},
+  hiddenIncentivePercentages = [],
   cryoPrescriptions = [],
   cryoPrices = {},
 }) {
@@ -25,6 +26,7 @@ export default function ShinjangSprayStatsView({
       cryoPrescriptions={cryoPrescriptions}
       cryoPrices={cryoPrices}
       incentivePercentages={incentivePercentages}
+      hiddenIncentivePercentages={hiddenIncentivePercentages}
       monthlyTherapists={[]}
       treatmentLabel="신장분사"
       showRecentSummaries={false}

@@ -141,6 +141,29 @@ export function buildIncentiveRatePrescriptionGroups({
     .sort((a, b) => a.percentage - b.percentage);
 }
 
+export function isSettlementIncentiveRateVisible(
+  percentage,
+  hiddenIncentivePercentages = [],
+) {
+  const normalizedPercentage = Number(percentage);
+  if (!Number.isFinite(normalizedPercentage)) return true;
+
+  return !(Array.isArray(hiddenIncentivePercentages) ? hiddenIncentivePercentages : [])
+    .some((hiddenPercentage) => Number(hiddenPercentage) === normalizedPercentage);
+}
+
+export function getVisibleSettlementIncentiveTotal(
+  incentiveRateBreakdown = [],
+  hiddenIncentivePercentages = [],
+) {
+  return (Array.isArray(incentiveRateBreakdown) ? incentiveRateBreakdown : [])
+    .filter((summary) => isSettlementIncentiveRateVisible(
+      summary?.percentage,
+      hiddenIncentivePercentages,
+    ))
+    .reduce((sum, summary) => sum + (Number(summary?.incentive) || 0), 0);
+}
+
 export function getShockwaveSettlementPrintColumnWeight(prescription) {
   const compactLabel = String(prescription || '').replace(/\s+/g, '');
   const isLongLabel = /[()[\]{}]/.test(compactLabel) || Array.from(compactLabel).length >= 6;

@@ -553,6 +553,7 @@ export default function ShinjangSprayStatsPage() {
                     prescriptions={prescriptions}
                     prescriptionPrices={prescriptionPrices}
                     incentivePercentages={spraySettings.prescription_incentive_percentages}
+                    hiddenIncentivePercentages={canManageSettings ? [] : [15]}
                     cryoPrescriptions={spraySettings.cryo_prescriptions}
                     cryoPrices={spraySettings.cryo_prices}
                   />

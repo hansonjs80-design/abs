@@ -9,6 +9,8 @@ import {
   buildTherapistPrescriptionDisplayGroups,
   getIncentiveRateBadgeStyle,
   getTherapistCompletedPrescriptions,
+  getVisibleSettlementIncentiveTotal,
+  isSettlementIncentiveRateVisible,
   normalizePrescriptionKey,
   toStatsPrescriptionCount,
 } from '../../lib/shockwaveStatsCountUtils';
@@ -66,6 +68,7 @@ export default function ShockwaveSettlementView({
   cryoPrices = {},
   incentivePercentage,
   incentivePercentages,
+  hiddenIncentivePercentages = [],
   recentMonthlySummaries = [],
   recentPeriodInput = '최근 6개월',
   recentPeriodLabel = '최근 6개월',
@@ -139,6 +142,15 @@ export default function ShockwaveSettlementView({
     ])
   ), [incentivePercentages]);
   const usesPrescriptionIncentives = Object.keys(normalizedIncentiveMap).length > 0;
+  const hidesAnyIncentiveRate = hiddenIncentivePercentages.length > 0;
+  const isIncentivePercentageVisible = (percentage) => isSettlementIncentiveRateVisible(
+    percentage,
+    hiddenIncentivePercentages,
+  );
+  const getDisplayedIncentiveTotal = (breakdown) => getVisibleSettlementIncentiveTotal(
+    breakdown,
+    hiddenIncentivePercentages,
+  );
   const getIncentivePercentage = useCallback((prescription) => (
     normalizedIncentiveMap[normalizePrescriptionKey(prescription)]
       ?? Math.max(0, Number(incentivePercentage) || 0)
@@ -155,7 +167,7 @@ export default function ShockwaveSettlementView({
     return (
       <span className="sw-prescription-incentive-label">
         <span>{prescription}</span>
-        {usesPrescriptionIncentives && (
+        {usesPrescriptionIncentives && isIncentivePercentageVisible(prescriptionIncentivePercentage) && (
           <span
             className="sw-prescription-incentive-rate"
             style={getIncentiveRateBadgeStyle(prescriptionIncentivePercentage)}
@@ -504,21 +516,26 @@ export default function ShockwaveSettlementView({
                             colSpan={rateGroup.prescriptions.length || 1}
                             className={`merged-value incentive therapist-tone-${therapistIndex % 5}-cell${rateGroupIndex === rateGroups.length - 1 ? ' therapist-group-end' : ''}${horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length === 1 ? ' merged-value--single-prescription' : ''}`}
                           >
-                            {formatCurrency(
-                              rateGroup.percentage === null
-                                ? 0
-                                : getIncentiveRateSummary(item.incentiveRateBreakdown, rateGroup.percentage).incentive
-                            )}
+                            {rateGroup.percentage === null
+                              ? formatCurrency(0)
+                              : isIncentivePercentageVisible(rateGroup.percentage)
+                                ? formatCurrency(
+                                    getIncentiveRateSummary(
+                                      item.incentiveRateBreakdown,
+                                      rateGroup.percentage
+                                    ).incentive
+                                  )
+                                : ''}
                           </td>
                         ));
                       })}
                     </tr>
                   )}
                   <tr className={`settlement-incentive-row${showIncentiveRateSubtotals ? ' settlement-rate-total-row' : ''}`}>
-                    <th className="row-label">{showIncentiveRateSubtotals ? '전체 인센티브 합계' : incentiveRowLabel}</th>
+                    <th className="row-label">{showIncentiveRateSubtotals ? (hidesAnyIncentiveRate ? '표시 인센티브 합계' : '전체 인센티브 합계') : incentiveRowLabel}</th>
                     {displayedTherapistSummaries.map((item, therapistIndex) => (
                       <td key={`incentive-${item?.therapist?.id || item?.therapist?.name || therapistIndex}`} colSpan={horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length || 1} className={`merged-value incentive therapist-group-end therapist-tone-${therapistIndex % 5}-cell${horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length === 1 ? ' merged-value--single-prescription' : ''}`}>
-                        {formatCurrency(item.incentive)}
+                        {formatCurrency(getDisplayedIncentiveTotal(item.incentiveRateBreakdown))}
                       </td>
                     ))}
                   </tr>
@@ -597,20 +614,22 @@ export default function ShockwaveSettlementView({
                             className="grand-value merged-value incentive"
                             colSpan={rateGroup.prescriptions.length}
                           >
-                            {formatCurrency(
-                              getIncentiveRateSummary(
-                                settlement.grandIncentiveRateBreakdown,
-                                rateGroup.percentage
-                              ).incentive
-                            )}
+                            {isIncentivePercentageVisible(rateGroup.percentage)
+                              ? formatCurrency(
+                                  getIncentiveRateSummary(
+                                    settlement.grandIncentiveRateBreakdown,
+                                    rateGroup.percentage
+                                  ).incentive
+                                )
+                              : ''}
                           </td>
                         ))}
                       </tr>
                     )}
                     <tr className={`settlement-incentive-row${showIncentiveRateSubtotals ? ' settlement-rate-total-row' : ''}`}>
-                      <th className="row-label">{showIncentiveRateSubtotals ? '전체 인센티브 합계' : incentiveRowLabel}</th>
+                      <th className="row-label">{showIncentiveRateSubtotals ? (hidesAnyIncentiveRate ? '표시 인센티브 합계' : '전체 인센티브 합계') : incentiveRowLabel}</th>
                       <td className="grand-value merged-value incentive" colSpan={horizontalSummaryPrescriptions.length}>
-                        {formatCurrency(settlement.grandIncentive)}
+                        {formatCurrency(getDisplayedIncentiveTotal(settlement.grandIncentiveRateBreakdown))}
                       </td>
                     </tr>
                   </tbody>
@@ -670,6 +689,7 @@ export default function ShockwaveSettlementView({
           currentMonth={currentMonth}
           incentivePercentage={incentivePercentage}
           incentivePercentages={incentivePercentages}
+          hiddenIncentivePercentages={hiddenIncentivePercentages}
           incentiveLabel={incentiveLabel}
           isCryoAdjusted={isCryoAdjusted}
           normalizedPriceMap={normalizedPriceMap}
@@ -734,8 +754,9 @@ export default function ShockwaveSettlementView({
                             const count = item.countsByPrescription[prescription] || 0;
                             const unitPrice = normalizedPriceMap[normalizePrescriptionKey(prescription)] || 0;
                             const prescriptionAmount = count * unitPrice;
+                            const prescriptionIncentivePercentage = getIncentivePercentage(prescription);
                             const prescriptionIncentive = Math.round(
-                              prescriptionAmount * (getIncentivePercentage(prescription) / 100)
+                              prescriptionAmount * (prescriptionIncentivePercentage / 100)
                             );
 
                             return (
@@ -743,7 +764,11 @@ export default function ShockwaveSettlementView({
                                 <td className="prescription-name" title={!prescription ? '완료 처방 없음' : undefined}>{renderPrescriptionLabel(prescription)}</td>
                                 <td className="count-val">{count > 0 ? `${count}건` : '-'}</td>
                                 <td className="amount-val">{prescriptionAmount > 0 ? formatCurrency(prescriptionAmount) : '-'}</td>
-                                <td className="incentive-val">{prescriptionIncentive > 0 ? formatCurrency(prescriptionIncentive) : '-'}</td>
+                                <td className="incentive-val">
+                                  {isIncentivePercentageVisible(prescriptionIncentivePercentage)
+                                    ? prescriptionIncentive > 0 ? formatCurrency(prescriptionIncentive) : '-'
+                                    : ''}
+                                </td>
                               </tr>
                             );
                           })}
@@ -751,7 +776,11 @@ export default function ShockwaveSettlementView({
                           <th>합계</th>
                           <td>{item.totalCount > 0 ? `${item.totalCount}건` : '-'}</td>
                           <td className="amount-val">{item.amount > 0 ? formatCurrency(item.amount) : '-'}</td>
-                          <td className="incentive-val">{item.incentive > 0 ? formatCurrency(item.incentive) : '-'}</td>
+                          <td className="incentive-val">
+                            {getDisplayedIncentiveTotal(item.incentiveRateBreakdown) > 0
+                              ? formatCurrency(getDisplayedIncentiveTotal(item.incentiveRateBreakdown))
+                              : '-'}
+                          </td>
                         </tr>
                       </tbody>
                     </table>
@@ -779,7 +808,7 @@ export default function ShockwaveSettlementView({
                         <th>총 합계</th>
                         <td>{settlement.grandTotalCount}건</td>
                         <td className="amount-val">{formatCurrency(settlement.grandAmount)}</td>
-                        <td className="incentive-val">{formatCurrency(settlement.grandIncentive)}</td>
+                        <td className="incentive-val">{formatCurrency(getDisplayedIncentiveTotal(settlement.grandIncentiveRateBreakdown))}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -808,8 +837,9 @@ export default function ShockwaveSettlementView({
                           const count = settlement.grandPrescriptionCounts[prescription] || 0;
                           const unitPrice = normalizedPriceMap[normalizePrescriptionKey(prescription)] || 0;
                           const prescriptionAmount = count * unitPrice;
+                          const prescriptionIncentivePercentage = getIncentivePercentage(prescription);
                           const prescriptionIncentive = Math.round(
-                            prescriptionAmount * (getIncentivePercentage(prescription) / 100)
+                            prescriptionAmount * (prescriptionIncentivePercentage / 100)
                           );
 
                           return (
@@ -817,7 +847,11 @@ export default function ShockwaveSettlementView({
                               <td className="prescription-name">{renderPrescriptionLabel(prescription)}</td>
                               <td className="count-val">{count > 0 ? `${count}건` : '-'}</td>
                               <td className="amount-val">{prescriptionAmount > 0 ? formatCurrency(prescriptionAmount) : '-'}</td>
-                              <td className="incentive-val">{prescriptionIncentive > 0 ? formatCurrency(prescriptionIncentive) : '-'}</td>
+                              <td className="incentive-val">
+                                {isIncentivePercentageVisible(prescriptionIncentivePercentage)
+                                  ? prescriptionIncentive > 0 ? formatCurrency(prescriptionIncentive) : '-'
+                                  : ''}
+                              </td>
                             </tr>
                           );
                         })}
