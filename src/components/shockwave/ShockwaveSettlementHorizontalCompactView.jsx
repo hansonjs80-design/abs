@@ -1,5 +1,8 @@
 import React from 'react';
-import { normalizePrescriptionKey } from '../../lib/shockwaveStatsCountUtils.js';
+import {
+  getTherapistCompletedPrescriptions,
+  normalizePrescriptionKey,
+} from '../../lib/shockwaveStatsCountUtils.js';
 
 function formatCount(value) {
   return `${Number(value || 0).toLocaleString('ko-KR')}건`;
@@ -77,9 +80,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
             const toneClass = `therapist-tone-${therapistIndex % 5}`;
             const therapistKey = item.therapist.id || item.therapist.name || therapistIndex;
             const therapistPrescriptions = showOnlyTherapistPrescriptions
-              ? prescriptions.filter((prescription) => (
-                  (item.countsByPrescription[prescription] || 0) > 0
-                ))
+              ? getTherapistCompletedPrescriptions(item, prescriptions)
               : displayedPrescriptions;
             return (
               <section key={therapistKey} className="sw-horizontal2-therapist-section">

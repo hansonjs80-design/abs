@@ -7,6 +7,8 @@ import {
   buildShockwaveSettlementPrintColumnWidths,
   buildStatsDisplayPrescriptions,
   buildTherapistPrescriptionDisplayGroups,
+  buildTherapistCompletedPrescriptionGroups,
+  getTherapistCompletedPrescriptions,
   buildShockwaveCountSummaries,
   normalizePrescriptionKey,
   statsPrescriptionsMatch,
@@ -283,6 +285,41 @@ describe('shockwave stats count utilities', () => {
       ['F2.5'],
       ['F4.0'],
     ]);
+  });
+
+  it('uses each therapist summary counts without inheriting another therapist prescription', () => {
+    const prescriptions = ['수동(신장분사)', '충격파(신장분사)', '혼합(신장분사)'];
+    const summaries = [
+      {
+        therapist: { id: 'manual', name: '수동치료사' },
+        countsByPrescription: {
+          '수동(신장분사)': 3,
+          '충격파(신장분사)': 0,
+          '혼합(신장분사)': 1,
+        },
+      },
+      {
+        therapist: { id: 'shockwave', name: '충격파치료사' },
+        countsByPrescription: {
+          '수동(신장분사)': 0,
+          '충격파(신장분사)': 2,
+          '혼합(신장분사)': 0,
+        },
+      },
+    ];
+
+    assert.deepEqual(
+      getTherapistCompletedPrescriptions(summaries[0], prescriptions),
+      ['수동(신장분사)', '혼합(신장분사)']
+    );
+    assert.deepEqual(
+      buildTherapistCompletedPrescriptionGroups({ summaries, prescriptions })
+        .map((group) => group.prescriptions),
+      [
+        ['수동(신장분사)', '혼합(신장분사)'],
+        ['충격파(신장분사)'],
+      ]
+    );
   });
 
   it('uses the three most common prescriptions for a therapist with no treatments', () => {

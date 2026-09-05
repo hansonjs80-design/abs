@@ -71,7 +71,10 @@ describe('shinjang spray statistics UI', () => {
     assert.match(statsViewSource, /cryoPrescriptions=\{cryoPrescriptions\}/);
     assert.match(statsViewSource, /viewModeStorageKey=\{SHINJANG_VIEW_MODE_STORAGE_KEY\}/);
     assert.match(statsViewSource, /showOnlyTherapistPrescriptions/);
-    assert.match(settlementSource, /emptyTherapistPrescriptionLimit: showOnlyTherapistPrescriptions \? 0 : 3/);
+    assert.match(settlementSource, /buildTherapistCompletedPrescriptionGroups/);
+    assert.match(settlementSource, /getTherapistCompletedPrescriptions/);
+    assert.match(settlementSource, /displayedTherapistSummaries/);
+    assert.match(settlementSource, /filter\(\(item\) => item\.totalCount > 0\)/);
     assert.match(settlementSource, /크라이오 반영 통계/);
     assert.match(settlementSource, /handleViewModeChange\('horizontal2', targetPricingMode\)/);
     assert.match(settlementSource, /handleViewModeChange\('vertical', targetPricingMode\)/);
@@ -81,7 +84,7 @@ describe('shinjang spray statistics UI', () => {
   it('shows only prescriptions actually completed by each therapist in compact settlement', async () => {
     const source = await readFile(compactSettlementViewUrl, 'utf8');
     assert.match(source, /const therapistPrescriptions = showOnlyTherapistPrescriptions/);
-    assert.match(source, /item\.countsByPrescription\[prescription\]/);
+    assert.match(source, /getTherapistCompletedPrescriptions\(item, prescriptions\)/);
     assert.match(source, /rowSpan=\{therapistPrescriptions\.length \+ 1\}/);
     assert.match(source, /therapistPrescriptions\.map/);
   });

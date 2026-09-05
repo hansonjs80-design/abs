@@ -79,6 +79,23 @@ export function buildShockwaveSettlementPrintColumnWidths(
   }));
 }
 
+export function getTherapistCompletedPrescriptions(summary, prescriptions = []) {
+  const countsByPrescription = summary?.countsByPrescription || {};
+  return (Array.isArray(prescriptions) ? prescriptions : []).filter((prescription) => (
+    Number(countsByPrescription[prescription]) > 0
+  ));
+}
+
+export function buildTherapistCompletedPrescriptionGroups({
+  summaries = [],
+  prescriptions = [],
+} = {}) {
+  return (Array.isArray(summaries) ? summaries : []).map((summary) => ({
+    therapist: summary?.therapist,
+    prescriptions: getTherapistCompletedPrescriptions(summary, prescriptions),
+  }));
+}
+
 export function buildStatsDisplayPrescriptions({
   configuredPrescriptions = [],
   rows = [],
