@@ -3920,6 +3920,63 @@
   text-align: center;
 }
 
+.patient-history-treatment-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 3px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #e2e8f0;
+}
+
+.patient-history-treatment-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  font-size: 0.79rem;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.patient-history-treatment-tab:hover {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.patient-history-treatment-tab--all.is-active {
+  border-color: #94a3b8;
+  background: #fff;
+  color: #1e293b;
+}
+
+.patient-history-treatment-tab--shockwave.is-active {
+  border-color: #60a5fa;
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.patient-history-treatment-tab--manual.is-active {
+  border-color: #fb923c;
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.patient-history-treatment-tab--shinjang.is-active {
+  border-color: #34d399;
+  background: #d1fae5;
+  color: #065f46;
+}
+
 .patient-history-sort-control {
   display: flex;
   align-items: center;
@@ -4183,6 +4240,32 @@
 
 .patient-history-table tbody .patient-history-row-number-cell--shinjang {
   background: #d1fae5 !important;
+  color: #065f46;
+}
+
+.patient-history-table .patient-history-treatment-type-header,
+.patient-history-table .patient-history-treatment-type-cell {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.patient-history-table .patient-history-treatment-type-cell {
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.patient-history-table tbody .patient-history-treatment-type-cell--shockwave {
+  background: #eff6ff !important;
+  color: #1e40af;
+}
+
+.patient-history-table tbody .patient-history-treatment-type-cell--manual {
+  background: #fff7ed !important;
+  color: #9a3412;
+}
+
+.patient-history-table tbody .patient-history-treatment-type-cell--shinjang {
+  background: #ecfdf5 !important;
   color: #065f46;
 }
 
@@ -4468,7 +4551,8 @@
     flex-direction: column;
   }
 
-  .patient-history-treatment-filters {
+  .patient-history-treatment-filters,
+  .patient-history-treatment-tabs {
     flex-wrap: wrap;
   }
 }

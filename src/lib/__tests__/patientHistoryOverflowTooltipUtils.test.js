@@ -121,20 +121,25 @@ test('patient history prescription and body filters render as unlabeled checkbox
   assert.doesNotMatch(shockwaveCss, /\.patient-history-filter-title/);
 });
 
-test('patient history exposes three treatment filters, selectable sorting, and treatment-colored row numbers', async () => {
+test('patient history exposes treatment tabs, selectable sorting, and treatment identity columns', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
     readFile(shockwaveViewUrl, 'utf8'),
   ]);
 
-  assert.match(shockwaveView, /patientHistoryTreatmentFilterOptions\.map/);
-  assert.match(shockwaveView, /togglePatientHistoryTreatmentSelection/);
+  assert.match(shockwaveView, /patientHistoryTreatmentTabOptions\.map/);
+  assert.match(shockwaveView, /role="tablist"/);
+  assert.match(shockwaveView, /role="tab"/);
+  assert.match(shockwaveView, /patientHistoryTreatmentTab === 'all'/);
   assert.match(shockwaveView, /PATIENT_HISTORY_SORT_OPTIONS\.map/);
   assert.match(shockwaveView, /aria-label="스케줄 내역 정렬 기준"/);
   assert.match(shockwaveView, /patient-history-row-number-cell--\$\{historyTreatmentGroup\}/);
-  assert.match(shockwaveCss, /\.patient-history-treatment-filter--shockwave\.is-checked/);
-  assert.match(shockwaveCss, /\.patient-history-treatment-filter--manual\.is-checked/);
-  assert.match(shockwaveCss, /\.patient-history-treatment-filter--shinjang\.is-checked/);
+  assert.match(shockwaveView, />치료 구분<\/th>/);
+  assert.match(shockwaveView, /patient-history-treatment-type-cell--\$\{historyTreatmentGroup\}/);
+  assert.match(shockwaveCss, /\.patient-history-treatment-tab--shockwave\.is-active/);
+  assert.match(shockwaveCss, /\.patient-history-treatment-tab--manual\.is-active/);
+  assert.match(shockwaveCss, /\.patient-history-treatment-tab--shinjang\.is-active/);
+  assert.match(shockwaveCss, /\.patient-history-treatment-type-cell--shinjang/);
   assert.match(shockwaveCss, /\.patient-history-row-number-cell--shinjang/);
 });
 

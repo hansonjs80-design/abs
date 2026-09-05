@@ -13,6 +13,7 @@ const monthlyTherapistConfigUrl = new URL('../../components/shockwave/MonthlyThe
 const scheduleContextUrl = new URL('../../contexts/ScheduleContext.jsx', import.meta.url);
 const loginSettingsUrl = new URL('../../components/settings/LoginSettings.jsx', import.meta.url);
 const shockwaveStatsViewUrl = new URL('../../components/shockwave/ShockwaveStatsView.jsx', import.meta.url);
+const scheduleViewUrl = new URL('../../components/shockwave/ShockwaveView.jsx', import.meta.url);
 
 describe('shinjang spray statistics UI', () => {
   it('registers the top-level route and permission tab', async () => {
@@ -26,6 +27,24 @@ describe('shinjang spray statistics UI', () => {
     assert.match(permissionSource, /label: '신장분사 통계'/);
     assert.match(loginSettingsSource, /APP_TABS\.map\(\(tab\) =>/);
     assert.match(loginSettingsSource, /toggleAppUserPermission\(row\.id, tab\.key\)/);
+    assert(
+      permissionSource.indexOf("key: 'shockwave_stats'")
+        < permissionSource.indexOf("key: 'shinjang_spray_stats'")
+    );
+    assert(
+      permissionSource.indexOf("key: 'shinjang_spray_stats'")
+        < permissionSource.indexOf("key: 'manual_therapy_stats'")
+    );
+  });
+
+  it('orders scheduler prescription selectors as shockwave, shinjang, then manual therapy', async () => {
+    const source = await readFile(scheduleViewUrl, 'utf8');
+    const shockwaveIndex = source.indexOf('ariaLabel="충격파 처방 선택"');
+    const shinjangIndex = source.indexOf('ariaLabel="신장분사 처방 선택"');
+    const manualIndex = source.indexOf('ariaLabel="도수치료 처방 선택"');
+
+    assert(shockwaveIndex >= 0 && shockwaveIndex < shinjangIndex);
+    assert(shinjangIndex < manualIndex);
   });
 
   it('combines shockwave and manual logs and exposes per-prescription incentive settings', async () => {
@@ -50,6 +69,7 @@ describe('shinjang spray statistics UI', () => {
     assert.match(pageSource, /activeSection === 'new-patients'/);
     assert.match(pageSource, /<ShockwaveNewPatientsView/);
     assert.match(pageSource, /<ShockwaveDataGrid/);
+    assert.match(pageSource, /showOnlyTherapistPrescriptions/);
     assert.match(pageSource, /aria-label="치료사 필터"/);
     assert.match(settingsSource, /인센티브율/);
     assert.match(settingsSource, /집계 치료사/);
@@ -74,17 +94,21 @@ describe('shinjang spray statistics UI', () => {
     assert.match(settlementSource, /buildTherapistCompletedPrescriptionGroups/);
     assert.match(settlementSource, /getTherapistCompletedPrescriptions/);
     assert.match(settlementSource, /displayedTherapistSummaries/);
-    assert.match(settlementSource, /filter\(\(item\) => item\.totalCount > 0\)/);
+    assert.match(settlementSource, /preserveEmptyColumn: true/);
     assert.match(settlementSource, /크라이오 반영 통계/);
     assert.match(settlementSource, /handleViewModeChange\('horizontal2', targetPricingMode\)/);
     assert.match(settlementSource, /handleViewModeChange\('vertical', targetPricingMode\)/);
     assert.match(settlementSource, /처방별 인센티브/);
+    assert.match(settlementSource, /sw-prescription-incentive-rate/);
+    assert.match(settlementSource, /formatPercentage\(getIncentivePercentage\(prescription\)\)/);
   });
 
   it('shows only prescriptions actually completed by each therapist in compact settlement', async () => {
     const source = await readFile(compactSettlementViewUrl, 'utf8');
-    assert.match(source, /const therapistPrescriptions = showOnlyTherapistPrescriptions/);
+    assert.match(source, /const completedTherapistPrescriptions = showOnlyTherapistPrescriptions/);
     assert.match(source, /getTherapistCompletedPrescriptions\(item, prescriptions\)/);
+    assert.match(source, /: \[null\]/);
+    assert.match(source, /sw-prescription-incentive-rate/);
     assert.match(source, /rowSpan=\{therapistPrescriptions\.length \+ 1\}/);
     assert.match(source, /therapistPrescriptions\.map/);
   });
@@ -124,5 +148,6 @@ describe('shinjang spray statistics UI', () => {
 
     assert(shockwaveSyncIndex >= 0 && shockwaveSyncIndex < shockwaveQueryIndex);
     assert(manualSyncIndex >= 0 && manualSyncIndex < manualQueryIndex);
+    assert.match(pageSource, /syncMonthShockwaveScheduleToStats/);
   });
 });

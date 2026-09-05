@@ -85,6 +85,13 @@ describe('shockwave view patient history model', () => {
       selectedTreatmentGroups: ['shockwave', 'manual'],
     });
     assert.deepEqual(split.map((group) => group.key), ['manual', 'shockwave']);
+
+    const shinjangOnly = buildPatientHistoryLogGroups({
+      logs,
+      selectedTreatmentGroups: ['shinjang'],
+    });
+    assert.deepEqual(shinjangOnly.map((group) => group.key), ['shinjang']);
+    assert.deepEqual(shinjangOnly[0].logs.map((log) => log.id), ['shinjang']);
   });
 
   it('sorts selected history rows by prescription or body while keeping recent rows first within a label', () => {
@@ -269,6 +276,7 @@ describe('shockwave view patient history model', () => {
     assert.equal(getPatientHistoryModalLayout(2).width, '100%');
     assert.equal(getPatientHistoryModalLayout([{ key: 'all' }]).width, '95%');
     const columnWidths = getPatientHistoryColumnWidths(1);
+    const combinedColumnWidths = getPatientHistoryColumnWidths(1, true);
     assert.ok(
       Math.abs(
         columnWidths
@@ -278,6 +286,13 @@ describe('shockwave view patient history model', () => {
     assert.deepEqual(
       getPatientHistoryColumnWidths(2),
       getPatientHistoryColumnWidths(1)
+    );
+    assert.equal(combinedColumnWidths.length, columnWidths.length + 1);
+    assert.ok(
+      Math.abs(
+        combinedColumnWidths
+          .reduce((sum, width) => sum + Number.parseFloat(width), 0) - 100
+      ) < 0.0001
     );
 
     const projectedWidths = columnWidths

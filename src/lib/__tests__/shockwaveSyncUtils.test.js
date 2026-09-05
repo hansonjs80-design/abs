@@ -7,6 +7,7 @@ import {
   parseTherapyInfo,
   resolveShockwaveSchedulePrescriptionCount,
   shouldUseExistingShockwaveSchedulerLogForCopy,
+  syncMonthShockwaveScheduleToStats,
 } from '../shockwaveSyncUtils.js';
 
 describe('shockwave scheduler/stat sync formatting', () => {
@@ -51,6 +52,61 @@ describe('shockwave scheduler/stat sync formatting', () => {
       body_part: '',
       original: '12745/신금란*',
     });
+  });
+
+  it('keeps 40/60-tagged patient names when an independent shinjang prescription is synced', () => {
+    assert.equal(parseTherapyInfo('12745/신금란40(2)'), null);
+    assert.deepEqual(
+      parseTherapyInfo('12745/신금란40(2)', { allowManualDuration: true }),
+      {
+        patient_name: '신금란',
+        chart_number: '12745',
+        visit_count: '2',
+        body_part: '',
+        original: '12745/신금란40(2)',
+      }
+    );
+  });
+
+  it('rebuilds completed shinjang 1 and 2 cells even when patient names carry manual duration tags', async () => {
+    const settings = {
+      monthly_settlement_settings: {
+        '2026-09': {
+          shinjang_spray: {
+            prescriptions: ['신장분사 1', '신장분사 2'],
+          },
+        },
+      },
+    };
+    const result = await syncMonthShockwaveScheduleToStats({
+      year: 2026,
+      month: 9,
+      memos: {
+        '0-5-0-0': {
+          content: '12745/신금란40(2)',
+          prescription: '신장분사 1',
+          bg_color: '#ffe599',
+        },
+        '0-5-1-0': {
+          content: '12746/홍길동60(3)',
+          prescription: '신장분사 2',
+          bg_color: '#ffe599',
+        },
+      },
+      therapists: [{ name: '주한솔' }],
+      monthlyTherapists: [],
+      settings,
+      replaceExistingMonthLogs: true,
+      emitEvent: false,
+    });
+
+    assert.deepEqual(
+      result.rebuiltRows.map((row) => [row.prescription, row.patient_name]),
+      [
+        ['신장분사 1', '신금란'],
+        ['신장분사 2', '홍길동'],
+      ]
+    );
   });
 
   it('counts each completed scheduler cell as one prescription even when old stats had larger counts', () => {

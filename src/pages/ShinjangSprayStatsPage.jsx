@@ -533,6 +533,7 @@ export default function ShinjangSprayStatsPage() {
                         selectedTherapistNames={selectedTherapistNames}
                         onSelectedTherapistNamesChange={setSelectedTherapistNames}
                         readOnly
+                        showOnlyTherapistPrescriptions
                       />
                     </div>
                   </div>

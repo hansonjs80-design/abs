@@ -89,11 +89,21 @@ export function getTherapistCompletedPrescriptions(summary, prescriptions = []) 
 export function buildTherapistCompletedPrescriptionGroups({
   summaries = [],
   prescriptions = [],
+  preserveEmptyColumn = false,
 } = {}) {
-  return (Array.isArray(summaries) ? summaries : []).map((summary) => ({
-    therapist: summary?.therapist,
-    prescriptions: getTherapistCompletedPrescriptions(summary, prescriptions),
-  }));
+  return (Array.isArray(summaries) ? summaries : []).map((summary) => {
+    const completedPrescriptions = getTherapistCompletedPrescriptions(
+      summary,
+      prescriptions
+    );
+
+    return {
+      therapist: summary?.therapist,
+      prescriptions: completedPrescriptions.length > 0 || !preserveEmptyColumn
+        ? completedPrescriptions
+        : [null],
+    };
+  });
 }
 
 export function buildStatsDisplayPrescriptions({
@@ -137,15 +147,19 @@ export function buildTherapistPrescriptionDisplayGroups({
   therapists = [],
   sharedPrescriptionLimit = 4,
   emptyTherapistPrescriptionLimit = 3,
+  preserveEmptyColumn = false,
 } = {}) {
   const safeRows = Array.isArray(rows) ? rows.filter(Boolean) : [];
   const safePrescriptions = Array.isArray(prescriptions) ? prescriptions.filter(Boolean) : [];
   const safeTherapists = Array.isArray(therapists) ? therapists.filter(Boolean) : [];
 
   if (safePrescriptions.length <= sharedPrescriptionLimit) {
+    const sharedPrescriptions = safePrescriptions.length > 0 || !preserveEmptyColumn
+      ? safePrescriptions
+      : [null];
     return safeTherapists.map((therapist) => ({
       therapist,
-      prescriptions: [...safePrescriptions],
+      prescriptions: [...sharedPrescriptions],
     }));
   }
 
@@ -192,7 +206,9 @@ export function buildTherapistPrescriptionDisplayGroups({
       therapist,
       prescriptions: usedPrescriptions.length > 0
         ? usedPrescriptions
-        : [...fallbackPrescriptions],
+        : preserveEmptyColumn
+          ? [null]
+          : [...fallbackPrescriptions],
     };
   });
 }

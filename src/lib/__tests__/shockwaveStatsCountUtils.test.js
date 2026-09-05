@@ -322,6 +322,51 @@ describe('shockwave stats count utilities', () => {
     );
   });
 
+  it('keeps one empty display column for a therapist without completed prescriptions', () => {
+    const prescriptions = ['신장분사1', '신장분사 2.5', '신장분사 3.0'];
+    const therapists = [
+      { name: '주한솔' },
+      { name: '신수민' },
+      { name: '김세령' },
+    ];
+    const rows = [
+      { therapist_name: '주한솔', prescription: '신장분사1', prescription_count: 2 },
+      { therapist_name: '주한솔', prescription: '신장분사 3.0', prescription_count: 1 },
+      { therapist_name: '신수민', prescription: '신장분사 2.5', prescription_count: 1 },
+    ];
+    const groups = buildTherapistPrescriptionDisplayGroups({
+      prescriptions,
+      therapists,
+      rows,
+      sharedPrescriptionLimit: 0,
+      emptyTherapistPrescriptionLimit: 0,
+      preserveEmptyColumn: true,
+    });
+    const summaries = buildShockwaveCountSummaries({ prescriptions, therapists, rows })
+      .therapistTotals.map((summary, index) => ({
+        therapist: therapists[index],
+        countsByPrescription: summary.byPres,
+      }));
+
+    assert.deepEqual(groups.map((group) => group.prescriptions), [
+      ['신장분사1', '신장분사 3.0'],
+      ['신장분사 2.5'],
+      [null],
+    ]);
+    assert.deepEqual(
+      buildTherapistCompletedPrescriptionGroups({
+        summaries,
+        prescriptions,
+        preserveEmptyColumn: true,
+      }).map((group) => group.prescriptions),
+      [
+        ['신장분사1', '신장분사 3.0'],
+        ['신장분사 2.5'],
+        [null],
+      ]
+    );
+  });
+
   it('uses the three most common prescriptions for a therapist with no treatments', () => {
     const groups = buildTherapistPrescriptionDisplayGroups({
       prescriptions: ['F2.0', 'F2.5', 'F3.0', 'F4.0', 'F4.0 DC'],

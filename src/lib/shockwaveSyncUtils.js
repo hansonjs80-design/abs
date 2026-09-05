@@ -120,7 +120,7 @@ function omitSchedulerCellKey(row) {
 }
 
 // 추출 로직 (기존 앱스스크립트 parseNameChart_ 및 관련 정규표현식 이식)
-export function parseTherapyInfo(rawContent) {
+export function parseTherapyInfo(rawContent, { allowManualDuration = false } = {}) {
   if (!rawContent || typeof rawContent !== 'string') return null;
   const s = rawContent.trim();
   if (!s) return null;
@@ -155,7 +155,7 @@ export function parseTherapyInfo(rawContent) {
   }
 
   // 도수치료 표기(이름40/이름60)는 충격파 통계에서 제외
-  if (has4060Pattern(s) || has4060Pattern(name)) return null;
+  if (!allowManualDuration && (has4060Pattern(s) || has4060Pattern(name))) return null;
 
   // Extract visit count: name(visit) or name*
   const visitMatch = name.match(/\((\d+)₩?\)$/);
@@ -342,9 +342,12 @@ async function runTodayShockwaveScheduleToStatsSync({
 
     // 방문 완료된 셀만 통계에 포함
     if (String(cell?.bg_color || '').toLowerCase() !== TREATMENT_COMPLETE_BG.toLowerCase()) return;
-    if (getScheduleItemTreatmentGroup(cell, settings, year, month) === 'manual_therapy') return;
+    const treatmentGroup = getScheduleItemTreatmentGroup(cell, settings, year, month);
+    if (treatmentGroup === 'manual_therapy') return;
 
-    const parsed = parseTherapyInfo(cell?.content);
+    const parsed = parseTherapyInfo(cell?.content, {
+      allowManualDuration: treatmentGroup === 'shinjang_spray',
+    });
     if (!parsed) return;
 
     const therapistName = resolveTherapistName(c, dayInfo.day, therapists, monthlyTherapists);
@@ -607,9 +610,12 @@ export async function syncMonthShockwaveScheduleToStats({
         if (dayInfo.day > today.getDate()) return;
       }
       if (String(cell?.bg_color || '').toLowerCase() !== TREATMENT_COMPLETE_BG.toLowerCase()) return;
-      if (getScheduleItemTreatmentGroup(cell, settings, year, month) === 'manual_therapy') return;
+      const treatmentGroup = getScheduleItemTreatmentGroup(cell, settings, year, month);
+      if (treatmentGroup === 'manual_therapy') return;
 
-      const parsed = parseTherapyInfo(cell?.content);
+      const parsed = parseTherapyInfo(cell?.content, {
+        allowManualDuration: treatmentGroup === 'shinjang_spray',
+      });
       if (!parsed) return;
 
       const cleanName = normalizeHistoryPatientName(parsed.patient_name);

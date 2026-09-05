@@ -22,6 +22,12 @@ function formatTotalCurrency(value) {
   return `${Number(value || 0).toLocaleString('ko-KR')}원`;
 }
 
+function formatPercentage(value) {
+  return `${Math.max(0, Number(value) || 0).toLocaleString('ko-KR', {
+    maximumFractionDigits: 2,
+  })}%`;
+}
+
 function TherapistNameStack({ name }) {
   const chars = Array.from(String(name || '')).filter((char) => char.trim());
   return (
@@ -58,10 +64,14 @@ export default function ShockwaveSettlementHorizontalCompactView({
       Math.max(0, Number(percentage) || 0) / 100,
     ])
   );
-  const getIncentiveRate = (prescription) => (
-    normalizedIncentiveMap[normalizePrescriptionKey(prescription)] ?? incentiveRate
+  const getIncentivePercentage = (prescription) => (
+    (normalizedIncentiveMap[normalizePrescriptionKey(prescription)] ?? incentiveRate) * 100
   );
-  const visibleTherapistSummaries = settlement.summaryByTherapist.filter((item) => item.totalCount > 0);
+  const getIncentiveRate = (prescription) => getIncentivePercentage(prescription) / 100;
+  const showPrescriptionIncentiveRates = Object.keys(normalizedIncentiveMap).length > 0;
+  const visibleTherapistSummaries = showOnlyTherapistPrescriptions
+    ? settlement.summaryByTherapist
+    : settlement.summaryByTherapist.filter((item) => item.totalCount > 0);
   const displayedPrescriptions = prescriptions.filter((prescription) => (
     (settlement.grandPrescriptionCounts[prescription] || 0) > 0
   ));
@@ -79,9 +89,12 @@ export default function ShockwaveSettlementHorizontalCompactView({
           {visibleTherapistSummaries.map((item, therapistIndex) => {
             const toneClass = `therapist-tone-${therapistIndex % 5}`;
             const therapistKey = item.therapist.id || item.therapist.name || therapistIndex;
-            const therapistPrescriptions = showOnlyTherapistPrescriptions
+            const completedTherapistPrescriptions = showOnlyTherapistPrescriptions
               ? getTherapistCompletedPrescriptions(item, prescriptions)
               : displayedPrescriptions;
+            const therapistPrescriptions = completedTherapistPrescriptions.length > 0
+              ? completedTherapistPrescriptions
+              : [null];
             return (
               <section key={therapistKey} className="sw-horizontal2-therapist-section">
                 <table className="sw-settlement-table sw-horizontal2-therapist-table">
@@ -103,8 +116,19 @@ export default function ShockwaveSettlementHorizontalCompactView({
                         prescriptionAmount * getIncentiveRate(prescription)
                       );
                       return (
-                        <tr key={`${therapistKey}-${prescription}`} className="horizontal2-content-row">
-                          <td className="prescription-name">{prescription}</td>
+                        <tr key={`${therapistKey}-${prescription || 'empty'}`} className="horizontal2-content-row">
+                          <td className="prescription-name" title={!prescription ? '완료 처방 없음' : undefined}>
+                            {prescription ? (
+                              <span className="sw-prescription-incentive-label">
+                                <span>{prescription}</span>
+                                {showPrescriptionIncentiveRates && (
+                                  <span className="sw-prescription-incentive-rate">
+                                    인센 {formatPercentage(getIncentivePercentage(prescription))}
+                                  </span>
+                                )}
+                              </span>
+                            ) : '—'}
+                          </td>
                           <td className="count-val">{formatCount(count)}</td>
                           <td className="amount-val">{formatCurrency(prescriptionAmount)}</td>
                           <td className="incentive-val">{formatCurrency(prescriptionIncentive)}</td>
