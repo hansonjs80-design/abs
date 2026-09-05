@@ -329,7 +329,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const patientHistoryColumnWidths = useMemo(
     () => getPatientHistoryColumnWidths(
       patientHistoryLogGroups.length,
-      patientHistoryTreatmentTab === 'all'
+      patientHistoryTreatmentTab === 'all',
+      patientHistoryTreatmentTab
     ),
     [patientHistoryLogGroups.length, patientHistoryTreatmentTab]
   );
