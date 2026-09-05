@@ -460,6 +460,7 @@ const PATIENT_HISTORY_MEMO_COLUMN_SCALE = 1.1;
 const PATIENT_HISTORY_APPLY_COLUMN_SCALE = 1.1;
 const PATIENT_HISTORY_TREATMENT_COLUMN_WIDTH = 7.8;
 const PATIENT_HISTORY_SHINJANG_PRESCRIPTION_SCALE = 1.2;
+const PATIENT_HISTORY_COMBINED_PRESCRIPTION_SCALE = 1.15;
 const PATIENT_HISTORY_COLUMN_WIDTH_SCALE = (
   PATIENT_HISTORY_BASE_COLUMN_WIDTHS.reduce((sum, width, index) => {
     if (index === PATIENT_HISTORY_MEMO_COLUMN_INDEX) {
@@ -485,10 +486,15 @@ export function getPatientHistoryModalLayout(groupsOrCount) {
     };
   }
   if (isCombined) {
+    const combinedPrescriptionWidthIncrease = PATIENT_HISTORY_SINGLE_MODAL_BASE_WIDTH
+      * PATIENT_HISTORY_BASE_COLUMN_WIDTHS[PATIENT_HISTORY_PRESCRIPTION_COLUMN_INDEX]
+      * (PATIENT_HISTORY_COMBINED_PRESCRIPTION_SCALE - 1)
+      / 100;
     return {
       maxWidth: Math.ceil(
         (PATIENT_HISTORY_SINGLE_MODAL_BASE_WIDTH * PATIENT_HISTORY_COLUMN_WIDTH_SCALE)
         + (PATIENT_HISTORY_SINGLE_MODAL_BASE_WIDTH * PATIENT_HISTORY_TREATMENT_COLUMN_WIDTH / 100)
+        + combinedPrescriptionWidthIncrease
       ),
       width: '95%',
       gridTemplateColumns: 'minmax(0, 1fr)',
@@ -523,6 +529,8 @@ export function getPatientHistoryColumnWidths(
       ? width * PATIENT_HISTORY_MEMO_COLUMN_SCALE
       : index === PATIENT_HISTORY_PRESCRIPTION_COLUMN_INDEX && treatmentGroupKey === 'shinjang'
         ? width * PATIENT_HISTORY_SHINJANG_PRESCRIPTION_SCALE
+      : index === PATIENT_HISTORY_PRESCRIPTION_COLUMN_INDEX && includeTreatmentColumn
+        ? width * PATIENT_HISTORY_COMBINED_PRESCRIPTION_SCALE
       : index === PATIENT_HISTORY_BASE_COLUMN_WIDTHS.length - 1
         ? width * PATIENT_HISTORY_APPLY_COLUMN_SCALE
         : width

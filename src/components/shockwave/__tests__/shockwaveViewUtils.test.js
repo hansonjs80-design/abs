@@ -290,7 +290,7 @@ describe('shockwave view patient history model', () => {
     assert.equal(getPatientHistoryModalLayout(2).width, '100%');
     const combinedLayout = getPatientHistoryModalLayout([{ key: 'all' }]);
     const shinjangLayout = getPatientHistoryModalLayout([{ key: 'shinjang' }]);
-    assert.equal(combinedLayout.maxWidth, 861);
+    assert.equal(combinedLayout.maxWidth, 875);
     assert.equal(combinedLayout.width, '95%');
     assert.equal(shinjangLayout.maxWidth, 819);
     assert.equal(shinjangLayout.width, '85%');
@@ -317,6 +317,8 @@ describe('shockwave view patient history model', () => {
 
     const projectedWidths = columnWidths
       .map((width) => (Number.parseFloat(width) / 100) * getPatientHistoryModalLayout(1).maxWidth);
+    const combinedProjectedWidths = combinedColumnWidths
+      .map((width) => (Number.parseFloat(width) / 100) * combinedLayout.maxWidth);
     assert.ok(projectedWidths[1] >= (735 * 0.114) * 1.15);
     assert.ok(projectedWidths[2] >= 735 * 0.078);
     assert.ok(projectedWidths[3] >= (770 * 0.108) * 1.1);
@@ -324,6 +326,9 @@ describe('shockwave view patient history model', () => {
     assert.ok(projectedWidths[7] >= 735 * 0.069);
     assert.ok(projectedWidths[8] >= (780 * 0.0363) * 1.1);
     assert.ok(projectedWidths[8] < (780 * 0.0363) * 1.11);
+    assert.ok(combinedProjectedWidths[4] >= projectedWidths[3] * 1.149);
+    assert.ok(combinedProjectedWidths[4] <= projectedWidths[3] * 1.151);
+    assert.ok(Math.abs(combinedProjectedWidths[2] - projectedWidths[1]) < 0.2);
 
     const shinjangProjectedWidths = shinjangColumnWidths.map(
       (width) => (Number.parseFloat(width) / 100) * shinjangLayout.maxWidth
