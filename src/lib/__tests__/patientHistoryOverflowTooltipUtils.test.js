@@ -141,6 +141,18 @@ test('patient history exposes treatment tabs, selectable sorting, and treatment 
   assert.match(shockwaveCss, /\.patient-history-treatment-tab--shinjang\.is-active/);
   assert.match(shockwaveCss, /\.patient-history-treatment-type-cell--shinjang/);
   assert.match(shockwaveCss, /\.patient-history-row-number-cell--shinjang/);
+  assert.match(
+    shockwaveCss,
+    /\.patient-history-treatment-tab\s*\{[^}]*border-radius:\s*9px 9px 0 0;[^}]*box-shadow:/s
+  );
+  assert.match(
+    shockwaveCss,
+    /\.patient-history-treatment-tab\.is-active\s*\{[^}]*border-top:\s*3px solid var\(--patient-history-tab-accent\);[^}]*font-size:\s*0\.86rem;/s
+  );
+  assert.match(
+    shockwaveCss,
+    /\.patient-history-treatment-tabs:has\(\.patient-history-treatment-tab--shinjang\.is-active\)\s*\{[^}]*border-bottom-color:\s*#0891b2;/s
+  );
 });
 
 test('patient history group count follows the title in a larger compact format', async () => {
@@ -716,6 +728,9 @@ test('patient history prescription dropdown keeps its height and uses the reques
   const prescriptionFieldRule = shockwaveCss.match(
     /\.patient-history-table \.patient-history-edit-field--prescription\s*\{([^}]*)\}/s
   )?.[1] || '';
+  const currentPrescriptionFieldRule = shockwaveCss.match(
+    /\.patient-history-table tbody tr\.patient-history-current-row \.patient-history-edit-field--prescription\s*\{([^}]*)\}/s
+  )?.[1] || '';
   const prescriptionOptionRule = shockwaveCss.match(
     /\.patient-history-table \.patient-history-edit-field--prescription option\s*\{([^}]*)\}/s
   )?.[1] || '';
@@ -726,8 +741,11 @@ test('patient history prescription dropdown keeps its height and uses the reques
   assert.match(prescriptionSelect, /backgroundSize:\s*'6px 4px'/);
   assert.match(prescriptionSelect, /padding:\s*'2px 11px 2px 5px'/);
   assert.match(prescriptionFieldRule, /font-size:\s*0\.82rem\s*!important;/);
+  assert.match(prescriptionFieldRule, /font-weight:\s*800\s*!important;/);
   assert.match(prescriptionFieldRule, /text-align:\s*center;/);
   assert.match(prescriptionFieldRule, /text-align-last:\s*center;/);
+  assert.match(currentPrescriptionFieldRule, /font-size:\s*0\.86rem\s*!important;/);
+  assert.match(currentPrescriptionFieldRule, /font-weight:\s*900\s*!important;/);
   assert.match(prescriptionOptionRule, /text-align:\s*left;/);
   assert.match(prescriptionOptionRule, /text-align-last:\s*left;/);
   assert.doesNotMatch(prescriptionSelect, /(?:minH|h)eight:\s*'20px'/);

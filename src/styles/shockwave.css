@@ -3922,59 +3922,115 @@
 
 .patient-history-treatment-tabs {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 4px;
   min-width: 0;
-  padding: 3px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #e2e8f0;
+  padding: 4px 4px 0;
+  border: 0;
+  border-bottom: 2px solid #64748b;
+  border-radius: 0;
+  background: transparent;
+  transition: border-color 180ms ease;
+}
+
+.patient-history-treatment-tabs:has(.patient-history-treatment-tab--shockwave.is-active) {
+  border-bottom-color: #7b2eff;
+}
+
+.patient-history-treatment-tabs:has(.patient-history-treatment-tab--manual.is-active) {
+  border-bottom-color: #b14530;
+}
+
+.patient-history-treatment-tabs:has(.patient-history-treatment-tab--shinjang.is-active) {
+  border-bottom-color: #0891b2;
 }
 
 .patient-history-treatment-tab {
+  --patient-history-tab-bg: #e2e8f0;
+  --patient-history-tab-hover-bg: #f1f5f9;
+  --patient-history-tab-accent: #64748b;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  min-height: 28px;
-  padding: 4px 10px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: transparent;
-  color: #475569;
+  min-height: 30px;
+  margin-bottom: 0;
+  padding: 6px 11px 5px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-bottom: 0;
+  border-radius: 9px 9px 0 0;
+  background: var(--patient-history-tab-bg);
+  color: #263244;
+  box-shadow:
+    0 -2px 6px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.42);
   cursor: pointer;
   font-size: 0.79rem;
   font-weight: 850;
   line-height: 1;
+  opacity: 0.88;
+  transform: translateY(1px);
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
   white-space: nowrap;
 }
 
 .patient-history-treatment-tab:hover {
-  background: rgba(255, 255, 255, 0.72);
+  border-top: 3px solid var(--patient-history-tab-accent);
+  background: var(--patient-history-tab-hover-bg);
+  color: var(--patient-history-tab-accent);
+  opacity: 1;
+  transform: translateY(0);
 }
 
-.patient-history-treatment-tab--all.is-active {
-  border-color: #94a3b8;
-  background: #fff;
-  color: #1e293b;
+.patient-history-treatment-tab.is-active {
+  min-height: 34px;
+  margin-bottom: -2px;
+  padding: 7px 13px 6px;
+  border-color: rgba(15, 23, 42, 0.12);
+  border-top: 3px solid var(--patient-history-tab-accent);
+  border-bottom: 2px solid #f8fafc;
+  background: #f8fafc;
+  color: var(--patient-history-tab-accent);
+  box-shadow: 0 -4px 8px -3px rgba(15, 23, 42, 0.22);
+  font-size: 0.86rem;
+  font-weight: 900;
+  opacity: 1;
+  transform: none;
 }
 
-.patient-history-treatment-tab--shockwave.is-active {
-  border-color: #60a5fa;
-  background: #dbeafe;
-  color: #1e40af;
+.patient-history-treatment-tab--shockwave {
+  --patient-history-tab-bg: #d1b6ff;
+  --patient-history-tab-hover-bg: #f3e8ff;
+  --patient-history-tab-accent: #7b2eff;
 }
 
-.patient-history-treatment-tab--manual.is-active {
-  border-color: #fb923c;
-  background: #ffedd5;
-  color: #9a3412;
+.patient-history-treatment-tab--manual {
+  --patient-history-tab-bg: #e6b8af;
+  --patient-history-tab-hover-bg: #f8e2de;
+  --patient-history-tab-accent: #b14530;
 }
 
+.patient-history-treatment-tab--shinjang {
+  --patient-history-tab-bg: #a5f3fc;
+  --patient-history-tab-hover-bg: #cffafe;
+  --patient-history-tab-accent: #0891b2;
+}
+
+.patient-history-treatment-tab--all.is-active,
+.patient-history-treatment-tab--shockwave.is-active,
+.patient-history-treatment-tab--manual.is-active,
 .patient-history-treatment-tab--shinjang.is-active {
-  border-color: #34d399;
-  background: #d1fae5;
-  color: #065f46;
+  background: #f8fafc;
+}
+
+.patient-history-treatment-tab.is-active .patient-history-treatment-count {
+  background: color-mix(in srgb, var(--patient-history-tab-accent) 14%, #ffffff);
+  color: var(--patient-history-tab-accent);
 }
 
 .patient-history-sort-control {
@@ -4492,8 +4548,14 @@
 
 .patient-history-table .patient-history-edit-field--prescription {
   font-size: 0.82rem !important;
+  font-weight: 800 !important;
   text-align: center;
   text-align-last: center;
+}
+
+.patient-history-table tbody tr.patient-history-current-row .patient-history-edit-field--prescription {
+  font-size: 0.86rem !important;
+  font-weight: 900 !important;
 }
 
 .patient-history-table .patient-history-edit-field--prescription option {
