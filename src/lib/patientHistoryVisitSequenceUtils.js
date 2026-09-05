@@ -85,31 +85,23 @@ export function getPatientHistoryGroupedVisitSequenceColors(
 ) {
   const source = Array.isArray(logs) ? logs : [];
   const rowColors = Array(source.length).fill(null);
-  const sequenceGroups = new Map();
+  const treatmentGroups = new Map();
 
   source.forEach((log, index) => {
     const treatmentGroup = String(getTreatmentGroup(log) || 'shockwave');
-    const prescription = String(log?.prescription || '').trim().toLowerCase() || '__empty__';
-    const key = `${treatmentGroup}__${prescription}`;
-    if (!sequenceGroups.has(key)) {
-      sequenceGroups.set(key, { treatmentGroup, rows: [] });
+    if (!treatmentGroups.has(treatmentGroup)) {
+      treatmentGroups.set(treatmentGroup, []);
     }
-    sequenceGroups.get(key).rows.push({ log, index });
+    treatmentGroups.get(treatmentGroup).push({ log, index });
   });
 
-  const prescriptionOffsets = new Map();
-  sequenceGroups.forEach(({ treatmentGroup, rows }) => {
+  treatmentGroups.forEach((rows, treatmentGroup) => {
     const orderedRows = [...rows].sort((left, right) => (
       String(right.log?.date || '').localeCompare(String(left.log?.date || ''))
       || left.index - right.index
     ));
-    const basePalette = PATIENT_HISTORY_TREATMENT_SEQUENCE_PALETTES[treatmentGroup]
+    const palette = PATIENT_HISTORY_TREATMENT_SEQUENCE_PALETTES[treatmentGroup]
       || PATIENT_HISTORY_VISIT_SEQUENCE_COLORS;
-    const offset = prescriptionOffsets.get(treatmentGroup) || 0;
-    prescriptionOffsets.set(treatmentGroup, offset + 1);
-    const palette = basePalette.map((_, index) => (
-      basePalette[(index + offset) % basePalette.length]
-    ));
     const colors = getPatientHistoryVisitSequenceColors(
       orderedRows.map(({ log }) => log),
       palette

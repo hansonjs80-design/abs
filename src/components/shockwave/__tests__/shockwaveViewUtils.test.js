@@ -61,6 +61,20 @@ describe('shockwave view patient history model', () => {
     assert.deepEqual(groups[0].visitSequenceColors, ['#bfdbfe', '#bfdbfe', '#bfdbfe']);
   });
 
+  it('keeps shinjang visit colors continuous across different prescriptions', () => {
+    const groups = buildPatientHistoryLogGroups({
+      logs: [
+        { id: 'shinjang-3', history_group: 'shinjang_spray', date: '2026-09-03', visit_count: '3', prescription: '신장분사 3.0' },
+        { id: 'shinjang-2', history_group: 'shinjang_spray', date: '2026-09-02', visit_count: '2', prescription: '신장분사 2' },
+        { id: 'shinjang-1', history_group: 'shinjang_spray', date: '2026-09-01', visit_count: '1', prescription: '신장분사 1' },
+      ],
+      selectedTreatmentGroups: ['shinjang'],
+    });
+
+    assert.equal(groups[0].key, 'shinjang');
+    assert.deepEqual(groups[0].visitSequenceColors, ['#bbf7d0', '#bbf7d0', '#bbf7d0']);
+  });
+
   it('combines all three treatment groups chronologically and splits exactly two selections', () => {
     const logs = [
       { id: 'manual', history_group: 'manual', date: '2026-09-02', prescription: '40분' },

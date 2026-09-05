@@ -103,14 +103,14 @@ describe('patient history visit sequence colors', () => {
     );
   });
 
-  it('colors consecutive visits independently by treatment and prescription', () => {
+  it('keeps one consecutive color across prescription changes within each treatment', () => {
     const rows = [
       { ...log('3', '2026-09-03'), history_group: 'manual', prescription: '40분' },
-      { ...log('2', '2026-09-02'), history_group: 'manual', prescription: '40분' },
-      { ...log('3', '2026-09-03'), history_group: 'shockwave', prescription: 'F2.5' },
+      { ...log('2', '2026-09-02'), history_group: 'manual', prescription: '60분' },
+      { ...log('3', '2026-09-03'), history_group: 'shockwave', prescription: 'F3.0' },
       { ...log('2', '2026-09-02'), history_group: 'shockwave', prescription: 'F2.5' },
-      { ...log('3', '2026-09-03'), history_group: 'shinjang', prescription: 'F3.0(신장분사DC)' },
-      { ...log('2', '2026-09-02'), history_group: 'shinjang', prescription: 'F3.0(신장분사DC)' },
+      { ...log('3', '2026-09-03'), history_group: 'shinjang', prescription: '신장분사 3.0' },
+      { ...log('2', '2026-09-02'), history_group: 'shinjang', prescription: '신장분사 2' },
     ];
     const colors = getPatientHistoryGroupedVisitSequenceColors(rows);
 
@@ -118,5 +118,38 @@ describe('patient history visit sequence colors', () => {
     assert.deepEqual(colors.slice(2, 4), ['#bfdbfe', '#bfdbfe']);
     assert.deepEqual(colors.slice(4, 6), ['#bbf7d0', '#bbf7d0']);
     assert.equal(new Set([colors[0], colors[2], colors[4]]).size, 3);
+  });
+
+  it('keeps a visible shockwave 6-to-1 run together when the prescription changes', () => {
+    const rows = [
+      { ...log('1', '2026-08-29'), history_group: 'shockwave', prescription: 'F3.0(본인)' },
+      { ...log('6', '2026-08-22'), history_group: 'shockwave', prescription: 'F3.0' },
+      { ...log('5', '2026-08-08'), history_group: 'shockwave', prescription: 'F3.0' },
+      { ...log('4', '2026-08-01'), history_group: 'shockwave', prescription: 'F3.0' },
+      { ...log('3', '2026-07-25'), history_group: 'shockwave', prescription: 'F3.0' },
+      { ...log('2', '2026-07-14'), history_group: 'shockwave', prescription: 'F2.5' },
+      { ...log('1', '2026-07-07'), history_group: 'shockwave', prescription: 'F2.5' },
+    ];
+
+    assert.deepEqual(getPatientHistoryGroupedVisitSequenceColors(rows), [
+      null,
+      ...Array(6).fill('#bfdbfe'),
+    ]);
+  });
+
+  it('colors a shinjang sequence even when every visit uses a different prescription', () => {
+    const rows = [
+      { ...log('3', '2026-09-03'), history_group: 'shinjang_spray', prescription: '신장분사 3.0' },
+      { ...log('2', '2026-09-02'), history_group: 'shinjang_spray', prescription: '신장분사 2' },
+      { ...log('1', '2026-09-01'), history_group: 'shinjang_spray', prescription: '신장분사 1' },
+    ];
+    const normalizeGroup = (row) => (
+      row.history_group === 'shinjang_spray' ? 'shinjang' : row.history_group
+    );
+
+    assert.deepEqual(
+      getPatientHistoryGroupedVisitSequenceColors(rows, normalizeGroup),
+      Array(3).fill('#bbf7d0')
+    );
   });
 });

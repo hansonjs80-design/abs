@@ -76,7 +76,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
     (settlement.grandPrescriptionCounts[prescription] || 0) > 0
   ));
   return (
-    <div className={`sw-horizontal2-layout${showRecentSummaries ? '' : ' sw-horizontal2-layout--single'}${showPrescriptionIncentiveRates ? ' sw-horizontal2-layout--prescription-incentives' : ''}`}>
+    <div className={`sw-horizontal2-layout${showRecentSummaries ? '' : ' sw-horizontal2-layout--single'}${showPrescriptionIncentiveRates ? ' sw-horizontal2-layout--prescription-incentives' : ''}${treatmentLabel === '신장분사' ? ' sw-horizontal2-layout--shinjang' : ''}`}>
       <div className="sw-horizontal2-left">
         <div className="sw-horizontal2-title-row">
           <h2>{currentMonth}월 {treatmentLabel}{isCryoAdjusted ? ' 크라이오 반영' : ''} 결산</h2>
