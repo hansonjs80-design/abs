@@ -2645,14 +2645,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     const shortcutKey = getScheduleShortcutKey(e);
 
     // 복사(C), 붙여넣기(V), 전체선택(A), 잘라내기(X), 실행취소(Z), 찾기(F) 및 완료(S), 취소(D), 공휴일(B) 등의 주요 편집 조작 단축키 보존
-    const isReservedEditorKey = isMeta && /^[ACVXZFSDB]$/i.test(shortcutKey);
+    const isReservedEditorKey = isMeta && !e.shiftKey && /^[ACVXZFSDB]$/i.test(shortcutKey);
     const effectiveManualSettings = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'manual_therapy');
     const effectiveShockwaveSettings = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'shockwave');
+    const effectiveShinjangSettings = getEffectiveShinjangSpraySettings(settings, currentYear, currentMonth);
     const shortcutMatch = isReservedEditorKey
       ? null
       : resolveSchedulePrescriptionShortcut(e, {
           manualShortcuts: effectiveManualSettings?.shortcuts,
           shockwaveShortcuts: effectiveShockwaveSettings?.shortcuts,
+          shinjangShortcuts: effectiveShinjangSettings?.shortcuts,
           hiddenPrescriptions: prescriptionScheduleSettings.hiddenPrescriptions,
         });
 
@@ -3770,8 +3772,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 value={shinjangPrescriptions.includes(currentPrescription) ? currentPrescription : ''}
                                 options={shinjangPrescriptions}
                                 prescriptionColors={contextMenuPrescriptionColors}
-                                shortcuts={{}}
-                                shortcutModifier=""
+                                shortcuts={effectiveShinjangSettings?.shortcuts || {}}
+                                shortcutModifier={shortcutLabels.shinjangPrescriptionModifier}
                                 align="end"
                                 onChange={(nextPrescription) => {
                                   const prescription = nextPrescription || null;

@@ -13,7 +13,10 @@ import {
   getActionDoseTagFromPrescription,
   updateDoseTagForPrescriptionContent,
 } from '../../lib/schedulerContentFormat';
-import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
+import {
+  getEffectiveSettlementSettings,
+  getEffectiveShinjangSpraySettings,
+} from '../../lib/settlementSettings';
 import { getPrescriptionScheduleSettings } from '../../lib/prescriptionScheduleSettings';
 import { buildManualTherapyUnmergePayload } from '../../lib/manualTherapyMergeUtils';
 import {
@@ -438,11 +441,13 @@ export default function useScheduleKeyboardActions({
 
     const effectiveManualSettings = getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'manual_therapy');
     const effectiveShockwaveSettings = getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'shockwave');
+    const effectiveShinjangSettings = getEffectiveShinjangSpraySettings(shockwaveSettings, currentYear, currentMonth);
     const prescriptionScheduleSettings = getPrescriptionScheduleSettings(shockwaveSettings, currentYear, currentMonth);
     const hiddenPrescriptions = prescriptionScheduleSettings?.hiddenPrescriptions || [];
     const shortcutMatch = resolveSchedulePrescriptionShortcut(event, {
       manualShortcuts: effectiveManualSettings?.shortcuts,
       shockwaveShortcuts: effectiveShockwaveSettings?.shortcuts,
+      shinjangShortcuts: effectiveShinjangSettings?.shortcuts,
       hiddenPrescriptions,
     });
     if (!shortcutMatch) return false;

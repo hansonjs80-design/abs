@@ -46,6 +46,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
   settlement,
   treatmentLabel = '충격파',
   showRecentSummaries = true,
+  showOnlyTherapistPrescriptions = false,
 }) {
   const incentiveRate = (Number(incentivePercentage) || 0) / 100;
   const normalizedIncentiveMap = Object.fromEntries(
@@ -61,7 +62,6 @@ export default function ShockwaveSettlementHorizontalCompactView({
   const displayedPrescriptions = prescriptions.filter((prescription) => (
     (settlement.grandPrescriptionCounts[prescription] || 0) > 0
   ));
-
   return (
     <div className={`sw-horizontal2-layout${showRecentSummaries ? '' : ' sw-horizontal2-layout--single'}`}>
       <div className="sw-horizontal2-left">
@@ -76,12 +76,17 @@ export default function ShockwaveSettlementHorizontalCompactView({
           {visibleTherapistSummaries.map((item, therapistIndex) => {
             const toneClass = `therapist-tone-${therapistIndex % 5}`;
             const therapistKey = item.therapist.id || item.therapist.name || therapistIndex;
+            const therapistPrescriptions = showOnlyTherapistPrescriptions
+              ? prescriptions.filter((prescription) => (
+                  (item.countsByPrescription[prescription] || 0) > 0
+                ))
+              : displayedPrescriptions;
             return (
               <section key={therapistKey} className="sw-horizontal2-therapist-section">
                 <table className="sw-settlement-table sw-horizontal2-therapist-table">
                   <tbody>
                     <tr className={`horizontal2-header-row ${toneClass}`}>
-                      <th className={`therapist-name-col ${toneClass}`} rowSpan={displayedPrescriptions.length + 1}>
+                      <th className={`therapist-name-col ${toneClass}`} rowSpan={therapistPrescriptions.length + 1}>
                         <TherapistNameStack name={item.therapist.name} />
                       </th>
                       <th>처방명</th>
@@ -89,7 +94,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                       <th>건별 결산금액</th>
                       <th>건별 인센티브</th>
                     </tr>
-                    {displayedPrescriptions.map((prescription) => {
+                    {therapistPrescriptions.map((prescription) => {
                       const count = item.countsByPrescription[prescription] || 0;
                       const unitPrice = normalizedPriceMap[normalizePrescriptionKey(prescription)] || 0;
                       const prescriptionAmount = count * unitPrice;

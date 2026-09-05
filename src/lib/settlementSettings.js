@@ -54,6 +54,7 @@ export const DEFAULT_SHINJANG_SPRAY_SETTLEMENT = {
   prescription_colors: {
     '신장분사': '#0f766e',
   },
+  shortcuts: {},
   dose_tags: {},
   duration_minutes: {},
   visit_line_break_prescriptions: [],
@@ -292,6 +293,9 @@ export function getEffectiveShinjangSpraySettings(settings, year, month) {
       ...DEFAULT_SHINJANG_SPRAY_SETTLEMENT.prescription_colors,
       ...filterMap(override?.prescription_colors),
     },
+    shortcuts: {
+      ...filterMap(override?.shortcuts),
+    },
     dose_tags: {
       ...filterMap(override?.dose_tags),
     },
@@ -358,6 +362,7 @@ export function setMonthlyShinjangSpraySettings(settings, year, month, nextConfi
         cryo_prescriptions: filterList(nextConfig?.cryo_prescriptions),
         cryo_prices: filterMap(nextConfig?.cryo_prices),
         prescription_colors: filterMap(nextConfig?.prescription_colors),
+        shortcuts: filterMap(nextConfig?.shortcuts),
         dose_tags: filterMap(nextConfig?.dose_tags),
         duration_minutes: filterMap(nextConfig?.duration_minutes),
         visit_line_break_prescriptions: filterList(nextConfig?.visit_line_break_prescriptions),

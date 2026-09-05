@@ -108,6 +108,11 @@ describe('monthly settlement shortcut settings', () => {
       cryo_prices: { '맞춤 신장분사': 12000 },
       prescription_colors: { '맞춤 신장분사': '#123456' },
       prescription_incentive_percentages: { '맞춤 신장분사': 8.5 },
+      shortcuts: { '맞춤 신장분사': 'A' },
+      dose_tags: { '맞춤 신장분사': 'S' },
+      duration_minutes: { '맞춤 신장분사': 30 },
+      visit_line_break_prescriptions: ['맞춤 신장분사'],
+      hidden_prescriptions: ['맞춤 신장분사'],
       therapist_names: ['주한솔'],
     });
     const effective = getEffectiveShinjangSpraySettings({ monthly_settlement_settings }, 2026, 10);
@@ -118,6 +123,11 @@ describe('monthly settlement shortcut settings', () => {
     assert.equal(effective.cryo_prices['맞춤 신장분사'], 12000);
     assert.equal(effective.prescription_colors['맞춤 신장분사'], '#123456');
     assert.equal(effective.prescription_incentive_percentages['맞춤 신장분사'], 8.5);
+    assert.equal(effective.shortcuts['맞춤 신장분사'], 'A');
+    assert.equal(effective.dose_tags['맞춤 신장분사'], 'S');
+    assert.equal(effective.duration_minutes['맞춤 신장분사'], 30);
+    assert.deepEqual(effective.visit_line_break_prescriptions, ['맞춤 신장분사']);
+    assert.deepEqual(effective.hidden_prescriptions, ['맞춤 신장분사']);
   });
 
   it('stores and inherits cryo selections and prices separately for each treatment type', () => {

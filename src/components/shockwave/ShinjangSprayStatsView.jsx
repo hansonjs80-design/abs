@@ -28,6 +28,7 @@ export default function ShinjangSprayStatsView({
       monthlyTherapists={[]}
       treatmentLabel="신장분사"
       showRecentSummaries={false}
+      showOnlyTherapistPrescriptions
       viewModeStorageKey={SHINJANG_VIEW_MODE_STORAGE_KEY}
     />
   );

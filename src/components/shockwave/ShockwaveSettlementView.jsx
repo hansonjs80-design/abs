@@ -58,6 +58,7 @@ export default function ShockwaveSettlementView({
   recentSummariesLoading = false,
   treatmentLabel = '충격파',
   showRecentSummaries = true,
+  showOnlyTherapistPrescriptions = false,
   viewModeStorageKey = SETTLEMENT_VIEW_MODE_STORAGE_KEY,
 }) {
   const [viewMode, setViewMode] = useState(() => readStoredViewMode(viewModeStorageKey)); // 'horizontal' | 'horizontal2' | 'vertical'
@@ -210,9 +211,9 @@ export default function ShockwaveSettlementView({
       prescriptions: safePrescriptions,
       therapists: displayTherapists,
       sharedPrescriptionLimit: 0,
-      emptyTherapistPrescriptionLimit: 3,
+      emptyTherapistPrescriptionLimit: showOnlyTherapistPrescriptions ? 0 : 3,
     }),
-    [displayTherapists, safeLogs, safePrescriptions]
+    [displayTherapists, safeLogs, safePrescriptions, showOnlyTherapistPrescriptions]
   );
   const horizontalPrintColumns = useMemo(
     () => buildShockwaveSettlementPrintColumnWidths(horizontalTherapistPrescriptionGroups),
@@ -468,6 +469,7 @@ export default function ShockwaveSettlementView({
           recentSummariesLoading={recentSummariesLoading}
           treatmentLabel={treatmentLabel}
           showRecentSummaries={showRecentSummaries}
+          showOnlyTherapistPrescriptions={showOnlyTherapistPrescriptions}
         />
       ) : (
         <>

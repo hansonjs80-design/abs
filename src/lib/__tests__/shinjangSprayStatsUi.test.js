@@ -8,6 +8,7 @@ const pageUrl = new URL('../../pages/ShinjangSprayStatsPage.jsx', import.meta.ur
 const settingsPanelUrl = new URL('../../components/shockwave/ShinjangSpraySettingsPanel.jsx', import.meta.url);
 const statsViewUrl = new URL('../../components/shockwave/ShinjangSprayStatsView.jsx', import.meta.url);
 const sharedSettlementViewUrl = new URL('../../components/shockwave/ShockwaveSettlementView.jsx', import.meta.url);
+const compactSettlementViewUrl = new URL('../../components/shockwave/ShockwaveSettlementHorizontalCompactView.jsx', import.meta.url);
 const monthlyTherapistConfigUrl = new URL('../../components/shockwave/MonthlyTherapistConfig.jsx', import.meta.url);
 const scheduleContextUrl = new URL('../../contexts/ScheduleContext.jsx', import.meta.url);
 const loginSettingsUrl = new URL('../../components/settings/LoginSettings.jsx', import.meta.url);
@@ -42,6 +43,8 @@ describe('shinjang spray statistics UI', () => {
     assert.match(pageSource, /shockwaveCryoPrescriptions/);
     assert.match(pageSource, /manualTherapyCryoPrescriptions/);
     assert.match(pageSource, /setMonthlyShinjangSpraySettings/);
+    assert.match(pageSource, /renameSchedulePrescriptionsForMonth/);
+    assert.match(pageSource, /restoreSchedulePrescriptionRenames/);
     assert.match(pageSource, /신장분사 현황/);
     assert.match(pageSource, /신장분사 결산/);
     assert.match(pageSource, /activeSection === 'new-patients'/);
@@ -52,6 +55,12 @@ describe('shinjang spray statistics UI', () => {
     assert.match(settingsSource, /집계 치료사/);
     assert.match(settingsSource, /크라이오 가격/);
     assert.match(settingsSource, /처방 단가/);
+    assert.match(settingsSource, /셀 태그/);
+    assert.match(settingsSource, /단축키/);
+    assert.match(settingsSource, /치료시간/);
+    assert.match(settingsSource, /회차 줄바꿈/);
+    assert.match(settingsSource, /숨김/);
+    assert.match(settingsSource, /prescriptionRenames/);
     assert.match(settingsSource, /removePrescription/);
     assert.match(settingsSource, /addPrescription/);
     assert.match(settingsSource, /cryoPrescriptions/);
@@ -61,10 +70,20 @@ describe('shinjang spray statistics UI', () => {
     assert.match(statsViewSource, /incentivePercentages=\{incentivePercentages\}/);
     assert.match(statsViewSource, /cryoPrescriptions=\{cryoPrescriptions\}/);
     assert.match(statsViewSource, /viewModeStorageKey=\{SHINJANG_VIEW_MODE_STORAGE_KEY\}/);
+    assert.match(statsViewSource, /showOnlyTherapistPrescriptions/);
+    assert.match(settlementSource, /emptyTherapistPrescriptionLimit: showOnlyTherapistPrescriptions \? 0 : 3/);
     assert.match(settlementSource, /크라이오 반영 통계/);
     assert.match(settlementSource, /handleViewModeChange\('horizontal2', targetPricingMode\)/);
     assert.match(settlementSource, /handleViewModeChange\('vertical', targetPricingMode\)/);
     assert.match(settlementSource, /처방별 인센티브/);
+  });
+
+  it('shows only prescriptions actually completed by each therapist in compact settlement', async () => {
+    const source = await readFile(compactSettlementViewUrl, 'utf8');
+    assert.match(source, /const therapistPrescriptions = showOnlyTherapistPrescriptions/);
+    assert.match(source, /item\.countsByPrescription\[prescription\]/);
+    assert.match(source, /rowSpan=\{therapistPrescriptions\.length \+ 1\}/);
+    assert.match(source, /therapistPrescriptions\.map/);
   });
 
   it('adds a monthly shinjang therapist tab and applies it to every shinjang statistics section', async () => {

@@ -26,6 +26,10 @@ import {
   buildShinjangSprayPrescriptions,
   mergeShinjangSprayLogs,
 } from '../lib/shinjangSprayStatsUtils';
+import {
+  renameSchedulePrescriptionsForMonth,
+  restoreSchedulePrescriptionRenames,
+} from '../lib/schedulePrescriptionRenameUtils';
 import '../styles/shockwave_stats.css';
 import '../styles/shinjang_spray_stats.css';
 
@@ -345,6 +349,12 @@ export default function ShinjangSprayStatsPage() {
     cryoPrices: nextCryoPrices,
     prescriptionColors: nextPrescriptionColors,
     prescriptionIncentivePercentages,
+    shortcuts,
+    doseTags,
+    durationMinutes,
+    visitLineBreakPrescriptions,
+    hiddenPrescriptions,
+    prescriptionRenames,
     therapistNames,
   }) => {
     const settingsToUpdate = settingsRef.current || shockwaveSettings || {};
@@ -361,17 +371,50 @@ export default function ShinjangSprayStatsPage() {
           cryo_prices: nextCryoPrices,
           prescription_colors: nextPrescriptionColors,
           prescription_incentive_percentages: prescriptionIncentivePercentages,
+          shortcuts,
+          dose_tags: doseTags,
+          duration_minutes: durationMinutes,
+          visit_line_break_prescriptions: visitLineBreakPrescriptions,
+          hidden_prescriptions: hiddenPrescriptions,
           therapist_names: therapistNames,
         }
       ),
     };
+
+    let renameResult = { updatedCount: 0, changes: [] };
+    try {
+      renameResult = await renameSchedulePrescriptionsForMonth({
+        supabaseClient: supabase,
+        year: currentYear,
+        month: currentMonth,
+        renames: prescriptionRenames,
+      });
+    } catch (error) {
+      console.error('Shinjang spray schedule prescription rename failed:', error);
+      addToast('기존 스케줄의 신장분사 처방명 변경에 실패했습니다.', 'error');
+      return false;
+    }
+
     const ok = await saveShockwaveSettings(nextSettings);
     if (ok) {
       settingsRef.current = nextSettings;
-      await loadShockwaveSettings({ force: true });
+      await refreshData({ force: true });
+    } else if (renameResult.changes.length > 0) {
+      try {
+        await restoreSchedulePrescriptionRenames({
+          supabaseClient: supabase,
+          changes: renameResult.changes,
+        });
+      } catch (error) {
+        console.error('Shinjang spray schedule prescription rename rollback failed:', error);
+        addToast('설정 저장과 기존 처방명 복구에 실패했습니다. 스케줄을 확인해주세요.', 'error');
+        return false;
+      }
     }
     addToast(
-      ok ? '이번 달 신장분사 처방·크라이오·인센티브 설정을 저장했습니다.' : '신장분사 설정 저장에 실패했습니다.',
+      ok
+        ? `이번 달 신장분사 상세 설정을 저장했습니다.${renameResult.updatedCount > 0 ? ` 기존 스케줄 ${renameResult.updatedCount}건의 처방명도 변경했습니다.` : ''}`
+        : '신장분사 설정 저장에 실패했습니다.',
       ok ? 'success' : 'error'
     );
     return ok;
@@ -379,7 +422,7 @@ export default function ShinjangSprayStatsPage() {
     addToast,
     currentMonth,
     currentYear,
-    loadShockwaveSettings,
+    refreshData,
     saveShockwaveSettings,
     shockwaveSettings,
   ]);

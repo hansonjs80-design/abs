@@ -18,7 +18,7 @@ export function formatScheduleShortcutLabel(value, modifier = 'Ctrl') {
   const normalized = normalizeScheduleShortcutValue(value);
   if (!normalized) return '';
   const keyLabel = normalized === ' ' ? 'Space' : normalized;
-  return modifier === '⌘' ? `⌘${keyLabel}` : `${modifier}+${keyLabel}`;
+  return String(modifier).startsWith('⌘') ? `${modifier}${keyLabel}` : `${modifier}+${keyLabel}`;
 }
 
 export function getScheduleShortcutKey(event) {
@@ -46,6 +46,7 @@ function findPrescriptionByShortcut(shortcuts, shortcutKey, hiddenPrescriptions)
 export function resolveSchedulePrescriptionShortcut(event, {
   manualShortcuts = {},
   shockwaveShortcuts = {},
+  shinjangShortcuts = {},
   hiddenPrescriptions = [],
 } = {}) {
   const shortcutKey = getScheduleShortcutKey(event);
@@ -61,8 +62,18 @@ export function resolveSchedulePrescriptionShortcut(event, {
       : null;
   }
 
+  const isShinjangModifier = Boolean(
+    (event?.metaKey || event?.ctrlKey) && event?.shiftKey && !event?.altKey
+  );
+  if (isShinjangModifier && /^[1-9A-Z]$/.test(shortcutKey)) {
+    const prescription = findPrescriptionByShortcut(shinjangShortcuts, shortcutKey, hidden);
+    return prescription
+      ? { type: 'shinjang_spray', prescription, shortcutKey }
+      : null;
+  }
+
   const isShockwaveModifier = Boolean(
-    (event?.metaKey || event?.ctrlKey) && !event?.altKey
+    (event?.metaKey || event?.ctrlKey) && !event?.shiftKey && !event?.altKey
   );
   if (isShockwaveModifier && /^[1-9A-Z]$/.test(shortcutKey)) {
     const prescription = findPrescriptionByShortcut(shockwaveShortcuts, shortcutKey, hidden);

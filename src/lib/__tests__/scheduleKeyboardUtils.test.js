@@ -62,6 +62,8 @@ describe('schedule keyboard shortcut detection', () => {
     assert.equal(formatScheduleShortcutLabel('4', '⌥'), '⌥+4');
     assert.equal(formatScheduleShortcutLabel('+', 'Ctrl'), 'Ctrl++');
     assert.equal(formatScheduleShortcutLabel('+', '⌘'), '⌘+');
+    assert.equal(formatScheduleShortcutLabel('3', 'Ctrl+Shift'), 'Ctrl+Shift+3');
+    assert.equal(formatScheduleShortcutLabel('A', '⌘⇧'), '⌘⇧A');
     assert.equal(formatScheduleShortcutLabel('', 'Ctrl'), '');
   });
 
@@ -117,6 +119,35 @@ describe('schedule keyboard shortcut detection', () => {
     assert.equal(
       resolveSchedulePrescriptionShortcut(
         { metaKey: true, altKey: true, code: 'Digit4', key: '4' },
+        shortcuts
+      ),
+      null
+    );
+  });
+
+  it('uses Ctrl or Command plus Shift for shinjang spray prescriptions', () => {
+    const shortcuts = {
+      shockwaveShortcuts: { F2: '4' },
+      shinjangShortcuts: { 'F3.0(신장분사DC)': '4', '40분(신장분사)': 'A' },
+    };
+
+    assert.deepEqual(
+      resolveSchedulePrescriptionShortcut(
+        { metaKey: true, shiftKey: true, code: 'Digit4', key: '$' },
+        shortcuts
+      ),
+      { type: 'shinjang_spray', prescription: 'F3.0(신장분사DC)', shortcutKey: '4' }
+    );
+    assert.deepEqual(
+      resolveSchedulePrescriptionShortcut(
+        { ctrlKey: true, shiftKey: true, code: 'KeyA', key: 'A' },
+        shortcuts
+      ),
+      { type: 'shinjang_spray', prescription: '40분(신장분사)', shortcutKey: 'A' }
+    );
+    assert.equal(
+      resolveSchedulePrescriptionShortcut(
+        { ctrlKey: true, shiftKey: true, altKey: true, code: 'KeyA', key: 'A' },
         shortcuts
       ),
       null

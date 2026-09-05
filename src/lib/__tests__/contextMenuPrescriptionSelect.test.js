@@ -18,6 +18,7 @@ test('context menu prescription dropdowns show current monthly shortcuts on the 
 
   assert.match(view, /shortcuts=\{effectiveShockwaveSettings\?\.shortcuts \|\| \{\}\}/);
   assert.match(view, /shortcuts=\{effectiveManualSettings\?\.shortcuts \|\| \{\}\}/);
+  assert.match(view, /shortcuts=\{effectiveShinjangSettings\?\.shortcuts \|\| \{\}\}/);
   assert.match(
     view,
     /shortcuts=\{effectiveShockwaveSettings\?\.shortcuts \|\| \{\}\}[\s\S]*?shortcutModifier=\{shortcutLabels\.modifier\}/
@@ -25,6 +26,10 @@ test('context menu prescription dropdowns show current monthly shortcuts on the 
   assert.match(
     view,
     /shortcuts=\{effectiveManualSettings\?\.shortcuts \|\| \{\}\}[\s\S]*?shortcutModifier=\{shortcutLabels\.manualPrescriptionModifier\}/
+  );
+  assert.match(
+    view,
+    /shortcuts=\{effectiveShinjangSettings\?\.shortcuts \|\| \{\}\}[\s\S]*?shortcutModifier=\{shortcutLabels\.shinjangPrescriptionModifier\}/
   );
   assert.match(view, /const contextMenuPrescriptionColors = \{/);
   assert.equal(

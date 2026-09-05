@@ -52,6 +52,7 @@ export default function useScheduleViewState({
     return {
       modifier: mod,
       manualPrescriptionModifier: isAppleShortcutPlatform ? '⌥' : 'Alt',
+      shinjangPrescriptionModifier: isAppleShortcutPlatform ? '⌘⇧' : 'Ctrl+Shift',
       copy: join(mod, 'C'),
       cut: join(mod, 'X'),
       paste: join(mod, 'V'),

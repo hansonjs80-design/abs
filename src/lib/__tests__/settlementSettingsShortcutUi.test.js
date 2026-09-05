@@ -45,4 +45,5 @@ test('manual therapy shortcut settings show Alt or Option and accept digits only
   );
   assert.match(panel, /title=\{shortcutTitle\}/);
   assert.match(viewState, /manualPrescriptionModifier: isAppleShortcutPlatform \? '⌥' : 'Alt'/);
+  assert.match(viewState, /shinjangPrescriptionModifier: isAppleShortcutPlatform \? '⌘⇧' : 'Ctrl\+Shift'/);
 });
