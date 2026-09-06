@@ -305,3 +305,15 @@ export function buildSchedulerCellDisplay(content, mergeSpan) {
     hasDisplayText,
   };
 }
+
+export function splitSchedulerPatientDelimiter(value) {
+  const text = String(value || '');
+  const delimiterIndex = text.indexOf('/');
+  if (delimiterIndex < 1 || !/\d/u.test(text.slice(0, delimiterIndex))) return null;
+
+  return {
+    beforeDelimiter: text.slice(0, delimiterIndex),
+    delimiter: '/',
+    afterDelimiter: text.slice(delimiterIndex + 1),
+  };
+}

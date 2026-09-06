@@ -99,22 +99,6 @@ export default function useScheduleViewState({
     }, {});
   }, [settings, currentYear, currentMonth]);
 
-  const effectivePrescriptionBackgroundColors = useMemo(() => {
-    const shinjangSpraySettlement = getEffectiveShinjangSpraySettings(
-      settings,
-      currentYear,
-      currentMonth
-    );
-    return Object.entries(
-      shinjangSpraySettlement.prescription_background_colors || {}
-    ).reduce((acc, [key, value]) => {
-      if (!key || !value) return acc;
-      acc[key] = value;
-      acc[normalizePrescriptionColorKey(key)] = value;
-      return acc;
-    }, {});
-  }, [settings, currentYear, currentMonth]);
-
   const initialTextSettingsRef = useRef(null);
   if (initialTextSettingsRef.current === null) {
     initialTextSettingsRef.current = readLocalSchedulerTextSettings();
@@ -167,7 +151,6 @@ export default function useScheduleViewState({
   }, []);
 
   return {
-    effectivePrescriptionBackgroundColors,
     effectivePrescriptionColors,
     effectiveSchedulerTextSettings,
     hasCompletableSelection,

@@ -7,7 +7,6 @@ import {
 } from '../../lib/schedulerContentFormat';
 
 const DEFAULT_PRESCRIPTION_COLOR = '#0f766e';
-const DEFAULT_PRESCRIPTION_BACKGROUND_COLOR = '#ffffff';
 
 function normalizeDurationStepMinutes(value) {
   const numeric = Number(value) || 0;
@@ -29,9 +28,6 @@ function buildInitialDraft(effectiveSettings) {
     cryo_prescriptions: [...(effectiveSettings?.cryo_prescriptions || [])],
     cryo_prices: { ...(effectiveSettings?.cryo_prices || {}) },
     prescription_colors: { ...(effectiveSettings?.prescription_colors || {}) },
-    prescription_background_colors: {
-      ...(effectiveSettings?.prescription_background_colors || {}),
-    },
     prescription_incentive_percentages: {
       ...(effectiveSettings?.prescription_incentive_percentages || {}),
     },
@@ -86,12 +82,6 @@ function renameDraftPrescription(draft, index, previousName, nextName) {
       previousName,
       nextName,
       DEFAULT_PRESCRIPTION_COLOR
-    ),
-    prescription_background_colors: renameMapKey(
-      draft.prescription_background_colors,
-      previousName,
-      nextName,
-      DEFAULT_PRESCRIPTION_BACKGROUND_COLOR
     ),
     prescription_incentive_percentages: renameMapKey(
       draft.prescription_incentive_percentages,
@@ -243,10 +233,6 @@ export default function ShinjangSpraySettingsPanel({
         ...current.prescription_colors,
         [prescription]: DEFAULT_PRESCRIPTION_COLOR,
       },
-      prescription_background_colors: {
-        ...current.prescription_background_colors,
-        [prescription]: DEFAULT_PRESCRIPTION_BACKGROUND_COLOR,
-      },
       prescription_incentive_percentages: {
         ...current.prescription_incentive_percentages,
         [prescription]: 0,
@@ -276,9 +262,6 @@ export default function ShinjangSpraySettingsPanel({
       cryo_prescriptions: current.cryo_prescriptions.filter((item) => item !== prescription),
       cryo_prices: removeMapKey(current.cryo_prices),
       prescription_colors: removeMapKey(current.prescription_colors),
-      prescription_background_colors: removeMapKey(
-        current.prescription_background_colors
-      ),
       prescription_incentive_percentages: removeMapKey(
         current.prescription_incentive_percentages
       ),
@@ -308,11 +291,6 @@ export default function ShinjangSpraySettingsPanel({
     const prescriptionColors = Object.fromEntries(prescriptions.map((prescription) => [
       prescription,
       draft.prescription_colors?.[prescription] || DEFAULT_PRESCRIPTION_COLOR,
-    ]));
-    const prescriptionBackgroundColors = Object.fromEntries(prescriptions.map((prescription) => [
-      prescription,
-      draft.prescription_background_colors?.[prescription]
-        || DEFAULT_PRESCRIPTION_BACKGROUND_COLOR,
     ]));
     const doseTags = Object.fromEntries(prescriptions.map((prescription) => [
       prescription,
@@ -346,7 +324,6 @@ export default function ShinjangSpraySettingsPanel({
         )),
         cryoPrices: buildNumberMap(draft.cryo_prices),
         prescriptionColors,
-        prescriptionBackgroundColors,
         prescriptionIncentivePercentages: buildNumberMap(
           draft.prescription_incentive_percentages
         ),
@@ -433,7 +410,7 @@ export default function ShinjangSpraySettingsPanel({
 
       <div className="shinjang-spray-settings-list">
         <p className="shinjang-spray-cryo-settings-note">
-          처방별 태그·단축키·치료시간·크라이오 차감·인센티브율·글자색·배경색을 각각 설정합니다.
+          처방별 태그·단축키·치료시간·크라이오 차감·인센티브율·글자색을 각각 설정합니다.
           처방명을 바꾸면 이번 달 스케줄의 기존 처방명도 함께 변경됩니다.
         </p>
         <div className="settlement-settings-row settlement-settings-header-row shinjang-spray-detail-row shinjang-spray-settings-header-row">
@@ -449,7 +426,6 @@ export default function ShinjangSpraySettingsPanel({
           <span className="settlement-label">크라이오 가격</span>
           <span className="settlement-label">인센티브율</span>
           <span className="settlement-label">글자색</span>
-          <span className="settlement-label">배경색</span>
           <span />
         </div>
         {draft.prescriptions.map((prescription, index) => {
@@ -692,21 +668,6 @@ export default function ShinjangSpraySettingsPanel({
                   ...current,
                   prescription_colors: {
                     ...current.prescription_colors,
-                    [prescription]: event.target.value,
-                  },
-                }))}
-              />
-              <input
-                type="color"
-                className="settlement-color-input settlement-background-color-input"
-                value={draft.prescription_background_colors[prescription]
-                  || DEFAULT_PRESCRIPTION_BACKGROUND_COLOR}
-                aria-label={`${prescription} 배경색`}
-                title={`${prescription} 스케줄러 셀 배경색`}
-                onChange={(event) => setDraft((current) => ({
-                  ...current,
-                  prescription_background_colors: {
-                    ...current.prescription_background_colors,
                     [prescription]: event.target.value,
                   },
                 }))}

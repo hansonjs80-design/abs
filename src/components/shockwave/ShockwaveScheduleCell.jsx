@@ -6,12 +6,13 @@ import {
 import { getMobileScheduleCellFitFontSize } from '../../lib/scheduleCellTextFitUtils';
 import { getReservationGroupFromMergeSpan } from '../../lib/scheduleReservationGroupUtils';
 import { isTreatmentCancelBg, isTreatmentCompleteBg } from '../../lib/scheduleStatusUtils';
+import { isShinjangSprayPrescription } from '../../lib/shinjangSprayStatsUtils';
 import {
   HORIZONTAL_BORDER_COLOR,
   buildSchedulerCellDisplay,
-  getPrescriptionColor,
   getScheduleCellBottomBorderColor,
   getMemoListFromMergeSpan,
+  splitSchedulerPatientDelimiter,
 } from '../../lib/schedulerUtils';
 import { has4060Pattern } from '../../lib/schedulerContentFormat';
 
@@ -95,10 +96,28 @@ const renderSchedulerVisitSuffix = (suffix, className, style) => {
   );
 };
 
+const renderSchedulerBaseText = (value, style, highlightPatientDelimiter) => {
+  const text = String(value || '');
+  const patientText = highlightPatientDelimiter
+    ? splitSchedulerPatientDelimiter(text)
+    : null;
+  if (!patientText) {
+    return <span style={style}>{text}</span>;
+  }
+
+  return (
+    <span style={style}>
+      {patientText.beforeDelimiter}
+      <span className="sw-cell-shinjang-patient-delimiter">{patientText.delimiter}</span>
+      {patientText.afterDelimiter}
+    </span>
+  );
+};
+
 const MemoizedCell = memo(({
   cellKey, weekIdx, dayIdx, rowIdx, colIdx, dayInfo, slotInfo, showTimeCol, gridRowStart, isLastRenderedRow, colCount,
   cellData, pendingContent, pendingMergeSpan, mergeSpan, editingCell, imePreviewCell, selectedKeys, selectedCell, clipboardSource,
-  workState, staffBlockRule, effectivePrescriptionColors, effectivePrescriptionBackgroundColors,
+  workState, staffBlockRule, effectivePrescriptionColors,
   reservationGroupEdge,
   cellBorderBottomColor,
   cellFontSize,
@@ -268,10 +287,6 @@ const MemoizedCell = memo(({
     workState === 'off' ||
     Boolean(staffBlockRule?.bg_color)
   );
-  const prescriptionBackgroundColor = cellPrescription
-    ? getPrescriptionColor(cellPrescription, effectivePrescriptionBackgroundColors)
-    : null;
-
   if (hasStaffOffBackground) {
     cls += ' staff-off';
   } else if (hasStaffBlockedBackground) {
@@ -283,8 +298,6 @@ const MemoizedCell = memo(({
   let fillBackgroundColor = null;
   if (isCurrentMonthCell && cellData?.bg_color) {
     fillBackgroundColor = cellData.bg_color;
-  } else if (isCurrentMonthCell && hasDisplayText && prescriptionBackgroundColor) {
-    fillBackgroundColor = prescriptionBackgroundColor;
   } else if (isCurrentMonthCell && !hasDisplayText && staffBlockRule?.bg_color) {
     fillBackgroundColor = staffBlockRule.bg_color;
   }
@@ -342,6 +355,7 @@ const MemoizedCell = memo(({
   }
 
   const prescriptionColor = cellPrescription ? effectivePrescriptionColors[cellPrescription] : undefined;
+  const highlightShinjangPatientDelimiter = isShinjangSprayPrescription(cellPrescription);
   const shouldBreakVisitLine = Boolean(cellPrescription && visitLineBreakPrescriptions?.includes(cellPrescription));
   const hasMeaningfulContent = hasDisplayText;
   const noPrescription = hasMeaningfulContent && !cellPrescription;
@@ -467,7 +481,11 @@ const MemoizedCell = memo(({
     <div ref={displayRef} className="sw-cell-display" style={pointerEvents ? { pointerEvents } : undefined}>
       {displayData.hasDisplayText ? (
         <span ref={mainTextRef} className="sw-cell-main">
-          <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
+          {renderSchedulerBaseText(
+            displayData.baseText,
+            baseTextColor ? { color: baseTextColor } : undefined,
+            highlightShinjangPatientDelimiter
+          )}
           {displayData.noteAfterVisit ? (
             <>
               {displayData.visitSuffix
@@ -677,7 +695,6 @@ const MemoizedCell = memo(({
   if (isAnts && prevProps.clipboardSource?.mode !== nextProps.clipboardSource?.mode) return false;
 
   if (prevProps.workState !== nextProps.workState) return false;
-  if (prevProps.effectivePrescriptionBackgroundColors !== nextProps.effectivePrescriptionBackgroundColors) return false;
   if (prevProps.staffBlockRule?.bg_color !== nextProps.staffBlockRule?.bg_color) return false;
   if (prevProps.staffBlockRule?.font_color !== nextProps.staffBlockRule?.font_color) return false;
   if (prevProps.staffBlockRule?.keyword !== nextProps.staffBlockRule?.keyword) return false;

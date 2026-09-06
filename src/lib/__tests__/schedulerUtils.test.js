@@ -10,6 +10,7 @@ import {
   isStaleNumericVisitRestoreAfterNewPatientAutoFormat,
   markSchedulerContentAsNewPatient,
   normalizeSchedulerVisitSuffix,
+  splitSchedulerPatientDelimiter,
   splitSchedulerInlineNote,
   stepVisitShortcutInputValue,
   stepVisitInputValue,
@@ -348,6 +349,16 @@ describe('manual therapy dose tag formatting', () => {
 });
 
 describe('scheduler cell display splitting', () => {
+  it('isolates only the chart and patient name delimiter for visual emphasis', () => {
+    assert.deepEqual(splitSchedulerPatientDelimiter('1111/주한솔'), {
+      beforeDelimiter: '1111',
+      delimiter: '/',
+      afterDelimiter: '주한솔',
+    });
+    assert.equal(splitSchedulerPatientDelimiter('주한솔/메모'), null);
+    assert.equal(splitSchedulerPatientDelimiter('1111주한솔'), null);
+  });
+
   it('splits base text, non-visit note, and visit suffix independently', () => {
     assert.deepEqual(buildSchedulerCellDisplay('3275/손연희(진료후도수)(2)', null), {
       mainText: '3275/손연희(진료후도수)(2)',
