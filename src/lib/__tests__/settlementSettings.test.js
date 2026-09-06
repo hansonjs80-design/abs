@@ -55,10 +55,9 @@ describe('monthly settlement shortcut settings', () => {
   });
 
   it('uses every available shinjang spray therapist until a monthly list is saved', () => {
-    assert.equal(
-      getEffectiveShinjangSpraySettings({}, 2026, 9).therapist_names,
-      null
-    );
+    const effective = getEffectiveShinjangSpraySettings({}, 2026, 9);
+    assert.equal(effective.therapist_names, null);
+    assert.deepEqual(effective.patient_delimiter_prescriptions, []);
   });
 
   it('keeps an explicitly emptied shinjang prescription list empty for the scheduler', () => {
@@ -107,6 +106,9 @@ describe('monthly settlement shortcut settings', () => {
       cryo_prescriptions: ['맞춤 신장분사'],
       cryo_prices: { '맞춤 신장분사': 12000 },
       prescription_colors: { '맞춤 신장분사': '#123456' },
+      patient_delimiter_prescriptions: ['맞춤 신장분사'],
+      patient_delimiter_colors: { '맞춤 신장분사': '#dc2626' },
+      patient_delimiter_font_weights: { '맞춤 신장분사': 725 },
       prescription_incentive_percentages: { '맞춤 신장분사': 8.5 },
       shortcuts: { '맞춤 신장분사': 'A' },
       dose_tags: { '맞춤 신장분사': 'S' },
@@ -122,6 +124,9 @@ describe('monthly settlement shortcut settings', () => {
     assert.deepEqual(effective.cryo_prescriptions, ['맞춤 신장분사']);
     assert.equal(effective.cryo_prices['맞춤 신장분사'], 12000);
     assert.equal(effective.prescription_colors['맞춤 신장분사'], '#123456');
+    assert.deepEqual(effective.patient_delimiter_prescriptions, ['맞춤 신장분사']);
+    assert.equal(effective.patient_delimiter_colors['맞춤 신장분사'], '#dc2626');
+    assert.equal(effective.patient_delimiter_font_weights['맞춤 신장분사'], 750);
     assert.equal(effective.prescription_incentive_percentages['맞춤 신장분사'], 8.5);
     assert.equal(effective.shortcuts['맞춤 신장분사'], 'A');
     assert.equal(effective.dose_tags['맞춤 신장분사'], 'S');

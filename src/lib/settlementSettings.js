@@ -54,6 +54,9 @@ export const DEFAULT_SHINJANG_SPRAY_SETTLEMENT = {
   prescription_colors: {
     '신장분사': '#0f766e',
   },
+  patient_delimiter_prescriptions: [],
+  patient_delimiter_colors: {},
+  patient_delimiter_font_weights: {},
   shortcuts: {},
   dose_tags: {},
   duration_minutes: {},
@@ -293,6 +296,15 @@ export function getEffectiveShinjangSpraySettings(settings, year, month) {
       ...DEFAULT_SHINJANG_SPRAY_SETTLEMENT.prescription_colors,
       ...filterMap(override?.prescription_colors),
     },
+    patient_delimiter_prescriptions: Array.isArray(override?.patient_delimiter_prescriptions)
+      ? filterList(override.patient_delimiter_prescriptions)
+      : DEFAULT_SHINJANG_SPRAY_SETTLEMENT.patient_delimiter_prescriptions,
+    patient_delimiter_colors: {
+      ...filterMap(override?.patient_delimiter_colors),
+    },
+    patient_delimiter_font_weights: {
+      ...filterMap(override?.patient_delimiter_font_weights),
+    },
     shortcuts: {
       ...filterMap(override?.shortcuts),
     },
@@ -351,6 +363,18 @@ export function setMonthlyShinjangSpraySettings(settings, year, month, nextConfi
       ])
       .filter(([prescription]) => prescription)
   ));
+  const patientDelimiterFontWeights = filterMap(Object.fromEntries(
+    Object.entries(
+      nextConfig?.patient_delimiter_font_weights
+      && typeof nextConfig.patient_delimiter_font_weights === 'object'
+      && !Array.isArray(nextConfig.patient_delimiter_font_weights)
+        ? nextConfig.patient_delimiter_font_weights
+        : {}
+    ).map(([prescription, value]) => [
+      prescription,
+      Math.min(950, Math.max(100, Math.round((Number(value) || 950) / 50) * 50)),
+    ])
+  ));
 
   return {
     ...existing,
@@ -362,6 +386,11 @@ export function setMonthlyShinjangSpraySettings(settings, year, month, nextConfi
         cryo_prescriptions: filterList(nextConfig?.cryo_prescriptions),
         cryo_prices: filterMap(nextConfig?.cryo_prices),
         prescription_colors: filterMap(nextConfig?.prescription_colors),
+        patient_delimiter_prescriptions: filterList(
+          nextConfig?.patient_delimiter_prescriptions
+        ),
+        patient_delimiter_colors: filterMap(nextConfig?.patient_delimiter_colors),
+        patient_delimiter_font_weights: patientDelimiterFontWeights,
         shortcuts: filterMap(nextConfig?.shortcuts),
         dose_tags: filterMap(nextConfig?.dose_tags),
         duration_minutes: filterMap(nextConfig?.duration_minutes),

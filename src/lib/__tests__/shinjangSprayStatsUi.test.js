@@ -15,6 +15,7 @@ const loginSettingsUrl = new URL('../../components/settings/LoginSettings.jsx', 
 const shockwaveStatsViewUrl = new URL('../../components/shockwave/ShockwaveStatsView.jsx', import.meta.url);
 const scheduleViewUrl = new URL('../../components/shockwave/ShockwaveView.jsx', import.meta.url);
 const scheduleCellUrl = new URL('../../components/shockwave/ShockwaveScheduleCell.jsx', import.meta.url);
+const scheduleViewStateUrl = new URL('../../components/shockwave/useScheduleViewState.js', import.meta.url);
 const scheduleCssUrl = new URL('../../styles/shockwave.css', import.meta.url);
 const statsCssUrl = new URL('../../styles/shockwave_stats.css', import.meta.url);
 const horizontal2CssUrl = new URL('../../styles/shockwave_settlement_horizontal2.css', import.meta.url);
@@ -78,6 +79,9 @@ describe('shinjang spray statistics UI', () => {
     assert.match(settingsSource, /인센티브율/);
     assert.doesNotMatch(settingsSource, />배경색</);
     assert.doesNotMatch(settingsSource, /prescriptionBackgroundColors/);
+    assert.match(settingsSource, />\/ 강조</);
+    assert.match(settingsSource, />\/ 색</);
+    assert.match(settingsSource, />\/ 두께</);
     assert.match(settingsSource, /집계 치료사/);
     assert.match(settingsSource, /크라이오 가격/);
     assert.match(settingsSource, /처방 단가/);
@@ -113,19 +117,29 @@ describe('shinjang spray statistics UI', () => {
     assert.match(settlementSource, /formatPercentage\(prescriptionIncentivePercentage\)/);
   });
 
-  it('highlights only the patient delimiter for shinjang spray schedule cells', async () => {
-    const [settingsSource, scheduleCellSource, scheduleCssSource] = await Promise.all([
+  it('applies per-prescription patient delimiter styles only when enabled', async () => {
+    const [pageSource, settingsSource, viewStateSource, scheduleCellSource, scheduleCssSource] = await Promise.all([
+      readFile(pageUrl, 'utf8'),
       readFile(settingsPanelUrl, 'utf8'),
+      readFile(scheduleViewStateUrl, 'utf8'),
       readFile(scheduleCellUrl, 'utf8'),
       readFile(scheduleCssUrl, 'utf8'),
     ]);
 
     assert.doesNotMatch(settingsSource, /배경색/);
     assert.doesNotMatch(settingsSource, /prescription_background_colors/);
+    assert.match(settingsSource, /aria-label=\{`\$\{prescription\} 슬래시 강조`\}/);
+    assert.match(settingsSource, /aria-label=\{`\$\{prescription\} 슬래시 색`\}/);
+    assert.match(settingsSource, /aria-label=\{`\$\{prescription\} 슬래시 두께`\}/);
+    assert.match(pageSource, /patient_delimiter_prescriptions:\s*nextPatientDelimiterPrescriptions/);
+    assert.match(pageSource, /patient_delimiter_colors:\s*nextPatientDelimiterColors/);
+    assert.match(pageSource, /patient_delimiter_font_weights:\s*nextPatientDelimiterFontWeights/);
+    assert.match(viewStateSource, /enabledPrescriptions\.has\(prescription\)/);
     assert.match(scheduleCellSource, /isShinjangSprayPrescription\(cellPrescription\)/);
     assert.match(scheduleCellSource, /splitSchedulerPatientDelimiter\(text\)/);
     assert.match(scheduleCellSource, /className="sw-cell-shinjang-patient-delimiter"/);
-    assert.match(scheduleCssSource, /\.sw-cell \.sw-cell-shinjang-patient-delimiter\s*\{[\s\S]*?color:\s*#0891b2 !important;/);
+    assert.match(scheduleCssSource, /color:\s*var\(--shinjang-patient-delimiter-color, currentColor\) !important;/);
+    assert.match(scheduleCssSource, /font-weight:\s*var\(--shinjang-patient-delimiter-font-weight, inherit\);/);
   });
 
   it('shows only prescriptions actually completed by each therapist in compact settlement', async () => {

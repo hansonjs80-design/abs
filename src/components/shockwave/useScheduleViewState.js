@@ -99,6 +99,34 @@ export default function useScheduleViewState({
     }, {});
   }, [settings, currentYear, currentMonth]);
 
+  const effectiveShinjangPatientDelimiterStyles = useMemo(() => {
+    const shinjangSpraySettlement = getEffectiveShinjangSpraySettings(
+      settings,
+      currentYear,
+      currentMonth
+    );
+    const enabledPrescriptions = new Set(
+      shinjangSpraySettlement.patient_delimiter_prescriptions || []
+    );
+
+    return (shinjangSpraySettlement.prescriptions || []).reduce((acc, prescription) => {
+      if (!enabledPrescriptions.has(prescription)) return acc;
+      const color = shinjangSpraySettlement.patient_delimiter_colors?.[prescription]
+        || '#0891b2';
+      const fontWeight = Math.min(950, Math.max(
+        100,
+        Number(shinjangSpraySettlement.patient_delimiter_font_weights?.[prescription]) || 950
+      ));
+      const delimiterStyle = {
+        '--shinjang-patient-delimiter-color': color,
+        '--shinjang-patient-delimiter-font-weight': String(fontWeight),
+      };
+      acc[prescription] = delimiterStyle;
+      acc[normalizePrescriptionColorKey(prescription)] = delimiterStyle;
+      return acc;
+    }, {});
+  }, [settings, currentYear, currentMonth]);
+
   const initialTextSettingsRef = useRef(null);
   if (initialTextSettingsRef.current === null) {
     initialTextSettingsRef.current = readLocalSchedulerTextSettings();
@@ -152,6 +180,7 @@ export default function useScheduleViewState({
 
   return {
     effectivePrescriptionColors,
+    effectiveShinjangPatientDelimiterStyles,
     effectiveSchedulerTextSettings,
     hasCompletableSelection,
     hasCompletedSelection,

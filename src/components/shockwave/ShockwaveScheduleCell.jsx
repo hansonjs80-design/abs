@@ -12,6 +12,7 @@ import {
   buildSchedulerCellDisplay,
   getScheduleCellBottomBorderColor,
   getMemoListFromMergeSpan,
+  normalizePrescriptionColorKey,
   splitSchedulerPatientDelimiter,
 } from '../../lib/schedulerUtils';
 import { has4060Pattern } from '../../lib/schedulerContentFormat';
@@ -96,9 +97,9 @@ const renderSchedulerVisitSuffix = (suffix, className, style) => {
   );
 };
 
-const renderSchedulerBaseText = (value, style, highlightPatientDelimiter) => {
+const renderSchedulerBaseText = (value, style, patientDelimiterStyle) => {
   const text = String(value || '');
-  const patientText = highlightPatientDelimiter
+  const patientText = patientDelimiterStyle
     ? splitSchedulerPatientDelimiter(text)
     : null;
   if (!patientText) {
@@ -108,7 +109,9 @@ const renderSchedulerBaseText = (value, style, highlightPatientDelimiter) => {
   return (
     <span style={style}>
       {patientText.beforeDelimiter}
-      <span className="sw-cell-shinjang-patient-delimiter">{patientText.delimiter}</span>
+      <span className="sw-cell-shinjang-patient-delimiter" style={patientDelimiterStyle}>
+        {patientText.delimiter}
+      </span>
       {patientText.afterDelimiter}
     </span>
   );
@@ -117,7 +120,7 @@ const renderSchedulerBaseText = (value, style, highlightPatientDelimiter) => {
 const MemoizedCell = memo(({
   cellKey, weekIdx, dayIdx, rowIdx, colIdx, dayInfo, slotInfo, showTimeCol, gridRowStart, isLastRenderedRow, colCount,
   cellData, pendingContent, pendingMergeSpan, mergeSpan, editingCell, imePreviewCell, selectedKeys, selectedCell, clipboardSource,
-  workState, staffBlockRule, effectivePrescriptionColors,
+  workState, staffBlockRule, effectivePrescriptionColors, effectiveShinjangPatientDelimiterStyles,
   reservationGroupEdge,
   cellBorderBottomColor,
   cellFontSize,
@@ -355,7 +358,12 @@ const MemoizedCell = memo(({
   }
 
   const prescriptionColor = cellPrescription ? effectivePrescriptionColors[cellPrescription] : undefined;
-  const highlightShinjangPatientDelimiter = isShinjangSprayPrescription(cellPrescription);
+  const shinjangPatientDelimiterStyle = isShinjangSprayPrescription(cellPrescription)
+    ? effectiveShinjangPatientDelimiterStyles?.[cellPrescription]
+      || effectiveShinjangPatientDelimiterStyles?.[
+        normalizePrescriptionColorKey(cellPrescription)
+      ]
+    : null;
   const shouldBreakVisitLine = Boolean(cellPrescription && visitLineBreakPrescriptions?.includes(cellPrescription));
   const hasMeaningfulContent = hasDisplayText;
   const noPrescription = hasMeaningfulContent && !cellPrescription;
@@ -484,7 +492,7 @@ const MemoizedCell = memo(({
           {renderSchedulerBaseText(
             displayData.baseText,
             baseTextColor ? { color: baseTextColor } : undefined,
-            highlightShinjangPatientDelimiter
+            shinjangPatientDelimiterStyle
           )}
           {displayData.noteAfterVisit ? (
             <>
@@ -695,6 +703,7 @@ const MemoizedCell = memo(({
   if (isAnts && prevProps.clipboardSource?.mode !== nextProps.clipboardSource?.mode) return false;
 
   if (prevProps.workState !== nextProps.workState) return false;
+  if (prevProps.effectiveShinjangPatientDelimiterStyles !== nextProps.effectiveShinjangPatientDelimiterStyles) return false;
   if (prevProps.staffBlockRule?.bg_color !== nextProps.staffBlockRule?.bg_color) return false;
   if (prevProps.staffBlockRule?.font_color !== nextProps.staffBlockRule?.font_color) return false;
   if (prevProps.staffBlockRule?.keyword !== nextProps.staffBlockRule?.keyword) return false;

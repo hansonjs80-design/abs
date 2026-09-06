@@ -161,8 +161,8 @@
 }
 
 .shinjang-spray-detail-row {
-  grid-template-columns: 62px minmax(165px, 220px) minmax(82px, 118px) minmax(104px, 126px) minmax(72px, 92px) minmax(72px, 92px) 40px 58px minmax(105px, 135px) minmax(116px, 146px) minmax(96px, 120px) 44px auto;
-  min-width: 1510px;
+  grid-template-columns: 62px minmax(165px, 220px) minmax(82px, 118px) minmax(104px, 126px) minmax(72px, 92px) minmax(72px, 92px) 40px 58px minmax(105px, 135px) minmax(116px, 146px) minmax(96px, 120px) 44px 48px 44px minmax(84px, 100px) auto;
+  min-width: 1700px;
   margin: 0 10px 8px;
 }
 
@@ -175,6 +175,12 @@
   align-items: center;
   gap: 4px;
   min-width: 0;
+}
+
+.shinjang-spray-delimiter-weight-input {
+  width: 100%;
+  min-width: 0;
+  text-align: center;
 }
 
 .shinjang-spray-cryo-settings-note {
@@ -316,7 +322,7 @@
   }
 
   .shinjang-spray-detail-row {
-    min-width: 1510px;
+    min-width: 1700px;
   }
 }
 

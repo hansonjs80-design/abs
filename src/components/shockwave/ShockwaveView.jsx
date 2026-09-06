@@ -1866,6 +1866,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const selectionInfo = computeSelectionInfo();
   const {
     effectivePrescriptionColors,
+    effectiveShinjangPatientDelimiterStyles,
     effectiveSchedulerTextSettings,
     hasCompletableSelection,
     isTextSettingsLoading,
@@ -3268,6 +3269,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                               selectedKeys={renderSelectedKeys} selectedCell={renderSelectedCell} clipboardSource={renderClipboardSource}
                               workState={workState} staffBlockRule={staffBlockRule}
                               effectivePrescriptionColors={effectivePrescriptionColors}
+                              effectiveShinjangPatientDelimiterStyles={effectiveShinjangPatientDelimiterStyles}
                               reservationGroupEdge={reservationGroupEdgeMap[key]}
                               cellBorderBottomColor={cellBorderBottomColor}
                               cellFontSize={effectiveSchedulerTextSettings.font_size}
@@ -3347,7 +3349,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         renderMemos, renderPendingDisplayValues, renderPendingMergeSpans, renderPendingCellBgColors, renderMergeSpans, reservationGroupEdgeMap, editingCell, imePreviewCell,
         renderSelectedKeys, renderSelectedCell, renderClipboardSource,
         getTherapistWorkState, getStaffScheduleBlockForCell,
-        isLastHourSlot, effectivePrescriptionColors, editValue,
+        isLastHourSlot, effectivePrescriptionColors, effectiveShinjangPatientDelimiterStyles, editValue,
         handleCellMouseDown, handleCellMouseEnter, setHoverCell,
         handleCellDoubleClick, handleCellContextMenu,
         handleEditKeyDown, handleKeyDown, scheduleEditDraftAutosave, promoteFocusedInputToEditor, handleCellSave,
