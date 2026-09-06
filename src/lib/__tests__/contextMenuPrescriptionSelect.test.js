@@ -108,13 +108,20 @@ test('context menu prescription dropdowns show current monthly shortcuts on the 
     /context-menu-prescription-select-group context-menu-prescription-select-group--shinjang/
   );
   assert.match(view, /ariaLabel="신장분사 처방 선택"/);
+  assert.match(view, /getContextMenuPrescriptionLayout\(\s*shinjangPrescriptions\s*\)/);
+  assert.match(view, /'--context-prescription-preferred-width'/);
+  assert.match(view, /'--context-shinjang-prescription-column-ratio'/);
   assert.match(
     css,
-    /\.context-menu-submenu--prescription\s*\{[^}]*width:\s*min\(318px, calc\(100vw - 36px\), var\(--context-submenu-max-width, calc\(100vw - 36px\)\)\);[^}]*max-width:\s*min\(318px, calc\(100vw - 36px\), var\(--context-submenu-max-width, calc\(100vw - 36px\)\)\);/s
+    /\.context-menu-submenu--prescription\s*\{[^}]*width:\s*min\(var\(--context-prescription-preferred-width, 318px\), calc\(100vw - 36px\), var\(--context-submenu-max-width, calc\(100vw - 36px\)\)\);[^}]*max-width:\s*min\(var\(--context-prescription-preferred-width, 318px\), calc\(100vw - 36px\), var\(--context-submenu-max-width, calc\(100vw - 36px\)\)\);/s
   );
   assert.match(
     css,
-    /\.context-menu-prescription-row--triple\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);/s
+    /\.context-menu-prescription-row--triple\s*\{[^}]*grid-template-columns:[^;]*--context-shinjang-prescription-column-ratio[^;]*;/s
+  );
+  assert.match(
+    css,
+    /\.context-menu-prescription-select-label\s*\{[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;[^}]*white-space:\s*nowrap;/s
   );
   assert.match(
     css,

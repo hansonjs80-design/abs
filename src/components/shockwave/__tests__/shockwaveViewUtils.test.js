@@ -7,6 +7,7 @@ import {
   buildPatientHistoryLogGroups,
   buildPatientHistoryTreatmentFilterOptions,
   getPatientHistoryColumnWidths,
+  getContextMenuPrescriptionLayout,
   getPatientHistoryFilterWidthWeight,
   getPatientHistoryModalLayout,
   getPatientHistoryPrescriptionColor,
@@ -17,6 +18,19 @@ import {
 } from '../shockwaveViewUtils.js';
 
 describe('shockwave view patient history model', () => {
+  it('grows the shinjang prescription menu column with the longest configured label', () => {
+    const compact = getContextMenuPrescriptionLayout(['신장분사 1', '신장분사 2.5']);
+    const expanded = getContextMenuPrescriptionLayout([
+      '신장분사 1',
+      '신장분사 3.0 DC 장문 처방',
+    ]);
+
+    assert.equal(compact.shinjangColumnWidth, 148);
+    assert.ok(expanded.shinjangColumnWidth > compact.shinjangColumnWidth);
+    assert.ok(expanded.preferredWidth > compact.preferredWidth);
+    assert.ok(expanded.shinjangColumnRatio > compact.shinjangColumnRatio);
+  });
+
   it('offers forward and reverse directions for every history sort field', () => {
     assert.deepEqual(PATIENT_HISTORY_SORT_OPTIONS.map((option) => option.key), [
       'date',

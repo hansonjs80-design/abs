@@ -1834,9 +1834,9 @@
   top: -6px;
   left: calc(100% + 4px);
   right: auto;
-  width: min(318px, calc(100vw - 36px), var(--context-submenu-max-width, calc(100vw - 36px)));
+  width: min(var(--context-prescription-preferred-width, 318px), calc(100vw - 36px), var(--context-submenu-max-width, calc(100vw - 36px)));
   min-width: 0;
-  max-width: min(318px, calc(100vw - 36px), var(--context-submenu-max-width, calc(100vw - 36px)));
+  max-width: min(var(--context-prescription-preferred-width, 318px), calc(100vw - 36px), var(--context-submenu-max-width, calc(100vw - 36px)));
   padding: 8px;
   border-radius: 11px;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14), 0 4px 10px rgba(15, 23, 42, 0.08);
@@ -2700,7 +2700,10 @@
 
 .context-menu-prescription-row--triple {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, var(--context-shinjang-prescription-column-ratio, 1fr))
+    minmax(0, 1fr);
   gap: 10px;
   width: 100%;
 }
@@ -2714,10 +2717,14 @@
 }
 
 .context-menu-prescription-select-label {
+  min-width: 0;
+  overflow: hidden;
   color: #475569;
   font-size: 0.8rem;
   font-weight: 800;
   line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .context-menu-prescription-picker {

@@ -102,6 +102,7 @@ import {
   getPatientHistoryModalLayout,
   getPatientHistoryPrescriptionColor,
   getPatientHistoryScheduleNavigationTarget,
+  getContextMenuPrescriptionLayout,
   getPlainTextDefaultRowSpan,
   loadHiddenBodyPartOptionsByPatient,
   normalizeCommittedSchedulerContent,
@@ -3499,6 +3500,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                 contextMenuPrescriptionColors
               )
               : null;
+            const contextMenuPrescriptionLayout = getContextMenuPrescriptionLayout(
+              shinjangPrescriptions
+            );
             const selectedHasSameReservationGroup = selectionHasReservationGroup({
               keys: selectedKeys,
               memos: renderMemos,
@@ -3693,7 +3697,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                         {currentPrescription || '없음'}
                       </span>
                     </span>
-                    <div className="context-menu-submenu context-menu-submenu--prescription">
+                    <div
+                      className="context-menu-submenu context-menu-submenu--prescription"
+                      style={{
+                        '--context-prescription-preferred-width': `${contextMenuPrescriptionLayout.preferredWidth}px`,
+                        '--context-shinjang-prescription-column-ratio': `${contextMenuPrescriptionLayout.shinjangColumnRatio}fr`,
+                      }}
+                    >
                       <div className="context-menu-editor-panel">
                         <div className="context-menu-inline-column">
                           <div className="context-menu-prescription-row context-menu-prescription-row--triple">

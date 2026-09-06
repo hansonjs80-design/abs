@@ -48,6 +48,26 @@ export function getPatientHistoryPrescriptionColor(prescription, colorMap) {
     || 'var(--text-primary, #1f2937)';
 }
 
+export function getContextMenuPrescriptionLayout(shinjangPrescriptions = []) {
+  const longestPrescriptionLength = (Array.isArray(shinjangPrescriptions)
+    ? shinjangPrescriptions
+    : []
+  ).reduce((longest, prescription) => (
+    Math.max(longest, Array.from(String(prescription || '').normalize('NFKC').trim()).length)
+  ), 0);
+  const sideColumnWidth = 90;
+  const shinjangColumnWidth = Math.min(
+    360,
+    Math.max(148, 72 + (longestPrescriptionLength * 9))
+  );
+
+  return {
+    preferredWidth: 36 + (sideColumnWidth * 2) + shinjangColumnWidth,
+    shinjangColumnRatio: Number((shinjangColumnWidth / sideColumnWidth).toFixed(3)),
+    shinjangColumnWidth,
+  };
+}
+
 const PATIENT_HISTORY_EMPTY_BODY_FILTER = '__empty__';
 const PATIENT_HISTORY_EMPTY_PRESCRIPTION_FILTER = '__empty__';
 const HIDDEN_BODY_PART_OPTIONS_STORAGE_KEY = 'shockwave-hidden-body-part-options-by-patient';
