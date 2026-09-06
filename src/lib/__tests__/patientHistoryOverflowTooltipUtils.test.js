@@ -160,14 +160,17 @@ test('patient history exposes treatment tabs, selectable sorting, and treatment 
   );
   assert.match(
     shockwaveCss,
-    /\.patient-history-sticky-controls\s*\{[^}]*position:\s*sticky;[^}]*top:\s*-14px;[^}]*z-index:\s*8;[^}]*background:\s*var\(--bg-primary, #fff\);/s
+    /\.patient-history-sticky-controls\s*\{[^}]*position:\s*relative;[^}]*flex:\s*0 0 auto;[^}]*z-index:\s*8;[^}]*background:\s*#fff;/s
   );
   assert.match(shockwaveView, /className="patient-history-sticky-controls"/);
   const searchControlIndex = shockwaveView.indexOf('className="patient-history-search-control"');
   const searchTargetIndex = shockwaveView.indexOf('className="patient-history-search-target"');
+  const fixedControlsIndex = shockwaveView.indexOf('className="patient-history-sticky-controls"');
   const scrollBodyIndex = shockwaveView.indexOf('ref={patientHistoryModalBodyRef}');
   assert(searchControlIndex >= 0 && searchControlIndex < searchTargetIndex);
-  assert(searchTargetIndex < scrollBodyIndex);
+  assert(searchTargetIndex < fixedControlsIndex);
+  assert(fixedControlsIndex < scrollBodyIndex);
+  assert.match(shockwaveView, /ref=\{patientHistoryModalBodyRef\} style=\{\{ padding: '0 18px 14px'/);
 });
 
 test('patient history group count follows the title in a larger compact format', async () => {

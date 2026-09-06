@@ -9,6 +9,7 @@ import { isTreatmentCancelBg, isTreatmentCompleteBg } from '../../lib/scheduleSt
 import {
   HORIZONTAL_BORDER_COLOR,
   buildSchedulerCellDisplay,
+  getPrescriptionColor,
   getScheduleCellBottomBorderColor,
   getMemoListFromMergeSpan,
 } from '../../lib/schedulerUtils';
@@ -97,7 +98,7 @@ const renderSchedulerVisitSuffix = (suffix, className, style) => {
 const MemoizedCell = memo(({
   cellKey, weekIdx, dayIdx, rowIdx, colIdx, dayInfo, slotInfo, showTimeCol, gridRowStart, isLastRenderedRow, colCount,
   cellData, pendingContent, pendingMergeSpan, mergeSpan, editingCell, imePreviewCell, selectedKeys, selectedCell, clipboardSource,
-  workState, staffBlockRule, effectivePrescriptionColors,
+  workState, staffBlockRule, effectivePrescriptionColors, effectivePrescriptionBackgroundColors,
   reservationGroupEdge,
   cellBorderBottomColor,
   cellFontSize,
@@ -267,6 +268,9 @@ const MemoizedCell = memo(({
     workState === 'off' ||
     Boolean(staffBlockRule?.bg_color)
   );
+  const prescriptionBackgroundColor = cellPrescription
+    ? getPrescriptionColor(cellPrescription, effectivePrescriptionBackgroundColors)
+    : null;
 
   if (hasStaffOffBackground) {
     cls += ' staff-off';
@@ -279,6 +283,8 @@ const MemoizedCell = memo(({
   let fillBackgroundColor = null;
   if (isCurrentMonthCell && cellData?.bg_color) {
     fillBackgroundColor = cellData.bg_color;
+  } else if (isCurrentMonthCell && hasDisplayText && prescriptionBackgroundColor) {
+    fillBackgroundColor = prescriptionBackgroundColor;
   } else if (isCurrentMonthCell && !hasDisplayText && staffBlockRule?.bg_color) {
     fillBackgroundColor = staffBlockRule.bg_color;
   }
@@ -671,6 +677,7 @@ const MemoizedCell = memo(({
   if (isAnts && prevProps.clipboardSource?.mode !== nextProps.clipboardSource?.mode) return false;
 
   if (prevProps.workState !== nextProps.workState) return false;
+  if (prevProps.effectivePrescriptionBackgroundColors !== nextProps.effectivePrescriptionBackgroundColors) return false;
   if (prevProps.staffBlockRule?.bg_color !== nextProps.staffBlockRule?.bg_color) return false;
   if (prevProps.staffBlockRule?.font_color !== nextProps.staffBlockRule?.font_color) return false;
   if (prevProps.staffBlockRule?.keyword !== nextProps.staffBlockRule?.keyword) return false;

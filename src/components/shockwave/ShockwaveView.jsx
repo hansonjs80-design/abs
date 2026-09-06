@@ -1865,6 +1865,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
 
   const selectionInfo = computeSelectionInfo();
   const {
+    effectivePrescriptionBackgroundColors,
     effectivePrescriptionColors,
     effectiveSchedulerTextSettings,
     hasCompletableSelection,
@@ -3267,6 +3268,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                               editingCell={editingCell} imePreviewCell={imePreviewCell}
                               selectedKeys={renderSelectedKeys} selectedCell={renderSelectedCell} clipboardSource={renderClipboardSource}
                               workState={workState} staffBlockRule={staffBlockRule}
+                              effectivePrescriptionBackgroundColors={effectivePrescriptionBackgroundColors}
                               effectivePrescriptionColors={effectivePrescriptionColors}
                               reservationGroupEdge={reservationGroupEdgeMap[key]}
                               cellBorderBottomColor={cellBorderBottomColor}
@@ -3347,7 +3349,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         renderMemos, renderPendingDisplayValues, renderPendingMergeSpans, renderPendingCellBgColors, renderMergeSpans, reservationGroupEdgeMap, editingCell, imePreviewCell,
         renderSelectedKeys, renderSelectedCell, renderClipboardSource,
         getTherapistWorkState, getStaffScheduleBlockForCell,
-        isLastHourSlot, effectivePrescriptionColors, editValue,
+        isLastHourSlot, effectivePrescriptionBackgroundColors, effectivePrescriptionColors, editValue,
         handleCellMouseDown, handleCellMouseEnter, setHoverCell,
         handleCellDoubleClick, handleCellContextMenu,
         handleEditKeyDown, handleKeyDown, scheduleEditDraftAutosave, promoteFocusedInputToEditor, handleCellSave,
@@ -4110,41 +4112,41 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
               </div>
               <button onClick={closePatientHistoryModal} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', padding: '0 4px', color: 'var(--text-secondary, #666)' }}>✕</button>
             </div>
-            <div ref={patientHistoryModalBodyRef} style={{ padding: '14px 18px', maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain' }}>
-              <div className="patient-history-sticky-controls">
-                <div className="patient-history-view-controls">
-                  <div className="patient-history-treatment-tabs" role="tablist" aria-label="스케줄 내역 치료 구분">
-                    {patientHistoryTreatmentTabOptions.map((option) => {
-                      const isActive = patientHistoryTreatmentTab === option.key;
-                      return (
-                        <button
-                          key={`patient-history-treatment-${option.key}`}
-                          type="button"
-                          role="tab"
-                          aria-selected={isActive}
-                          className={`patient-history-treatment-tab patient-history-treatment-tab--${option.key}${isActive ? ' is-active' : ''}`}
-                          onClick={() => setPatientHistoryTreatmentTab(option.key)}
-                        >
-                          <span>{option.label}</span>
-                          <span className="patient-history-treatment-count">{option.count}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <label className="patient-history-sort-control">
-                    <span>정렬</span>
-                    <select
-                      aria-label="스케줄 내역 정렬 기준"
-                      value={patientHistorySortOrder}
-                      onChange={(event) => setPatientHistorySortOrder(event.target.value)}
-                    >
-                      {PATIENT_HISTORY_SORT_OPTIONS.map((option) => (
-                        <option key={option.key} value={option.key}>{option.label}</option>
-                      ))}
-                    </select>
-                  </label>
+            <div className="patient-history-sticky-controls">
+              <div className="patient-history-view-controls">
+                <div className="patient-history-treatment-tabs" role="tablist" aria-label="스케줄 내역 치료 구분">
+                  {patientHistoryTreatmentTabOptions.map((option) => {
+                    const isActive = patientHistoryTreatmentTab === option.key;
+                    return (
+                      <button
+                        key={`patient-history-treatment-${option.key}`}
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive}
+                        className={`patient-history-treatment-tab patient-history-treatment-tab--${option.key}${isActive ? ' is-active' : ''}`}
+                        onClick={() => setPatientHistoryTreatmentTab(option.key)}
+                      >
+                        <span>{option.label}</span>
+                        <span className="patient-history-treatment-count">{option.count}</span>
+                      </button>
+                    );
+                  })}
                 </div>
+                <label className="patient-history-sort-control">
+                  <span>정렬</span>
+                  <select
+                    aria-label="스케줄 내역 정렬 기준"
+                    value={patientHistorySortOrder}
+                    onChange={(event) => setPatientHistorySortOrder(event.target.value)}
+                  >
+                    {PATIENT_HISTORY_SORT_OPTIONS.map((option) => (
+                      <option key={option.key} value={option.key}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
               </div>
+            </div>
+            <div ref={patientHistoryModalBodyRef} style={{ padding: '0 18px 14px', maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain' }}>
               
               {patientHistoryModalData.loading ? (
                 <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>내역을 불러오는 중...</div>

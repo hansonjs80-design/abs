@@ -14,6 +14,8 @@ const scheduleContextUrl = new URL('../../contexts/ScheduleContext.jsx', import.
 const loginSettingsUrl = new URL('../../components/settings/LoginSettings.jsx', import.meta.url);
 const shockwaveStatsViewUrl = new URL('../../components/shockwave/ShockwaveStatsView.jsx', import.meta.url);
 const scheduleViewUrl = new URL('../../components/shockwave/ShockwaveView.jsx', import.meta.url);
+const scheduleCellUrl = new URL('../../components/shockwave/ShockwaveScheduleCell.jsx', import.meta.url);
+const scheduleViewStateUrl = new URL('../../components/shockwave/useScheduleViewState.js', import.meta.url);
 const statsCssUrl = new URL('../../styles/shockwave_stats.css', import.meta.url);
 const horizontal2CssUrl = new URL('../../styles/shockwave_settlement_horizontal2.css', import.meta.url);
 
@@ -74,6 +76,8 @@ describe('shinjang spray statistics UI', () => {
     assert.match(pageSource, /showOnlyTherapistPrescriptions/);
     assert.match(pageSource, /aria-label="치료사 필터"/);
     assert.match(settingsSource, /인센티브율/);
+    assert.match(settingsSource, />배경색</);
+    assert.match(settingsSource, /prescriptionBackgroundColors/);
     assert.match(settingsSource, /집계 치료사/);
     assert.match(settingsSource, /크라이오 가격/);
     assert.match(settingsSource, /처방 단가/);
@@ -107,6 +111,25 @@ describe('shinjang spray statistics UI', () => {
     assert.match(settlementSource, /처방별 인센티브/);
     assert.match(settlementSource, /sw-prescription-incentive-rate/);
     assert.match(settlementSource, /formatPercentage\(prescriptionIncentivePercentage\)/);
+  });
+
+  it('applies a configured prescription background until a status color takes precedence', async () => {
+    const [pageSource, settingsSource, viewStateSource, scheduleCellSource] = await Promise.all([
+      readFile(pageUrl, 'utf8'),
+      readFile(settingsPanelUrl, 'utf8'),
+      readFile(scheduleViewStateUrl, 'utf8'),
+      readFile(scheduleCellUrl, 'utf8'),
+    ]);
+
+    assert.match(pageSource, /prescription_background_colors:\s*nextPrescriptionBackgroundColors/);
+    assert.match(settingsSource, /aria-label=\{`\$\{prescription\} 배경색`\}/);
+    assert.match(viewStateSource, /effectivePrescriptionBackgroundColors/);
+    assert.match(viewStateSource, /shinjangSpraySettlement\.prescription_background_colors/);
+    assert.match(scheduleCellSource, /getPrescriptionColor\(cellPrescription, effectivePrescriptionBackgroundColors\)/);
+    assert(
+      scheduleCellSource.indexOf('if (isCurrentMonthCell && cellData?.bg_color)')
+        < scheduleCellSource.indexOf('hasDisplayText && prescriptionBackgroundColor')
+    );
   });
 
   it('shows only prescriptions actually completed by each therapist in compact settlement', async () => {

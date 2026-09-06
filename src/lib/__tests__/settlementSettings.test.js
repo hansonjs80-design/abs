@@ -100,13 +100,14 @@ describe('monthly settlement shortcut settings', () => {
     );
   });
 
-  it('stores an independent shinjang spray prescription, cryo price, color, and incentive', () => {
+  it('stores an independent shinjang spray prescription, cryo price, colors, and incentive', () => {
     const monthly_settlement_settings = setMonthlyShinjangSpraySettings({}, 2026, 9, {
       prescriptions: ['맞춤 신장분사'],
       prescription_prices: { '맞춤 신장분사': 80000 },
       cryo_prescriptions: ['맞춤 신장분사'],
       cryo_prices: { '맞춤 신장분사': 12000 },
       prescription_colors: { '맞춤 신장분사': '#123456' },
+      prescription_background_colors: { '맞춤 신장분사': '#dbeafe' },
       prescription_incentive_percentages: { '맞춤 신장분사': 8.5 },
       shortcuts: { '맞춤 신장분사': 'A' },
       dose_tags: { '맞춤 신장분사': 'S' },
@@ -122,6 +123,7 @@ describe('monthly settlement shortcut settings', () => {
     assert.deepEqual(effective.cryo_prescriptions, ['맞춤 신장분사']);
     assert.equal(effective.cryo_prices['맞춤 신장분사'], 12000);
     assert.equal(effective.prescription_colors['맞춤 신장분사'], '#123456');
+    assert.equal(effective.prescription_background_colors['맞춤 신장분사'], '#dbeafe');
     assert.equal(effective.prescription_incentive_percentages['맞춤 신장분사'], 8.5);
     assert.equal(effective.shortcuts['맞춤 신장분사'], 'A');
     assert.equal(effective.dose_tags['맞춤 신장분사'], 'S');
