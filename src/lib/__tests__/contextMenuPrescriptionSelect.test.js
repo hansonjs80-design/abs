@@ -45,6 +45,9 @@ test('context menu prescription dropdowns show current monthly shortcuts on the 
   assert.match(select, /'--context-prescription-option-color': selectedColor/);
   assert.match(select, /context-menu-prescription-option-shortcut/);
   assert.match(select, /formatScheduleShortcutLabel/);
+  assert.match(select, /isWholeNumberShinjangSprayPrescription/);
+  assert.match(select, /is-whole-number-shinjang/);
+  assert.match(view, /emphasizeWholeNumberShinjangOptions/);
   assert.match(select, /const estimatedListHeight = \(options\.length \+ 1\) \* 33 \+ 8;/);
   const dropdownListRule = css.match(
     /\.context-menu-prescription-dropdown-list\s*\{([^}]*)\}/s
@@ -52,6 +55,10 @@ test('context menu prescription dropdowns show current monthly shortcuts on the 
   assert.doesNotMatch(dropdownListRule, /max-height:/);
   assert.doesNotMatch(dropdownListRule, /overflow-y:\s*auto;/);
   assert.match(dropdownListRule, /width:\s*max\(100%, 148px\);/);
+  assert.match(
+    css,
+    /\.context-menu-prescription-dropdown-option\.is-whole-number-shinjang\s*\{[^}]*background:\s*#edf1f6;/s
+  );
   assert.match(
     css,
     /\.context-menu-prescription-dropdown-option:hover,[^{]*\{[^}]*background:\s*#8fbced;[^}]*font-weight:\s*900;/s

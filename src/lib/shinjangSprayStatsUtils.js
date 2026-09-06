@@ -148,6 +148,14 @@ export function isShinjangSprayPrescription(value) {
   return normalizeMarkerText(value).includes('신장분사');
 }
 
+export function isWholeNumberShinjangSprayPrescription(value) {
+  const doseMatch = String(value || '')
+    .normalize('NFKC')
+    .trim()
+    .match(/신장분사\s*(\d+(?:\.\d+)?)/);
+  return Boolean(doseMatch && !doseMatch[1].includes('.'));
+}
+
 export function mergeShinjangSprayLogs({
   shockwaveRows = [],
   manualTherapyRows = [],

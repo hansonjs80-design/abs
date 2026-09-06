@@ -7,6 +7,7 @@ import {
   buildShinjangSprayPrescriptions,
   buildShinjangSpraySettlementSummary,
   isShinjangSprayPrescription,
+  isWholeNumberShinjangSprayPrescription,
   mergeShinjangSprayLogs,
 } from '../shinjangSprayStatsUtils.js';
 
@@ -75,6 +76,15 @@ describe('shinjang spray statistics', () => {
     assert.equal(isShinjangSprayPrescription('F3.0(신장분사DC)'), true);
     assert.equal(isShinjangSprayPrescription('특수 신장분사 처방'), true);
     assert.equal(isShinjangSprayPrescription('F2.5'), false);
+  });
+
+  it('distinguishes whole-number shinjang prescriptions from decimal prescriptions', () => {
+    assert.equal(isWholeNumberShinjangSprayPrescription('신장분사 1'), true);
+    assert.equal(isWholeNumberShinjangSprayPrescription('신장분사2'), true);
+    assert.equal(isWholeNumberShinjangSprayPrescription('신장분사 2.0'), false);
+    assert.equal(isWholeNumberShinjangSprayPrescription('신장분사 2.5'), false);
+    assert.equal(isWholeNumberShinjangSprayPrescription('신장분사 3.0 DC'), false);
+    assert.equal(isWholeNumberShinjangSprayPrescription('F3.0(신장분사DC)'), false);
   });
 
   it('combines both treatment logs and deduplicates the same scheduler cell', () => {

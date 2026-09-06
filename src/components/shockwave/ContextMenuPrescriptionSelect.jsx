@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 
 import { formatScheduleShortcutLabel } from '../../lib/scheduleKeyboardUtils';
 import { getPrescriptionColor } from '../../lib/schedulerUtils';
+import { isWholeNumberShinjangSprayPrescription } from '../../lib/shinjangSprayStatsUtils';
 
 export default function ContextMenuPrescriptionSelect({
   ariaLabel,
@@ -10,6 +11,7 @@ export default function ContextMenuPrescriptionSelect({
   prescriptionColors = {},
   shortcuts = {},
   shortcutModifier,
+  emphasizeWholeNumberShinjangOptions = false,
   align = 'start',
   onChange,
 }) {
@@ -98,11 +100,13 @@ export default function ContextMenuPrescriptionSelect({
               shortcutModifier
             );
             const isSelected = value === prescription;
+            const isWholeNumberShinjang = emphasizeWholeNumberShinjangOptions
+              && isWholeNumberShinjangSprayPrescription(prescription);
             return (
               <button
                 type="button"
                 key={prescription}
-                className={`context-menu-prescription-dropdown-option${isSelected ? ' is-selected' : ''}`}
+                className={`context-menu-prescription-dropdown-option${isWholeNumberShinjang ? ' is-whole-number-shinjang' : ''}${isSelected ? ' is-selected' : ''}`}
                 role="option"
                 aria-selected={isSelected}
                 style={prescriptionColor ? { '--context-prescription-option-color': prescriptionColor } : undefined}

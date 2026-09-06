@@ -3015,6 +3015,10 @@
   text-align: left;
 }
 
+.shockwave-context-menu .context-menu-prescription-dropdown-option.is-whole-number-shinjang {
+  background: #edf1f6;
+}
+
 .shockwave-context-menu .context-menu-prescription-dropdown-option.is-selected {
   background: #dbeafe;
   color: #0f4c81;

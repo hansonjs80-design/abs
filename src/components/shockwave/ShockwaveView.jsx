@@ -3753,6 +3753,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                                 prescriptionColors={contextMenuPrescriptionColors}
                                 shortcuts={effectiveShinjangSettings?.shortcuts || {}}
                                 shortcutModifier={shortcutLabels.shinjangPrescriptionModifier}
+                                emphasizeWholeNumberShinjangOptions
                                 align="end"
                                 onChange={(nextPrescription) => {
                                   const prescription = nextPrescription || null;
