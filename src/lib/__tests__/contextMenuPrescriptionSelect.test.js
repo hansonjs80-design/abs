@@ -103,7 +103,7 @@ test('context menu prescription dropdowns show current monthly shortcuts on the 
   assert.match(view, /ariaLabel="신장분사 처방 선택"/);
   assert.match(
     css,
-    /\.context-menu-submenu--prescription\s*\{[^}]*width:\s*min\(318px, calc\(100vw - 36px\)\);[^}]*max-width:\s*min\(318px, calc\(100vw - 36px\)\);/s
+    /\.context-menu-submenu--prescription\s*\{[^}]*width:\s*min\(318px, calc\(100vw - 36px\), var\(--context-submenu-max-width, calc\(100vw - 36px\)\)\);[^}]*max-width:\s*min\(318px, calc\(100vw - 36px\), var\(--context-submenu-max-width, calc\(100vw - 36px\)\)\);/s
   );
   assert.match(
     css,

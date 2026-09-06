@@ -14,16 +14,17 @@ export default function useContextMenuPositioning({
   setContextMenu,
 }) {
   const [contextSubmenuOffset, setContextSubmenuOffset] = useState({ x: 0, y: 0 });
-  const [bodySubmenuLayout, setBodySubmenuLayout] = useState({
+  const [anchoredSubmenuLayout, setAnchoredSubmenuLayout] = useState({
     openLeft: null,
     maxWidth: null,
+    kind: null,
   });
 
-  const resetBodySubmenuLayout = useCallback(() => {
-    setBodySubmenuLayout((prev) => (
-      prev.openLeft === null && prev.maxWidth === null
+  const resetAnchoredSubmenuLayout = useCallback(() => {
+    setAnchoredSubmenuLayout((prev) => (
+      prev.openLeft === null && prev.maxWidth === null && prev.kind === null
         ? prev
-        : { openLeft: null, maxWidth: null }
+        : { openLeft: null, maxWidth: null, kind: null }
     ));
   }, []);
 
@@ -51,7 +52,7 @@ export default function useContextMenuPositioning({
       setContextSubmenuOffset((prev) => (
         prev.x === 0 && prev.y === 0 ? prev : { x: 0, y: 0 }
       ));
-      resetBodySubmenuLayout();
+      resetAnchoredSubmenuLayout();
       return;
     }
 
@@ -60,7 +61,7 @@ export default function useContextMenuPositioning({
       setContextSubmenuOffset((prev) => (
         prev.x === 0 && prev.y === 0 ? prev : { x: 0, y: 0 }
       ));
-      resetBodySubmenuLayout();
+      resetAnchoredSubmenuLayout();
       return;
     }
 
@@ -76,9 +77,12 @@ export default function useContextMenuPositioning({
     );
     const isBodySubmenu = submenu.classList.contains('context-menu-submenu--body')
       && !menu.classList.contains('standalone-mode');
+    const isPrescriptionSubmenu = submenu.classList.contains('context-menu-submenu--prescription')
+      && !menu.classList.contains('standalone-mode');
+    const isAnchoredSubmenu = isBodySubmenu || isPrescriptionSubmenu;
     let nextOffset = viewportOffset;
 
-    if (isBodySubmenu) {
+    if (isAnchoredSubmenu) {
       const anchoredLayout = getAnchoredFloatingPanelLayout({
         panelRect: rect,
         anchorRect: menu.getBoundingClientRect(),
@@ -88,20 +92,22 @@ export default function useContextMenuPositioning({
         preferLeft: menu.classList.contains('submenu-pop-left'),
       });
       nextOffset = { x: 0, y: viewportOffset.y };
-      setBodySubmenuLayout((prev) => (
+      const nextKind = isBodySubmenu ? 'body' : 'prescription';
+      setAnchoredSubmenuLayout((prev) => (
         prev.openLeft === anchoredLayout.openLeft
           && prev.maxWidth === anchoredLayout.maxWidth
+          && prev.kind === nextKind
           ? prev
-          : anchoredLayout
+          : { ...anchoredLayout, kind: nextKind }
       ));
     } else {
-      resetBodySubmenuLayout();
+      resetAnchoredSubmenuLayout();
     }
 
     setContextSubmenuOffset((prev) => (
       prev.x === nextOffset.x && prev.y === nextOffset.y ? prev : nextOffset
     ));
-  }, [activeContextSubmenu, contextMenuRef, resetBodySubmenuLayout]);
+  }, [activeContextSubmenu, contextMenuRef, resetAnchoredSubmenuLayout]);
 
   useEffect(() => {
     if (!contextMenu) return undefined;
@@ -172,8 +178,11 @@ export default function useContextMenuPositioning({
   ]);
 
   return {
-    bodySubmenuMaxWidth: bodySubmenuLayout.maxWidth,
-    bodySubmenuOpenLeft: bodySubmenuLayout.openLeft,
+    bodySubmenuMaxWidth: anchoredSubmenuLayout.kind === 'body'
+      ? anchoredSubmenuLayout.maxWidth
+      : null,
+    contextSubmenuMaxWidth: anchoredSubmenuLayout.maxWidth,
+    contextSubmenuOpenLeft: anchoredSubmenuLayout.openLeft,
     contextSubmenuOffsetX: contextSubmenuOffset.x,
     contextSubmenuOffsetY: contextSubmenuOffset.y,
   };

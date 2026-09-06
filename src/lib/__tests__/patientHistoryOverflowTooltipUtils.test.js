@@ -160,8 +160,9 @@ test('patient history exposes treatment tabs, selectable sorting, and treatment 
   );
   assert.match(
     shockwaveCss,
-    /\.patient-history-view-controls\s*\{[^}]*position:\s*sticky;[^}]*top:\s*0;[^}]*z-index:\s*8;/s
+    /\.patient-history-sticky-controls\s*\{[^}]*position:\s*sticky;[^}]*top:\s*-14px;[^}]*z-index:\s*8;[^}]*background:\s*var\(--bg-primary, #fff\);/s
   );
+  assert.match(shockwaveView, /className="patient-history-sticky-controls"/);
   const searchControlIndex = shockwaveView.indexOf('className="patient-history-search-control"');
   const searchTargetIndex = shockwaveView.indexOf('className="patient-history-search-target"');
   const scrollBodyIndex = shockwaveView.indexOf('ref={patientHistoryModalBodyRef}');

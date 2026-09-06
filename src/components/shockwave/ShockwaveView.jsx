@@ -448,7 +448,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const scheduleDateRef = useRef({ year: currentYear, month: currentMonth });
   const {
     bodySubmenuMaxWidth,
-    bodySubmenuOpenLeft,
+    contextSubmenuMaxWidth,
+    contextSubmenuOpenLeft,
     contextSubmenuOffsetX,
     contextSubmenuOffsetY,
   } = useContextMenuPositioning({
@@ -3366,8 +3367,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         <div
           ref={contextMenuRef}
           className={`shockwave-context-menu schedule-context-menu${contextMenu.patientHistoryCell ? ' patient-history-context-menu' : ''} ${(
-            activeContextSubmenu === 'body' && bodySubmenuOpenLeft !== null
-              ? bodySubmenuOpenLeft
+            contextSubmenuOpenLeft !== null
+              ? contextSubmenuOpenLeft
               : contextMenu.isNearRightEdge
           ) ? 'submenu-pop-left' : ''} ${(contextMenu.isStandaloneSubmenu || contextMenu.isStandaloneBodyPart) ? 'standalone-mode' : ''}`}
           style={{
@@ -3375,6 +3376,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
             left: contextMenu.x,
             '--context-body-submenu-max-width': bodySubmenuMaxWidth !== null
               ? `${bodySubmenuMaxWidth}px`
+              : undefined,
+            '--context-submenu-max-width': contextSubmenuMaxWidth !== null
+              ? `${contextSubmenuMaxWidth}px`
               : undefined,
             '--context-submenu-offset-x': `${contextSubmenuOffsetX}px`,
             '--context-submenu-offset-y': `${contextSubmenuOffsetY}px`,
@@ -4107,37 +4111,39 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
               <button onClick={closePatientHistoryModal} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', padding: '0 4px', color: 'var(--text-secondary, #666)' }}>✕</button>
             </div>
             <div ref={patientHistoryModalBodyRef} style={{ padding: '14px 18px', maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain' }}>
-              <div className="patient-history-view-controls">
-                <div className="patient-history-treatment-tabs" role="tablist" aria-label="스케줄 내역 치료 구분">
-                  {patientHistoryTreatmentTabOptions.map((option) => {
-                    const isActive = patientHistoryTreatmentTab === option.key;
-                    return (
-                      <button
-                        key={`patient-history-treatment-${option.key}`}
-                        type="button"
-                        role="tab"
-                        aria-selected={isActive}
-                        className={`patient-history-treatment-tab patient-history-treatment-tab--${option.key}${isActive ? ' is-active' : ''}`}
-                        onClick={() => setPatientHistoryTreatmentTab(option.key)}
-                      >
-                        <span>{option.label}</span>
-                        <span className="patient-history-treatment-count">{option.count}</span>
-                      </button>
-                    );
-                  })}
+              <div className="patient-history-sticky-controls">
+                <div className="patient-history-view-controls">
+                  <div className="patient-history-treatment-tabs" role="tablist" aria-label="스케줄 내역 치료 구분">
+                    {patientHistoryTreatmentTabOptions.map((option) => {
+                      const isActive = patientHistoryTreatmentTab === option.key;
+                      return (
+                        <button
+                          key={`patient-history-treatment-${option.key}`}
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          className={`patient-history-treatment-tab patient-history-treatment-tab--${option.key}${isActive ? ' is-active' : ''}`}
+                          onClick={() => setPatientHistoryTreatmentTab(option.key)}
+                        >
+                          <span>{option.label}</span>
+                          <span className="patient-history-treatment-count">{option.count}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <label className="patient-history-sort-control">
+                    <span>정렬</span>
+                    <select
+                      aria-label="스케줄 내역 정렬 기준"
+                      value={patientHistorySortOrder}
+                      onChange={(event) => setPatientHistorySortOrder(event.target.value)}
+                    >
+                      {PATIENT_HISTORY_SORT_OPTIONS.map((option) => (
+                        <option key={option.key} value={option.key}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
-                <label className="patient-history-sort-control">
-                  <span>정렬</span>
-                  <select
-                    aria-label="스케줄 내역 정렬 기준"
-                    value={patientHistorySortOrder}
-                    onChange={(event) => setPatientHistorySortOrder(event.target.value)}
-                  >
-                    {PATIENT_HISTORY_SORT_OPTIONS.map((option) => (
-                      <option key={option.key} value={option.key}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
               </div>
               
               {patientHistoryModalData.loading ? (

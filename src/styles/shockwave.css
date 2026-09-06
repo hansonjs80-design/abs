@@ -1827,9 +1827,9 @@
   top: -6px;
   left: calc(100% + 4px);
   right: auto;
-  width: min(318px, calc(100vw - 36px));
+  width: min(318px, calc(100vw - 36px), var(--context-submenu-max-width, calc(100vw - 36px)));
   min-width: 0;
-  max-width: min(318px, calc(100vw - 36px));
+  max-width: min(318px, calc(100vw - 36px), var(--context-submenu-max-width, calc(100vw - 36px)));
   padding: 8px;
   border-radius: 11px;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14), 0 4px 10px rgba(15, 23, 42, 0.08);
@@ -3928,20 +3928,26 @@
   font-weight: 700;
 }
 
-.patient-history-view-controls {
+.patient-history-sticky-controls {
   position: sticky;
-  top: 0;
+  top: -14px;
   z-index: 8;
+  margin: -14px -18px 10px;
+  padding: 14px 18px 0;
+  background: var(--bg-primary, #fff);
+  box-shadow: 0 6px 10px -9px rgba(15, 23, 42, 0.55);
+}
+
+.patient-history-view-controls {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 0;
   padding: 7px 9px;
   border: 1px solid #d7dee8;
   border-radius: 8px;
   background: #f8fafc;
-  box-shadow: 0 4px 8px -7px rgba(15, 23, 42, 0.45);
 }
 
 .patient-history-treatment-filters {

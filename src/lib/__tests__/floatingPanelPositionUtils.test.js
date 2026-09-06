@@ -95,6 +95,8 @@ test('repositions an open context submenu whenever its rendered size changes', a
   assert.match(positioningHook, /resizeObserver\.observe\(submenu\)/);
   assert.match(positioningHook, /getAnchoredFloatingPanelLayout/);
   assert.match(positioningHook, /!menu\.classList\.contains\('standalone-mode'\)/);
+  assert.match(positioningHook, /context-menu-submenu--prescription/);
+  assert.match(positioningHook, /contextSubmenuOpenLeft:\s*anchoredSubmenuLayout\.openLeft/);
   assert.match(
     css,
     /\.context-menu-submenu\s*\{[^}]*box-sizing:\s*border-box;/s,
@@ -102,6 +104,10 @@ test('repositions an open context submenu whenever its rendered size changes', a
   assert.match(
     css,
     /\.context-menu-submenu--body\s*\{[^}]*--context-body-submenu-max-width/s,
+  );
+  assert.match(
+    css,
+    /\.context-menu-submenu--prescription\s*\{[^}]*--context-submenu-max-width/s,
   );
   assert.match(
     css,
