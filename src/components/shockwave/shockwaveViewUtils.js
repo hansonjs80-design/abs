@@ -48,17 +48,25 @@ export function getPatientHistoryPrescriptionColor(prescription, colorMap) {
     || 'var(--text-primary, #1f2937)';
 }
 
+function getContextMenuPrescriptionTextUnits(value) {
+  return Array.from(String(value || '').normalize('NFKC').trim()).reduce((units, character) => {
+    if (/\s/u.test(character)) return units + 0.35;
+    if (/[A-Za-z0-9.,/()_-]/u.test(character)) return units + 0.62;
+    return units + 1;
+  }, 0);
+}
+
 export function getContextMenuPrescriptionLayout(shinjangPrescriptions = []) {
-  const longestPrescriptionLength = (Array.isArray(shinjangPrescriptions)
+  const longestPrescriptionUnits = (Array.isArray(shinjangPrescriptions)
     ? shinjangPrescriptions
     : []
   ).reduce((longest, prescription) => (
-    Math.max(longest, Array.from(String(prescription || '').normalize('NFKC').trim()).length)
+    Math.max(longest, getContextMenuPrescriptionTextUnits(prescription))
   ), 0);
   const sideColumnWidth = 90;
   const shinjangColumnWidth = Math.min(
-    360,
-    Math.max(148, 72 + (longestPrescriptionLength * 9))
+    320,
+    Math.max(112, Math.ceil(30 + (longestPrescriptionUnits * 12.5)))
   );
 
   return {

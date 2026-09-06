@@ -25,7 +25,13 @@ describe('shockwave view patient history model', () => {
       '신장분사 3.0 DC 장문 처방',
     ]);
 
-    assert.equal(compact.shinjangColumnWidth, 148);
+    const currentMenu = getContextMenuPrescriptionLayout([
+      '신장분사 2.5',
+      '신장분사 3.0 DC',
+    ]);
+
+    assert.equal(compact.shinjangColumnWidth, 112);
+    assert.equal(currentMenu.shinjangColumnWidth, 128);
     assert.ok(expanded.shinjangColumnWidth > compact.shinjangColumnWidth);
     assert.ok(expanded.preferredWidth > compact.preferredWidth);
     assert.ok(expanded.shinjangColumnRatio > compact.shinjangColumnRatio);
