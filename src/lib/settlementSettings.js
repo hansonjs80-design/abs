@@ -56,7 +56,7 @@ export const DEFAULT_SHINJANG_SPRAY_SETTLEMENT = {
   },
   patient_delimiter_prescriptions: [],
   patient_delimiter_colors: {},
-  patient_delimiter_font_weights: {},
+  patient_delimiter_thicknesses: {},
   shortcuts: {},
   dose_tags: {},
   duration_minutes: {},
@@ -279,6 +279,28 @@ export function getEffectiveShinjangSpraySettings(settings, year, month) {
   );
   const filterList = (values) => (Array.isArray(values) ? values : [])
     .filter((prescription) => activePrescriptionSet.has(prescription));
+  const normalizeDelimiterThickness = (value, fallback = 0.75) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return fallback;
+    return Math.min(4, Math.max(0, Math.round(numeric * 4) / 4));
+  };
+  const delimiterThicknesses = override?.patient_delimiter_thicknesses
+    && typeof override.patient_delimiter_thicknesses === 'object'
+    && !Array.isArray(override.patient_delimiter_thicknesses)
+    ? filterMap(override.patient_delimiter_thicknesses)
+    : filterMap(Object.fromEntries(Object.entries(
+      override?.patient_delimiter_font_weights
+      && typeof override.patient_delimiter_font_weights === 'object'
+      && !Array.isArray(override.patient_delimiter_font_weights)
+        ? override.patient_delimiter_font_weights
+        : {}
+    ).map(([prescription, value]) => {
+      const legacyWeight = Math.min(950, Math.max(100, Number(value) || 950));
+      return [
+        prescription,
+        normalizeDelimiterThickness(((legacyWeight - 100) / 850) * 2),
+      ];
+    })));
 
   return {
     prescriptions,
@@ -302,8 +324,8 @@ export function getEffectiveShinjangSpraySettings(settings, year, month) {
     patient_delimiter_colors: {
       ...filterMap(override?.patient_delimiter_colors),
     },
-    patient_delimiter_font_weights: {
-      ...filterMap(override?.patient_delimiter_font_weights),
+    patient_delimiter_thicknesses: {
+      ...delimiterThicknesses,
     },
     shortcuts: {
       ...filterMap(override?.shortcuts),
@@ -363,16 +385,16 @@ export function setMonthlyShinjangSpraySettings(settings, year, month, nextConfi
       ])
       .filter(([prescription]) => prescription)
   ));
-  const patientDelimiterFontWeights = filterMap(Object.fromEntries(
+  const patientDelimiterThicknesses = filterMap(Object.fromEntries(
     Object.entries(
-      nextConfig?.patient_delimiter_font_weights
-      && typeof nextConfig.patient_delimiter_font_weights === 'object'
-      && !Array.isArray(nextConfig.patient_delimiter_font_weights)
-        ? nextConfig.patient_delimiter_font_weights
+      nextConfig?.patient_delimiter_thicknesses
+      && typeof nextConfig.patient_delimiter_thicknesses === 'object'
+      && !Array.isArray(nextConfig.patient_delimiter_thicknesses)
+        ? nextConfig.patient_delimiter_thicknesses
         : {}
     ).map(([prescription, value]) => [
       prescription,
-      Math.min(950, Math.max(100, Math.round((Number(value) || 950) / 50) * 50)),
+      Math.min(4, Math.max(0, Math.round((Number(value) || 0) * 4) / 4)),
     ])
   ));
 
@@ -390,7 +412,7 @@ export function setMonthlyShinjangSpraySettings(settings, year, month, nextConfi
           nextConfig?.patient_delimiter_prescriptions
         ),
         patient_delimiter_colors: filterMap(nextConfig?.patient_delimiter_colors),
-        patient_delimiter_font_weights: patientDelimiterFontWeights,
+        patient_delimiter_thicknesses: patientDelimiterThicknesses,
         shortcuts: filterMap(nextConfig?.shortcuts),
         dose_tags: filterMap(nextConfig?.dose_tags),
         duration_minutes: filterMap(nextConfig?.duration_minutes),

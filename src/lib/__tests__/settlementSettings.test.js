@@ -108,7 +108,7 @@ describe('monthly settlement shortcut settings', () => {
       prescription_colors: { '맞춤 신장분사': '#123456' },
       patient_delimiter_prescriptions: ['맞춤 신장분사'],
       patient_delimiter_colors: { '맞춤 신장분사': '#dc2626' },
-      patient_delimiter_font_weights: { '맞춤 신장분사': 725 },
+      patient_delimiter_thicknesses: { '맞춤 신장분사': 2.37 },
       prescription_incentive_percentages: { '맞춤 신장분사': 8.5 },
       shortcuts: { '맞춤 신장분사': 'A' },
       dose_tags: { '맞춤 신장분사': 'S' },
@@ -126,13 +126,30 @@ describe('monthly settlement shortcut settings', () => {
     assert.equal(effective.prescription_colors['맞춤 신장분사'], '#123456');
     assert.deepEqual(effective.patient_delimiter_prescriptions, ['맞춤 신장분사']);
     assert.equal(effective.patient_delimiter_colors['맞춤 신장분사'], '#dc2626');
-    assert.equal(effective.patient_delimiter_font_weights['맞춤 신장분사'], 750);
+    assert.equal(effective.patient_delimiter_thicknesses['맞춤 신장분사'], 2.25);
     assert.equal(effective.prescription_incentive_percentages['맞춤 신장분사'], 8.5);
     assert.equal(effective.shortcuts['맞춤 신장분사'], 'A');
     assert.equal(effective.dose_tags['맞춤 신장분사'], 'S');
     assert.equal(effective.duration_minutes['맞춤 신장분사'], 30);
     assert.deepEqual(effective.visit_line_break_prescriptions, ['맞춤 신장분사']);
     assert.deepEqual(effective.hidden_prescriptions, ['맞춤 신장분사']);
+  });
+
+  it('converts previously stored delimiter font weights into visible stroke thickness', () => {
+    const settings = {
+      monthly_settlement_settings: {
+        '2026-09': {
+          shinjang_spray: {
+            prescriptions: ['맞춤 신장분사'],
+            patient_delimiter_prescriptions: ['맞춤 신장분사'],
+            patient_delimiter_font_weights: { '맞춤 신장분사': 950 },
+          },
+        },
+      },
+    };
+
+    const effective = getEffectiveShinjangSpraySettings(settings, 2026, 9);
+    assert.equal(effective.patient_delimiter_thicknesses['맞춤 신장분사'], 2);
   });
 
   it('stores and inherits cryo selections and prices separately for each treatment type', () => {

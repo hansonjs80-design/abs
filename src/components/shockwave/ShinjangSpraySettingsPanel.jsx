@@ -8,17 +8,23 @@ import {
 
 const DEFAULT_PRESCRIPTION_COLOR = '#0f766e';
 const DEFAULT_PATIENT_DELIMITER_COLOR = '#0891b2';
-const DEFAULT_PATIENT_DELIMITER_FONT_WEIGHT = 950;
+const DEFAULT_PATIENT_DELIMITER_THICKNESS = 0.75;
 
 function normalizeDurationStepMinutes(value) {
   const numeric = Number(value) || 0;
   return Math.max(0, Math.round(numeric / 5) * 5);
 }
 
-function normalizePatientDelimiterFontWeight(value) {
+function normalizePatientDelimiterThickness(value) {
   const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return DEFAULT_PATIENT_DELIMITER_FONT_WEIGHT;
-  return Math.min(950, Math.max(100, Math.round(numeric / 50) * 50));
+  if (!Number.isFinite(numeric)) return DEFAULT_PATIENT_DELIMITER_THICKNESS;
+  return Math.min(4, Math.max(0, Math.round(numeric * 4) / 4));
+}
+
+function enablePatientDelimiterPrescription(prescriptions, prescription) {
+  return prescriptions.includes(prescription)
+    ? prescriptions
+    : [...prescriptions, prescription];
 }
 
 function normalizePrescriptionName(value) {
@@ -40,8 +46,8 @@ function buildInitialDraft(effectiveSettings) {
       ...(effectiveSettings?.patient_delimiter_prescriptions || []),
     ],
     patient_delimiter_colors: { ...(effectiveSettings?.patient_delimiter_colors || {}) },
-    patient_delimiter_font_weights: {
-      ...(effectiveSettings?.patient_delimiter_font_weights || {}),
+    patient_delimiter_thicknesses: {
+      ...(effectiveSettings?.patient_delimiter_thicknesses || {}),
     },
     prescription_incentive_percentages: {
       ...(effectiveSettings?.prescription_incentive_percentages || {}),
@@ -109,11 +115,11 @@ function renameDraftPrescription(draft, index, previousName, nextName) {
       nextName,
       DEFAULT_PATIENT_DELIMITER_COLOR
     ),
-    patient_delimiter_font_weights: renameMapKey(
-      draft.patient_delimiter_font_weights,
+    patient_delimiter_thicknesses: renameMapKey(
+      draft.patient_delimiter_thicknesses,
       previousName,
       nextName,
-      DEFAULT_PATIENT_DELIMITER_FONT_WEIGHT
+      DEFAULT_PATIENT_DELIMITER_THICKNESS
     ),
     prescription_incentive_percentages: renameMapKey(
       draft.prescription_incentive_percentages,
@@ -269,9 +275,9 @@ export default function ShinjangSpraySettingsPanel({
         ...current.patient_delimiter_colors,
         [prescription]: DEFAULT_PATIENT_DELIMITER_COLOR,
       },
-      patient_delimiter_font_weights: {
-        ...current.patient_delimiter_font_weights,
-        [prescription]: DEFAULT_PATIENT_DELIMITER_FONT_WEIGHT,
+      patient_delimiter_thicknesses: {
+        ...current.patient_delimiter_thicknesses,
+        [prescription]: DEFAULT_PATIENT_DELIMITER_THICKNESS,
       },
       prescription_incentive_percentages: {
         ...current.prescription_incentive_percentages,
@@ -306,8 +312,8 @@ export default function ShinjangSpraySettingsPanel({
         (item) => item !== prescription
       ),
       patient_delimiter_colors: removeMapKey(current.patient_delimiter_colors),
-      patient_delimiter_font_weights: removeMapKey(
-        current.patient_delimiter_font_weights
+      patient_delimiter_thicknesses: removeMapKey(
+        current.patient_delimiter_thicknesses
       ),
       prescription_incentive_percentages: removeMapKey(
         current.prescription_incentive_percentages
@@ -343,10 +349,10 @@ export default function ShinjangSpraySettingsPanel({
       prescription,
       draft.patient_delimiter_colors?.[prescription] || DEFAULT_PATIENT_DELIMITER_COLOR,
     ]));
-    const patientDelimiterFontWeights = Object.fromEntries(prescriptions.map((prescription) => [
+    const patientDelimiterThicknesses = Object.fromEntries(prescriptions.map((prescription) => [
       prescription,
-      normalizePatientDelimiterFontWeight(
-        draft.patient_delimiter_font_weights?.[prescription]
+      normalizePatientDelimiterThickness(
+        draft.patient_delimiter_thicknesses?.[prescription]
       ),
     ]));
     const doseTags = Object.fromEntries(prescriptions.map((prescription) => [
@@ -385,7 +391,7 @@ export default function ShinjangSpraySettingsPanel({
           (prescription) => prescriptions.includes(prescription)
         ),
         patientDelimiterColors,
-        patientDelimiterFontWeights,
+        patientDelimiterThicknesses,
         prescriptionIncentivePercentages: buildNumberMap(
           draft.prescription_incentive_percentages
         ),
@@ -759,13 +765,16 @@ export default function ShinjangSpraySettingsPanel({
               <input
                 type="color"
                 className="settlement-color-input"
-                disabled={!hasPatientDelimiterStyle}
                 value={draft.patient_delimiter_colors[prescription]
                   || DEFAULT_PATIENT_DELIMITER_COLOR}
                 aria-label={`${prescription} 슬래시 색`}
-                title={`${prescription} 차트번호와 이름 사이 / 색`}
+                title={`${prescription} 차트번호와 이름 사이 / 색 (변경 시 강조 자동 적용)`}
                 onChange={(event) => setDraft((current) => ({
                   ...current,
+                  patient_delimiter_prescriptions: enablePatientDelimiterPrescription(
+                    current.patient_delimiter_prescriptions,
+                    prescription
+                  ),
                   patient_delimiter_colors: {
                     ...current.patient_delimiter_colors,
                     [prescription]: event.target.value,
@@ -774,29 +783,32 @@ export default function ShinjangSpraySettingsPanel({
               />
               <input
                 type="number"
-                className="form-input settlement-price-input shinjang-spray-delimiter-weight-input"
-                min={100}
-                max={950}
-                step={50}
-                disabled={!hasPatientDelimiterStyle}
-                value={draft.patient_delimiter_font_weights[prescription]
-                  ?? DEFAULT_PATIENT_DELIMITER_FONT_WEIGHT}
+                className="form-input settlement-price-input shinjang-spray-delimiter-thickness-input"
+                min={0}
+                max={4}
+                step={0.25}
+                value={draft.patient_delimiter_thicknesses[prescription]
+                  ?? DEFAULT_PATIENT_DELIMITER_THICKNESS}
                 aria-label={`${prescription} 슬래시 두께`}
-                title="100(얇게)부터 950(가장 굵게)까지 설정"
+                title="0(기본 두께)부터 4px(가장 굵게)까지 설정, 변경 시 강조 자동 적용"
                 onChange={(event) => setDraft((current) => ({
                   ...current,
-                  patient_delimiter_font_weights: {
-                    ...current.patient_delimiter_font_weights,
+                  patient_delimiter_prescriptions: enablePatientDelimiterPrescription(
+                    current.patient_delimiter_prescriptions,
+                    prescription
+                  ),
+                  patient_delimiter_thicknesses: {
+                    ...current.patient_delimiter_thicknesses,
                     [prescription]: event.target.value,
                   },
                 }))}
                 onBlur={(event) => {
-                  const nextWeight = normalizePatientDelimiterFontWeight(event.target.value);
+                  const nextThickness = normalizePatientDelimiterThickness(event.target.value);
                   setDraft((current) => ({
                     ...current,
-                    patient_delimiter_font_weights: {
-                      ...current.patient_delimiter_font_weights,
-                      [prescription]: nextWeight,
+                    patient_delimiter_thicknesses: {
+                      ...current.patient_delimiter_thicknesses,
+                      [prescription]: nextThickness,
                     },
                   }));
                 }}

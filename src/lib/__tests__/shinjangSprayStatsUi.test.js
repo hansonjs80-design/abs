@@ -131,15 +131,19 @@ describe('shinjang spray statistics UI', () => {
     assert.match(settingsSource, /aria-label=\{`\$\{prescription\} 슬래시 강조`\}/);
     assert.match(settingsSource, /aria-label=\{`\$\{prescription\} 슬래시 색`\}/);
     assert.match(settingsSource, /aria-label=\{`\$\{prescription\} 슬래시 두께`\}/);
+    assert.doesNotMatch(settingsSource, /disabled=\{!hasPatientDelimiterStyle\}/);
+    assert.match(settingsSource, /enablePatientDelimiterPrescription/);
+    assert.match(settingsSource, /변경 시 강조 자동 적용/);
     assert.match(pageSource, /patient_delimiter_prescriptions:\s*nextPatientDelimiterPrescriptions/);
     assert.match(pageSource, /patient_delimiter_colors:\s*nextPatientDelimiterColors/);
-    assert.match(pageSource, /patient_delimiter_font_weights:\s*nextPatientDelimiterFontWeights/);
+    assert.match(pageSource, /patient_delimiter_thicknesses:\s*nextPatientDelimiterThicknesses/);
     assert.match(viewStateSource, /enabledPrescriptions\.has\(prescription\)/);
     assert.match(scheduleCellSource, /isShinjangSprayPrescription\(cellPrescription\)/);
     assert.match(scheduleCellSource, /splitSchedulerPatientDelimiter\(text\)/);
     assert.match(scheduleCellSource, /className="sw-cell-shinjang-patient-delimiter"/);
     assert.match(scheduleCssSource, /color:\s*var\(--shinjang-patient-delimiter-color, currentColor\) !important;/);
-    assert.match(scheduleCssSource, /font-weight:\s*var\(--shinjang-patient-delimiter-font-weight, inherit\);/);
+    assert.match(scheduleCssSource, /-webkit-text-stroke-width:\s*var\(--shinjang-patient-delimiter-thickness, 0\);/);
+    assert.match(scheduleCssSource, /paint-order:\s*stroke fill;/);
   });
 
   it('shows only prescriptions actually completed by each therapist in compact settlement', async () => {

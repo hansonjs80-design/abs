@@ -113,13 +113,13 @@ export default function useScheduleViewState({
       if (!enabledPrescriptions.has(prescription)) return acc;
       const color = shinjangSpraySettlement.patient_delimiter_colors?.[prescription]
         || '#0891b2';
-      const fontWeight = Math.min(950, Math.max(
-        100,
-        Number(shinjangSpraySettlement.patient_delimiter_font_weights?.[prescription]) || 950
+      const thickness = Math.min(4, Math.max(
+        0,
+        Number(shinjangSpraySettlement.patient_delimiter_thicknesses?.[prescription]) || 0
       ));
       const delimiterStyle = {
         '--shinjang-patient-delimiter-color': color,
-        '--shinjang-patient-delimiter-font-weight': String(fontWeight),
+        '--shinjang-patient-delimiter-thickness': `${thickness}px`,
       };
       acc[prescription] = delimiterStyle;
       acc[normalizePrescriptionColorKey(prescription)] = delimiterStyle;

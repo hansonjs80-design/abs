@@ -834,7 +834,9 @@
 
 .sw-cell .sw-cell-shinjang-patient-delimiter {
   color: var(--shinjang-patient-delimiter-color, currentColor) !important;
-  font-weight: var(--shinjang-patient-delimiter-font-weight, inherit);
+  -webkit-text-stroke-color: var(--shinjang-patient-delimiter-color, currentColor);
+  -webkit-text-stroke-width: var(--shinjang-patient-delimiter-thickness, 0);
+  paint-order: stroke fill;
 }
 
 .sw-cell.has-prescription-color:hover,
