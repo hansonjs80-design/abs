@@ -21,9 +21,12 @@ export const PATIENT_HISTORY_GROUPS = [
 ];
 
 export const PATIENT_HISTORY_SORT_OPTIONS = [
-  { key: 'date', label: '날짜순' },
-  { key: 'prescription', label: '처방순' },
-  { key: 'body', label: '부위순' },
+  { key: 'date', label: '날짜순 (최신순)' },
+  { key: 'date-reverse', label: '날짜 역순 (과거순)' },
+  { key: 'prescription', label: '처방순 (가나다순)' },
+  { key: 'prescription-reverse', label: '처방 역순 (다나가순)' },
+  { key: 'body', label: '부위순 (가나다순)' },
+  { key: 'body-reverse', label: '부위 역순 (다나가순)' },
 ];
 
 export const PATIENT_HISTORY_ALL_BODY_FILTER = '__all__';
@@ -306,6 +309,8 @@ function filterPatientHistoryLogsByPrescription(logs, prescriptionFilters) {
 
 export function sortPatientHistoryLogs(logs = [], sortOrder = 'date') {
   const source = Array.isArray(logs) ? logs : [];
+  const isReverse = String(sortOrder).endsWith('-reverse');
+  const baseSortOrder = String(sortOrder).replace(/-reverse$/, '');
   const compareDate = (left, right) => (
     String(right?.date || '').localeCompare(String(left?.date || ''))
   );
@@ -327,12 +332,12 @@ export function sortPatientHistoryLogs(logs = [], sortOrder = 'date') {
   return source
     .map((log, index) => ({ log, index }))
     .sort((left, right) => {
-      const primary = sortOrder === 'prescription'
+      const primary = baseSortOrder === 'prescription'
         ? compareLabel(left.log, right.log, 'prescription')
-        : sortOrder === 'body'
+        : baseSortOrder === 'body'
           ? compareLabel(left.log, right.log, 'body_part')
           : compareDate(left.log, right.log);
-      return primary
+      return (isReverse ? -primary : primary)
         || compareDate(left.log, right.log)
         || compareSchedulePosition(left.log, right.log)
         || left.index - right.index;

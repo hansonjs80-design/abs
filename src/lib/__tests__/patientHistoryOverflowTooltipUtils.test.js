@@ -133,6 +133,11 @@ test('patient history exposes treatment tabs, selectable sorting, and treatment 
   assert.match(shockwaveView, /patientHistoryTreatmentTab === 'all'/);
   assert.match(shockwaveView, /PATIENT_HISTORY_SORT_OPTIONS\.map/);
   assert.match(shockwaveView, /aria-label="스케줄 내역 정렬 기준"/);
+  assert.match(
+    shockwaveView,
+    /const handleOpenPatientHistoryFromShortcut = useCallback\(\(\) => \{\s*setPatientHistoryTreatmentTab\('all'\);/
+  );
+  assert.match(shockwaveView, /setContextMenu\(null\);\s*handleOpenPatientHistoryFromShortcut\(\);/);
   assert.match(shockwaveView, /patient-history-row-number-cell--\$\{historyTreatmentGroup\}/);
   assert.match(shockwaveView, />치료 구분<\/th>/);
   assert.match(shockwaveView, /patient-history-treatment-type-cell--\$\{historyTreatmentGroup\}/);
@@ -153,6 +158,15 @@ test('patient history exposes treatment tabs, selectable sorting, and treatment 
     shockwaveCss,
     /\.patient-history-treatment-tabs:has\(\.patient-history-treatment-tab--shinjang\.is-active\)\s*\{[^}]*border-bottom-color:\s*#0891b2;/s
   );
+  assert.match(
+    shockwaveCss,
+    /\.patient-history-view-controls\s*\{[^}]*position:\s*sticky;[^}]*top:\s*0;[^}]*z-index:\s*8;/s
+  );
+  const searchControlIndex = shockwaveView.indexOf('className="patient-history-search-control"');
+  const searchTargetIndex = shockwaveView.indexOf('className="patient-history-search-target"');
+  const scrollBodyIndex = shockwaveView.indexOf('ref={patientHistoryModalBodyRef}');
+  assert(searchControlIndex >= 0 && searchControlIndex < searchTargetIndex);
+  assert(searchTargetIndex < scrollBodyIndex);
 });
 
 test('patient history group count follows the title in a larger compact format', async () => {

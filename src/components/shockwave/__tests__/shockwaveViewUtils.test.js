@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  PATIENT_HISTORY_SORT_OPTIONS,
   buildShockwaveHoverTooltipText,
   buildPatientHistoryLogGroups,
   buildPatientHistoryTreatmentFilterOptions,
@@ -16,6 +17,17 @@ import {
 } from '../shockwaveViewUtils.js';
 
 describe('shockwave view patient history model', () => {
+  it('offers forward and reverse directions for every history sort field', () => {
+    assert.deepEqual(PATIENT_HISTORY_SORT_OPTIONS.map((option) => option.key), [
+      'date',
+      'date-reverse',
+      'prescription',
+      'prescription-reverse',
+      'body',
+      'body-reverse',
+    ]);
+  });
+
   it('orders the selected treatment group first and applies body filters', () => {
     const groups = buildPatientHistoryLogGroups({
       selectedGroupKey: 'manual',
@@ -108,7 +120,7 @@ describe('shockwave view patient history model', () => {
     assert.deepEqual(shinjangOnly[0].logs.map((log) => log.id), ['shinjang']);
   });
 
-  it('sorts selected history rows by prescription or body while keeping recent rows first within a label', () => {
+  it('sorts every history order forward or in reverse while keeping recent rows first within a label', () => {
     const logs = [
       { id: 'b-new', history_group: 'shockwave', date: '2026-09-03', prescription: 'B', body_part: 'Shoulder' },
       { id: 'a-old', history_group: 'manual', date: '2026-09-01', prescription: 'A', body_part: 'Knee' },
@@ -120,8 +132,12 @@ describe('shockwave view patient history model', () => {
       sortOrder,
     })[0].logs.map((log) => log.id);
 
+    assert.deepEqual(build('date'), ['b-new', 'a-new', 'a-old']);
+    assert.deepEqual(build('date-reverse'), ['a-old', 'a-new', 'b-new']);
     assert.deepEqual(build('prescription'), ['a-new', 'a-old', 'b-new']);
+    assert.deepEqual(build('prescription-reverse'), ['b-new', 'a-new', 'a-old']);
     assert.deepEqual(build('body'), ['a-old', 'a-new', 'b-new']);
+    assert.deepEqual(build('body-reverse'), ['b-new', 'a-new', 'a-old']);
   });
 
   it('tracks treatment filter counts and never lets the final treatment be unchecked', () => {

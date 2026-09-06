@@ -2057,6 +2057,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   });
 
   const handleOpenPatientHistoryFromShortcut = useCallback(() => {
+    setPatientHistoryTreatmentTab('all');
     const targetCell = selectedCellRef.current || selectedCell;
     if (targetCell) {
       patientHistoryTargetCellRef.current = targetCell;
@@ -3586,7 +3587,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                 <div className="context-menu-item context-menu-history-search-item" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => {
                   e.stopPropagation();
                   setContextMenu(null);
-                  handleOpenPatientHistoryModal();
+                  handleOpenPatientHistoryFromShortcut();
                 }}>
                   <div className="context-menu-label" style={{ fontWeight: 600, color: 'var(--brand-primary)' }}>
                     🔍 환자 내역 검색 ({shortcutLabels.patientHistory})
@@ -4034,10 +4035,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
           style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999999, overscrollBehavior: 'none' }}
         >
           <div style={{ background: 'var(--bg-primary, #fff)', maxWidth: patientHistoryModalLayout.maxWidth, width: patientHistoryModalLayout.width, borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--border-color, #eee)', background: 'var(--bg-secondary, #f8f9fa)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div className="patient-history-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--border-color, #eee)', background: 'var(--bg-secondary, #f8f9fa)' }}>
+              <div className="patient-history-modal-header-main">
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>환자 스케줄 내역 검색</h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-primary, #fff)', border: '1px solid var(--border-color, #ddd)', borderRadius: '6px', padding: '2px 8px' }}>
+                <div className="patient-history-search-control" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-primary, #fff)', border: '1px solid var(--border-color, #ddd)', borderRadius: '6px', padding: '2px 8px' }}>
                   <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary, #666)' }}>검색:</span>
                   <input 
                     ref={patientHistorySearchInputRef}
@@ -4061,51 +4062,51 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                   />
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary, #999)' }}>↵ Enter</span>
                 </div>
+                {(patientHistoryModalData.searchName || (patientHistoryModalData.chartOptions || []).length > 0) && (
+                  <div className="patient-history-search-target">
+                    <span className="patient-history-search-target-label">검색 대상:</span>
+                    {(patientHistoryModalData.chartOptions || []).length > 1 ? (
+                      <>
+                        <select
+                          className="patient-history-search-target-select"
+                          aria-label="검색 대상 이름 및 챠트번호 선택"
+                          value={patientHistoryModalData.searchChart || ''}
+                          disabled={patientHistoryModalData.loading}
+                          onChange={handleSelectPatientHistoryChart}
+                        >
+                          <option value="">동명이인 전체</option>
+                          {patientHistoryModalData.chartOptions.map((option) => (
+                            <option key={option.chartNumber} value={option.chartNumber}>
+                              {option.patientName} ({option.chartNumber})
+                            </option>
+                          ))}
+                        </select>
+                        <span className="patient-history-search-target-note">
+                          동명이인 {patientHistoryModalData.chartOptions.length}명
+                        </span>
+                      </>
+                    ) : (
+                      <span className="patient-history-search-target-value">
+                        {patientHistoryModalData.searchName ? (
+                          <button
+                            type="button"
+                            aria-label={`${patientHistoryModalData.searchName} 이름만으로 다시 검색`}
+                            title="이름만으로 다시 검색"
+                            disabled={patientHistoryModalData.loading}
+                            onClick={handleSearchPatientHistoryByName}
+                          >
+                            {patientHistoryModalData.searchName}
+                          </button>
+                        ) : null}{' '}
+                        {patientHistoryModalData.searchChart ? `(${patientHistoryModalData.searchChart})` : ''}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               <button onClick={closePatientHistoryModal} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', padding: '0 4px', color: 'var(--text-secondary, #666)' }}>✕</button>
             </div>
             <div ref={patientHistoryModalBodyRef} style={{ padding: '14px 18px', maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain' }}>
-              <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem', fontWeight: 600 }}>
-                <span>검색 대상:</span>
-                {(patientHistoryModalData.chartOptions || []).length > 1 ? (
-                  <>
-                    <select
-                      aria-label="검색 대상 이름 및 챠트번호 선택"
-                      value={patientHistoryModalData.searchChart || ''}
-                      disabled={patientHistoryModalData.loading}
-                      onChange={handleSelectPatientHistoryChart}
-                      style={{ border: '1px solid var(--border-color, #cbd5e1)', borderRadius: '6px', background: 'var(--bg-primary, #fff)', color: 'var(--brand-primary)', padding: '4px 28px 4px 8px', fontSize: '0.95rem', fontWeight: 700, cursor: patientHistoryModalData.loading ? 'wait' : 'pointer' }}
-                    >
-                      <option value="">동명이인 전체</option>
-                      {patientHistoryModalData.chartOptions.map((option) => (
-                        <option key={option.chartNumber} value={option.chartNumber}>
-                          {option.patientName} ({option.chartNumber})
-                        </option>
-                      ))}
-                    </select>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary, #64748b)' }}>
-                      동명이인 {patientHistoryModalData.chartOptions.length}명
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    {patientHistoryModalData.searchName ? (
-                      <button
-                        type="button"
-                        aria-label={`${patientHistoryModalData.searchName} 이름만으로 다시 검색`}
-                        title="이름만으로 다시 검색"
-                        disabled={patientHistoryModalData.loading}
-                        onClick={handleSearchPatientHistoryByName}
-                        style={{ border: 'none', background: 'none', padding: 0, color: 'var(--brand-primary)', font: 'inherit', fontWeight: 'inherit', textDecoration: 'underline', textUnderlineOffset: '2px', cursor: patientHistoryModalData.loading ? 'wait' : 'pointer' }}
-                      >
-                        {patientHistoryModalData.searchName}
-                      </button>
-                    ) : null}{' '}
-                    {patientHistoryModalData.searchChart ? `(${patientHistoryModalData.searchChart})` : ''}
-                  </>
-                )}
-              </div>
-
               <div className="patient-history-view-controls">
                 <div className="patient-history-treatment-tabs" role="tablist" aria-label="스케줄 내역 치료 구분">
                   {patientHistoryTreatmentTabOptions.map((option) => {
