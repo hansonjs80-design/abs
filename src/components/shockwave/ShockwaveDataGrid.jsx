@@ -1802,7 +1802,7 @@ export default function ShockwaveDataGrid({
                       : `${group.therapist.displayName} · ${p} 환자만 보기 (더블클릭)`
                     : undefined}
                 >
-                  {prescriptionCount}
+                  {!p ? '-' : prescriptionCount}
                 </th>
               );
             }))}

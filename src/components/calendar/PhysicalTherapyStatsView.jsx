@@ -361,7 +361,7 @@ export default function PhysicalTherapyStatsView() {
             {loadingYearly ? (
               <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-tertiary)' }}>데이터를 불러오는 중입니다...</div>
             ) : (
-              <table className="excel-table" style={{ minWidth: 800 }}>
+              <table className="excel-table">
                 <thead>
                   <tr>
                     <th>{yearlyYear}년</th>

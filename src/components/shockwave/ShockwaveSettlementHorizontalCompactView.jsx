@@ -140,7 +140,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                               </span>
                             ) : '—'}
                           </td>
-                          <td className="count-val">{formatCount(count)}</td>
+                          <td className="count-val">{formatOptionalCount(count)}</td>
                           <td className="amount-val">{formatCurrency(prescriptionAmount)}</td>
                           <td className="incentive-val">{formatCurrency(prescriptionIncentive)}</td>
                         </tr>

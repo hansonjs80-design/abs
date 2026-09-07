@@ -1662,18 +1662,21 @@
 /* 도수치료 결산 탭 내 가로 배치 */
 .sw-manual-settlement-container {
   display: grid;
-  grid-template-columns: minmax(640px, 1.72fr) minmax(360px, 0.88fr);
+  grid-template-columns: auto auto;
+  justify-content: start;
   align-items: start;
   gap: 18px;
-  width: 100%;
+  width: max-content;
   max-width: 100%;
   min-width: 0;
 }
 
 .sw-manual-settlement-container:has(.sw-manual-settlement-stack--narrow) {
-  grid-template-columns: 468px minmax(480px, 600px);
-  width: min(100%, 1086px);
-  margin-inline: auto;
+  grid-template-columns: auto auto;
+  justify-content: start;
+  width: max-content;
+  max-width: 100%;
+  margin-inline: 0;
 }
 
 .sw-stats-body--settlement .sw-manual-settlement-stack {
@@ -1804,24 +1807,24 @@
 }
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table {
-  width: 100%;
-  min-width: 680px;
+  width: auto;
+  min-width: 0;
   height: 100%;
-  table-layout: fixed;
+  table-layout: auto;
+  white-space: nowrap;
 }
 
 .sw-manual-settlement-main-card .sw-manual-settlement-label-column {
-  width: 170px;
+  width: auto;
 }
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table th,
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table td {
   min-width: 0;
   height: 40px;
-  padding: 8px 7px;
+  padding: 8px 12px;
   font-size: 0.96rem;
-  overflow: hidden;
-  text-overflow: clip;
+  white-space: nowrap;
 }
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table thead .therapist-col,
@@ -1841,10 +1844,11 @@
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table .label-col,
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table .row-label {
-  width: 170px;
-  min-width: 170px;
-  max-width: 170px;
+  width: auto;
+  min-width: 0;
+  max-width: none;
   font-size: 0.96rem;
+  white-space: nowrap;
 }
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table .merged-value,

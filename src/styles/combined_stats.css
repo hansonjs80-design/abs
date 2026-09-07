@@ -612,6 +612,10 @@
 }
 
 @media print {
+  .combined-stats-refresh {
+    display: none !important;
+  }
+
   .combined-stats-header,
   .combined-stats-dashboard {
     max-width: 1550px;

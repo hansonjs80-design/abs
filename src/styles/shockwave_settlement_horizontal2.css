@@ -125,7 +125,8 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 
 .sw-horizontal2-layout {
   display: grid !important;
-  grid-template-columns: 420px 372px !important;
+  grid-template-columns: auto auto !important;
+  justify-content: start !important;
   gap: 22px !important;
   align-items: start !important;
   width: max-content !important;
@@ -134,7 +135,7 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 }
 
 .sw-horizontal2-layout--single {
-  grid-template-columns: 420px !important;
+  grid-template-columns: auto !important;
 }
 
 .sw-horizontal2-left,
@@ -212,39 +213,40 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 .sw-horizontal2-grand-table,
 .sw-horizontal2-recent-table {
   border-collapse: collapse !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
   background: #ffffff !important;
   border: 2px solid #64748b !important;
   box-shadow: none !important;
+  width: 100% !important;
 }
 
 .sw-horizontal2-therapist-table {
-  width: 420px !important;
+  width: 100% !important;
 }
 
 .sw-horizontal2-therapist-total-table {
-  width: 374px !important;
+  width: calc(100% - 46px) !important;
   margin: -2px 0 0 46px !important;
   border-left: 2px solid #64748b !important;
 }
 
 .sw-horizontal2-grand-table {
-  width: 374px !important;
+  width: calc(100% - 46px) !important;
   margin: 6px 0 0 46px !important;
 }
 
 .sw-horizontal2-layout--shinjang,
 .sw-horizontal2-layout--shinjang.sw-horizontal2-layout--single {
-  grid-template-columns: 456px !important;
+  grid-template-columns: auto !important;
 }
 
 .sw-horizontal2-layout--shinjang .sw-horizontal2-therapist-table {
-  width: 456px !important;
+  width: 100% !important;
 }
 
 .sw-horizontal2-layout--shinjang .sw-horizontal2-therapist-total-table,
 .sw-horizontal2-layout--shinjang .sw-horizontal2-grand-table {
-  width: 410px !important;
+  width: calc(100% - 46px) !important;
 }
 
 .sw-horizontal2-therapist-name-column {
@@ -252,24 +254,24 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 }
 
 .sw-horizontal2-prescription-column {
-  width: 76px !important;
+  width: auto !important;
 }
 
 .sw-horizontal2-layout--shinjang .sw-horizontal2-prescription-column {
-  width: 112px !important;
+  width: auto !important;
 }
 
 .sw-horizontal2-count-column {
-  width: 58px !important;
+  width: auto !important;
 }
 
 .sw-horizontal2-amount-column,
 .sw-horizontal2-incentive-column {
-  width: 120px !important;
+  width: auto !important;
 }
 
 .sw-horizontal2-recent-table {
-  width: 372px !important;
+  width: 100% !important;
 }
 
 .sw-horizontal2-therapist-table th,
@@ -314,27 +316,27 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 
 .sw-horizontal2-therapist-table th:nth-child(2),
 .sw-horizontal2-therapist-table td.prescription-name {
-  width: 76px !important;
+  width: auto !important;
 }
 
 .sw-horizontal2-layout--shinjang .sw-horizontal2-therapist-table th:nth-child(2),
 .sw-horizontal2-layout--shinjang .sw-horizontal2-therapist-table td.prescription-name {
-  width: 112px !important;
+  width: auto !important;
 }
 
 .sw-horizontal2-therapist-table th:nth-child(3),
 .sw-horizontal2-therapist-table td.count-val {
-  width: 58px !important;
+  width: auto !important;
 }
 
 .sw-horizontal2-therapist-table th:nth-child(4),
 .sw-horizontal2-therapist-table td.amount-val {
-  width: 120px !important;
+  width: auto !important;
 }
 
 .sw-horizontal2-therapist-table th:nth-child(5),
 .sw-horizontal2-therapist-table td.incentive-val {
-  width: 120px !important;
+  width: auto !important;
 }
 
 .sw-horizontal2-therapist-table .therapist-name-col {

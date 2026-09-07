@@ -177,8 +177,8 @@ describe('shinjang spray statistics UI', () => {
     assert.match(statsCss, /font-size:\s*calc\(0\.7rem \+ 2px\)/);
     assert.match(statsCss, /--sw-incentive-hue/);
     assert.match(horizontal2Css, /sw-horizontal2-layout--prescription-incentives[\s\S]*?padding-top:\s*4px !important;[\s\S]*?padding-bottom:\s*4px !important;/);
-    assert.match(horizontal2Css, /sw-horizontal2-layout--shinjang \.sw-horizontal2-therapist-table[\s\S]*?width:\s*456px !important;/);
-    assert.match(horizontal2Css, /sw-horizontal2-layout--shinjang \.sw-horizontal2-therapist-table td\.prescription-name[\s\S]*?width:\s*112px !important;/);
+    assert.match(horizontal2Css, /sw-horizontal2-layout--shinjang \.sw-horizontal2-therapist-table[\s\S]*?width:\s*100% !important;/);
+    assert.match(horizontal2Css, /sw-horizontal2-layout--shinjang \.sw-horizontal2-therapist-table td\.prescription-name[\s\S]*?width:\s*auto !important;/);
   });
 
   it('adds a monthly shinjang therapist tab and applies it to every shinjang statistics section', async () => {

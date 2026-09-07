@@ -970,6 +970,7 @@ export default function ShockwaveStatsView({
                         selectedTherapistNames={selectedTherapistNames}
                         onSelectedTherapistNamesChange={setSelectedTherapistNames}
                         readOnly
+                        showOnlyTherapistPrescriptions
                       />
                     </ShockwaveStatsErrorBoundary>
                   </div>
@@ -1002,6 +1003,7 @@ export default function ShockwaveStatsView({
                   onRecentPeriodInputChange={setRecentPeriodInput}
                   selectedTherapistNames={selectedTherapistNames}
                   recentSummariesLoading={isRecentLogsLoading}
+                  showOnlyTherapistPrescriptions
                 />
               )}
             </div>
