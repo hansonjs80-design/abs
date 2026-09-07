@@ -100,7 +100,7 @@ export default function ManualTherapySixMonthIonTreatment({
                     </label>
                   </td>
                   <td>
-                    <label className="sw-six-month-ion-input-wrap">
+                    <label className="sw-six-month-ion-input-wrap sw-six-month-ion-input-wrap--amount">
                       <input
                         aria-label={`${row.year}년 ${row.month}월 이온치료 총액`}
                         inputMode="numeric"

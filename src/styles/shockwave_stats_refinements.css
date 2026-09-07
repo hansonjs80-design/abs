@@ -2129,8 +2129,28 @@
 }
 
 /* 도수치료 좌측 결산 테이블 전용 컴팩트 디자인 및 우측열 중앙 정렬 */
+.sw-manual-settlement-main-card {
+  width: 390px !important;
+  max-width: 100% !important;
+}
+
+.sw-manual-settlement-stack--narrow {
+  width: 390px !important;
+  max-width: 100% !important;
+}
+
 .sw-manual-settlement-main-card .sw-settlement-header h2 {
   font-size: 1.05rem !important;
+}
+
+.sw-manual-settlement-main-card .sw-settlement-meta {
+  gap: 4px !important;
+}
+
+.sw-manual-settlement-main-card .sw-settlement-meta span {
+  min-height: 24px !important;
+  padding-inline: 6px !important;
+  font-size: 0.76rem !important;
 }
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table {
@@ -2163,7 +2183,7 @@
   text-align: center !important;
   width: 38% !important;
   min-width: 120px !important;
-  max-width: 180px !important;
+  max-width: 160px !important;
   padding: 6px 12px !important;
 }
 
@@ -2174,5 +2194,15 @@
   text-align: center !important;
   padding-left: 12px !important;
   padding-right: 12px !important;
+}
+
+/* 이온치료 현황 건수/총액 입력창 너비 최적화 (총액 숫자 잘림 방지) */
+.sw-manual-ion-summary-table td:nth-child(2) .sw-six-month-ion-input-wrap input {
+  width: 48px !important;
+}
+
+.sw-manual-ion-summary-table td:nth-child(3) .sw-six-month-ion-input-wrap input,
+.sw-six-month-ion-input-wrap--amount input {
+  width: 86px !important;
 }
 
