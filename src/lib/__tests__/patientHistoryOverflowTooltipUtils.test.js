@@ -152,7 +152,19 @@ test('patient history exposes treatment tabs, selectable sorting, and treatment 
   );
   assert.match(
     shockwaveCss,
-    /\.patient-history-treatment-tab\.is-active\s*\{[^}]*border-top:\s*3px solid var\(--patient-history-tab-accent\);[^}]*font-size:\s*0\.86rem;/s
+    /\.patient-history-treatment-tab\.is-active\s*\{[^}]*border-top:\s*3px solid var\(--patient-history-tab-accent\);[^}]*font-size:\s*calc\(0\.86rem \+ 2px\);/s
+  );
+  assert.match(
+    shockwaveCss,
+    /\.patient-history-treatment-tab\s*\{[^}]*font-size:\s*calc\(0\.79rem \+ 2px\);/s
+  );
+  assert.match(
+    shockwaveCss,
+    /\.patient-history-treatment-count\s*\{[^}]*font-size:\s*calc\(0\.68rem \+ 2px\);/s
+  );
+  assert.match(
+    shockwaveCss,
+    /\.patient-history-view-controls\s*\{[^}]*padding:\s*0;[^}]*border:\s*0;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;/s
   );
   assert.match(
     shockwaveCss,

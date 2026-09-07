@@ -3977,10 +3977,10 @@
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 0;
-  padding: 7px 9px;
-  border: 1px solid #d7dee8;
-  border-radius: 8px;
-  background: #f8fafc;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .patient-history-treatment-filters {
@@ -4046,7 +4046,7 @@
   padding: 1px 4px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.72);
-  font-size: 0.68rem;
+  font-size: calc(0.68rem + 2px);
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
@@ -4096,7 +4096,7 @@
     0 -2px 6px rgba(15, 23, 42, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.42);
   cursor: pointer;
-  font-size: 0.79rem;
+  font-size: calc(0.79rem + 2px);
   font-weight: 850;
   line-height: 1;
   opacity: 0.88;
@@ -4128,7 +4128,7 @@
   background: #f8fafc;
   color: var(--patient-history-tab-accent);
   box-shadow: 0 -4px 8px -3px rgba(15, 23, 42, 0.22);
-  font-size: 0.86rem;
+  font-size: calc(0.86rem + 2px);
   font-weight: 900;
   opacity: 1;
   transform: none;
