@@ -64,3 +64,14 @@ test('shockwave and manual therapy setting headers share the same fixed action c
     /\.(?:shockwave|manual-therapy)-row\s*\{[^}]*grid-template-columns:[^;}]*36px auto;/s
   );
 });
+
+test('settlement prescription name editing keeps the row stable until blur commits the rename', async () => {
+  const panel = await readFile(panelUrl, 'utf8');
+
+  assert.match(panel, /const \[prescriptionNameDrafts, setPrescriptionNameDrafts\] = useState\(\{\}\);/);
+  assert.match(panel, /value=\{prescriptionNameDrafts\[prescription\] \?\? prescription\}/);
+  assert.match(panel, /onChange=\{\(event\) => updatePrescriptionNameDraft\(prescription, event\.target\.value\)\}/);
+  assert.match(panel, /onBlur=\{\(event\) => renamePrescription\(index, event\.target\.value, prescription\)\}/);
+  assert.doesNotMatch(panel, /const updatePrescriptionDraftName/);
+  assert.doesNotMatch(panel, /renamePrescription\(index, event\.currentTarget\.value\);\s*event\.currentTarget\.blur\(\);/);
+});

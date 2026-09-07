@@ -53,7 +53,7 @@ export default function SettlementSettingsPanel({
 
   const [draft, setDraft] = useState(buildInitialDraft);
   const [newPrescriptionName, setNewPrescriptionName] = useState('');
-  const [prescriptionRenameKeys, setPrescriptionRenameKeys] = useState({});
+  const [prescriptionNameDrafts, setPrescriptionNameDrafts] = useState({});
   const [draggedIndex, setDraggedIndex] = useState(null);
 
   const isAppleShortcutPlatform = useMemo(() => {
@@ -77,6 +77,7 @@ export default function SettlementSettingsPanel({
 
   useEffect(() => {
     setDraft(buildInitialDraft());
+    setPrescriptionNameDrafts({});
   }, [buildInitialDraft]);
 
   // Drag and Drop handlers
@@ -118,7 +119,7 @@ export default function SettlementSettingsPanel({
         prescriptions: nextPrescriptions,
       };
     });
-    setPrescriptionRenameKeys({});
+    setPrescriptionNameDrafts({});
     setDraggedIndex(null);
   }, []);
 
@@ -128,24 +129,24 @@ export default function SettlementSettingsPanel({
     return extractDoseTagFromPrescription(prescription);
   };
 
-  const renamePrescription = (index, rawValue) => {
+  const renamePrescription = (index, rawValue, previousName) => {
     const nextValue = String(rawValue || '').trim();
     setDraft((prev) => {
-      const previousName = prescriptionRenameKeys[index] || prev.prescriptions[index];
-      if (!previousName) return prev;
+      const stablePreviousName = previousName || prev.prescriptions[index];
+      if (!stablePreviousName) return prev;
       if (!nextValue) {
         return {
           ...prev,
           prescriptions: prev.prescriptions.map((item, itemIndex) => (
-            itemIndex === index ? previousName : item
+            itemIndex === index ? stablePreviousName : item
           )),
         };
       }
-      if (nextValue !== previousName && prev.prescriptions.some((item, itemIndex) => itemIndex !== index && item === nextValue)) {
+      if (nextValue !== stablePreviousName && prev.prescriptions.some((item, itemIndex) => itemIndex !== index && item === nextValue)) {
         return {
           ...prev,
           prescriptions: prev.prescriptions.map((item, itemIndex) => (
-            itemIndex === index ? previousName : item
+            itemIndex === index ? stablePreviousName : item
           )),
         };
       }
@@ -159,38 +160,38 @@ export default function SettlementSettingsPanel({
       const nextCryoPrescriptions = new Set(prev.cryo_prescriptions || []);
       const nextLineBreaks = new Set(prev.visit_line_break_prescriptions || []);
       const nextHidden = new Set(prev.hidden_prescriptions || []);
-      if (previousName !== nextValue) {
-        nextPrices[nextValue] = nextPrices[previousName] ?? 0;
-        delete nextPrices[previousName];
-        nextCryoPrices[nextValue] = nextCryoPrices[previousName] ?? 0;
-        delete nextCryoPrices[previousName];
+      if (stablePreviousName !== nextValue) {
+        nextPrices[nextValue] = nextPrices[stablePreviousName] ?? 0;
+        delete nextPrices[stablePreviousName];
+        nextCryoPrices[nextValue] = nextCryoPrices[stablePreviousName] ?? 0;
+        delete nextCryoPrices[stablePreviousName];
         const nextColors = { ...(prev.prescription_colors || {}) };
-        nextColors[nextValue] = nextColors[previousName] || '#000000';
-        delete nextColors[previousName];
-        if (nextDoseTags[previousName] !== undefined) {
-          nextDoseTags[nextValue] = nextDoseTags[previousName];
-          delete nextDoseTags[previousName];
+        nextColors[nextValue] = nextColors[stablePreviousName] || '#000000';
+        delete nextColors[stablePreviousName];
+        if (nextDoseTags[stablePreviousName] !== undefined) {
+          nextDoseTags[nextValue] = nextDoseTags[stablePreviousName];
+          delete nextDoseTags[stablePreviousName];
         }
-        if (nextDurations[previousName] !== undefined) {
-          nextDurations[nextValue] = nextDurations[previousName];
-          delete nextDurations[previousName];
+        if (nextDurations[stablePreviousName] !== undefined) {
+          nextDurations[nextValue] = nextDurations[stablePreviousName];
+          delete nextDurations[stablePreviousName];
         }
-        if (nextLineBreaks.has(previousName)) {
-          nextLineBreaks.delete(previousName);
+        if (nextLineBreaks.has(stablePreviousName)) {
+          nextLineBreaks.delete(stablePreviousName);
           nextLineBreaks.add(nextValue);
         }
-        if (nextCryoPrescriptions.has(previousName)) {
-          nextCryoPrescriptions.delete(previousName);
+        if (nextCryoPrescriptions.has(stablePreviousName)) {
+          nextCryoPrescriptions.delete(stablePreviousName);
           nextCryoPrescriptions.add(nextValue);
         }
-        if (nextHidden.has(previousName)) {
-          nextHidden.delete(previousName);
+        if (nextHidden.has(stablePreviousName)) {
+          nextHidden.delete(stablePreviousName);
           nextHidden.add(nextValue);
         }
         const nextShortcuts = { ...prev.shortcuts };
-        if (nextShortcuts[previousName] !== undefined) {
-          nextShortcuts[nextValue] = nextShortcuts[previousName];
-          delete nextShortcuts[previousName];
+        if (nextShortcuts[stablePreviousName] !== undefined) {
+          nextShortcuts[nextValue] = nextShortcuts[stablePreviousName];
+          delete nextShortcuts[stablePreviousName];
         }
         return {
           ...prev,
@@ -208,48 +209,52 @@ export default function SettlementSettingsPanel({
       }
       return { ...prev, prescriptions: nextPrescriptions, prescription_prices: nextPrices };
     });
-    setPrescriptionRenameKeys((prev) => {
+    setPrescriptionNameDrafts((prev) => {
       const next = { ...prev };
-      delete next[index];
+      delete next[previousName];
       return next;
     });
   };
 
-  const updatePrescriptionDraftName = (index, value) => {
-    setDraft((prev) => ({
+  const updatePrescriptionNameDraft = (prescription, value) => {
+    setPrescriptionNameDrafts((prev) => ({
       ...prev,
-      prescriptions: prev.prescriptions.map((item, itemIndex) => (
-        itemIndex === index ? value : item
-      )),
+      [prescription]: value,
     }));
   };
 
   const removePrescription = (index) => {
+    const target = draft.prescriptions[index];
+    setPrescriptionNameDrafts((prev) => {
+      const next = { ...prev };
+      delete next[target];
+      return next;
+    });
     setDraft((prev) => {
-      const target = prev.prescriptions[index];
+      const targetPrescription = prev.prescriptions[index];
       const nextPrices = { ...prev.prescription_prices };
       const nextCryoPrices = { ...(prev.cryo_prices || {}) };
       const nextColors = { ...(prev.prescription_colors || {}) };
       const nextDoseTags = { ...prev.dose_tags };
       const nextDurations = { ...(prev.duration_minutes || {}) };
       const nextShortcuts = { ...prev.shortcuts };
-      delete nextPrices[target];
-      delete nextCryoPrices[target];
-      delete nextColors[target];
-      delete nextDoseTags[target];
-      delete nextDurations[target];
-      delete nextShortcuts[target];
+      delete nextPrices[targetPrescription];
+      delete nextCryoPrices[targetPrescription];
+      delete nextColors[targetPrescription];
+      delete nextDoseTags[targetPrescription];
+      delete nextDurations[targetPrescription];
+      delete nextShortcuts[targetPrescription];
       return {
         ...prev,
         prescriptions: prev.prescriptions.filter((_, itemIndex) => itemIndex !== index),
         prescription_prices: nextPrices,
-        cryo_prescriptions: (prev.cryo_prescriptions || []).filter((item) => item !== target),
+        cryo_prescriptions: (prev.cryo_prescriptions || []).filter((item) => item !== targetPrescription),
         cryo_prices: nextCryoPrices,
         prescription_colors: nextColors,
         dose_tags: nextDoseTags,
         duration_minutes: nextDurations,
-        visit_line_break_prescriptions: (prev.visit_line_break_prescriptions || []).filter((item) => item !== target),
-        hidden_prescriptions: (prev.hidden_prescriptions || []).filter((item) => item !== target),
+        visit_line_break_prescriptions: (prev.visit_line_break_prescriptions || []).filter((item) => item !== targetPrescription),
+        hidden_prescriptions: (prev.hidden_prescriptions || []).filter((item) => item !== targetPrescription),
         shortcuts: nextShortcuts,
       };
     });
@@ -258,6 +263,12 @@ export default function SettlementSettingsPanel({
   const addPrescription = (value) => {
     const nextValue = value.trim();
     if (!nextValue) return false;
+    setPrescriptionNameDrafts((prev) => {
+      if (prev[nextValue] === undefined) return prev;
+      const next = { ...prev };
+      delete next[nextValue];
+      return next;
+    });
     setDraft((prev) => {
       if (prev.prescriptions.includes(nextValue)) return prev;
       return {
@@ -450,19 +461,12 @@ export default function SettlementSettingsPanel({
                   </div>
                   <input
                     className="form-input settlement-prescription-input"
-                    value={prescription}
-                    onFocus={() => {
-                      setPrescriptionRenameKeys((prev) => ({
-                        ...prev,
-                        [index]: prev[index] || prescription,
-                      }));
-                    }}
-                    onChange={(event) => updatePrescriptionDraftName(index, event.target.value)}
-                    onBlur={(event) => renamePrescription(index, event.target.value)}
+                    value={prescriptionNameDrafts[prescription] ?? prescription}
+                    onChange={(event) => updatePrescriptionNameDraft(prescription, event.target.value)}
+                    onBlur={(event) => renamePrescription(index, event.target.value, prescription)}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter') {
                         event.preventDefault();
-                        renamePrescription(index, event.currentTarget.value);
                         event.currentTarget.blur();
                       }
                     }}
