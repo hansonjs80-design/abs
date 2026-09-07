@@ -55,7 +55,7 @@
 
 .combined-stats-dashboard {
   display: grid;
-  grid-template-columns: minmax(610px, 1.447fr) minmax(410px, 1fr);
+  grid-template-columns: auto minmax(410px, 1fr);
   align-items: start;
   gap: 28px;
   max-width: 1550px;
@@ -65,6 +65,8 @@
 .combined-stats-current {
   display: grid;
   gap: 24px;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .combined-therapist-card,
@@ -78,6 +80,9 @@
 
 .combined-therapist-card {
   border-top: 3px solid var(--combined-tone-strong);
+  width: fit-content;
+  min-width: 460px;
+  max-width: 100%;
 }
 
 .combined-therapist-summary-card {
@@ -85,9 +90,15 @@
   --combined-tone-soft: #e2e8f0;
   margin-top: 4px;
   border-color: #64748b;
+  width: 100%;
 }
 
-.combined-therapist-card table,
+.combined-therapist-card table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
 .combined-stats-recent table {
   width: 100%;
   border-collapse: collapse;
@@ -95,7 +106,18 @@
 }
 
 .combined-therapist-card th,
-.combined-therapist-card td,
+.combined-therapist-card td {
+  height: 36.5px;
+  padding: 6px 12px;
+  border-right: 1px solid #cbd5e1;
+  border-bottom: 1px solid #cbd5e1;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .combined-stats-recent th,
 .combined-stats-recent td {
   height: 36.5px;
@@ -153,30 +175,15 @@
   font-size: 1.08rem;
 }
 
-.combined-current-col-type {
-  width: 21%;
-}
-
-.combined-current-col-count {
-  width: 14%;
-}
-
+.combined-current-col-type,
+.combined-current-col-count,
 .combined-current-col-amount,
-.combined-current-col-incentive {
-  width: 25.4%;
-}
-
-.combined-current-col-rate {
-  width: 14.2%;
-}
-
-.combined-summary-col-therapist {
-  width: 28%;
-}
-
+.combined-current-col-incentive,
+.combined-current-col-rate,
+.combined-summary-col-therapist,
 .combined-summary-col-amount,
 .combined-summary-col-incentive {
-  width: 36%;
+  width: auto;
 }
 
 .combined-therapist-card tbody th {
@@ -572,7 +579,7 @@
   }
 
   .combined-stats-dashboard {
-    grid-template-columns: minmax(610px, 1.447fr) minmax(410px, 1fr);
+    grid-template-columns: auto minmax(410px, 1fr);
   }
 
   .combined-therapist-card th,

@@ -75,12 +75,10 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /onCurrentLoaded:\s*\(summary\)/);
     assert.match(pageSource, /className="combined-current-col-type"/);
     assert.match(pageSource, /className="combined-recent-col-month"/);
-    assert.match(styleSource, /\.combined-current-col-type\s*\{\s*width:\s*21%;/s);
-    assert.match(styleSource, /\.combined-current-col-count\s*\{\s*width:\s*14%;/s);
-    assert.match(styleSource, /\.combined-current-col-amount,[\s\S]*width:\s*25\.4%;/s);
-    assert.match(styleSource, /\.combined-current-col-rate\s*\{\s*width:\s*14\.2%;/s);
+    assert.match(styleSource, /\.combined-therapist-card table\s*\{[\s\S]*table-layout:\s*auto;/);
+    assert.match(styleSource, /\.combined-current-col-type,[\s\S]*width:\s*auto;/);
+    assert.match(styleSource, /\.combined-therapist-card th,[\s\S]*white-space:\s*nowrap;/);
     assert.match(styleSource, /\.combined-therapist-summary-card\s*\{[\s\S]*--combined-tone-strong:\s*#475569;/);
-    assert.match(styleSource, /\.combined-summary-col-therapist\s*\{\s*width:\s*28%;/s);
     assert.match(styleSource, /\.combined-recent-col-month\s*\{\s*width:\s*23\.94%;/s);
     assert.match(styleSource, /\.combined-recent-col-count\s*\{\s*width:\s*19\.72%;/s);
     assert.match(styleSource, /font-size:\s*calc\(0\.95rem \+ 2px\);/);
