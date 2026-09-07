@@ -90,7 +90,9 @@
   --combined-tone-soft: #e2e8f0;
   margin-top: 4px;
   border-color: #64748b;
-  width: 100%;
+  width: fit-content;
+  min-width: 460px;
+  max-width: 100%;
 }
 
 .combined-therapist-card table {
@@ -243,34 +245,66 @@
 }
 
 .combined-therapist-summary-card table {
-  border: 2.5px solid #000000 !important;
+  width: 100%;
   border-collapse: collapse !important;
+  border: 0 !important;
+  table-layout: auto;
 }
 
 .combined-therapist-summary-card th,
 .combined-therapist-summary-card td {
-  border: 1px solid #000000 !important;
+  border-right: 1px solid #cbd5e1 !important;
+  border-bottom: 1px solid #cbd5e1 !important;
 }
 
-.combined-therapist-summary-card thead th {
-  background: #ffffff !important;
-  color: #000000 !important;
-  font-weight: 800 !important;
+.combined-therapist-summary-card tr > :last-child {
+  border-right: 0 !important;
+}
+
+.combined-summary-title-header {
+  height: 46.75px !important;
+  padding: 6px 14px !important;
+  background: var(--combined-tone-strong, #475569) !important;
+  border-right: 0 !important;
+  border-bottom: 2px solid rgba(15, 23, 42, 0.35) !important;
+  text-align: left !important;
+}
+
+.combined-summary-title-header .combined-therapist-name-content span:first-child {
+  color: #ffffff;
+  font-size: 1.32rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.combined-summary-title-header .combined-therapist-header-count {
+  background: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  font-size: 0.9rem !important;
+  font-weight: 900 !important;
+}
+
+.combined-summary-column-header-row th {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  font-weight: 850 !important;
   font-size: 1.05rem !important;
   text-align: center !important;
-  padding: 8px 6px !important;
+  padding: 8px 12px !important;
+  border-bottom: 2px solid #94a3b8 !important;
 }
 
 .combined-summary-empty-header {
-  background: #ffffff !important;
+  background: #f8fafc !important;
 }
 
 .combined-summary-therapist-cell {
-  color: #000000 !important;
-  font-weight: 800 !important;
+  color: #0f172a !important;
+  font-weight: 850 !important;
   font-size: 1.05rem !important;
   text-align: center !important;
-  padding: 8px 10px !important;
+  padding: 8px 12px !important;
   white-space: nowrap !important;
 }
 
@@ -296,18 +330,18 @@
 
 .combined-summary-amount-cell,
 .combined-summary-incentive-cell {
-  color: #000000 !important;
-  font-weight: 700 !important;
+  color: #0f172a !important;
+  font-weight: 750 !important;
   font-size: 1.05rem !important;
   text-align: right !important;
-  padding: 8px 16px !important;
+  padding: 8px 18px !important;
 }
 
 .combined-summary-grand-total > * {
-  border-top: 2.5px solid #000000 !important;
-  background: #f8fafc !important;
-  color: #000000 !important;
-  font-weight: 900 !important;
+  border-top: 2.5px solid #64748b !important;
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+  font-weight: 950 !important;
 }
 
 .combined-summary-grand-total > th {

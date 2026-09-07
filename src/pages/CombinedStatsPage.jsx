@@ -475,12 +475,6 @@ export default function CombinedStatsPage() {
                 aria-label={`${currentMonth}월 치료사 합계`}
               >
                 <table>
-                  <caption className="visually-hidden">
-                    <span>치료사별 합계</span>
-                    <span className="combined-therapist-header-count">
-                      {formatCount(currentSummary.total.count)}
-                    </span>
-                  </caption>
                   <colgroup>
                     <col className="combined-summary-col-therapist" />
                     <col className="combined-summary-col-amount" />
@@ -488,6 +482,16 @@ export default function CombinedStatsPage() {
                   </colgroup>
                   <thead>
                     <tr>
+                      <th className="combined-therapist-name combined-summary-title-header" colSpan={3}>
+                        <div className="combined-therapist-name-content">
+                          <span>치료사별 합계</span>
+                          <span className="combined-therapist-header-count">
+                            {formatCount(currentSummary.total.count)}
+                          </span>
+                        </div>
+                      </th>
+                    </tr>
+                    <tr className="combined-summary-column-header-row">
                       <th className="combined-summary-empty-header" aria-label="치료사"></th>
                       <th>총 결산 금액 합계</th>
                       <th>총 인센티브 합계</th>
