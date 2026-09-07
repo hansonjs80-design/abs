@@ -1275,8 +1275,8 @@
 .sw-manual-compact-settlement-table td.grand-value.amount,
 .sw-manual-compact-settlement-table td.merged-value.incentive,
 .sw-manual-compact-settlement-table td.grand-value.incentive {
-  font-size: 0.95rem !important;
-  font-weight: 800 !important;
+  font-size: 1.16rem !important;
+  font-weight: 900 !important;
 }
 
 /* Keep the visible table frame at 3px on every shockwave stats table. */
@@ -2191,7 +2191,7 @@
 }
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table thead th {
-  font-size: 0.94rem !important;
+  font-size: 1.12rem !important;
   line-height: 1.2 !important;
   font-weight: 800 !important;
   text-align: center !important;
@@ -2201,7 +2201,7 @@
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table tbody th,
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table tbody td {
-  font-size: 0.92rem !important;
+  font-size: 1.10rem !important;
   line-height: 1.2 !important;
   height: 34px !important;
   padding: 6px 12px !important;
@@ -2269,8 +2269,13 @@
 .sw-manual-summary-card .sw-summary-table th,
 .sw-manual-summary-card .sw-summary-table td {
   padding: 4px 8px !important;
-  font-size: 0.88rem !important;
+  font-size: 1.06rem !important;
   white-space: nowrap !important;
+}
+
+.sw-manual-summary-card .sw-summary-table td.amount {
+  font-size: 1.14rem !important;
+  font-weight: 900 !important;
 }
 
 /* 도수치료 결산/신환 현황 결산 금액 컬럼 너비 15% 추가 확대 반영 */
@@ -2286,7 +2291,7 @@
   padding-right: 14px !important;
 }
 
-/* 이온치료 현황 건수/총액 입력창 너비 최적화 (총액 너비 15% 추가 확대 반영) */
+/* 이온치료 현황 건수/총액 입력창 너비 및 글자 크기 최적화 */
 .sw-manual-ion-summary-table td:nth-child(2) .sw-six-month-ion-input-wrap input {
   width: 48px !important;
 }
@@ -2304,6 +2309,123 @@
 .sw-six-month-ion-input-wrap--amount input {
   width: 122px !important;
 }
+
+.sw-six-month-ion-input-wrap input {
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+}
+
+.sw-six-month-ion-input-wrap span {
+  font-size: 1rem !important;
+  font-weight: 800 !important;
+}
+
+/* ==========================================================================
+   통계 결산 화면 작은 글자 셀 크기 확대 (셀 크기/레이아웃 유지, 폰트만 확대)
+   ========================================================================== */
+/* 1. 충격파/신장분사 결산 메인 테이블 헤더 */
+.sw-settlement-table thead .therapist-col,
+.sw-compact-settlement-table thead .therapist-col {
+  font-size: 1.14rem !important;
+  font-weight: 900 !important;
+}
+
+.sw-settlement-table thead .prescription-col,
+.sw-compact-settlement-table thead .prescription-col,
+.sw-grand-total-table thead .prescription-col {
+  font-size: 1.06rem !important;
+  font-weight: 850 !important;
+}
+
+.sw-settlement-table thead .label-col,
+.sw-settlement-table .row-label,
+.sw-compact-settlement-table thead .label-col,
+.sw-compact-settlement-table .row-label,
+.sw-grand-total-table thead .label-col,
+.sw-grand-total-table .row-label {
+  font-size: 1.06rem !important;
+  font-weight: 900 !important;
+}
+
+/* 2. 결산 메인 테이블 데이터 셀 (처방 건수 및 합계 건수) */
+.sw-settlement-table tbody td,
+.sw-compact-settlement-table tbody td {
+  font-size: 1.10rem !important;
+  font-weight: 800 !important;
+}
+
+.sw-settlement-table .merged-value,
+.sw-compact-settlement-table .merged-value {
+  font-size: 1.12rem !important;
+  font-weight: 800 !important;
+}
+
+/* 3. 결산 금액 및 인센티브 금액 */
+.sw-settlement-table .amount,
+.sw-compact-settlement-table .amount,
+.sw-settlement-table .settlement-amount-row td,
+.sw-compact-settlement-table .settlement-amount-row td {
+  font-size: 1.18rem !important;
+  font-weight: 900 !important;
+}
+
+.sw-settlement-table .incentive,
+.sw-compact-settlement-table .incentive,
+.sw-settlement-table .settlement-incentive-row td,
+.sw-compact-settlement-table .settlement-incentive-row td {
+  font-size: 1.16rem !important;
+  font-weight: 900 !important;
+}
+
+/* 4. 총합계 테이블 */
+.sw-grand-total-table tbody td,
+.sw-grand-total-table .grand-value {
+  font-size: 1.10rem !important;
+  font-weight: 800 !important;
+}
+
+.sw-grand-total-table .settlement-amount-row .grand-value,
+.sw-grand-total-table .amount {
+  font-size: 1.18rem !important;
+  font-weight: 900 !important;
+}
+
+.sw-grand-total-table .settlement-incentive-row .grand-value,
+.sw-grand-total-table .incentive {
+  font-size: 1.16rem !important;
+  font-weight: 900 !important;
+}
+
+/* 5. 최근 6개월 결산/신환 요약 테이블 */
+.sw-summary-table thead th,
+.sw-compact-summary-table thead th {
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+}
+
+.sw-summary-table tbody th.month-label,
+.sw-compact-summary-table tbody th.month-label {
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+}
+
+.sw-summary-table tbody td,
+.sw-compact-summary-table tbody td {
+  font-size: 1.08rem !important;
+  font-weight: 800 !important;
+}
+
+.sw-summary-table tbody td.amount,
+.sw-compact-summary-table tbody td.amount {
+  font-size: 1.15rem !important;
+  font-weight: 900 !important;
+}
+
+/* 6. 신장분사 처방 인센티브 뱃지 글자 크기 보강 */
+.sw-prescription-incentive-rate {
+  font-size: 0.82rem !important;
+}
+
 
 
 
