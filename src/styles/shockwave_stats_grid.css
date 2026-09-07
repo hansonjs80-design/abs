@@ -346,7 +346,7 @@
 }
 
 .hdr-pres {
-  font-size: 13px;
+  font-size: 15px;
   text-transform: uppercase;
   color: var(--text-tertiary);
   border-bottom: 1px solid var(--grid-strong) !important;

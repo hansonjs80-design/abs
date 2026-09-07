@@ -482,7 +482,7 @@
   padding: 8px 6px;
   background: #f3f6fa;
   color: #334155;
-  font-size: 0.92rem;
+  font-size: calc(0.92rem + 2px);
   font-weight: 900;
 }
 
