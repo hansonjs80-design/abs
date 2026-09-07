@@ -266,6 +266,12 @@ export default function ManualTherapySixMonthStats({
 
       <div className="sw-settlement-table-wrap sw-compact-table-wrap sw-six-month-summary-wrap">
         <table className="sw-summary-table sw-compact-summary-table">
+          <colgroup>
+            <col className="sw-manual-summary-month-col" />
+            <col className="sw-manual-summary-count-col" />
+            <col className="sw-manual-summary-amount-col" />
+            <col className="sw-manual-summary-patient-col" />
+          </colgroup>
           <thead>
             <tr>
               <th>월</th>
