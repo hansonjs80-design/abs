@@ -203,7 +203,8 @@ test('patient history group count follows the title in a larger compact format',
   );
   assert.match(titleRowRule, /justify-content:\s*flex-start;/);
   assert.match(titleRowRule, /gap:\s*4px;/);
-  assert.match(countRule, /font-size:\s*0\.76rem;/);
+  assert.match(titleRowRule, /font-size:\s*calc\(0\.86rem \+ 3px\);/);
+  assert.match(countRule, /font-size:\s*calc\(0\.76rem \+ 3px\);/);
   assert.match(countRule, /white-space:\s*nowrap;/);
 });
 

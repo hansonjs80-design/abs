@@ -75,6 +75,11 @@ describe('combined statistics', () => {
     assert.deepEqual(primary.treatments.shockwave, { count: 2, amount: 160000, incentive: 16000 });
     assert.deepEqual(primary.treatments.shinjang_spray, { count: 1, amount: 270000, incentive: 18900 });
     assert.deepEqual(primary.treatments.manual_therapy, { count: 1, amount: 150000, incentive: 7500 });
+    assert.deepEqual(primary.incentiveRates, {
+      shockwave: [10],
+      shinjang_spray: [7],
+      manual_therapy: [5],
+    });
     assert.deepEqual(primary.total, { count: 4, amount: 580000, incentive: 42400 });
     assert.deepEqual(hidden.total, { count: 0, amount: 0, incentive: 0 });
     assert.equal(summary.totalCount, 4);
@@ -100,6 +105,7 @@ describe('combined statistics', () => {
       amount: 400000,
       incentive: 60000,
     });
+    assert.deepEqual(secondary.incentiveRates.shinjang_spray, [15]);
     assert.equal(summary.totalCount, 5);
     assert.equal(summary.amount, 980000);
     assert.equal(summary.incentive, 102400);
@@ -164,5 +170,51 @@ describe('combined statistics', () => {
       summary.therapists.some((item) => item.therapist.name === '과거치료사'),
       false
     );
+  });
+
+  it('updates the displayed shinjang incentive rates from the active prescription list', () => {
+    const dynamicSettings = structuredClone(settings);
+    const shinjangSettings = dynamicSettings.monthly_settlement_settings['2026-09'].shinjang_spray;
+    shinjangSettings.prescriptions = ['S7(신장분사)', 'S12(신장분사)'];
+    shinjangSettings.prescription_incentive_percentages = {
+      'S7(신장분사)': 7,
+      'S12(신장분사)': 12,
+    };
+    shinjangSettings.hidden_prescriptions = ['S15(신장분사)'];
+
+    const summary = buildCombinedStatsMonthSummary({
+      year: 2026,
+      month: 9,
+      shockwaveRows: [
+        ...shockwaveRows,
+        { therapist_name: '주한솔', prescription: 'S12(신장분사)', prescription_count: 1 },
+      ],
+      manualTherapyRows,
+      shockwaveTherapists: therapists,
+      manualTherapists: therapists,
+      settings: dynamicSettings,
+      isAdmin: true,
+    });
+
+    assert.deepEqual(summary.therapists[0].incentiveRates.shinjang_spray, [7, 12]);
+  });
+
+  it('stacks every distinct shinjang incentive rate completed by one therapist', () => {
+    const summary = buildCombinedStatsMonthSummary({
+      year: 2026,
+      month: 9,
+      shockwaveRows: [
+        ...shockwaveRows,
+        { therapist_name: '주한솔', prescription: 'S15(신장분사)', prescription_count: 1 },
+      ],
+      manualTherapyRows,
+      shockwaveTherapists: therapists,
+      manualTherapists: therapists,
+      settings,
+      isAdmin: true,
+    });
+
+    const primary = summary.therapists.find((item) => item.therapist.name === '주한솔');
+    assert.deepEqual(primary.incentiveRates.shinjang_spray, [7, 15]);
   });
 });

@@ -4200,13 +4200,13 @@
   justify-content: flex-start;
   gap: 4px;
   padding: 0 1px;
-  font-size: 0.86rem;
+  font-size: calc(0.86rem + 3px);
   font-weight: 900;
 }
 
 .patient-history-group-count {
   color: var(--text-secondary, #64748b);
-  font-size: 0.76rem;
+  font-size: calc(0.76rem + 3px);
   font-variant-numeric: tabular-nums;
   font-weight: 800;
   white-space: nowrap;

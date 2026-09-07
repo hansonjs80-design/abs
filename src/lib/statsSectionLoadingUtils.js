@@ -41,3 +41,41 @@ export async function loadStatsMonthsWithConcurrency(targets, loadMonth, concurr
   await Promise.all(Array.from({ length: workerCount }, () => runWorker()));
   return results;
 }
+
+export async function loadStatsMonthsCurrentFirst({
+  targets,
+  currentYear,
+  currentMonth,
+  loadMonth,
+  onCurrentLoaded,
+  concurrency = 2,
+} = {}) {
+  const safeTargets = Array.isArray(targets) ? targets : [];
+  if (safeTargets.length === 0) return [];
+
+  const currentIndex = safeTargets.findIndex((target) => (
+    isDisplayedStatsMonth(target, currentYear, currentMonth)
+  ));
+  if (currentIndex < 0) {
+    return loadStatsMonthsWithConcurrency(safeTargets, loadMonth, concurrency);
+  }
+
+  const results = new Array(safeTargets.length);
+  results[currentIndex] = await loadMonth(safeTargets[currentIndex], currentIndex);
+  if (typeof onCurrentLoaded === 'function') {
+    await onCurrentLoaded(results[currentIndex]);
+  }
+
+  const remainingTargets = safeTargets
+    .map((target, index) => ({ target, index }))
+    .filter(({ index }) => index !== currentIndex);
+  const remainingResults = await loadStatsMonthsWithConcurrency(
+    remainingTargets,
+    ({ target, index }) => loadMonth(target, index),
+    concurrency
+  );
+  remainingTargets.forEach(({ index }, resultIndex) => {
+    results[index] = remainingResults[resultIndex];
+  });
+  return results;
+}

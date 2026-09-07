@@ -42,6 +42,38 @@ function getVisibleStandardPrescriptions(settings) {
     });
 }
 
+function normalizeIncentiveRates(values) {
+  return [...new Set(
+    (Array.isArray(values) ? values : [])
+      .map(Number)
+      .filter((value) => Number.isFinite(value) && value >= 0)
+  )].sort((left, right) => left - right);
+}
+
+function buildStandardIncentiveRates(settings) {
+  return getVisibleStandardPrescriptions(settings).length > 0
+    ? normalizeIncentiveRates([settings?.incentive_percentage])
+    : [];
+}
+
+function buildShinjangIncentiveRatesByTherapist(summary) {
+  const ratesByTherapist = new Map();
+  (Array.isArray(summary?.detailRows) ? summary.detailRows : []).forEach((row) => {
+    if (Math.max(0, Number(row?.count) || 0) === 0) return;
+    const name = String(row?.therapist?.name || row?.therapist?.displayName || '').trim();
+    if (!name) return;
+    const rates = ratesByTherapist.get(name) || [];
+    rates.push(row?.incentivePercentage);
+    ratesByTherapist.set(name, rates);
+  });
+  return new Map(
+    [...ratesByTherapist.entries()].map(([name, rates]) => [
+      name,
+      normalizeIncentiveRates(rates),
+    ])
+  );
+}
+
 function addTherapist(therapistsByName, therapist, index) {
   const name = String(therapist?.name || therapist?.therapist_name || '').trim();
   if (!name || therapistsByName.has(name)) return;
@@ -280,6 +312,11 @@ export function buildCombinedStatsMonthSummary({
     shinjang_spray: toShinjangTreatmentMap(shinjangResult.settlement),
     manual_therapy: toTreatmentMap(manualSettlement),
   };
+  const shockwaveIncentiveRates = buildStandardIncentiveRates(shockwaveSettings);
+  const manualIncentiveRates = buildStandardIncentiveRates(manualSettings);
+  const shinjangIncentiveRatesByTherapist = buildShinjangIncentiveRatesByTherapist(
+    shinjangResult.settlement
+  );
   const therapistSummaries = therapists.map((therapist) => {
     const treatments = Object.fromEntries(COMBINED_STATS_TREATMENTS.map(({ key }) => [
       key,
@@ -288,6 +325,11 @@ export function buildCombinedStatsMonthSummary({
     return {
       therapist,
       treatments,
+      incentiveRates: {
+        shockwave: treatments.shockwave.count > 0 ? shockwaveIncentiveRates : [],
+        shinjang_spray: shinjangIncentiveRatesByTherapist.get(therapist.name) || [],
+        manual_therapy: treatments.manual_therapy.count > 0 ? manualIncentiveRates : [],
+      },
       total: addTreatmentValues(Object.values(treatments)),
     };
   });

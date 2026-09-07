@@ -3,6 +3,7 @@ import { RefreshCw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchedule } from '../contexts/ScheduleContext';
 import { useToast } from '../components/common/Toast';
+import ManualTherapySixMonthIonTreatment from '../components/shockwave/ManualTherapySixMonthIonTreatment';
 import { supabase } from '../lib/supabaseClient';
 import { isAdminUser } from '../lib/authPermissions';
 import { getTodayKST } from '../lib/calendarUtils';
@@ -12,6 +13,7 @@ import {
   COMBINED_STATS_TREATMENTS,
 } from '../lib/combinedStatsUtils';
 import { normalizeManualTherapyLogRows } from '../lib/manualTherapyLogUtils';
+import { setManualTherapyIonTreatment } from '../lib/manualTherapyIonTreatmentUtils';
 import { syncMonthManualTherapyScheduleToStats } from '../lib/manualTherapyUtils';
 import { formatRecentPeriodLabel, parseRecentPeriodMonths } from '../lib/recentPeriodUtils';
 import { getEffectiveSettlementSettings } from '../lib/settlementSettings';
@@ -21,7 +23,7 @@ import {
   loadScheduleMemosForStatsMonth,
   loadStatsMonthlyTherapists,
 } from '../lib/statsScheduleSourceUtils';
-import { loadStatsMonthsWithConcurrency } from '../lib/statsSectionLoadingUtils';
+import { loadStatsMonthsCurrentFirst } from '../lib/statsSectionLoadingUtils';
 import '../styles/combined_stats.css';
 
 const LOG_FIELDS = 'id,date,patient_name,chart_number,visit_count,body_part,therapist_name,prescription,prescription_count,source,scheduler_cell_key,created_at';
@@ -32,6 +34,24 @@ function formatCount(value) {
 
 function formatCurrency(value) {
   return `${Math.max(0, Number(value) || 0).toLocaleString('ko-KR')}원`;
+}
+
+function formatIncentiveRate(value) {
+  const rate = Math.max(0, Number(value) || 0);
+  return `${rate.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}%`;
+}
+
+function IncentiveRateList({ rates = [] }) {
+  if (!Array.isArray(rates) || rates.length === 0) return <span>—</span>;
+  return (
+    <div className="combined-incentive-rate-list">
+      {rates.map((rate) => (
+        <span key={rate} className="combined-incentive-rate-badge">
+          {formatIncentiveRate(rate)}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 function buildMonthLogQuery(tableName, year, month) {
@@ -63,6 +83,7 @@ export default function CombinedStatsPage() {
     loadTherapists,
     loadManualTherapists,
     loadShockwaveSettings,
+    saveShockwaveSettings,
   } = useSchedule();
   const { user } = useAuth();
   const { addToast } = useToast();
@@ -74,9 +95,11 @@ export default function CombinedStatsPage() {
   const settingsRef = useRef(shockwaveSettings);
   const therapistRef = useRef(therapists);
   const manualTherapistRef = useRef(manualTherapists);
+  const ionTreatmentSettingsRef = useRef(shockwaveSettings);
 
   useEffect(() => {
     settingsRef.current = shockwaveSettings;
+    ionTreatmentSettingsRef.current = shockwaveSettings;
   }, [shockwaveSettings]);
 
   useEffect(() => {
@@ -121,7 +144,7 @@ export default function CombinedStatsPage() {
       const settings = loadedSettings || settingsRef.current || {};
       settingsRef.current = settings;
 
-      const summaries = await loadStatsMonthsWithConcurrency(monthTargets, async (target) => {
+      const loadMonthSummary = async (target) => {
         const [
           memos,
           monthlyShockwaveTherapists,
@@ -223,7 +246,28 @@ export default function CombinedStatsPage() {
           settings,
           isAdmin,
         });
-      }, 2);
+      };
+      const summaries = await loadStatsMonthsCurrentFirst({
+        targets: monthTargets,
+        currentYear,
+        currentMonth,
+        loadMonth: loadMonthSummary,
+        concurrency: 2,
+        onCurrentLoaded: (summary) => {
+          if (requestId !== requestIdRef.current || !summary) return;
+          setMonthSummaries((previous) => {
+            const summariesByMonth = new Map(
+              previous.map((item) => [item.monthKey, item])
+            );
+            summariesByMonth.set(summary.monthKey, summary);
+            return monthTargets
+              .map((target) => summariesByMonth.get(
+                `${Number(target.year)}-${String(Number(target.month)).padStart(2, '0')}`
+              ))
+              .filter(Boolean);
+          });
+        },
+      });
       if (requestId !== requestIdRef.current) return;
       setMonthSummaries(summaries);
     } catch (error) {
@@ -240,12 +284,36 @@ export default function CombinedStatsPage() {
     loadManualTherapists,
     loadShockwaveSettings,
     loadTherapists,
+    currentMonth,
+    currentYear,
     monthTargets,
   ]);
 
   useEffect(() => {
     refreshData();
   }, [refreshData]);
+
+  const handleSaveIonTreatment = useCallback(async (year, month, nextIonTreatment) => {
+    const settingsToUpdate = ionTreatmentSettingsRef.current || shockwaveSettings || {};
+    const nextSettings = {
+      ...settingsToUpdate,
+      monthly_settlement_settings: setManualTherapyIonTreatment(
+        settingsToUpdate,
+        year,
+        month,
+        nextIonTreatment
+      ),
+    };
+    ionTreatmentSettingsRef.current = nextSettings;
+    const ok = await saveShockwaveSettings(nextSettings);
+    if (ok) await loadShockwaveSettings();
+    if (!ok) ionTreatmentSettingsRef.current = shockwaveSettings;
+    addToast(
+      ok ? '이온치료 현황을 저장했습니다.' : '이온치료 현황 저장에 실패했습니다.',
+      ok ? 'success' : 'error'
+    );
+    return ok;
+  }, [addToast, loadShockwaveSettings, saveShockwaveSettings, shockwaveSettings]);
 
   useEffect(() => {
     const handleStatsUpdated = () => refreshData();
@@ -282,103 +350,143 @@ export default function CombinedStatsPage() {
 
       <div className="combined-stats-dashboard">
         <section className="combined-stats-current" aria-label={`${currentMonth}월 치료사별 전체 통계`}>
-          {currentSummary?.therapists?.length > 0 ? currentSummary.therapists.map((item, index) => (
-            <article
-              key={item.therapist.key || item.therapist.id || item.therapist.name}
-              className={`combined-therapist-card combined-tone-${index % 5}`}
-            >
-              <table>
-                <thead>
-                  <tr>
-                    <th className="combined-therapist-name" colSpan={4}>
-                      {item.therapist.displayName || item.therapist.name} 치료사
-                    </th>
-                  </tr>
-                  <tr>
-                    <th>구분</th>
-                    <th>총건수</th>
-                    <th>처방별 총 결산 금액</th>
-                    <th>처방별 총 인센티브</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {COMBINED_STATS_TREATMENTS.map((treatment) => {
-                    const value = item.treatments[treatment.key];
-                    return (
-                      <tr key={treatment.key}>
-                        <th>{treatment.label}</th>
-                        <td>{formatCount(value.count)}</td>
-                        <td>{formatCurrency(value.amount)}</td>
-                        <td>{formatCurrency(value.incentive)}</td>
+          {currentSummary?.therapists?.length > 0 ? currentSummary.therapists.map((item, index) => {
+            const visibleTreatments = COMBINED_STATS_TREATMENTS.filter((treatment) => (
+              Math.max(0, Number(item.treatments[treatment.key]?.count) || 0) > 0
+            ));
+            return (
+              <article
+                key={item.therapist.key || item.therapist.id || item.therapist.name}
+                className={`combined-therapist-card combined-tone-${index % 5}`}
+              >
+                <table>
+                  <colgroup>
+                    <col className="combined-current-col-type" />
+                    <col className="combined-current-col-count" />
+                    <col className="combined-current-col-amount" />
+                    <col className="combined-current-col-incentive" />
+                    <col className="combined-current-col-rate" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th className="combined-therapist-name" colSpan={5}>
+                        <div className="combined-therapist-name-content">
+                          <span>{item.therapist.displayName || item.therapist.name} 치료사</span>
+                          <span className="combined-therapist-header-count">
+                            {formatCount(item.total.count)}
+                          </span>
+                        </div>
+                      </th>
+                    </tr>
+                    {visibleTreatments.length > 0 && (
+                      <tr>
+                        <th>구분</th>
+                        <th>총건수</th>
+                        <th>처방별 총 결산 금액</th>
+                        <th>처방별 총 인센티브</th>
+                        <th>인센</th>
                       </tr>
-                    );
-                  })}
-                  <tr className="combined-therapist-total">
-                    <th>총액</th>
-                    <td>{formatCount(item.total.count)}</td>
-                    <td>{formatCurrency(item.total.amount)}</td>
-                    <td>{formatCurrency(item.total.incentive)}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </article>
-          )) : (
+                    )}
+                  </thead>
+                  {visibleTreatments.length > 0 && (
+                    <tbody>
+                      {visibleTreatments.map((treatment) => {
+                        const value = item.treatments[treatment.key];
+                        return (
+                          <tr key={treatment.key}>
+                            <th>{treatment.label}</th>
+                            <td>{formatCount(value.count)}</td>
+                            <td>{formatCurrency(value.amount)}</td>
+                            <td>{formatCurrency(value.incentive)}</td>
+                            <td className="combined-incentive-rate-cell">
+                              <IncentiveRateList rates={item.incentiveRates?.[treatment.key]} />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      <tr className="combined-therapist-total">
+                        <th>합계</th>
+                        <td>{formatCount(item.total.count)}</td>
+                        <td>{formatCurrency(item.total.amount)}</td>
+                        <td>{formatCurrency(item.total.incentive)}</td>
+                        <td>—</td>
+                      </tr>
+                    </tbody>
+                  )}
+                </table>
+              </article>
+            );
+          }) : (
             <div className="combined-stats-empty">
               {isLoading ? '전체 통계를 계산하고 있습니다.' : '표시할 치료사 통계가 없습니다.'}
             </div>
           )}
         </section>
 
-        <aside className="combined-stats-recent" aria-label={`${recentPeriodLabel} 전체 결산 현황`}>
-          <div className="combined-stats-recent-heading">
-            <div>
-              <h2>{recentPeriodLabel} 결산 현황</h2>
-              <span>크라이오 반영 전체 통계</span>
+        <aside className="combined-stats-side">
+          <section className="combined-stats-recent" aria-label={`${recentPeriodLabel} 전체 결산 현황`}>
+            <div className="combined-stats-recent-heading">
+              <div>
+                <h2>{recentPeriodLabel} 결산 현황</h2>
+                <span>크라이오 반영 전체 통계</span>
+              </div>
+              <input
+                type="text"
+                value={recentPeriodInput}
+                onChange={(event) => setRecentPeriodInput(event.target.value)}
+                placeholder="최근 6개월"
+                aria-label="전체 통계 최근 결산 기간"
+              />
             </div>
-            <input
-              type="text"
-              value={recentPeriodInput}
-              onChange={(event) => setRecentPeriodInput(event.target.value)}
-              placeholder="최근 6개월"
-              aria-label="전체 통계 최근 결산 기간"
-            />
-          </div>
-          <div className="combined-stats-recent-table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>월</th>
-                  <th>총건수</th>
-                  <th>결산 금액</th>
-                  <th>인센티브</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentRows.map((summary) => (
-                  <tr
-                    key={summary.monthKey}
-                    className={summary.monthKey === currentMonthKey ? 'is-current' : undefined}
-                  >
-                    <th>{summary.label}</th>
-                    <td>{formatCount(summary.totalCount)}</td>
-                    <td>{formatCurrency(summary.amount)}</td>
-                    <td>{formatCurrency(summary.incentive)}</td>
+            <div className="combined-stats-recent-table-wrap">
+              <table>
+                <colgroup>
+                  <col className="combined-recent-col-month" />
+                  <col className="combined-recent-col-count" />
+                  <col className="combined-recent-col-amount" />
+                  <col className="combined-recent-col-incentive" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>월</th>
+                    <th>총건수</th>
+                    <th>결산 금액</th>
+                    <th>인센티브</th>
                   </tr>
-                ))}
-                <tr className="combined-recent-total">
-                  <th>{recentPeriodLabel} 합계</th>
-                  <td>{formatCount(recentTotal.count)}</td>
-                  <td>{formatCurrency(recentTotal.amount)}</td>
-                  <td>{formatCurrency(recentTotal.incentive)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          {!isAdmin && (
-            <p className="combined-stats-permission-note">
-              일반 계정에서는 신장분사 인센티브 15% 처방이 결산에서 제외됩니다.
-            </p>
-          )}
+                </thead>
+                <tbody>
+                  {recentRows.map((summary) => (
+                    <tr
+                      key={summary.monthKey}
+                      className={summary.monthKey === currentMonthKey ? 'is-current' : undefined}
+                    >
+                      <th>{summary.label}</th>
+                      <td>{formatCount(summary.totalCount)}</td>
+                      <td>{formatCurrency(summary.amount)}</td>
+                      <td>{formatCurrency(summary.incentive)}</td>
+                    </tr>
+                  ))}
+                  <tr className="combined-recent-total">
+                    <th>{recentPeriodLabel} 합계</th>
+                    <td>{formatCount(recentTotal.count)}</td>
+                    <td>{formatCurrency(recentTotal.amount)}</td>
+                    <td>{formatCurrency(recentTotal.incentive)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            {!isAdmin && (
+              <p className="combined-stats-permission-note">
+                일반 계정에서는 신장분사 인센티브 15% 처방이 결산에서 제외됩니다.
+              </p>
+            )}
+          </section>
+          <ManualTherapySixMonthIonTreatment
+            currentYear={currentYear}
+            currentMonth={currentMonth}
+            settings={shockwaveSettings}
+            onSave={handleSaveIonTreatment}
+          />
         </aside>
       </div>
     </div>

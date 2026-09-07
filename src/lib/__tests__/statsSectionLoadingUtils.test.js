@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   isDisplayedStatsMonth,
+  loadStatsMonthsCurrentFirst,
   loadStatsMonthsTogether,
   loadStatsMonthsWithConcurrency,
   shouldKeepStatsSectionMounted,
@@ -85,5 +86,35 @@ describe('statistics secondary section preparation', () => {
 
     assert.equal(maxActive, 2);
     assert.deepEqual(result, ['3월', '4월', '5월', '6월']);
+  });
+
+  it('publishes the displayed month before starting recent month work', async () => {
+    const events = [];
+    const targets = [
+      { year: 2026, month: 4 },
+      { year: 2026, month: 5 },
+      { year: 2026, month: 6 },
+    ];
+
+    const result = await loadStatsMonthsCurrentFirst({
+      targets,
+      currentYear: 2026,
+      currentMonth: 6,
+      loadMonth: async (target) => {
+        events.push(`start-${target.month}`);
+        await Promise.resolve();
+        return `${target.month}월`;
+      },
+      onCurrentLoaded: (summary) => {
+        events.push(`current-${summary}`);
+      },
+      concurrency: 2,
+    });
+
+    assert.deepEqual(result, ['4월', '5월', '6월']);
+    assert.equal(events[0], 'start-6');
+    assert.equal(events[1], 'current-6월');
+    assert.ok(events.indexOf('current-6월') < events.indexOf('start-4'));
+    assert.ok(events.indexOf('current-6월') < events.indexOf('start-5'));
   });
 });
