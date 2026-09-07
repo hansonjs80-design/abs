@@ -2149,9 +2149,9 @@
 }
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table {
-  width: auto !important;
-  min-width: 0 !important;
-  table-layout: auto !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  table-layout: fixed !important;
 }
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table thead th {
@@ -2176,9 +2176,9 @@
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table thead .label-col,
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table .row-label {
   text-align: center !important;
-  width: auto !important;
+  width: 38% !important;
   min-width: 120px !important;
-  max-width: 150px !important;
+  max-width: 180px !important;
   padding: 6px 12px !important;
 }
 
