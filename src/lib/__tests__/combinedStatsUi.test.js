@@ -79,8 +79,10 @@ describe('combined statistics UI', () => {
     assert.match(styleSource, /\.combined-current-col-type,[\s\S]*width:\s*auto;/);
     assert.match(styleSource, /\.combined-therapist-card th,[\s\S]*white-space:\s*nowrap;/);
     assert.match(styleSource, /\.combined-therapist-summary-card\s*\{[\s\S]*--combined-tone-strong:\s*#475569;/);
-    assert.match(styleSource, /\.combined-recent-col-month\s*\{\s*width:\s*23\.94%;/s);
-    assert.match(styleSource, /\.combined-recent-col-count\s*\{\s*width:\s*19\.72%;/s);
+    assert.match(styleSource, /\.combined-recent-col-month,[\s\S]*width:\s*auto;/);
+    assert.match(styleSource, /\.combined-summary-amount-cell,[\s\S]*font-size:\s*calc\(1\.05rem \+ 2px\) !important;/);
+    assert.match(styleSource, /\.combined-summary-grand-total > th\s*\{[\s\S]*font-size:\s*calc\(1\.05rem \+ 3px\) !important;/);
+    assert.match(styleSource, /\.combined-summary-grand-total > td,[\s\S]*font-size:\s*calc\(1\.05rem \+ 3px\) !important;/);
     assert.match(styleSource, /font-size:\s*calc\(0\.95rem \+ 2px\);/);
     assert.match(styleSource, /\.combined-therapist-card\s*\{\s*border-top:\s*3px solid var\(--combined-tone-strong\);/s);
     assert.match(styleSource, /border-right:\s*1px solid #cbd5e1;/);
