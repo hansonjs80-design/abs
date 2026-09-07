@@ -346,7 +346,7 @@
 }
 
 .hdr-pres {
-  font-size: 11px;
+  font-size: 13px;
   text-transform: uppercase;
   color: var(--text-tertiary);
   border-bottom: 1px solid var(--grid-strong) !important;
@@ -464,7 +464,7 @@
 .sw-header-row-prescriptions th {
   top: calc(var(--sw-grid-header-title-height) + var(--sw-grid-header-therapist-height));
   height: var(--sw-grid-header-prescription-height);
-  font-size: 13px !important;
+  font-size: 15px !important;
   border-bottom: none;
   z-index: 38 !important;
 }
