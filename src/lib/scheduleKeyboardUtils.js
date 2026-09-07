@@ -48,38 +48,57 @@ export function resolveSchedulePrescriptionShortcut(event, {
   shockwaveShortcuts = {},
   shinjangShortcuts = {},
   hiddenPrescriptions = [],
+  preferredType = null,
 } = {}) {
   const shortcutKey = getScheduleShortcutKey(event);
   const hidden = new Set(hiddenPrescriptions || []);
-  const isManualModifier = Boolean(
-    event?.altKey && !event?.metaKey && !event?.ctrlKey && !event?.shiftKey
-  );
 
-  if (isManualModifier && /^[1-9]$/.test(shortcutKey)) {
-    const prescription = findPrescriptionByShortcut(manualShortcuts, shortcutKey, hidden);
-    return prescription
-      ? { type: 'manual_therapy', prescription, shortcutKey }
-      : null;
-  }
-
+  // 1. 신장분사: 윈도우 Alt / 맥 Option + 숫자 또는 영문
   const isShinjangModifier = Boolean(
-    (event?.metaKey || event?.ctrlKey) && event?.shiftKey && !event?.altKey
+    event?.altKey && !event?.metaKey && !event?.ctrlKey && !event?.shiftKey
   );
   if (isShinjangModifier && /^[1-9A-Z]$/.test(shortcutKey)) {
     const prescription = findPrescriptionByShortcut(shinjangShortcuts, shortcutKey, hidden);
-    return prescription
-      ? { type: 'shinjang_spray', prescription, shortcutKey }
-      : null;
+    if (prescription) {
+      return { type: 'shinjang_spray', prescription, shortcutKey };
+    }
   }
 
-  const isShockwaveModifier = Boolean(
+  // 기존 Ctrl/Cmd + Shift 신장분사 조합도 하위 호환 지원
+  const isLegacyShinjangModifier = Boolean(
+    (event?.metaKey || event?.ctrlKey) && event?.shiftKey && !event?.altKey
+  );
+  if (isLegacyShinjangModifier && /^[1-9A-Z]$/.test(shortcutKey)) {
+    const prescription = findPrescriptionByShortcut(shinjangShortcuts, shortcutKey, hidden);
+    if (prescription) {
+      return { type: 'shinjang_spray', prescription, shortcutKey };
+    }
+  }
+
+  // 2. 도수치료 및 충격파: 윈도우 Ctrl / 맥 Cmd + 숫자 또는 영문
+  const isMetaModifier = Boolean(
     (event?.metaKey || event?.ctrlKey) && !event?.shiftKey && !event?.altKey
   );
-  if (isShockwaveModifier && /^[1-9A-Z]$/.test(shortcutKey)) {
-    const prescription = findPrescriptionByShortcut(shockwaveShortcuts, shortcutKey, hidden);
-    return prescription
-      ? { type: 'shockwave', prescription, shortcutKey }
-      : null;
+  if (isMetaModifier && /^[1-9A-Z]$/.test(shortcutKey)) {
+    if (preferredType === 'manual_therapy') {
+      const manualPrescription = findPrescriptionByShortcut(manualShortcuts, shortcutKey, hidden);
+      if (manualPrescription) {
+        return { type: 'manual_therapy', prescription: manualPrescription, shortcutKey };
+      }
+      const shockwavePrescription = findPrescriptionByShortcut(shockwaveShortcuts, shortcutKey, hidden);
+      if (shockwavePrescription) {
+        return { type: 'shockwave', prescription: shockwavePrescription, shortcutKey };
+      }
+    } else {
+      const shockwavePrescription = findPrescriptionByShortcut(shockwaveShortcuts, shortcutKey, hidden);
+      if (shockwavePrescription) {
+        return { type: 'shockwave', prescription: shockwavePrescription, shortcutKey };
+      }
+      const manualPrescription = findPrescriptionByShortcut(manualShortcuts, shortcutKey, hidden);
+      if (manualPrescription) {
+        return { type: 'manual_therapy', prescription: manualPrescription, shortcutKey };
+      }
+    }
   }
 
   return null;

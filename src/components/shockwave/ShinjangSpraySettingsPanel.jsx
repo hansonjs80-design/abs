@@ -179,8 +179,8 @@ export default function ShinjangSpraySettingsPanel({
     if (typeof navigator === 'undefined') return false;
     return /Mac|iPhone|iPad|iPod/i.test(`${navigator.platform || ''} ${navigator.userAgent || ''}`);
   }, []);
-  const shortcutPrefix = isAppleShortcutPlatform ? 'Cmd+Shift+' : 'Ctrl+Shift+';
-  const shortcutTitle = `${isAppleShortcutPlatform ? 'Command' : 'Ctrl'} + Shift + 숫자/영문으로 신장분사 처방 단축키 설정`;
+  const shortcutPrefix = isAppleShortcutPlatform ? 'Option+' : 'Alt+';
+  const shortcutTitle = `${isAppleShortcutPlatform ? 'Option' : 'Alt'} + 숫자/영문으로 신장분사 처방 단축키 설정`;
 
   useEffect(() => {
     setDraft(initialDraft);

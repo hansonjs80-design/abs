@@ -33,19 +33,19 @@ test('settlement prescription rows expose cryo selection before base and cryo pr
   assert.match(styles, /\.settlement-cryo-price-input:disabled\s*\{/);
 });
 
-test('manual therapy shortcut settings show Alt or Option and accept digits only', async () => {
+test('manual therapy shortcut settings show Ctrl or Cmd and accept digits and letters', async () => {
   const [panel, viewState] = await Promise.all([
     readFile(panelUrl, 'utf8'),
     readFile(stateUrl, 'utf8'),
   ]);
 
-  assert.match(panel, /isAppleShortcutPlatform \? 'Option\+' : 'Alt\+'/);
+  assert.match(panel, /isAppleShortcutPlatform \? 'Cmd\+' : 'Ctrl\+'/);
   assert.ok(
-    panel.includes('const allowedPattern = isManualTherapy ? /[^1-9]/g : /[^1-9A-Z]/g;')
+    panel.includes('const allowedPattern = /[^1-9A-Z]/g;')
   );
   assert.match(panel, /title=\{shortcutTitle\}/);
-  assert.match(viewState, /manualPrescriptionModifier: isAppleShortcutPlatform \? '⌥' : 'Alt'/);
-  assert.match(viewState, /shinjangPrescriptionModifier: isAppleShortcutPlatform \? '⌘⇧' : 'Ctrl\+Shift'/);
+  assert.match(viewState, /manualPrescriptionModifier: isAppleShortcutPlatform \? '⌘' : 'Ctrl'/);
+  assert.match(viewState, /shinjangPrescriptionModifier: isAppleShortcutPlatform \? '⌥' : 'Alt'/);
 });
 
 test('shockwave and manual therapy setting headers share the same fixed action column geometry as their rows', async () => {

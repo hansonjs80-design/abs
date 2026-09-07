@@ -51,8 +51,8 @@ export default function useScheduleViewState({
     const join = (...keys) => isAppleShortcutPlatform ? keys.join('') : keys.join('+');
     return {
       modifier: mod,
-      manualPrescriptionModifier: isAppleShortcutPlatform ? '⌥' : 'Alt',
-      shinjangPrescriptionModifier: isAppleShortcutPlatform ? '⌘⇧' : 'Ctrl+Shift',
+      manualPrescriptionModifier: isAppleShortcutPlatform ? '⌘' : 'Ctrl',
+      shinjangPrescriptionModifier: isAppleShortcutPlatform ? '⌥' : 'Alt',
       copy: join(mod, 'C'),
       cut: join(mod, 'X'),
       paste: join(mod, 'V'),

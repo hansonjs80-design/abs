@@ -67,25 +67,26 @@ describe('schedule keyboard shortcut detection', () => {
     assert.equal(formatScheduleShortcutLabel('', 'Ctrl'), '');
   });
 
-  it('uses Alt or Option digits only for manual therapy prescriptions', () => {
+  it('uses Alt or Option for shinjang spray prescriptions with digits and letters', () => {
     const shortcuts = {
-      manualShortcuts: { '도수 30분': '4', '도수 영문': 'A' },
+      shinjangShortcuts: { '신장분사 3.0': '4', '신장분사 영문': 'A' },
+      manualShortcuts: { '도수 30분': '4' },
       shockwaveShortcuts: { F2: '4' },
     };
 
     assert.deepEqual(
       resolveSchedulePrescriptionShortcut(
-        { altKey: true, code: 'Digit4', key: '¢' },
+        { altKey: true, code: 'Digit4', key: '4' },
         shortcuts
       ),
-      { type: 'manual_therapy', prescription: '도수 30분', shortcutKey: '4' }
+      { type: 'shinjang_spray', prescription: '신장분사 3.0', shortcutKey: '4' }
     );
-    assert.equal(
+    assert.deepEqual(
       resolveSchedulePrescriptionShortcut(
-        { altKey: true, code: 'KeyA', key: 'å' },
+        { altKey: true, code: 'KeyA', key: 'a' },
         shortcuts
       ),
-      null
+      { type: 'shinjang_spray', prescription: '신장분사 영문', shortcutKey: 'A' }
     );
     assert.equal(
       resolveSchedulePrescriptionShortcut(
@@ -96,12 +97,13 @@ describe('schedule keyboard shortcut detection', () => {
     );
   });
 
-  it('keeps Ctrl or Command prescription shortcuts exclusive to shockwave', () => {
+  it('uses Ctrl or Command for manual therapy and shockwave prescriptions with digits and letters', () => {
     const shortcuts = {
-      manualShortcuts: { '도수 30분': '4' },
+      manualShortcuts: { '도수 30분': '3', '도수 60분': 'M' },
       shockwaveShortcuts: { F2: '4', F3: 'A' },
     };
 
+    // 충격파 단축키
     assert.deepEqual(
       resolveSchedulePrescriptionShortcut(
         { metaKey: true, code: 'Digit4', key: '4' },
@@ -116,6 +118,24 @@ describe('schedule keyboard shortcut detection', () => {
       ),
       { type: 'shockwave', prescription: 'F3', shortcutKey: 'A' }
     );
+
+    // 도수치료 단축키 (컨트롤 + 숫자, 영문)
+    assert.deepEqual(
+      resolveSchedulePrescriptionShortcut(
+        { ctrlKey: true, code: 'Digit3', key: '3' },
+        shortcuts
+      ),
+      { type: 'manual_therapy', prescription: '도수 30분', shortcutKey: '3' }
+    );
+    assert.deepEqual(
+      resolveSchedulePrescriptionShortcut(
+        { metaKey: true, code: 'KeyM', key: 'm' },
+        shortcuts
+      ),
+      { type: 'manual_therapy', prescription: '도수 60분', shortcutKey: 'M' }
+    );
+
+    // Alt가 함께 눌렸을 때는 null
     assert.equal(
       resolveSchedulePrescriptionShortcut(
         { metaKey: true, altKey: true, code: 'Digit4', key: '4' },
@@ -125,7 +145,7 @@ describe('schedule keyboard shortcut detection', () => {
     );
   });
 
-  it('uses Ctrl or Command plus Shift for shinjang spray prescriptions', () => {
+  it('supports legacy Ctrl/Cmd plus Shift for shinjang spray prescriptions as fallback', () => {
     const shortcuts = {
       shockwaveShortcuts: { F2: '4' },
       shinjangShortcuts: { 'F3.0(신장분사DC)': '4', '40분(신장분사)': 'A' },
@@ -145,22 +165,25 @@ describe('schedule keyboard shortcut detection', () => {
       ),
       { type: 'shinjang_spray', prescription: '40분(신장분사)', shortcutKey: 'A' }
     );
-    assert.equal(
-      resolveSchedulePrescriptionShortcut(
-        { ctrlKey: true, shiftKey: true, altKey: true, code: 'KeyA', key: 'A' },
-        shortcuts
-      ),
-      null
-    );
   });
 
   it('does not resolve hidden prescriptions', () => {
     assert.equal(
       resolveSchedulePrescriptionShortcut(
-        { altKey: true, code: 'Digit2', key: '™' },
+        { ctrlKey: true, code: 'Digit2', key: '2' },
         {
           manualShortcuts: { '도수 60분': '2' },
           hiddenPrescriptions: ['도수 60분'],
+        }
+      ),
+      null
+    );
+    assert.equal(
+      resolveSchedulePrescriptionShortcut(
+        { altKey: true, code: 'Digit1', key: '1' },
+        {
+          shinjangShortcuts: { '신장분사 1': '1' },
+          hiddenPrescriptions: ['신장분사 1'],
         }
       ),
       null
