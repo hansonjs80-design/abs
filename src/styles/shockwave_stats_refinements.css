@@ -2260,14 +2260,18 @@
   white-space: nowrap !important;
 }
 
-/* 이온치료 현황 건수/총액 입력창 너비 최적화 (총액 숫자 잘림 방지) */
+/* 이온치료 현황 건수/총액 입력창 너비 최적화 (총액 너비 20% 확대 반영) */
 .sw-manual-ion-summary-table td:nth-child(2) .sw-six-month-ion-input-wrap input {
   width: 48px !important;
 }
 
+.sw-manual-ion-amount-column {
+  width: 135px !important;
+}
+
 .sw-manual-ion-summary-table td:nth-child(3) .sw-six-month-ion-input-wrap input,
 .sw-six-month-ion-input-wrap--amount input {
-  width: 86px !important;
+  width: 105px !important;
 }
 
 
