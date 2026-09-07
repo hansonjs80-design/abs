@@ -1275,7 +1275,7 @@
 .sw-manual-compact-settlement-table td.grand-value.amount,
 .sw-manual-compact-settlement-table td.merged-value.incentive,
 .sw-manual-compact-settlement-table td.grand-value.incentive {
-  font-size: 1.2rem !important;
+  font-size: 0.95rem !important;
   font-weight: 800 !important;
 }
 
@@ -1716,7 +1716,7 @@
   box-sizing: border-box;
   gap: 6px;
   margin: 0 !important;
-  padding: 16px;
+  padding: 12px 14px;
 }
 
 .sw-manual-settlement-container .sw-settlement-header {
@@ -1809,7 +1809,7 @@
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table {
   width: auto;
   min-width: 0;
-  height: 100%;
+  height: auto;
   table-layout: auto;
   white-space: nowrap;
 }
@@ -1821,10 +1821,11 @@
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table th,
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table td {
   min-width: 0;
-  height: 40px;
-  padding: 8px 12px;
-  font-size: 0.96rem;
+  height: 34px;
+  padding: 6px 12px;
+  font-size: 0.92rem;
   white-space: nowrap;
+  text-align: center !important;
 }
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table thead .therapist-col,
@@ -1832,51 +1833,56 @@
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table .grand-value {
   width: auto;
   min-width: 0;
-  font-size: 1rem;
+  font-size: 0.94rem;
+  text-align: center !important;
 }
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table thead .prescription-col {
   width: auto;
   min-width: 0;
   max-width: none;
-  font-size: 0.94rem;
+  font-size: 0.88rem;
+  text-align: center !important;
 }
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table .label-col,
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table .row-label {
   width: auto;
-  min-width: 0;
+  min-width: 120px;
   max-width: none;
-  font-size: 0.96rem;
+  font-size: 0.92rem;
   white-space: nowrap;
+  text-align: center !important;
 }
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table .merged-value,
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table .grand-value {
-  font-size: 0.98rem;
+  font-size: 0.94rem;
+  text-align: center !important;
 }
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table
   .settlement-amount-row td,
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table
   .settlement-incentive-row td {
-  font-size: 1.04rem;
+  font-size: 0.95rem;
+  text-align: center !important;
 }
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table--narrow {
-  width: 100%;
+  width: auto;
   min-width: 0;
 }
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table--narrow
   thead .therapist-col {
-  font-size: 1.14rem;
+  font-size: 0.96rem;
   line-height: 1.15;
 }
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table--narrow
   thead .prescription-col {
-  font-size: 0.98rem;
+  font-size: 0.88rem;
 }
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table--compact {
@@ -2089,19 +2095,25 @@
   }
 }
 
-/* Keep long manual-therapy amount and incentive labels fully readable. */
+/* Manual therapy settlement compact readable layout. */
 .sw-manual-settlement-container--readable {
-  grid-template-columns: minmax(760px, 1.9fr) minmax(360px, 0.82fr);
+  grid-template-columns: auto minmax(360px, 0.82fr);
+  justify-content: start;
+  width: max-content;
+  max-width: 100%;
 }
 
 .sw-manual-settlement-container--readable:has(.sw-manual-settlement-stack--narrow) {
-  grid-template-columns: 620px minmax(480px, 600px);
-  width: min(100%, 1238px);
+  grid-template-columns: auto auto;
+  justify-content: start;
+  width: max-content;
+  max-width: 100%;
 }
 
 .sw-manual-settlement-container--readable
   .sw-manual-settlement-main-card .sw-manual-compact-settlement-table {
-  min-width: 820px;
+  min-width: 0;
+  width: auto;
 }
 
 .sw-manual-settlement-container--readable
@@ -2110,16 +2122,17 @@
   .sw-manual-settlement-main-card .sw-manual-compact-settlement-table .label-col,
 .sw-manual-settlement-container--readable
   .sw-manual-settlement-main-card .sw-manual-compact-settlement-table .row-label {
-  width: 230px;
-  min-width: 230px;
-  max-width: 230px;
+  width: auto;
+  min-width: 120px;
+  max-width: 150px;
   overflow: visible;
   text-overflow: unset;
 }
 
 .sw-manual-settlement-container--readable
   .sw-manual-settlement-main-card .sw-manual-compact-settlement-table--narrow {
-  min-width: 600px;
+  min-width: 0;
+  width: auto;
 }
 
 @media (max-width: 1280px) {
@@ -2129,3 +2142,52 @@
     width: 100%;
   }
 }
+
+/* 도수치료 좌측 결산 테이블 전용 컴팩트 디자인 및 우측열 중앙 정렬 */
+.sw-manual-settlement-main-card .sw-settlement-header h2 {
+  font-size: 1.05rem !important;
+}
+
+.sw-manual-settlement-main-card .sw-manual-compact-settlement-table {
+  width: auto !important;
+  min-width: 0 !important;
+  table-layout: auto !important;
+}
+
+.sw-manual-settlement-main-card .sw-manual-compact-settlement-table thead th {
+  font-size: 0.94rem !important;
+  line-height: 1.2 !important;
+  font-weight: 800 !important;
+  text-align: center !important;
+  padding: 6px 12px !important;
+  height: 34px !important;
+}
+
+.sw-manual-settlement-main-card .sw-manual-compact-settlement-table tbody th,
+.sw-manual-settlement-main-card .sw-manual-compact-settlement-table tbody td {
+  font-size: 0.92rem !important;
+  line-height: 1.2 !important;
+  height: 34px !important;
+  padding: 6px 12px !important;
+  text-align: center !important;
+  box-sizing: border-box !important;
+}
+
+.sw-manual-settlement-main-card .sw-manual-compact-settlement-table thead .label-col,
+.sw-manual-settlement-main-card .sw-manual-compact-settlement-table .row-label {
+  text-align: center !important;
+  width: auto !important;
+  min-width: 120px !important;
+  max-width: 150px !important;
+  padding: 6px 12px !important;
+}
+
+.sw-manual-settlement-main-card .sw-manual-compact-settlement-table .merged-value,
+.sw-manual-settlement-main-card .sw-manual-compact-settlement-table .amount,
+.sw-manual-settlement-main-card .sw-manual-compact-settlement-table .incentive,
+.sw-manual-settlement-main-card .sw-manual-compact-settlement-table [class*='therapist-tone-'] {
+  text-align: center !important;
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+}
+

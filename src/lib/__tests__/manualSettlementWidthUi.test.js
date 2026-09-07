@@ -6,7 +6,7 @@ const pageUrl = new URL('../../pages/ManualTherapyStatsPage.jsx', import.meta.ur
 const stylesUrl = new URL('../../styles/shockwave_stats_refinements.css', import.meta.url);
 
 describe('manual therapy settlement readable width', () => {
-  it('uses a dedicated wide layout and a label column that fits long breakdown labels', async () => {
+  it('uses a dedicated compact layout and a label column that fits labels compactly', async () => {
     const [pageSource, styles] = await Promise.all([
       readFile(pageUrl, 'utf8'),
       readFile(stylesUrl, 'utf8'),
@@ -14,9 +14,9 @@ describe('manual therapy settlement readable width', () => {
 
     assert.match(pageSource, /sw-manual-settlement-container--readable/);
     assert.match(styles, /\.sw-manual-settlement-container--readable\s*\{/);
-    assert.match(styles, /grid-template-columns: minmax\(760px, 1\.9fr\)/);
-    assert.match(styles, /min-width: 820px/);
-    assert.match(styles, /min-width: 230px/);
+    assert.match(styles, /grid-template-columns: auto minmax\(360px, 0\.82fr\)/);
+    assert.match(styles, /\.sw-manual-settlement-container--readable:has\(\.sw-manual-settlement-stack--narrow\)/);
+    assert.match(styles, /min-width: 120px/);
     assert.match(styles, /overflow: visible/);
   });
 });
