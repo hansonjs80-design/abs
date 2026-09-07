@@ -174,13 +174,9 @@
   width: 28%;
 }
 
-.combined-summary-col-count {
-  width: 18%;
-}
-
 .combined-summary-col-amount,
 .combined-summary-col-incentive {
-  width: 27%;
+  width: 36%;
 }
 
 .combined-therapist-card tbody th {
@@ -239,13 +235,77 @@
   font-weight: 900 !important;
 }
 
-.combined-therapist-summary-card tbody th {
-  background: #f8fafc;
+.combined-therapist-summary-card table {
+  border: 2.5px solid #000000 !important;
+  border-collapse: collapse !important;
+}
+
+.combined-therapist-summary-card th,
+.combined-therapist-summary-card td {
+  border: 1px solid #000000 !important;
+}
+
+.combined-therapist-summary-card thead th {
+  background: #ffffff !important;
+  color: #000000 !important;
+  font-weight: 800 !important;
+  font-size: 1.05rem !important;
+  text-align: center !important;
+  padding: 8px 6px !important;
+}
+
+.combined-summary-empty-header {
+  background: #ffffff !important;
+}
+
+.combined-summary-therapist-cell {
+  color: #000000 !important;
+  font-weight: 800 !important;
+  font-size: 1.05rem !important;
+  text-align: center !important;
+  padding: 8px 10px !important;
+  white-space: nowrap !important;
+}
+
+.combined-summary-tone-0 {
+  background-color: #fed7aa !important;
+}
+
+.combined-summary-tone-1 {
+  background-color: #ddd6fe !important;
+}
+
+.combined-summary-tone-2 {
+  background-color: #bbf7d0 !important;
+}
+
+.combined-summary-tone-3 {
+  background-color: #bfdbfe !important;
+}
+
+.combined-summary-tone-4 {
+  background-color: #fbcfe8 !important;
+}
+
+.combined-summary-amount-cell,
+.combined-summary-incentive-cell {
+  color: #000000 !important;
+  font-weight: 700 !important;
+  font-size: 1.05rem !important;
+  text-align: right !important;
+  padding: 8px 16px !important;
 }
 
 .combined-summary-grand-total > * {
-  border-top-color: #475569;
-  color: #0f172a !important;
+  border-top: 2.5px solid #000000 !important;
+  background: #f8fafc !important;
+  color: #000000 !important;
+  font-weight: 900 !important;
+}
+
+.combined-summary-grand-total > th {
+  text-align: center !important;
+  font-size: 1.05rem !important;
 }
 
 .combined-tone-0 {

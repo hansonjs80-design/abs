@@ -208,17 +208,22 @@ export default function CombinedStatsPage() {
       settingsRef.current = settings;
 
       const loadMonthSummary = async (target) => {
+        const isCurrentMonth = Number(target.year) === Number(currentYear)
+          && Number(target.month) === Number(currentMonth);
+
         const [
           memos,
           monthlyShockwaveTherapists,
           monthlyManualTherapists,
           monthlyShinjangTherapists,
         ] = await Promise.all([
-          loadScheduleMemosForStatsMonth({
-            year: target.year,
-            month: target.month,
-            settings,
-          }),
+          isCurrentMonth
+            ? loadScheduleMemosForStatsMonth({
+                year: target.year,
+                month: target.month,
+                settings,
+              })
+            : Promise.resolve({}),
           loadStatsMonthlyTherapists({
             year: target.year,
             month: target.month,
@@ -239,37 +244,39 @@ export default function CombinedStatsPage() {
           }),
         ]);
 
-        const syncResults = await Promise.allSettled([
-          ...(baseShockwaveTherapists.length > 0 ? [syncMonthShockwaveScheduleToStats({
-            year: target.year,
-            month: target.month,
-            memos,
-            therapists: baseShockwaveTherapists,
-            monthlyTherapists: monthlyShockwaveTherapists,
-            settings,
-            upToToday: true,
-            scheduleAuthoritative: true,
-            emitEvent: false,
-            replaceExistingMonthLogs: true,
-          })] : []),
-          ...(baseManualTherapists.length > 0 ? [syncMonthManualTherapyScheduleToStats({
-            year: target.year,
-            month: target.month,
-            memos,
-            therapists: baseManualTherapists,
-            monthlyTherapists: monthlyManualTherapists,
-            settings,
-            upToToday: true,
-            scheduleAuthoritative: true,
-            emitEvent: false,
-            replaceExistingMonthLogs: true,
-          })] : []),
-        ]);
-        syncResults.forEach((result) => {
-          if (result.status === 'rejected') {
-            console.error('전체 통계 원본 동기화 실패:', result.reason);
-          }
-        });
+        if (isCurrentMonth) {
+          const syncResults = await Promise.allSettled([
+            ...(baseShockwaveTherapists.length > 0 ? [syncMonthShockwaveScheduleToStats({
+              year: target.year,
+              month: target.month,
+              memos,
+              therapists: baseShockwaveTherapists,
+              monthlyTherapists: monthlyShockwaveTherapists,
+              settings,
+              upToToday: true,
+              scheduleAuthoritative: true,
+              emitEvent: false,
+              replaceExistingMonthLogs: true,
+            })] : []),
+            ...(baseManualTherapists.length > 0 ? [syncMonthManualTherapyScheduleToStats({
+              year: target.year,
+              month: target.month,
+              memos,
+              therapists: baseManualTherapists,
+              monthlyTherapists: monthlyManualTherapists,
+              settings,
+              upToToday: true,
+              scheduleAuthoritative: true,
+              emitEvent: false,
+              replaceExistingMonthLogs: true,
+            })] : []),
+          ]);
+          syncResults.forEach((result) => {
+            if (result.status === 'rejected') {
+              console.error('전체 통계 원본 동기화 실패:', result.reason);
+            }
+          });
+        }
 
         const [shockwaveResult, manualResult] = await Promise.all([
           buildMonthLogQuery('shockwave_patient_logs', target.year, target.month),
@@ -292,7 +299,7 @@ export default function CombinedStatsPage() {
             year: target.year,
             month: target.month,
             settings,
-            scheduleAuthoritative: true,
+            scheduleAuthoritative: isCurrentMonth,
           }
         );
 
@@ -468,44 +475,38 @@ export default function CombinedStatsPage() {
                 aria-label={`${currentMonth}월 치료사 합계`}
               >
                 <table>
+                  <caption className="visually-hidden">
+                    <span>치료사별 합계</span>
+                    <span className="combined-therapist-header-count">
+                      {formatCount(currentSummary.total.count)}
+                    </span>
+                  </caption>
                   <colgroup>
                     <col className="combined-summary-col-therapist" />
-                    <col className="combined-summary-col-count" />
                     <col className="combined-summary-col-amount" />
                     <col className="combined-summary-col-incentive" />
                   </colgroup>
                   <thead>
                     <tr>
-                      <th className="combined-therapist-name" colSpan={4}>
-                        <div className="combined-therapist-name-content">
-                          <span>치료사별 합계</span>
-                          <span className="combined-therapist-header-count">
-                            {formatCount(currentSummary.total.count)}
-                          </span>
-                        </div>
-                      </th>
-                    </tr>
-                    <tr>
-                      <th>치료사</th>
-                      <th>총건수</th>
-                      <th>총 결산 금액</th>
-                      <th>총 인센티브</th>
+                      <th className="combined-summary-empty-header" aria-label="치료사"></th>
+                      <th>총 결산 금액 합계</th>
+                      <th>총 인센티브 합계</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {currentSummary.therapists.map((item) => (
+                    {currentSummary.therapists.map((item, index) => (
                       <tr key={`summary-${item.therapist.key || item.therapist.id || item.therapist.name}`}>
-                        <th>{item.therapist.displayName || item.therapist.name}</th>
-                        <td>{formatCount(item.total.count)}</td>
-                        <td>{formatCurrency(item.total.amount)}</td>
-                        <td>{formatCurrency(item.total.incentive)}</td>
+                        <th className={`combined-summary-therapist-cell combined-summary-tone-${index % 5}`}>
+                          {item.therapist.displayName || item.therapist.name} 치료사
+                        </th>
+                        <td className="combined-summary-amount-cell">{formatCurrency(item.total.amount)}</td>
+                        <td className="combined-summary-incentive-cell">{formatCurrency(item.total.incentive)}</td>
                       </tr>
                     ))}
                     <tr className="combined-therapist-total combined-summary-grand-total">
                       <th>전체 합계</th>
-                      <td>{formatCount(currentSummary.total.count)}</td>
-                      <td>{formatCurrency(currentSummary.total.amount)}</td>
-                      <td>{formatCurrency(currentSummary.total.incentive)}</td>
+                      <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.total.amount)}</td>
+                      <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.total.incentive)}</td>
                     </tr>
                   </tbody>
                 </table>

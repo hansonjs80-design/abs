@@ -131,6 +131,8 @@ export default function ShinjangSprayStatsPage() {
   const [recentRefreshVersion, setRecentRefreshVersion] = useState(0);
   const requestIdRef = useRef(0);
   const recentRequestIdRef = useRef(0);
+  const recentAutoSyncKeyRef = useRef(null);
+  const recentAutoSyncRunRef = useRef({ key: '', promise: null });
   const settingsRef = useRef(shockwaveSettings);
   const memosRef = useRef(shockwaveMemos);
   const recentPeriodMonths = useMemo(
@@ -315,93 +317,164 @@ export default function ShinjangSprayStatsPage() {
         Number(target.year) !== Number(currentYear)
         || Number(target.month) !== Number(currentMonth)
       ));
-      const targetSources = await loadStatsMonthsWithConcurrency(previousTargets, async (target) => {
-        const [targetMemos, targetShockwaveTherapists, targetManualTherapists, targetShinjangTherapists] = await Promise.all([
-          loadScheduleMemosForStatsMonth({
-            year: target.year,
-            month: target.month,
-            settings: settingsForRange,
-          }),
-          loadStatsMonthlyTherapists({
-            year: target.year,
-            month: target.month,
-            type: 'shockwave',
-            baseTherapists: shockwaveTherapistRoster,
-          }),
-          loadStatsMonthlyTherapists({
-            year: target.year,
-            month: target.month,
-            type: 'manual_therapy',
-            baseTherapists: manualTherapistRoster,
-          }),
-          loadStatsMonthlyTherapists({
-            year: target.year,
-            month: target.month,
-            type: 'shinjang_spray',
-            baseTherapists: shockwaveTherapistRoster,
-          }),
-        ]);
-        const syncResults = await Promise.allSettled([
-          ...(shockwaveTherapistRoster.length > 0 ? [syncMonthShockwaveScheduleToStats({
-            year: target.year,
-            month: target.month,
-            memos: targetMemos,
-            therapists: shockwaveTherapistRoster,
-            monthlyTherapists: targetShockwaveTherapists,
-            settings: settingsForRange,
-            upToToday: true,
-            scheduleAuthoritative: true,
-            emitEvent: false,
-            replaceExistingMonthLogs: true,
-          })] : []),
-          ...(manualTherapistRoster.length > 0 ? [syncMonthManualTherapyScheduleToStats({
-            year: target.year,
-            month: target.month,
-            memos: targetMemos,
-            therapists: manualTherapistRoster,
-            monthlyTherapists: targetManualTherapists,
-            settings: settingsForRange,
-            upToToday: true,
-            scheduleAuthoritative: true,
-            emitEvent: false,
-            replaceExistingMonthLogs: true,
-          })] : []),
-        ]);
-        syncResults.forEach((result) => {
-          if (result.status === 'rejected') {
-            console.error('Recent shinjang spray source statistics sync failed:', result.reason);
-          }
-        });
-        return {
-          monthKey: `${target.year}-${String(target.month).padStart(2, '0')}`,
-          therapists: targetShinjangTherapists,
-        };
-      }, 2);
-      if (requestId !== recentRequestIdRef.current) return;
 
       let nextShockwaveLogs = [];
       let nextManualLogs = [];
+      let monthlyTherapistEntries = [];
+
       if (previousTargets.length > 0) {
         const firstTarget = previousTargets[0];
         const startDate = `${firstTarget.year}-${String(firstTarget.month).padStart(2, '0')}-01`;
         const endDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
-        const [shockwaveResult, manualResult] = await Promise.all([
+
+        const [shockwaveResult, manualResult, therapistResults] = await Promise.all([
           buildDateRangeQuery('shockwave_patient_logs', startDate, endDate),
           buildDateRangeQuery('manual_therapy_patient_logs', startDate, endDate),
+          Promise.all(previousTargets.map(async (target) => {
+            const list = await loadStatsMonthlyTherapists({
+              year: target.year,
+              month: target.month,
+              type: 'shinjang_spray',
+              baseTherapists: shockwaveTherapistRoster,
+            });
+            return [
+              `${target.year}-${String(target.month).padStart(2, '0')}`,
+              list,
+            ];
+          })),
         ]);
+
         if (requestId !== recentRequestIdRef.current) return;
         if (shockwaveResult.error) throw shockwaveResult.error;
         if (manualResult.error) throw manualResult.error;
         nextShockwaveLogs = shockwaveResult.data || [];
         nextManualLogs = manualResult.data || [];
+        monthlyTherapistEntries = therapistResults;
       }
 
       setRecentShockwaveLogs(nextShockwaveLogs);
       setRecentManualLogs(nextManualLogs);
       setRecentMonthlyTherapistsByMonth({
         [currentMonthKey]: monthlyShinjangSprayTherapists,
-        ...Object.fromEntries(targetSources.map((item) => [item.monthKey, item.therapists])),
+        ...Object.fromEntries(monthlyTherapistEntries),
       });
+
+      // 즉시 결산/신환 현황 스켈레톤 해제 및 즉각 렌더링
+      setIsRecentLogsLoading(false);
+
+      if (previousTargets.length === 0) return;
+
+      const therapistKey = shockwaveTherapistRoster
+        .map((t, idx) => `${t?.slot_index ?? idx}:${t?.name || ''}`)
+        .join('|');
+      const syncKey = `${currentYear}-${currentMonth}:${recentPeriodMonths}:${therapistKey}`;
+      if (recentAutoSyncKeyRef.current === syncKey) return;
+
+      let syncPromise = recentAutoSyncRunRef.current.key === syncKey
+        ? recentAutoSyncRunRef.current.promise
+        : null;
+
+      if (!syncPromise) {
+        const runSync = async () => {
+          const targetSources = await loadStatsMonthsWithConcurrency(previousTargets, async (target) => {
+            const [targetMemos, targetShockwaveTherapists, targetManualTherapists, targetShinjangTherapists] = await Promise.all([
+              loadScheduleMemosForStatsMonth({
+                year: target.year,
+                month: target.month,
+                settings: settingsForRange,
+              }),
+              loadStatsMonthlyTherapists({
+                year: target.year,
+                month: target.month,
+                type: 'shockwave',
+                baseTherapists: shockwaveTherapistRoster,
+              }),
+              loadStatsMonthlyTherapists({
+                year: target.year,
+                month: target.month,
+                type: 'manual_therapy',
+                baseTherapists: manualTherapistRoster,
+              }),
+              loadStatsMonthlyTherapists({
+                year: target.year,
+                month: target.month,
+                type: 'shinjang_spray',
+                baseTherapists: shockwaveTherapistRoster,
+              }),
+            ]);
+            const syncResults = await Promise.allSettled([
+              ...(shockwaveTherapistRoster.length > 0 ? [syncMonthShockwaveScheduleToStats({
+                year: target.year,
+                month: target.month,
+                memos: targetMemos,
+                therapists: shockwaveTherapistRoster,
+                monthlyTherapists: targetShockwaveTherapists,
+                settings: settingsForRange,
+                upToToday: true,
+                scheduleAuthoritative: true,
+                emitEvent: false,
+                replaceExistingMonthLogs: true,
+              })] : []),
+              ...(manualTherapistRoster.length > 0 ? [syncMonthManualTherapyScheduleToStats({
+                year: target.year,
+                month: target.month,
+                memos: targetMemos,
+                therapists: manualTherapistRoster,
+                monthlyTherapists: targetManualTherapists,
+                settings: settingsForRange,
+                upToToday: true,
+                scheduleAuthoritative: true,
+                emitEvent: false,
+                replaceExistingMonthLogs: true,
+              })] : []),
+            ]);
+            syncResults.forEach((result) => {
+              if (result.status === 'rejected') {
+                console.error('Recent shinjang spray source statistics sync failed:', result.reason);
+              }
+            });
+            return {
+              monthKey: `${target.year}-${String(target.month).padStart(2, '0')}`,
+              therapists: targetShinjangTherapists,
+            };
+          }, 2);
+          return targetSources;
+        };
+
+        syncPromise = runSync();
+        recentAutoSyncRunRef.current = { key: syncKey, promise: syncPromise };
+      }
+
+      syncPromise
+        .then(async (targetSources) => {
+          if (requestId !== recentRequestIdRef.current) return;
+          const firstTarget = previousTargets[0];
+          const startDate = `${firstTarget.year}-${String(firstTarget.month).padStart(2, '0')}-01`;
+          const endDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
+          const [shockwaveResult, manualResult] = await Promise.all([
+            buildDateRangeQuery('shockwave_patient_logs', startDate, endDate),
+            buildDateRangeQuery('manual_therapy_patient_logs', startDate, endDate),
+          ]);
+          if (requestId !== recentRequestIdRef.current) return;
+          if (shockwaveResult.data) setRecentShockwaveLogs(shockwaveResult.data);
+          if (manualResult.data) setRecentManualLogs(manualResult.data);
+          if (Array.isArray(targetSources)) {
+            setRecentMonthlyTherapistsByMonth((prev) => ({
+              ...prev,
+              ...Object.fromEntries(targetSources.map((item) => [item.monthKey, item.therapists])),
+            }));
+          }
+          recentAutoSyncKeyRef.current = syncKey;
+        })
+        .catch((error) => {
+          console.error('Recent shinjang spray sync failed:', error);
+          recentAutoSyncKeyRef.current = null;
+        })
+        .finally(() => {
+          if (recentAutoSyncRunRef.current.promise === syncPromise) {
+            recentAutoSyncRunRef.current = { key: '', promise: null };
+          }
+        });
     } catch (error) {
       if (requestId === recentRequestIdRef.current) {
         console.error('Recent shinjang spray statistics load failed:', error);
@@ -420,6 +493,7 @@ export default function ShinjangSprayStatsPage() {
     manualTherapists,
     monthlyShinjangSprayTherapists,
     recentMonthTargets,
+    recentPeriodMonths,
     shockwaveSettings,
     therapists,
   ]);
