@@ -592,15 +592,19 @@
 .top-tab--stats-sw.active,
 .top-tab--stats-mt.active,
 .top-tab--stats-shinjang.active,
+.top-tab--stats-combined.active,
 .top-tab--stats-sw.active svg,
 .top-tab--stats-mt.active svg,
 .top-tab--stats-shinjang.active svg,
+.top-tab--stats-combined.active svg,
 .top-tab--stats-sw.active:hover > span,
 .top-tab--stats-mt.active:hover > span,
 .top-tab--stats-shinjang.active:hover > span,
+.top-tab--stats-combined.active:hover > span,
 .top-tab--stats-sw.active .month-nav-btn,
 .top-tab--stats-mt.active .month-nav-btn,
-.top-tab--stats-shinjang.active .month-nav-btn {
+.top-tab--stats-shinjang.active .month-nav-btn,
+.top-tab--stats-combined.active .month-nav-btn {
   color: var(--tab-active-border) !important;
 }
 
@@ -609,20 +613,24 @@
 .top-tab--stats-mt.active,
 .top-tab--stats-mt.active:hover,
 .top-tab--stats-shinjang.active,
-.top-tab--stats-shinjang.active:hover {
+.top-tab--stats-shinjang.active:hover,
+.top-tab--stats-combined.active,
+.top-tab--stats-combined.active:hover {
   background: var(--tab-active-surface);
   border-bottom-color: var(--tab-active-surface);
 }
 
 .top-tab--stats-sw.active .month-nav-btn,
 .top-tab--stats-mt.active .month-nav-btn,
-.top-tab--stats-shinjang.active .month-nav-btn {
+.top-tab--stats-shinjang.active .month-nav-btn,
+.top-tab--stats-combined.active .month-nav-btn {
   border-color: var(--tab-active-border) !important;
 }
 
 .top-tab--stats-sw.active .month-nav-btn svg,
 .top-tab--stats-mt.active .month-nav-btn svg,
-.top-tab--stats-shinjang.active .month-nav-btn svg {
+.top-tab--stats-shinjang.active .month-nav-btn svg,
+.top-tab--stats-combined.active .month-nav-btn svg {
   color: var(--tab-active-border) !important;
   stroke: var(--tab-active-border) !important;
 }
@@ -752,7 +760,18 @@
   --tab-text-color: #263244;
 }
 
-/* 6. Stats PT (Blue) */
+/* 6. Combined Stats (Indigo) */
+.top-tab--stats-combined {
+  --tab-bg: #c7d2fe;
+  --tab-hover-bg: #e0e7ff;
+  --tab-active-surface: #f8fafc;
+  --tab-active-bg: #f8fafc;
+  --tab-active-border: #4f46e5;
+  --tab-shadow: rgba(79, 70, 229, 0.2);
+  --tab-text-color: #263244;
+}
+
+/* 7. Stats PT (Blue) */
 .top-tab--stats-pt {
   --tab-bg: #bae6fd;
   --tab-hover-bg: #7dd3fc;
@@ -762,7 +781,7 @@
   --tab-text-color: #111827;
 }
 
-/* 7. Settings (Gray) */
+/* 8. Settings (Gray) */
 .top-tab--settings {
   --tab-bg: #6b7280;
   --tab-hover-bg: #6b7280;

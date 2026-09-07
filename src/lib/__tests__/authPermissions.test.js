@@ -34,5 +34,6 @@ describe('auth permissions', () => {
     assert.equal(canAccessTab(user, 'shockwave_stats'), false);
     assert.equal(normalizePermissions(undefined, user).shockwave_stats, false);
     assert.equal(normalizePermissions(undefined, user).shinjang_spray_stats, true);
+    assert.equal(normalizePermissions(undefined, user).combined_stats, true);
   });
 });

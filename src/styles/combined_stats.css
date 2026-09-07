@@ -1,0 +1,319 @@
+.combined-stats-page {
+  min-height: 100%;
+  padding: 28px 34px 48px;
+  overflow: auto;
+  background:
+    radial-gradient(circle at 92% 5%, rgba(8, 145, 178, 0.08), transparent 28%),
+    var(--bg-primary, #f5f7fb);
+  color: var(--text-primary, #111827);
+}
+
+.combined-stats-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  max-width: 1780px;
+  margin: 0 auto 22px;
+}
+
+.combined-stats-header h1,
+.combined-stats-recent-heading h2 {
+  margin: 0;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.combined-stats-header h1 {
+  font-size: 1.65rem;
+}
+
+.combined-stats-header p {
+  margin: 7px 0 0;
+  color: var(--text-secondary, #64748b);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.combined-stats-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 14px;
+  border: 1px solid #93c5fd;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.combined-stats-refresh:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.combined-stats-dashboard {
+  display: grid;
+  grid-template-columns: minmax(700px, 1.2fr) minmax(460px, 0.8fr);
+  align-items: start;
+  gap: 28px;
+  max-width: 1780px;
+  margin: 0 auto;
+}
+
+.combined-stats-current {
+  display: grid;
+  gap: 24px;
+}
+
+.combined-therapist-card,
+.combined-stats-recent {
+  overflow: hidden;
+  border: 2px solid #111827;
+  border-radius: 5px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+}
+
+.combined-therapist-card table,
+.combined-stats-recent table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.combined-therapist-card th,
+.combined-therapist-card td,
+.combined-stats-recent th,
+.combined-stats-recent td {
+  height: 43px;
+  padding: 8px 12px;
+  border-right: 2px solid #111827;
+  border-bottom: 2px solid #111827;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.combined-therapist-card tr > :last-child,
+.combined-stats-recent tr > :last-child {
+  border-right: 0;
+}
+
+.combined-therapist-card tbody tr:last-child > *,
+.combined-stats-recent tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.combined-therapist-card .combined-therapist-name {
+  height: 55px;
+  padding: 8px 12px;
+  border-right: 0;
+  background: var(--combined-tone-strong);
+  text-align: left;
+  font-size: 1.55rem;
+}
+
+.combined-therapist-card thead tr:nth-child(2) th {
+  background: #fff;
+  font-size: 1.08rem;
+}
+
+.combined-therapist-card thead tr:nth-child(2) th:first-child,
+.combined-therapist-card tbody th {
+  width: 21%;
+}
+
+.combined-therapist-card thead tr:nth-child(2) th:nth-child(2) {
+  width: 15%;
+}
+
+.combined-therapist-card thead tr:nth-child(2) th:nth-child(3),
+.combined-therapist-card thead tr:nth-child(2) th:nth-child(4) {
+  width: 32%;
+}
+
+.combined-therapist-card tbody th {
+  background: #fff;
+  font-size: 1.08rem;
+}
+
+.combined-therapist-card tbody td:nth-child(3) {
+  color: #075fc5;
+}
+
+.combined-therapist-card tbody td:nth-child(4) {
+  color: #7c3aed;
+}
+
+.combined-therapist-total > * {
+  background: var(--combined-tone-soft) !important;
+  font-size: 1.08rem !important;
+  font-weight: 900 !important;
+}
+
+.combined-tone-0 {
+  --combined-tone-strong: #f8b66d;
+  --combined-tone-soft: #fde5c6;
+}
+
+.combined-tone-1 {
+  --combined-tone-strong: #afa1d3;
+  --combined-tone-soft: #ddd6f2;
+}
+
+.combined-tone-2 {
+  --combined-tone-strong: #92c67c;
+  --combined-tone-soft: #d5e8ce;
+}
+
+.combined-tone-3 {
+  --combined-tone-strong: #79c9d8;
+  --combined-tone-soft: #d2eef2;
+}
+
+.combined-tone-4 {
+  --combined-tone-strong: #e6a8b7;
+  --combined-tone-soft: #f4d5dc;
+}
+
+.combined-stats-recent {
+  position: sticky;
+  top: 68px;
+  border-color: #64748b;
+}
+
+.combined-stats-recent-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 2px solid #64748b;
+  background: linear-gradient(135deg, #dbeafe, #ecfeff);
+}
+
+.combined-stats-recent-heading h2 {
+  font-size: 1.35rem;
+}
+
+.combined-stats-recent-heading span {
+  display: block;
+  margin-top: 4px;
+  color: #0e7490;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.combined-stats-recent-heading input {
+  width: 118px;
+  padding: 8px 10px;
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1e3a8a;
+  font-weight: 800;
+  text-align: center;
+}
+
+.combined-stats-recent th,
+.combined-stats-recent td {
+  height: 45px;
+  border-color: #94a3b8;
+  font-size: 0.95rem;
+}
+
+.combined-stats-recent thead th {
+  background: #e2e8f0;
+}
+
+.combined-stats-recent tbody th {
+  background: #f8fafc;
+}
+
+.combined-stats-recent tbody td:nth-child(3) {
+  color: #075fc5;
+}
+
+.combined-stats-recent tbody td:nth-child(4) {
+  color: #7c3aed;
+}
+
+.combined-stats-recent tr.is-current > * {
+  background: #fff7cc;
+  font-weight: 900;
+}
+
+.combined-recent-total > * {
+  background: #dff4f6 !important;
+  font-weight: 900 !important;
+}
+
+.combined-stats-permission-note {
+  margin: 0;
+  padding: 11px 15px;
+  border-top: 1px solid #cbd5e1;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.combined-stats-empty {
+  padding: 72px 24px;
+  border: 1px dashed #94a3b8;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #64748b;
+  text-align: center;
+  font-weight: 800;
+}
+
+@media (max-width: 1180px) {
+  .combined-stats-page {
+    padding: 22px 20px 40px;
+  }
+
+  .combined-stats-dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .combined-stats-recent {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .combined-stats-page {
+    padding: 12px 8px 90px;
+  }
+
+  .combined-stats-header {
+    align-items: flex-start;
+  }
+
+  .combined-stats-header h1 {
+    font-size: 1.2rem;
+  }
+
+  .combined-stats-header p {
+    font-size: 0.76rem;
+  }
+
+  .combined-stats-refresh {
+    padding: 8px;
+    font-size: 0;
+  }
+
+  .combined-therapist-card,
+  .combined-stats-recent {
+    overflow-x: auto;
+  }
+
+  .combined-therapist-card table,
+  .combined-stats-recent table {
+    min-width: 620px;
+  }
+}

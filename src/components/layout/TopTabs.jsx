@@ -97,7 +97,6 @@ export default function TopTabs() {
       <nav className="top-tabs" aria-label="주요 화면 이동">
         <div className="top-tabs-track">
           {items.map((item) => {
-            const Icon = item.icon;
             const currentPath = optimisticPath || location.pathname;
             const isActive = item.path === '/'
               ? currentPath === '/'
@@ -130,7 +129,6 @@ export default function TopTabs() {
                   aria-selected={isActive}
                 >
                   <div className="top-tab-inner">
-                    <Icon size={18} />
                     {item.monthLabel ? (
                       <MonthPicker suffix={item.monthLabel} variant="tab" />
                     ) : (

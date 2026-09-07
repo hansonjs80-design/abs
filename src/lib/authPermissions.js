@@ -1,4 +1,4 @@
-import { Activity, Calendar, ClipboardList, Hand, Settings, Waves, Zap } from 'lucide-react';
+import { Activity, BarChart3, Calendar, ClipboardList, Hand, Settings, Waves, Zap } from 'lucide-react';
 
 export const ADMIN_USERNAME = 'admin';
 
@@ -8,6 +8,7 @@ export const APP_TABS = [
   { key: 'shockwave_stats', path: '/shockwave-stats', icon: Zap, label: '충격파 통계', shortLabel: '충격파', monthLabel: '충격파 통계', tabClass: 'top-tab--stats-sw' },
   { key: 'shinjang_spray_stats', path: '/shinjang-spray-stats', icon: Waves, label: '신장분사 통계', shortLabel: '신장분사', monthLabel: '신장분사 통계', tabClass: 'top-tab--stats-shinjang' },
   { key: 'manual_therapy_stats', path: '/manual-therapy-stats', icon: Hand, label: '도수치료 통계', shortLabel: '도수', monthLabel: '도수치료 통계', tabClass: 'top-tab--stats-mt' },
+  { key: 'combined_stats', path: '/combined-stats', icon: BarChart3, label: '전체 통계', shortLabel: '전체', monthLabel: '전체 통계', tabClass: 'top-tab--stats-combined' },
   { key: 'pt_stats', path: '/pt-stats', icon: Activity, label: '물리치료 통계', shortLabel: '물리', monthLabel: '물리치료 통계', tabClass: 'top-tab--stats-pt' },
   { key: 'settings', path: '/settings', icon: Settings, label: '설정', shortLabel: '설정', tabClass: 'top-tab--settings' },
 ];

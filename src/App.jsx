@@ -12,6 +12,7 @@ import {
   loadManualTherapyStatsPage,
   loadShinjangSprayStatsPage,
   loadShockwaveStatsPage,
+  loadCombinedStatsPage,
 } from './lib/statsRoutePreload';
 
 const LoginPage = React.lazy(() => import('./pages/LoginPage'));
@@ -20,6 +21,7 @@ const ShockwavePage = React.lazy(() => import('./pages/ShockwavePage'));
 const ShockwaveStatsPage = React.lazy(loadShockwaveStatsPage);
 const ManualTherapyStatsPage = React.lazy(loadManualTherapyStatsPage);
 const ShinjangSprayStatsPage = React.lazy(loadShinjangSprayStatsPage);
+const CombinedStatsPage = React.lazy(loadCombinedStatsPage);
 const PhysicalTherapyStatsPage = React.lazy(() => import('./pages/PhysicalTherapyStatsPage'));
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
 
@@ -87,6 +89,7 @@ function AppRoutes() {
         <Route path="/shockwave-stats" element={<ProtectedRoute path="/shockwave-stats"><LazyPage><ShockwaveStatsPage /></LazyPage></ProtectedRoute>} />
         <Route path="/manual-therapy-stats" element={<ProtectedRoute path="/manual-therapy-stats"><LazyPage><ManualTherapyStatsPage /></LazyPage></ProtectedRoute>} />
         <Route path="/shinjang-spray-stats" element={<ProtectedRoute path="/shinjang-spray-stats"><LazyPage><ShinjangSprayStatsPage /></LazyPage></ProtectedRoute>} />
+        <Route path="/combined-stats" element={<ProtectedRoute path="/combined-stats"><LazyPage><CombinedStatsPage /></LazyPage></ProtectedRoute>} />
         <Route path="/pt-stats" element={<ProtectedRoute path="/pt-stats"><LazyPage><PhysicalTherapyStatsPage /></LazyPage></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute path="/settings"><LazyPage><SettingsPage /></LazyPage></ProtectedRoute>} />
       </Route>
