@@ -5,6 +5,7 @@ import {
   applyMonthlyShinjangSprayTherapists,
   buildShinjangSprayDefaultTherapists,
   buildShinjangSprayPrescriptions,
+  buildShinjangSprayRecentMonthlySummaries,
   buildShinjangSpraySettlementSummary,
   isShinjangSprayPrescription,
   isWholeNumberShinjangSprayPrescription,
@@ -193,5 +194,87 @@ describe('shinjang spray statistics', () => {
     assert.equal(summary.grandCryoDeduction, 40000);
     assert.equal(summary.grandAmount, 190000);
     assert.equal(summary.grandIncentive, 15000);
+  });
+
+  it('builds recent monthly summaries with each month settings and restricted incentives', () => {
+    const summaries = buildShinjangSprayRecentMonthlySummaries({
+      monthTargets: [
+        { year: 2026, month: 8 },
+        { year: 2026, month: 9 },
+      ],
+      currentMonthKey: '2026-09',
+      currentMonthRows: [
+        {
+          date: '2026-09-03',
+          patient_name: '현재신환*',
+          therapist_name: '주한솔',
+          prescription: '신장분사 1',
+          prescription_count: 1,
+          unit_price: 100000,
+          is_cryo: true,
+          cryo_adjusted_unit_price: 90000,
+        },
+        {
+          date: '2026-09-04',
+          patient_name: '제한처방',
+          therapist_name: '주한솔',
+          prescription: '신장분사 2',
+          prescription_count: 2,
+          unit_price: 150000,
+        },
+      ],
+      shockwaveRows: [
+        {
+          date: '2026-08-10',
+          patient_name: '이전신환*',
+          therapist_name: '이전이름',
+          prescription: '신장분사 1',
+          prescription_count: 2,
+          scheduler_cell_key: '2026:08:0:1:0:0',
+        },
+      ],
+      monthlySettingsByMonth: {
+        '2026-08': {
+          prescriptions: ['신장분사 1'],
+          prescription_prices: { '신장분사 1': 80000 },
+          cryo_prescriptions: ['신장분사 1'],
+          cryo_prices: { '신장분사 1': 10000 },
+          prescription_incentive_percentages: { '신장분사 1': 7 },
+          therapist_names: ['과거치료사'],
+        },
+        '2026-09': {
+          prescriptions: ['신장분사 1', '신장분사 2'],
+          prescription_incentive_percentages: {
+            '신장분사 1': 7,
+            '신장분사 2': 15,
+          },
+        },
+      },
+      monthlyTherapistsByMonth: {
+        '2026-08': [
+          { slot_index: 0, therapist_name: '과거치료사', start_day: 1, end_day: 31 },
+        ],
+      },
+      hiddenIncentivePercentages: [15],
+    });
+
+    assert.deepEqual(summaries, [
+      {
+        monthKey: '2026-09',
+        label: '2026년 09월',
+        totalCount: 1,
+        amount: 100000,
+        cryoAdjustedAmount: 90000,
+        newPatientCount: 1,
+      },
+      {
+        monthKey: '2026-08',
+        label: '2026년 08월',
+        totalCount: 2,
+        amount: 160000,
+        cryoAdjustedAmount: 140000,
+        newPatientCount: 1,
+      },
+    ]);
   });
 });

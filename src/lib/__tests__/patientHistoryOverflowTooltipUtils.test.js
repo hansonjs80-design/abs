@@ -627,6 +627,19 @@ test('patient history search autofocus runs only when the modal opens', async ()
   assert.doesNotMatch(focusEffect, /dismissPatientHistoryCellInteraction/);
 });
 
+test('patient history modal header drags the dialog without capturing its controls', async () => {
+  const [shockwaveView, shockwaveCss] = await Promise.all([
+    readFile(shockwaveViewUrl, 'utf8'),
+    readFile(shockwaveCssUrl, 'utf8'),
+  ]);
+
+  assert.match(shockwaveView, /ref=\{patientHistoryModalDialogRef\}/);
+  assert.match(shockwaveView, /transform: `translate3d\(\$\{patientHistoryModalOffset\.x\}px, \$\{patientHistoryModalOffset\.y\}px, 0\)`/);
+  assert.match(shockwaveView, /onPointerDown=\{handlePatientHistoryModalDragStart\}/);
+  assert.match(shockwaveView, /event\.target\.closest\('input, select, button, textarea, a'\)/);
+  assert.match(shockwaveCss, /\.patient-history-modal-header\s*\{[^}]*cursor:\s*grab;[^}]*touch-action:\s*none;/s);
+});
+
 test('patient history clipboard shortcuts suspend the background schedule keyboard handlers', async () => {
   const [shockwaveView, keyboardActions, globalEvents] = await Promise.all([
     readFile(shockwaveViewUrl, 'utf8'),

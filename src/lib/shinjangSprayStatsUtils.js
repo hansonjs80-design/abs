@@ -229,6 +229,105 @@ export function buildShinjangSprayPrescriptions({
     .map(([, prescription]) => prescription);
 }
 
+export function buildShinjangSprayRecentMonthlySummaries({
+  monthTargets = [],
+  currentMonthKey = '',
+  currentMonthRows = [],
+  shockwaveRows = [],
+  manualTherapyRows = [],
+  monthlySettingsByMonth = {},
+  monthlyTherapistsByMonth = {},
+  hiddenIncentivePercentages = [],
+} = {}) {
+  const hiddenIncentiveSet = new Set(
+    (Array.isArray(hiddenIncentivePercentages) ? hiddenIncentivePercentages : [])
+      .map((percentage) => Number(percentage))
+      .filter(Number.isFinite)
+  );
+
+  return [...(Array.isArray(monthTargets) ? monthTargets : [])]
+    .reverse()
+    .map((target) => {
+      const year = Number(target?.year);
+      const month = Number(target?.month);
+      const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+      const monthSettings = monthlySettingsByMonth?.[monthKey] || {};
+      const isCurrentMonth = monthKey === currentMonthKey;
+      const sourceRows = isCurrentMonth
+        ? (Array.isArray(currentMonthRows) ? currentMonthRows : [])
+        : mergeShinjangSprayLogs({
+            shockwaveRows: (Array.isArray(shockwaveRows) ? shockwaveRows : []).filter(
+              (row) => String(row?.date || '').startsWith(monthKey)
+            ),
+            manualTherapyRows: (Array.isArray(manualTherapyRows) ? manualTherapyRows : []).filter(
+              (row) => String(row?.date || '').startsWith(monthKey)
+            ),
+            shockwavePrescriptionPrices: monthSettings.prescription_prices,
+            manualTherapyPrescriptionPrices: monthSettings.prescription_prices,
+            shockwaveCryoPrescriptions: monthSettings.cryo_prescriptions,
+            shockwaveCryoPrices: monthSettings.cryo_prices,
+            manualTherapyCryoPrescriptions: monthSettings.cryo_prescriptions,
+            manualTherapyCryoPrices: monthSettings.cryo_prices,
+          });
+      const reassignedRows = applyMonthlyShinjangSprayTherapists(
+        sourceRows,
+        monthlyTherapistsByMonth?.[monthKey]
+      );
+      const hiddenPrescriptions = Array.isArray(monthSettings.hidden_prescriptions)
+        ? monthSettings.hidden_prescriptions
+        : [];
+      const visiblePrescriptions = buildShinjangSprayPrescriptions({
+        configuredPrescriptions: monthSettings.prescriptions,
+        rows: reassignedRows,
+      }).filter((prescription) => {
+        if (isConfiguredPrescription(hiddenPrescriptions, prescription)) return false;
+        const incentivePercentage = Math.max(
+          0,
+          Number(getNormalizedMapValue(
+            monthSettings.prescription_incentive_percentages,
+            prescription
+          )) || 0
+        );
+        return !hiddenIncentiveSet.has(incentivePercentage);
+      });
+      const visiblePrescriptionKeys = new Set(
+        visiblePrescriptions.map(normalizePrescriptionKey)
+      );
+      const configuredTherapistNames = Array.isArray(monthSettings.therapist_names)
+        ? new Set(monthSettings.therapist_names.map((name) => String(name || '').trim()).filter(Boolean))
+        : null;
+      const visibleRows = reassignedRows.filter((row) => (
+        visiblePrescriptionKeys.has(normalizePrescriptionKey(row?.prescription))
+        && (!configuredTherapistNames || configuredTherapistNames.has(String(row?.therapist_name || '').trim()))
+      ));
+      const totalCount = visibleRows.reduce(
+        (sum, row) => sum + toStatsPrescriptionCount(row?.prescription_count),
+        0
+      );
+      const amount = visibleRows.reduce((sum, row) => {
+        const unitPrice = Math.max(0, Number(row?.unit_price) || 0);
+        return sum + (toStatsPrescriptionCount(row?.prescription_count) * unitPrice);
+      }, 0);
+      const cryoAdjustedAmount = visibleRows.reduce((sum, row) => {
+        const unitPrice = row?.is_cryo
+          ? Math.max(0, Number(row?.cryo_adjusted_unit_price) || 0)
+          : Math.max(0, Number(row?.unit_price) || 0);
+        return sum + (toStatsPrescriptionCount(row?.prescription_count) * unitPrice);
+      }, 0);
+
+      return {
+        monthKey,
+        label: `${year}년 ${String(month).padStart(2, '0')}월`,
+        totalCount,
+        amount,
+        cryoAdjustedAmount,
+        newPatientCount: visibleRows.filter(
+          (row) => String(row?.patient_name || '').includes('*')
+        ).length,
+      };
+    });
+}
+
 export function buildShinjangSpraySettlementSummary({
   rows = [],
   prescriptions = [],

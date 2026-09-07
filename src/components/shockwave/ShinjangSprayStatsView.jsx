@@ -15,6 +15,11 @@ export default function ShinjangSprayStatsView({
   hiddenIncentivePercentages = [],
   cryoPrescriptions = [],
   cryoPrices = {},
+  recentMonthlySummaries = [],
+  recentPeriodInput = '최근 6개월',
+  recentPeriodLabel = '최근 6개월',
+  onRecentPeriodInputChange,
+  recentSummariesLoading = false,
 }) {
   return (
     <ShockwaveSettlementView
@@ -29,7 +34,11 @@ export default function ShinjangSprayStatsView({
       hiddenIncentivePercentages={hiddenIncentivePercentages}
       monthlyTherapists={[]}
       treatmentLabel="신장분사"
-      showRecentSummaries={false}
+      recentMonthlySummaries={recentMonthlySummaries}
+      recentPeriodInput={recentPeriodInput}
+      recentPeriodLabel={recentPeriodLabel}
+      onRecentPeriodInputChange={onRecentPeriodInputChange}
+      recentSummariesLoading={recentSummariesLoading}
       showOnlyTherapistPrescriptions
       viewModeStorageKey={SHINJANG_VIEW_MODE_STORAGE_KEY}
     />

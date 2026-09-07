@@ -9,6 +9,7 @@ import {
 } from '../../lib/contextMenuDismissUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import {
+  getPatientHistoryDraggedModalOffset,
   getPatientHistoryNameOnlySearchTarget,
   getPatientHistoryTreatmentGroup,
   isNameOnlyPatientHistoryDraft,
@@ -262,6 +263,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const [patientHistoryPrescriptionFilters, setPatientHistoryPrescriptionFilters] = useState({});
   const [patientHistoryTreatmentTab, setPatientHistoryTreatmentTab] = useState('all');
   const [patientHistorySortOrder, setPatientHistorySortOrder] = useState('date');
+  const [patientHistoryModalOffset, setPatientHistoryModalOffset] = useState({ x: 0, y: 0 });
   const [pendingPatientHistoryApplyLog, setPendingPatientHistoryApplyLog] = useState(null);
   const [pendingPatientHistoryNavigation, setPendingPatientHistoryNavigation] = useState(null);
   const patientHistoryTargetCellRef = useRef(null);
@@ -436,7 +438,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const editInputRef = useRef(null);
   const patientHistorySearchInputRef = useRef(null);
   const patientHistoryModalOverlayRef = useRef(null);
+  const patientHistoryModalDialogRef = useRef(null);
   const patientHistoryModalBodyRef = useRef(null);
+  const patientHistoryModalDragRef = useRef(null);
   const imeOpenRef = useRef(false);
   const skipNextEditBlurSaveRef = useRef(false);
   const handleCellSaveRef = useRef(null);
@@ -2061,6 +2065,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
 
   const handleOpenPatientHistoryFromShortcut = useCallback(() => {
     setPatientHistoryTreatmentTab('all');
+    setPatientHistoryModalOffset({ x: 0, y: 0 });
+    patientHistoryModalDragRef.current = null;
     const targetCell = selectedCellRef.current || selectedCell;
     if (targetCell) {
       patientHistoryTargetCellRef.current = targetCell;
@@ -2087,6 +2093,44 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
 
     handleOpenPatientHistoryModal();
   }, [cellKey, editValue, editingCell, handleOpenPatientHistoryModal, selectedCell]);
+
+  const handlePatientHistoryModalDragStart = useCallback((event) => {
+    if (event.button !== 0) return;
+    if (event.target.closest('input, select, button, textarea, a')) return;
+    const dialog = patientHistoryModalDialogRef.current;
+    if (!dialog) return;
+
+    patientHistoryModalDragRef.current = {
+      pointerId: event.pointerId,
+      startOffset: patientHistoryModalOffset,
+      startPointer: { x: event.clientX, y: event.clientY },
+      startRect: dialog.getBoundingClientRect(),
+    };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    event.preventDefault();
+  }, [patientHistoryModalOffset]);
+
+  const handlePatientHistoryModalDragMove = useCallback((event) => {
+    const drag = patientHistoryModalDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    setPatientHistoryModalOffset(getPatientHistoryDraggedModalOffset({
+      startOffset: drag.startOffset,
+      startPointer: drag.startPointer,
+      currentPointer: { x: event.clientX, y: event.clientY },
+      startRect: drag.startRect,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+    }));
+  }, []);
+
+  const handlePatientHistoryModalDragEnd = useCallback((event) => {
+    const drag = patientHistoryModalDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    patientHistoryModalDragRef.current = null;
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }, []);
 
   const rerunPatientHistorySearch = useCallback((searchName, searchChart = '') => {
     if (!searchName || patientHistoryModalData.loading) return;
@@ -4051,8 +4095,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
           data-preserve-schedule-selection="true"
           style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999999, overscrollBehavior: 'none' }}
         >
-          <div style={{ background: 'var(--bg-primary, #fff)', maxWidth: patientHistoryModalLayout.maxWidth, width: patientHistoryModalLayout.width, borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
-            <div className="patient-history-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--border-color, #eee)', background: 'var(--bg-secondary, #f8f9fa)' }}>
+          <div ref={patientHistoryModalDialogRef} style={{ background: 'var(--bg-primary, #fff)', maxWidth: patientHistoryModalLayout.maxWidth, width: patientHistoryModalLayout.width, borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden', transform: `translate3d(${patientHistoryModalOffset.x}px, ${patientHistoryModalOffset.y}px, 0)` }} onClick={e => e.stopPropagation()}>
+            <div
+              className="patient-history-modal-header"
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--border-color, #eee)', background: 'var(--bg-secondary, #f8f9fa)' }}
+              onPointerDown={handlePatientHistoryModalDragStart}
+              onPointerMove={handlePatientHistoryModalDragMove}
+              onPointerUp={handlePatientHistoryModalDragEnd}
+              onPointerCancel={handlePatientHistoryModalDragEnd}
+            >
               <div className="patient-history-modal-header-main">
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>환자 스케줄 내역 검색</h3>
                 <div className="patient-history-search-control" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-primary, #fff)', border: '1px solid var(--border-color, #ddd)', borderRadius: '6px', padding: '2px 8px' }}>

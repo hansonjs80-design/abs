@@ -264,6 +264,40 @@ export function getPatientHistoryListTextAlign(itemCount) {
   return Number(itemCount) > 1 ? 'left' : 'center';
 }
 
+export function getPatientHistoryDraggedModalOffset({
+  startOffset = { x: 0, y: 0 },
+  startPointer = { x: 0, y: 0 },
+  currentPointer = { x: 0, y: 0 },
+  startRect,
+  viewportWidth,
+  viewportHeight,
+  margin = 8,
+} = {}) {
+  const safeStartOffset = {
+    x: Number(startOffset?.x) || 0,
+    y: Number(startOffset?.y) || 0,
+  };
+  if (!startRect) return safeStartOffset;
+
+  const deltaX = (Number(currentPointer?.x) || 0) - (Number(startPointer?.x) || 0);
+  const deltaY = (Number(currentPointer?.y) || 0) - (Number(startPointer?.y) || 0);
+  const safeMargin = Math.max(0, Number(margin) || 0);
+  const safeViewportWidth = Math.max(0, Number(viewportWidth) || 0);
+  const safeViewportHeight = Math.max(0, Number(viewportHeight) || 0);
+  const minDeltaX = safeMargin - Number(startRect.left || 0);
+  const maxDeltaX = safeViewportWidth - safeMargin - Number(startRect.right || 0);
+  const minDeltaY = safeMargin - Number(startRect.top || 0);
+  const maxDeltaY = safeViewportHeight - safeMargin - Number(startRect.bottom || 0);
+  const clampDelta = (value, min, max) => (
+    min <= max ? Math.min(max, Math.max(min, value)) : 0
+  );
+
+  return {
+    x: safeStartOffset.x + clampDelta(deltaX, minDeltaX, maxDeltaX),
+    y: safeStartOffset.y + clampDelta(deltaY, minDeltaY, maxDeltaY),
+  };
+}
+
 export function resolvePatientHistoryApplyTarget(capturedCell, selectedCell) {
   const target = capturedCell || selectedCell;
   if (!target) return null;

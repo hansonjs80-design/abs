@@ -105,6 +105,12 @@ describe('shinjang spray statistics UI', () => {
     assert.match(statsViewSource, /cryoPrescriptions=\{cryoPrescriptions\}/);
     assert.match(statsViewSource, /viewModeStorageKey=\{SHINJANG_VIEW_MODE_STORAGE_KEY\}/);
     assert.match(statsViewSource, /showOnlyTherapistPrescriptions/);
+    assert.match(pageSource, /buildShinjangSprayRecentMonthlySummaries/);
+    assert.match(pageSource, /getRecentScheduleMonthTargets/);
+    assert.match(pageSource, /recentMonthlySummaries=\{recentMonthlySummaries\}/);
+    assert.match(statsViewSource, /recentMonthlySummaries=\{recentMonthlySummaries\}/);
+    assert.match(statsViewSource, /recentPeriodInput=\{recentPeriodInput\}/);
+    assert.doesNotMatch(statsViewSource, /showRecentSummaries=\{false\}/);
     assert.match(settlementSource, /buildTherapistCompletedPrescriptionGroups/);
     assert.match(settlementSource, /getTherapistCompletedPrescriptions/);
     assert.match(settlementSource, /displayedTherapistSummaries/);

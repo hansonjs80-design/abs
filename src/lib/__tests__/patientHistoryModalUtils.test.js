@@ -9,6 +9,7 @@ import {
   getPatientHistoryChartOptions,
   getPatientHistoryBodyPartText,
   getPatientHistoryBodyPartTextareaRows,
+  getPatientHistoryDraggedModalOffset,
   getPatientHistoryListTextAlign,
   getPatientHistoryMemoDisplayText,
   getPatientHistoryMemoText,
@@ -26,6 +27,20 @@ import {
   resolvePatientHistoryApplyTarget,
   shouldIncrementPatientHistoryApplyVisit,
 } from '../patientHistoryModalUtils.js';
+
+describe('patient history modal dragging', () => {
+  it('moves from the captured offset and keeps the dialog inside the viewport', () => {
+    assert.deepEqual(getPatientHistoryDraggedModalOffset({
+      startOffset: { x: 10, y: -5 },
+      startPointer: { x: 300, y: 200 },
+      currentPointer: { x: 500, y: 20 },
+      startRect: { left: 200, right: 800, top: 100, bottom: 700 },
+      viewportWidth: 900,
+      viewportHeight: 760,
+      margin: 8,
+    }), { x: 102, y: -97 });
+  });
+});
 
 describe('patient history treatment grouping', () => {
   const settings = {

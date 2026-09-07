@@ -3861,6 +3861,22 @@
 .patient-history-modal-header {
   gap: 12px;
   min-width: 0;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.patient-history-modal-header:active {
+  cursor: grabbing;
+}
+
+.patient-history-modal-header input,
+.patient-history-modal-header select,
+.patient-history-modal-header button,
+.patient-history-modal-header textarea,
+.patient-history-modal-header a {
+  cursor: auto;
+  user-select: auto;
 }
 
 .patient-history-modal-header-main {
