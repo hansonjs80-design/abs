@@ -96,4 +96,20 @@ describe('combined statistics UI', () => {
     assert.match(styleSource, /\.combined-recent-breakdown-item--total\s*\{[\s\S]*border-bottom:\s*2px solid #94a3b8;/);
     assert.match(styleSource, /@media print\s*\{[\s\S]*height:\s*36\.5px !important;[\s\S]*font-size:\s*calc\(0\.95rem \+ 2px\) !important;/);
   });
+
+  it('supports a total-only view filter tab for the recent settlement table', async () => {
+    const [pageSource, styleSource] = await Promise.all([
+      readFile(pageUrl, 'utf8'),
+      readFile(styleUrl, 'utf8'),
+    ]);
+
+    assert.match(pageSource, /combined-recent-filter-tabs/);
+    assert.match(pageSource, /전체만 보기/);
+    assert.match(pageSource, /상세 보기/);
+    assert.match(pageSource, /totalOnly=\{recentViewMode === 'total-only'\}/);
+    assert.match(styleSource, /\.combined-recent-filter-tabs\s*\{/);
+    assert.match(styleSource, /\.combined-recent-tab-btn\.is-active\s*\{/);
+    assert.match(styleSource, /\.combined-recent-single-value\s*\{/);
+  });
 });
+

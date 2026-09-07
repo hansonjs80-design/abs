@@ -65,7 +65,7 @@ function buildTherapistTreatmentSections(item) {
   }).filter((section) => Math.max(0, Number(section.value.count) || 0) > 0);
 }
 
-function buildRecentMetricItems(summary, metric, { includeManual = true } = {}) {
+function buildRecentMetricItems(summary, metric, { includeManual = true, totalOnly = false } = {}) {
   const treatmentTotals = summary?.treatmentTotals || {};
   const shinjangTotal = treatmentTotals.shinjang_spray || {};
   const shinjangGroups = Array.isArray(summary?.shinjangIncentiveGroups)
@@ -85,6 +85,10 @@ function buildRecentMetricItems(summary, metric, { includeManual = true } = {}) 
       }))
     : [{ key: 'shinjang', label: '신장분사', tone: 'shinjang', value: shinjangTotal?.[metric] }];
 
+  if (totalOnly) {
+    return [{ key: 'total', label: '전체', tone: 'total', value: total?.[metric] }];
+  }
+
   return [
     { key: 'total', label: '전체', tone: 'total', value: total?.[metric] },
     {
@@ -103,11 +107,22 @@ function buildRecentMetricItems(summary, metric, { includeManual = true } = {}) 
   ];
 }
 
-function RecentMetricBreakdown({ summary, metric, includeManual = true }) {
+function RecentMetricBreakdown({ summary, metric, includeManual = true, totalOnly = false }) {
   const formatter = metric === 'count' ? formatCount : formatCurrency;
+  const items = buildRecentMetricItems(summary, metric, { includeManual, totalOnly });
+
+  if (totalOnly && items.length === 1) {
+    const single = items[0];
+    return (
+      <div className={`combined-recent-single-value combined-recent-single-value--${metric}`}>
+        <strong>{formatter(single.value)}</strong>
+      </div>
+    );
+  }
+
   return (
     <div className={`combined-recent-breakdown combined-recent-breakdown--${metric}`}>
-      {buildRecentMetricItems(summary, metric, { includeManual }).map((item) => (
+      {items.map((item) => (
         <div
           key={item.key}
           className={`combined-recent-breakdown-item combined-recent-breakdown-item--${item.tone}`}
@@ -154,6 +169,7 @@ export default function CombinedStatsPage() {
   const { addToast } = useToast();
   const isAdmin = isAdminUser(user);
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
+  const [recentViewMode, setRecentViewMode] = useState('total-only');
   const [monthSummaries, setMonthSummaries] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);
@@ -530,16 +546,38 @@ export default function CombinedStatsPage() {
                 <h2>{recentPeriodLabel} 결산 현황</h2>
                 <span>크라이오 반영 전체 통계</span>
               </div>
-              <input
-                type="text"
-                value={recentPeriodInput}
-                onChange={(event) => setRecentPeriodInput(event.target.value)}
-                placeholder="최근 6개월"
-                aria-label="전체 통계 최근 결산 기간"
-              />
+              <div className="combined-recent-controls">
+                <div className="combined-recent-filter-tabs" role="tablist" aria-label="결산 현황 보기 방식">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={recentViewMode === 'total-only'}
+                    className={`combined-recent-tab-btn ${recentViewMode === 'total-only' ? 'is-active' : ''}`}
+                    onClick={() => setRecentViewMode('total-only')}
+                  >
+                    전체만 보기
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={recentViewMode === 'detail'}
+                    className={`combined-recent-tab-btn ${recentViewMode === 'detail' ? 'is-active' : ''}`}
+                    onClick={() => setRecentViewMode('detail')}
+                  >
+                    상세 보기
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={recentPeriodInput}
+                  onChange={(event) => setRecentPeriodInput(event.target.value)}
+                  placeholder="최근 6개월"
+                  aria-label="전체 통계 최근 결산 기간"
+                />
+              </div>
             </div>
             <div className="combined-stats-recent-table-wrap">
-              <table>
+              <table className={recentViewMode === 'total-only' ? 'combined-stats-recent-table--total-only' : undefined}>
                 <colgroup>
                   <col className="combined-recent-col-month" />
                   <col className="combined-recent-col-count" />
@@ -566,6 +604,7 @@ export default function CombinedStatsPage() {
                           summary={summary}
                           metric="count"
                           includeManual={isAdmin}
+                          totalOnly={recentViewMode === 'total-only'}
                         />
                       </td>
                       <td className="combined-recent-breakdown-cell">
@@ -573,6 +612,7 @@ export default function CombinedStatsPage() {
                           summary={summary}
                           metric="amount"
                           includeManual={isAdmin}
+                          totalOnly={recentViewMode === 'total-only'}
                         />
                       </td>
                       <td className="combined-recent-breakdown-cell">
@@ -580,6 +620,7 @@ export default function CombinedStatsPage() {
                           summary={summary}
                           metric="incentive"
                           includeManual={isAdmin}
+                          totalOnly={recentViewMode === 'total-only'}
                         />
                       </td>
                     </tr>
