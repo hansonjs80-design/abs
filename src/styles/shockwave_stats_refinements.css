@@ -2273,32 +2273,38 @@
   white-space: nowrap !important;
 }
 
-/* 도수치료 결산/신환 현황 결산 금액 컬럼 너비 15% 확대 반영 */
+/* 도수치료 결산/신환 현황 결산 금액 컬럼 너비 15% 추가 확대 반영 */
 .sw-manual-summary-amount-col {
-  width: 115px !important;
+  width: 133px !important;
 }
 
 .sw-manual-summary-card .sw-summary-table th:nth-child(3),
 .sw-manual-summary-card .sw-summary-table td:nth-child(3),
 .sw-manual-summary-card .sw-summary-table td.amount {
-  min-width: 112px !important;
-  padding-left: 12px !important;
-  padding-right: 12px !important;
+  min-width: 130px !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
 }
 
-/* 이온치료 현황 건수/총액 입력창 너비 최적화 (총액 너비 20% 확대 반영) */
+/* 이온치료 현황 건수/총액 입력창 너비 최적화 (총액 너비 15% 추가 확대 반영) */
 .sw-manual-ion-summary-table td:nth-child(2) .sw-six-month-ion-input-wrap input {
   width: 48px !important;
 }
 
 .sw-manual-ion-amount-column {
-  width: 135px !important;
+  width: 156px !important;
+}
+
+.sw-manual-ion-summary-table th:nth-child(3),
+.sw-manual-ion-summary-table td:nth-child(3) {
+  min-width: 156px !important;
 }
 
 .sw-manual-ion-summary-table td:nth-child(3) .sw-six-month-ion-input-wrap input,
 .sw-six-month-ion-input-wrap--amount input {
-  width: 105px !important;
+  width: 122px !important;
 }
+
 
 
 
