@@ -56,20 +56,50 @@ function buildStandardIncentiveRates(settings) {
     : [];
 }
 
-function buildShinjangIncentiveRatesByTherapist(summary) {
-  const ratesByTherapist = new Map();
+function addShinjangIncentiveGroup(groupsByRate, rateValue, value = {}) {
+  const rate = Math.max(0, Number(rateValue) || 0);
+  const current = groupsByRate.get(rate) || {
+    rate,
+    count: 0,
+    amount: 0,
+    incentive: 0,
+  };
+  current.count += Math.max(0, Number(value?.count) || 0);
+  current.amount += Math.max(0, Number(value?.amount) || 0);
+  current.incentive += Math.max(0, Number(value?.incentive) || 0);
+  groupsByRate.set(rate, current);
+}
+
+function sortShinjangIncentiveGroups(groupsByRate) {
+  return [...groupsByRate.values()].sort((left, right) => left.rate - right.rate);
+}
+
+function buildShinjangIncentiveGroups(summary, initialRates = []) {
+  const groupsByRate = new Map();
+  normalizeIncentiveRates(initialRates).forEach((rate) => {
+    addShinjangIncentiveGroup(groupsByRate, rate);
+  });
+  (Array.isArray(summary?.detailRows) ? summary.detailRows : []).forEach((row) => {
+    if (Math.max(0, Number(row?.count) || 0) === 0) return;
+    addShinjangIncentiveGroup(groupsByRate, row?.incentivePercentage, row);
+  });
+  return sortShinjangIncentiveGroups(groupsByRate);
+}
+
+function buildShinjangIncentiveGroupsByTherapist(summary) {
+  const groupsByTherapist = new Map();
   (Array.isArray(summary?.detailRows) ? summary.detailRows : []).forEach((row) => {
     if (Math.max(0, Number(row?.count) || 0) === 0) return;
     const name = String(row?.therapist?.name || row?.therapist?.displayName || '').trim();
     if (!name) return;
-    const rates = ratesByTherapist.get(name) || [];
-    rates.push(row?.incentivePercentage);
-    ratesByTherapist.set(name, rates);
+    const groupsByRate = groupsByTherapist.get(name) || new Map();
+    addShinjangIncentiveGroup(groupsByRate, row?.incentivePercentage, row);
+    groupsByTherapist.set(name, groupsByRate);
   });
   return new Map(
-    [...ratesByTherapist.entries()].map(([name, rates]) => [
+    [...groupsByTherapist.entries()].map(([name, groupsByRate]) => [
       name,
-      normalizeIncentiveRates(rates),
+      sortShinjangIncentiveGroups(groupsByRate),
     ])
   );
 }
@@ -197,6 +227,7 @@ function buildShinjangTreatmentSummary({
 
   return {
     rows: visibleRows,
+    prescriptions,
     settlement: buildShinjangSpraySettlementSummary({
       rows: visibleRows,
       prescriptions,
@@ -310,11 +341,20 @@ export function buildCombinedStatsMonthSummary({
     // 충격파 결산은 기존 탭과 동일하게 처방별 인센티브를 반올림한 뒤 합산한다.
     shockwave: toTreatmentMap(shockwaveSettlement, { sumPrescriptionIncentives: true }),
     shinjang_spray: toShinjangTreatmentMap(shinjangResult.settlement),
-    manual_therapy: toTreatmentMap(manualSettlement),
+    // 전체 통계의 도수치료 결산은 관리자에게만 공개한다. 일반 계정의 합계에도
+    // 도수치료 금액이 섞이지 않도록 화면 렌더링 전 집계 단계에서 제외한다.
+    manual_therapy: isAdmin ? toTreatmentMap(manualSettlement) : new Map(),
   };
   const shockwaveIncentiveRates = buildStandardIncentiveRates(shockwaveSettings);
   const manualIncentiveRates = buildStandardIncentiveRates(manualSettings);
-  const shinjangIncentiveRatesByTherapist = buildShinjangIncentiveRatesByTherapist(
+  const shinjangConfiguredRates = shinjangResult.prescriptions.map((prescription) => (
+    getMapValue(shinjangSettings?.prescription_incentive_percentages, prescription)
+  ));
+  const shinjangIncentiveGroups = buildShinjangIncentiveGroups(
+    shinjangResult.settlement,
+    shinjangConfiguredRates
+  );
+  const shinjangIncentiveGroupsByTherapist = buildShinjangIncentiveGroupsByTherapist(
     shinjangResult.settlement
   );
   const therapistSummaries = therapists.map((therapist) => {
@@ -327,21 +367,55 @@ export function buildCombinedStatsMonthSummary({
       treatments,
       incentiveRates: {
         shockwave: treatments.shockwave.count > 0 ? shockwaveIncentiveRates : [],
-        shinjang_spray: shinjangIncentiveRatesByTherapist.get(therapist.name) || [],
-        manual_therapy: treatments.manual_therapy.count > 0 ? manualIncentiveRates : [],
+        shinjang_spray: (shinjangIncentiveGroupsByTherapist.get(therapist.name) || [])
+          .map((group) => group.rate),
+        manual_therapy: isAdmin && treatments.manual_therapy.count > 0
+          ? manualIncentiveRates
+          : [],
       },
+      shinjangIncentiveGroups: shinjangIncentiveGroupsByTherapist.get(therapist.name) || [],
       total: addTreatmentValues(Object.values(treatments)),
     };
   });
-  const grandTotal = addTreatmentValues(therapistSummaries.map((item) => item.total));
+  const treatmentTotals = Object.fromEntries(COMBINED_STATS_TREATMENTS.map(({ key }) => [
+    key,
+    addTreatmentValues(therapistSummaries.map((item) => item.treatments[key])),
+  ]));
+  const grandTotal = addTreatmentValues(Object.values(treatmentTotals));
 
   return {
     monthKey: `${Number(year)}-${String(Number(month)).padStart(2, '0')}`,
     label: `${Number(year)}년 ${String(Number(month)).padStart(2, '0')}월`,
     therapists: therapistSummaries,
+    treatmentTotals,
+    shinjangIncentiveGroups,
+    total: grandTotal,
     totalCount: grandTotal.count,
     amount: grandTotal.amount,
     incentive: grandTotal.incentive,
+  };
+}
+
+export function buildCombinedStatsRecentBreakdown(monthSummaries = []) {
+  const summaries = Array.isArray(monthSummaries) ? monthSummaries : [];
+  const treatmentTotals = Object.fromEntries(COMBINED_STATS_TREATMENTS.map(({ key }) => [
+    key,
+    addTreatmentValues(summaries.map((summary) => summary?.treatmentTotals?.[key])),
+  ]));
+  const shinjangGroupsByRate = new Map();
+  summaries.forEach((summary) => {
+    (Array.isArray(summary?.shinjangIncentiveGroups)
+      ? summary.shinjangIncentiveGroups
+      : []
+    ).forEach((group) => {
+      addShinjangIncentiveGroup(shinjangGroupsByRate, group?.rate, group);
+    });
+  });
+
+  return {
+    treatmentTotals,
+    shinjangIncentiveGroups: sortShinjangIncentiveGroups(shinjangGroupsByRate),
+    total: addTreatmentValues(Object.values(treatmentTotals)),
   };
 }
 

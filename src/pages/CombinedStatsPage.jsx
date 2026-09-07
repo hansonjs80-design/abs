@@ -9,7 +9,7 @@ import { isAdminUser } from '../lib/authPermissions';
 import { getTodayKST } from '../lib/calendarUtils';
 import {
   buildCombinedStatsMonthSummary,
-  buildCombinedStatsRecentTotal,
+  buildCombinedStatsRecentBreakdown,
   COMBINED_STATS_TREATMENTS,
 } from '../lib/combinedStatsUtils';
 import { normalizeManualTherapyLogRows } from '../lib/manualTherapyLogUtils';
@@ -49,6 +49,75 @@ function IncentiveRateList({ rates = [] }) {
         <span key={rate} className="combined-incentive-rate-badge">
           {formatIncentiveRate(rate)}
         </span>
+      ))}
+    </div>
+  );
+}
+
+function buildTherapistTreatmentSections(item) {
+  return COMBINED_STATS_TREATMENTS.map((treatment) => {
+    const value = item?.treatments?.[treatment.key] || { count: 0, amount: 0, incentive: 0 };
+    const shinjangGroups = treatment.key === 'shinjang_spray'
+      && Array.isArray(item?.shinjangIncentiveGroups)
+      ? item.shinjangIncentiveGroups
+      : [];
+    const rows = shinjangGroups.length > 0
+      ? shinjangGroups.map((group) => ({ ...group, rates: [group.rate] }))
+      : [{ ...value, rates: item?.incentiveRates?.[treatment.key] || [] }];
+    return { ...treatment, value, rows };
+  }).filter((section) => Math.max(0, Number(section.value.count) || 0) > 0);
+}
+
+function buildRecentMetricItems(summary, metric, { includeManual = true } = {}) {
+  const treatmentTotals = summary?.treatmentTotals || {};
+  const shinjangTotal = treatmentTotals.shinjang_spray || {};
+  const shinjangGroups = Array.isArray(summary?.shinjangIncentiveGroups)
+    ? summary.shinjangIncentiveGroups
+    : [];
+  const total = summary?.total || {
+    count: summary?.totalCount,
+    amount: summary?.amount,
+    incentive: summary?.incentive,
+  };
+  const shinjangItems = shinjangGroups.length > 0
+    ? shinjangGroups.map((group) => ({
+        key: `shinjang-${group.rate}`,
+        label: `신장분사 ${formatIncentiveRate(group.rate)}`,
+        tone: 'shinjang',
+        value: group?.[metric],
+      }))
+    : [{ key: 'shinjang', label: '신장분사', tone: 'shinjang', value: shinjangTotal?.[metric] }];
+
+  return [
+    {
+      key: 'shockwave',
+      label: '충격파',
+      tone: 'shockwave',
+      value: treatmentTotals.shockwave?.[metric],
+    },
+    ...shinjangItems,
+    ...(includeManual ? [{
+      key: 'manual',
+      label: '도수치료',
+      tone: 'manual',
+      value: treatmentTotals.manual_therapy?.[metric],
+    }] : []),
+    { key: 'total', label: '전체', tone: 'total', value: total?.[metric] },
+  ];
+}
+
+function RecentMetricBreakdown({ summary, metric, includeManual = true }) {
+  const formatter = metric === 'count' ? formatCount : formatCurrency;
+  return (
+    <div className={`combined-recent-breakdown combined-recent-breakdown--${metric}`}>
+      {buildRecentMetricItems(summary, metric, { includeManual }).map((item) => (
+        <div
+          key={item.key}
+          className={`combined-recent-breakdown-item combined-recent-breakdown-item--${item.tone}`}
+        >
+          <span>{item.label}</span>
+          <strong>{formatter(item.value)}</strong>
+        </div>
       ))}
     </div>
   );
@@ -324,8 +393,8 @@ export default function CombinedStatsPage() {
   const currentMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
   const currentSummary = monthSummaries.find((summary) => summary.monthKey === currentMonthKey);
   const recentRows = useMemo(() => [...monthSummaries].reverse(), [monthSummaries]);
-  const recentTotal = useMemo(
-    () => buildCombinedStatsRecentTotal(monthSummaries),
+  const recentBreakdown = useMemo(
+    () => buildCombinedStatsRecentBreakdown(monthSummaries),
     [monthSummaries]
   );
 
@@ -335,7 +404,11 @@ export default function CombinedStatsPage() {
       <header className="combined-stats-header">
         <div>
           <h1>{currentYear}년 {String(currentMonth).padStart(2, '0')}월 전체 통계</h1>
-          <p>충격파 · 신장분사 · 도수치료의 크라이오 반영 결산입니다.</p>
+          <p>
+            {isAdmin
+              ? '충격파 · 신장분사 · 도수치료의 크라이오 반영 결산입니다.'
+              : '충격파 · 신장분사의 크라이오 반영 결산입니다.'}
+          </p>
         </div>
         <button
           type="button"
@@ -351,9 +424,7 @@ export default function CombinedStatsPage() {
       <div className="combined-stats-dashboard">
         <section className="combined-stats-current" aria-label={`${currentMonth}월 치료사별 전체 통계`}>
           {currentSummary?.therapists?.length > 0 ? currentSummary.therapists.map((item, index) => {
-            const visibleTreatments = COMBINED_STATS_TREATMENTS.filter((treatment) => (
-              Math.max(0, Number(item.treatments[treatment.key]?.count) || 0) > 0
-            ));
+            const visibleTreatments = buildTherapistTreatmentSections(item);
             return (
               <article
                 key={item.therapist.key || item.therapist.id || item.therapist.name}
@@ -390,20 +461,24 @@ export default function CombinedStatsPage() {
                   </thead>
                   {visibleTreatments.length > 0 && (
                     <tbody>
-                      {visibleTreatments.map((treatment) => {
-                        const value = item.treatments[treatment.key];
-                        return (
-                          <tr key={treatment.key}>
-                            <th>{treatment.label}</th>
-                            <td>{formatCount(value.count)}</td>
-                            <td>{formatCurrency(value.amount)}</td>
-                            <td>{formatCurrency(value.incentive)}</td>
+                      {visibleTreatments.flatMap((treatment) => (
+                        treatment.rows.map((row, rowIndex) => (
+                          <tr
+                            key={`${treatment.key}-${row.rates.join('-') || 'total'}`}
+                            className={rowIndex === 0 ? 'combined-treatment-group-start' : undefined}
+                          >
+                            {rowIndex === 0 && (
+                              <th rowSpan={treatment.rows.length}>{treatment.label}</th>
+                            )}
+                            <td>{formatCount(row.count)}</td>
+                            <td>{formatCurrency(row.amount)}</td>
+                            <td>{formatCurrency(row.incentive)}</td>
                             <td className="combined-incentive-rate-cell">
-                              <IncentiveRateList rates={item.incentiveRates?.[treatment.key]} />
+                              <IncentiveRateList rates={row.rates} />
                             </td>
                           </tr>
-                        );
-                      })}
+                        ))
+                      ))}
                       <tr className="combined-therapist-total">
                         <th>합계</th>
                         <td>{formatCount(item.total.count)}</td>
@@ -461,25 +536,56 @@ export default function CombinedStatsPage() {
                       className={summary.monthKey === currentMonthKey ? 'is-current' : undefined}
                     >
                       <th>{summary.label}</th>
-                      <td>{formatCount(summary.totalCount)}</td>
-                      <td>{formatCurrency(summary.amount)}</td>
-                      <td>{formatCurrency(summary.incentive)}</td>
+                      <td className="combined-recent-breakdown-cell">
+                        <RecentMetricBreakdown
+                          summary={summary}
+                          metric="count"
+                          includeManual={isAdmin}
+                        />
+                      </td>
+                      <td className="combined-recent-breakdown-cell">
+                        <RecentMetricBreakdown
+                          summary={summary}
+                          metric="amount"
+                          includeManual={isAdmin}
+                        />
+                      </td>
+                      <td className="combined-recent-breakdown-cell">
+                        <RecentMetricBreakdown
+                          summary={summary}
+                          metric="incentive"
+                          includeManual={isAdmin}
+                        />
+                      </td>
                     </tr>
                   ))}
                   <tr className="combined-recent-total">
                     <th>{recentPeriodLabel} 합계</th>
-                    <td>{formatCount(recentTotal.count)}</td>
-                    <td>{formatCurrency(recentTotal.amount)}</td>
-                    <td>{formatCurrency(recentTotal.incentive)}</td>
+                    <td className="combined-recent-breakdown-cell">
+                      <RecentMetricBreakdown
+                        summary={recentBreakdown}
+                        metric="count"
+                        includeManual={isAdmin}
+                      />
+                    </td>
+                    <td className="combined-recent-breakdown-cell">
+                      <RecentMetricBreakdown
+                        summary={recentBreakdown}
+                        metric="amount"
+                        includeManual={isAdmin}
+                      />
+                    </td>
+                    <td className="combined-recent-breakdown-cell">
+                      <RecentMetricBreakdown
+                        summary={recentBreakdown}
+                        metric="incentive"
+                        includeManual={isAdmin}
+                      />
+                    </td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            {!isAdmin && (
-              <p className="combined-stats-permission-note">
-                일반 계정에서는 신장분사 인센티브 15% 처방이 결산에서 제외됩니다.
-              </p>
-            )}
           </section>
           <ManualTherapySixMonthIonTreatment
             currentYear={currentYear}

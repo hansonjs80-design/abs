@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   buildCombinedStatsMonthSummary,
+  buildCombinedStatsRecentBreakdown,
   buildCombinedStatsRecentTotal,
 } from '../combinedStatsUtils.js';
 
@@ -58,7 +59,7 @@ const manualTherapyRows = [
 ];
 
 describe('combined statistics', () => {
-  it('uses cryo-adjusted totals and hides 15 percent shinjang rows from non-admin settlements', () => {
+  it('uses cryo-adjusted totals and hides 15 percent shinjang and manual rows from non-admin settlements', () => {
     const summary = buildCombinedStatsMonthSummary({
       year: 2026,
       month: 9,
@@ -74,17 +75,28 @@ describe('combined statistics', () => {
     const hidden = summary.therapists.find((item) => item.therapist.name === '신수민');
     assert.deepEqual(primary.treatments.shockwave, { count: 2, amount: 160000, incentive: 16000 });
     assert.deepEqual(primary.treatments.shinjang_spray, { count: 1, amount: 270000, incentive: 18900 });
-    assert.deepEqual(primary.treatments.manual_therapy, { count: 1, amount: 150000, incentive: 7500 });
+    assert.deepEqual(primary.treatments.manual_therapy, { count: 0, amount: 0, incentive: 0 });
     assert.deepEqual(primary.incentiveRates, {
       shockwave: [10],
       shinjang_spray: [7],
-      manual_therapy: [5],
+      manual_therapy: [],
     });
-    assert.deepEqual(primary.total, { count: 4, amount: 580000, incentive: 42400 });
+    assert.deepEqual(primary.shinjangIncentiveGroups, [
+      { rate: 7, count: 1, amount: 270000, incentive: 18900 },
+    ]);
+    assert.deepEqual(summary.treatmentTotals, {
+      shockwave: { count: 2, amount: 160000, incentive: 16000 },
+      shinjang_spray: { count: 1, amount: 270000, incentive: 18900 },
+      manual_therapy: { count: 0, amount: 0, incentive: 0 },
+    });
+    assert.deepEqual(summary.shinjangIncentiveGroups, [
+      { rate: 7, count: 1, amount: 270000, incentive: 18900 },
+    ]);
+    assert.deepEqual(primary.total, { count: 3, amount: 430000, incentive: 34900 });
     assert.deepEqual(hidden.total, { count: 0, amount: 0, incentive: 0 });
-    assert.equal(summary.totalCount, 4);
-    assert.equal(summary.amount, 580000);
-    assert.equal(summary.incentive, 42400);
+    assert.equal(summary.totalCount, 3);
+    assert.equal(summary.amount, 430000);
+    assert.equal(summary.incentive, 34900);
   });
 
   it('includes 15 percent shinjang rows for administrators', () => {
@@ -106,6 +118,10 @@ describe('combined statistics', () => {
       incentive: 60000,
     });
     assert.deepEqual(secondary.incentiveRates.shinjang_spray, [15]);
+    assert.deepEqual(summary.shinjangIncentiveGroups, [
+      { rate: 7, count: 1, amount: 270000, incentive: 18900 },
+      { rate: 15, count: 1, amount: 400000, incentive: 60000 },
+    ]);
     assert.equal(summary.totalCount, 5);
     assert.equal(summary.amount, 980000);
     assert.equal(summary.incentive, 102400);
@@ -120,6 +136,50 @@ describe('combined statistics', () => {
       amount: 1300000,
       incentive: 103400,
     });
+  });
+
+  it('adds recent treatment totals and keeps dynamic shinjang incentive groups separate', () => {
+    const september = buildCombinedStatsMonthSummary({
+      year: 2026,
+      month: 9,
+      shockwaveRows,
+      manualTherapyRows,
+      shockwaveTherapists: therapists,
+      manualTherapists: therapists,
+      settings,
+      isAdmin: true,
+    });
+    const octoberSettings = structuredClone(settings);
+    octoberSettings.monthly_settlement_settings['2026-10'] = structuredClone(
+      octoberSettings.monthly_settlement_settings['2026-09']
+    );
+    const octoberShinjang = octoberSettings.monthly_settlement_settings['2026-10'].shinjang_spray;
+    octoberShinjang.prescriptions = ['S12(신장분사)'];
+    octoberShinjang.prescription_incentive_percentages = { 'S12(신장분사)': 12 };
+    const october = buildCombinedStatsMonthSummary({
+      year: 2026,
+      month: 10,
+      shockwaveRows: [
+        { therapist_name: '주한솔', prescription: 'S12(신장분사)', prescription_count: 2 },
+      ],
+      shockwaveTherapists: therapists,
+      manualTherapists: therapists,
+      settings: octoberSettings,
+      isAdmin: true,
+    });
+
+    const recent = buildCombinedStatsRecentBreakdown([september, october]);
+    assert.deepEqual(recent.treatmentTotals, {
+      shockwave: { count: 2, amount: 160000, incentive: 16000 },
+      shinjang_spray: { count: 4, amount: 670000, incentive: 78900 },
+      manual_therapy: { count: 1, amount: 150000, incentive: 7500 },
+    });
+    assert.deepEqual(recent.shinjangIncentiveGroups, [
+      { rate: 7, count: 1, amount: 270000, incentive: 18900 },
+      { rate: 12, count: 2, amount: 0, incentive: 0 },
+      { rate: 15, count: 1, amount: 400000, incentive: 60000 },
+    ]);
+    assert.deepEqual(recent.total, { count: 7, amount: 980000, incentive: 102400 });
   });
 
   it('matches the shockwave tab by rounding incentives per prescription', () => {
@@ -216,5 +276,9 @@ describe('combined statistics', () => {
 
     const primary = summary.therapists.find((item) => item.therapist.name === '주한솔');
     assert.deepEqual(primary.incentiveRates.shinjang_spray, [7, 15]);
+    assert.deepEqual(primary.shinjangIncentiveGroups, [
+      { rate: 7, count: 1, amount: 270000, incentive: 18900 },
+      { rate: 15, count: 1, amount: 400000, incentive: 60000 },
+    ]);
   });
 });
