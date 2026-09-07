@@ -447,9 +447,9 @@ export default function CombinedStatsPage() {
                                 {rowIndex === 0 && (
                                   <th rowSpan={treatment.rows.length}>{treatment.label}</th>
                                 )}
-                                <td>{formatCount(row.count)}</td>
-                                <td>{formatCurrency(row.amount)}</td>
-                                <td>{formatCurrency(row.incentive)}</td>
+                                <td className="combined-therapist-count-cell">{formatCount(row.count)}</td>
+                                <td className="combined-therapist-amount-cell">{formatCurrency(row.amount)}</td>
+                                <td className="combined-therapist-incentive-cell">{formatCurrency(row.incentive)}</td>
                                 <td className="combined-incentive-rate-cell">
                                   <IncentiveRateList rates={row.rates} />
                                 </td>
@@ -458,9 +458,9 @@ export default function CombinedStatsPage() {
                           ))}
                           <tr className="combined-therapist-total">
                             <th>합계</th>
-                            <td>{formatCount(item.total.count)}</td>
-                            <td>{formatCurrency(item.total.amount)}</td>
-                            <td>{formatCurrency(item.total.incentive)}</td>
+                            <td className="combined-therapist-count-cell">{formatCount(item.total.count)}</td>
+                            <td className="combined-therapist-amount-cell">{formatCurrency(item.total.amount)}</td>
+                            <td className="combined-therapist-incentive-cell">{formatCurrency(item.total.incentive)}</td>
                             <td>—</td>
                           </tr>
                         </tbody>

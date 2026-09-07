@@ -194,11 +194,11 @@
   font-size: 1.08rem;
 }
 
-.combined-therapist-card tbody td:nth-child(3) {
+.combined-therapist-card tbody td.combined-therapist-amount-cell {
   color: #075fc5;
 }
 
-.combined-therapist-card tbody td:nth-child(4) {
+.combined-therapist-card tbody td.combined-therapist-incentive-cell {
   color: #7c3aed;
 }
 
