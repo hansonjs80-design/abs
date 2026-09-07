@@ -86,6 +86,7 @@ function buildRecentMetricItems(summary, metric, { includeManual = true } = {}) 
     : [{ key: 'shinjang', label: '신장분사', tone: 'shinjang', value: shinjangTotal?.[metric] }];
 
   return [
+    { key: 'total', label: '전체', tone: 'total', value: total?.[metric] },
     {
       key: 'shockwave',
       label: '충격파',
@@ -99,7 +100,6 @@ function buildRecentMetricItems(summary, metric, { includeManual = true } = {}) 
       tone: 'manual',
       value: treatmentTotals.manual_therapy?.[metric],
     }] : []),
-    { key: 'total', label: '전체', tone: 'total', value: total?.[metric] },
   ];
 }
 

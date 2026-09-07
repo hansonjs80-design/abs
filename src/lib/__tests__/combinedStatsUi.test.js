@@ -55,6 +55,7 @@ describe('combined statistics UI', () => {
     assert.doesNotMatch(pageSource, /setManualTherapyIonTreatment/);
     assert.match(pageSource, /recentPeriodInput/);
     assert.match(pageSource, /includeManual \? \[\{/);
+    assert.match(pageSource, /return\s*\[\s*\{\s*key:\s*'total'[\s\S]*?key:\s*'shockwave'/);
     assert.doesNotMatch(pageSource, /결산에서 제외됩니다/);
   });
 
@@ -88,6 +89,7 @@ describe('combined statistics UI', () => {
     assert.match(styleSource, /\.combined-stats-recent\s*\{[\s\S]*border-top:\s*3px solid #0891b2;/);
     assert.doesNotMatch(styleSource, /\.combined-stats-side \.sw-manual-ion-summary-card/);
     assert.match(styleSource, /\.combined-recent-breakdown-item--shinjang/);
+    assert.match(styleSource, /\.combined-recent-breakdown-item--total\s*\{[\s\S]*border-bottom:\s*2px solid #94a3b8;/);
     assert.match(styleSource, /@media print\s*\{[\s\S]*height:\s*36\.5px !important;[\s\S]*font-size:\s*calc\(0\.95rem \+ 2px\) !important;/);
   });
 });

@@ -485,9 +485,22 @@
 .combined-recent-breakdown-item--total {
   --combined-recent-accent: #0f172a;
   --combined-recent-bg: #e2e8f0;
-  margin-top: 2px;
-  border-top: 1px solid #94a3b8;
+  margin-bottom: 4px;
+  border-bottom: 2px solid #94a3b8;
+  padding: 5px 6px;
   font-weight: 900;
+}
+
+.combined-recent-breakdown-item--total > span {
+  color: #0f172a;
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.combined-recent-breakdown-item--total > strong {
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 950;
 }
 
 .combined-stats-recent tr.is-current > * {
