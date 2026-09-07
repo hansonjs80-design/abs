@@ -80,6 +80,13 @@
   border-top: 3px solid var(--combined-tone-strong);
 }
 
+.combined-therapist-summary-card {
+  --combined-tone-strong: #475569;
+  --combined-tone-soft: #e2e8f0;
+  margin-top: 4px;
+  border-color: #64748b;
+}
+
 .combined-therapist-card table,
 .combined-stats-recent table {
   width: 100%;
@@ -163,6 +170,19 @@
   width: 14.2%;
 }
 
+.combined-summary-col-therapist {
+  width: 28%;
+}
+
+.combined-summary-col-count {
+  width: 18%;
+}
+
+.combined-summary-col-amount,
+.combined-summary-col-incentive {
+  width: 27%;
+}
+
 .combined-therapist-card tbody th {
   background: #fff;
   font-size: 1.08rem;
@@ -217,6 +237,15 @@
   background: var(--combined-tone-soft) !important;
   font-size: 1.08rem !important;
   font-weight: 900 !important;
+}
+
+.combined-therapist-summary-card tbody th {
+  background: #f8fafc;
+}
+
+.combined-summary-grand-total > * {
+  border-top-color: #475569;
+  color: #0f172a !important;
 }
 
 .combined-tone-0 {
@@ -406,56 +435,6 @@
   font-weight: 900;
 }
 
-.combined-recent-total > * {
-  border-top: 2px solid #64748b;
-  background: #dff4f6 !important;
-  font-weight: 900 !important;
-}
-
-.combined-stats-side .sw-manual-ion-summary-card {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 100%;
-  margin: 0;
-  padding: 18px 20px;
-  border: 1px solid #94a3b8;
-  border-top: 3px solid #8b5cf6;
-  border-radius: 12px;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.09);
-}
-
-.combined-stats-side .sw-manual-ion-summary-card .sw-six-month-summary-wrap {
-  display: block;
-  width: 100%;
-  border: 1px solid #b8c4d3;
-  border-radius: 8px;
-}
-
-.combined-stats-side .sw-manual-ion-summary-table {
-  width: 100%;
-}
-
-.combined-stats-side .sw-manual-ion-summary-table th,
-.combined-stats-side .sw-manual-ion-summary-table td {
-  border-right: 1px solid #d5dee9;
-  border-bottom: 1px solid #d5dee9;
-}
-
-.combined-stats-side .sw-manual-ion-summary-table thead th {
-  height: 30px;
-  padding: 3px 6px;
-  border-bottom: 2px solid #94a3b8;
-  line-height: 1.05;
-}
-
-.combined-stats-side .sw-manual-ion-summary-table tbody th,
-.combined-stats-side .sw-manual-ion-summary-table tbody td {
-  height: 34px;
-  padding: 1px 6px;
-  line-height: 1.05;
-  vertical-align: middle;
-}
-
 .combined-stats-empty {
   padding: 72px 24px;
   border: 1px dashed #94a3b8;
@@ -503,8 +482,7 @@
   }
 
   .combined-therapist-card,
-  .combined-stats-recent,
-  .combined-stats-side .sw-manual-ion-summary-card {
+  .combined-stats-recent {
     overflow-x: auto;
   }
 
