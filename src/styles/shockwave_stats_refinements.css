@@ -2161,6 +2161,19 @@
   font-size: 1.05rem !important;
 }
 
+/* 크라이오 반영 버튼 및 총 건수/매출 배지 숨김 */
+.sw-manual-settlement-container .sw-manual-cryo-mode-button,
+.sw-manual-settlement-main-card .sw-manual-cryo-mode-button {
+  display: none !important;
+}
+
+.sw-manual-settlement-container .sw-settlement-meta-total,
+.sw-manual-settlement-container .sw-settlement-meta-sales,
+.sw-manual-settlement-main-card .sw-settlement-meta-total,
+.sw-manual-settlement-main-card .sw-settlement-meta-sales {
+  display: none !important;
+}
+
 .sw-manual-settlement-main-card .sw-settlement-meta {
   gap: 4px !important;
 }
