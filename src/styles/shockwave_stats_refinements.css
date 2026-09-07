@@ -1694,7 +1694,8 @@
 
 .sw-stats-body--settlement .sw-manual-summary-card {
   min-width: 0;
-  width: 100%;
+  width: fit-content;
+  max-width: 100%;
   height: 100%;
 }
 
@@ -1702,12 +1703,15 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  width: 100%;
+  width: fit-content;
+  max-width: 100%;
   gap: 18px;
 }
 
 .sw-stats-body--settlement .sw-manual-summary-stack .sw-manual-summary-card {
   height: auto;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .sw-manual-settlement-container .sw-settlement-card {
@@ -1906,10 +1910,10 @@
 }
 
 .sw-manual-summary-card .sw-summary-table {
-  width: 100%;
-  min-width: 360px;
-  height: 100%;
-  table-layout: fixed;
+  width: auto !important;
+  min-width: 0 !important;
+  height: auto;
+  table-layout: auto !important;
 }
 
 .sw-manual-summary-card .sw-settlement-header {
@@ -1975,21 +1979,11 @@
   font-weight: 900;
 }
 
-.sw-manual-summary-card .sw-summary-table th:nth-child(1),
-.sw-manual-summary-card .sw-summary-table td:nth-child(1) {
-  width: 28%;
-}
-
-.sw-manual-summary-card .sw-summary-table th:nth-child(2),
-.sw-manual-summary-card .sw-summary-table td:nth-child(2),
-.sw-manual-summary-card .sw-summary-table th:nth-child(4),
-.sw-manual-summary-card .sw-summary-table td:nth-child(4) {
-  width: 17%;
-}
-
-.sw-manual-summary-card .sw-summary-table th:nth-child(3),
-.sw-manual-summary-card .sw-summary-table td:nth-child(3) {
-  width: 38%;
+.sw-manual-summary-card .sw-summary-table th,
+.sw-manual-summary-card .sw-summary-table td {
+  width: auto !important;
+  padding: 4px 10px !important;
+  white-space: nowrap !important;
 }
 
 .sw-manual-ion-summary-card .sw-six-month-summary-wrap {
@@ -1997,46 +1991,37 @@
 }
 
 .sw-manual-ion-summary-table {
+  width: auto !important;
   min-width: 0 !important;
   height: auto !important;
+  table-layout: auto !important;
 }
 
-.sw-manual-ion-summary-table .sw-manual-ion-month-column {
-  width: 34%;
-}
-
-.sw-manual-ion-summary-table .sw-manual-ion-count-column {
-  width: 27%;
-}
-
-.sw-manual-ion-summary-table .sw-manual-ion-amount-column {
-  width: 39%;
-}
-
-.sw-manual-ion-summary-table th:nth-child(n),
-.sw-manual-ion-summary-table td:nth-child(n) {
-  width: auto;
+.sw-manual-ion-summary-table th,
+.sw-manual-ion-summary-table td {
+  width: auto !important;
+  padding: 4px 8px !important;
+  white-space: nowrap !important;
 }
 
 .sw-six-month-ion-input-wrap {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  width: 100%;
-  min-width: 0;
-  gap: 4px;
+  display: inline-flex !important;
+  align-items: center !important;
+  width: auto !important;
+  min-width: 0 !important;
+  gap: 4px !important;
 }
 
 .sw-six-month-ion-input-wrap input {
-  width: 100%;
-  min-width: 0;
+  width: 58px !important;
+  min-width: 0 !important;
   height: 30px;
   box-sizing: border-box;
   border: 1px solid #9db2cf;
   border-radius: 4px;
   background: #fff;
   color: #172033;
-  padding: 3px 6px;
+  padding: 2px 4px !important;
   font: inherit;
   line-height: 1.2;
   text-align: right;

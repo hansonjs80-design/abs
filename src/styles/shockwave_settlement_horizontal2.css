@@ -489,17 +489,20 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 }
 
 .sw-horizontal2-therapist-total-table .horizontal2-total-label {
-  width: 76px !important;
+  width: auto !important;
+  min-width: 0 !important;
   border-left: 2px solid #64748b !important;
 }
 
 .sw-horizontal2-therapist-total-table .count-val {
-  width: 58px !important;
+  width: auto !important;
+  min-width: 0 !important;
 }
 
 .sw-horizontal2-therapist-total-table .amount-val,
 .sw-horizontal2-therapist-total-table .incentive-val {
-  width: 120px !important;
+  width: auto !important;
+  min-width: 0 !important;
 }
 
 .sw-horizontal2-therapist-total-table .horizontal2-total-row .incentive-val {
@@ -542,24 +545,28 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 }
 
 .sw-horizontal2-grand-table .grand-title {
-  width: 76px !important;
+  width: auto !important;
+  min-width: 0 !important;
   color: #0f172a !important;
 }
 
 .sw-horizontal2-layout--shinjang .sw-horizontal2-grand-table .grand-title {
-  width: 112px !important;
+  width: auto !important;
+  min-width: 0 !important;
 }
 
 .sw-horizontal2-grand-table th:nth-child(2),
 .sw-horizontal2-grand-table td:nth-child(1) {
-  width: 58px !important;
+  width: auto !important;
+  min-width: 0 !important;
 }
 
 .sw-horizontal2-grand-table th:nth-child(3),
 .sw-horizontal2-grand-table td:nth-child(2),
 .sw-horizontal2-grand-table th:nth-child(4),
 .sw-horizontal2-grand-table td:nth-child(3) {
-  width: 120px !important;
+  width: auto !important;
+  min-width: 0 !important;
 }
 
 .sw-horizontal2-grand-table .horizontal2-grand-total-row .incentive-val {
@@ -568,22 +575,26 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 
 .sw-horizontal2-recent-table th:first-child,
 .sw-horizontal2-recent-table td:first-child {
-  width: 100px !important;
+  width: auto !important;
+  min-width: 0 !important;
 }
 
 .sw-horizontal2-recent-table th:nth-child(2),
 .sw-horizontal2-recent-table td:nth-child(2) {
-  width: 66px !important;
+  width: auto !important;
+  min-width: 0 !important;
 }
 
 .sw-horizontal2-recent-table th:nth-child(3),
 .sw-horizontal2-recent-table td:nth-child(3) {
-  width: 132px !important;
+  width: auto !important;
+  min-width: 0 !important;
 }
 
 .sw-horizontal2-recent-table th:nth-child(4),
 .sw-horizontal2-recent-table td:nth-child(4) {
-  width: 74px !important;
+  width: auto !important;
+  min-width: 0 !important;
 }
 
 .sw-horizontal2-recent-table .new-patient-val {
