@@ -193,7 +193,7 @@ ALTER TABLE public.holidays DISABLE ROW LEVEL SECURITY;`
   },
   {
     title: '로그인 사용자 및 권한 테이블',
-    description: '기존 앱 로그인 계정과 탭별 접근 권한을 보존합니다. 기본 관리자 비밀번호는 자동 생성하지 않습니다.',
+    description: '기존 앱 로그인 계정과 탭별 접근 권한을 관리합니다. 기본 관리자 계정(admin / 1234)을 복구 및 생성합니다.',
     sql: `CREATE TABLE IF NOT EXISTS public.app_users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   username text NOT NULL UNIQUE,
@@ -211,7 +211,17 @@ ALTER TABLE public.app_users ADD COLUMN IF NOT EXISTS display_name text NOT NULL
 ALTER TABLE public.app_users ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'user';
 ALTER TABLE public.app_users ADD COLUMN IF NOT EXISTS permissions jsonb NOT NULL DEFAULT '{}';
 ALTER TABLE public.app_users ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
--- 기본 관리자 계정이나 비밀번호는 자동 생성하지 않습니다.`
+
+-- 기본 관리자 계정(admin / 1234) 생성 및 권한 부여
+INSERT INTO public.app_users (username, password, display_name, role, permissions, is_active)
+VALUES ('admin', '1234', '관리자', 'admin', '{"staff_schedule":true,"shockwave":true,"shockwave_stats":true,"shinjang_spray_stats":true,"manual_therapy_stats":true,"combined_stats":true,"pt_stats":true,"settings":true}'::jsonb, true)
+ON CONFLICT (username) DO UPDATE
+SET is_active = true,
+    role = 'admin',
+    password = CASE WHEN public.app_users.password = '' THEN '1234' ELSE public.app_users.password END;
+
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.app_users TO anon, authenticated, service_role;`
   }
 ];
 
@@ -525,8 +535,19 @@ ADD COLUMN IF NOT EXISTS permissions jsonb NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE public.app_users
 ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
 
--- 보안상 기본 관리자 계정이나 비밀번호는 자동 생성하지 않습니다.
--- 관리자는 Supabase Auth의 app_metadata.role='admin' 또는 로그인 관리 화면에서 명시적으로 구성합니다.`;
+-- 기본 관리자 계정(admin / 1234) 생성 및 권한 부여
+INSERT INTO public.app_users (username, password, display_name, role, permissions, is_active)
+VALUES ('admin', '1234', '관리자', 'admin', '{"staff_schedule":true,"shockwave":true,"shockwave_stats":true,"shinjang_spray_stats":true,"manual_therapy_stats":true,"combined_stats":true,"pt_stats":true,"settings":true}'::jsonb, true)
+ON CONFLICT (username) DO UPDATE
+SET is_active = true,
+    role = 'admin',
+    password = CASE WHEN public.app_users.password = '' THEN '1234' ELSE public.app_users.password END;
+
+-- Supabase 클라이언트 권한 부여
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;`;
 
 export const DB_USAGE_CHECK_SQL = `-- 1. 현재 DB 전체 크기
 select

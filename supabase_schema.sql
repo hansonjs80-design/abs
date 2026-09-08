@@ -420,8 +420,13 @@ CREATE TRIGGER set_app_users_updated_at
 BEFORE UPDATE ON public.app_users
 FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
--- 보안상 기본 관리자 비밀번호를 자동 생성하거나 기존 관리자 비밀번호를 덮어쓰지 않습니다.
--- 관리자는 Supabase Auth의 app_metadata.role='admin' 또는 기존 로그인 관리 화면에서 명시적으로 구성합니다.
+-- 기본 관리자 계정 생성 및 복구 (admin / 1234)
+INSERT INTO public.app_users (username, password, display_name, role, permissions, is_active)
+VALUES ('admin', '1234', '관리자', 'admin', '{"staff_schedule":true,"shockwave":true,"shockwave_stats":true,"shinjang_spray_stats":true,"manual_therapy_stats":true,"combined_stats":true,"pt_stats":true,"settings":true}'::jsonb, true)
+ON CONFLICT (username) DO UPDATE
+SET is_active = true,
+    role = 'admin',
+    password = CASE WHEN public.app_users.password = '' THEN '1234' ELSE public.app_users.password END;
 
 -- 9. Staff calendar slot settings
 CREATE TABLE IF NOT EXISTS public.staff_calendar_settings (
@@ -472,3 +477,12 @@ EXCEPTION WHEN OTHERS THEN
   -- Ignore errors (e.g., if supabase_realtime publication does not exist)
 END;
 $$;
+
+-- 11. Grant permissions to anon and authenticated roles
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO anon, authenticated, service_role;
