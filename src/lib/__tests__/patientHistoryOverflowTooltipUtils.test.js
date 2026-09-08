@@ -16,13 +16,23 @@ const patientHistoryFiltersUrl = new URL(
   '../../components/shockwave/PatientHistoryFilters.jsx',
   import.meta.url
 );
+const patientHistoryModalUrl = new URL(
+  '../../components/shockwave/PatientHistoryModal.jsx',
+  import.meta.url
+);
+const shockwaveContextMenuUrl = new URL(
+  '../../components/shockwave/ShockwaveContextMenu.jsx',
+  import.meta.url
+);
 
 async function readPatientHistoryRenderSource() {
-  const [viewSource, editableCellsSource] = await Promise.all([
+  const [viewSource, editableCellsSource, modalSource, contextMenuSource] = await Promise.all([
     readFile(shockwaveViewUrl, 'utf8'),
     readFile(patientHistoryEditableCellsUrl, 'utf8'),
+    readFile(patientHistoryModalUrl, 'utf8'),
+    readFile(shockwaveContextMenuUrl, 'utf8'),
   ]);
-  return `${viewSource}\n${editableCellsSource}`;
+  return `${viewSource}\n${editableCellsSource}\n${modalSource}\n${contextMenuSource}`;
 }
 
 test('patient history overflow tooltip shows multiple values on separate lines', () => {
@@ -62,7 +72,7 @@ test('patient history overflow tooltip stays in the viewport and flips above low
 test('patient history overflow tooltip stays above the modal with a light gray surface', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
-    readFile(shockwaveViewUrl, 'utf8'),
+    readPatientHistoryRenderSource(),
   ]);
   const tooltipRule = shockwaveCss.match(/\.patient-history-overflow-tooltip\s*\{([^}]*)\}/s)?.[1] || '';
   const tooltipZIndex = Number(tooltipRule.match(/z-index:\s*(\d+)/)?.[1]);
@@ -76,7 +86,7 @@ test('patient history overflow tooltip stays above the modal with a light gray s
 test('patient history tables show a pinned spreadsheet-style row number column', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
-    readFile(shockwaveViewUrl, 'utf8'),
+    readPatientHistoryRenderSource(),
   ]);
   const rowNumberRule = shockwaveCss.match(
     /\.patient-history-table \.patient-history-row-number-cell\s*\{([^}]*)\}/s
@@ -99,7 +109,7 @@ test('patient history prescription and body filters render as unlabeled checkbox
   const [patientHistoryFilters, shockwaveCss, shockwaveView] = await Promise.all([
     readFile(patientHistoryFiltersUrl, 'utf8'),
     readFile(shockwaveCssUrl, 'utf8'),
-    readFile(shockwaveViewUrl, 'utf8'),
+    readPatientHistoryRenderSource(),
   ]);
 
   assert.match(shockwaveView, /<PatientHistoryFilters/);
@@ -124,7 +134,7 @@ test('patient history prescription and body filters render as unlabeled checkbox
 test('patient history exposes treatment tabs, selectable sorting, and treatment identity columns', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
-    readFile(shockwaveViewUrl, 'utf8'),
+    readPatientHistoryRenderSource(),
   ]);
 
   assert.match(shockwaveView, /patientHistoryTreatmentTabOptions\.map/);
@@ -188,7 +198,7 @@ test('patient history exposes treatment tabs, selectable sorting, and treatment 
 test('patient history group count follows the title in a larger compact format', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
-    readFile(shockwaveViewUrl, 'utf8'),
+    readPatientHistoryRenderSource(),
   ]);
   const titleRowRule = shockwaveCss.match(
     /\.patient-history-group-title-row\s*\{([^}]*)\}/s
@@ -294,7 +304,7 @@ test('patient history checkbox filters share width by content in a compact layou
 test('manual patient history header omits its bottom border without changing shockwave rows', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
-    readFile(shockwaveViewUrl, 'utf8'),
+    readPatientHistoryRenderSource(),
   ]);
   const manualHeaderRule = shockwaveCss.match(
     /\.patient-history-table--manual thead th\s*\{([^}]*)\}/s
@@ -308,7 +318,7 @@ test('manual patient history header omits its bottom border without changing sho
 test('patient history tables use a stronger scoped line color throughout', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
-    readFile(shockwaveViewUrl, 'utf8'),
+    readPatientHistoryRenderSource(),
   ]);
   const tableCellRule = shockwaveCss.match(
     /\.patient-history-table\.sw-summary-table th,[\s\S]*?\.patient-history-table\.sw-compact-summary-table td\s*\{([^}]*)\}/
@@ -334,7 +344,7 @@ test('patient history tables use a stronger scoped line color throughout', async
 test('current patient history row border includes the pinned number cell as one thicker outline', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
-    readFile(shockwaveViewUrl, 'utf8'),
+    readPatientHistoryRenderSource(),
   ]);
   const currentRowCellsRule = shockwaveCss.match(
     /\.patient-history-table tbody tr\.patient-history-current-row td\s*\{([^}]*)\}/s
@@ -360,7 +370,7 @@ test('current patient history row border includes the pinned number cell as one 
 });
 
 test('current patient history row uses light treatment-specific backgrounds', async () => {
-  const shockwaveView = await readFile(shockwaveViewUrl, 'utf8');
+  const shockwaveView = await readPatientHistoryRenderSource();
 
   assert.match(
     shockwaveView,
@@ -397,7 +407,7 @@ test('patient history edit fields keep a flat base style until focused', async (
 test('patient history cursors distinguish editable and read-only cells', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
-    readFile(shockwaveViewUrl, 'utf8'),
+    readPatientHistoryRenderSource(),
   ]);
   const bodyCellRule = shockwaveCss.match(
     /\.patient-history-table tbody td\s*\{([^}]*)\}/s
@@ -642,7 +652,7 @@ test('patient history search autofocus runs only when the modal opens', async ()
 
 test('patient history modal header drags the dialog without capturing its controls', async () => {
   const [shockwaveView, shockwaveCss] = await Promise.all([
-    readFile(shockwaveViewUrl, 'utf8'),
+    readPatientHistoryRenderSource(),
     readFile(shockwaveCssUrl, 'utf8'),
   ]);
 
@@ -761,10 +771,10 @@ test('patient history column headers use one compact readable type size', async 
   assert.match(tableHeaderRule, /line-height:\s*1\.12;/);
 });
 
-test('patient history prescription dropdown keeps its height and uses the requested type size with a tightly spaced arrow', async () => {
+test('patient history prescription dropdown matches row styling and eliminates dead space', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
-    readFile(shockwaveViewUrl, 'utf8'),
+    readPatientHistoryRenderSource(),
   ]);
   const prescriptionSelect = shockwaveView.match(
     /<select\s+[\s\S]*?aria-label="처방 수정"[\s\S]*?<\/select>/
@@ -798,7 +808,7 @@ test('patient history prescription dropdown keeps its height and uses the reques
 test('patient history data cells stay consistent with a compact apply button label', async () => {
   const [shockwaveCss, shockwaveView] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
-    readFile(shockwaveViewUrl, 'utf8'),
+    readPatientHistoryRenderSource(),
   ]);
   const bodyCellRule = shockwaveCss.match(
     /\.patient-history-table tbody td\s*\{([^}]*)\}/s
@@ -827,18 +837,19 @@ test('patient history date cells expose single-click schedule navigation and sel
     '../../components/shockwave/usePatientHistoryActions.js',
     import.meta.url
   );
-  const [shockwaveCss, shockwaveView, patientHistoryActions] = await Promise.all([
+  const [shockwaveCss, shockwaveView, patientHistoryActions, patientHistoryModal] = await Promise.all([
     readFile(shockwaveCssUrl, 'utf8'),
     readFile(shockwaveViewUrl, 'utf8'),
     readFile(patientHistoryActionsUrl, 'utf8'),
+    readFile(patientHistoryModalUrl, 'utf8'),
   ]);
   const dateCellRule = shockwaveCss.match(
     /\.patient-history-table \.patient-history-date-cell\s*\{([^}]*)\}/s
   )?.[1] || '';
 
-  assert.match(shockwaveView, /className="patient-history-date-cell"/);
-  assert.match(shockwaveView, /onClick=\{\(\) => handlePatientHistoryDateClick\(log\)\}/);
-  assert.doesNotMatch(shockwaveView, /handlePatientHistoryDateDoubleClick/);
+  assert.match(patientHistoryModal, /className="patient-history-date-cell"/);
+  assert.match(patientHistoryModal, /onClick=\{\(\) => handlePatientHistoryDateClick\(log\)\}/);
+  assert.doesNotMatch(patientHistoryModal, /handlePatientHistoryDateDoubleClick/);
   assert.match(shockwaveView, /targetDate:\s*pendingPatientHistoryNavigation\?\.date \|\| null/);
   assert.match(shockwaveView, /selectSingleCell\(normalizedCell, \{ normalize: false \}\)/);
   assert.doesNotMatch(shockwaveView, /document\.getElementById\(`cell-\$\{targetKey\}`\)\?\.scrollIntoView/);

@@ -60,17 +60,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../lib/authPermissions';
 import MonthlyTherapistConfig from './MonthlyTherapistConfig';
 import SchedulerPatientSelector from './SchedulerPatientSelector';
-import BodyPartKeyboardPanel from './BodyPartKeyboardPanel';
-import ContextMenuBodySummary from './ContextMenuBodySummary';
-import { ContextMenuLocalInput } from './ContextMenuLocalInput';
-import { ContextMenuLocalInputGroup } from './ContextMenuLocalInputGroup';
-import ContextMenuMemoList from './ContextMenuMemoList';
-import ContextMenuPrescriptionSelect from './ContextMenuPrescriptionSelect';
+import ShockwaveContextMenu from './ShockwaveContextMenu';
+import PatientHistoryModal from './PatientHistoryModal';
 import MemoizedCell from './ShockwaveScheduleCell';
 import ShockwaveHoverTooltip from './ShockwaveHoverTooltip';
-import PatientHistoryApplyConfirmDialog from './PatientHistoryApplyConfirmDialog';
-import PatientHistoryEditableCells from './PatientHistoryEditableCells';
-import PatientHistoryFilters from './PatientHistoryFilters';
 import useContextMenuPositioning from './useContextMenuPositioning';
 import usePatientHistoryActions from './usePatientHistoryActions';
 import usePatientHistoryCellInteractions from './usePatientHistoryCellInteractions';
@@ -96,24 +89,19 @@ import {
   buildShockwaveHoverTooltipText,
   buildPatientHistoryLogGroups,
   buildPatientHistoryTreatmentFilterOptions,
-  DEFAULT_CONTEXT_PRESCRIPTION_COLORS,
   EMPTY_SCHEDULE_MERGE_SPAN,
   getPatientHistoryGroupKey,
   getPatientHistoryColumnWidths,
   getPatientHistoryModalLayout,
-  getPatientHistoryPrescriptionColor,
   getPatientHistoryScheduleNavigationTarget,
-  getContextMenuPrescriptionLayout,
   getPlainTextDefaultRowSpan,
   loadHiddenBodyPartOptionsByPatient,
   normalizeCommittedSchedulerContent,
   PATIENT_HISTORY_GROUPS,
-  PATIENT_HISTORY_SORT_OPTIONS,
   resolvePatientHistoryGroupTargetCell,
   saveHiddenBodyPartOptionsByPatient,
   SCHEDULE_INTERNAL_BORDER_COLOR,
   stepContextMenuVisitValue,
-  togglePatientHistoryFilterSelection,
 } from './shockwaveViewUtils';
 import {
   HORIZONTAL_BORDER_COLOR,
@@ -3415,678 +3403,46 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         settings?.time_label_interval_minutes
       ])}
       </div>
-      {contextMenu && (
-        <div
-          ref={contextMenuRef}
-          className={`shockwave-context-menu schedule-context-menu${contextMenu.patientHistoryCell ? ' patient-history-context-menu' : ''} ${(
-            contextSubmenuOpenLeft !== null
-              ? contextSubmenuOpenLeft
-              : contextMenu.isNearRightEdge
-          ) ? 'submenu-pop-left' : ''} ${(contextMenu.isStandaloneSubmenu || contextMenu.isStandaloneBodyPart) ? 'standalone-mode' : ''}`}
-          style={{
-            top: contextMenu.y,
-            left: contextMenu.x,
-            '--context-body-submenu-max-width': bodySubmenuMaxWidth !== null
-              ? `${bodySubmenuMaxWidth}px`
-              : undefined,
-            '--context-submenu-max-width': contextSubmenuMaxWidth !== null
-              ? `${contextSubmenuMaxWidth}px`
-              : undefined,
-            '--context-submenu-offset-x': `${contextSubmenuOffsetX}px`,
-            '--context-submenu-offset-y': `${contextSubmenuOffsetY}px`,
-            '--patient-history-editor-width': contextMenu.patientHistoryEditorWidth
-              ? `${contextMenu.patientHistoryEditorWidth}px`
-              : undefined,
-          }}
-          onKeyDown={(e) => e.stopPropagation()}
-          onKeyUp={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {(() => {
-            const contextKey = contextMenu
-              ? `${contextMenu.weekIdx}-${contextMenu.dayIdx}-${contextMenu.rowIdx}-${contextMenu.colIdx}`
-              : null;
-            const firstKey = contextKey || (selectedKeys ? Array.from(selectedKeys)[0] : null);
-            const baseMemo = firstKey ? (renderMemos[firstKey] || {}) : {};
-            const currentMemo = (firstKey && contextMenu?.memoSnapshot) 
-              ? { ...baseMemo, ...contextMenu.memoSnapshot } 
-              : baseMemo;
-            const currentPrescription = currentMemo?.prescription || '';
-            const effectiveManualSettings = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'manual_therapy');
-            const effectiveShockwaveSettings = getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'shockwave');
-            const effectiveShinjangSettings = getEffectiveShinjangSpraySettings(settings, currentYear, currentMonth);
-            const hiddenPrescriptions = prescriptionScheduleSettings?.hiddenPrescriptions || [];
-            const shinjangPrescriptions = Array.isArray(effectiveShinjangSettings?.prescriptions)
-              ? effectiveShinjangSettings.prescriptions.filter((pres) => pres && !hiddenPrescriptions.includes(pres))
-              : [];
-            const shockwavePrescriptions = Array.isArray(effectiveShockwaveSettings?.prescriptions)
-              ? effectiveShockwaveSettings.prescriptions.filter((pres) => pres && !shinjangPrescriptions.includes(pres) && !String(pres).includes('신장분사') && !hiddenPrescriptions.includes(pres))
-              : [];
-            const manualTherapyPrescriptions = Array.isArray(effectiveManualSettings?.prescriptions)
-              ? effectiveManualSettings.prescriptions.filter((pres) => pres && !shockwavePrescriptions.includes(pres) && !shinjangPrescriptions.includes(pres) && !String(pres).includes('신장분사') && !hiddenPrescriptions.includes(pres))
-              : [];
-            const allDoseTags = {
-              ...(effectiveShockwaveSettings?.dose_tags || {}),
-              ...(effectiveManualSettings?.dose_tags || {}),
-              ...(effectiveShinjangSettings?.dose_tags || {}),
-            };
-            const manualDoseTags = {
-              ...(settings?.manual_therapy_dose_tags || {}),
-              ...(effectiveManualSettings?.dose_tags || {}),
-            };
-            const contextMenuPrescriptionColors = {
-              ...DEFAULT_CONTEXT_PRESCRIPTION_COLORS,
-              ...(effectivePrescriptionColors || {}),
-            };
-            const currentPrescriptionClass = shockwavePrescriptions.includes(currentPrescription)
-              ? ' is-shockwave'
-              : manualTherapyPrescriptions.includes(currentPrescription)
-                ? ' is-manual'
-                : shinjangPrescriptions.includes(currentPrescription)
-                  ? ' is-shinjang'
-                  : '';
-            const currentPrescriptionColor = getPatientHistoryPrescriptionColor(
-              currentPrescription,
-              contextMenuPrescriptionColors
-            );
-            const currentBodyPart = currentMemo?.body_part || '';
-            const currentParts = splitBodyParts(currentBodyPart);
-            const hasMultipleCurrentParts = currentParts.length > 1;
-            const contextMenuBodyItemClassName = [
-              'context-menu-item has-submenu context-menu-meta-item context-menu-body-item',
-              hasMultipleCurrentParts ? 'context-menu-body-item--stacked' : '',
-              activeContextSubmenu === 'body' ? 'is-submenu-open' : '',
-            ].filter(Boolean).join(' ');
-            const { patientChart, patientName } = parseSchedulerPatientIdentity(currentMemo?.content || '');
-            const bodyPartPatientKey = patientChart
-              ? `chart:${String(patientChart).trim()}`
-              : `name:${normalizeNameForMatch(patientName)}`;
-            const hiddenBodyPartKeys = new Set([
-              ...(hiddenBodyPartOptionsByPatient[bodyPartPatientKey] || []),
-              ...contextMenuHiddenBodyPartKeys,
-            ]);
-            const currentBodyPartKeys = new Set(currentParts.map((part) => normalizeBodyPartKey(part)));
-            const currentKeyParts = firstKey ? firstKey.split('-').map(Number) : null;
-            const currentSortKey = currentKeyParts
-              ? buildSchedulerMemoSortKey(firstKey, weeks)
-              : '';
-            let previousPrescription = null;
-
-            const patientBodyPartsMap = new Map();
-            Object.entries(renderMemos || {}).forEach(([memoKey, m]) => {
-              const effectiveMemo = (selectedKeys && selectedKeys.has(memoKey)) ? currentMemo : m;
-              if (!effectiveMemo?.content) return;
-              const { patientChart: mChart, patientName: mName } = parseSchedulerPatientIdentity(effectiveMemo.content);
-              const isMatch = patientChart
-                ? Boolean(mChart && String(patientChart).trim() === String(mChart).trim())
-                : Boolean(patientName && mName && patientName === mName);
-              if (isMatch) {
-                if (effectiveMemo.body_part) {
-                  splitBodyParts(effectiveMemo.body_part).forEach((part) => addBodyPartToMap(patientBodyPartsMap, part));
-                }
-                if (!effectiveMemo.prescription || memoKey === firstKey) return;
-                const memoSortKey = buildSchedulerMemoSortKey(memoKey, weeks);
-                if (memoSortKey < currentSortKey && (!previousPrescription || memoSortKey > previousPrescription.sortKey)) {
-                  previousPrescription = { value: effectiveMemo.prescription, sortKey: memoSortKey };
-                }
-              }
-            });
-            currentParts.forEach((part) => addBodyPartToMap(patientBodyPartsMap, part));
-            const availablePartsMap = new Map();
-            contextMenuBodyPartOptions.forEach((part) => addBodyPartToMap(availablePartsMap, part));
-            Array.from(patientBodyPartsMap.values()).forEach((part) => addBodyPartToMap(availablePartsMap, part));
-            const availableParts = Array.from(availablePartsMap.values())
-              .filter((part) => {
-                const partKey = normalizeBodyPartKey(part);
-                return currentBodyPartKeys.has(partKey) || !hiddenBodyPartKeys.has(partKey);
-              })
-              .sort((a, b) => a.localeCompare(b, 'ko'));
-            const previousPrescriptionValue = previousPrescription?.value || '';
-            const previousPrescriptionColor = previousPrescriptionValue
-              ? getPatientHistoryPrescriptionColor(
-                previousPrescriptionValue,
-                contextMenuPrescriptionColors
-              )
-              : null;
-            const contextMenuPrescriptionLayout = getContextMenuPrescriptionLayout(
-              shinjangPrescriptions
-            );
-            const selectedHasSameReservationGroup = selectionHasReservationGroup({
-              keys: selectedKeys,
-              memos: renderMemos,
-              pendingMergeSpans: renderPendingMergeSpans,
-            });
-            const sameReservationLabel = selectedHasSameReservationGroup ? '동시간 예약 취소' : '동시간 예약';
-
-            return (
-              <>
-                <button
-                  type="button"
-                  className="context-menu-item"
-                  data-shortcut-tooltip={`복사 ${shortcutLabels.copy}`}
-                  onClick={() => handleContextAction('copy')}
-                >
-                  <span className="context-menu-label">복사</span>
-                  <span className="context-menu-shortcut">{shortcutLabels.copy}</span>
-                </button>
-                <button
-                  type="button"
-                  className="context-menu-item"
-                  data-shortcut-tooltip={`잘라내기 ${shortcutLabels.cut}`}
-                  onClick={() => handleContextAction('cut')}
-                >
-                  <span className="context-menu-label">잘라내기</span>
-                  <span className="context-menu-shortcut">{shortcutLabels.cut}</span>
-                </button>
-                <button
-                  type="button"
-                  className="context-menu-item"
-                  data-shortcut-tooltip={`붙여넣기 ${shortcutLabels.paste}`}
-                  onClick={() => handleContextAction('paste')}
-                >
-                  <span className="context-menu-label">붙여넣기</span>
-                  <span className="context-menu-shortcut">{shortcutLabels.paste}</span>
-                </button>
-                <div className="context-menu-divider" />
-                {!selectionInfo?.isMergedMaster ? (
-                  <button
-                    type="button"
-                    className="context-menu-item"
-                    data-shortcut-tooltip={`셀 병합 ${shortcutLabels.merge}`}
-                    onClick={() => handleContextAction('merge')}
-                    disabled={!selectionInfo?.selectionMultiple}
-                  >
-                    <span className="context-menu-label">셀 병합</span>
-                    <span className="context-menu-shortcut">{shortcutLabels.merge}</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="context-menu-item"
-                    data-shortcut-tooltip={`병합 해제 ${shortcutLabels.merge}`}
-                    onClick={() => handleContextAction('unmerge')}
-                  >
-                    <span className="context-menu-label">병합 해제</span>
-                    <span className="context-menu-shortcut">{shortcutLabels.merge}</span>
-                  </button>
-                )}
-                <div className="context-menu-divider" />
-                <button
-                  type="button"
-                  className="context-menu-item"
-                  data-shortcut-tooltip={`${sameReservationLabel} Ctrl+Q`}
-                  onClick={() => handleContextAction('same-reservation-group-toggle')}
-                  disabled={!selectedHasSameReservationGroup && (!selectedKeys || selectedKeys.size < 2)}
-                >
-                  <span className="context-menu-label">{sameReservationLabel}</span>
-                  <span className="context-menu-shortcut">Ctrl+Q</span>
-                </button>
-                <div className="context-menu-divider" />
-                <button
-                  type="button"
-                  className="context-menu-item context-menu-item-complete"
-                  data-shortcut-tooltip={`${treatmentCompleteButtonLabel} ${shortcutLabels.complete}`}
-                  onClick={() => handleContextAction('complete-toggle')}
-                  disabled={!hasCompletableSelection}
-                >
-                  <span className="context-menu-label">{treatmentCompleteButtonLabel}</span>
-                  <span className="context-menu-shortcut">{shortcutLabels.complete}</span>
-                </button>
-                <button
-                  type="button"
-                  className="context-menu-item context-menu-item-clear-complete"
-                  data-shortcut-tooltip={`예약 취소 ${shortcutLabels.cancel}`}
-                  onClick={() => handleContextAction('cancel-toggle')}
-                  disabled={!hasCompletableSelection}
-                >
-                  <span className="context-menu-label">예약 취소</span>
-                  <span className="context-menu-shortcut">{shortcutLabels.cancel}</span>
-                </button>
-                <div className="context-menu-item context-menu-history-search-item" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => {
-                  e.stopPropagation();
-                  setContextMenu(null);
-                  handleOpenPatientHistoryFromShortcut();
-                }}>
-                  <div className="context-menu-label" style={{ fontWeight: 600, color: 'var(--brand-primary)' }}>
-                    🔍 환자 내역 검색 ({shortcutLabels.patientHistory})
-                  </div>
-                </div>
-                <div className="context-menu-divider" />
-
-                <div className="context-menu-meta-section">
-                  {/* 당장은 필요가 없어 예약시간 부분을 숨김 처리합니다.
-                  <div className="context-menu-item context-menu-item-inline-edit context-menu-meta-item context-menu-time-item" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} style={{ cursor: 'default' }}>
-                    <label className="context-menu-time-editor" style={{ width: '100%', margin: 0, padding: 0 }}>
-                      <span className="context-menu-time-label">예약시간 :</span>
-                      <span className="context-menu-time-control">
-                        <button
-                          type="button"
-                          className="context-menu-time-reset"
-                          aria-label="예약시간 기본값으로 되돌리기"
-                          title="기본 시간으로"
-                          disabled={!contextMenu?.savedReservationTime}
-                          onMouseDown={e => e.stopPropagation()}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleContextAction({ type: 'reservationTimeReset' });
-                          }}
-                        >
-                          ↺
-                        </button>
-                        <input
-                          type="text"
-                          placeholder={contextMenu?.defaultReservationTime || ''}
-                          className="context-menu-time-input"
-                          value={contextMenuReservationInput}
-                          readOnly
-                          onKeyDown={(e) => {
-                            e.stopPropagation();
-                            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                              e.preventDefault();
-                              stepContextMenuReservationInput(e.key === 'ArrowUp' ? 10 : -10);
-                            }
-                          }}
-                          onMouseDown={e => e.stopPropagation()}
-                          onClick={e => e.stopPropagation()}
-                        />
-                        <span className="context-menu-time-stepper">
-                          <button
-                            type="button"
-                            className="context-menu-time-step context-menu-step-left"
-                            aria-label="현재 셀 기준 예약시간 10분 감소"
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              stepContextMenuReservationInput(-10);
-                            }}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                            }}
-                          >
-                            <span className="context-menu-step-symbol context-menu-step-symbol--minus" />
-                          </button>
-                          <span className="context-menu-display-value context-menu-time-display">
-                            {contextMenuReservationInput || contextMenu?.defaultReservationTime || ''}
-                          </span>
-                          <button
-                            type="button"
-                            className="context-menu-time-step context-menu-step-right"
-                            aria-label="현재 셀 기준 예약시간 10분 증가"
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              stepContextMenuReservationInput(10);
-                            }}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                            }}
-                          >
-                            <span className="context-menu-step-symbol context-menu-step-symbol--plus" />
-                          </button>
-                        </span>
-                      </span>
-                    </label>
-                  </div>
-                  */}
-
-                  <div
-                    className={`context-menu-item has-submenu context-menu-meta-item context-menu-prescription-item${activeContextSubmenu === 'prescription' ? ' is-submenu-open' : ''}`}
-                    onMouseEnter={() => setActiveContextSubmenu('prescription')}
-                    onFocusCapture={() => setActiveContextSubmenu('prescription')}
-                  >
-                    <span className="context-menu-meta-value-row">
-                      <span className="context-menu-meta-label">처방 :</span>
-                      <span
-                        className={`context-menu-prescription-value${currentPrescriptionClass}`}
-                        style={{ '--context-prescription-color': currentPrescriptionColor }}
-                      >
-                        {currentPrescription || '없음'}
-                      </span>
-                    </span>
-                    <div
-                      className="context-menu-submenu context-menu-submenu--prescription"
-                      style={{
-                        '--context-prescription-preferred-width': `${contextMenuPrescriptionLayout.preferredWidth}px`,
-                        '--context-shinjang-prescription-column-ratio': `${contextMenuPrescriptionLayout.shinjangColumnRatio}fr`,
-                      }}
-                    >
-                      <div className="context-menu-editor-panel">
-                        <div className="context-menu-inline-column">
-                          <div className="context-menu-prescription-row context-menu-prescription-row--triple">
-                            <div className="context-menu-prescription-select-group context-menu-prescription-select-group--shockwave">
-                              <label className="context-menu-prescription-select-label">
-                                충격파
-                                {previousPrescriptionValue && shockwavePrescriptions.includes(previousPrescriptionValue) ? (
-                                  <span
-                                    className="context-menu-current-prescription"
-                                    style={{
-                                      marginLeft: '6px',
-                                      '--context-prescription-color': previousPrescriptionColor,
-                                    }}
-                                  >
-                                    {previousPrescriptionValue}
-                                  </span>
-                                ) : null}
-                              </label>
-                              <ContextMenuPrescriptionSelect
-                                ariaLabel="충격파 처방 선택"
-                                value={shockwavePrescriptions.includes(currentPrescription) ? currentPrescription : ''}
-                                options={shockwavePrescriptions}
-                                prescriptionColors={contextMenuPrescriptionColors}
-                                shortcuts={effectiveShockwaveSettings?.shortcuts || {}}
-                                shortcutModifier={shortcutLabels.modifier}
-                                onChange={(nextPrescription) => {
-                                  const prescription = nextPrescription || null;
-                                  const hasDoseTag = prescription && Object.prototype.hasOwnProperty.call(allDoseTags, prescription);
-                                  const autoDoseTag = prescription?.match(/(\d{2,3})/)?.[1] || '';
-                                  handleContextAction({
-                                    type: 'prescription',
-                                    value: prescription,
-                                    doseTag: hasDoseTag ? allDoseTags[prescription] : autoDoseTag,
-                                  });
-                                }}
-                              />
-                            </div>
-                            <div className="context-menu-prescription-select-group context-menu-prescription-select-group--shinjang">
-                              <label className="context-menu-prescription-select-label">
-                                신장분사
-                                {previousPrescriptionValue && shinjangPrescriptions.includes(previousPrescriptionValue) ? (
-                                  <span
-                                    className="context-menu-current-prescription"
-                                    style={{
-                                      marginLeft: '6px',
-                                      '--context-prescription-color': previousPrescriptionColor,
-                                    }}
-                                  >
-                                    {previousPrescriptionValue}
-                                  </span>
-                                ) : null}
-                              </label>
-                              <ContextMenuPrescriptionSelect
-                                ariaLabel="신장분사 처방 선택"
-                                value={shinjangPrescriptions.includes(currentPrescription) ? currentPrescription : ''}
-                                options={shinjangPrescriptions}
-                                prescriptionColors={contextMenuPrescriptionColors}
-                                shortcuts={effectiveShinjangSettings?.shortcuts || {}}
-                                shortcutModifier={shortcutLabels.shinjangPrescriptionModifier}
-                                emphasizeWholeNumberShinjangOptions
-                                align="end"
-                                onChange={(nextPrescription) => {
-                                  const prescription = nextPrescription || null;
-                                  const hasDoseTag = prescription && Object.prototype.hasOwnProperty.call(allDoseTags, prescription);
-                                  const autoDoseTag = prescription?.match(/(\d{2,3})/)?.[1] || '';
-                                  handleContextAction({
-                                    type: 'prescription',
-                                    value: prescription,
-                                    doseTag: hasDoseTag ? allDoseTags[prescription] : autoDoseTag,
-                                  });
-                                }}
-                              />
-                            </div>
-                            <div className="context-menu-prescription-select-group context-menu-prescription-select-group--manual">
-                              <label className="context-menu-prescription-select-label">
-                                도수치료
-                                {previousPrescriptionValue && manualTherapyPrescriptions.includes(previousPrescriptionValue) ? (
-                                  <span
-                                    className="context-menu-current-prescription"
-                                    style={{
-                                      marginLeft: '6px',
-                                      '--context-prescription-color': previousPrescriptionColor,
-                                    }}
-                                  >
-                                    {previousPrescriptionValue}
-                                  </span>
-                                ) : null}
-                              </label>
-                              <ContextMenuPrescriptionSelect
-                                ariaLabel="도수치료 처방 선택"
-                                value={manualTherapyPrescriptions.includes(currentPrescription) ? currentPrescription : ''}
-                                options={manualTherapyPrescriptions}
-                                prescriptionColors={contextMenuPrescriptionColors}
-                                shortcuts={effectiveManualSettings?.shortcuts || {}}
-                                shortcutModifier={shortcutLabels.manualPrescriptionModifier}
-                                align="end"
-                                onChange={(nextPrescription) => {
-                                  const prescription = nextPrescription || null;
-                                  const hasDoseTag = prescription && Object.prototype.hasOwnProperty.call(manualDoseTags, prescription);
-                                  const autoDoseTag = prescription?.match(/(\d{2,3})/)?.[1] || '';
-                                  handleContextAction({
-                                    type: 'prescription',
-                                    value: prescription,
-                                    doseTag: hasDoseTag ? manualDoseTags[prescription] : autoDoseTag,
-                                  });
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className={contextMenuBodyItemClassName}
-                    onMouseEnter={() => setActiveContextSubmenu('body')}
-                    onFocusCapture={() => setActiveContextSubmenu('body')}
-                  >
-                    <ContextMenuBodySummary parts={currentParts} />
-                    <div className="context-menu-submenu context-menu-submenu--body">
-                      <div className="context-menu-editor-panel">
-                        <div className="context-menu-inline-column">
-                          <div className="context-menu-body-dropdown">
-                            <BodyPartKeyboardPanel
-                              availableParts={availableParts}
-                              currentParts={currentParts}
-                              autoFocus={true}
-                              imeOpenRef={imeOpenRef}
-                              onAdd={(value) => {
-                                const partKey = normalizeBodyPartKey(value);
-                                setContextMenuHiddenBodyPartKeys((prev) => {
-                                  const next = new Set(prev);
-                                  next.delete(partKey);
-                                  return next;
-                                });
-                                setHiddenBodyPartOptionsByPatient((prev) => {
-                                  const nextKeys = (prev[bodyPartPatientKey] || []).filter((key) => key !== partKey);
-                                  if (nextKeys.length === (prev[bodyPartPatientKey] || []).length) return prev;
-                                  const next = { ...prev };
-                                  if (nextKeys.length > 0) {
-                                    next[bodyPartPatientKey] = nextKeys;
-                                  } else {
-                                    delete next[bodyPartPatientKey];
-                                  }
-                                  saveHiddenBodyPartOptionsByPatient(next);
-                                  return next;
-                                });
-                                handleContextAction({ type: 'bodyPartAdd', value });
-                              }}
-                              onEdit={(index, value, parts) => {
-                                const previousPart = currentParts[index];
-                                const previousKey = normalizeBodyPartKey(previousPart);
-                                const nextKey = normalizeBodyPartKey(value);
-                                setContextMenuHiddenBodyPartKeys((prev) => {
-                                  const next = new Set(prev);
-                                  if (previousKey && previousKey !== nextKey) next.add(previousKey);
-                                  if (nextKey) next.delete(nextKey);
-                                  return next;
-                                });
-                                handleContextAction({ type: 'bodyPartEdit', index, value, parts });
-                              }}
-                              onMove={(index, direction) => handleContextAction({ type: 'bodyPartMove', index, direction })}
-                              onRemove={(index) => handleContextAction({ type: 'bodyPartRemove', index })}
-                              onToggle={(value) => handleContextAction({ type: 'bodyPartToggle', value })}
-                              onSetPreset={(presetId, isSelected, directions) => handleContextAction({
-                                type: 'bodyPartPreset',
-                                presetId,
-                                isSelected,
-                                directions,
-                              })}
-                              onDelete={(value) => {
-                                const partKey = normalizeBodyPartKey(value);
-                                setContextMenuHiddenBodyPartKeys((prev) => {
-                                  const next = new Set(prev);
-                                  next.add(partKey);
-                                  return next;
-                                });
-                                setHiddenBodyPartOptionsByPatient((prev) => {
-                                  const current = prev[bodyPartPatientKey] || [];
-                                  if (current.includes(partKey)) return prev;
-                                  const next = { ...prev, [bodyPartPatientKey]: [...current, partKey] };
-                                  saveHiddenBodyPartOptionsByPatient(next);
-                                  return next;
-                                });
-                                setContextMenuBodyPartOptions((prev) => (
-                                  prev.filter((item) => normalizeBodyPartKey(item) !== partKey)
-                                ));
-                                handleContextAction({ type: 'bodyPartDeleteValue', value });
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                </div>
-
-                <div className="context-menu-item context-menu-item-inline-edit context-menu-meta-item context-menu-visit-item" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} style={{ cursor: 'default' }}>
-                  <label className="context-menu-visit-editor" style={{ width: '100%', margin: 0, padding: 0 }}>
-                    <span style={{ flexShrink: 0, width: '40px' }}>회차 :</span>
-                    <span className="context-menu-visit-control" style={{ flexGrow: 1 }}>
-                      <span className="context-menu-visit-stepper">
-                        <button
-                          type="button"
-                          className="context-menu-visit-step context-menu-step-left"
-                          aria-label="회차 감소"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            stepContextMenuVisitInput(-1);
-                          }}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                          }}
-                        >
-                          <span className="context-menu-step-symbol context-menu-step-symbol--minus" />
-                        </button>
-                        <ContextMenuLocalInput
-                          inputMode="numeric"
-                          pattern="[0-9*-]*"
-                          className={`context-menu-visit-input context-menu-display-value context-menu-visit-display context-menu-visit-display--len-${Math.min(String(contextMenuVisitInput || '').length || 1, 3)}`}
-                          value={contextMenuVisitInput}
-                          onChange={(val) => {
-                            const nextValue = val.replace(/[^\d*-]/g, '');
-                            setContextMenuVisitInput(nextValue);
-                          }}
-                          onBlur={(e, val) => {
-                            e.stopPropagation();
-                            const normalized = normalizeVisitInputValue(val);
-                            setContextMenuVisitInput(normalized);
-                            handleContextAction({ type: 'visitCount', value: normalized });
-                          }}
-                          onKeyDown={(e, val) => {
-                            e.stopPropagation();
-                            if (e.nativeEvent?.isComposing || e.keyCode === 229) return;
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              const normalized = normalizeVisitInputValue(val);
-                              setContextMenuVisitInput(normalized);
-                              handleContextAction({ type: 'visitCount', value: normalized });
-                            }
-                            if (e.key === 'ArrowUp') {
-                              e.preventDefault();
-                              stepContextMenuVisitInput(1);
-                            }
-                            if (e.key === 'ArrowDown') {
-                              e.preventDefault();
-                              stepContextMenuVisitInput(-1);
-                            }
-                          }}
-                        />
-                        <button
-                          type="button"
-                          className="context-menu-visit-step context-menu-step-right"
-                          aria-label="회차 증가"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            stepContextMenuVisitInput(1);
-                          }}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                          }}
-                        >
-                          <span className="context-menu-step-symbol context-menu-step-symbol--plus" />
-                        </button>
-                      </span>
-                    </span>
-                  </label>
-                </div>
-
-                <div
-                  className={`context-menu-item has-submenu context-menu-meta-item context-menu-memo-item${activeContextSubmenu === 'memo' ? ' is-submenu-open' : ''}`}
-                  onMouseEnter={() => setActiveContextSubmenu('memo')}
-                  onFocusCapture={() => setActiveContextSubmenu('memo')}
-                >
-                  <span className={`context-menu-memo-summary${contextMenuMemoDrafts.length > 1 ? ' context-menu-memo-summary--stacked' : ''}`}>
-                    <span className="context-menu-memo-summary-label">메모 :</span>
-                    {contextMenuMemoDrafts.length === 0 ? (
-                      <span className="context-menu-memo-summary-text">없음</span>
-                    ) : contextMenuMemoDrafts.length === 1 ? (
-                      <span className="context-menu-memo-summary-text">{contextMenuMemoDrafts[0]}</span>
-                    ) : (
-                      <span className="context-menu-memo-summary-list">
-                        {contextMenuMemoDrafts.map((memo, index) => (
-                          <span key={`${memo}-${index}`} className="context-menu-memo-summary-row">
-                            <span className="context-menu-memo-summary-marker">•</span>
-                            <span className="context-menu-memo-summary-text">{memo}</span>
-                          </span>
-                        ))}
-                      </span>
-                    )}
-                  </span>
-                  <div className="context-menu-submenu context-menu-submenu--memo">
-                    <div className="context-menu-editor-panel">
-                      <div className="context-menu-inline-column">
-                        <div className="context-menu-inline-label">
-                          <span>
-                            메모 목록
-                            <span className="context-menu-note-status">
-                              ({contextMenuMemoDrafts.length > 0 ? `${contextMenuMemoDrafts.length}개` : '없음'})
-                            </span>
-                          </span>
-                          <span className="context-menu-shortcut">{shortcutLabels.memo}</span>
-                        </div>
-                        <div className="context-menu-inline-memo-box">
-                          <ContextMenuMemoList
-                            memos={contextMenuMemoDrafts}
-                            onDraftChange={(index, value) => {
-                              setContextMenuMemoDrafts((prev) => prev.map((memo, memoIndex) => memoIndex === index ? value : memo));
-                            }}
-                            onAction={handleContextAction}
-                          />
-                          <ContextMenuLocalInputGroup
-                            placeholder="새 메모 추가"
-                            buttonLabel="추가"
-                            focusSignal={contextMenuMemoFocusSignal}
-                            onSubmit={(val) => {
-                              handleContextAction({ type: 'memoAdd', value: val });
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                </div>
-              </>
-            );
-          })()}
-        </div>
-      )}
+      <ShockwaveContextMenu
+        contextMenu={contextMenu}
+        contextMenuRef={contextMenuRef}
+        contextSubmenuOpenLeft={contextSubmenuOpenLeft}
+        bodySubmenuMaxWidth={bodySubmenuMaxWidth}
+        contextSubmenuMaxWidth={contextSubmenuMaxWidth}
+        contextSubmenuOffsetX={contextSubmenuOffsetX}
+        contextSubmenuOffsetY={contextSubmenuOffsetY}
+        selectedKeys={selectedKeys}
+        renderMemos={renderMemos}
+        renderPendingMergeSpans={renderPendingMergeSpans}
+        selectionInfo={selectionInfo}
+        settings={settings}
+        currentYear={currentYear}
+        currentMonth={currentMonth}
+        weeks={weeks}
+        prescriptionScheduleSettings={prescriptionScheduleSettings}
+        effectivePrescriptionColors={effectivePrescriptionColors}
+        contextMenuBodyPartOptions={contextMenuBodyPartOptions}
+        setContextMenuBodyPartOptions={setContextMenuBodyPartOptions}
+        contextMenuHiddenBodyPartKeys={contextMenuHiddenBodyPartKeys}
+        setContextMenuHiddenBodyPartKeys={setContextMenuHiddenBodyPartKeys}
+        hiddenBodyPartOptionsByPatient={hiddenBodyPartOptionsByPatient}
+        setHiddenBodyPartOptionsByPatient={setHiddenBodyPartOptionsByPatient}
+        contextMenuMemoDrafts={contextMenuMemoDrafts}
+        setContextMenuMemoDrafts={setContextMenuMemoDrafts}
+        contextMenuMemoFocusSignal={contextMenuMemoFocusSignal}
+        contextMenuVisitInput={contextMenuVisitInput}
+        setContextMenuVisitInput={setContextMenuVisitInput}
+        treatmentCompleteButtonLabel={treatmentCompleteButtonLabel}
+        hasCompletableSelection={hasCompletableSelection}
+        shortcutLabels={shortcutLabels}
+        activeContextSubmenu={activeContextSubmenu}
+        setActiveContextSubmenu={setActiveContextSubmenu}
+        handleContextAction={handleContextAction}
+        handleOpenPatientHistoryFromShortcut={handleOpenPatientHistoryFromShortcut}
+        setContextMenu={setContextMenu}
+        stepContextMenuVisitInput={stepContextMenuVisitInput}
+        imeOpenRef={imeOpenRef}
+      />
 
       <SchedulerPatientSelector
         selector={chartSelector}
@@ -4094,426 +3450,54 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         onCancel={() => handleChartSelectorClose(null)}
       />
 
-      {patientHistoryModalOpen && (
-        <div
-          ref={patientHistoryModalOverlayRef}
-          data-preserve-schedule-selection="true"
-          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999999, overscrollBehavior: 'none' }}
-        >
-          <div ref={patientHistoryModalDialogRef} style={{ background: 'var(--bg-primary, #fff)', maxWidth: patientHistoryModalLayout.maxWidth, width: patientHistoryModalLayout.width, borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', overflow: 'hidden', transform: `translate3d(${patientHistoryModalOffset.x}px, ${patientHistoryModalOffset.y}px, 0)` }} onClick={e => e.stopPropagation()}>
-            <div
-              className="patient-history-modal-header"
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid var(--border-color, #eee)', background: 'var(--bg-secondary, #f8f9fa)' }}
-              onPointerDown={handlePatientHistoryModalDragStart}
-              onPointerMove={handlePatientHistoryModalDragMove}
-              onPointerUp={handlePatientHistoryModalDragEnd}
-              onPointerCancel={handlePatientHistoryModalDragEnd}
-            >
-              <div className="patient-history-modal-header-main">
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>환자 스케줄 내역 검색</h3>
-                <div className="patient-history-search-control" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-primary, #fff)', border: '1px solid var(--border-color, #ddd)', borderRadius: '6px', padding: '2px 8px' }}>
-                  <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary, #666)' }}>검색:</span>
-                  <input 
-                    ref={patientHistorySearchInputRef}
-                    className="patient-history-search-input"
-                    type="text" 
-                    placeholder="이름/차트번호" 
-                    defaultValue={patientHistoryModalData.searchChart || patientHistoryModalData.searchName}
-                    style={{ border: 'none', outline: 'none', background: 'transparent', width: '120px', fontSize: '0.9rem', padding: '4px 0' }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        const val = e.target.value.trim();
-                        if (val) {
-                          const parsed = parseSchedulerPatientIdentity(val);
-                          const sName = normalizeNameForMatch(parsed.patientName);
-                          const sChart = parsed.patientChart ? String(parsed.patientChart).trim() : null;
-                          fetchPatientHistory(sName, sChart);
-                        }
-                      }
-                    }}
-                  />
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary, #999)' }}>↵ Enter</span>
-                </div>
-                {(patientHistoryModalData.searchName || (patientHistoryModalData.chartOptions || []).length > 0) && (
-                  <div className="patient-history-search-target">
-                    <span className="patient-history-search-target-label">검색 대상:</span>
-                    {(patientHistoryModalData.chartOptions || []).length > 1 ? (
-                      <>
-                        <select
-                          className="patient-history-search-target-select"
-                          aria-label="검색 대상 이름 및 챠트번호 선택"
-                          value={patientHistoryModalData.searchChart || ''}
-                          disabled={patientHistoryModalData.loading}
-                          onChange={handleSelectPatientHistoryChart}
-                        >
-                          <option value="">동명이인 전체</option>
-                          {patientHistoryModalData.chartOptions.map((option) => (
-                            <option key={option.chartNumber} value={option.chartNumber}>
-                              {option.patientName} ({option.chartNumber})
-                            </option>
-                          ))}
-                        </select>
-                        <span className="patient-history-search-target-note">
-                          동명이인 {patientHistoryModalData.chartOptions.length}명
-                        </span>
-                      </>
-                    ) : (
-                      <span className="patient-history-search-target-value">
-                        {patientHistoryModalData.searchName ? (
-                          <button
-                            type="button"
-                            aria-label={`${patientHistoryModalData.searchName} 이름만으로 다시 검색`}
-                            title="이름만으로 다시 검색"
-                            disabled={patientHistoryModalData.loading}
-                            onClick={handleSearchPatientHistoryByName}
-                          >
-                            {patientHistoryModalData.searchName}
-                          </button>
-                        ) : null}{' '}
-                        {patientHistoryModalData.searchChart ? `(${patientHistoryModalData.searchChart})` : ''}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-              <button onClick={closePatientHistoryModal} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', padding: '0 4px', color: 'var(--text-secondary, #666)' }}>✕</button>
-            </div>
-            <div className="patient-history-sticky-controls">
-              <div className="patient-history-view-controls">
-                <div className="patient-history-treatment-tabs" role="tablist" aria-label="스케줄 내역 치료 구분">
-                  {patientHistoryTreatmentTabOptions.map((option) => {
-                    const isActive = patientHistoryTreatmentTab === option.key;
-                    return (
-                      <button
-                        key={`patient-history-treatment-${option.key}`}
-                        type="button"
-                        role="tab"
-                        aria-selected={isActive}
-                        className={`patient-history-treatment-tab patient-history-treatment-tab--${option.key}${isActive ? ' is-active' : ''}`}
-                        onClick={() => setPatientHistoryTreatmentTab(option.key)}
-                      >
-                        <span>{option.label}</span>
-                        <span className="patient-history-treatment-count">{option.count}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <label className="patient-history-sort-control">
-                  <span>정렬</span>
-                  <select
-                    aria-label="스케줄 내역 정렬 기준"
-                    value={patientHistorySortOrder}
-                    onChange={(event) => setPatientHistorySortOrder(event.target.value)}
-                  >
-                    {PATIENT_HISTORY_SORT_OPTIONS.map((option) => (
-                      <option key={option.key} value={option.key}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            </div>
-            <div ref={patientHistoryModalBodyRef} style={{ padding: '0 18px 14px', maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain' }}>
-              
-              {patientHistoryModalData.loading ? (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>내역을 불러오는 중...</div>
-              ) : patientHistoryModalData.logs.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>해당하는 내역이 없습니다.</div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: patientHistoryModalLayout.gridTemplateColumns, gap: '12px', alignItems: 'start' }}>
-                  {patientHistoryLogGroups.map((group) => (
-                    <div
-                      key={group.key}
-                      style={{
-                        border: '1px solid var(--patient-history-border-color, #c5cfdb)',
-                        borderRadius: '8px',
-                        overflow: 'hidden',
-                        background: 'var(--bg-primary, #fff)',
-                        '--patient-history-border-color': '#c5cfdb',
-                        '--patient-history-group-header-bg': group.key === 'manual'
-                          ? '#fed7aa'
-                          : group.key === 'shinjang'
-                            ? '#a7f3d0'
-                            : group.key === 'all'
-                              ? '#e2e8f0'
-                              : '#bae6fd',
-                        '--patient-history-column-header-bg': group.key === 'manual'
-                          ? '#fff3e6'
-                          : group.key === 'shinjang'
-                            ? '#ecfdf5'
-                            : group.key === 'all'
-                              ? '#f8fafc'
-                              : '#e0f2fe',
-                      }}
-                    >
-                      <div className="patient-history-group-header">
-                        <div className="patient-history-group-title-row">
-                          <span>{group.label}</span>
-                          <span className="patient-history-group-count">
-                            ({group.logs.length}/{group.totalLogs.length})건
-                          </span>
-                        </div>
-                        <PatientHistoryFilters
-                          group={group}
-                          onBodyFilterToggle={(optionKey) => {
-                            setPatientHistoryBodyFilters((prev) => ({
-                              ...prev,
-                              [group.key]: togglePatientHistoryFilterSelection(
-                                prev[group.key],
-                                optionKey
-                              ),
-                            }));
-                          }}
-                          onPrescriptionFilterToggle={(optionKey) => {
-                            setPatientHistoryPrescriptionFilters((prev) => ({
-                              ...prev,
-                              [group.key]: togglePatientHistoryFilterSelection(
-                                prev[group.key],
-                                optionKey
-                              ),
-                            }));
-                          }}
-                        />
-                      </div>
-                      <div className="sw-compact-table-wrap">
-                        <table
-                          className={`sw-summary-table sw-compact-summary-table patient-history-table patient-history-table--${group.key}`}
-                          style={{ width: '100%', margin: 0, tableLayout: 'fixed' }}
-                        >
-                          <colgroup>
-                            {patientHistoryColumnWidths.map((width, columnIndex) => (
-                              <col key={`patient-history-col-${columnIndex}`} style={{ width }} />
-                            ))}
-                          </colgroup>
-                          <thead>
-                            <tr>
-                              <th className="patient-history-row-number-cell">번호</th>
-                              {group.key === 'all' && (
-                                <th className="patient-history-treatment-type-header">치료 구분</th>
-                              )}
-                              <th style={{ textAlign: 'center' }}>날짜</th>
-                              <th style={{ textAlign: 'center' }}>챠트</th>
-                              <th style={{ textAlign: 'center' }}>처방</th>
-                              <th style={{ textAlign: 'center' }}>부위</th>
-                              <th style={{ textAlign: 'center' }}>메모</th>
-                              <th style={{ textAlign: 'center' }}>회차</th>
-                              <th style={{ textAlign: 'center' }}>담당</th>
-                              <th style={{ textAlign: 'center' }}>적용</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {group.logs.map((log, idx) => {
-                              const historyRowKey = log._history_row_key || `${group.key}-${log.id || log.date}-${idx}`;
-                              const visitSequenceColor = group.visitSequenceColors?.[idx] || null;
-                              const historyTreatmentGroup = getPatientHistoryGroupKey(log);
-                              const historyTreatmentLabel = PATIENT_HISTORY_GROUPS.find(
-                                (option) => option.key === historyTreatmentGroup
-                              )?.label.replace(' 내역', '') || '충격파';
-                              const selectedHistoryCellId = selectedCell
-                                ? `draft-${selectedCell.w}-${selectedCell.d}-${selectedCell.r}-${selectedCell.c}`
-                                : '';
-                              const isCurrentHistoryRow = Boolean(log.isCurrentCell || (selectedHistoryCellId && log.id === selectedHistoryCellId));
-                              const currentCellRowBackground = isCurrentHistoryRow
-                                ? (historyTreatmentGroup === 'manual'
-                                  ? '#fff1e3'
-                                  : historyTreatmentGroup === 'shinjang'
-                                    ? '#ecfdf5'
-                                    : '#e6f6fe')
-                                : undefined;
-                              const historyRowFontWeight = isCurrentHistoryRow ? 800 : 400;
-                              const currentPrescriptionValue = String(log.prescription || '');
-                              const configuredPrescriptionOptions = patientHistoryPrescriptionOptions[historyTreatmentGroup]
-                                || patientHistoryPrescriptionOptions.shockwave
-                                || [];
-                              const prescriptionOptions = Array.from(new Set([
-                                currentPrescriptionValue,
-                                ...configuredPrescriptionOptions,
-                              ].map((value) => String(value || '').trim()).filter(Boolean)));
-                              const currentPrescriptionColor = getPatientHistoryPrescriptionColor(
-                                currentPrescriptionValue,
-                                effectivePrescriptionColors
-                              );
-                              const historyEditFieldStyle = {
-                                width: '100%',
-                                minWidth: 0,
-                                border: 'none',
-                                borderRadius: 0,
-                                background: 'transparent',
-                                color: 'var(--text-primary, #1f2937)',
-                                fontSize: 'inherit',
-                                fontWeight: 'inherit',
-                                padding: '2px 5px',
-                                outline: 'none',
-                                boxSizing: 'border-box',
-                                boxShadow: 'none',
-                              };
-                              const handleHistoryPrescriptionChange = async (event) => {
-                                const nextValue = event.target.value;
-                                const originalValue = log._original_prescription ?? '';
-                                updatePatientHistoryModalLog(historyRowKey, {
-                                  prescription: nextValue,
-                                });
-                                if (nextValue === originalValue) return;
-
-                                const success = await handleUpdatePatientHistoryField(log, 'prescription', nextValue);
-                                updatePatientHistoryModalLog(historyRowKey, (item) => (
-                                  success
-                                    ? { ...item, prescription: nextValue, _original_prescription: nextValue }
-                                    : { ...item, prescription: originalValue }
-                                ));
-                              };
-                              return (
-                              <tr
-                                key={historyRowKey}
-                                className={isCurrentHistoryRow ? 'patient-history-current-row' : undefined}
-                                onMouseEnter={(event) => {
-                                  event.currentTarget.classList.add('patient-history-row--hovered');
-                                }}
-                                onMouseLeave={(event) => {
-                                  event.currentTarget.classList.remove('patient-history-row--hovered');
-                                }}
-                                style={{
-                                  '--patient-history-current-row-bg': currentCellRowBackground,
-                                  fontWeight: historyRowFontWeight,
-                                }}
-                                title={log.id === 'draft' ? "현재 선택된 셀의 날짜를 기반으로 한 임시 항목입니다" : undefined}
-                              >
-                                <td
-                                  className={`patient-history-row-number-cell patient-history-row-number-cell--${historyTreatmentGroup}`}
-                                  aria-label={`행 번호 ${idx + 1}`}
-                                >
-                                  {idx + 1}
-                                </td>
-                                {group.key === 'all' && (
-                                  <td
-                                    className={`patient-history-treatment-type-cell patient-history-treatment-type-cell--${historyTreatmentGroup}`}
-                                    title={`${historyTreatmentLabel} 내역`}
-                                  >
-                                    {historyTreatmentLabel}
-                                  </td>
-                                )}
-                                <td
-                                  className="patient-history-date-cell"
-                                  title={`${log.date} 스케줄 주차로 이동하려면 클릭하세요`}
-                                  onClick={() => handlePatientHistoryDateClick(log)}
-                                  style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, whiteSpace: 'nowrap', fontWeight: historyRowFontWeight }}
-                                >
-                                  {log.date}
-                                  {isCurrentHistoryRow && (
-                                    <span style={{ fontSize: '0.82rem', color: 'var(--brand-primary)', display: 'block', marginTop: '2px', fontWeight: 800 }}>현재 셀</span>
-                                  )}
-                                </td>
-                                <td
-                                  title={log.chart_number || ''}
-                                  style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: historyRowFontWeight }}
-                                >
-                                  {log.chart_number || '-'}
-                                </td>
-                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
-                                  <select
-                                    className="patient-history-edit-field patient-history-edit-field--inset patient-history-edit-field--prescription"
-                                    aria-label="처방 수정"
-                                    value={currentPrescriptionValue}
-                                    onChange={handleHistoryPrescriptionChange}
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                    onClick={(e) => e.stopPropagation()}
-                                    style={{
-                                      ...historyEditFieldStyle,
-                                      appearance: 'none',
-                                      WebkitAppearance: 'none',
-                                      backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%226%22 height=%224%22 viewBox=%220 0 6 4%22%3E%3Cpath d=%22M1 1l2 2 2-2%22 fill=%22none%22 stroke=%22%2364748b%22 stroke-width=%221%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E")',
-                                      backgroundRepeat: 'no-repeat',
-                                      backgroundPosition: 'right 3px center',
-                                      backgroundSize: '6px 4px',
-                                      padding: '2px 11px 2px 5px',
-                                      color: currentPrescriptionColor,
-                                    }}
-                                  >
-                                    <option value="" style={{ color: 'var(--text-primary, #1f2937)' }}>처방 없음</option>
-                                    {prescriptionOptions.map((prescription) => (
-                                      <option
-                                        key={`${historyRowKey}-prescription-${prescription}`}
-                                        value={prescription}
-                                        style={{
-                                          color: getPatientHistoryPrescriptionColor(
-                                            prescription,
-                                            effectivePrescriptionColors
-                                          ),
-                                        }}
-                                      >
-                                        {prescription}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </td>
-                                <PatientHistoryEditableCells
-                                  log={log}
-                                  historyRowKey={historyRowKey}
-                                  currentCellRowBackground={currentCellRowBackground}
-                                  historyRowFontWeight={historyRowFontWeight}
-                                  historyEditFieldStyle={historyEditFieldStyle}
-                                  visitSequenceColor={visitSequenceColor}
-                                  patientHistoryClipboardCell={patientHistoryClipboardCell}
-                                  patientHistoryInlineEditor={patientHistoryInlineEditor}
-                                  patientHistorySelectedCellIds={patientHistorySelectedCellIds}
-                                  patientHistoryFillCellIds={patientHistoryFillCellIds}
-                                  selectedPatientHistoryCell={selectedPatientHistoryCell}
-                                  cancelPatientHistoryInlineCellEdit={cancelPatientHistoryInlineCellEdit}
-                                  commitPatientHistoryInlineCellEdit={commitPatientHistoryInlineCellEdit}
-                                  openPatientHistoryCellEditor={openPatientHistoryCellEditor}
-                                  selectPatientHistoryCell={selectPatientHistoryCell}
-                                  startPatientHistoryCellFill={startPatientHistoryCellFill}
-                                  startPatientHistoryCellRangeSelection={startPatientHistoryCellRangeSelection}
-                                  updatePatientHistoryInlineCellDraft={updatePatientHistoryInlineCellDraft}
-                                />
-                                <td
-                                  className="patient-history-therapist-cell"
-                                  title={log.therapist_name || ''}
-                                  style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: historyRowFontWeight }}
-                                >
-                                  {log.therapist_name || '-'}
-                                </td>
-                                <td style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }} onClick={(e) => e.stopPropagation()}>
-                                  <button
-                                    type="button"
-                                    className="patient-history-apply-button"
-                                    title="선택한 셀에 적용"
-                                    onClick={() => requestApplyPatientHistoryToCell(log)}
-                                    style={{
-                                      border: '1px solid var(--brand-primary, #4f46e5)',
-                                      background: 'var(--brand-primary, #4f46e5)',
-                                      color: '#fff',
-                                      borderRadius: '6px',
-                                      padding: '4px 5px',
-                                      fontSize: '0.74rem',
-                                      fontWeight: 600,
-                                      lineHeight: 1.2,
-                                      cursor: 'pointer',
-                                      whiteSpace: 'nowrap',
-                                    }}
-                                  >
-                                    적용
-                                  </button>
-                                </td>
-                              </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-          <PatientHistoryApplyConfirmDialog
-            open={Boolean(pendingPatientHistoryApplyLog)}
-            onCancel={() => setPendingPatientHistoryApplyLog(null)}
-            onConfirm={confirmApplyPatientHistoryToCell}
-          />
-        </div>
-      )}
+      <PatientHistoryModal
+        open={patientHistoryModalOpen}
+        patientHistoryModalOverlayRef={patientHistoryModalOverlayRef}
+        patientHistoryModalDialogRef={patientHistoryModalDialogRef}
+        patientHistoryModalLayout={patientHistoryModalLayout}
+        patientHistoryModalOffset={patientHistoryModalOffset}
+        handlePatientHistoryModalDragStart={handlePatientHistoryModalDragStart}
+        handlePatientHistoryModalDragMove={handlePatientHistoryModalDragMove}
+        handlePatientHistoryModalDragEnd={handlePatientHistoryModalDragEnd}
+        patientHistorySearchInputRef={patientHistorySearchInputRef}
+        patientHistoryModalData={patientHistoryModalData}
+        fetchPatientHistory={fetchPatientHistory}
+        handleSelectPatientHistoryChart={handleSelectPatientHistoryChart}
+        handleSearchPatientHistoryByName={handleSearchPatientHistoryByName}
+        closePatientHistoryModal={closePatientHistoryModal}
+        patientHistoryTreatmentTabOptions={patientHistoryTreatmentTabOptions}
+        patientHistoryTreatmentTab={patientHistoryTreatmentTab}
+        setPatientHistoryTreatmentTab={setPatientHistoryTreatmentTab}
+        patientHistorySortOrder={patientHistorySortOrder}
+        setPatientHistorySortOrder={setPatientHistorySortOrder}
+        patientHistoryModalBodyRef={patientHistoryModalBodyRef}
+        patientHistoryLogGroups={patientHistoryLogGroups}
+        setPatientHistoryBodyFilters={setPatientHistoryBodyFilters}
+        setPatientHistoryPrescriptionFilters={setPatientHistoryPrescriptionFilters}
+        patientHistoryColumnWidths={patientHistoryColumnWidths}
+        selectedCell={selectedCell}
+        patientHistoryPrescriptionOptions={patientHistoryPrescriptionOptions}
+        effectivePrescriptionColors={effectivePrescriptionColors}
+        updatePatientHistoryModalLog={updatePatientHistoryModalLog}
+        handleUpdatePatientHistoryField={handleUpdatePatientHistoryField}
+        handlePatientHistoryDateClick={handlePatientHistoryDateClick}
+        patientHistoryClipboardCell={patientHistoryClipboardCell}
+        patientHistoryInlineEditor={patientHistoryInlineEditor}
+        patientHistorySelectedCellIds={patientHistorySelectedCellIds}
+        patientHistoryFillCellIds={patientHistoryFillCellIds}
+        selectedPatientHistoryCell={selectedPatientHistoryCell}
+        cancelPatientHistoryInlineCellEdit={cancelPatientHistoryInlineCellEdit}
+        commitPatientHistoryInlineCellEdit={commitPatientHistoryInlineCellEdit}
+        openPatientHistoryCellEditor={openPatientHistoryCellEditor}
+        selectPatientHistoryCell={selectPatientHistoryCell}
+        startPatientHistoryCellFill={startPatientHistoryCellFill}
+        startPatientHistoryCellRangeSelection={startPatientHistoryCellRangeSelection}
+        updatePatientHistoryInlineCellDraft={updatePatientHistoryInlineCellDraft}
+        requestApplyPatientHistoryToCell={requestApplyPatientHistoryToCell}
+        pendingPatientHistoryApplyLog={pendingPatientHistoryApplyLog}
+        setPendingPatientHistoryApplyLog={setPendingPatientHistoryApplyLog}
+        confirmApplyPatientHistoryToCell={confirmApplyPatientHistoryToCell}
+      />
 
       <ShockwaveHoverTooltip
         tooltipRef={tooltipRef}

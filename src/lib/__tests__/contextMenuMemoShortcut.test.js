@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const viewUrl = new URL('../../components/shockwave/ShockwaveView.jsx', import.meta.url);
+const viewUrl = new URL('../../components/shockwave/ShockwaveContextMenu.jsx', import.meta.url);
 const viewStateUrl = new URL('../../components/shockwave/useScheduleViewState.js', import.meta.url);
 
 test('schedule memo panel header shows the current platform shortcut on the right', async () => {
