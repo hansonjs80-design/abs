@@ -1439,6 +1439,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       if (wasDeletedAfterSaveStarted() || !isSaveVersionCurrent()) return;
       if (success) {
         removePendingScheduleDraft(currentYear, currentMonth, key);
+        removeDeletedScheduleDraft(currentYear, currentMonth, key);
         clearImmediateCellDisplay(combinedPayload);
       } else {
         rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
@@ -1498,6 +1499,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         if (success) {
           undoKeys.forEach((undoKey) => {
             removePendingScheduleDraft(currentYear, currentMonth, undoKey);
+            removeDeletedScheduleDraft(currentYear, currentMonth, undoKey);
           });
           clearImmediateCellDisplay(combinedPayload);
         } else {
@@ -1639,6 +1641,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       if (wasDeletedAfterSaveStarted() || !isSaveVersionCurrent()) return;
       if (success) {
         removePendingScheduleDraft(currentYear, currentMonth, key);
+        removeDeletedScheduleDraft(currentYear, currentMonth, key);
         clearImmediateCellDisplay(combinedPayload);
       } else {
         rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
@@ -1711,7 +1714,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     if (wasDeletedAfterSaveStarted() || !isSaveVersionCurrent()) return;
     if (success) {
       removePendingScheduleDraft(currentYear, currentMonth, key);
-      if (!newContent.trim()) {
+      if (newContent.trim()) {
+        removeDeletedScheduleDraft(currentYear, currentMonth, key);
+      } else {
         clearImmediateCellDisplay(finalSinglePayload, { force: true });
       }
     } else {

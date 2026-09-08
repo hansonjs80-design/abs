@@ -43,6 +43,7 @@ import {
   readDeletedScheduleDrafts,
   readPendingScheduleDrafts,
   rememberDeletedScheduleDraft,
+  removeDeletedScheduleDraft,
   wasScheduleDraftDeletedAfter,
 } from '../lib/schedulerUtils';
 import { saveMonthlyTherapistConfigs } from '../lib/monthlyTherapistPersistence';
@@ -62,7 +63,7 @@ import {
 import { mergeMonthlySettingsPreservingDeviceProfiles } from '../lib/shockwaveSettingsJsonSync';
 
 const ScheduleContext = createContext();
-const LOCAL_WRITE_STALE_GUARD_MS = 1200;
+const LOCAL_WRITE_STALE_GUARD_MS = 5000;
 const SHOCKWAVE_MEMO_VIEW_CACHE_LIMIT = 8;
 const SHOCKWAVE_RAW_MONTH_CACHE_LIMIT = 12;
 const SHOCKWAVE_MONTH_LOAD_RETRY_COUNT = 2;
@@ -2256,10 +2257,14 @@ export function ScheduleProvider({ children }) {
       let canonicalUpsertData = canonicalizeShockwaveScheduleItemDate(upsertData);
       const canonicalKey = `${canonicalUpsertData.week_index}-${canonicalUpsertData.day_index}-${canonicalUpsertData.row_index}-${canonicalUpsertData.col_index}`;
       if (
-        wasScheduleDraftDeletedAfter(canonicalUpsertData.year, canonicalUpsertData.month, canonicalKey, 0) &&
+        wasDeletedAfterWriteStarted() &&
         shouldKeepShockwaveMemo(canonicalUpsertData)
       ) {
         return true;
+      }
+
+      if (shouldKeepShockwaveMemo(canonicalUpsertData)) {
+        removeDeletedScheduleDraft(canonicalUpsertData.year, canonicalUpsertData.month, canonicalKey);
       }
 
       setShockwaveMemos(prev => {
@@ -2422,19 +2427,26 @@ export function ScheduleProvider({ children }) {
       };
 
       try {
+      const nowStr = new Date().toISOString();
+      writeStartedAtMs = new Date(nowStr).getTime();
       const currentMemosSnapshot = shockwaveMemosRef.current;
       const writeMemosArray = memosArray.filter((item) => {
         const canonicalItem = canonicalizeShockwaveScheduleItemDate(item);
         const canonicalKey = `${canonicalItem.week_index}-${canonicalItem.day_index}-${canonicalItem.row_index}-${canonicalItem.col_index}`;
-        const hasActiveDelete = wasScheduleDraftDeletedAfter(canonicalItem.year, canonicalItem.month, canonicalKey, 0);
+        const hasActiveDelete = wasScheduleDraftDeletedAfter(canonicalItem.year, canonicalItem.month, canonicalKey, writeStartedAtMs);
         return !hasActiveDelete ||
           isIntentionalClearScheduleItem(canonicalItem) ||
           !shouldKeepShockwaveMemo(canonicalItem);
       });
       if (writeMemosArray.length === 0) return true;
+      writeMemosArray.forEach((item) => {
+        const canonicalItem = canonicalizeShockwaveScheduleItemDate(item);
+        const canonicalKey = `${canonicalItem.week_index}-${canonicalItem.day_index}-${canonicalItem.row_index}-${canonicalItem.col_index}`;
+        if (shouldKeepShockwaveMemo(canonicalItem)) {
+          removeDeletedScheduleDraft(canonicalItem.year, canonicalItem.month, canonicalKey);
+        }
+      });
       const writeTargetKeys = writeMemosArray.map((item) => `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`);
-      const nowStr = new Date().toISOString();
-      writeStartedAtMs = new Date(nowStr).getTime();
       const optimisticSnapshot = buildOptimisticShockwaveMemos(
         currentMemosSnapshot,
         writeMemosArray,
