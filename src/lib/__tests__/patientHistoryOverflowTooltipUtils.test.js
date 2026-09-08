@@ -825,7 +825,7 @@ test('patient history data cells stay consistent with a compact apply button lab
 
   assert.match(bodyCellRule, /font-size:\s*0\.82rem;/);
   assert.match(inputRule, /font-size:\s*0\.82rem;/);
-  assert.match(therapistCellRule, /font-size:\s*calc\(0\.598rem - 2px\);/);
+  assert.match(therapistCellRule, /font-size:\s*calc\(0\.598rem - 4px\);/);
   assert.match(shockwaveView, /className="patient-history-therapist-cell"/);
   assert.match(applyButtonRule, /font-size:\s*0\.74rem\s*!important;/);
   assert.match(shockwaveView, /fontSize:\s*'0\.82rem'.*?>현재 셀<\/span>/s);
