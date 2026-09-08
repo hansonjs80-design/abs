@@ -4404,7 +4404,7 @@
 }
 
 .patient-history-table .patient-history-therapist-cell {
-  font-size: 0.664rem;
+  font-size: 0.598rem;
 }
 
 .patient-history-table .patient-history-row-number-cell {
@@ -4442,7 +4442,7 @@
 }
 
 .patient-history-table .patient-history-treatment-type-cell {
-  font-size: 0.632rem;
+  font-size: 0.569rem;
   font-weight: 850;
 }
 
@@ -4538,7 +4538,7 @@
 }
 
 .patient-history-table .patient-history-edit-field--detail {
-  font-size: 0.82rem !important;
+  font-size: 0.902rem !important;
   overflow-y: hidden !important;
   resize: none !important;
 }
@@ -4683,14 +4683,14 @@
 }
 
 .patient-history-table .patient-history-edit-field--prescription {
-  font-size: 0.82rem !important;
+  font-size: 0.902rem !important;
   font-weight: 800 !important;
   text-align: center;
   text-align-last: center;
 }
 
 .patient-history-table tbody tr.patient-history-current-row .patient-history-edit-field--prescription {
-  font-size: 0.86rem !important;
+  font-size: 0.946rem !important;
   font-weight: 900 !important;
 }
 
@@ -4706,7 +4706,7 @@
 }
 
 .patient-history-table .patient-history-visit-count-field {
-  font-size: 0.902rem !important;
+  font-size: 0.992rem !important;
   font-weight: 800 !important;
 }
 

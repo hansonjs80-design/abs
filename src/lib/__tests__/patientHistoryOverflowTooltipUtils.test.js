@@ -751,7 +751,7 @@ test('patient history body and memo text use the shared content size with shorte
     shockwaveView.match(/patient-history-edit-field--detail/g)?.length,
     3
   );
-  assert.match(detailFieldRule, /font-size:\s*0\.82rem\s*!important;/);
+  assert.match(detailFieldRule, /font-size:\s*0\.902rem\s*!important;/);
   assert.match(detailFieldRule, /overflow-y:\s*hidden\s*!important;/);
   assert.match(detailFieldRule, /resize:\s*none\s*!important;/);
   assert.match(tableCellRule, /padding:\s*1px 3px\s*!important;/);
@@ -794,11 +794,11 @@ test('patient history prescription dropdown matches row styling and eliminates d
   assert.match(prescriptionSelect, /backgroundPosition:\s*'right 3px center'/);
   assert.match(prescriptionSelect, /backgroundSize:\s*'6px 4px'/);
   assert.match(prescriptionSelect, /padding:\s*'2px 11px 2px 5px'/);
-  assert.match(prescriptionFieldRule, /font-size:\s*0\.82rem\s*!important;/);
+  assert.match(prescriptionFieldRule, /font-size:\s*0\.902rem\s*!important;/);
   assert.match(prescriptionFieldRule, /font-weight:\s*800\s*!important;/);
   assert.match(prescriptionFieldRule, /text-align:\s*center;/);
   assert.match(prescriptionFieldRule, /text-align-last:\s*center;/);
-  assert.match(currentPrescriptionFieldRule, /font-size:\s*0\.86rem\s*!important;/);
+  assert.match(currentPrescriptionFieldRule, /font-size:\s*0\.946rem\s*!important;/);
   assert.match(currentPrescriptionFieldRule, /font-weight:\s*900\s*!important;/);
   assert.match(prescriptionOptionRule, /text-align:\s*left;/);
   assert.match(prescriptionOptionRule, /text-align-last:\s*left;/);
@@ -825,7 +825,7 @@ test('patient history data cells stay consistent with a compact apply button lab
 
   assert.match(bodyCellRule, /font-size:\s*0\.82rem;/);
   assert.match(inputRule, /font-size:\s*0\.82rem;/);
-  assert.match(therapistCellRule, /font-size:\s*0\.664rem;/);
+  assert.match(therapistCellRule, /font-size:\s*0\.598rem;/);
   assert.match(shockwaveView, /className="patient-history-therapist-cell"/);
   assert.match(applyButtonRule, /font-size:\s*0\.74rem\s*!important;/);
   assert.match(shockwaveView, /fontSize:\s*'0\.82rem'.*?>현재 셀<\/span>/s);
