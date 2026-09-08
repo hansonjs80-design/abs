@@ -1765,7 +1765,7 @@ export default function ShockwaveDataGrid({
                       : `${p} 처방 환자를 모든 치료사에서 보기 (더블클릭)`
                     : !p ? '완료 처방 없음' : undefined}
                 >
-                  {p || '—'}
+                  <span className="sw-grid-prescription-label">{p || '—'}</span>
                 </th>
               );
             }))}

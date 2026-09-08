@@ -452,6 +452,7 @@ function PatientHistoryModal({
                                 )}
                               </td>
                               <td
+                                className="patient-history-chart-cell"
                                 title={log.chart_number || ''}
                                 style={{
                                   textAlign: 'center',

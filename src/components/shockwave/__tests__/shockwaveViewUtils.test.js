@@ -320,15 +320,15 @@ describe('shockwave view patient history model', () => {
   });
 
   it('returns stable modal sizing for single and split layouts', () => {
-    assert.equal(getPatientHistoryModalLayout(1).maxWidth, 800);
+    assert.equal(getPatientHistoryModalLayout(1).maxWidth, 806);
     assert.equal(getPatientHistoryModalLayout(1).width, '85%');
-    assert.equal(getPatientHistoryModalLayout(2).maxWidth, 1574);
+    assert.equal(getPatientHistoryModalLayout(2).maxWidth, 1585);
     assert.equal(getPatientHistoryModalLayout(2).width, '100%');
     const combinedLayout = getPatientHistoryModalLayout([{ key: 'all' }]);
     const shinjangLayout = getPatientHistoryModalLayout([{ key: 'shinjang' }]);
-    assert.equal(combinedLayout.maxWidth, 890);
+    assert.equal(combinedLayout.maxWidth, 896);
     assert.equal(combinedLayout.width, '95%');
-    assert.equal(shinjangLayout.maxWidth, 819);
+    assert.equal(shinjangLayout.maxWidth, 824);
     assert.equal(shinjangLayout.width, '85%');
     const columnWidths = getPatientHistoryColumnWidths(1);
     const combinedColumnWidths = getPatientHistoryColumnWidths(1, true);

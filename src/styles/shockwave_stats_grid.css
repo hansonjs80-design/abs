@@ -1343,6 +1343,15 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   font-size: 1.12rem !important;
 }
 
+@media screen {
+  /* Paint 15px labels at 16px without changing the auto-layout table's cell sizes. */
+  .sw-stats-container--shockwave .hdr-pres .sw-grid-prescription-label {
+    display: inline-block;
+    transform: scale(calc(16 / 15));
+    -webkit-text-stroke: 0.15px currentColor;
+  }
+}
+
 /* Specific Z-Index for intersection of Frozen Left and Sticky Right (though they don't overlap) */
 .hdr-fixed.sticky-right-last-1, .hdr-fixed.sticky-right-last-2 {
   z-index: 70 !important;

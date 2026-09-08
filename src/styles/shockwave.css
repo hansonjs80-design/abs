@@ -4391,6 +4391,11 @@
 .patient-history-table .patient-history-date-cell {
   cursor: pointer;
   user-select: none;
+  font-size: 0.738rem;
+}
+
+.patient-history-table .patient-history-chart-cell {
+  font-size: 0.738rem;
 }
 
 .patient-history-table .patient-history-date-cell:hover {
@@ -4437,7 +4442,7 @@
 }
 
 .patient-history-table .patient-history-treatment-type-cell {
-  font-size: 0.78rem;
+  font-size: 0.702rem;
   font-weight: 850;
 }
 

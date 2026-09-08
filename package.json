@@ -10,14 +10,18 @@
     "test": "node --test \"src/**/*.test.js\"",
     "preview": "vite preview",
     "restore:supabase-backup": "node scripts/restore-supabase-backup.mjs",
-    "auto-push": "bash scripts/auto-push.sh"
+    "auto-push": "bash scripts/auto-push.sh",
+    "sync": "node safe-sync.js"
   },
   "allowScripts": {
     "esbuild@0.27.7": true
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.0",
+    "chokidar": "^5.0.0",
+    "dotenv": "^17.4.2",
     "lucide-react": "^1.8.0",
+    "pg": "^8.23.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.14.0"
