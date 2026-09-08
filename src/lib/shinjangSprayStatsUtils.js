@@ -293,12 +293,8 @@ export function buildShinjangSprayRecentMonthlySummaries({
       const visiblePrescriptionKeys = new Set(
         visiblePrescriptions.map(normalizePrescriptionKey)
       );
-      const configuredTherapistNames = Array.isArray(monthSettings.therapist_names)
-        ? new Set(monthSettings.therapist_names.map((name) => String(name || '').trim()).filter(Boolean))
-        : null;
       const visibleRows = reassignedRows.filter((row) => (
         visiblePrescriptionKeys.has(normalizePrescriptionKey(row?.prescription))
-        && (!configuredTherapistNames || configuredTherapistNames.has(String(row?.therapist_name || '').trim()))
       ));
       const totalCount = visibleRows.reduce(
         (sum, row) => sum + toStatsPrescriptionCount(row?.prescription_count),

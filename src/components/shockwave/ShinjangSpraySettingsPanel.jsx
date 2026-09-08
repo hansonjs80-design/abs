@@ -147,7 +147,6 @@ function renameDraftPrescription(draft, index, previousName, nextName) {
 export default function ShinjangSpraySettingsPanel({
   year,
   month,
-  therapists = [],
   effectiveSettings,
   onSave,
 }) {
@@ -155,18 +154,7 @@ export default function ShinjangSpraySettingsPanel({
     () => buildInitialDraft(effectiveSettings),
     [effectiveSettings]
   );
-  const therapistNameList = useMemo(() => (
-    (Array.isArray(therapists) ? therapists : [])
-      .map((therapist) => String(therapist?.name || '').trim())
-      .filter(Boolean)
-  ), [therapists]);
-  const effectiveTherapistNames = useMemo(() => {
-    if (!Array.isArray(effectiveSettings?.therapist_names)) return therapistNameList;
-    const configuredNames = new Set(effectiveSettings.therapist_names);
-    return therapistNameList.filter((name) => configuredNames.has(name));
-  }, [effectiveSettings?.therapist_names, therapistNameList]);
   const [draft, setDraft] = useState(initialDraft);
-  const [draftTherapistNames, setDraftTherapistNames] = useState(effectiveTherapistNames);
   const [newPrescriptionName, setNewPrescriptionName] = useState('');
   const [prescriptionRenameKeys, setPrescriptionRenameKeys] = useState({});
   const [prescriptionOrigins, setPrescriptionOrigins] = useState(() => Object.fromEntries(
@@ -184,12 +172,11 @@ export default function ShinjangSpraySettingsPanel({
 
   useEffect(() => {
     setDraft(initialDraft);
-    setDraftTherapistNames(effectiveTherapistNames);
     setPrescriptionRenameKeys({});
     setPrescriptionOrigins(Object.fromEntries(
       initialDraft.prescriptions.map((prescription) => [prescription, prescription])
     ));
-  }, [effectiveTherapistNames, initialDraft]);
+  }, [initialDraft]);
 
   const sourceText = useMemo(() => {
     if (!effectiveSettings?.source_month_key) return '기존 신장분사 처방 설정을 사용 중입니다.';
@@ -405,7 +392,6 @@ export default function ShinjangSpraySettingsPanel({
           (prescription) => prescriptions.includes(prescription)
         ),
         prescriptionRenames,
-        therapistNames: draftTherapistNames,
       });
     } finally {
       setIsSaving(false);
@@ -423,57 +409,10 @@ export default function ShinjangSpraySettingsPanel({
           type="button"
           className="btn btn-primary"
           onClick={handleSave}
-          disabled={isSaving || draftTherapistNames.length === 0}
+          disabled={isSaving}
         >
           {isSaving ? '저장 중...' : '이번 달 설정 저장'}
         </button>
-      </div>
-
-      <div className="shinjang-spray-therapist-settings">
-        <div className="shinjang-spray-settings-section-heading">
-          <div>
-            <h3>집계 치료사</h3>
-            <p>신장분사 현황·결산·신환에 표시할 치료사를 선택합니다.</p>
-          </div>
-          <button
-            type="button"
-            className="shinjang-spray-select-all-button"
-            onClick={() => setDraftTherapistNames(therapistNameList)}
-            disabled={therapistNameList.length === draftTherapistNames.length}
-          >
-            전체 선택
-          </button>
-        </div>
-        {therapistNameList.length === 0 ? (
-          <div className="shinjang-spray-setting-empty">설정할 치료사가 없습니다.</div>
-        ) : (
-          <div className="shinjang-spray-therapist-options" aria-label="신장분사 집계 치료사 설정">
-            {therapists.map((therapist, index) => {
-              const name = String(therapist?.name || '').trim();
-              if (!name) return null;
-              const isChecked = draftTherapistNames.includes(name);
-              const isLastChecked = isChecked && draftTherapistNames.length <= 1;
-              return (
-                <label
-                  key={therapist.key || therapist.id || name}
-                  className={`shinjang-spray-therapist-option tone-${index % 5}${isChecked ? ' is-active' : ''}`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    disabled={isLastChecked}
-                    onChange={(event) => setDraftTherapistNames((current) => (
-                      event.target.checked
-                        ? [...current, name]
-                        : current.filter((item) => item !== name)
-                    ))}
-                  />
-                  <span>{therapist.displayName || name}</span>
-                </label>
-              );
-            })}
-          </div>
-        )}
       </div>
 
       <div className="shinjang-spray-settings-list">

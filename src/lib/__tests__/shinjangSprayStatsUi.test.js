@@ -82,7 +82,8 @@ describe('shinjang spray statistics UI', () => {
     assert.match(settingsSource, />\/ 강조</);
     assert.match(settingsSource, />\/ 색</);
     assert.match(settingsSource, />\/ 두께</);
-    assert.match(settingsSource, /집계 치료사/);
+    assert.doesNotMatch(settingsSource, /집계 치료사|draftTherapistNames|therapist_names/);
+    assert.doesNotMatch(pageSource, /spraySettings\.therapist_names/);
     assert.match(settingsSource, /크라이오 가격/);
     assert.match(settingsSource, /처방 단가/);
     assert.match(settingsSource, /셀 태그/);
@@ -94,7 +95,6 @@ describe('shinjang spray statistics UI', () => {
     assert.match(settingsSource, /removePrescription/);
     assert.match(settingsSource, /addPrescription/);
     assert.match(settingsSource, /cryoPrescriptions/);
-    assert.match(settingsSource, /aria-label="신장분사 집계 치료사 설정"/);
     assert.match(settingsSource, /이번 달 설정 저장/);
     assert.match(statsViewSource, /treatmentLabel="신장분사"/);
     assert.match(statsViewSource, /incentivePercentages=\{incentivePercentages\}/);

@@ -196,7 +196,7 @@ describe('shinjang spray statistics', () => {
     assert.equal(summary.grandIncentive, 15000);
   });
 
-  it('builds recent monthly summaries with each month settings and restricted incentives', () => {
+  it('uses monthly prices and incentive visibility without legacy therapist exclusions', () => {
     const summaries = buildShinjangSprayRecentMonthlySummaries({
       monthTargets: [
         { year: 2026, month: 8 },
@@ -240,9 +240,10 @@ describe('shinjang spray statistics', () => {
           cryo_prescriptions: ['신장분사 1'],
           cryo_prices: { '신장분사 1': 10000 },
           prescription_incentive_percentages: { '신장분사 1': 7 },
-          therapist_names: ['과거치료사'],
+          therapist_names: ['다른치료사'],
         },
         '2026-09': {
+          therapist_names: [],
           prescriptions: ['신장분사 1', '신장분사 2'],
           prescription_incentive_percentages: {
             '신장분사 1': 7,

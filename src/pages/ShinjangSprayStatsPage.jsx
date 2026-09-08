@@ -574,7 +574,7 @@ export default function ShinjangSprayStatsPage() {
     manualTherapists,
     therapists,
   ]);
-  const availableTherapists = useMemo(() => buildUniqueTherapists({
+  const displayTherapists = useMemo(() => buildUniqueTherapists({
     rows: combinedRows,
     shinjangSprayTherapists,
     monthlyShinjangSprayTherapists,
@@ -583,11 +583,6 @@ export default function ShinjangSprayStatsPage() {
     monthlyShinjangSprayTherapists,
     shinjangSprayTherapists,
   ]);
-  const displayTherapists = useMemo(() => {
-    if (!Array.isArray(spraySettings.therapist_names)) return availableTherapists;
-    const configuredNames = new Set(spraySettings.therapist_names);
-    return availableTherapists.filter((therapist) => configuredNames.has(therapist.name));
-  }, [availableTherapists, spraySettings.therapist_names]);
   const therapistNameList = useMemo(
     () => displayTherapists.map((therapist) => therapist.name).filter(Boolean),
     [displayTherapists]
@@ -630,7 +625,6 @@ export default function ShinjangSprayStatsPage() {
     visitLineBreakPrescriptions,
     hiddenPrescriptions,
     prescriptionRenames,
-    therapistNames,
   }) => {
     const settingsToUpdate = settingsRef.current || shockwaveSettings || {};
     const nextSettings = {
@@ -654,7 +648,6 @@ export default function ShinjangSprayStatsPage() {
           duration_minutes: durationMinutes,
           visit_line_break_prescriptions: visitLineBreakPrescriptions,
           hidden_prescriptions: hiddenPrescriptions,
-          therapist_names: therapistNames,
         }
       ),
     };
@@ -754,7 +747,7 @@ export default function ShinjangSprayStatsPage() {
                 {isLoading ? '새로 고침 중...' : '새로 고침'}
               </button>
             </div>
-            {therapistNameList.length > 1 && (
+            {therapistNameList.length > 0 && (
               <div className="sw-sidebar-filter" aria-label="치료사 필터">
                 <div className="sw-sidebar-filter-title">치료사 필터</div>
                 <div className="sw-sidebar-filter-list">
@@ -860,7 +853,6 @@ export default function ShinjangSprayStatsPage() {
                 <ShinjangSpraySettingsPanel
                   year={currentYear}
                   month={currentMonth}
-                  therapists={availableTherapists}
                   effectiveSettings={spraySettings}
                   onSave={handleSaveSettings}
                 />
