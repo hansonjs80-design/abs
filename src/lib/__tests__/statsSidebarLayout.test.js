@@ -6,6 +6,7 @@ const layoutCssUrl = new URL('../../styles/shockwave_stats_layout.css', import.m
 const mobileCssUrl = new URL('../../styles/mobile.css', import.meta.url);
 const shockwaveStatsUrl = new URL('../../components/shockwave/ShockwaveStatsView.jsx', import.meta.url);
 const manualStatsUrl = new URL('../../pages/ManualTherapyStatsPage.jsx', import.meta.url);
+const shinjangStatsUrl = new URL('../../pages/ShinjangSprayStatsPage.jsx', import.meta.url);
 
 test('desktop stats sidebar is 20 percent narrower without changing button typography', async () => {
   const layoutCss = await readFile(layoutCssUrl, 'utf8');
@@ -44,4 +45,17 @@ test('stats therapist filters wait for the current monthly roster before renderi
       /\(\) => \(monthlyTherapistsReady \? safeTherapists : \[\]\)/
     );
   }
+});
+
+test('shinjang publishes the monthly roster before log sync and excludes previous-month data', async () => {
+  const source = await readFile(shinjangStatsUrl, 'utf8');
+  const publishRoster = source.indexOf('setLoadedTherapistsMonthKey(currentMonthKey)');
+  const syncLogs = source.indexOf('syncMonthShockwaveScheduleToStats({');
+  assert(publishRoster >= 0 && publishRoster < syncLogs);
+  assert.match(source, /loadedMonthKey: loadedTherapistsMonthKey/);
+  assert.match(source, /loadedTherapistsMonthKey !== currentMonthKey \|\| loadedLogsMonthKey !== currentMonthKey/);
+  assert(source.indexOf('setLoadedLogsMonthKey(currentMonthKey)') > source.indexOf('setManualLogs(normalizedManualLogs)'));
+  assert.match(source, /shockwaveTherapists: localShockwaveTherapists,/);
+  assert.match(source, /manualTherapists: localManualTherapists,/);
+  assert.match(source, /return \(\) => \{ requestIdRef\.current \+= 1; \};/);
 });

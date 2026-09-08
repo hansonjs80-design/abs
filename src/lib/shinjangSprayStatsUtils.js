@@ -4,6 +4,7 @@ import {
   toStatsPrescriptionCount,
 } from './shockwaveStatsCountUtils.js';
 import { parseSchedulerCellKey } from './schedulerHistoryCandidateUtils.js';
+import { buildDisplayTherapists } from './therapistDisplayUtils.js';
 
 function normalizeMarkerText(value) {
   return String(value || '')
@@ -75,6 +76,36 @@ export function buildShinjangSprayDefaultTherapists({
       name: String(source.name || source.therapist_name || '').trim(),
     };
   });
+}
+
+export function buildShinjangSprayDisplayTherapists({
+  currentMonthKey,
+  loadedMonthKey,
+  rows,
+  shinjangSprayTherapists,
+  monthlyShinjangSprayTherapists,
+}) {
+  if (!loadedMonthKey || loadedMonthKey !== currentMonthKey) return [];
+
+  const therapistsByName = new Map();
+  const add = (therapist) => {
+    const name = String(therapist?.name || therapist?.therapist_name || '').trim();
+    if (!name || therapistsByName.has(name)) return;
+    therapistsByName.set(name, {
+      ...therapist,
+      id: therapist?.key || therapist?.id || name,
+      key: therapist?.key || therapist?.id || name,
+      name,
+      displayName: therapist?.displayName || name,
+    });
+  };
+
+  buildDisplayTherapists(
+    shinjangSprayTherapists,
+    monthlyShinjangSprayTherapists
+  ).forEach(add);
+  (Array.isArray(rows) ? rows : []).forEach(add);
+  return [...therapistsByName.values()];
 }
 
 export function applyMonthlyShinjangSprayTherapists(rows, monthlyTherapists) {

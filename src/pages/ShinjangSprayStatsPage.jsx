@@ -11,7 +11,6 @@ import ShinjangSpraySettingsPanel from '../components/shockwave/ShinjangSpraySet
 import { supabase } from '../lib/supabaseClient';
 import { isAdminUser } from '../lib/authPermissions';
 import { getTodayKST } from '../lib/calendarUtils';
-import { buildDisplayTherapists } from '../lib/therapistDisplayUtils';
 import { normalizeManualTherapyLogRows } from '../lib/manualTherapyLogUtils';
 import { syncMonthManualTherapyScheduleToStats } from '../lib/manualTherapyUtils';
 import { syncMonthShockwaveScheduleToStats } from '../lib/shockwaveSyncUtils';
@@ -23,6 +22,7 @@ import {
 import {
   applyMonthlyShinjangSprayTherapists,
   buildShinjangSprayDefaultTherapists,
+  buildShinjangSprayDisplayTherapists,
   buildShinjangSprayPrescriptions,
   buildShinjangSprayRecentMonthlySummaries,
   mergeShinjangSprayLogs,
@@ -42,32 +42,6 @@ import '../styles/shockwave_stats.css';
 import '../styles/shinjang_spray_stats.css';
 
 const LOG_FIELDS = 'id,date,patient_name,chart_number,visit_count,body_part,therapist_name,prescription,prescription_count,source,scheduler_cell_key,created_at';
-
-function buildUniqueTherapists({
-  rows,
-  shinjangSprayTherapists,
-  monthlyShinjangSprayTherapists,
-}) {
-  const therapistsByName = new Map();
-  const add = (therapist) => {
-    const name = String(therapist?.name || therapist?.therapist_name || '').trim();
-    if (!name || therapistsByName.has(name)) return;
-    therapistsByName.set(name, {
-      ...therapist,
-      id: therapist?.key || therapist?.id || name,
-      key: therapist?.key || therapist?.id || name,
-      name,
-      displayName: therapist?.displayName || name,
-    });
-  };
-
-  buildDisplayTherapists(
-    shinjangSprayTherapists,
-    monthlyShinjangSprayTherapists
-  ).forEach(add);
-  (Array.isArray(rows) ? rows : []).forEach(add);
-  return [...therapistsByName.values()];
-}
 
 function buildMonthQuery(tableName, currentYear, currentMonth) {
   const startDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
@@ -122,6 +96,8 @@ export default function ShinjangSprayStatsPage() {
   const [localShockwaveTherapists, setLocalShockwaveTherapists] = useState([]);
   const [localManualTherapists, setLocalManualTherapists] = useState([]);
   const [monthlyShinjangSprayTherapists, setMonthlyShinjangSprayTherapists] = useState([]);
+  const [loadedTherapistsMonthKey, setLoadedTherapistsMonthKey] = useState(null);
+  const [loadedLogsMonthKey, setLoadedLogsMonthKey] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [recentShockwaveLogs, setRecentShockwaveLogs] = useState([]);
   const [recentManualLogs, setRecentManualLogs] = useState([]);
@@ -186,6 +162,14 @@ export default function ShinjangSprayStatsPage() {
         loadShockwaveSettings({ force }),
       ]);
       if (requestId !== requestIdRef.current) return;
+
+      // Publish the monthly roster before the slower schedule/statistics sync.
+      setLocalShockwaveTherapists(Array.isArray(loadedShockwaveTherapists) ? loadedShockwaveTherapists : []);
+      setLocalManualTherapists(Array.isArray(loadedManualTherapists) ? loadedManualTherapists : []);
+      setMonthlyShinjangSprayTherapists(
+        Array.isArray(loadedMonthlyShinjangSpray) ? loadedMonthlyShinjangSpray : []
+      );
+      setLoadedTherapistsMonthKey(currentMonthKey);
 
       const settingsForMonth = loadedSettings || settingsRef.current || {};
       settingsRef.current = settingsForMonth;
@@ -257,13 +241,9 @@ export default function ShinjangSprayStatsPage() {
         }
       );
 
-      setLocalShockwaveTherapists(Array.isArray(loadedShockwaveTherapists) ? loadedShockwaveTherapists : []);
-      setLocalManualTherapists(Array.isArray(loadedManualTherapists) ? loadedManualTherapists : []);
-      setMonthlyShinjangSprayTherapists(
-        Array.isArray(loadedMonthlyShinjangSpray) ? loadedMonthlyShinjangSpray : []
-      );
       setShockwaveLogs(shockwaveResult.data || []);
       setManualLogs(normalizedManualLogs);
+      setLoadedLogsMonthKey(currentMonthKey);
       setRecentRefreshVersion((value) => value + 1);
     } catch (error) {
       if (requestId === requestIdRef.current) {
@@ -276,6 +256,7 @@ export default function ShinjangSprayStatsPage() {
   }, [
     addToast,
     currentMonth,
+    currentMonthKey,
     currentYear,
     loadManualTherapists,
     loadMonthlyTherapists,
@@ -286,6 +267,7 @@ export default function ShinjangSprayStatsPage() {
 
   useEffect(() => {
     refreshData();
+    return () => { requestIdRef.current += 1; };
   }, [refreshData]);
 
   useEffect(() => {
@@ -524,10 +506,10 @@ export default function ShinjangSprayStatsPage() {
     spraySettings.cryo_prices,
     spraySettings.prescription_prices,
   ]);
-  const combinedRows = useMemo(() => applyMonthlyShinjangSprayTherapists(
-    sourceCombinedRows,
-    monthlyShinjangSprayTherapists
-  ), [monthlyShinjangSprayTherapists, sourceCombinedRows]);
+  const combinedRows = useMemo(() => {
+    if (loadedTherapistsMonthKey !== currentMonthKey || loadedLogsMonthKey !== currentMonthKey) return [];
+    return applyMonthlyShinjangSprayTherapists(sourceCombinedRows, monthlyShinjangSprayTherapists);
+  }, [currentMonthKey, loadedLogsMonthKey, loadedTherapistsMonthKey, monthlyShinjangSprayTherapists, sourceCombinedRows]);
   const prescriptions = useMemo(() => buildShinjangSprayPrescriptions({
     configuredPrescriptions: spraySettings.prescriptions,
     rows: combinedRows,
@@ -562,24 +544,22 @@ export default function ShinjangSprayStatsPage() {
     recentShockwaveLogs,
   ]);
   const shinjangSprayTherapists = useMemo(() => buildShinjangSprayDefaultTherapists({
-    shockwaveTherapists: localShockwaveTherapists.length > 0
-      ? localShockwaveTherapists
-      : therapists,
-    manualTherapists: localManualTherapists.length > 0
-      ? localManualTherapists
-      : manualTherapists,
+    shockwaveTherapists: localShockwaveTherapists,
+    manualTherapists: localManualTherapists,
   }), [
     localManualTherapists,
     localShockwaveTherapists,
-    manualTherapists,
-    therapists,
   ]);
-  const displayTherapists = useMemo(() => buildUniqueTherapists({
+  const displayTherapists = useMemo(() => buildShinjangSprayDisplayTherapists({
+    currentMonthKey,
+    loadedMonthKey: loadedTherapistsMonthKey,
     rows: combinedRows,
     shinjangSprayTherapists,
     monthlyShinjangSprayTherapists,
   }), [
     combinedRows,
+    currentMonthKey,
+    loadedTherapistsMonthKey,
     monthlyShinjangSprayTherapists,
     shinjangSprayTherapists,
   ]);

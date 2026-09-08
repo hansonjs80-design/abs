@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   applyMonthlyShinjangSprayTherapists,
   buildShinjangSprayDefaultTherapists,
+  buildShinjangSprayDisplayTherapists,
   buildShinjangSprayPrescriptions,
   buildShinjangSprayRecentMonthlySummaries,
   buildShinjangSpraySettlementSummary,
@@ -13,6 +14,49 @@ import {
 } from '../shinjangSprayStatsUtils.js';
 
 describe('shinjang spray statistics', () => {
+  it('waits for the requested monthly roster and first displays the monthly therapist names', () => {
+    const input = {
+      currentMonthKey: '2026-09',
+      shinjangSprayTherapists: [{ id: 's0', name: '기본이전치료사' }],
+      monthlyShinjangSprayTherapists: [
+        { slot_index: 0, therapist_name: '이번달치료사', start_day: 1, end_day: 30 },
+      ],
+      rows: [],
+    };
+    assert.deepEqual(buildShinjangSprayDisplayTherapists({ ...input, loadedMonthKey: null }), []);
+    assert.deepEqual(buildShinjangSprayDisplayTherapists({ ...input, loadedMonthKey: '2026-08' }), []);
+    assert.deepEqual(
+      buildShinjangSprayDisplayTherapists({ ...input, loadedMonthKey: '2026-09' }).map((item) => item.name),
+      ['이번달치료사']
+    );
+    // Changing month must hide the old roster in the very first render.
+    assert.deepEqual(buildShinjangSprayDisplayTherapists({
+      ...input,
+      currentMonthKey: '2026-10',
+      loadedMonthKey: '2026-09',
+      rows: [{ therapist_name: '이전달기록치료사' }],
+    }), []);
+  });
+
+  it('uses the loaded base roster when monthly overrides are empty and keeps valid log-only names', () => {
+    const input = {
+      currentMonthKey: '2026-09',
+      loadedMonthKey: '2026-09',
+      shinjangSprayTherapists: [{ id: 's0', name: '현재기본치료사' }],
+      monthlyShinjangSprayTherapists: [],
+      rows: [
+        { therapist_name: '현재기본치료사' },
+        { therapist_name: '기록치료사' },
+      ],
+    };
+    assert.deepEqual(buildShinjangSprayDisplayTherapists(input).map((item) => item.name), [
+      '현재기본치료사', '기록치료사',
+    ]);
+    assert.deepEqual(buildShinjangSprayDisplayTherapists({
+      ...input, shinjangSprayTherapists: [], rows: [],
+    }), []);
+  });
+
   it('builds the default shinjang roster by scheduler column', () => {
     assert.deepEqual(
       buildShinjangSprayDefaultTherapists({
