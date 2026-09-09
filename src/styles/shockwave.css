@@ -4392,11 +4392,17 @@
   cursor: pointer;
   user-select: none;
   font-size: 0.738rem;
+}
+
+.patient-history-table tbody tr:not(.patient-history-current-row) .patient-history-date-cell {
   font-weight: 500 !important;
 }
 
 .patient-history-table .patient-history-chart-cell {
   font-size: 0.738rem;
+}
+
+.patient-history-table tbody tr:not(.patient-history-current-row) .patient-history-chart-cell {
   font-weight: 500 !important;
 }
 
