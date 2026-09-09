@@ -7,7 +7,7 @@ import {
 } from '../../lib/schedulerContentFormat';
 
 const DEFAULT_PRESCRIPTION_COLOR = '#0f766e';
-const DEFAULT_PATIENT_DELIMITER_COLOR = '#0891b2';
+const DEFAULT_PATIENT_DELIMITER_COLOR = '#2fb420';
 const DEFAULT_PATIENT_DELIMITER_THICKNESS = 0.75;
 
 function normalizeDurationStepMinutes(value) {

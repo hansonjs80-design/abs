@@ -749,14 +749,14 @@
   --tab-text-color: #263244;
 }
 
-/* 5. Shinjang Spray Stats (Cyan) */
+/* 5. Shinjang Spray Stats (Green #2fb420) */
 .top-tab--stats-shinjang {
-  --tab-bg: #a5f3fc;
-  --tab-hover-bg: #cffafe;
+  --tab-bg: #bbf7d0;
+  --tab-hover-bg: #dcfce7;
   --tab-active-surface: #f8fafc;
   --tab-active-bg: #f8fafc;
-  --tab-active-border: #0891b2;
-  --tab-shadow: rgba(8, 145, 178, 0.2);
+  --tab-active-border: #2fb420;
+  --tab-shadow: rgba(47, 180, 32, 0.2);
   --tab-text-color: #263244;
 }
 

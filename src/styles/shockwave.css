@@ -4036,9 +4036,9 @@
 }
 
 .patient-history-treatment-filter--shinjang.is-checked {
-  border-color: #34d399;
-  background: #d1fae5;
-  color: #065f46;
+  border-color: #2fb420;
+  background: #dcfce7;
+  color: #1e7314;
 }
 
 .patient-history-treatment-count {
@@ -4073,7 +4073,7 @@
 }
 
 .patient-history-treatment-tabs:has(.patient-history-treatment-tab--shinjang.is-active) {
-  border-bottom-color: #0891b2;
+  border-bottom-color: #2fb420;
 }
 
 .patient-history-treatment-tab {
@@ -4147,9 +4147,9 @@
 }
 
 .patient-history-treatment-tab--shinjang {
-  --patient-history-tab-bg: #a5f3fc;
-  --patient-history-tab-hover-bg: #cffafe;
-  --patient-history-tab-accent: #0891b2;
+  --patient-history-tab-bg: #bbf7d0;
+  --patient-history-tab-hover-bg: #dcfce7;
+  --patient-history-tab-accent: #2fb420;
 }
 
 .patient-history-treatment-tab--all.is-active,

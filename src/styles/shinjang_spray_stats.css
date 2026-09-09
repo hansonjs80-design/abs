@@ -98,7 +98,7 @@
 
 .shinjang-spray-table .shinjang-spray-therapist-cell {
   min-width: 0;
-  border-left: 4px solid var(--therapist-accent, #0891b2);
+  border-left: 4px solid var(--therapist-accent, #2fb420);
   color: var(--therapist-text, #164e63);
   font-size: 0.92rem;
   font-weight: 900;
@@ -222,7 +222,7 @@
   height: 34px;
   border: 0;
   border-radius: 8px;
-  background: #0891b2;
+  background: #2fb420;
   color: #fff;
   font-size: 1.25rem;
   font-weight: 900;

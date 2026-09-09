@@ -90,7 +90,7 @@ describe('combined statistics UI', () => {
     assert.match(styleSource, /font-size:\s*calc\(0\.95rem \+ 2px\);/);
     assert.match(styleSource, /\.combined-therapist-card\s*\{\s*border-top:\s*3px solid var\(--combined-tone-strong\);/s);
     assert.match(styleSource, /border-right:\s*1px solid #cbd5e1;/);
-    assert.match(styleSource, /\.combined-stats-recent\s*\{[\s\S]*border-top:\s*3px solid #0891b2;/);
+    assert.match(styleSource, /\.combined-stats-recent\s*\{[\s\S]*border-top:\s*3px solid #2fb420;/);
     assert.doesNotMatch(styleSource, /\.combined-stats-side \.sw-manual-ion-summary-card/);
     assert.match(styleSource, /\.combined-recent-breakdown-item--shinjang/);
     assert.match(styleSource, /\.combined-recent-breakdown-item--total\s*\{[\s\S]*border-bottom:\s*2px solid #94a3b8;/);

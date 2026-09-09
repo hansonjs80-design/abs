@@ -178,7 +178,7 @@ test('patient history exposes treatment tabs, selectable sorting, and treatment 
   );
   assert.match(
     shockwaveCss,
-    /\.patient-history-treatment-tabs:has\(\.patient-history-treatment-tab--shinjang\.is-active\)\s*\{[^}]*border-bottom-color:\s*#0891b2;/s
+    /\.patient-history-treatment-tabs:has\(\.patient-history-treatment-tab--shinjang\.is-active\)\s*\{[^}]*border-bottom-color:\s*#2fb420;/s
   );
   assert.match(
     shockwaveCss,

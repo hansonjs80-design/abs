@@ -112,7 +112,7 @@ export default function useScheduleViewState({
     return (shinjangSpraySettlement.prescriptions || []).reduce((acc, prescription) => {
       if (!enabledPrescriptions.has(prescription)) return acc;
       const color = shinjangSpraySettlement.patient_delimiter_colors?.[prescription]
-        || '#0891b2';
+        || '#2fb420';
       const thickness = Math.min(4, Math.max(
         0,
         Number(shinjangSpraySettlement.patient_delimiter_thicknesses?.[prescription]) || 0
