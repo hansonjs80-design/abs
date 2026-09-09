@@ -363,7 +363,7 @@ function PatientHistoryModal({
                                 ? '#ecfdf5'
                                 : '#e6f6fe')
                             : undefined;
-                          const historyRowFontWeight = isCurrentHistoryRow ? 800 : 'var(--patient-history-row-font-weight, 350)';
+                          const historyRowFontWeight = isCurrentHistoryRow ? 800 : 400;
                           const currentPrescriptionValue = String(log.prescription || '');
                           const configuredPrescriptionOptions = patientHistoryPrescriptionOptions[historyTreatmentGroup]
                             || patientHistoryPrescriptionOptions.shockwave
