@@ -1,6 +1,8 @@
 import {
   formatPatientHistoryMemoEditDraft,
   insertPatientHistoryMemoLineBreak,
+  mergePatientHistoryMemoLineBackward,
+  mergePatientHistoryMemoLineForward,
   removeEmptyPatientHistoryMemoLine,
 } from '../../lib/patientHistoryCellInteractionUtils';
 import {
@@ -253,7 +255,35 @@ export default function PatientHistoryEditableCells({
                 && !isComposing
               ) {
                 const field = event.currentTarget;
-                const formattedDraft = removeEmptyPatientHistoryMemoLine(
+                const formattedDraft = mergePatientHistoryMemoLineBackward(
+                  field.value,
+                  field.selectionStart,
+                  field.selectionEnd,
+                ) || removeEmptyPatientHistoryMemoLine(
+                  field.value,
+                  field.selectionStart,
+                  field.selectionEnd,
+                );
+                if (!formattedDraft) return;
+                event.preventDefault();
+                event.stopPropagation();
+                updatePatientHistoryInlineCellDraft(memoHistoryCell, formattedDraft.value);
+                window.requestAnimationFrame(() => {
+                  if (document.activeElement !== field) return;
+                  field.setSelectionRange(
+                    formattedDraft.selectionStart,
+                    formattedDraft.selectionEnd,
+                  );
+                });
+              } else if (
+                event.key === 'Delete'
+                && !event.altKey
+                && !event.ctrlKey
+                && !event.metaKey
+                && !isComposing
+              ) {
+                const field = event.currentTarget;
+                const formattedDraft = mergePatientHistoryMemoLineForward(
                   field.value,
                   field.selectionStart,
                   field.selectionEnd,

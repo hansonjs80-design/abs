@@ -337,6 +337,92 @@ export function insertPatientHistoryMemoLineBreak(rawValue, selectionStart, sele
   );
 }
 
+
+export function mergePatientHistoryMemoLineBackward(rawValue, selectionStart, selectionEnd) {
+  const normalizedValue = String(rawValue ?? '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+  const start = Number.isFinite(selectionStart)
+    ? Math.min(Math.max(0, selectionStart), normalizedValue.length)
+    : normalizedValue.length;
+  const end = Number.isFinite(selectionEnd)
+    ? Math.min(Math.max(start, selectionEnd), normalizedValue.length)
+    : start;
+  if (start !== end) return null;
+
+  const rawLines = normalizedValue.split('\n');
+  const { index, column } = getPatientHistoryMemoCursorPosition(rawLines, start);
+  if (index === 0) return null;
+
+  const currentLine = rawLines[index];
+  const prefixLength = currentLine.match(PATIENT_HISTORY_MEMO_BULLET_PREFIX)?.[0].length || 0;
+  if (column > prefixLength) return null;
+
+  const previousLine = rawLines[index - 1];
+  const previousContent = previousLine.replace(PATIENT_HISTORY_MEMO_BULLET_PREFIX, '');
+  const currentContent = currentLine.replace(PATIENT_HISTORY_MEMO_BULLET_PREFIX, '');
+
+  const mergedContent = `${previousContent}${currentContent}`;
+  const nextContentLines = rawLines.map((l) => l.replace(PATIENT_HISTORY_MEMO_BULLET_PREFIX, ''));
+  nextContentLines[index - 1] = mergedContent;
+  nextContentLines.splice(index, 1);
+
+  const usesBullets = nextContentLines.length > 1;
+  const formattedLines = nextContentLines.map((l) => (usesBullets ? `• ${l}` : l));
+  const nextValue = formattedLines.join('\n');
+
+  const prevLineStart = formattedLines.slice(0, index - 1).reduce((sum, l) => sum + l.length + 1, 0);
+  const targetCaret = prevLineStart + (usesBullets ? 2 : 0) + previousContent.length;
+
+  return {
+    value: nextValue,
+    selectionStart: targetCaret,
+    selectionEnd: targetCaret,
+  };
+}
+
+export function mergePatientHistoryMemoLineForward(rawValue, selectionStart, selectionEnd) {
+  const normalizedValue = String(rawValue ?? '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+  const start = Number.isFinite(selectionStart)
+    ? Math.min(Math.max(0, selectionStart), normalizedValue.length)
+    : normalizedValue.length;
+  const end = Number.isFinite(selectionEnd)
+    ? Math.min(Math.max(start, selectionEnd), normalizedValue.length)
+    : start;
+  if (start !== end) return null;
+
+  const rawLines = normalizedValue.split('\n');
+  const { index, column } = getPatientHistoryMemoCursorPosition(rawLines, start);
+  if (index >= rawLines.length - 1) return null;
+
+  const currentLine = rawLines[index];
+  if (column < currentLine.length) return null;
+
+  const nextLine = rawLines[index + 1];
+  const currentContent = currentLine.replace(PATIENT_HISTORY_MEMO_BULLET_PREFIX, '');
+  const nextContent = nextLine.replace(PATIENT_HISTORY_MEMO_BULLET_PREFIX, '');
+
+  const mergedContent = `${currentContent}${nextContent}`;
+  const nextContentLines = rawLines.map((l) => l.replace(PATIENT_HISTORY_MEMO_BULLET_PREFIX, ''));
+  nextContentLines[index] = mergedContent;
+  nextContentLines.splice(index + 1, 1);
+
+  const usesBullets = nextContentLines.length > 1;
+  const formattedLines = nextContentLines.map((l) => (usesBullets ? `• ${l}` : l));
+  const nextValue = formattedLines.join('\n');
+
+  const lineStart = formattedLines.slice(0, index).reduce((sum, l) => sum + l.length + 1, 0);
+  const targetCaret = lineStart + (usesBullets ? 2 : 0) + currentContent.length;
+
+  return {
+    value: nextValue,
+    selectionStart: targetCaret,
+    selectionEnd: targetCaret,
+  };
+}
+
 export function removeEmptyPatientHistoryMemoLine(rawValue, selectionStart, selectionEnd) {
   const normalizedValue = String(rawValue ?? '')
     .replace(/\r\n/g, '\n')

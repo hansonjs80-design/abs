@@ -22,6 +22,8 @@ import {
   isPatientHistoryCellClearShortcut,
   isPatientHistoryCellEditorShortcut,
   normalizePatientHistoryCellValue,
+  mergePatientHistoryMemoLineBackward,
+  mergePatientHistoryMemoLineForward,
   removeEmptyPatientHistoryMemoLine,
   runPatientHistoryTasksWithConcurrency,
   stepPatientHistoryVisitCount,
@@ -351,6 +353,55 @@ describe('patient history memo cell actions', () => {
       x: 998,
       width: 272,
       side: 'overlap',
+    });
+  });
+  it('merges line content into the previous line on backspace at the start of a line and pulls lower lines up', () => {
+    // 3 lines: 1, 2, 3
+    const threeLines = '• 1행\n• 2행\n• 3행';
+    // Caret at line 2 start (just after the bullet)
+    const line2Start = '• 1행\n• '.length;
+    const mergedBack = mergePatientHistoryMemoLineBackward(threeLines, line2Start, line2Start);
+
+    assert.deepEqual(mergedBack, {
+      value: '• 1행2행\n• 3행',
+      selectionStart: '• 1행'.length,
+      selectionEnd: '• 1행'.length,
+    });
+
+    // 2 lines: merging reduces to 1 line, removing bullet points
+    const twoLines = '• 1행\n• 2행';
+    const twoLine2Start = '• 1행\n• '.length;
+    const mergedToOne = mergePatientHistoryMemoLineBackward(twoLines, twoLine2Start, twoLine2Start);
+
+    assert.deepEqual(mergedToOne, {
+      value: '1행2행',
+      selectionStart: '1행'.length,
+      selectionEnd: '1행'.length,
+    });
+  });
+
+  it('pulls next line content into the current line on delete at the end of a line without bullet markers', () => {
+    // 3 lines: 1, 2, 3
+    const threeLines = '• 1행\n• 2행\n• 3행';
+    // Caret at end of line 1
+    const line1End = '• 1행'.length;
+    const mergedForward = mergePatientHistoryMemoLineForward(threeLines, line1End, line1End);
+
+    assert.deepEqual(mergedForward, {
+      value: '• 1행2행\n• 3행',
+      selectionStart: '• 1행'.length,
+      selectionEnd: '• 1행'.length,
+    });
+
+    // 2 lines: deleting at end of line 1 pulls line 2 up and drops bullet points
+    const twoLines = '• 1행\n• 2행';
+    const twoLine1End = '• 1행'.length;
+    const mergedToOne = mergePatientHistoryMemoLineForward(twoLines, twoLine1End, twoLine1End);
+
+    assert.deepEqual(mergedToOne, {
+      value: '1행2행',
+      selectionStart: '1행'.length,
+      selectionEnd: '1행'.length,
     });
   });
 });
