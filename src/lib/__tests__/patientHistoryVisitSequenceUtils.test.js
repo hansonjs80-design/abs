@@ -132,8 +132,8 @@ describe('patient history visit sequence colors', () => {
     ];
 
     assert.deepEqual(getPatientHistoryGroupedVisitSequenceColors(rows), [
-      null,
-      ...Array(6).fill('#bfdbfe'),
+      '#bfdbfe',
+      ...Array(6).fill('#93c5fd'),
     ]);
   });
 
@@ -151,5 +151,16 @@ describe('patient history visit sequence colors', () => {
       getPatientHistoryGroupedVisitSequenceColors(rows, normalizeGroup),
       Array(3).fill('#bbf7d0')
     );
+  });
+  it('colors standalone or single visits with alternating tones per treatment group instead of leaving them blank', () => {
+    const rows = [
+      { ...log('1', '2026-09-03'), history_group: 'manual' },
+      { ...log('*', '2026-09-02'), history_group: 'manual' },
+      { ...log('1', '2026-09-01'), history_group: 'shockwave' },
+    ];
+    const colors = getPatientHistoryGroupedVisitSequenceColors(rows);
+    assert.equal(colors[0], '#fed7aa');
+    assert.equal(colors[1], '#fdba74');
+    assert.equal(colors[2], '#bfdbfe');
   });
 });

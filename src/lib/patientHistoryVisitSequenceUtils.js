@@ -42,7 +42,8 @@ function getVisitSequenceEdge(currentLog, nextLog) {
 
 export function getPatientHistoryVisitSequenceColors(
   logs = [],
-  palette = PATIENT_HISTORY_VISIT_SEQUENCE_COLORS
+  palette = PATIENT_HISTORY_VISIT_SEQUENCE_COLORS,
+  fillStandalone = false
 ) {
   const source = Array.isArray(logs) ? logs : [];
   const colors = Array.isArray(palette) && palette.length > 0
@@ -55,11 +56,25 @@ export function getPatientHistoryVisitSequenceColors(
 
   const finishRun = (endExclusive) => {
     if (runHasStep) {
-      const color = colors[
-        sequenceIndex % colors.length
-      ];
+      let color = colors[sequenceIndex % colors.length];
+      const prevColor = runStart > 0 ? rowColors[runStart - 1] : null;
+      if (prevColor && color === prevColor && colors.length > 1) {
+        sequenceIndex += 1;
+        color = colors[sequenceIndex % colors.length];
+      }
       rowColors.fill(color, runStart, endExclusive);
       sequenceIndex += 1;
+    } else if (fillStandalone) {
+      for (let r = runStart; r < endExclusive; r += 1) {
+        let color = colors[sequenceIndex % colors.length];
+        const prevColor = r > 0 ? rowColors[r - 1] : null;
+        if (prevColor && color === prevColor && colors.length > 1) {
+          sequenceIndex += 1;
+          color = colors[sequenceIndex % colors.length];
+        }
+        rowColors[r] = color;
+        sequenceIndex += 1;
+      }
     }
   };
 
@@ -81,7 +96,8 @@ export function getPatientHistoryVisitSequenceColors(
 
 export function getPatientHistoryGroupedVisitSequenceColors(
   logs = [],
-  getTreatmentGroup = (log) => log?.history_group || 'shockwave'
+  getTreatmentGroup = (log) => log?.history_group || 'shockwave',
+  options = {}
 ) {
   const source = Array.isArray(logs) ? logs : [];
   const rowColors = Array(source.length).fill(null);
@@ -104,7 +120,8 @@ export function getPatientHistoryGroupedVisitSequenceColors(
       || PATIENT_HISTORY_VISIT_SEQUENCE_COLORS;
     const colors = getPatientHistoryVisitSequenceColors(
       orderedRows.map(({ log }) => log),
-      palette
+      palette,
+      options.fillStandalone ?? true
     );
     orderedRows.forEach(({ index }, orderedIndex) => {
       rowColors[index] = colors[orderedIndex];
