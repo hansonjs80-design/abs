@@ -4600,6 +4600,11 @@
   -webkit-text-stroke: 0.25px currentColor !important;
 }
 
+/* Keep each history row's own color while making hover slightly darker. */
+.patient-history-table tbody tr.patient-history-prescription-row:is(:hover, .patient-history-row--hovered):not(:has(.is-selected, .is-fill-preview)) > td {
+  background-color: color-mix(in srgb, var(--patient-history-prescription-row-bg, var(--bg-primary, #fff)) 94%, black) !important;
+}
+
 .patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-selected) > td,
 .patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-fill-preview) > td {
   background-color: #cbd5e1 !important;
@@ -4747,6 +4752,15 @@
 .patient-history-table tbody tr:not(.patient-history-current-row):not(:hover):not(.patient-history-row--hovered) > td :is(span, input, textarea, select, button) {
   font-weight: 550 !important;
   -webkit-text-stroke: 0 transparent !important;
+}
+
+/* Reduce only date, chart number, and visit count weights at rest. */
+.patient-history-table tbody tr:not(.patient-history-current-row):not(:hover):not(.patient-history-row--hovered) :is(.patient-history-date-cell, .patient-history-chart-cell, .patient-history-visit-count-field) {
+  font-weight: 500 !important;
+}
+
+.patient-history-table tbody tr.patient-history-current-row:not(:hover):not(.patient-history-row--hovered) :is(.patient-history-date-cell, .patient-history-chart-cell, .patient-history-visit-count-field) {
+  font-weight: 750 !important;
 }
 
 /* Ensure hover thickening applies on top of prescription and visit field weights for English and numbers */
