@@ -77,7 +77,9 @@ function PatientHistoryModal({
         backgroundColor: 'rgba(0,0,0,0.5)',
         display: 'flex',
         justifyContent: 'center',
-        alignItems: 'center',
+        alignItems: 'flex-start',
+        paddingTop: 'clamp(16px, 8dvh, 72px)',
+        boxSizing: 'border-box',
         zIndex: 999999,
         overscrollBehavior: 'none',
       }}
@@ -88,6 +90,7 @@ function PatientHistoryModal({
           background: 'var(--bg-primary, #fff)',
           maxWidth: patientHistoryModalLayout.maxWidth,
           width: patientHistoryModalLayout.width,
+          maxHeight: 'calc(100dvh - clamp(16px, 8dvh, 72px) - 16px)',
           borderRadius: '12px',
           boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
           display: 'flex',
@@ -101,6 +104,7 @@ function PatientHistoryModal({
           className="patient-history-modal-header"
           style={{
             display: 'flex',
+            flexShrink: 0,
             justifyContent: 'space-between',
             alignItems: 'center',
             padding: '12px 20px',
@@ -248,7 +252,7 @@ function PatientHistoryModal({
           </div>
         </div>
 
-        <div ref={patientHistoryModalBodyRef} style={{ padding: '0 18px 14px', maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain' }}>
+        <div ref={patientHistoryModalBodyRef} style={{ padding: '0 18px 14px', minHeight: 0, maxHeight: '70vh', overflowY: 'auto', overscrollBehavior: 'contain' }}>
           {patientHistoryModalData.loading ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-tertiary)' }}>
               내역을 불러오는 중...

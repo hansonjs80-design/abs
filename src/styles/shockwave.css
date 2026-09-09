@@ -4618,7 +4618,7 @@
 /* Blend in the original visit color so translucent row tints become more vivid. */
 .patient-history-table tbody tr.patient-history-prescription-row:is(:hover, .patient-history-row--hovered):not(:has(.is-selected, .is-fill-preview)) > td {
   background-color: var(--patient-history-prescription-row-bg, var(--bg-primary, #fff)) !important;
-  background-color: color-mix(in srgb, var(--patient-history-prescription-row-bg, var(--bg-primary, #fff)) 84%, var(--patient-history-row-accent, var(--patient-history-prescription-row-bg))) !important;
+  background-color: color-mix(in srgb, var(--patient-history-prescription-row-bg, var(--bg-primary, #fff)) 50%, var(--patient-history-row-accent, var(--patient-history-prescription-row-bg))) !important;
 }
 
 .patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-selected) > td,
