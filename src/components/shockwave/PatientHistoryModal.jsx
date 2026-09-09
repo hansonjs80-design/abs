@@ -335,7 +335,7 @@ function PatientHistoryModal({
                             <th className="patient-history-treatment-type-header">치료 구분</th>
                           )}
                           <th style={{ textAlign: 'center' }}>날짜</th>
-                          <th style={{ textAlign: 'center' }}>챠트</th>
+                          <th style={{ textAlign: 'center' }}>챠트번호</th>
                           <th style={{ textAlign: 'center' }}>처방</th>
                           <th style={{ textAlign: 'center' }}>부위</th>
                           <th style={{ textAlign: 'center' }}>메모</th>
