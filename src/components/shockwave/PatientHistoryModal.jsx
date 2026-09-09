@@ -359,7 +359,7 @@ function PatientHistoryModal({
                             ? `draft-${selectedCell.w}-${selectedCell.d}-${selectedCell.r}-${selectedCell.c}`
                             : '';
                           const isCurrentHistoryRow = Boolean(log.isCurrentCell || (selectedHistoryCellId && log.id === selectedHistoryCellId));
-                          const historyRowFontWeight = isCurrentHistoryRow ? 800 : 400;
+                          const historyRowFontWeight = isCurrentHistoryRow ? 800 : 550;
                           const currentPrescriptionValue = String(log.prescription || '');
                           const configuredPrescriptionOptions = patientHistoryPrescriptionOptions[historyTreatmentGroup]
                             || patientHistoryPrescriptionOptions.shockwave

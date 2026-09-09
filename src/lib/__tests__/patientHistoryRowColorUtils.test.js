@@ -23,5 +23,5 @@ test('derives background from visit sequence cell color and darkens for current 
   const currentBg = getPatientHistoryPrescriptionRowColor('30분', visitColorHex, true);
 
   assert.equal(normalBg, 'rgba(254, 215, 170, 0.32)');
-  assert.equal(currentBg, 'rgba(208, 176, 139, 0.72)');
+  assert.equal(currentBg, 'rgba(254, 225, 191, 0.82)');
 });

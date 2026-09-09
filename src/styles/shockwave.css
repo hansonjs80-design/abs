@@ -4588,8 +4588,8 @@
 .patient-history-table tbody tr.patient-history-row--hovered > td,
 .patient-history-table tbody tr:hover > td :is(span, input, textarea, select, button),
 .patient-history-table tbody tr.patient-history-row--hovered > td :is(span, input, textarea, select, button) {
-  font-weight: 850 !important;
-  -webkit-text-stroke: 0.38px currentColor !important;
+  font-weight: 800 !important;
+  -webkit-text-stroke: 0.25px currentColor !important;
 }
 
 .patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-selected) > td,
@@ -4752,8 +4752,8 @@
 .patient-history-table tbody tr.patient-history-row--hovered .patient-history-visit-count-field,
 .patient-history-table tbody tr:hover .patient-history-edit-field--prescription,
 .patient-history-table tbody tr.patient-history-row--hovered .patient-history-edit-field--prescription {
-  font-weight: 900 !important;
-  -webkit-text-stroke: 0.38px currentColor !important;
+  font-weight: 800 !important;
+  -webkit-text-stroke: 0.25px currentColor !important;
 }
 
 .patient-history-table .patient-history-visit-count-field.has-visit-sequence {

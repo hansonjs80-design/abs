@@ -32,11 +32,11 @@ export function getPatientHistoryPrescriptionRowColor(prescription, baseColor, i
     if (rgb) {
       const [r, g, b] = rgb;
       if (isCurrentCell) {
-        // 회차 셀 색상 기반으로 약간 더 진하게 강조
-        const darkR = Math.max(0, Math.round(r * 0.82));
-        const darkG = Math.max(0, Math.round(g * 0.82));
-        const darkB = Math.max(0, Math.round(b * 0.82));
-        return `rgba(${darkR}, ${darkG}, ${darkB}, 0.72)`;
+        // 회차 셀 색상 기반으로 산뜻하게 강조 (밝고 채도 높게)
+        const brightR = Math.min(255, Math.round(r + (255 - r) * 0.25));
+        const brightG = Math.min(255, Math.round(g + (255 - g) * 0.25));
+        const brightB = Math.min(255, Math.round(b + (255 - b) * 0.25));
+        return `rgba(${brightR}, ${brightG}, ${brightB}, 0.82)`;
       }
       // 일반 행: 회차 셀 색상 기반의 은은하고 연한 배경
       return `rgba(${r}, ${g}, ${b}, 0.32)`;
@@ -45,7 +45,7 @@ export function getPatientHistoryPrescriptionRowColor(prescription, baseColor, i
 
   const label = String(prescription ?? '').trim();
   if (!label) {
-    return isCurrentCell ? 'rgba(203, 213, 225, 0.9)' : '#f8fafc';
+    return isCurrentCell ? 'rgba(186, 210, 235, 0.78)' : '#f8fafc';
   }
 
   let hash = 2166136261;
@@ -53,7 +53,7 @@ export function getPatientHistoryPrescriptionRowColor(prescription, baseColor, i
     hash = Math.imul(hash ^ character.codePointAt(0), 16777619) >>> 0;
   }
   const hue = hash % 360;
-  const lightness = isCurrentCell ? 78 : 93;
-  const saturation = isCurrentCell ? 80 : 70;
+  const lightness = isCurrentCell ? 84 : 93;
+  const saturation = isCurrentCell ? 85 : 70;
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }
