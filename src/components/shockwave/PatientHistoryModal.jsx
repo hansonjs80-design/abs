@@ -448,7 +448,7 @@ function PatientHistoryModal({
                               >
                                 {log.date}
                                 {isCurrentHistoryRow && (
-                                  <span style={{ fontSize: '0.82rem', color: 'var(--brand-primary)', display: 'block', marginTop: '2px', fontWeight: 800 }}>현재 셀</span>
+                                  <span style={{ fontSize: '0.82rem', color: '#dc2626', display: 'block', marginTop: '2px', fontWeight: 800 }}>현재 셀</span>
                                 )}
                               </td>
                               <td
