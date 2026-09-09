@@ -16,3 +16,12 @@ test('missing prescriptions use a neutral row background', () => {
     assert.equal(getPatientHistoryPrescriptionRowColor(value), '#f8fafc');
   }
 });
+
+test('derives soft background tint from prescription text color and darkens for current cell', () => {
+  const textColorHex = '#2563eb';
+  const normalBg = getPatientHistoryPrescriptionRowColor('F2.5', textColorHex, false);
+  const currentBg = getPatientHistoryPrescriptionRowColor('F2.5', textColorHex, true);
+
+  assert.equal(normalBg, 'rgba(37, 99, 235, 0.14)');
+  assert.equal(currentBg, 'rgba(37, 99, 235, 0.32)');
+});

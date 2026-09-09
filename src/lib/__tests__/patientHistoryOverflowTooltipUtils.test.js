@@ -372,7 +372,7 @@ test('current patient history row border includes the pinned number cell as one 
 test('patient history rows use prescription backgrounds including the current row', async () => {
   const shockwaveView = await readPatientHistoryRenderSource();
 
-  assert.match(shockwaveView, /getPatientHistoryPrescriptionRowColor\(log\.prescription\)/);
+  assert.match(shockwaveView, /getPatientHistoryPrescriptionRowColor\s*\(\s*[\s\S]*?log\.prescription/);
   assert.match(shockwaveView, /'--patient-history-prescription-row-bg': currentCellRowBackground/);
   assert.match(shockwaveView, /'--patient-history-current-row-bg': currentCellRowBackground/);
 });

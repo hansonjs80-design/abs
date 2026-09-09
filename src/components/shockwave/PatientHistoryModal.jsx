@@ -357,7 +357,6 @@ function PatientHistoryModal({
                             ? `draft-${selectedCell.w}-${selectedCell.d}-${selectedCell.r}-${selectedCell.c}`
                             : '';
                           const isCurrentHistoryRow = Boolean(log.isCurrentCell || (selectedHistoryCellId && log.id === selectedHistoryCellId));
-                          const currentCellRowBackground = getPatientHistoryPrescriptionRowColor(log.prescription);
                           const historyRowFontWeight = isCurrentHistoryRow ? 800 : 400;
                           const currentPrescriptionValue = String(log.prescription || '');
                           const configuredPrescriptionOptions = patientHistoryPrescriptionOptions[historyTreatmentGroup]
@@ -370,6 +369,11 @@ function PatientHistoryModal({
                           const currentPrescriptionColor = getPatientHistoryPrescriptionColor(
                             currentPrescriptionValue,
                             effectivePrescriptionColors
+                          );
+                          const currentCellRowBackground = getPatientHistoryPrescriptionRowColor(
+                            log.prescription,
+                            currentPrescriptionColor,
+                            isCurrentHistoryRow
                           );
                           const historyEditFieldStyle = {
                             width: '100%',
