@@ -12,6 +12,7 @@ import {
 import { parseSchedulerPatientIdentity } from '../../lib/schedulerUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import { getPatientHistoryPrescriptionRowColor } from '../../lib/patientHistoryRowColorUtils';
+import { PATIENT_HISTORY_TREATMENT_SEQUENCE_PALETTES } from '../../lib/patientHistoryVisitSequenceUtils';
 
 function PatientHistoryModal({
   open,
@@ -371,9 +372,12 @@ function PatientHistoryModal({
                             currentPrescriptionValue,
                             effectivePrescriptionColors
                           );
+                          const effectiveVisitColor = visitSequenceColor
+                            || PATIENT_HISTORY_TREATMENT_SEQUENCE_PALETTES[historyTreatmentGroup]?.[0]
+                            || '#bfdbfe';
                           const currentCellRowBackground = getPatientHistoryPrescriptionRowColor(
                             log.prescription,
-                            currentPrescriptionColor,
+                            effectiveVisitColor,
                             isCurrentHistoryRow
                           );
                           const historyEditFieldStyle = {

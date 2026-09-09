@@ -25,22 +25,22 @@ function colorToRgba(colorStr, alpha) {
 
   const hslMatch = trimmed.match(/^hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%/i);
   if (hslMatch) {
-    const [, h, s] = hslMatch;
-    const alphaLightness = isNaN(alpha) ? 93 : Math.max(70, Math.round(96 - alpha * 45));
+    const [, h, s, l] = hslMatch;
+    const alphaLightness = isNaN(alpha) ? 93 : Math.max(65, Math.round(96 - alpha * 35));
     return `hsl(${h}, ${s}%, ${alphaLightness}%)`;
   }
 
   return null;
 }
 
-// Derive the tint from the prescription text color or label so sorting and filtering never change it.
-export function getPatientHistoryPrescriptionRowColor(prescription, prescriptionColor, isCurrentCell = false) {
-  const normalAlpha = 0.14;
-  const currentAlpha = 0.32;
+// Derive the tint from the visit sequence cell color or prescription label.
+export function getPatientHistoryPrescriptionRowColor(prescription, baseColor, isCurrentCell = false) {
+  const normalAlpha = 0.35;
+  const currentAlpha = 0.75;
   const alpha = isCurrentCell ? currentAlpha : normalAlpha;
 
-  if (prescriptionColor) {
-    const rgba = colorToRgba(prescriptionColor, alpha);
+  if (baseColor) {
+    const rgba = colorToRgba(baseColor, alpha);
     if (rgba) return rgba;
   }
 
