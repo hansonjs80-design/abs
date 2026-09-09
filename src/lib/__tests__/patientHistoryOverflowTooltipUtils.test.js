@@ -848,7 +848,7 @@ test('patient history date cells expose single-click schedule navigation and sel
     /\.patient-history-table \.patient-history-date-cell\s*\{([^}]*)\}/s
   )?.[1] || '';
 
-  assert.match(patientHistoryModal, /className="patient-history-date-cell"/);
+  assert.match(patientHistoryModal, /className=\{`patient-history-date-cell\$\{/);
   assert.match(patientHistoryModal, /onClick=\{\(\) => handlePatientHistoryDateClick\(log\)\}/);
   assert.doesNotMatch(patientHistoryModal, /handlePatientHistoryDateDoubleClick/);
   assert.match(shockwaveView, /targetDate:\s*pendingPatientHistoryNavigation\?\.date \|\| null/);

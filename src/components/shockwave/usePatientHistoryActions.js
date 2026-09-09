@@ -29,6 +29,11 @@ import {
   getPrescriptionScheduleSettings,
 } from '../../lib/prescriptionScheduleSettings';
 import { supabase } from '../../lib/supabaseClient';
+import { getEffectiveCellBgColor } from '../../lib/scheduleStatusUtils';
+import {
+  getPatientHistoryScheduleCompletion,
+  getPatientHistoryScheduleStatusSignature,
+} from '../../lib/patientHistoryScheduleStatusUtils';
 import {
   extractDoseTagFromPrescription,
   getActionDoseTagFromPrescription,
@@ -117,6 +122,7 @@ const SCHEDULER_LINKED_HISTORY_SCHEDULE_SELECT = [
   'prescription',
   'body_part',
   'merge_span',
+  'bg_color',
   'updated_at',
 ].join(',');
 
@@ -281,6 +287,7 @@ export default function usePatientHistoryActions({
   editValue,
   editInputRef,
   memos,
+  pendingCellBgColors,
   pendingDisplayValues,
   baseTimeSlotsLength,
   colCount,
@@ -343,6 +350,7 @@ export default function usePatientHistoryActions({
       baseTimeSlotsLength,
       colCount,
       prescriptionClassificationSignature,
+      getPatientHistoryScheduleStatusSignature(memos, pendingCellBgColors),
     ].join('__');
     const setLoadedPatientHistory = (logs, chartOptions = []) => {
       setPatientHistoryModalData((prev) => ({
@@ -499,6 +507,7 @@ export default function usePatientHistoryActions({
           ...log,
           schedule_id: linkedSchedule.id,
           memo: getPatientHistoryMemoText(linkedSchedule.merge_span),
+          schedule_completed: getPatientHistoryScheduleCompletion(linkedSchedule),
         };
       });
       let allData = logsWithLinkedScheduleMemos.filter(keepHistoryLog);
@@ -643,6 +652,7 @@ export default function usePatientHistoryActions({
             prescription: schedulePrescription || '',
             body_part: s.body_part || '',
             memo: getPatientHistoryMemoText(s.merge_span),
+            schedule_completed: getPatientHistoryScheduleCompletion(s),
             therapist_name: therapistName,
             type: 'schedule',
             history_group: historyGroup,
@@ -676,6 +686,7 @@ export default function usePatientHistoryActions({
               prescription: scheduleLog.prescription || allData[existingIndex].prescription,
               body_part: scheduleLog.body_part || allData[existingIndex].body_part,
               memo: scheduleLog.memo,
+              schedule_completed: scheduleLog.schedule_completed,
               therapist_name: scheduleLog.therapist_name,
               schedule_id: scheduleLog.id,
               scheduler_cell_key: scheduleLog.scheduler_cell_key,
@@ -706,6 +717,7 @@ export default function usePatientHistoryActions({
           prescription: override.prescription || item.prescription,
           body_part: override.body_part || item.body_part,
           memo: override.memo,
+          schedule_completed: override.schedule_completed,
           therapist_name: override.therapist_name,
           schedule_id: override.id,
           scheduler_cell_key: override.scheduler_cell_key,
@@ -776,6 +788,9 @@ export default function usePatientHistoryActions({
                   getUniqueMatchingBodyPart(allData, draftLog),
                 ) || '',
                 memo: getPatientHistoryMemoText(memo.merge_span),
+                schedule_completed: getPatientHistoryScheduleCompletion({
+                  bg_color: getEffectiveCellBgColor(memos, pendingCellBgColors, key),
+                }),
                 therapist_name: resolveTherapistNameForHistory({
                   slotIndex: colIndex,
                   day: selectedDayInfo.day,
@@ -835,6 +850,7 @@ export default function usePatientHistoryActions({
     monthlyManualTherapists,
     selectedCell,
     memos,
+    pendingCellBgColors,
     pendingDisplayValues,
     baseTimeSlotsLength,
     colCount,

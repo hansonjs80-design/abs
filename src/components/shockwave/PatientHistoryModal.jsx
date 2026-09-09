@@ -432,11 +432,11 @@ function PatientHistoryModal({
                                   className={`patient-history-treatment-type-cell patient-history-treatment-type-cell--${historyTreatmentGroup}`}
                                   title={`${historyTreatmentLabel} 내역`}
                                 >
-                                  {historyTreatmentLabel}
+                                  <span className="patient-history-treatment-type-text">{historyTreatmentLabel}</span>
                                 </td>
                               )}
                               <td
-                                className="patient-history-date-cell"
+                                className={`patient-history-date-cell${log.schedule_completed === false ? ' patient-history-date-cell--incomplete' : ''}`}
                                 title={`${log.date} 스케줄 주차로 이동하려면 클릭하세요`}
                                 onClick={() => handlePatientHistoryDateClick(log)}
                                 style={{
@@ -537,7 +537,7 @@ function PatientHistoryModal({
                                   fontWeight: historyRowFontWeight,
                                 }}
                               >
-                                {log.therapist_name || '-'}
+                                <span className="patient-history-therapist-text">{log.therapist_name || '-'}</span>
                               </td>
                               <td
                                 style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, fontWeight: historyRowFontWeight }}

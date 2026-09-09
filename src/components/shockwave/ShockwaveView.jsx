@@ -1993,6 +1993,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     editValue,
     editInputRef,
     memos: effectiveMemos,
+    pendingCellBgColors,
     pendingDisplayValues,
     baseTimeSlotsLength: baseTimeSlots.length,
     colCount,

@@ -4403,8 +4403,25 @@
   text-underline-offset: 2px;
 }
 
+.patient-history-table .patient-history-date-cell--incomplete {
+  color: #2563eb;
+}
+
 .patient-history-table .patient-history-therapist-cell {
   font-size: calc(0.598rem - 4px);
+}
+
+/* Scale the painted text too, including when a browser enforces a minimum font size. */
+.patient-history-table .patient-history-therapist-text {
+  display: inline-block;
+  transform: scale(0.9);
+  transform-origin: center;
+}
+
+.patient-history-table .patient-history-treatment-type-text {
+  display: inline-block;
+  transform: scale(0.85);
+  transform-origin: center;
 }
 
 .patient-history-table .patient-history-row-number-cell {
