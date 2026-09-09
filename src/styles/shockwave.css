@@ -4730,19 +4730,15 @@
 /* Keep the current row emphasized; other rows gain weight only while hovered. */
 .patient-history-table tbody tr:not(.patient-history-current-row) {
   --patient-history-row-font-weight: 350;
-  --patient-history-row-emphasis-weight: 600;
 }
 
 .patient-history-table tbody tr:not(.patient-history-current-row):hover {
   --patient-history-row-font-weight: 700;
-  --patient-history-row-emphasis-weight: 800;
 }
 
-.patient-history-table tbody tr:not(.patient-history-current-row) .patient-history-row-number-cell,
-.patient-history-table tbody tr:not(.patient-history-current-row) .patient-history-treatment-type-cell,
-.patient-history-table tbody tr:not(.patient-history-current-row) .patient-history-edit-field--prescription,
-.patient-history-table tbody tr:not(.patient-history-current-row) .patient-history-visit-count-field {
-  font-weight: var(--patient-history-row-emphasis-weight) !important;
+.patient-history-table tbody tr:not(.patient-history-current-row) > td,
+.patient-history-table tbody tr:not(.patient-history-current-row) > td :is(span, input, textarea, select, button) {
+  font-weight: var(--patient-history-row-font-weight) !important;
 }
 
 .patient-history-table .patient-history-visit-count-field.has-visit-sequence {
