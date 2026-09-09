@@ -7,6 +7,7 @@ import {
   findBodyPartPresetItemByValue,
   formatBodyPartPresetDisplayValue,
   getBodyPartPresetState,
+  getBodyPartUnselectedCustomOptions,
 } from '../../lib/bodyPartPresetUtils';
 
 export default function BodyPartKeyboardPanel({
@@ -31,8 +32,7 @@ export default function BodyPartKeyboardPanel({
   const selectedInputRefs = useRef([]);
   const selectedParts = currentParts.map((part) => String(part || '').trim()).filter(Boolean);
   const selectedPartSignature = selectedParts.join('\u001f');
-  const selectedKeySet = new Set(selectedParts.map((part) => normalizeBodyPartKey(part)));
-  const selectableParts = availableParts.filter((part) => !selectedKeySet.has(normalizeBodyPartKey(part)));
+  const selectableParts = getBodyPartUnselectedCustomOptions(availableParts, selectedParts);
 
   const togglePresetDirection = (item, directionId) => {
     const { directions } = getBodyPartPresetState(selectedParts, item);

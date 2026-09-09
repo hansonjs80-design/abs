@@ -8,6 +8,7 @@ import {
   formatBodyPartPresetDisplayText,
   formatBodyPartPresetDisplayValue,
   getBodyPartPresetState,
+  getBodyPartUnselectedCustomOptions,
   replaceBodyPartPreset,
   replaceBodyPartPresetOptions,
 } from '../bodyPartPresetUtils.js';
@@ -111,4 +112,16 @@ describe('bodyPartPresetUtils', () => {
       ['Rt. 족저근막염(M722)', 'Lt. 석회성건염(M6521)']
     );
   });
+});
+
+
+it('unchecked presets from historical options never reappear as custom choices', () => {
+  const cervical = findBodyPartPresetItem('cervical-myofascial-pain');
+  const selected = replaceBodyPartPreset(['직접 입력한 통증 부위'], cervical, true, ['left']);
+  const historyOptions = [...selected, 'Rt. 경추근막통증(M79180)', '석회성 건염(M6521)', '다른 직접 입력'];
+  assert.deepEqual(getBodyPartUnselectedCustomOptions(historyOptions, selected), ['다른 직접 입력']);
+  const cleared = replaceBodyPartPreset(selected, cervical, false);
+  assert.deepEqual(cleared, ['직접 입력한 통증 부위']);
+  assert.deepEqual(getBodyPartUnselectedCustomOptions(historyOptions, cleared), ['다른 직접 입력']);
+  assert.deepEqual(getBodyPartUnselectedCustomOptions(historyOptions, []), ['직접 입력한 통증 부위', '다른 직접 입력']);
 });

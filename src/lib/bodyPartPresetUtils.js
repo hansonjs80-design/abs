@@ -216,3 +216,13 @@ export function replaceBodyPartPresetOptions(options, item, nextParts) {
     });
   return Array.from(optionMap.values());
 }
+
+// Preset choices already live in the upper checklist. History/options must not
+// resurrect deselected presets in the lower custom-entry list.
+export function getBodyPartUnselectedCustomOptions(availableParts = [], currentParts = []) {
+  const selectedKeys = new Set(currentParts.map(normalizePresetValue));
+  return availableParts.filter((part) => (
+    !findBodyPartPresetItemByValue(part)
+    && !selectedKeys.has(normalizePresetValue(part))
+  ));
+}
