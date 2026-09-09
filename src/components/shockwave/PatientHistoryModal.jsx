@@ -348,8 +348,9 @@ function PatientHistoryModal({
                       <tbody>
                         {group.logs.map((log, idx) => {
                           const historyRowKey = log._history_row_key || `${group.key}-${log.id || log.date}-${idx}`;
-                          const visitSequenceColor = group.visitSequenceColors?.[idx] || null;
                           const historyTreatmentGroup = getPatientHistoryGroupKey(log);
+                          const visitSequenceColor = group.visitSequenceColors?.[idx]
+                            || (historyTreatmentGroup === 'shinjang' ? '#bbf7d0' : null);
                           const historyTreatmentLabel = PATIENT_HISTORY_GROUPS.find(
                             (option) => option.key === historyTreatmentGroup
                           )?.label.replace(' 내역', '') || '충격파';

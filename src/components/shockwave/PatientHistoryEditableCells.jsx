@@ -334,7 +334,7 @@ export default function PatientHistoryEditableCells({
       >
         <PatientHistoryOverflowField disabled value={activeVisitCountValue}>
           <input
-            className={`patient-history-edit-field patient-history-edit-field--inset patient-history-edit-field--detail patient-history-visit-count-field${visitSequenceColor ? ' has-visit-sequence' : ''}${isVisitInlineEditing ? ' patient-history-edit-field--inline-editing' : ''}`}
+            className={`patient-history-edit-field patient-history-edit-field--inset patient-history-edit-field--detail patient-history-visit-count-field${(visitSequenceColor || String(log?.history_group || '').includes('shinjang') || String(log?.prescription || '').includes('신장')) ? ' has-visit-sequence patient-history-visit-count-field--shinjang' : ''}${isVisitInlineEditing ? ' patient-history-edit-field--inline-editing' : ''}`}
             type="text"
             inputMode="text"
             value={activeVisitCountValue}
@@ -355,7 +355,7 @@ export default function PatientHistoryEditableCells({
               boxShadow: 'none',
               font: 'inherit',
               fontWeight: 'inherit',
-              '--patient-history-visit-sequence-bg': visitSequenceColor,
+              '--patient-history-visit-sequence-bg': visitSequenceColor || ((String(log?.history_group || '').includes('shinjang') || String(log?.prescription || '').includes('신장')) ? '#bbf7d0' : undefined),
             }}
             onChange={(event) => updatePatientHistoryInlineCellDraft(visitHistoryCell, event.target.value)}
             onBlur={(event) => commitPatientHistoryInlineCellEdit(visitHistoryCell, event.target.value)}

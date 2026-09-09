@@ -721,8 +721,8 @@ test('patient history visit count fields show derived sequence background colors
     /\.patient-history-table \.patient-history-visit-count-field\s*\{([^}]*)\}/s
   )?.[1] || '';
 
-  assert.match(shockwaveView, /const visitSequenceColor = group\.visitSequenceColors\?\.\[idx\] \|\| null;/);
-  assert.match(shockwaveView, /patient-history-visit-count-field\$\{visitSequenceColor \? ' has-visit-sequence' : ''\}/);
+  assert.match(shockwaveView, /const visitSequenceColor = group\.visitSequenceColors\?\.\[idx\]/);
+  assert.match(shockwaveView, /patient-history-visit-count-field\${[\s\S]*?visitSequenceColor/);
   assert.match(shockwaveView, /'--patient-history-visit-sequence-bg': visitSequenceColor/);
   assert.match(visitCountFieldRule, /font-weight:\s*800\s*!important;/);
   assert.match(

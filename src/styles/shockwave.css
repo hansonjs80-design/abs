@@ -4741,6 +4741,10 @@
   background-color: var(--patient-history-visit-sequence-bg) !important;
 }
 
+.patient-history-table .patient-history-visit-count-field--shinjang {
+  background-color: var(--patient-history-visit-sequence-bg, #bbf7d0) !important;
+}
+
 .patient-history-overflow-field {
   position: relative;
   width: 100%;
