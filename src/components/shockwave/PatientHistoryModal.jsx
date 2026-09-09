@@ -11,6 +11,7 @@ import {
 } from './shockwaveViewUtils';
 import { parseSchedulerPatientIdentity } from '../../lib/schedulerUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
+import { getPatientHistoryPrescriptionRowColor } from '../../lib/patientHistoryRowColorUtils';
 
 function PatientHistoryModal({
   open,
@@ -356,13 +357,7 @@ function PatientHistoryModal({
                             ? `draft-${selectedCell.w}-${selectedCell.d}-${selectedCell.r}-${selectedCell.c}`
                             : '';
                           const isCurrentHistoryRow = Boolean(log.isCurrentCell || (selectedHistoryCellId && log.id === selectedHistoryCellId));
-                          const currentCellRowBackground = isCurrentHistoryRow
-                            ? (historyTreatmentGroup === 'manual'
-                              ? '#fff1e3'
-                              : historyTreatmentGroup === 'shinjang'
-                                ? '#ecfdf5'
-                                : '#e6f6fe')
-                            : undefined;
+                          const currentCellRowBackground = getPatientHistoryPrescriptionRowColor(log.prescription);
                           const historyRowFontWeight = isCurrentHistoryRow ? 800 : 400;
                           const currentPrescriptionValue = String(log.prescription || '');
                           const configuredPrescriptionOptions = patientHistoryPrescriptionOptions[historyTreatmentGroup]
@@ -408,7 +403,7 @@ function PatientHistoryModal({
                           return (
                             <tr
                               key={historyRowKey}
-                              className={isCurrentHistoryRow ? 'patient-history-current-row' : undefined}
+                              className={`patient-history-prescription-row${isCurrentHistoryRow ? ' patient-history-current-row' : ''}`}
                               onMouseEnter={(event) => {
                                 event.currentTarget.classList.add('patient-history-row--hovered');
                               }}
@@ -416,6 +411,7 @@ function PatientHistoryModal({
                                 event.currentTarget.classList.remove('patient-history-row--hovered');
                               }}
                               style={{
+                                '--patient-history-prescription-row-bg': currentCellRowBackground,
                                 '--patient-history-current-row-bg': currentCellRowBackground,
                                 fontWeight: historyRowFontWeight,
                               }}

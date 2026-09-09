@@ -4485,6 +4485,10 @@
   font-size: 0.78rem;
 }
 
+.patient-history-table tbody tr.patient-history-prescription-row > td {
+  background-color: var(--patient-history-prescription-row-bg, var(--bg-primary, #fff)) !important;
+}
+
 .patient-history-table tbody tr.patient-history-current-row td {
   background-color: var(--patient-history-current-row-bg) !important;
   border-top: 2px solid rgba(37, 99, 235, 0.46) !important;

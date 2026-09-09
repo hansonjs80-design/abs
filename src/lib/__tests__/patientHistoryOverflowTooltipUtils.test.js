@@ -369,17 +369,12 @@ test('current patient history row border includes the pinned number cell as one 
   assert.doesNotMatch(shockwaveView, /outline:\s*isCurrentHistoryRow/);
 });
 
-test('current patient history row uses light treatment-specific backgrounds', async () => {
+test('patient history rows use prescription backgrounds including the current row', async () => {
   const shockwaveView = await readPatientHistoryRenderSource();
 
-  assert.match(
-    shockwaveView,
-    /historyTreatmentGroup === 'manual'/
-  );
-  assert.match(shockwaveView, /\? '#fff1e3'/);
-  assert.match(shockwaveView, /\? '#ecfdf5'/);
-  assert.match(shockwaveView, /: '#e6f6fe'/);
-  assert.doesNotMatch(shockwaveView, /#fedfbb|#c8ebfd/);
+  assert.match(shockwaveView, /getPatientHistoryPrescriptionRowColor\(log\.prescription\)/);
+  assert.match(shockwaveView, /'--patient-history-prescription-row-bg': currentCellRowBackground/);
+  assert.match(shockwaveView, /'--patient-history-current-row-bg': currentCellRowBackground/);
 });
 
 test('patient history edit fields keep a flat base style until focused', async () => {
