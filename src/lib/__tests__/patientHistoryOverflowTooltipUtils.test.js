@@ -488,7 +488,7 @@ test('patient history cell clipboard keeps an immediate selected-cell reference'
   );
   assert.match(
     cellInteractions,
-    /if \(isUndoShortcutEvent\(event\)\)[\s\S]*?undoLastHistoryChange\(\);/,
+    /if \(isUndoShortcutEvent\(event\)\)[\s\S]*?enqueueHistoryMutation\(undoLastHistoryChange\);/,
   );
   assert.match(
     cellInteractions,
@@ -618,8 +618,9 @@ test('patient history memo and visit double click activate inline field editors'
   assert.doesNotMatch(shockwaveView, /disabled=\{isMemoInlineEditing\}/);
   assert.match(
     shockwaveView,
-    /className="patient-history-body-part-menu-trigger"[\s\S]*?onMouseEnter=\{\(event\) => openPatientHistoryCellEditor\(event, bodyPartHistoryCell\)\}/,
+    /className="patient-history-body-part-menu-trigger"[\s\S]*?onMouseEnter=\{\(event\) => \{\s*if \(selectedPatientHistoryCell\?\.id !== bodyPartHistoryCell\.id\) return;\s*openPatientHistoryCellEditor\(event, bodyPartHistoryCell\);\s*\}\}/,
   );
+  assert.match(shockwaveView, /onClick=\{\(event\) => openPatientHistoryCellEditor\(event, bodyPartHistoryCell\)\}/);
   assert.match(
     shockwaveCss,
     /\.patient-history-body-part-menu-trigger::before\s*\{[^}]*border-left:\s*6px solid #475569;[^}]*\}/s,
@@ -688,7 +689,7 @@ test('patient history escape dismisses cell interaction state before closing the
     shockwaveView,
     /if \(dismissPatientHistoryCellInteraction\(\)\) return;\s*closePatientHistoryModal\(\);/,
   );
-  assert.match(shockwaveView, /if \(patientHistoryModalOpen && e\.key === 'Escape'\) return;/);
+  assert.match(shockwaveView, /const handleGlobalKeyDown = \(e\) => \{\s*if \(patientHistoryModalOpen\) return;/);
   assert.match(cellInteractions, /if \(action === 'close-editor'\)[\s\S]*setContextMenu\(null\);[\s\S]*setActiveContextSubmenu\(null\);/);
   assert.match(cellInteractions, /if \(action === 'clear-clipboard'\)[\s\S]*setClipboardCell\(null\);/);
   assert.match(cellInteractions, /if \(action === 'clear-selection'\)[\s\S]*setSelectedCell\(null\);/);

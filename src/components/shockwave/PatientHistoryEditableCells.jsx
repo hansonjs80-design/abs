@@ -142,14 +142,17 @@ export default function PatientHistoryEditableCells({
             className="patient-history-body-part-menu-trigger"
             aria-label="부위 목록 열기"
             aria-haspopup="menu"
-            title="마우스를 올리면 부위 목록 열기"
+            title="클릭: 부위 목록 열기 · 선택된 셀은 마우스를 올려 열기"
             tabIndex={-1}
-            onMouseEnter={(event) => openPatientHistoryCellEditor(event, bodyPartHistoryCell)}
+            onMouseEnter={(event) => {
+              if (selectedPatientHistoryCell?.id !== bodyPartHistoryCell.id) return;
+              openPatientHistoryCellEditor(event, bodyPartHistoryCell);
+            }}
             onPointerDown={(event) => {
               event.preventDefault();
               event.stopPropagation();
             }}
-            onClick={(event) => event.stopPropagation()}
+            onClick={(event) => openPatientHistoryCellEditor(event, bodyPartHistoryCell)}
             onDoubleClick={(event) => event.stopPropagation()}
           />
           {selectedPatientHistoryCell?.id === bodyPartHistoryCell.id

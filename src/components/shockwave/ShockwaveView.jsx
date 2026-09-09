@@ -752,7 +752,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
 
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
-      if (patientHistoryModalOpen && e.key === 'Escape') return;
+      if (patientHistoryModalOpen) return;
       if (clipboardSource && (e.key === 'Escape' || e.key === 'Backspace' || isUndoShortcutEvent(e))) {
         e.preventDefault();
         e.stopPropagation();

@@ -26,6 +26,11 @@ import {
 } from '../../lib/patientHistoryModalUtils';
 import { buildMergeSpanWithMemoList, isUndoShortcutEvent } from '../../lib/schedulerUtils';
 import usePatientHistoryDragInteractions from './usePatientHistoryDragInteractions';
+import {
+  createPatientHistoryMutationQueue,
+  undoPatientHistoryDraft,
+  updatePatientHistoryDraft,
+} from '../../lib/patientHistoryUndoUtils';
 
 const getHistoryRowKey = (log) => log?._history_row_key || log?.id;
 
@@ -64,6 +69,15 @@ export default function usePatientHistoryCellInteractions({
   const inlineEditorRef = useRef(null);
   const undoStackRef = useRef([]);
   const undoInProgressRef = useRef(false);
+  const mutationQueueRef = useRef(null);
+  if (!mutationQueueRef.current) mutationQueueRef.current = createPatientHistoryMutationQueue();
+
+  const enqueueHistoryMutation = useCallback((task) => (
+    mutationQueueRef.current.enqueue(task).catch(() => {
+      addToast('내역 셀 변경을 저장하지 못했습니다. 다시 시도해 주세요.', 'warning');
+      return false;
+    })
+  ), [addToast]);
 
   useEffect(() => {
     logsRef.current = logs || [];
@@ -110,6 +124,7 @@ export default function usePatientHistoryCellInteractions({
   }, [setClipboardSource]);
 
   const recordHistoryUndo = useCallback((changes) => {
+    if (!mutationQueueRef.current.isCurrent()) return;
     const action = buildPatientHistoryUndoAction(changes);
     if (!action) return;
     undoStackRef.current = [
@@ -119,6 +134,7 @@ export default function usePatientHistoryCellInteractions({
   }, []);
 
   const persistCellValue = useCallback(async (cell, rawValue, { recordUndo = true } = {}) => {
+    if (!mutationQueueRef.current.isCurrent()) return false;
     const log = findLog(cell?.rowKey);
     if (!log || !cell?.field) return false;
     if (cell.field === 'memo' && !cell.canEdit) {
@@ -136,11 +152,17 @@ export default function usePatientHistoryCellInteractions({
     if (nextValue === currentValue) return true;
 
     patchLog(cell.rowKey, { [cell.field]: nextValue });
-    const success = cell.field === 'body_part'
-      ? await updateHistoryField(log, 'body_part', nextValue)
-      : cell.field === 'memo'
-        ? await updateHistoryMemo(log, nextValue)
-        : await updateHistoryVisitCount(log, nextValue);
+    let success = false;
+    try {
+      success = cell.field === 'body_part'
+        ? await updateHistoryField(log, 'body_part', nextValue)
+        : cell.field === 'memo'
+          ? await updateHistoryMemo(log, nextValue)
+          : await updateHistoryVisitCount(log, nextValue);
+    } catch {
+      addToast('내역 셀 변경을 저장하지 못했습니다.', 'warning');
+    }
+    if (!mutationQueueRef.current.isCurrent()) return false;
     patchLog(cell.rowKey, (latest) => (
       success
         ? { ...latest, [cell.field]: nextValue, [originalKey]: nextValue }
@@ -218,6 +240,7 @@ export default function usePatientHistoryCellInteractions({
       undoInProgressRef.current = false;
     }
 
+    if (!mutationQueueRef.current.isCurrent()) return true;
     if (!success) {
       undoStackRef.current = [action, ...undoStackRef.current].slice(0, 50);
       addToast('내역 셀 변경을 되돌리지 못했습니다.', 'warning');
@@ -236,8 +259,8 @@ export default function usePatientHistoryCellInteractions({
     const nextValue = normalizePatientHistoryCellValue(cell.field, rawValue ?? activeEditor.value);
     inlineEditorRef.current = null;
     setInlineEditor(null);
-    return persistCellValue(cell, nextValue);
-  }, [persistCellValue]);
+    return enqueueHistoryMutation(() => persistCellValue(cell, nextValue));
+  }, [enqueueHistoryMutation, persistCellValue]);
 
   const cancelInlineCellEdit = useCallback((cell) => {
     if (inlineEditorRef.current?.cell?.id !== cell?.id) return false;
@@ -248,10 +271,7 @@ export default function usePatientHistoryCellInteractions({
 
   const updateInlineCellDraft = useCallback((cell, rawValue) => {
     if (inlineEditorRef.current?.cell?.id !== cell?.id) return;
-    const nextEditor = {
-      ...inlineEditorRef.current,
-      value: String(rawValue ?? ''),
-    };
+    const nextEditor = updatePatientHistoryDraft(inlineEditorRef.current, rawValue);
     inlineEditorRef.current = nextEditor;
     setInlineEditor(nextEditor);
   }, []);
@@ -269,14 +289,13 @@ export default function usePatientHistoryCellInteractions({
       commitInlineCellEdit(currentEditor.cell, currentEditor.value);
     }
 
-    const nextEditor = {
+    const originalEditor = {
       cell: { ...cell },
-      value: getPatientHistoryInlineEditInitialValue(
-        cell.field,
-        log[cell.field],
-        initialText,
-      ),
+      value: getPatientHistoryInlineEditInitialValue(cell.field, log[cell.field]),
+      undoValues: [],
     };
+    const nextEditor = updatePatientHistoryDraft(originalEditor,
+      getPatientHistoryInlineEditInitialValue(cell.field, log[cell.field], initialText));
     inlineEditorRef.current = nextEditor;
     flushSync(() => {
       setInlineEditor(nextEditor);
@@ -318,6 +337,7 @@ export default function usePatientHistoryCellInteractions({
     findLog,
     persistCellValue,
     recordHistoryUndo,
+    enqueueHistoryMutation,
     addToast,
     clearClipboardCell,
     setCellSelection,
@@ -452,25 +472,31 @@ export default function usePatientHistoryCellInteractions({
       beginInlineCellEdit(cell, event.currentTarget);
       return;
     }
+    const currentEditor = inlineEditorRef.current;
+    if (currentEditor) {
+      void commitInlineCellEdit(currentEditor.cell, currentEditor.value);
+    }
     openEditorAtRect(cell, event.currentTarget?.getBoundingClientRect?.());
-  }, [beginInlineCellEdit, openEditorAtRect]);
+  }, [beginInlineCellEdit, commitInlineCellEdit, openEditorAtRect]);
 
   const handleContextAction = useCallback(async (action) => {
     const cell = contextMenu?.patientHistoryCell;
     if (!cell || !isPatientHistoryEditorAction(cell.field, action)) return false;
-    const log = findLog(cell.rowKey);
-    if (!log) return true;
-    const currentValue = normalizePatientHistoryCellValue(cell.field, log[cell.field]);
-    const nextValue = cell.field === 'body_part'
-      ? applyPatientHistoryBodyPartAction(currentValue, action)
-      : applyPatientHistoryMemoAction(currentValue, action);
-    if (nextValue === currentValue) return true;
+    return enqueueHistoryMutation(async () => {
+      const log = findLog(cell.rowKey);
+      if (!log) return true;
+      const currentValue = normalizePatientHistoryCellValue(cell.field, log[cell.field]);
+      const nextValue = cell.field === 'body_part'
+        ? applyPatientHistoryBodyPartAction(currentValue, action)
+        : applyPatientHistoryMemoAction(currentValue, action);
+      if (nextValue === currentValue) return true;
 
-    updateEditorDisplay(cell, nextValue);
-    const success = await persistCellValue(cell, nextValue);
-    if (!success) updateEditorDisplay(cell, currentValue);
-    return true;
-  }, [contextMenu?.patientHistoryCell, findLog, persistCellValue, updateEditorDisplay]);
+      updateEditorDisplay(cell, nextValue);
+      const success = await persistCellValue(cell, nextValue);
+      if (!success) updateEditorDisplay(cell, currentValue);
+      return true;
+    });
+  }, [contextMenu?.patientHistoryCell, enqueueHistoryMutation, findLog, persistCellValue, updateEditorDisplay]);
 
   const copyOrCut = useCallback((mode) => {
     const activeCell = selectedCellRef.current;
@@ -497,49 +523,53 @@ export default function usePatientHistoryCellInteractions({
 
   const clearSelectedCell = useCallback(async () => {
     const activeCells = selectedCellsRef.current.length > 0
-      ? selectedCellsRef.current
+      ? [...selectedCellsRef.current]
       : [selectedCellRef.current].filter(Boolean);
     if (activeCells.length === 0) return;
-    if (activeCells.some((cell) => cell.field === 'memo' && !cell.canEdit)) {
-      addToast('스케줄과 연결되지 않은 기존 기록은 메모를 삭제할 수 없습니다.', 'warning');
-      return;
-    }
-    const appliedChanges = [];
-    for (const cell of activeCells) {
-      const log = findLog(cell.rowKey);
-      const previousValue = normalizePatientHistoryCellValue(cell.field, log?.[cell.field]);
-      if (!previousValue) continue;
-      const success = await persistCellValue(cell, '', { recordUndo: false });
-      if (!success) {
-        let rollbackSucceeded = true;
-        for (const change of [...appliedChanges].reverse()) {
-          const restored = await persistCellValue(change.cell, change.previousValue, {
-            recordUndo: false,
-          });
-          if (!restored) rollbackSucceeded = false;
-        }
-        addToast(
-          rollbackSucceeded
-            ? '선택 범위를 삭제하지 못해 변경 전 상태로 되돌렸습니다.'
-            : '선택 범위를 일부 되돌리지 못했습니다. 해당 셀을 확인해 주세요.',
-          'warning',
-        );
+    return enqueueHistoryMutation(async () => {
+      if (activeCells.some((cell) => cell.field === 'memo' && !cell.canEdit)) {
+        addToast('스케줄과 연결되지 않은 기존 기록은 메모를 삭제할 수 없습니다.', 'warning');
         return;
       }
-      appliedChanges.push({ cell, previousValue, nextValue: '' });
-    }
-    if (appliedChanges.length > 0) recordHistoryUndo(appliedChanges);
-  }, [addToast, findLog, persistCellValue, recordHistoryUndo]);
+      const appliedChanges = [];
+      for (const cell of activeCells) {
+        const log = findLog(cell.rowKey);
+        const previousValue = normalizePatientHistoryCellValue(cell.field, log?.[cell.field]);
+        if (!previousValue) continue;
+        const success = await persistCellValue(cell, '', { recordUndo: false });
+        if (!success) {
+          let rollbackSucceeded = true;
+          for (const change of [...appliedChanges].reverse()) {
+            const restored = await persistCellValue(change.cell, change.previousValue, {
+              recordUndo: false,
+            });
+            if (!restored) rollbackSucceeded = false;
+          }
+          addToast(
+            rollbackSucceeded
+              ? '선택 범위를 삭제하지 못해 변경 전 상태로 되돌렸습니다.'
+              : '선택 범위를 일부 되돌리지 못했습니다. 해당 셀을 확인해 주세요.',
+            'warning',
+          );
+          return;
+        }
+        appliedChanges.push({ cell, previousValue, nextValue: '' });
+      }
+      if (appliedChanges.length > 0) recordHistoryUndo(appliedChanges);
+    });
+  }, [addToast, enqueueHistoryMutation, findLog, persistCellValue, recordHistoryUndo]);
 
   const stepSelectedVisitCount = useCallback(async (cell, delta) => {
-    const log = findLog(cell?.rowKey);
-    if (!log || cell?.field !== 'visit_count') return false;
-    const currentValue = normalizePatientHistoryCellValue('visit_count', log.visit_count);
-    if (!currentValue) return true;
-    const nextValue = stepPatientHistoryVisitCount(currentValue, delta);
-    if (nextValue === currentValue) return true;
-    return persistCellValue(cell, nextValue);
-  }, [findLog, persistCellValue]);
+    return enqueueHistoryMutation(async () => {
+      const log = findLog(cell?.rowKey);
+      if (!log || cell?.field !== 'visit_count') return false;
+      const currentValue = normalizePatientHistoryCellValue('visit_count', log.visit_count);
+      if (!currentValue) return true;
+      const nextValue = stepPatientHistoryVisitCount(currentValue, delta);
+      if (nextValue === currentValue) return true;
+      return persistCellValue(cell, nextValue);
+    });
+  }, [enqueueHistoryMutation, findLog, persistCellValue]);
 
   const dismissCellInteraction = useCallback(() => {
     if (cancelPatientHistoryCellFill() || cancelPatientHistoryRangeSelection()) return true;
@@ -585,7 +615,23 @@ export default function usePatientHistoryCellInteractions({
     if (!modalOpen) return undefined;
 
     const handleKeyDown = (event) => {
+      if (event.isComposing || event.keyCode === 229) return;
       if (event.target?.closest?.('.patient-history-context-menu')) return;
+      if (isUndoShortcutEvent(event) && inlineEditorRef.current
+        && event.target?.closest?.('.patient-history-edit-field--inline-editing')) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        const restoredEditor = undoPatientHistoryDraft(inlineEditorRef.current);
+        if (restoredEditor) {
+          inlineEditorRef.current = restoredEditor;
+          setInlineEditor(restoredEditor);
+        } else {
+          cancelInlineCellEdit(inlineEditorRef.current.cell);
+          void enqueueHistoryMutation(undoLastHistoryChange);
+        }
+        return;
+      }
       if (
         isEditableElement(event.target)
         && event.target?.closest?.(
@@ -596,7 +642,7 @@ export default function usePatientHistoryCellInteractions({
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation?.();
-        undoLastHistoryChange();
+        void enqueueHistoryMutation(undoLastHistoryChange);
         return;
       }
       const activeCell = selectedCellRef.current;
@@ -715,72 +761,74 @@ export default function usePatientHistoryCellInteractions({
       const normalizedPastedText = pastedText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
       const isInternalClipboard = internalClipboard
         && normalizedPastedText === String(internalClipboard.plainText || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-      const activeLog = findLog(activeCell.rowKey);
-      const targetPreviousValue = normalizePatientHistoryCellValue(
-        activeCell.field,
-        activeLog?.[activeCell.field],
-      );
-      const success = await persistCellValue(activeCell, normalizedPastedText, { recordUndo: false });
-      if (!success) return;
-      if (!isInternalClipboard) {
-        recordHistoryUndo([{
-          cell: activeCell,
-          previousValue: targetPreviousValue,
-          nextValue: normalizedPastedText,
-        }]);
-        clearClipboardCell();
-        return;
-      }
-      if (internalClipboard.mode !== 'cut') {
-        recordHistoryUndo([{
-          cell: activeCell,
-          previousValue: targetPreviousValue,
-          nextValue: normalizedPastedText,
-        }]);
-        clearClipboardCell();
-        return;
-      }
-
-      const sourceCell = internalClipboard.sourceCell;
-      if (!sourceCell || sourceCell.id === activeCell.id) {
-        recordHistoryUndo([{
-          cell: activeCell,
-          previousValue: targetPreviousValue,
-          nextValue: normalizedPastedText,
-        }]);
-        clearClipboardCell();
-        return;
-      }
-      const sourceLog = findLog(sourceCell.rowKey);
-      const sourcePreviousValue = normalizePatientHistoryCellValue(
-        sourceCell.field,
-        sourceLog?.[sourceCell.field],
-      );
-      const cleared = await persistCellValue(sourceCell, '', { recordUndo: false });
-      if (cleared) {
-        recordHistoryUndo([
-          {
+      return enqueueHistoryMutation(async () => {
+        const activeLog = findLog(activeCell.rowKey);
+        const targetPreviousValue = normalizePatientHistoryCellValue(
+          activeCell.field,
+          activeLog?.[activeCell.field],
+        );
+        const success = await persistCellValue(activeCell, normalizedPastedText, { recordUndo: false });
+        if (!success) return;
+        if (!isInternalClipboard) {
+          recordHistoryUndo([{
             cell: activeCell,
             previousValue: targetPreviousValue,
             nextValue: normalizedPastedText,
-          },
-          {
-            cell: sourceCell,
-            previousValue: sourcePreviousValue,
-            nextValue: '',
-          },
-        ]);
-        clearClipboardCell();
-        addToast('잘라낸 셀을 이동했습니다.', 'success');
-      } else {
-        recordHistoryUndo([{
-          cell: activeCell,
-          previousValue: targetPreviousValue,
-          nextValue: normalizedPastedText,
-        }]);
-        clearClipboardCell();
-        addToast('붙여넣기는 완료됐지만 원본 셀을 비우지 못했습니다.', 'warning');
-      }
+          }]);
+          clearClipboardCell();
+          return;
+        }
+        if (internalClipboard.mode !== 'cut') {
+          recordHistoryUndo([{
+            cell: activeCell,
+            previousValue: targetPreviousValue,
+            nextValue: normalizedPastedText,
+          }]);
+          clearClipboardCell();
+          return;
+        }
+
+        const sourceCell = internalClipboard.sourceCell;
+        if (!sourceCell || sourceCell.id === activeCell.id) {
+          recordHistoryUndo([{
+            cell: activeCell,
+            previousValue: targetPreviousValue,
+            nextValue: normalizedPastedText,
+          }]);
+          clearClipboardCell();
+          return;
+        }
+        const sourceLog = findLog(sourceCell.rowKey);
+        const sourcePreviousValue = normalizePatientHistoryCellValue(
+          sourceCell.field,
+          sourceLog?.[sourceCell.field],
+        );
+        const cleared = await persistCellValue(sourceCell, '', { recordUndo: false });
+        if (cleared) {
+          recordHistoryUndo([
+            {
+              cell: activeCell,
+              previousValue: targetPreviousValue,
+              nextValue: normalizedPastedText,
+            },
+            {
+              cell: sourceCell,
+              previousValue: sourcePreviousValue,
+              nextValue: '',
+            },
+          ]);
+          clearClipboardCell();
+          addToast('잘라낸 셀을 이동했습니다.', 'success');
+        } else {
+          recordHistoryUndo([{
+            cell: activeCell,
+            previousValue: targetPreviousValue,
+            nextValue: normalizedPastedText,
+          }]);
+          clearClipboardCell();
+          addToast('붙여넣기는 완료됐지만 원본 셀을 비우지 못했습니다.', 'warning');
+        }
+      });
     };
 
     const handleOutsideMouseDown = (event) => {
@@ -818,10 +866,13 @@ export default function usePatientHistoryCellInteractions({
     recordHistoryUndo,
     stepSelectedVisitCount,
     undoLastHistoryChange,
+    cancelInlineCellEdit,
+    enqueueHistoryMutation,
   ]);
 
   useEffect(() => {
     if (modalOpen) return;
+    mutationQueueRef.current.reset();
     selectedCellRef.current = null;
     selectedCellsRef.current = [];
     setSelectedCell(null);

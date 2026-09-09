@@ -14,6 +14,7 @@ export default function usePatientHistoryDragInteractions({
   findLog,
   persistCellValue,
   recordHistoryUndo,
+  enqueueHistoryMutation,
   addToast,
   clearClipboardCell,
   setCellSelection,
@@ -164,53 +165,55 @@ export default function usePatientHistoryDragInteractions({
     fillDragRef.current = null;
     setFillPreviewCellIds([]);
     if (!drag?.targetCells?.length) return;
+    return enqueueHistoryMutation(async () => {
 
-    const nextValues = buildPatientHistoryCellFillValues(
-      drag.field,
-      drag.sourceValue,
-      drag.targetCells.length,
-    );
-    const pendingChanges = [];
-    for (let index = 0; index < drag.targetCells.length; index += 1) {
-      const cell = drag.targetCells[index];
-      const log = findLog(cell.rowKey);
-      const previousValue = normalizePatientHistoryCellValue(drag.field, log?.[drag.field]);
-      const nextValue = nextValues[index];
-      if (previousValue === nextValue) continue;
-      pendingChanges.push({ cell, previousValue, nextValue });
-    }
-
-    const results = await runPatientHistoryTasksWithConcurrency(
-      pendingChanges,
-      async (change) => ({
-        ...change,
-        success: await persistCellValue(change.cell, change.nextValue, { recordUndo: false }),
-      }),
-    );
-    const appliedChanges = results.filter((change) => change.success);
-    if (appliedChanges.length !== pendingChanges.length) {
-      let rollbackSucceeded = true;
-      for (const change of [...appliedChanges].reverse()) {
-        const restored = await persistCellValue(change.cell, change.previousValue, {
-          recordUndo: false,
-        });
-        if (!restored) rollbackSucceeded = false;
-      }
-      addToast(
-        rollbackSucceeded
-          ? '셀 채우기를 저장하지 못해 변경 전 상태로 되돌렸습니다.'
-          : '셀 채우기를 일부 되돌리지 못했습니다. 해당 셀을 확인해 주세요.',
-        'warning',
+      const nextValues = buildPatientHistoryCellFillValues(
+        drag.field,
+        drag.sourceValue,
+        drag.targetCells.length,
       );
-      return;
-    }
+      const pendingChanges = [];
+      for (let index = 0; index < drag.targetCells.length; index += 1) {
+        const cell = drag.targetCells[index];
+        const log = findLog(cell.rowKey);
+        const previousValue = normalizePatientHistoryCellValue(drag.field, log?.[drag.field]);
+        const nextValue = nextValues[index];
+        if (previousValue === nextValue) continue;
+        pendingChanges.push({ cell, previousValue, nextValue });
+      }
 
-    if (appliedChanges.length > 0) {
-      recordHistoryUndo(appliedChanges);
-      const label = drag.field === 'visit_count' ? '회차 연속 입력' : '내용 복사';
-      addToast(`${label}을 ${appliedChanges.length}개 셀에 적용했습니다.`, 'success');
-    }
-  }, [addToast, findLog, persistCellValue, recordHistoryUndo]);
+      const results = await runPatientHistoryTasksWithConcurrency(
+        pendingChanges,
+        async (change) => ({
+          ...change,
+          success: await persistCellValue(change.cell, change.nextValue, { recordUndo: false }),
+        }),
+      );
+      const appliedChanges = results.filter((change) => change.success);
+      if (appliedChanges.length !== pendingChanges.length) {
+        let rollbackSucceeded = true;
+        for (const change of [...appliedChanges].reverse()) {
+          const restored = await persistCellValue(change.cell, change.previousValue, {
+            recordUndo: false,
+          });
+          if (!restored) rollbackSucceeded = false;
+        }
+        addToast(
+          rollbackSucceeded
+            ? '셀 채우기를 저장하지 못해 변경 전 상태로 되돌렸습니다.'
+            : '셀 채우기를 일부 되돌리지 못했습니다. 해당 셀을 확인해 주세요.',
+          'warning',
+        );
+        return;
+      }
+
+      if (appliedChanges.length > 0) {
+        recordHistoryUndo(appliedChanges);
+        const label = drag.field === 'visit_count' ? '회차 연속 입력' : '내용 복사';
+        addToast(`${label}을 ${appliedChanges.length}개 셀에 적용했습니다.`, 'success');
+      }
+    });
+  }, [addToast, enqueueHistoryMutation, findLog, persistCellValue, recordHistoryUndo]);
 
   const cancelCellFill = useCallback(() => {
     if (!fillDragRef.current) return false;
