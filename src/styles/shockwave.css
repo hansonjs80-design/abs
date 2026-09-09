@@ -4585,8 +4585,10 @@
 }
 
 .patient-history-table tbody tr:hover > td,
-.patient-history-table tbody tr.patient-history-row--hovered > td {
-  background-color: #94a3b8 !important;
+.patient-history-table tbody tr.patient-history-row--hovered > td,
+.patient-history-table tbody tr:hover > td :is(span, input, textarea, select, button),
+.patient-history-table tbody tr.patient-history-row--hovered > td :is(span, input, textarea, select, button) {
+  font-weight: 850 !important;
 }
 
 .patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-selected) > td,
@@ -4732,8 +4734,8 @@
 }
 
 /* Use regular text at rest; hovering restores each field's original weight. */
-.patient-history-table tbody tr:not(.patient-history-current-row):not(:hover) > td,
-.patient-history-table tbody tr:not(.patient-history-current-row):not(:hover) > td :is(span, input, textarea, select, button) {
+.patient-history-table tbody tr:not(.patient-history-current-row):not(:hover):not(.patient-history-row--hovered) > td,
+.patient-history-table tbody tr:not(.patient-history-current-row):not(:hover):not(.patient-history-row--hovered) > td :is(span, input, textarea, select, button) {
   font-weight: 550 !important;
 }
 
