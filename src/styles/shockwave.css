@@ -3972,6 +3972,7 @@
 }
 
 .patient-history-view-controls {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -4056,12 +4057,23 @@
   align-items: flex-end;
   gap: 4px;
   min-width: 0;
-  padding: 4px 4px 0;
+  padding: 4px 12px 0;
   border: 0;
   border-bottom: 2px solid #64748b;
   border-radius: 0;
   background: transparent;
   transition: border-color 180ms ease;
+}
+
+/* Extend the tab baseline across the controls, leaving the active tab open below. */
+.patient-history-treatment-tabs::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-bottom: inherit;
+  pointer-events: none;
 }
 
 .patient-history-treatment-tabs:has(.patient-history-treatment-tab--shockwave.is-active) {
@@ -4077,6 +4089,8 @@
 }
 
 .patient-history-treatment-tab {
+  position: relative;
+  z-index: 1;
   --patient-history-tab-bg: #e2e8f0;
   --patient-history-tab-hover-bg: #f1f5f9;
   --patient-history-tab-accent: #64748b;
@@ -4841,5 +4855,14 @@
   .patient-history-treatment-filters,
   .patient-history-treatment-tabs {
     flex-wrap: wrap;
+  }
+
+  .patient-history-treatment-tabs {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .patient-history-treatment-tabs::before {
+    display: none;
   }
 }
