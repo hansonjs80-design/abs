@@ -421,6 +421,7 @@ function PatientHistoryModal({
                               }}
                               style={{
                                 '--patient-history-prescription-row-bg': currentCellRowBackground,
+                                '--patient-history-row-accent': effectiveVisitColor,
                                 '--patient-history-current-row-bg': currentCellRowBackground,
                                 fontWeight: historyRowFontWeight,
                               }}
