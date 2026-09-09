@@ -4754,12 +4754,12 @@
   -webkit-text-stroke: 0.25px currentColor !important;
 }
 
-/* 날짜/차트번호 셀은 호버 시에도 약간 가볍게 */
+/* 날짜/차트번호 셀도 호버 시 동일 두께 */
 .patient-history-table tbody tr:hover .patient-history-date-cell,
 .patient-history-table tbody tr.patient-history-row--hovered .patient-history-date-cell,
 .patient-history-table tbody tr:hover .patient-history-chart-cell,
 .patient-history-table tbody tr.patient-history-row--hovered .patient-history-chart-cell {
-  font-weight: 750 !important;
+  font-weight: 800 !important;
   -webkit-text-stroke: 0.25px currentColor !important;
 }
 
