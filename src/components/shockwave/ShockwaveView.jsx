@@ -7,7 +7,6 @@ import {
   CONTEXT_MENU_DISMISS_GRACE_MS,
   shouldIgnoreContextMenuDismissEvent,
 } from '../../lib/contextMenuDismissUtils';
-import { normalizeNameForMatch } from '../../lib/memoParser';
 import {
   getPatientHistoryDraggedModalOffset,
   getPatientHistoryNameOnlySearchTarget,
@@ -20,7 +19,7 @@ import {
   MIN_SCHEDULE_TIME_COL_WIDTH,
 } from '../../lib/scheduleGridSizeUtils';
 import { markIntentionalClearPayload } from '../../lib/scheduleMergeUtils';
-import { buildClearReservationGroupPayload, getReservationGroupFromMergeSpan, selectionHasReservationGroup } from '../../lib/scheduleReservationGroupUtils';
+import { buildClearReservationGroupPayload, getReservationGroupFromMergeSpan } from '../../lib/scheduleReservationGroupUtils';
 import {
   clearSupersededScheduleInputValue,
   consumeSupersededScheduleDraft,
@@ -90,7 +89,6 @@ import {
   buildPatientHistoryLogGroups,
   buildPatientHistoryTreatmentFilterOptions,
   EMPTY_SCHEDULE_MERGE_SPAN,
-  getPatientHistoryGroupKey,
   getPatientHistoryColumnWidths,
   getPatientHistoryModalLayout,
   getPatientHistoryScheduleNavigationTarget,
@@ -99,7 +97,6 @@ import {
   normalizeCommittedSchedulerContent,
   PATIENT_HISTORY_GROUPS,
   resolvePatientHistoryGroupTargetCell,
-  saveHiddenBodyPartOptionsByPatient,
   SCHEDULE_INTERNAL_BORDER_COLOR,
   stepContextMenuVisitValue,
 } from './shockwaveViewUtils';
@@ -114,21 +111,15 @@ import {
   removeDeletedScheduleDraft,
   removePendingScheduleDraft,
   wasScheduleDraftDeletedAfter,
-  splitBodyParts,
-  normalizeBodyPartKey,
-  parseSchedulerPatientIdentity,
   normalizeSchedulerVisitSuffix,
   getSchedulerVisitInputValue,
-  normalizeVisitInputValue,
   applyVisitCountToSchedulerContent,
   stepVisitShortcutInputValue,
   isOnlySchedulerVisitSuffixChange,
   isStaleNumericVisitRestoreAfterNewPatientAutoFormat,
   buildMergeSpanWithReservationTime,
   isUndoShortcutEvent,
-  buildSchedulerMemoSortKey,
   getNonVisitParentheticalSuffix,
-  addBodyPartToMap,
   getScheduleDisplaySlotMinutes,
 } from '../../lib/schedulerUtils';
 import { normalizeLoadedScheduleMonthKey } from '../../lib/scheduleMonthLoadUtils';

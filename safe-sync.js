@@ -95,7 +95,9 @@ async function runSafeSync() {
     try {
       await client.query('ROLLBACK');
       console.log('🛡️ 롤백(Rollback)되어 이전 DB 상태와 데이터가 안전하게 보호되었습니다.');
-    } catch (_) {}
+    } catch {
+      // Rollback can also fail after a connection error; still close the client below.
+    }
   } finally {
     await client.end();
     isExecuting = false;
