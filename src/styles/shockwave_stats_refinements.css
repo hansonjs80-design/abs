@@ -881,10 +881,10 @@
 .sw-manual-compact-settlement-table tbody tr:hover td,
 .sw-new-patient-table tbody tr:hover td,
 .sw-compact-new-patient-table tbody tr:hover td,
-.sw-summary-table tbody tr:hover th,
-.sw-summary-table tbody tr:hover td,
-.sw-compact-summary-table tbody tr:hover th,
-.sw-compact-summary-table tbody tr:hover td {
+.sw-summary-table:not(.patient-history-table) tbody tr:hover th,
+.sw-summary-table:not(.patient-history-table) tbody tr:hover td,
+.sw-compact-summary-table:not(.patient-history-table) tbody tr:hover th,
+.sw-compact-summary-table:not(.patient-history-table) tbody tr:hover td {
   background-color: #f3f8ff !important;
 }
 

@@ -4600,9 +4600,10 @@
   -webkit-text-stroke: 0.25px currentColor !important;
 }
 
-/* Keep each history row's own color while making hover slightly darker. */
+/* Increase only the row color's chroma; preserve lightness, hue, and opacity. */
 .patient-history-table tbody tr.patient-history-prescription-row:is(:hover, .patient-history-row--hovered):not(:has(.is-selected, .is-fill-preview)) > td {
-  background-color: color-mix(in srgb, var(--patient-history-prescription-row-bg, var(--bg-primary, #fff)) 94%, black) !important;
+  background-color: var(--patient-history-prescription-row-bg, var(--bg-primary, #fff)) !important;
+  background-color: oklch(from var(--patient-history-prescription-row-bg, var(--bg-primary, #fff)) l calc(c * 1.2) h / alpha) !important;
 }
 
 .patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-selected) > td,
