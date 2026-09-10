@@ -2430,3 +2430,20 @@
 
 
 
+
+/* Keep settlement table surrounds clean on screen and in print. */
+.sw-stats-body.sw-stats-body--settlement,
+.sw-stats-body--settlement :is(
+  .sw-settlement-card,
+  .sw-settlement-table-wrap,
+  .sw-compact-table-wrap,
+  .sw-manual-settlement-container,
+  .sw-manual-settlement-table-wrap,
+  .sw-summary-table-wrap,
+  .sw-six-month-summary-wrap,
+  .sw-settlement-vertical-header-wrap,
+  .sw-vertical-therapist-card
+) {
+  background: #ffffff !important;
+  box-shadow: none !important;
+}

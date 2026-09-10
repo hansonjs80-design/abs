@@ -690,19 +690,6 @@
 }
 
 @media print {
-  .combined-stats-page,
-  .combined-stats-header,
-  .combined-stats-dashboard,
-  .combined-stats-current,
-  .combined-stats-side {
-    background: #ffffff !important;
-  }
-
-  .combined-therapist-card,
-  .combined-stats-recent {
-    box-shadow: none !important;
-  }
-
   .combined-stats-refresh {
     display: none !important;
   }
@@ -738,4 +725,18 @@
     padding: 6px 10px !important;
     font-size: calc(0.95rem + 2px) !important;
   }
+}
+
+/* Use the same white, shadow-free table surrounds on screen and in print. */
+.combined-stats-page,
+.combined-stats-header,
+.combined-stats-dashboard,
+.combined-stats-current,
+.combined-stats-side {
+  background: #ffffff !important;
+}
+
+.combined-therapist-card,
+.combined-stats-recent {
+  box-shadow: none !important;
 }
