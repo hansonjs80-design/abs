@@ -682,11 +682,12 @@ export default function ShinjangSprayStatsPage() {
     <div className="animate-fade-in" style={{ height: '100%', overflow: 'auto' }}>
       <div className="sw-stats-container sw-stats-container--shinjang animate-fade-in">
         {isLoading && <div className="top-loading-bar" />}
-        <div className="sw-stats-layout">
-          <aside className="sw-stats-sidebar">
+        <div className="sw-stats-layout sw-stats-layout--compact">
+          <aside className="sw-stats-sidebar sw-stats-sidebar--compact" aria-label="통계 메뉴 및 치료사 필터">
             <button
               type="button"
               className={`sw-stats-side-tab sw-stats-side-tab--grid${activeSection === 'grid' ? ' active' : ''}`}
+              aria-pressed={activeSection === 'grid'}
               onClick={() => setActiveSection('grid')}
             >
               신장분사 현황
@@ -694,6 +695,7 @@ export default function ShinjangSprayStatsPage() {
             <button
               type="button"
               className={`sw-stats-side-tab sw-stats-side-tab--settlement${activeSection === 'settlement' ? ' active' : ''}`}
+              aria-pressed={activeSection === 'settlement'}
               onClick={() => setActiveSection('settlement')}
             >
               신장분사 결산
@@ -701,20 +703,22 @@ export default function ShinjangSprayStatsPage() {
             <button
               type="button"
               className={`sw-stats-side-tab sw-stats-side-tab--new-patients${activeSection === 'new-patients' ? ' active' : ''}`}
+              aria-pressed={activeSection === 'new-patients'}
               onClick={() => setActiveSection('new-patients')}
             >
-              신환
+              신규 환자
             </button>
             {canManageSettings && (
               <button
                 type="button"
                 className={`sw-stats-side-tab sw-stats-side-tab--settings${activeSection === 'settings' ? ' active' : ''}`}
+                aria-pressed={activeSection === 'settings'}
                 onClick={() => setActiveSection('settings')}
               >
                 설정
               </button>
             )}
-            <div style={{ marginTop: 'auto', padding: '12px 0' }}>
+            <div className="sw-stats-sidebar-refresh">
               <button
                 type="button"
                 className="sw-stats-side-tab"

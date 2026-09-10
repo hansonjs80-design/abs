@@ -2,6 +2,7 @@
 @import './shockwave_stats_grid.css';
 @import './shockwave_stats_reports.css';
 @import './shockwave_stats_refinements.css';
+@import './shockwave_stats_sidebar.css';
 
 .sw-prescription-incentive-label {
   display: inline-flex;

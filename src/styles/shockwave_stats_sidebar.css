@@ -1,0 +1,163 @@
+/* Compact navigation keeps the existing print-excluded sidebar structure. */
+@media screen {
+  .sw-stats-layout.sw-stats-layout--compact {
+    flex-direction: row;
+    gap: 12px;
+  }
+
+  .sw-stats-layout--compact > .sw-stats-sidebar--compact {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 91px;
+    width: 91px;
+    gap: 4px;
+    padding: 3px;
+    box-sizing: border-box;
+    border: 1px solid #e0e6ee;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: none;
+  }
+
+  .sw-stats-sidebar--compact .sw-stats-side-tab {
+    --tab-accent: #2563eb;
+    --tab-surface: #edf4ff;
+    width: 100%;
+    min-height: 35px;
+    padding: 8px 1px;
+    border: 1px solid transparent;
+    border-left: 3px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1.25;
+    white-space: nowrap;
+    text-align: left;
+    box-shadow: none;
+    transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+  }
+
+  .sw-stats-container--manual .sw-stats-sidebar--compact .sw-stats-side-tab--grid,
+  .sw-stats-sidebar--compact .sw-stats-side-tab--settlement {
+    --tab-accent: #b45309;
+    --tab-surface: #fff2e6;
+  }
+  .sw-stats-container--shinjang .sw-stats-sidebar--compact .sw-stats-side-tab--grid {
+    --tab-accent: #278343;
+    --tab-surface: #edf8ef;
+  }
+  .sw-stats-sidebar--compact .sw-stats-side-tab--new-patients {
+    --tab-accent: #7c3aed;
+    --tab-surface: #f3eeff;
+  }
+  .sw-stats-sidebar--compact .sw-stats-side-tab--settings {
+    --tab-accent: #16765c;
+    --tab-surface: #edf8f3;
+  }
+
+  .sw-stats-layout--compact .sw-stats-sidebar--compact .sw-stats-side-tab:hover {
+    transform: none;
+    background: var(--tab-surface);
+    color: var(--tab-accent);
+    border-color: transparent;
+    box-shadow: none;
+  }
+  .sw-stats-layout--compact .sw-stats-sidebar--compact .sw-stats-side-tab.active {
+    background: var(--tab-surface);
+    color: var(--tab-accent);
+    border-color: transparent;
+    border-left-color: var(--tab-accent);
+    font-weight: 850;
+    box-shadow: none;
+  }
+
+  .sw-stats-sidebar--compact .sw-sidebar-filter {
+    order: 2;
+    margin: 7px 0 0;
+    padding: 11px 0 0;
+    border: 0;
+    border-top: 1px solid #e8edf3;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+  }
+  .sw-stats-sidebar--compact .sw-sidebar-filter-title {
+    margin: 0 0 8px;
+    padding: 0 4px;
+    color: #7b889b;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+    text-align: left;
+  }
+  .sw-stats-sidebar--compact .sw-sidebar-filter-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .sw-stats-sidebar--compact .sw-sidebar-filter-chip {
+    justify-content: flex-start;
+    min-height: 29px;
+    padding: 5px 7px;
+    gap: 7px;
+    border: 1px solid #e7ecf2;
+    border-radius: 6px;
+    background: #fff;
+    color: #718096;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .sw-stats-sidebar--compact .sw-sidebar-filter-chip.is-active {
+    border-color: #d2dfec;
+    color: #334155;
+  }
+  .sw-stats-sidebar--compact .sw-sidebar-filter-chip.tone-0.is-active { background: #edf4ff; }
+  .sw-stats-sidebar--compact .sw-sidebar-filter-chip.tone-1.is-active { background: #f3eeff; }
+  .sw-stats-sidebar--compact .sw-sidebar-filter-chip.tone-2.is-active { background: #edf7f1; }
+  .sw-stats-sidebar--compact .sw-sidebar-filter-chip.tone-3.is-active { background: #fff3e5; }
+  .sw-stats-sidebar--compact .sw-sidebar-filter-chip.tone-4.is-active { background: #fceff4; }
+  .sw-stats-sidebar--compact .sw-sidebar-filter-chip input {
+    width: 12px;
+    height: 12px;
+    accent-color: #587799;
+  }
+  .sw-stats-sidebar--compact .sw-sidebar-filter-reset {
+    min-height: 25px;
+    margin-top: 6px;
+    padding: 4px 6px;
+    border-color: transparent;
+    border-radius: 5px;
+    background: #f5f7fa;
+    color: #64748b;
+    font-size: 10px;
+  }
+  .sw-stats-layout--compact .sw-stats-sidebar--compact > .sw-stats-sidebar-refresh {
+    order: 3;
+    margin: 7px 0 0 !important;
+    padding: 8px 0 0 !important;
+    border-top: 1px solid #e8edf3;
+  }
+  .sw-stats-layout--compact .sw-stats-sidebar-refresh .sw-stats-side-tab {
+    min-height: 29px;
+    padding: 5px 4px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 10px;
+    color: #64748b;
+  }
+  .sw-stats-sidebar--compact .sw-stats-side-tab:focus-visible,
+  .sw-stats-sidebar--compact .sw-sidebar-filter-reset:focus-visible,
+  .sw-stats-sidebar--compact .sw-sidebar-filter-chip:has(input:focus-visible) {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+}
+
+@media print {
+  .sw-stats-layout--compact > .sw-stats-sidebar--compact,
+  .sw-stats-sidebar--compact .sw-sidebar-filter {
+    display: none !important;
+  }
+}
