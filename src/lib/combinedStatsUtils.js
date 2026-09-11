@@ -210,11 +210,9 @@ function buildShinjangTreatmentSummary({
     rows: reassignedRows,
   }).filter((prescription) => {
     if (hiddenKeys.has(normalizePrescriptionKey(prescription))) return false;
-    const incentivePercentage = Math.max(
-      0,
-      Number(getMapValue(settings?.prescription_incentive_percentages, prescription)) || 0
-    );
-    return isAdmin || incentivePercentage !== 15;
+    // 처방 자체는 관리자/비관리자 구분 없이 모두 포함.
+    // 비관리자의 15% 인센티브 제한은 buildCombinedStatsMonthSummary에서 처리.
+    return true;
   });
   const visiblePrescriptionKeys = new Set(prescriptions.map(normalizePrescriptionKey));
   const configuredTherapistNames = Array.isArray(settings?.therapist_names)
@@ -337,25 +335,47 @@ export function buildCombinedStatsMonthSummary({
     settings: shinjangSettings,
     isAdmin,
   });
+  // 비관리자: 15% 처방의 인센티브를 0으로 마스킹 (건수·금액은 유지)
+  const shinjangSettlementForMaps = isAdmin
+    ? shinjangResult.settlement
+    : {
+        ...shinjangResult.settlement,
+        detailRows: shinjangResult.settlement.detailRows.map((row) => (
+          Number(row?.incentivePercentage) === 15
+            ? { ...row, incentive: 0 }
+            : row
+        )),
+      };
+  // 비관리자: 인센티브 그룹에서 15% 행 자체를 제외
+  const shinjangSettlementForGroups = isAdmin
+    ? shinjangResult.settlement
+    : {
+        ...shinjangResult.settlement,
+        detailRows: shinjangResult.settlement.detailRows.filter(
+          (row) => Number(row?.incentivePercentage) !== 15
+        ),
+      };
   const treatmentMaps = {
     // 충격파 결산은 기존 탭과 동일하게 처방별 인센티브를 반올림한 뒤 합산한다.
     shockwave: toTreatmentMap(shockwaveSettlement, { sumPrescriptionIncentives: true }),
-    shinjang_spray: toShinjangTreatmentMap(shinjangResult.settlement),
+    shinjang_spray: toShinjangTreatmentMap(shinjangSettlementForMaps),
     // 전체 통계의 도수치료 결산은 관리자에게만 공개한다. 일반 계정의 합계에도
     // 도수치료 금액이 섞이지 않도록 화면 렌더링 전 집계 단계에서 제외한다.
     manual_therapy: isAdmin ? toTreatmentMap(manualSettlement) : new Map(),
   };
   const shockwaveIncentiveRates = buildStandardIncentiveRates(shockwaveSettings);
   const manualIncentiveRates = buildStandardIncentiveRates(manualSettings);
-  const shinjangConfiguredRates = shinjangResult.prescriptions.map((prescription) => (
-    getMapValue(shinjangSettings?.prescription_incentive_percentages, prescription)
-  ));
+  const shinjangConfiguredRates = shinjangResult.prescriptions
+    .map((prescription) => (
+      getMapValue(shinjangSettings?.prescription_incentive_percentages, prescription)
+    ))
+    .filter((rate) => isAdmin || Number(rate) !== 15);
   const shinjangIncentiveGroups = buildShinjangIncentiveGroups(
-    shinjangResult.settlement,
+    shinjangSettlementForGroups,
     shinjangConfiguredRates
   );
   const shinjangIncentiveGroupsByTherapist = buildShinjangIncentiveGroupsByTherapist(
-    shinjangResult.settlement
+    shinjangSettlementForGroups
   );
   const therapistSummaries = therapists.map((therapist) => {
     const treatments = Object.fromEntries(COMBINED_STATS_TREATMENTS.map(({ key }) => [
