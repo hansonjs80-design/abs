@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const layoutCssUrl = new URL('../../styles/shockwave_stats_layout.css', import.meta.url);
 const mobileCssUrl = new URL('../../styles/mobile.css', import.meta.url);
+const sidebarCssUrl = new URL('../../styles/shockwave_stats_sidebar.css', import.meta.url);
 const shockwaveStatsUrl = new URL('../../components/shockwave/ShockwaveStatsView.jsx', import.meta.url);
 const manualStatsUrl = new URL('../../pages/ManualTherapyStatsPage.jsx', import.meta.url);
 const shinjangStatsUrl = new URL('../../pages/ShinjangSprayStatsPage.jsx', import.meta.url);
@@ -19,6 +20,14 @@ test('mobile stats sidebar remains full width', async () => {
   const mobileCss = await readFile(mobileCssUrl, 'utf8');
 
   assert.match(mobileCss, /\.sw-stats-sidebar\s*\{[^}]*width:\s*100%;/s);
+});
+
+test('compact stats sidebar centers navigation and therapist filter labels', async () => {
+  const sidebarCss = await readFile(sidebarCssUrl, 'utf8');
+
+  assert.match(sidebarCss, /\.sw-stats-sidebar--compact \.sw-stats-side-tab\s*\{[\s\S]*?text-align:\s*center;/);
+  assert.match(sidebarCss, /\.sw-stats-sidebar--compact \.sw-sidebar-filter-title\s*\{[\s\S]*?text-align:\s*center;/);
+  assert.match(sidebarCss, /\.sw-stats-sidebar--compact \.sw-sidebar-filter-chip\s*\{[\s\S]*?justify-content:\s*center;/);
 });
 
 test('both stats refresh buttons use the shorter label', async () => {

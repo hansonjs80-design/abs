@@ -504,7 +504,7 @@ export default function CombinedStatsPage() {
                               const rowKey = row.prescription
                                 ? `${treatment.key}-${row.prescription}`
                                 : `${treatment.key}-${row.rates?.join('-') || 'total'}`;
-                              // 처방명별 다중 행인 경우(신장분사 처방명 모드): 각 행에 구분 셀 독립 표시
+                              // 처방명별 행: 구분 열에 처방명, 인센 열에 인센율 표시
                               const hasPrescription = Boolean(row.prescription);
                               return (
                                 <tr
@@ -512,10 +512,8 @@ export default function CombinedStatsPage() {
                                   className={rowIndex === 0 ? 'combined-treatment-group-start' : undefined}
                                 >
                                   {hasPrescription ? (
-                                    // 처방명별 행: 처방명을 구분 셀로 표시
-                                    rowIndex === 0 ? (
-                                      <th rowSpan={treatment.rows.length}>{treatment.label}</th>
-                                    ) : null
+                                    // 처방명별: 구분 열에 처방명을 각 행에 독립 표시
+                                    <th>{row.prescription}</th>
                                   ) : (
                                     rowIndex === 0 && (
                                       <th rowSpan={treatment.rows.length}>{treatment.label}</th>
@@ -525,9 +523,7 @@ export default function CombinedStatsPage() {
                                   <td className="combined-therapist-amount-cell">{formatCurrency(row.amount)}</td>
                                   <td className="combined-therapist-incentive-cell">{formatCurrency(row.incentive)}</td>
                                   <td className="combined-incentive-rate-cell">
-                                    {hasPrescription
-                                      ? <span className="combined-prescription-label">{row.prescription}</span>
-                                      : <IncentiveRateList rates={row.rates} />}
+                                    <IncentiveRateList rates={row.rates} />
                                   </td>
                                 </tr>
                               );

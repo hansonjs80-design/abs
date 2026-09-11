@@ -7,6 +7,7 @@ const permissionUrl = new URL('../authPermissions.js', import.meta.url);
 const pageUrl = new URL('../../pages/CombinedStatsPage.jsx', import.meta.url);
 const topTabsUrl = new URL('../../components/layout/TopTabs.jsx', import.meta.url);
 const styleUrl = new URL('../../styles/combined_stats.css', import.meta.url);
+const componentStyleUrl = new URL('../../styles/components.css', import.meta.url);
 
 describe('combined statistics UI', () => {
   it('registers the combined tab immediately after manual therapy statistics', async () => {
@@ -37,6 +38,9 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /<th>처방별 총 인센티브<\/th>/);
     assert.match(pageSource, /<th>인센<\/th>/);
     assert.match(pageSource, /<IncentiveRateList rates=\{row\.rates\} \/>/);
+    assert.match(pageSource, /const hasPrescription = Boolean\(row\.prescription\);/);
+    assert.match(pageSource, /<th>\{row\.prescription\}<\/th>/);
+    assert.doesNotMatch(pageSource, /<span className="combined-prescription-label">\{row\.prescription\}<\/span>/);
     assert.match(pageSource, /<tr className="combined-therapist-total">\s*<th>합계<\/th>/);
     assert.match(pageSource, /const visibleTreatments = buildTherapistTreatmentSections\(item\)/);
     assert.match(pageSource, /visibleTreatments\.length > 0/);
@@ -63,6 +67,14 @@ describe('combined statistics UI', () => {
     const source = await readFile(topTabsUrl, 'utf8');
     assert.doesNotMatch(source, /const Icon = item\.icon/);
     assert.doesNotMatch(source, /<Icon size=\{18\}/);
+  });
+
+  it('uses straight, lightly color-coded active top tabs', async () => {
+    const styleSource = await readFile(componentStyleUrl, 'utf8');
+
+    assert.match(styleSource, /\.top-tab\.active\s*\{[\s\S]*?border-radius:\s*0;/);
+    assert.match(styleSource, /\.top-tab--stats-sw\s*\{[\s\S]*?--tab-active-surface:\s*#faf5ff;/);
+    assert.match(styleSource, /\.top-tab--stats-combined\s*\{[\s\S]*?--tab-active-surface:\s*#eef2ff;/);
   });
 
   it('uses current-month-first loading and compact screen and print table geometry', async () => {
@@ -112,4 +124,3 @@ describe('combined statistics UI', () => {
     assert.match(styleSource, /\.combined-recent-single-value\s*\{/);
   });
 });
-

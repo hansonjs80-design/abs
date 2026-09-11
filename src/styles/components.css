@@ -473,7 +473,7 @@
   border: 1px solid rgba(0, 0, 0, 0.06);
   border-bottom: 0;
   background-clip: padding-box;
-  border-radius: 10px 10px 0 0;
+  border-radius: 0;
   background: var(--tab-bg);
   color: var(--tab-text-color);
   font-size: 1.05rem;
@@ -712,6 +712,7 @@
   --tab-bg: #ff9629;
   --tab-hover-bg: #ea580c;
   --tab-active-bg: #ea580c;
+  --tab-active-surface: #fff7ed;
   --tab-active-border: #ea580c;
   --tab-shadow: rgba(234, 88, 12, 0.18);
   --tab-text-color: #111827;
@@ -722,6 +723,7 @@
   --tab-bg: #00e10d;
   --tab-hover-bg: #049a00;
   --tab-active-bg: #049a00;
+  --tab-active-surface: #f0fdf4;
   --tab-active-border: #049a00;
   --tab-shadow: rgba(4, 154, 0, 0.18);
   --tab-text-color: #111827;
@@ -731,7 +733,7 @@
 .top-tab--stats-sw {
   --tab-bg: #d1b6ff;
   --tab-hover-bg: #f3e8ff;
-  --tab-active-surface: #f8fafc;
+  --tab-active-surface: #faf5ff;
   --tab-active-bg: #f8fafc;
   --tab-active-border: #7b2eff;
   --tab-shadow: rgba(123, 46, 255, 0.2);
@@ -742,7 +744,7 @@
 .top-tab--stats-mt {
   --tab-bg: #e6b8af;
   --tab-hover-bg: #f8e2de;
-  --tab-active-surface: #f8fafc;
+  --tab-active-surface: #fff7f5;
   --tab-active-bg: #f8fafc;
   --tab-active-border: #b14530;
   --tab-shadow: rgba(177, 69, 48, 0.2);
@@ -753,7 +755,7 @@
 .top-tab--stats-shinjang {
   --tab-bg: #bbf7d0;
   --tab-hover-bg: #dcfce7;
-  --tab-active-surface: #f8fafc;
+  --tab-active-surface: #f0fdf4;
   --tab-active-bg: #f8fafc;
   --tab-active-border: #2fb420;
   --tab-shadow: rgba(47, 180, 32, 0.2);
@@ -764,7 +766,7 @@
 .top-tab--stats-combined {
   --tab-bg: #c7d2fe;
   --tab-hover-bg: #e0e7ff;
-  --tab-active-surface: #f8fafc;
+  --tab-active-surface: #eef2ff;
   --tab-active-bg: #f8fafc;
   --tab-active-border: #4f46e5;
   --tab-shadow: rgba(79, 70, 229, 0.2);
@@ -776,6 +778,7 @@
   --tab-bg: #bae6fd;
   --tab-hover-bg: #7dd3fc;
   --tab-active-bg: #0284c7;
+  --tab-active-surface: #f0f9ff;
   --tab-active-border: #0284c7;
   --tab-shadow: rgba(2, 132, 199, 0.18);
   --tab-text-color: #111827;
@@ -786,6 +789,7 @@
   --tab-bg: #6b7280;
   --tab-hover-bg: #6b7280;
   --tab-active-bg: #d1d5db;
+  --tab-active-surface: #f3f4f6;
   --tab-active-border: #6b7280;
   --tab-text-color: #ffffff;
   --tab-shadow: rgba(107, 114, 128, 0.16);
