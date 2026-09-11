@@ -498,8 +498,32 @@ export default function ShockwaveSettlementView({
                       </td>
                     ))}
                   </tr>
-                  <tr className="settlement-amount-row">
-                    <th className="row-label">결산 금액(원)</th>
+                  {showIncentiveRateSubtotals && (
+                    <tr className="settlement-amount-row settlement-rate-subtotal-row">
+                      <th className="row-label">결산 금액 합계</th>
+                      {displayedTherapistSummaries.flatMap((item, therapistIndex) => {
+                        const rateGroups = horizontalTherapistIncentiveRateGroups[therapistIndex] || [];
+                        return rateGroups.map((rateGroup, rateGroupIndex) => (
+                          <td
+                            key={`rate-amount-${item?.therapist?.id || item?.therapist?.name || therapistIndex}-${rateGroup.percentage ?? 'empty'}`}
+                            colSpan={rateGroup.prescriptions.length || 1}
+                            className={`merged-value amount therapist-tone-${therapistIndex % 5}-cell${rateGroupIndex === rateGroups.length - 1 ? ' therapist-group-end' : ''}${horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length === 1 ? ' merged-value--single-prescription' : ''}`}
+                          >
+                            {rateGroup.percentage === null
+                              ? formatCurrency(0)
+                              : formatCurrency(
+                                  getIncentiveRateSummary(
+                                    item.incentiveRateBreakdown,
+                                    rateGroup.percentage
+                                  ).amount
+                                )}
+                          </td>
+                        ));
+                      })}
+                    </tr>
+                  )}
+                  <tr className={`settlement-amount-row${showIncentiveRateSubtotals ? ' settlement-rate-total-row' : ''}`}>
+                    <th className="row-label">{showIncentiveRateSubtotals ? '전체 결산 금액(원)' : '결산 금액(원)'}</th>
                     {displayedTherapistSummaries.map((item, therapistIndex) => (
                       <td key={`amount-${item?.therapist?.id || item?.therapist?.name || therapistIndex}`} colSpan={horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length || 1} className={`merged-value amount therapist-group-end therapist-tone-${therapistIndex % 5}-cell${horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length === 1 ? ' merged-value--single-prescription' : ''}`}>
                         {formatCurrency(item.amount)}
@@ -598,8 +622,27 @@ export default function ShockwaveSettlementView({
                         {formatCount(settlement.grandTotalCount)}
                       </td>
                     </tr>
-                    <tr className="settlement-amount-row">
-                      <th className="row-label">결산 금액(원)</th>
+                    {showIncentiveRateSubtotals && (
+                      <tr className="settlement-amount-row settlement-rate-subtotal-row">
+                        <th className="row-label">결산 금액 합계</th>
+                        {horizontalSummaryIncentiveRateGroups.map((rateGroup) => (
+                          <td
+                            key={`grand-rate-amount-${rateGroup.percentage}`}
+                            className="grand-value merged-value amount"
+                            colSpan={rateGroup.prescriptions.length}
+                          >
+                            {formatCurrency(
+                              getIncentiveRateSummary(
+                                settlement.grandIncentiveRateBreakdown,
+                                rateGroup.percentage
+                              ).amount
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    )}
+                    <tr className={`settlement-amount-row${showIncentiveRateSubtotals ? ' settlement-rate-total-row' : ''}`}>
+                      <th className="row-label">{showIncentiveRateSubtotals ? '전체 결산 금액(원)' : '결산 금액(원)'}</th>
                       <td className="grand-value merged-value amount" colSpan={horizontalSummaryPrescriptions.length}>
                         {formatCurrency(settlement.grandAmount)}
                       </td>
@@ -766,8 +809,16 @@ export default function ShockwaveSettlementView({
                               </tr>
                             );
                           })}
-                        <tr className={`vertical-total-row therapist-tone-${therapistIndex % 3}`}>
-                          <th>합계</th>
+                        {showIncentiveRateSubtotals && item.incentiveRateBreakdown?.map((rateSummary) => (
+                          <tr key={`vertical-therapist-rate-${rateSummary.percentage}`} className="settlement-rate-subtotal-row">
+                            <th>{formatPercentage(rateSummary.percentage)} 합계</th>
+                            <td>{rateSummary.count > 0 ? `${rateSummary.count}건` : '-'}</td>
+                            <td className="amount-val">{rateSummary.amount > 0 ? formatCurrency(rateSummary.amount) : '-'}</td>
+                            <td className="incentive-val">{rateSummary.incentive > 0 ? formatCurrency(rateSummary.incentive) : '-'}</td>
+                          </tr>
+                        ))}
+                        <tr className={`vertical-total-row therapist-tone-${therapistIndex % 3}${showIncentiveRateSubtotals ? ' settlement-rate-total-row' : ''}`}>
+                          <th>{showIncentiveRateSubtotals ? '전체 합계' : '합계'}</th>
                           <td>{item.totalCount > 0 ? `${item.totalCount}건` : '-'}</td>
                           <td className="amount-val">{item.amount > 0 ? formatCurrency(item.amount) : '-'}</td>
                           <td className="incentive-val">
@@ -798,8 +849,16 @@ export default function ShockwaveSettlementView({
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="grand-total-row">
-                        <th>총 합계</th>
+                      {showIncentiveRateSubtotals && settlement.grandIncentiveRateBreakdown.map((rateSummary) => (
+                        <tr key={`vertical-grand-rate-${rateSummary.percentage}`} className="settlement-rate-subtotal-row">
+                          <th>{formatPercentage(rateSummary.percentage)} 합계</th>
+                          <td>{rateSummary.count}건</td>
+                          <td className="amount-val">{formatCurrency(rateSummary.amount)}</td>
+                          <td className="incentive-val">{formatCurrency(rateSummary.incentive)}</td>
+                        </tr>
+                      ))}
+                      <tr className={`grand-total-row${showIncentiveRateSubtotals ? ' settlement-rate-total-row' : ''}`}>
+                        <th>{showIncentiveRateSubtotals ? '전체 합계' : '총 합계'}</th>
                         <td>{settlement.grandTotalCount}건</td>
                         <td className="amount-val">{formatCurrency(settlement.grandAmount)}</td>
                         <td className="incentive-val">{formatCurrency(settlement.grandIncentive)}</td>

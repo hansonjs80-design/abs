@@ -535,7 +535,7 @@ test('patient history cells support range selection, direct typing, and fill han
   );
   assert.match(
     shockwaveCss,
-    /\.patient-history-table tbody tr:hover > td[\s\S]*?font-weight:\s*800\s*!important;/,
+    /\.patient-history-table tbody tr:hover > td[\s\S]*?font-weight:\s*700\s*!important;/,
   );
   assert.doesNotMatch(
     shockwaveCss,

@@ -69,6 +69,9 @@ export default function ShockwaveSettlementHorizontalCompactView({
     (normalizedIncentiveMap[normalizePrescriptionKey(prescription)] ?? incentiveRate) * 100
   );
   const showPrescriptionIncentiveRates = Object.keys(normalizedIncentiveMap).length > 0;
+  const showIncentiveRateSubtotals = treatmentLabel === '신장분사'
+    && showPrescriptionIncentiveRates
+    && settlement.incentiveRatePercentages?.length > 0;
   const visibleTherapistSummaries = showOnlyTherapistPrescriptions
     ? settlement.summaryByTherapist
     : settlement.summaryByTherapist.filter((item) => item.totalCount > 0);
@@ -156,8 +159,16 @@ export default function ShockwaveSettlementHorizontalCompactView({
                     <col className="sw-horizontal2-incentive-column" />
                   </colgroup>
                   <tbody>
-                    <tr className={`horizontal2-total-row ${toneClass}`}>
-                      <th className="horizontal2-total-label">합계</th>
+                    {showIncentiveRateSubtotals && item.incentiveRateBreakdown?.map((rateSummary) => (
+                      <tr key={`h2-therapist-rate-${therapistKey}-${rateSummary.percentage}`} className={`settlement-rate-subtotal-row ${toneClass}`}>
+                        <th className="horizontal2-total-label">{formatPercentage(rateSummary.percentage)} 합계</th>
+                        <td className="count-val">{formatOptionalCount(rateSummary.count)}</td>
+                        <td className="amount-val">{formatCurrency(rateSummary.amount)}</td>
+                        <td className="incentive-val">{formatCurrency(rateSummary.incentive)}</td>
+                      </tr>
+                    ))}
+                    <tr className={`horizontal2-total-row ${toneClass}${showIncentiveRateSubtotals ? ' settlement-rate-total-row' : ''}`}>
+                      <th className="horizontal2-total-label">{showIncentiveRateSubtotals ? '전체 합계' : '합계'}</th>
                       <td className="count-val">{formatOptionalCount(item.totalCount)}</td>
                       <td className="amount-val">{formatCurrency(item.amount)}</td>
                       <td className="incentive-val">{formatCurrency(item.incentive)}</td>
@@ -178,12 +189,19 @@ export default function ShockwaveSettlementHorizontalCompactView({
           </colgroup>
           <tbody>
             <tr>
-              <th className="grand-title" rowSpan={2}>{currentMonth}월 총 결산</th>
+              <th className="grand-title" rowSpan={2 + (showIncentiveRateSubtotals ? settlement.grandIncentiveRateBreakdown.length : 0)}>{currentMonth}월 총 결산</th>
               <th>총 건수</th>
               <th>결산 총액</th>
               <th>인센티브 총액</th>
             </tr>
-            <tr className="horizontal2-grand-total-row">
+            {showIncentiveRateSubtotals && settlement.grandIncentiveRateBreakdown.map((rateSummary) => (
+              <tr key={`h2-grand-rate-${rateSummary.percentage}`} className="settlement-rate-subtotal-row">
+                <td>{formatCount(rateSummary.count)}</td>
+                <td className="amount-val">{formatTotalCurrency(rateSummary.amount)}</td>
+                <td className="incentive-val">{formatTotalCurrency(rateSummary.incentive)}</td>
+              </tr>
+            ))}
+            <tr className={`horizontal2-grand-total-row${showIncentiveRateSubtotals ? ' settlement-rate-total-row' : ''}`}>
               <td>{formatCount(settlement.grandTotalCount)}</td>
               <td className="amount-val">{formatTotalCurrency(settlement.grandAmount)}</td>
               <td className="incentive-val">{formatTotalCurrency(settlement.grandIncentive)}</td>
