@@ -75,10 +75,11 @@ describe('combined statistics UI', () => {
     assert.doesNotMatch(source, /<Icon size=\{18\}/);
   });
 
-  it('uses straight, lightly color-coded active top tabs', async () => {
+  it('uses lightly color-coded top tabs with rounded top corners', async () => {
     const styleSource = await readFile(componentStyleUrl, 'utf8');
 
-    assert.match(styleSource, /\.top-tab\.active\s*\{[\s\S]*?border-radius:\s*0;/);
+    assert.match(styleSource, /\.top-tab\s*\{[^}]*border-radius:\s*10px 10px 0 0;/);
+    assert.match(styleSource, /\.top-tab\.active\s*\{[^}]*border-radius:\s*10px 10px 0 0;/);
     assert.match(styleSource, /\.top-tab--stats-sw\s*\{[\s\S]*?--tab-active-surface:\s*#faf5ff;/);
     assert.match(styleSource, /\.top-tab--stats-combined\s*\{[\s\S]*?--tab-active-surface:\s*#eef2ff;/);
   });

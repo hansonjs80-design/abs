@@ -30,6 +30,15 @@ test('compact stats sidebar centers navigation and therapist filter labels', asy
   assert.match(sidebarCss, /\.sw-stats-sidebar--compact \.sw-sidebar-filter-chip\s*\{[\s\S]*?justify-content:\s*center;/);
 });
 
+test('compact stats sidebar uses a straight full-height indicator for the selected tab', async () => {
+  const sidebarCss = await readFile(sidebarCssUrl, 'utf8');
+
+  assert.match(
+    sidebarCss,
+    /\.sw-stats-layout--compact \.sw-stats-sidebar--compact \.sw-stats-side-tab\.active::before\s*\{[\s\S]*?top:\s*0;[\s\S]*?bottom:\s*0;[\s\S]*?width:\s*3px;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*var\(--tab-accent\);/
+  );
+});
+
 test('both stats refresh buttons use the shorter label', async () => {
   const [shockwaveStats, manualStats] = await Promise.all([
     readFile(shockwaveStatsUrl, 'utf8'),
