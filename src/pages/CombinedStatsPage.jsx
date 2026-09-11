@@ -52,17 +52,41 @@ function IncentiveRateList({ rates = [] }) {
 }
 
 function buildTherapistTreatmentSections(item) {
+  const hasAnyActivity = Math.max(0, Number(item?.total?.count) || 0) > 0;
+  if (!hasAnyActivity) return [];
+
   return COMBINED_STATS_TREATMENTS.map((treatment) => {
     const value = item?.treatments?.[treatment.key] || { count: 0, amount: 0, incentive: 0 };
-    const shinjangGroups = treatment.key === 'shinjang_spray'
-      && Array.isArray(item?.shinjangIncentiveGroups)
-      ? item.shinjangIncentiveGroups
-      : [];
-    const rows = shinjangGroups.length > 0
-      ? shinjangGroups.map((group) => ({ ...group, rates: [group.rate] }))
-      : [{ ...value, rates: item?.incentiveRates?.[treatment.key] || [] }];
+    if (treatment.key === 'shinjang_spray') {
+      const therapistShinjangMap = new Map(
+        (Array.isArray(item?.shinjangIncentiveGroups) ? item.shinjangIncentiveGroups : [])
+          .map((g) => [Number(g.rate), g])
+      );
+      const configuredRates = Array.isArray(item?.configuredShinjangRates) && item.configuredShinjangRates.length > 0
+        ? item.configuredShinjangRates.map(Number)
+        : (item?.incentiveRates?.shinjang_spray?.length > 0
+          ? item.incentiveRates.shinjang_spray.map(Number)
+          : [7]);
+
+      const rows = configuredRates.map((rate) => {
+        const found = therapistShinjangMap.get(rate);
+        if (found) {
+          return { ...found, rates: [rate] };
+        }
+        return { rate, count: 0, amount: 0, incentive: 0, rates: [rate] };
+      });
+
+      return { ...treatment, value, rows };
+    }
+
+    const rows = [{ ...value, rates: item?.incentiveRates?.[treatment.key] || [] }];
     return { ...treatment, value, rows };
-  }).filter((section) => Math.max(0, Number(section.value.count) || 0) > 0);
+  }).filter((section) => {
+    if (section.key === 'shinjang_spray') {
+      return section.rows.length > 0;
+    }
+    return Math.max(0, Number(section.value.count) || 0) > 0;
+  });
 }
 
 function buildRecentMetricItems(summary, metric, { includeManual = true, totalOnly = false } = {}) {
