@@ -58,6 +58,26 @@ function buildTherapistTreatmentSections(item) {
   return COMBINED_STATS_TREATMENTS.map((treatment) => {
     const value = item?.treatments?.[treatment.key] || { count: 0, amount: 0, incentive: 0 };
     if (treatment.key === 'shinjang_spray') {
+      // 처방명별 실적이 있으면 처방명별로 행 생성 (우선)
+      const prescriptionGroups = Array.isArray(item?.shinjangPrescriptionGroups)
+        ? item.shinjangPrescriptionGroups
+        : [];
+      if (prescriptionGroups.length > 0) {
+        const rows = prescriptionGroups.map((pg) => ({
+          prescription: pg.prescription,
+          count: Math.max(0, Number(pg.count) || 0),
+          amount: Math.max(0, Number(pg.amount) || 0),
+          incentive: Math.max(0, Number(pg.incentive) || 0),
+          rates: Array.isArray(pg.rates) && pg.rates.length > 0 ? pg.rates : [pg.rate ?? 0],
+        }));
+        // 실적이 있는 행만 포함 (count > 0)
+        const activeRows = rows.filter((r) => r.count > 0);
+        if (activeRows.length > 0) {
+          return { ...treatment, value, rows: activeRows };
+        }
+      }
+
+      // 폴백: 인센율별 그룹 사용
       const therapistShinjangMap = new Map(
         (Array.isArray(item?.shinjangIncentiveGroups) ? item.shinjangIncentiveGroups : [])
           .map((g) => [Number(g.rate), g])
@@ -83,7 +103,8 @@ function buildTherapistTreatmentSections(item) {
     return { ...treatment, value, rows };
   }).filter((section) => {
     if (section.key === 'shinjang_spray') {
-      return section.rows.length > 0;
+      return section.rows.some((r) => Math.max(0, Number(r.count) || 0) > 0)
+        || Math.max(0, Number(section.value.count) || 0) > 0;
     }
     return Math.max(0, Number(section.value.count) || 0) > 0;
   });
@@ -479,22 +500,38 @@ export default function CombinedStatsPage() {
                       {visibleTreatments.length > 0 && (
                         <tbody>
                           {visibleTreatments.flatMap((treatment) => (
-                            treatment.rows.map((row, rowIndex) => (
-                              <tr
-                                key={`${treatment.key}-${row.rates.join('-') || 'total'}`}
-                                className={rowIndex === 0 ? 'combined-treatment-group-start' : undefined}
-                              >
-                                {rowIndex === 0 && (
-                                  <th rowSpan={treatment.rows.length}>{treatment.label}</th>
-                                )}
-                                <td className="combined-therapist-count-cell">{formatCount(row.count)}</td>
-                                <td className="combined-therapist-amount-cell">{formatCurrency(row.amount)}</td>
-                                <td className="combined-therapist-incentive-cell">{formatCurrency(row.incentive)}</td>
-                                <td className="combined-incentive-rate-cell">
-                                  <IncentiveRateList rates={row.rates} />
-                                </td>
-                              </tr>
-                            ))
+                            treatment.rows.map((row, rowIndex) => {
+                              const rowKey = row.prescription
+                                ? `${treatment.key}-${row.prescription}`
+                                : `${treatment.key}-${row.rates?.join('-') || 'total'}`;
+                              // 처방명별 다중 행인 경우(신장분사 처방명 모드): 각 행에 구분 셀 독립 표시
+                              const hasPrescription = Boolean(row.prescription);
+                              return (
+                                <tr
+                                  key={rowKey}
+                                  className={rowIndex === 0 ? 'combined-treatment-group-start' : undefined}
+                                >
+                                  {hasPrescription ? (
+                                    // 처방명별 행: 처방명을 구분 셀로 표시
+                                    rowIndex === 0 ? (
+                                      <th rowSpan={treatment.rows.length}>{treatment.label}</th>
+                                    ) : null
+                                  ) : (
+                                    rowIndex === 0 && (
+                                      <th rowSpan={treatment.rows.length}>{treatment.label}</th>
+                                    )
+                                  )}
+                                  <td className="combined-therapist-count-cell">{formatCount(row.count)}</td>
+                                  <td className="combined-therapist-amount-cell">{formatCurrency(row.amount)}</td>
+                                  <td className="combined-therapist-incentive-cell">{formatCurrency(row.incentive)}</td>
+                                  <td className="combined-incentive-rate-cell">
+                                    {hasPrescription
+                                      ? <span className="combined-prescription-label">{row.prescription}</span>
+                                      : <IncentiveRateList rates={row.rates} />}
+                                  </td>
+                                </tr>
+                              );
+                            })
                           ))}
                           <tr className="combined-therapist-total">
                             <th>합계</th>

@@ -134,7 +134,7 @@ export function buildCombinedStatsTherapists({
     ...buildDisplayTherapists(shockwaveTherapists, monthlyShockwaveTherapists),
     ...buildDisplayTherapists(manualTherapists, monthlyManualTherapists),
   ];
-  const configuredShinjangNames = Array.isArray(shinjangTherapistNames)
+  const configuredShinjangNames = Array.isArray(shinjangTherapistNames) && shinjangTherapistNames.length > 0
     ? new Set(shinjangTherapistNames.map((name) => String(name || '').trim()).filter(Boolean))
     : null;
   const shinjangCandidates = [
@@ -217,7 +217,7 @@ function buildShinjangTreatmentSummary({
     return isAdmin || incentivePercentage !== 15;
   });
   const visiblePrescriptionKeys = new Set(prescriptions.map(normalizePrescriptionKey));
-  const configuredTherapistNames = Array.isArray(settings?.therapist_names)
+  const configuredTherapistNames = Array.isArray(settings?.therapist_names) && settings.therapist_names.length > 0
     ? new Set(settings.therapist_names.map((name) => String(name || '').trim()).filter(Boolean))
     : null;
   const visibleRows = reassignedRows.filter((row) => (
@@ -360,11 +360,36 @@ export function buildCombinedStatsMonthSummary({
     shinjangResult.settlement,
     shinjangConfiguredRates
   );
+  // 각 치료사별 신장분사 처방목록 이름(prescription)별 실적 매핑
+  const shinjangDetailByTherapistAndPrescription = new Map();
+  (Array.isArray(shinjangResult.settlement?.detailRows) ? shinjangResult.settlement.detailRows : []).forEach((row) => {
+    const name = String(row?.therapist?.name || row?.therapist?.displayName || '').trim();
+    if (!name) return;
+    const key = `${name}:::${normalizePrescriptionKey(row?.prescription)}`;
+    shinjangDetailByTherapistAndPrescription.set(key, row);
+  });
   const therapistSummaries = therapists.map((therapist) => {
     const treatments = Object.fromEntries(COMBINED_STATS_TREATMENTS.map(({ key }) => [
       key,
       treatmentMaps[key].get(therapist.name) || { count: 0, amount: 0, incentive: 0 },
     ]));
+    const shinjangPrescriptionGroups = shinjangResult.prescriptions.map((prescription) => {
+      const key = `${therapist.name}:::${normalizePrescriptionKey(prescription)}`;
+      const found = shinjangDetailByTherapistAndPrescription.get(key);
+      const configuredRate = Math.max(
+        0,
+        Number(getMapValue(shinjangSettings?.prescription_incentive_percentages, prescription)) || 0
+      );
+      const rate = found?.incentivePercentage !== undefined ? Number(found.incentivePercentage) : configuredRate;
+      return {
+        prescription,
+        rate,
+        count: Math.max(0, Number(found?.count) || 0),
+        amount: Math.max(0, Number(found?.amount) || 0),
+        incentive: Math.max(0, Number(found?.incentive) || 0),
+        rates: [rate],
+      };
+    });
     return {
       therapist,
       treatments,
@@ -377,6 +402,7 @@ export function buildCombinedStatsMonthSummary({
           : [],
       },
       shinjangIncentiveGroups: shinjangIncentiveGroupsByTherapist.get(therapist.name) || [],
+      shinjangPrescriptionGroups,
       configuredShinjangRates: shinjangConfiguredRates,
       total: addTreatmentValues(Object.values(treatments)),
     };

@@ -212,7 +212,11 @@ export function mergeShinjangSprayLogs({
       cryoPrescriptions: manualTherapyCryoPrescriptions,
       cryoPrices: manualTherapyCryoPrices,
     })),
-  ].filter((row) => isShinjangSprayPrescription(row?.prescription));
+  ].filter((row) => (
+    isShinjangSprayPrescription(row?.prescription)
+    || getNormalizedMapValue(shockwavePrescriptionPrices, row?.prescription) !== undefined
+    || getNormalizedMapValue(manualTherapyPrescriptionPrices, row?.prescription) !== undefined
+  ));
   const rowsByKey = new Map();
 
   candidates.forEach((row, index) => {
