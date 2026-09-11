@@ -56,6 +56,8 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /\{formatCount\(item\.total\.count\)\}/);
     assert.match(pageSource, /className="combined-therapist-card combined-therapist-summary-card"/);
     assert.match(pageSource, /<aside className="combined-stats-side">[\s\S]*?className="combined-therapist-card combined-treatment-breakdown-card"/);
+    assert.match(pageSource, /<th>충격파 7%<\/th>/);
+    assert.match(pageSource, /<th>도수치료 15%<\/th>/);
     assert.match(pageSource, /<span>치료사별 합계<\/span>/);
     assert.match(pageSource, /<th>전체 합계<\/th>/);
     assert.match(pageSource, /\{formatCurrency\(currentSummary\.total\.incentive\)\}/);

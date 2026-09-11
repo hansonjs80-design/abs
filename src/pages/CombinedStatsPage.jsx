@@ -724,7 +724,7 @@ export default function CombinedStatsPage() {
                 </thead>
                 <tbody>
                   <tr className="combined-breakdown-row combined-breakdown-shockwave">
-                    <th>충격파</th>
+                    <th>충격파 7%</th>
                     <td>{formatCount(currentSummary.treatmentTotals?.shockwave?.count)}</td>
                     <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.shockwave?.amount)}</td>
                     <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.shockwave?.incentive)}</td>
@@ -748,7 +748,7 @@ export default function CombinedStatsPage() {
                       )}
                   {isAdmin && (
                     <tr className="combined-breakdown-row combined-breakdown-manual">
-                      <th>도수치료</th>
+                      <th>도수치료 15%</th>
                       <td>{formatCount(currentSummary.treatmentTotals?.manual_therapy?.count)}</td>
                       <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.manual_therapy?.amount)}</td>
                       <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.manual_therapy?.incentive)}</td>
