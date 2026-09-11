@@ -189,23 +189,35 @@ export default function ShockwaveSettlementHorizontalCompactView({
           </colgroup>
           <tbody>
             <tr>
-              <th className="grand-title" rowSpan={2 + (showIncentiveRateSubtotals ? settlement.grandIncentiveRateBreakdown.length : 0)}>{currentMonth}월 총 결산</th>
+              <th className="grand-title" rowSpan={showIncentiveRateSubtotals ? 1 : 2}>{currentMonth}월 총 결산</th>
               <th>총 건수</th>
               <th>결산 총액</th>
               <th>인센티브 총액</th>
             </tr>
-            {showIncentiveRateSubtotals && settlement.grandIncentiveRateBreakdown.map((rateSummary) => (
-              <tr key={`h2-grand-rate-${rateSummary.percentage}`} className="settlement-rate-subtotal-row">
-                <td>{formatCount(rateSummary.count)}</td>
-                <td className="amount-val">{formatTotalCurrency(rateSummary.amount)}</td>
-                <td className="incentive-val">{formatTotalCurrency(rateSummary.incentive)}</td>
+            {showIncentiveRateSubtotals ? (
+              <>
+                {settlement.grandIncentiveRateBreakdown.map((rateSummary) => (
+                  <tr key={`h2-grand-rate-${rateSummary.percentage}`} className="settlement-rate-subtotal-row">
+                    <th className="grand-rate-label">{formatPercentage(rateSummary.percentage)} 합계</th>
+                    <td>{formatCount(rateSummary.count)}</td>
+                    <td className="amount-val">{formatTotalCurrency(rateSummary.amount)}</td>
+                    <td className="incentive-val">{formatTotalCurrency(rateSummary.incentive)}</td>
+                  </tr>
+                ))}
+                <tr className="horizontal2-grand-total-row settlement-rate-total-row">
+                  <th className="grand-rate-label">전체 합계</th>
+                  <td>{formatCount(settlement.grandTotalCount)}</td>
+                  <td className="amount-val">{formatTotalCurrency(settlement.grandAmount)}</td>
+                  <td className="incentive-val">{formatTotalCurrency(settlement.grandIncentive)}</td>
+                </tr>
+              </>
+            ) : (
+              <tr className="horizontal2-grand-total-row">
+                <td>{formatCount(settlement.grandTotalCount)}</td>
+                <td className="amount-val">{formatTotalCurrency(settlement.grandAmount)}</td>
+                <td className="incentive-val">{formatTotalCurrency(settlement.grandIncentive)}</td>
               </tr>
-            ))}
-            <tr className={`horizontal2-grand-total-row${showIncentiveRateSubtotals ? ' settlement-rate-total-row' : ''}`}>
-              <td>{formatCount(settlement.grandTotalCount)}</td>
-              <td className="amount-val">{formatTotalCurrency(settlement.grandAmount)}</td>
-              <td className="incentive-val">{formatTotalCurrency(settlement.grandIncentive)}</td>
-            </tr>
+            )}
           </tbody>
         </table>
       </div>
