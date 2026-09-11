@@ -20,6 +20,10 @@ const manualTherapySixMonthStatsUrl = new URL(
   '../../components/shockwave/ManualTherapySixMonthStats.jsx',
   import.meta.url,
 );
+const horizontal2ViewUrl = new URL(
+  '../../components/shockwave/ShockwaveSettlementHorizontalCompactView.jsx',
+  import.meta.url,
+);
 
 test('shockwave landscape print uses label-aware prescription columns', async () => {
   const [indexCss, settlementView] = await Promise.all([
@@ -130,6 +134,17 @@ test('shockwave horizontal2 print enlarges summary text without resizing tables'
   );
   assert.match(horizontal2Css, /\.sw-horizontal2-grand-table\s*\{[^}]*width:\s*87mm !important;/s);
   assert.match(horizontal2Css, /\.sw-horizontal2-recent-table\s*\{[^}]*width:\s*88mm !important;/s);
+});
+
+test('shockwave horizontal2 therapist total rows share the body table columns', async () => {
+  const [horizontal2View, horizontal2Css] = await Promise.all([
+    readFile(horizontal2ViewUrl, 'utf8'),
+    readFile(horizontal2CssUrl, 'utf8'),
+  ]);
+
+  assert.match(horizontal2View, /<td className="horizontal2-total-spacer" aria-hidden="true" \/>/);
+  assert.doesNotMatch(horizontal2View, /sw-horizontal2-therapist-total-table/);
+  assert.match(horizontal2Css, /\.sw-horizontal2-therapist-table \.horizontal2-total-spacer\s*\{[\s\S]*?border-right:\s*2px solid #64748b !important;/);
 });
 
 test('manual settlement screen enlarges section titles and compacts only body rows', async () => {

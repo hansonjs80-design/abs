@@ -149,18 +149,9 @@ export default function ShockwaveSettlementHorizontalCompactView({
                         </tr>
                       );
                     })}
-                  </tbody>
-                </table>
-                <table className="sw-settlement-table sw-horizontal2-therapist-total-table">
-                  <colgroup>
-                    <col className="sw-horizontal2-prescription-column" />
-                    <col className="sw-horizontal2-count-column" />
-                    <col className="sw-horizontal2-amount-column" />
-                    <col className="sw-horizontal2-incentive-column" />
-                  </colgroup>
-                  <tbody>
                     {showIncentiveRateSubtotals && item.incentiveRateBreakdown?.map((rateSummary) => (
                       <tr key={`h2-therapist-rate-${therapistKey}-${rateSummary.percentage}`} className={`settlement-rate-subtotal-row ${toneClass}`}>
+                        <td className="horizontal2-total-spacer" aria-hidden="true" />
                         <th className="horizontal2-total-label">{formatPercentage(rateSummary.percentage)} 합계</th>
                         <td className="count-val">{formatOptionalCount(rateSummary.count)}</td>
                         <td className="amount-val">{formatCurrency(rateSummary.amount)}</td>
@@ -168,6 +159,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                       </tr>
                     ))}
                     <tr className={`horizontal2-total-row ${toneClass}${showIncentiveRateSubtotals ? ' settlement-rate-total-row' : ''}`}>
+                      <td className="horizontal2-total-spacer" aria-hidden="true" />
                       <th className="horizontal2-total-label">{showIncentiveRateSubtotals ? '전체 합계' : '합계'}</th>
                       <td className="count-val">{formatOptionalCount(item.totalCount)}</td>
                       <td className="amount-val">{formatCurrency(item.amount)}</td>

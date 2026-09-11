@@ -466,12 +466,12 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   line-height: 1.08 !important;
 }
 
-.sw-horizontal2-therapist-total-table .horizontal2-total-row {
+.sw-horizontal2-therapist-table .horizontal2-total-row {
   height: 27px !important;
 }
 
-.sw-horizontal2-therapist-total-table .horizontal2-total-row > th,
-.sw-horizontal2-therapist-total-table .horizontal2-total-row > td {
+.sw-horizontal2-therapist-table .horizontal2-total-row > th,
+.sw-horizontal2-therapist-table .horizontal2-total-row > td {
   height: 27px !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
@@ -488,24 +488,28 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   font-size: 13.4px !important;
 }
 
-.sw-horizontal2-therapist-total-table .horizontal2-total-label {
-  width: auto !important;
-  min-width: 0 !important;
-  border-left: 2px solid #64748b !important;
+.sw-horizontal2-therapist-table .horizontal2-total-spacer {
+  border-right: 2px solid #64748b !important;
+  padding: 0 !important;
 }
 
-.sw-horizontal2-therapist-total-table .count-val {
-  width: auto !important;
-  min-width: 0 !important;
-}
-
-.sw-horizontal2-therapist-total-table .amount-val,
-.sw-horizontal2-therapist-total-table .incentive-val {
+.sw-horizontal2-therapist-table .horizontal2-total-label {
   width: auto !important;
   min-width: 0 !important;
 }
 
-.sw-horizontal2-therapist-total-table .horizontal2-total-row .incentive-val {
+.sw-horizontal2-therapist-table .horizontal2-total-row .count-val {
+  width: auto !important;
+  min-width: 0 !important;
+}
+
+.sw-horizontal2-therapist-table .horizontal2-total-row .amount-val,
+.sw-horizontal2-therapist-table .horizontal2-total-row .incentive-val {
+  width: auto !important;
+  min-width: 0 !important;
+}
+
+.sw-horizontal2-therapist-table .horizontal2-total-row .incentive-val {
   color: #9a3412 !important;
 }
 
