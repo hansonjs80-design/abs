@@ -41,6 +41,9 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /const hasPrescription = Boolean\(row\.prescription\);/);
     assert.match(pageSource, /<th>\{row\.prescription\}<\/th>/);
     assert.doesNotMatch(pageSource, /<span className="combined-prescription-label">\{row\.prescription\}<\/span>/);
+    assert.match(pageSource, /const incentiveRate = row\.rates\?\.length === 1 \? Number\(row\.rates\[0\]\) : null;/);
+    assert.match(pageSource, /combined-incentive-rate-row--7/);
+    assert.match(pageSource, /combined-incentive-rate-row--15/);
     assert.match(pageSource, /<tr className="combined-therapist-total">\s*<th>합계<\/th>/);
     assert.match(pageSource, /const visibleTreatments = buildTherapistTreatmentSections\(item\)/);
     assert.match(pageSource, /visibleTreatments\.length > 0/);
@@ -52,6 +55,7 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /className="combined-therapist-header-count"/);
     assert.match(pageSource, /\{formatCount\(item\.total\.count\)\}/);
     assert.match(pageSource, /className="combined-therapist-card combined-therapist-summary-card"/);
+    assert.match(pageSource, /<aside className="combined-stats-side">[\s\S]*?className="combined-therapist-card combined-treatment-breakdown-card"/);
     assert.match(pageSource, /<span>치료사별 합계<\/span>/);
     assert.match(pageSource, /<th>전체 합계<\/th>/);
     assert.match(pageSource, /\{formatCurrency\(currentSummary\.total\.incentive\)\}/);
@@ -91,6 +95,8 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /className="combined-therapist-incentive-cell"/);
     assert.match(styleSource, /\.combined-therapist-card tbody td\.combined-therapist-amount-cell\s*\{[\s\S]*color:\s*#075fc5;/);
     assert.match(styleSource, /\.combined-therapist-card tbody td\.combined-therapist-incentive-cell\s*\{[\s\S]*color:\s*#7c3aed;/);
+    assert.match(styleSource, /\.combined-therapist-card tbody tr\.combined-incentive-rate-row--7 > \*\s*\{[\s\S]*background:\s*#eff6ff;/);
+    assert.match(styleSource, /\.combined-therapist-card tbody tr\.combined-incentive-rate-row--15 > \*\s*\{[\s\S]*background:\s*#faf5ff;/);
     assert.match(styleSource, /\.combined-therapist-card table\s*\{[\s\S]*table-layout:\s*auto;/);
     assert.match(styleSource, /\.combined-current-col-type,[\s\S]*width:\s*auto;/);
     assert.match(styleSource, /\.combined-therapist-card th,[\s\S]*white-space:\s*nowrap;/);
