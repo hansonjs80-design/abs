@@ -39,13 +39,14 @@ test('compact stats sidebar gives every navigation tab a distinct pastel treatme
   assert.match(sidebarCss, /\.sw-stats-sidebar--compact \.sw-stats-side-tab--new-patients\s*\{[\s\S]*?--tab-surface:\s*#eee7ff;[\s\S]*?--tab-border:\s*#c4b5fd;/);
 });
 
-test('compact stats sidebar gives the selected tab a border matching its background', async () => {
+test('compact stats sidebar fills the selected tab with its former dark border color', async () => {
   const sidebarCss = await readFile(sidebarCssUrl, 'utf8');
 
   assert.match(
     sidebarCss,
-    /\.sw-stats-layout--compact \.sw-stats-sidebar--compact \.sw-stats-side-tab\.active\s*\{[\s\S]*?color:\s*var\(--tab-accent\);[\s\S]*?border:\s*2px solid var\(--tab-surface\);/
+    /\.sw-stats-layout--compact \.sw-stats-sidebar--compact \.sw-stats-side-tab\.active\s*\{[\s\S]*?background:\s*var\(--tab-active-surface\);[\s\S]*?color:\s*#fff;[\s\S]*?border:\s*2px solid var\(--tab-active-surface\);/
   );
+  assert.match(sidebarCss, /--tab-active-surface:\s*#1e40af;/);
   assert.doesNotMatch(sidebarCss, /\.sw-stats-side-tab\.active::before/);
 });
 

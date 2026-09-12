@@ -723,7 +723,7 @@ export default function CombinedStatsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="combined-breakdown-row combined-breakdown-shockwave">
+                  <tr className="combined-breakdown-row combined-breakdown-shockwave combined-incentive-rate-row--7">
                     <th>충격파 7%</th>
                     <td>{formatCount(currentSummary.treatmentTotals?.shockwave?.count)}</td>
                     <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.shockwave?.amount)}</td>
@@ -731,7 +731,10 @@ export default function CombinedStatsPage() {
                   </tr>
                   {(Array.isArray(currentSummary.shinjangIncentiveGroups) && currentSummary.shinjangIncentiveGroups.length > 0)
                     ? currentSummary.shinjangIncentiveGroups.map((group) => (
-                        <tr key={`breakdown-shinjang-${group.rate}`} className="combined-breakdown-row combined-breakdown-shinjang">
+                        <tr
+                          key={`breakdown-shinjang-${group.rate}`}
+                          className={`combined-breakdown-row combined-breakdown-shinjang${Number(group.rate) === 7 ? ' combined-incentive-rate-row--7' : Number(group.rate) === 15 ? ' combined-incentive-rate-row--15' : ''}`}
+                        >
                           <th>신장분사 {formatIncentiveRate(group.rate)}</th>
                           <td>{formatCount(group.count)}</td>
                           <td className="combined-summary-amount-cell">{formatCurrency(group.amount)}</td>
@@ -747,7 +750,7 @@ export default function CombinedStatsPage() {
                         </tr>
                       )}
                   {isAdmin && (
-                    <tr className="combined-breakdown-row combined-breakdown-manual">
+                    <tr className="combined-breakdown-row combined-breakdown-manual combined-incentive-rate-row--15">
                       <th>도수치료 15%</th>
                       <td>{formatCount(currentSummary.treatmentTotals?.manual_therapy?.count)}</td>
                       <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.manual_therapy?.amount)}</td>

@@ -29,6 +29,13 @@ function formatPercentage(value) {
   })}%`;
 }
 
+function getIncentiveRateToneClass(value) {
+  const rate = Number(value);
+  if (rate === 7) return 'settlement-rate-subtotal-row--7';
+  if (rate === 15) return 'settlement-rate-subtotal-row--15';
+  return '';
+}
+
 function TherapistNameStack({ name }) {
   const chars = Array.from(String(name || '')).filter((char) => char.trim());
   return (
@@ -150,7 +157,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                       );
                     })}
                     {showIncentiveRateSubtotals && item.incentiveRateBreakdown?.map((rateSummary) => (
-                      <tr key={`h2-therapist-rate-${therapistKey}-${rateSummary.percentage}`} className={`settlement-rate-subtotal-row ${toneClass}`}>
+                      <tr key={`h2-therapist-rate-${therapistKey}-${rateSummary.percentage}`} className={`settlement-rate-subtotal-row ${toneClass} ${getIncentiveRateToneClass(rateSummary.percentage)}`}>
                         <td className="horizontal2-total-spacer" aria-hidden="true" />
                         <th className="horizontal2-total-label">{formatPercentage(rateSummary.percentage)} 합계</th>
                         <td className="count-val">{formatOptionalCount(rateSummary.count)}</td>
@@ -189,7 +196,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
             {showIncentiveRateSubtotals ? (
               <>
                 {settlement.grandIncentiveRateBreakdown.map((rateSummary) => (
-                  <tr key={`h2-grand-rate-${rateSummary.percentage}`} className="settlement-rate-subtotal-row">
+                  <tr key={`h2-grand-rate-${rateSummary.percentage}`} className={`settlement-rate-subtotal-row ${getIncentiveRateToneClass(rateSummary.percentage)}`}>
                     <th className="grand-rate-label">{formatPercentage(rateSummary.percentage)} 합계</th>
                     <td>{formatCount(rateSummary.count)}</td>
                     <td className="amount-val">{formatTotalCurrency(rateSummary.amount)}</td>

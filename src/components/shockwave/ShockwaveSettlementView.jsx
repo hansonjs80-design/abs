@@ -57,6 +57,13 @@ function getIncentiveRateSummary(summaries, percentage) {
   ) || { percentage, count: 0, amount: 0, incentive: 0 };
 }
 
+function getIncentiveRateToneClass(value) {
+  const rate = Number(value);
+  if (rate === 7) return 'settlement-rate-subtotal-row--7';
+  if (rate === 15) return 'settlement-rate-subtotal-row--15';
+  return '';
+}
+
 export default function ShockwaveSettlementView({
   logs,
   therapists,
@@ -478,7 +485,7 @@ export default function ShockwaveSettlementView({
                           <td
                             key={`rate-count-${item?.therapist?.id || item?.therapist?.name || therapistIndex}-${rateGroup.percentage ?? 'empty'}`}
                             colSpan={rateGroup.prescriptions.length || 1}
-                            className={`merged-value therapist-tone-${therapistIndex % 5}-cell${rateGroupIndex === rateGroups.length - 1 ? ' therapist-group-end' : ''}${horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length === 1 ? ' merged-value--single-prescription' : ''}`}
+                            className={`merged-value therapist-tone-${therapistIndex % 5}-cell ${getIncentiveRateToneClass(rateGroup.percentage)}${rateGroupIndex === rateGroups.length - 1 ? ' therapist-group-end' : ''}${horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length === 1 ? ' merged-value--single-prescription' : ''}`}
                           >
                             {formatCount(
                               rateGroup.percentage === null
@@ -507,7 +514,7 @@ export default function ShockwaveSettlementView({
                           <td
                             key={`rate-amount-${item?.therapist?.id || item?.therapist?.name || therapistIndex}-${rateGroup.percentage ?? 'empty'}`}
                             colSpan={rateGroup.prescriptions.length || 1}
-                            className={`merged-value amount therapist-tone-${therapistIndex % 5}-cell${rateGroupIndex === rateGroups.length - 1 ? ' therapist-group-end' : ''}${horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length === 1 ? ' merged-value--single-prescription' : ''}`}
+                            className={`merged-value amount therapist-tone-${therapistIndex % 5}-cell ${getIncentiveRateToneClass(rateGroup.percentage)}${rateGroupIndex === rateGroups.length - 1 ? ' therapist-group-end' : ''}${horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length === 1 ? ' merged-value--single-prescription' : ''}`}
                           >
                             {rateGroup.percentage === null
                               ? formatCurrency(0)
@@ -539,7 +546,7 @@ export default function ShockwaveSettlementView({
                           <td
                             key={`rate-incentive-${item?.therapist?.id || item?.therapist?.name || therapistIndex}-${rateGroup.percentage ?? 'empty'}`}
                             colSpan={rateGroup.prescriptions.length || 1}
-                            className={`merged-value incentive therapist-tone-${therapistIndex % 5}-cell${rateGroupIndex === rateGroups.length - 1 ? ' therapist-group-end' : ''}${horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length === 1 ? ' merged-value--single-prescription' : ''}`}
+                            className={`merged-value incentive therapist-tone-${therapistIndex % 5}-cell ${getIncentiveRateToneClass(rateGroup.percentage)}${rateGroupIndex === rateGroups.length - 1 ? ' therapist-group-end' : ''}${horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions.length === 1 ? ' merged-value--single-prescription' : ''}`}
                           >
                             {rateGroup.percentage === null
                               ? formatCurrency(0)
@@ -603,7 +610,7 @@ export default function ShockwaveSettlementView({
                         {horizontalSummaryIncentiveRateGroups.map((rateGroup) => (
                           <td
                             key={`grand-rate-count-${rateGroup.percentage}`}
-                            className="grand-value merged-value"
+                            className={`grand-value merged-value ${getIncentiveRateToneClass(rateGroup.percentage)}`}
                             colSpan={rateGroup.prescriptions.length}
                           >
                             {formatCount(
@@ -628,7 +635,7 @@ export default function ShockwaveSettlementView({
                         {horizontalSummaryIncentiveRateGroups.map((rateGroup) => (
                           <td
                             key={`grand-rate-amount-${rateGroup.percentage}`}
-                            className="grand-value merged-value amount"
+                            className={`grand-value merged-value amount ${getIncentiveRateToneClass(rateGroup.percentage)}`}
                             colSpan={rateGroup.prescriptions.length}
                           >
                             {formatCurrency(
@@ -653,7 +660,7 @@ export default function ShockwaveSettlementView({
                         {horizontalSummaryIncentiveRateGroups.map((rateGroup) => (
                           <td
                             key={`grand-rate-incentive-${rateGroup.percentage}`}
-                            className="grand-value merged-value incentive"
+                            className={`grand-value merged-value incentive ${getIncentiveRateToneClass(rateGroup.percentage)}`}
                             colSpan={rateGroup.prescriptions.length}
                           >
                             {formatCurrency(
@@ -810,7 +817,7 @@ export default function ShockwaveSettlementView({
                             );
                           })}
                         {showIncentiveRateSubtotals && item.incentiveRateBreakdown?.map((rateSummary) => (
-                          <tr key={`vertical-therapist-rate-${rateSummary.percentage}`} className="settlement-rate-subtotal-row">
+                          <tr key={`vertical-therapist-rate-${rateSummary.percentage}`} className={`settlement-rate-subtotal-row ${getIncentiveRateToneClass(rateSummary.percentage)}`}>
                             <th>{formatPercentage(rateSummary.percentage)} 합계</th>
                             <td>{rateSummary.count > 0 ? `${rateSummary.count}건` : '-'}</td>
                             <td className="amount-val">{rateSummary.amount > 0 ? formatCurrency(rateSummary.amount) : '-'}</td>
@@ -850,7 +857,7 @@ export default function ShockwaveSettlementView({
                     </thead>
                     <tbody>
                       {showIncentiveRateSubtotals && settlement.grandIncentiveRateBreakdown.map((rateSummary) => (
-                        <tr key={`vertical-grand-rate-${rateSummary.percentage}`} className="settlement-rate-subtotal-row">
+                        <tr key={`vertical-grand-rate-${rateSummary.percentage}`} className={`settlement-rate-subtotal-row ${getIncentiveRateToneClass(rateSummary.percentage)}`}>
                           <th>{formatPercentage(rateSummary.percentage)} 합계</th>
                           <td>{rateSummary.count}건</td>
                           <td className="amount-val">{formatCurrency(rateSummary.amount)}</td>

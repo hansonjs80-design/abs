@@ -10,6 +10,37 @@
   margin-right: 12px !important;
 }
 
+/* 신장분사 인센율 소계는 7%와 15%를 행/열 배경으로 구분한다. */
+.sw-horizontal2-layout--shinjang .settlement-rate-subtotal-row--7 > *,
+.sw-settlement-stack--shockwave .sw-settlement-table .settlement-rate-subtotal-row--7,
+.sw-settlement-stack--shockwave .sw-settlement-table .settlement-rate-subtotal-row--7 > *,
+.sw-settlement-stack--shockwave .sw-settlement-table .settlement-rate-subtotal-row--7.settlement-rate-subtotal-row > * {
+  background: #eaf3ff !important;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.sw-horizontal2-layout--shinjang .settlement-rate-subtotal-row--15 > *,
+.sw-settlement-stack--shockwave .sw-settlement-table .settlement-rate-subtotal-row--15,
+.sw-settlement-stack--shockwave .sw-settlement-table .settlement-rate-subtotal-row--15 > *,
+.sw-settlement-stack--shockwave .sw-settlement-table .settlement-rate-subtotal-row--15.settlement-rate-subtotal-row > * {
+  background: #f8edff !important;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.sw-settlement-stack--shockwave .sw-settlement-table td.settlement-rate-subtotal-row--7 {
+  background: #eaf3ff !important;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.sw-settlement-stack--shockwave .sw-settlement-table td.settlement-rate-subtotal-row--15 {
+  background: #f8edff !important;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
 .sw-view-mode-btn {
   border: none !important;
   background: transparent !important;

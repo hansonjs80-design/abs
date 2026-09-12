@@ -10,6 +10,21 @@
   max-width: 100% !important;
 }
 
+/* 신장분사 인센율 소계는 치료사별 행과 총합계에서 같은 색을 사용한다. */
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.settlement-rate-subtotal-row.settlement-rate-subtotal-row--7 > *,
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table tbody tr.settlement-rate-subtotal-row.settlement-rate-subtotal-row--7 > * {
+  background: #eaf3ff !important;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.settlement-rate-subtotal-row.settlement-rate-subtotal-row--15 > *,
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table tbody tr.settlement-rate-subtotal-row.settlement-rate-subtotal-row--15 > * {
+  background: #f8edff !important;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
 .sw-settlement-vertical-header-wrap {
   width: 100% !important;
   background: #ffffff !important;

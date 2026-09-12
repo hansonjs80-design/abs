@@ -8,6 +8,10 @@ const horizontal2CssUrl = new URL(
   '../../styles/shockwave_settlement_horizontal2.css',
   import.meta.url,
 );
+const verticalCssUrl = new URL(
+  '../../styles/shockwave_settlement_vertical.css',
+  import.meta.url,
+);
 const shockwaveSettlementUrl = new URL(
   '../../components/shockwave/ShockwaveSettlementView.jsx',
   import.meta.url,
@@ -145,6 +149,25 @@ test('shockwave horizontal2 therapist total rows share the body table columns', 
   assert.match(horizontal2View, /<td className="horizontal2-total-spacer" aria-hidden="true" \/>/);
   assert.doesNotMatch(horizontal2View, /sw-horizontal2-therapist-total-table/);
   assert.match(horizontal2Css, /\.sw-horizontal2-therapist-table \.horizontal2-total-spacer\s*\{[\s\S]*?border-right:\s*2px solid #64748b !important;/);
+});
+
+test('shinjang settlement distinguishes 7 and 15 percent incentive subtotals by background', async () => {
+  const [settlementView, horizontal2View, horizontal2Css, verticalCss] = await Promise.all([
+    readFile(shockwaveSettlementUrl, 'utf8'),
+    readFile(horizontal2ViewUrl, 'utf8'),
+    readFile(horizontal2CssUrl, 'utf8'),
+    readFile(verticalCssUrl, 'utf8'),
+  ]);
+
+  for (const source of [settlementView, horizontal2View]) {
+    assert.match(source, /function getIncentiveRateToneClass\(value\)/);
+    assert.match(source, /settlement-rate-subtotal-row--7/);
+    assert.match(source, /settlement-rate-subtotal-row--15/);
+  }
+  assert.match(horizontal2Css, /\.settlement-rate-subtotal-row--7[\s\S]*?background:\s*#eaf3ff !important;/);
+  assert.match(horizontal2Css, /\.settlement-rate-subtotal-row--15[\s\S]*?background:\s*#f8edff !important;/);
+  assert.match(verticalCss, /tr\.settlement-rate-subtotal-row\.settlement-rate-subtotal-row--7 > \*[\s\S]*?background:\s*#eaf3ff !important;/);
+  assert.match(verticalCss, /tr\.settlement-rate-subtotal-row\.settlement-rate-subtotal-row--15 > \*[\s\S]*?background:\s*#f8edff !important;/);
 });
 
 test('manual settlement screen enlarges section titles and compacts only body rows', async () => {

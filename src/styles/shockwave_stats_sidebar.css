@@ -21,6 +21,7 @@
 
   .sw-stats-sidebar--compact .sw-stats-side-tab {
     --tab-accent: #2563eb;
+    --tab-active-surface: #1e40af;
     --tab-surface: #e0efff;
     --tab-border: #93c5fd;
     width: 100%;
@@ -42,21 +43,25 @@
   .sw-stats-container--manual .sw-stats-sidebar--compact .sw-stats-side-tab--grid,
   .sw-stats-sidebar--compact .sw-stats-side-tab--settlement {
     --tab-accent: #b45309;
+    --tab-active-surface: #92400e;
     --tab-surface: #ffeadb;
     --tab-border: #f3b276;
   }
   .sw-stats-container--shinjang .sw-stats-sidebar--compact .sw-stats-side-tab--grid {
     --tab-accent: #278343;
+    --tab-active-surface: #166534;
     --tab-surface: #ddf5e4;
     --tab-border: #86c89a;
   }
   .sw-stats-sidebar--compact .sw-stats-side-tab--new-patients {
     --tab-accent: #7c3aed;
+    --tab-active-surface: #5b21b6;
     --tab-surface: #eee7ff;
     --tab-border: #c4b5fd;
   }
   .sw-stats-sidebar--compact .sw-stats-side-tab--settings {
     --tab-accent: #16765c;
+    --tab-active-surface: #0f5c47;
     --tab-surface: #dcf7eb;
     --tab-border: #8ed4b8;
   }
@@ -69,9 +74,9 @@
     box-shadow: none;
   }
   .sw-stats-layout--compact .sw-stats-sidebar--compact .sw-stats-side-tab.active {
-    background: var(--tab-surface);
-    color: var(--tab-accent);
-    border: 2px solid var(--tab-surface);
+    background: var(--tab-active-surface);
+    color: #fff;
+    border: 2px solid var(--tab-active-surface);
     font-weight: 850;
     box-shadow: none;
   }
