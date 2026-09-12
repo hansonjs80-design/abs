@@ -38,12 +38,14 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /<th>처방별 총 인센티브<\/th>/);
     assert.match(pageSource, /<th>인센<\/th>/);
     assert.match(pageSource, /<IncentiveRateList rates=\{row\.rates\} \/>/);
-    assert.match(pageSource, /const hasPrescription = Boolean\(row\.prescription\);/);
-    assert.match(pageSource, /<th>\{row\.prescription\}<\/th>/);
+    assert.match(pageSource, /const rowLabel = row\.label \|\| row\.prescription;/);
+    assert.match(pageSource, /<th>\{rowLabel\}<\/th>/);
     assert.doesNotMatch(pageSource, /<span className="combined-prescription-label">\{row\.prescription\}<\/span>/);
     assert.match(pageSource, /const incentiveRate = row\.rates\?\.length === 1 \? Number\(row\.rates\[0\]\) : null;/);
     assert.match(pageSource, /combined-incentive-rate-row--7/);
     assert.match(pageSource, /combined-incentive-rate-row--15/);
+    assert.match(pageSource, /\[7, 15\]\.map\(\(rate\) =>/);
+    assert.match(pageSource, /label: `신장분사 \$\{formatIncentiveRate\(rate\)\}`/);
     assert.match(pageSource, /<tr className="combined-therapist-total">\s*<th>합계<\/th>/);
     assert.match(pageSource, /const visibleTreatments = buildTherapistTreatmentSections\(item\)/);
     assert.match(pageSource, /visibleTreatments\.length > 0/);

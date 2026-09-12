@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { useSchedule } from '../../contexts/ScheduleContext';
 
 import { getTodayKST, isSameDate } from '../../lib/calendarUtils';
+import { supabase } from '../../lib/supabaseClient';
 import {
   CONTEXT_MENU_DISMISS_GRACE_MS,
   shouldIgnoreContextMenuDismissEvent,
@@ -123,6 +124,7 @@ import {
   getScheduleDisplaySlotMinutes,
 } from '../../lib/schedulerUtils';
 import { normalizeLoadedScheduleMonthKey } from '../../lib/scheduleMonthLoadUtils';
+import { buildScheduleReservationWarnings } from '../../lib/scheduleReservationWarningUtils';
 
 export default function ShockwaveView({ therapists, settings, memos = {}, memosLoadedKey = '', onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
   const { currentYear, currentMonth, goToMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, monthlyShinjangSprayTherapists, monthlyTherapistsByMonth, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings, clipboardRef, clipboardSource, setClipboardSource } = useSchedule();
@@ -522,6 +524,80 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     settings,
     setChartSelector,
   });
+
+  const confirmScheduleReservationWarnings = useCallback(async ({
+    w,
+    d,
+    r,
+    c,
+    content,
+    prescription,
+    oldContent,
+    oldPrescription,
+  }) => {
+    const dayInfo = weeks?.[w]?.[d];
+    if (!dayInfo) return true;
+    const target = {
+      year: currentYear,
+      month: currentMonth,
+      week_index: w,
+      day_index: d,
+      row_index: r,
+      col_index: c,
+      content,
+      prescription,
+      date: `${dayInfo.year}-${String(dayInfo.month).padStart(2, '0')}-${String(dayInfo.day).padStart(2, '0')}`,
+    };
+    const searchTerm = String(content || '').split('/')[0].replace(/[%_]/g, '').trim();
+    let remoteRows = [];
+    if (searchTerm) {
+      const { data, error } = await supabase
+        .from('shockwave_schedules')
+        .select('year,month,week_index,day_index,row_index,col_index,content,prescription,merge_span')
+        .neq('content', '')
+        .ilike('content', `%${searchTerm}%`)
+        .limit(1000);
+      if (error) {
+        // A failed read must not turn a routine booking into a blocked save.
+        console.warn('Schedule reservation warning query failed:', error);
+      } else {
+        remoteRows = data || [];
+      }
+    }
+    const localRows = Object.entries(effectiveMemos).map(([memoKey, memo]) => {
+      const [weekIndex, dayIndex, rowIndex, colIndex] = memoKey.split('-').map(Number);
+      return {
+        ...memo,
+        year: currentYear,
+        month: currentMonth,
+        week_index: weekIndex,
+        day_index: dayIndex,
+        row_index: rowIndex,
+        col_index: colIndex,
+      };
+    });
+    const rowsByKey = new Map();
+    [...remoteRows, ...localRows].forEach((row) => {
+      const rowKey = `${row.year}-${row.month}-${row.week_index}-${row.day_index}-${row.row_index}-${row.col_index}`;
+      rowsByKey.set(rowKey, row);
+    });
+    const warningInput = {
+      scheduleRows: [...rowsByKey.values()],
+      settings,
+      year: currentYear,
+      month: currentMonth,
+    };
+    const priorWarningTypes = new Set(buildScheduleReservationWarnings({
+      ...warningInput,
+      target: { ...target, content: oldContent, prescription: oldPrescription },
+    }).map((warning) => warning.type));
+    const warnings = buildScheduleReservationWarnings({
+      ...warningInput,
+      target,
+    }).filter((warning) => !priorWarningTypes.has(warning.type));
+
+    return warnings.every((warning) => window.confirm(warning.message));
+  }, [currentMonth, currentYear, effectiveMemos, settings, weeks]);
 
   // ── 기존 40/60 셀과 빈 셀 잔여 메타데이터 보정 ──
   const prescriptionPatchKeyRef = useRef(null);
@@ -1317,6 +1393,34 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     const finalBodyPart = newContent.trim()
       ? (hasBodyPartResult ? newBodyPart : oldBodyPart)
       : null;
+    if (newContent.trim()) {
+      const approved = await confirmScheduleReservationWarnings({
+        w,
+        d,
+        r,
+        c,
+        content: newContent,
+        prescription: finalPrescription,
+        oldContent,
+        oldPrescription,
+      });
+      if (wasDeletedAfterSaveStarted() || !isSaveVersionCurrent()) return false;
+      if (!approved) {
+        if (editInputRef.current?.dataset?.cellKey === key) {
+          editInputRef.current.value = oldContent;
+        }
+        setEditingCell(null);
+        setEditValue(oldContent);
+        setPendingDisplayValues((prev) => {
+          if (!(key in prev)) return prev;
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+        removePendingScheduleDraft(currentYear, currentMonth, key);
+        return false;
+      }
+    }
     const scheduleSlotMinutes = getScheduleDisplaySlotMinutes(settings, 20);
     const finalPrescriptionRowSpan = finalPrescription
       ? getManualTherapyRowSpan(finalPrescription, {
@@ -1709,7 +1813,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       const errMsg = window.lastDbError?.message || window.lastDbError?.error_description || (typeof window.lastDbError === 'string' ? window.lastDbError : '') || '상세 에러 없음';
       addToast(`저장 실패 (${errMsg})`, 'error');
     }
-  }, [editValue, currentYear, currentMonth, settings, memos, effectiveMemos, pendingMergeSpans, pendingDisplayValues, baseTimeSlots.length, queuedOnSaveMemo, addToast, buildSchedulerAutoText, recordUndo, buildMemoSnapshotForKeys, queuedSaveShockwaveMemosBulk, applyImmediateCellDisplay, applyImmediateMergeSpan, clearImmediateCellDisplay, cellKey, setPendingDisplayValues, prescriptionScheduleSettings.doseTags, prescriptionScheduleSettings.durationMinutesMap, getDefaultEditingMergeSpanForKey, getDefaultReservationTime]);
+  }, [editValue, currentYear, currentMonth, settings, memos, effectiveMemos, pendingMergeSpans, pendingDisplayValues, baseTimeSlots.length, queuedOnSaveMemo, addToast, buildSchedulerAutoText, confirmScheduleReservationWarnings, recordUndo, buildMemoSnapshotForKeys, queuedSaveShockwaveMemosBulk, applyImmediateCellDisplay, applyImmediateMergeSpan, clearImmediateCellDisplay, cellKey, setPendingDisplayValues, prescriptionScheduleSettings.doseTags, prescriptionScheduleSettings.durationMinutesMap, getDefaultEditingMergeSpanForKey, getDefaultReservationTime]);
 
   handleCellSaveRef.current = handleCellSave;
 

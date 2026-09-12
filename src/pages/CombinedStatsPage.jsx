@@ -58,42 +58,24 @@ function buildTherapistTreatmentSections(item) {
   return COMBINED_STATS_TREATMENTS.map((treatment) => {
     const value = item?.treatments?.[treatment.key] || { count: 0, amount: 0, incentive: 0 };
     if (treatment.key === 'shinjang_spray') {
-      // 처방명별 실적이 있으면 처방명별로 행 생성 (우선)
-      const prescriptionGroups = Array.isArray(item?.shinjangPrescriptionGroups)
-        ? item.shinjangPrescriptionGroups
-        : [];
-      if (prescriptionGroups.length > 0) {
-        const rows = prescriptionGroups.map((pg) => ({
-          prescription: pg.prescription,
-          count: Math.max(0, Number(pg.count) || 0),
-          amount: Math.max(0, Number(pg.amount) || 0),
-          incentive: Math.max(0, Number(pg.incentive) || 0),
-          rates: Array.isArray(pg.rates) && pg.rates.length > 0 ? pg.rates : [pg.rate ?? 0],
-        }));
-        // 실적이 있는 행만 포함 (count > 0)
-        const activeRows = rows.filter((r) => r.count > 0);
-        if (activeRows.length > 0) {
-          return { ...treatment, value, rows: activeRows };
-        }
-      }
-
-      // 폴백: 인센율별 그룹 사용
       const therapistShinjangMap = new Map(
         (Array.isArray(item?.shinjangIncentiveGroups) ? item.shinjangIncentiveGroups : [])
           .map((g) => [Number(g.rate), g])
       );
-      const configuredRates = Array.isArray(item?.configuredShinjangRates) && item.configuredShinjangRates.length > 0
-        ? item.configuredShinjangRates.map(Number)
-        : (item?.incentiveRates?.shinjang_spray?.length > 0
-          ? item.incentiveRates.shinjang_spray.map(Number)
-          : [7]);
-
-      const rows = configuredRates.map((rate) => {
+      // 치료사 표는 처방명이 달라도 인센율 기준의 두 구분으로 고정한다.
+      const rows = [7, 15].map((rate) => {
         const found = therapistShinjangMap.get(rate);
         if (found) {
-          return { ...found, rates: [rate] };
+          return { ...found, label: `신장분사 ${formatIncentiveRate(rate)}`, rates: [rate] };
         }
-        return { rate, count: 0, amount: 0, incentive: 0, rates: [rate] };
+        return {
+          rate,
+          label: `신장분사 ${formatIncentiveRate(rate)}`,
+          count: 0,
+          amount: 0,
+          incentive: 0,
+          rates: [rate],
+        };
       });
 
       return { ...treatment, value, rows };
@@ -504,7 +486,7 @@ export default function CombinedStatsPage() {
                               const rowKey = row.prescription
                                 ? `${treatment.key}-${row.prescription}`
                                 : `${treatment.key}-${row.rates?.join('-') || 'total'}`;
-                              const hasPrescription = Boolean(row.prescription);
+                              const rowLabel = row.label || row.prescription;
                               const incentiveRate = row.rates?.length === 1 ? Number(row.rates[0]) : null;
                               const incentiveRateRowClass = incentiveRate === 7
                                 ? 'combined-incentive-rate-row--7'
@@ -519,8 +501,8 @@ export default function CombinedStatsPage() {
                                     incentiveRateRowClass,
                                   ].filter(Boolean).join(' ')}
                                 >
-                                  {hasPrescription ? (
-                                    <th>{row.prescription}</th>
+                                  {rowLabel ? (
+                                    <th>{rowLabel}</th>
                                   ) : (
                                     rowIndex === 0 && (
                                       <th rowSpan={treatment.rows.length}>{treatment.label}</th>
