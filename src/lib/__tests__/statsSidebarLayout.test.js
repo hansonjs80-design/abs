@@ -46,7 +46,11 @@ test('compact stats sidebar fills the selected tab with its former dark border c
     sidebarCss,
     /\.sw-stats-layout--compact \.sw-stats-sidebar--compact \.sw-stats-side-tab\.active\s*\{[\s\S]*?background:\s*var\(--tab-active-surface\);[\s\S]*?color:\s*#fff;[\s\S]*?border:\s*2px solid var\(--tab-active-surface\);/
   );
-  assert.match(sidebarCss, /--tab-active-surface:\s*#1e40af;/);
+  assert.match(sidebarCss, /--tab-active-surface:\s*#1d4ed8;/);
+  assert.match(sidebarCss, /\.sw-stats-sidebar--compact \.sw-stats-side-tab--settlement\s*\{[\s\S]*?--tab-active-surface:\s*#c84f00;/);
+  assert.match(sidebarCss, /\.sw-stats-container--shinjang[\s\S]*?--tab-active-surface:\s*#15803d;/);
+  assert.match(sidebarCss, /\.sw-stats-side-tab--new-patients\s*\{[\s\S]*?--tab-active-surface:\s*#6d28d9;/);
+  assert.match(sidebarCss, /\.sw-stats-side-tab--settings\s*\{[\s\S]*?--tab-active-surface:\s*#0f766e;/);
   assert.doesNotMatch(sidebarCss, /\.sw-stats-side-tab\.active::before/);
 });
 
