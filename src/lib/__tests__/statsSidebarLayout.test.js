@@ -39,17 +39,25 @@ test('compact stats sidebar gives every navigation tab a distinct pastel treatme
   assert.match(sidebarCss, /\.sw-stats-sidebar--compact \.sw-stats-side-tab--new-patients\s*\{[\s\S]*?--tab-surface:\s*#eee7ff;[\s\S]*?--tab-border:\s*#c4b5fd;/);
 });
 
-test('compact stats sidebar uses a straight full-height indicator for the selected tab', async () => {
+test('compact stats sidebar marks the selected tab with an accent border instead of a vertical bar', async () => {
   const sidebarCss = await readFile(sidebarCssUrl, 'utf8');
 
   assert.match(
     sidebarCss,
-    /\.sw-stats-layout--compact \.sw-stats-sidebar--compact \.sw-stats-side-tab\.active\s*\{[\s\S]*?border-left-color:\s*transparent;/
+    /\.sw-stats-layout--compact \.sw-stats-sidebar--compact \.sw-stats-side-tab\.active\s*\{[\s\S]*?color:\s*var\(--tab-accent\);[\s\S]*?border:\s*2px solid var\(--tab-accent\);/
   );
-  assert.match(
-    sidebarCss,
-    /\.sw-stats-layout--compact \.sw-stats-sidebar--compact \.sw-stats-side-tab\.active::before\s*\{[\s\S]*?top:\s*-1px;[\s\S]*?bottom:\s*-1px;[\s\S]*?width:\s*3px;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*var\(--tab-accent\);/
-  );
+  assert.doesNotMatch(sidebarCss, /\.sw-stats-side-tab\.active::before/);
+});
+
+test('compact stats sidebar gives therapist filter chips distinct color coding', async () => {
+  const sidebarCss = await readFile(sidebarCssUrl, 'utf8');
+
+  assert.match(sidebarCss, /\.sw-sidebar-filter-chip\.tone-0\s*\{\s*--filter-surface:\s*#e7f0ff;[\s\S]*?--filter-accent:\s*#2563b7;/);
+  assert.match(sidebarCss, /\.sw-sidebar-filter-chip\.tone-1\s*\{\s*--filter-surface:\s*#f0e9ff;[\s\S]*?--filter-accent:\s*#7042c1;/);
+  assert.match(sidebarCss, /\.sw-sidebar-filter-chip\.tone-2\s*\{\s*--filter-surface:\s*#e6f7ec;[\s\S]*?--filter-accent:\s*#237841;/);
+  assert.match(sidebarCss, /\.sw-sidebar-filter-chip\.tone-3\s*\{\s*--filter-surface:\s*#fff0df;[\s\S]*?--filter-accent:\s*#a8510b;/);
+  assert.match(sidebarCss, /\.sw-sidebar-filter-chip\.tone-4\s*\{\s*--filter-surface:\s*#ffe8f0;[\s\S]*?--filter-accent:\s*#b33d68;/);
+  assert.match(sidebarCss, /\.sw-sidebar-filter-chip\.is-active\s*\{[\s\S]*?border-color:\s*var\(--filter-accent\);[\s\S]*?box-shadow:\s*inset 0 0 0 1px var\(--filter-accent\);/);
 });
 
 test('both stats refresh buttons use the shorter label', async () => {
