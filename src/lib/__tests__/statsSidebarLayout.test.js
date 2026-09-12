@@ -30,12 +30,25 @@ test('compact stats sidebar centers navigation and therapist filter labels', asy
   assert.match(sidebarCss, /\.sw-stats-sidebar--compact \.sw-sidebar-filter-chip\s*\{[\s\S]*?justify-content:\s*center;/);
 });
 
+test('compact stats sidebar gives every navigation tab a distinct pastel treatment color', async () => {
+  const sidebarCss = await readFile(sidebarCssUrl, 'utf8');
+
+  assert.match(sidebarCss, /\.sw-stats-sidebar--compact \.sw-stats-side-tab\s*\{[\s\S]*?--tab-surface:\s*#e0efff;[\s\S]*?--tab-border:\s*#93c5fd;[\s\S]*?background:\s*var\(--tab-surface\);/);
+  assert.match(sidebarCss, /\.sw-stats-container--manual[\s\S]*?--tab-surface:\s*#ffeadb;[\s\S]*?--tab-border:\s*#f3b276;/);
+  assert.match(sidebarCss, /\.sw-stats-container--shinjang[\s\S]*?--tab-surface:\s*#ddf5e4;[\s\S]*?--tab-border:\s*#86c89a;/);
+  assert.match(sidebarCss, /\.sw-stats-sidebar--compact \.sw-stats-side-tab--new-patients\s*\{[\s\S]*?--tab-surface:\s*#eee7ff;[\s\S]*?--tab-border:\s*#c4b5fd;/);
+});
+
 test('compact stats sidebar uses a straight full-height indicator for the selected tab', async () => {
   const sidebarCss = await readFile(sidebarCssUrl, 'utf8');
 
   assert.match(
     sidebarCss,
-    /\.sw-stats-layout--compact \.sw-stats-sidebar--compact \.sw-stats-side-tab\.active::before\s*\{[\s\S]*?top:\s*0;[\s\S]*?bottom:\s*0;[\s\S]*?width:\s*3px;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*var\(--tab-accent\);/
+    /\.sw-stats-layout--compact \.sw-stats-sidebar--compact \.sw-stats-side-tab\.active\s*\{[\s\S]*?border-left-color:\s*transparent;/
+  );
+  assert.match(
+    sidebarCss,
+    /\.sw-stats-layout--compact \.sw-stats-sidebar--compact \.sw-stats-side-tab\.active::before\s*\{[\s\S]*?top:\s*-1px;[\s\S]*?bottom:\s*-1px;[\s\S]*?width:\s*3px;[\s\S]*?border-radius:\s*0;[\s\S]*?background:\s*var\(--tab-accent\);/
   );
 });
 

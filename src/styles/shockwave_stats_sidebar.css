@@ -21,14 +21,15 @@
 
   .sw-stats-sidebar--compact .sw-stats-side-tab {
     --tab-accent: #2563eb;
-    --tab-surface: #edf4ff;
+    --tab-surface: #e0efff;
+    --tab-border: #93c5fd;
     width: 100%;
     min-height: 35px;
     padding: 8px 1px;
-    border: 1px solid transparent;
-    border-left: 3px solid transparent;
+    border: 1px solid var(--tab-border);
+    border-left: 3px solid var(--tab-border);
     border-radius: 6px;
-    background: transparent;
+    background: var(--tab-surface);
     color: #64748b;
     font-size: 12px;
     font-weight: 750;
@@ -43,41 +44,46 @@
   .sw-stats-container--manual .sw-stats-sidebar--compact .sw-stats-side-tab--grid,
   .sw-stats-sidebar--compact .sw-stats-side-tab--settlement {
     --tab-accent: #b45309;
-    --tab-surface: #fff2e6;
+    --tab-surface: #ffeadb;
+    --tab-border: #f3b276;
   }
   .sw-stats-container--shinjang .sw-stats-sidebar--compact .sw-stats-side-tab--grid {
     --tab-accent: #278343;
-    --tab-surface: #edf8ef;
+    --tab-surface: #ddf5e4;
+    --tab-border: #86c89a;
   }
   .sw-stats-sidebar--compact .sw-stats-side-tab--new-patients {
     --tab-accent: #7c3aed;
-    --tab-surface: #f3eeff;
+    --tab-surface: #eee7ff;
+    --tab-border: #c4b5fd;
   }
   .sw-stats-sidebar--compact .sw-stats-side-tab--settings {
     --tab-accent: #16765c;
-    --tab-surface: #edf8f3;
+    --tab-surface: #dcf7eb;
+    --tab-border: #8ed4b8;
   }
 
   .sw-stats-layout--compact .sw-stats-sidebar--compact .sw-stats-side-tab:hover {
     transform: none;
     background: var(--tab-surface);
     color: var(--tab-accent);
-    border-color: transparent;
+    border-color: var(--tab-border);
+    border-left-color: var(--tab-border);
     box-shadow: none;
   }
   .sw-stats-layout--compact .sw-stats-sidebar--compact .sw-stats-side-tab.active {
     background: var(--tab-surface);
     color: var(--tab-accent);
     border-color: transparent;
-    border-left-color: var(--tab-accent);
+    border-left-color: transparent;
     font-weight: 850;
     box-shadow: none;
   }
   .sw-stats-layout--compact .sw-stats-sidebar--compact .sw-stats-side-tab.active::before {
     content: '';
     position: absolute;
-    top: 0;
-    bottom: 0;
+    top: -1px;
+    bottom: -1px;
     left: -1px;
     width: 3px;
     border-radius: 0;
