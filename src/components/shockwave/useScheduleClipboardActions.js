@@ -52,6 +52,7 @@ export default function useScheduleClipboardActions({
   cellKey,
   buildSchedulerAutoText,
   saveShockwaveMemosBulk,
+  prepareScheduleReservations,
   recordUndo,
   applyImmediateCellDisplay,
   applyImmediateMergeSpan,
@@ -730,7 +731,11 @@ export default function useScheduleClipboardActions({
       });
     });
 
-    const payload = Array.from(combinedPayload.values());
+    const unconfirmedPayload = Array.from(combinedPayload.values());
+    const payload = prepareScheduleReservations
+      ? await prepareScheduleReservations(unconfirmedPayload)
+      : unconfirmedPayload;
+    if (!payload) return;
 
     // 잘라내기 소스의 원본 상태 맵 구성
     const cutSourceOriginals = new Map();
@@ -823,6 +828,7 @@ export default function useScheduleClipboardActions({
     baseTimeSlotsLength,
     colCount,
     saveShockwaveMemosBulk,
+    prepareScheduleReservations,
     recordUndo,
     applyImmediateCellDisplay,
     applyImmediateMergeSpan,

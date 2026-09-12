@@ -1,0 +1,23 @@
+.reservation-warning-dialog {
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 24px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  color: #1e293b;
+  background: white;
+  box-shadow: 0 16px 48px #0003;
+}
+.reservation-warning-dialog::backdrop { background: #0f172a66; }
+.reservation-warning-dialog h2 { font-size: 18px; margin: 0 0 12px; }
+.reservation-warning-dialog p { margin: 0 0 20px; }
+.reservation-warning-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.reservation-warning-actions button {
+  padding: 9px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
+  cursor: pointer;
+}
+.reservation-warning-actions button:last-child { color: #075985; background: #e0f2fe; }
+.reservation-warning-actions button:disabled { opacity: .5; cursor: default; }
+.reservation-warning-actions button:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }

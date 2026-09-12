@@ -44,10 +44,10 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /const incentiveRate = row\.rates\?\.length === 1 \? Number\(row\.rates\[0\]\) : null;/);
     assert.match(pageSource, /combined-incentive-rate-row--7/);
     assert.match(pageSource, /combined-incentive-rate-row--15/);
-    assert.match(pageSource, /\[7, 15\]\.map\(\(rate\) =>/);
+    assert.match(pageSource, /\(isAdmin \? \[7, 15\] : \[7\]\)\.map\(\(rate\) =>/);
     assert.match(pageSource, /label: `신장분사 \$\{formatIncentiveRate\(rate\)\}`/);
     assert.match(pageSource, /<tr className="combined-therapist-total">\s*<th>합계<\/th>/);
-    assert.match(pageSource, /const visibleTreatments = buildTherapistTreatmentSections\(item\)/);
+    assert.match(pageSource, /const visibleTreatments = buildTherapistTreatmentSections\(item, isAdmin\)/);
     assert.match(pageSource, /visibleTreatments\.length > 0/);
     assert.match(pageSource, /rowSpan=\{treatment\.rows\.length\}/);
     assert.match(pageSource, /metric="count"\s*includeManual=\{isAdmin\}/);

@@ -3,6 +3,29 @@ import { getScheduleItemTreatmentGroup } from './prescriptionScheduleSettings.js
 import { getExplicitVisitSuffix, parseSchedulerPatientIdentity } from './schedulerCellTextUtils.js';
 import { getScheduleDayDateKey } from './schedulerHistoryCandidateUtils.js';
 
+export function findShinjangReplacement(prescription, prescriptions = []) {
+  const getDose = (value) => String(value || '').normalize('NFKC').match(/\d+(?:\.\d+)?/g) || [];
+  const source = getDose(prescription);
+  if (source.length !== 1) return '';
+  const matches = prescriptions.filter((candidate) => {
+    const doses = getDose(candidate);
+    return doses.length === 1 && Number(doses[0]) === Number(source[0])
+      && /dc/i.test(candidate) === /dc/i.test(prescription);
+  });
+  return matches.length === 1 ? matches[0] : '';
+}
+
+export async function prepareReservationPayload(payload, confirm) {
+  const prepared = payload.map((row) => ({ ...row }));
+  for (const row of prepared) {
+    if (!String(row.content || '').trim() || row.merge_span?.mergedInto) continue;
+    const answer = await confirm(row, prepared);
+    if (answer === false) return null;
+    if (typeof answer === 'string') row.prescription = answer;
+  }
+  return prepared;
+}
+
 function getIdentity(content) {
   const parsed = parseSchedulerPatientIdentity(content);
   return {
@@ -80,7 +103,7 @@ export function buildScheduleReservationWarnings({
         .filter((item) => item.treatmentGroup === 'manual_therapy' && getMondayWeekKey(item.date) === getMondayWeekKey(targetDate))
         .map((item) => item.date)
     );
-    if (sameWeekDates.size >= 2) {
+    if (sameWeekDates.size >= 2 && !sameWeekDates.has(targetDate)) {
       warnings.push({
         type: 'manual-week-limit',
         message: '도수치료 처방은 같은 환자가 한 주에 2일을 초과해 예약할 수 있습니다. 그래도 예약하시겠습니까?',
@@ -106,7 +129,7 @@ export function buildScheduleReservationWarnings({
     if (hasRecentShockwave) {
       warnings.push({
         type: 'shockwave-interval',
-        message: '충격파 예약 후 7일이 경과되지 않았습니다. 그래도 예약하시겠습니까?',
+        message: '아직 7일이 경과되지 않았습니다',
       });
     }
     if (getVisitCount(targetContent) >= 7) {

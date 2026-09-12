@@ -51,7 +51,7 @@ function IncentiveRateList({ rates = [] }) {
   );
 }
 
-function buildTherapistTreatmentSections(item) {
+function buildTherapistTreatmentSections(item, isAdmin = false) {
   const hasAnyActivity = Math.max(0, Number(item?.total?.count) || 0) > 0;
   if (!hasAnyActivity) return [];
 
@@ -63,7 +63,7 @@ function buildTherapistTreatmentSections(item) {
           .map((g) => [Number(g.rate), g])
       );
       // 치료사 표는 처방명이 달라도 인센율 기준의 두 구분으로 고정한다.
-      const rows = [7, 15].map((rate) => {
+      const rows = (isAdmin ? [7, 15] : [7]).map((rate) => {
         const found = therapistShinjangMap.get(rate);
         if (found) {
           return { ...found, label: `신장분사 ${formatIncentiveRate(rate)}`, rates: [rate] };
@@ -444,7 +444,7 @@ export default function CombinedStatsPage() {
           {currentSummary?.therapists?.length > 0 ? (
             <>
               {currentSummary.therapists.map((item, index) => {
-                const visibleTreatments = buildTherapistTreatmentSections(item);
+                const visibleTreatments = buildTherapistTreatmentSections(item, isAdmin);
                 return (
                   <article
                     key={item.therapist.key || item.therapist.id || item.therapist.name}

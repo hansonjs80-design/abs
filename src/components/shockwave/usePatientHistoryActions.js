@@ -293,6 +293,7 @@ export default function usePatientHistoryActions({
   colCount,
   cellKey,
   saveShockwaveMemosBulk,
+  prepareScheduleReservations,
   addToast,
   setPendingDisplayValues,
   applyImmediateCellDisplay,
@@ -1443,7 +1444,7 @@ export default function usePatientHistoryActions({
     }
   }, [selectedCell, cellKey, editingCell, editInputRef, editValue, memos, pendingDisplayValues, fetchPatientHistory, setPatientHistoryModalOpen, setPatientHistoryModalData, patientHistoryTargetCellRef]);
 
-  const handleApplyHistoryToCell = useCallback((log) => {
+  const handleApplyHistoryToCell = useCallback(async (log) => {
     const targetCell = resolvePatientHistoryApplyTarget(
       patientHistoryTargetCellRef?.current,
       selectedCell
@@ -1494,7 +1495,11 @@ export default function usePatientHistoryActions({
       doseTags: prescriptionScheduleSettings.doseTags,
       slotMinutes: settings?.interval_minutes || 10,
     });
-    const savePayload = manualTherapyMerge.ok ? manualTherapyMerge.payload : [payload];
+    const unconfirmedPayload = manualTherapyMerge.ok ? manualTherapyMerge.payload : [payload];
+    const savePayload = prepareScheduleReservations
+      ? await prepareScheduleReservations(unconfirmedPayload)
+      : unconfirmedPayload;
+    if (!savePayload) return;
 
     // A name-only blur automation may already be resolving in the background.
     // Invalidate it before applying history so its stale result cannot repaint
@@ -1542,6 +1547,7 @@ export default function usePatientHistoryActions({
     clearImmediateCellDisplay,
     patientHistoryTargetCellRef,
     invalidateCellSavesForPayload,
+    prepareScheduleReservations,
   ]);
 
   return {

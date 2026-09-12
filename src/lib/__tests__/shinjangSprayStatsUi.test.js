@@ -158,7 +158,7 @@ describe('shinjang spray statistics UI', () => {
     assert.match(source, /getTherapistCompletedPrescriptions\(item, prescriptions\)/);
     assert.match(source, /: \[null\]/);
     assert.match(source, /sw-prescription-incentive-rate/);
-    assert.match(source, /rowSpan=\{therapistPrescriptions\.length \+ 1\}/);
+    assert.match(source, /rowSpan=\{therapistPrescriptions\.length \+ 2 \+ \(showIncentiveRateSubtotals/);
     assert.match(source, /therapistPrescriptions\.map/);
   });
 

@@ -2,7 +2,50 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { generateShockwaveCalendar } from '../calendarUtils.js';
-import { buildScheduleReservationWarnings } from '../scheduleReservationWarningUtils.js';
+import { buildScheduleReservationWarnings, findShinjangReplacement, prepareReservationPayload } from '../scheduleReservationWarningUtils.js';
+
+describe('shinjang replacement selection', () => {
+  it('matches decimal doses including self-pay shockwave prescriptions', () => {
+    for (const source of ['충격파2.5', 'F2.5', '2.5(본인)', 'F2.5(본인)']) {
+      assert.equal(findShinjangReplacement(source, ['신장분사2', '신장분사2.5', '신장분사3.0']), '신장분사2.5');
+      assert.equal(findShinjangReplacement(source, ['F2.5(신장분사)']), 'F2.5(신장분사)');
+    }
+    assert.equal(findShinjangReplacement('F3.0', ['신장분사3']), '신장분사3');
+    assert.equal(findShinjangReplacement('F3.0(본인)', ['신장분사3.0', '신장분사3.0 DC']), '신장분사3.0');
+    assert.equal(findShinjangReplacement('F3.0 DC', ['신장분사3.0', '신장분사3.0 DC']), '신장분사3.0 DC');
+  });
+  it('does not guess missing, ambiguous or nonnumeric prescriptions', () => {
+    assert.equal(findShinjangReplacement('F2.5', ['신장분사2', '신장분사3']), '');
+    assert.equal(findShinjangReplacement('F2.5', ['신장분사2.5', 'F2.5(신장분사)']), '');
+    assert.equal(findShinjangReplacement('F/R', ['신장분사2.5']), '');
+  });
+});
+
+describe('reservation payload confirmation', () => {
+  const source = { content: '', prescription: '', week_index: 1, day_index: 0, row_index: 0, col_index: 0 };
+  const destination = { content: '1001/김환자(7)', prescription: 'F2.5', week_index: 1, day_index: 2, row_index: 0, col_index: 0 };
+  it('cancels the whole cut-and-paste batch before any source deletion', async () => {
+    const payload = [source, destination];
+    let calls = 0;
+    const result = await prepareReservationPayload(payload, async (row, batch) => {
+      calls++;
+      assert.equal(row.content, destination.content);
+      assert.equal(batch[0].content, '');
+      return false;
+    });
+    assert.equal(result, null);
+    assert.equal(calls, 1);
+    assert.equal(payload[1].prescription, 'F2.5');
+  });
+  it('applies the selected prescription to clipboard and history payloads without changing patient content', async () => {
+    for (const payload of [[destination], [source, destination]]) {
+      const result = await prepareReservationPayload(payload, async () => '신장분사2.5');
+      assert.equal(result.at(-1).prescription, '신장분사2.5');
+      assert.equal(result.at(-1).content, destination.content);
+      assert.equal(destination.prescription, 'F2.5');
+    }
+  });
+});
 
 const settings = {
   monthly_settlement_settings: {

@@ -124,7 +124,8 @@ import {
   getScheduleDisplaySlotMinutes,
 } from '../../lib/schedulerUtils';
 import { normalizeLoadedScheduleMonthKey } from '../../lib/scheduleMonthLoadUtils';
-import { buildScheduleReservationWarnings } from '../../lib/scheduleReservationWarningUtils';
+import { buildScheduleReservationWarnings, findShinjangReplacement, prepareReservationPayload } from '../../lib/scheduleReservationWarningUtils';
+import ReservationWarningDialog from './ReservationWarningDialog';
 
 export default function ShockwaveView({ therapists, settings, memos = {}, memosLoadedKey = '', onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
   const { currentYear, currentMonth, goToMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, monthlyShinjangSprayTherapists, monthlyTherapistsByMonth, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings, clipboardRef, clipboardSource, setClipboardSource } = useSchedule();
@@ -132,6 +133,19 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const { user } = useAuth();
   const canManageSchedulerSettings = isAdminUser(user);
   const viewRef = useRef(null);
+  const [reservationWarning, setReservationWarning] = useState(null);
+  const reservationWarningResolver = useRef(null);
+  const answerReservationWarning = useCallback((answer) => {
+    const resolve = reservationWarningResolver.current;
+    reservationWarningResolver.current = null;
+    setReservationWarning(null);
+    resolve?.(answer);
+  }, []);
+  useEffect(() => () => {
+    reservationWarningResolver.current?.(false);
+    reservationWarningResolver.current = null;
+  }, []);
+  useEffect(() => { answerReservationWarning(false); }, [currentYear, currentMonth, answerReservationWarning]);
   const scheduleBulkSaveQueueRef = useRef(Promise.resolve(true));
   const queuedSaveShockwaveMemosBulk = useCallback((payload, options) => {
     const nextSave = scheduleBulkSaveQueueRef.current
@@ -534,6 +548,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     prescription,
     oldContent,
     oldPrescription,
+    batch = [],
   }) => {
     const dayInfo = weeks?.[w]?.[d];
     if (!dayInfo) return true;
@@ -577,7 +592,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       };
     });
     const rowsByKey = new Map();
-    [...remoteRows, ...localRows].forEach((row) => {
+    [...remoteRows, ...localRows, ...batch].forEach((row) => {
       const rowKey = `${row.year}-${row.month}-${row.week_index}-${row.day_index}-${row.row_index}-${row.col_index}`;
       rowsByKey.set(rowKey, row);
     });
@@ -587,17 +602,40 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       year: currentYear,
       month: currentMonth,
     };
-    const priorWarningTypes = new Set(buildScheduleReservationWarnings({
+    const priorWarnings = new Set(buildScheduleReservationWarnings({
       ...warningInput,
       target: { ...target, content: oldContent, prescription: oldPrescription },
-    }).map((warning) => warning.type));
+    }).map((warning) => warning.message));
     const warnings = buildScheduleReservationWarnings({
       ...warningInput,
       target,
-    }).filter((warning) => !priorWarningTypes.has(warning.type));
+    }).filter((warning) => !priorWarnings.has(warning.message));
 
-    return warnings.every((warning) => window.confirm(warning.message));
+    for (const warning of warnings) {
+      if (warning.type === 'shockwave-interval') {
+        const replacement = findShinjangReplacement(prescription,
+          getPrescriptionScheduleSettings(settings, dayInfo.year, dayInfo.month).schedulerPrescriptions.shinjangSpray);
+        const answer = await new Promise((resolve) => {
+          reservationWarningResolver.current?.(false);
+          reservationWarningResolver.current = resolve;
+          setReservationWarning({ message: warning.message, replacement });
+        });
+        if (answer !== true) return answer;
+      } else if (!window.confirm(warning.message)) return false;
+    }
+    return true;
   }, [currentMonth, currentYear, effectiveMemos, settings, weeks]);
+
+  const prepareScheduleReservations = useCallback((payload) => prepareReservationPayload(payload, (row, batch) => {
+    const key = `${row.week_index}-${row.day_index}-${row.row_index}-${row.col_index}`;
+    const previous = effectiveMemos[key] || {};
+    if (row.content === previous.content && row.prescription === previous.prescription) return true;
+    return confirmScheduleReservationWarnings({
+      w: row.week_index, d: row.day_index, r: row.row_index, c: row.col_index,
+      content: row.content, prescription: row.prescription,
+      oldContent: previous.content, oldPrescription: previous.prescription, batch,
+    });
+  }), [confirmScheduleReservationWarnings, effectiveMemos]);
 
   // ── 기존 40/60 셀과 빈 셀 잔여 메타데이터 보정 ──
   const prescriptionPatchKeyRef = useRef(null);
@@ -820,6 +858,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
       if (patientHistoryModalOpen) return;
+      if (reservationWarningResolver.current) return;
       if (clipboardSource && (e.key === 'Escape' || e.key === 'Backspace' || isUndoShortcutEvent(e))) {
         e.preventDefault();
         e.stopPropagation();
@@ -1367,27 +1406,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       }
     }
 
-    const manualTherapyMerge = buildManualTherapyAutoMergePayload({
-      key,
-      memos: effectiveMemos,
-      pendingMergeSpans,
-      currentYear,
-      currentMonth,
-      rowCount: baseTimeSlots.length,
-      content: newContent,
-      bgColor: targetBgColor,
-      prescription: newPrescription ?? oldPrescription,
-      bodyPart: newBodyPart,
-      mergeSpan: newMergeSpan || withCellReservationTime(oldMergeSpan),
-      durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,
-      doseTags: prescriptionScheduleSettings.doseTags,
-      slotMinutes: getScheduleDisplaySlotMinutes(settings, 20),
-      oldContent,
-      oldPrescription,
-    });
-
-    const shouldWritePrescription = hasPrescriptionResult || (newPrescription !== undefined && newPrescription !== null);
-    const finalPrescription = newContent.trim()
+    let shouldWritePrescription = hasPrescriptionResult || (newPrescription !== undefined && newPrescription !== null);
+    let finalPrescription = newContent.trim()
       ? (shouldWritePrescription ? (newPrescription || '') : oldPrescription)
       : '';
     const finalBodyPart = newContent.trim()
@@ -1406,6 +1426,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       });
       if (wasDeletedAfterSaveStarted() || !isSaveVersionCurrent()) return false;
       if (!approved) {
+        editDraftRef.current = null;
+        if (defaultEditMerge?.revertUpdates?.length) applyImmediateMergeSpan(defaultEditMerge.revertUpdates);
         if (editInputRef.current?.dataset?.cellKey === key) {
           editInputRef.current.value = oldContent;
         }
@@ -1420,7 +1442,20 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         removePendingScheduleDraft(currentYear, currentMonth, key);
         return false;
       }
+      if (typeof approved === 'string') {
+        finalPrescription = approved;
+        shouldWritePrescription = true;
+      }
     }
+    const manualTherapyMerge = buildManualTherapyAutoMergePayload({
+      key, memos: effectiveMemos, pendingMergeSpans, currentYear, currentMonth,
+      rowCount: baseTimeSlots.length, content: newContent, bgColor: targetBgColor,
+      prescription: finalPrescription, bodyPart: newBodyPart,
+      mergeSpan: newMergeSpan || withCellReservationTime(oldMergeSpan),
+      durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,
+      doseTags: prescriptionScheduleSettings.doseTags,
+      slotMinutes: getScheduleDisplaySlotMinutes(settings, 20), oldContent, oldPrescription,
+    });
     const scheduleSlotMinutes = getScheduleDisplaySlotMinutes(settings, 20);
     const finalPrescriptionRowSpan = finalPrescription
       ? getManualTherapyRowSpan(finalPrescription, {
@@ -2037,6 +2072,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     cellKey,
     buildSchedulerAutoText,
     saveShockwaveMemosBulk: queuedSaveShockwaveMemosBulk,
+    prepareScheduleReservations,
     recordUndo,
     applyImmediateCellDisplay,
     applyImmediateMergeSpan,
@@ -2096,6 +2132,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     saveShockwaveMemosBulk: queuedSaveShockwaveMemosBulk,
     addToast,
     setPendingDisplayValues,
+    prepareScheduleReservations,
     applyImmediateCellDisplay,
     applyImmediateMergeSpan,
     clearImmediateCellDisplay,
@@ -2381,6 +2418,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     if (!patientHistoryModalOpen) return;
 
     const handlePatientHistoryEscape = (event) => {
+      if (reservationWarningResolver.current) return;
       if (event.key !== 'Escape') return;
       event.preventDefault();
       event.stopPropagation();
@@ -2662,7 +2700,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   }, [cellKey, getStaffScheduleBlockForCell, getTherapistNameForDate, getTimeSlotsForDay, positionTooltip, weeks]);
 
   const handleKeyDown = useScheduleKeyboardActions({
-    disabled: patientHistoryModalOpen,
+    disabled: patientHistoryModalOpen || Boolean(reservationWarning),
     contextMenu,
     clipboardSource,
     setClipboardSource,
@@ -2719,7 +2757,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   });
 
   useScheduleGlobalEvents({
-    keyboardDisabled: patientHistoryModalOpen,
+    keyboardDisabled: patientHistoryModalOpen || Boolean(reservationWarning),
     viewRef,
     contextMenuRef,
     contextMenu,
@@ -3540,6 +3578,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         imeOpenRef={imeOpenRef}
       />
 
+      {reservationWarning && <ReservationWarningDialog request={reservationWarning} onAnswer={answerReservationWarning} />}
       <SchedulerPatientSelector
         selector={chartSelector}
         onSelect={handleChartSelectorClose}
