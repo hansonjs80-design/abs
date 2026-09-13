@@ -1,23 +1,57 @@
 .reservation-warning-dialog {
-  max-width: min(520px, calc(100vw - 32px));
-  padding: 24px;
-  border: 1px solid #cbd5e1;
-  border-radius: 12px;
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(620px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
   color: #1e293b;
   background: white;
-  box-shadow: 0 16px 48px #0003;
+  box-shadow: 0 24px 80px #0f172a40;
+  font-family: inherit;
 }
-.reservation-warning-dialog::backdrop { background: #0f172a66; }
-.reservation-warning-dialog h2 { font-size: 18px; margin: 0 0 12px; }
-.reservation-warning-dialog p { margin: 0 0 20px; }
-.reservation-warning-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.reservation-warning-dialog::backdrop { background: #0f172a70; backdrop-filter: blur(3px); }
+.reservation-warning-header { display: flex; align-items: center; gap: 14px; padding: 24px 26px; background: linear-gradient(110deg, #fff7ed, #f8fafc); border-bottom: 1px solid #f1f5f9; }
+.reservation-warning-icon { display: grid; place-items: center; width: 48px; height: 48px; background: #ffedd5; color: #c2410c; border-radius: 14px; }
+.reservation-warning-dialog h2 { font-size: 20px; margin: 0 0 4px; color: #0f172a; }
+.reservation-warning-header div > span { font-size: 13px; color: #64748b; }
+.reservation-warning-close { margin-left: auto; background: transparent; border: 0; color: #64748b; padding: 8px; cursor: pointer; }
+.reservation-warning-body { padding: 24px 26px 18px; }
+.reservation-warning-dialog p { margin: 0 0 10px; line-height: 1.6; }
+.reservation-warning-message { font-weight: 700; color: #9a3412; font-size: 17px; }
+.reservation-warning-prescriptions { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-top: 20px; }
+.reservation-warning-section-title { font-weight: 700; font-size: 14px; margin-bottom: 14px; }
+.reservation-warning-selects { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.reservation-warning-select > span { display: block; font-size: 13px; font-weight: 700; margin-bottom: 7px; }
+.reservation-warning-select--shockwave { color: #7c3aed; }
+.reservation-warning-select--shinjangSpray { color: #15803d; }
+.reservation-warning-select--manualTherapy { color: #0369a1; }
+.reservation-warning-select select { width: 100%; min-width: 0; padding: 9px 6px; border: 1px solid #cbd5e1; border-radius: 7px; background: white; color: #334155; font: inherit; font-size: 13px; }
+.reservation-warning-dialog .reservation-warning-selection { margin: 14px 0 0; font-size: 13px; color: #64748b; }
+.reservation-warning-selection strong { color: #334155; }
+.reservation-warning-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 16px 26px 24px; }
 .reservation-warning-actions button {
-  padding: 9px 14px;
+  padding: 10px 18px;
   border: 1px solid #cbd5e1;
-  border-radius: 6px;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
   background: #f8fafc;
   cursor: pointer;
 }
-.reservation-warning-actions button:last-child { color: #075985; background: #e0f2fe; }
+.reservation-warning-actions .reservation-warning-yes { color: white; background: #4f46e5; border-color: #4f46e5; }
+.reservation-warning-actions .reservation-warning-no { color: #475569; background: white; }
+.reservation-warning-actions .reservation-warning-replace { color: #166534; background: #ecfdf5; border-color: #bbf7d0; }
+.reservation-warning-actions button:hover { filter: brightness(.97); }
 .reservation-warning-actions button:disabled { opacity: .5; cursor: default; }
-.reservation-warning-actions button:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.reservation-warning-dialog :is(button, select):focus-visible { outline: 2px solid #6366f1; outline-offset: 3px; }
+@media (max-width: 520px) {
+  .reservation-warning-selects { grid-template-columns: 1fr; }
+  .reservation-warning-header, .reservation-warning-body { padding: 18px; }
+  .reservation-warning-actions { padding: 12px 18px 18px; }
+}

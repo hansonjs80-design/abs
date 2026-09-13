@@ -2,7 +2,32 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { generateShockwaveCalendar } from '../calendarUtils.js';
-import { buildScheduleReservationWarnings, findShinjangReplacement, prepareReservationPayload } from '../scheduleReservationWarningUtils.js';
+import { buildScheduleReservationWarnings, findShinjangReplacement, prepareReservationPayload, resolveReservationWarnings } from '../scheduleReservationWarningUtils.js';
+
+describe('reservation warning prescription changes', () => {
+  const getWarnings = (prescription) => prescription === '충격파'
+    ? [{ type: 'shockwave-interval', message: '7일 미경과' }, { type: 'shockwave-visit-limit', message: '7회차' }]
+    : prescription === '도수치료' ? [{ type: 'manual-week-limit', message: '주 2일 초과' }] : [];
+  it('rechecks the selected treatment and permits shinjang without the obsolete shockwave warning', async () => {
+    let calls = 0;
+    assert.equal(await resolveReservationWarnings({ prescription: '충격파', getWarnings, ask: async () => { calls++; return '신장분사'; } }), '신장분사');
+    assert.equal(calls, 1);
+  });
+  it('cancels if the user declines a warning for the newly selected manual prescription', async () => {
+    const shown = [];
+    const answer = await resolveReservationWarnings({ prescription: '충격파', getWarnings, ask: async (warning) => {
+      shown.push(warning.type);
+      return shown.length === 1 ? '도수치료' : false;
+    } });
+    assert.equal(answer, false);
+    assert.deepEqual(shown, ['shockwave-interval', 'manual-week-limit']);
+  });
+  it('confirms each warning once when keeping the current prescription', async () => {
+    let count = 0;
+    assert.equal(await resolveReservationWarnings({ prescription: '충격파', getWarnings, ask: async () => { count++; return true; } }), true);
+    assert.equal(count, 2);
+  });
+});
 
 describe('shinjang replacement selection', () => {
   it('matches decimal doses including self-pay shockwave prescriptions', () => {
@@ -104,6 +129,7 @@ describe('schedule reservation warnings', () => {
     });
 
     assert.deepEqual(result.map((item) => item.type), ['manual-week-limit']);
+    assert.equal(result[0].message, '한 주에 2일을 초과해 예약할 수 없습니다. 그래도 예약하시겠습니까?');
   });
 
   it('warns when a shockwave appointment is less than seven days after the previous appointment', () => {

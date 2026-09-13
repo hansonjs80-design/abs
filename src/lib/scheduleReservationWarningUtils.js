@@ -26,6 +26,19 @@ export async function prepareReservationPayload(payload, confirm) {
   return prepared;
 }
 
+export async function resolveReservationWarnings({ prescription, getWarnings, ask }) {
+  let selected = prescription;
+  const accepted = new Set();
+  while (true) {
+    const warning = getWarnings(selected).find((item) => !accepted.has(`${selected}:${item.type}:${item.message}`));
+    if (!warning) return selected === prescription ? true : selected;
+    const answer = await ask(warning, selected);
+    if (answer === false) return false;
+    if (typeof answer === 'string' && answer !== selected) selected = answer;
+    else accepted.add(`${selected}:${warning.type}:${warning.message}`);
+  }
+}
+
 function getIdentity(content) {
   const parsed = parseSchedulerPatientIdentity(content);
   return {
@@ -106,7 +119,7 @@ export function buildScheduleReservationWarnings({
     if (sameWeekDates.size >= 2 && !sameWeekDates.has(targetDate)) {
       warnings.push({
         type: 'manual-week-limit',
-        message: '도수치료 처방은 같은 환자가 한 주에 2일을 초과해 예약할 수 있습니다. 그래도 예약하시겠습니까?',
+        message: '한 주에 2일을 초과해 예약할 수 없습니다. 그래도 예약하시겠습니까?',
       });
     }
     const visitCount = getVisitCount(targetContent);

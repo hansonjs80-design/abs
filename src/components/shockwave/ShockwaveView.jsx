@@ -124,7 +124,7 @@ import {
   getScheduleDisplaySlotMinutes,
 } from '../../lib/schedulerUtils';
 import { normalizeLoadedScheduleMonthKey } from '../../lib/scheduleMonthLoadUtils';
-import { buildScheduleReservationWarnings, findShinjangReplacement, prepareReservationPayload } from '../../lib/scheduleReservationWarningUtils';
+import { buildScheduleReservationWarnings, findShinjangReplacement, prepareReservationPayload, resolveReservationWarnings } from '../../lib/scheduleReservationWarningUtils';
 import ReservationWarningDialog from './ReservationWarningDialog';
 
 export default function ShockwaveView({ therapists, settings, memos = {}, memosLoadedKey = '', onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
@@ -606,27 +606,28 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       ...warningInput,
       target: { ...target, content: oldContent, prescription: oldPrescription },
     }).map((warning) => warning.message));
-    const warnings = buildScheduleReservationWarnings({
-      ...warningInput,
-      target,
-    }).filter((warning) => !priorWarnings.has(warning.message));
-
-    for (const warning of warnings) {
-      if (warning.type === 'shockwave-interval') {
-        const replacement = findShinjangReplacement(prescription,
-          getPrescriptionScheduleSettings(settings, dayInfo.year, dayInfo.month).schedulerPrescriptions.shinjangSpray);
-        const answer = await new Promise((resolve) => {
+    const config = getPrescriptionScheduleSettings(settings, dayInfo.year, dayInfo.month);
+    const prescriptions = Object.fromEntries(Object.entries(config.schedulerPrescriptions).map(([group, values]) => [
+      group, values.filter((value) => !config.hiddenPrescriptions.includes(value)),
+    ]));
+    return resolveReservationWarnings({
+      prescription,
+      getWarnings: (selected) => buildScheduleReservationWarnings({
+        ...warningInput, target: { ...target, prescription: selected },
+      }).filter((warning) => selected !== prescription || !priorWarnings.has(warning.message)),
+      ask: (warning, selected) => new Promise((resolve) => {
           reservationWarningResolver.current?.(false);
           reservationWarningResolver.current = resolve;
-          setReservationWarning({ message: warning.message, replacement });
-        });
-        if (answer !== true) return answer;
-      } else if (!window.confirm(warning.message)) return false;
-    }
-    return true;
+          setReservationWarning({
+            ...warning, prescription: selected, prescriptions,
+            replacement: findShinjangReplacement(selected, prescriptions.shinjangSpray),
+          });
+      }),
+    });
   }, [currentMonth, currentYear, effectiveMemos, settings, weeks]);
 
-  const prepareScheduleReservations = useCallback((payload) => prepareReservationPayload(payload, (row, batch) => {
+  const prepareScheduleReservations = useCallback(async (payload) => {
+    const prepared = await prepareReservationPayload(payload, (row, batch) => {
     const key = `${row.week_index}-${row.day_index}-${row.row_index}-${row.col_index}`;
     const previous = effectiveMemos[key] || {};
     if (row.content === previous.content && row.prescription === previous.prescription) return true;
@@ -635,7 +636,44 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       content: row.content, prescription: row.prescription,
       oldContent: previous.content, oldPrescription: previous.prescription, batch,
     });
-  }), [confirmScheduleReservationWarnings, effectiveMemos]);
+    });
+    if (!prepared) return null;
+    const keyOf = (row) => `${row.week_index}-${row.day_index}-${row.row_index}-${row.col_index}`;
+    const preparedMap = new Map(prepared.map((row) => [`${row.year}-${row.month}-${keyOf(row)}`, row]));
+    const virtualMemos = { ...effectiveMemos };
+    prepared.forEach((row) => {
+      if (row.year === currentYear && row.month === currentMonth) virtualMemos[keyOf(row)] = row;
+    });
+    for (let index = 0; index < prepared.length; index++) {
+      const row = prepared[index];
+      const previous = payload[index];
+      if (row.prescription === previous.prescription) continue;
+      row.content = updateDoseTagForPrescriptionContent(row.content,
+        getActionDoseTagFromPrescription(row.prescription, prescriptionScheduleSettings.doseTags),
+        getActionDoseTagFromPrescription(previous.prescription, prescriptionScheduleSettings.doseTags),
+        prescriptionScheduleSettings.doseTags);
+      const args = {
+        key: keyOf(row), memos: virtualMemos, currentYear, currentMonth,
+        rowCount: baseTimeSlots.length, content: row.content, prescription: row.prescription,
+        bgColor: row.bg_color, bodyPart: row.body_part, mergeSpan: row.merge_span,
+        durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,
+        doseTags: prescriptionScheduleSettings.doseTags,
+        slotMinutes: getScheduleDisplaySlotMinutes(settings, 20),
+      };
+      const merged = buildManualTherapyAutoMergePayload(args);
+      const adjusted = merged.ok ? merged : merged.reason === 'not-merged'
+        ? buildManualTherapyUnmergePayload(args) : null;
+      if (adjusted?.ok) adjusted.payload.forEach((item) => {
+        virtualMemos[keyOf(item)] = item;
+        preparedMap.set(`${item.year}-${item.month}-${keyOf(item)}`, item);
+      });
+      else if (merged.reason === 'occupied' || merged.reason === 'bounds') {
+        addToast('변경한 처방의 치료 시간을 확보할 수 없어 예약하지 않았습니다.', 'warning');
+        return null;
+      }
+    }
+    return [...preparedMap.values()];
+  }, [confirmScheduleReservationWarnings, effectiveMemos, currentYear, currentMonth, prescriptionScheduleSettings, baseTimeSlots.length, settings, addToast]);
 
   // ── 기존 40/60 셀과 빈 셀 잔여 메타데이터 보정 ──
   const prescriptionPatchKeyRef = useRef(null);
@@ -1359,7 +1397,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     }
     if (wasDeletedAfterSaveStarted()) return;
     if (!isSaveVersionCurrent()) return;
-    const newContent = normalizeSchedulerVisitSuffix(
+    let newContent = normalizeSchedulerVisitSuffix(
       normalize4060StarOrder(typeof result === 'string' ? result : (result?.text || ''))
     );
     if (editInputRef.current?.dataset?.cellKey === key) {
@@ -1443,6 +1481,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         return false;
       }
       if (typeof approved === 'string') {
+        newContent = updateDoseTagForPrescriptionContent(newContent,
+          getActionDoseTagFromPrescription(approved, prescriptionScheduleSettings.doseTags),
+          getActionDoseTagFromPrescription(finalPrescription, prescriptionScheduleSettings.doseTags),
+          prescriptionScheduleSettings.doseTags);
         finalPrescription = approved;
         shouldWritePrescription = true;
       }
@@ -3578,7 +3620,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         imeOpenRef={imeOpenRef}
       />
 
-      {reservationWarning && <ReservationWarningDialog request={reservationWarning} onAnswer={answerReservationWarning} />}
+      {reservationWarning && <ReservationWarningDialog key={`${reservationWarning.type}:${reservationWarning.prescription}`} request={reservationWarning} onAnswer={answerReservationWarning} />}
       <SchedulerPatientSelector
         selector={chartSelector}
         onSelect={handleChartSelectorClose}
