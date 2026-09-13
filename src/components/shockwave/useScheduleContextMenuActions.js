@@ -6,6 +6,7 @@ import {
   shouldUnmergeSingleSlotPrescription,
 } from '../../lib/schedulePrescriptionChangeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
+import { prepareReservationPayload } from '../../lib/scheduleReservationWarningUtils';
 import {
   findBodyPartPresetItem,
   replaceBodyPartPreset,
@@ -39,6 +40,7 @@ import {
 } from '../../lib/schedulerUtils';
 
 export default function useScheduleContextMenuActions({
+  confirmScheduleReservationWarnings,
   selectedKeys,
   contextMenu,
   memos,
@@ -274,12 +276,34 @@ export default function useScheduleContextMenuActions({
       const affectedKeys = new Set(keys);
       const fallbackSaves = [];
 
+      // Confirm the entire proposed batch before changing snapshots, merging, or saving.
+      const proposed = keys.map((key) => {
+        const [week_index, day_index, row_index, col_index] = key.split('-').map(Number);
+        const memo = getMemoForAction(key);
+        return { ...memo, year: currentYear, month: currentMonth, week_index, day_index, row_index, col_index,
+          content: getStableMemoContent(key, memo), prescription: action.value || '' };
+      });
+      const approved = await prepareReservationPayload(proposed, (row, batch) => {
+        const key = `${row.week_index}-${row.day_index}-${row.row_index}-${row.col_index}`;
+        const previous = getMemoForAction(key);
+        if (previous.prescription === row.prescription) return true;
+        return confirmScheduleReservationWarnings({
+          w: row.week_index, d: row.day_index, r: row.row_index, c: row.col_index,
+          content: row.content, prescription: row.prescription,
+          oldContent: getStableMemoContent(key, previous), oldPrescription: previous.prescription, batch,
+        });
+      });
+      if (!approved) return;
+      const approvedPrescriptions = new Map(approved.map((row) => [
+        `${row.week_index}-${row.day_index}-${row.row_index}-${row.col_index}`, row.prescription,
+      ]));
+
       for (const key of keys) {
         const [w, d, r, c] = key.split('-').map(Number);
         const memo = getMemoForAction(key);
         let updatedContent = getStableMemoContent(key, memo);
-        const prescriptionValue = action.value || '';
-        const hasActionDoseTag = Object.prototype.hasOwnProperty.call(action, 'doseTag');
+        const prescriptionValue = approvedPrescriptions.get(key) || '';
+        const hasActionDoseTag = prescriptionValue === (action.value || '') && Object.prototype.hasOwnProperty.call(action, 'doseTag');
         const doseNumber = hasActionDoseTag
           ? action.doseTag
           : getActionDoseTagFromPrescription(prescriptionValue, prescriptionScheduleSettings?.doseTags || {});
@@ -299,7 +323,7 @@ export default function useScheduleContextMenuActions({
           previousDoseTag,
           prescriptionScheduleSettings?.doseTags || {}
         );
-        if (memo.prescription !== action.value || updatedContent !== getStableMemoContent(key, memo) || shouldUnmergeSingleSlot) {
+        if (memo.prescription !== prescriptionValue || updatedContent !== getStableMemoContent(key, memo) || shouldUnmergeSingleSlot) {
           updateContextMemoSnapshot(key, memo, {
             content: updatedContent,
             prescription: prescriptionValue,
@@ -314,7 +338,7 @@ export default function useScheduleContextMenuActions({
               currentMonth,
               content: updatedContent,
               bgColor: memo.bg_color || null,
-              prescription: action.value,
+              prescription: prescriptionValue,
               bodyPart: memo.body_part || null,
             });
 
@@ -351,7 +375,7 @@ export default function useScheduleContextMenuActions({
             rowCount,
             content: updatedContent,
             bgColor: memo.bg_color || null,
-            prescription: action.value,
+            prescription: prescriptionValue,
             bodyPart: memo.body_part || null,
             mergeSpan: memo.merge_span,
             durationMinutesMap: prescriptionScheduleSettings?.durationMinutesMap || {},
@@ -389,7 +413,7 @@ export default function useScheduleContextMenuActions({
                 currentMonth,
                 content: updatedContent,
                 bgColor: memo.bg_color || null,
-                prescription: action.value,
+                prescription: prescriptionValue,
                 bodyPart: memo.body_part || null,
               });
 
@@ -431,7 +455,7 @@ export default function useScheduleContextMenuActions({
               content: updatedContent,
               bg_color: memo.bg_color || null,
               merge_span: pendingMergeSpans?.[key] || memo.merge_span,
-              prescription: action.value || null,
+              prescription: prescriptionValue || null,
               body_part: memo.body_part || null,
             };
             applyImmediateCellDisplay?.(fallbackPayload, { keepContextMenuOpen: Boolean(contextMenu) });
@@ -439,10 +463,10 @@ export default function useScheduleContextMenuActions({
             updateContextMemoSnapshot(key, memo, {
               content: updatedContent,
               merge_span: fallbackPayload.merge_span,
-              prescription: action.value || null,
+              prescription: prescriptionValue || null,
               body_part: memo.body_part || null,
             });
-            fallbackSaves.push(onSaveMemo(currentYear, currentMonth, w, d, r, c, updatedContent, memo.bg_color, fallbackPayload.merge_span, action.value, memo.body_part));
+            fallbackSaves.push(onSaveMemo(currentYear, currentMonth, w, d, r, c, updatedContent, memo.bg_color, fallbackPayload.merge_span, prescriptionValue, memo.body_part));
           }
         }
       }
@@ -1129,6 +1153,7 @@ export default function useScheduleContextMenuActions({
     }
     setContextMenu(null);
   }, [
+    confirmScheduleReservationWarnings,
     selectedKeys,
     contextMenu,
     memos,

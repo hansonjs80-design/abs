@@ -78,6 +78,10 @@ function isSamePatient(left, right) {
   );
 }
 
+export function canReusePriorReservationWarnings({ content, oldContent, prescription, oldPrescription }) {
+  return prescription === oldPrescription && isSamePatient(getIdentity(content), getIdentity(oldContent));
+}
+
 function getScheduleDate(row) {
   const weeks = generateShockwaveCalendar(Number(row?.year), Number(row?.month));
   return getScheduleDayDateKey(weeks?.[Number(row?.week_index)]?.[Number(row?.day_index)]);

@@ -2,7 +2,21 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { generateShockwaveCalendar } from '../calendarUtils.js';
-import { buildScheduleReservationWarnings, findShinjangReplacement, getNextReservationActionIndex, getReservationWarningReplacement, prepareReservationPayload, resolveReservationWarnings } from '../scheduleReservationWarningUtils.js';
+import { buildScheduleReservationWarnings, canReusePriorReservationWarnings, findShinjangReplacement, getNextReservationActionIndex, getReservationWarningReplacement, prepareReservationPayload, resolveReservationWarnings } from '../scheduleReservationWarningUtils.js';
+
+describe('existing appointment prescription changes', () => {
+  it('never suppresses old warnings when the prescription changes, even within the same treatment group', () => {
+    for (const [oldPrescription, prescription] of [['F2.5', 'F3.0'], ['30분', '60분'], ['신장분사1', '30분'], ['F2.5(본인)', 'F2.5']]) {
+      assert.equal(canReusePriorReservationWarnings({ content: '1001/가상환자(6)', oldContent: '1001/가상환자(6)', prescription, oldPrescription }), false);
+    }
+  });
+  it('reuses warnings only for unchanged prescriptions and the same patient', () => {
+    const input = { content: '1001/가상환자(6)', oldContent: '1001/가상환자(6)', prescription: '30분', oldPrescription: '30분' };
+    assert.equal(canReusePriorReservationWarnings(input), true);
+    assert.equal(canReusePriorReservationWarnings({ ...input, content: '1002/가상환자(6)' }), false);
+    assert.equal(canReusePriorReservationWarnings({ ...input, content: '1001/다른환자(6)' }), false);
+  });
+});
 
 describe('reservation action keyboard navigation', () => {
   it('moves left and right and wraps at either end', () => {

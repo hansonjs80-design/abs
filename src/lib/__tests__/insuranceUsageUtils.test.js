@@ -63,6 +63,21 @@ describe('clinic annual insurance usage', () => {
     assert.equal(usage(rows, rows[1]).count, 1);
     assert.equal(usage(rows, rows[2]).count, 2);
   });
+  it('marks shinjang history only when its linked category has an earlier eligible treatment', () => {
+    const rows = [row('2026-09-01', '30분'), row('2026-09-03', 'F2.5')];
+    const manual = usage(rows, row('2026-09-02', '신장분사 1'));
+    assert.equal(manual.category, 'manual');
+    assert.equal(manual.hasHistory, true);
+    assert.equal(manual.periodEnd, '2027-01-01');
+    const shock = usage(rows, row('2026-09-02', '신장분사 2.5'));
+    assert.equal(shock.isShinjang, true);
+    assert.equal(shock.hasHistory, false);
+    const later = usage(rows, row('2026-09-04', '신장분사 2.5'));
+    assert.equal(later.hasHistory, true);
+    assert.equal(later.count, 1);
+    assert.equal(later.periodEnd, '2027-09-03');
+    assert.equal(usage([row('2026-09-02', 'F2.5', 3)], row('2026-09-02', '신장분사2.5', 1)).hasHistory, false);
+  });
   it('preserves counts for a cut and increments for a copy, without changing the original rows', () => {
     const original = row('2026-09-01');
     const destination = row('2026-09-08');

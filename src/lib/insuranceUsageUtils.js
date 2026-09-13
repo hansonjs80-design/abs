@@ -91,16 +91,18 @@ export function getInsuranceUsage(records, targetRow, settings) {
   candidates.push(target);
   const chronological = candidates.sort((a, b) => a.date.localeCompare(b.date) || a.order - b.order || a.key.localeCompare(b.key));
   const year = Number(target.date.slice(0, 4));
-  const first = chronological.find((row) => row.contributes && row.date <= target.date);
-  const empty = { category: target.category, count: 0, selfPay: target.selfPay, periodStart: '', periodEnd: '' };
+  const targetIndex = chronological.findIndex((row) => row.key === target.key);
+  const preceding = chronological.slice(0, targetIndex + 1);
+  const first = preceding.find((row) => row.contributes);
+  const isShinjang = target.group === 'shinjang_spray';
+  const empty = { category: target.category, count: 0, selfPay: target.selfPay, periodStart: '', periodEnd: '', isShinjang, hasHistory: false };
   if (target.date < INSURANCE_USAGE_START_DATE) return empty;
   if (!first && target.category !== 'manual') return empty;
   const periodYear = target.category === 'manual' ? year : target.date >= anniversary(first.date, year) ? year : year - 1;
   const periodStart = target.category === 'manual' ? `${year}-01-01` : anniversary(first.date, periodYear);
   const periodEnd = target.category === 'manual' ? `${year + 1}-01-01` : anniversary(first.date, periodYear + 1);
-  const targetIndex = chronological.findIndex((row) => row.key === target.key);
-  const count = chronological.slice(0, targetIndex + 1).filter((row) => row.contributes && row.date >= periodStart && row.date < periodEnd).length;
-  return { category: target.category, count, selfPay: target.selfPay, periodStart, periodEnd };
+  const count = preceding.filter((row) => row.contributes && row.date >= periodStart && row.date < periodEnd).length;
+  return { category: target.category, count, selfPay: target.selfPay, periodStart, periodEnd, isShinjang, hasHistory: Boolean(first) };
 }
 
 export function localInsuranceScheduleRows(memos, year, month) {

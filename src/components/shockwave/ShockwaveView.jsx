@@ -127,7 +127,7 @@ import {
   getScheduleDisplaySlotMinutes,
 } from '../../lib/schedulerUtils';
 import { normalizeLoadedScheduleMonthKey } from '../../lib/scheduleMonthLoadUtils';
-import { buildScheduleReservationWarnings, findShinjangReplacement, prepareReservationPayload, resolveReservationWarnings } from '../../lib/scheduleReservationWarningUtils';
+import { buildScheduleReservationWarnings, canReusePriorReservationWarnings, findShinjangReplacement, prepareReservationPayload, resolveReservationWarnings } from '../../lib/scheduleReservationWarningUtils';
 import ReservationWarningDialog from './ReservationWarningDialog';
 
 export default function ShockwaveView({ therapists, settings, memos = {}, memosLoadedKey = '', onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
@@ -617,8 +617,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       year: currentYear,
       month: currentMonth,
     };
-    const isSamePriorPatient = patient.key && getInsurancePatient({ content: oldContent }).key === patient.key;
-    const priorWarnings = new Set((isSamePriorPatient ? buildScheduleReservationWarnings({
+    const reusePriorWarnings = canReusePriorReservationWarnings({ content, oldContent, prescription, oldPrescription });
+    const priorWarnings = new Set((reusePriorWarnings ? buildScheduleReservationWarnings({
       ...warningInput,
       target: { ...target, content: oldContent, prescription: oldPrescription },
     }) : []).map((warning) => warning.message));
@@ -2547,6 +2547,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   }, [patientHistoryModalOpen]);
 
   const handleScheduleContextAction = useScheduleContextMenuActions({
+    confirmScheduleReservationWarnings,
     selectedKeys,
     contextMenu,
     memos: effectiveMemos,

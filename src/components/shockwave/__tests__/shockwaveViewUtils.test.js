@@ -485,6 +485,18 @@ describe('shockwave hover tooltip model', () => {
     assert.ok(text.endsWith('• 갱신 일자: 2027-01-01'));
   });
 
+  it('hides shinjang insurance details when there is no linked treatment history', () => {
+    const text = buildShockwaveHoverTooltipText({
+      hoverCell: { weekIdx: 0, dayIdx: 1, rowIdx: 2, colIdx: 0, slotInfo: { label: '10:00' } },
+      renderMemos: { '0-1-2-0': { content: '100/가상환자', prescription: '신장분사1', merge_span: { meta: { memo_list: ['메모 유지'] } } } },
+      cellKey, getReservationTimeForMemo: () => '10:00',
+      insuranceUsage: { category: 'manual', count: 0, periodEnd: '2027-01-01', isShinjang: true, hasHistory: false },
+    });
+    assert.ok(text.includes('메모 유지'));
+    assert.ok(!text.includes('실비소진'));
+    assert.ok(!text.includes('갱신 일자'));
+  });
+
   it('keeps selected range time and duration formatting', () => {
     const selectedKey = '0-1-2-0';
     const text = buildShockwaveHoverTooltipText({

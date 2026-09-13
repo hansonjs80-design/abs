@@ -763,6 +763,7 @@ export function buildShockwaveHoverTooltipText({
   } else if (memoList.length > 1) {
     text += `\n📝 메모:\n${memoList.map((memo) => `  • ${memo}`).join('\n')}`;
   }
+  if (insuranceUsage?.isShinjang && !insuranceUsage.hasHistory) return text;
   if (hasHoverContent && insuranceUsage) {
     const label = insuranceUsage.category === 'manual' ? '도수치료' : '충격파';
     text += `\n• 실비소진: ${label} ${insuranceUsage.count}회`;
