@@ -320,16 +320,16 @@ describe('shockwave view patient history model', () => {
   });
 
   it('returns stable modal sizing for single and split layouts', () => {
-    assert.equal(getPatientHistoryModalLayout(1).maxWidth, 816);
-    assert.equal(getPatientHistoryModalLayout(1).width, '85%');
-    assert.equal(getPatientHistoryModalLayout(2).maxWidth, 1604);
-    assert.equal(getPatientHistoryModalLayout(2).width, '100%');
+    assert.equal(getPatientHistoryModalLayout(1).maxWidth, 990);
+    assert.equal(getPatientHistoryModalLayout(1).width, 'min(calc(85% + 174px), calc(100vw - 24px))');
+    assert.equal(getPatientHistoryModalLayout(2).maxWidth, 1952);
+    assert.equal(getPatientHistoryModalLayout(2).width, 'min(calc(100% + 348px), calc(100vw - 24px))');
     const combinedLayout = getPatientHistoryModalLayout([{ key: 'all' }]);
     const shinjangLayout = getPatientHistoryModalLayout([{ key: 'shinjang' }]);
-    assert.equal(combinedLayout.maxWidth, 906);
-    assert.equal(combinedLayout.width, '95%');
-    assert.equal(shinjangLayout.maxWidth, 834);
-    assert.equal(shinjangLayout.width, '85%');
+    assert.equal(combinedLayout.maxWidth, 1080);
+    assert.equal(combinedLayout.width, 'min(calc(95% + 174px), calc(100vw - 24px))');
+    assert.equal(shinjangLayout.maxWidth, 1008);
+    assert.equal(shinjangLayout.width, 'min(calc(85% + 174px), calc(100vw - 24px))');
     const columnWidths = getPatientHistoryColumnWidths(1);
     const combinedColumnWidths = getPatientHistoryColumnWidths(1, true);
     const shinjangColumnWidths = getPatientHistoryColumnWidths(1, false, 'shinjang');
@@ -359,9 +359,12 @@ describe('shockwave view patient history model', () => {
     assert.ok(projectedWidths[2] >= 735 * 0.078);
     assert.ok(projectedWidths[3] >= (770 * 0.108) * 1.1);
     assert.ok(projectedWidths[5] >= (780 * 0.2183) * 1.1);
-    assert.ok(projectedWidths[7] >= 735 * 0.069);
-    assert.ok(projectedWidths[8] >= (780 * 0.0363) * 1.1);
-    assert.ok(projectedWidths[8] < (780 * 0.0363) * 1.11);
+    assert.equal(columnWidths.length, 11);
+    assert.ok(projectedWidths[7] >= 63 && projectedWidths[7] <= 65);
+    assert.ok(projectedWidths[8] >= 109 && projectedWidths[8] <= 111);
+    assert.ok(projectedWidths[9] >= 735 * 0.069);
+    assert.ok(projectedWidths[10] >= (780 * 0.0363) * 1.1);
+    assert.ok(projectedWidths[10] < (780 * 0.0363) * 1.11);
     assert.ok(combinedProjectedWidths[4] >= projectedWidths[3] * 1.319);
     assert.ok(combinedProjectedWidths[4] <= projectedWidths[3] * 1.321);
     assert.ok(Math.abs(combinedProjectedWidths[2] - projectedWidths[1]) < 0.2);
@@ -468,6 +471,18 @@ describe('shockwave hover tooltip model', () => {
         '  • 둘째 메모',
       ].join('\n')
     );
+  });
+
+  it('puts bulleted insurance usage and renewal after the body-part and memo details', () => {
+    const text = buildShockwaveHoverTooltipText({
+      hoverCell: { weekIdx: 0, dayIdx: 1, rowIdx: 2, colIdx: 0, slotInfo: { label: '10:00' } },
+      renderMemos: { '0-1-2-0': { content: '100/가상환자(2)', prescription: '신장분사1', body_part: 'Lt. Knee', merge_span: { meta: { memo_list: ['메모1', '메모2'] } } } },
+      cellKey, getReservationTimeForMemo: () => '10:00',
+      insuranceUsage: { category: 'manual', count: 4, periodEnd: '2027-01-01' },
+    });
+    assert.ok(text.indexOf('🦴 부위:') < text.indexOf('📝 메모:'));
+    assert.ok(text.indexOf('메모2') < text.indexOf('• 실비소진: 도수치료 4회'));
+    assert.ok(text.endsWith('• 갱신 일자: 2027-01-01'));
   });
 
   it('keeps selected range time and duration formatting', () => {

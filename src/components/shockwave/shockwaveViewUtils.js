@@ -516,7 +516,7 @@ const PATIENT_HISTORY_COLUMN_WIDTH_SCALE = (
   }, 0)
 ) / 100;
 
-export function getPatientHistoryModalLayout(groupsOrCount) {
+function getPatientHistoryBaseModalLayout(groupsOrCount) {
   const groups = Array.isArray(groupsOrCount) ? groupsOrCount : null;
   const groupCount = groups ? groups.length : Number(groupsOrCount || 0);
   const isCombined = groups?.length === 1 && groups[0]?.key === 'all';
@@ -561,6 +561,18 @@ export function getPatientHistoryModalLayout(groupsOrCount) {
   };
 }
 
+export function getPatientHistoryModalLayout(groupsOrCount) {
+  const base = getPatientHistoryBaseModalLayout(groupsOrCount);
+  const count = Array.isArray(groupsOrCount) ? groupsOrCount.length : Number(groupsOrCount || 0);
+  const addedWidth = count >= 2 ? 348 : 174;
+  return {
+    ...base,
+    maxWidth: base.maxWidth + addedWidth,
+    width: `min(calc(${base.width} + ${addedWidth}px), calc(100vw - 24px))`,
+    tableMinWidth: count >= 2 ? Math.floor(base.maxWidth / 2) + 174 - 48 : base.maxWidth + 174 - 72,
+  };
+}
+
 export function getPatientHistoryColumnWidths(
   groupCount,
   includeTreatmentColumn = false,
@@ -582,6 +594,7 @@ export function getPatientHistoryColumnWidths(
         ? width * PATIENT_HISTORY_APPLY_COLUMN_SCALE
         : width
   ));
+  expandedWidths.splice(7, 0, 64 / PATIENT_HISTORY_SINGLE_MODAL_BASE_WIDTH * 100, 110 / PATIENT_HISTORY_SINGLE_MODAL_BASE_WIDTH * 100);
   const displayWidths = includeTreatmentColumn
     ? [expandedWidths[0], PATIENT_HISTORY_TREATMENT_COLUMN_WIDTH, ...expandedWidths.slice(1)]
     : expandedWidths;
@@ -656,6 +669,8 @@ export function buildShockwaveHoverTooltipText({
   getTimeSlotsForDay,
   getReservationTimeForMemo,
   slotMinutes = 30,
+  insuranceUsage,
+  insuranceUsageStatus = '',
 } = {}) {
   if (!hoverCell) return '';
 
@@ -747,6 +762,14 @@ export function buildShockwaveHoverTooltipText({
     text += `\n📝 메모: ${memoList[0]}`;
   } else if (memoList.length > 1) {
     text += `\n📝 메모:\n${memoList.map((memo) => `  • ${memo}`).join('\n')}`;
+  }
+  if (hasHoverContent && insuranceUsage) {
+    const label = insuranceUsage.category === 'manual' ? '도수치료' : '충격파';
+    text += `\n• 실비소진: ${label} ${insuranceUsage.count}회`;
+    text += `\n• 갱신 일자: ${insuranceUsage.periodEnd || '집계 시작 전'}`;
+  } else if (hasHoverContent && insuranceUsageStatus) {
+    text += `\n• 실비소진: ${insuranceUsageStatus}`;
+    text += `\n• 갱신 일자: ${insuranceUsageStatus}`;
   }
 
   return text;

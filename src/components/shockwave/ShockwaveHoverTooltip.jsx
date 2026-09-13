@@ -1,4 +1,5 @@
 import BodyPartStack, { normalizeBodyPartStackParts } from './BodyPartStack';
+import { INSURANCE_USAGE_COLORS } from '../../lib/insuranceUsageUtils';
 
 function TooltipListBlock({ icon, label, items }) {
   return (
@@ -63,6 +64,17 @@ export default function ShockwaveHoverTooltip({ tooltipRef, text, visible }) {
 
         for (let index = 0; index < lines.length; index += 1) {
           const line = lines[index];
+          if (line.startsWith('• 실비소진: ') || line.startsWith('• 갱신 일자: ')) {
+            const isUsage = line.startsWith('• 실비소진: ');
+            const category = line.includes('도수치료') ? 'manual' : 'shockwave';
+            const prefix = isUsage ? '• 실비소진: ' : '• 갱신 일자: ';
+            renderedLines.push(<div key={index} className="sw-custom-tooltip-insurance-line" style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+              <span aria-hidden="true" style={{ width: '1.25em', flexShrink: 0, textAlign: 'center' }}>•</span>
+              <span style={{ minWidth: '4.5em' }}>{isUsage ? '실비소진:' : '갱신 일자:'}</span>
+              <strong style={{ color: isUsage ? INSURANCE_USAGE_COLORS[category] : undefined }}>{line.slice(prefix.length)}</strong>
+            </div>);
+            continue;
+          }
           const bodyPartPrefix = '🦴 부위: ';
           if (line.startsWith(bodyPartPrefix)) {
             renderedLines.push(
@@ -77,7 +89,7 @@ export default function ShockwaveHoverTooltip({ tooltipRef, text, visible }) {
           if (line === '📝 메모:') {
             const memoItems = [];
             let nextIndex = index + 1;
-            while (nextIndex < lines.length && lines[nextIndex].trim().startsWith('•')) {
+            while (nextIndex < lines.length && lines[nextIndex].startsWith('  •')) {
               memoItems.push(lines[nextIndex].trim().replace(/^•\s*/, ''));
               nextIndex += 1;
             }

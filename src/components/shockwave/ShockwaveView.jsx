@@ -4,6 +4,9 @@ import { useSchedule } from '../../contexts/ScheduleContext';
 
 import { getTodayKST, isSameDate } from '../../lib/calendarUtils';
 import { supabase } from '../../lib/supabaseClient';
+import useInsuranceUsage from './useInsuranceUsage';
+import { fetchInsurancePatientRecords } from '../../lib/insuranceUsageRepository';
+import { getInsurancePatient } from '../../lib/insuranceUsageUtils';
 import {
   CONTEXT_MENU_DISMISS_GRACE_MS,
   shouldIgnoreContextMenuDismissEvent,
@@ -295,8 +298,23 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     selectedCell,
     settings,
   ]);
+  const [hoverCell, setHoverCell] = useState(null);
+  const insuranceMemos = useMemo(() => Object.fromEntries(Object.entries(effectiveMemos).map(([key, memo]) => [
+    key, Object.prototype.hasOwnProperty.call(pendingCellBgColors, key) ? { ...memo, bg_color: pendingCellBgColors[key] } : memo,
+  ])), [effectiveMemos, pendingCellBgColors]);
+  const hoverInsuranceRow = useMemo(() => {
+    if (!hoverCell) return null;
+    const { weekIdx, dayIdx, rowIdx, colIdx } = hoverCell;
+    const memo = insuranceMemos[`${weekIdx}-${dayIdx}-${rowIdx}-${colIdx}`];
+    return memo ? { ...memo, year: currentYear, month: currentMonth,
+      week_index: weekIdx, day_index: dayIdx, row_index: rowIdx, col_index: colIdx } : null;
+  }, [hoverCell, insuranceMemos, currentYear, currentMonth]);
+  const insuranceUsage = useInsuranceUsage({
+    logs: patientHistoryModalOpen ? patientHistoryModalData.logs : [],
+    hoverRow: hoverInsuranceRow, memos: insuranceMemos, year: currentYear, month: currentMonth, settings,
+  });
   const patientHistoryLogGroups = useMemo(() => buildPatientHistoryLogGroups({
-    logs: patientHistoryModalData.logs,
+    logs: insuranceUsage.logs,
     bodyFilters: patientHistoryBodyFilters,
     prescriptionFilters: patientHistoryPrescriptionFilters,
     selectedGroupKey: selectedPatientHistoryGroupKey,
@@ -306,7 +324,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     sortOrder: patientHistorySortOrder,
   }), [
     patientHistoryBodyFilters,
-    patientHistoryModalData.logs,
+    insuranceUsage.logs,
     patientHistoryPrescriptionFilters,
     patientHistorySortOrder,
     patientHistoryTreatmentTab,
@@ -385,7 +403,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const tooltipRef = useRef(null);
   const tooltipMousePosRef = useRef({ x: 0, y: 0 });
   const weekRefs = useRef([]);
-  const [hoverCell, setHoverCell] = useState(null);
 
   // ── 활성 행의 시간 셀 하이라이트 ──
   useEffect(() => {
@@ -563,23 +580,20 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       prescription,
       date: `${dayInfo.year}-${String(dayInfo.month).padStart(2, '0')}-${String(dayInfo.day).padStart(2, '0')}`,
     };
-    const searchTerm = String(content || '').split('/')[0].replace(/[%_]/g, '').trim();
     let remoteRows = [];
-    if (searchTerm) {
-      const { data, error } = await supabase
-        .from('shockwave_schedules')
-        .select('year,month,week_index,day_index,row_index,col_index,content,prescription,merge_span')
-        .neq('content', '')
-        .ilike('content', `%${searchTerm}%`)
-        .limit(1000);
-      if (error) {
-        // A failed read must not turn a routine booking into a blocked save.
-        console.warn('Schedule reservation warning query failed:', error);
-      } else {
-        remoteRows = data || [];
+    let historyLogs = [];
+    const patient = getInsurancePatient(target);
+    if (patient.key) {
+      try {
+        const result = await fetchInsurancePatientRecords(supabase, patient);
+        remoteRows = result.scheduleRows;
+        historyLogs = result.historyLogs;
+      } catch {
+        addToast('실비 소진 내역을 조회하지 못했습니다. 잠시 후 다시 예약해 주세요.', 'error');
+        return false;
       }
     }
-    const localRows = Object.entries(effectiveMemos).map(([memoKey, memo]) => {
+    const localRows = Object.entries(insuranceMemos).map(([memoKey, memo]) => {
       const [weekIndex, dayIndex, rowIndex, colIndex] = memoKey.split('-').map(Number);
       return {
         ...memo,
@@ -598,14 +612,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     });
     const warningInput = {
       scheduleRows: [...rowsByKey.values()],
+      historyLogs,
       settings,
       year: currentYear,
       month: currentMonth,
     };
-    const priorWarnings = new Set(buildScheduleReservationWarnings({
+    const isSamePriorPatient = patient.key && getInsurancePatient({ content: oldContent }).key === patient.key;
+    const priorWarnings = new Set((isSamePriorPatient ? buildScheduleReservationWarnings({
       ...warningInput,
       target: { ...target, content: oldContent, prescription: oldPrescription },
-    }).map((warning) => warning.message));
+    }) : []).map((warning) => warning.message));
     const config = getPrescriptionScheduleSettings(settings, dayInfo.year, dayInfo.month);
     const prescriptions = Object.fromEntries(Object.entries(config.schedulerPrescriptions).map(([group, values]) => [
       group, values.filter((value) => !config.hiddenPrescriptions.includes(value)),
@@ -624,7 +640,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
           });
       }),
     });
-  }, [currentMonth, currentYear, effectiveMemos, settings, weeks]);
+  }, [addToast, currentMonth, currentYear, insuranceMemos, settings, weeks]);
 
   const prepareScheduleReservations = useCallback(async (payload) => {
     const prepared = await prepareReservationPayload(payload, (row, batch) => {
@@ -3688,6 +3704,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
           getTimeSlotsForDay,
           getReservationTimeForMemo,
           slotMinutes: getScheduleDisplaySlotMinutes(settings, 30),
+          insuranceUsage: insuranceUsage.hoverUsage,
+          insuranceUsageStatus: hoverInsuranceRow && getInsurancePatient(hoverInsuranceRow).key ? insuranceUsage.hoverStatus : '',
         })}
         visible={Boolean(hoverCell)}
       />

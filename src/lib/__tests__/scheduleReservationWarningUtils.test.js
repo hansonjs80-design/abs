@@ -148,13 +148,14 @@ describe('schedule reservation warnings', () => {
 
   it('warns from the sixteenth manual-therapy visit onward', () => {
     const result = buildScheduleReservationWarnings({
-      target: target({ date: '2026-09-14', content: '1001/김환자(16)', prescription: '도수치료' }),
+      target: target({ date: '2026-09-14', content: '1001/김환자(99)', prescription: '도수치료' }),
+      scheduleRows: Array.from({ length: 15 }, (_, rowIndex) => scheduleRow({ date: '2026-09-01', content: '1001/김환자(1)', prescription: '도수치료', rowIndex })),
       settings,
       year: 2026,
       month: 9,
     });
 
-    assert.deepEqual(result, [{
+    assert.deepEqual(result.map(({ type, message }) => ({ type, message })), [{
       type: 'manual-visit-limit',
       message: '도수치료 16회차째 입니다. 그래도 예약하시겠습니까?',
     }]);
@@ -164,7 +165,7 @@ describe('schedule reservation warnings', () => {
     const result = buildScheduleReservationWarnings({
       target: target({ date: '2026-09-14', content: '1001/김환자(7)', prescription: '충격파 A' }),
       scheduleRows: [
-        scheduleRow({ date: '2026-09-07', content: '1001/김환자(6)', prescription: '충격파 B' }),
+        ...Array.from({ length: 6 }, (_, rowIndex) => scheduleRow({ date: '2026-09-07', content: '1001/김환자(1)', prescription: '충격파 B', rowIndex })),
       ],
       settings,
       year: 2026,
@@ -172,5 +173,10 @@ describe('schedule reservation warnings', () => {
     });
 
     assert.deepEqual(result.map((item) => item.type), ['shockwave-visit-limit']);
+    assert.equal(result[0].insuranceUsage.count, 7);
+  });
+  it('does not infer insurance usage from the editable visit suffix', () => {
+    const result = buildScheduleReservationWarnings({ target: target({ date: '2026-09-14', content: '1001/김환자(99)', prescription: '도수치료' }), settings, year: 2026, month: 9 });
+    assert.deepEqual(result, []);
   });
 });

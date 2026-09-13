@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import './ReservationWarningDialog.css';
+import InsuranceUsageBadge from './InsuranceUsageBadge';
 
 export default function ReservationWarningDialog({ request, onAnswer }) {
   const dialogRef = useRef(null);
@@ -35,6 +36,7 @@ export default function ReservationWarningDialog({ request, onAnswer }) {
       <div className="reservation-warning-body">
         <p id="reservation-warning-message" className="reservation-warning-message">{message}</p>
         <p>그래도 예약하시겠습니까?</p>
+        {request.insuranceUsage && <p>실비 소진: <InsuranceUsageBadge usage={request.insuranceUsage} showLabel /></p>}
         <div className="reservation-warning-prescriptions">
           <div className="reservation-warning-selects">
             {groups.map(({ key, label }) => {

@@ -13,6 +13,7 @@ import { parseSchedulerPatientIdentity } from '../../lib/schedulerUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import { getPatientHistoryPrescriptionRowColor } from '../../lib/patientHistoryRowColorUtils';
 import { PATIENT_HISTORY_TREATMENT_SEQUENCE_PALETTES } from '../../lib/patientHistoryVisitSequenceUtils';
+import InsuranceUsageBadge from './InsuranceUsageBadge';
 
 function PatientHistoryModal({
   open,
@@ -324,10 +325,10 @@ function PatientHistoryModal({
                       }}
                     />
                   </div>
-                  <div className="sw-compact-table-wrap">
+                  <div className="sw-compact-table-wrap" style={{ display: 'block', width: '100%', overflowX: 'auto' }}>
                     <table
                       className={`sw-summary-table sw-compact-summary-table patient-history-table patient-history-table--${group.key}`}
-                      style={{ width: '100%', margin: 0, tableLayout: 'fixed' }}
+                      style={{ width: '100%', minWidth: patientHistoryModalLayout.tableMinWidth, margin: 0, tableLayout: 'fixed' }}
                     >
                       <colgroup>
                         {patientHistoryColumnWidths.map((width, columnIndex) => (
@@ -346,6 +347,8 @@ function PatientHistoryModal({
                           <th style={{ textAlign: 'center' }}>부위</th>
                           <th style={{ textAlign: 'center' }}>메모</th>
                           <th style={{ textAlign: 'center' }}>회차</th>
+                          <th style={{ textAlign: 'center' }}>실비소진</th>
+                          <th style={{ textAlign: 'center' }}>갱신 일자</th>
                           <th style={{ textAlign: 'center' }}>담당</th>
                           <th style={{ textAlign: 'center' }}>적용</th>
                         </tr>
@@ -535,6 +538,12 @@ function PatientHistoryModal({
                                 startPatientHistoryCellRangeSelection={startPatientHistoryCellRangeSelection}
                                 updatePatientHistoryInlineCellDraft={updatePatientHistoryInlineCellDraft}
                               />
+                              <td className="patient-history-insurance-usage-cell" style={{ textAlign: 'center', backgroundColor: currentCellRowBackground }}>
+                                <InsuranceUsageBadge usage={log.insuranceUsage} status={log.insuranceUsageStatus} />
+                              </td>
+                              <td className="patient-history-insurance-renewal-cell" style={{ textAlign: 'center', backgroundColor: currentCellRowBackground, whiteSpace: 'nowrap' }}>
+                                {log.insuranceUsage ? (log.insuranceUsage.periodEnd || '—') : log.insuranceUsageStatus}
+                              </td>
                               <td
                                 className="patient-history-therapist-cell"
                                 title={log.therapist_name || ''}
