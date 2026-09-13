@@ -28,6 +28,15 @@ export function getReservationWarningReplacement(request, dropdownPrescription =
   return (request.type === 'shockwave-interval' ? request.replacement : request.prescription) || '';
 }
 
+export function getNextReservationActionIndex(disabled, currentIndex, key) {
+  if (key !== 'ArrowLeft' && key !== 'ArrowRight') return -1;
+  const enabled = disabled.flatMap((value, index) => value ? [] : [index]);
+  if (!enabled.length) return -1;
+  const position = enabled.indexOf(currentIndex);
+  if (position < 0) return enabled[0];
+  return enabled[(position + (key === 'ArrowRight' ? 1 : -1) + enabled.length) % enabled.length];
+}
+
 export async function prepareReservationPayload(payload, confirm) {
   const prepared = payload.map((row) => ({ ...row }));
   for (const row of prepared) {

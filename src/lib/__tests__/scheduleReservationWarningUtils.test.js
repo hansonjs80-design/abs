@@ -2,7 +2,22 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { generateShockwaveCalendar } from '../calendarUtils.js';
-import { buildScheduleReservationWarnings, findShinjangReplacement, getReservationWarningReplacement, prepareReservationPayload, resolveReservationWarnings } from '../scheduleReservationWarningUtils.js';
+import { buildScheduleReservationWarnings, findShinjangReplacement, getNextReservationActionIndex, getReservationWarningReplacement, prepareReservationPayload, resolveReservationWarnings } from '../scheduleReservationWarningUtils.js';
+
+describe('reservation action keyboard navigation', () => {
+  it('moves left and right and wraps at either end', () => {
+    assert.equal(getNextReservationActionIndex([false, false, false], 1, 'ArrowLeft'), 0);
+    assert.equal(getNextReservationActionIndex([false, false, false], 1, 'ArrowRight'), 2);
+    assert.equal(getNextReservationActionIndex([false, false, false], 2, 'ArrowRight'), 0);
+    assert.equal(getNextReservationActionIndex([false, false, false], 0, 'ArrowLeft'), 2);
+  });
+  it('skips disabled buttons and leaves Enter, Tab and Escape to their native handlers', () => {
+    assert.equal(getNextReservationActionIndex([false, false, true], 1, 'ArrowRight'), 0);
+    assert.equal(getNextReservationActionIndex([false, false, true], 0, 'ArrowLeft'), 1);
+    assert.equal(getNextReservationActionIndex([true, true, true], 0, 'ArrowRight'), -1);
+    for (const key of ['Enter', 'Tab', 'Escape']) assert.equal(getNextReservationActionIndex([false, false, false], 1, key), -1);
+  });
+});
 
 describe('manual warning default replacement', () => {
   it('uses the registered shinjang 1 prescription for both manual warnings', () => {

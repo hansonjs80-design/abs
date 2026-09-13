@@ -25,7 +25,7 @@
 .reservation-warning-select--shinjangSpray { color: #15803d; }
 .reservation-warning-select--manualTherapy { color: #0369a1; }
 .reservation-warning-select select { width: 100%; min-width: 0; height: 30px; padding: 4px; border: 1px solid #cbd5e1; border-radius: 5px; background: white; color: #334155; font: inherit; font-size: 12px; }
-.reservation-warning-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; padding: 12px 16px 14px; }
+.reservation-warning-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; padding: 12px 16px 14px; }
 .reservation-warning-actions button {
   padding: 7px 12px;
   border: 1px solid #cbd5e1;
@@ -42,6 +42,7 @@
 .reservation-warning-actions button:hover { filter: brightness(.97); }
 .reservation-warning-actions button:disabled { opacity: .5; cursor: default; }
 .reservation-warning-dialog :is(button, select):focus-visible { outline: 2px solid #6366f1; outline-offset: 3px; }
+.reservation-warning-dialog .reservation-warning-actions button:focus { outline: 3px solid #6366f1; outline-offset: 2px; }
 @media (max-width: 360px) {
   .reservation-warning-selects { grid-template-columns: 1fr; }
 }

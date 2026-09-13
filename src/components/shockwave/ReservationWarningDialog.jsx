@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import './ReservationWarningDialog.css';
 import InsuranceUsageBadge from './InsuranceUsageBadge';
-import { getReservationWarningReplacement } from '../../lib/scheduleReservationWarningUtils';
+import { getNextReservationActionIndex, getReservationWarningReplacement } from '../../lib/scheduleReservationWarningUtils';
 
 export default function ReservationWarningDialog({ request, onAnswer }) {
   const dialogRef = useRef(null);
+  const cancelButtonRef = useRef(null);
   const [dropdownPrescription, setDropdownPrescription] = useState('');
   const selectedPrescription = dropdownPrescription || request.prescription || '';
   const replacement = getReservationWarningReplacement(request, dropdownPrescription);
@@ -20,6 +21,7 @@ export default function ReservationWarningDialog({ request, onAnswer }) {
   useEffect(() => {
     const dialog = dialogRef.current;
     dialog.showModal();
+    cancelButtonRef.current?.focus();
     return () => dialog.close();
   }, []);
 
@@ -54,9 +56,15 @@ export default function ReservationWarningDialog({ request, onAnswer }) {
           </div>
         </div>
       </div>
-      <div className="reservation-warning-actions">
+      <div className="reservation-warning-actions" role="group" aria-label="예약 확인 선택" onKeyDown={(event) => {
+        const buttons = [...event.currentTarget.querySelectorAll('button')];
+        const nextIndex = getNextReservationActionIndex(buttons.map((button) => button.disabled), buttons.indexOf(document.activeElement), event.key);
+        if (nextIndex < 0) return;
+        event.preventDefault();
+        buttons[nextIndex].focus();
+      }}>
         <button type="button" className="reservation-warning-yes" onClick={() => onAnswer(true)}>예</button>
-        <button type="button" className="reservation-warning-no" autoFocus onClick={() => onAnswer(false)}>아니오</button>
+        <button ref={cancelButtonRef} type="button" className="reservation-warning-no" autoFocus onClick={() => onAnswer(false)}>아니오</button>
         <button type="button" className="reservation-warning-replace" disabled={!replacement} onClick={() => onAnswer(replacement)}>
           {replacement ? (isDefaultManualReplacement ? '신장분사 1로 변경' : `${replacement} 처방으로 변경`) : '일치하는 신장분사 처방 없음'}
         </button>
