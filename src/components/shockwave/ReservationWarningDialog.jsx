@@ -2,14 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import './ReservationWarningDialog.css';
 import InsuranceUsageBadge from './InsuranceUsageBadge';
+import { getReservationWarningReplacement } from '../../lib/scheduleReservationWarningUtils';
 
 export default function ReservationWarningDialog({ request, onAnswer }) {
   const dialogRef = useRef(null);
   const [dropdownPrescription, setDropdownPrescription] = useState('');
   const selectedPrescription = dropdownPrescription || request.prescription || '';
-  const replacement = dropdownPrescription
-    || (request.type === 'shockwave-interval' ? request.replacement : request.prescription)
-    || '';
+  const replacement = getReservationWarningReplacement(request, dropdownPrescription);
+  const isDefaultManualReplacement = !dropdownPrescription
+    && (request.type === 'manual-week-limit' || request.type === 'manual-visit-limit');
   const groups = [
     { key: 'shockwave', label: '충격파' },
     { key: 'shinjangSpray', label: '신장분사' },
@@ -57,7 +58,7 @@ export default function ReservationWarningDialog({ request, onAnswer }) {
         <button type="button" className="reservation-warning-yes" onClick={() => onAnswer(true)}>예</button>
         <button type="button" className="reservation-warning-no" autoFocus onClick={() => onAnswer(false)}>아니오</button>
         <button type="button" className="reservation-warning-replace" disabled={!replacement} onClick={() => onAnswer(replacement)}>
-          {replacement ? `${replacement} 처방으로 변경` : '일치하는 신장분사 처방 없음'}
+          {replacement ? (isDefaultManualReplacement ? '신장분사 1로 변경' : `${replacement} 처방으로 변경`) : '일치하는 신장분사 처방 없음'}
         </button>
       </div>
     </dialog>,

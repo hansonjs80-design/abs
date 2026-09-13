@@ -17,6 +17,17 @@ export function findShinjangReplacement(prescription, prescriptions = []) {
   return matches.length === 1 ? matches[0] : '';
 }
 
+export function getReservationWarningReplacement(request, dropdownPrescription = '') {
+  if (dropdownPrescription) return dropdownPrescription;
+  if (request.type === 'manual-week-limit' || request.type === 'manual-visit-limit') {
+    const matches = (request.prescriptions?.shinjangSpray || []).filter((value) => (
+      String(value).normalize('NFKC').replace(/\s/g, '') === '신장분사1'
+    ));
+    return matches.length === 1 ? matches[0] : '';
+  }
+  return (request.type === 'shockwave-interval' ? request.replacement : request.prescription) || '';
+}
+
 export async function prepareReservationPayload(payload, confirm) {
   const prepared = payload.map((row) => ({ ...row }));
   for (const row of prepared) {

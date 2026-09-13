@@ -2,7 +2,32 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { generateShockwaveCalendar } from '../calendarUtils.js';
-import { buildScheduleReservationWarnings, findShinjangReplacement, prepareReservationPayload, resolveReservationWarnings } from '../scheduleReservationWarningUtils.js';
+import { buildScheduleReservationWarnings, findShinjangReplacement, getReservationWarningReplacement, prepareReservationPayload, resolveReservationWarnings } from '../scheduleReservationWarningUtils.js';
+
+describe('manual warning default replacement', () => {
+  it('uses the registered shinjang 1 prescription for both manual warnings', () => {
+    for (const type of ['manual-week-limit', 'manual-visit-limit']) {
+      for (const name of ['신장분사1', '신장분사 1']) {
+        const request = { type, prescription: '30분', prescriptions: { shinjangSpray: ['신장분사2', '신장분사1.0', name] } };
+        assert.equal(getReservationWarningReplacement(request), name);
+        assert.equal(getReservationWarningReplacement(request, '60분'), '60분');
+      }
+    }
+  });
+  it('does not substitute an unregistered or ambiguous prescription', () => {
+    assert.equal(getReservationWarningReplacement({ type: 'manual-week-limit', prescription: '30분' }), '');
+    assert.equal(getReservationWarningReplacement({ type: 'manual-week-limit', prescriptions: { shinjangSpray: ['신장분사1', '신장분사 1'] } }), '');
+  });
+  it('preserves the existing shockwave replacement', () => {
+    assert.equal(getReservationWarningReplacement({ type: 'shockwave-interval', prescription: 'F2.5', replacement: '신장분사2.5' }), '신장분사2.5');
+  });
+  it('passes shinjang 1 through the existing reservation payload flow', async () => {
+    const payload = [{ content: '1001/가상환자(6)', prescription: '30분' }];
+    const result = await prepareReservationPayload(payload, () => getReservationWarningReplacement({ type: 'manual-week-limit', prescriptions: { shinjangSpray: ['신장분사 1'] } }));
+    assert.equal(result[0].prescription, '신장분사 1');
+    assert.equal(payload[0].prescription, '30분');
+  });
+});
 
 describe('reservation warning prescription changes', () => {
   const getWarnings = (prescription) => prescription === '충격파'
