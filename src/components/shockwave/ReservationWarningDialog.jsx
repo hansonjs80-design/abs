@@ -7,6 +7,7 @@ import { getNextReservationActionIndex, getReservationWarningReplacement } from 
 export default function ReservationWarningDialog({ request, onAnswer }) {
   const dialogRef = useRef(null);
   const cancelButtonRef = useRef(null);
+  const replacementButtonRef = useRef(null);
   const [dropdownPrescription, setDropdownPrescription] = useState('');
   const selectedPrescription = dropdownPrescription || request.prescription || '';
   const replacement = getReservationWarningReplacement(request, dropdownPrescription);
@@ -21,7 +22,10 @@ export default function ReservationWarningDialog({ request, onAnswer }) {
   useEffect(() => {
     const dialog = dialogRef.current;
     dialog.showModal();
-    cancelButtonRef.current?.focus();
+    const initialButton = replacementButtonRef.current?.disabled
+      ? cancelButtonRef.current
+      : replacementButtonRef.current;
+    initialButton?.focus();
     return () => dialog.close();
   }, []);
 
@@ -64,8 +68,8 @@ export default function ReservationWarningDialog({ request, onAnswer }) {
         buttons[nextIndex].focus();
       }}>
         <button type="button" className="reservation-warning-yes" onClick={() => onAnswer(true)}>예</button>
-        <button ref={cancelButtonRef} type="button" className="reservation-warning-no" autoFocus onClick={() => onAnswer(false)}>아니오</button>
-        <button type="button" className="reservation-warning-replace" disabled={!replacement} onClick={() => onAnswer(replacement)}>
+        <button ref={cancelButtonRef} type="button" className="reservation-warning-no" onClick={() => onAnswer(false)}>아니오</button>
+        <button ref={replacementButtonRef} type="button" className="reservation-warning-replace" disabled={!replacement} onClick={() => onAnswer(replacement)}>
           {replacement ? (isDefaultManualReplacement ? '신장분사 1로 변경' : `${replacement} 처방으로 변경`) : '일치하는 신장분사 처방 없음'}
         </button>
       </div>
