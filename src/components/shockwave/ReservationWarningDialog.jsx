@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import './ReservationWarningDialog.css';
 import InsuranceUsageBadge from './InsuranceUsageBadge';
@@ -28,6 +28,10 @@ export default function ReservationWarningDialog({ request, onAnswer }) {
     initialButton?.focus();
     return () => dialog.close();
   }, []);
+
+  useLayoutEffect(() => {
+    if (dropdownPrescription) replacementButtonRef.current?.focus();
+  }, [dropdownPrescription]);
 
   return createPortal(
     <dialog
