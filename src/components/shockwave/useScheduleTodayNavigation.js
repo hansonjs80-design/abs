@@ -30,6 +30,7 @@ export default function useScheduleTodayNavigation({
   onNavigateToTodayMonth,
   shortcutLabel,
   setTodayShortcutTooltip,
+  shouldDeferShortcut,
 }) {
   const todayWeekIdx = useMemo(() => {
     let idx = weeks.findIndex((weekDays) => weekDays.some((dayInfo) => isSameDate(dayInfo.date, today)));
@@ -150,6 +151,7 @@ export default function useScheduleTodayNavigation({
 
   useEffect(() => {
     const handleTodayShortcut = (event) => {
+      if (shouldDeferShortcut?.(event)) return;
       const isOpenShortcut = isMetaEvent(event) && getScheduleShortcutKey(event) === 'T';
       if (!isOpenShortcut) return;
       event.preventDefault();
@@ -168,10 +170,11 @@ export default function useScheduleTodayNavigation({
       window.removeEventListener('keydown', handleTodayShortcut, true);
       document.removeEventListener('keydown', handleTodayShortcut, true);
     };
-  }, [isCurrentScheduleMonth, onNavigateToTodayMonth, scrollToTodayWeek, today]);
+  }, [isCurrentScheduleMonth, onNavigateToTodayMonth, scrollToTodayWeek, today, shouldDeferShortcut]);
 
   useEffect(() => {
     const handleNextWeekShortcut = (event) => {
+      if (shouldDeferShortcut?.(event)) return;
       if (event.__shockwaveNextWeekHandled) return;
       const shortcutKey = getScheduleShortcutKey(event);
       const isNextWeekShortcut = isMetaEvent(event) &&
@@ -192,7 +195,7 @@ export default function useScheduleTodayNavigation({
       window.removeEventListener('keydown', handleNextWeekShortcut, true);
       document.removeEventListener('keydown', handleNextWeekShortcut, true);
     };
-  }, [scrollToNextVisibleWeek]);
+  }, [scrollToNextVisibleWeek, shouldDeferShortcut]);
 
   useEffect(() => {
     let wheelTargetWeekIdx = null;

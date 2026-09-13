@@ -47,14 +47,14 @@ export const BODY_PART_PRESET_GROUPS = [
   },
   {
     id: 'knee',
-    label: '슬관절',
+    label: '무릎',
     items: [
       { id: 'patellar-tendinitis', label: '슬개건염', code: 'M765' },
     ],
   },
   {
     id: 'ankle',
-    label: '발목관절',
+    label: '발목',
     items: [
       { id: 'achilles-tendinitis', label: '아킬레스건염', code: 'M766' },
     ],
@@ -73,7 +73,7 @@ export const BODY_PART_PRESET_GROUPS = [
   },
   {
     id: 'spine',
-    label: '척추부',
+    label: '척추',
     items: [
       { id: 'cervical-myofascial-pain', label: '경추근막통증', code: 'M79180' },
       {

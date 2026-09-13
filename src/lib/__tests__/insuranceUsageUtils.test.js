@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { generateShockwaveCalendar } from '../calendarUtils.js';
-import { buildInsuranceRecords, getInsuranceUsage, isInsuranceSelfPay, overlayInsuranceScheduleRows } from '../insuranceUsageUtils.js';
+import { buildInsuranceRecords, formatInsuranceUsage, getInsuranceUsage, isInsuranceSelfPay, overlayInsuranceScheduleRows } from '../insuranceUsageUtils.js';
 import { readAllInsuranceRows } from '../insuranceUsageRepository.js';
 import { buildScheduleReservationWarnings } from '../scheduleReservationWarningUtils.js';
 
@@ -21,6 +21,101 @@ function usage(rows, target, historyLogs = []) {
 }
 
 describe('clinic annual insurance usage', () => {
+  const partRow = (index, body_part, prescription = 'F2.5') => row('2026-09-01', prescription, index, { body_part });
+  const visitWarnings = (rows, target) => buildScheduleReservationWarnings({ target, scheduleRows: rows, settings, year: target.year, month: target.month })
+    .filter((warning) => warning.type.endsWith('visit-limit'));
+  it('combines lateral and medial epicondylitis into one elbow allowance', () => {
+    const rows = Array.from({ length: 6 }, (_, i) => partRow(i, i < 3 ? 'Rt. 외측 상과염(M771)' : 'Lt. 내측상과염(M770)'));
+    assert.equal(formatInsuranceUsage(usage(rows, rows[5])), '6회(팔꿈치 6/6)');
+    const seventh = partRow(6, '외측상과염(M771)');
+    assert.equal(visitWarnings(rows, seventh).length, 1);
+    assert.equal(visitWarnings(rows, partRow(6, '석회성건염(M6521)')).length, 0);
+    const mixed = [...rows.slice(0, 3), ...Array.from({ length: 3 }, (_, i) => partRow(i + 3, '경추근막통증(M79180)'))];
+    assert.equal(formatInsuranceUsage(usage(mixed, mixed[5])), '6회(팔꿈치 3/6, 척추 3/6)');
+    assert.equal(visitWarnings(mixed, seventh).length, 0);
+  });
+  it('combines spinal subdiagnoses and counts duplicate subdiagnoses within a visit once per region', () => {
+    const rows = Array.from({ length: 6 }, (_, i) => partRow(i, i < 3 ? '경추근막통증(M79180)' : '요추/척추부 근막통(M79180)'));
+    assert.equal(formatInsuranceUsage(usage(rows, rows[5])), '6회(척추 6/6)');
+    assert.equal(visitWarnings(rows, partRow(6, '경추근막통증(M79180)')).length, 1);
+    assert.equal(formatInsuranceUsage(usage([], partRow(0, '외측상과염(M771), 내측상과염(M770)'))), '1회(팔꿈치 1/6)');
+  });
+  it('returns both treatment histories at a shinjang cell without incrementing either count', () => {
+    const rows = [partRow(0, '어깨'), partRow(1, '허리', '30분')];
+    const records = buildInsuranceRecords({ scheduleRows: rows, settings });
+    const target = partRow(2, '허리', '신장분사1');
+    const shock = getInsuranceUsage(records, target, settings, 'shockwave');
+    const manual = getInsuranceUsage(records, target, settings, 'manual');
+    assert.equal(shock.count, 1);
+    assert.equal(manual.count, 1);
+    assert.equal(shock.periodEnd, '2027-09-01');
+    assert.equal(manual.periodEnd, '2027-01-01');
+    assert.equal(shock.hasHistory && manual.hasHistory, true);
+  });
+  it('allows a new body part after six visits without restarting the anniversary', () => {
+    const rows = Array.from({ length: 6 }, (_, i) => partRow(i, '목'));
+    const target = partRow(6, '어깨');
+    const result = usage(rows, target);
+    assert.equal(result.count, 7);
+    assert.equal(result.limit, 12);
+    assert.equal(result.periodEnd, '2027-09-01');
+    assert.equal(result.overLimit, false);
+    assert.equal(visitWarnings(rows, target).length, 0);
+    assert.equal(formatInsuranceUsage(result), '7회(목 6/6, 어깨 1/6)');
+  });
+  it('warns on the seventh visit to the same body part, including after a different part', () => {
+    const rows = Array.from({ length: 6 }, (_, i) => partRow(i, '목'));
+    const seventh = partRow(6, '목');
+    assert.equal(formatInsuranceUsage(usage(rows, seventh)), '7회(목 7/6)');
+    assert.equal(visitWarnings(rows, seventh).length, 1);
+    rows.push(partRow(6, '어깨'));
+    const target = partRow(7, '목');
+    assert.equal(usage(rows, target).exceededParts[0].count, 7);
+    assert.equal(visitWarnings(rows, target).length, 1);
+    assert.equal(usage(rows, target).periodEnd, '2027-09-01');
+  });
+  it('allows twelve visits across parts and warns at thirteen even when every part is below six', () => {
+    const rows = Array.from({ length: 12 }, (_, i) => partRow(i, ['목', '어깨', '허리'][i % 3]));
+    assert.equal(visitWarnings(rows, rows[11]).length, 0);
+    const target = partRow(12, '어깨');
+    assert.equal(visitWarnings(rows, target).length, 1);
+    assert.equal(formatInsuranceUsage(usage(rows, target)), '13/12회(목 4/6, 어깨 5/6, 허리 4/6)');
+    assert.equal(usage(rows, target).periodEnd, '2027-09-01');
+  });
+  it('counts manual therapy across all parts against fifteen and resets on January first', () => {
+    const rows = Array.from({ length: 15 }, (_, i) => partRow(i, i % 2 ? '목' : '어깨', '30분'));
+    assert.equal(visitWarnings(rows, rows[14]).length, 0);
+    const target = partRow(15, '허리', '30분');
+    assert.equal(visitWarnings(rows, target).length, 1);
+    assert.equal(formatInsuranceUsage(usage(rows, target)), '16회');
+    assert.equal(formatInsuranceUsage(usage(rows, target), true), '16회(16/15)');
+    assert.equal(usage(rows, target).periodEnd, '2027-01-01');
+    assert.equal(usage(rows, row('2027-01-01', '30분')).count, 1);
+  });
+  it('excludes self-pay from body counts, carries shinjang counts and resets all parts together', () => {
+    const rows = [partRow(0, '목'), partRow(1, '어깨', 'F2.5(본인)'), partRow(2, '목')];
+    assert.equal(formatInsuranceUsage(usage(rows, partRow(3, '어깨', '신장분사2.5'))), '2회(목 2/6)');
+    const renewed = usage(rows, row('2027-09-01', 'F2.5', 0, { body_part: '어깨' }));
+    assert.equal(formatInsuranceUsage(renewed), '1회(어깨 1/6)');
+    assert.equal(renewed.periodEnd, '2028-09-01');
+  });
+  it('counts a multi-part appointment once overall and once per listed part, deduplicating labels', () => {
+    const target = partRow(0, '목, 어깨\n목');
+    const result = usage([], target);
+    assert.equal(result.count, 1);
+    assert.equal(formatInsuranceUsage(result), '1회(목 1/6, 어깨 1/6)');
+  });
+  it('shows usage and renewal for a previous-month cell without double-counting its canonical record', () => {
+    const actual = row('2026-09-28', 'F3.0', 0, { body_part: '목' });
+    const weeks = generateShockwaveCalendar(2026, 10);
+    const week_index = weeks.findIndex((week) => week.some((day) => day.month === 9 && day.day === 28));
+    const day_index = weeks[week_index].findIndex((day) => day.month === 9 && day.day === 28);
+    const adjacent = { ...actual, month: 10, week_index, day_index };
+    const rows = [row('2026-08-11'), actual, adjacent];
+    assert.equal(usage(rows, adjacent).count, 2);
+    assert.equal(usage(rows, adjacent).periodEnd, '2027-08-11');
+    assert.equal(usage(rows, { ...adjacent, prescription: 'F2.5(본인)' }).count, 1);
+  });
   it('resets on the anniversary, not January 1 or a rolling 365-day window', () => {
     const rows = [row('2026-09-01'), row('2027-01-01'), row('2027-08-31')];
     assert.equal(usage(rows, rows[2]).count, 3);

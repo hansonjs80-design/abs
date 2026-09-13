@@ -5,7 +5,8 @@ export function isMetaEvent(event) {
 }
 
 export function normalizeScheduleShortcutValue(value) {
-  const rawKey = String(value || '').trim();
+  const rawKey = String(value || '').replace(/[！-～]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0)).trim()
+    .replace(/^(?:(?:ctrl|control|cmd|command)\s*\+\s*|⌘\s*\+?\s*)/i, '');
   if (!rawKey) return '';
   if (rawKey === 'Spacebar' || rawKey === ' ') return ' ';
   if (rawKey.length === 1) {
@@ -57,7 +58,7 @@ export function resolveSchedulePrescriptionShortcut(event, {
   const isShinjangModifier = Boolean(
     event?.altKey && !event?.metaKey && !event?.ctrlKey && !event?.shiftKey
   );
-  if (isShinjangModifier && /^[1-9A-Z]$/.test(shortcutKey)) {
+  if (isShinjangModifier && /^[0-9A-Z]$/.test(shortcutKey)) {
     const prescription = findPrescriptionByShortcut(shinjangShortcuts, shortcutKey, hidden);
     if (prescription) {
       return { type: 'shinjang_spray', prescription, shortcutKey };
@@ -68,7 +69,7 @@ export function resolveSchedulePrescriptionShortcut(event, {
   const isLegacyShinjangModifier = Boolean(
     (event?.metaKey || event?.ctrlKey) && event?.shiftKey && !event?.altKey
   );
-  if (isLegacyShinjangModifier && /^[1-9A-Z]$/.test(shortcutKey)) {
+  if (isLegacyShinjangModifier && /^[0-9A-Z]$/.test(shortcutKey)) {
     const prescription = findPrescriptionByShortcut(shinjangShortcuts, shortcutKey, hidden);
     if (prescription) {
       return { type: 'shinjang_spray', prescription, shortcutKey };
@@ -79,7 +80,7 @@ export function resolveSchedulePrescriptionShortcut(event, {
   const isMetaModifier = Boolean(
     (event?.metaKey || event?.ctrlKey) && !event?.shiftKey && !event?.altKey
   );
-  if (isMetaModifier && /^[1-9A-Z]$/.test(shortcutKey)) {
+  if (isMetaModifier && /^[0-9A-Z]$/.test(shortcutKey)) {
     if (preferredType === 'manual_therapy') {
       const manualPrescription = findPrescriptionByShortcut(manualShortcuts, shortcutKey, hidden);
       if (manualPrescription) {

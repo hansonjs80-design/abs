@@ -20,6 +20,22 @@ import {
 } from '../scheduleKeyboardUtils.js';
 
 describe('schedule keyboard shortcut detection', () => {
+  it('matches every digit and letter for Windows Ctrl and Mac Command, including Korean input', () => {
+    for (const modifier of ['ctrlKey', 'metaKey']) {
+      for (const key of '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+        const code = /\d/.test(key) ? `Digit${key}` : `Key${key}`;
+        assert.deepEqual(resolveSchedulePrescriptionShortcut({ [modifier]: true, code, key: key === 'A' ? 'ㅁ' : key.toLowerCase() }, { shockwaveShortcuts: { F2: key } }),
+          { type: 'shockwave', prescription: 'F2', shortcutKey: key });
+      }
+      assert.equal(resolveSchedulePrescriptionShortcut({ [modifier]: true, code: 'Numpad0', key: '0' }, { shockwaveShortcuts: { F2: '0' } })?.prescription, 'F2');
+    }
+  });
+  it('accepts shortcut values saved as complete Ctrl/Cmd labels', () => {
+    for (const value of ['Ctrl+1', 'Control + 1', 'Cmd+1', 'Command+1', '⌘1', '⌘+1', '１']) {
+      assert.equal(normalizeScheduleShortcutValue(value), '1');
+      assert.equal(resolveSchedulePrescriptionShortcut({ metaKey: true, code: 'Digit1', key: '1' }, { shockwaveShortcuts: { F2: value } })?.prescription, 'F2');
+    }
+  });
   it('detects patient history search with cmd/ctrl f', () => {
     assert.equal(isPatientHistoryShortcut({ metaKey: true, code: 'KeyF', key: 'f' }), true);
     assert.equal(isPatientHistoryShortcut({ ctrlKey: true, code: '', key: 'F' }), true);

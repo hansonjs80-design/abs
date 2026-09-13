@@ -3,6 +3,20 @@ import { getScheduleItemTreatmentGroup } from './prescriptionScheduleSettings.js
 import { parseSchedulerPatientIdentity } from './schedulerCellTextUtils.js';
 import { getScheduleDayDateKey, getScheduleRowSchedulerCellKey } from './schedulerHistoryCandidateUtils.js';
 import { isTreatmentCancelBg } from './scheduleStatusUtils.js';
+import { BODY_PART_PRESET_GROUPS } from './bodyPartPresetUtils.js';
+
+export function getInsuranceBodyPart(value) {
+  const label = String(value || '').normalize('NFKC').replace(/^\s*[•·]\s*/, '').trim();
+  const compact = label.toLowerCase().replace(/\s/g, '');
+  const diagnosis = compact.replace(/^(?:lt\.?|rt\.?|both\.?)/, '').replace(/\([^)]*\)/g, '');
+  if (/^(?:경추근막통(?:증)?|요추\/(?:척추부|천추부)근막통(?:증)?)$/.test(diagnosis)) return '척추';
+  for (const group of BODY_PART_PRESET_GROUPS) {
+    if (group.items.some((item) => [item.label, ...(item.aliases || [])]
+      .some((name) => diagnosis === name.toLowerCase().replace(/\s/g, '')))) return group.label;
+  }
+  const aliases = { shoulder: '어깨', elbow: '팔꿈치', hip: '고관절', knee: '무릎', 슬관절: '무릎', ankle: '발목', 발목관절: '발목', foot: '족부', cervical: '목', lumbar: '허리', spine: '척추', 척추부: '척추' };
+  return aliases[compact] || label.replace(/\([^)]*\)/g, '').trim();
+}
 
 // Clinic tracking rule, not an insurer's coverage/claim determination.
 export const INSURANCE_USAGE_COLORS = { shockwave: '#2563eb', manual: '#92400e' };
@@ -19,7 +33,7 @@ export function isInsuranceSelfPay(prescription) {
   return /\(\s*본인\s*\)/.test(String(prescription || '').normalize('NFKC'));
 }
 
-export function normalizeInsuranceRecord(row, settings) {
+export function normalizeInsuranceRecord(row, settings, allowAdjacentMonth = false) {
   if (!row) return null;
   const patient = getInsurancePatient(row);
   if (!patient.key) return null;
@@ -28,7 +42,7 @@ export function normalizeInsuranceRecord(row, settings) {
     ? generateShockwaveCalendar(Number(row.year), Number(row.month))?.[Number(row.week_index)]?.[Number(row.day_index)]
     : null;
   // Adjacent-month calendar cells are representations, not extra appointments.
-  if (isSchedule && !day?.isCurrentMonth) return null;
+  if (isSchedule && (!day || (!day.isCurrentMonth && !allowAdjacentMonth))) return null;
   const date = isSchedule ? getScheduleDayDateKey(day) : String(row.date || '').slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
   const group = getScheduleItemTreatmentGroup(row, settings, Number(date.slice(0, 4)), Number(date.slice(5, 7)))
@@ -43,7 +57,11 @@ export function normalizeInsuranceRecord(row, settings) {
     : row.scheduler_cell_key || `${row.type || row.history_group}:${row.id}`;
   const excluded = Boolean(row.merge_span?.mergedInto || isTreatmentCancelBg(row.bg_color) || row.cancelled);
   return {
-    key, date, patient: patient.key, category, prescription, group,
+    key, date, patient: patient.key, category, prescription, group, isSchedule,
+    adjacentMonth: isSchedule && !day.isCurrentMonth,
+    bodyParts: [...new Set(String(row.body_part || '').normalize('NFKC').split(/[,\r\n]+/)
+      .map(getInsuranceBodyPart)
+      .filter(Boolean))],
     order: isSchedule ? Number(row.row_index) * 1000 + Number(row.col_index) : Number(row.sort_index ?? 1e9),
     contributes: date >= INSURANCE_USAGE_START_DATE && !excluded && group !== 'shinjang_spray' && !isInsuranceSelfPay(prescription),
     excluded,
@@ -73,17 +91,23 @@ function anniversary(anchor, year) {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
-export function getInsuranceUsage(records, targetRow, settings) {
-  const target = normalizeInsuranceRecord(targetRow, settings);
+export function getInsuranceUsage(records, targetRow, settings, categoryOverride) {
+  const target = normalizeInsuranceRecord(targetRow, settings, true);
   if (!target) return null;
   const existing = records.find((row) => row.key === target.key)
     || records.find((row) => row.patient === target.patient && row.date === target.date
-      && row.group === target.group && row.prescription === target.prescription
-      && targetRow.week_index == null && !targetRow.scheduler_cell_key);
+      && ((target.adjacentMonth && row.order === target.order)
+        || (row.isSchedule && row.group === target.group && row.prescription === target.prescription
+          && targetRow.week_index == null && !targetRow.scheduler_cell_key)));
   if (existing) {
     target.key = existing.key;
     target.order = existing.order;
     if (existing.excluded) target.contributes = false;
+  }
+  if (categoryOverride && target.category !== categoryOverride) {
+    target.category = categoryOverride;
+    target.contributes = false;
+    target.group = 'shinjang_spray';
   }
   // A proposed edit replaces its own cell, so neither editing nor cut/paste adds a duplicate.
   const candidates = records.filter((row) => row.key !== target.key
@@ -101,8 +125,35 @@ export function getInsuranceUsage(records, targetRow, settings) {
   const periodYear = target.category === 'manual' ? year : target.date >= anniversary(first.date, year) ? year : year - 1;
   const periodStart = target.category === 'manual' ? `${year}-01-01` : anniversary(first.date, periodYear);
   const periodEnd = target.category === 'manual' ? `${year + 1}-01-01` : anniversary(first.date, periodYear + 1);
-  const count = preceding.filter((row) => row.contributes && row.date >= periodStart && row.date < periodEnd).length;
-  return { category: target.category, count, selfPay: target.selfPay, periodStart, periodEnd, isShinjang, hasHistory: Boolean(first) };
+  const eligible = preceding.filter((row) => row.contributes && row.date >= periodStart && row.date < periodEnd);
+  const count = eligible.length;
+  const parts = new Map();
+  if (target.category === 'shockwave') {
+    for (const row of eligible) {
+      for (const label of row.bodyParts?.length ? row.bodyParts : ['부위 미입력']) {
+        const key = label.toLowerCase().replace(/\s/g, '');
+        const entry = parts.get(key) || { key, label, count: 0, limit: 6 };
+        entry.count += 1;
+        parts.set(key, entry);
+      }
+    }
+  }
+  const bodyParts = [...parts.values()];
+  const limit = target.category === 'manual' ? 15 : bodyParts.length > 1 ? 12 : 6;
+  const targetParts = target.bodyParts.length ? target.bodyParts : ['부위 미입력'];
+  const targetKeys = new Set(targetParts.map((label) => label.toLowerCase().replace(/\s/g, '')));
+  const exceededParts = bodyParts.filter((part) => part.count > part.limit && targetKeys.has(part.key));
+  return { category: target.category, count, limit, bodyParts, exceededParts,
+    overLimit: count > limit || exceededParts.length > 0,
+    selfPay: target.selfPay, periodStart, periodEnd, isShinjang, hasHistory: Boolean(first) };
+}
+
+export function formatInsuranceUsage(usage, showLimit = false) {
+  if (usage.category !== 'shockwave') return showLimit ? `${usage.count}회(${usage.count}/15)` : `${usage.count}회`;
+  const parts = usage.bodyParts || [];
+  if (!parts.length) return `${usage.count}회`;
+  const total = usage.count > 12 ? `${usage.count}/12회` : `${usage.count}회`;
+  return `${total}(${parts.map((part) => `${part.label} ${part.count}/6`).join(', ')})`;
 }
 
 export function localInsuranceScheduleRows(memos, year, month) {

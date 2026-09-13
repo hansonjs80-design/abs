@@ -41,7 +41,7 @@ test('manual therapy shortcut settings show Ctrl or Cmd and accept digits and le
 
   assert.match(panel, /isAppleShortcutPlatform \? 'Cmd\+' : 'Ctrl\+'/);
   assert.ok(
-    panel.includes('const allowedPattern = /[^1-9A-Z]/g;')
+    panel.includes('const allowedPattern = /[^0-9A-Z]/g;')
   );
   assert.match(panel, /title=\{shortcutTitle\}/);
   assert.match(viewState, /manualPrescriptionModifier: isAppleShortcutPlatform \? '⌘' : 'Ctrl'/);

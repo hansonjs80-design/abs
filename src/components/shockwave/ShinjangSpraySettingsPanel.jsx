@@ -355,7 +355,7 @@ export default function ShinjangSpraySettingsPanel({
     const shortcuts = Object.fromEntries(prescriptions.map((prescription) => [
       prescription,
       normalizeScheduleShortcutValue(draft.shortcuts?.[prescription] || '')
-        .replace(/[^1-9A-Z]/g, ''),
+        .replace(/[^0-9A-Z]/g, ''),
     ]));
     const prescriptionRenames = prescriptions
       .map((prescription) => ({
@@ -549,7 +549,7 @@ export default function ShinjangSpraySettingsPanel({
                   maxLength={1}
                   onChange={(event) => {
                     const value = normalizeScheduleShortcutValue(event.target.value)
-                      .replace(/[^1-9A-Z]/g, '');
+                      .replace(/[^0-9A-Z]/g, '');
                     setDraft((current) => ({
                       ...current,
                       shortcuts: { ...current.shortcuts, [prescription]: value },

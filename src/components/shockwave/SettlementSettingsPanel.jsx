@@ -504,7 +504,7 @@ export default function SettlementSettingsPanel({
                       title={shortcutTitle}
                       maxLength={1}
                       onChange={(event) => {
-                        const allowedPattern = /[^1-9A-Z]/g;
+                        const allowedPattern = /[^0-9A-Z]/g;
                         const val = normalizeScheduleShortcutValue(event.target.value).replace(allowedPattern, '');
                         setDraft((prev) => ({
                           ...prev,

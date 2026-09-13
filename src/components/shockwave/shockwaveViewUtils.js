@@ -13,6 +13,7 @@ import {
 import { getPatientHistoryGroupedVisitSequenceColors } from '../../lib/patientHistoryVisitSequenceUtils.js';
 import { parseSchedulerCellKey } from '../../lib/schedulerHistoryCandidateUtils.js';
 import { formatBodyPartPresetDisplayValue } from '../../lib/bodyPartPresetUtils.js';
+import { formatInsuranceUsage } from '../../lib/insuranceUsageUtils.js';
 
 export const PATIENT_HISTORY_GROUPS = [
   { key: 'shockwave', label: '충격파 내역' },
@@ -561,22 +562,29 @@ function getPatientHistoryBaseModalLayout(groupsOrCount) {
   };
 }
 
-export function getPatientHistoryModalLayout(groupsOrCount) {
+export function getPatientHistoryInsuranceWidth(groups = []) {
+  const texts = groups.flatMap((group) => (group.logs || []).map((log) => log.insuranceUsage ? formatInsuranceUsage(log.insuranceUsage) : ''));
+  const width = Math.max(64, ...texts.map((text) => [...text].reduce((sum, char) => sum + (/[가-힣]/.test(char) ? 14 : 8), 24)));
+  return Math.min(560, width);
+}
+
+export function getPatientHistoryModalLayout(groupsOrCount, insuranceWidth = 64) {
   const base = getPatientHistoryBaseModalLayout(groupsOrCount);
   const count = Array.isArray(groupsOrCount) ? groupsOrCount.length : Number(groupsOrCount || 0);
-  const addedWidth = count >= 2 ? 348 : 174;
+  const addedWidth = (count >= 2 ? 2 : 1) * (insuranceWidth + 110);
   return {
     ...base,
     maxWidth: base.maxWidth + addedWidth,
     width: `min(calc(${base.width} + ${addedWidth}px), calc(100vw - 24px))`,
-    tableMinWidth: count >= 2 ? Math.floor(base.maxWidth / 2) + 174 - 48 : base.maxWidth + 174 - 72,
+    tableMinWidth: count >= 2 ? Math.floor(base.maxWidth / 2) + insuranceWidth + 110 - 48 : base.maxWidth + insuranceWidth + 110 - 72,
   };
 }
 
 export function getPatientHistoryColumnWidths(
   groupCount,
   includeTreatmentColumn = false,
-  treatmentGroupKey = ''
+  treatmentGroupKey = '',
+  insuranceWidth = 64
 ) {
   void groupCount;
   const expandedWidths = PATIENT_HISTORY_BASE_COLUMN_WIDTHS.map((width, index) => (
@@ -594,7 +602,7 @@ export function getPatientHistoryColumnWidths(
         ? width * PATIENT_HISTORY_APPLY_COLUMN_SCALE
         : width
   ));
-  expandedWidths.splice(7, 0, 64 / PATIENT_HISTORY_SINGLE_MODAL_BASE_WIDTH * 100, 110 / PATIENT_HISTORY_SINGLE_MODAL_BASE_WIDTH * 100);
+  expandedWidths.splice(7, 0, insuranceWidth / PATIENT_HISTORY_SINGLE_MODAL_BASE_WIDTH * 100, 110 / PATIENT_HISTORY_SINGLE_MODAL_BASE_WIDTH * 100);
   const displayWidths = includeTreatmentColumn
     ? [expandedWidths[0], PATIENT_HISTORY_TREATMENT_COLUMN_WIDTH, ...expandedWidths.slice(1)]
     : expandedWidths;
@@ -670,6 +678,7 @@ export function buildShockwaveHoverTooltipText({
   getReservationTimeForMemo,
   slotMinutes = 30,
   insuranceUsage,
+  insuranceUsages,
   insuranceUsageStatus = '',
 } = {}) {
   if (!hoverCell) return '';
@@ -763,11 +772,13 @@ export function buildShockwaveHoverTooltipText({
   } else if (memoList.length > 1) {
     text += `\n📝 메모:\n${memoList.map((memo) => `  • ${memo}`).join('\n')}`;
   }
-  if (insuranceUsage?.isShinjang && !insuranceUsage.hasHistory) return text;
-  if (hasHoverContent && insuranceUsage) {
-    const label = insuranceUsage.category === 'manual' ? '도수치료' : '충격파';
-    text += `\n• 실비소진: ${label} ${insuranceUsage.count}회`;
-    text += `\n• 갱신 일자: ${insuranceUsage.periodEnd || '집계 시작 전'}`;
+  const usages = insuranceUsages || (insuranceUsage && !(insuranceUsage.isShinjang && !insuranceUsage.hasHistory) ? [insuranceUsage] : []);
+  if (hasHoverContent && usages.length) {
+    for (const usage of usages) {
+      const label = usage.category === 'manual' ? '도수치료' : '충격파';
+      text += `\n• 실비소진: ${label} ${formatInsuranceUsage(usage, true)}`;
+      text += `\n• 갱신 일자: ${usage.periodEnd || '집계 시작 전'}`;
+    }
   } else if (hasHoverContent && insuranceUsageStatus) {
     text += `\n• 실비소진: ${insuranceUsageStatus}`;
     text += `\n• 갱신 일자: ${insuranceUsageStatus}`;

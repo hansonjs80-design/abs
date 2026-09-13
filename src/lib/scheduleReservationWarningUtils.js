@@ -5,6 +5,14 @@ import { getScheduleDayDateKey } from './schedulerHistoryCandidateUtils.js';
 import { buildInsuranceRecords, getInsuranceUsage, isInsuranceSelfPay } from './insuranceUsageUtils.js';
 import { isTreatmentCancelBg } from './scheduleStatusUtils.js';
 
+// Notifications never gate, cancel, or replace a scheduler operation.
+export function notifyReservationWarnings(loadWarnings, notify, onError = () => {}) {
+  Promise.resolve().then(loadWarnings).then((warnings) => {
+    if (warnings?.length) notify(warnings);
+  }).catch(onError);
+  return true;
+}
+
 export function findShinjangReplacement(prescription, prescriptions = []) {
   const getDose = (value) => String(value || '').normalize('NFKC').match(/\d+(?:\.\d+)?/g) || [];
   const source = getDose(prescription);
@@ -167,10 +175,13 @@ export function buildScheduleReservationWarnings({
         message: '아직 7일이 경과되지 않았습니다',
       });
     }
-    if (visitCount >= 7) {
+    if (visitCount > 0 && usage?.overLimit) {
       warnings.push({
         type: 'shockwave-visit-limit',
-        message: `충격파가 ${visitCount}회차입니다. 그래도 예약하시겠습니까?`,
+        message: `충격파 실비 한도 초과: ${[
+          ...(visitCount > 12 ? [`합산 ${visitCount}/12회`] : []),
+          ...(usage.exceededParts || []).map((part) => `(${part.label} ${part.count}/6)`),
+        ].join(', ')}. 그래도 예약하시겠습니까?`,
       });
     }
   }

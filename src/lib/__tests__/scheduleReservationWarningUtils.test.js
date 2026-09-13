@@ -2,7 +2,29 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { generateShockwaveCalendar } from '../calendarUtils.js';
-import { buildScheduleReservationWarnings, canReusePriorReservationWarnings, findShinjangReplacement, getNextReservationActionIndex, getReservationWarningReplacement, prepareReservationPayload, resolveReservationWarnings } from '../scheduleReservationWarningUtils.js';
+import { buildScheduleReservationWarnings, canReusePriorReservationWarnings, findShinjangReplacement, getNextReservationActionIndex, getReservationWarningReplacement, notifyReservationWarnings, prepareReservationPayload, resolveReservationWarnings } from '../scheduleReservationWarningUtils.js';
+
+describe('non-blocking reservation alerts', () => {
+  it('lets a paste finish before history loads or an alert is closed', async () => {
+    let release;
+    const delayed = new Promise((resolve) => { release = resolve; });
+    let notified = false;
+    const payload = [{ content: '1001/가상환자(7)', prescription: 'F2.5' }];
+    const result = await prepareReservationPayload(payload, () => notifyReservationWarnings(() => delayed, () => { notified = true; }));
+    assert.deepEqual(result, payload);
+    assert.equal(notified, false);
+    release([{ message: '한도 초과' }]);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(notified, true);
+    assert.deepEqual(result, payload);
+  });
+  it('does not cancel a cell operation when notification history lookup fails', async () => {
+    let reported = false;
+    assert.equal(notifyReservationWarnings(async () => { throw new Error('offline'); }, () => assert.fail(), () => { reported = true; }), true);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(reported, true);
+  });
+});
 
 describe('existing appointment prescription changes', () => {
   it('never suppresses old warnings when the prescription changes, even within the same treatment group', () => {

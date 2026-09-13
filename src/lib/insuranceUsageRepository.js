@@ -17,10 +17,10 @@ export async function fetchInsurancePatientRecords(client, { chart, name }) {
   const term = chart.replace(/[%_\\]/g, '\\$&');
   const [scheduleRows, shockwave, manual] = await Promise.all([
     readAllInsuranceRows(() => client.from('shockwave_schedules')
-      .select('id,year,month,week_index,day_index,row_index,col_index,content,prescription,merge_span,bg_color')
+      .select('id,year,month,week_index,day_index,row_index,col_index,content,prescription,body_part,merge_span,bg_color')
       .ilike('content', `%${term}%`).order('id', { ascending: true })),
     ...['shockwave_patient_logs', 'manual_therapy_patient_logs'].map((table) => readAllInsuranceRows(() => client.from(table)
-      .select('id,patient_name,chart_number,date,prescription,visit_count,source,scheduler_cell_key')
+      .select('id,patient_name,chart_number,date,prescription,body_part,visit_count,source,scheduler_cell_key')
       .eq('chart_number', chart).order('id', { ascending: true }))),
   ]);
   const patientKey = JSON.stringify([chart, name]);

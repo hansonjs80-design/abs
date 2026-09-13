@@ -670,8 +670,8 @@ test('patient history clipboard shortcuts suspend the background schedule keyboa
     readFile(new URL('../../components/shockwave/useScheduleGlobalEvents.js', import.meta.url), 'utf8'),
   ]);
 
-  assert.match(shockwaveView, /useScheduleKeyboardActions\(\{\s*disabled:\s*patientHistoryModalOpen \|\| Boolean\(reservationWarning\),/);
-  assert.match(shockwaveView, /useScheduleGlobalEvents\(\{\s*keyboardDisabled:\s*patientHistoryModalOpen \|\| Boolean\(reservationWarning\),/);
+  assert.match(shockwaveView, /useScheduleKeyboardActions\(\{\s*confirmScheduleReservationWarnings,\s*disabled:\s*patientHistoryModalOpen,/);
+  assert.match(shockwaveView, /useScheduleGlobalEvents\(\{\s*keyboardDisabled:\s*patientHistoryModalOpen,/);
   assert.match(keyboardActions, /const handleEarlyPrescriptionShortcut = \(event\) => \{\s*if \(disabled\) return;/);
   assert.match(keyboardActions, /return useCallback\(\(e\) => \{\s*if \(disabled\) return;/);
   assert.match(globalEvents, /const handleWindowKeyDown = \(event\) => \{\s*if \(keyboardDisabled\) return;/);

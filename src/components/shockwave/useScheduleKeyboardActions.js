@@ -52,6 +52,7 @@ import { buildMoveScheduleSelectionPayload } from '../../lib/scheduleMoveUtils';
 import useScheduleMovePersistence from './useScheduleMovePersistence';
 
 export default function useScheduleKeyboardActions({
+  confirmScheduleReservationWarnings,
   disabled = false,
   contextMenu,
   clipboardSource,
@@ -508,6 +509,9 @@ export default function useScheduleKeyboardActions({
         });
 
         if (memo.prescription === targetPrescription && stableContent === updatedContent && !shouldUnmergeSingleSlot) continue;
+        confirmScheduleReservationWarnings?.({ w: kw, d: kd, r: kr, c: kc,
+          content: updatedContent, prescription: targetPrescription, bodyPart: memo.body_part,
+          oldContent: stableContent, oldPrescription: memo.prescription });
 
         if (shouldUnmergeSingleSlot) {
           const unmergePayload = buildManualTherapyUnmergePayload({
@@ -678,7 +682,7 @@ export default function useScheduleKeyboardActions({
     })();
 
     return true;
-  }, [addToast, applyPayloadToLatestRefs, cellKey, contextMenu, currentMonth, currentYear, editingCell, getLatestSelectedCell, pendingRef, rowCount, shockwaveSettings, syncPendingShortcutSavesFromPayload, updateOpenContextMenuSnapshotFromPayload]);
+  }, [addToast, applyPayloadToLatestRefs, cellKey, contextMenu, currentMonth, currentYear, editingCell, getLatestSelectedCell, pendingRef, rowCount, shockwaveSettings, syncPendingShortcutSavesFromPayload, updateOpenContextMenuSnapshotFromPayload, confirmScheduleReservationWarnings]);
 
   const moveSelectedCells = useCallback(({ rowDelta = 0, colDelta = 0 }) => {
     const activeCell = getLatestSelectedCell();
@@ -980,6 +984,10 @@ export default function useScheduleKeyboardActions({
       if (!isHolidayBackgroundShortcut(event)) return;
       if (isContextMenuTarget(event.target)) return;
       if (isEditableTarget(event.target)) return;
+      if (applyPrescriptionShortcut(event)) {
+        event.__shockwavePrescriptionHandled = true;
+        return;
+      }
       if (event.__shockwaveBackgroundHandled) return;
       event.__shockwaveBackgroundHandled = true;
       event.preventDefault();
@@ -1002,6 +1010,7 @@ export default function useScheduleKeyboardActions({
     isContextMenuTarget,
     isEditableTarget,
     toggleSelectedGreenBackground,
+    applyPrescriptionShortcut,
   ]);
 
   useEffect(() => {
@@ -1045,6 +1054,7 @@ export default function useScheduleKeyboardActions({
 
   return useCallback((e) => {
     if (disabled) return;
+    if (e.key === 'Escape' && document.querySelector('.reservation-warning-dialog')) return;
     if (e.defaultPrevented) return;
     if (e.__shockwaveBackgroundHandled) return;
     if (e.__shockwavePrescriptionHandled) return;

@@ -64,6 +64,20 @@ export default function ShockwaveHoverTooltip({ tooltipRef, text, visible }) {
 
         for (let index = 0; index < lines.length; index += 1) {
           const line = lines[index];
+          if (line.startsWith('• 실비소진: ') && lines[index + 1]?.startsWith('• 갱신 일자: ')) {
+            const category = line.includes('도수치료') ? 'manual' : 'shockwave';
+            renderedLines.push(<div key={index} className="sw-custom-tooltip-insurance-card" style={{ marginTop: 7, padding: '7px 9px', background: category === 'manual' ? '#fff7ed' : '#eff6ff', borderRadius: 7 }}>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
+                <span aria-hidden="true">•</span><span>실비소진:</span>
+                <strong style={{ color: INSURANCE_USAGE_COLORS[category] }}>{line.slice('• 실비소진: '.length)}</strong>
+              </div>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'baseline', color: '#64748b', marginTop: 3 }}>
+                <span aria-hidden="true">•</span><span>갱신 일자:</span><span>{lines[index + 1].slice('• 갱신 일자: '.length)}</span>
+              </div>
+            </div>);
+            index += 1;
+            continue;
+          }
           if (line.startsWith('• 실비소진: ') || line.startsWith('• 갱신 일자: ')) {
             const isUsage = line.startsWith('• 실비소진: ');
             const category = line.includes('도수치료') ? 'manual' : 'shockwave';
