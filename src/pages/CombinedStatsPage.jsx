@@ -62,7 +62,7 @@ function buildTherapistTreatmentSections(item, isAdmin = false) {
         (Array.isArray(item?.shinjangIncentiveGroups) ? item.shinjangIncentiveGroups : [])
           .map((g) => [Number(g.rate), g])
       );
-      // 치료사 표는 처방명이 달라도 인센율 기준의 두 구분으로 고정한다.
+      // 처방명 대신 인센율로 구분하고, 실적이 있는 행만 표시한다.
       const rows = (isAdmin ? [7, 15] : [7]).map((rate) => {
         const found = therapistShinjangMap.get(rate);
         if (found) {
@@ -81,15 +81,16 @@ function buildTherapistTreatmentSections(item, isAdmin = false) {
       return { ...treatment, value, rows };
     }
 
-    const rows = [{ ...value, rates: item?.incentiveRates?.[treatment.key] || [] }];
+    const rows = [{
+      ...value,
+      label: treatment.key === 'shockwave' ? '충격파 7%' : '도수치료 15%',
+      rates: item?.incentiveRates?.[treatment.key] || [],
+    }];
     return { ...treatment, value, rows };
-  }).filter((section) => {
-    if (section.key === 'shinjang_spray') {
-      return section.rows.some((r) => Math.max(0, Number(r.count) || 0) > 0)
-        || Math.max(0, Number(section.value.count) || 0) > 0;
-    }
-    return Math.max(0, Number(section.value.count) || 0) > 0;
-  });
+  }).map((section) => ({
+    ...section,
+    rows: section.rows.filter((row) => Number(row.count) > 0),
+  })).filter((section) => section.rows.length > 0);
 }
 
 function buildRecentMetricItems(summary, metric, { includeManual = true, totalOnly = false } = {}) {
