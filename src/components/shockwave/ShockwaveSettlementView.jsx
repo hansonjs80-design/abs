@@ -875,6 +875,9 @@ export default function ShockwaveSettlementView({
                                   incentive: 0,
                                 })
                               : null;
+                            const effectiveRateSpan = showIncentiveRateSubtotals && rateSpan > 0
+                              ? rateSpan + 1
+                              : rateSpan;
 
                             return (
                               <React.Fragment key={prescription || 'empty'}>
@@ -885,7 +888,7 @@ export default function ShockwaveSettlementView({
                                   <td className="incentive-val">
                                     {prescriptionIncentive > 0 ? formatCurrency(prescriptionIncentive) : '-'}
                                   </td>
-                                  {showIncentiveColumn && rateSpan > 0 && <td className="sw-settlement-rate-cell" rowSpan={rateSpan}>{renderIncentiveBadge(prescription)}</td>}
+                                  {showIncentiveColumn && effectiveRateSpan > 0 && <td className="sw-settlement-rate-cell" rowSpan={effectiveRateSpan}>{renderIncentiveBadge(prescription)}</td>}
                                 </tr>
                                 {rateSummary && (
                                   <tr key={`vertical-therapist-rate-${rateSummary.percentage}`} className={`settlement-rate-subtotal-row ${getIncentiveRateToneClass(rateSummary.percentage)}`}>
@@ -893,7 +896,7 @@ export default function ShockwaveSettlementView({
                                     <td>{rateSummary.count > 0 ? `${rateSummary.count}건` : '-'}</td>
                                     <td className="amount-val">{rateSummary.amount > 0 ? formatCurrency(rateSummary.amount) : '-'}</td>
                                     <td className="incentive-val">{rateSummary.incentive > 0 ? formatCurrency(rateSummary.incentive) : '-'}</td>
-                                    {showIncentiveColumn && <td className="sw-settlement-rate-cell" />}
+                                    {!showIncentiveRateSubtotals && showIncentiveColumn && <td className="sw-settlement-rate-cell" />}
                                   </tr>
                                 )}
                               </React.Fragment>

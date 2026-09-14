@@ -227,8 +227,8 @@ describe('shinjang spray statistics UI', () => {
       assert.match(source, /isRateGroupEnd/);
       assert.match(source, /settlement-rate-subtotal-row/);
     }
-    assert.match(rateColumnCss, /data-incentive-rate="7"[\s\S]*?background:\s*#edf7ea !important;/);
-    assert.match(rateColumnCss, /data-incentive-rate="15"[\s\S]*?background:\s*#f6ecfb !important;/);
+    assert.match(rateColumnCss, /data-incentive-rate="7"[\s\S]*?background:\s*#f4fbf2 !important;/);
+    assert.match(rateColumnCss, /data-incentive-rate="15"[\s\S]*?background:\s*#faf3fd !important;/);
   });
 
   it('places horizontal settlement subtotal rows first and groups all grand total rows consecutively at the bottom', async () => {

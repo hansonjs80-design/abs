@@ -149,6 +149,9 @@ export default function ShockwaveSettlementHorizontalCompactView({
                             incentive: 0,
                           })
                         : null;
+                      const effectiveRateSpan = showIncentiveRateSubtotals && rateSpan > 0
+                        ? rateSpan + 1
+                        : rateSpan;
 
                       return (
                         <React.Fragment key={`${therapistKey}-${prescription || 'empty'}`}>
@@ -171,7 +174,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                             <td className="count-val">{formatOptionalCount(count)}</td>
                             <td className="amount-val">{formatCurrency(prescriptionAmount)}</td>
                             <td className="incentive-val">{formatCurrency(prescriptionIncentive)}</td>
-                            {showIncentiveColumn && rateSpan > 0 && <td className="sw-settlement-rate-cell" rowSpan={rateSpan}>
+                            {showIncentiveColumn && effectiveRateSpan > 0 && <td className="sw-settlement-rate-cell" rowSpan={effectiveRateSpan}>
                               {prescription ? <span className="sw-prescription-incentive-rate" style={getIncentiveRateBadgeStyle(prescriptionIncentivePercentage)}>
                                 {formatPercentage(prescriptionIncentivePercentage)}
                               </span> : '—'}
@@ -183,7 +186,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                               <td className="count-val">{formatOptionalCount(rateSummary.count)}</td>
                               <td className="amount-val">{formatCurrency(rateSummary.amount)}</td>
                               <td className="incentive-val">{formatCurrency(rateSummary.incentive)}</td>
-                              {showIncentiveColumn && <td className="sw-settlement-rate-cell" />}
+                              {!showIncentiveRateSubtotals && showIncentiveColumn && <td className="sw-settlement-rate-cell" />}
                             </tr>
                           )}
                         </React.Fragment>
