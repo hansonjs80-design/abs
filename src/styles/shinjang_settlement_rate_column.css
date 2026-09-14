@@ -35,7 +35,7 @@
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode] table[data-incentive-column="true"] tbody tr[data-incentive-rate="7"] > *,
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] :is(th, td).settlement-rate-subtotal-row--7,
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode] table tbody tr.settlement-rate-subtotal-row--7 > * {
-  background: #e2f2dc !important;
+  background: #edf7ea !important;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }
@@ -43,7 +43,7 @@
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode] table[data-incentive-column="true"] tbody tr[data-incentive-rate="15"] > *,
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] :is(th, td).settlement-rate-subtotal-row--15,
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode] table tbody tr.settlement-rate-subtotal-row--15 > * {
-  background: #efdef8 !important;
+  background: #f6ecfb !important;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }

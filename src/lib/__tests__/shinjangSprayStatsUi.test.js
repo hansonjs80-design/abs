@@ -218,4 +218,17 @@ describe('shinjang spray statistics UI', () => {
     assert(manualSyncIndex >= 0 && manualSyncIndex < manualQueryIndex);
     assert.match(pageSource, /syncMonthShockwaveScheduleToStats/);
   });
+  it('places 7% and 15% subtotal rows immediately after each rate group and uses soft pastel backgrounds', async () => {
+    const horizontal2Source = await readFile(compactSettlementViewUrl, 'utf8');
+    const verticalSource = await readFile(sharedSettlementViewUrl, 'utf8');
+    const rateColumnCss = await readFile(new URL('../../styles/shinjang_settlement_rate_column.css', import.meta.url), 'utf8');
+
+    for (const source of [horizontal2Source, verticalSource]) {
+      assert.match(source, /isRateGroupEnd/);
+      assert.match(source, /settlement-rate-subtotal-row/);
+    }
+    assert.match(rateColumnCss, /data-incentive-rate="7"[\s\S]*?background:\s*#edf7ea !important;/);
+    assert.match(rateColumnCss, /data-incentive-rate="15"[\s\S]*?background:\s*#f6ecfb !important;/);
+  });
+
 });

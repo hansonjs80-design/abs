@@ -814,20 +814,42 @@ export default function ShockwaveSettlementView({
                             const prescriptionIncentive = Math.round(
                               prescriptionAmount * (prescriptionIncentivePercentage / 100)
                             );
+                            const nextPrescription = rows[index + 1];
+                            const nextRate = nextPrescription ? getIncentivePercentage(nextPrescription) : null;
+                            const isRateGroupEnd = Boolean(prescription) && (index === rows.length - 1 || nextRate !== prescriptionIncentivePercentage);
+                            const rateSummary = isRateGroupEnd && showIncentiveRateSubtotals
+                              ? (item.incentiveRateBreakdown?.find((r) => r.percentage === prescriptionIncentivePercentage) || {
+                                  percentage: prescriptionIncentivePercentage,
+                                  count: 0,
+                                  amount: 0,
+                                  incentive: 0,
+                                })
+                              : null;
 
                             return (
-                              <tr key={prescription || 'empty'} data-incentive-rate={showIncentiveColumn && prescription ? prescriptionIncentivePercentage : undefined}>
-                                <td className="prescription-name" title={!prescription ? '완료 처방 없음' : undefined}>{renderPrescriptionLabel(prescription, !showIncentiveColumn)}</td>
-                                <td className="count-val">{count > 0 ? `${count}건` : '-'}</td>
-                                <td className="amount-val">{prescriptionAmount > 0 ? formatCurrency(prescriptionAmount) : '-'}</td>
-                                <td className="incentive-val">
-                                  {prescriptionIncentive > 0 ? formatCurrency(prescriptionIncentive) : '-'}
-                                </td>
-                                {showIncentiveColumn && rateSpan > 0 && <td className="sw-settlement-rate-cell" rowSpan={rateSpan}>{renderIncentiveBadge(prescription)}</td>}
-                              </tr>
+                              <React.Fragment key={prescription || 'empty'}>
+                                <tr data-incentive-rate={showIncentiveColumn && prescription ? prescriptionIncentivePercentage : undefined}>
+                                  <td className="prescription-name" title={!prescription ? '완료 처방 없음' : undefined}>{renderPrescriptionLabel(prescription, !showIncentiveColumn)}</td>
+                                  <td className="count-val">{count > 0 ? `${count}건` : '-'}</td>
+                                  <td className="amount-val">{prescriptionAmount > 0 ? formatCurrency(prescriptionAmount) : '-'}</td>
+                                  <td className="incentive-val">
+                                    {prescriptionIncentive > 0 ? formatCurrency(prescriptionIncentive) : '-'}
+                                  </td>
+                                  {showIncentiveColumn && rateSpan > 0 && <td className="sw-settlement-rate-cell" rowSpan={rateSpan}>{renderIncentiveBadge(prescription)}</td>}
+                                </tr>
+                                {rateSummary && (
+                                  <tr key={`vertical-therapist-rate-${rateSummary.percentage}`} className={`settlement-rate-subtotal-row ${getIncentiveRateToneClass(rateSummary.percentage)}`}>
+                                    <th>{formatPercentage(rateSummary.percentage)} 합계</th>
+                                    <td>{rateSummary.count > 0 ? `${rateSummary.count}건` : '-'}</td>
+                                    <td className="amount-val">{rateSummary.amount > 0 ? formatCurrency(rateSummary.amount) : '-'}</td>
+                                    <td className="incentive-val">{rateSummary.incentive > 0 ? formatCurrency(rateSummary.incentive) : '-'}</td>
+                                    {showIncentiveColumn && <td className="sw-settlement-rate-cell" />}
+                                  </tr>
+                                )}
+                              </React.Fragment>
                             );
                           })}
-                        {showIncentiveRateSubtotals && item.incentiveRateBreakdown?.map((rateSummary) => (
+                        {showIncentiveRateSubtotals && (!therapistPrescriptions[0]) && item.incentiveRateBreakdown?.map((rateSummary) => (
                           <tr key={`vertical-therapist-rate-${rateSummary.percentage}`} className={`settlement-rate-subtotal-row ${getIncentiveRateToneClass(rateSummary.percentage)}`}>
                             <th>{formatPercentage(rateSummary.percentage)} 합계</th>
                             <td>{rateSummary.count > 0 ? `${rateSummary.count}건` : '-'}</td>

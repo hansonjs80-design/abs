@@ -1,6 +1,6 @@
 import { generateShockwaveCalendar } from './calendarUtils.js';
 import { getPrescriptionFromConfiguredDoseTag, getScheduleItemTreatmentGroup } from './prescriptionScheduleSettings.js';
-import { parseSchedulerPatientIdentity } from './schedulerCellTextUtils.js';
+import { getExplicitVisitSuffix, parseSchedulerPatientIdentity } from './schedulerCellTextUtils.js';
 import { getScheduleDayDateKey, getScheduleRowSchedulerCellKey } from './schedulerHistoryCandidateUtils.js';
 import { isTreatmentCancelBg } from './scheduleStatusUtils.js';
 import { BODY_PART_PRESET_GROUPS } from './bodyPartPresetUtils.js';
@@ -88,7 +88,7 @@ export function normalizeInsuranceRecord(row, settings, allowAdjacentMonth = fal
       .map(getInsuranceBodyPart)
       .filter(Boolean))],
     order: isSchedule ? Number(row.row_index) * 1000 + Number(row.col_index) : Number(row.sort_index ?? 1e9),
-    contributes: date >= INSURANCE_USAGE_START_DATE && !excluded && group !== 'shinjang_spray' && !isInsuranceSelfPay(prescription),
+    contributes: date >= INSURANCE_USAGE_START_DATE && !excluded && (!isSchedule || /^\d+$/.test(getExplicitVisitSuffix(row.content || '').replace(/[()]/g, ''))) && group !== 'shinjang_spray' && !isInsuranceSelfPay(prescription),
     excluded,
     selfPay: isInsuranceSelfPay(prescription),
     visit: String(row.visit_count || ''),

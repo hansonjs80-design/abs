@@ -138,35 +138,58 @@ export default function ShockwaveSettlementHorizontalCompactView({
                       const prescriptionIncentive = Math.round(
                         prescriptionAmount * (prescriptionIncentivePercentage / 100)
                       );
+                      const nextPrescription = rows[index + 1];
+                      const nextRate = nextPrescription ? getIncentivePercentage(nextPrescription) : null;
+                      const isRateGroupEnd = Boolean(prescription) && (index === rows.length - 1 || nextRate !== prescriptionIncentivePercentage);
+                      const rateSummary = isRateGroupEnd && showIncentiveRateSubtotals
+                        ? (item.incentiveRateBreakdown?.find((r) => r.percentage === prescriptionIncentivePercentage) || {
+                            percentage: prescriptionIncentivePercentage,
+                            count: 0,
+                            amount: 0,
+                            incentive: 0,
+                          })
+                        : null;
+
                       return (
-                        <tr key={`${therapistKey}-${prescription || 'empty'}`} className="horizontal2-content-row" data-incentive-rate={showIncentiveColumn && prescription ? prescriptionIncentivePercentage : undefined}>
-                          <td className="prescription-name" title={!prescription ? '완료 처방 없음' : undefined}>
-                            {prescription ? (
-                              <span className="sw-prescription-incentive-label">
-                                <span>{prescription}</span>
-                                {showPrescriptionIncentiveRates && !showIncentiveColumn && (
-                                  <span
-                                    className="sw-prescription-incentive-rate"
-                                    style={getIncentiveRateBadgeStyle(prescriptionIncentivePercentage)}
-                                  >
-                                    인센 {formatPercentage(prescriptionIncentivePercentage)}
-                                  </span>
-                                )}
-                              </span>
-                            ) : '—'}
-                          </td>
-                          <td className="count-val">{formatOptionalCount(count)}</td>
-                          <td className="amount-val">{formatCurrency(prescriptionAmount)}</td>
-                          <td className="incentive-val">{formatCurrency(prescriptionIncentive)}</td>
-                          {showIncentiveColumn && rateSpan > 0 && <td className="sw-settlement-rate-cell" rowSpan={rateSpan}>
-                            {prescription ? <span className="sw-prescription-incentive-rate" style={getIncentiveRateBadgeStyle(prescriptionIncentivePercentage)}>
-                              {formatPercentage(prescriptionIncentivePercentage)}
-                            </span> : '—'}
-                          </td>}
-                        </tr>
+                        <React.Fragment key={`${therapistKey}-${prescription || 'empty'}`}>
+                          <tr className="horizontal2-content-row" data-incentive-rate={showIncentiveColumn && prescription ? prescriptionIncentivePercentage : undefined}>
+                            <td className="prescription-name" title={!prescription ? '완료 처방 없음' : undefined}>
+                              {prescription ? (
+                                <span className="sw-prescription-incentive-label">
+                                  <span>{prescription}</span>
+                                  {showPrescriptionIncentiveRates && !showIncentiveColumn && (
+                                    <span
+                                      className="sw-prescription-incentive-rate"
+                                      style={getIncentiveRateBadgeStyle(prescriptionIncentivePercentage)}
+                                    >
+                                      인센 {formatPercentage(prescriptionIncentivePercentage)}
+                                    </span>
+                                  )}
+                                </span>
+                              ) : '—'}
+                            </td>
+                            <td className="count-val">{formatOptionalCount(count)}</td>
+                            <td className="amount-val">{formatCurrency(prescriptionAmount)}</td>
+                            <td className="incentive-val">{formatCurrency(prescriptionIncentive)}</td>
+                            {showIncentiveColumn && rateSpan > 0 && <td className="sw-settlement-rate-cell" rowSpan={rateSpan}>
+                              {prescription ? <span className="sw-prescription-incentive-rate" style={getIncentiveRateBadgeStyle(prescriptionIncentivePercentage)}>
+                                {formatPercentage(prescriptionIncentivePercentage)}
+                              </span> : '—'}
+                            </td>}
+                          </tr>
+                          {rateSummary && (
+                            <tr key={`h2-therapist-rate-${therapistKey}-${rateSummary.percentage}`} className={`settlement-rate-subtotal-row ${toneClass} ${getIncentiveRateToneClass(rateSummary.percentage)}`}>
+                              <th className="horizontal2-total-label">{formatPercentage(rateSummary.percentage)} 합계</th>
+                              <td className="count-val">{formatOptionalCount(rateSummary.count)}</td>
+                              <td className="amount-val">{formatCurrency(rateSummary.amount)}</td>
+                              <td className="incentive-val">{formatCurrency(rateSummary.incentive)}</td>
+                              {showIncentiveColumn && <td className="sw-settlement-rate-cell" />}
+                            </tr>
+                          )}
+                        </React.Fragment>
                       );
                     })}
-                    {showIncentiveRateSubtotals && item.incentiveRateBreakdown?.map((rateSummary) => (
+                    {showIncentiveRateSubtotals && (!therapistPrescriptions[0]) && item.incentiveRateBreakdown?.map((rateSummary) => (
                       <tr key={`h2-therapist-rate-${therapistKey}-${rateSummary.percentage}`} className={`settlement-rate-subtotal-row ${toneClass} ${getIncentiveRateToneClass(rateSummary.percentage)}`}>
                         <th className="horizontal2-total-label">{formatPercentage(rateSummary.percentage)} 합계</th>
                         <td className="count-val">{formatOptionalCount(rateSummary.count)}</td>

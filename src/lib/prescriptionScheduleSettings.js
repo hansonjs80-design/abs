@@ -147,6 +147,7 @@ export function getScheduleItemTreatmentGroup(item, settings, year, month) {
     && (
       manualKeys.has(prescriptionKey)
       || String(item?.prescription || '').includes('도수')
+      || /^\d{2,3}\s*분$/u.test(String(item?.prescription || '').trim())
     )
   ) return 'manual_therapy';
   if (
