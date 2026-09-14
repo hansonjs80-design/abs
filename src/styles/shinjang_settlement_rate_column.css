@@ -81,3 +81,14 @@
   body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-recent-summary-card .sw-summary-table :is(th, td):nth-child(4) { width: 17.346939% !important; }
   body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-recent-summary-card .sw-summary-table :is(th, td):nth-child(3) { width: 38.095238% !important; }
 }
+
+/* 인센티브 그룹 헤더 셀 스타일 */
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] th.rate-header-col {
+  text-align: center !important;
+  font-weight: 850 !important;
+  font-size: 0.88rem !important;
+  padding: 4px 6px !important;
+  line-height: 1.2 !important;
+  vertical-align: middle !important;
+  letter-spacing: -0.01em !important;
+}

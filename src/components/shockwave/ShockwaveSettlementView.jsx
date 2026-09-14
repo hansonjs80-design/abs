@@ -450,7 +450,7 @@ export default function ShockwaveSettlementView({
                 </colgroup>
                 <thead>
                   <tr>
-                    <th className="label-col" rowSpan={2}>구분</th>
+                    <th className="label-col" rowSpan={showIncentiveRateSubtotals ? 3 : 2}>구분</th>
                     {displayedTherapistSummaries.map((item, therapistIndex) => (
                       <th
                         key={item?.therapist?.id || item?.therapist?.name || therapistIndex}
@@ -461,11 +461,28 @@ export default function ShockwaveSettlementView({
                       </th>
                     ))}
                   </tr>
+                  {showIncentiveRateSubtotals && (
+                    <tr className="settlement-rate-header-row">
+                      {displayedTherapistSummaries.flatMap((item, therapistIndex) => {
+                        const rateGroups = horizontalTherapistIncentiveRateGroups[therapistIndex] || [];
+                        return rateGroups.map((rateGroup, rateGroupIndex) => (
+                          <th
+                            key={`rate-header-${item?.therapist?.id || item?.therapist?.name || therapistIndex}-${rateGroup.percentage ?? 'empty'}`}
+                            colSpan={rateGroup.prescriptions.length || 1}
+                            className={`rate-header-col therapist-tone-${therapistIndex % 5}-cell ${getIncentiveRateToneClass(rateGroup.percentage)}${rateGroupIndex === rateGroups.length - 1 ? ' therapist-group-end' : ''}`}
+                            data-incentive-rate={rateGroup.percentage ?? undefined}
+                          >
+                            {rateGroup.percentage !== null ? `인센티브 ${formatPercentage(rateGroup.percentage)}` : '—'}
+                          </th>
+                        ));
+                      })}
+                    </tr>
+                  )}
                   <tr>
                     {displayedTherapistSummaries.flatMap((item, therapistIndex) =>
                       (horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions || []).map((prescription, prescriptionIndex, therapistPrescriptions) => (
                         <th data-incentive-rate={treatmentLabel === '신장분사' && prescription ? getIncentivePercentage(prescription) : undefined} key={`${item?.therapist?.id || item?.therapist?.name || therapistIndex}-${prescription || 'empty'}`} className={`prescription-col therapist-tone-${therapistIndex % 5}-sub${!prescription ? ' prescription-col--empty' : ''}${prescriptionIndex === therapistPrescriptions.length - 1 ? ' therapist-group-end' : ''}`} title={!prescription ? '완료 처방 없음' : undefined}>
-                          {renderPrescriptionLabel(prescription)}
+                          {renderPrescriptionLabel(prescription, !showIncentiveRateSubtotals)}
                         </th>
                       ))
                     )}
@@ -594,14 +611,47 @@ export default function ShockwaveSettlementView({
               <div className="sw-settlement-table-wrap sw-compact-table-wrap">
                 <table className="sw-settlement-table sw-grand-total-table">
                   <thead>
-                    <tr>
-                      <th className="label-col">구분</th>
-                      {horizontalSummaryPrescriptions.map((prescription) => (
-                        <th data-incentive-rate={treatmentLabel === '신장분사' && prescription ? getIncentivePercentage(prescription) : undefined} key={`grand-summary-head-${prescription || 'empty'}`} className="prescription-col">
-                          {renderPrescriptionLabel(prescription)}
-                        </th>
-                      ))}
-                    </tr>
+                    {showIncentiveRateSubtotals ? (
+                      <>
+                        <tr>
+                          <th className="label-col" rowSpan={2}>구분</th>
+                          {horizontalSummaryIncentiveRateGroups.map((rateGroup) => (
+                            <th
+                              key={`grand-rate-head-${rateGroup.percentage}`}
+                              className={`rate-header-col ${getIncentiveRateToneClass(rateGroup.percentage)}`}
+                              colSpan={rateGroup.prescriptions.length}
+                              data-incentive-rate={rateGroup.percentage}
+                            >
+                              인센티브 {formatPercentage(rateGroup.percentage)}
+                            </th>
+                          ))}
+                        </tr>
+                        <tr>
+                          {horizontalSummaryPrescriptions.map((prescription) => (
+                            <th
+                              data-incentive-rate={treatmentLabel === '신장분사' && prescription ? getIncentivePercentage(prescription) : undefined}
+                              key={`grand-summary-head-${prescription || 'empty'}`}
+                              className="prescription-col"
+                            >
+                              {renderPrescriptionLabel(prescription, false)}
+                            </th>
+                          ))}
+                        </tr>
+                      </>
+                    ) : (
+                      <tr>
+                        <th className="label-col">구분</th>
+                        {horizontalSummaryPrescriptions.map((prescription) => (
+                          <th
+                            data-incentive-rate={treatmentLabel === '신장분사' && prescription ? getIncentivePercentage(prescription) : undefined}
+                            key={`grand-summary-head-${prescription || 'empty'}`}
+                            className="prescription-col"
+                          >
+                            {renderPrescriptionLabel(prescription)}
+                          </th>
+                        ))}
+                      </tr>
+                    )}
                   </thead>
                   <tbody>
                     <tr>

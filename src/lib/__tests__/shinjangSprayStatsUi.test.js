@@ -250,4 +250,14 @@ describe('shinjang spray statistics UI', () => {
     assert(grandIncentiveIdx > grandAmountIdx, 'grand incentive comes after grand amount');
   });
 
+  it('renders merged rate header rows labeled "인센티브 7%" and "인센티브 15%" while keeping prescriptions separate without individual badges', async () => {
+    const source = await readFile(sharedSettlementViewUrl, 'utf8');
+
+    // 상단 테이블 검증: settlement-rate-header-row와 rate-header-col 존재
+    assert.match(source, /className="settlement-rate-header-row"/);
+    assert.match(source, /인센티브 \$\{formatPercentage\(rateGroup\.percentage\)\}/);
+    assert.match(source, /renderPrescriptionLabel\(prescription, !showIncentiveRateSubtotals\)/);
+    assert.match(source, /renderPrescriptionLabel\(prescription, false\)/);
+  });
+
 });
