@@ -33,6 +33,10 @@ export function isInsuranceSelfPay(prescription) {
   return /\(\s*본인\s*\)/.test(String(prescription || '').normalize('NFKC'));
 }
 
+function getManualInsurancePrescriptionKey(prescription) {
+  return String(prescription || '').normalize('NFKC').replace(/\s+/g, '').toLowerCase();
+}
+
 export function getShinjangSprayInsuranceCategory(prescription) {
   const text = String(prescription || '').normalize('NFKC').trim();
   const doseMatches = text.match(/\d+(?:\.\d+)?/g);
@@ -135,8 +139,15 @@ export function getInsuranceUsage(records, targetRow, settings, categoryOverride
     target.group = 'shinjang_spray';
   }
   // A proposed edit replaces its own cell, so neither editing nor cut/paste adds a duplicate.
+  // 도수치료의 실비소진 회차는 처방별 실제 치료 순서를 따른다. 예를 들어
+  // 40분 일정의 (1), (2)가 남아 있어도 새 30분 처방의 첫 치료는 1회다.
+  // 신장분사의 정수 처방은 도수치료 이력을 조회만 하므로 기존처럼 전체
+  // 도수치료 이력을 연결한다.
+  const scopeManualPrescription = target.category === 'manual' && target.group === 'manual_therapy';
+  const targetPrescriptionKey = getManualInsurancePrescriptionKey(target.prescription);
   const candidates = records.filter((row) => row.key !== target.key
-    && row.patient === target.patient && row.category === target.category);
+    && row.patient === target.patient && row.category === target.category
+    && (!scopeManualPrescription || getManualInsurancePrescriptionKey(row.prescription) === targetPrescriptionKey));
   candidates.push(target);
   const chronological = candidates.sort((a, b) => a.date.localeCompare(b.date) || a.order - b.order || a.key.localeCompare(b.key));
   const year = Number(target.date.slice(0, 4));

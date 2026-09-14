@@ -277,6 +277,24 @@ describe('clinic annual insurance usage', () => {
     assert.equal(u4.count, 4);
   });
 
+  it('keeps a new manual-therapy prescription at its own first insurance visit despite older numeric schedules', () => {
+    const scheduleRows = [
+      { year: 2026, month: 7, week_index: 3, day_index: 2, row_index: 44, col_index: 1, content: '3275/손연희40(1)', prescription: '40분' },
+      { year: 2026, month: 8, week_index: 2, day_index: 2, row_index: 44, col_index: 1, content: '3275/손연희40(2)', prescription: '40분' },
+      { year: 2026, month: 9, week_index: 2, day_index: 2, row_index: 32, col_index: 1, content: '3275/손연희M(4)', prescription: '30분' },
+    ];
+    const historyLogs = [
+      { id: 1, date: '2026-09-04', chart_number: '3275', patient_name: '손연희', prescription: '30분', visit_count: '1', type: 'manual' },
+      { id: 2, date: '2026-09-08', chart_number: '3275', patient_name: '손연희', prescription: '30분', visit_count: '2', type: 'manual' },
+      { id: 3, date: '2026-09-11', chart_number: '3275', patient_name: '손연희', prescription: '30분', visit_count: '3', type: 'manual' },
+    ];
+    const records = buildInsuranceRecords({ scheduleRows, historyLogs, settings });
+    assert.equal(getInsuranceUsage(records, historyLogs[0], settings).count, 1);
+    assert.equal(getInsuranceUsage(records, historyLogs[1], settings).count, 2);
+    assert.equal(getInsuranceUsage(records, historyLogs[2], settings).count, 3);
+    assert.equal(getInsuranceUsage(records, scheduleRows[2], settings).count, 4);
+  });
+
   it('renews manual therapy on January 1 and carries the new-year count to integer shinjang', () => {
     const rows = [row('2026-07-01', '30분'), row('2026-12-31', '30분')];
     assert.equal(usage(rows, rows[1]).count, 2);
