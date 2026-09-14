@@ -218,6 +218,13 @@ export default function ShockwaveSettlementHorizontalCompactView({
       </div>
 
       <div className="sw-horizontal2-right">
+        <div className="sw-horizontal2-title-row sw-horizontal2-title-spacer" aria-hidden="true">
+          <h2>{currentMonth}월 치료사별 {treatmentLabel}{isCryoAdjusted ? ' 크라이오 반영' : ''} 결산</h2>
+          <div className="sw-settlement-meta">
+            <span>{incentiveLabel || `인센티브 ${Number(incentivePercentage) || 0}%`}</span>
+          </div>
+        </div>
+
         <table className="sw-settlement-table sw-horizontal2-grand-table">
           <colgroup>
             <col className="sw-horizontal2-prescription-column" />

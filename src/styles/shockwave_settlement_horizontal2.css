@@ -186,8 +186,15 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   gap: 9px !important;
 }
 
-.sw-horizontal2-right .sw-horizontal2-title-row {
+.sw-horizontal2-right .sw-horizontal2-title-row:not(.sw-horizontal2-title-spacer) {
   margin-bottom: 9px !important;
+}
+
+.sw-horizontal2-right .sw-horizontal2-title-spacer {
+  visibility: hidden !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  margin: 0 0 3px !important;
 }
 
 .sw-horizontal2-title-row {
@@ -743,8 +750,15 @@ body.shockwave-settlement-print .sw-view-mode-btn {
     margin: 0 0 1.2mm !important;
   }
 
-  body.settlement-print.shockwave-settlement-print .sw-horizontal2-right .sw-horizontal2-title-row {
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-right .sw-horizontal2-title-row:not(.sw-horizontal2-title-spacer) {
     margin-bottom: 2.4mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-right .sw-horizontal2-title-spacer {
+    visibility: hidden !important;
+    pointer-events: none !important;
+    user-select: none !important;
+    margin: 0 0 1.2mm !important;
   }
 
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-title-row h2 {
