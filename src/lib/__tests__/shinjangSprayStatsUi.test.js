@@ -231,4 +231,23 @@ describe('shinjang spray statistics UI', () => {
     assert.match(rateColumnCss, /data-incentive-rate="15"[\s\S]*?background:\s*#f6ecfb !important;/);
   });
 
+  it('places horizontal settlement subtotal rows first and groups all grand total rows consecutively at the bottom', async () => {
+    const source = await readFile(sharedSettlementViewUrl, 'utf8');
+
+    // 상단 테이블 검증: 비율별 건수 -> 비율별 금액 -> 비율별 인센 -> 전체 건수 -> 전체 금액 -> 전체 인센
+    const rateCountIdx = source.indexOf('{treatmentLabel} 합계(건)');
+    const rateAmountIdx = source.indexOf('결산 금액 합계');
+    const rateIncentiveIdx = source.indexOf('인센티브 합계');
+    const grandCountIdx = source.indexOf('{treatmentLabel} 전체 합계(건)');
+    const grandAmountIdx = source.indexOf('전체 결산 금액(원)');
+    const grandIncentiveIdx = source.indexOf('전체 인센티브 합계');
+
+    assert(rateCountIdx >= 0, 'rate count row found');
+    assert(rateAmountIdx > rateCountIdx, 'rate amount comes after rate count');
+    assert(rateIncentiveIdx > rateAmountIdx, 'rate incentive comes after rate amount');
+    assert(grandCountIdx > rateIncentiveIdx, 'grand count comes after rate incentive');
+    assert(grandAmountIdx > grandCountIdx, 'grand amount comes after grand count');
+    assert(grandIncentiveIdx > grandAmountIdx, 'grand incentive comes after grand amount');
+  });
+
 });
