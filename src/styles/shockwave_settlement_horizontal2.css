@@ -457,7 +457,7 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   color: #003da5 !important;
   font-size: 15px !important;
   font-weight: 900 !important;
-  padding: 5px 8px !important;
+  padding: 3px 6px !important;
 }
 
 .sw-horizontal2-grand-table .horizontal2-grand-total-row th,
@@ -466,8 +466,9 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   color: #003da5 !important;
   font-size: 16.5px !important;
   font-weight: 900 !important;
-  padding: 6px 8px !important;
-  line-height: 1.25 !important;
+  padding: 4px 6px !important;
+  height: 34px !important;
+  line-height: 1.2 !important;
 }
 
 .sw-horizontal2-therapist-table .horizontal2-header-row {
@@ -508,59 +509,70 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 
 .sw-horizontal2-layout--prescription-incentives .sw-horizontal2-therapist-table tbody tr.horizontal2-content-row,
 .sw-horizontal2-layout--prescription-incentives .sw-horizontal2-therapist-table tbody tr.horizontal2-content-row > td {
-  height: 44px !important;
+  height: 34px !important;
 }
 
 .sw-horizontal2-layout--prescription-incentives .sw-horizontal2-therapist-table tbody tr.horizontal2-content-row > td {
   padding-top: 4px !important;
   padding-bottom: 4px !important;
-  line-height: 1.08 !important;
+  line-height: 1.1 !important;
+}
+
+.sw-horizontal2-therapist-table tbody tr.settlement-rate-subtotal-row,
+.sw-horizontal2-therapist-table tbody tr.settlement-rate-subtotal-row > * {
+  height: 30px !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
 }
 
 .sw-horizontal2-therapist-table .horizontal2-total-row {
-  height: 27px !important;
+  height: 38px !important;
 }
 
 .sw-horizontal2-therapist-table .horizontal2-total-row > th,
 .sw-horizontal2-therapist-table .horizontal2-total-row > td {
-  height: 27px !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-  font-size: 14.6px !important;
-  line-height: 0.95 !important;
+  height: 38px !important;
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+  font-size: 15.5px !important;
+  line-height: 1.15 !important;
 }
 
 .sw-horizontal2-grand-table td {
-  font-size: 14.5px !important;
-  padding: 4px 6px !important;
+  font-size: 14.2px !important;
+  padding: 3px 6px !important;
+  height: 30px !important;
 }
 
 .sw-horizontal2-grand-table tbody tr:first-child th:not(.grand-title) {
-  font-size: 14.5px !important;
-  padding: 4px 6px !important;
+  font-size: 14.2px !important;
+  padding: 3px 6px !important;
+  height: 30px !important;
 }
 
 .sw-horizontal2-grand-table .grand-rate-label {
-  font-size: 14.5px !important;
+  font-size: 14.2px !important;
   font-weight: 800 !important;
-  padding: 4px 6px !important;
+  padding: 3px 6px !important;
 }
 
 .sw-horizontal2-recent-table thead th {
-  font-size: 14.5px !important;
-  padding: 4px 6px !important;
+  font-size: 14px !important;
+  padding: 3px 4px !important;
+  height: 28px !important;
 }
 
 .sw-horizontal2-recent-table tbody th,
 .sw-horizontal2-recent-table tbody td {
-  font-size: 14.2px !important;
-  padding: 4px 6px !important;
-  line-height: 1.2 !important;
+  font-size: 13.8px !important;
+  padding: 2px 4px !important;
+  height: 26px !important;
+  line-height: 1.15 !important;
 }
 
 .sw-horizontal2-recent-table .current-period-row th,
 .sw-horizontal2-recent-table .current-period-row td {
-  font-size: 14.8px !important;
+  font-size: 14.2px !important;
 }
 
 
