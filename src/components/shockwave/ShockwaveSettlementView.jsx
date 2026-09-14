@@ -422,7 +422,7 @@ export default function ShockwaveSettlementView({
         <>
           <div className="sw-settlement-card sw-settlement-main-card">
             <div className="sw-settlement-header">
-              <h2>{currentMonth}월 {treatmentLabel}{isCryoAdjusted ? ' 크라이오 반영' : ''} 결산</h2>
+              <h2>{currentMonth}월 치료사별 {treatmentLabel}{isCryoAdjusted ? ' 크라이오 반영' : ''} 결산</h2>
               <div className="sw-settlement-meta">
                 <span>{incentiveLabel}</span>
               </div>
@@ -756,7 +756,7 @@ export default function ShockwaveSettlementView({
           <div className="sw-settlement-vertical-heading-row">
             <div className="sw-settlement-vertical-header-wrap">
               <div className="sw-settlement-header">
-                <h2>{currentMonth}월 {treatmentLabel}{isCryoAdjusted ? ' 크라이오 반영' : ''} 결산</h2>
+                <h2>{currentMonth}월 치료사별 {treatmentLabel}{isCryoAdjusted ? ' 크라이오 반영' : ''} 결산</h2>
                 <div className="sw-settlement-meta">
                   <span>{incentiveLabel}</span>
                 </div>
