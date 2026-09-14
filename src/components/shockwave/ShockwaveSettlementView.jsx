@@ -878,7 +878,7 @@ export default function ShockwaveSettlementView({
                                   incentive: 0,
                                 })
                               : null;
-                            const effectiveRateSpan = showIncentiveRateSubtotals && rateSpan > 0
+                            const effectiveRateSpan = (showIncentiveRateSubtotals && Boolean(prescription) && rateSpan > 0)
                               ? rateSpan + 1
                               : rateSpan;
 

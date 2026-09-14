@@ -260,4 +260,25 @@ describe('shinjang spray statistics UI', () => {
     assert.match(source, /renderPrescriptionLabel\(prescription, false\)/);
   });
 
+  it('renders grand total table and recent summaries in the right column with empty therapist rateSpan protection', async () => {
+    const compactSource = await readFile(compactSettlementViewUrl, 'utf8');
+    const horizontal2Css = await readFile(horizontal2CssUrl, 'utf8');
+    const rateColumnCss = await readFile(new URL('../../styles/shinjang_settlement_rate_column.css', import.meta.url), 'utf8');
+
+    // 빈 처방 치료사 effectiveRateSpan 보호 검증
+    assert.match(compactSource, /const effectiveRateSpan = \(showIncentiveRateSubtotals && Boolean\(prescription\) && rateSpan > 0\)/);
+
+    // sw-horizontal2-right 내부에 grand-table 및 recent-wrap 배치 검증
+    const rightIndex = compactSource.indexOf('className="sw-horizontal2-right"');
+    const grandTableIndex = compactSource.indexOf('sw-horizontal2-grand-table');
+    const recentTableIndex = compactSource.indexOf('sw-horizontal2-recent-table');
+    assert(rightIndex >= 0, 'right column found');
+    assert(grandTableIndex > rightIndex, 'grand table is inside right column');
+    assert(recentTableIndex > grandTableIndex, 'recent table follows grand table inside right column');
+
+    // 우측 총결산 테이블 폰트 및 마지막 합계 강조 검증
+    assert.match(horizontal2Css, /\.sw-horizontal2-grand-table \.horizontal2-grand-total-row th,[\s\S]*?font-size:\s*16\.5px !important;/);
+    assert.match(rateColumnCss, /\.sw-settlement-rate-column\s*\{\s*width:\s*78px !important;\s*\}/);
+    assert.match(rateColumnCss, /th\.sw-settlement-rate-cell[\s\S]*?white-space:\s*nowrap !important;/);
+  });
 });

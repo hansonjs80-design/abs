@@ -149,7 +149,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                             incentive: 0,
                           })
                         : null;
-                      const effectiveRateSpan = showIncentiveRateSubtotals && rateSpan > 0
+                      const effectiveRateSpan = (showIncentiveRateSubtotals && Boolean(prescription) && rateSpan > 0)
                         ? rateSpan + 1
                         : rateSpan;
 
@@ -206,7 +206,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                       <td className="count-val">{formatOptionalCount(item.totalCount)}</td>
                       <td className="amount-val">{formatCurrency(item.amount)}</td>
                       <td className="incentive-val">{formatCurrency(item.incentive)}</td>
-                      {showIncentiveColumn && <td className="sw-settlement-rate-cell" />}
+                      {showIncentiveColumn && <td className="sw-settlement-rate-cell">—</td>}
                     </tr>
                   </tbody>
                 </table>
@@ -214,7 +214,9 @@ export default function ShockwaveSettlementHorizontalCompactView({
             );
           })}
         </div>
+      </div>
 
+      <div className="sw-horizontal2-right">
         <table className="sw-settlement-table sw-horizontal2-grand-table">
           <colgroup>
             <col className="sw-horizontal2-prescription-column" />
@@ -255,50 +257,50 @@ export default function ShockwaveSettlementHorizontalCompactView({
             )}
           </tbody>
         </table>
-      </div>
 
-      {showRecentSummaries && (
-      <div className="sw-horizontal2-right">
-        <div className="sw-horizontal2-title-row sw-horizontal2-recent-title-row">
-          <h2>{recentPeriodLabel} {treatmentLabel}{isCryoAdjusted ? ' 크라이오 반영' : ''} 결산/신환 현황</h2>
-          <input
-            className="sw-horizontal2-period-input"
-            type="text"
-            value={recentPeriodInput}
-            onChange={(event) => onRecentPeriodInputChange?.(event.target.value)}
-            placeholder="최근 6개월"
-            aria-label={`${treatmentLabel} 최근 현황 기간`}
-          />
-        </div>
+        {showRecentSummaries && (
+          <div className="sw-horizontal2-recent-wrap">
+            <div className="sw-horizontal2-title-row sw-horizontal2-recent-title-row">
+              <h2>{recentPeriodLabel} {treatmentLabel}{isCryoAdjusted ? ' 크라이오 반영' : ''} 결산/신환 현황</h2>
+              <input
+                className="sw-horizontal2-period-input"
+                type="text"
+                value={recentPeriodInput}
+                onChange={(event) => onRecentPeriodInputChange?.(event.target.value)}
+                placeholder="최근 6개월"
+                aria-label={`${treatmentLabel} 최근 현황 기간`}
+              />
+            </div>
 
-        <table className="sw-settlement-table sw-horizontal2-recent-table">
-          <thead>
-            <tr>
-              <th>연 월</th>
-              <th>건수(건)</th>
-              <th>결산 금액(원)</th>
-              <th>신환(명)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {recentSummariesLoading ? (
-              <tr>
-                <td colSpan={4}>최근 현황 불러오는 중...</td>
-              </tr>
-            ) : (
-              recentMonthlySummaries.map((item, index) => (
-                <tr key={item.monthKey} className={index === 0 ? 'current-period-row' : ''}>
-                  <th className="month-label">{item.label}</th>
-                  <td>{formatCount(item.totalCount)}</td>
-                  <td className="amount-val">{formatTotalCurrency(item.amount)}</td>
-                  <td className="new-patient-val">{Number(item.newPatientCount || 0).toLocaleString('ko-KR')}명</td>
+            <table className="sw-settlement-table sw-horizontal2-recent-table">
+              <thead>
+                <tr>
+                  <th>연 월</th>
+                  <th>건수(건)</th>
+                  <th>결산 금액(원)</th>
+                  <th>신환(명)</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {recentSummariesLoading ? (
+                  <tr>
+                    <td colSpan={4}>최근 현황 불러오는 중...</td>
+                  </tr>
+                ) : (
+                  recentMonthlySummaries.map((item, index) => (
+                    <tr key={item.monthKey} className={index === 0 ? 'current-period-row' : ''}>
+                      <th className="month-label">{item.label}</th>
+                      <td>{formatCount(item.totalCount)}</td>
+                      <td className="amount-val">{formatTotalCurrency(item.amount)}</td>
+                      <td className="new-patient-val">{Number(item.newPatientCount || 0).toLocaleString('ko-KR')}명</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-      )}
     </div>
   );
 }

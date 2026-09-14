@@ -262,11 +262,14 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 }
 
 .sw-horizontal2-grand-table {
-  width: calc(100% - 46px) !important;
-  margin: 6px 0 0 46px !important;
+  width: 100% !important;
+  margin: 0 0 16px 0 !important;
 }
 
-.sw-horizontal2-layout--shinjang,
+.sw-horizontal2-layout--shinjang {
+  grid-template-columns: auto auto !important;
+}
+
 .sw-horizontal2-layout--shinjang.sw-horizontal2-layout--single {
   grid-template-columns: auto !important;
 }
@@ -277,7 +280,8 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 
 .sw-horizontal2-layout--shinjang .sw-horizontal2-therapist-total-table,
 .sw-horizontal2-layout--shinjang .sw-horizontal2-grand-table {
-  width: calc(100% - 46px) !important;
+  width: 100% !important;
+  margin: 0 0 16px 0 !important;
 }
 
 .sw-horizontal2-therapist-name-column {
@@ -441,13 +445,29 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 .sw-horizontal2-therapist-table .horizontal2-total-row th,
 .sw-horizontal2-therapist-table .horizontal2-total-row td,
 .sw-horizontal2-therapist-total-table .horizontal2-total-row th,
-.sw-horizontal2-therapist-total-table .horizontal2-total-row td,
-.sw-horizontal2-grand-table .grand-title,
-.sw-horizontal2-grand-table .horizontal2-grand-total-row td {
+.sw-horizontal2-therapist-total-table .horizontal2-total-row td {
   background: #fff7cc !important;
   color: #003da5 !important;
   font-size: 13px !important;
   font-weight: 900 !important;
+}
+
+.sw-horizontal2-grand-table .grand-title {
+  background: #fff7cc !important;
+  color: #003da5 !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  padding: 5px 8px !important;
+}
+
+.sw-horizontal2-grand-table .horizontal2-grand-total-row th,
+.sw-horizontal2-grand-table .horizontal2-grand-total-row td {
+  background: #fff7cc !important;
+  color: #003da5 !important;
+  font-size: 16.5px !important;
+  font-weight: 900 !important;
+  padding: 6px 8px !important;
+  line-height: 1.25 !important;
 }
 
 .sw-horizontal2-therapist-table .horizontal2-header-row {
@@ -511,7 +531,19 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 }
 
 .sw-horizontal2-grand-table td {
-  font-size: 12.6px !important;
+  font-size: 14.5px !important;
+  padding: 4px 6px !important;
+}
+
+.sw-horizontal2-grand-table tbody tr:first-child th:not(.grand-title) {
+  font-size: 14.5px !important;
+  padding: 4px 6px !important;
+}
+
+.sw-horizontal2-grand-table .grand-rate-label {
+  font-size: 14.5px !important;
+  font-weight: 800 !important;
+  padding: 4px 6px !important;
 }
 
 .sw-horizontal2-recent-table tbody th,
