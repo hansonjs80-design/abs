@@ -404,16 +404,18 @@ function PatientHistoryModal({
                           const handleHistoryPrescriptionChange = async (event) => {
                             const nextValue = event.target.value;
                             const originalValue = log._original_prescription ?? '';
+                            const nextGroup = getPatientHistoryGroupKey({ ...log, prescription: nextValue });
                             updatePatientHistoryModalLog(historyRowKey, {
                               prescription: nextValue,
+                              history_group: nextGroup,
                             });
                             if (nextValue === originalValue) return;
 
                             const success = await handleUpdatePatientHistoryField(log, 'prescription', nextValue);
                             updatePatientHistoryModalLog(historyRowKey, (item) => (
                               success
-                                ? { ...item, prescription: nextValue, _original_prescription: nextValue }
-                                : { ...item, prescription: originalValue }
+                                ? { ...item, prescription: nextValue, _original_prescription: nextValue, history_group: nextGroup }
+                                : { ...item, prescription: originalValue, history_group: log.history_group }
                             ));
                           };
                           return (

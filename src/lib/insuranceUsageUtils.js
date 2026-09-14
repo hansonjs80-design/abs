@@ -43,27 +43,30 @@ export function getShinjangSprayInsuranceCategory(prescription) {
     /신장분사.*[cC]/i.test(text)
     || /(?:^|[^a-zA-Z0-9가-힣])[cC](?:$|[^a-zA-Z0-9가-힣])/i.test(text)
     || /cryo|크라이오/i.test(text)
+    || /[cC]/i.test(text)
   ) {
     return 'shockwave';
   }
   if (doseMatches?.length === 1) {
     return 'manual';
   }
-  return '';
+  return 'shockwave';
 }
 
 export function normalizeInsuranceRecord(row, settings, allowAdjacentMonth = false) {
   if (!row) return null;
   const patient = getInsurancePatient(row);
   if (!patient.key) return null;
-  const isSchedule = row.week_index != null;
+  const year = Number(row.year || (row.date && String(row.date).slice(0, 4)));
+  const month = Number(row.month || (row.date && String(row.date).slice(5, 7)));
+  const isSchedule = row.week_index != null && Number.isFinite(year) && Number.isFinite(month);
   const day = isSchedule
-    ? generateShockwaveCalendar(Number(row.year), Number(row.month))?.[Number(row.week_index)]?.[Number(row.day_index)]
+    ? generateShockwaveCalendar(year, month)?.[Number(row.week_index)]?.[Number(row.day_index)]
     : null;
   // Adjacent-month calendar cells are representations, not extra appointments.
-  if (isSchedule && (!day || (!day.isCurrentMonth && !allowAdjacentMonth))) return null;
-  const date = isSchedule ? getScheduleDayDateKey(day) : String(row.date || '').slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  if (isSchedule && day && !day.isCurrentMonth && !allowAdjacentMonth) return null;
+  const date = isSchedule && day ? getScheduleDayDateKey(day) : String(row.date || '').slice(0, 10);
+  if (!/\d{4}-\d{2}-\d{2}$/.test(date)) return null;
   const group = getScheduleItemTreatmentGroup(row, settings, Number(date.slice(0, 4)), Number(date.slice(5, 7)))
     || ({ manual: 'manual_therapy', shockwave: 'shockwave', shinjang: 'shinjang_spray' }[row.history_group || row.type]);
   const prescription = String(
@@ -80,7 +83,7 @@ export function normalizeInsuranceRecord(row, settings, allowAdjacentMonth = fal
   const excluded = Boolean(row.merge_span?.mergedInto || isTreatmentCancelBg(row.bg_color) || row.cancelled);
   return {
     key, date, patient: patient.key, category, prescription, group, isSchedule,
-    adjacentMonth: isSchedule && !day.isCurrentMonth,
+    adjacentMonth: isSchedule && Boolean(day && !day.isCurrentMonth),
     bodyParts: [...new Set(String(row.body_part || '').normalize('NFKC').split(/[,\r\n]+/)
       .map(getInsuranceBodyPart)
       .filter(Boolean))],

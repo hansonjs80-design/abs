@@ -179,6 +179,30 @@ describe('clinic annual insurance usage', () => {
     assert.equal(shinjangLowerC.count, 2);
     assert.equal(formatInsuranceUsage(shinjangLowerC), '2회(척추 2/6)');
     assert.equal(shinjangLowerC.periodEnd, '2027-09-01');
+
+    const kneeHistory = [
+      { id: 'h1', date: '2026-08-06', chart_number: '15307', patient_name: '김시호', prescription: 'F1.5', body_part: 'Rt. 슬개건염(M765)', type: 'shockwave' },
+      { id: 'h2', date: '2026-08-27', chart_number: '15307', patient_name: '김시호', prescription: 'F1.5', body_part: 'Rt. 슬개건염(M765)', type: 'shockwave' },
+      { id: 'h3', date: '2026-09-04', chart_number: '15307', patient_name: '김시호', prescription: 'F1.5', body_part: 'Rt. 슬개건염(M765)', type: 'shockwave' },
+      { id: 'h4', date: '2026-09-11', chart_number: '15307', patient_name: '김시호', prescription: 'F1.5', body_part: 'Rt. 슬개건염(M765)', type: 'shockwave' },
+    ];
+    const targetKnee = {
+      id: 'draft-2-4-16-1',
+      date: '2026-09-18',
+      chart_number: '15307',
+      patient_name: '김시호',
+      prescription: '신장분사C',
+      body_part: 'Rt. 슬개건염(M765)',
+      history_group: 'shinjang',
+      schedule_cell_key: '2-4-16-1',
+    };
+    const kneeUsage = usage([], targetKnee, kneeHistory);
+    assert.equal(kneeUsage.category, 'shockwave');
+    assert.equal(kneeUsage.count, 4);
+    assert.equal(formatInsuranceUsage(kneeUsage), '4회(무릎 4/6)');
+    assert.equal(kneeUsage.periodEnd, '2027-08-06');
+    assert.equal(kneeUsage.isShinjang, true);
+    assert.equal(kneeUsage.hasHistory, true);
   });
   it('respects same-day chronological order and does not include future appointments', () => {
     const rows = [row('2026-09-01', '30분', 1), row('2026-09-01', '신장분사1', 2), row('2026-09-01', '30분', 3), row('2026-09-02', '30분')];

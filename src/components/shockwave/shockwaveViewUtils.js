@@ -772,7 +772,7 @@ export function buildShockwaveHoverTooltipText({
   } else if (memoList.length > 1) {
     text += `\n📝 메모:\n${memoList.map((memo) => `  • ${memo}`).join('\n')}`;
   }
-  const usages = insuranceUsages || (insuranceUsage && !(insuranceUsage.isShinjang && !insuranceUsage.hasHistory) ? [insuranceUsage] : []);
+  const usages = (Array.isArray(insuranceUsages) && insuranceUsages.length > 0) ? insuranceUsages : (insuranceUsage && !(insuranceUsage.isShinjang && !insuranceUsage.hasHistory) ? [insuranceUsage] : []);
   if (hasHoverContent && usages.length) {
     for (const usage of usages) {
       const label = usage.category === 'manual' ? '도수치료' : '충격파';

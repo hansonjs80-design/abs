@@ -359,9 +359,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const updatePatientHistoryModalLog = useCallback((historyRowKey, updater) => {
     setPatientHistoryModalData((prev) => ({
       ...prev,
-      logs: (prev.logs || []).map((item) => {
+      logs: (prev.logs || []).map((item, index) => {
         const itemKey = item._history_row_key || item.id;
-        if (itemKey !== historyRowKey) return item;
+        const matches = itemKey === historyRowKey
+          || item.id === historyRowKey
+          || item._history_row_key === historyRowKey
+          || (item.id && String(historyRowKey).includes(String(item.id)))
+          || (historyRowKey && String(historyRowKey).endsWith(`-${item.id || item.date}-${index}`));
+        if (!matches) return item;
         return typeof updater === 'function' ? updater(item) : { ...item, ...updater };
       }),
     }));

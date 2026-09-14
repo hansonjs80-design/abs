@@ -63,18 +63,29 @@ export default function useInsuranceUsage({ logs, hoverRow, memos, year, month, 
     });
   }, [loaded, patientsKey, memos, year, month, settings]);
   const getStatus = (row) => {
-    const key = getInsurancePatient(row).key;
+    let key = getInsurancePatient(row).key;
+    if (!key) {
+      const keys = JSON.parse(patientsKey);
+      if (keys.length === 1) key = keys[0];
+    }
     if (!key) return '—';
     return loaded[key]?.error ? '조회 실패' : loaded[key]?.data ? '—' : '조회 중';
   };
   const getUsage = (row, category) => {
-    const entry = loaded[getInsurancePatient(row).key];
+    let patientKey = getInsurancePatient(row).key;
+    if (!patientKey) {
+      const keys = JSON.parse(patientsKey);
+      if (keys.length === 1) patientKey = keys[0];
+    }
+    const entry = loaded[patientKey];
     if (!entry?.data || entry.error) return null;
+    const effectiveYear = Number(row.year || (row.date && String(row.date).slice(0, 4)) || year);
+    const effectiveMonth = Number(row.month || (row.date && String(row.date).slice(5, 7)) || month);
     if (row.schedule_cell_key && !row.scheduler_cell_key) {
       const [week_index, day_index, row_index, col_index] = row.schedule_cell_key.split('-').map(Number);
-      return getInsuranceUsage(records, { ...row, year, month, week_index, day_index, row_index, col_index }, settings, category);
+      return getInsuranceUsage(records, { ...row, year: effectiveYear, month: effectiveMonth, week_index, day_index, row_index, col_index }, settings, category);
     }
-    return getInsuranceUsage(records, row, settings, category);
+    return getInsuranceUsage(records, { ...row, year: effectiveYear, month: effectiveMonth }, settings, category);
   };
   return {
     logs: logs.map((row) => ({ ...row, insuranceUsage: getUsage(row), insuranceUsageStatus: getStatus(row) })),
