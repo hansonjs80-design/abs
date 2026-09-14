@@ -141,11 +141,15 @@ test('shockwave horizontal2 print enlarges summary text without resizing tables'
 });
 
 test('shockwave horizontal2 therapist total rows share the body table columns', async () => {
-  const horizontal2View = await readFile(horizontal2ViewUrl, 'utf8');
+  const [horizontal2View, horizontal2Css] = await Promise.all([
+    readFile(horizontal2ViewUrl, 'utf8'),
+    readFile(horizontal2CssUrl, 'utf8'),
+  ]);
 
-  assert.doesNotMatch(horizontal2View, /<td className="horizontal2-total-spacer"/);
-  assert.match(horizontal2View, /rowSpan=\{therapistPrescriptions.length \+ 2 \+ \(showIncentiveRateSubtotals \? \(item.incentiveRateBreakdown\?\.length \|\| 0\) : 0\)\}/);
+  assert.match(horizontal2View, /<td className="horizontal2-total-spacer" aria-hidden="true" \/>/);
+  assert.match(horizontal2View, /rowSpan=\{therapistPrescriptions\.length \+ 1 \+ \(showIncentiveRateSubtotals \? \(item\.incentiveRateBreakdown\?\.length \|\| 0\) : 0\)\}/);
   assert.doesNotMatch(horizontal2View, /sw-horizontal2-therapist-total-table/);
+  assert.match(horizontal2Css, /\.sw-horizontal2-therapist-table \.horizontal2-total-spacer\s*\{[\s\S]*?border-right:\s*2px solid #64748b !important;/);
 });
 
 test('shinjang settlement distinguishes 7 and 15 percent incentive subtotals by background', async () => {

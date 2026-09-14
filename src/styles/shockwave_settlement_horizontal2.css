@@ -575,6 +575,13 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   font-size: 14.2px !important;
 }
 
+.sw-horizontal2-therapist-table .horizontal2-total-spacer {
+  border-right: 2px solid #64748b !important;
+  border-left: none !important;
+  border-bottom: none !important;
+  background: #ffffff !important;
+  padding: 0 !important;
+}
 
 .sw-horizontal2-therapist-table .horizontal2-total-label {
   width: auto !important;

@@ -120,7 +120,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                   </colgroup>
                   <tbody>
                     <tr className={`horizontal2-header-row ${toneClass}`}>
-                      <th className={`therapist-name-col ${toneClass}`} rowSpan={therapistPrescriptions.length + 2 + (showIncentiveRateSubtotals ? (item.incentiveRateBreakdown?.length || 0) : 0)}>
+                      <th className={`therapist-name-col ${toneClass}`} rowSpan={therapistPrescriptions.length + 1 + (showIncentiveRateSubtotals ? (item.incentiveRateBreakdown?.length || 0) : 0)}>
                         <TherapistNameStack name={item.therapist.name} />
                       </th>
                       <th>처방명</th>
@@ -202,6 +202,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                       </tr>
                     ))}
                     <tr className={`horizontal2-total-row ${toneClass}${showIncentiveRateSubtotals ? ' settlement-rate-total-row' : ''}`}>
+                      <td className="horizontal2-total-spacer" aria-hidden="true" />
                       <th className="horizontal2-total-label">{showIncentiveRateSubtotals ? '전체 합계' : '합계'}</th>
                       <td className="count-val">{formatOptionalCount(item.totalCount)}</td>
                       <td className="amount-val">{formatCurrency(item.amount)}</td>
