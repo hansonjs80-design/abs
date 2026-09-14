@@ -299,6 +299,22 @@ describe('clinic annual insurance usage', () => {
     assert.equal(getInsuranceUsage(records, dialogCurrentCell, settings).count, 4);
   });
 
+  it('uses missing scheduler-linked history as a fallback and does not increment shinjang 2.5', () => {
+    const current = row('2026-09-17', 'F2.5', 3, {
+      content: '15388/최희원(4)', body_part: 'Rt. 슬개건염(M765)',
+    });
+    const historyLogs = [
+      { id: 'first', scheduler_cell_key: '2026:09:0:1:16:1', source: 'scheduler', date: '2026-09-01', chart_number: '15388', patient_name: '최희원', prescription: 'F2.5', body_part: 'Rt. 슬개건염(M765)', visit_count: '*', type: 'shockwave' },
+      { id: 'second', scheduler_cell_key: '2026:09:1:1:16:1', source: 'scheduler', date: '2026-09-08', chart_number: '15388', patient_name: '최희원', prescription: 'F2.5', body_part: 'Rt. 슬개건염(M765)', visit_count: '2', type: 'shockwave' },
+      { id: 'linked', scheduler_cell_key: '2026:09:1:5:16:1', source: 'scheduler', date: '2026-09-12', chart_number: '15388', patient_name: '최희원', prescription: '신장분사 2.5', body_part: 'Rt. 슬개건염(M765)', visit_count: '3', history_group: 'shinjang', type: 'shinjang' },
+    ];
+    const records = buildInsuranceRecords({ scheduleRows: [current], historyLogs, settings });
+    assert.equal(getInsuranceUsage(records, historyLogs[0], settings).count, 1);
+    assert.equal(getInsuranceUsage(records, historyLogs[1], settings).count, 2);
+    assert.equal(getInsuranceUsage(records, historyLogs[2], settings).count, 2);
+    assert.equal(getInsuranceUsage(records, current, settings).count, 3);
+  });
+
   it('renews manual therapy on January 1 and carries the new-year count to integer shinjang', () => {
     const rows = [row('2026-07-01', '30분'), row('2026-12-31', '30분')];
     assert.equal(usage(rows, rows[1]).count, 2);

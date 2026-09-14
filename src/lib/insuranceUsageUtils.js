@@ -108,13 +108,18 @@ export function normalizeInsuranceRecord(row, settings, allowAdjacentMonth = fal
 export function buildInsuranceRecords({ scheduleRows = [], historyLogs = [], settings } = {}) {
   const schedule = scheduleRows.map((row) => normalizeInsuranceRecord(row, settings)).filter(Boolean);
   const records = new Map(schedule.map((row) => [row.key, row]));
+  const scheduleKeys = new Set(schedule.map((row) => row.key));
   const fingerprint = (row) => JSON.stringify([row.patient, row.date, row.group, row.prescription]);
   const scheduleFingerprints = new Set(schedule.map(fingerprint));
   for (const log of historyLogs) {
-    // Scheduler-linked logs mirror the schedule; deleted/cancelled cells must not reappear.
-    if (log.scheduler_cell_key || log.source === 'scheduler') continue;
     const row = normalizeInsuranceRecord(log, settings);
-    if (!row || scheduleFingerprints.has(fingerprint(row))) continue;
+    if (!row) continue;
+    // A scheduler-linked log normally mirrors its current schedule cell. Keep that
+    // cell authoritative when it was loaded, but retain the saved treatment log as
+    // a fallback when an older schedule row is absent from the query result.
+    const isSchedulerLinked = Boolean(log.scheduler_cell_key || log.source === 'scheduler');
+    if (isSchedulerLinked && scheduleKeys.has(row.key)) continue;
+    if (scheduleFingerprints.has(fingerprint(row))) continue;
     records.set(row.key, row);
   }
   return [...records.values()];
