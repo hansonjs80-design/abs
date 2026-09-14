@@ -1,11 +1,11 @@
 /* 신장분사 결산 인센 % 열 및 가로보기/세로보기 전문 스타일링 */
 
 /* 세로보기 및 가로보기 2 공통 컬럼 너비 */
-.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(1) { width: 23.94% !important; }
-.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(2) { width: 14.19% !important; }
-.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(3) { width: 21.94% !important; }
-.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(4) { width: 25.27% !important; }
-.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(5) { width: 14.66% !important; }
+.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(1) { width: 26.5% !important; }
+.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(2) { width: 13.0% !important; }
+.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(3) { width: 21.5% !important; }
+.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(4) { width: 25.0% !important; }
+.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(5) { width: 14.0% !important; }
 
 /* 1. 처방 데이터 행: 가로보기2 / 세로보기 본문 (눈이 편안한 소프트 파스텔 틴트) */
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] :is(th, td)[data-incentive-rate="7"]:not(.rate-header-col):not(.prescription-col),
@@ -84,7 +84,7 @@
   line-height: 1.2 !important;
 }
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] :is(.sw-compact-settlement-table, .sw-grand-total-table) thead .prescription-col {
-  min-width: 44px !important;
+  min-width: 49px !important;
   padding: 4px 4px !important;
   font-size: 0.95rem !important;
   white-space: nowrap !important;
@@ -120,11 +120,11 @@
   width: 516px !important;
   table-layout: fixed !important;
 }
-.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-horizontal2-prescription-column { width: 104px !important; }
-.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-horizontal2-count-column { width: 64px !important; }
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-horizontal2-prescription-column { width: 115px !important; }
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-horizontal2-count-column { width: 58px !important; }
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-horizontal2-amount-column,
-.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-horizontal2-incentive-column { width: 112px !important; }
-.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-settlement-rate-column { width: 78px !important; }
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-horizontal2-incentive-column { width: 110px !important; }
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-settlement-rate-column { width: 77px !important; }
 
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-horizontal2-therapist-table th.sw-settlement-rate-cell {
   white-space: nowrap !important;

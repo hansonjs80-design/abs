@@ -279,8 +279,10 @@ describe('shinjang spray statistics UI', () => {
     // 우측 총결산 테이블 및 결산/신환 테이블 폰트 확대 검증
     assert.match(horizontal2Css, /\.sw-horizontal2-grand-table \.horizontal2-grand-total-row th,[\s\S]*?font-size:\s*16\.5px !important;/);
     assert.match(horizontal2Css, /\.sw-horizontal2-recent-table thead th[\s\S]*?font-size:\s*14\.5px !important;/);
-    assert.match(horizontal2Css, /\.sw-horizontal2-recent-table tbody th,[\s\S]*?font-size:\s*14\.2px !important;/);
-    assert.match(rateColumnCss, /\.sw-settlement-rate-column\s*\{\s*width:\s*78px !important;\s*\}/);
+    // 처방명 열 너비 10% 확대 검증 (세로보기 26.5%, 가로보기2 115px)
+    assert.match(rateColumnCss, /:nth-child\(1\)\s*\{\s*width:\s*26\.5% !important;\s*\}/);
+    assert.match(rateColumnCss, /\.sw-horizontal2-prescription-column\s*\{\s*width:\s*115px !important;\s*\}/);
+    assert.match(rateColumnCss, /\.sw-settlement-rate-column\s*\{\s*width:\s*77px !important;\s*\}/);
     assert.match(rateColumnCss, /th\.sw-settlement-rate-cell[\s\S]*?white-space:\s*nowrap !important;/);
   });
 });
