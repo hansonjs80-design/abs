@@ -1968,6 +1968,15 @@
   border-bottom: 0 !important;
 }
 
+/* 인센티브 소계 다음의 '전체 합계'만 한눈에 구분되도록 상단선을 강화한다. */
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.vertical-total-row.settlement-rate-total-row > * {
+  border-top: 3px solid #94a3b8 !important;
+}
+
+.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table tbody tr.grand-total-row.settlement-rate-total-row > * {
+  border-top: 3px solid #1d4ed8 !important;
+}
+
 @media print {
   body.vertical-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-card,
   body.vertical-settlement-print .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-right :is(

@@ -12,6 +12,10 @@ const verticalCssUrl = new URL(
   '../../styles/shockwave_settlement_vertical.css',
   import.meta.url,
 );
+const shinjangRateColumnCssUrl = new URL(
+  '../../styles/shinjang_settlement_rate_column.css',
+  import.meta.url,
+);
 const shockwaveSettlementUrl = new URL(
   '../../components/shockwave/ShockwaveSettlementView.jsx',
   import.meta.url,
@@ -169,6 +173,28 @@ test('shinjang settlement distinguishes 7 and 15 percent incentive subtotals by 
   assert.match(horizontal2Css, /\.settlement-rate-subtotal-row--15[\s\S]*?background:\s*#f8edff !important;/);
   assert.match(verticalCss, /tr\.settlement-rate-subtotal-row\.settlement-rate-subtotal-row--7 > \*[\s\S]*?background:\s*#eaf3ff !important;/);
   assert.match(verticalCss, /tr\.settlement-rate-subtotal-row\.settlement-rate-subtotal-row--15 > \*[\s\S]*?background:\s*#f8edff !important;/);
+});
+
+test('vertical settlement distinguishes overall totals with a thicker top border', async () => {
+  const verticalCss = await readFile(verticalCssUrl, 'utf8');
+
+  assert.match(
+    verticalCss,
+    /tr\.vertical-total-row\.settlement-rate-total-row > \*\s*\{[^}]*border-top:\s*3px solid #94a3b8 !important;/s,
+  );
+  assert.match(
+    verticalCss,
+    /tr\.grand-total-row\.settlement-rate-total-row > \*\s*\{[^}]*border-top:\s*3px solid #1d4ed8 !important;/s,
+  );
+});
+
+test('shinjang horizontal settlement carries the label header baseline through prescription headers', async () => {
+  const rateColumnCss = await readFile(shinjangRateColumnCssUrl, 'utf8');
+
+  assert.match(
+    rateColumnCss,
+    /:is\(\.sw-horizontal-settlement-main-table, \.sw-grand-total-table\) thead \.label-col,[\s\S]*?:is\(\.sw-horizontal-settlement-main-table, \.sw-grand-total-table\) thead tr:last-child \.prescription-col\s*\{[^}]*border-bottom:\s*2px solid #b7c4d4 !important;/,
+  );
 });
 
 test('manual settlement screen enlarges section titles and compacts only body rows', async () => {
