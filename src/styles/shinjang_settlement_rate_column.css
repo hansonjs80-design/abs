@@ -172,6 +172,15 @@
   border-bottom: 2px solid #b7c4d4 !important;
 }
 
+/* 전체 결산 금액/인센티브 행은 금액 숫자만 한 단계 더 강조한다. */
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] :is(.sw-horizontal-settlement-main-table, .sw-grand-total-table) tbody tr.settlement-rate-total-row.settlement-amount-row td {
+  font-size: calc(1.18rem + 2px) !important;
+}
+
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] :is(.sw-horizontal-settlement-main-table, .sw-grand-total-table) tbody tr.settlement-rate-total-row.settlement-incentive-row td {
+  font-size: calc(1.16rem + 2px) !important;
+}
+
 @media screen {
   .sw-stats-body--settlement .sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical[data-treatment="신장분사"],
   .sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical[data-treatment="신장분사"] .sw-settlement-vertical-layout {

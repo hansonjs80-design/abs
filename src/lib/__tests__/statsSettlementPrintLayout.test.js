@@ -197,6 +197,19 @@ test('shinjang horizontal settlement carries the label header baseline through p
   );
 });
 
+test('shinjang horizontal overall amount and incentive totals enlarge only numeric cells', async () => {
+  const rateColumnCss = await readFile(shinjangRateColumnCssUrl, 'utf8');
+
+  assert.match(
+    rateColumnCss,
+    /tr\.settlement-rate-total-row\.settlement-amount-row td\s*\{[^}]*font-size:\s*calc\(1\.18rem \+ 2px\) !important;/,
+  );
+  assert.match(
+    rateColumnCss,
+    /tr\.settlement-rate-total-row\.settlement-incentive-row td\s*\{[^}]*font-size:\s*calc\(1\.16rem \+ 2px\) !important;/,
+  );
+});
+
 test('manual settlement screen enlarges section titles and compacts only body rows', async () => {
   const refinementsCss = await readFile(refinementsCssUrl, 'utf8');
 
