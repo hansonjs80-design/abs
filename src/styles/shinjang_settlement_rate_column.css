@@ -1,113 +1,116 @@
-/* 신장분사 가로보기 2 / 세로보기: 퍼센트를 별도 열에 한 줄로 표시. */
-.sw-settlement-stack table[data-incentive-column="true"] .sw-settlement-rate-cell {
-  text-align: center !important;
-  vertical-align: middle !important;
-  white-space: nowrap !important;
-  padding: 2px 4px !important;
-}
-.sw-settlement-stack table[data-incentive-column="true"] .sw-settlement-rate-column {
-  width: 66px !important;
-}
-.sw-settlement-stack table[data-incentive-column="true"] .sw-prescription-incentive-rate {
-  display: inline-flex;
-  white-space: nowrap;
-  margin: 0;
-}
-.sw-settlement-stack .sw-horizontal2-layout--shinjang table[data-incentive-column="true"] tbody tr.horizontal2-content-row,
-.sw-settlement-stack .sw-horizontal2-layout--shinjang table[data-incentive-column="true"] tbody tr.horizontal2-content-row > td {
-  height: 26px !important;
-  padding-top: 2px !important;
-  padding-bottom: 2px !important;
-  line-height: 1.1 !important;
-}
-.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td) {
-  padding: 4px !important;
-  height: auto !important;
-}
-.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(1) { width: 25.64% !important; }
-.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(2) { width: 9.16% !important; text-align: center !important; }
-.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(3),
+/* 신장분사 결산 인센 % 열 및 가로보기/세로보기 전문 스타일링 */
+
+/* 세로보기 및 가로보기 2 공통 컬럼 너비 */
+.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(1) { width: 23.94% !important; }
+.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(2) { width: 14.19% !important; }
+.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(3) { width: 21.94% !important; }
 .sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(4) { width: 25.27% !important; }
 .sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(5) { width: 14.66% !important; }
 
-/* 1. 처방 데이터 행: 더 연하고 은은한 파스텔 톤 */
+/* 1. 처방 데이터 행: 가로보기2 / 세로보기 본문 (눈이 편안한 소프트 파스텔 틴트) */
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] :is(th, td)[data-incentive-rate="7"]:not(.rate-header-col):not(.prescription-col),
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode] table[data-incentive-column="true"] tbody tr[data-incentive-rate="7"] > * {
-  background: #f4fbf2 !important;
+  background: #f6fbf5 !important;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] :is(th, td)[data-incentive-rate="15"]:not(.rate-header-col):not(.prescription-col),
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode] table[data-incentive-column="true"] tbody tr[data-incentive-rate="15"] > * {
-  background: #faf3fd !important;
+  background: #faf6fd !important;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }
 
-/* 2. 합계 행: 구분감을 위한 진하기 유지 */
+/* 2. 비율별 소계 합계 행 (7% 합계, 15% 합계): 구분감 있는 단정한 파스텔 톤 */
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] :is(th, td).settlement-rate-subtotal-row--7,
-.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode] table tbody tr.settlement-rate-subtotal-row--7 > *,
-.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] th.rate-header-col[data-incentive-rate="7"] {
-  background: #daf0d4 !important;
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode] table tbody tr.settlement-rate-subtotal-row--7 > * {
+  background: #e2f2e0 !important;
+  color: #1b4320 !important;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] :is(th, td).settlement-rate-subtotal-row--15,
-.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode] table tbody tr.settlement-rate-subtotal-row--15 > *,
-.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] th.rate-header-col[data-incentive-rate="15"] {
-  background: #ebd4f7 !important;
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode] table tbody tr.settlement-rate-subtotal-row--15 > * {
+  background: #efe2fa !important;
+  color: #4a196e !important;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }
 
-/* 3. 가로보기 처방목록 헤더: 15% 정도 더 진하고 선명하게 */
+/* 3. 가로보기 상단 인센티브 그룹 헤더 (인센티브 7%, 인센티브 15%) */
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] th.rate-header-col[data-incentive-rate="7"] {
+  background: #e8f5e7 !important;
+  color: #1e5e2e !important;
+  border-bottom: 2px solid #b7dfb8 !important;
+  font-weight: 800 !important;
+  font-size: 0.96rem !important;
+  padding: 5px 6px !important;
+  letter-spacing: -0.02em !important;
+  text-align: center !important;
+}
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] th.rate-header-col[data-incentive-rate="15"] {
+  background: #f4ecfb !important;
+  color: #581c87 !important;
+  border-bottom: 2px solid #dfc7f7 !important;
+  font-weight: 800 !important;
+  font-size: 0.96rem !important;
+  padding: 5px 6px !important;
+  letter-spacing: -0.02em !important;
+  text-align: center !important;
+}
+
+/* 4. 가로보기 처방목록 헤더 (신장C, 신장 2.5 등): 상위 그룹을 받쳐주는 은은하고 선명한 서브톤 */
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] th.prescription-col[data-incentive-rate="7"],
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-grand-total-table th.prescription-col[data-incentive-rate="7"] {
-  background: #d4edd0 !important;
-  color: #1a4216 !important;
-  font-weight: 850 !important;
+  background: #f3f9f2 !important;
+  color: #1e3f22 !important;
+  font-weight: 750 !important;
+  border-bottom: 1px solid #d0e7ce !important;
 }
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] th.prescription-col[data-incentive-rate="15"],
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-grand-total-table th.prescription-col[data-incentive-rate="15"] {
-  background: #e5c8f6 !important;
-  color: #421258 !important;
-  font-weight: 850 !important;
+  background: #faf4fd !important;
+  color: #3b1756 !important;
+  font-weight: 750 !important;
+  border-bottom: 1px solid #e9d7f9 !important;
 }
 
-/* 4. 상단 헤더 인센티브 7% / 인센티브 15% 글자 크기 약간 더 크게 */
-.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] th.rate-header-col {
-  text-align: center !important;
-  font-weight: 900 !important;
-  font-size: 1.05rem !important;
-  padding: 4px 6px !important;
-  line-height: 1.2 !important;
-  vertical-align: middle !important;
-  letter-spacing: -0.02em !important;
+/* 5. 가로보기 테이블 컴팩트화 및 정렬 최적화 */
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] :is(.sw-compact-settlement-table, .sw-grand-total-table) {
+  table-layout: auto !important;
 }
-
-/* 5. 가로보기 테이블 컴팩트화 (행/열 여백 축소) */
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] :is(.sw-compact-settlement-table, .sw-grand-total-table) :is(th, td) {
   padding: 4px 6px !important;
-  line-height: 1.15 !important;
+  line-height: 1.2 !important;
 }
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] :is(.sw-compact-settlement-table, .sw-grand-total-table) thead .prescription-col {
-  min-width: 48px !important;
-  padding: 3px 4px !important;
-  font-size: 0.98rem !important;
+  min-width: 44px !important;
+  padding: 4px 4px !important;
+  font-size: 0.95rem !important;
+  white-space: nowrap !important;
 }
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] :is(.sw-compact-settlement-table, .sw-grand-total-table) thead .therapist-col {
   padding: 4px 6px !important;
-  font-size: 1.08rem !important;
+  font-size: 1.05rem !important;
 }
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] :is(.sw-compact-settlement-table, .sw-grand-total-table) thead .label-col,
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] :is(.sw-compact-settlement-table, .sw-grand-total-table) .row-label {
   padding: 4px 8px !important;
-  min-width: 88px !important;
-  font-size: 1rem !important;
+  min-width: 86px !important;
+  font-size: 0.98rem !important;
+  white-space: nowrap !important;
 }
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] :is(.sw-compact-settlement-table, .sw-grand-total-table) tbody td {
-  padding: 4px 6px !important;
-  min-width: 46px !important;
+  padding: 4px 5px !important;
+  min-width: 42px !important;
+}
+
+/* 가로보기 데이터 셀 (처방 건수) 텍스트 명확화 */
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] tbody tr:not(.settlement-rate-subtotal-row) td[data-incentive-rate="7"] {
+  background: #fbfdfa !important;
+}
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] tbody tr:not(.settlement-rate-subtotal-row) td[data-incentive-rate="15"] {
+  background: #fdfbfe !important;
 }
 
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .count-val {

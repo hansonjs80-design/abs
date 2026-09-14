@@ -180,9 +180,12 @@ export default function ShockwaveSettlementView({
   const renderPrescriptionLabel = (prescription, showRate = true) => {
     if (!prescription) return '—';
     const prescriptionIncentivePercentage = getIncentivePercentage(prescription);
+    const displayPrescription = (viewMode === 'horizontal' && treatmentLabel === '신장분사')
+      ? prescription.replace(/신장분사/g, '신장')
+      : prescription;
     return (
       <span className="sw-prescription-incentive-label">
-        <span>{prescription}</span>
+        <span>{displayPrescription}</span>
         {usesPrescriptionIncentives && showRate && (
           <span
             className="sw-prescription-incentive-rate"
@@ -481,7 +484,7 @@ export default function ShockwaveSettlementView({
                   <tr>
                     {displayedTherapistSummaries.flatMap((item, therapistIndex) =>
                       (horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions || []).map((prescription, prescriptionIndex, therapistPrescriptions) => (
-                        <th data-incentive-rate={treatmentLabel === '신장분사' && prescription ? getIncentivePercentage(prescription) : undefined} key={`${item?.therapist?.id || item?.therapist?.name || therapistIndex}-${prescription || 'empty'}`} className={`prescription-col therapist-tone-${therapistIndex % 5}-sub${!prescription ? ' prescription-col--empty' : ''}${prescriptionIndex === therapistPrescriptions.length - 1 ? ' therapist-group-end' : ''}`} title={!prescription ? '완료 처방 없음' : undefined}>
+                        <th data-incentive-rate={treatmentLabel === '신장분사' && prescription ? getIncentivePercentage(prescription) : undefined} key={`${item?.therapist?.id || item?.therapist?.name || therapistIndex}-${prescription || 'empty'}`} className={`prescription-col therapist-tone-${therapistIndex % 5}-sub${!prescription ? ' prescription-col--empty' : ''}${prescriptionIndex === therapistPrescriptions.length - 1 ? ' therapist-group-end' : ''}`} title={!prescription ? '완료 처방 없음' : prescription}>
                           {renderPrescriptionLabel(prescription, !showIncentiveRateSubtotals)}
                         </th>
                       ))
