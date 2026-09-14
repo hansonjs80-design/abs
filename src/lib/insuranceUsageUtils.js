@@ -33,6 +33,12 @@ export function isInsuranceSelfPay(prescription) {
   return /\(\s*본인\s*\)/.test(String(prescription || '').normalize('NFKC'));
 }
 
+function isCountableInsuranceScheduleVisit(content) {
+  const visit = getExplicitVisitSuffix(content).replace(/[()]/g, '');
+  // 신규 환자 표기(*)는 첫 치료(1회)와 같은 실제 치료 표기다.
+  return /^\d+$/.test(visit) || visit === '*';
+}
+
 function getManualInsurancePrescriptionKey(prescription) {
   return String(prescription || '').normalize('NFKC').replace(/\s+/g, '').toLowerCase();
 }
@@ -92,7 +98,7 @@ export function normalizeInsuranceRecord(row, settings, allowAdjacentMonth = fal
       .map(getInsuranceBodyPart)
       .filter(Boolean))],
     order: isSchedule ? Number(row.row_index) * 1000 + Number(row.col_index) : Number(row.sort_index ?? 1e9),
-    contributes: date >= INSURANCE_USAGE_START_DATE && !excluded && (!isSchedule || /^\d+$/.test(getExplicitVisitSuffix(row.content || '').replace(/[()]/g, ''))) && group !== 'shinjang_spray' && !isInsuranceSelfPay(prescription),
+    contributes: date >= INSURANCE_USAGE_START_DATE && !excluded && (!isSchedule || isCountableInsuranceScheduleVisit(row.content || '')) && group !== 'shinjang_spray' && !isInsuranceSelfPay(prescription),
     excluded,
     selfPay: isInsuranceSelfPay(prescription),
     visit: String(row.visit_count || ''),
@@ -131,7 +137,16 @@ export function getInsuranceUsage(records, targetRow, settings, categoryOverride
   if (existing) {
     target.key = existing.key;
     target.order = existing.order;
-    if (existing.excluded) target.contributes = false;
+    // 환자 내역창의 현재 셀은 화면 좌표만 가진 표시용 행이라 content가 비어
+    // 있다. 이 경우 원본 스케줄의 집계 상태를 그대로 사용해야 호버와 같은
+    // 회차를 표시하고, 현재 셀을 한 번 빠뜨리는 일이 없다.
+    if (target.isSchedule && !String(targetRow.content || '').trim()) {
+      target.contributes = existing.contributes;
+      target.excluded = existing.excluded;
+      target.selfPay = existing.selfPay;
+    } else if (existing.excluded) {
+      target.contributes = false;
+    }
   }
   if (categoryOverride && target.category !== categoryOverride) {
     target.category = categoryOverride;
