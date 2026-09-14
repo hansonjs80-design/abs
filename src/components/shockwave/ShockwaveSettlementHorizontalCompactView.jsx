@@ -76,6 +76,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
     (normalizedIncentiveMap[normalizePrescriptionKey(prescription)] ?? incentiveRate) * 100
   );
   const showPrescriptionIncentiveRates = Object.keys(normalizedIncentiveMap).length > 0;
+  const showIncentiveColumn = treatmentLabel === '신장분사' && showPrescriptionIncentiveRates;
   const showIncentiveRateSubtotals = treatmentLabel === '신장분사'
     && showPrescriptionIncentiveRates
     && settlement.incentiveRatePercentages?.length > 0;
@@ -107,13 +108,14 @@ export default function ShockwaveSettlementHorizontalCompactView({
               : [null];
             return (
               <section key={therapistKey} className="sw-horizontal2-therapist-section">
-                <table className="sw-settlement-table sw-horizontal2-therapist-table">
+                <table className="sw-settlement-table sw-horizontal2-therapist-table" data-incentive-column={showIncentiveColumn}>
                   <colgroup>
                     <col className="sw-horizontal2-therapist-name-column" />
                     <col className="sw-horizontal2-prescription-column" />
                     <col className="sw-horizontal2-count-column" />
                     <col className="sw-horizontal2-amount-column" />
                     <col className="sw-horizontal2-incentive-column" />
+                    {showIncentiveColumn && <col className="sw-settlement-rate-column" />}
                   </colgroup>
                   <tbody>
                     <tr className={`horizontal2-header-row ${toneClass}`}>
@@ -124,6 +126,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                       <th>건수</th>
                       <th>건별 결산금액</th>
                       <th>건별 인센티브</th>
+                      {showIncentiveColumn && <th className="sw-settlement-rate-cell">인센 %</th>}
                     </tr>
                     {therapistPrescriptions.map((prescription) => {
                       const count = item.countsByPrescription[prescription] || 0;
@@ -139,7 +142,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                             {prescription ? (
                               <span className="sw-prescription-incentive-label">
                                 <span>{prescription}</span>
-                                {showPrescriptionIncentiveRates && (
+                                {showPrescriptionIncentiveRates && !showIncentiveColumn && (
                                   <span
                                     className="sw-prescription-incentive-rate"
                                     style={getIncentiveRateBadgeStyle(prescriptionIncentivePercentage)}
@@ -153,6 +156,11 @@ export default function ShockwaveSettlementHorizontalCompactView({
                           <td className="count-val">{formatOptionalCount(count)}</td>
                           <td className="amount-val">{formatCurrency(prescriptionAmount)}</td>
                           <td className="incentive-val">{formatCurrency(prescriptionIncentive)}</td>
+                          {showIncentiveColumn && <td className="sw-settlement-rate-cell">
+                            {prescription ? <span className="sw-prescription-incentive-rate" style={getIncentiveRateBadgeStyle(prescriptionIncentivePercentage)}>
+                              인센 {formatPercentage(prescriptionIncentivePercentage)}
+                            </span> : '—'}
+                          </td>}
                         </tr>
                       );
                     })}
@@ -162,6 +170,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                         <td className="count-val">{formatOptionalCount(rateSummary.count)}</td>
                         <td className="amount-val">{formatCurrency(rateSummary.amount)}</td>
                         <td className="incentive-val">{formatCurrency(rateSummary.incentive)}</td>
+                        {showIncentiveColumn && <td className="sw-settlement-rate-cell" />}
                       </tr>
                     ))}
                     <tr className={`horizontal2-total-row ${toneClass}${showIncentiveRateSubtotals ? ' settlement-rate-total-row' : ''}`}>
@@ -169,6 +178,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                       <td className="count-val">{formatOptionalCount(item.totalCount)}</td>
                       <td className="amount-val">{formatCurrency(item.amount)}</td>
                       <td className="incentive-val">{formatCurrency(item.incentive)}</td>
+                      {showIncentiveColumn && <td className="sw-settlement-rate-cell" />}
                     </tr>
                   </tbody>
                 </table>

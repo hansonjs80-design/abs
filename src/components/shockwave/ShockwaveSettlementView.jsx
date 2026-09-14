@@ -14,6 +14,7 @@ import {
   toStatsPrescriptionCount,
 } from '../../lib/shockwaveStatsCountUtils';
 import ShockwaveSettlementHorizontalCompactView from './ShockwaveSettlementHorizontalCompactView';
+import '../../styles/shinjang_settlement_rate_column.css';
 
 const SETTLEMENT_VIEW_MODE_STORAGE_KEY = 'shockwave:settlement:viewMode';
 const VIEW_MODES = new Set(['horizontal', 'horizontal2', 'vertical']);
@@ -169,13 +170,19 @@ export default function ShockwaveSettlementView({
   const incentiveRowLabel = usesPrescriptionIncentives
     ? '인센티브 (처방별)'
     : `인센티브 (${Number(incentivePercentage) || 0}%)`;
-  const renderPrescriptionLabel = (prescription) => {
+  const showIncentiveColumn = treatmentLabel === '신장분사' && usesPrescriptionIncentives;
+  const renderIncentiveBadge = (prescription) => prescription ? (
+    <span className="sw-prescription-incentive-rate" style={getIncentiveRateBadgeStyle(getIncentivePercentage(prescription))}>
+      인센 {formatPercentage(getIncentivePercentage(prescription))}
+    </span>
+  ) : '—';
+  const renderPrescriptionLabel = (prescription, showRate = true) => {
     if (!prescription) return '—';
     const prescriptionIncentivePercentage = getIncentivePercentage(prescription);
     return (
       <span className="sw-prescription-incentive-label">
         <span>{prescription}</span>
-        {usesPrescriptionIncentives && (
+        {usesPrescriptionIncentives && showRate && (
           <span
             className="sw-prescription-incentive-rate"
             style={getIncentiveRateBadgeStyle(prescriptionIncentivePercentage)}
@@ -409,7 +416,7 @@ export default function ShockwaveSettlementView({
   );
 
   return (
-    <div className={`sw-settlement-stack sw-settlement-stack--shockwave ${viewMode === 'vertical' ? 'sw-settlement-stack--vertical' : ''} ${viewMode === 'horizontal2' ? 'sw-settlement-stack--horizontal2' : ''}`}>
+    <div data-treatment={treatmentLabel} data-view-mode={viewMode} className={`sw-settlement-stack sw-settlement-stack--shockwave ${viewMode === 'vertical' ? 'sw-settlement-stack--vertical' : ''} ${viewMode === 'horizontal2' ? 'sw-settlement-stack--horizontal2' : ''}`}>
       <div className="sw-settlement-view-mode-row">
         {renderViewModeSelector('standard', `기본 ${treatmentLabel} 결산 보기 방식`)}
         <div className="sw-cryo-view-mode-group">
@@ -786,13 +793,14 @@ export default function ShockwaveSettlementView({
                     <h3>{item.therapist.name} 치료사</h3>
                   </div>
                   <div className="sw-settlement-table-wrap">
-                    <table className="sw-vertical-therapist-table">
+                    <table className="sw-vertical-therapist-table" data-incentive-column={showIncentiveColumn}>
                       <thead>
                         <tr>
                           <th>처방명</th>
                           <th>건수</th>
                           <th>건별 결산금액</th>
                           <th>건별 인센티브</th>
+                          {showIncentiveColumn && <th className="sw-settlement-rate-cell">인센 %</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -807,12 +815,13 @@ export default function ShockwaveSettlementView({
 
                             return (
                               <tr key={prescription || 'empty'}>
-                                <td className="prescription-name" title={!prescription ? '완료 처방 없음' : undefined}>{renderPrescriptionLabel(prescription)}</td>
+                                <td className="prescription-name" title={!prescription ? '완료 처방 없음' : undefined}>{renderPrescriptionLabel(prescription, !showIncentiveColumn)}</td>
                                 <td className="count-val">{count > 0 ? `${count}건` : '-'}</td>
                                 <td className="amount-val">{prescriptionAmount > 0 ? formatCurrency(prescriptionAmount) : '-'}</td>
                                 <td className="incentive-val">
                                   {prescriptionIncentive > 0 ? formatCurrency(prescriptionIncentive) : '-'}
                                 </td>
+                                {showIncentiveColumn && <td className="sw-settlement-rate-cell">{renderIncentiveBadge(prescription)}</td>}
                               </tr>
                             );
                           })}
@@ -822,6 +831,7 @@ export default function ShockwaveSettlementView({
                             <td>{rateSummary.count > 0 ? `${rateSummary.count}건` : '-'}</td>
                             <td className="amount-val">{rateSummary.amount > 0 ? formatCurrency(rateSummary.amount) : '-'}</td>
                             <td className="incentive-val">{rateSummary.incentive > 0 ? formatCurrency(rateSummary.incentive) : '-'}</td>
+                            {showIncentiveColumn && <td className="sw-settlement-rate-cell" />}
                           </tr>
                         ))}
                         <tr className={`vertical-total-row therapist-tone-${therapistIndex % 3}${showIncentiveRateSubtotals ? ' settlement-rate-total-row' : ''}`}>
@@ -833,6 +843,7 @@ export default function ShockwaveSettlementView({
                               ? formatCurrency(item.incentive)
                               : '-'}
                           </td>
+                          {showIncentiveColumn && <td className="sw-settlement-rate-cell" />}
                         </tr>
                       </tbody>
                     </table>
@@ -881,13 +892,14 @@ export default function ShockwaveSettlementView({
                   <h2>{currentMonth}월 처방별 총 결산</h2>
                 </div>
                 <div className="sw-settlement-table-wrap">
-                  <table className="sw-vertical-prescription-summary-table">
+                  <table className="sw-vertical-prescription-summary-table" data-incentive-column={showIncentiveColumn}>
                     <thead>
                       <tr>
                         <th>처방명</th>
                         <th>건수</th>
                         <th>건별 결산금액</th>
                         <th>건별 인센티브</th>
+                        {showIncentiveColumn && <th className="sw-settlement-rate-cell">인센 %</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -904,12 +916,13 @@ export default function ShockwaveSettlementView({
 
                           return (
                             <tr key={prescription}>
-                              <td className="prescription-name">{renderPrescriptionLabel(prescription)}</td>
+                              <td className="prescription-name">{renderPrescriptionLabel(prescription, !showIncentiveColumn)}</td>
                               <td className="count-val">{count > 0 ? `${count}건` : '-'}</td>
                               <td className="amount-val">{prescriptionAmount > 0 ? formatCurrency(prescriptionAmount) : '-'}</td>
                               <td className="incentive-val">
                                 {prescriptionIncentive > 0 ? formatCurrency(prescriptionIncentive) : '-'}
                               </td>
+                              {showIncentiveColumn && <td className="sw-settlement-rate-cell">{renderIncentiveBadge(prescription)}</td>}
                             </tr>
                           );
                         })}

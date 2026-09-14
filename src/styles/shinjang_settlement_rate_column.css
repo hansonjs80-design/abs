@@ -1,0 +1,42 @@
+/* 신장분사 가로보기 2 / 세로보기: 퍼센트를 별도 열에 한 줄로 표시. */
+.sw-settlement-stack table[data-incentive-column="true"] .sw-settlement-rate-cell {
+  text-align: center !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+  padding: 2px 4px !important;
+}
+.sw-settlement-stack table[data-incentive-column="true"] .sw-settlement-rate-column {
+  width: 66px !important;
+}
+.sw-settlement-stack table[data-incentive-column="true"] .sw-prescription-incentive-rate {
+  display: inline-flex;
+  white-space: nowrap;
+  margin: 0;
+}
+.sw-settlement-stack .sw-horizontal2-layout--shinjang table[data-incentive-column="true"] tbody tr.horizontal2-content-row,
+.sw-settlement-stack .sw-horizontal2-layout--shinjang table[data-incentive-column="true"] tbody tr.horizontal2-content-row > td {
+  height: 26px !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+  line-height: 1.1 !important;
+}
+.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td) {
+  padding: 4px !important;
+  height: auto !important;
+}
+.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(1) { width: 28% !important; }
+.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(2) { width: 10% !important; }
+.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(3),
+.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(4) { width: 23% !important; }
+.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(5) { width: 16% !important; }
+
+@media print {
+  /* 24:17:42:17 → 24:15.3:33.6:15.3 (88.2%). Transfer saved width to totals. */
+  body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-settlement-support-row:not(.sw-settlement-support-row--single) {
+    grid-template-columns: minmax(0, 53.664%) minmax(0, 42.336%) !important;
+  }
+  body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-recent-summary-card .sw-summary-table :is(th, td):first-child { width: 27.210884% !important; }
+  body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-recent-summary-card .sw-summary-table :is(th, td):nth-child(2),
+  body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-recent-summary-card .sw-summary-table :is(th, td):nth-child(4) { width: 17.346939% !important; }
+  body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-recent-summary-card .sw-summary-table :is(th, td):nth-child(3) { width: 38.095238% !important; }
+}

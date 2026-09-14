@@ -103,8 +103,8 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /className="combined-therapist-incentive-cell"/);
     assert.match(styleSource, /\.combined-therapist-card tbody td\.combined-therapist-amount-cell\s*\{[\s\S]*color:\s*#075fc5;/);
     assert.match(styleSource, /\.combined-therapist-card tbody td\.combined-therapist-incentive-cell\s*\{[\s\S]*color:\s*#7c3aed;/);
-    assert.match(styleSource, /\.combined-therapist-card tbody tr\.combined-incentive-rate-row--7 > \*\s*\{[\s\S]*background:\s*#eff6ff;/);
-    assert.match(styleSource, /\.combined-therapist-card tbody tr\.combined-incentive-rate-row--15 > \*\s*\{[\s\S]*background:\s*#faf5ff;/);
+    assert.match(styleSource, /\.combined-therapist-card tbody tr\.combined-incentive-rate-row--7 > \*\s*\{[\s\S]*background:\s*#d6e7ff;/);
+    assert.match(styleSource, /\.combined-therapist-card tbody tr\.combined-incentive-rate-row--15 > \*\s*\{[\s\S]*background:\s*#ead5f8;/);
     assert.match(styleSource, /\.combined-therapist-card table\s*\{[\s\S]*table-layout:\s*auto;/);
     assert.match(styleSource, /\.combined-current-col-type,[\s\S]*width:\s*auto;/);
     assert.match(styleSource, /\.combined-therapist-card th,[\s\S]*white-space:\s*nowrap;/);
