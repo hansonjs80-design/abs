@@ -546,9 +546,21 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   padding: 4px 6px !important;
 }
 
+.sw-horizontal2-recent-table thead th {
+  font-size: 14.5px !important;
+  padding: 4px 6px !important;
+}
+
 .sw-horizontal2-recent-table tbody th,
 .sw-horizontal2-recent-table tbody td {
-  font-size: 13.4px !important;
+  font-size: 14.2px !important;
+  padding: 4px 6px !important;
+  line-height: 1.2 !important;
+}
+
+.sw-horizontal2-recent-table .current-period-row th,
+.sw-horizontal2-recent-table .current-period-row td {
+  font-size: 14.8px !important;
 }
 
 

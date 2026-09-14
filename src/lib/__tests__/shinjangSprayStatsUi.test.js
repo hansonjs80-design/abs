@@ -276,8 +276,10 @@ describe('shinjang spray statistics UI', () => {
     assert(grandTableIndex > rightIndex, 'grand table is inside right column');
     assert(recentTableIndex > grandTableIndex, 'recent table follows grand table inside right column');
 
-    // 우측 총결산 테이블 폰트 및 마지막 합계 강조 검증
+    // 우측 총결산 테이블 및 결산/신환 테이블 폰트 확대 검증
     assert.match(horizontal2Css, /\.sw-horizontal2-grand-table \.horizontal2-grand-total-row th,[\s\S]*?font-size:\s*16\.5px !important;/);
+    assert.match(horizontal2Css, /\.sw-horizontal2-recent-table thead th[\s\S]*?font-size:\s*14\.5px !important;/);
+    assert.match(horizontal2Css, /\.sw-horizontal2-recent-table tbody th,[\s\S]*?font-size:\s*14\.2px !important;/);
     assert.match(rateColumnCss, /\.sw-settlement-rate-column\s*\{\s*width:\s*78px !important;\s*\}/);
     assert.match(rateColumnCss, /th\.sw-settlement-rate-cell[\s\S]*?white-space:\s*nowrap !important;/);
   });
