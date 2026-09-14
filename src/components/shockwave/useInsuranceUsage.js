@@ -5,13 +5,19 @@ import {
   buildInsuranceRecords, getInsurancePatient, getInsuranceUsage,
   localInsuranceScheduleRows, overlayInsuranceScheduleRows,
 } from '../../lib/insuranceUsageUtils';
+import { getExplicitVisitSuffix } from '../../lib/schedulerCellTextUtils';
+
+const INSURANCE_CACHE_TTL_MS = 5 * 60 * 1000;
+const INSURANCE_ERROR_CACHE_TTL_MS = 15 * 1000;
 
 export default function useInsuranceUsage({ logs, hoverRow, memos, year, month, settings }) {
   const patientsKey = JSON.stringify([...new Set([...logs, hoverRow].filter(Boolean)
     .map((row) => getInsurancePatient(row).key).filter(Boolean))].sort());
   const prefetchKey = JSON.stringify([...new Set(Object.values(memos || {})
+    // Empty/future cells cannot have a usage value yet. Prioritize cells whose
+    // visit mark can actually show insurance usage when the cursor reaches them.
+    .filter((row) => Boolean(getExplicitVisitSuffix(row?.content || '')))
     .map((row) => getInsurancePatient(row).key).filter(Boolean))].sort());
-  const targetKey = JSON.stringify([hoverRow?.year, hoverRow?.month, hoverRow?.week_index, hoverRow?.day_index, hoverRow?.row_index, hoverRow?.col_index, logs.length]);
   const [loaded, setLoaded] = useState({});
   const cacheRef = useRef(new Map());
   const pendingRef = useRef(new Map());
@@ -20,34 +26,44 @@ export default function useInsuranceUsage({ logs, hoverRow, memos, year, month, 
     mountedRef.current = true;
     return () => { mountedRef.current = false; };
   }, []);
-  const loadPatient = useCallback((key) => {
+  const loadPatient = useCallback((key, { publish = true } = {}) => {
+    const publishResult = (result) => {
+      if (publish && mountedRef.current) {
+        setLoaded((previous) => (previous[key] === result ? previous : { ...previous, [key]: result }));
+      }
+      return result;
+    };
     const cached = cacheRef.current.get(key);
-    if (cached && Date.now() - cached.time < 60000) return Promise.resolve(cached);
-    if (pendingRef.current.has(key)) return pendingRef.current.get(key);
+    const cacheTtl = cached?.error ? INSURANCE_ERROR_CACHE_TTL_MS : INSURANCE_CACHE_TTL_MS;
+    if (cached && Date.now() - cached.time < cacheTtl) return Promise.resolve(publishResult(cached));
+    if (pendingRef.current.has(key)) return pendingRef.current.get(key).then(publishResult);
     const [chart, name] = JSON.parse(key);
     const promise = fetchInsurancePatientRecords(supabase, { chart, name })
       .then((data) => {
         const result = { data, time: Date.now(), error: false };
         cacheRef.current.set(key, result);
-        if (mountedRef.current) setLoaded((prev) => ({ ...prev, [key]: result }));
         return result;
       }).catch(() => {
-        if (mountedRef.current) setLoaded((prev) => ({ ...prev, [key]: { error: true } }));
+        const result = { error: true, time: Date.now() };
+        cacheRef.current.set(key, result);
+        return result;
       }).finally(() => pendingRef.current.delete(key));
     pendingRef.current.set(key, promise);
-    return promise;
+    return promise.then(publishResult);
   }, []);
   useEffect(() => {
-    JSON.parse(patientsKey).forEach(loadPatient);
-  }, [patientsKey, targetKey, loadPatient, memos]);
+    JSON.parse(patientsKey).forEach((key) => loadPatient(key));
+  }, [patientsKey, loadPatient]);
   useEffect(() => {
     let active = true;
     const queue = JSON.parse(prefetchKey);
     const worker = async () => {
       while (active && queue.length) await loadPatient(queue.shift());
     };
-    // Warm visible patients without waiting for the first hover. Limit background concurrency.
-    const timer = setTimeout(() => { worker(); worker(); }, 250);
+    // Keep prefetch invisible to interaction: it populates only the cache, while
+    // a hovered patient publishes its result immediately. Starting after the
+    // first paint also avoids competing with the initial scheduler render.
+    const timer = setTimeout(() => { worker(); worker(); }, 80);
     return () => { active = false; clearTimeout(timer); };
   }, [prefetchKey, loadPatient]);
   const records = useMemo(() => {

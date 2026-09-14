@@ -1,4 +1,4 @@
-import { getInsurancePatient } from './insuranceUsageUtils.js';
+import { getInsurancePatient, INSURANCE_USAGE_START_DATE } from './insuranceUsageUtils.js';
 
 // Read-only, paginated queries. Never infer zero usage from a failed/partial read.
 export async function readAllInsuranceRows(makeQuery, pageSize = 500) {
@@ -15,13 +15,20 @@ export async function readAllInsuranceRows(makeQuery, pageSize = 500) {
 export async function fetchInsurancePatientRecords(client, { chart, name }) {
   if (!chart || !name) return { scheduleRows: [], historyLogs: [] };
   const term = chart.replace(/[%_\\]/g, '\\$&');
+  const [startYear, startMonth] = INSURANCE_USAGE_START_DATE.split('-').map(Number);
   const [scheduleRows, shockwave, manual] = await Promise.all([
     readAllInsuranceRows(() => client.from('shockwave_schedules')
       .select('id,year,month,week_index,day_index,row_index,col_index,content,prescription,body_part,merge_span,bg_color')
-      .ilike('content', `%${term}%`).order('id', { ascending: true })),
+      .ilike('content', `%${term}%`)
+      // The insurer tracking window starts on 2026-07-01, so older schedules
+      // cannot change a usage count or renewal date.
+      .or(`year.gt.${startYear},and(year.eq.${startYear},month.gte.${startMonth})`)
+      .order('id', { ascending: true })),
     ...['shockwave_patient_logs', 'manual_therapy_patient_logs'].map((table) => readAllInsuranceRows(() => client.from(table)
       .select('id,patient_name,chart_number,date,prescription,body_part,visit_count,source,scheduler_cell_key')
-      .eq('chart_number', chart).order('id', { ascending: true }))),
+      .eq('chart_number', chart)
+      .gte('date', INSURANCE_USAGE_START_DATE)
+      .order('id', { ascending: true }))),
   ]);
   const patientKey = JSON.stringify([chart, name]);
   const matches = (row) => getInsurancePatient(row).key === patientKey;

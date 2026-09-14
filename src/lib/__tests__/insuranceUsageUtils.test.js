@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { generateShockwaveCalendar } from '../calendarUtils.js';
 import { buildInsuranceRecords, formatInsuranceUsage, getInsuranceUsage, getShinjangSprayInsuranceCategory, isInsuranceSelfPay, overlayInsuranceScheduleRows } from '../insuranceUsageUtils.js';
-import { readAllInsuranceRows } from '../insuranceUsageRepository.js';
+import { fetchInsurancePatientRecords, readAllInsuranceRows } from '../insuranceUsageRepository.js';
 import { buildScheduleReservationWarnings } from '../scheduleReservationWarningUtils.js';
 
 const settings = {
@@ -336,5 +336,31 @@ describe('complete insurance history reads', () => {
   });
   it('throws on a later failed page instead of returning a partial count', async () => {
     await assert.rejects(readAllInsuranceRows(() => ({ range: async (start) => start ? { error: new Error('read failed') } : { data: [1, 2] } }), 2), /read failed/);
+  });
+  it('limits remote insurance lookups to the clinic tracking window', async () => {
+    const calls = [];
+    const client = {
+      from(table) {
+        const call = { table, filters: [] };
+        calls.push(call);
+        const query = {
+          select: () => query,
+          ilike: (field, value) => { call.filters.push(['ilike', field, value]); return query; },
+          eq: (field, value) => { call.filters.push(['eq', field, value]); return query; },
+          gte: (field, value) => { call.filters.push(['gte', field, value]); return query; },
+          or: (value) => { call.filters.push(['or', value]); return query; },
+          order: () => query,
+          range: async () => ({ data: [], error: null }),
+        };
+        return query;
+      },
+    };
+    await fetchInsurancePatientRecords(client, { chart: '1001', name: '가상환자' });
+    const schedule = calls.find((call) => call.table === 'shockwave_schedules');
+    assert.deepEqual(schedule.filters.find(([type]) => type === 'or'), ['or', 'year.gt.2026,and(year.eq.2026,month.gte.7)']);
+    for (const table of ['shockwave_patient_logs', 'manual_therapy_patient_logs']) {
+      const call = calls.find((item) => item.table === table);
+      assert.deepEqual(call.filters.find(([type]) => type === 'gte'), ['gte', 'date', '2026-07-01']);
+    }
   });
 });
