@@ -24,11 +24,52 @@
   padding: 4px !important;
   height: auto !important;
 }
-.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(1) { width: 28% !important; }
-.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(2) { width: 10% !important; }
+.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(1) { width: 25.64% !important; }
+.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(2) { width: 9.16% !important; text-align: center !important; }
 .sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(3),
-.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(4) { width: 23% !important; }
-.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(5) { width: 16% !important; }
+.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(4) { width: 25.27% !important; }
+.sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical table[data-incentive-column="true"] :is(th, td):nth-child(5) { width: 14.66% !important; }
+
+/* Rate colors apply only to prescription/rate cells, never mixed totals. */
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] :is(th, td)[data-incentive-rate="7"],
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode] table[data-incentive-column="true"] tbody tr[data-incentive-rate="7"] > *,
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] :is(th, td).settlement-rate-subtotal-row--7,
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode] table tbody tr.settlement-rate-subtotal-row--7 > * {
+  background: #e2f2dc !important;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] :is(th, td)[data-incentive-rate="15"],
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode] table[data-incentive-column="true"] tbody tr[data-incentive-rate="15"] > *,
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] :is(th, td).settlement-rate-subtotal-row--15,
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode] table tbody tr.settlement-rate-subtotal-row--15 > * {
+  background: #efdef8 !important;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .count-val {
+  text-align: center !important;
+}
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-horizontal2-therapist-table {
+  width: 516px !important;
+  table-layout: fixed !important;
+}
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-horizontal2-prescription-column { width: 104px !important; }
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-horizontal2-count-column { width: 64px !important; }
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-horizontal2-amount-column,
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-horizontal2-incentive-column { width: 112px !important; }
+
+@media screen {
+  .sw-stats-body--settlement .sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical[data-treatment="신장분사"],
+  .sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical[data-treatment="신장분사"] .sw-settlement-vertical-layout {
+    width: min(100%, 1003px) !important;
+  }
+  .sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical[data-treatment="신장분사"] :is(.sw-settlement-vertical-heading-row, .sw-settlement-vertical-body) {
+    grid-template-columns: minmax(435px, 501px) minmax(404px, 478px) !important;
+  }
+  .sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical[data-treatment="신장분사"] .sw-settlement-vertical-left { max-width: 501px !important; }
+  .sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical[data-treatment="신장분사"] .sw-settlement-vertical-right { max-width: 478px !important; }
+}
 
 @media print {
   /* 24:17:42:17 → 24:15.3:33.6:15.3 (88.2%). Transfer saved width to totals. */

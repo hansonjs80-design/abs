@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { generateShockwaveCalendar } from '../calendarUtils.js';
-import { buildInsuranceRecords, formatInsuranceUsage, getInsuranceUsage, isInsuranceSelfPay, overlayInsuranceScheduleRows } from '../insuranceUsageUtils.js';
+import { buildInsuranceRecords, formatInsuranceUsage, getInsuranceUsage, getShinjangSprayInsuranceCategory, isInsuranceSelfPay, overlayInsuranceScheduleRows } from '../insuranceUsageUtils.js';
 import { readAllInsuranceRows } from '../insuranceUsageRepository.js';
 import { buildScheduleReservationWarnings } from '../scheduleReservationWarningUtils.js';
 
@@ -152,6 +152,33 @@ describe('clinic annual insurance usage', () => {
     assert.equal(usage(rows, row('2026-09-04', '신장분사2.5')).count, 1);
     assert.equal(usage(rows, row('2026-09-04', '신장분사3.0')).category, 'shockwave');
     assert.equal(usage(rows, row('2027-09-03', '신장분사3.0')).count, 0);
+  });
+  it('links shinjang C with shockwave, carrying counts, body limits and renewal date without incrementing', () => {
+    assert.equal(getShinjangSprayInsuranceCategory('신장분사C'), 'shockwave');
+    assert.equal(getShinjangSprayInsuranceCategory('신장분사c'), 'shockwave');
+    assert.equal(getShinjangSprayInsuranceCategory('신장분사 C'), 'shockwave');
+    assert.equal(getShinjangSprayInsuranceCategory('신장분사 2.5'), 'shockwave');
+    assert.equal(getShinjangSprayInsuranceCategory('신장분사 1'), 'manual');
+
+    const rows = [
+      partRow(0, '척추', '충격파 1.5'),
+      partRow(1, '척추', '충격파 1.5'),
+    ];
+    const shinjangC = usage(rows, partRow(2, '척추', '신장분사C'));
+    assert.equal(shinjangC.category, 'shockwave');
+    assert.equal(shinjangC.isShinjang, true);
+    assert.equal(shinjangC.hasHistory, true);
+    assert.equal(shinjangC.count, 2);
+    assert.equal(formatInsuranceUsage(shinjangC), '2회(척추 2/6)');
+    assert.equal(shinjangC.periodEnd, '2027-09-01');
+
+    const shinjangLowerC = usage(rows, partRow(2, '척추', '신장분사c'));
+    assert.equal(shinjangLowerC.category, 'shockwave');
+    assert.equal(shinjangLowerC.isShinjang, true);
+    assert.equal(shinjangLowerC.hasHistory, true);
+    assert.equal(shinjangLowerC.count, 2);
+    assert.equal(formatInsuranceUsage(shinjangLowerC), '2회(척추 2/6)');
+    assert.equal(shinjangLowerC.periodEnd, '2027-09-01');
   });
   it('respects same-day chronological order and does not include future appointments', () => {
     const rows = [row('2026-09-01', '30분', 1), row('2026-09-01', '신장분사1', 2), row('2026-09-01', '30분', 3), row('2026-09-02', '30분')];

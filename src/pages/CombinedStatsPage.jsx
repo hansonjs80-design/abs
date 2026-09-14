@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { getConsecutiveRowSpan } from '../lib/settlementRowLayoutUtils';
 import { RefreshCw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchedule } from '../contexts/ScheduleContext';
@@ -446,6 +447,7 @@ export default function CombinedStatsPage() {
             <>
               {currentSummary.therapists.map((item, index) => {
                 const visibleTreatments = buildTherapistTreatmentSections(item, isAdmin);
+                const visibleRateRows = visibleTreatments.flatMap((treatment) => treatment.rows);
                 return (
                   <article
                     key={item.therapist.key || item.therapist.id || item.therapist.name}
@@ -488,6 +490,7 @@ export default function CombinedStatsPage() {
                                 ? `${treatment.key}-${row.prescription}`
                                 : `${treatment.key}-${row.rates?.join('-') || 'total'}`;
                               const rowLabel = row.label || row.prescription;
+                              const rateSpan = getConsecutiveRowSpan(visibleRateRows, visibleRateRows.indexOf(row), (entry) => entry.rates?.length === 1 ? Number(entry.rates[0]) : null);
                               const incentiveRate = row.rates?.length === 1 ? Number(row.rates[0]) : null;
                               const incentiveRateRowClass = incentiveRate === 7
                                 ? 'combined-incentive-rate-row--7'
@@ -512,9 +515,9 @@ export default function CombinedStatsPage() {
                                   <td className="combined-therapist-count-cell">{formatCount(row.count)}</td>
                                   <td className="combined-therapist-amount-cell">{formatCurrency(row.amount)}</td>
                                   <td className="combined-therapist-incentive-cell">{formatCurrency(row.incentive)}</td>
-                                  <td className="combined-incentive-rate-cell">
+                                  {rateSpan > 0 && <td className="combined-incentive-rate-cell" rowSpan={rateSpan}>
                                     <IncentiveRateList rates={row.rates} />
-                                  </td>
+                                  </td>}
                                 </tr>
                               );
                             })

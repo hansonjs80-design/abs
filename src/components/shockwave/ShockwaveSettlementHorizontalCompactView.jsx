@@ -1,4 +1,5 @@
 import React from 'react';
+import { getConsecutiveRowSpan } from '../../lib/settlementRowLayoutUtils';
 import {
   getIncentiveRateBadgeStyle,
   getTherapistCompletedPrescriptions,
@@ -65,15 +66,15 @@ export default function ShockwaveSettlementHorizontalCompactView({
   showRecentSummaries = true,
   showOnlyTherapistPrescriptions = false,
 }) {
-  const incentiveRate = (Number(incentivePercentage) || 0) / 100;
+  const incentiveRate = Number(incentivePercentage) || 0;
   const normalizedIncentiveMap = Object.fromEntries(
     Object.entries(incentivePercentages || {}).map(([prescription, percentage]) => [
       normalizePrescriptionKey(prescription),
-      Math.max(0, Number(percentage) || 0) / 100,
+      Math.max(0, Number(percentage) || 0),
     ])
   );
   const getIncentivePercentage = (prescription) => (
-    (normalizedIncentiveMap[normalizePrescriptionKey(prescription)] ?? incentiveRate) * 100
+    normalizedIncentiveMap[normalizePrescriptionKey(prescription)] ?? incentiveRate
   );
   const showPrescriptionIncentiveRates = Object.keys(normalizedIncentiveMap).length > 0;
   const showIncentiveColumn = treatmentLabel === '신장분사' && showPrescriptionIncentiveRates;
@@ -128,7 +129,8 @@ export default function ShockwaveSettlementHorizontalCompactView({
                       <th>건별 인센티브</th>
                       {showIncentiveColumn && <th className="sw-settlement-rate-cell">인센 %</th>}
                     </tr>
-                    {therapistPrescriptions.map((prescription) => {
+                    {therapistPrescriptions.map((prescription, index, rows) => {
+                      const rateSpan = getConsecutiveRowSpan(rows, index, (p) => p ? getIncentivePercentage(p) : null);
                       const count = item.countsByPrescription[prescription] || 0;
                       const unitPrice = normalizedPriceMap[normalizePrescriptionKey(prescription)] || 0;
                       const prescriptionAmount = count * unitPrice;
@@ -137,7 +139,7 @@ export default function ShockwaveSettlementHorizontalCompactView({
                         prescriptionAmount * (prescriptionIncentivePercentage / 100)
                       );
                       return (
-                        <tr key={`${therapistKey}-${prescription || 'empty'}`} className="horizontal2-content-row">
+                        <tr key={`${therapistKey}-${prescription || 'empty'}`} className="horizontal2-content-row" data-incentive-rate={showIncentiveColumn && prescription ? prescriptionIncentivePercentage : undefined}>
                           <td className="prescription-name" title={!prescription ? '완료 처방 없음' : undefined}>
                             {prescription ? (
                               <span className="sw-prescription-incentive-label">
@@ -156,9 +158,9 @@ export default function ShockwaveSettlementHorizontalCompactView({
                           <td className="count-val">{formatOptionalCount(count)}</td>
                           <td className="amount-val">{formatCurrency(prescriptionAmount)}</td>
                           <td className="incentive-val">{formatCurrency(prescriptionIncentive)}</td>
-                          {showIncentiveColumn && <td className="sw-settlement-rate-cell">
+                          {showIncentiveColumn && rateSpan > 0 && <td className="sw-settlement-rate-cell" rowSpan={rateSpan}>
                             {prescription ? <span className="sw-prescription-incentive-rate" style={getIncentiveRateBadgeStyle(prescriptionIncentivePercentage)}>
-                              인센 {formatPercentage(prescriptionIncentivePercentage)}
+                              {formatPercentage(prescriptionIncentivePercentage)}
                             </span> : '—'}
                           </td>}
                         </tr>

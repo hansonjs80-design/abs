@@ -142,8 +142,20 @@ export function getScheduleItemTreatmentGroup(item, settings, year, month) {
       || String(item?.prescription || '').includes('신장분사')
     )
   ) return 'shinjang_spray';
-  if (prescriptionKey && manualKeys.has(prescriptionKey)) return 'manual_therapy';
-  if (prescriptionKey && shockwaveKeys.has(prescriptionKey)) return 'shockwave';
+  if (
+    prescriptionKey
+    && (
+      manualKeys.has(prescriptionKey)
+      || String(item?.prescription || '').includes('도수')
+    )
+  ) return 'manual_therapy';
+  if (
+    prescriptionKey
+    && (
+      shockwaveKeys.has(prescriptionKey)
+      || String(item?.prescription || '').includes('충격파')
+    )
+  ) return 'shockwave';
 
   const content = String(item?.content || '').trim();
   const shinjangSprayDoseTags = filterPrescriptionMap(

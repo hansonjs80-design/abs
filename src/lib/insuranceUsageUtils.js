@@ -1,5 +1,5 @@
 import { generateShockwaveCalendar } from './calendarUtils.js';
-import { getScheduleItemTreatmentGroup } from './prescriptionScheduleSettings.js';
+import { getPrescriptionFromConfiguredDoseTag, getScheduleItemTreatmentGroup } from './prescriptionScheduleSettings.js';
 import { parseSchedulerPatientIdentity } from './schedulerCellTextUtils.js';
 import { getScheduleDayDateKey, getScheduleRowSchedulerCellKey } from './schedulerHistoryCandidateUtils.js';
 import { isTreatmentCancelBg } from './scheduleStatusUtils.js';
@@ -33,6 +33,25 @@ export function isInsuranceSelfPay(prescription) {
   return /\(\s*본인\s*\)/.test(String(prescription || '').normalize('NFKC'));
 }
 
+export function getShinjangSprayInsuranceCategory(prescription) {
+  const text = String(prescription || '').normalize('NFKC').trim();
+  const doseMatches = text.match(/\d+(?:\.\d+)?/g);
+  if (doseMatches?.length === 1 && doseMatches[0].includes('.')) {
+    return 'shockwave';
+  }
+  if (
+    /신장분사.*[cC]/i.test(text)
+    || /(?:^|[^a-zA-Z0-9가-힣])[cC](?:$|[^a-zA-Z0-9가-힣])/i.test(text)
+    || /cryo|크라이오/i.test(text)
+  ) {
+    return 'shockwave';
+  }
+  if (doseMatches?.length === 1) {
+    return 'manual';
+  }
+  return '';
+}
+
 export function normalizeInsuranceRecord(row, settings, allowAdjacentMonth = false) {
   if (!row) return null;
   const patient = getInsurancePatient(row);
@@ -47,10 +66,13 @@ export function normalizeInsuranceRecord(row, settings, allowAdjacentMonth = fal
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
   const group = getScheduleItemTreatmentGroup(row, settings, Number(date.slice(0, 4)), Number(date.slice(5, 7)))
     || ({ manual: 'manual_therapy', shockwave: 'shockwave', shinjang: 'shinjang_spray' }[row.history_group || row.type]);
-  const prescription = String(row.prescription || '').normalize('NFKC');
-  const shinjangDose = prescription.match(/\d+(?:\.\d+)?/g);
+  const prescription = String(
+    row.prescription
+    || (settings && getPrescriptionFromConfiguredDoseTag(settings, Number(date.slice(0, 4)), Number(date.slice(5, 7)), row.content))
+    || ''
+  ).normalize('NFKC');
   const category = group === 'shinjang_spray'
-    ? (shinjangDose?.length === 1 ? (shinjangDose[0].includes('.') ? 'shockwave' : 'manual') : '')
+    ? getShinjangSprayInsuranceCategory(prescription)
     : ({ manual_therapy: 'manual', shockwave: 'shockwave' }[group] || '');
   if (!category) return null;
   const key = isSchedule ? getScheduleRowSchedulerCellKey(row)

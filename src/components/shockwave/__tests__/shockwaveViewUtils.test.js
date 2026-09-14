@@ -497,6 +497,24 @@ describe('shockwave hover tooltip model', () => {
     assert.ok(!text.includes('갱신 일자'));
   });
 
+  it('shows shockwave insurance usage and renewal date for shinjang C tooltip when linked history exists', () => {
+    const text = buildShockwaveHoverTooltipText({
+      hoverCell: { weekIdx: 0, dayIdx: 1, rowIdx: 2, colIdx: 0, slotInfo: { label: '10:00' } },
+      renderMemos: { '0-1-2-0': { content: '100/가상환자(2)', prescription: '신장분사C', body_part: '척추' } },
+      cellKey, getReservationTimeForMemo: () => '10:00',
+      insuranceUsage: {
+        category: 'shockwave',
+        count: 2,
+        bodyParts: [{ key: '척추', label: '척추', count: 2, limit: 6 }],
+        periodEnd: '2027-09-01',
+        isShinjang: true,
+        hasHistory: true,
+      },
+    });
+    assert.ok(text.includes('• 실비소진: 충격파 2회(척추 2/6)'));
+    assert.ok(text.includes('• 갱신 일자: 2027-09-01'));
+  });
+
   it('keeps selected range time and duration formatting', () => {
     const selectedKey = '0-1-2-0';
     const text = buildShockwaveHoverTooltipText({

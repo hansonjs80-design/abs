@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
+import { getConsecutiveRowSpan } from '../../lib/settlementRowLayoutUtils';
 import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 import {
   buildCryoAdjustedPrescriptionPrices,
@@ -173,7 +174,7 @@ export default function ShockwaveSettlementView({
   const showIncentiveColumn = treatmentLabel === '신장분사' && usesPrescriptionIncentives;
   const renderIncentiveBadge = (prescription) => prescription ? (
     <span className="sw-prescription-incentive-rate" style={getIncentiveRateBadgeStyle(getIncentivePercentage(prescription))}>
-      인센 {formatPercentage(getIncentivePercentage(prescription))}
+      {formatPercentage(getIncentivePercentage(prescription))}
     </span>
   ) : '—';
   const renderPrescriptionLabel = (prescription, showRate = true) => {
@@ -463,7 +464,7 @@ export default function ShockwaveSettlementView({
                   <tr>
                     {displayedTherapistSummaries.flatMap((item, therapistIndex) =>
                       (horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions || []).map((prescription, prescriptionIndex, therapistPrescriptions) => (
-                        <th key={`${item?.therapist?.id || item?.therapist?.name || therapistIndex}-${prescription || 'empty'}`} className={`prescription-col therapist-tone-${therapistIndex % 5}-sub${!prescription ? ' prescription-col--empty' : ''}${prescriptionIndex === therapistPrescriptions.length - 1 ? ' therapist-group-end' : ''}`} title={!prescription ? '완료 처방 없음' : undefined}>
+                        <th data-incentive-rate={treatmentLabel === '신장분사' && prescription ? getIncentivePercentage(prescription) : undefined} key={`${item?.therapist?.id || item?.therapist?.name || therapistIndex}-${prescription || 'empty'}`} className={`prescription-col therapist-tone-${therapistIndex % 5}-sub${!prescription ? ' prescription-col--empty' : ''}${prescriptionIndex === therapistPrescriptions.length - 1 ? ' therapist-group-end' : ''}`} title={!prescription ? '완료 처방 없음' : undefined}>
                           {renderPrescriptionLabel(prescription)}
                         </th>
                       ))
@@ -475,7 +476,7 @@ export default function ShockwaveSettlementView({
                     <th className="row-label">처방 건수</th>
                     {displayedTherapistSummaries.flatMap((item, therapistIndex) =>
                       (horizontalTherapistPrescriptionGroups[therapistIndex]?.prescriptions || []).map((prescription, prescriptionIndex, therapistPrescriptions) => (
-                        <td key={`count-${item?.therapist?.id || item?.therapist?.name || therapistIndex}-${prescription || 'empty'}`} className={`therapist-tone-${therapistIndex % 5}-cell${!prescription ? ' prescription-value--empty' : ''}${prescriptionIndex === therapistPrescriptions.length - 1 ? ' therapist-group-end' : ''}`}>
+                        <td data-incentive-rate={treatmentLabel === '신장분사' && prescription ? getIncentivePercentage(prescription) : undefined} key={`count-${item?.therapist?.id || item?.therapist?.name || therapistIndex}-${prescription || 'empty'}`} className={`therapist-tone-${therapistIndex % 5}-cell${!prescription ? ' prescription-value--empty' : ''}${prescriptionIndex === therapistPrescriptions.length - 1 ? ' therapist-group-end' : ''}`}>
                           {prescription && settlement.grandPrescriptionCounts[prescription] >= 0
                             ? item.countsByPrescription[prescription] || 0
                             : 0}
@@ -596,7 +597,7 @@ export default function ShockwaveSettlementView({
                     <tr>
                       <th className="label-col">구분</th>
                       {horizontalSummaryPrescriptions.map((prescription) => (
-                        <th key={`grand-summary-head-${prescription || 'empty'}`} className="prescription-col">
+                        <th data-incentive-rate={treatmentLabel === '신장분사' && prescription ? getIncentivePercentage(prescription) : undefined} key={`grand-summary-head-${prescription || 'empty'}`} className="prescription-col">
                           {renderPrescriptionLabel(prescription)}
                         </th>
                       ))}
@@ -606,7 +607,7 @@ export default function ShockwaveSettlementView({
                     <tr>
                       <th className="row-label">처방 건수</th>
                       {horizontalSummaryPrescriptions.map((prescription) => (
-                        <td key={`grand-summary-count-${prescription || 'empty'}`} className="grand-value">
+                        <td data-incentive-rate={treatmentLabel === '신장분사' && prescription ? getIncentivePercentage(prescription) : undefined} key={`grand-summary-count-${prescription || 'empty'}`} className="grand-value">
                           {formatCount(settlement.grandPrescriptionCounts[prescription] || 0)}
                         </td>
                       ))}
@@ -804,7 +805,8 @@ export default function ShockwaveSettlementView({
                         </tr>
                       </thead>
                       <tbody>
-                        {therapistPrescriptions.map((prescription) => {
+                        {therapistPrescriptions.map((prescription, index, rows) => {
+                            const rateSpan = getConsecutiveRowSpan(rows, index, (p) => p ? getIncentivePercentage(p) : null);
                             const count = item.countsByPrescription[prescription] || 0;
                             const unitPrice = normalizedPriceMap[normalizePrescriptionKey(prescription)] || 0;
                             const prescriptionAmount = count * unitPrice;
@@ -814,14 +816,14 @@ export default function ShockwaveSettlementView({
                             );
 
                             return (
-                              <tr key={prescription || 'empty'}>
+                              <tr key={prescription || 'empty'} data-incentive-rate={showIncentiveColumn && prescription ? prescriptionIncentivePercentage : undefined}>
                                 <td className="prescription-name" title={!prescription ? '완료 처방 없음' : undefined}>{renderPrescriptionLabel(prescription, !showIncentiveColumn)}</td>
                                 <td className="count-val">{count > 0 ? `${count}건` : '-'}</td>
                                 <td className="amount-val">{prescriptionAmount > 0 ? formatCurrency(prescriptionAmount) : '-'}</td>
                                 <td className="incentive-val">
                                   {prescriptionIncentive > 0 ? formatCurrency(prescriptionIncentive) : '-'}
                                 </td>
-                                {showIncentiveColumn && <td className="sw-settlement-rate-cell">{renderIncentiveBadge(prescription)}</td>}
+                                {showIncentiveColumn && rateSpan > 0 && <td className="sw-settlement-rate-cell" rowSpan={rateSpan}>{renderIncentiveBadge(prescription)}</td>}
                               </tr>
                             );
                           })}
@@ -905,7 +907,8 @@ export default function ShockwaveSettlementView({
                     <tbody>
                       {settlementPrescriptions
                         .filter((prescription) => (settlement.grandPrescriptionCounts[prescription] || 0) > 0)
-                        .map((prescription) => {
+                        .map((prescription, index, rows) => {
+                          const rateSpan = getConsecutiveRowSpan(rows, index, getIncentivePercentage);
                           const count = settlement.grandPrescriptionCounts[prescription] || 0;
                           const unitPrice = normalizedPriceMap[normalizePrescriptionKey(prescription)] || 0;
                           const prescriptionAmount = count * unitPrice;
@@ -915,14 +918,14 @@ export default function ShockwaveSettlementView({
                           );
 
                           return (
-                            <tr key={prescription}>
+                            <tr key={prescription} data-incentive-rate={showIncentiveColumn ? prescriptionIncentivePercentage : undefined}>
                               <td className="prescription-name">{renderPrescriptionLabel(prescription, !showIncentiveColumn)}</td>
                               <td className="count-val">{count > 0 ? `${count}건` : '-'}</td>
                               <td className="amount-val">{prescriptionAmount > 0 ? formatCurrency(prescriptionAmount) : '-'}</td>
                               <td className="incentive-val">
                                 {prescriptionIncentive > 0 ? formatCurrency(prescriptionIncentive) : '-'}
                               </td>
-                              {showIncentiveColumn && <td className="sw-settlement-rate-cell">{renderIncentiveBadge(prescription)}</td>}
+                              {showIncentiveColumn && rateSpan > 0 && <td className="sw-settlement-rate-cell" rowSpan={rateSpan}>{renderIncentiveBadge(prescription)}</td>}
                             </tr>
                           );
                         })}
