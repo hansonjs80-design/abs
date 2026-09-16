@@ -63,13 +63,13 @@
 .sw-summary-table td,
 .sw-compact-summary-table th,
 .sw-compact-summary-table td {
-  height: 44px;
-  padding: 11px 16px;
+  height: 40px;
+  padding: 10px 14px;
   border-right: 1px solid #dbe3ee;
   border-bottom: 1px solid #dbe3ee;
   color: #1f2a3d;
   font-size: 1rem;
-  line-height: 1.25;
+  line-height: 1.2;
   letter-spacing: 0;
   text-align: center;
   white-space: nowrap;
@@ -110,7 +110,7 @@
 .sw-settlement-table thead .therapist-col,
 .sw-manual-compact-settlement-table thead .therapist-col {
   min-width: 112px;
-  padding: 12px 18px;
+  padding: 10px 16px;
   border-top: 2px solid var(--therapist-accent, #64748b);
   border-left: 2px solid var(--therapist-line, #cbd5e1);
   border-right: 2px solid var(--therapist-line, #cbd5e1);
