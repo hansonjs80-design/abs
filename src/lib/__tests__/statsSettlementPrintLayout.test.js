@@ -45,7 +45,7 @@ test('shockwave landscape print uses label-aware prescription columns', async ()
   assert.match(settlementView, /merged-value--single-prescription/);
   assert.match(
     indexCss,
-    /col\.sw-shockwave-settlement-prescription-column\s*\{[^}]*width:\s*var\(--sw-shockwave-print-column-width\) !important;/s,
+    /col\.sw-shockwave-settlement-prescription-column\s*\{[^}]*width:\s*auto !important;/s,
   );
   assert.match(
     indexCss,
@@ -122,26 +122,20 @@ test('shockwave horizontal2 print enlarges summary text without resizing tables'
 
   assert.match(
     horizontal2Css,
-    /\.sw-horizontal2-grand-table \.grand-title\s*\{[^}]*font-size:\s*8\.4pt !important;/s,
+    /\.sw-horizontal2-grand-table \.grand-title,[\s\S]*?font-size:\s*12\.5pt !important;/s,
   );
   assert.match(
     horizontal2Css,
-    /\.sw-horizontal2-grand-table \.horizontal2-grand-total-row td\s*\{[^}]*font-size:\s*8\.4pt !important;/s,
+    /\.sw-horizontal2-grand-table \.horizontal2-grand-total-row td\s*\{[^}]*font-size:\s*12\.5pt !important;/s,
   );
   assert.match(
     horizontal2Css,
-    /\.sw-horizontal2-recent-table thead th\s*\{[^}]*font-size:\s*9pt !important;/s,
+    /\.sw-horizontal2-recent-table thead th\s*\{[^}]*font-size:\s*11\.5pt !important;/s,
   );
   assert.match(
     horizontal2Css,
-    /\.sw-horizontal2-recent-table tbody tr:not\(\.current-period-row\) th,[\s\S]*?font-size:\s*8\.7pt !important;/s,
+    /\.sw-horizontal2-recent-table tbody tr\.current-period-row th,[\s\S]*?font-size:\s*11\.5pt !important;/s,
   );
-  assert.match(
-    horizontal2Css,
-    /\.sw-horizontal2-recent-table tbody tr\.current-period-row th,[\s\S]*?font-size:\s*9\.1pt !important;/s,
-  );
-  assert.match(horizontal2Css, /\.sw-horizontal2-grand-table\s*\{[^}]*width:\s*87mm !important;/s);
-  assert.match(horizontal2Css, /\.sw-horizontal2-recent-table\s*\{[^}]*width:\s*88mm !important;/s);
 });
 
 test('shockwave horizontal2 therapist total rows share the body table columns', async () => {

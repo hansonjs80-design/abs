@@ -199,16 +199,17 @@
 
 @media print {
   body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-horizontal-settlement-main-table {
-    table-layout: fixed !important;
-    width: 100% !important;
+    table-layout: auto !important;
+    width: auto !important;
+    margin: 0 auto !important;
     box-sizing: border-box !important;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", "맑은 고딕", sans-serif !important;
   }
   body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-horizontal-settlement-main-table col.sw-shockwave-settlement-label-column {
-    width: 18% !important;
+    width: auto !important;
   }
   body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-horizontal-settlement-main-table col.sw-shockwave-settlement-prescription-column {
-    width: var(--sw-shockwave-print-column-width) !important;
+    width: auto !important;
   }
   body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-horizontal-settlement-main-table :is(th, td) {
     box-sizing: border-box !important;
