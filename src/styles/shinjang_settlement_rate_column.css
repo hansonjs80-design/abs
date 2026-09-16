@@ -10,22 +10,22 @@
 /* 1. 처방 데이터 행: 가로보기2 / 세로보기 본문 (눈이 편안한 소프트 파스텔 틴트) */
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] :is(th, td)[data-incentive-rate="7"]:not(.rate-header-col):not(.prescription-col),
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode] table[data-incentive-column="true"] tbody tr[data-incentive-rate="7"] > * {
-  background: #f6fbf5 !important;
+  background: #eff6ff !important;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] :is(th, td)[data-incentive-rate="15"]:not(.rate-header-col):not(.prescription-col),
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode] table[data-incentive-column="true"] tbody tr[data-incentive-rate="15"] > * {
-  background: #faf6fd !important;
+  background: #fff7ed !important;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }
 
-/* 2. 비율별 소계 합계 행 (7% 합계, 15% 합계): 구분감 있는 단정한 파스텔 톤 */
+/* 2. 비율별 소계 합계 행 (7% 합계: 연한 파랑, 15% 합계: 연한 갈색) */
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] :is(th, td).settlement-rate-subtotal-row--7,
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode] table tbody tr.settlement-rate-subtotal-row--7 > * {
-  background: #e2f2e0 !important;
-  color: #1b4320 !important;
+  background: #dbeafe !important;
+  color: #1e40af !important;
   font-size: 15px !important;
   font-weight: 900 !important;
   print-color-adjust: exact;
@@ -33,19 +33,19 @@
 }
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] :is(th, td).settlement-rate-subtotal-row--15,
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode] table tbody tr.settlement-rate-subtotal-row--15 > * {
-  background: #efe2fa !important;
-  color: #4a196e !important;
+  background: #ffedd5 !important;
+  color: #9a3412 !important;
   font-size: 15px !important;
   font-weight: 900 !important;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }
 
-/* 3. 가로보기 상단 인센티브 그룹 헤더 (인센티브 7%, 인센티브 15%) */
+/* 3. 가로보기 상단 인센티브 그룹 헤더 (인센티브 7%: 연파랑, 인센티브 15%: 연갈색) */
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] th.rate-header-col[data-incentive-rate="7"] {
-  background: #e8f5e7 !important;
-  color: #1e5e2e !important;
-  border-bottom: 2px solid #b7dfb8 !important;
+  background: #dbeafe !important;
+  color: #1d4ed8 !important;
+  border-bottom: 2px solid #93c5fd !important;
   font-weight: 800 !important;
   font-size: 0.96rem !important;
   padding: 1.5px 6px !important;
@@ -54,9 +54,9 @@
   text-align: center !important;
 }
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] th.rate-header-col[data-incentive-rate="15"] {
-  background: #f4ecfb !important;
-  color: #581c87 !important;
-  border-bottom: 2px solid #dfc7f7 !important;
+  background: #ffedd5 !important;
+  color: #9a3412 !important;
+  border-bottom: 2px solid #fdba74 !important;
   font-weight: 800 !important;
   font-size: 0.96rem !important;
   padding: 1.5px 6px !important;

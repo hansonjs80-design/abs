@@ -167,10 +167,10 @@ test('shinjang settlement distinguishes 7 and 15 percent incentive subtotals by 
     assert.match(source, /settlement-rate-subtotal-row--7/);
     assert.match(source, /settlement-rate-subtotal-row--15/);
   }
-  assert.match(horizontal2Css, /\.settlement-rate-subtotal-row--7[\s\S]*?background:\s*#eaf3ff !important;/);
-  assert.match(horizontal2Css, /\.settlement-rate-subtotal-row--15[\s\S]*?background:\s*#f8edff !important;/);
-  assert.match(verticalCss, /tr\.settlement-rate-subtotal-row\.settlement-rate-subtotal-row--7 > \*[\s\S]*?background:\s*#eaf3ff !important;/);
-  assert.match(verticalCss, /tr\.settlement-rate-subtotal-row\.settlement-rate-subtotal-row--15 > \*[\s\S]*?background:\s*#f8edff !important;/);
+  assert.match(horizontal2Css, /\.settlement-rate-subtotal-row--7[\s\S]*?background:\s*#dbeafe !important;/);
+  assert.match(horizontal2Css, /\.settlement-rate-subtotal-row--15[\s\S]*?background:\s*#ffedd5 !important;/);
+  assert.match(verticalCss, /tr\.settlement-rate-subtotal-row\.settlement-rate-subtotal-row--7 > \*[\s\S]*?background:\s*#dbeafe !important;/);
+  assert.match(verticalCss, /tr\.settlement-rate-subtotal-row\.settlement-rate-subtotal-row--15 > \*[\s\S]*?background:\s*#ffedd5 !important;/);
 });
 
 test('vertical settlement distinguishes overall totals with a thicker top border', async () => {

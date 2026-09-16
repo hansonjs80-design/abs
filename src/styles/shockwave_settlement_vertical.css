@@ -10,17 +10,19 @@
   max-width: 100% !important;
 }
 
-/* 신장분사 인센율 소계는 치료사별 행과 총합계에서 같은 색을 사용한다. */
+/* 신장분사 인센율 소계는 7%(연한 파랑)와 15%(연한 갈색)를 치료사별 행과 총합계에서 구분하여 적용한다. */
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.settlement-rate-subtotal-row.settlement-rate-subtotal-row--7 > *,
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table tbody tr.settlement-rate-subtotal-row.settlement-rate-subtotal-row--7 > * {
-  background: #eaf3ff !important;
+  background: #dbeafe !important;
+  color: #1e40af !important;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
 
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-table tbody tr.settlement-rate-subtotal-row.settlement-rate-subtotal-row--15 > *,
 .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-table tbody tr.settlement-rate-subtotal-row.settlement-rate-subtotal-row--15 > * {
-  background: #f8edff !important;
+  background: #ffedd5 !important;
+  color: #9a3412 !important;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
