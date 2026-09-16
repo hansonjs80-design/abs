@@ -888,4 +888,17 @@ body.shockwave-settlement-print .sw-view-mode-btn {
     font-weight: 800 !important;
     padding: 1.2mm 2mm !important;
   }
+
+  /* 3. 치료사별 결산 전체 합계 행의 좌측 spacer 셀 (치료사 이름 세로 박스 아래) 좌측/하단 테두리 선 제거 */
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table td.horizontal2-total-spacer,
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .horizontal2-total-spacer {
+    border-left: hidden !important;
+    border-left-style: none !important;
+    border-bottom: hidden !important;
+    border-bottom-style: none !important;
+    border-top: 0.5pt solid #64748b !important;
+    border-right: 0.5pt solid #64748b !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+  }
 }

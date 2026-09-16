@@ -148,6 +148,10 @@ test('shockwave horizontal2 therapist total rows share the body table columns', 
   assert.match(horizontal2View, /rowSpan=\{therapistPrescriptions\.length \+ 1 \+ \(showIncentiveRateSubtotals \? \(item\.incentiveRateBreakdown\?\.length \|\| 0\) : 0\)\}/);
   assert.doesNotMatch(horizontal2View, /sw-horizontal2-therapist-total-table/);
   assert.match(horizontal2Css, /\.sw-horizontal2-therapist-table \.horizontal2-total-spacer\s*\{[\s\S]*?border-right:\s*2px solid #64748b !important;/);
+  assert.match(
+    horizontal2Css,
+    /\.sw-horizontal2-therapist-table td\.horizontal2-total-spacer[\s\S]*?border-left:\s*hidden !important;[\s\S]*?border-bottom:\s*hidden !important;/s,
+  );
 });
 
 test('shinjang settlement distinguishes 7 and 15 percent incentive subtotals by background', async () => {
