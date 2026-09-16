@@ -26,6 +26,8 @@
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode] table tbody tr.settlement-rate-subtotal-row--7 > * {
   background: #e2f2e0 !important;
   color: #1b4320 !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }
@@ -33,6 +35,8 @@
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode] table tbody tr.settlement-rate-subtotal-row--15 > * {
   background: #efe2fa !important;
   color: #4a196e !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }

@@ -460,8 +460,8 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 }
 
 .sw-horizontal2-grand-table .grand-title {
-  background: #fff7cc !important;
-  color: #003da5 !important;
+  background: #d9edf2 !important;
+  color: #0f172a !important;
   font-size: 15px !important;
   font-weight: 900 !important;
   padding: 3px 6px !important;
@@ -527,9 +527,11 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 
 .sw-horizontal2-therapist-table tbody tr.settlement-rate-subtotal-row,
 .sw-horizontal2-therapist-table tbody tr.settlement-rate-subtotal-row > * {
-  height: 30px !important;
+  height: 32px !important;
   padding-top: 2px !important;
   padding-bottom: 2px !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
 }
 
 .sw-horizontal2-therapist-table .horizontal2-total-row {
@@ -552,14 +554,14 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 }
 
 .sw-horizontal2-grand-table tbody tr:first-child th:not(.grand-title) {
-  font-size: 14.2px !important;
+  font-size: 14.5px !important;
   padding: 3px 6px !important;
   height: 30px !important;
 }
 
 .sw-horizontal2-grand-table .grand-rate-label {
-  font-size: 14.2px !important;
-  font-weight: 800 !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
   padding: 3px 6px !important;
 }
 
