@@ -589,18 +589,16 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   border-top: 2px solid #64748b !important;
 }
 
-.sw-horizontal2-therapist-table .horizontal2-total-spacer {
+.sw-horizontal2-therapist-table .horizontal2-total-spacer,
+.sw-horizontal2-therapist-table td.horizontal2-total-spacer,
+.sw-horizontal2-therapist-table tr.horizontal2-total-row > td:first-child,
+td.horizontal2-total-spacer {
+  border-left: 0 none transparent !important;
   border-left: hidden !important;
+  border-left-color: transparent !important;
+  border-bottom: 0 none transparent !important;
   border-bottom: hidden !important;
-  border-top: 2px solid #64748b !important;
-  border-right: 2px solid #64748b !important;
-  background: #ffffff !important;
-  padding: 0 !important;
-}
-
-.sw-horizontal2-therapist-table .horizontal2-total-row td.horizontal2-total-spacer {
-  border-left: hidden !important;
-  border-bottom: hidden !important;
+  border-bottom-color: transparent !important;
   border-top: 2px solid #64748b !important;
   border-right: 2px solid #64748b !important;
   background: #ffffff !important;
@@ -892,12 +890,15 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   /* 3. 치료사별 결산 전체 합계 행의 좌측 spacer 셀 (치료사 이름 세로 박스 아래) 좌측/하단 테두리 선 제거 */
   body.settlement-print .sw-horizontal2-therapist-table td.horizontal2-total-spacer,
   body.settlement-print .sw-horizontal2-therapist-table .horizontal2-total-spacer,
+  body.settlement-print .sw-horizontal2-therapist-table tr.horizontal2-total-row > td:first-child,
   body.settlement-print .horizontal2-total-spacer,
   td.horizontal2-total-spacer {
-    border-left: hidden !important;
     border-left: 0 none transparent !important;
-    border-bottom: hidden !important;
+    border-left: hidden !important;
+    border-left-color: transparent !important;
     border-bottom: 0 none transparent !important;
+    border-bottom: hidden !important;
+    border-bottom-color: transparent !important;
     border-top: 0.5pt solid #64748b !important;
     border-right: 0.5pt solid #64748b !important;
     background: #ffffff !important;
