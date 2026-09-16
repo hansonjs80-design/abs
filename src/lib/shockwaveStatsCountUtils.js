@@ -182,8 +182,8 @@ export function getShockwaveSettlementPrintColumnWeight(prescription, treatmentL
     ? String(prescription || '').replace(/신장분사/g, '신장')
     : String(prescription || '');
   const compactLabel = displayLabel.replace(/\s+/g, '');
-  const isLongLabel = /[()[\]{}]/.test(compactLabel) || Array.from(compactLabel).length >= 7;
-  return isLongLabel ? 1.05 : 0.95;
+  const isLongLabel = /[()[\]{}]/.test(compactLabel) || Array.from(compactLabel).length >= 8;
+  return isLongLabel ? 1.02 : 1.0;
 }
 
 export function buildShockwaveSettlementPrintColumnWidths(
@@ -202,7 +202,7 @@ export function buildShockwaveSettlementPrintColumnWidths(
     });
   const weights = columns.map(({ prescription, isSingleTherapistColumn }) => (
     getShockwaveSettlementPrintColumnWeight(prescription, treatmentLabel)
-    * (isSingleTherapistColumn ? 1.05 : 1)
+    * (isSingleTherapistColumn ? 1.02 : 1)
   ));
   const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
   if (totalWeight <= 0) return [];
