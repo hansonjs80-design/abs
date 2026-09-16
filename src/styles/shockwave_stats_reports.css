@@ -133,7 +133,7 @@
   vertical-align: middle;
   border-left: 2px solid var(--therapist-accent, #64748b);
   border-right: 2px solid var(--therapist-accent, #64748b);
-  border-bottom: 1.5px solid #475569 !important;
+  border-bottom: 1.5px solid #94a3b8 !important;
   box-shadow: none !important;
 }
 
@@ -737,7 +737,7 @@
   border-left: 1px solid var(--therapist-line, #cfd8e5);
   border-right: 1px solid var(--therapist-line, #cfd8e5);
   border-top: 2px solid var(--therapist-accent, #64748b);
-  border-bottom: 1.5px solid #475569 !important;
+  border-bottom: 1.5px solid #94a3b8 !important;
   background: var(--therapist-head, #f3f6fa);
   color: var(--therapist-text, #243247);
   box-shadow: none !important;
