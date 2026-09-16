@@ -341,11 +341,31 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 }
 
 .sw-horizontal2-therapist-table thead th,
-.sw-horizontal2-therapist-table .horizontal2-header-row th:not(.therapist-name-col),
-.sw-horizontal2-recent-table thead th,
-.sw-horizontal2-grand-table tbody tr:first-child th:not(.grand-title) {
+.sw-horizontal2-therapist-table .horizontal2-header-row th:not(.therapist-name-col) {
   background: #d9edf2 !important;
   color: #0f172a !important;
+  font-weight: 900 !important;
+  font-size: 13.5px !important;
+  line-height: 1.08 !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+}
+
+/* 우측 상단 총 결산 테이블 상단 헤더 행: 파란색 */
+.sw-horizontal2-grand-table tbody tr:first-child th {
+  background: #bfdbfe !important;
+  color: #1e3a8a !important;
+  font-weight: 900 !important;
+  font-size: 13.5px !important;
+  line-height: 1.08 !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+}
+
+/* 우측 하단 최근 6개월 결산/신환 현황 테이블 상단 헤더 행: 오랜지색 */
+.sw-horizontal2-recent-table thead th {
+  background: #fed7aa !important;
+  color: #7c2d12 !important;
   font-weight: 900 !important;
   font-size: 13.5px !important;
   line-height: 1.08 !important;
@@ -464,8 +484,8 @@ body.shockwave-settlement-print .sw-view-mode-btn {
 }
 
 .sw-horizontal2-grand-table .grand-title {
-  background: #d9edf2 !important;
-  color: #0f172a !important;
+  background: #bfdbfe !important;
+  color: #1e3a8a !important;
   font-size: 15px !important;
   font-weight: 900 !important;
   padding: 3px 6px !important;
@@ -850,12 +870,26 @@ td.horizontal2-total-spacer {
 
   /* 1. 헤더 영역 글자 크기 약간 더 도드라지게 (11.5pt) */
   body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table thead th,
-  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .horizontal2-header-row th:not(.therapist-name-col),
-  body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table tbody tr:first-child th,
-  body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table thead th {
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-therapist-table .horizontal2-header-row th:not(.therapist-name-col) {
     font-size: 11.5pt !important;
     font-weight: 900 !important;
     background: #dbeafe !important;
+    padding: 1.5mm 2mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-grand-table tbody tr:first-child th {
+    font-size: 11.5pt !important;
+    font-weight: 900 !important;
+    background: #bfdbfe !important;
+    color: #1e3a8a !important;
+    padding: 1.5mm 2mm !important;
+  }
+
+  body.settlement-print.shockwave-settlement-print .sw-horizontal2-recent-table thead th {
+    font-size: 11.5pt !important;
+    font-weight: 900 !important;
+    background: #fed7aa !important;
+    color: #7c2d12 !important;
     padding: 1.5mm 2mm !important;
   }
 
