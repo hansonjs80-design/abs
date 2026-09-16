@@ -214,9 +214,9 @@
   background-color: #ffffff !important;
 }
 
-/* 총합계 테이블 결산 금액/인센티브 숫자 셀(1,040,000원, 785,000원 등): 한 단계 축소 및 흰색 배경 강제 */
+/* 총합계 테이블 결산 금액/인센티브 숫자 셀(1,040,000원, 785,000원 등): 화면상에서는 1단계 크게 설정 및 흰색 배경 강제 */
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-grand-total-table tbody tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) td {
-  font-size: 0.95rem !important;
+  font-size: 1.1rem !important;
   font-weight: 800 !important;
   background: #ffffff !important;
   background-color: #ffffff !important;
