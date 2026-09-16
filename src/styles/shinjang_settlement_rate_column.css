@@ -101,8 +101,8 @@
   padding: 4px 6px !important;
   font-size: 1.05rem !important;
   line-height: 1.2 !important;
-  border-bottom: 2.5px solid #1e293b !important;
-  box-shadow: inset 0 -2.5px 0 #1e293b !important;
+  border-bottom: 1.5px solid #475569 !important;
+  box-shadow: none !important;
 }
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] :is(.sw-compact-settlement-table, .sw-grand-total-table) thead .label-col,
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] :is(.sw-compact-settlement-table, .sw-grand-total-table) .row-label {
