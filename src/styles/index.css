@@ -898,6 +898,19 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     text-align: center !important;
   }
 
+  /* 가로보기 2 결산 테이블 치료사 이름 하단 spacer 셀의 인쇄 보더(좌측/하단) 제거 */
+  body.settlement-print .sw-settlement-table td.horizontal2-total-spacer,
+  body.settlement-print td.horizontal2-total-spacer {
+    border-left: hidden !important;
+    border-left: 0 none transparent !important;
+    border-bottom: hidden !important;
+    border-bottom: 0 none transparent !important;
+    border-top: 0.5pt solid #64748b !important;
+    border-right: 0.5pt solid #64748b !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+  }
+
   /* 결산 테이블 1열(첫 번째 열) 가운데 정렬 */
   body.settlement-print .sw-settlement-table td:first-child,
   body.settlement-print .sw-settlement-table th:first-child {
