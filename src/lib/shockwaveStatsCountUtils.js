@@ -177,15 +177,19 @@ export function filterVisibleSettlementPrescriptions({
   });
 }
 
-export function getShockwaveSettlementPrintColumnWeight(prescription) {
-  const compactLabel = String(prescription || '').replace(/\s+/g, '');
-  const isLongLabel = /[()[\]{}]/.test(compactLabel) || Array.from(compactLabel).length >= 6;
-  return isLongLabel ? 1.1 : 0.9;
+export function getShockwaveSettlementPrintColumnWeight(prescription, treatmentLabel = '') {
+  const displayLabel = (treatmentLabel === '신장분사')
+    ? String(prescription || '').replace(/신장분사/g, '신장')
+    : String(prescription || '');
+  const compactLabel = displayLabel.replace(/\s+/g, '');
+  const isLongLabel = /[()[\]{}]/.test(compactLabel) || Array.from(compactLabel).length >= 7;
+  return isLongLabel ? 1.05 : 0.95;
 }
 
 export function buildShockwaveSettlementPrintColumnWidths(
   prescriptionGroups,
   valueAreaPercent = 81,
+  treatmentLabel = '',
 ) {
   const columns = (Array.isArray(prescriptionGroups) ? prescriptionGroups : [])
     .flatMap((group) => {
@@ -197,8 +201,8 @@ export function buildShockwaveSettlementPrintColumnWidths(
       }));
     });
   const weights = columns.map(({ prescription, isSingleTherapistColumn }) => (
-    getShockwaveSettlementPrintColumnWeight(prescription)
-    * (isSingleTherapistColumn ? 1.25 : 1)
+    getShockwaveSettlementPrintColumnWeight(prescription, treatmentLabel)
+    * (isSingleTherapistColumn ? 1.05 : 1)
   ));
   const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
   if (totalWeight <= 0) return [];

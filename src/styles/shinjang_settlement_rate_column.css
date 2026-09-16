@@ -194,6 +194,19 @@
 }
 
 @media print {
+  body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-horizontal-settlement-main-table {
+    table-layout: fixed !important;
+    width: 100% !important;
+  }
+  body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-horizontal-settlement-main-table col.sw-shockwave-settlement-prescription-column {
+    width: var(--sw-shockwave-print-column-width) !important;
+  }
+  body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-horizontal-settlement-main-table :is(th, td).prescription-col,
+  body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-horizontal-settlement-main-table :is(th, td)[data-incentive-rate] {
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+  }
   /* 24:17:42:17 → 24:15.3:33.6:15.3 (88.2%). Transfer saved width to totals. */
   body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-settlement-support-row:not(.sw-settlement-support-row--single) {
     grid-template-columns: minmax(0, 53.664%) minmax(0, 42.336%) !important;

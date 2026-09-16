@@ -380,8 +380,12 @@ export default function ShockwaveSettlementView({
     showIncentiveRateSubtotals,
   ]);
   const horizontalPrintColumns = useMemo(
-    () => buildShockwaveSettlementPrintColumnWidths(horizontalTherapistPrescriptionGroups),
-    [horizontalTherapistPrescriptionGroups]
+    () => buildShockwaveSettlementPrintColumnWidths(
+      horizontalTherapistPrescriptionGroups,
+      81,
+      treatmentLabel
+    ),
+    [horizontalTherapistPrescriptionGroups, treatmentLabel]
   );
 
   if (!displayTherapists.length) {

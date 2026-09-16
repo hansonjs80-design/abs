@@ -191,7 +191,7 @@ describe('shockwave stats count utilities', () => {
     );
     assert.equal(
       Math.round((columns[0].widthPercent / columns[1].widthPercent) * 100),
-      122,
+      111,
     );
   });
 
