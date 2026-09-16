@@ -1542,15 +1542,24 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table th,
   body.settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table td,
   body.settlement-print .sw-settlement-stack--shockwave .sw-recent-summary-card .sw-summary-table th,
-  body.settlement-print .sw-settlement-stack--shockwave .sw-recent-summary-card .sw-summary-table td {
+  body.settlement-print .sw-settlement-stack--shockwave .sw-recent-summary-card .sw-summary-table td,
+  body.settlement-print .sw-recent-summary-card .sw-summary-table :is(th, td) {
     font-size: 13pt !important;
     font-weight: 800 !important;
     line-height: 1.15 !important;
+    vertical-align: middle !important;
+    text-align: center !important;
   }
 
-  /* 하단 왼쪽 총합계 테이블: 결산 금액 합계 / 인센티브 합계 행 글자 크기 한단계 작게 (11.5pt) */
-  body.settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) :is(th, td) {
-    font-size: 11.5pt !important;
+  /* 하단 왼쪽 총합계 테이블: 결산 금액 합계 / 인센티브 합계 레이블(th)은 같은 열과 비슷하게 13pt 유지 */
+  body.settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) th.row-label {
+    font-size: 13pt !important;
+    font-weight: 800 !important;
+  }
+
+  /* 하단 왼쪽 총합계 테이블: 같은 행 숫자 셀(td) 글자 크기는 약간 축소 (10.8pt) */
+  body.settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) td {
+    font-size: 10.8pt !important;
     font-weight: 700 !important;
   }
 

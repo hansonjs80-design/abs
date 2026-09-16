@@ -125,16 +125,18 @@
   line-height: 1.05 !important;
 }
 
-/* 최근 6개월 결산/신환 현황 테이블: 셀 높이 10% 축소 (38px) 및 '월' 열 가운데 정렬 */
+/* 최근 6개월 결산/신환 현황 테이블: 셀 높이 10% 축소 (38px) 및 수직/수평 가운데 정렬 */
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-recent-summary-card .sw-summary-table :is(th, td) {
   height: 38px !important;
   padding: 1.5px 4px !important;
   line-height: 1.1 !important;
+  vertical-align: middle !important;
 }
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-recent-summary-card .sw-summary-table tbody th.month-label,
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-recent-summary-card .sw-summary-table thead th:first-child,
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-summary-table tbody th.month-label {
   text-align: center !important;
+  vertical-align: middle !important;
 }
 
 /* 가로보기 데이터 셀 (처방 건수) 텍스트 명확화 */
@@ -195,9 +197,14 @@
   font-size: calc(1.16rem + 2px) !important;
 }
 
-/* 하단 총합계 테이블(아래 왼쪽 테이블): 결산 금액 합계 / 인센티브 합계 행 글자 크기 한 단계 작게 */
-.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-grand-total-table tbody tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) :is(th, td) {
-  font-size: 0.92rem !important;
+/* 하단 총합계 테이블(아래 왼쪽 테이블): 결산 금액 합계 / 인센티브 합계 레이블(th)은 같은 열 글자 크기와 비슷하게 유지 */
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-grand-total-table tbody tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) th.row-label {
+  font-size: 0.98rem !important;
+}
+
+/* 하단 총합계 테이블(아래 왼쪽 테이블): 같은 행 숫자 셀(td) 글자 크기는 약간 줄임 */
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-grand-total-table tbody tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) td {
+  font-size: 0.88rem !important;
 }
 
 /* 하단 총합계 테이블(아래 왼쪽 테이블): 신장분사 전체 합계(건) / 전체 결산 금액(원) / 전체 인센티브 합계 행 글자 크기 한 단계 크게 */
