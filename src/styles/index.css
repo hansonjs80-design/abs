@@ -927,10 +927,10 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.settlement-print.shockwave-settlement-print .sw-horizontal-settlement-main-table th,
   body.settlement-print.shockwave-settlement-print .sw-horizontal-settlement-main-table td {
     box-sizing: border-box !important;
-    min-width: 0 !important;
-    padding: 1.2mm 1.5mm !important;
+    min-width: 14mm !important;
+    padding: 1.8mm 3.6mm !important;
     font-size: 12.5pt !important;
-    line-height: 1.05 !important;
+    line-height: 1.08 !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: clip !important;
@@ -938,14 +938,14 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
 
   body.settlement-print.shockwave-settlement-print
     .sw-horizontal-settlement-main-table thead .therapist-col {
-    padding: 1.5mm 1.8mm !important;
+    padding: 1.8mm 4mm !important;
     font-size: 13.5pt !important;
     line-height: 1.0 !important;
   }
 
   body.settlement-print.shockwave-settlement-print
     .sw-horizontal-settlement-main-table thead .prescription-col {
-    padding: 1.1mm 1.2mm !important;
+    padding: 1.4mm 3.2mm !important;
     font-size: 12.5pt !important;
     line-height: 1.0 !important;
   }
@@ -955,8 +955,9 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   body.settlement-print.shockwave-settlement-print
     .sw-horizontal-settlement-main-table .row-label {
     width: auto !important;
-    padding-left: 1.5mm !important;
-    padding-right: 1.5mm !important;
+    min-width: 30mm !important;
+    padding-left: 3.8mm !important;
+    padding-right: 3.8mm !important;
     font-size: 13pt !important;
     line-height: 1.08 !important;
   }

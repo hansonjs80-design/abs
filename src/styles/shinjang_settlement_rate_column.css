@@ -217,10 +217,12 @@
     box-sizing: border-box !important;
     white-space: nowrap !important;
     text-align: center !important;
-    letter-spacing: -0.03em !important;
+    letter-spacing: -0.02em !important;
     word-break: keep-all !important;
     overflow: hidden !important;
     text-overflow: clip !important;
+    padding: 1.8mm 3.6mm !important;
+    min-width: 14mm !important;
   }
   /* 24:17:42:17 → 24:15.3:33.6:15.3 (88.2%). Transfer saved width to totals. */
   body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-settlement-support-row:not(.sw-settlement-support-row--single) {
