@@ -1500,7 +1500,7 @@
   width: max-content;
   min-width: 100%;
   max-width: none;
-  gap: 18px;
+  gap: 9px;
 }
 
 .sw-stats-body--settlement .sw-settlement-stack--shockwave .sw-settlement-card {

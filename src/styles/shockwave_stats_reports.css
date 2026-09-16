@@ -37,7 +37,7 @@
 .sw-settlement-stack {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 10px;
 }
 
 .sw-settlement-header {
