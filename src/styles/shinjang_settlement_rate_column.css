@@ -179,12 +179,23 @@
 }
 
 /* 전체 결산 금액/인센티브 행은 금액 숫자만 한 단계 더 강조한다. */
-.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] :is(.sw-horizontal-settlement-main-table, .sw-grand-total-table) tbody tr.settlement-rate-total-row.settlement-amount-row td {
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] :is(.sw-horizontal-settlement-main-table) tbody tr.settlement-rate-total-row.settlement-amount-row td {
   font-size: calc(1.18rem + 2px) !important;
 }
 
-.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] :is(.sw-horizontal-settlement-main-table, .sw-grand-total-table) tbody tr.settlement-rate-total-row.settlement-incentive-row td {
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] :is(.sw-horizontal-settlement-main-table) tbody tr.settlement-rate-total-row.settlement-incentive-row td {
   font-size: calc(1.16rem + 2px) !important;
+}
+
+/* 하단 총합계 테이블(아래 왼쪽 테이블): 결산 금액 합계 / 인센티브 합계 행 글자 크기 한 단계 작게 */
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-grand-total-table tbody tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) :is(th, td) {
+  font-size: 0.92rem !important;
+}
+
+/* 하단 총합계 테이블(아래 왼쪽 테이블): 신장분사 전체 합계(건) / 전체 결산 금액(원) / 전체 인센티브 합계 행 글자 크기 한 단계 크게 */
+.sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-grand-total-table tbody tr.settlement-rate-total-row :is(th, td) {
+  font-size: 1.22rem !important;
+  font-weight: 900 !important;
 }
 
 @media screen {
