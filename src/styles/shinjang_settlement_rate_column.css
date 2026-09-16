@@ -197,20 +197,23 @@
   font-size: calc(1.16rem + 2px) !important;
 }
 
-/* 하단 총합계 테이블(아래 왼쪽 테이블): 결산 금액 합계 / 인센티브 합계 행의 글자와 숫자 크기를 신장분사 합계(건) 행과 동일하게 일치 */
+/* 하단 총합계 테이블(아래 왼쪽 테이블): 결산 금액 합계 / 인센티브 합계 행의 글자와 숫자 크기를 신장분사 합계(건) 행과 동일하게 일치 및 노란 배경색 제거 */
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-grand-total-table tbody tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) th.row-label {
   font-size: 0.98rem !important;
+  background: #ffffff !important;
 }
 
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-grand-total-table tbody tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) td {
   font-size: 1.18rem !important;
   font-weight: 800 !important;
+  background: #ffffff !important;
 }
 
-/* 하단 총합계 테이블(아래 왼쪽 테이블): 신장분사 전체 합계(건) / 전체 결산 금액(원) / 전체 인센티브 합계 행 글자 크기 한 단계 크게 */
+/* 하단 총합계 테이블(아래 왼쪽 테이블): 아래부터 3개 행(신장분사 전체 합계, 전체 결산 금액, 전체 인센티브 합계) 연한 노란색 배경 및 글자 크기 한 단계 크게 */
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"] .sw-grand-total-table tbody tr.settlement-rate-total-row :is(th, td) {
   font-size: 1.22rem !important;
   font-weight: 900 !important;
+  background: #fff7cc !important;
 }
 
 @media screen {

@@ -1551,16 +1551,18 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     text-align: center !important;
   }
 
-  /* 하단 왼쪽 총합계 테이블: 결산 금액 합계 / 인센티브 합계 행의 글자 및 숫자를 위의 신장분사 합계(건) 행과 동일하게 13pt로 설정 */
+  /* 하단 왼쪽 총합계 테이블: 결산 금액 합계 / 인센티브 합계 행의 글자 및 숫자를 위의 신장분사 합계(건) 행과 동일하게 13pt로 설정 및 노란 배경색 제거 */
   body.settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) :is(th, td) {
     font-size: 13pt !important;
     font-weight: 800 !important;
+    background: #ffffff !important;
   }
 
-  /* 하단 왼쪽 총합계 테이블: 신장분사 전체 합계(건) / 전체 결산 금액(원) / 전체 인센티브 합계 행 글자 크기 한단계 크게 (15pt) */
+  /* 하단 왼쪽 총합계 테이블: 아래부터 3개 행 (신장분사 전체 합계(건) / 전체 결산 금액(원) / 전체 인센티브 합계) 연한 노란색 배경 및 15pt 적용 */
   body.settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table tr.settlement-rate-total-row :is(th, td) {
     font-size: 15pt !important;
     font-weight: 900 !important;
+    background: #fff7cc !important;
   }
 
   body.shockwave-settlement-print .sw-settlement-stack--shockwave .sw-grand-total-card .sw-settlement-table-wrap {
