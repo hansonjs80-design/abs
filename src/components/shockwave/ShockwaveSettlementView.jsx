@@ -694,7 +694,8 @@ export default function ShockwaveSettlementView({
                         {horizontalSummaryIncentiveRateGroups.map((rateGroup) => (
                           <td
                             key={`grand-rate-amount-${rateGroup.percentage}`}
-                            className={`grand-value merged-value amount ${getIncentiveRateToneClass(rateGroup.percentage)}`}
+                            className={`grand-value merged-value amount grand-rate-cell--white ${getIncentiveRateToneClass(rateGroup.percentage)}`}
+                            style={{ backgroundColor: '#ffffff', background: '#ffffff' }}
                             colSpan={rateGroup.prescriptions.length}
                           >
                             {formatCurrency(
@@ -713,7 +714,8 @@ export default function ShockwaveSettlementView({
                         {horizontalSummaryIncentiveRateGroups.map((rateGroup) => (
                           <td
                             key={`grand-rate-incentive-${rateGroup.percentage}`}
-                            className={`grand-value merged-value incentive ${getIncentiveRateToneClass(rateGroup.percentage)}`}
+                            className={`grand-value merged-value incentive grand-rate-cell--white ${getIncentiveRateToneClass(rateGroup.percentage)}`}
+                            style={{ backgroundColor: '#ffffff', background: '#ffffff' }}
                             colSpan={rateGroup.prescriptions.length}
                           >
                             {formatCurrency(

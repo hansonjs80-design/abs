@@ -1552,8 +1552,11 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   }
 
   /* 인쇄 미리보기: 결산 금액 합계 및 인센티브 합계 행 배경색 흰색 보장 */
-  body.settlement-print :is(.sw-settlement-table, .sw-horizontal-settlement-main-table, .sw-grand-total-table) tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) :is(th, td) {
+  body.settlement-print :is(.sw-settlement-table, .sw-horizontal-settlement-main-table, .sw-grand-total-table) tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) :is(th, td),
+  body.settlement-print .sw-grand-total-table tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) :is(th, td, td.settlement-rate-subtotal-row--7, td.settlement-rate-subtotal-row--15, td.grand-rate-cell--white),
+  body.shockwave-settlement-print .sw-grand-total-table tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) :is(th, td, td.settlement-rate-subtotal-row--7, td.settlement-rate-subtotal-row--15, td.grand-rate-cell--white) {
     background: #ffffff !important;
+    background-color: #ffffff !important;
   }
 
   /* 결산 금액 합계 및 인센티브 합계 글자 크기 조금 확대 (14pt) */
@@ -1561,13 +1564,20 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     font-size: 14pt !important;
     font-weight: 900 !important;
     background: #ffffff !important;
+    background-color: #ffffff !important;
   }
 
   /* 총합계 테이블 결산 금액/인센티브 숫자 셀(1,040,000원, 785,000원 등) 한 단계 축소 (11pt) */
-  body.settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) td {
+  body.settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) td,
+  body.settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) td.settlement-rate-subtotal-row--7,
+  body.settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) td.settlement-rate-subtotal-row--15,
+  body.shockwave-settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) td,
+  body.shockwave-settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) td.settlement-rate-subtotal-row--7,
+  body.shockwave-settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table tr.settlement-rate-subtotal-row:is(.settlement-amount-row, .settlement-incentive-row) td.settlement-rate-subtotal-row--15 {
     font-size: 11pt !important;
     font-weight: 800 !important;
     background: #ffffff !important;
+    background-color: #ffffff !important;
   }
 
   /* 하단 왼쪽 총합계 테이블: 아래부터 3개 행 (신장분사 전체 합계(건) / 전체 결산 금액(원) / 전체 인센티브 합계) 연한 노란색 배경 및 15pt 적용 */
