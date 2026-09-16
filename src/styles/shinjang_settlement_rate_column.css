@@ -65,20 +65,20 @@
   text-align: center !important;
 }
 
-/* 4. 가로보기 처방목록 헤더 (신장C, 신장 2.5 등): 상위 그룹을 받쳐주는 은은하고 선명한 서브톤 */
+/* 4. 가로보기 처방목록 헤더 (신장C, 신장 2.5 등): 7%는 연파랑 서브톤, 15%는 연갈색 서브톤 적용 */
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] th.prescription-col[data-incentive-rate="7"],
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-grand-total-table th.prescription-col[data-incentive-rate="7"] {
-  background: #f3f9f2 !important;
-  color: #1e3f22 !important;
+  background: #eff6ff !important;
+  color: #1e40af !important;
   font-weight: 750 !important;
-  border-bottom: 1px solid #d0e7ce !important;
+  border-bottom: 1px solid #bfdbfe !important;
 }
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] th.prescription-col[data-incentive-rate="15"],
 .sw-settlement-stack.sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-grand-total-table th.prescription-col[data-incentive-rate="15"] {
-  background: #faf4fd !important;
-  color: #3b1756 !important;
+  background: #fff7ed !important;
+  color: #9a3412 !important;
   font-weight: 750 !important;
-  border-bottom: 1px solid #e9d7f9 !important;
+  border-bottom: 1px solid #fed7aa !important;
 }
 
 /* 5. 가로보기 테이블 행 높이 15% 축소 (이름 헤더 및 글자 크기는 유지) */
