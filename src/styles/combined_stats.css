@@ -113,6 +113,7 @@
   padding: 6px 10px;
   border-right: 1px solid #cbd5e1;
   border-bottom: 1px solid #cbd5e1;
+  background-clip: padding-box;
   text-align: center;
   font-size: 1rem;
   font-weight: 800;
@@ -212,6 +213,21 @@
 
 .combined-incentive-rate-cell {
   padding: 3px 5px !important;
+}
+
+/* 윈도우 분수 배율(125%, 150%) 및 rowspan 셀에서 가장 우측 인센 열의 좌측 보더선이 누락되는 현상 완벽 방지 */
+.combined-therapist-card thead tr:nth-child(2) th:last-child,
+.combined-therapist-card tbody td.combined-incentive-rate-cell,
+.combined-therapist-card tbody tr.combined-therapist-total > td:last-child {
+  border-left: 1px solid #cbd5e1 !important;
+  box-shadow: inset 1px 0 0 0 #cbd5e1;
+}
+
+.combined-therapist-card thead tr:nth-child(2) th:nth-child(4),
+.combined-therapist-card tbody td.combined-therapist-incentive-cell,
+.combined-therapist-card tbody tr.combined-therapist-total > td.combined-therapist-incentive-cell,
+.combined-therapist-card tbody tr.combined-therapist-total > td:nth-child(4) {
+  border-right: 1px solid #cbd5e1 !important;
 }
 
 .combined-incentive-rate-list {

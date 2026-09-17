@@ -138,4 +138,13 @@ describe('combined statistics UI', () => {
     assert.match(styleSource, /\.combined-recent-single-value\s*\{/);
     assert.match(styleSource, /@media print\s*\{[\s\S]*?\.combined-recent-filter-tabs,[\s\S]*?display:\s*none !important;/);
   });
+
+  it('preserves the left border of the rightmost incentive rate column under Windows scaling', async () => {
+    const styleSource = await readFile(styleUrl, 'utf8');
+
+    assert.match(styleSource, /background-clip:\s*padding-box;/);
+    assert.match(styleSource, /\.combined-therapist-card tbody td\.combined-incentive-rate-cell,[\s\S]*border-left:\s*1px solid #cbd5e1 !important;/);
+    assert.match(styleSource, /box-shadow:\s*inset 1px 0 0 0 #cbd5e1;/);
+    assert.match(styleSource, /\.combined-therapist-card tbody td\.combined-therapist-incentive-cell,[\s\S]*border-right:\s*1px solid #cbd5e1 !important;/);
+  });
 });
