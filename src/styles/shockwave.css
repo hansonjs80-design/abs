@@ -2027,6 +2027,13 @@
   background: #b3b3b3;
 }
 
+.context-menu-body-preset-item.is-keyboard-focused,
+.context-menu-body-preset-item:focus-within {
+  background: #b3b3b3;
+  outline: 2px solid rgba(37, 99, 235, 0.48);
+  outline-offset: -1px;
+}
+
 .context-menu-body-preset-label {
   display: flex;
   flex: 1 1 auto;
@@ -2058,6 +2065,11 @@
   flex: 0 0 auto;
   align-self: center;
   margin: 0 5.6px 0 0;
+}
+
+.context-menu-body-preset-label input[type="checkbox"]:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
 }
 
 .context-menu-body-preset-label input[type="checkbox"]:checked {

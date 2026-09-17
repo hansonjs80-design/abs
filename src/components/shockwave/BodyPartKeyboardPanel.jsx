@@ -25,11 +25,14 @@ export default function BodyPartKeyboardPanel({
 }) {
   const [inputValue, setInputValue] = useState('');
   const [focusIndex, setFocusIndex] = useState(0);
+  const [presetFocusIndex, setPresetFocusIndex] = useState(0);
   const [selectedDrafts, setSelectedDrafts] = useState([]);
   const [editingSelectedIndex, setEditingSelectedIndex] = useState(null);
   const inputRef = useRef(null);
   const itemRefs = useRef([]);
+  const presetRefs = useRef([]);
   const selectedInputRefs = useRef([]);
+  const presetItems = BODY_PART_PRESET_GROUPS.flatMap((group) => group.items);
   const selectedParts = currentParts.map((part) => String(part || '').trim()).filter(Boolean);
   const selectedPartSignature = selectedParts.join('\u001f');
   const selectableParts = getBodyPartUnselectedCustomOptions(availableParts, selectedParts);
@@ -45,6 +48,41 @@ export default function BodyPartKeyboardPanel({
   const togglePresetSelection = (item) => {
     const { isSelected } = getBodyPartPresetState(selectedParts, item);
     onSetPreset?.(item.id, !isSelected, []);
+  };
+
+  const focusPreset = (nextIndex) => {
+    if (presetItems.length === 0) return;
+    const boundedIndex = (nextIndex + presetItems.length) % presetItems.length;
+    setPresetFocusIndex(boundedIndex);
+    presetRefs.current[boundedIndex]?.focus({ preventScroll: true });
+  };
+
+  const handlePresetKeyDown = (event, item, index) => {
+    event.stopPropagation();
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      focusPreset(index + 1);
+      return;
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      focusPreset(index - 1);
+      return;
+    }
+    if (event.key === ' ' || event.key === 'Spacebar' || event.key === 'Enter') {
+      event.preventDefault();
+      togglePresetSelection(item);
+      return;
+    }
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      togglePresetDirection(item, 'left');
+      return;
+    }
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      togglePresetDirection(item, 'right');
+    }
   };
 
   useEffect(() => {
@@ -64,18 +102,23 @@ export default function BodyPartKeyboardPanel({
   useEffect(() => {
     if (!autoFocus) return undefined;
     let cancelled = false;
-    const focusInput = () => {
-      if (cancelled || !inputRef.current) return;
-      inputRef.current.focus({ preventScroll: true });
-      inputRef.current.select();
-      setFocusIndex(0);
+    const focusInitialElement = () => {
+      if (cancelled) return;
+      if (presetItems.length > 0 && presetRefs.current[0]) {
+        presetRefs.current[0].focus({ preventScroll: true });
+        setPresetFocusIndex(0);
+      } else if (inputRef.current) {
+        inputRef.current.focus({ preventScroll: true });
+        inputRef.current.select();
+        setFocusIndex(0);
+      }
     };
 
-    focusInput();
+    focusInitialElement();
     let nestedFrameId = null;
     const frameId = requestAnimationFrame(() => {
-      focusInput();
-      nestedFrameId = requestAnimationFrame(focusInput);
+      focusInitialElement();
+      nestedFrameId = requestAnimationFrame(focusInitialElement);
     });
 
     return () => {
@@ -85,7 +128,7 @@ export default function BodyPartKeyboardPanel({
         cancelAnimationFrame(nestedFrameId);
       }
     };
-  }, [autoFocus]);
+  }, [autoFocus, presetItems.length]);
 
   const focusTarget = (nextIndex) => {
     const maxIndex = selectableParts.length;
@@ -176,15 +219,25 @@ export default function BodyPartKeyboardPanel({
             <h4 className="context-menu-body-preset-title">{group.label}</h4>
             <div className="context-menu-body-preset-list">
               {group.items.map((item) => {
+                const flatIndex = presetItems.findIndex((p) => p.id === item.id);
                 const { isSelected, directions } = getBodyPartPresetState(selectedParts, item);
                 const displayLabel = item.displayLabel || item.label;
+                const isFocused = presetFocusIndex === flatIndex;
                 return (
-                  <div key={item.id} className="context-menu-body-preset-item">
+                  <div
+                    key={item.id}
+                    className={`context-menu-body-preset-item${isFocused ? ' is-keyboard-focused' : ''}`}
+                  >
                     <label className="context-menu-body-preset-label">
                       <input
+                        ref={(node) => {
+                          presetRefs.current[flatIndex] = node;
+                        }}
                         type="checkbox"
                         checked={isSelected}
                         aria-label={`${displayLabel} 선택`}
+                        onFocus={() => setPresetFocusIndex(flatIndex)}
+                        onKeyDown={(event) => handlePresetKeyDown(event, item, flatIndex)}
                         onChange={(event) => {
                           event.stopPropagation();
                           togglePresetSelection(item);
