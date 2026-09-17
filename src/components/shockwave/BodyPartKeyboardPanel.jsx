@@ -28,6 +28,7 @@ export default function BodyPartKeyboardPanel({
   const [inputValue, setInputValue] = useState('');
   const [focusIndex, setFocusIndex] = useState(0);
   const [presetFocusIndex, setPresetFocusIndex] = useState(0);
+  const [isKeyboardNavigating, setIsKeyboardNavigating] = useState(false);
   const [selectedDrafts, setSelectedDrafts] = useState([]);
   const [editingSelectedIndex, setEditingSelectedIndex] = useState(null);
   const inputRef = useRef(null);
@@ -67,11 +68,13 @@ export default function BodyPartKeyboardPanel({
     event.stopPropagation();
     if (event.key === 'ArrowDown') {
       event.preventDefault();
+      setIsKeyboardNavigating(true);
       focusPreset(index + 1);
       return;
     }
     if (event.key === 'ArrowUp') {
       event.preventDefault();
+      setIsKeyboardNavigating(true);
       focusPreset(index - 1);
       return;
     }
@@ -234,17 +237,27 @@ export default function BodyPartKeyboardPanel({
         if (event.key === 'ArrowDown') {
           event.preventDefault();
           event.stopPropagation();
+          setIsKeyboardNavigating(true);
           focusPreset(presetFocusIndex + 1);
         } else if (event.key === 'ArrowUp') {
           event.preventDefault();
           event.stopPropagation();
+          setIsKeyboardNavigating(true);
           focusPreset(presetFocusIndex - 1);
+        }
+      }}
+      onMouseMove={() => {
+        if (isKeyboardNavigating) {
+          setIsKeyboardNavigating(false);
         }
       }}
       onMouseDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
     >
-      <div className="context-menu-body-presets" aria-label="진단별 부위 빠른 입력">
+      <div
+        className={`context-menu-body-presets${isKeyboardNavigating ? ' is-keyboard-navigating' : ''}`}
+        aria-label="진단별 부위 빠른 입력"
+      >
         {BODY_PART_PRESET_GROUPS.map((group) => (
           <section key={group.id} className="context-menu-body-preset-group">
             <h4 className="context-menu-body-preset-title">{group.label}</h4>
@@ -259,6 +272,7 @@ export default function BodyPartKeyboardPanel({
                     key={item.id}
                     className={`context-menu-body-preset-item${isFocused ? ' is-keyboard-focused' : ''}`}
                     onMouseEnter={() => {
+                      setIsKeyboardNavigating(false);
                       setPresetFocusIndex(flatIndex);
                       presetRefs.current[flatIndex]?.focus({ preventScroll: true });
                     }}

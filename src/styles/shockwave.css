@@ -2026,6 +2026,10 @@
   background: #e5e7eb;
 }
 
+.context-menu-body-presets.is-keyboard-navigating .context-menu-body-preset-item:hover:not(.is-keyboard-focused) {
+  background: transparent !important;
+}
+
 .context-menu-body-preset-item.is-keyboard-focused,
 .context-menu-body-preset-item:focus-within {
   background: #e5e7eb;
