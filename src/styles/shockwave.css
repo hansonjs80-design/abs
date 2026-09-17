@@ -2023,14 +2023,13 @@
 }
 
 .context-menu-body-preset-item:hover {
-  /* 검정 30%에 흰색 70%를 섞은 회색 */
-  background: #b3b3b3;
+  background: #e5e7eb;
 }
 
 .context-menu-body-preset-item.is-keyboard-focused,
 .context-menu-body-preset-item:focus-within {
-  background: #b3b3b3;
-  outline: 2px solid rgba(37, 99, 235, 0.48);
+  background: #e5e7eb;
+  outline: 2px solid #2563eb;
   outline-offset: -1px;
 }
 
@@ -2064,12 +2063,13 @@
   transition: all 0.15s ease;
   flex: 0 0 auto;
   align-self: center;
-  margin: 0 5.6px 0 0;
+  margin: 0 6px 0 1px;
 }
 
 .context-menu-body-preset-label input[type="checkbox"]:focus {
-  outline: 2px solid #2563eb;
-  outline-offset: 1px;
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb;
 }
 
 .context-menu-body-preset-label input[type="checkbox"]:checked {
@@ -3239,9 +3239,9 @@
 
 .context-menu-check-item:focus,
 .context-menu-check-item.is-keyboard-focused {
-  outline: 2px solid rgba(37, 99, 235, 0.48);
+  outline: 2px solid #2563eb;
   outline-offset: -2px;
-  border-color: rgba(37, 99, 235, 0.38);
+  border-color: #2563eb;
 }
 
 .context-menu-check-label {
