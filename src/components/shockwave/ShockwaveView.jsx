@@ -3045,13 +3045,19 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   }, [chartSelector]);
 
   useEffect(() => {
-    if (!hoverCell || !tooltipRef.current) return;
+    if (!hoverCell || !tooltipRef.current) return undefined;
     const { x, y } = tooltipMousePosRef.current;
     const rafId = window.requestAnimationFrame(() => {
       positionTooltip(x, y);
     });
-    return () => window.cancelAnimationFrame(rafId);
-  }, [hoverCell, positionTooltip]);
+    const timer = setTimeout(() => {
+      positionTooltip(x, y);
+    }, 40);
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      clearTimeout(timer);
+    };
+  }, [hoverCell, contextMenu, activeContextSubmenu, positionTooltip]);
 
   const isScheduleMonthLoading = loadedMemosKey !== scheduleScrollKey;
   const handleNavigateToTodayMonth = useCallback((targetToday) => {
