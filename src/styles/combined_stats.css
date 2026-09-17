@@ -764,11 +764,28 @@
     display: none !important;
   }
 
+  .combined-stats-header h1 {
+    white-space: nowrap;
+  }
+
   .combined-stats-header h1[data-print-suffix]::after {
     content: ' ' attr(data-print-suffix);
     font-size: 0.72em;
     font-weight: 700;
     letter-spacing: 0;
+  }
+
+  /* 결산 현황 heading 내 h2 + span 을 한 행으로 표시 */
+  .combined-stats-recent-heading > div:first-child {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    white-space: nowrap;
+  }
+
+  .combined-stats-recent-heading > div:first-child > span {
+    display: inline;
+    margin-top: 0;
   }
 
   .combined-stats-header,
@@ -832,10 +849,30 @@ body.settlement-print .combined-stats-header p {
   display: none !important;
 }
 
+body[class*="-print"] .combined-stats-header h1,
+body.settlement-print .combined-stats-header h1 {
+  white-space: nowrap;
+}
+
 body[class*="-print"] .combined-stats-header h1[data-print-suffix]::after,
 body.settlement-print .combined-stats-header h1[data-print-suffix]::after {
   content: ' ' attr(data-print-suffix);
   font-size: 0.72em;
   font-weight: 700;
   letter-spacing: 0;
+}
+
+/* 인쇄 모드 클래스에서도 결산 heading 한 행 표시 */
+body[class*="-print"] .combined-stats-recent-heading > div:first-child,
+body.settlement-print .combined-stats-recent-heading > div:first-child {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+body[class*="-print"] .combined-stats-recent-heading > div:first-child > span,
+body.settlement-print .combined-stats-recent-heading > div:first-child > span {
+  display: inline;
+  margin-top: 0;
 }
