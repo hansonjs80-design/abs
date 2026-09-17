@@ -36,8 +36,7 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /<th>총건수<\/th>/);
     assert.match(pageSource, /<th>총 결산 금액<\/th>/);
     assert.match(pageSource, /<th>총 인센티브<\/th>/);
-    assert.match(pageSource, /<th>인센<\/th>/);
-    assert.match(pageSource, /<IncentiveRateList rates=\{row\.rates\} \/>/);
+    assert.doesNotMatch(pageSource, /<th>인센<\/th>/);
     assert.match(pageSource, /const rowLabel = row\.label \|\| row\.prescription;/);
     assert.match(pageSource, /<th>\{rowLabel\}<\/th>/);
     assert.doesNotMatch(pageSource, /<span className="combined-prescription-label">\{row\.prescription\}<\/span>/);
@@ -214,7 +213,7 @@ describe('combined statistics UI', () => {
     assert.match(styleSource, /\.combined-stats-summary-container\s*\{/);
     assert.match(styleSource, /@media print\s*\{[\s\S]*?\.combined-stats-dashboard--horizontal \.combined-stats-current\s*\{[\s\S]*?flex-wrap:\s*nowrap !important;/);
     assert.match(styleSource, /body\[class\*="-print"\][\s\S]*?\.combined-stats-dashboard--horizontal \.combined-therapist-card[\s\S]*?flex:\s*1 1 0% !important;/);
-    assert.match(styleSource, /\.combined-therapist-card \.combined-current-col-type\s*\{\s*width:\s*27% !important;/);
-    assert.match(styleSource, /\.combined-therapist-card \.combined-current-col-rate\s*\{\s*width:\s*9% !important;/);
+    assert.match(styleSource, /\.combined-therapist-card \.combined-current-col-type\s*\{\s*width:\s*30% !important;/);
+    assert.match(styleSource, /\.combined-therapist-card \.combined-current-col-incentive\s*\{\s*width:\s*24% !important;/);
   });
 });

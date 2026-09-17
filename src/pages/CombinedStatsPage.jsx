@@ -602,7 +602,7 @@ export default function CombinedStatsPage() {
                 const visibleTreatments = viewMode === 'detail'
                   ? buildTherapistTreatmentDetailSections(item, isAdmin)
                   : buildTherapistTreatmentSections(item, isAdmin);
-                const visibleRateRows = visibleTreatments.flatMap((treatment) => treatment.rows);
+                // const visibleRateRows = visibleTreatments.flatMap((treatment) => treatment.rows);
                 const { rate7Total, rate15Total } = getTherapistRateTotals(item, isAdmin);
                 return (
                   <article
@@ -615,11 +615,10 @@ export default function CombinedStatsPage() {
                         <col className="combined-current-col-count" />
                         <col className="combined-current-col-amount" />
                         <col className="combined-current-col-incentive" />
-                        <col className="combined-current-col-rate" />
                       </colgroup>
                       <thead>
                         <tr>
-                          <th className="combined-therapist-name" colSpan={5}>
+                          <th className="combined-therapist-name" colSpan={4}>
                             <div className="combined-therapist-name-content">
                               <div className="combined-therapist-title-wrap">
                                 <span>{item.therapist.displayName || item.therapist.name} 치료사</span>
@@ -656,7 +655,6 @@ export default function CombinedStatsPage() {
                             <th>총건수</th>
                             <th>총 결산 금액</th>
                             <th>총 인센티브</th>
-                            <th>인센</th>
                           </tr>
                         )}
                       </thead>
@@ -670,7 +668,6 @@ export default function CombinedStatsPage() {
                                   ? `${treatment.key}-${row.prescription}`
                                   : `${treatment.key}-${row.rates?.join('-') || 'total'}`;
                               const rowLabel = row.label || row.prescription;
-                              const rateSpan = getConsecutiveRowSpan(visibleRateRows, visibleRateRows.indexOf(row), (entry) => entry.rates?.length === 1 ? Number(entry.rates[0]) : null);
                               const incentiveRate = row.rates?.length === 1 ? Number(row.rates[0]) : null;
                               const incentiveRateRowClass = incentiveRate === 7
                                 ? 'combined-incentive-rate-row--7'
@@ -701,9 +698,6 @@ export default function CombinedStatsPage() {
                                   <td className="combined-therapist-count-cell">{formatCount(row.count)}</td>
                                   <td className="combined-therapist-amount-cell">{formatCurrency(row.amount)}</td>
                                   <td className="combined-therapist-incentive-cell">{formatCurrency(row.incentive)}</td>
-                                  {rateSpan > 0 && <td className="combined-incentive-rate-cell" rowSpan={rateSpan}>
-                                    <IncentiveRateList rates={row.rates} />
-                                  </td>}
                                 </tr>
                               );
                             })
@@ -714,9 +708,6 @@ export default function CombinedStatsPage() {
                               <td className="combined-therapist-count-cell">{formatCount(rate7Total.count)}</td>
                               <td className="combined-therapist-amount-cell">{formatCurrency(rate7Total.amount)}</td>
                               <td className="combined-therapist-incentive-cell">{formatCurrency(rate7Total.incentive)}</td>
-                              <td className="combined-incentive-rate-cell">
-                                <IncentiveRateList rates={[7]} />
-                              </td>
                             </tr>
                           )}
                           {isAdmin && Number(rate15Total.count) > 0 && (
@@ -725,9 +716,6 @@ export default function CombinedStatsPage() {
                               <td className="combined-therapist-count-cell">{formatCount(rate15Total.count)}</td>
                               <td className="combined-therapist-amount-cell">{formatCurrency(rate15Total.amount)}</td>
                               <td className="combined-therapist-incentive-cell">{formatCurrency(rate15Total.incentive)}</td>
-                              <td className="combined-incentive-rate-cell">
-                                <IncentiveRateList rates={[15]} />
-                              </td>
                             </tr>
                           )}
                           <tr className="combined-therapist-total">
@@ -735,7 +723,6 @@ export default function CombinedStatsPage() {
                             <td className="combined-therapist-count-cell">{formatCount(item.total.count)}</td>
                             <td className="combined-therapist-amount-cell">{formatCurrency(item.total.amount)}</td>
                             <td className="combined-therapist-incentive-cell">{formatCurrency(item.total.incentive)}</td>
-                            <td>—</td>
                           </tr>
                         </tbody>
                       )}

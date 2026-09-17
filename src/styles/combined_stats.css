@@ -1063,11 +1063,10 @@
     table-layout: fixed !important;
   }
 
-  .combined-therapist-card .combined-current-col-type { width: 27% !important; }
-  .combined-therapist-card .combined-current-col-count { width: 13% !important; }
-  .combined-therapist-card .combined-current-col-amount { width: 28% !important; }
-  .combined-therapist-card .combined-current-col-incentive { width: 23% !important; }
-  .combined-therapist-card .combined-current-col-rate { width: 9% !important; }
+  .combined-therapist-card .combined-current-col-type { width: 30% !important; }
+  .combined-therapist-card .combined-current-col-count { width: 16% !important; }
+  .combined-therapist-card .combined-current-col-amount { width: 30% !important; }
+  .combined-therapist-card .combined-current-col-incentive { width: 24% !important; }
 
   .combined-therapist-card th,
   .combined-therapist-card td {
@@ -1352,19 +1351,16 @@ body.settlement-print .combined-therapist-card table {
 }
 
 body[class*="-print"] .combined-therapist-card .combined-current-col-type,
-body.settlement-print .combined-therapist-card .combined-current-col-type { width: 27% !important; }
+body.settlement-print .combined-therapist-card .combined-current-col-type { width: 30% !important; }
 
 body[class*="-print"] .combined-therapist-card .combined-current-col-count,
-body.settlement-print .combined-therapist-card .combined-current-col-count { width: 13% !important; }
+body.settlement-print .combined-therapist-card .combined-current-col-count { width: 16% !important; }
 
 body[class*="-print"] .combined-therapist-card .combined-current-col-amount,
-body.settlement-print .combined-therapist-card .combined-current-col-amount { width: 28% !important; }
+body.settlement-print .combined-therapist-card .combined-current-col-amount { width: 30% !important; }
 
 body[class*="-print"] .combined-therapist-card .combined-current-col-incentive,
-body.settlement-print .combined-therapist-card .combined-current-col-incentive { width: 23% !important; }
-
-body[class*="-print"] .combined-therapist-card .combined-current-col-rate,
-body.settlement-print .combined-therapist-card .combined-current-col-rate { width: 9% !important; }
+body.settlement-print .combined-therapist-card .combined-current-col-incentive { width: 24% !important; }
 
 body[class*="-print"] .combined-therapist-card th,
 body[class*="-print"] .combined-therapist-card td,
