@@ -315,6 +315,7 @@ export default function CombinedStatsPage() {
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
   const [recentViewMode, setRecentViewMode] = useState('total-only');
   const [activeTab, setActiveTab] = useState('therapist'); // 'therapist' | 'summary' | 'settlement'
+  const [layoutMode, setLayoutMode] = useState('horizontal'); // 'horizontal' | 'vertical'
   const [therapistViewModes, setTherapistViewModes] = useState({});
   const [monthSummaries, setMonthSummaries] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -578,6 +579,28 @@ export default function CombinedStatsPage() {
                 전체 결산
               </button>
             </div>
+            {activeTab === 'therapist' && (
+              <div className="combined-stats-layout-tabs" role="tablist" aria-label="레이아웃 보기 방식">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={layoutMode === 'horizontal'}
+                  className={`combined-stats-layout-tab ${layoutMode === 'horizontal' ? 'is-active' : ''}`}
+                  onClick={() => setLayoutMode('horizontal')}
+                >
+                  가로보기
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={layoutMode === 'vertical'}
+                  className={`combined-stats-layout-tab ${layoutMode === 'vertical' ? 'is-active' : ''}`}
+                  onClick={() => setLayoutMode('vertical')}
+                >
+                  세로보기
+                </button>
+              </div>
+            )}
           </div>
         </div>
         <button
@@ -592,7 +615,7 @@ export default function CombinedStatsPage() {
       </header>
 
       {activeTab === 'therapist' && (
-        <div className="combined-stats-dashboard combined-stats-dashboard--stats combined-stats-dashboard--horizontal">
+        <div className={`combined-stats-dashboard combined-stats-dashboard--stats combined-stats-dashboard--${layoutMode}`}>
           <section className="combined-stats-current" aria-label={`${currentMonth}월 치료사별 전체 통계`}>
             {currentSummary?.therapists?.length > 0 ? (
               currentSummary.therapists.map((item, index) => {
