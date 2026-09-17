@@ -184,6 +184,8 @@ describe('combined statistics UI', () => {
     assert.match(styleSource, /\.combined-therapist-tab-btn\.is-active\s*\{/);
     assert.match(styleSource, /\.combined-treatment-parent-row/);
     assert.match(pageSource, /getTherapistRateTotals/);
+    assert.match(pageSource, /Number\(rate7Total\.count\) > 0/);
+    assert.match(pageSource, /isAdmin && Number\(rate15Total\.count\) > 0/);
     assert.match(pageSource, /<th>7% 합계<\/th>/);
     assert.match(pageSource, /<th>15% 합계<\/th>/);
     assert.match(pageSource, /combined-therapist-subtotal/);

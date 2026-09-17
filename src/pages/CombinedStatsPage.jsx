@@ -708,17 +708,19 @@ export default function CombinedStatsPage() {
                               );
                             })
                           ))}
-                          <tr className="combined-therapist-subtotal combined-therapist-subtotal--start combined-incentive-rate-row--7">
-                            <th>7% 합계</th>
-                            <td className="combined-therapist-count-cell">{formatCount(rate7Total.count)}</td>
-                            <td className="combined-therapist-amount-cell">{formatCurrency(rate7Total.amount)}</td>
-                            <td className="combined-therapist-incentive-cell">{formatCurrency(rate7Total.incentive)}</td>
-                            <td className="combined-incentive-rate-cell">
-                              <IncentiveRateList rates={[7]} />
-                            </td>
-                          </tr>
-                          {isAdmin && (
-                            <tr className="combined-therapist-subtotal combined-incentive-rate-row--15">
+                          {Number(rate7Total.count) > 0 && (
+                            <tr className="combined-therapist-subtotal combined-therapist-subtotal--start combined-incentive-rate-row--7">
+                              <th>7% 합계</th>
+                              <td className="combined-therapist-count-cell">{formatCount(rate7Total.count)}</td>
+                              <td className="combined-therapist-amount-cell">{formatCurrency(rate7Total.amount)}</td>
+                              <td className="combined-therapist-incentive-cell">{formatCurrency(rate7Total.incentive)}</td>
+                              <td className="combined-incentive-rate-cell">
+                                <IncentiveRateList rates={[7]} />
+                              </td>
+                            </tr>
+                          )}
+                          {isAdmin && Number(rate15Total.count) > 0 && (
+                            <tr className={`combined-therapist-subtotal ${Number(rate7Total.count) <= 0 ? 'combined-therapist-subtotal--start ' : ''}combined-incentive-rate-row--15`}>
                               <th>15% 합계</th>
                               <td className="combined-therapist-count-cell">{formatCount(rate15Total.count)}</td>
                               <td className="combined-therapist-amount-cell">{formatCurrency(rate15Total.amount)}</td>
