@@ -314,8 +314,7 @@ export default function CombinedStatsPage() {
   const isAdmin = isAdminUser(user);
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
   const [recentViewMode, setRecentViewMode] = useState('total-only');
-  const [activeTab, setActiveTab] = useState('stats'); // 'stats' | 'settlement'
-  const [statsLayout, setStatsLayout] = useState('vertical'); // 'vertical' | 'horizontal'
+  const [activeTab, setActiveTab] = useState('therapist'); // 'therapist' | 'summary' | 'settlement'
   const [therapistViewModes, setTherapistViewModes] = useState({});
   const [monthSummaries, setMonthSummaries] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -554,11 +553,20 @@ export default function CombinedStatsPage() {
               <button
                 type="button"
                 role="tab"
-                aria-selected={activeTab === 'stats'}
-                className={`combined-stats-nav-tab ${activeTab === 'stats' ? 'is-active' : ''}`}
-                onClick={() => setActiveTab('stats')}
+                aria-selected={activeTab === 'therapist'}
+                className={`combined-stats-nav-tab ${activeTab === 'therapist' ? 'is-active' : ''}`}
+                onClick={() => setActiveTab('therapist')}
               >
-                전체 통계
+                치료사 통계
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'summary'}
+                className={`combined-stats-nav-tab ${activeTab === 'summary' ? 'is-active' : ''}`}
+                onClick={() => setActiveTab('summary')}
+              >
+                전체 합계
               </button>
               <button
                 type="button"
@@ -570,28 +578,6 @@ export default function CombinedStatsPage() {
                 전체 결산
               </button>
             </div>
-            {activeTab === 'stats' && (
-              <div className="combined-stats-layout-tabs" role="tablist" aria-label="통계 배치 방향">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={statsLayout === 'vertical'}
-                  className={`combined-stats-layout-tab ${statsLayout === 'vertical' ? 'is-active' : ''}`}
-                  onClick={() => setStatsLayout('vertical')}
-                >
-                  세로보기
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={statsLayout === 'horizontal'}
-                  className={`combined-stats-layout-tab ${statsLayout === 'horizontal' ? 'is-active' : ''}`}
-                  onClick={() => setStatsLayout('horizontal')}
-                >
-                  가로보기
-                </button>
-              </div>
-            )}
           </div>
         </div>
         <button
@@ -605,8 +591,8 @@ export default function CombinedStatsPage() {
         </button>
       </header>
 
-      {activeTab === 'stats' ? (
-        <div className={`combined-stats-dashboard combined-stats-dashboard--stats ${statsLayout === 'horizontal' ? 'combined-stats-dashboard--horizontal' : 'combined-stats-dashboard--vertical'}`}>
+      {activeTab === 'therapist' && (
+        <div className="combined-stats-dashboard combined-stats-dashboard--stats combined-stats-dashboard--horizontal">
           <section className="combined-stats-current" aria-label={`${currentMonth}월 치료사별 전체 통계`}>
             {currentSummary?.therapists?.length > 0 ? (
               currentSummary.therapists.map((item, index) => {
@@ -761,9 +747,13 @@ export default function CombinedStatsPage() {
               </div>
             )}
           </section>
+        </div>
+      )}
 
-          {currentSummary?.therapists?.length > 0 && (
-            <aside className="combined-stats-side">
+      {activeTab === 'summary' && (
+        <div className="combined-stats-dashboard combined-stats-dashboard--summary">
+          {currentSummary?.therapists?.length > 0 ? (
+            <div className="combined-stats-summary-container">
               <article
                 className="combined-therapist-card combined-therapist-summary-card"
                 aria-label={`${currentMonth}월 치료사 합계`}
@@ -880,10 +870,16 @@ export default function CombinedStatsPage() {
                   </tbody>
                 </table>
               </article>
-            </aside>
+            </div>
+          ) : (
+            <div className="combined-stats-empty">
+              {isLoading ? '전체 합계를 계산하고 있습니다.' : '표시할 합계 통계가 없습니다.'}
+            </div>
           )}
         </div>
-      ) : (
+      )}
+
+      {activeTab === 'settlement' && (
         <div className="combined-stats-dashboard combined-stats-dashboard--settlement">
           <section className="combined-stats-recent combined-settlement-recent-main" aria-label={`${recentPeriodLabel} 전체 결산 현황`}>
             <div className="combined-stats-recent-heading">

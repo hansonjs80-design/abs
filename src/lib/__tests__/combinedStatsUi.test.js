@@ -57,7 +57,7 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /className="combined-therapist-header-count"/);
     assert.match(pageSource, /\{formatCount\(item\.total\.count\)\}/);
     assert.match(pageSource, /className="combined-therapist-card combined-therapist-summary-card"/);
-    assert.match(pageSource, /<aside className="combined-stats-side">[\s\S]*?className="combined-therapist-card combined-treatment-breakdown-card"/);
+    assert.match(pageSource, /className="combined-stats-summary-container"[\s\S]*?className="combined-therapist-card combined-treatment-breakdown-card"/);
     assert.match(pageSource, /<th>충격파 7%<\/th>/);
     assert.match(pageSource, /<th>도수치료 15%<\/th>/);
     assert.match(pageSource, /combined-breakdown-shockwave combined-incentive-rate-row--7/);
@@ -148,16 +148,18 @@ describe('combined statistics UI', () => {
     assert.match(styleSource, /\.combined-therapist-card tbody td\.combined-therapist-incentive-cell,[\s\S]*border-right:\s*1px solid #cbd5e1 !important;/);
   });
 
-  it('separates overall statistics and settlement into dedicated tabs with therapist summary alongside breakdown in stats tab', async () => {
+  it('separates overall statistics, total summary, and settlement into dedicated tabs', async () => {
     const [pageSource, styleSource] = await Promise.all([
       readFile(pageUrl, 'utf8'),
       readFile(styleUrl, 'utf8'),
     ]);
 
     assert.match(pageSource, /className="combined-stats-nav-tabs"/);
-    assert.match(pageSource, />\s*전체 통계\s*<\/button>/);
+    assert.match(pageSource, />\s*치료사 통계\s*<\/button>/);
+    assert.match(pageSource, />\s*전체 합계\s*<\/button>/);
     assert.match(pageSource, />\s*전체 결산\s*<\/button>/);
-    assert.match(pageSource, /activeTab === 'stats'/);
+    assert.match(pageSource, /activeTab === 'therapist'/);
+    assert.match(pageSource, /activeTab === 'summary'/);
     assert.match(pageSource, /activeTab === 'settlement'/);
     assert.match(styleSource, /\.combined-stats-nav-tabs\s*\{/);
     assert.match(styleSource, /\.combined-stats-nav-tab\.is-active\s*\{/);
@@ -192,23 +194,23 @@ describe('combined statistics UI', () => {
     assert.match(styleSource, /body\[class\*="-print"\][\s\S]*?\.combined-therapist-view-tabs,[\s\S]*?display:\s*none !important;/);
   });
 
-  it('supports vertical and horizontal layout modes with reordered cards and hidden controls during print', async () => {
+  it('supports therapist stats, total summary, and settlement tabs without vertical mode and optimizes print layout', async () => {
     const [pageSource, styleSource] = await Promise.all([
       readFile(pageUrl, 'utf8'),
       readFile(styleUrl, 'utf8'),
     ]);
 
-    assert.match(pageSource, /className="combined-stats-layout-tabs"/);
-    assert.match(pageSource, />\s*세로보기\s*<\/button>/);
-    assert.match(pageSource, />\s*가로보기\s*<\/button>/);
-    assert.match(pageSource, /statsLayout === 'horizontal'/);
-    assert.match(pageSource, /combined-stats-dashboard--horizontal/);
-    assert.match(styleSource, /\.combined-stats-layout-tabs\s*\{/);
-    assert.match(styleSource, /\.combined-stats-layout-tab\.is-active\s*\{/);
+    assert.match(pageSource, />\s*치료사 통계\s*<\/button>/);
+    assert.match(pageSource, />\s*전체 합계\s*<\/button>/);
+    assert.match(pageSource, />\s*전체 결산\s*<\/button>/);
+    assert.doesNotMatch(pageSource, />\s*세로보기\s*<\/button>/);
+    assert.match(pageSource, /combined-stats-dashboard--stats combined-stats-dashboard--horizontal/);
+    assert.match(pageSource, /combined-stats-dashboard combined-stats-dashboard--summary/);
     assert.match(styleSource, /\.combined-stats-dashboard--horizontal\s*\{[\s\S]*flex-direction:\s*column/);
     assert.match(styleSource, /\.combined-stats-dashboard--horizontal \.combined-stats-current\s*\{[\s\S]*flex-direction:\s*row/);
-    assert.match(styleSource, /\.combined-stats-dashboard--horizontal \.combined-stats-side\s*\{[\s\S]*flex-direction:\s*row/);
-    assert.match(styleSource, /@media print\s*\{[\s\S]*?\.combined-stats-layout-tabs,[\s\S]*?display:\s*none !important;/);
-    assert.match(styleSource, /body\[class\*="-print"\][\s\S]*?\.combined-stats-layout-tabs,[\s\S]*?display:\s*none !important;/);
+    assert.match(styleSource, /\.combined-stats-dashboard--summary\s*\{/);
+    assert.match(styleSource, /\.combined-stats-summary-container\s*\{/);
+    assert.match(styleSource, /@media print\s*\{[\s\S]*?\.combined-stats-dashboard--horizontal \.combined-stats-current\s*\{[\s\S]*?flex-wrap:\s*nowrap !important;/);
+    assert.match(styleSource, /body\[class\*="-print"\][\s\S]*?\.combined-stats-dashboard--horizontal \.combined-therapist-card[\s\S]*?flex:\s*1 1 0% !important;/);
   });
 });
