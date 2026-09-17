@@ -35,6 +35,14 @@
   font-weight: 700;
 }
 
+.combined-stats-nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
 .combined-stats-nav-tabs {
   display: inline-flex;
   align-items: center;
@@ -43,7 +51,44 @@
   border-radius: 10px;
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
-  margin-top: 12px;
+}
+
+.combined-stats-layout-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+}
+
+.combined-stats-layout-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  white-space: nowrap;
+}
+
+.combined-stats-layout-tab:hover {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.combined-stats-layout-tab.is-active {
+  background: #ffffff;
+  color: #0369a1;
+  border-color: #93c5fd;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.09);
 }
 
 .combined-stats-nav-tab {
@@ -108,6 +153,50 @@
   width: max-content;
   min-width: 400px;
   max-width: 100%;
+}
+
+/* 가로보기(horizontal) 레이아웃: 치료사 가로 배치, 하단에 합계/내역 테이블 가로 배치 */
+.combined-stats-dashboard--horizontal {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 28px !important;
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.combined-stats-dashboard--horizontal .combined-stats-current {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: flex-start !important;
+  gap: 24px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.combined-stats-dashboard--horizontal .combined-therapist-card {
+  width: auto !important;
+  min-width: 360px !important;
+  flex: 0 0 auto !important;
+}
+
+.combined-stats-dashboard--horizontal .combined-stats-side {
+  position: static !important;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: flex-start !important;
+  gap: 24px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.combined-stats-dashboard--horizontal .combined-therapist-summary-card,
+.combined-stats-dashboard--horizontal .combined-treatment-breakdown-card {
+  width: auto !important;
+  min-width: 360px !important;
+  flex: 0 0 auto !important;
+  margin-top: 0 !important;
 }
 
 .combined-therapist-card,
@@ -798,6 +887,8 @@
   .combined-recent-filter-tabs,
   .combined-recent-tab-btn,
   .combined-stats-nav-tabs,
+  .combined-stats-layout-tabs,
+  .combined-stats-layout-tab,
   .combined-therapist-view-tabs,
   .combined-therapist-tab-btn {
     display: none !important;
@@ -831,6 +922,10 @@
     margin-top: 0;
   }
 
+  .combined-stats-page {
+    padding: 12px 10px 24px !important;
+  }
+
   .combined-stats-header,
   .combined-stats-dashboard {
     max-width: 1550px;
@@ -839,6 +934,57 @@
   .combined-stats-dashboard {
     grid-template-columns: auto auto;
     justify-content: start;
+    gap: 14px !important;
+  }
+
+  .combined-stats-dashboard--vertical {
+    display: grid !important;
+    grid-template-columns: auto auto !important;
+    justify-content: start !important;
+    gap: 14px !important;
+  }
+
+  .combined-stats-dashboard.combined-stats-dashboard--horizontal {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .combined-stats-dashboard--horizontal .combined-stats-current {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .combined-stats-dashboard--horizontal .combined-therapist-card {
+    width: auto !important;
+    min-width: 320px !important;
+    flex: 0 0 auto !important;
+  }
+
+  .combined-stats-dashboard--horizontal .combined-stats-side {
+    position: static !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .combined-stats-dashboard--horizontal .combined-therapist-summary-card,
+  .combined-stats-dashboard--horizontal .combined-treatment-breakdown-card {
+    width: auto !important;
+    min-width: 320px !important;
+    flex: 0 0 auto !important;
+    margin-top: 0 !important;
   }
 
   .combined-therapist-card th,
@@ -862,6 +1008,35 @@
     padding: 6px 10px !important;
     font-size: calc(0.95rem + 2px) !important;
   }
+
+  /* 인쇄 시 우측 요약 카드가 용지 너비를 벗어나 잘리지 않도록 셀 패딩 및 폰트 최적화 */
+  .combined-summary-amount-cell,
+  .combined-summary-incentive-cell {
+    padding: 4px 8px !important;
+    font-size: 0.88rem !important;
+  }
+
+  .combined-summary-column-header-row th,
+  .combined-summary-therapist-cell {
+    padding: 4px 8px !important;
+    font-size: 0.85rem !important;
+  }
+
+  .combined-summary-title-header {
+    padding: 4px 10px !important;
+  }
+
+  .combined-summary-title-header .combined-therapist-name-content span:first-child {
+    font-size: 1.15rem !important;
+  }
+
+  .combined-summary-grand-total > th,
+  .combined-summary-grand-total > td,
+  .combined-summary-grand-total .combined-summary-amount-cell,
+  .combined-summary-grand-total .combined-summary-incentive-cell {
+    font-size: 0.92rem !important;
+    padding: 4px 8px !important;
+  }
 }
 
 /* Use the same white, shadow-free table surrounds on screen and in print. */
@@ -881,10 +1056,14 @@
 /* 인쇄 모드 상태 클래스에서도 전체만보기/상세보기 탭 버튼 숨김 보장 */
 body[class*="-print"] .combined-recent-filter-tabs,
 body[class*="-print"] .combined-recent-tab-btn,
+body[class*="-print"] .combined-stats-layout-tabs,
+body[class*="-print"] .combined-stats-layout-tab,
 body[class*="-print"] .combined-therapist-view-tabs,
 body[class*="-print"] .combined-therapist-tab-btn,
 body.settlement-print .combined-recent-filter-tabs,
 body.settlement-print .combined-recent-tab-btn,
+body.settlement-print .combined-stats-layout-tabs,
+body.settlement-print .combined-stats-layout-tab,
 body.settlement-print .combined-therapist-view-tabs,
 body.settlement-print .combined-therapist-tab-btn {
   display: none !important;
@@ -922,4 +1101,61 @@ body[class*="-print"] .combined-stats-recent-heading > div:first-child > span,
 body.settlement-print .combined-stats-recent-heading > div:first-child > span {
   display: inline;
   margin-top: 0;
+}
+
+/* 인쇄 모드 클래스에서도 세로보기 우측 요약 카드가 잘리지 않도록 동일 규칙 적용 */
+body[class*="-print"] .combined-stats-page,
+body.settlement-print .combined-stats-page {
+  padding: 12px 10px 24px !important;
+}
+
+body[class*="-print"] .combined-stats-dashboard,
+body.settlement-print .combined-stats-dashboard {
+  gap: 14px !important;
+}
+
+body[class*="-print"] .combined-stats-dashboard--vertical,
+body.settlement-print .combined-stats-dashboard--vertical {
+  display: grid !important;
+  grid-template-columns: auto auto !important;
+  justify-content: start !important;
+  gap: 14px !important;
+}
+
+body[class*="-print"] .combined-summary-amount-cell,
+body[class*="-print"] .combined-summary-incentive-cell,
+body.settlement-print .combined-summary-amount-cell,
+body.settlement-print .combined-summary-incentive-cell {
+  padding: 4px 8px !important;
+  font-size: 0.88rem !important;
+}
+
+body[class*="-print"] .combined-summary-column-header-row th,
+body[class*="-print"] .combined-summary-therapist-cell,
+body.settlement-print .combined-summary-column-header-row th,
+body.settlement-print .combined-summary-therapist-cell {
+  padding: 4px 8px !important;
+  font-size: 0.85rem !important;
+}
+
+body[class*="-print"] .combined-summary-title-header,
+body.settlement-print .combined-summary-title-header {
+  padding: 4px 10px !important;
+}
+
+body[class*="-print"] .combined-summary-title-header .combined-therapist-name-content span:first-child,
+body.settlement-print .combined-summary-title-header .combined-therapist-name-content span:first-child {
+  font-size: 1.15rem !important;
+}
+
+body[class*="-print"] .combined-summary-grand-total > th,
+body[class*="-print"] .combined-summary-grand-total > td,
+body[class*="-print"] .combined-summary-grand-total .combined-summary-amount-cell,
+body[class*="-print"] .combined-summary-grand-total .combined-summary-incentive-cell,
+body.settlement-print .combined-summary-grand-total > th,
+body.settlement-print .combined-summary-grand-total > td,
+body.settlement-print .combined-summary-grand-total .combined-summary-amount-cell,
+body.settlement-print .combined-summary-grand-total .combined-summary-incentive-cell {
+  font-size: 0.92rem !important;
+  padding: 4px 8px !important;
 }

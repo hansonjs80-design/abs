@@ -179,4 +179,24 @@ describe('combined statistics UI', () => {
     assert.match(styleSource, /@media print\s*\{[\s\S]*?\.combined-therapist-view-tabs,[\s\S]*?display:\s*none !important;/);
     assert.match(styleSource, /body\[class\*="-print"\][\s\S]*?\.combined-therapist-view-tabs,[\s\S]*?display:\s*none !important;/);
   });
+
+  it('supports vertical and horizontal layout modes with reordered cards and hidden controls during print', async () => {
+    const [pageSource, styleSource] = await Promise.all([
+      readFile(pageUrl, 'utf8'),
+      readFile(styleUrl, 'utf8'),
+    ]);
+
+    assert.match(pageSource, /className="combined-stats-layout-tabs"/);
+    assert.match(pageSource, />\s*세로보기\s*<\/button>/);
+    assert.match(pageSource, />\s*가로보기\s*<\/button>/);
+    assert.match(pageSource, /statsLayout === 'horizontal'/);
+    assert.match(pageSource, /combined-stats-dashboard--horizontal/);
+    assert.match(styleSource, /\.combined-stats-layout-tabs\s*\{/);
+    assert.match(styleSource, /\.combined-stats-layout-tab\.is-active\s*\{/);
+    assert.match(styleSource, /\.combined-stats-dashboard--horizontal\s*\{[\s\S]*flex-direction:\s*column/);
+    assert.match(styleSource, /\.combined-stats-dashboard--horizontal \.combined-stats-current\s*\{[\s\S]*flex-direction:\s*row/);
+    assert.match(styleSource, /\.combined-stats-dashboard--horizontal \.combined-stats-side\s*\{[\s\S]*flex-direction:\s*row/);
+    assert.match(styleSource, /@media print\s*\{[\s\S]*?\.combined-stats-layout-tabs,[\s\S]*?display:\s*none !important;/);
+    assert.match(styleSource, /body\[class\*="-print"\][\s\S]*?\.combined-stats-layout-tabs,[\s\S]*?display:\s*none !important;/);
+  });
 });

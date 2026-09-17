@@ -218,6 +218,7 @@ export default function CombinedStatsPage() {
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
   const [recentViewMode, setRecentViewMode] = useState('total-only');
   const [activeTab, setActiveTab] = useState('stats'); // 'stats' | 'settlement'
+  const [statsLayout, setStatsLayout] = useState('vertical'); // 'vertical' | 'horizontal'
   const [therapistViewModes, setTherapistViewModes] = useState({});
   const [monthSummaries, setMonthSummaries] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -451,25 +452,49 @@ export default function CombinedStatsPage() {
               ? '충격파 · 신장분사 · 도수치료의 크라이오 차감 적용 결산 입니다.'
               : '신장분사 치료의 크라이오 차감 적용 결산 입니다.'}
           </p>
-          <div className="combined-stats-nav-tabs" role="tablist" aria-label="전체 통계 탭 메뉴">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'stats'}
-              className={`combined-stats-nav-tab ${activeTab === 'stats' ? 'is-active' : ''}`}
-              onClick={() => setActiveTab('stats')}
-            >
-              전체 통계
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'settlement'}
-              className={`combined-stats-nav-tab ${activeTab === 'settlement' ? 'is-active' : ''}`}
-              onClick={() => setActiveTab('settlement')}
-            >
-              전체 결산
-            </button>
+          <div className="combined-stats-nav-bar">
+            <div className="combined-stats-nav-tabs" role="tablist" aria-label="전체 통계 탭 메뉴">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'stats'}
+                className={`combined-stats-nav-tab ${activeTab === 'stats' ? 'is-active' : ''}`}
+                onClick={() => setActiveTab('stats')}
+              >
+                전체 통계
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'settlement'}
+                className={`combined-stats-nav-tab ${activeTab === 'settlement' ? 'is-active' : ''}`}
+                onClick={() => setActiveTab('settlement')}
+              >
+                전체 결산
+              </button>
+            </div>
+            {activeTab === 'stats' && (
+              <div className="combined-stats-layout-tabs" role="tablist" aria-label="통계 배치 방향">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={statsLayout === 'vertical'}
+                  className={`combined-stats-layout-tab ${statsLayout === 'vertical' ? 'is-active' : ''}`}
+                  onClick={() => setStatsLayout('vertical')}
+                >
+                  세로보기
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={statsLayout === 'horizontal'}
+                  className={`combined-stats-layout-tab ${statsLayout === 'horizontal' ? 'is-active' : ''}`}
+                  onClick={() => setStatsLayout('horizontal')}
+                >
+                  가로보기
+                </button>
+              </div>
+            )}
           </div>
         </div>
         <button
@@ -484,7 +509,7 @@ export default function CombinedStatsPage() {
       </header>
 
       {activeTab === 'stats' ? (
-        <div className="combined-stats-dashboard combined-stats-dashboard--stats">
+        <div className={`combined-stats-dashboard combined-stats-dashboard--stats ${statsLayout === 'horizontal' ? 'combined-stats-dashboard--horizontal' : 'combined-stats-dashboard--vertical'}`}>
           <section className="combined-stats-current" aria-label={`${currentMonth}월 치료사별 전체 통계`}>
             {currentSummary?.therapists?.length > 0 ? (
               currentSummary.therapists.map((item, index) => {
