@@ -67,7 +67,7 @@
   display: grid;
   gap: 24px;
   width: max-content;
-  min-width: 480px;
+  min-width: 400px;
   max-width: 100%;
 }
 
@@ -110,7 +110,7 @@
 .combined-therapist-card th,
 .combined-therapist-card td {
   height: 36.5px;
-  padding: 6px 12px;
+  padding: 6px 10px;
   border-right: 1px solid #cbd5e1;
   border-bottom: 1px solid #cbd5e1;
   text-align: center;
@@ -693,7 +693,7 @@
 
   .combined-therapist-card table,
   .combined-stats-recent table {
-    min-width: 620px;
+    min-width: 520px;
   }
 }
 

@@ -34,8 +34,8 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /충격파 · 신장분사 · 도수치료의 크라이오 반영 결산/);
     assert.match(pageSource, /충격파 · 신장분사의 크라이오 반영 결산/);
     assert.match(pageSource, /<th>총건수<\/th>/);
-    assert.match(pageSource, /<th>처방별 총 결산 금액<\/th>/);
-    assert.match(pageSource, /<th>처방별 총 인센티브<\/th>/);
+    assert.match(pageSource, /<th>총 결산 금액<\/th>/);
+    assert.match(pageSource, /<th>총 인센티브<\/th>/);
     assert.match(pageSource, /<th>인센<\/th>/);
     assert.match(pageSource, /<IncentiveRateList rates=\{row\.rates\} \/>/);
     assert.match(pageSource, /const rowLabel = row\.label \|\| row\.prescription;/);

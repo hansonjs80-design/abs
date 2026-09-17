@@ -476,8 +476,8 @@ export default function CombinedStatsPage() {
                           <tr>
                             <th>구분</th>
                             <th>총건수</th>
-                            <th>처방별 총 결산 금액</th>
-                            <th>처방별 총 인센티브</th>
+                            <th>총 결산 금액</th>
+                            <th>총 인센티브</th>
                             <th>인센</th>
                           </tr>
                         )}
