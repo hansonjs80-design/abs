@@ -147,4 +147,20 @@ describe('combined statistics UI', () => {
     assert.match(styleSource, /box-shadow:\s*inset 1px 0 0 0 #cbd5e1;/);
     assert.match(styleSource, /\.combined-therapist-card tbody td\.combined-therapist-incentive-cell,[\s\S]*border-right:\s*1px solid #cbd5e1 !important;/);
   });
+
+  it('separates overall statistics and settlement into dedicated tabs with therapist summary alongside breakdown in stats tab', async () => {
+    const [pageSource, styleSource] = await Promise.all([
+      readFile(pageUrl, 'utf8'),
+      readFile(styleUrl, 'utf8'),
+    ]);
+
+    assert.match(pageSource, /className="combined-stats-nav-tabs"/);
+    assert.match(pageSource, />\s*전체 통계\s*<\/button>/);
+    assert.match(pageSource, />\s*전체 결산\s*<\/button>/);
+    assert.match(pageSource, /activeTab === 'stats'/);
+    assert.match(pageSource, /activeTab === 'settlement'/);
+    assert.match(styleSource, /\.combined-stats-nav-tabs\s*\{/);
+    assert.match(styleSource, /\.combined-stats-nav-tab\.is-active\s*\{/);
+    assert.match(styleSource, /@media print\s*\{[\s\S]*?\.combined-stats-nav-tabs[\s\S]*?display:\s*none !important;/);
+  });
 });

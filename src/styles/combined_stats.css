@@ -35,6 +35,45 @@
   font-weight: 700;
 }
 
+.combined-stats-nav-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  margin-top: 12px;
+}
+
+.combined-stats-nav-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 18px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.98rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  white-space: nowrap;
+}
+
+.combined-stats-nav-tab:hover {
+  color: #1e293b;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.combined-stats-nav-tab.is-active {
+  background: #ffffff;
+  color: #1e40af;
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
 .combined-stats-refresh {
   display: inline-flex;
   align-items: center;
@@ -716,7 +755,8 @@
 @media print {
   .combined-stats-refresh,
   .combined-recent-filter-tabs,
-  .combined-recent-tab-btn {
+  .combined-recent-tab-btn,
+  .combined-stats-nav-tabs {
     display: none !important;
   }
 

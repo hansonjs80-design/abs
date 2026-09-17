@@ -199,6 +199,7 @@ export default function CombinedStatsPage() {
   const isAdmin = isAdminUser(user);
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
   const [recentViewMode, setRecentViewMode] = useState('total-only');
+  const [activeTab, setActiveTab] = useState('stats'); // 'stats' | 'settlement'
   const [monthSummaries, setMonthSummaries] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);
@@ -423,12 +424,34 @@ export default function CombinedStatsPage() {
       {isLoading && <div className="top-loading-bar" />}
       <header className="combined-stats-header">
         <div>
-          <h1 data-print-suffix={`(${isAdmin ? '충격파 · 신장분사 · 도수치료의 크라이오 차감 적용 결산 입니다.' : '신장분사 치료의 크라이오 차감 적용 결산 입니다.'})`}>{currentYear}년 {String(currentMonth).padStart(2, '0')}월 전체 통계</h1>
+          <h1 data-print-suffix={`(${isAdmin ? '충격파 · 신장분사 · 도수치료의 크라이오 차감 적용 결산 입니다.' : '신장분사 치료의 크라이오 차감 적용 결산 입니다.'})`}>
+            {currentYear}년 {String(currentMonth).padStart(2, '0')}월 {activeTab === 'stats' ? '전체 통계' : '전체 결산'}
+          </h1>
           <p>
             {isAdmin
               ? '충격파 · 신장분사 · 도수치료의 크라이오 차감 적용 결산 입니다.'
               : '신장분사 치료의 크라이오 차감 적용 결산 입니다.'}
           </p>
+          <div className="combined-stats-nav-tabs" role="tablist" aria-label="전체 통계 탭 메뉴">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'stats'}
+              className={`combined-stats-nav-tab ${activeTab === 'stats' ? 'is-active' : ''}`}
+              onClick={() => setActiveTab('stats')}
+            >
+              전체 통계
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'settlement'}
+              className={`combined-stats-nav-tab ${activeTab === 'settlement' ? 'is-active' : ''}`}
+              onClick={() => setActiveTab('settlement')}
+            >
+              전체 결산
+            </button>
+          </div>
         </div>
         <button
           type="button"
@@ -441,11 +464,11 @@ export default function CombinedStatsPage() {
         </button>
       </header>
 
-      <div className="combined-stats-dashboard">
-        <section className="combined-stats-current" aria-label={`${currentMonth}월 치료사별 전체 통계`}>
-          {currentSummary?.therapists?.length > 0 ? (
-            <>
-              {currentSummary.therapists.map((item, index) => {
+      {activeTab === 'stats' ? (
+        <div className="combined-stats-dashboard combined-stats-dashboard--stats">
+          <section className="combined-stats-current" aria-label={`${currentMonth}월 치료사별 전체 통계`}>
+            {currentSummary?.therapists?.length > 0 ? (
+              currentSummary.therapists.map((item, index) => {
                 const visibleTreatments = buildTherapistTreatmentSections(item, isAdmin);
                 const visibleRateRows = visibleTreatments.flatMap((treatment) => treatment.rows);
                 return (
@@ -534,8 +557,16 @@ export default function CombinedStatsPage() {
                     </table>
                   </article>
                 );
-              })}
+              })
+            ) : (
+              <div className="combined-stats-empty">
+                {isLoading ? '전체 통계를 계산하고 있습니다.' : '표시할 치료사 통계가 없습니다.'}
+              </div>
+            )}
+          </section>
 
+          {currentSummary?.therapists?.length > 0 && (
+            <aside className="combined-stats-side">
               <article
                 className="combined-therapist-card combined-therapist-summary-card"
                 aria-label={`${currentMonth}월 치료사 합계`}
@@ -582,16 +613,82 @@ export default function CombinedStatsPage() {
                 </table>
               </article>
 
-            </>
-          ) : (
-            <div className="combined-stats-empty">
-              {isLoading ? '전체 통계를 계산하고 있습니다.' : '표시할 치료사 통계가 없습니다.'}
-            </div>
+              <article
+                className="combined-therapist-card combined-treatment-breakdown-card"
+                aria-label={`${currentMonth}월 항목별 결산 내역`}
+              >
+                <table>
+                  <colgroup>
+                    <col className="combined-breakdown-col-label" />
+                    <col className="combined-breakdown-col-count" />
+                    <col className="combined-breakdown-col-amount" />
+                    <col className="combined-breakdown-col-incentive" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th className="combined-therapist-name combined-summary-title-header" colSpan={4}>
+                        <div className="combined-therapist-name-content">
+                          <span>항목별 결산 내역</span>
+                        </div>
+                      </th>
+                    </tr>
+                    <tr className="combined-summary-column-header-row">
+                      <th className="combined-summary-empty-header" aria-label="항목">항목</th>
+                      <th>건수</th>
+                      <th>결산 금액</th>
+                      <th>인센티브</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="combined-breakdown-row combined-breakdown-shockwave combined-incentive-rate-row--7">
+                      <th>충격파 7%</th>
+                      <td>{formatCount(currentSummary.treatmentTotals?.shockwave?.count)}</td>
+                      <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.shockwave?.amount)}</td>
+                      <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.shockwave?.incentive)}</td>
+                    </tr>
+                    {(Array.isArray(currentSummary.shinjangIncentiveGroups) && currentSummary.shinjangIncentiveGroups.length > 0)
+                      ? currentSummary.shinjangIncentiveGroups.map((group) => (
+                          <tr
+                            key={`breakdown-shinjang-${group.rate}`}
+                            className={`combined-breakdown-row combined-breakdown-shinjang${Number(group.rate) === 7 ? ' combined-incentive-rate-row--7' : Number(group.rate) === 15 ? ' combined-incentive-rate-row--15' : ''}`}
+                          >
+                            <th>신장분사 {formatIncentiveRate(group.rate)}</th>
+                            <td>{formatCount(group.count)}</td>
+                            <td className="combined-summary-amount-cell">{formatCurrency(group.amount)}</td>
+                            <td className="combined-summary-incentive-cell">{formatCurrency(group.incentive)}</td>
+                          </tr>
+                        ))
+                      : (
+                          <tr className="combined-breakdown-row combined-breakdown-shinjang">
+                            <th>신장분사</th>
+                            <td>{formatCount(currentSummary.treatmentTotals?.shinjang_spray?.count)}</td>
+                            <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.shinjang_spray?.amount)}</td>
+                            <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.shinjang_spray?.incentive)}</td>
+                          </tr>
+                        )}
+                    {isAdmin && (
+                      <tr className="combined-breakdown-row combined-breakdown-manual combined-incentive-rate-row--15">
+                        <th>도수치료 15%</th>
+                        <td>{formatCount(currentSummary.treatmentTotals?.manual_therapy?.count)}</td>
+                        <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.manual_therapy?.amount)}</td>
+                        <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.manual_therapy?.incentive)}</td>
+                      </tr>
+                    )}
+                    <tr className="combined-therapist-total combined-summary-grand-total">
+                      <th>전체 합계</th>
+                      <td>{formatCount(currentSummary.total.count)}</td>
+                      <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.total.amount)}</td>
+                      <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.total.incentive)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </article>
+            </aside>
           )}
-        </section>
-
-        <aside className="combined-stats-side">
-          <section className="combined-stats-recent" aria-label={`${recentPeriodLabel} 전체 결산 현황`}>
+        </div>
+      ) : (
+        <div className="combined-stats-dashboard combined-stats-dashboard--settlement">
+          <section className="combined-stats-recent combined-settlement-recent-main" aria-label={`${recentPeriodLabel} 전체 결산 현황`}>
             <div className="combined-stats-recent-heading">
               <div>
                 <h2>{recentPeriodLabel} 결산 현황</h2>
@@ -682,79 +779,81 @@ export default function CombinedStatsPage() {
           </section>
 
           {currentSummary?.therapists?.length > 0 && (
-            <article
-              className="combined-therapist-card combined-treatment-breakdown-card"
-              aria-label={`${currentMonth}월 항목별 결산 내역`}
-            >
-              <table>
-                <colgroup>
-                  <col className="combined-breakdown-col-label" />
-                  <col className="combined-breakdown-col-count" />
-                  <col className="combined-breakdown-col-amount" />
-                  <col className="combined-breakdown-col-incentive" />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th className="combined-therapist-name combined-summary-title-header" colSpan={4}>
-                      <div className="combined-therapist-name-content">
-                        <span>항목별 결산 내역</span>
-                      </div>
-                    </th>
-                  </tr>
-                  <tr className="combined-summary-column-header-row">
-                    <th className="combined-summary-empty-header" aria-label="항목">항목</th>
-                    <th>건수</th>
-                    <th>결산 금액</th>
-                    <th>인센티브</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="combined-breakdown-row combined-breakdown-shockwave combined-incentive-rate-row--7">
-                    <th>충격파 7%</th>
-                    <td>{formatCount(currentSummary.treatmentTotals?.shockwave?.count)}</td>
-                    <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.shockwave?.amount)}</td>
-                    <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.shockwave?.incentive)}</td>
-                  </tr>
-                  {(Array.isArray(currentSummary.shinjangIncentiveGroups) && currentSummary.shinjangIncentiveGroups.length > 0)
-                    ? currentSummary.shinjangIncentiveGroups.map((group) => (
-                        <tr
-                          key={`breakdown-shinjang-${group.rate}`}
-                          className={`combined-breakdown-row combined-breakdown-shinjang${Number(group.rate) === 7 ? ' combined-incentive-rate-row--7' : Number(group.rate) === 15 ? ' combined-incentive-rate-row--15' : ''}`}
-                        >
-                          <th>신장분사 {formatIncentiveRate(group.rate)}</th>
-                          <td>{formatCount(group.count)}</td>
-                          <td className="combined-summary-amount-cell">{formatCurrency(group.amount)}</td>
-                          <td className="combined-summary-incentive-cell">{formatCurrency(group.incentive)}</td>
-                        </tr>
-                      ))
-                    : (
-                        <tr className="combined-breakdown-row combined-breakdown-shinjang">
-                          <th>신장분사</th>
-                          <td>{formatCount(currentSummary.treatmentTotals?.shinjang_spray?.count)}</td>
-                          <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.shinjang_spray?.amount)}</td>
-                          <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.shinjang_spray?.incentive)}</td>
-                        </tr>
-                      )}
-                  {isAdmin && (
-                    <tr className="combined-breakdown-row combined-breakdown-manual combined-incentive-rate-row--15">
-                      <th>도수치료 15%</th>
-                      <td>{formatCount(currentSummary.treatmentTotals?.manual_therapy?.count)}</td>
-                      <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.manual_therapy?.amount)}</td>
-                      <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.manual_therapy?.incentive)}</td>
+            <aside className="combined-stats-side combined-settlement-side" aria-label={`${currentMonth}월 결산 내역 요약`}>
+              <article
+                className="combined-therapist-card combined-treatment-breakdown-card"
+                aria-label={`${currentMonth}월 항목별 결산 내역`}
+              >
+                <table>
+                  <colgroup>
+                    <col className="combined-breakdown-col-label" />
+                    <col className="combined-breakdown-col-count" />
+                    <col className="combined-breakdown-col-amount" />
+                    <col className="combined-breakdown-col-incentive" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th className="combined-therapist-name combined-summary-title-header" colSpan={4}>
+                        <div className="combined-therapist-name-content">
+                          <span>항목별 결산 내역</span>
+                        </div>
+                      </th>
                     </tr>
-                  )}
-                  <tr className="combined-therapist-total combined-summary-grand-total">
-                    <th>전체 합계</th>
-                    <td>{formatCount(currentSummary.total.count)}</td>
-                    <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.total.amount)}</td>
-                    <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.total.incentive)}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </article>
+                    <tr className="combined-summary-column-header-row">
+                      <th className="combined-summary-empty-header" aria-label="항목">항목</th>
+                      <th>건수</th>
+                      <th>결산 금액</th>
+                      <th>인센티브</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="combined-breakdown-row combined-breakdown-shockwave combined-incentive-rate-row--7">
+                      <th>충격파 7%</th>
+                      <td>{formatCount(currentSummary.treatmentTotals?.shockwave?.count)}</td>
+                      <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.shockwave?.amount)}</td>
+                      <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.shockwave?.incentive)}</td>
+                    </tr>
+                    {(Array.isArray(currentSummary.shinjangIncentiveGroups) && currentSummary.shinjangIncentiveGroups.length > 0)
+                      ? currentSummary.shinjangIncentiveGroups.map((group) => (
+                          <tr
+                            key={`breakdown-shinjang-${group.rate}`}
+                            className={`combined-breakdown-row combined-breakdown-shinjang${Number(group.rate) === 7 ? ' combined-incentive-rate-row--7' : Number(group.rate) === 15 ? ' combined-incentive-rate-row--15' : ''}`}
+                          >
+                            <th>신장분사 {formatIncentiveRate(group.rate)}</th>
+                            <td>{formatCount(group.count)}</td>
+                            <td className="combined-summary-amount-cell">{formatCurrency(group.amount)}</td>
+                            <td className="combined-summary-incentive-cell">{formatCurrency(group.incentive)}</td>
+                          </tr>
+                        ))
+                      : (
+                          <tr className="combined-breakdown-row combined-breakdown-shinjang">
+                            <th>신장분사</th>
+                            <td>{formatCount(currentSummary.treatmentTotals?.shinjang_spray?.count)}</td>
+                            <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.shinjang_spray?.amount)}</td>
+                            <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.shinjang_spray?.incentive)}</td>
+                          </tr>
+                        )}
+                    {isAdmin && (
+                      <tr className="combined-breakdown-row combined-breakdown-manual combined-incentive-rate-row--15">
+                        <th>도수치료 15%</th>
+                        <td>{formatCount(currentSummary.treatmentTotals?.manual_therapy?.count)}</td>
+                        <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.manual_therapy?.amount)}</td>
+                        <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.manual_therapy?.incentive)}</td>
+                      </tr>
+                    )}
+                    <tr className="combined-therapist-total combined-summary-grand-total">
+                      <th>전체 합계</th>
+                      <td>{formatCount(currentSummary.total.count)}</td>
+                      <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.total.amount)}</td>
+                      <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.total.incentive)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </article>
+            </aside>
           )}
-        </aside>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
