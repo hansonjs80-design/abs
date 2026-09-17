@@ -617,6 +617,18 @@ export default function ShockwaveSettlementView({
 
               <div className="sw-settlement-table-wrap sw-compact-table-wrap">
                 <table className="sw-settlement-table sw-grand-total-table">
+                  <colgroup>
+                    <col className="sw-shockwave-settlement-label-column" style={{ width: '28%' }} />
+                    {horizontalSummaryPrescriptions.map((prescription) => (
+                      <col
+                        key={`grand-col-${prescription || 'empty'}`}
+                        className="sw-shockwave-settlement-prescription-column"
+                        style={{
+                          width: `${72 / Math.max(1, horizontalSummaryPrescriptions.length)}%`,
+                        }}
+                      />
+                    ))}
+                  </colgroup>
                   <thead>
                     {showIncentiveRateSubtotals ? (
                       <>

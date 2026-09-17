@@ -1601,7 +1601,8 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
     border-bottom: 0.8px solid #94a3b8 !important;
   }
 
-  body.settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table th:first-child,
+  body.settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table th.label-col,
+  body.settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table th.row-label,
   body.settlement-print .sw-settlement-stack--shockwave .sw-grand-total-table td:first-child {
     width: 28% !important;
   }

@@ -239,3 +239,34 @@ test('manual settlement recent-period header omits the redundant aggregate badge
   assert.doesNotMatch(sixMonthStats, /개월 집계/);
   assert.match(sixMonthStats, /aria-label="도수치료 최근 현황 기간"/);
 });
+
+test('shinjang horizontal print relaxes main table widths and balances grand total columns', async () => {
+  const [indexCss, rateColumnCss, settlementView] = await Promise.all([
+    readFile(indexCssUrl, 'utf8'),
+    readFile(shinjangRateColumnCssUrl, 'utf8'),
+    readFile(shockwaveSettlementUrl, 'utf8'),
+  ]);
+
+  // 총합계 테이블에서 th.label-col, th.row-label에만 28%가 지정되어 신장 C가 2배 넓어지는 것 방지
+  assert.match(
+    indexCss,
+    /\.sw-grand-total-table th\.label-col,[\s\S]*?\.sw-grand-total-table th\.row-label,[\s\S]*?\.sw-grand-total-table td:first-child\s*\{[^}]*width:\s*28% !important;/s,
+  );
+
+  // 총합계 테이블에 명시적 colgroup 배분
+  assert.match(
+    settlementView,
+    /<table className="sw-settlement-table sw-grand-total-table">[\s\S]*?<colgroup>[\s\S]*?className="sw-shockwave-settlement-label-column"[\s\S]*?className="sw-shockwave-settlement-prescription-column"/s,
+  );
+
+  // 신장분사 가로보기 인쇄 시 메인 테이블 너비 100% 및 넉넉한 셀 패딩/min-width 여유 확보
+  assert.match(
+    rateColumnCss,
+    /\.sw-horizontal-settlement-main-table\s*\{[^}]*width:\s*100% !important;[^}]*min-width:\s*100% !important;/s,
+  );
+  assert.match(
+    rateColumnCss,
+    /\.sw-horizontal-settlement-main-table :is\(th, td\)\s*\{[^}]*padding:\s*2\.2mm 5\.5mm !important;[^}]*min-width:\s*24mm !important;/s,
+  );
+});
+

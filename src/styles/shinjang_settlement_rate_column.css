@@ -242,9 +242,14 @@
 }
 
 @media print {
+  body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-settlement-card:first-of-type .sw-settlement-table-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
   body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-horizontal-settlement-main-table {
     table-layout: auto !important;
-    width: auto !important;
+    width: 100% !important;
+    min-width: 100% !important;
     margin: 0 auto 0 0 !important;
     margin-left: 0 !important;
     margin-right: auto !important;
@@ -252,10 +257,12 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", "맑은 고딕", sans-serif !important;
   }
   body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-horizontal-settlement-main-table col.sw-shockwave-settlement-label-column {
-    width: auto !important;
+    width: 20% !important;
+    min-width: 36mm !important;
   }
   body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-horizontal-settlement-main-table col.sw-shockwave-settlement-prescription-column {
     width: auto !important;
+    min-width: 24mm !important;
   }
   body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-horizontal-settlement-main-table :is(th, td) {
     box-sizing: border-box !important;
@@ -265,8 +272,20 @@
     word-break: keep-all !important;
     overflow: hidden !important;
     text-overflow: clip !important;
-    padding: 1.8mm 3.6mm !important;
-    min-width: 14mm !important;
+    padding: 2.2mm 5.5mm !important;
+    min-width: 24mm !important;
+  }
+  body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-horizontal-settlement-main-table thead .label-col,
+  body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-horizontal-settlement-main-table .row-label {
+    min-width: 36mm !important;
+    padding: 2.2mm 5mm !important;
+  }
+  body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-horizontal-settlement-main-table thead .therapist-col {
+    padding: 2.2mm 6mm !important;
+  }
+  body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-horizontal-settlement-main-table td.merged-value--single-prescription {
+    padding-left: 4mm !important;
+    padding-right: 4mm !important;
   }
   /* 24:17:42:17 → 24:15.3:33.6:15.3 (88.2%). Transfer saved width to totals. */
   body.settlement-print .sw-settlement-stack--shockwave[data-treatment="신장분사"][data-view-mode="horizontal"] .sw-settlement-support-row:not(.sw-settlement-support-row--single) {
