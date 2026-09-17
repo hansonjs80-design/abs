@@ -423,11 +423,11 @@ export default function CombinedStatsPage() {
       {isLoading && <div className="top-loading-bar" />}
       <header className="combined-stats-header">
         <div>
-          <h1>{currentYear}년 {String(currentMonth).padStart(2, '0')}월 전체 통계</h1>
+          <h1 data-print-suffix={`(${isAdmin ? '충격파 · 신장분사 · 도수치료의 크라이오 차감 적용 결산 입니다.' : '신장분사 치료의 크라이오 차감 적용 결산 입니다.'})`}>{currentYear}년 {String(currentMonth).padStart(2, '0')}월 전체 통계</h1>
           <p>
             {isAdmin
-              ? '충격파 · 신장분사 · 도수치료의 크라이오 반영 결산입니다.'
-              : '충격파 · 신장분사의 크라이오 반영 결산입니다.'}
+              ? '충격파 · 신장분사 · 도수치료의 크라이오 차감 적용 결산 입니다.'
+              : '신장분사 치료의 크라이오 차감 적용 결산 입니다.'}
           </p>
         </div>
         <button
@@ -595,7 +595,7 @@ export default function CombinedStatsPage() {
             <div className="combined-stats-recent-heading">
               <div>
                 <h2>{recentPeriodLabel} 결산 현황</h2>
-                <span>크라이오 반영 전체 통계</span>
+                <span>크라이오 차감 적용 전체 통계</span>
               </div>
               <div className="combined-recent-controls">
                 <div className="combined-recent-filter-tabs" role="tablist" aria-label="결산 현황 보기 방식">
