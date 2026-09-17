@@ -214,5 +214,7 @@ describe('combined statistics UI', () => {
     assert.match(styleSource, /\.combined-stats-summary-container\s*\{/);
     assert.match(styleSource, /@media print\s*\{[\s\S]*?\.combined-stats-dashboard--horizontal \.combined-stats-current\s*\{[\s\S]*?flex-wrap:\s*nowrap !important;/);
     assert.match(styleSource, /body\[class\*="-print"\][\s\S]*?\.combined-stats-dashboard--horizontal \.combined-therapist-card[\s\S]*?flex:\s*1 1 0% !important;/);
+    assert.match(styleSource, /\.combined-therapist-card \.combined-current-col-type\s*\{\s*width:\s*27% !important;/);
+    assert.match(styleSource, /\.combined-therapist-card \.combined-current-col-rate\s*\{\s*width:\s*9% !important;/);
   });
 });
