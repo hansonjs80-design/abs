@@ -163,4 +163,20 @@ describe('combined statistics UI', () => {
     assert.match(styleSource, /\.combined-stats-nav-tab\.is-active\s*\{/);
     assert.match(styleSource, /@media print\s*\{[\s\S]*?\.combined-stats-nav-tabs[\s\S]*?display:\s*none !important;/);
   });
+
+  it('supports total-only and detail view modes for individual therapist cards and hides tabs during print', async () => {
+    const [pageSource, styleSource] = await Promise.all([
+      readFile(pageUrl, 'utf8'),
+      readFile(styleUrl, 'utf8'),
+    ]);
+
+    assert.match(pageSource, /className="combined-therapist-view-tabs"/);
+    assert.match(pageSource, /className=\{`combined-therapist-tab-btn \$\{viewMode === 'total-only' \? 'is-active' : ''\}`\}/);
+    assert.match(pageSource, /className=\{`combined-therapist-tab-btn \$\{viewMode === 'detail' \? 'is-active' : ''\}`\}/);
+    assert.match(pageSource, /buildTherapistTreatmentDetailSections/);
+    assert.match(styleSource, /\.combined-therapist-view-tabs\s*\{/);
+    assert.match(styleSource, /\.combined-therapist-tab-btn\.is-active\s*\{/);
+    assert.match(styleSource, /@media print\s*\{[\s\S]*?\.combined-therapist-view-tabs,[\s\S]*?display:\s*none !important;/);
+    assert.match(styleSource, /body\[class\*="-print"\][\s\S]*?\.combined-therapist-view-tabs,[\s\S]*?display:\s*none !important;/);
+  });
 });

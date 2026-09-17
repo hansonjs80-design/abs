@@ -373,6 +373,50 @@ export function buildCombinedStatsMonthSummary({
       key,
       treatmentMaps[key].get(therapist.name) || { count: 0, amount: 0, incentive: 0 },
     ]));
+    const shockwaveTherapistData = (shockwaveSettlement?.summaryByTherapist || []).find((item) => (
+      String(item?.therapist?.name || '').trim() === therapist.name
+      || String(item?.therapist?.displayName || '').trim() === therapist.name
+      || item?.therapist?.key === therapist.key
+      || item?.therapist?.id === therapist.id
+    ));
+    const shockwaveRate = Number(shockwaveSettings?.incentive_percentage) || 7;
+    const shockwavePrescriptionGroups = (shockwaveSettlement?.prescriptions || []).map((prescription) => {
+      const count = Math.max(0, Number(shockwaveTherapistData?.countsByPrescription?.[prescription]) || 0);
+      const amount = Math.max(0, Number(shockwaveTherapistData?.amountsByPrescription?.[prescription]) || 0);
+      const incentive = Math.max(0, Number(shockwaveTherapistData?.incentivesByPrescription?.[prescription]) || 0);
+      return {
+        prescription,
+        rate: shockwaveRate,
+        count,
+        amount,
+        incentive,
+        rates: [shockwaveRate],
+      };
+    });
+    const manualTherapistData = isAdmin
+      ? (manualSettlement?.summaryByTherapist || []).find((item) => (
+          String(item?.therapist?.name || '').trim() === therapist.name
+          || String(item?.therapist?.displayName || '').trim() === therapist.name
+          || item?.therapist?.key === therapist.key
+          || item?.therapist?.id === therapist.id
+        ))
+      : null;
+    const manualRate = Number(manualSettings?.incentive_percentage) || 15;
+    const manualPrescriptionGroups = isAdmin
+      ? (manualSettlement?.prescriptions || []).map((prescription) => {
+          const count = Math.max(0, Number(manualTherapistData?.countsByPrescription?.[prescription]) || 0);
+          const amount = Math.max(0, Number(manualTherapistData?.amountsByPrescription?.[prescription]) || 0);
+          const incentive = Math.max(0, Number(manualTherapistData?.incentivesByPrescription?.[prescription]) || 0);
+          return {
+            prescription,
+            rate: manualRate,
+            count,
+            amount,
+            incentive,
+            rates: [manualRate],
+          };
+        })
+      : [];
     const shinjangPrescriptionGroups = shinjangResult.prescriptions.map((prescription) => {
       const key = `${therapist.name}:::${normalizePrescriptionKey(prescription)}`;
       const found = shinjangDetailByTherapistAndPrescription.get(key);
@@ -403,6 +447,11 @@ export function buildCombinedStatsMonthSummary({
       },
       shinjangIncentiveGroups: shinjangIncentiveGroupsByTherapist.get(therapist.name) || [],
       shinjangPrescriptionGroups,
+      prescriptionGroups: {
+        shockwave: shockwavePrescriptionGroups,
+        shinjang_spray: shinjangPrescriptionGroups,
+        manual_therapy: manualPrescriptionGroups,
+      },
       configuredShinjangRates: shinjangConfiguredRates,
       total: addTreatmentValues(Object.values(treatments)),
     };

@@ -52,6 +52,24 @@ function IncentiveRateList({ rates = [] }) {
   );
 }
 
+function buildTherapistTreatmentDetailSections(item, isAdmin = false) {
+  const hasAnyActivity = Math.max(0, Number(item?.total?.count) || 0) > 0;
+  if (!hasAnyActivity) return [];
+
+  return COMBINED_STATS_TREATMENTS.map((treatment) => {
+    const value = item?.treatments?.[treatment.key] || { count: 0, amount: 0, incentive: 0 };
+    const groups = item?.prescriptionGroups?.[treatment.key] || [];
+    const rows = groups
+      .filter((row) => Number(row?.count) > 0 && (isAdmin || treatment.key !== 'shinjang_spray' || Number(row?.rate) !== 15))
+      .map((row) => ({
+        ...row,
+        label: row.prescription,
+        rates: Array.isArray(row.rates) ? row.rates : [row.rate],
+      }));
+    return { ...treatment, value, rows };
+  }).filter((section) => (isAdmin || section.key !== 'manual_therapy') && section.rows.length > 0);
+}
+
 function buildTherapistTreatmentSections(item, isAdmin = false) {
   const hasAnyActivity = Math.max(0, Number(item?.total?.count) || 0) > 0;
   if (!hasAnyActivity) return [];
@@ -200,6 +218,7 @@ export default function CombinedStatsPage() {
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
   const [recentViewMode, setRecentViewMode] = useState('total-only');
   const [activeTab, setActiveTab] = useState('stats'); // 'stats' | 'settlement'
+  const [therapistViewModes, setTherapistViewModes] = useState({});
   const [monthSummaries, setMonthSummaries] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);
@@ -469,11 +488,16 @@ export default function CombinedStatsPage() {
           <section className="combined-stats-current" aria-label={`${currentMonth}월 치료사별 전체 통계`}>
             {currentSummary?.therapists?.length > 0 ? (
               currentSummary.therapists.map((item, index) => {
-                const visibleTreatments = buildTherapistTreatmentSections(item, isAdmin);
+                const therapistKey = item.therapist.key || item.therapist.id || item.therapist.name;
+                const viewMode = therapistViewModes[therapistKey] || 'total-only';
+                // const visibleTreatments = buildTherapistTreatmentSections(item, isAdmin);
+                const visibleTreatments = viewMode === 'detail'
+                  ? buildTherapistTreatmentDetailSections(item, isAdmin)
+                  : buildTherapistTreatmentSections(item, isAdmin);
                 const visibleRateRows = visibleTreatments.flatMap((treatment) => treatment.rows);
                 return (
                   <article
-                    key={item.therapist.key || item.therapist.id || item.therapist.name}
+                    key={therapistKey}
                     className={`combined-therapist-card combined-tone-${index % 5}`}
                   >
                     <table>
@@ -488,7 +512,29 @@ export default function CombinedStatsPage() {
                         <tr>
                           <th className="combined-therapist-name" colSpan={5}>
                             <div className="combined-therapist-name-content">
-                              <span>{item.therapist.displayName || item.therapist.name} 치료사</span>
+                              <div className="combined-therapist-title-wrap">
+                                <span>{item.therapist.displayName || item.therapist.name} 치료사</span>
+                                <div className="combined-therapist-view-tabs" role="tablist" aria-label="치료사 통계 보기 방식">
+                                  <button
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={viewMode === 'total-only'}
+                                    className={`combined-therapist-tab-btn ${viewMode === 'total-only' ? 'is-active' : ''}`}
+                                    onClick={() => setTherapistViewModes((prev) => ({ ...prev, [therapistKey]: 'total-only' }))}
+                                  >
+                                    전체만 보기
+                                  </button>
+                                  <button
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={viewMode === 'detail'}
+                                    className={`combined-therapist-tab-btn ${viewMode === 'detail' ? 'is-active' : ''}`}
+                                    onClick={() => setTherapistViewModes((prev) => ({ ...prev, [therapistKey]: 'detail' }))}
+                                  >
+                                    상세 보기
+                                  </button>
+                                </div>
+                              </div>
                               <span className="combined-therapist-header-count">
                                 {formatCount(item.total.count)}
                               </span>

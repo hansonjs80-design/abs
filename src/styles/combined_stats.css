@@ -201,6 +201,47 @@
   width: 100%;
 }
 
+.combined-therapist-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.combined-therapist-view-tabs {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.combined-therapist-tab-btn {
+  padding: 3px 8px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.combined-therapist-tab-btn:hover {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.combined-therapist-tab-btn.is-active {
+  background: #ffffff;
+  color: #1e3a8a;
+  font-weight: 900;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
+}
+
 .combined-therapist-header-count {
   flex: 0 0 auto;
   padding: 4px 9px;
@@ -756,7 +797,9 @@
   .combined-stats-refresh,
   .combined-recent-filter-tabs,
   .combined-recent-tab-btn,
-  .combined-stats-nav-tabs {
+  .combined-stats-nav-tabs,
+  .combined-therapist-view-tabs,
+  .combined-therapist-tab-btn {
     display: none !important;
   }
 
@@ -838,8 +881,12 @@
 /* 인쇄 모드 상태 클래스에서도 전체만보기/상세보기 탭 버튼 숨김 보장 */
 body[class*="-print"] .combined-recent-filter-tabs,
 body[class*="-print"] .combined-recent-tab-btn,
+body[class*="-print"] .combined-therapist-view-tabs,
+body[class*="-print"] .combined-therapist-tab-btn,
 body.settlement-print .combined-recent-filter-tabs,
-body.settlement-print .combined-recent-tab-btn {
+body.settlement-print .combined-recent-tab-btn,
+body.settlement-print .combined-therapist-view-tabs,
+body.settlement-print .combined-therapist-tab-btn {
   display: none !important;
 }
 
