@@ -1551,12 +1551,128 @@
   padding: 18px 0 0 !important;
 }
 
-/* 가로보기: 상단 결산 테이블과 하단 총합계/최근 현황 사이 세로 간격 절반 축소 */
+/* 가로보기: 상단 결산 테이블과 하단 총합계/최근 현황 사이 세로 간격 및 상단 여백 절반 축소 */
 .sw-stats-body--settlement .sw-settlement-stack.sw-settlement-stack--shockwave[data-view-mode="horizontal"] {
-  gap: 5px;
+  gap: 2px;
 }
+
+.sw-stats-body--settlement .sw-settlement-stack--shockwave[data-view-mode="horizontal"] .sw-settlement-support-row {
+  margin-top: 0 !important;
+}
+
+.sw-stats-body--settlement .sw-settlement-stack--shockwave[data-view-mode="horizontal"] .sw-settlement-support-row .sw-settlement-card {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
 .sw-stats-body--settlement .sw-settlement-stack--shockwave[data-view-mode="horizontal"] .sw-grand-total-card {
-  padding: 9px 0 0 !important;
+  padding: 0 !important;
+}
+
+.sw-stats-body--settlement .sw-settlement-stack--shockwave[data-view-mode="horizontal"] .sw-recent-summary-card {
+  padding-top: 0 !important;
+}
+
+/* 가로보기: 하단 좌우 카드 헤더 높이 및 여백 일치 (테이블 상단 가로선 수평 정렬) */
+.sw-stats-body--settlement .sw-settlement-stack--shockwave[data-view-mode="horizontal"] .sw-settlement-support-row .sw-settlement-header {
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  margin: 0 0 6px 0 !important;
+  padding: 0 2px !important;
+  border: 0 !important;
+  border-bottom: 0 !important;
+  background: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+}
+
+.sw-stats-body--settlement .sw-settlement-stack--shockwave[data-view-mode="horizontal"] .sw-settlement-support-row .sw-settlement-header h2 {
+  margin: 0 !important;
+  line-height: 32px !important;
+  font-size: 1.05rem !important;
+  white-space: nowrap !important;
+}
+
+.sw-stats-body--settlement .sw-settlement-stack--shockwave[data-view-mode="horizontal"] .sw-settlement-support-row .sw-settlement-meta {
+  margin: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  height: 32px !important;
+}
+
+.sw-stats-body--settlement .sw-settlement-stack--shockwave[data-view-mode="horizontal"] .sw-settlement-support-row .sw-recent-period-control input {
+  height: 26px !important;
+  line-height: 26px !important;
+  padding: 0 6px !important;
+}
+
+.sw-stats-body--settlement .sw-settlement-stack--shockwave[data-view-mode="horizontal"] .sw-settlement-support-row .sw-settlement-table-wrap {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.sw-stats-body--settlement .sw-settlement-stack--shockwave[data-view-mode="horizontal"] .sw-recent-summary-card .sw-settlement-table-wrap {
+  border: 3px solid #94a3b8 !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+/* 가로보기 인쇄 모드: 상단 테이블과 하단 카드 사이 세로 간격 절반 축소 */
+body.settlement-print .sw-settlement-stack--shockwave[data-view-mode="horizontal"] .sw-settlement-support-row {
+  margin-top: 1.5mm !important;
+}
+
+/* 가로보기 인쇄 모드: 하단 좌우 헤더 높이/여백 완전 일치 및 테이블 상단 가로선 수평 정렬 */
+body.settlement-print .sw-settlement-stack--shockwave[data-view-mode="horizontal"] .sw-settlement-support-row .sw-settlement-header {
+  height: 6mm !important;
+  min-height: 6mm !important;
+  max-height: 6mm !important;
+  margin: 0 0 1.5mm 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-bottom: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+}
+
+body.settlement-print .sw-settlement-stack--shockwave[data-view-mode="horizontal"] .sw-settlement-support-row .sw-settlement-header h2 {
+  margin: 0 !important;
+  line-height: 6mm !important;
+  font-size: 12pt !important;
+  white-space: nowrap !important;
+}
+
+body.settlement-print .sw-settlement-stack--shockwave[data-view-mode="horizontal"] .sw-settlement-support-row .sw-settlement-meta {
+  margin: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  height: 6mm !important;
+  line-height: 6mm !important;
+}
+
+body.settlement-print .sw-settlement-stack--shockwave[data-view-mode="horizontal"] .sw-settlement-support-row .sw-recent-period-control input {
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 6mm !important;
+  line-height: 6mm !important;
+}
+
+body.settlement-print .sw-settlement-stack--shockwave[data-view-mode="horizontal"] .sw-settlement-support-row .sw-settlement-table-wrap,
+body.settlement-print .sw-settlement-stack--shockwave[data-view-mode="horizontal"] .sw-settlement-support-row .sw-compact-table-wrap {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+body.shockwave-settlement-print .sw-settlement-stack--shockwave[data-view-mode="horizontal"] .sw-recent-summary-card .sw-settlement-table-wrap,
+body.settlement-print .sw-settlement-stack--shockwave[data-view-mode="horizontal"] .sw-recent-summary-card .sw-settlement-table-wrap {
+  border: 1.2px solid #94a3b8 !important;
+  border-radius: 2.5mm !important;
+  box-shadow: none !important;
+  background: #ffffff !important;
+  overflow: hidden !important;
 }
 
 .sw-grand-total-card .sw-settlement-header,
