@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useCallback, useRef } from 'react';
 import BodyPartKeyboardPanel from './BodyPartKeyboardPanel';
 import ContextMenuBodySummary from './ContextMenuBodySummary';
 import { ContextMenuLocalInput } from './ContextMenuLocalInput';
@@ -181,6 +181,27 @@ function ShockwaveContextMenu({
   });
   const sameReservationLabel = selectedHasSameReservationGroup ? '동시간 예약 취소' : '동시간 예약';
 
+  const shockwaveTriggerRef = useRef(null);
+  const shinjangTriggerRef = useRef(null);
+  const manualTriggerRef = useRef(null);
+  const bodyPanelFocusTriggerRef = useRef(null);
+
+  const focusPrescriptionTrigger = useCallback(() => {
+    setActiveContextSubmenu('prescription');
+    const timer = setTimeout(() => {
+      if (shinjangPrescriptions.includes(currentPrescription) && shinjangTriggerRef.current) {
+        shinjangTriggerRef.current.focus({ preventScroll: true });
+      } else if (manualTherapyPrescriptions.includes(currentPrescription) && manualTriggerRef.current) {
+        manualTriggerRef.current.focus({ preventScroll: true });
+      } else if (shockwaveTriggerRef.current) {
+        shockwaveTriggerRef.current.focus({ preventScroll: true });
+      } else if (shinjangTriggerRef.current) {
+        shinjangTriggerRef.current.focus({ preventScroll: true });
+      }
+    }, 20);
+    return () => clearTimeout(timer);
+  }, [currentPrescription, shinjangPrescriptions, manualTherapyPrescriptions, setActiveContextSubmenu]);
+
   return (
     <div
       ref={contextMenuRef}
@@ -309,7 +330,7 @@ function ShockwaveContextMenu({
       <div className="context-menu-meta-section">
         <div
           className={`context-menu-item has-submenu context-menu-meta-item context-menu-prescription-item${activeContextSubmenu === 'prescription' ? ' is-submenu-open' : ''}`}
-          onMouseEnter={() => setActiveContextSubmenu('prescription')}
+          onMouseEnter={focusPrescriptionTrigger}
           onFocusCapture={() => setActiveContextSubmenu('prescription')}
         >
           <span className="context-menu-meta-value-row">
@@ -347,6 +368,7 @@ function ShockwaveContextMenu({
                       ) : null}
                     </label>
                     <ContextMenuPrescriptionSelect
+                      triggerRef={shockwaveTriggerRef}
                       ariaLabel="충격파 처방 선택"
                       value={shockwavePrescriptions.includes(currentPrescription) ? currentPrescription : ''}
                       options={shockwavePrescriptions}
@@ -381,6 +403,7 @@ function ShockwaveContextMenu({
                       ) : null}
                     </label>
                     <ContextMenuPrescriptionSelect
+                      triggerRef={shinjangTriggerRef}
                       ariaLabel="신장분사 처방 선택"
                       value={shinjangPrescriptions.includes(currentPrescription) ? currentPrescription : ''}
                       options={shinjangPrescriptions}
@@ -417,6 +440,7 @@ function ShockwaveContextMenu({
                       ) : null}
                     </label>
                     <ContextMenuPrescriptionSelect
+                      triggerRef={manualTriggerRef}
                       ariaLabel="도수치료 처방 선택"
                       value={manualTherapyPrescriptions.includes(currentPrescription) ? currentPrescription : ''}
                       options={manualTherapyPrescriptions}
@@ -444,7 +468,10 @@ function ShockwaveContextMenu({
 
         <div
           className={contextMenuBodyItemClassName}
-          onMouseEnter={() => setActiveContextSubmenu('body')}
+          onMouseEnter={() => {
+            setActiveContextSubmenu('body');
+            bodyPanelFocusTriggerRef.current?.();
+          }}
           onFocusCapture={() => setActiveContextSubmenu('body')}
         >
           <ContextMenuBodySummary parts={currentParts} />
@@ -456,6 +483,8 @@ function ShockwaveContextMenu({
                     availableParts={availableParts}
                     currentParts={currentParts}
                     autoFocus={true}
+                    isActive={activeContextSubmenu === 'body'}
+                    focusTriggerRef={bodyPanelFocusTriggerRef}
                     imeOpenRef={imeOpenRef}
                     onAdd={(value) => {
                       const partKey = normalizeBodyPartKey(value);

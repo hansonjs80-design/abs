@@ -2964,11 +2964,18 @@
 }
 
 .shockwave-context-menu .context-menu-prescription-trigger:hover,
-.shockwave-context-menu .context-menu-prescription-trigger:focus-visible,
 .shockwave-context-menu .context-menu-prescription-trigger[aria-expanded="true"] {
   border-color: #8aa8d6;
   background: #f8fbff;
   outline: none;
+}
+
+.shockwave-context-menu .context-menu-prescription-trigger:focus,
+.shockwave-context-menu .context-menu-prescription-trigger:focus-visible {
+  border-color: #2563eb !important;
+  background: #eff6ff !important;
+  outline: 2px solid #2563eb !important;
+  outline-offset: -1px;
 }
 
 .context-menu-prescription-trigger-text,

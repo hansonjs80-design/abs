@@ -14,6 +14,7 @@ export default function ContextMenuPrescriptionSelect({
   emphasizeWholeNumberShinjangOptions = false,
   align = 'start',
   onChange,
+  triggerRef,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [opensUpward, setOpensUpward] = useState(false);
@@ -61,6 +62,7 @@ export default function ContextMenuPrescriptionSelect({
       className={`context-menu-prescription-dropdown context-menu-prescription-dropdown--${align}`}
     >
       <button
+        ref={triggerRef}
         type="button"
         className="context-menu-prescription-trigger"
         aria-label={ariaLabel}

@@ -22,6 +22,8 @@ export default function BodyPartKeyboardPanel({
   onSetPreset,
   imeOpenRef,
   autoFocus = false,
+  isActive = false,
+  focusTriggerRef,
 }) {
   const [inputValue, setInputValue] = useState('');
   const [focusIndex, setFocusIndex] = useState(0);
@@ -54,7 +56,11 @@ export default function BodyPartKeyboardPanel({
     if (presetItems.length === 0) return;
     const boundedIndex = (nextIndex + presetItems.length) % presetItems.length;
     setPresetFocusIndex(boundedIndex);
-    presetRefs.current[boundedIndex]?.focus({ preventScroll: true });
+    const node = presetRefs.current[boundedIndex];
+    if (node) {
+      node.focus({ preventScroll: true });
+      node.scrollIntoView?.({ block: 'nearest' });
+    }
   };
 
   const handlePresetKeyDown = (event, item, index) => {
@@ -100,11 +106,15 @@ export default function BodyPartKeyboardPanel({
   }, [editingSelectedIndex]);
 
   useEffect(() => {
-    if (!autoFocus) return undefined;
+    if (!isActive && !autoFocus) return undefined;
     let cancelled = false;
     const focusInitialElement = () => {
       if (cancelled) return;
-      if (presetItems.length > 0 && presetRefs.current[0]) {
+      const targetIndex = presetFocusIndex > 0 ? presetFocusIndex : 0;
+      if (presetItems.length > 0 && presetRefs.current[targetIndex]) {
+        presetRefs.current[targetIndex].focus({ preventScroll: true });
+        setPresetFocusIndex(targetIndex);
+      } else if (presetItems.length > 0 && presetRefs.current[0]) {
         presetRefs.current[0].focus({ preventScroll: true });
         setPresetFocusIndex(0);
       } else if (inputRef.current) {
@@ -120,15 +130,24 @@ export default function BodyPartKeyboardPanel({
       focusInitialElement();
       nestedFrameId = requestAnimationFrame(focusInitialElement);
     });
+    const timer = setTimeout(focusInitialElement, 40);
 
     return () => {
       cancelled = true;
       cancelAnimationFrame(frameId);
-      if (nestedFrameId !== null) {
-        cancelAnimationFrame(nestedFrameId);
-      }
+      if (nestedFrameId) cancelAnimationFrame(nestedFrameId);
+      clearTimeout(timer);
     };
-  }, [autoFocus, presetItems.length]);
+  }, [isActive, autoFocus, presetItems.length]);
+
+  useEffect(() => {
+    if (focusTriggerRef) {
+      focusTriggerRef.current = () => {
+        focusPreset(presetFocusIndex >= 0 ? presetFocusIndex : 0);
+      };
+    }
+  }, [focusTriggerRef, presetFocusIndex, presetItems.length]);
+
 
   const focusTarget = (nextIndex) => {
     const maxIndex = selectableParts.length;
@@ -210,6 +229,18 @@ export default function BodyPartKeyboardPanel({
   return (
     <div
       className="context-menu-body-panel"
+      tabIndex={-1}
+      onKeyDown={(event) => {
+        if (event.key === 'ArrowDown') {
+          event.preventDefault();
+          event.stopPropagation();
+          focusPreset(presetFocusIndex + 1);
+        } else if (event.key === 'ArrowUp') {
+          event.preventDefault();
+          event.stopPropagation();
+          focusPreset(presetFocusIndex - 1);
+        }
+      }}
       onMouseDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
     >
@@ -227,6 +258,10 @@ export default function BodyPartKeyboardPanel({
                   <div
                     key={item.id}
                     className={`context-menu-body-preset-item${isFocused ? ' is-keyboard-focused' : ''}`}
+                    onMouseEnter={() => {
+                      setPresetFocusIndex(flatIndex);
+                      presetRefs.current[flatIndex]?.focus({ preventScroll: true });
+                    }}
                   >
                     <label className="context-menu-body-preset-label">
                       <input
