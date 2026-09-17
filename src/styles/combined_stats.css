@@ -389,14 +389,20 @@
 .combined-therapist-card tbody th {
   background: #fff;
   font-size: 1.08rem;
+  text-align: left;
+  padding-left: 2ch;
 }
 
 .combined-therapist-card tbody td.combined-therapist-amount-cell {
   color: #075fc5;
+  text-align: right;
+  padding-right: 10px;
 }
 
 .combined-therapist-card tbody td.combined-therapist-incentive-cell {
   color: #7c3aed;
+  text-align: right;
+  padding-right: 10px;
 }
 
 .combined-therapist-card tbody tr.combined-incentive-rate-row--7 > * {
