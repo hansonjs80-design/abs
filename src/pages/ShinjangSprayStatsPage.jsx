@@ -789,6 +789,7 @@ export default function ShinjangSprayStatsPage() {
                         onSelectedTherapistNamesChange={setSelectedTherapistNames}
                         readOnly
                         showOnlyTherapistPrescriptions
+                        treatmentLabel="신장분사"
                       />
                     </div>
                   </div>

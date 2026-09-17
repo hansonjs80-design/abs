@@ -287,4 +287,15 @@ describe('shinjang spray statistics UI', () => {
     assert.match(rateColumnCss, /\.sw-settlement-rate-column\s*\{\s*width:\s*77px !important;\s*\}/);
     assert.match(rateColumnCss, /th\.sw-settlement-rate-cell[\s\S]*?white-space:\s*nowrap !important;/);
   });
+
+  it('abbreviates prescription names and narrows column width in shinjang spray grid table', async () => {
+    const [pageSource, gridSource] = await Promise.all([
+      readFile(pageUrl, 'utf8'),
+      readFile(new URL('../../components/shockwave/ShockwaveDataGrid.jsx', import.meta.url), 'utf8'),
+    ]);
+
+    assert.match(pageSource, /treatmentLabel="신장분사"/);
+    assert.match(gridSource, /if\s*\(isShinjangSpray\)\s*return\s*64;/);
+    assert.match(gridSource, /prescription\.replace\(\/신장분사\/g,\s*'신장'\)/);
+  });
 });

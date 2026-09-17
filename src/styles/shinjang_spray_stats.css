@@ -262,3 +262,20 @@
     display: none !important;
   }
 }
+
+/* 신장분사 현황 테이블: 처방 헤더 글자 크기 및 패딩 최적화 */
+.sw-grid-wrapper[data-treatment="신장분사"] .hdr-pres,
+.sw-grid-table[data-treatment="신장분사"] .hdr-pres {
+  font-size: 13.5px !important;
+  padding-left: 2px !important;
+  padding-right: 2px !important;
+  letter-spacing: -0.02em !important;
+  white-space: nowrap !important;
+}
+
+.sw-grid-wrapper[data-treatment="신장분사"] .hdr-pres-total,
+.sw-grid-table[data-treatment="신장분사"] .hdr-pres-total {
+  font-size: 14.5px !important;
+  padding-left: 2px !important;
+  padding-right: 2px !important;
+}

@@ -113,7 +113,16 @@ export default function ShockwaveDataGrid({
   onSelectedTherapistNamesChange,
   readOnly = false,
   showOnlyTherapistPrescriptions = false,
+  treatmentLabel = '충격파',
 }) {
+  const isShinjangSpray = treatmentLabel === '신장분사' || String(title || '').includes('신장분사');
+  const formatPrescriptionHeader = useCallback((prescription) => {
+    if (!prescription) return '—';
+    if (isShinjangSpray) {
+      return prescription.replace(/신장분사/g, '신장');
+    }
+    return prescription;
+  }, [isShinjangSpray]);
   const { addToast } = useToast();
   const { shockwaveSettings: settings } = useSchedule();
   const safeInputLogs = useMemo(
@@ -399,13 +408,14 @@ export default function ShockwaveDataGrid({
   const newPatientColIndex = totalCountColIndex + 1;
   const totalColCount = newPatientColIndex + 1;
   const therapistColumnWidth = useMemo(() => {
+    if (isShinjangSpray) return 64;
     if (showOnlyTherapistPrescriptions) return 88;
     const count = Math.max(1, visibleTherapists.length);
     if (count <= 2) return 69;
     if (count <= 4) return 64;
     if (count <= 6) return 57;
     return 52;
-  }, [showOnlyTherapistPrescriptions, visibleTherapists.length]);
+  }, [isShinjangSpray, showOnlyTherapistPrescriptions, visibleTherapists.length]);
   const gridMinWidth = useMemo(() => {
     const fixedWidth = FIXED_FIELDS.reduce((sum, field) => sum + field.w, 0);
     const therapistWidth = therapistPrescriptionColumns.length * therapistColumnWidth;
@@ -1645,8 +1655,18 @@ export default function ShockwaveDataGrid({
 
   return (
     <div className="sw-grid-shell">
-    <div className={gridWrapperClassName} ref={wrapRef} tabIndex={0} onMouseUp={onMouseUp}>
-      <table className="sw-grid-table" style={{ minWidth: `${gridMinWidth}px` }}>
+    <div
+      className={gridWrapperClassName}
+      ref={wrapRef}
+      tabIndex={0}
+      onMouseUp={onMouseUp}
+      data-treatment={isShinjangSpray ? '신장분사' : undefined}
+    >
+      <table
+        className="sw-grid-table"
+        data-treatment={isShinjangSpray ? '신장분사' : undefined}
+        style={{ minWidth: `${gridMinWidth}px` }}
+      >
         <colgroup>
           {FIXED_FIELDS.map((f) => <col key={f.id} style={{ width: f.w, minWidth: f.w }} />)}
           {therapistPrescriptionColumns.map((column) => (
@@ -1762,10 +1782,10 @@ export default function ShockwaveDataGrid({
                   title={canFilter
                     ? isActiveFilter
                       ? '더블클릭하여 전체 치료사 처방 필터 해제'
-                      : `${p} 처방 환자를 모든 치료사에서 보기 (더블클릭)`
+                      : `${formatPrescriptionHeader(p)} 처방 환자를 모든 치료사에서 보기 (더블클릭)`
                     : !p ? '완료 처방 없음' : undefined}
                 >
-                  <span className="sw-grid-prescription-label">{p || '—'}</span>
+                  <span className="sw-grid-prescription-label">{formatPrescriptionHeader(p)}</span>
                 </th>
               );
             }))}
@@ -1799,7 +1819,7 @@ export default function ShockwaveDataGrid({
                   title={canFilter
                     ? isActiveFilter
                       ? '더블클릭하여 환자 필터 해제'
-                      : `${group.therapist.displayName} · ${p} 환자만 보기 (더블클릭)`
+                      : `${group.therapist.displayName} · ${formatPrescriptionHeader(p)} 환자만 보기 (더블클릭)`
                     : undefined}
                 >
                   {!p ? '-' : prescriptionCount}
