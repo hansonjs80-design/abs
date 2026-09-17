@@ -174,8 +174,14 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /className=\{`combined-therapist-tab-btn \$\{viewMode === 'total-only' \? 'is-active' : ''\}`\}/);
     assert.match(pageSource, /className=\{`combined-therapist-tab-btn \$\{viewMode === 'detail' \? 'is-active' : ''\}`\}/);
     assert.match(pageSource, /buildTherapistTreatmentDetailSections/);
+    assert.match(pageSource, /isParent:\s*true/);
+    assert.match(pageSource, /label:\s*`↳ \$\{row\.prescription\}`/);
+    assert.match(pageSource, /combined-treatment-parent-row/);
+    assert.match(pageSource, /combined-treatment-child-row/);
     assert.match(styleSource, /\.combined-therapist-view-tabs\s*\{/);
     assert.match(styleSource, /\.combined-therapist-tab-btn\.is-active\s*\{/);
+    assert.match(styleSource, /\.combined-treatment-parent-row/);
+    assert.match(styleSource, /\.combined-treatment-child-row/);
     assert.match(styleSource, /@media print\s*\{[\s\S]*?\.combined-therapist-view-tabs,[\s\S]*?display:\s*none !important;/);
     assert.match(styleSource, /body\[class\*="-print"\][\s\S]*?\.combined-therapist-view-tabs,[\s\S]*?display:\s*none !important;/);
   });

@@ -56,18 +56,93 @@ function buildTherapistTreatmentDetailSections(item, isAdmin = false) {
   const hasAnyActivity = Math.max(0, Number(item?.total?.count) || 0) > 0;
   if (!hasAnyActivity) return [];
 
-  return COMBINED_STATS_TREATMENTS.map((treatment) => {
-    const value = item?.treatments?.[treatment.key] || { count: 0, amount: 0, incentive: 0 };
-    const groups = item?.prescriptionGroups?.[treatment.key] || [];
-    const rows = groups
-      .filter((row) => Number(row?.count) > 0 && (isAdmin || treatment.key !== 'shinjang_spray' || Number(row?.rate) !== 15))
+  const sections = [];
+
+  // 1. 충격파
+  const shockwaveTotal = item?.treatments?.shockwave || { count: 0, amount: 0, incentive: 0 };
+  if (Number(shockwaveTotal.count) > 0) {
+    const parentRow = {
+      ...shockwaveTotal,
+      label: '충격파 7%',
+      rates: [7],
+      isParent: true,
+    };
+    const childRows = (item?.prescriptionGroups?.shockwave || [])
+      .filter((row) => Number(row?.count) > 0)
       .map((row) => ({
         ...row,
-        label: row.prescription,
-        rates: Array.isArray(row.rates) ? row.rates : [row.rate],
+        label: `↳ ${row.prescription}`,
+        rates: [7],
+        isChild: true,
       }));
-    return { ...treatment, value, rows };
-  }).filter((section) => (isAdmin || section.key !== 'manual_therapy') && section.rows.length > 0);
+    sections.push({
+      key: 'shockwave',
+      label: '충격파',
+      value: shockwaveTotal,
+      rows: [parentRow, ...childRows],
+    });
+  }
+
+  // 2. 신장분사 (7%와 15%가 각각 상위 항목으로 나옴)
+  const therapistShinjangMap = new Map(
+    (Array.isArray(item?.shinjangIncentiveGroups) ? item.shinjangIncentiveGroups : [])
+      .map((g) => [Number(g.rate), g])
+  );
+  const shinjangRates = isAdmin ? [7, 15] : [7];
+  shinjangRates.forEach((rate) => {
+    const rateSummary = therapistShinjangMap.get(rate);
+    if (!rateSummary || Number(rateSummary.count) <= 0) return;
+
+    const parentRow = {
+      ...rateSummary,
+      label: `신장분사 ${formatIncentiveRate(rate)}`,
+      rates: [rate],
+      isParent: true,
+    };
+    const childRows = (item?.prescriptionGroups?.shinjang_spray || [])
+      .filter((row) => Number(row?.rate) === rate && Number(row?.count) > 0)
+      .map((row) => ({
+        ...row,
+        label: `↳ ${row.prescription}`,
+        rates: [rate],
+        isChild: true,
+      }));
+    sections.push({
+      key: `shinjang_spray_${rate}`,
+      label: '신장분사',
+      value: rateSummary,
+      rows: [parentRow, ...childRows],
+    });
+  });
+
+  // 3. 도수치료 (isAdmin일 때만)
+  if (isAdmin) {
+    const manualTotal = item?.treatments?.manual_therapy || { count: 0, amount: 0, incentive: 0 };
+    if (Number(manualTotal.count) > 0) {
+      const parentRow = {
+        ...manualTotal,
+        label: '도수치료 15%',
+        rates: [15],
+        isParent: true,
+      };
+      const childRows = (item?.prescriptionGroups?.manual_therapy || [])
+        .filter((row) => Number(row?.count) > 0)
+        .map((row) => ({
+          ...row,
+          label: `↳ ${row.prescription}`,
+          rates: [15],
+          isChild: true,
+        }));
+      sections.push({
+        key: 'manual_therapy',
+        label: '도수치료',
+        value: manualTotal,
+        rows: [parentRow, ...childRows],
+      });
+    }
+  }
+
+  return sections;
 }
 
 function buildTherapistTreatmentSections(item, isAdmin = false) {
@@ -580,9 +655,11 @@ export default function CombinedStatsPage() {
                         <tbody>
                           {visibleTreatments.flatMap((treatment) => (
                             treatment.rows.map((row, rowIndex) => {
-                              const rowKey = row.prescription
-                                ? `${treatment.key}-${row.prescription}`
-                                : `${treatment.key}-${row.rates?.join('-') || 'total'}`;
+                              const rowKey = row.isParent
+                                ? `${treatment.key}-parent-${row.label}`
+                                : row.prescription
+                                  ? `${treatment.key}-${row.prescription}`
+                                  : `${treatment.key}-${row.rates?.join('-') || 'total'}`;
                               const rowLabel = row.label || row.prescription;
                               const rateSpan = getConsecutiveRowSpan(visibleRateRows, visibleRateRows.indexOf(row), (entry) => entry.rates?.length === 1 ? Number(entry.rates[0]) : null);
                               const incentiveRate = row.rates?.length === 1 ? Number(row.rates[0]) : null;
@@ -591,12 +668,18 @@ export default function CombinedStatsPage() {
                                 : incentiveRate === 15
                                   ? 'combined-incentive-rate-row--15'
                                   : '';
+                              const hierarchyClass = row.isParent
+                                ? 'combined-treatment-parent-row'
+                                : row.isChild
+                                  ? 'combined-treatment-child-row'
+                                  : '';
                               return (
                                 <tr
                                   key={rowKey}
                                   className={[
                                     rowIndex === 0 ? 'combined-treatment-group-start' : '',
                                     incentiveRateRowClass,
+                                    hierarchyClass,
                                   ].filter(Boolean).join(' ')}
                                 >
                                   {rowLabel ? (

@@ -380,6 +380,32 @@
   background: #f6ecfb;
 }
 
+/* 상세 보기 계층 스타일: 상위 항목(충격파 7% 등) 및 하위 세부 처방(↳ F2.5 등) */
+.combined-therapist-card tbody tr.combined-treatment-parent-row > * {
+  font-weight: 900 !important;
+}
+
+.combined-therapist-card tbody tr.combined-treatment-child-row th {
+  padding-left: 18px !important;
+  text-align: left !important;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.combined-therapist-card tbody tr.combined-treatment-child-row td {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.combined-therapist-card tbody tr.combined-treatment-child-row.combined-incentive-rate-row--7 > * {
+  background: #f4f8fe !important;
+}
+
+.combined-therapist-card tbody tr.combined-treatment-child-row.combined-incentive-rate-row--15 > * {
+  background: #faf4fc !important;
+}
+
 .combined-incentive-rate-cell {
   padding: 3px 5px !important;
 }
