@@ -698,7 +698,9 @@
 }
 
 @media print {
-  .combined-stats-refresh {
+  .combined-stats-refresh,
+  .combined-recent-filter-tabs,
+  .combined-recent-tab-btn {
     display: none !important;
   }
 
@@ -747,4 +749,12 @@
 .combined-therapist-card,
 .combined-stats-recent {
   box-shadow: none !important;
+}
+
+/* 인쇄 모드 상태 클래스에서도 전체만보기/상세보기 탭 버튼 숨김 보장 */
+body[class*="-print"] .combined-recent-filter-tabs,
+body[class*="-print"] .combined-recent-tab-btn,
+body.settlement-print .combined-recent-filter-tabs,
+body.settlement-print .combined-recent-tab-btn {
+  display: none !important;
 }

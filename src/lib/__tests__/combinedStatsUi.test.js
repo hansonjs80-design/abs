@@ -136,5 +136,6 @@ describe('combined statistics UI', () => {
     assert.match(styleSource, /\.combined-recent-filter-tabs\s*\{/);
     assert.match(styleSource, /\.combined-recent-tab-btn\.is-active\s*\{/);
     assert.match(styleSource, /\.combined-recent-single-value\s*\{/);
+    assert.match(styleSource, /@media print\s*\{[\s\S]*?\.combined-recent-filter-tabs,[\s\S]*?display:\s*none !important;/);
   });
 });
