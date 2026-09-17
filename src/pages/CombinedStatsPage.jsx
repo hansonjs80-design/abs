@@ -614,153 +614,170 @@ export default function CombinedStatsPage() {
         </button>
       </header>
 
-      {activeTab === 'therapist' && (
-        <div className={`combined-stats-dashboard combined-stats-dashboard--stats combined-stats-dashboard--${layoutMode}`}>
-          <section className="combined-stats-current" aria-label={`${currentMonth}월 치료사별 전체 통계`}>
-            {currentSummary?.therapists?.length > 0 ? (
-              currentSummary.therapists.map((item, index) => {
-                const therapistKey = item.therapist.key || item.therapist.id || item.therapist.name;
-                const viewMode = therapistViewModes[therapistKey] || 'total-only';
-                // const visibleTreatments = buildTherapistTreatmentSections(item, isAdmin);
-                const visibleTreatments = viewMode === 'detail'
-                  ? buildTherapistTreatmentDetailSections(item, isAdmin)
-                  : buildTherapistTreatmentSections(item, isAdmin);
-                // const visibleRateRows = visibleTreatments.flatMap((treatment) => treatment.rows);
-                const { rate7Total, rate15Total } = getTherapistRateTotals(item, isAdmin);
-                return (
-                  <article
-                    key={therapistKey}
-                    className={`combined-therapist-card combined-tone-${index % 5}`}
-                  >
-                    <table>
-                      <colgroup>
-                        <col className="combined-current-col-type" />
-                        <col className="combined-current-col-count" />
-                        <col className="combined-current-col-amount" />
-                        <col className="combined-current-col-incentive" />
-                      </colgroup>
-                      <thead>
-                        <tr>
-                          <th className="combined-therapist-name" colSpan={4}>
-                            <div className="combined-therapist-name-content">
-                              <div className="combined-therapist-title-wrap">
-                                <span>{item.therapist.displayName || item.therapist.name} 치료사</span>
-                                <div className="combined-therapist-view-tabs" role="tablist" aria-label="치료사 통계 보기 방식">
-                                  <button
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={viewMode === 'total-only'}
-                                    className={`combined-therapist-tab-btn ${viewMode === 'total-only' ? 'is-active' : ''}`}
-                                    onClick={() => setTherapistViewModes((prev) => ({ ...prev, [therapistKey]: 'total-only' }))}
-                                  >
-                                    전체만 보기
-                                  </button>
-                                  <button
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={viewMode === 'detail'}
-                                    className={`combined-therapist-tab-btn ${viewMode === 'detail' ? 'is-active' : ''}`}
-                                    onClick={() => setTherapistViewModes((prev) => ({ ...prev, [therapistKey]: 'detail' }))}
-                                  >
-                                    상세 보기
-                                  </button>
-                                </div>
-                              </div>
-                              <span className="combined-therapist-header-count">
-                                {formatCount(item.total.count)}
-                              </span>
-                            </div>
-                          </th>
-                        </tr>
-                        {visibleTreatments.length > 0 && (
-                          <tr>
-                            <th>구분</th>
-                            <th>총건수</th>
-                            <th>총 결산 금액</th>
-                            <th>총 인센티브</th>
+      {activeTab === 'therapist' && (() => {
+        const renderTherapistCard = (item, index) => {
+          const therapistKey = item.therapist.key || item.therapist.id || item.therapist.name;
+          const viewMode = therapistViewModes[therapistKey] || 'total-only';
+          const visibleTreatments = viewMode === 'detail'
+            ? buildTherapistTreatmentDetailSections(item, isAdmin)
+            : buildTherapistTreatmentSections(item, isAdmin);
+          const { rate7Total, rate15Total } = getTherapistRateTotals(item, isAdmin);
+          return (
+            <article
+              key={therapistKey}
+              className={`combined-therapist-card combined-tone-${index % 5}`}
+            >
+              <table>
+                <colgroup>
+                  <col className="combined-current-col-type" />
+                  <col className="combined-current-col-count" />
+                  <col className="combined-current-col-amount" />
+                  <col className="combined-current-col-incentive" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th className="combined-therapist-name" colSpan={4}>
+                      <div className="combined-therapist-name-content">
+                        <div className="combined-therapist-title-wrap">
+                          <span>{item.therapist.displayName || item.therapist.name} 치료사</span>
+                          <div className="combined-therapist-view-tabs" role="tablist" aria-label="치료사 통계 보기 방식">
+                            <button
+                              type="button"
+                              role="tab"
+                              aria-selected={viewMode === 'total-only'}
+                              className={`combined-therapist-tab-btn ${viewMode === 'total-only' ? 'is-active' : ''}`}
+                              onClick={() => setTherapistViewModes((prev) => ({ ...prev, [therapistKey]: 'total-only' }))}
+                            >
+                              전체만 보기
+                            </button>
+                            <button
+                              type="button"
+                              role="tab"
+                              aria-selected={viewMode === 'detail'}
+                              className={`combined-therapist-tab-btn ${viewMode === 'detail' ? 'is-active' : ''}`}
+                              onClick={() => setTherapistViewModes((prev) => ({ ...prev, [therapistKey]: 'detail' }))}
+                            >
+                              상세 보기
+                            </button>
+                          </div>
+                        </div>
+                        <span className="combined-therapist-header-count">
+                          {formatCount(item.total.count)}
+                        </span>
+                      </div>
+                    </th>
+                  </tr>
+                  {visibleTreatments.length > 0 && (
+                    <tr>
+                      <th>구분</th>
+                      <th>총건수</th>
+                      <th>총 결산 금액</th>
+                      <th>총 인센티브</th>
+                    </tr>
+                  )}
+                </thead>
+                {visibleTreatments.length > 0 && (
+                  <tbody>
+                    {visibleTreatments.flatMap((treatment) => (
+                      treatment.rows.map((row, rowIndex) => {
+                        const rowKey = row.isParent
+                          ? `${treatment.key}-parent-${row.label}`
+                          : row.prescription
+                            ? `${treatment.key}-${row.prescription}`
+                            : `${treatment.key}-${row.rates?.join('-') || 'total'}`;
+                        const rowLabel = row.label || row.prescription;
+                        const incentiveRate = row.rates?.length === 1 ? Number(row.rates[0]) : null;
+                        const incentiveRateRowClass = incentiveRate === 7
+                          ? 'combined-incentive-rate-row--7'
+                          : incentiveRate === 15
+                            ? 'combined-incentive-rate-row--15'
+                            : '';
+                        const hierarchyClass = row.isParent
+                          ? 'combined-treatment-parent-row'
+                          : row.isChild
+                            ? 'combined-treatment-child-row'
+                            : '';
+                        return (
+                          <tr
+                            key={rowKey}
+                            className={[
+                              rowIndex === 0 ? 'combined-treatment-group-start' : '',
+                              incentiveRateRowClass,
+                              hierarchyClass,
+                            ].filter(Boolean).join(' ')}
+                          >
+                            {rowLabel ? (
+                              <th>{rowLabel}</th>
+                            ) : (
+                              rowIndex === 0 && (
+                                <th rowSpan={treatment.rows.length}>{treatment.label}</th>
+                              )
+                            )}
+                            <td className="combined-therapist-count-cell">{formatCount(row.count)}</td>
+                            <td className="combined-therapist-amount-cell">{formatCurrency(row.amount)}</td>
+                            <td className="combined-therapist-incentive-cell">{formatCurrency(row.incentive)}</td>
                           </tr>
-                        )}
-                      </thead>
-                      {visibleTreatments.length > 0 && (
-                        <tbody>
-                          {visibleTreatments.flatMap((treatment) => (
-                            treatment.rows.map((row, rowIndex) => {
-                              const rowKey = row.isParent
-                                ? `${treatment.key}-parent-${row.label}`
-                                : row.prescription
-                                  ? `${treatment.key}-${row.prescription}`
-                                  : `${treatment.key}-${row.rates?.join('-') || 'total'}`;
-                              const rowLabel = row.label || row.prescription;
-                              const incentiveRate = row.rates?.length === 1 ? Number(row.rates[0]) : null;
-                              const incentiveRateRowClass = incentiveRate === 7
-                                ? 'combined-incentive-rate-row--7'
-                                : incentiveRate === 15
-                                  ? 'combined-incentive-rate-row--15'
-                                  : '';
-                              const hierarchyClass = row.isParent
-                                ? 'combined-treatment-parent-row'
-                                : row.isChild
-                                  ? 'combined-treatment-child-row'
-                                  : '';
-                              return (
-                                <tr
-                                  key={rowKey}
-                                  className={[
-                                    rowIndex === 0 ? 'combined-treatment-group-start' : '',
-                                    incentiveRateRowClass,
-                                    hierarchyClass,
-                                  ].filter(Boolean).join(' ')}
-                                >
-                                  {rowLabel ? (
-                                    <th>{rowLabel}</th>
-                                  ) : (
-                                    rowIndex === 0 && (
-                                      <th rowSpan={treatment.rows.length}>{treatment.label}</th>
-                                    )
-                                  )}
-                                  <td className="combined-therapist-count-cell">{formatCount(row.count)}</td>
-                                  <td className="combined-therapist-amount-cell">{formatCurrency(row.amount)}</td>
-                                  <td className="combined-therapist-incentive-cell">{formatCurrency(row.incentive)}</td>
-                                </tr>
-                              );
-                            })
-                          ))}
-                          {Number(rate7Total.count) > 0 && (
-                            <tr className="combined-therapist-subtotal combined-therapist-subtotal--start combined-incentive-rate-row--7">
-                              <th>7% 합계</th>
-                              <td className="combined-therapist-count-cell">{formatCount(rate7Total.count)}</td>
-                              <td className="combined-therapist-amount-cell">{formatCurrency(rate7Total.amount)}</td>
-                              <td className="combined-therapist-incentive-cell">{formatCurrency(rate7Total.incentive)}</td>
-                            </tr>
-                          )}
-                          {isAdmin && Number(rate15Total.count) > 0 && (
-                            <tr className={`combined-therapist-subtotal ${Number(rate7Total.count) <= 0 ? 'combined-therapist-subtotal--start ' : ''}combined-incentive-rate-row--15`}>
-                              <th>15% 합계</th>
-                              <td className="combined-therapist-count-cell">{formatCount(rate15Total.count)}</td>
-                              <td className="combined-therapist-amount-cell">{formatCurrency(rate15Total.amount)}</td>
-                              <td className="combined-therapist-incentive-cell">{formatCurrency(rate15Total.incentive)}</td>
-                            </tr>
-                          )}
-                          <tr className="combined-therapist-total">
-                            <th>합계</th>
-                            <td className="combined-therapist-count-cell">{formatCount(item.total.count)}</td>
-                            <td className="combined-therapist-amount-cell">{formatCurrency(item.total.amount)}</td>
-                            <td className="combined-therapist-incentive-cell">{formatCurrency(item.total.incentive)}</td>
-                          </tr>
-                        </tbody>
-                      )}
-                    </table>
-                  </article>
-                );
-              })
+                        );
+                      })
+                    ))}
+                    {Number(rate7Total.count) > 0 && (
+                      <tr className="combined-therapist-subtotal combined-therapist-subtotal--start combined-incentive-rate-row--7">
+                        <th>7% 합계</th>
+                        <td className="combined-therapist-count-cell">{formatCount(rate7Total.count)}</td>
+                        <td className="combined-therapist-amount-cell">{formatCurrency(rate7Total.amount)}</td>
+                        <td className="combined-therapist-incentive-cell">{formatCurrency(rate7Total.incentive)}</td>
+                      </tr>
+                    )}
+                    {isAdmin && Number(rate15Total.count) > 0 && (
+                      <tr className={`combined-therapist-subtotal ${Number(rate7Total.count) <= 0 ? 'combined-therapist-subtotal--start ' : ''}combined-incentive-rate-row--15`}>
+                        <th>15% 합계</th>
+                        <td className="combined-therapist-count-cell">{formatCount(rate15Total.count)}</td>
+                        <td className="combined-therapist-amount-cell">{formatCurrency(rate15Total.amount)}</td>
+                        <td className="combined-therapist-incentive-cell">{formatCurrency(rate15Total.incentive)}</td>
+                      </tr>
+                    )}
+                    <tr className="combined-therapist-total">
+                      <th>합계</th>
+                      <td className="combined-therapist-count-cell">{formatCount(item.total.count)}</td>
+                      <td className="combined-therapist-amount-cell">{formatCurrency(item.total.amount)}</td>
+                      <td className="combined-therapist-incentive-cell">{formatCurrency(item.total.incentive)}</td>
+                    </tr>
+                  </tbody>
+                )}
+              </table>
+            </article>
+          );
+        };
+
+        const therapists = currentSummary?.therapists || [];
+
+        return (
+          <div className={`combined-stats-dashboard combined-stats-dashboard--stats combined-stats-dashboard--${layoutMode}`}>
+            {therapists.length > 0 ? (
+              layoutMode === 'vertical' ? (
+                <div className="combined-vertical-two-col">
+                  <div className="combined-vertical-left">
+                    {renderTherapistCard(therapists[0], 0)}
+                  </div>
+                  {therapists.length > 1 && (
+                    <div className="combined-vertical-right">
+                      {therapists.slice(1).map((item, idx) => renderTherapistCard(item, idx + 1))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <section className="combined-stats-current" aria-label={`${currentMonth}월 치료사별 전체 통계`}>
+                  {therapists.map((item, index) => renderTherapistCard(item, index))}
+                </section>
+              )
             ) : (
               <div className="combined-stats-empty">
                 {isLoading ? '전체 통계를 계산하고 있습니다.' : '표시할 치료사 통계가 없습니다.'}
               </div>
             )}
-          </section>
-        </div>
-      )}
+          </div>
+        );
+      })()}
 
       {activeTab === 'summary' && (
         <div className="combined-stats-dashboard combined-stats-dashboard--summary">
