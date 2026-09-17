@@ -93,6 +93,13 @@ describe('combined statistics', () => {
       { rate: 7, count: 1, amount: 270000, incentive: 18900 },
     ]);
     assert.deepEqual(primary.total, { count: 3, amount: 430000, incentive: 34900 });
+    assert.deepEqual(primary.prescriptionGroups.shockwave, [
+      { prescription: 'F3.0', rate: 10, count: 2, amount: 160000, incentive: 16000, rates: [10] },
+    ]);
+    assert.deepEqual(primary.prescriptionGroups.shinjang_spray, [
+      { prescription: 'S7(신장분사)', rate: 7, count: 1, amount: 270000, incentive: 18900, rates: [7] },
+    ]);
+    assert.deepEqual(primary.prescriptionGroups.manual_therapy, []);
     assert.deepEqual(hidden.total, { count: 0, amount: 0, incentive: 0 });
     assert.equal(summary.totalCount, 3);
     assert.equal(summary.amount, 430000);
@@ -125,6 +132,10 @@ describe('combined statistics', () => {
     assert.equal(summary.totalCount, 5);
     assert.equal(summary.amount, 980000);
     assert.equal(summary.incentive, 102400);
+    const adminPrimary = summary.therapists.find((item) => item.therapist.name === '주한솔');
+    assert.deepEqual(adminPrimary.prescriptionGroups.manual_therapy, [
+      { prescription: '40분', rate: 5, count: 1, amount: 150000, incentive: 7500, rates: [5] },
+    ]);
   });
 
   it('adds recent month counts, settlement amounts, and incentives', () => {

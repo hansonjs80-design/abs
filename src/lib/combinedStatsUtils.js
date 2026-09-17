@@ -169,13 +169,18 @@ function buildStandardTreatmentSummary({
     cryoPrices: settings?.cryo_prices,
   });
 
-  return buildManualTherapySettlementSummary({
+  const settlement = buildManualTherapySettlementSummary({
     rows: visibleRows,
     prescriptions,
     therapists,
     prescriptionPrices: cryoAdjustedPrices,
     incentivePercentage: settings?.incentive_percentage,
   });
+
+  return {
+    ...settlement,
+    prescriptions,
+  };
 }
 
 function buildShinjangTreatmentSummary({
