@@ -181,7 +181,13 @@ describe('combined statistics UI', () => {
     assert.match(styleSource, /\.combined-therapist-view-tabs\s*\{/);
     assert.match(styleSource, /\.combined-therapist-tab-btn\.is-active\s*\{/);
     assert.match(styleSource, /\.combined-treatment-parent-row/);
-    assert.match(styleSource, /\.combined-treatment-child-row/);
+    assert.match(pageSource, /getTherapistRateTotals/);
+    assert.match(pageSource, /<th>7% 합계<\/th>/);
+    assert.match(pageSource, /<th>15% 합계<\/th>/);
+    assert.match(pageSource, /combined-therapist-subtotal/);
+    assert.match(styleSource, /\.combined-therapist-subtotal/);
+    assert.match(styleSource, /\.combined-therapist-card tbody tr\.combined-therapist-subtotal\.combined-incentive-rate-row--7/);
+    assert.match(styleSource, /\.combined-therapist-card tbody tr\.combined-therapist-subtotal\.combined-incentive-rate-row--15/);
     assert.match(styleSource, /@media print\s*\{[\s\S]*?\.combined-therapist-view-tabs,[\s\S]*?display:\s*none !important;/);
     assert.match(styleSource, /body\[class\*="-print"\][\s\S]*?\.combined-therapist-view-tabs,[\s\S]*?display:\s*none !important;/);
   });

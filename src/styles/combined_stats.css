@@ -457,6 +457,23 @@
   vertical-align: middle;
 }
 
+.combined-therapist-subtotal > * {
+  font-size: 1.02rem !important;
+  font-weight: 900 !important;
+}
+
+.combined-therapist-subtotal--start > * {
+  border-top: 2px solid #94a3b8;
+}
+
+.combined-therapist-card tbody tr.combined-therapist-subtotal.combined-incentive-rate-row--7 > * {
+  background: #dbeafe !important;
+}
+
+.combined-therapist-card tbody tr.combined-therapist-subtotal.combined-incentive-rate-row--15 > * {
+  background: #eed5f8 !important;
+}
+
 .combined-therapist-total > * {
   border-top: 2px solid #94a3b8;
   background: var(--combined-tone-soft) !important;
