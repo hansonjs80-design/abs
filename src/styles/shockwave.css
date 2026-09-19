@@ -4886,3 +4886,29 @@
     box-sizing: border-box;
   }
 }
+
+.patient-history-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.patient-history-print-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border: 1px solid #94a3b8;
+  border-radius: 6px;
+  background: #fff;
+  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.patient-history-print-button:hover:not(:disabled) { background: #eaf2fd; }
+.patient-history-print-button:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
+.patient-history-print-button:disabled { opacity: 0.5; cursor: default; }

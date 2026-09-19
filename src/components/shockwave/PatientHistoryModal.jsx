@@ -1,4 +1,6 @@
 import { memo } from 'react';
+import { Printer } from 'lucide-react';
+import { printPatientHistory } from '../../lib/patientHistoryPrint';
 import PatientHistoryApplyConfirmDialog from './PatientHistoryApplyConfirmDialog';
 import PatientHistoryEditableCells from './PatientHistoryEditableCells';
 import PatientHistoryFilters from './PatientHistoryFilters';
@@ -203,19 +205,32 @@ function PatientHistoryModal({
               </div>
             )}
           </div>
-          <button
-            onClick={closePatientHistoryModal}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '1.2rem',
-              cursor: 'pointer',
-              padding: '0 4px',
-              color: 'var(--text-secondary, #666)',
-            }}
-          >
-            ✕
-          </button>
+          <div className="patient-history-header-actions" onPointerDown={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              className="patient-history-print-button"
+              disabled={patientHistoryModalData.loading || !patientHistoryLogGroups.some((group) => group.logs.length > 0)}
+              onClick={() => printPatientHistory(patientHistoryModalDialogRef.current)}
+              title="현재 검색 결과 전체를 A4 용지에 인쇄"
+            >
+              <Printer size={16} aria-hidden="true" /> 인쇄
+            </button>
+            <button
+              type="button"
+              aria-label="스케줄 내역 검색창 닫기"
+              onClick={closePatientHistoryModal}
+              style={{
+                background: 'none',
+                border: 'none',
+                fontSize: '1.2rem',
+                cursor: 'pointer',
+                padding: '0 4px',
+                color: 'var(--text-secondary, #666)',
+              }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         <div className="patient-history-sticky-controls">
