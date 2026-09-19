@@ -46,7 +46,7 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /\(isAdmin \? \[7, 15\] : \[7\]\)\.map\(\(rate\) =>/);
     assert.match(pageSource, /label: `신장분사 \$\{formatIncentiveRate\(rate\)\}`/);
     assert.match(pageSource, /<tr className="combined-therapist-total">\s*<th>합계<\/th>/);
-    assert.match(pageSource, /const visibleTreatments = buildTherapistTreatmentSections\(item, isAdmin\)/);
+    assert.match(pageSource, /const visibleTreatments = viewMode === 'detail'[\s\S]*?buildTherapistTreatmentSections\(item, isAdmin\)/);
     assert.match(pageSource, /visibleTreatments\.length > 0/);
     assert.match(pageSource, /rowSpan=\{treatment\.rows\.length\}/);
     assert.match(pageSource, /metric="count"\s*includeManual=\{isAdmin\}/);
@@ -195,7 +195,7 @@ describe('combined statistics UI', () => {
     assert.match(styleSource, /body\[class\*="-print"\][\s\S]*?\.combined-therapist-view-tabs,[\s\S]*?display:\s*none !important;/);
   });
 
-  it('supports therapist stats, total summary, and settlement tabs without vertical mode and optimizes print layout', async () => {
+  it('supports therapist stats, total summary, and settlement tabs with selectable layout and optimizes print layout', async () => {
     const [pageSource, styleSource] = await Promise.all([
       readFile(pageUrl, 'utf8'),
       readFile(styleUrl, 'utf8'),
@@ -204,8 +204,8 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, />\s*치료사 통계\s*<\/button>/);
     assert.match(pageSource, />\s*전체 합계\s*<\/button>/);
     assert.match(pageSource, />\s*전체 결산\s*<\/button>/);
-    assert.doesNotMatch(pageSource, />\s*세로보기\s*<\/button>/);
-    assert.match(pageSource, /combined-stats-dashboard--stats combined-stats-dashboard--horizontal/);
+    assert.match(pageSource, />\s*세로보기\s*<\/button>/);
+    assert.match(pageSource, /combined-stats-dashboard--stats combined-stats-dashboard--\$\{layoutMode\}/);
     assert.match(pageSource, /combined-stats-dashboard combined-stats-dashboard--summary/);
     assert.match(styleSource, /\.combined-stats-dashboard--horizontal\s*\{[\s\S]*flex-direction:\s*column/);
     assert.match(styleSource, /\.combined-stats-dashboard--horizontal \.combined-stats-current\s*\{[\s\S]*flex-direction:\s*row/);

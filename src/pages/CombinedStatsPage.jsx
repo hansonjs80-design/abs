@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getConsecutiveRowSpan } from '../lib/settlementRowLayoutUtils';
-import { RefreshCw } from 'lucide-react';
+import { Printer, RefreshCw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchedule } from '../contexts/ScheduleContext';
 import { useToast } from '../components/common/Toast';
@@ -22,6 +22,8 @@ import {
   loadStatsMonthlyTherapists,
 } from '../lib/statsScheduleSourceUtils';
 import { loadStatsMonthsCurrentFirst } from '../lib/statsSectionLoadingUtils';
+import { buildCombinedPrescriptionDetails } from '../lib/combinedPrescriptionDetails';
+import { printSettlementTable } from '../lib/printSettlementTable';
 import '../styles/combined_stats.css';
 
 const LOG_FIELDS = 'id,date,patient_name,chart_number,visit_count,body_part,therapist_name,prescription,prescription_count,source,scheduler_cell_key,created_at';
@@ -316,6 +318,8 @@ export default function CombinedStatsPage() {
   const [recentViewMode, setRecentViewMode] = useState('total-only');
   const [activeTab, setActiveTab] = useState('therapist'); // 'therapist' | 'summary' | 'settlement'
   const [layoutMode, setLayoutMode] = useState('horizontal'); // 'horizontal' | 'vertical'
+  const [breakdownViewMode, setBreakdownViewMode] = useState('total');
+  const breakdownRef = useRef(null);
   const [therapistViewModes, setTherapistViewModes] = useState({});
   const [monthSummaries, setMonthSummaries] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -335,6 +339,18 @@ export default function CombinedStatsPage() {
   useEffect(() => {
     manualTherapistRef.current = manualTherapists;
   }, [manualTherapists]);
+
+  const renderBreakdownDetails = (summary, treatment, rate) => {
+    if (breakdownViewMode !== 'detail') return null;
+    return buildCombinedPrescriptionDetails(summary, treatment, rate, isAdmin).map((row) => (
+      <tr key={row.key} className="combined-treatment-child-row combined-breakdown-detail-row">
+        <th scope="row">↳ {row.label}</th>
+        <td>{formatCount(row.count)}</td>
+        <td className="combined-summary-amount-cell">{formatCurrency(row.amount)}</td>
+        <td className="combined-summary-incentive-cell">{formatCurrency(row.incentive)}</td>
+      </tr>
+    ));
+  };
 
   const recentPeriodMonths = useMemo(
     () => parseRecentPeriodMonths(recentPeriodInput, 6),
@@ -830,6 +846,7 @@ export default function CombinedStatsPage() {
               </article>
 
               <article
+                ref={breakdownRef}
                 className="combined-therapist-card combined-treatment-breakdown-card"
                 aria-label={`${currentMonth}월 항목별 결산 내역`}
               >
@@ -845,6 +862,13 @@ export default function CombinedStatsPage() {
                       <th className="combined-therapist-name combined-summary-title-header" colSpan={4}>
                         <div className="combined-therapist-name-content">
                           <span>항목별 결산 내역</span>
+                          <div className="combined-breakdown-actions">
+                            <div className="combined-therapist-view-tabs" role="group" aria-label="항목별 결산 보기">
+                              <button type="button" className={`combined-therapist-tab-btn ${breakdownViewMode === 'total' ? 'is-active' : ''}`} aria-pressed={breakdownViewMode === 'total'} onClick={() => setBreakdownViewMode('total')}>전체보기</button>
+                              <button type="button" className={`combined-therapist-tab-btn ${breakdownViewMode === 'detail' ? 'is-active' : ''}`} aria-pressed={breakdownViewMode === 'detail'} onClick={() => setBreakdownViewMode('detail')}>상세보기</button>
+                            </div>
+                            <button type="button" className="combined-breakdown-print" aria-label="항목별 결산 내역만 인쇄" onClick={() => printSettlementTable(breakdownRef.current, `${currentYear}년 ${currentMonth}월 항목별 결산 내역`)}><Printer size={16} />인쇄</button>
+                          </div>
                         </div>
                       </th>
                     </tr>
@@ -862,10 +886,11 @@ export default function CombinedStatsPage() {
                       <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.shockwave?.amount)}</td>
                       <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.shockwave?.incentive)}</td>
                     </tr>
+                    {renderBreakdownDetails(currentSummary, 'shockwave')}
                     {(Array.isArray(currentSummary.shinjangIncentiveGroups) && currentSummary.shinjangIncentiveGroups.length > 0)
                       ? currentSummary.shinjangIncentiveGroups.map((group) => (
+                          <Fragment key={`breakdown-shinjang-${group.rate}`}>
                           <tr
-                            key={`breakdown-shinjang-${group.rate}`}
                             className={`combined-breakdown-row combined-breakdown-shinjang${Number(group.rate) === 7 ? ' combined-incentive-rate-row--7' : Number(group.rate) === 15 ? ' combined-incentive-rate-row--15' : ''}`}
                           >
                             <th>신장분사 {formatIncentiveRate(group.rate)}</th>
@@ -873,6 +898,8 @@ export default function CombinedStatsPage() {
                             <td className="combined-summary-amount-cell">{formatCurrency(group.amount)}</td>
                             <td className="combined-summary-incentive-cell">{formatCurrency(group.incentive)}</td>
                           </tr>
+                          {renderBreakdownDetails(currentSummary, 'shinjang_spray', group.rate)}
+                          </Fragment>
                         ))
                       : (
                           <tr className="combined-breakdown-row combined-breakdown-shinjang">
@@ -890,6 +917,7 @@ export default function CombinedStatsPage() {
                         <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.manual_therapy?.incentive)}</td>
                       </tr>
                     )}
+                    {isAdmin && renderBreakdownDetails(currentSummary, 'manual_therapy')}
                     <tr className="combined-therapist-total combined-summary-grand-total">
                       <th>전체 합계</th>
                       <td>{formatCount(currentSummary.total.count)}</td>
