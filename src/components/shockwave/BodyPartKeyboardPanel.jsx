@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, Pencil, Trash2 } from 'lucide-react';
 import { normalizeBodyPartKey } from '../../lib/schedulerUtils';
 import {
@@ -34,6 +34,7 @@ export default function BodyPartKeyboardPanel({
   const inputRef = useRef(null);
   const itemRefs = useRef([]);
   const presetRefs = useRef([]);
+  const latestPresetFocusIndex = useRef(0);
   const selectedInputRefs = useRef([]);
   const presetItems = BODY_PART_PRESET_GROUPS.flatMap((group) => group.items);
   const selectedParts = currentParts.map((part) => String(part || '').trim()).filter(Boolean);
@@ -53,7 +54,7 @@ export default function BodyPartKeyboardPanel({
     onSetPreset?.(item.id, !isSelected, []);
   };
 
-  const focusPreset = (nextIndex) => {
+  const focusPreset = useCallback((nextIndex) => {
     if (presetItems.length === 0) return;
     const boundedIndex = (nextIndex + presetItems.length) % presetItems.length;
     setPresetFocusIndex(boundedIndex);
@@ -62,7 +63,7 @@ export default function BodyPartKeyboardPanel({
       node.focus({ preventScroll: true });
       node.scrollIntoView?.({ block: 'nearest' });
     }
-  };
+  }, [presetItems.length]);
 
   const handlePresetKeyDown = (event, item, index) => {
     event.stopPropagation();
@@ -109,11 +110,15 @@ export default function BodyPartKeyboardPanel({
   }, [editingSelectedIndex]);
 
   useEffect(() => {
+    latestPresetFocusIndex.current = presetFocusIndex;
+  }, [presetFocusIndex]);
+
+  useEffect(() => {
     if (!isActive && !autoFocus) return undefined;
     let cancelled = false;
     const focusInitialElement = () => {
       if (cancelled) return;
-      const targetIndex = presetFocusIndex > 0 ? presetFocusIndex : 0;
+      const targetIndex = Math.max(0, latestPresetFocusIndex.current);
       if (presetItems.length > 0 && presetRefs.current[targetIndex]) {
         presetRefs.current[targetIndex].focus({ preventScroll: true });
         setPresetFocusIndex(targetIndex);
@@ -149,7 +154,7 @@ export default function BodyPartKeyboardPanel({
         focusPreset(presetFocusIndex >= 0 ? presetFocusIndex : 0);
       };
     }
-  }, [focusTriggerRef, presetFocusIndex, presetItems.length]);
+  }, [focusTriggerRef, presetFocusIndex, focusPreset]);
 
 
   const focusTarget = (nextIndex) => {

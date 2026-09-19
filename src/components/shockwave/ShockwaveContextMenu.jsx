@@ -1,4 +1,4 @@
-import { memo, useCallback, useRef } from 'react';
+import { memo, useRef } from 'react';
 import BodyPartKeyboardPanel from './BodyPartKeyboardPanel';
 import ContextMenuBodySummary from './ContextMenuBodySummary';
 import { ContextMenuLocalInput } from './ContextMenuLocalInput';
@@ -66,6 +66,11 @@ function ShockwaveContextMenu({
   stepContextMenuVisitInput,
   imeOpenRef,
 }) {
+  const shockwaveTriggerRef = useRef(null);
+  const shinjangTriggerRef = useRef(null);
+  const manualTriggerRef = useRef(null);
+  const bodyPanelFocusTriggerRef = useRef(null);
+
   if (!contextMenu) return null;
 
   const contextKey = `${contextMenu.weekIdx}-${contextMenu.dayIdx}-${contextMenu.rowIdx}-${contextMenu.colIdx}`;
@@ -181,12 +186,7 @@ function ShockwaveContextMenu({
   });
   const sameReservationLabel = selectedHasSameReservationGroup ? '동시간 예약 취소' : '동시간 예약';
 
-  const shockwaveTriggerRef = useRef(null);
-  const shinjangTriggerRef = useRef(null);
-  const manualTriggerRef = useRef(null);
-  const bodyPanelFocusTriggerRef = useRef(null);
-
-  const focusPrescriptionTrigger = useCallback(() => {
+  const focusPrescriptionTrigger = () => {
     setActiveContextSubmenu('prescription');
     const timer = setTimeout(() => {
       if (shinjangPrescriptions.includes(currentPrescription) && shinjangTriggerRef.current) {
@@ -200,7 +200,7 @@ function ShockwaveContextMenu({
       }
     }, 20);
     return () => clearTimeout(timer);
-  }, [currentPrescription, shinjangPrescriptions, manualTherapyPrescriptions, setActiveContextSubmenu]);
+  };
 
   return (
     <div

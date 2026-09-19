@@ -1,5 +1,4 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getConsecutiveRowSpan } from '../lib/settlementRowLayoutUtils';
 import { Printer, RefreshCw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchedule } from '../contexts/ScheduleContext';

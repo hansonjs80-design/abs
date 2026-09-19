@@ -7,13 +7,32 @@ export const PATIENT_HISTORY_PRINT_CSS = `
   table { width: 100%; table-layout: fixed; border-collapse: collapse; margin: 0 0 6mm; font-size: 8pt; }
   caption { text-align: left; font-weight: bold; font-size: 11pt; padding: 3mm 0; }
   thead { display: table-header-group; }
-  th, td { border: 0.2mm solid #b8c4d2; padding: 2mm 1.5mm; vertical-align: top; text-align: center; white-space: pre-wrap; overflow-wrap: anywhere; }
+  th, td { border: 0.2mm solid #b8c4d2; padding: 1.5mm; vertical-align: middle; text-align: center; white-space: normal; overflow-wrap: anywhere; }
   th { background: #e2e8f0; font-weight: bold; }
   tbody tr:nth-child(even) { background: #f8fafc; }
   tr { break-inside: avoid; page-break-inside: avoid; }
   .print-detail { text-align: left; }
   * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 `;
+
+const HIDDEN_PRINT_COLUMNS = new Set(['처방', '담당', '챠트번호', '차트번호', '메모', '적용']);
+const PRINT_COLUMN_WEIGHTS = { 번호: 4, '치료 구분': 9, 날짜: 12, 부위: 40, 회차: 6, 실비소진: 16, '갱신 일자': 13 };
+
+export function getPatientHistoryPrintColumns(labels) {
+  const columns = labels.map((label, index) => ({ label: label.trim(), index }))
+    .filter(({ label }) => !HIDDEN_PRINT_COLUMNS.has(label));
+  const total = columns.reduce((sum, { label }) => sum + (PRINT_COLUMN_WEIGHTS[label] || 8), 0);
+  return columns.map((column) => ({
+    ...column,
+    width: (PRINT_COLUMN_WEIGHTS[column.label] || 8) / total * 100,
+  }));
+}
+
+export function formatPatientHistoryPrintText(text, label) {
+  return label === '부위'
+    ? text.split(/\r?\n/).map((part) => part.trim()).filter(Boolean).join(', ')
+    : text.replace(/\s+/g, ' ').trim();
+}
 
 // Use live form values, including text hidden by textarea scrolling or ellipsis.
 export function getPatientHistoryPrintCellText(cell) {
@@ -61,14 +80,11 @@ export function buildPatientHistoryPrintDocument(source, doc) {
     caption.textContent = [group.querySelector('.patient-history-group-title-row')?.textContent, ...filters].filter(Boolean).join(' · ');
     table.appendChild(caption);
     const headers = [...original.querySelectorAll('thead th')];
-    const columns = headers.map((header, index) => ({ label: header.textContent.trim(), index }))
-      .filter(({ label }) => label !== '적용');
-    const widths = { 번호: 4, '치료 구분': 7, 날짜: 9, 챠트번호: 7, 처방: 9, 부위: 13, 메모: 19, 회차: 5, 실비소진: 7, '갱신 일자': 9, 담당: 7 };
-    const totalWidth = columns.reduce((total, { label }) => total + (widths[label] || 8), 0);
+    const columns = getPatientHistoryPrintColumns(headers.map((header) => header.textContent));
     const colgroup = doc.createElement('colgroup');
-    columns.forEach(({ label }) => {
+    columns.forEach(({ width }) => {
       const col = doc.createElement('col');
-      col.style.width = `${(widths[label] || 8) / totalWidth * 100}%`;
+      col.style.width = `${width}%`;
       colgroup.appendChild(col);
     });
     table.appendChild(colgroup);
@@ -91,8 +107,9 @@ export function buildPatientHistoryPrintDocument(source, doc) {
       }
       columns.forEach(({ label, index }) => {
         const cell = printedRow.insertCell();
-        cell.textContent = row.cells[index] ? getPatientHistoryPrintCellText(row.cells[index]) : '';
-        if (label === '부위' || label === '메모') cell.className = 'print-detail';
+        cell.textContent = row.cells[index]
+          ? formatPatientHistoryPrintText(getPatientHistoryPrintCellText(row.cells[index]), label) : '';
+        if (label === '부위') cell.className = 'print-detail';
       });
     });
     doc.body.appendChild(table);
