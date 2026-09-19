@@ -9,17 +9,18 @@
   max-height: calc(100dvh - 32px);
   overflow: auto;
   padding: 0;
-  border: 1px solid #e2e8f0;
+  border: 2px solid #ea580c;
   border-radius: 12px;
   color: #1e293b;
-  background: white;
-  box-shadow: 0 24px 80px #0f172a40;
+  background: #fff7ed;
+  box-shadow: 0 0 0 5px #fb923c30, 0 24px 80px #0f172a66;
+  animation: reservation-warning-enter 160ms ease-out;
   font-family: inherit;
 }
 .reservation-warning-dialog::backdrop { background: #0f172a70; backdrop-filter: blur(3px); }
 .reservation-warning-body { padding: 16px 16px 0; }
-.reservation-warning-dialog p { margin: 0 0 6px; line-height: 1.45; font-size: 13px; }
-.reservation-warning-dialog .reservation-warning-message { font-weight: 700; color: #9a3412; font-size: 15px; }
+.reservation-warning-dialog p { margin: 0 0 6px; line-height: 1.45; font-size: 14px; }
+.reservation-warning-dialog .reservation-warning-message { font-weight: 800; color: #9a3412; font-size: 17px; line-height: 1.5; }
 .reservation-warning-prescriptions { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-top: 12px; }
 .reservation-warning-selects { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .reservation-warning-select > span { display: block; font-size: 12px; font-weight: 700; margin-bottom: 5px; }
@@ -47,4 +48,25 @@
 .reservation-warning-dialog .reservation-warning-actions button:focus { outline: 3px solid #6366f1; outline-offset: 2px; }
 @media (max-width: 360px) {
   .reservation-warning-selects { grid-template-columns: 1fr; }
+}
+
+.reservation-warning-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #fdba74;
+  color: #9a3412;
+  font-size: 14px;
+  font-weight: 800;
+}
+.reservation-warning-actions button { background: #9a3412; border-color: #9a3412; color: #fff; }
+.reservation-warning-actions button small { opacity: 0.85; }
+@keyframes reservation-warning-enter {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 6px)); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reservation-warning-dialog { animation: none; }
 }

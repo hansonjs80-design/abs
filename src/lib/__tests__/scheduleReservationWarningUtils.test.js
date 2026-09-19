@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { generateShockwaveCalendar } from '../calendarUtils.js';
-import { buildScheduleReservationWarnings, canReusePriorReservationWarnings, findShinjangReplacement, getNextReservationActionIndex, getReservationWarningReplacement, notifyReservationWarnings, prepareReservationPayload, resolveReservationWarnings } from '../scheduleReservationWarningUtils.js';
+import { buildReservationChangeWarnings, notifyLatestReservationWarnings, replaceReservationWarnings, buildScheduleReservationWarnings, canReusePriorReservationWarnings, findShinjangReplacement, getNextReservationActionIndex, getReservationWarningReplacement, notifyReservationWarnings, prepareReservationPayload, resolveReservationWarnings } from '../scheduleReservationWarningUtils.js';
 
 describe('non-blocking reservation alerts', () => {
   it('lets a paste finish before history loads or an alert is closed', async () => {
@@ -255,4 +255,82 @@ describe('schedule reservation warnings', () => {
     const result = buildScheduleReservationWarnings({ target: target({ date: '2026-09-14', content: '1001/김환자(99)', prescription: '도수치료' }), settings, year: 2026, month: 9 });
     assert.deepEqual(result, []);
   });
+});
+
+
+describe('latest prescription and body-part warnings', () => {
+  const base = target({ date: '2026-09-09', content: '1001/김환자(3)', prescription: '충격파 A' });
+  const input = {
+    settings, year: 2026, month: 9,
+    scheduleRows: [
+      scheduleRow({ date: '2026-09-07', content: '1001/김환자(1)', prescription: '충격파 B' }),
+      scheduleRow({ date: '2026-09-07', content: '1001/김환자(1)', prescription: '도수치료', rowIndex: 1 }),
+      scheduleRow({ date: '2026-09-08', content: '1001/김환자(2)', prescription: '도수치료' }),
+    ],
+    previousTarget: { ...base, body_part: 'Lt. Shoulder' },
+  };
+  it('explains that changing only the body part does not bypass the seven-day warning', () => {
+    const warnings = buildReservationChangeWarnings({ ...input, target: { ...base, body_part: 'Rt. Knee' } });
+    assert.equal(warnings[0].type, 'shockwave-interval');
+    assert.equal(warnings[0].message, '7일이 경과하지 않아 부위를 변경해도 실손 적용이 안됩니다.');
+  });
+  it('rechecks another shockwave prescription, but never carries shockwave warnings to manual therapy', () => {
+    const changedShockwave = buildReservationChangeWarnings({ ...input, target: { ...base, prescription: '충격파 B' } });
+    assert.equal(changedShockwave[0].type, 'shockwave-interval');
+    const manual = buildReservationChangeWarnings({ ...input, target: { ...base, prescription: '도수치료' } });
+    assert.deepEqual(manual.map((w) => w.type), ['manual-week-limit']);
+  });
+  it('passes without alerts when the new prescription or date does not trigger a rule', () => {
+    assert.deepEqual(buildReservationChangeWarnings({ ...input, target: { ...base, prescription: '신장분사 1' } }), []);
+    assert.deepEqual(buildReservationChangeWarnings({ ...input, target: { ...base, date: '2026-09-14', body_part: 'Rt. Knee' } }), []);
+    assert.deepEqual(buildReservationChangeWarnings({ ...input, target: input.previousTarget }), []);
+  });
+  it('replaces only the edited cell warnings, including clearing them for an allowed prescription', () => {
+    const first = replaceReservationWarnings(null, 'a', [{ type: 'shockwave-interval' }]);
+    const second = replaceReservationWarnings(first, 'b', [{ type: 'manual-week-limit' }]);
+    const changed = replaceReservationWarnings(second, 'a', [{ type: 'manual-visit-limit' }]);
+    assert.deepEqual(changed.warnings.map((w) => w.type), ['manual-week-limit', 'manual-visit-limit']);
+    assert.equal(replaceReservationWarnings(first, 'a', []), null);
+    assert.deepEqual(replaceReservationWarnings(second, 'a', []).warnings.map((w) => w.cellKey), ['b']);
+  });
+  it('ignores an old shockwave lookup that finishes after a newer allowed prescription', async () => {
+    const pending = new Map();
+    let release;
+    const slow = new Promise((resolve) => { release = resolve; });
+    const shown = [];
+    notifyLatestReservationWarnings(pending, 'cell', () => slow, (warnings) => shown.push(warnings), assert.fail);
+    notifyLatestReservationWarnings(pending, 'cell', async () => [], (warnings) => shown.push(warnings), assert.fail);
+    await new Promise((resolve) => setImmediate(resolve));
+    release([{ type: 'shockwave-interval' }]);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.ok(shown.every((warnings) => warnings.length === 0));
+    assert.equal(pending.size, 0);
+  });
+  it('does not reopen an alert after dismissal while a lookup is pending', async () => {
+    const pending = new Map();
+    let release;
+    const slow = new Promise((resolve) => { release = resolve; });
+    const shown = [];
+    notifyLatestReservationWarnings(pending, 'cell', () => slow, (warnings) => shown.push(warnings), assert.fail);
+    pending.clear();
+    release([{ type: 'shockwave-interval' }]);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(shown, [[]]);
+  });
+});
+
+
+it('does not infer shockwave from an old dose tag after choosing an unrelated prescription', () => {
+  const taggedSettings = { monthly_settlement_settings: { '2026-09': {
+    shockwave: { prescriptions: ['F2.5'], dose_tags: { 'F2.5': '2.5' } },
+    manual_therapy: { prescriptions: [] }, shinjang_spray: { prescriptions: [] },
+  } } };
+  const content = '1001/김환자2.5(3)';
+  const input = {
+    target: target({ date: '2026-09-09', content, prescription: 'F2.5' }),
+    scheduleRows: [scheduleRow({ date: '2026-09-07', content, prescription: 'F2.5' })],
+    settings: taggedSettings, year: 2026, month: 9,
+  };
+  assert.equal(buildScheduleReservationWarnings(input)[0].type, 'shockwave-interval');
+  assert.deepEqual(buildScheduleReservationWarnings({ ...input, target: { ...input.target, prescription: '일반치료' } }), []);
 });

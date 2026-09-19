@@ -138,6 +138,16 @@ export default function useScheduleContextMenuActions({
       const pick = (name, fallback) => (
         Object.prototype.hasOwnProperty.call(overrides, name) ? overrides[name] : fallback
       );
+      if (Object.prototype.hasOwnProperty.call(overrides, 'body_part')
+        && String(overrides.body_part || '') !== String(memo.body_part || '')) {
+        confirmScheduleReservationWarnings?.({
+          w, d, r, c,
+          content: pick('content', getStableMemoContent(key, memo)),
+          prescription: pick('prescription', memo.prescription),
+          bodyPart: overrides.body_part, oldBodyPart: memo.body_part,
+          oldContent: getStableMemoContent(key, memo), oldPrescription: memo.prescription,
+        });
+      }
       return onSaveMemo(
         currentYear,
         currentMonth,

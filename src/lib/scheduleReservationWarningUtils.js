@@ -90,6 +90,12 @@ export function canReusePriorReservationWarnings({ content, oldContent, prescrip
   return prescription === oldPrescription && isSamePatient(getIdentity(content), getIdentity(oldContent));
 }
 
+function getReservationTreatmentGroup(row, settings, year, month) {
+  // An explicit replacement prescription takes priority over a stale dose tag.
+  const item = String(row?.prescription || '').trim() ? { ...row, content: '' } : row;
+  return getScheduleItemTreatmentGroup(item, settings, year, month);
+}
+
 function getScheduleDate(row) {
   const weeks = generateShockwaveCalendar(Number(row?.year), Number(row?.month));
   return getScheduleDayDateKey(weeks?.[Number(row?.week_index)]?.[Number(row?.day_index)]);
@@ -128,14 +134,14 @@ export function buildScheduleReservationWarnings({
   const targetContent = String(target?.content || '').trim();
   const targetDate = String(target?.date || '').trim();
   const targetIdentity = getIdentity(targetContent);
-  const treatmentGroup = getScheduleItemTreatmentGroup(target, settings, year, month);
+  const treatmentGroup = getReservationTreatmentGroup(target, settings, year, month);
   if (!targetDate || !isSamePatient(targetIdentity, targetIdentity)) return [];
 
   const matchingRows = (Array.isArray(scheduleRows) ? scheduleRows : []).flatMap((row) => {
     if (isTargetRow(row, target) || row?.merge_span?.mergedInto || isTreatmentCancelBg(row.bg_color) || !String(row?.content || '').trim()) return [];
     const rowDate = getScheduleDate(row);
     if (!rowDate || !isSamePatient(targetIdentity, getIdentity(row.content))) return [];
-    return [{ row, date: rowDate, treatmentGroup: getScheduleItemTreatmentGroup(row, settings, year, month) }];
+    return [{ row, date: rowDate, treatmentGroup: getReservationTreatmentGroup(row, settings, year, month) }];
   });
 
   const warnings = [];
@@ -187,4 +193,44 @@ export function buildScheduleReservationWarnings({
   }
 
   return warnings.map((warning) => ({ ...warning, insuranceUsage: usage }));
+}
+
+export function buildReservationChangeWarnings({ previousTarget, ...input }) {
+  const { target } = input;
+  const samePrescriptionAndPatient = canReusePriorReservationWarnings({
+    content: target.content, oldContent: previousTarget?.content,
+    prescription: target.prescription, oldPrescription: previousTarget?.prescription,
+  });
+  const bodyChanged = String(target.body_part || '').trim() !== String(previousTarget?.body_part || '').trim();
+  const prior = samePrescriptionAndPatient && !bodyChanged
+    ? new Set(buildScheduleReservationWarnings({ ...input, target: previousTarget }).map((warning) => warning.message))
+    : new Set();
+  return buildScheduleReservationWarnings(input)
+    .filter((warning) => !prior.has(warning.message))
+    .map((warning) => warning.type === 'shockwave-interval' && bodyChanged && samePrescriptionAndPatient
+      ? { ...warning, message: '7일이 경과하지 않아 부위를 변경해도 실손 적용이 안됩니다.' }
+      : warning);
+}
+
+export function replaceReservationWarnings(previous, cellKey, warnings) {
+  const remaining = (previous?.warnings || []).filter((warning) => warning.cellKey !== cellKey);
+  const next = [...remaining, ...warnings.map((warning) => ({ ...warning, cellKey }))];
+  return next.length ? { warnings: next } : null;
+}
+
+// A newer edit (or closing the alert) invalidates pending checks for that cell.
+export function notifyLatestReservationWarnings(requests, cellKey, loadWarnings, notify, onError) {
+  const token = {};
+  requests.set(cellKey, token);
+  notify([]);
+  Promise.resolve().then(loadWarnings).then((warnings) => {
+    if (requests.get(cellKey) !== token) return;
+    requests.delete(cellKey);
+    notify(warnings || []);
+  }).catch((error) => {
+    if (requests.get(cellKey) !== token) return;
+    requests.delete(cellKey);
+    onError(error);
+  });
+  return true;
 }

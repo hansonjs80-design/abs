@@ -128,7 +128,7 @@ import {
   getScheduleDisplaySlotMinutes,
 } from '../../lib/schedulerUtils';
 import { normalizeLoadedScheduleMonthKey } from '../../lib/scheduleMonthLoadUtils';
-import { buildScheduleReservationWarnings, canReusePriorReservationWarnings, notifyReservationWarnings, prepareReservationPayload } from '../../lib/scheduleReservationWarningUtils';
+import { buildReservationChangeWarnings, notifyLatestReservationWarnings, replaceReservationWarnings, prepareReservationPayload } from '../../lib/scheduleReservationWarningUtils';
 import ReservationWarningDialog from './ReservationWarningDialog';
 
 export default function ShockwaveView({ therapists, settings, memos = {}, memosLoadedKey = '', onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
@@ -138,7 +138,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const canManageSchedulerSettings = isAdminUser(user);
   const viewRef = useRef(null);
   const [reservationWarning, setReservationWarning] = useState(null);
+  const reservationWarningRequests = useRef(new Map());
   const answerReservationWarning = useCallback(() => {
+    reservationWarningRequests.current.clear();
     setReservationWarning(null);
   }, []);
   useEffect(() => { answerReservationWarning(false); }, [currentYear, currentMonth, answerReservationWarning]);
@@ -571,7 +573,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   }) => {
     const dayInfo = weeks?.[w]?.[d];
     if (!dayInfo) return true;
-    return notifyReservationWarnings(async () => {
+    const warningCellKey = `${currentYear}-${currentMonth}-${w}-${d}-${r}-${c}`;
+    return notifyLatestReservationWarnings(reservationWarningRequests.current, warningCellKey, async () => {
     const target = {
       year: currentYear,
       month: currentMonth,
@@ -620,17 +623,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       year: currentYear,
       month: currentMonth,
     };
-    const reusePriorWarnings = bodyPart === oldBodyPart && canReusePriorReservationWarnings({ content, oldContent, prescription, oldPrescription });
-    const priorWarnings = new Set((reusePriorWarnings ? buildScheduleReservationWarnings({
+    return buildReservationChangeWarnings({
       ...warningInput,
-      target: { ...target, content: oldContent, prescription: oldPrescription },
-    }) : []).map((warning) => warning.message));
-    return buildScheduleReservationWarnings({ ...warningInput, target })
-      .filter((warning) => !priorWarnings.has(warning.message));
-    }, (warnings) => setReservationWarning((previous) => ({
-      warnings: [...new Map([...(previous?.warnings || []), ...warnings]
-        .map((warning) => [warning.message, warning])).values()],
-    })), () => addToast('실비소진 조회 실패로 예약 조건 알림을 확인하지 못했습니다.', 'error'));
+      target,
+      previousTarget: { ...target, content: oldContent, prescription: oldPrescription, body_part: oldBodyPart },
+    });
+    }, (warnings) => setReservationWarning((previous) => replaceReservationWarnings(previous, warningCellKey, warnings)),
+    () => addToast('실비소진 조회 실패로 예약 조건 알림을 확인하지 못했습니다.', 'error'));
   }, [addToast, currentMonth, currentYear, insuranceMemos, settings, weeks]);
 
   const prepareScheduleReservations = useCallback(async (payload) => {

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { TriangleAlert } from 'lucide-react';
 import './ReservationWarningDialog.css';
 import InsuranceUsageBadge from './InsuranceUsageBadge';
 
@@ -18,6 +19,7 @@ export default function ReservationWarningDialog({ request, onAnswer }) {
   return createPortal(
     <section className="reservation-warning-dialog" role="alert" aria-label="예약 알림">
       <div className="reservation-warning-body">
+        <div className="reservation-warning-heading"><TriangleAlert size={20} aria-hidden="true" /><span>예약 조건 확인</span></div>
         {(request.warnings || [request]).map((warning, index) => <div key={index}>
           <p className="reservation-warning-message">{warning.message.replace(/\s*그래도 예약하시겠습니까\?$/, '')}</p>
           {warning.insuranceUsage && <p>실비소진: <InsuranceUsageBadge usage={warning.insuranceUsage} showLabel /></p>}
