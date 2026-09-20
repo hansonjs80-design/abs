@@ -1583,3 +1583,67 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
 @media print {
   .combined-breakdown-actions { display: none !important; }
 }
+
+/* Compact hierarchy for the item settlement table, including both detail views. */
+.combined-treatment-breakdown-card table :is(th, td) {
+  box-sizing: border-box;
+  height: 32px;
+  padding: 6px 12px !important;
+  line-height: 1.35;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  border-color: #dce3ed;
+  font-variant-numeric: tabular-nums;
+}
+.combined-treatment-breakdown-card table tbody th { text-align: left; }
+.combined-treatment-breakdown-card table tbody td:nth-child(2) { text-align: center; }
+.combined-treatment-breakdown-card table tbody td:nth-child(n+3) { text-align: right; }
+.combined-treatment-breakdown-card table .combined-summary-title-header {
+  height: 44px;
+  padding: 8px 12px;
+}
+.combined-treatment-breakdown-card .combined-summary-title-header .combined-therapist-name-content > span:first-child {
+  font-size: 17px;
+  font-weight: 800 !important;
+}
+.combined-treatment-breakdown-card table .combined-summary-column-header-row th {
+  height: 32px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 12px !important;
+  font-weight: 700;
+}
+.combined-treatment-breakdown-card table tbody .combined-breakdown-row > * {
+  height: 35px;
+  font-weight: 800 !important;
+  border-top: 1px solid #b8c7dc;
+}
+.combined-treatment-breakdown-card table tbody .combined-breakdown-detail-row > * {
+  height: 29px;
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #475569 !important;
+  background: #fbfcfe;
+}
+.combined-treatment-breakdown-card table tbody .combined-breakdown-detail-row th {
+  padding-left: 20px !important;
+  font-weight: 600 !important;
+}
+.combined-treatment-breakdown-card table tbody .combined-breakdown-detail-row:hover > * {
+  background: #f1f5f9;
+}
+.combined-treatment-breakdown-card table tbody .combined-therapist-subtotal > * {
+  height: 34px;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+}
+.combined-treatment-breakdown-card table tbody .combined-summary-grand-total > * {
+  height: 38px;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  background: #e2e8f0 !important;
+  color: #0f172a;
+  border-top: 2px solid #64748b;
+}

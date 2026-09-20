@@ -16,11 +16,15 @@ export function printSettlementTable(element, title) {
     body { margin: 0; font-family: sans-serif; color: #172033; }
     h1 { font-size: 18px; margin: 0 0 16px; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    th, td { border: 1px solid #94a3b8; padding: 9px; text-align: right; }
+    th, td { border: 1px solid #94a3b8; padding: 6px 8px; text-align: right; }
     th:first-child { text-align: left; }
     thead { display: table-header-group; background: #e2e8f0; }
     tr { break-inside: avoid; }
+    .combined-breakdown-row { font-weight: bold; }
+    .combined-summary-column-header-row { color: #475569; font-size: 11px; }
+    .combined-breakdown-detail-row { background: #fbfcfe; color: #475569; font-size: 11px; }
     .combined-therapist-subtotal { font-weight: bold; }
+    .combined-therapist-total { font-size: 13px; }
     .combined-therapist-subtotal--start > * { border-top: 2px solid #64748b; }
     .combined-therapist-total { font-weight: bold; background: #e2e8f0; }
     .combined-incentive-rate-row--7 { background: #eaf2fd; }

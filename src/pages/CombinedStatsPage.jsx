@@ -344,7 +344,7 @@ export default function CombinedStatsPage() {
     const total = buildCombinedRateTotals(summary, isAdmin).find((row) => row.rate === rate);
     if (!total) return null;
     return (
-      <tr className={`combined-therapist-subtotal combined-therapist-subtotal--start combined-incentive-rate-row--${rate}`}>
+      <tr className={`combined-therapist-subtotal ${rate === 7 ? 'combined-therapist-subtotal--start ' : ''}combined-incentive-rate-row--${rate}`}>
         <th>{rate}% 합계</th>
         <td>{formatCount(total.count)}</td>
         <td className="combined-summary-amount-cell">{formatCurrency(total.amount)}</td>
@@ -904,7 +904,6 @@ export default function CombinedStatsPage() {
                     {(Array.isArray(currentSummary.shinjangIncentiveGroups) && currentSummary.shinjangIncentiveGroups.length > 0)
                       ? currentSummary.shinjangIncentiveGroups.map((group) => (
                           <Fragment key={`breakdown-shinjang-${group.rate}`}>
-                          {Number(group.rate) === 15 && renderBreakdownRateTotal(currentSummary, 7)}
                           <tr
                             className={`combined-breakdown-row combined-breakdown-shinjang${Number(group.rate) === 7 ? ' combined-incentive-rate-row--7' : Number(group.rate) === 15 ? ' combined-incentive-rate-row--15' : ''}`}
                           >
@@ -924,8 +923,6 @@ export default function CombinedStatsPage() {
                             {showBreakdownIncentive && <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.shinjang_spray?.incentive)}</td>}
                           </tr>
                         )}
-                    {!currentSummary.shinjangIncentiveGroups?.some((group) => Number(group.rate) === 15)
-                      && renderBreakdownRateTotal(currentSummary, 7)}
                     {isAdmin && (
                       <tr className="combined-breakdown-row combined-breakdown-manual combined-incentive-rate-row--15">
                         <th>도수치료 15%</th>
@@ -935,6 +932,7 @@ export default function CombinedStatsPage() {
                       </tr>
                     )}
                     {isAdmin && renderBreakdownDetails(currentSummary, 'manual_therapy')}
+                    {renderBreakdownRateTotal(currentSummary, 7)}
                     {renderBreakdownRateTotal(currentSummary, 15)}
                     <tr className="combined-therapist-total combined-summary-grand-total">
                       <th>전체 합계</th>
