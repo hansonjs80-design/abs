@@ -1,12 +1,17 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import './ReservationWarningDialog.css';
 import InsuranceUsageBadge from './InsuranceUsageBadge';
 
 export default function ReservationWarningDialog({ request, onAnswer }) {
+  const closeButtonRef = useRef(null);
+
   useEffect(() => {
+    closeButtonRef.current?.focus({ preventScroll: true });
     const closeOnEscape = (event) => {
-      if (event.key !== 'Escape') return;
+      const isCloseEnter = event.key === 'Enter' && event.target === closeButtonRef.current;
+      if (event.key !== 'Escape' && !isCloseEnter) return;
+      if (event.isComposing || event.keyCode === 229) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       onAnswer();
@@ -24,7 +29,7 @@ export default function ReservationWarningDialog({ request, onAnswer }) {
         </div>)}
       </div>
       <div className="reservation-warning-actions">
-        <button type="button" onClick={() => onAnswer()}>닫기 <small>Esc</small></button>
+        <button ref={closeButtonRef} type="button" onClick={() => onAnswer()}>닫기 <small>Enter / Esc</small></button>
       </div>
     </section>, document.body
   );
