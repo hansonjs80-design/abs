@@ -20,6 +20,8 @@ export function printSettlementTable(element, title) {
     th:first-child { text-align: left; }
     thead { display: table-header-group; background: #e2e8f0; }
     tr { break-inside: avoid; }
+    .combined-therapist-subtotal { font-weight: bold; }
+    .combined-therapist-subtotal--start > * { border-top: 2px solid #64748b; }
     .combined-therapist-total { font-weight: bold; background: #e2e8f0; }
     .combined-incentive-rate-row--7 { background: #eaf2fd; }
     .combined-incentive-rate-row--15 { background: #f6ecfb; }

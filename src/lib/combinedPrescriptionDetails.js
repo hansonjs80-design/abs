@@ -20,3 +20,17 @@ export function buildCombinedPrescriptionDetails(summary, treatment, rate, isAdm
   }
   return [...groups.values()];
 }
+
+// Sum the category totals once, independent of expanded prescription rows.
+export function buildCombinedRateTotals(summary, isAdmin = false) {
+  return (isAdmin ? [7, 15] : [7]).map((rate) => {
+    const values = [
+      summary?.treatmentTotals?.[rate === 7 ? 'shockwave' : 'manual_therapy'],
+      ...(summary?.shinjangIncentiveGroups || []).filter((group) => Number(group.rate) === rate),
+    ];
+    return values.reduce((total, value) => {
+      for (const metric of ['count', 'amount', 'incentive']) total[metric] += Number(value?.[metric]) || 0;
+      return total;
+    }, { rate, count: 0, amount: 0, incentive: 0 });
+  });
+}

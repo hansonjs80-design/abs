@@ -21,7 +21,7 @@ import {
   loadStatsMonthlyTherapists,
 } from '../lib/statsScheduleSourceUtils';
 import { loadStatsMonthsCurrentFirst } from '../lib/statsSectionLoadingUtils';
-import { buildCombinedPrescriptionDetails } from '../lib/combinedPrescriptionDetails';
+import { buildCombinedPrescriptionDetails, buildCombinedRateTotals } from '../lib/combinedPrescriptionDetails';
 import { printSettlementTable } from '../lib/printSettlementTable';
 import '../styles/combined_stats.css';
 
@@ -917,6 +917,17 @@ export default function CombinedStatsPage() {
                       </tr>
                     )}
                     {isAdmin && renderBreakdownDetails(currentSummary, 'manual_therapy')}
+                    {buildCombinedRateTotals(currentSummary, isAdmin).map((total, index) => (
+                      <tr
+                        key={`breakdown-rate-total-${total.rate}`}
+                        className={`combined-therapist-subtotal ${index === 0 ? 'combined-therapist-subtotal--start ' : ''}combined-incentive-rate-row--${total.rate}`}
+                      >
+                        <th>{total.rate}% 합계</th>
+                        <td>{formatCount(total.count)}</td>
+                        <td className="combined-summary-amount-cell">{formatCurrency(total.amount)}</td>
+                        <td className="combined-summary-incentive-cell">{formatCurrency(total.incentive)}</td>
+                      </tr>
+                    ))}
                     <tr className="combined-therapist-total combined-summary-grand-total">
                       <th>전체 합계</th>
                       <td>{formatCount(currentSummary.total.count)}</td>

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildCombinedPrescriptionDetails } from '../combinedPrescriptionDetails.js';
+import { buildCombinedPrescriptionDetails, buildCombinedRateTotals } from '../combinedPrescriptionDetails.js';
 
 const summary = { therapists: [
   { prescriptionGroups: {
@@ -42,4 +42,35 @@ test('preserves administrator-only visibility and handles empty summaries', () =
   assert.deepEqual(buildCombinedPrescriptionDetails(summary, 'manual_therapy'), []);
   assert.equal(buildCombinedPrescriptionDetails(summary, 'manual_therapy', undefined, true).length, 1);
   assert.deepEqual(buildCombinedPrescriptionDetails(null, 'shockwave'), []);
+});
+
+
+test('rate subtotals sum category totals once and retain settled rounding', () => {
+  const data = {
+    treatmentTotals: {
+      shockwave: { count: 55, amount: 5110000, incentive: 357700 },
+      manual_therapy: { count: 13, amount: 541541, incentive: 81231 },
+    },
+    shinjangIncentiveGroups: [
+      { rate: '7', count: 16, amount: 1515000, incentive: 106050 },
+      { rate: 15, count: 9, amount: 1000000, incentive: 150000 },
+    ],
+    therapists: summary.therapists,
+  };
+  const totals = buildCombinedRateTotals(data, true);
+  assert.deepEqual(totals, [
+    { rate: 7, count: 71, amount: 6625000, incentive: 463750 },
+    { rate: 15, count: 22, amount: 1541541, incentive: 231231 },
+  ]);
+  assert.equal(totals.reduce((sum, row) => sum + row.count, 0), 93);
+  assert.equal(totals.reduce((sum, row) => sum + row.amount, 0), 8166541);
+  assert.equal(totals.reduce((sum, row) => sum + row.incentive, 0), 694981);
+  assert.deepEqual(buildCombinedRateTotals(data, false), [totals[0]]);
+});
+
+test('empty rate subtotals stay visible with zero values', () => {
+  assert.deepEqual(buildCombinedRateTotals(null, true), [
+    { rate: 7, count: 0, amount: 0, incentive: 0 },
+    { rate: 15, count: 0, amount: 0, incentive: 0 },
+  ]);
 });
