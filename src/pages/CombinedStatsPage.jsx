@@ -861,9 +861,10 @@ export default function CombinedStatsPage() {
               <article
                 ref={breakdownRef}
                 className="combined-therapist-card combined-treatment-breakdown-card"
+                data-breakdown-view={breakdownViewMode}
                 aria-label={`${currentMonth}월 항목별 결산 내역`}
               >
-                <table>
+                <table data-breakdown-view={breakdownViewMode}>
                   <colgroup>
                     <col className="combined-breakdown-col-label" />
                     <col className="combined-breakdown-col-count" />

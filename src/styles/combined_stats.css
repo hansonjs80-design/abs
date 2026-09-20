@@ -1647,3 +1647,46 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   color: #0f172a;
   border-top: 2px solid #64748b;
 }
+
+/* Three columns need less overall width than the incentive-inclusive view. */
+.combined-stats-summary-container .combined-treatment-breakdown-card[data-breakdown-view="detail-no-incentive"] {
+  flex: 0 1 460px !important;
+  width: 100% !important;
+  min-width: min(320px, 100%) !important;
+  max-width: 460px !important;
+}
+.combined-treatment-breakdown-card table[data-breakdown-view="detail-no-incentive"] {
+  table-layout: fixed;
+}
+.combined-treatment-breakdown-card [data-breakdown-view="detail-no-incentive"] .combined-breakdown-col-label { width: 44%; }
+.combined-treatment-breakdown-card [data-breakdown-view="detail-no-incentive"] .combined-breakdown-col-count { width: 16%; }
+.combined-treatment-breakdown-card [data-breakdown-view="detail-no-incentive"] .combined-breakdown-col-amount { width: 40%; }
+.combined-treatment-breakdown-card[data-breakdown-view="detail-no-incentive"] .combined-breakdown-actions {
+  gap: 6px;
+}
+.combined-treatment-breakdown-card table[data-breakdown-view="detail-no-incentive"] tbody th {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.combined-stats-summary-container .combined-treatment-breakdown-card:not([data-breakdown-view="detail-no-incentive"]) {
+  flex: 0 1 520px !important;
+  width: 100% !important;
+  min-width: min(320px, 100%) !important;
+  max-width: 520px !important;
+}
+.combined-treatment-breakdown-card table:not([data-breakdown-view="detail-no-incentive"]) {
+  table-layout: fixed;
+}
+.combined-treatment-breakdown-card table:not([data-breakdown-view="detail-no-incentive"]) .combined-breakdown-col-label { width: 32%; }
+.combined-treatment-breakdown-card table:not([data-breakdown-view="detail-no-incentive"]) .combined-breakdown-col-count { width: 13%; }
+.combined-treatment-breakdown-card table:not([data-breakdown-view="detail-no-incentive"]) .combined-breakdown-col-amount { width: 29%; }
+.combined-treatment-breakdown-card table:not([data-breakdown-view="detail-no-incentive"]) .combined-breakdown-col-incentive { width: 26%; }
+.combined-treatment-breakdown-card table:not([data-breakdown-view="detail-no-incentive"]) tbody th {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.combined-treatment-breakdown-card table tbody td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

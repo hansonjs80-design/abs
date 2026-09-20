@@ -16,7 +16,16 @@ export function printSettlementTable(element, title) {
     body { margin: 0; font-family: sans-serif; color: #172033; }
     h1 { font-size: 18px; margin: 0 0 16px; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    th, td { border: 1px solid #94a3b8; padding: 6px 8px; text-align: right; }
+    table:not([data-breakdown-view="detail-no-incentive"]) { max-width: 145mm; table-layout: fixed; margin: 0 auto; }
+    table:not([data-breakdown-view="detail-no-incentive"]) .combined-breakdown-col-label { width: 32%; }
+    table:not([data-breakdown-view="detail-no-incentive"]) .combined-breakdown-col-count { width: 13%; }
+    table:not([data-breakdown-view="detail-no-incentive"]) .combined-breakdown-col-amount { width: 29%; }
+    table:not([data-breakdown-view="detail-no-incentive"]) .combined-breakdown-col-incentive { width: 26%; }
+    table[data-breakdown-view="detail-no-incentive"] { max-width: 125mm; table-layout: fixed; margin: 0 auto; }
+    table[data-breakdown-view="detail-no-incentive"] .combined-breakdown-col-label { width: 44%; }
+    table[data-breakdown-view="detail-no-incentive"] .combined-breakdown-col-count { width: 16%; }
+    table[data-breakdown-view="detail-no-incentive"] .combined-breakdown-col-amount { width: 40%; }
+    th, td { border: 1px solid #94a3b8; padding: 6px 8px; text-align: right; overflow-wrap: anywhere; }
     th:first-child { text-align: left; }
     thead { display: table-header-group; background: #e2e8f0; }
     tr { break-inside: avoid; }
