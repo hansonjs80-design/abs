@@ -318,6 +318,7 @@ export default function CombinedStatsPage() {
   const [activeTab, setActiveTab] = useState('therapist'); // 'therapist' | 'summary' | 'settlement'
   const [layoutMode, setLayoutMode] = useState('horizontal'); // 'horizontal' | 'vertical'
   const [breakdownViewMode, setBreakdownViewMode] = useState('total');
+  const showBreakdownIncentive = breakdownViewMode !== 'detail-no-incentive';
   const breakdownRef = useRef(null);
   const [therapistViewModes, setTherapistViewModes] = useState({});
   const [monthSummaries, setMonthSummaries] = useState([]);
@@ -339,14 +340,27 @@ export default function CombinedStatsPage() {
     manualTherapistRef.current = manualTherapists;
   }, [manualTherapists]);
 
+  const renderBreakdownRateTotal = (summary, rate) => {
+    const total = buildCombinedRateTotals(summary, isAdmin).find((row) => row.rate === rate);
+    if (!total) return null;
+    return (
+      <tr className={`combined-therapist-subtotal combined-therapist-subtotal--start combined-incentive-rate-row--${rate}`}>
+        <th>{rate}% 합계</th>
+        <td>{formatCount(total.count)}</td>
+        <td className="combined-summary-amount-cell">{formatCurrency(total.amount)}</td>
+        {showBreakdownIncentive && <td className="combined-summary-incentive-cell">{formatCurrency(total.incentive)}</td>}
+      </tr>
+    );
+  };
+
   const renderBreakdownDetails = (summary, treatment, rate) => {
-    if (breakdownViewMode !== 'detail') return null;
+    if (breakdownViewMode === 'total') return null;
     return buildCombinedPrescriptionDetails(summary, treatment, rate, isAdmin).map((row) => (
       <tr key={row.key} className="combined-treatment-child-row combined-breakdown-detail-row">
         <th scope="row">↳ {row.label}</th>
         <td>{formatCount(row.count)}</td>
         <td className="combined-summary-amount-cell">{formatCurrency(row.amount)}</td>
-        <td className="combined-summary-incentive-cell">{formatCurrency(row.incentive)}</td>
+        {showBreakdownIncentive && <td className="combined-summary-incentive-cell">{formatCurrency(row.incentive)}</td>}
       </tr>
     ));
   };
@@ -854,17 +868,18 @@ export default function CombinedStatsPage() {
                     <col className="combined-breakdown-col-label" />
                     <col className="combined-breakdown-col-count" />
                     <col className="combined-breakdown-col-amount" />
-                    <col className="combined-breakdown-col-incentive" />
+                    {showBreakdownIncentive && <col className="combined-breakdown-col-incentive" />}
                   </colgroup>
                   <thead>
                     <tr>
-                      <th className="combined-therapist-name combined-summary-title-header" colSpan={4}>
+                      <th className="combined-therapist-name combined-summary-title-header" colSpan={showBreakdownIncentive ? 4 : 3}>
                         <div className="combined-therapist-name-content">
                           <span>항목별 결산 내역</span>
                           <div className="combined-breakdown-actions">
                             <div className="combined-therapist-view-tabs" role="group" aria-label="항목별 결산 보기">
                               <button type="button" className={`combined-therapist-tab-btn ${breakdownViewMode === 'total' ? 'is-active' : ''}`} aria-pressed={breakdownViewMode === 'total'} onClick={() => setBreakdownViewMode('total')}>전체보기</button>
                               <button type="button" className={`combined-therapist-tab-btn ${breakdownViewMode === 'detail' ? 'is-active' : ''}`} aria-pressed={breakdownViewMode === 'detail'} onClick={() => setBreakdownViewMode('detail')}>상세보기</button>
+                              <button type="button" className={`combined-therapist-tab-btn ${breakdownViewMode === 'detail-no-incentive' ? 'is-active' : ''}`} aria-pressed={breakdownViewMode === 'detail-no-incentive'} onClick={() => setBreakdownViewMode('detail-no-incentive')}>상세보기2</button>
                             </div>
                             <button type="button" className="combined-breakdown-print" aria-label="항목별 결산 내역만 인쇄" onClick={() => printSettlementTable(breakdownRef.current, `${currentYear}년 ${currentMonth}월 항목별 결산 내역`)}><Printer size={16} />인쇄</button>
                           </div>
@@ -875,7 +890,7 @@ export default function CombinedStatsPage() {
                       <th className="combined-summary-empty-header" aria-label="항목">항목</th>
                       <th>건수</th>
                       <th>결산 금액</th>
-                      <th>인센티브</th>
+                      {showBreakdownIncentive && <th>인센티브</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -883,19 +898,20 @@ export default function CombinedStatsPage() {
                       <th>충격파 7%</th>
                       <td>{formatCount(currentSummary.treatmentTotals?.shockwave?.count)}</td>
                       <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.shockwave?.amount)}</td>
-                      <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.shockwave?.incentive)}</td>
+                      {showBreakdownIncentive && <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.shockwave?.incentive)}</td>}
                     </tr>
                     {renderBreakdownDetails(currentSummary, 'shockwave')}
                     {(Array.isArray(currentSummary.shinjangIncentiveGroups) && currentSummary.shinjangIncentiveGroups.length > 0)
                       ? currentSummary.shinjangIncentiveGroups.map((group) => (
                           <Fragment key={`breakdown-shinjang-${group.rate}`}>
+                          {Number(group.rate) === 15 && renderBreakdownRateTotal(currentSummary, 7)}
                           <tr
                             className={`combined-breakdown-row combined-breakdown-shinjang${Number(group.rate) === 7 ? ' combined-incentive-rate-row--7' : Number(group.rate) === 15 ? ' combined-incentive-rate-row--15' : ''}`}
                           >
                             <th>신장분사 {formatIncentiveRate(group.rate)}</th>
                             <td>{formatCount(group.count)}</td>
                             <td className="combined-summary-amount-cell">{formatCurrency(group.amount)}</td>
-                            <td className="combined-summary-incentive-cell">{formatCurrency(group.incentive)}</td>
+                            {showBreakdownIncentive && <td className="combined-summary-incentive-cell">{formatCurrency(group.incentive)}</td>}
                           </tr>
                           {renderBreakdownDetails(currentSummary, 'shinjang_spray', group.rate)}
                           </Fragment>
@@ -905,34 +921,26 @@ export default function CombinedStatsPage() {
                             <th>신장분사</th>
                             <td>{formatCount(currentSummary.treatmentTotals?.shinjang_spray?.count)}</td>
                             <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.shinjang_spray?.amount)}</td>
-                            <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.shinjang_spray?.incentive)}</td>
+                            {showBreakdownIncentive && <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.shinjang_spray?.incentive)}</td>}
                           </tr>
                         )}
+                    {!currentSummary.shinjangIncentiveGroups?.some((group) => Number(group.rate) === 15)
+                      && renderBreakdownRateTotal(currentSummary, 7)}
                     {isAdmin && (
                       <tr className="combined-breakdown-row combined-breakdown-manual combined-incentive-rate-row--15">
                         <th>도수치료 15%</th>
                         <td>{formatCount(currentSummary.treatmentTotals?.manual_therapy?.count)}</td>
                         <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.manual_therapy?.amount)}</td>
-                        <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.manual_therapy?.incentive)}</td>
+                        {showBreakdownIncentive && <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.manual_therapy?.incentive)}</td>}
                       </tr>
                     )}
                     {isAdmin && renderBreakdownDetails(currentSummary, 'manual_therapy')}
-                    {buildCombinedRateTotals(currentSummary, isAdmin).map((total, index) => (
-                      <tr
-                        key={`breakdown-rate-total-${total.rate}`}
-                        className={`combined-therapist-subtotal ${index === 0 ? 'combined-therapist-subtotal--start ' : ''}combined-incentive-rate-row--${total.rate}`}
-                      >
-                        <th>{total.rate}% 합계</th>
-                        <td>{formatCount(total.count)}</td>
-                        <td className="combined-summary-amount-cell">{formatCurrency(total.amount)}</td>
-                        <td className="combined-summary-incentive-cell">{formatCurrency(total.incentive)}</td>
-                      </tr>
-                    ))}
+                    {renderBreakdownRateTotal(currentSummary, 15)}
                     <tr className="combined-therapist-total combined-summary-grand-total">
                       <th>전체 합계</th>
                       <td>{formatCount(currentSummary.total.count)}</td>
                       <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.total.amount)}</td>
-                      <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.total.incentive)}</td>
+                      {showBreakdownIncentive && <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.total.incentive)}</td>}
                     </tr>
                   </tbody>
                 </table>
