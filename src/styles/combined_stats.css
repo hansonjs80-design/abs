@@ -1782,8 +1782,21 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   overflow: hidden;
   background: #fff;
 }
-.combined-ion-treatment .sw-settlement-header { padding: 10px 12px; background: #475569; color: #fff; }
-.combined-ion-treatment h2 { margin: 0; font-size: 16px; }
+.combined-ion-treatment .sw-settlement-header {
+  padding: 12px 14px;
+  background: #334155;
+  color: #fff;
+  border-radius: 8px;
+  border-left: 4px solid #93c5fd;
+}
+.combined-ion-treatment .sw-settlement-header h2 {
+  margin: 0;
+  color: #fff !important;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+}
 .combined-ion-treatment table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .combined-ion-treatment :is(th, td) { padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 14px; }
 .combined-ion-treatment thead { background: #e2e8f0; }
