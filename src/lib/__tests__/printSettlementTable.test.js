@@ -37,3 +37,33 @@ test('prints an isolated clone with the selected rows and removes controls, then
   afterprint();
   assert.equal(removedFrame, true);
 });
+
+test('global summary printing includes both tables in order and honors orientation', (t) => {
+  const copies = [{ querySelectorAll: () => [] }, { querySelectorAll: () => [] }];
+  const tables = copies.map((copy) => ({ cloneNode: () => copy }));
+  const nodes = [];
+  const styles = [];
+  let printed = false;
+  const doc = {
+    createElement: () => ({}), head: { appendChild: (node) => styles.push(node) },
+    body: { appendChild: (node) => nodes.push(node), offsetHeight: 100 },
+  };
+  const frame = { style: {}, contentDocument: doc, contentWindow: {
+    addEventListener() {}, focus() {}, print: () => { printed = true; },
+  } };
+  const originalDocument = globalThis.document;
+  t.after(() => {
+    if (originalDocument === undefined) delete globalThis.document;
+    else globalThis.document = originalDocument;
+  });
+  globalThis.document = { getElementById: () => null, createElement: () => frame, body: { appendChild() {} } };
+  const source = { querySelectorAll: (selector) => {
+    assert.equal(selector, '.combined-therapist-summary-card > table, .combined-treatment-breakdown-card > table');
+    return tables;
+  } };
+  printSettlementTable(source, '2026년 9월 전체 통계 합계', { includeTherapistSummary: true, orientation: 'landscape' });
+  assert.deepEqual(nodes.slice(1), copies);
+  assert.equal(printed, true);
+  assert.match(styles[0].textContent, /size: A4 landscape/);
+  assert.equal(doc.title, '2026년 9월 전체 통계 합계');
+});

@@ -1,7 +1,9 @@
 // Isolated document keeps application navigation and other tables out of print.
-export function printSettlementTable(element, title) {
-  const table = element?.querySelector('table');
-  if (!table) return;
+export function printSettlementTable(element, title, { includeTherapistSummary = false, orientation = 'portrait' } = {}) {
+  const tables = includeTherapistSummary
+    ? [...(element?.querySelectorAll('.combined-therapist-summary-card > table, .combined-treatment-breakdown-card > table') || [])]
+    : [element?.querySelector('table')].filter(Boolean);
+  if (!tables.length) return;
   document.getElementById('combined-settlement-print-frame')?.remove();
   const frame = document.createElement('iframe');
   frame.id = 'combined-settlement-print-frame';
@@ -12,15 +14,20 @@ export function printSettlementTable(element, title) {
   doc.title = title;
   const style = doc.createElement('style');
   style.textContent = `
-    @page { size: A4 portrait; margin: 12mm; }
+    @page { size: A4 ${orientation === 'landscape' ? 'landscape' : 'portrait'}; margin: 12mm; }
     body { margin: 0; font-family: sans-serif; color: #172033; }
     h1 { font-size: 18px; margin: 0 0 16px; }
-    table { width: auto; max-width: 100%; table-layout: auto; border-collapse: collapse; font-size: 12px; margin: 0 auto; }
+    table { width: auto; max-width: 100%; table-layout: auto; border-collapse: collapse; font-size: 12px; margin: 0 auto 8mm; }
     col { width: auto; }
     th, td { border: 1px solid #94a3b8; padding: 6px 8px; text-align: right; overflow-wrap: anywhere; }
     th:first-child { text-align: left; }
     thead { display: table-header-group; background: #e2e8f0; }
     tr { break-inside: avoid; }
+    .combined-therapist-name { background: #475569; color: white; }
+    .combined-therapist-name-content { display: flex; justify-content: space-between; gap: 12px; }
+    .combined-summary-tone-0 { background: #ffedd5; }
+    .combined-summary-tone-1 { background: #ede9fe; }
+    .combined-summary-tone-2 { background: #dcfce7; }
     .combined-breakdown-row { font-weight: bold; }
     .combined-summary-column-header-row { color: #475569; font-size: 11px; }
     .combined-breakdown-detail-row { background: #fbfcfe; color: #475569; font-size: 11px; }
@@ -37,9 +44,11 @@ export function printSettlementTable(element, title) {
   const heading = doc.createElement('h1');
   heading.textContent = title;
   doc.body.appendChild(heading);
-  const copy = table.cloneNode(true);
-  copy.querySelectorAll('.combined-breakdown-actions').forEach((node) => node.remove());
-  doc.body.appendChild(copy);
+  tables.forEach((table) => {
+    const copy = table.cloneNode(true);
+    copy.querySelectorAll('.combined-breakdown-actions').forEach((node) => node.remove());
+    doc.body.appendChild(copy);
+  });
   frame.contentWindow.addEventListener('afterprint', () => frame.remove(), { once: true });
   // Force layout before opening the print dialog within the click activation.
   void doc.body.offsetHeight;

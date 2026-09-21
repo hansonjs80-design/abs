@@ -811,7 +811,7 @@ export default function CombinedStatsPage() {
       {activeTab === 'summary' && (
         <div className="combined-stats-dashboard combined-stats-dashboard--summary">
           {currentSummary?.therapists?.length > 0 ? (
-            <div className="combined-stats-summary-container">
+            <div className="combined-stats-summary-container" data-print-title={`${currentYear}년 ${currentMonth}월 전체 통계 합계`}>
               <article
                 className="combined-therapist-card combined-therapist-summary-card"
                 aria-label={`${currentMonth}월 치료사 합계`}

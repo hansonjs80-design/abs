@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Printer } from 'lucide-react';
+import { printSettlementTable } from '../../lib/printSettlementTable';
 
 const PRINT_STYLE_ID = 'clinic-print-orientation-style';
 const STATS_GRID_PRINT_FRAME_ID = 'stats-grid-print-frame';
@@ -478,6 +479,16 @@ export default function PrintButton({ isStaffSchedule }) {
   const handlePrint = (orientation, calendarOnly = false, forceWeeks = null) => {
     // 근무표 탭(isStaffSchedule)에서 인쇄 시 가로/세로 모든 인쇄 모드에서 우측 3개 창(.staff-side) 숨김 처리
     const effectiveCalendarOnly = calendarOnly || isStaffSchedule;
+    const combinedSummary = !effectiveCalendarOnly && [...document.querySelectorAll('.combined-stats-summary-container')]
+      .find((element) => !element.closest('[hidden]') && element.getClientRects().length > 0);
+    if (combinedSummary) {
+      setIsOpen(false);
+      printSettlementTable(combinedSummary, combinedSummary.dataset.printTitle || '전체 통계 합계', {
+        includeTherapistSummary: true,
+        orientation,
+      });
+      return;
+    }
     const isNewPatientPortraitPrint = !effectiveCalendarOnly
       && orientation === 'portrait'
       && hasVisiblePrintTarget('.sw-new-patient-table');
