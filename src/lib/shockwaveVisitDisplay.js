@@ -8,7 +8,7 @@ const identity = (row) => String(row.chart_number || '').trim()
   ? `chart:${String(row.chart_number).trim()}` : `name:${normalizeNameForMatch(row.patient_name)}`;
 const bodyKey = (value) => String(value || '').normalize('NFKC').toLowerCase().split(/[,\n]+/).map((part) => part.replace(/\s+/g, '')).filter(Boolean).sort().join('|');
 const visitNumber = (value) => String(value).trim() === '*' ? 1 : /^\d+$/.test(String(value).trim()) ? Number(value) : null;
-const label = (visit, shinjang) => `${visit}회${shinjang ? `(신장분사${shinjang}회)` : ''}`;
+const label = (visit, shinjang) => `${visit}회${shinjang ? `(신장${shinjang}회)` : ''}`;
 
 // A treatment series requires the same patient, exact body parts, and consecutive
 // recorded visit numbers. Shinjang is a subset of that sequence, never an addition.

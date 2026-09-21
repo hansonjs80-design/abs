@@ -9,15 +9,15 @@ const row = (id, visit, shinjang = false, extra = {}) => ({ id, chart_number: '1
 test('example 1: recorded 1, 2, 3 sequence displays 3 with one Shinjang visit, without adding again', () => {
   const history = [row(1, '*'), row(2, '2', true), row(3, '3')];
   const result = buildShockwaveVisitDisplay([history[0], history[2]], history, settings);
-  assert.equal(result.byRow[3], '3회(신장분사1회)');
-  assert.equal(result.latestByRow[3], '3회(신장분사1회)');
+  assert.equal(result.byRow[3], '3회(신장1회)');
+  assert.equal(result.latestByRow[3], '3회(신장1회)');
   assert.equal(history[2].visit_count, '3');
 });
 test('example 2: continuous 1 to 5 series includes two Shinjang visits after the latest shockwave row', () => {
   const history = [row(1, '*'), row(2, '2'), row(3, '3', true), row(4, '4'), row(5, '5', true)];
   const result = buildShockwaveVisitDisplay([history[3]], history, settings);
-  assert.equal(result.latestByRow[4], '5회(신장분사2회)');
-  assert.equal(result.byRow[4], '4회(신장분사1회)');
+  assert.equal(result.latestByRow[4], '5회(신장2회)');
+  assert.equal(result.byRow[4], '4회(신장1회)');
 });
 test('does not join different body parts, gaps, resets, other patients, or 15 percent treatments', () => {
   for (const extra of [{ body_part: 'Lt. Knee' }, { visit_count: '8' }, { chart_number: '2' }, { prescription: '신장분사 1' }]) {
@@ -47,7 +47,7 @@ test('historical shockwave prescriptions still connect when absent from current 
     shinjang_spray: settings.monthly_settlement_settings['2026-01'].shinjang_spray,
   } } };
   const history = [row(1, '*'), row(2, '2', true), row(3, '3')];
-  assert.equal(buildShockwaveVisitDisplay([history[0]], history, historicalSettings).latestByRow[1], '3회(신장분사1회)');
+  assert.equal(buildShockwaveVisitDisplay([history[0]], history, historicalSettings).latestByRow[1], '3회(신장1회)');
 });
 
 
@@ -55,6 +55,6 @@ test('schedule-backed statistics IDs receive the connected series through their 
   const history = [row(1, '*'), row(2, '2', true), row(3, '3')].map((entry) => ({ ...entry, scheduler_cell_key: `cell:${entry.id}`, _schedule: true }));
   const targets = [history[0], history[2]].map((entry) => ({ ...entry, id: `schedule-source:${entry.id}`, _schedule: false }));
   const result = buildShockwaveVisitDisplay(targets, history, settings);
-  assert.equal(result.latestByRow['schedule-source:1'], '3회(신장분사1회)');
-  assert.equal(result.latestByRow['schedule-source:3'], '3회(신장분사1회)');
+  assert.equal(result.latestByRow['schedule-source:1'], '3회(신장1회)');
+  assert.equal(result.latestByRow['schedule-source:3'], '3회(신장1회)');
 });
