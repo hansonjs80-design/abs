@@ -1,3 +1,4 @@
+import { buildRecentTreatmentSummary } from './recentTreatmentSummary.js';
 import { getEffectiveSettlementSettings, getEffectiveShinjangSpraySettings } from './settlementSettings.js';
 import { buildDisplayTherapists } from './therapistDisplayUtils.js';
 import {
@@ -472,6 +473,13 @@ export function buildCombinedStatsMonthSummary({
     label: `${Number(year)}년 ${String(Number(month)).padStart(2, '0')}월`,
     therapists: therapistSummaries,
     treatmentTotals,
+    recentTreatments: {
+      shockwave: buildRecentTreatmentSummary(shockwaveRows, getVisibleStandardPrescriptions(shockwaveSettings), shockwaveSettings.prescription_prices),
+      shinjang_spray: buildRecentTreatmentSummary(shinjangSourceRows, shinjangResult.prescriptions, {}, true),
+      manual_therapy: isAdmin
+        ? buildRecentTreatmentSummary(manualTherapyRows, getVisibleStandardPrescriptions(manualSettings), manualSettings.prescription_prices)
+        : buildRecentTreatmentSummary(),
+    },
     shinjangIncentiveGroups,
     total: grandTotal,
     totalCount: grandTotal.count,

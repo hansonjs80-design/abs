@@ -3012,3 +3012,9 @@ input, textarea, select { font-family: inherit; font-size: inherit; }
   50% { opacity: 0.35; }
   100% { opacity: 1; }
 }
+
+/* Scrollbars are application controls, never printed page content. */
+@media print {
+  * { scrollbar-width: none !important; }
+  ::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+}

@@ -1,6 +1,8 @@
 // Isolated document keeps application navigation and other tables out of print.
-export function printSettlementTable(element, title, { includeTherapistSummary = false, orientation = 'portrait' } = {}) {
-  const tables = includeTherapistSummary
+export function printSettlementTable(element, title, { includeTherapistSummary = false, includeRecentTables = false, orientation = 'portrait' } = {}) {
+  const tables = includeRecentTables
+    ? [...element.querySelectorAll('section table')]
+    : includeTherapistSummary
     ? [...(element?.querySelectorAll('.combined-therapist-summary-card > table, .combined-treatment-breakdown-card > table, .combined-ion-treatment table') || [])]
     : [element?.querySelector('table')].filter(Boolean);
   if (!tables.length) return;
@@ -38,12 +40,28 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     .combined-incentive-rate-row--7 { background: #eaf2fd; }
     .combined-incentive-rate-row--15 { background: #f6ecfb; }
     .combined-treatment-child-row th { padding-left: 22px; font-weight: normal; }
-    * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    caption { text-align: left; font-size: 13px; font-weight: bold; padding: 0 0 8px; }
+    .combined-recent-print-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5mm; align-items: start; }
+    .combined-recent-print-grid[data-view="detail"] { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2mm; }
+    .combined-recent-print-grid table { width: 100%; table-layout: fixed; font-size: 9px; }
+    .combined-recent-print-grid th, .combined-recent-print-grid td { padding: 3px; }
+    .combined-recent-print-grid[data-view="detail"] table { font-size: 8px; }
+    .combined-recent-breakdown-item { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px; padding: 3px; margin: 2px 0 2px 3px; background: #f8fafc; }
+    .combined-recent-breakdown-item--total { border-left: 2px solid #0f172a; margin-left: 0; background: #e2e8f0; font-weight: bold; }
+    .combined-summary-grand-total > *, .combined-treatment-breakdown-card .combined-therapist-total > *, .combined-therapist-total > * { color: #9f1239; }
+    ::-webkit-scrollbar { display: none; width: 0; height: 0; }
+    * { scrollbar-width: none; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   `;
   doc.head.appendChild(style);
   const heading = doc.createElement('h1');
   heading.textContent = title;
   doc.body.appendChild(heading);
+  const container = includeRecentTables ? doc.createElement('div') : doc.body;
+  if (includeRecentTables) {
+    container.className = 'combined-recent-print-grid';
+    container.dataset.view = element.dataset.recentView;
+    doc.body.appendChild(container);
+  }
   tables.forEach((table) => {
     const copy = table.cloneNode(true);
     copy.querySelectorAll('.combined-breakdown-actions').forEach((node) => node.remove());
@@ -53,7 +71,12 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
       copy.prepend(caption);
       copy.querySelectorAll('input').forEach((input) => input.remove());
     }
-    doc.body.appendChild(copy);
+    if (table.closest('.combined-stats-recent')) {
+      const caption = doc.createElement('caption');
+      caption.textContent = table.closest('section').querySelector('h2')?.textContent || title;
+      copy.prepend(caption);
+    }
+    container.appendChild(copy);
   });
   frame.contentWindow.addEventListener('afterprint', () => frame.remove(), { once: true });
   // Force layout before opening the print dialog within the click activation.

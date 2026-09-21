@@ -88,6 +88,7 @@ export default function ManualTherapyStatsPage() {
   const { user } = useAuth();
   const canManageStatsSettings = isAdminUser(user);
   const { addToast } = useToast();
+  const [showRecentSummary, setShowRecentSummary] = useState(true);
   const [logs, setLogs] = useState([]);
   const [activeSection, setActiveSection] = useState('grid');
   const [isLogsLoading, setIsLogsLoading] = useState(false);
@@ -687,14 +688,17 @@ export default function ManualTherapyStatsPage() {
                           selectedTherapistNames={selectedTherapistNames}
                         />
                         <div className="sw-manual-summary-stack">
-                          <ManualTherapySixMonthStats
-                            currentYear={currentYear}
-                            currentMonth={currentMonth}
-                            therapists={displayBaseTherapists}
-                            settings={shockwaveSettings}
-                            selectedTherapistNames={selectedTherapistNames}
-                            currentMonthLogs={visibleLogs}
-                          />
+                          <label className="settlement-recent-visibility-toggle"><input type="checkbox" checked={showRecentSummary} onChange={(event) => setShowRecentSummary(event.target.checked)} />최근 결산/신환 현황 보기</label>
+                          {showRecentSummary && (
+                            <ManualTherapySixMonthStats
+                              currentYear={currentYear}
+                              currentMonth={currentMonth}
+                              therapists={displayBaseTherapists}
+                              settings={shockwaveSettings}
+                              selectedTherapistNames={selectedTherapistNames}
+                              currentMonthLogs={visibleLogs}
+                            />
+                          )}
 
                         </div>
                       </div>

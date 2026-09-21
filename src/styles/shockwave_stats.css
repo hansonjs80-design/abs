@@ -30,3 +30,11 @@
   line-height: 1;
   white-space: nowrap;
 }
+
+.settlement-recent-visibility-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: #475569; cursor: pointer; }
+.settlement-recent-visibility-toggle input { accent-color: #4f46e5; width: 16px; height: 16px; }
+@media print {
+  .settlement-recent-visibility-toggle, .combined-recent-visibility-controls { display: none !important; }
+  .sw-grid-wrapper, .sw-settlement-table-wrap { scrollbar-width: none !important; }
+  ::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+}

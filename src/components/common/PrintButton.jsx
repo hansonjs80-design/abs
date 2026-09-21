@@ -479,6 +479,13 @@ export default function PrintButton({ isStaffSchedule }) {
   const handlePrint = (orientation, calendarOnly = false, forceWeeks = null) => {
     // 근무표 탭(isStaffSchedule)에서 인쇄 시 가로/세로 모든 인쇄 모드에서 우측 3개 창(.staff-side) 숨김 처리
     const effectiveCalendarOnly = calendarOnly || isStaffSchedule;
+    const recentSettlement = !effectiveCalendarOnly && [...document.querySelectorAll('.combined-stats-dashboard--settlement')]
+      .find((element) => !element.closest('[hidden]') && element.getClientRects().length > 0);
+    if (recentSettlement) {
+      setIsOpen(false);
+      printSettlementTable(recentSettlement, recentSettlement.dataset.printTitle, { includeRecentTables: true, orientation });
+      return;
+    }
     const combinedSummary = !effectiveCalendarOnly && [...document.querySelectorAll('.combined-stats-summary-container')]
       .find((element) => !element.closest('[hidden]') && element.getClientRects().length > 0);
     if (combinedSummary) {

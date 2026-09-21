@@ -85,10 +85,12 @@ export default function ShockwaveSettlementView({
   selectedTherapistNames,
   recentSummariesLoading = false,
   treatmentLabel = '충격파',
-  showRecentSummaries = true,
+  showRecentSummaries: allowRecentSummaries = true,
   showOnlyTherapistPrescriptions = false,
   viewModeStorageKey = SETTLEMENT_VIEW_MODE_STORAGE_KEY,
 }) {
+  const [recentSummariesVisible, setRecentSummariesVisible] = useState(true);
+  const showRecentSummaries = allowRecentSummaries && recentSummariesVisible;
   const [viewMode, setViewMode] = useState(() => readStoredViewMode(viewModeStorageKey)); // 'horizontal' | 'horizontal2' | 'vertical'
   const [pricingMode, setPricingMode] = useState('standard'); // 'standard' | 'cryo'
   const handleViewModeChange = useCallback((nextViewMode, nextPricingMode = 'standard') => {
@@ -426,6 +428,7 @@ export default function ShockwaveSettlementView({
   return (
     <div data-treatment={treatmentLabel} data-view-mode={viewMode} className={`sw-settlement-stack sw-settlement-stack--shockwave ${viewMode === 'vertical' ? 'sw-settlement-stack--vertical' : ''} ${viewMode === 'horizontal2' ? 'sw-settlement-stack--horizontal2' : ''}`}>
       <div className="sw-settlement-view-mode-row">
+        {allowRecentSummaries && <label className="settlement-recent-visibility-toggle"><input type="checkbox" checked={recentSummariesVisible} onChange={(event) => setRecentSummariesVisible(event.target.checked)} />{recentPeriodLabel} 결산/신환 현황 보기</label>}
         {renderViewModeSelector('standard', `기본 ${treatmentLabel} 결산 보기 방식`)}
         <div className="sw-cryo-view-mode-group">
           <span className="sw-cryo-view-mode-label">크라이오 반영 통계</span>

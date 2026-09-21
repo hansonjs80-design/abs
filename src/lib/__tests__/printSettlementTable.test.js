@@ -75,7 +75,7 @@ test('includes the checked ion table with its title and printable values', (t) =
     querySelectorAll: (selector) => selector === 'input' ? [{ remove: () => { removedInput = true; } }] : [],
     prepend: (node) => { caption = node.textContent; },
   };
-  const table = { closest: () => ({}), cloneNode: () => copy };
+  const table = { closest: (selector) => selector === '.combined-ion-treatment' ? {} : null, cloneNode: () => copy };
   const nodes = [];
   const doc = { createElement: () => ({}), head: { appendChild() {} }, body: { appendChild: (node) => nodes.push(node) } };
   const frame = { style: {}, contentDocument: doc, contentWindow: { addEventListener() {}, focus() {}, print() {} } };

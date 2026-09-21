@@ -1,3 +1,4 @@
+import CombinedRecentTreatmentTable from '../components/shockwave/CombinedRecentTreatmentTable';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Printer, RefreshCw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -317,8 +318,10 @@ export default function CombinedStatsPage() {
   const { addToast } = useToast();
   const isAdmin = isAdminUser(user);
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
+  const [recentTableVisibility, setRecentTableVisibility] = useState({ overall: true, shockwave: true, shinjang_spray: true, manual_therapy: true });
   const [recentViewMode, setRecentViewMode] = useState('total-only');
   const [activeTab, setActiveTab] = useState('therapist'); // 'therapist' | 'summary' | 'settlement'
+  const [summaryViewMode, setSummaryViewMode] = useState('total');
   const [showIonTreatment, setShowIonTreatment] = useState(false);
   const [showTherapistSummary, setShowTherapistSummary] = useState(false);
   const [layoutMode, setLayoutMode] = useState('horizontal'); // 'horizontal' | 'vertical'
@@ -599,51 +602,53 @@ export default function CombinedStatsPage() {
   ) : null;
 
   const renderTherapistSummary = () => currentSummary ? (
-              <article
-                className="combined-therapist-card combined-therapist-summary-card"
-                aria-label={`${currentMonth}월 치료사 합계`}
-              >
-                <table>
-                  <colgroup>
-                    <col className="combined-summary-col-therapist" />
-                    <col className="combined-summary-col-amount" />
-                    <col className="combined-summary-col-incentive" />
-                  </colgroup>
-                  <thead>
-                    <tr>
-                      <th className="combined-therapist-name combined-summary-title-header" colSpan={3}>
-                        <div className="combined-therapist-name-content">
-                          <span>치료사별 합계</span>
-                          <span className="combined-therapist-header-count">
-                            {formatCount(currentSummary.total.count)}
-                          </span>
-                        </div>
-                      </th>
-                    </tr>
-                    <tr className="combined-summary-column-header-row">
-                      <th className="combined-summary-empty-header" aria-label="치료사"></th>
-                      <th>총 결산 금액 합계</th>
-                      <th>총 인센티브 합계</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentSummary.therapists.map((item, index) => (
-                      <tr key={`summary-${item.therapist.key || item.therapist.id || item.therapist.name}`}>
-                        <th className={`combined-summary-therapist-cell combined-summary-tone-${index % 5}`}>
-                          {item.therapist.displayName || item.therapist.name} 치료사
-                        </th>
-                        <td className="combined-summary-amount-cell">{formatCurrency(item.total.amount)}</td>
-                        <td className="combined-summary-incentive-cell">{formatCurrency(item.total.incentive)}</td>
-                      </tr>
-                    ))}
-                    <tr className="combined-therapist-total combined-summary-grand-total">
-                      <th>전체 합계</th>
-                      <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.total.amount)}</td>
-                      <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.total.incentive)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </article>
+    <article className="combined-therapist-card combined-therapist-summary-card" data-summary-view={summaryViewMode}>
+      <table>
+        <thead>
+          <tr><th className="combined-therapist-name combined-summary-title-header" colSpan={summaryViewMode === 'detail' ? 5 : 3}>
+            <div className="combined-therapist-name-content">
+              <span>치료사별 합계</span>
+              <span className="combined-therapist-header-count">{formatCount(currentSummary.total.count)}</span>
+              <div className="combined-breakdown-actions">
+                <div className="combined-therapist-view-tabs">
+                  <button type="button" className={`combined-therapist-tab-btn ${summaryViewMode === 'total' ? 'is-active' : ''}`} aria-pressed={summaryViewMode === 'total'} onClick={() => setSummaryViewMode('total')}>전체보기</button>
+                  <button type="button" className={`combined-therapist-tab-btn ${summaryViewMode === 'detail' ? 'is-active' : ''}`} aria-pressed={summaryViewMode === 'detail'} onClick={() => setSummaryViewMode('detail')}>상세보기</button>
+                </div>
+                <button type="button" className="combined-table-print-button" onClick={(event) => printSettlementTable(event.currentTarget.closest('article'), `${currentYear}년 ${currentMonth}월 치료사별 합계`)}><Printer size={16} />인쇄</button>
+              </div>
+            </div>
+          </th></tr>
+          <tr className="combined-summary-column-header-row">
+            <th className="combined-summary-empty-header" aria-label="치료사"></th>
+            {summaryViewMode === 'detail' && <><th>항목</th><th>건수</th></>}
+            <th>총 결산 금액 합계</th><th>총 인센티브 합계</th>
+          </tr>
+        </thead>
+        <tbody>
+          {currentSummary.therapists.map((item, index) => (
+            <Fragment key={`summary-${item.therapist.key || item.therapist.id || item.therapist.name}`}>
+              <tr className={summaryViewMode === 'detail' ? 'combined-summary-parent-row' : undefined}>
+                <th className={`combined-summary-therapist-cell combined-summary-tone-${index % 5}`}>{item.therapist.displayName || item.therapist.name} 치료사</th>
+                {summaryViewMode === 'detail' && <><td>합계</td><td>{formatCount(item.total.count)}</td></>}
+                <td className="combined-summary-amount-cell">{formatCurrency(item.total.amount)}</td>
+                <td className="combined-summary-incentive-cell">{formatCurrency(item.total.incentive)}</td>
+              </tr>
+              {summaryViewMode === 'detail' && buildTherapistTreatmentSections(item, isAdmin).flatMap((section) => section.rows).map((row) => (
+                <tr className="combined-breakdown-detail-row" key={row.label}>
+                  <td></td><th scope="row">↳ {row.label}</th><td>{formatCount(row.count)}</td><td>{formatCurrency(row.amount)}</td><td>{formatCurrency(row.incentive)}</td>
+                </tr>
+              ))}
+            </Fragment>
+          ))}
+          <tr className="combined-therapist-total combined-summary-grand-total">
+            <th colSpan={summaryViewMode === 'detail' ? 2 : 1}>전체 합계</th>
+            {summaryViewMode === 'detail' && <td>{formatCount(currentSummary.total.count)}</td>}
+            <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.total.amount)}</td>
+            <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.total.incentive)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </article>
   ) : null;
   const recentRows = useMemo(() => [...monthSummaries].reverse(), [monthSummaries]);
 
@@ -1015,14 +1020,21 @@ export default function CombinedStatsPage() {
       )}
 
       {activeTab === 'settlement' && (
-        <div className="combined-stats-dashboard combined-stats-dashboard--settlement">
-          <section className="combined-stats-recent combined-settlement-recent-main" aria-label={`${recentPeriodLabel} 전체 결산 현황`}>
+        <>
+        <div className="combined-recent-visibility-controls">
+          {[{ key: 'overall', label: '전체결산' }, ...COMBINED_STATS_TREATMENTS].filter(({ key }) => isAdmin || key !== 'manual_therapy').map(({ key, label }) => (
+            <label className="settlement-recent-visibility-toggle" key={key}><input type="checkbox" checked={recentTableVisibility[key]} onChange={(event) => setRecentTableVisibility((current) => ({ ...current, [key]: event.target.checked }))} />{label} 현황 보기</label>
+          ))}
+        </div>
+        <div className="combined-stats-dashboard combined-stats-dashboard--settlement" data-recent-view={recentViewMode} data-print-title={`${recentPeriodLabel} 전체결산`}>
+          {recentTableVisibility.overall && <section className="combined-stats-recent combined-settlement-recent-main" aria-label={`${recentPeriodLabel} 전체 결산 현황`}>
             <div className="combined-stats-recent-heading">
               <div>
-                <h2>{recentPeriodLabel} 결산 현황</h2>
+                <h2>{recentPeriodLabel} 전체결산</h2>
                 <span>크라이오 차감 적용 전체 통계</span>
               </div>
               <div className="combined-recent-controls">
+                <button type="button" className="combined-table-print-button" onClick={(event) => printSettlementTable(event.currentTarget.closest('section'), `${recentPeriodLabel} 전체결산`)}><Printer size={16} />인쇄</button>
                 <div className="combined-recent-filter-tabs" role="tablist" aria-label="결산 현황 보기 방식">
                   <button
                     type="button"
@@ -1104,8 +1116,12 @@ export default function CombinedStatsPage() {
                 </tbody>
               </table>
             </div>
-          </section>
+          </section>}
+          {COMBINED_STATS_TREATMENTS.filter(({ key }) => recentTableVisibility[key] && (isAdmin || key !== 'manual_therapy')).map(({ key, label }) => (
+            <CombinedRecentTreatmentTable key={key} treatment={key} label={label} periodLabel={recentPeriodLabel} summaries={recentRows} currentMonthKey={currentMonthKey} viewMode={recentViewMode} />
+          ))}
         </div>
+        </>
       )}
     </div>
   );
