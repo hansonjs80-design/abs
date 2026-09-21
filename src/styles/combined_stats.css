@@ -1859,6 +1859,7 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
 .combined-recent-scroll { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; padding-bottom: 12px; scrollbar-gutter: stable; }
 .combined-recent-scroll:focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; }
 .combined-recent-scroll .combined-stats-dashboard--settlement[data-recent-view] {
+  margin-inline: 0 !important;
   grid-template-columns: repeat(2, minmax(max-content, 1fr));
   width: max-content !important;
   max-width: none !important;
