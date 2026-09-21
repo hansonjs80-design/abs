@@ -34,3 +34,11 @@ export function buildCombinedRateTotals(summary, isAdmin = false) {
     }, { rate, count: 0, amount: 0, incentive: 0 });
   });
 }
+
+
+export function getCombinedSummaryAnchorIndex(therapists = [], layoutMode = 'horizontal') {
+  const name = layoutMode === 'vertical' ? '주한솔' : '김세령';
+  const index = therapists.findIndex((item) => [item.therapist?.name, item.therapist?.displayName]
+    .some((value) => String(value || '').trim().replace(/\s*치료사$/, '') === name));
+  return index >= 0 ? index : layoutMode === 'vertical' ? 0 : therapists.length - 1;
+}

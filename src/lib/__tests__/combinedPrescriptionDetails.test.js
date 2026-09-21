@@ -74,3 +74,12 @@ test('empty rate subtotals stay visible with zero values', () => {
     { rate: 15, count: 0, amount: 0, incentive: 0 },
   ]);
 });
+
+test('summary follows the named therapist in each layout even if ordering changes', async () => {
+  const { getCombinedSummaryAnchorIndex } = await import('../combinedPrescriptionDetails.js');
+  const therapists = ['신수민', '김세령', '주한솔'].map((name) => ({ therapist: { name } }));
+  assert.equal(getCombinedSummaryAnchorIndex(therapists, 'horizontal'), 1);
+  assert.equal(getCombinedSummaryAnchorIndex(therapists, 'vertical'), 2);
+  assert.equal(getCombinedSummaryAnchorIndex(therapists.slice(0, 1), 'horizontal'), 0);
+  assert.equal(getCombinedSummaryAnchorIndex(therapists.slice(0, 1), 'vertical'), 0);
+});

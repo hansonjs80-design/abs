@@ -1687,3 +1687,69 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   flex-wrap: wrap;
   min-width: 0;
 }
+
+.combined-therapist-summary-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.combined-therapist-summary-toggle input { width: 16px; height: 16px; accent-color: #4f46e5; }
+.combined-therapist-column { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.combined-stats-dashboard--horizontal .combined-therapist-column { flex: 1 1 340px; }
+.combined-stats-dashboard--stats .combined-therapist-column .combined-therapist-card {
+  width: 100% !important;
+  min-width: 0 !important;
+  flex: none !important;
+  margin-top: 0;
+}
+.combined-stats-dashboard--stats .combined-therapist-summary-card :is(th, td) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 14px !important;
+  padding: 7px 8px !important;
+}
+@media print {
+  .combined-therapist-summary-toggle { display: none !important; }
+  body .combined-stats-page .combined-stats-dashboard--horizontal .combined-stats-current {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+  body .combined-stats-page .combined-therapist-column { flex: 1 1 0% !important; min-width: 0 !important; gap: 10px; }
+  body .combined-stats-page .combined-stats-dashboard--stats .combined-therapist-column .combined-therapist-card {
+    width: 100% !important; min-width: 0 !important; flex: none !important;
+    overflow: visible !important;
+  }
+  body .combined-stats-page .combined-stats-dashboard--stats .combined-therapist-card :is(th, td) {
+    height: auto !important;
+    padding: 4px 4px !important;
+    font-size: 11.5pt !important;
+    line-height: 1.25 !important;
+    letter-spacing: -0.2px !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  body .combined-stats-page .combined-stats-dashboard--stats .combined-therapist-card tbody tr.combined-treatment-child-row > * {
+    font-size: 11pt !important;
+    font-weight: 500 !important;
+    color: #334155 !important;
+  }
+  body .combined-stats-page .combined-stats-dashboard--stats .combined-therapist-card tbody tr.combined-treatment-parent-row > * {
+    font-size: 12pt !important;
+    font-weight: 800 !important;
+  }
+  body .combined-stats-page .combined-stats-dashboard--stats .combined-therapist-card tbody tr.combined-incentive-rate-row--7:not(.combined-treatment-child-row) > * { background: #dbeafe !important; }
+  body .combined-stats-page .combined-stats-dashboard--stats .combined-therapist-card tbody tr.combined-incentive-rate-row--15:not(.combined-treatment-child-row) > * { background: #eadcf8 !important; }
+  body .combined-stats-page .combined-stats-dashboard--stats .combined-therapist-card tbody tr:is(.combined-therapist-subtotal, .combined-therapist-total) > * {
+    font-size: 12pt !important;
+    font-weight: 800 !important;
+  }
+  body .combined-stats-page .combined-stats-dashboard--stats .combined-therapist-summary-card :is(th, td) { font-size: 11pt !important; }
+}
