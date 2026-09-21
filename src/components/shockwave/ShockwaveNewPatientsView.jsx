@@ -19,6 +19,7 @@ function formatMonthDay(dateText) {
 
 export default function ShockwaveNewPatientsView({
   logs,
+  visitCountDisplay,
   therapists,
   currentMonth,
   title,
@@ -53,6 +54,7 @@ export default function ShockwaveNewPatientsView({
           firstDate: String(log?.date || ''),
           latestDate: String(log?.date || ''),
           latestVisitCount: toVisitNumber(log?.visit_count),
+          latestLogId: log.id,
           bodyPart: String(log?.body_part || '').trim(),
           patientName: cleanName,
         };
@@ -69,6 +71,7 @@ export default function ShockwaveNewPatientsView({
         ) {
           current.latestDate = nextDate;
           current.latestVisitCount = nextVisitCount;
+          current.latestLogId = log.id;
           if (String(log?.body_part || '').trim()) current.bodyPart = String(log.body_part).trim();
         } else if (!current.bodyPart && String(log?.body_part || '').trim()) {
           current.bodyPart = String(log.body_part).trim();
@@ -87,7 +90,7 @@ export default function ShockwaveNewPatientsView({
           date: formatMonthDay(item.firstDate),
           patientName: `${item.patientName}*`,
           bodyPart: item.bodyPart || '-',
-          visitLabel: `${item.latestVisitCount}회`,
+          visitLabel: visitCountDisplay?.[item.latestLogId] || `${item.latestVisitCount}회`,
         }));
 
       return {
@@ -105,14 +108,14 @@ export default function ShockwaveNewPatientsView({
       maxRows,
       totalCount,
     };
-  }, [logs, displayTherapists]);
+  }, [logs, displayTherapists, visitCountDisplay]);
 
   const printColumnWidths = useMemo(() => {
     const therapistCount = Math.max(1, summary.byTherapist.length);
     const groupWidth = 100 / therapistCount;
-    const ratios = [0.18, 0.23, 0.41, 0.18];
+    const ratios = visitCountDisplay ? [0.16, 0.21, 0.37, 0.26] : [0.18, 0.23, 0.41, 0.18];
     return summary.byTherapist.flatMap(() => ratios.map((ratio) => `${groupWidth * ratio}%`));
-  }, [summary.byTherapist]);
+  }, [summary.byTherapist, visitCountDisplay]);
 
   if (!displayTherapists.length) {
     return (

@@ -1,3 +1,4 @@
+import useShockwaveVisitDisplay from '../../hooks/useShockwaveVisitDisplay';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
@@ -149,6 +150,7 @@ export default function ShockwaveStatsView({
     () => safeLogs.filter((log) => !isShinjangSprayPrescription(log?.prescription)),
     [safeLogs]
   );
+  const visitCountDisplay = useShockwaveVisitDisplay(visibleShockwaveLogs, shockwaveSettings, currentYear, currentMonth, activeSection === 'new-patients');
   const visibleRecentLogs = useMemo(
     () => (Array.isArray(recentLogs) ? recentLogs : []).filter(
       (log) => !isShinjangSprayPrescription(log?.prescription)
@@ -1019,6 +1021,7 @@ export default function ShockwaveStatsView({
               hidden={activeSection !== 'new-patients'}
             >
               <ShockwaveNewPatientsView
+                visitCountDisplay={visitCountDisplay.latestByRow}
                 logs={visibleShockwaveLogs}
                 therapists={displayBaseTherapists}
                 monthlyTherapists={monthlyTherapists}
