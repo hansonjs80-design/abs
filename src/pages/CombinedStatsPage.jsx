@@ -627,7 +627,7 @@ export default function CombinedStatsPage() {
         <tbody>
           {currentSummary.therapists.map((item, index) => (
             <Fragment key={`summary-${item.therapist.key || item.therapist.id || item.therapist.name}`}>
-              <tr className={summaryViewMode === 'detail' ? 'combined-summary-parent-row' : undefined}>
+              <tr className={`combined-summary-parent-row combined-summary-tone-${index % 5}`}>
                 <th className={`combined-summary-therapist-cell combined-summary-tone-${index % 5}`}>{item.therapist.displayName || item.therapist.name} 치료사</th>
                 {summaryViewMode === 'detail' && <><td>합계</td><td>{formatCount(item.total.count)}</td></>}
                 <td className="combined-summary-amount-cell">{formatCurrency(item.total.amount)}</td>
@@ -635,7 +635,7 @@ export default function CombinedStatsPage() {
               </tr>
               {summaryViewMode === 'detail' && buildTherapistTreatmentSections(item, isAdmin).flatMap((section) => section.rows).map((row) => (
                 <tr className="combined-breakdown-detail-row" key={row.label}>
-                  <td></td><th scope="row">↳ {row.label}</th><td>{formatCount(row.count)}</td><td>{formatCurrency(row.amount)}</td><td>{formatCurrency(row.incentive)}</td>
+                  <td></td><th scope="row">↳ {row.label}</th><td>{formatCount(row.count)}</td><td className="combined-summary-amount-cell">{formatCurrency(row.amount)}</td><td className="combined-summary-incentive-cell">{formatCurrency(row.incentive)}</td>
                 </tr>
               ))}
             </Fragment>

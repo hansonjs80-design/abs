@@ -605,23 +605,28 @@
   white-space: nowrap !important;
 }
 
-.combined-summary-tone-0 {
+.combined-summary-tone-0,
+.combined-therapist-summary-card .combined-summary-parent-row.combined-summary-tone-0 > * {
   background-color: #fed7aa !important;
 }
 
-.combined-summary-tone-1 {
+.combined-summary-tone-1,
+.combined-therapist-summary-card .combined-summary-parent-row.combined-summary-tone-1 > * {
   background-color: #ddd6fe !important;
 }
 
-.combined-summary-tone-2 {
+.combined-summary-tone-2,
+.combined-therapist-summary-card .combined-summary-parent-row.combined-summary-tone-2 > * {
   background-color: #bbf7d0 !important;
 }
 
-.combined-summary-tone-3 {
+.combined-summary-tone-3,
+.combined-therapist-summary-card .combined-summary-parent-row.combined-summary-tone-3 > * {
   background-color: #bfdbfe !important;
 }
 
-.combined-summary-tone-4 {
+.combined-summary-tone-4,
+.combined-therapist-summary-card .combined-summary-parent-row.combined-summary-tone-4 > * {
   background-color: #fbcfe8 !important;
 }
 
@@ -1869,4 +1874,19 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
 .combined-recent-scroll .combined-stats-recent :is(th, td) { padding: 6px 8px !important; white-space: nowrap; }
 @media print {
   .combined-recent-scroll { overflow: visible !important; width: auto; max-width: none; padding-bottom: 0; }
+}
+
+/* Summary currency alignment and stronger final totals in both display modes. */
+.combined-stats-summary-container :is(.combined-therapist-summary-card, .combined-treatment-breakdown-card) table tbody :is(.combined-summary-amount-cell, .combined-summary-incentive-cell) {
+  text-align: right !important;
+  padding-right: 10px !important;
+}
+.combined-stats-summary-container .combined-therapist-summary-card[data-summary-view="total"] table tbody .combined-summary-grand-total > * {
+  font-size: calc(1.05rem + 5px) !important;
+}
+.combined-stats-summary-container .combined-therapist-summary-card[data-summary-view="detail"] table tbody .combined-summary-grand-total > * {
+  font-size: 15px !important;
+}
+.combined-stats-summary-container .combined-treatment-breakdown-card table tbody .combined-summary-grand-total > * {
+  font-size: 17px !important;
 }
