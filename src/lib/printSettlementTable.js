@@ -17,7 +17,7 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     @page { size: A4 ${orientation === 'landscape' ? 'landscape' : 'portrait'}; margin: 12mm; }
     body { margin: 0; font-family: sans-serif; color: #172033; }
     h1 { font-size: 18px; margin: 0 0 16px; }
-    table { width: auto; max-width: 100%; table-layout: auto; border-collapse: collapse; font-size: 12px; margin: 0 auto 8mm; }
+    table { width: auto; max-width: 100%; table-layout: auto; border-collapse: collapse; font-size: 12px; margin: 0 0 8mm; }
     col { width: auto; }
     th, td { border: 1px solid #94a3b8; padding: 6px 8px; text-align: right; overflow-wrap: anywhere; }
     th:first-child { text-align: left; }
