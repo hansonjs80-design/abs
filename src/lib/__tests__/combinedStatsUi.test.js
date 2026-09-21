@@ -65,8 +65,10 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /<span>치료사별 합계<\/span>/);
     assert.match(pageSource, /<th>전체 합계<\/th>/);
     assert.match(pageSource, /\{formatCurrency\(currentSummary\.total\.incentive\)\}/);
-    assert.doesNotMatch(pageSource, /ManualTherapySixMonthIonTreatment/);
-    assert.doesNotMatch(pageSource, /setManualTherapyIonTreatment/);
+    assert.match(pageSource, /isAdmin && showIonTreatment/);
+    assert.match(pageSource, /checked=\{showIonTreatment\}/);
+    assert.match(pageSource, /index === summaryAnchorIndex && renderIonTreatment\(\)/);
+    assert.match(pageSource, /setManualTherapyIonTreatment/);
     assert.match(pageSource, /recentPeriodInput/);
     assert.match(pageSource, /includeManual \? \[\{/);
     assert.match(pageSource, /return\s*\[\s*\{\s*key:\s*'total'[\s\S]*?key:\s*'shockwave'/);

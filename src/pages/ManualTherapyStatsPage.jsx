@@ -11,13 +11,9 @@ import ShockwaveDataGrid from '../components/shockwave/ShockwaveDataGrid';
 import ShockwaveNewPatientsView from '../components/shockwave/ShockwaveNewPatientsView';
 import ManualTherapyStatsView from '../components/shockwave/ManualTherapyStatsView';
 import ManualTherapySixMonthStats from '../components/shockwave/ManualTherapySixMonthStats';
-import ManualTherapySixMonthIonTreatment from '../components/shockwave/ManualTherapySixMonthIonTreatment';
 import SettlementSettingsPanel from '../components/shockwave/SettlementSettingsPanel';
 import { getEffectiveSettlementSettings } from '../lib/settlementSettings';
 import { normalizeManualTherapyLogRows } from '../lib/manualTherapyLogUtils';
-import {
-  setManualTherapyIonTreatment,
-} from '../lib/manualTherapyIonTreatmentUtils';
 import { isAdminUser } from '../lib/authPermissions';
 import {
   buildScheduleMemoSignature,
@@ -141,10 +137,6 @@ export default function ManualTherapyStatsPage() {
     () => getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'manual_therapy'),
     [shockwaveSettings, currentYear, currentMonth]
   );
-  const ionTreatmentSettingsRef = useRef(shockwaveSettings);
-  useEffect(() => {
-    ionTreatmentSettingsRef.current = shockwaveSettings;
-  }, [shockwaveSettings]);
   const allPrescriptions = useMemo(
     () => (Array.isArray(effectiveSettlementSettings.prescriptions)
       ? effectiveSettlementSettings.prescriptions.filter(Boolean)
@@ -535,24 +527,6 @@ export default function ManualTherapyStatsPage() {
     addToast(ok ? '이번 달 도수치료 결산 설정을 저장했습니다.' : '결산 설정 저장에 실패했습니다.', ok ? 'success' : 'error');
   }, [addToast, loadShockwaveSettings, saveShockwaveSettings]);
 
-  const handleSaveIonTreatment = useCallback(async (year, month, nextIonTreatment) => {
-    const settingsToUpdate = ionTreatmentSettingsRef.current || shockwaveSettings || {};
-    const nextSettings = {
-      ...settingsToUpdate,
-      monthly_settlement_settings: setManualTherapyIonTreatment(
-        settingsToUpdate,
-        year,
-        month,
-        nextIonTreatment
-      ),
-    };
-    ionTreatmentSettingsRef.current = nextSettings;
-    const ok = await saveShockwaveSettings(nextSettings);
-    if (ok) await loadShockwaveSettings();
-    if (!ok) ionTreatmentSettingsRef.current = shockwaveSettings;
-    addToast(ok ? '이온치료 현황을 저장했습니다.' : '이온치료 현황 저장에 실패했습니다.', ok ? 'success' : 'error');
-    return ok;
-  }, [addToast, loadShockwaveSettings, saveShockwaveSettings, shockwaveSettings]);
 
   const secondarySectionsReady = shouldPrepareStatsSecondarySections({
     dataReady: monthlyTherapistsReady,
@@ -721,12 +695,7 @@ export default function ManualTherapyStatsPage() {
                             selectedTherapistNames={selectedTherapistNames}
                             currentMonthLogs={visibleLogs}
                           />
-                          <ManualTherapySixMonthIonTreatment
-                            currentYear={currentYear}
-                            currentMonth={currentMonth}
-                            settings={shockwaveSettings}
-                            onSave={handleSaveIonTreatment}
-                          />
+
                         </div>
                       </div>
                     )}

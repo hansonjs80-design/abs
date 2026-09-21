@@ -1753,3 +1753,43 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   }
   body .combined-stats-page .combined-stats-dashboard--stats .combined-therapist-summary-card :is(th, td) { font-size: 11pt !important; }
 }
+
+.combined-summary-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1 1 360px;
+  min-width: 0;
+  max-width: 580px;
+}
+.combined-stats-summary-container .combined-summary-stack .combined-therapist-summary-card {
+  flex: none !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+.combined-ion-treatment { min-width: 0; }
+.combined-ion-treatment .sw-manual-ion-summary-card {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  border: 2px solid #94a3b8;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+.combined-ion-treatment .sw-settlement-header { padding: 10px 12px; background: #475569; color: #fff; }
+.combined-ion-treatment h2 { margin: 0; font-size: 16px; }
+.combined-ion-treatment table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.combined-ion-treatment :is(th, td) { padding: 6px 8px; border: 1px solid #cbd5e1; font-size: 14px; }
+.combined-ion-treatment thead { background: #e2e8f0; }
+.combined-ion-treatment .sw-current-month-summary-row { background: #eff6ff; }
+.combined-ion-treatment .sw-six-month-ion-input-wrap { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.combined-ion-treatment input { width: 100%; min-width: 0; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px; text-align: right; font: inherit; }
+.sw-ion-print-value { display: none; }
+@media print {
+  body .combined-stats-page .combined-ion-treatment { break-inside: avoid; }
+  body .combined-stats-page .combined-ion-treatment input { display: none !important; }
+  body .combined-stats-page .combined-ion-treatment .sw-ion-print-value { display: inline !important; }
+  body .combined-stats-page .combined-ion-treatment :is(th, td) { font-size: 11pt !important; padding: 4px !important; }
+  body .combined-stats-page .combined-ion-treatment .sw-manual-ion-saving { display: none; }
+}

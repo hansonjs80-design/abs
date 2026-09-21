@@ -1,7 +1,7 @@
 // Isolated document keeps application navigation and other tables out of print.
 export function printSettlementTable(element, title, { includeTherapistSummary = false, orientation = 'portrait' } = {}) {
   const tables = includeTherapistSummary
-    ? [...(element?.querySelectorAll('.combined-therapist-summary-card > table, .combined-treatment-breakdown-card > table') || [])]
+    ? [...(element?.querySelectorAll('.combined-therapist-summary-card > table, .combined-treatment-breakdown-card > table, .combined-ion-treatment table') || [])]
     : [element?.querySelector('table')].filter(Boolean);
   if (!tables.length) return;
   document.getElementById('combined-settlement-print-frame')?.remove();
@@ -47,6 +47,12 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
   tables.forEach((table) => {
     const copy = table.cloneNode(true);
     copy.querySelectorAll('.combined-breakdown-actions').forEach((node) => node.remove());
+    if (table.closest('.combined-ion-treatment')) {
+      const caption = doc.createElement('caption');
+      caption.textContent = '최근 6개월 이온치료 현황';
+      copy.prepend(caption);
+      copy.querySelectorAll('input').forEach((input) => input.remove());
+    }
     doc.body.appendChild(copy);
   });
   frame.contentWindow.addEventListener('afterprint', () => frame.remove(), { once: true });

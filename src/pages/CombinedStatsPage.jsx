@@ -22,6 +22,8 @@ import {
 } from '../lib/statsScheduleSourceUtils';
 import { loadStatsMonthsCurrentFirst } from '../lib/statsSectionLoadingUtils';
 import { buildCombinedPrescriptionDetails, buildCombinedRateTotals, getCombinedSummaryAnchorIndex } from '../lib/combinedPrescriptionDetails';
+import ManualTherapySixMonthIonTreatment from '../components/shockwave/ManualTherapySixMonthIonTreatment';
+import { setManualTherapyIonTreatment } from '../lib/manualTherapyIonTreatmentUtils';
 import { printSettlementTable } from '../lib/printSettlementTable';
 import '../styles/combined_stats.css';
 
@@ -309,6 +311,7 @@ export default function CombinedStatsPage() {
     loadTherapists,
     loadManualTherapists,
     loadShockwaveSettings,
+    saveShockwaveSettings,
   } = useSchedule();
   const { user } = useAuth();
   const { addToast } = useToast();
@@ -316,6 +319,7 @@ export default function CombinedStatsPage() {
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
   const [recentViewMode, setRecentViewMode] = useState('total-only');
   const [activeTab, setActiveTab] = useState('therapist'); // 'therapist' | 'summary' | 'settlement'
+  const [showIonTreatment, setShowIonTreatment] = useState(false);
   const [showTherapistSummary, setShowTherapistSummary] = useState(false);
   const [layoutMode, setLayoutMode] = useState('horizontal'); // 'horizontal' | 'vertical'
   const [breakdownViewMode, setBreakdownViewMode] = useState('total');
@@ -564,6 +568,36 @@ export default function CombinedStatsPage() {
 
   const currentMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
   const currentSummary = monthSummaries.find((summary) => summary.monthKey === currentMonthKey);
+  const handleSaveIonTreatment = useCallback(async (year, month, nextIonTreatment) => {
+    const settingsToUpdate = settingsRef.current || shockwaveSettings || {};
+    const nextSettings = {
+      ...settingsToUpdate,
+      monthly_settlement_settings: setManualTherapyIonTreatment(
+        settingsToUpdate,
+        year,
+        month,
+        nextIonTreatment
+      ),
+    };
+    settingsRef.current = nextSettings;
+    const ok = await saveShockwaveSettings(nextSettings);
+    if (ok) await loadShockwaveSettings();
+    if (!ok) settingsRef.current = shockwaveSettings;
+    addToast(ok ? '이온치료 현황을 저장했습니다.' : '이온치료 현황 저장에 실패했습니다.', ok ? 'success' : 'error');
+    return ok;
+  }, [addToast, loadShockwaveSettings, saveShockwaveSettings, shockwaveSettings]);
+
+  const renderIonTreatment = () => isAdmin && showIonTreatment ? (
+    <div className="combined-ion-treatment">
+      <ManualTherapySixMonthIonTreatment
+        currentYear={currentYear}
+        currentMonth={currentMonth}
+        settings={shockwaveSettings}
+        onSave={handleSaveIonTreatment}
+      />
+    </div>
+  ) : null;
+
   const renderTherapistSummary = () => currentSummary ? (
               <article
                 className="combined-therapist-card combined-therapist-summary-card"
@@ -677,6 +711,12 @@ export default function CombinedStatsPage() {
                   세로보기
                 </button>
               </div>
+            )}
+            {isAdmin && activeTab !== 'settlement' && (
+              <label className="combined-therapist-summary-toggle">
+                <input type="checkbox" checked={showIonTreatment} onChange={(event) => setShowIonTreatment(event.target.checked)} />
+                이온치료현황
+              </label>
             )}
             {activeTab === 'therapist' && (
               <label className="combined-therapist-summary-toggle">
@@ -838,6 +878,7 @@ export default function CombinedStatsPage() {
           <div className="combined-therapist-column" key={item.therapist.key || item.therapist.id || item.therapist.name}>
             {renderTherapistCard(item, index)}
             {showTherapistSummary && index === summaryAnchorIndex && renderTherapistSummary()}
+            {index === summaryAnchorIndex && renderIonTreatment()}
           </div>
         );
 
@@ -873,7 +914,10 @@ export default function CombinedStatsPage() {
         <div className="combined-stats-dashboard combined-stats-dashboard--summary">
           {currentSummary?.therapists?.length > 0 ? (
             <div className="combined-stats-summary-container" data-print-title={`${currentYear}년 ${currentMonth}월 전체 통계 합계`}>
-              {renderTherapistSummary()}
+              <div className="combined-summary-stack">
+                {renderTherapistSummary()}
+                {renderIonTreatment()}
+              </div>
 
               <article
                 ref={breakdownRef}

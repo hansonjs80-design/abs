@@ -96,6 +96,7 @@ export default function ManualTherapySixMonthIonTreatment({
                           if (event.key === 'Enter') event.currentTarget.blur();
                         }}
                       />
+                      <span className="sw-ion-print-value">{value.count || "—"}</span>
                       <span>건</span>
                     </label>
                   </td>
@@ -111,6 +112,7 @@ export default function ManualTherapySixMonthIonTreatment({
                           if (event.key === 'Enter') event.currentTarget.blur();
                         }}
                       />
+                      <span className="sw-ion-print-value">{formatAmount(value.amount) || "—"}</span>
                       <span>원</span>
                     </label>
                   </td>
