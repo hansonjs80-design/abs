@@ -40,3 +40,21 @@ test('a reassigned schedule cell never borrows another patient treatment sequenc
     row(3, '3', false, { chart_number: '2', scheduler_cell_key: 'end', _schedule: true })];
   assert.deepEqual(buildShockwaveVisitDisplay([target], history, settings).latestByRow, {});
 });
+
+test('historical shockwave prescriptions still connect when absent from current configured list', () => {
+  const historicalSettings = { monthly_settlement_settings: { '2026-01': {
+    shockwave: { prescriptions: [] },
+    shinjang_spray: settings.monthly_settlement_settings['2026-01'].shinjang_spray,
+  } } };
+  const history = [row(1, '*'), row(2, '2', true), row(3, '3')];
+  assert.equal(buildShockwaveVisitDisplay([history[0]], history, historicalSettings).latestByRow[1], '3회(신장분사1회)');
+});
+
+
+test('schedule-backed statistics IDs receive the connected series through their cell keys', () => {
+  const history = [row(1, '*'), row(2, '2', true), row(3, '3')].map((entry) => ({ ...entry, scheduler_cell_key: `cell:${entry.id}`, _schedule: true }));
+  const targets = [history[0], history[2]].map((entry) => ({ ...entry, id: `schedule-source:${entry.id}`, _schedule: false }));
+  const result = buildShockwaveVisitDisplay(targets, history, settings);
+  assert.equal(result.latestByRow['schedule-source:1'], '3회(신장분사1회)');
+  assert.equal(result.latestByRow['schedule-source:3'], '3회(신장분사1회)');
+});

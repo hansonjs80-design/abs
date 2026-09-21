@@ -1,7 +1,7 @@
 import { normalizeNameForMatch } from './nameMatchUtils.js';
 import { getEffectiveShinjangSpraySettings } from './settlementSettings.js';
 import { normalizePrescriptionKey } from './shockwaveStatsCountUtils.js';
-import { getScheduleItemTreatmentGroup } from './prescriptionScheduleSettings.js';
+import { getPatientHistoryTreatmentGroup } from './patientHistoryModalUtils.js';
 import { isShinjangSprayPrescription } from './shinjangSprayStatsUtils.js';
 
 const identity = (row) => String(row.chart_number || '').trim()
@@ -31,7 +31,7 @@ export function buildShockwaveVisitDisplay(rows, history, settings) {
     }
     const isShinjang = isShinjangSprayPrescription(row.prescription);
     const isShinjang7 = isShinjang && monthRates.get(month).get(normalizePrescriptionKey(row.prescription)) === 7;
-    const treatment = getScheduleItemTreatmentGroup(row, settings, year, monthNumber);
+    const treatment = getPatientHistoryTreatmentGroup({ ...row, type: row._table === 'manual_therapy_patient_logs' ? 'manual' : 'shockwave', settings, year, month: monthNumber });
     const allowed = isShinjang7 || (!isShinjang && treatment === 'shockwave');
     const patient = identity(row);
     if (patient === 'name:') continue;

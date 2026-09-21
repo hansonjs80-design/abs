@@ -20,6 +20,7 @@ function formatMonthDay(dateText) {
 export default function ShockwaveNewPatientsView({
   logs,
   visitCountDisplay,
+  visitCountStatus,
   therapists,
   currentMonth,
   title,
@@ -90,7 +91,7 @@ export default function ShockwaveNewPatientsView({
           date: formatMonthDay(item.firstDate),
           patientName: `${item.patientName}*`,
           bodyPart: item.bodyPart || '-',
-          visitLabel: visitCountDisplay?.[item.latestLogId] || `${item.latestVisitCount}회`,
+          visitLabel: visitCountStatus?.isLoading ? '확인 중…' : visitCountDisplay?.[item.latestLogId] || `${item.latestVisitCount}회`,
         }));
 
       return {
@@ -108,7 +109,7 @@ export default function ShockwaveNewPatientsView({
       maxRows,
       totalCount,
     };
-  }, [logs, displayTherapists, visitCountDisplay]);
+  }, [logs, displayTherapists, visitCountDisplay, visitCountStatus?.isLoading]);
 
   const printColumnWidths = useMemo(() => {
     const therapistCount = Math.max(1, summary.byTherapist.length);
@@ -133,6 +134,8 @@ export default function ShockwaveNewPatientsView({
           <h2>{title || `${currentMonth}월 충격파 신규환자`}</h2>
           <div className="sw-settlement-meta">
             <span>총 {summary.totalCount}명</span>
+            {visitCountStatus?.isLoading && <span role="status">연결 회차 확인 중…</span>}
+            {visitCountStatus?.hasError && <span role="alert">연결 회차를 불러오지 못했습니다. <button type="button" onClick={visitCountStatus.retry}>다시 확인</button></span>}
           </div>
         </div>
 

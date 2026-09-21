@@ -150,7 +150,12 @@ export default function ShockwaveStatsView({
     () => safeLogs.filter((log) => !isShinjangSprayPrescription(log?.prescription)),
     [safeLogs]
   );
-  const visitCountDisplay = useShockwaveVisitDisplay(visibleShockwaveLogs, shockwaveSettings, currentYear, currentMonth, activeSection === 'new-patients');
+  const newPatientVisitLogs = useMemo(() => {
+    const patientKey = (row) => String(row.chart_number || '').trim() || String(row.patient_name || '').replace(/\*/g, '').trim();
+    const newPatients = new Set(visibleShockwaveLogs.filter((row) => String(row.patient_name || '').includes('*')).map(patientKey));
+    return visibleShockwaveLogs.filter((row) => newPatients.has(patientKey(row)));
+  }, [visibleShockwaveLogs]);
+  const visitCountDisplay = useShockwaveVisitDisplay(newPatientVisitLogs, shockwaveSettings, currentYear, currentMonth, activeSection === 'new-patients');
   const visibleRecentLogs = useMemo(
     () => (Array.isArray(recentLogs) ? recentLogs : []).filter(
       (log) => !isShinjangSprayPrescription(log?.prescription)
@@ -1022,6 +1027,7 @@ export default function ShockwaveStatsView({
             >
               <ShockwaveNewPatientsView
                 visitCountDisplay={visitCountDisplay.latestByRow}
+                visitCountStatus={visitCountDisplay}
                 logs={visibleShockwaveLogs}
                 therapists={displayBaseTherapists}
                 monthlyTherapists={monthlyTherapists}

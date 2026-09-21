@@ -1848,3 +1848,25 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   min-width: 0;
 }
 .combined-stats-summary-container .combined-therapist-summary-card .combined-breakdown-actions { flex-wrap: wrap; }
+
+/* Constrain the scroll viewport, not the expanded grid inside it. */
+.combined-stats-page { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.combined-recent-scroll { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; padding-bottom: 12px; scrollbar-gutter: stable; }
+.combined-recent-scroll:focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; }
+.combined-recent-scroll .combined-stats-dashboard--settlement[data-recent-view] {
+  grid-template-columns: repeat(2, minmax(max-content, 1fr));
+  width: max-content !important;
+  max-width: none !important;
+  gap: 16px !important;
+  overflow: visible;
+}
+.combined-recent-scroll .combined-stats-dashboard--settlement[data-recent-view="detail"] { grid-template-columns: repeat(4, minmax(max-content, 1fr)); }
+.combined-recent-scroll .combined-stats-recent-heading { contain: inline-size; min-width: 0; align-content: flex-start; }
+.combined-recent-scroll .combined-stats-recent-heading h2 { width: 100%; font-size: 15px; }
+.combined-recent-scroll .combined-recent-controls { flex-wrap: wrap; gap: 6px; }
+.combined-recent-scroll .combined-stats-recent { min-width: 360px !important; }
+.combined-recent-scroll .combined-stats-recent table { min-width: 0; width: 100%; }
+.combined-recent-scroll .combined-stats-recent :is(th, td) { padding: 6px 8px !important; white-space: nowrap; }
+@media print {
+  .combined-recent-scroll { overflow: visible !important; width: auto; max-width: none; padding-bottom: 0; }
+}
