@@ -320,6 +320,9 @@ export default function CombinedStatsPage() {
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
   const [recentTableVisibility, setRecentTableVisibility] = useState({ overall: true, shockwave: true, shinjang_spray: true, manual_therapy: true });
   const [recentViewMode, setRecentViewMode] = useState('total-only');
+  const [recentTreatmentViewModes, setRecentTreatmentViewModes] = useState({});
+  const hasVisibleRecentDetails = (recentTableVisibility.overall && recentViewMode === 'detail') ||
+    COMBINED_STATS_TREATMENTS.some(({ key }) => recentTableVisibility[key] && (isAdmin || key !== 'manual_therapy') && recentTreatmentViewModes[key] === 'detail');
   const [activeTab, setActiveTab] = useState('therapist'); // 'therapist' | 'summary' | 'settlement'
   const [summaryViewMode, setSummaryViewMode] = useState('total');
   const [showIonTreatment, setShowIonTreatment] = useState(false);
@@ -1027,7 +1030,7 @@ export default function CombinedStatsPage() {
           ))}
         </div>
         <div className="combined-recent-scroll" role="region" aria-label="최근 결산 표 가로 스크롤" tabIndex={0}>
-        <div className="combined-stats-dashboard combined-stats-dashboard--settlement" data-recent-view={recentViewMode} data-print-title={`${recentPeriodLabel} 전체결산`}>
+        <div className="combined-stats-dashboard combined-stats-dashboard--settlement" data-recent-view={hasVisibleRecentDetails ? 'detail' : 'total-only'} data-print-title={`${recentPeriodLabel} 전체결산`}>
           {recentTableVisibility.overall && <section className="combined-stats-recent combined-settlement-recent-main" aria-label={`${recentPeriodLabel} 전체 결산 현황`}>
             <div className="combined-stats-recent-heading">
               <div>
@@ -1119,7 +1122,7 @@ export default function CombinedStatsPage() {
             </div>
           </section>}
           {COMBINED_STATS_TREATMENTS.filter(({ key }) => recentTableVisibility[key] && (isAdmin || key !== 'manual_therapy')).map(({ key, label }) => (
-            <CombinedRecentTreatmentTable key={key} treatment={key} label={label} periodLabel={recentPeriodLabel} summaries={recentRows} currentMonthKey={currentMonthKey} viewMode={recentViewMode} onViewModeChange={setRecentViewMode} />
+            <CombinedRecentTreatmentTable key={key} treatment={key} label={label} periodLabel={recentPeriodLabel} summaries={recentRows} currentMonthKey={currentMonthKey} viewMode={recentTreatmentViewModes[key] || 'total-only'} onViewModeChange={(mode) => setRecentTreatmentViewModes((current) => ({ ...current, [key]: mode }))} />
           ))}
         </div>
         </div>
