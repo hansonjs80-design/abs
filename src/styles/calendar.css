@@ -1062,3 +1062,6 @@
     padding: 1px 1px 2px 2px;
   }
 }
+@media screen and (min-width: 1201px) {
+  .staff-layout { grid-template-columns: max-content max-content; }
+}

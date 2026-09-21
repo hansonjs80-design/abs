@@ -105,6 +105,8 @@ export default function NoticeBoard({
           return (
             <div key={i} className="notice-item" onClick={() => !isEditing && handleClick(i)}>
               {isEditing ? (
+                <span className="notice-input-wrap">
+                <span className="notice-input-sizer" aria-hidden="true">{editValue || '메모를 입력하세요...'}</span>
                 <input
                   className="notice-input"
                   value={editValue}
@@ -114,6 +116,7 @@ export default function NoticeBoard({
                   autoFocus
                   placeholder="메모를 입력하세요..."
                 />
+                </span>
               ) : (
                 <span className="notice-text" style={{ color: notice?.content ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
                   {notice?.content || ''}

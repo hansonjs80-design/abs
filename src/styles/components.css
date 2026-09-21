@@ -2783,3 +2783,18 @@
   color: var(--text-tertiary);
   margin-top: 2px;
 }
+
+.notice-input-wrap { display: grid; width: 100%; min-width: 0; }
+.notice-input-wrap > * { grid-area: 1 / 1; }
+.notice-input-sizer { visibility: hidden; white-space: pre; padding: 3px 2px; font: inherit; }
+.notice-input-wrap .notice-input { min-width: 0; box-sizing: border-box; }
+@media screen and (min-width: 769px) {
+  .staff-side .notice-board { width: max-content; min-width: 255px; align-self: start; }
+  .staff-side .notice-text { width: auto; white-space: pre; }
+  .staff-side .notice-item { min-width: 225px; }
+  .staff-side { width: max-content; }
+}
+@media print {
+  .notice-input-sizer { display: none; }
+  .notice-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+}
