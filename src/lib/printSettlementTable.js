@@ -77,6 +77,7 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     const copy = table.cloneNode(true);
     copy.querySelectorAll('.combined-breakdown-actions').forEach((node) => node.remove());
     if (table.closest('.combined-ion-treatment')) {
+      if (includeRecentTables) copy.style.gridColumn = '1';
       const caption = doc.createElement('caption');
       caption.textContent = '최근 6개월 이온치료 현황';
       copy.prepend(caption);

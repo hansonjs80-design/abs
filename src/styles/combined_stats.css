@@ -1911,3 +1911,7 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
 .combined-stats-summary-container .combined-treatment-breakdown-card table tbody .combined-summary-grand-total > * {
   font-size: 17px !important;
 }
+
+.combined-stats-dashboard--settlement > .combined-ion-treatment {
+  grid-column: 1;
+}

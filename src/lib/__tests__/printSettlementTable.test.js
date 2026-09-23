@@ -95,3 +95,33 @@ test('includes the checked ion table with its title and printable values', (t) =
   assert.equal(removedInput, true);
   assert.equal(nodes[1], copy);
 });
+
+test('recent settlement printing includes the selected ion table in the first column', (t) => {
+  const printedTables = [];
+  const copy = {
+    style: {},
+    querySelectorAll: () => [],
+    prepend: () => {},
+  };
+  const table = {
+    closest: (selector) => selector === '.combined-ion-treatment' ? {} : null,
+    cloneNode: () => copy,
+  };
+  const doc = {
+    createElement: (tag) => tag === 'div'
+      ? { dataset: {}, appendChild: (node) => printedTables.push(node) }
+      : {},
+    head: { appendChild() {} },
+    body: { appendChild() {}, offsetHeight: 100 },
+  };
+  const frame = { style: {}, contentDocument: doc, contentWindow: { addEventListener() {}, focus() {}, print() {} } };
+  const originalDocument = globalThis.document;
+  t.after(() => {
+    if (originalDocument === undefined) delete globalThis.document;
+    else globalThis.document = originalDocument;
+  });
+  globalThis.document = { getElementById: () => null, createElement: () => frame, body: { appendChild() {} } };
+  printSettlementTable({ dataset: { recentView: 'total-only' }, querySelectorAll: () => [table] }, '전체결산', { includeRecentTables: true });
+  assert.deepEqual(printedTables, [copy]);
+  assert.equal(copy.style.gridColumn, '1');
+});

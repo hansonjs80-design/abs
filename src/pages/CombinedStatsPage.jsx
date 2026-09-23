@@ -1028,6 +1028,7 @@ export default function CombinedStatsPage() {
           {[{ key: 'overall', label: '전체결산' }, ...COMBINED_STATS_TREATMENTS].filter(({ key }) => isAdmin || key !== 'manual_therapy').map(({ key, label }) => (
             <label className="settlement-recent-visibility-toggle" key={key}><input type="checkbox" checked={recentTableVisibility[key]} onChange={(event) => setRecentTableVisibility((current) => ({ ...current, [key]: event.target.checked }))} />{label} 현황 보기</label>
           ))}
+          {isAdmin && <label className="settlement-recent-visibility-toggle"><input type="checkbox" checked={showIonTreatment} onChange={(event) => setShowIonTreatment(event.target.checked)} />이온치료 현황 보기</label>}
         </div>
         <div className="combined-recent-scroll" role="region" aria-label="최근 결산 표 가로 스크롤" tabIndex={0}>
         <div className="combined-stats-dashboard combined-stats-dashboard--settlement" data-recent-view={hasVisibleRecentDetails ? 'detail' : 'total-only'} data-print-title={`${recentPeriodLabel} 전체결산`}>
@@ -1124,6 +1125,7 @@ export default function CombinedStatsPage() {
           {COMBINED_STATS_TREATMENTS.filter(({ key }) => recentTableVisibility[key] && (isAdmin || key !== 'manual_therapy')).map(({ key, label }) => (
             <CombinedRecentTreatmentTable key={key} treatment={key} label={label} periodLabel={recentPeriodLabel} summaries={recentRows} currentMonthKey={currentMonthKey} viewMode={recentTreatmentViewModes[key] || 'total-only'} onViewModeChange={(mode) => setRecentTreatmentViewModes((current) => ({ ...current, [key]: mode }))} />
           ))}
+          {renderIonTreatment()}
         </div>
         </div>
         </>
