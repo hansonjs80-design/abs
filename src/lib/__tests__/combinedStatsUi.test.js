@@ -67,7 +67,8 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /\{formatCurrency\(currentSummary\.total\.incentive\)\}/);
     assert.match(pageSource, /isAdmin && showIonTreatment/);
     assert.match(pageSource, /checked=\{showIonTreatment\}/);
-    assert.match(pageSource, /index === summaryAnchorIndex && renderIonTreatment\(\)/);
+    assert.doesNotMatch(pageSource, /index === summaryAnchorIndex && renderIonTreatment\(\)/);
+    assert.match(pageSource, /className="combined-stats-current"[\s\S]*?className="combined-vertical-right"[\s\S]*?therapists\.slice\(1\)\.map/);
     assert.match(pageSource, /setManualTherapyIonTreatment/);
     assert.match(pageSource, /recentPeriodInput/);
     assert.match(pageSource, /includeManual \? \[\{/);

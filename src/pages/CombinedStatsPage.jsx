@@ -894,7 +894,6 @@ export default function CombinedStatsPage() {
           <div className="combined-therapist-column" key={item.therapist.key || item.therapist.id || item.therapist.name}>
             {renderTherapistCard(item, index)}
             {showTherapistSummary && index === summaryAnchorIndex && renderTherapistSummary()}
-            {index === summaryAnchorIndex && renderIonTreatment()}
           </div>
         );
 
@@ -914,7 +913,16 @@ export default function CombinedStatsPage() {
                 </div>
               ) : (
                 <section className="combined-stats-current" aria-label={`${currentMonth}월 치료사별 전체 통계`}>
-                  {therapists.map((item, index) => renderTherapistColumn(item, index))}
+                  <div className="combined-vertical-two-col">
+                    <div className="combined-vertical-left">
+                      {renderTherapistColumn(therapists[0], 0)}
+                    </div>
+                    {therapists.length > 1 && (
+                      <div className="combined-vertical-right">
+                        {therapists.slice(1).map((item, index) => renderTherapistColumn(item, index + 1))}
+                      </div>
+                    )}
+                  </div>
                 </section>
               )
             ) : (
