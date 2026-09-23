@@ -924,7 +924,6 @@ export default function CombinedStatsPage() {
             <div className="combined-stats-summary-container" data-print-title={`${currentYear}년 ${currentMonth}월 전체 통계 합계`}>
               <div className="combined-summary-stack">
                 {renderTherapistSummary()}
-                {renderIonTreatment()}
               </div>
 
               <article
@@ -1013,6 +1012,7 @@ export default function CombinedStatsPage() {
                   </tbody>
                 </table>
               </article>
+              {renderIonTreatment()}
             </div>
           ) : (
             <div className="combined-stats-empty">

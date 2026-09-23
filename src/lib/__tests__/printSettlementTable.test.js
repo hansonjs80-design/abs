@@ -76,6 +76,35 @@ test('global summary printing includes both tables in order and honors orientati
   assert.equal(doc.title, '2026년 9월 전체 통계 합계');
 });
 
+test('landscape summary prints the ion table to the right of the two settlement tables', (t) => {
+  const copies = Array.from({ length: 3 }, () => ({ querySelectorAll: () => [], prepend() {} }));
+  const tables = [
+    { closest: (selector) => selector === '.combined-ion-treatment' ? {} : null, cloneNode: () => copies[2] },
+    { closest: () => null, cloneNode: () => copies[0] },
+    { closest: (selector) => selector === '.combined-treatment-breakdown-card' ? {} : null, cloneNode: () => copies[1] },
+  ];
+  const nodes = [];
+  const styles = [];
+  const doc = {
+    createElement: () => ({}),
+    head: { appendChild: (node) => styles.push(node) },
+    body: { appendChild: (node) => nodes.push(node), offsetHeight: 100 },
+  };
+  const frame = { style: {}, contentDocument: doc, contentWindow: { addEventListener() {}, focus() {}, print() {} } };
+  const originalDocument = globalThis.document;
+  t.after(() => {
+    if (originalDocument === undefined) delete globalThis.document;
+    else globalThis.document = originalDocument;
+  });
+  globalThis.document = { getElementById: () => null, createElement: () => frame, body: { appendChild() {} } };
+
+  printSettlementTable({ querySelectorAll: () => tables }, '전체 통계 합계', { includeTherapistSummary: true, orientation: 'landscape' });
+
+  assert.deepEqual(nodes.slice(1), copies);
+  assert.equal(doc.body.className, 'combined-summary-print--landscape combined-summary-print--with-ion');
+  assert.match(styles[0].textContent, /\.combined-summary-print--landscape\.combined-summary-print--with-ion \{ grid-template-columns: minmax\(0, 1\.2fr\) repeat\(2, minmax\(0, 1fr\)\)/);
+});
+
 test('includes the checked ion table with its title and printable values', (t) => {
   let removedInput = false;
   let caption;

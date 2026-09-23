@@ -11,6 +11,7 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
       })
     : [element?.querySelector('table')].filter(Boolean);
   if (!tables.length) return;
+  const hasIonTreatment = includeTherapistSummary && tables.some((table) => table.closest('.combined-ion-treatment'));
   document.getElementById('combined-settlement-print-frame')?.remove();
   const frame = document.createElement('iframe');
   frame.id = 'combined-settlement-print-frame';
@@ -19,7 +20,7 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
   document.body.appendChild(frame);
   const doc = frame.contentDocument;
   doc.title = title;
-  if (includeTherapistSummary) doc.body.className = `combined-summary-print--${orientation}`;
+  if (includeTherapistSummary) doc.body.className = `combined-summary-print--${orientation}${hasIonTreatment ? ' combined-summary-print--with-ion' : ''}`;
   if (includeRecentTables) doc.body.className = `combined-recent-print--${orientation}`;
   const style = doc.createElement('style');
   style.textContent = `
@@ -60,9 +61,12 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     .combined-recent-print--landscape .combined-recent-print-grid th, .combined-recent-print--landscape .combined-recent-print-grid td { padding: 3px 2px; }
     .combined-recent-print--landscape .combined-recent-print-grid[data-view="detail"] table { font-size: 7.5px; }
     .combined-summary-print--landscape { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 6mm; align-items: start; }
+    .combined-summary-print--landscape.combined-summary-print--with-ion { grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(0, 1fr)); gap: 0 4mm; }
     .combined-summary-print--landscape h1 { grid-column: 1 / -1; }
     .combined-summary-print--landscape table { width: 100%; min-width: 0; font-size: 10px; }
+    .combined-summary-print--landscape.combined-summary-print--with-ion table { font-size: 9px; }
     .combined-summary-print--landscape th, .combined-summary-print--landscape td { padding: 5px; }
+    .combined-summary-print--landscape.combined-summary-print--with-ion th, .combined-summary-print--landscape.combined-summary-print--with-ion td { padding: 4px 3px; }
     .combined-summary-print--landscape :is(.combined-summary-parent-row, .combined-breakdown-row) > * { font-size: 12px; }
     .combined-recent-breakdown-item { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px; padding: 3px; margin: 2px 0 2px 3px; background: #f8fafc; }
     .combined-recent-breakdown-item--total { border-left: 2px solid #0f172a; margin-left: 0; background: #e2e8f0; font-weight: bold; }
