@@ -20,6 +20,7 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
   const doc = frame.contentDocument;
   doc.title = title;
   if (includeTherapistSummary) doc.body.className = `combined-summary-print--${orientation}`;
+  if (includeRecentTables) doc.body.className = `combined-recent-print--${orientation}`;
   const style = doc.createElement('style');
   style.textContent = `
     @page { size: A4 ${orientation === 'landscape' ? 'landscape' : 'portrait'}; margin: 12mm; }
@@ -54,6 +55,10 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     .combined-recent-print-grid col { width: auto !important; }
     .combined-recent-print-grid th, .combined-recent-print-grid td { padding: 3px; }
     .combined-recent-print-grid[data-view="detail"] table { font-size: 8px; }
+    .combined-recent-print--landscape .combined-recent-print-grid { width: 94%; margin-inline: auto; }
+    .combined-recent-print--landscape .combined-recent-print-grid table { font-size: 8.5px; }
+    .combined-recent-print--landscape .combined-recent-print-grid th, .combined-recent-print--landscape .combined-recent-print-grid td { padding: 3px 2px; }
+    .combined-recent-print--landscape .combined-recent-print-grid[data-view="detail"] table { font-size: 7.5px; }
     .combined-summary-print--landscape { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 6mm; align-items: start; }
     .combined-summary-print--landscape h1 { grid-column: 1 / -1; }
     .combined-summary-print--landscape table { width: 100%; min-width: 0; font-size: 10px; }

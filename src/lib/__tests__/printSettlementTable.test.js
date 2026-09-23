@@ -101,6 +101,7 @@ test('includes the checked ion table with its title and printable values', (t) =
 
 test('recent settlement printing includes the selected ion table in the first column', (t) => {
   const printedTables = [];
+  const styles = [];
   const copy = {
     style: {},
     querySelectorAll: () => [],
@@ -114,7 +115,7 @@ test('recent settlement printing includes the selected ion table in the first co
     createElement: (tag) => tag === 'div'
       ? { dataset: {}, appendChild: (node) => printedTables.push(node) }
       : {},
-    head: { appendChild() {} },
+    head: { appendChild: (node) => styles.push(node) },
     body: { appendChild() {}, offsetHeight: 100 },
   };
   const frame = { style: {}, contentDocument: doc, contentWindow: { addEventListener() {}, focus() {}, print() {} } };
@@ -124,7 +125,11 @@ test('recent settlement printing includes the selected ion table in the first co
     else globalThis.document = originalDocument;
   });
   globalThis.document = { getElementById: () => null, createElement: () => frame, body: { appendChild() {} } };
-  printSettlementTable({ dataset: { recentView: 'total-only' }, querySelectorAll: () => [table] }, '전체결산', { includeRecentTables: true });
+  printSettlementTable({ dataset: { recentView: 'total-only' }, querySelectorAll: () => [table] }, '전체결산', { includeRecentTables: true, orientation: 'landscape' });
   assert.deepEqual(printedTables, [copy]);
   assert.equal(copy.style.gridColumn, '1');
+  assert.equal(doc.body.className, 'combined-recent-print--landscape');
+  assert.match(styles[0].textContent, /\.combined-recent-print-grid \{ display: grid; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(styles[0].textContent, /\.combined-recent-print--landscape \.combined-recent-print-grid \{ width: 94%; margin-inline: auto; \}/);
+  assert.match(styles[0].textContent, /\.combined-recent-print--landscape \.combined-recent-print-grid table \{ font-size: 8\.5px; \}/);
 });
