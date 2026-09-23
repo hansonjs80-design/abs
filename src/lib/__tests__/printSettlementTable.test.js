@@ -70,6 +70,9 @@ test('global summary printing includes both tables in order and honors orientati
   assert.match(styles[0].textContent, /size: A4 landscape/);
   assert.equal(doc.body.className, 'combined-summary-print--landscape');
   assert.match(styles[0].textContent, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(styles[0].textContent, /\.combined-summary-parent-row > \*, \.combined-breakdown-row > \* \{ font-size: 13px; font-weight: 800; \}/);
+  assert.match(styles[0].textContent, /\.combined-breakdown-detail-row > \* \{ font-size: 11px; font-weight: 500; \}/);
+  assert.match(styles[0].textContent, /\.combined-summary-print--landscape :is\(\.combined-summary-parent-row, \.combined-breakdown-row\) > \* \{ font-size: 12px; \}/);
   assert.equal(doc.title, '2026년 9월 전체 통계 합계');
 });
 
@@ -98,6 +101,8 @@ test('includes the checked ion table with its title and printable values', (t) =
 
 test('recent settlement printing includes the selected ion table in the first column', (t) => {
   const printedTables = [];
+  const styles = [];
+  let printGrid;
   const copy = {
     style: {},
     querySelectorAll: () => [],
@@ -109,9 +114,9 @@ test('recent settlement printing includes the selected ion table in the first co
   };
   const doc = {
     createElement: (tag) => tag === 'div'
-      ? { dataset: {}, appendChild: (node) => printedTables.push(node) }
+      ? (printGrid = { dataset: {}, appendChild: (node) => printedTables.push(node) })
       : {},
-    head: { appendChild() {} },
+    head: { appendChild: (node) => styles.push(node) },
     body: { appendChild() {}, offsetHeight: 100 },
   };
   const frame = { style: {}, contentDocument: doc, contentWindow: { addEventListener() {}, focus() {}, print() {} } };
@@ -121,7 +126,9 @@ test('recent settlement printing includes the selected ion table in the first co
     else globalThis.document = originalDocument;
   });
   globalThis.document = { getElementById: () => null, createElement: () => frame, body: { appendChild() {} } };
-  printSettlementTable({ dataset: { recentView: 'total-only' }, querySelectorAll: () => [table] }, '전체결산', { includeRecentTables: true });
+  printSettlementTable({ dataset: { recentView: 'total-only' }, querySelectorAll: () => [table] }, '전체결산', { includeRecentTables: true, orientation: 'landscape' });
   assert.deepEqual(printedTables, [copy]);
   assert.equal(copy.style.gridColumn, '1');
+  assert.equal(printGrid.dataset.orientation, 'landscape');
+  assert.match(styles[0].textContent, /grid-template-columns: repeat\(2, fit-content\(calc\(\(100% - 5mm\) \/ 2\)\)\)/);
 });
