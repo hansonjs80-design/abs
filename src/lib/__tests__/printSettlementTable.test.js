@@ -101,8 +101,6 @@ test('includes the checked ion table with its title and printable values', (t) =
 
 test('recent settlement printing includes the selected ion table in the first column', (t) => {
   const printedTables = [];
-  const styles = [];
-  let printGrid;
   const copy = {
     style: {},
     querySelectorAll: () => [],
@@ -114,9 +112,9 @@ test('recent settlement printing includes the selected ion table in the first co
   };
   const doc = {
     createElement: (tag) => tag === 'div'
-      ? (printGrid = { dataset: {}, appendChild: (node) => printedTables.push(node) })
+      ? { dataset: {}, appendChild: (node) => printedTables.push(node) }
       : {},
-    head: { appendChild: (node) => styles.push(node) },
+    head: { appendChild() {} },
     body: { appendChild() {}, offsetHeight: 100 },
   };
   const frame = { style: {}, contentDocument: doc, contentWindow: { addEventListener() {}, focus() {}, print() {} } };
@@ -126,9 +124,7 @@ test('recent settlement printing includes the selected ion table in the first co
     else globalThis.document = originalDocument;
   });
   globalThis.document = { getElementById: () => null, createElement: () => frame, body: { appendChild() {} } };
-  printSettlementTable({ dataset: { recentView: 'total-only' }, querySelectorAll: () => [table] }, '전체결산', { includeRecentTables: true, orientation: 'landscape' });
+  printSettlementTable({ dataset: { recentView: 'total-only' }, querySelectorAll: () => [table] }, '전체결산', { includeRecentTables: true });
   assert.deepEqual(printedTables, [copy]);
   assert.equal(copy.style.gridColumn, '1');
-  assert.equal(printGrid.dataset.orientation, 'landscape');
-  assert.match(styles[0].textContent, /grid-template-columns: repeat\(2, fit-content\(calc\(\(100% - 5mm\) \/ 2\)\)\)/);
 });

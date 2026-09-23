@@ -54,9 +54,6 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     .combined-recent-print-grid col { width: auto !important; }
     .combined-recent-print-grid th, .combined-recent-print-grid td { padding: 3px; }
     .combined-recent-print-grid[data-view="detail"] table { font-size: 8px; }
-    .combined-recent-print-grid[data-orientation="landscape"] { grid-template-columns: repeat(2, fit-content(calc((100% - 5mm) / 2))); justify-content: start; }
-    .combined-recent-print-grid[data-orientation="landscape"][data-view="detail"] { grid-template-columns: repeat(4, fit-content(calc((100% - 6mm) / 4))); }
-    .combined-recent-print-grid[data-orientation="landscape"] table { width: max-content; max-width: 100%; }
     .combined-summary-print--landscape { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 6mm; align-items: start; }
     .combined-summary-print--landscape h1 { grid-column: 1 / -1; }
     .combined-summary-print--landscape table { width: 100%; min-width: 0; font-size: 10px; }
@@ -76,7 +73,6 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
   if (includeRecentTables) {
     container.className = 'combined-recent-print-grid';
     container.dataset.view = element.dataset.recentView;
-    container.dataset.orientation = orientation;
     doc.body.appendChild(container);
   }
   tables.forEach((table) => {
