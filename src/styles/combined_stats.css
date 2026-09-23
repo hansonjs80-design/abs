@@ -1862,7 +1862,7 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
 .combined-therapist-summary-card[data-summary-view="detail"] table { width: max-content; table-layout: auto; }
 .combined-therapist-summary-card[data-summary-view="detail"] :is(th, td) { padding: 6px 8px !important; white-space: nowrap; font-size: 13px !important; }
 .combined-therapist-summary-card[data-summary-view="detail"] .combined-summary-parent-row > * { background-color: #e2e8f0; font-size: 14px !important; font-weight: 800; }
-.combined-therapist-summary-card[data-summary-view="detail"] .combined-breakdown-detail-row > * { background: #f8fafc; font-size: 12px !important; font-weight: 500; }
+.combined-therapist-summary-card[data-summary-view="detail"] .combined-breakdown-detail-row > * { background: #f8fafc; font-size: 12px !important; font-weight: 400 !important; }
 .combined-stats-dashboard--summary .combined-therapist-total > * { color: #9f1239 !important; font-weight: 900 !important; }
 .combined-stats-dashboard--settlement[data-recent-view] { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px !important; align-items: start; max-width: 1500px !important; }
 .combined-stats-dashboard--settlement[data-recent-view="detail"] { grid-template-columns: repeat(4, minmax(420px, 1fr)); max-width: none !important; overflow-x: auto; }
