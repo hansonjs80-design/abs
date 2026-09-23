@@ -656,7 +656,9 @@ export default function CombinedStatsPage() {
   ) : null;
   const recentRows = useMemo(() => [...monthSummaries].reverse(), [monthSummaries]);
   const visibleRecentTreatments = COMBINED_STATS_TREATMENTS.filter(({ key }) => recentTableVisibility[key] && (isAdmin || key !== 'manual_therapy'));
-  const treatmentsBeforeIon = recentTableVisibility.overall ? 1 : 2;
+  const treatmentsBeforeIon = recentIonLayout === 'vertical'
+    ? visibleRecentTreatments.length
+    : recentTableVisibility.overall ? 1 : 2;
   const renderRecentTreatmentTable = ({ key, label }) => (
     <CombinedRecentTreatmentTable key={key} treatment={key} label={label} periodLabel={recentPeriodLabel} summaries={recentRows} currentMonthKey={currentMonthKey} viewMode={recentTreatmentViewModes[key] || 'total-only'} onViewModeChange={(mode) => setRecentTreatmentViewModes((current) => ({ ...current, [key]: mode }))} />
   );

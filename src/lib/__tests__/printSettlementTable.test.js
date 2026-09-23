@@ -156,7 +156,14 @@ test('recent settlement printing keeps the selected ion table third in both layo
   assert.equal(printGrid.dataset.layout, 'horizontal');
   assert.equal(doc.body.className, 'combined-recent-print--landscape');
   assert.match(styles[0].textContent, /\.combined-recent-print-grid\[data-layout="horizontal"\] \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
-  assert.match(styles[0].textContent, /\.combined-recent-print-grid\[data-layout="vertical"\] \{ grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(styles[0].textContent, /\.combined-recent-print-grid\[data-layout="vertical"\] \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(styles[0].textContent, /\.combined-recent-print--landscape \.combined-recent-print-grid \{ width: 94%; margin-inline: auto; \}/);
   assert.match(styles[0].textContent, /\.combined-recent-print--landscape \.combined-recent-print-grid table \{ font-size: 8\.5px; \}/);
+
+  printedTables.length = 0;
+  copies[2].style = {};
+  printSettlementTable({ dataset: { recentView: 'total-only', recentLayout: 'vertical' }, querySelectorAll: () => tables }, '전체결산', { includeRecentTables: true, orientation: 'landscape' });
+  assert.deepEqual(printedTables, copies);
+  assert.equal(printGrid.dataset.layout, 'vertical');
+  assert.equal(copies[2].style.gridColumn, '1');
 });

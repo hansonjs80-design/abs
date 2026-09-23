@@ -181,6 +181,7 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /label:\s*row\.prescription/);
     assert.doesNotMatch(pageSource, /label:\s*`↳ \$\{row\.prescription\}`/);
     assert.match(styleSource, /\.combined-stats-dashboard--stats \.combined-therapist-column \.combined-therapist-card tbody tr\.combined-treatment-child-row th\s*\{[^}]*padding-left:\s*calc\(10px \+ 1\.08rem\) !important;/);
+    assert.match(styleSource, /\.combined-stats-dashboard--stats \.combined-therapist-column \.combined-therapist-card tbody tr\.combined-treatment-child-row th::before\s*\{[^}]*content:\s*'↳';[^}]*margin-left:\s*-1\.08rem;/);
     assert.match(pageSource, /combined-treatment-parent-row/);
     assert.match(pageSource, /combined-treatment-child-row/);
     assert.match(styleSource, /\.combined-therapist-view-tabs\s*\{/);

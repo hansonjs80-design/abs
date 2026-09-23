@@ -53,13 +53,12 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     .combined-recent-print-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5mm; align-items: start; }
     .combined-recent-print-grid[data-view="detail"] { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2mm; }
     .combined-recent-print-grid[data-layout="horizontal"] { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3mm; }
-    .combined-recent-print-grid[data-layout="vertical"] { grid-template-columns: minmax(0, 1fr); width: min(100%, 140mm); }
+    .combined-recent-print-grid[data-layout="vertical"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .combined-recent-print-grid table { width: 100%; table-layout: auto; font-size: 9px; }
     .combined-recent-print-grid col { width: auto !important; }
     .combined-recent-print-grid th, .combined-recent-print-grid td { padding: 3px; }
     .combined-recent-print-grid[data-view="detail"] table { font-size: 8px; }
     .combined-recent-print--landscape .combined-recent-print-grid { width: 94%; margin-inline: auto; }
-    .combined-recent-print--landscape .combined-recent-print-grid[data-layout="vertical"] { width: min(94%, 140mm); }
     .combined-recent-print--landscape .combined-recent-print-grid table { font-size: 8.5px; }
     .combined-recent-print--landscape .combined-recent-print-grid th, .combined-recent-print--landscape .combined-recent-print-grid td { padding: 3px 2px; }
     .combined-recent-print--landscape .combined-recent-print-grid[data-view="detail"] table { font-size: 7.5px; }
@@ -92,6 +91,7 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     const copy = table.cloneNode(true);
     copy.querySelectorAll('.combined-breakdown-actions').forEach((node) => node.remove());
     if (table.closest('.combined-ion-treatment')) {
+      if (includeRecentTables && element.dataset.recentLayout === 'vertical') copy.style.gridColumn = '1';
       const caption = doc.createElement('caption');
       caption.textContent = '최근 6개월 이온치료 현황';
       copy.prepend(caption);

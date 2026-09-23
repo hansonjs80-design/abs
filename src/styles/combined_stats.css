@@ -455,6 +455,12 @@
 .combined-stats-dashboard--stats .combined-therapist-column .combined-therapist-card tbody tr.combined-treatment-child-row th {
   padding-left: calc(10px + 1.08rem) !important;
 }
+.combined-stats-dashboard--stats .combined-therapist-column .combined-therapist-card tbody tr.combined-treatment-child-row th::before {
+  content: '↳';
+  display: inline-block;
+  width: 1.08rem;
+  margin-left: -1.08rem;
+}
 
 .combined-therapist-card tbody tr.combined-treatment-child-row td {
   font-size: 0.95rem;
@@ -1763,6 +1769,10 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   body .combined-stats-page .combined-stats-dashboard--stats .combined-therapist-card tbody tr.combined-treatment-child-row th {
     padding-left: calc(4px + 12pt) !important;
   }
+  body .combined-stats-page .combined-stats-dashboard--stats .combined-therapist-card tbody tr.combined-treatment-child-row th::before {
+    width: 12pt;
+    margin-left: -12pt;
+  }
   body .combined-stats-page .combined-stats-dashboard--stats .combined-therapist-card tbody tr.combined-incentive-rate-row--7:not(.combined-treatment-child-row) > * { background: #dbeafe !important; }
   body .combined-stats-page .combined-stats-dashboard--stats .combined-therapist-card tbody tr.combined-incentive-rate-row--15:not(.combined-treatment-child-row) > * { background: #eadcf8 !important; }
   body .combined-stats-page .combined-stats-dashboard--stats .combined-therapist-card tbody tr:is(.combined-therapist-subtotal, .combined-therapist-total) > * {
@@ -1919,9 +1929,10 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   grid-template-columns: repeat(3, clamp(480px, 30vw, 620px)) !important;
 }
 .combined-recent-scroll .combined-stats-dashboard--settlement[data-recent-layout="vertical"] {
-  grid-template-columns: minmax(480px, 700px) !important;
+  grid-template-columns: repeat(2, clamp(480px, 36vw, 700px)) !important;
 }
 .combined-recent-scroll .combined-stats-dashboard--settlement > .combined-ion-treatment { grid-column: auto; }
+.combined-recent-scroll .combined-stats-dashboard--settlement[data-recent-layout="vertical"] > .combined-ion-treatment { grid-column: 1; }
 .combined-recent-scroll .combined-stats-recent-heading { contain: inline-size; min-width: 0; align-content: flex-start; }
 .combined-recent-scroll .combined-stats-recent-heading h2 { width: 100%; font-size: 15px; }
 .combined-recent-scroll .combined-recent-controls { flex-wrap: wrap; gap: 6px; }
