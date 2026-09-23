@@ -72,6 +72,7 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     .combined-summary-print--landscape :is(.combined-summary-parent-row, .combined-breakdown-row) > * { font-size: 12px; }
     .combined-recent-breakdown-item { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px; padding: 3px; margin: 2px 0 2px 3px; background: #f8fafc; }
     .combined-recent-breakdown-item--total { border-left: 2px solid #0f172a; margin-left: 0; background: #e2e8f0; font-weight: bold; }
+    .combined-recent-breakdown-item:not(.combined-recent-breakdown-item--total) > strong { font-weight: 400; }
     .combined-summary-grand-total > *, .combined-treatment-breakdown-card .combined-therapist-total > *, .combined-therapist-total > * { color: #9f1239; }
     ::-webkit-scrollbar { display: none; width: 0; height: 0; }
     * { scrollbar-width: none; print-color-adjust: exact; -webkit-print-color-adjust: exact; }

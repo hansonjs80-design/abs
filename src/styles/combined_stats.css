@@ -1873,6 +1873,7 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
 .combined-stats-dashboard--settlement :is(th, td) { padding: 6px !important; font-size: 13px; }
 .combined-recent-breakdown-item:not(.combined-recent-breakdown-item--total) { border-left: none; margin-left: 8px; }
 .combined-recent-breakdown-item:not(.combined-recent-breakdown-item--total) > span { font-weight: 500; }
+.combined-recent-breakdown-item:not(.combined-recent-breakdown-item--total) > strong { font-weight: 400; }
 @media print {
   .combined-table-print-button, .combined-breakdown-actions { display: none !important; }
   .combined-stats-page, .combined-stats-page * { scrollbar-width: none !important; }
