@@ -40,7 +40,10 @@ test('prints an isolated clone with the selected rows and removes controls, then
 
 test('global summary printing includes both tables in order and honors orientation', (t) => {
   const copies = [{ querySelectorAll: () => [] }, { querySelectorAll: () => [] }];
-  const tables = copies.map((copy) => ({ closest: () => null, cloneNode: () => copy }));
+  const tables = [
+    { closest: (selector) => selector === '.combined-treatment-breakdown-card' ? {} : null, cloneNode: () => copies[1] },
+    { closest: () => null, cloneNode: () => copies[0] },
+  ];
   const nodes = [];
   const styles = [];
   let printed = false;
@@ -65,6 +68,8 @@ test('global summary printing includes both tables in order and honors orientati
   assert.deepEqual(nodes.slice(1), copies);
   assert.equal(printed, true);
   assert.match(styles[0].textContent, /size: A4 landscape/);
+  assert.equal(doc.body.className, 'combined-summary-print--landscape');
+  assert.match(styles[0].textContent, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.equal(doc.title, '2026년 9월 전체 통계 합계');
 });
 

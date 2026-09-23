@@ -2789,10 +2789,10 @@
 .notice-input-sizer { visibility: hidden; white-space: pre; padding: 3px 2px; font: inherit; }
 .notice-input-wrap .notice-input { min-width: 0; box-sizing: border-box; }
 @media screen and (min-width: 769px) {
-  .staff-side .notice-board { width: max-content; min-width: 255px; align-self: start; }
+  .staff-side .notice-board { width: 100%; min-width: 0; box-sizing: border-box; align-self: stretch; }
   .staff-side .notice-text { width: auto; white-space: pre; }
-  .staff-side .notice-item { min-width: 225px; }
-  .staff-side { width: max-content; }
+  .staff-side .notice-item { min-width: 0; }
+  .staff-side { width: 100%; min-width: 0; }
 }
 @media print {
   .notice-input-sizer { display: none; }

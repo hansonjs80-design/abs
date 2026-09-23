@@ -33,7 +33,7 @@ export const STAFF_CALENDAR_DURABLE_PROFILE_KEY = 'staff-calendar-device-profile
 
 const DEVICE_SETTINGS_FIELD = 'staff_calendar_device_settings';
 
-const DEFAULTS = {
+export const STAFF_CALENDAR_DEVICE_DEFAULTS = {
   colWidth: 0,
   rowHeight: 120,
   dateRowHeight: 28,
@@ -104,7 +104,7 @@ export function normalizeStaffCalendarDeviceSettingsPatch(settings = {}) {
 
 export function normalizeStaffCalendarDeviceSettings(settings = {}) {
   return {
-    ...DEFAULTS,
+    ...STAFF_CALENDAR_DEVICE_DEFAULTS,
     ...normalizeStaffCalendarDeviceSettingsPatch(settings),
   };
 }

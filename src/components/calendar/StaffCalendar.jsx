@@ -16,6 +16,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../lib/authPermissions';
 import {
   STAFF_CALENDAR_DEVICE_SETTING_KEYS,
+  STAFF_CALENDAR_DEVICE_DEFAULTS,
   flushPendingStaffCalendarDeviceSettings,
   mergeStaffCalendarDeviceSettingsForBackup,
   readLocalStaffCalendarDeviceSettings,
@@ -185,8 +186,8 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   const [rowHeight, setRowHeight] = usePersistentNumber(ROW_H_KEY, 120, MIN_ROW_HEIGHT);
   const [dateRowHeight, setDateRowHeight] = usePersistentNumber(DATE_H_KEY, 28, MIN_DATE_ROW_HEIGHT);
   const [memoFontSize, setMemoFontSize] = usePersistentNumber(MEMO_FONT_SIZE_KEY, 13, 10);
-  const [dateFontSize, setDateFontSize] = usePersistentNumber(DATE_FONT_SIZE_KEY, 16, 8);
-  const [dateFontWeight, setDateFontWeight] = usePersistentNumber(DATE_FONT_WEIGHT_KEY, 800, 500);
+  const [dateFontSize, setDateFontSize] = usePersistentNumber(DATE_FONT_SIZE_KEY, STAFF_CALENDAR_DEVICE_DEFAULTS.dateFontSize, 8);
+  const [dateFontWeight, setDateFontWeight] = usePersistentNumber(DATE_FONT_WEIGHT_KEY, STAFF_CALENDAR_DEVICE_DEFAULTS.dateFontWeight, 500);
   const [weekdayFontSize, setWeekdayFontSize] = usePersistentNumber(WEEKDAY_FONT_SIZE_KEY, 16, 8);
   const [weekdayFontWeight, setWeekdayFontWeight] = usePersistentNumber(WEEKDAY_FONT_WEIGHT_KEY, 800, 500);
   const [weekdayRowHeight, setWeekdayRowHeight] = usePersistentNumber(WEEKDAY_ROW_HEIGHT_KEY, 32, MIN_WEEKDAY_ROW_HEIGHT);
@@ -1318,7 +1319,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                   <select
                     id="staff-date-font-size"
                     value={dateFontSize}
-                    onChange={(e) => updateDateFontSize(Number(e.target.value) || 15)}
+                    onChange={(e) => updateDateFontSize(Number(e.target.value) || STAFF_CALENDAR_DEVICE_DEFAULTS.dateFontSize)}
                     style={{
                       width: 88,
                       padding: '4px 6px',
@@ -1366,7 +1367,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                   <select
                     id="staff-date-font-weight"
                     value={dateFontWeight}
-                    onChange={(e) => updateDateFontWeight(Number(e.target.value) || 700)}
+                    onChange={(e) => updateDateFontWeight(Number(e.target.value) || STAFF_CALENDAR_DEVICE_DEFAULTS.dateFontWeight)}
                     style={{
                       width: 88,
                       padding: '4px 6px',

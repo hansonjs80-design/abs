@@ -4,6 +4,11 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     ? [...element.querySelectorAll('section table')]
     : includeTherapistSummary
     ? [...(element?.querySelectorAll('.combined-therapist-summary-card > table, .combined-treatment-breakdown-card > table, .combined-ion-treatment table') || [])]
+      .sort((a, b) => {
+        const rank = (table) => table.closest('.combined-ion-treatment') ? 2
+          : table.closest('.combined-treatment-breakdown-card') ? 1 : 0;
+        return rank(a) - rank(b);
+      })
     : [element?.querySelector('table')].filter(Boolean);
   if (!tables.length) return;
   document.getElementById('combined-settlement-print-frame')?.remove();
@@ -14,6 +19,7 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
   document.body.appendChild(frame);
   const doc = frame.contentDocument;
   doc.title = title;
+  if (includeTherapistSummary) doc.body.className = `combined-summary-print--${orientation}`;
   const style = doc.createElement('style');
   style.textContent = `
     @page { size: A4 ${orientation === 'landscape' ? 'landscape' : 'portrait'}; margin: 12mm; }
@@ -43,9 +49,14 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     caption { text-align: left; font-size: 13px; font-weight: bold; padding: 0 0 8px; }
     .combined-recent-print-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5mm; align-items: start; }
     .combined-recent-print-grid[data-view="detail"] { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2mm; }
-    .combined-recent-print-grid table { width: 100%; table-layout: fixed; font-size: 9px; }
+    .combined-recent-print-grid table { width: 100%; table-layout: auto; font-size: 9px; }
+    .combined-recent-print-grid col { width: auto !important; }
     .combined-recent-print-grid th, .combined-recent-print-grid td { padding: 3px; }
     .combined-recent-print-grid[data-view="detail"] table { font-size: 8px; }
+    .combined-summary-print--landscape { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 6mm; align-items: start; }
+    .combined-summary-print--landscape h1 { grid-column: 1 / -1; }
+    .combined-summary-print--landscape table { width: 100%; min-width: 0; font-size: 10px; }
+    .combined-summary-print--landscape th, .combined-summary-print--landscape td { padding: 5px; }
     .combined-recent-breakdown-item { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px; padding: 3px; margin: 2px 0 2px 3px; background: #f8fafc; }
     .combined-recent-breakdown-item--total { border-left: 2px solid #0f172a; margin-left: 0; background: #e2e8f0; font-weight: bold; }
     .combined-summary-grand-total > *, .combined-treatment-breakdown-card .combined-therapist-total > *, .combined-therapist-total > * { color: #9f1239; }

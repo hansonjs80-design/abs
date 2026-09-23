@@ -1711,6 +1711,13 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   flex: none !important;
   margin-top: 0;
 }
+/* Prescription labels take only the space their text needs. */
+.combined-stats-dashboard--stats .combined-therapist-column .combined-therapist-card table tr > :first-child:not([colspan]) {
+  width: 1%;
+  white-space: nowrap;
+  padding-left: 10px;
+  padding-right: 10px;
+}
 .combined-stats-dashboard--stats .combined-therapist-summary-card :is(th, td) {
   white-space: normal;
   overflow-wrap: anywhere;
