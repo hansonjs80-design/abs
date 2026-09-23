@@ -5,7 +5,6 @@ export const PATIENT_HISTORY_PRINT_CSS = `
   h1 { margin: 0 0 4mm; font-size: 17pt; }
   .print-context { margin: 0 0 5mm; font-size: 9pt; color: #475569; white-space: pre-wrap; overflow-wrap: anywhere; }
   table { width: auto; max-width: 100%; table-layout: auto; border-collapse: collapse; margin: 0 0 6mm; font-size: 8pt; }
-  caption { text-align: left; font-weight: bold; font-size: 11pt; padding: 3mm 0; }
   thead { display: table-header-group; }
   th, td { border: 0.2mm solid #b8c4d2; padding: 1mm 1.2mm; vertical-align: middle; text-align: center; white-space: normal; overflow-wrap: anywhere; }
   th { background: #e2e8f0; font-weight: bold; }
@@ -64,14 +63,6 @@ export function buildPatientHistoryPrintDocument(source, doc) {
 
   source.querySelectorAll('.patient-history-table').forEach((original) => {
     const table = doc.createElement('table');
-    const group = original.parentElement.parentElement;
-    const caption = doc.createElement('caption');
-    const filters = [...group.querySelectorAll('.patient-history-filter-section')].map((section) => {
-      const selected = [...section.querySelectorAll('.is-checked > span:first-of-type')].map((node) => node.textContent);
-      return `${section.getAttribute('aria-label')}: ${selected.join(', ')}`;
-    });
-    caption.textContent = [group.querySelector('.patient-history-group-title-row')?.textContent, ...filters].filter(Boolean).join(' · ');
-    table.appendChild(caption);
     const headers = [...original.querySelectorAll('thead th')];
     const columns = getPatientHistoryPrintColumns(headers.map((header) => header.textContent));
     const head = table.createTHead().insertRow();
