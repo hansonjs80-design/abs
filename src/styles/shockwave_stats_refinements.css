@@ -1404,6 +1404,14 @@
   width: max-content;
 }
 
+/* Keep the new-patient total aligned with the table rather than the page edge. */
+.sw-stats-body--settlement .sw-new-patient-stack,
+.sw-stats-body--settlement .sw-new-patient-card {
+  min-width: 0;
+  width: fit-content;
+  max-width: 100%;
+}
+
 .sw-settlement-table thead .therapist-col,
 .sw-compact-settlement-table thead .therapist-col,
 .sw-manual-compact-settlement-table thead .therapist-col,

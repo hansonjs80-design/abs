@@ -128,8 +128,8 @@ export default function ShockwaveNewPatientsView({
   }
 
   return (
-    <div className="sw-settlement-stack">
-      <div className="sw-settlement-card">
+    <div className="sw-settlement-stack sw-new-patient-stack">
+      <div className="sw-settlement-card sw-new-patient-card">
         <div className="sw-settlement-header">
           <h2>{title || `${currentMonth}월 충격파 신규환자`}</h2>
           <div className="sw-settlement-meta">
