@@ -128,21 +128,18 @@ test('includes the checked ion table with its title and printable values', (t) =
   assert.equal(nodes[1], copy);
 });
 
-test('recent settlement printing includes the selected ion table in the first column', (t) => {
+test('recent settlement printing keeps the selected ion table third in both layout modes', (t) => {
   const printedTables = [];
   const styles = [];
-  const copy = {
-    style: {},
-    querySelectorAll: () => [],
-    prepend: () => {},
-  };
-  const table = {
-    closest: (selector) => selector === '.combined-ion-treatment' ? {} : null,
+  const copies = Array.from({ length: 3 }, () => ({ querySelectorAll: () => [], prepend() {} }));
+  const tables = copies.map((copy, index) => ({
+    closest: (selector) => index === 2 && selector === '.combined-ion-treatment' ? {} : null,
     cloneNode: () => copy,
-  };
+  }));
+  let printGrid;
   const doc = {
     createElement: (tag) => tag === 'div'
-      ? { dataset: {}, appendChild: (node) => printedTables.push(node) }
+      ? (printGrid = { dataset: {}, appendChild: (node) => printedTables.push(node) })
       : {},
     head: { appendChild: (node) => styles.push(node) },
     body: { appendChild() {}, offsetHeight: 100 },
@@ -154,11 +151,12 @@ test('recent settlement printing includes the selected ion table in the first co
     else globalThis.document = originalDocument;
   });
   globalThis.document = { getElementById: () => null, createElement: () => frame, body: { appendChild() {} } };
-  printSettlementTable({ dataset: { recentView: 'total-only' }, querySelectorAll: () => [table] }, '전체결산', { includeRecentTables: true, orientation: 'landscape' });
-  assert.deepEqual(printedTables, [copy]);
-  assert.equal(copy.style.gridColumn, '1');
+  printSettlementTable({ dataset: { recentView: 'total-only', recentLayout: 'horizontal' }, querySelectorAll: () => tables }, '전체결산', { includeRecentTables: true, orientation: 'landscape' });
+  assert.deepEqual(printedTables, copies);
+  assert.equal(printGrid.dataset.layout, 'horizontal');
   assert.equal(doc.body.className, 'combined-recent-print--landscape');
-  assert.match(styles[0].textContent, /\.combined-recent-print-grid \{ display: grid; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(styles[0].textContent, /\.combined-recent-print-grid\[data-layout="horizontal"\] \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(styles[0].textContent, /\.combined-recent-print-grid\[data-layout="vertical"\] \{ grid-template-columns: minmax\(0, 1fr\)/);
   assert.match(styles[0].textContent, /\.combined-recent-print--landscape \.combined-recent-print-grid \{ width: 94%; margin-inline: auto; \}/);
   assert.match(styles[0].textContent, /\.combined-recent-print--landscape \.combined-recent-print-grid table \{ font-size: 8\.5px; \}/);
 });

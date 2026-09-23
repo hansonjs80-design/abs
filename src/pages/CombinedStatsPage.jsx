@@ -75,7 +75,7 @@ function buildTherapistTreatmentDetailSections(item, isAdmin = false) {
       .filter((row) => Number(row?.count) > 0)
       .map((row) => ({
         ...row,
-        label: `↳ ${row.prescription}`,
+        label: row.prescription,
         rates: [7],
         isChild: true,
       }));
@@ -107,7 +107,7 @@ function buildTherapistTreatmentDetailSections(item, isAdmin = false) {
       .filter((row) => Number(row?.rate) === rate && Number(row?.count) > 0)
       .map((row) => ({
         ...row,
-        label: `↳ ${row.prescription}`,
+        label: row.prescription,
         rates: [rate],
         isChild: true,
       }));
@@ -133,7 +133,7 @@ function buildTherapistTreatmentDetailSections(item, isAdmin = false) {
         .filter((row) => Number(row?.count) > 0)
         .map((row) => ({
           ...row,
-          label: `↳ ${row.prescription}`,
+          label: row.prescription,
           rates: [15],
           isChild: true,
         }));
@@ -326,6 +326,7 @@ export default function CombinedStatsPage() {
   const [activeTab, setActiveTab] = useState('therapist'); // 'therapist' | 'summary' | 'settlement'
   const [summaryViewMode, setSummaryViewMode] = useState('total');
   const [showIonTreatment, setShowIonTreatment] = useState(false);
+  const [recentIonLayout, setRecentIonLayout] = useState('horizontal');
   const [showTherapistSummary, setShowTherapistSummary] = useState(false);
   const [layoutMode, setLayoutMode] = useState('horizontal'); // 'horizontal' | 'vertical'
   const [breakdownViewMode, setBreakdownViewMode] = useState('total');
@@ -654,6 +655,11 @@ export default function CombinedStatsPage() {
     </article>
   ) : null;
   const recentRows = useMemo(() => [...monthSummaries].reverse(), [monthSummaries]);
+  const visibleRecentTreatments = COMBINED_STATS_TREATMENTS.filter(({ key }) => recentTableVisibility[key] && (isAdmin || key !== 'manual_therapy'));
+  const treatmentsBeforeIon = recentTableVisibility.overall ? 1 : 2;
+  const renderRecentTreatmentTable = ({ key, label }) => (
+    <CombinedRecentTreatmentTable key={key} treatment={key} label={label} periodLabel={recentPeriodLabel} summaries={recentRows} currentMonthKey={currentMonthKey} viewMode={recentTreatmentViewModes[key] || 'total-only'} onViewModeChange={(mode) => setRecentTreatmentViewModes((current) => ({ ...current, [key]: mode }))} />
+  );
 
   return (
     <div className="combined-stats-page animate-fade-in">
@@ -720,7 +726,7 @@ export default function CombinedStatsPage() {
                 </button>
               </div>
             )}
-            {isAdmin && activeTab !== 'settlement' && (
+            {isAdmin && activeTab === 'summary' && (
               <label className="combined-therapist-summary-toggle">
                 <input type="checkbox" checked={showIonTreatment} onChange={(event) => setShowIonTreatment(event.target.checked)} />
                 이온치료현황
@@ -1028,10 +1034,16 @@ export default function CombinedStatsPage() {
           {[{ key: 'overall', label: '전체결산' }, ...COMBINED_STATS_TREATMENTS].filter(({ key }) => isAdmin || key !== 'manual_therapy').map(({ key, label }) => (
             <label className="settlement-recent-visibility-toggle" key={key}><input type="checkbox" checked={recentTableVisibility[key]} onChange={(event) => setRecentTableVisibility((current) => ({ ...current, [key]: event.target.checked }))} />{label} 현황 보기</label>
           ))}
-          {isAdmin && <label className="settlement-recent-visibility-toggle"><input type="checkbox" checked={showIonTreatment} onChange={(event) => setShowIonTreatment(event.target.checked)} />이온치료 현황 보기</label>}
+          {isAdmin && <div className="combined-recent-ion-controls">
+            <label className="settlement-recent-visibility-toggle"><input type="checkbox" checked={showIonTreatment} onChange={(event) => setShowIonTreatment(event.target.checked)} />이온치료 현황 보기</label>
+            {showIonTreatment && <div className="combined-recent-ion-layout-tabs" role="group" aria-label="이온치료 현황 배치">
+              <button type="button" className={recentIonLayout === 'horizontal' ? 'is-active' : ''} aria-pressed={recentIonLayout === 'horizontal'} onClick={() => setRecentIonLayout('horizontal')}>가로보기</button>
+              <button type="button" className={recentIonLayout === 'vertical' ? 'is-active' : ''} aria-pressed={recentIonLayout === 'vertical'} onClick={() => setRecentIonLayout('vertical')}>세로보기</button>
+            </div>}
+          </div>}
         </div>
         <div className="combined-recent-scroll" role="region" aria-label="최근 결산 표 가로 스크롤" tabIndex={0}>
-        <div className="combined-stats-dashboard combined-stats-dashboard--settlement" data-recent-view={hasVisibleRecentDetails ? 'detail' : 'total-only'} data-print-title={`${recentPeriodLabel} 전체결산`}>
+        <div className="combined-stats-dashboard combined-stats-dashboard--settlement" data-recent-view={hasVisibleRecentDetails ? 'detail' : 'total-only'} data-recent-layout={isAdmin && showIonTreatment ? recentIonLayout : 'default'} data-print-title={`${recentPeriodLabel} 전체결산`}>
           {recentTableVisibility.overall && <section className="combined-stats-recent combined-settlement-recent-main" aria-label={`${recentPeriodLabel} 전체 결산 현황`}>
             <div className="combined-stats-recent-heading">
               <div>
@@ -1122,10 +1134,9 @@ export default function CombinedStatsPage() {
               </table>
             </div>
           </section>}
-          {COMBINED_STATS_TREATMENTS.filter(({ key }) => recentTableVisibility[key] && (isAdmin || key !== 'manual_therapy')).map(({ key, label }) => (
-            <CombinedRecentTreatmentTable key={key} treatment={key} label={label} periodLabel={recentPeriodLabel} summaries={recentRows} currentMonthKey={currentMonthKey} viewMode={recentTreatmentViewModes[key] || 'total-only'} onViewModeChange={(mode) => setRecentTreatmentViewModes((current) => ({ ...current, [key]: mode }))} />
-          ))}
+          {visibleRecentTreatments.slice(0, treatmentsBeforeIon).map(renderRecentTreatmentTable)}
           {renderIonTreatment()}
+          {visibleRecentTreatments.slice(treatmentsBeforeIon).map(renderRecentTreatmentTable)}
         </div>
         </div>
         </>

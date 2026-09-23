@@ -178,7 +178,9 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /className=\{`combined-therapist-tab-btn \$\{viewMode === 'detail' \? 'is-active' : ''\}`\}/);
     assert.match(pageSource, /buildTherapistTreatmentDetailSections/);
     assert.match(pageSource, /isParent:\s*true/);
-    assert.match(pageSource, /label:\s*`↳ \$\{row\.prescription\}`/);
+    assert.match(pageSource, /label:\s*row\.prescription/);
+    assert.doesNotMatch(pageSource, /label:\s*`↳ \$\{row\.prescription\}`/);
+    assert.match(styleSource, /\.combined-stats-dashboard--stats \.combined-therapist-card tbody tr\.combined-treatment-child-row th::before\s*\{[^}]*width:\s*1\.25em;/);
     assert.match(pageSource, /combined-treatment-parent-row/);
     assert.match(pageSource, /combined-treatment-child-row/);
     assert.match(styleSource, /\.combined-therapist-view-tabs\s*\{/);

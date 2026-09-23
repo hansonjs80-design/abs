@@ -440,7 +440,7 @@
   background: #f6ecfb;
 }
 
-/* 상세 보기 계층 스타일: 상위 항목(충격파 7% 등) 및 하위 세부 처방(↳ F2.5 등) */
+/* 상세 보기 계층 스타일: 상위 항목과 들여쓴 하위 세부 처방 */
 .combined-therapist-card tbody tr.combined-treatment-parent-row > * {
   font-weight: 900 !important;
 }
@@ -451,6 +451,11 @@
   font-size: 0.95rem;
   font-weight: 700;
   color: #334155;
+}
+.combined-stats-dashboard--stats .combined-therapist-card tbody tr.combined-treatment-child-row th::before {
+  content: '';
+  display: inline-block;
+  width: 1.25em;
 }
 
 .combined-therapist-card tbody tr.combined-treatment-child-row td {
@@ -1865,6 +1870,10 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
 }
 .combined-recent-visibility-controls { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 12px; }
 .combined-stats-page .settlement-recent-visibility-toggle { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; color: #475569; }
+.combined-recent-ion-controls { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.combined-recent-ion-layout-tabs { display: inline-flex; padding: 2px; gap: 2px; border: 1px solid #cbd5e1; border-radius: 7px; background: #f1f5f9; }
+.combined-recent-ion-layout-tabs button { border: 0; border-radius: 5px; padding: 4px 9px; background: transparent; color: #475569; font: inherit; font-size: 12px; cursor: pointer; }
+.combined-recent-ion-layout-tabs button.is-active { background: #fff; color: #1d4ed8; font-weight: 700; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12); }
 .combined-summary-stack:has([data-summary-view="detail"]) { flex: 0 1 auto; width: max-content; max-width: 100%; }
 .combined-therapist-summary-card[data-summary-view="detail"] { max-width: 100% !important; overflow-x: auto; }
 @media print {
@@ -1905,6 +1914,13 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   overflow: visible;
 }
 .combined-recent-scroll .combined-stats-dashboard--settlement[data-recent-view="detail"] { grid-template-columns: repeat(4, minmax(max-content, 1fr)); }
+.combined-recent-scroll .combined-stats-dashboard--settlement[data-recent-layout="horizontal"] {
+  grid-template-columns: repeat(3, clamp(480px, 30vw, 620px)) !important;
+}
+.combined-recent-scroll .combined-stats-dashboard--settlement[data-recent-layout="vertical"] {
+  grid-template-columns: minmax(480px, 700px) !important;
+}
+.combined-recent-scroll .combined-stats-dashboard--settlement > .combined-ion-treatment { grid-column: auto; }
 .combined-recent-scroll .combined-stats-recent-heading { contain: inline-size; min-width: 0; align-content: flex-start; }
 .combined-recent-scroll .combined-stats-recent-heading h2 { width: 100%; font-size: 15px; }
 .combined-recent-scroll .combined-recent-controls { flex-wrap: wrap; gap: 6px; }
