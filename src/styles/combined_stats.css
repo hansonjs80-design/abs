@@ -1893,6 +1893,27 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
 .combined-recent-scroll .combined-stats-recent { min-width: 360px !important; }
 .combined-recent-scroll .combined-stats-recent table { min-width: 0; width: 100%; }
 .combined-recent-scroll .combined-stats-recent :is(th, td) { padding: 6px 8px !important; white-space: nowrap; }
+.combined-recent-scroll .combined-settlement-recent-main .combined-stats-recent-heading > div:first-child {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+}
+.combined-recent-scroll .combined-settlement-recent-main .combined-stats-recent-heading h2 { width: auto; }
+.combined-recent-scroll .combined-settlement-recent-main .combined-stats-recent-heading > div:first-child > span {
+  display: inline;
+  margin-top: 0;
+  white-space: nowrap;
+}
+.combined-recent-scroll .combined-settlement-recent-main .combined-stats-recent-table--total-only tbody tr { height: 38px; }
+.combined-recent-scroll .combined-settlement-recent-main .combined-stats-recent-table--total-only tbody :is(th, td) {
+  height: auto;
+  padding: 4px 6px !important;
+}
+.combined-settlement-recent-main .combined-stats-recent-table--total-only .combined-recent-single-value {
+  min-height: 0;
+  padding: 0;
+}
 @media print {
   .combined-recent-scroll { overflow: visible !important; width: auto; max-width: none; padding-bottom: 0; }
 }

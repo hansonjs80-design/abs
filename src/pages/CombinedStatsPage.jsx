@@ -779,7 +779,7 @@ export default function CombinedStatsPage() {
                               className={`combined-therapist-tab-btn ${viewMode === 'total-only' ? 'is-active' : ''}`}
                               onClick={() => setTherapistViewModes((prev) => ({ ...prev, [therapistKey]: 'total-only' }))}
                             >
-                              전체만 보기
+                              전체 보기
                             </button>
                             <button
                               type="button"
@@ -1048,7 +1048,7 @@ export default function CombinedStatsPage() {
                     className={`combined-recent-tab-btn ${recentViewMode === 'total-only' ? 'is-active' : ''}`}
                     onClick={() => setRecentViewMode('total-only')}
                   >
-                    전체만 보기
+                    전체 보기
                   </button>
                   <button
                     type="button"
