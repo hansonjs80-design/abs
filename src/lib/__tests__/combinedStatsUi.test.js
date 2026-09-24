@@ -217,6 +217,7 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /combined-stats-dashboard combined-stats-dashboard--summary/);
     assert.match(styleSource, /\.combined-stats-dashboard--horizontal\s*\{[\s\S]*flex-direction:\s*column/);
     assert.match(styleSource, /\.combined-stats-dashboard--horizontal \.combined-stats-current\s*\{[\s\S]*flex-direction:\s*row/);
+    assert.match(styleSource, /\.combined-stats-dashboard--stats \.combined-therapist-column \.combined-therapist-summary-card\s*\{[^}]*width:\s*max-content !important;[^}]*overflow:\s*visible;/);
     assert.match(styleSource, /\.combined-stats-dashboard--summary\s*\{/);
     assert.match(styleSource, /\.combined-stats-summary-container\s*\{/);
     assert.match(styleSource, /@media print\s*\{[\s\S]*?\.combined-stats-dashboard--horizontal \.combined-stats-current\s*\{[\s\S]*?flex-wrap:\s*nowrap !important;/);

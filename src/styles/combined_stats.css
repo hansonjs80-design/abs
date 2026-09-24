@@ -1783,6 +1783,39 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   body .combined-stats-page .combined-stats-dashboard--stats .combined-therapist-summary-card :is(th, td) { font-size: 11pt !important; }
 }
 
+@media print {
+  body .combined-stats-page .combined-stats-dashboard--stats.combined-stats-dashboard--horizontal {
+    width: 100% !important;
+    max-width: none !important;
+    margin-inline: 0 !important;
+  }
+  body .combined-stats-page .combined-stats-dashboard--horizontal .combined-stats-current {
+    width: 100% !important;
+    max-width: none !important;
+    overflow: visible !important;
+  }
+  body .combined-stats-page .combined-stats-dashboard--horizontal .combined-therapist-column {
+    flex: 1 1 auto !important;
+    width: auto !important;
+  }
+  body .combined-stats-page .combined-stats-dashboard--horizontal .combined-therapist-card table {
+    table-layout: auto !important;
+  }
+  body .combined-stats-page .combined-stats-dashboard--horizontal .combined-therapist-card :is(th, td) {
+    padding: 3px 2px !important;
+    font-size: 9pt !important;
+    white-space: nowrap !important;
+    overflow-wrap: normal !important;
+    word-break: keep-all !important;
+  }
+  body .combined-stats-page .combined-stats-dashboard--horizontal .combined-therapist-card tbody tr.combined-treatment-child-row > * {
+    font-size: 8.5pt !important;
+  }
+  body .combined-stats-page .combined-stats-dashboard--horizontal .combined-therapist-card tbody tr:is(.combined-treatment-parent-row, .combined-therapist-subtotal, .combined-therapist-total) > * {
+    font-size: 9.5pt !important;
+  }
+}
+
 .combined-summary-stack {
   display: flex;
   flex-direction: column;
@@ -1889,6 +1922,21 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
 .combined-recent-ion-layout-tabs button.is-active { background: #fff; color: #1d4ed8; font-weight: 700; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12); }
 .combined-summary-stack:has([data-summary-view="detail"]) { flex: 0 1 auto; width: max-content; max-width: 100%; }
 .combined-therapist-summary-card[data-summary-view="detail"] { max-width: 100% !important; overflow-x: auto; }
+@media screen {
+  .combined-stats-dashboard--horizontal .combined-therapist-summary-column {
+    flex: 0 0 auto;
+    width: max-content;
+    max-width: none;
+  }
+  .combined-stats-dashboard--stats .combined-therapist-column .combined-therapist-summary-card {
+    width: max-content !important;
+    max-width: none !important;
+    overflow: visible;
+  }
+  .combined-stats-dashboard--stats .combined-therapist-column .combined-therapist-summary-card table {
+    width: max-content;
+  }
+}
 @media print {
   .combined-recent-visibility-controls { display: none !important; }
 }
