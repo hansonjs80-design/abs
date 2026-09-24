@@ -68,7 +68,9 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /isAdmin && showIonTreatment/);
     assert.match(pageSource, /checked=\{showIonTreatment\}/);
     assert.doesNotMatch(pageSource, /index === summaryAnchorIndex && renderIonTreatment\(\)/);
-    assert.match(pageSource, /className="combined-stats-current"[\s\S]*?className="combined-vertical-right"[\s\S]*?therapists\.slice\(1\)\.map/);
+    assert.match(pageSource, /layoutMode === 'vertical'[\s\S]*?className="combined-vertical-right"[\s\S]*?therapists\.slice\(1\)\.map/);
+    assert.match(pageSource, /className="combined-stats-current"[\s\S]*?therapists\.map\(\(item, index\) => renderTherapistColumn\(item, index, false\)\)/);
+    assert.match(pageSource, /showTherapistSummary && \([\s\S]*?className="combined-therapist-column combined-therapist-summary-column"/);
     assert.match(pageSource, /setManualTherapyIonTreatment/);
     assert.match(pageSource, /recentPeriodInput/);
     assert.match(pageSource, /includeManual \? \[\{/);

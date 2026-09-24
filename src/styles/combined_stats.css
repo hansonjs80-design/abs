@@ -167,11 +167,12 @@
 .combined-stats-dashboard--horizontal .combined-stats-current {
   display: flex !important;
   flex-direction: row !important;
-  flex-wrap: wrap !important;
+  flex-wrap: nowrap !important;
   align-items: flex-start !important;
   gap: 24px !important;
   width: 100% !important;
   max-width: 100% !important;
+  overflow-x: auto;
 }
 
 .combined-stats-dashboard--horizontal .combined-therapist-card {
@@ -1074,7 +1075,7 @@
   .combined-stats-dashboard--horizontal .combined-stats-current {
     display: flex !important;
     flex-direction: row !important;
-    flex-wrap: wrap !important;
+    flex-wrap: nowrap !important;
     align-items: flex-start !important;
     gap: 16px !important;
     width: 100% !important;
@@ -1855,7 +1856,7 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
 
 /* Compact therapist cards use the same intrinsic sizing as the vertical view. */
 @media screen {
-  .combined-stats-dashboard--horizontal .combined-therapist-column { flex: 0 1 auto; width: max-content; max-width: 100%; }
+  .combined-stats-dashboard--horizontal .combined-therapist-column { flex: 0 0 auto; width: max-content; max-width: 100%; }
 }
 .combined-table-print-button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #334155; padding: 5px 8px; font-size: 12px; cursor: pointer; }
 .combined-therapist-summary-card .combined-therapist-name-content { flex-wrap: wrap; gap: 8px; }
