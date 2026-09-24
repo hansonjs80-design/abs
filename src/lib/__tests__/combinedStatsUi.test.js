@@ -218,6 +218,8 @@ describe('combined statistics UI', () => {
     assert.match(styleSource, /\.combined-stats-dashboard--horizontal\s*\{[\s\S]*flex-direction:\s*column/);
     assert.match(styleSource, /\.combined-stats-dashboard--horizontal \.combined-stats-current\s*\{[\s\S]*flex-direction:\s*row/);
     assert.match(styleSource, /\.combined-stats-dashboard--stats \.combined-therapist-column \.combined-therapist-summary-card\s*\{[^}]*width:\s*max-content !important;[^}]*overflow:\s*visible;/);
+    assert.match(pageSource, /className="combined-stats-current" data-therapist-count=\{therapists\.length\}/);
+    assert.match(styleSource, /\.combined-stats-current\[data-therapist-count="3"\][\s\S]*?grid-template-columns:\s*minmax\(0, 1\.04fr\) minmax\(0, 1fr\)/);
     assert.match(styleSource, /\.combined-stats-dashboard--summary\s*\{/);
     assert.match(styleSource, /\.combined-stats-summary-container\s*\{/);
     assert.match(styleSource, /@media print\s*\{[\s\S]*?\.combined-stats-dashboard--horizontal \.combined-stats-current\s*\{[\s\S]*?flex-wrap:\s*nowrap !important;/);

@@ -912,7 +912,7 @@ export default function CombinedStatsPage() {
                   )}
                 </div>
               ) : (
-                <section className="combined-stats-current" aria-label={`${currentMonth}월 치료사별 전체 통계`}>
+                <section className="combined-stats-current" data-therapist-count={therapists.length} aria-label={`${currentMonth}월 치료사별 전체 통계`}>
                   {therapists.map((item, index) => renderTherapistColumn(item, index, false))}
                   {showTherapistSummary && (
                     <div className="combined-therapist-column combined-therapist-summary-column">
