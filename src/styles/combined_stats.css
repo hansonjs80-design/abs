@@ -1875,6 +1875,7 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   min-width: 0;
   margin: 0 !important;
   padding: 0;
+  gap: 0;
   border: 1px solid #a9bad0 !important;
   border-top: 3px solid #28b63a !important;
   border-radius: 12px;
