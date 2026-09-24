@@ -194,7 +194,8 @@ test('five recent tables balance the final row in landscape and portrait print',
 
   printSettlementTable({ dataset: { recentView: 'total-only', recentLayout: 'horizontal' }, querySelectorAll: () => tables }, '전체결산', { includeRecentTables: true, orientation: 'landscape' });
   assert.equal(printGrid.dataset.tableCount, '5');
-  assert.match(styles[0].textContent, /\[data-layout="horizontal"\]\[data-table-count="5"\] > table:nth-last-child\(-n\+2\) \{ grid-column: span 3; \}/);
+  assert.match(styles[0].textContent, /\[data-layout="horizontal"\]\[data-table-count="5"\] > table:nth-last-child\(2\) \{ grid-column: 2 \/ span 2; \}/);
+  assert.match(styles[0].textContent, /\[data-layout="horizontal"\]\[data-table-count="5"\] > table:last-child \{ grid-column: 4 \/ span 2; \}/);
 
   printSettlementTable({ dataset: { recentView: 'total-only', recentLayout: 'horizontal' }, querySelectorAll: () => tables }, '전체결산', { includeRecentTables: true, orientation: 'portrait' });
   assert.equal(doc.body.className, 'combined-recent-print--portrait');
@@ -202,5 +203,6 @@ test('five recent tables balance the final row in landscape and portrait print',
 
   printSettlementTable({ dataset: { recentView: 'total-only', recentLayout: 'vertical' }, querySelectorAll: () => tables }, '전체결산', { includeRecentTables: true, orientation: 'portrait' });
   assert.equal(copies[4].style.gridColumn, '1');
+  assert.match(styles[2].textContent, /\[data-layout="vertical"\]\[data-table-count="5"\] > table:first-child \{ grid-column: 1 \/ -1; width: calc\(\(100% - 4mm\) \/ 2\); justify-self: center; \}/);
   assert.match(styles[2].textContent, /\[data-layout="vertical"\]\[data-table-count="5"\] > table:nth-child\(4\) \{ grid-column: 2; grid-row: 3; \}/);
 });

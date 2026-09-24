@@ -56,7 +56,7 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     .combined-recent-print-grid[data-layout="vertical"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .combined-recent-print-grid table { width: 100%; table-layout: auto; font-size: 9px; margin: 0; }
     .combined-recent-print-grid col { width: auto !important; }
-    .combined-recent-print-grid th, .combined-recent-print-grid td { padding: 3px; }
+    .combined-recent-print-grid th, .combined-recent-print-grid td { padding: 3px; vertical-align: middle; font-variant-numeric: tabular-nums; }
     .combined-recent-print-grid[data-view="detail"] table { font-size: 8px; }
     .combined-recent-print--landscape .combined-recent-print-grid { width: 100%; margin-inline: 0; }
     .combined-recent-print--landscape .combined-recent-print-grid table { font-size: 8.5px; }
@@ -64,11 +64,12 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     .combined-recent-print--landscape .combined-recent-print-grid[data-view="detail"] table { font-size: 7.5px; }
     .combined-recent-print--landscape .combined-recent-print-grid[data-layout="horizontal"][data-table-count="5"] { grid-template-columns: repeat(6, minmax(0, 1fr)); }
     .combined-recent-print--landscape .combined-recent-print-grid[data-layout="horizontal"][data-table-count="5"] > table { grid-column: span 2; }
-    .combined-recent-print--landscape .combined-recent-print-grid[data-layout="horizontal"][data-table-count="5"] > table:nth-last-child(-n+2) { grid-column: span 3; }
+    .combined-recent-print--landscape .combined-recent-print-grid[data-layout="horizontal"][data-table-count="5"] > table:nth-last-child(2) { grid-column: 2 / span 2; }
+    .combined-recent-print--landscape .combined-recent-print-grid[data-layout="horizontal"][data-table-count="5"] > table:last-child { grid-column: 4 / span 2; }
     .combined-recent-print--landscape .combined-recent-print-grid[data-layout="horizontal"][data-table-count="4"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .combined-recent-print--portrait .combined-recent-print-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .combined-recent-print--portrait .combined-recent-print-grid[data-layout="horizontal"]:is([data-table-count="3"], [data-table-count="5"]) > table:last-child { grid-column: 1 / -1; width: calc((100% - 5mm) / 2); justify-self: center; }
-    .combined-recent-print-grid[data-layout="vertical"][data-table-count="5"] > table:first-child { grid-column: 1 / -1; width: 72%; justify-self: center; }
+    .combined-recent-print--portrait .combined-recent-print-grid[data-layout="horizontal"]:is([data-table-count="3"], [data-table-count="5"]) > table:last-child { grid-column: 1 / -1; width: calc((100% - 3mm) / 2); justify-self: center; }
+    .combined-recent-print-grid[data-layout="vertical"][data-table-count="5"] > table:first-child { grid-column: 1 / -1; width: calc((100% - 4mm) / 2); justify-self: center; }
     .combined-recent-print-grid[data-layout="vertical"][data-table-count="5"] > table:nth-child(4) { grid-column: 2; grid-row: 3; }
     .combined-recent-print-grid[data-layout="vertical"][data-table-count="5"] > table:nth-child(5) { grid-column: 1; grid-row: 3; }
     .combined-summary-print--landscape { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 6mm; align-items: start; }
