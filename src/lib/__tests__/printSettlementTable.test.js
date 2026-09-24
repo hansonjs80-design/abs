@@ -154,10 +154,11 @@ test('recent settlement printing keeps the selected ion table third in both layo
   printSettlementTable({ dataset: { recentView: 'total-only', recentLayout: 'horizontal' }, querySelectorAll: () => tables }, '전체결산', { includeRecentTables: true, orientation: 'landscape' });
   assert.deepEqual(printedTables, copies);
   assert.equal(printGrid.dataset.layout, 'horizontal');
+  assert.equal(printGrid.dataset.tableCount, '3');
   assert.equal(doc.body.className, 'combined-recent-print--landscape');
   assert.match(styles[0].textContent, /\.combined-recent-print-grid\[data-layout="horizontal"\] \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
   assert.match(styles[0].textContent, /\.combined-recent-print-grid\[data-layout="vertical"\] \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(styles[0].textContent, /\.combined-recent-print--landscape \.combined-recent-print-grid \{ width: 94%; margin-inline: auto; \}/);
+  assert.match(styles[0].textContent, /\.combined-recent-print--landscape \.combined-recent-print-grid \{ width: 100%; margin-inline: 0; \}/);
   assert.match(styles[0].textContent, /\.combined-recent-print--landscape \.combined-recent-print-grid table \{ font-size: 8\.5px; \}/);
 
   printedTables.length = 0;
@@ -166,4 +167,40 @@ test('recent settlement printing keeps the selected ion table third in both layo
   assert.deepEqual(printedTables, copies);
   assert.equal(printGrid.dataset.layout, 'vertical');
   assert.equal(copies[2].style.gridColumn, '1');
+});
+
+test('five recent tables balance the final row in landscape and portrait print', (t) => {
+  const copies = Array.from({ length: 5 }, () => ({ style: {}, querySelectorAll: () => [], prepend() {} }));
+  const tables = copies.map((copy, index) => ({
+    closest: (selector) => index === 4 && selector === '.combined-ion-treatment' ? {} : null,
+    cloneNode: () => copy,
+  }));
+  let printGrid;
+  const styles = [];
+  const doc = {
+    createElement: (tag) => tag === 'div'
+      ? (printGrid = { dataset: {}, appendChild() {} })
+      : {},
+    head: { appendChild: (node) => styles.push(node) },
+    body: { appendChild() {}, offsetHeight: 100 },
+  };
+  const frame = { style: {}, contentDocument: doc, contentWindow: { addEventListener() {}, focus() {}, print() {} } };
+  const originalDocument = globalThis.document;
+  t.after(() => {
+    if (originalDocument === undefined) delete globalThis.document;
+    else globalThis.document = originalDocument;
+  });
+  globalThis.document = { getElementById: () => null, createElement: () => frame, body: { appendChild() {} } };
+
+  printSettlementTable({ dataset: { recentView: 'total-only', recentLayout: 'horizontal' }, querySelectorAll: () => tables }, '전체결산', { includeRecentTables: true, orientation: 'landscape' });
+  assert.equal(printGrid.dataset.tableCount, '5');
+  assert.match(styles[0].textContent, /\[data-layout="horizontal"\]\[data-table-count="5"\] > table:nth-last-child\(-n\+2\) \{ grid-column: span 3; \}/);
+
+  printSettlementTable({ dataset: { recentView: 'total-only', recentLayout: 'horizontal' }, querySelectorAll: () => tables }, '전체결산', { includeRecentTables: true, orientation: 'portrait' });
+  assert.equal(doc.body.className, 'combined-recent-print--portrait');
+  assert.match(styles[1].textContent, /\.combined-recent-print--portrait \.combined-recent-print-grid\[data-layout="horizontal"\]:is\(\[data-table-count="3"\], \[data-table-count="5"\]\) > table:last-child \{ grid-column: 1 \/ -1;/);
+
+  printSettlementTable({ dataset: { recentView: 'total-only', recentLayout: 'vertical' }, querySelectorAll: () => tables }, '전체결산', { includeRecentTables: true, orientation: 'portrait' });
+  assert.equal(copies[4].style.gridColumn, '1');
+  assert.match(styles[2].textContent, /\[data-layout="vertical"\]\[data-table-count="5"\] > table:nth-child\(4\) \{ grid-column: 2; grid-row: 3; \}/);
 });

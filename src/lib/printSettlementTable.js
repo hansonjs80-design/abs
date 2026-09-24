@@ -50,18 +50,27 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     .combined-incentive-rate-row--15 { background: #f6ecfb; }
     .combined-treatment-child-row th { padding-left: 22px; font-weight: normal; }
     caption { text-align: left; font-size: 13px; font-weight: bold; padding: 0 0 8px; }
-    .combined-recent-print-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5mm; align-items: start; }
+    .combined-recent-print-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6mm 4mm; align-items: start; width: 100%; }
     .combined-recent-print-grid[data-view="detail"] { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2mm; }
     .combined-recent-print-grid[data-layout="horizontal"] { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3mm; }
     .combined-recent-print-grid[data-layout="vertical"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .combined-recent-print-grid table { width: 100%; table-layout: auto; font-size: 9px; }
+    .combined-recent-print-grid table { width: 100%; table-layout: auto; font-size: 9px; margin: 0; }
     .combined-recent-print-grid col { width: auto !important; }
     .combined-recent-print-grid th, .combined-recent-print-grid td { padding: 3px; }
     .combined-recent-print-grid[data-view="detail"] table { font-size: 8px; }
-    .combined-recent-print--landscape .combined-recent-print-grid { width: 94%; margin-inline: auto; }
+    .combined-recent-print--landscape .combined-recent-print-grid { width: 100%; margin-inline: 0; }
     .combined-recent-print--landscape .combined-recent-print-grid table { font-size: 8.5px; }
     .combined-recent-print--landscape .combined-recent-print-grid th, .combined-recent-print--landscape .combined-recent-print-grid td { padding: 3px 2px; }
     .combined-recent-print--landscape .combined-recent-print-grid[data-view="detail"] table { font-size: 7.5px; }
+    .combined-recent-print--landscape .combined-recent-print-grid[data-layout="horizontal"][data-table-count="5"] { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .combined-recent-print--landscape .combined-recent-print-grid[data-layout="horizontal"][data-table-count="5"] > table { grid-column: span 2; }
+    .combined-recent-print--landscape .combined-recent-print-grid[data-layout="horizontal"][data-table-count="5"] > table:nth-last-child(-n+2) { grid-column: span 3; }
+    .combined-recent-print--landscape .combined-recent-print-grid[data-layout="horizontal"][data-table-count="4"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .combined-recent-print--portrait .combined-recent-print-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .combined-recent-print--portrait .combined-recent-print-grid[data-layout="horizontal"]:is([data-table-count="3"], [data-table-count="5"]) > table:last-child { grid-column: 1 / -1; width: calc((100% - 5mm) / 2); justify-self: center; }
+    .combined-recent-print-grid[data-layout="vertical"][data-table-count="5"] > table:first-child { grid-column: 1 / -1; width: 72%; justify-self: center; }
+    .combined-recent-print-grid[data-layout="vertical"][data-table-count="5"] > table:nth-child(4) { grid-column: 2; grid-row: 3; }
+    .combined-recent-print-grid[data-layout="vertical"][data-table-count="5"] > table:nth-child(5) { grid-column: 1; grid-row: 3; }
     .combined-summary-print--landscape { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 6mm; align-items: start; }
     .combined-summary-print--landscape.combined-summary-print--with-ion { grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(0, 1fr)); gap: 0 4mm; }
     .combined-summary-print--landscape h1 { grid-column: 1 / -1; }
@@ -86,6 +95,7 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     container.className = 'combined-recent-print-grid';
     container.dataset.view = element.dataset.recentView;
     container.dataset.layout = element.dataset.recentLayout;
+    container.dataset.tableCount = String(tables.length);
     doc.body.appendChild(container);
   }
   tables.forEach((table) => {
