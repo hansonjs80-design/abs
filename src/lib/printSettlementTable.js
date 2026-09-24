@@ -1,3 +1,25 @@
+// Preserve the visible table's column proportions and per-cell alignment in the isolated print document.
+function copyRecentTableLayout(source, copy) {
+  if (typeof getComputedStyle !== 'function' || !source.querySelectorAll) return;
+  const sourceCells = source.querySelectorAll('th, td');
+  const copiedCells = copy.querySelectorAll('th, td');
+  sourceCells.forEach((cell, index) => {
+    const copiedCell = copiedCells[index];
+    if (!copiedCell) return;
+    const style = getComputedStyle(cell);
+    copiedCell.style.textAlign = style.textAlign;
+    copiedCell.style.verticalAlign = style.verticalAlign;
+  });
+
+  const sourceHeaders = source.querySelectorAll('thead tr:first-child > th, thead tr:first-child > td');
+  const copiedHeaders = copy.querySelectorAll('thead tr:first-child > th, thead tr:first-child > td');
+  const tableWidth = source.getBoundingClientRect?.().width;
+  if (!tableWidth || sourceHeaders.length !== copiedHeaders.length) return;
+  sourceHeaders.forEach((header, index) => {
+    copiedHeaders[index].style.width = `${(header.getBoundingClientRect().width / tableWidth) * 100}%`;
+  });
+}
+
 // Isolated document keeps application navigation and other tables out of print.
 export function printSettlementTable(element, title, { includeTherapistSummary = false, includeRecentTables = false, orientation = 'portrait' } = {}) {
   const tables = includeRecentTables
@@ -51,27 +73,19 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     .combined-treatment-child-row th { padding-left: 22px; font-weight: normal; }
     caption { text-align: left; font-size: 13px; font-weight: bold; padding: 0 0 8px; }
     .combined-recent-print-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6mm 4mm; align-items: start; width: 100%; }
-    .combined-recent-print-grid[data-view="detail"] { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2mm; }
+    .combined-recent-print-grid[data-view="detail"][data-layout="default"] { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2mm; }
     .combined-recent-print-grid[data-layout="horizontal"] { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3mm; }
     .combined-recent-print-grid[data-layout="vertical"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .combined-recent-print-grid table { width: 100%; table-layout: auto; font-size: 9px; margin: 0; }
+    .combined-recent-print-grid table { width: 100%; table-layout: fixed; font-size: 9px; margin: 0; }
     .combined-recent-print-grid col { width: auto !important; }
-    .combined-recent-print-grid th, .combined-recent-print-grid td { padding: 3px; vertical-align: middle; font-variant-numeric: tabular-nums; }
+    .combined-recent-print-grid th, .combined-recent-print-grid td { padding: 3px; vertical-align: middle; font-variant-numeric: tabular-nums; overflow-wrap: normal; white-space: nowrap; }
+    .combined-recent-print-grid .sw-six-month-ion-input-wrap { display: flex; justify-content: flex-end; gap: 2px; }
     .combined-recent-print-grid[data-view="detail"] table { font-size: 8px; }
     .combined-recent-print--landscape .combined-recent-print-grid { width: 100%; margin-inline: 0; }
     .combined-recent-print--landscape .combined-recent-print-grid table { font-size: 8.5px; }
     .combined-recent-print--landscape .combined-recent-print-grid th, .combined-recent-print--landscape .combined-recent-print-grid td { padding: 3px 2px; }
     .combined-recent-print--landscape .combined-recent-print-grid[data-view="detail"] table { font-size: 7.5px; }
-    .combined-recent-print--landscape .combined-recent-print-grid[data-layout="horizontal"][data-table-count="5"] { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-    .combined-recent-print--landscape .combined-recent-print-grid[data-layout="horizontal"][data-table-count="5"] > table { grid-column: span 2; }
-    .combined-recent-print--landscape .combined-recent-print-grid[data-layout="horizontal"][data-table-count="5"] > table:nth-last-child(2) { grid-column: 2 / span 2; }
-    .combined-recent-print--landscape .combined-recent-print-grid[data-layout="horizontal"][data-table-count="5"] > table:last-child { grid-column: 4 / span 2; }
-    .combined-recent-print--landscape .combined-recent-print-grid[data-layout="horizontal"][data-table-count="4"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .combined-recent-print--portrait .combined-recent-print-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .combined-recent-print--portrait .combined-recent-print-grid[data-layout="horizontal"]:is([data-table-count="3"], [data-table-count="5"]) > table:last-child { grid-column: 1 / -1; width: calc((100% - 3mm) / 2); justify-self: center; }
-    .combined-recent-print-grid[data-layout="vertical"][data-table-count="5"] > table:first-child { grid-column: 1 / -1; width: calc((100% - 4mm) / 2); justify-self: center; }
-    .combined-recent-print-grid[data-layout="vertical"][data-table-count="5"] > table:nth-child(4) { grid-column: 2; grid-row: 3; }
-    .combined-recent-print-grid[data-layout="vertical"][data-table-count="5"] > table:nth-child(5) { grid-column: 1; grid-row: 3; }
+    .combined-recent-print--portrait .combined-recent-print-grid[data-layout="horizontal"] table { font-size: 7.5px; }
     .combined-summary-print--landscape { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 6mm; align-items: start; }
     .combined-summary-print--landscape.combined-summary-print--with-ion { grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(0, 1fr)); gap: 0 4mm; }
     .combined-summary-print--landscape h1 { grid-column: 1 / -1; }
@@ -101,6 +115,7 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
   }
   tables.forEach((table) => {
     const copy = table.cloneNode(true);
+    if (includeRecentTables) copyRecentTableLayout(table, copy);
     copy.querySelectorAll('.combined-breakdown-actions').forEach((node) => node.remove());
     if (table.closest('.combined-ion-treatment')) {
       if (includeRecentTables && element.dataset.recentLayout === 'vertical') copy.style.gridColumn = '1';

@@ -158,6 +158,7 @@ test('recent settlement printing keeps the selected ion table third in both layo
   assert.equal(doc.body.className, 'combined-recent-print--landscape');
   assert.match(styles[0].textContent, /\.combined-recent-print-grid\[data-layout="horizontal"\] \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
   assert.match(styles[0].textContent, /\.combined-recent-print-grid\[data-layout="vertical"\] \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(styles[0].textContent, /\[data-view="detail"\]\[data-layout="default"\] \{ grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
   assert.match(styles[0].textContent, /\.combined-recent-print--landscape \.combined-recent-print-grid \{ width: 100%; margin-inline: 0; \}/);
   assert.match(styles[0].textContent, /\.combined-recent-print--landscape \.combined-recent-print-grid table \{ font-size: 8\.5px; \}/);
 
@@ -169,7 +170,7 @@ test('recent settlement printing keeps the selected ion table third in both layo
   assert.equal(copies[2].style.gridColumn, '1');
 });
 
-test('five recent tables balance the final row in landscape and portrait print', (t) => {
+test('five recent tables retain the screen grid in landscape and portrait print', (t) => {
   const copies = Array.from({ length: 5 }, () => ({ style: {}, querySelectorAll: () => [], prepend() {} }));
   const tables = copies.map((copy, index) => ({
     closest: (selector) => index === 4 && selector === '.combined-ion-treatment' ? {} : null,
@@ -194,15 +195,61 @@ test('five recent tables balance the final row in landscape and portrait print',
 
   printSettlementTable({ dataset: { recentView: 'total-only', recentLayout: 'horizontal' }, querySelectorAll: () => tables }, '전체결산', { includeRecentTables: true, orientation: 'landscape' });
   assert.equal(printGrid.dataset.tableCount, '5');
-  assert.match(styles[0].textContent, /\[data-layout="horizontal"\]\[data-table-count="5"\] > table:nth-last-child\(2\) \{ grid-column: 2 \/ span 2; \}/);
-  assert.match(styles[0].textContent, /\[data-layout="horizontal"\]\[data-table-count="5"\] > table:last-child \{ grid-column: 4 \/ span 2; \}/);
+  assert.doesNotMatch(styles[0].textContent, /\[data-table-count="5"\] > table/);
 
   printSettlementTable({ dataset: { recentView: 'total-only', recentLayout: 'horizontal' }, querySelectorAll: () => tables }, '전체결산', { includeRecentTables: true, orientation: 'portrait' });
   assert.equal(doc.body.className, 'combined-recent-print--portrait');
-  assert.match(styles[1].textContent, /\.combined-recent-print--portrait \.combined-recent-print-grid\[data-layout="horizontal"\]:is\(\[data-table-count="3"\], \[data-table-count="5"\]\) > table:last-child \{ grid-column: 1 \/ -1;/);
+  assert.match(styles[1].textContent, /\.combined-recent-print-grid\[data-layout="horizontal"\] \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.doesNotMatch(styles[1].textContent, /\.combined-recent-print--portrait \.combined-recent-print-grid \{ grid-template-columns: repeat\(2/);
 
   printSettlementTable({ dataset: { recentView: 'total-only', recentLayout: 'vertical' }, querySelectorAll: () => tables }, '전체결산', { includeRecentTables: true, orientation: 'portrait' });
   assert.equal(copies[4].style.gridColumn, '1');
-  assert.match(styles[2].textContent, /\[data-layout="vertical"\]\[data-table-count="5"\] > table:first-child \{ grid-column: 1 \/ -1; width: calc\(\(100% - 4mm\) \/ 2\); justify-self: center; \}/);
-  assert.match(styles[2].textContent, /\[data-layout="vertical"\]\[data-table-count="5"\] > table:nth-child\(4\) \{ grid-column: 2; grid-row: 3; \}/);
+  assert.doesNotMatch(styles[2].textContent, /\[data-layout="vertical"\]\[data-table-count="5"\] > table/);
+});
+
+test('recent print copies visible column ratios and cell alignment', (t) => {
+  const sourceHeaders = [60, 30, 90].map((width) => ({ getBoundingClientRect: () => ({ width }) }));
+  const sourceCells = [
+    { align: 'center', vertical: 'middle' },
+    { align: 'center', vertical: 'middle' },
+    { align: 'right', vertical: 'middle' },
+    { align: 'center', vertical: 'middle' },
+    { align: 'center', vertical: 'middle' },
+    { align: 'right', vertical: 'middle' },
+  ];
+  const copiedCells = sourceCells.map(() => ({ style: {} }));
+  const source = {
+    closest: () => null,
+    getBoundingClientRect: () => ({ width: 180 }),
+    querySelectorAll: (selector) => selector === 'th, td' ? sourceCells : sourceHeaders,
+    cloneNode: () => copy,
+  };
+  const copy = {
+    style: {},
+    querySelectorAll: (selector) => selector === 'th, td' ? copiedCells
+      : selector.startsWith('thead ') ? copiedCells.slice(0, 3) : [],
+    prepend() {},
+  };
+  const doc = {
+    createElement: (tag) => tag === 'div' ? { dataset: {}, appendChild() {} } : {},
+    head: { appendChild() {} },
+    body: { appendChild() {}, offsetHeight: 100 },
+  };
+  const frame = { style: {}, contentDocument: doc, contentWindow: { addEventListener() {}, focus() {}, print() {} } };
+  const originalDocument = globalThis.document;
+  const originalGetComputedStyle = globalThis.getComputedStyle;
+  t.after(() => {
+    if (originalDocument === undefined) delete globalThis.document;
+    else globalThis.document = originalDocument;
+    if (originalGetComputedStyle === undefined) delete globalThis.getComputedStyle;
+    else globalThis.getComputedStyle = originalGetComputedStyle;
+  });
+  globalThis.getComputedStyle = (cell) => ({ textAlign: cell.align, verticalAlign: cell.vertical });
+  globalThis.document = { getElementById: () => null, createElement: () => frame, body: { appendChild() {} } };
+
+  printSettlementTable({ dataset: { recentView: 'total-only', recentLayout: 'horizontal' }, querySelectorAll: () => [source] }, '전체결산', { includeRecentTables: true, orientation: 'portrait' });
+
+  assert.deepEqual(copiedCells.slice(0, 3).map((cell) => cell.style.width), ['33.33333333333333%', '16.666666666666664%', '50%']);
+  assert.deepEqual(copiedCells.map((cell) => cell.style.textAlign), ['center', 'center', 'right', 'center', 'center', 'right']);
+  assert.ok(copiedCells.every((cell) => cell.style.verticalAlign === 'middle'));
 });
