@@ -20,6 +20,7 @@ export default function NoticeBoard({
   const canManageDepartments = isAdminUser(user);
   const [editingSlot, setEditingSlot] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
+  const [clipboardSlot, setClipboardSlot] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [contextMenu, setContextMenu] = useState(null);
   const [isDepartmentSettingsOpen, setIsDepartmentSettingsOpen] = useState(false);
@@ -33,6 +34,7 @@ export default function NoticeBoard({
 
   useEffect(() => {
     setSelectedSlot(null);
+    setClipboardSlot(null);
     setEditingSlot(null);
     setContextMenu(null);
   }, [currentYear, currentMonth]);
@@ -91,6 +93,7 @@ export default function NoticeBoard({
   };
 
   const handleNoticeKeyDown = (event, index) => {
+    if (event.key === 'Escape') setClipboardSlot(null);
     if (event.target?.tagName === 'INPUT') return;
     if (event.key === 'Enter' || event.key === 'F2') {
       event.preventDefault();
@@ -114,10 +117,12 @@ export default function NoticeBoard({
     const content = notices.find(n => n.slot_index === index)?.content || '';
     event.clipboardData.setData('text/plain', content);
     noticeClipboardRef.current = content;
+    setClipboardSlot(index);
     if (cut && notices.some(n => n.slot_index === index && n.content)) saveNotice(index, '', currentYear, currentMonth);
   };
 
   const pasteNotice = (event, index) => {
+    setClipboardSlot(null);
     if (event.target?.tagName === 'INPUT') return;
     event.preventDefault();
     applyNoticePaste(event.clipboardData.getData('text/plain'), index);
@@ -125,6 +130,7 @@ export default function NoticeBoard({
 
   const applyNoticePaste = (text, index) => {
     if (!text) return;
+    setClipboardSlot(null);
     const values = parseNoticePasteValues(text, SLOT_COUNT - index);
     values.forEach((value, offset) => {
       saveNotice(index + offset, value, currentYear, currentMonth);
@@ -138,6 +144,7 @@ export default function NoticeBoard({
     if (action === 'edit') startEditing(index);
     if (action === 'copy' || action === 'cut') {
       noticeClipboardRef.current = content;
+      setClipboardSlot(index);
       try { await navigator.clipboard?.writeText(content); } catch { /* Local copy remains available. */ }
       if (action === 'cut' && content) saveNotice(index, '', currentYear, currentMonth);
     }
@@ -190,7 +197,7 @@ export default function NoticeBoard({
             <div
               key={i}
               ref={(node) => { slotRefs.current[i] = node; }}
-              className={`notice-item${selectedSlot === i ? ' is-selected' : ''}`}
+              className={`notice-item${selectedSlot === i ? ' is-selected' : ''}${clipboardSlot === i ? ' is-clipboard-source' : ''}`}
               role="button"
               tabIndex={0}
               aria-label={`${i + 1}번 전달 사항${notice?.content ? `: ${notice.content}` : ''}`}
