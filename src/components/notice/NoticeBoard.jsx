@@ -3,7 +3,7 @@ import { MessageSquare, Settings, Trash2 } from 'lucide-react';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../lib/authPermissions';
-import { parseNoticePasteValues } from '../../lib/noticeClipboardUtils';
+import { pasteNoticeClipboard } from '../../lib/noticeClipboardUtils';
 
 const SLOT_COUNT = 6;
 
@@ -30,11 +30,19 @@ export default function NoticeBoard({
   const editingMonthRef = useRef(null);
   const selectedBeforeClickRef = useRef(false);
   const noticeClipboardRef = useRef('');
+  const pendingCutRef = useRef(null);
+  const currentNoticesRef = useRef({ year: currentYear, month: currentMonth, notices });
   const contextMenuRef = useRef(null);
+
+  useEffect(() => {
+    currentNoticesRef.current = { year: currentYear, month: currentMonth, notices };
+  }, [currentYear, currentMonth, notices]);
 
   useEffect(() => {
     setSelectedSlot(null);
     setClipboardSlot(null);
+    pendingCutRef.current = null;
+    noticeClipboardRef.current = '';
     setEditingSlot(null);
     setContextMenu(null);
   }, [currentYear, currentMonth]);
@@ -93,7 +101,11 @@ export default function NoticeBoard({
   };
 
   const handleNoticeKeyDown = (event, index) => {
-    if (event.key === 'Escape') setClipboardSlot(null);
+    if (event.key === 'Escape') {
+      setClipboardSlot(null);
+      pendingCutRef.current = null;
+      noticeClipboardRef.current = '';
+    }
     if (event.target?.tagName === 'INPUT') return;
     if (event.key === 'Enter' || event.key === 'F2') {
       event.preventDefault();
@@ -118,22 +130,31 @@ export default function NoticeBoard({
     event.clipboardData.setData('text/plain', content);
     noticeClipboardRef.current = content;
     setClipboardSlot(index);
-    if (cut && notices.some(n => n.slot_index === index && n.content)) saveNotice(index, '', currentYear, currentMonth);
+    pendingCutRef.current = cut ? { index, content, year: currentYear, month: currentMonth } : null;
   };
 
   const pasteNotice = (event, index) => {
     setClipboardSlot(null);
-    if (event.target?.tagName === 'INPUT') return;
+    if (event.target?.tagName === 'INPUT') {
+      pendingCutRef.current = null;
+      return;
+    }
     event.preventDefault();
     applyNoticePaste(event.clipboardData.getData('text/plain'), index);
   };
 
-  const applyNoticePaste = (text, index) => {
+  const applyNoticePaste = async (text, index) => {
     if (!text) return;
     setClipboardSlot(null);
-    const values = parseNoticePasteValues(text, SLOT_COUNT - index);
-    values.forEach((value, offset) => {
-      saveNotice(index + offset, value, currentYear, currentMonth);
+    const cut = pendingCutRef.current;
+    pendingCutRef.current = null;
+    await pasteNoticeClipboard({
+      text, index, slotCount: SLOT_COUNT, year: currentYear, month: currentMonth, cut, saveNotice,
+      isCutSourceUnchanged: (source) => {
+        const current = currentNoticesRef.current;
+        return current.year === source.year && current.month === source.month
+          && current.notices.find(n => n.slot_index === source.index)?.content === source.content;
+      },
     });
   };
 
@@ -145,8 +166,8 @@ export default function NoticeBoard({
     if (action === 'copy' || action === 'cut') {
       noticeClipboardRef.current = content;
       setClipboardSlot(index);
+      pendingCutRef.current = action === 'cut' ? { index, content, year: currentYear, month: currentMonth } : null;
       try { await navigator.clipboard?.writeText(content); } catch { /* Local copy remains available. */ }
-      if (action === 'cut' && content) saveNotice(index, '', currentYear, currentMonth);
     }
     if (action === 'paste') {
       let text = noticeClipboardRef.current;
@@ -229,7 +250,7 @@ export default function NoticeBoard({
             >
               {isEditing ? (
                 <span className="notice-input-wrap">
-                <span className="notice-input-sizer" aria-hidden="true">{editValue || '메모를 입력하세요...'}</span>
+                <span className="notice-input-sizer" aria-hidden="true">{editValue || '\u00a0'}</span>
                 <input
                   className="notice-input"
                   value={editValue}
@@ -237,7 +258,6 @@ export default function NoticeBoard({
                   onBlur={() => handleBlur(i)}
                   onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
                   autoFocus
-                  placeholder="메모를 입력하세요..."
                 />
                 </span>
               ) : (

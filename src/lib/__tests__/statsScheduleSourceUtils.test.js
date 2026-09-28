@@ -56,6 +56,21 @@ describe('statistics monthly therapist loading', () => {
       [['신수민', 2026, 9, 1, 30], ['김세령', 2026, 9, 1, 30]]);
   });
 
+  it('shares preceding-roster queries across recent months only within one refresh', async (context) => {
+    const calls = mockMonthlyQueries(context, [
+      { data: [], error: null },
+      { data: [{ year: 2026, month: 4, slot_index: 0, therapist_name: '현재', start_day: 1, end_day: 30 }], error: null },
+      { data: [], error: null },
+    ]);
+    const rosterQueryCache = new Map();
+    const september = await loadStatsMonthlyTherapists({ year: 2026, month: 9, rosterQueryCache });
+    const august = await loadStatsMonthlyTherapists({ year: 2026, month: 8, rosterQueryCache });
+    assert.equal(calls.length, 3);
+    assert.equal(september[0].end_day, 30);
+    assert.equal(august[0].end_day, 31);
+    assert.equal(august[0].therapist_name, september[0].therapist_name);
+  });
+
   it('keeps explicit month settings and mid-month replacement periods', async (context) => {
     const configs = [
       { slot_index: 0, therapist_name: '전임', start_day: 1, end_day: 10 },

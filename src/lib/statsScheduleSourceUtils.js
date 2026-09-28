@@ -326,6 +326,7 @@ export async function loadStatsMonthlyTherapists({
   type = 'shockwave',
   baseTherapists = [],
   fallbackMonthlyTherapists = [],
+  rosterQueryCache,
 } = {}) {
   const { data, error } = await withScheduleStatsQueryTimeout(
     supabase
@@ -343,19 +344,25 @@ export async function loadStatsMonthlyTherapists({
   if (Array.isArray(data) && data.length > 0) return data;
 
   const currentValue = Number(year) * 12 + Number(month);
-  const { data: previousRows, error: previousError } = await withScheduleStatsQueryTimeout(
-    supabase
-      .from('shockwave_monthly_therapists')
-      .select('*')
-      .eq('type', type)
-      .gte('year', Number(year) - 1)
-      .order('year', { ascending: false })
-      .order('month', { ascending: false })
-      .order('slot_index')
-      .order('start_day')
-      .limit(50),
-    `shockwave_monthly_therapists stats previous ${type} ${year}-${month}`
-  );
+  const previousQueryKey = `${type}:${Number(year) - 1}`;
+  let previousQuery = rosterQueryCache?.get(previousQueryKey);
+  if (!previousQuery) {
+    previousQuery = withScheduleStatsQueryTimeout(
+      supabase
+        .from('shockwave_monthly_therapists')
+        .select('*')
+        .eq('type', type)
+        .gte('year', Number(year) - 1)
+        .order('year', { ascending: false })
+        .order('month', { ascending: false })
+        .order('slot_index')
+        .order('start_day')
+        .limit(50),
+      `shockwave_monthly_therapists stats previous ${type} ${year}-${month}`
+    );
+    rosterQueryCache?.set(previousQueryKey, previousQuery);
+  }
+  const { data: previousRows, error: previousError } = await previousQuery;
 
   if (!previousError && Array.isArray(previousRows) && previousRows.length > 0) {
     const previousMonths = previousRows.filter((item) => {

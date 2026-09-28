@@ -2103,3 +2103,15 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
 .combined-stats-dashboard--settlement > .combined-ion-treatment {
   grid-column: 1;
 }
+
+/* Distinguish the overall settlement while retaining the shared table sizing. */
+.combined-settlement-recent-main { border-top-color: #7c3aed; }
+.combined-settlement-recent-main .combined-stats-recent-heading {
+  background: linear-gradient(135deg, #ede9fe, #f5f3ff);
+}
+.combined-settlement-recent-main thead th { background: #ede9fe; }
+.combined-recent-breakdown-item--shinjang-total,
+.combined-shinjang-total > :is(th, td) {
+  background: #dcfce7;
+  font-weight: 800;
+}

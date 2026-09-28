@@ -107,7 +107,7 @@ function buildTherapistTreatmentDetailSections(item, isAdmin = false) {
       .filter((row) => Number(row?.rate) === rate && Number(row?.count) > 0)
       .map((row) => ({
         ...row,
-        label: row.prescription,
+        label: row.prescription.replace(/신장\s*분사\s*/g, '신장 '),
         rates: [rate],
         isChild: true,
       }));
@@ -245,6 +245,7 @@ function buildRecentMetricItems(summary, metric, { includeManual = true, totalOn
       tone: 'shockwave',
       value: treatmentTotals.shockwave?.[metric],
     },
+    { key: 'shinjang-total', label: '신장분사(전체)', tone: 'shinjang-total', value: shinjangTotal?.[metric] },
     ...shinjangItems,
     ...(includeManual ? [{
       key: 'manual',
@@ -392,6 +393,7 @@ export default function CombinedStatsPage() {
     recentPeriodMonths,
   }), [currentMonth, currentYear, recentPeriodMonths]);
   const summaryScope = `${currentYear}-${currentMonth}-${recentPeriodMonths}-${isAdmin}`;
+  const recentOverallTitle = `${recentPeriodLabel} 전체결산(충격파/신장분사${isAdmin ? '/도수치료' : ''})`;
   const cryoModeLabel = `크라이오 차감 ${applyCryoDeduction ? '적용' : '비적용'}`;
   const loadedSummaries = summaryState.scope === summaryScope ? summaryState.summaries : [];
   const monthSummaries = loadedSummaries.map((summary) => (
@@ -400,12 +402,12 @@ export default function CombinedStatsPage() {
 
   const refreshData = useCallback(async ({ force = false } = {}) => {
     const requestId = ++requestIdRef.current;
-    setSummaryState({ scope: summaryScope, summaries: [] });
+    setSummaryState((previous) => previous.scope === summaryScope ? previous : { scope: summaryScope, summaries: [] });
     setIsLoading(true);
     try {
       const [loadedShockwaveTherapists, loadedManualTherapists, loadedSettings] = await Promise.all([
-        loadTherapists({ force: true }),
-        loadManualTherapists({ force: true }),
+        loadTherapists({ force }),
+        loadManualTherapists({ force }),
         loadShockwaveSettings({ force }),
       ]);
       if (requestId !== requestIdRef.current) return;
@@ -419,6 +421,7 @@ export default function CombinedStatsPage() {
       const settings = loadedSettings || settingsRef.current || {};
       settingsRef.current = settings;
 
+      const rosterQueryCache = new Map();
       const loadMonthSummary = async (target) => {
         const isCurrentMonth = Number(target.year) === Number(currentYear)
           && Number(target.month) === Number(currentMonth);
@@ -439,12 +442,14 @@ export default function CombinedStatsPage() {
             year: target.year,
             month: target.month,
             type: 'shockwave',
+            rosterQueryCache,
             baseTherapists: baseShockwaveTherapists,
           }),
           loadStatsMonthlyTherapists({
             year: target.year,
             month: target.month,
             type: 'manual_therapy',
+            rosterQueryCache,
             baseTherapists: baseManualTherapists,
           }),
         ]);
@@ -453,6 +458,7 @@ export default function CombinedStatsPage() {
           year: target.year,
           month: target.month,
           type: 'shinjang_spray',
+          rosterQueryCache,
           baseTherapists: baseShockwaveTherapists,
           fallbackMonthlyTherapists: [
             ...monthlyShockwaveTherapists,
@@ -588,9 +594,16 @@ export default function CombinedStatsPage() {
   }, [refreshData]);
 
   useEffect(() => {
-    const handleStatsUpdated = () => refreshData();
+    let refreshTimer;
+    const handleStatsUpdated = () => {
+      clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => refreshData(), 150);
+    };
     window.addEventListener('clinic-stats-updated', handleStatsUpdated);
-    return () => window.removeEventListener('clinic-stats-updated', handleStatsUpdated);
+    return () => {
+      clearTimeout(refreshTimer);
+      window.removeEventListener('clinic-stats-updated', handleStatsUpdated);
+    };
   }, [refreshData]);
 
   const currentMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
@@ -1035,6 +1048,12 @@ export default function CombinedStatsPage() {
                       </tr>
                     )}
                     {isAdmin && renderBreakdownDetails(currentSummary, 'manual_therapy')}
+                    <tr className="combined-therapist-subtotal combined-shinjang-total">
+                      <th>신장분사 합계</th>
+                      <td>{formatCount(currentSummary.treatmentTotals?.shinjang_spray?.count)}</td>
+                      <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.shinjang_spray?.amount)}</td>
+                      {showBreakdownIncentive && <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.shinjang_spray?.incentive)}</td>}
+                    </tr>
                     {renderBreakdownRateTotal(currentSummary, 7)}
                     {renderBreakdownRateTotal(currentSummary, 15)}
                     <tr className="combined-therapist-total combined-summary-grand-total">
@@ -1071,15 +1090,14 @@ export default function CombinedStatsPage() {
           </div>}
         </div>
         <div className="combined-recent-scroll" role="region" aria-label="최근 결산 표 가로 스크롤" tabIndex={0}>
-        <div className="combined-stats-dashboard combined-stats-dashboard--settlement" data-recent-view={hasVisibleRecentDetails ? 'detail' : 'total-only'} data-recent-layout={isAdmin && showIonTreatment ? recentIonLayout : 'default'} data-print-title={`${recentPeriodLabel} 전체결산 (${cryoModeLabel})`}>
+        <div className="combined-stats-dashboard combined-stats-dashboard--settlement" data-recent-view={hasVisibleRecentDetails ? 'detail' : 'total-only'} data-recent-layout={isAdmin && showIonTreatment ? recentIonLayout : 'default'} data-print-title={`${recentOverallTitle} (${cryoModeLabel})`}>
           {recentTableVisibility.overall && <section className="combined-stats-recent combined-settlement-recent-main" aria-label={`${recentPeriodLabel} 전체 결산 현황`}>
             <div className="combined-stats-recent-heading">
               <div>
                 <h2>{recentPeriodLabel} 전체결산</h2>
-                <span>크라이오 차감 {applyCryoDeduction ? '적용' : '비적용'} 전체 통계</span>
               </div>
               <div className="combined-recent-controls">
-                <button type="button" className="combined-table-print-button" onClick={(event) => printSettlementTable(event.currentTarget.closest('section'), `${recentPeriodLabel} 전체결산 (${cryoModeLabel})`)}><Printer size={16} />인쇄</button>
+                <button type="button" className="combined-table-print-button" onClick={(event) => printSettlementTable(event.currentTarget.closest('section'), `${recentOverallTitle} (${cryoModeLabel})`)}><Printer size={16} />인쇄</button>
                 <div className="combined-recent-filter-tabs" role="tablist" aria-label="결산 현황 보기 방식">
                   <button
                     type="button"
