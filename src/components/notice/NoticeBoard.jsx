@@ -27,6 +27,7 @@ export default function NoticeBoard({
   const [newDepartment, setNewDepartment] = useState('');
   const departmentFilterRef = useRef(null);
   const slotRefs = useRef([]);
+  const boardRef = useRef(null);
   const editingMonthRef = useRef(null);
   const selectedBeforeClickRef = useRef(false);
   const noticeClipboardRef = useRef('');
@@ -46,6 +47,37 @@ export default function NoticeBoard({
     setEditingSlot(null);
     setContextMenu(null);
   }, [currentYear, currentMonth]);
+
+  useEffect(() => {
+    if (selectedSlot === null && clipboardSlot === null && !contextMenu) return undefined;
+    const clearSelection = () => {
+      // Finish any active edit through the existing blur/save path.
+      const activeElement = document.activeElement;
+      if (boardRef.current?.contains(activeElement)) activeElement.blur();
+      setSelectedSlot(null);
+      setClipboardSlot(null);
+      setContextMenu(null);
+      selectedBeforeClickRef.current = false;
+      pendingCutRef.current = null;
+      noticeClipboardRef.current = '';
+    };
+    const handleOutsidePointerDown = (event) => {
+      if (boardRef.current?.contains(event.target) || contextMenuRef.current?.contains(event.target)) return;
+      clearSelection();
+    };
+    const handleEscape = (event) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      clearSelection();
+    };
+    document.addEventListener('pointerdown', handleOutsidePointerDown, true);
+    document.addEventListener('keydown', handleEscape, true);
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsidePointerDown, true);
+      document.removeEventListener('keydown', handleEscape, true);
+    };
+  }, [selectedSlot, clipboardSlot, contextMenu]);
 
   useEffect(() => {
     if (!contextMenu) return undefined;
@@ -101,11 +133,6 @@ export default function NoticeBoard({
   };
 
   const handleNoticeKeyDown = (event, index) => {
-    if (event.key === 'Escape') {
-      setClipboardSlot(null);
-      pendingCutRef.current = null;
-      noticeClipboardRef.current = '';
-    }
     if (event.target?.tagName === 'INPUT') return;
     if (event.key === 'Enter' || event.key === 'F2') {
       event.preventDefault();
@@ -205,7 +232,7 @@ export default function NoticeBoard({
 
   return (
     <>
-      <div className="notice-board">
+      <div ref={boardRef} className="notice-board">
         <div className="notice-board-header">
           <MessageSquare size={21} strokeWidth={2.4} />
           {currentMonth}월 전달 사항
