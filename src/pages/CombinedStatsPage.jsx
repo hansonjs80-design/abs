@@ -324,6 +324,7 @@ export default function CombinedStatsPage() {
   const hasVisibleRecentDetails = (recentTableVisibility.overall && recentViewMode === 'detail') ||
     COMBINED_STATS_TREATMENTS.some(({ key }) => recentTableVisibility[key] && (isAdmin || key !== 'manual_therapy') && recentTreatmentViewModes[key] === 'detail');
   const [activeTab, setActiveTab] = useState('therapist'); // 'therapist' | 'summary' | 'settlement'
+  const [applyCryoDeduction, setApplyCryoDeduction] = useState(true);
   const [summaryViewMode, setSummaryViewMode] = useState('total');
   const [showIonTreatment, setShowIonTreatment] = useState(false);
   const [recentIonLayout, setRecentIonLayout] = useState('horizontal');
@@ -333,7 +334,7 @@ export default function CombinedStatsPage() {
   const showBreakdownIncentive = breakdownViewMode !== 'detail-no-incentive';
   const breakdownRef = useRef(null);
   const [therapistViewModes, setTherapistViewModes] = useState({});
-  const [monthSummaries, setMonthSummaries] = useState([]);
+  const [summaryState, setSummaryState] = useState({ scope: '', summaries: [] });
   const [isLoading, setIsLoading] = useState(false);
   const requestIdRef = useRef(0);
   const settingsRef = useRef(shockwaveSettings);
@@ -390,14 +391,21 @@ export default function CombinedStatsPage() {
     currentMonth,
     recentPeriodMonths,
   }), [currentMonth, currentYear, recentPeriodMonths]);
+  const summaryScope = `${currentYear}-${currentMonth}-${recentPeriodMonths}-${isAdmin}`;
+  const cryoModeLabel = `크라이오 차감 ${applyCryoDeduction ? '적용' : '비적용'}`;
+  const loadedSummaries = summaryState.scope === summaryScope ? summaryState.summaries : [];
+  const monthSummaries = loadedSummaries.map((summary) => (
+    applyCryoDeduction ? summary : summary.withoutCryoDeduction
+  ));
 
   const refreshData = useCallback(async ({ force = false } = {}) => {
     const requestId = ++requestIdRef.current;
+    setSummaryState({ scope: summaryScope, summaries: [] });
     setIsLoading(true);
     try {
       const [loadedShockwaveTherapists, loadedManualTherapists, loadedSettings] = await Promise.all([
-        loadTherapists({ force }),
-        loadManualTherapists({ force }),
+        loadTherapists({ force: true }),
+        loadManualTherapists({ force: true }),
         loadShockwaveSettings({ force }),
       ]);
       if (requestId !== requestIdRef.current) return;
@@ -433,18 +441,21 @@ export default function CombinedStatsPage() {
             month: target.month,
             type: 'shockwave',
             baseTherapists: baseShockwaveTherapists,
+            preferBaseRoster: isCurrentMonth,
           }),
           loadStatsMonthlyTherapists({
             year: target.year,
             month: target.month,
             type: 'manual_therapy',
             baseTherapists: baseManualTherapists,
+            preferBaseRoster: isCurrentMonth,
           }),
           loadStatsMonthlyTherapists({
             year: target.year,
             month: target.month,
             type: 'shinjang_spray',
             baseTherapists: baseShockwaveTherapists,
+            preferBaseRoster: isCurrentMonth,
           }),
         ]);
 
@@ -507,7 +518,7 @@ export default function CombinedStatsPage() {
           }
         );
 
-        return buildCombinedStatsMonthSummary({
+        const summaryInput = {
           year: target.year,
           month: target.month,
           shockwaveRows: shockwaveResult.data || [],
@@ -519,7 +530,13 @@ export default function CombinedStatsPage() {
           monthlyShinjangTherapists,
           settings,
           isAdmin,
-        });
+          includeLogOnlyTherapists: !isCurrentMonth,
+        };
+        const adjusted = buildCombinedStatsMonthSummary(summaryInput);
+        return {
+          ...adjusted,
+          withoutCryoDeduction: buildCombinedStatsMonthSummary({ ...summaryInput, applyCryoDeduction: false }),
+        };
       };
       const summaries = await loadStatsMonthsCurrentFirst({
         targets: monthTargets,
@@ -529,21 +546,21 @@ export default function CombinedStatsPage() {
         concurrency: 2,
         onCurrentLoaded: (summary) => {
           if (requestId !== requestIdRef.current || !summary) return;
-          setMonthSummaries((previous) => {
+          setSummaryState((previous) => {
             const summariesByMonth = new Map(
-              previous.map((item) => [item.monthKey, item])
+              (previous.scope === summaryScope ? previous.summaries : []).map((item) => [item.monthKey, item])
             );
             summariesByMonth.set(summary.monthKey, summary);
-            return monthTargets
+            return { scope: summaryScope, summaries: monthTargets
               .map((target) => summariesByMonth.get(
                 `${Number(target.year)}-${String(Number(target.month)).padStart(2, '0')}`
               ))
-              .filter(Boolean);
+              .filter(Boolean) };
           });
         },
       });
       if (requestId !== requestIdRef.current) return;
-      setMonthSummaries(summaries);
+      setSummaryState({ scope: summaryScope, summaries });
     } catch (error) {
       if (requestId === requestIdRef.current) {
         console.error('전체 통계 로드 실패:', error);
@@ -561,6 +578,7 @@ export default function CombinedStatsPage() {
     currentMonth,
     currentYear,
     monthTargets,
+    summaryScope,
   ]);
 
   useEffect(() => {
@@ -618,7 +636,7 @@ export default function CombinedStatsPage() {
                   <button type="button" className={`combined-therapist-tab-btn ${summaryViewMode === 'total' ? 'is-active' : ''}`} aria-pressed={summaryViewMode === 'total'} onClick={() => setSummaryViewMode('total')}>전체보기</button>
                   <button type="button" className={`combined-therapist-tab-btn ${summaryViewMode === 'detail' ? 'is-active' : ''}`} aria-pressed={summaryViewMode === 'detail'} onClick={() => setSummaryViewMode('detail')}>상세보기</button>
                 </div>
-                <button type="button" className="combined-table-print-button" onClick={(event) => printSettlementTable(event.currentTarget.closest('article'), `${currentYear}년 ${currentMonth}월 치료사별 합계`)}><Printer size={16} />인쇄</button>
+                <button type="button" className="combined-table-print-button" onClick={(event) => printSettlementTable(event.currentTarget.closest('article'), `${currentYear}년 ${currentMonth}월 치료사별 합계 (${cryoModeLabel})`)}><Printer size={16} />인쇄</button>
               </div>
             </div>
           </th></tr>
@@ -654,13 +672,13 @@ export default function CombinedStatsPage() {
       </table>
     </article>
   ) : null;
-  const recentRows = useMemo(() => [...monthSummaries].reverse(), [monthSummaries]);
+  const recentRows = [...monthSummaries].reverse();
   const visibleRecentTreatments = COMBINED_STATS_TREATMENTS.filter(({ key }) => recentTableVisibility[key] && (isAdmin || key !== 'manual_therapy'));
   const treatmentsBeforeIon = recentIonLayout === 'vertical'
     ? visibleRecentTreatments.length
     : recentTableVisibility.overall ? 1 : 2;
   const renderRecentTreatmentTable = ({ key, label }) => (
-    <CombinedRecentTreatmentTable key={key} treatment={key} label={label} periodLabel={recentPeriodLabel} summaries={recentRows} currentMonthKey={currentMonthKey} viewMode={recentTreatmentViewModes[key] || 'total-only'} onViewModeChange={(mode) => setRecentTreatmentViewModes((current) => ({ ...current, [key]: mode }))} />
+    <CombinedRecentTreatmentTable key={key} treatment={key} label={label} periodLabel={recentPeriodLabel} cryoModeLabel={cryoModeLabel} summaries={recentRows} currentMonthKey={currentMonthKey} viewMode={recentTreatmentViewModes[key] || 'total-only'} onViewModeChange={(mode) => setRecentTreatmentViewModes((current) => ({ ...current, [key]: mode }))} />
   );
 
   return (
@@ -668,13 +686,11 @@ export default function CombinedStatsPage() {
       {isLoading && <div className="top-loading-bar" />}
       <header className="combined-stats-header">
         <div>
-          <h1 data-print-suffix={`(${isAdmin ? '충격파 · 신장분사 · 도수치료의 크라이오 차감 적용 결산 입니다.' : '신장분사 치료의 크라이오 차감 적용 결산 입니다.'})`}>
-            {currentYear}년 {String(currentMonth).padStart(2, '0')}월 {activeTab === 'stats' ? '전체 통계' : '전체 결산'}
+          <h1 data-print-suffix={`(${isAdmin ? '충격파 · 신장분사 · 도수치료' : '신장분사 치료'}의 크라이오 차감 ${applyCryoDeduction ? '적용' : '비적용'} 결산 입니다.)`}>
+            {currentYear}년 {String(currentMonth).padStart(2, '0')}월 {activeTab === 'settlement' ? '전체 결산' : '전체 통계'}
           </h1>
           <p>
-            {isAdmin
-              ? '충격파 · 신장분사 · 도수치료의 크라이오 차감 적용 결산 입니다.'
-              : '신장분사 치료의 크라이오 차감 적용 결산 입니다.'}
+            {isAdmin ? '충격파 · 신장분사 · 도수치료' : '신장분사 치료'}의 크라이오 차감 {applyCryoDeduction ? '적용' : '비적용'} 결산 입니다.
           </p>
           <div className="combined-stats-nav-bar">
             <div className="combined-stats-nav-tabs" role="tablist" aria-label="전체 통계 탭 메뉴">
@@ -705,6 +721,10 @@ export default function CombinedStatsPage() {
               >
                 전체 결산
               </button>
+            </div>
+            <div className="combined-cryo-mode-tabs" role="group" aria-label="크라이오 차감 방식">
+              <button type="button" className={applyCryoDeduction ? 'is-active' : ''} aria-pressed={applyCryoDeduction} onClick={() => setApplyCryoDeduction(true)}>크라이오 차감 적용</button>
+              <button type="button" className={!applyCryoDeduction ? 'is-active' : ''} aria-pressed={!applyCryoDeduction} onClick={() => setApplyCryoDeduction(false)}>크라이오 차감 비적용</button>
             </div>
             {activeTab === 'therapist' && (
               <div className="combined-stats-layout-tabs" role="tablist" aria-label="레이아웃 보기 방식">
@@ -933,7 +953,7 @@ export default function CombinedStatsPage() {
       {activeTab === 'summary' && (
         <div className="combined-stats-dashboard combined-stats-dashboard--summary">
           {currentSummary?.therapists?.length > 0 ? (
-            <div className="combined-stats-summary-container" data-print-title={`${currentYear}년 ${currentMonth}월 전체 통계 합계`}>
+            <div className="combined-stats-summary-container" data-print-title={`${currentYear}년 ${currentMonth}월 전체 통계 합계 (${cryoModeLabel})`}>
               <div className="combined-summary-stack">
                 {renderTherapistSummary()}
               </div>
@@ -962,7 +982,7 @@ export default function CombinedStatsPage() {
                               <button type="button" className={`combined-therapist-tab-btn ${breakdownViewMode === 'detail' ? 'is-active' : ''}`} aria-pressed={breakdownViewMode === 'detail'} onClick={() => setBreakdownViewMode('detail')}>상세보기</button>
                               <button type="button" className={`combined-therapist-tab-btn ${breakdownViewMode === 'detail-no-incentive' ? 'is-active' : ''}`} aria-pressed={breakdownViewMode === 'detail-no-incentive'} onClick={() => setBreakdownViewMode('detail-no-incentive')}>상세보기2</button>
                             </div>
-                            <button type="button" className="combined-breakdown-print" aria-label="항목별 결산 내역만 인쇄" onClick={() => printSettlementTable(breakdownRef.current, `${currentYear}년 ${currentMonth}월 항목별 결산 내역`)}><Printer size={16} />인쇄</button>
+                            <button type="button" className="combined-breakdown-print" aria-label="항목별 결산 내역만 인쇄" onClick={() => printSettlementTable(breakdownRef.current, `${currentYear}년 ${currentMonth}월 항목별 결산 내역 (${cryoModeLabel})`)}><Printer size={16} />인쇄</button>
                           </div>
                         </div>
                       </th>
@@ -1049,15 +1069,15 @@ export default function CombinedStatsPage() {
           </div>}
         </div>
         <div className="combined-recent-scroll" role="region" aria-label="최근 결산 표 가로 스크롤" tabIndex={0}>
-        <div className="combined-stats-dashboard combined-stats-dashboard--settlement" data-recent-view={hasVisibleRecentDetails ? 'detail' : 'total-only'} data-recent-layout={isAdmin && showIonTreatment ? recentIonLayout : 'default'} data-print-title={`${recentPeriodLabel} 전체결산`}>
+        <div className="combined-stats-dashboard combined-stats-dashboard--settlement" data-recent-view={hasVisibleRecentDetails ? 'detail' : 'total-only'} data-recent-layout={isAdmin && showIonTreatment ? recentIonLayout : 'default'} data-print-title={`${recentPeriodLabel} 전체결산 (${cryoModeLabel})`}>
           {recentTableVisibility.overall && <section className="combined-stats-recent combined-settlement-recent-main" aria-label={`${recentPeriodLabel} 전체 결산 현황`}>
             <div className="combined-stats-recent-heading">
               <div>
                 <h2>{recentPeriodLabel} 전체결산</h2>
-                <span>크라이오 차감 적용 전체 통계</span>
+                <span>크라이오 차감 {applyCryoDeduction ? '적용' : '비적용'} 전체 통계</span>
               </div>
               <div className="combined-recent-controls">
-                <button type="button" className="combined-table-print-button" onClick={(event) => printSettlementTable(event.currentTarget.closest('section'), `${recentPeriodLabel} 전체결산`)}><Printer size={16} />인쇄</button>
+                <button type="button" className="combined-table-print-button" onClick={(event) => printSettlementTable(event.currentTarget.closest('section'), `${recentPeriodLabel} 전체결산 (${cryoModeLabel})`)}><Printer size={16} />인쇄</button>
                 <div className="combined-recent-filter-tabs" role="tablist" aria-label="결산 현황 보기 방식">
                   <button
                     type="button"

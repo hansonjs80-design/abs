@@ -57,6 +57,14 @@ function buildStandardIncentiveRates(settings) {
     : [];
 }
 
+function getSettlementPrescriptionPrices(settings, applyCryoDeduction) {
+  return applyCryoDeduction ? buildCryoAdjustedPrescriptionPrices({
+    prescriptionPrices: settings?.prescription_prices,
+    cryoPrescriptions: settings?.cryo_prescriptions,
+    cryoPrices: settings?.cryo_prices,
+  }) : settings?.prescription_prices;
+}
+
 function addShinjangIncentiveGroup(groupsByRate, rateValue, value = {}) {
   const rate = Math.max(0, Number(rateValue) || 0);
   const current = groupsByRate.get(rate) || {
@@ -125,6 +133,7 @@ export function buildCombinedStatsTherapists({
   monthlyShinjangTherapists = [],
   shinjangTherapistNames = null,
   shinjangRows = [],
+  includeLogOnlyTherapists = true,
 } = {}) {
   const therapistsByName = new Map();
   const defaultShinjangTherapists = buildShinjangSprayDefaultTherapists({
@@ -140,7 +149,7 @@ export function buildCombinedStatsTherapists({
     : null;
   const shinjangCandidates = [
     ...buildDisplayTherapists(defaultShinjangTherapists, monthlyShinjangTherapists),
-    ...(Array.isArray(shinjangRows)
+    ...(includeLogOnlyTherapists && Array.isArray(shinjangRows)
       ? shinjangRows.map((row) => ({ name: row?.therapist_name }))
       : []),
   ].filter((therapist) => (
@@ -157,6 +166,7 @@ function buildStandardTreatmentSummary({
   rows,
   therapists,
   settings,
+  applyCryoDeduction = true,
 }) {
   const prescriptions = getVisibleStandardPrescriptions(settings);
   const prescriptionKeys = new Set(prescriptions.map(normalizePrescriptionKey));
@@ -164,17 +174,13 @@ function buildStandardTreatmentSummary({
     !isShinjangSprayPrescription(row?.prescription)
     && prescriptionKeys.has(normalizePrescriptionKey(row?.prescription))
   ));
-  const cryoAdjustedPrices = buildCryoAdjustedPrescriptionPrices({
-    prescriptionPrices: settings?.prescription_prices,
-    cryoPrescriptions: settings?.cryo_prescriptions,
-    cryoPrices: settings?.cryo_prices,
-  });
+  const prescriptionPrices = getSettlementPrescriptionPrices(settings, applyCryoDeduction);
 
   const settlement = buildManualTherapySettlementSummary({
     rows: visibleRows,
     prescriptions,
     therapists,
-    prescriptionPrices: cryoAdjustedPrices,
+    prescriptionPrices,
     incentivePercentage: settings?.incentive_percentage,
   });
 
@@ -191,6 +197,7 @@ function buildShinjangTreatmentSummary({
   monthlyShinjangTherapists,
   settings,
   isAdmin,
+  applyCryoDeduction = true,
 }) {
   const mergedRows = mergeShinjangSprayLogs({
     shockwaveRows,
@@ -240,7 +247,7 @@ function buildShinjangTreatmentSummary({
       therapists,
       prescriptionPrices: settings?.prescription_prices,
       incentivePercentages: settings?.prescription_incentive_percentages,
-      isCryoAdjusted: true,
+      isCryoAdjusted: applyCryoDeduction,
     }),
   };
 }
@@ -299,6 +306,8 @@ export function buildCombinedStatsMonthSummary({
   monthlyShinjangTherapists = [],
   settings = {},
   isAdmin = false,
+  applyCryoDeduction = true,
+  includeLogOnlyTherapists = true,
 } = {}) {
   const shockwaveSettings = getEffectiveSettlementSettings(settings, year, month, 'shockwave');
   const manualSettings = getEffectiveSettlementSettings(settings, year, month, 'manual_therapy');
@@ -324,16 +333,19 @@ export function buildCombinedStatsMonthSummary({
     monthlyShinjangTherapists,
     shinjangTherapistNames: shinjangSettings.therapist_names,
     shinjangRows: shinjangSourceRows,
+    includeLogOnlyTherapists,
   });
   const shockwaveSettlement = buildStandardTreatmentSummary({
     rows: shockwaveRows,
     therapists,
     settings: shockwaveSettings,
+    applyCryoDeduction,
   });
   const manualSettlement = buildStandardTreatmentSummary({
     rows: manualTherapyRows,
     therapists,
     settings: manualSettings,
+    applyCryoDeduction,
   });
   const shinjangResult = buildShinjangTreatmentSummary({
     shockwaveRows,
@@ -342,6 +354,7 @@ export function buildCombinedStatsMonthSummary({
     monthlyShinjangTherapists,
     settings: shinjangSettings,
     isAdmin,
+    applyCryoDeduction,
   });
   const treatmentMaps = {
     // 충격파 결산은 기존 탭과 동일하게 처방별 인센티브를 반올림한 뒤 합산한다.
@@ -474,10 +487,12 @@ export function buildCombinedStatsMonthSummary({
     therapists: therapistSummaries,
     treatmentTotals,
     recentTreatments: {
-      shockwave: buildRecentTreatmentSummary(shockwaveRows, getVisibleStandardPrescriptions(shockwaveSettings), shockwaveSettings.prescription_prices),
-      shinjang_spray: buildRecentTreatmentSummary(shinjangSourceRows, shinjangResult.prescriptions, {}, true),
+      shockwave: buildRecentTreatmentSummary(shockwaveRows, getVisibleStandardPrescriptions(shockwaveSettings), getSettlementPrescriptionPrices(shockwaveSettings, applyCryoDeduction)),
+      shinjang_spray: buildRecentTreatmentSummary(shinjangSourceRows, shinjangResult.prescriptions, {}, (row) => (
+        applyCryoDeduction && row.is_cryo ? row.cryo_adjusted_unit_price : row.unit_price
+      )),
       manual_therapy: isAdmin
-        ? buildRecentTreatmentSummary(manualTherapyRows, getVisibleStandardPrescriptions(manualSettings), manualSettings.prescription_prices)
+        ? buildRecentTreatmentSummary(manualTherapyRows, getVisibleStandardPrescriptions(manualSettings), getSettlementPrescriptionPrices(manualSettings, applyCryoDeduction))
         : buildRecentTreatmentSummary(),
     },
     shinjangIncentiveGroups,

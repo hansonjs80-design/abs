@@ -63,6 +63,35 @@
   border: 1px solid #cbd5e1;
 }
 
+.combined-cryo-mode-tabs {
+  display: inline-flex;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.combined-cryo-mode-tabs button {
+  padding: 7px 11px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #475569;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.combined-cryo-mode-tabs button.is-active {
+  border-color: #93c5fd;
+  background: #fff;
+  color: #1d4ed8;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.1);
+}
+
 .combined-stats-layout-tab {
   display: inline-flex;
   align-items: center;

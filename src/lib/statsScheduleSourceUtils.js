@@ -325,6 +325,7 @@ export async function loadStatsMonthlyTherapists({
   month,
   type = 'shockwave',
   baseTherapists = [],
+  preferBaseRoster = false,
 } = {}) {
   const { data, error } = await withScheduleStatsQueryTimeout(
     supabase
@@ -340,6 +341,10 @@ export async function loadStatsMonthlyTherapists({
 
   if (error) throw error;
   if (Array.isArray(data) && data.length > 0) return data;
+
+  if (preferBaseRoster && Array.isArray(baseTherapists) && baseTherapists.length > 0) {
+    return buildMonthlyTherapistRowsFromRoster({ year, month, type, roster: baseTherapists });
+  }
 
   const currentValue = Number(year) * 12 + Number(month);
   const { data: previousRows, error: previousError } = await withScheduleStatsQueryTimeout(

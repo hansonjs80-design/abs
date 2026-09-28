@@ -1,7 +1,7 @@
 import { normalizePrescriptionKey, toStatsPrescriptionCount } from './shockwaveStatsCountUtils.js';
 
-// Match the source tabs: prescription quantities, pre-cryo prices, and starred visit rows.
-export function buildRecentTreatmentSummary(rows = [], prescriptions = [], prices = {}, useRowPrice = false) {
+// Keep prescription quantities and starred visit rows while allowing the settlement price mode.
+export function buildRecentTreatmentSummary(rows = [], prescriptions = [], prices = {}, rowPriceSource = false) {
   const groups = new Map(prescriptions.map((prescription) => [normalizePrescriptionKey(prescription), {
     label: prescription.replace(/^신장\s*분사\s*/, '신장 '), count: 0, amount: 0, newPatientCount: 0,
   }]));
@@ -12,7 +12,10 @@ export function buildRecentTreatmentSummary(rows = [], prescriptions = [], price
     if (!group) continue;
     const count = toStatsPrescriptionCount(row.prescription_count);
     group.count += count;
-    group.amount += count * Math.max(0, Number(useRowPrice ? row.unit_price : normalizedPrices.get(key)) || 0);
+    const unitPrice = typeof rowPriceSource === 'function'
+      ? rowPriceSource(row)
+      : rowPriceSource ? row.unit_price : normalizedPrices.get(key);
+    group.amount += count * Math.max(0, Number(unitPrice) || 0);
     if (String(row.patient_name || '').includes('*')) group.newPatientCount += 1;
   }
   const details = [...groups.values()].filter((group) => group.count > 0);

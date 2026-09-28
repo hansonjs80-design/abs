@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  buildCombinedStatsTherapists,
   buildCombinedStatsMonthSummary,
   buildCombinedStatsRecentBreakdown,
   buildCombinedStatsRecentTotal,
@@ -59,6 +60,45 @@ const manualTherapyRows = [
 ];
 
 describe('combined statistics', () => {
+  it('does not show a former therapist from current-month log rows alone', () => {
+    const visible = buildCombinedStatsTherapists({
+      shockwaveTherapists: [{ name: '현재', slot_index: 0 }],
+      monthlyShockwaveTherapists: [{ therapist_name: '현재', slot_index: 0, start_day: 1, end_day: 30 }],
+      shinjangRows: [{ therapist_name: '이전' }],
+      includeLogOnlyTherapists: false,
+    });
+    assert.deepEqual(visible.map((item) => item.name), ['현재']);
+  });
+
+  it('switches cryo deduction for every treatment, therapist total, and recent table', () => {
+    const input = {
+      year: 2026,
+      month: 9,
+      shockwaveRows,
+      manualTherapyRows,
+      shockwaveTherapists: therapists,
+      manualTherapists: therapists,
+      settings,
+      isAdmin: true,
+    };
+    const adjusted = buildCombinedStatsMonthSummary(input);
+    const fullPrice = buildCombinedStatsMonthSummary({ ...input, applyCryoDeduction: false });
+    const adjustedPrimary = adjusted.therapists.find((item) => item.therapist.name === '주한솔');
+    const fullPricePrimary = fullPrice.therapists.find((item) => item.therapist.name === '주한솔');
+
+    assert.deepEqual(fullPricePrimary.treatments.shockwave, { count: 2, amount: 200000, incentive: 20000 });
+    assert.deepEqual(fullPricePrimary.treatments.shinjang_spray, { count: 1, amount: 300000, incentive: 21000 });
+    assert.deepEqual(fullPricePrimary.treatments.manual_therapy, { count: 1, amount: 200000, incentive: 10000 });
+    assert.deepEqual(fullPricePrimary.total, { count: 4, amount: 700000, incentive: 51000 });
+    assert.equal(adjustedPrimary.total.amount, 580000);
+    assert.equal(fullPrice.recentTreatments.shockwave.amount, 200000);
+    assert.equal(fullPrice.recentTreatments.shinjang_spray.amount, 700000);
+    assert.equal(fullPrice.recentTreatments.manual_therapy.amount, 200000);
+    assert.equal(adjusted.recentTreatments.shockwave.amount, 160000);
+    assert.equal(adjusted.recentTreatments.shinjang_spray.amount, 670000);
+    assert.equal(adjusted.recentTreatments.manual_therapy.amount, 150000);
+  });
+
   it('uses cryo-adjusted totals and hides 15 percent shinjang and manual rows from non-admin settlements', () => {
     const summary = buildCombinedStatsMonthSummary({
       year: 2026,

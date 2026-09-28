@@ -31,8 +31,9 @@ describe('combined statistics UI', () => {
   it('shows count, cryo-adjusted settlement, incentive, and recent period totals', async () => {
     const pageSource = await readFile(pageUrl, 'utf8');
 
-    assert.match(pageSource, /충격파 · 신장분사 · 도수치료의 크라이오 차감 적용 결산/);
-    assert.match(pageSource, /신장분사 치료의 크라이오 차감 적용 결산/);
+    assert.match(pageSource, /크라이오 차감 적용<\/button>/);
+    assert.match(pageSource, /크라이오 차감 비적용<\/button>/);
+    assert.match(pageSource, /summary\.withoutCryoDeduction/);
     assert.match(pageSource, /<th>총건수<\/th>/);
     assert.match(pageSource, /<th>총 결산 금액<\/th>/);
     assert.match(pageSource, /<th>총 인센티브<\/th>/);
