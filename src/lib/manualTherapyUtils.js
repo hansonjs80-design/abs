@@ -1,7 +1,7 @@
-import { supabase } from './supabaseClient';
-import { generateShockwaveCalendar, getTodayKST } from './calendarUtils';
-import { normalizeNameForMatch } from './memoParser';
-import { TREATMENT_COMPLETE_BG } from './schedulerUtils';
+import { supabase } from './supabaseClient.js';
+import { generateShockwaveCalendar, getTodayKST } from './calendarUtils.js';
+import { normalizeNameForMatch } from './nameMatchUtils.js';
+import { TREATMENT_COMPLETE_BG } from './schedulerUtils.js';
 import { parseConfiguredManualTherapyEntry } from './manualTherapyEntryUtils.js';
 import {
   getConfiguredDoseTag,
@@ -10,7 +10,7 @@ import {
 import {
   getPastLogsForPatient,
   sortPastLogsLatestFirst,
-} from './patientHistoryMatchUtils';
+} from './patientHistoryMatchUtils.js';
 import {
   applyScheduleStatsMutation,
   buildScheduleStatsSyncMutation,
@@ -459,6 +459,7 @@ export async function syncMonthManualTherapyScheduleToStats({
   scheduleAuthoritative = true,
   emitEvent = true,
   replaceExistingMonthLogs = false,
+  collectOnly = false,
 }) {
   const today = getTodayKST();
   const effectiveOverwriteManual = shouldOverwriteExistingStatsForScheduleSync({
@@ -477,7 +478,7 @@ export async function syncMonthManualTherapyScheduleToStats({
 
   const { startDate: startOfMonthStr, endDate: endOfMonthStr } = getStatsMonthDateRange(year, month);
 
-  if (replaceExistingMonthLogs) {
+  if (replaceExistingMonthLogs || collectOnly) {
     const weeks = generateShockwaveCalendar(year, month);
     const patientNamesSet = new Set();
     const chartNumbersSet = new Set();
@@ -592,6 +593,10 @@ export async function syncMonthManualTherapyScheduleToStats({
 
     if (dateErrors.length > 0) {
       throw new Error(`도수치료 월 통계 재계산 실패: ${dateErrors.join(', ')}`);
+    }
+
+    if (collectOnly) {
+      return { rebuiltRows: rebuiltRowsForMonth, totalInserted: 0, totalDeleted: 0, totalUpdated: 0, totalUpdates: 0 };
     }
 
     const deletedCount = effectiveOverwriteManual

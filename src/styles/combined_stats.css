@@ -2110,8 +2110,11 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   background: linear-gradient(135deg, #ede9fe, #f5f3ff);
 }
 .combined-settlement-recent-main thead th { background: #ede9fe; }
-.combined-recent-breakdown-item--shinjang-total,
-.combined-shinjang-total > :is(th, td) {
+.combined-recent-breakdown-item--shinjang-total {
   background: #dcfce7;
+  font-weight: 800;
+}
+.combined-shinjang-total > :is(th, td) {
+  background: #f1f5f9;
   font-weight: 800;
 }

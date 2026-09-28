@@ -100,8 +100,8 @@ describe('combined statistics UI', () => {
       readFile(styleUrl, 'utf8'),
     ]);
 
-    assert.match(pageSource, /loadStatsMonthsCurrentFirst/);
-    assert.match(pageSource, /onCurrentLoaded:\s*\(summary\)/);
+    assert.match(pageSource, /loadStatsMonthsProgressively/);
+    assert.match(pageSource, /onMonthLoaded:\s*\(summary\)/);
     assert.match(pageSource, /className="combined-current-col-type"/);
     assert.match(pageSource, /className="combined-recent-col-month"/);
     assert.match(pageSource, /className="combined-therapist-amount-cell"/);
@@ -194,8 +194,8 @@ describe('combined statistics UI', () => {
     assert.match(pageSource, /getTherapistRateTotals/);
     assert.match(pageSource, /Number\(rate7Total\.count\) > 0/);
     assert.match(pageSource, /isAdmin && Number\(rate15Total\.count\) > 0/);
-    assert.match(pageSource, /<th>7% 합계<\/th>/);
-    assert.match(pageSource, /<th>15% 합계<\/th>/);
+    assert.match(pageSource, /<th>충격파\+신장\(7%\)<\/th>/);
+    assert.match(pageSource, /<th>도수\+신장\(15%\)<\/th>/);
     assert.match(pageSource, /combined-therapist-subtotal/);
     assert.match(styleSource, /\.combined-therapist-subtotal/);
     assert.match(styleSource, /\.combined-therapist-card tbody tr\.combined-therapist-subtotal\.combined-incentive-rate-row--7/);

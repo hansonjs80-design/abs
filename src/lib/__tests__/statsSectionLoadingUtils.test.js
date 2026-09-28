@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   isDisplayedStatsMonth,
   loadStatsMonthsCurrentFirst,
+  loadStatsMonthsProgressively,
   loadStatsMonthsTogether,
   loadStatsMonthsWithConcurrency,
   shouldKeepStatsSectionMounted,
@@ -117,4 +118,25 @@ describe('statistics secondary section preparation', () => {
     assert.ok(events.indexOf('current-6월') < events.indexOf('start-4'));
     assert.ok(events.indexOf('current-6월') < events.indexOf('start-5'));
   });
+});
+
+
+it('publishes history without waiting for the slow current month and keeps final order', async () => {
+  let finishCurrent;
+  const events = [];
+  const targets = [{ year: 2026, month: 8 }, { year: 2026, month: 9 }];
+  const loading = loadStatsMonthsProgressively({
+    targets, currentYear: 2026, currentMonth: 9,
+    loadMonth: async target => {
+      events.push(`start-${target.month}`);
+      if (target.month === 9) await new Promise(resolve => { finishCurrent = resolve; });
+      return target.month;
+    },
+    onMonthLoaded: value => events.push(`show-${value}`),
+  });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(events, ['start-9', 'start-8', 'show-8']);
+  finishCurrent();
+  assert.deepEqual(await loading, [8, 9]);
+  assert.equal(events.at(-1), 'show-9');
 });

@@ -572,6 +572,7 @@ export async function syncMonthShockwaveScheduleToStats({
   scheduleAuthoritative = true,
   emitEvent = true,
   replaceExistingMonthLogs = false,
+  collectOnly = false,
   onRowsRebuilt = null,
 }) {
   const today = getTodayKST();
@@ -591,7 +592,7 @@ export async function syncMonthShockwaveScheduleToStats({
 
   const { startDate: startOfMonthStr, endDate: endOfMonthStr } = getStatsMonthDateRange(year, month);
 
-  if (replaceExistingMonthLogs) {
+  if (replaceExistingMonthLogs || collectOnly) {
     const weeks = generateShockwaveCalendar(year, month);
     const patientNamesSet = new Set();
     const chartNumbersSet = new Set();
@@ -707,6 +708,10 @@ export async function syncMonthShockwaveScheduleToStats({
 
     if (typeof onRowsRebuilt === 'function') {
       onRowsRebuilt(rebuiltRowsForMonth);
+    }
+
+    if (collectOnly) {
+      return { rebuiltRows: rebuiltRowsForMonth, totalInserted: 0, totalDeleted: 0, totalUpdated: 0, totalUpdates: 0 };
     }
 
     const deletedCount = effectiveOverwriteManual

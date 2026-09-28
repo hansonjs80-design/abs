@@ -21,7 +21,7 @@ import {
   loadScheduleMemosForStatsMonth,
   loadStatsMonthlyTherapists,
 } from '../lib/statsScheduleSourceUtils';
-import { loadStatsMonthsCurrentFirst } from '../lib/statsSectionLoadingUtils';
+import { loadStatsMonthsProgressively } from '../lib/statsSectionLoadingUtils';
 import { buildCombinedPrescriptionDetails, buildCombinedRateTotals, getCombinedSummaryAnchorIndex } from '../lib/combinedPrescriptionDetails';
 import ManualTherapySixMonthIonTreatment from '../components/shockwave/ManualTherapySixMonthIonTreatment';
 import { setManualTherapyIonTreatment } from '../lib/manualTherapyIonTreatmentUtils';
@@ -359,7 +359,7 @@ export default function CombinedStatsPage() {
     if (!total) return null;
     return (
       <tr className={`combined-therapist-subtotal ${rate === 7 ? 'combined-therapist-subtotal--start ' : ''}combined-incentive-rate-row--${rate}`}>
-        <th>{rate}% 합계</th>
+        <th>{Number(rate) === 7 ? '충격파+신장(7%)' : '도수+신장(15%)'}</th>
         <td>{formatCount(total.count)}</td>
         <td className="combined-summary-amount-cell">{formatCurrency(total.amount)}</td>
         {showBreakdownIncentive && <td className="combined-summary-incentive-cell">{formatCurrency(total.incentive)}</td>}
@@ -466,46 +466,34 @@ export default function CombinedStatsPage() {
           ],
         });
 
+        let shockwaveRows;
+        let manualRows;
         if (isCurrentMonth) {
-          const syncResults = await Promise.allSettled([
-            ...(baseShockwaveTherapists.length > 0 ? [syncMonthShockwaveScheduleToStats({
-              year: target.year,
-              month: target.month,
-              memos,
-              therapists: baseShockwaveTherapists,
-              monthlyTherapists: monthlyShockwaveTherapists,
-              settings,
-              upToToday: true,
-              scheduleAuthoritative: true,
-              emitEvent: false,
-              replaceExistingMonthLogs: true,
-            })] : []),
-            ...(baseManualTherapists.length > 0 ? [syncMonthManualTherapyScheduleToStats({
-              year: target.year,
-              month: target.month,
-              memos,
-              therapists: baseManualTherapists,
-              monthlyTherapists: monthlyManualTherapists,
-              settings,
-              upToToday: true,
-              scheduleAuthoritative: true,
-              emitEvent: false,
-              replaceExistingMonthLogs: true,
-            })] : []),
+          // Reuse the same schedule calculation without waiting for DB replacement and re-fetch.
+          const [shockwave, manual] = await Promise.all([
+            syncMonthShockwaveScheduleToStats({
+              year: target.year, month: target.month, memos,
+              therapists: baseShockwaveTherapists, monthlyTherapists: monthlyShockwaveTherapists,
+              settings, upToToday: true, scheduleAuthoritative: true, emitEvent: false, collectOnly: true,
+            }),
+            syncMonthManualTherapyScheduleToStats({
+              year: target.year, month: target.month, memos,
+              therapists: baseManualTherapists, monthlyTherapists: monthlyManualTherapists,
+              settings, upToToday: true, scheduleAuthoritative: true, emitEvent: false, collectOnly: true,
+            }),
           ]);
-          syncResults.forEach((result) => {
-            if (result.status === 'rejected') {
-              console.error('전체 통계 원본 동기화 실패:', result.reason);
-            }
-          });
+          shockwaveRows = shockwave.rebuiltRows;
+          manualRows = manual.rebuiltRows;
+        } else {
+          const [shockwaveResult, manualResult] = await Promise.all([
+            buildMonthLogQuery('shockwave_patient_logs', target.year, target.month),
+            buildMonthLogQuery('manual_therapy_patient_logs', target.year, target.month),
+          ]);
+          if (shockwaveResult.error) throw shockwaveResult.error;
+          if (manualResult.error) throw manualResult.error;
+          shockwaveRows = shockwaveResult.data || [];
+          manualRows = manualResult.data || [];
         }
-
-        const [shockwaveResult, manualResult] = await Promise.all([
-          buildMonthLogQuery('shockwave_patient_logs', target.year, target.month),
-          buildMonthLogQuery('manual_therapy_patient_logs', target.year, target.month),
-        ]);
-        if (shockwaveResult.error) throw shockwaveResult.error;
-        if (manualResult.error) throw manualResult.error;
 
         const manualSettings = getEffectiveSettlementSettings(
           settings,
@@ -514,7 +502,7 @@ export default function CombinedStatsPage() {
           'manual_therapy'
         );
         const normalizedManualRows = normalizeManualTherapyLogRows(
-          manualResult.data || [],
+          manualRows,
           manualSettings.prescriptions,
           {
             memos,
@@ -528,7 +516,7 @@ export default function CombinedStatsPage() {
         const summaryInput = {
           year: target.year,
           month: target.month,
-          shockwaveRows: shockwaveResult.data || [],
+          shockwaveRows,
           manualTherapyRows: normalizedManualRows,
           shockwaveTherapists: baseShockwaveTherapists,
           manualTherapists: baseManualTherapists,
@@ -545,13 +533,13 @@ export default function CombinedStatsPage() {
           withoutCryoDeduction: buildCombinedStatsMonthSummary({ ...summaryInput, applyCryoDeduction: false }),
         };
       };
-      const summaries = await loadStatsMonthsCurrentFirst({
+      const summaries = await loadStatsMonthsProgressively({
         targets: monthTargets,
         currentYear,
         currentMonth,
         loadMonth: loadMonthSummary,
         concurrency: 2,
-        onCurrentLoaded: (summary) => {
+        onMonthLoaded: (summary) => {
           if (requestId !== requestIdRef.current || !summary) return;
           setSummaryState((previous) => {
             const summariesByMonth = new Map(
@@ -896,7 +884,7 @@ export default function CombinedStatsPage() {
                     ))}
                     {Number(rate7Total.count) > 0 && (
                       <tr className="combined-therapist-subtotal combined-therapist-subtotal--start combined-incentive-rate-row--7">
-                        <th>7% 합계</th>
+                        <th>충격파+신장(7%)</th>
                         <td className="combined-therapist-count-cell">{formatCount(rate7Total.count)}</td>
                         <td className="combined-therapist-amount-cell">{formatCurrency(rate7Total.amount)}</td>
                         <td className="combined-therapist-incentive-cell">{formatCurrency(rate7Total.incentive)}</td>
@@ -904,7 +892,7 @@ export default function CombinedStatsPage() {
                     )}
                     {isAdmin && Number(rate15Total.count) > 0 && (
                       <tr className={`combined-therapist-subtotal ${Number(rate7Total.count) <= 0 ? 'combined-therapist-subtotal--start ' : ''}combined-incentive-rate-row--15`}>
-                        <th>15% 합계</th>
+                        <th>도수+신장(15%)</th>
                         <td className="combined-therapist-count-cell">{formatCount(rate15Total.count)}</td>
                         <td className="combined-therapist-amount-cell">{formatCurrency(rate15Total.amount)}</td>
                         <td className="combined-therapist-incentive-cell">{formatCurrency(rate15Total.incentive)}</td>
@@ -1017,6 +1005,12 @@ export default function CombinedStatsPage() {
                       {showBreakdownIncentive && <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.shockwave?.incentive)}</td>}
                     </tr>
                     {renderBreakdownDetails(currentSummary, 'shockwave')}
+                    <tr className="combined-therapist-subtotal combined-shinjang-total">
+                      <th>신장분사 합계</th>
+                      <td>{formatCount(currentSummary.treatmentTotals?.shinjang_spray?.count)}</td>
+                      <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.shinjang_spray?.amount)}</td>
+                      {showBreakdownIncentive && <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.shinjang_spray?.incentive)}</td>}
+                    </tr>
                     {(Array.isArray(currentSummary.shinjangIncentiveGroups) && currentSummary.shinjangIncentiveGroups.length > 0)
                       ? currentSummary.shinjangIncentiveGroups.map((group) => (
                           <Fragment key={`breakdown-shinjang-${group.rate}`}>
@@ -1048,12 +1042,6 @@ export default function CombinedStatsPage() {
                       </tr>
                     )}
                     {isAdmin && renderBreakdownDetails(currentSummary, 'manual_therapy')}
-                    <tr className="combined-therapist-subtotal combined-shinjang-total">
-                      <th>신장분사 합계</th>
-                      <td>{formatCount(currentSummary.treatmentTotals?.shinjang_spray?.count)}</td>
-                      <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.shinjang_spray?.amount)}</td>
-                      {showBreakdownIncentive && <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.shinjang_spray?.incentive)}</td>}
-                    </tr>
                     {renderBreakdownRateTotal(currentSummary, 7)}
                     {renderBreakdownRateTotal(currentSummary, 15)}
                     <tr className="combined-therapist-total combined-summary-grand-total">

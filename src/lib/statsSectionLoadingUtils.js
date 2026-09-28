@@ -79,3 +79,20 @@ export async function loadStatsMonthsCurrentFirst({
   });
   return results;
 }
+
+// Start the displayed month first, but let independent historical months publish as they finish.
+export async function loadStatsMonthsProgressively({
+  targets = [], currentYear, currentMonth, loadMonth, onMonthLoaded, concurrency = 2,
+} = {}) {
+  const prioritized = targets.map((target, index) => ({ target, index })).sort((a, b) => (
+    Number(isDisplayedStatsMonth(b.target, currentYear, currentMonth))
+    - Number(isDisplayedStatsMonth(a.target, currentYear, currentMonth))
+  ));
+  const results = new Array(targets.length);
+  await loadStatsMonthsWithConcurrency(prioritized, async ({ target, index }) => {
+    const result = await loadMonth(target, index);
+    results[index] = result;
+    await onMonthLoaded?.(result);
+  }, concurrency);
+  return results;
+}
