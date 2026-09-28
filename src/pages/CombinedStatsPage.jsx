@@ -427,7 +427,6 @@ export default function CombinedStatsPage() {
           memos,
           monthlyShockwaveTherapists,
           monthlyManualTherapists,
-          monthlyShinjangTherapists,
         ] = await Promise.all([
           isCurrentMonth
             ? loadScheduleMemosForStatsMonth({
@@ -441,23 +440,25 @@ export default function CombinedStatsPage() {
             month: target.month,
             type: 'shockwave',
             baseTherapists: baseShockwaveTherapists,
-            preferBaseRoster: isCurrentMonth,
           }),
           loadStatsMonthlyTherapists({
             year: target.year,
             month: target.month,
             type: 'manual_therapy',
             baseTherapists: baseManualTherapists,
-            preferBaseRoster: isCurrentMonth,
-          }),
-          loadStatsMonthlyTherapists({
-            year: target.year,
-            month: target.month,
-            type: 'shinjang_spray',
-            baseTherapists: baseShockwaveTherapists,
-            preferBaseRoster: isCurrentMonth,
           }),
         ]);
+        const shockwaveSlots = new Set(monthlyShockwaveTherapists.map((item) => Number(item.slot_index)));
+        const monthlyShinjangTherapists = await loadStatsMonthlyTherapists({
+          year: target.year,
+          month: target.month,
+          type: 'shinjang_spray',
+          baseTherapists: baseShockwaveTherapists,
+          fallbackMonthlyTherapists: [
+            ...monthlyShockwaveTherapists,
+            ...monthlyManualTherapists.filter((item) => !shockwaveSlots.has(Number(item.slot_index))),
+          ],
+        });
 
         if (isCurrentMonth) {
           const syncResults = await Promise.allSettled([
@@ -583,6 +584,7 @@ export default function CombinedStatsPage() {
 
   useEffect(() => {
     refreshData();
+    return () => { requestIdRef.current += 1; };
   }, [refreshData]);
 
   useEffect(() => {

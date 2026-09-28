@@ -7,10 +7,85 @@ import {
   buildScheduleMemoSignature,
   buildScheduleMemoMapForStats,
   getRecentScheduleMonthTargets,
+  loadStatsMonthlyTherapists,
   replaceCurrentStatsMonthLogs,
   resolveScheduleMemosForStatsMonth,
 } from '../statsScheduleSourceUtils.js';
 import { setMonthlySettlementSettings } from '../settlementSettings.js';
+import { supabase } from '../supabaseClient.js';
+
+function mockMonthlyQueries(context, responses) {
+  const calls = [];
+  context.mock.method(supabase, 'from', (table) => {
+    assert.equal(table, 'shockwave_monthly_therapists');
+    const filters = [];
+    const response = responses[calls.length];
+    assert.ok(response, 'Unexpected query');
+    calls.push(filters);
+    const query = {
+      select: () => query,
+      order: () => query,
+      limit: () => query,
+      eq: (key, value) => { filters.push([key, value]); return query; },
+      gte: () => query,
+      then: (resolve, reject) => Promise.resolve(response).then(resolve, reject),
+    };
+    return query;
+  });
+  return calls;
+}
+
+describe('statistics monthly therapist loading', () => {
+  it('inherits the latest preceding monthly roster before considering legacy active names', async (context) => {
+    const calls = mockMonthlyQueries(context, [
+      { data: [], error: null },
+      { data: [
+        { year: 2026, month: 2, slot_index: 1, therapist_name: '윤지원', start_day: 1, end_day: 25 },
+        { year: 2026, month: 4, slot_index: 1, therapist_name: '신수민', start_day: 1, end_day: 30 },
+        { year: 2026, month: 4, slot_index: 2, therapist_name: '김세령', start_day: 1, end_day: 30 },
+        { year: 2026, month: 10, slot_index: 1, therapist_name: '다음달', start_day: 1, end_day: 31 },
+      ], error: null },
+    ]);
+    const rows = await loadStatsMonthlyTherapists({
+      year: 2026, month: 9, type: 'shockwave',
+      baseTherapists: [{ name: '윤지원', slot_index: 1 }, { name: '박진희', slot_index: 2 }],
+    });
+    assert.equal(calls.length, 2);
+    assert.deepEqual(calls[0], [['year', 2026], ['month', 9], ['type', 'shockwave']]);
+    assert.deepEqual(rows.map((row) => [row.therapist_name, row.year, row.month, row.start_day, row.end_day]),
+      [['신수민', 2026, 9, 1, 30], ['김세령', 2026, 9, 1, 30]]);
+  });
+
+  it('keeps explicit month settings and mid-month replacement periods', async (context) => {
+    const configs = [
+      { slot_index: 0, therapist_name: '전임', start_day: 1, end_day: 10 },
+      { slot_index: 0, therapist_name: '후임', start_day: 11, end_day: 30 },
+    ];
+    const calls = mockMonthlyQueries(context, [{ data: configs, error: null }]);
+    assert.deepEqual(await loadStatsMonthlyTherapists({ year: 2026, month: 9 }), configs);
+    assert.equal(calls.length, 1);
+  });
+
+  it('uses the resolved schedule month for missing shinjang settings', async (context) => {
+    mockMonthlyQueries(context, [{ data: [], error: null }, { data: [], error: null }]);
+    const rows = await loadStatsMonthlyTherapists({
+      year: 2026, month: 9, type: 'shinjang_spray',
+      baseTherapists: [{ name: '윤지원', slot_index: 1 }],
+      fallbackMonthlyTherapists: [
+        { slot_index: 1, therapist_name: '신수민', start_day: 1, end_day: 30 },
+      ],
+    });
+    assert.deepEqual(rows, [{ year: 2026, month: 9, type: 'shinjang_spray',
+      slot_index: 1, therapist_name: '신수민', start_day: 1, end_day: 30 }]);
+  });
+
+  it('does not display a legacy roster when the preceding-month query fails', async (context) => {
+    mockMonthlyQueries(context, [{ data: [], error: null }, { data: null, error: new Error('offline') }]);
+    await assert.rejects(loadStatsMonthlyTherapists({
+      year: 2026, month: 9, baseTherapists: [{ name: '윤지원', slot_index: 1 }],
+    }), /offline/);
+  });
+});
 
 function findCurrentMonthCoord(year, month) {
   const weeks = generateShockwaveCalendar(year, month);

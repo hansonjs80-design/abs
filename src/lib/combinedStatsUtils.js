@@ -125,6 +125,15 @@ function addTherapist(therapistsByName, therapist, index) {
   });
 }
 
+function buildMonthlyDisplayTherapists(baseTherapists, monthlyTherapists) {
+  const configs = (Array.isArray(monthlyTherapists) ? monthlyTherapists : [])
+    .filter((item) => String(item?.therapist_name || '').trim())
+    .map((item) => ({ ...item, slot_index: Number(item.slot_index) }));
+  const names = new Set(configs.map((item) => String(item.therapist_name).trim()));
+  return buildDisplayTherapists(baseTherapists, configs)
+    .filter((item) => configs.length === 0 || names.has(item.name));
+}
+
 export function buildCombinedStatsTherapists({
   shockwaveTherapists = [],
   manualTherapists = [],
@@ -136,24 +145,21 @@ export function buildCombinedStatsTherapists({
   includeLogOnlyTherapists = true,
 } = {}) {
   const therapistsByName = new Map();
-  const currentRosterNames = new Set(
-    [...shockwaveTherapists, ...manualTherapists]
-      .map((therapist) => String(therapist?.name || therapist?.therapist_name || '').trim())
-      .filter(Boolean)
-  );
   const defaultShinjangTherapists = buildShinjangSprayDefaultTherapists({
     shockwaveTherapists,
     manualTherapists,
   });
   const standardCandidates = [
-    ...buildDisplayTherapists(shockwaveTherapists, monthlyShockwaveTherapists),
-    ...buildDisplayTherapists(manualTherapists, monthlyManualTherapists),
+    ...buildMonthlyDisplayTherapists(shockwaveTherapists, monthlyShockwaveTherapists),
+    ...buildMonthlyDisplayTherapists(manualTherapists, monthlyManualTherapists),
   ];
   const configuredShinjangNames = Array.isArray(shinjangTherapistNames) && shinjangTherapistNames.length > 0
     ? new Set(shinjangTherapistNames.map((name) => String(name || '').trim()).filter(Boolean))
     : null;
   const shinjangCandidates = [
-    ...buildDisplayTherapists(defaultShinjangTherapists, monthlyShinjangTherapists),
+    ...(monthlyShinjangTherapists.length > 0
+      ? buildMonthlyDisplayTherapists(defaultShinjangTherapists, monthlyShinjangTherapists)
+      : standardCandidates),
     ...(includeLogOnlyTherapists && Array.isArray(shinjangRows)
       ? shinjangRows.map((row) => ({ name: row?.therapist_name }))
       : []),
@@ -163,9 +169,6 @@ export function buildCombinedStatsTherapists({
   ));
 
   [...standardCandidates, ...shinjangCandidates]
-    .filter((therapist) => includeLogOnlyTherapists || currentRosterNames.has(
-      String(therapist?.name || therapist?.therapist_name || '').trim()
-    ))
     .forEach((therapist, index) => addTherapist(therapistsByName, therapist, index));
   return [...therapistsByName.values()];
 }

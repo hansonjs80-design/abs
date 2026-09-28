@@ -70,19 +70,43 @@ describe('combined statistics', () => {
     assert.deepEqual(visible.map((item) => item.name), ['현재']);
   });
 
-  it('excludes former names left in monthly settings only for the current month', () => {
+  it('uses the selected month roster even when the active base roster still contains former therapists', () => {
     const input = {
-      shockwaveTherapists: [{ name: '현재', slot_index: 0 }],
+      shockwaveTherapists: [
+        { name: '주한솔', slot_index: 0 },
+        { name: '윤지원', slot_index: 1 },
+        { name: '박진희', slot_index: 2 },
+      ],
       monthlyShockwaveTherapists: [
-        { therapist_name: '이전', slot_index: 0, start_day: 1, end_day: 10 },
-        { therapist_name: '현재', slot_index: 0, start_day: 11, end_day: 30 },
+        { therapist_name: '주한솔', slot_index: 0, start_day: 1, end_day: 30 },
+        { therapist_name: '신수민', slot_index: 1, start_day: 1, end_day: 30 },
+        { therapist_name: '김세령', slot_index: 2, start_day: 1, end_day: 30 },
       ],
       includeLogOnlyTherapists: false,
     };
-    assert.deepEqual(buildCombinedStatsTherapists(input).map((item) => item.name), ['현재']);
     assert.deepEqual(
-      buildCombinedStatsTherapists({ ...input, includeLogOnlyTherapists: true }).map((item) => item.name),
-      ['이전', '현재']
+      buildCombinedStatsTherapists(input).map((item) => item.name),
+      ['주한솔', '신수민', '김세령']
+    );
+    const summary = buildCombinedStatsMonthSummary({
+      ...input, year: 2026, month: 9, settings, shockwaveRows, manualTherapyRows, isAdmin: true,
+    });
+    assert.deepEqual(summary.therapists.map((item) => item.therapist.name), ['주한솔', '신수민', '김세령']);
+    assert.equal(summary.totalCount, 5);
+  });
+
+  it('keeps both therapists in a mid-month replacement and omits unused base slots', () => {
+    const visible = buildCombinedStatsTherapists({
+      shockwaveTherapists: [{ name: '기본이름' }, { name: '사용하지않는슬롯' }],
+      monthlyShockwaveTherapists: [
+        { therapist_name: '전임', slot_index: '0', start_day: 1, end_day: 10 },
+        { therapist_name: '후임', slot_index: '0', start_day: 11, end_day: 30 },
+      ],
+      includeLogOnlyTherapists: false,
+    });
+    assert.deepEqual(
+      visible.map((item) => [item.name, item.startDay, item.endDay]),
+      [['전임', 1, 10], ['후임', 11, 30]]
     );
   });
 

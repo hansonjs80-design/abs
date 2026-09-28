@@ -325,7 +325,7 @@ export async function loadStatsMonthlyTherapists({
   month,
   type = 'shockwave',
   baseTherapists = [],
-  preferBaseRoster = false,
+  fallbackMonthlyTherapists = [],
 } = {}) {
   const { data, error } = await withScheduleStatsQueryTimeout(
     supabase
@@ -341,10 +341,6 @@ export async function loadStatsMonthlyTherapists({
 
   if (error) throw error;
   if (Array.isArray(data) && data.length > 0) return data;
-
-  if (preferBaseRoster && Array.isArray(baseTherapists) && baseTherapists.length > 0) {
-    return buildMonthlyTherapistRowsFromRoster({ year, month, type, roster: baseTherapists });
-  }
 
   const currentValue = Number(year) * 12 + Number(month);
   const { data: previousRows, error: previousError } = await withScheduleStatsQueryTimeout(
@@ -391,7 +387,21 @@ export async function loadStatsMonthlyTherapists({
       });
     }
   } else if (previousError) {
-    console.warn(`Failed to load previous monthly therapists for stats ${type} ${year}-${month}; using roster fallback.`, previousError);
+    throw previousError;
+  }
+
+  // 신장분사 설정이 없는 달도 같은 달의 스케줄 명단을 사용한다.
+  // 기본 테이블의 is_active는 월별 재직 명단을 의미하지 않는다.
+  if (Array.isArray(fallbackMonthlyTherapists) && fallbackMonthlyTherapists.length > 0) {
+    return fallbackMonthlyTherapists.map((item) => ({
+      slot_index: Number(item.slot_index),
+      therapist_name: item.therapist_name,
+      start_day: item.start_day,
+      end_day: item.end_day,
+      year,
+      month,
+      type,
+    }));
   }
 
   const fallbackRoster = Array.isArray(baseTherapists) && baseTherapists.length > 0
