@@ -136,6 +136,11 @@ export function buildCombinedStatsTherapists({
   includeLogOnlyTherapists = true,
 } = {}) {
   const therapistsByName = new Map();
+  const currentRosterNames = new Set(
+    [...shockwaveTherapists, ...manualTherapists]
+      .map((therapist) => String(therapist?.name || therapist?.therapist_name || '').trim())
+      .filter(Boolean)
+  );
   const defaultShinjangTherapists = buildShinjangSprayDefaultTherapists({
     shockwaveTherapists,
     manualTherapists,
@@ -158,6 +163,9 @@ export function buildCombinedStatsTherapists({
   ));
 
   [...standardCandidates, ...shinjangCandidates]
+    .filter((therapist) => includeLogOnlyTherapists || currentRosterNames.has(
+      String(therapist?.name || therapist?.therapist_name || '').trim()
+    ))
     .forEach((therapist, index) => addTherapist(therapistsByName, therapist, index));
   return [...therapistsByName.values()];
 }

@@ -1586,9 +1586,9 @@
 .notice-item:focus-visible {
   position: relative;
   z-index: 1;
-  outline: 3px solid #3b82f6;
-  outline-offset: -3px;
-  background: #eff6ff;
+  outline: 1px solid #b8c0cc;
+  outline-offset: -1px;
+  background: #f8fafc;
 }
 .notice-item:last-child { border-bottom: none; }
 
@@ -2825,9 +2825,14 @@
 .notice-input-wrap .notice-input { min-width: 0; box-sizing: border-box; }
 @media screen and (min-width: 769px) {
   .staff-side .notice-board { width: 100%; min-width: 0; box-sizing: border-box; align-self: stretch; }
-  .staff-side .notice-text { width: auto; white-space: pre; }
+  .staff-side .notice-text { width: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
   .staff-side .notice-item { min-width: 0; }
   .staff-side { width: 100%; min-width: 0; }
+}
+@media screen and (min-width: 1201px) {
+  .staff-side { width: max-content; min-width: 340px; }
+  .staff-side .notice-board { width: max-content; min-width: 100%; }
+  .staff-side .notice-text { white-space: pre; }
 }
 @media print {
   .notice-input-sizer { display: none; }

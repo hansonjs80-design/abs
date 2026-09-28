@@ -70,6 +70,22 @@ describe('combined statistics', () => {
     assert.deepEqual(visible.map((item) => item.name), ['현재']);
   });
 
+  it('excludes former names left in monthly settings only for the current month', () => {
+    const input = {
+      shockwaveTherapists: [{ name: '현재', slot_index: 0 }],
+      monthlyShockwaveTherapists: [
+        { therapist_name: '이전', slot_index: 0, start_day: 1, end_day: 10 },
+        { therapist_name: '현재', slot_index: 0, start_day: 11, end_day: 30 },
+      ],
+      includeLogOnlyTherapists: false,
+    };
+    assert.deepEqual(buildCombinedStatsTherapists(input).map((item) => item.name), ['현재']);
+    assert.deepEqual(
+      buildCombinedStatsTherapists({ ...input, includeLogOnlyTherapists: true }).map((item) => item.name),
+      ['이전', '현재']
+    );
+  });
+
   it('switches cryo deduction for every treatment, therapist total, and recent table', () => {
     const input = {
       year: 2026,
