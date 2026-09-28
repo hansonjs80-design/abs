@@ -2115,6 +2115,13 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   font-weight: 800;
 }
 .combined-treatment-breakdown-card table tbody tr.combined-shinjang-total > :is(th, td) {
-  background: #f1f5f9 !important;
+  background: #dcfce7 !important;
   font-weight: 800;
+}
+
+.combined-treatment-breakdown-card table tbody tr.combined-breakdown-shockwave > :is(th, td) {
+  background: #dbeafe !important;
+}
+.combined-treatment-breakdown-card table tbody tr.combined-breakdown-manual > :is(th, td) {
+  background: #f3e5d8 !important;
 }
