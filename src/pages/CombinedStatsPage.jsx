@@ -393,7 +393,7 @@ export default function CombinedStatsPage() {
     recentPeriodMonths,
   }), [currentMonth, currentYear, recentPeriodMonths]);
   const summaryScope = `${currentYear}-${currentMonth}-${recentPeriodMonths}-${isAdmin}`;
-  const recentOverallTitle = `${recentPeriodLabel} 전체결산(충격파/신장분사${isAdmin ? '/도수치료' : ''})`;
+  const recentOverallTitle = `${recentPeriodLabel} 전체결산(충격파/신장분사${isAdmin ? '/도수' : ''})`;
   const cryoModeLabel = `크라이오 차감 ${applyCryoDeduction ? '적용' : '비적용'}`;
   const loadedSummaries = summaryState.scope === summaryScope ? summaryState.summaries : [];
   const monthSummaries = loadedSummaries.map((summary) => (
@@ -1006,7 +1006,7 @@ export default function CombinedStatsPage() {
                     </tr>
                     {renderBreakdownDetails(currentSummary, 'shockwave')}
                     <tr className="combined-therapist-subtotal combined-shinjang-total">
-                      <th>신장분사 합계</th>
+                      <th>신장분사(전체)</th>
                       <td>{formatCount(currentSummary.treatmentTotals?.shinjang_spray?.count)}</td>
                       <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.shinjang_spray?.amount)}</td>
                       {showBreakdownIncentive && <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.shinjang_spray?.incentive)}</td>}
@@ -1078,14 +1078,14 @@ export default function CombinedStatsPage() {
           </div>}
         </div>
         <div className="combined-recent-scroll" role="region" aria-label="최근 결산 표 가로 스크롤" tabIndex={0}>
-        <div className="combined-stats-dashboard combined-stats-dashboard--settlement" data-recent-view={hasVisibleRecentDetails ? 'detail' : 'total-only'} data-recent-layout={isAdmin && showIonTreatment ? recentIonLayout : 'default'} data-print-title={`${recentOverallTitle} (${cryoModeLabel})`}>
+        <div className="combined-stats-dashboard combined-stats-dashboard--settlement" data-recent-view={hasVisibleRecentDetails ? 'detail' : 'total-only'} data-recent-layout={isAdmin && showIonTreatment ? recentIonLayout : 'default'} data-print-title={`${recentPeriodLabel} 전체결산(${cryoModeLabel})`}>
           {recentTableVisibility.overall && <section className="combined-stats-recent combined-settlement-recent-main" aria-label={`${recentPeriodLabel} 전체 결산 현황`}>
             <div className="combined-stats-recent-heading">
               <div>
-                <h2>{recentPeriodLabel} 전체결산</h2>
+                <h2>{recentOverallTitle}</h2>
               </div>
               <div className="combined-recent-controls">
-                <button type="button" className="combined-table-print-button" onClick={(event) => printSettlementTable(event.currentTarget.closest('section'), `${recentOverallTitle} (${cryoModeLabel})`)}><Printer size={16} />인쇄</button>
+                <button type="button" className="combined-table-print-button" onClick={(event) => printSettlementTable(event.currentTarget.closest('section'), `${recentPeriodLabel} 전체결산(${cryoModeLabel})`)}><Printer size={16} />인쇄</button>
                 <div className="combined-recent-filter-tabs" role="tablist" aria-label="결산 현황 보기 방식">
                   <button
                     type="button"

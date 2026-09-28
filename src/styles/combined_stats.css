@@ -2114,7 +2114,7 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   background: #dcfce7;
   font-weight: 800;
 }
-.combined-shinjang-total > :is(th, td) {
-  background: #f1f5f9;
+.combined-treatment-breakdown-card table tbody tr.combined-shinjang-total > :is(th, td) {
+  background: #f1f5f9 !important;
   font-weight: 800;
 }
