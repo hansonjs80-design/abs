@@ -11,6 +11,7 @@ import {
 import { pasteCArmCounts } from '../lib/cArmClipboard';
 import { clearCArmSelection, copyCArmSelection } from '../lib/cArmSelection';
 import useCArmGridSelection from '../hooks/useCArmGridSelection';
+import CArmRecentStats from '../components/CArmRecentStats';
 import '../styles/c_arm_stats.css';
 
 const format = (value) => value.toLocaleString('ko-KR');
@@ -355,7 +356,6 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
   const colCount = cols.length;
   const numberOfDays = daysInCArmMonth(year, month);
   const total = cArmMonthTotal(document);
-  const annualTotal = records.filter((row) => row.month !== month).reduce((sum, row) => sum + cArmMonthTotal(row), total);
 
   useEffect(() => {
     if (!dirty && !saving) return undefined;
@@ -652,14 +652,7 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
           </div>
         </div>
         <aside className="c-arm-summary">
-          <table className="c-arm-table c-arm-annual"><caption>{year}년 월별 C-Arm 개수</caption>
-            <thead><tr><th scope="col">월</th><th scope="col">총 건수</th></tr></thead>
-            <tbody>{Array.from({ length: 12 }, (_, i) => i + 1).map((item) => {
-              const row = records.find((record) => record.month === item);
-              return <tr key={item} className={item === month ? 'c-arm-selected-month' : ''}><th scope="row">{item}월 총 C-Arm{item === month && dirty ? ' *' : ''}</th><td data-testid={`month-total-${item}`}>{format(item === month ? total : cArmMonthTotal(row))}</td></tr>;
-            })}</tbody>
-            <tfoot><tr><th scope="row">연간 합계</th><td>{format(annualTotal)}</td></tr></tfoot>
-          </table>
+          <CArmRecentStats year={year} month={month} records={records} currentTotal={total} dirty={dirty} />
           <div className="c-arm-incentive-card">
             <div className="c-arm-incentive-header">
               <h2>인센티브</h2>
@@ -692,14 +685,14 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
                         <tr key={group.rate}>
                           {index === 0 && <th scope="rowgroup" rowSpan={breakdown.length}>{person.name}</th>}
                           <td className="c-arm-incentive-items">{group.items.map((item, itemIndex) => <span key={itemIndex}>{item}</span>)}</td>
-                          <td>{format(group.count)}건</td>
+                          <td className="c-arm-incentive-count">{format(group.count)}건</td>
                           <td>{format(group.rate)}원</td>
                           <td>{format(group.amount)}원</td>
                         </tr>
                       ))}
                       {breakdown.length > 1 && <tr className="c-arm-incentive-subtotal">
                         <th scope="row" colSpan={2}>{person.name} 합계</th>
-                        <td>{format(pTotals.total)}건</td>
+                        <td className="c-arm-incentive-count">{format(pTotals.total)}건</td>
                         <td>—</td>
                         <td>{format(pIncentive)}원</td>
                       </tr>}
@@ -709,14 +702,13 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
                 <tfoot>
                   <tr>
                     <th scope="row" colSpan={2}>전체 합계</th>
-                    <td>{format(total)}건</td>
+                    <td className="c-arm-incentive-count">{format(total)}건</td>
                     <td>{uniformRate ? `${format(cols[0]?.rate ?? document.incentive_rate)}원` : '—'}</td>
                     <td data-testid="incentive-total">{format(totalIncentiveAmount)}원</td>
                   </tr>
                 </tfoot>
               </table>
             </div>
-            <p className="c-arm-help">단가는 해당 월에 적용됩니다. 열별 단가는 설정에서 변경할 수 있습니다.</p>
           </div>
         </aside>
       </div>
