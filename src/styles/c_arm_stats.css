@@ -6,6 +6,11 @@
 .c-arm-stats button, .c-arm-settings button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--border-color, #d6dce5); border-radius: 7px; padding: 8px 12px; background: var(--bg-secondary, #f4f6f9); color: var(--text-primary); cursor: pointer; font-weight: 600; }
 .c-arm-stats button:disabled, .c-arm-settings button:disabled { opacity: .5; cursor: default; }
 .c-arm-stats button.c-arm-primary, .c-arm-settings button.c-arm-primary { background: #2157a0; color: white; border-color: #2157a0; }
+.c-arm-view-tabs { display: inline-flex; padding: 2px; border-radius: 7px; background: var(--bg-secondary, #eef2f6); border: 1px solid var(--border-color, #cdd3dc); }
+.c-arm-view-tabs .c-arm-tab-btn { padding: 5px 12px; border: none; border-radius: 5px; background: transparent; color: var(--text-secondary, #64748b); font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s ease; white-space: nowrap; }
+.c-arm-view-tabs .c-arm-tab-btn:hover { color: var(--text-primary, #1e293b); }
+.c-arm-view-tabs .c-arm-tab-btn.is-active { background: #2157a0; color: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+.c-arm-empty-row td { text-align: center; color: var(--text-secondary, #64748b); padding: 20px 8px; font-size: 13px; background: var(--bg-primary, white); }
 .c-arm-status { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; min-height: 18px; }
 .c-arm-error { padding: 12px; border: 1px solid #e1a4a4; border-radius: 7px; background: #fff0f0; color: #a51d2d; font-size: 14px; }
 .c-arm-layout { display: flex; align-items: flex-start; gap: 24px; }

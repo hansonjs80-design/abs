@@ -76,4 +76,34 @@ describe('C-Arm rectangular selection', () => {
 
     assert.match(cssSource, /\.c-arm-sunday th,\s*\.c-arm-sunday td\s*\{\s*background:\s*#fde8e8;/);
   });
+  it('supports 전체 and 요약 view modes filtering rows without counts', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const pageSource = await readFile(new URL('../../pages/CArmStatsPage.jsx', import.meta.url), 'utf8');
+    const cssSource = await readFile(new URL('../../styles/c_arm_stats.css', import.meta.url), 'utf8');
+
+    assert.match(pageSource, /className=\{`c-arm-tab-btn \$\{viewMode === 'all' \? 'is-active' : ''\}`\}/);
+    assert.match(pageSource, /className=\{`c-arm-tab-btn \$\{viewMode === 'summary' \? 'is-active' : ''\}`\}/);
+    assert.match(pageSource, />\s*전체\s*<\/button>/);
+    assert.match(pageSource, />\s*요약\s*<\/button>/);
+    assert.match(pageSource, /viewMode === 'summary'/);
+
+    const mockPerson = {
+      days: {
+        1: { first: 2, returning: 0 },
+        2: { first: null, returning: null },
+        3: { first: 0, returning: 5 },
+        4: { first: 0, returning: 0 },
+        5: { first: 1, returning: 1 },
+      },
+    };
+    const days = [1, 2, 3, 4, 5];
+    const filteredDays = days.filter((day) => {
+      const d = mockPerson.days[day];
+      return (Number(d?.first) || 0) > 0 || (Number(d?.returning) || 0) > 0;
+    });
+    assert.deepEqual(filteredDays, [1, 3, 5]);
+
+    assert.match(cssSource, /\.c-arm-view-tabs/);
+    assert.match(cssSource, /\.c-arm-empty-row/);
+  });
 });

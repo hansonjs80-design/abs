@@ -102,6 +102,7 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
   const saveRef = useRef(null);
   const [error, setError] = useState('');
   const [status, setStatus] = useState(initial.restored ? '임시 입력을 복원했습니다. 자동 저장합니다.' : '');
+  const [viewMode, setViewMode] = useState('all');
   const dirty = !same(document, baseline);
   const conflict = revision !== (saved?.revision ?? null);
   const numberOfDays = daysInCArmMonth(year, month);
@@ -236,6 +237,24 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
       <header className="c-arm-toolbar">
         <div><h1>{year}년 {String(month).padStart(2, '0')}월 장곡 씨암 현황</h1><p>{month}월 · 방사선사별 초진·재진 건수를 직접 기록합니다.</p></div>
         <div className="c-arm-actions">
+          <div className="c-arm-view-tabs" role="group" aria-label="방사선사 테이블 보기">
+            <button
+              type="button"
+              className={`c-arm-tab-btn ${viewMode === 'all' ? 'is-active' : ''}`}
+              aria-pressed={viewMode === 'all'}
+              onClick={() => setViewMode('all')}
+            >
+              전체
+            </button>
+            <button
+              type="button"
+              className={`c-arm-tab-btn ${viewMode === 'summary' ? 'is-active' : ''}`}
+              aria-pressed={viewMode === 'summary'}
+              onClick={() => setViewMode('summary')}
+            >
+              요약
+            </button>
+          </div>
           <button type="button" disabled={saving} onClick={() => setSettingsOpen(true)}><Settings2 size={17} /> 방사선사 설정</button>
           <button type="button" disabled={saving} onClick={reload}>다시 불러오기</button>
           <button type="button" className="c-arm-primary" disabled={saving || !dirty || conflict} onClick={save}><Save size={17} /> {saving ? '저장 중…' : autosavePaused ? '다시 저장' : dirty ? '지금 저장' : '저장됨'}</button>
@@ -250,6 +269,13 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
           {document.radiographers.length === 0 && <div className="c-arm-empty"><Settings2 size={28} /><h2>방사선사를 등록해주세요</h2><p>설정에서 이름을 추가하면 날짜별 기록표가 만들어집니다.</p><button type="button" className="c-arm-primary" onClick={() => setSettingsOpen(true)}>방사선사 설정</button></div>}
           {document.radiographers.map((person, index) => {
             const totals = cArmPersonTotals(person);
+            const allDays = Array.from({ length: numberOfDays }, (_, i) => i + 1);
+            const visibleDays = viewMode === 'summary'
+              ? allDays.filter((day) => {
+                  const dayData = person.days[day];
+                  return (Number(dayData?.first) || 0) > 0 || (Number(dayData?.returning) || 0) > 0;
+                })
+              : allDays;
             return (
               <table key={person.id} className={`c-arm-table c-arm-person-table c-arm-person-table--${index % 4}`}>
                 <colgroup>
@@ -259,20 +285,24 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
                 </colgroup>
                 <caption>{person.name}</caption>
                 <thead><tr><th scope="col">날짜</th><th scope="col">초진</th><th scope="col">재진</th></tr></thead>
-                <tbody>{Array.from({ length: numberOfDays }, (_, i) => i + 1).map((day) => {
-                  const weekday = new Date(year, month - 1, day).getDay();
-                  const dateKey = `${year}-${month}-${day}`;
-                  const isHoliday = holidays.has(dateKey);
-                  return <tr key={day} className={isHoliday || weekday === 0 ? 'c-arm-sunday' : weekday === 6 ? 'c-arm-saturday' : ''}>
-                    <th scope="row" title={holidayNames.get(dateKey)}>{month}월 {day}일 <span>({['일', '월', '화', '수', '목', '금', '토'][weekday]})</span></th>
-                    {['first', 'returning'].map((kind) => <td key={kind} {...grid.getCellProps(day, index * 2 + (kind === 'returning' ? 1 : 0))}><input type="text" inputMode="numeric" pattern="[0-9]*" disabled={conflict}
-                      aria-label={`${person.name} ${month}월 ${day}일 ${kind === 'first' ? '초진' : '재진'}`} value={person.days[day]?.[kind] ?? ''}
-                      onFocus={() => grid.onFocus(day, index * 2 + (kind === 'returning' ? 1 : 0))}
-                      onKeyDown={grid.onKeyDown} onCopy={copyCounts} onCut={(event) => copyCounts(event, true)}
-                      onPaste={(event) => pasteCounts(event, person.id, day, kind)}
-                      onChange={(event) => changeCount(person.id, day, kind, event.target.value)} /></td>)}
-                  </tr>;
-                })}</tbody>
+                <tbody>{visibleDays.length > 0 ? (
+                  visibleDays.map((day) => {
+                    const weekday = new Date(year, month - 1, day).getDay();
+                    const dateKey = `${year}-${month}-${day}`;
+                    const isHoliday = holidays.has(dateKey);
+                    return <tr key={day} className={isHoliday || weekday === 0 ? 'c-arm-sunday' : weekday === 6 ? 'c-arm-saturday' : ''}>
+                      <th scope="row" title={holidayNames.get(dateKey)}>{month}월 {day}일 <span>({['일', '월', '화', '수', '목', '금', '토'][weekday]})</span></th>
+                      {['first', 'returning'].map((kind) => <td key={kind} {...grid.getCellProps(day, index * 2 + (kind === 'returning' ? 1 : 0))}><input type="text" inputMode="numeric" pattern="[0-9]*" disabled={conflict}
+                        aria-label={`${person.name} ${month}월 ${day}일 ${kind === 'first' ? '초진' : '재진'}`} value={person.days[day]?.[kind] ?? ''}
+                        onFocus={() => grid.onFocus(day, index * 2 + (kind === 'returning' ? 1 : 0))}
+                        onKeyDown={grid.onKeyDown} onCopy={copyCounts} onCut={(event) => copyCounts(event, true)}
+                        onPaste={(event) => pasteCounts(event, person.id, day, kind)}
+                        onChange={(event) => changeCount(person.id, day, kind, event.target.value)} /></td>)}
+                    </tr>;
+                  })
+                ) : (
+                  <tr className="c-arm-empty-row"><td colSpan={3}>기록된 건수가 없습니다.</td></tr>
+                )}</tbody>
                 <tfoot><tr><th scope="row">합계</th><td>{format(totals.first)}</td><td>{format(totals.returning)}</td></tr><tr className="c-arm-grand-total"><th scope="row">전체 합계</th><td colSpan={2} data-testid={`person-total-${index}`}>{format(totals.total)}</td></tr></tfoot>
               </table>
             );
