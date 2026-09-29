@@ -45,8 +45,9 @@
 .c-arm-sunday th { color: #c64848; }
 .c-arm-saturday th { color: #3775b9; }
 .c-arm-summary { display: grid; flex: 0 0 460px; min-width: 0; max-width: 100%; gap: 26px; margin-top: 42px; }
+.c-arm-annual { width: fit-content; min-width: 220px; max-width: 270px; }
 .c-arm-annual caption { background: #dce7f7; color: #173459; border: 2px solid #7189a8; border-bottom: 0; }
-.c-arm-annual th:first-child { width: 58%; text-align: center; }
+.c-arm-annual th:first-child { width: 56%; text-align: center; }
 .c-arm-annual th, .c-arm-annual td,
 .c-arm-annual tbody th, .c-arm-annual tbody td,
 .c-arm-annual tfoot th, .c-arm-annual tfoot td,
@@ -276,10 +277,47 @@
   .c-arm-stats { padding: 0; }
   .c-arm-toolbar p, .c-arm-actions, .c-arm-status, .c-arm-help, .c-arm-settings, .c-arm-records-toolbar { display: none !important; }
   .c-arm-layout { display: block; }
-  .c-arm-records { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  .c-arm-records { display: flex !important; flex-wrap: wrap !important; align-items: flex-start !important; gap: 14px !important; }
   .c-arm-table, .c-arm-incentive-card { break-inside: avoid; }
-  .c-arm-summary { display: grid; grid-template-columns: 1fr 1fr; align-items: start; margin-top: 20px; }
+  .c-arm-summary { display: flex !important; flex-wrap: wrap !important; align-items: flex-start !important; gap: 16px !important; margin-top: 14px !important; }
   .c-arm-rate input { border: none; }
+
+  /* 인쇄 시 테이블이 전반적으로 넓어지지 않고 글자 길이에 맞게 컴팩트하게 표시 */
+  .c-arm-table,
+  .c-arm-person-table,
+  .c-arm-annual,
+  .c-arm-incentives {
+    width: auto !important;
+    table-layout: auto !important;
+  }
+  .c-arm-person-table .c-arm-col-date,
+  .c-arm-person-table .c-arm-col-first,
+  .c-arm-person-table .c-arm-col-returning,
+  .c-arm-person-table .c-arm-col-count {
+    width: auto !important;
+  }
+  .c-arm-table th,
+  .c-arm-table td {
+    padding: 3px 6px !important;
+    height: auto !important;
+    white-space: nowrap !important;
+  }
+  .c-arm-person-table td input {
+    width: auto !important;
+    min-width: 28px !important;
+    padding: 2px 4px !important;
+    height: auto !important;
+  }
+  .c-arm-annual {
+    width: auto !important;
+    min-width: 200px !important;
+    max-width: 250px !important;
+  }
+  .c-arm-incentive-card {
+    width: auto !important;
+    max-width: 100% !important;
+    padding: 10px 12px !important;
+  }
 
   /* 최근 n개월간 C-Arm 통계 상단 헤더: 인쇄 시 과도한 공백 없이 하나의 자연스러운 텍스트로 표시 */
   .c-arm-recent-caption-screen,
