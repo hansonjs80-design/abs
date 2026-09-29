@@ -43,12 +43,23 @@
 .c-arm-sunday th, .c-arm-sunday td { background: #fde8e8; }
 .c-arm-sunday th { color: #c64848; }
 .c-arm-saturday th { color: #3775b9; }
-.c-arm-summary { display: grid; flex: 0 0 460px; min-width: 0; max-width: 100%; gap: 26px; }
+.c-arm-summary { display: grid; flex: 0 0 460px; min-width: 0; max-width: 100%; gap: 26px; margin-top: 42px; }
 .c-arm-annual caption { background: #dce7f7; color: #173459; border: 2px solid #7189a8; border-bottom: 0; }
 .c-arm-annual th:first-child { width: 58%; text-align: center; }
+.c-arm-annual th, .c-arm-annual td,
+.c-arm-annual tbody th, .c-arm-annual tbody td,
+.c-arm-annual tfoot th, .c-arm-annual tfoot td,
+.c-arm-recent-th-month, .c-arm-recent-th-count,
+.c-arm-recent-cell-month, .c-arm-recent-cell-count,
+.c-arm-recent-foot-month, .c-arm-recent-foot-count {
+  text-align: center !important;
+  vertical-align: middle;
+}
 .c-arm-annual .c-arm-selected-month { background: #eaf2ff; color: #173459; }
 .c-arm-recent-caption { display: inline-flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; }
-.c-arm-recent-caption input { width: 2.8em; padding: 2px 3px; border: 1px solid #8c9eb7; border-radius: 5px; text-align: center; font: inherit; color: inherit; background: var(--bg-primary, white); }
+.c-arm-recent-caption input { width: 2.8em; padding: 2px 3px; border: 1px solid #8c9eb7; border-radius: 5px; text-align: center; font: inherit; color: inherit; background: var(--bg-primary, white); appearance: textfield; -moz-appearance: textfield; }
+.c-arm-recent-caption input::-webkit-inner-spin-button,
+.c-arm-recent-caption input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .c-arm-recent-caption input:focus-visible { outline: 2px solid #477ed0; outline-offset: 2px; }
 .c-arm-recent-hint { display: block; margin-top: 5px; font-size: 12px; font-weight: 400; }
 .c-arm-incentive-card { border: 2px solid #7189a8; border-radius: 8px; padding: 14px; background: var(--bg-primary); }
@@ -245,7 +256,7 @@
   color: #dc2626 !important;
 }
 .c-arm-dialog-actions { justify-content: flex-end; margin-top: 20px; }
-@media (max-width: 700px) { .c-arm-layout { flex-direction: column; } .c-arm-records-pane, .c-arm-records, .c-arm-summary { flex-basis: auto; width: 100%; min-width: 0; } .c-arm-summary { grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); align-items: start; } }
+@media (max-width: 700px) { .c-arm-layout { flex-direction: column; } .c-arm-records-pane, .c-arm-records, .c-arm-summary { flex-basis: auto; width: 100%; min-width: 0; } .c-arm-summary { grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); align-items: start; margin-top: 0; } }
 @media (max-width: 600px) { .c-arm-stats { padding: 12px; } .c-arm-actions { flex-wrap: wrap; } .c-arm-records { grid-template-columns: 1fr; } .c-arm-toolbar h1 { font-size: 18px; } }
 @media screen {
   .c-arm-records-pane { flex: 0 1 auto; min-width: 0; max-width: 100%; }
@@ -259,7 +270,31 @@
   .c-arm-person-table tfoot th,
   .c-arm-person-table tfoot td { padding-left: 4px; padding-right: 4px; white-space: nowrap; }
 }
-@media print { .c-arm-stats { padding: 0; } .c-arm-toolbar p, .c-arm-actions, .c-arm-status, .c-arm-help, .c-arm-settings, .c-arm-records-toolbar { display: none !important; } .c-arm-layout { display: block; } .c-arm-records { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; } .c-arm-table, .c-arm-incentive-card { break-inside: avoid; } .c-arm-summary { display: grid; grid-template-columns: 1fr 1fr; align-items: start; margin-top: 20px; } .c-arm-rate input { border: none; } }
+@media print {
+  .c-arm-stats { padding: 0; }
+  .c-arm-toolbar p, .c-arm-actions, .c-arm-status, .c-arm-help, .c-arm-settings, .c-arm-records-toolbar { display: none !important; }
+  .c-arm-layout { display: block; }
+  .c-arm-records { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  .c-arm-table, .c-arm-incentive-card { break-inside: avoid; }
+  .c-arm-summary { display: grid; grid-template-columns: 1fr 1fr; align-items: start; margin-top: 20px; }
+  .c-arm-rate input { border: none; }
+
+  /* 최근 n개월간 C-Arm 통계 테이블: 인쇄 시 셀 선/배경 제거, 숫자/글자만 표시 */
+  .c-arm-annual,
+  .c-arm-annual caption,
+  .c-arm-annual th,
+  .c-arm-annual td,
+  .c-arm-annual thead th,
+  .c-arm-annual tfoot th,
+  .c-arm-annual tfoot td,
+  .c-arm-summary .c-arm-annual,
+  .c-arm-summary .c-arm-annual th,
+  .c-arm-summary .c-arm-annual td {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+}
 
 /* Spreadsheet selection stays visible while copying or extending a range. */
 .c-arm-person-table td[data-c-arm-row] { position: relative; user-select: none; }

@@ -38,9 +38,13 @@ export default function CArmRecentStats({ year, month, records, currentTotal, di
   }));
 
   return <table className="c-arm-table c-arm-annual">
+    <colgroup>
+      <col className="c-arm-recent-col-month" />
+      <col className="c-arm-recent-col-count" />
+    </colgroup>
     <caption>
       <label className="c-arm-recent-caption">
-        최근 <input type="number" min="1" max={MAX_C_ARM_RECENT_MONTHS} step="1"
+        최근 <input type="number" inputMode="numeric" min="1" max={MAX_C_ARM_RECENT_MONTHS} step="1"
           aria-label="C-Arm 통계 조회 개월 수" value={input}
           onChange={(event) => {
             const value = event.target.value;
@@ -51,7 +55,7 @@ export default function CArmRecentStats({ year, month, records, currentTotal, di
       </label>
       {parseCArmRecentMonths(input) !== months && <small className="c-arm-recent-hint">1~{MAX_C_ARM_RECENT_MONTHS}개월을 입력해주세요. 현재 {months}개월 표시 중입니다.</small>}
     </caption>
-    <thead><tr><th scope="col">연월</th><th scope="col">총 건수</th></tr></thead>
+    <thead><tr><th scope="col" className="c-arm-recent-th-month">연월</th><th scope="col" className="c-arm-recent-th-count">총 건수</th></tr></thead>
     <tbody>
       {!ready ? <tr><td colSpan={2}>
         {error ? <span role="alert">기록을 불러오지 못했습니다. {error} <button type="button" onClick={() => setRetry((value) => value + 1)}>다시 시도</button></span>
@@ -59,11 +63,11 @@ export default function CArmRecentStats({ year, month, records, currentTotal, di
       </td></tr> : rows.map((item) => {
         const current = item.year === year && item.month === month;
         return <tr key={`${item.year}-${item.month}`} className={current ? 'c-arm-selected-month' : ''}>
-          <th scope="row">{item.year}년 {item.month}월{current && dirty ? ' *' : ''}</th>
-          <td data-testid={`month-total-${item.year}-${item.month}`}>{item.total.toLocaleString('ko-KR')}</td>
+          <th scope="row" className="c-arm-recent-cell-month">{item.year}년 {item.month}월{current && dirty ? ' *' : ''}</th>
+          <td className="c-arm-recent-cell-count" data-testid={`month-total-${item.year}-${item.month}`}>{item.total.toLocaleString('ko-KR')}건</td>
         </tr>;
       })}
     </tbody>
-    <tfoot><tr><th scope="row">최근 {months}개월 합계</th><td>{ready ? rows.reduce((sum, item) => sum + item.total, 0).toLocaleString('ko-KR') : '—'}</td></tr></tfoot>
+    <tfoot><tr><th scope="row" className="c-arm-recent-foot-month">최근 {months}개월 합계</th><td className="c-arm-recent-foot-count">{ready ? `${rows.reduce((sum, item) => sum + item.total, 0).toLocaleString('ko-KR')}건` : '—'}</td></tr></tfoot>
   </table>;
 }
