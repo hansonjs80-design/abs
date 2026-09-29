@@ -511,7 +511,7 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
   return (
     <section className="c-arm-stats" aria-label="C-Arm 통계">
       <header className="c-arm-toolbar">
-        <div><h1>{year}년 {String(month).padStart(2, '0')}월 장곡 씨암 현황</h1><p>{month}월 · 방사선사별 건수를 직접 기록합니다.</p></div>
+        <div><h1>{year}년 {String(month).padStart(2, '0')}월 장곡 씨암 현황</h1></div>
         <div className="c-arm-actions">
           <div className="c-arm-view-tabs" role="group" aria-label="방사선사 테이블 보기">
             <button
@@ -536,8 +536,12 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
           <button type="button" className="c-arm-primary" disabled={saving || !dirty || conflict} onClick={save}><Save size={17} /> {saving ? '저장 중…' : autosavePaused ? '다시 저장' : dirty ? '지금 저장' : '저장됨'}</button>
         </div>
       </header>
-      <p className="c-arm-help c-arm-paste-help">클릭·드래그로 셀 선택 후 Ctrl/Cmd+C·X·V로 복사·잘라내기·붙여넣기, Z로 실행 취소할 수 있습니다. 엑셀·시트 건수도 붙여넣으세요. 열은 설정된 항목 열 순서, 다음 방사선사 순서입니다. 빈 셀은 기존 값을 지웁니다.</p>
-      <div className="c-arm-status" role="status">{saving ? '자동 저장 중…' : status || '입력하면 자동 저장됩니다.'}{dirty && ' · 변경사항은 이 탭에 임시 보관됩니다.'}</div>
+      {(saving || status || dirty) && (
+        <div className="c-arm-status" role="status">
+          {saving ? '자동 저장 중…' : status}
+          {dirty && (status ? ' · 변경사항은 이 탭에 임시 보관됩니다.' : '변경사항은 이 탭에 임시 보관됩니다.')}
+        </div>
+      )}
       {conflict && <p role="alert" className="c-arm-error">다른 기기에서 저장한 기록과 입력 중인 내용이 다릅니다. 입력 내용을 확인한 뒤 다시 불러오기를 눌러주세요.</p>}
       {error && <p role="alert" className="c-arm-error">{error}</p>}
       <div className="c-arm-layout">
