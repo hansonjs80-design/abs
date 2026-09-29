@@ -279,20 +279,19 @@
   .c-arm-summary { display: grid; grid-template-columns: 1fr 1fr; align-items: start; margin-top: 20px; }
   .c-arm-rate input { border: none; }
 
-  /* 최근 n개월간 C-Arm 통계 테이블: 인쇄 시 셀 선/배경 제거, 숫자/글자만 표시 */
-  .c-arm-annual,
-  .c-arm-annual caption,
-  .c-arm-annual th,
-  .c-arm-annual td,
-  .c-arm-annual thead th,
-  .c-arm-annual tfoot th,
-  .c-arm-annual tfoot td,
-  .c-arm-summary .c-arm-annual,
-  .c-arm-summary .c-arm-annual th,
-  .c-arm-summary .c-arm-annual td {
+  /* 최근 n개월간 C-Arm 통계 상단 헤더의 n개월 입력 셀: 인쇄 시 테두리/배경 없이 일반 글자처럼 표시 */
+  .c-arm-recent-caption input {
     border: none !important;
     background: transparent !important;
+    padding: 0 !important;
+    width: auto !important;
+    font: inherit !important;
+    font-weight: inherit !important;
+    color: inherit !important;
     box-shadow: none !important;
+  }
+  .c-arm-recent-hint {
+    display: none !important;
   }
 }
 
