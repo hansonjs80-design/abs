@@ -27,8 +27,8 @@
 .c-arm-person-table .c-arm-col-returning,
 .c-arm-person-table .c-arm-col-count { width: 52px; }
 .c-arm-person-table tbody th { font-size: 13px; white-space: nowrap; text-align: center; padding: 4px; }
-.c-arm-person-table td { padding: 0; }
-.c-arm-person-table input { display: block; width: 100%; min-width: 0; height: 29px; padding: 3px 4px; text-align: center; font: inherit; color: inherit; background: transparent; border: 0; border-radius: 0; }
+.c-arm-person-table tbody td { padding: 0; background: #ffffff; }
+.c-arm-person-table tbody td input { display: block; width: 100%; min-width: 0; height: 29px; padding: 3px 4px; text-align: center; font: inherit; color: inherit; background: #ffffff; border: 0; border-radius: 0; }
 .c-arm-person-table input:focus { outline: 2px solid #477ed0; outline-offset: -2px; background: #eaf2ff; color: #173459; }
 .c-arm-person-table input:not(.is-editing) { caret-color: transparent; user-select: none; }
 .c-arm-person-table input:not(.is-editing)::selection { background: transparent; color: inherit; }
@@ -41,6 +41,7 @@
 .c-arm-person-table--2 caption { background: #d5eae1; color: #1e5942; }
 .c-arm-person-table--3 caption { background: #f4e1cd; color: #6d451d; }
 .c-arm-sunday th, .c-arm-sunday td { background: #fde8e8; }
+.c-arm-person-table tr.c-arm-sunday td, .c-arm-person-table tr.c-arm-sunday input { background: #fde8e8 !important; }
 .c-arm-sunday th { color: #c64848; }
 .c-arm-saturday th { color: #3775b9; }
 .c-arm-summary { display: grid; flex: 0 0 460px; min-width: 0; max-width: 100%; gap: 26px; margin-top: 42px; }
@@ -297,7 +298,8 @@
 
 /* Spreadsheet selection stays visible while copying or extending a range. */
 .c-arm-person-table td[data-c-arm-row] { position: relative; user-select: none; }
-.c-arm-person-table td.c-arm-cell-selected { background: #e4edff; color: #173459; }
+.c-arm-person-table td.c-arm-cell-selected,
+.c-arm-person-table td.c-arm-cell-selected input { background: #e4edff !important; color: #173459; }
 .c-arm-person-table td.c-arm-cell-selected::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1; border: 0 solid #477ed0; }
 .c-arm-person-table td.c-arm-range-top::after { border-top-width: 2px; }
 .c-arm-person-table td.c-arm-range-bottom::after { border-bottom-width: 2px; }
