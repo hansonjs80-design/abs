@@ -43,7 +43,7 @@
 .c-arm-sunday th, .c-arm-sunday td { background: #fde8e8; }
 .c-arm-sunday th { color: #c64848; }
 .c-arm-saturday th { color: #3775b9; }
-.c-arm-summary { display: grid; flex: 0 0 340px; gap: 26px; }
+.c-arm-summary { display: grid; flex: 0 0 460px; min-width: 0; max-width: 100%; gap: 26px; }
 .c-arm-annual caption { background: var(--bg-secondary, #f2f4f7); color: var(--text-primary); }
 .c-arm-annual th:first-child { width: 58%; text-align: center; }
 .c-arm-annual .c-arm-selected-month { background: #eaf2ff; color: #173459; }
@@ -54,11 +54,13 @@
 .c-arm-rate input { width: 68px; text-align: right; padding: 3px 6px; border: 1px solid var(--border-color, #cdd3dc); border-radius: 4px; color: var(--text-primary); background: var(--bg-secondary); font: inherit; font-weight: 700; }
 .c-arm-rate-detail-btn { background: #eaf2ff; border: 1px solid #c0d7f9; color: #2157a0; padding: 4px 8px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; }
 .c-arm-rate-detail-btn:hover { background: #dbe8fc; }
-.c-arm-incentives { font-size: 13px; }
-.c-arm-incentive-col-name { width: 26%; }
-.c-arm-incentive-col-count { width: 22%; }
-.c-arm-incentive-col-rate { width: 24%; }
-.c-arm-incentive-col-amount { width: 28%; }
+.c-arm-incentive-scroll { overflow-x: auto; }
+.c-arm-incentives { font-size: 13px; table-layout: auto; }
+.c-arm-incentives th, .c-arm-incentives td { white-space: nowrap; }
+.c-arm-incentives .c-arm-incentive-items { min-width: 90px; white-space: normal; text-align: left; font-size: 12px; line-height: 1.5; }
+.c-arm-incentive-items span { display: block; }
+.c-arm-incentives tbody + tbody { border-top: 2px solid #8c9eb7; }
+.c-arm-incentive-subtotal th, .c-arm-incentive-subtotal td { background: #e8effa; color: #263e60; font-weight: 700; }
 .c-arm-incentives th:first-child { text-align: center; }
 .c-arm-incentives th, .c-arm-incentives td { overflow-wrap: anywhere; }
 .c-arm-empty { grid-column: 1 / -1; padding: 60px 20px; text-align: center; border: 1px dashed var(--border-color, #cdd3dc); border-radius: 12px; }
@@ -100,6 +102,30 @@
   background: var(--bg-secondary, #eef2f7) !important;
   font-weight: 700 !important;
 }
+
+/* 상위 항목의 색조와 경계선을 세부 항목 및 건수 열까지 연결한다. */
+.c-arm-person-table thead tr.c-arm-header-categories th.c-arm-th-category {
+  background: #c1d3ed;
+  color: #173459;
+  font-weight: 800;
+  border-bottom: 2px solid #8c9eb7;
+}
+.c-arm-person-table thead tr.c-arm-header-categories th[data-group-tone="1"] {
+  background: #b5ced4;
+  color: #183f48;
+}
+.c-arm-person-table thead tr.c-arm-header-subitems th {
+  background: #e8effa;
+  color: #263e60;
+  font-weight: 700;
+  border-bottom: 2px solid #8c9eb7;
+}
+.c-arm-person-table thead tr.c-arm-header-subitems th[data-group-tone="1"] {
+  background: #e3eff0;
+  color: #26484f;
+}
+.c-arm-person-table th[data-group-start],
+.c-arm-person-table td[data-group-start] { border-left: 2px solid #8c9eb7; }
 
 /* 방사선사 및 항목 계층형 설정 모달 */
 .c-arm-group-list {
@@ -194,6 +220,18 @@
 .c-arm-dialog-actions { justify-content: flex-end; margin-top: 20px; }
 @media (max-width: 700px) { .c-arm-layout { flex-direction: column; } .c-arm-records-pane, .c-arm-records, .c-arm-summary { flex-basis: auto; width: 100%; min-width: 0; } .c-arm-summary { grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); align-items: start; } }
 @media (max-width: 600px) { .c-arm-stats { padding: 12px; } .c-arm-actions { flex-wrap: wrap; } .c-arm-records { grid-template-columns: 1fr; } .c-arm-toolbar h1 { font-size: 18px; } }
+@media screen {
+  .c-arm-records-pane { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+  .c-arm-records { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; overflow-x: auto; }
+  .c-arm-person-table { flex: 0 0 auto; width: auto; table-layout: auto; }
+  .c-arm-person-table .c-arm-col-date,
+  .c-arm-person-table .c-arm-col-first,
+  .c-arm-person-table .c-arm-col-returning,
+  .c-arm-person-table .c-arm-col-count { width: auto; }
+  .c-arm-person-table thead th { white-space: nowrap; }
+  .c-arm-person-table tfoot th,
+  .c-arm-person-table tfoot td { padding-left: 4px; padding-right: 4px; white-space: nowrap; }
+}
 @media print { .c-arm-stats { padding: 0; } .c-arm-toolbar p, .c-arm-actions, .c-arm-status, .c-arm-help, .c-arm-settings, .c-arm-records-toolbar { display: none !important; } .c-arm-layout { display: block; } .c-arm-records { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; } .c-arm-table, .c-arm-incentive-card { break-inside: avoid; } .c-arm-summary { display: grid; grid-template-columns: 1fr 1fr; align-items: start; margin-top: 20px; } .c-arm-rate input { border: none; } }
 
 /* Spreadsheet selection stays visible while copying or extending a range. */

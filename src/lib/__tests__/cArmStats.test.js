@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { C_ARM_TABLE, cArmColumnGroups, cArmIncentive, cArmMonthTotal, cArmPersonTotals, createCArmMonth, daysInCArmMonth, loadCArmYear, saveCArmMonth, validateCArmMonth } from '../cArmStats.js';
+import { C_ARM_TABLE, cArmColumnGroups, cArmIncentive, cArmIncentiveBreakdown, cArmMonthTotal, cArmPersonTotals, createCArmMonth, daysInCArmMonth, loadCArmYear, saveCArmMonth, validateCArmMonth } from '../cArmStats.js';
 import { APP_TABS, canAccessPath, canAccessTab, createDefaultPermissions, getAllowedTabs, normalizePermissions } from '../authPermissions.js';
 
 const month = () => ({ incentive_rate: 2000, radiographers: [
@@ -16,6 +16,32 @@ function fakeClient(response) {
 }
 
 describe('independent C-Arm statistics', () => {
+  it('separates actual incentive rates and reconciles grouped counts and amounts', () => {
+    const document = {
+      incentive_rate: 2000,
+      columns: [
+        { id: 'first', category: 'C-Arm', label: '초진', rate: 2000 },
+        { id: 'returning', category: 'C-Arm', label: '재진', rate: 1000 },
+        { id: 'ultrasound', category: '초음파', label: '시술', rate: 2000 },
+        { id: 'free', category: '기타', label: '비지급', rate: 0 },
+      ],
+    };
+    const person = { days: { 1: { first: 2, returning: 3, ultrasound: 1, free: 4 }, 2: { first: 1, returning: null } } };
+    const rows = cArmIncentiveBreakdown(person, document);
+    assert.deepEqual(rows, [
+      { rate: 2000, count: 4, amount: 8000, items: ['C-Arm · 초진', '초음파 · 시술'] },
+      { rate: 1000, count: 3, amount: 3000, items: ['C-Arm · 재진'] },
+      { rate: 0, count: 4, amount: 0, items: ['기타 · 비지급'] },
+    ]);
+    assert.equal(rows.reduce((sum, row) => sum + row.amount, 0), cArmIncentive(person, document));
+    assert.equal(rows.reduce((sum, row) => sum + row.count, 0), cArmPersonTotals(person).total);
+  });
+  it('shows configured rates for empty records and uses the monthly rate when a column rate is missing', () => {
+    const document = { incentive_rate: 3500, columns: [{ id: 'first', label: '초진' }, { id: 'returning', label: '재진' }] };
+    assert.deepEqual(cArmIncentiveBreakdown({ days: {} }, document), [
+      { rate: 3500, count: 0, amount: 0, items: ['C-Arm · 초진', 'C-Arm · 재진'] },
+    ]);
+  });
   it('adds both visit types per person and month and uses the editable rate', () => {
     const document = month();
     assert.deepEqual(cArmPersonTotals(document.radiographers[0]), { first: 4, returning: 2, total: 6 });

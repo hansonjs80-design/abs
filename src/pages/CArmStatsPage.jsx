@@ -4,7 +4,7 @@ import { useSchedule } from '../contexts/ScheduleContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import {
-  cArmColumns, cArmColumnGroups, cArmIncentive, cArmMonthTotal, cArmPersonTotals, createCArmMonth,
+  cArmColumns, cArmColumnGroups, cArmIncentive, cArmIncentiveBreakdown, cArmMonthTotal, cArmPersonTotals, createCArmMonth,
   daysInCArmMonth, DEFAULT_C_ARM_RATE, loadCArmTemplate, loadCArmYear, MAX_C_ARM_COUNT,
   MAX_C_ARM_RATE, saveCArmMonth, validateCArmMonth,
 } from '../lib/cArmStats';
@@ -348,6 +348,10 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
   const conflict = revision !== (saved?.revision ?? null);
   const cols = cArmColumns(document);
   const colGroups = cArmColumnGroups(cols);
+  const groupStartIds = new Set(colGroups.map((group) => group.columns[0].id));
+  const columnGroupTones = new Map(colGroups.flatMap((group, index) => (
+    group.columns.map((col) => [col.id, index % 2])
+  )));
   const colCount = cols.length;
   const numberOfDays = daysInCArmMonth(year, month);
   const total = cArmMonthTotal(document);
@@ -499,7 +503,7 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
   const totalIncentiveAmount = document.radiographers.reduce((sum, person) => sum + cArmIncentive(person, document, cols), 0);
 
   return (
-    <section className="c-arm-stats" aria-label="C-Arm 통계">
+    <section className="c-arm-stats" aria-label="방사선 통계">
       <header className="c-arm-toolbar">
         <div><h1>{year}년 {String(month).padStart(2, '0')}월 장곡 씨암 현황</h1></div>
         <div className="c-arm-actions">
@@ -574,6 +578,8 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
                         scope="colgroup"
                         colSpan={group.columns.length}
                         className="c-arm-th-category"
+                        data-group-tone={gIdx % 2}
+                        data-group-start
                       >
                         {group.category}
                       </th>
@@ -581,7 +587,7 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
                   </tr>
                   <tr className="c-arm-header-subitems">
                     {cols.map((col) => (
-                      <th key={col.id} scope="col" className="c-arm-th-subitem">{col.label}</th>
+                      <th key={col.id} scope="col" className="c-arm-th-subitem" data-group-tone={columnGroupTones.get(col.id)} data-group-start={groupStartIds.has(col.id) || undefined}>{col.label}</th>
                     ))}
                   </tr>
                 </thead>
@@ -597,9 +603,10 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
                           const gridColIdx = index * colCount + colSubIdx;
                           const editing = grid.isEditing(day, gridColIdx);
                           return (
-                            <td key={col.id} {...grid.getCellProps(day, gridColIdx)}>
+                            <td key={col.id} {...grid.getCellProps(day, gridColIdx)} data-group-start={groupStartIds.has(col.id) || undefined}>
                               <input
                                 type="text"
+                                size={4}
                                 inputMode="numeric"
                                 pattern="[0-9]*"
                                 disabled={conflict}
@@ -631,12 +638,12 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
                   <tr>
                     <th scope="row">합계</th>
                     {cols.map((col) => (
-                      <td key={col.id}>{format(totals[col.id] || 0)}</td>
+                      <td key={col.id} data-group-start={groupStartIds.has(col.id) || undefined}>{format(totals[col.id] || 0)}</td>
                     ))}
                   </tr>
                   <tr className="c-arm-grand-total">
                     <th scope="row">전체 합계</th>
-                    <td colSpan={cols.length} data-testid={`person-total-${index}`}>{format(totals.total)}</td>
+                    <td colSpan={cols.length} data-group-start data-testid={`person-total-${index}`}>{format(totals.total)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -657,45 +664,58 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
             <div className="c-arm-incentive-header">
               <h2>인센티브</h2>
             </div>
-            <table className="c-arm-table c-arm-incentives">
-              <colgroup>
-                <col className="c-arm-incentive-col-name" />
-                <col className="c-arm-incentive-col-count" />
-                <col className="c-arm-incentive-col-rate" />
-                <col className="c-arm-incentive-col-amount" />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th scope="col">방사선사</th>
-                  <th scope="col">건수</th>
-                  <th scope="col">건당</th>
-                  <th scope="col">인센티브 금액</th>
-                </tr>
-              </thead>
-              <tbody>{document.radiographers.map((person) => {
-                const pTotals = cArmPersonTotals(person, cols);
-                const pIncentive = cArmIncentive(person, document, cols);
-                const rateText = uniformRate
-                  ? `${format(cols[0]?.rate ?? document.incentive_rate)}원`
-                  : (pTotals.total > 0 ? `${format(Math.round(pIncentive / pTotals.total))}원` : `${format(cols[0]?.rate ?? document.incentive_rate)}원`);
-                return (
-                  <tr key={person.id}>
-                    <th scope="row">{person.name}</th>
-                    <td>{format(pTotals.total)}건</td>
-                    <td>{rateText}</td>
-                    <td>{format(pIncentive)}원</td>
+            <div className="c-arm-incentive-scroll">
+              <table className="c-arm-table c-arm-incentives">
+                <colgroup>
+                  <col className="c-arm-incentive-col-name" />
+                  <col className="c-arm-incentive-col-items" />
+                  <col className="c-arm-incentive-col-count" />
+                  <col className="c-arm-incentive-col-rate" />
+                  <col className="c-arm-incentive-col-amount" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th scope="col">방사선사</th>
+                    <th scope="col">항목</th>
+                    <th scope="col">건수</th>
+                    <th scope="col">건당</th>
+                    <th scope="col">인센티브 금액</th>
                   </tr>
-                );
-              })}</tbody>
-              <tfoot>
-                <tr>
-                  <th scope="row">전체 합계</th>
-                  <td>{format(total)}건</td>
-                  <td>{uniformRate ? `${format(cols[0]?.rate ?? document.incentive_rate)}원` : (total > 0 ? `${format(Math.round(totalIncentiveAmount / total))}원` : '-')}</td>
-                  <td data-testid="incentive-total">{format(totalIncentiveAmount)}원</td>
-                </tr>
-              </tfoot>
-            </table>
+                </thead>
+                {document.radiographers.map((person) => {
+                  const pTotals = cArmPersonTotals(person, cols);
+                  const pIncentive = cArmIncentive(person, document, cols);
+                  const breakdown = cArmIncentiveBreakdown(person, document, cols);
+                  return (
+                    <tbody key={person.id}>
+                      {breakdown.map((group, index) => (
+                        <tr key={group.rate}>
+                          {index === 0 && <th scope="rowgroup" rowSpan={breakdown.length}>{person.name}</th>}
+                          <td className="c-arm-incentive-items">{group.items.map((item, itemIndex) => <span key={itemIndex}>{item}</span>)}</td>
+                          <td>{format(group.count)}건</td>
+                          <td>{format(group.rate)}원</td>
+                          <td>{format(group.amount)}원</td>
+                        </tr>
+                      ))}
+                      {breakdown.length > 1 && <tr className="c-arm-incentive-subtotal">
+                        <th scope="row" colSpan={2}>{person.name} 합계</th>
+                        <td>{format(pTotals.total)}건</td>
+                        <td>—</td>
+                        <td>{format(pIncentive)}원</td>
+                      </tr>}
+                    </tbody>
+                  );
+                })}
+                <tfoot>
+                  <tr>
+                    <th scope="row" colSpan={2}>전체 합계</th>
+                    <td>{format(total)}건</td>
+                    <td>{uniformRate ? `${format(cols[0]?.rate ?? document.incentive_rate)}원` : '—'}</td>
+                    <td data-testid="incentive-total">{format(totalIncentiveAmount)}원</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
             <p className="c-arm-help">단가는 해당 월에 적용됩니다. 열별 단가는 설정에서 변경할 수 있습니다.</p>
           </div>
         </aside>

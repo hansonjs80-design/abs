@@ -47,7 +47,7 @@ describe('C-Arm rectangular selection', () => {
     assert.equal(DEFAULT_C_ARM_COLUMNS[1].label, '재진');
     assert.match(pageSource, /<tr className="c-arm-header-categories">/);
     assert.match(pageSource, /<tr className="c-arm-header-subitems">/);
-    assert.match(pageSource, /\{cols\.map\(\(col\)\s*=>\s*\(?\s*<th\s+key=\{col\.id\}\s+scope="col"\s+className="c-arm-th-subitem">\{col\.label\}<\/th>/);
+    assert.match(pageSource, /\{cols\.map\(\(col\)\s*=>\s*\(?\s*<th\s+key=\{col\.id\}\s+scope="col"\s+className="c-arm-th-subitem"[^>]*>\{col\.label\}<\/th>/);
     assert.doesNotMatch(pageSource, /<th scope="col">초진환자<\/th>/);
     assert.doesNotMatch(pageSource, /<th scope="col">재진환자<\/th>/);
     assert.match(pageSource, /<col className="c-arm-col-date" \/>/);
@@ -60,7 +60,7 @@ describe('C-Arm rectangular selection', () => {
     const { readFile } = await import('node:fs/promises');
     const pageSource = await readFile(new URL('../../pages/CArmStatsPage.jsx', import.meta.url), 'utf8');
 
-    assert.match(pageSource, /<th scope="col">방사선사<\/th>\s*<th scope="col">건수<\/th>\s*<th scope="col">건당<\/th>\s*<th scope="col">인센티브 금액<\/th>/);
+    assert.match(pageSource, /<th scope="col">방사선사<\/th>\s*<th scope="col">항목<\/th>\s*<th scope="col">건수<\/th>\s*<th scope="col">건당<\/th>\s*<th scope="col">인센티브 금액<\/th>/);
     assert.doesNotMatch(pageSource, /<small>.*건 × .*원<\/small>/);
     assert.match(pageSource, /<col className="c-arm-incentive-col-name" \/>/);
     assert.match(pageSource, /<col className="c-arm-incentive-col-count" \/>/);
@@ -117,9 +117,9 @@ describe('C-Arm rectangular selection', () => {
     // 상단 인센티브 헤더 옆의 건당 입력 레이블 제거 확인
     assert.doesNotMatch(pageSource, /<div className="c-arm-incentive-header">[\s\S]*?<label className="c-arm-rate">/);
     // 인센티브 테이블에 '건당' 헤더 및 컬럼 확인
-    assert.match(pageSource, /<th scope="col">방사선사<\/th>\s*<th scope="col">건수<\/th>\s*<th scope="col">건당<\/th>\s*<th scope="col">인센티브 금액<\/th>/);
+    assert.match(pageSource, /<th scope="col">방사선사<\/th>\s*<th scope="col">항목<\/th>\s*<th scope="col">건수<\/th>\s*<th scope="col">건당<\/th>\s*<th scope="col">인센티브 금액<\/th>/);
     assert.match(pageSource, /<col className="c-arm-incentive-col-rate" \/>/);
-    assert.match(cssSource, /\.c-arm-incentive-col-rate\s*\{\s*width:\s*24%;/);
+    assert.match(cssSource, /\.c-arm-incentives\s*\{[^}]*table-layout:\s*auto;/);
   });
   it('hides caret on single-click cell selection and enables caret on double-click edit', async () => {
     const { readFile } = await import('node:fs/promises');

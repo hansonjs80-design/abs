@@ -97,6 +97,22 @@ export function cArmIncentive(person, documentOrRate, columns = null) {
   }, 0);
 }
 
+export function cArmIncentiveBreakdown(person, document, columns = null) {
+  const cols = columns || cArmColumns(document);
+  const totals = cArmPersonTotals(person, cols);
+  const groups = new Map();
+  for (const col of cols) {
+    const rate = Number(col.rate ?? document?.incentive_rate ?? DEFAULT_C_ARM_RATE);
+    if (!groups.has(rate)) groups.set(rate, { rate, count: 0, amount: 0, items: [] });
+    const group = groups.get(rate);
+    const count = totals[col.id] || 0;
+    group.count += count;
+    group.amount += count * rate;
+    group.items.push(`${col.category || 'C-Arm'} · ${col.label}`);
+  }
+  return [...groups.values()];
+}
+
 export function validateCArmMonth(document, year, month) {
   if (!Number.isInteger(year) || year < 1900 || year > 9999 || !Number.isInteger(month) || month < 1 || month > 12) {
     throw new Error('올바른 연월을 선택해주세요.');

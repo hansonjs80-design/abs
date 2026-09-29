@@ -10,7 +10,7 @@ export const APP_TABS = [
   { key: 'manual_therapy_stats', path: '/manual-therapy-stats', icon: Hand, label: '도수치료 통계', shortLabel: '도수', monthLabel: '도수치료 통계', tabClass: 'top-tab--stats-mt' },
   { key: 'combined_stats', path: '/combined-stats', icon: BarChart3, label: '전체 통계', shortLabel: '전체', monthLabel: '전체 통계', tabClass: 'top-tab--stats-combined' },
   { key: 'pt_stats', path: '/pt-stats', icon: Activity, label: '물리치료 통계', shortLabel: '물리', monthLabel: '물리치료 통계', tabClass: 'top-tab--stats-pt' },
-  { key: 'c_arm_stats', path: '/c-arm-stats', icon: Activity, label: 'C-Arm 통계', shortLabel: 'C-Arm', monthLabel: 'C-Arm 통계', tabClass: 'top-tab--stats-c-arm' },
+  { key: 'c_arm_stats', path: '/c-arm-stats', icon: Activity, label: '방사선 통계', shortLabel: '방사선', monthLabel: '방사선 통계', tabClass: 'top-tab--stats-c-arm' },
   { key: 'settings', path: '/settings', icon: Settings, label: '설정', shortLabel: '설정', tabClass: 'top-tab--settings' },
 ];
 
