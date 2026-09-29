@@ -1005,7 +1005,7 @@ export default function CombinedStatsPage() {
                       {showBreakdownIncentive && <td className="combined-summary-incentive-cell">{formatCurrency(currentSummary.treatmentTotals?.shockwave?.incentive)}</td>}
                     </tr>
                     {renderBreakdownDetails(currentSummary, 'shockwave')}
-                    <tr className="combined-therapist-subtotal combined-shinjang-total">
+                    <tr className="combined-breakdown-row combined-therapist-subtotal combined-shinjang-total">
                       <th>신장분사(전체)</th>
                       <td>{formatCount(currentSummary.treatmentTotals?.shinjang_spray?.count)}</td>
                       <td className="combined-summary-amount-cell">{formatCurrency(currentSummary.treatmentTotals?.shinjang_spray?.amount)}</td>

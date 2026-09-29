@@ -228,4 +228,15 @@ describe('combined statistics UI', () => {
     assert.match(styleSource, /\.combined-therapist-card \.combined-current-col-type\s*\{\s*width:\s*30% !important;/);
     assert.match(styleSource, /\.combined-therapist-card \.combined-current-col-incentive\s*\{\s*width:\s*24% !important;/);
   });
+
+  it('matches shinjang total row typography and numbers with shockwave breakdown row in item settlement', async () => {
+    const [pageSource, styleSource] = await Promise.all([
+      readFile(pageUrl, 'utf8'),
+      readFile(styleUrl, 'utf8'),
+    ]);
+
+    assert.match(pageSource, /<tr className="combined-breakdown-row combined-therapist-subtotal combined-shinjang-total">/);
+    assert.match(styleSource, /\.combined-treatment-breakdown-card table tbody tr\.combined-shinjang-total > :is\(th, td\)\s*\{[\s\S]*?height:\s*35px;[\s\S]*?font-size:\s*14px !important;[\s\S]*?font-weight:\s*800 !important;/);
+    assert.match(styleSource, /\.combined-treatment-breakdown-card table tbody tr\.combined-shinjang-total > :is\(\.combined-summary-amount-cell, \.combined-summary-incentive-cell\)\s*\{[\s\S]*?font-size:\s*calc\(1\.05rem \+ 2px\) !important;/);
+  });
 });

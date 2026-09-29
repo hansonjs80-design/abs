@@ -2120,8 +2120,15 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   font-weight: 800;
 }
 .combined-treatment-breakdown-card table tbody tr.combined-shinjang-total > :is(th, td) {
+  height: 35px;
   background: #dcfce7 !important;
-  font-weight: 800;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  border-top: 1px solid #b8c7dc;
+}
+.combined-treatment-breakdown-card table tbody tr.combined-shinjang-total > :is(.combined-summary-amount-cell, .combined-summary-incentive-cell) {
+  font-size: calc(1.05rem + 2px) !important;
+  font-weight: 750 !important;
 }
 
 .combined-treatment-breakdown-card table tbody tr.combined-breakdown-shockwave > :is(th, td) {
