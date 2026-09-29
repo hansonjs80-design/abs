@@ -82,6 +82,55 @@ describe('independent C-Arm statistics', () => {
     const failure = fakeClient({ data: null, error: new Error('offline') });
     await assert.rejects(saveCArmMonth(failure, { year: 2026, month: 9, document: month(), revision: 3 }), /offline/);
   });
+  it('supports custom dynamic columns and per-column incentive rates', async () => {
+    const customColumns = [
+      { id: 'first', label: '초진', rate: 3000 },
+      { id: 'returning', label: '재진', rate: 2000 },
+      { id: 'special', label: '특수', rate: 5000 },
+    ];
+    const customDoc = {
+      incentive_rate: 2000,
+      columns: customColumns,
+      radiographers: [
+        {
+          id: 'p1',
+          name: '김태현',
+          columns: customColumns,
+          days: {
+            1: { first: 2, returning: 3, special: 1 },
+            2: { first: 1, returning: 0, special: 2 },
+          },
+        },
+      ],
+    };
+
+    assert.doesNotThrow(() => validateCArmMonth(customDoc, 2026, 9));
+    const totals = cArmPersonTotals(customDoc.radiographers[0], customColumns);
+    assert.equal(totals.first, 3);
+    assert.equal(totals.returning, 3);
+    assert.equal(totals.special, 3);
+    assert.equal(totals.total, 9);
+
+    // 김태현: first(3 * 3000) + returning(3 * 2000) + special(3 * 5000) = 9000 + 6000 + 15000 = 30000
+    const incentive = cArmIncentive(customDoc.radiographers[0], customDoc, customColumns);
+    assert.equal(incentive, 30000);
+
+    // 중복 열 이름 검증
+    const duplicateLabelsDoc = {
+      ...customDoc,
+      columns: [
+        { id: 'c1', label: '초진', rate: 2000 },
+        { id: 'c2', label: '초진', rate: 2000 },
+      ],
+    };
+    assert.throws(() => validateCArmMonth(duplicateLabelsDoc, 2026, 9), /중복/);
+
+    // 저장 시 custom columns가 radiographers에 보존되는지 검증
+    const client = fakeClient({ data: [{ year: 2026, month: 9, revision: 1 }], error: null });
+    await saveCArmMonth(client, { year: 2026, month: 9, document: customDoc, revision: null });
+    const inserted = client.calls[1][1];
+    assert.deepEqual(inserted.radiographers[0].columns, customColumns);
+  });
 });
 
 describe('C-Arm opt-in permission', () => {

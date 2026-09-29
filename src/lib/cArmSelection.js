@@ -1,3 +1,5 @@
+import { cArmColumns } from './cArmStats.js';
+
 export function cArmSelectionBounds(selection) {
   if (!selection) return null;
   return {
@@ -14,26 +16,41 @@ export function cArmCellSelected(bounds, row, col) {
 
 export function copyCArmSelection(document, bounds) {
   if (!bounds) return '';
+  const cols = cArmColumns(document);
+  const colCount = Math.max(1, cols.length);
   return Array.from({ length: bounds.bottom - bounds.top + 1 }, (_, r) => (
     Array.from({ length: bounds.right - bounds.left + 1 }, (_, c) => {
       const column = bounds.left + c;
-      const person = document.radiographers[Math.floor(column / 2)];
-      return person.days[bounds.top + r]?.[column % 2 === 0 ? 'first' : 'returning'] ?? '';
+      const personIndex = Math.floor(column / colCount);
+      const person = document.radiographers[personIndex];
+      if (!person) return '';
+      const colId = cols[column % colCount]?.id;
+      return person.days[bounds.top + r]?.[colId] ?? '';
     }).join('\t')
   )).join('\n');
 }
 
 export function clearCArmSelection(document, bounds) {
   if (!bounds) return document;
-  return { ...document, radiographers: document.radiographers.map((person, index) => {
-    if (index * 2 > bounds.right || index * 2 + 1 < bounds.left) return person;
-    const days = { ...person.days };
-    for (let day = bounds.top; day <= bounds.bottom; day += 1) {
-      days[day] = { ...days[day] };
-      for (let offset = 0; offset < 2; offset += 1) {
-        if (cArmCellSelected(bounds, day, index * 2 + offset)) days[day][offset === 0 ? 'first' : 'returning'] = null;
+  const cols = cArmColumns(document);
+  const colCount = Math.max(1, cols.length);
+  return {
+    ...document,
+    radiographers: document.radiographers.map((person, index) => {
+      const startCol = index * colCount;
+      const endCol = startCol + colCount - 1;
+      if (startCol > bounds.right || endCol < bounds.left) return person;
+      const days = { ...person.days };
+      for (let day = bounds.top; day <= bounds.bottom; day += 1) {
+        days[day] = { ...days[day] };
+        for (let offset = 0; offset < colCount; offset += 1) {
+          if (cArmCellSelected(bounds, day, startCol + offset)) {
+            const colId = cols[offset]?.id;
+            days[day][colId] = null;
+          }
+        }
       }
-    }
-    return { ...person, days };
-  }) };
+      return { ...person, days };
+    }),
+  };
 }
