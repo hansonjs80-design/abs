@@ -24,7 +24,7 @@ export function saveCArmRecentMonths(value, storage, browserDocument) {
 
 export function cArmRecentMonthRange(year, month, count) {
   return Array.from({ length: count }, (_, index) => {
-    const serial = year * 12 + month - count + index;
-    return { year: Math.floor(serial / 12), month: serial % 12 + 1 };
+    const serial = year * 12 + month - 1 - index;
+    return { year: Math.floor(serial / 12), month: (serial % 12 + 12) % 12 + 1 };
   });
 }

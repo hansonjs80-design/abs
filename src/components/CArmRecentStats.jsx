@@ -13,7 +13,7 @@ export default function CArmRecentStats({ year, month, records, currentTotal, di
   const [history, setHistory] = useState(null);
   const [retry, setRetry] = useState(0);
   const range = cArmRecentMonthRange(year, month, months);
-  const startYear = range[0].year;
+  const startYear = Math.min(...range.map((item) => item.year));
   const historyKey = `${startYear}:${year}:${retry}`;
 
   useEffect(() => {

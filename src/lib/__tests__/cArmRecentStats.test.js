@@ -31,14 +31,14 @@ test('restores the chosen number from cookie backup after local storage is lost'
   assert.equal(readCArmRecentMonths(blocked, document), 18);
 });
 
-test('includes the selected month and crosses year boundaries without future months', () => {
+test('includes the selected month and crosses year boundaries without future months in reverse order (most recent first)', () => {
   assert.deepEqual(cArmRecentMonthRange(2026, 2, 3), [
-    { year: 2025, month: 12 }, { year: 2026, month: 1 }, { year: 2026, month: 2 },
+    { year: 2026, month: 2 }, { year: 2026, month: 1 }, { year: 2025, month: 12 },
   ]);
   assert.deepEqual(cArmRecentMonthRange(2026, 9, 1), [{ year: 2026, month: 9 }]);
   const range = cArmRecentMonthRange(2026, 9, 18);
   assert.equal(range.length, 18);
-  assert.deepEqual(range[0], { year: 2025, month: 4 });
-  assert.deepEqual(range.at(-1), { year: 2026, month: 9 });
+  assert.deepEqual(range[0], { year: 2026, month: 9 });
+  assert.deepEqual(range.at(-1), { year: 2025, month: 4 });
   assert.equal(parseCArmRecentMonths('120'), 120);
 });
