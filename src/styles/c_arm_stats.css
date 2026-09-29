@@ -45,8 +45,8 @@
 .c-arm-sunday th { color: #c64848; }
 .c-arm-saturday th { color: #3775b9; }
 .c-arm-summary { display: grid; flex: 0 0 460px; min-width: 0; max-width: 100%; gap: 26px; margin-top: 42px; }
-.c-arm-annual { width: auto; max-width: fit-content; table-layout: auto; }
-.c-arm-annual caption { background: #dce7f7; color: #173459; border: 2px solid #7189a8; border-bottom: 0; padding: 7px 10px; white-space: nowrap; }
+.c-arm-annual { width: max-content; min-width: 260px; max-width: 100%; table-layout: auto; }
+.c-arm-annual caption { background: #dce7f7; color: #173459; border: 2px solid #7189a8; border-bottom: 0; padding: 7px 12px; white-space: nowrap !important; }
 .c-arm-annual th, .c-arm-annual td,
 .c-arm-annual tbody th, .c-arm-annual tbody td,
 .c-arm-annual tfoot th, .c-arm-annual tfoot td,
@@ -64,8 +64,8 @@
   width: auto !important;
 }
 .c-arm-annual .c-arm-selected-month { background: #eaf2ff; color: #173459; }
-.c-arm-recent-caption-print { display: none; }
-.c-arm-recent-caption { display: inline-flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; }
+.c-arm-recent-caption-print { display: none; white-space: nowrap !important; }
+.c-arm-recent-caption { display: inline-flex; align-items: center; justify-content: center; flex-wrap: nowrap !important; white-space: nowrap !important; gap: 4px; }
 .c-arm-recent-caption input { width: 2.8em; padding: 2px 3px; border: 1px solid #8c9eb7; border-radius: 5px; text-align: center; font: inherit; color: inherit; background: var(--bg-primary, white); appearance: textfield; -moz-appearance: textfield; }
 .c-arm-recent-caption input::-webkit-inner-spin-button,
 .c-arm-recent-caption input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
@@ -316,8 +316,11 @@
   }
   .c-arm-annual {
     width: auto !important;
-    min-width: 200px !important;
-    max-width: 250px !important;
+    min-width: 250px !important;
+    max-width: fit-content !important;
+  }
+  .c-arm-annual caption {
+    white-space: nowrap !important;
   }
   .c-arm-incentive-card {
     width: auto !important;
@@ -336,6 +339,7 @@
     font-weight: 750 !important;
     color: inherit !important;
     letter-spacing: normal !important;
+    white-space: nowrap !important;
   }
 }
 
