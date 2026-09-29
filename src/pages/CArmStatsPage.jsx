@@ -453,6 +453,7 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
                         <th scope="row" title={holidayNames.get(dateKey)}>{month}월 {day}일 <span>({['일', '월', '화', '수', '목', '금', '토'][weekday]})</span></th>
                         {cols.map((col, colSubIdx) => {
                           const gridColIdx = index * colCount + colSubIdx;
+                          const editing = grid.isEditing(day, gridColIdx);
                           return (
                             <td key={col.id} {...grid.getCellProps(day, gridColIdx)}>
                               <input
@@ -460,9 +461,15 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
                                 inputMode="numeric"
                                 pattern="[0-9]*"
                                 disabled={conflict}
+                                className={editing ? 'is-editing' : ''}
                                 aria-label={`${person.name} ${month}월 ${day}일 ${col.label}`}
                                 value={person.days[day]?.[col.id] ?? ''}
                                 onFocus={() => grid.onFocus(day, gridColIdx)}
+                                onBlur={() => grid.onBlur(day, gridColIdx)}
+                                onDoubleClick={(event) => {
+                                  event.stopPropagation();
+                                  grid.startEdit(day, gridColIdx);
+                                }}
                                 onKeyDown={grid.onKeyDown}
                                 onCopy={copyCounts}
                                 onCut={(event) => copyCounts(event, true)}

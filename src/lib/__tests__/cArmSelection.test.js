@@ -115,4 +115,23 @@ describe('C-Arm rectangular selection', () => {
     assert.match(cssSource, /\.c-arm-incentive-header\s*\{\s*display:\s*flex;\s*align-items:\s*center;\s*justify-content:\s*space-between;/);
     assert.match(cssSource, /\.c-arm-rate input\s*\{\s*width:\s*68px;/);
   });
+  it('hides caret on single-click cell selection and enables caret on double-click edit', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const pageSource = await readFile(new URL('../../pages/CArmStatsPage.jsx', import.meta.url), 'utf8');
+    const cssSource = await readFile(new URL('../../styles/c_arm_stats.css', import.meta.url), 'utf8');
+    const hookSource = await readFile(new URL('../../hooks/useCArmGridSelection.js', import.meta.url), 'utf8');
+
+    // CSS 검증: 비편집 시 커서 투명, 더블클릭/편집 시 커서 표시
+    assert.match(cssSource, /\.c-arm-person-table input:not\(\.is-editing\)\s*\{\s*caret-color:\s*transparent;/);
+    assert.match(cssSource, /\.c-arm-person-table input\.is-editing\s*\{\s*caret-color:\s*#173459;/);
+
+    // JSX 연결 검증
+    assert.match(pageSource, /className=\{editing \? 'is-editing' : ''\}/);
+    assert.match(pageSource, /grid\.startEdit\(day, gridColIdx\)/);
+
+    // 훅 로직 검증: 더블클릭 및 키 입력 시 편집 상태 제어
+    assert.match(hookSource, /isEditing/);
+    assert.match(hookSource, /startEdit/);
+    assert.match(hookSource, /updateEditing/);
+  });
 });

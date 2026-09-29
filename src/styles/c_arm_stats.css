@@ -25,10 +25,12 @@
 .c-arm-person-table .c-arm-col-returning,
 .c-arm-person-table .c-arm-col-count { width: 52px; }
 .c-arm-person-table tbody th { font-size: 13px; white-space: nowrap; text-align: center; padding: 4px; }
-.c-arm-person-table tbody th span { font-size: inherit; }
 .c-arm-person-table td { padding: 0; }
 .c-arm-person-table input { display: block; width: 100%; min-width: 0; height: 29px; padding: 3px 4px; text-align: center; font: inherit; color: inherit; background: transparent; border: 0; border-radius: 0; }
 .c-arm-person-table input:focus { outline: 2px solid #477ed0; outline-offset: -2px; background: #eaf2ff; color: #173459; }
+.c-arm-person-table input:not(.is-editing) { caret-color: transparent; user-select: none; }
+.c-arm-person-table input:not(.is-editing)::selection { background: transparent; color: inherit; }
+.c-arm-person-table input.is-editing { caret-color: #173459; background: #ffffff !important; box-shadow: inset 0 0 0 1px #2157a0; outline: none; user-select: text; }
 .c-arm-table tfoot th, .c-arm-table tfoot td { background: #fff4bd; color: #453707; font-weight: 750; padding: 6px 8px; }
 .c-arm-table tfoot th { text-align: left; }
 .c-arm-table .c-arm-grand-total th, .c-arm-table .c-arm-grand-total td { background: #ffdf85; }
