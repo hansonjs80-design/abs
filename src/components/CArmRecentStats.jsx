@@ -43,7 +43,10 @@ export default function CArmRecentStats({ year, month, records, currentTotal, di
       <col className="c-arm-recent-col-count" />
     </colgroup>
     <caption>
-      <label className="c-arm-recent-caption">
+      <span className="c-arm-recent-caption-print" aria-hidden="true">
+        최근 {months}개월간 C-Arm 통계
+      </span>
+      <label className="c-arm-recent-caption c-arm-recent-caption-screen">
         최근 <input type="number" inputMode="numeric" min="1" max={MAX_C_ARM_RECENT_MONTHS} step="1"
           aria-label="C-Arm 통계 조회 개월 수" value={input}
           onChange={(event) => {

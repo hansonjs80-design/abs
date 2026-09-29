@@ -57,6 +57,7 @@
   vertical-align: middle;
 }
 .c-arm-annual .c-arm-selected-month { background: #eaf2ff; color: #173459; }
+.c-arm-recent-caption-print { display: none; }
 .c-arm-recent-caption { display: inline-flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; }
 .c-arm-recent-caption input { width: 2.8em; padding: 2px 3px; border: 1px solid #8c9eb7; border-radius: 5px; text-align: center; font: inherit; color: inherit; background: var(--bg-primary, white); appearance: textfield; -moz-appearance: textfield; }
 .c-arm-recent-caption input::-webkit-inner-spin-button,
@@ -280,19 +281,17 @@
   .c-arm-summary { display: grid; grid-template-columns: 1fr 1fr; align-items: start; margin-top: 20px; }
   .c-arm-rate input { border: none; }
 
-  /* 최근 n개월간 C-Arm 통계 상단 헤더의 n개월 입력 셀: 인쇄 시 테두리/배경 없이 일반 글자처럼 표시 */
-  .c-arm-recent-caption input {
-    border: none !important;
-    background: transparent !important;
-    padding: 0 !important;
-    width: auto !important;
-    font: inherit !important;
-    font-weight: inherit !important;
-    color: inherit !important;
-    box-shadow: none !important;
-  }
+  /* 최근 n개월간 C-Arm 통계 상단 헤더: 인쇄 시 과도한 공백 없이 하나의 자연스러운 텍스트로 표시 */
+  .c-arm-recent-caption-screen,
   .c-arm-recent-hint {
     display: none !important;
+  }
+  .c-arm-recent-caption-print {
+    display: inline !important;
+    font: inherit !important;
+    font-weight: 750 !important;
+    color: inherit !important;
+    letter-spacing: normal !important;
   }
 }
 
