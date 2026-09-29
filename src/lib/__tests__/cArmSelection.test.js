@@ -64,4 +64,10 @@ describe('C-Arm rectangular selection', () => {
     assert.match(pageSource, /<col className="c-arm-incentive-col-count" \/>/);
     assert.match(pageSource, /<col className="c-arm-incentive-col-amount" \/>/);
   });
+  it('hides the toolbar subtitle description during print', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const cssSource = await readFile(new URL('../../styles/c_arm_stats.css', import.meta.url), 'utf8');
+
+    assert.match(cssSource, /@media print\s*\{[\s\S]*?\.c-arm-toolbar p[^}]*display:\s*none !important;/);
+  });
 });

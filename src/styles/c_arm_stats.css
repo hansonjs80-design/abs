@@ -61,7 +61,7 @@
 .c-arm-dialog-actions { justify-content: flex-end; margin-top: 24px; }
 @media (max-width: 700px) { .c-arm-layout { flex-direction: column; } .c-arm-records, .c-arm-summary { flex-basis: auto; width: 100%; min-width: 0; } .c-arm-summary { grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); align-items: start; } }
 @media (max-width: 600px) { .c-arm-stats { padding: 12px; } .c-arm-actions { flex-wrap: wrap; } .c-arm-records { grid-template-columns: 1fr; } .c-arm-toolbar h1 { font-size: 18px; } }
-@media print { .c-arm-stats { padding: 0; } .c-arm-actions, .c-arm-status, .c-arm-help, .c-arm-settings { display: none !important; } .c-arm-layout { display: block; } .c-arm-records { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; } .c-arm-table, .c-arm-incentive-card { break-inside: avoid; } .c-arm-summary { display: grid; grid-template-columns: 1fr 1fr; align-items: start; margin-top: 20px; } .c-arm-rate input { border: none; } }
+@media print { .c-arm-stats { padding: 0; } .c-arm-toolbar p, .c-arm-actions, .c-arm-status, .c-arm-help, .c-arm-settings { display: none !important; } .c-arm-layout { display: block; } .c-arm-records { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; } .c-arm-table, .c-arm-incentive-card { break-inside: avoid; } .c-arm-summary { display: grid; grid-template-columns: 1fr 1fr; align-items: start; margin-top: 20px; } .c-arm-rate input { border: none; } }
 
 /* Spreadsheet selection stays visible while copying or extending a range. */
 .c-arm-person-table td[data-c-arm-row] { position: relative; user-select: none; }
