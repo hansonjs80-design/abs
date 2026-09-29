@@ -43,9 +43,10 @@
 .c-arm-annual th:first-child { width: 58%; text-align: center; }
 .c-arm-annual .c-arm-selected-month { background: #eaf2ff; color: #173459; }
 .c-arm-incentive-card { border: 1px solid var(--border-color, #cdd3dc); border-radius: 8px; padding: 14px; background: var(--bg-primary); }
-.c-arm-incentive-card h2 { margin: 0 0 10px; font-size: 17px; }
-.c-arm-rate { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 14px; }
-.c-arm-rate input { width: 130px; text-align: right; padding: 6px 8px; border: 1px solid var(--border-color, #cdd3dc); border-radius: 4px; color: var(--text-primary); background: var(--bg-secondary); font: inherit; font-weight: 700; }
+.c-arm-incentive-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.c-arm-incentive-header h2 { margin: 0; font-size: 17px; }
+.c-arm-rate { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; margin: 0; }
+.c-arm-rate input { width: 68px; text-align: right; padding: 3px 6px; border: 1px solid var(--border-color, #cdd3dc); border-radius: 4px; color: var(--text-primary); background: var(--bg-secondary); font: inherit; font-weight: 700; }
 .c-arm-incentives { font-size: 13px; }
 .c-arm-incentive-col-name { width: 33%; }
 .c-arm-incentive-col-count { width: 27%; }

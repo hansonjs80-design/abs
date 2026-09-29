@@ -106,4 +106,13 @@ describe('C-Arm rectangular selection', () => {
     assert.match(cssSource, /\.c-arm-view-tabs/);
     assert.match(cssSource, /\.c-arm-empty-row/);
   });
+  it('places 건당 rate input beside the incentive heading and compacts its width', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const pageSource = await readFile(new URL('../../pages/CArmStatsPage.jsx', import.meta.url), 'utf8');
+    const cssSource = await readFile(new URL('../../styles/c_arm_stats.css', import.meta.url), 'utf8');
+
+    assert.match(pageSource, /<div className="c-arm-incentive-header">\s*<h2>인센티브<\/h2>\s*<label className="c-arm-rate">/);
+    assert.match(cssSource, /\.c-arm-incentive-header\s*\{\s*display:\s*flex;\s*align-items:\s*center;\s*justify-content:\s*space-between;/);
+    assert.match(cssSource, /\.c-arm-rate input\s*\{\s*width:\s*68px;/);
+  });
 });

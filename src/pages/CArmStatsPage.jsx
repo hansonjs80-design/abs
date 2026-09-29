@@ -318,9 +318,11 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
             <tfoot><tr><th scope="row">연간 합계</th><td>{format(annualTotal)}</td></tr></tfoot>
           </table>
           <div className="c-arm-incentive-card">
-            <h2>인센티브</h2>
-            <label className="c-arm-rate">건당 <input aria-label="건당 인센티브" type="text" inputMode="numeric" pattern="[0-9]*" disabled={conflict} value={document.incentive_rate}
-              onChange={(event) => { const value = event.target.value; if (value === '' || (/^\d+$/.test(value) && Number(value) <= MAX_C_ARM_RATE)) change({ ...document, incentive_rate: Number(value) }); }} /> 원</label>
+            <div className="c-arm-incentive-header">
+              <h2>인센티브</h2>
+              <label className="c-arm-rate">건당 <input aria-label="건당 인센티브" type="text" inputMode="numeric" pattern="[0-9]*" disabled={conflict} value={document.incentive_rate}
+                onChange={(event) => { const value = event.target.value; if (value === '' || (/^\d+$/.test(value) && Number(value) <= MAX_C_ARM_RATE)) change({ ...document, incentive_rate: Number(value) }); }} /> 원</label>
+            </div>
             <table className="c-arm-table c-arm-incentives">
               <colgroup>
                 <col className="c-arm-incentive-col-name" />
