@@ -45,17 +45,23 @@
 .c-arm-sunday th { color: #c64848; }
 .c-arm-saturday th { color: #3775b9; }
 .c-arm-summary { display: grid; flex: 0 0 460px; min-width: 0; max-width: 100%; gap: 26px; margin-top: 42px; }
-.c-arm-annual { width: fit-content; min-width: 220px; max-width: 270px; }
-.c-arm-annual caption { background: #dce7f7; color: #173459; border: 2px solid #7189a8; border-bottom: 0; }
-.c-arm-annual th:first-child { width: 56%; text-align: center; }
+.c-arm-annual { width: auto; max-width: fit-content; table-layout: auto; }
+.c-arm-annual caption { background: #dce7f7; color: #173459; border: 2px solid #7189a8; border-bottom: 0; padding: 7px 10px; white-space: nowrap; }
 .c-arm-annual th, .c-arm-annual td,
 .c-arm-annual tbody th, .c-arm-annual tbody td,
 .c-arm-annual tfoot th, .c-arm-annual tfoot td,
 .c-arm-recent-th-month, .c-arm-recent-th-count,
 .c-arm-recent-cell-month, .c-arm-recent-cell-count,
 .c-arm-recent-foot-month, .c-arm-recent-foot-count {
+  width: auto !important;
+  padding: 4px 10px !important;
+  white-space: nowrap !important;
   text-align: center !important;
   vertical-align: middle;
+}
+.c-arm-recent-col-month,
+.c-arm-recent-col-count {
+  width: auto !important;
 }
 .c-arm-annual .c-arm-selected-month { background: #eaf2ff; color: #173459; }
 .c-arm-recent-caption-print { display: none; }
