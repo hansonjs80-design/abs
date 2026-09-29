@@ -12,6 +12,12 @@ const PAGE_SIZE = 1000;
 
 export const BACKUP_TABLES = [
   {
+    name: 'c_arm_monthly_stats',
+    label: 'C-Arm 월별 기록',
+    order: ['year', 'month'],
+    conflictColumns: ['year', 'month'],
+  },
+  {
     name: 'staff_schedules',
     label: '직원 근무표',
     order: ['year', 'month', 'day', 'slot_index'],

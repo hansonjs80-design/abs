@@ -784,6 +784,17 @@
   --tab-text-color: #111827;
 }
 
+/* Independent C-Arm statistics */
+.top-tab--stats-c-arm {
+  --tab-bg: #d4e2ed;
+  --tab-hover-bg: #b8d0e2;
+  --tab-active-bg: #426b8b;
+  --tab-active-surface: #eff5fa;
+  --tab-active-border: #426b8b;
+  --tab-shadow: rgba(66, 107, 139, 0.18);
+  --tab-text-color: #173459;
+}
+
 /* 8. Settings (Gray) */
 .top-tab--settings {
   --tab-bg: #6b7280;

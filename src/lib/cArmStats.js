@@ -1,0 +1,96 @@
+export const C_ARM_TABLE = 'c_arm_monthly_stats';
+export const DEFAULT_C_ARM_RATE = 2000;
+export const MAX_C_ARM_COUNT = 100000;
+export const MAX_C_ARM_RATE = 100000000;
+
+export function daysInCArmMonth(year, month) {
+  return new Date(year, month, 0).getDate();
+}
+
+export function createCArmMonth(template) {
+  return {
+    incentive_rate: template?.incentive_rate ?? DEFAULT_C_ARM_RATE,
+    radiographers: (template?.radiographers ?? []).map((person) => ({
+      id: person.id,
+      name: person.name,
+      days: {},
+    })),
+  };
+}
+
+export function cArmPersonTotals(person) {
+  return Object.values(person.days || {}).reduce((sum, day) => ({
+    first: sum.first + (day.first || 0),
+    returning: sum.returning + (day.returning || 0),
+    total: sum.total + (day.first || 0) + (day.returning || 0),
+  }), { first: 0, returning: 0, total: 0 });
+}
+
+export function cArmMonthTotal(document) {
+  return (document?.radiographers || []).reduce((sum, person) => sum + cArmPersonTotals(person).total, 0);
+}
+
+export function cArmIncentive(person, rate) {
+  return cArmPersonTotals(person).total * rate;
+}
+
+export function validateCArmMonth(document, year, month) {
+  if (!Number.isInteger(year) || year < 1900 || year > 9999 || !Number.isInteger(month) || month < 1 || month > 12) {
+    throw new Error('올바른 연월을 선택해주세요.');
+  }
+  if (!Number.isInteger(document.incentive_rate) || document.incentive_rate < 0 || document.incentive_rate > MAX_C_ARM_RATE) {
+    throw new Error('건당 인센티브는 0~100,000,000원의 정수로 입력해주세요.');
+  }
+  if (!Array.isArray(document.radiographers) || document.radiographers.length > 30) {
+    throw new Error('방사선사는 최대 30명까지 등록할 수 있습니다.');
+  }
+  const ids = new Set();
+  const names = new Set();
+  for (const person of document.radiographers) {
+    const name = String(person.name || '').trim();
+    if (!person.id || ids.has(person.id) || !name || name.length > 40 || names.has(name)) {
+      throw new Error('방사선사 이름은 중복 없이 1~40자로 입력해주세요.');
+    }
+    ids.add(person.id);
+    names.add(name);
+    for (const [day, values] of Object.entries(person.days || {})) {
+      if (!/^\d+$/.test(day) || Number(day) < 1 || Number(day) > daysInCArmMonth(year, month)) {
+        throw new Error('해당 월에 없는 날짜의 기록이 있습니다.');
+      }
+      for (const kind of ['first', 'returning']) {
+        const count = values[kind] ?? 0;
+        if (!Number.isInteger(count) || count < 0 || count > MAX_C_ARM_COUNT) {
+          throw new Error('건수는 0~100,000 사이의 정수로 입력해주세요.');
+        }
+      }
+    }
+  }
+  return document;
+}
+
+export async function loadCArmYear(client, year) {
+  const { data, error } = await client.from(C_ARM_TABLE).select('*').eq('year', year).order('month');
+  if (error) throw error;
+  return data || [];
+}
+
+export async function loadCArmTemplate(client, year) {
+  const { data, error } = await client.from(C_ARM_TABLE).select('*')
+    .lt('year', year).order('year', { ascending: false }).order('month', { ascending: false }).limit(1);
+  if (error) throw error;
+  return data?.[0] || null;
+}
+
+export async function saveCArmMonth(client, { year, month, document, revision }) {
+  validateCArmMonth(document, year, month);
+  const payload = { year, month, ...document, revision: revision === null ? 1 : revision + 1 };
+  const query = revision === null
+    ? client.from(C_ARM_TABLE).insert(payload)
+    : client.from(C_ARM_TABLE).update(payload).eq('year', year).eq('month', month).eq('revision', revision);
+  const { data, error } = await query.select();
+  if (error?.code === '23505' || (!error && data?.length !== 1)) {
+    throw new Error('다른 기기에서 이 달의 기록을 변경했습니다. 입력값을 확인한 뒤 서버 기록을 다시 불러와주세요.');
+  }
+  if (error) throw error;
+  return data[0];
+}

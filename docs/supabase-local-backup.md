@@ -22,6 +22,7 @@
 
 ## 포함 테이블
 
+- `c_arm_monthly_stats`
 - `staff_schedules`
 - `shockwave_schedules`
 - `shockwave_patient_logs`

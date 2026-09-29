@@ -23,6 +23,7 @@ const ManualTherapyStatsPage = React.lazy(loadManualTherapyStatsPage);
 const ShinjangSprayStatsPage = React.lazy(loadShinjangSprayStatsPage);
 const CombinedStatsPage = React.lazy(loadCombinedStatsPage);
 const PhysicalTherapyStatsPage = React.lazy(() => import('./pages/PhysicalTherapyStatsPage'));
+const CArmStatsPage = React.lazy(() => import('./pages/CArmStatsPage'));
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
 
 function PageFallback() {
@@ -91,6 +92,7 @@ function AppRoutes() {
         <Route path="/shinjang-spray-stats" element={<ProtectedRoute path="/shinjang-spray-stats"><LazyPage><ShinjangSprayStatsPage /></LazyPage></ProtectedRoute>} />
         <Route path="/combined-stats" element={<ProtectedRoute path="/combined-stats"><LazyPage><CombinedStatsPage /></LazyPage></ProtectedRoute>} />
         <Route path="/pt-stats" element={<ProtectedRoute path="/pt-stats"><LazyPage><PhysicalTherapyStatsPage /></LazyPage></ProtectedRoute>} />
+        <Route path="/c-arm-stats" element={<ProtectedRoute path="/c-arm-stats"><LazyPage><CArmStatsPage /></LazyPage></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute path="/settings"><LazyPage><SettingsPage /></LazyPage></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
