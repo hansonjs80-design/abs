@@ -76,6 +76,119 @@
 .c-arm-rate-input-wrap { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--text-secondary); flex-shrink: 0; }
 .c-arm-rate-input-wrap input { width: 68px; text-align: right; padding: 7px 6px; font-weight: 600; }
 .c-arm-add-person { margin-top: 4px; }
+
+/* 2단 계층형 헤더 스타일 */
+.c-arm-table thead tr.c-arm-header-categories th {
+  background: #e7effa;
+  color: #1a365d;
+  font-weight: 700;
+  font-size: 13px;
+  border-bottom: 1px solid #c0d1e5;
+  padding: 5px 6px;
+}
+.c-arm-table thead tr.c-arm-header-subitems th {
+  background: var(--bg-secondary, #f4f6f9);
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 4px 6px;
+}
+.c-arm-th-date {
+  vertical-align: middle;
+  background: var(--bg-secondary, #eef2f7) !important;
+  font-weight: 700 !important;
+}
+
+/* 방사선사 및 항목 계층형 설정 모달 */
+.c-arm-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 38vh;
+  overflow-y: auto;
+  margin: 10px 0;
+  padding-right: 2px;
+}
+.c-arm-group-card {
+  border: 1px solid var(--border-color, #cdd3dc);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--bg-primary, #ffffff);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.c-arm-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--border-color, #e2e8f0);
+}
+.c-arm-group-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: #e2eaf6;
+  color: #2157a0;
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.c-arm-group-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  font: inherit;
+  font-weight: 700;
+  border: 1px solid var(--border-color, #cdd3dc);
+  border-radius: 6px;
+  background: var(--bg-secondary, #f8fafc);
+}
+.c-arm-subitem-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 8px;
+}
+.c-arm-subitem-setting {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.c-arm-subitem-setting input:not([type="button"]) {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  font: inherit;
+  border: 1px solid var(--border-color, #cdd3dc);
+  border-radius: 5px;
+  background: var(--bg-secondary);
+}
+.c-arm-add-subitem-btn {
+  align-self: flex-start;
+  margin-top: 4px;
+  font-size: 12px !important;
+  padding: 4px 8px !important;
+  color: #2157a0 !important;
+  background: #f0f4fa !important;
+  border: 1px dashed #b8cee8 !important;
+}
+.c-arm-add-group-btn {
+  margin-top: 6px;
+  font-size: 13px !important;
+}
+.c-arm-icon-btn {
+  padding: 6px !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--text-secondary, #64748b) !important;
+  cursor: pointer;
+  border-radius: 5px;
+}
+.c-arm-icon-btn:hover:not(:disabled) {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+}
 .c-arm-dialog-actions { justify-content: flex-end; margin-top: 20px; }
 @media (max-width: 700px) { .c-arm-layout { flex-direction: column; } .c-arm-records, .c-arm-summary { flex-basis: auto; width: 100%; min-width: 0; } .c-arm-summary { grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); align-items: start; } }
 @media (max-width: 600px) { .c-arm-stats { padding: 12px; } .c-arm-actions { flex-wrap: wrap; } .c-arm-records { grid-template-columns: 1fr; } .c-arm-toolbar h1 { font-size: 18px; } }

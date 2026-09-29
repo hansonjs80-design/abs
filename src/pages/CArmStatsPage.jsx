@@ -4,7 +4,7 @@ import { useSchedule } from '../contexts/ScheduleContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import {
-  cArmColumns, cArmIncentive, cArmMonthTotal, cArmPersonTotals, createCArmMonth,
+  cArmColumns, cArmColumnGroups, cArmIncentive, cArmMonthTotal, cArmPersonTotals, createCArmMonth,
   daysInCArmMonth, DEFAULT_C_ARM_RATE, loadCArmTemplate, loadCArmYear, MAX_C_ARM_COUNT,
   MAX_C_ARM_RATE, saveCArmMonth, validateCArmMonth,
 } from '../lib/cArmStats';
@@ -26,7 +26,15 @@ function readDraft(key) {
 }
 
 function RadiographerSettings({ document, year, month, onApply, onClose }) {
-  const [columns, setColumns] = useState(() => cArmColumns(document).map((col) => ({ ...col })));
+  const [groups, setGroups] = useState(() => {
+    const cols = cArmColumns(document);
+    const colGroups = cArmColumnGroups(cols);
+    return colGroups.map((g, idx) => ({
+      id: `grp_${idx}_${Date.now()}`,
+      name: g.category,
+      items: g.columns.map((c) => ({ id: c.id, label: c.label, rate: c.rate })),
+    }));
+  });
   const [people, setPeople] = useState(() => document.radiographers.map((person) => ({ ...person })));
   const [error, setError] = useState('');
   const dialog = useRef(null);
@@ -38,41 +46,105 @@ function RadiographerSettings({ document, year, month, onApply, onClose }) {
     return () => { element.close(); previousFocus?.focus?.(); };
   }, []);
 
-  const changeColumn = (id, field, value) => {
-    setColumns((prev) => prev.map((col) => {
-      if (col.id !== id) return col;
-      if (field === 'rate') {
-        if (value !== '' && (!/^\d+$/.test(value) || Number(value) > MAX_C_ARM_RATE)) return col;
-        return { ...col, rate: value === '' ? 0 : Number(value) };
-      }
-      return { ...col, [field]: value };
+  const totalItemCount = groups.reduce((sum, g) => sum + g.items.length, 0);
+
+  const changeGroupName = (groupId, name) => {
+    setGroups((prev) => prev.map((g) => (g.id === groupId ? { ...g, name } : g)));
+  };
+
+  const addGroup = () => {
+    if (totalItemCount >= 10 || groups.length >= 5) return;
+    const nextGroupIdx = groups.length + 1;
+    const nextColIdx = totalItemCount + 1;
+    const baseRate = groups[0]?.items[0]?.rate ?? document.incentive_rate ?? DEFAULT_C_ARM_RATE;
+    setGroups((prev) => [
+      ...prev,
+      {
+        id: `grp_${Date.now()}`,
+        name: `상위 항목 ${nextGroupIdx}`,
+        items: [{ id: `col_${Date.now()}`, label: `항목 ${nextColIdx}`, rate: baseRate }],
+      },
+    ]);
+  };
+
+  const removeGroup = (groupId) => {
+    if (groups.length <= 1) return;
+    const group = groups.find((g) => g.id === groupId);
+    if (!group) return;
+    const hasCounts = group.items.some((item) =>
+      people.some((person) => Object.values(person.days || {}).some((day) => (Number(day[item.id]) || 0) > 0))
+    );
+    if (hasCounts) {
+      setError('기록된 건수가 있는 항목이 포함된 상위 항목은 삭제할 수 없습니다.');
+      return;
+    }
+    setGroups((prev) => prev.filter((g) => g.id !== groupId));
+  };
+
+  const changeItem = (groupId, itemId, field, value) => {
+    setGroups((prev) => prev.map((g) => {
+      if (g.id !== groupId) return g;
+      return {
+        ...g,
+        items: g.items.map((item) => {
+          if (item.id !== itemId) return item;
+          if (field === 'rate') {
+            if (value !== '' && (!/^\d+$/.test(value) || Number(value) > MAX_C_ARM_RATE)) return item;
+            return { ...item, rate: value === '' ? 0 : Number(value) };
+          }
+          return { ...item, [field]: value };
+        }),
+      };
     }));
   };
 
-  const addColumn = () => {
-    if (columns.length >= 10) return;
-    const nextIndex = columns.length + 1;
-    const newId = `col_${Date.now()}`;
-    const baseRate = columns[0]?.rate ?? document.incentive_rate ?? DEFAULT_C_ARM_RATE;
-    setColumns((prev) => [...prev, { id: newId, label: `항목 ${nextIndex}`, rate: baseRate }]);
+  const addItem = (groupId) => {
+    if (totalItemCount >= 10) return;
+    const baseRate = groups.find((g) => g.id === groupId)?.items[0]?.rate ?? document.incentive_rate ?? DEFAULT_C_ARM_RATE;
+    setGroups((prev) => prev.map((g) => {
+      if (g.id !== groupId) return g;
+      return {
+        ...g,
+        items: [...g.items, { id: `col_${Date.now()}`, label: `세부 항목 ${g.items.length + 1}`, rate: baseRate }],
+      };
+    }));
   };
 
-  const removeColumn = (id) => {
-    if (columns.length <= 1) return;
-    const hasCounts = people.some((person) => Object.values(person.days || {}).some((day) => (Number(day[id]) || 0) > 0));
+  const removeItem = (groupId, itemId) => {
+    if (totalItemCount <= 1) return;
+    const hasCounts = people.some((person) => Object.values(person.days || {}).some((day) => (Number(day[itemId]) || 0) > 0));
     if (hasCounts) {
-      setError('기록된 건수가 있는 항목 열은 삭제할 수 없습니다.');
+      setError('기록된 건수가 있는 세부 항목은 삭제할 수 없습니다.');
       return;
     }
-    setColumns((prev) => prev.filter((col) => col.id !== id));
+    setGroups((prev) => prev.map((g) => {
+      if (g.id !== groupId) return g;
+      return {
+        ...g,
+        items: g.items.filter((item) => item.id !== itemId),
+      };
+    }).filter((g) => g.items.length > 0));
   };
 
   const apply = (event) => {
     event.preventDefault();
+    const columns = groups.flatMap((group) => {
+      const category = group.name.trim() || 'C-Arm';
+      return group.items.map((item) => ({
+        id: item.id,
+        label: item.label.trim(),
+        rate: item.rate,
+        category,
+      }));
+    });
     const updated = {
       ...document,
-      columns: columns.map((col) => ({ ...col, label: col.label.trim() })),
-      radiographers: people.map((person) => ({ ...person, name: person.name.trim() })),
+      columns,
+      radiographers: people.map((person) => ({
+        ...person,
+        name: person.name.trim(),
+        columns,
+      })),
     };
     try {
       validateCArmMonth(updated, year, month);
@@ -89,64 +161,113 @@ function RadiographerSettings({ document, year, month, onApply, onClose }) {
           <h2 id="c-arm-settings-title">방사선사 및 항목 설정</h2>
           <button type="button" onClick={onClose} aria-label="닫기"><X size={19} /></button>
         </div>
-        <p>{year}년 {month}월 기록표에 표시할 항목 열과 방사선사 명단을 설정합니다.</p>
-        <p className="c-arm-help">건수가 있는 항목 열과 방사선사는 제거할 수 없습니다. 새 달은 이전 설정을 이어받습니다.</p>
+        <p>{year}년 {month}월 기록표에 표시할 상위 항목, 세부 항목 및 방사선사 명단을 설정합니다.</p>
+        <p className="c-arm-help">건수가 있는 항목과 방사선사는 제거할 수 없습니다. 새 달은 이전 설정을 이어받습니다.</p>
 
         <section className="c-arm-settings-section">
-          <h3>기록 항목(열) 및 인센티브 단가</h3>
-          <div className="c-arm-column-list">
-            {columns.map((col, index) => {
-              const hasCounts = people.some((p) => Object.values(p.days || {}).some((d) => (Number(d[col.id]) || 0) > 0));
+          <div className="c-arm-section-header">
+            <h3>상위 항목 및 세부 항목(열) 설정</h3>
+            <button
+              type="button"
+              className="c-arm-add-group-btn"
+              disabled={totalItemCount >= 10 || groups.length >= 5}
+              onClick={addGroup}
+            >
+              <Plus size={15} /> 상위 항목 추가
+            </button>
+          </div>
+          <div className="c-arm-group-list">
+            {groups.map((group, gIdx) => {
+              const groupHasCounts = group.items.some((item) =>
+                people.some((person) => Object.values(person.days || {}).some((day) => (Number(day[item.id]) || 0) > 0))
+              );
               return (
-                <div key={col.id} className="c-arm-column-setting">
-                  <span className="c-arm-setting-num">{index + 1}</span>
-                  <input
-                    type="text"
-                    value={col.label}
-                    maxLength={30}
-                    placeholder="열 제목 (예: 초진)"
-                    aria-label={`항목 ${index + 1} 제목`}
-                    onChange={(e) => changeColumn(col.id, 'label', e.target.value)}
-                  />
-                  <div className="c-arm-rate-input-wrap">
+                <div key={group.id} className="c-arm-group-card">
+                  <div className="c-arm-group-card-header">
+                    <span className="c-arm-group-badge">상위 {gIdx + 1}</span>
                     <input
                       type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      value={col.rate ?? 0}
-                      aria-label={`${col.label || `항목 ${index + 1}`} 인센티브 단가`}
-                      onChange={(e) => changeColumn(col.id, 'rate', e.target.value)}
+                      value={group.name}
+                      maxLength={40}
+                      placeholder="상위 항목명 (예: C-Arm)"
+                      aria-label={`상위 항목 ${gIdx + 1} 이름`}
+                      onChange={(e) => changeGroupName(group.id, e.target.value)}
+                      className="c-arm-group-name-input"
                     />
-                    <span>원</span>
+                    {groups.length > 1 && (
+                      <button
+                        type="button"
+                        className="c-arm-icon-btn"
+                        disabled={groupHasCounts}
+                        title={groupHasCounts ? '기록이 있는 항목이 포함된 상위 항목은 삭제할 수 없습니다' : '상위 항목 삭제'}
+                        aria-label={`${group.name} 상위 항목 삭제`}
+                        onClick={() => removeGroup(group.id)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                  <div className="c-arm-column-list">
+                    {group.items.map((item, itemIdx) => {
+                      const hasCounts = people.some((p) =>
+                        Object.values(p.days || {}).some((d) => (Number(d[item.id]) || 0) > 0)
+                      );
+                      return (
+                        <div key={item.id} className="c-arm-column-setting">
+                          <span className="c-arm-setting-num">{itemIdx + 1}</span>
+                          <input
+                            type="text"
+                            value={item.label}
+                            maxLength={30}
+                            placeholder="세부 항목명 (예: 초진)"
+                            aria-label={`${group.name} 세부 항목 ${itemIdx + 1} 이름`}
+                            onChange={(e) => changeItem(group.id, item.id, 'label', e.target.value)}
+                          />
+                          <div className="c-arm-rate-input-wrap">
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={item.rate ?? 0}
+                              aria-label={`${item.label || `세부 항목 ${itemIdx + 1}`} 인센티브 단가`}
+                              onChange={(e) => changeItem(group.id, item.id, 'rate', e.target.value)}
+                            />
+                            <span>원</span>
+                          </div>
+                          <button
+                            type="button"
+                            className="c-arm-icon-btn"
+                            disabled={totalItemCount <= 1 || group.items.length <= 1 || hasCounts}
+                            title={hasCounts ? '기록이 있는 열은 삭제할 수 없습니다' : '세부 항목 삭제'}
+                            aria-label={`${item.label} 세부 항목 삭제`}
+                            onClick={() => removeItem(group.id, item.id)}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                   <button
                     type="button"
-                    disabled={columns.length <= 1 || hasCounts}
-                    title={hasCounts ? '기록이 있는 열은 삭제할 수 없습니다' : '항목 열 삭제'}
-                    aria-label={`${col.label} 열 삭제`}
-                    onClick={() => removeColumn(col.id)}
+                    className="c-arm-add-subitem-btn"
+                    disabled={totalItemCount >= 10}
+                    onClick={() => addItem(group.id)}
                   >
-                    <Trash2 size={17} />
+                    <Plus size={14} /> 세부 항목 추가
                   </button>
                 </div>
               );
             })}
           </div>
-          <button
-            type="button"
-            className="c-arm-add-person"
-            disabled={columns.length >= 10}
-            onClick={addColumn}
-          >
-            <Plus size={16} /> 항목 열 추가
-          </button>
         </section>
 
         <section className="c-arm-settings-section" style={{ marginTop: '20px' }}>
           <h3>방사선사 명단</h3>
           <div className="c-arm-person-list">
             {people.map((person, index) => {
-              const hasCounts = cArmPersonTotals(person, columns).total > 0;
+              const currentCols = groups.flatMap((g) => g.items.map((i) => ({ ...i, category: g.name })));
+              const hasCounts = cArmPersonTotals(person, currentCols).total > 0;
               return (
                 <div key={person.id} className="c-arm-person-setting">
                   <label htmlFor={`c-arm-name-${person.id}`}>{index + 1}</label>
@@ -160,6 +281,7 @@ function RadiographerSettings({ document, year, month, onApply, onClose }) {
                   />
                   <button
                     type="button"
+                    className="c-arm-icon-btn"
                     disabled={hasCounts}
                     title={hasCounts ? '기록이 있는 방사선사는 제거할 수 없습니다' : '방사선사 제거'}
                     aria-label={`${person.name || index + 1} 방사선사 제거`}
@@ -180,6 +302,16 @@ function RadiographerSettings({ document, year, month, onApply, onClose }) {
             <Plus size={16} /> 방사선사 추가
           </button>
         </section>
+
+        {error && <p role="alert" className="c-arm-error" style={{ marginTop: '14px' }}>{error}</p>}
+        <div className="c-arm-dialog-actions">
+          <button type="button" onClick={onClose}>취소</button>
+          <button type="submit" className="c-arm-primary">적용</button>
+        </div>
+      </form>
+    </dialog>
+  );
+}
 
         {error && <p role="alert" className="c-arm-error" style={{ marginTop: '14px' }}>{error}</p>}
         <div className="c-arm-dialog-actions">
@@ -225,6 +357,7 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
   const dirty = !same(document, baseline);
   const conflict = revision !== (saved?.revision ?? null);
   const cols = cArmColumns(document);
+  const colGroups = cArmColumnGroups(cols);
   const colCount = cols.length;
   const numberOfDays = daysInCArmMonth(year, month);
   const total = cArmMonthTotal(document);
@@ -436,10 +569,22 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
                 </colgroup>
                 <caption>{person.name}</caption>
                 <thead>
-                  <tr>
-                    <th scope="col">날짜</th>
+                  <tr className="c-arm-header-categories">
+                    <th scope="col" rowSpan={2} className="c-arm-th-date">날짜</th>
+                    {colGroups.map((group, gIdx) => (
+                      <th
+                        key={`grp-${gIdx}-${group.category}`}
+                        scope="colgroup"
+                        colSpan={group.columns.length}
+                        className="c-arm-th-category"
+                      >
+                        {group.category}
+                      </th>
+                    ))}
+                  </tr>
+                  <tr className="c-arm-header-subitems">
                     {cols.map((col) => (
-                      <th key={col.id} scope="col">{col.label}</th>
+                      <th key={col.id} scope="col" className="c-arm-th-subitem">{col.label}</th>
                     ))}
                   </tr>
                 </thead>

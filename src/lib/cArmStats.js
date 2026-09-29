@@ -4,8 +4,8 @@ export const MAX_C_ARM_COUNT = 100000;
 export const MAX_C_ARM_RATE = 100000000;
 
 export const DEFAULT_C_ARM_COLUMNS = Object.freeze([
-  { id: 'first', label: '초진', rate: DEFAULT_C_ARM_RATE },
-  { id: 'returning', label: '재진', rate: DEFAULT_C_ARM_RATE },
+  { id: 'first', label: '초진', rate: DEFAULT_C_ARM_RATE, category: 'C-Arm' },
+  { id: 'returning', label: '재진', rate: DEFAULT_C_ARM_RATE, category: 'C-Arm' },
 ]);
 
 export function daysInCArmMonth(year, month) {
@@ -23,7 +23,23 @@ export function cArmColumns(document) {
     id: String(col.id || `col_${index + 1}`).trim(),
     label: String(col.label || (index === 0 ? '초진' : index === 1 ? '재진' : `항목 ${index + 1}`)).trim(),
     rate: Number.isInteger(col.rate) && col.rate >= 0 ? col.rate : fallbackRate,
+    category: String(col.category || 'C-Arm').trim() || 'C-Arm',
   }));
+}
+
+export function cArmColumnGroups(columns) {
+  const cols = Array.isArray(columns) ? columns : [];
+  const groups = [];
+  for (const col of cols) {
+    const category = col.category || 'C-Arm';
+    const last = groups[groups.length - 1];
+    if (last && last.category === category) {
+      last.columns.push(col);
+    } else {
+      groups.push({ category, columns: [col] });
+    }
+  }
+  return groups;
 }
 
 export function createCArmMonth(template) {
@@ -96,13 +112,14 @@ export function validateCArmMonth(document, year, month) {
   const colLabels = new Set();
   for (const col of columns) {
     if (!col.id || colIds.has(col.id)) throw new Error('열 ID에 중복이 있습니다.');
-    if (!col.label || col.label.length > 30) throw new Error('열 제목은 1~30자로 입력해주세요.');
-    if (colLabels.has(col.label)) throw new Error(`열 제목 "${col.label}"이(가) 중복되었습니다.`);
+    if (!col.label || col.label.length > 30) throw new Error('세부 항목 이름은 1~30자로 입력해주세요.');
+    if (!col.category || col.category.length > 40) throw new Error('상위 항목 이름은 1~40자로 입력해주세요.');
+    if (colLabels.has(`${col.category}::${col.label}`)) throw new Error(`"${col.category}" 항목 내 세부 항목 "${col.label}"이(가) 중복되었습니다.`);
     if (!Number.isInteger(col.rate) || col.rate < 0 || col.rate > MAX_C_ARM_RATE) {
       throw new Error(`"${col.label}" 열의 인센티브 단가는 0~100,000,000원의 정수로 입력해주세요.`);
     }
     colIds.add(col.id);
-    colLabels.add(col.label);
+    colLabels.add(`${col.category}::${col.label}`);
   }
   if (!Array.isArray(document.radiographers) || document.radiographers.length > 30) {
     throw new Error('방사선사는 최대 30명까지 등록할 수 있습니다.');
@@ -150,8 +167,8 @@ export async function saveCArmMonth(client, { year, month, document, revision })
   const columns = cArmColumns(document);
   const fallbackRate = document.incentive_rate ?? DEFAULT_C_ARM_RATE;
   const isCustom = columns.length !== 2 ||
-    columns[0]?.id !== 'first' || columns[0]?.label !== '초진' || columns[0]?.rate !== fallbackRate ||
-    columns[1]?.id !== 'returning' || columns[1]?.label !== '재진' || columns[1]?.rate !== fallbackRate ||
+    columns[0]?.id !== 'first' || columns[0]?.label !== '초진' || columns[0]?.rate !== fallbackRate || (columns[0]?.category || 'C-Arm') !== 'C-Arm' ||
+    columns[1]?.id !== 'returning' || columns[1]?.label !== '재진' || columns[1]?.rate !== fallbackRate || (columns[1]?.category || 'C-Arm') !== 'C-Arm' ||
     (Array.isArray(document.columns) && document.columns.length > 0) ||
     document.radiographers?.some((p) => Array.isArray(p.columns));
 

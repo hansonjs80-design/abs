@@ -45,7 +45,9 @@ describe('C-Arm rectangular selection', () => {
 
     assert.equal(DEFAULT_C_ARM_COLUMNS[0].label, '초진');
     assert.equal(DEFAULT_C_ARM_COLUMNS[1].label, '재진');
-    assert.match(pageSource, /\{cols\.map\(\(col\)\s*=>\s*\(?\s*<th\s+key=\{col\.id\}\s+scope="col">\{col\.label\}<\/th>/);
+    assert.match(pageSource, /<tr className="c-arm-header-categories">/);
+    assert.match(pageSource, /<tr className="c-arm-header-subitems">/);
+    assert.match(pageSource, /\{cols\.map\(\(col\)\s*=>\s*\(?\s*<th\s+key=\{col\.id\}\s+scope="col"\s+className="c-arm-th-subitem">\{col\.label\}<\/th>/);
     assert.doesNotMatch(pageSource, /<th scope="col">초진환자<\/th>/);
     assert.doesNotMatch(pageSource, /<th scope="col">재진환자<\/th>/);
     assert.match(pageSource, /<col className="c-arm-col-date" \/>/);

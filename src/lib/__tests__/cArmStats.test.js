@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { C_ARM_TABLE, cArmIncentive, cArmMonthTotal, cArmPersonTotals, createCArmMonth, daysInCArmMonth, loadCArmYear, saveCArmMonth, validateCArmMonth } from '../cArmStats.js';
+import { C_ARM_TABLE, cArmColumnGroups, cArmIncentive, cArmMonthTotal, cArmPersonTotals, createCArmMonth, daysInCArmMonth, loadCArmYear, saveCArmMonth, validateCArmMonth } from '../cArmStats.js';
 import { APP_TABS, canAccessPath, canAccessTab, createDefaultPermissions, getAllowedTabs, normalizePermissions } from '../authPermissions.js';
 
 const month = () => ({ incentive_rate: 2000, radiographers: [
@@ -84,9 +84,9 @@ describe('independent C-Arm statistics', () => {
   });
   it('supports custom dynamic columns and per-column incentive rates', async () => {
     const customColumns = [
-      { id: 'first', label: '초진', rate: 3000 },
-      { id: 'returning', label: '재진', rate: 2000 },
-      { id: 'special', label: '특수', rate: 5000 },
+      { id: 'first', label: '초진', rate: 3000, category: 'C-Arm' },
+      { id: 'returning', label: '재진', rate: 2000, category: 'C-Arm' },
+      { id: 'special', label: '특수', rate: 5000, category: '초음파' },
     ];
     const customDoc = {
       incentive_rate: 2000,
@@ -115,17 +115,25 @@ describe('independent C-Arm statistics', () => {
     const incentive = cArmIncentive(customDoc.radiographers[0], customDoc, customColumns);
     assert.equal(incentive, 30000);
 
-    // 중복 열 이름 검증
+    // 같은 카테고리 내 중복 열 이름 검증
     const duplicateLabelsDoc = {
       ...customDoc,
       columns: [
-        { id: 'c1', label: '초진', rate: 2000 },
-        { id: 'c2', label: '초진', rate: 2000 },
+        { id: 'c1', label: '초진', rate: 2000, category: 'C-Arm' },
+        { id: 'c2', label: '초진', rate: 2000, category: 'C-Arm' },
       ],
     };
     assert.throws(() => validateCArmMonth(duplicateLabelsDoc, 2026, 9), /중복/);
 
-    // 저장 시 custom columns가 radiographers에 보존되는지 검증
+    // cArmColumnGroups 그룹화 검증
+    const groups = cArmColumnGroups(customColumns);
+    assert.equal(groups.length, 2);
+    assert.equal(groups[0].category, 'C-Arm');
+    assert.equal(groups[0].columns.length, 2);
+    assert.equal(groups[1].category, '초음파');
+    assert.equal(groups[1].columns.length, 1);
+
+    // 저장 시 custom columns(category 포함)가 radiographers에 보존되는지 검증
     const client = fakeClient({ data: [{ year: 2026, month: 9, revision: 1 }], error: null });
     await saveCArmMonth(client, { year: 2026, month: 9, document: customDoc, revision: null });
     const inserted = client.calls[1][1];
