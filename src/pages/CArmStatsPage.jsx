@@ -291,9 +291,15 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
             <h2>인센티브</h2>
             <label className="c-arm-rate">건당 <input aria-label="건당 인센티브" type="text" inputMode="numeric" pattern="[0-9]*" disabled={conflict} value={document.incentive_rate}
               onChange={(event) => { const value = event.target.value; if (value === '' || (/^\d+$/.test(value) && Number(value) <= MAX_C_ARM_RATE)) change({ ...document, incentive_rate: Number(value) }); }} /> 원</label>
-            <table className="c-arm-table c-arm-incentives"><thead><tr><th scope="col">방사선사</th><th scope="col">인센티브 금액</th></tr></thead>
-              <tbody>{document.radiographers.map((person) => <tr key={person.id}><th scope="row">{person.name}<small>{format(cArmPersonTotals(person).total)}건 × {format(document.incentive_rate)}원</small></th><td>{format(cArmIncentive(person, document.incentive_rate))}원</td></tr>)}</tbody>
-              <tfoot><tr><th scope="row">전체 합계</th><td data-testid="incentive-total">{format(total * document.incentive_rate)}원</td></tr></tfoot>
+            <table className="c-arm-table c-arm-incentives">
+              <colgroup>
+                <col className="c-arm-incentive-col-name" />
+                <col className="c-arm-incentive-col-count" />
+                <col className="c-arm-incentive-col-amount" />
+              </colgroup>
+              <thead><tr><th scope="col">방사선사</th><th scope="col">건수</th><th scope="col">인센티브 금액</th></tr></thead>
+              <tbody>{document.radiographers.map((person) => <tr key={person.id}><th scope="row">{person.name}</th><td>{format(cArmPersonTotals(person).total)}건</td><td>{format(cArmIncentive(person, document.incentive_rate))}원</td></tr>)}</tbody>
+              <tfoot><tr><th scope="row">전체 합계</th><td>{format(total)}건</td><td data-testid="incentive-total">{format(total * document.incentive_rate)}원</td></tr></tfoot>
             </table>
             <p className="c-arm-help">단가는 해당 월에 적용됩니다.</p>
           </div>

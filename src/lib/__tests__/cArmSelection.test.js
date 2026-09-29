@@ -54,4 +54,14 @@ describe('C-Arm rectangular selection', () => {
     assert.match(cssSource, /\.c-arm-person-table \.c-arm-col-first\s*\{\s*width:\s*52px;/);
     assert.match(cssSource, /\.c-arm-person-table \.c-arm-col-returning\s*\{\s*width:\s*52px;/);
   });
+  it('renders incentive table with separate 건수 column instead of small description', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const pageSource = await readFile(new URL('../../pages/CArmStatsPage.jsx', import.meta.url), 'utf8');
+
+    assert.match(pageSource, /<th scope="col">방사선사<\/th><th scope="col">건수<\/th><th scope="col">인센티브 금액<\/th>/);
+    assert.doesNotMatch(pageSource, /<small>.*건 × .*원<\/small>/);
+    assert.match(pageSource, /<col className="c-arm-incentive-col-name" \/>/);
+    assert.match(pageSource, /<col className="c-arm-incentive-col-count" \/>/);
+    assert.match(pageSource, /<col className="c-arm-incentive-col-amount" \/>/);
+  });
 });

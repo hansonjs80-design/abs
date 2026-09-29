@@ -41,9 +41,11 @@
 .c-arm-rate { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 14px; }
 .c-arm-rate input { width: 130px; text-align: right; padding: 6px 8px; border: 1px solid var(--border-color, #cdd3dc); border-radius: 4px; color: var(--text-primary); background: var(--bg-secondary); font: inherit; font-weight: 700; }
 .c-arm-incentives { font-size: 13px; }
+.c-arm-incentive-col-name { width: 33%; }
+.c-arm-incentive-col-count { width: 27%; }
+.c-arm-incentive-col-amount { width: 40%; }
 .c-arm-incentives th:first-child { text-align: center; }
 .c-arm-incentives th, .c-arm-incentives td { overflow-wrap: anywhere; }
-.c-arm-incentives th small { display: block; font-size: 10px; margin-top: 5px; opacity: .75; }
 .c-arm-empty { grid-column: 1 / -1; padding: 60px 20px; text-align: center; border: 1px dashed var(--border-color, #cdd3dc); border-radius: 12px; }
 .c-arm-empty h2 { font-size: 18px; }
 .c-arm-empty p { font-size: 14px; color: var(--text-secondary); }
