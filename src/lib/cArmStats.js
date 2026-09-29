@@ -153,7 +153,7 @@ export function validateCArmMonth(document, year, month) {
       if (!/^\d+$/.test(day) || Number(day) < 1 || Number(day) > daysInCArmMonth(year, month)) {
         throw new Error('해당 월에 없는 날짜의 기록이 있습니다.');
       }
-      for (const [key, val] of Object.entries(values || {})) {
+      for (const val of Object.values(values || {})) {
         if (val !== null && val !== undefined) {
           if (!Number.isInteger(val) || val < 0 || val > MAX_C_ARM_COUNT) {
             throw new Error('건수는 0~100,000 사이의 정수로 입력해주세요.');

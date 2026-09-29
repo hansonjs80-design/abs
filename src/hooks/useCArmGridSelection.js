@@ -7,7 +7,7 @@ export default function useCArmGridSelection({ rowCount, columnCount, disabled, 
   const editingRef = useRef(null);
   const dragRef = useRef(null);
   const [selection, setSelection] = useState(null);
-  const [editingCell, setEditingCell] = useState(null);
+  const [, setEditingCell] = useState(null);
 
   const update = (next) => { selectionRef.current = next; setSelection(next); };
   const updateEditing = (next) => { editingRef.current = next; setEditingCell(next); };

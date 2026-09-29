@@ -44,14 +44,14 @@
 .c-arm-sunday th { color: #c64848; }
 .c-arm-saturday th { color: #3775b9; }
 .c-arm-summary { display: grid; flex: 0 0 460px; min-width: 0; max-width: 100%; gap: 26px; }
-.c-arm-annual caption { background: var(--bg-secondary, #f2f4f7); color: var(--text-primary); }
+.c-arm-annual caption { background: #dce7f7; color: #173459; border: 2px solid #7189a8; border-bottom: 0; }
 .c-arm-annual th:first-child { width: 58%; text-align: center; }
 .c-arm-annual .c-arm-selected-month { background: #eaf2ff; color: #173459; }
 .c-arm-recent-caption { display: inline-flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; }
 .c-arm-recent-caption input { width: 4.5em; padding: 3px 5px; border: 1px solid #8c9eb7; border-radius: 5px; text-align: center; font: inherit; color: inherit; background: var(--bg-primary, white); }
 .c-arm-recent-caption input:focus-visible { outline: 2px solid #477ed0; outline-offset: 2px; }
 .c-arm-recent-hint { display: block; margin-top: 5px; font-size: 12px; font-weight: 400; }
-.c-arm-incentive-card { border: 1px solid var(--border-color, #cdd3dc); border-radius: 8px; padding: 14px; background: var(--bg-primary); }
+.c-arm-incentive-card { border: 2px solid #7189a8; border-radius: 8px; padding: 14px; background: var(--bg-primary); }
 .c-arm-incentive-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .c-arm-incentive-header h2 { margin: 0; font-size: 17px; }
 .c-arm-rate { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; margin: 0; }
@@ -64,10 +64,22 @@
 .c-arm-incentives .c-arm-incentive-items { min-width: 90px; white-space: normal; text-align: center; font-size: 12px; line-height: 1.5; }
 .c-arm-incentives .c-arm-incentive-count { text-align: center; }
 .c-arm-incentive-items span { display: block; }
-.c-arm-incentives tbody + tbody { border-top: 2px solid #8c9eb7; }
+.c-arm-incentives tbody + tbody { border-top: 2px solid #7189a8; }
 .c-arm-incentive-subtotal th, .c-arm-incentive-subtotal td { background: #e8effa; color: #263e60; font-weight: 700; }
 .c-arm-incentives th:first-child { text-align: center; }
 .c-arm-incentives th, .c-arm-incentives td { overflow-wrap: anywhere; }
+/* 우측 표: 외곽·헤더·합계와 핵심 열을 강조하고 일반 행은 얇게 유지한다. */
+.c-arm-summary .c-arm-table { border: 2px solid #7189a8; }
+.c-arm-summary .c-arm-table th,
+.c-arm-summary .c-arm-table td { border-color: #bac7d7; }
+.c-arm-summary .c-arm-table thead th { background: #e8effa; color: #263e60; border-bottom: 2px solid #7189a8; }
+.c-arm-summary .c-arm-table tfoot th,
+.c-arm-summary .c-arm-table tfoot td { border-top: 2px solid #7189a8; }
+.c-arm-annual tr > :first-child { border-right: 2px solid #91a6c0; }
+.c-arm-incentives thead th:first-child,
+.c-arm-incentives th[scope="rowgroup"] { border-right: 2px solid #91a6c0; }
+.c-arm-incentives tr > :last-child { border-left: 2px solid #91a6c0; }
+.c-arm-incentives .c-arm-incentive-subtotal > * { border-top: 2px solid #91a6c0; }
 .c-arm-empty { grid-column: 1 / -1; padding: 60px 20px; text-align: center; border: 1px dashed var(--border-color, #cdd3dc); border-radius: 12px; }
 .c-arm-empty h2 { font-size: 18px; }
 .c-arm-empty p { font-size: 14px; color: var(--text-secondary); }
@@ -138,7 +150,9 @@
 .c-arm-person-table tfoot tr:last-child > * { border-bottom: 2px solid #7189a8; }
 .c-arm-person-table th[data-group-start],
 .c-arm-person-table td[data-group-start] { border-left: 2px solid #7189a8; }
-.c-arm-person-table tfoot tr:first-child > * { border-top-color: #91a6c0; }
+.c-arm-person-table thead tr.c-arm-header-categories th.c-arm-th-date,
+.c-arm-person-table thead tr.c-arm-header-subitems th { border-bottom: 2px solid #7189a8; }
+.c-arm-person-table tfoot tr:first-child > * { border-top: 2px solid #7189a8; }
 
 /* 방사선사 및 항목 계층형 설정 모달 */
 .c-arm-group-list {
