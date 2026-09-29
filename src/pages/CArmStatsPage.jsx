@@ -252,8 +252,13 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
             const totals = cArmPersonTotals(person);
             return (
               <table key={person.id} className={`c-arm-table c-arm-person-table c-arm-person-table--${index % 4}`}>
+                <colgroup>
+                  <col className="c-arm-col-date" />
+                  <col className="c-arm-col-first" />
+                  <col className="c-arm-col-returning" />
+                </colgroup>
                 <caption>{person.name}</caption>
-                <thead><tr><th scope="col">날짜</th><th scope="col">초진환자</th><th scope="col">재진환자</th></tr></thead>
+                <thead><tr><th scope="col">날짜</th><th scope="col">초진</th><th scope="col">재진</th></tr></thead>
                 <tbody>{Array.from({ length: numberOfDays }, (_, i) => i + 1).map((day) => {
                   const weekday = new Date(year, month - 1, day).getDay();
                   const dateKey = `${year}-${month}-${day}`;

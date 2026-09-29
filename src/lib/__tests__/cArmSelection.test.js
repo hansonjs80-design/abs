@@ -37,4 +37,21 @@ describe('C-Arm rectangular selection', () => {
     assert.deepEqual(result.document.radiographers[1].days[5], { first: 5, returning: 6 });
     assert.deepEqual(result.document.radiographers[1].days[6], { first: null, returning: null });
   });
+  it('renders compact table with 초진 and 재진 headers and explicit column widths', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const pageSource = await readFile(new URL('../../pages/CArmStatsPage.jsx', import.meta.url), 'utf8');
+    const cssSource = await readFile(new URL('../../styles/c_arm_stats.css', import.meta.url), 'utf8');
+
+    assert.match(pageSource, /<th scope="col">초진<\/th>/);
+    assert.match(pageSource, /<th scope="col">재진<\/th>/);
+    assert.doesNotMatch(pageSource, /<th scope="col">초진환자<\/th>/);
+    assert.doesNotMatch(pageSource, /<th scope="col">재진환자<\/th>/);
+    assert.match(pageSource, /<col className="c-arm-col-date" \/>/);
+    assert.match(pageSource, /<col className="c-arm-col-first" \/>/);
+    assert.match(pageSource, /<col className="c-arm-col-returning" \/>/);
+
+    assert.match(cssSource, /\.c-arm-person-table \.c-arm-col-date\s*\{\s*width:\s*96px;/);
+    assert.match(cssSource, /\.c-arm-person-table \.c-arm-col-first\s*\{\s*width:\s*52px;/);
+    assert.match(cssSource, /\.c-arm-person-table \.c-arm-col-returning\s*\{\s*width:\s*52px;/);
+  });
 });

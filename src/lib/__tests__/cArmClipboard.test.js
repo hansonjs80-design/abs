@@ -39,6 +39,8 @@ describe('C-Arm spreadsheet paste', () => {
     assert.deepEqual(result.document.radiographers[1].days[1], { first: 3, returning: 4 });
   });
   it('handles copied dates and optional header rows without treating dates as counts', () => {
+    const compactResult = paste(source(), '날짜\t초진\t재진\r\n9월 1일 (화)\t3\t4\r\n9월 2일 (수)\t5\t6\r\n');
+    assert.equal(compactResult.document.radiographers[0].days[2].returning, 6);
     const result = paste(source(), '날짜\t초진환자\t재진환자\r\n9월 1일 (화)\t3\t4\r\n9월 2일 (수)\t5\t6\r\n');
     assert.equal(result.document.radiographers[0].days[2].returning, 6);
     assert.equal(paste(source(), '2026-09-01\t2\t3').document.radiographers[0].days[1].first, 2);

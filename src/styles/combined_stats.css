@@ -2100,6 +2100,11 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   font-size: 17px !important;
 }
 
+/* Keep prescription details neutral beneath the colored treatment groups. */
+.combined-stats-dashboard--stats .combined-therapist-card tbody tr.combined-treatment-child-row > * {
+  background: #fff !important;
+}
+
 .combined-stats-dashboard--settlement > .combined-ion-treatment {
   grid-column: 1;
 }

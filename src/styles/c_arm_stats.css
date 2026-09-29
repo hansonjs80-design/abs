@@ -9,16 +9,19 @@
 .c-arm-status { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; min-height: 18px; }
 .c-arm-error { padding: 12px; border: 1px solid #e1a4a4; border-radius: 7px; background: #fff0f0; color: #a51d2d; font-size: 14px; }
 .c-arm-layout { display: flex; align-items: flex-start; gap: 24px; }
-.c-arm-records { display: grid; flex: 0 1 calc(var(--c-arm-person-count) * 344px - 24px); min-width: 260px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); align-items: start; gap: 24px; }
+.c-arm-records { display: grid; flex: 0 1 calc(var(--c-arm-person-count) * 216px - 16px); min-width: 200px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); align-items: start; gap: 16px; }
 .c-arm-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px; background: var(--bg-primary, white); font-variant-numeric: tabular-nums; }
 .c-arm-table caption { padding: 10px; background: #dce7f7; border: 1px solid #aab7ca; border-bottom: 0; color: #173459; font-size: 17px; font-weight: 750; overflow-wrap: anywhere; }
-.c-arm-table th, .c-arm-table td { border: 1px solid var(--border-color, #cdd3dc); height: 29px; padding: 4px 8px; text-align: right; }
+.c-arm-table th, .c-arm-table td { border: 1px solid var(--border-color, #cdd3dc); height: 29px; padding: 4px 6px; text-align: right; }
 .c-arm-table thead th { background: var(--bg-secondary, #f2f4f7); text-align: center; font-size: 13px; }
 .c-arm-table tbody th { font-weight: 500; text-align: left; }
-.c-arm-person-table tbody th { font-size: 13px; white-space: nowrap; text-align: center; }
+.c-arm-person-table .c-arm-col-date { width: 96px; }
+.c-arm-person-table .c-arm-col-first { width: 52px; }
+.c-arm-person-table .c-arm-col-returning { width: 52px; }
+.c-arm-person-table tbody th { font-size: 13px; white-space: nowrap; text-align: center; padding: 4px; }
 .c-arm-person-table tbody th span { font-size: inherit; }
 .c-arm-person-table td { padding: 0; }
-.c-arm-person-table input { display: block; width: 100%; min-width: 0; height: 29px; padding: 3px 9px; text-align: center; font: inherit; color: inherit; background: transparent; border: 0; border-radius: 0; }
+.c-arm-person-table input { display: block; width: 100%; min-width: 0; height: 29px; padding: 3px 4px; text-align: center; font: inherit; color: inherit; background: transparent; border: 0; border-radius: 0; }
 .c-arm-person-table input:focus { outline: 2px solid #477ed0; outline-offset: -2px; background: #eaf2ff; color: #173459; }
 .c-arm-table tfoot th, .c-arm-table tfoot td { background: #fff4bd; color: #453707; font-weight: 750; padding: 6px 8px; }
 .c-arm-table tfoot th { text-align: left; }
