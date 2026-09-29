@@ -71,7 +71,7 @@
 .c-arm-recent-caption input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .c-arm-recent-caption input:focus-visible { outline: 2px solid #477ed0; outline-offset: 2px; }
 .c-arm-recent-hint { display: block; margin-top: 5px; font-size: 12px; font-weight: 400; }
-.c-arm-incentive-card { border: 2px solid #7189a8; border-radius: 8px; padding: 14px; background: var(--bg-primary); }
+.c-arm-incentive-card { border: none; border-radius: 0; padding: 0; background: transparent; }
 .c-arm-incentive-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .c-arm-incentive-header h2 { margin: 0; font-size: 17px; }
 .c-arm-rate { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; margin: 0; }
@@ -323,9 +323,11 @@
     white-space: nowrap !important;
   }
   .c-arm-incentive-card {
+    border: none !important;
     width: auto !important;
     max-width: 100% !important;
-    padding: 10px 12px !important;
+    padding: 0 !important;
+    background: transparent !important;
   }
 
   /* 최근 n개월간 C-Arm 통계 상단 헤더: 인쇄 시 과도한 공백 없이 하나의 자연스러운 텍스트로 표시 */
