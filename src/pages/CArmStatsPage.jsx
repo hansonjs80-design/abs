@@ -513,24 +513,6 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
       <header className="c-arm-toolbar">
         <div><h1>{year}년 {String(month).padStart(2, '0')}월 장곡 씨암 현황</h1></div>
         <div className="c-arm-actions">
-          <div className="c-arm-view-tabs" role="group" aria-label="방사선사 테이블 보기">
-            <button
-              type="button"
-              className={`c-arm-tab-btn ${viewMode === 'all' ? 'is-active' : ''}`}
-              aria-pressed={viewMode === 'all'}
-              onClick={() => setViewMode('all')}
-            >
-              전체
-            </button>
-            <button
-              type="button"
-              className={`c-arm-tab-btn ${viewMode === 'summary' ? 'is-active' : ''}`}
-              aria-pressed={viewMode === 'summary'}
-              onClick={() => setViewMode('summary')}
-            >
-              요약
-            </button>
-          </div>
           <button type="button" disabled={saving} onClick={() => setSettingsOpen(true)}><Settings2 size={17} /> 방사선사 설정</button>
           <button type="button" disabled={saving} onClick={reload}>다시 불러오기</button>
           <button type="button" className="c-arm-primary" disabled={saving || !dirty || conflict} onClick={save}><Save size={17} /> {saving ? '저장 중…' : autosavePaused ? '다시 저장' : dirty ? '지금 저장' : '저장됨'}</button>
@@ -545,14 +527,35 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
       {conflict && <p role="alert" className="c-arm-error">다른 기기에서 저장한 기록과 입력 중인 내용이 다릅니다. 입력 내용을 확인한 뒤 다시 불러오기를 눌러주세요.</p>}
       {error && <p role="alert" className="c-arm-error">{error}</p>}
       <div className="c-arm-layout">
-        <div
-          ref={grid.rootRef}
-          className="c-arm-records"
-          style={{
-            '--c-arm-person-count': Math.max(1, document.radiographers.length),
-            '--c-arm-col-count': colCount,
-          }}
-        >
+        <div className="c-arm-records-pane">
+          <div className="c-arm-records-toolbar">
+            <div className="c-arm-view-tabs" role="group" aria-label="방사선사 테이블 보기">
+              <button
+                type="button"
+                className={`c-arm-tab-btn ${viewMode === 'all' ? 'is-active' : ''}`}
+                aria-pressed={viewMode === 'all'}
+                onClick={() => setViewMode('all')}
+              >
+                전체
+              </button>
+              <button
+                type="button"
+                className={`c-arm-tab-btn ${viewMode === 'summary' ? 'is-active' : ''}`}
+                aria-pressed={viewMode === 'summary'}
+                onClick={() => setViewMode('summary')}
+              >
+                요약
+              </button>
+            </div>
+          </div>
+          <div
+            ref={grid.rootRef}
+            className="c-arm-records"
+            style={{
+              '--c-arm-person-count': Math.max(1, document.radiographers.length),
+              '--c-arm-col-count': colCount,
+            }}
+          >
           {document.radiographers.length === 0 && <div className="c-arm-empty"><Settings2 size={28} /><h2>방사선사를 등록해주세요</h2><p>설정에서 이름을 추가하면 날짜별 기록표가 만들어집니다.</p><button type="button" className="c-arm-primary" onClick={() => setSettingsOpen(true)}>방사선사 설정</button></div>}
           {document.radiographers.map((person, index) => {
             const totals = cArmPersonTotals(person, cols);
@@ -649,6 +652,7 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
               </table>
             );
           })}
+          </div>
         </div>
         <aside className="c-arm-summary">
           <table className="c-arm-table c-arm-annual"><caption>{year}년 월별 C-Arm 개수</caption>

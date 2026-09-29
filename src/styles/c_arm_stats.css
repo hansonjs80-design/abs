@@ -14,7 +14,9 @@
 .c-arm-status { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; min-height: 18px; }
 .c-arm-error { padding: 12px; border: 1px solid #e1a4a4; border-radius: 7px; background: #fff0f0; color: #a51d2d; font-size: 14px; }
 .c-arm-layout { display: flex; align-items: flex-start; gap: 24px; }
-.c-arm-records { display: grid; flex: 0 1 calc(var(--c-arm-person-count) * (96px + var(--c-arm-col-count, 2) * 52px + 16px)); min-width: 200px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); align-items: start; gap: 16px; }
+.c-arm-records-pane { display: flex; flex-direction: column; gap: 10px; flex: 0 1 calc(var(--c-arm-person-count) * (96px + var(--c-arm-col-count, 2) * 52px + 16px)); min-width: 200px; }
+.c-arm-records-toolbar { display: flex; align-items: center; justify-content: flex-start; }
+.c-arm-records { display: grid; width: 100%; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); align-items: start; gap: 16px; }
 .c-arm-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px; background: var(--bg-primary, white); font-variant-numeric: tabular-nums; }
 .c-arm-table caption { padding: 10px; background: #dce7f7; border: 1px solid #aab7ca; border-bottom: 0; color: #173459; font-size: 17px; font-weight: 750; overflow-wrap: anywhere; }
 .c-arm-table th, .c-arm-table td { border: 1px solid var(--border-color, #cdd3dc); height: 29px; padding: 4px 6px; text-align: right; }
@@ -190,9 +192,9 @@
   color: #dc2626 !important;
 }
 .c-arm-dialog-actions { justify-content: flex-end; margin-top: 20px; }
-@media (max-width: 700px) { .c-arm-layout { flex-direction: column; } .c-arm-records, .c-arm-summary { flex-basis: auto; width: 100%; min-width: 0; } .c-arm-summary { grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); align-items: start; } }
+@media (max-width: 700px) { .c-arm-layout { flex-direction: column; } .c-arm-records-pane, .c-arm-records, .c-arm-summary { flex-basis: auto; width: 100%; min-width: 0; } .c-arm-summary { grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); align-items: start; } }
 @media (max-width: 600px) { .c-arm-stats { padding: 12px; } .c-arm-actions { flex-wrap: wrap; } .c-arm-records { grid-template-columns: 1fr; } .c-arm-toolbar h1 { font-size: 18px; } }
-@media print { .c-arm-stats { padding: 0; } .c-arm-toolbar p, .c-arm-actions, .c-arm-status, .c-arm-help, .c-arm-settings { display: none !important; } .c-arm-layout { display: block; } .c-arm-records { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; } .c-arm-table, .c-arm-incentive-card { break-inside: avoid; } .c-arm-summary { display: grid; grid-template-columns: 1fr 1fr; align-items: start; margin-top: 20px; } .c-arm-rate input { border: none; } }
+@media print { .c-arm-stats { padding: 0; } .c-arm-toolbar p, .c-arm-actions, .c-arm-status, .c-arm-help, .c-arm-settings, .c-arm-records-toolbar { display: none !important; } .c-arm-layout { display: block; } .c-arm-records { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; } .c-arm-table, .c-arm-incentive-card { break-inside: avoid; } .c-arm-summary { display: grid; grid-template-columns: 1fr 1fr; align-items: start; margin-top: 20px; } .c-arm-rate input { border: none; } }
 
 /* Spreadsheet selection stays visible while copying or extending a range. */
 .c-arm-person-table td[data-c-arm-row] { position: relative; user-select: none; }
