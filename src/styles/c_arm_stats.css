@@ -30,6 +30,7 @@
 .c-arm-person-table--1 caption { background: #ebd9e8; color: #58324f; }
 .c-arm-person-table--2 caption { background: #d5eae1; color: #1e5942; }
 .c-arm-person-table--3 caption { background: #f4e1cd; color: #6d451d; }
+.c-arm-sunday th, .c-arm-sunday td { background: #fde8e8; }
 .c-arm-sunday th { color: #c64848; }
 .c-arm-saturday th { color: #3775b9; }
 .c-arm-summary { display: grid; flex: 0 0 310px; gap: 26px; }

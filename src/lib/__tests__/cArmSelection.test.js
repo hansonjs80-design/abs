@@ -70,4 +70,10 @@ describe('C-Arm rectangular selection', () => {
 
     assert.match(cssSource, /@media print\s*\{[\s\S]*?\.c-arm-toolbar p[^}]*display:\s*none !important;/);
   });
+  it('colors sunday rows with light red background', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const cssSource = await readFile(new URL('../../styles/c_arm_stats.css', import.meta.url), 'utf8');
+
+    assert.match(cssSource, /\.c-arm-sunday th,\s*\.c-arm-sunday td\s*\{\s*background:\s*#fde8e8;/);
+  });
 });
