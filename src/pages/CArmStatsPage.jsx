@@ -313,16 +313,6 @@ function RadiographerSettings({ document, year, month, onApply, onClose }) {
   );
 }
 
-        {error && <p role="alert" className="c-arm-error" style={{ marginTop: '14px' }}>{error}</p>}
-        <div className="c-arm-dialog-actions">
-          <button type="button" onClick={onClose}>취소</button>
-          <button type="submit" className="c-arm-primary">적용</button>
-        </div>
-      </form>
-    </dialog>
-  );
-}
-
 function CArmMonthEditor({ year, month, records, template, holidays, holidayNames, userId, onSaved, onReload }) {
   const saved = records.find((row) => row.month === month);
   const prior = records.filter((row) => row.month < month).at(-1) || template;
