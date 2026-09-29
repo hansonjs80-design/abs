@@ -48,7 +48,7 @@
 .c-arm-annual th:first-child { width: 58%; text-align: center; }
 .c-arm-annual .c-arm-selected-month { background: #eaf2ff; color: #173459; }
 .c-arm-recent-caption { display: inline-flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; }
-.c-arm-recent-caption input { width: 4.5em; padding: 3px 5px; border: 1px solid #8c9eb7; border-radius: 5px; text-align: center; font: inherit; color: inherit; background: var(--bg-primary, white); }
+.c-arm-recent-caption input { width: 2.8em; padding: 2px 3px; border: 1px solid #8c9eb7; border-radius: 5px; text-align: center; font: inherit; color: inherit; background: var(--bg-primary, white); }
 .c-arm-recent-caption input:focus-visible { outline: 2px solid #477ed0; outline-offset: 2px; }
 .c-arm-recent-hint { display: block; margin-top: 5px; font-size: 12px; font-weight: 400; }
 .c-arm-incentive-card { border: 2px solid #7189a8; border-radius: 8px; padding: 14px; background: var(--bg-primary); }
