@@ -41,7 +41,7 @@
 .c-arm-sunday th, .c-arm-sunday td { background: #fde8e8; }
 .c-arm-sunday th { color: #c64848; }
 .c-arm-saturday th { color: #3775b9; }
-.c-arm-summary { display: grid; flex: 0 0 310px; gap: 26px; }
+.c-arm-summary { display: grid; flex: 0 0 340px; gap: 26px; }
 .c-arm-annual caption { background: var(--bg-secondary, #f2f4f7); color: var(--text-primary); }
 .c-arm-annual th:first-child { width: 58%; text-align: center; }
 .c-arm-annual .c-arm-selected-month { background: #eaf2ff; color: #173459; }
@@ -53,9 +53,10 @@
 .c-arm-rate-detail-btn { background: #eaf2ff; border: 1px solid #c0d7f9; color: #2157a0; padding: 4px 8px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; }
 .c-arm-rate-detail-btn:hover { background: #dbe8fc; }
 .c-arm-incentives { font-size: 13px; }
-.c-arm-incentive-col-name { width: 33%; }
-.c-arm-incentive-col-count { width: 27%; }
-.c-arm-incentive-col-amount { width: 40%; }
+.c-arm-incentive-col-name { width: 26%; }
+.c-arm-incentive-col-count { width: 22%; }
+.c-arm-incentive-col-rate { width: 24%; }
+.c-arm-incentive-col-amount { width: 28%; }
 .c-arm-incentives th:first-child { text-align: center; }
 .c-arm-incentives th, .c-arm-incentives td { overflow-wrap: anywhere; }
 .c-arm-empty { grid-column: 1 / -1; padding: 60px 20px; text-align: center; border: 1px dashed var(--border-color, #cdd3dc); border-radius: 12px; }
