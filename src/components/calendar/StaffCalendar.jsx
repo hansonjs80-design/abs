@@ -13,6 +13,7 @@ import { useToast } from '../common/Toast';
 import MemoSlot from './MemoSlot';
 import { usePTCalendarCounts } from '../../hooks/usePTCalendarCounts';
 import { getPTCalendarCount, getPTCountDisplayMemo } from '../../lib/ptStaffCalendarCounts';
+import { normalizeStaffDeptNameSpacing } from '../../lib/staffMemoFormatUtils';
 import { usePersistentNumber } from '../../hooks/usePersistentState';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../lib/authPermissions';
@@ -53,6 +54,7 @@ const MAX_DATE_ROW_HEIGHT = 64;
 const MIN_WEEKDAY_ROW_HEIGHT = 12;
 const MAX_WEEKDAY_ROW_HEIGHT = 96;
 const NUMERIC_ONLY_STAFF_COUNT_PATTERN = /^\d+$/;
+const toISODate = day => `${day.year}-${String(day.month).padStart(2, '0')}-${String(day.day).padStart(2, '0')}`;
 const MEMO_FONT_SIZE_OPTIONS = Array.from({ length: 21 }, (_, index) => 10 + index * 0.5);
 const CELL_FONT_SIZE_OPTIONS = Array.from({ length: 25 }, (_, index) => 8 + index * 0.5);
 const LAST_ROW_FONT_SIZE_OPTIONS = Array.from({ length: 25 }, (_, index) => 8 + index * 0.5);
@@ -136,7 +138,7 @@ function FillColorIcon() {
 }
 
 export default function StaffCalendar({ hiddenDepartments = [], showLastRows = true }) {
-  const { currentYear, currentMonth, staffMemos, loadStaffMemos, saveStaffMemo, holidays, holidayNames, loadHolidays, shockwaveSettings, loadShockwaveSettings, calendarSlotSettings, loadCalendarSlotSettings, saveCalendarSlotSettings } = useSchedule();
+  const { currentYear, currentMonth, staffMemos, loadStaffMemos, saveStaffMemo: saveRawStaffMemo, holidays, holidayNames, loadHolidays, shockwaveSettings, loadShockwaveSettings, calendarSlotSettings, loadCalendarSlotSettings, saveCalendarSlotSettings } = useSchedule();
   const { addToast } = useToast();
   const { user } = useAuth();
   const canManageCalendarSettings = isAdminUser(user);
@@ -347,14 +349,39 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
 
   const today = getTodayKST();
   const { grid } = useMemo(() => generateCalendarGrid(currentYear, currentMonth, holidays), [currentYear, currentMonth, holidays]);
-  const toISODate = day => `${day.year}-${String(day.month).padStart(2, '0')}-${String(day.day).padStart(2, '0')}`;
   const ptCounts = usePTCalendarCounts(toISODate(grid[0][0]), toISODate(grid.at(-1)[6]));
+  const { saveManualOverride, refresh: refreshPTCounts } = ptCounts;
 
   // 주차별 슬롯 수 헬퍼
   const getSlotCount = useCallback((wi) => {
     if (!calendarSlotSettings?.week_slot_counts) return 6;
     return Number(calendarSlotSettings.week_slot_counts[String(wi)]) || 6;
   }, [calendarSlotSettings]);
+
+  const getDisplayedMemoContent = useCallback((key) => {
+    const [year, month, day, slot] = key.split('-').map(Number);
+    const wi = grid.findIndex(week => week.some(item => item.year === year && item.month === month && item.day === day));
+    const date = toISODate({ year, month, day });
+    const count = wi >= 0 && slot === getSlotCount(wi) - 1 ? getPTCalendarCount(ptCounts.counts, ptCounts.settings, date) : null;
+    return getPTCountDisplayMemo(staffMemos[key], count, ptCounts.overrides?.[date], key)?.content || '';
+  }, [grid, getSlotCount, ptCounts.counts, ptCounts.settings, ptCounts.overrides, staffMemos]);
+
+  const saveStaffMemo = useCallback(async (year, month, day, slot, content, fontColor, bgColor, textStyle) => {
+    const key = `${year}-${month}-${day}-${slot}`;
+    const wi = grid.findIndex(week => week.some(item => item.year === year && item.month === month && item.day === day));
+    const date = toISODate({ year, month, day });
+    const count = wi >= 0 && slot === getSlotCount(wi) - 1 ? getPTCalendarCount(ptCounts.counts, ptCounts.settings, date) : null;
+    const normalized = normalizeStaffDeptNameSpacing(content || '');
+    const contentEdit = fontColor === undefined && bgColor === undefined && textStyle === undefined;
+    if (count !== null && (contentEdit || normalized !== (staffMemos[key]?.content || ''))) {
+      // Save the source count observed at this edit before saving its text. A
+      // failed memo save cannot expose this marker because its content must match.
+      if (!await saveManualOverride(date, key, normalized, count)) return false;
+    }
+    const saved = await saveRawStaffMemo(year, month, day, slot, normalized, fontColor, bgColor, textStyle);
+    if (saved && count !== null) refreshPTCounts();
+    return saved;
+  }, [grid, getSlotCount, ptCounts.counts, ptCounts.settings, saveManualOverride, refreshPTCounts, staffMemos, saveRawStaffMemo]);
 
   const getMemoGridTemplateRows = useCallback((wi) => {
     const slotCount = getSlotCount(wi);
@@ -716,7 +743,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     setEditingCell(null);
     resetInputToHidden();
     const key = memoKey(wi, di, slot);
-    const old = (staffMemos[key]?.content || '').trim();
+    const old = getDisplayedMemoContent(key).trim();
     const nv = (val || '').trim();
     if (old !== nv) {
       const d = grid[wi][di];
@@ -724,13 +751,13 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
       if (!await saveStaffMemo(d.year, d.month, d.day, slot, nv)) addToast('저장 실패', 'error');
     }
     focusHiddenInput();
-  }, [staffMemos, memoKey, grid, saveStaffMemo, addToast, recordUndo, resetInputToHidden, focusHiddenInput]);
+  }, [getDisplayedMemoContent, memoKey, grid, saveStaffMemo, addToast, recordUndo, resetInputToHidden, focusHiddenInput]);
 
   const commitActiveEdit = useCallback(() => {
     if (!editingCell) return;
     const currentKey = editingCell;
     const { year, month, day, slot } = dayFromKey(currentKey);
-    const old = (staffMemos[currentKey]?.content || '').trim();
+    const old = getDisplayedMemoContent(currentKey).trim();
     const nv = (hiddenInputRef.current?.value || '').trim();
     skipNextBlurSaveRef.current = true;
     setTimeout(() => {
@@ -744,7 +771,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
         if (!success) addToast('저장 실패', 'error');
       });
     }
-  }, [editingCell, dayFromKey, staffMemos, resetInputToHidden, recordUndo, saveStaffMemo, addToast]);
+  }, [editingCell, dayFromKey, getDisplayedMemoContent, resetInputToHidden, recordUndo, saveStaffMemo, addToast]);
 
   const deleteCells = useCallback(async (keys) => {
     const items = [], proms = [];
@@ -966,7 +993,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     }
 
     const meta = e.metaKey || e.ctrlKey;
-    if (e.key === 'Enter' || e.key === 'F2') { e.preventDefault(); beginEdit(selectedCell.key, staffMemos[selectedCell.key]?.content || '', true); return; }
+    if (e.key === 'Enter' || e.key === 'F2') { e.preventDefault(); beginEdit(selectedCell.key, getDisplayedMemoContent(selectedCell.key), true); return; }
     if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteCells(selectedKeys); return; }
     if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
       e.preventDefault();
@@ -985,7 +1012,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
       beginEdit(selectedCell.key, '', false);
       return;
     }
-  }, [selectedCell, editingCell, selectedKeys, cellFromXY, selectSingle, buildRange, beginEdit, staffMemos, doUndo, clipboardSource, deleteCells, handleCopy, handleCut, resetInputToHidden, focusHiddenInput]);
+  }, [selectedCell, editingCell, selectedKeys, cellFromXY, selectSingle, buildRange, beginEdit, getDisplayedMemoContent, doUndo, clipboardSource, deleteCells, handleCopy, handleCut, resetInputToHidden, focusHiddenInput]);
 
   useEffect(() => {
     const el = hiddenInputRef.current;
@@ -1040,8 +1067,8 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
 
   const onCellDblClick = useCallback((wi, di, slot) => {
     const key = memoKey(wi, di, slot);
-    beginEdit(key, staffMemos[key]?.content || '', true, false);
-  }, [memoKey, staffMemos, beginEdit]);
+    beginEdit(key, getDisplayedMemoContent(key), true, false);
+  }, [memoKey, getDisplayedMemoContent, beginEdit]);
 
   const onCellCtxMenu = useCallback((wi, di, slot, e) => {
     e.preventDefault();
@@ -1697,9 +1724,10 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                     const rawMemo = staffMemos[key];
                     const ptCount = slot === slotCount - 1
                       ? getPTCalendarCount(ptCounts.counts, ptCounts.settings, toISODate(dayInfo)) : null;
+                    const resolvedMemo = getPTCountDisplayMemo(rawMemo, ptCount, ptCounts.overrides?.[toISODate(dayInfo)], key);
                     const displayMemo = shouldHideLastRowContent
                       ? { ...(rawMemo || {}), content: '' }
-                      : getStaffCalendarDisplayMemo(getPTCountDisplayMemo(rawMemo, ptCount), slot === slotCount - 1);
+                      : getStaffCalendarDisplayMemo(resolvedMemo, slot === slotCount - 1);
                     const memoContent = displayMemo?.content || '';
                     const isDepartmentHidden = shouldHideStaffMemoByDepartment(memoContent, hiddenDepartments);
                     const autoFontColor = getAutoFontColorForStaffMemo(memoContent);
@@ -1709,6 +1737,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                         linkedCount={shouldHideLastRowContent ? null : ptCount}
                         originalContent={rawMemo?.content || ''}
                         linkedCountDelayed={ptCounts.error}
+                        isManualCount={!shouldHideLastRowContent && ptCount !== null && resolvedMemo === rawMemo}
                         isSelected={isSel} isPrimary={isPri} isEditing={isEd} clipboardMode={clipMode}
                         cellId={key}
                         autoFontColor={autoFontColor}

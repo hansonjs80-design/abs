@@ -43,7 +43,9 @@ export async function fetchPTCalendarCounts(client, startDate, endDate, signal) 
   return { counts, settings };
 }
 
-export function getPTCountDisplayMemo(memo, count) {
+export function getPTCountDisplayMemo(memo, count, override, memoKey) {
   if (count === null) return memo;
+  if (override?.active && override.sourceCount === count && override.memoKey === memoKey &&
+      override.content === (memo?.content || '')) return memo;
   return { ...memo, content: `${count}명` };
 }
