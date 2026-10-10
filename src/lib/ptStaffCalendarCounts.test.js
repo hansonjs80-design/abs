@@ -43,7 +43,7 @@ test('calendar queries only counts and its reserved settings record, with bounde
     return chain;
   } };
   const result = await fetchPTCalendarCounts(client, '2026-09-27', '2026-10-31');
-  assert.deepEqual(result, { settings: { scope: 'all', startDate: null }, counts: { '2026-10-10': 47 } });
+  assert.deepEqual(result, { settings: { enabled: true, scope: 'all', startDate: null }, counts: { '2026-10-10': 47 } });
   assert.deepEqual(calls[0].eq, ['date', PT_STAFF_COUNT_SETTINGS_RECORD]);
   assert.equal(calls[1].select, 'date,total_count');
   assert.deepEqual(calls[1].gte, ['date', '2026-09-27']);
@@ -56,4 +56,28 @@ test('failed count reads do not masquerade as an empty day', async () => {
     return () => chain;
   } });
   await assert.rejects(fetchPTCalendarCounts({ from: () => chain }, '2026-10-01', '2026-10-31'), /offline/);
+});
+
+test('disabled integration restores existing memo without losing its count, formatting, or scope', () => {
+  const settings = { enabled: false, scope: 'from', startDate: '2026-09-01' };
+  const counts = { '2026-10-10': 53 };
+  const memo = { content: '47명', font_size: 18, font_color: '#434343' };
+  assert.equal(getPTCountDisplayMemo(memo, getPTCalendarCount(counts, settings, '2026-10-10')), memo);
+  const restored = getPTCalendarCount(counts, { ...settings, enabled: true }, '2026-10-10');
+  assert.equal(restored, 53);
+  assert.equal(settings.startDate, '2026-09-01');
+  assert.equal(memo.content, '47명');
+});
+
+test('disabled integration reads its shared switch without querying daily counts', async () => {
+  const selections = [];
+  const query = new Proxy({}, { get(_, key) {
+    if (key === 'select') return value => { selections.push(value); return query; };
+    if (key === 'then') return resolve => resolve({ data: [{ rows_data: [{ staffCalendarCounts: { enabled: false, scope: 'today', startDate: '2026-10-10' } }] }], error: null });
+    return () => query;
+  } });
+  const result = await fetchPTCalendarCounts({ from: () => query }, '2026-10-01', '2026-10-31');
+  assert.equal(result.settings.enabled, false);
+  assert.deepEqual(result.counts, {});
+  assert.deepEqual(selections, ['rows_data']);
 });

@@ -9,13 +9,14 @@ export function isPTCountDate(value) {
 
 export function normalizePTCountSettings(value) {
   if (!value || !['today', 'all', 'from'].includes(value.scope)) return null;
+  if (value.enabled !== undefined && typeof value.enabled !== 'boolean') return null;
   if (value.scope !== 'all' && !isPTCountDate(value.startDate)) return null;
-  return { scope: value.scope, startDate: value.scope === 'all' ? null : value.startDate };
+  return { enabled: value.enabled !== false, scope: value.scope, startDate: value.scope === 'all' ? null : value.startDate };
 }
 
 export function getPTCalendarCount(counts, settings, date) {
   const normalized = normalizePTCountSettings(settings);
-  if (!normalized || !isPTCountDate(date) || (normalized.startDate && date < normalized.startDate)) return null;
+  if (!normalized || !normalized.enabled || !isPTCountDate(date) || (normalized.startDate && date < normalized.startDate)) return null;
   const count = counts[date];
   return Number.isInteger(count) && count >= 0 ? count : null;
 }
@@ -24,12 +25,15 @@ export async function fetchPTCalendarCounts(client, startDate, endDate, signal) 
   if (!isPTCountDate(startDate) || !isPTCountDate(endDate)) throw new Error('Invalid calendar range');
   const settingsQuery = client.from('pt_daily_records').select('rows_data')
     .eq('date', PT_STAFF_COUNT_SETTINGS_RECORD).limit(1).abortSignal(signal);
+  const settingsResult = await settingsQuery;
+  if (settingsResult.error) throw settingsResult.error;
+  const settings = normalizePTCountSettings(settingsResult.data?.[0]?.rows_data?.[0]?.staffCalendarCounts);
+  // Continue polling only the scope while disabled so re-enabling is noticed.
+  if (!settings || !settings.enabled) return { counts: {}, settings };
   const countsQuery = client.from('pt_daily_records').select('date,total_count')
     .gte('date', startDate).lte('date', endDate).order('date').limit(100).abortSignal(signal);
-  const [settingsResult, countsResult] = await Promise.all([settingsQuery, countsQuery]);
-  if (settingsResult.error) throw settingsResult.error;
+  const countsResult = await countsQuery;
   if (countsResult.error) throw countsResult.error;
-  const settings = normalizePTCountSettings(settingsResult.data?.[0]?.rows_data?.[0]?.staffCalendarCounts);
   const counts = {};
   for (const record of countsResult.data || []) {
     if (isPTCountDate(record.date) && Number.isInteger(record.total_count) && record.total_count >= 0) {
