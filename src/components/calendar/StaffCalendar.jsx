@@ -11,6 +11,8 @@ import { getEffectiveStaffDisplayRules, getMemoFontColorByRule } from '../../lib
 import { shouldHideStaffMemoByDepartment } from '../../lib/staffDepartmentFilters';
 import { useToast } from '../common/Toast';
 import MemoSlot from './MemoSlot';
+import { usePTCalendarCounts } from '../../hooks/usePTCalendarCounts';
+import { getPTCalendarCount, getPTCountDisplayMemo } from '../../lib/ptStaffCalendarCounts';
 import { usePersistentNumber } from '../../hooks/usePersistentState';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../lib/authPermissions';
@@ -345,6 +347,8 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
 
   const today = getTodayKST();
   const { grid } = useMemo(() => generateCalendarGrid(currentYear, currentMonth, holidays), [currentYear, currentMonth, holidays]);
+  const toISODate = day => `${day.year}-${String(day.month).padStart(2, '0')}-${String(day.day).padStart(2, '0')}`;
+  const ptCounts = usePTCalendarCounts(toISODate(grid[0][0]), toISODate(grid.at(-1)[6]));
 
   // 주차별 슬롯 수 헬퍼
   const getSlotCount = useCallback((wi) => {
@@ -1691,15 +1695,20 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                     // 공휴일 이름: 첫 번째 슬롯에 표시
                     const holidayName = (slot === 0 && dayInfo.isHoliday) ? holidayNames.get(dayInfo.key) : null;
                     const rawMemo = staffMemos[key];
-                    const memoContent = shouldHideLastRowContent ? '' : (rawMemo?.content || '');
+                    const ptCount = slot === slotCount - 1
+                      ? getPTCalendarCount(ptCounts.counts, ptCounts.settings, toISODate(dayInfo)) : null;
                     const displayMemo = shouldHideLastRowContent
                       ? { ...(rawMemo || {}), content: '' }
-                      : getStaffCalendarDisplayMemo(rawMemo, slot === slotCount - 1);
+                      : getStaffCalendarDisplayMemo(getPTCountDisplayMemo(rawMemo, ptCount), slot === slotCount - 1);
+                    const memoContent = displayMemo?.content || '';
                     const isDepartmentHidden = shouldHideStaffMemoByDepartment(memoContent, hiddenDepartments);
                     const autoFontColor = getAutoFontColorForStaffMemo(memoContent);
 
                     return (
                       <MemoSlot key={slot} memo={displayMemo} dayInfo={dayInfo} slotIndex={slot}
+                        linkedCount={shouldHideLastRowContent ? null : ptCount}
+                        originalContent={rawMemo?.content || ''}
+                        linkedCountDelayed={ptCounts.error}
                         isSelected={isSel} isPrimary={isPri} isEditing={isEd} clipboardMode={clipMode}
                         cellId={key}
                         autoFontColor={autoFontColor}

@@ -14,6 +14,9 @@ export default function MemoSlot({
   isDepartmentHidden = false,
   isLastSlot = false,
   isBeforeLastSlot = false,
+  linkedCount = null,
+  originalContent = '',
+  linkedCountDelayed = false,
 }) {
   const content = memo?.content || '';
   const fontColor = computeMemoFontColor(content);
@@ -76,7 +79,8 @@ export default function MemoSlot({
       onMouseEnter={onMouseEnter}
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
-      title={isEditing || isDepartmentHidden ? '' : content}
+      title={isEditing || isDepartmentHidden ? '' : linkedCount === null ? content
+        : `PT현황 총치료 ${linkedCount}건${linkedCountDelayed ? ' · 연결 지연, 마지막 확인 건수' : ''}${originalContent ? ` · 기존 메모: ${originalContent}` : ''}`}
       style={inlineStyle}
     >
       <span style={{
