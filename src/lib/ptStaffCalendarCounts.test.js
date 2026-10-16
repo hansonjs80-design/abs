@@ -23,6 +23,24 @@ test('PT count overlay retains original memo and style without mutating it', () 
   assert.equal(memo.content, '수동 메모');
 });
 
+test('empty PT dates display no automatic count and preserve memo data through count changes', () => {
+  const memo = { content: '기존 메모', font_color: '#123456', font_size: 18 };
+  assert.equal(getPTCountDisplayMemo(undefined, 0).content, '');
+  assert.deepEqual(getPTCountDisplayMemo(memo, 0), { ...memo, content: '' });
+  assert.equal(getPTCountDisplayMemo(memo, 48).content, '48명');
+  assert.equal(getPTCountDisplayMemo(memo, 0).content, '');
+  assert.equal(getPTCountDisplayMemo(memo, null), memo, 'disabled/missing integration restores the stored memo');
+  assert.equal(memo.content, '기존 메모');
+});
+
+test('zero automatic counts retain explicit manual overrides until their source count changes', () => {
+  const memo = { content: '수동 메모', font_color: '#123456' }, key = '2026-10-17-5';
+  const override = { active: true, sourceCount: 0, memoKey: key, content: memo.content };
+  assert.equal(getPTCountDisplayMemo(memo, 0, override, key), memo);
+  assert.equal(getPTCountDisplayMemo(memo, 1, override, key).content, '1명');
+  assert.equal(getPTCountDisplayMemo(memo, 0, { ...override, active: false }, key).content, '');
+});
+
 test('calendar queries only counts and its reserved settings record, with bounded dates', async () => {
   const calls = [];
   const client = { from(table) {

@@ -47,5 +47,5 @@ export function getPTCountDisplayMemo(memo, count, override, memoKey) {
   if (count === null) return memo;
   if (override?.active && override.sourceCount === count && override.memoKey === memoKey &&
       override.content === (memo?.content || '')) return memo;
-  return { ...memo, content: `${count}명` };
+  return { ...memo, content: count === 0 ? '' : `${count}명` };
 }
