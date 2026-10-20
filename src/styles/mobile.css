@@ -109,9 +109,9 @@
   .top-tab--settings.active {
     width: 100%;
     min-width: 0;
-    min-height: 38px;
+    min-height: 34.2px;
     margin: 0;
-    padding: 4px 7px;
+    padding: 3.6px 6.3px;
     justify-content: center;
     overflow: visible;
     border: 1px solid color-mix(in srgb, var(--tab-active-border) 30%, #dbe3ec);
@@ -121,7 +121,7 @@
     box-shadow: none;
     color: var(--tab-active-border);
     font-size: 1rem;
-    font-weight: 900;
+    font-weight: 810;
     transform: none;
   }
 
@@ -167,10 +167,10 @@
   }
 
   .top-tab.active .month-picker.tab-variant .month-nav-btn {
-    width: 30px;
-    min-width: 30px;
-    max-width: 30px;
-    height: 30px;
+    width: 27px;
+    min-width: 27px;
+    max-width: 27px;
+    height: 27px;
     border-radius: 9px;
   }
 
