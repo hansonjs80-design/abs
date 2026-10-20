@@ -2154,6 +2154,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
 
   const {
     fetchPatientHistory,
+    cancelPatientHistorySearch,
     handleUpdateLogVisitCount,
     handleUpdatePatientHistoryField,
     handleUpdatePatientHistoryMemo,
@@ -2400,6 +2401,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   }, [applyImmediateMergeSpan, cellKey, currentMonth, currentYear]);
 
   const closePatientHistoryModal = useCallback(() => {
+    cancelPatientHistorySearch();
     const deferred = deferredPatientHistoryAutoFillRef.current;
     deferredPatientHistoryAutoFillRef.current = null;
     skipNextEditBlurSaveRef.current = false;
@@ -2416,7 +2418,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       console.error('Failed to run deferred patient automation after closing history:', error);
       addToast('환자 자동화 적용에 실패했습니다.', 'error');
     });
-  }, [addToast]);
+  }, [addToast, cancelPatientHistorySearch]);
 
   const handlePatientHistoryDateClick = useCallback((log) => {
     const target = getPatientHistoryScheduleNavigationTarget(log);

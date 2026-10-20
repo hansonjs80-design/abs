@@ -1,7 +1,7 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { generateShockwaveCalendar, getTodayKST } from '../../lib/calendarUtils';
 import { buildManualTherapyUnmergePayload } from '../../lib/manualTherapyMergeUtils';
-import { normalizeNameForMatch } from '../../lib/memoParser';
+import { normalizeNameForMatch } from '../../lib/nameMatchUtils';
 import {
   buildPatientHistoryCellUpdate,
   dedupePatientHistoryLogsByScheduleCell,
@@ -126,8 +126,16 @@ const SCHEDULER_LINKED_HISTORY_SCHEDULE_SELECT = [
   'updated_at',
 ].join(',');
 
-const fetchScheduleRowsForSchedulerLinkedLogs = async (logs) => {
-  const targets = getSchedulerLinkedLogQueryTargets(logs);
+const fetchScheduleRowsForSchedulerLinkedLogs = async (logs, candidates = []) => {
+  const uniqueTargets = new Map();
+  for (const source of [logs, candidates]) {
+    for (const target of getSchedulerLinkedLogQueryTargets(source)) {
+      const signature = [target.year, target.month, ...['weekIndexes', 'dayIndexes', 'rowIndexes', 'colIndexes']
+        .map((key) => [...target[key]].sort((a, b) => a - b).join(','))].join('|');
+      uniqueTargets.set(signature, target);
+    }
+  }
+  const targets = [...uniqueTargets.values()];
   if (targets.length === 0) return buildScheduleRowsBySchedulerCellKey([]);
 
   const results = await Promise.all(targets.map(async (target) => {
@@ -307,8 +315,15 @@ export default function usePatientHistoryActions({
   const patientHistoryResultCacheRef = useRef(new Map());
   const monthlyTherapistRowsCacheRef = useRef(new Map());
   const calendarCacheRef = useRef(new Map());
+  const patientHistoryRequestRef = useRef(0);
+  const cancelPatientHistorySearch = useCallback(() => {
+    patientHistoryRequestRef.current += 1;
+  }, []);
+  useEffect(() => cancelPatientHistorySearch, [currentYear, currentMonth, cancelPatientHistorySearch]);
 
   const fetchPatientHistory = useCallback(async (nameParam, chartParam, options = {}) => {
+    const requestId = ++patientHistoryRequestRef.current;
+    const isCurrentRequest = () => patientHistoryRequestRef.current === requestId;
     const activeSelectedKey = String(options?.selectedKey || '');
     const activeSelectedContent = typeof options?.selectedContent === 'string'
       ? options.selectedContent
@@ -354,7 +369,7 @@ export default function usePatientHistoryActions({
       getPatientHistoryScheduleStatusSignature(memos, pendingCellBgColors),
     ].join('__');
     const setLoadedPatientHistory = (logs, chartOptions = []) => {
-      setPatientHistoryModalData((prev) => ({
+      setPatientHistoryModalData((prev) => !isCurrentRequest() ? prev : ({
         ...prev,
         loading: false,
         logs,
@@ -371,6 +386,7 @@ export default function usePatientHistoryActions({
     setPatientHistoryModalData((prev) => ({
       ...prev,
       loading: true,
+      logs: [],
       searchName: nameParam,
       searchChart: chartParam,
       chartOptions: normalizeNameForMatch(prev.searchName) === normalizeNameForMatch(nameParam)
@@ -407,6 +423,9 @@ export default function usePatientHistoryActions({
       }
 
       const [shockwaveRes, manualRes, scheduleRes] = await Promise.all([shockwaveQuery, manualQuery, scheduleQuery]);
+      if (!isCurrentRequest()) return;
+      const queryError = shockwaveRes.error || manualRes.error || scheduleRes.error;
+      if (queryError) throw queryError;
       const shockwaveRows = shockwaveRes.data || [];
       const manualRows = manualRes.data || [];
       const scheduleCandidates = scheduleRes.data || [];
@@ -481,7 +500,15 @@ export default function usePatientHistoryActions({
           }),
         })),
       ];
-      const linkedScheduleRowsByKey = await fetchScheduleRowsForSchedulerLinkedLogs(fetchedLogData);
+      // Reuse identical queries and run the remaining reads together without
+      // widening their coordinate filters or changing the latest-row checks.
+      const linkedScheduleRowsByKey = await fetchScheduleRowsForSchedulerLinkedLogs(
+        fetchedLogData,
+        scheduleCandidates.map((row) => ({
+          scheduler_cell_key: getScheduleRowSchedulerCellKey(row),
+        })),
+      );
+      if (!isCurrentRequest()) return;
       const keepHistoryLog = (log) => shouldKeepSchedulerLinkedPatientLog(log, linkedScheduleRowsByKey, {
         rowCount: baseTimeSlotsLength,
         colCount,
@@ -513,18 +540,13 @@ export default function usePatientHistoryActions({
       });
       let allData = logsWithLinkedScheduleMemos.filter(keepHistoryLog);
 
-      const latestScheduleRowsByKey = await fetchScheduleRowsForSchedulerLinkedLogs(
-        scheduleCandidates.map((row) => ({
-          scheduler_cell_key: getScheduleRowSchedulerCellKey(row),
-        }))
-      );
       const scheduleData = [];
       const seenScheduleKeys = new Set();
       scheduleCandidates.forEach((candidate) => {
         const key = getScheduleRowSchedulerCellKey(candidate);
         if (!key || seenScheduleKeys.has(key)) return;
         seenScheduleKeys.add(key);
-        const latest = latestScheduleRowsByKey.get(key);
+        const latest = linkedScheduleRowsByKey.get(key);
         if (latest) scheduleData.push(latest);
       });
       const scheduleOverrides = new Map();
@@ -535,13 +557,17 @@ export default function usePatientHistoryActions({
         const baseSignature = type === 'manual_therapy' ? manualTherapistSignature : therapistSignature;
         const key = `${getHistoryMonthKey(year, month, type)}__${baseSignature}`;
         if (!monthlyTherapistRowsCacheRef.current.has(key)) {
-          monthlyTherapistRowsCacheRef.current.set(key, loadMonthlyTherapistRowsForHistory({
+          const loading = loadMonthlyTherapistRowsForHistory({
             year,
             month,
             type,
             therapists,
             manualTherapists,
-          }));
+          }).catch((error) => {
+            monthlyTherapistRowsCacheRef.current.delete(key);
+            throw error;
+          });
+          monthlyTherapistRowsCacheRef.current.set(key, loading);
         }
         return monthlyTherapistRowsCacheRef.current.get(key);
       };
@@ -621,6 +647,7 @@ export default function usePatientHistoryActions({
       await Promise.all([...monthlyPreloadTargets.values()].map((target) => (
         getMonthlyTherapistRows(target.year, target.month, target.historyGroup)
       )));
+      if (!isCurrentRequest()) return;
 
       for (const item of scheduleRowsWithMeta) {
         try {
@@ -836,8 +863,9 @@ export default function usePatientHistoryActions({
       }
       setLoadedPatientHistory(logsWithMeta, chartOptions);
     } catch (e) {
+      if (!isCurrentRequest()) return;
       console.error(e);
-      alert(`디버그 에러 발생: ${e.message}`);
+      addToast('스케줄 내역을 불러오지 못했습니다. 다시 검색해 주세요.', 'error');
       setPatientHistoryModalData((prev) => ({ ...prev, loading: false }));
     }
   }, [
@@ -858,6 +886,7 @@ export default function usePatientHistoryActions({
     cellKey,
     setPatientHistoryModalData,
     patientHistoryTargetCellRef,
+    addToast,
   ]);
 
   const buildContentWithPrescription = useCallback((content, oldPrescription, newPrescription) => {
@@ -1420,6 +1449,7 @@ export default function usePatientHistoryActions({
             : (memos[key]?.content || ''));
 
       if (!content.trim()) {
+        cancelPatientHistorySearch();
         setPatientHistoryModalData({ loading: false, logs: [], searchName: '', searchChart: '' });
         setPatientHistoryModalOpen(true);
         return;
@@ -1428,6 +1458,7 @@ export default function usePatientHistoryActions({
       const { shouldFetch, searchName, searchChart } = getPatientHistorySearchTarget(content);
 
       if (!shouldFetch) {
+        cancelPatientHistorySearch();
         setPatientHistoryModalData({ loading: false, logs: [], searchName: '', searchChart: '' });
         setPatientHistoryModalOpen(true);
         return;
@@ -1442,7 +1473,7 @@ export default function usePatientHistoryActions({
       console.error(e);
       alert(`디버그 에러 발생: ${e.message}`);
     }
-  }, [selectedCell, cellKey, editingCell, editInputRef, editValue, memos, pendingDisplayValues, fetchPatientHistory, setPatientHistoryModalOpen, setPatientHistoryModalData, patientHistoryTargetCellRef]);
+  }, [selectedCell, cellKey, editingCell, editInputRef, editValue, memos, pendingDisplayValues, fetchPatientHistory, setPatientHistoryModalOpen, setPatientHistoryModalData, patientHistoryTargetCellRef, cancelPatientHistorySearch]);
 
   const handleApplyHistoryToCell = useCallback(async (log) => {
     const targetCell = resolvePatientHistoryApplyTarget(
@@ -1552,6 +1583,7 @@ export default function usePatientHistoryActions({
 
   return {
     fetchPatientHistory,
+    cancelPatientHistorySearch,
     handleUpdateLogVisitCount,
     handleUpdatePatientHistoryField,
     handleUpdatePatientHistoryMemo,
