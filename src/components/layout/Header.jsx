@@ -10,7 +10,7 @@ export default function Header({ onMenuToggle }) {
     '/': '직원 근무표',
     '/shockwave': '충격파/도수 스케줄',
     '/shockwave-stats': '충격파 통계',
-    '/manual-therapy-stats': '도수치료 통계',
+    '/manual-therapy-stats': '도수 통계',
     '/shinjang-spray-stats': '신장분사 통계',
     '/combined-stats': '전체 통계',
     '/settings': '설정 / 관리',

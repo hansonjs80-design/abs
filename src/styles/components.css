@@ -846,7 +846,7 @@
 }
 
 .top-tab.active .month-picker.tab-variant {
-  gap: 2px;
+  gap: 5px;
   pointer-events: auto;
 }
 
