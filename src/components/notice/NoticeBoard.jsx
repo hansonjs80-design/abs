@@ -4,8 +4,7 @@ import { useSchedule } from '../../contexts/ScheduleContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../lib/authPermissions';
 import { pasteNoticeClipboard } from '../../lib/noticeClipboardUtils';
-
-const SLOT_COUNT = 6;
+import { getNoticeRowCount, MAX_NOTICE_ROW_COUNT } from '../../lib/noticeRows';
 
 export default function NoticeBoard({
   departments = [],
@@ -34,6 +33,7 @@ export default function NoticeBoard({
   const pendingCutRef = useRef(null);
   const currentNoticesRef = useRef({ year: currentYear, month: currentMonth, notices });
   const contextMenuRef = useRef(null);
+  const slotCount = getNoticeRowCount(notices, editingSlot, editValue);
 
   useEffect(() => {
     currentNoticesRef.current = { year: currentYear, month: currentMonth, notices };
@@ -142,7 +142,7 @@ export default function NoticeBoard({
       if (notices.some(n => n.slot_index === index && n.content)) saveNotice(index, '', currentYear, currentMonth);
     } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
-      const next = Math.max(0, Math.min(SLOT_COUNT - 1, index + (event.key === 'ArrowDown' ? 1 : -1)));
+      const next = Math.max(0, Math.min(slotCount - 1, index + (event.key === 'ArrowDown' ? 1 : -1)));
       slotRefs.current[next]?.focus();
     } else if (event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
       event.preventDefault();
@@ -176,7 +176,7 @@ export default function NoticeBoard({
     const cut = pendingCutRef.current;
     pendingCutRef.current = null;
     await pasteNoticeClipboard({
-      text, index, slotCount: SLOT_COUNT, year: currentYear, month: currentMonth, cut, saveNotice,
+      text, index, slotCount: MAX_NOTICE_ROW_COUNT, year: currentYear, month: currentMonth, cut, saveNotice,
       isCutSourceUnchanged: (source) => {
         const current = currentNoticesRef.current;
         return current.year === source.year && current.month === source.month
@@ -237,7 +237,7 @@ export default function NoticeBoard({
           <MessageSquare size={21} strokeWidth={2.4} />
           {currentMonth}월 전달 사항
         </div>
-        {Array.from({ length: SLOT_COUNT }, (_, i) => {
+        {Array.from({ length: slotCount }, (_, i) => {
           const notice = notices.find(n => n.slot_index === i);
           const isEditing = editingSlot === i;
 
