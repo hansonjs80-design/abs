@@ -7,13 +7,15 @@ import { getTodayKST } from '../../lib/calendarUtils';
 import { WEEKDAYS_FULL } from '../../lib/constants';
 
 export default function TodayPanel() {
-  const { staffMemos, currentYear, currentMonth, shockwaveSettings } = useSchedule();
+  const { staffMemos, shockwaveSettings } = useSchedule();
   const today = getTodayKST();
   const dow = today.getDay();
+  const todayYear = today.getFullYear();
+  const todayMonth = today.getMonth() + 1;
 
   const displayRules = useMemo(
-    () => getEffectiveStaffDisplayRules(shockwaveSettings, currentYear, currentMonth).rules,
-    [shockwaveSettings, currentYear, currentMonth]
+    () => getEffectiveStaffDisplayRules(shockwaveSettings, todayYear, todayMonth).rules,
+    [shockwaveSettings, todayYear, todayMonth]
   );
 
   const todayItems = useMemo(() => {
@@ -22,9 +24,10 @@ export default function TodayPanel() {
     const d = today.getDate();
     const items = [];
 
-    for (let slot = 0; slot < 6; slot++) {
-      const key = `${y}-${m}-${d}-${slot}`;
-      const memo = staffMemos[key];
+    const datePrefix = `${y}-${m}-${d}-`;
+    const entries = Object.entries(staffMemos).filter(([key]) => key.startsWith(datePrefix))
+      .sort(([a], [b]) => Number(a.slice(datePrefix.length)) - Number(b.slice(datePrefix.length)));
+    for (const [, memo] of entries) {
       if (!memo?.content) continue;
 
       // 표시 규칙 우선 적용, 없으면 기존 memoParser 폴백

@@ -11,6 +11,18 @@ function getMonthKey(year, month) {
   return `${year}-${String(month).padStart(2, '0')}`;
 }
 
+// Store inside the existing settings JSON; no new database column is required.
+export function getSavedStaffDisplayRules(settings) {
+  return settings?.staff_display_rules ?? settings?.monthly_settlement_settings?.__staff_display_rules;
+}
+
+export function withSavedStaffDisplayRules(monthlySettings, rules) {
+  return {
+    ...monthlySettings,
+    ...(rules === undefined ? {} : { __staff_display_rules: rules }),
+  };
+}
+
 /* ── 기본 규칙 ── */
 export const DEFAULT_STAFF_DISPLAY_RULES = [
   {
@@ -122,6 +134,8 @@ function normalizeRule(rule, index = 0) {
     keyword: String(rule?.keyword ?? '').trim(),
     position: rule?.position || 'suffix',
     today_suffix: String(rule?.today_suffix ?? '').trim(),
+    today_format: rule?.today_format === 'template' ? 'template' : 'suffix',
+    today_template: String(rule?.today_template ?? '').trim(),
     calendar_font_color: rule?.calendar_font_color || '',
     calendar_bg_color: rule?.calendar_bg_color || '',
     enabled: rule?.enabled !== false,
@@ -139,7 +153,7 @@ function compareMonthKeys(a, b) {
 }
 
 export function getEffectiveStaffDisplayRules(settings, year, month) {
-  const source = settings?.staff_display_rules;
+  const source = getSavedStaffDisplayRules(settings);
   const monthKey = getMonthKey(year, month);
 
   if (Array.isArray(source)) {
@@ -159,15 +173,16 @@ export function getEffectiveStaffDisplayRules(settings, year, month) {
     .pop();
 
   return {
-    rules: inheritedMonthKey ? normalizeRuleList(monthly[inheritedMonthKey]) : normalizeRuleList(DEFAULT_STAFF_DISPLAY_RULES),
+    rules: normalizeRuleList(inheritedMonthKey ? monthly[inheritedMonthKey] : monthly.default || DEFAULT_STAFF_DISPLAY_RULES),
     source_month_key: inheritedMonthKey || null,
     target_month_key: monthKey,
   };
 }
 
 export function setMonthlyStaffDisplayRules(settings, year, month, rules) {
-  const source = settings?.staff_display_rules;
-  const existing = source && typeof source === 'object' && !Array.isArray(source) ? source : {};
+  const source = getSavedStaffDisplayRules(settings);
+  const existing = Array.isArray(source) ? { default: normalizeRuleList(source) }
+    : source && typeof source === 'object' ? source : {};
   return {
     ...existing,
     [getMonthKey(year, month)]: normalizeRuleList(rules),
@@ -225,7 +240,8 @@ export function parseDeptNameMemo(text) {
  */
 export function matchDisplayRule(memoText, rules) {
   const parsed = parseDeptNameMemo(memoText);
-  if (!parsed) return null;
+  const normalizedMemo = String(memoText || '').replace(/\s+/g, '').toLowerCase();
+  if (!normalizedMemo) return null;
 
   const enabledRules = (rules || DEFAULT_STAFF_DISPLAY_RULES)
     .filter((r) => r.enabled !== false);
@@ -233,12 +249,19 @@ export function matchDisplayRule(memoText, rules) {
   // 우선순위 높은 순으로 정렬
   const sorted = [...enabledRules].sort((a, b) => (b.priority || 0) - (a.priority || 0));
 
-  const normalizedPrefix = parsed.prefix.replace(/\s+/g, '').toLowerCase();
-  const normalizedSuffix = parsed.suffix.replace(/\s+/g, '').toLowerCase();
+  const normalizedPrefix = (parsed?.prefix || '').replace(/\s+/g, '').toLowerCase();
+  const normalizedSuffix = (parsed?.suffix || '').replace(/\s+/g, '').toLowerCase();
 
   for (const rule of sorted) {
     const normalizedKeyword = (rule.keyword || '').replace(/\s+/g, '').toLowerCase();
 
+    if (rule.position === 'contains' && normalizedKeyword && normalizedMemo.includes(normalizedKeyword)) {
+      return { rule, parsed };
+    }
+    if (rule.position === 'exact' && normalizedKeyword && normalizedMemo === normalizedKeyword) {
+      return { rule, parsed };
+    }
+    if (!parsed) continue;
     if (rule.position === 'prefix' && normalizedKeyword) {
       if (normalizedPrefix === normalizedKeyword || normalizedPrefix.includes(normalizedKeyword)) {
         return { rule, parsed };
@@ -266,13 +289,30 @@ export function formatMemoWithRule(memoText, rules) {
   if (!match) return null;
 
   const { rule, parsed } = match;
-  const base = `${parsed.dept}/${parsed.name}`;
+  if (rule.today_format === 'template') {
+    const fields = { '부서': parsed?.dept || '', '이름': parsed?.name || '', '키워드': rule.keyword || '', '메모': String(memoText || '').trim() };
+    return String(rule.today_template || '').replace(/\{(부서|이름|키워드|메모)\}/g, (_, key) => fields[key]).trim();
+  }
+  const base = parsed ? `${parsed.dept}/${parsed.name}` : String(memoText || '').trim();
   const suffix = rule.today_suffix || '';
 
   if (suffix) {
     return `${base} ${suffix}`;
   }
   return base;
+}
+
+export function validateStaffDisplayRules(rules) {
+  const seen = new Set();
+  for (const [index, rule] of rules.entries()) {
+    if (rule.enabled === false) continue;
+    if (rule.position !== 'standalone' && !String(rule.keyword || '').trim()) return `${index + 1}번 규칙에 찾을 키워드를 입력해 주세요.`;
+    if (rule.today_format === 'template' && !String(rule.today_template || '').trim()) return `${index + 1}번 규칙에 오늘 일정 표시 문구를 입력해 주세요.`;
+    const key = `${rule.position}:${String(rule.keyword || '').replace(/\s+/g, '').toLowerCase()}`;
+    if (seen.has(key)) return `${index + 1}번 규칙의 조건이 다른 규칙과 같습니다. 기존 규칙을 수정하거나 조건을 바꿔 주세요.`;
+    seen.add(key);
+  }
+  return '';
 }
 
 /**

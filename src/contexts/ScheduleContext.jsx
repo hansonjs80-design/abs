@@ -61,6 +61,7 @@ import {
   updateCachedScheduleRowsFromRealtime,
 } from '../lib/scheduleMonthLoadUtils';
 import { mergeMonthlySettingsPreservingDeviceProfiles } from '../lib/shockwaveSettingsJsonSync';
+import { getSavedStaffDisplayRules, withSavedStaffDisplayRules } from '../lib/staffDisplayRules';
 
 const ScheduleContext = createContext();
 const LOCAL_WRITE_STALE_GUARD_MS = 5000;
@@ -1145,6 +1146,7 @@ export function ScheduleProvider({ children }) {
           manual_therapy_incentive_percentage: data.manual_therapy_incentive_percentage ?? 0,
           frozen_columns: data.frozen_columns || 6,
           staff_schedule_block_rules: data.staff_schedule_block_rules || {},
+          staff_display_rules: getSavedStaffDisplayRules(data),
           shortcuts: data.shortcuts || {},
           manual_therapy_shortcuts: data.manual_therapy_shortcuts || {},
           dose_tags: data.dose_tags || {},
@@ -1289,12 +1291,14 @@ export function ScheduleProvider({ children }) {
     const currentSettings = shockwaveSettingsRefCache.current;
     try {
       const nextUpdatedAt = new Date().toISOString();
-      const { data: latestRow } = await supabase
+      const { data: latestRow, error: latestSettingsError } = await supabase
         .from('shockwave_settings')
         .select('id, monthly_settlement_settings')
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
+
+      if (latestSettingsError) throw latestSettingsError;
 
       const targetId = latestRow?.id || newSettings.id || currentSettings?.id || '00000000-0000-0000-0000-000000000000';
 
@@ -1390,13 +1394,13 @@ export function ScheduleProvider({ children }) {
       );
       const payload = {
         ...basePayload,
-        monthly_settlement_settings: {
+        monthly_settlement_settings: withSavedStaffDisplayRules({
           ...mergedMonthlySettings,
           __schedule_display: {
             ...(mergedMonthlySettings.__schedule_display || {}),
             time_label_interval_minutes: newSettings.time_label_interval_minutes || newSettings.interval_minutes || 20,
           },
-        }
+        }, newSettings.staff_display_rules)
       };
 
       const { error } = await supabase
