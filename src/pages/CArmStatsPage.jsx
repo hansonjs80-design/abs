@@ -324,6 +324,7 @@ function RadiographerSettings({ document, year, month, onApply, onClose }) {
                     </button>
                   </div>
                   <input
+                    type="text"
                     id={`c-arm-name-${person.id}`}
                     aria-label={`방사선사 ${index + 1} 이름`}
                     value={person.name}
