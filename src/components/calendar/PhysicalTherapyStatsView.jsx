@@ -108,44 +108,42 @@ export default function PhysicalTherapyStatsView() {
     });
   }, [grid, staffMemos, getSlotCount]);
 
+  // 두 체크박스 그룹을 모든 월간 집계에 동일하게 적용한다.
+  const isIncludedDow = useCallback(dow => selectedDows.includes(dow) && !excludedWeekdays.includes(dow), [selectedDows, excludedWeekdays]);
+
   const monthlySummary = useMemo(() => {
     let total = 0; let daysWithData = 0;
     weeksData.forEach(week => week.forEach(day => {
-      if (day && day.value !== null) { total += day.value; daysWithData++; }
+      if (day && day.value !== null && isIncludedDow(day.dow)) { total += day.value; daysWithData++; }
     }));
     return { total, days: daysWithData, average: daysWithData > 0 ? Math.round(total / daysWithData) : 0 };
-  }, [weeksData]);
+  }, [weeksData, isIncludedDow]);
 
   const weeklyStats = useMemo(() => {
     return weeksData.map((week, idx) => {
       let total = 0; let daysWithData = 0;
       week.forEach(day => {
-        if (day && day.value !== null) { total += day.value; daysWithData++; }
+        if (day && day.value !== null && isIncludedDow(day.dow)) { total += day.value; daysWithData++; }
       });
       return { weekNumber: idx + 1, dates: week, total, days: daysWithData, average: daysWithData > 0 ? Math.round(total / daysWithData) : 0 };
     });
-  }, [weeksData]);
+  }, [weeksData, isIncludedDow]);
 
-  const monthlyDowTotals = useMemo(() => DOW_LABELS.map((_, dow) => {
-    const recordedDays = weeksData.flat().filter(day => day?.dow === dow && day.value !== null);
-    return recordedDays.length ? recordedDays.reduce((sum, day) => sum + day.value, 0) : null;
-  }), [weeksData]);
+  const monthlyDowStats = useMemo(() => DOW_LABELS.map((_, dow) => {
+    const recordedDays = weeksData.flat().filter(day => day?.dow === dow && day.value !== null && isIncludedDow(dow));
+    const total = recordedDays.reduce((sum, day) => sum + day.value, 0);
+    return { total: recordedDays.length ? total : null, average: recordedDays.length ? Math.round(total / recordedDays.length) : null };
+  }), [weeksData, isIncludedDow]);
 
-  const customDowStats = useMemo(() => {
-    let total = 0; let daysWithData = 0;
-    weeksData.forEach(week => week.forEach(day => {
-      if (day && day.value !== null && selectedDows.includes(day.dow)) { total += day.value; daysWithData++; }
-    }));
-    return { total, days: daysWithData, average: daysWithData > 0 ? Math.round(total / daysWithData) : 0 };
-  }, [weeksData, selectedDows]);
+  const customDowStats = monthlySummary;
 
   const typeStats = useMemo(() => {
     let weekdayTotal = 0; let weekdayDays = 0;
     let weekendTotal = 0; let weekendDays = 0;
     weeksData.forEach(week => week.forEach(day => {
-      if (day && day.value !== null) {
+      if (day && day.value !== null && isIncludedDow(day.dow)) {
         if (WEEKDAYS.includes(day.dow)) {
-          if (!excludedWeekdays.includes(day.dow)) { weekdayTotal += day.value; weekdayDays++; }
+          weekdayTotal += day.value; weekdayDays++;
         } else if (WEEKENDS.includes(day.dow)) {
           weekendTotal += day.value; weekendDays++;
         }
@@ -155,7 +153,7 @@ export default function PhysicalTherapyStatsView() {
       weekday: { total: weekdayTotal, days: weekdayDays, average: weekdayDays > 0 ? Math.round(weekdayTotal / weekdayDays) : 0 },
       weekend: { total: weekendTotal, days: weekendDays, average: weekendDays > 0 ? Math.round(weekendTotal / weekendDays) : 0 }
     };
-  }, [weeksData, excludedWeekdays]);
+  }, [weeksData, isIncludedDow]);
 
   // --- 연간 통계 계산 ---
   const yearlyStatsAgg = useMemo(() => {
@@ -281,14 +279,14 @@ export default function PhysicalTherapyStatsView() {
             </div>
           </div>
 
-          <p className="pt-calendar-guide">날짜별 방문 인원 · 오른쪽은 주간 합계, 아래 월간 총계는 요일별 누적 합계입니다. —는 미입력이며, 0명은 기록된 값입니다.</p>
+          <p className="pt-calendar-guide">체크한 요일에서 평일 제외 요일을 빼고 집계합니다. 흐린 칸은 집계 제외 · —는 미입력 · 평균은 기록이 있는 날 기준(0명 포함, 반올림)입니다.</p>
           <div className="pt-stats-grid-row pt-stats-monthly-grid">
             <div className="excel-table-wrapper pt-calendar-wrapper" tabIndex={0} role="region" aria-label="날짜별 방문 통계 표, 좁은 화면에서는 좌우로 스크롤">
               <table className="excel-table pt-calendar-table" aria-label={`${currentYear}년 ${currentMonth}월 주차별 요일별 방문 통계`}>
                 <thead>
                   <tr>
                     <th scope="col">{currentMonth}월 주차</th>
-                    {DOW_LABELS.map((label, dow) => <th key={label} scope="col" className={dow === 0 ? 'pt-calendar-sunday' : dow === 6 ? 'pt-calendar-saturday' : ''}>{label}</th>)}
+                    {DOW_LABELS.map((label, dow) => <th key={label} scope="col" className={`${dow === 0 ? 'pt-calendar-sunday' : dow === 6 ? 'pt-calendar-saturday' : ''} ${!isIncludedDow(dow) ? 'pt-calendar-excluded' : ''}`}>{label}</th>)}
                     <th scope="col" className="pt-calendar-summary-start">주간 합계</th>
                     <th scope="col">운영 일수</th>
                     <th scope="col">일 평균</th>
@@ -299,7 +297,7 @@ export default function PhysicalTherapyStatsView() {
                     <tr key={`week-${stat.weekNumber}`}>
                       <th scope="row">{stat.weekNumber}주차</th>
                       {stat.dates.map((day, dow) => (
-                        <td key={dow} className={`pt-calendar-day ${!day ? 'pt-calendar-outside' : ''}`}>
+                        <td key={dow} className={`pt-calendar-day ${!day ? 'pt-calendar-outside' : ''} ${!isIncludedDow(dow) ? 'pt-calendar-excluded' : ''}`} title={!isIncludedDow(dow) ? '집계 제외' : undefined}>
                           {day && <>
                             <span className={`pt-calendar-date ${dow === 0 ? 'pt-calendar-sunday' : dow === 6 ? 'pt-calendar-saturday' : ''}`}>{day.day}일</span>
                             <span className={`pt-calendar-count ${day.value === null ? 'pt-calendar-missing' : ''}`} aria-label={`${currentMonth}월 ${day.day}일 ${DOW_LABELS[dow]}요일 ${day.value === null ? '미입력' : `${day.value}명`}`}>
@@ -316,10 +314,16 @@ export default function PhysicalTherapyStatsView() {
                 </tbody>
                 <tfoot>
                     <tr className="total-row">
-                      <th scope="row">월간 총계</th>
-                      {monthlyDowTotals.map((total, dow) => <td key={dow} aria-label={`${DOW_LABELS[dow]}요일 월간 합계 ${total === null ? '미입력' : `${total}명`}`}>{total === null ? '—' : `${total.toLocaleString()}명`}</td>)}
+                      <th scope="row">요일별 합계</th>
+                      {monthlyDowStats.map(({ total }, dow) => <td key={dow} className={!isIncludedDow(dow) ? 'pt-calendar-excluded' : ''} aria-label={`${DOW_LABELS[dow]}요일 합계 ${!isIncludedDow(dow) ? '집계 제외' : total === null ? '미입력' : `${total}명`}`}>{total === null ? '—' : `${total.toLocaleString()}명`}</td>)}
                       <td className="pt-calendar-summary-start">{monthlySummary.days ? `${monthlySummary.total.toLocaleString()}명` : '—'}</td>
                       <td>{monthlySummary.days}일</td>
+                      <td>{monthlySummary.days ? `${monthlySummary.average.toLocaleString()}명` : '—'}</td>
+                    </tr>
+                    <tr className="pt-calendar-average-row">
+                      <th scope="row">요일별 평균</th>
+                      {monthlyDowStats.map(({ average }, dow) => <td key={dow} className={!isIncludedDow(dow) ? 'pt-calendar-excluded' : ''} aria-label={`${DOW_LABELS[dow]}요일 평균 ${!isIncludedDow(dow) ? '집계 제외' : average === null ? '미입력' : `${average}명`}`}>{average === null ? '—' : `${average.toLocaleString()}명`}</td>)}
+                      <td colSpan={2} className="pt-calendar-summary-start">전체 일 평균</td>
                       <td>{monthlySummary.days ? `${monthlySummary.average.toLocaleString()}명` : '—'}</td>
                     </tr>
                 </tfoot>

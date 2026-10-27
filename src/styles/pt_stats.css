@@ -208,7 +208,8 @@
 
 /* 주차 × 요일 달력: 원본 근무표의 일~토 주차를 유지한다. */
 .pt-stats-container.pt-stats-monthly {
-  width: 100%;
+  width: fit-content;
+  max-width: 100%;
   min-width: 0;
 }
 .pt-stats-monthly-grid {
@@ -221,32 +222,32 @@
   line-height: 1.6;
 }
 .pt-calendar-wrapper {
-  width: 100%;
+  width: fit-content;
   min-width: 0;
 }
 .pt-calendar-table {
-  width: 100%;
-  min-width: 980px;
+  width: auto;
 }
 .pt-calendar-table tbody th {
   position: static;
   border-bottom: 1px solid var(--border-color-light);
 }
 .pt-calendar-table .pt-calendar-day {
-  min-width: 72px;
-  height: 76px;
-  padding: 8px 10px;
-  vertical-align: top;
+  min-width: 84px;
+  padding: 7px 10px;
+  vertical-align: middle;
 }
 .pt-calendar-date {
-  display: block;
-  text-align: left;
-  font-size: 0.78rem;
+  display: inline-block;
+  text-align: right;
+  min-width: 26px;
+  font-size: 0.72rem;
   color: var(--text-secondary);
-  margin-bottom: 8px;
+  margin-right: 8px;
 }
 .pt-calendar-count {
-  display: block;
+  display: inline-block;
+  min-width: 34px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -254,6 +255,7 @@
 .pt-calendar-table .pt-calendar-saturday { color: #2563eb; }
 .pt-calendar-missing { color: var(--text-tertiary); font-weight: 400; }
 .pt-calendar-table .pt-calendar-outside { background: var(--bg-tertiary); }
+.pt-calendar-table .pt-calendar-excluded { opacity: 0.45; }
 .pt-calendar-table .pt-calendar-summary-start {
   border-left: 2px solid var(--border-color);
   background: var(--brand-primary-light);
@@ -265,4 +267,9 @@
   color: var(--brand-primary);
   font-weight: 800;
   border-top: 2px solid var(--border-color);
+}
+.pt-calendar-table .pt-calendar-average-row th,
+.pt-calendar-table .pt-calendar-average-row td {
+  border-top: 1px solid var(--border-color-light);
+  font-weight: 600;
 }
