@@ -14,15 +14,16 @@ export function cArmCellSelected(bounds, row, col) {
   return Boolean(bounds && row >= bounds.top && row <= bounds.bottom && col >= bounds.left && col <= bounds.right);
 }
 
-export function copyCArmSelection(document, bounds) {
+export function copyCArmSelection(document, bounds, columns = null, targetPeople = null) {
   if (!bounds) return '';
-  const cols = cArmColumns(document);
+  const cols = columns || cArmColumns(document);
   const colCount = Math.max(1, cols.length);
+  const people = targetPeople || document.radiographers || [];
   return Array.from({ length: bounds.bottom - bounds.top + 1 }, (_, r) => (
     Array.from({ length: bounds.right - bounds.left + 1 }, (_, c) => {
       const column = bounds.left + c;
       const personIndex = Math.floor(column / colCount);
-      const person = document.radiographers[personIndex];
+      const person = people[personIndex];
       if (!person) return '';
       const colId = cols[column % colCount]?.id;
       return person.days[bounds.top + r]?.[colId] ?? '';
@@ -30,14 +31,18 @@ export function copyCArmSelection(document, bounds) {
   )).join('\n');
 }
 
-export function clearCArmSelection(document, bounds) {
+export function clearCArmSelection(document, bounds, columns = null, targetPeople = null) {
   if (!bounds) return document;
-  const cols = cArmColumns(document);
+  const cols = columns || cArmColumns(document);
   const colCount = Math.max(1, cols.length);
+  const people = targetPeople || document.radiographers || [];
+  const targetIds = new Set(people.map((p) => p.id));
   return {
     ...document,
-    radiographers: document.radiographers.map((person, index) => {
-      const startCol = index * colCount;
+    radiographers: document.radiographers.map((person) => {
+      if (!targetIds.has(person.id)) return person;
+      const personVisibleIndex = people.findIndex((p) => p.id === person.id);
+      const startCol = personVisibleIndex * colCount;
       const endCol = startCol + colCount - 1;
       if (startCol > bounds.right || endCol < bounds.left) return person;
       const days = { ...person.days };

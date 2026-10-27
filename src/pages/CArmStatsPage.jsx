@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Save, Settings2, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Plus, Save, Settings2, Trash2, X } from 'lucide-react';
 import { useSchedule } from '../contexts/ScheduleContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import {
-  cArmColumns, cArmColumnGroups, cArmIncentive, cArmIncentiveBreakdown, cArmMonthTotal, cArmPersonTotals, createCArmMonth,
-  daysInCArmMonth, DEFAULT_C_ARM_RATE, loadCArmTemplate, loadCArmYear, MAX_C_ARM_COUNT,
-  MAX_C_ARM_RATE, saveCArmMonth, validateCArmMonth,
+  cArmColumns, cArmColumnGroups, cArmIncentive, cArmIncentiveBreakdown, cArmPersonTotals, createCArmMonth,
+  daysInCArmMonth, DEFAULT_C_ARM_RATE, isPersonHidden, loadCArmTemplate, loadCArmYear, MAX_C_ARM_COUNT,
+  MAX_C_ARM_RATE, saveCArmMonth, setPersonHiddenState, validateCArmMonth,
 } from '../lib/cArmStats';
 import { pasteCArmCounts } from '../lib/cArmClipboard';
 import { clearCArmSelection, copyCArmSelection } from '../lib/cArmSelection';
@@ -36,9 +36,34 @@ function RadiographerSettings({ document, year, month, onApply, onClose }) {
       items: g.columns.map((c) => ({ id: c.id, label: c.label, rate: c.rate })),
     }));
   });
-  const [people, setPeople] = useState(() => document.radiographers.map((person) => ({ ...person })));
+  const [people, setPeople] = useState(() => document.radiographers.map((person) => ({
+    ...person,
+    _hiddenInMonth: isPersonHidden(person, year, month),
+  })));
   const [error, setError] = useState('');
   const dialog = useRef(null);
+
+  const movePerson = (index, direction) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= people.length) return;
+    setPeople((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(index, 1);
+      next.splice(targetIndex, 0, moved);
+      return next;
+    });
+  };
+
+  const toggleHidePerson = (personId, shouldHide) => {
+    setPeople((prev) => prev.map((item) => {
+      if (item.id !== personId) return item;
+      const updated = setPersonHiddenState(item, year, month, shouldHide);
+      return {
+        ...updated,
+        _hiddenInMonth: shouldHide,
+      };
+    }));
+  };
 
   useEffect(() => {
     const previousFocus = window.document.activeElement;
@@ -141,11 +166,14 @@ function RadiographerSettings({ document, year, month, onApply, onClose }) {
     const updated = {
       ...document,
       columns,
-      radiographers: people.map((person) => ({
-        ...person,
-        name: person.name.trim(),
-        columns,
-      })),
+      radiographers: people.map((person) => {
+        const { _hiddenInMonth, ...cleanPerson } = person;
+        return {
+          ...cleanPerson,
+          name: cleanPerson.name.trim(),
+          columns,
+        };
+      }),
     };
     try {
       validateCArmMonth(updated, year, month);
@@ -163,7 +191,7 @@ function RadiographerSettings({ document, year, month, onApply, onClose }) {
           <button type="button" onClick={onClose} aria-label="닫기"><X size={19} /></button>
         </div>
         <p>{year}년 {month}월 기록표에 표시할 상위 항목, 세부 항목 및 방사선사 명단을 설정합니다.</p>
-        <p className="c-arm-help">건수가 있는 항목과 방사선사는 제거할 수 없습니다. 새 달은 이전 설정을 이어받습니다.</p>
+        <p className="c-arm-help">건수가 있는 항목과 방사선사는 제거할 수 없습니다. 건수가 없는 방사선사는 '숨김'을 체크하면 해당월 이후로 기록표에서 제외되며, 숨김을 해제하면 해당월부터 다시 표시됩니다. 위/아래 버튼으로 표시 순서를 지정할 수 있습니다.</p>
 
         <section className="c-arm-settings-section">
           <div className="c-arm-section-header">
@@ -264,14 +292,37 @@ function RadiographerSettings({ document, year, month, onApply, onClose }) {
         </section>
 
         <section className="c-arm-settings-section" style={{ marginTop: '20px' }}>
-          <h3>방사선사 명단</h3>
+          <h3>방사선사 명단 및 순서·숨김 설정</h3>
           <div className="c-arm-person-list">
             {people.map((person, index) => {
               const currentCols = groups.flatMap((g) => g.items.map((i) => ({ ...i, category: g.name })));
               const hasCounts = cArmPersonTotals(person, currentCols).total > 0;
+              const isHidden = Boolean(person._hiddenInMonth);
               return (
-                <div key={person.id} className="c-arm-person-setting">
-                  <label htmlFor={`c-arm-name-${person.id}`}>{index + 1}</label>
+                <div key={person.id} className={`c-arm-person-setting ${isHidden ? 'is-hidden-person' : ''}`}>
+                  <span className="c-arm-person-num">{index + 1}</span>
+                  <div className="c-arm-order-btns">
+                    <button
+                      type="button"
+                      className="c-arm-order-btn"
+                      disabled={index === 0}
+                      title="위로 이동"
+                      aria-label={`${person.name || index + 1} 위로 이동`}
+                      onClick={() => movePerson(index, -1)}
+                    >
+                      <ArrowUp size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      className="c-arm-order-btn"
+                      disabled={index === people.length - 1}
+                      title="아래로 이동"
+                      aria-label={`${person.name || index + 1} 아래로 이동`}
+                      onClick={() => movePerson(index, 1)}
+                    >
+                      <ArrowDown size={13} />
+                    </button>
+                  </div>
                   <input
                     id={`c-arm-name-${person.id}`}
                     aria-label={`방사선사 ${index + 1} 이름`}
@@ -280,6 +331,19 @@ function RadiographerSettings({ document, year, month, onApply, onClose }) {
                     onChange={(event) => setPeople((prev) => prev.map((item) => item.id === person.id ? { ...item, name: event.target.value } : item))}
                     placeholder="방사선사 이름"
                   />
+                  <label
+                    className={`c-arm-hide-checkbox ${hasCounts ? 'is-disabled' : ''} ${isHidden ? 'is-checked' : ''}`}
+                    title={hasCounts ? '기록된 건수가 있는 방사선사는 숨길 수 없습니다' : isHidden ? `${year}년 ${month}월부터 숨김 해제` : `${year}년 ${month}월부터 숨김 처리`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isHidden}
+                      disabled={hasCounts}
+                      onChange={(e) => toggleHidePerson(person.id, e.target.checked)}
+                      aria-label={`${person.name || index + 1} 숨김`}
+                    />
+                    <span>숨김</span>
+                  </label>
                   <button
                     type="button"
                     className="c-arm-icon-btn"
@@ -298,7 +362,7 @@ function RadiographerSettings({ document, year, month, onApply, onClose }) {
             type="button"
             className="c-arm-add-person"
             disabled={people.length >= 30}
-            onClick={() => setPeople((prev) => [...prev, { id: crypto.randomUUID(), name: '', days: {} }])}
+            onClick={() => setPeople((prev) => [...prev, { id: crypto.randomUUID(), name: '', days: {}, _hiddenInMonth: false }])}
           >
             <Plus size={16} /> 방사선사 추가
           </button>
@@ -355,7 +419,8 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
   )));
   const colCount = cols.length;
   const numberOfDays = daysInCArmMonth(year, month);
-  const total = cArmMonthTotal(document);
+  const visibleRadiographers = document.radiographers.filter((person) => !isPersonHidden(person, year, month));
+  const total = visibleRadiographers.reduce((sum, person) => sum + cArmPersonTotals(person, cols).total, 0);
 
   useEffect(() => {
     if (!dirty && !saving) return undefined;
@@ -401,32 +466,32 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
   };
   const grid = useCArmGridSelection({
     rowCount: numberOfDays,
-    columnCount: document.radiographers.length * colCount,
+    columnCount: visibleRadiographers.length * colCount,
     disabled: conflict,
-    onClear: (bounds) => change(clearCArmSelection(document, bounds, cols)),
+    onClear: (bounds) => change(clearCArmSelection(document, bounds, cols, visibleRadiographers)),
     onUndo: undo,
     onRedo: redo,
   });
   const copyCounts = (event, cut = false) => {
     if (!grid.bounds || conflict) return;
     event.preventDefault();
-    event.clipboardData.setData('text/plain', copyCArmSelection(document, grid.bounds, cols));
-    if (cut) change(clearCArmSelection(document, grid.bounds, cols));
+    event.clipboardData.setData('text/plain', copyCArmSelection(document, grid.bounds, cols, visibleRadiographers));
+    if (cut) change(clearCArmSelection(document, grid.bounds, cols, visibleRadiographers));
     setStatus(cut ? '선택한 셀을 잘라냈습니다. 실행 취소로 되돌릴 수 있습니다.' : '선택한 셀을 복사했습니다.');
   };
   const pasteCounts = (event, personId, day, kind) => {
     event.preventDefault();
     if (conflict) return;
     try {
-      const personIndex = document.radiographers.findIndex((person) => person.id === personId);
+      const personIndex = visibleRadiographers.findIndex((person) => person.id === personId);
       const colSubIndex = cols.findIndex((col) => col.id === kind);
       const start = grid.bounds ? { row: grid.bounds.top, col: grid.bounds.left } : {
         row: day,
         col: (personIndex >= 0 ? personIndex : 0) * colCount + (colSubIndex >= 0 ? colSubIndex : 0),
       };
-      const targetPersonIndex = Math.min(document.radiographers.length - 1, Math.floor(start.col / colCount));
+      const targetPersonIndex = Math.min(visibleRadiographers.length - 1, Math.floor(start.col / colCount));
       const targetColSubIndex = start.col % colCount;
-      const targetPerson = document.radiographers[targetPersonIndex];
+      const targetPerson = visibleRadiographers[targetPersonIndex];
       const targetKind = cols[targetColSubIndex]?.id || cols[0].id;
       const result = pasteCArmCounts(document, {
         text: event.clipboardData.getData('text/plain'),
@@ -435,6 +500,7 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
         personId: targetPerson?.id || personId,
         day: start.row,
         kind: targetKind,
+        targetRadiographers: visibleRadiographers,
       });
       change(result.document);
       grid.selectRange({ anchor: start, end: { row: start.row + result.rows - 1, col: start.col + result.columns - 1 } });
@@ -500,7 +566,7 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
   };
 
   const uniformRate = cols.length > 0 && cols.every((c) => (c.rate ?? document.incentive_rate) === (cols[0]?.rate ?? document.incentive_rate));
-  const totalIncentiveAmount = document.radiographers.reduce((sum, person) => sum + cArmIncentive(person, document, cols), 0);
+  const totalIncentiveAmount = visibleRadiographers.reduce((sum, person) => sum + cArmIncentive(person, document, cols), 0);
 
   return (
     <section className="c-arm-stats" aria-label="방사선 통계">
@@ -546,12 +612,19 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
             ref={grid.rootRef}
             className="c-arm-records"
             style={{
-              '--c-arm-person-count': Math.max(1, document.radiographers.length),
+              '--c-arm-person-count': Math.max(1, visibleRadiographers.length),
               '--c-arm-col-count': colCount,
             }}
           >
-          {document.radiographers.length === 0 && <div className="c-arm-empty"><Settings2 size={28} /><h2>방사선사를 등록해주세요</h2><p>설정에서 이름을 추가하면 날짜별 기록표가 만들어집니다.</p><button type="button" className="c-arm-primary" onClick={() => setSettingsOpen(true)}>방사선사 설정</button></div>}
-          {document.radiographers.map((person, index) => {
+          {visibleRadiographers.length === 0 && (
+            <div className="c-arm-empty">
+              <Settings2 size={28} />
+              <h2>{document.radiographers.length === 0 ? '방사선사를 등록해주세요' : '모든 방사선사가 숨김 처리되어 있습니다'}</h2>
+              <p>{document.radiographers.length === 0 ? '설정에서 이름을 추가하면 날짜별 기록표가 만들어집니다.' : '설정에서 숨김을 해제하면 기록표가 다시 표시됩니다.'}</p>
+              <button type="button" className="c-arm-primary" onClick={() => setSettingsOpen(true)}>방사선사 설정</button>
+            </div>
+          )}
+          {visibleRadiographers.map((person, index) => {
             const totals = cArmPersonTotals(person, cols);
             const allDays = Array.from({ length: numberOfDays }, (_, i) => i + 1);
             const visibleDays = viewMode === 'summary'
@@ -675,7 +748,7 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
                     <th scope="col">인센티브 금액</th>
                   </tr>
                 </thead>
-                {document.radiographers.map((person) => {
+                {visibleRadiographers.map((person) => {
                   const pTotals = cArmPersonTotals(person, cols);
                   const pIncentive = cArmIncentive(person, document, cols);
                   const breakdown = cArmIncentiveBreakdown(person, document, cols);

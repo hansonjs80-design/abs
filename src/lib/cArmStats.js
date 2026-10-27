@@ -12,6 +12,58 @@ export function daysInCArmMonth(year, month) {
   return new Date(year, month, 0).getDate();
 }
 
+export function toMonthKey(year, month) {
+  return `${year}-${String(month).padStart(2, '0')}`;
+}
+
+export function isPersonHidden(person, year, month) {
+  if (!person) return false;
+  const monthKey = toMonthKey(year, month);
+
+  if (Array.isArray(person.hiddenHistory) && person.hiddenHistory.length > 0) {
+    const applicable = person.hiddenHistory
+      .filter((entry) => entry && typeof entry.month === 'string' && entry.month <= monthKey)
+      .sort((a, b) => a.month.localeCompare(b.month));
+
+    if (applicable.length > 0) {
+      return Boolean(applicable[applicable.length - 1].hidden);
+    }
+    return false;
+  }
+
+  if (person.hiddenFrom && typeof person.hiddenFrom === 'string') {
+    if (monthKey < person.hiddenFrom) return false;
+    if (person.unhiddenFrom && typeof person.unhiddenFrom === 'string') {
+      if (monthKey >= person.unhiddenFrom) return false;
+    }
+    return true;
+  }
+
+  if (typeof person.hidden === 'boolean') {
+    return person.hidden;
+  }
+
+  return false;
+}
+
+export function setPersonHiddenState(person, year, month, shouldHide) {
+  const monthKey = toMonthKey(year, month);
+  const currentHistory = Array.isArray(person.hiddenHistory)
+    ? person.hiddenHistory.map((h) => ({ ...h }))
+    : [];
+
+  const nextHistory = currentHistory.filter((entry) => entry.month !== monthKey);
+  nextHistory.push({ month: monthKey, hidden: Boolean(shouldHide) });
+  nextHistory.sort((a, b) => a.month.localeCompare(b.month));
+
+  return {
+    ...person,
+    hiddenHistory: nextHistory,
+    hidden: Boolean(shouldHide),
+    ...(shouldHide ? { hiddenFrom: monthKey } : { unhiddenFrom: monthKey }),
+  };
+}
+
 export function cArmColumns(document) {
   const source = Array.isArray(document?.columns) && document.columns.length > 0
     ? document.columns
@@ -53,6 +105,10 @@ export function createCArmMonth(template) {
       name: person.name,
       columns,
       days: {},
+      ...(Array.isArray(person.hiddenHistory) ? { hiddenHistory: person.hiddenHistory.map((h) => ({ ...h })) } : {}),
+      ...(person.hidden !== undefined ? { hidden: person.hidden } : {}),
+      ...(person.hiddenFrom ? { hiddenFrom: person.hiddenFrom } : {}),
+      ...(person.unhiddenFrom ? { unhiddenFrom: person.unhiddenFrom } : {}),
     })),
   };
 }

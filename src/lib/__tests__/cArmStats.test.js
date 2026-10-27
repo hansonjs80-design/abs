@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { C_ARM_TABLE, cArmColumnGroups, cArmIncentive, cArmIncentiveBreakdown, cArmMonthTotal, cArmPersonTotals, createCArmMonth, daysInCArmMonth, loadCArmYear, saveCArmMonth, validateCArmMonth } from '../cArmStats.js';
+import { C_ARM_TABLE, cArmColumnGroups, cArmIncentive, cArmIncentiveBreakdown, cArmMonthTotal, cArmPersonTotals, createCArmMonth, daysInCArmMonth, isPersonHidden, loadCArmYear, saveCArmMonth, setPersonHiddenState, toMonthKey, validateCArmMonth } from '../cArmStats.js';
 import { APP_TABS, canAccessPath, canAccessTab, createDefaultPermissions, getAllowedTabs, normalizePermissions } from '../authPermissions.js';
 
 const month = () => ({ incentive_rate: 2000, radiographers: [
@@ -164,6 +164,53 @@ describe('independent C-Arm statistics', () => {
     await saveCArmMonth(client, { year: 2026, month: 9, document: customDoc, revision: null });
     const inserted = client.calls[1][1];
     assert.deepEqual(inserted.radiographers[0].columns, customColumns);
+  });
+
+  it('supports hiding radiographers starting from a specific month and unhiding starting from a later month', () => {
+    assert.equal(toMonthKey(2026, 9), '2026-09');
+    assert.equal(toMonthKey(2026, 10), '2026-10');
+
+    let person = { id: 'p1', name: '김치료', days: {} };
+
+    // 숨김 설정 전: 항상 표시(false)
+    assert.equal(isPersonHidden(person, 2026, 9), false);
+    assert.equal(isPersonHidden(person, 2026, 10), false);
+    assert.equal(isPersonHidden(person, 2027, 1), false);
+
+    // 2026년 10월부터 숨김 설정
+    person = setPersonHiddenState(person, 2026, 10, true);
+    // 2026년 9월(이전 달): 여전히 표시(false)
+    assert.equal(isPersonHidden(person, 2026, 9), false);
+    // 2026년 10월(해당 달): 숨김(true)
+    assert.equal(isPersonHidden(person, 2026, 10), true);
+    // 2026년 11월, 12월, 2027년 2월(해당 달 이후): 계속 숨김(true)
+    assert.equal(isPersonHidden(person, 2026, 11), true);
+    assert.equal(isPersonHidden(person, 2026, 12), true);
+    assert.equal(isPersonHidden(person, 2027, 2), true);
+
+    // 2027년 3월부터 숨김 해제 설정
+    person = setPersonHiddenState(person, 2027, 3, false);
+    // 2026년 9월(이전 달): 표시(false)
+    assert.equal(isPersonHidden(person, 2026, 9), false);
+    // 2026년 10월 ~ 2027년 2월(과거 숨김 구간): 여전히 숨김(true)
+    assert.equal(isPersonHidden(person, 2026, 10), true);
+    assert.equal(isPersonHidden(person, 2026, 11), true);
+    assert.equal(isPersonHidden(person, 2027, 2), true);
+    // 2027년 3월부터(해제 월 이후): 다시 표시(false)
+    assert.equal(isPersonHidden(person, 2027, 3), false);
+    assert.equal(isPersonHidden(person, 2027, 4), false);
+
+    // 새 달 생성(createCArmMonth) 시 hiddenHistory가 그대로 복제되어 전달되는지 검증
+    const templateDoc = {
+      incentive_rate: 2000,
+      columns: [{ id: 'first', label: '초진', rate: 2000 }],
+      radiographers: [person],
+    };
+    const nextMonthDoc = createCArmMonth(templateDoc);
+    const nextPerson = nextMonthDoc.radiographers[0];
+    assert.equal(nextPerson.name, '김치료');
+    assert.equal(isPersonHidden(nextPerson, 2026, 10), true);
+    assert.equal(isPersonHidden(nextPerson, 2027, 3), false);
   });
 });
 

@@ -45,7 +45,7 @@ function clipboardCount(value, row, column) {
   return count;
 }
 
-export function pasteCArmCounts(document, { text, year, month, personId, day, kind }) {
+export function pasteCArmCounts(document, { text, year, month, personId, day, kind, targetRadiographers = null }) {
   let rows = parseCArmClipboard(text);
   const cols = cArmColumns(document);
   const colCount = Math.max(1, cols.length);
@@ -53,7 +53,10 @@ export function pasteCArmCounts(document, { text, year, month, personId, day, ki
   const headers = new Set(['날짜', '초진', '재진', '초진환자', '재진환자', ...cols.map((c) => c.label)]);
   if (rows[0]?.length && rows[0].every((value) => headers.has(value.trim()))) rows = rows.slice(1);
   if (!rows.length) throw new Error('붙여넣을 건수 데이터가 없습니다.');
-  const personIndex = document.radiographers.findIndex((person) => person.id === personId);
+  const peopleList = Array.isArray(targetRadiographers) && targetRadiographers.length > 0
+    ? targetRadiographers
+    : document.radiographers;
+  const personIndex = peopleList.findIndex((person) => person.id === personId);
   const kindIndex = colIds.indexOf(kind);
   if (personIndex < 0 || kindIndex < 0 || !Number.isInteger(day) || day < 1) {
     throw new Error('붙여넣을 건수 칸을 먼저 선택해주세요.');
@@ -76,18 +79,20 @@ export function pasteCArmCounts(document, { text, year, month, personId, day, ki
   const startColumn = personIndex * colCount + kindIndex;
   const countColumns = rows[0].length;
   if (!countColumns) throw new Error('날짜 오른쪽의 건수도 함께 복사해주세요.');
-  if (startColumn + countColumns > document.radiographers.length * colCount) {
+  if (startColumn + countColumns > peopleList.length * colCount) {
     throw new Error('붙여넣을 열이 방사선사 표 범위를 넘습니다. 방사선사를 추가하거나 복사 범위를 줄여주세요.');
   }
   // Validate every cell before creating an updated document: never apply a partial paste.
   const counts = rows.map((row, r) => row.map((value, c) => clipboardCount(value, r + 1, c + 1)));
-  const people = document.radiographers.map((person) => ({ ...person, days: { ...person.days } }));
+  const peopleMap = new Map(document.radiographers.map((p) => [p.id, { ...p, days: { ...p.days } }]));
   counts.forEach((row, offset) => row.forEach((value, column) => {
     const targetColumn = startColumn + column;
-    const person = people[Math.floor(targetColumn / colCount)];
+    const targetPersonRef = peopleList[Math.floor(targetColumn / colCount)];
+    const person = peopleMap.get(targetPersonRef?.id);
+    if (!person) return;
     const targetColId = cols[targetColumn % colCount]?.id;
     const targetDay = day + offset;
     person.days[targetDay] = { ...person.days[targetDay], [targetColId]: value };
   }));
-  return { document: { ...document, radiographers: people }, rows: counts.length, columns: countColumns };
+  return { document: { ...document, radiographers: document.radiographers.map((p) => peopleMap.get(p.id) || p) }, rows: counts.length, columns: countColumns };
 }
