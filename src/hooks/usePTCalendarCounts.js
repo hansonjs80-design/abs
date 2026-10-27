@@ -3,13 +3,14 @@ import { supabase } from '../lib/supabaseClient';
 import { fetchPTCalendarCounts } from '../lib/ptStaffCalendarCounts';
 import { loadPTManualCountOverrides, savePTManualCountOverride } from '../lib/ptManualCountOverrides';
 
-export function usePTCalendarCounts(startDate, endDate) {
+export function usePTCalendarCounts(startDate, endDate, { readOnly = false } = {}) {
   const [snapshot, setSnapshot] = useState({ counts: {}, settings: null, range: '', error: false });
   const range = `${startDate}/${endDate}`;
   const revisionRef = useRef(0);
   const invalidatedRef = useRef(new Set());
   const refreshRef = useRef(null);
   const saveManualOverride = useCallback(async (date, memoKey, content, sourceCount) => {
+    if (readOnly) return false;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 12000);
     revisionRef.current++;
@@ -20,7 +21,7 @@ export function usePTCalendarCounts(startDate, endDate) {
       return true;
     } catch { return false; }
     finally { clearTimeout(timeout); }
-  }, []);
+  }, [readOnly]);
   useEffect(() => {
     let disposed = false;
     let busy = false;
@@ -36,7 +37,7 @@ export function usePTCalendarCounts(startDate, endDate) {
       try {
         const result = await fetchPTCalendarCounts(supabase, startDate, endDate, controller.signal);
         const manual = result.settings?.enabled
-          ? await loadPTManualCountOverrides(supabase, startDate, endDate, result.counts, controller.signal, invalidatedRef.current)
+          ? await loadPTManualCountOverrides(supabase, startDate, endDate, result.counts, controller.signal, invalidatedRef.current, { persistInvalidations: !readOnly })
           : { overrides: {}, delayed: false };
         if (revision !== revisionRef.current) { rerun = true; return; }
         if (!disposed) setSnapshot({ ...result, overrides: manual.overrides, range, error: manual.delayed });
@@ -67,7 +68,7 @@ export function usePTCalendarCounts(startDate, endDate) {
       window.removeEventListener('online', refresh);
       if (channel) void supabase.removeChannel(channel);
     };
-  }, [startDate, endDate, range]);
+  }, [startDate, endDate, range, readOnly]);
   const refresh = useCallback(() => { void refreshRef.current?.(); }, []);
-  return { ...(snapshot.range === range ? snapshot : { counts: {}, settings: null, error: snapshot.error }), saveManualOverride, refresh };
+  return { ...(snapshot.range === range ? snapshot : { counts: {}, settings: null, error: snapshot.error }), loading: snapshot.range !== range && !snapshot.error, saveManualOverride, refresh };
 }

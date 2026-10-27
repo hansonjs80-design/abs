@@ -75,3 +75,16 @@ test('invalid baseline cannot write a manual metadata record', async () => {
   await assert.rejects(savePTManualCountOverride(f.client, '2026-10-10', 'key', '52', -1), /Invalid/);
   assert.equal(f.writes.length, 0);
 });
+
+test('stats read-only mode invalidates stale manual overrides in memory without any DB update', async () => {
+  const f = fixture(), date = '2026-10-19';
+  const original = { memoKey: '2026-10-19-5', content: '52', sourceCount: 47, active: true, revision: 'test-revision' };
+  f.records.set(PT_MANUAL_COUNT_PREFIX + date, { date: PT_MANUAL_COUNT_PREFIX + date, rows_data: [original] });
+  const invalidated = new Set();
+  const changed = await loadPTManualCountOverrides(f.client, date, date, { [date]: 48 }, undefined, invalidated, { persistInvalidations: false });
+  assert.equal(changed.overrides[date].active, false);
+  const returned = await loadPTManualCountOverrides(f.client, date, date, { [date]: 47 }, undefined, invalidated, { persistInvalidations: false });
+  assert.equal(returned.overrides[date].active, false);
+  assert.deepEqual(f.writes, []);
+  assert.deepEqual(f.records.get(PT_MANUAL_COUNT_PREFIX + date).rows_data, [original]);
+});

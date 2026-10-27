@@ -14,10 +14,10 @@ export async function savePTManualCountOverride(client, date, memoKey, content, 
   return override;
 }
 
-export async function loadPTManualCountOverrides(client, startDate, endDate, counts, signal, invalidated = new Set()) {
+export async function loadPTManualCountOverrides(client, startDate, endDate, counts, signal, invalidated = new Set(), { persistInvalidations = true } = {}) {
   const { data, error } = await client.from('pt_daily_records').select('date,rows_data')
     .gte('date', PT_MANUAL_COUNT_PREFIX + startDate).lte('date', PT_MANUAL_COUNT_PREFIX + endDate)
-    .order('date').limit(100).abortSignal(signal);
+    .order('date').limit(1000).abortSignal(signal);
   if (error) throw error;
   const overrides = {};
   let delayed = false;
@@ -35,6 +35,7 @@ export async function loadPTManualCountOverrides(client, startDate, endDate, cou
       overrides[date] = { ...value, active: false };
       // A count returning to an earlier value must not resurrect an old edit.
       // Compare the revision so another device's newer edit is never invalidated.
+      if (!persistInvalidations) continue;
       try {
         const result = await client.from('pt_daily_records').update({ rows_data: [overrides[date]], updated_at: new Date().toISOString() })
           .eq('date', record.date).contains('rows_data', [{ revision: value.revision }]).abortSignal(signal);

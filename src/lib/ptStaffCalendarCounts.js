@@ -31,7 +31,7 @@ export async function fetchPTCalendarCounts(client, startDate, endDate, signal) 
   // Continue polling only the scope while disabled so re-enabling is noticed.
   if (!settings || !settings.enabled) return { counts: {}, settings };
   const countsQuery = client.from('pt_daily_records').select('date,total_count')
-    .gte('date', startDate).lte('date', endDate).order('date').limit(100).abortSignal(signal);
+    .gte('date', startDate).lte('date', endDate).order('date').limit(1000).abortSignal(signal);
   const countsResult = await countsQuery;
   if (countsResult.error) throw countsResult.error;
   const counts = {};

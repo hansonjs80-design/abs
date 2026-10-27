@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { useSchedule } from '../../contexts/ScheduleContext';
-import { generateCalendarGrid } from '../../lib/calendarUtils';
+import { usePTCalendarCounts } from '../../hooks/usePTCalendarCounts';
+import { fetchPTStatsYear, getPTStatsWeeks } from '../../lib/physicalTherapyStats';
 import { supabase } from '../../lib/supabaseClient';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -9,104 +10,59 @@ const WEEKDAYS = [1, 2, 3, 4, 5]; // 월~금
 const WEEKENDS = [6, 0]; // 토, 일
 
 export default function PhysicalTherapyStatsView() {
-  const { currentYear, currentMonth, navigateMonth, staffMemos, loadStaffMemos, calendarSlotSettings } = useSchedule();
+  const { currentYear, currentMonth, navigateMonth, staffMemos, loadStaffMemos, calendarSlotSettings, loadCalendarSlotSettings } = useSchedule();
   
   const [activeTab, setActiveTab] = useState('monthly'); // 'monthly' | 'yearly'
   
   // 연간 데이터
   const [yearlyYear, setYearlyYear] = useState(new Date().getFullYear());
-  const [yearlyData, setYearlyData] = useState({});
+  const [yearlySnapshot, setYearlySnapshot] = useState(null);
+  const [yearlyError, setYearlyError] = useState(false);
   const [loadingYearly, setLoadingYearly] = useState(false);
 
   // 요일별/평일 통계 제외 설정
   const [selectedDows, setSelectedDows] = useState([1, 2, 3, 4, 5, 6]);
   const [excludedWeekdays, setExcludedWeekdays] = useState([]);
 
-  // 이번 달 데이터 로드
+  const rangeYear = activeTab === 'yearly' ? yearlyYear : currentYear;
+  const startDate = `${rangeYear}-${activeTab === 'yearly' ? '01' : String(currentMonth).padStart(2, '0')}-01`;
+  const endDate = activeTab === 'yearly' ? `${rangeYear}-12-31`
+    : `${rangeYear}-${String(currentMonth).padStart(2, '0')}-${new Date(rangeYear, currentMonth, 0).getDate()}`;
+  const ptCounts = usePTCalendarCounts(startDate, endDate, { readOnly: true });
+
   useEffect(() => {
     if (activeTab === 'monthly') {
       loadStaffMemos(currentYear, currentMonth, { includeAdjacentMonths: false });
+      loadCalendarSlotSettings(currentYear, currentMonth);
     }
-  }, [currentYear, currentMonth, loadStaffMemos, activeTab]);
+  }, [currentYear, currentMonth, loadStaffMemos, loadCalendarSlotSettings, activeTab]);
 
-  // 연간 데이터 로드
   useEffect(() => {
-    if (activeTab === 'yearly') {
-      fetchYearlyData(yearlyYear);
-    }
+    if (activeTab !== 'yearly') return;
+    let active = true;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    setLoadingYearly(true);
+    setYearlyError(false);
+    fetchPTStatsYear(supabase, yearlyYear, controller.signal)
+      .then(data => { if (active) setYearlySnapshot({ ...data, year: yearlyYear }); })
+      .catch(() => { if (active) setYearlyError(true); })
+      .finally(() => { clearTimeout(timeout); if (active) setLoadingYearly(false); });
+    return () => { active = false; controller.abort(); clearTimeout(timeout); };
   }, [yearlyYear, activeTab]);
 
-  const fetchYearlyData = async (year) => {
-    setLoadingYearly(true);
-    try {
-      const { data, error } = await supabase
-        .from('staff_schedules')
-        .select('month, day, slot_index, content')
-        .eq('year', year);
+  const weeksData = useMemo(() => getPTStatsWeeks(
+    currentYear, currentMonth, staffMemos, calendarSlotSettings, ptCounts
+  ), [currentYear, currentMonth, staffMemos, calendarSlotSettings, ptCounts]);
 
-      if (error) throw error;
-      
-      // 월,일별로 가장 높은 slot_index (내용이 있는 것) 찾기
-      const dayMaxSlot = {};
-      (data || []).forEach(item => {
-        if (!item.content || !item.content.trim()) return;
-        const k = `${item.month}-${item.day}`;
-        if (!dayMaxSlot[k] || item.slot_index > dayMaxSlot[k].slot_index) {
-          dayMaxSlot[k] = item;
-        }
-      });
-
-      // 월별로 매핑
-      const mapped = {};
-      for (let i = 1; i <= 12; i++) {
-        mapped[i] = [];
-      }
-
-      Object.values(dayMaxSlot).forEach(item => {
-        const match = (item.content || '').match(/\d+/);
-        if (match) {
-          const val = parseInt(match[0], 10);
-          const d = new Date(year, item.month - 1, item.day);
-          mapped[item.month].push({
-            day: item.day,
-            dow: d.getDay(),
-            value: val
-          });
-        }
-      });
-      setYearlyData(mapped);
-    } catch (err) {
-      console.error('연간 물리치료 통계 로드 실패:', err);
-    } finally {
-      setLoadingYearly(false);
-    }
-  };
-
-  // --- 월간 상세 통계 데이터 ---
-  const { grid } = useMemo(() => generateCalendarGrid(currentYear, currentMonth, new Set()), [currentYear, currentMonth]);
-
-  const getSlotCount = useCallback((wi) => {
-    if (!calendarSlotSettings?.week_slot_counts) return 6;
-    return Number(calendarSlotSettings.week_slot_counts[String(wi)]) || 6;
-  }, [calendarSlotSettings]);
-
-  const weeksData = useMemo(() => {
-    return grid.map((week, wi) => {
-      const slotCount = getSlotCount(wi);
-      const targetSlot = slotCount - 1; // 해당 주차의 마지막 행
-      return week.map(day => {
-        if (!day.isCurrentMonth) return null;
-        const key = `${day.year}-${day.month}-${day.day}-${targetSlot}`;
-        const content = staffMemos[key]?.content || '';
-        const match = content.match(/\d+/);
-        return {
-          day: day.day,
-          dow: day.dow,
-          value: match ? parseInt(match[0], 10) : null
-        };
-      });
-    });
-  }, [grid, staffMemos, getSlotCount]);
+  const yearlyData = useMemo(() => {
+    if (yearlySnapshot?.year !== yearlyYear) return {};
+    return Object.fromEntries(Array.from({ length: 12 }, (_, index) => {
+      const month = index + 1;
+      return [month, getPTStatsWeeks(yearlyYear, month, yearlySnapshot.memos,
+        yearlySnapshot.settings[month], ptCounts).flat().filter(day => day && day.value !== null)];
+    }));
+  }, [yearlySnapshot, yearlyYear, ptCounts]);
 
   // 두 체크박스 그룹을 모든 월간 집계에 동일하게 적용한다.
   const isIncludedDow = useCallback(dow => selectedDows.includes(dow) && !excludedWeekdays.includes(dow), [selectedDows, excludedWeekdays]);
@@ -240,7 +196,7 @@ export default function PhysicalTherapyStatsView() {
       <div className="pt-stats-header">
         <div className="pt-stats-title">
           <h1>물리치료 데이터 랩</h1>
-          <p>직원 근무표의 마지막 줄 숫자를 바탕으로 산출된 엑셀 기반 통계입니다.</p>
+          <p>직원 근무표 마지막 줄에 표시되는 인원(PT현황 연동·수동 수정 포함)을 집계합니다.</p>
         </div>
       </div>
 
@@ -249,6 +205,9 @@ export default function PhysicalTherapyStatsView() {
         <button className={`pt-stats-tab-btn ${activeTab === 'yearly' ? 'active' : ''}`} onClick={() => setActiveTab('yearly')}>연간 비교 데이터</button>
       </div>
 
+      {ptCounts.loading && <p role="status">PT현황 연동 인원을 불러오는 중입니다.</p>}
+      {ptCounts.error && <p role="alert">PT현황 연동 조회에 실패했습니다. 표시된 통계가 최신 연동값과 다를 수 있습니다. 연결 복구 후 자동 갱신합니다.</p>}
+      {yearlyError && activeTab === 'yearly' && <p role="alert">연간 근무표 조회에 실패했습니다. 다른 연도를 선택하거나 화면을 다시 열어 주세요.</p>}
       {activeTab === 'monthly' && (
         <div className="animate-fade-in">
           <div className="year-nav" style={{ marginBottom: '16px', justifyContent: 'flex-start' }}>
@@ -279,7 +238,7 @@ export default function PhysicalTherapyStatsView() {
             </div>
           </div>
 
-          <p className="pt-calendar-guide">체크한 요일에서 평일 제외 요일을 빼고 집계합니다. 흐린 칸은 집계 제외 · —는 미입력 · 평균은 기록이 있는 날 기준(0명 포함, 반올림)입니다.</p>
+          <p className="pt-calendar-guide">체크한 요일에서 평일 제외 요일을 빼고 집계합니다. 흐린 칸은 집계 제외 · —는 미입력 · 평균은 숫자가 표시된 날 기준(수동 0명 포함, 연동 공란 제외, 반올림)입니다.</p>
           <div className="pt-stats-grid-row pt-stats-monthly-grid">
             <div className="excel-table-wrapper pt-calendar-wrapper" tabIndex={0} role="region" aria-label="날짜별 방문 통계 표, 좁은 화면에서는 좌우로 스크롤">
               <table className="excel-table pt-calendar-table" aria-label={`${currentYear}년 ${currentMonth}월 주차별 요일별 방문 통계`}>
@@ -376,7 +335,7 @@ export default function PhysicalTherapyStatsView() {
           </div>
 
           <div className="excel-table-wrapper">
-            {loadingYearly ? (
+            {loadingYearly || ptCounts.loading ? (
               <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-tertiary)' }}>데이터를 불러오는 중입니다...</div>
             ) : (
               <table className="excel-table">
