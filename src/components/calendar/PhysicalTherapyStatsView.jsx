@@ -253,22 +253,51 @@ export default function PhysicalTherapyStatsView() {
                 </thead>
                 <tbody>
                   {weeklyStats.map(stat => (
-                    <tr key={`week-${stat.weekNumber}`}>
-                      <th scope="row">{stat.weekNumber}주차</th>
-                      {stat.dates.map((day, dow) => (
-                        <td key={dow} className={`pt-calendar-day ${!day ? 'pt-calendar-outside' : ''} ${!isIncludedDow(dow) ? 'pt-calendar-excluded' : ''}`} title={!isIncludedDow(dow) ? '집계 제외' : undefined}>
-                          {day && <>
-                            <span className={`pt-calendar-date ${dow === 0 ? 'pt-calendar-sunday' : dow === 6 ? 'pt-calendar-saturday' : ''}`}>{day.day}일</span>
-                            <span className={`pt-calendar-count ${day.value === null ? 'pt-calendar-missing' : ''}`} aria-label={`${currentMonth}월 ${day.day}일 ${DOW_LABELS[dow]}요일 ${day.value === null ? '미입력' : `${day.value}명`}`}>
-                              {day.value === null ? '—' : `${day.value.toLocaleString()}명`}
-                            </span>
-                          </>}
+                    <React.Fragment key={`week-${stat.weekNumber}`}>
+                      <tr className="pt-calendar-date-row">
+                        <th scope="row" rowSpan={2} className="pt-calendar-week-th">{stat.weekNumber}주차</th>
+                        {stat.dates.map((day, dow) => (
+                          <td
+                            key={`date-${dow}`}
+                            className={`pt-calendar-date-cell ${!day ? 'pt-calendar-outside' : ''} ${!isIncludedDow(dow) ? 'pt-calendar-excluded' : ''}`}
+                            title={!isIncludedDow(dow) ? '집계 제외' : undefined}
+                          >
+                            {day && (
+                              <span className={`pt-calendar-date ${dow === 0 ? 'pt-calendar-sunday' : dow === 6 ? 'pt-calendar-saturday' : ''}`}>
+                                {day.day}일
+                              </span>
+                            )}
+                          </td>
+                        ))}
+                        <td rowSpan={2} className="val-highlight pt-calendar-summary-start pt-calendar-summary-val">
+                          {stat.days ? `${stat.total.toLocaleString()}명` : '—'}
                         </td>
-                      ))}
-                      <td className="val-highlight pt-calendar-summary-start">{stat.days ? `${stat.total.toLocaleString()}명` : '—'}</td>
-                      <td>{stat.days}일</td>
-                      <td className="val-highlight">{stat.days ? `${stat.average.toLocaleString()}명` : '—'}</td>
-                    </tr>
+                        <td rowSpan={2} className="pt-calendar-summary-val">
+                          {stat.days}일
+                        </td>
+                        <td rowSpan={2} className="val-highlight pt-calendar-summary-val">
+                          {stat.days ? `${stat.average.toLocaleString()}명` : '—'}
+                        </td>
+                      </tr>
+                      <tr className="pt-calendar-count-row">
+                        {stat.dates.map((day, dow) => (
+                          <td
+                            key={`count-${dow}`}
+                            className={`pt-calendar-count-cell ${!day ? 'pt-calendar-outside' : ''} ${!isIncludedDow(dow) ? 'pt-calendar-excluded' : ''}`}
+                            title={!isIncludedDow(dow) ? '집계 제외' : undefined}
+                          >
+                            {day && (
+                              <span
+                                className={`pt-calendar-count ${day.value === null ? 'pt-calendar-missing' : ''}`}
+                                aria-label={`${currentMonth}월 ${day.day}일 ${DOW_LABELS[dow]}요일 ${day.value === null ? '미입력' : `${day.value}명`}`}
+                              >
+                                {day.value === null ? '—' : `${day.value.toLocaleString()}명`}
+                              </span>
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    </React.Fragment>
                   ))}
                 </tbody>
                 <tfoot>
