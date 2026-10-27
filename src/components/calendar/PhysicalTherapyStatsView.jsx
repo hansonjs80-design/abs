@@ -122,9 +122,14 @@ export default function PhysicalTherapyStatsView() {
       week.forEach(day => {
         if (day && day.value !== null) { total += day.value; daysWithData++; }
       });
-      return { weekNumber: idx + 1, total, days: daysWithData, average: daysWithData > 0 ? Math.round(total / daysWithData) : 0 };
-    }).filter(w => w.days > 0);
+      return { weekNumber: idx + 1, dates: week, total, days: daysWithData, average: daysWithData > 0 ? Math.round(total / daysWithData) : 0 };
+    });
   }, [weeksData]);
+
+  const monthlyDowTotals = useMemo(() => DOW_LABELS.map((_, dow) => {
+    const recordedDays = weeksData.flat().filter(day => day?.dow === dow && day.value !== null);
+    return recordedDays.length ? recordedDays.reduce((sum, day) => sum + day.value, 0) : null;
+  }), [weeksData]);
 
   const customDowStats = useMemo(() => {
     let total = 0; let daysWithData = 0;
@@ -233,7 +238,7 @@ export default function PhysicalTherapyStatsView() {
   const toggleExcludeWeekday = (dow) => setExcludedWeekdays(prev => prev.includes(dow) ? prev.filter(d => d !== dow) : [...prev, dow].sort());
 
   return (
-    <div className="pt-stats-container animate-fade-in">
+    <div className={`pt-stats-container animate-fade-in ${activeTab === 'monthly' ? 'pt-stats-monthly' : ''}`}>
       <div className="pt-stats-header">
         <div className="pt-stats-title">
           <h1>물리치료 데이터 랩</h1>
@@ -276,43 +281,52 @@ export default function PhysicalTherapyStatsView() {
             </div>
           </div>
 
-          <div className="pt-stats-grid-row">
-            {/* 왼쪽: 주차별 데이터 */}
-            <div className="excel-table-wrapper">
-              <table className="excel-table">
+          <p className="pt-calendar-guide">날짜별 방문 인원 · 오른쪽은 주간 합계, 아래 월간 총계는 요일별 누적 합계입니다. —는 미입력이며, 0명은 기록된 값입니다.</p>
+          <div className="pt-stats-grid-row pt-stats-monthly-grid">
+            <div className="excel-table-wrapper pt-calendar-wrapper" tabIndex={0} role="region" aria-label="날짜별 방문 통계 표, 좁은 화면에서는 좌우로 스크롤">
+              <table className="excel-table pt-calendar-table" aria-label={`${currentYear}년 ${currentMonth}월 주차별 요일별 방문 통계`}>
                 <thead>
                   <tr>
-                    <th>{currentMonth}월 주차</th>
-                    <th>운영 일수</th>
-                    <th>총 방문</th>
-                    <th>일 평균</th>
+                    <th scope="col">{currentMonth}월 주차</th>
+                    {DOW_LABELS.map((label, dow) => <th key={label} scope="col" className={dow === 0 ? 'pt-calendar-sunday' : dow === 6 ? 'pt-calendar-saturday' : ''}>{label}</th>)}
+                    <th scope="col" className="pt-calendar-summary-start">주간 합계</th>
+                    <th scope="col">운영 일수</th>
+                    <th scope="col">일 평균</th>
                   </tr>
                 </thead>
                 <tbody>
                   {weeklyStats.map(stat => (
                     <tr key={`week-${stat.weekNumber}`}>
-                      <td>{stat.weekNumber}주차</td>
+                      <th scope="row">{stat.weekNumber}주차</th>
+                      {stat.dates.map((day, dow) => (
+                        <td key={dow} className={`pt-calendar-day ${!day ? 'pt-calendar-outside' : ''}`}>
+                          {day && <>
+                            <span className={`pt-calendar-date ${dow === 0 ? 'pt-calendar-sunday' : dow === 6 ? 'pt-calendar-saturday' : ''}`}>{day.day}일</span>
+                            <span className={`pt-calendar-count ${day.value === null ? 'pt-calendar-missing' : ''}`} aria-label={`${currentMonth}월 ${day.day}일 ${DOW_LABELS[dow]}요일 ${day.value === null ? '미입력' : `${day.value}명`}`}>
+                              {day.value === null ? '—' : `${day.value.toLocaleString()}명`}
+                            </span>
+                          </>}
+                        </td>
+                      ))}
+                      <td className="val-highlight pt-calendar-summary-start">{stat.days ? `${stat.total.toLocaleString()}명` : '—'}</td>
                       <td>{stat.days}일</td>
-                      <td>{stat.total}</td>
-                      <td className="val-highlight">{stat.average}</td>
+                      <td className="val-highlight">{stat.days ? `${stat.average.toLocaleString()}명` : '—'}</td>
                     </tr>
                   ))}
-                  {weeklyStats.length === 0 && (
-                    <tr><td colSpan={4} style={{ textAlign: 'center', padding: 20 }}>데이터가 없습니다.</td></tr>
-                  )}
-                  {weeklyStats.length > 0 && (
-                    <tr className="total-row">
-                      <td>월간 총계</td>
-                      <td>{monthlySummary.days}일</td>
-                      <td>{monthlySummary.total}</td>
-                      <td className="val-highlight">{monthlySummary.average}</td>
-                    </tr>
-                  )}
                 </tbody>
+                <tfoot>
+                    <tr className="total-row">
+                      <th scope="row">월간 총계</th>
+                      {monthlyDowTotals.map((total, dow) => <td key={dow} aria-label={`${DOW_LABELS[dow]}요일 월간 합계 ${total === null ? '미입력' : `${total}명`}`}>{total === null ? '—' : `${total.toLocaleString()}명`}</td>)}
+                      <td className="pt-calendar-summary-start">{monthlySummary.days ? `${monthlySummary.total.toLocaleString()}명` : '—'}</td>
+                      <td>{monthlySummary.days}일</td>
+                      <td>{monthlySummary.days ? `${monthlySummary.average.toLocaleString()}명` : '—'}</td>
+                    </tr>
+                </tfoot>
               </table>
             </div>
 
-            {/* 오른쪽: 분석 데이터 */}
+            {/* 달력 아래: 기존 요일 선택 / 평일·주말 분석 */}
             <div className="excel-table-wrapper">
               <table className="excel-table">
                 <thead>
