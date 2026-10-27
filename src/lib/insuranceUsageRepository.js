@@ -1,4 +1,6 @@
 import { getInsurancePatient, INSURANCE_USAGE_START_DATE } from './insuranceUsageUtils.js';
+import { getScheduleRowSchedulerCellKey, parseSchedulerCellKey } from './schedulerHistoryCandidateUtils.js';
+import { isTreatmentCancelBg } from './scheduleStatusUtils.js';
 
 // Read-only, paginated queries. Never infer zero usage from a failed/partial read.
 export async function readAllInsuranceRows(makeQuery, pageSize = 500) {
@@ -32,8 +34,23 @@ export async function fetchInsurancePatientRecords(client, { chart, name }) {
   ]);
   const patientKey = JSON.stringify([chart, name]);
   const matches = (row) => getInsurancePatient(row).key === patientKey;
-  return { scheduleRows: scheduleRows.filter(matches), historyLogs: [
+  const filteredScheduleRows = scheduleRows.filter(matches);
+  const activeScheduleKeys = new Set(
+    filteredScheduleRows
+      .filter((row) => !isTreatmentCancelBg(row.bg_color) && !row.cancelled)
+      .map((row) => getScheduleRowSchedulerCellKey(row))
+      .filter(Boolean)
+  );
+  const allLogs = [
     ...shockwave.map((row) => ({ ...row, type: 'shockwave' })),
     ...manual.map((row) => ({ ...row, type: 'manual' })),
-  ].filter(matches) };
+  ].filter(matches);
+  const historyLogs = allLogs.filter((log) => {
+    const isSchedulerLinked = Boolean(log.scheduler_cell_key || log.source === 'scheduler');
+    if (!isSchedulerLinked) return true;
+    const parsedKey = parseSchedulerCellKey(log.scheduler_cell_key);
+    if (!parsedKey) return log.source !== 'scheduler';
+    return activeScheduleKeys.has(parsedKey.schedulerCellKey);
+  });
+  return { scheduleRows: filteredScheduleRows, historyLogs };
 }

@@ -70,14 +70,30 @@ export default function useInsuranceUsage({ logs, hoverRow, memos, year, month, 
     const keys = JSON.parse(patientsKey);
     if (!keys.length) return [];
     const patients = new Set(keys);
+    const modalLogsByPatient = new Map();
+    if (Array.isArray(logs) && logs.length > 0) {
+      logs.forEach((row) => {
+        const pKey = getInsurancePatient(row).key;
+        if (pKey && patients.has(pKey)) {
+          if (!modalLogsByPatient.has(pKey)) modalLogsByPatient.set(pKey, []);
+          modalLogsByPatient.get(pKey).push(row);
+        }
+      });
+    }
+    const historyLogs = keys.flatMap((key) => {
+      if (modalLogsByPatient.has(key)) {
+        return modalLogsByPatient.get(key);
+      }
+      return loaded[key]?.data?.historyLogs || [];
+    });
     return buildInsuranceRecords({
       scheduleRows: overlayInsuranceScheduleRows(
         keys.flatMap((key) => loaded[key]?.data?.scheduleRows || []),
         localInsuranceScheduleRows(memos, year, month)
       ).filter((row) => patients.has(getInsurancePatient(row).key)),
-      historyLogs: keys.flatMap((key) => loaded[key]?.data?.historyLogs || []), settings,
+      historyLogs, settings,
     });
-  }, [loaded, patientsKey, memos, year, month, settings]);
+  }, [loaded, patientsKey, memos, year, month, settings, logs]);
   const getStatus = (row) => {
     let key = getInsurancePatient(row).key;
     if (!key) {

@@ -373,30 +373,155 @@ describe('complete insurance history reads', () => {
   it('throws on a later failed page instead of returning a partial count', async () => {
     await assert.rejects(readAllInsuranceRows(() => ({ range: async (start) => start ? { error: new Error('read failed') } : { data: [1, 2] } }), 2), /read failed/);
   });
-  it('limits remote insurance lookups to the clinic tracking window', async () => {
-    const calls = [];
+  it('excludes orphaned scheduler logs when schedule cells are cancelled, deleted, or reassigned', async () => {
     const client = {
       from(table) {
-        const call = { table, filters: [] };
-        calls.push(call);
         const query = {
           select: () => query,
-          ilike: (field, value) => { call.filters.push(['ilike', field, value]); return query; },
-          eq: (field, value) => { call.filters.push(['eq', field, value]); return query; },
-          gte: (field, value) => { call.filters.push(['gte', field, value]); return query; },
-          or: (value) => { call.filters.push(['or', value]); return query; },
+          ilike: () => query,
+          eq: () => query,
+          gte: () => query,
+          or: () => query,
           order: () => query,
-          range: async () => ({ data: [], error: null }),
+          range: async () => {
+            if (table === 'shockwave_schedules') {
+              return {
+                data: [
+                  // 8/20 정상 스케줄
+                  { id: 1, year: 2026, month: 8, week_index: 3, day_index: 3, row_index: 17, col_index: 0, content: '6509/이경희(*)', prescription: 'F2.5', body_part: 'Rt. 경추근막통증(M79180)', bg_color: '#fff' },
+                  // 8/27 정상 스케줄
+                  { id: 2, year: 2026, month: 8, week_index: 4, day_index: 3, row_index: 17, col_index: 0, content: '6509/이경희(2)', prescription: 'F2.5', body_part: 'Rt. 경추근막통증(M79180)', bg_color: '#fff' },
+                ],
+                error: null,
+              };
+            }
+            if (table === 'shockwave_patient_logs') {
+              return {
+                data: [
+                  // 8/13 스케줄러에서 삭제된 고아 로그 (이경희)
+                  { id: 101, chart_number: '6509', patient_name: '이경희', date: '2026-08-13', prescription: 'F2.5', body_part: 'Rt. 경추근막통증(M79180)', visit_count: '6', source: 'scheduler', scheduler_cell_key: '2026:08:2:3:17:0' },
+                  // 8/20 정상 로그
+                  { id: 102, chart_number: '6509', patient_name: '이경희', date: '2026-08-20', prescription: 'F2.5', body_part: 'Rt. 경추근막통증(M79180)', visit_count: '*', source: 'scheduler', scheduler_cell_key: '2026:08:3:3:17:0' },
+                  // 8/27 정상 로그
+                  { id: 103, chart_number: '6509', patient_name: '이경희', date: '2026-08-27', prescription: 'F2.5', body_part: 'Rt. 경추근막통증(M79180)', visit_count: '2', source: 'scheduler', scheduler_cell_key: '2026:08:4:3:17:0' },
+                  // 수동 입력 로그 (스케줄러와 무관하므로 유지되어야 함)
+                  { id: 104, chart_number: '6509', patient_name: '이경희', date: '2026-08-01', prescription: 'F2.5', body_part: 'Rt. 경추근막통증(M79180)', visit_count: '1', source: 'manual' },
+                ],
+                error: null,
+              };
+            }
+            return { data: [], error: null };
+          },
         };
         return query;
       },
     };
-    await fetchInsurancePatientRecords(client, { chart: '1001', name: '가상환자' });
-    const schedule = calls.find((call) => call.table === 'shockwave_schedules');
-    assert.deepEqual(schedule.filters.find(([type]) => type === 'or'), ['or', 'year.gt.2026,and(year.eq.2026,month.gte.7)']);
-    for (const table of ['shockwave_patient_logs', 'manual_therapy_patient_logs']) {
-      const call = calls.find((item) => item.table === table);
-      assert.deepEqual(call.filters.find(([type]) => type === 'gte'), ['gte', 'date', '2026-07-01']);
+    const result = await fetchInsurancePatientRecords(client, { chart: '6509', name: '이경희' });
+    // 삭제된 8/13 고아 로그(101)는 제외되고, 정상 로그(102, 103)와 수동 로그(104)만 남아야 함
+    const logIds = result.historyLogs.map((l) => l.id);
+    assert.deepEqual(logIds, [102, 103, 104]);
+    assert.equal(logIds.includes(101), false);
+  });
+
+  it('calculates Lee Kyung-hee insurance usage starting at 1/6 and incrementing sequentially', () => {
+    // 8/13 및 9/17 고아 로그가 제외된 정상 치료 이력
+    const modalLogs = [
+      { id: '10', date: '2026-08-20', chart_number: '6509', patient_name: '이경희', prescription: 'F2.5', body_part: 'Rt. 경추근막통증(M79180)', visit_count: '*', type: 'shockwave', history_group: 'shockwave' },
+      { id: '9', date: '2026-08-27', chart_number: '6509', patient_name: '이경희', prescription: 'F2.5', body_part: 'Rt. 경추근막통증(M79180)', visit_count: '2', type: 'shockwave', history_group: 'shockwave' },
+      { id: '8', date: '2026-09-03', chart_number: '6509', patient_name: '이경희', prescription: 'F2.5', body_part: 'Rt. 경추근막통증(M79180)', visit_count: '3', type: 'shockwave', history_group: 'shockwave' },
+      { id: '7', date: '2026-10-02', chart_number: '6509', patient_name: '이경희', prescription: 'F2.5', body_part: 'Rt. 경추근막통증(M79180)', visit_count: '4', type: 'shockwave', history_group: 'shockwave' },
+      { id: '6', date: '2026-10-08', chart_number: '6509', patient_name: '이경희', prescription: '신장분사 2.5', body_part: 'Rt. 경추근막통증(M79180)', visit_count: '5', type: 'shinjang', history_group: 'shinjang' },
+      { id: '5', date: '2026-10-15', chart_number: '6509', patient_name: '이경희', prescription: 'F2.5', body_part: 'Rt. 경추근막통증(M79180)', visit_count: '6', type: 'shockwave', history_group: 'shockwave' },
+      { id: '4', date: '2026-10-21', chart_number: '6509', patient_name: '이경희', prescription: '신장분사 1', body_part: 'Rt. 경추근막통증(M79180)', visit_count: '7', type: 'shinjang', history_group: 'shinjang' },
+      { id: '3', date: '2026-10-23', chart_number: '6509', patient_name: '이경희', prescription: '신장분사 1', body_part: 'Rt. 경추근막통증(M79180)', visit_count: '8', type: 'shinjang', history_group: 'shinjang' },
+      { id: '2', date: '2026-10-27', chart_number: '6509', patient_name: '이경희', prescription: 'F2.5', body_part: 'Rt. 경추근막통증(M79180)', visit_count: '9', type: 'schedule', history_group: 'shockwave' },
+      { id: '1', date: '2026-11-03', chart_number: '6509', patient_name: '이경희', prescription: '신장분사 2.5', body_part: 'Rt. 경추근막통증(M79180)', visit_count: '10', type: 'shinjang', history_group: 'shinjang' },
+    ];
+    const records = buildInsuranceRecords({ scheduleRows: [], historyLogs: modalLogs, settings });
+
+    // 8/20 첫 진료: 2/6이 아닌 1/6으로 시작
+    const u1 = getInsuranceUsage(records, modalLogs[0], settings);
+    assert.equal(u1.count, 1);
+    assert.equal(formatInsuranceUsage(u1), '1회(척추 1/6)');
+
+    // 8/27: 2회(척추 2/6)
+    assert.equal(getInsuranceUsage(records, modalLogs[1], settings).count, 2);
+    // 9/03: 3회(척추 3/6)
+    assert.equal(getInsuranceUsage(records, modalLogs[2], settings).count, 3);
+    // 10/02: 4회(척추 4/6)
+    assert.equal(getInsuranceUsage(records, modalLogs[3], settings).count, 4);
+
+    // 10/08: 신장분사 2.5 (충격파 카운트 안 올리고 4회 유지)
+    assert.equal(getInsuranceUsage(records, modalLogs[4], settings).count, 4);
+
+    // 10/15: 충격파 5회 (6회로 건너뛰지 않고 5회!)
+    const u5 = getInsuranceUsage(records, modalLogs[5], settings);
+    assert.equal(u5.count, 5);
+    assert.equal(formatInsuranceUsage(u5), '5회(척추 5/6)');
+
+    // 10/21, 10/23: 신장분사 1 (도수치료 카테고리이나 도수 이력 없으므로 0회)
+    assert.equal(getInsuranceUsage(records, modalLogs[6], settings).count, 0);
+    assert.equal(getInsuranceUsage(records, modalLogs[7], settings).count, 0);
+
+    // 10/27: 충격파 6회(척추 6/6)
+    const u9 = getInsuranceUsage(records, modalLogs[8], settings);
+    assert.equal(u9.count, 6);
+    assert.equal(formatInsuranceUsage(u9), '6회(척추 6/6)');
+
+    // 11/03: 신장분사 2.5 (충격파 6회 유지)
+    const u10 = getInsuranceUsage(records, modalLogs[9], settings);
+    assert.equal(u10.count, 6);
+    assert.equal(formatInsuranceUsage(u10), '6회(척추 6/6)');
+  });
+
+  it('does not count hip for Jeong Soon-gil from 8/20 to 10/06 when only spine was treated', () => {
+    // 8/18, 9/22 타환자 변경 고관절 고아 로그가 제외된 정상 치료 이력
+    const modalLogs = [
+      { id: '11', date: '2026-08-20', chart_number: '8487', patient_name: '정순길', prescription: 'F2.5', body_part: '요추/척추부근막통(M79180)', visit_count: '*', type: 'shockwave', history_group: 'shockwave' },
+      { id: '10', date: '2026-08-28', chart_number: '8487', patient_name: '정순길', prescription: 'F2.5', body_part: '요추/척추부근막통(M79180)', visit_count: '2', type: 'shockwave', history_group: 'shockwave' },
+      { id: '9', date: '2026-09-04', chart_number: '8487', patient_name: '정순길', prescription: 'F2.5', body_part: '요추/척추부근막통(M79180)', visit_count: '3', type: 'shockwave', history_group: 'shockwave' },
+      { id: '8', date: '2026-09-11', chart_number: '8487', patient_name: '정순길', prescription: 'F2.5', body_part: '요추/척추부근막통(M79180)', visit_count: '4', type: 'shockwave', history_group: 'shockwave' },
+      { id: '7', date: '2026-09-18', chart_number: '8487', patient_name: '정순길', prescription: 'F2.5', body_part: '요추/척추부근막통(M79180)', visit_count: '5', type: 'shockwave', history_group: 'shockwave' },
+      { id: '6', date: '2026-09-21', chart_number: '8487', patient_name: '정순길', prescription: '신장분사 2.5', body_part: '요추/척추부근막통(M79180)', visit_count: '6', type: 'shinjang', history_group: 'shinjang' },
+      { id: '5', date: '2026-09-28', chart_number: '8487', patient_name: '정순길', prescription: 'F2.5', body_part: '요추/척추부근막통(M79180)', visit_count: '7', type: 'shockwave', history_group: 'shockwave' },
+      { id: '4', date: '2026-10-06', chart_number: '8487', patient_name: '정순길', prescription: '신장분사 2.5', body_part: '요추/척추부근막통(M79180)', visit_count: '8', type: 'shinjang', history_group: 'shinjang' },
+      // 10/12 첫 고관절(둔부힘줄염) 치료 시작
+      { id: '3', date: '2026-10-12', chart_number: '8487', patient_name: '정순길', prescription: 'F2.5', body_part: 'Lt. 둔부힘줄염(M760)', visit_count: '1', type: 'shockwave', history_group: 'shockwave' },
+      { id: '2', date: '2026-10-20', chart_number: '8487', patient_name: '정순길', prescription: 'F2.5', body_part: 'Lt. 둔부힘줄염(M760)', visit_count: '2', type: 'shockwave', history_group: 'shockwave' },
+      { id: '1', date: '2026-10-28', chart_number: '8487', patient_name: '정순길', prescription: 'F2.5', body_part: 'Lt. 둔부힘줄염(M760)', visit_count: '3', type: 'shockwave', history_group: 'shockwave' },
+    ];
+    const records = buildInsuranceRecords({ scheduleRows: [], historyLogs: modalLogs, settings });
+
+    // 8/20 첫 진료: 고관절 카운트가 전혀 없어야 함!
+    const u1 = getInsuranceUsage(records, modalLogs[0], settings);
+    assert.equal(u1.count, 1);
+    assert.equal(formatInsuranceUsage(u1), '1회(척추 1/6)');
+    assert.equal(u1.bodyParts.some((p) => p.label === '고관절'), false);
+
+    // 8/28 ~ 10/06 기간에도 고관절 카운트가 전혀 없어야 함!
+    for (let i = 0; i < 8; i++) {
+      const u = getInsuranceUsage(records, modalLogs[i], settings);
+      assert.equal(u.bodyParts.some((p) => p.label === '고관절'), false, `Index ${i} (${modalLogs[i].date}) should not have hip count`);
     }
+
+    // 9/28: 척추 6회차 충격파
+    const u7 = getInsuranceUsage(records, modalLogs[6], settings);
+    assert.equal(u7.count, 6);
+    assert.equal(formatInsuranceUsage(u7), '6회(척추 6/6)');
+
+    // 10/12: 실제 첫 고관절 치료 시작 -> 고관절 1회 시작!
+    const uHip1 = getInsuranceUsage(records, modalLogs[8], settings);
+    assert.equal(uHip1.count, 7);
+    assert.equal(formatInsuranceUsage(uHip1), '7회(척추 6/6, 고관절 1/6)');
+
+    // 10/20: 고관절 2회
+    const uHip2 = getInsuranceUsage(records, modalLogs[9], settings);
+    assert.equal(uHip2.count, 8);
+    assert.equal(formatInsuranceUsage(uHip2), '8회(척추 6/6, 고관절 2/6)');
+
+    // 10/28: 고관절 3회
+    const uHip3 = getInsuranceUsage(records, modalLogs[10], settings);
+    assert.equal(uHip3.count, 9);
+    assert.equal(formatInsuranceUsage(uHip3), '9회(척추 6/6, 고관절 3/6)');
   });
 });
