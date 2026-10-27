@@ -5,7 +5,7 @@ import {
 } from '../lib/calendarUtils';
 import {
   canonicalizeShockwaveScheduleItemDate,
-  getShockwaveScheduleItemDate,
+  createShockwaveScheduleDateMapper,
   getVisibleShockwaveScheduleMonths,
   isShockwaveCalendarCellVisible,
   mapShockwaveScheduleItemToVisibleMonth,
@@ -113,10 +113,11 @@ function rememberShockwaveRawMonthCache(cacheRef, cacheKey, rows) {
 
 function mapShockwaveRowsToVisibleRows(rows, year, month, shouldKeepShockwaveMemo, scheduleSettings = {}) {
   const visibleRows = [];
+  const dateMapper = createShockwaveScheduleDateMapper(year, month);
   rows.forEach(item => {
     if (!shouldKeepShockwaveMemo(item)) return;
-    const itemDate = getShockwaveScheduleItemDate(item);
-    const visibleItem = mapShockwaveScheduleItemToVisibleMonth(item, year, month);
+    const itemDate = dateMapper.getItemDate(item);
+    const visibleItem = dateMapper.mapToVisibleMonth(item);
     const prescriptionScheduleSettings = getPrescriptionScheduleSettings(
       scheduleSettings,
       itemDate?.year || year,

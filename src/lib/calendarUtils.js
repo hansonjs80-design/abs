@@ -140,6 +140,27 @@ export function generateShockwaveCalendar(year, month, holidays = new Set()) {
     }
   }
 
+  // 기존 예약은 주차/요일 좌표로 저장되므로 앞쪽 주차는 그대로 유지한다.
+  // 마지막 표시 주에 이번 달 날짜가 남아 있으면 다음 예약용 월~토 한 주를 추가한다.
+  // 월말의 요일이 아니라 표시 범위가 기준이며, 이미 다음 달 온전한 주가 있으면 추가하지 않는다.
+  if (weeks.at(-1)?.some(day => day.isCurrentMonth)) {
+    const lastSaturday = weeks[weeks.length - 1][5].date;
+    const nextWeek = Array.from({ length: 6 }, (_, index) => {
+      const date = new Date(lastSaturday);
+      date.setDate(date.getDate() + 2 + index);
+      const y = date.getFullYear();
+      const m = date.getMonth() + 1;
+      const d = date.getDate();
+      const key = `${y}-${m}-${d}`;
+      return {
+        date, year: y, month: m, day: d, dow: date.getDay(),
+        isCurrentMonth: y === year && m === month,
+        isHoliday: holidays.has(key), key,
+      };
+    });
+    weeks.push(nextWeek);
+  }
+
   return weeks;
 }
 

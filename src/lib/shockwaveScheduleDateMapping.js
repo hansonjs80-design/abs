@@ -101,6 +101,45 @@ export function mapShockwaveScheduleItemToVisibleMonth(item, viewYear, viewMonth
   };
 }
 
+// 한 번의 조회 결과를 처리하는 동안만 달력을 재사용한다.
+// 예약 데이터나 서버 응답을 캐시하지 않아 기존 최신성/저장 보호 로직에는 영향이 없다.
+export function createShockwaveScheduleDateMapper(viewYear, viewMonth) {
+  const sourceCalendars = new Map();
+  const coordinates = new Map();
+  const viewWeeks = generateShockwaveCalendar(viewYear, viewMonth);
+  sourceCalendars.set(`${viewYear}-${viewMonth}`, viewWeeks);
+  viewWeeks.forEach((week, weekIndex) => week.forEach((day, dayIndex) => {
+    coordinates.set(day.key, { weekIndex, dayIndex });
+  }));
+
+  const getItemDate = (item) => {
+    if (!item) return null;
+    const year = Number(item.year);
+    const month = Number(item.month);
+    const key = `${year}-${month}`;
+    if (!sourceCalendars.has(key)) {
+      sourceCalendars.set(key, generateShockwaveCalendar(year, month));
+    }
+    const day = sourceCalendars.get(key)[Number(item.week_index)]?.[Number(item.day_index)];
+    return day?.isCurrentMonth ? day : null;
+  };
+
+  return {
+    getItemDate,
+    mapToVisibleMonth(item) {
+      const day = getItemDate(item);
+      const coordinate = day && coordinates.get(day.key);
+      if (!coordinate) return null;
+      const { weekIndex, dayIndex } = coordinate;
+      return {
+        ...item, year: viewYear, month: viewMonth,
+        week_index: weekIndex, day_index: dayIndex,
+        merge_span: remapMergeSpanToDay(item.merge_span, weekIndex, dayIndex),
+      };
+    },
+  };
+}
+
 export function isShockwaveCalendarCellInCurrentMonth(year, month, weekIndex, dayIndex) {
   const weeks = generateShockwaveCalendar(Number(year), Number(month));
   const dayInfo = weeks[Number(weekIndex)]?.[Number(dayIndex)];
