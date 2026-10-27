@@ -58,7 +58,7 @@ export default function useInsuranceUsage({ logs, hoverRow, memos, year, month, 
     let active = true;
     const queue = JSON.parse(prefetchKey);
     const worker = async () => {
-      while (active && queue.length) await loadPatient(queue.shift());
+      while (active && queue.length) await loadPatient(queue.shift(), { publish: false });
     };
     // Keep prefetch invisible to interaction: it populates only the cache, while
     // a hovered patient publishes its result immediately. Starting after the
@@ -94,7 +94,7 @@ export default function useInsuranceUsage({ logs, hoverRow, memos, year, month, 
       historyLogs, settings,
     });
   }, [loaded, patientsKey, memos, year, month, settings, logs]);
-  const getStatus = (row) => {
+  const getStatus = useCallback((row) => {
     let key = getInsurancePatient(row).key;
     if (!key) {
       const keys = JSON.parse(patientsKey);
@@ -102,8 +102,8 @@ export default function useInsuranceUsage({ logs, hoverRow, memos, year, month, 
     }
     if (!key) return '—';
     return loaded[key]?.error ? '조회 실패' : loaded[key]?.data ? '—' : '조회 중';
-  };
-  const getUsage = (row, category) => {
+  }, [loaded, patientsKey]);
+  const getUsage = useCallback((row, category) => {
     let patientKey = getInsurancePatient(row).key;
     if (!patientKey) {
       const keys = JSON.parse(patientsKey);
@@ -118,9 +118,12 @@ export default function useInsuranceUsage({ logs, hoverRow, memos, year, month, 
       return getInsuranceUsage(records, { ...row, year: effectiveYear, month: effectiveMonth, week_index, day_index, row_index, col_index }, settings, category);
     }
     return getInsuranceUsage(records, { ...row, year: effectiveYear, month: effectiveMonth }, settings, category);
-  };
+  }, [loaded, patientsKey, records, settings, year, month]);
+  const enrichedLogs = useMemo(() => logs.map((row) => ({
+    ...row, insuranceUsage: getUsage(row), insuranceUsageStatus: getStatus(row),
+  })), [logs, getUsage, getStatus]);
   return {
-    logs: logs.map((row) => ({ ...row, insuranceUsage: getUsage(row), insuranceUsageStatus: getStatus(row) })),
+    logs: enrichedLogs,
     hoverUsage: hoverRow ? getUsage(hoverRow) : null,
     hoverUsages: hoverRow ? ['shockwave', 'manual'].map((category) => getUsage(hoverRow, category))
       .filter((usage) => usage?.hasHistory) : [],

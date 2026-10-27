@@ -481,7 +481,7 @@ describe('shockwave hover tooltip model', () => {
       insuranceUsage: { category: 'manual', count: 4, periodEnd: '2027-01-01' },
     });
     assert.ok(text.indexOf('🦴 부위:') < text.indexOf('📝 메모:'));
-    assert.ok(text.indexOf('메모2') < text.indexOf('• 실비소진: 도수치료 4회'));
+    assert.ok(text.indexOf('메모2') < text.indexOf('• 실비소진: 도수치료 4/15회'));
     assert.ok(text.endsWith('• 갱신 일자: 2027-01-01'));
   });
 

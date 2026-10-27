@@ -147,8 +147,8 @@ export function getInsuranceUsage(records, targetRow, settings, categoryOverride
   const target = normalizeInsuranceRecord(targetRow, settings, true);
   if (!target) return null;
 
-  const scopeManualPrescription = target.category === 'manual' && target.group === 'manual_therapy';
-  const targetPrescriptionKey = getManualInsurancePrescriptionKey(target.prescription);
+  let scopeManualPrescription = target.category === 'manual' && target.group === 'manual_therapy';
+  let targetPrescriptionKey = getManualInsurancePrescriptionKey(target.prescription);
 
   const existing = records.find((row) => row.key === target.key)
     || (!target.isSchedule && records.find((row) => row.patient === target.patient && row.date === target.date
@@ -172,16 +172,32 @@ export function getInsuranceUsage(records, targetRow, settings, categoryOverride
       target.contributes = false;
     }
   }
+  // A display-only current cell may inherit its original schedule status, but
+  // a spray/self-pay prescription must never inherit a countable visit.
+  if (target.group === 'shinjang_spray' || target.selfPay) target.contributes = false;
   if (categoryOverride && target.category !== categoryOverride) {
     target.category = categoryOverride;
     target.contributes = false;
     target.group = 'shinjang_spray';
+    scopeManualPrescription = false;
   }
   // A proposed edit replaces its own cell, so neither editing nor cut/paste adds a duplicate.
   // 도수치료의 실비소진 회차는 처방별 실제 치료 순서를 따른다. 예를 들어
   // 40분 일정의 (1), (2)가 남아 있어도 새 30분 처방의 첫 치료는 1회다.
-  // 신장분사의 정수 처방은 도수치료 이력을 조회만 하므로 기존처럼 전체
-  // 도수치료 이력을 연결한다.
+  // 신장분사 1/2는 직전 도수치료 처방의 누적 횟수를 이어 보여준다.
+  // 미래 치료나 취소/본인부담 기록은 직전 처방 선택에 사용하지 않는다.
+  if (target.category === 'manual' && target.group === 'shinjang_spray') {
+    const previous = records.filter((row) => row.patient === target.patient
+      && row.category === 'manual' && row.contributes
+      && row.date.slice(0, 4) === target.date.slice(0, 4)
+      && (row.date < target.date || (row.date === target.date
+        && (row.order < target.order || (row.order === target.order && row.key.localeCompare(target.key) < 0)))))
+      .sort((a, b) => b.date.localeCompare(a.date) || b.order - a.order || b.key.localeCompare(a.key))[0];
+    if (previous) {
+      scopeManualPrescription = true;
+      targetPrescriptionKey = getManualInsurancePrescriptionKey(previous.prescription);
+    }
+  }
   const excludeKey = existing?.key || target.key;
   const candidates = records.filter((row) => row.key !== excludeKey
     && row.patient === target.patient && row.category === target.category
@@ -222,8 +238,9 @@ export function getInsuranceUsage(records, targetRow, settings, categoryOverride
     selfPay: target.selfPay, periodStart, periodEnd, isShinjang, hasHistory: Boolean(first) };
 }
 
-export function formatInsuranceUsage(usage, showLimit = false) {
-  if (usage.category !== 'shockwave') return showLimit ? `${usage.count}회(${usage.count}/15)` : `${usage.count}회`;
+export function formatInsuranceUsage(usage) {
+  if (usage.category === 'manual') return `${usage.count}/15회`;
+  if (usage.category !== 'shockwave') return `${usage.count}회`;
   const parts = usage.bodyParts || [];
   if (!parts.length) return `${usage.count}회`;
   const total = usage.count > 12 ? `${usage.count}/12회` : `${usage.count}회`;

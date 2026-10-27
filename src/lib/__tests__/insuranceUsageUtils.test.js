@@ -87,8 +87,8 @@ describe('clinic annual insurance usage', () => {
     assert.equal(visitWarnings(rows, rows[14]).length, 0);
     const target = partRow(15, '허리', '30분');
     assert.equal(visitWarnings(rows, target).length, 1);
-    assert.equal(formatInsuranceUsage(usage(rows, target)), '16회');
-    assert.equal(formatInsuranceUsage(usage(rows, target), true), '16회(16/15)');
+    assert.equal(formatInsuranceUsage(usage(rows, target)), '16/15회');
+    assert.equal(formatInsuranceUsage(usage(rows, target), true), '16/15회');
     assert.equal(usage(rows, target).periodEnd, '2027-01-01');
     assert.equal(usage(rows, row('2027-01-01', '30분')).count, 1);
   });
@@ -152,6 +152,37 @@ describe('clinic annual insurance usage', () => {
     assert.equal(usage(rows, row('2026-09-04', '신장분사2.5')).count, 1);
     assert.equal(usage(rows, row('2026-09-04', '신장분사3.0')).category, 'shockwave');
     assert.equal(usage(rows, row('2027-09-03', '신장분사3.0')).count, 0);
+  });
+  it('carries the preceding manual prescription count for shinjang 1 and 2 without counting sprays', () => {
+    const rows = [row('2026-08-01', '40분'), row('2026-08-03', '40분'),
+      ...[1, 2, 3, 4, 5, 7, 8, 9].map((day) => row(`2026-09-${String(day).padStart(2, '0')}`, '30분')),
+      row('2026-09-10', '신장분사 1'), row('2026-09-11', '신장분사 2'),
+      row('2026-09-12', '30분(본인)'), row('2026-09-14', '40분', 0, { cancelled: true }),
+      row('2026-09-21', '40분')];
+    for (const prescription of ['신장분사 1', '신장분사 2']) {
+      const result = usage(rows, row('2026-09-15', prescription));
+      assert.equal(result.count, 8);
+      assert.equal(result.isShinjang, true);
+      assert.equal(result.periodEnd, '2027-01-01');
+      assert.equal(formatInsuranceUsage(result), '8/15회');
+      assert.equal(usage(rows, row('2027-01-01', prescription)).count, 0);
+    }
+    assert.equal(usage(rows, row('2026-09-16', '30분')).count, 9);
+    assert.equal(formatInsuranceUsage(usage([], row('2026-09-01', '신장분사 1'))), '0/15회');
+  });
+  it('carries only earlier manual visits on the same day into a spray history row', () => {
+    const rows = [row('2026-09-01', '30분', 1), row('2026-09-01', '신장분사 2', 2), row('2026-09-01', '40분', 3)];
+    assert.equal(usage(rows, rows[1]).count, 1);
+    assert.equal(formatInsuranceUsage(usage(rows, rows[1])), '1/15회');
+  });
+  it('does not inherit a countable manual visit when the current cell is changed to shinjang 1 or 2', () => {
+    const rows = [row('2026-09-01', '30분'), row('2026-09-02', '30분')];
+    for (const prescription of ['신장분사 1', '신장분사 2']) {
+      const currentCell = { ...rows[1], content: '', chart_number: '1001', patient_name: '가상환자', prescription };
+      const result = usage(rows, currentCell);
+      assert.equal(result.count, 1);
+      assert.equal(formatInsuranceUsage(result), '1/15회');
+    }
   });
   it('links shinjang C with shockwave, carrying counts, body limits and renewal date without incrementing', () => {
     assert.equal(getShinjangSprayInsuranceCategory('신장분사C'), 'shockwave');
