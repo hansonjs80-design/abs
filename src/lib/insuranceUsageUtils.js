@@ -78,7 +78,8 @@ export function normalizeInsuranceRecord(row, settings, allowAdjacentMonth = fal
   const date = isSchedule && day ? getScheduleDayDateKey(day) : String(row.date || '').slice(0, 10);
   if (!/\d{4}-\d{2}-\d{2}$/.test(date)) return null;
   const group = getScheduleItemTreatmentGroup(row, settings, Number(date.slice(0, 4)), Number(date.slice(5, 7)))
-    || ({ manual: 'manual_therapy', shockwave: 'shockwave', shinjang: 'shinjang_spray' }[row.history_group || row.type]);
+    || ({ manual: 'manual_therapy', shockwave: 'shockwave', shinjang: 'shinjang_spray' }[row.history_group || row.type])
+    || (isSchedule ? 'shockwave' : '');
   const prescription = String(
     row.prescription
     || (settings && getPrescriptionFromConfiguredDoseTag(settings, Number(date.slice(0, 4)), Number(date.slice(5, 7)), row.content))
@@ -109,8 +110,6 @@ export function buildInsuranceRecords({ scheduleRows = [], historyLogs = [], set
   const schedule = scheduleRows.map((row) => normalizeInsuranceRecord(row, settings)).filter(Boolean);
   const records = new Map(schedule.map((row) => [row.key, row]));
   const scheduleKeys = new Set(schedule.map((row) => row.key));
-  const fingerprint = (row) => JSON.stringify([row.patient, row.date, row.group, row.prescription]);
-  const scheduleFingerprints = new Set(schedule.map(fingerprint));
   for (const log of historyLogs) {
     const row = normalizeInsuranceRecord(log, settings);
     if (!row) continue;
@@ -119,7 +118,20 @@ export function buildInsuranceRecords({ scheduleRows = [], historyLogs = [], set
     // a fallback when an older schedule row is absent from the query result.
     const isSchedulerLinked = Boolean(log.scheduler_cell_key || log.source === 'scheduler');
     if (isSchedulerLinked && scheduleKeys.has(row.key)) continue;
-    if (scheduleFingerprints.has(fingerprint(row))) continue;
+
+    // Check if an existing schedule record already represents this treatment date.
+    // Enrich that schedule record with accurate log prescription/body-part details
+    // instead of adding a duplicate record for the same treatment.
+    const matchingSchedule = schedule.find((s) => s.patient === row.patient && s.date === row.date
+      && s.category === row.category && s.group === row.group
+      && (row.category !== 'manual' || !s.prescription || !row.prescription
+        || getManualInsurancePrescriptionKey(s.prescription) === getManualInsurancePrescriptionKey(row.prescription)));
+
+    if (matchingSchedule) {
+      if (!matchingSchedule.prescription && row.prescription) matchingSchedule.prescription = row.prescription;
+      if (!matchingSchedule.bodyParts.length && row.bodyParts.length) matchingSchedule.bodyParts = row.bodyParts;
+      continue;
+    }
     records.set(row.key, row);
   }
   return [...records.values()];
@@ -134,11 +146,18 @@ function anniversary(anchor, year) {
 export function getInsuranceUsage(records, targetRow, settings, categoryOverride) {
   const target = normalizeInsuranceRecord(targetRow, settings, true);
   if (!target) return null;
+
+  const scopeManualPrescription = target.category === 'manual' && target.group === 'manual_therapy';
+  const targetPrescriptionKey = getManualInsurancePrescriptionKey(target.prescription);
+
   const existing = records.find((row) => row.key === target.key)
+    || (!target.isSchedule && records.find((row) => row.patient === target.patient && row.date === target.date
+      && row.category === target.category && row.group === target.group
+      && (!scopeManualPrescription || !row.prescription || !target.prescription
+        || getManualInsurancePrescriptionKey(row.prescription) === targetPrescriptionKey)))
     || records.find((row) => row.patient === target.patient && row.date === target.date
-      && ((target.adjacentMonth && row.order === target.order)
-        || (row.isSchedule && row.group === target.group && row.prescription === target.prescription
-          && targetRow.week_index == null && !targetRow.scheduler_cell_key)));
+      && target.adjacentMonth && row.order === target.order);
+
   if (existing) {
     target.key = existing.key;
     target.order = existing.order;
@@ -163,9 +182,8 @@ export function getInsuranceUsage(records, targetRow, settings, categoryOverride
   // 40분 일정의 (1), (2)가 남아 있어도 새 30분 처방의 첫 치료는 1회다.
   // 신장분사의 정수 처방은 도수치료 이력을 조회만 하므로 기존처럼 전체
   // 도수치료 이력을 연결한다.
-  const scopeManualPrescription = target.category === 'manual' && target.group === 'manual_therapy';
-  const targetPrescriptionKey = getManualInsurancePrescriptionKey(target.prescription);
-  const candidates = records.filter((row) => row.key !== target.key
+  const excludeKey = existing?.key || target.key;
+  const candidates = records.filter((row) => row.key !== excludeKey
     && row.patient === target.patient && row.category === target.category
     && (!scopeManualPrescription || getManualInsurancePrescriptionKey(row.prescription) === targetPrescriptionKey));
   candidates.push(target);

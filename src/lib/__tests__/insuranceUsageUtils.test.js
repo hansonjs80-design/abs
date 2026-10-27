@@ -315,6 +315,42 @@ describe('clinic annual insurance usage', () => {
     assert.equal(getInsuranceUsage(records, current, settings).count, 3);
   });
 
+  it('does not duplicate shockwave counts when schedule rows and history logs coexist on same dates', () => {
+    const scheduleRows = [
+      row('2026-08-04', 'F2.5', 1, { content: '8364/최정원(*)' }),
+      row('2026-08-12', '', 2, { content: '8364/최정원(2)' }), // 처방 비어있는 스케줄
+      row('2026-09-02', 'F2.5', 3, { content: '8364/최정원(3)' }),
+      row('2026-09-16', '', 4, { content: '8364/최정원(4)' }), // 처방 비어있는 스케줄
+      row('2026-09-22', '신장분사 2.5', 5, { content: '8364/최정원(5)' }),
+      row('2026-09-30', 'F2.5', 6, { content: '8364/최정원(6)' }),
+      row('2026-10-07', 'F2.5', 7, { content: '8364/최정원(7)' }),
+      row('2026-10-20', '신장분사 2.5', 8, { content: '8364/최정원(8)' }),
+      row('2026-10-26', '신장분사 2.5', 9, { content: '8364/최정원(9)' }),
+    ];
+    const historyLogs = [
+      { id: 'h1', date: '2026-08-04', chart_number: '8364', patient_name: '최정원', prescription: 'F2.5', body_part: 'Lt. 족저근막염(M722)', visit_count: '*', type: 'shockwave' },
+      { id: 'h2', date: '2026-08-12', chart_number: '8364', patient_name: '최정원', prescription: 'F2.5', body_part: 'Lt. 족저근막염(M722)', visit_count: '2', type: 'shockwave' },
+      { id: 'h3', date: '2026-09-02', chart_number: '8364', patient_name: '최정원', prescription: 'F2.5', body_part: 'Lt. 족저근막염(M722)', visit_count: '3', type: 'shockwave' },
+      { id: 'h4', date: '2026-09-16', chart_number: '8364', patient_name: '최정원', prescription: 'F2.5', body_part: 'Lt. 족저근막염(M722)', visit_count: '4', type: 'shockwave' },
+      { id: 'h5', date: '2026-09-22', chart_number: '8364', patient_name: '최정원', prescription: '신장분사 2.5', body_part: 'Lt. 족저근막염(M722)', visit_count: '5', history_group: 'shinjang', type: 'shinjang' },
+      { id: 'h6', date: '2026-09-30', chart_number: '8364', patient_name: '최정원', prescription: 'F2.5', body_part: 'Lt. 족저근막염(M722)', visit_count: '6', type: 'shockwave' },
+      { id: 'h7', date: '2026-10-07', chart_number: '8364', patient_name: '최정원', prescription: 'F2.5', body_part: 'Lt. 족저근막염(M722)', visit_count: '7', type: 'shockwave' },
+      { id: 'h8', date: '2026-10-20', chart_number: '8364', patient_name: '최정원', prescription: '신장분사 2.5', body_part: 'Lt. 족저근막염(M722)', visit_count: '8', history_group: 'shinjang', type: 'shinjang' },
+      { id: 'h9', date: '2026-10-26', chart_number: '8364', patient_name: '최정원', prescription: '신장분사 2.5', body_part: 'Lt. 족저근막염(M722)', visit_count: '9', history_group: 'shinjang', type: 'shinjang' },
+    ];
+    const records = buildInsuranceRecords({ scheduleRows, historyLogs, settings });
+    assert.equal(getInsuranceUsage(records, historyLogs[0], settings).count, 1);
+    assert.equal(getInsuranceUsage(records, historyLogs[1], settings).count, 2); // 3회로 건너뛰지 않고 2회
+    assert.equal(getInsuranceUsage(records, historyLogs[2], settings).count, 3);
+    assert.equal(getInsuranceUsage(records, historyLogs[3], settings).count, 4); // 6회로 건너뛰지 않고 4회
+    assert.equal(getInsuranceUsage(records, historyLogs[4], settings).count, 4); // 신장분사 2.5는 충격파 직전 4회 유지
+    assert.equal(getInsuranceUsage(records, historyLogs[5], settings).count, 5);
+    assert.equal(getInsuranceUsage(records, historyLogs[6], settings).count, 6); // 최종 충격파 6회
+    assert.equal(getInsuranceUsage(records, historyLogs[7], settings).count, 6); // 신장분사 2.5는 6회 유지
+    assert.equal(getInsuranceUsage(records, historyLogs[8], settings).count, 6); // 신장분사 2.5는 6회 유지
+    assert.equal(getInsuranceUsage(records, historyLogs[8], settings).periodEnd, '2027-08-04');
+  });
+
   it('renews manual therapy on January 1 and carries the new-year count to integer shinjang', () => {
     const rows = [row('2026-07-01', '30분'), row('2026-12-31', '30분')];
     assert.equal(usage(rows, rows[1]).count, 2);
