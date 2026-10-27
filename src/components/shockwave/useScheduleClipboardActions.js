@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { needsSchedulePasteHistory } from '../../lib/schedulePasteUtils.js';
 import { supabase } from '../../lib/supabaseClient';
 import { incrementSessionCount } from '../../lib/scheduleVisitCountUtils';
 import {
@@ -440,7 +441,7 @@ export default function useScheduleClipboardActions({
     const charts = [];
     const names = [];
     targetPayload.forEach((item) => {
-      if (!item.content) return;
+      if (!needsSchedulePasteHistory(item)) return;
       const parsed = parseSchedulerPatientIdentity(item.content);
       if (parsed?.patientChart) {
         charts.push(parsed.patientChart);
@@ -506,7 +507,7 @@ export default function useScheduleClipboardActions({
     }
 
     const enhancedPayload = await Promise.all(targetPayload.map(async (item) => {
-      if (item.content && (!item.prescription || !item.body_part)) {
+      if (needsSchedulePasteHistory(item)) {
         const result = await buildSchedulerAutoText(
           item.week_index,
           item.day_index,

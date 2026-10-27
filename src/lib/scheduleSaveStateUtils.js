@@ -61,6 +61,16 @@ export function applyShockwaveMemoStateUpdate(prev, key, memo, shouldKeepMemo) {
   return next;
 }
 
+// Clone the month snapshot once per batch, keeping the same replacement/deletion rules.
+export function applyShockwaveMemoStateUpdates(prev, updates, shouldKeepMemo) {
+  const next = { ...(prev || {}) };
+  Object.entries(updates || {}).forEach(([key, memo]) => {
+    if (shouldKeepMemo(memo)) next[key] = memo;
+    else delete next[key];
+  });
+  return next;
+}
+
 export function rollbackShockwaveMemoState(prev, previousMemos) {
   const next = { ...(prev || {}) };
   Object.entries(previousMemos || {}).forEach(([key, memo]) => {

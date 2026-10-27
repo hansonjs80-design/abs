@@ -27,6 +27,7 @@ import { buildShockwaveIntervalRealignmentUpdates } from '../lib/scheduleInterva
 import {
   applyRealtimeShockwaveMemoUpdate,
   applyShockwaveMemoStateUpdate,
+  applyShockwaveMemoStateUpdates,
   buildOptimisticShockwaveMemos,
   rollbackShockwaveMemoState,
 } from '../lib/scheduleSaveStateUtils';
@@ -2464,13 +2465,9 @@ export function ScheduleProvider({ children }) {
       }
 
       if (canApplyClientState()) {
-        setShockwaveMemos(prev => {
-          let next = prev;
-          Object.entries(optimisticSnapshot.optimisticMemos).forEach(([key, value]) => {
-            next = applyShockwaveMemoStateUpdate(next, key, value, shouldKeepShockwaveMemo);
-          });
-          return next;
-        });
+        setShockwaveMemos(prev => applyShockwaveMemoStateUpdates(
+          prev, optimisticSnapshot.optimisticMemos, shouldKeepShockwaveMemo
+        ));
       }
 
       const canonicalMemosArray = writeMemosArray.map((item) => canonicalizeShockwaveScheduleItemDate(item));
