@@ -451,6 +451,7 @@ function PatientHistoryModal({
                           return (
                             <tr
                               key={historyRowKey}
+                              data-patient-history-treatment={historyTreatmentGroup}
                               className={`patient-history-prescription-row${isShinjangGroup ? ' patient-history-prescription-row--shinjang' : ''}${isCurrentHistoryRow ? ' patient-history-current-row' : ''}`}
                               onMouseEnter={(event) => {
                                 event.currentTarget.classList.add('patient-history-row--hovered');

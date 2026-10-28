@@ -8,7 +8,10 @@ export const PATIENT_HISTORY_PRINT_CSS = `
   thead { display: table-header-group; }
   th, td { border: 0.2mm solid #b8c4d2; padding: 1mm 1.2mm; vertical-align: middle; text-align: center; white-space: normal; overflow-wrap: anywhere; }
   th { background: #e2e8f0; font-weight: bold; }
-  tbody tr:nth-child(even) { background: #f8fafc; }
+  tbody tr > td { background: #fff; }
+  tbody tr.print-treatment-shockwave > td { background: #e8f2ff; }
+  tbody tr.print-treatment-manual > td { background: #f3e8dc; }
+  tbody tr.print-treatment-shinjang > td { background: #fff; }
   tr { break-inside: avoid; page-break-inside: avoid; }
   .print-detail { text-align: left; }
   * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
@@ -76,6 +79,10 @@ export function buildPatientHistoryPrintDocument(source, doc) {
     // Every rendered result is copied, independent of viewport and scroll position.
     original.querySelectorAll('tbody tr').forEach((row) => {
       const printedRow = body.insertRow();
+      const treatment = row.dataset.patientHistoryTreatment;
+      if (['shockwave', 'manual', 'shinjang'].includes(treatment)) {
+        printedRow.className = `print-treatment-${treatment}`;
+      }
       if (row.cells.length === 1 && row.cells[0].colSpan > 1) {
         const cell = printedRow.insertCell();
         cell.colSpan = columns.length;
