@@ -372,8 +372,9 @@ function PatientHistoryModal({
                         {group.logs.map((log, idx) => {
                           const historyRowKey = log._history_row_key || `${group.key}-${log.id || log.date}-${idx}`;
                           const historyTreatmentGroup = getPatientHistoryGroupKey(log);
+                          const isShinjangGroup = historyTreatmentGroup === 'shinjang' || String(log?.prescription || '').includes('신장');
                           const visitSequenceColor = group.visitSequenceColors?.[idx]
-                            || (historyTreatmentGroup === 'shinjang' ? '#bbf7d0' : null);
+                            || (isShinjangGroup ? '#bbf7d0' : null);
                           const historyTreatmentLabel = PATIENT_HISTORY_GROUPS.find(
                             (option) => option.key === historyTreatmentGroup
                           )?.label.replace(' 내역', '') || '충격파';
@@ -397,11 +398,19 @@ function PatientHistoryModal({
                           const effectiveVisitColor = visitSequenceColor
                             || PATIENT_HISTORY_TREATMENT_SEQUENCE_PALETTES[historyTreatmentGroup]?.[0]
                             || '#bfdbfe';
-                          const currentCellRowBackground = getPatientHistoryPrescriptionRowColor(
-                            log.prescription,
-                            effectiveVisitColor,
-                            isCurrentHistoryRow
-                          );
+                          const currentCellRowBackground = isCurrentHistoryRow
+                            ? getPatientHistoryPrescriptionRowColor(
+                                log.prescription,
+                                effectiveVisitColor,
+                                isCurrentHistoryRow
+                              )
+                            : (isShinjangGroup
+                              ? '#ffffff'
+                              : getPatientHistoryPrescriptionRowColor(
+                                  log.prescription,
+                                  effectiveVisitColor,
+                                  isCurrentHistoryRow
+                                ));
                           const historyEditFieldStyle = {
                             width: '100%',
                             minWidth: 0,

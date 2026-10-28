@@ -375,6 +375,7 @@ test('patient history rows use prescription backgrounds including the current ro
   assert.match(shockwaveView, /getPatientHistoryPrescriptionRowColor\s*\(\s*[\s\S]*?log\.prescription/);
   assert.match(shockwaveView, /'--patient-history-prescription-row-bg': currentCellRowBackground/);
   assert.match(shockwaveView, /'--patient-history-current-row-bg': currentCellRowBackground/);
+  assert.match(shockwaveView, /isShinjangGroup\s*\?\s*['"]#ffffff['"]/);
 });
 
 test('patient history edit fields keep a flat base style until focused', async () => {
