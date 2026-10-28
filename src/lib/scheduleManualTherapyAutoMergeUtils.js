@@ -74,13 +74,14 @@ export function buildManualTherapyAutoMergePayload({
   durationMinutesMap = {},
   doseTags = {},
   slotMinutes,
+  preservePrescription = false,
   oldContent: _oldContent = '',
   oldPrescription: _oldPrescription = '',
   ...rest
 }) {
   const finalSlotMinutes = Number(slotMinutes) || 20;
 
-  const resolvedPrescription = resolveManualTherapyAutoPrescription({
+  const resolvedPrescription = preservePrescription ? String(prescription || '').trim() : resolveManualTherapyAutoPrescription({
     content,
     prescription,
     durationMinutesMap,
@@ -89,7 +90,7 @@ export function buildManualTherapyAutoMergePayload({
   });
 
   const explicitPrescription = String(prescription || '').trim();
-  const finalPrescription = resolvedPrescription ||
+  const finalPrescription = preservePrescription ? explicitPrescription : resolvedPrescription ||
     (isConfiguredAutoPrescription(explicitPrescription, durationMinutesMap, doseTags) ? explicitPrescription : '');
   const rowSpan = getManualTherapyRowSpan(finalPrescription, { durationMinutesMap, slotMinutes: finalSlotMinutes });
 

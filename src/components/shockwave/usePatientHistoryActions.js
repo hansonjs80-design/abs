@@ -32,7 +32,6 @@ import { supabase } from '../../lib/supabaseClient';
 import { getEffectiveCellBgColor } from '../../lib/scheduleStatusUtils';
 import {
   getPatientHistoryScheduleCompletion,
-  getPatientHistoryScheduleStatusSignature,
 } from '../../lib/patientHistoryScheduleStatusUtils';
 import {
   extractDoseTagFromPrescription,
@@ -312,7 +311,6 @@ export default function usePatientHistoryActions({
   patientHistoryTargetCellRef,
   invalidateCellSavesForPayload,
 }) {
-  const patientHistoryResultCacheRef = useRef(new Map());
   const monthlyTherapistRowsCacheRef = useRef(new Map());
   const calendarCacheRef = useRef(new Map());
   const patientHistoryRequestRef = useRef(0);
@@ -348,41 +346,17 @@ export default function usePatientHistoryActions({
         );
       }
     }
-    const prescriptionClassificationSignature = JSON.stringify({
-      shockwave: settings?.prescriptions || [],
-      manual: settings?.manual_therapy_prescriptions || [],
-      shockwaveDoseTags: settings?.dose_tags || {},
-      manualDoseTags: settings?.manual_therapy_dose_tags || {},
-      monthly: settings?.monthly_settlement_settings || {},
-    });
-    const cacheKey = [
-      normalizeNameForMatch(nameParam),
-      String(chartParam || '').trim(),
-      activeSelectedKey,
-      activeSelectedContent ?? '',
-      currentYear,
-      currentMonth,
-      selectedDate,
-      baseTimeSlotsLength,
-      colCount,
-      prescriptionClassificationSignature,
-      getPatientHistoryScheduleStatusSignature(memos, pendingCellBgColors),
-    ].join('__');
     const setLoadedPatientHistory = (logs, chartOptions = []) => {
       setPatientHistoryModalData((prev) => !isCurrentRequest() ? prev : ({
         ...prev,
         loading: false,
+        insuranceRevision: requestId,
         logs,
         searchName: nameParam,
         searchChart: resolvePatientHistorySearchChart(chartParam, chartOptions),
         chartOptions,
       }));
     };
-    const cached = patientHistoryResultCacheRef.current.get(cacheKey);
-    if (cached && Date.now() - cached.time < 15000) {
-      setLoadedPatientHistory(cached.logs, cached.chartOptions || []);
-      return;
-    }
     setPatientHistoryModalData((prev) => ({
       ...prev,
       loading: true,
@@ -536,6 +510,7 @@ export default function usePatientHistoryActions({
           schedule_id: linkedSchedule.id,
           memo: getPatientHistoryMemoText(linkedSchedule.merge_span),
           schedule_completed: getPatientHistoryScheduleCompletion(linkedSchedule),
+          _insuranceScheduleRow: linkedSchedule,
         };
       });
       let allData = logsWithLinkedScheduleMemos.filter(keepHistoryLog);
@@ -681,6 +656,7 @@ export default function usePatientHistoryActions({
             body_part: s.body_part || '',
             memo: getPatientHistoryMemoText(s.merge_span),
             schedule_completed: getPatientHistoryScheduleCompletion(s),
+            _insuranceScheduleRow: s,
             therapist_name: therapistName,
             type: 'schedule',
             history_group: historyGroup,
@@ -712,9 +688,11 @@ export default function usePatientHistoryActions({
               chart_number: scheduleLog.chart_number || allData[existingIndex].chart_number,
               visit_count: scheduleLog.visit_count || allData[existingIndex].visit_count,
               prescription: scheduleLog.prescription || allData[existingIndex].prescription,
+              history_group: scheduleLog.history_group,
               body_part: scheduleLog.body_part || allData[existingIndex].body_part,
               memo: scheduleLog.memo,
               schedule_completed: scheduleLog.schedule_completed,
+              _insuranceScheduleRow: scheduleLog._insuranceScheduleRow,
               therapist_name: scheduleLog.therapist_name,
               schedule_id: scheduleLog.id,
               scheduler_cell_key: scheduleLog.scheduler_cell_key,
@@ -743,9 +721,11 @@ export default function usePatientHistoryActions({
           chart_number: override.chart_number || item.chart_number,
           visit_count: override.visit_count,
           prescription: override.prescription || item.prescription,
+          history_group: override.history_group,
           body_part: override.body_part || item.body_part,
           memo: override.memo,
           schedule_completed: override.schedule_completed,
+          _insuranceScheduleRow: override._insuranceScheduleRow,
           therapist_name: override.therapist_name,
           schedule_id: override.id,
           scheduler_cell_key: override.scheduler_cell_key,
@@ -852,15 +832,6 @@ export default function usePatientHistoryActions({
         });
       }
       const logsWithMeta = finalLogs.map(withPatientHistoryRowMeta);
-      patientHistoryResultCacheRef.current.set(cacheKey, {
-        time: Date.now(),
-        logs: logsWithMeta,
-        chartOptions,
-      });
-      if (patientHistoryResultCacheRef.current.size > 30) {
-        const oldestKey = patientHistoryResultCacheRef.current.keys().next().value;
-        patientHistoryResultCacheRef.current.delete(oldestKey);
-      }
       setLoadedPatientHistory(logsWithMeta, chartOptions);
     } catch (e) {
       if (!isCurrentRequest()) return;
@@ -1002,7 +973,6 @@ export default function usePatientHistoryActions({
     const success = await saveShockwaveMemosBulk(savePayload);
     if (success) {
       clearImmediateCellDisplay?.(savePayload);
-      patientHistoryResultCacheRef.current.clear();
       addToast(field === 'prescription' ? '처방이 수정되었습니다.' : '부위가 수정되었습니다.', 'success');
       return true;
     }
@@ -1057,7 +1027,6 @@ export default function usePatientHistoryActions({
     const success = await saveShockwaveMemosBulk(payload);
     if (success) {
       clearImmediateCellDisplay?.(payload);
-      patientHistoryResultCacheRef.current.clear();
       addToast('메모가 수정되었습니다.', 'success');
       return true;
     }
@@ -1160,7 +1129,6 @@ export default function usePatientHistoryActions({
         }
       }
 
-      patientHistoryResultCacheRef.current.clear();
       addToast(field === 'prescription' ? '처방이 수정되었습니다.' : '부위가 수정되었습니다.', 'success');
       return true;
     } catch (e) {
@@ -1195,7 +1163,6 @@ export default function usePatientHistoryActions({
       }
 
       await updateLinkedScheduleRowMemo(scheduleId, rawValue);
-      patientHistoryResultCacheRef.current.clear();
       addToast('메모가 수정되었습니다.', 'success');
       return true;
     } catch (e) {
@@ -1434,7 +1401,10 @@ export default function usePatientHistoryActions({
         selectedCell
       );
       if (!targetCell) {
-        alert('디버그: 선택된 셀이 없습니다.');
+        cancelPatientHistorySearch();
+        if (patientHistoryTargetCellRef) patientHistoryTargetCellRef.current = null;
+        setPatientHistoryModalData({ loading: false, logs: [], searchName: '', searchChart: '', chartOptions: [] });
+        setPatientHistoryModalOpen(true);
         return;
       }
       if (patientHistoryTargetCellRef) {
@@ -1471,9 +1441,9 @@ export default function usePatientHistoryActions({
       });
     } catch (e) {
       console.error(e);
-      alert(`디버그 에러 발생: ${e.message}`);
+      addToast('검색창을 열지 못했습니다. 다시 시도해 주세요.', 'error');
     }
-  }, [selectedCell, cellKey, editingCell, editInputRef, editValue, memos, pendingDisplayValues, fetchPatientHistory, setPatientHistoryModalOpen, setPatientHistoryModalData, patientHistoryTargetCellRef, cancelPatientHistorySearch]);
+  }, [selectedCell, cellKey, editingCell, editInputRef, editValue, memos, pendingDisplayValues, fetchPatientHistory, setPatientHistoryModalOpen, setPatientHistoryModalData, patientHistoryTargetCellRef, cancelPatientHistorySearch, addToast]);
 
   const handleApplyHistoryToCell = useCallback(async (log) => {
     const targetCell = resolvePatientHistoryApplyTarget(

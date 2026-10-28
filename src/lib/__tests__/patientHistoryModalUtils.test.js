@@ -436,3 +436,13 @@ describe('patient history apply payload', () => {
     assert.equal(update.body_part, 'Lumbar');
   });
 });
+
+
+it('history row edits match one exact identity even when numeric IDs overlap', async () => {
+  const { matchesPatientHistoryRowKey } = await import('../patientHistoryModalUtils.js');
+  const rows = [{id:1,_history_row_key:'manual__1'}, {id:11,_history_row_key:'manual__11'}, {id:1,_history_row_key:'shockwave__1'}];
+  assert.deepEqual(rows.map((row,i)=>matchesPatientHistoryRowKey(row,'manual__11',i)),[false,true,false]);
+  assert.equal(matchesPatientHistoryRowKey({id:1},'all-11-0',0),false);
+  assert.equal(matchesPatientHistoryRowKey({id:11},'all-11-0',0),true);
+  assert.equal(matchesPatientHistoryRowKey({id:11},11,0),true);
+});

@@ -1,6 +1,6 @@
 import { generateShockwaveCalendar } from './calendarUtils.js';
 import { getPrescriptionFromConfiguredDoseTag, getScheduleItemTreatmentGroup } from './prescriptionScheduleSettings.js';
-import { getExplicitVisitSuffix, parseSchedulerPatientIdentity } from './schedulerCellTextUtils.js';
+import { applyVisitCountToSchedulerContent, getExplicitVisitSuffix, parseSchedulerPatientIdentity } from './schedulerCellTextUtils.js';
 import { getScheduleDayDateKey, getScheduleRowSchedulerCellKey } from './schedulerHistoryCandidateUtils.js';
 import { isTreatmentCancelBg } from './scheduleStatusUtils.js';
 import { BODY_PART_PRESET_GROUPS } from './bodyPartPresetUtils.js';
@@ -258,4 +258,35 @@ export function overlayInsuranceScheduleRows(...sources) {
   const rows = new Map();
   sources.flat().forEach((row) => rows.set(getScheduleRowSchedulerCellKey(row), row));
   return [...rows.values()];
+}
+
+// The history dialog verifies linked cells again. Reuse that snapshot rather than
+// letting the five-minute hover cache override the prescription shown in the dialog.
+export function verifiedInsuranceScheduleRows(logs = []) {
+  return logs.flatMap((log) => {
+    const source = log._insuranceScheduleRow;
+    if (!source || getScheduleRowSchedulerCellKey(source) !== log.scheduler_cell_key
+      || getInsurancePatient(source).key !== getInsurancePatient(log).key) return [];
+    return [{
+      ...source,
+      prescription: log.prescription ?? source.prescription,
+      body_part: log.body_part ?? source.body_part,
+      content: log.visit_count == null ? source.content
+        : applyVisitCountToSchedulerContent(source.content, log.visit_count),
+    }];
+  });
+}
+
+export function overlayInsuranceHistorySchedules(scheduleRows, logs, localRows) {
+  const historyPatients = new Set(logs.map((log) => getInsurancePatient(log).key).filter(Boolean));
+  const drafts = new Set(logs.filter((log) => log.schedule_cell_key && log.type === 'draft')
+    .map((log) => `${getInsurancePatient(log).key}:${log.schedule_cell_key}`));
+  const localOverrides = localRows.filter((row) => {
+    const patient = getInsurancePatient(row).key;
+    const key = `${row.week_index}-${row.day_index}-${row.row_index}-${row.col_index}`;
+    // Only the displayed draft cell can supersede a fresh history query. A warm
+    // month-view cache must not revive deleted records or old prescriptions.
+    return !historyPatients.has(patient) || drafts.has(`${patient}:${key}`);
+  });
+  return overlayInsuranceScheduleRows(scheduleRows, localOverrides, verifiedInsuranceScheduleRows(logs));
 }

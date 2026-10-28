@@ -5,6 +5,7 @@ import { useSchedule } from '../../contexts/ScheduleContext';
 import { getTodayKST, isSameDate } from '../../lib/calendarUtils';
 import { supabase } from '../../lib/supabaseClient';
 import useInsuranceUsage from './useInsuranceUsage';
+import { resolveLoadedSchedulePrescription } from '../../lib/scheduleLoadedPrescriptionUtils';
 import { fetchInsurancePatientRecords } from '../../lib/insuranceUsageRepository';
 import { getInsurancePatient } from '../../lib/insuranceUsageUtils';
 import {
@@ -13,6 +14,7 @@ import {
 } from '../../lib/contextMenuDismissUtils';
 import {
   getPatientHistoryDraggedModalOffset,
+  matchesPatientHistoryRowKey,
   getPatientHistoryNameOnlySearchTarget,
   getPatientHistoryTreatmentGroup,
   isNameOnlyPatientHistoryDraft,
@@ -37,7 +39,6 @@ import {
   get4060PrescriptionFromContent,
   getActionDoseTagFromPrescription,
   has4060Pattern,
-  normalizeConfiguredDoseTagInContent,
   normalize4060StarOrder,
   updateDoseTagForPrescriptionContent,
 } from '../../lib/schedulerContentFormat';
@@ -306,6 +307,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   }, [hoverCell, insuranceMemos, currentYear, currentMonth]);
   const insuranceUsage = useInsuranceUsage({
     logs: patientHistoryModalOpen ? patientHistoryModalData.logs : [],
+    historyRevision: patientHistoryModalOpen ? patientHistoryModalData.insuranceRevision || 0 : 0,
     hoverRow: hoverInsuranceRow, memos: insuranceMemos, year: currentYear, month: currentMonth, settings,
   });
   const patientHistoryLogGroups = useMemo(() => buildPatientHistoryLogGroups({
@@ -362,12 +364,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     setPatientHistoryModalData((prev) => ({
       ...prev,
       logs: (prev.logs || []).map((item, index) => {
-        const itemKey = item._history_row_key || item.id;
-        const matches = itemKey === historyRowKey
-          || item.id === historyRowKey
-          || item._history_row_key === historyRowKey
-          || (item.id && String(historyRowKey).includes(String(item.id)))
-          || (historyRowKey && String(historyRowKey).endsWith(`-${item.id || item.date}-${index}`));
+        const matches = matchesPatientHistoryRowKey(item, historyRowKey, index);
         if (!matches) return item;
         return typeof updater === 'function' ? updater(item) : { ...item, ...updater };
       }),
@@ -692,30 +689,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     if (!memos || Object.keys(memos).length === 0) return;
 
     const fixEntries = [];
-    const activePrescriptionSet = new Set(
-      (Array.isArray(prescriptionScheduleSettings?.schedulerPrescriptions?.all)
-        ? prescriptionScheduleSettings.schedulerPrescriptions.all
-        : [])
-        .map((prescription) => String(prescription || '').trim())
-        .filter(Boolean)
-    );
-    const isActivePrescription = (prescription) => {
-      const value = String(prescription || '').trim();
-      return Boolean(value && activePrescriptionSet.has(value));
-    };
     Object.entries(memos).forEach(([key, memo]) => {
       const content = String(memo?.content || '').trim();
       if (!content) return;
       const mergeSpan = memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
       if (mergeSpan.mergedInto) return;
 
-      const normalizedContent = normalizeConfiguredDoseTagInContent(content, prescriptionScheduleSettings.doseTags);
-      const configuredAutoPres = getPrescriptionFromConfiguredDoseTag(settings, currentYear, currentMonth, normalizedContent);
-      const legacyAutoPres = get4060PrescriptionFromContent(normalizedContent);
-      const memoPrescription = String(memo?.prescription || '').trim();
-      const targetPres = configuredAutoPres
-        || (isActivePrescription(legacyAutoPres) ? legacyAutoPres : '')
-        || (isActivePrescription(memoPrescription) ? memoPrescription : '');
+      const { content: normalizedContent, prescription: targetPres } = resolveLoadedSchedulePrescription(
+        memo, settings, currentYear, currentMonth
+      );
 
       const expectedPrescriptionRowSpan = targetPres
         ? getManualTherapyRowSpan(targetPres, {
@@ -769,6 +751,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
           content,
           bgColor: memos[key]?.bg_color || null,
           prescription,
+          preservePrescription: true,
           bodyPart: memos[key]?.body_part || null,
           mergeSpan: memos[key]?.merge_span,
           durationMinutesMap: prescriptionScheduleSettings.durationMinutesMap,

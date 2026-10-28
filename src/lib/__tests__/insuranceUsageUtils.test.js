@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { generateShockwaveCalendar } from '../calendarUtils.js';
-import { buildInsuranceRecords, formatInsuranceUsage, getInsuranceUsage, getShinjangSprayInsuranceCategory, isInsuranceSelfPay, overlayInsuranceScheduleRows } from '../insuranceUsageUtils.js';
+import { buildInsuranceRecords, formatInsuranceUsage, getInsuranceUsage, getShinjangSprayInsuranceCategory, isInsuranceSelfPay, overlayInsuranceScheduleRows, verifiedInsuranceScheduleRows, overlayInsuranceHistorySchedules } from '../insuranceUsageUtils.js';
 import { fetchInsurancePatientRecords, readAllInsuranceRows } from '../insuranceUsageRepository.js';
 import { buildScheduleReservationWarnings } from '../scheduleReservationWarningUtils.js';
 
@@ -183,6 +183,49 @@ describe('clinic annual insurance usage', () => {
       assert.equal(result.count, 1);
       assert.equal(formatInsuranceUsage(result), '1/15회');
     }
+  });
+  it('reuses freshly verified history cells when the hover cache still contains old spray prescriptions', () => {
+    const actual = [row('2026-08-01', '40분'), row('2026-09-05', '40분'),
+      row('2026-09-08', '40분'), row('2026-09-11', '40분'), row('2026-09-15', '신장분사 1')];
+    const stale = actual.map((r, i) => i > 0 && i < 4 ? { ...r, prescription: '신장분사 1' } : r);
+    const logs = actual.map((r, i) => ({ id: i, type: 'schedule', date: r.date,
+      chart_number: '1001', patient_name: '가상환자', prescription: r.prescription, visit_count: String(i + 1),
+      scheduler_cell_key: `2026:${String(r.month).padStart(2, '0')}:${r.week_index}:${r.day_index}:${r.row_index}:${r.col_index}`,
+      _insuranceScheduleRow: r,
+    }));
+    const oldRecords = buildInsuranceRecords({ scheduleRows: stale, historyLogs: logs, settings });
+    assert.deepEqual(logs.map(log => getInsuranceUsage(oldRecords, log, settings).count), [1, 2, 2, 2, 1]);
+    const schedules = overlayInsuranceScheduleRows(stale, verifiedInsuranceScheduleRows(logs));
+    const records = buildInsuranceRecords({ scheduleRows: schedules, historyLogs: logs, settings });
+    assert.deepEqual(logs.map(log => formatInsuranceUsage(getInsuranceUsage(records, log, settings))),
+      ['1/15회', '2/15회', '3/15회', '4/15회', '4/15회']);
+    assert.equal(getInsuranceUsage(records, { ...logs[4], prescription: '신장분사 2' }, settings).count, 4);
+    assert.equal(stale[1].prescription, '신장분사 1', 'never mutate cached source data');
+    const cancelled = { ...actual[1], cancelled: true };
+    const cancelledSnapshot = verifiedInsuranceScheduleRows([{ ...logs[1], _insuranceScheduleRow: cancelled }]);
+    assert.equal(buildInsuranceRecords({ scheduleRows: cancelledSnapshot, settings })[0].contributes, false);
+    assert.equal(verifiedInsuranceScheduleRows([{ ...logs[1], chart_number: '9999' }]).length, 0);
+  });
+  it('keeps the original spray sequence at one manual visit even when the cache has old manual prescriptions', () => {
+    const actual = [row('2026-08-01', '40분'), ...['05','08','11','15'].map(day => row(`2026-09-${day}`, '신장분사 1'))];
+    const logs = actual.map((r, i) => ({id: i, type:'schedule', date:r.date,
+      patient_name:'가상환자', chart_number:'1001', prescription:r.prescription, visit_count:String(i+1),
+      scheduler_cell_key:`2026:${String(r.month).padStart(2,'0')}:${r.week_index}:${r.day_index}:${r.row_index}:${r.col_index}`,
+      _insuranceScheduleRow:r}));
+    const stale = actual.map((r,i)=>i>0&&i<4?{...r,prescription:'40분'}:r);
+    const snapshot = JSON.stringify(actual);
+    const records = buildInsuranceRecords({scheduleRows:overlayInsuranceScheduleRows(stale,verifiedInsuranceScheduleRows(logs)), historyLogs:logs, settings});
+    assert.deepEqual(logs.map(log=>formatInsuranceUsage(getInsuranceUsage(records,log,settings))), Array(5).fill('1/15회'));
+    assert.equal(JSON.stringify(actual), snapshot);
+  });
+  it('does not let a stale month-view cache replace fresh history or revive deleted visits', () => {
+    const saved = row('2026-09-05', '신장분사 1');
+    const stale = { ...saved, prescription:'40분' };
+    const logs=[{id:'display',date:'2026-09-05',patient_name:'가상환자',chart_number:'1001',prescription:'신장분사 1',type:'schedule'}];
+    assert.deepEqual(overlayInsuranceHistorySchedules([saved],logs,[stale]),[saved]);
+    assert.deepEqual(overlayInsuranceHistorySchedules([],logs,[stale]),[]);
+    const draft={...logs[0],type:'draft',schedule_cell_key:`${saved.week_index}-${saved.day_index}-${saved.row_index}-${saved.col_index}`};
+    assert.deepEqual(overlayInsuranceHistorySchedules([saved],[draft],[stale]),[stale]);
   });
   it('links shinjang C with shockwave, carrying counts, body limits and renewal date without incrementing', () => {
     assert.equal(getShinjangSprayInsuranceCategory('신장분사C'), 'shockwave');

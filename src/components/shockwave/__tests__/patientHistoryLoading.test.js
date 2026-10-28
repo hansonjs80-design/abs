@@ -64,6 +64,8 @@ test('linked log and candidate reads share one monthly verification and retain t
   const linked=f.calls.filter(query=>query.table==='shockwave_schedules'&&query.filters.some(([method,key])=>method==='eq'&&key==='year'));
   assert.equal(linked.length,1);
   assert.equal(f.data.logs.length,1);assert.equal(f.data.logs[0].visit_count,'2');
+  assert.equal(f.data.logs[0]._insuranceScheduleRow.prescription,row.prescription);
+  assert.equal(f.data.logs[0]._insuranceScheduleRow.updated_at,row.updated_at);
   assert.equal(f.data.logs[0].schedule_completed,true);assert.equal(f.data.logs[0].therapist_name,'가상치료사');
 });
 
@@ -118,7 +120,7 @@ test('failed initial queries never cache a partial result and can be retried',as
   });
   await f.actions.fetchPatientHistory('가상환자','');assert.equal(f.notices.length,1);assert.equal(f.data.logs.length,0);
   fail=false;await f.actions.fetchPatientHistory('가상환자','');assert.equal(f.data.logs.length,1);
-  const reads=f.calls.length;await f.actions.fetchPatientHistory('가상환자','');assert.equal(f.calls.length,reads,'successful fresh results reuse the existing short cache');
+  const reads=f.calls.length;await f.actions.fetchPatientHistory('가상환자','');assert.ok(f.calls.length>reads,'explicit searches verify the source again rather than replaying old results');
 });
 
 test('failed therapist loading is retried rather than retaining a rejected cache promise',async()=>{
@@ -135,4 +137,34 @@ test('failed therapist loading is retried rather than retaining a rejected cache
   await f.actions.fetchPatientHistory('가상환자','461');assert.equal(f.notices.length,1);
   fail=false;await f.actions.fetchPatientHistory('가상환자','461');
   assert.equal(monthlyReads,2);assert.equal(f.data.logs[0].therapist_name,'복구된 치료사');
+});
+
+
+test('opens an empty searchable dialog without a selected cell and without reading all patients', async () => {
+  const f = fixture(() => { throw Error('must not query before a search term'); });
+  await f.actions.handleOpenPatientHistoryModal();
+  assert.equal(f.open, true);
+  assert.equal(f.data.loading, false);
+  assert.equal(f.data.logs.length, 0);
+  assert.equal(f.data.searchChart, '');
+  assert.equal(f.calls.length, 0);
+  assert.equal(f.notices.length, 0);
+});
+
+test('repeated searches reflect a changed prescription and treatment group immediately', async () => {
+  let prescription = '40분';
+  const row = {id:10,year:2026,month:9,week_index:0,day_index:5,row_index:10,col_index:0,
+    content:'461/가상환자40(2)',prescription,body_part:'허리'};
+  const f = fixture(query => {
+    if(query.table === 'shockwave_schedules')return {data:[{...row,prescription}]};
+    if(query.table === 'shockwave_monthly_therapists')return {data:[{slot_index:0,therapist_name:'가상치료사',start_day:1,end_day:31}]};
+    return {data:[]};
+  }, {settings:{manual_therapy_prescriptions:['40분']}});
+  await f.actions.fetchPatientHistory('가상환자','461');
+  assert.equal(f.data.logs[0].prescription, '40분');
+  prescription = '신장분사 1';
+  await f.actions.fetchPatientHistory('가상환자','461');
+  assert.equal(f.data.logs[0].prescription, '신장분사 1');
+  assert.equal(f.data.logs[0].history_group, 'shinjang');
+  assert.equal(f.data.logs[0]._insuranceScheduleRow.prescription, '신장분사 1');
 });

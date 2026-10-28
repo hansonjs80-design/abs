@@ -356,3 +356,13 @@ export function buildPatientHistoryCellUpdate(log, currentMemo = {}, options = {
     merge_span: currentMemo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
   };
 }
+
+// Never use substring matching: numeric IDs can be prefixes of other rows' IDs.
+export function matchesPatientHistoryRowKey(item, key, index) {
+  if (key == null || key === '') return false;
+  const requested = String(key);
+  if (item._history_row_key) return String(item._history_row_key) === requested;
+  if (item.id != null && String(item.id) === requested) return true;
+  return ['all', 'manual', 'shockwave', 'shinjang'].some((group) =>
+    requested === `${group}-${item.id || item.date}-${index}`);
+}
