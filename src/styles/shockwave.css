@@ -4649,7 +4649,7 @@
 }
 
 .patient-history-table tbody tr.patient-history-prescription-row--shinjang.patient-history-current-row:is(:hover, .patient-history-row--hovered):not(:has(.is-selected, .is-fill-preview)) > td {
-  background-color: #cbd5e1 !important;
+  background-color: #e2e8f0 !important;
 }
 
 .patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-selected) > td,
