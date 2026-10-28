@@ -402,7 +402,7 @@ function PatientHistoryModal({
                           const rowAccentColor = isShinjangGroup ? '#cbd5e1' : effectiveVisitColor;
                           const currentCellRowBackground = isCurrentHistoryRow
                             ? (isShinjangGroup
-                              ? getPatientHistoryPrescriptionRowColor(log.prescription, '#cbd5e1', true)
+                              ? '#e2e8f0'
                               : getPatientHistoryPrescriptionRowColor(
                                   log.prescription,
                                   effectiveVisitColor,

@@ -385,7 +385,7 @@ export default function PatientHistoryEditableCells({
               boxShadow: 'none',
               font: 'inherit',
               fontWeight: 'inherit',
-              '--patient-history-visit-sequence-bg': visitSequenceColor || ((String(log?.history_group || '').includes('shinjang') || String(log?.prescription || '').includes('신장')) ? '#bbf7d0' : undefined),
+              '--patient-history-visit-sequence-bg': visitSequenceColor || ((String(log?.history_group || '').includes('shinjang') || String(log?.prescription || '').includes('신장')) ? '#cbd5e1' : undefined),
             }}
             onChange={(event) => updatePatientHistoryInlineCellDraft(visitHistoryCell, event.target.value)}
             onBlur={(event) => commitPatientHistoryInlineCellEdit(visitHistoryCell, event.target.value)}
