@@ -26,7 +26,7 @@ function parseColorRgb(colorStr) {
 }
 
 // Derive the row tint from the visit sequence cell color or prescription label.
-export function getPatientHistoryPrescriptionRowColor(prescription, baseColor, isCurrentCell = false) {
+export function getPatientHistoryPrescriptionRowColor(prescription, baseColor, isCurrentCell = false, opacity) {
   if (baseColor) {
     const rgb = parseColorRgb(baseColor);
     if (rgb) {
@@ -39,7 +39,8 @@ export function getPatientHistoryPrescriptionRowColor(prescription, baseColor, i
         return `rgba(${brightR}, ${brightG}, ${brightB}, 0.88)`;
       }
       // 일반 행: 회차 셀 색상 기반의 은은하고 연한 배경
-      return `rgba(${r}, ${g}, ${b}, 0.32)`;
+      const alpha = typeof opacity === 'number' && Number.isFinite(opacity) ? opacity : 0.32;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
   }
 

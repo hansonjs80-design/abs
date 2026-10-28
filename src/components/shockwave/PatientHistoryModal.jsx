@@ -373,8 +373,9 @@ function PatientHistoryModal({
                           const historyRowKey = log._history_row_key || `${group.key}-${log.id || log.date}-${idx}`;
                           const historyTreatmentGroup = getPatientHistoryGroupKey(log);
                           const isShinjangGroup = historyTreatmentGroup === 'shinjang' || String(log?.prescription || '').includes('신장');
+                          const isShockwaveOrManual = historyTreatmentGroup === 'shockwave' || historyTreatmentGroup === 'manual';
                           const visitSequenceColor = group.visitSequenceColors?.[idx]
-                            || (isShinjangGroup ? '#bbf7d0' : null);
+                            || (isShinjangGroup ? '#cbd5e1' : null);
                           const historyTreatmentLabel = PATIENT_HISTORY_GROUPS.find(
                             (option) => option.key === historyTreatmentGroup
                           )?.label.replace(' 내역', '') || '충격파';
@@ -398,19 +399,24 @@ function PatientHistoryModal({
                           const effectiveVisitColor = visitSequenceColor
                             || PATIENT_HISTORY_TREATMENT_SEQUENCE_PALETTES[historyTreatmentGroup]?.[0]
                             || '#bfdbfe';
+                          const rowAccentColor = isShinjangGroup ? '#cbd5e1' : effectiveVisitColor;
                           const currentCellRowBackground = isCurrentHistoryRow
-                            ? getPatientHistoryPrescriptionRowColor(
-                                log.prescription,
-                                effectiveVisitColor,
-                                isCurrentHistoryRow
-                              )
-                            : (isShinjangGroup
-                              ? '#ffffff'
+                            ? (isShinjangGroup
+                              ? getPatientHistoryPrescriptionRowColor(log.prescription, '#cbd5e1', true)
                               : getPatientHistoryPrescriptionRowColor(
                                   log.prescription,
                                   effectiveVisitColor,
                                   isCurrentHistoryRow
-                                ));
+                                ))
+                            : (isShinjangGroup
+                              ? '#ffffff'
+                              : (isShockwaveOrManual
+                                ? getPatientHistoryPrescriptionRowColor(log.prescription, effectiveVisitColor, false, 0.47)
+                                : getPatientHistoryPrescriptionRowColor(
+                                    log.prescription,
+                                    effectiveVisitColor,
+                                    isCurrentHistoryRow
+                                  )));
                           const historyEditFieldStyle = {
                             width: '100%',
                             minWidth: 0,
@@ -445,7 +451,7 @@ function PatientHistoryModal({
                           return (
                             <tr
                               key={historyRowKey}
-                              className={`patient-history-prescription-row${isCurrentHistoryRow ? ' patient-history-current-row' : ''}`}
+                              className={`patient-history-prescription-row${isShinjangGroup ? ' patient-history-prescription-row--shinjang' : ''}${isCurrentHistoryRow ? ' patient-history-current-row' : ''}`}
                               onMouseEnter={(event) => {
                                 event.currentTarget.classList.add('patient-history-row--hovered');
                               }}
@@ -454,7 +460,7 @@ function PatientHistoryModal({
                               }}
                               style={{
                                 '--patient-history-prescription-row-bg': currentCellRowBackground,
-                                '--patient-history-row-accent': effectiveVisitColor,
+                                '--patient-history-row-accent': rowAccentColor,
                                 '--patient-history-current-row-bg': currentCellRowBackground,
                                 fontWeight: historyRowFontWeight,
                               }}

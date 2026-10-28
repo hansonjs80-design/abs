@@ -4600,7 +4600,7 @@
   margin-left: auto !important;
   border: 1px solid rgba(148, 163, 184, 0.5) !important;
   border-radius: 3px !important;
-  background-color: rgba(255, 255, 255, 0.72) !important;
+  background-color: var(--patient-history-prescription-row-bg, transparent) !important;
   box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.04) !important;
 }
 
@@ -4642,6 +4642,10 @@
 .patient-history-table tbody tr.patient-history-prescription-row:is(:hover, .patient-history-row--hovered):not(:has(.is-selected, .is-fill-preview)) > td {
   background-color: var(--patient-history-prescription-row-bg, var(--bg-primary, #fff)) !important;
   background-color: color-mix(in srgb, var(--patient-history-prescription-row-bg, var(--bg-primary, #fff)) 50%, var(--patient-history-row-accent, var(--patient-history-prescription-row-bg))) !important;
+}
+
+.patient-history-table tbody tr.patient-history-prescription-row--shinjang:is(:hover, .patient-history-row--hovered):not(:has(.is-selected, .is-fill-preview)) > td {
+  background-color: #f1f5f9 !important;
 }
 
 .patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-selected) > td,
