@@ -4638,18 +4638,11 @@
   -webkit-text-stroke: 0.25px currentColor !important;
 }
 
-/* Blend in the original visit color so translucent row tints become more vivid. */
-.patient-history-table tbody tr.patient-history-prescription-row:is(:hover, .patient-history-row--hovered):not(:has(.is-selected, .is-fill-preview)) > td {
-  background-color: var(--patient-history-prescription-row-bg, var(--bg-primary, #fff)) !important;
-  background-color: color-mix(in srgb, var(--patient-history-prescription-row-bg, var(--bg-primary, #fff)) 50%, var(--patient-history-row-accent, var(--patient-history-prescription-row-bg))) !important;
-}
-
-.patient-history-table tbody tr.patient-history-prescription-row--shinjang:not(.patient-history-current-row):is(:hover, .patient-history-row--hovered):not(:has(.is-selected, .is-fill-preview)) > td {
-  background-color: #f1f5f9 !important;
-}
-
-.patient-history-table tbody tr.patient-history-prescription-row--shinjang.patient-history-current-row:is(:hover, .patient-history-row--hovered):not(:has(.is-selected, .is-fill-preview)) > td {
-  background-color: #e2e8f0 !important;
+/* 마우스 호버 시 현재 배경색(현재 셀이든 일반 행이든)보다 약간 더 진해지도록 블렌딩 */
+.patient-history-table tbody tr.patient-history-prescription-row:is(:hover, .patient-history-row--hovered):not(:has(.is-selected, .is-fill-preview)) > td,
+.patient-history-table tbody tr.patient-history-current-row:is(:hover, .patient-history-row--hovered):not(:has(.is-selected, .is-fill-preview)) > td {
+  background-color: var(--patient-history-prescription-row-bg, var(--patient-history-current-row-bg, #f1f5f9)) !important;
+  background-color: color-mix(in srgb, var(--patient-history-prescription-row-bg, var(--patient-history-current-row-bg, var(--bg-primary, #fff))) 87%, #0f172a 13%) !important;
 }
 
 .patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-selected) > td,
