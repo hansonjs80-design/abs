@@ -9,7 +9,7 @@ export const PATIENT_HISTORY_VISIT_SEQUENCE_COLORS = [
 ];
 
 export const PATIENT_HISTORY_TREATMENT_SEQUENCE_PALETTES = {
-  shockwave: ['#bfdbfe', '#93c5fd', '#a5b4fc'],
+  shockwave: ['#8b9dc3', '#93c5fd', '#a5b4fc'],
   manual: ['#fed7aa', '#fdba74', '#fde68a', '#fecdd3'],
   shinjang: ['#bbf7d0', '#86efac', '#a6f4d0', '#c2f4bd'],
 };

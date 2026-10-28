@@ -398,7 +398,7 @@ function PatientHistoryModal({
                           );
                           const effectiveVisitColor = visitSequenceColor
                             || PATIENT_HISTORY_TREATMENT_SEQUENCE_PALETTES[historyTreatmentGroup]?.[0]
-                            || '#bfdbfe';
+                            || PATIENT_HISTORY_TREATMENT_SEQUENCE_PALETTES.shockwave[0];
                           const rowAccentColor = isShinjangGroup ? '#cbd5e1' : effectiveVisitColor;
                           const currentCellRowBackground = isCurrentHistoryRow
                             ? (isShinjangGroup

@@ -115,7 +115,7 @@ describe('patient history visit sequence colors', () => {
     const colors = getPatientHistoryGroupedVisitSequenceColors(rows);
 
     assert.deepEqual(colors.slice(0, 2), ['#fed7aa', '#fed7aa']);
-    assert.deepEqual(colors.slice(2, 4), ['#bfdbfe', '#bfdbfe']);
+    assert.deepEqual(colors.slice(2, 4), ['#8b9dc3', '#8b9dc3']);
     assert.deepEqual(colors.slice(4, 6), ['#bbf7d0', '#bbf7d0']);
     assert.equal(new Set([colors[0], colors[2], colors[4]]).size, 3);
   });
@@ -132,7 +132,7 @@ describe('patient history visit sequence colors', () => {
     ];
 
     assert.deepEqual(getPatientHistoryGroupedVisitSequenceColors(rows), [
-      '#bfdbfe',
+      '#8b9dc3',
       ...Array(6).fill('#93c5fd'),
     ]);
   });
@@ -161,6 +161,6 @@ describe('patient history visit sequence colors', () => {
     const colors = getPatientHistoryGroupedVisitSequenceColors(rows);
     assert.equal(colors[0], '#fed7aa');
     assert.equal(colors[1], '#fdba74');
-    assert.equal(colors[2], '#bfdbfe');
+    assert.equal(colors[2], '#8b9dc3');
   });
 });

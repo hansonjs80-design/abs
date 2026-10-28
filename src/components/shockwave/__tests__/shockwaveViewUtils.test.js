@@ -90,7 +90,7 @@ describe('shockwave view patient history model', () => {
       ],
     });
 
-    assert.deepEqual(groups[0].visitSequenceColors, ['#bfdbfe', '#bfdbfe', '#bfdbfe']);
+    assert.deepEqual(groups[0].visitSequenceColors, ['#8b9dc3', '#8b9dc3', '#8b9dc3']);
   });
 
   it('keeps shinjang visit colors continuous across different prescriptions', () => {
