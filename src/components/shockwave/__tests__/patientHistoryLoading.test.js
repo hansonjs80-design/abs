@@ -168,3 +168,36 @@ test('repeated searches reflect a changed prescription and treatment group immed
   assert.equal(f.data.logs[0].history_group, 'shinjang');
   assert.equal(f.data.logs[0]._insuranceScheduleRow.prescription, '신장분사 1');
 });
+
+
+test('a new history search clears body and prescription filters before results arrive',async()=>{
+  let finish;const waiting=new Promise(resolve=>{finish=resolve;});
+  let body={all:['Rt. 족저근막염(M722)']},prescription={all:['신장분사 2.5']};
+  const f=fixture(async()=>{await waiting;return {data:[]};},{
+    setPatientHistoryBodyFilters:value=>{body=value;},
+    setPatientHistoryPrescriptionFilters:value=>{prescription=value;},
+  });
+  const pending=f.actions.fetchPatientHistory('다른 가상환자','TEST7');
+  assert.deepEqual(Object.keys(body),[]);
+  assert.deepEqual(Object.keys(prescription),[]);
+  finish();await pending;
+});
+
+
+test('opening history from a schedule cell clears stale filters before the first dialog render, even without a patient',async()=>{
+  for(const hasPatient of [false,true]) {
+    let body={all:['Rt. 족저근막염(M722)']},prescription={all:['신장분사 2.5']};
+    const f=fixture(async()=>({data:[]}),{
+      selectedCell:hasPatient?{w:0,d:0,r:0,c:0}:null,
+      memos:hasPatient?{'0-0-0-0':{content:'461/가상환자(1)'}}:{},
+      setPatientHistoryBodyFilters:value=>{body=value;},
+      setPatientHistoryPrescriptionFilters:value=>{prescription=value;},
+      setPatientHistoryModalOpen:()=>{
+        assert.deepEqual(Object.keys(body),[],'body is all before dialog opens');
+        assert.deepEqual(Object.keys(prescription),[],'prescription is all before dialog opens');
+      },
+    });
+    await f.actions.handleOpenPatientHistoryModal();
+    if(!hasPatient)assert.equal(f.calls.length,0,'unselected cell opens without a query');
+  }
+});

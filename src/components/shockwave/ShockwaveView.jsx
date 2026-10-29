@@ -2173,6 +2173,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     clearImmediateCellDisplay,
     setPatientHistoryModalOpen,
     setPatientHistoryModalData,
+    setPatientHistoryBodyFilters,
+    setPatientHistoryPrescriptionFilters,
     patientHistoryTargetCellRef,
     invalidateCellSavesForPayload,
   });

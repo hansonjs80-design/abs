@@ -308,6 +308,8 @@ export default function usePatientHistoryActions({
   clearImmediateCellDisplay,
   setPatientHistoryModalOpen,
   setPatientHistoryModalData,
+  setPatientHistoryBodyFilters,
+  setPatientHistoryPrescriptionFilters,
   patientHistoryTargetCellRef,
   invalidateCellSavesForPayload,
 }) {
@@ -320,6 +322,10 @@ export default function usePatientHistoryActions({
   useEffect(() => cancelPatientHistorySearch, [currentYear, currentMonth, cancelPatientHistorySearch]);
 
   const fetchPatientHistory = useCallback(async (nameParam, chartParam, options = {}) => {
+    // A new search starts with its complete result set, even when another
+    // patient shared the same body/prescription labels in the previous search.
+    setPatientHistoryBodyFilters?.({});
+    setPatientHistoryPrescriptionFilters?.({});
     const requestId = ++patientHistoryRequestRef.current;
     const isCurrentRequest = () => patientHistoryRequestRef.current === requestId;
     const activeSelectedKey = String(options?.selectedKey || '');
@@ -856,6 +862,8 @@ export default function usePatientHistoryActions({
     colCount,
     cellKey,
     setPatientHistoryModalData,
+    setPatientHistoryBodyFilters,
+    setPatientHistoryPrescriptionFilters,
     patientHistoryTargetCellRef,
     addToast,
   ]);
@@ -1395,6 +1403,10 @@ export default function usePatientHistoryActions({
   ]);
 
   const handleOpenPatientHistoryModal = useCallback(async () => {
+    // Reset before the very first open, including empty/unselected cells that
+    // show the dialog without starting a fetch.
+    setPatientHistoryBodyFilters?.({});
+    setPatientHistoryPrescriptionFilters?.({});
     try {
       const targetCell = resolvePatientHistoryApplyTarget(
         patientHistoryTargetCellRef?.current,
@@ -1443,7 +1455,7 @@ export default function usePatientHistoryActions({
       console.error(e);
       addToast('검색창을 열지 못했습니다. 다시 시도해 주세요.', 'error');
     }
-  }, [selectedCell, cellKey, editingCell, editInputRef, editValue, memos, pendingDisplayValues, fetchPatientHistory, setPatientHistoryModalOpen, setPatientHistoryModalData, patientHistoryTargetCellRef, cancelPatientHistorySearch, addToast]);
+  }, [selectedCell, cellKey, editingCell, editInputRef, editValue, memos, pendingDisplayValues, fetchPatientHistory, setPatientHistoryModalOpen, setPatientHistoryModalData, patientHistoryTargetCellRef, cancelPatientHistorySearch, addToast, setPatientHistoryBodyFilters, setPatientHistoryPrescriptionFilters]);
 
   const handleApplyHistoryToCell = useCallback(async (log) => {
     const targetCell = resolvePatientHistoryApplyTarget(
