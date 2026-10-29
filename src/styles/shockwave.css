@@ -4535,10 +4535,15 @@
   background-color: var(--patient-history-prescription-row-bg, var(--bg-primary, #fff)) !important;
 }
 
+/* Identify the current shinjang row with a dark gray frame and left marker. */
+.patient-history-table tbody tr.patient-history-current-row.patient-history-prescription-row--shinjang {
+  --patient-history-current-row-border: #4b5563;
+}
+
 .patient-history-table tbody tr.patient-history-current-row td {
   background-color: var(--patient-history-current-row-bg) !important;
-  border-top: 2px solid rgba(37, 99, 235, 0.46) !important;
-  border-bottom: 2px solid rgba(37, 99, 235, 0.46) !important;
+  border-top: 2px solid var(--patient-history-current-row-border, rgba(37, 99, 235, 0.46)) !important;
+  border-bottom: 2px solid var(--patient-history-current-row-border, rgba(37, 99, 235, 0.46)) !important;
   height: 23px;
   padding-top: 3px !important;
   padding-bottom: 3px !important;
@@ -4546,12 +4551,12 @@
 
 .patient-history-table tbody tr.patient-history-current-row .patient-history-row-number-cell {
   background-color: var(--patient-history-current-row-bg) !important;
-  border-left: 2px solid rgba(37, 99, 235, 0.46) !important;
-  box-shadow: inset 3px 0 0 var(--brand-primary, #2563eb);
+  border-left: 2px solid var(--patient-history-current-row-border, rgba(37, 99, 235, 0.46)) !important;
+  box-shadow: inset 3px 0 0 var(--patient-history-current-row-border, var(--brand-primary, #2563eb));
 }
 
 .patient-history-table tbody tr.patient-history-current-row td:last-child {
-  border-right: 2px solid rgba(37, 99, 235, 0.46) !important;
+  border-right: 2px solid var(--patient-history-current-row-border, rgba(37, 99, 235, 0.46)) !important;
 }
 
 .patient-history-table tbody tr.patient-history-current-row .patient-history-edit-field,
