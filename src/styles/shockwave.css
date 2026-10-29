@@ -4540,6 +4540,11 @@
   --patient-history-current-row-border: #4b5563;
 }
 
+/* Use the manual-therapy treatment color for its current-row frame. */
+.patient-history-table tbody tr.patient-history-current-row[data-patient-history-treatment="manual"] {
+  --patient-history-current-row-border: #92400e;
+}
+
 .patient-history-table tbody tr.patient-history-current-row td {
   background-color: var(--patient-history-current-row-bg) !important;
   border-top: 2px solid var(--patient-history-current-row-border, rgba(37, 99, 235, 0.46)) !important;
