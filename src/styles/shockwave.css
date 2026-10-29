@@ -4652,10 +4652,16 @@
   background-color: color-mix(in srgb, var(--patient-history-prescription-row-bg, var(--patient-history-current-row-bg, var(--bg-primary, #fff))) 87%, #0f172a 13%) !important;
 }
 
-/* Shockwave hover strengthens its own blue/violet tint without a gray overlay. */
-.patient-history-table tbody tr[data-patient-history-treatment="shockwave"]:is(:hover, .patient-history-row--hovered):not(:has(.is-selected, .is-fill-preview)) > td {
+/* Treatment hover strengthens its own tint without a gray overlay. */
+.patient-history-table tbody tr[data-patient-history-treatment="shockwave"]:is(:hover, .patient-history-row--hovered):not(:has(.is-selected, .is-fill-preview)) > td,
+.patient-history-table tbody tr[data-patient-history-treatment="manual"]:is(:hover, .patient-history-row--hovered):not(:has(.is-selected, .is-fill-preview)) > td {
   background-color: var(--patient-history-prescription-row-bg) !important;
   background-color: color-mix(in srgb, var(--patient-history-prescription-row-bg) 75%, var(--patient-history-row-accent) 25%) !important;
+}
+
+/* Reduce the gray overlay by 10% (13% -> 11.7%), including the current row. */
+.patient-history-table tbody tr[data-patient-history-treatment="shinjang"]:is(:hover, .patient-history-row--hovered):not(:has(.is-selected, .is-fill-preview)) > td {
+  background-color: color-mix(in srgb, var(--patient-history-prescription-row-bg) 88.3%, #0f172a 11.7%) !important;
 }
 
 .patient-history-table tbody tr:has(.patient-history-data-cell--selectable.is-selected) > td,
