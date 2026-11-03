@@ -681,9 +681,11 @@ export default function CombinedStatsPage() {
   const effectiveRecentLayout = totalVisibleRecentCount === 4
     ? 'vertical'
     : (isAdmin && showIonTreatment ? recentIonLayout : (recentIonLayout === 'vertical' ? 'vertical' : 'default'));
-  const treatmentsBeforeIon = effectiveRecentLayout === 'vertical'
-    ? (totalVisibleRecentCount === 5 ? (recentTableVisibility.overall ? 3 : 4) : visibleRecentTreatments.length)
-    : (recentTableVisibility.overall ? 1 : 2);
+  const treatmentsBeforeIon = totalVisibleRecentCount === 4
+    ? (recentTableVisibility.overall ? 1 : 2)
+    : (effectiveRecentLayout === 'vertical'
+        ? (totalVisibleRecentCount === 5 ? (recentTableVisibility.overall ? 3 : 4) : visibleRecentTreatments.length)
+        : (recentTableVisibility.overall ? 1 : 2));
   const renderRecentTreatmentTable = ({ key, label }) => (
     <CombinedRecentTreatmentTable key={key} treatment={key} label={label} periodLabel={recentPeriodLabel} cryoModeLabel={cryoModeLabel} summaries={recentRows} currentMonthKey={currentMonthKey} viewMode={recentTreatmentViewModes[key] || 'total-only'} onViewModeChange={(mode) => setRecentTreatmentViewModes((current) => ({ ...current, [key]: mode }))} />
   );

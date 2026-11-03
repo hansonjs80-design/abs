@@ -2074,6 +2074,7 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   grid-template-columns: repeat(2, clamp(480px, 36vw, 700px)) !important;
 }
 .combined-recent-scroll .combined-stats-dashboard--settlement > .combined-ion-treatment { grid-column: auto; }
+.combined-recent-scroll .combined-stats-dashboard--settlement[data-table-count="4"] > .combined-ion-treatment { grid-column: auto !important; }
 .combined-recent-scroll .combined-stats-dashboard--settlement[data-recent-layout="vertical"] > .combined-ion-treatment { grid-column: 1; }
 .combined-recent-scroll .combined-stats-dashboard--settlement[data-recent-layout="vertical"][data-table-count="5"] > .combined-ion-treatment { grid-column: 1; }
 .combined-recent-scroll .combined-stats-recent-heading { contain: inline-size; min-width: 0; align-content: flex-start; }
