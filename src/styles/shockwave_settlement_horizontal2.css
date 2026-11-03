@@ -166,7 +166,7 @@ body.shockwave-settlement-print .sw-view-mode-btn {
   align-items: start !important;
   width: max-content !important;
   padding: 14px 18px !important;
-  background: #ffffff !important;
+  background: transparent !important;
 }
 
 .sw-horizontal2-layout--single {

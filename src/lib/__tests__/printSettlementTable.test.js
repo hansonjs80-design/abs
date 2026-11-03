@@ -207,6 +207,34 @@ test('five recent tables retain the screen grid in landscape and portrait print'
   assert.doesNotMatch(styles[2].textContent, /\[data-layout="vertical"\]\[data-table-count="5"\] > table/);
 });
 
+test('four recent tables use a 2x2 grid in screen and print', (t) => {
+  const copies = Array.from({ length: 4 }, () => ({ style: {}, querySelectorAll: () => [], prepend() {} }));
+  const tables = copies.map((copy) => ({
+    closest: () => null,
+    cloneNode: () => copy,
+  }));
+  let printGrid;
+  const styles = [];
+  const doc = {
+    createElement: (tag) => tag === 'div'
+      ? (printGrid = { dataset: {}, appendChild() {} })
+      : {},
+    head: { appendChild: (node) => styles.push(node) },
+    body: { appendChild() {}, offsetHeight: 100 },
+  };
+  const frame = { style: {}, contentDocument: doc, contentWindow: { addEventListener() {}, focus() {}, print() {} } };
+  const originalDocument = globalThis.document;
+  t.after(() => {
+    if (originalDocument === undefined) delete globalThis.document;
+    else globalThis.document = originalDocument;
+  });
+  globalThis.document = { getElementById: () => null, createElement: () => frame, body: { appendChild() {} } };
+
+  printSettlementTable({ dataset: { recentView: 'total-only', recentLayout: 'vertical' }, querySelectorAll: () => tables }, '전체결산', { includeRecentTables: true, orientation: 'landscape' });
+  assert.equal(printGrid.dataset.tableCount, '4');
+  assert.match(styles[0].textContent, /\.combined-recent-print-grid\[data-table-count="4"\] \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\) !important; \}/);
+});
+
 test('recent print copies visible column ratios and cell alignment', (t) => {
   const sourceHeaders = [60, 30, 90].map((width) => ({ getBoundingClientRect: () => ({ width }) }));
   const sourceCells = [

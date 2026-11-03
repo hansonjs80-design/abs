@@ -10,14 +10,14 @@
 .c-arm-view-tabs .c-arm-tab-btn { padding: 5px 12px; border: none; border-radius: 5px; background: transparent; color: var(--text-secondary, #64748b); font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s ease; white-space: nowrap; }
 .c-arm-view-tabs .c-arm-tab-btn:hover { color: var(--text-primary, #1e293b); }
 .c-arm-view-tabs .c-arm-tab-btn.is-active { background: #2157a0; color: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
-.c-arm-empty-row td { text-align: center; color: var(--text-secondary, #64748b); padding: 20px 8px; font-size: 13px; background: var(--bg-primary, white); }
+.c-arm-empty-row td { text-align: center; color: var(--text-secondary, #64748b); padding: 20px 8px; font-size: 13px; background: #ffffff; }
 .c-arm-status { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; min-height: 18px; }
 .c-arm-error { padding: 12px; border: 1px solid #e1a4a4; border-radius: 7px; background: #fff0f0; color: #a51d2d; font-size: 14px; }
 .c-arm-layout { display: flex; align-items: flex-start; gap: 24px; }
 .c-arm-records-pane { display: flex; flex-direction: column; gap: 10px; flex: 0 1 calc(var(--c-arm-person-count) * (96px + var(--c-arm-col-count, 2) * 52px + 16px)); min-width: 200px; }
 .c-arm-records-toolbar { display: flex; align-items: center; justify-content: flex-start; }
 .c-arm-records { display: grid; width: 100%; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); align-items: start; gap: 16px; }
-.c-arm-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px; background: var(--bg-primary, white); font-variant-numeric: tabular-nums; }
+.c-arm-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px; background: #ffffff; font-variant-numeric: tabular-nums; }
 .c-arm-table caption { padding: 10px; background: #dce7f7; border: 1px solid #aab7ca; border-bottom: 0; color: #173459; font-size: 17px; font-weight: 750; overflow-wrap: anywhere; }
 .c-arm-table th, .c-arm-table td { border: 1px solid var(--border-color, #cdd3dc); height: 29px; padding: 4px 6px; text-align: right; }
 .c-arm-table thead th { background: var(--bg-secondary, #f2f4f7); text-align: center; font-size: 13px; }

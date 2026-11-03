@@ -2569,19 +2569,53 @@ body.settlement-print .sw-settlement-stack--shockwave[data-view-mode="horizontal
 
 
 
-/* Keep settlement table surrounds clean on screen and in print. */
+/* Keep settlement outer layout wrappers transparent on screen so the active tab page tone shows cleanly, while keeping actual table wrappers and cards white. */
+.sw-stats-body,
 .sw-stats-body.sw-stats-body--settlement,
 .sw-stats-body--settlement :is(
+  .sw-settlement-stack,
   .sw-settlement-card,
+  .sw-manual-settlement-container,
+  .sw-settlement-vertical-header-wrap,
+  .sw-settlement-vertical-layout,
+  .sw-settlement-vertical-body,
+  .sw-horizontal2-layout,
+  .sw-new-patient-stack,
+  .sw-new-patient-card
+) {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.sw-stats-body--settlement :is(
   .sw-settlement-table-wrap,
   .sw-compact-table-wrap,
-  .sw-manual-settlement-container,
   .sw-manual-settlement-table-wrap,
   .sw-summary-table-wrap,
   .sw-six-month-summary-wrap,
-  .sw-settlement-vertical-header-wrap,
-  .sw-vertical-therapist-card
+  .sw-vertical-therapist-card,
+  .sw-new-patient-table-wrap,
+  .shinjang-spray-settings-list
 ) {
   background: #ffffff !important;
   box-shadow: none !important;
+}
+
+@media print {
+  .sw-stats-body.sw-stats-body--settlement,
+  .sw-stats-body--settlement :is(
+    .sw-settlement-card,
+    .sw-settlement-table-wrap,
+    .sw-compact-table-wrap,
+    .sw-manual-settlement-container,
+    .sw-manual-settlement-table-wrap,
+    .sw-summary-table-wrap,
+    .sw-six-month-summary-wrap,
+    .sw-settlement-vertical-header-wrap,
+    .sw-vertical-therapist-card
+  ) {
+    background: #ffffff !important;
+    box-shadow: none !important;
+  }
 }

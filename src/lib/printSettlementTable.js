@@ -76,6 +76,7 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     .combined-recent-print-grid[data-view="detail"][data-layout="default"] { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2mm; }
     .combined-recent-print-grid[data-layout="horizontal"] { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3mm; }
     .combined-recent-print-grid[data-layout="vertical"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .combined-recent-print-grid[data-table-count="4"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
     .combined-recent-print-grid table { width: 100%; table-layout: fixed; font-size: 9px; margin: 0; }
     .combined-recent-print-grid col { width: auto !important; }
     .combined-recent-print-grid th, .combined-recent-print-grid td { padding: 3px; vertical-align: middle; font-variant-numeric: tabular-nums; overflow-wrap: normal; white-space: nowrap; }

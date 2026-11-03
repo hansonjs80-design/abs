@@ -1277,18 +1277,36 @@
   }
 }
 
-/* Use the same white, shadow-free table surrounds on screen and in print. */
-.combined-stats-page,
+/* Keep page and layout wrappers matched to the active tab tone on screen, while keeping print backgrounds white. */
+.combined-stats-page {
+  background: var(--active-page-surface, var(--bg-primary)) !important;
+}
+
 .combined-stats-header,
 .combined-stats-dashboard,
 .combined-stats-current,
-.combined-stats-side {
-  background: #ffffff !important;
+.combined-stats-side,
+.combined-stats-summary-container,
+.combined-therapist-column,
+.combined-vertical-left,
+.combined-vertical-right {
+  background: transparent !important;
 }
 
 .combined-therapist-card,
 .combined-stats-recent {
+  background: #ffffff !important;
   box-shadow: none !important;
+}
+
+@media print {
+  .combined-stats-page,
+  .combined-stats-header,
+  .combined-stats-dashboard,
+  .combined-stats-current,
+  .combined-stats-side {
+    background: #ffffff !important;
+  }
 }
 
 body[class*="-print"] .combined-recent-filter-tabs,
@@ -2052,8 +2070,12 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
 .combined-recent-scroll .combined-stats-dashboard--settlement[data-recent-layout="vertical"] {
   grid-template-columns: repeat(2, clamp(480px, 36vw, 700px)) !important;
 }
+.combined-recent-scroll .combined-stats-dashboard--settlement[data-table-count="4"] {
+  grid-template-columns: repeat(2, clamp(480px, 36vw, 700px)) !important;
+}
 .combined-recent-scroll .combined-stats-dashboard--settlement > .combined-ion-treatment { grid-column: auto; }
 .combined-recent-scroll .combined-stats-dashboard--settlement[data-recent-layout="vertical"] > .combined-ion-treatment { grid-column: 1; }
+.combined-recent-scroll .combined-stats-dashboard--settlement[data-recent-layout="vertical"][data-table-count="5"] > .combined-ion-treatment { grid-column: 1; }
 .combined-recent-scroll .combined-stats-recent-heading { contain: inline-size; min-width: 0; align-content: flex-start; }
 .combined-recent-scroll .combined-stats-recent-heading h2 { width: 100%; font-size: 15px; }
 .combined-recent-scroll .combined-recent-controls { flex-wrap: wrap; gap: 6px; }

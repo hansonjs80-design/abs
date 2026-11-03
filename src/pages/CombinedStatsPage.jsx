@@ -677,9 +677,13 @@ export default function CombinedStatsPage() {
   ) : null;
   const recentRows = [...monthSummaries].reverse();
   const visibleRecentTreatments = COMBINED_STATS_TREATMENTS.filter(({ key }) => recentTableVisibility[key] && (isAdmin || key !== 'manual_therapy'));
-  const treatmentsBeforeIon = recentIonLayout === 'vertical'
-    ? visibleRecentTreatments.length
-    : recentTableVisibility.overall ? 1 : 2;
+  const totalVisibleRecentCount = (recentTableVisibility.overall ? 1 : 0) + visibleRecentTreatments.length + (isAdmin && showIonTreatment ? 1 : 0);
+  const effectiveRecentLayout = totalVisibleRecentCount === 4
+    ? 'vertical'
+    : (isAdmin && showIonTreatment ? recentIonLayout : (recentIonLayout === 'vertical' ? 'vertical' : 'default'));
+  const treatmentsBeforeIon = effectiveRecentLayout === 'vertical'
+    ? (totalVisibleRecentCount === 5 ? (recentTableVisibility.overall ? 3 : 4) : visibleRecentTreatments.length)
+    : (recentTableVisibility.overall ? 1 : 2);
   const renderRecentTreatmentTable = ({ key, label }) => (
     <CombinedRecentTreatmentTable key={key} treatment={key} label={label} periodLabel={recentPeriodLabel} cryoModeLabel={cryoModeLabel} summaries={recentRows} currentMonthKey={currentMonthKey} viewMode={recentTreatmentViewModes[key] || 'total-only'} onViewModeChange={(mode) => setRecentTreatmentViewModes((current) => ({ ...current, [key]: mode }))} />
   );
@@ -1078,7 +1082,13 @@ export default function CombinedStatsPage() {
           </div>}
         </div>
         <div className="combined-recent-scroll" role="region" aria-label="최근 결산 표 가로 스크롤" tabIndex={0}>
-        <div className="combined-stats-dashboard combined-stats-dashboard--settlement" data-recent-view={hasVisibleRecentDetails ? 'detail' : 'total-only'} data-recent-layout={isAdmin && showIonTreatment ? recentIonLayout : 'default'} data-print-title={`${recentPeriodLabel} 전체결산(${cryoModeLabel})`}>
+        <div
+          className="combined-stats-dashboard combined-stats-dashboard--settlement"
+          data-recent-view={hasVisibleRecentDetails ? 'detail' : 'total-only'}
+          data-recent-layout={effectiveRecentLayout}
+          data-table-count={String(totalVisibleRecentCount)}
+          data-print-title={`${recentPeriodLabel} 전체결산(${cryoModeLabel})`}
+        >
           {recentTableVisibility.overall && <section className="combined-stats-recent combined-settlement-recent-main" aria-label={`${recentPeriodLabel} 전체 결산 현황`}>
             <div className="combined-stats-recent-heading">
               <div>
