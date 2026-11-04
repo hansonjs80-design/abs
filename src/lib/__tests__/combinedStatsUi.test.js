@@ -90,8 +90,8 @@ describe('combined statistics UI', () => {
 
     assert.match(styleSource, /\.top-tab\s*\{[^}]*border-radius:\s*10px 10px 0 0;/);
     assert.match(styleSource, /\.top-tab\.active\s*\{[^}]*border-radius:\s*10px 10px 0 0;/);
-    assert.match(styleSource, /\.top-tab--stats-sw\s*\{[\s\S]*?--tab-active-surface:\s*#f0f9ff;/);
-    assert.match(styleSource, /\.top-tab--stats-combined\s*\{[\s\S]*?--tab-active-surface:\s*#fef2f2;/);
+    assert.match(styleSource, /\.top-tab--stats-sw\s*\{[\s\S]*?--tab-active-surface:\s*#faf5ff;/);
+    assert.match(styleSource, /\.top-tab--stats-combined\s*\{[\s\S]*?--tab-active-surface:\s*#eef2ff;/);
   });
 
   it('uses current-month-first loading and compact screen and print table geometry', async () => {
