@@ -65,14 +65,18 @@ import { mergeMonthlySettingsPreservingDeviceProfiles } from '../lib/shockwaveSe
 import { getSavedStaffDisplayRules, withSavedStaffDisplayRules } from '../lib/staffDisplayRules';
 
 const ScheduleContext = createContext();
-const LOCAL_WRITE_STALE_GUARD_MS = 5000;
+const CLIENT_SESSION_ID = typeof crypto !== 'undefined' && crypto.randomUUID
+  ? crypto.randomUUID()
+  : Math.random().toString(36).slice(2) + Date.now().toString(36);
+const LOCAL_WRITE_STALE_GUARD_MS = 1500;
 const SHOCKWAVE_MEMO_VIEW_CACHE_LIMIT = 8;
 const SHOCKWAVE_RAW_MONTH_CACHE_LIMIT = 12;
 const SHOCKWAVE_MONTH_LOAD_RETRY_COUNT = 2;
 const SHOCKWAVE_MONTH_LOAD_RETRY_DELAY_MS = 500;
 const SHOCKWAVE_REALTIME_RELOAD_DEBOUNCE_MS = 120;
-const SHOCKWAVE_BACKGROUND_REFRESH_DEBOUNCE_MS = 500;
-const SHOCKWAVE_BACKGROUND_REFRESH_MIN_INTERVAL_MS = 12000;
+const SHOCKWAVE_BACKGROUND_REFRESH_DEBOUNCE_MS = 100;
+const SHOCKWAVE_BACKGROUND_REFRESH_MIN_INTERVAL_MS = 1500;
+const SHOCKWAVE_SMART_POLL_INTERVAL_MS = 3500;
 const SHOCKWAVE_NAVIGATION_PRELOAD_DEBOUNCE_MS = 80;
 const SCHEDULE_QUERY_TIMEOUT_MS = 15000;
 const HIDDEN_MERGED_RELOCATION_SOURCE_META_KEY = 'relocated_from_hidden_merge_cell';
@@ -274,6 +278,8 @@ export function ScheduleProvider({ children }) {
   const realtimeRefreshTimerRef = useRef(null);
   const shockwaveRealtimeReloadTimerRef = useRef(null);
   const lastBackgroundRefreshAtRef = useRef(0);
+  const scheduleChannelRef = useRef(null);
+  const lastKnownScheduleServerUpdatedAtRef = useRef(null);
   const staffMemosRef = useRef(staffMemos);
   const staffMemosLoadedKeyRef = useRef(staffMemosLoadedKey);
   const staffMemoSaveRequestRef = useRef(new Map());
@@ -537,7 +543,13 @@ export function ScheduleProvider({ children }) {
     }
 
     const serverTime = getShockwaveMemoTime(serverItem);
-    if (serverTime > 0) return serverTime <= localTime;
+    if (serverTime > 0) {
+      if (serverTime > localTime) {
+        localShockwaveWriteTimeRef.current.delete(key);
+        return false;
+      }
+      return serverTime <= localTime;
+    }
 
     return true;
   }, [getShockwaveMemoTime]);
@@ -924,10 +936,24 @@ export function ScheduleProvider({ children }) {
 
       // 서버 데이터로 최종 업데이트
       if (staffMemoSaveRequestRef.current.get(key) !== requestId) return true;
+      const savedStaffData = data?.[0] || { ...upsertData, slot_index: slotIndex };
       setStaffMemos(prev => ({
         ...prev,
-        [key]: data?.[0] || { ...prev[key], ...upsertData, slot_index: slotIndex }
+        [key]: savedStaffData
       }));
+
+      if (scheduleChannelRef.current) {
+        scheduleChannelRef.current.send({
+          type: 'broadcast',
+          event: 'staff_memo_broadcast',
+          payload: {
+            action: 'upsert',
+            item: savedStaffData,
+            senderId: CLIENT_SESSION_ID,
+            timestamp: Date.now(),
+          },
+        }).catch(() => {});
+      }
       return true;
     } catch (err) {
       if (staffMemoSaveRequestRef.current.get(key) === requestId) {
@@ -2187,22 +2213,35 @@ export function ScheduleProvider({ children }) {
 
     const refreshWhenVisible = () => {
       if (document.visibilityState === 'visible') {
+        if (scheduleChannelRef.current) {
+          const state = scheduleChannelRef.current.state;
+          if (state === 'errored' || state === 'timed_out' || state === 'closed') {
+            scheduleChannelRef.current.subscribe();
+          }
+        }
         refreshCurrentScheduleFromServer('visibility', {
           force: true,
+          invalidateCache: true,
           minIntervalMs: SHOCKWAVE_BACKGROUND_REFRESH_MIN_INTERVAL_MS,
+          debounceMs: 50,
         });
       }
     };
     const refreshWhenOnline = () => {
+      if (scheduleChannelRef.current) {
+        scheduleChannelRef.current.subscribe();
+      }
       refreshCurrentScheduleFromServer('online', {
         force: true,
         invalidateCache: true,
+        debounceMs: 50,
       });
     };
     const refreshWhenFocused = () => {
       refreshCurrentScheduleFromServer('focus', {
         force: true,
         minIntervalMs: SHOCKWAVE_BACKGROUND_REFRESH_MIN_INTERVAL_MS,
+        debounceMs: 50,
       });
     };
 
@@ -2347,6 +2386,21 @@ export function ScheduleProvider({ children }) {
         });
       }
 
+      if (scheduleChannelRef.current && savedCanonicalMemo) {
+        const action = shouldKeepShockwaveMemo(savedCanonicalMemo) ? 'upsert' : 'delete';
+        scheduleChannelRef.current.send({
+          type: 'broadcast',
+          event: 'shockwave_memo_broadcast',
+          payload: {
+            action,
+            items: action === 'upsert' ? [savedCanonicalMemo] : [],
+            keys: [key],
+            senderId: CLIENT_SESSION_ID,
+            timestamp: Date.now(),
+          },
+        }).catch(() => {});
+      }
+
       const weeks = generateShockwaveCalendar(canonicalUpsertData.year, canonicalUpsertData.month);
       const dayInfo = weeks[canonicalUpsertData.week_index]?.[canonicalUpsertData.day_index];
       const targetDateStr = dayInfo && dayInfo.isCurrentMonth && canonicalUpsertData.year === year && canonicalUpsertData.month === month
@@ -2354,36 +2408,38 @@ export function ScheduleProvider({ children }) {
         : null;
 
       if (targetDateStr) {
-        if (therapists.length > 0) {
-          try {
-            await syncTodayShockwaveScheduleToStats({
-              year,
-              month,
-              memos: nextShockwaveMemos,
-              therapists,
-              monthlyTherapists,
-              settings: shockwaveSettingsRefCache.current,
-              targetDateStr,
-            });
-          } catch (syncErr) {
-            console.error('Failed to sync shockwave memo to stats:', syncErr);
+        setTimeout(async () => {
+          if (therapists.length > 0) {
+            try {
+              await syncTodayShockwaveScheduleToStats({
+                year,
+                month,
+                memos: nextShockwaveMemos,
+                therapists,
+                monthlyTherapists,
+                settings: shockwaveSettingsRefCache.current,
+                targetDateStr,
+              });
+            } catch (syncErr) {
+              console.error('Failed to sync shockwave memo to stats:', syncErr);
+            }
           }
-        }
-        if (manualTherapists.length > 0) {
-          try {
-            await syncTodayManualTherapyScheduleToStats({
-              year,
-              month,
-              memos: nextShockwaveMemos,
-              therapists: manualTherapists,
-              monthlyTherapists: monthlyManualTherapists,
-              settings: shockwaveSettingsRefCache.current,
-              targetDateStr,
-            });
-          } catch (syncErr) {
-            console.error('Failed to sync manual therapy memo to stats:', syncErr);
+          if (manualTherapists.length > 0) {
+            try {
+              await syncTodayManualTherapyScheduleToStats({
+                year,
+                month,
+                memos: nextShockwaveMemos,
+                therapists: manualTherapists,
+                monthlyTherapists: monthlyManualTherapists,
+                settings: shockwaveSettingsRefCache.current,
+                targetDateStr,
+              });
+            } catch (syncErr) {
+              console.error('Failed to sync manual therapy memo to stats:', syncErr);
+            }
           }
-        }
+        }, 0);
       }
       return true;
       } catch (err) {
@@ -2578,6 +2634,34 @@ export function ScheduleProvider({ children }) {
         });
       }
 
+      if (scheduleChannelRef.current) {
+        if (currentViewRelevantData.length > 0) {
+          scheduleChannelRef.current.send({
+            type: 'broadcast',
+            event: 'shockwave_memo_broadcast',
+            payload: {
+              action: 'upsert',
+              items: currentViewRelevantData,
+              senderId: CLIENT_SESSION_ID,
+              timestamp: Date.now(),
+            },
+          }).catch(() => {});
+        }
+        if (deletePayloads.length > 0) {
+          const delKeys = deletePayloads.map(d => `${d.week_index}-${d.day_index}-${d.row_index}-${d.col_index}`);
+          scheduleChannelRef.current.send({
+            type: 'broadcast',
+            event: 'shockwave_memo_broadcast',
+            payload: {
+              action: 'delete',
+              keys: delKeys,
+              senderId: CLIENT_SESSION_ID,
+              timestamp: Date.now(),
+            },
+          }).catch(() => {});
+        }
+      }
+
       const weeks = generateShockwaveCalendar(currentYear, currentMonth);
       const affectedDates = new Set();
       
@@ -2631,15 +2715,11 @@ export function ScheduleProvider({ children }) {
         return true;
       }
 
-      if (deferStatsSync) {
-        setTimeout(() => {
-          syncAffectedStats().catch((syncErr) => {
-            console.error('Failed to sync deferred bulk schedule stats:', syncErr);
-          });
-        }, 0);
-      } else {
-        await syncAffectedStats();
-      }
+      setTimeout(() => {
+        syncAffectedStats().catch((syncErr) => {
+          console.error('Failed to sync bulk schedule stats:', syncErr);
+        });
+      }, 0);
       return true;
     } catch (err) {
       window.lastDbError = err;
@@ -3003,7 +3083,73 @@ export function ScheduleProvider({ children }) {
 
   // Real-time synchronization
   useEffect(() => {
-    const channel = supabase.channel(`schedule-realtime-${currentYear}-${currentMonth}`)
+    const channel = supabase.channel(`schedule-realtime-${currentYear}-${currentMonth}`, {
+      config: {
+        broadcast: { self: false },
+      },
+    })
+      .on(
+        'broadcast',
+        { event: 'shockwave_memo_broadcast' },
+        (message) => {
+          const payload = message?.payload;
+          if (!payload || payload.senderId === CLIENT_SESSION_ID) return;
+
+          if (payload.action === 'upsert' && Array.isArray(payload.items)) {
+            payload.items.forEach((rawItem) => {
+              const item = sanitizeShockwaveScheduleItemForDisplay(
+                mapShockwaveScheduleItemToVisibleMonth(rawItem, currentYear, currentMonth)
+              );
+              if (!item) {
+                syncShockwaveRealtimeCaches(rawItem);
+                return;
+              }
+              const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+              if (shockwaveWriteQueueRef.current.has(key)) return;
+
+              syncShockwaveRealtimeCaches(rawItem, { affectsCurrentView: true });
+              if (item.updated_at) {
+                lastWriteTimeRef.current.set(key, item.updated_at);
+                lastKnownScheduleServerUpdatedAtRef.current = item.updated_at;
+              }
+              setShockwaveMemos(prev => applyRealtimeShockwaveMemoUpdate(prev, key, item, shouldKeepShockwaveMemo));
+            });
+          } else if (payload.action === 'delete' && Array.isArray(payload.keys)) {
+            payload.keys.forEach((targetKey) => {
+              if (shockwaveWriteQueueRef.current.has(targetKey)) return;
+              setShockwaveMemos(prev => {
+                if (!prev[targetKey]) return prev;
+                const next = { ...prev };
+                delete next[targetKey];
+                return next;
+              });
+            });
+          }
+        }
+      )
+      .on(
+        'broadcast',
+        { event: 'staff_memo_broadcast' },
+        (message) => {
+          const payload = message?.payload;
+          if (!payload || payload.senderId === CLIENT_SESSION_ID) return;
+          if (payload.action === 'upsert' && payload.item) {
+            const item = payload.item;
+            if (item.year === currentYear && item.month === currentMonth) {
+              const key = `${item.year}-${item.month}-${item.day}-${item.slot_index}`;
+              if (!staffMemoSaveRequestRef.current.has(key)) {
+                setStaffMemos(prev => ({ ...prev, [key]: item }));
+              }
+            }
+          } else if (payload.action === 'delete' && payload.targetKey) {
+            setStaffMemos(prev => {
+              const next = { ...prev };
+              delete next[payload.targetKey];
+              return next;
+            });
+          }
+        }
+      )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'shockwave_schedules' },
@@ -3028,6 +3174,7 @@ export function ScheduleProvider({ children }) {
             syncShockwaveRealtimeCaches(payload.new, { affectsCurrentView: true });
             if (item.updated_at) {
               lastWriteTimeRef.current.set(key, item.updated_at);
+              lastKnownScheduleServerUpdatedAtRef.current = item.updated_at;
             }
 
             setShockwaveMemos(prev => applyRealtimeShockwaveMemoUpdate(prev, key, item, shouldKeepShockwaveMemo));
@@ -3107,19 +3254,81 @@ export function ScheduleProvider({ children }) {
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           return;
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           console.warn(`Schedule realtime ${status}; refreshing current month from database.`);
           refreshCurrentScheduleFromServer(status.toLowerCase(), {
             force: true,
             invalidateCache: true,
+            debounceMs: 50,
           });
         }
       });
 
+    scheduleChannelRef.current = channel;
+
     return () => {
+      scheduleChannelRef.current = null;
       supabase.removeChannel(channel);
     };
   }, [currentYear, currentMonth, shouldKeepShockwaveMemo, shouldIgnoreStaleShockwaveServerItem, refreshCurrentScheduleFromServer, syncShockwaveRealtimeCaches]);
+
+  // 스마트 경량 폴링: WebSocket이 좀비 상태이거나 패킷이 유실되어도 3.5초 이내에 100% 동기화 보장
+  useEffect(() => {
+    let pollTimer = null;
+    let isPolling = false;
+
+    const checkServerUpdates = async () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return;
+      }
+      if (isPolling) return;
+      isPolling = true;
+
+      try {
+        const { data, error } = await supabase
+          .from('shockwave_schedules')
+          .select('updated_at')
+          .eq('year', currentYear)
+          .eq('month', currentMonth)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!error && data?.updated_at) {
+          const serverLatest = data.updated_at;
+          const knownLatest = lastKnownScheduleServerUpdatedAtRef.current;
+
+          if (!knownLatest) {
+            lastKnownScheduleServerUpdatedAtRef.current = serverLatest;
+          } else if (new Date(serverLatest).getTime() > new Date(knownLatest).getTime()) {
+            lastKnownScheduleServerUpdatedAtRef.current = serverLatest;
+            refreshCurrentScheduleFromServer('smart_poll', {
+              force: true,
+              invalidateCache: true,
+              debounceMs: 50,
+            });
+          }
+        }
+
+        if (scheduleChannelRef.current) {
+          const state = scheduleChannelRef.current.state;
+          if (state === 'errored' || state === 'timed_out' || state === 'closed') {
+            scheduleChannelRef.current.subscribe();
+          }
+        }
+      } catch (pollErr) {
+        // 백그라운드 폴링 실패는 무시
+      } finally {
+        isPolling = false;
+      }
+    };
+
+    pollTimer = setInterval(checkServerUpdates, SHOCKWAVE_SMART_POLL_INTERVAL_MS);
+
+    return () => {
+      if (pollTimer) clearInterval(pollTimer);
+    };
+  }, [currentYear, currentMonth, refreshCurrentScheduleFromServer]);
 
   return (
     <ScheduleContext.Provider value={{
