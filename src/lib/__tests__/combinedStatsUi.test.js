@@ -10,7 +10,7 @@ const styleUrl = new URL('../../styles/combined_stats.css', import.meta.url);
 const componentStyleUrl = new URL('../../styles/components.css', import.meta.url);
 
 describe('combined statistics UI', () => {
-  it('registers the combined tab immediately after manual therapy statistics', async () => {
+  it('registers the combined tab immediately after the schedule', async () => {
     const [appSource, permissionSource] = await Promise.all([
       readFile(appUrl, 'utf8'),
       readFile(permissionUrl, 'utf8'),
@@ -19,12 +19,12 @@ describe('combined statistics UI', () => {
     assert.match(appSource, /path="\/combined-stats"/);
     assert.match(permissionSource, /key: 'combined_stats'/);
     assert.ok(
-      permissionSource.indexOf("key: 'manual_therapy_stats'")
+      permissionSource.indexOf("key: 'shockwave'")
         < permissionSource.indexOf("key: 'combined_stats'")
     );
     assert.ok(
       permissionSource.indexOf("key: 'combined_stats'")
-        < permissionSource.indexOf("key: 'pt_stats'")
+        < permissionSource.indexOf("key: 'shockwave_stats'")
     );
   });
 

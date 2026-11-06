@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { MessageSquare, Settings, Trash2 } from 'lucide-react';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../lib/authPermissions';
-import { pasteNoticeClipboard } from '../../lib/noticeClipboardUtils';
+import { createNoticeClipboard, getNoticeSelectionIndices, pasteNoticeClipboard } from '../../lib/noticeClipboardUtils';
 import { getNoticeRowCount, MAX_NOTICE_ROW_COUNT } from '../../lib/noticeRows';
+import { useToast } from '../common/Toast';
 
 export default function NoticeBoard({
   departments = [],
@@ -16,10 +17,12 @@ export default function NoticeBoard({
 }) {
   const { currentYear, currentMonth, notices, loadNotices, saveNotice } = useSchedule();
   const { user } = useAuth();
+  const { addToast } = useToast();
   const canManageDepartments = isAdminUser(user);
   const [editingSlot, setEditingSlot] = useState(null);
-  const [selectedSlot, setSelectedSlot] = useState(null);
-  const [clipboardSlot, setClipboardSlot] = useState(null);
+  const [selection, setSelection] = useState(null);
+  const [clipboardSelection, setClipboardSelection] = useState(null);
+  const [isPasting, setIsPasting] = useState(false);
   const [editValue, setEditValue] = useState('');
   const [contextMenu, setContextMenu] = useState(null);
   const [isDepartmentSettingsOpen, setIsDepartmentSettingsOpen] = useState(false);
@@ -29,37 +32,54 @@ export default function NoticeBoard({
   const boardRef = useRef(null);
   const editingMonthRef = useRef(null);
   const selectedBeforeClickRef = useRef(false);
-  const noticeClipboardRef = useRef('');
+  const dragSelectionRef = useRef(null);
+  const suppressClickRef = useRef(false);
+  const selectionRef = useRef(null);
+  const pasteInProgressRef = useRef(false);
+  const noticeClipboardRef = useRef(null);
   const pendingCutRef = useRef(null);
   const currentNoticesRef = useRef({ year: currentYear, month: currentMonth, notices });
   const contextMenuRef = useRef(null);
-  const slotCount = getNoticeRowCount(notices, editingSlot, editValue);
+  const selectedIndices = getNoticeSelectionIndices(selection);
+  const slotCount = Math.max(
+    getNoticeRowCount(notices, editingSlot, editValue),
+    ...selectedIndices.map(index => index + 1),
+    ...(clipboardSelection?.indices || []).map(index => index + 1),
+  );
+
+  const selectRange = useCallback((anchor, focus = anchor) => {
+    const next = anchor === null ? null : { anchor, focus };
+    selectionRef.current = next;
+    setSelection(next);
+  }, []);
 
   useEffect(() => {
     currentNoticesRef.current = { year: currentYear, month: currentMonth, notices };
   }, [currentYear, currentMonth, notices]);
 
   useEffect(() => {
-    setSelectedSlot(null);
-    setClipboardSlot(null);
+    selectRange(null);
+    setClipboardSelection(null);
+    dragSelectionRef.current = null;
     pendingCutRef.current = null;
-    noticeClipboardRef.current = '';
+    noticeClipboardRef.current = null;
     setEditingSlot(null);
     setContextMenu(null);
-  }, [currentYear, currentMonth]);
+  }, [currentYear, currentMonth, selectRange]);
 
   useEffect(() => {
-    if (selectedSlot === null && clipboardSlot === null && !contextMenu) return undefined;
+    if (selection === null && clipboardSelection === null && !contextMenu) return undefined;
     const clearSelection = () => {
       // Finish any active edit through the existing blur/save path.
       const activeElement = document.activeElement;
       if (boardRef.current?.contains(activeElement)) activeElement.blur();
-      setSelectedSlot(null);
-      setClipboardSlot(null);
+      selectRange(null);
+      setClipboardSelection(null);
+      dragSelectionRef.current = null;
       setContextMenu(null);
       selectedBeforeClickRef.current = false;
       pendingCutRef.current = null;
-      noticeClipboardRef.current = '';
+      noticeClipboardRef.current = null;
     };
     const handleOutsidePointerDown = (event) => {
       if (boardRef.current?.contains(event.target) || contextMenuRef.current?.contains(event.target)) return;
@@ -77,7 +97,36 @@ export default function NoticeBoard({
       document.removeEventListener('pointerdown', handleOutsidePointerDown, true);
       document.removeEventListener('keydown', handleEscape, true);
     };
-  }, [selectedSlot, clipboardSlot, contextMenu]);
+  }, [selection, clipboardSelection, contextMenu, selectRange]);
+
+  useEffect(() => {
+    const moveSelection = (event) => {
+      const drag = dragSelectionRef.current;
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      const row = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-notice-index]');
+      if (!row || !boardRef.current?.contains(row)) return;
+      const focus = Number(row.dataset.noticeIndex);
+      if (focus !== drag.start) drag.moved = true;
+      selectRange(drag.anchor, focus);
+    };
+    const finishSelection = () => {
+      if (dragSelectionRef.current?.moved) {
+        suppressClickRef.current = true;
+        selectedBeforeClickRef.current = false;
+      }
+      dragSelectionRef.current = null;
+    };
+    document.addEventListener('pointermove', moveSelection);
+    document.addEventListener('pointerup', finishSelection);
+    document.addEventListener('pointercancel', finishSelection);
+    window.addEventListener('blur', finishSelection);
+    return () => {
+      document.removeEventListener('pointermove', moveSelection);
+      document.removeEventListener('pointerup', finishSelection);
+      document.removeEventListener('pointercancel', finishSelection);
+      window.removeEventListener('blur', finishSelection);
+    };
+  }, [selectRange]);
 
   useEffect(() => {
     if (!contextMenu) return undefined;
@@ -117,6 +166,8 @@ export default function NoticeBoard({
   }, [isDepartmentSettingsOpen]);
 
   const startEditing = (index, initialValue) => {
+    if (pasteInProgressRef.current) return;
+    selectRange(index);
     const existing = notices.find(n => n.slot_index === index);
     setEditValue(initialValue ?? existing?.content ?? '');
     setEditingSlot(index);
@@ -134,74 +185,141 @@ export default function NoticeBoard({
 
   const handleNoticeKeyDown = (event, index) => {
     if (event.target?.tagName === 'INPUT') return;
+    if (pasteInProgressRef.current) { event.preventDefault(); return; }
+    const activeIndex = selectionRef.current?.focus ?? index;
+
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'c' || event.key === 'C')) {
+      event.preventDefault();
+      const clipboard = prepareClipboard(index, false);
+      navigator.clipboard?.writeText(clipboard.text).catch(() => {});
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'x' || event.key === 'X')) {
+      event.preventDefault();
+      const clipboard = prepareClipboard(index, true);
+      navigator.clipboard?.writeText(clipboard.text).catch(() => {});
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'v' || event.key === 'V')) {
+      event.preventDefault();
+      const indices = getActionIndices(index);
+      navigator.clipboard?.readText()
+        .then((text) => applyNoticePaste(text || noticeClipboardRef.current?.text || '', indices[0]))
+        .catch(() => applyNoticePaste(noticeClipboardRef.current?.text || '', indices[0]));
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'a' || event.key === 'A')) {
+      event.preventDefault();
+      selectRange(0, slotCount - 1);
+      return;
+    }
+
     if (event.key === 'Enter' || event.key === 'F2') {
       event.preventDefault();
-      startEditing(index);
+      startEditing(activeIndex);
     } else if (event.key === 'Backspace' || event.key === 'Delete') {
       event.preventDefault();
-      if (notices.some(n => n.slot_index === index && n.content)) saveNotice(index, '', currentYear, currentMonth);
+      deleteNotices(index);
     } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
-      const next = Math.max(0, Math.min(slotCount - 1, index + (event.key === 'ArrowDown' ? 1 : -1)));
+      const next = Math.max(0, Math.min(slotCount - 1, activeIndex + (event.key === 'ArrowDown' ? 1 : -1)));
+      selectRange(event.shiftKey ? (selectionRef.current?.anchor ?? index) : next, next);
       slotRefs.current[next]?.focus();
     } else if (event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
       event.preventDefault();
-      startEditing(index, event.key);
+      startEditing(activeIndex, event.key);
     }
+  };
+
+  const getActionIndices = (index) => {
+    const indices = getNoticeSelectionIndices(selectionRef.current);
+    return indices.includes(index) ? indices : [index];
+  };
+
+  const prepareClipboard = (index, cut) => {
+    const indices = getActionIndices(index);
+    const clipboard = createNoticeClipboard(notices, indices, currentYear, currentMonth);
+    noticeClipboardRef.current = clipboard;
+    setClipboardSelection({ indices, cut });
+    pendingCutRef.current = cut ? clipboard : null;
+    return clipboard;
+  };
+
+  const deleteNotices = async (index) => {
+    if (pasteInProgressRef.current) return;
+    const indices = getActionIndices(index).filter(slot => notices.some(n => n.slot_index === slot && n.content));
+    pendingCutRef.current = null;
+    setClipboardSelection(null);
+    const results = await Promise.all(indices.map(slot => saveNotice(slot, '', currentYear, currentMonth)));
+    if (results.some(result => !result)) addToast('일부 전달 사항을 삭제하지 못했습니다. 다시 확인해 주세요.', 'error');
   };
 
   const copyNotice = (event, index, cut = false) => {
     if (event.target?.tagName === 'INPUT') return;
     event.preventDefault();
-    const content = notices.find(n => n.slot_index === index)?.content || '';
-    event.clipboardData.setData('text/plain', content);
-    noticeClipboardRef.current = content;
-    setClipboardSlot(index);
-    pendingCutRef.current = cut ? { index, content, year: currentYear, month: currentMonth } : null;
+    if (pasteInProgressRef.current) return;
+    const clipboard = prepareClipboard(index, cut);
+    event.clipboardData.setData('text/plain', clipboard.text);
   };
 
   const pasteNotice = (event, index) => {
-    setClipboardSlot(null);
     if (event.target?.tagName === 'INPUT') {
       pendingCutRef.current = null;
+      setClipboardSelection(null);
       return;
     }
     event.preventDefault();
-    applyNoticePaste(event.clipboardData.getData('text/plain'), index);
+    applyNoticePaste(event.clipboardData.getData('text/plain'), getActionIndices(index)[0]);
   };
 
   const applyNoticePaste = async (text, index) => {
-    if (!text) return;
-    setClipboardSlot(null);
+    if (pasteInProgressRef.current) return;
+    const clipboard = noticeClipboardRef.current;
+    if (!text && (!clipboard || clipboard.text !== text)) return;
     const cut = pendingCutRef.current;
-    pendingCutRef.current = null;
-    await pasteNoticeClipboard({
-      text, index, slotCount: MAX_NOTICE_ROW_COUNT, year: currentYear, month: currentMonth, cut, saveNotice,
+    const year = currentYear;
+    const month = currentMonth;
+    if (currentNoticesRef.current.year !== year || currentNoticesRef.current.month !== month) return;
+    pasteInProgressRef.current = true;
+    setIsPasting(true);
+    const succeeded = await pasteNoticeClipboard({
+      text, index, slotCount: MAX_NOTICE_ROW_COUNT, year, month, clipboard, cut,
+      saveNotice: (...args) => {
+        const current = currentNoticesRef.current;
+        if (current.year !== year || current.month !== month) return false;
+        return saveNotice(...args);
+      },
       isCutSourceUnchanged: (source) => {
         const current = currentNoticesRef.current;
         return current.year === source.year && current.month === source.month
-          && current.notices.find(n => n.slot_index === source.index)?.content === source.content;
+          && (current.notices.find(n => n.slot_index === source.index)?.content || '') === source.content;
       },
     });
+    pasteInProgressRef.current = false;
+    setIsPasting(false);
+    if (pendingCutRef.current === cut) pendingCutRef.current = null;
+    setClipboardSelection(null);
+    if (!succeeded) {
+      addToast('전달 사항을 모두 붙여넣지 못했습니다. 남은 행 수와 저장 상태를 확인해 주세요. 복사한 내용은 유지됩니다.', 'error');
+    }
   };
 
   const handleContextAction = async (action, index) => {
-    const content = notices.find(n => n.slot_index === index)?.content || '';
+    if (pasteInProgressRef.current) return;
+    const indices = getActionIndices(index);
     setContextMenu(null);
     slotRefs.current[index]?.focus();
     if (action === 'edit') startEditing(index);
     if (action === 'copy' || action === 'cut') {
-      noticeClipboardRef.current = content;
-      setClipboardSlot(index);
-      pendingCutRef.current = action === 'cut' ? { index, content, year: currentYear, month: currentMonth } : null;
-      try { await navigator.clipboard?.writeText(content); } catch { /* Local copy remains available. */ }
+      const clipboard = prepareClipboard(index, action === 'cut');
+      try { await navigator.clipboard?.writeText(clipboard.text); } catch { /* Local copy remains available. */ }
     }
     if (action === 'paste') {
-      let text = noticeClipboardRef.current;
-      try { text = await navigator.clipboard?.readText() || text; } catch { /* Use the local copy. */ }
-      if (text) applyNoticePaste(text, index);
+      let text = noticeClipboardRef.current?.text ?? '';
+      try { text = await navigator.clipboard?.readText() ?? text; } catch { /* Use the local copy. */ }
+      applyNoticePaste(text, indices[0]);
     }
-    if (action === 'delete' && content) saveNotice(index, '', currentYear, currentMonth);
+    if (action === 'delete') deleteNotices(index);
   };
 
   const toggleDepartment = (dept) => {
@@ -232,7 +350,7 @@ export default function NoticeBoard({
 
   return (
     <>
-      <div ref={boardRef} className="notice-board">
+      <div ref={boardRef} className="notice-board" aria-busy={isPasting}>
         <div className="notice-board-header">
           <MessageSquare size={21} strokeWidth={2.4} />
           {currentMonth}월 전달 사항
@@ -240,29 +358,48 @@ export default function NoticeBoard({
         {Array.from({ length: slotCount }, (_, i) => {
           const notice = notices.find(n => n.slot_index === i);
           const isEditing = editingSlot === i;
+          const isSelected = selectedIndices.includes(i);
+          const isClipboardSource = clipboardSelection?.indices.includes(i);
 
           return (
             <div
               key={i}
               ref={(node) => { slotRefs.current[i] = node; }}
-              className={`notice-item${selectedSlot === i ? ' is-selected' : ''}${clipboardSlot === i ? ' is-clipboard-source' : ''}`}
+              className={`notice-item${isSelected ? ' is-selected' : ''}${isClipboardSource ? ' is-clipboard-source' : ''}${isClipboardSource && clipboardSelection.cut ? ' is-cut-source' : ''}`}
+              data-notice-index={i}
               role="button"
               tabIndex={0}
               aria-label={`${i + 1}번 전달 사항${notice?.content ? `: ${notice.content}` : ''}`}
-              aria-pressed={selectedSlot === i}
-              onFocus={() => setSelectedSlot(i)}
-              onPointerDown={() => { selectedBeforeClickRef.current = selectedSlot === i; }}
+              aria-pressed={isSelected}
+              onFocus={() => {
+                if (dragSelectionRef.current || getNoticeSelectionIndices(selectionRef.current).includes(i)) return;
+                selectRange(i);
+              }}
+              onPointerDown={(event) => {
+                if (event.button !== 0 || isEditing || pasteInProgressRef.current) return;
+                const indices = getNoticeSelectionIndices(selectionRef.current);
+                selectedBeforeClickRef.current = indices.length === 1 && indices[0] === i && !event.shiftKey;
+                suppressClickRef.current = event.shiftKey;
+                const anchor = event.shiftKey ? (selectionRef.current?.anchor ?? i) : i;
+                dragSelectionRef.current = { anchor, start: i, pointerId: event.pointerId, moved: false };
+                selectRange(anchor, i);
+                slotRefs.current[i]?.focus({ preventScroll: true });
+                setContextMenu(null);
+              }}
+              onDragStart={(event) => event.preventDefault()}
               onClick={() => {
+                if (suppressClickRef.current) { suppressClickRef.current = false; return; }
                 if (isEditing) return;
                 if (selectedBeforeClickRef.current) startEditing(i);
-                else { setSelectedSlot(i); slotRefs.current[i]?.focus(); }
                 selectedBeforeClickRef.current = false;
               }}
-              onDoubleClick={() => startEditing(i)}
+              onDoubleClick={() => {
+                if (getNoticeSelectionIndices(selectionRef.current).length <= 1) startEditing(i);
+              }}
               onContextMenu={(event) => {
                 event.preventDefault();
                 selectedBeforeClickRef.current = false;
-                setSelectedSlot(i);
+                if (!getNoticeSelectionIndices(selectionRef.current).includes(i)) selectRange(i);
                 slotRefs.current[i]?.focus();
                 setContextMenu({
                   index: i,
@@ -300,7 +437,7 @@ export default function NoticeBoard({
             {[
               ['edit', '입력·수정'], ['copy', '복사'], ['cut', '잘라내기'], ['paste', '붙여넣기'], ['delete', '삭제'],
             ].map(([action, label]) => (
-              <button key={action} type="button" role="menuitem" onClick={() => handleContextAction(action, contextMenu.index)}>{label}</button>
+              <button key={action} type="button" role="menuitem" disabled={isPasting} onClick={() => handleContextAction(action, contextMenu.index)}>{label}</button>
             ))}
           </div>
         )}
