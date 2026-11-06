@@ -52,3 +52,57 @@ export async function pasteNoticeClipboard({ text, index, slotCount, year, month
     return false;
   }
 }
+
+export function getNoticePasteAffectedSlots({ text, index, slotCount, year, month, clipboard, cut }) {
+  if (!Number.isInteger(index) || index < 0 || index >= slotCount) return [];
+  const localCopy = clipboard && text === clipboard.text ? clipboard : null;
+  const allValues = localCopy?.values || parseNoticePasteValues(text, slotCount);
+  const values = allValues.slice(0, slotCount - index);
+  if (!values.length) return [];
+  const destinationSlots = values.map((_, offset) => index + offset);
+  const isLocalCut = cut && text === (cut.text ?? cut.content)
+    && cut.year === year && cut.month === month;
+  const sources = isLocalCut ? (cut.entries || [{ index: cut.index, content: cut.content }]) : [];
+  const sourceSlots = sources
+    .map(s => s.index)
+    .filter(slot => !destinationSlots.includes(slot));
+  return [...destinationSlots, ...sourceSlots];
+}
+
+export function createNoticeUndoAction({ type, year, month, slot, prevContent, newContent, items, actionLabel }) {
+  if (type === 'edit') {
+    return {
+      type: 'edit',
+      year,
+      month,
+      slot,
+      prevContent: prevContent || '',
+      newContent: newContent || '',
+      actionLabel: actionLabel || '입력',
+    };
+  }
+  return {
+    type: 'bulk',
+    year,
+    month,
+    items: (items || []).map(item => ({
+      slot: item.slot,
+      content: item.content || '',
+    })),
+    actionLabel: actionLabel || '작업',
+  };
+}
+
+export async function applyNoticeUndo(action, saveNotice) {
+  if (!action || typeof saveNotice !== 'function') return false;
+  if (action.type === 'edit') {
+    return Boolean(await saveNotice(action.slot, action.prevContent, action.year, action.month));
+  }
+  if (action.type === 'bulk' && Array.isArray(action.items)) {
+    const results = await Promise.all(
+      action.items.map(item => saveNotice(item.slot, item.content, action.year, action.month))
+    );
+    return results.every(Boolean);
+  }
+  return false;
+}

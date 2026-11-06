@@ -4,7 +4,14 @@ import { useSchedule } from '../../contexts/ScheduleContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../lib/authPermissions';
 import { getScheduleShortcutKey, isMetaEvent } from '../../lib/scheduleKeyboardUtils';
-import { createNoticeClipboard, getNoticeSelectionIndices, pasteNoticeClipboard } from '../../lib/noticeClipboardUtils';
+import {
+  createNoticeClipboard,
+  getNoticeSelectionIndices,
+  pasteNoticeClipboard,
+  getNoticePasteAffectedSlots,
+  createNoticeUndoAction,
+  applyNoticeUndo,
+} from '../../lib/noticeClipboardUtils';
 import { getNoticeRowCount, MAX_NOTICE_ROW_COUNT } from '../../lib/noticeRows';
 import { useToast } from '../common/Toast';
 
@@ -26,6 +33,13 @@ export default function NoticeBoard({
   const [isPasting, setIsPasting] = useState(false);
   const [editValue, setEditValue] = useState('');
   const [contextMenu, setContextMenu] = useState(null);
+  const [undoStack, setUndoStack] = useState([]);
+  const undoStackRef = useRef([]);
+  useEffect(() => { undoStackRef.current = undoStack; }, [undoStack]);
+  const undoInProgressRef = useRef(false);
+  const initialEditContentRef = useRef('');
+  const isEditCancelledRef = useRef(false);
+  const editHistoryRef = useRef([]);
   const [isDepartmentSettingsOpen, setIsDepartmentSettingsOpen] = useState(false);
   const [newDepartment, setNewDepartment] = useState('');
   const departmentFilterRef = useRef(null);
@@ -54,6 +68,43 @@ export default function NoticeBoard({
     setSelection(next);
   }, []);
 
+  const recordUndo = useCallback((action) => {
+    setUndoStack(prev => [action, ...prev].slice(0, 50));
+  }, []);
+
+  const doUndo = useCallback(async () => {
+    if (undoInProgressRef.current || undoStackRef.current.length === 0) return;
+    const action = undoStackRef.current[0];
+    undoInProgressRef.current = true;
+    setUndoStack(prev => prev.slice(1));
+    try {
+      const success = await applyNoticeUndo(action, (slot, content, year, month) => {
+        const current = currentNoticesRef.current;
+        if (current.year !== year || current.month !== month) return false;
+        return saveNotice(slot, content, year, month);
+      });
+      if (success) {
+        if (action.type === 'edit') {
+          selectRange(action.slot);
+          slotRefs.current[action.slot]?.focus({ preventScroll: true });
+        } else if (action.type === 'bulk') {
+          const slots = action.items.map(i => i.slot);
+          if (slots.length > 0) {
+            const minSlot = Math.min(...slots);
+            const maxSlot = Math.max(...slots);
+            selectRange(minSlot, maxSlot);
+            slotRefs.current[minSlot]?.focus({ preventScroll: true });
+          }
+        }
+        addToast(action.actionLabel ? `${action.actionLabel} 작업이 취소(되돌리기)되었습니다.` : '되돌리기가 완료되었습니다.', 'info');
+      } else {
+        addToast('되돌리기에 실패했습니다. 다시 확인해 주세요.', 'error');
+      }
+    } finally {
+      undoInProgressRef.current = false;
+    }
+  }, [saveNotice, selectRange, addToast]);
+
   useEffect(() => {
     currentNoticesRef.current = { year: currentYear, month: currentMonth, notices };
   }, [currentYear, currentMonth, notices]);
@@ -66,6 +117,8 @@ export default function NoticeBoard({
     noticeClipboardRef.current = null;
     setEditingSlot(null);
     setContextMenu(null);
+    setUndoStack([]);
+    undoInProgressRef.current = false;
   }, [currentYear, currentMonth, selectRange]);
 
   useEffect(() => {
@@ -166,21 +219,41 @@ export default function NoticeBoard({
     };
   }, [isDepartmentSettingsOpen]);
 
-  const startEditing = (index, initialValue) => {
+  const startEditing = (index, initialValue = null) => {
     if (pasteInProgressRef.current) return;
     selectRange(index);
     const existing = notices.find(n => n.slot_index === index);
-    setEditValue(initialValue ?? existing?.content ?? '');
+    const initial = initialValue ?? existing?.content ?? '';
+    initialEditContentRef.current = existing?.content || '';
+    editHistoryRef.current = [initial];
+    isEditCancelledRef.current = false;
+    setEditValue(initial);
     setEditingSlot(index);
     editingMonthRef.current = { year: currentYear, month: currentMonth };
   };
 
   const handleBlur = async (index) => {
     setEditingSlot(null);
-    const existing = notices.find(n => n.slot_index === index);
-    if (editValue.trim() !== (existing?.content || '').trim()) {
+    if (isEditCancelledRef.current) {
+      isEditCancelledRef.current = false;
+      return;
+    }
+    const prevContent = initialEditContentRef.current;
+    const trimmed = editValue.trim();
+    if (trimmed !== (prevContent || '').trim()) {
       const { year, month } = editingMonthRef.current || { year: currentYear, month: currentMonth };
-      await saveNotice(index, editValue.trim(), year, month);
+      const success = await saveNotice(index, trimmed, year, month);
+      if (success) {
+        recordUndo(createNoticeUndoAction({
+          type: 'edit',
+          year,
+          month,
+          slot: index,
+          prevContent,
+          newContent: trimmed,
+          actionLabel: '입력',
+        }));
+      }
     }
   };
 
@@ -191,6 +264,11 @@ export default function NoticeBoard({
 
     if (isMetaEvent(event)) {
       const shortcut = getScheduleShortcutKey(event);
+      if (shortcut === 'Z' && !event.shiftKey) {
+        event.preventDefault();
+        doUndo();
+        return;
+      }
       if (shortcut === 'C') {
         event.preventDefault();
         const clipboard = prepareClipboard(index, false);
@@ -254,10 +332,25 @@ export default function NoticeBoard({
   const deleteNotices = async (index) => {
     if (pasteInProgressRef.current) return;
     const indices = getActionIndices(index).filter(slot => notices.some(n => n.slot_index === slot && n.content));
+    if (indices.length === 0) return;
+    const items = indices.map(slot => ({
+      slot,
+      content: notices.find(n => n.slot_index === slot)?.content || '',
+    }));
     pendingCutRef.current = null;
     setClipboardSelection(null);
     const results = await Promise.all(indices.map(slot => saveNotice(slot, '', currentYear, currentMonth)));
-    if (results.some(result => !result)) addToast('일부 전달 사항을 삭제하지 못했습니다. 다시 확인해 주세요.', 'error');
+    if (results.some(result => !result)) {
+      addToast('일부 전달 사항을 삭제하지 못했습니다. 다시 확인해 주세요.', 'error');
+    } else {
+      recordUndo(createNoticeUndoAction({
+        type: 'bulk',
+        year: currentYear,
+        month: currentMonth,
+        items,
+        actionLabel: '삭제',
+      }));
+    }
   };
 
   const copyNotice = (event, index, cut = false) => {
@@ -286,6 +379,21 @@ export default function NoticeBoard({
     const year = currentYear;
     const month = currentMonth;
     if (currentNoticesRef.current.year !== year || currentNoticesRef.current.month !== month) return;
+
+    const affectedSlots = getNoticePasteAffectedSlots({
+      text,
+      index,
+      slotCount: MAX_NOTICE_ROW_COUNT,
+      year,
+      month,
+      clipboard,
+      cut,
+    });
+    const prePasteItems = affectedSlots.map(slot => ({
+      slot,
+      content: notices.find(n => n.slot_index === slot)?.content || '',
+    }));
+
     pasteInProgressRef.current = true;
     setIsPasting(true);
     const succeeded = await pasteNoticeClipboard({
@@ -310,6 +418,15 @@ export default function NoticeBoard({
     if (!succeeded) {
       addToast('전달 사항을 모두 붙여넣지 못했습니다. 남은 행 수와 저장 상태를 확인해 주세요. 복사한 내용은 유지됩니다.', 'error');
     } else {
+      if (prePasteItems.length > 0) {
+        recordUndo(createNoticeUndoAction({
+          type: 'bulk',
+          year,
+          month,
+          items: prePasteItems,
+          actionLabel: '붙여넣기',
+        }));
+      }
       addToast('전달 사항이 붙여넣기되었습니다.', 'info');
     }
   };
@@ -319,6 +436,7 @@ export default function NoticeBoard({
     const indices = getActionIndices(index);
     setContextMenu(null);
     slotRefs.current[index]?.focus();
+    if (action === 'undo') doUndo();
     if (action === 'edit') startEditing(index);
     if (action === 'copy' || action === 'cut') {
       const clipboard = prepareClipboard(index, action === 'cut');
@@ -429,9 +547,48 @@ export default function NoticeBoard({
                 <input
                   className="notice-input"
                   value={editValue}
-                  onChange={e => setEditValue(e.target.value)}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setEditValue(val);
+                    const hist = editHistoryRef.current;
+                    if (!hist || hist[hist.length - 1] !== val) {
+                      if (!hist) editHistoryRef.current = [];
+                      editHistoryRef.current.push(val);
+                    }
+                  }}
                   onBlur={() => handleBlur(i)}
-                  onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.target.blur();
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      isEditCancelledRef.current = true;
+                      setEditValue(initialEditContentRef.current);
+                      setEditingSlot(null);
+                    } else if (isMetaEvent(e)) {
+                      const shortcut = getScheduleShortcutKey(e);
+                      if (shortcut === 'Z' && !e.shiftKey) {
+                        if (editHistoryRef.current.length > 1) {
+                          e.preventDefault();
+                          editHistoryRef.current.pop();
+                          const prevVal = editHistoryRef.current[editHistoryRef.current.length - 1];
+                          setEditValue(prevVal);
+                          return;
+                        } else if (editValue !== initialEditContentRef.current) {
+                          e.preventDefault();
+                          setEditValue(initialEditContentRef.current);
+                          return;
+                        } else if (undoStackRef.current.length > 0) {
+                          e.preventDefault();
+                          isEditCancelledRef.current = true;
+                          setEditingSlot(null);
+                          doUndo();
+                          return;
+                        }
+                      }
+                    }
+                  }}
                   autoFocus
                 />
                 </span>
@@ -446,7 +603,12 @@ export default function NoticeBoard({
         {contextMenu && (
           <div ref={contextMenuRef} className="notice-context-menu" style={{ left: contextMenu.x, top: contextMenu.y }} role="menu" aria-label="전달 사항 셀 메뉴">
             {[
-              ['edit', '입력·수정'], ['copy', '복사'], ['cut', '잘라내기'], ['paste', '붙여넣기'], ['delete', '삭제'],
+              ['edit', '입력·수정'],
+              ['copy', '복사'],
+              ['cut', '잘라내기'],
+              ['paste', '붙여넣기'],
+              ['delete', '삭제'],
+              ...(undoStack.length > 0 ? [['undo', '되돌리기 (Ctrl+Z)']] : []),
             ].map(([action, label]) => (
               <button key={action} type="button" role="menuitem" disabled={isPasting} onClick={() => handleContextAction(action, contextMenu.index)}>{label}</button>
             ))}

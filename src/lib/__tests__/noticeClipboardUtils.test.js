@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createNoticeClipboard, getNoticeSelectionIndices, parseNoticePasteValues, pasteNoticeClipboard } from '../noticeClipboardUtils.js';
+import {
+  createNoticeClipboard,
+  getNoticeSelectionIndices,
+  parseNoticePasteValues,
+  pasteNoticeClipboard,
+  getNoticePasteAffectedSlots,
+  createNoticeUndoAction,
+  applyNoticeUndo,
+} from '../noticeClipboardUtils.js';
 
 test('pastes consecutive notice rows without clearing another cell for a trailing newline', () => {
   assert.deepEqual(parseNoticePasteValues('첫째\n둘째\n', 4), ['첫째', '둘째']);
@@ -148,4 +156,84 @@ test('a failed source clear is reported after destinations have safely received 
   }), false);
   assert.equal(notices.find(row => row.slot_index === 5).content, 'A');
   assert.equal(notices.find(row => row.slot_index === 6).content, 'B');
+});
+
+test('identifies paste affected slots including destination and cut source slots', () => {
+  const cut = {
+    year: 2026,
+    month: 11,
+    entries: [{ index: 1, content: 'A' }, { index: 2, content: 'B' }],
+    text: 'A\nB',
+  };
+  const affected = getNoticePasteAffectedSlots({
+    text: 'A\nB',
+    index: 5,
+    slotCount: 20,
+    year: 2026,
+    month: 11,
+    clipboard: cut,
+    cut,
+  });
+  assert.deepEqual(affected, [5, 6, 1, 2]);
+
+  // When external paste without cut
+  const externalAffected = getNoticePasteAffectedSlots({
+    text: 'Hello\nWorld',
+    index: 3,
+    slotCount: 20,
+    year: 2026,
+    month: 11,
+  });
+  assert.deepEqual(externalAffected, [3, 4]);
+});
+
+test('creates and applies notice undo for single edit and bulk actions', async () => {
+  const writes = [];
+  const fakeSave = async (slot, content, year, month) => {
+    writes.push({ slot, content, year, month });
+    return true;
+  };
+
+  // 1. Single edit undo
+  const editUndo = createNoticeUndoAction({
+    type: 'edit',
+    year: 2026,
+    month: 11,
+    slot: 2,
+    prevContent: '이전 내용',
+    newContent: '새 내용',
+    actionLabel: '입력',
+  });
+  assert.equal(editUndo.type, 'edit');
+  assert.equal(editUndo.prevContent, '이전 내용');
+  const editSuccess = await applyNoticeUndo(editUndo, fakeSave);
+  assert.equal(editSuccess, true);
+  assert.deepEqual(writes, [{ slot: 2, content: '이전 내용', year: 2026, month: 11 }]);
+
+  // 2. Bulk undo (e.g., delete or paste)
+  writes.length = 0;
+  const bulkUndo = createNoticeUndoAction({
+    type: 'bulk',
+    year: 2026,
+    month: 11,
+    items: [
+      { slot: 0, content: '삭제된 공지 1' },
+      { slot: 1, content: '삭제된 공지 2' },
+    ],
+    actionLabel: '삭제',
+  });
+  assert.equal(bulkUndo.type, 'bulk');
+  assert.equal(bulkUndo.items.length, 2);
+  const bulkSuccess = await applyNoticeUndo(bulkUndo, fakeSave);
+  assert.equal(bulkSuccess, true);
+  assert.deepEqual(writes, [
+    { slot: 0, content: '삭제된 공지 1', year: 2026, month: 11 },
+    { slot: 1, content: '삭제된 공지 2', year: 2026, month: 11 },
+  ]);
+
+  // 3. Failure handling
+  const failedSave = async () => false;
+  assert.equal(await applyNoticeUndo(editUndo, failedSave), false);
+  assert.equal(await applyNoticeUndo(bulkUndo, failedSave), false);
+  assert.equal(await applyNoticeUndo(null, fakeSave), false);
 });
