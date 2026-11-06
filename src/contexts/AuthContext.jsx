@@ -69,17 +69,23 @@ export function AuthProvider({ children }) {
         if (!stored) return;
         const storedUser = JSON.parse(stored);
         const username = normalizeUsername(storedUser?.username || storedUser?.email);
-        const profile = await loadActiveLegacyAppUserProfile({
-          supabaseClient: supabase,
-          username,
-        });
-        if (!profile) {
-          clearStoredDevUser();
-          return;
+        try {
+          const profile = await loadActiveLegacyAppUserProfile({
+            supabaseClient: supabase,
+            username,
+          });
+          if (!profile) {
+            clearStoredDevUser();
+            return;
+          }
+          const restoredUser = createAppUser(profile);
+          writeStoredDevUser(restoredUser);
+          if (!cancelled) setUser(restoredUser);
+        } catch (profileErr) {
+          // If server/network threw an error (e.g. quota restricted, offline), preserve the existing stored user
+          console.warn('Failed to verify profile with server, using stored credentials:', profileErr);
+          if (storedUser && !cancelled) setUser(storedUser);
         }
-        const restoredUser = createAppUser(profile);
-        writeStoredDevUser(restoredUser);
-        if (!cancelled) setUser(restoredUser);
       } catch (err) {
         console.warn('Failed to restore user session:', err);
         clearStoredDevUser();
@@ -140,8 +146,9 @@ export function AuthProvider({ children }) {
     } catch (legacyError) {
       if (legacyError?.message !== 'Invalid login credentials') {
         console.warn('Legacy app user login failed:', legacyError);
+        throw legacyError;
       }
-      throw supabaseAuthError || new Error('Invalid login credentials');
+      throw supabaseAuthError || legacyError;
     }
   };
 

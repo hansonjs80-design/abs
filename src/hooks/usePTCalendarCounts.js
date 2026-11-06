@@ -55,7 +55,11 @@ export function usePTCalendarCounts(startDate, endDate, { readOnly = false } = {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pt_daily_records' }, () => { void refresh(); });
     channel?.subscribe();
     refreshRef.current = refresh;
-    const timer = setInterval(() => { void refresh(); }, 10000);
+    const timer = setInterval(() => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        void refresh();
+      }
+    }, 30000);
     document.addEventListener('visibilitychange', refresh);
     window.addEventListener('online', refresh);
     void refresh();

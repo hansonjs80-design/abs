@@ -66,12 +66,20 @@ const writeLastLoginId = (email) => {
 const getAuthMessage = (error, isSignUp) => {
   const message = error?.message || '';
 
+  if (message.includes('exceed_egress_quota') || message.includes('restricted due to the following violations')) {
+    return 'Supabase 서버의 월간 데이터 전송량(egress) 한도가 초과되어 서비스가 일시 제한되었습니다. Supabase 대시보드(Billing)에서 플랜을 확인하거나 한도를 해제해야 합니다.';
+  }
+
   if (message.includes('Email not confirmed')) {
     return '이메일 인증이 아직 완료되지 않았습니다. 메일함에서 인증 링크를 누른 뒤 다시 로그인하세요.';
   }
 
   if (message.includes('Invalid login credentials')) {
-    return '이메일 또는 비밀번호가 올바르지 않습니다.';
+    return '아이디 또는 비밀번호가 올바르지 않습니다.';
+  }
+
+  if (message.includes('fetch failed') || message.includes('NetworkError') || message.includes('Failed to fetch')) {
+    return '서버에 연결할 수 없습니다. 네트워크 연결 또는 서버 상태를 확인해 주세요.';
   }
 
   if (message.includes('User already registered')) {
@@ -82,7 +90,7 @@ const getAuthMessage = (error, isSignUp) => {
     return '비밀번호는 6자 이상이어야 합니다.';
   }
 
-  return isSignUp ? '회원가입에 실패했습니다.' : '로그인에 실패했습니다.';
+  return message || (isSignUp ? '회원가입에 실패했습니다.' : '로그인에 실패했습니다.');
 };
 
 export default function LoginPage() {
