@@ -3,6 +3,7 @@ import { MessageSquare, Settings, Trash2 } from 'lucide-react';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../lib/authPermissions';
+import { getScheduleShortcutKey, isMetaEvent } from '../../lib/scheduleKeyboardUtils';
 import { createNoticeClipboard, getNoticeSelectionIndices, pasteNoticeClipboard } from '../../lib/noticeClipboardUtils';
 import { getNoticeRowCount, MAX_NOTICE_ROW_COUNT } from '../../lib/noticeRows';
 import { useToast } from '../common/Toast';
@@ -188,30 +189,35 @@ export default function NoticeBoard({
     if (pasteInProgressRef.current) { event.preventDefault(); return; }
     const activeIndex = selectionRef.current?.focus ?? index;
 
-    if ((event.ctrlKey || event.metaKey) && (event.key === 'c' || event.key === 'C')) {
-      event.preventDefault();
-      const clipboard = prepareClipboard(index, false);
-      navigator.clipboard?.writeText(clipboard.text).catch(() => {});
-      return;
-    }
-    if ((event.ctrlKey || event.metaKey) && (event.key === 'x' || event.key === 'X')) {
-      event.preventDefault();
-      const clipboard = prepareClipboard(index, true);
-      navigator.clipboard?.writeText(clipboard.text).catch(() => {});
-      return;
-    }
-    if ((event.ctrlKey || event.metaKey) && (event.key === 'v' || event.key === 'V')) {
-      event.preventDefault();
-      const indices = getActionIndices(index);
-      navigator.clipboard?.readText()
-        .then((text) => applyNoticePaste(text || noticeClipboardRef.current?.text || '', indices[0]))
-        .catch(() => applyNoticePaste(noticeClipboardRef.current?.text || '', indices[0]));
-      return;
-    }
-    if ((event.ctrlKey || event.metaKey) && (event.key === 'a' || event.key === 'A')) {
-      event.preventDefault();
-      selectRange(0, slotCount - 1);
-      return;
+    if (isMetaEvent(event)) {
+      const shortcut = getScheduleShortcutKey(event);
+      if (shortcut === 'C') {
+        event.preventDefault();
+        const clipboard = prepareClipboard(index, false);
+        navigator.clipboard?.writeText(clipboard.text).catch(() => {});
+        addToast('전달 사항이 복사되었습니다.', 'info');
+        return;
+      }
+      if (shortcut === 'X') {
+        event.preventDefault();
+        const clipboard = prepareClipboard(index, true);
+        navigator.clipboard?.writeText(clipboard.text).catch(() => {});
+        addToast('전달 사항이 잘라내기되었습니다.', 'info');
+        return;
+      }
+      if (shortcut === 'V') {
+        event.preventDefault();
+        const indices = getActionIndices(index);
+        navigator.clipboard?.readText()
+          .then((text) => applyNoticePaste(text || noticeClipboardRef.current?.text || '', indices[0]))
+          .catch(() => applyNoticePaste(noticeClipboardRef.current?.text || '', indices[0]));
+        return;
+      }
+      if (shortcut === 'A') {
+        event.preventDefault();
+        selectRange(0, slotCount - 1);
+        return;
+      }
     }
 
     if (event.key === 'Enter' || event.key === 'F2') {
@@ -298,9 +304,13 @@ export default function NoticeBoard({
     pasteInProgressRef.current = false;
     setIsPasting(false);
     if (pendingCutRef.current === cut) pendingCutRef.current = null;
-    setClipboardSelection(null);
+    if (cut) {
+      setClipboardSelection(null);
+    }
     if (!succeeded) {
       addToast('전달 사항을 모두 붙여넣지 못했습니다. 남은 행 수와 저장 상태를 확인해 주세요. 복사한 내용은 유지됩니다.', 'error');
+    } else {
+      addToast('전달 사항이 붙여넣기되었습니다.', 'info');
     }
   };
 
@@ -313,6 +323,7 @@ export default function NoticeBoard({
     if (action === 'copy' || action === 'cut') {
       const clipboard = prepareClipboard(index, action === 'cut');
       try { await navigator.clipboard?.writeText(clipboard.text); } catch { /* Local copy remains available. */ }
+      addToast(action === 'cut' ? '전달 사항이 잘라내기되었습니다.' : '전달 사항이 복사되었습니다.', 'info');
     }
     if (action === 'paste') {
       let text = noticeClipboardRef.current?.text ?? '';
