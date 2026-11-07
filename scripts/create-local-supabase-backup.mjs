@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -12,6 +13,54 @@ import {
 } from '../src/lib/supabaseBackupUtils.js';
 
 const DEFAULT_MAX_AUTO_BACKUPS = 20;
+const SUPABASE_WRITE_DIFF_PATTERN = /(\.upsert\s*\(|\.insert\s*\(|\.update\s*\(|\.delete\s*\(|\.rpc\s*\(|applyScheduleStatsMutation|syncMonthShockwaveScheduleToStats|syncMonthManualTherapyScheduleToStats|saveShockwaveMemo|saveStaffMemo|saveCArmMonth|saveMonthlyTherapistConfigs|saveTherapistRosterSafely)/;
+
+function resolveDiffRange() {
+  for (const candidate of ['@{u}..HEAD', 'origin/main..HEAD', 'HEAD~1..HEAD']) {
+    try {
+      execFileSync('git', ['rev-parse', '--verify', candidate.split('..')[0]], { stdio: 'ignore' });
+      return candidate;
+    } catch {
+      // Try next fallback range
+    }
+  }
+  return null;
+}
+
+function hasSupabaseDataMutationRiskInGitDiff() {
+  const range = resolveDiffRange();
+  if (!range) return false;
+
+  let changedFiles = [];
+  try {
+    const out = execFileSync('git', ['diff', '--name-only', range], { encoding: 'utf8' });
+    changedFiles = out.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  } catch {
+    return false;
+  }
+
+  if (changedFiles.length === 0) return false;
+  if (changedFiles.some((file) => file.endsWith('.sql'))) return true;
+
+  const codeFiles = changedFiles.filter((file) => (
+    /\.(js|jsx|mjs|ts|tsx)$/.test(file)
+    && !file.endsWith('.test.js')
+    && !file.includes('__tests__/')
+    && file !== 'scripts/create-local-supabase-backup.mjs'
+  ));
+
+  if (codeFiles.length === 0) return false;
+
+  try {
+    const diffText = execFileSync('git', ['diff', '-U0', range, '--', ...codeFiles], { encoding: 'utf8' });
+    const changedCodeLines = diffText
+      .split(/\r?\n/)
+      .filter((line) => (line.startsWith('+') || line.startsWith('-')) && !line.startsWith('+++') && !line.startsWith('---'));
+    return changedCodeLines.some((line) => SUPABASE_WRITE_DIFF_PATTERN.test(line));
+  } catch {
+    return false;
+  }
+}
 
 function parseEnvFile(filePath) {
   if (!existsSync(filePath)) return;
@@ -165,6 +214,11 @@ async function main() {
   const backupDir = path.resolve(process.cwd(), 'backups');
   mkdirSync(backupDir, { recursive: true });
 
+  if (!force && reason === 'pre-push' && !hasSupabaseDataMutationRiskInGitDiff()) {
+    console.log('[로컬 백업 생략] Supabase 데이터 쓰기·삭제·스키마와 무관한 코드 수정이므로 백업을 건너뜁니다.');
+    return;
+  }
+
   if (!force && maxAgeHours > 0) {
     const recent = findRecentBackup(backupDir, maxAgeHours);
     if (recent) {
@@ -207,3 +261,4 @@ main().catch((error) => {
   console.error('[로컬 백업 오류]', error?.message || error);
   process.exit(1);
 });
+
