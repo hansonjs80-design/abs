@@ -420,13 +420,49 @@ CREATE TRIGGER set_app_users_updated_at
 BEFORE UPDATE ON public.app_users
 FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
--- 기본 관리자 계정 생성 및 복구 (admin / 1)
+-- 기본 관리자 계정 생성 및 복구 (기존 비밀번호는 유지하고 비어 있을 때만 초기값 설정)
 INSERT INTO public.app_users (username, password, display_name, role, permissions, is_active)
 VALUES ('admin', '1', '관리자', 'admin', '{"staff_schedule":true,"shockwave":true,"shockwave_stats":true,"shinjang_spray_stats":true,"manual_therapy_stats":true,"combined_stats":true,"pt_stats":true,"settings":true}'::jsonb, true)
 ON CONFLICT (username) DO UPDATE
 SET is_active = true,
     role = 'admin',
     password = CASE WHEN public.app_users.password = '' THEN '1' ELSE public.app_users.password END;
+
+-- 서버 측 비밀번호 검증 RPC (브라우저로 평문 비밀번호를 내려보내지 않고 검증)
+CREATE OR REPLACE FUNCTION public.authenticate_app_user(
+  p_username text,
+  p_password text
+)
+RETURNS TABLE (
+  id uuid,
+  username text,
+  display_name text,
+  role text,
+  permissions jsonb,
+  is_active boolean
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    u.id,
+    u.username,
+    u.display_name,
+    u.role,
+    u.permissions,
+    u.is_active
+  FROM public.app_users u
+  WHERE lower(trim(u.username)) = lower(trim(COALESCE(p_username, '')))
+    AND u.is_active = true
+    AND u.password = COALESCE(p_password, '')
+  LIMIT 1;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.authenticate_app_user(text, text) TO anon, authenticated, service_role;
 
 -- 9. Staff calendar slot settings
 CREATE TABLE IF NOT EXISTS public.staff_calendar_settings (
@@ -478,7 +514,7 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
--- 11. Grant permissions to anon and authenticated roles
+-- 11. Grant permissions to anon and authenticated roles (with destructive privilege minimization)
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
@@ -486,6 +522,8 @@ GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO anon, authenticated, service_role;
+REVOKE TRUNCATE ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
+REVOKE DELETE ON TABLE public.app_users, public.shockwave_settings, public.staff_calendar_settings FROM anon, authenticated;
 
 -- 12. Independent C-Arm statistics
 -- Independent manual C-Arm records. No existing treatment tables are modified.

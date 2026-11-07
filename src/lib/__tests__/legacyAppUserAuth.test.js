@@ -64,4 +64,49 @@ describe('legacy app user authentication', () => {
       /Invalid login credentials/
     );
   });
+
+  it('uses server-side authenticate_app_user RPC first so passwords are not fetched to the browser', async () => {
+    let tableQueried = false;
+    const supabaseClient = {
+      rpc(fnName, params) {
+        assert.equal(fnName, 'authenticate_app_user');
+        if (params.p_username === 'admin' && params.p_password === 'correct') {
+          return Promise.resolve({
+            data: [{
+              id: 'u-admin',
+              username: 'admin',
+              display_name: '관리자',
+              role: 'admin',
+              permissions: {},
+              is_active: true,
+            }],
+            error: null,
+          });
+        }
+        return Promise.resolve({ data: [], error: null });
+      },
+      from() {
+        tableQueried = true;
+        throw new Error('Should not query app_users table directly when RPC succeeds');
+      },
+    };
+
+    const profile = await authenticateLegacyAppUser({
+      supabaseClient,
+      username: 'admin',
+      password: 'correct',
+    });
+    assert.equal(profile.username, 'admin');
+    assert.equal(profile.role, 'admin');
+    assert.equal(tableQueried, false);
+
+    await assert.rejects(
+      authenticateLegacyAppUser({
+        supabaseClient,
+        username: 'admin',
+        password: 'wrong',
+      }),
+      /Invalid login credentials/
+    );
+  });
 });

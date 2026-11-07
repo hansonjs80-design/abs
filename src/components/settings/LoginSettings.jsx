@@ -13,6 +13,7 @@ import {
   createDefaultPermissions,
   normalizeUsername,
 } from '../../lib/authPermissions';
+import { loadActiveLegacyAppUserProfile } from '../../lib/legacyAppUserAuth';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function LoginSettings({ canManageLogin }) {
@@ -28,8 +29,34 @@ export default function LoginSettings({ canManageLogin }) {
     is_active: true,
   });
 
+  const verifyServerAdminAccess = useCallback(async () => {
+    if (!canManageLogin) return false;
+    if (!user?.isLocalDevUser) return true;
+
+    const username = normalizeUsername(user?.username || user?.email);
+    if (!username) return false;
+
+    const profile = await loadActiveLegacyAppUserProfile({
+      supabaseClient: supabase,
+      username,
+    });
+    const isVerifiedAdmin = Boolean(
+      profile?.is_active && (profile?.role === 'admin' || normalizeUsername(profile?.username) === ADMIN_USERNAME)
+    );
+    if (!isVerifiedAdmin) {
+      addToast('관리자 권한이 확인되지 않아 요청이 차단되었습니다.', 'error');
+      return false;
+    }
+    return true;
+  }, [addToast, canManageLogin, user?.email, user?.isLocalDevUser, user?.username]);
+
   const loadAppUsers = useCallback(async () => {
     try {
+      const allowed = await verifyServerAdminAccess();
+      if (!allowed) {
+        setAppUsers([]);
+        return;
+      }
       const { data, error } = await supabase
         .from('app_users')
         .select('id, username, display_name, role, permissions, is_active, created_at, updated_at')
@@ -49,7 +76,7 @@ export default function LoginSettings({ canManageLogin }) {
       console.error('Failed to load app users:', err);
       addToast('로그인 사용자 목록을 불러오지 못했습니다. SQL 테이블을 먼저 생성해주세요.', 'error');
     }
-  }, [addToast]);
+  }, [addToast, verifyServerAdminAccess]);
 
   useEffect(() => {
     if (canManageLogin) loadAppUsers();
@@ -67,6 +94,7 @@ export default function LoginSettings({ canManageLogin }) {
       return;
     }
     try {
+      if (!(await verifyServerAdminAccess())) return;
       const row = {
         username,
         password,
@@ -135,6 +163,7 @@ export default function LoginSettings({ canManageLogin }) {
     if (password) payload.password = password;
 
     try {
+      if (!(await verifyServerAdminAccess())) return;
       const { error } = await supabase.from('app_users').update(payload).eq('id', row.id);
       if (error) throw error;
       addToast('사용자 설정이 저장되었습니다.', 'success');
@@ -161,6 +190,7 @@ export default function LoginSettings({ canManageLogin }) {
       return;
     }
     try {
+      if (!(await verifyServerAdminAccess())) return;
       const { error } = await supabase
         .from('app_users')
         .update({ is_active: false, updated_at: new Date().toISOString() })

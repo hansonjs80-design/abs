@@ -37,6 +37,12 @@ export async function legacyPasswordsMatch(storedPassword, candidatePassword) {
   return difference === 0;
 }
 
+function isMissingRpcFunctionError(error) {
+  const code = String(error?.code || '');
+  const message = String(error?.message || '').toLowerCase();
+  return code === 'PGRST202' || code === '42883' || message.includes('authenticate_app_user');
+}
+
 export async function authenticateLegacyAppUser({
   supabaseClient,
   username,
@@ -44,6 +50,22 @@ export async function authenticateLegacyAppUser({
 } = {}) {
   if (!supabaseClient || !username || password == null || password === '') {
     throw createInvalidLoginError();
+  }
+
+  if (typeof supabaseClient.rpc === 'function') {
+    const { data: rpcData, error: rpcError } = await supabaseClient.rpc('authenticate_app_user', {
+      p_username: username,
+      p_password: String(password),
+    });
+    if (!rpcError) {
+      const row = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+      if (!row || !row.username) throw createInvalidLoginError();
+      const { password: _password, ...profile } = row;
+      return profile;
+    }
+    if (!isMissingRpcFunctionError(rpcError)) {
+      throw rpcError;
+    }
   }
 
   const { data, error } = await supabaseClient

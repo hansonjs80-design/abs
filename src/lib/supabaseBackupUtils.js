@@ -89,6 +89,7 @@ export const BACKUP_TABLES = [
     label: '앱 로그인 사용자',
     order: ['username'],
     conflictColumns: ['username'],
+    selectColumns: 'id,username,display_name,role,permissions,is_active,created_at,updated_at',
     sensitive: true,
   },
 ];
@@ -280,7 +281,7 @@ async function fetchTableRows(supabase, tableConfig) {
   while (true) {
     let query = supabase
       .from(tableConfig.name)
-      .select('*')
+      .select(tableConfig.selectColumns || '*')
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
     query = applyTableOrdering(query, tableConfig.order || []);

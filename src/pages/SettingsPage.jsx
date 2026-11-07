@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   DatabaseBackup,
@@ -6,16 +6,64 @@ import {
   Shield,
   UsersRound,
 } from 'lucide-react';
-import { isAdminUser } from '../lib/authPermissions';
+import { isAdminUser, normalizePermissions, normalizeUsername } from '../lib/authPermissions';
+import { supabase } from '../lib/supabaseClient';
+import { loadActiveLegacyAppUserProfile } from '../lib/legacyAppUserAuth';
 import GeneralSettings from '../components/settings/GeneralSettings';
 import LoginSettings from '../components/settings/LoginSettings';
 import BackupSettings from '../components/settings/BackupSettings';
 import SupabaseConnectionSettings from '../components/settings/SupabaseConnectionSettings';
 
 export default function SettingsPage() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, refreshStoredUser } = useAuth();
   const canManageLogin = isAdminUser(user);
   const [settingsSection, setSettingsSection] = useState('general');
+
+  useEffect(() => {
+    if (!user?.isLocalDevUser) return;
+    let cancelled = false;
+    const username = normalizeUsername(user?.username || user?.email);
+    if (!username) return;
+
+    loadActiveLegacyAppUserProfile({
+      supabaseClient: supabase,
+      username,
+    })
+      .then((profile) => {
+        if (cancelled) return;
+        if (!profile) {
+          signOut();
+          return;
+        }
+        const verifiedRole = profile.role || 'user';
+        const verifiedPermissions = normalizePermissions(profile.permissions, profile);
+        const verifiedIsAdmin = verifiedRole === 'admin';
+        if (user.app_role !== verifiedRole || user.isAdmin !== verifiedIsAdmin) {
+          refreshStoredUser?.({
+            ...user,
+            username: profile.username,
+            email: profile.username,
+            user_metadata: { ...(user.user_metadata || {}), name: profile.display_name || profile.username },
+            app_permissions: verifiedPermissions,
+            app_role: verifiedRole,
+            isAdmin: verifiedIsAdmin,
+          });
+        }
+      })
+      .catch(() => {
+        // Keep current session when offline or unreachable.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.username, user?.email, user?.isLocalDevUser]);
+
+  useEffect(() => {
+    if (!canManageLogin && (settingsSection === 'login' || settingsSection === 'backup')) {
+      setSettingsSection('general');
+    }
+  }, [canManageLogin, settingsSection]);
   
   return (
     <div className="animate-fade-in settings-page">
@@ -46,14 +94,16 @@ export default function SettingsPage() {
               로그인 관리
             </button>
           )}
-          <button
-            type="button"
-            className={`settings-page-tab${settingsSection === 'backup' ? ' active' : ''}`}
-            onClick={() => setSettingsSection('backup')}
-            aria-current={settingsSection === 'backup' ? 'page' : undefined}
-          >
-            <DatabaseBackup size={16} /> 백업
-          </button>
+          {canManageLogin && (
+            <button
+              type="button"
+              className={`settings-page-tab${settingsSection === 'backup' ? ' active' : ''}`}
+              onClick={() => setSettingsSection('backup')}
+              aria-current={settingsSection === 'backup' ? 'page' : undefined}
+            >
+              <DatabaseBackup size={16} /> 백업
+            </button>
+          )}
         </nav>
       </header>
 
@@ -81,8 +131,8 @@ export default function SettingsPage() {
           </>
         )}
 
-        {settingsSection === 'login' && <LoginSettings canManageLogin={canManageLogin} />}
-        {settingsSection === 'backup' && <BackupSettings />}
+        {settingsSection === 'login' && canManageLogin && <LoginSettings canManageLogin={canManageLogin} />}
+        {settingsSection === 'backup' && canManageLogin && <BackupSettings />}
       </div>
     </div>
   );
