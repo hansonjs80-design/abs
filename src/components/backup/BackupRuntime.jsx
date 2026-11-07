@@ -59,6 +59,10 @@ export default function BackupRuntime() {
     const runSnapshotIfDue = async () => {
       const settings = settingsRef.current;
       if (cancelled || !settings.autoSnapshotEnabled) return;
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        scheduleNext();
+        return;
+      }
       const intervalMs = Math.max(1, settings.snapshotIntervalMinutes) * 60 * 1000;
       const lastAt = getLastSnapshotAt();
       if (lastAt > 0 && Date.now() - lastAt < intervalMs - 500) {

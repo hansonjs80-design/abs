@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { fetchPTCalendarCounts } from '../lib/ptStaffCalendarCounts';
 import { loadPTManualCountOverrides, savePTManualCountOverride } from '../lib/ptManualCountOverrides';
+import { subscribePTCalendarCountChanges } from '../lib/ptCalendarCountUpdates';
 
 export function usePTCalendarCounts(startDate, endDate, { readOnly = false } = {}) {
   const [snapshot, setSnapshot] = useState({ counts: {}, settings: null, range: '', error: false });
@@ -27,6 +28,7 @@ export function usePTCalendarCounts(startDate, endDate, { readOnly = false } = {
     let busy = false;
     let rerun = false;
     let controller;
+    let notificationTimer;
     const refresh = async () => {
       if (disposed || document.visibilityState === 'hidden') return;
       if (busy) { rerun = true; return; }
@@ -50,10 +52,10 @@ export function usePTCalendarCounts(startDate, endDate, { readOnly = false } = {
         if (rerun && !disposed) { rerun = false; void refresh(); }
       }
     };
-    const channel = supabase.channel?.('pt-live-updates-v1')
-      .on('broadcast', { event: 'changed' }, () => { void refresh(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pt_daily_records' }, () => { void refresh(); });
-    channel?.subscribe();
+    const channel = subscribePTCalendarCountChanges(supabase, startDate, endDate, () => {
+      clearTimeout(notificationTimer);
+      notificationTimer = setTimeout(() => { void refresh(); }, 150);
+    });
     refreshRef.current = refresh;
     const timer = setInterval(() => {
       if (typeof document === 'undefined' || document.visibilityState === 'visible') {
@@ -67,6 +69,7 @@ export function usePTCalendarCounts(startDate, endDate, { readOnly = false } = {
       disposed = true;
       if (refreshRef.current === refresh) refreshRef.current = null;
       controller?.abort();
+      clearTimeout(notificationTimer);
       clearInterval(timer);
       document.removeEventListener('visibilitychange', refresh);
       window.removeEventListener('online', refresh);

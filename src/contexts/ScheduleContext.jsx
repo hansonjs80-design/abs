@@ -75,7 +75,7 @@ const SHOCKWAVE_MONTH_LOAD_RETRY_COUNT = 2;
 const SHOCKWAVE_MONTH_LOAD_RETRY_DELAY_MS = 500;
 const SHOCKWAVE_REALTIME_RELOAD_DEBOUNCE_MS = 120;
 const SHOCKWAVE_BACKGROUND_REFRESH_DEBOUNCE_MS = 100;
-const SHOCKWAVE_BACKGROUND_REFRESH_MIN_INTERVAL_MS = 1500;
+const SHOCKWAVE_BACKGROUND_REFRESH_MIN_INTERVAL_MS = 30000;
 const SHOCKWAVE_SMART_POLL_INTERVAL_MS = 30000; // 30초 간격 폴링 (과도한 네트워크 egress 소모 방지)
 const SHOCKWAVE_NAVIGATION_PRELOAD_DEBOUNCE_MS = 80;
 const SCHEDULE_QUERY_TIMEOUT_MS = 15000;
@@ -767,6 +767,7 @@ export function ScheduleProvider({ children }) {
       window.dispatchEvent(new CustomEvent('clinic-before-route-change'));
     }
     loadCacheRef.current = { staffMemos: null, shockwaveMemos: null, holidays: null };
+    lastKnownScheduleServerUpdatedAtRef.current = null;
     const nextDate = shiftScheduleMonth(
       currentDateRef.current.year,
       currentDateRef.current.month,
@@ -783,6 +784,7 @@ export function ScheduleProvider({ children }) {
       window.dispatchEvent(new CustomEvent('clinic-before-route-change'));
     }
     loadCacheRef.current = { staffMemos: null, shockwaveMemos: null, holidays: null };
+    lastKnownScheduleServerUpdatedAtRef.current = null;
     const nextDate = { year: Number(year), month: Number(month) };
     applyCachedScheduleMonthState(nextDate.year, nextDate.month);
     currentDateRef.current = nextDate;
@@ -1594,6 +1596,47 @@ export function ScheduleProvider({ children }) {
     }
   }, [scheduleShockwaveNavigationPreload]);
 
+  const advanceKnownScheduleServerUpdatedAt = useCallback((updatedAt) => {
+    if (!updatedAt) return;
+    const candidateMs = new Date(updatedAt).getTime();
+    if (!Number.isFinite(candidateMs)) return;
+    const currentMs = lastKnownScheduleServerUpdatedAtRef.current
+      ? new Date(lastKnownScheduleServerUpdatedAtRef.current).getTime()
+      : 0;
+    if (!Number.isFinite(currentMs) || candidateMs > currentMs) {
+      lastKnownScheduleServerUpdatedAtRef.current = updatedAt;
+    }
+  }, []);
+
+  const applyLocalShockwaveRawCacheUpdates = useCallback((upsertedItems = [], removedItems = []) => {
+    const mutateMonthCache = (item, remove) => {
+      const itemYear = Number(item?.year);
+      const itemMonth = Number(item?.month);
+      if (!Number.isFinite(itemYear) || !Number.isFinite(itemMonth)) return;
+      if (item?.updated_at && isCurrentScheduleMonth(itemYear, itemMonth)) {
+        advanceKnownScheduleServerUpdatedAt(item.updated_at);
+      }
+      const rawCacheKey = getShockwaveRawMonthCacheKey(itemYear, itemMonth);
+      const cachedRows = shockwaveRawMonthRowsCacheRef.current.get(rawCacheKey);
+      if (!Array.isArray(cachedRows)) return;
+      const nextRows = updateCachedScheduleRowsFromRealtime(cachedRows, item, { remove });
+      if (nextRows !== cachedRows && Array.isArray(nextRows)) {
+        rememberShockwaveRawMonthCache(shockwaveRawMonthRowsCacheRef, rawCacheKey, nextRows);
+      }
+    };
+
+    (Array.isArray(upsertedItems) ? upsertedItems : []).forEach((item) => mutateMonthCache(item, false));
+    (Array.isArray(removedItems) ? removedItems : []).forEach((item) => mutateMonthCache(item, true));
+
+    loadCacheRef.current.shockwaveMemos = null;
+    shockwaveScheduleCacheVersionRef.current += 1;
+    shockwaveMemoViewCacheRef.current.clear();
+    shockwaveMemoViewVersionRef.current.clear();
+    shockwaveMemoViewLoadPromisesRef.current.clear();
+    shockwaveRawMonthRowsLoadPromisesRef.current.clear();
+    scheduleShockwaveNavigationPreload(250);
+  }, [advanceKnownScheduleServerUpdatedAt, isCurrentScheduleMonth, scheduleShockwaveNavigationPreload]);
+
   const persistHiddenMergedScheduleRelocation = useCallback((payload) => {
     const visiblePayload = (Array.isArray(payload) ? payload : []).filter(Boolean);
     if (visiblePayload.length === 0) return;
@@ -1680,14 +1723,7 @@ export function ScheduleProvider({ children }) {
 
       if (error) throw error;
 
-      loadCacheRef.current.shockwaveMemos = null;
-      shockwaveScheduleCacheVersionRef.current += 1;
-      shockwaveMemoViewCacheRef.current.clear();
-      shockwaveMemoViewVersionRef.current.clear();
-      shockwaveMemoViewLoadPromisesRef.current.clear();
-      shockwaveRawMonthRowsCacheRef.current.clear();
-      shockwaveRawMonthRowsLoadPromisesRef.current.clear();
-      scheduleShockwaveNavigationPreload(250);
+      applyLocalShockwaveRawCacheUpdates(upsertPayload, []);
       return true;
     })
       .catch((err) => {
@@ -1696,7 +1732,7 @@ export function ScheduleProvider({ children }) {
       .finally(() => {
         hiddenMergedScheduleRelocationWriteRef.current.delete(signature);
       });
-  }, [enqueueShockwaveWrite, scheduleShockwaveNavigationPreload]);
+  }, [applyLocalShockwaveRawCacheUpdates, enqueueShockwaveWrite]);
 
   const loadShockwaveRawMonthRows = useCallback(async (target, options = {}) => {
     const cacheKey = getShockwaveRawMonthCacheKey(target.year, target.month);
@@ -1720,6 +1756,11 @@ export function ScheduleProvider({ children }) {
           if (shockwaveScheduleCacheVersionRef.current === cacheVersion) {
             rememberShockwaveRawMonthCache(shockwaveRawMonthRowsCacheRef, cacheKey, rows);
           }
+          if (isCurrentScheduleMonth(Number(target.year), Number(target.month)) && Array.isArray(rows)) {
+            rows.forEach((row) => {
+              if (row?.updated_at) advanceKnownScheduleServerUpdatedAt(row.updated_at);
+            });
+          }
           return rows;
         } catch (err) {
           lastError = err;
@@ -1737,7 +1778,7 @@ export function ScheduleProvider({ children }) {
 
     shockwaveRawMonthRowsLoadPromisesRef.current.set(cacheKey, rowsPromise);
     return rowsPromise;
-  }, []);
+  }, [advanceKnownScheduleServerUpdatedAt, isCurrentScheduleMonth]);
 
   const syncShockwaveRealtimeCaches = useCallback((item, options = {}) => {
     const itemYear = Number(item?.year);
@@ -2142,29 +2183,36 @@ export function ScheduleProvider({ children }) {
   }, [loadShockwaveMemos]);
 
   const refreshCurrentScheduleFromServer = useCallback((reason = 'manual', options = {}) => {
-    if (realtimeRefreshTimerRef.current) {
-      clearTimeout(realtimeRefreshTimerRef.current);
-    }
-
     const now = Date.now();
     const minInterval = Number(options.minIntervalMs ?? 0);
     if (minInterval > 0 && now - lastBackgroundRefreshAtRef.current < minInterval) {
       return;
     }
 
+    // A throttled focus event must not cancel an already queued reconnect.
+    if (realtimeRefreshTimerRef.current) {
+      clearTimeout(realtimeRefreshTimerRef.current);
+    }
+
     realtimeRefreshTimerRef.current = setTimeout(() => {
       realtimeRefreshTimerRef.current = null;
       lastBackgroundRefreshAtRef.current = Date.now();
       const { year, month } = currentDateRef.current;
-      loadCacheRef.current.staffMemos = null;
+      if (options.includeStaff !== false) loadCacheRef.current.staffMemos = null;
       if (options.invalidateCache === true) {
         loadCacheRef.current.shockwaveMemos = null;
         shockwaveScheduleCacheVersionRef.current += 1;
         shockwaveMemoViewCacheRef.current.clear();
         shockwaveMemoViewVersionRef.current.clear();
         shockwaveMemoViewLoadPromisesRef.current.clear();
-        shockwaveRawMonthRowsCacheRef.current.clear();
-        shockwaveRawMonthRowsLoadPromisesRef.current.clear();
+        if (options.invalidateCurrentMonthOnly === true) {
+          const currentRawKey = getShockwaveRawMonthCacheKey(year, month);
+          shockwaveRawMonthRowsCacheRef.current.delete(currentRawKey);
+          shockwaveRawMonthRowsLoadPromisesRef.current.delete(currentRawKey);
+        } else {
+          shockwaveRawMonthRowsCacheRef.current.clear();
+          shockwaveRawMonthRowsLoadPromisesRef.current.clear();
+        }
         scheduleShockwaveNavigationPreload(250);
       }
 
@@ -2208,23 +2256,79 @@ export function ScheduleProvider({ children }) {
     }
   }, []);
 
+  const isPollingScheduleUpdatesRef = useRef(false);
+  const checkScheduleServerUpdates = useCallback(async () => {
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+      return;
+    }
+    if (isPollingScheduleUpdatesRef.current) return;
+    isPollingScheduleUpdatesRef.current = true;
+
+    try {
+      const { year, month } = currentDateRef.current;
+      const { data, error } = await supabase
+        .from('shockwave_schedules')
+        .select('updated_at')
+        .eq('year', year)
+        .eq('month', month)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!error && data?.updated_at) {
+        const serverLatest = data.updated_at;
+        const knownLatest = lastKnownScheduleServerUpdatedAtRef.current;
+
+        if (!knownLatest) {
+          lastKnownScheduleServerUpdatedAtRef.current = serverLatest;
+        } else if (new Date(serverLatest).getTime() > new Date(knownLatest).getTime()) {
+          lastKnownScheduleServerUpdatedAtRef.current = serverLatest;
+          refreshCurrentScheduleFromServer('smart_poll', {
+            force: true,
+            invalidateCache: true,
+            invalidateCurrentMonthOnly: true,
+            includeStaff: false,
+            debounceMs: 50,
+          });
+        }
+      }
+
+      if (scheduleChannelRef.current) {
+        const state = scheduleChannelRef.current.state;
+        if (state === 'errored' || state === 'timed_out' || state === 'closed') {
+          scheduleChannelRef.current.subscribe();
+        }
+      }
+    } catch {
+      // 백그라운드 폴링 실패는 무시
+    } finally {
+      isPollingScheduleUpdatesRef.current = false;
+    }
+  }, [refreshCurrentScheduleFromServer]);
+
   useEffect(() => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
 
     const refreshWhenVisible = () => {
       if (document.visibilityState === 'visible') {
-        if (scheduleChannelRef.current) {
-          const state = scheduleChannelRef.current.state;
-          if (state === 'errored' || state === 'timed_out' || state === 'closed') {
-            scheduleChannelRef.current.subscribe();
-          }
+        const state = scheduleChannelRef.current?.state;
+        const isChannelDisconnected = state === 'errored' || state === 'timed_out' || state === 'closed';
+        if (isChannelDisconnected) {
+          scheduleChannelRef.current.subscribe();
+          refreshCurrentScheduleFromServer('visibility', {
+            force: true,
+            invalidateCache: true,
+            invalidateCurrentMonthOnly: true,
+            minIntervalMs: SHOCKWAVE_BACKGROUND_REFRESH_MIN_INTERVAL_MS,
+            debounceMs: 50,
+          });
+          return;
         }
-        refreshCurrentScheduleFromServer('visibility', {
-          force: true,
-          invalidateCache: true,
-          minIntervalMs: SHOCKWAVE_BACKGROUND_REFRESH_MIN_INTERVAL_MS,
-          debounceMs: 50,
-        });
+        const now = Date.now();
+        if (now - lastBackgroundRefreshAtRef.current >= SHOCKWAVE_BACKGROUND_REFRESH_MIN_INTERVAL_MS) {
+          lastBackgroundRefreshAtRef.current = now;
+          void checkScheduleServerUpdates();
+        }
       }
     };
     const refreshWhenOnline = () => {
@@ -2234,15 +2338,16 @@ export function ScheduleProvider({ children }) {
       refreshCurrentScheduleFromServer('online', {
         force: true,
         invalidateCache: true,
+        invalidateCurrentMonthOnly: true,
         debounceMs: 50,
       });
     };
     const refreshWhenFocused = () => {
-      refreshCurrentScheduleFromServer('focus', {
-        force: true,
-        minIntervalMs: SHOCKWAVE_BACKGROUND_REFRESH_MIN_INTERVAL_MS,
-        debounceMs: 50,
-      });
+      const now = Date.now();
+      if (now - lastBackgroundRefreshAtRef.current >= SHOCKWAVE_BACKGROUND_REFRESH_MIN_INTERVAL_MS) {
+        lastBackgroundRefreshAtRef.current = now;
+        void checkScheduleServerUpdates();
+      }
     };
 
     document.addEventListener('visibilitychange', refreshWhenVisible);
@@ -2254,7 +2359,7 @@ export function ScheduleProvider({ children }) {
       window.removeEventListener('online', refreshWhenOnline);
       window.removeEventListener('focus', refreshWhenFocused);
     };
-  }, [refreshCurrentScheduleFromServer]);
+  }, [checkScheduleServerUpdates, refreshCurrentScheduleFromServer]);
 
   // 충격파 스케줄 저장
   const saveShockwaveMemo = useCallback(async (year, month, weekIndex, dayIndex, rowIndex, colIndex, content, bg_color, merge_span, prescription, body_part) => {
@@ -2354,14 +2459,11 @@ export function ScheduleProvider({ children }) {
         )) || { ...optimisticMemo, ...canonicalUpsertData };
       }
 
-      loadCacheRef.current.shockwaveMemos = null;
-      shockwaveScheduleCacheVersionRef.current += 1;
-      shockwaveMemoViewCacheRef.current.clear();
-      shockwaveMemoViewVersionRef.current.clear();
-      shockwaveMemoViewLoadPromisesRef.current.clear();
-      shockwaveRawMonthRowsCacheRef.current.clear();
-      shockwaveRawMonthRowsLoadPromisesRef.current.clear();
-      scheduleShockwaveNavigationPreload(250);
+      const shouldKeepCanonical = shouldKeepShockwaveMemo(canonicalUpsertData);
+      applyLocalShockwaveRawCacheUpdates(
+        shouldKeepCanonical ? [savedCanonicalMemo] : [],
+        shouldKeepCanonical ? [] : [savedCanonicalMemo]
+      );
       if (wasDeletedAfterWriteStarted()) {
         return true;
       }
@@ -2451,7 +2553,7 @@ export function ScheduleProvider({ children }) {
         return false;
       }
     });
-  }, [therapists, manualTherapists, monthlyTherapists, monthlyManualTherapists, shouldKeepShockwaveMemo, protectExistingScheduleContent, enqueueShockwaveWrite, isCurrentScheduleMonth, scheduleShockwaveNavigationPreload]);
+  }, [therapists, manualTherapists, monthlyTherapists, monthlyManualTherapists, shouldKeepShockwaveMemo, protectExistingScheduleContent, enqueueShockwaveWrite, isCurrentScheduleMonth, applyLocalShockwaveRawCacheUpdates]);
 
   // 다중 셀 동시 업데이트 (병합/병합해제 등)
   const saveShockwaveMemosBulk = useCallback(async (memosArray, options = {}) => {
@@ -2601,14 +2703,10 @@ export function ScheduleProvider({ children }) {
             return isKeyWriteStillCurrent(key);
           })
         : [];
-      loadCacheRef.current.shockwaveMemos = null;
-      shockwaveScheduleCacheVersionRef.current += 1;
-      shockwaveMemoViewCacheRef.current.clear();
-      shockwaveMemoViewVersionRef.current.clear();
-      shockwaveMemoViewLoadPromisesRef.current.clear();
-      shockwaveRawMonthRowsCacheRef.current.clear();
-      shockwaveRawMonthRowsLoadPromisesRef.current.clear();
-      scheduleShockwaveNavigationPreload(250);
+      applyLocalShockwaveRawCacheUpdates(
+        data.length > 0 ? data : upsertPayloads,
+        []
+      );
       const nextShockwaveMemos = { ...shockwaveMemosRef.current };
       currentViewRelevantData.forEach(item => {
         const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
@@ -2733,7 +2831,7 @@ export function ScheduleProvider({ children }) {
       return false;
       }
     });
-  }, [currentYear, currentMonth, therapists, manualTherapists, monthlyTherapists, monthlyManualTherapists, shouldKeepShockwaveMemo, protectExistingScheduleContent, enqueueShockwaveWrite, isCurrentScheduleMonth, scheduleShockwaveNavigationPreload]);
+  }, [currentYear, currentMonth, therapists, manualTherapists, monthlyTherapists, monthlyManualTherapists, shouldKeepShockwaveMemo, protectExistingScheduleContent, enqueueShockwaveWrite, isCurrentScheduleMonth, applyLocalShockwaveRawCacheUpdates]);
 
   const resolveMonthlyTherapistRows = useCallback(async (year, month, type = 'shockwave', options = {}) => {
     const { data, error } = await withScheduleQueryTimeout(
@@ -3272,63 +3370,16 @@ export function ScheduleProvider({ children }) {
     };
   }, [currentYear, currentMonth, shouldKeepShockwaveMemo, shouldIgnoreStaleShockwaveServerItem, refreshCurrentScheduleFromServer, syncShockwaveRealtimeCaches]);
 
-  // 스마트 경량 폴링: WebSocket이 좀비 상태이거나 패킷이 유실되어도 3.5초 이내에 100% 동기화 보장
+  // 실시간 알림이 우선이며, 누락된 충격파 변경은 30초 간격 경량 조회로 확인한다.
   useEffect(() => {
-    let pollTimer = null;
-    let isPolling = false;
-
-    const checkServerUpdates = async () => {
-      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
-        return;
-      }
-      if (isPolling) return;
-      isPolling = true;
-
-      try {
-        const { data, error } = await supabase
-          .from('shockwave_schedules')
-          .select('updated_at')
-          .eq('year', currentYear)
-          .eq('month', currentMonth)
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!error && data?.updated_at) {
-          const serverLatest = data.updated_at;
-          const knownLatest = lastKnownScheduleServerUpdatedAtRef.current;
-
-          if (!knownLatest) {
-            lastKnownScheduleServerUpdatedAtRef.current = serverLatest;
-          } else if (new Date(serverLatest).getTime() > new Date(knownLatest).getTime()) {
-            lastKnownScheduleServerUpdatedAtRef.current = serverLatest;
-            refreshCurrentScheduleFromServer('smart_poll', {
-              force: true,
-              invalidateCache: true,
-              debounceMs: 50,
-            });
-          }
-        }
-
-        if (scheduleChannelRef.current) {
-          const state = scheduleChannelRef.current.state;
-          if (state === 'errored' || state === 'timed_out' || state === 'closed') {
-            scheduleChannelRef.current.subscribe();
-          }
-        }
-      } catch (pollErr) {
-        // 백그라운드 폴링 실패는 무시
-      } finally {
-        isPolling = false;
-      }
-    };
-
-    pollTimer = setInterval(checkServerUpdates, SHOCKWAVE_SMART_POLL_INTERVAL_MS);
+    const pollTimer = setInterval(() => {
+      void checkScheduleServerUpdates();
+    }, SHOCKWAVE_SMART_POLL_INTERVAL_MS);
 
     return () => {
-      if (pollTimer) clearInterval(pollTimer);
+      clearInterval(pollTimer);
     };
-  }, [currentYear, currentMonth, refreshCurrentScheduleFromServer]);
+  }, [currentYear, currentMonth, checkScheduleServerUpdates]);
 
   return (
     <ScheduleContext.Provider value={{

@@ -397,11 +397,15 @@ export default function ManualTherapyStatsPage() {
     fetchLogs,
   ]);
 
-  // 탭이 다시 보일 때 (visibility change) 자동으로 데이터 갱신
+  // 탭이 다시 보일 때 (visibility change) 과도한 강제 재조회를 방지하기 위해 최소 30초 간격으로 갱신
+  const lastVisibilityRefreshAtRef = useRef(0);
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        reloadScheduleData({ force: true });
+        const now = Date.now();
+        if (now - lastVisibilityRefreshAtRef.current < 30000) return;
+        lastVisibilityRefreshAtRef.current = now;
+        reloadScheduleData({ force: false });
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);

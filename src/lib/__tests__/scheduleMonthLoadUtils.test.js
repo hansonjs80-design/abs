@@ -336,4 +336,32 @@ describe('schedule month loading priority', () => {
       old: {},
     }), 'unknown');
   });
+
+  it('migrates legacy v1 backup settings off so devices stop automatic full snapshots', async () => {
+    const { readBackupSettings, BACKUP_SETTINGS_STORAGE_KEY } = await import('../supabaseBackupUtils.js');
+    const storageMap = new Map([
+      ['abs.supabaseBackup.settings.v1', JSON.stringify({
+        autoSnapshotEnabled: true,
+        realtimeEnabled: true,
+        snapshotIntervalMinutes: 5,
+      })],
+    ]);
+    const prevWindow = globalThis.window;
+    globalThis.window = {
+      localStorage: {
+        getItem: (key) => storageMap.get(key) ?? null,
+        setItem: (key, val) => storageMap.set(key, String(val)),
+        removeItem: (key) => storageMap.delete(key),
+      },
+    };
+    try {
+      const settings = readBackupSettings();
+      assert.equal(BACKUP_SETTINGS_STORAGE_KEY, 'abs.supabaseBackup.settings.v2');
+      assert.equal(settings.autoSnapshotEnabled, false);
+      assert.equal(settings.realtimeEnabled, false);
+      assert.equal(storageMap.has('abs.supabaseBackup.settings.v1'), false);
+    } finally {
+      globalThis.window = prevWindow;
+    }
+  });
 });

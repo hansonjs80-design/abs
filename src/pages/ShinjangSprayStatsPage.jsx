@@ -276,9 +276,15 @@ export default function ShinjangSprayStatsPage() {
     return () => window.removeEventListener('clinic-stats-updated', handleStatsUpdated);
   }, [refreshData]);
 
+  const lastVisibilityRefreshAtRef = useRef(0);
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') refreshData({ force: true });
+      if (document.visibilityState === 'visible') {
+        const now = Date.now();
+        if (now - lastVisibilityRefreshAtRef.current < 30000) return;
+        lastVisibilityRefreshAtRef.current = now;
+        refreshData({ force: false });
+      }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);

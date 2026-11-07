@@ -1,4 +1,5 @@
-export const BACKUP_SETTINGS_STORAGE_KEY = 'abs.supabaseBackup.settings.v1';
+export const BACKUP_SETTINGS_STORAGE_KEY = 'abs.supabaseBackup.settings.v2';
+const LEGACY_BACKUP_SETTINGS_STORAGE_KEY = 'abs.supabaseBackup.settings.v1';
 export const BACKUP_LAST_AUTO_SNAPSHOT_KEY = 'abs.supabaseBackup.lastAutoSnapshotAt.v1';
 export const BACKUP_SETTINGS_EVENT = 'abs:supabase-backup-settings-changed';
 
@@ -159,6 +160,7 @@ function normalizeBackupSettings(value = {}) {
 export function readBackupSettings() {
   if (typeof window === 'undefined') return DEFAULT_BACKUP_SETTINGS;
   try {
+    window.localStorage.removeItem(LEGACY_BACKUP_SETTINGS_STORAGE_KEY);
     const raw = window.localStorage.getItem(BACKUP_SETTINGS_STORAGE_KEY);
     if (!raw) return DEFAULT_BACKUP_SETTINGS;
     return normalizeBackupSettings(JSON.parse(raw));
