@@ -150,8 +150,8 @@ function normalizeBackupSettings(value = {}) {
   const interval = Number(value.snapshotIntervalMinutes);
   const maxSnapshots = Number(value.maxSnapshots);
   return {
-    autoSnapshotEnabled: Boolean(value.autoSnapshotEnabled),
-    realtimeEnabled: Boolean(value.realtimeEnabled),
+    autoSnapshotEnabled: false,
+    realtimeEnabled: false,
     snapshotIntervalMinutes: [5, 10, 30, 60].includes(interval) ? interval : DEFAULT_BACKUP_SETTINGS.snapshotIntervalMinutes,
     maxSnapshots: Number.isFinite(maxSnapshots) && maxSnapshots >= 12 ? Math.min(500, Math.round(maxSnapshots)) : DEFAULT_MAX_SNAPSHOTS,
   };

@@ -9,6 +9,8 @@
     "lint": "eslint .",
     "test": "node --test \"src/**/*.test.js\"",
     "preview": "vite preview",
+    "backup:local": "node scripts/create-local-supabase-backup.mjs --force",
+    "backup:pre-push": "node scripts/create-local-supabase-backup.mjs --pre-push --if-older-than-hours=6",
     "restore:supabase-backup": "node scripts/restore-supabase-backup.mjs",
     "auto-push": "bash scripts/auto-push.sh",
     "sync": "node safe-sync.js"

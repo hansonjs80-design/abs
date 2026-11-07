@@ -7,7 +7,6 @@ import {
   FileText,
   HardDrive,
   RefreshCw,
-  Save,
   Trash2,
   Upload,
 } from 'lucide-react';
@@ -27,15 +26,7 @@ import {
   listBackupSnapshots,
   readBackupSettings,
   saveBackupSnapshot,
-  writeBackupSettings,
 } from '../../lib/supabaseBackupUtils';
-
-const intervalOptions = [
-  { value: 5, label: '5분' },
-  { value: 10, label: '10분' },
-  { value: 30, label: '30분' },
-  { value: 60, label: '60분' },
-];
 
 const formatDateTime = (value) => {
   if (!value) return '-';
@@ -115,7 +106,7 @@ export default function BackupSettings() {
   const { addToast } = useToast();
   const fileInputRef = useRef(null);
   const selectedIdRef = useRef('');
-  const [settings, setSettings] = useState(() => readBackupSettings());
+  const [settings] = useState(() => readBackupSettings());
   const [snapshots, setSnapshots] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [selectedSnapshot, setSelectedSnapshot] = useState(null);
@@ -169,13 +160,6 @@ export default function BackupSettings() {
         setMessage(`선택한 백업을 불러오지 못했습니다: ${error.message}`);
       });
   }, [selectedId]);
-
-  const handleSaveSettings = () => {
-    const saved = writeBackupSettings(settings);
-    setSettings(saved);
-    setMessage('백업 설정을 저장했습니다. 자동 백업은 이 브라우저에서 앱이 열려 있을 때만 실행됩니다.');
-    addToast?.('백업 설정이 저장되었습니다.', 'success');
-  };
 
   const handleCreateSnapshot = async () => {
     setBusy(true);
@@ -250,67 +234,16 @@ export default function BackupSettings() {
         </div>
         <div className="card-body backup-settings-body">
           <div className="backup-notices">
-            <NoticeBox tone="warning">
-              이 화면은 Supabase 데이터를 읽어 로컬에 백업하며, 서버 데이터는 수정하거나 삭제하지 않습니다.
+            <NoticeBox tone="info">
+              기기별 브라우저 자동 백업은 Supabase 데이터 전송량(Egress) 보호를 위해 비활성화되었습니다. 코딩·배포(git push) 시 맥(Mac)의 <code>backups/</code> 폴더에 자동으로 로컬 백업 파일이 생성됩니다.
             </NoticeBox>
             <NoticeBox>
-              장기 보관용 백업은 JSON으로 내보내 별도 드라이브에 보관하세요.
+              필요 시 아래 <strong>지금 전체 백업</strong> 버튼을 눌러 수동으로 스냅샷을 만들고 JSON으로 내보낼 수 있습니다.
             </NoticeBox>
-          </div>
-
-          <div className="backup-options-grid">
-            <label className="backup-option-card">
-              <input
-                type="checkbox"
-                checked={settings.autoSnapshotEnabled}
-                onChange={(event) => setSettings((prev) => ({ ...prev, autoSnapshotEnabled: event.target.checked }))}
-              />
-              <span>
-                <strong>자동 전체 백업</strong>
-                <small>앱이 켜져 있을 때 주기적으로 전체 스냅샷 생성</small>
-              </span>
-            </label>
-            <label className="backup-option-card">
-              <input
-                type="checkbox"
-                checked={settings.realtimeEnabled}
-                onChange={(event) => setSettings((prev) => ({ ...prev, realtimeEnabled: event.target.checked }))}
-              />
-              <span>
-                <strong>실시간 변경 로그</strong>
-                <small>스케줄 핵심 테이블 변경을 로컬에 보조 기록</small>
-              </span>
-            </label>
-            <div className="backup-field">
-              <label>백업 주기</label>
-              <select
-                className="form-input"
-                value={settings.snapshotIntervalMinutes}
-                onChange={(event) => setSettings((prev) => ({ ...prev, snapshotIntervalMinutes: Number(event.target.value) }))}
-              >
-                {intervalOptions.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="backup-field">
-              <label>보관 스냅샷 수</label>
-              <input
-                className="form-input"
-                type="number"
-                min={12}
-                max={500}
-                value={settings.maxSnapshots}
-                onChange={(event) => setSettings((prev) => ({ ...prev, maxSnapshots: Number(event.target.value) }))}
-              />
-            </div>
           </div>
 
           <div className="backup-primary-actions">
-            <button type="button" className="btn btn-primary" onClick={handleSaveSettings}>
-              <Save size={16} /> 설정 저장
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={handleCreateSnapshot} disabled={busy}>
+            <button type="button" className="btn btn-primary" onClick={handleCreateSnapshot} disabled={busy}>
               <DatabaseBackup size={16} /> 지금 전체 백업
             </button>
             <button type="button" className="btn btn-secondary" onClick={() => refreshSnapshots()} disabled={busy}>
