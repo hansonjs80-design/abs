@@ -1060,11 +1060,11 @@ td.gc-bold > .gc-input {
 
 /* Frozen Columns Persistence */
 .hdr-fixed-1, .gc-fixed-1 { left: 0; z-index: 25 !important; }
-.hdr-fixed-2, .gc-fixed-2 { left: 48px; z-index: 25 !important; }
-.hdr-fixed-3, .gc-fixed-3 { left: 118px; z-index: 25 !important; }
-.hdr-fixed-4, .gc-fixed-4 { left: 203px; z-index: 25 !important; }
-.hdr-fixed-5, .gc-fixed-5 { left: 278px; z-index: 25 !important; }
-.hdr-fixed-6, .gc-fixed-6 { left: 323px; z-index: 25 !important; border-right: 1px solid var(--grid-strong) !important; }
+.hdr-fixed-2, .gc-fixed-2 { left: 37px; z-index: 25 !important; }
+.hdr-fixed-3, .gc-fixed-3 { left: 104px; z-index: 25 !important; }
+.hdr-fixed-4, .gc-fixed-4 { left: 185px; z-index: 25 !important; }
+.hdr-fixed-5, .gc-fixed-5 { left: 256px; z-index: 25 !important; }
+.hdr-fixed-6, .gc-fixed-6 { left: 299px; z-index: 25 !important; border-right: 1px solid var(--grid-strong) !important; }
 
 .hdr-fixed, .gc-fixed {
   position: sticky !important;
@@ -1316,14 +1316,20 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   font-weight: 800;
   color: #475569;
   background: var(--grid-summary-strong-bg) !important;
-  border: 1px solid var(--grid-strong) !important;
+  border-top: 0 !important;
+  border-left: 0 !important;
+  border-right: 1px solid var(--grid-strong) !important;
+  border-bottom: 1px solid var(--grid-strong) !important;
 }
 
 .hdr-new-patient-total {
   font-weight: 800;
   color: #334155;
   background: var(--grid-new-strong-bg) !important;
-  border: 1px solid var(--grid-strong) !important;
+  border-top: 0 !important;
+  border-left: 0 !important;
+  border-right: 1px solid var(--grid-strong) !important;
+  border-bottom: 1px solid var(--grid-strong) !important;
 }
 
 /* Data grid header emphasis: fixed, therapist, prescription, and summary header rows. */

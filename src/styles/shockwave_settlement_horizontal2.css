@@ -3,10 +3,10 @@
   display: inline-flex !important;
   align-items: center !important;
   gap: 2px !important;
-  background: #f8fafc !important;
-  padding: 2px !important;
-  border-radius: 6px !important;
-  border: 1px solid #cbd5e1 !important;
+  background: #f1f5f9 !important;
+  padding: 3px !important;
+  border-radius: 8px !important;
+  border: 1px solid #dbe4f0 !important;
   margin-right: 12px !important;
 }
 
@@ -48,23 +48,35 @@
 .sw-view-mode-btn {
   border: none !important;
   background: transparent !important;
-  padding: 4px 10px !important;
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  border-radius: 4px !important;
+  padding: 5px 11px !important;
+  font-size: 11.5px !important;
+  font-weight: 800 !important;
+  border-radius: 6px !important;
   cursor: pointer !important;
   color: #64748b !important;
-  transition: all 0.15s ease !important;
+  transition: all 0.14s ease !important;
   outline: none !important;
   line-height: 1.2 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.sw-view-mode-btn:hover:not(.active) {
+  color: #1e293b !important;
+  background: rgba(255, 255, 255, 0.65) !important;
 }
 
 .sw-settlement-view-mode-row {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  gap: 12px !important;
+  gap: 10px !important;
   width: 100% !important;
+  padding: 6px 10px !important;
+  box-sizing: border-box !important;
+  border: 1px solid #dbe4f0 !important;
+  border-radius: 10px !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
 }
 
 .sw-settlement-view-mode-row .sw-view-mode-selector {
@@ -72,33 +84,40 @@
 }
 
 .sw-view-mode-btn.active {
-  background: #1e3a8a !important;
+  background: #1d4ed8 !important;
   color: #ffffff !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 1px 3px rgba(29, 78, 216, 0.25) !important;
 }
 
 .sw-cryo-view-mode-group {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: flex-end !important;
-  gap: 6px !important;
+  gap: 8px !important;
   margin-left: auto !important;
+  padding: 2px 3px 2px 10px !important;
+  border: 1px solid #bae6fd !important;
+  border-radius: 9px !important;
+  background: #f0f9ff !important;
 }
 
 .sw-cryo-view-mode-label {
-  color: #0e7490 !important;
-  font-size: 11px !important;
+  color: #0369a1 !important;
+  font-size: 11.5px !important;
   font-weight: 800 !important;
   white-space: nowrap !important;
+  letter-spacing: -0.01em !important;
 }
 
 .sw-cryo-view-mode-group .sw-view-mode-selector {
-  border-color: #67e8f9 !important;
-  background: #ecfeff !important;
+  border-color: transparent !important;
+  background: rgba(255, 255, 255, 0.75) !important;
+  padding: 2px !important;
 }
 
 .sw-cryo-view-mode-group .sw-view-mode-btn.active {
-  background: #0e7490 !important;
+  background: #0284c7 !important;
+  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.25) !important;
 }
 
 @media (max-width: 720px) {
@@ -718,28 +737,41 @@ td.horizontal2-total-spacer {
   color: #ef0000 !important;
 }
 
+.sw-horizontal2-recent-table {
+  width: 100% !important;
+  table-layout: auto !important;
+}
+
+.sw-horizontal2-recent-table th,
+.sw-horizontal2-recent-table td {
+  overflow: visible !important;
+  text-overflow: clip !important;
+  padding: 5px 8px !important;
+  box-sizing: border-box !important;
+}
+
 .sw-horizontal2-recent-table th:first-child,
 .sw-horizontal2-recent-table td:first-child {
-  width: auto !important;
-  min-width: 0 !important;
+  width: 26% !important;
+  min-width: 96px !important;
 }
 
 .sw-horizontal2-recent-table th:nth-child(2),
 .sw-horizontal2-recent-table td:nth-child(2) {
-  width: auto !important;
-  min-width: 0 !important;
+  width: 19% !important;
+  min-width: 68px !important;
 }
 
 .sw-horizontal2-recent-table th:nth-child(3),
 .sw-horizontal2-recent-table td:nth-child(3) {
-  width: auto !important;
-  min-width: 0 !important;
+  width: 35% !important;
+  min-width: 118px !important;
 }
 
 .sw-horizontal2-recent-table th:nth-child(4),
 .sw-horizontal2-recent-table td:nth-child(4) {
-  width: auto !important;
-  min-width: 0 !important;
+  width: 20% !important;
+  min-width: 68px !important;
 }
 
 .sw-horizontal2-recent-table .new-patient-val {
@@ -941,5 +973,36 @@ td.horizontal2-total-spacer {
     border-right: 0.5pt solid #64748b !important;
     background: #ffffff !important;
     padding: 0 !important;
+  }
+}
+
+@media screen {
+  /* 가로보기 2 화면: 치료사 이름 셀 아래 1칸 빈칸(원본 구조)에 어떠한 배경색도 남지 않도록 tr과 spacer 모두 투명 처리 */
+  .sw-horizontal2-layout .sw-horizontal2-therapist-section,
+  .sw-horizontal2-layout .sw-horizontal2-therapist-table,
+  .sw-horizontal2-layout .sw-horizontal2-therapist-table tbody,
+  .sw-horizontal2-layout .sw-horizontal2-therapist-table tr.horizontal2-total-row,
+  .sw-horizontal2-layout .sw-horizontal2-therapist-table tr.horizontal2-total-row.therapist-tone-0,
+  .sw-horizontal2-layout .sw-horizontal2-therapist-table tr.horizontal2-total-row.therapist-tone-1,
+  .sw-horizontal2-layout .sw-horizontal2-therapist-table tr.horizontal2-total-row.therapist-tone-2,
+  .sw-horizontal2-layout .sw-horizontal2-therapist-table tr.horizontal2-total-row.therapist-tone-3,
+  .sw-horizontal2-layout .sw-horizontal2-therapist-table tr.horizontal2-total-row.therapist-tone-4,
+  .sw-horizontal2-layout .sw-horizontal2-therapist-table tr.horizontal2-total-row > td.horizontal2-total-spacer,
+  .sw-horizontal2-layout .sw-horizontal2-therapist-table tr.horizontal2-total-row.therapist-tone-0 > td.horizontal2-total-spacer,
+  .sw-horizontal2-layout .sw-horizontal2-therapist-table tr.horizontal2-total-row.therapist-tone-1 > td.horizontal2-total-spacer,
+  .sw-horizontal2-layout .sw-horizontal2-therapist-table tr.horizontal2-total-row.therapist-tone-2 > td.horizontal2-total-spacer,
+  .sw-horizontal2-layout .sw-horizontal2-therapist-table tr.horizontal2-total-row.therapist-tone-3 > td.horizontal2-total-spacer,
+  .sw-horizontal2-layout .sw-horizontal2-therapist-table tr.horizontal2-total-row.therapist-tone-4 > td.horizontal2-total-spacer {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+
+  .sw-horizontal2-layout .sw-horizontal2-therapist-table tr.horizontal2-total-row > td.horizontal2-total-spacer {
+    border-left: 0 none transparent !important;
+    border-left: hidden !important;
+    border-bottom: 0 none transparent !important;
+    border-bottom: hidden !important;
+    border-top: 1.5px solid #475569 !important;
+    border-right: 1.5px solid #475569 !important;
   }
 }

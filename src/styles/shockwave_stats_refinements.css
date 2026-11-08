@@ -1281,17 +1281,17 @@
   font-weight: 900 !important;
 }
 
-/* Keep the visible table frame at 3px on every shockwave stats table. */
+/* Keep the visible table frame unified without duplicate cell borders */
 .sw-grid-table thead tr:first-child > * {
-  border-top: 3px solid #94a3b8 !important;
+  border-top: 0 !important;
 }
 
 .sw-grid-table tr > :last-child {
-  border-right: 3px solid #94a3b8 !important;
+  border-right: 0 !important;
 }
 
 .sw-grid-table {
-  border-bottom: 3px solid #94a3b8 !important;
+  border-bottom: 2px solid #64748b !important;
 }
 
 .sw-grid-table tbody tr:last-child > td.gc,
@@ -1531,7 +1531,7 @@
 
 .sw-settlement-support-row {
   display: grid;
-  grid-template-columns: minmax(420px, max-content) minmax(500px, max-content);
+  grid-template-columns: max-content max-content;
   align-items: start;
   gap: 18px;
   width: max-content;
@@ -1539,13 +1539,19 @@
 }
 
 .sw-settlement-support-row--single {
-  grid-template-columns: minmax(420px, max-content);
+  grid-template-columns: max-content;
 }
 
 .sw-stats-body--settlement .sw-settlement-support-row .sw-settlement-card {
-  width: auto;
+  width: fit-content !important;
+  min-width: 0 !important;
   max-width: 100%;
   align-self: start;
+}
+
+.sw-stats-body--settlement .sw-settlement-support-row .sw-settlement-header {
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .sw-grand-total-card,
@@ -2275,14 +2281,22 @@ body.settlement-print .sw-settlement-stack--shockwave[data-view-mode="horizontal
 }
 
 /* 도수치료 좌측 결산 테이블 전용 컴팩트 디자인 및 우측열 중앙 정렬 */
+.sw-stats-body--settlement .sw-manual-settlement-stack {
+  width: fit-content !important;
+  max-width: 100% !important;
+  flex: 0 0 auto !important;
+}
+
 .sw-manual-settlement-main-card {
-  width: 370px !important;
+  width: max-content !important;
+  min-width: 370px !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
 }
 
 .sw-manual-settlement-stack--narrow {
-  width: 370px !important;
+  width: max-content !important;
+  min-width: 370px !important;
   max-width: 100% !important;
 }
 
@@ -2319,13 +2333,13 @@ body.settlement-print .sw-settlement-stack--shockwave[data-view-mode="horizontal
 }
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table {
-  width: 100% !important;
+  width: max-content !important;
   min-width: 100% !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
 }
 
 .sw-manual-settlement-main-card .sw-manual-settlement-label-column {
-  width: 44% !important;
+  width: auto !important;
 }
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table thead th {
@@ -2350,10 +2364,18 @@ body.settlement-print .sw-settlement-stack--shockwave[data-view-mode="horizontal
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table thead .label-col,
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table .row-label {
   text-align: center !important;
-  width: 44% !important;
+  width: auto !important;
   min-width: 138px !important;
   max-width: 175px !important;
   padding: 6px 12px !important;
+}
+
+.sw-manual-settlement-main-card .sw-manual-compact-settlement-table thead .prescription-col,
+.sw-manual-settlement-main-card .sw-manual-compact-settlement-table thead th.grand-col.prescription-col,
+.sw-manual-settlement-main-card .sw-manual-compact-settlement-table tbody td,
+.sw-manual-settlement-main-card .sw-manual-compact-settlement-table tbody td.grand-value:not([colspan]) {
+  width: auto !important;
+  min-width: 96px !important;
 }
 
 .sw-manual-settlement-main-card .sw-manual-compact-settlement-table .merged-value,
@@ -2599,7 +2621,372 @@ body.settlement-print .sw-settlement-stack--shockwave[data-view-mode="horizontal
   .shinjang-spray-settings-list
 ) {
   background: #ffffff !important;
-  box-shadow: none !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.035) !important;
+}
+
+@media screen {
+  .sw-settlement-header {
+    padding-left: 10px;
+    border-left: 3.5px solid #2563eb;
+  }
+
+  .sw-stats-container--shinjang .sw-settlement-header {
+    border-left-color: #15803d;
+  }
+
+  .sw-stats-container--manual .sw-settlement-header {
+    border-left-color: #ea580c;
+  }
+
+  .sw-new-patient-card .sw-settlement-header {
+    border-left-color: #7c3aed;
+  }
+
+  .sw-settlement-meta {
+    gap: 6px;
+  }
+
+  .sw-settlement-meta span {
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid #dbe4f0;
+    background: #ffffff;
+    color: #334155;
+    font-size: 0.78rem;
+    font-weight: 800;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  }
+
+  .sw-settlement-meta .sw-settlement-meta-sales {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+  }
+
+  .sw-settlement-meta .sw-settlement-meta-incentive {
+    border-color: #a7f3d0;
+    background: #ecfdf5;
+    color: #047857;
+  }
+
+  .sw-cryo-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 28px;
+    padding: 4px 12px;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    background: #f0f9ff;
+    color: #0369a1;
+    font-size: 11.5px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 140ms ease;
+  }
+
+  .sw-cryo-toggle-btn:hover:not(.active) {
+    background: #e0f2fe;
+    border-color: #7dd3fc;
+  }
+
+  .sw-cryo-toggle-btn.active {
+    background: #0284c7;
+    border-color: #0284c7;
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(2, 132, 199, 0.25);
+  }
+
+  /* 치료사별 열 그룹 경계선 시인성 강화 및 전체 테이블 선 연결성/매끄러움 통일 (현황 / 결산 / 신규 환자 공통) */
+  .sw-stats-body--grid .sw-grid-card-table,
+  .sw-stats-body--grid .sw-grid-shell,
+  .sw-stats-body--grid .sw-grid-wrapper {
+    width: max-content !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .sw-grid-wrapper--shockwave .grid-title::before,
+  .sw-grid-wrapper--shockwave .grid-title::after,
+  .sw-grid-table .grid-title::before,
+  .sw-grid-table .grid-title::after {
+    display: none !important;
+  }
+
+  .sw-stats-body--grid .sw-grid-table {
+    --grid-divider: #64748b;
+    --grid-strong: #64748b;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    border: 2px solid #64748b !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05) !important;
+  }
+
+  .sw-grid-table th,
+  .sw-grid-table td {
+    border-top: 0 !important;
+    border-left: 0 !important;
+    border-right: 1px solid #cbd5e1 !important;
+    border-bottom: 1px solid #dbe3ee !important;
+  }
+
+  .sw-grid-table thead .grid-title,
+  .sw-grid-table thead tr:first-child > * {
+    border-top: 0 !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-bottom: 2px solid #64748b !important;
+    border-radius: 0 !important;
+  }
+
+  .sw-grid-table thead .hdr-therapist,
+  .sw-grid-table thead .hdr-pres,
+  .sw-grid-table thead .hdr-total,
+  .sw-grid-table thead .hdr-new-patient {
+    border-bottom: 1.5px solid #94a3b8 !important;
+  }
+
+  .sw-grid-table thead .sw-header-row-therapists > th[rowspan="3"],
+  .sw-grid-table thead .sw-header-row-prescription-totals > th {
+    border-bottom: 2px solid #64748b !important;
+  }
+
+  .sw-stats-body--grid .sw-grid-table thead .sw-header-row-therapists th:nth-child(6),
+  .sw-stats-body--grid .sw-grid-table thead .hdr-fixed-last,
+  .sw-stats-body--grid .sw-grid-table tbody td.fixed-field-last,
+  .sw-stats-body--grid .sw-grid-table thead .hdr-therapist.therapist-group-end,
+  .sw-stats-body--grid .sw-grid-table thead .hdr-pres.therapist-group-end,
+  .sw-stats-body--grid .sw-grid-table thead .hdr-pres-total.therapist-group-end,
+  .sw-stats-body--grid .sw-grid-table tbody .gc-therapist-value.therapist-group-end,
+  .sw-stats-body--grid .sw-grid-table tbody td.therapist-group-end {
+    border-right: 1.5px solid #8596ab !important;
+  }
+
+  .sw-stats-body--grid .sw-grid-table thead .hdr-total.total-group-start,
+  .sw-stats-body--grid .sw-grid-table thead .hdr-grand-total.total-group-start,
+  .sw-stats-body--grid .sw-grid-table tbody .gc-total.total-group-start {
+    border-right: 1.5px solid #94a3b8 !important;
+  }
+
+  .sw-stats-body--grid .sw-grid-table tbody tr.tr-date-end > td,
+  .sw-stats-body--grid .sw-grid-table tbody td.grp-first:not(.gc-grid-bottom) {
+    border-bottom: 1.5px solid #94a3b8 !important;
+  }
+
+  .sw-stats-body--grid .sw-grid-table thead tr > :last-child,
+  .sw-stats-body--grid .sw-grid-table tbody tr > :last-child {
+    border-right: 0 !important;
+  }
+
+  .sw-stats-body--grid .sw-grid-table tbody tr:last-child > td,
+  .sw-stats-body--grid .sw-grid-table tbody td.gc.gc-grid-bottom {
+    border-bottom: 0 !important;
+  }
+
+  /* 가로보기 총합계 우상단 11월 전체 배지가 테이블 우측 끝과 정확히 맞도록 정렬 */
+  .sw-stats-body--settlement .sw-settlement-support-row .sw-grand-total-card {
+    display: inline-flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: max-content !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .sw-stats-body--settlement .sw-settlement-support-row .sw-grand-total-card .sw-settlement-header {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 결산 및 신규 환자 테이블 외곽선/내부선 단차 제거 및 치료사별 경계선 은은하고 명확하게 조정 */
+  .sw-stats-body--settlement .sw-settlement-table-wrap:has(
+    .sw-settlement-table,
+    .sw-compact-settlement-table,
+    .sw-manual-compact-settlement-table,
+    .sw-grand-total-table,
+    .sw-summary-table,
+    .sw-compact-summary-table
+  ),
+  .sw-stats-body--settlement .sw-settlement-stack--shockwave .sw-grand-total-card .sw-settlement-table-wrap,
+  .sw-stats-body--settlement .sw-settlement-stack--shockwave[data-view-mode="horizontal"] .sw-recent-summary-card .sw-settlement-table-wrap,
+  .sw-stats-body--settlement .sw-recent-summary-card .sw-settlement-table-wrap,
+  .sw-stats-body--settlement .sw-six-month-summary-wrap {
+    border: 2px solid #64748b !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+  }
+
+  /* 최근 6개월 결산/신환 현황 테이블: 가로보기/가로보기 2/세로보기/도수치료 결산 어디서나 우측 잘림 없이 4개 컬럼이 온전히 보이도록 보정 */
+  .sw-stats-body--settlement .sw-recent-summary-card,
+  .sw-stats-body--settlement .sw-recent-summary-card .sw-settlement-table-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .sw-stats-body--settlement .sw-settlement-support-row .sw-recent-summary-card,
+  .sw-stats-body--settlement .sw-manual-summary-stack .sw-recent-summary-card {
+    width: max-content !important;
+  }
+
+  .sw-stats-body--settlement .sw-recent-summary-card .sw-summary-table,
+  .sw-stats-body--settlement .sw-recent-summary-card .sw-compact-summary-table {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: auto !important;
+  }
+
+  .sw-stats-body--settlement .sw-recent-summary-card .sw-summary-table th,
+  .sw-stats-body--settlement .sw-recent-summary-card .sw-summary-table td {
+    min-width: 0 !important;
+    padding: 7px 8px !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
+
+  .sw-stats-body--settlement .sw-recent-summary-card .sw-summary-table th:nth-child(1),
+  .sw-stats-body--settlement .sw-recent-summary-card .sw-summary-table td:nth-child(1) {
+    min-width: 96px !important;
+    width: 25% !important;
+  }
+
+  .sw-stats-body--settlement .sw-recent-summary-card .sw-summary-table th:nth-child(2),
+  .sw-stats-body--settlement .sw-recent-summary-card .sw-summary-table td:nth-child(2) {
+    min-width: 68px !important;
+    width: 18% !important;
+  }
+
+  .sw-stats-body--settlement .sw-recent-summary-card .sw-summary-table th:nth-child(3),
+  .sw-stats-body--settlement .sw-recent-summary-card .sw-summary-table td:nth-child(3) {
+    min-width: 118px !important;
+    width: 37% !important;
+  }
+
+  .sw-stats-body--settlement .sw-recent-summary-card .sw-summary-table th:nth-child(4),
+  .sw-stats-body--settlement .sw-recent-summary-card .sw-summary-table td:nth-child(4) {
+    min-width: 68px !important;
+    width: 20% !important;
+  }
+
+  .sw-stats-body--settlement .sw-settlement-table:not(.sw-horizontal2-therapist-table):not(.sw-horizontal2-grand-table):not(.sw-horizontal2-recent-table),
+  .sw-stats-body--settlement .sw-compact-settlement-table,
+  .sw-stats-body--settlement .sw-manual-compact-settlement-table,
+  .sw-stats-body--settlement .sw-grand-total-table,
+  .sw-stats-body--settlement .sw-summary-table,
+  .sw-stats-body--settlement .sw-compact-summary-table {
+    border: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .sw-stats-body--settlement .sw-settlement-table:not(.sw-horizontal2-therapist-table):not(.sw-horizontal2-grand-table):not(.sw-horizontal2-recent-table) :is(th, td),
+  .sw-stats-body--settlement .sw-compact-settlement-table :is(th, td),
+  .sw-stats-body--settlement .sw-manual-compact-settlement-table :is(th, td),
+  .sw-stats-body--settlement .sw-grand-total-table :is(th, td) {
+    border-top: 0 !important;
+    border-left: 0 !important;
+    border-right: 1px solid #cbd5e1 !important;
+    border-bottom: 1px solid #cbd5e1 !important;
+  }
+
+  .sw-stats-body--settlement .sw-summary-table :is(th, td),
+  .sw-stats-body--settlement .sw-compact-summary-table :is(th, td) {
+    border-top: 0 !important;
+    border-left: 0 !important;
+    border-right: 1px solid #94a3b8 !important;
+    border-bottom: 1px solid #94a3b8 !important;
+  }
+
+  .sw-stats-body--settlement .sw-settlement-table:not(.sw-horizontal2-therapist-table):not(.sw-horizontal2-grand-table):not(.sw-horizontal2-recent-table) thead :is(.therapist-col, .grand-col:not(.prescription-col):not([rowspan]), .rate-header-col),
+  .sw-stats-body--settlement .sw-compact-settlement-table thead :is(.therapist-col, .grand-col:not(.prescription-col):not([rowspan]), .rate-header-col),
+  .sw-stats-body--settlement .sw-manual-compact-settlement-table thead :is(.therapist-col, .grand-col:not(.prescription-col):not([rowspan]), .rate-header-col),
+  .sw-stats-body--settlement .sw-grand-total-table thead :is(.therapist-col, .grand-col:not(.prescription-col):not([rowspan]), .rate-header-col) {
+    border-bottom: 1.5px solid #94a3b8 !important;
+  }
+
+  .sw-stats-body--settlement .sw-settlement-table:not(.sw-horizontal2-therapist-table):not(.sw-horizontal2-grand-table):not(.sw-horizontal2-recent-table) thead :is(tr:last-child > th, .label-col, .grand-col[rowspan]),
+  .sw-stats-body--settlement .sw-compact-settlement-table thead :is(tr:last-child > th, .label-col, .grand-col[rowspan]),
+  .sw-stats-body--settlement .sw-manual-compact-settlement-table thead :is(tr:last-child > th, .label-col, .grand-col[rowspan]),
+  .sw-stats-body--settlement .sw-grand-total-table thead :is(tr:last-child > th, .label-col, .grand-col[rowspan]),
+  .sw-stats-body--settlement .sw-summary-table thead tr:last-child > th,
+  .sw-stats-body--settlement .sw-compact-summary-table thead tr:last-child > th {
+    border-bottom: 2px solid #64748b !important;
+  }
+
+  /* 구분/월 컬럼 우측 경계선 */
+  .sw-stats-body--settlement .sw-settlement-table:not(.sw-horizontal2-therapist-table):not(.sw-horizontal2-grand-table):not(.sw-horizontal2-recent-table) :is(thead .label-col, .row-label),
+  .sw-stats-body--settlement .sw-compact-settlement-table :is(thead .label-col, .row-label),
+  .sw-stats-body--settlement .sw-manual-compact-settlement-table :is(thead .label-col, .row-label),
+  .sw-stats-body--settlement .sw-grand-total-table :is(thead .label-col, .row-label),
+  .sw-stats-body--settlement .sw-summary-table :is(thead th:first-child, tbody th.month-label),
+  .sw-stats-body--settlement .sw-compact-summary-table :is(thead th:first-child, tbody th.month-label) {
+    border-right: 1.5px solid #64748b !important;
+  }
+
+  /* 치료사별 경계선: 외곽선(#64748b)보다 한 톤 부드럽게 구분되도록 1.5px solid #7c8ea3 적용 */
+  .sw-stats-body--settlement .sw-settlement-table:not(.sw-horizontal2-therapist-table):not(.sw-horizontal2-grand-table):not(.sw-horizontal2-recent-table) .therapist-group-end:not(:last-child),
+  .sw-stats-body--settlement .sw-compact-settlement-table .therapist-group-end:not(:last-child),
+  .sw-stats-body--settlement .sw-manual-compact-settlement-table .therapist-group-end:not(:last-child) {
+    border-right: 1.5px solid #7c8ea3 !important;
+  }
+
+  .sw-stats-body--settlement .sw-settlement-table:not(.sw-horizontal2-therapist-table):not(.sw-horizontal2-grand-table):not(.sw-horizontal2-recent-table) tr > :last-child,
+  .sw-stats-body--settlement .sw-compact-settlement-table tr > :last-child,
+  .sw-stats-body--settlement .sw-manual-compact-settlement-table tr > :last-child,
+  .sw-stats-body--settlement .sw-grand-total-table tr > :last-child,
+  .sw-stats-body--settlement .sw-summary-table tr > :last-child,
+  .sw-stats-body--settlement .sw-compact-summary-table tr > :last-child {
+    border-right: 0 !important;
+  }
+
+  .sw-stats-body--settlement .sw-settlement-table:not(.sw-horizontal2-therapist-table):not(.sw-horizontal2-grand-table):not(.sw-horizontal2-recent-table) tbody tr:last-child > *,
+  .sw-stats-body--settlement .sw-compact-settlement-table tbody tr:last-child > *,
+  .sw-stats-body--settlement .sw-manual-compact-settlement-table tbody tr:last-child > *,
+  .sw-stats-body--settlement .sw-grand-total-table tbody tr:last-child > *,
+  .sw-stats-body--settlement .sw-summary-table tbody tr:last-child > *,
+  .sw-stats-body--settlement .sw-compact-summary-table tbody tr:last-child > * {
+    border-bottom: 0 !important;
+  }
+
+  .sw-stats-body--settlement .sw-new-patient-table,
+  .sw-stats-body--settlement .sw-compact-new-patient-table {
+    border: 2px solid #64748b !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+  }
+
+  .sw-stats-body--settlement .sw-new-patient-table thead .therapist-col,
+  .sw-stats-body--settlement .sw-compact-new-patient-table thead .therapist-col,
+  .sw-stats-body--settlement .sw-new-patient-table thead .sub-col:nth-child(4n + 1),
+  .sw-stats-body--settlement .sw-compact-new-patient-table thead .sub-col:nth-child(4n + 1),
+  .sw-stats-body--settlement .sw-new-patient-table tbody td.therapist-group-start,
+  .sw-stats-body--settlement .sw-compact-new-patient-table tbody td.therapist-group-start,
+  .sw-stats-body--settlement .sw-new-patient-table tbody td:nth-child(4n + 1),
+  .sw-stats-body--settlement .sw-compact-new-patient-table tbody td:nth-child(4n + 1) {
+    border-left: 0 !important;
+  }
+
+  .sw-stats-body--settlement .sw-new-patient-table thead .therapist-col:not(:last-child),
+  .sw-stats-body--settlement .sw-compact-new-patient-table thead .therapist-col:not(:last-child),
+  .sw-stats-body--settlement .sw-new-patient-table thead .sub-col:nth-child(4n):not(:last-child),
+  .sw-stats-body--settlement .sw-compact-new-patient-table thead .sub-col:nth-child(4n):not(:last-child),
+  .sw-stats-body--settlement .sw-new-patient-table tbody td.therapist-group-end:not(:last-child),
+  .sw-stats-body--settlement .sw-compact-new-patient-table tbody td.therapist-group-end:not(:last-child),
+  .sw-stats-body--settlement .sw-new-patient-table tbody td:nth-child(4n):not(:last-child),
+  .sw-stats-body--settlement .sw-compact-new-patient-table tbody td:nth-child(4n):not(:last-child) {
+    border-right: 1.5px solid #7c8ea3 !important;
+  }
 }
 
 @media print {

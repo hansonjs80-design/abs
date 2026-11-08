@@ -1004,37 +1004,48 @@
 
 .sw-settlement-settings-card {
   max-width: 1240px;
+  padding: 14px 16px !important;
+  border: 1px solid #dbe4f0 !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
 }
 
 .sw-settlement-settings-subtext {
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   color: #64748b;
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   font-weight: 700;
 }
 
 .settlement-settings-grid {
   display: grid;
-  grid-template-columns: minmax(320px, 1fr) 180px;
-  gap: 18px;
+  grid-template-columns: minmax(320px, 1fr) 168px;
+  gap: 14px;
   align-items: start;
 }
 
 .settlement-settings-list {
   display: grid;
-  gap: 8px;
-  max-width: 980px;
+  gap: 5px;
+  max-width: 1020px;
 }
 
 .settlement-settings-row {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
-  padding: 8px;
-  border: 1px solid #dbe3ee;
-  border-radius: 12px;
+  padding: 5px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: none;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.settlement-settings-row:not(.settlement-settings-header-row):hover {
+  border-color: #cbd5e1;
   background: #f8fafc;
-  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
 }
 
 .shockwave-row,
@@ -1057,15 +1068,16 @@
 
 .settlement-order-button {
   width: 22px;
-  height: 26px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   border: 1px solid #cbd5e1;
-  border-radius: 7px;
+  border-radius: 6px;
   background: #ffffff;
   color: #475569;
+  font-size: 0.72rem;
   cursor: pointer;
 }
 
@@ -1085,10 +1097,10 @@
   align-items: center;
   justify-content: center;
   color: #94a3b8;
-  font-size: 1.1rem;
+  font-size: 1rem;
   cursor: grab;
   user-select: none;
-  height: 26px;
+  height: 24px;
 }
 
 .settlement-drag-handle:active {
@@ -1106,12 +1118,12 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  height: 34px;
+  height: 30px;
 }
 
 .settlement-hidden-toggle input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   cursor: pointer;
 }
 
@@ -1119,28 +1131,30 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 34px;
+  height: 30px;
   cursor: pointer;
 }
 
 .settlement-cryo-toggle input[type="checkbox"] {
-  width: 17px;
-  height: 17px;
+  width: 15px;
+  height: 15px;
   margin: 0;
-  accent-color: #2fb420;
+  accent-color: #0284c7;
   cursor: pointer;
 }
 
 .settlement-settings-header-row {
   border: 1px solid transparent;
-  background: transparent;
+  background: #f1f5f9;
   padding: 0 8px;
+  min-height: 32px;
+  border-radius: 7px;
   box-shadow: none;
 }
 
 .settlement-settings-header-row .settlement-label {
   color: #475569;
-  font-size: 0.74rem;
+  font-size: 0.73rem;
   font-weight: 800;
   text-align: center;
 }
@@ -1158,9 +1172,9 @@
 }
 
 .settlement-dose-tag-input {
-  width: 54px;
-  height: 34px;
-  font-size: 0.86rem;
+  width: 52px;
+  height: 30px;
+  font-size: 0.82rem;
   font-weight: 800;
   text-align: center;
   padding: 0 4px;
@@ -1176,13 +1190,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  max-width: 58px;
-  min-height: 22px;
-  padding: 2px 6px;
-  border-radius: 6px;
+  max-width: 56px;
+  min-height: 20px;
+  padding: 2px 5px;
+  border-radius: 5px;
   background: #eef2ff;
   color: #4338ca;
-  font-size: 0.76rem;
+  font-size: 0.73rem;
   font-weight: 800;
   white-space: nowrap;
   overflow: hidden;
@@ -1197,15 +1211,15 @@
 }
 
 .settlement-shortcut-prefix {
-  font-size: 0.75rem;
+  font-size: 0.73rem;
   color: #64748b;
   font-weight: 700;
 }
 
 .settlement-shortcut-input {
   width: 24px;
-  height: 30px;
-  font-size: 0.85rem;
+  height: 28px;
+  font-size: 0.82rem;
   font-weight: 800;
   text-align: center;
   padding: 0 2px;
@@ -1226,17 +1240,17 @@
 }
 
 .settlement-duration-input {
-  width: 54px;
-  height: 30px;
+  width: 50px;
+  height: 28px;
   padding: 0 4px;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 800;
   text-align: center;
 }
 
 .settlement-duration-unit {
   color: #64748b;
-  font-size: 0.75rem;
+  font-size: 0.73rem;
   font-weight: 800;
 }
 
@@ -1244,14 +1258,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 34px;
+  min-height: 30px;
   cursor: pointer;
 }
 
 .settlement-linebreak-toggle input {
   appearance: none;
-  width: 38px;
-  height: 22px;
+  width: 34px;
+  height: 20px;
   border-radius: 999px;
   border: 1px solid #cbd5e1;
   background: #e2e8f0;
@@ -1265,8 +1279,8 @@
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: #ffffff;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.2);
@@ -1279,7 +1293,7 @@
 }
 
 .settlement-linebreak-toggle input:checked::after {
-  transform: translateX(16px);
+  transform: translateX(14px);
 }
 
 .settlement-linebreak-toggle input:focus-visible {
@@ -1290,8 +1304,8 @@
 .settlement-prescription-input,
 .settlement-price-input,
 .settlement-add-input {
-  height: 34px;
-  font-size: 0.88rem;
+  height: 30px;
+  font-size: 0.83rem;
   font-weight: 800;
 }
 
@@ -1332,16 +1346,16 @@
 
 .settlement-settings-unit {
   color: #475569;
-  font-size: 0.84rem;
-  font-weight: 900;
+  font-size: 0.78rem;
+  font-weight: 800;
 }
 
 .settlement-color-input {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   padding: 2px;
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  border-radius: 7px;
   background: #ffffff;
   cursor: pointer;
 }
@@ -1349,9 +1363,9 @@
 .settlement-add-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  width: 250px;
-  margin-top: 2px;
+  gap: 6px;
+  width: 240px;
+  margin-top: 4px;
 }
 
 .settlement-add-input {
@@ -1360,17 +1374,17 @@
 }
 
 .settlement-add-button {
-  width: 36px;
-  height: 34px;
+  width: 32px;
+  height: 30px;
   border: 1px solid #93c5fd;
-  border-radius: 10px;
+  border-radius: 7px;
   background: #eff6ff;
   color: #2563eb;
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 900;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.1);
 }
 
 .settlement-add-button:hover {
@@ -1384,36 +1398,49 @@
 
 .settlement-incentive-box {
   display: grid;
-  gap: 8px;
-  padding: 14px;
-  border: 1px solid #dbe3ee;
-  border-radius: 14px;
-  background: linear-gradient(180deg, #f8fafc 0%, #eef4fb 100%);
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid #dbe4f0;
+  border-radius: 10px;
+  background: #f8fafc;
 }
 
 .settlement-incentive-box > span {
-  color: #1e293b;
-  font-size: 0.86rem;
-  font-weight: 900;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 800;
 }
 
 .settlement-incentive-box > div {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
+  display: flex;
   align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
 }
 
 .settlement-incentive-box input {
-  height: 38px;
-  font-size: 1rem;
-  font-weight: 900;
+  flex: 1 1 0%;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 32px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  font-size: 0.92rem;
+  font-weight: 800;
+  text-align: right;
 }
 
 .settlement-incentive-box em {
+  flex: 0 0 auto;
   color: #475569;
   font-style: normal;
-  font-weight: 900;
+  font-weight: 800;
+  font-size: 0.84rem;
 }
 
 @media (max-width: 860px) {
