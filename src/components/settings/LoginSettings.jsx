@@ -208,11 +208,11 @@ export default function LoginSettings({ canManageLogin }) {
   return (
     <div className="card settings-card login-settings-card">
       <div className="card-header">
-        <div>
-          <span className="card-title"><Users size={18} /> 로그인 관리</span>
+        <div className="settings-card-heading">
+          <span className="card-title"><Users size={16} /> 로그인 관리</span>
           <p className="settings-card-description">사용자 계정과 화면별 접근 권한을 관리합니다.</p>
         </div>
-        <span className="settings-count-badge">{appUsers.length}명</span>
+        <span className="settings-count-badge">등록 {appUsers.length}명</span>
       </div>
       <div className="card-body login-settings-body">
         <form
@@ -268,7 +268,7 @@ export default function LoginSettings({ canManageLogin }) {
               </select>
             </label>
             <button className="btn btn-primary btn-sm login-add-button" type="submit">
-              <UserPlus size={15} />
+              <UserPlus size={14} />
               사용자 추가
             </button>
           </div>
@@ -295,15 +295,16 @@ export default function LoginSettings({ canManageLogin }) {
             <tbody>
               {appUsers.map((row) => {
                 const adminRow = row.username === ADMIN_USERNAME || row.role === 'admin';
+                const isActive = row.is_active !== false;
                 const permissions = {
                   ...createDefaultPermissions(),
                   ...(row.permissions || {}),
                 };
                 return (
-                  <tr key={row.id}>
+                  <tr key={row.id} className={!isActive ? 'is-inactive-row' : undefined}>
                     <td>
                       <input
-                        className="form-input"
+                        className="form-input login-table-input login-table-input--id"
                         value={row.username}
                         disabled={adminRow}
                         onChange={(e) => updateAppUserLocal(row.id, 'username', normalizeUsername(e.target.value))}
@@ -311,7 +312,7 @@ export default function LoginSettings({ canManageLogin }) {
                     </td>
                     <td>
                       <input
-                        className="form-input"
+                        className="form-input login-table-input"
                         type="password"
                         value={row.password || ''}
                         placeholder="변경할 때만 입력"
@@ -321,14 +322,14 @@ export default function LoginSettings({ canManageLogin }) {
                     </td>
                     <td>
                       <input
-                        className="form-input"
+                        className="form-input login-table-input"
                         value={row.display_name || ''}
                         onChange={(e) => updateAppUserLocal(row.id, 'display_name', e.target.value)}
                       />
                     </td>
                     <td>
                       <select
-                        className="form-input"
+                        className="form-input login-table-input"
                         value={adminRow ? 'admin' : row.role || 'user'}
                         disabled={row.username === ADMIN_USERNAME}
                         onChange={(e) => updateAppUserLocal(row.id, 'role', e.target.value)}
@@ -339,37 +340,41 @@ export default function LoginSettings({ canManageLogin }) {
                     </td>
                     <td>
                       <div className="login-permissions">
-                        {APP_TABS.map((tab) => (
-                          <label
-                            key={`${row.id}-${tab.key}`}
-                            className={`login-permission-chip${permissions[tab.key] !== false ? ' active' : ''}`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={adminRow || permissions[tab.key] !== false}
-                              disabled={adminRow}
-                              onChange={() => toggleAppUserPermission(row.id, tab.key)}
-                            />
-                            {tab.label}
-                          </label>
-                        ))}
+                        {APP_TABS.map((tab) => {
+                          const enabled = adminRow || permissions[tab.key] !== false;
+                          return (
+                            <label
+                              key={`${row.id}-${tab.key}`}
+                              className={`login-permission-chip${enabled ? ' active' : ''}${adminRow ? ' is-locked' : ''}`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={enabled}
+                                disabled={adminRow}
+                                onChange={() => toggleAppUserPermission(row.id, tab.key)}
+                              />
+                              <span className="login-permission-dot" aria-hidden="true" />
+                              {tab.label}
+                            </label>
+                          );
+                        })}
                       </div>
                     </td>
                     <td>
-                      <label className="login-active-toggle">
+                      <label className={`login-active-toggle${isActive ? ' is-active' : ' is-stopped'}${adminRow ? ' is-locked' : ''}`}>
                         <input
                           type="checkbox"
-                          checked={row.is_active !== false}
+                          checked={isActive}
                           disabled={adminRow}
                           onChange={(e) => updateAppUserLocal(row.id, 'is_active', e.target.checked)}
                         />
-                        <span>{row.is_active !== false ? '사용' : '중지'}</span>
+                        <span>{isActive ? '사용' : '중지'}</span>
                       </label>
                     </td>
                     <td>
                       <div className="login-row-actions">
                         <button className="btn btn-primary btn-sm" onClick={() => saveAppUser(row)}>
-                          <Save size={14} />
+                          <Save size={13} />
                           저장
                         </button>
                         <button
@@ -377,7 +382,7 @@ export default function LoginSettings({ canManageLogin }) {
                           disabled={adminRow || row.is_active === false}
                           onClick={() => deactivateAppUser(row)}
                         >
-                          <UserX size={14} />
+                          <UserX size={13} />
                           중지
                         </button>
                       </div>

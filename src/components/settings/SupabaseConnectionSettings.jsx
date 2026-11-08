@@ -85,11 +85,11 @@ export default function SupabaseConnectionSettings() {
   };
 
   return (
-    <div className="card supabase-connection-card">
+    <div className="card settings-card supabase-connection-card">
       <div className="card-header supabase-connection-header">
-        <div>
+        <div className="settings-card-heading">
           <span className="card-title">
-            <Database size={18} />
+            <Database size={16} />
             Supabase 서버 연결
           </span>
           <p className="settings-card-description">이 기기에서 사용할 데이터 서버를 관리합니다.</p>
@@ -101,7 +101,7 @@ export default function SupabaseConnectionSettings() {
 
       <div className="card-body">
         <div className="supabase-connection-notice">
-          <ShieldAlert size={18} aria-hidden="true" />
+          <ShieldAlert size={15} aria-hidden="true" />
           <div>
             <strong>공개용 anon/publishable key만 입력하세요.</strong>
             <span>service_role 또는 secret key는 보안을 위해 저장할 수 없습니다. 변경값은 이 브라우저에만 보관됩니다.</span>
@@ -148,7 +148,7 @@ export default function SupabaseConnectionSettings() {
                 aria-label={showKey ? 'Supabase key 숨기기' : 'Supabase key 보기'}
                 title={showKey ? '키 숨기기' : '키 보기'}
               >
-                {showKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showKey ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
             {errors.anonKey && <small className="supabase-connection-error">{errors.anonKey}</small>}
@@ -162,20 +162,20 @@ export default function SupabaseConnectionSettings() {
           <div className="supabase-connection-actions">
             <button
               type="button"
-              className="btn btn-secondary"
+              className="btn btn-secondary btn-sm"
               onClick={handleRestoreDefaults}
               disabled={busy || !hasBuildDefaults}
             >
-              <RotateCcw size={16} />
+              <RotateCcw size={14} />
               기본 서버 복원
             </button>
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-primary btn-sm"
               onClick={handleSave}
               disabled={busy}
             >
-              <Save size={16} />
+              <Save size={14} />
               저장 후 새로고침
             </button>
           </div>

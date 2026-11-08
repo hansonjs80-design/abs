@@ -312,7 +312,18 @@
   .schedule-settings-grid,
   .login-create-grid,
   .backup-options-grid {
+    min-width: 0;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .holiday-settings-list,
+  .settings-disclosures-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .holiday-settings-create-fields {
+    min-width: 0;
+    grid-template-columns: 1fr;
   }
 
   .settings-card-footer {

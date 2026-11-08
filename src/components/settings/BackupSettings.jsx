@@ -44,7 +44,7 @@ const formatDateTime = (value) => {
 function NoticeBox({ children, tone = 'info' }) {
   return (
     <div className={`backup-notice backup-notice--${tone}`}>
-      <AlertTriangle size={17} />
+      <AlertTriangle size={15} />
       <div>{children}</div>
     </div>
   );
@@ -73,7 +73,7 @@ function SnapshotSummary({ snapshot }) {
             <tr>
               <th>테이블</th>
               <th>내용</th>
-              <th>행 수</th>
+              <th className="backup-table-count">행 수</th>
               <th>상태</th>
             </tr>
           </thead>
@@ -83,14 +83,16 @@ function SnapshotSummary({ snapshot }) {
               const count = Array.isArray(tableBackup?.rows) ? tableBackup.rows.length : 0;
               return (
                 <tr key={table.name}>
-                  <td>{table.name}</td>
+                  <td className="backup-table-name">{table.name}</td>
                   <td>
-                    {table.label}
-                    {table.sensitive && <span style={{ marginLeft: 6, color: '#b45309' }}>민감정보</span>}
+                    <span>{table.label}</span>
+                    {table.sensitive && <span className="backup-sensitive-badge">민감정보</span>}
                   </td>
                   <td className="backup-table-count">{count.toLocaleString()}행</td>
-                  <td className={tableBackup?.error ? 'backup-table-error' : 'backup-table-success'}>
-                    {tableBackup?.error ? tableBackup.error : '완료'}
+                  <td>
+                    <span className={`backup-status-badge ${tableBackup?.error ? 'backup-table-error' : 'backup-table-success'}`}>
+                      {tableBackup?.error ? tableBackup.error : '완료'}
+                    </span>
                   </td>
                 </tr>
               );
@@ -227,9 +229,17 @@ export default function BackupSettings() {
     <div className="backup-settings">
       <div className="card settings-card">
         <div className="card-header">
-          <div>
-            <span className="card-title"><HardDrive size={18} /> 로컬 백업 설정</span>
+          <div className="settings-card-heading">
+            <span className="card-title"><HardDrive size={16} /> 로컬 백업 설정</span>
             <p className="settings-card-description">Supabase 데이터를 이 브라우저에 안전하게 보관합니다.</p>
+          </div>
+          <div className="backup-primary-actions">
+            <button type="button" className="btn btn-primary btn-sm" onClick={handleCreateSnapshot} disabled={busy}>
+              <DatabaseBackup size={14} /> 지금 전체 백업
+            </button>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => refreshSnapshots()} disabled={busy}>
+              <RefreshCw size={14} /> 목록 새로고침
+            </button>
           </div>
         </div>
         <div className="card-body backup-settings-body">
@@ -238,17 +248,8 @@ export default function BackupSettings() {
               기기별 브라우저 자동 백업은 Supabase 데이터 전송량(Egress) 보호를 위해 비활성화되었습니다. 코딩·배포(git push) 시 맥(Mac)의 <code>backups/</code> 폴더에 자동으로 로컬 백업 파일이 생성됩니다.
             </NoticeBox>
             <NoticeBox>
-              필요 시 아래 <strong>지금 전체 백업</strong> 버튼을 눌러 수동으로 스냅샷을 만들고 JSON으로 내보낼 수 있습니다.
+              필요 시 상단 <strong>지금 전체 백업</strong> 버튼을 눌러 수동으로 스냅샷을 만들고 JSON으로 내보낼 수 있습니다.
             </NoticeBox>
-          </div>
-
-          <div className="backup-primary-actions">
-            <button type="button" className="btn btn-primary" onClick={handleCreateSnapshot} disabled={busy}>
-              <DatabaseBackup size={16} /> 지금 전체 백업
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={() => refreshSnapshots()} disabled={busy}>
-              <RefreshCw size={16} /> 목록 새로고침
-            </button>
           </div>
 
           {message && (
@@ -261,8 +262,8 @@ export default function BackupSettings() {
 
       <div className="card settings-card">
         <div className="card-header">
-          <div>
-            <span className="card-title"><Activity size={18} /> 백업 스냅샷</span>
+          <div className="settings-card-heading">
+            <span className="card-title"><Activity size={16} /> 백업 스냅샷</span>
             <p className="settings-card-description">저장된 백업을 확인하거나 JSON 파일로 관리합니다.</p>
           </div>
           <span className="settings-count-badge">{snapshots.length}개</span>
@@ -283,16 +284,16 @@ export default function BackupSettings() {
             </select>
             <div className="backup-snapshot-actions">
               <button type="button" className="btn btn-secondary btn-sm" onClick={handleExportJson} disabled={!selectedSnapshot}>
-                <Download size={15} /> JSON 내보내기
+                <Download size={14} /> JSON 내보내기
               </button>
               <button type="button" className="btn btn-secondary btn-sm" onClick={handleExportReadme} disabled={!selectedSnapshot}>
-                <FileText size={15} /> 복구 안내
+                <FileText size={14} /> 복구 안내
               </button>
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => fileInputRef.current?.click()} disabled={busy}>
-                <Upload size={15} /> JSON 가져오기
+                <Upload size={14} /> JSON 가져오기
               </button>
               <button type="button" className="btn btn-danger btn-sm" onClick={handleDeleteSnapshot} disabled={!selectedSnapshotMeta || busy}>
-                <Trash2 size={15} /> 로컬 삭제
+                <Trash2 size={14} /> 로컬 삭제
               </button>
             </div>
           </div>

@@ -303,10 +303,14 @@ export default function GeneralSettings() {
       {/* 충격파 시간표 관리 */}
       <div className="card settings-card schedule-settings-card">
         <div className="card-header">
-          <div>
-            <span className="card-title"><Clock3 size={18} /> 스케줄 시간표</span>
+          <div className="settings-card-heading">
+            <span className="card-title"><Clock3 size={16} /> 스케줄 시간표</span>
             <p className="settings-card-description">운영 시간과 표의 기본 표시 방식을 설정합니다.</p>
           </div>
+          <button className="btn btn-primary btn-sm" onClick={handleSaveSettings}>
+            <Save size={14} />
+            설정 저장
+          </button>
         </div>
         <div className="card-body">
           <div className="schedule-settings-grid">
@@ -356,10 +360,6 @@ export default function GeneralSettings() {
               기본 병합은 모든 기기에 공통 적용되고, 시간열 표시는 이 기기에만 적용됩니다.
               고정 컬럼 기본값은 6개입니다.
             </p>
-            <button className="btn btn-primary" onClick={handleSaveSettings}>
-              <Save size={16} />
-              설정 저장
-            </button>
           </div>
         </div>
       </div>
@@ -367,9 +367,13 @@ export default function GeneralSettings() {
       {/* 공휴일 관리 */}
       <div className="card settings-card holiday-settings-card">
         <div className="card-header">
-          <div>
-            <span className="card-title"><CalendarDays size={18} /> 공휴일 관리</span>
+          <div className="settings-card-heading">
+            <span className="card-title"><CalendarDays size={16} /> 공휴일 관리</span>
             <p className="holiday-settings-summary">근무표와 스케줄에 표시할 공휴일을 관리합니다.</p>
+          </div>
+          <div className="holiday-settings-list-header">
+            <span>등록된 공휴일</span>
+            <span className="holiday-settings-count">{holidays.length}개</span>
           </div>
         </div>
         <div className="card-body">
@@ -408,18 +412,13 @@ export default function GeneralSettings() {
                 />
               </label>
               <button className="btn btn-primary btn-sm holiday-settings-add-button" type="submit">
-                <Plus size={15} />
+                <Plus size={14} />
                 추가
               </button>
             </div>
           </form>
 
-          <div className="holiday-settings-list-header">
-            <span>등록된 공휴일</span>
-            <span className="holiday-settings-count">{holidays.length}개</span>
-          </div>
-
-          <div className={`holiday-settings-list${holidays.length > 5 ? ' holiday-settings-list--scrollable' : ''}`}>
+          <div className={`holiday-settings-list${holidays.length > 6 ? ' holiday-settings-list--scrollable' : ''}`}>
             {holidays.map(h => {
               const isEditing = editingHoliday?.id === String(h.id);
               const isSaving = savingHolidayId === String(h.id);
@@ -430,74 +429,72 @@ export default function GeneralSettings() {
                   style={{ margin: 0 }}
                 >
                   {isEditing ? (
-                    <>
-                      <form
-                        className="holiday-settings-edit-form"
-                        onSubmit={(event) => {
+                    <form
+                      className="holiday-settings-edit-form"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        updateHoliday();
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Escape') {
                           event.preventDefault();
-                          updateHoliday();
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Escape') {
-                            event.preventDefault();
-                            cancelHolidayEdit();
-                          }
-                        }}
-                      >
-                        <div className="holiday-settings-edit-fields">
-                          <label className="holiday-settings-field">
-                            <span className="holiday-settings-field-label">날짜</span>
-                            <input
-                              className="form-input"
-                              type="date"
-                              value={editingHoliday.date}
-                              disabled={isSaving}
-                              onChange={event => setEditingHoliday(prev => ({
-                                ...prev,
-                                date: event.target.value,
-                              }))}
-                            />
-                          </label>
-                          <label className="holiday-settings-field">
-                            <span className="holiday-settings-field-label">공휴일 이름</span>
-                            <input
-                              className="form-input"
-                              placeholder="공휴일 이름 (선택)"
-                              value={editingHoliday.name}
-                              disabled={isSaving}
-                              onChange={event => setEditingHoliday(prev => ({
-                                ...prev,
-                                name: event.target.value,
-                              }))}
-                            />
-                          </label>
-                        </div>
-                        <div className="holiday-settings-actions">
-                          <button
-                            type="submit"
-                            className="btn btn-primary btn-sm"
+                          cancelHolidayEdit();
+                        }
+                      }}
+                    >
+                      <div className="holiday-settings-edit-fields">
+                        <label className="holiday-settings-field">
+                          <span className="holiday-settings-field-label">날짜</span>
+                          <input
+                            className="form-input"
+                            type="date"
+                            value={editingHoliday.date}
                             disabled={isSaving}
-                          >
-                            <Save size={14} />
-                            {isSaving ? '저장 중...' : '저장'}
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-sm"
+                            onChange={event => setEditingHoliday(prev => ({
+                              ...prev,
+                              date: event.target.value,
+                            }))}
+                          />
+                        </label>
+                        <label className="holiday-settings-field">
+                          <span className="holiday-settings-field-label">공휴일 이름</span>
+                          <input
+                            className="form-input"
+                            placeholder="공휴일 이름 (선택)"
+                            value={editingHoliday.name}
                             disabled={isSaving}
-                            onClick={cancelHolidayEdit}
-                          >
-                            <X size={14} />
-                            취소
-                          </button>
-                        </div>
-                      </form>
-                    </>
+                            onChange={event => setEditingHoliday(prev => ({
+                              ...prev,
+                              name: event.target.value,
+                            }))}
+                          />
+                        </label>
+                      </div>
+                      <div className="holiday-settings-actions">
+                        <button
+                          type="submit"
+                          className="btn btn-primary btn-sm"
+                          disabled={isSaving}
+                        >
+                          <Save size={13} />
+                          {isSaving ? '저장 중...' : '저장'}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          disabled={isSaving}
+                          onClick={cancelHolidayEdit}
+                        >
+                          <X size={13} />
+                          취소
+                        </button>
+                      </div>
+                    </form>
                   ) : (
                     <>
                       <div className="holiday-settings-info">
-                        <div className="settings-row-label">{h.date}</div>
-                        <div className="settings-row-desc">{h.name || '(이름 없음)'}</div>
+                        <span className="holiday-date-badge settings-row-label">{h.date}</span>
+                        <span className="holiday-name-text settings-row-desc">{h.name || '(이름 없음)'}</span>
                       </div>
                       <div className="holiday-settings-actions">
                         <button
@@ -505,7 +502,7 @@ export default function GeneralSettings() {
                           className="btn btn-secondary btn-sm"
                           onClick={() => startHolidayEdit(h)}
                         >
-                          <Pencil size={14} />
+                          <Pencil size={13} />
                           수정
                         </button>
                         <button
@@ -513,7 +510,7 @@ export default function GeneralSettings() {
                           className="btn btn-danger btn-sm"
                           onClick={() => removeHoliday(h.id)}
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={13} />
                           삭제
                         </button>
                       </div>
@@ -532,81 +529,83 @@ export default function GeneralSettings() {
         </div>
       </div>
 
-      {/* DB 용량 확인 */}
-      <details className="card settings-card settings-disclosure">
-        <summary className="settings-disclosure-summary">
-          <span className="settings-disclosure-icon"><Database size={18} /></span>
-          <span>
-            <strong>DB 용량 확인</strong>
-            <small>Supabase 저장 용량을 점검할 때 사용합니다.</small>
-          </span>
-          <span className="settings-disclosure-hint">열기</span>
-        </summary>
-        <div className="card-body settings-disclosure-body">
-          <div className="settings-inline-actions">
-            <button type="button" className="btn btn-secondary btn-sm" onClick={openSupabaseDashboard}>
-              Supabase 열기
-            </button>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => handleCopySQL(DB_USAGE_CHECK_SQL)}>
-              <Copy size={14} />
-              용량 확인 SQL 복사
-            </button>
-          </div>
-
-          <div className="db-usage-grid">
-            <div className="db-usage-checklist">
-              <div className="settings-subtitle">확인 순서</div>
-              <div className="db-usage-steps">
-                {dbUsageChecklist.map((item, index) => (
-                  <div key={item}>
-                    <span>{index + 1}</span>
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
+      {/* 고급 DB/SQL 도구 */}
+      <div className="settings-disclosures-grid">
+        <details className="card settings-card settings-disclosure">
+          <summary className="settings-disclosure-summary">
+            <span className="settings-disclosure-icon"><Database size={16} /></span>
+            <span>
+              <strong>DB 용량 확인</strong>
+              <small>Supabase 저장 용량을 점검할 때 사용합니다.</small>
+            </span>
+            <span className="settings-disclosure-hint">열기</span>
+          </summary>
+          <div className="card-body settings-disclosure-body">
+            <div className="settings-inline-actions">
+              <button type="button" className="btn btn-secondary btn-sm" onClick={openSupabaseDashboard}>
+                Supabase 열기
+              </button>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => handleCopySQL(DB_USAGE_CHECK_SQL)}>
+                <Copy size={13} />
+                용량 확인 SQL 복사
+              </button>
             </div>
 
-            <div className="settings-code-panel">
-              <div className="settings-subtitle">SQL Editor에서 실행할 코드</div>
-              <textarea
-                className="settings-code-textarea"
-                readOnly
-                value={DB_USAGE_CHECK_SQL}
-              />
-              <div className="settings-help-text">
-                앱 안에서 직접 숫자를 표시하려면 Supabase에 조회용 함수 생성이 추가로 필요합니다. 지금은 설정 탭에서 바로 복사하고 실행할 수 있게 구성했습니다.
+            <div className="db-usage-grid">
+              <div className="db-usage-checklist">
+                <div className="settings-subtitle">확인 순서</div>
+                <div className="db-usage-steps">
+                  {dbUsageChecklist.map((item, index) => (
+                    <div key={item}>
+                      <span>{index + 1}</span>
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="settings-code-panel">
+                <div className="settings-subtitle">SQL Editor에서 실행할 코드</div>
+                <textarea
+                  className="settings-code-textarea"
+                  readOnly
+                  value={DB_USAGE_CHECK_SQL}
+                />
+                <div className="settings-help-text">
+                  앱 안에서 직접 숫자를 표시하려면 Supabase에 조회용 함수 생성이 추가로 필요합니다. 지금은 설정 탭에서 바로 복사하고 실행할 수 있게 구성했습니다.
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </details>
+        </details>
 
-      <details className="card settings-card settings-disclosure">
-        <summary className="settings-disclosure-summary">
-          <span className="settings-disclosure-icon"><Code2 size={18} /></span>
-          <span>
-            <strong>전체 SQL 스크립트</strong>
-            <small>초기 테이블과 기본 데이터 생성용 고급 도구입니다.</small>
-          </span>
-          <span className="settings-disclosure-hint">열기</span>
-        </summary>
-        <div className="card-body settings-disclosure-body">
-          <div className="settings-inline-actions">
-            <button className="btn btn-secondary btn-sm" onClick={() => handleCopySQL(SQL_SETUP_SCRIPT)}>
-              <Copy size={14} />
-              전체 복사
-            </button>
+        <details className="card settings-card settings-disclosure">
+          <summary className="settings-disclosure-summary">
+            <span className="settings-disclosure-icon"><Code2 size={16} /></span>
+            <span>
+              <strong>전체 SQL 스크립트</strong>
+              <small>초기 테이블과 기본 데이터 생성용 고급 도구입니다.</small>
+            </span>
+            <span className="settings-disclosure-hint">열기</span>
+          </summary>
+          <div className="card-body settings-disclosure-body">
+            <div className="settings-inline-actions">
+              <button className="btn btn-secondary btn-sm" onClick={() => handleCopySQL(SQL_SETUP_SCRIPT)}>
+                <Copy size={13} />
+                전체 복사
+              </button>
+            </div>
+            <textarea
+              className="settings-code-textarea settings-code-textarea--large"
+              readOnly
+              value={SQL_SETUP_SCRIPT}
+            />
+            <p className="settings-help-text">
+              위 전체 SQL을 복사하면 필요한 테이블과 기본 데이터를 한 번에 생성할 수 있습니다.
+            </p>
           </div>
-          <textarea
-            className="settings-code-textarea settings-code-textarea--large"
-            readOnly
-            value={SQL_SETUP_SCRIPT}
-          />
-          <p className="settings-help-text">
-            위 전체 SQL을 복사하면 필요한 테이블과 기본 데이터를 한 번에 생성할 수 있습니다.
-          </p>
-        </div>
-      </details>
+        </details>
+      </div>
     </>
   );
 }
