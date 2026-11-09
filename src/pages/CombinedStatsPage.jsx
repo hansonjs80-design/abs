@@ -405,10 +405,75 @@ export default function CombinedStatsPage() {
     setSummaryState((previous) => previous.scope === summaryScope ? previous : { scope: summaryScope, summaries: [] });
     setIsLoading(true);
     try {
-      const [loadedShockwaveTherapists, loadedManualTherapists, loadedSettings] = await Promise.all([
+      // 과거 월 로그 일괄 프리패치: 5개월치 개별 쿼리들을 단 1번의 범위 쿼리로 통합하여 전송량 및 지연시간 대폭 절감
+      const fetchHistoricalLogs = async () => {
+        const historicalTargets = monthTargets.filter(
+          (target) => Number(target.year) !== Number(currentYear) || Number(target.month) !== Number(currentMonth)
+        );
+        if (historicalTargets.length === 0) {
+          return { shockwaveMap: new Map(), manualMap: new Map(), isLoaded: true };
+        }
+
+        const sortedTargets = [...historicalTargets].sort(
+          (a, b) => (Number(a.year) * 12 + Number(a.month)) - (Number(b.year) * 12 + Number(b.month))
+        );
+        const earliest = sortedTargets[0];
+        const latest = sortedTargets[sortedTargets.length - 1];
+        const minStartDate = `${earliest.year}-${String(earliest.month).padStart(2, '0')}-01`;
+        const latestNextYear = Number(latest.month) === 12 ? Number(latest.year) + 1 : Number(latest.year);
+        const latestNextMonth = Number(latest.month) === 12 ? 1 : Number(latest.month) + 1;
+        const maxEndDate = `${latestNextYear}-${String(latestNextMonth).padStart(2, '0')}-01`;
+
+        try {
+          const shockwavePromise = supabase
+            .from('shockwave_patient_logs')
+            .select(LOG_FIELDS)
+            .gte('date', minStartDate)
+            .lt('date', maxEndDate)
+            .order('date', { ascending: true })
+            .order('created_at', { ascending: true });
+
+          // 관리자가 아닐 경우 도수치료 로그는 통계 집계 대상이 아니므로 전송량 절약을 위해 쿼리를 완전히 생략
+          const manualPromise = isAdmin
+            ? supabase
+                .from('manual_therapy_patient_logs')
+                .select(LOG_FIELDS)
+                .gte('date', minStartDate)
+                .lt('date', maxEndDate)
+                .order('date', { ascending: true })
+                .order('created_at', { ascending: true })
+            : Promise.resolve({ data: [], error: null });
+
+          const [shockwaveResult, manualResult] = await Promise.all([shockwavePromise, manualPromise]);
+          if (shockwaveResult.error) throw shockwaveResult.error;
+          if (manualResult.error) throw manualResult.error;
+
+          const shockwaveMap = new Map();
+          (shockwaveResult.data || []).forEach((row) => {
+            const monthKey = String(row?.date || '').slice(0, 7);
+            if (!shockwaveMap.has(monthKey)) shockwaveMap.set(monthKey, []);
+            shockwaveMap.get(monthKey).push(row);
+          });
+
+          const manualMap = new Map();
+          (manualResult.data || []).forEach((row) => {
+            const monthKey = String(row?.date || '').slice(0, 7);
+            if (!manualMap.has(monthKey)) manualMap.set(monthKey, []);
+            manualMap.get(monthKey).push(row);
+          });
+
+          return { shockwaveMap, manualMap, isLoaded: true };
+        } catch (fetchErr) {
+          console.warn('[CombinedStats] 과거 월 로그 일괄 프리패치 실패, 개별 쿼리로 폴백:', fetchErr);
+          return { shockwaveMap: new Map(), manualMap: new Map(), isLoaded: false };
+        }
+      };
+
+      const [loadedShockwaveTherapists, loadedManualTherapists, loadedSettings, historicalLogs] = await Promise.all([
         loadTherapists({ force }),
-        loadManualTherapists({ force }),
+        isAdmin ? loadManualTherapists({ force }) : Promise.resolve([]),
         loadShockwaveSettings({ force }),
+        fetchHistoricalLogs(),
       ]);
       if (requestId !== requestIdRef.current) return;
 
@@ -445,13 +510,15 @@ export default function CombinedStatsPage() {
             rosterQueryCache,
             baseTherapists: baseShockwaveTherapists,
           }),
-          loadStatsMonthlyTherapists({
-            year: target.year,
-            month: target.month,
-            type: 'manual_therapy',
-            rosterQueryCache,
-            baseTherapists: baseManualTherapists,
-          }),
+          isAdmin
+            ? loadStatsMonthlyTherapists({
+                year: target.year,
+                month: target.month,
+                type: 'manual_therapy',
+                rosterQueryCache,
+                baseTherapists: baseManualTherapists,
+              })
+            : Promise.resolve([]),
         ]);
         const shockwaveSlots = new Set(monthlyShockwaveTherapists.map((item) => Number(item.slot_index)));
         const monthlyShinjangTherapists = await loadStatsMonthlyTherapists({
@@ -462,7 +529,7 @@ export default function CombinedStatsPage() {
           baseTherapists: baseShockwaveTherapists,
           fallbackMonthlyTherapists: [
             ...monthlyShockwaveTherapists,
-            ...monthlyManualTherapists.filter((item) => !shockwaveSlots.has(Number(item.slot_index))),
+            ...(isAdmin ? monthlyManualTherapists.filter((item) => !shockwaveSlots.has(Number(item.slot_index))) : []),
           ],
         });
 
@@ -476,23 +543,33 @@ export default function CombinedStatsPage() {
               therapists: baseShockwaveTherapists, monthlyTherapists: monthlyShockwaveTherapists,
               settings, upToToday: true, scheduleAuthoritative: true, emitEvent: false, collectOnly: true,
             }),
-            syncMonthManualTherapyScheduleToStats({
-              year: target.year, month: target.month, memos,
-              therapists: baseManualTherapists, monthlyTherapists: monthlyManualTherapists,
-              settings, upToToday: true, scheduleAuthoritative: true, emitEvent: false, collectOnly: true,
-            }),
+            isAdmin
+              ? syncMonthManualTherapyScheduleToStats({
+                  year: target.year, month: target.month, memos,
+                  therapists: baseManualTherapists, monthlyTherapists: monthlyManualTherapists,
+                  settings, upToToday: true, scheduleAuthoritative: true, emitEvent: false, collectOnly: true,
+                })
+              : Promise.resolve({ rebuiltRows: [] }),
           ]);
           shockwaveRows = shockwave.rebuiltRows;
           manualRows = manual.rebuiltRows;
         } else {
-          const [shockwaveResult, manualResult] = await Promise.all([
-            buildMonthLogQuery('shockwave_patient_logs', target.year, target.month),
-            buildMonthLogQuery('manual_therapy_patient_logs', target.year, target.month),
-          ]);
-          if (shockwaveResult.error) throw shockwaveResult.error;
-          if (manualResult.error) throw manualResult.error;
-          shockwaveRows = shockwaveResult.data || [];
-          manualRows = manualResult.data || [];
+          const monthKey = `${Number(target.year)}-${String(Number(target.month)).padStart(2, '0')}`;
+          if (historicalLogs?.isLoaded) {
+            shockwaveRows = historicalLogs.shockwaveMap.get(monthKey) || [];
+            manualRows = isAdmin ? (historicalLogs.manualMap.get(monthKey) || []) : [];
+          } else {
+            const [shockwaveResult, manualResult] = await Promise.all([
+              buildMonthLogQuery('shockwave_patient_logs', target.year, target.month),
+              isAdmin
+                ? buildMonthLogQuery('manual_therapy_patient_logs', target.year, target.month)
+                : Promise.resolve({ data: [] }),
+            ]);
+            if (shockwaveResult.error) throw shockwaveResult.error;
+            if (manualResult.error) throw manualResult.error;
+            shockwaveRows = shockwaveResult.data || [];
+            manualRows = manualResult.data || [];
+          }
         }
 
         const manualSettings = getEffectiveSettlementSettings(
@@ -538,7 +615,7 @@ export default function CombinedStatsPage() {
         currentYear,
         currentMonth,
         loadMonth: loadMonthSummary,
-        concurrency: 2,
+        concurrency: 4,
         onMonthLoaded: (summary) => {
           if (requestId !== requestIdRef.current || !summary) return;
           setSummaryState((previous) => {

@@ -102,6 +102,9 @@ describe('combined statistics UI', () => {
 
     assert.match(pageSource, /loadStatsMonthsProgressively/);
     assert.match(pageSource, /onMonthLoaded:\s*\(summary\)/);
+    assert.match(pageSource, /fetchHistoricalLogs/);
+    assert.match(pageSource, /isAdmin \? loadManualTherapists/);
+    assert.match(pageSource, /isAdmin[\s\S]*?from\('manual_therapy_patient_logs'\)/);
     assert.match(pageSource, /className="combined-current-col-type"/);
     assert.match(pageSource, /className="combined-recent-col-month"/);
     assert.match(pageSource, /className="combined-therapist-amount-cell"/);
