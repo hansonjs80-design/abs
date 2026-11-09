@@ -2758,6 +2758,15 @@ body.settlement-print .sw-settlement-stack--shockwave[data-view-mode="horizontal
     border-bottom: 2px solid #64748b !important;
   }
 
+  /* 한 치료사 내부의 처방/횟수 사이 세로선: 헤더(처방명, 횟수)와 바디(환자 셀) 모두 동일한 연한 격자선(1px solid #cbd5e1)으로 맞춰 완벽한 수직 연속성 유지 */
+  .sw-stats-body--grid .sw-grid-table thead .hdr-pres:not(.therapist-group-end),
+  .sw-stats-body--grid .sw-grid-table thead .hdr-pres-total:not(.therapist-group-end),
+  .sw-stats-body--grid .sw-grid-table tbody .gc-therapist-value:not(.therapist-group-end),
+  .sw-stats-body--grid .sw-grid-table tbody td:not(.fixed-field-last):not(.therapist-group-end):not(.total-group-start):not(:last-child) {
+    border-right: 1px solid #cbd5e1 !important;
+  }
+
+  /* 치료사 경계 세로선: 헤더(치료사명, 처방, 횟수)부터 바디(환자 데이터 행 전체)까지 위에서 아래로 끊김 없이 1.5px solid #64748b로 일관되게 진하게 연결 */
   .sw-stats-body--grid .sw-grid-table thead .sw-header-row-therapists th:nth-child(6),
   .sw-stats-body--grid .sw-grid-table thead .hdr-fixed-last,
   .sw-stats-body--grid .sw-grid-table tbody td.fixed-field-last,
@@ -2766,13 +2775,13 @@ body.settlement-print .sw-settlement-stack--shockwave[data-view-mode="horizontal
   .sw-stats-body--grid .sw-grid-table thead .hdr-pres-total.therapist-group-end,
   .sw-stats-body--grid .sw-grid-table tbody .gc-therapist-value.therapist-group-end,
   .sw-stats-body--grid .sw-grid-table tbody td.therapist-group-end {
-    border-right: 1.5px solid #8596ab !important;
+    border-right: 1.5px solid #64748b !important;
   }
 
   .sw-stats-body--grid .sw-grid-table thead .hdr-total.total-group-start,
   .sw-stats-body--grid .sw-grid-table thead .hdr-grand-total.total-group-start,
   .sw-stats-body--grid .sw-grid-table tbody .gc-total.total-group-start {
-    border-right: 1.5px solid #94a3b8 !important;
+    border-right: 1.5px solid #64748b !important;
   }
 
   .sw-stats-body--grid .sw-grid-table tbody tr.tr-date-end > td,
@@ -2934,11 +2943,11 @@ body.settlement-print .sw-settlement-stack--shockwave[data-view-mode="horizontal
     border-right: 1.5px solid #64748b !important;
   }
 
-  /* 치료사별 경계선: 외곽선(#64748b)보다 한 톤 부드럽게 구분되도록 1.5px solid #7c8ea3 적용 */
+  /* 치료사별 경계선: 1.5px solid #64748b 적용하여 헤더부터 바디까지 진하고 선명하게 일관된 연속성 유지 */
   .sw-stats-body--settlement .sw-settlement-table:not(.sw-horizontal2-therapist-table):not(.sw-horizontal2-grand-table):not(.sw-horizontal2-recent-table) .therapist-group-end:not(:last-child),
   .sw-stats-body--settlement .sw-compact-settlement-table .therapist-group-end:not(:last-child),
   .sw-stats-body--settlement .sw-manual-compact-settlement-table .therapist-group-end:not(:last-child) {
-    border-right: 1.5px solid #7c8ea3 !important;
+    border-right: 1.5px solid #64748b !important;
   }
 
   .sw-stats-body--settlement .sw-settlement-table:not(.sw-horizontal2-therapist-table):not(.sw-horizontal2-grand-table):not(.sw-horizontal2-recent-table) tr > :last-child,
@@ -2985,7 +2994,7 @@ body.settlement-print .sw-settlement-stack--shockwave[data-view-mode="horizontal
   .sw-stats-body--settlement .sw-compact-new-patient-table tbody td.therapist-group-end:not(:last-child),
   .sw-stats-body--settlement .sw-new-patient-table tbody td:nth-child(4n):not(:last-child),
   .sw-stats-body--settlement .sw-compact-new-patient-table tbody td:nth-child(4n):not(:last-child) {
-    border-right: 1.5px solid #7c8ea3 !important;
+    border-right: 1.5px solid #64748b !important;
   }
 }
 
