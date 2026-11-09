@@ -76,6 +76,37 @@ test('global summary printing includes both tables in order and honors orientati
   assert.equal(doc.title, '2026년 9월 전체 통계 합계');
 });
 
+test('portrait summary prints both settlement tables side-by-side using grid', (t) => {
+  const copies = [{ querySelectorAll: () => [] }, { querySelectorAll: () => [] }];
+  const tables = [
+    { closest: (selector) => selector === '.combined-treatment-breakdown-card' ? {} : null, cloneNode: () => copies[1] },
+    { closest: () => null, cloneNode: () => copies[0] },
+  ];
+  const nodes = [];
+  const styles = [];
+  let printed = false;
+  const doc = {
+    createElement: () => ({}), head: { appendChild: (node) => styles.push(node) },
+    body: { appendChild: (node) => nodes.push(node), offsetHeight: 100 },
+  };
+  const frame = { style: {}, contentDocument: doc, contentWindow: {
+    addEventListener() {}, focus() {}, print: () => { printed = true; },
+  } };
+  const originalDocument = globalThis.document;
+  t.after(() => {
+    if (originalDocument === undefined) delete globalThis.document;
+    else globalThis.document = originalDocument;
+  });
+  globalThis.document = { getElementById: () => null, createElement: () => frame, body: { appendChild() {} } };
+  const source = { querySelectorAll: () => tables };
+  printSettlementTable(source, '2026년 9월 전체 통계 합계', { includeTherapistSummary: true, orientation: 'portrait' });
+  assert.deepEqual(nodes.slice(1), copies);
+  assert.equal(printed, true);
+  assert.match(styles[0].textContent, /size: A4 portrait/);
+  assert.equal(doc.body.className, 'combined-summary-print--portrait');
+  assert.match(styles[0].textContent, /\.combined-summary-print--portrait \{ display: grid; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
+});
+
 test('landscape summary prints the ion table to the right of the two settlement tables', (t) => {
   const copies = Array.from({ length: 3 }, () => ({ querySelectorAll: () => [], prepend() {} }));
   const tables = [

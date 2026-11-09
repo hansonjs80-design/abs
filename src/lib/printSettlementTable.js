@@ -46,7 +46,7 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
   if (includeRecentTables) doc.body.className = `combined-recent-print--${orientation}`;
   const style = doc.createElement('style');
   style.textContent = `
-    @page { size: A4 ${orientation === 'landscape' ? 'landscape' : 'portrait'}; margin: 12mm; }
+    @page { size: A4 ${orientation === 'landscape' ? 'landscape' : 'portrait'}; margin: ${orientation === 'landscape' ? '12mm' : '10mm 8mm'}; }
     body { margin: 0; font-family: sans-serif; color: #172033; }
     h1 { font-size: 18px; margin: 0 0 16px; }
     table { width: auto; max-width: 100%; table-layout: auto; border-collapse: collapse; font-size: 12px; margin: 0 0 8mm; }
@@ -87,6 +87,20 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     .combined-recent-print--landscape .combined-recent-print-grid th, .combined-recent-print--landscape .combined-recent-print-grid td { padding: 3px 2px; }
     .combined-recent-print--landscape .combined-recent-print-grid[data-view="detail"] table { font-size: 7.5px; }
     .combined-recent-print--portrait .combined-recent-print-grid[data-layout="horizontal"] table { font-size: 7.5px; }
+    .combined-summary-print--portrait { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 5mm; align-items: start; }
+    .combined-summary-print--portrait.combined-summary-print--with-ion { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm; }
+    .combined-summary-print--portrait h1 { grid-column: 1 / -1; margin: 0 0 10px; font-size: 16px; }
+    .combined-summary-print--portrait table { width: 100%; min-width: 0; font-size: 9px; margin: 0 0 4mm; }
+    .combined-summary-print--portrait.combined-summary-print--with-ion table { font-size: 8px; }
+    .combined-summary-print--portrait th, .combined-summary-print--portrait td { padding: 4px 3px; }
+    .combined-summary-print--portrait.combined-summary-print--with-ion th, .combined-summary-print--portrait.combined-summary-print--with-ion td { padding: 3px 2px; }
+    .combined-summary-print--portrait :is(.combined-summary-parent-row, .combined-breakdown-row) > * { font-size: 10px; }
+    .combined-summary-print--portrait .combined-breakdown-detail-row > * { font-size: 7.5px; }
+    .combined-summary-print--portrait .combined-summary-column-header-row { font-size: 7.5px; }
+    .combined-summary-print--portrait .combined-therapist-subtotal > * { font-size: 9px; }
+    .combined-summary-print--portrait .combined-therapist-total { font-size: 10px; }
+    .combined-summary-print--portrait .combined-ion-treatment-table,
+    .combined-summary-print--portrait caption + table { grid-column: 1 / -1; }
     .combined-summary-print--landscape { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 6mm; align-items: start; }
     .combined-summary-print--landscape.combined-summary-print--with-ion { grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(0, 1fr)); gap: 0 4mm; }
     .combined-summary-print--landscape h1 { grid-column: 1 / -1; }
@@ -119,6 +133,7 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     if (includeRecentTables) copyRecentTableLayout(table, copy);
     copy.querySelectorAll('.combined-breakdown-actions').forEach((node) => node.remove());
     if (table.closest('.combined-ion-treatment')) {
+      copy.classList?.add?.('combined-ion-treatment-table');
       if (includeRecentTables && element.dataset.recentLayout === 'vertical' && tables.length !== 4) copy.style.gridColumn = '1';
       const caption = doc.createElement('caption');
       caption.textContent = '최근 6개월 이온치료 현황';
