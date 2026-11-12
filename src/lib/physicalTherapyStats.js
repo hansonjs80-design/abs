@@ -1,6 +1,16 @@
 import { generateCalendarGrid } from './calendarUtils.js';
 import { getPTCalendarCount, getPTCountDisplayMemo } from './ptStaffCalendarCounts.js';
 
+// Include a partially recorded week and an explicitly recorded zero; skip empty weeks.
+export function getPTWeeklyAverage(weeklyStats) {
+  const recordedWeeks = weeklyStats.filter(week => week.days > 0);
+  const total = recordedWeeks.reduce((sum, week) => sum + week.total, 0);
+  return {
+    weeks: recordedWeeks.length,
+    average: recordedWeeks.length ? Math.round(total / recordedWeeks.length) : null,
+  };
+}
+
 // Use the exact last-row display rule from StaffCalendar, without writing either source.
 export function getPTStatsWeeks(year, month, memos, slotSettings, pt = {}) {
   return generateCalendarGrid(year, month).grid.map((week, wi) => {

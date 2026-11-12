@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { usePTCalendarCounts } from '../../hooks/usePTCalendarCounts';
-import { fetchPTStatsYear, getPTStatsWeeks } from '../../lib/physicalTherapyStats';
+import { fetchPTStatsYear, getPTStatsWeeks, getPTWeeklyAverage } from '../../lib/physicalTherapyStats';
 import { supabase } from '../../lib/supabaseClient';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -95,6 +95,8 @@ export default function PhysicalTherapyStatsView() {
       return { weekNumber: idx + 1, dates: week, total, days: daysWithData, average: daysWithData > 0 ? Math.round(total / daysWithData) : 0 };
     });
   }, [weeksData, isIncludedDow]);
+
+  const weeklySummary = useMemo(() => getPTWeeklyAverage(weeklyStats), [weeklyStats]);
 
   const monthlyDowStats = useMemo(() => DOW_LABELS.map((_, dow) => {
     const recordedDays = weeksData.flat().filter(day => day?.dow === dow && day.value !== null && isIncludedDow(dow));
@@ -231,6 +233,7 @@ export default function PhysicalTherapyStatsView() {
               <div><dt>총 방문</dt><dd>{monthlySummary.days ? monthlySummary.total.toLocaleString() : '—'}<small>명</small></dd></div>
               <div><dt>집계 일수</dt><dd>{monthlySummary.days}<small>일</small></dd></div>
               <div><dt>일 평균</dt><dd>{monthlySummary.days ? monthlySummary.average.toLocaleString() : '—'}<small>명</small></dd></div>
+              <div><dt>주간 평균</dt><dd>{weeklySummary.average === null ? '—' : weeklySummary.average.toLocaleString()}<small>명/주</small></dd></div>
             </dl>
           </div>
 
@@ -369,6 +372,10 @@ export default function PhysicalTherapyStatsView() {
                 </table>
               </div>
               <p className="pt-stats-analysis-note">방문·평균 단위: 명<br />체크한 요일에서 평일 제외 요일을 빼고 집계합니다.</p>
+              <div className="pt-stats-weekly-average">
+                <div><span>주간 평균</span><strong>{weeklySummary.average === null ? '—' : weeklySummary.average.toLocaleString()}<small>명/주</small></strong></div>
+                <p>총 방문 ÷ 기록이 있는 {weeklySummary.weeks}주<br />일부 날짜만 입력된 주·0명 입력 주 포함</p>
+              </div>
             </section>
           </div>
           <p className="pt-calendar-guide">평균은 숫자가 표시된 날 기준입니다. 수동 입력 0명은 포함하고, 연동 공란은 제외하며 소수점은 반올림합니다.</p>

@@ -1,6 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getPTStatsWeeks, fetchPTStatsYear } from './physicalTherapyStats.js';
+import { getPTStatsWeeks, fetchPTStatsYear, getPTWeeklyAverage } from './physicalTherapyStats.js';
+
+test('weekly average uses recorded week totals, including partial weeks and explicit zero, without empty weeks', () => {
+  assert.deepEqual(getPTWeeklyAverage([
+    { total: 228, days: 6 }, { total: 149, days: 4 },
+    { total: 0, days: 0 }, { total: 0, days: 0 }, { total: 0, days: 0 },
+  ]), { weeks: 2, average: 189 });
+  assert.deepEqual(getPTWeeklyAverage([
+    { total: 100, days: 2 }, { total: 0, days: 1 }, { total: 0, days: 0 },
+  ]), { weeks: 2, average: 50 });
+  assert.deepEqual(getPTWeeklyAverage([{ total: 0, days: 1 }]), { weeks: 1, average: 0 });
+  assert.deepEqual(getPTWeeklyAverage([{ total: 0, days: 0 }]), { weeks: 0, average: null });
+  assert.deepEqual(getPTWeeklyAverage([]), { weeks: 0, average: null });
+});
 
 const day = (weeks, n) => weeks.flat().find(d => d?.day === n);
 test('PT integration, scope, overrides, missing days and zero follow the calendar display without mutating memos', () => {
