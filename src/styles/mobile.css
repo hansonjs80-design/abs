@@ -553,6 +553,7 @@
     align-items: stretch;
     overflow-x: auto;
     overscroll-behavior-x: contain;
+    touch-action: pan-x pan-y pinch-zoom;
     -webkit-overflow-scrolling: touch;
     padding-bottom: 0;
   }
@@ -624,9 +625,8 @@
     width: 100%;
     max-width: 100%;
     overflow-x: auto;
-    scroll-snap-type: x proximity;
-    scroll-padding-left: 0;
     overscroll-behavior-x: contain;
+    touch-action: pan-x pan-y pinch-zoom;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -647,7 +647,6 @@
     border-right: 2px solid var(--sw-mobile-strong-line, #000);
     border-top: none;
     border-bottom: none;
-    scroll-snap-align: start;
     overflow: hidden;
   }
 
@@ -839,6 +838,7 @@
     max-width: 100%;
     overflow-x: auto;
     overscroll-behavior-x: contain;
+    touch-action: pan-x pan-y pinch-zoom;
     -webkit-overflow-scrolling: touch;
   }
 

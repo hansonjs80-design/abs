@@ -159,3 +159,18 @@ test('mobile bottom navigation uses compact icon-only tabs', async () => {
   assert.match(bottomNav, /aria-label=\{item\.shortLabel \|\| item\.label\}/);
   assert.doesNotMatch(bottomNav, /<span>\{item\.shortLabel \|\| item\.label\}<\/span>/);
 });
+
+test('mobile schedule allows smooth horizontal touch scroll and uniform cell font size', async () => {
+  const [mobileCss, scheduleCell] = await Promise.all([
+    readFile(mobileCssUrl, 'utf8'),
+    readFile(scheduleCellUrl, 'utf8'),
+  ]);
+
+  assert.match(
+    mobileCss,
+    /\.shockwave-view\s*\{[^}]*overflow-x:\s*auto;[^}]*touch-action:\s*pan-x pan-y pinch-zoom;/s
+  );
+  assert.doesNotMatch(mobileCss, /scroll-snap-type:/);
+  assert.doesNotMatch(mobileCss, /scroll-snap-align:/);
+  assert.doesNotMatch(scheduleCell, /getMobileScheduleCellFitFontSize|data-mobile-fit|mobileFit/);
+});
