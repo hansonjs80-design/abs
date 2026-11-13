@@ -2312,9 +2312,34 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   .combined-therapist-summary-card :is(th, td),
   .combined-treatment-breakdown-card :is(th, td),
   .combined-stats-recent :is(th, td) {
-    border-right: 1px solid #e2e8f0;
-    border-bottom: 1px solid #e2e8f0;
+    border-left: 0 !important;
+    border-right: 1px solid #e2e8f0 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    box-shadow: none !important;
     font-variant-numeric: tabular-nums;
+  }
+
+  .combined-therapist-card thead tr:nth-child(2) th:last-child,
+  .combined-therapist-card tbody td.combined-incentive-rate-cell,
+  .combined-therapist-card tbody tr.combined-therapist-total > td:last-child {
+    border-left: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .combined-therapist-card tr > :last-child,
+  .combined-therapist-card thead tr:nth-child(2) th:last-child,
+  .combined-therapist-card tbody tr.combined-therapist-total > td:last-child,
+  .combined-therapist-summary-card tr > :last-child,
+  .combined-treatment-breakdown-card tr > :last-child,
+  .combined-stats-recent tr > :last-child {
+    border-right: 0 !important;
+  }
+
+  .combined-therapist-card tbody tr:last-child > *,
+  .combined-therapist-summary-card tbody tr:last-child > *,
+  .combined-treatment-breakdown-card tbody tr:last-child > *,
+  .combined-stats-recent tbody tr:last-child > * {
+    border-bottom: 0 !important;
   }
 
   /* 같은 행·셀 내부 글자 크기 균형 통일 */
@@ -2491,6 +2516,7 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
     background: #0f172a !important;
     color: #ffffff !important;
     font-weight: 800 !important;
+    border-right-color: rgba(255, 255, 255, 0.14) !important;
   }
 
   .combined-therapist-card tbody tr.combined-therapist-total > td:last-child,
