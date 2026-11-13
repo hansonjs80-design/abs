@@ -730,9 +730,7 @@ export default function CombinedStatsPage() {
           {currentSummary.therapists.map((item, index) => (
             <Fragment key={`summary-${item.therapist.key || item.therapist.id || item.therapist.name}`}>
               <tr className={`combined-summary-parent-row combined-summary-tone-${index % 5}`}>
-                <th className={`combined-summary-therapist-cell combined-summary-tone-${index % 5}`}>
-                  <span className="combined-summary-therapist-pill">{item.therapist.displayName || item.therapist.name}</span>
-                </th>
+                <th className={`combined-summary-therapist-cell combined-summary-tone-${index % 5}`}>{item.therapist.displayName || item.therapist.name}</th>
                 {summaryViewMode === 'detail' && <td>{formatCount(item.total.count)}</td>}
                 <td className="combined-summary-amount-cell">{formatCurrency(item.total.amount)}</td>
                 <td className="combined-summary-incentive-cell">{formatCurrency(item.total.incentive)}</td>

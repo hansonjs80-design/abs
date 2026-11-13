@@ -2803,57 +2803,6 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   .combined-stats-summary-container :is(.combined-therapist-summary-card, .combined-treatment-breakdown-card) tbody tr:not(.combined-summary-grand-total) .combined-summary-incentive-cell {
     color: #2563eb !important;
   }
-
-  .combined-summary-therapist-pill {
-    display: inline-block;
-    padding: 3px 12px;
-    border-radius: 999px;
-    font-weight: 800;
-    line-height: 1.3;
-    border: 1px solid transparent;
-  }
-
-  .combined-summary-tone-0 .combined-summary-therapist-pill {
-    background: #fef3c7;
-    border-color: #fcd34d;
-    color: #92400e;
-  }
-
-  .combined-summary-tone-1 .combined-summary-therapist-pill {
-    background: #ede9fe;
-    border-color: #c4b5fd;
-    color: #5b21b6;
-  }
-
-  .combined-summary-tone-2 .combined-summary-therapist-pill {
-    background: #dcfce7;
-    border-color: #86efac;
-    color: #166534;
-  }
-
-  .combined-summary-tone-3 .combined-summary-therapist-pill {
-    background: #cffafe;
-    border-color: #67e8f9;
-    color: #155e75;
-  }
-
-  .combined-summary-tone-4 .combined-summary-therapist-pill {
-    background: #fce7f3;
-    border-color: #f9a8d4;
-    color: #9d174d;
-  }
-
-  .combined-treatment-breakdown-card table tbody tr.combined-breakdown-row:not(.combined-therapist-subtotal) > :is(th, td) {
-    background: #ffffff !important;
-  }
-
-  .combined-treatment-breakdown-card table tbody tr.combined-therapist-subtotal:not(.combined-shinjang-total) > :is(th, td) {
-    background: #f8fafc !important;
-  }
-
-  .combined-treatment-breakdown-card table tbody tr.combined-shinjang-total > :is(th, td) {
-    background: #f0fdf4 !important;
-  }
 }
 
 @media print {
