@@ -2275,20 +2275,62 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   .combined-treatment-breakdown-card,
   .combined-stats-recent {
     background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 14px !important;
     box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
     overflow: hidden;
+    padding: 0;
   }
 
   .combined-therapist-card {
-    border-top: 4px solid var(--combined-tone-strong);
+    border-top: 4px solid var(--combined-tone-strong) !important;
+  }
+
+  .combined-therapist-card table,
+  .combined-therapist-summary-card table,
+  .combined-treatment-breakdown-card table,
+  .combined-stats-recent .combined-stats-recent-table-wrap,
+  .combined-stats-recent table {
+    width: 100% !important;
+    border-collapse: collapse;
+    margin: 0;
+  }
+
+  .combined-therapist-card :is(th, td),
+  .combined-therapist-summary-card :is(th, td),
+  .combined-treatment-breakdown-card :is(th, td),
+  .combined-stats-recent :is(th, td) {
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .combined-therapist-card tr > :last-child,
+  .combined-therapist-summary-card tr > :last-child,
+  .combined-treatment-breakdown-card tr > :last-child,
+  .combined-stats-recent tr > :last-child {
+    border-right: 0 !important;
+  }
+
+  .combined-therapist-card tbody tr:last-child > *,
+  .combined-therapist-summary-card tbody tr:last-child > *,
+  .combined-treatment-breakdown-card tbody tr:last-child > *,
+  .combined-stats-recent tbody tr:last-child > * {
+    border-bottom: 0 !important;
   }
 
   .combined-therapist-card .combined-therapist-name {
     background: var(--combined-tone-soft) !important;
     color: var(--combined-tone-text) !important;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding: 11px 14px;
+  }
+
+  .combined-therapist-summary-card .combined-therapist-name,
+  .combined-treatment-breakdown-card .combined-therapist-name {
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
+    border-bottom: 1px solid #cbd5e1 !important;
     padding: 11px 14px;
   }
 
@@ -2309,7 +2351,8 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
     display: inline-block;
   }
 
-  .combined-therapist-card .combined-therapist-header-count {
+  .combined-therapist-card .combined-therapist-header-count,
+  .combined-therapist-summary-card .combined-therapist-header-count {
     background: #ffffff !important;
     color: #0f172a !important;
     border: 1px solid #cbd5e1;
@@ -2317,13 +2360,6 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
     padding: 2px 10px;
     font-size: 0.78rem;
     font-weight: 800;
-  }
-
-  .combined-therapist-card :is(th, td),
-  .combined-therapist-summary-card :is(th, td),
-  .combined-treatment-breakdown-card :is(th, td),
-  .combined-stats-recent :is(th, td) {
-    font-variant-numeric: tabular-nums;
   }
 
   .combined-therapist-card thead tr:nth-child(2) th,
@@ -2411,6 +2447,12 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   .combined-therapist-card .combined-therapist-name {
     background: var(--combined-tone-soft) !important;
     color: var(--combined-tone-text) !important;
+  }
+
+  .combined-therapist-summary-card .combined-therapist-name,
+  .combined-treatment-breakdown-card .combined-therapist-name {
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
   }
 
   .combined-therapist-summary-card .combined-summary-parent-row.combined-summary-tone-0 > * { background: #fffbeb !important; }

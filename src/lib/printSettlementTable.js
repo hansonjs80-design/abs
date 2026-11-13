@@ -55,7 +55,7 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     th:first-child { text-align: left; }
     thead { display: table-header-group; background: #e2e8f0; }
     tr { break-inside: avoid; }
-    .combined-therapist-name { background: #475569; color: white; }
+    .combined-therapist-name { background: #f1f5f9; color: #0f172a; }
     .combined-therapist-name-content { display: flex; justify-content: space-between; gap: 12px; }
     .combined-summary-tone-0, .combined-summary-parent-row.combined-summary-tone-0 > * { background: #fffbeb; }
     .combined-summary-tone-1, .combined-summary-parent-row.combined-summary-tone-1 > * { background: #f5f3ff; }
