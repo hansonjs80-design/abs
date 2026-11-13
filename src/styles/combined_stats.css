@@ -2160,3 +2160,233 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
 .combined-treatment-breakdown-card table tbody tr.combined-breakdown-manual > :is(th, td) {
   background: #f3e5d8 !important;
 }
+
+/* ==========================================================================
+   KPI 요약 스트립 & 데스크탑 UI/테이블 리디자인 (화면 전용)
+   ========================================================================== */
+@media screen {
+  .combined-kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0 0 18px;
+  }
+
+  .combined-kpi-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .combined-kpi-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #64748b;
+  }
+
+  .combined-kpi-value {
+    font-size: 1.32rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .combined-kpi-card--incentive .combined-kpi-value {
+    color: #2563eb;
+  }
+
+  .combined-kpi-card--status .combined-kpi-value {
+    color: #047857;
+  }
+
+  .combined-kpi-sub {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+  }
+
+  @media (max-width: 900px) {
+    .combined-kpi-strip {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .combined-kpi-value {
+      font-size: 1.12rem;
+    }
+  }
+}
+
+@media print {
+  .combined-kpi-strip {
+    display: none !important;
+  }
+}
+
+@media screen and (min-width: 1025px) {
+  .combined-stats-page {
+    background: #f8fafc;
+    padding: 20px 24px 32px;
+    border-radius: 16px;
+  }
+
+  .combined-stats-header {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 18px 22px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    margin-bottom: 16px;
+  }
+
+  .combined-stats-nav-tabs {
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .combined-stats-nav-tab {
+    border-radius: 8px;
+    font-weight: 700;
+    transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .combined-stats-nav-tab.is-active {
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.25);
+  }
+
+  /* 치료사별 색상 팔레트 (상단 컬러 바 + 파스텔 헤더 + 고대비 텍스트) */
+  .combined-tone-0 { --combined-tone-strong: #f59e0b; --combined-tone-soft: #fffbeb; --combined-tone-text: #78350f; }
+  .combined-tone-1 { --combined-tone-strong: #8b5cf6; --combined-tone-soft: #f5f3ff; --combined-tone-text: #4c1d95; }
+  .combined-tone-2 { --combined-tone-strong: #10b981; --combined-tone-soft: #ecfdf5; --combined-tone-text: #064e3b; }
+  .combined-tone-3 { --combined-tone-strong: #06b6d4; --combined-tone-soft: #ecfeff; --combined-tone-text: #164e63; }
+  .combined-tone-4 { --combined-tone-strong: #ec4899; --combined-tone-soft: #fdf2f8; --combined-tone-text: #831843; }
+
+  .combined-therapist-card,
+  .combined-therapist-summary-card,
+  .combined-treatment-breakdown-card,
+  .combined-stats-recent {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+    overflow: hidden;
+  }
+
+  .combined-therapist-card {
+    border-top: 4px solid var(--combined-tone-strong);
+  }
+
+  .combined-therapist-card .combined-therapist-name {
+    background: var(--combined-tone-soft) !important;
+    color: var(--combined-tone-text) !important;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 11px 14px;
+  }
+
+  .combined-therapist-card .combined-therapist-title-wrap > span:first-child {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 800;
+    font-size: 1rem;
+  }
+
+  .combined-therapist-card .combined-therapist-title-wrap > span:first-child::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--combined-tone-strong);
+    display: inline-block;
+  }
+
+  .combined-therapist-card .combined-therapist-header-count {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .combined-therapist-card :is(th, td),
+  .combined-therapist-summary-card :is(th, td),
+  .combined-treatment-breakdown-card :is(th, td),
+  .combined-stats-recent :is(th, td) {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .combined-therapist-card thead tr:nth-child(2) th,
+  .combined-therapist-summary-card thead tr.combined-summary-column-header-row th,
+  .combined-treatment-breakdown-card thead tr.combined-summary-column-header-row th {
+    background: #f8fafc !important;
+    color: #64748b !important;
+    font-size: 0.76rem;
+    font-weight: 700;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .combined-therapist-card tbody tr:hover > *,
+  .combined-stats-recent tbody tr:hover > * {
+    background-color: #f8fafc;
+  }
+
+  /* 치료사별 합계 행 색상 구분 */
+  .combined-therapist-summary-card .combined-summary-parent-row.combined-summary-tone-0 > * {
+    background: #fffbeb !important;
+    border-left: 3px solid #f59e0b;
+  }
+  .combined-therapist-summary-card .combined-summary-parent-row.combined-summary-tone-1 > * {
+    background: #f5f3ff !important;
+    border-left: 3px solid #8b5cf6;
+  }
+  .combined-therapist-summary-card .combined-summary-parent-row.combined-summary-tone-2 > * {
+    background: #ecfdf5 !important;
+    border-left: 3px solid #10b981;
+  }
+  .combined-therapist-summary-card .combined-summary-parent-row.combined-summary-tone-3 > * {
+    background: #ecfeff !important;
+    border-left: 3px solid #06b6d4;
+  }
+  .combined-therapist-summary-card .combined-summary-parent-row.combined-summary-tone-4 > * {
+    background: #fdf2f8 !important;
+    border-left: 3px solid #ec4899;
+  }
+  .combined-therapist-summary-card .combined-summary-parent-row > td {
+    border-left: none !important;
+  }
+
+  /* 전체 합계 행 강조 (다크 네이비) */
+  .combined-therapist-card tbody tr.combined-therapist-total > *,
+  .combined-therapist-summary-card tbody tr.combined-summary-grand-total > *,
+  .combined-treatment-breakdown-card tbody tr.combined-summary-grand-total > * {
+    background: #0f172a !important;
+    color: #ffffff !important;
+    font-weight: 800 !important;
+  }
+
+  .combined-therapist-card tbody tr.combined-therapist-total > td:last-child,
+  .combined-therapist-summary-card tbody tr.combined-summary-grand-total > td.combined-summary-incentive-cell,
+  .combined-treatment-breakdown-card tbody tr.combined-summary-grand-total > td.combined-summary-incentive-cell {
+    color: #93c5fd !important;
+  }
+
+  /* 전체 결산 탭 다중 테이블 간격 및 필터 바 정돈 */
+  .combined-settlement-controls {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+}

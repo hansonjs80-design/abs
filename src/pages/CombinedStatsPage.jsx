@@ -730,7 +730,7 @@ export default function CombinedStatsPage() {
           {currentSummary.therapists.map((item, index) => (
             <Fragment key={`summary-${item.therapist.key || item.therapist.id || item.therapist.name}`}>
               <tr className={`combined-summary-parent-row combined-summary-tone-${index % 5}`}>
-                <th className={`combined-summary-therapist-cell combined-summary-tone-${index % 5}`}>{item.therapist.displayName || item.therapist.name} 치료사</th>
+                <th className={`combined-summary-therapist-cell combined-summary-tone-${index % 5}`}>{item.therapist.displayName || item.therapist.name}</th>
                 {summaryViewMode === 'detail' && <td>{formatCount(item.total.count)}</td>}
                 <td className="combined-summary-amount-cell">{formatCurrency(item.total.amount)}</td>
                 <td className="combined-summary-incentive-cell">{formatCurrency(item.total.incentive)}</td>
@@ -859,6 +859,31 @@ export default function CombinedStatsPage() {
         </button>
       </header>
 
+      {currentSummary && activeTab !== 'settlement' && (
+        <section className="combined-kpi-strip" aria-label="월간 핵심 요약">
+          <div className="combined-kpi-card">
+            <div className="combined-kpi-label">총 치료 건수</div>
+            <div className="combined-kpi-value">{formatCount(currentSummary.total.count)}</div>
+            <div className="combined-kpi-sub">치료사 {currentSummary.therapists?.length || 0}명 합계</div>
+          </div>
+          <div className="combined-kpi-card">
+            <div className="combined-kpi-label">총 결산 금액</div>
+            <div className="combined-kpi-value">{formatCurrency(currentSummary.total.amount)}</div>
+            <div className="combined-kpi-sub">{currentYear}년 {String(currentMonth).padStart(2, '0')}월 누적</div>
+          </div>
+          <div className="combined-kpi-card combined-kpi-card--incentive">
+            <div className="combined-kpi-label">총 인센티브</div>
+            <div className="combined-kpi-value">{formatCurrency(currentSummary.total.incentive)}</div>
+            <div className="combined-kpi-sub">7% · 15% 합산</div>
+          </div>
+          <div className="combined-kpi-card combined-kpi-card--status">
+            <div className="combined-kpi-label">크라이오 차감</div>
+            <div className="combined-kpi-value">{applyCryoDeduction ? '적용중' : '비적용'}</div>
+            <div className="combined-kpi-sub">{isAdmin ? '충격파 · 신장분사 · 도수' : '신장분사 치료'}</div>
+          </div>
+        </section>
+      )}
+
       {activeTab === 'therapist' && (() => {
         const renderTherapistCard = (item, index) => {
           const therapistKey = item.therapist.key || item.therapist.id || item.therapist.name;
@@ -884,7 +909,7 @@ export default function CombinedStatsPage() {
                     <th className="combined-therapist-name" colSpan={4}>
                       <div className="combined-therapist-name-content">
                         <div className="combined-therapist-title-wrap">
-                          <span>{item.therapist.displayName || item.therapist.name} 치료사</span>
+                          <span>{item.therapist.displayName || item.therapist.name}</span>
                           <div className="combined-therapist-view-tabs" role="tablist" aria-label="치료사 통계 보기 방식">
                             <button
                               type="button"
