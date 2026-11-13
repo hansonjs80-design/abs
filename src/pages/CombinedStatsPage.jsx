@@ -713,10 +713,10 @@ export default function CombinedStatsPage() {
               <span className="combined-therapist-header-count">{formatCount(currentSummary.total.count)}</span>
               <div className="combined-breakdown-actions">
                 <div className="combined-therapist-view-tabs">
-                  <button type="button" className={`combined-therapist-tab-btn ${summaryViewMode === 'total' ? 'is-active' : ''}`} aria-pressed={summaryViewMode === 'total'} onClick={() => setSummaryViewMode('total')}>전체보기</button>
-                  <button type="button" className={`combined-therapist-tab-btn ${summaryViewMode === 'detail' ? 'is-active' : ''}`} aria-pressed={summaryViewMode === 'detail'} onClick={() => setSummaryViewMode('detail')}>상세보기</button>
+                  <button type="button" className={`combined-therapist-tab-btn ${summaryViewMode === 'total' ? 'is-active' : ''}`} aria-pressed={summaryViewMode === 'total'} onClick={() => setSummaryViewMode('total')}>전체</button>
+                  <button type="button" className={`combined-therapist-tab-btn ${summaryViewMode === 'detail' ? 'is-active' : ''}`} aria-pressed={summaryViewMode === 'detail'} onClick={() => setSummaryViewMode('detail')}>상세</button>
                 </div>
-                <button type="button" className="combined-table-print-button" onClick={(event) => printSettlementTable(event.currentTarget.closest('article'), `${currentYear}년 ${currentMonth}월 치료사별 합계 (${cryoModeLabel})`)}><Printer size={16} />인쇄</button>
+                <button type="button" className="combined-table-print-button" title="인쇄" aria-label="치료사별 합계 인쇄" onClick={(event) => printSettlementTable(event.currentTarget.closest('article'), `${currentYear}년 ${currentMonth}월 치료사별 합계 (${cryoModeLabel})`)}><Printer size={16} /></button>
               </div>
             </div>
           </th></tr>
@@ -918,7 +918,7 @@ export default function CombinedStatsPage() {
                               className={`combined-therapist-tab-btn ${viewMode === 'total-only' ? 'is-active' : ''}`}
                               onClick={() => setTherapistViewModes((prev) => ({ ...prev, [therapistKey]: 'total-only' }))}
                             >
-                              전체 보기
+                              전체
                             </button>
                             <button
                               type="button"
@@ -927,7 +927,7 @@ export default function CombinedStatsPage() {
                               className={`combined-therapist-tab-btn ${viewMode === 'detail' ? 'is-active' : ''}`}
                               onClick={() => setTherapistViewModes((prev) => ({ ...prev, [therapistKey]: 'detail' }))}
                             >
-                              상세 보기
+                              상세
                             </button>
                           </div>
                         </div>
@@ -1089,11 +1089,11 @@ export default function CombinedStatsPage() {
                           <span>항목별 결산 내역</span>
                           <div className="combined-breakdown-actions">
                             <div className="combined-therapist-view-tabs" role="group" aria-label="항목별 결산 보기">
-                              <button type="button" className={`combined-therapist-tab-btn ${breakdownViewMode === 'total' ? 'is-active' : ''}`} aria-pressed={breakdownViewMode === 'total'} onClick={() => setBreakdownViewMode('total')}>전체보기</button>
-                              <button type="button" className={`combined-therapist-tab-btn ${breakdownViewMode === 'detail' ? 'is-active' : ''}`} aria-pressed={breakdownViewMode === 'detail'} onClick={() => setBreakdownViewMode('detail')}>상세보기</button>
-                              <button type="button" className={`combined-therapist-tab-btn ${breakdownViewMode === 'detail-no-incentive' ? 'is-active' : ''}`} aria-pressed={breakdownViewMode === 'detail-no-incentive'} onClick={() => setBreakdownViewMode('detail-no-incentive')}>상세보기2</button>
+                              <button type="button" className={`combined-therapist-tab-btn ${breakdownViewMode === 'total' ? 'is-active' : ''}`} aria-pressed={breakdownViewMode === 'total'} onClick={() => setBreakdownViewMode('total')}>전체</button>
+                              <button type="button" className={`combined-therapist-tab-btn ${breakdownViewMode === 'detail' ? 'is-active' : ''}`} aria-pressed={breakdownViewMode === 'detail'} onClick={() => setBreakdownViewMode('detail')}>상세</button>
+                              <button type="button" className={`combined-therapist-tab-btn ${breakdownViewMode === 'detail-no-incentive' ? 'is-active' : ''}`} aria-pressed={breakdownViewMode === 'detail-no-incentive'} onClick={() => setBreakdownViewMode('detail-no-incentive')}>상세2</button>
                             </div>
-                            <button type="button" className="combined-breakdown-print" aria-label="항목별 결산 내역만 인쇄" onClick={() => printSettlementTable(breakdownRef.current, `${currentYear}년 ${currentMonth}월 항목별 결산 내역 (${cryoModeLabel})`)}><Printer size={16} />인쇄</button>
+                            <button type="button" className="combined-breakdown-print" title="인쇄" aria-label="항목별 결산 내역만 인쇄" onClick={() => printSettlementTable(breakdownRef.current, `${currentYear}년 ${currentMonth}월 항목별 결산 내역 (${cryoModeLabel})`)}><Printer size={16} /></button>
                           </div>
                         </div>
                       </th>
@@ -1199,7 +1199,7 @@ export default function CombinedStatsPage() {
                 <h2>{recentOverallTitle}</h2>
               </div>
               <div className="combined-recent-controls">
-                <button type="button" className="combined-table-print-button" onClick={(event) => printSettlementTable(event.currentTarget.closest('section'), `${recentPeriodLabel} 전체결산(${cryoModeLabel})`)}><Printer size={16} />인쇄</button>
+                <button type="button" className="combined-table-print-button" title="인쇄" aria-label={`${recentPeriodLabel} 전체 결산 인쇄`} onClick={(event) => printSettlementTable(event.currentTarget.closest('section'), `${recentPeriodLabel} 전체결산(${cryoModeLabel})`)}><Printer size={16} /></button>
                 <div className="combined-recent-filter-tabs" role="tablist" aria-label="결산 현황 보기 방식">
                   <button
                     type="button"
@@ -1208,7 +1208,7 @@ export default function CombinedStatsPage() {
                     className={`combined-recent-tab-btn ${recentViewMode === 'total-only' ? 'is-active' : ''}`}
                     onClick={() => setRecentViewMode('total-only')}
                   >
-                    전체 보기
+                    전체
                   </button>
                   <button
                     type="button"
@@ -1217,7 +1217,7 @@ export default function CombinedStatsPage() {
                     className={`combined-recent-tab-btn ${recentViewMode === 'detail' ? 'is-active' : ''}`}
                     onClick={() => setRecentViewMode('detail')}
                   >
-                    상세 보기
+                    상세
                   </button>
                 </div>
                 <input

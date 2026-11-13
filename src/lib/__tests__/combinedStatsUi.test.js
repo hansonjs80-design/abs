@@ -138,8 +138,8 @@ describe('combined statistics UI', () => {
     ]);
 
     assert.match(pageSource, /combined-recent-filter-tabs/);
-    assert.match(pageSource, /전체 보기/);
-    assert.match(pageSource, /상세 보기/);
+    assert.match(pageSource, />전체</);
+    assert.match(pageSource, />상세</);
     assert.match(pageSource, /totalOnly=\{recentViewMode === 'total-only'\}/);
     assert.match(styleSource, /\.combined-recent-filter-tabs\s*\{/);
     assert.match(styleSource, /\.combined-recent-tab-btn\.is-active\s*\{/);

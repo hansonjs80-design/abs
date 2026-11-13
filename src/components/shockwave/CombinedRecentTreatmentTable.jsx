@@ -11,10 +11,10 @@ export default function CombinedRecentTreatmentTable({ treatment, label, periodL
       <div className="combined-stats-recent-heading">
         <h2>{title}</h2>
         <div className="combined-recent-filter-tabs" role="tablist" aria-label={`${label} 결산 현황 보기 방식`}>
-          <button type="button" role="tab" aria-selected={viewMode === 'total-only'} className={`combined-recent-tab-btn ${viewMode === 'total-only' ? 'is-active' : ''}`} onClick={() => onViewModeChange('total-only')}>전체 보기</button>
-          <button type="button" role="tab" aria-selected={viewMode === 'detail'} className={`combined-recent-tab-btn ${viewMode === 'detail' ? 'is-active' : ''}`} onClick={() => onViewModeChange('detail')}>상세 보기</button>
+          <button type="button" role="tab" aria-selected={viewMode === 'total-only'} className={`combined-recent-tab-btn ${viewMode === 'total-only' ? 'is-active' : ''}`} onClick={() => onViewModeChange('total-only')}>전체</button>
+          <button type="button" role="tab" aria-selected={viewMode === 'detail'} className={`combined-recent-tab-btn ${viewMode === 'detail' ? 'is-active' : ''}`} onClick={() => onViewModeChange('detail')}>상세</button>
         </div>
-        <button type="button" className="combined-table-print-button" onClick={(event) => printSettlementTable(event.currentTarget.closest('section'), printTitle)} aria-label={`${title} 인쇄`}><Printer size={16} />인쇄</button>
+        <button type="button" className="combined-table-print-button" title="인쇄" onClick={(event) => printSettlementTable(event.currentTarget.closest('section'), printTitle)} aria-label={`${title} 인쇄`}><Printer size={16} /></button>
       </div>
       <div className="combined-stats-recent-table-wrap">
         <table>
