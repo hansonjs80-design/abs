@@ -771,13 +771,15 @@ export default function CombinedStatsPage() {
     <div className="combined-stats-page animate-fade-in">
       {isLoading && <div className="top-loading-bar" />}
       <header className="combined-stats-header">
-        <div>
+        <div className="combined-stats-header-title">
           <h1 data-print-suffix={`(${isAdmin ? '충격파 · 신장분사 · 도수치료' : '신장분사 치료'}의 크라이오 차감 ${applyCryoDeduction ? '적용' : '비적용'} 결산 입니다.)`}>
             {currentYear}년 {String(currentMonth).padStart(2, '0')}월 {activeTab === 'settlement' ? '전체 결산' : '전체 통계'}
           </h1>
           <p>
             {isAdmin ? '충격파 · 신장분사 · 도수치료' : '신장분사 치료'}의 크라이오 차감 {applyCryoDeduction ? '적용' : '비적용'} 결산 입니다.
           </p>
+        </div>
+        <div className="combined-stats-header-actions">
           <div className="combined-stats-nav-bar">
             <div className="combined-stats-nav-tabs" role="tablist" aria-label="전체 통계 탭 메뉴">
               <button
@@ -847,16 +849,16 @@ export default function CombinedStatsPage() {
               </label>
             )}
           </div>
+          <button
+            type="button"
+            className="combined-stats-refresh"
+            onClick={() => refreshData({ force: true })}
+            disabled={isLoading}
+          >
+            <RefreshCw size={16} className={isLoading ? 'spin-animation' : ''} />
+            {isLoading ? '새로 고침 중...' : '새로 고침'}
+          </button>
         </div>
-        <button
-          type="button"
-          className="combined-stats-refresh"
-          onClick={() => refreshData({ force: true })}
-          disabled={isLoading}
-        >
-          <RefreshCw size={16} className={isLoading ? 'spin-animation' : ''} />
-          {isLoading ? '새로 고침 중...' : '새로 고침'}
-        </button>
       </header>
 
       {currentSummary && activeTab !== 'settlement' && (
