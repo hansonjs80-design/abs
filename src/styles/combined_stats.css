@@ -10,7 +10,7 @@
 
 .combined-stats-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 16px;
@@ -25,11 +25,25 @@
 
 .combined-stats-header-actions {
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.combined-stats-header-primary,
+.combined-stats-header-secondary {
+  display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
-  margin-left: auto;
+}
+
+@media print {
+  .combined-stats-header-actions {
+    display: none !important;
+  }
 }
 
 .combined-stats-header h1,

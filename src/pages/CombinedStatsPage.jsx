@@ -780,7 +780,7 @@ export default function CombinedStatsPage() {
           </p>
         </div>
         <div className="combined-stats-header-actions">
-          <div className="combined-stats-nav-bar">
+          <div className="combined-stats-header-primary">
             <div className="combined-stats-nav-tabs" role="tablist" aria-label="전체 통계 탭 메뉴">
               <button
                 type="button"
@@ -814,50 +814,54 @@ export default function CombinedStatsPage() {
               <button type="button" className={applyCryoDeduction ? 'is-active' : ''} aria-pressed={applyCryoDeduction} onClick={() => setApplyCryoDeduction(true)}>크라이오 차감 적용</button>
               <button type="button" className={!applyCryoDeduction ? 'is-active' : ''} aria-pressed={!applyCryoDeduction} onClick={() => setApplyCryoDeduction(false)}>크라이오 차감 비적용</button>
             </div>
-            {activeTab === 'therapist' && (
-              <div className="combined-stats-layout-tabs" role="tablist" aria-label="레이아웃 보기 방식">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={layoutMode === 'horizontal'}
-                  className={`combined-stats-layout-tab ${layoutMode === 'horizontal' ? 'is-active' : ''}`}
-                  onClick={() => setLayoutMode('horizontal')}
-                >
-                  가로보기
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={layoutMode === 'vertical'}
-                  className={`combined-stats-layout-tab ${layoutMode === 'vertical' ? 'is-active' : ''}`}
-                  onClick={() => setLayoutMode('vertical')}
-                >
-                  세로보기
-                </button>
-              </div>
-            )}
-            {isAdmin && activeTab === 'summary' && (
-              <label className="combined-therapist-summary-toggle">
-                <input type="checkbox" checked={showIonTreatment} onChange={(event) => setShowIonTreatment(event.target.checked)} />
-                이온치료현황
-              </label>
-            )}
-            {activeTab === 'therapist' && (
-              <label className="combined-therapist-summary-toggle">
-                <input type="checkbox" checked={showTherapistSummary} onChange={(event) => setShowTherapistSummary(event.target.checked)} />
-                치료사별 합계 테이블 보기
-              </label>
-            )}
+            <button
+              type="button"
+              className="combined-stats-refresh"
+              onClick={() => refreshData({ force: true })}
+              disabled={isLoading}
+            >
+              <RefreshCw size={16} className={isLoading ? 'spin-animation' : ''} />
+              {isLoading ? '새로 고침 중...' : '새로 고침'}
+            </button>
           </div>
-          <button
-            type="button"
-            className="combined-stats-refresh"
-            onClick={() => refreshData({ force: true })}
-            disabled={isLoading}
-          >
-            <RefreshCw size={16} className={isLoading ? 'spin-animation' : ''} />
-            {isLoading ? '새로 고침 중...' : '새로 고침'}
-          </button>
+          {(activeTab === 'therapist' || (isAdmin && activeTab === 'summary')) && (
+            <div className="combined-stats-header-secondary">
+              {activeTab === 'therapist' && (
+                <div className="combined-stats-layout-tabs" role="tablist" aria-label="레이아웃 보기 방식">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={layoutMode === 'horizontal'}
+                    className={`combined-stats-layout-tab ${layoutMode === 'horizontal' ? 'is-active' : ''}`}
+                    onClick={() => setLayoutMode('horizontal')}
+                  >
+                    가로보기
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={layoutMode === 'vertical'}
+                    className={`combined-stats-layout-tab ${layoutMode === 'vertical' ? 'is-active' : ''}`}
+                    onClick={() => setLayoutMode('vertical')}
+                  >
+                    세로보기
+                  </button>
+                </div>
+              )}
+              {isAdmin && activeTab === 'summary' && (
+                <label className="combined-therapist-summary-toggle">
+                  <input type="checkbox" checked={showIonTreatment} onChange={(event) => setShowIonTreatment(event.target.checked)} />
+                  이온치료현황
+                </label>
+              )}
+              {activeTab === 'therapist' && (
+                <label className="combined-therapist-summary-toggle">
+                  <input type="checkbox" checked={showTherapistSummary} onChange={(event) => setShowTherapistSummary(event.target.checked)} />
+                  치료사별 합계 테이블 보기
+                </label>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
