@@ -2666,6 +2666,16 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   }
 }
 
+/* 윈도우 배율·1024px 이하 뷰포트에서도 전체 합계 카드의 신장분사(전체) 포함 모든 일반 행 셀 크기/굵기 통일 */
+@media screen {
+  .combined-stats-summary-container :is(.combined-therapist-summary-card, .combined-treatment-breakdown-card) table tbody tr:not(.combined-summary-grand-total):not(.combined-breakdown-detail-row) > :is(th, td, .combined-summary-amount-cell, .combined-summary-incentive-cell),
+  .combined-treatment-breakdown-card table tbody tr.combined-shinjang-total > :is(th, td, .combined-summary-amount-cell, .combined-summary-incentive-cell) {
+    font-size: 1.05rem !important;
+    font-weight: 800 !important;
+    line-height: 1.38 !important;
+  }
+}
+
 @media print {
   .combined-stats-page,
   .combined-stats-page * {
