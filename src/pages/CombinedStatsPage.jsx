@@ -1199,7 +1199,13 @@ export default function CombinedStatsPage() {
                 <h2>{recentOverallTitle}</h2>
               </div>
               <div className="combined-recent-controls">
-                <button type="button" className="combined-table-print-button" title="인쇄" aria-label={`${recentPeriodLabel} 전체 결산 인쇄`} onClick={(event) => printSettlementTable(event.currentTarget.closest('section'), `${recentPeriodLabel} 전체결산(${cryoModeLabel})`)}><Printer size={16} /></button>
+                <input
+                  type="text"
+                  value={recentPeriodInput}
+                  onChange={(event) => setRecentPeriodInput(event.target.value)}
+                  placeholder="최근 6개월"
+                  aria-label="전체 통계 최근 결산 기간"
+                />
                 <div className="combined-recent-filter-tabs" role="tablist" aria-label="결산 현황 보기 방식">
                   <button
                     type="button"
@@ -1220,13 +1226,7 @@ export default function CombinedStatsPage() {
                     상세
                   </button>
                 </div>
-                <input
-                  type="text"
-                  value={recentPeriodInput}
-                  onChange={(event) => setRecentPeriodInput(event.target.value)}
-                  placeholder="최근 6개월"
-                  aria-label="전체 통계 최근 결산 기간"
-                />
+                <button type="button" className="combined-table-print-button" title="인쇄" aria-label={`${recentPeriodLabel} 전체 결산 인쇄`} onClick={(event) => printSettlementTable(event.currentTarget.closest('section'), `${recentPeriodLabel} 전체결산(${cryoModeLabel})`)}><Printer size={16} /></button>
               </div>
             </div>
             <div className="combined-stats-recent-table-wrap">
