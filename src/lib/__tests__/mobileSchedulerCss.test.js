@@ -182,7 +182,8 @@ test('mobile layout optimizes iPhone safe areas, dynamic viewport height, and st
   assert.match(mobileCss, /min-height:\s*100dvh;/);
   assert.match(mobileCss, /padding-right:\s*env\(safe-area-inset-right,\s*0px\);/);
   assert.match(mobileCss, /padding-left:\s*env\(safe-area-inset-left,\s*0px\);/);
-  assert.match(mobileCss, /\.sw-settlement-vertical-body\s*\{[^}]*flex-direction:\s*column !important;/s);
+  assert.match(mobileCss, /\.sw-settlement-vertical-body[\s\S]*?flex-direction:\s*column !important;/);
+  assert.match(mobileCss, /\.combined-vertical-two-col\s*\{[^}]*flex-direction:\s*column;/s);
   assert.match(mobileCss, /\.sw-horizontal2-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\) !important;/s);
 });
 

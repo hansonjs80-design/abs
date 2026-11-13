@@ -847,17 +847,57 @@
   }
 
   /* 결산 가로형2/세로형 레이아웃: 아이폰 세로 화면에서 2열 고정 대신 세로 스택 + 가로 스크롤 */
-  .sw-settlement-vertical-body {
+  .sw-settlement-vertical-body,
+  .sw-settlement-stack--shockwave.sw-settlement-stack--vertical :is(.sw-settlement-vertical-heading-row, .sw-settlement-vertical-body),
+  .sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical[data-treatment="신장분사"] :is(.sw-settlement-vertical-heading-row, .sw-settlement-vertical-body) {
+    display: flex !important;
     flex-direction: column !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
     gap: 12px !important;
   }
 
+  .sw-stats-body--settlement .sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical,
+  .sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-settlement-vertical-layout,
+  .sw-stats-body--settlement .sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical[data-treatment="신장분사"],
+  .sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical[data-treatment="신장분사"] .sw-settlement-vertical-layout {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
   .sw-settlement-vertical-left,
-  .sw-settlement-vertical-right {
+  .sw-settlement-vertical-right,
+  .sw-settlement-stack--shockwave.sw-settlement-stack--vertical :is(.sw-settlement-vertical-left, .sw-settlement-vertical-right),
+  .sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical[data-treatment="신장분사"] .sw-settlement-vertical-left,
+  .sw-settlement-stack.sw-settlement-stack--shockwave.sw-settlement-stack--vertical[data-treatment="신장분사"] .sw-settlement-vertical-right {
     flex: 1 1 auto !important;
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
+  }
+
+  .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-therapist-card,
+  .sw-settlement-stack--shockwave.sw-settlement-stack--vertical .sw-vertical-summary-card {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x pan-y pinch-zoom;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .combined-vertical-two-col {
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+  }
+
+  .combined-vertical-left,
+  .combined-vertical-right {
+    width: 100%;
+    min-width: 0;
+    gap: 14px;
   }
 
   .sw-horizontal2-layout {
