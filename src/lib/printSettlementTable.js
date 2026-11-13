@@ -57,9 +57,19 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     tr { break-inside: avoid; }
     .combined-therapist-name { background: #475569; color: white; }
     .combined-therapist-name-content { display: flex; justify-content: space-between; gap: 12px; }
-    .combined-summary-tone-0 { background: #ffedd5; }
-    .combined-summary-tone-1 { background: #ede9fe; }
-    .combined-summary-tone-2 { background: #dcfce7; }
+    .combined-summary-tone-0, .combined-summary-parent-row.combined-summary-tone-0 > * { background: #fffbeb; }
+    .combined-summary-tone-1, .combined-summary-parent-row.combined-summary-tone-1 > * { background: #f5f3ff; }
+    .combined-summary-tone-2, .combined-summary-parent-row.combined-summary-tone-2 > * { background: #ecfdf5; }
+    .combined-summary-tone-3, .combined-summary-parent-row.combined-summary-tone-3 > * { background: #ecfeff; }
+    .combined-summary-tone-4, .combined-summary-parent-row.combined-summary-tone-4 > * { background: #fdf2f8; }
+    .combined-summary-parent-row.combined-summary-tone-0 > :first-child { border-left: 3px solid #f59e0b; }
+    .combined-summary-parent-row.combined-summary-tone-1 > :first-child { border-left: 3px solid #8b5cf6; }
+    .combined-summary-parent-row.combined-summary-tone-2 > :first-child { border-left: 3px solid #10b981; }
+    .combined-summary-parent-row.combined-summary-tone-3 > :first-child { border-left: 3px solid #06b6d4; }
+    .combined-summary-parent-row.combined-summary-tone-4 > :first-child { border-left: 3px solid #ec4899; }
+    .combined-shinjang-total > * { background: #dcfce7; font-weight: 800; }
+    .combined-breakdown-shockwave > * { background: #dbeafe; }
+    .combined-breakdown-manual > * { background: #f3e5d8; }
     .combined-summary-parent-row > *, .combined-breakdown-row > * { font-size: 13px; font-weight: 800; }
     .combined-summary-column-header-row { color: #475569; font-size: 11px; }
     .combined-breakdown-detail-row { background: #fbfcfe; color: #475569; }
@@ -112,7 +122,8 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     .combined-recent-breakdown-item { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px; padding: 3px; margin: 2px 0 2px 3px; background: #f8fafc; }
     .combined-recent-breakdown-item--total { border-left: 2px solid #0f172a; margin-left: 0; background: #e2e8f0; font-weight: bold; }
     .combined-recent-breakdown-item:not(.combined-recent-breakdown-item--total) > strong { font-weight: 400; }
-    .combined-summary-grand-total > *, .combined-treatment-breakdown-card .combined-therapist-total > *, .combined-therapist-total > * { color: #9f1239; }
+    .combined-summary-grand-total > *, .combined-treatment-breakdown-card .combined-therapist-total > *, .combined-therapist-total > * { background: #0f172a; color: #ffffff; font-weight: 800; }
+    .combined-summary-grand-total > .combined-summary-incentive-cell { color: #93c5fd; }
     ::-webkit-scrollbar { display: none; width: 0; height: 0; }
     * { scrollbar-width: none; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   `;

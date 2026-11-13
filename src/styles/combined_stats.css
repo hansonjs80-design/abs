@@ -2390,3 +2390,45 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   }
 }
+
+@media print {
+  .combined-stats-page,
+  .combined-stats-page * {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .combined-tone-0 { --combined-tone-strong: #f59e0b; --combined-tone-soft: #fffbeb; --combined-tone-text: #78350f; }
+  .combined-tone-1 { --combined-tone-strong: #8b5cf6; --combined-tone-soft: #f5f3ff; --combined-tone-text: #4c1d95; }
+  .combined-tone-2 { --combined-tone-strong: #10b981; --combined-tone-soft: #ecfdf5; --combined-tone-text: #064e3b; }
+  .combined-tone-3 { --combined-tone-strong: #06b6d4; --combined-tone-soft: #ecfeff; --combined-tone-text: #164e63; }
+  .combined-tone-4 { --combined-tone-strong: #ec4899; --combined-tone-soft: #fdf2f8; --combined-tone-text: #831843; }
+
+  .combined-therapist-card {
+    border-top: 4px solid var(--combined-tone-strong) !important;
+  }
+
+  .combined-therapist-card .combined-therapist-name {
+    background: var(--combined-tone-soft) !important;
+    color: var(--combined-tone-text) !important;
+  }
+
+  .combined-therapist-summary-card .combined-summary-parent-row.combined-summary-tone-0 > * { background: #fffbeb !important; }
+  .combined-therapist-summary-card .combined-summary-parent-row.combined-summary-tone-1 > * { background: #f5f3ff !important; }
+  .combined-therapist-summary-card .combined-summary-parent-row.combined-summary-tone-2 > * { background: #ecfdf5 !important; }
+  .combined-therapist-summary-card .combined-summary-parent-row.combined-summary-tone-3 > * { background: #ecfeff !important; }
+  .combined-therapist-summary-card .combined-summary-parent-row.combined-summary-tone-4 > * { background: #fdf2f8 !important; }
+
+  .combined-therapist-card tbody tr.combined-therapist-total > *,
+  .combined-therapist-summary-card tbody tr.combined-summary-grand-total > *,
+  .combined-treatment-breakdown-card tbody tr.combined-summary-grand-total > * {
+    background: #0f172a !important;
+    color: #ffffff !important;
+  }
+
+  .combined-therapist-card tbody tr.combined-therapist-total > td:last-child,
+  .combined-therapist-summary-card tbody tr.combined-summary-grand-total > td.combined-summary-incentive-cell,
+  .combined-treatment-breakdown-card tbody tr.combined-summary-grand-total > td.combined-summary-incentive-cell {
+    color: #93c5fd !important;
+  }
+}
