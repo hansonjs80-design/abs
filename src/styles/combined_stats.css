@@ -2305,6 +2305,30 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
     font-variant-numeric: tabular-nums;
   }
 
+  /* 같은 행·셀 내부 글자 크기 균형 통일 */
+  .combined-therapist-card tbody :is(th, td),
+  .combined-therapist-summary-card tbody :is(th, td),
+  .combined-treatment-breakdown-card tbody :is(th, td),
+  .combined-stats-recent tbody :is(th, td),
+  .combined-therapist-summary-card tbody :is(.combined-summary-amount-cell, .combined-summary-incentive-cell),
+  .combined-treatment-breakdown-card tbody :is(.combined-summary-amount-cell, .combined-summary-incentive-cell),
+  .combined-treatment-breakdown-card table tbody tr.combined-shinjang-total > :is(th, td, .combined-summary-amount-cell, .combined-summary-incentive-cell) {
+    font-size: 0.92rem !important;
+    line-height: 1.35 !important;
+  }
+
+  .combined-therapist-card tbody tr.combined-treatment-child-row :is(th, td),
+  .combined-therapist-summary-card tbody tr.combined-breakdown-detail-row :is(th, td),
+  .combined-treatment-breakdown-card tbody tr.combined-breakdown-detail-row :is(th, td) {
+    font-size: 0.84rem !important;
+  }
+
+  .combined-therapist-card tbody tr.combined-therapist-total :is(th, td),
+  .combined-therapist-summary-card tbody tr.combined-summary-grand-total :is(th, td),
+  .combined-treatment-breakdown-card tbody tr.combined-summary-grand-total :is(th, td) {
+    font-size: 0.96rem !important;
+  }
+
   .combined-therapist-card tr > :last-child,
   .combined-therapist-summary-card tr > :last-child,
   .combined-treatment-breakdown-card tr > :last-child,
