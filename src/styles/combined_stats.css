@@ -2390,10 +2390,11 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   .combined-treatment-breakdown-card .combined-summary-title-header .combined-therapist-name-content {
     contain: none !important;
     display: flex !important;
+    flex-direction: row !important;
     flex-wrap: nowrap !important;
     align-items: center !important;
     justify-content: space-between !important;
-    gap: 10px !important;
+    gap: 12px !important;
     white-space: nowrap !important;
   }
 
@@ -2622,10 +2623,11 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   .combined-treatment-breakdown-card .combined-summary-title-header .combined-therapist-name-content {
     contain: none !important;
     display: flex !important;
+    flex-direction: row !important;
     flex-wrap: nowrap !important;
     align-items: center !important;
     justify-content: space-between !important;
-    gap: 10px !important;
+    gap: 12px !important;
     white-space: nowrap !important;
   }
 
