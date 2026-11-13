@@ -2342,7 +2342,7 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
     border-bottom: 0 !important;
   }
 
-  /* 같은 행·셀 내부 글자 크기 균형 통일 */
+  /* 같은 행·셀 내부 글자 크기 균형 통일 (가독성 향상) */
   .combined-therapist-card tbody :is(th, td),
   .combined-therapist-summary-card tbody :is(th, td),
   .combined-treatment-breakdown-card tbody :is(th, td),
@@ -2350,20 +2350,20 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   .combined-therapist-summary-card tbody :is(.combined-summary-amount-cell, .combined-summary-incentive-cell),
   .combined-treatment-breakdown-card tbody :is(.combined-summary-amount-cell, .combined-summary-incentive-cell),
   .combined-treatment-breakdown-card table tbody tr.combined-shinjang-total > :is(th, td, .combined-summary-amount-cell, .combined-summary-incentive-cell) {
-    font-size: 0.92rem !important;
-    line-height: 1.35 !important;
+    font-size: 1rem !important;
+    line-height: 1.38 !important;
   }
 
   .combined-therapist-card tbody tr.combined-treatment-child-row :is(th, td),
   .combined-therapist-summary-card tbody tr.combined-breakdown-detail-row :is(th, td),
   .combined-treatment-breakdown-card tbody tr.combined-breakdown-detail-row :is(th, td) {
-    font-size: 0.84rem !important;
+    font-size: 0.9rem !important;
   }
 
   .combined-therapist-card tbody tr.combined-therapist-total :is(th, td),
   .combined-therapist-summary-card tbody tr.combined-summary-grand-total :is(th, td),
   .combined-treatment-breakdown-card tbody tr.combined-summary-grand-total :is(th, td) {
-    font-size: 0.96rem !important;
+    font-size: 1.06rem !important;
   }
 
   .combined-therapist-card tr > :last-child,
@@ -2442,20 +2442,8 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   }
 
   .combined-therapist-card .combined-therapist-title-wrap > span:first-child {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
     font-weight: 800;
-    font-size: 1rem;
-  }
-
-  .combined-therapist-card .combined-therapist-title-wrap > span:first-child::before {
-    content: "";
-    width: 10px;
-    height: 10px;
-    border-radius: 999px;
-    background: var(--combined-tone-strong);
-    display: inline-block;
+    font-size: 1.04rem;
   }
 
   .combined-therapist-card .combined-therapist-header-count,
@@ -2471,10 +2459,11 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
 
   .combined-therapist-card thead tr:nth-child(2) th,
   .combined-therapist-summary-card thead tr.combined-summary-column-header-row th,
-  .combined-treatment-breakdown-card thead tr.combined-summary-column-header-row th {
+  .combined-treatment-breakdown-card thead tr.combined-summary-column-header-row th,
+  .combined-stats-recent thead th {
     background: #f8fafc !important;
     color: #64748b !important;
-    font-size: 0.76rem;
+    font-size: 0.84rem !important;
     font-weight: 700;
     border-bottom: 1px solid #e2e8f0;
   }
@@ -2559,6 +2548,7 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
     border: 0 !important;
     border-right: 1px solid #e2e8f0 !important;
     border-bottom: 1px solid #e2e8f0 !important;
+    font-size: 1rem !important;
     font-variant-numeric: tabular-nums;
   }
 
@@ -2573,7 +2563,7 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   .combined-ion-treatment .sw-manual-ion-summary-table thead th {
     background: #f8fafc !important;
     color: #64748b !important;
-    font-size: 0.78rem !important;
+    font-size: 0.84rem !important;
     font-weight: 700 !important;
     height: 36px;
   }
