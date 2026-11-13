@@ -185,3 +185,16 @@ test('mobile layout optimizes iPhone safe areas, dynamic viewport height, and st
   assert.match(mobileCss, /\.sw-settlement-vertical-body\s*\{[^}]*flex-direction:\s*column !important;/s);
   assert.match(mobileCss, /\.sw-horizontal2-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\) !important;/s);
 });
+
+test('mobile staff calendar grid expands to max-content for horizontal touch scrolling', async () => {
+  const mobileCss = await readFile(mobileCssUrl, 'utf8');
+
+  assert.match(
+    mobileCss,
+    /\.staff-calendar\s*\{[^}]*overflow-x:\s*auto;[^}]*touch-action:\s*pan-x pan-y pinch-zoom;/s
+  );
+  assert.match(
+    mobileCss,
+    /\.calendar-grid\s*\{[^}]*width:\s*max-content !important;[^}]*min-width:\s*max\(100%,\s*560px\) !important;/s
+  );
+});

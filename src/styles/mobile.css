@@ -551,6 +551,7 @@
   .staff-calendar {
     display: flex;
     width: 100%;
+    max-width: 100%;
     min-width: 0;
     margin-left: 0;
     align-items: stretch;
@@ -574,8 +575,8 @@
   }
 
   .calendar-grid {
-    width: 100% !important;
-    min-width: 0 !important;
+    width: max-content !important;
+    min-width: max(100%, 560px) !important;
   }
 
   .calendar-cell {
