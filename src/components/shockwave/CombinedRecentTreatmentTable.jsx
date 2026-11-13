@@ -7,7 +7,7 @@ export default function CombinedRecentTreatmentTable({ treatment, label, periodL
   const title = `${periodLabel} ${label} 결산/신환 현황`;
   const printTitle = cryoModeLabel ? `${title} (${cryoModeLabel})` : title;
   return (
-    <section className="combined-stats-recent combined-recent-treatment-card" data-print-title={printTitle}>
+    <section className="combined-stats-recent combined-recent-treatment-card" data-treatment={treatment} data-print-title={printTitle}>
       <div className="combined-stats-recent-heading">
         <h2>{title}</h2>
         <div className="combined-recent-controls">
@@ -28,7 +28,11 @@ export default function CombinedRecentTreatmentTable({ treatment, label, periodL
                 <th>{summary.label}</th>
                 {['count', 'amount', 'newPatientCount'].map((metric) => (
                   <td key={metric} className="combined-recent-breakdown-cell">
-                    {viewMode === 'total-only' ? <strong>{formatValue(values[metric], metric)}</strong> : (
+                    {viewMode === 'total-only' ? (
+                      <strong className={metric === 'newPatientCount' ? 'combined-recent-new-patient-pill' : undefined}>
+                        {formatValue(values[metric], metric)}
+                      </strong>
+                    ) : (
                       <div className="combined-recent-breakdown">
                         <div className="combined-recent-breakdown-item combined-recent-breakdown-item--total"><span>전체</span><strong>{formatValue(values[metric], metric)}</strong></div>
                         {(values.details || []).map((detail) => <div key={detail.label} className="combined-recent-breakdown-item"><span>{detail.label}</span><strong>{formatValue(detail[metric], metric)}</strong></div>)}

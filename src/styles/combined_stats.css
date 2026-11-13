@@ -10,10 +10,10 @@
 
 .combined-stats-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 14px;
   max-width: 1550px;
   margin: 0 auto 22px;
 }
@@ -25,9 +25,11 @@
 
 .combined-stats-header-actions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap-reverse;
   margin-left: auto;
 }
 
@@ -37,7 +39,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 @media print {
@@ -2610,10 +2612,10 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
     justify-content: center;
   }
 
-  /* 이온치료 현황 테이블 카드 리디자인 (주변 최근 결산 카드와 크기·비율 통일) */
+  /* 이온치료 현황 테이블 카드 리디자인 (두 번째 디자인 앰버 톤 + 주변 카드와 크기·비율 통일) */
   .combined-ion-treatment .sw-manual-ion-summary-card {
-    border: 1px solid #cbd5e1 !important;
-    border-top: 4px solid #6366f1 !important;
+    border: 1.5px solid #fde68a !important;
+    border-top: 4px solid #d97706 !important;
     border-radius: 14px !important;
     box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05) !important;
     overflow: hidden;
@@ -2623,14 +2625,14 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
     display: flex !important;
     align-items: center !important;
     min-height: 49px;
-    background: linear-gradient(135deg, #eef2ff, #f8fafc) !important;
-    border-bottom: 1px solid #cbd5e1 !important;
+    background: #fffbeb !important;
+    border-bottom: 1px solid #fde68a !important;
     padding: 10px 14px !important;
   }
 
   .combined-ion-treatment .sw-settlement-header h2 {
     margin: 0 !important;
-    color: #1e1b4b !important;
+    color: #92400e !important;
     font-size: 0.96rem !important;
     font-weight: 800 !important;
     line-height: 1.3 !important;
@@ -2703,6 +2705,67 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
     font-size: 1.05rem !important;
     font-weight: 800 !important;
     line-height: 1.38 !important;
+  }
+
+  /* 전체 결산 카드 두 번째 디자인 톤 적용 (제목 좌측 점 없음, 전체/상세·인쇄 버튼 유지) */
+  .combined-stats-dashboard--settlement .combined-settlement-recent-main {
+    --tone-bg: #eff6ff;
+    --tone-border: #bfdbfe;
+    --tone-accent: #2563eb;
+    --tone-text: #1e3a8a;
+  }
+
+  .combined-stats-dashboard--settlement .combined-recent-treatment-card[data-treatment="shockwave"] {
+    --tone-bg: #eef2ff;
+    --tone-border: #c7d2fe;
+    --tone-accent: #4f46e5;
+    --tone-text: #3730a3;
+  }
+
+  .combined-stats-dashboard--settlement .combined-recent-treatment-card[data-treatment="shinjang_spray"] {
+    --tone-bg: #ecfeff;
+    --tone-border: #a5f3fc;
+    --tone-accent: #0891b2;
+    --tone-text: #155e75;
+  }
+
+  .combined-stats-dashboard--settlement .combined-recent-treatment-card[data-treatment="manual_therapy"] {
+    --tone-bg: #f5f3ff;
+    --tone-border: #ddd6fe;
+    --tone-accent: #7c3aed;
+    --tone-text: #5b21b6;
+  }
+
+  .combined-stats-dashboard--settlement :is(.combined-settlement-recent-main, .combined-recent-treatment-card) {
+    border: 1.5px solid var(--tone-border) !important;
+    border-top: 4px solid var(--tone-accent) !important;
+    border-radius: 14px !important;
+    overflow: hidden;
+  }
+
+  .combined-stats-dashboard--settlement :is(.combined-settlement-recent-main, .combined-recent-treatment-card) .combined-stats-recent-heading {
+    background: var(--tone-bg) !important;
+    border-bottom: 1px solid var(--tone-border) !important;
+  }
+
+  .combined-stats-dashboard--settlement :is(.combined-settlement-recent-main, .combined-recent-treatment-card) .combined-stats-recent-heading h2 {
+    color: var(--tone-text) !important;
+  }
+
+  .combined-stats-dashboard--settlement :is(.combined-settlement-recent-main, .combined-recent-treatment-card) thead th {
+    background: #f8fafc !important;
+    color: #64748b !important;
+  }
+
+  .combined-recent-new-patient-pill {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #334155 !important;
+    font-size: 0.92rem;
+    font-weight: 800;
+    line-height: 1.3;
   }
 }
 
@@ -2800,14 +2863,14 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   }
 
   .combined-ion-treatment .sw-manual-ion-summary-card {
-    border-top: 4px solid #6366f1 !important;
+    border-top: 4px solid #d97706 !important;
   }
 
   .combined-ion-treatment .sw-manual-ion-summary-card .sw-settlement-header {
-    background: #eef2ff !important;
+    background: #fffbeb !important;
   }
 
   .combined-ion-treatment .sw-current-month-summary-row > * {
-    background: #eef2ff !important;
+    background: #fffbeb !important;
   }
 }
