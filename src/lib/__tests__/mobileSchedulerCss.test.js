@@ -44,7 +44,7 @@ test('mobile table viewport removes outer padding and visible scrollbars', async
   assert.match(mobileCss, /\.staff-calendar::-webkit-scrollbar[\s\S]*display:\s*none;/);
   assert.match(
     mobileCss,
-    /@media screen and \(hover: none\) and \(pointer: coarse\) and \(orientation: landscape\)[\s\S]*?\.app-content,\s*\.top-tabs-shell,\s*\.bottom-nav\s*\{[^}]*padding-right:\s*0;[^}]*padding-left:\s*0;/s
+    /@media screen and \(hover: none\) and \(pointer: coarse\) and \(orientation: landscape\)[\s\S]*?\.app-content,\s*\.top-tabs-shell,\s*\.bottom-nav\s*\{[^}]*padding-right:\s*env\(safe-area-inset-right,\s*0px\);[^}]*padding-left:\s*env\(safe-area-inset-left,\s*0px\);/s
   );
 });
 
@@ -173,4 +173,15 @@ test('mobile schedule allows smooth horizontal touch scroll and uniform cell fon
   assert.doesNotMatch(mobileCss, /scroll-snap-type:/);
   assert.doesNotMatch(mobileCss, /scroll-snap-align:/);
   assert.doesNotMatch(scheduleCell, /getMobileScheduleCellFitFontSize|data-mobile-fit|mobileFit/);
+});
+
+test('mobile layout optimizes iPhone safe areas, dynamic viewport height, and stacked settlement grids', async () => {
+  const mobileCss = await readFile(mobileCssUrl, 'utf8');
+
+  assert.match(mobileCss, /-webkit-text-size-adjust:\s*100%;/);
+  assert.match(mobileCss, /min-height:\s*100dvh;/);
+  assert.match(mobileCss, /padding-right:\s*env\(safe-area-inset-right,\s*0px\);/);
+  assert.match(mobileCss, /padding-left:\s*env\(safe-area-inset-left,\s*0px\);/);
+  assert.match(mobileCss, /\.sw-settlement-vertical-body\s*\{[^}]*flex-direction:\s*column !important;/s);
+  assert.match(mobileCss, /\.sw-horizontal2-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\) !important;/s);
 });
