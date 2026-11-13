@@ -2334,6 +2334,12 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
     padding: 11px 14px;
   }
 
+  .combined-summary-title-header .combined-therapist-name-content span:first-child,
+  .combined-therapist-summary-card .combined-therapist-name-content span:first-child,
+  .combined-treatment-breakdown-card .combined-therapist-name-content span:first-child {
+    color: #0f172a !important;
+  }
+
   .combined-therapist-card .combined-therapist-title-wrap > span:first-child {
     display: inline-flex;
     align-items: center;
@@ -2518,6 +2524,12 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   .combined-therapist-summary-card .combined-therapist-name,
   .combined-treatment-breakdown-card .combined-therapist-name {
     background: #f1f5f9 !important;
+    color: #0f172a !important;
+  }
+
+  .combined-summary-title-header .combined-therapist-name-content span:first-child,
+  .combined-therapist-summary-card .combined-therapist-name-content span:first-child,
+  .combined-treatment-breakdown-card .combined-therapist-name-content span:first-child {
     color: #0f172a !important;
   }
 
