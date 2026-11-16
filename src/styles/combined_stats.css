@@ -1967,6 +1967,7 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
   padding: 13px 16px;
   background: linear-gradient(110deg, #e6f0ff, #ecfbff);
   color: #25354a;
+  border-left: 0 !important;
   border-bottom: 1px solid #b7c9dd;
 }
 .combined-ion-treatment .sw-settlement-header h2 {
@@ -2626,6 +2627,7 @@ body.settlement-print .combined-stats-summary-container .combined-treatment-brea
     align-items: center !important;
     min-height: 49px;
     background: #fffbeb !important;
+    border-left: 0 !important;
     border-bottom: 1px solid #fde68a !important;
     padding: 10px 14px !important;
   }

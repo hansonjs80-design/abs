@@ -98,7 +98,7 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     .combined-recent-print--landscape .combined-recent-print-grid th, .combined-recent-print--landscape .combined-recent-print-grid td { padding: 3px 2px; }
     .combined-recent-print--landscape .combined-recent-print-grid[data-view="detail"] table { font-size: 7.5px; }
     .combined-recent-print--portrait .combined-recent-print-grid[data-layout="horizontal"] table { font-size: 7.5px; }
-    .combined-summary-print--portrait { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 5mm; align-items: start; }
+    .combined-summary-print--portrait { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: max-content; align-content: start; gap: 0 5mm; align-items: start; }
     .combined-summary-print--portrait.combined-summary-print--with-ion { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm; }
     .combined-summary-print--portrait h1 { grid-column: 1 / -1; margin: 0 0 10px; font-size: 16px; }
     .combined-summary-print--portrait table { width: 100%; min-width: 0; font-size: 9px; margin: 0 0 4mm; }
