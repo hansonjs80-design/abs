@@ -75,6 +75,7 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     .combined-breakdown-detail-row { background: #fbfcfe; color: #475569; }
     .combined-breakdown-detail-row > * { font-size: 11px; font-weight: 500; }
     .combined-therapist-subtotal > * { font-size: 12px; font-weight: 800; }
+    .combined-breakdown-row.combined-therapist-subtotal > *, .combined-shinjang-total > * { font-size: 13px; font-weight: 800; }
     .combined-therapist-total { font-size: 13px; }
     .combined-therapist-subtotal--start > * { border-top: 2px solid #64748b; }
     .combined-therapist-total { font-weight: bold; background: #e2e8f0; }
@@ -108,6 +109,7 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     .combined-summary-print--portrait .combined-breakdown-detail-row > * { font-size: 7.5px; }
     .combined-summary-print--portrait .combined-summary-column-header-row { font-size: 7.5px; }
     .combined-summary-print--portrait .combined-therapist-subtotal > * { font-size: 9px; }
+    .combined-summary-print--portrait :is(.combined-breakdown-row.combined-therapist-subtotal, .combined-shinjang-total) > * { font-size: 10px; }
     .combined-summary-print--portrait .combined-therapist-total { font-size: 10px; }
     .combined-summary-print--portrait .combined-ion-treatment-table,
     .combined-summary-print--portrait caption + table { grid-column: 1 / -1; }
