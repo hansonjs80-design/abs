@@ -62,11 +62,6 @@ export function printSettlementTable(element, title, { includeTherapistSummary =
     .combined-summary-tone-2, .combined-summary-parent-row.combined-summary-tone-2 > * { background: #ecfdf5; }
     .combined-summary-tone-3, .combined-summary-parent-row.combined-summary-tone-3 > * { background: #ecfeff; }
     .combined-summary-tone-4, .combined-summary-parent-row.combined-summary-tone-4 > * { background: #fdf2f8; }
-    .combined-summary-parent-row.combined-summary-tone-0 > :first-child { border-left: 3px solid #f59e0b; }
-    .combined-summary-parent-row.combined-summary-tone-1 > :first-child { border-left: 3px solid #8b5cf6; }
-    .combined-summary-parent-row.combined-summary-tone-2 > :first-child { border-left: 3px solid #10b981; }
-    .combined-summary-parent-row.combined-summary-tone-3 > :first-child { border-left: 3px solid #06b6d4; }
-    .combined-summary-parent-row.combined-summary-tone-4 > :first-child { border-left: 3px solid #ec4899; }
     .combined-shinjang-total > * { background: #dcfce7; font-weight: 800; }
     .combined-breakdown-shockwave > * { background: #dbeafe; }
     .combined-breakdown-manual > * { background: #f3e5d8; }
