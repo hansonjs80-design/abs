@@ -4,8 +4,16 @@ export const HIDDEN_TOP_TABS_SETTING_KEY = '__hidden_top_tabs';
 export const HIDDEN_TOP_TABS_STORAGE_KEY = 'abs.hiddenTopTabs.v1';
 export const INCLUDE_HIDDEN_TABS_IN_COMBINED_STATS_KEY = '__include_hidden_tabs_in_combined_stats';
 export const INCLUDE_HIDDEN_TABS_IN_COMBINED_STATS_STORAGE_KEY = 'abs.includeHiddenTabsInCombinedStats.v1';
+export const HIDDEN_COMBINED_STATS_TREATMENTS_KEY = '__hidden_combined_stats_treatments';
+export const HIDDEN_COMBINED_STATS_TREATMENTS_STORAGE_KEY = 'abs.hiddenCombinedStatsTreatments.v1';
 
 export const HIDEABLE_TOP_TABS = APP_TABS.filter((tab) => tab.key !== 'settings');
+
+export const COMBINED_STATS_TREATMENT_OPTIONS = Object.freeze([
+  { key: 'shockwave', tabKey: 'shockwave_stats', label: '충격파' },
+  { key: 'shinjang_spray', tabKey: 'shinjang_spray_stats', label: '신장분사' },
+  { key: 'manual_therapy', tabKey: 'manual_therapy_stats', label: '도수치료' },
+]);
 
 export const COMBINED_STATS_TAB_TREATMENT_MAP = Object.freeze({
   shockwave_stats: 'shockwave',
@@ -14,6 +22,7 @@ export const COMBINED_STATS_TAB_TREATMENT_MAP = Object.freeze({
 });
 
 const HIDEABLE_KEY_SET = new Set(HIDEABLE_TOP_TABS.map((tab) => tab.key));
+const TREATMENT_KEY_SET = new Set(COMBINED_STATS_TREATMENT_OPTIONS.map((item) => item.key));
 
 /**
  * 유효한 숨김 탭 key 배열로 정규화한다.
@@ -32,6 +41,19 @@ export function normalizeHiddenTopTabs(raw) {
   return result;
 }
 
+export function normalizeHiddenCombinedStatsTreatments(raw) {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set();
+  const result = [];
+  raw.forEach((key) => {
+    const normalized = String(key || '').trim();
+    if (!TREATMENT_KEY_SET.has(normalized) || seen.has(normalized)) return;
+    seen.add(normalized);
+    result.push(normalized);
+  });
+  return result;
+}
+
 export function readHiddenTopTabsFromSettings(shockwaveSettings) {
   const monthlySettings = shockwaveSettings?.monthly_settlement_settings;
   if (!monthlySettings || typeof monthlySettings !== 'object') return null;
@@ -44,6 +66,21 @@ export function readIncludeHiddenTabsInCombinedStatsFromSettings(shockwaveSettin
   if (!monthlySettings || typeof monthlySettings !== 'object') return null;
   if (!(INCLUDE_HIDDEN_TABS_IN_COMBINED_STATS_KEY in monthlySettings)) return null;
   return monthlySettings[INCLUDE_HIDDEN_TABS_IN_COMBINED_STATS_KEY] !== false;
+}
+
+export function readHiddenCombinedStatsTreatmentsFromSettings(shockwaveSettings) {
+  const monthlySettings = shockwaveSettings?.monthly_settlement_settings;
+  if (!monthlySettings || typeof monthlySettings !== 'object') return null;
+  if (HIDDEN_COMBINED_STATS_TREATMENTS_KEY in monthlySettings) {
+    return normalizeHiddenCombinedStatsTreatments(monthlySettings[HIDDEN_COMBINED_STATS_TREATMENTS_KEY]);
+  }
+  if (monthlySettings[INCLUDE_HIDDEN_TABS_IN_COMBINED_STATS_KEY] === false) {
+    const hiddenTabs = normalizeHiddenTopTabs(monthlySettings[HIDDEN_TOP_TABS_SETTING_KEY]);
+    return normalizeHiddenCombinedStatsTreatments(
+      hiddenTabs.map((tabKey) => COMBINED_STATS_TAB_TREATMENT_MAP[tabKey]).filter(Boolean)
+    );
+  }
+  return null;
 }
 
 export function readCachedHiddenTopTabs(storage = typeof window !== 'undefined' ? window.localStorage : null) {
@@ -90,6 +127,28 @@ export function writeCachedIncludeHiddenTabsInCombinedStats(include, storage = t
   return normalized;
 }
 
+export function readCachedHiddenCombinedStatsTreatments(storage = typeof window !== 'undefined' ? window.localStorage : null) {
+  if (!storage) return [];
+  try {
+    const raw = storage.getItem(HIDDEN_COMBINED_STATS_TREATMENTS_STORAGE_KEY);
+    if (!raw) return [];
+    return normalizeHiddenCombinedStatsTreatments(JSON.parse(raw));
+  } catch {
+    return [];
+  }
+}
+
+export function writeCachedHiddenCombinedStatsTreatments(hiddenTreatments, storage = typeof window !== 'undefined' ? window.localStorage : null) {
+  const normalized = normalizeHiddenCombinedStatsTreatments(hiddenTreatments);
+  if (!storage) return normalized;
+  try {
+    storage.setItem(HIDDEN_COMBINED_STATS_TREATMENTS_STORAGE_KEY, JSON.stringify(normalized));
+  } catch {
+    // Ignore storage quota or private browsing failures.
+  }
+  return normalized;
+}
+
 export function resolveEffectiveHiddenTopTabs(shockwaveSettings, storage) {
   const fromSettings = readHiddenTopTabsFromSettings(shockwaveSettings);
   if (fromSettings !== null) return fromSettings;
@@ -100,6 +159,12 @@ export function resolveEffectiveIncludeHiddenTabsInCombinedStats(shockwaveSettin
   const fromSettings = readIncludeHiddenTabsInCombinedStatsFromSettings(shockwaveSettings);
   if (fromSettings !== null) return fromSettings;
   return readCachedIncludeHiddenTabsInCombinedStats(storage);
+}
+
+export function resolveEffectiveHiddenCombinedStatsTreatments(shockwaveSettings, storage) {
+  const fromSettings = readHiddenCombinedStatsTreatmentsFromSettings(shockwaveSettings);
+  if (fromSettings !== null) return fromSettings;
+  return readCachedHiddenCombinedStatsTreatments(storage);
 }
 
 /**
@@ -114,14 +179,24 @@ export function getVisibleTabs(user, hiddenTabKeys = []) {
 }
 
 /**
- * 전체 통계에서 집계할 치료 항목(충격파/신장분사/도수치료) 포함 여부를 계산한다.
- * includeHiddenTabs가 false일 때만 숨김 처리된 대응 탭의 치료 항목을 전체 통계에서 제외한다.
+ * 전체 통계에서 집계·표시할 치료 항목(충격파/신장분사/도수치료) 포함 여부를 계산한다.
+ * hiddenTreatments가 명시된 경우 해당 항목을 제외하며, 미지정 시 기존 includeHiddenTabs 옵션을 따른다.
  */
 export function getIncludedCombinedStatsTreatments({
   isAdmin = false,
   hiddenTabKeys = [],
   includeHiddenTabs = true,
+  hiddenTreatments = null,
 } = {}) {
+  if (Array.isArray(hiddenTreatments)) {
+    const hiddenTreatmentSet = new Set(normalizeHiddenCombinedStatsTreatments(hiddenTreatments));
+    return {
+      shockwave: !hiddenTreatmentSet.has('shockwave'),
+      shinjang_spray: !hiddenTreatmentSet.has('shinjang_spray'),
+      manual_therapy: Boolean(isAdmin) && !hiddenTreatmentSet.has('manual_therapy'),
+    };
+  }
+
   const hiddenSet = new Set(normalizeHiddenTopTabs(hiddenTabKeys));
   const shouldExclude = includeHiddenTabs === false;
 
@@ -143,6 +218,11 @@ export function buildHiddenTopTabsSettingsPayload(currentSettings, nextHiddenTab
   };
   if (typeof options.includeHiddenTabsInCombinedStats === 'boolean') {
     nextMonthly[INCLUDE_HIDDEN_TABS_IN_COMBINED_STATS_KEY] = options.includeHiddenTabsInCombinedStats;
+  }
+  if (Array.isArray(options.hiddenCombinedStatsTreatments)) {
+    nextMonthly[HIDDEN_COMBINED_STATS_TREATMENTS_KEY] = normalizeHiddenCombinedStatsTreatments(
+      options.hiddenCombinedStatsTreatments
+    );
   }
   return {
     ...baseSettings,

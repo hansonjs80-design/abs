@@ -28,6 +28,7 @@ import { setManualTherapyIonTreatment } from '../lib/manualTherapyIonTreatmentUt
 import { printSettlementTable } from '../lib/printSettlementTable';
 import {
   getIncludedCombinedStatsTreatments,
+  resolveEffectiveHiddenCombinedStatsTreatments,
   resolveEffectiveHiddenTopTabs,
   resolveEffectiveIncludeHiddenTabsInCombinedStats,
 } from '../lib/topTabVisibilityUtils';
@@ -61,15 +62,18 @@ function IncentiveRateList({ rates = [] }) {
   );
 }
 
-function buildTherapistTreatmentDetailSections(item, isAdmin = false) {
+function buildTherapistTreatmentDetailSections(item, isAdmin = false, includedTreatments = item?.includedTreatments) {
   const hasAnyActivity = Math.max(0, Number(item?.total?.count) || 0) > 0;
   if (!hasAnyActivity) return [];
+  const includeShockwave = includedTreatments?.shockwave !== false;
+  const includeShinjang = includedTreatments?.shinjang_spray !== false;
+  const includeManual = Boolean(isAdmin) && includedTreatments?.manual_therapy !== false;
 
   const sections = [];
 
   // 1. 충격파
   const shockwaveTotal = item?.treatments?.shockwave || { count: 0, amount: 0, incentive: 0 };
-  if (Number(shockwaveTotal.count) > 0) {
+  if (includeShockwave && Number(shockwaveTotal.count) > 0) {
     const parentRow = {
       ...shockwaveTotal,
       label: '충격파 7%',
@@ -93,39 +97,41 @@ function buildTherapistTreatmentDetailSections(item, isAdmin = false) {
   }
 
   // 2. 신장분사 (7%와 15%가 각각 상위 항목으로 나옴)
-  const therapistShinjangMap = new Map(
-    (Array.isArray(item?.shinjangIncentiveGroups) ? item.shinjangIncentiveGroups : [])
-      .map((g) => [Number(g.rate), g])
-  );
-  const shinjangRates = isAdmin ? [7, 15] : [7];
-  shinjangRates.forEach((rate) => {
-    const rateSummary = therapistShinjangMap.get(rate);
-    if (!rateSummary || Number(rateSummary.count) <= 0) return;
+  if (includeShinjang) {
+    const therapistShinjangMap = new Map(
+      (Array.isArray(item?.shinjangIncentiveGroups) ? item.shinjangIncentiveGroups : [])
+        .map((g) => [Number(g.rate), g])
+    );
+    const shinjangRates = isAdmin ? [7, 15] : [7];
+    shinjangRates.forEach((rate) => {
+      const rateSummary = therapistShinjangMap.get(rate);
+      if (!rateSummary || Number(rateSummary.count) <= 0) return;
 
-    const parentRow = {
-      ...rateSummary,
-      label: `신장분사 ${formatIncentiveRate(rate)}`,
-      rates: [rate],
-      isParent: true,
-    };
-    const childRows = (item?.prescriptionGroups?.shinjang_spray || [])
-      .filter((row) => Number(row?.rate) === rate && Number(row?.count) > 0)
-      .map((row) => ({
-        ...row,
-        label: row.prescription.replace(/신장\s*분사\s*/g, '신장 '),
+      const parentRow = {
+        ...rateSummary,
+        label: `신장분사 ${formatIncentiveRate(rate)}`,
         rates: [rate],
-        isChild: true,
-      }));
-    sections.push({
-      key: `shinjang_spray_${rate}`,
-      label: '신장분사',
-      value: rateSummary,
-      rows: [parentRow, ...childRows],
+        isParent: true,
+      };
+      const childRows = (item?.prescriptionGroups?.shinjang_spray || [])
+        .filter((row) => Number(row?.rate) === rate && Number(row?.count) > 0)
+        .map((row) => ({
+          ...row,
+          label: row.prescription.replace(/신장\s*분사\s*/g, '신장 '),
+          rates: [rate],
+          isChild: true,
+        }));
+      sections.push({
+        key: `shinjang_spray_${rate}`,
+        label: '신장분사',
+        value: rateSummary,
+        rows: [parentRow, ...childRows],
+      });
     });
-  });
+  }
 
-  // 3. 도수치료 (isAdmin일 때만)
-  if (isAdmin) {
+  // 3. 도수치료 (isAdmin 및 포함 설정일 때만)
+  if (includeManual) {
     const manualTotal = item?.treatments?.manual_therapy || { count: 0, amount: 0, incentive: 0 };
     if (Number(manualTotal.count) > 0) {
       const parentRow = {
@@ -154,11 +160,19 @@ function buildTherapistTreatmentDetailSections(item, isAdmin = false) {
   return sections;
 }
 
-function buildTherapistTreatmentSections(item, isAdmin = false) {
+function buildTherapistTreatmentSections(item, isAdmin = false, includedTreatments = item?.includedTreatments) {
   const hasAnyActivity = Math.max(0, Number(item?.total?.count) || 0) > 0;
   if (!hasAnyActivity) return [];
+  const includeShockwave = includedTreatments?.shockwave !== false;
+  const includeShinjang = includedTreatments?.shinjang_spray !== false;
+  const includeManual = Boolean(isAdmin) && includedTreatments?.manual_therapy !== false;
 
-  return COMBINED_STATS_TREATMENTS.map((treatment) => {
+  return COMBINED_STATS_TREATMENTS.filter((treatment) => {
+    if (treatment.key === 'shockwave') return includeShockwave;
+    if (treatment.key === 'shinjang_spray') return includeShinjang;
+    if (treatment.key === 'manual_therapy') return includeManual;
+    return true;
+  }).map((treatment) => {
     const value = item?.treatments?.[treatment.key] || { count: 0, amount: 0, incentive: 0 };
     if (treatment.key === 'shinjang_spray') {
       const therapistShinjangMap = new Map(
@@ -196,12 +210,15 @@ function buildTherapistTreatmentSections(item, isAdmin = false) {
   })).filter((section) => section.rows.length > 0);
 }
 
-function getTherapistRateTotals(item, isAdmin = false) {
-  const shockwave = item?.treatments?.shockwave || { count: 0, amount: 0, incentive: 0 };
-  const shinjangGroups = Array.isArray(item?.shinjangIncentiveGroups) ? item.shinjangIncentiveGroups : [];
+function getTherapistRateTotals(item, isAdmin = false, includedTreatments = item?.includedTreatments) {
+  const includeShockwave = includedTreatments?.shockwave !== false;
+  const includeShinjang = includedTreatments?.shinjang_spray !== false;
+  const includeManual = Boolean(isAdmin) && includedTreatments?.manual_therapy !== false;
+  const shockwave = (includeShockwave ? item?.treatments?.shockwave : null) || { count: 0, amount: 0, incentive: 0 };
+  const shinjangGroups = includeShinjang && Array.isArray(item?.shinjangIncentiveGroups) ? item.shinjangIncentiveGroups : [];
   const shinjang7 = shinjangGroups.find((g) => Number(g?.rate) === 7);
   const shinjang15 = shinjangGroups.find((g) => Number(g?.rate) === 15);
-  const manual = (isAdmin ? item?.treatments?.manual_therapy : null) || { count: 0, amount: 0, incentive: 0 };
+  const manual = (includeManual ? item?.treatments?.manual_therapy : null) || { count: 0, amount: 0, incentive: 0 };
 
   const rate7Total = {
     count: (Number(shockwave.count) || 0) + (Number(shinjang7?.count) || 0),
@@ -349,13 +366,18 @@ export default function CombinedStatsPage() {
     () => resolveEffectiveIncludeHiddenTabsInCombinedStats(shockwaveSettings),
     [shockwaveSettings]
   );
+  const hiddenCombinedStatsTreatments = useMemo(
+    () => resolveEffectiveHiddenCombinedStatsTreatments(shockwaveSettings),
+    [shockwaveSettings]
+  );
   const includedTreatments = useMemo(
     () => getIncludedCombinedStatsTreatments({
       isAdmin,
       hiddenTabKeys: hiddenTopTabs,
       includeHiddenTabs: includeHiddenTabsInCombinedStats,
+      hiddenTreatments: hiddenCombinedStatsTreatments,
     }),
-    [isAdmin, hiddenTopTabs, includeHiddenTabsInCombinedStats]
+    [isAdmin, hiddenTopTabs, includeHiddenTabsInCombinedStats, hiddenCombinedStatsTreatments]
   );
   const includeShockwave = includedTreatments.shockwave;
   const includeShinjang = includedTreatments.shinjang_spray;
@@ -397,8 +419,8 @@ export default function CombinedStatsPage() {
   }, [manualTherapists]);
 
   const renderBreakdownRateTotal = (summary, rate) => {
-    if (Number(rate) === 7 && !includeShockwave && !includeShinjang) return null;
-    if (Number(rate) === 15 && !includeManual && !(isAdmin && includeShinjang)) return null;
+    if (Number(rate) === 7 && !(includeShockwave && includeShinjang)) return null;
+    if (Number(rate) === 15 && !(isAdmin && includeManual && includeShinjang)) return null;
     const total = buildCombinedRateTotals(summary, isAdmin).find((row) => row.rate === rate);
     if (!total) return null;
     return (
@@ -651,6 +673,7 @@ export default function CombinedStatsPage() {
           isAdmin,
           hiddenTabKeys: resolveEffectiveHiddenTopTabs(settings),
           includeHiddenTabs: resolveEffectiveIncludeHiddenTabsInCombinedStats(settings),
+          hiddenTreatments: resolveEffectiveHiddenCombinedStatsTreatments(settings),
         });
         const summaryInput = {
           year: target.year,
@@ -798,7 +821,7 @@ export default function CombinedStatsPage() {
                 <td className="combined-summary-amount-cell">{formatCurrency(item.total.amount)}</td>
                 <td className="combined-summary-incentive-cell">{formatCurrency(item.total.incentive)}</td>
               </tr>
-              {summaryViewMode === 'detail' && buildTherapistTreatmentSections(item, isAdmin).flatMap((section) => section.rows).map((row) => (
+              {summaryViewMode === 'detail' && buildTherapistTreatmentSections(item, isAdmin, includedTreatments).flatMap((section) => section.rows).map((row) => (
                 <tr className="combined-breakdown-detail-row" key={row.label}>
                   <th scope="row">↳ {row.label}</th><td>{formatCount(row.count)}</td><td className="combined-summary-amount-cell">{formatCurrency(row.amount)}</td><td className="combined-summary-incentive-cell">{formatCurrency(row.incentive)}</td>
                 </tr>
@@ -1059,7 +1082,7 @@ export default function CombinedStatsPage() {
                         );
                       })
                     ))}
-                    {Number(rate7Total.count) > 0 && (
+                    {includeShockwave && includeShinjang && Number(rate7Total.count) > 0 && (
                       <tr className="combined-therapist-subtotal combined-therapist-subtotal--start combined-incentive-rate-row--7">
                         <th>충격파+신장(7%)</th>
                         <td className="combined-therapist-count-cell">{formatCount(rate7Total.count)}</td>
@@ -1067,8 +1090,8 @@ export default function CombinedStatsPage() {
                         <td className="combined-therapist-incentive-cell">{formatCurrency(rate7Total.incentive)}</td>
                       </tr>
                     )}
-                    {isAdmin && Number(rate15Total.count) > 0 && (
-                      <tr className={`combined-therapist-subtotal ${Number(rate7Total.count) <= 0 ? 'combined-therapist-subtotal--start ' : ''}combined-incentive-rate-row--15`}>
+                    {includeManual && includeShinjang && isAdmin && Number(rate15Total.count) > 0 && (
+                      <tr className={`combined-therapist-subtotal ${!(includeShockwave && includeShinjang && Number(rate7Total.count) > 0) ? 'combined-therapist-subtotal--start ' : ''}combined-incentive-rate-row--15`}>
                         <th>도수+신장(15%)</th>
                         <td className="combined-therapist-count-cell">{formatCount(rate15Total.count)}</td>
                         <td className="combined-therapist-amount-cell">{formatCurrency(rate15Total.amount)}</td>

@@ -3,13 +3,17 @@ import assert from 'node:assert/strict';
 import { canAccessPath, canAccessTab, getAllowedTabs } from '../authPermissions.js';
 import { buildCombinedStatsMonthSummary } from '../combinedStatsUtils.js';
 import {
+  HIDDEN_COMBINED_STATS_TREATMENTS_KEY,
   HIDDEN_TOP_TABS_SETTING_KEY,
   INCLUDE_HIDDEN_TABS_IN_COMBINED_STATS_KEY,
   buildHiddenTopTabsSettingsPayload,
   getIncludedCombinedStatsTreatments,
   getVisibleTabs,
+  normalizeHiddenCombinedStatsTreatments,
   normalizeHiddenTopTabs,
+  readHiddenCombinedStatsTreatmentsFromSettings,
   readHiddenTopTabsFromSettings,
+  resolveEffectiveHiddenCombinedStatsTreatments,
   resolveEffectiveHiddenTopTabs,
   resolveEffectiveIncludeHiddenTabsInCombinedStats,
 } from '../topTabVisibilityUtils.js';
@@ -119,6 +123,26 @@ describe('topTabVisibilityUtils', () => {
       getIncludedCombinedStatsTreatments({ isAdmin: false, hiddenTabKeys: ['shinjang_spray_stats'], includeHiddenTabs: false }),
       { shockwave: true, shinjang_spray: false, manual_therapy: false }
     );
+
+    // 명시적 통계 항목 체크박스 해제 시 해당 항목이 제외된다.
+    assert.deepEqual(
+      normalizeHiddenCombinedStatsTreatments(['manual_therapy', 'invalid', 'manual_therapy']),
+      ['manual_therapy']
+    );
+    assert.deepEqual(
+      getIncludedCombinedStatsTreatments({
+        isAdmin: true,
+        hiddenTabKeys: [],
+        hiddenTreatments: ['manual_therapy'],
+      }),
+      { shockwave: true, shinjang_spray: true, manual_therapy: false }
+    );
+    const saved = buildHiddenTopTabsSettingsPayload({}, [], {
+      hiddenCombinedStatsTreatments: ['manual_therapy'],
+    });
+    assert.deepEqual(saved.monthly_settlement_settings[HIDDEN_COMBINED_STATS_TREATMENTS_KEY], ['manual_therapy']);
+    assert.deepEqual(readHiddenCombinedStatsTreatmentsFromSettings(saved), ['manual_therapy']);
+    assert.deepEqual(resolveEffectiveHiddenCombinedStatsTreatments(saved), ['manual_therapy']);
   });
 
   it('excludes hidden treatments from buildCombinedStatsMonthSummary totals when configured', () => {

@@ -513,6 +513,11 @@ export function buildCombinedStatsMonthSummary({
         manual_therapy: manualPrescriptionGroups,
       },
       configuredShinjangRates: shinjangConfiguredRates,
+      includedTreatments: {
+        shockwave: includeShockwave,
+        shinjang_spray: includeShinjang,
+        manual_therapy: includeManual,
+      },
       total: addTreatmentValues(Object.values(treatments)),
     };
   });
