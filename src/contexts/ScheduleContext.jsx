@@ -301,6 +301,7 @@ export function ScheduleProvider({ children }) {
   const noticeSaveRequestRef = useRef(new Map());
   const holidaysLoadRequestRef = useRef(0);
   const holidaysLoadedKeyRef = useRef(holidaysLoadedKey);
+  const calendarSlotSettingsCacheRef = useRef(new Map());
   const calendarSlotSettingsLoadRequestRef = useRef(0);
   const calendarSlotSettingsSaveRequestRef = useRef(0);
   const shockwaveSettingsLoadRequestRef = useRef(0);
@@ -956,6 +957,9 @@ export function ScheduleProvider({ children }) {
           },
         }).catch(() => {});
       }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('clinic-staff-schedule-updated'));
+      }
       return true;
     } catch (err) {
       if (staffMemoSaveRequestRef.current.get(key) === requestId) {
@@ -1238,7 +1242,16 @@ export function ScheduleProvider({ children }) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 근무표 달력 주차별 슬롯 수 설정 로드
-  const loadCalendarSlotSettings = useCallback(async (year, month) => {
+  const loadCalendarSlotSettings = useCallback(async (year, month, options = {}) => {
+    const cacheKey = `${year}-${month}`;
+    if (!options.force) {
+      const cached = calendarSlotSettingsCacheRef.current.get(cacheKey);
+      if (cached) {
+        calendarSlotSettingsLoadRequestRef.current += 1;
+        setCalendarSlotSettings(cached);
+        return cached;
+      }
+    }
     const requestId = ++calendarSlotSettingsLoadRequestRef.current;
     const applyIfLatest = (value) => {
       if (calendarSlotSettingsLoadRequestRef.current === requestId) {
@@ -1260,6 +1273,7 @@ export function ScheduleProvider({ children }) {
 
       if (data) {
         const value = { year, month, week_slot_counts: data.week_slot_counts };
+        calendarSlotSettingsCacheRef.current.set(cacheKey, value);
         applyIfLatest(value);
         return value;
       } else {
@@ -1278,6 +1292,7 @@ export function ScheduleProvider({ children }) {
 
         const defaults = prevData?.week_slot_counts || { '0': 6, '1': 6, '2': 6, '3': 6, '4': 6 };
         const value = { year, month, week_slot_counts: defaults };
+        calendarSlotSettingsCacheRef.current.set(cacheKey, value);
         applyIfLatest(value);
         return value;
       }
@@ -1303,9 +1318,15 @@ export function ScheduleProvider({ children }) {
         }, { onConflict: 'year,month' });
 
       if (error) throw error;
+      calendarSlotSettingsCacheRef.current.clear();
+      const savedValue = { year, month, week_slot_counts: weekSlotCounts };
+      calendarSlotSettingsCacheRef.current.set(`${year}-${month}`, savedValue);
       if (calendarSlotSettingsSaveRequestRef.current === requestId) {
         calendarSlotSettingsLoadRequestRef.current += 1;
-        setCalendarSlotSettings({ year, month, week_slot_counts: weekSlotCounts });
+        setCalendarSlotSettings(savedValue);
+      }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('clinic-staff-schedule-updated'));
       }
       return true;
     } catch (err) {
@@ -3245,6 +3266,9 @@ export function ScheduleProvider({ children }) {
               delete next[payload.targetKey];
               return next;
             });
+          }
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('clinic-staff-schedule-updated'));
           }
         }
       )

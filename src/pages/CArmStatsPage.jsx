@@ -12,6 +12,14 @@ import { pasteCArmCounts } from '../lib/cArmClipboard';
 import { clearCArmSelection, copyCArmSelection } from '../lib/cArmSelection';
 import useCArmGridSelection from '../hooks/useCArmGridSelection';
 import CArmRecentStats from '../components/CArmRecentStats';
+import {
+  clearCArmCache,
+  getCachedCArmTemplateEntry,
+  getCachedCArmYear,
+  setCachedCArmTemplate,
+  setCachedCArmYear,
+  upsertCachedCArmRow,
+} from '../lib/cArmStatsCache';
 import '../styles/c_arm_stats.css';
 
 const format = (value) => value.toLocaleString('ko-KR');
@@ -794,15 +802,22 @@ function CArmMonthEditor({ year, month, records, template, holidays, holidayName
 export default function CArmStatsPage() {
   const { currentYear: year, currentMonth: month, holidays, holidayNames, loadHolidays } = useSchedule();
   const { user } = useAuth();
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState(() => {
+    const cachedRecords = getCachedCArmYear(year);
+    const cachedTemplateEntry = getCachedCArmTemplateEntry(year);
+    if (Array.isArray(cachedRecords) && cachedTemplateEntry) {
+      return { year, records: cachedRecords, template: cachedTemplateEntry.template };
+    }
+    return null;
+  });
   const [error, setError] = useState('');
   const [request, setRequest] = useState(0);
   const [holidayError, setHolidayError] = useState(false);
   useEffect(() => {
     let cancelled = false;
     setHolidayError(false);
-    // Refresh on entry so edits in Settings are reflected even for the same month.
-    loadHolidays(year, month, { force: true }).then((loaded) => {
+    // 수동 재조회(다시 불러오기) 시에만 공휴일을 강제 갱신하고, 일반 탭 진입은 캐시 우선 사용
+    loadHolidays(year, month, { force: request > 0 }).then((loaded) => {
       if (!cancelled) setHolidayError(loaded === null);
     });
     return () => { cancelled = true; };
@@ -810,8 +825,18 @@ export default function CArmStatsPage() {
   useEffect(() => {
     let cancelled = false;
     setError('');
-    setResult(null);
+    if (request === 0) {
+      const cachedRecords = getCachedCArmYear(year);
+      const cachedTemplateEntry = getCachedCArmTemplateEntry(year);
+      if (Array.isArray(cachedRecords) && cachedTemplateEntry) {
+        setResult({ year, records: cachedRecords, template: cachedTemplateEntry.template });
+        return () => { cancelled = true; };
+      }
+    }
+    setResult((prev) => (prev?.year === year ? prev : null));
     Promise.all([loadCArmYear(supabase, year), loadCArmTemplate(supabase, year)]).then(([records, template]) => {
+      setCachedCArmYear(year, records);
+      setCachedCArmTemplate(year, template);
       if (!cancelled) setResult({ year, records, template });
     }).catch((err) => { if (!cancelled) setError(err.message || '연결을 확인해주세요.'); });
     return () => { cancelled = true; };
@@ -821,6 +846,13 @@ export default function CArmStatsPage() {
   return <>
     {holidayError && <p role="alert" className="c-arm-error">공휴일 설정을 불러오지 못했습니다. 다시 불러오기를 눌러주세요.</p>}
     <CArmMonthEditor holidays={holidays} holidayNames={holidayNames} key={`${year}-${month}-${request}`} year={year} month={month} records={result.records} template={result.template} userId={user.id}
-    onReload={() => setRequest((value) => value + 1)} onSaved={(row) => setResult((prev) => prev?.year === row.year ? { ...prev, records: [...prev.records.filter((item) => item.month !== row.month), row].sort((a, b) => a.month - b.month) } : prev)} />
+    onReload={() => {
+      clearCArmCache();
+      setRequest((value) => value + 1);
+    }}
+    onSaved={(row) => {
+      upsertCachedCArmRow(row);
+      setResult((prev) => prev?.year === row.year ? { ...prev, records: [...prev.records.filter((item) => item.month !== row.month), row].sort((a, b) => a.month - b.month) } : prev);
+    }} />
   </>;
 }

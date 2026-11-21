@@ -626,6 +626,7 @@ export async function syncMonthManualTherapyScheduleToStats({
       totalDeleted: deletedCount,
       totalUpdated: 0,
       totalUpdates: inserted + deletedCount,
+      rebuiltRows: rebuiltRowsForMonth,
     };
   }
 

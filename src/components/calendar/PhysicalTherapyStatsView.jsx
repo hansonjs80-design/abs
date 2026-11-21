@@ -2,12 +2,20 @@ import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { usePTCalendarCounts } from '../../hooks/usePTCalendarCounts';
 import { fetchPTStatsYear, getPTStatsWeeks, getPTWeeklyAverage } from '../../lib/physicalTherapyStats';
+import {
+  createStatsMemoryCache,
+  DEFAULT_STATS_CACHE_TTL_MS,
+} from '../../lib/statsMemoryCache';
 import { supabase } from '../../lib/supabaseClient';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const DOW_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 const WEEKDAYS = [1, 2, 3, 4, 5]; // 월~금
 const WEEKENDS = [6, 0]; // 토, 일
+const ptStatsYearCache = createStatsMemoryCache({
+  ttlMs: DEFAULT_STATS_CACHE_TTL_MS,
+  invalidateEvents: ['clinic-staff-schedule-updated'],
+});
 
 export default function PhysicalTherapyStatsView() {
   const { currentYear, currentMonth, navigateMonth, staffMemos, loadStaffMemos, calendarSlotSettings, loadCalendarSlotSettings, holidays, holidayNames, loadHolidays } = useSchedule();
@@ -16,7 +24,11 @@ export default function PhysicalTherapyStatsView() {
   
   // 연간 데이터
   const [yearlyYear, setYearlyYear] = useState(new Date().getFullYear());
-  const [yearlySnapshot, setYearlySnapshot] = useState(null);
+  const [yearlySnapshot, setYearlySnapshot] = useState(() => {
+    const currentYearValue = new Date().getFullYear();
+    const cached = ptStatsYearCache.get(String(currentYearValue));
+    return cached ? { ...cached, year: currentYearValue } : null;
+  });
   const [yearlyError, setYearlyError] = useState(false);
   const [loadingYearly, setLoadingYearly] = useState(false);
 
@@ -42,7 +54,7 @@ export default function PhysicalTherapyStatsView() {
     if (activeTab !== 'monthly') return;
     let active = true;
     setHolidayError(false);
-    loadHolidays(currentYear, currentMonth, { force: true }).then(loaded => {
+    loadHolidays(currentYear, currentMonth).then(loaded => {
       if (active) setHolidayError(loaded === null);
     });
     return () => { active = false; };
@@ -50,13 +62,23 @@ export default function PhysicalTherapyStatsView() {
 
   useEffect(() => {
     if (activeTab !== 'yearly') return;
+    const cached = ptStatsYearCache.get(String(yearlyYear));
+    if (cached) {
+      setYearlyError(false);
+      setYearlySnapshot({ ...cached, year: yearlyYear });
+      setLoadingYearly(false);
+      return undefined;
+    }
     let active = true;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20000);
     setLoadingYearly(true);
     setYearlyError(false);
     fetchPTStatsYear(supabase, yearlyYear, controller.signal)
-      .then(data => { if (active) setYearlySnapshot({ ...data, year: yearlyYear }); })
+      .then(data => {
+        ptStatsYearCache.set(String(yearlyYear), data);
+        if (active) setYearlySnapshot({ ...data, year: yearlyYear });
+      })
       .catch(() => { if (active) setYearlyError(true); })
       .finally(() => { clearTimeout(timeout); if (active) setLoadingYearly(false); });
     return () => { active = false; controller.abort(); clearTimeout(timeout); };

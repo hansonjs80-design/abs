@@ -10,6 +10,7 @@ import {
   getRecentScheduleMonthTargets,
   loadScheduleMemosForStatsMonth,
   loadStatsMonthlyTherapists,
+  prefetchStatsMonthlyTherapists,
   replaceCurrentStatsMonthLogs,
 } from '../../lib/statsScheduleSourceUtils';
 import { normalizePrescriptionGroupKey } from '../../lib/prescriptionScheduleSettings';
@@ -17,6 +18,24 @@ import {
   isDisplayedStatsMonth,
   loadStatsMonthsWithConcurrency,
 } from '../../lib/statsSectionLoadingUtils';
+import {
+  createStatsMemoryCache,
+  DEFAULT_STATS_CACHE_TTL_MS,
+} from '../../lib/statsMemoryCache';
+
+const manualSixMonthLogsCache = createStatsMemoryCache({
+  ttlMs: DEFAULT_STATS_CACHE_TTL_MS,
+  invalidateEvents: ['clinic-stats-updated'],
+});
+const manualSixMonthSyncedCache = createStatsMemoryCache({
+  ttlMs: DEFAULT_STATS_CACHE_TTL_MS,
+  invalidateEvents: ['clinic-stats-updated'],
+});
+
+export function clearManualTherapySixMonthCache() {
+  manualSixMonthLogsCache.clear();
+  manualSixMonthSyncedCache.clear();
+}
 
 export default function ManualTherapySixMonthStats({
   currentYear,
@@ -26,14 +45,17 @@ export default function ManualTherapySixMonthStats({
   selectedTherapistNames,
   currentMonthLogs = [],
 }) {
-  const [logs, setLogs] = useState([]);
   const [recentPeriodInput, setRecentPeriodInput] = useState('최근 6개월');
-  const [refreshKey, setRefreshKey] = useState(0);
-  const recentAutoSyncKeyRef = useRef(null);
   const recentPeriodMonths = useMemo(
     () => parseRecentPeriodMonths(recentPeriodInput, 6),
     [recentPeriodInput]
   );
+  const recentLogsCacheKey = `${currentYear}-${currentMonth}:${recentPeriodMonths}`;
+  const [logs, setLogs] = useState(() => (
+    manualSixMonthLogsCache.get(recentLogsCacheKey) || []
+  ));
+  const [refreshKey, setRefreshKey] = useState(0);
+  const recentAutoSyncKeyRef = useRef(null);
   const recentPeriodLabel = useMemo(
     () => formatRecentPeriodLabel(recentPeriodMonths),
     [recentPeriodMonths]
@@ -67,7 +89,10 @@ export default function ManualTherapySixMonthStats({
       recentMonthTargets
     );
     const syncKey = `${currentYear}-${currentMonth}:${recentPeriodMonths}:${therapistKey}:${scheduleSettingsKey}:${prescriptionSettingsKey}`;
-    if (recentAutoSyncKeyRef.current === syncKey) return undefined;
+    if (recentAutoSyncKeyRef.current === syncKey || manualSixMonthSyncedCache.get(syncKey)) {
+      recentAutoSyncKeyRef.current = syncKey;
+      return undefined;
+    }
     recentAutoSyncKeyRef.current = syncKey;
 
     let cancelled = false;
@@ -76,39 +101,49 @@ export default function ManualTherapySixMonthStats({
       try {
         const targets = recentMonthTargets
           .filter((target) => !isDisplayedStatsMonth(target, currentYear, currentMonth));
+        if (targets.length > 0) {
+          const rosterQueryCache = new Map();
+          const minYear = Math.min(...targets.map((target) => Number(target.year)));
+          await prefetchStatsMonthlyTherapists({ minYear, rosterQueryCache });
 
-        await loadStatsMonthsWithConcurrency(targets, async (target) => {
-          if (cancelled) return null;
-          const [targetMemos, targetMonthlyTherapists] = await Promise.all([
-            loadScheduleMemosForStatsMonth({
+          await loadStatsMonthsWithConcurrency(targets, async (target) => {
+            if (cancelled) return null;
+            const [targetMemos, targetMonthlyTherapists] = await Promise.all([
+              loadScheduleMemosForStatsMonth({
+                year: target.year,
+                month: target.month,
+                settings,
+              }),
+              loadStatsMonthlyTherapists({
+                year: target.year,
+                month: target.month,
+                type: 'manual_therapy',
+                baseTherapists: safeTherapists,
+                rosterQueryCache,
+              }),
+            ]);
+
+            if (cancelled) return null;
+            return syncMonthManualTherapyScheduleToStats({
               year: target.year,
               month: target.month,
+              memos: targetMemos,
+              therapists: safeTherapists,
+              monthlyTherapists: targetMonthlyTherapists,
               settings,
-            }),
-            loadStatsMonthlyTherapists({
-              year: target.year,
-              month: target.month,
-              type: 'manual_therapy',
-              baseTherapists: safeTherapists,
-            }),
-          ]);
+              upToToday: true,
+              scheduleAuthoritative: true,
+              emitEvent: false,
+              replaceExistingMonthLogs: true,
+            });
+          }, 2);
+        }
 
-          if (cancelled) return;
-          return syncMonthManualTherapyScheduleToStats({
-            year: target.year,
-            month: target.month,
-            memos: targetMemos,
-            therapists: safeTherapists,
-            monthlyTherapists: targetMonthlyTherapists,
-            settings,
-            upToToday: true,
-            scheduleAuthoritative: true,
-            emitEvent: false,
-            replaceExistingMonthLogs: true,
-          });
-        }, 2);
-
-        if (!cancelled) setRefreshKey((value) => value + 1);
+        if (!cancelled) {
+          manualSixMonthSyncedCache.set(syncKey, true);
+          manualSixMonthLogsCache.delete(recentLogsCacheKey);
+          setRefreshKey((value) => value + 1);
+        }
       } catch (error) {
         console.error('최근 도수치료 통계 자동 동기화 실패:', error);
         recentAutoSyncKeyRef.current = null;
@@ -120,15 +155,27 @@ export default function ManualTherapySixMonthStats({
     return () => {
       cancelled = true;
     };
-  }, [currentMonth, currentYear, recentPeriodMonths, safeTherapists, settings]);
+  }, [currentMonth, currentYear, recentLogsCacheKey, recentPeriodMonths, safeTherapists, settings]);
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchSixMonths() {
+      if (recentPeriodMonths <= 1) {
+        setLogs([]);
+        return;
+      }
+      if (refreshKey === 0) {
+        const cachedLogs = manualSixMonthLogsCache.get(recentLogsCacheKey);
+        if (Array.isArray(cachedLogs)) {
+          setLogs(cachedLogs);
+          return;
+        }
+      }
       try {
         const startDate = new Date(currentYear, currentMonth - recentPeriodMonths, 1);
-        const endDate = new Date(currentYear, currentMonth, 1);
         const startStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-01`;
-        const endStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-01`;
+        // 현재 월은 currentMonthLogs로 교체되므로 과거 월만 조회해 중복 전송량을 절감
+        const endStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
 
         const { data, error } = await supabase
           .from('manual_therapy_patient_logs')
@@ -138,18 +185,26 @@ export default function ManualTherapySixMonthStats({
           .order('date', { ascending: true });
 
         if (error) throw error;
-        setLogs(Array.isArray(data) ? data : []);
+        if (cancelled) return;
+        const nextLogs = Array.isArray(data) ? data : [];
+        manualSixMonthLogsCache.set(recentLogsCacheKey, nextLogs);
+        setLogs(nextLogs);
       } catch (error) {
         console.error(error);
-        setLogs([]);
+        if (!cancelled) setLogs([]);
       }
     }
 
     fetchSixMonths();
-  }, [currentMonth, currentYear, recentPeriodMonths, refreshKey]);
+    return () => {
+      cancelled = true;
+    };
+  }, [currentMonth, currentYear, recentLogsCacheKey, recentPeriodMonths, refreshKey]);
 
   useEffect(() => {
     const handleStatsUpdated = () => {
+      manualSixMonthLogsCache.clear();
+      manualSixMonthSyncedCache.clear();
       setRefreshKey((value) => value + 1);
     };
     window.addEventListener('clinic-stats-updated', handleStatsUpdated);

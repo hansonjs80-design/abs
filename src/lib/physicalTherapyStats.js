@@ -28,6 +28,14 @@ export function getPTStatsWeeks(year, month, memos, slotSettings, pt = {}) {
 }
 
 export async function fetchPTStatsYear(client, year, signal) {
+  const settingsPromise = Promise.resolve(
+    client.from('staff_calendar_settings')
+      .select('year,month,week_slot_counts').gte('year', year - 1).lte('year', year)
+      .order('year').order('month').limit(24).abortSignal(signal)
+  );
+  // Loop failure before awaiting settingsPromise should not emit an unhandled rejection.
+  settingsPromise.catch(() => {});
+
   const memos = {};
   // A whole year's staff memos exceed the API row limit; read every page in stable order.
   for (let offset = 0; ; offset += 1000) {
@@ -38,9 +46,7 @@ export async function fetchPTStatsYear(client, year, signal) {
     for (const row of data || []) memos[`${year}-${row.month}-${row.day}-${row.slot_index}`] = row;
     if ((data || []).length < 1000) break;
   }
-  const { data, error } = await client.from('staff_calendar_settings')
-    .select('year,month,week_slot_counts').gte('year', year - 1).lte('year', year)
-    .order('year').order('month').limit(24).abortSignal(signal);
+  const { data, error } = await settingsPromise;
   if (error) throw error;
   const settings = {};
   for (let month = 1; month <= 12; month++) {

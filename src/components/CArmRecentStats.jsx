@@ -1,31 +1,66 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { cArmMonthTotal, loadCArmYear } from '../lib/cArmStats';
+import { getCachedCArmYear, setCachedCArmYear } from '../lib/cArmStatsCache';
 import { cArmRecentMonthRange, MAX_C_ARM_RECENT_MONTHS, parseCArmRecentMonths, readCArmRecentMonths, saveCArmRecentMonths } from '../lib/cArmRecentStats';
 
 function browserStorage() {
   try { return window.localStorage; } catch { return null; }
 }
 
+function readAllCachedCArmYears(years) {
+  if (!Array.isArray(years) || years.length === 0) return [];
+  const rows = [];
+  for (const item of years) {
+    const cached = getCachedCArmYear(item);
+    if (!Array.isArray(cached)) return null;
+    rows.push(cached);
+  }
+  return rows.flat();
+}
+
 export default function CArmRecentStats({ year, month, records, currentTotal, dirty }) {
   const [months, setMonths] = useState(() => readCArmRecentMonths(browserStorage()));
   const [input, setInput] = useState(() => String(months));
-  const [history, setHistory] = useState(null);
   const [retry, setRetry] = useState(0);
   const range = cArmRecentMonthRange(year, month, months);
   const startYear = Math.min(...range.map((item) => item.year));
   const historyKey = `${startYear}:${year}:${retry}`;
+  const [history, setHistory] = useState(() => {
+    const initialYears = Array.from({ length: year - startYear }, (_, index) => startYear + index);
+    if (initialYears.length === 0) return null;
+    const cached = readAllCachedCArmYears(initialYears);
+    return cached ? { key: historyKey, records: cached } : null;
+  });
 
   useEffect(() => {
     let cancelled = false;
     const years = Array.from({ length: year - startYear }, (_, index) => startYear + index);
-    Promise.all(years.map((item) => loadCArmYear(supabase, item))).then((rows) => {
+    if (years.length === 0) return undefined;
+
+    if (retry === 0) {
+      const cached = readAllCachedCArmYears(years);
+      if (cached) {
+        setHistory({ key: historyKey, records: cached });
+        return undefined;
+      }
+    }
+
+    Promise.all(years.map(async (item) => {
+      if (retry === 0) {
+        const cached = getCachedCArmYear(item);
+        if (Array.isArray(cached)) return cached;
+      }
+      const rows = await loadCArmYear(supabase, item);
+      setCachedCArmYear(item, rows);
+      return rows;
+    })).then((rows) => {
       if (!cancelled) setHistory({ key: historyKey, records: rows.flat() });
     }).catch((error) => {
       if (!cancelled) setHistory({ key: historyKey, error: error.message || '연결을 확인해주세요.' });
     });
     return () => { cancelled = true; };
-  }, [startYear, year, historyKey]);
+  }, [startYear, year, retry, historyKey]);
 
   const needsHistory = startYear < year;
   const ready = !needsHistory || (history?.key === historyKey && !history.error);

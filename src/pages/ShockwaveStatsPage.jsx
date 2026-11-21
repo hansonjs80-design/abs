@@ -31,9 +31,6 @@ class ShockwaveStatsPageErrorBoundary extends React.Component {
 }
 
 export default function ShockwaveStatsPage() {
-  const [localMonthlyTherapists, setLocalMonthlyTherapists] = useState(null);
-  const [isScheduleLoading, setIsScheduleLoading] = useState(false);
-  const scheduleReloadRequestRef = useRef(0);
   const {
     currentYear,
     currentMonth,
@@ -42,14 +39,32 @@ export default function ShockwaveStatsPage() {
     shockwaveMemos,
     shockwaveMemosLoadedKey,
     loadShockwaveMemos,
+    monthlyTherapistsByMonth,
     loadMonthlyTherapists,
   } = useSchedule();
 
-  // 연월 변경 시 로컬 치료사 목록을 즉시 초기화하여 이전 달 데이터가 잔류하지 않도록 함
+  // 연월 변경 시 로컬 치료사 목록을 즉시 초기화하되, 이미 로드된 월 캐시가 있으면 재사용
   const currentMonthKey = useMemo(() => `${currentYear}-${currentMonth}`, [currentYear, currentMonth]);
+  const cachedMonthlyTherapists = monthlyTherapistsByMonth?.shockwave?.[currentMonthKey];
+  const [localMonthlyTherapists, setLocalMonthlyTherapists] = useState(() => (
+    Array.isArray(cachedMonthlyTherapists) ? cachedMonthlyTherapists : null
+  ));
+  const [isScheduleLoading, setIsScheduleLoading] = useState(false);
+  const scheduleReloadRequestRef = useRef(0);
+  const monthlyTherapistsByMonthRef = useRef(monthlyTherapistsByMonth);
+  const shockwaveMemosLoadedKeyRef = useRef(shockwaveMemosLoadedKey);
 
   useEffect(() => {
-    setLocalMonthlyTherapists(null);
+    monthlyTherapistsByMonthRef.current = monthlyTherapistsByMonth;
+  }, [monthlyTherapistsByMonth]);
+
+  useEffect(() => {
+    shockwaveMemosLoadedKeyRef.current = shockwaveMemosLoadedKey;
+  }, [shockwaveMemosLoadedKey]);
+
+  useEffect(() => {
+    const cached = monthlyTherapistsByMonthRef.current?.shockwave?.[currentMonthKey];
+    setLocalMonthlyTherapists(Array.isArray(cached) ? cached : null);
   }, [currentMonthKey]);
 
   useEffect(() => {
@@ -95,7 +110,11 @@ export default function ShockwaveStatsPage() {
   useEffect(() => {
     let active = true;
     const requestId = ++scheduleReloadRequestRef.current;
-    setIsScheduleLoading(true);
+    const hasCachedMonth = Array.isArray(monthlyTherapistsByMonthRef.current?.shockwave?.[currentMonthKey])
+      && shockwaveMemosLoadedKeyRef.current === currentMonthKey;
+    if (!hasCachedMonth) {
+      setIsScheduleLoading(true);
+    }
 
     (async () => {
       try {
@@ -132,7 +151,7 @@ export default function ShockwaveStatsPage() {
     return () => {
       active = false;
     };
-  }, [currentYear, currentMonth, loadShockwaveMemos, loadMonthlyTherapists]);
+  }, [currentMonthKey, currentYear, currentMonth, loadShockwaveMemos, loadMonthlyTherapists]);
 
   // 탭이 다시 보일 때 (visibility change) 과도한 강제 재조회를 방지하기 위해 최소 30초 간격으로 갱신
   const lastVisibilityRefreshAtRef = useRef(0);

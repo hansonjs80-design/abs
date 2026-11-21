@@ -29,10 +29,16 @@ import {
 } from '../lib/shinjangSprayStatsUtils';
 import { formatRecentPeriodLabel, parseRecentPeriodMonths } from '../lib/recentPeriodUtils';
 import {
+  buildScheduleMemoSignature,
   getRecentScheduleMonthTargets,
   loadScheduleMemosForStatsMonth,
   loadStatsMonthlyTherapists,
+  prefetchStatsMonthlyTherapists,
 } from '../lib/statsScheduleSourceUtils';
+import {
+  createStatsMemoryCache,
+  DEFAULT_STATS_CACHE_TTL_MS,
+} from '../lib/statsMemoryCache';
 import { loadStatsMonthsWithConcurrency } from '../lib/statsSectionLoadingUtils';
 import {
   renameSchedulePrescriptionsForMonth,
@@ -42,6 +48,14 @@ import '../styles/shockwave_stats.css';
 import '../styles/shinjang_spray_stats.css';
 
 const LOG_FIELDS = 'id,date,patient_name,chart_number,visit_count,body_part,therapist_name,prescription,prescription_count,source,scheduler_cell_key,created_at';
+const shinjangCurrentCache = createStatsMemoryCache({
+  ttlMs: DEFAULT_STATS_CACHE_TTL_MS,
+  invalidateEvents: ['clinic-stats-updated'],
+});
+const shinjangRecentCache = createStatsMemoryCache({
+  ttlMs: DEFAULT_STATS_CACHE_TTL_MS,
+  invalidateEvents: ['clinic-stats-updated'],
+});
 
 function buildMonthQuery(tableName, currentYear, currentMonth) {
   const startDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
@@ -90,14 +104,30 @@ export default function ShinjangSprayStatsPage() {
   const { user } = useAuth();
   const { addToast } = useToast();
   const canManageSettings = isAdminUser(user);
+  const currentMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+  const initialCachedCurrent = shinjangCurrentCache.get(currentMonthKey);
   const [activeSection, setActiveSection] = useState('grid');
-  const [shockwaveLogs, setShockwaveLogs] = useState([]);
-  const [manualLogs, setManualLogs] = useState([]);
-  const [localShockwaveTherapists, setLocalShockwaveTherapists] = useState([]);
-  const [localManualTherapists, setLocalManualTherapists] = useState([]);
-  const [monthlyShinjangSprayTherapists, setMonthlyShinjangSprayTherapists] = useState([]);
-  const [loadedTherapistsMonthKey, setLoadedTherapistsMonthKey] = useState(null);
-  const [loadedLogsMonthKey, setLoadedLogsMonthKey] = useState(null);
+  const [shockwaveLogs, setShockwaveLogs] = useState(() => (
+    Array.isArray(initialCachedCurrent?.shockwaveLogs) ? initialCachedCurrent.shockwaveLogs : []
+  ));
+  const [manualLogs, setManualLogs] = useState(() => (
+    Array.isArray(initialCachedCurrent?.manualLogs) ? initialCachedCurrent.manualLogs : []
+  ));
+  const [localShockwaveTherapists, setLocalShockwaveTherapists] = useState(() => (
+    Array.isArray(initialCachedCurrent?.localShockwaveTherapists) ? initialCachedCurrent.localShockwaveTherapists : []
+  ));
+  const [localManualTherapists, setLocalManualTherapists] = useState(() => (
+    Array.isArray(initialCachedCurrent?.localManualTherapists) ? initialCachedCurrent.localManualTherapists : []
+  ));
+  const [monthlyShinjangSprayTherapists, setMonthlyShinjangSprayTherapists] = useState(() => (
+    Array.isArray(initialCachedCurrent?.monthlyShinjangSprayTherapists) ? initialCachedCurrent.monthlyShinjangSprayTherapists : []
+  ));
+  const [loadedTherapistsMonthKey, setLoadedTherapistsMonthKey] = useState(() => (
+    initialCachedCurrent ? currentMonthKey : null
+  ));
+  const [loadedLogsMonthKey, setLoadedLogsMonthKey] = useState(() => (
+    initialCachedCurrent ? currentMonthKey : null
+  ));
   const [isLoading, setIsLoading] = useState(false);
   const [recentShockwaveLogs, setRecentShockwaveLogs] = useState([]);
   const [recentManualLogs, setRecentManualLogs] = useState([]);
@@ -124,7 +154,6 @@ export default function ShinjangSprayStatsPage() {
     currentMonth,
     recentPeriodMonths,
   }), [currentMonth, currentYear, recentPeriodMonths]);
-  const currentMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
 
   useEffect(() => {
     settingsRef.current = shockwaveSettings;
@@ -142,7 +171,15 @@ export default function ShinjangSprayStatsPage() {
 
   const refreshData = useCallback(async ({ force = false } = {}) => {
     const requestId = ++requestIdRef.current;
-    setIsLoading(true);
+    if (force) {
+      shinjangCurrentCache.delete(currentMonthKey);
+      shinjangRecentCache.clear();
+      recentAutoSyncKeyRef.current = null;
+    }
+    const existingCacheSnapshot = !force ? shinjangCurrentCache.get(currentMonthKey) : null;
+    if (!existingCacheSnapshot) {
+      setIsLoading(true);
+    }
     try {
       const [
         loadedShockwaveTherapists,
@@ -163,12 +200,14 @@ export default function ShinjangSprayStatsPage() {
       ]);
       if (requestId !== requestIdRef.current) return;
 
+      const safeLoadedShockwaveTherapists = Array.isArray(loadedShockwaveTherapists) ? loadedShockwaveTherapists : [];
+      const safeLoadedManualTherapists = Array.isArray(loadedManualTherapists) ? loadedManualTherapists : [];
+      const safeLoadedMonthlyShinjangSpray = Array.isArray(loadedMonthlyShinjangSpray) ? loadedMonthlyShinjangSpray : [];
+
       // Publish the monthly roster before the slower schedule/statistics sync.
-      setLocalShockwaveTherapists(Array.isArray(loadedShockwaveTherapists) ? loadedShockwaveTherapists : []);
-      setLocalManualTherapists(Array.isArray(loadedManualTherapists) ? loadedManualTherapists : []);
-      setMonthlyShinjangSprayTherapists(
-        Array.isArray(loadedMonthlyShinjangSpray) ? loadedMonthlyShinjangSpray : []
-      );
+      setLocalShockwaveTherapists(safeLoadedShockwaveTherapists);
+      setLocalManualTherapists(safeLoadedManualTherapists);
+      setMonthlyShinjangSprayTherapists(safeLoadedMonthlyShinjangSpray);
       setLoadedTherapistsMonthKey(currentMonthKey);
 
       const settingsForMonth = loadedSettings || settingsRef.current || {};
@@ -184,64 +223,111 @@ export default function ShinjangSprayStatsPage() {
         : memosRef.current;
       const hasAuthoritativeSchedule = Boolean(loadedMemos && typeof loadedMemos === 'object');
 
-      if (hasAuthoritativeSchedule) {
-        const syncTasks = [];
-        if (Array.isArray(loadedShockwaveTherapists) && loadedShockwaveTherapists.length > 0) {
-          syncTasks.push(syncMonthShockwaveScheduleToStats({
-            year: currentYear,
-            month: currentMonth,
-            memos: memosForMonth,
-            therapists: loadedShockwaveTherapists,
-            monthlyTherapists: loadedMonthlyShockwave,
-            settings: settingsForMonth,
-            upToToday: true,
-            scheduleAuthoritative: true,
-            emitEvent: false,
-            replaceExistingMonthLogs: true,
-          }));
+      const syncSignature = JSON.stringify({
+        month: currentMonthKey,
+        memos: hasAuthoritativeSchedule ? buildScheduleMemoSignature(memosForMonth) : 'no-memos',
+        shockwaveTherapists: safeLoadedShockwaveTherapists.map((t, i) => `${t?.slot_index ?? i}:${t?.name || ''}`),
+        manualTherapists: safeLoadedManualTherapists.map((t, i) => `${t?.slot_index ?? i}:${t?.name || ''}`),
+        monthlyShockwave: Array.isArray(loadedMonthlyShockwave)
+          ? loadedMonthlyShockwave.map((t) => `${t?.slot_index ?? ''}:${t?.therapist_name || ''}:${t?.start_day ?? ''}:${t?.end_day ?? ''}`)
+          : [],
+        monthlyManual: Array.isArray(loadedMonthlyManual)
+          ? loadedMonthlyManual.map((t) => `${t?.slot_index ?? ''}:${t?.therapist_name || ''}:${t?.start_day ?? ''}:${t?.end_day ?? ''}`)
+          : [],
+        scheduleLayout: {
+          start_time: settingsForMonth?.start_time,
+          end_time: settingsForMonth?.end_time,
+          interval_minutes: settingsForMonth?.interval_minutes,
+          day_overrides: settingsForMonth?.day_overrides,
+          date_overrides: settingsForMonth?.date_overrides,
+        },
+        manualPrescriptions: manualSettings?.prescriptions,
+        manualDoseTags: manualSettings?.dose_tags,
+        manualDurations: manualSettings?.duration_minutes,
+        scheduleGroups: settingsForMonth?.prescription_schedule_groups,
+      });
+
+      const cachedCurrent = !force ? shinjangCurrentCache.get(currentMonthKey) : null;
+      let nextShockwaveLogs = [];
+      let normalizedManualLogs = [];
+
+      if (cachedCurrent && cachedCurrent.syncSignature === syncSignature) {
+        nextShockwaveLogs = cachedCurrent.shockwaveLogs;
+        normalizedManualLogs = cachedCurrent.manualLogs;
+      } else {
+        if (!existingCacheSnapshot) {
+          setIsLoading(true);
         }
-        if (Array.isArray(loadedManualTherapists) && loadedManualTherapists.length > 0) {
-          syncTasks.push(syncMonthManualTherapyScheduleToStats({
-            year: currentYear,
-            month: currentMonth,
-            memos: memosForMonth,
-            therapists: loadedManualTherapists,
-            monthlyTherapists: loadedMonthlyManual,
-            settings: settingsForMonth,
-            upToToday: true,
-            scheduleAuthoritative: true,
-            emitEvent: false,
-            replaceExistingMonthLogs: true,
-          }));
-        }
-        const syncResults = await Promise.allSettled(syncTasks);
-        syncResults.forEach((result) => {
-          if (result.status === 'rejected') {
-            console.error('Shinjang spray source statistics sync failed:', result.reason);
+        if (hasAuthoritativeSchedule) {
+          const syncTasks = [];
+          if (safeLoadedShockwaveTherapists.length > 0) {
+            syncTasks.push(syncMonthShockwaveScheduleToStats({
+              year: currentYear,
+              month: currentMonth,
+              memos: memosForMonth,
+              therapists: safeLoadedShockwaveTherapists,
+              monthlyTherapists: loadedMonthlyShockwave,
+              settings: settingsForMonth,
+              upToToday: true,
+              scheduleAuthoritative: true,
+              emitEvent: false,
+              replaceExistingMonthLogs: true,
+            }));
           }
+          if (safeLoadedManualTherapists.length > 0) {
+            syncTasks.push(syncMonthManualTherapyScheduleToStats({
+              year: currentYear,
+              month: currentMonth,
+              memos: memosForMonth,
+              therapists: safeLoadedManualTherapists,
+              monthlyTherapists: loadedMonthlyManual,
+              settings: settingsForMonth,
+              upToToday: true,
+              scheduleAuthoritative: true,
+              emitEvent: false,
+              replaceExistingMonthLogs: true,
+            }));
+          }
+          const syncResults = await Promise.allSettled(syncTasks);
+          syncResults.forEach((result) => {
+            if (result.status === 'rejected') {
+              console.error('Shinjang spray source statistics sync failed:', result.reason);
+            }
+          });
+        }
+
+        const [shockwaveResult, manualResult] = await Promise.all([
+          buildMonthQuery('shockwave_patient_logs', currentYear, currentMonth),
+          buildMonthQuery('manual_therapy_patient_logs', currentYear, currentMonth),
+        ]);
+        if (requestId !== requestIdRef.current) return;
+        if (shockwaveResult.error) throw shockwaveResult.error;
+        if (manualResult.error) throw manualResult.error;
+
+        nextShockwaveLogs = shockwaveResult.data || [];
+        normalizedManualLogs = normalizeManualTherapyLogRows(
+          manualResult.data || [],
+          manualSettings.prescriptions,
+          {
+            memos: memosForMonth,
+            year: currentYear,
+            month: currentMonth,
+            settings: settingsForMonth,
+            scheduleAuthoritative: hasAuthoritativeSchedule,
+          }
+        );
+
+        shinjangCurrentCache.set(currentMonthKey, {
+          syncSignature,
+          shockwaveLogs: nextShockwaveLogs,
+          manualLogs: normalizedManualLogs,
+          localShockwaveTherapists: safeLoadedShockwaveTherapists,
+          localManualTherapists: safeLoadedManualTherapists,
+          monthlyShinjangSprayTherapists: safeLoadedMonthlyShinjangSpray,
         });
       }
 
-      const [shockwaveResult, manualResult] = await Promise.all([
-        buildMonthQuery('shockwave_patient_logs', currentYear, currentMonth),
-        buildMonthQuery('manual_therapy_patient_logs', currentYear, currentMonth),
-      ]);
-      if (requestId !== requestIdRef.current) return;
-      if (shockwaveResult.error) throw shockwaveResult.error;
-      if (manualResult.error) throw manualResult.error;
-      const normalizedManualLogs = normalizeManualTherapyLogRows(
-        manualResult.data || [],
-        manualSettings.prescriptions,
-        {
-          memos: memosForMonth,
-          year: currentYear,
-          month: currentMonth,
-          settings: settingsForMonth,
-          scheduleAuthoritative: hasAuthoritativeSchedule,
-        }
-      );
-
-      setShockwaveLogs(shockwaveResult.data || []);
+      setShockwaveLogs(nextShockwaveLogs);
       setManualLogs(normalizedManualLogs);
       setLoadedLogsMonthKey(currentMonthKey);
       setRecentRefreshVersion((value) => value + 1);
@@ -271,7 +357,12 @@ export default function ShinjangSprayStatsPage() {
   }, [refreshData]);
 
   useEffect(() => {
-    const handleStatsUpdated = () => refreshData();
+    const handleStatsUpdated = () => {
+      shinjangCurrentCache.clear();
+      shinjangRecentCache.clear();
+      recentAutoSyncKeyRef.current = null;
+      refreshData();
+    };
     window.addEventListener('clinic-stats-updated', handleStatsUpdated);
     return () => window.removeEventListener('clinic-stats-updated', handleStatsUpdated);
   }, [refreshData]);
@@ -292,20 +383,43 @@ export default function ShinjangSprayStatsPage() {
 
   const refreshRecentData = useCallback(async () => {
     const requestId = ++recentRequestIdRef.current;
-    setIsRecentLogsLoading(true);
+    const recentCacheKey = `${currentMonthKey}:${recentPeriodMonths}`;
+    const shockwaveTherapistRoster = localShockwaveTherapists.length > 0
+      ? localShockwaveTherapists
+      : therapists;
+    const manualTherapistRoster = localManualTherapists.length > 0
+      ? localManualTherapists
+      : manualTherapists;
+    const previousTargets = recentMonthTargets.filter((target) => (
+      Number(target.year) !== Number(currentYear)
+      || Number(target.month) !== Number(currentMonth)
+    ));
+    const therapistKey = shockwaveTherapistRoster
+      .map((t, idx) => `${t?.slot_index ?? idx}:${t?.name || ''}`)
+      .join('|');
+    const syncKey = `${currentYear}-${currentMonth}:${recentPeriodMonths}:${therapistKey}`;
+
+    const cachedRecent = shinjangRecentCache.get(recentCacheKey);
+    if (cachedRecent) {
+      setRecentShockwaveLogs(cachedRecent.shockwaveLogs || []);
+      setRecentManualLogs(cachedRecent.manualLogs || []);
+      setRecentMonthlyTherapistsByMonth({
+        [currentMonthKey]: monthlyShinjangSprayTherapists,
+        ...(cachedRecent.monthlyTherapistsByMonth || {}),
+      });
+      setIsRecentLogsLoading(false);
+      if (cachedRecent.syncKey === syncKey) {
+        recentAutoSyncKeyRef.current = syncKey;
+        return;
+      }
+    }
+
+    if (!cachedRecent) {
+      setIsRecentLogsLoading(true);
+    }
     try {
       const settingsForRange = settingsRef.current || shockwaveSettings || {};
-      const shockwaveTherapistRoster = localShockwaveTherapists.length > 0
-        ? localShockwaveTherapists
-        : therapists;
-      const manualTherapistRoster = localManualTherapists.length > 0
-        ? localManualTherapists
-        : manualTherapists;
-      const previousTargets = recentMonthTargets.filter((target) => (
-        Number(target.year) !== Number(currentYear)
-        || Number(target.month) !== Number(currentMonth)
-      ));
-
+      const rosterQueryCache = new Map();
       let nextShockwaveLogs = [];
       let nextManualLogs = [];
       let monthlyTherapistEntries = [];
@@ -314,22 +428,12 @@ export default function ShinjangSprayStatsPage() {
         const firstTarget = previousTargets[0];
         const startDate = `${firstTarget.year}-${String(firstTarget.month).padStart(2, '0')}-01`;
         const endDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
+        const minYear = Math.min(...previousTargets.map((target) => Number(target.year)));
 
-        const [shockwaveResult, manualResult, therapistResults] = await Promise.all([
+        const [shockwaveResult, manualResult] = await Promise.all([
           buildDateRangeQuery('shockwave_patient_logs', startDate, endDate),
           buildDateRangeQuery('manual_therapy_patient_logs', startDate, endDate),
-          Promise.all(previousTargets.map(async (target) => {
-            const list = await loadStatsMonthlyTherapists({
-              year: target.year,
-              month: target.month,
-              type: 'shinjang_spray',
-              baseTherapists: shockwaveTherapistRoster,
-            });
-            return [
-              `${target.year}-${String(target.month).padStart(2, '0')}`,
-              list,
-            ];
-          })),
+          prefetchStatsMonthlyTherapists({ minYear, rosterQueryCache }),
         ]);
 
         if (requestId !== recentRequestIdRef.current) return;
@@ -337,25 +441,43 @@ export default function ShinjangSprayStatsPage() {
         if (manualResult.error) throw manualResult.error;
         nextShockwaveLogs = shockwaveResult.data || [];
         nextManualLogs = manualResult.data || [];
-        monthlyTherapistEntries = therapistResults;
+        monthlyTherapistEntries = await Promise.all(previousTargets.map(async (target) => {
+          const list = await loadStatsMonthlyTherapists({
+            year: target.year,
+            month: target.month,
+            type: 'shinjang_spray',
+            baseTherapists: shockwaveTherapistRoster,
+            rosterQueryCache,
+          });
+          return [
+            `${target.year}-${String(target.month).padStart(2, '0')}`,
+            list,
+          ];
+        }));
       }
 
+      if (requestId !== recentRequestIdRef.current) return;
+      const monthlyTherapistsMap = Object.fromEntries(monthlyTherapistEntries);
       setRecentShockwaveLogs(nextShockwaveLogs);
       setRecentManualLogs(nextManualLogs);
       setRecentMonthlyTherapistsByMonth({
         [currentMonthKey]: monthlyShinjangSprayTherapists,
-        ...Object.fromEntries(monthlyTherapistEntries),
+        ...monthlyTherapistsMap,
       });
 
       // 즉시 결산/신환 현황 스켈레톤 해제 및 즉각 렌더링
       setIsRecentLogsLoading(false);
 
-      if (previousTargets.length === 0) return;
+      if (previousTargets.length === 0) {
+        shinjangRecentCache.set(recentCacheKey, {
+          shockwaveLogs: [],
+          manualLogs: [],
+          monthlyTherapistsByMonth: {},
+          syncKey,
+        });
+        return;
+      }
 
-      const therapistKey = shockwaveTherapistRoster
-        .map((t, idx) => `${t?.slot_index ?? idx}:${t?.name || ''}`)
-        .join('|');
-      const syncKey = `${currentYear}-${currentMonth}:${recentPeriodMonths}:${therapistKey}`;
       if (recentAutoSyncKeyRef.current === syncKey) return;
 
       let syncPromise = recentAutoSyncRunRef.current.key === syncKey
@@ -376,18 +498,21 @@ export default function ShinjangSprayStatsPage() {
                 month: target.month,
                 type: 'shockwave',
                 baseTherapists: shockwaveTherapistRoster,
+                rosterQueryCache,
               }),
               loadStatsMonthlyTherapists({
                 year: target.year,
                 month: target.month,
                 type: 'manual_therapy',
                 baseTherapists: manualTherapistRoster,
+                rosterQueryCache,
               }),
               loadStatsMonthlyTherapists({
                 year: target.year,
                 month: target.month,
                 type: 'shinjang_spray',
                 baseTherapists: shockwaveTherapistRoster,
+                rosterQueryCache,
               }),
             ]);
             const syncResults = await Promise.allSettled([
@@ -444,14 +569,26 @@ export default function ShinjangSprayStatsPage() {
             buildDateRangeQuery('manual_therapy_patient_logs', startDate, endDate),
           ]);
           if (requestId !== recentRequestIdRef.current) return;
+          const finalShockwaveLogs = shockwaveResult.data || nextShockwaveLogs;
+          const finalManualLogs = manualResult.data || nextManualLogs;
+          const nextMonthlyTherapistsMap = Array.isArray(targetSources)
+            ? Object.fromEntries(targetSources.map((item) => [item.monthKey, item.therapists]))
+            : monthlyTherapistsMap;
+
           if (shockwaveResult.data) setRecentShockwaveLogs(shockwaveResult.data);
           if (manualResult.data) setRecentManualLogs(manualResult.data);
           if (Array.isArray(targetSources)) {
             setRecentMonthlyTherapistsByMonth((prev) => ({
               ...prev,
-              ...Object.fromEntries(targetSources.map((item) => [item.monthKey, item.therapists])),
+              ...nextMonthlyTherapistsMap,
             }));
           }
+          shinjangRecentCache.set(recentCacheKey, {
+            shockwaveLogs: finalShockwaveLogs,
+            manualLogs: finalManualLogs,
+            monthlyTherapistsByMonth: nextMonthlyTherapistsMap,
+            syncKey,
+          });
           recentAutoSyncKeyRef.current = syncKey;
         })
         .catch((error) => {
