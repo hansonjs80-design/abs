@@ -8,6 +8,7 @@ import {
   buildScheduleMemoMapForStats,
   getRecentScheduleMonthTargets,
   loadStatsMonthlyTherapists,
+  prefetchStatsMonthlyTherapists,
   replaceCurrentStatsMonthLogs,
   resolveScheduleMemosForStatsMonth,
 } from '../statsScheduleSourceUtils.js';
@@ -545,5 +546,34 @@ describe('stats schedule source utilities', () => {
     const staleEntries = Object.values(memoMap).filter((cell) => cell?.content === staleContent);
     assert.equal(visibleEntries.length, 2);
     assert.equal(staleEntries.length, 0);
+  });
+
+  it('serves multiple months and types from a single prefetched shockwave_monthly_therapists query', async (context) => {
+    const calls = mockMonthlyQueries(context, [
+      {
+        data: [
+          { year: 2026, month: 10, type: 'shockwave', slot_index: 0, therapist_name: '주한솔', start_day: 1, end_day: 31 },
+          { year: 2026, month: 10, type: 'manual_therapy', slot_index: 0, therapist_name: '신수민', start_day: 1, end_day: 31 },
+        ],
+        error: null,
+      },
+    ]);
+    const rosterQueryCache = new Map();
+    await prefetchStatsMonthlyTherapists({ minYear: 2026, rosterQueryCache });
+
+    const octShockwave = await loadStatsMonthlyTherapists({
+      year: 2026, month: 10, type: 'shockwave', rosterQueryCache,
+    });
+    const novShockwave = await loadStatsMonthlyTherapists({
+      year: 2026, month: 11, type: 'shockwave', rosterQueryCache,
+    });
+    const novManual = await loadStatsMonthlyTherapists({
+      year: 2026, month: 11, type: 'manual_therapy', rosterQueryCache,
+    });
+
+    assert.equal(calls.length, 1);
+    assert.deepEqual(octShockwave.map((item) => item.therapist_name), ['주한솔']);
+    assert.deepEqual(novShockwave.map((item) => item.therapist_name), ['주한솔']);
+    assert.deepEqual(novManual.map((item) => item.therapist_name), ['신수민']);
   });
 });

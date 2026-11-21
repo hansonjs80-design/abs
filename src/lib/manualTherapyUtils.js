@@ -541,7 +541,15 @@ export async function syncMonthManualTherapyScheduleToStats({
       }
     });
 
-    const historyResults = await Promise.all(historyQueries);
+    const [historyResults, existingMonthStats] = await Promise.all([
+      Promise.all(historyQueries),
+      fetchStatsRowsForDateRange({
+        supabaseClient: supabase,
+        tableName: 'manual_therapy_patient_logs',
+        startDate: startOfMonthStr,
+        endDate: endOfMonthStr,
+      }),
+    ]);
     const historyError = historyResults.find((result) => result.error)?.error;
     if (historyError) throw historyError;
 
@@ -551,13 +559,6 @@ export async function syncMonthManualTherapyScheduleToStats({
       if (seenHistoryRows.has(key)) return false;
       seenHistoryRows.add(key);
       return true;
-    });
-
-    const existingMonthStats = await fetchStatsRowsForDateRange({
-      supabaseClient: supabase,
-      tableName: 'manual_therapy_patient_logs',
-      startDate: startOfMonthStr,
-      endDate: endOfMonthStr,
     });
 
     const rebuiltRowsForMonth = [];
