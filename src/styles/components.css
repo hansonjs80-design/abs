@@ -3242,3 +3242,101 @@
 [data-theme="dark"] .top-tab-visibility-item.is-hidden .top-tab-visibility-label {
   color: #94a3b8;
 }
+
+.top-tab-combined-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.top-tab-combined-option-text {
+  flex: 1 1 260px;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.top-tab-combined-option-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #0f172a;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.top-tab-combined-option-title svg {
+  color: var(--brand-primary);
+}
+
+.top-tab-combined-option-status {
+  margin: 2px 0 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.top-tab-combined-option-status.is-excluding {
+  color: #b45309;
+}
+
+.top-tab-combined-option-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 9px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  flex-shrink: 0;
+}
+
+.top-tab-combined-option-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.top-tab-combined-option-btn:hover:not(:disabled) {
+  color: #0f172a;
+}
+
+.top-tab-combined-option-btn.is-active {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.25);
+}
+
+[data-theme="dark"] .top-tab-combined-option {
+  border-top-color: #334155;
+}
+
+[data-theme="dark"] .top-tab-combined-option-title {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .top-tab-combined-option-toggle {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .top-tab-combined-option-btn {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .top-tab-combined-option-btn.is-active {
+  background: #2563eb;
+  color: #ffffff;
+}

@@ -143,6 +143,9 @@ export function buildCombinedStatsTherapists({
   shinjangTherapistNames = null,
   shinjangRows = [],
   includeLogOnlyTherapists = true,
+  includeShockwave = true,
+  includeShinjang = true,
+  includeManual = true,
 } = {}) {
   const therapistsByName = new Map();
   const defaultShinjangTherapists = buildShinjangSprayDefaultTherapists({
@@ -150,23 +153,29 @@ export function buildCombinedStatsTherapists({
     manualTherapists,
   });
   const standardCandidates = [
-    ...buildMonthlyDisplayTherapists(shockwaveTherapists, monthlyShockwaveTherapists),
-    ...buildMonthlyDisplayTherapists(manualTherapists, monthlyManualTherapists),
+    ...(includeShockwave ? buildMonthlyDisplayTherapists(shockwaveTherapists, monthlyShockwaveTherapists) : []),
+    ...(includeManual ? buildMonthlyDisplayTherapists(manualTherapists, monthlyManualTherapists) : []),
   ];
   const configuredShinjangNames = Array.isArray(shinjangTherapistNames) && shinjangTherapistNames.length > 0
     ? new Set(shinjangTherapistNames.map((name) => String(name || '').trim()).filter(Boolean))
     : null;
-  const shinjangCandidates = [
-    ...(monthlyShinjangTherapists.length > 0
-      ? buildMonthlyDisplayTherapists(defaultShinjangTherapists, monthlyShinjangTherapists)
-      : standardCandidates),
-    ...(includeLogOnlyTherapists && Array.isArray(shinjangRows)
-      ? shinjangRows.map((row) => ({ name: row?.therapist_name }))
-      : []),
-  ].filter((therapist) => (
-    !configuredShinjangNames
-    || configuredShinjangNames.has(String(therapist?.name || therapist?.therapist_name || '').trim())
-  ));
+  const shinjangFallbackCandidates = [
+    ...buildMonthlyDisplayTherapists(shockwaveTherapists, monthlyShockwaveTherapists),
+    ...buildMonthlyDisplayTherapists(manualTherapists, monthlyManualTherapists),
+  ];
+  const shinjangCandidates = includeShinjang
+    ? [
+        ...(monthlyShinjangTherapists.length > 0
+          ? buildMonthlyDisplayTherapists(defaultShinjangTherapists, monthlyShinjangTherapists)
+          : shinjangFallbackCandidates),
+        ...(includeLogOnlyTherapists && Array.isArray(shinjangRows)
+          ? shinjangRows.map((row) => ({ name: row?.therapist_name }))
+          : []),
+      ].filter((therapist) => (
+        !configuredShinjangNames
+        || configuredShinjangNames.has(String(therapist?.name || therapist?.therapist_name || '').trim())
+      ))
+    : [];
 
   [...standardCandidates, ...shinjangCandidates]
     .forEach((therapist, index) => addTherapist(therapistsByName, therapist, index));
@@ -319,23 +328,29 @@ export function buildCombinedStatsMonthSummary({
   isAdmin = false,
   applyCryoDeduction = true,
   includeLogOnlyTherapists = true,
+  includedTreatments = null,
 } = {}) {
+  const includeShockwave = includedTreatments?.shockwave !== false;
+  const includeShinjang = includedTreatments?.shinjang_spray !== false;
+  const includeManual = Boolean(isAdmin) && includedTreatments?.manual_therapy !== false;
   const shockwaveSettings = getEffectiveSettlementSettings(settings, year, month, 'shockwave');
   const manualSettings = getEffectiveSettlementSettings(settings, year, month, 'manual_therapy');
   const shinjangSettings = getEffectiveShinjangSpraySettings(settings, year, month);
-  const shinjangSourceRows = applyMonthlyShinjangSprayTherapists(
-    mergeShinjangSprayLogs({
-      shockwaveRows,
-      manualTherapyRows,
-      shockwavePrescriptionPrices: shinjangSettings.prescription_prices,
-      manualTherapyPrescriptionPrices: shinjangSettings.prescription_prices,
-      shockwaveCryoPrescriptions: shinjangSettings.cryo_prescriptions,
-      shockwaveCryoPrices: shinjangSettings.cryo_prices,
-      manualTherapyCryoPrescriptions: shinjangSettings.cryo_prescriptions,
-      manualTherapyCryoPrices: shinjangSettings.cryo_prices,
-    }),
-    monthlyShinjangTherapists
-  );
+  const shinjangSourceRows = includeShinjang
+    ? applyMonthlyShinjangSprayTherapists(
+        mergeShinjangSprayLogs({
+          shockwaveRows,
+          manualTherapyRows,
+          shockwavePrescriptionPrices: shinjangSettings.prescription_prices,
+          manualTherapyPrescriptionPrices: shinjangSettings.prescription_prices,
+          shockwaveCryoPrescriptions: shinjangSettings.cryo_prescriptions,
+          shockwaveCryoPrices: shinjangSettings.cryo_prices,
+          manualTherapyCryoPrescriptions: shinjangSettings.cryo_prescriptions,
+          manualTherapyCryoPrices: shinjangSettings.cryo_prices,
+        }),
+        monthlyShinjangTherapists
+      )
+    : [];
   const therapists = buildCombinedStatsTherapists({
     shockwaveTherapists,
     manualTherapists,
@@ -345,51 +360,65 @@ export function buildCombinedStatsMonthSummary({
     shinjangTherapistNames: shinjangSettings.therapist_names,
     shinjangRows: shinjangSourceRows,
     includeLogOnlyTherapists,
+    includeShockwave,
+    includeShinjang,
+    includeManual,
   });
-  const shockwaveSettlement = buildStandardTreatmentSummary({
-    rows: shockwaveRows,
-    therapists,
-    settings: shockwaveSettings,
-    applyCryoDeduction,
-  });
-  const manualSettlement = buildStandardTreatmentSummary({
-    rows: manualTherapyRows,
-    therapists,
-    settings: manualSettings,
-    applyCryoDeduction,
-  });
-  const shinjangResult = buildShinjangTreatmentSummary({
-    shockwaveRows,
-    manualTherapyRows,
-    therapists,
-    monthlyShinjangTherapists,
-    settings: shinjangSettings,
-    isAdmin,
-    applyCryoDeduction,
-  });
+  const shockwaveSettlement = includeShockwave
+    ? buildStandardTreatmentSummary({
+        rows: shockwaveRows,
+        therapists,
+        settings: shockwaveSettings,
+        applyCryoDeduction,
+      })
+    : { summaryByTherapist: [], prescriptions: [] };
+  const manualSettlement = includeManual
+    ? buildStandardTreatmentSummary({
+        rows: manualTherapyRows,
+        therapists,
+        settings: manualSettings,
+        applyCryoDeduction,
+      })
+    : { summaryByTherapist: [], prescriptions: [] };
+  const shinjangResult = includeShinjang
+    ? buildShinjangTreatmentSummary({
+        shockwaveRows,
+        manualTherapyRows,
+        therapists,
+        monthlyShinjangTherapists,
+        settings: shinjangSettings,
+        isAdmin,
+        applyCryoDeduction,
+      })
+    : { rows: [], prescriptions: [], settlement: { detailRows: [] } };
   const treatmentMaps = {
     // 충격파 결산은 기존 탭과 동일하게 처방별 인센티브를 반올림한 뒤 합산한다.
-    shockwave: toTreatmentMap(shockwaveSettlement, { sumPrescriptionIncentives: true }),
-    shinjang_spray: toShinjangTreatmentMap(shinjangResult.settlement),
-    // 전체 통계의 도수치료 결산은 관리자에게만 공개한다. 일반 계정의 합계에도
-    // 도수치료 금액이 섞이지 않도록 화면 렌더링 전 집계 단계에서 제외한다.
-    manual_therapy: isAdmin ? toTreatmentMap(manualSettlement) : new Map(),
+    shockwave: includeShockwave ? toTreatmentMap(shockwaveSettlement, { sumPrescriptionIncentives: true }) : new Map(),
+    shinjang_spray: includeShinjang ? toShinjangTreatmentMap(shinjangResult.settlement) : new Map(),
+    // 전체 통계의 도수치료 결산은 관리자에게만 공개하며, 설정에서 숨김 탭 제외 시 함께 제외한다.
+    manual_therapy: includeManual ? toTreatmentMap(manualSettlement) : new Map(),
   };
-  const shockwaveIncentiveRates = buildStandardIncentiveRates(shockwaveSettings);
-  const manualIncentiveRates = buildStandardIncentiveRates(manualSettings);
-  const shinjangConfiguredRates = shinjangResult.prescriptions
-    .map((prescription) => (
-      getMapValue(shinjangSettings?.prescription_incentive_percentages, prescription)
-    ))
-    .filter((rate) => isAdmin || Number(rate) !== 15);
-  const shinjangIncentiveGroups = buildShinjangIncentiveGroups(
-    shinjangResult.settlement,
-    shinjangConfiguredRates
-  );
-  const shinjangIncentiveGroupsByTherapist = buildShinjangIncentiveGroupsByTherapist(
-    shinjangResult.settlement,
-    shinjangConfiguredRates
-  );
+  const shockwaveIncentiveRates = includeShockwave ? buildStandardIncentiveRates(shockwaveSettings) : [];
+  const manualIncentiveRates = includeManual ? buildStandardIncentiveRates(manualSettings) : [];
+  const shinjangConfiguredRates = includeShinjang
+    ? shinjangResult.prescriptions
+        .map((prescription) => (
+          getMapValue(shinjangSettings?.prescription_incentive_percentages, prescription)
+        ))
+        .filter((rate) => isAdmin || Number(rate) !== 15)
+    : [];
+  const shinjangIncentiveGroups = includeShinjang
+    ? buildShinjangIncentiveGroups(
+        shinjangResult.settlement,
+        shinjangConfiguredRates
+      )
+    : [];
+  const shinjangIncentiveGroupsByTherapist = includeShinjang
+    ? buildShinjangIncentiveGroupsByTherapist(
+        shinjangResult.settlement,
+        shinjangConfiguredRates
+      )
+    : new Map();
   // 각 치료사별 신장분사 처방목록 이름(prescription)별 실적 매핑
   const shinjangDetailByTherapistAndPrescription = new Map();
   (Array.isArray(shinjangResult.settlement?.detailRows) ? shinjangResult.settlement.detailRows : []).forEach((row) => {
@@ -423,7 +452,7 @@ export function buildCombinedStatsMonthSummary({
         rates: [shockwaveRate],
       };
     });
-    const manualTherapistData = isAdmin
+    const manualTherapistData = includeManual
       ? (manualSettlement?.summaryByTherapist || []).find((item) => (
           String(item?.therapist?.name || '').trim() === therapist.name
           || String(item?.therapist?.displayName || '').trim() === therapist.name
@@ -432,7 +461,7 @@ export function buildCombinedStatsMonthSummary({
         ))
       : null;
     const manualRate = Number(manualSettings?.incentive_percentage) || 15;
-    const manualPrescriptionGroups = isAdmin
+    const manualPrescriptionGroups = includeManual
       ? (manualSettlement?.prescriptions || []).map((prescription) => {
           const count = Math.max(0, Number(manualTherapistData?.countsByPrescription?.[prescription]) || 0);
           const amount = Math.max(0, Number(manualTherapistData?.amountsByPrescription?.[prescription]) || 0);
@@ -468,14 +497,15 @@ export function buildCombinedStatsMonthSummary({
       therapist,
       treatments,
       incentiveRates: {
-        shockwave: treatments.shockwave.count > 0 ? shockwaveIncentiveRates : [],
-        shinjang_spray: (shinjangIncentiveGroupsByTherapist.get(therapist.name) || [])
-          .map((group) => group.rate),
-        manual_therapy: isAdmin && treatments.manual_therapy.count > 0
+        shockwave: includeShockwave && treatments.shockwave.count > 0 ? shockwaveIncentiveRates : [],
+        shinjang_spray: includeShinjang
+          ? (shinjangIncentiveGroupsByTherapist.get(therapist.name) || []).map((group) => group.rate)
+          : [],
+        manual_therapy: includeManual && treatments.manual_therapy.count > 0
           ? manualIncentiveRates
           : [],
       },
-      shinjangIncentiveGroups: shinjangIncentiveGroupsByTherapist.get(therapist.name) || [],
+      shinjangIncentiveGroups: includeShinjang ? (shinjangIncentiveGroupsByTherapist.get(therapist.name) || []) : [],
       shinjangPrescriptionGroups,
       prescriptionGroups: {
         shockwave: shockwavePrescriptionGroups,
@@ -497,12 +527,21 @@ export function buildCombinedStatsMonthSummary({
     label: `${Number(year)}년 ${String(Number(month)).padStart(2, '0')}월`,
     therapists: therapistSummaries,
     treatmentTotals,
+    includedTreatments: {
+      shockwave: includeShockwave,
+      shinjang_spray: includeShinjang,
+      manual_therapy: includeManual,
+    },
     recentTreatments: {
-      shockwave: buildRecentTreatmentSummary(shockwaveRows, getVisibleStandardPrescriptions(shockwaveSettings), getSettlementPrescriptionPrices(shockwaveSettings, applyCryoDeduction)),
-      shinjang_spray: buildRecentTreatmentSummary(shinjangSourceRows, shinjangResult.prescriptions, {}, (row) => (
-        applyCryoDeduction && row.is_cryo ? row.cryo_adjusted_unit_price : row.unit_price
-      )),
-      manual_therapy: isAdmin
+      shockwave: includeShockwave
+        ? buildRecentTreatmentSummary(shockwaveRows, getVisibleStandardPrescriptions(shockwaveSettings), getSettlementPrescriptionPrices(shockwaveSettings, applyCryoDeduction))
+        : buildRecentTreatmentSummary(),
+      shinjang_spray: includeShinjang
+        ? buildRecentTreatmentSummary(shinjangSourceRows, shinjangResult.prescriptions, {}, (row) => (
+            applyCryoDeduction && row.is_cryo ? row.cryo_adjusted_unit_price : row.unit_price
+          ))
+        : buildRecentTreatmentSummary(),
+      manual_therapy: includeManual
         ? buildRecentTreatmentSummary(manualTherapyRows, getVisibleStandardPrescriptions(manualSettings), getSettlementPrescriptionPrices(manualSettings, applyCryoDeduction))
         : buildRecentTreatmentSummary(),
     },
