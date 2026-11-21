@@ -10,6 +10,7 @@ import { isAdminUser, normalizePermissions, normalizeUsername } from '../lib/aut
 import { supabase } from '../lib/supabaseClient';
 import { loadActiveLegacyAppUserProfile } from '../lib/legacyAppUserAuth';
 import GeneralSettings from '../components/settings/GeneralSettings';
+import TopTabVisibilitySettings from '../components/settings/TopTabVisibilitySettings';
 import LoginSettings from '../components/settings/LoginSettings';
 import BackupSettings from '../components/settings/BackupSettings';
 import SupabaseConnectionSettings from '../components/settings/SupabaseConnectionSettings';
@@ -111,6 +112,7 @@ export default function SettingsPage() {
         {settingsSection === 'general' && (
           <>
             <GeneralSettings />
+            {canManageLogin && <TopTabVisibilitySettings />}
             {canManageLogin && <SupabaseConnectionSettings />}
 
             {/* 계정 */}

@@ -3,7 +3,11 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import MonthPicker from '../common/MonthPicker';
 import PrintButton from '../common/PrintButton';
 import { useAuth } from '../../contexts/AuthContext';
-import { getAllowedTabs } from '../../lib/authPermissions';
+import { useSchedule } from '../../contexts/ScheduleContext';
+import {
+  getVisibleTabs,
+  resolveEffectiveHiddenTopTabs,
+} from '../../lib/topTabVisibilityUtils';
 import {
   buildTopTabTransition,
   getTopTabMotionClasses,
@@ -16,7 +20,19 @@ export default function TopTabs() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const items = useMemo(() => getAllowedTabs(user), [user]);
+  const { shockwaveSettings, loadShockwaveSettings } = useSchedule();
+  const hiddenTopTabs = useMemo(
+    () => resolveEffectiveHiddenTopTabs(shockwaveSettings),
+    [shockwaveSettings]
+  );
+  const items = useMemo(
+    () => getVisibleTabs(user, hiddenTopTabs),
+    [user, hiddenTopTabs]
+  );
+
+  useEffect(() => {
+    loadShockwaveSettings?.();
+  }, [loadShockwaveSettings]);
   const [now, setNow] = useState(() => new Date());
   const [optimisticPath, setOptimisticPath] = useState(null);
   const [tabTransition, setTabTransition] = useState(null);

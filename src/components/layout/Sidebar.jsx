@@ -2,16 +2,22 @@ import { NavLink } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import AppIcon from '../common/AppIcon';
 import { useAuth } from '../../contexts/AuthContext';
-import { getAllowedTabs } from '../../lib/authPermissions';
+import { useSchedule } from '../../contexts/ScheduleContext';
+import {
+  getVisibleTabs,
+  resolveEffectiveHiddenTopTabs,
+} from '../../lib/topTabVisibilityUtils';
 
 export default function Sidebar({ isOpen, isCollapsed, onClose }) {
   const { user, signOut } = useAuth();
+  const { shockwaveSettings } = useSchedule();
 
   const handleSignOut = async () => {
     try { await signOut(); } catch (e) { console.error(e); }
   };
 
-  const allowedTabs = getAllowedTabs(user);
+  const hiddenTopTabs = resolveEffectiveHiddenTopTabs(shockwaveSettings);
+  const allowedTabs = getVisibleTabs(user, hiddenTopTabs);
   const navItems = [
     { section: '스케줄 관리' },
     ...allowedTabs.filter((item) => item.path !== '/settings'),

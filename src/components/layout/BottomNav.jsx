@@ -1,12 +1,18 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { getAllowedTabs } from '../../lib/authPermissions';
+import { useSchedule } from '../../contexts/ScheduleContext';
+import {
+  getVisibleTabs,
+  resolveEffectiveHiddenTopTabs,
+} from '../../lib/topTabVisibilityUtils';
 import { preloadStatsRoute } from '../../lib/statsRoutePreload';
 
 export default function BottomNav() {
   const { user } = useAuth();
+  const { shockwaveSettings } = useSchedule();
   const location = useLocation();
-  const items = getAllowedTabs(user);
+  const hiddenTopTabs = resolveEffectiveHiddenTopTabs(shockwaveSettings);
+  const items = getVisibleTabs(user, hiddenTopTabs);
 
   const notifyBeforeNavigate = (path) => {
     if (location.pathname === path) return;
