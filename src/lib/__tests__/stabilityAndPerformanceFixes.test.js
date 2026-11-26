@@ -159,6 +159,12 @@ describe('stability and performance fixes', () => {
     assert.doesNotMatch(shockwaveViewSource, /hoverCell\?\.rowIdx,\s*hoverCell\?\.weekIdx/);
     assert.match(shockwaveViewSource, /data-default-label=\{slotInfo\.label\}/);
     assert.match(shockwaveViewSource, /data-subslot-labels=\{subSlotLabelsAttr\}/);
+    const weeksInitIndex = shockwaveViewSource.indexOf('useScheduleTimeSlots({');
+    const activeRowEffectDepsIndex = shockwaveViewSource.indexOf('[hoverCell, selectedCell, editingCell, weeks,');
+    assert.ok(
+      weeksInitIndex > 0 && activeRowEffectDepsIndex > weeksInitIndex,
+      'weeks must be initialized by useScheduleTimeSlots before active-row useEffect dependency array'
+    );
 
     assert.match(scheduleContextSource, /scheduleStatsSyncForDates\(/);
     assert.match(scheduleContextSource, /defer:\s*Boolean\(deferStatsSync\)/);

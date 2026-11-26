@@ -402,72 +402,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const tooltipRef = useRef(null);
   const tooltipMousePosRef = useRef({ x: 0, y: 0 });
   const weekRefs = useRef([]);
-
-  // ── 활성 행의 시간 셀 하이라이트 ──
-  useEffect(() => {
-    // 활성 행 인덱스 결정: hover > editing > selected 우선순위
-    let activeWeek = null;
-    let activeRow = null;
-    if (hoverCell) {
-      activeWeek = hoverCell.weekIdx;
-      activeRow = hoverCell.rowIdx;
-    } else if (editingCell) {
-      const parts = editingCell.split('-').map(Number);
-      if (parts.length >= 3) {
-        activeWeek = parts[0];
-        activeRow = parts[2];
-      }
-    } else if (selectedCell) {
-      activeWeek = selectedCell.w;
-      activeRow = selectedCell.r;
-    }
-
-    const container = viewRef.current;
-    if (!container) return;
-
-    // 이전 하이라이트 제거 및 기본 시간 라벨 복원
-    const prevActive = container.querySelectorAll('.sw-time-label.active-row');
-    prevActive.forEach((el) => {
-      el.classList.remove('active-row');
-      const defaultLabel = el.dataset.defaultLabel;
-      const textEl = el.querySelector('.sw-time-label-text');
-      if (textEl && defaultLabel !== undefined && textEl.textContent !== defaultLabel) {
-        textEl.textContent = defaultLabel;
-      }
-    });
-
-    // 새 하이라이트 및 호버 서브슬롯 시간 라벨 적용
-    if (activeWeek !== null && activeRow !== null) {
-      const timeCell = container.querySelector(`[data-time-row="${activeWeek}-${activeRow}"]`)
-        || Array.from(container.querySelectorAll(`[data-time-week="${activeWeek}"]`)).find((cell) => {
-          const start = Number(cell.dataset.timeRowStart);
-          const end = Number(cell.dataset.timeRowEnd);
-          return Number.isFinite(start) && Number.isFinite(end) && activeRow >= start && activeRow <= end;
-        });
-      if (timeCell) {
-        timeCell.classList.add('active-row');
-        if (hoverCell) {
-          const textEl = timeCell.querySelector('.sw-time-label-text');
-          if (textEl) {
-            const defaultLabel = timeCell.dataset.defaultLabel ?? textEl.textContent;
-            let nextLabel = hoverCell.slotInfo?.time || hoverCell.slotInfo?.fullLabel || '';
-            if (!nextLabel && timeCell.dataset.subslotLabels) {
-              const match = timeCell.dataset.subslotLabels
-                .split('|')
-                .find((entry) => entry.startsWith(`${activeRow}:`));
-              if (match) {
-                nextLabel = match.slice(String(activeRow).length + 1);
-              }
-            }
-            const resolvedLabel = nextLabel || defaultLabel;
-            if (textEl.textContent !== resolvedLabel) {
-              textEl.textContent = resolvedLabel;
-            }
-          }
-        }
-      }
-    }
-  }, [hoverCell, selectedCell, editingCell, weeks, settings?.interval_minutes, settings?.time_label_interval_minutes]);
   const [todayShortcutTooltip, setTodayShortcutTooltip] = useState(null);
   const [chartSelector, setChartSelector] = useState(null);
   const [imePreviewCell, setImePreviewCell] = useState(null);
@@ -572,6 +506,72 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     holidays,
     settings,
   });
+
+  // ── 활성 행의 시간 셀 하이라이트 ──
+  useEffect(() => {
+    // 활성 행 인덱스 결정: hover > editing > selected 우선순위
+    let activeWeek = null;
+    let activeRow = null;
+    if (hoverCell) {
+      activeWeek = hoverCell.weekIdx;
+      activeRow = hoverCell.rowIdx;
+    } else if (editingCell) {
+      const parts = editingCell.split('-').map(Number);
+      if (parts.length >= 3) {
+        activeWeek = parts[0];
+        activeRow = parts[2];
+      }
+    } else if (selectedCell) {
+      activeWeek = selectedCell.w;
+      activeRow = selectedCell.r;
+    }
+
+    const container = viewRef.current;
+    if (!container) return;
+
+    // 이전 하이라이트 제거 및 기본 시간 라벨 복원
+    const prevActive = container.querySelectorAll('.sw-time-label.active-row');
+    prevActive.forEach((el) => {
+      el.classList.remove('active-row');
+      const defaultLabel = el.dataset.defaultLabel;
+      const textEl = el.querySelector('.sw-time-label-text');
+      if (textEl && defaultLabel !== undefined && textEl.textContent !== defaultLabel) {
+        textEl.textContent = defaultLabel;
+      }
+    });
+
+    // 새 하이라이트 및 호버 서브슬롯 시간 라벨 적용
+    if (activeWeek !== null && activeRow !== null) {
+      const timeCell = container.querySelector(`[data-time-row="${activeWeek}-${activeRow}"]`)
+        || Array.from(container.querySelectorAll(`[data-time-week="${activeWeek}"]`)).find((cell) => {
+          const start = Number(cell.dataset.timeRowStart);
+          const end = Number(cell.dataset.timeRowEnd);
+          return Number.isFinite(start) && Number.isFinite(end) && activeRow >= start && activeRow <= end;
+        });
+      if (timeCell) {
+        timeCell.classList.add('active-row');
+        if (hoverCell) {
+          const textEl = timeCell.querySelector('.sw-time-label-text');
+          if (textEl) {
+            const defaultLabel = timeCell.dataset.defaultLabel ?? textEl.textContent;
+            let nextLabel = hoverCell.slotInfo?.time || hoverCell.slotInfo?.fullLabel || '';
+            if (!nextLabel && timeCell.dataset.subslotLabels) {
+              const match = timeCell.dataset.subslotLabels
+                .split('|')
+                .find((entry) => entry.startsWith(`${activeRow}:`));
+              if (match) {
+                nextLabel = match.slice(String(activeRow).length + 1);
+              }
+            }
+            const resolvedLabel = nextLabel || defaultLabel;
+            if (textEl.textContent !== resolvedLabel) {
+              textEl.textContent = resolvedLabel;
+            }
+          }
+        }
+      }
+    }
+  }, [hoverCell, selectedCell, editingCell, weeks, settings?.interval_minutes, settings?.time_label_interval_minutes]);
 
 
   const { buildSchedulerAutoText } = useSchedulerAutoText({
