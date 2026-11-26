@@ -6,6 +6,7 @@ import {
 } from '../../lib/settlementSettings';
 import { formatRecentPeriodLabel, parseRecentPeriodMonths } from '../../lib/recentPeriodUtils';
 import { syncMonthManualTherapyScheduleToStats } from '../../lib/manualTherapyUtils';
+import { fetchAllPaginatedRows } from '../../lib/scheduleStatsSyncUtils';
 import {
   getRecentScheduleMonthTargets,
   loadScheduleMemosForStatsMonth,
@@ -177,14 +178,14 @@ export default function ManualTherapySixMonthStats({
         // 현재 월은 currentMonthLogs로 교체되므로 과거 월만 조회해 중복 전송량을 절감
         const endStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
 
-        const { data, error } = await supabase
+        const data = await fetchAllPaginatedRows(() => supabase
           .from('manual_therapy_patient_logs')
           .select('id,date,patient_name,therapist_name,prescription,prescription_count')
           .gte('date', startStr)
           .lt('date', endStr)
-          .order('date', { ascending: true });
+          .order('date', { ascending: true })
+          .order('id', { ascending: true }));
 
-        if (error) throw error;
         if (cancelled) return;
         const nextLogs = Array.isArray(data) ? data : [];
         manualSixMonthLogsCache.set(recentLogsCacheKey, nextLogs);

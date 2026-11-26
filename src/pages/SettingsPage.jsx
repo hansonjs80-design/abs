@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   DatabaseBackup,
@@ -8,7 +8,10 @@ import {
 } from 'lucide-react';
 import { isAdminUser, normalizePermissions, normalizeUsername } from '../lib/authPermissions';
 import { supabase } from '../lib/supabaseClient';
-import { loadActiveLegacyAppUserProfile } from '../lib/legacyAppUserAuth';
+import {
+  hasLegacyAppUserProfileChanged,
+  loadActiveLegacyAppUserProfile,
+} from '../lib/legacyAppUserAuth';
 import GeneralSettings from '../components/settings/GeneralSettings';
 import TopTabVisibilitySettings from '../components/settings/TopTabVisibilitySettings';
 import LoginSettings from '../components/settings/LoginSettings';
@@ -19,12 +22,20 @@ export default function SettingsPage() {
   const { user, signOut, refreshStoredUser } = useAuth();
   const canManageLogin = isAdminUser(user);
   const [settingsSection, setSettingsSection] = useState('general');
+  const latestAuthRef = useRef({ user, signOut, refreshStoredUser });
 
   useEffect(() => {
-    if (!user?.isLocalDevUser) return;
+    latestAuthRef.current = { user, signOut, refreshStoredUser };
+  }, [user, signOut, refreshStoredUser]);
+
+  const isLocalDevUser = Boolean(user?.isLocalDevUser);
+  const rawUsername = user?.username || user?.email || '';
+
+  useEffect(() => {
+    if (!isLocalDevUser) return undefined;
     let cancelled = false;
-    const username = normalizeUsername(user?.username || user?.email);
-    if (!username) return;
+    const username = normalizeUsername(rawUsername);
+    if (!username) return undefined;
 
     loadActiveLegacyAppUserProfile({
       supabaseClient: supabase,
@@ -32,19 +43,28 @@ export default function SettingsPage() {
     })
       .then((profile) => {
         if (cancelled) return;
+        const {
+          user: currentUser,
+          signOut: currentSignOut,
+          refreshStoredUser: currentRefreshStoredUser,
+        } = latestAuthRef.current;
         if (!profile) {
-          signOut();
+          currentSignOut?.();
           return;
         }
+        if (!currentUser) return;
         const verifiedRole = profile.role || 'user';
         const verifiedPermissions = normalizePermissions(profile.permissions, profile);
         const verifiedIsAdmin = verifiedRole === 'admin';
-        if (user.app_role !== verifiedRole || user.isAdmin !== verifiedIsAdmin) {
-          refreshStoredUser?.({
-            ...user,
+        if (hasLegacyAppUserProfileChanged(currentUser, profile, verifiedPermissions)) {
+          currentRefreshStoredUser?.({
+            ...currentUser,
             username: profile.username,
             email: profile.username,
-            user_metadata: { ...(user.user_metadata || {}), name: profile.display_name || profile.username },
+            user_metadata: {
+              ...(currentUser.user_metadata || {}),
+              name: profile.display_name || profile.username,
+            },
             app_permissions: verifiedPermissions,
             app_role: verifiedRole,
             isAdmin: verifiedIsAdmin,
@@ -58,7 +78,7 @@ export default function SettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [user?.username, user?.email, user?.isLocalDevUser]);
+  }, [isLocalDevUser, rawUsername]);
 
   useEffect(() => {
     if (!canManageLogin && (settingsSection === 'login' || settingsSection === 'backup')) {

@@ -51,8 +51,33 @@ export default function TopTabs() {
   }, []);
 
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(timer);
+    let timeoutId = null;
+    const syncClock = () => {
+      const next = new Date();
+      setNow((prev) => (
+        prev.getMinutes() === next.getMinutes()
+          && prev.getHours() === next.getHours()
+          && prev.getDate() === next.getDate()
+          && prev.getMonth() === next.getMonth()
+          && prev.getFullYear() === next.getFullYear()
+          ? prev
+          : next
+      ));
+      const msUntilNextMinute = 60000 - (next.getSeconds() * 1000 + next.getMilliseconds()) + 50;
+      timeoutId = window.setTimeout(syncClock, msUntilNextMinute);
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        if (timeoutId) window.clearTimeout(timeoutId);
+        syncClock();
+      }
+    };
+    syncClock();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   useEffect(() => {

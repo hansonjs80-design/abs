@@ -10,12 +10,14 @@ export function createStatsMemoryCache({
   const store = new Map();
 
   if (typeof window !== 'undefined' && Array.isArray(invalidateEvents)) {
-    invalidateEvents.forEach((eventName) => {
-      if (eventName) {
-        window.addEventListener(eventName, () => {
-          store.clear();
-        });
-      }
+    const events = new Set(invalidateEvents.filter(Boolean));
+    if (events.has('clinic-stats-updated')) {
+      events.add('clinic-stats-cache-invalidate');
+    }
+    events.forEach((eventName) => {
+      window.addEventListener(eventName, () => {
+        store.clear();
+      });
     });
   }
 

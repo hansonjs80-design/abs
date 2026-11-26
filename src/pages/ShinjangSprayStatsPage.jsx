@@ -28,6 +28,7 @@ import {
   mergeShinjangSprayLogs,
 } from '../lib/shinjangSprayStatsUtils';
 import { formatRecentPeriodLabel, parseRecentPeriodMonths } from '../lib/recentPeriodUtils';
+import { fetchAllPaginatedRows } from '../lib/scheduleStatsSyncUtils';
 import {
   buildScheduleMemoSignature,
   getRecentScheduleMonthTargets,
@@ -57,7 +58,7 @@ const shinjangRecentCache = createStatsMemoryCache({
   invalidateEvents: ['clinic-stats-updated'],
 });
 
-function buildMonthQuery(tableName, currentYear, currentMonth) {
+async function buildMonthQuery(tableName, currentYear, currentMonth) {
   const startDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
   const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
   const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
@@ -66,24 +67,38 @@ function buildMonthQuery(tableName, currentYear, currentMonth) {
   const isCurrentMonth = today.getFullYear() === currentYear
     && today.getMonth() + 1 === currentMonth;
   const todayDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  let query = supabase
-    .from(tableName)
-    .select(LOG_FIELDS)
-    .gte('date', startDate);
-  query = isCurrentMonth ? query.lte('date', todayDate) : query.lt('date', endDate);
-  return query
-    .order('date', { ascending: true })
-    .order('created_at', { ascending: true });
+  try {
+    const data = await fetchAllPaginatedRows(() => {
+      let query = supabase
+        .from(tableName)
+        .select(LOG_FIELDS)
+        .gte('date', startDate);
+      query = isCurrentMonth ? query.lte('date', todayDate) : query.lt('date', endDate);
+      return query
+        .order('date', { ascending: true })
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true });
+    });
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
 }
 
-function buildDateRangeQuery(tableName, startDate, endDate) {
-  return supabase
-    .from(tableName)
-    .select(LOG_FIELDS)
-    .gte('date', startDate)
-    .lt('date', endDate)
-    .order('date', { ascending: true })
-    .order('created_at', { ascending: true });
+async function buildDateRangeQuery(tableName, startDate, endDate) {
+  try {
+    const data = await fetchAllPaginatedRows(() => supabase
+      .from(tableName)
+      .select(LOG_FIELDS)
+      .gte('date', startDate)
+      .lt('date', endDate)
+      .order('date', { ascending: true })
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true }));
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
 }
 
 export default function ShinjangSprayStatsPage() {

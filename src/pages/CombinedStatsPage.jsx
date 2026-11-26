@@ -16,6 +16,7 @@ import { syncMonthManualTherapyScheduleToStats } from '../lib/manualTherapyUtils
 import { formatRecentPeriodLabel, parseRecentPeriodMonths } from '../lib/recentPeriodUtils';
 import { getEffectiveSettlementSettings } from '../lib/settlementSettings';
 import { syncMonthShockwaveScheduleToStats } from '../lib/shockwaveSyncUtils';
+import { fetchAllPaginatedRows } from '../lib/scheduleStatsSyncUtils';
 import {
   getRecentScheduleMonthTargets,
   loadScheduleMemosForStatsMonth,
@@ -59,9 +60,11 @@ function writeCombinedStatsCache(scope, { summaries, hasHistoricalLoaded }) {
 }
 
 if (typeof window !== 'undefined') {
-  window.addEventListener('clinic-stats-updated', () => {
+  const clearCombinedStatsCache = () => {
     combinedStatsCache.clear();
-  });
+  };
+  window.addEventListener('clinic-stats-updated', clearCombinedStatsCache);
+  window.addEventListener('clinic-stats-cache-invalidate', clearCombinedStatsCache);
 }
 
 function formatCount(value) {
@@ -368,7 +371,12 @@ function buildMonthLogQuery(tableName, year, month) {
   query = isCurrentCalendarMonth ? query.lte('date', todayDate) : query.lt('date', endDate);
   return query
     .order('date', { ascending: true })
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true });
+}
+
+async function fetchMonthLogRows(tableName, year, month) {
+  return fetchAllPaginatedRows(() => buildMonthLogQuery(tableName, year, month));
 }
 
 export default function CombinedStatsPage() {
@@ -581,39 +589,39 @@ export default function CombinedStatsPage() {
 
         try {
           const shockwavePromise = shouldLoadShockwaveLogs
-            ? supabase
+            ? fetchAllPaginatedRows(() => supabase
                 .from('shockwave_patient_logs')
                 .select(LOG_FIELDS)
                 .gte('date', minStartDate)
                 .lt('date', maxEndDate)
                 .order('date', { ascending: true })
                 .order('created_at', { ascending: true })
-            : Promise.resolve({ data: [], error: null });
+                .order('id', { ascending: true }))
+            : Promise.resolve([]);
 
           // 관리자가 아니거나 도수/신장분사가 모두 제외된 경우 도수치료 로그 쿼리를 생략해 전송량 절약
           const manualPromise = shouldLoadManual
-            ? supabase
+            ? fetchAllPaginatedRows(() => supabase
                 .from('manual_therapy_patient_logs')
                 .select(LOG_FIELDS)
                 .gte('date', minStartDate)
                 .lt('date', maxEndDate)
                 .order('date', { ascending: true })
                 .order('created_at', { ascending: true })
-            : Promise.resolve({ data: [], error: null });
+                .order('id', { ascending: true }))
+            : Promise.resolve([]);
 
-          const [shockwaveResult, manualResult] = await Promise.all([shockwavePromise, manualPromise]);
-          if (shockwaveResult.error) throw shockwaveResult.error;
-          if (manualResult.error) throw manualResult.error;
+          const [shockwaveRowsBatch, manualRowsBatch] = await Promise.all([shockwavePromise, manualPromise]);
 
           const shockwaveMap = new Map();
-          (shockwaveResult.data || []).forEach((row) => {
+          shockwaveRowsBatch.forEach((row) => {
             const monthKey = String(row?.date || '').slice(0, 7);
             if (!shockwaveMap.has(monthKey)) shockwaveMap.set(monthKey, []);
             shockwaveMap.get(monthKey).push(row);
           });
 
           const manualMap = new Map();
-          (manualResult.data || []).forEach((row) => {
+          manualRowsBatch.forEach((row) => {
             const monthKey = String(row?.date || '').slice(0, 7);
             if (!manualMap.has(monthKey)) manualMap.set(monthKey, []);
             manualMap.get(monthKey).push(row);
@@ -735,18 +743,16 @@ export default function CombinedStatsPage() {
             shockwaveRows = shouldLoadShockwaveLogs ? (historicalLogs.shockwaveMap.get(monthKey) || []) : [];
             manualRows = shouldLoadManual ? (historicalLogs.manualMap.get(monthKey) || []) : [];
           } else {
-            const [shockwaveResult, manualResult] = await Promise.all([
+            const [fetchedShockwaveRows, fetchedManualRows] = await Promise.all([
               shouldLoadShockwaveLogs
-                ? buildMonthLogQuery('shockwave_patient_logs', target.year, target.month)
-                : Promise.resolve({ data: [], error: null }),
+                ? fetchMonthLogRows('shockwave_patient_logs', target.year, target.month)
+                : Promise.resolve([]),
               shouldLoadManual
-                ? buildMonthLogQuery('manual_therapy_patient_logs', target.year, target.month)
-                : Promise.resolve({ data: [], error: null }),
+                ? fetchMonthLogRows('manual_therapy_patient_logs', target.year, target.month)
+                : Promise.resolve([]),
             ]);
-            if (shockwaveResult.error) throw shockwaveResult.error;
-            if (manualResult.error) throw manualResult.error;
-            shockwaveRows = shockwaveResult.data || [];
-            manualRows = manualResult.data || [];
+            shockwaveRows = fetchedShockwaveRows;
+            manualRows = fetchedManualRows;
           }
         }
 

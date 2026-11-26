@@ -14,6 +14,7 @@ import {
 import {
   applyScheduleStatsMutation,
   buildScheduleStatsSyncMutation,
+  fetchAllPaginatedRows,
   fetchStatsRowsForDateRange,
   getStatsMonthDateRange,
   replaceStatsRowsForDateRange,
@@ -521,27 +522,29 @@ export async function syncMonthManualTherapyScheduleToStats({
     ['manual_therapy_patient_logs', 'shockwave_patient_logs'].forEach((tableName) => {
       if (patientNames.length > 0) {
         historyQueries.push(
-          supabase
+          fetchAllPaginatedRows(() => supabase
             .from(tableName)
             .select('patient_name, chart_number, visit_count, body_part, date')
             .in('patient_name', patientNames)
             .lt('date', startOfMonthStr)
             .order('date', { ascending: false })
+            .order('id', { ascending: false }))
         );
       }
       if (chartNumbers.length > 0) {
         historyQueries.push(
-          supabase
+          fetchAllPaginatedRows(() => supabase
             .from(tableName)
             .select('patient_name, chart_number, visit_count, body_part, date')
             .in('chart_number', chartNumbers)
             .lt('date', startOfMonthStr)
             .order('date', { ascending: false })
+            .order('id', { ascending: false }))
         );
       }
     });
 
-    const [historyResults, existingMonthStats] = await Promise.all([
+    const [historyBatches, existingMonthStats] = await Promise.all([
       Promise.all(historyQueries),
       fetchStatsRowsForDateRange({
         supabaseClient: supabase,
@@ -550,11 +553,9 @@ export async function syncMonthManualTherapyScheduleToStats({
         endDate: endOfMonthStr,
       }),
     ]);
-    const historyError = historyResults.find((result) => result.error)?.error;
-    if (historyError) throw historyError;
 
     const seenHistoryRows = new Set();
-    const rollingPastData = historyResults.flatMap((result) => result.data || []).filter((row) => {
+    const rollingPastData = historyBatches.flatMap((rows) => rows || []).filter((row) => {
       const key = `${row.date}|${row.chart_number}|${row.patient_name}|${row.visit_count}|${row.body_part}`;
       if (seenHistoryRows.has(key)) return false;
       seenHistoryRows.add(key);
@@ -694,36 +695,34 @@ export async function syncMonthManualTherapyScheduleToStats({
     if (orParts.length > 0) {
       const orQuery = orParts.join(',');
       const [mHist, sHist] = await Promise.all([
-        supabase
+        fetchAllPaginatedRows(() => supabase
           .from('manual_therapy_patient_logs')
           .select('patient_name, chart_number, visit_count, body_part, date')
           .or(orQuery)
-          .order('date', { ascending: false }),
-        supabase
+          .order('date', { ascending: false })
+          .order('id', { ascending: false })),
+        fetchAllPaginatedRows(() => supabase
           .from('shockwave_patient_logs')
           .select('patient_name, chart_number, visit_count, body_part, date')
           .or(orQuery)
           .order('date', { ascending: false })
+          .order('id', { ascending: false }))
       ]);
       
-      manualHistory = mHist.data || [];
-      shockwaveHistory = sHist.data || [];
+      manualHistory = mHist || [];
+      shockwaveHistory = sHist || [];
     }
   }
 
   const pastDataCache = [...manualHistory, ...shockwaveHistory];
 
-  // 3단계: 해당 월 전체의 기존 통계 데이터를 단 1회 일괄 조회합니다.
-  const { data: existingMonthStats, error: statsError } = await supabase
-    .from('manual_therapy_patient_logs')
-    .select('*')
-    .gte('date', startOfMonthStr)
-    .lte('date', endOfMonthStr);
-
-  if (statsError) {
-    console.error('Failed to fetch existing month stats:', statsError);
-  }
-  const statsCache = existingMonthStats || [];
+  // 3단계: 해당 월 전체의 기존 통계 데이터를 단 1회 페이지네이션 일괄 조회합니다.
+  const statsCache = await fetchStatsRowsForDateRange({
+    supabaseClient: supabase,
+    tableName: 'manual_therapy_patient_logs',
+    startDate: startOfMonthStr,
+    endDate: endOfMonthStr,
+  });
 
   // 4단계: 일별 루프를 돌며 위에서 구성한 로컬 캐시를 사용해 변경 필요 데이터를 수집합니다. (DB 호출 없음)
   const allToDeleteIds = [];

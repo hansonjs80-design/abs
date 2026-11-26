@@ -19,6 +19,7 @@ import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 import { formatRecentPeriodLabel, parseRecentPeriodMonths } from '../../lib/recentPeriodUtils';
 import { isAdminUser } from '../../lib/authPermissions';
 import { TREATMENT_COMPLETE_BG } from '../../lib/schedulerUtils';
+import { fetchAllPaginatedRows } from '../../lib/scheduleStatsSyncUtils';
 import {
   buildScheduleMemoSignature,
   getRecentScheduleMonthTargets,
@@ -335,15 +336,15 @@ export default function ShockwaveStatsView({
       const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
       const endStr = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
 
-      const { data, error } = await supabase
+      const data = await fetchAllPaginatedRows(() => supabase
         .from('shockwave_patient_logs')
         .select('id,date,patient_name,chart_number,visit_count,body_part,therapist_name,prescription,prescription_count,source,scheduler_cell_key,created_at')
         .gte('date', startStr)
         .lt('date', endStr)
         .order('date', { ascending: true })
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true }));
 
-      if (error) throw error;
       if (currentFetchId !== fetchIdRef.current) return [];
       setCurrentLogsReadyKey(monthKey);
       logsLoadedKeyRef.current = monthKey;
@@ -382,14 +383,14 @@ export default function ShockwaveStatsView({
       const startStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-01`;
       // 현재 월은 currentMonthLogs(safeLogs)로 대체되므로 과거 월만 조회해 중복 다운로드 절감
       const endStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
-      const { data, error } = await supabase
+      const data = await fetchAllPaginatedRows(() => supabase
         .from('shockwave_patient_logs')
         .select('id,date,patient_name,therapist_name,prescription,prescription_count,source,scheduler_cell_key,created_at')
         .gte('date', startStr)
         .lt('date', endStr)
-        .order('date', { ascending: true });
+        .order('date', { ascending: true })
+        .order('id', { ascending: true }));
 
-      if (error) throw error;
       if (currentFetchId !== recentFetchIdRef.current) return null;
       const nextLogs = Array.isArray(data) ? data : [];
       const existingCache = shockwaveRecentCache.get(recentCacheKey);

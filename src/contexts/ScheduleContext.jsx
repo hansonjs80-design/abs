@@ -312,6 +312,8 @@ export function ScheduleProvider({ children }) {
   const shockwaveSettingsRefCache = useRef(shockwaveSettings);
   const monthlyTherapistLoadKeysRef = useRef(monthlyTherapistLoadKeys);
   const monthlyTherapistsByMonthRef = useRef(monthlyTherapistsByMonth);
+  const statsSyncPendingRef = useRef(new Map());
+  const statsSyncChainRef = useRef(Promise.resolve());
 
   useEffect(() => {
     staffMemosRef.current = staffMemos;
@@ -415,6 +417,122 @@ export function ScheduleProvider({ children }) {
   const isCurrentScheduleMonth = useCallback((year, month) => (
     currentDateRef.current.year === year && currentDateRef.current.month === month
   ), []);
+
+  const runPendingStatsSyncEntry = useCallback((monthKey) => {
+    const entry = statsSyncPendingRef.current.get(monthKey);
+    if (!entry) return;
+    if (entry.timerId) {
+      clearTimeout(entry.timerId);
+    }
+    statsSyncPendingRef.current.delete(monthKey);
+
+    const datesToSync = Array.from(entry.dates).filter(Boolean);
+    if (datesToSync.length === 0) return;
+
+    statsSyncChainRef.current = statsSyncChainRef.current
+      .catch(() => {})
+      .then(async () => {
+        const isActiveMonth = isCurrentScheduleMonth(entry.year, entry.month);
+        const liveMemos = isActiveMonth
+          ? shockwaveMemosRef.current
+          : (entry.fallbackMemos || {});
+        const activeShockwaveTherapists = therapistsRef.current || [];
+        const activeManualTherapists = manualTherapistsRef.current || [];
+        const monthShockwaveTherapists = monthlyTherapistsByMonthRef.current.shockwave?.[monthKey]
+          ?? (isActiveMonth ? monthlyTherapistsRef.current : []);
+        const monthManualTherapists = monthlyTherapistsByMonthRef.current.manual_therapy?.[monthKey]
+          ?? (isActiveMonth ? monthlyManualTherapistsRef.current : []);
+        const liveSettings = shockwaveSettingsRefCache.current;
+
+        for (const targetDateStr of datesToSync) {
+          if (activeShockwaveTherapists.length > 0) {
+            try {
+              await syncTodayShockwaveScheduleToStats({
+                year: entry.year,
+                month: entry.month,
+                memos: liveMemos,
+                therapists: activeShockwaveTherapists,
+                monthlyTherapists: monthShockwaveTherapists,
+                settings: liveSettings,
+                targetDateStr,
+              });
+            } catch (syncErr) {
+              console.error('Failed to sync shockwave schedule to stats:', syncErr);
+            }
+          }
+          if (activeManualTherapists.length > 0) {
+            try {
+              await syncTodayManualTherapyScheduleToStats({
+                year: entry.year,
+                month: entry.month,
+                memos: liveMemos,
+                therapists: activeManualTherapists,
+                monthlyTherapists: monthManualTherapists,
+                settings: liveSettings,
+                targetDateStr,
+              });
+            } catch (syncErr) {
+              console.error('Failed to sync manual therapy schedule to stats:', syncErr);
+            }
+          }
+        }
+      });
+  }, [isCurrentScheduleMonth]);
+
+  const scheduleStatsSyncForDates = useCallback(({
+    year,
+    month,
+    dates,
+    fallbackMemos = null,
+    defer = false,
+  }) => {
+    const safeYear = Number(year);
+    const safeMonth = Number(month);
+    if (!Number.isFinite(safeYear) || !Number.isFinite(safeMonth)) return;
+    const validDates = Array.from(dates || []).filter(Boolean);
+    if (validDates.length === 0) return;
+
+    const monthKey = `${safeYear}-${safeMonth}`;
+    let entry = statsSyncPendingRef.current.get(monthKey);
+    if (!entry) {
+      entry = {
+        year: safeYear,
+        month: safeMonth,
+        dates: new Set(),
+        timerId: null,
+        fallbackMemos: null,
+      };
+      statsSyncPendingRef.current.set(monthKey, entry);
+    }
+
+    validDates.forEach((dateStr) => entry.dates.add(dateStr));
+    if (fallbackMemos) {
+      entry.fallbackMemos = fallbackMemos;
+    }
+
+    if (entry.timerId) {
+      clearTimeout(entry.timerId);
+    }
+    const delayMs = defer ? 650 : 120;
+    entry.timerId = setTimeout(() => {
+      runPendingStatsSyncEntry(monthKey);
+    }, delayMs);
+  }, [runPendingStatsSyncEntry]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const flushAllPendingStatsSyncs = () => {
+      const pendingKeys = Array.from(statsSyncPendingRef.current.keys());
+      pendingKeys.forEach((monthKey) => {
+        runPendingStatsSyncEntry(monthKey);
+      });
+    };
+    window.addEventListener('clinic-before-route-change', flushAllPendingStatsSyncs);
+    return () => {
+      window.removeEventListener('clinic-before-route-change', flushAllPendingStatsSyncs);
+      flushAllPendingStatsSyncs();
+    };
+  }, [runPendingStatsSyncEntry]);
 
   const beginLoading = useCallback(() => {
     loadingCountRef.current += 1;
@@ -1121,6 +1239,9 @@ export function ScheduleProvider({ children }) {
           if (type === 'manual_therapy') manualTherapistsRef.current = savedData;
           else therapistsRef.current = savedData;
           setter(savedData);
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('clinic-stats-cache-invalidate'));
+          }
         }
         return true;
       } catch (err) {
@@ -1609,6 +1730,9 @@ export function ScheduleProvider({ children }) {
       shockwaveRawMonthRowsLoadPromisesRef.current.clear();
       loadShockwaveMemosRef.current?.(activeYear, activeMonth, { force: true });
       scheduleShockwaveNavigationPreload(250);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('clinic-stats-cache-invalidate'));
+      }
 
       return true;
     } catch (err) {
@@ -2531,38 +2655,13 @@ export function ScheduleProvider({ children }) {
         : null;
 
       if (targetDateStr) {
-        setTimeout(async () => {
-          if (therapists.length > 0) {
-            try {
-              await syncTodayShockwaveScheduleToStats({
-                year,
-                month,
-                memos: nextShockwaveMemos,
-                therapists,
-                monthlyTherapists,
-                settings: shockwaveSettingsRefCache.current,
-                targetDateStr,
-              });
-            } catch (syncErr) {
-              console.error('Failed to sync shockwave memo to stats:', syncErr);
-            }
-          }
-          if (manualTherapists.length > 0) {
-            try {
-              await syncTodayManualTherapyScheduleToStats({
-                year,
-                month,
-                memos: nextShockwaveMemos,
-                therapists: manualTherapists,
-                monthlyTherapists: monthlyManualTherapists,
-                settings: shockwaveSettingsRefCache.current,
-                targetDateStr,
-              });
-            } catch (syncErr) {
-              console.error('Failed to sync manual therapy memo to stats:', syncErr);
-            }
-          }
-        }, 0);
+        scheduleStatsSyncForDates({
+          year,
+          month,
+          dates: [targetDateStr],
+          fallbackMemos: nextShockwaveMemos,
+          defer: false,
+        });
       }
       return true;
       } catch (err) {
@@ -2574,7 +2673,7 @@ export function ScheduleProvider({ children }) {
         return false;
       }
     });
-  }, [therapists, manualTherapists, monthlyTherapists, monthlyManualTherapists, shouldKeepShockwaveMemo, protectExistingScheduleContent, enqueueShockwaveWrite, isCurrentScheduleMonth, applyLocalShockwaveRawCacheUpdates]);
+  }, [shouldKeepShockwaveMemo, protectExistingScheduleContent, enqueueShockwaveWrite, isCurrentScheduleMonth, applyLocalShockwaveRawCacheUpdates, scheduleStatsSyncForDates]);
 
   // 다중 셀 동시 업데이트 (병합/병합해제 등)
   const saveShockwaveMemosBulk = useCallback(async (memosArray, options = {}) => {
@@ -2793,52 +2892,19 @@ export function ScheduleProvider({ children }) {
         }
       });
 
-      const syncAffectedStats = async () => {
-        for (const targetDateStr of affectedDates) {
-        if (targetDateStr) {
-          if (therapists.length > 0) {
-            try {
-              await syncTodayShockwaveScheduleToStats({
-                year: currentYear,
-                month: currentMonth,
-                memos: nextShockwaveMemos,
-                therapists,
-                monthlyTherapists,
-                settings: shockwaveSettingsRefCache.current,
-                targetDateStr,
-              });
-            } catch (syncErr) {
-              console.error('Failed to sync bulk shockwave memos to stats:', syncErr);
-            }
-          }
-          if (manualTherapists.length > 0) {
-            try {
-              await syncTodayManualTherapyScheduleToStats({
-                year: currentYear,
-                month: currentMonth,
-                memos: nextShockwaveMemos,
-                therapists: manualTherapists,
-                monthlyTherapists: monthlyManualTherapists,
-                settings: shockwaveSettingsRefCache.current,
-                targetDateStr,
-              });
-            } catch (syncErr) {
-              console.error('Failed to sync bulk manual therapy memos to stats:', syncErr);
-            }
-          }
-        }
-        }
-      };
-
       if (!canApplyClientState()) {
         return true;
       }
 
-      setTimeout(() => {
-        syncAffectedStats().catch((syncErr) => {
-          console.error('Failed to sync bulk schedule stats:', syncErr);
+      if (affectedDates.size > 0) {
+        scheduleStatsSyncForDates({
+          year: currentYear,
+          month: currentMonth,
+          dates: affectedDates,
+          fallbackMemos: nextShockwaveMemos,
+          defer: Boolean(deferStatsSync),
         });
-      }, 0);
+      }
       return true;
     } catch (err) {
       window.lastDbError = err;
@@ -2852,7 +2918,7 @@ export function ScheduleProvider({ children }) {
       return false;
       }
     });
-  }, [currentYear, currentMonth, therapists, manualTherapists, monthlyTherapists, monthlyManualTherapists, shouldKeepShockwaveMemo, protectExistingScheduleContent, enqueueShockwaveWrite, isCurrentScheduleMonth, applyLocalShockwaveRawCacheUpdates]);
+  }, [currentYear, currentMonth, shouldKeepShockwaveMemo, protectExistingScheduleContent, enqueueShockwaveWrite, isCurrentScheduleMonth, applyLocalShockwaveRawCacheUpdates, scheduleStatsSyncForDates]);
 
   const resolveMonthlyTherapistRows = useCallback(async (year, month, type = 'shockwave', options = {}) => {
     const { data, error } = await withScheduleQueryTimeout(
@@ -3129,6 +3195,9 @@ export function ScheduleProvider({ children }) {
         setter(nextConfigs);
         setMonthlyTherapistsMonthCache(year, month, type, nextConfigs);
         setMonthlyTherapistLoadedKey(type, `${year}-${month}`);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('clinic-stats-cache-invalidate'));
+        }
       }
       return true;
     } catch (err) {

@@ -425,11 +425,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     const container = viewRef.current;
     if (!container) return;
 
-    // 이전 하이라이트 제거
+    // 이전 하이라이트 제거 및 기본 시간 라벨 복원
     const prevActive = container.querySelectorAll('.sw-time-label.active-row');
-    prevActive.forEach(el => el.classList.remove('active-row'));
+    prevActive.forEach((el) => {
+      el.classList.remove('active-row');
+      const defaultLabel = el.dataset.defaultLabel;
+      const textEl = el.querySelector('.sw-time-label-text');
+      if (textEl && defaultLabel !== undefined && textEl.textContent !== defaultLabel) {
+        textEl.textContent = defaultLabel;
+      }
+    });
 
-    // 새 하이라이트 적용
+    // 새 하이라이트 및 호버 서브슬롯 시간 라벨 적용
     if (activeWeek !== null && activeRow !== null) {
       const timeCell = container.querySelector(`[data-time-row="${activeWeek}-${activeRow}"]`)
         || Array.from(container.querySelectorAll(`[data-time-week="${activeWeek}"]`)).find((cell) => {
@@ -439,9 +446,28 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         });
       if (timeCell) {
         timeCell.classList.add('active-row');
+        if (hoverCell) {
+          const textEl = timeCell.querySelector('.sw-time-label-text');
+          if (textEl) {
+            const defaultLabel = timeCell.dataset.defaultLabel ?? textEl.textContent;
+            let nextLabel = hoverCell.slotInfo?.time || hoverCell.slotInfo?.fullLabel || '';
+            if (!nextLabel && timeCell.dataset.subslotLabels) {
+              const match = timeCell.dataset.subslotLabels
+                .split('|')
+                .find((entry) => entry.startsWith(`${activeRow}:`));
+              if (match) {
+                nextLabel = match.slice(String(activeRow).length + 1);
+              }
+            }
+            const resolvedLabel = nextLabel || defaultLabel;
+            if (textEl.textContent !== resolvedLabel) {
+              textEl.textContent = resolvedLabel;
+            }
+          }
+        }
       }
     }
-  }, [hoverCell, selectedCell, editingCell]);
+  }, [hoverCell, selectedCell, editingCell, weeks, settings?.interval_minutes, settings?.time_label_interval_minutes]);
   const [todayShortcutTooltip, setTodayShortcutTooltip] = useState(null);
   const [chartSelector, setChartSelector] = useState(null);
   const [imePreviewCell, setImePreviewCell] = useState(null);
@@ -3400,23 +3426,22 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                       // 1. Time Label
                       if (showTimeCol) {
                         if (slotInfo.showLabel) {
-                          const hoverRowIdx = Number(hoverCell?.rowIdx);
-                          const isHoverWithinTimeLabel = hoverCell?.weekIdx === weekIdx
-                            && Number.isFinite(hoverRowIdx)
-                            && hoverRowIdx >= rowIdx
-                            && hoverRowIdx < rowIdx + labelSpan;
-                          const hoveredSlotInfo = isHoverWithinTimeLabel
-                            ? daySlots.find((slot) => slot.idx === hoverRowIdx)
-                            : null;
-                          const displayTimeLabel = hoveredSlotInfo?.time || hoveredSlotInfo?.fullLabel || slotInfo.label;
+                          const subSlotLabelsAttr = labelSpan > 1
+                            ? daySlots
+                                .slice(slotRenderIndex, slotRenderIndex + labelSpan)
+                                .map((slot) => `${slot.idx}:${slot.time || slot.fullLabel || slotInfo.label}`)
+                                .join('|')
+                            : undefined;
                           elements.push(
                             <div
                               key={`time-${rowIdx}`}
-                              className={`sw-time-label${slotInfo.isLunch ? ' lunch' : ''}${slotInfo.disabled ? ' disabled' : ''}${isHoverWithinTimeLabel ? ' active-row' : ''}`}
+                              className={`sw-time-label${slotInfo.isLunch ? ' lunch' : ''}${slotInfo.disabled ? ' disabled' : ''}`}
                               data-time-row={`${weekIdx}-${rowIdx}`}
                               data-time-week={weekIdx}
                               data-time-row-start={rowIdx}
                               data-time-row-end={rowIdx + labelSpan - 1}
+                              data-default-label={slotInfo.label}
+                              data-subslot-labels={subSlotLabelsAttr}
                               style={{
                                 gridColumn: '1',
                                 gridRow: `${gridRowStart} / span ${labelSpan}`,
@@ -3426,7 +3451,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                               onMouseMove={(e) => handleTimeLabelMouseMove(e, weekIdx, dayIdx, slotRenderIndex, labelSpan, daySlots)}
                               onMouseLeave={handleTimeLabelMouseLeave}
                             >
-                              <span className="sw-time-label-text">{displayTimeLabel}</span>
+                              <span className="sw-time-label-text">{slotInfo.label}</span>
                             </div>
                           );
                         }
@@ -3497,7 +3522,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                               effectiveShinjangPatientDelimiterStyles={effectiveShinjangPatientDelimiterStyles}
                               reservationGroupEdge={reservationGroupEdgeMap[key]}
                               cellBorderBottomColor={cellBorderBottomColor}
-                              cellFontSize={effectiveSchedulerTextSettings.font_size}
                               visitLineBreakPrescriptions={prescriptionScheduleSettings.visitLineBreakPrescriptions}
                               editValue={editValue} setEditValue={setEditValue}
                               handleCellMouseDown={handleCellMouseDown} handleCellMouseEnter={handleCellMouseEnter}
@@ -3579,13 +3603,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         handleCellDoubleClick, handleCellContextMenu,
         handleEditKeyDown, handleKeyDown, scheduleEditDraftAutosave, promoteFocusedInputToEditor, handleCellSave,
         cellKey, rowHeight, canManageSchedulerSettings,
-        effectiveSchedulerTextSettings.font_size,
         prescriptionScheduleSettings.visitLineBreakPrescriptions,
         getDefaultEditingMergeSpanForKey,
         handleTimeLabelMouseLeave,
         handleTimeLabelMouseMove,
-        hoverCell?.rowIdx,
-        hoverCell?.weekIdx,
         settings?.interval_minutes,
         settings?.time_label_interval_minutes
       ])}

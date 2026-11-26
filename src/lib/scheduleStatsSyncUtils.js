@@ -106,6 +106,29 @@ export function getStatsMonthDateRange(year, month) {
   };
 }
 
+export async function fetchAllPaginatedRows(makeQuery, { pageSize = 1000 } = {}) {
+  if (typeof makeQuery !== 'function') return [];
+  const safePageSize = Math.max(1, Number(pageSize) || 1000);
+  const rows = [];
+
+  for (let offset = 0; ; offset += safePageSize) {
+    const query = makeQuery();
+    if (typeof query?.range !== 'function') {
+      const { data, error } = await query;
+      if (error) throw error;
+      return Array.isArray(data) ? data : [];
+    }
+
+    const { data, error } = await query.range(offset, offset + safePageSize - 1);
+    if (error) throw error;
+    const batch = Array.isArray(data) ? data : [];
+    rows.push(...batch);
+    if (batch.length < safePageSize) {
+      return rows;
+    }
+  }
+}
+
 export async function fetchStatsRowsForDateRange({
   supabaseClient,
   tableName,
@@ -116,26 +139,17 @@ export async function fetchStatsRowsForDateRange({
 } = {}) {
   if (!supabaseClient || !tableName || !startDate || !endDate) return [];
 
-  const rows = [];
-  let page = 0;
-  let hasMore = true;
-
-  while (hasMore) {
-    const { data, error } = await supabaseClient
+  return fetchAllPaginatedRows(() => {
+    let query = supabaseClient
       .from(tableName)
       .select(select)
       .gte('date', startDate)
-      .lte('date', endDate)
-      .range(page * pageSize, (page + 1) * pageSize - 1);
-
-    if (error) throw error;
-    if (Array.isArray(data)) rows.push(...data);
-
-    hasMore = Array.isArray(data) && data.length >= pageSize;
-    page += 1;
-  }
-
-  return rows;
+      .lte('date', endDate);
+    if (typeof query?.order === 'function') {
+      query = query.order('date', { ascending: true }).order('id', { ascending: true });
+    }
+    return query;
+  }, { pageSize });
 }
 
 function getReplaceableExistingIds(existingRows, overwriteExistingStats) {

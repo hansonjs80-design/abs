@@ -122,7 +122,6 @@ const MemoizedCell = memo(({
   workState, staffBlockRule, effectivePrescriptionColors, effectiveShinjangPatientDelimiterStyles,
   reservationGroupEdge,
   cellBorderBottomColor,
-  cellFontSize,
   visitLineBreakPrescriptions,
   editValue, setEditValue,
   handleCellMouseDown, handleCellMouseEnter, setHoverCell, handleCellDoubleClick, handleCellContextMenu,
@@ -615,7 +614,6 @@ const MemoizedCell = memo(({
   if (prevProps.staffBlockRule?.font_color !== nextProps.staffBlockRule?.font_color) return false;
   if (prevProps.staffBlockRule?.keyword !== nextProps.staffBlockRule?.keyword) return false;
   if (prevProps.cellBorderBottomColor !== nextProps.cellBorderBottomColor) return false;
-  if (prevProps.cellFontSize !== nextProps.cellFontSize) return false;
   if (prevProps.visitLineBreakPrescriptions !== nextProps.visitLineBreakPrescriptions) return false;
   if (JSON.stringify(prevProps.reservationGroupEdge || null) !== JSON.stringify(nextProps.reservationGroupEdge || null)) return false;
 

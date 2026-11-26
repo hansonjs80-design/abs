@@ -364,6 +364,9 @@ export default function ShockwaveDataGrid({
         isDraft: true, _isFirst: true, _isLast: true, _groupSize: 1,
       });
     }
+    for (let i = 0; i < flat.length; i += 1) {
+      flat[i]._rowIndex = i;
+    }
     return flat;
   }, [
     draftCellValues,
@@ -589,6 +592,9 @@ export default function ShockwaveDataGrid({
   // ─── 2. CELL VALUE HELPERS ────────────────────────────────
   const getVal = (row, colIdx) => {
     if (colIdx === 0) {
+      if (Number.isInteger(row?._rowIndex) && row._rowIndex >= 0) {
+        return row._rowIndex + 1;
+      }
       const idx = gridData.indexOf(row);
       return idx >= 0 ? idx + 1 : '';
     }
@@ -802,24 +808,35 @@ export default function ShockwaveDataGrid({
       source: targetRow.source || 'manual',
     };
 
-    if (targetRow.isDraft) {
-      await supabase.from(tableName).insert([payload]);
-      clearLocalDraftRow(targetRow.id, targetRow.isInsertedDraft);
-    } else {
-      await supabase.from(tableName).update(payload).eq('id', targetRow.id);
-    }
-
-    rememberCurrentRowOrder();
-    await fetchLogs();
-    for (const date of affectedDates) {
-      if (!date) continue;
-      try {
-        await runSyncForDate(date);
-      } catch (error) {
-        console.error('Failed to sync stats row snapshot to scheduler:', error);
+    try {
+      if (targetRow.isDraft) {
+        const { error } = await supabase.from(tableName).insert([payload]);
+        if (error) throw error;
+        clearLocalDraftRow(targetRow.id, targetRow.isInsertedDraft);
+      } else {
+        const { error } = await supabase.from(tableName).update(payload).eq('id', targetRow.id);
+        if (error) throw error;
       }
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('clinic-stats-cache-invalidate'));
+      }
+      rememberCurrentRowOrder();
+      await fetchLogs();
+      for (const date of affectedDates) {
+        if (!date) continue;
+        try {
+          await runSyncForDate(date);
+        } catch (error) {
+          console.error('Failed to sync stats row snapshot to scheduler:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to apply stats row snapshot:', error);
+      addToast('행 데이터를 저장하지 못했습니다. 다시 시도해 주세요.', 'error');
+      await fetchLogs();
     }
-  }, [clearLocalDraftRow, currentMonth, currentYear, fetchLogs, rememberCurrentRowOrder, runSyncForDate, tableName]);
+  }, [addToast, clearLocalDraftRow, currentMonth, currentYear, fetchLogs, rememberCurrentRowOrder, runSyncForDate, tableName]);
 
   const insertDraftRow = useCallback((anchorRow, placement) => {
     if (!anchorRow) return;
@@ -1023,6 +1040,9 @@ export default function ShockwaveDataGrid({
       }
     }
     rememberCurrentRowOrder();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('clinic-stats-cache-invalidate'));
+    }
     if (editSaveRequestRef.current === saveRequestId) {
       await fetchLogs();
       for (const date of affectedDates) {
@@ -1141,6 +1161,9 @@ export default function ShockwaveDataGrid({
           if (d) await runSyncForDate(d);
         }
       }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('clinic-stats-cache-invalidate'));
+      }
       if (bulkMutationRequestRef.current === mutationRequestId) {
         await fetchLogs();
       }
@@ -1228,6 +1251,9 @@ export default function ShockwaveDataGrid({
 
       recordUndo({ type: 'bulk', changes: undoChanges, affectedDates: Array.from(affectedDates) });
       rememberCurrentRowOrder();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('clinic-stats-cache-invalidate'));
+      }
       if (bulkMutationRequestRef.current === mutationRequestId) {
         await fetchLogs();
         for (const d of affectedDates) {
@@ -1307,6 +1333,9 @@ export default function ShockwaveDataGrid({
     const { undoChanges, affectedDates } = await clearRange(selNorm);
     recordUndo({ type: 'bulk', changes: undoChanges, affectedDates });
     rememberCurrentRowOrder();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('clinic-stats-cache-invalidate'));
+    }
     if (bulkMutationRequestRef.current === mutationRequestId) {
       await fetchLogs();
       for (const date of affectedDates) {
@@ -1331,6 +1360,9 @@ export default function ShockwaveDataGrid({
         if (error) throw error;
         setCtxMenu(null);
         rememberCurrentRowOrder();
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('clinic-stats-cache-invalidate'));
+        }
         await fetchLogs();
         if (affectedDate) {
           try {

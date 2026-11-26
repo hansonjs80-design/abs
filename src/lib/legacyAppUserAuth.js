@@ -100,3 +100,32 @@ export async function loadActiveLegacyAppUserProfile({
   if (error && error.code !== 'PGRST116') throw error;
   return data && !Array.isArray(data) ? data : null;
 }
+
+export function hasLegacyAppUserProfileChanged(currentUser, profile, normalizedPermissions) {
+  if (!currentUser || !profile) return false;
+  const verifiedRole = profile.role || 'user';
+  const verifiedIsAdmin = verifiedRole === 'admin';
+  const nextDisplayName = profile.display_name || profile.username || '';
+  const currentDisplayName = currentUser.user_metadata?.name || '';
+
+  if (currentUser.app_role !== verifiedRole || Boolean(currentUser.isAdmin) !== verifiedIsAdmin) {
+    return true;
+  }
+  if (currentDisplayName !== nextDisplayName) {
+    return true;
+  }
+
+  const currentPerms = currentUser.app_permissions && typeof currentUser.app_permissions === 'object'
+    ? currentUser.app_permissions
+    : {};
+  const nextPerms = normalizedPermissions && typeof normalizedPermissions === 'object'
+    ? normalizedPermissions
+    : {};
+  const allKeys = new Set([...Object.keys(currentPerms), ...Object.keys(nextPerms)]);
+  for (const key of allKeys) {
+    if (Boolean(currentPerms[key]) !== Boolean(nextPerms[key])) {
+      return true;
+    }
+  }
+  return false;
+}

@@ -33,6 +33,8 @@ import {
   shouldPrepareStatsSecondarySections,
 } from '../lib/statsSectionLoadingUtils';
 
+import { fetchAllPaginatedRows } from '../lib/scheduleStatsSyncUtils';
+
 const DEFAULT_SETTINGS_ID = '00000000-0000-0000-0000-000000000000';
 const manualTherapyCurrentCache = createStatsMemoryCache({
   ttlMs: DEFAULT_STATS_CACHE_TTL_MS,
@@ -296,19 +298,20 @@ export default function ManualTherapyStatsPage() {
       );
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-      let query = supabase
-        .from('manual_therapy_patient_logs')
-        .select('id,date,patient_name,chart_number,visit_count,body_part,therapist_name,prescription,prescription_count,source,scheduler_cell_key,created_at')
-        .gte('date', startStr);
-      query = isCurrentCalendarMonth
-        ? query.lte('date', todayStr)
-        : query.lt('date', endStr);
+      const data = await fetchAllPaginatedRows(() => {
+        let query = supabase
+          .from('manual_therapy_patient_logs')
+          .select('id,date,patient_name,chart_number,visit_count,body_part,therapist_name,prescription,prescription_count,source,scheduler_cell_key,created_at')
+          .gte('date', startStr);
+        query = isCurrentCalendarMonth
+          ? query.lte('date', todayStr)
+          : query.lt('date', endStr);
+        return query
+          .order('date', { ascending: true })
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true });
+      });
 
-      const { data, error } = await query
-        .order('date', { ascending: true })
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
       if (currentFetchId !== fetchIdRef.current) return [];
       logsLoadedKeyRef.current = monthKey;
       const currentScheduleIsLoaded = shockwaveMemosLoadedKey === monthKey;
