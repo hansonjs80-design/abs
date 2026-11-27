@@ -439,9 +439,33 @@ export default function CombinedStatsPage() {
   const showBreakdownIncentive = breakdownViewMode !== 'detail-no-incentive';
   const breakdownRef = useRef(null);
   const [therapistViewModes, setTherapistViewModes] = useState({});
-  const [summaryState, setSummaryState] = useState({ scope: '', summaries: [] });
-  const [isLoading, setIsLoading] = useState(false);
+  const recentPeriodMonths = useMemo(
+    () => parseRecentPeriodMonths(recentPeriodInput, 6),
+    [recentPeriodInput]
+  );
+  const recentPeriodLabel = useMemo(
+    () => formatRecentPeriodLabel(recentPeriodMonths),
+    [recentPeriodMonths]
+  );
+  const monthTargets = useMemo(() => getRecentScheduleMonthTargets({
+    currentYear,
+    currentMonth,
+    recentPeriodMonths,
+  }), [currentMonth, currentYear, recentPeriodMonths]);
+  const summaryScope = `${currentYear}-${currentMonth}-${recentPeriodMonths}-${isAdmin}-${includeShockwave ? 1 : 0}${includeShinjang ? 1 : 0}${includeManual ? 1 : 0}`;
+  const needsHistoricalMonths = activeTab === 'settlement';
+  const [summaryState, setSummaryState] = useState(() => {
+    const cached = readFreshCombinedStatsCache(summaryScope);
+    return cached?.summaries?.length
+      ? { scope: summaryScope, summaries: cached.summaries }
+      : { scope: summaryScope, summaries: [] };
+  });
+  const [isLoading, setIsLoading] = useState(() => {
+    const cached = readFreshCombinedStatsCache(summaryScope);
+    return !(cached && (!needsHistoricalMonths || cached.hasHistoricalLoaded));
+  });
   const requestIdRef = useRef(0);
+  const loadedSummariesRef = useRef([]);
   const settingsRef = useRef(shockwaveSettings);
   const therapistRef = useRef(therapists);
   const manualTherapistRef = useRef(manualTherapists);
@@ -492,20 +516,6 @@ export default function CombinedStatsPage() {
     ));
   };
 
-  const recentPeriodMonths = useMemo(
-    () => parseRecentPeriodMonths(recentPeriodInput, 6),
-    [recentPeriodInput]
-  );
-  const recentPeriodLabel = useMemo(
-    () => formatRecentPeriodLabel(recentPeriodMonths),
-    [recentPeriodMonths]
-  );
-  const monthTargets = useMemo(() => getRecentScheduleMonthTargets({
-    currentYear,
-    currentMonth,
-    recentPeriodMonths,
-  }), [currentMonth, currentYear, recentPeriodMonths]);
-  const summaryScope = `${currentYear}-${currentMonth}-${recentPeriodMonths}-${isAdmin}-${includeShockwave ? 1 : 0}${includeShinjang ? 1 : 0}${includeManual ? 1 : 0}`;
   const includedShortLabels = [
     ...(includeShockwave ? ['충격파'] : []),
     ...(includeShinjang ? ['신장분사'] : []),
@@ -521,17 +531,18 @@ export default function CombinedStatsPage() {
     : '선택된 치료 없음';
   const recentOverallTitle = `${recentPeriodLabel} 전체결산(${includedShortLabels.length > 0 ? includedShortLabels.join('/') : '없음'})`;
   const cryoModeLabel = `크라이오 차감 ${applyCryoDeduction ? '적용' : '비적용'}`;
-  const needsHistoricalMonths = activeTab === 'settlement';
   const loadedSummaries = summaryState.scope === summaryScope
     ? summaryState.summaries
     : (readFreshCombinedStatsCache(summaryScope)?.summaries || []);
+  loadedSummariesRef.current = loadedSummaries;
   const monthSummaries = loadedSummaries.map((summary) => (
     applyCryoDeduction ? summary : summary.withoutCryoDeduction
   ));
 
-  const refreshData = useCallback(async ({ force = false } = {}) => {
+  const refreshData = useCallback(async ({ force = false, silent = false } = {}) => {
     const requestId = ++requestIdRef.current;
     const currentMonthKeyTarget = `${Number(currentYear)}-${String(Number(currentMonth)).padStart(2, '0')}`;
+    const forceBaseMetadata = Boolean(force && !silent);
     if (force) {
       combinedStatsCache.delete(summaryScope);
     }
@@ -543,11 +554,14 @@ export default function CombinedStatsPage() {
       return;
     }
 
+    const seedSummaries = cachedEntry?.summaries?.length
+      ? cachedEntry.summaries
+      : (silent ? loadedSummariesRef.current : []);
     const existingSummariesByMonth = new Map(
-      (cachedEntry?.summaries || []).map((item) => [item.monthKey, item])
+      seedSummaries.map((item) => [item.monthKey, item])
     );
-    if (cachedEntry?.summaries?.length) {
-      setSummaryState({ scope: summaryScope, summaries: cachedEntry.summaries });
+    if (seedSummaries.length > 0) {
+      setSummaryState({ scope: summaryScope, summaries: seedSummaries });
     } else {
       setSummaryState((previous) => previous.scope === summaryScope ? previous : { scope: summaryScope, summaries: [] });
     }
@@ -565,7 +579,9 @@ export default function CombinedStatsPage() {
       return;
     }
 
-    setIsLoading(true);
+    if (!silent) {
+      setIsLoading(true);
+    }
     try {
       const shouldLoadManual = isAdmin && (includeManual || includeShinjang);
       const shouldLoadShockwaveLogs = includeShockwave || includeShinjang;
@@ -658,13 +674,13 @@ export default function CombinedStatsPage() {
         ,
         prefetchedCurrentScheduleRows,
       ] = await Promise.all([
-        loadTherapists({ force }),
-        (includeManual || includeShinjang) && isAdmin ? loadManualTherapists({ force }) : Promise.resolve([]),
-        loadShockwaveSettings({ force }),
+        loadTherapists({ force: forceBaseMetadata }),
+        (includeManual || includeShinjang) && isAdmin ? loadManualTherapists({ force: forceBaseMetadata }) : Promise.resolve([]),
+        loadShockwaveSettings({ force: forceBaseMetadata }),
         needsHistoricalMonths
           ? fetchHistoricalLogs()
           : Promise.resolve({ shockwaveMap: new Map(), manualMap: new Map(), isLoaded: false }),
-        prefetchStatsMonthlyTherapists({ minYear: minTargetYear, rosterQueryCache, force }),
+        prefetchStatsMonthlyTherapists({ minYear: minTargetYear, rosterQueryCache, force: forceBaseMetadata }),
         needsCurrentMonthTarget && !preloadedVisibleCurrentMemos
           ? prefetchScheduleRowsForStatsMonth({ year: currentYear, month: currentMonth, force })
           : Promise.resolve(null),
@@ -921,14 +937,20 @@ export default function CombinedStatsPage() {
     const handleStatsUpdated = () => {
       combinedStatsCache.clear();
       clearTimeout(refreshTimer);
-      refreshTimer = setTimeout(() => refreshData({ force: true }), 150);
+      const currentMonthKeyTarget = `${Number(currentYear)}-${String(Number(currentMonth)).padStart(2, '0')}`;
+      const hasRenderedCurrentSummary = loadedSummariesRef.current.some(
+        (item) => item?.monthKey === currentMonthKeyTarget
+      );
+      refreshTimer = setTimeout(() => {
+        refreshData({ force: true, silent: hasRenderedCurrentSummary });
+      }, 200);
     };
     window.addEventListener('clinic-stats-updated', handleStatsUpdated);
     return () => {
       clearTimeout(refreshTimer);
       window.removeEventListener('clinic-stats-updated', handleStatsUpdated);
     };
-  }, [refreshData]);
+  }, [currentMonth, currentYear, refreshData]);
 
   const currentMonthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
   const currentSummary = monthSummaries.find((summary) => summary.monthKey === currentMonthKey);

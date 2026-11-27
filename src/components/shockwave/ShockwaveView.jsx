@@ -920,8 +920,12 @@ export default function ShockwaveView({
           payloadByKey.set(`${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`, item);
         });
       });
+      const hasCompletedFix = fixEntries.some(({ key }) => isTreatmentCompleteBg(memos[key]?.bg_color));
       const bulkUpdates = Array.from(payloadByKey.values());
-      const ok = await saveShockwaveMemosBulk(bulkUpdates);
+      const ok = await saveShockwaveMemosBulk(bulkUpdates, {
+        deferStatsSync: true,
+        skipStatsSync: !hasCompletedFix,
+      });
       if (ok) {
         await onLoadMemos(currentYear, currentMonth, { silent: true });
       }

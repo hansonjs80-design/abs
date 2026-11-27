@@ -437,9 +437,16 @@ async function runTodayManualTherapyScheduleToStatsSync({
 }
 
 export async function syncTodayManualTherapyScheduleToStats(params) {
+  const emitEvent = params?.emitEvent !== false;
   const run = todayManualTherapySyncQueue.then(async () => {
     const res = await runTodayManualTherapyScheduleToStatsSync(params);
-    if (typeof window !== 'undefined') {
+    if (
+      emitEvent &&
+      res &&
+      !res.skipped &&
+      Number(res.totalUpdates) > 0 &&
+      typeof window !== 'undefined'
+    ) {
       window.dispatchEvent(new Event('clinic-stats-updated'));
     }
     return res;

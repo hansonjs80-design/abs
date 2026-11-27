@@ -577,4 +577,34 @@ describe('stability and performance fixes', () => {
     assert.match(scheduleContextSource, /mergeLoadedStaffMonthResults\(fulfilledStaffEntries,\s*\{\s*commitState:\s*false\s*\}\)/);
     assert.match(scheduleContextSource, /loadHolidaysRangeShared\(year,\s*month,\s*\{\s*commitState:\s*false\s*\}\)/);
   });
+
+  it('prevents CombinedStatsPage refresh button from toggling repeatedly on background stats sync storms', async () => {
+    const [
+      combinedStatsSource,
+      scheduleContextSource,
+      shockwaveViewSource,
+      shockwaveSyncSource,
+      manualSyncSource,
+    ] = await Promise.all([
+      readFile(new URL('../../pages/CombinedStatsPage.jsx', import.meta.url), 'utf8'),
+      readFile(new URL('../../contexts/ScheduleContext.jsx', import.meta.url), 'utf8'),
+      readFile(new URL('../../components/shockwave/ShockwaveView.jsx', import.meta.url), 'utf8'),
+      readFile(new URL('../shockwaveSyncUtils.js', import.meta.url), 'utf8'),
+      readFile(new URL('../manualTherapyUtils.js', import.meta.url), 'utf8'),
+    ]);
+
+    // Today sync helpers only emit clinic-stats-updated when emitEvent !== false and actual updates occurred
+    assert.match(shockwaveSyncSource, /const emitEvent = params\?\.emitEvent !== false;/);
+    assert.match(shockwaveSyncSource, /Number\(res\.totalUpdates\) > 0/);
+    assert.match(manualSyncSource, /const emitEvent = params\?\.emitEvent !== false;/);
+    assert.match(manualSyncSource, /Number\(res\.totalUpdates\) > 0/);
+
+    // ScheduleContext batches per-date syncs with emitEvent: false and emits at most once when queue drains
+    assert.match(scheduleContextSource, /statsSyncActiveCountRef\.current === 0/);
+    assert.match(scheduleContextSource, /statsSyncDirtyUpdatesRef\.current > 0/);
+    assert.match(shockwaveViewSource, /skipStatsSync:\s*!hasCompletedFix/);
+
+    // CombinedStatsPage silently revalidates background clinic-stats-updated events when summary is already visible
+    assert.match(combinedStatsSource, /refreshData\(\{\s*force:\s*true,\s*silent:\s*hasRenderedCurrentSummary\s*\}\)/);
+  });
 });

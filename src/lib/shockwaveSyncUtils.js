@@ -557,9 +557,16 @@ async function runTodayShockwaveScheduleToStatsSync({
 }
 
 export async function syncTodayShockwaveScheduleToStats(params) {
+  const emitEvent = params?.emitEvent !== false;
   const run = todaySchedulerSyncQueue.then(async () => {
     const res = await runTodayShockwaveScheduleToStatsSync(params);
-    if (typeof window !== 'undefined') {
+    if (
+      emitEvent &&
+      res &&
+      !res.skipped &&
+      Number(res.totalUpdates) > 0 &&
+      typeof window !== 'undefined'
+    ) {
       window.dispatchEvent(new Event('clinic-stats-updated'));
     }
     return res;
