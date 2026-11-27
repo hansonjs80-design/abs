@@ -132,8 +132,43 @@ import { normalizeLoadedScheduleMonthKey } from '../../lib/scheduleMonthLoadUtil
 import { buildReservationChangeWarnings, notifyLatestReservationWarnings, replaceReservationWarnings, prepareReservationPayload } from '../../lib/scheduleReservationWarningUtils';
 import ReservationWarningDialog from './ReservationWarningDialog';
 
-export default function ShockwaveView({ therapists, settings, memos = {}, memosLoadedKey = '', onLoadMemos, onSaveMemo, holidays, staffMemos = {} }) {
-  const { currentYear, currentMonth, goToMonth, saveShockwaveMemosBulk, manualTherapists, monthlyTherapists, monthlyManualTherapists, monthlyShinjangSprayTherapists, monthlyTherapistsByMonth, saveMonthlyTherapists, saveTherapistRoster, loadShockwaveSettings, saveShockwaveSettings, clipboardRef, clipboardSource, setClipboardSource } = useSchedule();
+export default function ShockwaveView({
+  displayYear,
+  displayMonth,
+  therapists,
+  monthlyTherapistsOverride,
+  monthlyTherapistsByMonthOverride,
+  settings,
+  memos = {},
+  memosLoadedKey = '',
+  onLoadMemos,
+  onSaveMemo,
+  holidays,
+  staffMemos = {},
+  pendingNavigationLabel = '',
+}) {
+  const {
+    currentYear: contextYear,
+    currentMonth: contextMonth,
+    goToMonth,
+    saveShockwaveMemosBulk,
+    manualTherapists,
+    monthlyTherapists: contextMonthlyTherapists,
+    monthlyManualTherapists,
+    monthlyShinjangSprayTherapists,
+    monthlyTherapistsByMonth: contextMonthlyTherapistsByMonth,
+    saveMonthlyTherapists,
+    saveTherapistRoster,
+    loadShockwaveSettings,
+    saveShockwaveSettings,
+    clipboardRef,
+    clipboardSource,
+    setClipboardSource,
+  } = useSchedule();
+  const currentYear = displayYear ?? contextYear;
+  const currentMonth = displayMonth ?? contextMonth;
+  const monthlyTherapists = monthlyTherapistsOverride ?? contextMonthlyTherapists;
+  const monthlyTherapistsByMonth = monthlyTherapistsByMonthOverride ?? contextMonthlyTherapistsByMonth;
   const { addToast } = useToast();
   const { user } = useAuth();
   const canManageSchedulerSettings = isAdminUser(user);
@@ -881,7 +916,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
       const bulkUpdates = Array.from(payloadByKey.values());
       const ok = await saveShockwaveMemosBulk(bulkUpdates);
       if (ok) {
-        await onLoadMemos(currentYear, currentMonth);
+        await onLoadMemos(currentYear, currentMonth, { silent: true });
       }
     })();
   }, [loadedMemosKey, currentYear, currentMonth, settings, memos, baseTimeSlots.length, saveShockwaveMemosBulk, onLoadMemos, prescriptionScheduleSettings.durationMinutesMap, prescriptionScheduleSettings.doseTags, prescriptionScheduleSettings.schedulerPrescriptions, getDefaultReservationTime]);
@@ -3082,15 +3117,21 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     }
   }, [baseTimeSlots.length, colCount, selectSingleCell, getAdjacentCell, moveEditInputCaret, settings, currentYear, currentMonth, handleCellSave, memos, pendingCellBgColors, cellKey, handleOpenBodyPartMenu, handleOpenMemoMenu, setEditingCell, prescriptionScheduleSettings.doseTags, prescriptionScheduleSettings.hiddenPrescriptions]);
 
+  const isMonthTransitioning = Boolean(pendingNavigationLabel);
+  const isMonthTransitioningRef = useRef(isMonthTransitioning);
+  isMonthTransitioningRef.current = isMonthTransitioning;
+
   const handleKeyDownRef = useRef(handleKeyDown);
   handleKeyDownRef.current = handleKeyDown;
   const cellHandleKeyDown = useCallback((event) => {
+    if (isMonthTransitioningRef.current) return;
     handleKeyDownRef.current?.(event);
   }, []);
 
   const handleEditKeyDownRef = useRef(handleEditKeyDown);
   handleEditKeyDownRef.current = handleEditKeyDown;
   const cellHandleEditKeyDown = useCallback((event, w, d, r, c) => {
+    if (isMonthTransitioningRef.current) return;
     handleEditKeyDownRef.current?.(event, w, d, r, c);
   }, []);
 
@@ -3264,10 +3305,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   return (
     <>
       <div 
-        className={`shockwave-view animate-fade-in${(isScheduleMonthLoading || isDeviceSettingsLoading || isTextSettingsLoading) ? ' is-month-loading' : ''}`}
+        className={`shockwave-view animate-fade-in${(isScheduleMonthLoading || isDeviceSettingsLoading || isTextSettingsLoading) ? ' is-month-loading' : ''}${isMonthTransitioning ? ' is-month-transitioning' : ''}`}
         ref={viewRef} 
         tabIndex={0} 
-        aria-busy={isScheduleMonthLoading || isDeviceSettingsLoading}
+        aria-busy={isScheduleMonthLoading || isDeviceSettingsLoading || isMonthTransitioning}
         style={{
           outline: 'none',
           '--sw-row-height': `${rowHeight}px`,
@@ -3290,23 +3331,23 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
           if (tooltipRef.current) positionTooltip(e.clientX, e.clientY);
         }}
       >
-      {(isScheduleMonthLoading || isDeviceSettingsLoading || isTextSettingsLoading) && (
+      {(isScheduleMonthLoading || isDeviceSettingsLoading || isTextSettingsLoading || isMonthTransitioning) && (
         <div className="shockwave-month-loading" role="status" aria-live="polite">
           <div className="shockwave-month-loading-card">
             <span className="shockwave-month-loading-spinner" />
-            <span>{currentYear}년 {String(currentMonth).padStart(2, '0')}월 스케줄 불러오는 중</span>
+            <span>{pendingNavigationLabel || `${currentYear}년 ${String(currentMonth).padStart(2, '0')}월`} 스케줄 불러오는 중</span>
           </div>
         </div>
       )}
       {useMemo(() => {
-        if (isDeviceSettingsLoading || isTextSettingsLoading) return null;
+        if (isScheduleMonthLoading || isDeviceSettingsLoading || isTextSettingsLoading) return null;
         return weeks.map((weekDays, weekIdx) => {
           const daysContainerWidth = dayColWidth
             ? dayColWidth * weekDays.length + timeColWidth + 4
             : null;
         return (
         <div
-          key={weekIdx}
+          key={`${currentYear}-${currentMonth}-${weekIdx}`}
           className={`shockwave-week${weekIdx === todayWeekIdx ? ' is-today-week' : ''}`}
           style={daysContainerWidth
             ? { width: `${daysContainerWidth}px`, minWidth: 0 }
@@ -3635,7 +3676,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         );
       });
       }, [
-        isDeviceSettingsLoading, isTextSettingsLoading, weeks, dayColWidth, timeColWidth, todayWeekIdx, today, getTimeSlotsForDay,
+        isScheduleMonthLoading, isDeviceSettingsLoading, isTextSettingsLoading, currentYear, currentMonth, weeks, dayColWidth, timeColWidth, todayWeekIdx, today, getTimeSlotsForDay,
         therapistColsCSS, colCount, getTherapistNameForDate, activeColRatios,
         resetColRatios, resetTimeColWidth, resizeTimeColWidthBy,
         startColResize, startDayResize, startRowResize, startTimeColResize,

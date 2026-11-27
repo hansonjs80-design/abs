@@ -609,6 +609,7 @@ const MemoizedCell = memo(({
   if (isAnts && prevProps.clipboardSource?.mode !== nextProps.clipboardSource?.mode) return false;
 
   if (prevProps.workState !== nextProps.workState) return false;
+  if (prevProps.effectivePrescriptionColors !== nextProps.effectivePrescriptionColors) return false;
   if (prevProps.effectiveShinjangPatientDelimiterStyles !== nextProps.effectiveShinjangPatientDelimiterStyles) return false;
   if (prevProps.staffBlockRule?.bg_color !== nextProps.staffBlockRule?.bg_color) return false;
   if (prevProps.staffBlockRule?.font_color !== nextProps.staffBlockRule?.font_color) return false;

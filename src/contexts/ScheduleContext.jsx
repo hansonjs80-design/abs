@@ -284,9 +284,12 @@ export function ScheduleProvider({ children }) {
   const lastKnownScheduleServerUpdatedAtRef = useRef(null);
   const staffMemosRef = useRef(staffMemos);
   const staffMemosLoadedKeyRef = useRef(staffMemosLoadedKey);
+  const loadedStaffMonthsRef = useRef(new Set());
+  const staffMonthLoadPromisesRef = useRef(new Map());
   const staffMemoSaveRequestRef = useRef(new Map());
   const staffMemosLoadRequestRef = useRef(0);
   const shockwaveMemosRef = useRef(shockwaveMemos);
+  const shockwaveMemosLoadedKeyRef = useRef(shockwaveMemosLoadedKey);
   const currentDateRef = useRef({ year: currentYear, month: currentMonth });
   const shockwaveMemosLoadRequestRef = useRef(0);
   const monthlyTherapistLoadRequestRef = useRef({ shockwave: 0, manual_therapy: 0, shinjang_spray: 0 });
@@ -302,6 +305,9 @@ export function ScheduleProvider({ children }) {
   });
   const noticesLoadRequestRef = useRef(0);
   const noticeSaveRequestRef = useRef(new Map());
+  const holidaysRef = useRef(holidays);
+  const holidayNamesRef = useRef(holidayNames);
+  const loadedHolidayMonthsRef = useRef(new Set());
   const holidaysLoadRequestRef = useRef(0);
   const holidaysLoadedKeyRef = useRef(holidaysLoadedKey);
   const calendarSlotSettingsCacheRef = useRef(new Map());
@@ -311,12 +317,16 @@ export function ScheduleProvider({ children }) {
   const shockwaveSettingsLoadPromiseRef = useRef(null);
   const shockwaveSettingsSaveRequestRef = useRef(0);
   const loadShockwaveMemosRef = useRef(null);
+  const buildShockwaveMemoViewSnapshotRef = useRef(null);
+  const persistHiddenMergedScheduleRelocationRef = useRef(null);
+  const loadMonthlyTherapistRowsSharedRef = useRef(null);
   const therapistsRef = useRef(therapists);
   const therapistsLoadedRef = useRef(false);
   const manualTherapistsRef = useRef(manualTherapists);
   const shockwaveSettingsRefCache = useRef(shockwaveSettings);
   const shockwaveSettingsLoadedRef = useRef(false);
   const monthlyTherapistLoadKeysRef = useRef(monthlyTherapistLoadKeys);
+  const monthlyTherapistVisibleLoadKeysRef = useRef(monthlyTherapistVisibleLoadKeys);
   const monthlyTherapistsByMonthRef = useRef(monthlyTherapistsByMonth);
   const statsSyncPendingRef = useRef(new Map());
   const statsSyncChainRef = useRef(Promise.resolve());
@@ -340,12 +350,28 @@ export function ScheduleProvider({ children }) {
   }, [shockwaveMemos]);
 
   useEffect(() => {
+    shockwaveMemosLoadedKeyRef.current = shockwaveMemosLoadedKey;
+  }, [shockwaveMemosLoadedKey]);
+
+  useEffect(() => {
     currentDateRef.current = { year: currentYear, month: currentMonth };
   }, [currentYear, currentMonth]);
 
   useEffect(() => {
+    holidaysRef.current = holidays;
+  }, [holidays]);
+
+  useEffect(() => {
+    holidayNamesRef.current = holidayNames;
+  }, [holidayNames]);
+
+  useEffect(() => {
     monthlyTherapistLoadKeysRef.current = monthlyTherapistLoadKeys;
   }, [monthlyTherapistLoadKeys]);
+
+  useEffect(() => {
+    monthlyTherapistVisibleLoadKeysRef.current = monthlyTherapistVisibleLoadKeys;
+  }, [monthlyTherapistVisibleLoadKeys]);
 
   useEffect(() => {
     monthlyTherapistsByMonthRef.current = monthlyTherapistsByMonth;
@@ -683,8 +709,12 @@ export function ScheduleProvider({ children }) {
     return true;
   }, [getShockwaveMemoTime]);
 
-  const reconcileLoadedShockwaveMemosWithLocalWrites = useCallback((memoMap) => {
+  const reconcileLoadedShockwaveMemosWithLocalWrites = useCallback((memoMap, year, month) => {
     const next = { ...(memoMap || {}) };
+    const targetMonthKey = getShockwaveMemoViewCacheKey(year, month);
+    if (shockwaveMemosLoadedKeyRef.current !== targetMonthKey) {
+      return next;
+    }
     const localMemos = shockwaveMemosRef.current || {};
 
     localShockwaveWriteTimeRef.current.forEach((localLastWrite, key) => {
@@ -867,19 +897,253 @@ export function ScheduleProvider({ children }) {
     });
   }, []);
 
+  const setMonthlyTherapistVisibleLoadedKey = useCallback((type, key) => {
+    if (monthlyTherapistVisibleLoadKeysRef.current[type] === key) return;
+    monthlyTherapistVisibleLoadKeysRef.current = {
+      ...monthlyTherapistVisibleLoadKeysRef.current,
+      [type]: key,
+    };
+    setMonthlyTherapistVisibleLoadKeys(monthlyTherapistVisibleLoadKeysRef.current);
+  }, []);
+
+  const loadStaffMonthShared = useCallback(async (year, month, options = {}) => {
+    const targetYear = Number(year);
+    const targetMonth = Number(month);
+    const monthKey = `${targetYear}-${targetMonth}`;
+    if (options.force) {
+      loadedStaffMonthsRef.current.delete(monthKey);
+      staffMonthLoadPromisesRef.current.delete(monthKey);
+    } else {
+      if (loadedStaffMonthsRef.current.has(monthKey)) {
+        return { monthKey, year: targetYear, month: targetMonth, map: null, fromCache: true };
+      }
+      const inFlight = staffMonthLoadPromisesRef.current.get(monthKey);
+      if (inFlight) return inFlight;
+    }
+
+    let loadPromise;
+    loadPromise = (async () => {
+      const targetMemoMap = {};
+      let page = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const { data, error } = await withScheduleQueryTimeout(
+          supabase
+            .from('staff_schedules')
+            .select('*')
+            .eq('year', targetYear)
+            .eq('month', targetMonth)
+            .range(page * 1000, (page + 1) * 1000 - 1),
+          `staff_schedules ${targetYear}-${targetMonth} page ${page + 1}`
+        );
+
+        if (error) throw error;
+
+        (data || []).forEach((item) => {
+          const key = `${item.year}-${item.month}-${item.day}-${item.slot_index}`;
+          targetMemoMap[key] = {
+            ...item,
+            content: normalizeStaffDeptNameSpacing(item.content || ''),
+          };
+        });
+
+        if (!data || data.length < 1000) hasMore = false;
+        page += 1;
+      }
+      return { monthKey, year: targetYear, month: targetMonth, map: targetMemoMap, fromCache: false };
+    })().finally(() => {
+      if (staffMonthLoadPromisesRef.current.get(monthKey) === loadPromise) {
+        staffMonthLoadPromisesRef.current.delete(monthKey);
+      }
+    });
+
+    staffMonthLoadPromisesRef.current.set(monthKey, loadPromise);
+    return loadPromise;
+  }, []);
+
+  const mergeLoadedStaffMonthResults = useCallback((monthEntries, options = {}) => {
+    const { commitState = true } = options;
+    let nextMemos = staffMemosRef.current;
+    let didMutate = false;
+
+    (Array.isArray(monthEntries) ? monthEntries : []).forEach((entry) => {
+      if (!entry || entry.fromCache || !entry.map) return;
+      const prefix = `${entry.year}-${entry.month}-`;
+      const existingKeys = Object.keys(nextMemos).filter((key) => key.startsWith(prefix));
+      const incomingKeys = Object.keys(entry.map);
+      const isIdentical = existingKeys.length === incomingKeys.length && incomingKeys.every((key) => {
+        const prevItem = nextMemos[key];
+        const nextItem = entry.map[key];
+        return Boolean(
+          prevItem &&
+          prevItem.content === nextItem.content &&
+          prevItem.bg_color === nextItem.bg_color &&
+          prevItem.font_color === nextItem.font_color &&
+          prevItem.font_size === nextItem.font_size &&
+          prevItem.font_weight === nextItem.font_weight &&
+          prevItem.updated_at === nextItem.updated_at
+        );
+      });
+
+      loadedStaffMonthsRef.current.add(entry.monthKey);
+      if (isIdentical) return;
+
+      if (!didMutate) {
+        nextMemos = { ...nextMemos };
+        didMutate = true;
+      }
+      existingKeys.forEach((key) => {
+        delete nextMemos[key];
+      });
+      Object.assign(nextMemos, entry.map);
+    });
+
+    if (didMutate) {
+      staffMemosRef.current = nextMemos;
+    }
+    if (commitState) {
+      setStaffMemos(staffMemosRef.current);
+    }
+    return staffMemosRef.current;
+  }, []);
+
+  const loadHolidaysRangeShared = useCallback(async (year, month, options = {}) => {
+    const baseYear = Number(year);
+    const windowMonths = [];
+    for (let y = baseYear - 1; y <= baseYear + 1; y += 1) {
+      for (let m = 1; m <= 12; m += 1) {
+        windowMonths.push({ year: y, month: m });
+      }
+    }
+    if (options.force) {
+      windowMonths.forEach((target) => {
+        loadedHolidayMonthsRef.current.delete(`${target.year}-${target.month}`);
+      });
+    } else if (windowMonths.every((target) => loadedHolidayMonthsRef.current.has(`${target.year}-${target.month}`))) {
+      if (options.commitState !== false) {
+        setHolidays(holidaysRef.current);
+        setHolidayNames(holidayNamesRef.current);
+      }
+      return holidaysRef.current;
+    }
+
+    const startDate = `${baseYear - 1}-01-01`;
+    const endStr = `${baseYear + 2}-01-01`;
+
+    const { data, error } = await withScheduleQueryTimeout(
+      supabase
+        .from('holidays')
+        .select('*')
+        .gte('date', startDate)
+        .lt('date', endStr),
+      `holidays ${startDate}-${endStr}`
+    );
+
+    if (error) throw error;
+
+    const windowMonthSet = new Set(windowMonths.map((target) => `${target.year}-${target.month}`));
+    const nextSet = new Set();
+    const nextNames = new Map();
+
+    holidaysRef.current.forEach((key) => {
+      const [ky, km] = String(key).split('-').map(Number);
+      if (!windowMonthSet.has(`${ky}-${km}`)) {
+        nextSet.add(key);
+        if (holidayNamesRef.current.has(key)) {
+          nextNames.set(key, holidayNamesRef.current.get(key));
+        }
+      }
+    });
+
+    (data || []).forEach((h) => {
+      let key;
+      if (h.date && h.date.includes('-')) {
+        const [y, m, d] = h.date.split('-');
+        key = `${Number(y)}-${Number(m)}-${Number(d.substring(0, 2))}`;
+      } else {
+        const d = new Date(h.date);
+        key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+      }
+      nextSet.add(key);
+      if (h.name) nextNames.set(key, h.name);
+    });
+
+    const isSameSet = nextSet.size === holidaysRef.current.size
+      && Array.from(nextSet).every((key) => holidaysRef.current.has(key));
+    const isSameNames = nextNames.size === holidayNamesRef.current.size
+      && Array.from(nextNames.entries()).every(([key, val]) => holidayNamesRef.current.get(key) === val);
+
+    if (!isSameSet) holidaysRef.current = nextSet;
+    if (!isSameNames) holidayNamesRef.current = nextNames;
+    windowMonths.forEach((target) => {
+      loadedHolidayMonthsRef.current.add(`${target.year}-${target.month}`);
+    });
+
+    if (options.commitState !== false) {
+      setHolidays(holidaysRef.current);
+      setHolidayNames(holidayNamesRef.current);
+    }
+    return holidaysRef.current;
+  }, []);
+
   const applyCachedScheduleMonthState = useCallback((year, month) => {
-    const monthKey = getShockwaveMemoViewCacheKey(year, month);
-    const cachedMemos = readShockwaveMemoViewCache(
+    const targetYear = Number(year);
+    const targetMonth = Number(month);
+    const monthKey = getShockwaveMemoViewCacheKey(targetYear, targetMonth);
+
+    setMonthlyTherapistsByMonth(monthlyTherapistsByMonthRef.current);
+    setStaffMemos(staffMemosRef.current);
+    setHolidays(holidaysRef.current);
+    setHolidayNames(holidayNamesRef.current);
+
+    let cachedMemos = readShockwaveMemoViewCache(
       shockwaveMemoViewCacheRef,
       shockwaveMemoViewVersionRef,
       monthKey,
       shockwaveScheduleCacheVersionRef.current
     );
+    if (!cachedMemos && shockwaveSettingsLoadedRef.current && buildShockwaveMemoViewSnapshotRef.current) {
+      const visibleTargets = getVisibleShockwaveScheduleMonths(targetYear, targetMonth);
+      const completedRows = collectVisibleScheduleMonthRows(
+        visibleTargets,
+        targetYear,
+        targetMonth,
+        (target) => shockwaveRawMonthRowsCacheRef.current.get(
+          getShockwaveRawMonthCacheKey(target.year, target.month)
+        )
+      );
+      if (completedRows.isComplete) {
+        const snapshot = buildShockwaveMemoViewSnapshotRef.current(
+          targetYear,
+          targetMonth,
+          completedRows.rows,
+          { reconcileCurrentWrites: true }
+        );
+        rememberShockwaveMemoViewCache(
+          shockwaveMemoViewCacheRef,
+          shockwaveMemoViewVersionRef,
+          monthKey,
+          snapshot.memoMap,
+          shockwaveScheduleCacheVersionRef.current
+        );
+        if (snapshot.relocationPayload?.length > 0) {
+          persistHiddenMergedScheduleRelocationRef.current?.(snapshot.relocationPayload);
+        }
+        cachedMemos = snapshot.memoMap;
+      }
+    }
     if (cachedMemos) {
       loadCacheRef.current.shockwaveMemos = monthKey;
       shockwaveMemosRef.current = cachedMemos;
+      shockwaveMemosLoadedKeyRef.current = monthKey;
       setShockwaveMemosLoadedKey(monthKey);
       setShockwaveMemos(cachedMemos);
+    } else {
+      loadCacheRef.current.shockwaveMemos = null;
+      shockwaveMemosRef.current = {};
+      shockwaveMemosLoadedKeyRef.current = '';
+      setShockwaveMemosLoadedKey('');
+      setShockwaveMemos({});
     }
 
     const cachedTherapists = monthlyTherapistsByMonthRef.current.shockwave?.[monthKey];
@@ -888,8 +1152,43 @@ export function ScheduleProvider({ children }) {
       monthlyTherapistsRef.current = cachedTherapists;
       setMonthlyTherapists(cachedTherapists);
       setMonthlyTherapistLoadedKey('shockwave', monthKey);
+    } else {
+      monthlyTherapistsRef.current = [];
+      setMonthlyTherapists([]);
+      setMonthlyTherapistLoadedKey('shockwave', '');
     }
-  }, [setMonthlyTherapistLoadedKey]);
+
+    const visibleTherapistTargets = getVisibleShockwaveScheduleMonths(targetYear, targetMonth);
+    const hasAllVisibleTherapists = visibleTherapistTargets.every((target) => (
+      Array.isArray(monthlyTherapistsByMonthRef.current.shockwave?.[`${target.year}-${target.month}`])
+    ));
+    if (hasAllVisibleTherapists) {
+      setMonthlyTherapistVisibleLoadedKey('shockwave', monthKey);
+    } else {
+      setMonthlyTherapistVisibleLoadedKey('shockwave', '');
+    }
+
+    const adjMonths = [
+      shiftScheduleMonth(targetYear, targetMonth, -1),
+      { year: targetYear, month: targetMonth },
+      shiftScheduleMonth(targetYear, targetMonth, 1),
+    ];
+    if (adjMonths.every((target) => loadedStaffMonthsRef.current.has(`${target.year}-${target.month}`))) {
+      const staffViewKey = getStaffScheduleViewKey(targetYear, targetMonth, true);
+      loadCacheRef.current.staffMemos = staffViewKey;
+      setStaffMemosViewLoadedKey(staffViewKey);
+    } else {
+      loadCacheRef.current.staffMemos = null;
+      setStaffMemosViewLoadedKey('');
+    }
+    if (adjMonths.every((target) => loadedHolidayMonthsRef.current.has(`${target.year}-${target.month}`))) {
+      loadCacheRef.current.holidays = monthKey;
+      setHolidaysViewLoadedKey(monthKey);
+    } else {
+      loadCacheRef.current.holidays = null;
+      setHolidaysViewLoadedKey('');
+    }
+  }, [setHolidaysViewLoadedKey, setMonthlyTherapistLoadedKey, setMonthlyTherapistVisibleLoadedKey, setStaffMemosViewLoadedKey]);
 
   const navigateMonth = useCallback((delta) => {
     if (typeof window !== 'undefined') {
@@ -897,13 +1196,15 @@ export function ScheduleProvider({ children }) {
     }
     loadCacheRef.current = { staffMemos: null, shockwaveMemos: null, holidays: null };
     lastKnownScheduleServerUpdatedAtRef.current = null;
+    lastWriteTimeRef.current.clear();
+    localShockwaveWriteTimeRef.current.clear();
     const nextDate = shiftScheduleMonth(
       currentDateRef.current.year,
       currentDateRef.current.month,
       delta
     );
-    applyCachedScheduleMonthState(nextDate.year, nextDate.month);
     currentDateRef.current = nextDate;
+    applyCachedScheduleMonthState(nextDate.year, nextDate.month);
     setCurrentYear(nextDate.year);
     setCurrentMonth(nextDate.month);
   }, [applyCachedScheduleMonthState]);
@@ -914,75 +1215,54 @@ export function ScheduleProvider({ children }) {
     }
     loadCacheRef.current = { staffMemos: null, shockwaveMemos: null, holidays: null };
     lastKnownScheduleServerUpdatedAtRef.current = null;
+    lastWriteTimeRef.current.clear();
+    localShockwaveWriteTimeRef.current.clear();
     const nextDate = { year: Number(year), month: Number(month) };
-    applyCachedScheduleMonthState(nextDate.year, nextDate.month);
     currentDateRef.current = nextDate;
+    applyCachedScheduleMonthState(nextDate.year, nextDate.month);
     setCurrentYear(nextDate.year);
     setCurrentMonth(nextDate.month);
   }, [applyCachedScheduleMonthState]);
 
-  // 직원 메모 로드 (캐시 키로 중복 방지)
+  // 직원 메모 로드 (월별 공유 캐시 + 변경 시에만 상태 반영)
   const loadStaffMemos = useCallback(async (year, month, options = {}) => {
+    const targetYear = Number(year);
+    const targetMonth = Number(month);
     const cacheKey = getStaffScheduleViewKey(
-      year,
-      month,
+      targetYear,
+      targetMonth,
       options.includeAdjacentMonths === true
     );
-    if (!options.force && loadCacheRef.current.staffMemos === cacheKey) return staffMemosRef.current;
+    const targetMonths = [{ year: targetYear, month: targetMonth }];
+    if (options.includeAdjacentMonths) {
+      const prev = shiftScheduleMonth(targetYear, targetMonth, -1);
+      const next = shiftScheduleMonth(targetYear, targetMonth, 1);
+      targetMonths.unshift(prev);
+      targetMonths.push(next);
+    }
+
+    if (!options.force && targetMonths.every((target) => loadedStaffMonthsRef.current.has(`${target.year}-${target.month}`))) {
+      loadCacheRef.current.staffMemos = cacheKey;
+      setStaffMemos(staffMemosRef.current);
+      setStaffMemosViewLoadedKey(cacheKey);
+      return staffMemosRef.current;
+    }
+
     loadCacheRef.current.staffMemos = cacheKey;
     const requestId = ++staffMemosLoadRequestRef.current;
-    // 같은 월의 강제 갱신과 이미 준비된 인접 월 이동은 현재 색상을
-    // 유지한 채 백그라운드에서 교체한다. 준비 범위 밖에서만 숨긴다.
     if (!doesStaffScheduleViewCoverMonth(
       staffMemosLoadedKeyRef.current,
-      year,
-      month
+      targetYear,
+      targetMonth
     )) {
       setStaffMemosViewLoadedKey('');
     }
 
     beginLoading();
     try {
-      const targetMonths = [{ year, month }];
-      if (options.includeAdjacentMonths) {
-        const prev = month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
-        const next = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
-        targetMonths.unshift(prev);
-        targetMonths.push(next);
-      }
-
-      const memoMap = {};
-
-      const staffMonthResults = await Promise.allSettled(targetMonths.map(async (target) => {
-        const targetMemoMap = {};
-        let page = 0;
-        let hasMore = true;
-        while (hasMore) {
-          const { data, error } = await withScheduleQueryTimeout(
-            supabase
-              .from('staff_schedules')
-              .select('*')
-              .eq('year', target.year)
-              .eq('month', target.month)
-              .range(page * 1000, (page + 1) * 1000 - 1),
-            `staff_schedules ${target.year}-${target.month} page ${page + 1}`
-          );
-            
-          if (error) throw error;
-          
-          (data || []).forEach(item => {
-            const key = `${item.year}-${item.month}-${item.day}-${item.slot_index}`;
-            targetMemoMap[key] = {
-              ...item,
-              content: normalizeStaffDeptNameSpacing(item.content || ''),
-            };
-          });
-          
-          if (!data || data.length < 1000) hasMore = false;
-          page++;
-        }
-        return targetMemoMap;
-      }));
+      const staffMonthResults = await Promise.allSettled(targetMonths.map((target) => (
+        loadStaffMonthShared(target.year, target.month, { force: options.force === true })
+      )));
 
       const failedMonthIndex = staffMonthResults.findIndex((result) => (
         result.status === 'rejected'
@@ -998,25 +1278,17 @@ export function ScheduleProvider({ children }) {
         }
         return null;
       }
-      staffMonthResults.forEach((result) => {
-        Object.assign(memoMap, result.value || {});
-      });
 
-      if (loadCacheRef.current.staffMemos !== cacheKey || staffMemosLoadRequestRef.current !== requestId) return memoMap;
-      const nextMemos = { ...staffMemosRef.current };
-      targetMonths.forEach(target => {
-        const prefix = `${target.year}-${target.month}-`;
-        Object.keys(nextMemos).forEach(key => {
-          if (key.startsWith(prefix)) {
-            delete nextMemos[key];
-          }
-        });
-      });
-      Object.assign(nextMemos, memoMap);
-      staffMemosRef.current = nextMemos;
-      setStaffMemos(nextMemos);
-      setStaffMemosViewLoadedKey(cacheKey);
-      return memoMap;
+      const entries = staffMonthResults.map((result) => result.value);
+      const isStillActiveRequest = (
+        loadCacheRef.current.staffMemos === cacheKey &&
+        staffMemosLoadRequestRef.current === requestId
+      );
+      const merged = mergeLoadedStaffMonthResults(entries, { commitState: isStillActiveRequest });
+      if (isStillActiveRequest) {
+        setStaffMemosViewLoadedKey(cacheKey);
+      }
+      return merged;
     } catch (err) {
       console.error('Failed to load staff memos:', err);
       if (staffMemosLoadRequestRef.current === requestId) {
@@ -1026,7 +1298,7 @@ export function ScheduleProvider({ children }) {
     } finally {
       endLoading();
     }
-  }, [beginLoading, endLoading, setStaffMemosViewLoadedKey]);
+  }, [beginLoading, endLoading, loadStaffMonthShared, mergeLoadedStaffMonthResults, setStaffMemosViewLoadedKey]);
 
   // 직원 메모 저장/업데이트
   const saveStaffMemo = useCallback(async (year, month, day, slotIndex, content, fontColor = undefined, bgColor = undefined, textStyle = undefined) => {
@@ -1048,10 +1320,9 @@ export function ScheduleProvider({ children }) {
       if (textStyle?.fontWeight !== undefined) upsertData.font_weight = textStyle.fontWeight;
       
       // 낙관적 업데이트 (네트워크 응답 대기 중 화면 깜빡임 방지)
-      setStaffMemos(prev => ({
-        ...prev,
-        [key]: { ...prev[key], ...upsertData, slot_index: slotIndex }
-      }));
+      const optimisticItem = { ...staffMemosRef.current[key], ...upsertData, slot_index: slotIndex };
+      staffMemosRef.current = { ...staffMemosRef.current, [key]: optimisticItem };
+      setStaffMemos(staffMemosRef.current);
 
       const { data, error } = await supabase
         .from('staff_schedules')
@@ -1068,10 +1339,8 @@ export function ScheduleProvider({ children }) {
       // 서버 데이터로 최종 업데이트
       if (staffMemoSaveRequestRef.current.get(key) !== requestId) return true;
       const savedStaffData = data?.[0] || { ...upsertData, slot_index: slotIndex };
-      setStaffMemos(prev => ({
-        ...prev,
-        [key]: savedStaffData
-      }));
+      staffMemosRef.current = { ...staffMemosRef.current, [key]: savedStaffData };
+      setStaffMemos(staffMemosRef.current);
 
       if (scheduleChannelRef.current) {
         scheduleChannelRef.current.send({
@@ -1091,12 +1360,11 @@ export function ScheduleProvider({ children }) {
       return true;
     } catch (err) {
       if (staffMemoSaveRequestRef.current.get(key) === requestId) {
-        setStaffMemos(prev => {
-          const next = { ...prev };
-          if (previousMemo === undefined) delete next[key];
-          else next[key] = previousMemo;
-          return next;
-        });
+        const next = { ...staffMemosRef.current };
+        if (previousMemo === undefined) delete next[key];
+        else next[key] = previousMemo;
+        staffMemosRef.current = next;
+        setStaffMemos(next);
       }
       console.error('Failed to save staff memo:', err);
       return false;
@@ -1107,56 +1375,40 @@ export function ScheduleProvider({ children }) {
     }
   }, []);
 
-  // 공휴일 로드
+  // 공휴일 로드 (인접 2개월 범위 공유 캐시 + 변경 시에만 상태 반영)
   const loadHolidays = useCallback(async (year, month, options = {}) => {
-    const cacheKey = `${year}-${month}`;
-    if (!options.force && loadCacheRef.current.holidays === cacheKey) return true;
+    const targetYear = Number(year);
+    const targetMonth = Number(month);
+    const cacheKey = `${targetYear}-${targetMonth}`;
+    const adjMonths = [
+      shiftScheduleMonth(targetYear, targetMonth, -1),
+      { year: targetYear, month: targetMonth },
+      shiftScheduleMonth(targetYear, targetMonth, 1),
+    ];
+    if (!options.force && adjMonths.every((target) => loadedHolidayMonthsRef.current.has(`${target.year}-${target.month}`))) {
+      loadCacheRef.current.holidays = cacheKey;
+      setHolidays(holidaysRef.current);
+      setHolidayNames(holidayNamesRef.current);
+      setHolidaysViewLoadedKey(cacheKey);
+      return holidaysRef.current;
+    }
+
     loadCacheRef.current.holidays = cacheKey;
     const requestId = ++holidaysLoadRequestRef.current;
     if (!doesAdjacentScheduleViewCoverMonth(
       holidaysLoadedKeyRef.current,
-      year,
-      month
+      targetYear,
+      targetMonth
     )) {
       setHolidaysViewLoadedKey('');
     }
 
     try {
-      const prevYear = month === 1 ? year - 1 : year;
-      const prevMonth = month === 1 ? 12 : month - 1;
-      const startDate = `${prevYear}-${String(prevMonth).padStart(2, '0')}-01`;
-      const afterNextYear = month >= 11 ? year + 1 : year;
-      const afterNextMonth = month === 11 ? 1 : month === 12 ? 2 : month + 2;
-      const endStr = `${afterNextYear}-${String(afterNextMonth).padStart(2, '0')}-01`;
-
-      const { data, error } = await withScheduleQueryTimeout(
-        supabase
-          .from('holidays')
-          .select('*')
-          .gte('date', startDate)
-          .lt('date', endStr),
-        `holidays ${startDate}-${endStr}`
-      );
-
-      if (error) throw error;
-
-      const holSet = new Set();
-      const holNames = new Map();
-      (data || []).forEach(h => {
-        let key;
-        if (h.date && h.date.includes('-')) {
-          const [y, m, d] = h.date.split('-');
-          key = `${Number(y)}-${Number(m)}-${Number(d.substring(0, 2))}`;
-        } else {
-          const d = new Date(h.date);
-          key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-        }
-        holSet.add(key);
-        if (h.name) holNames.set(key, h.name);
+      const holSet = await loadHolidaysRangeShared(targetYear, targetMonth, {
+        force: options.force === true,
+        commitState: loadCacheRef.current.holidays === cacheKey && holidaysLoadRequestRef.current === requestId,
       });
-      if (loadCacheRef.current.holidays !== cacheKey || holidaysLoadRequestRef.current !== requestId) return;
-      setHolidays(holSet);
-      setHolidayNames(holNames);
+      if (loadCacheRef.current.holidays !== cacheKey || holidaysLoadRequestRef.current !== requestId) return holSet;
       setHolidaysViewLoadedKey(cacheKey);
       return holSet;
     } catch (err) {
@@ -1166,7 +1418,7 @@ export function ScheduleProvider({ children }) {
       }
       return null;
     }
-  }, [setHolidaysViewLoadedKey]);
+  }, [loadHolidaysRangeShared, setHolidaysViewLoadedKey]);
 
   // 치료사 로드
   const loadTherapists = useCallback(async (options = {}) => {
@@ -2076,7 +2328,7 @@ export function ScheduleProvider({ children }) {
       shouldKeepShockwaveMemo
     );
     const reconciledMemoMap = options.reconcileCurrentWrites === true
-      ? reconcileLoadedShockwaveMemosWithLocalWrites(memoMap)
+      ? reconcileLoadedShockwaveMemosWithLocalWrites(memoMap, year, month)
       : memoMap;
     const recoveredMemoMap = options.skipLocalRecovery === true
       ? reconciledMemoMap
@@ -2091,6 +2343,11 @@ export function ScheduleProvider({ children }) {
     reconcileLoadedShockwaveMemosWithLocalWrites,
     shouldKeepShockwaveMemo,
   ]);
+
+  useEffect(() => {
+    buildShockwaveMemoViewSnapshotRef.current = buildShockwaveMemoViewSnapshot;
+    persistHiddenMergedScheduleRelocationRef.current = persistHiddenMergedScheduleRelocation;
+  }, [buildShockwaveMemoViewSnapshot, persistHiddenMergedScheduleRelocation]);
 
   // 충격파 스케줄 로드 (실제 완료 기준 캐시 + 중복 요청 공유)
   const loadShockwaveMemos = useCallback(async (year, month, options = {}) => {
@@ -2129,6 +2386,7 @@ export function ScheduleProvider({ children }) {
 
       loadCacheRef.current.shockwaveMemos = cacheKey;
       shockwaveMemosRef.current = memoMap;
+      shockwaveMemosLoadedKeyRef.current = cacheKey;
       setShockwaveMemosLoadedKey(cacheKey);
       setShockwaveMemos(memoMap);
       return true;
@@ -2296,13 +2554,7 @@ export function ScheduleProvider({ children }) {
   }, [waitForShockwaveWrites, loadShockwaveRawMonthRows, loadShockwaveSettings, beginLoading, endLoading, buildShockwaveMemoViewSnapshot, persistHiddenMergedScheduleRelocation]);
 
   const preloadShockwaveNavigationMonths = useCallback(async (year, month) => {
-    const previousMonth = shiftScheduleMonth(year, month, -1);
-    const nextMonth = shiftScheduleMonth(year, month, 1);
-    const viewMonths = [
-      { year: Number(year), month: Number(month) },
-      previousMonth,
-      nextMonth,
-    ];
+    const viewMonths = [0, -1, 1, -2, 2].map((delta) => shiftScheduleMonth(year, month, delta));
     const targets = collectUniqueScheduleMonthTargets(
       ...viewMonths.map((target) => (
         getVisibleShockwaveScheduleMonths(target.year, target.month)
@@ -2315,9 +2567,59 @@ export function ScheduleProvider({ children }) {
       )
     ));
 
-    const results = await Promise.allSettled(
-      missingTargets.map((target) => loadShockwaveRawMonthRows(target))
-    );
+    const auxiliaryWindowMonths = [-3, -2, -1, 0, 1, 2, 3].map((delta) => shiftScheduleMonth(year, month, delta));
+    const allPreloadMonths = collectUniqueScheduleMonthTargets(targets, auxiliaryWindowMonths);
+    const missingTherapistTargets = allPreloadMonths.filter((target) => (
+      !Array.isArray(monthlyTherapistsByMonthRef.current.shockwave?.[`${target.year}-${target.month}`])
+    ));
+    const missingStaffTargets = allPreloadMonths.filter((target) => (
+      !loadedStaffMonthsRef.current.has(`${target.year}-${target.month}`)
+    ));
+
+    const [results, therapistResults, staffResults] = await Promise.all([
+      Promise.allSettled(
+        missingTargets.map((target) => loadShockwaveRawMonthRows(target))
+      ),
+      loadMonthlyTherapistRowsSharedRef.current && missingTherapistTargets.length > 0
+        ? Promise.allSettled(
+            missingTherapistTargets.map((target) => (
+              loadMonthlyTherapistRowsSharedRef.current(target.year, target.month, 'shockwave')
+            ))
+          )
+        : Promise.resolve([]),
+      missingStaffTargets.length > 0
+        ? Promise.allSettled(
+            missingStaffTargets.map((target) => loadStaffMonthShared(target.year, target.month))
+          )
+        : Promise.resolve([]),
+      loadHolidaysRangeShared(year, month, { commitState: false }).catch((err) => {
+        console.warn('Failed to preload adjacent holidays:', err);
+      }),
+    ]);
+
+    const fetchedTherapistEntries = [];
+    therapistResults.forEach((result, index) => {
+      if (result.status === 'fulfilled' && Array.isArray(result.value)) {
+        const target = missingTherapistTargets[index];
+        fetchedTherapistEntries.push([`${target.year}-${target.month}`, result.value]);
+      }
+    });
+    if (fetchedTherapistEntries.length > 0) {
+      monthlyTherapistsByMonthRef.current = {
+        ...monthlyTherapistsByMonthRef.current,
+        shockwave: {
+          ...(monthlyTherapistsByMonthRef.current.shockwave || {}),
+          ...Object.fromEntries(fetchedTherapistEntries),
+        },
+      };
+    }
+
+    const fulfilledStaffEntries = staffResults
+      .filter((result) => result.status === 'fulfilled' && result.value)
+      .map((result) => result.value);
+    if (fulfilledStaffEntries.length > 0) {
+      mergeLoadedStaffMonthResults(fulfilledStaffEntries, { commitState: false });
+    }
     results.forEach((result, index) => {
       if (result.status === 'rejected') {
         const target = missingTargets[index];
@@ -2383,7 +2685,7 @@ export function ScheduleProvider({ children }) {
     });
 
     return results;
-  }, [buildShockwaveMemoViewSnapshot, loadShockwaveRawMonthRows]);
+  }, [buildShockwaveMemoViewSnapshot, loadHolidaysRangeShared, loadShockwaveRawMonthRows, loadStaffMonthShared, mergeLoadedStaffMonthResults]);
 
   useEffect(() => {
     preloadShockwaveNavigationMonthsRef.current = preloadShockwaveNavigationMonths;
@@ -3150,6 +3452,10 @@ export function ScheduleProvider({ children }) {
     return loadPromise;
   }, [resolveMonthlyTherapistRows]);
 
+  useEffect(() => {
+    loadMonthlyTherapistRowsSharedRef.current = loadMonthlyTherapistRowsShared;
+  }, [loadMonthlyTherapistRowsShared]);
+
   // 월별 치료사 설정 로드 (type: 'shockwave' | 'manual_therapy' | 'shinjang_spray')
   const loadMonthlyTherapists = useCallback(async (year, month, type = 'shockwave') => {
     const setter = type === 'manual_therapy'
@@ -3236,11 +3542,9 @@ export function ScheduleProvider({ children }) {
       // 인접 월 여러 건을 한 번에 반영해 큰 스케줄 표의 반복 렌더링을 피한다.
       setMonthlyTherapistsByMonth(monthlyTherapistsByMonthRef.current);
     }
-    setMonthlyTherapistVisibleLoadKeys((prev) => (
-      prev[type] === visibleKey ? prev : { ...prev, [type]: visibleKey }
-    ));
+    setMonthlyTherapistVisibleLoadedKey(type, visibleKey);
     return monthlyTherapistsByMonthRef.current[type];
-  }, [loadMonthlyTherapistRowsShared]);
+  }, [loadMonthlyTherapistRowsShared, setMonthlyTherapistVisibleLoadedKey]);
 
   // 월별 치료사 설정 저장 (type: 'shockwave' | 'manual_therapy' | 'shinjang_spray')
   const saveMonthlyTherapists = useCallback(async (year, month, configs, type = 'shockwave') => {
@@ -3394,18 +3698,20 @@ export function ScheduleProvider({ children }) {
           if (!payload || payload.senderId === CLIENT_SESSION_ID) return;
           if (payload.action === 'upsert' && payload.item) {
             const item = payload.item;
-            if (item.year === currentYear && item.month === currentMonth) {
-              const key = `${item.year}-${item.month}-${item.day}-${item.slot_index}`;
-              if (!staffMemoSaveRequestRef.current.has(key)) {
-                setStaffMemos(prev => ({ ...prev, [key]: item }));
-              }
+            const key = `${item.year}-${item.month}-${item.day}-${item.slot_index}`;
+            if (!staffMemoSaveRequestRef.current.has(key)) {
+              const normalizedItem = {
+                ...item,
+                content: normalizeStaffDeptNameSpacing(item.content || ''),
+              };
+              staffMemosRef.current = { ...staffMemosRef.current, [key]: normalizedItem };
+              setStaffMemos(staffMemosRef.current);
             }
           } else if (payload.action === 'delete' && payload.targetKey) {
-            setStaffMemos(prev => {
-              const next = { ...prev };
-              delete next[payload.targetKey];
-              return next;
-            });
+            const next = { ...staffMemosRef.current };
+            delete next[payload.targetKey];
+            staffMemosRef.current = next;
+            setStaffMemos(next);
           }
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new Event('clinic-staff-schedule-updated'));
@@ -3483,15 +3789,20 @@ export function ScheduleProvider({ children }) {
         { event: '*', schema: 'public', table: 'staff_schedules' },
         (payload) => {
           const eventKind = getScheduleRealtimePayloadKind(payload);
-          if (eventKind === 'upsert' && payload.new.year === currentYear && payload.new.month === currentMonth) {
+          if (eventKind === 'upsert' && payload.new) {
             const item = payload.new;
             const key = `${item.year}-${item.month}-${item.day}-${item.slot_index}`;
             if (staffMemoSaveRequestRef.current.has(key)) return;
-            setStaffMemos(prev => ({ ...prev, [key]: item }));
+            const normalizedItem = {
+              ...item,
+              content: normalizeStaffDeptNameSpacing(item.content || ''),
+            };
+            staffMemosRef.current = { ...staffMemosRef.current, [key]: normalizedItem };
+            setStaffMemos(staffMemosRef.current);
           } else if (eventKind === 'delete' && payload.old) {
             const item = payload.old;
             let targetKey = null;
-            if (item.year === currentYear && item.month === currentMonth) {
+            if (item.year !== undefined && item.month !== undefined && item.day !== undefined && item.slot_index !== undefined) {
               targetKey = `${item.year}-${item.month}-${item.day}-${item.slot_index}`;
             } else if (item.id !== undefined && item.id !== null) {
               const deleteId = String(item.id);
@@ -3504,11 +3815,10 @@ export function ScheduleProvider({ children }) {
 
             if (targetKey) {
               if (staffMemoSaveRequestRef.current.has(targetKey)) return;
-              setStaffMemos(prev => {
-                const next = { ...prev };
-                delete next[targetKey];
-                return next;
-              });
+              const next = { ...staffMemosRef.current };
+              delete next[targetKey];
+              staffMemosRef.current = next;
+              setStaffMemos(next);
             }
           }
         }

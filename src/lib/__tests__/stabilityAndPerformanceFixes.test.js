@@ -525,8 +525,56 @@ describe('stability and performance fixes', () => {
     assert.match(shockwavePageSource, /shockwaveSettingsLoaded:\s*shockwaveSettingsLoaded !== false/);
     assert.match(shockwavePageSource, /therapistsLoaded:\s*therapistsLoaded !== false/);
     assert.match(shockwaveViewSource, /useScheduleResizeState\(\{\s*colCount,\s*settings\s*\}\)/);
-    assert.match(shockwaveViewSource, /if \(isDeviceSettingsLoading \|\| isTextSettingsLoading\) return null;/);
+    assert.match(
+      shockwaveViewSource,
+      /if \(isScheduleMonthLoading \|\| isDeviceSettingsLoading \|\| isTextSettingsLoading\) return null;/
+    );
     assert.match(resizeHookSource, /hasCompleteLocalSchedulerGridDeviceSettings/);
     assert.match(viewStateHookSource, /resolveRemoteSchedulerTextSettings/);
+  });
+
+  it('transitions months cleanly without leftover previous-month cells or CSS background fade ghosts', async () => {
+    const [
+      shockwavePageSource,
+      shockwaveViewSource,
+      scheduleCellSource,
+      scheduleContextSource,
+      shockwaveCssSource,
+    ] = await Promise.all([
+      readFile(new URL('../../pages/ShockwavePage.jsx', import.meta.url), 'utf8'),
+      readFile(new URL('../../components/shockwave/ShockwaveView.jsx', import.meta.url), 'utf8'),
+      readFile(new URL('../../components/shockwave/ShockwaveScheduleCell.jsx', import.meta.url), 'utf8'),
+      readFile(new URL('../../contexts/ScheduleContext.jsx', import.meta.url), 'utf8'),
+      readFile(new URL('../../styles/shockwave.css', import.meta.url), 'utf8'),
+    ]);
+
+    // ShockwavePage waits for exact target-month staffMemos, holidays, and visibleMonthlyTherapists
+    assert.match(shockwavePageSource, /staffMemosLoadedKey === currentStaffViewKey/);
+    assert.match(shockwavePageSource, /holidaysLoadedKey === currentMonthKey/);
+    assert.match(shockwavePageSource, /monthlyTherapistVisibleLoadKeys\?\.shockwave === currentMonthKey/);
+    assert.match(shockwavePageSource, /memos=\{currentMonthReady \? shockwaveMemos : EMPTY_STAFF_MEMOS\}/);
+
+    // ShockwaveView keys week containers by year-month so previous month DOM nodes never morph/linger,
+    // and skips rendering incomplete month grids while loading
+    assert.match(shockwaveViewSource, /key=\{`\$\{currentYear\}-\$\{currentMonth\}-\$\{weekIdx\}`\}/);
+    assert.match(
+      shockwaveViewSource,
+      /if \(isScheduleMonthLoading \|\| isDeviceSettingsLoading \|\| isTextSettingsLoading\) return null;/
+    );
+
+    // No CSS background fade transition on .sw-cell or .sw-day-header-cell that causes old colors to linger
+    assert.match(shockwaveCssSource, /\.sw-cell\s*\{[^}]*transition:\s*none;/s);
+    assert.match(shockwaveCssSource, /\.sw-day-header-cell\s*\{[^}]*transition:\s*none;/s);
+
+    // MemoizedCell re-renders when monthly prescription colors change across months
+    assert.match(
+      scheduleCellSource,
+      /if \(prevProps\.effectivePrescriptionColors !== nextProps\.effectivePrescriptionColors\) return false;/
+    );
+
+    // ScheduleContext clears uncached month state immediately and preloads ±2 view months (±3 raw months)
+    assert.match(scheduleContextSource, /const auxiliaryWindowMonths = \[-3, -2, -1, 0, 1, 2, 3\]\.map/);
+    assert.match(scheduleContextSource, /mergeLoadedStaffMonthResults\(fulfilledStaffEntries,\s*\{\s*commitState:\s*false\s*\}\)/);
+    assert.match(scheduleContextSource, /loadHolidaysRangeShared\(year,\s*month,\s*\{\s*commitState:\s*false\s*\}\)/);
   });
 });

@@ -25,6 +25,10 @@
   font-family: Arial, Helvetica, sans-serif;
 }
 
+.shockwave-view.is-month-loading {
+  min-height: 72vh;
+}
+
 .shockwave-view.is-month-loading .shockwave-week {
   opacity: 0;
   visibility: hidden;
@@ -301,7 +305,7 @@
   font-weight: var(--sw-header-font-weight, 700);
   line-height: 1;
   background: var(--bg-tertiary);
-  transition: background var(--transition-fast);
+  transition: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -521,7 +525,7 @@
   text-align: center;
   border-right: 1px solid #b7b7b7;
   cursor: pointer;
-  transition: background var(--transition-fast);
+  transition: none;
   display: flex;
   align-items: center;
   justify-content: center;

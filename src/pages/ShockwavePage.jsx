@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSchedule } from '../contexts/ScheduleContext';
 import ShockwaveView from '../components/shockwave/ShockwaveView';
 import {
+  getStaffScheduleViewKey,
   isScheduleVisualViewReady,
   shouldKeepScheduleMounted,
 } from '../lib/scheduleMonthLoadUtils';
@@ -155,6 +156,8 @@ export default function ShockwavePage() {
     };
   }, [currentYear, currentMonth, loadStaffMemos, loadShockwaveMemos, preloadShockwaveNavigationMonths, loadHolidays, loadMonthlyTherapists, loadVisibleMonthlyTherapists, loadAttempt]);
 
+  const currentMonthKey = `${Number(currentYear)}-${Number(currentMonth)}`;
+  const currentStaffViewKey = getStaffScheduleViewKey(currentYear, currentMonth, true);
   const currentMonthReady = isScheduleVisualViewReady({
     year: currentYear,
     month: currentMonth,
@@ -165,8 +168,12 @@ export default function ShockwavePage() {
     holidaysLoadedKey,
     shockwaveSettingsLoaded: shockwaveSettingsLoaded !== false,
     therapistsLoaded: therapistsLoaded !== false,
-  });
-  const currentMonthKey = `${Number(currentYear)}-${Number(currentMonth)}`;
+  }) && (
+    monthlyTherapistVisibleLoadKeys?.shockwave === currentMonthKey &&
+    staffMemosLoadedKey === currentStaffViewKey &&
+    holidaysLoadedKey === currentMonthKey
+  );
+
   const effectiveLastReadyMonthKey = currentMonthReady ? currentMonthKey : lastReadyMonthKey;
 
   useEffect(() => {
@@ -188,7 +195,7 @@ export default function ShockwavePage() {
           <ShockwaveView
             therapists={therapists}
             settings={shockwaveSettings}
-            memos={shockwaveMemos}
+            memos={currentMonthReady ? shockwaveMemos : EMPTY_STAFF_MEMOS}
             memosLoadedKey={currentMonthReady ? shockwaveMemosLoadedKey : ''}
             onLoadMemos={loadShockwaveMemos}
             onSaveMemo={saveShockwaveMemo}
